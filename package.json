@@ -1,0 +1,24 @@
+{
+  "name": "@aresrpg/aresrpg",
+  "version": "1.0.0",
+  "description": "AresRPG is a Minecraft MMORPG Server",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aresrpg/aresrpg.git"
+  },
+  "keywords": [
+    "aresrpg",
+    "mmorpg",
+    "minecraft"
+  ],
+  "author": "AresRPG's Team",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/aresrpg/aresrpg/issues"
+  },
+  "homepage": "https://github.com/aresrpg/aresrpg#readme"
+}
