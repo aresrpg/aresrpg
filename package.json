@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node src/index.js",
-    "format": "prettier-eslint $PWD/\"**/*.js\" --print-width 80 --write"
+    "format": "prettier $PWD/\"**/*.js\" --no-semi --single-quote --write"
   },
   "repository": {
     "type": "git",
@@ -24,9 +24,11 @@
   },
   "homepage": "https://github.com/aresrpg/aresrpg#readme",
   "dependencies": {
-    "minecraft-protocol": "^1.16.0"
+    "minecraft-protocol": "^1.16.0",
+    "prismarine-provider-anvil": "^2.3.1"
   },
   "devDependencies": {
+    "prettier": "^2.1.2",
     "prettier-eslint-cli": "^5.0.0"
   }
 }
