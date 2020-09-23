@@ -1,105 +1,37 @@
-import protocol from "minecraft-protocol";
+import protocol from 'minecraft-protocol'
+import { version, online_mode } from './settings.js'
+import login from './login.js'
+import { floor1 as world } from './world.js'
+import update_chunks from './chunk/update.js'
+import EventEmitter from 'events'
+import { position_change_event } from './events.js'
+import { chunk_change_event, chunk_position } from './chunk.js'
 
-const server = protocol.createServer({ version: "1.16" });
+const server = protocol.createServer({ version, 'online-mode': online_mode })
 
-const w = {
-  piglin_safe: {
-    type: "byte",
-    value: 0
-  },
-  natural: {
-    type: "byte",
-    value: 1
-  },
-  ambient_light: {
-    type: "float",
-    value: 0
-  },
-  infiniburn: {
-    type: "string",
-    value: "minecraft:infiniburn_overworld"
-  },
-  respawn_anchor_works: {
-    type: "byte",
-    value: 0
-  },
-  has_skylight: {
-    type: "byte",
-    value: 1
-  },
-  bed_works: {
-    type: "byte",
-    value: 1
-  },
-  has_raids: {
-    type: "byte",
-    value: 1
-  },
-  name: {
-    type: "string",
-    value: "minecraft:overworld"
-  },
-  logical_height: {
-    type: "int",
-    value: 256
-  },
-  shrunk: {
-    type: "byte",
-    value: 0
-  },
-  ultrawarm: {
-    type: "byte",
-    value: 0
-  },
-  has_ceiling: {
-    type: "byte",
-    value: 0
-  }
-};
-
-server.on("login", client => {
-  client.write("login", {
-    entityId: client.id,
-    levelType: "default",
-    gameMode: 0,
-    previousGameMode: 255,
-    worldNames: ["minecraft:overworld"],
-    dimensionCodec: {
-      name: "",
-      type: "compound",
-      value: {
-        dimension: { type: "list", value: { type: "compound", value: [w] } }
-      }
+server.on('login', (client) => {
+  const state = {
+    client,
+    world,
+    position: world.spawn_position,
+    chunk: {
+      x: chunk_position(world.spawn_position.x),
+      z: chunk_position(world.spawn_position.z),
     },
-    dimension: "minecraft:overworld",
-    worldName: "minecraft:overworld",
-    difficulty: 2,
-    hashedSeed: [0, 0],
-    maxPlayers: server.maxPlayers,
-    reducedDebugInfo: false,
-    enableRespawnScreen: true
-  });
+    events: new EventEmitter(),
+    gameMode: 1,
+  }
 
-  client.write("position", {
-    x: 0,
-    y: 1.62,
-    z: 0,
-    yaw: 0,
-    pitch: 0,
-    flags: 0x00
-  });
+  login(state)
+  position_change_event(state)
+  chunk_change_event(state)
+  update_chunks(state)
+})
 
-  const msg = {
-    translate: "chat.type.announcement",
-    with: ["Server", "Hello, world!"]
-  };
-  client.write("chat", {
-    message: JSON.stringify(msg),
-    position: 0,
-    sender: "0"
-  });
-});
+server.on('listening', () => {
+  console.log('Listening on', server.socketServer.address())
+})
 
-server.on("listening", () => {
-	console.log("Listening on", server.socketServer.address())
+process.on('unhandledRejection', (error) => {
+  throw error
 })

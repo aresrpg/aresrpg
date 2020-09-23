@@ -1,0 +1,3 @@
+[submodule "world/floor1"]
+	path = world/floor1
+	url = ../floor1.git
