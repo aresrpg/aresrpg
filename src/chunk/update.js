@@ -48,7 +48,7 @@ export function unload_chunk({ client }, { x, z }) {
 export async function load_chunks(state, chunks) {
   const points = chunks.map(({ x, z }) => ({ x, y: z }))
   const sorted = sort_by_distance(
-    { x: state.chunk.x, z: state.chunk.z },
+    { x: state.chunk.x, y: state.chunk.z },
     points
   )
   for (const { x, y } of sorted) await load_chunk(state, { x, z: y })
