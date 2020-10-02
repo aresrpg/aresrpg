@@ -6,7 +6,7 @@ import { version } from './settings.js'
 const AnvilWorld = Anvil.Anvil(version)
 
 export const floor1 = {
-  spawn_position: { x: 75, y: 98, z: 75, yaw: 0, pitch: 0 },
+  spawn_position: { x: 469.5, y: 162, z: 646.5, yaw: 25, pitch: 0 },
   chunks: new AnvilWorld(
     join(
       dirname(fileURLToPath(import.meta.url)),

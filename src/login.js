@@ -1,6 +1,6 @@
 import { dimensionCodec } from './world/codec.js'
 
-export default function login({ client, world, gameMode, position }) {
+export default function login({ client, world, gameMode, position, chunk }) {
   // TODO: move this elsewhere
   const worldNames = ['minecraft:overworld']
   // TODO: we should not take the first world of the list
@@ -28,5 +28,10 @@ export default function login({ client, world, gameMode, position }) {
     ...position,
     flags: 0x00,
     teleportId: 0,
+  })
+
+  client.write('update_view_position', {
+    chunkX: chunk.x,
+    chunkZ: chunk.z,
   })
 }
