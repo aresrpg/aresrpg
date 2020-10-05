@@ -41,6 +41,7 @@ of a floor system and more classes than the v1
 ```bash
 $ git clone https://github.com/aresrpg/aresrpg
 $ cd aresrpg
+$ git submodule update --init
 $ npm install
 ```
 
