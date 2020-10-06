@@ -18,10 +18,10 @@ AresRPG is a non-modded MMORPG Minecraft Server for minecraft 1.16
 
 The version refered as v1 is the first version of AresRPG, developped in 2014 by [@Sceat](https://github.com/Sceat) in Java.
 
-4 classes where available: Barbarian, Archer, Vampire and Mage with skills and competance points
+4 classes were available: Barbarian, Archer, Vampire and Mage with spells and skill points
 
 This version works by floor, when you complete a floor you go to the next one.
-This version contained a unique floor but a Second floor is build but is missing gameplay and a Third floor is terraformed but is missing buildings
+This version contained a unique floor but a Second one is built but is missing gameplay, the Third one is terraformed but is missing buildings
 
 #### Ressources:
 
