@@ -8,6 +8,7 @@ import { position_change_event } from './events.js'
 import { chunk_change_event, chunk_position } from './chunk.js'
 import { open_trade } from './trade/trade.js'
 import { spawn_villager } from './trade/spawn_villager.js'
+import { spawn_mob } from './mobs/spawn_mob.js'
 
 const server = protocol.createServer({ version, 'online-mode': online_mode })
 
@@ -23,6 +24,7 @@ handle_login(
     // prettier-ignore
     spawn_villager,
     open_trade,
+    spawn_mob,
   ].reduce(
     ({ world, handlers }, fn) => {
       const { world: fn_world, handlers: fn_handlers } = fn(world)
