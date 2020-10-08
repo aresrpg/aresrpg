@@ -33,8 +33,9 @@ The V2 is a unreleased version of AresRPG, the goal of this version is to have a
 of a floor system and more classes than the v1
 
 ## Requirements
-  - NodeJS >= 14
-  - npm
+
+- NodeJS >= 14
+- npm
 
 ## Install
 
@@ -59,10 +60,12 @@ $ DEBUG="minecraft-protocol*" npm start
 See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Roadmap
- - Reimplement AresRPG v1:
-	- TODO
- - Develop AresRPG v2:
-	- TODO
+
+- Reimplement AresRPG v1:
+  - TODO
+- Develop AresRPG v2:
+  - TODO
 
 ## License
+
 [MIT](https://choosealicense.com/licenses/mit/)

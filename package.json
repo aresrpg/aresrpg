@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node src/index.js",
-    "format": "prettier $PWD/\"**/*.js\" --no-semi --single-quote --write"
+    "format": "prettier . --no-semi --single-quote --write"
   },
   "repository": {
     "type": "git",

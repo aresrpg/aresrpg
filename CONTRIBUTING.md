@@ -8,7 +8,6 @@ We use the [Github Flow](https://guides.github.com/introduction/flow/) to handle
 
 Branch are usualy merged with a fast-forward merge (sometimes with a rebase beforehand if no conflict happens)
 
-
 ## Code Style
 
 This codebase try to follow the [Functionnal Programming](https://en.wikipedia.org/wiki/Functional_programming) Paradigm,
