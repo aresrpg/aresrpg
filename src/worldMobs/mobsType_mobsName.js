@@ -211,7 +211,7 @@ export let mobsType_mobsName = {
     displayName: 'poule',
     type: 'chicken'
   },
-  sick_hen: {
+  sick_chicken: {
     displayName: 'poule_malade',
     type: ''
   },
