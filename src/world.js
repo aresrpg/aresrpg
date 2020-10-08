@@ -3,6 +3,9 @@ import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import fs from 'fs'
 import { version } from './settings.js'
+import logger from './logger.js'
+
+const log = logger(import.meta)
 
 const AnvilWorld = Anvil.Anvil(version)
 
@@ -22,3 +25,12 @@ export const floor1 = {
     fs.readFileSync(join(world_folder, 'floor1', 'items.json'), 'utf8')
   ),
 }
+
+log.trace(
+  {
+    world: 'floor1',
+    mobs: floor1.mobs.length,
+    items: Object.entries(floor1.items).length,
+  },
+  'World loaded'
+)

@@ -2,6 +2,9 @@ import protodef from 'protodef'
 import { version } from './settings.js'
 import minecraft_data from 'minecraft-data'
 import minecraft_types from 'minecraft-protocol/src/datatypes/minecraft.js'
+import logger from './logger.js'
+
+const log = logger(import.meta)
 
 const mc_data = minecraft_data(version)
 
@@ -55,7 +58,7 @@ export const path_types = {
   BREACH: 19,
   LEAVES: 20,
   STICKY_HONEY: 21,
-  COCOA: 22
+  COCOA: 22,
 }
 
 proto.addType('path', [
@@ -146,7 +149,7 @@ export function register_plugin_channels({ client }) {
     }
   })
 
-  client.on(BRAND_CHANNEL, (brand) => console.log('Client brand:', brand))
+  client.on(BRAND_CHANNEL, (brand) => log.debug({ brand }, 'Client brand'))
 }
 
 export function write_brand(client, { brand }) {

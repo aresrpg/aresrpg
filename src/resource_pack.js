@@ -1,3 +1,7 @@
+import logger from './logger.js'
+
+const log = logger(import.meta)
+
 const statuses = ['success', 'declined', 'failed', 'accepted']
 
 export function send_resource_pack({ client }) {
@@ -10,6 +14,6 @@ export function send_resource_pack({ client }) {
   client.on('resource_pack_receive', ({ result }) => {
     const status = statuses[result]
     // TODO: what do we do when failing ?
-    console.log('Ressource pack status:', status)
+    log.debug({ status }, 'Ressource pack status')
   })
 }
