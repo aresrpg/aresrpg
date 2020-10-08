@@ -30,6 +30,7 @@ server.on('login', (client) => {
   update_chunks(state)
   worldMobsSpawn(state)
   openTrade(state)
+  
   client.on('error', console.log)
   client.on('end', console.log)
 })
