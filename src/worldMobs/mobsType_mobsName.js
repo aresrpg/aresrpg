@@ -228,31 +228,31 @@ export let mobsType_mobsName = {
     type: ''
   },
   savage: {
-    displayName: 'savage',
+    displayName: 'sauvageon',
     type: ''
   },
   aggressive_savage: {
-    displayName: 'savage_agressif',
+    displayName: 'sauvageon_agressif',
     type: ''
   },
   fallen_savage: {
-    displayName: 'savage_dechu',
+    displayName: 'sauvageon_dechu',
     type: ''
   },
   slinger_savage: {
-    displayName: 'savage_frondeur',
+    displayName: 'sauvageon_frondeur',
     type: ''
   },
   fertile_savagene: {
-    displayName: 'savagene_feconde',
+    displayName: 'sauvageonne_feconde',
     type: ''
   },
   savagene: {
-    displayName: 'savagene',
+    displayName: 'sauvageonne',
     type: ''
   },
   savage_perjurer: {
-    displayName: 'savage_par_jure',
+    displayName: 'sauvageon_parjure',
     type: ''
   },
   darkness_soldier: {
