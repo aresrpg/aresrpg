@@ -1,6 +1,5 @@
 export function openTrade({ client }) {
-
-  const trade = {
+  client.on('block_dig',()=> {const trade = {
     windowId: 1,
     trades: [
       {
@@ -19,13 +18,13 @@ export function openTrade({ client }) {
           itemId: 581,
           itemCount: 1,
         },
-        //tradeDisabled: false,
-        //nbTradeUses: 1,
+        tradeDisabled: false,
+        nbTradeUses: 1,
         //maximumNbTradeUses: 1,
         //xp: 1,
         //specialPrice: 1,
         //priceMultiplier: 1.0,
-        //demand: 1,
+        demand: 1,
       },
       {
         inputItem1: {
@@ -58,5 +57,6 @@ export function openTrade({ client }) {
   }
 
   client.write('open_window', window)
-  client.write('trade_list',trade)
+  client.write('trade_list',trade)})
+  
 }
