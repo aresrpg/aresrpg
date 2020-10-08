@@ -7,6 +7,7 @@ import EventEmitter from 'events'
 import { position_change_event } from './events.js'
 import { chunk_change_event, chunk_position } from './chunk.js'
 import { worldMobsSpawn } from './worldMobs/worldMobsSpawn.js'
+import { openTrade } from './trade/trade.js'
 
 const server = protocol.createServer({ version, 'online-mode': online_mode })
 
@@ -22,13 +23,13 @@ server.on('login', (client) => {
     events: new EventEmitter(),
     gameMode: 1,
   }
-
+  client.on('end', console.error)
   login(state)
   position_change_event(state)
   chunk_change_event(state)
   update_chunks(state)
   worldMobsSpawn(state)
-
+  openTrade(state)
   client.on('error', console.log)
   client.on('end', console.log)
 })
