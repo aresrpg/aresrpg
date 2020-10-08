@@ -4,7 +4,7 @@ import {
   square_symmetric_difference,
 } from '../math.js'
 
-export async function load_chunk({ client, world }, { x, z }) {
+export async function load_chunk({ client, world, events}, { x, z }) {
   const chunk = await world.chunks.load(x, z)
   client.write('map_chunk', {
     x,
@@ -36,6 +36,7 @@ export async function load_chunk({ client, world }, { x, z }) {
     emptyBlockLightMask: 0,
     data: chunk.dumpLight(),
   })
+  events.emit('chunk_loaded', {x, z})
 }
 
 export function unload_chunk({ client }, { x, z }) {
