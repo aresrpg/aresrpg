@@ -6,7 +6,7 @@ export function openTrade({ client }) {
       {
         inputItem1: {
           present: true,
-          itemId: 581,
+          itemId: 581, //https://minecraft-data.prismarine.js.org/?v=1.16&d=items
           itemCount: 1,
         },
         outputItem: {
