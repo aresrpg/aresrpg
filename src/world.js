@@ -1,6 +1,7 @@
 import Anvil from 'prismarine-provider-anvil'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import fs from 'fs'
 import { version } from './settings.js'
 
 const AnvilWorld = Anvil.Anvil(version)
@@ -14,6 +15,18 @@ export const floor1 = {
       'world',
       'floor1',
       'region'
+    )
+  ),
+  mobs: JSON.parse(
+    fs.readFileSync(
+      join(
+        dirname(fileURLToPath(import.meta.url)),
+        '..',
+        'world',
+        'floor1',
+        'mobs.json'
+      ),
+      'utf8'
     )
   ),
 }
