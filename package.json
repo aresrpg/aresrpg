@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "start": "node src/index.js",
+    "start": "node src/index.js | pino-human",
     "format": "prettier . --no-semi --single-quote --write"
   },
   "repository": {
@@ -25,9 +25,11 @@
   "homepage": "https://github.com/aresrpg/aresrpg#readme",
   "dependencies": {
     "minecraft-protocol": "^1.16.0",
+    "pino": "^6.7.0",
     "prismarine-provider-anvil": "^2.3.1"
   },
   "devDependencies": {
+    "@hydre/pino-human": "^1.1.0",
     "prettier": "^2.1.2",
     "prettier-eslint-cli": "^5.0.0"
   }
