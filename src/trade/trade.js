@@ -10,12 +10,12 @@ export function openTrade({ client }) {
           {
             inputItem1: {
               present: true,
-              itemId: 581, //https://minecraft-data.prismarine.js.org/?v=1.16&d=items
+              itemId: 581,            //https://minecraft-data.prismarine.js.org/?v=1.16&d=items
               itemCount: 1,
             },
             outputItem: {
-              present: true,
-              itemId: 595,
+              present: true,          //https://wiki.vg/Protocol#Trade_List
+              itemId: 595,            //https://github.com/PrismarineJS/minecraft-data/blob/master/data/pc/1.16/protocol.json#L2264-L2321
               itemCount: 1,
             },
             inputItem2: {
@@ -23,19 +23,10 @@ export function openTrade({ client }) {
               itemId: 581,
               itemCount: 1,
             },
-            //tradeDisabled: false,
-            //nbTradeUses: 1,
-            //maximumNbTradeUses: 1,
-            //xp: 1,
-            //specialPrice: 1,
-            //priceMultiplier: 1.0,
-            //demand: 1,
-          },
-        ],
-        //villagerLevel: 1,
-        //experience: 1,
-        //isRegularVillager: false,
-        //canRestock: false,
+            maximumNbTradeUses: 99999, //mandatory
+          }
+          
+        ]
       }
 
       const window = {
@@ -48,7 +39,6 @@ export function openTrade({ client }) {
       client.write("trade_list", trade)
     }
   })
-  //client.on("select_trade", console.log)
 }
   
 
