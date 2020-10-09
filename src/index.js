@@ -6,8 +6,8 @@ import update_chunks from './chunk/update.js'
 import EventEmitter from 'events'
 import { position_change_event } from './events.js'
 import { chunk_change_event, chunk_position } from './chunk.js'
-import { worldMobsSpawn } from './worldMobsSpawn/worldMobsSpawn.js'
 import { openTrade } from './trade/trade.js'
+import { spawnVillager } from './trade/spawnVillager.js'
 
 const server = protocol.createServer({ version, 'online-mode': online_mode })
 
@@ -28,7 +28,7 @@ server.on('login', (client) => {
   position_change_event(state)
   chunk_change_event(state)
   update_chunks(state)
-  worldMobsSpawn(state)
+  spawnVillager(state)
   openTrade(state)
   
   client.on('error', console.log)
