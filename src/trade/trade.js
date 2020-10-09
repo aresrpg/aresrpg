@@ -35,7 +35,7 @@ export function openTrade({ client }) {
             inputItem1: {
               present: true,
               itemId: 582,
-              itemCount: 1,
+              itemCount: 64,
             },
             outputItem: {
               present: true,
