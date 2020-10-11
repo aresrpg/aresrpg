@@ -1,11 +1,17 @@
 import { dimensionCodec } from './world/codec.js'
 
-export default function login({ client, world, gameMode, position, chunk }) {
+export default function login({
+  client,
+  world,
+  gameMode,
+  position,
+  chunk,
+  entityId,
+}) {
   // TODO: move this elsewhere
   const worldNames = ['minecraft:overworld']
   // TODO: we should not take the first world of the list
   const [worldName] = worldNames
-  const { entityId } = client
 
   client.write('login', {
     entityId,
