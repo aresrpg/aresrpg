@@ -77,7 +77,7 @@ export function spawn_mob(world) {
                   text: displayName,
                   color: color_by_type[type],
                   extra: level && [
-                    { text: ` [ ${level} ] `, color: 'dark_red' },
+                    { text: ` [Lvl ${level}]`, color: 'dark_red' },
                   ],
                 }),
                 type: 5,

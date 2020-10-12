@@ -16,7 +16,7 @@ const world = {
   ...floor1,
   events: new EventEmitter(),
   lastEntityId: 0,
-  lastWindowId: 0,
+  lastWindowId: 1, // 0 is the player inventory
 }
 
 handle_login(
@@ -49,8 +49,14 @@ function handle_login({ world, handlers }) {
         x: chunk_position(world.spawn_position.x),
         z: chunk_position(world.spawn_position.z),
       },
+      inventory: Array.from({
+        length: 46,
+        36: { type: 'spellbook', count: 1 },
+        37: { type: 'bronze_coin', count: 10 },
+        38: { type: 'menitrass_100', count: 1 },
+      }),
       events: new EventEmitter(),
-      gameMode: 1,
+      gameMode: 2,
     }
 
     // Handle next login

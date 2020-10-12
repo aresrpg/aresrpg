@@ -1,4 +1,5 @@
 import { dimensionCodec } from './world/codec.js'
+import { item_to_slot, empty_slot } from './items.js'
 
 export default function login({
   client,
@@ -7,6 +8,7 @@ export default function login({
   position,
   chunk,
   entityId,
+  inventory,
 }) {
   // TODO: move this elsewhere
   const worldNames = ['minecraft:overworld']
@@ -39,5 +41,13 @@ export default function login({
   client.write('update_view_position', {
     chunkX: chunk.x,
     chunkZ: chunk.z,
+  })
+
+  const to_slot = (item) =>
+    item ? item_to_slot(world.items[item.type], item.count) : empty_slot
+
+  client.write('window_items', {
+    windowId: 0,
+    items: inventory.map(to_slot),
   })
 }

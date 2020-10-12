@@ -6,27 +6,19 @@ import { version } from './settings.js'
 
 const AnvilWorld = Anvil.Anvil(version)
 
+const world_folder = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  'world'
+)
+
 export const floor1 = {
   spawn_position: { x: 469.5, y: 162, z: 646.5, yaw: 25, pitch: 0 },
-  chunks: new AnvilWorld(
-    join(
-      dirname(fileURLToPath(import.meta.url)),
-      '..',
-      'world',
-      'floor1',
-      'region'
-    )
-  ),
+  chunks: new AnvilWorld(join(world_folder, 'floor1', 'region')),
   mobs: JSON.parse(
-    fs.readFileSync(
-      join(
-        dirname(fileURLToPath(import.meta.url)),
-        '..',
-        'world',
-        'floor1',
-        'mobs.json'
-      ),
-      'utf8'
-    )
+    fs.readFileSync(join(world_folder, 'floor1', 'mobs.json'), 'utf8')
+  ),
+  items: JSON.parse(
+    fs.readFileSync(join(world_folder, 'floor1', 'items.json'), 'utf8')
   ),
 }
