@@ -55,6 +55,10 @@ function handle_login(world) {
       experience: 0,
     }
 
+    client.on('error', (error) => {
+      throw error
+    })
+
     // Handle next login
     handle_login({ ...world, lastEntityId: world.lastEntityId + 1 })
 
