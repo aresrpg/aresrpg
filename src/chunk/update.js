@@ -85,7 +85,7 @@ export default function update_chunks({
         x: next.x,
         y: next.z,
       },
-      view_distance
+      view_distance - 1
     )
 
     const to_load = points_to_load.map(({ x, y }) => ({ x, z: y }))
@@ -115,7 +115,7 @@ export default function update_chunks({
     const points = square_difference(
       chunk_point,
       view_distance,
-      next_view_distance
+      next_view_distance - 1
     )
     const chunks = points.map(({ x, y }) => ({ x, z: y }))
 
