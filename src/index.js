@@ -9,6 +9,7 @@ import { chunk_change_event, chunk_position } from './chunk.js'
 import { open_trade } from './trade/trade.js'
 import { spawn_villager } from './trade/spawn_villager.js'
 import { spawn_mob } from './mobs/spawn_mob.js'
+import { send_resource_pack } from './resource_pack.js'
 
 const server = protocol.createServer({ version, 'online-mode': online_mode })
 
@@ -66,6 +67,7 @@ function handle_login({ world, handlers }) {
     })
 
     login(state)
+    send_resource_pack(state)
     position_change_event(state)
     chunk_change_event(state)
     update_chunks(state)
