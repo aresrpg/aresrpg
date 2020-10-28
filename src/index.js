@@ -6,40 +6,28 @@ import update_chunks from './chunk/update.js'
 import EventEmitter from 'events'
 import { position_change_event } from './events.js'
 import { chunk_change_event, chunk_position } from './chunk.js'
-import { open_trade } from './trade/trade.js'
-import { spawn_villager } from './trade/spawn_villager.js'
-import { spawn_mob } from './mobs/spawn_mob.js'
+import { register_villagers, spawn_villager } from './trade/spawn_villager.js'
+import { register_trades, open_trade } from './trade/trade.js'
+import { register_mobs, spawn_mob } from './mobs/spawn_mob.js'
 import { send_resource_pack } from './resource_pack.js'
 
 const server = protocol.createServer({ version, 'online-mode': online_mode })
 
-const world = {
+const world = [
+  // prettier-ignore
+  register_villagers,
+  register_trades,
+  register_mobs,
+].reduce((world, fn) => fn(world), {
   ...floor1,
   events: new EventEmitter(),
   lastEntityId: 0,
   lastWindowId: 1, // 0 is the player inventory
-}
+})
 
-handle_login(
-  [
-    // prettier-ignore
-    spawn_villager,
-    open_trade,
-    spawn_mob,
-  ].reduce(
-    ({ world, handlers }, fn) => {
-      const { world: fn_world, handlers: fn_handlers } = fn(world)
+handle_login(world)
 
-      return {
-        world: fn_world,
-        handlers: [...handlers, ...fn_handlers],
-      }
-    },
-    { world, handlers: [] }
-  )
-)
-
-function handle_login({ world, handlers }) {
+function handle_login(world) {
   server.once('login', (client) => {
     const state = {
       entityId: world.lastEntityId,
@@ -61,17 +49,16 @@ function handle_login({ world, handlers }) {
     }
 
     // Handle next login
-    handle_login({
-      world: { ...world, lastEntityId: world.lastEntityId + 1 },
-      handlers,
-    })
+    handle_login({ ...world, lastEntityId: world.lastEntityId + 1 })
 
     login(state)
     send_resource_pack(state)
     position_change_event(state)
     chunk_change_event(state)
     update_chunks(state)
-    for (const handler of handlers) handler(state)
+    spawn_villager(state)
+    open_trade(state)
+    spawn_mob(state)
   })
 }
 
