@@ -11,6 +11,7 @@ import { register_trades, open_trade } from './trade/trade.js'
 import { register_mobs, spawn_mob } from './mobs/spawn_mob.js'
 import { send_resource_pack } from './resource_pack.js'
 import { update_experience } from './experience.js'
+import { register_plugin_channels } from './plugin_channels.js'
 
 const server = protocol.createServer({ version, 'online-mode': online_mode })
 
@@ -53,6 +54,7 @@ function handle_login(world) {
     // Handle next login
     handle_login({ ...world, lastEntityId: world.lastEntityId + 1 })
 
+    register_plugin_channels(state)
     login(state)
     update_experience(state)
     send_resource_pack(state)
