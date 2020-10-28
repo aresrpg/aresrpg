@@ -1,5 +1,6 @@
 import { dimensionCodec } from './world/codec.js'
 import { item_to_slot, empty_slot } from './items.js'
+import { write_brand } from './plugin_channels.js'
 
 export default function login({
   client,
@@ -31,6 +32,8 @@ export default function login({
     isDebug: false,
     isFlat: false,
   })
+
+  write_brand(client, { brand: 'AresRPG' })
 
   client.write('position', {
     ...position,
