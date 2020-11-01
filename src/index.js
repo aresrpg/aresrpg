@@ -7,8 +7,8 @@ import { floor1 } from './world.js'
 import update_chunks from './chunk/update.js'
 import { position_change_event } from './events.js'
 import { chunk_change_event, chunk_position } from './chunk.js'
-import { register_villagers, spawn_villager } from './trade/spawn_villager.js'
 import { register_trades, open_trade } from './trade/trade.js'
+import { register_traders, spawn_merchants } from './trade/spawn_villagers.js'
 import { register_mobs, spawn_mob } from './mobs/spawn_mob.js'
 import { send_resource_pack } from './resource_pack.js'
 import { update_experience } from './experience.js'
@@ -21,9 +21,9 @@ const server = protocol.createServer({ version, 'online-mode': online_mode })
 
 const world = [
   // prettier-ignore
-  register_villagers,
-  register_trades,
   register_mobs,
+  register_traders,
+  register_trades,
 ].reduce((world, fn) => fn(world), {
   ...floor1,
   events: new EventEmitter(),
@@ -65,11 +65,11 @@ function handle_login(world) {
     register_plugin_channels(state)
     login(state)
     update_experience(state)
+    spawn_merchants(state)
     send_resource_pack(state)
     position_change_event(state)
     chunk_change_event(state)
     update_chunks(state)
-    spawn_villager(state)
     open_trade(state)
     spawn_mob(state)
   })
