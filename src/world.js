@@ -24,6 +24,9 @@ export const floor1 = {
   items: JSON.parse(
     fs.readFileSync(join(world_folder, 'floor1', 'items.json'), 'utf8')
   ),
+  traders: JSON.parse(
+    fs.readFileSync(join(world_folder, 'floor1', 'traders.json'), 'utf8')
+  ),
 }
 
 log.trace(

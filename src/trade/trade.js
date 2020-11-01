@@ -1,60 +1,54 @@
-import { version } from '../settings.js'
-import minecraftData from 'minecraft-data'
-
-const mcData = minecraftData(version)
-const { id: diamond } = mcData.findItemOrBlockByName('diamond')
-const { id: diamond_sword } = mcData.findItemOrBlockByName('diamond_sword')
+import { item_to_slot, empty_slot } from '../items.js'
 
 export function register_trades(world) {
   const windowIds = new Map(
-    world.trade.villagers.map((entityId, i) => [
-      entityId,
-      world.lastWindowId + i,
+    world.traders.recipes.map(({ id, recipes, name }, i) => [
+      id,
+      {
+        windowId: world.lastWindowId + i,
+        recipes,
+        name,
+      },
     ])
   )
   return {
     ...world,
     lastWindowId: world.lastWindowId + windowIds.size,
-    trade: {
-      ...world.trade,
+    traders: {
+      ...world.traders,
       windowIds,
     },
   }
 }
 
 export function open_trade({ client, world }) {
-  const { villagers, windowIds } = world.trade
+  const { windowIds } = world.traders
+  const right_click = 2
+  const inventoryType = 18
   client.on('use_entity', ({ target, mouse, sneaking }) => {
-    if (villagers.includes(target) && mouse === 2 && sneaking === false) {
-      const windowId = windowIds.get(target)
+    if (windowIds.has(target) && mouse === right_click && sneaking === false) {
+      const { name, windowId, recipes: ares_recipe } = windowIds.get(target)
+      const mc_recipe = ares_recipe.map((trade) => {
+        const { inputItem1, inputItem2, outputItem } = trade
+        const to_slot = (item) =>
+          item ? item_to_slot(world.items[item.type], item.count) : empty_slot
+        return {
+          inputItem1: to_slot(inputItem1),
+          inputItem2: to_slot(inputItem2),
+          outputItem: to_slot(outputItem),
+          maximumNbTradeUses: 99999,
+        }
+      })
+
       const trade = {
         windowId,
-        trades: [
-          {
-            inputItem1: {
-              present: true,
-              itemId: diamond,
-              itemCount: 1,
-            },
-            outputItem: {
-              present: true,
-              itemId: diamond_sword,
-              itemCount: 1,
-            },
-            inputItem2: {
-              present: true,
-              itemId: diamond,
-              itemCount: 1,
-            },
-            maximumNbTradeUses: 99999,
-          },
-        ],
+        trades: mc_recipe,
       }
 
       const window = {
         windowId,
-        inventoryType: 18, // todo : add all inventories in a file
-        windowTitle: JSON.stringify({ text: 'trade' }),
+        inventoryType,
+        windowTitle: JSON.stringify({ text: name ?? 'default' }),
       }
 
       client.write('open_window', window)
