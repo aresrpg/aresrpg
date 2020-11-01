@@ -10,6 +10,7 @@ import { register_villagers, spawn_villager } from './trade/spawn_villager.js'
 import { register_trades, open_trade } from './trade/trade.js'
 import { register_mobs, spawn_mob } from './mobs/spawn_mob.js'
 import { send_resource_pack } from './resource_pack.js'
+import { update_experience } from './experience.js'
 
 const server = protocol.createServer({ version, 'online-mode': online_mode })
 
@@ -46,12 +47,14 @@ function handle_login(world) {
       }),
       events: new EventEmitter(),
       gameMode: 2,
+      experience: 0,
     }
 
     // Handle next login
     handle_login({ ...world, lastEntityId: world.lastEntityId + 1 })
 
     login(state)
+    update_experience(state)
     send_resource_pack(state)
     position_change_event(state)
     chunk_change_event(state)
