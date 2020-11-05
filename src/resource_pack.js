@@ -1,10 +1,17 @@
+import { once } from 'events'
+
 import logger from './logger.js'
 
 const log = logger(import.meta)
 
-const statuses = ['success', 'declined', 'failed', 'accepted']
+const Status = {
+  SUCCESS: 0,
+  DECLINED: 1,
+  FAILED: 2,
+  ACCEPTED: 3,
+}
 
-export function send_resource_pack({ client }) {
+export async function send_resource_pack({ client }) {
   client.write('resource_pack_send', {
     url:
       'https://github.com/aresrpg/resourcepacks/releases/download/v1.0.1/addon.zip',
@@ -12,8 +19,41 @@ export function send_resource_pack({ client }) {
   })
 
   client.on('resource_pack_receive', ({ result }) => {
-    const status = statuses[result]
-    // TODO: what do we do when failing ?
+    const status = Object.entries(Status).find(
+      ([key, value]) => value === result
+    )
     log.debug({ status }, 'Ressource pack status')
   })
+
+  const [{ result }] = await once(client, 'resource_pack_receive')
+
+  switch (result) {
+    case Status.ACCEPTED:
+      break
+    case Status.DECLINED:
+      client.end(
+        'Resource Pack Declined',
+        JSON.stringify([
+          { text: 'Le ressource pack est obligatoire, ', color: 'yellow' },
+          { text: "Vous l'avez refusé !", color: 'red' },
+          { text: '\n' },
+          {
+            text: 'Dans votre menu multijoueur, cliquez sur ',
+            color: 'yellow',
+          },
+          { text: 'AresRPG', color: 'dark_green' },
+          { text: ' puis ', color: 'yellow' },
+          { translate: 'selectServer.edit', color: 'dark_green' },
+          { text: ' et enfin ', color: 'yellow' },
+          { translate: 'addServer.resourcePack', color: 'white ' },
+          { text: ': ', color: 'white' },
+          { translate: 'addServer.resourcePack.enabled', color: 'white ' },
+          { text: '.', color: 'yellow' },
+        ])
+      )
+      break
+    default:
+      client.end(`Invalid result ${result}`)
+      break
+  }
 }
