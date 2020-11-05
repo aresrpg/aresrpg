@@ -70,12 +70,13 @@ function transform_action(action) {
   ].reduce((intermediate, fn) => fn(intermediate), action)
 }
 
-function observe_client(context) {
+async function observe_client(context) {
   /* Observers that handle the protocol part.
    * They get the client and should map it to minecraft protocol */
+
+  await send_resource_pack(context)
   login(context)
   update_chunks(context)
-  send_resource_pack(context)
   spawn_mob(context)
   spawn_merchants(context)
   open_trade(context)
