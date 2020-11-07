@@ -16,7 +16,7 @@ const color_by_type = {
 const chunk_index = (x, z) => `${x}:${z}`
 
 export function register_mobs(world) {
-  //generate an object containing mobs by chunk
+  // generate an object containing mobs by chunk
   const mobs_in_chunk = world.mobs.reduce(
     (map, { position, mob: mob_name, level }, i) => {
       const chunk_x = chunk_position(position.x)
@@ -27,10 +27,12 @@ export function register_mobs(world) {
       if (!(mob_name in mobs)) throw new Error(`Invalid mob ${mob_name}`)
       const mob = mobs[mob_name]
 
-      if (!(mob.mob in mcData.entitiesByName))
+      if (!(mob.mob in mcData.entitiesByName)) {
         throw new Error(`Invalid 'mob' in ${JSON.stringify(mob)}`)
-      if (!(mob.type in color_by_type))
+      }
+      if (!(mob.type in color_by_type)) {
         throw new Error(`Invalid 'type' in ${JSON.stringify(mob)}`)
+      }
       return new Map([
         ...map.entries(),
         [

@@ -16,7 +16,7 @@ export function register_villagers(world) {
 
 export function spawn_villager({ client, world }) {
   const [entityId] = world.trade.villagers
-  const { id: type } = mcData.entitiesByName['villager']
+  const { id: type } = mcData.entitiesByName.villager
   const mob = {
     entityId,
     entityUUID: UUID.v4(),
