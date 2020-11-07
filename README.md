@@ -21,7 +21,7 @@
 </p>
 <h3 align=center>AresRPG is a non-modded MMORPG Minecraft Server for minecraft 1.16</h3>
 
-- [A *bit* of history](#a-bit-of-history)
+- [A _bit_ of history](#a-bit-of-history)
   - [The `v1`](#the-v1)
   - [The `v2`](#the-v2)
 - [Requirements](#requirements)
@@ -31,15 +31,15 @@
   - [Roadmap](#roadmap)
   - [License](#license)
 
-# A *bit* of history
+# A _bit_ of history
 
-Aresrpg first came up to the world in 2013 under the name EclozionMMORPG
-from the idea of @StoneBloodTv and @Sceat, later on the team spitted due to
+AresRPG first came up to the world in 2013 under the name EclozionMMORPG
+from the idea of [@StoneBloodTV](https://github.com/jdathueyt) and [@Sceat](https://github.com/Sceat), later on the team splitted due to
 an internal lack of organization and **AresRPG** as you know it flew on its own.
 
-Fully written in Java by @DarkPingoo and @Sceat, the project released a test version
+Fully written in Java by [@DarkPingoo](https://github.com/DarkPingoo) and [@Sceat](https://github.com/Sceat), the project released a test version
 called [the tutorial](https://www.youtube.com/watch?v=29AIkBtScgQ), quite successfull and enjoyed by the community it
-kept going, the team grew bigger with @DeltaEvo, @Unixfox and many more that you
+kept going, the team grew bigger with [@DeltaEvo](https://github.com/DeltaEvo), [@unixfox](https://github.com/unixfox) and many more that you
 can still find in the community these days.
 
 ## The `v1`
@@ -47,6 +47,7 @@ can still find in the community these days.
 The [gameplay was quite simple](https://www.youtube.com/watch?v=g4xb67Z5dxY), find mobs and kill them, buy the stuff rince and repeat.
 
 4 classes were available:
+
 - Barbarian
 - Archer
 - Vampire
@@ -58,7 +59,6 @@ team loot, etc..
 The world was working though a floor system,
 when you complete a floor you go to the next one.
 This version made AresRPG [quite famous](https://www.youtube.com/watch?v=dEELCqYUyEI)
-
 
 ## The `v2`
 
