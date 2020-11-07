@@ -27,7 +27,8 @@
   "dependencies": {
     "minecraft-protocol": "^1.16.0",
     "pino": "^6.7.0",
-    "prismarine-provider-anvil": "^2.3.1"
+    "prismarine-provider-anvil": "^2.3.1",
+    "streaming-iterables": "^5.0.3"
   },
   "devDependencies": {
     "@hydre/pino-human": "^1.1.0",

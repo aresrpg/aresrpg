@@ -141,15 +141,32 @@ proto.addType(DEBUG_GAME_TEST_ADD_MARKER_CHANNEL, [
 
 const channels = [BRAND_CHANNEL]
 
-export function register_plugin_channels({ client }) {
-  client.on('custom_payload', ({ channel, data: raw_data }) => {
+export function transform_plugin_channels(action) {
+  if (action.type === 'packet/custom_payload') {
+    const { channel, data: raw_data } = action.payload
+
     if (channels.includes(channel)) {
       const { data } = proto.parsePacketBuffer(channel, raw_data)
-      client.emit(channel, data)
+      return {
+        type: `channel/${channel}`,
+        payload: data,
+      }
     }
-  })
+  }
+  return action
+}
 
-  client.on(BRAND_CHANNEL, (brand) => log.debug({ brand }, 'Client brand'))
+export function reduce_plugin_channels(state, { type, payload }) {
+  if (type === `channel/${BRAND_CHANNEL}`) {
+    const brand = payload
+    log.debug({ brand }, 'Client brand')
+
+    return {
+      ...state,
+      brand,
+    }
+  }
+  return state
 }
 
 export function write_brand(client, { brand }) {

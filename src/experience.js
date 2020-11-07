@@ -1,3 +1,6 @@
+import { pipeline, reduce } from 'streaming-iterables'
+import { on } from 'events'
+
 const levels = [
   0, // levels starts at 1
   0,
@@ -105,17 +108,6 @@ const levels = [
 const reversed_levels = [...levels.entries()].reverse()
 
 /**
- * add some experience to the player
- * @param {any} state
- * @param {number} experience
- */
-export function add_experience(state, experience) {
-  const new_state = { ...state, experience: state.experience + experience }
-  update_experience(new_state)
-  return new_state
-}
-
-/**
  * find the current level and the remaining
  * experience from the total experience
  * @param {number} experience
@@ -148,17 +140,26 @@ export function level_progress({ level, remaining_experience }) {
 }
 
 /**
- * update the player experience from the state
- * @param {any} state
+ * update the player experience
+ * @param {any} context
  */
-export function update_experience(state) {
-  const { client, experience: total_experience } = state
-  const { level, remaining_experience } = experience_to_level(total_experience)
-  const progress = level_progress({ level, remaining_experience })
+export function update_experience({ client, events }) {
+  pipeline(
+    () => on(events, 'state'),
+    reduce((last_total_experience, [{ experience: total_experience }]) => {
+      if (last_total_experience !== total_experience) {
+        const { level, remaining_experience } = experience_to_level(
+          total_experience
+        )
+        const progress = level_progress({ level, remaining_experience })
 
-  client.write('experience', {
-    totalExperience: total_experience,
-    level,
-    experienceBar: progress,
-  })
+        client.write('experience', {
+          totalExperience: total_experience,
+          level,
+          experienceBar: progress,
+        })
+      }
+      return total_experience
+    }, null)
+  )
 }
