@@ -23,7 +23,7 @@ export function register_trades(world) {
 }
 
 export function open_trade({ client, world }) {
-  const { villagers, windowId } = world.trade
+  const { villagers, windowIds } = world.trade
   client.on('use_entity', ({ target, mouse, sneaking }) => {
     if (villagers.includes(target) && mouse === 2 && sneaking === false) {
       const windowId = windowIds.get(target)
@@ -53,7 +53,7 @@ export function open_trade({ client, world }) {
 
       const window = {
         windowId,
-        inventoryType: 18, //todo : add all inventories in a file
+        inventoryType: 18, // todo : add all inventories in a file
         windowTitle: JSON.stringify({ text: 'trade' }),
       }
 

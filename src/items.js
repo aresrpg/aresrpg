@@ -3,7 +3,7 @@ import minecraftData from 'minecraft-data'
 
 const mcData = minecraftData(version)
 
-const types = {
+const Types = {
   equipment: {
     name: 'Equipement',
     color: 'white',
@@ -46,7 +46,7 @@ const types = {
   },
 }
 
-const stats = {
+const Stats = {
   agility: {
     text: [" d'", 'Agilité'],
     color: 'dark_green',
@@ -104,7 +104,7 @@ export function item_to_slot(
   const display_name = {
     text: name,
     italic: false,
-    color: types[type].color,
+    color: Types[type].color,
     extra: level && [
       { text: ' <' },
       { text: `Lvl ${level}`, color: 'dark_green' },
@@ -114,7 +114,7 @@ export function item_to_slot(
 
   const stats_lore = Object.entries(stats).map(([stat, value]) => {
     const negative = value < 0
-    const color = negative ? undefined : stats[stat].color
+    const color = negative ? undefined : Stats[stat].color
 
     return {
       text: ' ',
@@ -126,9 +126,9 @@ export function item_to_slot(
           text: Math.abs(value).toString(),
           color,
         },
-        { text: stats[stat].text[0] },
+        { text: Stats[stat].text[0] },
         {
-          text: stats[stat].text[1],
+          text: Stats[stat].text[1],
           color,
         },
       ],
@@ -142,7 +142,7 @@ export function item_to_slot(
   }))
 
   const lore = [
-    { text: types[type].name, color: 'yellow', italic: false },
+    { text: Types[type].name, color: 'yellow', italic: false },
     damage && {
       text: `Dégâts: ${damage.join(' - ')}`,
       color: 'gray',
