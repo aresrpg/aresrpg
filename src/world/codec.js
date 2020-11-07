@@ -1,4 +1,4 @@
-export const dimensionCodec = {
+export const dimension_codec = {
   name: '',
   type: 'compound',
   value: {

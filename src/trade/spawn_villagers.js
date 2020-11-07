@@ -13,17 +13,17 @@ export function register_traders(world) {
     const entry = map.get(index) || []
     return new Map([
       ...map.entries(),
-      [index, [...entry, { x, z, y, name, id: world.lastEntityId + i }]],
+      [index, [...entry, { x, z, y, name, id: world.next_entity_id + i }]],
     ])
   }, new Map())
 
   const recipes = world.traders.map(({ recipes, name }, i) => {
-    return { id: world.lastEntityId + i, recipes, name }
+    return { id: world.next_entity_id + i, recipes, name }
   })
 
   return {
     ...world,
-    lastEntityId: world.lastEntityId + world.traders.length,
+    next_entity_id: world.next_entity_id + world.traders.length,
     traders: {
       traders_in_chunk,
       recipes,
@@ -33,7 +33,7 @@ export function register_traders(world) {
 
 export function spawn_merchants({ client, events, world }) {
   const { traders_in_chunk } = world.traders
-  const { id: type } = mcData.entitiesByName['villager']
+  const { id: type } = mcData.entitiesByName.villager
   events.on('chunk_loaded', ({ x: chunk_x, z: chunk_z }) => {
     if (traders_in_chunk.has(chunk_index(chunk_x, chunk_z))) {
       for (const { id, name, x, y, z } of traders_in_chunk.get(

@@ -5,7 +5,7 @@ export function register_trades(world) {
     world.traders.recipes.map(({ id, recipes, name }, i) => [
       id,
       {
-        windowId: world.lastWindowId + i,
+        windowId: world.next_window_id + i,
         recipes,
         name,
       },
@@ -13,7 +13,7 @@ export function register_trades(world) {
   )
   return {
     ...world,
-    lastWindowId: world.lastWindowId + windowIds.size,
+    next_window_id: world.next_window_id + windowIds.size,
     traders: {
       ...world.traders,
       windowIds,

@@ -1,20 +1,13 @@
 export const chunk_position = (value) => Math.floor(value / 16)
 
-export function chunk_change_event({ events }) {
-  events.on('position_change', ({ last, next }) => {
-    const last_chunk_x = chunk_position(last.x)
-    const last_chunk_z = chunk_position(last.z)
-    const next_chunk_x = chunk_position(next.x)
-    const next_chunk_z = chunk_position(next.z)
+export function same_chunk(first_position, second_position) {
+  const first_chunk_x = chunk_position(first_position.x)
+  const first_chunk_z = chunk_position(first_position.z)
+  const second_chunk_x = chunk_position(second_position.x)
+  const second_chunk_z = chunk_position(second_position.z)
 
-    const x_different = last_chunk_x !== next_chunk_x
-    const z_different = last_chunk_z !== next_chunk_z
+  const same_x = first_chunk_x === second_chunk_x
+  const same_z = first_chunk_z === second_chunk_z
 
-    if (x_different || z_different) {
-      events.emit('chunk_change', {
-        last: { x: last_chunk_x, z: last_chunk_z },
-        next: { x: next_chunk_x, z: next_chunk_z },
-      })
-    }
-  })
+  return same_x && same_z
 }

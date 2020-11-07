@@ -37,7 +37,7 @@ export function register_mobs(world) {
         ...map.entries(),
         [
           index,
-          [...entry, { ...mob, position, level, id: world.lastEntityId + i }],
+          [...entry, { ...mob, position, level, id: world.next_entity_id + i }],
         ],
       ])
     },
@@ -46,7 +46,7 @@ export function register_mobs(world) {
 
   return {
     ...world,
-    lastEntityId: world.lastEntityId + world.mobs.length,
+    next_entity_id: world.next_entity_id + world.mobs.length,
     mobs: {
       mobs_in_chunk,
     },
