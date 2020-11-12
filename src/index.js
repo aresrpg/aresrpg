@@ -29,6 +29,7 @@ import player_deal_damage, {
   register as player_deal_damage_register,
 } from './player/deal_damage.js'
 import player_inventory from './player/inventory.js'
+import player_teleportation_stones from './player/teleportation_stones.js'
 import plugin_channels from './plugin_channels.js'
 import chunk_update from './chunk/update.js'
 import mobs from './mobs.js'
@@ -74,6 +75,7 @@ const world_reducers = [
     id: 'player_screen',
     size: { width: 8, height: 4 },
   }),
+  player_teleportation_stones.register,
 ]
 
 /** @type {World} */
@@ -159,6 +161,7 @@ async function observe_client(context) {
   player_screen.observe(context)
   player_deal_damage.observe(context)
   player_inventory.observe(context)
+  player_teleportation_stones.observe(context)
 
   commands_declare.observe(context)
 
