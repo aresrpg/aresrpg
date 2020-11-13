@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node src/index.js | pino-human",
-    "lint": "standardx",
-    "format": "prettier . --write && standardx --fix"
+    "lint": "eslint .",
+    "format": "prettier . --write && eslint . --fix"
   },
   "repository": {
     "type": "git",
@@ -33,11 +33,15 @@
   },
   "devDependencies": {
     "@hydre/pino-human": "^1.1.0",
+    "eslint": "^7.13.0",
     "eslint-config-prettier": "^6.15.0",
+    "eslint-config-standard": "^16.0.1",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^4.2.1",
     "husky": "^4.3.0",
     "lint-staged": "^10.5.1",
-    "prettier": "^2.1.2",
-    "standardx": "^7.0.0"
+    "prettier": "^2.1.2"
   },
   "husky": {
     "hooks": {
@@ -47,7 +51,7 @@
   "lint-staged": {
     "*.js": [
       "prettier --write",
-      "standardx --fix"
+      "eslint --fix"
     ],
     "*.json": "prettier --write",
     "*.md": "prettier --write"
