@@ -1,6 +1,14 @@
 {
   "extends": ["standard", "prettier"],
   "rules": {
-    "camelcase": "off"
+    "camelcase": "off",
+    "no-var": "error",
+    "object-shorthand": "error",
+    "prefer-const": ["error", { "destructuring": "any" }],
+    "prefer-rest-params": "error",
+    "prefer-spread": "error",
+    "prefer-object-spread": "error",
+    "prefer-destructuring": "error",
+    "prefer-numeric-literals": "error"
   }
 }

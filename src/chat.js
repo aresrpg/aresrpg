@@ -9,7 +9,7 @@ export function write_chat_msg(
   { message, client: { uuid } }
 ) {
   const options = {
-    message: message,
+    message,
     position: Position.CHAT,
     sender: uuid,
   }
