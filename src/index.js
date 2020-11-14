@@ -28,6 +28,7 @@ import player_deal_damage, {
   DAMAGE_INDICATORS_AMMOUNT,
   register as player_deal_damage_register,
 } from './player/deal_damage.js'
+import player_inventory from './player/inventory.js'
 import plugin_channels from './plugin_channels.js'
 import chunk_update from './chunk/update.js'
 import mobs from './mobs.js'
@@ -93,6 +94,7 @@ const initial_state = {
   game_mode: 2,
   experience: 0,
   health: 40,
+  cursor_item_selected: undefined,
 }
 
 /** @template U
@@ -121,6 +123,7 @@ function reduce_state(state, action) {
     plugin_channels.reduce,
     player_fall_damage.reduce,
     player_deal_damage.reduce,
+    player_inventory.reduce,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
 }
 
