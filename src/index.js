@@ -14,6 +14,7 @@ import { send_resource_pack } from './resource_pack.js'
 import { update_experience } from './experience.js'
 import { register_plugin_channels } from './plugin_channels.js'
 import logger from './logger.js'
+import chat from './chat.js'
 
 const log = logger(import.meta)
 
@@ -37,6 +38,7 @@ function handle_login(world) {
   server.once('login', (client) => {
     const state = {
       entityId: world.lastEntityId,
+      server,
       client,
       world,
       position: world.spawn_position,
@@ -72,6 +74,7 @@ function handle_login(world) {
     update_chunks(state)
     open_trade(state)
     spawn_mob(state)
+    chat(state)
   })
 }
 
