@@ -30,8 +30,6 @@ export function square_symmetric_difference(
   const a = []
   const b = []
 
-  demi_length -= 1
-
   const is_inside_a = is_inside.bind(null, {
     min: { x: ax - demi_length, y: ay - demi_length },
     max: { x: ax + demi_length, y: ay + demi_length },
@@ -69,8 +67,8 @@ export function square_difference(
   demi_length_a,
   demi_length_b
 ) {
-  const from = Math.min(demi_length_a, demi_length_b) - 1
-  const to = Math.max(demi_length_a, demi_length_b) - 1
+  const from = Math.min(demi_length_a, demi_length_b)
+  const to = Math.max(demi_length_a, demi_length_b)
   const is_inside_from = is_inside.bind(null, {
     min: { x: -from, y: -from },
     max: { x: from, y: from },
