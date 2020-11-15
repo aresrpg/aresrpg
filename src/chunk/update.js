@@ -9,8 +9,32 @@ import {
   square_symmetric_difference,
 } from '../math.js'
 
+function fix_light(chunk) {
+  for (let x = 0; x < 16; x++) {
+    for (let z = 0; z < 16; z++) {
+      for (let y = 0; y < 256; y++) {
+        chunk.setSkyLight({ x, y, z }, 15)
+        chunk.setBlockLight({ x, y, z }, 15)
+      }
+    }
+  }
+}
+
 async function load_chunk({ world }, { client, x, z }) {
   const chunk = await world.chunks.load(x, z)
+
+  fix_light(chunk) // TODO: replace this with a proper fix
+
+  client.write('update_light', {
+    chunkX: x,
+    chunkZ: z,
+    trustEdges: true,
+    skyLightMask: chunk.skyLightMask,
+    blockLightMask: chunk.blockLightMask,
+    emptySkyLightMask: 0,
+    emptyBlockLightMask: 0,
+    data: chunk.dumpLight(),
+  })
   client.write('map_chunk', {
     x,
     z,
@@ -30,16 +54,6 @@ async function load_chunk({ world }, { client, x, z }) {
     }, // FIXME: fake heightmap
     chunkData: chunk.dump(),
     blockEntities: [],
-  })
-  client.write('update_light', {
-    chunkX: x,
-    chunkZ: z,
-    trustEdges: true,
-    skyLightMask: chunk.skyLightMask,
-    blockLightMask: chunk.blockLightMask,
-    emptySkyLightMask: 0,
-    emptyBlockLightMask: 0,
-    data: chunk.dumpLight(),
   })
 }
 
@@ -88,7 +102,7 @@ export default async function update_chunks({ client, events }) {
               x: chunk_position(state.position.x),
               y: chunk_position(state.position.z),
             },
-            state.view_distance - 1
+            state.view_distance
           )
 
           client.write('update_view_position', {
@@ -110,10 +124,14 @@ export default async function update_chunks({ client, events }) {
           }
           const points = square_difference(
             chunk_point,
-            Math.min(0, last_state.view_distance - 1),
-            state.view_distance - 1
+            last_state.view_distance,
+            state.view_distance
           )
           const chunks = points.map(({ x, y }) => ({ x, z: y }))
+
+          client.write('update_view_distance', {
+            viewDistance: state.view_distance,
+          })
 
           const action =
             state.view_distance > last_state.view_distance
