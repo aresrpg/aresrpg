@@ -1,5 +1,6 @@
-import { pipeline, reduce } from 'streaming-iterables'
 import { on } from 'events'
+
+import { pipeline, reduce } from 'streaming-iterables'
 
 const levels = [
   0, // levels starts at 1

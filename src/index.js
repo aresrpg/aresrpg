@@ -1,26 +1,27 @@
-import protocol from 'minecraft-protocol'
-import { on, EventEmitter } from 'events'
-import { reduce, map, parallelMerge, pipeline } from 'streaming-iterables'
+import { EventEmitter, on } from 'events'
 import { PassThrough } from 'stream'
 
-import { scan } from './iterables.js'
-import { version, online_mode } from './settings.js'
-import login from './login.js'
-import { floor1 } from './world.js'
+import protocol from 'minecraft-protocol'
+import { map, parallelMerge, pipeline, reduce } from 'streaming-iterables'
+
+import chat from './chat.js'
 import update_chunks from './chunk/update.js'
-import { reduce_position } from './position.js'
-import { register_trades, open_trade } from './trade/trade.js'
-import { register_traders, spawn_merchants } from './trade/spawn_villagers.js'
+import { update_experience } from './experience.js'
+import { scan } from './iterables.js'
+import logger from './logger.js'
+import login from './login.js'
 import { register_mobs, spawn_mob } from './mobs/spawn_mob.js'
 import { send_resource_pack } from './resource_pack.js'
-import { update_experience } from './experience.js'
 import {
   reduce_plugin_channels,
   transform_plugin_channels,
 } from './plugin_channels.js'
-import chat from './chat.js'
+import { reduce_position } from './position.js'
+import { online_mode, version } from './settings.js'
+import { register_traders, spawn_merchants } from './trade/spawn_villagers.js'
+import { open_trade, register_trades } from './trade/trade.js'
 import { reduce_view_distance } from './view_distance.js'
-import logger from './logger.js'
+import { floor1 } from './world.js'
 
 const log = logger(import.meta)
 

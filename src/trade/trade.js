@@ -1,4 +1,4 @@
-import { item_to_slot, empty_slot } from '../items.js'
+import { empty_slot, item_to_slot } from '../items.js'
 
 export function register_trades(world) {
   const windowIds = new Map(

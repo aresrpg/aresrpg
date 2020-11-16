@@ -1,7 +1,7 @@
-import { dimension_codec, overworld } from './world/codec.js'
-import { item_to_slot, empty_slot } from './items.js'
-import { write_brand } from './plugin_channels.js'
 import { chunk_position } from './chunk.js'
+import { empty_slot, item_to_slot } from './items.js'
+import { write_brand } from './plugin_channels.js'
+import { dimension_codec, overworld } from './world/codec.js'
 
 export default function login({ client, events }) {
   events.once(

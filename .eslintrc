@@ -9,6 +9,7 @@
     "prefer-spread": "error",
     "prefer-object-spread": "error",
     "prefer-destructuring": "error",
-    "prefer-numeric-literals": "error"
+    "prefer-numeric-literals": "error",
+    "import/order": ["error", { "newlines-between": "always" }]
   }
 }

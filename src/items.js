@@ -1,5 +1,6 @@
-import { version } from './settings.js'
 import minecraftData from 'minecraft-data'
+
+import { version } from './settings.js'
 
 const mcData = minecraftData(version)
 
