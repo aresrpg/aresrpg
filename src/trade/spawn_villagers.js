@@ -1,7 +1,9 @@
-import { version } from '../settings.js'
 import minecraftData from 'minecraft-data'
-import { chunk_position } from '../chunk.js'
 import UUID from 'uuid-1345'
+
+import { chunk_position } from '../chunk.js'
+import { version } from '../settings.js'
+
 const mcData = minecraftData(version)
 const chunk_index = (x, z) => `${x}:${z}`
 

@@ -1,4 +1,5 @@
 import minecraft_data from 'minecraft-data'
+
 import { version } from '../settings.js'
 
 const { loginPacket } = minecraft_data(version)

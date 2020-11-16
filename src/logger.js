@@ -1,6 +1,7 @@
-import pino from 'pino'
-import { fileURLToPath } from 'url'
 import { dirname, relative } from 'path'
+import { fileURLToPath } from 'url'
+
+import pino from 'pino'
 
 const root = dirname(fileURLToPath(import.meta.url))
 

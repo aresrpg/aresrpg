@@ -1,8 +1,9 @@
-import protodef from 'protodef'
-import { version } from './settings.js'
 import minecraft_data from 'minecraft-data'
 import minecraft_types from 'minecraft-protocol/src/datatypes/minecraft.js'
+import protodef from 'protodef'
+
 import logger from './logger.js'
+import { version } from './settings.js'
 
 const log = logger(import.meta)
 

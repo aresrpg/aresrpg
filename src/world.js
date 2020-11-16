@@ -1,9 +1,11 @@
-import Anvil from 'prismarine-provider-anvil'
-import { join, dirname } from 'path'
-import { fileURLToPath } from 'url'
 import fs from 'fs'
-import { version } from './settings.js'
+import { dirname, join } from 'path'
+import { fileURLToPath } from 'url'
+
+import Anvil from 'prismarine-provider-anvil'
+
 import logger from './logger.js'
+import { version } from './settings.js'
 
 const log = logger(import.meta)
 

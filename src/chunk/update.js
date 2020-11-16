@@ -1,11 +1,13 @@
 import { on } from 'events'
-import { reduce, pipeline } from 'streaming-iterables'
+
+import { pipeline, reduce } from 'streaming-iterables'
+
+import { chunk_position, same_chunk } from '../chunk.js'
 import {
   sort_by_distance,
   square_difference,
   square_symmetric_difference,
 } from '../math.js'
-import { same_chunk, chunk_position } from '../chunk.js'
 
 async function load_chunk({ world }, { client, x, z }) {
   const chunk = await world.chunks.load(x, z)
