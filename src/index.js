@@ -20,6 +20,7 @@ import player_fall_damage from './player/fall_damage.js'
 import player_position from './player/position.js'
 import player_view_distance from './player/view_distance.js'
 import player_chat from './player/chat.js'
+import player_scoreboard from './player/scoreboard.js'
 import player_resource_pack from './player/resource_pack.js'
 import player_statistics from './player/statistics.js'
 import player_traders from './player/traders.js'
@@ -110,6 +111,7 @@ async function observe_client(context) {
   player_health.observe(context)
   player_attributes.observe(context)
   player_chat.observe(context)
+  player_scoreboard.observe(context)
 
   commands_declare.observe(context)
 
