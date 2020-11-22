@@ -38,7 +38,7 @@ from the idea of [@StoneBloodTV](https://github.com/jdathueyt) and [@Sceat](http
 an internal lack of organization and **AresRPG** as you know it flew on its own.
 
 Fully written in Java by [@DarkPingoo](https://github.com/DarkPingoo) and [@Sceat](https://github.com/Sceat), the project released a test version
-called [the tutorial](https://www.youtube.com/watch?v=29AIkBtScgQ), quite successfull and enjoyed by the community it
+called [the tutorial](https://www.youtube.com/watch?v=29AIkBtScgQ), quite successful and enjoyed by the community it
 kept going, the team grew bigger with [@DeltaEvo](https://github.com/DeltaEvo), [@unixfox](https://github.com/unixfox) and many more that you
 can still find in the community these days.
 
