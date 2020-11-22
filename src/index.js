@@ -34,6 +34,7 @@ const initial_world = [
   register_trades,
 ].reduce((world, fn) => fn(world), {
   ...floor1,
+  events: new EventEmitter(),
   next_entity_id: 0,
   next_window_id: 1, // 0 is the player inventory
 })

@@ -1,0 +1,17 @@
+graph LR
+  state((State))
+  actions((Actions))
+  view((View))
+  minecraft[Minecraft Client]
+
+  style state fill:#29b6f6,color:white,stroke:none
+  style actions fill:#ef5350,color:white,stroke:none
+  style view fill:#66bb6a,color:white,stroke:none
+
+  actions -.reduce.-> state
+  view -.dispatch.-> actions
+  state -.observe.-> view
+
+  subgraph protocol
+    minecraft --- view
+  end
