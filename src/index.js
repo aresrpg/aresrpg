@@ -20,6 +20,7 @@ import {
 } from './plugin_channels.js'
 import chat from './chat.js'
 import { reduce_view_distance } from './view_distance.js'
+import { init_achievement } from './achievement/achievement.js'
 import logger from './logger.js'
 
 const log = logger(import.meta)
@@ -74,12 +75,13 @@ function observe_client(context) {
    * They get the client and should map it to minecraft protocol */
   login(context)
   update_chunks(context)
-  send_resource_pack(context)
+  // send_resource_pack(context)
   spawn_mob(context)
   spawn_merchants(context)
   open_trade(context)
   update_experience(context)
   chat({ server, ...context }) // TODO: remove server
+  init_achievement(context)
 }
 
 /* The following code handle the pipeline, it works as following
