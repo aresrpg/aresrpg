@@ -4,6 +4,25 @@ export const Position = {
   GAME_INFO: 2, // appears above the hotbar
 }
 
+export const chat_color = {
+  black: '§0',
+  dark_blue: '§1',
+  dark_green: '§2',
+  dark_cyan: '§3',
+  dark_red: '§4',
+  purple: '§5',
+  gold: '§6',
+  gray: '§7',
+  dark_gray: '§8',
+  blue: '§9',
+  bright_green: '§a',
+  cyan: '§b',
+  red: '§c',
+  pink: '§d',
+  yellow: '§e',
+  white: '§f',
+}
+
 export function write_chat_msg(
   { server: { clients } },
   { message, client: { uuid } }
