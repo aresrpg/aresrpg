@@ -8,7 +8,7 @@ export default function dialog({ client }) {
   client.on('use_entity', ({ target, mouse, sneaking }) => {
     if (mouse === right_click && sneaking === false) {
       if (target in floor1.mobs) {
-        const mob = floor1.mobs[target]
+        const mob = floor1.mobs[target] // FIXME: check proper entity id here
         speak_to(mob, { client })
       }
     }
