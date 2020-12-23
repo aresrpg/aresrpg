@@ -20,7 +20,7 @@ import { reduce_position } from './position.js'
 import { online_mode, version } from './settings.js'
 import { register_traders, spawn_merchants } from './trade/spawn_villagers.js'
 import { open_trade, register_trades } from './trade/trade.js'
-import detect_dialog from './mobs/dialog.js'
+import dialog from './mobs/dialog.js'
 import { reduce_view_distance } from './view_distance.js'
 import { floor1 } from './world.js'
 
@@ -75,14 +75,13 @@ function transform_action(action) {
 async function observe_client(context) {
   /* Observers that handle the protocol part.
    * They get the client and should map it to minecraft protocol */
-
   await send_resource_pack(context)
   login(context)
   update_chunks(context)
   spawn_mob(context)
   spawn_merchants(context)
   open_trade(context)
-  detect_dialog(context)
+  dialog(context)
   update_experience(context)
   chat({ server, ...context }) // TODO: remove server
 }

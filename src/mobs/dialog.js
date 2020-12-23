@@ -1,41 +1,35 @@
 import { floor1 } from '../world.js'
 import { Position } from '../chat.js'
 
-import { mobs, mobs_dialogs } from './mobs.js'
+import { mobs } from './mobs.js'
 
-export default function detect_dialog({ client }) {
+export default function dialog({ client }) {
   const right_click = 2
   client.on('use_entity', ({ target, mouse, sneaking }) => {
     if (mouse === right_click && sneaking === false) {
-      const mob = floor1.mobs[target]
-      if (mob !== undefined) {
-        const mobdata = mobs_dialogs[mobs[mob.mob].displayName]
-        speak_to(mobdata, { client })
+      if (target in floor1.mobs) {
+        const mob = floor1.mobs[target]
+        speak_to(mob, { client })
       }
     }
   })
 }
 
-export function speak_to(mobdata, { client }) {
-  if (mobdata !== undefined) {
-    const x = Math.floor(Math.random() * mobdata.dialogs.length)
-    const message = JSON.stringify({
-      translate: 'chat.type.text',
-      with: [
-        {
-          text: mobdata.name,
-        },
-        {
-          text: mobdata.dialogs[x],
-        },
-      ],
-    })
-    const options = {
+export function speak_to(mob, { client }) {
+  if (mobs[mob.mob].dialogs !== undefined) {
+    const x = Math.floor(Math.random() * mobs[mob.mob].dialogs.length)
+    const message = JSON.stringify([
+      { text: ' ' + mobs[mob.mob].displayName, color: 'green' },
+      { text: ' : ', color: 'gray' },
+      {
+        text: mobs[mob.mob].dialogs[x].replace('{player}', client.username),
+        color: 'white',
+      },
+    ])
+    client.write('chat', {
       message,
       position: Position.CHAT,
       sender: client.uuid,
-    }
-    const send_packet = (client) => client.write('chat', options)
-    Object.values([client]).forEach(send_packet)
+    })
   }
 }

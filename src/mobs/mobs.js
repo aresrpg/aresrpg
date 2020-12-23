@@ -1,78 +1,3 @@
-import { chat_color } from '../chat.js'
-
-export const mobs_dialogs = {
-  'Citoyen de Thebes': {
-    name: chat_color.bright_green + ' Citoyen ',
-    dialogs: [
-      chat_color.white + "C'est incroyable ce beau temps !",
-      chat_color.white +
-        "C'est toi {player} ? Je pensais que tu étais plus grand !",
-      chat_color.white +
-        "Fais attention à ne pas t'aventurer dans les catacombes, c'est dangereux !",
-      chat_color.white +
-        "Je n'ai pas le temps de te parler, va t'en ou j'apelle la garde !",
-      chat_color.white + 'Encore toi ?',
-      chat_color.white +
-        'Un jour les dragons reviendront et ce sera la fin de notre monde !',
-      chat_color.white + 'Laisse moi !',
-    ],
-  },
-  Moine: {
-    // Moine
-    name: chat_color.bright_green + ' Moine ',
-    dialogs: [
-      chat_color.white + 'A Bien le bonjour étranger !',
-      chat_color.white +
-        "Le père Niflard n'est pas rentré de sa ceuillette de choux..",
-      chat_color.white + 'Amen',
-      chat_color.white +
-        "A quelques lieues d'içi se trouve un gouffre terrible remplit d'Arakne.",
-      chat_color.white + 'Je doit aller à la messe !',
-      chat_color.white +
-        'Un jour les dragons reviendront et ce sera la fin de notre monde !',
-      chat_color.white + 'Diantre ! que tu est vilain..',
-      chat_color.white + 'Oh !',
-      chat_color.white + "Une bonne cervoise et c'est repartit !",
-      chat_color.white + 'Hum ?',
-    ],
-  },
-  'Citoyen de Segeste': {
-    // Citoyen de Segeste
-    name: chat_color.bright_green + ' Citoyen ',
-    dialogs: [
-      chat_color.white +
-        'A Ségeste nous aimons la pêche et les belles villageoises !',
-      chat_color.white +
-        "Teh c'est le petit {player} ! On m'avait dit que tu étais moche mais je ne pensais pas à ce point !",
-      chat_color.white +
-        'On raconte que le puit de Ségeste est ensorcelé.. sans doute une vieille légende',
-      chat_color.white +
-        "Ne m'adresse pas la parole petit ! nous n'avons pas les mêmes valeurs.",
-      chat_color.white + 'Encore toi ?',
-      chat_color.white +
-        'Un jour les dragons reviendront et ce sera la fin de notre monde !',
-      chat_color.white +
-        "AAAAAAAAAAAAAAH !!!! Oups pardon je t'avais prit pour un infécté..",
-      chat_color.white + 'Ce maudit Craken a encore provoqué une inondation...',
-      chat_color.white + "Une bonne bière et c'est repartit !",
-      chat_color.white + 'Laisse moi !',
-    ],
-  },
-  'Citoyen de Numen': {
-    // Citoyen de Numen
-    name: chat_color.bright_green + ' Citoyen ',
-    dialogs: [
-      chat_color.white + 'O man dôr túliel le ?',
-      chat_color.white + 'Man anírach cerin an le ?',
-      chat_color.white + 'Gwanno ereb nin !',
-      chat_color.white + 'No dhínen !',
-      chat_color.white + 'Garich i dhôl goll o Orch',
-      chat_color.white + 'Nai Aragog meditha le!',
-      chat_color.white + 'Heca, firimar !',
-    ],
-  },
-}
-
 export const mobs = {
   abrakleur: {
     displayName: 'Abrakleur',
@@ -503,16 +428,46 @@ export const mobs = {
     displayName: 'Citoyen de Nùmen',
     type: 'npc',
     mob: 'villager',
+    dialogs: [
+      'O man dôr túliel le ?',
+      'Man anírach cerin an le ?',
+      'Gwanno ereb nin !',
+      'No dhínen !',
+      'Garich i dhôl goll o Orch',
+      'Nai Aragog meditha le!',
+      'Heca, firimar !',
+    ],
   },
   segeste_citizen: {
     displayName: 'Citoyen de Ségeste',
     type: 'npc',
     mob: 'villager',
+    dialogs: [
+      'A Ségeste nous aimons la pêche et les belles villageoises !',
+      "Teh c'est le petit {player} ! On m'avait dit que tu étais moche mais je ne pensais pas à ce point !",
+      'On raconte que le puit de Ségeste est ensorcelé.. sans doute une vieille légende',
+      "Ne m'adresse pas la parole petit ! nous n'avons pas les mêmes valeurs.",
+      'Encore toi ?',
+      'Un jour les dragons reviendront et ce sera la fin de notre monde !',
+      "AAAAAAAAAAAAAAH !!!! Oups pardon je t'avais prit pour un infécté..",
+      'Ce maudit Craken a encore provoqué une inondation...',
+      "Une bonne bière et c'est repartit !",
+      'Laisse moi !',
+    ],
   },
   thebes_citizen: {
     displayName: 'Citoyen de Thebes',
     type: 'npc',
     mob: 'villager',
+    dialogs: [
+      "C'est incroyable ce beau temps !",
+      "C'est toi {player} ? Je pensais que tu étais plus grand !",
+      "Fais attention à ne pas t'aventurer dans les catacombes, c'est dangereux !",
+      "Je n'ai pas le temps de te parler, va t'en ou j'apelle la garde !",
+      'Encore toi ?',
+      'Un jour les dragons reviendront et ce sera la fin de notre monde !',
+      'Laisse moi !',
+    ],
   },
   guardian: {
     displayName: 'Garde',
@@ -523,5 +478,17 @@ export const mobs = {
     displayName: 'Moine',
     type: 'npc',
     mob: 'villager',
+    dialogs: [
+      'A Bien le bonjour étranger !',
+      "Le père Niflard n'est pas rentré de sa ceuillette de choux..",
+      'Amen',
+      "A quelques lieues d'içi se trouve un gouffre terrible remplit d'Arakne.",
+      'je doit aller à la messe !',
+      'Un jour les dragons reviendront et ce sera la fin de notre monde !',
+      'Diantre ! que tu est vilain..',
+      'Oh !',
+      "Une bonne cervoise et c'est repartit !",
+      'Hum ?',
+    ],
   },
 }
