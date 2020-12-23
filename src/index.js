@@ -11,7 +11,6 @@ import { scan } from './iterables.js'
 import logger from './logger.js'
 import login from './login.js'
 import { register_mobs, spawn_mob } from './mobs/spawn_mob.js'
-// import { drop_item, collect_item } from './mobs/item_drop.js'
 import { send_resource_pack } from './resource_pack.js'
 import {
   reduce_plugin_channels,
