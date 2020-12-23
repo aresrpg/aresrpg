@@ -20,6 +20,7 @@ import { reduce_position } from './position.js'
 import { online_mode, version } from './settings.js'
 import { register_traders, spawn_merchants } from './trade/spawn_villagers.js'
 import { open_trade, register_trades } from './trade/trade.js'
+import dialog from './mobs/dialog.js'
 import { reduce_view_distance } from './view_distance.js'
 import { floor1 } from './world.js'
 
@@ -81,6 +82,7 @@ async function observe_client(context) {
   spawn_mob(context)
   spawn_merchants(context)
   open_trade(context)
+  dialog(context)
   update_experience(context)
   chat({ server, ...context }) // TODO: remove server
 }
