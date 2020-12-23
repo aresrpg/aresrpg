@@ -143,6 +143,7 @@ pipeline(
           actions.write({ type, payload })
         },
       })
+
       return {
         world,
       }
