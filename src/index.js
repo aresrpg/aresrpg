@@ -143,9 +143,6 @@ pipeline(
           actions.write({ type, payload })
         },
       })
-
-      actions.write('update_time', { age: 0, time: -1 })
-
       return {
         world,
       }
