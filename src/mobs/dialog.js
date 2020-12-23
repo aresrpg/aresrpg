@@ -16,13 +16,14 @@ export default function dialog({ client }) {
 }
 
 export function speak_to(mob, { client }) {
-  if (mobs[mob.mob].dialogs !== undefined) {
-    const x = Math.floor(Math.random() * mobs[mob.mob].dialogs.length)
+  const { dialogs, displayName } = mobs[mob.mob]
+  if (dialogs !== undefined) {
+    const x = Math.floor(Math.random() * dialogs.length)
     const message = JSON.stringify([
-      { text: ' ' + mobs[mob.mob].displayName, color: 'green' },
+      { text: ' ' + displayName, color: 'green' },
       { text: ' : ', color: 'gray' },
       {
-        text: mobs[mob.mob].dialogs[x].replace('{player}', client.username),
+        text: dialogs[x].replace('{player}', client.username),
         color: 'white',
       },
     ])
