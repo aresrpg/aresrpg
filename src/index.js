@@ -75,6 +75,7 @@ function transform_action(action) {
 async function observe_client(context) {
   /* Observers that handle the protocol part.
    * They get the client and should map it to minecraft protocol */
+
   await send_resource_pack(context)
   login(context)
   update_chunks(context)
