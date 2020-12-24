@@ -3,6 +3,7 @@ import { empty_slot, item_to_slot } from './items.js'
 import { write_brand } from './plugin_channels.js'
 import { dimension_codec, overworld } from './world/codec.js'
 import { load_chunks } from './chunk/update.js'
+import { write_title } from './title.js'
 
 export default function login({ client, events }) {
   events.once('state', (state) => {
@@ -63,6 +64,14 @@ export default function login({ client, events }) {
     client.write('window_items', {
       windowId: 0,
       items: inventory.map(to_slot),
+    })
+
+    write_title(client, {
+      subtitle: { text: 'Bienvenue sur' },
+      title: { text: 'AresRPG' },
+      fadeIn: 5,
+      fadeOut: 2,
+      stay: 10,
     })
   })
 }
