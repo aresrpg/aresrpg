@@ -1,7 +1,8 @@
 import { EventEmitter, on } from 'events'
 import { PassThrough } from 'stream'
 import fs from 'fs'
-import path from 'path'
+import path, { dirname } from 'path'
+import { fileURLToPath } from 'url'
 
 import protocol from 'minecraft-protocol'
 import { map, parallelMerge, pipeline, reduce } from 'streaming-iterables'
@@ -31,9 +32,9 @@ const log = logger(import.meta)
 const server = protocol.createServer({
   version,
   'online-mode': online_mode,
-  motd: 'Ares Chevalier',
+  motd: 'AresRPG',
   favicon: `data:image/png;base64,${fs.readFileSync(
-    path.join(process.cwd(), '/favicon.png'),
+    path.join(dirname(fileURLToPath(import.meta.url)), '../favicon.png'),
     'base64'
   )}`,
 })
