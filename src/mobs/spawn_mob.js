@@ -110,10 +110,19 @@ export function spawn_mob({ client, events, world }) {
         client.write('entity_metadata', metadata)
 
         if (equipment) {
+          const equipment_map = {
+            main_hand: 0,
+            off_hand: 1,
+            boots: 2,
+            leggings: 3,
+            chestplate: 4,
+            helmet: 5,
+          }
+
           const entity_equipment = {
             entityId: id,
             equipments: Object.keys(equipment).map((slot) => ({
-              slot,
+              slot: equipment_map[slot],
               item: item_to_slot(
                 world.items[equipment[slot].type],
                 equipment[slot].count
