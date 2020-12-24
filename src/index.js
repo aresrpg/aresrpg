@@ -1,5 +1,7 @@
 import { EventEmitter, on } from 'events'
 import { PassThrough } from 'stream'
+import fs from 'fs'
+import path from 'path'
 
 import protocol from 'minecraft-protocol'
 import { map, parallelMerge, pipeline, reduce } from 'streaming-iterables'
@@ -26,7 +28,15 @@ import { floor1 } from './world.js'
 
 const log = logger(import.meta)
 
-const server = protocol.createServer({ version, 'online-mode': online_mode })
+const server = protocol.createServer({
+  version,
+  'online-mode': online_mode,
+  motd: 'Ares Chevalier',
+  favicon: `data:image/png;base64,${fs.readFileSync(
+    path.join(process.cwd(), '/favicon.png'),
+    'base64'
+  )}`,
+})
 
 const initial_world = [
   // Reducers that augment the world with extra properties
