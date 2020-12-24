@@ -62,7 +62,7 @@ const initial_state = ({ entity_id, world }) => ({
     37: { type: 'bronze_coin', count: 10 },
     38: { type: 'menitrass_100', count: 1 },
   }),
-  game_mode: 2,
+  game_mode: 1,
   experience: 0,
 })
 

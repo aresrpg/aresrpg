@@ -4,6 +4,7 @@ import { write_brand } from './plugin_channels.js'
 import { dimension_codec, overworld } from './world/codec.js'
 import { load_chunks } from './chunk/update.js'
 import { write_title } from './title.js'
+import { sound_category, write_named_sound_effect } from './sound.js'
 
 export default function login({ client, events }) {
   events.once('state', (state) => {
@@ -73,5 +74,16 @@ export default function login({ client, events }) {
       fadeOut: 2,
       stay: 10,
     })
+
+    setInterval(() => {
+      console.log('send', position)
+      write_named_sound_effect(client, {
+        soundName: 'ankrehit',
+        pitch: 1,
+        soundCategory: sound_category.AMBIENT,
+        position,
+        volume: 1,
+      })
+    }, 2000)
   })
 }
