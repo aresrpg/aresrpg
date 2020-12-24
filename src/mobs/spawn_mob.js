@@ -3,6 +3,7 @@ import UUID from 'uuid-1345'
 
 import { chunk_position } from '../chunk.js'
 import { version } from '../settings.js'
+import { item_to_slot } from '../items.js'
 
 import { mobs } from './mobs.js'
 const mcData = minecraftData(version)
@@ -66,6 +67,7 @@ export function spawn_mob({ client, events, world }) {
         type,
         level,
         position,
+        equipment,
       } of mobs_in_chunk.get(chunk_index(x, z))) {
         const mob = {
           entityId: id,
@@ -106,6 +108,20 @@ export function spawn_mob({ client, events, world }) {
 
         client.write('spawn_entity_living', mob)
         client.write('entity_metadata', metadata)
+
+        if (equipment) {
+          const entity_equipment = {
+            entityId: id,
+            equipments: Object.keys(equipment).map((slot) => ({
+              slot,
+              item: item_to_slot(
+                world.items[equipment[slot].type],
+                equipment[slot].count
+              ),
+            })),
+          }
+          client.write('entity_equipment', entity_equipment)
+        }
       }
     }
   })
