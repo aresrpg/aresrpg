@@ -3,6 +3,9 @@ export const mobs = {
     displayName: 'Abrakleur',
     type: 'mob',
     mob: 'enderman',
+    equipments: {
+      main_hand: { type: 'menitrass_100', count: 1 },
+    },
   },
   centenary_abrakleur: {
     displayName: 'Abrakleur Centenaire',
@@ -263,6 +266,9 @@ export const mobs = {
     displayName: 'Poule',
     type: 'mob',
     mob: 'chicken',
+    equipment: {
+      main_hand: { type: 'menitrass_100', count: 1 },
+    },
   },
   sick_chicken: {
     displayName: 'Poule Malade',
@@ -333,6 +339,10 @@ export const mobs = {
     displayName: 'Squelette',
     type: 'mob',
     mob: 'skeleton',
+    equipment: {
+      main_hand: { type: 'menitrass_100', count: 1 },
+      chestplate: { type: 'numen_armor', count: 1 },
+    },
   },
   brittle_skeleton: {
     displayName: 'Squelette Fragile',
