@@ -1,7 +1,7 @@
 import { EventEmitter, on } from 'events'
 import { PassThrough } from 'stream'
 import fs from 'fs'
-import path, { dirname } from 'path'
+import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
 import protocol from 'minecraft-protocol'
@@ -34,7 +34,7 @@ const server = protocol.createServer({
   'online-mode': online_mode,
   motd: 'AresRPG',
   favicon: `data:image/png;base64,${fs.readFileSync(
-    path.join(dirname(fileURLToPath(import.meta.url)), '../favicon.png'),
+    join(dirname(fileURLToPath(import.meta.url)), '../media/favicon.png'),
     'base64'
   )}`,
 })
