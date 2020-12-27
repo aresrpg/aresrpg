@@ -2,16 +2,7 @@ import { Position } from '../chat.js'
 
 import gamemode from './gamemode.js'
 
-export function write_unfounded_command({ sender }) {
-  sender.write('chat', {
-    message: JSON.stringify({
-      translate: 'commands.help.failed',
-      color: 'red',
-    }),
-    position: Position.CHAT,
-    sender: sender.uuid,
-  })
-}
+export function write_unfounded_command({ sender }) {}
 
 export default function execute_command({ message, sender }) {
   const [name, ...args] = message.trimStart().split(/\s+/)
@@ -28,7 +19,14 @@ export default function execute_command({ message, sender }) {
       break
 
     default:
-      write_unfounded_command(command)
+      sender.write('chat', {
+        message: JSON.stringify({
+          translate: 'commands.help.failed',
+          color: 'red',
+        }),
+        position: Position.CHAT,
+        sender: sender.uuid,
+      })
       break
   }
 }
