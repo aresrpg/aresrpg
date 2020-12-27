@@ -1,12 +1,17 @@
+import mapcolors from '@aresrpg/aresrpg-map-colors'
+
 import { chunk_position } from './chunk.js'
 import { empty_slot, item_to_slot } from './items.js'
 import { write_brand } from './plugin_channels.js'
 import { dimension_codec, overworld } from './world/codec.js'
 import { load_chunks } from './chunk/update.js'
 import { write_title } from './title.js'
+import { destroy_screen, spawn_screen, update_screen } from './screen.js'
+
+const { fromImage } = mapcolors
 
 export default function login({ client, events }) {
-  events.once('state', (state) => {
+  events.once('state', async (state) => {
     const {
       world,
       game_mode,
@@ -71,7 +76,41 @@ export default function login({ client, events }) {
       title: { text: 'AresRPG' },
       fadeIn: 5,
       fadeOut: 2,
-      stay: 10,
+      stay: 1,
     })
+
+    const screen_pos = { ...world.spawn_position }
+    screen_pos.y += 15
+
+    spawn_screen(
+      { client, world },
+      {
+        screen_id: 'player_screen',
+        position: screen_pos,
+        direction: { x: 1, y: 0, z: 0 },
+      }
+    )
+
+    const screen_pos2 = { ...world.spawn_position }
+    screen_pos2.y += 10
+    screen_pos2.x -= 25
+    spawn_screen(
+      { client, world },
+      {
+        screen_id: 'other_screen',
+        position: screen_pos2,
+        direction: { x: 0, y: 0, z: -1 },
+      }
+    )
+
+    const { datas } = await fromImage('https://i.imgur.com/PqDMCOI.png')
+    update_screen(
+      { client, world },
+      { screen_id: 'player_screen', newDatas: Buffer.from(datas) }
+    )
+
+    setTimeout(() => {
+      destroy_screen({ client, world }, { screen_id: 'player_screen' })
+    }, 10000)
   })
 }

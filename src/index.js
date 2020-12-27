@@ -26,6 +26,7 @@ import { open_trade, register_trades } from './trade/trade.js'
 import dialog from './mobs/dialog.js'
 import { reduce_view_distance } from './view_distance.js'
 import { floor1 } from './world.js'
+import { register_screen } from './screen.js'
 
 const log = logger(import.meta)
 
@@ -44,11 +45,20 @@ const initial_world = [
   register_mobs,
   register_traders,
   register_trades,
+  register_screen({
+    screen_id: 'player_screen',
+    screen_size: { width: 8, height: 4 },
+  }),
+  register_screen({
+    screen_id: 'other_screen',
+    screen_size: { width: 5, height: 5 },
+  }),
 ].reduce((world, fn) => fn(world), {
   ...floor1,
   events: new EventEmitter(),
   next_entity_id: 0,
   next_window_id: 1, // 0 is the player inventory
+  screens: [],
 })
 
 const initial_state = ({ entity_id, world }) => ({
@@ -62,7 +72,7 @@ const initial_state = ({ entity_id, world }) => ({
     37: { type: 'bronze_coin', count: 10 },
     38: { type: 'menitrass_100', count: 1 },
   }),
-  game_mode: 2,
+  game_mode: 1,
   experience: 0,
 })
 
