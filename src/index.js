@@ -46,8 +46,8 @@ const initial_world = [
   register_traders,
   register_trades,
   register_screen({
-    screen_id: 'player_screen',
-    screen_size: { width: 8, height: 4 },
+    id: 'player_screen',
+    size: { width: 8, height: 4 },
   }),
 ].reduce((world, fn) => fn(world), {
   ...floor1,
