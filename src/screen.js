@@ -12,12 +12,12 @@ const mcData = minecraftData(version)
 const { nearestMatch } = mapcolors
 const { createCanvas } = canvas
 
-export function register_screen({ screen_id, screen_size: { width, height } }) {
+export function register_screen({ id, size: { width, height } }) {
   return (world) => ({
     ...world,
     screens: {
       ...world.screens,
-      [screen_id]: {
+      [id]: {
         size: { width, height },
         start_id: world.next_entity_id,
       },
