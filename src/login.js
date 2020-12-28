@@ -1,4 +1,4 @@
-import mapcolors from '@aresrpg/aresrpg-map-colors'
+import canvas from 'canvas'
 
 import { chunk_position } from './chunk.js'
 import { empty_slot, item_to_slot } from './items.js'
@@ -6,9 +6,14 @@ import { write_brand } from './plugin_channels.js'
 import { dimension_codec, overworld } from './world/codec.js'
 import { load_chunks } from './chunk/update.js'
 import { write_title } from './title.js'
-import { destroy_screen, spawn_screen, update_screen } from './screen.js'
+import {
+  copy_canvas,
+  get_screen,
+  spawn_screen,
+  update_screen,
+} from './screen.js'
 
-const { fromImage } = mapcolors
+const { createCanvas } = canvas
 
 export default function login({ client, events }) {
   events.once('state', async (state) => {
@@ -91,26 +96,27 @@ export default function login({ client, events }) {
       }
     )
 
-    const screen_pos2 = { ...world.spawn_position }
-    screen_pos2.y += 10
-    screen_pos2.x -= 25
-    spawn_screen(
-      { client, world },
-      {
-        screen_id: 'other_screen',
-        position: screen_pos2,
-        direction: { x: 0, y: 0, z: -1 },
-      }
+    let last_frame = null
+    const { size } = get_screen(world, 'player_screen')
+    const canvas = createCanvas(size.width * 128, size.height * 128)
+    const ctx = canvas.getContext('2d')
+    ctx.fillStyle = 'black'
+    ctx.fillRect(0, 0, size.width * 128, size.height * 128)
+    events.on(
+      'screen_interract',
+      ({ x, y, screen_id, hand }) => {
+        ctx.font = '30px arial'
+        ctx.fillStyle = 'red'
+        ctx.beginPath()
+        ctx.ellipse(x, y, 10, 10, 0, 0, Math.PI * 2)
+        ctx.fill()
+        update_screen(
+          { client, world },
+          { screen_id, newCanvas: canvas, oldCanvas: last_frame }
+        )
+        last_frame = copy_canvas(canvas)
+      },
+      100
     )
-
-    const { datas } = await fromImage('https://i.imgur.com/PqDMCOI.png')
-    update_screen(
-      { client, world },
-      { screen_id: 'player_screen', newDatas: Buffer.from(datas) }
-    )
-
-    setTimeout(() => {
-      destroy_screen({ client, world }, { screen_id: 'player_screen' })
-    }, 10000)
   })
 }

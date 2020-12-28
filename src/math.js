@@ -1,3 +1,5 @@
+import Vec3 from 'vec3'
+
 export function is_inside({ min, max }, { x, y }) {
   return x >= min.x && x <= max.x && y >= min.y && y <= max.y
 }
@@ -93,4 +95,38 @@ export function sort_by_distance(center, positions) {
   return positions.slice(0).sort((a, b) => {
     return distance_squared(center, a) - distance_squared(center, b)
   })
+}
+
+export function to_direction(yaw, pitch) {
+  const yaw_rad = yaw * (Math.PI / 180)
+  const pitch_rad = pitch * (Math.PI / 180)
+  const xz = Math.cos(pitch_rad)
+  return Vec3(
+    -xz * Math.sin(yaw_rad),
+    -Math.sin(pitch_rad),
+    xz * Math.cos(yaw_rad)
+  )
+}
+
+export function floor_pos(position) {
+  return {
+    x: Math.floor(position.x),
+    y: Math.floor(position.y),
+    z: Math.floor(position.z),
+  }
+}
+
+export function intersect_ray_plane(origin, direction, normal, dist) {
+  const denom = direction.dot(normal)
+  if (denom !== 0) {
+    const t = -(origin.dot(normal) + dist) / denom
+    if (t < 0) {
+      return null
+    }
+    return origin.add(direction.scaled(t))
+  } else if (normal.dot(origin) + dist === 0) {
+    return origin
+  } else {
+    return null
+  }
 }

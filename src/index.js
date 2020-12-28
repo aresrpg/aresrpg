@@ -26,7 +26,7 @@ import { open_trade, register_trades } from './trade/trade.js'
 import dialog from './mobs/dialog.js'
 import { reduce_view_distance } from './view_distance.js'
 import { floor1 } from './world.js'
-import { register_screen } from './screen.js'
+import { interract_screen, register_screen } from './screen.js'
 
 const log = logger(import.meta)
 
@@ -48,10 +48,6 @@ const initial_world = [
   register_screen({
     screen_id: 'player_screen',
     screen_size: { width: 8, height: 4 },
-  }),
-  register_screen({
-    screen_id: 'other_screen',
-    screen_size: { width: 5, height: 5 },
   }),
 ].reduce((world, fn) => fn(world), {
   ...floor1,
@@ -106,6 +102,7 @@ async function observe_client(context) {
   dialog(context)
   update_experience(context)
   chat({ server, ...context }) // TODO: remove server
+  interract_screen(context)
 }
 
 /* The following code handle the pipeline, it works as following
