@@ -25,6 +25,12 @@ export function same_chunk(first_position, second_position) {
   return same_x && same_z
 }
 
+export async function get_block(world, { x, y, z }) {
+  const chunk = await world.chunks.load(chunk_position(x), chunk_position(z))
+
+  return chunk.getBlock({ x: x % 16, y, z: z % 16 })
+}
+
 // https://github.com/tc39/proposal-weakrefs#weak-caches
 function make_weak_cached(f) {
   const cache = new Map()

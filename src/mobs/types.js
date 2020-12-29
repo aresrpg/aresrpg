@@ -1,4 +1,4 @@
-export const mobs = {
+export const Types = {
   abrakleur: {
     displayName: 'Abrakleur',
     type: 'mob',
