@@ -26,6 +26,7 @@ import { open_trade, register_trades } from './trade/trade.js'
 import dialog from './mobs/dialog.js'
 import { reduce_view_distance } from './view_distance.js'
 import { floor1 } from './world.js'
+import { last_event_value } from './events.js'
 
 const log = logger(import.meta)
 
@@ -95,13 +96,7 @@ async function observe_client(context) {
   open_trade(context)
   dialog(context)
   update_experience(context)
-  const inventory = Array.from({
-    length: 46,
-    36: { type: 'spellbook', count: 1 },
-    37: { type: 'bronze_coin', count: 10 },
-    38: { type: 'menitrass_100', count: 1 },
-  }) // temporary
-  chat({ inventory, server, ...context }) // TODO: remove server
+  chat({ server, ...context }) // TODO: remove server
 }
 
 /* The following code handle the pipeline, it works as following
@@ -156,6 +151,7 @@ pipeline(
         client,
         world,
         events,
+        get_state: last_event_value(events, 'state'),
         dispatch(type, payload) {
           actions.write({ type, payload })
         },
