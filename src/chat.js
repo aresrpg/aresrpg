@@ -49,7 +49,7 @@ export function write_chat_msg(
   Object.values(clients).forEach(send_packet)
 }
 
-export default function chat({ server, client, world, inventory }) {
+export default function chat({ server, client, get_state, world }) {
   client.on('chat', (packet) => {
     const { message } = packet
     if (is_command_function(message)) {
@@ -62,6 +62,7 @@ export default function chat({ server, client, world, inventory }) {
     const formatted_message = message.split(/(%item\d%)/).map((part) => {
       if (part.match(/(%item\d%)/)) {
         const slot_number = parseInt(part.match(/\d/)[0]) + 36 // For the player 0 is the first item in hotbar. But for the game the hotbat begin at 36.
+        const { inventory } = get_state()
         const item = inventory[slot_number]
         if (item) {
           const { type, count } = item
