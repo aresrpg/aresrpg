@@ -26,7 +26,7 @@
   },
   "homepage": "https://github.com/aresrpg/aresrpg#readme",
   "dependencies": {
-    "minecraft-protocol": "^1.21.0",
+    "minecraft-protocol": "^1.22.0",
     "minecraft-data": "^2.71.0",
     "pino": "^6.8.0",
     "prismarine-provider-anvil": "^2.3.1",
