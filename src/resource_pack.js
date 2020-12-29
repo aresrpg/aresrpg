@@ -34,6 +34,24 @@ export async function send_resource_pack({ client }) {
       client.end(
         'Resource Pack Declined',
         JSON.stringify([
+          { text: 'The resource pack is mandatory, ', color: 'yellow' },
+          { text: 'You refused it!', color: 'red' },
+          { text: '\n' },
+          {
+            text: 'In your multiplayer menu, click on ',
+            color: 'yellow',
+          },
+          { text: 'AresRPG', color: 'dark_green' },
+          { text: ' then ', color: 'yellow' },
+          { translate: 'selectServer.edit', color: 'dark_green' },
+          { text: ' and finally ', color: 'yellow' },
+          { translate: 'addServer.resourcePack', color: 'white' },
+          { text: ': ', color: 'white' },
+          { translate: 'addServer.resourcePack.enabled', color: 'white' },
+          { text: '.\n', color: 'yellow' },
+
+          { text: '\n\n' },
+
           { text: 'Le ressource pack est obligatoire, ', color: 'yellow' },
           { text: "Vous l'avez refusé !", color: 'red' },
           { text: '\n' },
@@ -45,10 +63,10 @@ export async function send_resource_pack({ client }) {
           { text: ' puis ', color: 'yellow' },
           { translate: 'selectServer.edit', color: 'dark_green' },
           { text: ' et enfin ', color: 'yellow' },
-          { translate: 'addServer.resourcePack', color: 'white ' },
+          { translate: 'addServer.resourcePack', color: 'white' },
           { text: ': ', color: 'white' },
-          { translate: 'addServer.resourcePack.enabled', color: 'white ' },
-          { text: '.', color: 'yellow' },
+          { translate: 'addServer.resourcePack.enabled', color: 'white' },
+          { text: '.\n', color: 'yellow' },
         ])
       )
       break
