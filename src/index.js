@@ -29,6 +29,7 @@ import { floor1 } from './world.js'
 import { update_clients } from './mobs/position.js'
 import { mob_goto } from './mobs/goto.js'
 import { last_event_value } from './events.js'
+import declare_commands from './commands/declare_commands.js'
 
 const log = logger(import.meta)
 
@@ -102,6 +103,7 @@ async function observe_client(context) {
   open_trade(context)
   dialog(context)
   update_experience(context)
+  declare_commands(context)
   chat({ server, ...context }) // TODO: remove server
 }
 
