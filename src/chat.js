@@ -4,6 +4,7 @@ import minecraftData from 'minecraft-data'
 import { item_to_slot } from './items.js'
 import { version } from './settings.js'
 import logger from './logger.js'
+import execute_command from './commands/commands.js'
 
 const mcData = minecraftData(version)
 const log = logger(import.meta)
@@ -54,7 +55,7 @@ export default function chat({ server, client, get_state, world }) {
     const { message } = packet
     if (is_command_function(message)) {
       log.debug({ sender: client.uuid, command: message }, 'Command')
-
+      execute_command({ message, sender: client })
       return
     } else {
       log.debug({ sender: client.uuid, message }, 'Message')
