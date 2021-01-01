@@ -12,7 +12,6 @@ export function set_world_border({ client, x, z, radius, speed }) {
   })
 }
 
-// Screen does'nt turn to red
 export function red_screen({ client }) {
   client.write('world_border', { action: 5, warning_blocks: 5000 })
 }
