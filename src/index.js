@@ -30,6 +30,7 @@ import { update_clients } from './mobs/position.js'
 import { mob_goto } from './mobs/goto.js'
 import { last_event_value } from './events.js'
 import declare_commands from './commands/declare_commands.js'
+import { check_shoot } from './shoot_arrow.js'
 
 const log = logger(import.meta)
 
@@ -101,6 +102,7 @@ async function observe_client(context) {
   mob_goto(context)
   spawn_merchants(context)
   open_trade(context)
+  check_shoot(context)
   dialog(context)
   update_experience(context)
   declare_commands(context)
