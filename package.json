@@ -5,7 +5,8 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "start": "node --inspect=0.0.0.0 src/index.js | pino-human",
+    "start": "node src/index.js | pino-human",
+    "debug": "node --inspect=0.0.0.0 src/index.js | pino-human",
     "lint": "eslint .",
     "format": "prettier . --write && eslint . --fix",
     "rendermedia": "mmdc --theme neutral -i media/flow.mermaid -o media/flow.svg"

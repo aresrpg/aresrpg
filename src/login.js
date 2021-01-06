@@ -6,17 +6,12 @@ import { write_brand } from './plugin_channels.js'
 import { dimension_codec, overworld } from './world/codec.js'
 import { load_chunks } from './chunk/update.js'
 import { write_title } from './title.js'
-import {
-  copy_canvas,
-  get_screen,
-  spawn_screen,
-  update_screen,
-} from './screen.js'
+import { copy_canvas, spawn_screen, update_screen } from './screen.js'
 
 const { createCanvas } = canvas
 
 export default function login({ client, events }) {
-  events.once('state', async (state) => {
+  events.once('state', (state) => {
     const {
       world,
       game_mode,
@@ -97,7 +92,7 @@ export default function login({ client, events }) {
     )
 
     let last_frame = null
-    const { size } = get_screen(world, 'player_screen')
+    const { size } = world.screens.player_screen
     const canvas = createCanvas(size.width * 128, size.height * 128)
     const ctx = canvas.getContext('2d')
     ctx.fillStyle = 'black'
@@ -112,7 +107,7 @@ export default function login({ client, events }) {
         ctx.fill()
         update_screen(
           { client, world },
-          { screen_id, newCanvas: canvas, oldCanvas: last_frame }
+          { screen_id, new_canvas: canvas, old_canvas: last_frame }
         )
         last_frame = copy_canvas(canvas)
       },
