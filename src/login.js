@@ -84,8 +84,7 @@ export default function login({ client, events }) {
       stay: 1,
     })
 
-    const screen_pos = { ...world.spawn_position }
-    screen_pos.y += 15
+    const screen_pos = { ...world.spawn_position, y: world.spawn_position.y + 15 }
 
     spawn_screen(
       { client, world },
