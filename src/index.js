@@ -24,6 +24,7 @@ import { online_mode, version } from './settings.js'
 import { register_traders, spawn_merchants } from './trade/spawn_villagers.js'
 import { open_trade, register_trades } from './trade/trade.js'
 import dialog from './mobs/dialog.js'
+import { deal_damage } from './mobs/fight.js'
 import { reduce_view_distance } from './view_distance.js'
 import { floor1 } from './world.js'
 import { update_clients } from './mobs/position.js'
@@ -104,6 +105,7 @@ async function observe_client(context) {
   open_trade(context)
   check_shoot(context)
   dialog(context)
+  deal_damage(context)
   update_experience(context)
   declare_commands(context)
   chat({ server, ...context }) // TODO: remove server
