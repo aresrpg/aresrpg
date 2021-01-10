@@ -55,7 +55,7 @@ export default function chat({ server, client, get_state, world }) {
     const { message } = packet
     if (is_command_function(message)) {
       log.debug({ sender: client.uuid, command: message }, 'Command')
-      execute_command({ message, sender: client })
+      execute_command({ server, message, sender: client })
       return
     } else {
       log.debug({ sender: client.uuid, message }, 'Message')
