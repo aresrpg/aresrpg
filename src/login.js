@@ -56,7 +56,7 @@ export default function login({ client, events }) {
       chunkZ: chunk.z,
     })
 
-    set_world_border({ client, radius: 10000 })
+    set_world_border({ client, x: 512, z: 510, radius: 10000, speed: 1 })
 
     load_chunks(state, { client, events, chunks: [chunk] })
 
