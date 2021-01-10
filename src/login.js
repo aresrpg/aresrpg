@@ -4,8 +4,7 @@ import { write_brand } from './plugin_channels.js'
 import { dimension_codec, overworld } from './world/codec.js'
 import { load_chunks } from './chunk/update.js'
 import { write_title } from './title.js'
-import { set_world_border, red_screen } from './lowlife.js'
-
+import { set_world_border } from './world_border.js'
 export default function login({ client, events }) {
   events.once('state', (state) => {
     const {
@@ -58,7 +57,6 @@ export default function login({ client, events }) {
     })
 
     set_world_border({ client, radius: 10000 })
-    red_screen({ client, warning_blocks: 10000 })
 
     load_chunks(state, { client, events, chunks: [chunk] })
 
