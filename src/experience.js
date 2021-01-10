@@ -1,6 +1,6 @@
 import { on } from 'events'
 
-import { pipeline, reduce } from 'streaming-iterables'
+import { aiter } from 'iterator-helper'
 
 const levels = [
   0, // levels starts at 1
@@ -145,9 +145,8 @@ export function level_progress({ level, remaining_experience }) {
  * @param {any} context
  */
 export function update_experience({ client, events }) {
-  pipeline(
-    () => on(events, 'state'),
-    reduce((last_total_experience, [{ experience: total_experience }]) => {
+  aiter(on(events, 'state')).reduce(
+    (last_total_experience, [{ experience: total_experience }]) => {
       if (last_total_experience !== total_experience) {
         const { level, remaining_experience } = experience_to_level(
           total_experience
@@ -161,6 +160,7 @@ export function update_experience({ client, events }) {
         })
       }
       return total_experience
-    }, null)
+    },
+    null
   )
 }
