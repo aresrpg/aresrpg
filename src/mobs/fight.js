@@ -48,16 +48,4 @@ export function deal_damage({ client, world }) {
       }, null)
     )
   }
-
-  /* if (newlife > 0) {
-    client.write('entity_status', {
-      entityId: mob.entity_id,
-      entityStatus: 2, // Hurt Animation and Hurt Sound (sound not working)
-    })
-  } else {
-    client.write('entity_status', {
-      entityId: mob.entity_id,
-      entityStatus: 3, // Death Animation and Death Sound (sound not working)
-    })
-  } */
 }
