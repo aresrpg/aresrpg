@@ -1,4 +1,4 @@
-import { Position } from '../chat.js'
+import { write_chat_msg } from '../chat.js'
 
 export const thug_nodes = [
   {
@@ -10,15 +10,17 @@ export const thug_nodes = [
   },
 ]
 
-export default function thug({ sender }) {
-  sender.write('chat', {
-    message: JSON.stringify([
-      { text: ' ' + sender.username, color: 'gray' },
-      { text: " Pense qu'il y a un", color: 'blue' },
-      { text: ' Gangster', color: 'red' },
-      { text: ' Parmis nous !', color: 'blue' },
-    ]),
-    position: Position.CHAT,
-    sender: sender.uuid,
-  })
+export default function thug({ server, sender }) {
+  write_chat_msg(
+    { server },
+    {
+      message: JSON.stringify([
+        { text: ' ' + sender.username, color: 'gray' },
+        { text: " Pense qu'il y a un", color: 'blue' },
+        { text: ' Gangster', color: 'red' },
+        { text: ' Parmis nous !', color: 'blue' },
+      ]),
+      client: sender,
+    }
+  )
 }

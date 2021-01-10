@@ -1,4 +1,4 @@
-import { Position } from '../chat.js'
+import { write_chat_msg } from '../chat.js'
 
 export const ragequit_nodes = [
   {
@@ -10,14 +10,20 @@ export const ragequit_nodes = [
   },
 ]
 
-export default function ragequit({ sender }) {
-  sender.write('chat', {
-    message: JSON.stringify([
-      { text: ' ' + sender.username, color: 'gray' },
-      { text: ' a RageQuit !', color: 'red' },
-    ]),
-    position: Position.CHAT,
-    sender: sender.uuid,
-  })
-  sender.write('kick_disconnect', { reason: JSON.stringify('§ert si c trist') })
+export default function ragequit({ server, sender }) {
+  write_chat_msg(
+    { server },
+    {
+      message: JSON.stringify([
+        { text: ' ' + sender.username, color: 'gray' },
+        { text: ' a RageQuit !', color: 'red' },
+      ]),
+      client: sender,
+    }
+  )
+
+  sender.end(
+    'Ragequit',
+    JSON.stringify({ text: 'ert si c trist', color: 'yellow' })
+  )
 }

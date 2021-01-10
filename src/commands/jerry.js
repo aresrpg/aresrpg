@@ -1,4 +1,4 @@
-import { Position } from '../chat.js'
+import { write_chat_msg } from '../chat.js'
 
 export const jerry_nodes = [
   {
@@ -10,13 +10,15 @@ export const jerry_nodes = [
   },
 ]
 
-export default function jerry({ sender }) {
-  sender.write('chat', {
-    message: JSON.stringify([
-      { text: ' ' + sender.username, color: 'gray' },
-      { text: ' Harry Golay !', color: 'blue' },
-    ]),
-    position: Position.CHAT,
-    sender: sender.uuid,
-  })
+export default function jerry({ server, sender }) {
+  write_chat_msg(
+    { server },
+    {
+      message: JSON.stringify([
+        { text: ' ' + sender.username, color: 'gray' },
+        { text: ' Harry Golay !', color: 'blue' },
+      ]),
+      client: sender,
+    }
+  )
 }

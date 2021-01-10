@@ -1,4 +1,4 @@
-import { Position } from '../chat.js'
+import { write_chat_msg } from '../chat.js'
 
 export const respect_nodes = [
   {
@@ -10,14 +10,16 @@ export const respect_nodes = [
   },
 ]
 
-export default function respect({ sender }) {
-  sender.write('chat', {
-    message: JSON.stringify([
-      { text: ' ' + sender.username, color: 'gray' },
-      { text: ' cherche encore le', color: 'yellow' },
-      { text: ' respect', color: 'green', bold: 'true' },
-    ]),
-    position: Position.CHAT,
-    sender: sender.uuid,
-  })
+export default function respect({ server, sender }) {
+  write_chat_msg(
+    { server },
+    {
+      message: JSON.stringify([
+        { text: ' ' + sender.username, color: 'gray' },
+        { text: ' cherche encore le', color: 'yellow' },
+        { text: ' respect', color: 'green', bold: 'true' },
+      ]),
+      client: sender,
+    }
+  )
 }

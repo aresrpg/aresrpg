@@ -1,4 +1,4 @@
-import { Position } from '../chat.js'
+import { write_chat_msg } from '../chat.js'
 
 export const dislike_nodes = [
   {
@@ -10,15 +10,17 @@ export const dislike_nodes = [
   },
 ]
 
-export default function dislike({ sender }) {
-  sender.write('chat', {
-    message: JSON.stringify([
-      { text: ' ' + sender.username, color: 'gray' },
-      { text: ' a', color: 'blue' },
-      { text: ' Dislike', color: 'red' },
-      { text: ' !', color: 'blue' },
-    ]),
-    position: Position.CHAT,
-    sender: sender.uuid,
-  })
+export default function dislike({ server, sender }) {
+  write_chat_msg(
+    { server },
+    {
+      message: JSON.stringify([
+        { text: ' ' + sender.username, color: 'gray' },
+        { text: ' a', color: 'blue' },
+        { text: ' Dislike', color: 'red' },
+        { text: ' !', color: 'blue' },
+      ]),
+      client: sender,
+    }
+  )
 }

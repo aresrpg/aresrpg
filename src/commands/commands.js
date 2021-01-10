@@ -2,7 +2,7 @@ import { Position } from '../chat.js'
 
 import gamemode from './gamemode.js'
 import dislike from './dislike.js'
-import f from './f.js'
+import fragile from './fragile.js'
 import jerry from './jerry.js'
 import like from './like.js'
 import osef from './osef.js'
@@ -14,12 +14,13 @@ import thug from './thug.js'
 
 export function write_unfounded_command({ sender }) {}
 
-export default function execute_command({ message, sender }) {
+export default function execute_command({ server, message, sender }) {
   const [name, ...args] = message.trimStart().split(/\s+/)
   const command = {
     name,
     args,
     sender,
+    server,
   }
 
   switch (command.name) {
@@ -31,7 +32,7 @@ export default function execute_command({ message, sender }) {
       dislike(command)
       break
     case '/f':
-      f(command)
+      fragile(command)
       break
     case '/jerry':
       jerry(command)

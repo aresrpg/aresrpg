@@ -1,4 +1,4 @@
-import { Position } from '../chat.js'
+import { write_chat_msg } from '../chat.js'
 
 export const tg_nodes = [
   {
@@ -10,15 +10,17 @@ export const tg_nodes = [
   },
 ]
 
-export default function tg({ sender }) {
-  sender.write('chat', {
-    message: JSON.stringify([
-      { text: ' ' + sender.username, color: 'gray' },
-      { text: ' Demande le', color: 'gold' },
-      { text: ' silence', color: 'red', bold: 'true' },
-      { text: ' !', color: 'blue' },
-    ]),
-    position: Position.CHAT,
-    sender: sender.uuid,
-  })
+export default function tg({ server, sender }) {
+  write_chat_msg(
+    { server },
+    {
+      message: JSON.stringify([
+        { text: ' ' + sender.username, color: 'gray' },
+        { text: ' Demande le', color: 'gold' },
+        { text: ' silence', color: 'red', bold: 'true' },
+        { text: ' !', color: 'blue' },
+      ]),
+      client: sender,
+    }
+  )
 }

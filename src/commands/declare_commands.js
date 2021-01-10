@@ -1,6 +1,6 @@
 import { gamemode_nodes } from './gamemode.js'
 import { dislike_nodes } from './dislike.js'
-import { f_nodes } from './f.js'
+import { fragile_nodes } from './fragile.js'
 import { jerry_nodes } from './jerry.js'
 import { like_nodes } from './like.js'
 import { osef_nodes } from './osef.js'
@@ -30,7 +30,7 @@ export default function declare_commands({ client }) {
     children: [
       ...gamemode_nodes,
       ...dislike_nodes,
-      ...f_nodes,
+      ...fragile_nodes,
       ...jerry_nodes,
       ...like_nodes,
       ...osef_nodes,
