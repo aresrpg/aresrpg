@@ -3,7 +3,7 @@ import { on } from 'events'
 
 import minecraft_data from 'minecraft-data'
 import UUID from 'uuid-1345'
-import { reduce, map, pipeline } from 'streaming-iterables'
+import { aiter } from 'iterator-helper'
 
 import { chunk_position, same_chunk } from '../chunk.js'
 import { version } from '../settings.js'
@@ -187,28 +187,26 @@ export function update_clients(world) {
   const actions = new PassThrough({ objectMode: true })
 
   for (const mob of world.mobs.all) {
-    pipeline(
-      () => on(mob.events, 'state'),
-      map(([state]) => state),
-      path_to_positions,
-      reduce((last_position, position) => {
-        if (last_position !== position) {
-          actions.write({
-            type: 'mob_position',
-            payload: {
-              mob,
-              last_position,
-              position,
-            },
-          })
-        }
-        return position
-      }, null)
-    )
+    const state = aiter(on(mob.events, 'state')).map(([state]) => state)
 
-    pipeline(
-      () => on(mob.events, 'state'),
-      reduce((last_path, [{ path, open, closed }]) => {
+    const positions = path_to_positions(state)
+
+    aiter(positions).reduce((last_position, position) => {
+      if (last_position !== position) {
+        actions.write({
+          type: 'mob_position',
+          payload: {
+            mob,
+            last_position,
+            position,
+          },
+        })
+      }
+      return position
+    }, null)
+
+    aiter(on(mob.events, 'state')).reduce(
+      (last_path, [{ path, open, closed }]) => {
         if (last_path !== path) {
           actions.write({
             type: 'mob_path',
@@ -221,14 +219,15 @@ export function update_clients(world) {
           })
         }
         return path
-      }, null)
+      },
+      null
     )
   }
 
   function update_mobs({ events, client }) {
-    events.on('chunk_loaded', ({ x, z }) =>
+    events.on('chunk_loaded', ({ x, z }) => {
       actions.write({ type: 'client_chunk_loaded', payload: { client, x, z } })
-    )
+    })
 
     events.on('chunk_unloaded', ({ x, z }) =>
       actions.write({
@@ -238,23 +237,20 @@ export function update_clients(world) {
     )
   }
 
-  pipeline(
-    () => actions,
-    reduce((chunks, { type, payload }) => {
-      switch (type) {
-        case 'client_chunk_loaded':
-          return client_chunk_loaded(chunks, payload)
-        case 'client_chunk_unloaded':
-          return client_chunk_unloaded(chunks, payload)
-        case 'mob_position':
-          return mob_position(chunks, payload)
-        case 'mob_path':
-          return mob_path(chunks, payload)
-        default:
-          throw new Error(`unknown type: ${type}`)
-      }
-    }, new Map())
-  )
+  aiter(actions).reduce((chunks, { type, payload }) => {
+    switch (type) {
+      case 'client_chunk_loaded':
+        return client_chunk_loaded(chunks, payload)
+      case 'client_chunk_unloaded':
+        return client_chunk_unloaded(chunks, payload)
+      case 'mob_position':
+        return mob_position(chunks, payload)
+      case 'mob_path':
+        return mob_path(chunks, payload)
+      default:
+        throw new Error(`unknown type: ${type}`)
+    }
+  }, new Map())
 
   return update_mobs
 }

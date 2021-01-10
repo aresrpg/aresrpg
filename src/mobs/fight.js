@@ -1,6 +1,6 @@
 import { on } from 'events'
 
-import { reduce, pipeline } from 'streaming-iterables'
+import { aiter } from 'iterator-helper'
 
 import logger from '../logger.js'
 
@@ -35,17 +35,14 @@ export function deal_damage({ client, world }) {
   })
 
   for (const mob of world.mobs.all) {
-    pipeline(
-      () => on(mob.events, 'state'),
-      reduce((last_health, [{ health }]) => {
-        if (last_health !== health) {
-          client.write('entity_status', {
-            entityId: mob.entity_id,
-            entityStatus: health > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
-          })
-        }
-        return health
-      }, null)
-    )
+    aiter(on(mob.events, 'state')).reduce((last_health, [{ health }]) => {
+      if (last_health !== health) {
+        client.write('entity_status', {
+          entityId: mob.entity_id,
+          entityStatus: health > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
+        })
+      }
+      return health
+    }, null)
   }
 }

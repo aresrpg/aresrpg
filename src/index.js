@@ -5,12 +5,12 @@ import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
 import protocol from 'minecraft-protocol'
-import { map, parallelMerge, pipeline, reduce } from 'streaming-iterables'
+import { aiter } from 'iterator-helper'
+import combineAsyncIterators from 'combine-async-iterators'
 
 import chat from './chat.js'
 import update_chunks from './chunk/update.js'
 import { update_experience } from './experience.js'
-import { scan } from './iterables.js'
 import logger from './logger.js'
 import login from './login.js'
 import { register_mobs } from './mobs.js'
@@ -118,63 +118,51 @@ async function observe_client(context) {
  *   |> transform_action
  *   |> (state = reduce_state(state))
  *   |> observe_client
- *
- * the pipeline function is just an helper to do:
- * c(b(a())) == pipeline(a, b, c) */
+ */
 
-pipeline(
-  () => on(server, 'login'),
-  reduce(
-    ({ world: last_world }, [client]) => {
-      client.on('error', (error) => {
-        throw error
-      })
+aiter(on(server, 'login')).reduce(
+  ({ world: last_world }, [client]) => {
+    client.on('error', (error) => {
+      throw error
+    })
 
-      const actions = new PassThrough({ objectMode: true })
+    const actions = new PassThrough({ objectMode: true })
 
-      const packets = pipeline(
-        () => on(client, 'packet'),
-        map(([payload, { name }]) => ({
-          type: `packet/${name}`,
-          payload,
-        }))
-      )
+    const packets = aiter(on(client, 'packet')).map(([payload, { name }]) => ({
+      type: `packet/${name}`,
+      payload,
+    }))
 
-      const world = {
-        ...last_world,
-        next_entity_id: last_world.next_entity_id + 1,
-      }
+    const world = {
+      ...last_world,
+      next_entity_id: last_world.next_entity_id + 1,
+    }
 
-      const events = new EventEmitter()
+    const events = new EventEmitter()
 
-      pipeline(
-        () => parallelMerge(actions, packets),
-        map(transform_action),
-        scan(
-          reduce_state,
-          initial_state({ entity_id: last_world.next_entity_id, world })
-        ),
-        async (states) => {
-          for await (const state of states) events.emit('state', state)
-        }
-      )
+    aiter(combineAsyncIterators(actions, packets))
+      .map(transform_action)
+      .reduce((last_state, action) => {
+        const state = reduce_state(last_state, action)
+        events.emit('state', state)
+        return state
+      }, initial_state({ entity_id: last_world.next_entity_id, world }))
 
-      observe_client({
-        client,
-        world,
-        events,
-        get_state: last_event_value(events, 'state'),
-        dispatch(type, payload) {
-          actions.write({ type, payload })
-        },
-      })
+    observe_client({
+      client,
+      world,
+      events,
+      get_state: last_event_value(events, 'state'),
+      dispatch(type, payload) {
+        actions.write({ type, payload })
+      },
+    })
 
-      return {
-        world,
-      }
-    },
-    { world: initial_world }
-  )
+    return {
+      world,
+    }
+  },
+  { world: initial_world }
 )
 
 server.once('listening', () => {

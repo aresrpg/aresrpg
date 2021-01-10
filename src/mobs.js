@@ -1,9 +1,8 @@
 import { PassThrough } from 'stream'
 import { EventEmitter } from 'events'
 
-import { pipeline } from 'streaming-iterables'
+import { aiter } from 'iterator-helper'
 
-import { scan } from './iterables.js'
 import { reduce_goto } from './mobs/goto.js'
 import { reduce_deal_damage } from './mobs/fight.js'
 import { last_event_value } from './events.js'
@@ -33,16 +32,13 @@ export function register_mobs(world) {
     const actions = new PassThrough({ objectMode: true })
     const events = new EventEmitter()
 
-    pipeline(
-      () => actions,
-      scan(
-        (state, action) => reduce_state(state, action, world.get()),
-        initial_state
-      ),
-      async (states) => {
-        for await (const state of states) events.emit('state', state)
-      }
-    )
+    aiter(actions).reduce(async (last_state, action) => {
+      const state = await reduce_state(last_state, action, world.get())
+      events.emit('state', state)
+      return state
+    }, initial_state)
+
+    setImmediate(() => events.emit('state', initial_state))
 
     return {
       entity_id: world.next_entity_id + i,
