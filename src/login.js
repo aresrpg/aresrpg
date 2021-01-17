@@ -4,7 +4,7 @@ import { write_brand } from './plugin_channels.js'
 import { dimension_codec, overworld } from './world/codec.js'
 import { load_chunks } from './chunk/update.js'
 import { write_title } from './title.js'
-
+import { set_world_border } from './world_border.js'
 export default function login({ client, events }) {
   events.once('state', (state) => {
     const {
@@ -55,6 +55,8 @@ export default function login({ client, events }) {
       chunkX: chunk.x,
       chunkZ: chunk.z,
     })
+
+    set_world_border({ client, x: 510, z: 510, radius: 1020, speed: 1 })
 
     load_chunks(state, { client, events, chunks: [chunk] })
 
