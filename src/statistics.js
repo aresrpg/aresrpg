@@ -1,4 +1,4 @@
-const CATEGORIES = {
+const Categories = {
   MINED: 0,
   CRAFTED: 1,
   USED: 2,
@@ -17,18 +17,18 @@ export function statistics({ client }) {
         /*
           You can add statistcs like this:
           {
-            categoryId: CATEGORIES.MINED,
+            categoryId: Categories.MINED,
             statisticId: 1,
             value: 0,
           },
-          'CategoryId' is the type of stats you want to enter you can use CATEGORIES enum for help.
-          'StatisticId' is the id of the statistic. for a block, item, entity use they ids, for a custom
-          one use the custom statistics ids you can see everythings Here: https://wiki.vg/Protocol#Statistics.
-          'Value' is the value given to the player.
+          'categoryId' is the type of stats you want to enter you can use Categories enum for help.
+          'statisticId' is the id of the statistic. for a block, item, entity use they ids, for a custom
+          one use the custom statistics ids you can see everything listed here: https://wiki.vg/Protocol#Statistics.
+          'value' is the value given to the player.
           */
         entries: [
           {
-            categoryId: CATEGORIES.MINED,
+            categoryId: Categories.MINED,
             statisticId: 1,
             value: 0,
           },
