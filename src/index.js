@@ -26,6 +26,7 @@ import { open_trade, register_trades } from './trade/trade.js'
 import dialog from './mobs/dialog.js'
 import { deal_damage } from './mobs/fight.js'
 import { reduce_view_distance } from './view_distance.js'
+import { statistics } from './statistics.js'
 import { floor1 } from './world.js'
 import { update_clients } from './mobs/position.js'
 import { mob_goto } from './mobs/goto.js'
@@ -104,6 +105,7 @@ async function observe_client(context) {
   open_trade(context)
   dialog(context)
   deal_damage(context)
+  statistics(context)
   update_experience(context)
   declare_commands(context)
   chat({ server, ...context }) // TODO: remove server
