@@ -9,13 +9,13 @@ const log = logger(import.meta)
 export function reduce_deal_damage(state, { type, payload }) {
   if (type === 'deal_damage') {
     const { damage } = payload
-    const life = Math.max(0, state.life - damage)
+    const health = Math.max(0, state.health - damage)
 
-    log.info({ damage, life }, 'Deal Damage')
+    log.info({ damage, health }, 'Deal Damage')
 
     return {
       ...state,
-      life,
+      health,
     }
   }
   return state
@@ -37,14 +37,14 @@ export function deal_damage({ client, world }) {
   for (const mob of world.mobs.all) {
     pipeline(
       () => on(mob.events, 'state'),
-      reduce((last_life, [{ life }]) => {
-        if (last_life !== life) {
+      reduce((last_health, [{ health }]) => {
+        if (last_health !== health) {
           client.write('entity_status', {
             entityId: mob.entity_id,
-            entityStatus: life > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
+            entityStatus: health > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
           })
         }
-        return life
+        return health
       }, null)
     )
   }

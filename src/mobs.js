@@ -27,7 +27,7 @@ export function register_mobs(world) {
       closed: [],
       start_time: 0,
       speed: 500 /* block/ms */,
-      life: 20 /* halfheart */,
+      health: 20 /* halfheart */,
     }
 
     const actions = new PassThrough({ objectMode: true })
