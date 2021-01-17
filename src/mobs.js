@@ -5,11 +5,14 @@ import { pipeline } from 'streaming-iterables'
 
 import { scan } from './iterables.js'
 import { reduce_goto } from './mobs/goto.js'
+import { reduce_deal_damage } from './mobs/fight.js'
+import { last_event_value } from './events.js'
 
 function reduce_state(state, action, world) {
   return [
     //
     reduce_goto,
+    reduce_deal_damage,
   ].reduce(
     async (intermediate, fn) => fn(await intermediate, action, world),
     state
@@ -24,6 +27,7 @@ export function register_mobs(world) {
       closed: [],
       start_time: 0,
       speed: 500 /* block/ms */,
+      health: 20 /* halfheart */,
     }
 
     const actions = new PassThrough({ objectMode: true })
@@ -45,6 +49,7 @@ export function register_mobs(world) {
       mob,
       level,
       events,
+      get_state: last_event_value(events, 'state'),
       dispatch(type, payload) {
         actions.write({ type, payload })
       },
