@@ -28,7 +28,7 @@
   "dependencies": {
     "minecraft-protocol": "^1.22.0",
     "minecraft-data": "^2.71.0",
-    "pino": "^6.9.0",
+    "pino": "^6.11.0",
     "prismarine-provider-anvil": "^2.3.1",
     "streaming-iterables": "^5.0.3"
   },
