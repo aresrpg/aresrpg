@@ -30,7 +30,7 @@
     "minecraft-data": "^2.71.0",
     "pino": "^6.11.0",
     "prismarine-provider-anvil": "^2.3.1",
-    "streaming-iterables": "^5.0.3"
+    "streaming-iterables": "^5.0.4"
   },
   "devDependencies": {
     "@hydre/pino-human": "^1.1.0",
