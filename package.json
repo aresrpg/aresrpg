@@ -36,7 +36,7 @@
     "@hydre/pino-human": "^1.1.0",
     "@mermaid-js/mermaid-cli": "^8.8.4",
     "eslint": "^7.17.0",
-    "eslint-config-prettier": "^7.1.0",
+    "eslint-config-prettier": "^7.2.0",
     "eslint-config-standard": "^16.0.2",
     "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-node": "^11.1.0",
