@@ -39,16 +39,17 @@ const line_offset = 0.3
 export function register_teleportation_stones(world) {
   return {
     ...world,
-    lastEntityId:
-      world.lastEntityId + world.teleportation_stones.length * lines.length * 2,
-    lastWindowId: world.lastWindowId + world.teleportation_stones.length,
+    next_entity_id:
+      world.next_entity_id +
+      world.teleportation_stones.length * lines.length * 2,
+    next_window_id: world.next_window_id + world.teleportation_stones.length,
     teleportation_stones: world.teleportation_stones.map(
       (stone, stone_index) => ({
         ...stone,
-        window_id: world.lastWindowId + stone_index,
+        window_id: world.next_window_id + stone_index,
         entity_ids: Array.from({ length: lines.length * 2 }).map(
           (_, index) =>
-            world.lastEntityId + stone_index * lines.length * 2 + index
+            world.next_entity_id + stone_index * lines.length * 2 + index
         ),
       })
     ),
@@ -264,7 +265,7 @@ function on_window_click({ world, client, position }) {
         length: 18,
       })
       if (slot >= 0 && slot < available_teleportations_stones.length) {
-        client.write('transaction', { windowId, action, accepted: false })
+        // client.write('transaction', { windowId, action, accepted: false })
         if (available_teleportations_stones[slot]) {
           client.write('close_window', { windowId })
           client.write('position', {
@@ -272,10 +273,10 @@ function on_window_click({ world, client, position }) {
             ...available_teleportations_stones[slot].position,
           })
         }
-        return
+        
       }
       // TODO: cancel the window_click by resending the window_items & some set_slot packets
-      client.write('transaction', { windowId, action, accepted: true })
+      // client.write('transaction', { windowId, action, accepted: true })
     }
   }
 }
