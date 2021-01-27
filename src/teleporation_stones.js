@@ -1,5 +1,6 @@
 import UUID from 'uuid-1345'
 import minecraftData from 'minecraft-data'
+
 import { version } from './settings.js'
 import { chunk_position } from './chunk.js'
 import { empty_slot } from './items.js'
@@ -72,8 +73,8 @@ function teleportation_stones_in_chunk(world, chunk_x, chunk_z) {
 
 // TODO: Create a chat component type ?
 /**
- * create an armor_stand to create a line
- * with its display name
+ * create an armor_stand to create
+ * a text line with its display name
  * @param {any} client
  * @param {number} entity_id
  * @param {Position} position
@@ -273,7 +274,6 @@ function on_window_click({ world, client, position }) {
             ...available_teleportations_stones[slot].position,
           })
         }
-        
       }
       // TODO: cancel the window_click by resending the window_items & some set_slot packets
       // client.write('transaction', { windowId, action, accepted: true })
