@@ -10,7 +10,7 @@ Branch are usually merged with a fast-forward merge (sometimes with a rebase bef
 
 ## Code Style
 
-This codebase try to follow the [Functional Programming](https://en.wikipedia.org/wiki/Functional_programming) Paradigm,
+This codebase try to follow the [Declarative Programming](https://en.wikipedia.org/wiki/Declarative_programming) Paradigm,
 if you don't know this paradigm you can still contribute. Try to learn it while developing your contribution it's not required
 to be perfect. We will help you during the review to make it perfect :)
 
@@ -18,7 +18,7 @@ to be perfect. We will help you during the review to make it perfect :)
 
 ## State Management Pattern
 
-The Code Base follows a State Management Pattern (like [Redux](https://redux.js.org/introduction/core-concepts) or [Vuex](https://vuex.vuejs.org/#what-is-a-state-management-pattern))
+The Code Base follows a State Management Pattern (like [Redux](https://redux.js.org/introduction/core-concepts) or [Vuex](https://vuex.vuejs.org/#what-is-a-state-management-pattern)), this can also be viewed as a [CQRS](https://en.wikipedia.org/wiki/Command%E2%80%93query_separation#Command_query_responsibility_segregation) System
 
 The code is separated into 3 parts:
 
@@ -139,7 +139,7 @@ We also need to synchronize `events` in the [World](#World) and Chunks events fo
 
 ### Responsibility-Oriented Game Server
 
-We need to synchronize (Actions)[#Actions] between servers and run only a subset of each observers + reducers on each server
+We need to synchronize [Actions](#Actions) between servers and run only a subset of each observers + reducers on each server
 We also need to synchronize `events` in the [World](#World) and Chunks events
 
 So to resume the goal here is to write our server like if it was a [Monolithic Architecture](https://gameserverarchitecture.com/2015/10/pattern-monolithic-architecture/) but be able to implement other patterns easily
