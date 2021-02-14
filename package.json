@@ -28,7 +28,7 @@
   "dependencies": {
     "combine-async-iterators": "^2.0.0",
     "iterator-helper": "^1.1.0",
-    "minecraft-protocol": "^1.22.0",
+    "minecraft-protocol": "^1.23.1",
     "minecraft-data": "^2.74.0",
     "pino": "^6.11.0",
     "prismarine-provider-anvil": "^2.3.1"
