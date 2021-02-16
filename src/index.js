@@ -20,6 +20,7 @@ import {
   transform_plugin_channels,
 } from './plugin_channels.js'
 import { reduce_position } from './position.js'
+import * as fall_damage from './player/fall_damage.js'
 import { online_mode, version } from './settings.js'
 import { register_traders, spawn_merchants } from './trade/spawn_villagers.js'
 import { open_trade, register_trades } from './trade/trade.js'
@@ -71,6 +72,7 @@ const initial_state = ({ entity_id, world }) => ({
   }),
   game_mode: 2,
   experience: 0,
+  health: 40, // until there is some texture pack health bar, we use the original ares 20 hearts
 })
 
 function reduce_state(state, action) {
@@ -80,6 +82,7 @@ function reduce_state(state, action) {
     reduce_position,
     reduce_view_distance,
     reduce_plugin_channels,
+    fall_damage.reduce,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
 }
 
@@ -108,6 +111,7 @@ async function observe_client(context) {
   statistics(context)
   update_experience(context)
   declare_commands(context)
+  fall_damage.observe(context)
   chat({ server, ...context }) // TODO: remove server
 }
 
