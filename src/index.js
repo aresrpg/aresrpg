@@ -20,7 +20,7 @@ import {
   transform_plugin_channels,
 } from './plugin_channels.js'
 import { reduce_position } from './position.js'
-import * as fall_damage from './player/fall_damage.js'
+import fall_damage from './player/fall_damage.js'
 import { online_mode, version } from './settings.js'
 import { register_traders, spawn_merchants } from './trade/spawn_villagers.js'
 import { open_trade, register_trades } from './trade/trade.js'
@@ -82,7 +82,7 @@ function reduce_state(state, action) {
     reduce_position,
     reduce_view_distance,
     reduce_plugin_channels,
-    fall_damage.reduce,
+    fall_damage.reducer,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
 }
 
@@ -111,7 +111,7 @@ async function observe_client(context) {
   statistics(context)
   update_experience(context)
   declare_commands(context)
-  fall_damage.observe(context)
+  fall_damage.observer(context)
   chat({ server, ...context }) // TODO: remove server
 }
 
@@ -144,7 +144,7 @@ aiter(on(server, 'login')).reduce(
 
     const events = new EventEmitter()
 
-    aiter(combineAsyncIterators(actions, packets))
+    aiter(combineAsyncIterators(actions[Symbol.asyncIterator](), packets))
       .map(transform_action)
       .reduce((last_state, action) => {
         const state = reduce_state(last_state, action)
