@@ -11,9 +11,9 @@ import mobs_goto from './mobs/goto.js'
 import mobs_damage from './mobs/damage.js'
 import mobs_target from './mobs/target.js'
 import behavior_tree from './mobs/behavior_tree.js'
-import { version } from './settings.js'
+import { VERSION } from './settings.js'
 
-const { entitiesByName } = minecraft_data(version)
+const { entitiesByName } = minecraft_data(VERSION)
 
 function reduce_mob(state, action, world) {
   return [

@@ -1,5 +1,5 @@
-import { Position } from '../player/chat.js'
-import { SERVER_UUID } from '../context.js'
+import { Position } from '../chat.js'
+import { SERVER_UUID } from '../settings.js'
 
 import { write_error } from './commands.js'
 import { literal, integer } from './declare_options.js'

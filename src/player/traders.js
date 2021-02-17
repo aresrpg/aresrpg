@@ -2,10 +2,10 @@ import minecraft_data from 'minecraft-data'
 import UUID from 'uuid-1345'
 
 import { chunk_position, chunk_index } from '../chunk.js'
-import { version } from '../settings.js'
+import { VERSION } from '../settings.js'
 import { empty_slot, item_to_slot } from '../items.js'
 
-const mcData = minecraft_data(version)
+const mcData = minecraft_data(VERSION)
 
 /** @param {import('../context.js').InitialWorld} world */
 export function register(world) {

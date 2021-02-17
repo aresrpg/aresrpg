@@ -1,4 +1,4 @@
-import { write_chat_msg } from '../player/chat.js'
+import { world_chat_msg } from '../chat.js'
 
 import { literal } from './declare_options.js'
 
@@ -12,16 +12,14 @@ export const dislike_nodes = [
 ]
 
 export default function dislike({ world, sender }) {
-  write_chat_msg(
-    { world },
-    {
-      message: JSON.stringify([
-        { text: ' ' + sender.username, color: 'gray' },
-        { text: ' a', color: 'blue' },
-        { text: ' Dislike', color: 'red' },
-        { text: ' !', color: 'blue' },
-      ]),
-      client: sender,
-    }
-  )
+  world_chat_msg({
+    world,
+    message: JSON.stringify([
+      { text: ' ' + sender.username, color: 'gray' },
+      { text: ' a', color: 'blue' },
+      { text: ' Dislike', color: 'red' },
+      { text: ' !', color: 'blue' },
+    ]),
+    client: sender,
+  })
 }

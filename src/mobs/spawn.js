@@ -4,11 +4,11 @@ import minecraft_data from 'minecraft-data'
 import UUID from 'uuid-1345'
 import { aiter } from 'iterator-helper'
 
-import { version } from '../settings.js'
+import { VERSION } from '../settings.js'
 
 import { Types } from './types.js'
 
-const { entitiesByName } = minecraft_data(version)
+const { entitiesByName } = minecraft_data(VERSION)
 
 const color_by_type = {
   mob: 'white',

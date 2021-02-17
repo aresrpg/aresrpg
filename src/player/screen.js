@@ -5,9 +5,9 @@ import UUID from 'uuid-1345'
 import Vec3 from 'vec3'
 
 import { floor_pos, intersect_ray_plane, to_direction } from '../math.js'
-import { version } from '../settings.js'
+import { VERSION } from '../settings.js'
 
-const mcData = minecraftData(version)
+const mcData = minecraftData(VERSION)
 
 const { nearestMatch } = mapcolors
 const { createCanvas } = canvas

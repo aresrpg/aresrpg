@@ -2,9 +2,9 @@ import { performance } from 'perf_hooks'
 
 import Anvil from 'prismarine-provider-anvil'
 
-import { version } from './settings.js'
+import { VERSION } from './settings.js'
 
-const AnvilWorld = Anvil.Anvil(version)
+const AnvilWorld = Anvil.Anvil(VERSION)
 
 export const chunk_position = value => Math.floor(value / 16)
 

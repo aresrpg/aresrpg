@@ -50,15 +50,12 @@ import mobs_look_at from './mobs/look_at.js'
 import mobs_wakeup from './mobs/wakeup.js'
 import commands_declare from './commands/declare.js'
 import start_debug_server from './debug.js'
+import blockchain from './blockchain.js'
 import observe_performance from './performance.js'
 import { abortable } from './iterator.js'
 import Database from './database.js'
 
 const log = logger(import.meta)
-
-export const PLAYER_ENTITY_ID = 0
-export const PLAYER_INVENTORY_ID = 0
-export const SERVER_UUID = '00000000000000000000000000000000'
 
 const initial_world = {
   ...floor1,
@@ -108,6 +105,24 @@ const initial_state = {
   game_mode: 2,
   experience: 0,
   health: 40,
+  enjin: {
+    // an idendity represent a single ETH address
+    // if it stays undefined then their may be probleme with account creation
+    // and the user should not be allowed to interract with Enjin
+    identity_id: undefined,
+    // code used to link and identity to an ETH address
+    wallet_linking_code: undefined,
+    // an user that didn't linked his ETH wallet can't claim real tokens
+    wallet_linked: false,
+    // the ETH address (after link)
+    wallet_address: undefined,
+    // the amount of coin stored on the wallet
+    // when the wallet is linked we override this value
+    // otherwise we use the last saved value (in DB)
+    kares: 0,
+    // all others NFTs (a future PR on items implementation would precise this field)
+    items: [],
+  },
 }
 
 // Add here all fields that you want to save in the database
@@ -118,6 +133,9 @@ const saved_state = ({
   experience,
   health,
   held_slot_index,
+  kares,
+  enjin_identity_id,
+  enjin_wallet_linking_code,
 }) => ({
   position,
   inventory,
@@ -125,6 +143,9 @@ const saved_state = ({
   experience,
   health,
   held_slot_index,
+  kares,
+  enjin_identity_id,
+  enjin_wallet_linking_code,
 })
 
 /** @template U
@@ -158,6 +179,7 @@ function reduce_state(state, action) {
     player_deal_damage.reduce,
     player_inventory.reduce,
     player_held_item.reduce,
+    blockchain.reduce,
     chunk_update.reduce,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
 }
@@ -180,6 +202,12 @@ export async function observe_client(context) {
   finalization.observe(context)
 
   await player_resource_pack.observe(context)
+
+  // this is also an asynchrone observer initialization
+  // but i think it's fine to let it run alone without waiting for it
+  // not awaiting will enhance the UX, but we may have to restrict some actions
+  // until all datas are fully loaded from the blockchain
+  blockchain.observe(context)
 
   // login has to stay on top
   player_login.observe(context)
@@ -243,6 +271,7 @@ export async function create_context(client) {
       { username: client.username, uuid: client.uuid },
       'Client disconnected'
     )
+
     actions.end()
     controller.abort()
   })

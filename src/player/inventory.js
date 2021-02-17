@@ -3,7 +3,7 @@ import { on } from 'events'
 import { aiter } from 'iterator-helper'
 
 import { empty_slot, item_to_slot } from '../items.js'
-import { PLAYER_INVENTORY_ID } from '../context.js'
+import { PLAYER_INVENTORY_ID } from '../settings.js'
 import { abortable } from '../iterator.js'
 
 const FORBIDDEN_SLOTS = [

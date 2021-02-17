@@ -1,4 +1,4 @@
-import { PLAYER_ENTITY_ID } from '../context.js'
+import { PLAYER_ENTITY_ID } from '../settings.js'
 
 export default {
   /** @type {import('../context.js').Observer} */

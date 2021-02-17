@@ -3,11 +3,11 @@ import minecraft_types from 'minecraft-protocol/src/datatypes/minecraft.js'
 import protodef from 'protodef'
 
 import logger from './logger.js'
-import { version } from './settings.js'
+import { VERSION } from './settings.js'
 
 const log = logger(import.meta)
 
-const mc_data = minecraft_data(version)
+const mc_data = minecraft_data(VERSION)
 
 const BRAND_CHANNEL = 'minecraft:brand'
 const DEBUG_PATH_CHANNEL = 'minecraft:debug/path'

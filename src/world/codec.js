@@ -1,8 +1,8 @@
 import minecraft_data from 'minecraft-data'
 
-import { version } from '../settings.js'
+import { VERSION } from '../settings.js'
 
-const { loginPacket } = minecraft_data(version)
+const { loginPacket } = minecraft_data(VERSION)
 
 export const overworld = {
   name: '',

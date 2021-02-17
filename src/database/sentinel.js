@@ -3,12 +3,11 @@ import events from 'events'
 import Redis from 'ioredis'
 
 import logger from '../logger.js'
-
-const {
-  REDIS_HOST = '0.0.0.0',
-  REDIS_SENTINEL_PORT = 26379,
-  REDIS_MASTER_NAME = 'mymaster',
-} = process.env
+import {
+  REDIS_HOST,
+  REDIS_SENTINEL_PORT,
+  REDIS_MASTER_NAME,
+} from '../settings.js'
 
 const log = logger(import.meta)
 
