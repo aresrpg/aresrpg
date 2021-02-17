@@ -21,31 +21,33 @@ export default {
   },
 
   observer({ client, events, dispatch }) {
-    const reducer = (
-      { highest_y = 0, was_on_ground = true },
-      [
-        {
-          position: { y, onGround },
-        },
-      ]
-    ) => {
-      if (!was_on_ground && onGround) {
-        const fall_distance = highest_y - y
-        const raw_damage = fall_distance / 2 - 1.5
-        const damage = Math.round(raw_damage * 2) / 2
+    aiter(on(events, 'state')).reduce(
+      (
+        { highest_y = 0, was_on_ground = true },
+        [
+          {
+            position: { y, onGround },
+          },
+        ]
+      ) => {
+        if (!was_on_ground && onGround) {
+          const fall_distance = highest_y - y
+          const raw_damage = fall_distance / 2 - 1.5
+          const damage = Math.round(raw_damage * 2) / 2
 
-        if (damage > 0) dispatch('fall_damage', { damage })
-        return {
-          highest_y: y,
-          was_on_ground: true,
+          if (damage > 0) dispatch('fall_damage', { damage })
+          return {
+            highest_y: y,
+            was_on_ground: true,
+          }
         }
-      }
 
-      return {
-        highest_y: Math.max(highest_y, y),
-        was_on_ground: onGround,
-      }
-    }
-    aiter(on(events, 'state')).reduce(reducer, {})
+        return {
+          highest_y: Math.max(highest_y, y),
+          was_on_ground: onGround,
+        }
+      },
+      {}
+    )
   },
 }

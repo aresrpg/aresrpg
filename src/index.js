@@ -22,6 +22,7 @@ import {
 import { reduce_position } from './position.js'
 import player_fall_damage from './player/fall_damage.js'
 import player_health from './player/health.js'
+import player_attributes from './player/attributes.js'
 import { online_mode, version } from './settings.js'
 import { register_traders, spawn_merchants } from './trade/spawn_villagers.js'
 import { open_trade, register_trades } from './trade/trade.js'
@@ -73,7 +74,7 @@ const initial_state = ({ entity_id, world }) => ({
   }),
   game_mode: 2,
   experience: 0,
-  health: 20,
+  health: 40,
 })
 
 function reduce_state(state, action) {
@@ -95,28 +96,26 @@ function transform_action(action) {
 }
 
 const update_mobs_position = update_clients(initial_world)
-const observers = [
-  login,
-  update_chunks,
-  update_mobs_position,
-  mob_goto,
-  spawn_merchants,
-  open_trade,
-  dialog,
-  deal_damage,
-  statistics,
-  update_experience,
-  declare_commands,
-  player_fall_damage.observer,
-  player_health.observer,
-]
 
 async function observe_client(context) {
   /* Observers that handle the protocol part.
    * They get the client and should map it to minecraft protocol */
 
   await send_resource_pack(context)
-  observers.forEach((observer) => observer(context))
+  login(context)
+  update_chunks(context)
+  update_mobs_position(context)
+  mob_goto(context)
+  spawn_merchants(context)
+  open_trade(context)
+  dialog(context)
+  deal_damage(context)
+  statistics(context)
+  update_experience(context)
+  declare_commands(context)
+  player_fall_damage.observer(context)
+  player_health.observer(context)
+  player_attributes.observer(context)
   chat({ server, ...context }) // TODO: remove server
 }
 
