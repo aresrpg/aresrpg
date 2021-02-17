@@ -20,7 +20,8 @@ import {
   transform_plugin_channels,
 } from './plugin_channels.js'
 import { reduce_position } from './position.js'
-import fall_damage from './player/fall_damage.js'
+import player_fall_damage from './player/fall_damage.js'
+import player_health from './player/health.js'
 import { online_mode, version } from './settings.js'
 import { register_traders, spawn_merchants } from './trade/spawn_villagers.js'
 import { open_trade, register_trades } from './trade/trade.js'
@@ -82,7 +83,7 @@ function reduce_state(state, action) {
     reduce_position,
     reduce_view_distance,
     reduce_plugin_channels,
-    fall_damage.reducer,
+    player_fall_damage.reducer,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
 }
 
@@ -94,24 +95,28 @@ function transform_action(action) {
 }
 
 const update_mobs_position = update_clients(initial_world)
+const observers = [
+  login,
+  update_chunks,
+  update_mobs_position,
+  mob_goto,
+  spawn_merchants,
+  open_trade,
+  dialog,
+  deal_damage,
+  statistics,
+  update_experience,
+  declare_commands,
+  player_fall_damage.observer,
+  player_health.observer,
+]
 
 async function observe_client(context) {
   /* Observers that handle the protocol part.
    * They get the client and should map it to minecraft protocol */
 
   await send_resource_pack(context)
-  login(context)
-  update_chunks(context)
-  update_mobs_position(context)
-  mob_goto(context)
-  spawn_merchants(context)
-  open_trade(context)
-  dialog(context)
-  deal_damage(context)
-  statistics(context)
-  update_experience(context)
-  declare_commands(context)
-  fall_damage.observer(context)
+  observers.forEach((observer) => observer(context))
   chat({ server, ...context }) // TODO: remove server
 }
 
@@ -143,6 +148,10 @@ aiter(on(server, 'login')).reduce(
     }
 
     const events = new EventEmitter()
+    const default_state = initial_state({
+      entity_id: last_world.next_entity_id,
+      world,
+    })
 
     aiter(combineAsyncIterators(actions[Symbol.asyncIterator](), packets))
       .map(transform_action)
@@ -150,13 +159,13 @@ aiter(on(server, 'login')).reduce(
         const state = reduce_state(last_state, action)
         events.emit('state', state)
         return state
-      }, initial_state({ entity_id: last_world.next_entity_id, world }))
+      }, default_state)
 
     observe_client({
       client,
       world,
       events,
-      get_state: last_event_value(events, 'state'),
+      get_state: last_event_value(events, 'state', default_state),
       dispatch(type, payload) {
         actions.write({ type, payload })
       },

@@ -5,6 +5,7 @@ import { aiter } from 'iterator-helper'
 import logger from '../logger.js'
 
 const log = logger(import.meta)
+const nearest_half = (value) => Math.round(value * 2) / 2
 
 export default {
   reducer(state, { type, payload }) {
@@ -35,9 +36,7 @@ export default {
 
       if (reached_groud && has_fallen) {
         const fall_distance = start_y - y
-        const damage = fall_distance * 0.5 - 1.5
-
-        log.debug({ fall_distance, damage }, 'has fallen')
+        const damage = nearest_half(fall_distance * 0.5 - 1.5)
 
         if (damage > 0) dispatch('fall_damage', { damage })
       }
