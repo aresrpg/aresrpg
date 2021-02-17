@@ -73,7 +73,7 @@ const initial_state = ({ entity_id, world }) => ({
   }),
   game_mode: 2,
   experience: 0,
-  health: 40, // until there is some texture pack health bar, we use the original ares 20 hearts
+  health: 20, // until there is some texture pack health bar, we use the original ares 20 hearts
 })
 
 function reduce_state(state, action) {
@@ -148,10 +148,6 @@ aiter(on(server, 'login')).reduce(
     }
 
     const events = new EventEmitter()
-    const default_state = initial_state({
-      entity_id: last_world.next_entity_id,
-      world,
-    })
 
     aiter(combineAsyncIterators(actions[Symbol.asyncIterator](), packets))
       .map(transform_action)
@@ -159,13 +155,13 @@ aiter(on(server, 'login')).reduce(
         const state = reduce_state(last_state, action)
         events.emit('state', state)
         return state
-      }, default_state)
+      }, initial_state({ entity_id: last_world.next_entity_id, world }))
 
     observe_client({
       client,
       world,
       events,
-      get_state: last_event_value(events, 'state', default_state),
+      get_state: last_event_value(events, 'state'),
       dispatch(type, payload) {
         actions.write({ type, payload })
       },
