@@ -73,7 +73,7 @@ const initial_state = ({ entity_id, world }) => ({
   }),
   game_mode: 2,
   experience: 0,
-  health: 20, // until there is some texture pack health bar, we use the original ares 20 hearts
+  health: 20,
 })
 
 function reduce_state(state, action) {
