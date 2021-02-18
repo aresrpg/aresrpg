@@ -4,7 +4,7 @@ import { aiter } from 'iterator-helper'
 
 export default {
   observer({ client, events, dispatch, get_state }) {
-    const reducer = (last_health, [{ health }]) => {
+    aiter(on(events, 'state')).reduce((last_health, [{ health }]) => {
       if (last_health !== health) {
         client.write('update_health', {
           health,
@@ -13,7 +13,6 @@ export default {
         })
       }
       return health
-    }
-    aiter(on(events, 'state')).reduce(reducer, 0)
+    }, 0)
   },
 }

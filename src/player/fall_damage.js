@@ -8,16 +8,18 @@ const log = logger(import.meta)
 
 export default {
   reducer(state, { type, payload }) {
-    if (type !== 'fall_damage') return state
-    const { damage } = payload
-    const health = Math.max(0, state.health - damage)
+    if (type === 'fall_damage') {
+      const { damage } = payload
+      const health = Math.max(0, state.health - damage)
 
-    log.info({ damage, health }, 'Fall Damage')
+      log.info({ damage, health }, 'Fall Damage')
 
-    return {
-      ...state,
-      health,
+      return {
+        ...state,
+        health,
+      }
     }
+    return state
   },
 
   observer({ client, events, dispatch }) {
