@@ -91,6 +91,7 @@ export function unload_chunks(state, { client, events, chunks, world }) {
 }
 
 export default {
+  /** @type {import('../index.js').Observer} */
   observe({ client, events, world }) {
     aiter(on(events, 'state'))
       .map(([{ position, view_distance }]) => ({

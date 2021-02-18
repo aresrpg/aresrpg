@@ -47,6 +47,7 @@ export function write_chat_msg({ world }, { message, client: { uuid } }) {
 }
 
 export default {
+  /** @type {import('../index.js').Observer} */
   observe({ client, get_state, world }) {
     client.on('chat', (packet) => {
       const { message } = packet

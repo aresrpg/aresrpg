@@ -1,12 +1,13 @@
-import minecraftData from 'minecraft-data'
+import minecraft_data from 'minecraft-data'
 import UUID from 'uuid-1345'
 
 import { chunk_position, chunk_index } from '../chunk.js'
 import { version } from '../settings.js'
 import { empty_slot, item_to_slot } from '../items.js'
 
-const mcData = minecraftData(version)
+const mcData = minecraft_data(version)
 
+/** @param {import('../index.js').InitialWorld} world */
 function register(world) {
   const by_chunk = world.traders.reduce((map, { x, z, y, name }, i) => {
     const chunk_x = chunk_position(x)
@@ -45,6 +46,7 @@ function register(world) {
   }
 }
 
+/** @type {import('../index.js').Observer} */
 function spawn_merchants({ client, events, world }) {
   const { by_chunk } = world.traders
   const { id: type } = mcData.entitiesByName.villager
@@ -97,6 +99,7 @@ function spawn_merchants({ client, events, world }) {
   })
 }
 
+/** @type {import('../index.js').Observer} */
 function open_trade({ client, world }) {
   const { windowIds } = world.traders
   const right_click = 2
@@ -133,6 +136,7 @@ function open_trade({ client, world }) {
   })
 }
 
+/** @type {import('../index.js').Observer} */
 function look_player({ client, world, events }) {
   events.on('state', ({ position: { x, z } }) => {
     const { by_chunk } = world.traders

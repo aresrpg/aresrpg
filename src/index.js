@@ -49,17 +49,23 @@ const server = protocol.createServer({
 export const PLAYER_ENTITY_ID = 0
 export const PLAYER_INVENTORY_ID = 0
 
-const world = [
-  // Reducers that augment the world with extra properties
-  mobs.register,
-  player_traders.register,
-].reduce((world, fn) => fn(world), {
+const initial_world = {
   ...floor1,
   events: new EventEmitter(),
   next_entity_id: 1,
   next_window_id: 1, // 0 is the player inventory
+  /** @type {() => Object} Remove type to remove circular references */
   get: () => world,
-})
+}
+
+const world_reducers = [
+  // Reducers that augment the world with extra properties
+  mobs.register,
+  player_traders.register,
+]
+
+/** @type {World} */
+const world = world_reducers.reduce((world, fn) => fn(world), initial_world)
 
 const initial_state = {
   position: world.spawn_position,
@@ -75,6 +81,23 @@ const initial_state = {
   health: 40,
 }
 
+/** @template U
+ ** @typedef {import('./types').UnionToIntersection<U>} UnionToIntersection */
+
+/** @typedef {Readonly<typeof initial_world>} InitialWorld */
+/** @typedef {ReturnType<typeof world_reducers[number]>} WorldReducers */
+/** @typedef {Readonly<UnionToIntersection<WorldReducers>>} ReducedWorld */
+/** @typedef {InitialWorld & ReducedWorld} World */
+
+/** @typedef {Readonly<typeof initial_state>} State */
+/** @typedef {{ type: string, payload: any }} Action */
+/** @typedef {Readonly<ReturnType<typeof create_context>>} Context */
+
+/** @typedef {(state: State, action: Action) => State} Reducer */
+/** @typedef {(action: Action) => Action} Transformer */
+/** @typedef {(context: Context) => void} Observer */
+
+/** @type Reducer */
 function reduce_state(state, action) {
   return [
     /* Reducers that map the incomming actions (packet, ...)
@@ -86,6 +109,7 @@ function reduce_state(state, action) {
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
 }
 
+/** @type Transformer */
 function transform_action(action) {
   return [
     /* Map functions that are applied to all actions */
@@ -95,6 +119,7 @@ function transform_action(action) {
 
 const mobs_position = mobs_position_factory(world)
 
+/** @type Observer */
 async function observe_client(context) {
   /* Observers that handle the protocol part.
    * They get the client and should map it to minecraft protocol */
@@ -122,12 +147,15 @@ async function observe_client(context) {
   chunk_update.observe(context)
 }
 
-/* The following code handle the pipeline, it works as following
+/**
+ * The following code handle the pipeline, it works as following
  *
  * state = initial_state
  * on packets + on actions
  *   |> transform_action
  *   |> (state = reduce_state(state))
+ *
+ * @param {protocol.Client} client
  */
 function create_context(client) {
   client.on('error', (error) => {

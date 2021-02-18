@@ -56,7 +56,7 @@ export default {
     }
     return state
   },
-
+  /** @type {import('../index.js').Observer} */
   observe({ client, get_state, world }) {
     const right_click = 2
 

@@ -111,7 +111,7 @@ const reversed_levels = [...levels.entries()].reverse()
 /**
  * find the current level and the remaining
  * experience from the total experience
- * @param {number} experience
+ * @param {number} total_experience
  * @returns {{level: number, remaining_experience: number}}
  */
 export function experience_to_level(total_experience) {
@@ -141,6 +141,7 @@ export function level_progress({ level, remaining_experience }) {
 }
 
 export default {
+  /** @type {import('../index.js').Observer} */
   observe({ client, events }) {
     aiter(on(events, 'state')).reduce(
       (last_total_experience, [{ experience: total_experience }]) => {

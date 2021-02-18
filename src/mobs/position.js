@@ -224,6 +224,7 @@ export default function update_clients(world) {
     )
   }
 
+  /** @type {import('../index.js').Observer} */
   function update_mobs({ events, client }) {
     events.on('chunk_loaded', ({ x, z }) => {
       actions.write({ type: 'client_chunk_loaded', payload: { client, x, z } })

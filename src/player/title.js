@@ -23,8 +23,8 @@ export function write_title_reset(client) {
  *     stay: 5
  *   })
  * ```
- * @param {Client} client
- * @param {Option} options
+ * @param {import('minecraft-protocol').Client} client
+ * @param {Object} options
  */
 export function write_title(
   client,
