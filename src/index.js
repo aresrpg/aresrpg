@@ -20,6 +20,9 @@ import {
   transform_plugin_channels,
 } from './plugin_channels.js'
 import { reduce_position } from './position.js'
+import player_fall_damage from './player/fall_damage.js'
+import player_health from './player/health.js'
+import player_attributes from './player/attributes.js'
 import { online_mode, version } from './settings.js'
 import { register_traders, spawn_merchants } from './trade/spawn_villagers.js'
 import { open_trade, register_trades } from './trade/trade.js'
@@ -71,6 +74,7 @@ const initial_state = ({ entity_id, world }) => ({
   }),
   game_mode: 2,
   experience: 0,
+  health: 40,
 })
 
 function reduce_state(state, action) {
@@ -80,6 +84,7 @@ function reduce_state(state, action) {
     reduce_position,
     reduce_view_distance,
     reduce_plugin_channels,
+    player_fall_damage.reducer,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
 }
 
@@ -108,6 +113,9 @@ async function observe_client(context) {
   statistics(context)
   update_experience(context)
   declare_commands(context)
+  player_fall_damage.observer(context)
+  player_health.observer(context)
+  player_attributes.observer(context)
   chat({ server, ...context }) // TODO: remove server
 }
 
@@ -140,7 +148,7 @@ aiter(on(server, 'login')).reduce(
 
     const events = new EventEmitter()
 
-    aiter(combineAsyncIterators(actions, packets))
+    aiter(combineAsyncIterators(actions[Symbol.asyncIterator](), packets))
       .map(transform_action)
       .reduce((last_state, action) => {
         const state = reduce_state(last_state, action)

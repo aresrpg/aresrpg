@@ -5,6 +5,9 @@ import { aiter } from 'iterator-helper'
 import logger from '../logger.js'
 
 const log = logger(import.meta)
+const Mouse = {
+  LEFT_CLICK: 1,
+}
 
 export function reduce_deal_damage(state, { type, payload }) {
   if (type === 'deal_damage') {
@@ -23,8 +26,7 @@ export function reduce_deal_damage(state, { type, payload }) {
 
 export function deal_damage({ client, world }) {
   client.on('use_entity', ({ target, mouse, sneaking }) => {
-    const left_click = 1
-    if (mouse === left_click) {
+    if (mouse === Mouse.LEFT_CLICK) {
       const mob = world.mobs.by_entity_id(target)
       if (mob) {
         mob.dispatch('deal_damage', {
