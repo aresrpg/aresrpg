@@ -11,6 +11,7 @@ export default {
     }
     return state
   },
+  /** @type {import('../index.js').Observer} */
   observe({ client, world, events }) {
     for (const mob of world.mobs.all) {
       const send_position = ({ position }) =>

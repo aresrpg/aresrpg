@@ -9,6 +9,7 @@ import { write_title } from './title.js'
 import { set_world_border } from './world_border.js'
 
 export default {
+  /** @type {import('../index.js').Observer} */
   observe({ client, events, world }) {
     events.once('state', (state) => {
       const { game_mode, position, inventory, view_distance } = state

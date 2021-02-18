@@ -7,6 +7,7 @@ import logger from '../logger.js'
 const log = logger(import.meta)
 
 export default {
+  /** @type {import('../index.js').Reducer} */
   reduce(state, { type, payload }) {
     if (type === 'fall_damage') {
       const { damage } = payload
@@ -22,6 +23,7 @@ export default {
     return state
   },
 
+  /** @type {import('../index.js').Observer} */
   observe({ events, dispatch }) {
     aiter(on(events, 'state')).reduce(
       (

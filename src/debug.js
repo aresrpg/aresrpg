@@ -13,7 +13,7 @@ import { SUCCESS, FAILURE, RUNNING } from './behavior.js'
 const log = logger(import.meta)
 
 /**
- * @param {{ app: import('fastify').FastifyInstance }}
+ * @param {{ world: any, app: import('fastify').FastifyInstance }} param
  */
 function behavior({ world, app }) {
   const serializer = new XMLSerializer()
@@ -29,7 +29,7 @@ function behavior({ world, app }) {
       })),
   }))
 
-  app.get('/behavior', () => behavior_trees)
+  app.get('/behavior', async () => behavior_trees)
 
   const instances = world.mobs.all.map(({ entity_id }) => ({
     entity_id,
@@ -43,8 +43,11 @@ function behavior({ world, app }) {
 
     const format = (data) => `data: ${JSON.stringify(data)}\n\n`
 
+    /** @type {Object} */
+    const { params } = request
+
     const instance = instances.find(
-      ({ entity_id }) => entity_id === Number(request.params.id)
+      ({ entity_id }) => entity_id === Number(params.id)
     )
 
     const stream = new PassThrough()

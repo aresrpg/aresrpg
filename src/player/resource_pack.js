@@ -12,6 +12,7 @@ const Status = {
 }
 
 export default {
+  /** @type {import('../index.js').Observer} */
   async observe({ client }) {
     client.write('resource_pack_send', {
       url:

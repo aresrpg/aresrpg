@@ -26,6 +26,7 @@ export default {
     return state
   },
 
+  /** @type {import('../index.js').Observer} */
   observe({ client, world }) {
     client.on('use_entity', ({ target, mouse }) => {
       if (mouse === Mouse.LEFT_CLICK) {

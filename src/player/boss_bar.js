@@ -9,7 +9,7 @@ import uuid from 'uuid-1345'
  * @typedef Option
  * @property {number} action - ADD: 0, REMOVE: 1, UPDATE_HEALTH: 2, UPDATE_TITLE: 3, UPDATE_STYLE: 4, UPDATE_FLAGS: 5
  * @property {Title} title - {text:"Exemple Title"}
- * @property {float} health - min: 0.0 , max: 1.0
+ * @property {number} health - min: 0.0 , max: 1.0
  * @property {number} color - PINK: 0, BLUE: 1, RED: 2, GREEN: 3, YELLOW: 4, PURPLE: 5, WHITE: 6
  * @property {number} dividers -  NO_DIVISION: 0, '6_NOTCHES': 1, '10_NOTCHES': 2, '12_NOTCHES': 3, '20_NOTCHES': 4
  * @property {number} flags - DARKEN_SKY: 0x1, BOSS_BAR: 0x2, CREATE_FOG: 0x04
@@ -24,7 +24,7 @@ import uuid from 'uuid-1345'
  * @property {boolean} [strikethrough]
  * @property {boolean} [obfuscated]
  * @property {string} [color]
- * @property {array<object>} [extra]
+ * @property {Array<Title>} [extra]
  */
 
 export const Actions = {

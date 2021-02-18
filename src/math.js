@@ -15,8 +15,10 @@ export function is_inside({ min, max }, { x, y }) {
  *
  * So here the area a and b but not c
  *
+ * @param {Object} $0
  * @param {number} $0.x x coordinate of the first square's center
  * @param {number} $0.y y coordinate of the first square's center
+ * @param {Object} $1
  * @param {number} $1.x x coordinate of the second square's center
  * @param {number} $1.y y coordinate of the second square's center
  * @param {number} demi_length 1/2 of the length of the square
