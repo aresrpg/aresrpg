@@ -1,18 +1,3 @@
-const types = ['packet/position', 'packet/position_look', 'packet/look']
-
-export function reduce_position(state, { type, payload }) {
-  if (types.includes(type)) {
-    return {
-      ...state,
-      position: {
-        ...state.position,
-        ...payload,
-      },
-    }
-  }
-  return state
-}
-
 export function block_position({ x, y, z }) {
   return {
     x: Math.floor(x),

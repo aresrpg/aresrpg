@@ -1,4 +1,4 @@
-import { Position } from '../chat.js'
+import { Position } from '../player/chat.js'
 
 import gamemode from './gamemode.js'
 import dislike from './dislike.js'

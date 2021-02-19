@@ -1,4 +1,4 @@
-import { write_chat_msg } from '../chat.js'
+import { write_chat_msg } from '../player/chat.js'
 
 export const respect_nodes = [
   {
