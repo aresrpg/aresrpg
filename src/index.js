@@ -140,14 +140,11 @@ function create_context(client) {
 
   aiter(combineAsyncIterators(actions[Symbol.asyncIterator](), packets))
     .map(transform_action)
-    .reduce(
-      (last_state, action) => {
-        const state = reduce_state(last_state, action)
-        events.emit('state', state)
-        return state
-      },
-      { ...initial_state, world }
-    )
+    .reduce((last_state, action) => {
+      const state = reduce_state(last_state, action)
+      events.emit('state', state)
+      return state
+    }, initial_state)
 
   return {
     client,

@@ -8,9 +8,9 @@ import { PLAYER_ENTITY_ID, PLAYER_INVENTORY_ID } from '../index.js'
 import { write_title } from './title.js'
 import { set_world_border } from './world_border.js'
 
-export default function login({ client, events }) {
+export default function login({ client, events, world }) {
   events.once('state', (state) => {
-    const { world, game_mode, position, inventory, view_distance } = state
+    const { game_mode, position, inventory, view_distance } = state
     // TODO: move this elsewhere
     const world_names = ['minecraft:overworld']
     // TODO: we should not take the first world of the list
@@ -54,7 +54,7 @@ export default function login({ client, events }) {
 
     set_world_border({ client, x: 510, z: 510, radius: 1020, speed: 1 })
 
-    load_chunks(state, { client, events, chunks: [chunk] })
+    load_chunks(state, { client, world, events, chunks: [chunk] })
 
     const to_slot = (item) =>
       item ? item_to_slot(world.items[item.type], item.count) : empty_slot
