@@ -47,21 +47,22 @@ const server = protocol.createServer({
   )}`,
 })
 
-const initial_world = [
+export const PLAYER_ENTITY_ID = 0
+export const PLAYER_INVENTORY_ID = 0
+
+const world = [
   // Reducers that augment the world with extra properties
   register_mobs,
   register_traders,
 ].reduce((world, fn) => fn(world), {
   ...floor1,
   events: new EventEmitter(),
-  next_entity_id: 0,
+  next_entity_id: 1,
   next_window_id: 1, // 0 is the player inventory
-  get: () => initial_world,
+  get: () => world,
 })
 
-const initial_state = ({ entity_id, world }) => ({
-  entity_id,
-  world,
+const initial_state = {
   position: world.spawn_position,
   view_distance: 0,
   inventory: Array.from({
@@ -73,7 +74,7 @@ const initial_state = ({ entity_id, world }) => ({
   game_mode: 2,
   experience: 0,
   health: 40,
-})
+}
 
 function reduce_state(state, action) {
   return [
@@ -93,7 +94,7 @@ function transform_action(action) {
   ].reduce((intermediate, fn) => fn(intermediate), action)
 }
 
-const update_mobs_position = update_clients(initial_world)
+const update_mobs_position = update_clients(world)
 
 async function observe_client(context) {
   /* Observers that handle the protocol part.
@@ -122,53 +123,47 @@ async function observe_client(context) {
  * on packets + on actions
  *   |> transform_action
  *   |> (state = reduce_state(state))
- *   |> observe_client
  */
+function create_context(client) {
+  client.on('error', (error) => {
+    throw error
+  })
 
-aiter(on(server, 'login')).reduce(
-  ({ world: last_world }, [client]) => {
-    client.on('error', (error) => {
-      throw error
-    })
+  const actions = new PassThrough({ objectMode: true })
 
-    const actions = new PassThrough({ objectMode: true })
+  const packets = aiter(on(client, 'packet')).map(([payload, { name }]) => ({
+    type: `packet/${name}`,
+    payload,
+  }))
 
-    const packets = aiter(on(client, 'packet')).map(([payload, { name }]) => ({
-      type: `packet/${name}`,
-      payload,
-    }))
+  const events = new EventEmitter()
 
-    const world = {
-      ...last_world,
-      next_entity_id: last_world.next_entity_id + 1,
-    }
-
-    const events = new EventEmitter()
-
-    aiter(combineAsyncIterators(actions[Symbol.asyncIterator](), packets))
-      .map(transform_action)
-      .reduce((last_state, action) => {
+  aiter(combineAsyncIterators(actions[Symbol.asyncIterator](), packets))
+    .map(transform_action)
+    .reduce(
+      (last_state, action) => {
         const state = reduce_state(last_state, action)
         events.emit('state', state)
         return state
-      }, initial_state({ entity_id: last_world.next_entity_id, world }))
-
-    observe_client({
-      client,
-      world,
-      events,
-      get_state: last_event_value(events, 'state'),
-      dispatch(type, payload) {
-        actions.write({ type, payload })
       },
-    })
+      { ...initial_state, world }
+    )
 
-    return {
-      world,
-    }
-  },
-  { world: initial_world }
-)
+  return {
+    client,
+    world,
+    events,
+    get_state: last_event_value(events, 'state'),
+    dispatch(type, payload) {
+      actions.write({ type, payload })
+    },
+  }
+}
+
+server.on('login', (client) => {
+  const context = create_context(client)
+  observe_client(context)
+})
 
 server.once('listening', () => {
   log.info(server.socketServer.address(), 'Listening')

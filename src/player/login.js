@@ -3,27 +3,21 @@ import { empty_slot, item_to_slot } from '../items.js'
 import { write_brand } from '../plugin_channels.js'
 import { dimension_codec, overworld } from '../world/codec.js'
 import { load_chunks } from '../chunk/update.js'
+import { PLAYER_ENTITY_ID, PLAYER_INVENTORY_ID } from '../index.js'
 
 import { write_title } from './title.js'
 import { set_world_border } from './world_border.js'
 
 export default function login({ client, events }) {
   events.once('state', (state) => {
-    const {
-      world,
-      game_mode,
-      position,
-      entity_id,
-      inventory,
-      view_distance,
-    } = state
+    const { world, game_mode, position, inventory, view_distance } = state
     // TODO: move this elsewhere
     const world_names = ['minecraft:overworld']
     // TODO: we should not take the first world of the list
     const [world_name] = world_names
 
     client.write('login', {
-      entityId: entity_id,
+      entityId: PLAYER_ENTITY_ID,
       isHardcore: false,
       gameMode: game_mode,
       previousGameMode: 255,
@@ -66,7 +60,7 @@ export default function login({ client, events }) {
       item ? item_to_slot(world.items[item.type], item.count) : empty_slot
 
     client.write('window_items', {
-      windowId: 0,
+      windowId: PLAYER_INVENTORY_ID,
       items: inventory.map(to_slot),
     })
 
