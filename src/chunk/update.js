@@ -20,7 +20,7 @@ function fix_light(chunk) {
   }
 }
 
-async function load_chunk({ world }, { client, x, z }) {
+async function load_chunk({ client, world, x, z }) {
   const chunk = await world.chunks.load(x, z)
 
   fix_light(chunk) // TODO: replace this with a proper fix
@@ -57,14 +57,14 @@ async function load_chunk({ world }, { client, x, z }) {
   })
 }
 
-function unload_chunk(state, { client, x, z }) {
+function unload_chunk({ client, x, z }) {
   client.write('unload_chunk', {
     chunkX: x,
     chunkZ: z,
   })
 }
 
-export async function load_chunks(state, { client, events, chunks }) {
+export async function load_chunks(state, { client, events, world, chunks }) {
   const points = chunks.map(({ x, z }) => ({ x, y: z }))
   const sorted = sort_by_distance(
     {
@@ -73,23 +73,24 @@ export async function load_chunks(state, { client, events, chunks }) {
     },
     points
   )
-  for (const { x, y } of sorted) await load_chunk(state, { client, x, z: y })
-  for (const { x, y } of sorted) events.emit('chunk_loaded', { x, z: y })
-}
-
-export function unload_chunks(state, { client, events, chunks }) {
-  for (const chunk of chunks) {
-    events.emit('chunk_unloaded', chunk)
-    unload_chunk(state, { client, ...chunk })
+  for (const { x, y } of sorted) {
+    await load_chunk({ client, world, x, z: y })
+    events.emit('chunk_loaded', { x, z: y })
   }
 }
 
-export default async function update_chunks({ client, events }) {
+export function unload_chunks(state, { client, events, chunks, world }) {
+  for (const chunk of chunks) {
+    events.emit('chunk_unloaded', chunk)
+    unload_chunk({ client, world, ...chunk })
+  }
+}
+
+export default async function update_chunks({ client, events, world }) {
   aiter(on(events, 'state'))
-    .map(([{ position, view_distance, world }]) => ({
+    .map(([{ position, view_distance }]) => ({
       position,
       view_distance,
-      world,
     }))
     .reduce(async (last_state, state) => {
       if (!same_chunk(last_state.position, state.position)) {
@@ -114,10 +115,10 @@ export default async function update_chunks({ client, events }) {
         })
 
         const to_unload = points_to_unload.map(({ x, y }) => ({ x, z: y }))
-        unload_chunks(state, { client, events, chunks: to_unload })
+        unload_chunks(state, { client, events, world, chunks: to_unload })
 
         const to_load = points_to_load.map(({ x, y }) => ({ x, z: y }))
-        await load_chunks(state, { client, events, chunks: to_load }) // TODO kick player on error ?
+        await load_chunks(state, { client, events, world, chunks: to_load }) // TODO kick player on error ?
       }
 
       if (last_state.view_distance !== state.view_distance) {
@@ -141,7 +142,7 @@ export default async function update_chunks({ client, events }) {
             ? load_chunks
             : unload_chunks
 
-        await action(state, { client, events, chunks })
+        await action(state, { client, world, events, chunks })
       }
 
       return state
