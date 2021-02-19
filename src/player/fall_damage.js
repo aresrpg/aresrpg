@@ -7,7 +7,7 @@ import logger from '../logger.js'
 const log = logger(import.meta)
 
 export default {
-  reducer(state, { type, payload }) {
+  reduce(state, { type, payload }) {
     if (type === 'fall_damage') {
       const { damage } = payload
       const health = Math.max(0, state.health - damage)
@@ -22,7 +22,7 @@ export default {
     return state
   },
 
-  observer({ client, events, dispatch }) {
+  observe({ events, dispatch }) {
     aiter(on(events, 'state')).reduce(
       (
         { highest_y = 0, was_on_ground = true },

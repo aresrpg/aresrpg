@@ -2,18 +2,6 @@ import { Position } from '../player/chat.js'
 
 import { Types } from './types.js'
 
-export default function dialog({ client, world }) {
-  const right_click = 2
-  client.on('use_entity', ({ target, mouse, sneaking }) => {
-    if (mouse === right_click && sneaking === false) {
-      const mob = world.mobs.by_entity_id(target)
-      if (mob) {
-        speak_to(mob, { client })
-      }
-    }
-  })
-}
-
 export function speak_to(mob, { client }) {
   const { dialogs, displayName } = Types[mob.mob]
   if (dialogs !== undefined) {
@@ -32,4 +20,18 @@ export function speak_to(mob, { client }) {
       sender: client.uuid,
     })
   }
+}
+
+export default {
+  observe({ client, world }) {
+    const right_click = 2
+    client.on('use_entity', ({ target, mouse, sneaking }) => {
+      if (mouse === right_click && sneaking === false) {
+        const mob = world.mobs.by_entity_id(target)
+        if (mob) {
+          speak_to(mob, { client })
+        }
+      }
+    })
+  },
 }

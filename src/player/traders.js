@@ -7,7 +7,7 @@ import { empty_slot, item_to_slot } from '../items.js'
 
 const mcData = minecraftData(version)
 
-export function register_traders(world) {
+function register(world) {
   const by_chunk = world.traders.reduce((map, { x, z, y, name }, i) => {
     const chunk_x = chunk_position(x)
     const chunk_z = chunk_position(z)
@@ -165,8 +165,11 @@ function look_player({ client, world, events }) {
   })
 }
 
-export function traders(context) {
-  spawn_merchants(context)
-  open_trade(context)
-  look_player(context)
+export default {
+  observe(context) {
+    spawn_merchants(context)
+    open_trade(context)
+    look_player(context)
+  },
+  register,
 }

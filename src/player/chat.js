@@ -50,41 +50,45 @@ export function write_chat_msg(
   Object.values(clients).forEach(send_packet)
 }
 
-export default function chat({ server, client, get_state, world }) {
-  client.on('chat', (packet) => {
-    const { message } = packet
-    if (is_command_function(message)) {
-      log.debug({ sender: client.uuid, command: message }, 'Command')
-      execute_command({ server, message, sender: client })
-      return
-    } else {
-      log.debug({ sender: client.uuid, message }, 'Message')
-    }
-    const formatted_message = message.split(/(%item\d%)/).map((part) => {
-      if (part.match(/(%item\d%)/)) {
-        const slot_number = parseInt(part.match(/\d/)[0]) + 36 // For the player 0 is the first item in hotbar. But for the game the hotbat begin at 36.
-        const { inventory } = get_state()
-        const item = inventory[slot_number]
-        if (item) {
-          const { type, count } = item
-          return slot_to_chat(item_to_slot(world.items[type], count))
-        }
-      }
-      return { text: part }
-    })
+export default {
+  observe({ server, client, get_state, world }) {
+    client.on('chat', (packet) => {
+      const { message } = packet
 
-    const message_for_client = {
-      translate: 'chat.type.text',
-      with: [
-        {
-          text: client.username,
-        },
-        formatted_message,
-      ],
-    }
-    write_chat_msg(
-      { server },
-      { message: JSON.stringify(message_for_client), client }
-    )
-  })
+      if (is_command_function(message)) {
+        log.debug({ sender: client.uuid, command: message }, 'Command')
+        execute_command({ server, message, sender: client })
+        return
+      } else {
+        log.debug({ sender: client.uuid, message }, 'Message')
+      }
+
+      const formatted_message = message.split(/(%item\d%)/).map((part) => {
+        if (part.match(/(%item\d%)/)) {
+          const slot_number = parseInt(part.match(/\d/)[0]) + 36 // For the player 0 is the first item in hotbar. But for the game the hotbat begin at 36.
+          const { inventory } = get_state()
+          const item = inventory[slot_number]
+          if (item) {
+            const { type, count } = item
+            return slot_to_chat(item_to_slot(world.items[type], count))
+          }
+        }
+        return { text: part }
+      })
+
+      const message_for_client = {
+        translate: 'chat.type.text',
+        with: [
+          {
+            text: client.username,
+          },
+          formatted_message,
+        ],
+      }
+      write_chat_msg(
+        { server },
+        { message: JSON.stringify(message_for_client), client }
+      )
+    })
+  },
 }
