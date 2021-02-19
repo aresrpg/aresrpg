@@ -140,27 +140,25 @@ export function level_progress({ level, remaining_experience }) {
   )
 }
 
-/**
- * update the player experience
- * @param {any} context
- */
-export function update_experience({ client, events }) {
-  aiter(on(events, 'state')).reduce(
-    (last_total_experience, [{ experience: total_experience }]) => {
-      if (last_total_experience !== total_experience) {
-        const { level, remaining_experience } = experience_to_level(
-          total_experience
-        )
-        const progress = level_progress({ level, remaining_experience })
+export default {
+  observe({ client, events }) {
+    aiter(on(events, 'state')).reduce(
+      (last_total_experience, [{ experience: total_experience }]) => {
+        if (last_total_experience !== total_experience) {
+          const { level, remaining_experience } = experience_to_level(
+            total_experience
+          )
+          const progress = level_progress({ level, remaining_experience })
 
-        client.write('experience', {
-          totalExperience: total_experience,
-          level,
-          experienceBar: progress,
-        })
-      }
-      return total_experience
-    },
-    null
-  )
+          client.write('experience', {
+            totalExperience: total_experience,
+            level,
+            experienceBar: progress,
+          })
+        }
+        return total_experience
+      },
+      null
+    )
+  },
 }

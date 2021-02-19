@@ -8,32 +8,29 @@ import protocol from 'minecraft-protocol'
 import { aiter } from 'iterator-helper'
 import combineAsyncIterators from 'combine-async-iterators'
 
-import chat from './player/chat.js'
-import update_chunks from './chunk/update.js'
-import { update_experience } from './player/experience.js'
-import logger from './logger.js'
-import login from './player/login.js'
-import { register_mobs } from './mobs.js'
-import { send_resource_pack } from './player/resource_pack.js'
-import {
-  reduce_plugin_channels,
-  transform_plugin_channels,
-} from './plugin_channels.js'
-import { reduce_position } from './player/position.js'
-import player_fall_damage from './player/fall_damage.js'
-import player_health from './player/health.js'
-import player_attributes from './player/attributes.js'
 import { online_mode, version } from './settings.js'
-import { traders, register_traders } from './player/traders.js'
-import dialog from './mobs/dialog.js'
-import { deal_damage } from './mobs/fight.js'
-import { reduce_view_distance } from './player/view_distance.js'
-import { statistics } from './player/statistics.js'
-import { floor1 } from './world.js'
-import { update_clients } from './mobs/position.js'
-import { mob_goto } from './mobs/goto.js'
 import { last_event_value } from './events.js'
-import declare_commands from './commands/declare_commands.js'
+import { floor1 } from './world.js'
+import logger from './logger.js'
+import player_login from './player/login.js'
+import player_experience from './player/experience.js'
+import player_attributes from './player/attributes.js'
+import player_health from './player/health.js'
+import player_fall_damage from './player/fall_damage.js'
+import player_position from './player/position.js'
+import player_view_distance from './player/view_distance.js'
+import player_chat from './player/chat.js'
+import player_resource_pack from './player/resource_pack.js'
+import player_statistics from './player/statistics.js'
+import player_traders from './player/traders.js'
+import plugin_channels from './plugin_channels.js'
+import chunk_update from './chunk/update.js'
+import mobs from './mobs.js'
+import mobs_dialog from './mobs/dialog.js'
+import mobs_position_factory from './mobs/position.js'
+import mobs_damage from './mobs/damage.js'
+import mobs_goto from './mobs/goto.js'
+import commands_declare from './commands/declare.js'
 
 const log = logger(import.meta)
 
@@ -52,8 +49,8 @@ export const PLAYER_INVENTORY_ID = 0
 
 const world = [
   // Reducers that augment the world with extra properties
-  register_mobs,
-  register_traders,
+  mobs.register,
+  player_traders.register,
 ].reduce((world, fn) => fn(world), {
   ...floor1,
   events: new EventEmitter(),
@@ -80,41 +77,46 @@ function reduce_state(state, action) {
   return [
     /* Reducers that map the incomming actions (packet, ...)
      * to a new state */
-    reduce_position,
-    reduce_view_distance,
-    reduce_plugin_channels,
-    player_fall_damage.reducer,
+    player_position.reduce,
+    player_view_distance.reduce,
+    plugin_channels.reduce,
+    player_fall_damage.reduce,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
 }
 
 function transform_action(action) {
   return [
     /* Map functions that are applied to all actions */
-    transform_plugin_channels,
+    plugin_channels.transform,
   ].reduce((intermediate, fn) => fn(intermediate), action)
 }
 
-const update_mobs_position = update_clients(world)
+const mobs_position = mobs_position_factory(world)
 
 async function observe_client(context) {
   /* Observers that handle the protocol part.
    * They get the client and should map it to minecraft protocol */
 
-  await send_resource_pack(context)
-  login(context)
-  update_chunks(context)
-  update_mobs_position(context)
-  mob_goto(context)
-  traders(context)
-  dialog(context)
-  deal_damage(context)
-  statistics(context)
-  update_experience(context)
-  declare_commands(context)
-  player_fall_damage.observer(context)
-  player_health.observer(context)
-  player_attributes.observer(context)
-  chat({ server, ...context }) // TODO: remove server
+  await player_resource_pack.observe(context)
+
+  player_login.observe(context)
+  player_attributes.observe(context)
+  player_experience.observe(context)
+  player_traders.observe(context)
+  player_statistics.observe(context)
+  player_fall_damage.observe(context)
+  player_health.observe(context)
+  player_attributes.observe(context)
+  player_chat.observe({ server, ...context }) // TODO: remove server
+
+  commands_declare.observe(context)
+
+  mobs_position.observe(context)
+  mobs_goto.observe(context)
+  mobs_dialog.observe(context)
+  mobs_damage.observe(context)
+
+  chunk_update.observe(context)
 }
 
 /* The following code handle the pipeline, it works as following

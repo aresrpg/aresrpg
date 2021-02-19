@@ -183,7 +183,7 @@ function mob_path(chunks, { mob, path, open, closed }) {
   return chunks
 }
 
-export function update_clients(world) {
+export default function update_clients(world) {
   const actions = new PassThrough({ objectMode: true })
 
   for (const mob of world.mobs.all) {
@@ -252,5 +252,7 @@ export function update_clients(world) {
     }
   }, new Map())
 
-  return update_mobs
+  return {
+    observe: update_mobs,
+  }
 }

@@ -86,65 +86,67 @@ export function unload_chunks(state, { client, events, chunks, world }) {
   }
 }
 
-export default async function update_chunks({ client, events, world }) {
-  aiter(on(events, 'state'))
-    .map(([{ position, view_distance }]) => ({
-      position,
-      view_distance,
-    }))
-    .reduce(async (last_state, state) => {
-      if (!same_chunk(last_state.position, state.position)) {
-        const {
-          a: points_to_unload,
-          b: points_to_load,
-        } = square_symmetric_difference(
-          {
-            x: chunk_position(last_state.position.x),
-            y: chunk_position(last_state.position.z),
-          },
-          {
+export default {
+  observe({ client, events, world }) {
+    aiter(on(events, 'state'))
+      .map(([{ position, view_distance }]) => ({
+        position,
+        view_distance,
+      }))
+      .reduce(async (last_state, state) => {
+        if (!same_chunk(last_state.position, state.position)) {
+          const {
+            a: points_to_unload,
+            b: points_to_load,
+          } = square_symmetric_difference(
+            {
+              x: chunk_position(last_state.position.x),
+              y: chunk_position(last_state.position.z),
+            },
+            {
+              x: chunk_position(state.position.x),
+              y: chunk_position(state.position.z),
+            },
+            state.view_distance
+          )
+
+          client.write('update_view_position', {
+            chunkX: chunk_position(state.position.x),
+            chunkZ: chunk_position(state.position.z),
+          })
+
+          const to_unload = points_to_unload.map(({ x, y }) => ({ x, z: y }))
+          unload_chunks(state, { client, events, world, chunks: to_unload })
+
+          const to_load = points_to_load.map(({ x, y }) => ({ x, z: y }))
+          await load_chunks(state, { client, events, world, chunks: to_load }) // TODO kick player on error ?
+        }
+
+        if (last_state.view_distance !== state.view_distance) {
+          const chunk_point = {
             x: chunk_position(state.position.x),
             y: chunk_position(state.position.z),
-          },
-          state.view_distance
-        )
+          }
+          const points = square_difference(
+            chunk_point,
+            last_state.view_distance,
+            state.view_distance
+          )
+          const chunks = points.map(({ x, y }) => ({ x, z: y }))
 
-        client.write('update_view_position', {
-          chunkX: chunk_position(state.position.x),
-          chunkZ: chunk_position(state.position.z),
-        })
+          client.write('update_view_distance', {
+            viewDistance: state.view_distance,
+          })
 
-        const to_unload = points_to_unload.map(({ x, y }) => ({ x, z: y }))
-        unload_chunks(state, { client, events, world, chunks: to_unload })
+          const action =
+            state.view_distance > last_state.view_distance
+              ? load_chunks
+              : unload_chunks
 
-        const to_load = points_to_load.map(({ x, y }) => ({ x, z: y }))
-        await load_chunks(state, { client, events, world, chunks: to_load }) // TODO kick player on error ?
-      }
-
-      if (last_state.view_distance !== state.view_distance) {
-        const chunk_point = {
-          x: chunk_position(state.position.x),
-          y: chunk_position(state.position.z),
+          await action(state, { client, world, events, chunks })
         }
-        const points = square_difference(
-          chunk_point,
-          last_state.view_distance,
-          state.view_distance
-        )
-        const chunks = points.map(({ x, y }) => ({ x, z: y }))
 
-        client.write('update_view_distance', {
-          viewDistance: state.view_distance,
-        })
-
-        const action =
-          state.view_distance > last_state.view_distance
-            ? load_chunks
-            : unload_chunks
-
-        await action(state, { client, world, events, chunks })
-      }
-
-      return state
-    })
+        return state
+      })
+  },
 }
