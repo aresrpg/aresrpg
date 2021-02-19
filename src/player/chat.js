@@ -1,10 +1,10 @@
 import nbt from 'prismarine-nbt'
 import minecraftData from 'minecraft-data'
 
-import { item_to_slot } from './items.js'
-import { version } from './settings.js'
-import logger from './logger.js'
-import execute_command from './commands/commands.js'
+import { item_to_slot } from '../items.js'
+import { version } from '../settings.js'
+import logger from '../logger.js'
+import execute_command from '../commands/commands.js'
 
 const mcData = minecraftData(version)
 const log = logger(import.meta)

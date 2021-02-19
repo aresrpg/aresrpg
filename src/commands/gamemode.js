@@ -1,4 +1,4 @@
-import { Position } from '../chat.js'
+import { Position } from '../player/chat.js'
 
 const GameMode = {
   SURVIVAL: 0,

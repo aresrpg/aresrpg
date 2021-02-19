@@ -1,8 +1,9 @@
-import { chunk_position } from './chunk.js'
-import { empty_slot, item_to_slot } from './items.js'
-import { write_brand } from './plugin_channels.js'
-import { dimension_codec, overworld } from './world/codec.js'
-import { load_chunks } from './chunk/update.js'
+import { chunk_position } from '../chunk.js'
+import { empty_slot, item_to_slot } from '../items.js'
+import { write_brand } from '../plugin_channels.js'
+import { dimension_codec, overworld } from '../world/codec.js'
+import { load_chunks } from '../chunk/update.js'
+
 import { write_title } from './title.js'
 import { set_world_border } from './world_border.js'
 
