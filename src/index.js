@@ -24,8 +24,7 @@ import player_fall_damage from './player/fall_damage.js'
 import player_health from './player/health.js'
 import player_attributes from './player/attributes.js'
 import { online_mode, version } from './settings.js'
-import { register_traders, spawn_merchants } from './trade/spawn_villagers.js'
-import { open_trade, register_trades } from './trade/trade.js'
+import { traders, register_traders } from './player/traders.js'
 import dialog from './mobs/dialog.js'
 import { deal_damage } from './mobs/fight.js'
 import { reduce_view_distance } from './player/view_distance.js'
@@ -35,7 +34,6 @@ import { update_clients } from './mobs/position.js'
 import { mob_goto } from './mobs/goto.js'
 import { last_event_value } from './events.js'
 import declare_commands from './commands/declare_commands.js'
-import { look_player } from './trade/look_player.js'
 
 const log = logger(import.meta)
 
@@ -53,7 +51,6 @@ const initial_world = [
   // Reducers that augment the world with extra properties
   register_mobs,
   register_traders,
-  register_trades,
 ].reduce((world, fn) => fn(world), {
   ...floor1,
   events: new EventEmitter(),
@@ -107,9 +104,7 @@ async function observe_client(context) {
   update_chunks(context)
   update_mobs_position(context)
   mob_goto(context)
-  spawn_merchants(context)
-  look_player(context)
-  open_trade(context)
+  traders(context)
   dialog(context)
   deal_damage(context)
   statistics(context)
