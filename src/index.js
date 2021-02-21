@@ -67,8 +67,10 @@ const initial_state = ({ entity_id, world }) => ({
   world,
   position: world.spawn_position,
   view_distance: 0,
+  // Add Armor Piece
   inventory: Array.from({
     length: 46,
+    6: { type: 'guardian_armor', count: 1 },
     36: { type: 'spellbook', count: 1 },
     37: { type: 'bronze_coin', count: 10 },
     38: { type: 'menitrass_100', count: 1 },
@@ -76,6 +78,14 @@ const initial_state = ({ entity_id, world }) => ({
   game_mode: 2,
   experience: 0,
   health: 40,
+  stats: [
+    { type: 'vitality', value: 0 },
+    { type: 'strength', value: 10 },
+    { type: 'intelligence', value: 0 },
+    { type: 'agility', value: 0 },
+    { type: 'dexterity', value: 0 },
+    { type: 'spirit', value: 0 },
+  ],
 })
 
 function reduce_state(state, action) {
