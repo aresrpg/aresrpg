@@ -1,7 +1,8 @@
 import { chunk_index, chunk_position } from '../chunk.js'
 
-export function look_player({ client, world }) {
-  client.on('position', ({ x, y, z, onGround }) => {
+export function look_player({ client, world, events }) {
+  events.on('state', ({ position }) => {
+    const { x, z } = position
     const { traders_in_chunk } = world.traders
     const x_chunks = [
       chunk_position(x) - 1,
