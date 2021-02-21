@@ -16,11 +16,11 @@ export function look_player({ client, world, events }) {
     for (const i of x_chunks) {
       for (const j of z_chunks) {
         if (traders_in_chunk.has(chunk_index(i, j))) {
-          for (const k of traders_in_chunk.get(chunk_index(i, j))) {
+          for (const trader of traders_in_chunk.get(chunk_index(i, j))) {
             const yaw = Math.floor(
-              (-Math.atan2(x - k.x, z - k.z) / Math.PI) * (255 / 2)
+              (-Math.atan2(x - trader.x, z - trader.z) / Math.PI) * (255 / 2)
             )
-            const entityId = k.id
+            const entityId = trader.id
             client.write('entity_head_rotation', {
               entityId,
               headYaw: yaw,
