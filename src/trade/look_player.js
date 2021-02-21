@@ -13,14 +13,10 @@ export function look_player({ client, world }) {
       chunk_position(z),
       chunk_position(z) + 1,
     ]
-    for (const i in x_chunks) {
-      for (const j in z_chunks) {
-        for (const k in traders_in_chunk.get(
-          chunk_index(x_chunks[i], z_chunks[j])
-        )) {
-          const entity = traders_in_chunk.get(
-            chunk_index(x_chunks[i], z_chunks[j])
-          )[k]
+    for (const i of x_chunks) {
+      for (const j of z_chunks) {
+        for (const k in traders_in_chunk.get(chunk_index(i, j))) {
+          const entity = traders_in_chunk.get(chunk_index(i, j))[k]
           const yaw = Math.min(
             127,
             Math.max(
