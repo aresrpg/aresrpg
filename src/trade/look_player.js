@@ -1,8 +1,7 @@
 import { chunk_index, chunk_position } from '../chunk.js'
 
 export function look_player({ client, world, events }) {
-  events.on('state', ({ position }) => {
-    const { x, z } = position
+  events.on('state', ({ position: { x, z } }) => {
     const { traders_in_chunk } = world.traders
     const x_chunks = [
       chunk_position(x) - 1,
@@ -16,26 +15,17 @@ export function look_player({ client, world, events }) {
     ]
     for (const i of x_chunks) {
       for (const j of z_chunks) {
-        for (const k in traders_in_chunk.get(chunk_index(i, j))) {
-          const entity = traders_in_chunk.get(chunk_index(i, j))[k]
-          const yaw = Math.min(
-            127,
-            Math.max(
-              -128,
-              -((Math.atan2(x - entity.x, z - entity.z) / Math.PI / 2) * 255)
+        if (traders_in_chunk.has(chunk_index(i, j))) {
+          for (const k of traders_in_chunk.get(chunk_index(i, j))) {
+            const yaw = Math.floor(
+              (-Math.atan2(x - k.x, z - k.z) / Math.PI) * (255 / 2)
             )
-          )
-          const target = entity.id
-          client.write('entity_head_rotation', {
-            entityId: target,
-            headYaw: yaw,
-          })
-          client.write('entity_look', {
-            entityId: target,
-            yaw,
-            pitch: 0,
-            onGround: true,
-          })
+            const entityId = k.id
+            client.write('entity_head_rotation', {
+              entityId,
+              headYaw: yaw,
+            })
+          }
         }
       }
     }
