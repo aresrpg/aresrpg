@@ -64,9 +64,6 @@ export function deal_damage({ client, get_state, world }) {
           if (itemData.stats.strength) {
             strength += itemData.stats.strength
           }
-          if (itemData.stats.strength) {
-            strength += itemData.stats.strength
-          }
         }
       }
       strength = Math.max(0, strength)
