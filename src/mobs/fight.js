@@ -11,10 +11,10 @@ const Mouse = {
 
 export function reduce_deal_damage(state, { type, payload }) {
   if (type === 'deal_damage') {
-    const { damage, is_critical } = payload
+    const { damage } = payload
     const health = Math.max(0, state.health - damage)
 
-    log.info({ damage, health, is_critical }, 'Deal Damage')
+    log.info({ damage, health }, 'Deal Damage')
 
     return {
       ...state,
@@ -36,24 +36,28 @@ export function deal_damage({ client, get_state, world }) {
       */
 
       const { inventory, stats } = get_state()
-      let strength = stats[1].value
-      let dexterity = stats[4].value
+      const player_stats = {
+        strength: stats[1].value,
+        dexterity: stats[4].value,
+      }
 
       // Get weaponDamage from the inHand Weapon.
       const slot_number = 2 + 36 // For the player 0 is the first item in hotbar. But for the game the hotbat begin at 36.
       const item = inventory[slot_number]
-      let weaponDamage
+      const weapon = { damage: 0, critical: 0 }
       if (item) {
         const { type } = item
         const itemData = world.items[type]
         if (itemData.type === 'weapon') {
           const [minDamage, maxDamage] = itemData.damage
-          weaponDamage = minDamage + Math.random() * (maxDamage - minDamage)
+          weapon.damage = minDamage + Math.random() * (maxDamage - minDamage)
           if (itemData.critical) {
-            dexterity += itemData.critical * 100 * 4
+            weapon.critical += itemData.critical * 100 * 4
           }
         }
       }
+
+      const armor_stats = { strength: 0, dexterity: 0 }
 
       // Get the strength statistics of all equipped armor.
       for (const armor_slot of [5, 6, 7, 8]) {
@@ -62,27 +66,32 @@ export function deal_damage({ client, get_state, world }) {
           const { type } = item
           const itemData = world.items[type]
           if (itemData.stats.strength) {
-            strength += itemData.stats.strength
+            armor_stats.strength += itemData.stats.strength
           }
         }
       }
-      strength = Math.max(0, strength)
+      player_stats.strength = Math.max(0, player_stats.strength)
 
-      let dmg = 1 + (weaponDamage + strength * 0.5)
+      const strength = player_stats.strength + armor_stats.strength
+      const dexterity =
+        player_stats.dexterity + armor_stats.dexterity + weapon.critical
+
       // Check if Critical Damage.
       const rand = Math.random() * 100
       const critc = Math.min(50, 1 + dexterity / 4)
       let is_critical = false
       if (rand < critc) {
-        dmg *= 1.6
         is_critical = true
       }
+      const damage_multiplier = is_critical ? 1.6 : 1.0
+      const damage = Math.floor(
+        (1 + weapon.damage + strength * 0.5) * damage_multiplier
+      )
 
       const mob = world.mobs.by_entity_id(target)
       if (mob) {
         mob.dispatch('deal_damage', {
-          damage: Math.floor(dmg),
-          is_critical,
+          damage,
         })
       }
     }

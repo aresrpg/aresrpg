@@ -80,7 +80,7 @@ const initial_state = ({ entity_id, world }) => ({
   health: 40,
   stats: [
     { type: 'vitality', value: 0 },
-    { type: 'strength', value: 10 },
+    { type: 'strength', value: 0 },
     { type: 'intelligence', value: 0 },
     { type: 'agility', value: 0 },
     { type: 'dexterity', value: 0 },
