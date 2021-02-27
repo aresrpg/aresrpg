@@ -2,6 +2,7 @@ import { Node } from 'xmldom/lib/dom.js'
 
 import logger from './logger.js'
 import { sequence, reactive_sequence } from './behavior/sequence.js'
+import goto from './behavior/goto.js'
 
 const DEBUG = false // TODO: add a way to filter pino logs
 
@@ -10,6 +11,7 @@ const log = logger(import.meta)
 const nodes = {
   sequence,
   'reactive-sequence': reactive_sequence,
+  goto,
 }
 
 export const SUCCESS = Symbol('SUCCESS')
