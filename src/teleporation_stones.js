@@ -30,12 +30,12 @@ const CURSOR = { windowId: -1, slot: -1 }
 
 // TODO: should be made configurable, or should at least vary depending on the user's language
 const lines = [
-  (name) => [
+  ({ name }) => [
     { text: '|| ', obfuscated: true, color: 'black' },
     { text: name, color: 'dark_green', obfuscated: false },
     { text: ' ||', obfuscated: true, color: 'black' },
   ],
-  (_name) => [
+  () => [
     { text: '>>', bold: true, color: 'dark_aqua' },
     { text: ' Pierre de téléportation', color: 'gold' },
     { text: ' <<', bold: true, color: 'dark_aqua' },
@@ -185,7 +185,7 @@ function on_chunk_loaded({ world, client }) {
     }) => {
       return lines.map((line, line_index) => ({
         position: { x, y: y + line_index * line_offset, z },
-        text: line(name),
+        text: line({ name }),
         entity_ids: entity_ids.slice(line_index * 2, (line_index + 1) * 2),
       }))
     }
