@@ -7,12 +7,14 @@ import { last_event_value } from './events.js'
 import mobs_goto from './mobs/goto.js'
 import mobs_damage from './mobs/damage.js'
 import { path_end } from './mobs/path.js'
+import behavior_tree from './mobs/behavior_tree.js'
 
 function reduce_mob(state, action, world) {
   return [
     //
     mobs_goto.reduce_mob,
     mobs_damage.reduce_mob,
+    behavior_tree.reduce_mob,
   ].reduce(
     async (intermediate, fn) => fn(await intermediate, action, world),
     state
@@ -33,13 +35,17 @@ export default {
         start_time: 0,
         speed: 500 /* ms/block */,
         health: 20 /* halfheart */,
+        blackboard: {},
       }
 
       const actions = new PassThrough({ objectMode: true })
       const events = new EventEmitter()
 
       aiter(actions).reduce(async (last_state, action) => {
-        const state = await reduce_mob(last_state, action, world.get())
+        const state = await reduce_mob(last_state, action, {
+          world: world.get(),
+          mob,
+        })
         events.emit('state', state)
         return state
       }, initial_state)
