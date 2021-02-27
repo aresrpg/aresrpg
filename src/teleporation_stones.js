@@ -4,6 +4,9 @@ import minecraftData from 'minecraft-data'
 import { version } from './settings.js'
 import { chunk_position } from './chunk.js'
 import { empty_slot } from './items.js'
+
+import { PLAYER_ENTITY_ID } from './index.js'
+
 const mcData = minecraftData(version)
 
 // TODO: move the Position type elsewhere
@@ -22,6 +25,7 @@ const mcData = minecraftData(version)
  * @property {number[]} entity_ids - the entity_ids of the entities used to display everything
  */
 
+// TODO: should be made configurable, or should at least vary depending on the user's language
 const lines = [
   (name) => [
     { text: '|| ', obfuscated: true, color: 'black' },
@@ -37,7 +41,7 @@ const lines = [
 
 const line_offset = 0.3
 
-export function register_teleportation_stones(world) {
+export function register(world) {
   return {
     ...world,
     next_entity_id:
@@ -251,7 +255,7 @@ function on_use_entity({ client, world }) {
   }
 }
 
-function on_window_click({ world, client, position, get_state }) {
+function on_window_click({ world, client, position }) {
   return ({ windowId, action, slot }) => {
     const current_teleportation_stone = world.teleportation_stones.find(
       ({ window_id: stone_window_id }) => stone_window_id === windowId
@@ -268,11 +272,9 @@ function on_window_click({ world, client, position, get_state }) {
       if (slot >= 0 && slot < available_teleportations_stones.length) {
         // client.write('transaction', { windowId, action, accepted: false })
         if (available_teleportations_stones[slot]) {
-          const { entity_id } = get_state()
-          console.log(entity_id)
           client.write('close_window', { windowId })
           client.write('entity_teleport', {
-            entityId: entity_id,
+            entityId: PLAYER_ENTITY_ID,
             ...position,
             ...available_teleportations_stones[slot].position,
             onGround: false,
@@ -285,7 +287,7 @@ function on_window_click({ world, client, position, get_state }) {
   }
 }
 
-export function teleportation_stones(state) {
+export function observe(state) {
   const { events, client } = state
   events.on('chunk_loaded', on_chunk_loaded(state))
   events.on('chunk_unloaded', on_chunk_unloaded(state))

@@ -31,10 +31,7 @@ import mobs_position_factory from './mobs/position.js'
 import mobs_damage from './mobs/damage.js'
 import mobs_goto from './mobs/goto.js'
 import commands_declare from './commands/declare.js'
-import {
-  register_teleportation_stones,
-  teleportation_stones,
-} from './teleporation_stones.js'
+import teleportation_stones from './teleporation_stones.js'
 
 const log = logger(import.meta)
 
@@ -55,7 +52,7 @@ const world = [
   // Reducers that augment the world with extra properties
   mobs.register,
   player_traders.register,
-  register_teleportation_stones,
+  teleportation_stones.register,
 ].reduce((world, fn) => fn(world), {
   ...floor1,
   events: new EventEmitter(),
@@ -122,7 +119,7 @@ async function observe_client(context) {
   mobs_damage.observe(context)
 
   chunk_update.observe(context)
-  teleportation_stones(context)
+  teleportation_stones.observe(context)
 }
 
 /* The following code handle the pipeline, it works as following
