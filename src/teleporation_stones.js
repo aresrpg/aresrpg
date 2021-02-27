@@ -271,7 +271,7 @@ function on_use_entity({ client, world }) {
   }
 }
 
-function on_window_click({ world, client, position, get_state }) {
+function on_window_click({ world, client, get_state }) {
   return ({ windowId, action, slot }) => {
     const current_teleportation_stone = world.teleportation_stones.find(
       ({ window_id: stone_window_id }) => stone_window_id === windowId
@@ -290,7 +290,6 @@ function on_window_click({ world, client, position, get_state }) {
           client.write('close_window', { windowId })
           client.write('position', {
             entityId: PLAYER_ENTITY_ID,
-            ...position,
             ...available_teleportations_stones[slot].position,
             yaw: 0,
             pitch: 0,
