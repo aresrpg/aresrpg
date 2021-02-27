@@ -10,9 +10,9 @@ export const jerry_nodes = [
   },
 ]
 
-export default function jerry({ server, sender }) {
+export default function jerry({ world, sender }) {
   write_chat_msg(
-    { server },
+    { world },
     {
       message: JSON.stringify([
         { text: ' ' + sender.username, color: 'gray' },

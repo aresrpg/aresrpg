@@ -10,9 +10,9 @@ export const tg_nodes = [
   },
 ]
 
-export default function tg({ server, sender }) {
+export default function tg({ world, sender }) {
   write_chat_msg(
-    { server },
+    { world },
     {
       message: JSON.stringify([
         { text: ' ' + sender.username, color: 'gray' },

@@ -10,9 +10,9 @@ export const fragile_nodes = [
   },
 ]
 
-export default function fragile({ server, sender }) {
+export default function fragile({ world, sender }) {
   write_chat_msg(
-    { server },
+    { world },
     {
       message: JSON.stringify([
         { text: ' ' + sender.username, color: 'gray' },

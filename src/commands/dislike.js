@@ -10,9 +10,9 @@ export const dislike_nodes = [
   },
 ]
 
-export default function dislike({ server, sender }) {
+export default function dislike({ world, sender }) {
   write_chat_msg(
-    { server },
+    { world },
     {
       message: JSON.stringify([
         { text: ' ' + sender.username, color: 'gray' },

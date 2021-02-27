@@ -107,7 +107,7 @@ async function observe_client(context) {
   player_fall_damage.observe(context)
   player_health.observe(context)
   player_attributes.observe(context)
-  player_chat.observe({ server, ...context }) // TODO: remove server
+  player_chat.observe(context)
 
   commands_declare.observe(context)
 

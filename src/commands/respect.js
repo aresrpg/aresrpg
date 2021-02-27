@@ -10,9 +10,9 @@ export const respect_nodes = [
   },
 ]
 
-export default function respect({ server, sender }) {
+export default function respect({ world, sender }) {
   write_chat_msg(
-    { server },
+    { world },
     {
       message: JSON.stringify([
         { text: ' ' + sender.username, color: 'gray' },
