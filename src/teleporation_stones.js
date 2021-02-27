@@ -286,18 +286,9 @@ function on_window_click({ world, client, position, get_state }) {
         length: 18,
       })
       if (slot >= 0 && slot < available_teleportations_stones.length) {
-        // client.write('transaction', { windowId, action, accepted: false })
         if (available_teleportations_stones[slot]) {
           client.write('close_window', { windowId })
-          console.log({
-            entityId: PLAYER_ENTITY_ID,
-            ...position,
-            ...available_teleportations_stones[slot].position,
-            yaw: 0,
-            pitch: 0,
-            onGround: false,
-          })
-          client.write('entity_teleport', {
+          client.write('position', {
             entityId: PLAYER_ENTITY_ID,
             ...position,
             ...available_teleportations_stones[slot].position,
@@ -324,8 +315,6 @@ function on_window_click({ world, client, position, get_state }) {
         ],
       })
       client.write('set_slot', { ...CURSOR, item: empty_slot })
-      // TODO: cancel the window_click by resending the window_items & some set_slot packets
-      // client.write('transaction', { windowId, action, accepted: true })
     }
   }
 }
