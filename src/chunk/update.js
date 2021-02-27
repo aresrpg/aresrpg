@@ -76,6 +76,10 @@ export async function load_chunks(state, { client, events, world, chunks }) {
   for (const { x, y } of sorted) {
     await load_chunk({ client, world, x, z: y })
     events.emit('chunk_loaded', { x, z: y })
+
+    // Loading one chunk is cpu intensive, wait for next tick to avoid
+    // starving the event loop for too long
+    await new Promise((resolve) => process.nextTick(resolve))
   }
 }
 
