@@ -3,11 +3,14 @@ import minecraftData from 'minecraft-data'
 
 import { version } from './settings.js'
 import { chunk_position } from './chunk.js'
-import { empty_slot } from './items.js'
+import { empty_slot, item_to_slot } from './items.js'
 
 import { PLAYER_ENTITY_ID } from './index.js'
 
 const mcData = minecraftData(version)
+
+// TODO: export that outside, but where ?
+const CURSOR = { windowId: -1, slot: -1 }
 
 // TODO: move the Position type elsewhere
 /**
@@ -41,24 +44,34 @@ const lines = [
 
 const line_offset = 0.3
 
-export function register(world) {
-  return {
-    ...world,
-    next_entity_id:
-      world.next_entity_id +
-      world.teleportation_stones.length * lines.length * 2,
-    next_window_id: world.next_window_id + world.teleportation_stones.length,
-    teleportation_stones: world.teleportation_stones.map(
-      (stone, stone_index) => ({
-        ...stone,
-        window_id: world.next_window_id + stone_index,
-        entity_ids: Array.from({ length: lines.length * 2 }).map(
-          (_, index) =>
-            world.next_entity_id + stone_index * lines.length * 2 + index
-        ),
-      })
-    ),
-  }
+export default {
+  register(world) {
+    return {
+      ...world,
+      next_entity_id:
+        world.next_entity_id +
+        world.teleportation_stones.length * lines.length * 2,
+      next_window_id: world.next_window_id + world.teleportation_stones.length,
+      teleportation_stones: world.teleportation_stones.map(
+        (stone, stone_index) => ({
+          ...stone,
+          window_id: world.next_window_id + stone_index,
+          entity_ids: Array.from({ length: lines.length * 2 }).map(
+            (_, index) =>
+              world.next_entity_id + stone_index * lines.length * 2 + index
+          ),
+        })
+      ),
+    }
+  },
+  observe(state) {
+    const { events, client } = state
+    events.on('chunk_loaded', on_chunk_loaded(state))
+    events.on('chunk_unloaded', on_chunk_unloaded(state))
+
+    client.on('use_entity', on_use_entity(state))
+    client.on('window_click', on_window_click(state))
+  },
 }
 
 /**
@@ -206,32 +219,35 @@ function on_chunk_unloaded({ client, world }) {
   }
 }
 
+function stone_to_item({ name }) {
+  return {
+    present: true,
+    itemId: mcData.itemsByName.nether_star.id,
+    itemCount: 1,
+    nbtData: {
+      type: 'compound',
+      name: 'tag',
+      value: {
+        display: {
+          type: 'compound',
+          value: {
+            Name: {
+              type: 'string',
+              value: JSON.stringify({ text: name }),
+            },
+          },
+        },
+      },
+    },
+  }
+}
+
 function on_use_entity({ client, world }) {
   return ({ target, mouse, hand }) => {
     const current_teleportation_stone = world.teleportation_stones.find(
       (stone) => stone.entity_ids.includes(target)
     )
     if (current_teleportation_stone && hand === 1 && mouse === 2) {
-      const stone_to_item = ({ name }) => ({
-        present: true,
-        itemId: mcData.itemsByName.nether_star.id,
-        itemCount: 1,
-        nbtData: {
-          type: 'compound',
-          name: 'tag',
-          value: {
-            display: {
-              type: 'compound',
-              value: {
-                Name: {
-                  type: 'string',
-                  value: JSON.stringify({ text: name }),
-                },
-              },
-            },
-          },
-        },
-      })
       const items = Array.from({
         ...world.teleportation_stones.filter(
           (stone) => stone !== current_teleportation_stone
@@ -255,7 +271,7 @@ function on_use_entity({ client, world }) {
   }
 }
 
-function on_window_click({ world, client, position }) {
+function on_window_click({ world, client, position, get_state }) {
   return ({ windowId, action, slot }) => {
     const current_teleportation_stone = world.teleportation_stones.find(
       ({ window_id: stone_window_id }) => stone_window_id === windowId
@@ -273,25 +289,43 @@ function on_window_click({ world, client, position }) {
         // client.write('transaction', { windowId, action, accepted: false })
         if (available_teleportations_stones[slot]) {
           client.write('close_window', { windowId })
+          console.log({
+            entityId: PLAYER_ENTITY_ID,
+            ...position,
+            ...available_teleportations_stones[slot].position,
+            yaw: 0,
+            pitch: 0,
+            onGround: false,
+          })
           client.write('entity_teleport', {
             entityId: PLAYER_ENTITY_ID,
             ...position,
             ...available_teleportations_stones[slot].position,
+            yaw: 0,
+            pitch: 0,
             onGround: false,
           })
         }
       }
+      const { inventory } = get_state()
+      client.write('window_items', {
+        windowId: current_teleportation_stone.window_id,
+        items: [
+          ...available_teleportations_stones.map((stone) =>
+            stone ? stone_to_item(stone) : empty_slot
+          ),
+          ...inventory
+            .slice(9, 45)
+            .map((item) =>
+              item
+                ? item_to_slot(world.items[item.type], item.count)
+                : empty_slot
+            ),
+        ],
+      })
+      client.write('set_slot', { ...CURSOR, item: empty_slot })
       // TODO: cancel the window_click by resending the window_items & some set_slot packets
       // client.write('transaction', { windowId, action, accepted: true })
     }
   }
-}
-
-export function observe(state) {
-  const { events, client } = state
-  events.on('chunk_loaded', on_chunk_loaded(state))
-  events.on('chunk_unloaded', on_chunk_unloaded(state))
-
-  client.on('use_entity', on_use_entity(state))
-  client.on('window_click', on_window_click(state))
 }
