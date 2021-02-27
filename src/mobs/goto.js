@@ -7,7 +7,7 @@ import { path_between } from './navigation.js'
 const log = logger(import.meta)
 
 export default {
-  async reduce_mob(state, { type, payload, time }, world) {
+  async reduce_mob(state, { type, payload, time }, { world }) {
     if (type === 'goto') {
       const { position } = payload
 
