@@ -32,6 +32,7 @@ import mobs_damage from './mobs/damage.js'
 import mobs_goto from './mobs/goto.js'
 import mobs_target from './mobs/target.js'
 import commands_declare from './commands/declare.js'
+import start_debug_server from './debug.js'
 
 const log = logger(import.meta)
 
@@ -165,6 +166,8 @@ server.on('login', (client) => {
   const context = create_context(client)
   observe_client(context)
 })
+
+export const debug = start_debug_server({ world })
 
 server.once('listening', () => {
   log.info(server.socketServer.address(), 'Listening')
