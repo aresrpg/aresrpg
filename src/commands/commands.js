@@ -15,7 +15,7 @@ import thug from './thug.js'
 export default function execute_command({ world, message, sender }) {
   const [name, ...args] = message.trimStart().split(/\s+/)
   const command = {
-    name: name.substring(1),
+    name: name.slice(1),
     args,
     sender,
     world,
