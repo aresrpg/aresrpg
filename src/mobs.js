@@ -6,6 +6,7 @@ import { aiter } from 'iterator-helper'
 import { last_event_value } from './events.js'
 import mobs_goto from './mobs/goto.js'
 import mobs_damage from './mobs/damage.js'
+import { path_end } from './mobs/path.js'
 
 function reduce_mob(state, action, world) {
   return [
@@ -16,6 +17,10 @@ function reduce_mob(state, action, world) {
     async (intermediate, fn) => fn(await intermediate, action, world),
     state
   )
+}
+
+function observe_mobs(mobs) {
+  path_end(mobs)
 }
 
 export default {
@@ -52,6 +57,8 @@ export default {
         },
       }
     })
+
+    observe_mobs(mobs)
 
     const { next_entity_id } = world
 
