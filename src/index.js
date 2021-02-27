@@ -30,6 +30,7 @@ import mobs_dialog from './mobs/dialog.js'
 import mobs_position_factory from './mobs/position.js'
 import mobs_damage from './mobs/damage.js'
 import mobs_goto from './mobs/goto.js'
+import mobs_target from './mobs/target.js'
 import commands_declare from './commands/declare.js'
 
 const log = logger(import.meta)
@@ -115,6 +116,7 @@ async function observe_client(context) {
   mobs_goto.observe(context)
   mobs_dialog.observe(context)
   mobs_damage.observe(context)
+  mobs_target.observe(context)
 
   chunk_update.observe(context)
 }
