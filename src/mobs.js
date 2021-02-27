@@ -52,8 +52,8 @@ export default {
         level,
         events,
         get_state: last_event_value(events, 'state'),
-        dispatch(type, payload) {
-          actions.write({ type, payload })
+        dispatch(type, payload, time = Date.now()) {
+          actions.write({ type, payload, time })
         },
       }
     })

@@ -7,9 +7,9 @@ import { path_between } from './navigation.js'
 const log = logger(import.meta)
 
 export default {
-  async reduce_mob(state, { type, payload }, world) {
+  async reduce_mob(state, { type, payload, time }, world) {
     if (type === 'goto') {
-      const { position, time } = payload
+      const { position } = payload
 
       const to = block_position(position)
 
@@ -68,7 +68,6 @@ export default {
             const { position } = get_state()
             mob.dispatch('goto', {
               position,
-              time: Date.now(),
             })
           }, 5000)
         }
