@@ -1,5 +1,19 @@
 import { promisify } from 'util'
+import { on } from 'events'
+
+import { aiter } from 'iterator-helper'
+
+import logger from '../logger.js'
+
+const log = logger(import.meta)
+
 const setTimeoutPromise = promisify(setTimeout)
+
+export function path_ended({ path, time, start_time, speed }) {
+  const current = Math.floor((time - start_time) / speed)
+
+  return current >= path.length
+}
 
 export function path_position({ path, time, start_time, speed }) {
   const t = (time - start_time) / speed
@@ -33,10 +47,8 @@ export async function* path_to_positions(stream, value = stream.next()) {
 
     yield path_position({ path, time, start_time, speed })
 
-    const current = Math.floor((time - start_time) / speed)
-
     /* End of path, wait for next path */
-    if (current >= path.length) break
+    if (path_ended({ path, time, start_time, speed })) break
 
     const next_time = (Math.floor(time / PATH_UPDATE_MS) + 1) * PATH_UPDATE_MS
 
@@ -49,4 +61,43 @@ export async function* path_to_positions(stream, value = stream.next()) {
   }
 
   yield* path_to_positions(stream, next)
+}
+
+export async function* path_to_end(stream, value = stream.next()) {
+  const {
+    value: { path, start_time, speed },
+    done,
+  } = await value
+
+  if (done) return
+
+  const next = stream.next()
+  const time = Date.now()
+
+  const next_time = start_time + path.length * speed
+
+  const path_end = await Promise.race([
+    setTimeoutPromise(next_time - time, true),
+    next.then(() => false),
+  ])
+
+  if (path_end) yield next_time
+
+  yield* path_to_end(stream, next)
+}
+
+export function path_end(mobs) {
+  for (const mob of mobs) {
+    const state = aiter(on(mob.events, 'state')).map(([state]) => state)
+
+    const end = path_to_end(state)
+
+    aiter(end).reduce((last_time, time) => {
+      if (last_time !== time) {
+        log.info({ at: time }, 'Path Ended')
+        mob.dispatch('path_ended', null, time)
+      }
+      return time
+    })
+  }
 }
