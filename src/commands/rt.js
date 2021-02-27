@@ -10,9 +10,9 @@ export const rt_nodes = [
   },
 ]
 
-export default function rt({ server, sender }) {
+export default function rt({ world, sender }) {
   write_chat_msg(
-    { server },
+    { world },
     {
       message: JSON.stringify([
         { text: ' ' + sender.username, color: 'gray' },

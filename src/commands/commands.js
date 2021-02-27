@@ -14,13 +14,13 @@ import thug from './thug.js'
 
 export function write_unfounded_command({ sender }) {}
 
-export default function execute_command({ server, message, sender }) {
+export default function execute_command({ world, message, sender }) {
   const [name, ...args] = message.trimStart().split(/\s+/)
   const command = {
     name,
     args,
     sender,
-    server,
+    world,
   }
 
   switch (command.name) {

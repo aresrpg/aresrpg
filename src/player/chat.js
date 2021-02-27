@@ -37,17 +37,13 @@ export function slot_to_chat({ nbtData, itemCount, itemId }) {
   return chat
 }
 
-export function write_chat_msg(
-  { server: { clients } },
-  { message, client: { uuid } }
-) {
+export function write_chat_msg({ world }, { message, client: { uuid } }) {
   const options = {
     message,
     position: Position.CHAT,
     sender: uuid,
   }
-  const send_packet = (client) => client.write('chat', options)
-  Object.values(clients).forEach(send_packet)
+  world.events.emit('chat', options)
 }
 
 export default {
@@ -57,7 +53,7 @@ export default {
 
       if (is_command_function(message)) {
         log.debug({ sender: client.uuid, command: message }, 'Command')
-        execute_command({ server, message, sender: client })
+        execute_command({ world, message, sender: client })
         return
       } else {
         log.debug({ sender: client.uuid, message }, 'Message')
@@ -86,9 +82,10 @@ export default {
         ],
       }
       write_chat_msg(
-        { server },
+        { world },
         { message: JSON.stringify(message_for_client), client }
       )
     })
+    world.events.on('chat', (options) => client.write('chat', options))
   },
 }

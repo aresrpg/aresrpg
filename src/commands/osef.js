@@ -10,9 +10,9 @@ export const osef_nodes = [
   },
 ]
 
-export default function osef({ server, sender }) {
+export default function osef({ world, sender }) {
   write_chat_msg(
-    { server },
+    { world },
     {
       message: JSON.stringify([
         { text: ' ' + sender.username, color: 'gray' },

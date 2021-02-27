@@ -10,9 +10,9 @@ export const thug_nodes = [
   },
 ]
 
-export default function thug({ server, sender }) {
+export default function thug({ world, sender }) {
   write_chat_msg(
-    { server },
+    { world },
     {
       message: JSON.stringify([
         { text: ' ' + sender.username, color: 'gray' },
