@@ -4,6 +4,8 @@ import logger from './logger.js'
 import { sequence, reactive_sequence } from './behavior/sequence.js'
 import goto from './behavior/goto.js'
 import get_biggest_damager from './behavior/damager.js'
+import set_target from './behavior/set_target.js'
+import target_position from './behavior/target_position.js'
 
 const DEBUG = false // TODO: add a way to filter pino logs
 
@@ -14,6 +16,8 @@ const nodes = {
   'reactive-sequence': reactive_sequence,
   goto,
   get_biggest_damager,
+  set_target,
+  target_position,
 }
 
 export const SUCCESS = Symbol('SUCCESS')

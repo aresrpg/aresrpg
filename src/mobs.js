@@ -6,6 +6,7 @@ import { aiter } from 'iterator-helper'
 import { last_event_value } from './events.js'
 import mobs_goto from './mobs/goto.js'
 import mobs_damage from './mobs/damage.js'
+import mobs_target from './mobs/target.js'
 import { path_end } from './mobs/path.js'
 import behavior_tree from './mobs/behavior_tree.js'
 
@@ -15,6 +16,7 @@ function reduce_mob(state, action, world) {
     mobs_goto.reduce_mob,
     mobs_damage.reduce_mob,
     behavior_tree.reduce_mob,
+    mobs_target.reduce_mob,
   ].reduce(
     async (intermediate, fn) => fn(await intermediate, action, world),
     state
