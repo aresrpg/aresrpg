@@ -12,13 +12,14 @@ const Mouse = {
 export default {
   reduce_mob(state, { type, payload }) {
     if (type === 'deal_damage') {
-      const { damage } = payload
+      const { damage, damager } = payload
       const health = Math.max(0, state.health - damage)
 
       log.info({ damage, health }, 'Deal Damage')
 
       return {
         ...state,
+        last_damager: damager,
         health,
       }
     }
@@ -32,6 +33,7 @@ export default {
         if (mob) {
           mob.dispatch('deal_damage', {
             damage: 1,
+            damager: client.uuid,
           })
         }
       }
