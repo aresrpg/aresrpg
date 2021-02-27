@@ -12,50 +12,48 @@ import rt from './rt.js'
 import tg from './tg.js'
 import thug from './thug.js'
 
-export function write_unfounded_command({ sender }) {}
-
 export default function execute_command({ world, message, sender }) {
   const [name, ...args] = message.trimStart().split(/\s+/)
   const command = {
-    name,
+    name: name.slice(1),
     args,
     sender,
     world,
   }
 
   switch (command.name) {
-    case '/gm':
-    case '/gamemode':
+    case 'gm':
+    case 'gamemode':
       gamemode(command)
       break
-    case '/dislike':
+    case 'dislike':
       dislike(command)
       break
-    case '/f':
+    case 'f':
       fragile(command)
       break
-    case '/jerry':
+    case 'jerry':
       jerry(command)
       break
-    case '/like':
+    case 'like':
       like(command)
       break
-    case '/osef':
+    case 'osef':
       osef(command)
       break
-    case '/ragequit':
+    case 'ragequit':
       ragequit(command)
       break
-    case '/respect':
+    case 'respect':
       respect(command)
       break
-    case '/rt':
+    case 'rt':
       rt(command)
       break
-    case '/tg':
+    case 'tg':
       tg(command)
       break
-    case '/thug':
+    case 'thug':
       thug(command)
       break
 
