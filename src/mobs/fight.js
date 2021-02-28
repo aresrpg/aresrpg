@@ -36,7 +36,7 @@ export function deal_damage({ client, get_state, world }) {
         V : Add WeaponStatistics+PlayerStatistics algorithm
       */
 
-      const { inventory, stats: state } = get_state()
+      const { inventory, state } = get_state()
       const player_stats = {
         // TODO: Use Objects.keys()
         strength: state[1].value,
@@ -118,9 +118,10 @@ function get_all_armors_stats(inventory, world) {
     if (inventory[armor_slot]) {
       const { type } = item
       const itemData = world.items[type]
-      for (const [key, value] of Object.entries(itemData.stats)) {
-        itemStats[key] += value
-      }
+      Object.entries(itemData.stats).reduce((itemstats, [key, value]) => {
+        itemstats[key] += value
+        return itemstats
+      }, itemStats)
     }
   }
   console.log(itemStats)

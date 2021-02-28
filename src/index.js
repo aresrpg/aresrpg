@@ -78,7 +78,7 @@ const initial_state = ({ entity_id, world }) => ({
   game_mode: 2,
   experience: 0,
   health: 40,
-  stats: [
+  state: [
     { type: 'vitality', value: 0 },
     { type: 'strength', value: 0 },
     { type: 'intelligence', value: 0 },
