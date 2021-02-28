@@ -36,11 +36,11 @@ export function deal_damage({ client, get_state, world }) {
         V : Add WeaponStatistics+PlayerStatistics algorithm
       */
 
-      const { inventory, stats } = get_state()
+      const { inventory, stats: state } = get_state()
       const player_stats = {
         // TODO: Use Objects.keys()
-        strength: stats[1].value,
-        dexterity: stats[4].value,
+        strength: state[1].value,
+        dexterity: state[4].value,
       }
 
       // Get weaponDamage from the inHand Weapon.
@@ -52,14 +52,12 @@ export function deal_damage({ client, get_state, world }) {
         const { type } = item
         const itemData = world.items[type]
         if (itemData.type === 'weapon') {
-          const [minDamage, maxDamage] = get_weapon_damage(itemData)
+          const [minDamage, maxDamage] = itemData.damage ?? 0
           weapon.damage = minDamage + Math.random() * (maxDamage - minDamage)
-          if (get_weapon_critical(itemData)) {
-            weapon.critical += get_weapon_critical(itemData)
-          }
-          if (get_weapon_armor_penetration(itemData)) {
-            weapon.armor_penetration += get_weapon_armor_penetration(itemData)
-          }
+          weapon.critical += itemData.critical * 100 * 4 ?? 0
+          weapon.armor_penetration = itemData.stats
+            ? itemData.stats.armor_penetration ?? 0
+            : 0
         }
       }
 
@@ -71,12 +69,11 @@ export function deal_damage({ client, get_state, world }) {
         0,
         player_stats.dexterity + armor_stats.dexterity + weapon.critical
       )
-      console.log(strength, dexterity)
 
       // Check if Critical Damage.
       const rand = Math.random() * 100
-      const critc = Math.min(50, 1 + dexterity / 4)
-      const is_critical = rand < critc
+      const critical_chance = Math.min(50, 1 + dexterity / 4)
+      const is_critical = rand < critical_chance
       const damage_multiplier = is_critical ? 1.6 : 1.0
       const damage = Math.floor(
         (1 + weapon.damage + strength * 0.5) * damage_multiplier
@@ -104,20 +101,6 @@ export function deal_damage({ client, get_state, world }) {
   }
 }
 
-function get_weapon_damage(weaponData) {
-  return weaponData.damage
-}
-
-function get_weapon_critical(weaponData) {
-  return weaponData.critical * 100 * 4
-}
-
-function get_weapon_armor_penetration(weaponData) {
-  if (weaponData.stats) {
-    return weaponData.stats.armor_penetration
-  }
-}
-
 function get_all_armors_stats(inventory, world) {
   // CHANGE
   const itemStats = {
@@ -135,12 +118,11 @@ function get_all_armors_stats(inventory, world) {
     if (inventory[armor_slot]) {
       const { type } = item
       const itemData = world.items[type]
-      for (const key of Object.keys(itemStats)) {
-        if (itemData.stats[key]) {
-          itemStats[key] += itemData.stats[key]
-        }
+      for (const [key, value] of Object.entries(itemData.stats)) {
+        itemStats[key] += value
       }
     }
   }
+  console.log(itemStats)
   return itemStats
 }
