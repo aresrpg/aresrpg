@@ -102,7 +102,6 @@ export function deal_damage({ client, get_state, world }) {
 }
 
 function get_all_armors_stats(inventory, world) {
-  // CHANGE
   const itemStats = {
     vitality: 0,
     strength: 0,
@@ -115,7 +114,7 @@ function get_all_armors_stats(inventory, world) {
   }
   for (const armor_slot of [5, 6, 7, 8]) {
     const item = inventory[armor_slot]
-    if (inventory[armor_slot]) {
+    if (item) {
       const { type } = item
       const itemData = world.items[type]
       Object.entries(itemData.stats).reduce((itemstats, [key, value]) => {
