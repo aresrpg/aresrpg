@@ -87,7 +87,7 @@ export default {
       )
     })
     world.events.on('chat', (options) => client.write('chat', options))
-    world.events.on('private message', ({ receiver_username, options }) => {
+    world.events.on('private_message', ({ receiver_username, options }) => {
       if (receiver_username === client.username) client.write('chat', options)
     })
   },

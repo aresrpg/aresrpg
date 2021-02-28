@@ -10,6 +10,7 @@ import { rt_nodes } from './rt.js'
 import { tg_nodes } from './tg.js'
 import { thug_nodes } from './thug.js'
 import { msg_nodes } from './msg.js'
+import { command_node_types } from './declare_options.js'
 
 function flatten(node, index = 0) {
   const { children, list } = node.children.reduce(
@@ -25,7 +26,7 @@ function flatten(node, index = 0) {
 
 const nodes = flatten({
   flags: {
-    command_node_type: 0,
+    command_node_type: command_node_types.ROOT_INDEX,
   },
   children: [
     ...gamemode_nodes,

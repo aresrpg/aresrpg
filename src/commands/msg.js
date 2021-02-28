@@ -1,36 +1,37 @@
 import { Position } from '../player/chat.js'
 
 import { write_error } from './commands.js'
+import { command_node_types, parser_properties } from './declare_options.js'
 
 export const msg_nodes = [
   {
     flags: {
-      command_node_type: 1,
+      command_node_type: command_node_types.COMMAND,
     },
     extraNodeData: 'msg',
     children: [
       {
         flags: {
-          command_node_type: 2,
+          command_node_type: command_node_types.ARGUMENT,
         },
         children: [
           {
             flags: {
-              command_node_type: 2,
+              command_node_type: command_node_types.ARGUMENT,
               has_command: true,
             },
             children: [],
             extraNodeData: {
               name: 'text',
               parser: 'brigadier:string',
-              properties: 2,
+              properties: parser_properties.string.GREEDY_PHRASE,
             },
           },
         ],
         extraNodeData: {
           name: 'player',
           parser: 'minecraft:entity',
-          properties: 0x02, // 0x02 for only player entity
+          properties: parser_properties.entity.PLAYER,
         },
       },
     ],
@@ -43,7 +44,9 @@ export default function msg({ world, sender, args }) {
     return
   }
 
-  const private_message = args.slice(1).join(' ')
+  const [username, ...message_words] = args
+
+  const private_message = message_words.join(' ')
 
   const options = {
     message: JSON.stringify({ text: private_message }),
@@ -51,5 +54,5 @@ export default function msg({ world, sender, args }) {
     sender: sender.uuid,
   }
 
-  world.events.emit('private message', { receiver_username: args[0], options }) // args[0] is the username
+  world.events.emit('private_message', { receiver_username: username, options })
 }
