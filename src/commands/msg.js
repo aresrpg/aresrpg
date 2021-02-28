@@ -38,7 +38,10 @@ export const msg_nodes = [
 ]
 
 export default function msg({ world, sender, args }) {
-  if (args.length < 2) write_error({ sender })
+  if (args.length < 2) {
+    write_error({ sender })
+    return
+  }
 
   const private_message = args.slice(1).join(' ')
 
