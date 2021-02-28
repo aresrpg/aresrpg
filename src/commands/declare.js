@@ -9,6 +9,7 @@ import { respect_nodes } from './respect.js'
 import { rt_nodes } from './rt.js'
 import { tg_nodes } from './tg.js'
 import { thug_nodes } from './thug.js'
+import { msg_nodes } from './msg.js'
 
 function flatten(node, index = 0) {
   const { children, list } = node.children.reduce(
@@ -38,6 +39,7 @@ const nodes = flatten({
     ...rt_nodes,
     ...tg_nodes,
     ...thug_nodes,
+    ...msg_nodes,
   ], // add the nodes of all the commands. exemple : [...command_1,...comand_2,...comand_3]
 })
 

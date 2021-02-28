@@ -11,6 +11,18 @@ import respect from './respect.js'
 import rt from './rt.js'
 import tg from './tg.js'
 import thug from './thug.js'
+import msg from './msg.js'
+
+export function write_error({ sender }) {
+  sender.write('chat', {
+    message: JSON.stringify({
+      translate: 'arguments.operation.invalid',
+      color: 'red',
+    }),
+    position: Position.CHAT,
+    sender: sender.uuid,
+  })
+}
 
 export default function execute_command({ world, message, sender }) {
   const [name, ...args] = message.trimStart().split(/\s+/)
@@ -20,8 +32,10 @@ export default function execute_command({ world, message, sender }) {
     sender,
     world,
   }
-
   switch (command.name) {
+    case 'msg':
+      msg(command)
+      break
     case 'gm':
     case 'gamemode':
       gamemode(command)

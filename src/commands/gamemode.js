@@ -1,5 +1,7 @@
 import { Position } from '../player/chat.js'
 
+import { write_error } from './commands.js'
+
 const GameMode = {
   SURVIVAL: 0,
   CREATIVE: 1,
@@ -49,17 +51,6 @@ export const gamemode_nodes = [
     ],
   },
 ]
-
-function write_error({ sender }) {
-  sender.write('chat', {
-    message: JSON.stringify({
-      translate: 'arguments.operation.invalid',
-      color: 'red',
-    }),
-    position: Position.CHAT,
-    sender: sender.uuid,
-  })
-}
 
 export default function gamemode({ args, sender }) {
   if (args.length !== 1) {
