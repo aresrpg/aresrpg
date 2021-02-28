@@ -28,6 +28,7 @@ export function deal_damage({ client, get_state, world }) {
   client.on('use_entity', ({ target, mouse, sneaking }) => {
     if (mouse === Mouse.LEFT_CLICK) {
       /* TODO:
+        X : Check if Ranged or Magic attack
         V : Basic Weapon Damages
         V : Critical damage
         X : Sync to inventory
@@ -37,6 +38,7 @@ export function deal_damage({ client, get_state, world }) {
 
       const { inventory, stats } = get_state()
       const player_stats = {
+        // TODO: Use Objects.keys()
         strength: stats[1].value,
         dexterity: stats[4].value,
       }
@@ -44,45 +46,37 @@ export function deal_damage({ client, get_state, world }) {
       // Get weaponDamage from the inHand Weapon.
       const slot_number = 2 + 36 // For the player 0 is the first item in hotbar. But for the game the hotbat begin at 36.
       const item = inventory[slot_number]
-      const weapon = { damage: 0, critical: 0 }
+      const weapon = { damage: 0, critical: 0, armor_penetration: 0 }
+
       if (item) {
         const { type } = item
         const itemData = world.items[type]
         if (itemData.type === 'weapon') {
-          const [minDamage, maxDamage] = itemData.damage
+          const [minDamage, maxDamage] = get_weapon_damage(itemData)
           weapon.damage = minDamage + Math.random() * (maxDamage - minDamage)
-          if (itemData.critical) {
-            weapon.critical += itemData.critical * 100 * 4
+          if (get_weapon_critical(itemData)) {
+            weapon.critical += get_weapon_critical(itemData)
+          }
+          if (get_weapon_armor_penetration(itemData)) {
+            weapon.armor_penetration += get_weapon_armor_penetration(itemData)
           }
         }
       }
 
-      const armor_stats = { strength: 0, dexterity: 0 }
+      // Get the statistics of all equipped armor.
+      const armor_stats = get_all_armors_stats(inventory, world)
 
-      // Get the strength statistics of all equipped armor.
-      for (const armor_slot of [5, 6, 7, 8]) {
-        const item = inventory[armor_slot]
-        if (inventory[armor_slot]) {
-          const { type } = item
-          const itemData = world.items[type]
-          if (itemData.stats.strength) {
-            armor_stats.strength += itemData.stats.strength
-          }
-        }
-      }
-      player_stats.strength = Math.max(0, player_stats.strength)
-
-      const strength = player_stats.strength + armor_stats.strength
-      const dexterity =
+      const strength = Math.max(0, player_stats.strength + armor_stats.strength)
+      const dexterity = Math.max(
+        0,
         player_stats.dexterity + armor_stats.dexterity + weapon.critical
+      )
+      console.log(strength, dexterity)
 
       // Check if Critical Damage.
       const rand = Math.random() * 100
       const critc = Math.min(50, 1 + dexterity / 4)
-      let is_critical = false
-      if (rand < critc) {
-        is_critical = true
-      }
+      const is_critical = rand < critc
       const damage_multiplier = is_critical ? 1.6 : 1.0
       const damage = Math.floor(
         (1 + weapon.damage + strength * 0.5) * damage_multiplier
@@ -108,4 +102,45 @@ export function deal_damage({ client, get_state, world }) {
       return health
     }, null)
   }
+}
+
+function get_weapon_damage(weaponData) {
+  return weaponData.damage
+}
+
+function get_weapon_critical(weaponData) {
+  return weaponData.critical * 100 * 4
+}
+
+function get_weapon_armor_penetration(weaponData) {
+  if (weaponData.stats) {
+    return weaponData.stats.armor_penetration
+  }
+}
+
+function get_all_armors_stats(inventory, world) {
+  // CHANGE
+  const itemStats = {
+    vitality: 0,
+    strength: 0,
+    agility: 0,
+    speed: 0,
+    dexterity: 0,
+    protection: 0,
+    intelligence: 0,
+    dodge: 0,
+  }
+  for (const armor_slot of [5, 6, 7, 8]) {
+    const item = inventory[armor_slot]
+    if (inventory[armor_slot]) {
+      const { type } = item
+      const itemData = world.items[type]
+      for (const key of Object.keys(itemStats)) {
+        if (itemData.stats[key]) {
+          itemStats[key] += itemData.stats[key]
+        }
+      }
+    }
+  }
+  return itemStats
 }
