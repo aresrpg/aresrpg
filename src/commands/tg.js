@@ -1,9 +1,11 @@
 import { write_chat_msg } from '../player/chat.js'
 
+import { CommandNodeTypes } from './declare_options.js'
+
 export const tg_nodes = [
   {
     flags: {
-      command_node_type: 1,
+      command_node_type: CommandNodeTypes.COMMAND,
     },
     extraNodeData: 'tg',
     children: [],

@@ -1,37 +1,37 @@
 import { Position } from '../player/chat.js'
 
 import { write_error } from './commands.js'
-import { command_node_types, parser_properties } from './declare_options.js'
+import { CommandNodeTypes, ParserProperties } from './declare_options.js'
 
 export const msg_nodes = [
   {
     flags: {
-      command_node_type: command_node_types.COMMAND,
+      command_node_type: CommandNodeTypes.COMMAND,
     },
     extraNodeData: 'msg',
     children: [
       {
         flags: {
-          command_node_type: command_node_types.ARGUMENT,
+          command_node_type: CommandNodeTypes.ARGUMENT,
         },
         children: [
           {
             flags: {
-              command_node_type: command_node_types.ARGUMENT,
+              command_node_type: CommandNodeTypes.ARGUMENT,
               has_command: true,
             },
             children: [],
             extraNodeData: {
               name: 'text',
               parser: 'brigadier:string',
-              properties: parser_properties.string.GREEDY_PHRASE,
+              properties: ParserProperties.string.GREEDY_PHRASE,
             },
           },
         ],
         extraNodeData: {
           name: 'player',
           parser: 'minecraft:entity',
-          properties: parser_properties.entity.PLAYER,
+          properties: ParserProperties.entity.PLAYER,
         },
       },
     ],

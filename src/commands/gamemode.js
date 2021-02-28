@@ -1,6 +1,7 @@
 import { Position } from '../player/chat.js'
 
 import { write_error } from './commands.js'
+import { CommandNodeTypes, ParserProperties } from './declare_options.js'
 
 const GameMode = {
   SURVIVAL: 0,
@@ -12,40 +13,40 @@ const GameMode = {
 export const gamemode_nodes = [
   {
     flags: {
-      command_node_type: 1,
+      command_node_type: CommandNodeTypes.COMMAND,
     },
     extraNodeData: 'gm',
     children: [
       {
         flags: {
-          command_node_type: 2,
+          command_node_type: CommandNodeTypes.ARGUMENT,
           has_command: true,
         },
         children: [],
         extraNodeData: {
           name: 'gamemode name or number (0-3)',
           parser: 'brigadier:string',
-          properties: 0,
+          properties: ParserProperties.string.SINGLE_WORD,
         },
       },
     ],
   },
   {
     flags: {
-      command_node_type: 1,
+      command_node_type: CommandNodeTypes.COMMAND,
     },
     extraNodeData: 'gamemode',
     children: [
       {
         flags: {
-          command_node_type: 2,
+          command_node_type: CommandNodeTypes.ARGUMENT,
           has_command: true,
         },
         children: [],
         extraNodeData: {
           name: 'gamemode name or number (0-3)',
           parser: 'brigadier:string',
-          properties: 0,
+          properties: ParserProperties.string.SINGLE_WORD,
         },
       },
     ],
