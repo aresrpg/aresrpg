@@ -9,6 +9,8 @@ import { respect_nodes } from './respect.js'
 import { rt_nodes } from './rt.js'
 import { tg_nodes } from './tg.js'
 import { thug_nodes } from './thug.js'
+import { msg_nodes } from './msg.js'
+import { CommandNodeTypes } from './declare_options.js'
 
 function flatten(node, index = 0) {
   const { children, list } = node.children.reduce(
@@ -24,7 +26,7 @@ function flatten(node, index = 0) {
 
 const nodes = flatten({
   flags: {
-    command_node_type: 0,
+    command_node_type: CommandNodeTypes.ROOT_INDEX,
   },
   children: [
     ...gamemode_nodes,
@@ -38,13 +40,17 @@ const nodes = flatten({
     ...rt_nodes,
     ...tg_nodes,
     ...thug_nodes,
+    ...msg_nodes,
   ], // add the nodes of all the commands. exemple : [...command_1,...comand_2,...comand_3]
 })
 
 export default {
   observe({ client, events }) {
     events.once('state', () => {
-      client.write('declare_commands', { nodes, rootIndex: 0 })
+      client.write('declare_commands', {
+        nodes,
+        rootIndex: CommandNodeTypes.ROOT_INDEX,
+      })
     })
   },
 }
