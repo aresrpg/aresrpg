@@ -112,17 +112,20 @@ function get_all_armors_stats(inventory, world) {
     intelligence: 0,
     dodge: 0,
   }
+  let stats
   for (const armor_slot of [5, 6, 7, 8]) {
     const item = inventory[armor_slot]
     if (item) {
       const { type } = item
       const itemData = world.items[type]
-      Object.entries(itemData.stats).reduce((itemstats, [key, value]) => {
-        itemstats[key] += value
-        return itemstats
-      }, itemStats)
+      stats = Object.entries(itemData.stats).reduce(
+        (itemstats, [key, value]) => ({
+          ...itemstats,
+          [key]: value,
+        }),
+        itemStats
+      )
     }
   }
-  console.log(itemStats)
-  return itemStats
+  return stats
 }
