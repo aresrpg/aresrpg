@@ -78,14 +78,14 @@ const initial_state = ({ entity_id, world }) => ({
   game_mode: 2,
   experience: 0,
   health: 40,
-  state: [
-    { type: 'vitality', value: 0 },
-    { type: 'strength', value: 0 },
-    { type: 'intelligence', value: 0 },
-    { type: 'agility', value: 0 },
-    { type: 'dexterity', value: 0 },
-    { type: 'spirit', value: 0 },
-  ],
+  stats: {
+    vitality: 0,
+    strength: 0,
+    intelligence: 0,
+    agility: 0,
+    dexterity: 0,
+    spirit: 0,
+  },
 })
 
 function reduce_state(state, action) {

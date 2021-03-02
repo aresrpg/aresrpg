@@ -36,12 +36,8 @@ export function deal_damage({ client, get_state, world }) {
         V : Add WeaponStatistics+PlayerStatistics algorithm
       */
 
-      const { inventory, state } = get_state()
-      const player_stats = {
-        // TODO: Use Objects.keys()
-        strength: state[1].value,
-        dexterity: state[4].value,
-      }
+      const { inventory, stats } = get_state()
+      const player_stats = { ...stats }
 
       // Get weaponDamage from the inHand Weapon.
       const slot_number = 2 + 36 // For the player 0 is the first item in hotbar. But for the game the hotbat begin at 36.
@@ -102,30 +98,31 @@ export function deal_damage({ client, get_state, world }) {
 }
 
 function get_all_armors_stats(inventory, world) {
-  const itemStats = {
-    vitality: 0,
-    strength: 0,
-    agility: 0,
-    speed: 0,
-    dexterity: 0,
-    protection: 0,
-    intelligence: 0,
-    dodge: 0,
-  }
-  let stats
-  for (const armor_slot of [5, 6, 7, 8]) {
-    const item = inventory[armor_slot]
-    if (item) {
-      const { type } = item
-      const itemData = world.items[type]
-      stats = Object.entries(itemData.stats).reduce(
-        (itemstats, [key, value]) => ({
-          ...itemstats,
-          [key]: value,
-        }),
-        itemStats
-      )
+  return Object.values([5, 6, 7, 8]).reduce(
+    (stats, value) => {
+      const item = inventory[value]
+      if (item) {
+        const { type } = item
+        const itemData = world.items[type]
+        stats = Object.entries(itemData.stats).reduce(
+          (itemstats, [key, value]) => ({
+            ...itemstats,
+            [key]: value + itemstats[[key]], // Actually replace the old value
+          }),
+          stats
+        )
+      }
+      return stats
+    },
+    {
+      vitality: 0,
+      strength: 0,
+      agility: 0,
+      speed: 0,
+      dexterity: 0,
+      protection: 0,
+      intelligence: 0,
+      dodge: 0,
     }
-  }
-  return stats
+  )
 }
