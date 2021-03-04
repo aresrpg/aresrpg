@@ -15,8 +15,8 @@ export default {
     return state
   },
   /** @type {import('../context.js').Observer} */
-  observe({ client, world, events, signal }) {
-    for (const mob of world.mobs.all) {
+  observe({ client, events }) {
+    events.on('mob_spawned', ({ mob, signal }) => {
       const send_position = ({ position }) =>
         mob.dispatch('target_position', position)
 
@@ -31,6 +31,6 @@ export default {
         },
         null
       )
-    }
+    })
   },
 }

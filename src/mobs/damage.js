@@ -29,7 +29,7 @@ export default {
   },
 
   /** @type {import('../context.js').Observer} */
-  observe({ client, world, events, signal }) {
+  observe({ client, world, events }) {
     client.on('use_entity', ({ target, mouse }) => {
       if (mouse === Mouse.LEFT_CLICK) {
         const mob = world.mobs.by_entity_id(target)
@@ -42,7 +42,7 @@ export default {
       }
     })
 
-    for (const mob of world.mobs.all) {
+    events.on('mob_spawned', ({ mob, signal }) => {
       aiter(abortable(on(mob.events, 'state', { signal }))).reduce(
         (last_health, [{ health, last_damage }]) => {
           if (last_health !== health) {
@@ -56,6 +56,6 @@ export default {
         },
         null
       )
-    }
+    })
   },
 }

@@ -3,7 +3,6 @@ import { PassThrough } from 'stream'
 
 import { aiter } from 'iterator-helper'
 
-import { is_inside } from '../math.js'
 import { chunk_position, chunk_index, same_chunk } from '../chunk.js'
 import { abortable } from '../iterator.js'
 
@@ -28,33 +27,7 @@ function to_angle(raw) {
 }
 
 export default {
-  observe({ world, client, events, get_state, signal }) {
-    function inside_view(position) {
-      const { view_distance, position: player_position } = get_state()
-
-      const player_chunk_x = chunk_position(player_position.x)
-      const player_chunk_z = chunk_position(player_position.z)
-
-      const chunk_x = chunk_position(position.x)
-      const chunk_z = chunk_position(position.z)
-
-      return is_inside(
-        {
-          min: {
-            x: player_chunk_x - view_distance,
-            y: player_chunk_z - view_distance,
-          },
-          max: {
-            x: player_chunk_x + view_distance,
-            y: player_chunk_z + view_distance,
-          },
-        },
-        { x: chunk_x, y: chunk_z }
-      )
-    }
-
-    const outside_view = position => !inside_view(position)
-
+  observe({ world, client, events, inside_view, signal }) {
     const player_stream = new PassThrough({ objectMode: true })
     client.once('end', () => player_stream.end())
 
@@ -129,7 +102,7 @@ export default {
         }
 
         // Exit view distance
-        if (outside_view(position) && inside_view(last_position)) {
+        if (!inside_view(position) && inside_view(last_position)) {
           client.write('entity_destroy', {
             entityIds: [world.next_entity_id + playerIdx],
           })
