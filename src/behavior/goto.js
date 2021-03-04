@@ -1,7 +1,11 @@
 import logger from '../logger.js'
 import { block_position } from '../position.js'
 import { path_position } from '../mobs/path.js'
-import { path_between, diagonal_distance } from '../mobs/navigation.js'
+import {
+  path_between,
+  diagonal_distance,
+  horizontal_diagonal_distance,
+} from '../mobs/navigation.js'
 import { SUCCESS, FAILURE, RUNNING } from '../behavior.js'
 
 const log = logger(import.meta)
@@ -19,26 +23,27 @@ export default async function goto(node, state, { world, action }) {
   )
 
   const distance = Number(node.getAttribute('distance') ?? 0)
+  const distance_fn = node.hasAttribute('ignore_y')
+    ? horizontal_diagonal_distance
+    : diagonal_distance
 
-  if (diagonal_distance(from, to) <= distance) {
+  if (distance_fn(from, to) <= distance) {
     return { status: SUCCESS, state }
-  } else if (
-    diagonal_distance(state.path[state.path.length - 1], to) <= distance
-  ) {
+  } else if (distance_fn(state.path[state.path.length - 1], to) <= distance) {
     return { status: RUNNING, state }
   } else {
     const start_time = time
-
-    log.info({ start_time, from, to }, 'Goto Block')
 
     const { path, open, closed } = await path_between({
       world,
       from,
       to,
       distance,
+      distance_fn,
     })
 
     if (path != null) {
+      log.info({ start_time, from, to }, 'Goto Block')
       return {
         status: RUNNING,
         state: {
@@ -50,6 +55,7 @@ export default async function goto(node, state, { world, action }) {
         },
       }
     } else {
+      log.info({ start_time, from, to }, 'Failed Goto Block')
       return {
         status: FAILURE,
         state,

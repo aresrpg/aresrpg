@@ -56,6 +56,7 @@ export default {
       }, initial_state)
 
       setImmediate(() => events.emit('state', initial_state))
+      actions.write({ type: 'init', payload: null, time: Date.now() })
 
       return {
         entity_id,

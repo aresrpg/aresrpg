@@ -16,7 +16,7 @@ export function path_ended({ path, time, start_time, speed }) {
 }
 
 export function path_position({ path, time, start_time, speed }) {
-  const t = (time - start_time) / speed
+  const t = Math.max(0, (time - start_time) / speed)
   const current = Math.floor(t)
   const remain = t % 1
 
@@ -30,9 +30,31 @@ export function path_position({ path, time, start_time, speed }) {
   }
 }
 
+function flatten(generator) {
+  return async function* (...args) {
+    const streams = [generator(...args)]
+    while (streams.length >= 0) {
+      const { value, done } = await streams[streams.length - 1].next()
+
+      if (done) {
+        streams.pop()
+      }
+
+      if (typeof value === 'object' && Symbol.asyncIterator in value) {
+        streams.push(value)
+      } else {
+        yield value
+      }
+    }
+  }
+}
+
 const PATH_UPDATE_MS = 1000 / 20 /* 1 update each minecraft tick */
 
-export async function* path_to_positions(stream, value = stream.next()) {
+export const path_to_positions = flatten(async function* (
+  stream,
+  value = stream.next()
+) {
   const {
     value: { path, start_time, speed },
     done,
@@ -60,10 +82,13 @@ export async function* path_to_positions(stream, value = stream.next()) {
     if (new_path) break
   }
 
-  yield* path_to_positions(stream, next)
-}
+  return path_to_positions(stream, next)
+})
 
-export async function* path_to_end(stream, value = stream.next()) {
+export const path_to_end = flatten(async function* (
+  stream,
+  value = stream.next()
+) {
   const {
     value: { path, start_time, speed },
     done,
@@ -83,8 +108,8 @@ export async function* path_to_end(stream, value = stream.next()) {
 
   if (path_end) yield next_time
 
-  yield* path_to_end(stream, next)
-}
+  return path_to_end(stream, next)
+})
 
 export function path_end(mobs) {
   for (const mob of mobs) {
