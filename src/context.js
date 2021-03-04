@@ -14,7 +14,7 @@ import player_attributes from './player/attributes.js'
 import player_health from './player/health.js'
 import player_fall_damage from './player/fall_damage.js'
 import player_position from './player/position.js'
-import player_view_distance from './player/view_distance.js'
+import player_view_distance, { inside_view } from './player/view_distance.js'
 import player_chat from './player/chat.js'
 import player_resource_pack from './player/resource_pack.js'
 import player_statistics from './player/statistics.js'
@@ -37,11 +37,16 @@ import plugin_channels from './plugin_channels.js'
 import chunk_update from './chunk/update.js'
 import { register as register_mobs } from './mobs.js'
 import mobs_dialog from './mobs/dialog.js'
-import mobs_position_factory from './mobs/position.js'
+import mobs_position_factory, {
+  register as register_mobs_position,
+} from './mobs/position.js'
+import mobs_spawn from './mobs/spawn.js'
+import mobs_movements from './mobs/movements.js'
 import mobs_damage from './mobs/damage.js'
 import mobs_goto from './mobs/goto.js'
 import mobs_target from './mobs/target.js'
 import mobs_look_at from './mobs/look_at.js'
+import mobs_wakeup from './mobs/wakeup.js'
 import commands_declare from './commands/declare.js'
 import start_debug_server from './debug.js'
 import observe_performance from './performance.js'
@@ -67,6 +72,7 @@ const initial_world = {
 const world_reducers = [
   // Reducers that augment the world with extra properties
   register_mobs,
+  register_mobs_position,
   register_player_traders,
   register_player_deal_damage,
   register_screen({
@@ -195,11 +201,14 @@ export async function observe_client(context) {
   commands_declare.observe(context)
 
   mobs_position.observe(context)
+  mobs_spawn.observe(context)
+  mobs_movements.observe(context)
   mobs_goto.observe(context)
   mobs_dialog.observe(context)
   mobs_damage.observe(context)
   mobs_target.observe(context)
   mobs_look_at.observe(context)
+  mobs_wakeup.observe(context)
 
   chunk_update.observe(context)
 }
@@ -276,12 +285,15 @@ export async function create_context(client) {
       log.error(error, 'State error')
     })
 
+  const get_state = last_event_value(events, 'state')
+
   return {
     client,
     world,
     events,
     signal: controller.signal,
-    get_state: last_event_value(events, 'state'),
+    get_state,
+    inside_view: inside_view(get_state),
     dispatch(type, payload) {
       actions.write({ type, payload })
     },

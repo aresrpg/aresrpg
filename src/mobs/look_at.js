@@ -7,8 +7,8 @@ import { abortable } from '../iterator.js'
 import { path_position } from './path.js'
 
 export default {
-  observe({ client, world, events, signal }) {
-    for (const mob of world.mobs.all) {
+  observe({ client, events }) {
+    events.on('mob_spawned', ({ mob, signal }) => {
       const look_at_player = ({ position: { x, z } }) => {
         const state = mob.get_state()
 
@@ -44,6 +44,6 @@ export default {
           return look_at
         }
       )
-    }
+    })
   },
 }

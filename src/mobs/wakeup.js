@@ -1,14 +1,14 @@
 import { promisify } from 'util'
+import { on } from 'events'
 
-import { async_tail_recursive } from '../iterator.js'
+import { aiter } from 'iterator-helper'
+
+import { async_tail_recursive, abortable } from '../iterator.js'
 
 const setTimeoutPromise = promisify(setTimeout)
 
 async function* raw_wakeup_to_end(stream, value = stream.next()) {
-  const {
-    value: { wakeup_at },
-    done,
-  } = await value
+  const { value: { wakeup_at } = { wakeup_at: null }, done } = await value
 
   if (done) return
 
@@ -25,4 +25,28 @@ async function* raw_wakeup_to_end(stream, value = stream.next()) {
   return [raw_wakeup_to_end, stream, next]
 }
 
-export const wakeup_to_end = async_tail_recursive(raw_wakeup_to_end)
+const wakeup_to_end = async_tail_recursive(raw_wakeup_to_end)
+
+export default {
+  /** @type {import('../context.js').Observer} */
+  observe({ events }) {
+    events.on('mob_spawned', ({ mob, signal }) => {
+      const time = Date.now()
+
+      if (mob.get_state().wakeup_at <= time) mob.dispatch('wakeup', null, time)
+
+      const state = aiter(abortable(on(mob.events, 'state', { signal }))).map(
+        ([state]) => state
+      )
+
+      const wakeups = wakeup_to_end(state)
+
+      aiter(wakeups).reduce((last_time, time) => {
+        if (last_time !== time) {
+          mob.dispatch('wakeup', null, time)
+        }
+        return time
+      }, null)
+    })
+  },
+}
