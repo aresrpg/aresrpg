@@ -4,6 +4,7 @@ import { on } from 'events'
 import { aiter } from 'iterator-helper'
 
 import logger from '../logger.js'
+import { flatten } from '../iterator.js'
 
 const log = logger(import.meta)
 
@@ -27,25 +28,6 @@ export function path_position({ path, time, start_time, speed }) {
     x: from.x + (to.x - from.x) * remain,
     y: from.y + (to.y - from.y) * remain,
     z: from.z + (to.z - from.z) * remain,
-  }
-}
-
-function flatten(generator) {
-  return async function* (...args) {
-    const streams = [generator(...args)]
-    while (streams.length >= 0) {
-      const { value, done } = await streams[streams.length - 1].next()
-
-      if (done) {
-        streams.pop()
-      }
-
-      if (typeof value === 'object' && Symbol.asyncIterator in value) {
-        streams.push(value)
-      } else {
-        yield value
-      }
-    }
   }
 }
 

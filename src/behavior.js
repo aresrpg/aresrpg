@@ -14,6 +14,7 @@ import target_position from './behavior/target_position.js'
 import random_block_position from './behavior/random_position.js'
 import random from './behavior/random.js'
 import sleep from './behavior/sleep.js'
+import repeat from './behavior/repeat.js'
 
 import { debug } from './index.js'
 
@@ -33,6 +34,7 @@ const nodes = {
   random_block_position,
   random,
   sleep,
+  repeat,
 }
 
 export const SUCCESS = Symbol('SUCCESS')
