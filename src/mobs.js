@@ -38,6 +38,8 @@ export default {
         speed: 500 /* ms/block */,
         health: 20 /* halfheart */,
         blackboard: {},
+        wakeup_at: 0,
+        sleep_id: null,
       }
 
       const actions = new PassThrough({ objectMode: true })
@@ -56,7 +58,6 @@ export default {
       }, initial_state)
 
       setImmediate(() => events.emit('state', initial_state))
-      actions.write({ type: 'init', payload: null, time: Date.now() })
 
       return {
         entity_id,

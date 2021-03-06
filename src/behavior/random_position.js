@@ -13,8 +13,8 @@ export default function random_block_position(node, state, { action }) {
     })
   )
 
-  const x_delta = Math.floor(Math.random() * 30 - 15)
-  const z_delta = Math.floor(Math.random() * 30 - 15)
+  const x_delta = Math.floor(Math.random() * 15 - 7)
+  const z_delta = Math.floor(Math.random() * 15 - 7)
 
   return {
     status: SUCCESS,

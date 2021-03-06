@@ -12,6 +12,8 @@ import get_biggest_damager from './behavior/damager.js'
 import set_target from './behavior/set_target.js'
 import target_position from './behavior/target_position.js'
 import random_block_position from './behavior/random_position.js'
+import random from './behavior/random.js'
+import sleep from './behavior/sleep.js'
 
 import { debug } from './index.js'
 
@@ -29,6 +31,8 @@ const nodes = {
   set_target,
   target_position,
   random_block_position,
+  random,
+  sleep,
 }
 
 export const SUCCESS = Symbol('SUCCESS')

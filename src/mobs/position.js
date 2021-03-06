@@ -71,7 +71,14 @@ function get_chunk(chunks, { x, z }) {
 function client_chunk_loaded(chunks, { client, x, z }) {
   const chunk = get_chunk(chunks, { x, z })
 
-  for (const mob of chunk.mobs) write_mob(client, mob)
+  const time = Date.now()
+  for (const mob of chunk.mobs) {
+    if (mob.mob.get_state().wakeup_at <= time) {
+      console.log('wakeup')
+      mob.mob.dispatch('wakeup', null, time)
+    }
+    write_mob(client, mob)
+  }
 
   return new Map([
     ...chunks.entries(),
