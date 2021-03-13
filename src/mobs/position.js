@@ -4,11 +4,14 @@ import { on } from 'events'
 import minecraft_data from 'minecraft-data'
 import UUID from 'uuid-1345'
 import { aiter } from 'iterator-helper'
+import Vec3 from 'vec3'
 
 import { chunk_position, same_chunk } from '../chunk.js'
 import { version } from '../settings.js'
 import { write_path } from '../plugin_channels.js'
 import { to_minecraft_path } from '../pathfinding.js'
+import { direction_to_yaw_pitch } from '../math.js'
+import { position_equal } from '../position.js'
 
 import { Types } from './types.js'
 import { path_to_positions, path_position } from './path.js'
@@ -100,25 +103,41 @@ function client_chunk_unloaded(chunks, { client, x, z }) {
   ])
 }
 
-function mob_position(chunks, { mob, position, last_position }) {
+function mob_position(chunks, { mob, position, last_position, target }) {
   const x = chunk_position(position.x)
   const z = chunk_position(position.z)
 
   const chunk = get_chunk(chunks, { x, z })
 
-  if (last_position != null) {
+  if (last_position != null && !position_equal(position, last_position)) {
     const delta_x = (position.x * 32 - last_position.x * 32) * 128
     const delta_y = (position.y * 32 - last_position.y * 32) * 128
     const delta_z = (position.z * 32 - last_position.z * 32) * 128
 
     for (const client of chunk.clients) {
-      client.write('rel_entity_move', {
+      const { yaw: headYaw, pitch } = direction_to_yaw_pitch(
+        Vec3(target).subtract(Vec3(position))
+      )
+      const { yaw } = direction_to_yaw_pitch(
+        Vec3(position).subtract(Vec3(last_position))
+      )
+
+      client.write('entity_move_look', {
         entityId: mob.entity_id,
         dX: delta_x,
         dY: delta_y,
         dZ: delta_z,
+        pitch,
+        yaw,
         onGround: true,
       })
+
+      if (!position_equal(target, position)) {
+        client.write('entity_head_rotation', {
+          entityId: mob.entity_id,
+          headYaw,
+        })
+      }
     }
   }
 
@@ -210,7 +229,7 @@ export default function update_clients(world) {
 
       const positions = path_to_positions(state)
 
-      aiter(positions).reduce((last_position, position) => {
+      aiter(positions).reduce((last_position, { position, target }) => {
         if (last_position !== position) {
           actions.write({
             type: 'mob_position',
@@ -218,6 +237,7 @@ export default function update_clients(world) {
               mob,
               last_position,
               position,
+              target,
             },
           })
         }
