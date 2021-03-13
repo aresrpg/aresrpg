@@ -35,7 +35,6 @@ export async function get_block(world, { x, y, z }) {
 function make_weak_cached(f) {
   const cache = new Map()
   const cleanup = new FinalizationRegistry((key) => {
-    console.log('remove', key)
     const ref = cache.get(key)
     if (ref && !ref.deref()) cache.delete(key)
   })
@@ -59,7 +58,6 @@ export function chunks(region_folder) {
 
   const load_chunk = make_weak_cached((key) => {
     const { x, z } = chunk_from_index(key)
-    console.log('load', x, z)
     return provider.load(x, z)
   })
 

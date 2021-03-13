@@ -196,10 +196,7 @@ function mob_wakeup(chunks, { mob, time }) {
 
   const chunk = get_chunk(chunks, { x, z })
 
-  if (chunk.clients.length > 0) {
-    mob.dispatch('wakeup', null, time)
-    console.log('wakeup')
-  }
+  if (chunk.clients.length > 0) mob.dispatch('wakeup', null, time)
 
   return chunks
 }
