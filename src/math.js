@@ -132,3 +132,18 @@ export function intersect_ray_plane(origin, direction, normal, dist) {
     return null
   }
 }
+
+export function direction_to_yaw_pitch(direction) {
+  const distance = Math.sqrt(direction.x ** 2 + direction.z ** 2)
+  const pitch = Math.floor(
+    (-Math.atan2(direction.y, distance) / Math.PI) * (255 / 2)
+  )
+  const yaw = Math.floor(
+    (-Math.atan2(direction.x, direction.z) / Math.PI) * (255 / 2)
+  )
+
+  return {
+    yaw,
+    pitch,
+  }
+}
