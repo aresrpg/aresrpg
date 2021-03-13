@@ -94,3 +94,18 @@ export function sort_by_distance(center, positions) {
     return distance_squared(center, a) - distance_squared(center, b)
   })
 }
+
+export function direction_to_yaw_pitch(direction) {
+  const distance = Math.sqrt(direction.x ** 2 + direction.z ** 2)
+  const pitch = Math.floor(
+    (-Math.atan2(direction.y, distance) / Math.PI) * (255 / 2)
+  )
+  const yaw = Math.floor(
+    (-Math.atan2(direction.x, direction.z) / Math.PI) * (255 / 2)
+  )
+
+  return {
+    yaw,
+    pitch,
+  }
+}

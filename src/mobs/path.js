@@ -49,7 +49,10 @@ export const path_to_positions = flatten(async function* (
   while (true) {
     const time = Date.now()
 
-    yield path_position({ path, time, start_time, speed })
+    yield {
+      position: path_position({ path, time, start_time, speed }),
+      target: path[path.length - 1],
+    }
 
     /* End of path, wait for next path */
     if (path_ended({ path, time, start_time, speed })) break
