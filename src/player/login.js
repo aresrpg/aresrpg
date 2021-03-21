@@ -3,11 +3,10 @@ import { on } from 'events'
 import { aiter } from 'iterator-helper'
 
 import { chunk_position } from '../chunk.js'
-import { empty_slot, item_to_slot } from '../items.js'
 import { write_brand } from '../plugin_channels.js'
 import { dimension_codec, overworld } from '../world/codec.js'
 import { load_chunks } from '../chunk/update.js'
-import { PLAYER_ENTITY_ID, PLAYER_INVENTORY_ID } from '../index.js'
+import { PLAYER_ENTITY_ID } from '../index.js'
 
 
 import { write_title } from './title.js'
@@ -19,7 +18,7 @@ export default {
   /** @type {import('../index.js').Observer} */
   observe({ client, events, world }) {
     events.once('state', (state) => {
-      const { game_mode, position, inventory, view_distance } = state
+      const { game_mode, position, view_distance } = state
       // TODO: move this elsewhere
       const world_names = ['minecraft:overworld']
       // TODO: we should not take the first world of the list
@@ -64,14 +63,6 @@ export default {
       set_world_border({ client, x: 510, z: 510, radius: 1020, speed: 1 })
 
       load_chunks(state, { client, world, events, chunks: [chunk] })
-
-      const to_slot = (item) =>
-        item ? item_to_slot(world.items[item.type], item.count) : empty_slot
-
-      client.write('window_items', {
-        windowId: PLAYER_INVENTORY_ID,
-        items: inventory.map(to_slot),
-      })
 
       write_title(client, {
         subtitle: { text: 'Bienvenue sur' },

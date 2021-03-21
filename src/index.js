@@ -91,10 +91,12 @@ const initial_state = {
     pool: Array.from({ length: DAMAGE_INDICATORS_AMMOUNT }),
     cursor: -1,
   },
+  inventory_sequence_number: 0,
+  inventory_cursor: null,
+  inventory_cursor_index: 0,
   game_mode: 2,
   experience: 0,
   health: 40,
-  cursor_item_selected: undefined,
 }
 
 /** @template U
@@ -155,6 +157,7 @@ async function observe_client(context) {
   player_chat.observe(context)
   player_screen.observe(context)
   player_deal_damage.observe(context)
+  player_inventory.observe(context)
 
   commands_declare.observe(context)
 
