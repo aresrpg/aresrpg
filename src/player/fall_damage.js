@@ -27,7 +27,7 @@ export default {
   observe({ events, dispatch }) {
     aiter(on(events, 'state')).reduce(
       (
-        { highest_y = 0, was_on_ground = true },
+        { highest_y, was_on_ground },
         [
           {
             position: { y, onGround },
@@ -51,7 +51,7 @@ export default {
           was_on_ground: onGround,
         }
       },
-      {}
+      { highest_y: 0, was_on_ground: true }
     )
   },
 }
