@@ -18,6 +18,7 @@
 			</sequence>
 			<sequence>
 				<random chance="0.20"/>
+				<random_look_around/>
 				<sleep time="1"/>
 			</sequence>
 			<sleep time="1"/>

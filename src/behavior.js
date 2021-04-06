@@ -12,6 +12,7 @@ import get_biggest_damager from './behavior/damager.js'
 import set_target from './behavior/set_target.js'
 import target_position from './behavior/target_position.js'
 import random_block_position from './behavior/random_position.js'
+import random_look_around from './behavior/random_look_around.js'
 import random from './behavior/random.js'
 import sleep from './behavior/sleep.js'
 import repeat from './behavior/repeat.js'
@@ -32,6 +33,7 @@ const nodes = {
   set_target,
   target_position,
   random_block_position,
+  random_look_around,
   random,
   sleep,
   repeat,
