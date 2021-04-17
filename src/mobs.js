@@ -46,7 +46,7 @@ export default {
         blackboard: {},
         wakeup_at: 0,
         sleep_id: null,
-        look_at: { yaw: 0, pitch: 0 },
+        look_at: { player: false, yaw: 0, pitch: 0 },
       }
 
       const actions = new PassThrough({ objectMode: true })
