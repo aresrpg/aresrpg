@@ -1,13 +1,13 @@
 import { SUCCESS } from '../behavior.js'
 
-export default function random_look_around(node, state) {
+export default function look_at_player(node, state) {
   return {
     status: SUCCESS,
     state: {
       ...state,
       look_at: {
-        player: false,
-        yaw: Math.floor(Math.random() * 255) - 128,
+        player: true,
+        yaw: 0,
         pitch: 0,
       },
     },
