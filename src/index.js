@@ -3,6 +3,7 @@ import { PassThrough } from 'stream'
 import fs from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import crypto from 'crypto'
 
 import protocol from 'minecraft-protocol'
 import { aiter } from 'iterator-helper'
@@ -193,6 +194,21 @@ function create_context(client) {
 server.on('login', (client) => {
   const context = create_context(client)
   observe_client(context)
+})
+
+server.on('connection', (client) => {
+  client.once('encryption_begin', (packet) => {
+    const shared_secret = crypto
+      .privateDecrypt(
+        {
+          key: server.serverKey.exportKey(),
+          padding: crypto.constants.RSA_PKCS1_PADDING,
+        },
+        packet.sharedSecret
+      )
+      .toString('hex')
+    log.info({ shared_secret }, 'Encryption Begin')
+  })
 })
 
 export const debug = start_debug_server({ world })
