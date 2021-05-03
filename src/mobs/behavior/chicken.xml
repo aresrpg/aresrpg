@@ -1,0 +1,6 @@
+<reactive-sequence>
+	<get_biggest_damager output="damager"/>
+	<set_target input="damager"/>
+	<target_position output="position"/>
+	<goto target="position" distance="1"/>
+</reactive-sequence>
