@@ -4,8 +4,8 @@ import minecraftData from 'minecraft-data'
 import UUID from 'uuid-1345'
 import Vec3 from 'vec3'
 
-import { floor_pos, intersect_ray_plane, to_direction } from './math.js'
-import { version } from './settings.js'
+import { floor_pos, intersect_ray_plane, to_direction } from '../math.js'
+import { version } from '../settings.js'
 
 const mcData = minecraftData(version)
 
@@ -212,31 +212,34 @@ export function screen_ray_intersection(screen, position) {
   return false
 }
 
-export function interract_screen({ client, world, events }) {
-  client.on('arm_animation', ({ hand }) => {
-    events.once('state', (state) => {
-      const { position } = state
-      for (const [screen_id, screen] of Object.entries(world.screens)) {
-        const intersect = screen_ray_intersection(screen, position)
-        if (intersect) {
-          const { x, y } = intersect
-          events.emit('screen_interract', {
-            x,
-            y,
-            screen_id,
-            hand,
-          })
-        }
-      }
-    })
-  })
-}
-
 export function create_screen_canvas(screen) {
-  const { size } = screen;
+  const { size } = screen
   const canvas = createCanvas(size.width * 128, size.height * 128)
   const ctx = canvas.getContext('2d')
   ctx.fillStyle = 'black'
   ctx.fillRect(0, 0, size.width * 128, size.height * 128)
-  return { canvas, ctx };
+  return { canvas, ctx }
+}
+
+export default {
+  /** @type {import('../index.js').Observer} */
+  observe({ client, events, world }) {
+    client.on('arm_animation', ({ hand }) => {
+      events.once('state', (state) => {
+        const { position } = state
+        for (const [screen_id, screen] of Object.entries(world.screens)) {
+          const intersect = screen_ray_intersection(screen, position)
+          if (intersect) {
+            const { x, y } = intersect
+            events.emit('screen_interract', {
+              x,
+              y,
+              screen_id,
+              hand,
+            })
+          }
+        }
+      })
+    })
+  },
 }

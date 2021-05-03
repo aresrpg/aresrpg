@@ -63,7 +63,17 @@
       in
         {
           devShell = pkgs.mkShell {
-            buildInputs = [pkgs.nodejs-15_x];
+            buildInputs = [
+              pkgs.nodejs-15_x
+              pkgs.libuuid
+              pkgs.cairo
+              pkgs.pango
+              pkgs.libjpeg
+              pkgs.giflib
+              pkgs.librsvg
+              pkgs.python3
+              pkgs.pkg-config
+            ];
           };
 
           dockerImage = pkgs.dockerTools.buildImage {

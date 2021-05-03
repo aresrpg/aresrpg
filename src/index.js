@@ -11,7 +11,7 @@ import combineAsyncIterators from 'combine-async-iterators'
 import { online_mode, version } from './settings.js'
 import { last_event_value } from './events.js'
 import { floor1 } from './world.js'
-import { register_screen } from './screen.js'
+import player_screen, { register_screen } from './player/screen.js'
 import logger from './logger.js'
 import player_login from './player/login.js'
 import player_experience from './player/experience.js'
@@ -140,6 +140,7 @@ async function observe_client(context) {
   player_health.observe(context)
   player_attributes.observe(context)
   player_chat.observe(context)
+  player_screen.observe(context)
   // interract_screen(context)
 
   commands_declare.observe(context)
