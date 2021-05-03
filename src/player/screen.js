@@ -117,18 +117,15 @@ export function update_screen(
 
   for (let frame_x = 0; frame_x < size.width; frame_x++) {
     for (let frame_y = 0; frame_y < size.height; frame_y++) {
-      let different = true
       const new_image_data = new_canvas
         .getContext('2d')
         .getImageData(128 * frame_x, 128 * frame_y, 128, 128)
-      if (old_canvas) {
-        const old_image_data = old_canvas
-          .getContext('2d')
+      const old_image_data = old_canvas
+          ?.getContext('2d')
           .getImageData(128 * frame_x, 128 * frame_y, 128, 128)
-        different = !Buffer.from(old_image_data.data.buffer).equals(
+      const different = old_image_data && Buffer.from(old_image_data.data.buffer).equals(
           Buffer.from(new_image_data.data.buffer)
         )
-      }
       if (different) {
         const buff = Buffer.alloc(128 * 128, 4)
         for (let i = 0; i < new_image_data.data.length; i += 4) {
