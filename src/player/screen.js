@@ -28,7 +28,7 @@ export function register_screen({ id, size: { width, height } }) {
 
 export function spawn_item_frame(
   client,
-  { entityId, position: { x, y, z, yaw, pitch } }
+  { entityId, position: { x, y, z }, rotation: { yaw, pitch } }
 ) {
   client.write('spawn_entity', {
     entityId,
@@ -76,8 +76,8 @@ export function spawn_screen(
   { client, world },
   { screen_id, position, direction }
 ) {
-  const up = Vec3(0, 1, 0)
-  const right = Vec3(1, 0, 0)
+  const up = Vec3([0, 1, 0])
+  const right = Vec3([1, 0, 0])
   const dir = Vec3(direction).normalize()
   const forward = dir.cross(up)
 
@@ -99,12 +99,11 @@ export function spawn_screen(
         .scaled(frame_x)
         .add(screen.position)
         .offset(0, -frame_y, 0)
-      frame_pos.pitch = pitch
-      frame_pos.yaw = yaw
 
       spawn_item_frame(client, {
         entityId: index + start_id,
         position: frame_pos,
+        rotation: { yaw, pitch },
       })
     }
   }
@@ -177,7 +176,7 @@ export function copy_canvas(old_canvas) {
 export function screen_ray_intersection(screen, position) {
   const { direction, position: screen_pos, size } = screen
   const dir = Vec3(direction).normalize()
-  const normal = dir.cross(Vec3(0, 1, 0))
+  const normal = dir.cross(Vec3([0, 1, 0]))
   const player_forward = to_direction(position.yaw, position.pitch)
   const dot = normal.dot(player_forward)
   if (dot <= 0) {

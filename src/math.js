@@ -103,11 +103,11 @@ export function to_direction(yaw, pitch) {
   const yaw_rad = yaw * (Math.PI / 180)
   const pitch_rad = pitch * (Math.PI / 180)
   const xz = Math.cos(pitch_rad)
-  return Vec3(
+  return Vec3([
     -xz * Math.sin(yaw_rad),
     -Math.sin(pitch_rad),
-    xz * Math.cos(yaw_rad)
-  )
+    xz * Math.cos(yaw_rad),
+  ])
 }
 
 export function floor_pos(position) {
