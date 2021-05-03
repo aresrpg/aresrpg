@@ -116,51 +116,41 @@ export function update_screen(
 ) {
   const { size, start_id } = world.screens[screen_id]
 
-  for (let frame = 0; frame < size.width * size.height; frame++) {
-    let different = true
-    const new_image_data = new_canvas
-      .getContext('2d')
-      .getImageData(
-        128 * (frame % size.width),
-        128 * Math.floor(frame / size.width),
-        128,
-        128
-      )
-    if (old_canvas) {
-      different = false
-      const old_image_data = old_canvas
+  for (let frame_x = 0; frame_x < size.width; frame_x++) {
+    for (let frame_y = 0; frame_y < size.height; frame_y++) {
+      let different = true
+      const new_image_data = new_canvas
         .getContext('2d')
-        .getImageData(
-          128 * (frame % size.width),
-          128 * Math.floor(frame / size.width),
-          128,
-          128
+        .getImageData(128 * frame_x, 128 * frame_y, 128, 128)
+      if (old_canvas) {
+        const old_image_data = old_canvas
+          .getContext('2d')
+          .getImageData(128 * frame_x, 128 * frame_y, 128, 128)
+        different = !Buffer.from(old_image_data.data.buffer).equals(
+          Buffer.from(new_image_data.data.buffer)
         )
-      for (let i = 0; i < new_image_data.data.length; i++) {
-        if (new_image_data.data[i] !== old_image_data.data[i]) different = true
       }
-    }
-
-    if (different) {
-      const buff = Buffer.alloc(128 * 128, 4)
-      for (let i = 0; i < new_image_data.data.length; i += 4) {
-        const r = new_image_data.data[i]
-        const g = new_image_data.data[i + 1]
-        const b = new_image_data.data[i + 2]
-        buff[i / 4] = nearestMatch(r, g, b)
+      if (different) {
+        const buff = Buffer.alloc(128 * 128, 4)
+        for (let i = 0; i < new_image_data.data.length; i += 4) {
+          const r = new_image_data.data[i]
+          const g = new_image_data.data[i + 1]
+          const b = new_image_data.data[i + 2]
+          buff[i / 4] = nearestMatch(r, g, b)
+        }
+        client.write('map', {
+          itemDamage: start_id + frame_x + frame_y * size.width,
+          scale: 1,
+          trackingPosition: false,
+          locked: false,
+          icons: [],
+          columns: -128,
+          rows: -128,
+          x: 0,
+          y: 0,
+          data: buff,
+        })
       }
-      client.write('map', {
-        itemDamage: start_id + frame,
-        scale: 1,
-        trackingPosition: false,
-        locked: false,
-        icons: [],
-        columns: -128,
-        rows: -128,
-        x: 0,
-        y: 0,
-        data: buff,
-      })
     }
   }
 }
