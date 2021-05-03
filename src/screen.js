@@ -231,3 +231,12 @@ export function interract_screen({ client, world, events }) {
     })
   })
 }
+
+export function create_screen_canvas(screen) {
+  const { size } = screen;
+  const canvas = createCanvas(size.width * 128, size.height * 128)
+  const ctx = canvas.getContext('2d')
+  ctx.fillStyle = 'black'
+  ctx.fillRect(0, 0, size.width * 128, size.height * 128)
+  return { canvas, ctx };
+}
