@@ -11,6 +11,7 @@ import combineAsyncIterators from 'combine-async-iterators'
 import { online_mode, version } from './settings.js'
 import { last_event_value } from './events.js'
 import { floor1 } from './world.js'
+import player_screen, { register_screen } from './player/screen.js'
 import logger from './logger.js'
 import player_login from './player/login.js'
 import player_experience from './player/experience.js'
@@ -62,6 +63,10 @@ const world_reducers = [
   // Reducers that augment the world with extra properties
   mobs.register,
   player_traders.register,
+  register_screen({
+    id: 'player_screen',
+    size: { width: 8, height: 4 },
+  }),
 ]
 
 /** @type {World} */
@@ -135,6 +140,8 @@ async function observe_client(context) {
   player_health.observe(context)
   player_attributes.observe(context)
   player_chat.observe(context)
+  player_screen.observe(context)
+  // interract_screen(context)
 
   commands_declare.observe(context)
 

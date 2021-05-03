@@ -1,3 +1,7 @@
+import { on } from 'events'
+
+import { aiter } from 'iterator-helper'
+
 import { chunk_position } from '../chunk.js'
 import { empty_slot, item_to_slot } from '../items.js'
 import { write_brand } from '../plugin_channels.js'
@@ -5,8 +9,11 @@ import { dimension_codec, overworld } from '../world/codec.js'
 import { load_chunks } from '../chunk/update.js'
 import { PLAYER_ENTITY_ID, PLAYER_INVENTORY_ID } from '../index.js'
 
+
 import { write_title } from './title.js'
 import { set_world_border } from './world_border.js'
+import { copy_canvas, create_screen_canvas, spawn_screen, update_screen } from './screen.js'
+
 
 export default {
   /** @type {import('../index.js').Observer} */
@@ -73,6 +80,39 @@ export default {
         fadeOut: 2,
         stay: 10,
       })
+
+      const screen_pos = { ...world.spawn_position, y: world.spawn_position.y + 15 }
+      spawn_screen(
+        { client, world },
+        {
+          screen_id: 'player_screen',
+          position: screen_pos,
+          direction: { x: 1, y: 0, z: 0 },
+        }
+      )
+
+      const { canvas } = create_screen_canvas(world.screens.player_screen);
+
+      aiter(on(events, 'screen_interract')).reduce(
+        (old_canvas, [{ x, y, screen_id, hand }]) => {
+          const new_canvas = copy_canvas(old_canvas)
+          
+          const ctx = new_canvas.getContext('2d')
+          ctx.font = '30px arial'
+          ctx.fillStyle = 'red'
+          ctx.beginPath()
+          ctx.ellipse(x, y, 10, 10, 0, 0, Math.PI * 2)
+          ctx.fill()
+          
+          update_screen(
+            { client, world },
+            { screen_id, new_canvas, old_canvas }
+          )
+          
+          return new_canvas
+        },
+        canvas
+      )
     })
   },
 }
