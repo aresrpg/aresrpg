@@ -4,13 +4,26 @@ import { aiter } from 'iterator-helper'
 
 import { create_armor_stand } from '../armor_stand.js'
 
+export const DAMAGE_ARMOR_STAND_AMMOUNT = 5
+
+export function register_damage_armor_stands() {
+  return (world) => ({
+    ...world,
+    damage_armor_stands: {
+      amount: DAMAGE_ARMOR_STAND_AMMOUNT,
+      start_id: world.next_entity_id,
+    },
+    next_entity_id: world.next_entity_id + DAMAGE_ARMOR_STAND_AMMOUNT,
+  })
+}
+
 export default {
   /** @type {import('../index.js').Reducer} */
-  reduce(state, { type, payload }, { world }) {
+  reduce(state, { type, payload }) {
     if (type === 'create_damage_armor_stand') {
       const { position, damage } = payload
       const cursor =
-        state.damage_armor_stands.cursor >= world.damage_armor_stands.amount - 1
+        state.damage_armor_stands.cursor >= DAMAGE_ARMOR_STAND_AMMOUNT - 1
           ? 0
           : state.damage_armor_stands.cursor + 1
       const pool = [...state.damage_armor_stands.pool]

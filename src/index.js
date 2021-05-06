@@ -24,7 +24,10 @@ import player_chat from './player/chat.js'
 import player_resource_pack from './player/resource_pack.js'
 import player_statistics from './player/statistics.js'
 import player_traders from './player/traders.js'
-import player_deal_damage from './player/deal_damage.js'
+import player_deal_damage, {
+  DAMAGE_ARMOR_STAND_AMMOUNT,
+  register_damage_armor_stands,
+} from './player/deal_damage.js'
 import plugin_channels from './plugin_channels.js'
 import chunk_update from './chunk/update.js'
 import mobs from './mobs.js'
@@ -35,7 +38,6 @@ import mobs_goto from './mobs/goto.js'
 import mobs_target from './mobs/target.js'
 import commands_declare from './commands/declare.js'
 import start_debug_server from './debug.js'
-import { register_damage_armor_stands } from './armor_stand.js'
 
 const log = logger(import.meta)
 
@@ -69,7 +71,7 @@ const world_reducers = [
     id: 'player_screen',
     size: { width: 8, height: 4 },
   }),
-  register_damage_armor_stands({ amount: 5 }),
+  register_damage_armor_stands(),
 ]
 
 /** @type {World} */
@@ -85,7 +87,7 @@ const initial_state = {
     38: { type: 'menitrass_100', count: 1 },
   }),
   damage_armor_stands: {
-    pool: Array.from({ length: world.damage_armor_stands.amount }),
+    pool: Array.from({ length: DAMAGE_ARMOR_STAND_AMMOUNT }),
     cursor: -1,
   },
   game_mode: 2,
@@ -105,12 +107,12 @@ const initial_state = {
 /** @typedef {{ type: string, payload: any }} Action */
 /** @typedef {Readonly<ReturnType<typeof create_context>>} Context */
 
-/** @typedef {(state: State, action: Action, context: any ) => State} Reducer */
+/** @typedef {(state: State, action: Action) => State} Reducer */
 /** @typedef {(action: Action) => Action} Transformer */
 /** @typedef {(context: Context) => void} Observer */
 
 /** @type Reducer */
-function reduce_state(state, action, context) {
+function reduce_state(state, action) {
   return [
     /* Reducers that map the incomming actions (packet, ...)
      * to a new state */
@@ -119,7 +121,7 @@ function reduce_state(state, action, context) {
     plugin_channels.reduce,
     player_fall_damage.reduce,
     player_deal_damage.reduce,
-  ].reduce((intermediate, fn) => fn(intermediate, action, context), state)
+  ].reduce((intermediate, fn) => fn(intermediate, action), state)
 }
 
 /** @type Transformer */
@@ -189,7 +191,7 @@ function create_context(client) {
   aiter(combineAsyncIterators(actions[Symbol.asyncIterator](), packets))
     .map(transform_action)
     .reduce((last_state, action) => {
-      const state = reduce_state(last_state, action, { world })
+      const state = reduce_state(last_state, action)
       events.emit('state', state)
       return state
     }, initial_state)

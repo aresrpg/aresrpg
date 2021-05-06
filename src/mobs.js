@@ -43,7 +43,6 @@ export default {
         start_time: 0,
         speed: 500 /* ms/block */,
         health: 20 /* halfheart */,
-        max_health: 20,
         blackboard: {},
       }
 

@@ -5,17 +5,6 @@ import { version } from './settings.js'
 
 const mcData = minecraftData(version)
 
-export function register_damage_armor_stands({ amount }) {
-  return (world) => ({
-    ...world,
-    damage_armor_stands: {
-      amount,
-      start_id: world.next_entity_id,
-    },
-    next_entity_id: world.next_entity_id + amount,
-  })
-}
-
 /**
  * create an armor_stand to create
  * a text line with its display name
