@@ -57,7 +57,7 @@ export default {
 
     aiter(on(events, 'state')).reduce(
       (
-        last_cursor,
+        { cursor: last_cursor, handles },
         [
           {
             damage_indicators: { cursor, pool },
@@ -69,19 +69,31 @@ export default {
           const { position, damage } = pool[cursor]
           const entity_id = damage_indicators.start_id + cursor
 
+          clearTimeout(handles[cursor])
+
           create_armor_stand(client, entity_id, position, {
             text: `-${damage}`,
             color: 'red',
           })
-          setTimeout(() => {
+
+          const handle = setTimeout(() => {
             client.write('entity_destroy', {
               entityIds: [entity_id],
             })
           }, 1200)
+
+          return {
+            cursor,
+            handles: [
+              ...handles.slice(0, cursor),
+              handle,
+              ...handles.slice(cursor + 1),
+            ],
+          }
         }
-        return cursor
+        return { cursor, handles }
       },
-      -1
+      { cursor: -1, handles: Array.from({ length: DAMAGE_INDICATORS_AMMOUNT }) }
     )
   },
 }
