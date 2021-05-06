@@ -1,14 +1,19 @@
 import { PassThrough } from 'stream'
 import { EventEmitter } from 'events'
 
+import minecraft_data from 'minecraft-data'
 import { aiter } from 'iterator-helper'
 
+import { Types } from './mobs/types.js'
 import { last_event_value } from './events.js'
+import { path_end, path_position } from './mobs/path.js'
 import mobs_goto from './mobs/goto.js'
 import mobs_damage from './mobs/damage.js'
 import mobs_target from './mobs/target.js'
-import { path_end } from './mobs/path.js'
 import behavior_tree from './mobs/behavior_tree.js'
+import { version } from './settings.js'
+
+const { entitiesByName } = minecraft_data(version)
 
 function reduce_mob(state, action, world) {
   return [
@@ -38,6 +43,7 @@ export default {
         start_time: 0,
         speed: 500 /* ms/block */,
         health: 20 /* halfheart */,
+        max_health: 20,
         blackboard: {},
       }
 
@@ -58,12 +64,20 @@ export default {
 
       setImmediate(() => events.emit('state', initial_state))
 
+      const get_state = last_event_value(events, 'state')
+
       return {
         entity_id,
         mob,
         level,
         events,
-        get_state: last_event_value(events, 'state'),
+        get_state,
+        constants: entitiesByName[Types[mob].mob],
+        position(time = Date.now()) {
+          const { path, start_time, speed } = get_state()
+
+          return path_position({ path, time, start_time, speed })
+        },
         dispatch(type, payload, time = Date.now()) {
           actions.write({ type, payload, time })
         },
