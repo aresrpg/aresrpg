@@ -56,7 +56,10 @@ export default {
           const { position, damage } = pool[cursor]
           const entity_id = damage_armor_stands.start_id + cursor
 
-          create_armor_stand(client, entity_id, position, `-${damage}`)
+          create_armor_stand(client, entity_id, position, {
+            text: `-${damage}`,
+            color: 'red',
+          })
           setTimeout(() => {
             client.write('entity_destroy', {
               entityIds: [entity_id],
