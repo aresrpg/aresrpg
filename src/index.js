@@ -25,8 +25,8 @@ import player_resource_pack from './player/resource_pack.js'
 import player_statistics from './player/statistics.js'
 import player_traders from './player/traders.js'
 import player_deal_damage, {
-  DAMAGE_ARMOR_STAND_AMMOUNT,
-  register_damage_armor_stands,
+  DAMAGE_INDICATORS_AMMOUNT,
+  register_damage_indicators,
 } from './player/deal_damage.js'
 import plugin_channels from './plugin_channels.js'
 import chunk_update from './chunk/update.js'
@@ -71,7 +71,7 @@ const world_reducers = [
     id: 'player_screen',
     size: { width: 8, height: 4 },
   }),
-  register_damage_armor_stands(),
+  register_damage_indicators(),
 ]
 
 /** @type {World} */
@@ -86,8 +86,8 @@ const initial_state = {
     37: { type: 'bronze_coin', count: 10 },
     38: { type: 'menitrass_100', count: 1 },
   }),
-  damage_armor_stands: {
-    pool: Array.from({ length: DAMAGE_ARMOR_STAND_AMMOUNT }),
+  damage_indicators: {
+    pool: Array.from({ length: DAMAGE_INDICATORS_AMMOUNT }),
     cursor: -1,
   },
   game_mode: 2,

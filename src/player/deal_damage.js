@@ -4,16 +4,16 @@ import { aiter } from 'iterator-helper'
 
 import { create_armor_stand } from '../armor_stand.js'
 
-export const DAMAGE_ARMOR_STAND_AMMOUNT = 5
+export const DAMAGE_INDICATORS_AMMOUNT = 5
 
-export function register_damage_armor_stands() {
+export function register_damage_indicators() {
   return (world) => ({
     ...world,
-    damage_armor_stands: {
-      amount: DAMAGE_ARMOR_STAND_AMMOUNT,
+    damage_indicators: {
+      amount: DAMAGE_INDICATORS_AMMOUNT,
       start_id: world.next_entity_id,
     },
-    next_entity_id: world.next_entity_id + DAMAGE_ARMOR_STAND_AMMOUNT,
+    next_entity_id: world.next_entity_id + DAMAGE_INDICATORS_AMMOUNT,
   })
 }
 
@@ -21,18 +21,18 @@ export default {
   /** @type {import('../index.js').Reducer} */
   reduce(state, { type, payload }) {
     if (type === 'create_damage_armor_stand') {
-      const { position, damage } = payload
+      const { position, mob_damage } = payload
       const cursor =
-        state.damage_armor_stands.cursor >= DAMAGE_ARMOR_STAND_AMMOUNT - 1
-          ? 0
-          : state.damage_armor_stands.cursor + 1
-      const pool = [...state.damage_armor_stands.pool]
-
-      pool[cursor] = { position, damage }
+        (state.damage_indicators.cursor + 1) % DAMAGE_INDICATORS_AMMOUNT
+      const pool = [
+        ...state.damage_indicators.pool.slice(0, cursor),
+        { position, mob_damage },
+        ...state.damage_indicators.pool.slice(cursor + 1),
+      ]
 
       return {
         ...state,
-        damage_armor_stands: {
+        damage_indicators: {
           cursor,
           pool,
         },
@@ -43,7 +43,7 @@ export default {
 
   /** @type {import('../index.js').Observer} */
   observe({ events, dispatch, client, world }) {
-    events.on('player_deal_damage', ({ mob, damage }) => {
+    events.on('player_deal_damage', ({ mob, mob_damage }) => {
       const position = mob.position()
       const { height } = mob.constants
 
@@ -52,7 +52,7 @@ export default {
         y: position.y + height - 0.25 + (Math.random() * 2 - 1) * 0.15,
         z: position.z + (Math.random() * 2 - 1) * 0.25,
       }
-      dispatch('create_damage_armor_stand', { position: final_pos, damage })
+      dispatch('create_damage_armor_stand', { position: final_pos, mob_damage })
     })
 
     aiter(on(events, 'state')).reduce(
@@ -60,17 +60,17 @@ export default {
         last_cursor,
         [
           {
-            damage_armor_stands: { cursor, pool },
+            damage_indicators: { cursor, pool },
           },
         ]
       ) => {
         if (last_cursor !== cursor) {
-          const { damage_armor_stands } = world
-          const { position, damage } = pool[cursor]
-          const entity_id = damage_armor_stands.start_id + cursor
+          const { damage_indicators } = world
+          const { position, mob_damage } = pool[cursor]
+          const entity_id = damage_indicators.start_id + cursor
 
           create_armor_stand(client, entity_id, position, {
-            text: `-${damage}`,
+            text: `-${mob_damage}`,
             color: 'red',
           })
           setTimeout(() => {

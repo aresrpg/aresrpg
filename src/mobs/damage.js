@@ -49,7 +49,7 @@ export default {
               entityId: mob.entity_id,
               entityStatus: health > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
             })
-            events.emit('player_deal_damage', { mob, damage: last_damage })
+            events.emit('player_deal_damage', { mob, mob_damage: last_damage })
           }
           return health
         },
