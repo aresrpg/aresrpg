@@ -24,6 +24,10 @@ import player_chat from './player/chat.js'
 import player_resource_pack from './player/resource_pack.js'
 import player_statistics from './player/statistics.js'
 import player_traders from './player/traders.js'
+import player_deal_damage, {
+  DAMAGE_INDICATORS_AMMOUNT,
+  register as player_deal_damage_register,
+} from './player/deal_damage.js'
 import plugin_channels from './plugin_channels.js'
 import chunk_update from './chunk/update.js'
 import mobs from './mobs.js'
@@ -63,6 +67,7 @@ const world_reducers = [
   // Reducers that augment the world with extra properties
   mobs.register,
   player_traders.register,
+  player_deal_damage_register,
   register_screen({
     id: 'player_screen',
     size: { width: 8, height: 4 },
@@ -81,6 +86,10 @@ const initial_state = {
     37: { type: 'bronze_coin', count: 10 },
     38: { type: 'menitrass_100', count: 1 },
   }),
+  damage_indicators: {
+    pool: Array.from({ length: DAMAGE_INDICATORS_AMMOUNT }),
+    cursor: -1,
+  },
   game_mode: 2,
   experience: 0,
   health: 40,
@@ -111,6 +120,7 @@ function reduce_state(state, action) {
     player_view_distance.reduce,
     plugin_channels.reduce,
     player_fall_damage.reduce,
+    player_deal_damage.reduce,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
 }
 
@@ -141,7 +151,7 @@ async function observe_client(context) {
   player_attributes.observe(context)
   player_chat.observe(context)
   player_screen.observe(context)
-  // interract_screen(context)
+  player_deal_damage.observe(context)
 
   commands_declare.observe(context)
 

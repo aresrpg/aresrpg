@@ -20,6 +20,7 @@ export default {
       return {
         ...state,
         last_damager: damager,
+        last_damage: damage,
         health,
       }
     }
@@ -27,7 +28,7 @@ export default {
   },
 
   /** @type {import('../index.js').Observer} */
-  observe({ client, world }) {
+  observe({ client, world, events }) {
     client.on('use_entity', ({ target, mouse }) => {
       if (mouse === Mouse.LEFT_CLICK) {
         const mob = world.mobs.by_entity_id(target)
@@ -41,15 +42,19 @@ export default {
     })
 
     for (const mob of world.mobs.all) {
-      aiter(on(mob.events, 'state')).reduce((last_health, [{ health }]) => {
-        if (last_health !== health) {
-          client.write('entity_status', {
-            entityId: mob.entity_id,
-            entityStatus: health > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
-          })
-        }
-        return health
-      }, null)
+      aiter(on(mob.events, 'state')).reduce(
+        (last_health, [{ health, last_damage }]) => {
+          if (last_health !== health) {
+            client.write('entity_status', {
+              entityId: mob.entity_id,
+              entityStatus: health > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
+            })
+            events.emit('mob_damage', { mob, damage: last_damage })
+          }
+          return health
+        },
+        null
+      )
     }
   },
 }
