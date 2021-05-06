@@ -20,7 +20,7 @@ export function register_damage_indicators() {
 export default {
   /** @type {import('../index.js').Reducer} */
   reduce(state, { type, payload }) {
-    if (type === 'create_damage_armor_stand') {
+    if (type === 'create_damage_indicator') {
       const { position, damage } = payload
       const cursor =
         (state.damage_indicators.cursor + 1) % DAMAGE_INDICATORS_AMMOUNT
@@ -52,7 +52,7 @@ export default {
         y: position.y + height - 0.25 + (Math.random() * 2 - 1) * 0.15,
         z: position.z + (Math.random() * 2 - 1) * 0.25,
       }
-      dispatch('create_damage_armor_stand', { position: final_pos, damage })
+      dispatch('create_damage_indicator', { position: final_pos, damage })
     })
 
     aiter(on(events, 'state')).reduce(
