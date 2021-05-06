@@ -6,15 +6,16 @@ import { create_armor_stand } from '../armor_stand.js'
 
 export const DAMAGE_INDICATORS_AMMOUNT = 5
 
-export function register_damage_indicators() {
-  return (world) => ({
+/** @param {import('../index.js').InitialWorld} world */
+export function register(world) {
+  return {
     ...world,
     damage_indicators: {
       amount: DAMAGE_INDICATORS_AMMOUNT,
       start_id: world.next_entity_id,
     },
     next_entity_id: world.next_entity_id + DAMAGE_INDICATORS_AMMOUNT,
-  })
+  }
 }
 
 export default {

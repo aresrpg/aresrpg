@@ -26,7 +26,7 @@ import player_statistics from './player/statistics.js'
 import player_traders from './player/traders.js'
 import player_deal_damage, {
   DAMAGE_INDICATORS_AMMOUNT,
-  register_damage_indicators,
+  register as player_deal_damage_register,
 } from './player/deal_damage.js'
 import plugin_channels from './plugin_channels.js'
 import chunk_update from './chunk/update.js'
@@ -67,11 +67,11 @@ const world_reducers = [
   // Reducers that augment the world with extra properties
   mobs.register,
   player_traders.register,
+  player_deal_damage_register,
   register_screen({
     id: 'player_screen',
     size: { width: 8, height: 4 },
   }),
-  register_damage_indicators(),
 ]
 
 /** @type {World} */
