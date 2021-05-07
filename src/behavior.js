@@ -1,7 +1,12 @@
 import { Node } from 'xmldom/lib/dom.js'
 
 import logger from './logger.js'
-import { sequence, reactive_sequence } from './behavior/sequence.js'
+import {
+  sequence,
+  reactive_sequence,
+  fallback,
+  reactive_fallback,
+} from './behavior/control.js'
 import goto from './behavior/goto.js'
 import get_biggest_damager from './behavior/damager.js'
 import set_target from './behavior/set_target.js'
@@ -16,6 +21,8 @@ const log = logger(import.meta)
 const nodes = {
   sequence,
   'reactive-sequence': reactive_sequence,
+  fallback,
+  'reactive-fallback': reactive_fallback,
   goto,
   get_biggest_damager,
   set_target,
