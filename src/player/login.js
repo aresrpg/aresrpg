@@ -8,11 +8,14 @@ import { dimension_codec, overworld } from '../world/codec.js'
 import { load_chunks } from '../chunk/update.js'
 import { PLAYER_ENTITY_ID } from '../index.js'
 
-
 import { write_title } from './title.js'
 import { set_world_border } from './world_border.js'
-import { copy_canvas, create_screen_canvas, spawn_screen, update_screen } from './screen.js'
-
+import {
+  copy_canvas,
+  create_screen_canvas,
+  spawn_screen,
+  update_screen,
+} from './screen.js'
 
 export default {
   /** @type {import('../index.js').Observer} */
@@ -72,7 +75,10 @@ export default {
         stay: 10,
       })
 
-      const screen_pos = { ...world.spawn_position, y: world.spawn_position.y + 15 }
+      const screen_pos = {
+        ...world.spawn_position,
+        y: world.spawn_position.y + 15,
+      }
       spawn_screen(
         { client, world },
         {
@@ -82,24 +88,24 @@ export default {
         }
       )
 
-      const { canvas } = create_screen_canvas(world.screens.player_screen);
+      const { canvas } = create_screen_canvas(world.screens.player_screen)
 
       aiter(on(events, 'screen_interract')).reduce(
         (old_canvas, [{ x, y, screen_id, hand }]) => {
           const new_canvas = copy_canvas(old_canvas)
-          
+
           const ctx = new_canvas.getContext('2d')
           ctx.font = '30px arial'
           ctx.fillStyle = 'red'
           ctx.beginPath()
           ctx.ellipse(x, y, 10, 10, 0, 0, Math.PI * 2)
           ctx.fill()
-          
+
           update_screen(
             { client, world },
             { screen_id, new_canvas, old_canvas }
           )
-          
+
           return new_canvas
         },
         canvas
