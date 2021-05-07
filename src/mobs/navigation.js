@@ -55,6 +55,10 @@ export function diagonal_distance(a, b) {
   return (D3 - D2) * dmin + (D2 - D1) * dmid + D1 * dmax
 }
 
+export function horizontal_diagonal_distance(a, b) {
+  return diagonal_distance({ ...a, y: 0 }, { ...b, y: 0 })
+}
+
 export async function is_walkable(world, { x, y, z }) {
   const under = await get_block(world, { x, y: y - 1, z })
   const block = await get_block(world, { x, y, z })
@@ -67,18 +71,24 @@ export async function is_walkable(world, { x, y, z }) {
   )
 }
 
-export async function path_between({ world, from, to, distance = 0 }) {
+export async function path_between({
+  world,
+  from,
+  to,
+  distance = 0,
+  distance_fn = diagonal_distance,
+}) {
   const start = block_center_position(from)
   const destination = block_center_position(to)
 
   return await pathfinding({
     start,
     is_target(node) {
-      return diagonal_distance(node, destination) <= distance
+      return distance_fn(node, destination) <= distance
     },
     neighbors: neighbors(world),
     heuristic(node) {
-      return diagonal_distance(node, destination)
+      return distance_fn(node, destination)
     },
     equal: position_equal,
   })
