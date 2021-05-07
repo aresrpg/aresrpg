@@ -41,7 +41,7 @@ export default {
         open: [],
         closed: [],
         start_time: 0,
-        speed: 500 /* ms/block */,
+        speed: 250 /* ms/block */,
         health: 20 /* halfheart */,
         blackboard: {},
         wakeup_at: 0,
