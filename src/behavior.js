@@ -11,6 +11,7 @@ import goto from './behavior/goto.js'
 import get_biggest_damager from './behavior/damager.js'
 import set_target from './behavior/set_target.js'
 import target_position from './behavior/target_position.js'
+import random_block_position from './behavior/random_position.js'
 
 import { debug } from './index.js'
 
@@ -27,6 +28,7 @@ const nodes = {
   get_biggest_damager,
   set_target,
   target_position,
+  random_block_position,
 }
 
 export const SUCCESS = Symbol('SUCCESS')
