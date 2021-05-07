@@ -5,13 +5,21 @@ import { aiter } from 'iterator-helper'
 import { empty_slot, item_to_slot } from '../items.js'
 import { PLAYER_INVENTORY_ID } from '../index.js'
 
+const FORBIDDEN_SLOTS = [
+  0, // Craft Output
+  5, // Helmet
+  6, // Chestplate
+  7, // Leggings
+  8, // Boots
+]
+
 export default {
   /** @type {import('../index.js').Reducer} */
   reduce(state, { type, payload }) {
     if (type === 'packet/window_click') {
       const { windowId, slot, mode } = payload
 
-      if (windowId === PLAYER_INVENTORY_ID) {
+      if (windowId === PLAYER_INVENTORY_ID && !FORBIDDEN_SLOTS.includes(slot)) {
         if (mode === 0) {
           const drop = slot === -999
 
