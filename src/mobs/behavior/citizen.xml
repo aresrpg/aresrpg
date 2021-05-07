@@ -1,0 +1,15 @@
+<repeat>
+	<fallback>
+		<sequence>
+			<random chance="0.20"/>
+			<look_at_player/>
+			<sleep time="5"/>
+		</sequence>
+		<sequence>
+			<random chance="0.20"/>
+			<random_look_around/>
+			<sleep time="5"/>
+		</sequence>
+		<sleep time="5"/>
+	</fallback>
+</repeat>
