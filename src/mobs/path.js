@@ -4,6 +4,7 @@ import { on } from 'events'
 import { aiter } from 'iterator-helper'
 
 import logger from '../logger.js'
+import { async_tail_recursive } from '../iterator.js'
 
 const log = logger(import.meta)
 
@@ -16,7 +17,7 @@ export function path_ended({ path, time, start_time, speed }) {
 }
 
 export function path_position({ path, time, start_time, speed }) {
-  const t = (time - start_time) / speed
+  const t = Math.max(0, (time - start_time) / speed)
   const current = Math.floor(t)
   const remain = t % 1
 
@@ -32,7 +33,7 @@ export function path_position({ path, time, start_time, speed }) {
 
 const PATH_UPDATE_MS = 1000 / 20 /* 1 update each minecraft tick */
 
-export async function* path_to_positions(stream, value = stream.next()) {
+async function* raw_path_to_positions(stream, value = stream.next()) {
   const {
     value: { path, start_time, speed },
     done,
@@ -60,10 +61,11 @@ export async function* path_to_positions(stream, value = stream.next()) {
     if (new_path) break
   }
 
-  yield* path_to_positions(stream, next)
+  return [raw_path_to_positions, stream, next]
 }
+export const path_to_positions = async_tail_recursive(raw_path_to_positions)
 
-export async function* path_to_end(stream, value = stream.next()) {
+async function* raw_path_to_end(stream, value = stream.next()) {
   const {
     value: { path, start_time, speed },
     done,
@@ -83,8 +85,10 @@ export async function* path_to_end(stream, value = stream.next()) {
 
   if (path_end) yield next_time
 
-  yield* path_to_end(stream, next)
+  return [raw_path_to_end, stream, next]
 }
+
+export const path_to_end = async_tail_recursive(raw_path_to_end)
 
 export function path_end(mobs) {
   for (const mob of mobs) {
