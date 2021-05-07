@@ -44,6 +44,8 @@ export default {
         speed: 500 /* ms/block */,
         health: 20 /* halfheart */,
         blackboard: {},
+        wakeup_at: 0,
+        sleep_id: null,
       }
 
       const actions = new PassThrough({ objectMode: true })
