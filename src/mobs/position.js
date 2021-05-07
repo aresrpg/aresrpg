@@ -11,7 +11,8 @@ import { write_path } from '../plugin_channels.js'
 import { to_minecraft_path } from '../pathfinding.js'
 
 import { Types } from './types.js'
-import { path_to_positions } from './path.js'
+import { path_to_positions, path_position } from './path.js'
+import { wakeup_to_end } from './wakeup.js'
 
 const { entitiesByName } = minecraft_data(version)
 
@@ -71,7 +72,11 @@ function get_chunk(chunks, { x, z }) {
 function client_chunk_loaded(chunks, { client, x, z }) {
   const chunk = get_chunk(chunks, { x, z })
 
-  for (const mob of chunk.mobs) write_mob(client, mob)
+  const time = Date.now()
+  for (const { mob, position } of chunk.mobs) {
+    if (mob.get_state().wakeup_at <= time) mob.dispatch('wakeup', null, time)
+    write_mob(client, { mob, position })
+  }
 
   return new Map([
     ...chunks.entries(),
@@ -183,27 +188,61 @@ function mob_path(chunks, { mob, path, open, closed }) {
   return chunks
 }
 
+function mob_wakeup(chunks, { mob, time }) {
+  const { path, start_time, speed } = mob.get_state()
+  const position = path_position({ path, time, start_time, speed })
+  const x = chunk_position(position.x)
+  const z = chunk_position(position.z)
+
+  const chunk = get_chunk(chunks, { x, z })
+
+  if (chunk.clients.length > 0) mob.dispatch('wakeup', null, time)
+
+  return chunks
+}
+
 export default function update_clients(world) {
   const actions = new PassThrough({ objectMode: true })
 
   for (const mob of world.mobs.all) {
-    const state = aiter(on(mob.events, 'state')).map(([state]) => state)
+    {
+      const state = aiter(on(mob.events, 'state')).map(([state]) => state)
 
-    const positions = path_to_positions(state)
+      const positions = path_to_positions(state)
 
-    aiter(positions).reduce((last_position, position) => {
-      if (last_position !== position) {
-        actions.write({
-          type: 'mob_position',
-          payload: {
-            mob,
-            last_position,
-            position,
-          },
-        })
-      }
-      return position
-    }, null)
+      aiter(positions).reduce((last_position, position) => {
+        if (last_position !== position) {
+          actions.write({
+            type: 'mob_position',
+            payload: {
+              mob,
+              last_position,
+              position,
+            },
+          })
+        }
+        return position
+      }, null)
+    }
+
+    {
+      const state = aiter(on(mob.events, 'state')).map(([state]) => state)
+
+      const wakeups = wakeup_to_end(state)
+
+      aiter(wakeups).reduce((last_time, time) => {
+        if (last_time !== time) {
+          actions.write({
+            type: 'mob_wakeup',
+            payload: {
+              mob,
+              time,
+            },
+          })
+        }
+        return time
+      }, null)
+    }
 
     aiter(on(mob.events, 'state')).reduce(
       (last_path, [{ path, open, closed }]) => {
@@ -248,6 +287,8 @@ export default function update_clients(world) {
         return mob_position(chunks, payload)
       case 'mob_path':
         return mob_path(chunks, payload)
+      case 'mob_wakeup':
+        return mob_wakeup(chunks, payload)
       default:
         throw new Error(`unknown type: ${type}`)
     }
