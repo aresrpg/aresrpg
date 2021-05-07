@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/index.js | pino-human",
     "debug": "node --inspect=0.0.0.0 src/index.js | pino-human",
-    "lint": "eslint . && npm run typecheck",
+    "lint": "eslint . && prettier . --check && npm run typecheck",
     "typecheck": "tsc --build",
     "format": "prettier . --write && eslint . --fix",
     "rendermedia": "mmdc --theme neutral -i media/flow.mermaid -o media/flow.svg"
