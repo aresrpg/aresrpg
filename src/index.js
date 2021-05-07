@@ -90,7 +90,7 @@ const initial_state = {
     pool: Array.from({ length: DAMAGE_INDICATORS_AMMOUNT }),
     cursor: -1,
   },
-  game_mode: 2,
+  game_mode: 1,
   experience: 0,
   health: 40,
 }
