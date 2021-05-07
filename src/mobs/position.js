@@ -51,7 +51,7 @@ function write_mob(client, { mob: { entity_id, mob, level }, position }) {
         key: 2,
         type: 5,
         value: JSON.stringify({
-          text: displayName,
+          text: displayName + `(${entity_id})`,
           color: color_by_type[type],
           extra: level && [{ text: ` [Lvl ${level}]`, color: 'dark_red' }],
         }),
