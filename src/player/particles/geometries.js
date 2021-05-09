@@ -1,6 +1,6 @@
 import vecmath from 'vecmath'
 
-const { Vector3, Matrix4 } = vecmath
+const { Vector3 } = vecmath
 
 export function circle_geometry({ radius, sides, center }) {
   const vertices = []
@@ -29,11 +29,10 @@ export function torus_geometry({
 }) {
   const vertices = []
 
-  for (let j = 0; j <= radial_segments; j++) {
-    for (let i = 0; i <= tubular_segments; i++) {
+  for (let i = 0; i <= tubular_segments; i++) {
+    for (let j = 0; j <= radial_segments; j++) {
       const u = (i / tubular_segments) * Math.PI * 2
       const v = (j / radial_segments) * Math.PI * 2
-
       vertices.push(
         new Vector3(
           (radius + tube * Math.cos(v)) * Math.cos(u),
@@ -54,33 +53,27 @@ export function torus_geometry({
   }
 }
 
-export function rainbow_torus_material() {}
+export function rainbow_geometry({ min_radius, max_radius, sides, center }) {
+  const vertices = []
+  const steps = Math.PI / sides
 
-export function updateTransformMatrix(mesh) {
-  const { position, rotation, scale } = mesh
-
-  const m_translate = new Matrix4().identity().translate(position)
-  const m_rotate = new Matrix4()
-    .rotate(rotation.x, new Vector3(1, 0, 0))
-    .multiply(new Matrix4().rotate(rotation.y, new Vector3(0, 1, 0)))
-    .multiply(new Matrix4().rotate(rotation.z, new Vector3(0, 0, 1)))
-  const m_scale = new Matrix4().identity().scale(scale)
-
-  mesh.transformMatrix = m_translate
-    .clone()
-    .multiply(m_rotate)
-    .multiply(m_scale)
-}
-
-export function mesh({ geometry, material, position, rotation, scale }) {
-  const transformMatrix = new Matrix4().identity()
+  for (let a = 0; a < Math.PI; a += steps) {
+    for (let radius = min_radius; radius < max_radius; radius += 0.1) {
+      const position = new Vector3({
+        x: center.x + Math.cos(a) * radius,
+        y: center.y + Math.sin(a) * radius,
+        z: center.z,
+      })
+      vertices.push(position)
+    }
+  }
 
   return {
-    geometry,
-    material,
-    position,
-    rotation,
-    scale,
-    transformMatrix,
+    vertices,
+    min_radius,
+    max_radius,
+    max_circles: Math.floor(vertices.length / sides),
+    sides,
+    center,
   }
 }
