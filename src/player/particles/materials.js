@@ -7,10 +7,9 @@ export function rainbow_rainbow_material({ progress }) {
     colorize_vertice(geometry, vertice, index) {
       const circle_index = index % geometry.max_circles
       const h = circle_index / geometry.max_circles
-
       const side_index = Math.min(
         1,
-        index / geometry.sides / geometry.max_circles
+        index / geometry.segments / geometry.max_circles
       )
       return {
         particle_id: ParticlesTypes.RGB,
@@ -36,6 +35,18 @@ export function rainbow_torus_material() {
           ...hsl_to_rgb(h, 0.9, 0.5),
           scale: 1,
         },
+        visible: true,
+      }
+    },
+  }
+}
+
+export function basic_material({ color: { red, green, blue }, scale = 1 }) {
+  return {
+    colorize_vertice(geometry, vertice, index) {
+      return {
+        particle_id: ParticlesTypes.RGB,
+        data: { red, green, blue, scale },
         visible: true,
       }
     },

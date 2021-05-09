@@ -18,13 +18,18 @@ import {
   spawn_screen,
   update_screen,
 } from './screen.js'
-import { rainbow_geometry } from './particles/geometries.js'
+import { rainbow_geometry, sphere_geometry } from './particles/geometries.js'
 import {
   mesh,
+  render_mesh,
   render_particles,
+  updateMaterial,
   updateTransformMatrix,
 } from './particles/particles.js'
-import { rainbow_rainbow_material } from './particles/materials.js'
+import {
+  basic_material,
+  rainbow_rainbow_material,
+} from './particles/materials.js'
 
 const { Vector3 } = vecmath
 
@@ -116,10 +121,9 @@ export default {
           const ctx = new_canvas.getContext('2d')
           ctx.font = '30px arial'
           ctx.fillStyle = 'red'
-          ctx.fillText('COUCOU', x, y)
-          // ctx.beginPath()
-          // ctx.ellipse(x, y, 10, 10, 0, 0, Math.PI * 2)
-          // ctx.fill()
+          ctx.beginPath()
+          ctx.ellipse(x, y, 10, 10, 0, 0, Math.PI * 2)
+          ctx.fill()
 
           update_screen(
             { client, world },
@@ -136,59 +140,46 @@ export default {
         y: world.spawn_position.y + 30,
       }
 
-      // const geometry = torus_geometry({
-      //   center: { x: 0, y: 0, z: 0 },
-      //   radial_segments: 30,
-      //   tubular_segments: 100,
-      //   radius: 1,
-      //   tube: 0.5,
-      // })
-
-      // const geometry = cube_geometry({
-      //   width: 1,
-      //   height: 1,
-      //   depth: 1,
-      //   depth_segments: 5,
-      //   height_segments: 5,
-      //   width_segments: 5
-      // })
-
-      const geometry = rainbow_geometry({
-        min_radius: 3,
-        max_radius: 5,
-        center: { x: 0, y: 0, z: 0 },
-        sides: 60,
-      })
-
-      const torus = mesh({
-        geometry,
+      const rainbow = mesh({
+        geometry: rainbow_geometry({
+          min_radius: 3,
+          max_radius: 5,
+          center: { x: 0, y: 0, z: 0 },
+          segments: 60,
+        }),
         material: rainbow_rainbow_material({ progress: 1 }),
         position: particle_pos,
         rotation: new Vector3(0, 0, 0),
         scale: new Vector3(2, 2, 2),
       })
 
+      const sphere = mesh({
+        geometry: sphere_geometry({
+          radius: 2.5,
+          height_segments: 15,
+          width_segments: 30,
+        }),
+        material: basic_material({
+          color: { red: 1, green: 0, blue: 0 },
+          scale: 2,
+        }),
+        position: particle_pos,
+        rotation: new Vector3(0, 0, 0),
+        scale: new Vector3(1, 1, 1),
+      })
+
       let t = 0
       setInterval(() => {
         t += 0.01
-        const final_vertices = []
-        updateTransformMatrix(torus)
-        torus.material = rainbow_rainbow_material({ progress: t })
-        final_vertices.push(
-          ...torus.geometry.vertices.map((vertice, index) => ({
-            vertice: vertice.clone().transformMat4(torus.transformMatrix),
-            properties: torus.material.colorize_vertice(
-              torus.geometry,
-              vertice,
-              index
-            ),
-          }))
-        )
+        updateMaterial(rainbow, rainbow_rainbow_material({ progress: t }))
+        const final_vertex = render_mesh(rainbow).concat(render_mesh(sphere))
+
+        render_particles(client, final_vertex)
         if (t >= 1) {
           t = 0
-          torus.rotation.y += Math.PI
+          rainbow.rotation.y += Math.PI
+          updateTransformMatrix(rainbow)
         }
-        render_particles(client, final_vertices)
       }, 100)
     })
   },
