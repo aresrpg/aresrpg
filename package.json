@@ -43,7 +43,7 @@
   },
   "devDependencies": {
     "@hydre/pino-human": "^1.1.0",
-    "@mermaid-js/mermaid-cli": "^8.9.0",
+    "@mermaid-js/mermaid-cli": "^8.10.2",
     "@types/node": "14.14.20",
     "eslint": "^7.20.0",
     "eslint-config-prettier": "^8.1.0",
