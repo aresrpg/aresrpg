@@ -21,7 +21,7 @@ import player_fall_damage from './player/fall_damage.js'
 import player_position from './player/position.js'
 import player_view_distance from './player/view_distance.js'
 import player_chat from './player/chat.js'
-import player_resource_pack from './player/resource_pack.js'
+// import player_resource_pack from './player/resource_pack.js'
 import player_statistics from './player/statistics.js'
 import player_traders from './player/traders.js'
 import player_deal_damage, {
@@ -39,6 +39,7 @@ import mobs_goto from './mobs/goto.js'
 import mobs_target from './mobs/target.js'
 import commands_declare from './commands/declare.js'
 import start_debug_server from './debug.js'
+import bot from './bot/bot.js'
 
 const log = logger(import.meta)
 
@@ -144,7 +145,7 @@ async function observe_client(context) {
   /* Observers that handle the protocol part.
    * They get the client and should map it to minecraft protocol */
 
-  await player_resource_pack.observe(context)
+  // await player_resource_pack.observe(context) Disabled Resource pack for bot test
 
   player_login.observe(context)
   player_attributes.observe(context)
@@ -222,6 +223,7 @@ export const debug = start_debug_server({ world })
 
 server.once('listening', () => {
   log.info(server.socketServer.address(), 'Listening')
+  bot.execute('message', 'connected')
 })
 
 process.on('unhandledRejection', (error) => {
