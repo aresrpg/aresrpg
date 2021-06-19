@@ -21,7 +21,7 @@ import player_fall_damage from './player/fall_damage.js'
 import player_position from './player/position.js'
 import player_view_distance from './player/view_distance.js'
 import player_chat from './player/chat.js'
-// import player_resource_pack from './player/resource_pack.js'
+import player_resource_pack from './player/resource_pack.js'
 import player_statistics from './player/statistics.js'
 import player_traders from './player/traders.js'
 import player_deal_damage, {
@@ -144,8 +144,8 @@ const mobs_position = mobs_position_factory(world)
 async function observe_client(context) {
   /* Observers that handle the protocol part.
    * They get the client and should map it to minecraft protocol */
-
-  // await player_resource_pack.observe(context) Disabled Resource pack for bot test
+  if (!context.client.username.startsWith('#iRobot'))
+    await player_resource_pack.observe(context)
 
   player_login.observe(context)
   player_attributes.observe(context)
@@ -223,7 +223,7 @@ export const debug = start_debug_server({ world })
 
 server.once('listening', () => {
   log.info(server.socketServer.address(), 'Listening')
-  bot.execute('message', 'connected')
+  bot.execute('connected', 'message')
 })
 
 process.on('unhandledRejection', (error) => {

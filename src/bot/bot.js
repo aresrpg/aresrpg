@@ -27,7 +27,7 @@ test_list.add(connected)
 test_list.add(message)
 
 const events = new EventEmitter()
-const bot = mineflayer.createBot({ username: 'iRobot' + makeid(5) })
+const bot = mineflayer.createBot({ username: '#iRobot' + makeid(5) })
 move(bot)
 
 // @ts-ignore
@@ -40,7 +40,6 @@ export default {
   execute(...args) {
     log.info('Executing bot test')
     for (const test of test_list) {
-      log.info(args, 'Liste des tests : ')
       if (args.includes(test.name)) {
         // @ts-ignore
         bot.to_test.add(test)
@@ -49,6 +48,7 @@ export default {
         log.info(`Test ${test.name} Loaded ! `)
       }
     }
+    log.info(args, 'Liste des tests : ')
 
     bot.on('kicked', log.info)
     bot.on('error', (err) => log.info(err))
@@ -59,7 +59,7 @@ export default {
       for (const testl of bot.to_test) {
         if (testl.completed !== State.COMPLETED) return
       }
-      log.info('All test passed succesfully')
+      log.info('All test passed succesfully, disconnecting')
       bot.quit()
     })
 
