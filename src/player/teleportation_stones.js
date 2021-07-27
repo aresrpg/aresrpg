@@ -4,8 +4,6 @@ import minecraftData from 'minecraft-data'
 import { version } from '../settings.js'
 import { chunk_position } from '../chunk.js'
 import { empty_slot, item_to_slot } from '../items.js'
-import { PLAYER_ENTITY_ID } from '../index.js'
-
 const mcData = minecraftData(version)
 
 // TODO: export that outside, but where ?
@@ -258,14 +256,7 @@ function on_window_click({ world, client, dispatch, get_state }) {
       if (slot >= 0 && slot < available_teleportations_stones.length) {
         if (available_teleportations_stones[slot]) {
           client.write('close_window', { windowId })
-          client.write('position', {
-            entityId: PLAYER_ENTITY_ID,
-            ...available_teleportations_stones[slot].position,
-            yaw: 0,
-            pitch: 0,
-            teleportId: 42,
-            onGround: false,
-          })
+          dispatch('teleport', available_teleportations_stones[slot].position)
         }
       }
       const { inventory } = get_state()
