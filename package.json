@@ -38,7 +38,7 @@
     "minecraft-protocol": "^1.23.1",
     "pino": "^6.11.1",
     "prismarine-provider-anvil": "^2.3.1",
-    "typescript": "^4.1.5",
+    "typescript": "^4.3.5",
     "vec3": "^0.1.7",
     "xmldom": "^0.4.0"
   },
