@@ -160,7 +160,7 @@ export default {
   reduce(state, { type, payload }) {
     if (type === `channel/${BRAND_CHANNEL}`) {
       const brand = payload
-      log.debug({ brand }, 'Client brand')
+      log.info({ brand }, 'Client brand')
 
       return {
         ...state,

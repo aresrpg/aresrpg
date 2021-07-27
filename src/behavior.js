@@ -20,8 +20,6 @@ import repeat from './behavior/repeat.js'
 
 import { debug } from './index.js'
 
-const DEBUG = false // TODO: add a way to filter pino logs
-
 const log = logger(import.meta)
 
 const nodes = {
@@ -52,7 +50,7 @@ export default async function run(node, state, context) {
     path,
   }
   const result = await nodes[node.tagName](node, state, node_context)
-  if (DEBUG) log.debug({ path, status: result.status.toString() }, 'Runned')
+  log.debug({ path, status: result.status.toString() }, 'Runned')
   debug.behavior({ context: node_context, result })
   return result
 }
