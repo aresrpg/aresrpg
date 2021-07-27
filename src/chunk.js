@@ -1,3 +1,5 @@
+import { performance } from 'perf_hooks'
+
 import Anvil from 'prismarine-provider-anvil'
 
 import { version } from './settings.js'
@@ -32,11 +34,13 @@ export async function get_block(world, { x, y, z }) {
 }
 
 // https://github.com/tc39/proposal-weakrefs#weak-caches
-function make_weak_cached(f) {
+function make_weak_cached(load, unload) {
   const cache = new Map()
   const cleanup = new FinalizationRegistry((key) => {
     const ref = cache.get(key)
-    if (ref && !ref.deref()) cache.delete(key)
+    if (ref && !ref.deref()) {
+      if (cache.delete(key)) unload(key)
+    }
   })
 
   return (key) => {
@@ -46,7 +50,7 @@ function make_weak_cached(f) {
       if (cached !== undefined) return cached
     }
 
-    const fresh = f(key)
+    const fresh = load(key)
     cache.set(key, new WeakRef(fresh))
     cleanup.register(fresh, key)
     return fresh
@@ -56,10 +60,13 @@ function make_weak_cached(f) {
 export function chunks(region_folder) {
   const provider = new AnvilWorld(region_folder)
 
-  const load_chunk = make_weak_cached((key) => {
-    const { x, z } = chunk_from_index(key)
-    return provider.load(x, z)
-  })
+  const load_chunk = make_weak_cached(
+    (key) => {
+      const { x, z } = chunk_from_index(key)
+      return provider.load(x, z)
+    },
+    () => performance.mark('chunk_gc')
+  )
 
   return {
     load(x, z) {

@@ -45,6 +45,7 @@ import mobs_target from './mobs/target.js'
 import mobs_look_at from './mobs/look_at.js'
 import commands_declare from './commands/declare.js'
 import start_debug_server from './debug.js'
+import observe_performance from './performance.js'
 
 const log = logger(import.meta)
 
@@ -231,6 +232,7 @@ server.on('login', (client) => {
   observe_client(context)
 })
 
+observe_performance()
 export const debug = start_debug_server({ world })
 
 server.once('listening', () => {

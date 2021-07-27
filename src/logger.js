@@ -7,9 +7,12 @@ const root = dirname(fileURLToPath(import.meta.url))
 
 const strip_extension = (path) => path.slice(0, path.lastIndexOf('.'))
 
-export default function logger({ url }) {
+export default function logger({
+  url = null,
+  name = strip_extension(relative(root, fileURLToPath(url))),
+}) {
   return pino({
-    base: { name: strip_extension(relative(root, fileURLToPath(url))) },
+    base: { name },
     level: 'info',
   })
 }

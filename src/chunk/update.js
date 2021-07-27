@@ -1,4 +1,5 @@
 import { on } from 'events'
+import { performance } from 'perf_hooks'
 
 import { aiter } from 'iterator-helper'
 
@@ -23,6 +24,7 @@ function fix_light(chunk) {
 }
 
 async function load_chunk({ client, world, x, z }) {
+  performance.mark('load_chunk_start')
   const chunk = await world.chunks.load(x, z)
 
   fix_light(chunk) // TODO: replace this with a proper fix
@@ -57,6 +59,8 @@ async function load_chunk({ client, world, x, z }) {
     chunkData: chunk.dump(),
     blockEntities: [],
   })
+  performance.mark('load_chunk_end')
+  performance.measure('load_chunk', 'load_chunk_start', 'load_chunk_end')
 }
 
 function unload_chunk({ client, x, z }) {
