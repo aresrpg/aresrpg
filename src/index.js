@@ -83,6 +83,7 @@ const world = world_reducers.reduce((world, fn) => fn(world), initial_world)
 
 const initial_state = {
   position: world.spawn_position,
+  teleport: null,
   view_distance: 0,
   inventory: Array.from({
     length: 46,
@@ -129,6 +130,7 @@ function reduce_state(state, action) {
     player_fall_damage.reduce,
     player_deal_damage.reduce,
     player_inventory.reduce,
+    chunk_update.reduce,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
 }
 

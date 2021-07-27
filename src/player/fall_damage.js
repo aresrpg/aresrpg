@@ -27,10 +27,11 @@ export default {
   observe({ events, dispatch }) {
     aiter(on(events, 'state')).reduce(
       (
-        { highest_y, was_on_ground },
+        { highest_y, was_on_ground, last_teleport },
         [
           {
             position: { y, onGround },
+            teleport,
           },
         ]
       ) => {
@@ -43,15 +44,19 @@ export default {
           return {
             highest_y: y,
             was_on_ground: true,
+            last_teleport: teleport,
           }
         }
 
+        const reset_y = last_teleport !== teleport && teleport === null // Teleport just ended
+
         return {
-          highest_y: Math.max(highest_y, y),
+          highest_y: reset_y ? y : Math.max(highest_y, y),
           was_on_ground: onGround,
+          last_teleport: teleport,
         }
       },
-      { highest_y: 0, was_on_ground: true }
+      { highest_y: 0, was_on_ground: true, last_teleport: null }
     )
   },
 }

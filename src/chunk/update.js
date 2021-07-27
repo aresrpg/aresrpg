@@ -3,11 +3,13 @@ import { on } from 'events'
 import { aiter } from 'iterator-helper'
 
 import { chunk_position, same_chunk } from '../chunk.js'
+import { position_equal } from '../position.js'
 import {
   sort_by_distance,
   square_difference,
   square_symmetric_difference,
 } from '../math.js'
+import { PLAYER_ENTITY_ID } from '../index.js'
 
 function fix_light(chunk) {
   for (let x = 0; x < 16; x++) {
@@ -91,14 +93,57 @@ export function unload_chunks(state, { client, events, chunks, world }) {
 }
 
 export default {
+  /** @type {import('../index.js').Reducer} */
+  reduce(state, { type, payload }) {
+    if (type === 'teleport') {
+      return {
+        ...state,
+        teleport: payload,
+      }
+    }
+    if (position_equal(state.position, state.teleport)) {
+      return {
+        ...state,
+        teleport: null,
+      }
+    }
+    return state
+  },
   /** @type {import('../index.js').Observer} */
   observe({ client, events, world }) {
     aiter(on(events, 'state'))
-      .map(([{ position, view_distance }]) => ({
+      .map(([{ position, view_distance, teleport }]) => ({
         position,
         view_distance,
+        teleport,
       }))
       .reduce(async (last_state, state) => {
+        if (
+          state.teleport !== null &&
+          !position_equal(last_state.teleport, state.teleport)
+        ) {
+          const chunk = {
+            x: chunk_position(state.teleport.x),
+            z: chunk_position(state.teleport.z),
+          }
+
+          client.write('update_view_position', {
+            chunkX: chunk.x,
+            chunkZ: chunk.z,
+          })
+
+          await load_chunk({ client, world, x: chunk.x, z: chunk.z }) // TODO kick player on error ?
+
+          client.write('position', {
+            entityId: PLAYER_ENTITY_ID,
+            yaw: 0,
+            pitch: 0,
+            teleportId: 0,
+            ...state.teleport,
+            onGround: true,
+          })
+        }
+
         if (!same_chunk(last_state.position, state.position)) {
           const {
             a: points_to_unload,
