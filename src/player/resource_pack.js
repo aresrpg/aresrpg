@@ -24,7 +24,7 @@ export default {
       const status = Object.entries(Status).find(
         ([key, value]) => value === result
       )
-      log.debug({ status }, 'Ressource pack status')
+      log.info({ status }, 'Ressource pack status')
     })
 
     const [{ result }] = await once(client, 'resource_pack_receive')

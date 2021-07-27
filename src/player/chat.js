@@ -53,11 +53,11 @@ export default {
       const { message } = packet
 
       if (is_command_function(message)) {
-        log.debug({ sender: client.uuid, command: message }, 'Command')
+        log.info({ sender: client.uuid, command: message }, 'Command')
         execute_command({ world, message, sender: client })
         return
       } else {
-        log.debug({ sender: client.uuid, message }, 'Message')
+        log.info({ sender: client.uuid, message }, 'Message')
       }
 
       const formatted_message = message.split(/(%item\d%)/).map((part) => {

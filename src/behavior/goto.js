@@ -43,7 +43,7 @@ export default async function goto(node, state, { world, action }) {
     })
 
     if (path != null) {
-      log.info({ start_time, from, to }, 'Goto Block')
+      log.debug({ start_time, from, to }, 'Goto Block')
       return {
         status: RUNNING,
         state: {
@@ -55,7 +55,7 @@ export default async function goto(node, state, { world, action }) {
         },
       }
     } else {
-      log.info({ start_time, from, to }, 'Failed Goto Block')
+      log.debug({ start_time, from, to }, 'Failed Goto Block')
       return {
         status: FAILURE,
         state,

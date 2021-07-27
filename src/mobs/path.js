@@ -101,7 +101,7 @@ export function path_end(mobs) {
 
     aiter(end).reduce((last_time, time) => {
       if (last_time !== time) {
-        log.info({ at: time }, 'Path Ended')
+        log.debug({ at: time }, 'Path Ended')
         mob.dispatch('path_ended', null, time)
       }
       return time

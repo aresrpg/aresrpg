@@ -27,7 +27,7 @@ export const floor1 = {
   ),
 }
 
-log.trace(
+log.info(
   {
     world: 'floor1',
     mobs: floor1.mobs.length,
