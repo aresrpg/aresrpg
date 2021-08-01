@@ -29,7 +29,7 @@ import player_traders, {
   register as register_player_traders,
 } from './player/traders.js'
 import player_deal_damage, {
-  DAMAGE_INDICATORS_AMMOUNT,
+  DAMAGE_INDICATORS_AMOUNT,
   register as register_player_deal_damage,
 } from './player/damage.js'
 import player_inventory from './player/inventory.js'
@@ -110,7 +110,7 @@ const initial_state = {
     38: { type: 'menitrass_100', count: 1 },
   }),
   damage_indicators: {
-    pool: Array.from({ length: DAMAGE_INDICATORS_AMMOUNT }),
+    pool: Array.from({ length: DAMAGE_INDICATORS_AMOUNT }),
     cursor: -1,
   },
   looted_items: {
