@@ -32,16 +32,23 @@ function observe_mobs(mobs) {
   path_end(mobs)
 }
 
+const DEFAULT_SPEED = 100 /* instant speed, 1ms/block */
+
+const MOVEMENT_SPEED_TO_BLOCKS_PER_SECOND = 10
+
 /** @param {import('./context.js').InitialWorld} world */
 export function register(world) {
   const mobs = world.mob_positions.map(({ position, mob, level }, i) => {
+    const { speed = DEFAULT_SPEED, health } = Types[mob]
     const initial_state = {
       path: [position],
       open: [],
       closed: [],
       start_time: 0,
-      speed: 250 /* ms/block */,
-      health: 20 /* halfheart */,
+      speed:
+        (1 / (speed * MOVEMENT_SPEED_TO_BLOCKS_PER_SECOND)) *
+        1000 /* ms/block */,
+      health /* halfheart */,
       blackboard: {},
       wakeup_at: 0,
       sleep_id: null,
