@@ -1,2 +1,32 @@
-<sequence>
-</sequence>
+<reactive-fallback>
+	<reactive-sequence>
+		<get_biggest_damager output="damager"/>
+		<set_target input="damager"/>
+		<target_position output="position"/>
+		<sequence>
+			<goto target="position" distance="1"/>
+			<attack_target />
+			<sleep time="1"/>
+		</sequence>
+	</reactive-sequence>
+	<repeat>
+		<fallback>
+			<sequence>
+				<random chance="0.16"/>
+				<random_block_position output="random_position"/>
+				<goto target="random_position" distance="1" ignore_y="true"/>
+			</sequence>
+			<sequence>
+				<random chance="0.20"/>
+				<look_at_player/>
+				<sleep time="1"/>
+			</sequence>
+			<sequence>
+				<random chance="0.20"/>
+				<random_look_around/>
+				<sleep time="1"/>
+			</sequence>
+			<sleep time="1"/>
+		</fallback>
+	</repeat>
+</reactive-fallback>
