@@ -281,13 +281,14 @@ function on_window_click({ world, client, dispatch, get_state }) {
 }
 
 /** @param {import('../index.js').InitialWorld} world */
-function register(world) {
+export function register(world) {
   return {
     ...world,
     next_entity_id:
       world.next_entity_id +
       world.teleportation_stones.length * lines.length * 2,
     next_window_id: world.next_window_id + world.teleportation_stones.length,
+    /** @type {TeleportationStone} */
     teleportation_stones: world.teleportation_stones.map(
       (stone, stone_index) => ({
         ...stone,
@@ -302,7 +303,7 @@ function register(world) {
 }
 
 export default {
-  register,
+  /** @type {import('../index.js').Observer} */
   observe(context) {
     const { events, client } = context
     events.on('chunk_loaded', on_chunk_loaded(context))

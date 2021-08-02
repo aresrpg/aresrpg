@@ -38,14 +38,13 @@
     "minecraft-protocol": "^1.23.1",
     "pino": "^6.11.1",
     "prismarine-provider-anvil": "^2.3.1",
-    "typescript": "^4.1.5",
     "vec3": "^0.1.7",
     "xmldom": "^0.4.0"
   },
   "devDependencies": {
     "@hydre/pino-human": "^1.2.0",
     "@mermaid-js/mermaid-cli": "^8.11.0",
-    "@types/node": "14.14.20",
+    "@types/node": "16.4.10",
     "eslint": "^7.32.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-config-standard": "^16.0.3",
@@ -54,7 +53,8 @@
     "eslint-plugin-promise": "^5.1.0",
     "husky": "^4.3.8",
     "lint-staged": "^11.1.1",
-    "prettier": "^2.3.2"
+    "prettier": "^2.3.2",
+    "typescript": "^4.3.5"
   },
   "husky": {
     "hooks": {
