@@ -39,7 +39,7 @@
         aresrpg = pkgs.stdenv.mkDerivation {
           name = "aresrpg";
 
-          nativeBuildInputs = [ pkgs.nodejs-15_x ];
+          nativeBuildInputs = [ pkgs.nodejs-16_x ];
 
           src = ./.;
 
@@ -64,7 +64,7 @@
         {
           devShell = pkgs.mkShell {
             buildInputs = [
-              pkgs.nodejs-15_x
+              pkgs.nodejs-16_x
               pkgs.libuuid
               pkgs.cairo
               pkgs.pango
@@ -81,7 +81,7 @@
             tag = "latest";
 
             config = {
-              Cmd = [ "${pkgs.nodejs-15_x}/bin/node" "${aresrpg}/src/index.js" ];
+              Cmd = [ "${pkgs.nodejs-16_x}/bin/node" "${aresrpg}/src/index.js" ];
               ExposedPorts = {
                 "25565/tcp" = {};
               };
