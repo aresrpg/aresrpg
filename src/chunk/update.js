@@ -145,20 +145,18 @@ export default {
         }
 
         if (!same_chunk(last_state.position, state.position)) {
-          const {
-            a: points_to_unload,
-            b: points_to_load,
-          } = square_symmetric_difference(
-            {
-              x: chunk_position(last_state.position.x),
-              y: chunk_position(last_state.position.z),
-            },
-            {
-              x: chunk_position(state.position.x),
-              y: chunk_position(state.position.z),
-            },
-            state.view_distance
-          )
+          const { a: points_to_unload, b: points_to_load } =
+            square_symmetric_difference(
+              {
+                x: chunk_position(last_state.position.x),
+                y: chunk_position(last_state.position.z),
+              },
+              {
+                x: chunk_position(state.position.x),
+                y: chunk_position(state.position.z),
+              },
+              state.view_distance
+            )
 
           client.write('update_view_position', {
             chunkX: chunk_position(state.position.x),

@@ -146,9 +146,8 @@ export default {
     aiter(on(events, 'state')).reduce(
       (last_total_experience, [{ experience: total_experience }]) => {
         if (last_total_experience !== total_experience) {
-          const { level, remaining_experience } = experience_to_level(
-            total_experience
-          )
+          const { level, remaining_experience } =
+            experience_to_level(total_experience)
           const progress = level_progress({ level, remaining_experience })
 
           client.write('experience', {

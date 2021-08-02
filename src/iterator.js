@@ -1,5 +1,6 @@
-const AsyncGeneratorFunction = Object.getPrototypeOf(async function* () {})
-  .constructor
+const AsyncGeneratorFunction = Object.getPrototypeOf(
+  async function* () {}
+).constructor
 
 export function async_tail_recursive(generator) {
   return async function* (...args) {

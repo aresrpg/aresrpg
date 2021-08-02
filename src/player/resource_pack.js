@@ -15,8 +15,7 @@ export default {
   /** @type {import('../index.js').Observer} */
   async observe({ client }) {
     client.write('resource_pack_send', {
-      url:
-        'https://github.com/aresrpg/resourcepacks/releases/download/v1.0.1/addon.zip',
+      url: 'https://github.com/aresrpg/resourcepacks/releases/download/v1.0.1/addon.zip',
       hash: '428224b7fc5a20c0ce4f12a27862ecd60aed9bda',
     })
 
