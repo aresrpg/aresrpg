@@ -23,16 +23,20 @@ import player_view_distance from './player/view_distance.js'
 import player_chat from './player/chat.js'
 import player_resource_pack from './player/resource_pack.js'
 import player_statistics from './player/statistics.js'
-import player_traders from './player/traders.js'
+import player_traders, {
+  register as register_player_traders,
+} from './player/traders.js'
 import player_deal_damage, {
   DAMAGE_INDICATORS_AMMOUNT,
-  register as player_deal_damage_register,
+  register as register_player_deal_damage,
 } from './player/deal_damage.js'
 import player_inventory from './player/inventory.js'
-import player_teleportation_stones from './player/teleportation_stones.js'
+import player_teleportation_stones, {
+  register as register_player_teleportation_stones,
+} from './player/teleportation_stones.js'
 import plugin_channels from './plugin_channels.js'
 import chunk_update from './chunk/update.js'
-import mobs from './mobs.js'
+import { register as register_mobs } from './mobs.js'
 import mobs_dialog from './mobs/dialog.js'
 import mobs_position_factory from './mobs/position.js'
 import mobs_damage from './mobs/damage.js'
@@ -59,6 +63,7 @@ export const PLAYER_INVENTORY_ID = 0
 
 const initial_world = {
   ...floor1,
+  /** @type {NodeJS.EventEmitter} */
   events: new EventEmitter(),
   next_entity_id: 1,
   next_window_id: 1, // 0 is the player inventory
@@ -68,14 +73,14 @@ const initial_world = {
 
 const world_reducers = [
   // Reducers that augment the world with extra properties
-  mobs.register,
-  player_traders.register,
-  player_deal_damage_register,
+  register_mobs,
+  register_player_traders,
+  register_player_deal_damage,
   register_screen({
     id: 'player_screen',
     size: { width: 8, height: 4 },
   }),
-  player_teleportation_stones.register,
+  register_player_teleportation_stones,
 ]
 
 /** @type {World} */
@@ -199,6 +204,7 @@ function create_context(client) {
     payload,
   }))
 
+  /** @type {NodeJS.EventEmitter} */
   const events = new EventEmitter()
 
   aiter(combineAsyncIterators(actions[Symbol.asyncIterator](), packets))
