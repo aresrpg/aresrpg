@@ -10,7 +10,7 @@
     "lint": "eslint . && prettier . --check && npm run typecheck",
     "typecheck": "tsc --build",
     "format": "prettier . --write && eslint . --fix",
-    "rendermedia": "mmdc --theme neutral -i media/flow.mermaid -o media/flow.svg"
+    "rendermedia": "mmdc -c media/mermaid.json -i media/flow.mermaid -o media/flow.svg"
   },
   "repository": {
     "type": "git",
