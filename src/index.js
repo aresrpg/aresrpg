@@ -61,6 +61,7 @@ const server = protocol.createServer({
 
 export const PLAYER_ENTITY_ID = 0
 export const PLAYER_INVENTORY_ID = 0
+export const SERVER_UUID = '00000000000000000000000000000000'
 
 const initial_world = {
   ...floor1,
