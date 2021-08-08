@@ -7,6 +7,7 @@ import { write_brand } from '../plugin_channels.js'
 import { dimension_codec, overworld } from '../world/codec.js'
 import { load_chunks } from '../chunk/update.js'
 import { PLAYER_ENTITY_ID } from '../index.js'
+import { abortable } from '../iterator.js'
 
 import { write_title } from './title.js'
 import { set_world_border } from './world_border.js'
@@ -19,7 +20,7 @@ import {
 
 export default {
   /** @type {import('../index.js').Observer} */
-  observe({ client, events, world }) {
+  observe({ client, events, world, signal }) {
     events.once('state', (state) => {
       const { game_mode, position, view_distance } = state
       // TODO: move this elsewhere
@@ -90,7 +91,7 @@ export default {
 
       const { canvas } = create_screen_canvas(world.screens.player_screen)
 
-      aiter(on(events, 'screen_interract')).reduce(
+      aiter(abortable(on(events, 'screen_interract', { signal }))).reduce(
         (old_canvas, [{ x, y, screen_id, hand }]) => {
           const new_canvas = copy_canvas(old_canvas)
 

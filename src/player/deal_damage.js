@@ -3,6 +3,7 @@ import { on } from 'events'
 import { aiter } from 'iterator-helper'
 
 import { create_armor_stand } from '../armor_stand.js'
+import { abortable } from '../iterator.js'
 
 export const DAMAGE_INDICATORS_AMMOUNT = 5
 
@@ -43,7 +44,7 @@ export default {
   },
 
   /** @type {import('../index.js').Observer} */
-  observe({ events, dispatch, client, world }) {
+  observe({ events, dispatch, client, world, signal }) {
     events.on('mob_damage', ({ mob, damage }) => {
       const position = mob.position()
       const { height } = mob.constants
@@ -56,7 +57,7 @@ export default {
       dispatch('create_damage_indicator', { position: final_pos, damage })
     })
 
-    aiter(on(events, 'state')).reduce(
+    aiter(abortable(on(events, 'state', { signal }))).reduce(
       (
         { cursor: last_cursor, handles },
         [

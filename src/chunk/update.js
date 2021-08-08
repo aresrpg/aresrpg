@@ -11,6 +11,7 @@ import {
   square_symmetric_difference,
 } from '../math.js'
 import { PLAYER_ENTITY_ID } from '../index.js'
+import { abortable } from '../iterator.js'
 
 function fix_light(chunk) {
   for (let x = 0; x < 16; x++) {
@@ -114,8 +115,8 @@ export default {
     return state
   },
   /** @type {import('../index.js').Observer} */
-  observe({ client, events, world }) {
-    aiter(on(events, 'state'))
+  observe({ client, events, world, signal }) {
+    aiter(abortable(on(events, 'state', { signal })))
       .map(([{ position, view_distance, teleport }]) => ({
         position,
         view_distance,
@@ -199,6 +200,21 @@ export default {
         }
 
         return state
+      })
+      .then((state) => {
+        const chunk_point = {
+          x: chunk_position(state.position.x),
+          z: chunk_position(state.position.z),
+        }
+
+        for (let x = -state.view_distance; x <= state.view_distance; x++) {
+          for (let z = -state.view_distance; z <= state.view_distance; z++) {
+            events.emit('chunk_unloaded', {
+              x: chunk_point.x + x,
+              z: chunk_point.z + z,
+            })
+          }
+        }
       })
   },
 }
