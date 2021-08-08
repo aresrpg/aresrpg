@@ -2,6 +2,8 @@ import { on } from 'events'
 
 import { aiter } from 'iterator-helper'
 
+import { abortable } from '../iterator.js'
+
 const levels = [
   0, // levels starts at 1
   0,
@@ -142,8 +144,8 @@ export function level_progress({ level, remaining_experience }) {
 
 export default {
   /** @type {import('../index.js').Observer} */
-  observe({ client, events }) {
-    aiter(on(events, 'state')).reduce(
+  observe({ client, events, signal }) {
+    aiter(abortable(on(events, 'state', { signal }))).reduce(
       (last_total_experience, [{ experience: total_experience }]) => {
         if (last_total_experience !== total_experience) {
           const { level, remaining_experience } =

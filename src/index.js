@@ -46,6 +46,7 @@ import mobs_look_at from './mobs/look_at.js'
 import commands_declare from './commands/declare.js'
 import start_debug_server from './debug.js'
 import observe_performance from './performance.js'
+import { abortable } from './iterator.js'
 
 const log = logger(import.meta)
 
@@ -195,13 +196,32 @@ async function observe_client(context) {
  * @param {protocol.Client} client
  */
 function create_context(client) {
+  log.info(
+    {
+      username: client.username,
+      uuid: client.uuid,
+    },
+    'Client connected'
+  )
+
+  const controller = new AbortController()
+  client.once('end', () => {
+    log.info(
+      { username: client.username, uuid: client.uuid },
+      'Client disconnected'
+    )
+    controller.abort()
+  })
+
   client.on('error', (error) => {
     throw error
   })
 
   const actions = new PassThrough({ objectMode: true })
 
-  const packets = aiter(on(client, 'packet')).map(([payload, { name }]) => ({
+  const packets = aiter(
+    abortable(on(client, 'packet', { signal: controller.signal }))
+  ).map(([payload, { name }]) => ({
     type: `packet/${name}`,
     payload,
   }))
@@ -221,6 +241,7 @@ function create_context(client) {
     client,
     world,
     events,
+    signal: controller.signal,
     get_state: last_event_value(events, 'state'),
     dispatch(type, payload) {
       actions.write({ type, payload })

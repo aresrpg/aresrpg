@@ -16,3 +16,11 @@ export function async_tail_recursive(generator) {
     }
   }
 }
+
+export async function* abortable(iterator) {
+  try {
+    yield* iterator
+  } catch (error) {
+    if (!(error instanceof Error && error.name === 'AbortError')) throw error
+  }
+}

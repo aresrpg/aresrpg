@@ -3,6 +3,7 @@ import { on } from 'events'
 import { aiter } from 'iterator-helper'
 
 import logger from '../logger.js'
+import { abortable } from '../iterator.js'
 
 const log = logger(import.meta)
 const Mouse = {
@@ -28,7 +29,7 @@ export default {
   },
 
   /** @type {import('../index.js').Observer} */
-  observe({ client, world, events }) {
+  observe({ client, world, events, signal }) {
     client.on('use_entity', ({ target, mouse }) => {
       if (mouse === Mouse.LEFT_CLICK) {
         const mob = world.mobs.by_entity_id(target)
@@ -42,7 +43,7 @@ export default {
     })
 
     for (const mob of world.mobs.all) {
-      aiter(on(mob.events, 'state')).reduce(
+      aiter(abortable(on(mob.events, 'state', { signal }))).reduce(
         (last_health, [{ health, last_damage }]) => {
           if (last_health !== health) {
             client.write('entity_status', {

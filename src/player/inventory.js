@@ -4,6 +4,7 @@ import { aiter } from 'iterator-helper'
 
 import { empty_slot, item_to_slot } from '../items.js'
 import { PLAYER_INVENTORY_ID } from '../index.js'
+import { abortable } from '../iterator.js'
 
 const FORBIDDEN_SLOTS = [
   0, // Craft Output
@@ -67,7 +68,7 @@ export default {
     return state
   },
   /** @type {import('../index.js').Observer} */
-  observe({ client, events, world, get_state }) {
+  observe({ client, events, world, get_state, signal }) {
     const to_slot = (item) =>
       item ? item_to_slot(world.items[item.type], item.count) : empty_slot
 
@@ -77,7 +78,7 @@ export default {
         items: inventory.map(to_slot),
       })
 
-    aiter(on(events, 'state')).reduce(
+    aiter(abortable(on(events, 'state', { signal }))).reduce(
       (
         last_sequence_number,
         [{ inventory, inventory_cursor, inventory_sequence_number }]

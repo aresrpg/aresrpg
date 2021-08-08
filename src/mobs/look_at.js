@@ -2,10 +2,12 @@ import { on } from 'events'
 
 import { aiter } from 'iterator-helper'
 
+import { abortable } from '../iterator.js'
+
 import { path_position } from './path.js'
 
 export default {
-  observe({ client, world, events }) {
+  observe({ client, world, events, signal }) {
     for (const mob of world.mobs.all) {
       const look_at_player = ({ position: { x, z } }) => {
         const state = mob.get_state()
@@ -27,19 +29,21 @@ export default {
         })
       }
 
-      aiter(on(mob.events, 'state')).reduce((last_look_at, [{ look_at }]) => {
-        if (last_look_at !== look_at) {
-          if (last_look_at.player) events.off('state', look_at_player)
-          if (look_at.player) events.on('state', look_at_player)
-          else {
-            client.write('entity_head_rotation', {
-              entityId: mob.entity_id,
-              headYaw: look_at.yaw,
-            })
+      aiter(abortable(on(mob.events, 'state', { signal }))).reduce(
+        (last_look_at, [{ look_at }]) => {
+          if (last_look_at !== look_at) {
+            if (last_look_at.player) events.off('state', look_at_player)
+            if (look_at.player) events.on('state', look_at_player)
+            else {
+              client.write('entity_head_rotation', {
+                entityId: mob.entity_id,
+                headYaw: look_at.yaw,
+              })
+            }
           }
+          return look_at
         }
-        return look_at
-      })
+      )
     }
   },
 }

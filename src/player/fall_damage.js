@@ -3,6 +3,7 @@ import { on } from 'events'
 import { aiter } from 'iterator-helper'
 
 import logger from '../logger.js'
+import { abortable } from '../iterator.js'
 
 const log = logger(import.meta)
 
@@ -24,8 +25,8 @@ export default {
   },
 
   /** @type {import('../index.js').Observer} */
-  observe({ events, dispatch }) {
-    aiter(on(events, 'state')).reduce(
+  observe({ events, dispatch, signal }) {
+    aiter(abortable(on(events, 'state', { signal }))).reduce(
       (
         { highest_y, was_on_ground, last_teleport },
         [
