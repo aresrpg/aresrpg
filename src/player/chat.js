@@ -87,9 +87,17 @@ export default {
         { message: JSON.stringify(message_for_client), client }
       )
     })
-    world.events.on('chat', (options) => client.write('chat', options))
-    world.events.on('private_message', ({ receiver_username, options }) => {
+    const on_chat = (options) => client.write('chat', options)
+    const on_private_message = ({ receiver_username, options }) => {
       if (receiver_username === client.username) client.write('chat', options)
+    }
+
+    world.events.on('chat', on_chat)
+    world.events.on('private_message', on_private_message)
+
+    client.once('end', () => {
+      world.events.off('chat', on_chat)
+      world.events.off('private_message', on_private_message)
     })
   },
 }
