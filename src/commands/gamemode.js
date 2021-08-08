@@ -22,7 +22,7 @@ const gamemode_from_value = (value) =>
 export const gamemode_nodes = [
   {
     flags: {
-      command_node_type: CommandNodeTypes.COMMAND,
+      command_node_type: CommandNodeTypes.LITERAL,
     },
     extraNodeData: 'gm',
     children: [
@@ -42,7 +42,7 @@ export const gamemode_nodes = [
   },
   {
     flags: {
-      command_node_type: CommandNodeTypes.COMMAND,
+      command_node_type: CommandNodeTypes.LITERAL,
     },
     extraNodeData: 'gamemode',
     children: [

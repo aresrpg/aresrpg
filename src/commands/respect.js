@@ -5,7 +5,7 @@ import { CommandNodeTypes } from './declare_options.js'
 export const respect_nodes = [
   {
     flags: {
-      command_node_type: CommandNodeTypes.COMMAND,
+      command_node_type: CommandNodeTypes.LITERAL,
     },
     extraNodeData: 'respect',
     children: [],

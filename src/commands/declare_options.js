@@ -1,3 +1,4 @@
+// https://wiki.vg/Command_Data#Properties
 export const ParserProperties = {
   string: {
     SINGLE_WORD: 0, // Reads a single word
@@ -10,8 +11,9 @@ export const ParserProperties = {
   },
 }
 
+// https://wiki.vg/Command_Data#Graph_Structure
 export const CommandNodeTypes = {
-  ROOT_INDEX: 0,
-  COMMAND: 1,
+  ROOT: 0,
+  LITERAL: 1,
   ARGUMENT: 2,
 }
