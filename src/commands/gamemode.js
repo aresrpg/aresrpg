@@ -10,6 +10,14 @@ const GameMode = {
   SPECTATOR: 3,
 }
 
+const is_gamemode_valid = (number) => number >= 0 && number <= 3
+const parse_gamemode = (param) => {
+  if (is_gamemode_valid(+param)) return +param
+  return GameMode[param.toUpperCase()]
+}
+const mode_name_from_number = (number) =>
+  Object.keys(GameMode).find((k) => GameMode[k] === number)
+
 export const gamemode_nodes = [
   {
     flags: {
@@ -54,35 +62,33 @@ export const gamemode_nodes = [
 ]
 
 export default function gamemode({ args, sender }) {
-  if (args.length !== 1) {
-    write_error({ sender })
-    return
+  if (args.length === 1) {
+    const [input_mode] = args
+    const gameMode = parse_gamemode(input_mode)
+
+    if (gameMode !== undefined) {
+      // value can be 0 so chill and don't refac u nerd
+      sender.write('game_state_change', {
+        reason: 3, // @see https://wiki.vg/Protocol#Change_Game_State
+        gameMode,
+      })
+      sender.write('chat', {
+        message: JSON.stringify({
+          translate: 'commands.gamemode.success.self',
+          with: [
+            {
+              translate: `gameMode.${mode_name_from_number(
+                gameMode
+              ).toLowerCase()}`,
+            },
+          ],
+        }),
+        position: Position.CHAT,
+        sender: sender.uuid,
+      })
+      return
+    }
   }
-  const by_name = args[0].toUpperCase() in GameMode && args[0].toUpperCase()
-  const [by_number] =
-    Object.entries(GameMode).find(([, id]) => Number(args[0]) === id) ?? []
-  const mode = by_name || by_number
 
-  if (!mode) {
-    write_error({ sender })
-    return
-  }
-
-  const message = {
-    translate: 'commands.gamemode.success.self',
-    with: [{ translate: `gameMode.${mode.toLowerCase()}` }],
-  }
-
-  const gameMode = GameMode[mode]
-
-  sender.write('game_state_change', {
-    reason: 3, // game_state_change is not only for gamemode but for a lot of things. And 3 is for gamemode.
-    gameMode,
-  })
-
-  sender.write('chat', {
-    message: JSON.stringify(message),
-    position: Position.CHAT,
-    sender: '00000000000000000000000000000000',
-  })
+  write_error({ sender })
 }
