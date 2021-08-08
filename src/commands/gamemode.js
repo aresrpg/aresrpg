@@ -10,13 +10,13 @@ const GameMode = {
   SPECTATOR: 3,
 }
 
-const is_gamemode_valid = (number) => number >= 0 && number <= 3
+const is_gamemode_value = (value) => Object.values(GameMode).includes(value)
 const parse_gamemode = (param) => {
-  if (is_gamemode_valid(+param)) return +param
+  if (is_gamemode_value(+param)) return +param
   return GameMode[param.toUpperCase()]
 }
-const mode_name_from_number = (number) =>
-  Object.keys(GameMode).find((k) => GameMode[k] === number)
+const gamemode_from_value = (value) =>
+  Object.keys(GameMode).find((k) => GameMode[k] === value)
 
 export const gamemode_nodes = [
   {
@@ -77,7 +77,7 @@ export default function gamemode({ args, sender }) {
           translate: 'commands.gamemode.success.self',
           with: [
             {
-              translate: `gameMode.${mode_name_from_number(
+              translate: `gameMode.${gamemode_from_value(
                 gameMode
               ).toLowerCase()}`,
             },
