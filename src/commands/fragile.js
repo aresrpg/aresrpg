@@ -1,15 +1,14 @@
 import { write_chat_msg } from '../player/chat.js'
 
-import { CommandNodeTypes } from './declare_options.js'
+import { literal } from './declare_options.js'
 
 export const fragile_nodes = [
-  {
+  literal({
+    value: 'f',
     flags: {
-      command_node_type: CommandNodeTypes.LITERAL,
+      has_command: true,
     },
-    extraNodeData: 'f',
-    children: [],
-  },
+  }),
 ]
 
 export default function fragile({ world, sender }) {

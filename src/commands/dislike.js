@@ -1,15 +1,14 @@
 import { write_chat_msg } from '../player/chat.js'
 
-import { CommandNodeTypes } from './declare_options.js'
+import { literal } from './declare_options.js'
 
 export const dislike_nodes = [
-  {
+  literal({
+    value: 'dislike',
     flags: {
-      command_node_type: CommandNodeTypes.LITERAL,
+      has_command: true,
     },
-    extraNodeData: 'dislike',
-    children: [],
-  },
+  }),
 ]
 
 export default function dislike({ world, sender }) {
