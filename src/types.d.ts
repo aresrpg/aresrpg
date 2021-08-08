@@ -10,6 +10,7 @@ declare module 'minecraft-protocol' {
   }
 
   interface Client {
+    id: number
     end(reason: string, fullReason: string): void
   }
 }

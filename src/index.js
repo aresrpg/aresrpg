@@ -34,6 +34,7 @@ import player_inventory from './player/inventory.js'
 import player_teleportation_stones, {
   register as register_player_teleportation_stones,
 } from './player/teleportation_stones.js'
+import finalization from './finalization.js'
 import plugin_channels from './plugin_channels.js'
 import chunk_update from './chunk/update.js'
 import { register as register_mobs } from './mobs.js'
@@ -157,6 +158,8 @@ async function observe_client(context) {
   /* Observers that handle the protocol part.
    * They get the client and should map it to minecraft protocol */
 
+  finalization.observe(context)
+
   await player_resource_pack.observe(context)
 
   player_login.observe(context)
@@ -200,6 +203,7 @@ function create_context(client) {
     {
       username: client.username,
       uuid: client.uuid,
+      id: client.id,
     },
     'Client connected'
   )
