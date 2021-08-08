@@ -5,7 +5,7 @@ import { CommandNodeTypes } from './declare_options.js'
 export const fragile_nodes = [
   {
     flags: {
-      command_node_type: CommandNodeTypes.COMMAND,
+      command_node_type: CommandNodeTypes.LITERAL,
     },
     extraNodeData: 'f',
     children: [],

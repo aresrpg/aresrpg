@@ -26,7 +26,7 @@ function flatten(node, index = 0) {
 
 const nodes = flatten({
   flags: {
-    command_node_type: CommandNodeTypes.ROOT_INDEX,
+    command_node_type: CommandNodeTypes.ROOT,
   },
   children: [
     ...gamemode_nodes,
@@ -49,7 +49,7 @@ export default {
     events.once('state', () => {
       client.write('declare_commands', {
         nodes,
-        rootIndex: CommandNodeTypes.ROOT_INDEX,
+        rootIndex: 0,
       })
     })
   },
