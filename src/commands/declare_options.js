@@ -58,3 +58,27 @@ export function entity({ name, properties, flags = {}, children = [] }) {
     children,
   }
 }
+
+const number =
+  (type) =>
+  ({ name, min = null, max = null, flags = {}, children = [] }) => ({
+    flags: {
+      command_node_type: CommandNodeTypes.ARGUMENT,
+      ...flags,
+    },
+    extraNodeData: {
+      name,
+      parser: `brigadier:${type}`,
+      properties: {
+        flags: { min_present: min !== null, max_present: max !== null },
+        min,
+        max,
+      },
+    },
+    children,
+  })
+
+export const double = number('double')
+export const float = number('float')
+export const integer = number('integer')
+export const long = number('long')
