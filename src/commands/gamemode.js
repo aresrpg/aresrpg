@@ -4,7 +4,6 @@ import { SERVER_UUID } from '../index.js'
 import { write_error } from './commands.js'
 import { CommandNodeTypes, ParserProperties } from './declare_options.js'
 
-
 const GameMode = {
   SURVIVAL: 0,
   CREATIVE: 1,
