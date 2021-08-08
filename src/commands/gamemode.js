@@ -1,7 +1,9 @@
 import { Position } from '../player/chat.js'
+import { SERVER_UUID } from '../index.js'
 
 import { write_error } from './commands.js'
 import { CommandNodeTypes, ParserProperties } from './declare_options.js'
+
 
 const GameMode = {
   SURVIVAL: 0,
@@ -84,7 +86,7 @@ export default function gamemode({ args, sender }) {
           ],
         }),
         position: Position.CHAT,
-        sender: sender.uuid,
+        sender: SERVER_UUID,
       })
       return
     }
