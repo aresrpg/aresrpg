@@ -2,7 +2,7 @@ import { Position } from '../player/chat.js'
 import { SERVER_UUID } from '../index.js'
 
 import { write_error } from './commands.js'
-import { CommandNodeTypes, ParserProperties } from './declare_options.js'
+import { ParserProperties, literal, string } from './declare_options.js'
 
 const GameMode = {
   SURVIVAL: 0,
@@ -19,47 +19,23 @@ const parse_gamemode = (param) => {
 const gamemode_from_value = (value) =>
   Object.keys(GameMode).find((k) => GameMode[k] === value)
 
+const argument = string({
+  name: 'gamemode name or number (0-3)',
+  properties: ParserProperties.string.SINGLE_WORD,
+  flags: {
+    has_command: true,
+  },
+})
+
 export const gamemode_nodes = [
-  {
-    flags: {
-      command_node_type: CommandNodeTypes.LITERAL,
-    },
-    extraNodeData: 'gm',
-    children: [
-      {
-        flags: {
-          command_node_type: CommandNodeTypes.ARGUMENT,
-          has_command: true,
-        },
-        children: [],
-        extraNodeData: {
-          name: 'gamemode name or number (0-3)',
-          parser: 'brigadier:string',
-          properties: ParserProperties.string.SINGLE_WORD,
-        },
-      },
-    ],
-  },
-  {
-    flags: {
-      command_node_type: CommandNodeTypes.LITERAL,
-    },
-    extraNodeData: 'gamemode',
-    children: [
-      {
-        flags: {
-          command_node_type: CommandNodeTypes.ARGUMENT,
-          has_command: true,
-        },
-        children: [],
-        extraNodeData: {
-          name: 'gamemode name or number (0-3)',
-          parser: 'brigadier:string',
-          properties: ParserProperties.string.SINGLE_WORD,
-        },
-      },
-    ],
-  },
+  literal({
+    value: 'gm',
+    children: [argument],
+  }),
+  literal({
+    value: 'gamemode',
+    children: [argument],
+  }),
 ]
 
 export default function gamemode({ args, sender }) {

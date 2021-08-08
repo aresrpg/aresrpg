@@ -1,15 +1,15 @@
 import { write_chat_msg } from '../player/chat.js'
 
-import { CommandNodeTypes } from './declare_options.js'
+import { literal } from './declare_options.js'
 
 export const like_nodes = [
-  {
+  literal({
+    value: 'like',
     flags: {
-      command_node_type: CommandNodeTypes.LITERAL,
+      has_command: true,
     },
-    extraNodeData: 'like',
     children: [],
-  },
+  }),
 ]
 
 export default function like({ world, sender }) {

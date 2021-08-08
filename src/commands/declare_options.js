@@ -17,3 +17,44 @@ export const CommandNodeTypes = {
   LITERAL: 1,
   ARGUMENT: 2,
 }
+
+export function literal({ value, flags = {}, children = [] }) {
+  return {
+    flags: {
+      command_node_type: CommandNodeTypes.LITERAL,
+      ...flags,
+    },
+    extraNodeData: value,
+    children,
+  }
+}
+
+export function string({ name, properties, flags = {}, children = [] }) {
+  return {
+    flags: {
+      command_node_type: CommandNodeTypes.ARGUMENT,
+      ...flags,
+    },
+    extraNodeData: {
+      name,
+      parser: 'brigadier:string',
+      properties,
+    },
+    children,
+  }
+}
+
+export function entity({ name, properties, flags = {}, children = [] }) {
+  return {
+    flags: {
+      command_node_type: CommandNodeTypes.ARGUMENT,
+      ...flags,
+    },
+    extraNodeData: {
+      name,
+      parser: 'minecraft:entity',
+      properties,
+    },
+    children,
+  }
+}

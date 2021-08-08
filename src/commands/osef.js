@@ -1,15 +1,14 @@
 import { write_chat_msg } from '../player/chat.js'
 
-import { CommandNodeTypes } from './declare_options.js'
+import { literal } from './declare_options.js'
 
 export const osef_nodes = [
-  {
+  literal({
+    value: 'osef',
     flags: {
-      command_node_type: CommandNodeTypes.LITERAL,
+      has_command: true,
     },
-    extraNodeData: 'osef',
-    children: [],
-  },
+  }),
 ]
 
 export default function osef({ world, sender }) {

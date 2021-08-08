@@ -1,15 +1,14 @@
 import { write_chat_msg } from '../player/chat.js'
 
-import { CommandNodeTypes } from './declare_options.js'
+import { literal } from './declare_options.js'
 
 export const thug_nodes = [
-  {
+  literal({
+    value: 'thug',
     flags: {
-      command_node_type: CommandNodeTypes.LITERAL,
+      has_command: true,
     },
-    extraNodeData: 'thug',
-    children: [],
-  },
+  }),
 ]
 
 export default function thug({ world, sender }) {
