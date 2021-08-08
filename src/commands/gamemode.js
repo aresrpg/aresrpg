@@ -2,7 +2,7 @@ import { Position } from '../player/chat.js'
 import { SERVER_UUID } from '../index.js'
 
 import { write_error } from './commands.js'
-import { ParserProperties, literal, string } from './declare_options.js'
+import { literal, integer } from './declare_options.js'
 
 const GameMode = {
   SURVIVAL: 0,
@@ -19,22 +19,31 @@ const parse_gamemode = (param) => {
 const gamemode_from_value = (value) =>
   Object.keys(GameMode).find((k) => GameMode[k] === value)
 
-const argument = string({
-  name: 'gamemode name or number (0-3)',
-  properties: ParserProperties.string.SINGLE_WORD,
-  flags: {
-    has_command: true,
-  },
-})
+const gamemode_args = [
+  ...Object.keys(GameMode).map((key) =>
+    literal({
+      value: key.toLowerCase(),
+      flags: {
+        has_command: true,
+      },
+    })
+  ),
+  integer({
+    name: 'number',
+    flags: {
+      has_command: true,
+    },
+  }),
+]
 
 export const gamemode_nodes = [
   literal({
     value: 'gm',
-    children: [argument],
+    children: gamemode_args,
   }),
   literal({
     value: 'gamemode',
-    children: [argument],
+    children: gamemode_args,
   }),
 ]
 
