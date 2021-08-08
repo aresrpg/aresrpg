@@ -213,9 +213,7 @@ function create_context(client) {
     controller.abort()
   })
 
-  client.on('error', (error) => {
-    throw error
-  })
+  client.on('error', (error) => log.error(error, 'Client error'))
 
   const actions = new PassThrough({ objectMode: true })
 
