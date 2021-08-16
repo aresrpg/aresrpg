@@ -21,6 +21,11 @@
     "mmorpg",
     "minecraft"
   ],
+  "babel": {
+    "parserOpts": {
+      "allowAwaitOutsideFunction": true
+    }
+  },
   "author": "AresRPG's Team",
   "license": "MIT",
   "bugs": {
@@ -44,6 +49,8 @@
     "xmldom": "^0.6.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.15.0",
+    "@babel/eslint-parser": "^7.15.0",
     "@hydre/pino-human": "^1.2.0",
     "@mermaid-js/mermaid-cli": "^8.11.4",
     "@types/node": "16.6.1",
