@@ -87,6 +87,10 @@ $ npm start
 
 # Start with packet logging
 $ DEBUG="minecraft-protocol*" npm start
+
+# Start with redisgraph database
+$ docker-compose up
+$ USE_STORAGE="true" npm start
 ```
 
 ## Contributing

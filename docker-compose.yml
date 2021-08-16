@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  # Redis sentinel =========
+  redis-sentinel:
+    image: bitnami/redis-sentinel:latest
+    environment:
+      - REDIS_MASTER_HOST=redisgraph-master
+    ports:
+      - 26379:26379
+    depends_on:
+      - redisgraph-master
+      - redisgraph-slave
+
+  # Redis master-slave =========
+  redisgraph-master:
+    image: redislabs/redisgraph:edge
+    ports:
+      - 6379:6379
+    environment:
+      - REDIS_REPLICATION_MODE=master
+
+  redisgraph-slave:
+    image: redislabs/redisgraph:edge
+    ports:
+      - 6380:6380
+    depends_on:
+      - redisgraph-master
+    environment:
+      - REDIS_REPLICATION_MODE=slave
+      - REDIS_MASTER_HOST=redisgraph-master
+    command:
+      - redis-server
+      - --loadmodule
+      - /usr/lib/redis/modules/redisgraph.so
+      - --port
+      - '6380'
+      - --slaveof
+      - redisgraph-master
+      - '6379'

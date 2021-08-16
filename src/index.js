@@ -48,6 +48,7 @@ import commands_declare from './commands/declare.js'
 import start_debug_server from './debug.js'
 import observe_performance from './performance.js'
 import { abortable } from './iterator.js'
+import database from './database/index.js'
 
 const log = logger(import.meta)
 
@@ -133,6 +134,7 @@ function reduce_state(state, action) {
   return [
     /* Reducers that map the incomming actions (packet, ...)
      * to a new state */
+    database.reduce,
     player_position.reduce,
     player_view_distance.reduce,
     plugin_channels.reduce,
@@ -162,7 +164,11 @@ async function observe_client(context) {
 
   await player_resource_pack.observe(context)
 
+  // login has to stay on top
   player_login.observe(context)
+  // then database
+  database.observe(context)
+
   player_attributes.observe(context)
   player_experience.observe(context)
   player_traders.observe(context)
