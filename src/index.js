@@ -134,7 +134,6 @@ function reduce_state(state, action) {
   return [
     /* Reducers that map the incomming actions (packet, ...)
      * to a new state */
-    database.reduce,
     player_position.reduce,
     player_view_distance.reduce,
     plugin_channels.reduce,
@@ -166,8 +165,6 @@ async function observe_client(context) {
 
   // login has to stay on top
   player_login.observe(context)
-  // then database
-  database.observe(context)
 
   player_attributes.observe(context)
   player_experience.observe(context)
@@ -204,7 +201,7 @@ async function observe_client(context) {
  *
  * @param {protocol.Client} client
  */
-function create_context(client) {
+async function create_context(client) {
   log.info(
     {
       username: client.username,
@@ -236,14 +233,19 @@ function create_context(client) {
 
   /** @type {NodeJS.EventEmitter} */
   const events = new EventEmitter()
+  const storage = database(client)
+  const player_state = await storage.pull()
 
   aiter(combineAsyncIterators(actions[Symbol.asyncIterator](), packets))
     .map(transform_action)
-    .reduce((last_state, action) => {
-      const state = reduce_state(last_state, action)
-      events.emit('state', state)
-      return state
-    }, initial_state)
+    .reduce(
+      (last_state, action) => {
+        const state = reduce_state(last_state, action)
+        events.emit('state', state)
+        return state
+      },
+      { ...initial_state, ...player_state }
+    )
 
   return {
     client,
@@ -257,8 +259,8 @@ function create_context(client) {
   }
 }
 
-server.on('login', (client) => {
-  const context = create_context(client)
+server.on('login', async (client) => {
+  const context = await create_context(client)
   observe_client(context)
 })
 

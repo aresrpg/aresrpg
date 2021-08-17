@@ -1,44 +1,12 @@
-import graph from './graph.js'
+import Clients from './redis.js'
 
-export default {
-  /** @type {import('../index.js').Reducer} */
-  reduce(state, { type, payload }) {
-    if (type === 'database:load_player')
-      return {
-        ...state,
-        ...payload,
-      }
+export default (client) => ({
+  push: async (value) => {
+    // TODO: maybe implement a way to only push changes and not the whole state everytime
+    // @see https://oss.redis.com/redisjson/path/
+    return Clients.write.call('JSON.SET', client.uuid, '.', value)
 
-    return state
+    // we should also trigger a redis subscription here to sync all nodes
   },
-
-  /** @type {import('../index.js').Observer} */
-  observe({ events, dispatch, client, world, signal }) {
-    events.once('state', async (state) => {
-      const { player } = await graph.run`
-          MATCH (p:Player ${{ uuid: client.uuid }})
-          RETURN p as player`
-
-      if (player) {
-        const {
-          x,
-          y,
-          z,
-          yaw,
-          pitch,
-          view_distance,
-          game_mode,
-          experience,
-          health,
-        } = player
-        dispatch('database:load_player', {
-          position: { x, y, z, yaw, pitch },
-          view_distance,
-          game_mode,
-          experience,
-          health,
-        })
-      }
-    })
-  },
-}
+  pull: async () => Clients.read.call('JSON.GET', client.uuid),
+})
