@@ -211,12 +211,19 @@ async function create_context(client) {
     'Client connected'
   )
 
+  /** @type {NodeJS.EventEmitter} */
+  const events = new EventEmitter()
+  const get_state = last_event_value(events, 'state')
+  const storage = database(client)
+  const player_state = await storage.pull()
   const controller = new AbortController()
-  client.once('end', () => {
+
+  client.once('end', async () => {
     log.info(
       { username: client.username, uuid: client.uuid },
       'Client disconnected'
     )
+    await storage.push(get_state())
     controller.abort()
   })
 
@@ -230,11 +237,6 @@ async function create_context(client) {
     type: `packet/${name}`,
     payload,
   }))
-
-  /** @type {NodeJS.EventEmitter} */
-  const events = new EventEmitter()
-  const storage = database(client)
-  const player_state = await storage.pull()
 
   aiter(combineAsyncIterators(actions[Symbol.asyncIterator](), packets))
     .map(transform_action)
@@ -252,7 +254,7 @@ async function create_context(client) {
     world,
     events,
     signal: controller.signal,
-    get_state: last_event_value(events, 'state'),
+    get_state,
     dispatch(type, payload) {
       actions.write({ type, payload })
     },

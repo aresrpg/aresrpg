@@ -48,6 +48,8 @@ await Promise.all([
   events.once(master_client, 'ready'),
 ])
 
+log.info({ master: true, slave: true }, 'redis cluster initialized')
+
 new Set([master_client, slave_client]).forEach((client) => {
   client.on('error', () => {})
 })
