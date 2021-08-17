@@ -34,7 +34,6 @@
   "homepage": "https://github.com/aresrpg/aresrpg#readme",
   "dependencies": {
     "@aresrpg/aresrpg-map-colors": "^1.1.2",
-    "@hydre/rgraph": "^6.0.0",
     "canvas": "^2.8.0",
     "combine-async-iterators": "^2.0.0",
     "fastify": "^3.20.2",

@@ -5,36 +5,36 @@ services:
   redis-sentinel:
     image: bitnami/redis-sentinel:latest
     environment:
-      - REDIS_MASTER_HOST=redisgraph-master
+      - REDIS_MASTER_HOST=rejson-master
     ports:
       - 26379:26379
     depends_on:
-      - redisgraph-master
-      - redisgraph-slave
+      - rejson-master
+      - rejson-slave
 
   # Redis master-slave =========
-  redisgraph-master:
-    image: redislabs/redisgraph:edge
+  rejson-master:
+    image: redislabs/rejson:latest
     ports:
       - 6379:6379
     environment:
       - REDIS_REPLICATION_MODE=master
 
-  redisgraph-slave:
-    image: redislabs/redisgraph:edge
+  rejson-slave:
+    image: redislabs/rejson:latest
     ports:
       - 6380:6380
     depends_on:
-      - redisgraph-master
+      - rejson-master
     environment:
       - REDIS_REPLICATION_MODE=slave
-      - REDIS_MASTER_HOST=redisgraph-master
+      - REDIS_MASTER_HOST=rejson-master
     command:
       - redis-server
       - --loadmodule
-      - /usr/lib/redis/modules/redisgraph.so
+      - /usr/lib/redis/modules/rejson.so
       - --port
       - '6380'
       - --slaveof
-      - redisgraph-master
+      - rejson-master
       - '6379'
