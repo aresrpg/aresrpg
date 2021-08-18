@@ -2,7 +2,7 @@ import { persist_storage } from '../settings.js'
 import logger from '../logger.js'
 
 const log = logger(import.meta)
-const noop = { call: () => ({}) }
+const noop = { call: (...x) => '' }
 const Clients = {
   write: noop,
   read: noop,

@@ -116,6 +116,9 @@ const initial_state = {
 /** @template U
  ** @typedef {import('./types').UnionToIntersection<U>} UnionToIntersection */
 
+/** @template U
+ ** @typedef {import('./types').Await<U>} Await */
+
 /** @typedef {Readonly<typeof initial_world>} InitialWorld */
 /** @typedef {ReturnType<typeof world_reducers[number]>} WorldReducers */
 /** @typedef {Readonly<UnionToIntersection<WorldReducers>>} ReducedWorld */
@@ -123,7 +126,7 @@ const initial_state = {
 
 /** @typedef {Readonly<typeof initial_state>} State */
 /** @typedef {{ type: string, payload: any }} Action */
-/** @typedef {Readonly<ReturnType<typeof create_context>>} Context */
+/** @typedef {Readonly<Await<ReturnType<typeof create_context>>>} Context */
 
 /** @typedef {(state: State, action: Action) => State} Reducer */
 /** @typedef {(action: Action) => Action} Transformer */

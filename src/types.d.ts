@@ -26,3 +26,5 @@ type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
 ) => void
   ? I
   : never
+
+type Await<T> = T extends Promise<infer U> ? U : T
