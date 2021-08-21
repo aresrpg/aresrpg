@@ -98,7 +98,7 @@ function client_chunk_unloaded(chunks, { client, x, z }) {
     ...chunks.entries(),
     [
       chunk_index(x, z),
-      { ...chunk, clients: chunk.clients.filter((c) => c !== client) },
+      { ...chunk, clients: chunk.clients.filter(c => c !== client) },
     ],
   ])
 }
@@ -186,7 +186,7 @@ function mob_position(chunks, { mob, position, last_position, target }) {
 
 function mob_path(chunks, { mob, path, open, closed }) {
   const path_chunks = new Set(
-    path.map((point) =>
+    path.map(point =>
       get_chunk(chunks, {
         x: chunk_position(point.x),
         z: chunk_position(point.z),

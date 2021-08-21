@@ -214,17 +214,17 @@ function stone_to_item({ name }) {
 
 function on_use_entity({ client, world }) {
   return ({ target, mouse, hand }) => {
-    const current_teleportation_stone = world.teleportation_stones.find(
-      (stone) => stone.entity_ids.includes(target)
+    const current_teleportation_stone = world.teleportation_stones.find(stone =>
+      stone.entity_ids.includes(target)
     )
     if (current_teleportation_stone && hand === 1 && mouse === 2) {
       const items = Array.from({
         ...world.teleportation_stones.filter(
-          (stone) => stone !== current_teleportation_stone
+          stone => stone !== current_teleportation_stone
         ),
         // TODO: inventory size depending on the number of teleportation stones
         length: GENERIC_9X2_INVENTORY_SIZE,
-      }).map((stone) => (stone ? stone_to_item(stone) : empty_slot))
+      }).map(stone => (stone ? stone_to_item(stone) : empty_slot))
 
       client.write('open_window', {
         windowId: current_teleportation_stone.window_id,
@@ -248,7 +248,7 @@ function on_window_click({ world, client, dispatch, get_state }) {
     if (current_teleportation_stone) {
       const available_teleportations_stones = Array.from({
         ...world.teleportation_stones.filter(
-          (stone) => stone !== current_teleportation_stone
+          stone => stone !== current_teleportation_stone
         ),
         // TODO: inventory size depending on the number of teleportation stones
         length: GENERIC_9X2_INVENTORY_SIZE,
@@ -263,12 +263,12 @@ function on_window_click({ world, client, dispatch, get_state }) {
       client.write('window_items', {
         windowId: current_teleportation_stone.window_id,
         items: [
-          ...available_teleportations_stones.map((stone) =>
+          ...available_teleportations_stones.map(stone =>
             stone ? stone_to_item(stone) : empty_slot
           ),
           ...inventory
             .slice(9, 45)
-            .map((item) =>
+            .map(item =>
               item
                 ? item_to_slot(world.items[item.type], item.count)
                 : empty_slot

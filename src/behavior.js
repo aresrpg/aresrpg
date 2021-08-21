@@ -57,6 +57,6 @@ export default async function run(node, state, context) {
 
 export function childs(node) {
   return Array.from(node.childNodes).filter(
-    (child) => child.nodeType === Node.ELEMENT_NODE
+    child => child.nodeType === Node.ELEMENT_NODE
   )
 }

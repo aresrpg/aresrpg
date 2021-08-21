@@ -21,7 +21,7 @@ import {
 export default {
   /** @type {import('../index.js').Observer} */
   observe({ client, events, world, signal }) {
-    events.once('state', (state) => {
+    events.once('state', state => {
       const { game_mode, position, view_distance, held_slot_index } = state
       // TODO: move this elsewhere
       const world_names = ['minecraft:overworld']

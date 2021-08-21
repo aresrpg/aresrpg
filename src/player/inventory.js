@@ -69,10 +69,10 @@ export default {
   },
   /** @type {import('../index.js').Observer} */
   observe({ client, events, world, get_state, signal }) {
-    const to_slot = (item) =>
+    const to_slot = item =>
       item ? item_to_slot(world.items[item.type], item.count) : empty_slot
 
-    const write_inventory = (inventory) =>
+    const write_inventory = inventory =>
       client.write('window_items', {
         windowId: PLAYER_INVENTORY_ID,
         items: inventory.map(to_slot),

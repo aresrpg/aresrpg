@@ -60,7 +60,7 @@ export function entity({ name, properties, flags = {}, children = [] }) {
 }
 
 const number =
-  (type) =>
+  type =>
   ({ name, min = null, max = null, flags = {}, children = [] }) => ({
     flags: {
       command_node_type: CommandNodeTypes.ARGUMENT,

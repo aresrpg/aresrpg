@@ -13,7 +13,7 @@ const { nearestMatch } = mapcolors
 const { createCanvas } = canvas
 
 export function register_screen({ id, size: { width, height } }) {
-  return (world) => ({
+  return world => ({
     ...world,
     screens: {
       ...world.screens,
@@ -213,7 +213,7 @@ export default {
   /** @type {import('../index.js').Observer} */
   observe({ client, events, world }) {
     client.on('arm_animation', ({ hand }) => {
-      events.once('state', (state) => {
+      events.once('state', state => {
         const { position } = state
         for (const [screen_id, screen] of Object.entries(world.screens)) {
           const intersect = screen_ray_intersection(screen, position)

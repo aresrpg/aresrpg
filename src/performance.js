@@ -36,7 +36,7 @@ function create_debounced_observer({
     histogram.reset()
   }
 
-  return (entries) => {
+  return entries => {
     if (entries.length !== 0) {
       if (timer == null) log.info('Started')
       else clearTimeout(timer)
@@ -59,7 +59,7 @@ export default function observe() {
     with_histogram: false,
   })
 
-  const observer = new PerformanceObserver((list) => {
+  const observer = new PerformanceObserver(list => {
     observe_load_chunk(list.getEntriesByName('load_chunk'))
     observe_chunk_gc(list.getEntriesByName('chunk_gc'))
   })
