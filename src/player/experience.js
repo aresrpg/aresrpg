@@ -157,6 +157,11 @@ export default {
             level,
             experienceBar: progress,
           })
+
+          dispatch('player/experience', {
+            level,
+            progress,
+          })
         }
         return total_experience
       },
