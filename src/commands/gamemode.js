@@ -11,16 +11,16 @@ const GameMode = {
   SPECTATOR: 3,
 }
 
-const is_gamemode_value = (value) => Object.values(GameMode).includes(value)
-const parse_gamemode = (param) => {
+const is_gamemode_value = value => Object.values(GameMode).includes(value)
+const parse_gamemode = param => {
   if (is_gamemode_value(+param)) return +param
   return GameMode[param.toUpperCase()]
 }
-const gamemode_from_value = (value) =>
-  Object.keys(GameMode).find((k) => GameMode[k] === value)
+const gamemode_from_value = value =>
+  Object.keys(GameMode).find(k => GameMode[k] === value)
 
 const gamemode_args = [
-  ...Object.keys(GameMode).map((key) =>
+  ...Object.keys(GameMode).map(key =>
     literal({
       value: key.toLowerCase(),
       flags: {

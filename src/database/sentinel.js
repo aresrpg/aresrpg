@@ -13,7 +13,7 @@ const {
 const log = logger(import.meta)
 
 function retry_strategy(label) {
-  return (attempt) => {
+  return attempt => {
     log.info({ label, attempt }, 'Unable to reach redis, retrying..')
     if (attempt >= 10) {
       log.info({ label }, `Can't connect to redis exiting..`)

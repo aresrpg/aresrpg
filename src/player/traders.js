@@ -107,9 +107,9 @@ function open_trade({ client, world }) {
   client.on('use_entity', ({ target, mouse, sneaking }) => {
     if (windowIds.has(target) && mouse === right_click && sneaking === false) {
       const { name, windowId, recipes: ares_recipe } = windowIds.get(target)
-      const mc_recipe = ares_recipe.map((trade) => {
+      const mc_recipe = ares_recipe.map(trade => {
         const { inputItem1, inputItem2, outputItem } = trade
-        const to_slot = (item) =>
+        const to_slot = item =>
           item ? item_to_slot(world.items[item.type], item.count) : empty_slot
         return {
           inputItem1: to_slot(inputItem1),

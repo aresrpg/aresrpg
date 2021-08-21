@@ -24,14 +24,14 @@ export function neighbors(world) {
           length: jump_height * 2 + 1,
         })
           .flatMap((e, i) =>
-            directions.map((dt) => ({
+            directions.map(dt => ({
               ...dt,
               x: x + dt.x,
               y: y + i - jump_height,
               z: z + dt.z,
             }))
           )
-          .map(async (point) => [point, await is_walkable(world, point)])
+          .map(async point => [point, await is_walkable(world, point)])
       )
     )
       .filter(([point, walkable]) => walkable)

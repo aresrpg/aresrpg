@@ -247,7 +247,7 @@ async function create_context(client) {
     controller.abort()
   })
 
-  client.on('error', (error) => log.error(error, 'Client error'))
+  client.on('error', error => log.error(error, 'Client error'))
 
   const packets = aiter(
     abortable(on(client, 'packet', { signal: controller.signal }))
@@ -256,7 +256,7 @@ async function create_context(client) {
     payload,
   }))
 
-  const save_state = (state) => {
+  const save_state = state => {
     log.info(
       { username: client.username, uuid: client.uuid },
       'Saving to database'
@@ -282,7 +282,7 @@ async function create_context(client) {
       { ...initial_state, ...player_state }
     )
     .then(save_state)
-    .catch((error) => {
+    .catch(error => {
       // TODO: what to do here if we can't save the client ?
       log.error(error)
     })
@@ -299,10 +299,10 @@ async function create_context(client) {
   }
 }
 
-server.on('login', (client) => {
+server.on('login', client => {
   create_context(client)
     .then(observe_client)
-    .catch((error) => {
+    .catch(error => {
       log.error({
         username: client.username,
         uuid: client.uuid,
@@ -321,6 +321,6 @@ server.once('listening', () => {
   log.info(server.socketServer.address(), 'Listening')
 })
 
-process.on('unhandledRejection', (error) => {
+process.on('unhandledRejection', error => {
   throw error
 })

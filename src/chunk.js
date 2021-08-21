@@ -6,7 +6,7 @@ import { version } from './settings.js'
 
 const AnvilWorld = Anvil.Anvil(version)
 
-export const chunk_position = (value) => Math.floor(value / 16)
+export const chunk_position = value => Math.floor(value / 16)
 
 export const chunk_index = (x, z) => `${x}:${z}`
 
@@ -36,14 +36,14 @@ export async function get_block(world, { x, y, z }) {
 // https://github.com/tc39/proposal-weakrefs#weak-caches
 function make_weak_cached(load, unload) {
   const cache = new Map()
-  const cleanup = new FinalizationRegistry((key) => {
+  const cleanup = new FinalizationRegistry(key => {
     const ref = cache.get(key)
     if (ref && !ref.deref()) {
       if (cache.delete(key)) unload(key)
     }
   })
 
-  return (key) => {
+  return key => {
     const ref = cache.get(key)
     if (ref) {
       const cached = ref.deref()
@@ -61,7 +61,7 @@ export function chunks(region_folder) {
   const provider = new AnvilWorld(region_folder)
 
   const load_chunk = make_weak_cached(
-    (key) => {
+    key => {
       const { x, z } = chunk_from_index(key)
       return provider.load(x, z)
     },

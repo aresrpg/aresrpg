@@ -41,7 +41,7 @@ function behavior({ world, app }) {
     reply.type('text/event-stream')
     reply.header('Connection', 'keep-alive')
 
-    const format = (data) => `data: ${JSON.stringify(data)}\n\n`
+    const format = data => `data: ${JSON.stringify(data)}\n\n`
 
     /** @type {Object} */
     const { params } = request
@@ -96,7 +96,7 @@ export default function start_debug_server({ world }) {
     origin: true,
   })
 
-  app.listen(4242).then((address) => {
+  app.listen(4242).then(address => {
     log.info(
       `Arborist https://aresrpg-arborist.netlify.app/${encodeURIComponent(
         `${address}/behavior`

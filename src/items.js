@@ -136,7 +136,7 @@ export function item_to_slot(
     }
   })
 
-  const description_lore = description.map((text) => ({
+  const description_lore = description.map(text => ({
     text,
     color: 'dark_gray',
     italic: false,
@@ -165,7 +165,7 @@ export function item_to_slot(
     ...description_lore,
     stats_lore.length && [{ text: '' }],
     ...stats_lore,
-  ].filter((v) => typeof v === 'object')
+  ].filter(v => typeof v === 'object')
 
   return {
     present: true,
@@ -187,7 +187,7 @@ export function item_to_slot(
               type: 'list',
               value: {
                 type: 'string',
-                value: lore.map((line) => JSON.stringify(line)),
+                value: lore.map(line => JSON.stringify(line)),
               },
             },
           },

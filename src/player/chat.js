@@ -49,7 +49,7 @@ export function write_chat_msg({ world }, { message, client: { uuid } }) {
 export default {
   /** @type {import('../index.js').Observer} */
   observe({ client, get_state, world }) {
-    client.on('chat', (packet) => {
+    client.on('chat', packet => {
       const { message } = packet
 
       if (is_command_function(message)) {
@@ -60,7 +60,7 @@ export default {
         log.info({ sender: client.uuid, message }, 'Message')
       }
 
-      const formatted_message = message.split(/(%item\d%)/).map((part) => {
+      const formatted_message = message.split(/(%item\d%)/).map(part => {
         if (part.match(/(%item\d%)/)) {
           const slot_number = parseInt(part.match(/\d/)[0]) + 36 // For the player 0 is the first item in hotbar. But for the game the hotbat begin at 36.
           const { inventory } = get_state()
@@ -87,7 +87,7 @@ export default {
         { message: JSON.stringify(message_for_client), client }
       )
     })
-    const on_chat = (options) => client.write('chat', options)
+    const on_chat = options => client.write('chat', options)
     const on_private_message = ({ receiver_username, options }) => {
       if (receiver_username === client.username) client.write('chat', options)
     }

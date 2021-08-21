@@ -86,7 +86,7 @@ export async function load_chunks(state, { client, events, world, chunks }) {
 
     // Loading one chunk is cpu intensive, wait for next tick to avoid
     // starving the event loop for too long
-    await new Promise((resolve) => process.nextTick(resolve))
+    await new Promise(resolve => process.nextTick(resolve))
   }
 }
 
@@ -201,7 +201,7 @@ export default {
 
         return state
       })
-      .then((state) => {
+      .then(state => {
         const chunk_point = {
           x: chunk_position(state.position.x),
           z: chunk_position(state.position.z),

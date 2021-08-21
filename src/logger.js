@@ -5,7 +5,7 @@ import pino from 'pino'
 
 const root = dirname(fileURLToPath(import.meta.url))
 
-const strip_extension = (path) => path.slice(0, path.lastIndexOf('.'))
+const strip_extension = path => path.slice(0, path.lastIndexOf('.'))
 
 export default function logger({
   url = null,

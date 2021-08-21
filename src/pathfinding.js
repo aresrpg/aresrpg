@@ -1,7 +1,7 @@
 import { path_types } from './plugin_channels.js'
 
 function sorted_insert(array, sort_key, value) {
-  const index = array.findIndex((e) => e[sort_key] > value[sort_key])
+  const index = array.findIndex(e => e[sort_key] > value[sort_key])
 
   array.splice(index, 0, value)
 }
