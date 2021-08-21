@@ -24,6 +24,7 @@ import player_chat from './player/chat.js'
 import player_resource_pack from './player/resource_pack.js'
 import player_statistics from './player/statistics.js'
 import player_held_item from './player/held_item.js'
+import player_scoreboard from './player/scoreboard.js'
 import player_traders, {
   register as register_player_traders,
 } from './player/traders.js'
@@ -202,6 +203,7 @@ async function observe_client(context) {
   player_deal_damage.observe(context)
   player_inventory.observe(context)
   player_teleportation_stones.observe(context)
+  player_scoreboard.observe(context)
 
   commands_declare.observe(context)
 
