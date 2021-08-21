@@ -117,7 +117,11 @@ export default {
         Array.from({
           length: 15,
           14: '',
-          [Slots.CLASS]: Lines.CLASS({ name: 'Sram', lvl: 196, percent: 22 }),
+          [Slots.CLASS]: Lines.CLASS({
+            name: 'Sram',
+            level: 196,
+            progress: 22,
+          }),
           [Slots.PROGRESS]: Lines.PROGRESS({ progress: 22 }),
           [Slots.SOUL]: Lines.SOUL({ soul: 100 }),
           [Slots.KARES]: Lines.KARES({ kares: 0 }),
