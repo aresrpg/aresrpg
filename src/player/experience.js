@@ -144,7 +144,7 @@ export function level_progress({ level, remaining_experience }) {
 
 export default {
   /** @type {import('../index.js').Observer} */
-  observe({ client, events, signal }) {
+  observe({ client, events, signal, dispatch }) {
     aiter(abortable(on(events, 'state', { signal }))).reduce(
       (last_total_experience, [{ experience: total_experience }]) => {
         if (last_total_experience !== total_experience) {
@@ -156,6 +156,11 @@ export default {
             totalExperience: total_experience,
             level,
             experienceBar: progress,
+          })
+
+          dispatch('player/experience', {
+            level,
+            progress,
           })
         }
         return total_experience
