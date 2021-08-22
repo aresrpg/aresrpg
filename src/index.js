@@ -234,7 +234,6 @@ async function create_context(client) {
 
   const controller = new AbortController()
 
-  client.on('error', (error) => log.error(error, 'Client error'))
   client.once('end', () => {
     log.info(
       { username: client.username, uuid: client.uuid },
@@ -242,6 +241,8 @@ async function create_context(client) {
     )
     controller.abort()
   })
+
+  client.on('error', (error) => log.error(error, 'Client error'))
 
   const actions = new PassThrough({ objectMode: true })
 
