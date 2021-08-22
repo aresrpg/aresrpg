@@ -27,6 +27,7 @@
 - [Requirements](#requirements)
   - [Install](#install)
   - [Usage](#usage)
+    - [Enable data persistence](#enable-data-persistence)
   - [Contributing](#contributing)
   - [Roadmap](#roadmap)
   - [License](#license)
@@ -87,6 +88,15 @@ $ npm start
 
 # Start with packet logging
 $ DEBUG="minecraft-protocol*" npm start
+```
+
+### Enable data persistence
+
+Aresrpg is using redis with the rejson module to persist player's state
+
+```bash
+$ docker-compose up
+$ USE_PERSISTENT_STORAGE="true" npm start
 ```
 
 ## Contributing

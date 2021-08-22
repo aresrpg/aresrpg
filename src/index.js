@@ -48,6 +48,7 @@ import commands_declare from './commands/declare.js'
 import start_debug_server from './debug.js'
 import observe_performance from './performance.js'
 import { abortable } from './iterator.js'
+import Redis from './database/redis.js'
 
 const log = logger(import.meta)
 
@@ -112,8 +113,29 @@ const initial_state = {
   health: 40,
 }
 
+// Add here all fields that you want to save in the database
+const serialize_state = ({
+  position,
+  view_distance,
+  inventory,
+  game_mode,
+  experience,
+  health,
+}) =>
+  JSON.stringify({
+    position,
+    view_distance,
+    inventory,
+    game_mode,
+    experience,
+    health,
+  })
+
 /** @template U
  ** @typedef {import('./types').UnionToIntersection<U>} UnionToIntersection */
+
+/** @template U
+ ** @typedef {import('./types').Await<U>} Await */
 
 /** @typedef {Readonly<typeof initial_world>} InitialWorld */
 /** @typedef {ReturnType<typeof world_reducers[number]>} WorldReducers */
@@ -122,7 +144,7 @@ const initial_state = {
 
 /** @typedef {Readonly<typeof initial_state>} State */
 /** @typedef {{ type: string, payload: any }} Action */
-/** @typedef {Readonly<ReturnType<typeof create_context>>} Context */
+/** @typedef {Readonly<Await<ReturnType<typeof create_context>>>} Context */
 
 /** @typedef {(state: State, action: Action) => State} Reducer */
 /** @typedef {(action: Action) => Action} Transformer */
@@ -162,7 +184,9 @@ async function observe_client(context) {
 
   await player_resource_pack.observe(context)
 
+  // login has to stay on top
   player_login.observe(context)
+
   player_attributes.observe(context)
   player_experience.observe(context)
   player_traders.observe(context)
@@ -198,7 +222,7 @@ async function observe_client(context) {
  *
  * @param {protocol.Client} client
  */
-function create_context(client) {
+async function create_context(client) {
   log.info(
     {
       username: client.username,
@@ -209,6 +233,7 @@ function create_context(client) {
   )
 
   const controller = new AbortController()
+
   client.once('end', () => {
     log.info(
       { username: client.username, uuid: client.uuid },
@@ -228,16 +253,31 @@ function create_context(client) {
     payload,
   }))
 
+  const save_state = (state) =>
+    Redis.push({
+      key: client.uuid.toLowerCase(),
+      value: serialize_state(state),
+    })
+
   /** @type {NodeJS.EventEmitter} */
   const events = new EventEmitter()
+  const player_state = await Redis.pull(client.uuid.toLowerCase())
 
   aiter(combineAsyncIterators(actions[Symbol.asyncIterator](), packets))
     .map(transform_action)
-    .reduce((last_state, action) => {
-      const state = reduce_state(last_state, action)
-      events.emit('state', state)
-      return state
-    }, initial_state)
+    .reduce(
+      (last_state, action) => {
+        const state = reduce_state(last_state, action)
+        events.emit('state', state)
+        return state
+      },
+      { ...initial_state, ...player_state }
+    )
+    .then(save_state)
+    .catch((error) => {
+      // TODO: what to do here if we can't save the client ?
+      log.error(error)
+    })
 
   return {
     client,
@@ -252,8 +292,18 @@ function create_context(client) {
 }
 
 server.on('login', (client) => {
-  const context = create_context(client)
-  observe_client(context)
+  create_context(client)
+    .then(observe_client)
+    .catch((error) => {
+      log.error({
+        username: client.username,
+        uuid: client.uuid,
+        error,
+      })
+      client.end(
+        'There was a problem while initializing your character, please retry or contact us'
+      )
+    })
 })
 
 observe_performance()

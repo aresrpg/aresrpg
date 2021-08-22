@@ -1,5 +1,11 @@
 {
   "extends": ["standard", "prettier"],
+  "parser": "@babel/eslint-parser",
+  "parserOptions": {
+    "requireConfigFile": false,
+    "sourceType": "module",
+    "ecmaVersion": 12
+  },
   "rules": {
     "camelcase": "off",
     "no-var": "error",

@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  # Redis sentinel =========
+  redis-sentinel:
+    image: bitnami/redis-sentinel:latest
+    environment:
+      - REDIS_MASTER_HOST=rejson-master
+    ports:
+      - 26379:26379
+    depends_on:
+      - rejson-master
+      - rejson-slave
+
+  # Redis master-slave =========
+  rejson-master:
+    image: redislabs/rejson:latest
+    ports:
+      - 6379:6379
+    environment:
+      - REDIS_REPLICATION_MODE=master
+
+  rejson-slave:
+    image: redislabs/rejson:latest
+    ports:
+      - 6380:6380
+    depends_on:
+      - rejson-master
+    environment:
+      - REDIS_REPLICATION_MODE=slave
+      - REDIS_MASTER_HOST=rejson-master
+    command:
+      - redis-server
+      - --loadmodule
+      - /usr/lib/redis/modules/rejson.so
+      - --port
+      - '6380'
+      - --slaveof
+      - rejson-master
+      - '6379'
