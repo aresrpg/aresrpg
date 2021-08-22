@@ -5,11 +5,11 @@ const hotbar_to_inventory_slot = (slot_id) => slot_id + 36
 export default {
   /** @type {import('../index.js').Reducer} */
   reduce(state, { type, payload }) {
-    if(type === 'packet/held_item_slot') {
+    if (type === 'packet/held_item_slot') {
       const { slotId } = payload
       return {
         ...state,
-        held_slot_index: slotId
+        held_slot_index: slotId,
       }
     }
     if (type === 'packet/block_dig' && payload.status === SWAP_HAND_STATUS) {
