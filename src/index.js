@@ -237,21 +237,6 @@ async function create_context(client) {
   const player_state = await Redis.pull(client.uuid.toLowerCase())
   const controller = new AbortController()
 
-  client.once('end', () => {
-    log.info(
-      { username: client.username, uuid: client.uuid },
-      'Client disconnected'
-    )
-    Redis.push({
-      key: client.uuid.toLowerCase(),
-      value: serialize_state(),
-    }).catch((error) => {
-      // TODO: what to do here if can't save the client ? ;/
-      log.error(error)
-    })
-    controller.abort()
-  })
-
   client.on('error', (error) => log.error(error, 'Client error'))
 
   const actions = new PassThrough({ objectMode: true })
@@ -263,7 +248,9 @@ async function create_context(client) {
     payload,
   }))
 
-  aiter(combineAsyncIterators(actions[Symbol.asyncIterator](), packets))
+  const final_state = aiter(
+    combineAsyncIterators(actions[Symbol.asyncIterator](), packets)
+  )
     .map(transform_action)
     .reduce(
       (last_state, action) => {
@@ -273,6 +260,25 @@ async function create_context(client) {
       },
       { ...initial_state, ...player_state }
     )
+
+  client.once('end', () => {
+    log.info(
+      { username: client.username, uuid: client.uuid },
+      'Client disconnected'
+    )
+    final_state
+      .then((state) =>
+        Redis.push({
+          key: client.uuid.toLowerCase(),
+          value: serialize_state(state),
+        })
+      )
+      .catch((error) => {
+        // TODO: what to do here if we can't save the client ?
+        log.error(error)
+      })
+    controller.abort()
+  })
 
   return {
     client,
@@ -287,7 +293,18 @@ async function create_context(client) {
 }
 
 server.on('login', (client) => {
-  create_context(client).then(observe_client)
+  create_context(client)
+    .then(observe_client)
+    .catch((error) => {
+      log.error({
+        username: client.username,
+        uuid: client.uuid,
+        error,
+      })
+      client.end(
+        'There was a problem while initializing your character, please retry or contact us'
+      )
+    })
 })
 
 observe_performance()
