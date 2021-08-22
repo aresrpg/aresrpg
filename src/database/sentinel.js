@@ -12,28 +12,32 @@ const {
 
 const log = logger(import.meta)
 
-const retryStrategy = (label) => (attempt) => {
-  log.info({ label, attempt }, 'Unable to reach redis, retrying..')
-  if (attempt >= 10) {
-    log.info({ label }, `Can't connect to redis exiting..`)
-    // let a potential kubernetes scheduler do his job here
-    process.exit(1)
-  }
+function retryStrategy(label) {
+  return (attempt) => {
+    log.info({ label, attempt }, 'Unable to reach redis, retrying..')
+    if (attempt >= 10) {
+      log.info({ label }, `Can't connect to redis exiting..`)
+      // let a potential kubernetes scheduler do his job here
+      process.exit(1)
+    }
 
-  return 250 * 2 ** attempt
+    return 250 * 2 ** attempt
+  }
 }
 
-const redis_options = (role, label = role) => ({
-  sentinels: [
-    {
-      host: REDIS_HOST,
-      port: REDIS_SENTINEL_PORT,
-    },
-  ],
-  name: REDIS_MASTER_NAME,
-  role,
-  sentinelRetryStrategy: retryStrategy(label),
-})
+function redis_options(role, label = role) {
+  return {
+    sentinels: [
+      {
+        host: REDIS_HOST,
+        port: REDIS_SENTINEL_PORT,
+      },
+    ],
+    name: REDIS_MASTER_NAME,
+    role,
+    sentinelRetryStrategy: retryStrategy(label),
+  }
+}
 
 export const slave_client = new Redis(redis_options('slave'))
 export const master_client = new Redis(redis_options('master'))
