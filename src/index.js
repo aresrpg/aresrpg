@@ -232,12 +232,16 @@ async function create_context(client) {
     'Client connected'
   )
 
-  /** @type {NodeJS.EventEmitter} */
-  const events = new EventEmitter()
-  const player_state = await Redis.pull(client.uuid.toLowerCase())
   const controller = new AbortController()
 
   client.on('error', (error) => log.error(error, 'Client error'))
+  client.once('end', () => {
+    log.info(
+      { username: client.username, uuid: client.uuid },
+      'Client disconnected'
+    )
+    controller.abort()
+  })
 
   const actions = new PassThrough({ objectMode: true })
 
@@ -248,9 +252,17 @@ async function create_context(client) {
     payload,
   }))
 
-  const final_state = aiter(
-    combineAsyncIterators(actions[Symbol.asyncIterator](), packets)
-  )
+  const save_state = (state) =>
+    Redis.push({
+      key: client.uuid.toLowerCase(),
+      value: serialize_state(state),
+    })
+
+  /** @type {NodeJS.EventEmitter} */
+  const events = new EventEmitter()
+  const player_state = await Redis.pull(client.uuid.toLowerCase())
+
+  aiter(combineAsyncIterators(actions[Symbol.asyncIterator](), packets))
     .map(transform_action)
     .reduce(
       (last_state, action) => {
@@ -260,25 +272,11 @@ async function create_context(client) {
       },
       { ...initial_state, ...player_state }
     )
-
-  client.once('end', () => {
-    log.info(
-      { username: client.username, uuid: client.uuid },
-      'Client disconnected'
-    )
-    final_state
-      .then((state) =>
-        Redis.push({
-          key: client.uuid.toLowerCase(),
-          value: serialize_state(state),
-        })
-      )
-      .catch((error) => {
-        // TODO: what to do here if we can't save the client ?
-        log.error(error)
-      })
-    controller.abort()
-  })
+    .then(save_state)
+    .catch((error) => {
+      // TODO: what to do here if we can't save the client ?
+      log.error(error)
+    })
 
   return {
     client,
