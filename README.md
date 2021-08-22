@@ -96,7 +96,7 @@ Aresrpg is using redis with the rejson module to persist player's state
 
 ```bash
 $ docker-compose up
-$ PERSIST_STORAGE="true" npm start
+$ USE_PERSISTENT_STORAGE="true" npm start
 ```
 
 ## Contributing

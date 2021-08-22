@@ -12,7 +12,8 @@ const {
 
 const log = logger(import.meta)
 
-const probe_status = {
+// will be used when we deploy kubernetes
+export const probe_status = {
   status: true,
 }
 
@@ -40,18 +41,15 @@ const redis_options = (role, label = role) => ({
   sentinelRetryStrategy: retryStrategy(label),
 })
 
-const slave_client = new Redis(redis_options('slave'))
-const master_client = new Redis(redis_options('master'))
+export const slave_client = new Redis(redis_options('slave'))
+export const master_client = new Redis(redis_options('master'))
 
 await Promise.all([
   events.once(slave_client, 'ready'),
   events.once(master_client, 'ready'),
 ])
 
-log.info({ master: true, slave: true }, 'redis cluster initialized')
+log.info('redis cluster initialized')
 
-new Set([master_client, slave_client]).forEach((client) => {
-  client.on('error', () => {})
-})
-
-export { master_client, slave_client, probe_status }
+master_client.on('error', log.error)
+slave_client.on('error', log.error)

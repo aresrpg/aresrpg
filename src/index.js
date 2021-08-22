@@ -48,7 +48,7 @@ import commands_declare from './commands/declare.js'
 import start_debug_server from './debug.js'
 import observe_performance from './performance.js'
 import { abortable } from './iterator.js'
-import database from './database/index.js'
+import Redis from './database/redis.js'
 
 const log = logger(import.meta)
 
@@ -112,6 +112,24 @@ const initial_state = {
   experience: 0,
   health: 40,
 }
+
+// Add here all fields that you want to save in the database
+const serialize_state = ({
+  position,
+  view_distance,
+  inventory,
+  game_mode,
+  experience,
+  health,
+}) =>
+  JSON.stringify({
+    position,
+    view_distance,
+    inventory,
+    game_mode,
+    experience,
+    health,
+  })
 
 /** @template U
  ** @typedef {import('./types').UnionToIntersection<U>} UnionToIntersection */
@@ -216,17 +234,21 @@ async function create_context(client) {
 
   /** @type {NodeJS.EventEmitter} */
   const events = new EventEmitter()
-  const get_state = last_event_value(events, 'state')
-  const storage = database(client)
-  const player_state = await storage.pull()
+  const player_state = await Redis.pull(client.uuid.toLowerCase())
   const controller = new AbortController()
 
-  client.once('end', async () => {
+  client.once('end', () => {
     log.info(
       { username: client.username, uuid: client.uuid },
       'Client disconnected'
     )
-    await storage.push(get_state())
+    Redis.push({
+      key: client.uuid.toLowerCase(),
+      value: serialize_state(),
+    }).catch((error) => {
+      // TODO: what to do here if can't save the client ? ;/
+      log.error(error)
+    })
     controller.abort()
   })
 
@@ -257,16 +279,15 @@ async function create_context(client) {
     world,
     events,
     signal: controller.signal,
-    get_state,
+    get_state: last_event_value(events, 'state'),
     dispatch(type, payload) {
       actions.write({ type, payload })
     },
   }
 }
 
-server.on('login', async (client) => {
-  const context = await create_context(client)
-  observe_client(context)
+server.on('login', (client) => {
+  create_context(client).then(observe_client)
 })
 
 observe_performance()
