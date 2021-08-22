@@ -52,7 +52,7 @@ const Formats = {
 }
 
 const Compose = {
-  no_duplicate:
+  no_duplicates:
     (lines) =>
     ({ text, index }) => {
       const { length } = lines
@@ -82,8 +82,8 @@ const update_sidebar_with =
   ({ last, next }) =>
     next
       .map((text, index) => ({ text, index }))
-      .map(Compose.no_duplicates(next))
       .filter(Compose.only_changes(last))
+      .map(Compose.no_duplicates(next))
       .map(Compose.log)
       .map(Compose.create_packet)
       .forEach((options) => client.write('scoreboard_score', options))
@@ -108,9 +108,8 @@ export default {
     })
 
     aiter(abortable(on(events, 'state', { signal }))).reduce(
-      (last, [{ total_experience }]) => {
-        const { level, remaining_experience } =
-          experience_to_level(total_experience)
+      (last, [{ experience }]) => {
+        const { level, remaining_experience } = experience_to_level(experience)
         const progress = level_progress({ level, remaining_experience })
         const next = Array.from({
           length: 15,
