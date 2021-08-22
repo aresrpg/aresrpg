@@ -12,15 +12,9 @@ const {
 
 const log = logger(import.meta)
 
-// will be used when we deploy kubernetes
-export const probe_status = {
-  status: true,
-}
-
 const retryStrategy = (label) => (attempt) => {
   log.info({ label, attempt }, 'Unable to reach redis, retrying..')
   if (attempt >= 10) {
-    probe_status.status = false
     log.info({ label }, `Can't connect to redis exiting..`)
     // let a potential kubernetes scheduler do his job here
     process.exit(1)
