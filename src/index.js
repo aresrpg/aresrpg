@@ -124,6 +124,7 @@ const serialize_state = ({
   game_mode,
   experience,
   health,
+  held_slot_index
 }) =>
   JSON.stringify({
     position,
@@ -132,6 +133,7 @@ const serialize_state = ({
     game_mode,
     experience,
     health,
+    held_slot_index
   })
 
 /** @template U
