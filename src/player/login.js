@@ -22,7 +22,7 @@ export default {
   /** @type {import('../index.js').Observer} */
   observe({ client, events, world, signal }) {
     events.once('state', (state) => {
-      const { game_mode, position, view_distance } = state
+      const { game_mode, position, view_distance, held_slot_index } = state
       // TODO: move this elsewhere
       const world_names = ['minecraft:overworld']
       // TODO: we should not take the first world of the list
@@ -68,6 +68,8 @@ export default {
 
       load_chunks(state, { client, world, events, chunks: [chunk] })
 
+      client.write('held_item_slot', { slot: held_slot_index })
+
       write_title(client, {
         subtitle: { text: 'Bienvenue sur' },
         title: { text: 'AresRPG' },
@@ -80,6 +82,7 @@ export default {
         ...world.spawn_position,
         y: world.spawn_position.y + 15,
       }
+
       spawn_screen(
         { client, world },
         {

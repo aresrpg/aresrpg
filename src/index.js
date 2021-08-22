@@ -23,6 +23,7 @@ import player_view_distance from './player/view_distance.js'
 import player_chat from './player/chat.js'
 import player_resource_pack from './player/resource_pack.js'
 import player_statistics from './player/statistics.js'
+import player_held_item from './player/held_item.js'
 import player_traders, {
   register as register_player_traders,
 } from './player/traders.js'
@@ -108,6 +109,8 @@ const initial_state = {
   inventory_sequence_number: 0,
   inventory_cursor: null,
   inventory_cursor_index: 0,
+  /** @type {0|1|2|3|4|5|6|7|8} */
+  held_slot_index: 0,
   game_mode: 2,
   experience: 0,
   health: 40,
@@ -161,6 +164,7 @@ function reduce_state(state, action) {
     player_fall_damage.reduce,
     player_deal_damage.reduce,
     player_inventory.reduce,
+    player_held_item.reduce,
     chunk_update.reduce,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
 }
