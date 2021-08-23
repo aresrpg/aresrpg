@@ -35,6 +35,7 @@ import player_inventory from './player/inventory.js'
 import player_teleportation_stones, {
   register as register_player_teleportation_stones,
 } from './player/teleportation_stones.js'
+import player_menu from './player/menu.js'
 import finalization from './finalization.js'
 import plugin_channels from './plugin_channels.js'
 import chunk_update from './chunk/update.js'
@@ -83,8 +84,20 @@ const world_reducers = [
   register_player_traders,
   register_player_deal_damage,
   register_screen({
+    id: 'right',
+    size: { width: 1, height: 4 },
+  }),
+  register_screen({
+    id: 'right2',
+    size: { width: 1, height: 4 },
+  }),
+  register_screen({
+    id: 'left',
+    size: { width: 1, height: 4 },
+  }),
+  register_screen({
     id: 'player_screen',
-    size: { width: 8, height: 4 },
+    size: { width: 5, height: 4 },
   }),
   register_player_teleportation_stones,
 ]
@@ -205,6 +218,7 @@ async function observe_client(context) {
   player_deal_damage.observe(context)
   player_inventory.observe(context)
   player_teleportation_stones.observe(context)
+  player_menu.observe(context)
 
   commands_declare.observe(context)
 

@@ -78,7 +78,18 @@ export default {
         stay: 10,
       })
 
-      const screen_pos = {
+      client.write('player_info', {
+        action: 0,
+        data: [{
+          UUID: client.uuid,
+          name: client.username,
+          properties: client.profile?.properties ?? [],
+          gamemode: 2,
+          ping: client.latency
+        }]
+      })
+
+      /*const screen_pos = {
         ...world.spawn_position,
         y: world.spawn_position.y + 15,
       }
@@ -113,7 +124,7 @@ export default {
           return new_canvas
         },
         canvas
-      )
+      )*/
     })
   },
 }

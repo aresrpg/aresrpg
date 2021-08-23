@@ -4,7 +4,12 @@ import minecraftData from 'minecraft-data'
 import UUID from 'uuid-1345'
 import Vec3 from 'vec3'
 
-import { floor_pos, intersect_ray_plane, to_direction } from '../math.js'
+import {
+  direction_to_yaw_pitch,
+  floor_pos,
+  intersect_ray_plane,
+  to_direction,
+} from '../math.js'
 import { version } from '../settings.js'
 
 const mcData = minecraftData(version)
@@ -28,7 +33,8 @@ export function register_screen({ id, size: { width, height } }) {
 
 export function spawn_item_frame(
   client,
-  { entityId, position: { x, y, z }, rotation: { yaw, pitch } }
+  { entityId, position: { x, y, z }, rotation: { yaw, pitch } },
+  item
 ) {
   client.write('spawn_entity', {
     entityId,
@@ -50,10 +56,15 @@ export function spawn_item_frame(
     entityId,
     metadata: [
       {
+        key: 0,
+        type: 0,
+        value: 0x20,
+      },
+      {
         key: 7,
         value: {
           present: true,
-          itemId: mcData.itemsByName.filled_map.id,
+          itemId: item ? mcData.itemsByName.golden_helmet.id : mcData.itemsByName.filled_map.id,
           itemCount: 1,
           nbtData: {
             type: 'compound',
@@ -74,15 +85,16 @@ export function spawn_item_frame(
 
 export function spawn_screen(
   { client, world },
-  { screen_id, position, direction }
+  { screen_id, position, direction },
+  item = false
 ) {
   const up = Vec3([0, 1, 0])
-  const right = Vec3([1, 0, 0])
   const dir = Vec3(direction).normalize()
   const forward = dir.cross(up)
 
-  const pitch = Math.acos(forward.dot(up)) * (128 / Math.PI) - 128 + 64
-  const yaw = Math.acos(forward.dot(right)) * (128 / Math.PI) - 128 + 64
+  const { yaw, pitch } = direction_to_yaw_pitch(forward)
+
+  console.log('Yaw/pitch', yaw, pitch)
 
   const screen = world.screens[screen_id]
 
@@ -104,7 +116,7 @@ export function spawn_screen(
         entityId: index + start_id,
         position: frame_pos,
         rotation: { yaw, pitch },
-      })
+      }, item)
     }
   }
 }
@@ -134,7 +146,10 @@ export function update_screen(
           const r = new_image_data.data[i]
           const g = new_image_data.data[i + 1]
           const b = new_image_data.data[i + 2]
-          buff[i / 4] = nearestMatch(r, g, b)
+          const a = new_image_data.data[i + 3]
+          if (a === 0) {
+            buff[i / 4] = 0
+          } else buff[i / 4] = nearestMatch(r, g, b)
         }
         client.write('map', {
           itemDamage: start_id + frame_x + frame_y * size.width,
@@ -204,8 +219,8 @@ export function create_screen_canvas(screen) {
   const { size } = screen
   const canvas = createCanvas(size.width * 128, size.height * 128)
   const ctx = canvas.getContext('2d')
-  ctx.fillStyle = 'black'
-  ctx.fillRect(0, 0, size.width * 128, size.height * 128)
+  // ctx.fillStyle = 'black'
+  // ctx.fillRect(0, 0, size.width * 128, size.height * 128)
   return { canvas, ctx }
 }
 

@@ -14,7 +14,7 @@ const FORBIDDEN_SLOTS = [
   8, // Boots
 ]
 
-const BlockDigStatus = {
+export const BlockDigStatus = {
   STARTED_DIGGING: 0,
   CANCELLED_DIGGING: 1,
   FINISHED_DIGGING: 2,
