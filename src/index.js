@@ -238,18 +238,18 @@ async function create_context(client) {
   )
 
   const controller = new AbortController()
+  const actions = new PassThrough({ objectMode: true })
 
   client.once('end', () => {
     log.info(
       { username: client.username, uuid: client.uuid },
       'Client disconnected'
     )
+    actions.end()
     controller.abort()
   })
 
   client.on('error', (error) => log.error(error, 'Client error'))
-
-  const actions = new PassThrough({ objectMode: true })
 
   const packets = aiter(
     abortable(on(client, 'packet', { signal: controller.signal }))
