@@ -49,7 +49,7 @@ import commands_declare from './commands/declare.js'
 import start_debug_server from './debug.js'
 import observe_performance from './performance.js'
 import { abortable } from './iterator.js'
-import Redis from './database/redis.js'
+import Database from './database.js'
 
 const log = logger(import.meta)
 
@@ -117,7 +117,7 @@ const initial_state = {
 }
 
 // Add here all fields that you want to save in the database
-const serialize_state = ({
+const saved_state = ({
   position,
   view_distance,
   inventory,
@@ -125,16 +125,15 @@ const serialize_state = ({
   experience,
   health,
   held_slot_index,
-}) =>
-  JSON.stringify({
-    position,
-    view_distance,
-    inventory,
-    game_mode,
-    experience,
-    health,
-    held_slot_index,
-  })
+}) => ({
+  position,
+  view_distance,
+  inventory,
+  game_mode,
+  experience,
+  health,
+  held_slot_index,
+})
 
 /** @template U
  ** @typedef {import('./types').UnionToIntersection<U>} UnionToIntersection */
@@ -259,15 +258,20 @@ async function create_context(client) {
     payload,
   }))
 
-  const save_state = (state) =>
-    Redis.push({
+  const save_state = (state) => {
+    log.info(
+      { username: client.username, uuid: client.uuid },
+      'Saving to database'
+    )
+    Database.push({
       key: client.uuid.toLowerCase(),
-      value: serialize_state(state),
+      value: saved_state(state),
     })
+  }
 
   /** @type {NodeJS.EventEmitter} */
   const events = new EventEmitter()
-  const player_state = await Redis.pull(client.uuid.toLowerCase())
+  const player_state = await Database.pull(client.uuid.toLowerCase())
 
   aiter(combineAsyncIterators(actions[Symbol.asyncIterator](), packets))
     .map(transform_action)
