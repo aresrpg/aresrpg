@@ -119,7 +119,6 @@ const initial_state = {
 // Add here all fields that you want to save in the database
 const saved_state = ({
   position,
-  view_distance,
   inventory,
   game_mode,
   experience,
@@ -127,7 +126,6 @@ const saved_state = ({
   held_slot_index,
 }) => ({
   position,
-  view_distance,
   inventory,
   game_mode,
   experience,
