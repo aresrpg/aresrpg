@@ -12,7 +12,6 @@ import rt from './rt.js'
 import tg from './tg.js'
 import thug from './thug.js'
 import msg from './msg.js'
-import test from './test.js'
 
 export function write_error({ sender }) {
   sender.write('chat', {
@@ -70,9 +69,6 @@ export default function execute_command({ world, message, sender }) {
       break
     case 'thug':
       thug(command)
-      break
-    case 'test':
-      test(command)
       break
 
     default:

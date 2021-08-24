@@ -39,7 +39,6 @@ import mobs_goto from './mobs/goto.js'
 import mobs_target from './mobs/target.js'
 import commands_declare from './commands/declare.js'
 import start_debug_server from './debug.js'
-import bot from './bot/bot.js'
 
 const log = logger(import.meta)
 
@@ -47,6 +46,7 @@ const server = protocol.createServer({
   version,
   'online-mode': online_mode,
   motd: 'AresRPG',
+  port: 25567,
   favicon: `data:image/png;base64,${fs.readFileSync(
     join(dirname(fileURLToPath(import.meta.url)), '../media/favicon.png'),
     'base64'
@@ -223,7 +223,6 @@ export const debug = start_debug_server({ world })
 
 server.once('listening', () => {
   log.info(server.socketServer.address(), 'Listening')
-  bot.execute('connected', 'message')
 })
 
 process.on('unhandledRejection', (error) => {
