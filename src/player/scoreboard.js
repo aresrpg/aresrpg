@@ -53,16 +53,16 @@ const Formats = {
 
 const Compose = {
   no_duplicates:
-    (lines) =>
+    lines =>
     ({ text, index }) => {
       const { length } = lines
         .slice(0, index)
-        .filter((current_text) => current_text === text)
+        .filter(current_text => current_text === text)
 
       return { text: `${text}${MAGIC_RESET.repeat(length)}`, index }
     },
   only_changes:
-    (source) =>
+    source =>
     ({ text, index }) =>
       source.at(index) !== text,
   create_packet: ({ text, index }) => ({
@@ -71,14 +71,14 @@ const Compose = {
     itemName: text.slice(0, 40),
     value: index + 1,
   }),
-  log: (identity) => {
+  log: identity => {
     log.info(identity, 'scoreboard update')
     return identity
   },
 }
 
 const update_sidebar_with =
-  (client) =>
+  client =>
   ({ last, next }) =>
     next
       .map((text, index) => ({ text, index }))
@@ -86,14 +86,14 @@ const update_sidebar_with =
       .map(Compose.no_duplicates(next))
       .map(Compose.log)
       .map(Compose.create_packet)
-      .forEach((options) => client.write('scoreboard_score', options))
+      .forEach(options => client.write('scoreboard_score', options))
 
 export default {
   /** @type {import('../index.js').Observer} */
   observe({ events, dispatch, signal, client, get_state }) {
     const update_sidebar = update_sidebar_with(client)
 
-    events.once('state', (state) => {
+    events.once('state', state => {
       client.write('scoreboard_objective', {
         name: SCOREBOARD_NAME,
         action: Actions.OBJECTIVE_CREATE,
