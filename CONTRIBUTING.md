@@ -1,14 +1,26 @@
-# Contributing to AresRPG
-
 If you want to contribute come on [Discord](https://discord.gg/gaqrFT5) to chat with us beforehand
 
-## Workflow
+- [Workflow](#workflow)
+- [Code Style](#code-style)
+- [Architecture](#architecture)
+  - [State Management Pattern](#state-management-pattern)
+    - [State](#state)
+    - [Actions](#actions)
+    - [View](#view)
+  - [World](#world)
+  - [Chat components](#chat-components)
+  - [Distributed Server](#distributed-server)
+    - [Distributed Network Connections](#distributed-network-connections)
+    - [Seamless World Game Server](#seamless-world-game-server)
+    - [Responsibility-Oriented Game Server](#responsibility-oriented-game-server)
+
+# Workflow
 
 We use the [GitHub Flow](https://guides.github.com/introduction/flow/) to handle contributions
 
 Branch are usually merged with a fast-forward merge (sometimes with a rebase beforehand if no conflict happens)
 
-## Code Style
+# Code Style
 
 This codebase try to follow the [Declarative Programming](https://en.wikipedia.org/wiki/Declarative_programming) Paradigm,
 if you don't know this paradigm you can still contribute. Try to learn it while developing your contribution it's not required
@@ -113,6 +125,23 @@ listen to it on all the others
 You can add data to the world using a function called a `register` function.
 
 A register function take the world as argument and return a new world
+
+## Chat components
+
+Minecraft chat components are [quite verbose](https://wiki.vg/Chat#Colors), we provide a more handy way of writing them
+
+```js
+import compose from './chat_component'
+
+const component = [
+  compose('hello').green.bold,
+  compose('world').yellow.raw({
+    extra: [compose('!').underline.bold],
+    hoverEvent: ...
+  })
+]
+client.write('chat', JSON.stringify(component))
+```
 
 ## Distributed Server
 
