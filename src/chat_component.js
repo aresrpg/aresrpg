@@ -52,7 +52,7 @@ export default function (text) {
             return composable_component
           }
         throw new Error(
-          `Property ${property} is not supported in chat components`
+          `Property ${property?.toString()} is not supported in chat components`
         )
       },
     }
