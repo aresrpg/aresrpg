@@ -50,6 +50,7 @@ export function register(world) {
 
     const actions = new PassThrough({ objectMode: true })
     const events = new EventEmitter()
+    events.setMaxListeners(Infinity)
 
     const entity_id = world.next_entity_id + i
 
