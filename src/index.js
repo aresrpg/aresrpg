@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url'
 import protocol from 'minecraft-protocol'
 import { aiter } from 'iterator-helper'
 import combineAsyncIterators from 'combine-async-iterators'
+import pino from 'pino'
 
 import { online_mode, version } from './settings.js'
 import { last_event_value } from './events.js'
@@ -284,7 +285,7 @@ async function create_context(client) {
     .then(save_state)
     .catch(error => {
       // TODO: what to do here if we can't save the client ?
-      log.error(error)
+      log.error(error, 'State error')
     })
 
   return {
@@ -303,11 +304,14 @@ server.on('login', client => {
   create_context(client)
     .then(observe_client)
     .catch(error => {
-      log.error({
-        username: client.username,
-        uuid: client.uuid,
-        error,
-      })
+      log.error(
+        {
+          username: client.username,
+          uuid: client.uuid,
+          error: pino.stdSerializers.err(error),
+        },
+        'Create context error'
+      )
       client.end(
         'There was a problem while initializing your character, please retry or contact us'
       )
