@@ -71,6 +71,18 @@ function unload_chunk({ client, x, z }) {
   })
 }
 
+function unload_signal({ events, x, z }) {
+  const controller = new AbortController()
+
+  aiter(on(events, 'chunk_unloaded'))
+    .filter(([chunk]) => chunk.x === x && chunk.z === z)
+    .take(0) // TODO: should be 1, seems to be a iterator-helper bug
+    .toArray()
+    .then(() => controller.abort())
+
+  return controller.signal
+}
+
 export async function load_chunks(state, { client, events, world, chunks }) {
   const points = chunks.map(({ x, z }) => ({ x, y: z }))
   const sorted = sort_by_distance(
@@ -82,7 +94,11 @@ export async function load_chunks(state, { client, events, world, chunks }) {
   )
   for (const { x, y } of sorted) {
     await load_chunk({ client, world, x, z: y })
-    events.emit('chunk_loaded', { x, z: y })
+    events.emit('chunk_loaded', {
+      x,
+      z: y,
+      signal: unload_signal({ events, x, z: y }),
+    })
 
     // Loading one chunk is cpu intensive, wait for next tick to avoid
     // starving the event loop for too long
