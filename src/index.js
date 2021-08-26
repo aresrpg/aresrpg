@@ -36,6 +36,8 @@ import player_inventory from './player/inventory.js'
 import player_teleportation_stones, {
   register as register_player_teleportation_stones,
 } from './player/teleportation_stones.js'
+import player_tablist from './player/tablist.js'
+import player_sync from './player/sync.js'
 import finalization from './finalization.js'
 import plugin_channels from './plugin_channels.js'
 import chunk_update from './chunk/update.js'
@@ -203,6 +205,8 @@ async function observe_client(context) {
   player_deal_damage.observe(context)
   player_inventory.observe(context)
   player_teleportation_stones.observe(context)
+  player_tablist.observe(context)
+  player_sync.observe(context)
 
   commands_declare.observe(context)
 
