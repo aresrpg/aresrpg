@@ -2,108 +2,89 @@ import { on } from 'events'
 
 import { aiter } from 'iterator-helper'
 
+import update_sidebar_for from '../scoreboard/update_sidebar.js'
 import { abortable } from '../iterator.js'
-import logger from '../logger.js'
+import package_json from '../../package.json'
 
 import { experience_to_level, level_progress } from './experience.js'
 
-const log = logger(import.meta)
-
-const Positions = {
-  LIST: 0,
-  SIDEBAR: 1,
-  BELOW_NAME: 2,
-}
-
-const Actions = {
-  OBJECTIVE_CREATE: 0,
-  OBJECTIVE_REMOVE: 1,
-  OBJECTIVE_UPDATE: 2,
-  SCORE_UPSERT: 0,
-  SCORE_REMOVE: 1,
-}
-
-const INTEGER_TYPE = 0
 const SCOREBOARD_NAME = 'aresrpg'
+const CREATE_OBJECTIVE_ACTION = 0
+const INTEGER_TYPE = 0
+const SIDEBAR_POSITION = 1
 const PROGRESS_SQUARES_CHAR = '▀'
 const PROGRESS_SQUARES_AMOUNT = 12
 const KARES_FORMATER = Intl.NumberFormat('en', { notation: 'compact' })
-const MAGIC_RESET = '§r'
 
-const Formats = {
-  CLASS: ({ name, level, progress }) =>
-    `§f§l${name} §7[Lvl §2${level}§7] (§a${progress}§f%§7)`,
+const Slots = {
+  EMPTY_GROUP_SLOT: { color: 'gray', text: '-' },
+  CLASS: ({ name, level, progress }) => [
+    { text: `${name}`, color: 'white', bold: true },
+    { text: ' [Lvl ', color: 'gray' },
+    { text: `${level}`, color: 'dark_green', reset: false },
+    { text: '] (', color: 'gray' },
+    { text: `${Math.round(progress * 100)}`, color: 'green' },
+    { text: '%', color: 'white' },
+    { text: ')', color: 'gray' },
+  ],
+
   PROGRESS: ({ progress }) => {
-    const amount = (PROGRESS_SQUARES_AMOUNT * progress) / 100
-    const full_squares = '§a' + PROGRESS_SQUARES_CHAR.repeat(amount)
-    const empty_squares =
-      '§8' + PROGRESS_SQUARES_CHAR.repeat(PROGRESS_SQUARES_AMOUNT - amount)
-    return `${full_squares}${empty_squares}`
+    const percent_progress = Math.round(progress * 100)
+    const amount = (PROGRESS_SQUARES_AMOUNT * percent_progress) / 100
+    return [
+      { color: 'green', text: PROGRESS_SQUARES_CHAR.repeat(amount) },
+      {
+        color: 'dark_gray',
+        text: PROGRESS_SQUARES_CHAR.repeat(PROGRESS_SQUARES_AMOUNT - amount),
+      },
+    ]
   },
-  SOUL: ({ soul }) => `§7Ame: §d${soul}§f%`,
+  SOUL: ({ soul }) => [
+    { text: 'Ame: ', color: 'gray' },
+    { text: `${soul}`, color: 'light_purple' },
+    { text: '%', color: 'white' },
+  ],
   KARES: ({ kares }) => {
     const formatted = KARES_FORMATER.formatToParts(kares).map(
       ({ value }) => value
     )
     const amount = formatted.slice(0, -1).join('')
     const compact = formatted.at(-1)
-    return `§7kAres: §6${amount}§f${compact}`
+    return [
+      { text: 'kAres: ', color: 'gray' },
+      { text: `${amount}`, color: 'gold' },
+      { text: `${compact}`, color: 'white' },
+    ]
   },
 }
-
-const Compose = {
-  no_duplicates:
-    lines =>
-    ({ text, index }) => {
-      const { length } = lines
-        .slice(0, index)
-        .filter(current_text => current_text === text)
-
-      return { text: `${text}${MAGIC_RESET.repeat(length)}`, index }
-    },
-  only_changes:
-    source =>
-    ({ text, index }) =>
-      source.at(index) !== text,
-  create_packet: ({ text, index }) => ({
-    scoreName: SCOREBOARD_NAME,
-    action: Actions.SCORE_UPSERT,
-    itemName: text.slice(0, 40),
-    value: index + 1,
-  }),
-  log: identity => {
-    log.info(identity, 'scoreboard update')
-    return identity
-  },
-}
-
-const update_sidebar_with =
-  client =>
-  ({ last, next }) =>
-    next
-      .map((text, index) => ({ text, index }))
-      .filter(Compose.only_changes(last))
-      .map(Compose.no_duplicates(next))
-      .map(Compose.log)
-      .map(Compose.create_packet)
-      .forEach(options => client.write('scoreboard_score', options))
 
 export default {
   /** @type {import('../index.js').Observer} */
   observe({ events, dispatch, signal, client, get_state }) {
-    const update_sidebar = update_sidebar_with(client)
+    const update_sidebar = update_sidebar_for({
+      client,
+      scoreboard_name: SCOREBOARD_NAME,
+    })
 
     events.once('state', state => {
       client.write('scoreboard_objective', {
         name: SCOREBOARD_NAME,
-        action: Actions.OBJECTIVE_CREATE,
-        displayText: JSON.stringify({ text: '§6Ares§lRPG §7[§oV1§r§7]' }),
+        action: CREATE_OBJECTIVE_ACTION,
+        displayText: JSON.stringify([
+          { text: 'Ares', color: 'gold' },
+          { text: 'RPG ', bold: true },
+          {
+            text: `v${package_json.version}`,
+            italic: true,
+            color: 'dark_gray',
+          },
+        ]),
         type: INTEGER_TYPE,
       })
 
       client.write('scoreboard_display_objective', {
         name: SCOREBOARD_NAME,
-        position: Positions.SIDEBAR,
+        position: SIDEBAR_POSITION,
       })
     })
 
@@ -114,20 +95,20 @@ export default {
         const next = Array.from({
           length: 15,
           14: '',
-          13: Formats.CLASS({ name: 'Sram', level, progress }),
-          12: Formats.PROGRESS({ progress }),
-          11: Formats.SOUL({ soul: 100 }),
-          10: Formats.KARES({ kares: 0 }),
+          13: Slots.CLASS({ name: 'Sram', level, progress }),
+          12: Slots.PROGRESS({ progress }),
+          11: Slots.SOUL({ soul: 100 }),
+          10: Slots.KARES({ kares: 0 }),
           9: '',
-          8: '§7§nGroupe:',
-          7: '§7-',
-          6: '§7-',
-          5: '§7-',
-          4: '§7-',
-          3: '§7-',
-          2: '§7-',
+          8: { color: 'gray', underline: true, text: 'Groupe:' },
+          7: Slots.EMPTY_GROUP_SLOT,
+          6: Slots.EMPTY_GROUP_SLOT,
+          5: Slots.EMPTY_GROUP_SLOT,
+          4: Slots.EMPTY_GROUP_SLOT,
+          3: Slots.EMPTY_GROUP_SLOT,
+          2: Slots.EMPTY_GROUP_SLOT,
           1: '',
-          0: '§owww.aresrpg.fr',
+          0: { italic: true, text: '   www.aresrpg.fr   ' },
         })
 
         update_sidebar({ last, next })
