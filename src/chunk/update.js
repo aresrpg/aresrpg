@@ -10,7 +10,7 @@ import {
   square_difference,
   square_symmetric_difference,
 } from '../math.js'
-import { PLAYER_ENTITY_ID } from '../index.js'
+import { PLAYER_ENTITY_ID } from '../context.js'
 import { abortable } from '../iterator.js'
 
 function fix_light(chunk) {
@@ -114,7 +114,7 @@ export function unload_chunks(state, { client, events, chunks, world }) {
 }
 
 export default {
-  /** @type {import('../index.js').Reducer} */
+  /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
     if (type === 'teleport') {
       return {
@@ -130,7 +130,7 @@ export default {
     }
     return state
   },
-  /** @type {import('../index.js').Observer} */
+  /** @type {import('../context.js').Observer} */
   observe({ client, events, world, signal }) {
     aiter(abortable(on(events, 'state', { signal })))
       .map(([{ position, view_distance, teleport }]) => ({

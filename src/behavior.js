@@ -17,8 +17,7 @@ import look_at_player from './behavior/look_at_player.js'
 import random from './behavior/random.js'
 import sleep from './behavior/sleep.js'
 import repeat from './behavior/repeat.js'
-
-import { debug } from './index.js'
+import { debug } from './context.js'
 
 const log = logger(import.meta)
 

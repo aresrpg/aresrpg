@@ -280,7 +280,7 @@ function on_window_click({ world, client, dispatch, get_state }) {
   }
 }
 
-/** @param {import('../index.js').InitialWorld} world */
+/** @param {import('../context.js').InitialWorld} world */
 export function register(world) {
   return {
     ...world,
@@ -303,7 +303,7 @@ export function register(world) {
 }
 
 export default {
-  /** @type {import('../index.js').Observer} */
+  /** @type {import('../context.js').Observer} */
   observe(context) {
     const { events, client } = context
     events.on('chunk_loaded', on_chunk_loaded(context))
