@@ -5,7 +5,7 @@ import { aiter } from 'iterator-helper'
 import { abortable } from '../iterator.js'
 
 export default {
-  /** @type {import('../index.js').Observer} */
+  /** @type {import('../context.js').Observer} */
   observe({ client, events, signal }) {
     aiter(abortable(on(events, 'state', { signal }))).reduce(
       (last_health, [{ health }]) => {
