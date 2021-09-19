@@ -6,7 +6,7 @@ import { chunk_position } from '../chunk.js'
 import { write_brand } from '../plugin_channels.js'
 import { dimension_codec, overworld } from '../world/codec.js'
 import { load_chunks } from '../chunk/update.js'
-import { PLAYER_ENTITY_ID } from '../index.js'
+import { PLAYER_ENTITY_ID } from '../context.js'
 import { abortable } from '../iterator.js'
 
 import { write_title } from './title.js'
@@ -19,7 +19,7 @@ import {
 } from './screen.js'
 
 export default {
-  /** @type {import('../index.js').Observer} */
+  /** @type {import('../context.js').Observer} */
   observe({ client, events, world, signal }) {
     events.once('state', state => {
       const { game_mode, position, view_distance, held_slot_index } = state

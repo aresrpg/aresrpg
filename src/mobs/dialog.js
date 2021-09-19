@@ -23,7 +23,7 @@ export function speak_to(mob, { client }) {
 }
 
 export default {
-  /** @type {import('../index.js').Observer} */
+  /** @type {import('../context.js').Observer} */
   observe({ client, world }) {
     const right_click = 2
     client.on('use_entity', ({ target, mouse, sneaking }) => {

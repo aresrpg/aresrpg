@@ -3,7 +3,7 @@ const SWAP_HAND_STATUS = 6
 const hotbar_to_inventory_slot = slot_id => slot_id + 36
 
 export default {
-  /** @type {import('../index.js').Reducer} */
+  /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
     if (type === 'packet/held_item_slot') {
       const { slotId } = payload

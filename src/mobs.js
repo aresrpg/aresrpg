@@ -32,7 +32,7 @@ function observe_mobs(mobs) {
   path_end(mobs)
 }
 
-/** @param {import('./index.js').InitialWorld} world */
+/** @param {import('./context.js').InitialWorld} world */
 export function register(world) {
   const mobs = world.mobs.map(({ position, mob, level }, i) => {
     const initial_state = {
