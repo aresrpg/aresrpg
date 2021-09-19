@@ -52,7 +52,7 @@
     "@babel/core": "7.15.0",
     "@babel/eslint-parser": "7.15.0",
     "@hydre/pino-human": "1.2.0",
-    "@mermaid-js/mermaid-cli": "8.11.0",
+    "@mermaid-js/mermaid-cli": "8.12.1",
     "@types/node": "16.4.10",
     "eslint": "7.32.0",
     "eslint-config-prettier": "8.3.0",
