@@ -11,7 +11,7 @@ const Categories = {
 }
 
 export default {
-  /** @type {import('../index.js').Observer} */
+  /** @type {import('../context.js').Observer} */
   observe({ client }) {
     client.on('client_command', actionId => {
       if (actionId.actionId === 1) {

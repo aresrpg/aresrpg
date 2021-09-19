@@ -7,7 +7,7 @@ import { empty_slot, item_to_slot } from '../items.js'
 
 const mcData = minecraft_data(version)
 
-/** @param {import('../index.js').InitialWorld} world */
+/** @param {import('../context.js').InitialWorld} world */
 export function register(world) {
   const by_chunk = world.traders.reduce((map, { x, z, y, name }, i) => {
     const chunk_x = chunk_position(x)
@@ -46,7 +46,7 @@ export function register(world) {
   }
 }
 
-/** @type {import('../index.js').Observer} */
+/** @type {import('../context.js').Observer} */
 function spawn_merchants({ client, events, world }) {
   const { by_chunk } = world.traders
   const { id: type } = mcData.entitiesByName.villager
@@ -99,7 +99,7 @@ function spawn_merchants({ client, events, world }) {
   })
 }
 
-/** @type {import('../index.js').Observer} */
+/** @type {import('../context.js').Observer} */
 function open_trade({ client, world }) {
   const { windowIds } = world.traders
   const right_click = 2
@@ -136,7 +136,7 @@ function open_trade({ client, world }) {
   })
 }
 
-/** @type {import('../index.js').Observer} */
+/** @type {import('../context.js').Observer} */
 function look_player({ client, world, events }) {
   events.on('state', ({ position: { x, z } }) => {
     const { by_chunk } = world.traders
@@ -170,7 +170,7 @@ function look_player({ client, world, events }) {
 }
 
 export default {
-  /** @type {import('../index.js').Observer} */
+  /** @type {import('../context.js').Observer} */
   observe(context) {
     spawn_merchants(context)
     open_trade(context)

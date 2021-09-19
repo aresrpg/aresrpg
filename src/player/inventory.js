@@ -3,7 +3,7 @@ import { on } from 'events'
 import { aiter } from 'iterator-helper'
 
 import { empty_slot, item_to_slot } from '../items.js'
-import { PLAYER_INVENTORY_ID } from '../index.js'
+import { PLAYER_INVENTORY_ID } from '../context.js'
 import { abortable } from '../iterator.js'
 
 const FORBIDDEN_SLOTS = [
@@ -26,7 +26,7 @@ const BlockDigStatus = {
 }
 
 export default {
-  /** @type {import('../index.js').Reducer} */
+  /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
     if (type === 'packet/window_click') {
       const { windowId, slot, mode } = payload
@@ -67,7 +67,7 @@ export default {
     }
     return state
   },
-  /** @type {import('../index.js').Observer} */
+  /** @type {import('../context.js').Observer} */
   observe({ client, events, world, get_state, signal }) {
     const to_slot = item =>
       item ? item_to_slot(world.items[item.type], item.count) : empty_slot

@@ -8,7 +8,7 @@ import { abortable } from '../iterator.js'
 const log = logger(import.meta)
 
 export default {
-  /** @type {import('../index.js').Reducer} */
+  /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
     if (type === 'fall_damage') {
       const { damage } = payload
@@ -24,7 +24,7 @@ export default {
     return state
   },
 
-  /** @type {import('../index.js').Observer} */
+  /** @type {import('../context.js').Observer} */
   observe({ events, dispatch, signal }) {
     aiter(abortable(on(events, 'state', { signal }))).reduce(
       (

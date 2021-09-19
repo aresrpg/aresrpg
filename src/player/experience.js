@@ -143,7 +143,7 @@ export function level_progress({ level, remaining_experience }) {
 }
 
 export default {
-  /** @type {import('../index.js').Observer} */
+  /** @type {import('../context.js').Observer} */
   observe({ client, events, signal }) {
     aiter(abortable(on(events, 'state', { signal }))).reduce(
       (last_total_experience, [{ experience: total_experience }]) => {

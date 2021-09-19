@@ -210,7 +210,7 @@ export function create_screen_canvas(screen) {
 }
 
 export default {
-  /** @type {import('../index.js').Observer} */
+  /** @type {import('../context.js').Observer} */
   observe({ client, events, world }) {
     client.on('arm_animation', ({ hand }) => {
       events.once('state', state => {
