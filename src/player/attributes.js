@@ -1,7 +1,7 @@
-import { PLAYER_ENTITY_ID } from '../index.js'
+import { PLAYER_ENTITY_ID } from '../context.js'
 
 export default {
-  /** @type {import('../index.js').Observer} */
+  /** @type {import('../context.js').Observer} */
   observe({ client, events }) {
     events.once('state', () => {
       client.write('entity_update_attributes', {

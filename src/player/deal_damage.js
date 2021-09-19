@@ -7,7 +7,7 @@ import { abortable } from '../iterator.js'
 
 export const DAMAGE_INDICATORS_AMMOUNT = 5
 
-/** @param {import('../index.js').InitialWorld} world */
+/** @param {import('../context.js').InitialWorld} world */
 export function register(world) {
   return {
     ...world,
@@ -20,7 +20,7 @@ export function register(world) {
 }
 
 export default {
-  /** @type {import('../index.js').Reducer} */
+  /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
     if (type === 'create_damage_indicator') {
       const { position, damage } = payload
@@ -43,7 +43,7 @@ export default {
     return state
   },
 
-  /** @type {import('../index.js').Observer} */
+  /** @type {import('../context.js').Observer} */
   observe({ events, dispatch, client, world, signal }) {
     events.on('mob_damage', ({ mob, damage }) => {
       const position = mob.position()

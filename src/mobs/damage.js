@@ -28,7 +28,7 @@ export default {
     return state
   },
 
-  /** @type {import('../index.js').Observer} */
+  /** @type {import('../context.js').Observer} */
   observe({ client, world, events, signal }) {
     client.on('use_entity', ({ target, mouse }) => {
       if (mouse === Mouse.LEFT_CLICK) {

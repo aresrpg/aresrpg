@@ -12,7 +12,7 @@ const Status = {
 }
 
 export default {
-  /** @type {import('../index.js').Observer} */
+  /** @type {import('../context.js').Observer} */
   async observe({ client }) {
     client.write('resource_pack_send', {
       url: 'https://github.com/aresrpg/resourcepacks/releases/download/v1.0.1/addon.zip',
