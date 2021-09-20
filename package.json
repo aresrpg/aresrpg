@@ -43,7 +43,7 @@
     "iterator-helper": "1.3.4",
     "minecraft-data": "2.93.0",
     "minecraft-protocol": "1.26.5",
-    "pino": "6.11.1",
+    "pino": "6.13.2",
     "prismarine-provider-anvil": "2.4.0",
     "vec3": "0.1.7",
     "xmldom": "0.6.0"
