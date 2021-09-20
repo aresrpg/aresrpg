@@ -42,9 +42,5 @@ const extract_modifiers = ({ text, extra = [], color, ...modifiers }) => {
     .join('')}`
 }
 
-// sending chat components is great but it's adding extra reset chars
-// between all components parts (even extra)
-// which increase way too much the length of the scoreboard line
-// makes the client crash, so we need to convert back to string
 export default raw_component =>
   normalize(raw_component).map(extract_modifiers).join('')
