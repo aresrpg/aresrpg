@@ -1,4 +1,4 @@
-import normalize from './normalize.js'
+import { normalize_chat_component } from '../chat.js'
 
 const Colors = {
   GREEN: '§a',
@@ -28,7 +28,7 @@ const Modifiers = {
   RESET: '§r',
 }
 
-const extract_modifiers = ({ text, extra = [], color, ...modifiers }) => {
+const component_to_legacy = ({ text, extra = [], color, ...modifiers }) => {
   const inline_modifiers = Object.entries(Modifiers).reduce(
     (combined, [key, value]) => {
       if (modifiers[key.toLowerCase()]) return `${combined}${value}`
@@ -38,9 +38,12 @@ const extract_modifiers = ({ text, extra = [], color, ...modifiers }) => {
   )
 
   return `${Colors[color?.toUpperCase()] ?? ''}${inline_modifiers}${text}${extra
-    .map(extract_modifiers)
+    .map(components_to_legacy)
     .join('')}`
 }
 
-export default raw_component =>
-  normalize(raw_component).map(extract_modifiers).join('')
+export default function components_to_legacy(raw_component) {
+  return normalize_chat_component(raw_component)
+    .map(component_to_legacy)
+    .join('')
+}

@@ -1,9 +1,9 @@
 import equals from 'fast-deep-equal'
 
-import inline_component from './inline_component.js'
-import normalize from './normalize.js'
+import { normalize_chat_component, MAGIC_RESET } from '../chat.js'
 
-const MAGIC_RESET = '§r'
+import inline_component from './inline_component.js'
+
 const Action = {
   UPSERT: 0,
   REMOVE: 1,
@@ -13,7 +13,7 @@ function no_duplicates(components) {
   return ({ component, index }) => {
     const { length } = components
       .slice(0, index)
-      .map(normalize)
+      .map(normalize_chat_component)
       .filter(current_component => equals(current_component, component))
 
     const [first, ...tail] = component
@@ -30,7 +30,7 @@ function no_duplicates(components) {
 
 function only_changes(components) {
   return ({ component, index }) =>
-    !equals(components.map(normalize)[index], component)
+    !equals(components.map(normalize_chat_component)[index], component)
 }
 
 function create_packets(scoreName, last) {
@@ -51,17 +51,16 @@ function create_packets(scoreName, last) {
 }
 
 function write_packets(client) {
-  return packets =>
-    packets.forEach(packet => client.write('scoreboard_score', packet))
+  return packet => client.write('scoreboard_score', packet)
 }
 
 export default function ({ client, scoreboard_name }) {
   return ({ last, next }) =>
     next
-      .map(normalize)
+      .map(normalize_chat_component)
       .map((component, index) => ({ component, index }))
       .filter(only_changes(last))
       .map(no_duplicates(next))
-      .map(create_packets(scoreboard_name, last))
+      .flatMap(create_packets(scoreboard_name, last))
       .forEach(write_packets(client))
 }

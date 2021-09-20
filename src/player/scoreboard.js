@@ -12,38 +12,32 @@ const SCOREBOARD_NAME = 'aresrpg'
 const CREATE_OBJECTIVE_ACTION = 0
 const INTEGER_TYPE = 0
 const SIDEBAR_POSITION = 1
-const PROGRESS_SQUARES_CHAR = '▀'
-const PROGRESS_SQUARES_AMOUNT = 12
 const KARES_FORMATER = Intl.NumberFormat('en', { notation: 'compact' })
 
 const Slots = {
   EMPTY_GROUP_SLOT: { color: 'gray', text: '-' },
-  CLASS: ({ name, level, progress }) => [
-    { text: `${name}`, color: 'white', bold: true },
-    { text: ' [Lvl ', color: 'gray' },
+  CLASS: ({ name }) => [
+    { text: `${name} `, color: 'white', bold: true },
+    { text: '(', color: 'gray' },
+    { text: 'none', color: 'white', italic: true }, // faction
+    { text: ')', color: 'gray' },
+  ],
+
+  PROGRESS: ({ level, progress }) => [
+    { text: 'Lvl: ', color: 'gray' },
     { text: `${level}`, color: 'dark_green', reset: false },
-    { text: '] (', color: 'gray' },
+    { text: ' (', color: 'gray' },
     { text: `${Math.round(progress * 100)}`, color: 'green' },
     { text: '%', color: 'white' },
     { text: ')', color: 'gray' },
   ],
 
-  PROGRESS: ({ progress }) => {
-    const percent_progress = Math.round(progress * 100)
-    const amount = (PROGRESS_SQUARES_AMOUNT * percent_progress) / 100
-    return [
-      { color: 'green', text: PROGRESS_SQUARES_CHAR.repeat(amount) },
-      {
-        color: 'dark_gray',
-        text: PROGRESS_SQUARES_CHAR.repeat(PROGRESS_SQUARES_AMOUNT - amount),
-      },
-    ]
-  },
   SOUL: ({ soul }) => [
     { text: 'Ame: ', color: 'gray' },
     { text: `${soul}`, color: 'light_purple' },
     { text: '%', color: 'white' },
   ],
+
   KARES: ({ kares }) => {
     const formatted = KARES_FORMATER.formatToParts(kares).map(
       ({ value }) => value
@@ -59,7 +53,7 @@ const Slots = {
 }
 
 export default {
-  /** @type {import('../index.js').Observer} */
+  /** @type {import('../context.js').Observer} */
   observe({ events, dispatch, signal, client, get_state }) {
     const update_sidebar = update_sidebar_for({
       client,
@@ -95,8 +89,8 @@ export default {
         const next = Array.from({
           length: 15,
           14: '',
-          13: Slots.CLASS({ name: 'Sram', level, progress }),
-          12: Slots.PROGRESS({ progress }),
+          13: Slots.CLASS({ name: 'Sram' }),
+          12: Slots.PROGRESS({ level, progress }),
           11: Slots.SOUL({ soul: 100 }),
           10: Slots.KARES({ kares: 0 }),
           9: '',
