@@ -50,7 +50,7 @@
   },
   "devDependencies": {
     "@babel/core": "7.15.5",
-    "@babel/eslint-parser": "7.15.0",
+    "@babel/eslint-parser": "7.15.7",
     "@hydre/pino-human": "1.3.0",
     "@mermaid-js/mermaid-cli": "8.13.0",
     "@types/node": "16.10.2",
