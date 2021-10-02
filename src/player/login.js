@@ -8,8 +8,8 @@ import { dimension_codec, overworld } from '../world/codec.js'
 import { load_chunks } from '../chunk/update.js'
 import { PLAYER_ENTITY_ID } from '../context.js'
 import { abortable } from '../iterator.js'
+import { write_title } from '../title.js'
 
-import { write_title } from './title.js'
 import { set_world_border } from './world_border.js'
 import {
   copy_canvas,
@@ -70,12 +70,14 @@ export default {
 
       client.write('held_item_slot', { slot: held_slot_index })
 
-      write_title(client, {
-        subtitle: { text: 'Bienvenue sur' },
-        title: { text: 'AresRPG' },
-        fadeIn: 5,
-        fadeOut: 2,
-        stay: 10,
+      write_title({
+        client,
+        subtitle: { text: 'Welcome on AresRPG' },
+        times: {
+          fadeIn: 2,
+          fadeOut: 2,
+          stay: 10,
+        },
       })
 
       const screen_pos = {
