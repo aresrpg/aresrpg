@@ -89,7 +89,7 @@ export default {
         const next = Array.from({
           length: 15,
           14: '',
-          13: Slots.CLASS({ name: 'Sram' }),
+          13: Slots.CLASS({ name: '<Classe>' }),
           12: Slots.PROGRESS({ level, progress }),
           11: Slots.SOUL({ soul: 100 }),
           10: Slots.KARES({ kares: 0 }),
