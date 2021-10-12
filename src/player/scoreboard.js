@@ -38,7 +38,7 @@ const Slots = {
     { text: '%', color: 'white' },
   ],
 
-  KARES: ({ kares }) => {
+  KARES({ kares }) {
     const formatted = KARES_FORMATER.formatToParts(kares).map(
       ({ value }) => value
     )
