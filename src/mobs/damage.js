@@ -19,6 +19,7 @@ export default {
       log.info({ damage, health }, 'Deal Damage')
 
       return {
+        first_damager: damager,
         ...state,
         last_damager: damager,
         health,
@@ -51,6 +52,10 @@ export default {
               entityStatus: health > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
             })
             events.emit('mob_damage', { mob, damage: last_health - health })
+
+            if (health === 0) {
+              events.emit('mob_death', { mob })
+            }
           }
           return health
         })

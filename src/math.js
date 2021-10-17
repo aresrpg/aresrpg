@@ -89,13 +89,20 @@ export function square_difference(
   return res
 }
 
-export function distance_squared({ x: ax, y: ay }, { x: bx, y: by }) {
+export function distance2d_squared({ x: ax, y: ay }, { x: bx, y: by }) {
   return (ax - bx) ** 2 + (ay - by) ** 2
 }
 
-export function sort_by_distance(center, positions) {
+export function distance3d_squared(
+  { x: ax, y: ay, z: az },
+  { x: bx, y: by, z: bz }
+) {
+  return (ax - bx) ** 2 + (ay - by) ** 2 + (az - bz) ** 2
+}
+
+export function sort_by_distance2d(center, positions) {
   return positions.slice(0).sort((a, b) => {
-    return distance_squared(center, a) - distance_squared(center, b)
+    return distance2d_squared(center, a) - distance2d_squared(center, b)
   })
 }
 

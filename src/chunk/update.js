@@ -6,7 +6,7 @@ import { aiter } from 'iterator-helper'
 import { chunk_position, same_chunk } from '../chunk.js'
 import { position_equal } from '../position.js'
 import {
-  sort_by_distance,
+  sort_by_distance2d,
   square_difference,
   square_symmetric_difference,
 } from '../math.js'
@@ -85,7 +85,7 @@ function unload_signal({ events, x, z }) {
 
 export async function load_chunks(state, { client, events, world, chunks }) {
   const points = chunks.map(({ x, z }) => ({ x, y: z }))
-  const sorted = sort_by_distance(
+  const sorted = sort_by_distance2d(
     {
       x: chunk_position(state.position.x),
       y: chunk_position(state.position.z),
