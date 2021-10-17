@@ -10,6 +10,7 @@
     "allowSyntheticDefaultImports": true,
     "declaration": true,
     "emitDeclarationOnly": true,
+    "resolveJsonModule": true,
     "outDir": "types"
   }
 }
