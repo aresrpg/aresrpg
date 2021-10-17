@@ -1,4 +1,4 @@
-import { Position } from '../player/chat.js'
+import { Position } from '../chat.js'
 
 import { write_error } from './commands.js'
 import { ParserProperties, literal, string, entity } from './declare_options.js'

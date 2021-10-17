@@ -2,24 +2,19 @@ import nbt from 'prismarine-nbt'
 import minecraftData from 'minecraft-data'
 
 import { item_to_slot } from '../items.js'
-import { version } from '../settings.js'
 import logger from '../logger.js'
 import execute_command from '../commands/commands.js'
+import { VERSION } from '../settings.js'
+import { world_chat_msg } from '../chat.js'
 
-const mcData = minecraftData(version)
+const mcData = minecraftData(VERSION)
 const log = logger(import.meta)
-
-export const Position = {
-  CHAT: 0, // appears in the chat box
-  SYSTEM_MESSAGE: 1, // appears in the chat box
-  GAME_INFO: 2, // appears above the hotbar
-}
 
 function is_command_function(message) {
   return message.trimStart()[0] === '/'
 }
 
-export function slot_to_chat({ nbtData, itemCount, itemId }) {
+function slot_to_chat({ nbtData, itemCount, itemId }) {
   const tag = nbt.simplify(nbtData)
   const { name } = mcData.items[itemId]
 
@@ -37,15 +32,6 @@ export function slot_to_chat({ nbtData, itemCount, itemId }) {
   return chat
 }
 
-export function write_chat_msg({ world }, { message, client: { uuid } }) {
-  const options = {
-    message,
-    position: Position.CHAT,
-    sender: uuid,
-  }
-  world.events.emit('chat', options)
-}
-
 export default {
   /** @type {import('../context.js').Observer} */
   observe({ client, get_state, world }) {
@@ -54,7 +40,7 @@ export default {
 
       if (is_command_function(message)) {
         log.info({ sender: client.uuid, command: message }, 'Command')
-        execute_command({ world, message, sender: client })
+        execute_command({ world, message, sender: client, get_state })
         return
       } else {
         log.info({ sender: client.uuid, message }, 'Message')
@@ -82,10 +68,11 @@ export default {
           formatted_message,
         ],
       }
-      write_chat_msg(
-        { world },
-        { message: JSON.stringify(message_for_client), client }
-      )
+      world_chat_msg({
+        world,
+        message: JSON.stringify(message_for_client),
+        client,
+      })
     })
     const on_chat = options => client.write('chat', options)
     const on_private_message = ({ receiver_username, options }) => {

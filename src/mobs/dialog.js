@@ -1,4 +1,4 @@
-import { Position } from '../player/chat.js'
+import { Position } from '../chat.js'
 
 import { Types } from './types.js'
 

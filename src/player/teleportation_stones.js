@@ -1,10 +1,10 @@
 import UUID from 'uuid-1345'
 import minecraftData from 'minecraft-data'
 
-import { version } from '../settings.js'
+import { VERSION } from '../settings.js'
 import { chunk_position } from '../chunk.js'
 import { empty_slot, item_to_slot } from '../items.js'
-const mcData = minecraftData(version)
+const mcData = minecraftData(VERSION)
 
 // TODO: export that outside, but where ?
 const CURSOR = { windowId: -1, slot: -1 }

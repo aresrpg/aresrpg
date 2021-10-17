@@ -1,9 +1,9 @@
 import UUID from 'uuid-1345'
 import minecraftData from 'minecraft-data'
 
-import { version } from './settings.js'
+import { VERSION } from './settings.js'
 
-const mcData = minecraftData(version)
+const mcData = minecraftData(VERSION)
 
 /**
  * create an armor_stand to create

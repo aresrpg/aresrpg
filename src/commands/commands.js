@@ -1,4 +1,4 @@
-import { Position } from '../player/chat.js'
+import { Position } from '../chat.js'
 
 import gamemode from './gamemode.js'
 import dislike from './dislike.js'
@@ -12,6 +12,7 @@ import rt from './rt.js'
 import tg from './tg.js'
 import thug from './thug.js'
 import msg from './msg.js'
+import enjin from './enjin.js'
 
 export function write_error({ sender }) {
   sender.write('chat', {
@@ -24,13 +25,14 @@ export function write_error({ sender }) {
   })
 }
 
-export default function execute_command({ world, message, sender }) {
+export default function execute_command({ world, message, sender, get_state }) {
   const [name, ...args] = message.trimStart().split(/\s+/)
   const command = {
     name: name.slice(1),
     args,
     sender,
     world,
+    get_state,
   }
   switch (command.name) {
     case 'msg':
@@ -69,6 +71,9 @@ export default function execute_command({ world, message, sender }) {
       break
     case 'thug':
       thug(command)
+      break
+    case 'enjin':
+      enjin(command)
       break
 
     default:

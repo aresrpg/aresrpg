@@ -6,7 +6,7 @@ import { chunk_position } from '../chunk.js'
 import { write_brand } from '../plugin_channels.js'
 import { dimension_codec, overworld } from '../world/codec.js'
 import { load_chunks } from '../chunk/update.js'
-import { PLAYER_ENTITY_ID } from '../context.js'
+import { PLAYER_ENTITY_ID } from '../settings.js'
 import { abortable } from '../iterator.js'
 import { write_title } from '../title.js'
 

@@ -5,14 +5,14 @@ import { fileURLToPath } from 'url'
 import pino from 'pino'
 import protocol from 'minecraft-protocol'
 
-import { online_mode, version } from './settings.js'
+import { ONLINE_MODE, VERSION } from './settings.js'
 import logger from './logger.js'
 
 const log = logger(import.meta)
 
 const server = protocol.createServer({
-  version,
-  'online-mode': online_mode,
+  version: VERSION,
+  'online-mode': ONLINE_MODE,
   motd: 'AresRPG',
   favicon: `data:image/png;base64,${fs.readFileSync(
     join(dirname(fileURLToPath(import.meta.url)), '../media/favicon.png'),

@@ -1,0 +1,8 @@
+query get_identity($uuid: String!) {
+  EnjinUser(name: $uuid) {
+    identities {
+      id
+      linkingCode
+    }
+  }
+}

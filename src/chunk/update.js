@@ -10,7 +10,7 @@ import {
   square_difference,
   square_symmetric_difference,
 } from '../math.js'
-import { PLAYER_ENTITY_ID } from '../context.js'
+import { PLAYER_ENTITY_ID } from '../settings.js'
 import { abortable } from '../iterator.js'
 
 function fix_light(chunk) {

@@ -1,8 +1,8 @@
 import minecraftData from 'minecraft-data'
 
-import { version } from './settings.js'
+import { VERSION } from './settings.js'
 
-const mcData = minecraftData(version)
+const mcData = minecraftData(VERSION)
 
 const Types = {
   equipment: {
