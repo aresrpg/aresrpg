@@ -14,6 +14,9 @@ const FORBIDDEN_SLOTS = [
   8, // Boots
 ]
 
+export const USABLE_INVENTORY_START = 9
+export const USABLE_INVENTORY_END = 44
+
 const BlockDigStatus = {
   STARTED_DIGGING: 0,
   CANCELLED_DIGGING: 1,

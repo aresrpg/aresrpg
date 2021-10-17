@@ -33,6 +33,10 @@ import player_teleportation_stones, {
 } from './player/teleportation_stones.js'
 import player_tablist from './player/tablist.js'
 import player_sync from './player/sync.js'
+import player_item_loot, {
+  register as register_player_item_loot,
+  ITEM_LOOT_MAX_COUNT,
+} from './player/item_loot.js'
 import finalization from './finalization.js'
 import plugin_channels from './plugin_channels.js'
 import chunk_update from './chunk/update.js'
@@ -48,6 +52,7 @@ import mobs_goto from './mobs/goto.js'
 import mobs_target from './mobs/target.js'
 import mobs_look_at from './mobs/look_at.js'
 import mobs_wakeup from './mobs/wakeup.js'
+import mobs_loot from './mobs/loot.js'
 import commands_declare from './commands/declare.js'
 import start_debug_server from './debug.js'
 import blockchain from './blockchain.js'
@@ -78,6 +83,7 @@ const world_reducers = [
     size: { width: 8, height: 4 },
   }),
   register_player_teleportation_stones,
+  register_player_item_loot,
 ]
 
 /** @type {World} */
@@ -96,6 +102,10 @@ const initial_state = {
   damage_indicators: {
     pool: Array.from({ length: DAMAGE_INDICATORS_AMMOUNT }),
     cursor: -1,
+  },
+  looted_items: {
+    pool: Array.from({ length: ITEM_LOOT_MAX_COUNT }),
+    cursor: 0,
   },
   inventory_sequence_number: 0,
   inventory_cursor: null,
@@ -179,6 +189,7 @@ function reduce_state(state, action) {
     player_deal_damage.reduce,
     player_inventory.reduce,
     player_held_item.reduce,
+    player_item_loot.reduce,
     blockchain.reduce,
     chunk_update.reduce,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
@@ -227,6 +238,7 @@ export async function observe_client(context) {
   player_tablist.observe(context)
   player_sync.observe(context)
   player_scoreboard.observe(context)
+  player_item_loot.observe(context)
 
   commands_declare.observe(context)
 
@@ -239,6 +251,7 @@ export async function observe_client(context) {
   mobs_target.observe(context)
   mobs_look_at.observe(context)
   mobs_wakeup.observe(context)
+  mobs_loot.observe(context)
 
   chunk_update.observe(context)
 }

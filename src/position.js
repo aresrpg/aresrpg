@@ -16,3 +16,8 @@ export function block_center_position({ x, y, z }) {
 
 export const position_equal = (a, b) =>
   a?.x === b?.x && a?.y === b?.y && a?.z === b?.z
+
+export const block_position_equal = (a, b) =>
+  Math.floor(a?.x) === Math.floor(b?.x) &&
+  Math.floor(a?.y) === Math.floor(b?.y) &&
+  Math.floor(a?.z) === Math.floor(b?.z)
