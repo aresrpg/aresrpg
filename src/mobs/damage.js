@@ -21,7 +21,6 @@ export default {
       return {
         ...state,
         last_damager: damager,
-        last_damage: damage,
         health,
       }
     }
@@ -43,19 +42,18 @@ export default {
     })
 
     events.on('mob_spawned', ({ mob, signal }) => {
-      aiter(abortable(on(mob.events, 'state', { signal }))).reduce(
-        (last_health, [{ health, last_damage }]) => {
+      aiter(abortable(on(mob.events, 'state', { signal })))
+        .map(([{ health }]) => health)
+        .reduce((last_health, health) => {
           if (last_health !== health) {
             client.write('entity_status', {
               entityId: mob.entity_id,
               entityStatus: health > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
             })
-            events.emit('mob_damage', { mob, damage: last_damage })
+            events.emit('mob_damage', { mob, damage: last_health - health })
           }
           return health
-        },
-        null
-      )
+        })
     })
   },
 }
