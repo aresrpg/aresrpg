@@ -16,6 +16,7 @@ export const Action = {
   DEATH: 'DEATH',
   RESYNC_INVENTORY: 'RESYNC_INVENTORY',
   GAMEMODE: 'GAMEMODE',
+  ADD_EXPERIENCE: 'ADD_EXPERIENCE',
 }
 
 export const Context = {

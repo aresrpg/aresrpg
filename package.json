@@ -48,6 +48,7 @@
     "pino": "7.0.5",
     "prismarine-provider-anvil": "2.4.0",
     "pusher-js": "7.0.3",
+    "uuid-1345": "^1.0.2",
     "vec3": "0.1.7",
     "xmldom": "0.6.0"
   },
