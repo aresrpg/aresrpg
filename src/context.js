@@ -8,7 +8,9 @@ import { last_event_value, Context } from './events.js'
 import { floor1 } from './world.js'
 import logger from './logger.js'
 import player_login from './player/login.js'
-import player_experience from './player/experience.js'
+import player_experience, {
+  register as register_experience,
+} from './player/experience.js'
 import player_attributes from './player/attributes.js'
 import player_health from './player/health.js'
 import player_fall_damage from './player/fall_damage.js'
@@ -82,6 +84,7 @@ const world_reducers = [
   register_mobs_position,
   register_player_traders,
   register_player_deal_damage,
+  register_experience,
   register_player_teleportation_stones,
   register_player_item_loot,
 ]
@@ -205,6 +208,7 @@ function reduce_state(state, action) {
     player_item_loot.reduce,
     player_soul.reduce,
     player_health.reduce,
+    player_experience.reduce,
     blockchain.reduce,
     chunk_update.reduce,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)

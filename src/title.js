@@ -10,6 +10,7 @@ const empty_component = { text: '' }
 
 /**
  * Send a title to a client, all times are in seconds
+ * @param {{ client: any, title?: any, subtitle?: any, times?: any }} arg
  */
 export function write_title({
   client,
