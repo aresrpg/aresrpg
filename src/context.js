@@ -4,7 +4,7 @@ import { PassThrough } from 'stream'
 import { aiter } from 'iterator-helper'
 import combineAsyncIterators from 'combine-async-iterators'
 
-import { last_event_value } from './events.js'
+import { last_event_value, Context } from './events.js'
 import { floor1 } from './world.js'
 import player_screen, { register_screen } from './player/screen.js'
 import logger from './logger.js'
@@ -318,7 +318,7 @@ export async function create_context(client) {
     .reduce(
       (last_state, action) => {
         const state = reduce_state(last_state, action)
-        events.emit('state', state)
+        events.emit(Context.STATE, state)
         return state
       },
       { ...initial_state, ...player_state }
@@ -329,7 +329,7 @@ export async function create_context(client) {
       log.error(error, 'State error')
     })
 
-  const get_state = last_event_value(events, 'state')
+  const get_state = last_event_value(events, Context.STATE)
 
   return {
     client,

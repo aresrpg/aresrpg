@@ -9,6 +9,7 @@ import { distance3d_squared } from '../math.js'
 import { block_position_equal } from '../position.js'
 import { VERSION, PLAYER_ENTITY_ID } from '../settings.js'
 import { item_to_slot } from '../items.js'
+import { Action, Context } from '../events.js'
 
 import { USABLE_INVENTORY_START, USABLE_INVENTORY_END } from './inventory.js'
 
@@ -61,7 +62,7 @@ function spawn_item_entity({ client, entity_id, item, world }) {
 export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
-    if (type === 'loot_item') {
+    if (type === Action.LOOT_ITEM) {
       const { type, count, position } = payload
       const cursor = (state.looted_items.cursor + 1) % ITEM_LOOT_MAX_COUNT
       const pool = [
@@ -75,7 +76,7 @@ export default {
         looted_items: { cursor, pool },
       }
     }
-    if (type === 'pick_item') {
+    if (type === Action.PICK_ITEM) {
       const position = state.looted_items.pool.indexOf(payload)
       if (position === -1) return state
 
@@ -127,7 +128,7 @@ export default {
   },
   /** @type {import('../context.js').Observer} */
   observe({ client, events, signal, dispatch, world }) {
-    aiter(abortable(on(events, 'state', { signal })))
+    aiter(abortable(on(events, Context.STATE, { signal })))
       .map(([{ looted_items }]) => looted_items)
       .reduce((last_looted_items, looted_items) => {
         if (last_looted_items !== looted_items) {
@@ -169,7 +170,7 @@ export default {
         return looted_items
       })
 
-    aiter(abortable(on(events, 'state', { signal })))
+    aiter(abortable(on(events, Context.STATE, { signal })))
       .map(([{ position, looted_items }]) => ({ position, looted_items }))
       .reduce(
         (
@@ -188,7 +189,7 @@ export default {
             )
 
             for (const item of near_items) {
-              dispatch('pick_item', item)
+              dispatch(Action.PICK_ITEM, item)
             }
           }
 

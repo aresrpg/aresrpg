@@ -3,6 +3,7 @@ import minecraftData from 'minecraft-data'
 
 import { VERSION } from '../settings.js'
 import { chunk_position } from '../chunk.js'
+import { Action, Context } from '../events.js'
 import { empty_slot, item_to_slot } from '../items.js'
 const mcData = minecraftData(VERSION)
 
@@ -256,7 +257,10 @@ function on_window_click({ world, client, dispatch, get_state }) {
       if (slot >= 0 && slot < available_teleportations_stones.length) {
         if (available_teleportations_stones[slot]) {
           client.write('close_window', { windowId })
-          dispatch('teleport', available_teleportations_stones[slot].position)
+          dispatch(
+            Action.TELEPORT,
+            available_teleportations_stones[slot].position
+          )
         }
       }
       const { inventory } = get_state()
@@ -306,8 +310,8 @@ export default {
   /** @type {import('../context.js').Observer} */
   observe(context) {
     const { events, client } = context
-    events.on('chunk_loaded', on_chunk_loaded(context))
-    events.on('chunk_unloaded', on_chunk_unloaded(context))
+    events.on(Context.CHUNK_LOADED, on_chunk_loaded(context))
+    events.on(Context.CHUNK_UNLOADED, on_chunk_unloaded(context))
 
     client.on('use_entity', on_use_entity(context))
     client.on('window_click', on_window_click(context))

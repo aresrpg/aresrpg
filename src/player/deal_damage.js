@@ -2,8 +2,9 @@ import { on } from 'events'
 
 import { aiter } from 'iterator-helper'
 
-import { create_armor_stand } from '../armor_stand.js'
 import { abortable } from '../iterator.js'
+import { Action, Context } from '../events.js'
+import { create_armor_stand } from '../armor_stand.js'
 
 export const DAMAGE_INDICATORS_AMMOUNT = 5
 
@@ -22,7 +23,7 @@ export function register(world) {
 export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
-    if (type === 'create_damage_indicator') {
+    if (type === Action.DAMAGE_INDICATOR) {
       const { position, damage } = payload
       const cursor =
         (state.damage_indicators.cursor + 1) % DAMAGE_INDICATORS_AMMOUNT
@@ -45,7 +46,7 @@ export default {
 
   /** @type {import('../context.js').Observer} */
   observe({ events, dispatch, client, world, signal }) {
-    events.on('mob_damage', ({ mob, damage }) => {
+    events.on(Context.mo, ({ mob, damage }) => {
       const position = mob.position()
       const { height } = mob.constants
 
@@ -54,10 +55,10 @@ export default {
         y: position.y + height - 0.25 + (Math.random() * 2 - 1) * 0.15,
         z: position.z + (Math.random() * 2 - 1) * 0.25,
       }
-      dispatch('create_damage_indicator', { position: final_pos, damage })
+      dispatch(Action.DAMAGE_INDICATOR, { position: final_pos, damage })
     })
 
-    aiter(abortable(on(events, 'state', { signal }))).reduce(
+    aiter(abortable(on(events, Context.STATE, { signal }))).reduce(
       (
         { cursor: last_cursor, handles },
         [

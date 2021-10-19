@@ -2,6 +2,7 @@ import { on } from 'events'
 
 import { aiter } from 'iterator-helper'
 
+import { MobAction, Context, Mob } from '../events.js'
 import logger from '../logger.js'
 import { abortable } from '../iterator.js'
 
@@ -12,7 +13,7 @@ const Mouse = {
 
 export default {
   reduce_mob(state, { type, payload }) {
-    if (type === 'deal_damage') {
+    if (type === MobAction.DEAL_DAMAGE) {
       const { damage, damager } = payload
       const health = Math.max(0, state.health - damage)
 
@@ -34,7 +35,7 @@ export default {
       if (mouse === Mouse.LEFT_CLICK) {
         const mob = world.mobs.by_entity_id(target)
         if (mob) {
-          mob.dispatch('deal_damage', {
+          mob.dispatch(MobAction.DEAL_DAMAGE, {
             damage: 1,
             damager: client.uuid,
           })
@@ -42,8 +43,8 @@ export default {
       }
     })
 
-    events.on('mob_spawned', ({ mob, signal }) => {
-      aiter(abortable(on(mob.events, 'state', { signal })))
+    events.on(Context.MOB_SPAWNED, ({ mob, signal }) => {
+      aiter(abortable(on(mob.events, Mob.STATE, { signal })))
         .map(([{ health }]) => health)
         .reduce((last_health, health) => {
           if (last_health !== health) {
@@ -51,10 +52,13 @@ export default {
               entityId: mob.entity_id,
               entityStatus: health > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
             })
-            events.emit('mob_damage', { mob, damage: last_health - health })
+            events.emit(Context.MOB_DAMAGE, {
+              mob,
+              damage: last_health - health,
+            })
 
             if (health === 0) {
-              events.emit('mob_death', { mob })
+              events.emit(Context.MOB_DEATH, { mob })
             }
           }
           return health

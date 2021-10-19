@@ -4,6 +4,7 @@ import minecraftData from 'minecraft-data'
 import UUID from 'uuid-1345'
 import Vec3 from 'vec3'
 
+import { Context } from '../events.js'
 import { floor_pos, intersect_ray_plane, to_direction } from '../math.js'
 import { VERSION } from '../settings.js'
 
@@ -213,13 +214,13 @@ export default {
   /** @type {import('../context.js').Observer} */
   observe({ client, events, world }) {
     client.on('arm_animation', ({ hand }) => {
-      events.once('state', state => {
+      events.once(Context.STATE, state => {
         const { position } = state
         for (const [screen_id, screen] of Object.entries(world.screens)) {
           const intersect = screen_ray_intersection(screen, position)
           if (intersect) {
             const { x, y } = intersect
-            events.emit('screen_interract', {
+            events.emit(Context.SCREEN_INTERRACT, {
               x,
               y,
               screen_id,

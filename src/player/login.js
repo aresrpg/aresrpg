@@ -9,6 +9,7 @@ import { load_chunks } from '../chunk/update.js'
 import { PLAYER_ENTITY_ID } from '../settings.js'
 import { abortable } from '../iterator.js'
 import { write_title } from '../title.js'
+import { Context } from '../events.js'
 
 import { set_world_border } from './world_border.js'
 import {
@@ -21,7 +22,7 @@ import {
 export default {
   /** @type {import('../context.js').Observer} */
   observe({ client, events, world, signal }) {
-    events.once('state', state => {
+    events.once(Context.STATE, state => {
       const { game_mode, position, view_distance, held_slot_index } = state
       // TODO: move this elsewhere
       const world_names = ['minecraft:overworld']
@@ -96,7 +97,7 @@ export default {
 
       const { canvas } = create_screen_canvas(world.screens.player_screen)
 
-      aiter(abortable(on(events, 'screen_interract', { signal }))).reduce(
+      aiter(abortable(on(events, Context.SCREEN_INTERRACT, { signal }))).reduce(
         (old_canvas, [{ x, y, screen_id, hand }]) => {
           const new_canvas = copy_canvas(old_canvas)
 

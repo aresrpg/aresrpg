@@ -5,6 +5,7 @@ import { aiter } from 'iterator-helper'
 import { empty_slot, item_to_slot } from '../items.js'
 import { PLAYER_INVENTORY_ID } from '../settings.js'
 import { abortable } from '../iterator.js'
+import { Context } from '../events.js'
 
 const FORBIDDEN_SLOTS = [
   0, // Craft Output
@@ -81,7 +82,7 @@ export default {
         items: inventory.map(to_slot),
       })
 
-    aiter(abortable(on(events, 'state', { signal }))).reduce(
+    aiter(abortable(on(events, Context.STATE, { signal }))).reduce(
       (
         last_sequence_number,
         [{ inventory, inventory_cursor, inventory_sequence_number }]
