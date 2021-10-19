@@ -5,6 +5,7 @@ import { aiter } from 'iterator-helper'
 import update_sidebar_for from '../scoreboard/update_sidebar.js'
 import { abortable } from '../iterator.js'
 import package_json from '../../package.json'
+import { Context } from '../events.js'
 
 import { experience_to_level, level_progress } from './experience.js'
 
@@ -60,7 +61,7 @@ export default {
       scoreboard_name: SCOREBOARD_NAME,
     })
 
-    events.once('state', state => {
+    events.once(Context.STATE, state => {
       client.write('scoreboard_objective', {
         name: SCOREBOARD_NAME,
         action: CREATE_OBJECTIVE_ACTION,
@@ -82,7 +83,7 @@ export default {
       })
     })
 
-    aiter(abortable(on(events, 'state', { signal }))).reduce(
+    aiter(abortable(on(events, Context.STATE, { signal }))).reduce(
       (last, [{ experience }]) => {
         const { level, remaining_experience } = experience_to_level(experience)
         const progress = level_progress({ level, remaining_experience })

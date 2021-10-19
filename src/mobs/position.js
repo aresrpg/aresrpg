@@ -4,6 +4,7 @@ import EventEmitter, { on } from 'events'
 import { aiter } from 'iterator-helper'
 
 import { chunk_position, same_chunk, chunk_index } from '../chunk.js'
+import { Context, Mob } from '../events.js'
 
 import { path_to_positions } from './path.js'
 
@@ -12,7 +13,7 @@ export function register(world) {
   const mobs_positions = new EventEmitter()
 
   for (const mob of world.mobs.all) {
-    const state = aiter(on(mob.events, 'state')).map(([state]) => state)
+    const state = aiter(on(mob.events, Mob.STATE)).map(([state]) => state)
 
     const positions = path_to_positions(state)
 
@@ -62,14 +63,14 @@ export default function observe_world({ mobs }) {
 
   /** @type {import('../context.js').Observer} */
   function observe({ events }) {
-    events.on('chunk_loaded', ({ x, z, signal }) => {
+    events.on(Context.CHUNK_LOADED, ({ x, z, signal }) => {
       actions.write({
         type: 'client_chunk_loaded',
         payload: { events, x, z, signal },
       })
     })
 
-    events.on('chunk_unloaded', ({ x, z }) =>
+    events.on(Context.CHUNK_UNLOADED, ({ x, z }) =>
       actions.write({
         type: 'client_chunk_unloaded',
         payload: { events, x, z },
@@ -82,14 +83,14 @@ export default function observe_world({ mobs }) {
       const mobs = mobs_by_chunk.get(chunk_index(x, z)) ?? []
 
       if (type === 'client_chunk_loaded')
-        payload.events.emit('chunk_loaded_with_mobs', {
+        payload.events.emit(Context.CHUNK_LOADED_WITH_MOBS, {
           mobs,
           x,
           z,
           signal: payload.signal,
         })
       else if (type === 'client_chunk_unloaded')
-        payload.events.emit('chunk_unloaded_with_mobs', { mobs, x, z })
+        payload.events.emit(Context.CHUNK_UNLOADED_WITH_MOBS, { mobs, x, z })
       else if (type === 'mob_position') {
         const { mob, last_position, position } = payload
 

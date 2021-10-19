@@ -7,13 +7,14 @@ import { chunk_position, chunk_index } from '../chunk.js'
 import { direction_to_yaw_pitch } from '../math.js'
 import { position_equal } from '../position.js'
 import { abortable } from '../iterator.js'
+import { Context } from '../events.js'
 
 import { despawn_mobs, spawn_mob } from './spawn.js'
 
 export default {
   /** @type {import('../context.js').Observer} */
   observe({ client, events, world, inside_view }) {
-    events.on('chunk_loaded_with_mobs', ({ x, z, signal }) => {
+    events.on(Context.CHUNK_LOADED_WITH_MOBS, ({ x, z, signal }) => {
       aiter(
         abortable(on(world.mobs.positions, chunk_index(x, z), { signal }))
       ).forEach(([{ mob, position, last_position, target }]) => {

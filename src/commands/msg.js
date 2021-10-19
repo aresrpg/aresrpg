@@ -1,4 +1,5 @@
 import { Position } from '../chat.js'
+import { World } from '../events.js'
 
 import { write_error } from './commands.js'
 import { ParserProperties, literal, string, entity } from './declare_options.js'
@@ -40,5 +41,8 @@ export default function msg({ world, sender, args }) {
     sender: sender.uuid,
   }
 
-  world.events.emit('private_message', { receiver_username: username, options })
+  world.events.emit(World.PRIVATE_MESSAGE, {
+    receiver_username: username,
+    options,
+  })
 }

@@ -4,6 +4,7 @@ import UUID from 'uuid-1345'
 import { chunk_position, chunk_index } from '../chunk.js'
 import { VERSION } from '../settings.js'
 import { empty_slot, item_to_slot } from '../items.js'
+import { Context } from '../events.js'
 
 const mcData = minecraft_data(VERSION)
 
@@ -50,7 +51,7 @@ export function register(world) {
 function spawn_merchants({ client, events, world }) {
   const { by_chunk } = world.traders
   const { id: type } = mcData.entitiesByName.villager
-  events.on('chunk_loaded', ({ x: chunk_x, z: chunk_z }) => {
+  events.on(Context.CHUNK_LOADED, ({ x: chunk_x, z: chunk_z }) => {
     if (by_chunk.has(chunk_index(chunk_x, chunk_z))) {
       for (const { id, name, x, y, z } of by_chunk.get(
         chunk_index(chunk_x, chunk_z)
@@ -90,7 +91,7 @@ function spawn_merchants({ client, events, world }) {
     }
   })
 
-  events.on('chunk_unloaded', ({ x, z }) => {
+  events.on(Context.CHUNK_UNLOADED, ({ x, z }) => {
     if (by_chunk.has(chunk_index(x, z))) {
       client.write('entity_destroy', {
         entityIds: by_chunk.get(chunk_index(x, z)).map(({ id }) => id),
@@ -138,7 +139,7 @@ function open_trade({ client, world }) {
 
 /** @type {import('../context.js').Observer} */
 function look_player({ client, world, events }) {
-  events.on('state', ({ position: { x, z } }) => {
+  events.on(Context.STATE, ({ position: { x, z } }) => {
     const { by_chunk } = world.traders
     const x_chunks = [
       chunk_position(x) - 1,

@@ -6,6 +6,7 @@ import logger from '../logger.js'
 import execute_command from '../commands/commands.js'
 import { VERSION } from '../settings.js'
 import { world_chat_msg } from '../chat.js'
+import { World } from '../events.js'
 
 const mcData = minecraftData(VERSION)
 const log = logger(import.meta)
@@ -79,12 +80,12 @@ export default {
       if (receiver_username === client.username) client.write('chat', options)
     }
 
-    world.events.on('chat', on_chat)
-    world.events.on('private_message', on_private_message)
+    world.events.on(World.CHAT, on_chat)
+    world.events.on(World.PRIVATE_MESSAGE, on_private_message)
 
     client.once('end', () => {
-      world.events.off('chat', on_chat)
-      world.events.off('private_message', on_private_message)
+      world.events.off(World.CHAT, on_chat)
+      world.events.off(World.PRIVATE_MESSAGE, on_private_message)
     })
   },
 }

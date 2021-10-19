@@ -1,6 +1,7 @@
 import logger from '../logger.js'
 import { ENJIN_APP_ID } from '../settings.js'
 import { client_chat_msg } from '../chat.js'
+import { Action, Context } from '../events.js'
 
 import { Events, emitter } from './pusher.js'
 import Queries from './graphql/index.js'
@@ -49,7 +50,7 @@ export default {
 
   reduce(state, { type, payload }) {
     switch (type) {
-      case 'enjin/state':
+      case Action.ENJIN:
         return {
           ...state,
           enjin: {
@@ -76,7 +77,7 @@ export default {
 
       if (linkingCode) {
         // the user doesn't have an ETH wallet
-        dispatch('enjin/state', {
+        dispatch(Action.ENJIN, {
           identity_id: id,
           wallet_linking_code: linkingCode,
           wallet_linked: false,
@@ -103,7 +104,7 @@ export default {
         const { value: kares } = balances.find(
           ({ token }) => token.id === Items.KARES
         ) ?? { value: 0 }
-        dispatch('enjin/state', {
+        dispatch(Action.ENJIN, {
           kares,
           items,
           identity_id: id,
@@ -114,7 +115,7 @@ export default {
       }
     }
 
-    events.once('state', state => {
+    events.once(Context.STATE, state => {
       initialize().catch(error => {
         log.error(
           error,
@@ -144,7 +145,7 @@ export default {
             { text: '✓', color: '#2ECC71', bold: true, italic: false },
           ],
         })
-        dispatch('enjin/state', {
+        dispatch(Action.ENJIN, {
           wallet_linking_code: undefined,
           wallet_linked: true,
           wallet_address,
@@ -174,7 +175,7 @@ export default {
                 { text: '⚠', color: '#F1C40F', bold: true, italic: false },
               ],
             })
-            dispatch('enjin/state', {
+            dispatch(Action.ENJIN, {
               wallet_linking_code: identity.linkingCode,
               wallet_linked: false,
               wallet_address: undefined,
@@ -185,7 +186,7 @@ export default {
               error,
               `unable to find the Enjin identity for ${client.username}`
             )
-            dispatch('enjin/state', {
+            dispatch(Action.ENJIN, {
               wallet_linking_code: '... error :(',
               wallet_linked: false,
               wallet_address: undefined,

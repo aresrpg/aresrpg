@@ -5,7 +5,7 @@ import minecraft_data from 'minecraft-data'
 import { aiter } from 'iterator-helper'
 
 import { Types } from './mobs/types.js'
-import { last_event_value } from './events.js'
+import { last_event_value, Mob } from './events.js'
 import { path_end, path_position } from './mobs/path.js'
 import mobs_goto from './mobs/goto.js'
 import mobs_damage from './mobs/damage.js'
@@ -60,13 +60,13 @@ export function register(world) {
         mob,
         entity_id,
       })
-      events.emit('state', state)
+      events.emit(Mob.STATE, state)
       return state
     }, initial_state)
 
-    setImmediate(() => events.emit('state', initial_state))
+    setImmediate(() => events.emit(Mob.STATE, initial_state))
 
-    const get_state = last_event_value(events, 'state')
+    const get_state = last_event_value(events, Mob.STATE)
 
     return {
       entity_id,

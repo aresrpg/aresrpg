@@ -12,6 +12,7 @@ import {
 } from '../math.js'
 import { PLAYER_ENTITY_ID } from '../settings.js'
 import { abortable } from '../iterator.js'
+import { Action, Context } from '../events.js'
 
 function fix_light(chunk) {
   for (let x = 0; x < 16; x++) {
@@ -74,7 +75,7 @@ function unload_chunk({ client, x, z }) {
 function unload_signal({ events, x, z }) {
   const controller = new AbortController()
 
-  aiter(on(events, 'chunk_unloaded'))
+  aiter(on(events, Context.CHUNK_UNLOADED))
     .filter(([chunk]) => chunk.x === x && chunk.z === z)
     .take(0) // TODO: should be 1, seems to be a iterator-helper bug
     .toArray()
@@ -94,7 +95,7 @@ export async function load_chunks(state, { client, events, world, chunks }) {
   )
   for (const { x, y } of sorted) {
     await load_chunk({ client, world, x, z: y })
-    events.emit('chunk_loaded', {
+    events.emit(Context.CHUNK_LOADED, {
       x,
       z: y,
       signal: unload_signal({ events, x, z: y }),
@@ -108,7 +109,7 @@ export async function load_chunks(state, { client, events, world, chunks }) {
 
 export function unload_chunks(state, { client, events, chunks, world }) {
   for (const chunk of chunks) {
-    events.emit('chunk_unloaded', chunk)
+    events.emit(Context.CHUNK_UNLOADED, chunk)
     unload_chunk({ client, world, ...chunk })
   }
 }
@@ -116,7 +117,7 @@ export function unload_chunks(state, { client, events, chunks, world }) {
 export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
-    if (type === 'teleport') {
+    if (type === Action.TELEPORT) {
       return {
         ...state,
         teleport: payload,
@@ -132,7 +133,7 @@ export default {
   },
   /** @type {import('../context.js').Observer} */
   observe({ client, events, world, signal }) {
-    aiter(abortable(on(events, 'state', { signal })))
+    aiter(abortable(on(events, Context.STATE, { signal })))
       .map(([{ position, view_distance, teleport }]) => ({
         position,
         view_distance,
@@ -225,7 +226,7 @@ export default {
 
         for (let x = -state.view_distance; x <= state.view_distance; x++) {
           for (let z = -state.view_distance; z <= state.view_distance; z++) {
-            events.emit('chunk_unloaded', {
+            events.emit(Context.CHUNK_UNLOADED, {
               x: chunk_point.x + x,
               z: chunk_point.z + z,
             })

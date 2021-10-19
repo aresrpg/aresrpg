@@ -1,3 +1,5 @@
+import { Context } from '../events.js'
+
 import { gamemode_nodes } from './gamemode.js'
 import { dislike_nodes } from './dislike.js'
 import { fragile_nodes } from './fragile.js'
@@ -48,7 +50,7 @@ const nodes = flatten({
 
 export default {
   observe({ client, events }) {
-    events.once('state', () => {
+    events.once(Context.STATE, () => {
       client.write('declare_commands', {
         nodes,
         rootIndex: 0,

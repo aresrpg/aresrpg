@@ -5,6 +5,7 @@ import UUID from 'uuid-1345'
 import { aiter } from 'iterator-helper'
 
 import { VERSION } from '../settings.js'
+import { Context } from '../events.js'
 
 import { Types } from './types.js'
 
@@ -21,7 +22,7 @@ const color_by_type = {
 function despawn_signal({ events, entity_id }) {
   const controller = new AbortController()
 
-  aiter(on(events, 'mob_despawned'))
+  aiter(on(events, Context.MOB_DESPAWNED))
     .filter(([id]) => id === entity_id)
     .take(0) // TODO: should be 1, seems to be a iterator-helper bug
     .toArray()
@@ -69,7 +70,7 @@ export function spawn_mob(client, { mob, position, events }) {
     ],
   })
 
-  events.emit('mob_spawned', {
+  events.emit(Context.MOB_SPAWNED, {
     mob,
     signal: despawn_signal({ events, entity_id: mob.entity_id }),
   })
@@ -77,18 +78,18 @@ export function spawn_mob(client, { mob, position, events }) {
 
 export function despawn_mobs(client, { ids, events }) {
   client.write('entity_destroy', { entityIds: ids })
-  for (const entity_id of ids) events.emit('mob_despawned', entity_id)
+  for (const entity_id of ids) events.emit(Context.MOB_DESPAWNED, entity_id)
 }
 
 export default {
   /** @type {import('../context.js').Observer} */
   observe({ client, events }) {
-    events.on('chunk_loaded_with_mobs', ({ mobs }) => {
+    events.on(Context.CHUNK_LOADED_WITH_MOBS, ({ mobs }) => {
       for (const { mob, position } of mobs)
         spawn_mob(client, { mob, position, events })
     })
 
-    events.on('chunk_unloaded_with_mobs', ({ mobs }) => {
+    events.on(Context.CHUNK_UNLOADED_WITH_MOBS, ({ mobs }) => {
       despawn_mobs(client, {
         ids: mobs.map(({ mob }) => mob.entity_id),
         events,

@@ -1,3 +1,5 @@
+import { Context, World } from '../events.js'
+
 export default {
   observe({ world, client, events, get_state }) {
     const player_info = position => ({
@@ -15,28 +17,28 @@ export default {
         data: [info],
       })
     }
-    world.events.on(`add_player_${client.uuid}`, add_player)
+    world.events.on(World.ADD_PLAYER(client.uuid), add_player)
 
     const on_player = info => {
       // Add player to tab list
-      world.events.emit(`add_player_${client.uuid}`, info)
+      world.events.emit(World.ADD_PLAYER(client.uuid), info)
       if (info.UUID !== client.uuid) {
         // Send my info to new player
         world.events.emit(
-          `add_player_${info.UUID}`,
+          World.ADD_PLAYER(info.UUID),
           player_info(get_state().position)
         )
       }
     }
-    world.events.on('player', on_player)
+    world.events.on(World.PLAYER, on_player)
 
     client.once('end', () => {
-      world.events.off(`add_player_${client.uuid}`, add_player)
-      world.events.off('player', on_player)
+      world.events.off(World.ADD_PLAYER(client.uuid), add_player)
+      world.events.off(World.PLAYER, on_player)
     })
 
-    events.once('state', ({ position }) => {
-      world.events.emit('player', player_info(position))
+    events.once(Context.STATE, ({ position }) => {
+      world.events.emit(World.PLAYER, player_info(position))
     })
   },
 }
