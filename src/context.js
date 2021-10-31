@@ -61,6 +61,7 @@ import blockchain from './blockchain.js'
 import observe_performance from './performance.js'
 import { abortable } from './iterator.js'
 import Database from './database.js'
+import { USE_RESSOURCE_PACK } from './settings.js'
 
 const log = logger(import.meta)
 
@@ -226,7 +227,7 @@ export async function observe_client(context) {
 
   finalization.observe(context)
 
-  await player_resource_pack.observe(context)
+  if (USE_RESSOURCE_PACK) await player_resource_pack.observe(context)
 
   // this is also an asynchrone observer initialization
   // but i think it's fine to let it run alone without waiting for it
