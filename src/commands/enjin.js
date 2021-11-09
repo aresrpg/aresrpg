@@ -1,4 +1,4 @@
-import { client_chat_msg } from '../chat.js'
+import { client_chat_msg, Formats } from '../chat.js'
 import { USE_BLOCKCHAIN } from '../settings.js'
 
 import {
@@ -41,7 +41,7 @@ const Handlers = {
   kares({ state: { kares }, sender }) {
     client_chat_msg({
       message: [
-        { text: `kAres:`, color: 'gray', underline: true },
+        { text: `kAres:`, ...Formats.BASE },
         { text: ` ${kares}`, color: 'gold', bold: true },
       ],
       client: sender,
@@ -56,20 +56,15 @@ const Handlers = {
         message: [
           {
             text: 'Your wallet is already linked to the address ',
-            color: '#ECF0F1',
-            italic: true,
+            ...Formats.BASE,
           },
           {
             text: wallet_address,
-            italic: false,
-            bold: true,
-            color: '#9C27B0',
+            ...Formats.INFO,
           },
           {
             text: ', you can unlink it in your Enjin wallet',
-            color: '#ECF0F1',
-            italic: true,
-            bold: false,
+            ...Formats.BASE,
           },
         ],
         client: sender,
@@ -79,14 +74,11 @@ const Handlers = {
         message: [
           {
             text: 'Here is your Enjin wallet linking code: ',
-            color: '#ECF0F1',
-            italic: true,
+            ...Formats.BASE,
           },
           {
             text: wallet_linking_code,
-            color: '#3498DB',
-            italic: false,
-            bold: true,
+            ...Formats.INFO,
           },
         ],
         client: sender,
@@ -102,8 +94,7 @@ export default function enjin({ args, world, sender, get_state }) {
     client_chat_msg({
       message: {
         text: 'Enjin is not enabled on this server',
-        color: '#E74C3C',
-        bold: true,
+        ...Formats.DANGER,
       },
       client: sender,
     })
