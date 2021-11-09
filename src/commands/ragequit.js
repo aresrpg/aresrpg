@@ -23,6 +23,6 @@ export default function ragequit({ world, sender }) {
 
   sender.end(
     'Ragequit',
-    JSON.stringify({ text: 'ert si c trist', color: 'yellow' })
+    JSON.stringify({ text: 'rt si c trist', color: 'yellow' })
   )
 }

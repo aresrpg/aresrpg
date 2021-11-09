@@ -1,6 +1,6 @@
 import logger from '../logger.js'
 import { ENJIN_APP_ID } from '../settings.js'
-import { client_chat_msg } from '../chat.js'
+import { client_chat_msg, Formats } from '../chat.js'
 import { Action, Context } from '../events.js'
 
 import { Events, emitter } from './pusher.js'
@@ -139,10 +139,9 @@ export default {
           message: [
             {
               text: `Your Enjin identity was linked to your wallet `,
-              color: '#ECF0F1',
-              italic: true,
+              ...Formats.BASE,
             },
-            { text: '✓', color: '#2ECC71', bold: true, italic: false },
+            { text: '✓', ...Formats.SUCCESS },
           ],
         })
         dispatch(Action.ENJIN, {
@@ -169,10 +168,9 @@ export default {
               message: [
                 {
                   text: `Your Enjin identity was unlinked `,
-                  color: '#ECF0F1',
-                  italic: true,
+                  ...Formats.BASE,
                 },
-                { text: '⚠', color: '#F1C40F', bold: true, italic: false },
+                { text: '⚠', ...Formats.WARN },
               ],
             })
             dispatch(Action.ENJIN, {
