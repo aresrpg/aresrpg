@@ -13,6 +13,7 @@ import tg from './tg.js'
 import thug from './thug.js'
 import msg from './msg.js'
 import enjin from './enjin.js'
+import health from './health.js'
 
 export function write_error({ sender }) {
   sender.write('chat', {
@@ -25,7 +26,13 @@ export function write_error({ sender }) {
   })
 }
 
-export default function execute_command({ world, message, sender, get_state }) {
+export default function execute_command({
+  world,
+  message,
+  sender,
+  get_state,
+  dispatch,
+}) {
   const [name, ...args] = message.trimStart().split(/\s+/)
   const command = {
     name: name.slice(1),
@@ -33,6 +40,7 @@ export default function execute_command({ world, message, sender, get_state }) {
     sender,
     world,
     get_state,
+    dispatch,
   }
   switch (command.name) {
     case 'msg':
@@ -74,6 +82,9 @@ export default function execute_command({ world, message, sender, get_state }) {
       break
     case 'enjin':
       enjin(command)
+      break
+    case 'health':
+      health(command)
       break
 
     default:
