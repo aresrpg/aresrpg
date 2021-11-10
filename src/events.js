@@ -11,6 +11,7 @@ export const Action = {
   DAMAGE_INDICATOR: 'DAMAGE_INDICATOR',
   LOOT_ITEM: 'LOOT_ITEM',
   PICK_ITEM: 'PICK_ITEM',
+  DEATH: 'DEATH',
 }
 
 export const Context = {

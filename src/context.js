@@ -90,6 +90,7 @@ const world_reducers = [
 const world = world_reducers.reduce((world, fn) => fn(world), initial_world)
 
 const initial_state = {
+  username: undefined,
   position: world.spawn_position,
   teleport: null,
   view_distance: 0,
@@ -115,6 +116,7 @@ const initial_state = {
   game_mode: 2,
   experience: 0,
   health: 40,
+  soul: 100,
   enjin: {
     // an idendity represent a single ETH address
     // if it stays undefined then their may be probleme with account creation
@@ -317,7 +319,7 @@ export async function create_context(client) {
         events.emit(Context.STATE, state)
         return state
       },
-      { ...initial_state, ...player_state }
+      { ...initial_state, ...player_state, username: client.username }
     )
     .then(save_state)
     .catch(error => {
