@@ -116,6 +116,7 @@ const initial_state = {
   game_mode: 2,
   experience: 0,
   health: 40,
+  alive: true,
   soul: 100,
   enjin: {
     // an idendity represent a single ETH address

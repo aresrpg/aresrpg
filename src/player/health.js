@@ -12,14 +12,14 @@ export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
     if (type === Action.DEATH) {
-      const { dead } = payload
+      const { alive } = payload
       const { username } = state
 
-      log.info({ dead, username }, 'rip')
+      log.info({ alive, username }, 'rip')
 
       return {
         ...state,
-        dead,
+        alive,
       }
     }
     return state
@@ -38,7 +38,7 @@ export default {
           })
 
           if (health === 0) {
-            dispatch(Action.DEATH, { dead: true })
+            dispatch(Action.DEATH, { alive: false })
           }
         }
         return health
