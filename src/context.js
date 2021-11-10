@@ -20,6 +20,8 @@ import player_resource_pack from './player/resource_pack.js'
 import player_statistics from './player/statistics.js'
 import player_held_item from './player/held_item.js'
 import player_scoreboard from './player/scoreboard.js'
+import player_body from './player/body.js'
+import { States as BodyStates } from './body.js'
 import player_traders, {
   register as register_player_traders,
 } from './player/traders.js'
@@ -37,6 +39,7 @@ import player_item_loot, {
   register as register_player_item_loot,
   ITEM_LOOT_MAX_COUNT,
 } from './player/item_loot.js'
+import player_soul from './player/soul.js'
 import finalization from './finalization.js'
 import plugin_channels from './plugin_channels.js'
 import chunk_update from './chunk/update.js'
@@ -116,8 +119,13 @@ const initial_state = {
   game_mode: 2,
   experience: 0,
   health: 40,
-  alive: true,
+  body_state: BodyStates.ALIVE,
+  // player's energy, losing after each death
   soul: 100,
+  // last time the player joined,
+  // can be used for example to calcule regenerated soul while offline
+  last_connection_time: -1,
+  last_disconnection_time: -1,
   enjin: {
     // an idendity represent a single ETH address
     // if it stays undefined then their may be probleme with account creation
@@ -181,6 +189,7 @@ function reduce_state(state, action) {
   return [
     /* Reducers that map the incomming actions (packet, ...)
      * to a new state */
+    player_login.reduce,
     player_position.reduce,
     player_view_distance.reduce,
     plugin_channels.reduce,
@@ -189,6 +198,9 @@ function reduce_state(state, action) {
     player_inventory.reduce,
     player_held_item.reduce,
     player_item_loot.reduce,
+    player_soul.reduce,
+    player_health.reduce,
+    player_body.reduce,
     blockchain.reduce,
     chunk_update.reduce,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
@@ -238,6 +250,7 @@ export async function observe_client(context) {
   player_sync.observe(context)
   player_scoreboard.observe(context)
   player_item_loot.observe(context)
+  player_soul.observe(context)
 
   commands_declare.observe(context)
 
@@ -322,6 +335,10 @@ export async function create_context(client) {
       },
       { ...initial_state, ...player_state, username: client.username }
     )
+    .then(state => ({
+      ...state,
+      last_disconnection_time: Date.now(),
+    }))
     .then(save_state)
     .catch(error => {
       // TODO: what to do here if we can't save the client ?

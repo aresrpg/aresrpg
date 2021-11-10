@@ -4,6 +4,7 @@ import { aiter } from 'iterator-helper'
 
 import { Context, Action } from '../events.js'
 import { abortable } from '../iterator.js'
+import { States as BodyStates } from '../body.js'
 import logger from '../logger.js'
 
 const log = logger(import.meta)
@@ -11,15 +12,14 @@ const log = logger(import.meta)
 export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
-    if (type === Action.DEATH) {
-      const { alive } = payload
-      const { username } = state
+    if (type === Action.HEALTH) {
+      const health = Math.max(0, payload.health)
 
-      log.info({ alive, username }, 'rip')
+      log.info({ health }, 'direct health update')
 
       return {
         ...state,
-        alive,
+        health,
       }
     }
     return state
@@ -37,9 +37,8 @@ export default {
             foodSaturation: 0.0,
           })
 
-          if (health === 0) {
-            dispatch(Action.DEATH, { alive: false })
-          }
+          if (health === 0)
+            dispatch(Action.BODY_STATE, { body_state: BodyStates.DEAD })
         }
         return health
       }, 0)

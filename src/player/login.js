@@ -9,7 +9,7 @@ import { load_chunks } from '../chunk/update.js'
 import { PLAYER_ENTITY_ID } from '../settings.js'
 import { abortable } from '../iterator.js'
 import { write_title } from '../title.js'
-import { Context } from '../events.js'
+import { Context, Action } from '../events.js'
 
 import { set_world_border } from './world_border.js'
 import {
@@ -20,8 +20,20 @@ import {
 } from './screen.js'
 
 export default {
+  /** @type {import('../context.js').Reducer} */
+  reduce(state, { type, payload }) {
+    if (type === Action.LOGIN) {
+      const { time } = payload
+      return {
+        ...state,
+        last_connection_time: time,
+      }
+    }
+    return state
+  },
+
   /** @type {import('../context.js').Observer} */
-  observe({ client, events, world, signal }) {
+  observe({ client, events, world, signal, dispatch }) {
     events.once(Context.STATE, state => {
       const { game_mode, position, view_distance, held_slot_index } = state
       // TODO: move this elsewhere
@@ -42,7 +54,7 @@ export default {
         maxPlayers: 32,
         viewDistance: view_distance,
         reducedDebugInfo: false,
-        enableRespawnScreen: true,
+        enableRespawnScreen: false,
         isDebug: false,
         isFlat: false,
       })
@@ -117,6 +129,9 @@ export default {
         },
         canvas
       )
+
+      // make sure all pods are running with UTC time
+      dispatch(Action.LOGIN, { time: Date.now() })
     })
   },
 }
