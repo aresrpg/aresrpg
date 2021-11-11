@@ -20,7 +20,6 @@ import player_resource_pack from './player/resource_pack.js'
 import player_statistics from './player/statistics.js'
 import player_held_item from './player/held_item.js'
 import player_scoreboard from './player/scoreboard.js'
-import player_body from './player/body.js'
 import player_traders, {
   register as register_player_traders,
 } from './player/traders.js'
@@ -204,7 +203,6 @@ function reduce_state(state, action) {
     player_item_loot.reduce,
     player_soul.reduce,
     player_health.reduce,
-    player_body.reduce,
     blockchain.reduce,
     chunk_update.reduce,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
