@@ -12,9 +12,8 @@ export const Action = {
   DAMAGE_INDICATOR: 'DAMAGE_INDICATOR',
   LOOT_ITEM: 'LOOT_ITEM',
   PICK_ITEM: 'PICK_ITEM',
-  LOGIN: 'LOGIN',
   REGENERATE_SOUL: 'REGENERATE_SOUL',
-  BODY_STATE: 'BODY_STATE',
+  DEATH: 'DEATH',
 }
 
 export const Context = {

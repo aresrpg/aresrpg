@@ -21,7 +21,6 @@ import player_statistics from './player/statistics.js'
 import player_held_item from './player/held_item.js'
 import player_scoreboard from './player/scoreboard.js'
 import player_body from './player/body.js'
-import { States as BodyStates } from './body.js'
 import player_traders, {
   register as register_player_traders,
 } from './player/traders.js'
@@ -93,7 +92,7 @@ const world_reducers = [
 const world = world_reducers.reduce((world, fn) => fn(world), initial_world)
 
 const initial_state = {
-  username: undefined,
+  nickname: undefined,
   position: world.spawn_position,
   teleport: null,
   view_distance: 0,
@@ -119,12 +118,11 @@ const initial_state = {
   game_mode: 2,
   experience: 0,
   health: 40,
-  body_state: BodyStates.ALIVE,
   // player's energy, losing after each death
   soul: 100,
   // last time the player joined,
   // can be used for example to calcule regenerated soul while offline
-  last_connection_time: -1,
+  last_connection_time: Date.now(),
   last_disconnection_time: -1,
   enjin: {
     // an idendity represent a single ETH address
@@ -148,20 +146,26 @@ const initial_state = {
 
 // Add here all fields that you want to save in the database
 const saved_state = ({
+  nickname,
   position,
   inventory,
+  held_slot_index,
   game_mode,
   experience,
   health,
-  held_slot_index,
+  soul,
+  last_disconnection_time,
   enjin,
 }) => ({
+  nickname,
   position,
   inventory,
+  held_slot_index,
   game_mode,
   experience,
   health,
-  held_slot_index,
+  soul,
+  last_disconnection_time,
   enjin,
 })
 
@@ -333,7 +337,8 @@ export async function create_context(client) {
         events.emit(Context.STATE, state)
         return state
       },
-      { ...initial_state, ...player_state, username: client.username }
+      // default nickname is the client username, and is overriden by the loaded player state
+      { ...initial_state, nickname: client.username, ...player_state }
     )
     .then(state => ({
       ...state,
