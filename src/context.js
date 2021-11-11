@@ -143,9 +143,7 @@ const saved_state = ({
   experience,
   health,
   held_slot_index,
-  kares,
-  enjin_identity_id,
-  enjin_wallet_linking_code,
+  enjin,
 }) => ({
   position,
   inventory,
@@ -153,9 +151,7 @@ const saved_state = ({
   experience,
   health,
   held_slot_index,
-  kares,
-  enjin_identity_id,
-  enjin_wallet_linking_code,
+  enjin,
 })
 
 /** @template U
