@@ -121,8 +121,8 @@ const initial_state = {
   soul: 100,
   // last time the player joined,
   // can be used for example to calcule regenerated soul while offline
-  last_connection_time: Date.now(),
-  last_disconnection_time: -1,
+  last_connection_time: undefined,
+  last_disconnection_time: undefined,
   enjin: {
     // an idendity represent a single ETH address
     // if it stays undefined then their may be probleme with account creation
@@ -336,7 +336,12 @@ export async function create_context(client) {
         return state
       },
       // default nickname is the client username, and is overriden by the loaded player state
-      { ...initial_state, nickname: client.username, ...player_state }
+      {
+        ...initial_state,
+        nickname: client.username,
+        ...player_state,
+        last_connection_time: Date.now(),
+      }
     )
     .then(state => ({
       ...state,
