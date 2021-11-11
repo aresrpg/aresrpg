@@ -1,4 +1,4 @@
-import { client_chat_msg } from '../chat.js'
+import { client_chat_msg, Formats } from '../chat.js'
 import { Action } from '../events.js'
 
 import { write_error } from './commands.js'
@@ -25,8 +25,8 @@ export default function health({ world, sender, dispatch, args }) {
       client_chat_msg({
         client: sender,
         message: [
-          { text: 'health updated: ', color: '#ECF0F1', italic: true },
-          { text: health, color: '#E74C3C', bold: true, italic: false },
+          { text: 'health updated: ', ...Formats.BASE },
+          { text: health, ...Formats.DANGER },
         ],
       })
       return
