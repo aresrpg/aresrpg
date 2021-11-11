@@ -37,6 +37,7 @@ import player_item_loot, {
   register as register_player_item_loot,
   ITEM_LOOT_MAX_COUNT,
 } from './player/item_loot.js'
+import player_soul from './player/soul.js'
 import finalization from './finalization.js'
 import plugin_channels from './plugin_channels.js'
 import chunk_update from './chunk/update.js'
@@ -90,6 +91,7 @@ const world_reducers = [
 const world = world_reducers.reduce((world, fn) => fn(world), initial_world)
 
 const initial_state = {
+  nickname: undefined,
   position: world.spawn_position,
   teleport: null,
   view_distance: 0,
@@ -115,6 +117,12 @@ const initial_state = {
   game_mode: 2,
   experience: 0,
   health: 40,
+  // player's energy, losing after each death
+  soul: 100,
+  // last time the player joined,
+  // can be used for example to calcule regenerated soul while offline
+  last_connection_time: undefined,
+  last_disconnection_time: undefined,
   enjin: {
     // an idendity represent a single ETH address
     // if it stays undefined then their may be probleme with account creation
@@ -137,20 +145,26 @@ const initial_state = {
 
 // Add here all fields that you want to save in the database
 const saved_state = ({
+  nickname,
   position,
   inventory,
+  held_slot_index,
   game_mode,
   experience,
   health,
-  held_slot_index,
+  soul,
+  last_disconnection_time,
   enjin,
 }) => ({
+  nickname,
   position,
   inventory,
+  held_slot_index,
   game_mode,
   experience,
   health,
-  held_slot_index,
+  soul,
+  last_disconnection_time,
   enjin,
 })
 
@@ -178,6 +192,7 @@ function reduce_state(state, action) {
   return [
     /* Reducers that map the incomming actions (packet, ...)
      * to a new state */
+    player_login.reduce,
     player_position.reduce,
     player_view_distance.reduce,
     plugin_channels.reduce,
@@ -186,6 +201,8 @@ function reduce_state(state, action) {
     player_inventory.reduce,
     player_held_item.reduce,
     player_item_loot.reduce,
+    player_soul.reduce,
+    player_health.reduce,
     blockchain.reduce,
     chunk_update.reduce,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
@@ -235,6 +252,7 @@ export async function observe_client(context) {
   player_sync.observe(context)
   player_scoreboard.observe(context)
   player_item_loot.observe(context)
+  player_soul.observe(context)
 
   commands_declare.observe(context)
 
@@ -317,8 +335,18 @@ export async function create_context(client) {
         events.emit(Context.STATE, state)
         return state
       },
-      { ...initial_state, ...player_state }
+      // default nickname is the client username, and is overriden by the loaded player state
+      {
+        ...initial_state,
+        nickname: client.username,
+        ...player_state,
+        last_connection_time: Date.now(),
+      }
     )
+    .then(state => ({
+      ...state,
+      last_disconnection_time: Date.now(),
+    }))
     .then(save_state)
     .catch(error => {
       // TODO: what to do here if we can't save the client ?

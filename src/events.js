@@ -7,10 +7,13 @@ export function last_event_value(emitter, event) {
 export const Action = {
   ENJIN: 'ENJIN',
   FALL_DAMAGE: 'FALL_DAMAGE',
+  HEALTH: 'HEALTH',
   TELEPORT: 'TELEPORT',
   DAMAGE_INDICATOR: 'DAMAGE_INDICATOR',
   LOOT_ITEM: 'LOOT_ITEM',
   PICK_ITEM: 'PICK_ITEM',
+  REGENERATE_SOUL: 'REGENERATE_SOUL',
+  DEATH: 'DEATH',
 }
 
 export const Context = {

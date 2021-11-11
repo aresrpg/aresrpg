@@ -35,13 +35,13 @@ function slot_to_chat({ nbtData, itemCount, itemId }) {
 
 export default {
   /** @type {import('../context.js').Observer} */
-  observe({ client, get_state, world }) {
+  observe({ client, get_state, world, dispatch }) {
     client.on('chat', packet => {
       const { message } = packet
 
       if (is_command_function(message)) {
         log.info({ sender: client.uuid, command: message }, 'Command')
-        execute_command({ world, message, sender: client, get_state })
+        execute_command({ world, message, sender: client, get_state, dispatch })
         return
       } else {
         log.info({ sender: client.uuid, message }, 'Message')

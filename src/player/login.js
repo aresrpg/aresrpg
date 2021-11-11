@@ -21,7 +21,7 @@ import {
 
 export default {
   /** @type {import('../context.js').Observer} */
-  observe({ client, events, world, signal }) {
+  observe({ client, events, world, signal, dispatch }) {
     events.once(Context.STATE, state => {
       const { game_mode, position, view_distance, held_slot_index } = state
       // TODO: move this elsewhere
@@ -42,7 +42,7 @@ export default {
         maxPlayers: 32,
         viewDistance: view_distance,
         reducedDebugInfo: false,
-        enableRespawnScreen: true,
+        enableRespawnScreen: false,
         isDebug: false,
         isFlat: false,
       })
