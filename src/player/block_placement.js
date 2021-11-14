@@ -9,12 +9,6 @@ export default {
   observe({ dispatch, client, world }) {
     client.on('block_place', ({ location }) =>
       get_block(world, location)
-        .then(({ name, stateId }) => ({ name, stateId }))
-        .catch(error => {
-          log.error(error)
-          return {}
-        })
-        // @ts-ignore
         .then(({ name, stateId }) => {
           if (name === 'flower_pot') {
             dispatch(Action.RESYNC_INVENTORY)
@@ -24,6 +18,7 @@ export default {
             })
           }
         })
+        .catch(error => log.error(error))
     )
   },
 }
