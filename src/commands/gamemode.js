@@ -1,15 +1,9 @@
 import { Position } from '../chat.js'
 import { SERVER_UUID } from '../settings.js'
+import { GameMode } from '../gamemode.js'
 
 import { write_error } from './commands.js'
 import { literal, integer } from './declare_options.js'
-
-const GameMode = {
-  SURVIVAL: 0,
-  CREATIVE: 1,
-  ADVENTURE: 2,
-  SPECTATOR: 3,
-}
 
 const is_gamemode_value = value => Object.values(GameMode).includes(value)
 const parse_gamemode = param => {
