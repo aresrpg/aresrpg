@@ -14,6 +14,7 @@ export default {
           log.error(error)
           return {}
         })
+        // @ts-ignore
         .then(({ name, stateId }) => {
           if (name === 'flower_pot') {
             dispatch(Action.RESYNC_INVENTORY)
