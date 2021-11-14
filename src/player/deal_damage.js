@@ -46,7 +46,7 @@ export default {
 
   /** @type {import('../context.js').Observer} */
   observe({ events, dispatch, client, world, signal }) {
-    events.on(Context.mo, ({ mob, damage }) => {
+    events.on(Context.MOB_DAMAGE, ({ mob, damage }) => {
       const position = mob.position()
       const { height } = mob.constants
 
