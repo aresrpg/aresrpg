@@ -192,7 +192,6 @@ function reduce_state(state, action) {
   return [
     /* Reducers that map the incomming actions (packet, ...)
      * to a new state */
-    player_login.reduce,
     player_position.reduce,
     player_view_distance.reduce,
     plugin_channels.reduce,
