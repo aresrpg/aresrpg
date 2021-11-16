@@ -14,6 +14,7 @@ export const Action = {
   PICK_ITEM: 'PICK_ITEM',
   REGENERATE_SOUL: 'REGENERATE_SOUL',
   DEATH: 'DEATH',
+  RESYNC_INVENTORY: 'RESYNC_INVENTORY',
 }
 
 export const Context = {

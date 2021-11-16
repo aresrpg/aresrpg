@@ -5,7 +5,7 @@ import { aiter } from 'iterator-helper'
 import { empty_slot, item_to_slot } from '../items.js'
 import { PLAYER_INVENTORY_ID } from '../settings.js'
 import { abortable } from '../iterator.js'
-import { Context } from '../events.js'
+import { Action, Context } from '../events.js'
 
 const FORBIDDEN_SLOTS = [
   0, // Craft Output
@@ -68,7 +68,11 @@ export default {
           }
         }
       }
-    }
+    } else if (type === Action.RESYNC_INVENTORY)
+      return {
+        ...state,
+        inventory_sequence_number: state.inventory_sequence_number + 1,
+      }
     return state
   },
   /** @type {import('../context.js').Observer} */
