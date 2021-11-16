@@ -19,6 +19,7 @@ import player_chat from './player/chat.js'
 import player_resource_pack from './player/resource_pack.js'
 import player_statistics from './player/statistics.js'
 import player_held_item from './player/held_item.js'
+import player_gamemode from './player/gamemode.js'
 import player_scoreboard from './player/scoreboard.js'
 import player_block_place from './player/block_placement.js'
 import player_traders, {
@@ -27,7 +28,7 @@ import player_traders, {
 import player_deal_damage, {
   DAMAGE_INDICATORS_AMMOUNT,
   register as register_player_deal_damage,
-} from './player/deal_damage.js'
+} from './player/damage.js'
 import player_inventory from './player/inventory.js'
 import player_teleportation_stones, {
   register as register_player_teleportation_stones,
@@ -196,9 +197,9 @@ function reduce_state(state, action) {
     player_position.reduce,
     player_view_distance.reduce,
     plugin_channels.reduce,
-    player_fall_damage.reduce,
     player_deal_damage.reduce,
     player_inventory.reduce,
+    player_gamemode.reduce,
     player_held_item.reduce,
     player_item_loot.reduce,
     player_soul.reduce,

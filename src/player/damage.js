@@ -5,8 +5,12 @@ import { aiter } from 'iterator-helper'
 import { abortable } from '../iterator.js'
 import { Action, Context } from '../events.js'
 import { create_armor_stand } from '../armor_stand.js'
+import logger from '../logger.js'
+import { GameMode } from '../gamemode.js'
 
 export const DAMAGE_INDICATORS_AMMOUNT = 5
+
+const log = logger(import.meta)
 
 /** @param {import('../context.js').InitialWorld} world */
 export function register(world) {
@@ -23,7 +27,17 @@ export function register(world) {
 export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
-    if (type === Action.DAMAGE_INDICATOR) {
+    if (type === Action.DAMAGE && state.game_mode !== GameMode.CREATIVE) {
+      const { damage } = payload
+      const health = Math.max(0, state.health - damage)
+
+      log.info({ damage, health }, 'took damage')
+
+      return {
+        ...state,
+        health,
+      }
+    } else if (type === Action.DAMAGE_INDICATOR) {
       const { position, damage } = payload
       const cursor =
         (state.damage_indicators.cursor + 1) % DAMAGE_INDICATORS_AMMOUNT

@@ -6,7 +6,7 @@ export function last_event_value(emitter, event) {
 
 export const Action = {
   ENJIN: 'ENJIN',
-  FALL_DAMAGE: 'FALL_DAMAGE',
+  DAMAGE: 'DAMAGE',
   HEALTH: 'HEALTH',
   TELEPORT: 'TELEPORT',
   DAMAGE_INDICATOR: 'DAMAGE_INDICATOR',
@@ -15,6 +15,7 @@ export const Action = {
   REGENERATE_SOUL: 'REGENERATE_SOUL',
   DEATH: 'DEATH',
   RESYNC_INVENTORY: 'RESYNC_INVENTORY',
+  GAMEMODE: 'GAMEMODE',
 }
 
 export const Context = {
