@@ -1,6 +1,7 @@
 import { Position } from '../chat.js'
 import { SERVER_UUID } from '../settings.js'
 import { GameMode } from '../gamemode.js'
+import { Action } from '../events.js'
 
 import { write_error } from './commands.js'
 import { literal, integer } from './declare_options.js'
@@ -41,16 +42,16 @@ export const gamemode_nodes = [
   }),
 ]
 
-export default function gamemode({ args, sender }) {
+export default function gamemode({ args, sender, dispatch }) {
   if (args.length === 1) {
     const [input_mode] = args
-    const gameMode = parse_gamemode(input_mode)
+    const game_mode = parse_gamemode(input_mode)
 
-    if (gameMode !== undefined) {
+    if (game_mode !== undefined) {
       // value can be 0 so chill and don't refac u nerd
       sender.write('game_state_change', {
         reason: 3, // @see https://wiki.vg/Protocol#Change_Game_State
-        gameMode,
+        gameMode: game_mode,
       })
       sender.write('chat', {
         message: JSON.stringify({
@@ -58,7 +59,7 @@ export default function gamemode({ args, sender }) {
           with: [
             {
               translate: `gameMode.${gamemode_from_value(
-                gameMode
+                game_mode
               ).toLowerCase()}`,
             },
           ],
@@ -66,6 +67,7 @@ export default function gamemode({ args, sender }) {
         position: Position.CHAT,
         sender: SERVER_UUID,
       })
+      dispatch(Action.GAMEMODE, { game_mode })
       return
     }
   }
