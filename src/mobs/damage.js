@@ -6,6 +6,8 @@ import { MobAction, Context, Mob } from '../events.js'
 import logger from '../logger.js'
 import { abortable } from '../iterator.js'
 
+import { Types } from './types.js'
+
 const log = logger(import.meta)
 const Mouse = {
   LEFT_CLICK: 1,
@@ -34,7 +36,8 @@ export default {
     client.on('use_entity', ({ target, mouse }) => {
       if (mouse === Mouse.LEFT_CLICK) {
         const mob = world.mobs.by_entity_id(target)
-        if (mob) {
+        const { type } = Types[mob?.mob]
+        if (mob && type !== 'npc') {
           mob.dispatch(MobAction.DEAL_DAMAGE, {
             damage: 1,
             damager: client.uuid,

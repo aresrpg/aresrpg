@@ -1088,7 +1088,7 @@ export const Types = {
   },
   guardian: {
     displayName: 'Garde',
-    type: 'garde',
+    type: 'npc',
     mob: 'villager',
   },
   monk: {
