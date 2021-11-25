@@ -14,12 +14,12 @@ export const tg_nodes = [
 export default function tg({ world, sender }) {
   world_chat_msg({
     world,
-    message: JSON.stringify([
+    message: [
       { text: ' ' + sender.username, color: 'gray' },
       { text: ' Demande le', color: 'gold' },
       { text: ' silence', color: 'red', bold: 'true' },
       { text: ' !', color: 'blue' },
-    ]),
+    ],
     client: sender,
   })
 }

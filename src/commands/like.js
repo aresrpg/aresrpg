@@ -15,11 +15,11 @@ export const like_nodes = [
 export default function like({ world, sender }) {
   world_chat_msg({
     world,
-    message: JSON.stringify([
+    message: [
       { text: ' ' + sender.username, color: 'gray' },
       { text: ' Aime ça', color: 'dark_aqua' },
       { text: ' !', color: 'blue' },
-    ]),
+    ],
     client: sender,
   })
 }

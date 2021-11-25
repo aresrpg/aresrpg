@@ -14,13 +14,13 @@ export const fragile_nodes = [
 export default function fragile({ world, sender }) {
   world_chat_msg({
     world,
-    message: JSON.stringify([
+    message: [
       { text: ' ' + sender.username, color: 'gray' },
       { text: " trouve qu'il y a trop de", color: 'yellow' },
       { text: ' fragile', color: 'blue', bold: 'true' },
       { text: ' ici', color: 'yellow' },
       { text: ' !', color: 'blue' },
-    ]),
+    ],
     client: sender,
   })
 }

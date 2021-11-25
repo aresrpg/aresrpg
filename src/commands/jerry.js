@@ -14,10 +14,10 @@ export const jerry_nodes = [
 export default function jerry({ world, sender }) {
   world_chat_msg({
     world,
-    message: JSON.stringify([
+    message: [
       { text: ' ' + sender.username, color: 'gray' },
       { text: ' Harry Golay !', color: 'blue' },
-    ]),
+    ],
     client: sender,
   })
 }

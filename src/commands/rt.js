@@ -14,12 +14,12 @@ export const rt_nodes = [
 export default function rt({ world, sender }) {
   world_chat_msg({
     world,
-    message: JSON.stringify([
+    message: [
       { text: ' ' + sender.username, color: 'gray' },
       { text: ' a', color: 'blue' },
       { text: ' Retweet', color: 'aqua' },
       { text: ' !', color: 'blue' },
-    ]),
+    ],
     client: sender,
   })
 }
