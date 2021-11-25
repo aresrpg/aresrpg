@@ -14,12 +14,12 @@ export const dislike_nodes = [
 export default function dislike({ world, sender }) {
   world_chat_msg({
     world,
-    message: JSON.stringify([
+    message: [
       { text: ' ' + sender.username, color: 'gray' },
       { text: ' a', color: 'blue' },
       { text: ' Dislike', color: 'red' },
       { text: ' !', color: 'blue' },
-    ]),
+    ],
     client: sender,
   })
 }

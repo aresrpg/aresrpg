@@ -75,7 +75,7 @@ export function client_chat_msg({ client, message }) {
 
 export function world_chat_msg({ world, message, client: { uuid: sender } }) {
   const options = {
-    message,
+    message: JSON.stringify(message),
     position: Position.CHAT,
     sender,
   }

@@ -14,11 +14,11 @@ export const osef_nodes = [
 export default function osef({ world, sender }) {
   world_chat_msg({
     world,
-    message: JSON.stringify([
+    message: [
       { text: ' ' + sender.username, color: 'gray' },
       { text: " S'en fout", color: 'dark_aqua' },
       { text: ' !', color: 'blue' },
-    ]),
+    ],
     client: sender,
   })
 }

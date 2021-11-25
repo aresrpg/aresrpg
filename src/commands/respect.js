@@ -14,11 +14,11 @@ export const respect_nodes = [
 export default function respect({ world, sender }) {
   world_chat_msg({
     world,
-    message: JSON.stringify([
+    message: [
       { text: ' ' + sender.username, color: 'gray' },
       { text: ' cherche encore le', color: 'yellow' },
       { text: ' respect', color: 'green', bold: 'true' },
-    ]),
+    ],
     client: sender,
   })
 }

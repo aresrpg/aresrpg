@@ -14,12 +14,12 @@ export const thug_nodes = [
 export default function thug({ world, sender }) {
   world_chat_msg({
     world,
-    message: JSON.stringify([
+    message: [
       { text: ' ' + sender.username, color: 'gray' },
       { text: " Pense qu'il y a un", color: 'blue' },
       { text: ' Gangster', color: 'red' },
       { text: ' Parmis nous !', color: 'blue' },
-    ]),
+    ],
     client: sender,
   })
 }

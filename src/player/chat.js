@@ -60,18 +60,17 @@ export default {
         return { text: part }
       })
 
-      const message_for_client = {
-        translate: 'chat.type.text',
-        with: [
-          {
-            text: client.username,
-          },
-          formatted_message,
-        ],
-      }
       world_chat_msg({
         world,
-        message: JSON.stringify(message_for_client),
+        message: {
+          translate: 'chat.type.text',
+          with: [
+            {
+              text: client.username,
+            },
+            formatted_message,
+          ],
+        },
         client,
       })
     })

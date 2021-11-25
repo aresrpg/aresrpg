@@ -14,10 +14,10 @@ export const ragequit_nodes = [
 export default function ragequit({ world, sender }) {
   world_chat_msg({
     world,
-    message: JSON.stringify([
+    message: [
       { text: ' ' + sender.username, color: 'gray' },
       { text: ' a RageQuit !', color: 'red' },
-    ]),
+    ],
     client: sender,
   })
 
