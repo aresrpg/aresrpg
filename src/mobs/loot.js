@@ -11,7 +11,8 @@ export default {
       const owner = mob.get_state().first_damager
 
       if (owner === client.uuid) {
-        for (const { chance, item } of Types[mob.mob].loots) {
+        const { loots = [] } = Types[mob.mob]
+        for (const { chance, item } of loots) {
           if (chance >= Math.random()) {
             dispatch(Action.LOOT_ITEM, {
               type: item,
