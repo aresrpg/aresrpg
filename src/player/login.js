@@ -5,6 +5,7 @@ import { load_chunks } from '../chunk/update.js'
 import { PLAYER_ENTITY_ID } from '../settings.js'
 import { write_title } from '../title.js'
 import { Context } from '../events.js'
+import { Formats, world_chat_msg } from '../chat.js'
 
 import { set_world_border } from './world_border.js'
 
@@ -12,7 +13,14 @@ export default {
   /** @type {import('../context.js').Observer} */
   observe({ client, events, world, signal, dispatch }) {
     events.once(Context.STATE, state => {
-      const { game_mode, position, view_distance, held_slot_index } = state
+      const {
+        nickname,
+        game_mode,
+        position,
+        view_distance,
+        held_slot_index,
+        last_disconnection_time,
+      } = state
       // TODO: move this elsewhere
       const world_names = ['minecraft:overworld']
       // TODO: we should not take the first world of the list
@@ -69,6 +77,18 @@ export default {
           stay: 10,
         },
       })
+
+      if (!last_disconnection_time)
+        world_chat_msg({
+          world,
+          client,
+          message: [
+            { text: nickname, ...Formats.SUCCESS },
+            { text: ' just joined ', ...Formats.BASE },
+            { text: 'AresRPG', ...Formats.INFO },
+            { text: ' for the first time', ...Formats.BASE },
+          ],
+        })
     })
   },
 }
