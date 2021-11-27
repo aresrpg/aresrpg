@@ -9,6 +9,7 @@ import { abortable } from '../iterator.js'
 import { Types } from './types.js'
 
 const log = logger(import.meta)
+const invulnerability_time = 500
 const Mouse = {
   LEFT_CLICK: 1,
 }
@@ -32,19 +33,28 @@ export default {
   },
 
   /** @type {import('../context.js').Observer} */
-  observe({ client, world, events }) {
-    client.on('use_entity', ({ target, mouse }) => {
-      if (mouse === Mouse.LEFT_CLICK) {
-        const mob = world.mobs.by_entity_id(target)
-        const { type } = Types[mob?.mob]
-        if (mob && type !== 'npc') {
-          mob.dispatch(MobAction.DEAL_DAMAGE, {
-            damage: 1,
-            damager: client.uuid,
-          })
+  observe({ client, world, events, signal }) {
+    aiter(abortable(on(client, 'use_entity', { signal }))).reduce(
+      (last_hit, [{ target, mouse }]) => {
+        const now = Date.now()
+        if (
+          last_hit + invulnerability_time < now &&
+          mouse === Mouse.LEFT_CLICK
+        ) {
+          const mob = world.mobs.by_entity_id(target)
+          const { type } = Types[mob?.mob]
+          if (mob && type !== 'npc') {
+            mob.dispatch(MobAction.DEAL_DAMAGE, {
+              damage: 1,
+              damager: client.uuid,
+            })
+          }
+          return now
         }
-      }
-    })
+        return last_hit
+      },
+      0
+    )
 
     events.on(Context.MOB_SPAWNED, ({ mob, signal }) => {
       aiter(abortable(on(mob.events, Mob.STATE, { signal })))
