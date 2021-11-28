@@ -24,13 +24,15 @@ export const trees = Object.fromEntries(
 
 export default {
   async reduce_mob(state, action, context) {
-    const tree = trees[context.mob]
-    const { state: next_state } = await run(tree.documentElement, state, {
-      path: 'tree',
-      action,
-      ...context,
-    })
+    if (state.health > 0) {
+      const tree = trees[context.mob]
+      const { state: next_state } = await run(tree.documentElement, state, {
+        path: 'tree',
+        action,
+        ...context,
+      })
 
-    return next_state
+      return next_state
+    } else return state
   },
 }
