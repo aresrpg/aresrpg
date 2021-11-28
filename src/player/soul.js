@@ -39,7 +39,7 @@ export default {
   },
 
   /** @type {import('../context.js').Observer} */
-  observe({ client, events, world, signal, dispatch, get_state }) {
+  observe({ events, signal, dispatch, get_state }) {
     // regenerate soul every 10 minute while online
     aiter(abortable(setInterval(MINUTE_10, { signal }))).forEach(() => {
       const { soul } = get_state()
@@ -53,14 +53,16 @@ export default {
       Context.STATE,
       ({ last_connection_time, last_disconnection_time }) => {
         // when the player join, we give him the soul he regenerated while offline
-        const time_offline = Math.max(
-          0,
-          last_connection_time - last_disconnection_time
-        )
-        const hours_offline = Math.round(time_offline / HOUR_1)
-        dispatch(Action.REGENERATE_SOUL, {
-          amount: SOUL_REGEN_PER_OFFLINE_HOUR * hours_offline,
-        })
+        if (last_disconnection_time !== undefined) {
+          const time_offline = Math.max(
+            0,
+            last_connection_time - last_disconnection_time
+          )
+          const hours_offline = Math.round(time_offline / HOUR_1)
+          dispatch(Action.REGENERATE_SOUL, {
+            amount: SOUL_REGEN_PER_OFFLINE_HOUR * hours_offline,
+          })
+        }
       }
     )
   },
