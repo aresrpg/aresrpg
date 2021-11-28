@@ -17,10 +17,21 @@ export function path_ended({ path, time, start_time, speed }) {
   return current >= path.length
 }
 
-export function path_position({ path, time, start_time, speed }) {
+export function path_remain_time({ path, time, start_time, speed }) {
+  if ((time - start_time) / speed > path.length - 1) return 0
+  return (time - start_time) % speed
+}
+
+export function path_position({
+  path,
+  time,
+  start_time,
+  speed,
+  block_position = false,
+}) {
   const t = Math.max(0, (time - start_time) / speed)
   const current = Math.floor(t)
-  const remain = t % 1
+  const remain = block_position ? t % 1 : 0
 
   const from = path[Math.min(current, path.length - 1)]
   const to = path[Math.min(current + 1, path.length - 1)]
