@@ -6,7 +6,6 @@ import combineAsyncIterators from 'combine-async-iterators'
 
 import { last_event_value, Context } from './events.js'
 import { floor1 } from './world.js'
-import player_screen, { register_screen } from './player/screen.js'
 import logger from './logger.js'
 import player_login from './player/login.js'
 import player_experience from './player/experience.js'
@@ -81,10 +80,6 @@ const world_reducers = [
   register_mobs_position,
   register_player_traders,
   register_player_deal_damage,
-  register_screen({
-    id: 'player_screen',
-    size: { width: 8, height: 4 },
-  }),
   register_player_teleportation_stones,
   register_player_item_loot,
 ]
@@ -245,7 +240,6 @@ export async function observe_client(context) {
   player_health.observe(context)
   player_attributes.observe(context)
   player_chat.observe(context)
-  player_screen.observe(context)
   player_deal_damage.observe(context)
   player_inventory.observe(context)
   player_teleportation_stones.observe(context)
