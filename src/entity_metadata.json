@@ -1,0 +1,1326 @@
+{
+  "entity": {
+    "metadata": {
+      "flags": {
+        "key": 0,
+        "type": 0,
+        "bitflags": {
+          "is_on_fire": 0,
+          "is_crouching": 1,
+          "unused": 2,
+          "is_sprinting": 3,
+          "is_swimming": 4,
+          "is_invisible": 5,
+          "has_glowing_effect": 6,
+          "is_flying_with_an_elytra": 7
+        }
+      },
+      "air_ticks": {
+        "key": 1,
+        "type": 1
+      },
+      "custom_name": {
+        "key": 2,
+        "type": 5
+      },
+      "is_custom_name_visible": {
+        "key": 3,
+        "type": 7
+      },
+      "is_silent": {
+        "key": 4,
+        "type": 7
+      },
+      "has_no_gravity": {
+        "key": 5,
+        "type": 7
+      },
+      "pose": {
+        "key": 6,
+        "type": 18
+      }
+    }
+  },
+  "thrown_egg": {
+    "parent": "entity",
+    "metadata": {
+      "item": {
+        "key": 7,
+        "type": 6
+      }
+    }
+  },
+  "thrown_ender_pearl": {
+    "parent": "entity",
+    "metadata": {
+      "item": {
+        "key": 7,
+        "type": 6
+      }
+    }
+  },
+  "thrown_experience_bottle": {
+    "parent": "entity",
+    "metadata": {
+      "item": {
+        "key": 7,
+        "type": 6
+      }
+    }
+  },
+  "thrown_potion": {
+    "parent": "entity",
+    "metadata": {
+      "potion_which_is_thrown": {
+        "key": 7,
+        "type": 6
+      }
+    }
+  },
+  "snowball": {
+    "parent": "entity",
+    "metadata": {
+      "item": {
+        "key": 7,
+        "type": 6
+      }
+    }
+  },
+  "eye_of_ender": {
+    "parent": "entity",
+    "metadata": {
+      "item": {
+        "key": 7,
+        "type": 6
+      }
+    }
+  },
+  "falling_block": {
+    "parent": "entity",
+    "metadata": {
+      "spawn_position": {
+        "key": 7,
+        "type": 9
+      }
+    }
+  },
+  "area_effect_cloud": {
+    "parent": "entity",
+    "metadata": {
+      "radius": {
+        "key": 7,
+        "type": 2
+      },
+      "color": {
+        "key": 8,
+        "type": 1
+      },
+      "ignore_radius_and_show_effect_as_single_point": {
+        "key": 9,
+        "type": 7
+      },
+      "particle": {
+        "key": 10,
+        "type": 15
+      }
+    }
+  },
+  "fishing_hook": {
+    "parent": "entity",
+    "metadata": {
+      "hooked_entity_id_+_1": {
+        "key": 7,
+        "type": 1
+      },
+      "is_catchable": {
+        "key": 8,
+        "type": 7
+      }
+    }
+  },
+  "abstract_arrow": {
+    "parent": "entity",
+    "metadata": {
+      "flags": {
+        "key": 7,
+        "type": 0,
+        "bitflags": {
+          "is_critical": 0,
+          "is_noclip": 1
+        }
+      },
+      "piercing_level": {
+        "key": 8,
+        "type": 0
+      }
+    }
+  },
+  "arrow": {
+    "parent": "abstract_arrow",
+    "metadata": {
+      "color": {
+        "key": 9,
+        "type": 1
+      }
+    }
+  },
+  "spectral_arrow": {
+    "parent": "abstract_arrow",
+    "metadata": {}
+  },
+  "thrown_trident": {
+    "parent": "abstract_arrow",
+    "metadata": {
+      "loyalty_level": {
+        "key": 9,
+        "type": 1
+      },
+      "has_enchantment_glint": {
+        "key": 10,
+        "type": 7
+      }
+    }
+  },
+  "boat": {
+    "parent": "entity",
+    "metadata": {
+      "time_since_last_hit": {
+        "key": 7,
+        "type": 1
+      },
+      "forward_direction": {
+        "key": 8,
+        "type": 1
+      },
+      "damage_taken": {
+        "key": 9,
+        "type": 2
+      },
+      "type": {
+        "key": 10,
+        "type": 1
+      },
+      "is_left_paddle_turning": {
+        "key": 11,
+        "type": 7
+      },
+      "is_right_paddle_turning": {
+        "key": 12,
+        "type": 7
+      },
+      "splash_timer": {
+        "key": 13,
+        "type": 1
+      }
+    }
+  },
+  "end_crystal": {
+    "parent": "entity",
+    "metadata": {
+      "beam_target": {
+        "key": 7,
+        "type": 10
+      },
+      "show_bottom": {
+        "key": 8,
+        "type": 7
+      }
+    }
+  },
+  "dragon_fireball": {
+    "parent": "entity",
+    "metadata": {}
+  },
+  "small_fireball": {
+    "parent": "entity",
+    "metadata": {
+      "item": {
+        "key": 7,
+        "type": 6
+      }
+    }
+  },
+  "fireball": {
+    "parent": "entity",
+    "metadata": {
+      "item": {
+        "key": 7,
+        "type": 6
+      }
+    }
+  },
+  "wither_skull": {
+    "parent": "entity",
+    "metadata": {
+      "is_invulnerable": {
+        "key": 7,
+        "type": 7
+      }
+    }
+  },
+  "firework_rocket_entity": {
+    "parent": "entity",
+    "metadata": {
+      "firework_info": {
+        "key": 7,
+        "type": 6
+      },
+      "owner_id": {
+        "key": 8,
+        "type": 17
+      },
+      "is_shot_at_angle": {
+        "key": 9,
+        "type": 7
+      }
+    }
+  },
+  "item_frame": {
+    "parent": "entity",
+    "metadata": {
+      "item": {
+        "key": 7,
+        "type": 6
+      },
+      "rotation": {
+        "key": 8,
+        "type": 1
+      }
+    }
+  },
+  "item_entity": {
+    "parent": "entity",
+    "metadata": {
+      "item": {
+        "key": 7,
+        "type": 6
+      }
+    }
+  },
+  "living_entity": {
+    "parent": "entity",
+    "metadata": {
+      "hand_states": {
+        "key": 7,
+        "type": 0,
+        "bitflags": {
+          "is_hand_active": 0,
+          "active_hand": 1,
+          "is_in_riptide_spin_attack": 2
+        }
+      },
+      "potion_effect_color": {
+        "key": 9,
+        "type": 1
+      },
+      "is_potion_effect_ambient": {
+        "key": 10,
+        "type": 7
+      },
+      "number_of_arrows_in_entity": {
+        "key": 11,
+        "type": 1
+      },
+      "health_added_by_absorption": {
+        "key": 12,
+        "type": 1
+      },
+      "location_of_the_bed_that_the_entity_is_currently_sleeping_in": {
+        "key": 13,
+        "type": 10
+      }
+    }
+  },
+  "player": {
+    "parent": "living_entity",
+    "metadata": {
+      "additional_hearts": {
+        "key": 14,
+        "type": 2
+      },
+      "score": {
+        "key": 15,
+        "type": 1
+      },
+      "skin_parts": {
+        "key": 16,
+        "type": 0,
+        "bitflags": {
+          "cape_enabled": 0,
+          "jacket_enabled": 1,
+          "left_sleeve_enabled": 2,
+          "right_sleeve_enabled": 3,
+          "left_pants_leg_enabled": 4,
+          "right_pants_leg_enabled": 5,
+          "hat_enabled": 6,
+          "unused": 7
+        }
+      },
+      "left_shoulder_entity_data": {
+        "key": 18,
+        "type": 14
+      },
+      "right_shoulder_entity_data": {
+        "key": 19,
+        "type": 14
+      }
+    }
+  },
+  "armor_stand": {
+    "parent": "living_entity",
+    "metadata": {
+      "flags": {
+        "key": 14,
+        "type": 0,
+        "bitflags": {
+          "is_small": 0,
+          "has_arms": 2,
+          "has_no_baseplate": 3,
+          "is_marker": 4
+        }
+      },
+      "head_rotation": {
+        "key": 15
+      },
+      "body_rotation": {
+        "key": 16
+      },
+      "left_arm_rotation": {
+        "key": 17
+      },
+      "right_arm_rotation": {
+        "key": 18
+      },
+      "left_leg_rotation": {
+        "key": 19
+      },
+      "right_leg_rotation": {
+        "key": 20
+      }
+    }
+  },
+  "mob": {
+    "parent": "living_entity",
+    "metadata": {
+      "flags": {
+        "key": 14,
+        "type": 0,
+        "bitflags": {
+          "noai": 0,
+          "is_left_handed": 1,
+          "is_agressive": 2
+        }
+      }
+    }
+  },
+  "ambient_creature": {
+    "parent": "mob",
+    "metadata": {}
+  },
+  "bat": {
+    "parent": "ambient_creature",
+    "metadata": {
+      "flags": {
+        "key": 15,
+        "type": 0,
+        "bitflags": {
+          "is_hanging": 0
+        }
+      }
+    }
+  },
+  "pathfinder_mob": {
+    "parent": "mob",
+    "metadata": {}
+  },
+  "water_animal": {
+    "parent": "pathfinder_mob",
+    "metadata": {}
+  },
+  "squid": {
+    "parent": "water_animal",
+    "metadata": {}
+  },
+  "dolphin": {
+    "parent": "water_animal",
+    "metadata": {
+      "treasure_position": {
+        "key": 15,
+        "type": 9
+      },
+      "can_find_treasure": {
+        "key": 16,
+        "type": 7
+      },
+      "has_fish": {
+        "key": 17,
+        "type": 7
+      }
+    }
+  },
+  "abstract_fish": {
+    "parent": "water_animal",
+    "metadata": {
+      "from_bucket": {
+        "key": 15,
+        "type": 7
+      }
+    }
+  },
+  "cod": {
+    "parent": "abstract_fish",
+    "metadata": {}
+  },
+  "puffer_fish": {
+    "parent": "abstract_fish",
+    "metadata": {
+      "puffstate": {
+        "key": 16,
+        "type": 1
+      }
+    }
+  },
+  "salmon": {
+    "parent": "abstract_fish",
+    "metadata": {}
+  },
+  "tropical_fish": {
+    "parent": "abstract_fish",
+    "metadata": {
+      "variant": {
+        "key": 16,
+        "type": 1
+      }
+    }
+  },
+  "ageable_mob": {
+    "parent": "pathfinder_mob",
+    "metadata": {
+      "is_baby": {
+        "key": 15,
+        "type": 7
+      }
+    }
+  },
+  "animal": {
+    "parent": "ageable_mob",
+    "metadata": {}
+  },
+  "abstract_horse": {
+    "parent": "animal",
+    "metadata": {
+      "flags": {
+        "key": 16,
+        "type": 0,
+        "bitflags": {
+          "unused": 7,
+          "is_tame": 1,
+          "is_saddled": 2,
+          "has_bred": 3,
+          "is_eating": 4,
+          "is_rearing": 5,
+          "is_mouth_open": 6
+        }
+      },
+      "owner": {
+        "key": 17,
+        "type": 12
+      }
+    }
+  },
+  "horse": {
+    "parent": "abstract_horse",
+    "metadata": {
+      "variant": {
+        "key": 18,
+        "type": 1
+      }
+    }
+  },
+  "zombie_horse": {
+    "parent": "abstract_horse",
+    "metadata": {}
+  },
+  "skeleton_horse": {
+    "parent": "abstract_horse",
+    "metadata": {}
+  },
+  "chested_horse": {
+    "parent": "abstract_horse",
+    "metadata": {
+      "has_chest": {
+        "key": 18,
+        "type": 7
+      }
+    }
+  },
+  "donkey": {
+    "parent": "chested_horse",
+    "metadata": {}
+  },
+  "llama": {
+    "parent": "chested_horse",
+    "metadata": {
+      "strength": {
+        "key": 19,
+        "type": 1
+      },
+      "carpet_color": {
+        "key": 20,
+        "type": 1
+      },
+      "variant": {
+        "key": 21,
+        "type": 1
+      }
+    }
+  },
+  "trader_llama": {
+    "metadata": {}
+  },
+  "mule": {
+    "parent": "chested_horse",
+    "metadata": {}
+  },
+  "bee": {
+    "parent": "animal",
+    "metadata": {
+      "flags": {
+        "key": 16,
+        "type": 0
+      },
+      "": {
+        "key": 0
+      },
+      "anger_time_in_ticks": {
+        "key": 17,
+        "type": 1
+      }
+    }
+  },
+  "fox": {
+    "parent": "animal",
+    "metadata": {
+      "type": {
+        "key": 16,
+        "type": 1,
+        "bitflags": {
+          "is_sitting": 0,
+          "unused": 1,
+          "is_crouching": 2,
+          "is_interested": 3,
+          "is_pouncing": 4,
+          "is_sleeping": 5,
+          "is_faceplanted": 6,
+          "is_defending": 7
+        }
+      },
+      "second_uuid": {
+        "key": 19,
+        "type": 12
+      }
+    }
+  },
+  "ocelot": {
+    "parent": "animal",
+    "metadata": {
+      "is_trusting": {
+        "key": 16,
+        "type": 7
+      }
+    }
+  },
+  "panda": {
+    "parent": "animal",
+    "metadata": {
+      "breed_timer": {
+        "key": 16,
+        "type": 1
+      },
+      "sneeze_timer": {
+        "key": 17,
+        "type": 1
+      },
+      "eat_timer": {
+        "key": 18,
+        "type": 1
+      },
+      "main_gene": {
+        "key": 19,
+        "type": 0
+      },
+      "hidden_gene": {
+        "key": 20,
+        "type": 0,
+        "bitflags": {
+          "unused": 0,
+          "is_sneezing": 1,
+          "is_rolling": 2,
+          "is_sitting": 3,
+          "is_on_back": 4
+        }
+      }
+    }
+  },
+  "pig": {
+    "parent": "animal",
+    "metadata": {
+      "has_saddle": {
+        "key": 16,
+        "type": 7
+      },
+      "total_time_to_\"boost\"_with_a_carrot_on_a_stick_for": {
+        "key": 17,
+        "type": 1
+      }
+    }
+  },
+  "rabbit": {
+    "parent": "animal",
+    "metadata": {
+      "type": {
+        "key": 16,
+        "type": 1
+      }
+    }
+  },
+  "turtle": {
+    "parent": "animal",
+    "metadata": {
+      "home_pos": {
+        "key": 16,
+        "type": 9
+      },
+      "has_egg": {
+        "key": 17,
+        "type": 7
+      },
+      "is_laying_egg": {
+        "key": 18,
+        "type": 7
+      },
+      "travel_pos": {
+        "key": 19,
+        "type": 9
+      },
+      "is_going_home": {
+        "key": 20,
+        "type": 7
+      },
+      "is_traveling": {
+        "key": 21,
+        "type": 7
+      }
+    }
+  },
+  "polar_bear": {
+    "parent": "animal",
+    "metadata": {
+      "is_standing_up": {
+        "key": 16,
+        "type": 7
+      }
+    }
+  },
+  "chicken": {
+    "parent": "animal",
+    "metadata": {}
+  },
+  "cow": {
+    "parent": "animal",
+    "metadata": {}
+  },
+  "hoglin": {
+    "parent": "animal",
+    "metadata": {
+      "is_immune_to_zombification": {
+        "key": 16,
+        "type": 7
+      }
+    }
+  },
+  "mooshroom": {
+    "parent": "cow",
+    "metadata": {
+      "variant": {
+        "key": 16,
+        "type": 3
+      }
+    }
+  },
+  "sheep": {
+    "parent": "animal",
+    "metadata": {
+      "flags": {
+        "key": 16,
+        "type": 0,
+        "bitflags": {
+          "color_id": 3.9068905956085187,
+          "is_sheared": 4
+        }
+      }
+    }
+  },
+  "strider": {
+    "parent": "animal",
+    "metadata": {
+      "total_time_to_\"boost\"_with_warped_fungus_on_a_stick_for": {
+        "key": 16,
+        "type": 1
+      },
+      "is_shaking": {
+        "key": 17,
+        "type": 7
+      },
+      "has_saddle": {
+        "key": 18,
+        "type": 7
+      }
+    }
+  },
+  "tameable_animal": {
+    "parent": "animal",
+    "metadata": {
+      "flags": {
+        "key": 16,
+        "type": 0,
+        "bitflags": {
+          "is_sitting": 0,
+          "unused": 1,
+          "is_tamed": 2
+        }
+      },
+      "owner": {
+        "key": 17,
+        "type": 12
+      }
+    }
+  },
+  "cat": {
+    "parent": "tameable_animal",
+    "metadata": {
+      "type": {
+        "key": 18,
+        "type": 1
+      },
+      "is_lying": {
+        "key": 19,
+        "type": 7
+      },
+      "is_relaxed": {
+        "key": 20,
+        "type": 7
+      },
+      "collar_color": {
+        "key": 21,
+        "type": 1
+      }
+    }
+  },
+  "wolf": {
+    "parent": "tameable_animal",
+    "metadata": {
+      "is_begging": {
+        "key": 18,
+        "type": 7
+      },
+      "collar_color": {
+        "key": 19,
+        "type": 1
+      },
+      "anger_time": {
+        "key": 20,
+        "type": 1
+      }
+    }
+  },
+  "parrot": {
+    "parent": "tameable_animal",
+    "metadata": {
+      "variant": {
+        "key": 18,
+        "type": 1
+      }
+    }
+  },
+  "abstract_villager": {
+    "parent": "ageable_mob",
+    "metadata": {
+      "head_shake_timer": {
+        "key": 16,
+        "type": 1
+      }
+    }
+  },
+  "villager": {
+    "parent": "abstract_villager",
+    "metadata": {
+      "villager_data": {
+        "key": 17,
+        "type": 16
+      }
+    }
+  },
+  "wandering_trader": {
+    "parent": "abstract_villager",
+    "metadata": {}
+  },
+  "abstract_golem": {
+    "parent": "pathfinder_mob",
+    "metadata": {}
+  },
+  "iron_golem": {
+    "parent": "abstract_golem",
+    "metadata": {
+      "flags": {
+        "key": 15,
+        "type": 0,
+        "bitflags": {
+          "is_player-created": 0
+        }
+      }
+    }
+  },
+  "snow_golem": {
+    "parent": "abstract_golem",
+    "metadata": {
+      "0x10": {
+        "key": 15,
+        "type": 0,
+        "bitflags": {
+          "has_no_pumpkin_hat": null,
+          "has_pumpkin_hat": 4
+        }
+      }
+    }
+  },
+  "shulker": {
+    "parent": "abstract_golem",
+    "metadata": {
+      "attach_face": {
+        "key": 15,
+        "type": 11
+      },
+      "attachment_position": {
+        "key": 16,
+        "type": 10
+      },
+      "shield_height": {
+        "key": 17,
+        "type": 0
+      },
+      "color": {
+        "key": 18,
+        "type": 0
+      }
+    }
+  },
+  "monster": {
+    "parent": "pathfinder_mob",
+    "metadata": {}
+  },
+  "base_piglin": {
+    "parent": "monster",
+    "metadata": {
+      "is_immune_to_zombification": {
+        "key": 15,
+        "type": 7
+      }
+    }
+  },
+  "piglin": {
+    "parent": "base_piglin",
+    "metadata": {
+      "is_baby": {
+        "key": 16,
+        "type": 7
+      },
+      "is_charging_crossbow": {
+        "key": 17,
+        "type": 7
+      },
+      "is_dancing": {
+        "key": 18,
+        "type": 7
+      }
+    }
+  },
+  "piglin_brute": {
+    "parent": "base_piglin",
+    "metadata": {}
+  },
+  "blaze": {
+    "parent": "monster",
+    "metadata": {
+      "flags": {
+        "key": 15,
+        "type": 0,
+        "bitflags": {
+          "is_on_fire": 0
+        }
+      }
+    }
+  },
+  "creeper": {
+    "parent": "monster",
+    "metadata": {
+      "state": {
+        "key": 15,
+        "type": 1
+      },
+      "is_charged": {
+        "key": 16,
+        "type": 7
+      },
+      "is_ignited": {
+        "key": 17,
+        "type": 7
+      }
+    }
+  },
+  "endermite": {
+    "parent": "monster",
+    "metadata": {}
+  },
+  "giant": {
+    "parent": "monster",
+    "metadata": {}
+  },
+  "guardian": {
+    "parent": "monster",
+    "metadata": {
+      "is_retracting_spikes": {
+        "key": 15,
+        "type": 7
+      },
+      "target_eid": {
+        "key": 16,
+        "type": 1
+      }
+    }
+  },
+  "elder_guardian": {
+    "parent": "guardian",
+    "metadata": {}
+  },
+  "silverfish": {
+    "parent": "monster",
+    "metadata": {}
+  },
+  "raider": {
+    "parent": "monster",
+    "metadata": {
+      "is_celebrating": {
+        "key": 15
+      }
+    }
+  },
+  "abstract_illager": {
+    "parent": "raider",
+    "metadata": {}
+  },
+  "vindicator": {
+    "parent": "abstract_illager",
+    "metadata": {}
+  },
+  "pillager": {
+    "parent": "abstract_illager",
+    "metadata": {
+      "is_charging": {
+        "key": 16,
+        "type": 7
+      }
+    }
+  },
+  "spellcaster_illager": {
+    "parent": "abstract_illager",
+    "metadata": {
+      "spell": {
+        "key": 16,
+        "type": 0
+      }
+    }
+  },
+  "evoker": {
+    "parent": "spellcaster_illager",
+    "metadata": {}
+  },
+  "illusioner": {
+    "parent": "spellcaster_illager",
+    "metadata": {}
+  },
+  "ravager": {
+    "parent": "raider",
+    "metadata": {}
+  },
+  "witch": {
+    "parent": "raider",
+    "metadata": {
+      "is_drinking_potion": {
+        "key": 16,
+        "type": 7
+      }
+    }
+  },
+  "evoker_fangs": {
+    "parent": "entity",
+    "metadata": {}
+  },
+  "vex": {
+    "parent": "monster",
+    "metadata": {
+      "flags": {
+        "key": 15,
+        "type": 0,
+        "bitflags": {
+          "is_attacking": 0
+        }
+      }
+    }
+  },
+  "abstract_skeleton": {
+    "parent": "monster",
+    "metadata": {}
+  },
+  "skeleton": {
+    "parent": "abstract_skeleton",
+    "metadata": {}
+  },
+  "wither_skeleton": {
+    "parent": "abstract_skeleton",
+    "metadata": {}
+  },
+  "stray": {
+    "parent": "abstract_skeleton",
+    "metadata": {}
+  },
+  "spider": {
+    "parent": "monster",
+    "metadata": {
+      "flags": {
+        "key": 15,
+        "type": 0,
+        "bitflags": {
+          "is_climbing": 0
+        }
+      }
+    }
+  },
+  "wither": {
+    "parent": "monster",
+    "metadata": {
+      "center_head's_target": {
+        "key": 15,
+        "type": 1
+      },
+      "left_head's_target": {
+        "key": 16,
+        "type": 1
+      },
+      "right_head's_target": {
+        "key": 17,
+        "type": 1
+      },
+      "invulnerable_time": {
+        "key": 18,
+        "type": 1
+      }
+    }
+  },
+  "zoglin": {
+    "parent": "monster",
+    "metadata": {
+      "is_baby": {
+        "key": 15,
+        "type": 7
+      }
+    }
+  },
+  "zombie": {
+    "parent": "monster",
+    "metadata": {
+      "is_baby": {
+        "key": 15,
+        "type": 7
+      },
+      "unused": {
+        "key": 16,
+        "type": 1
+      },
+      "is_becoming_a_drowned": {
+        "key": 17,
+        "type": 7
+      }
+    }
+  },
+  "zombie_villager": {
+    "parent": "zombie",
+    "metadata": {
+      "is_converting": {
+        "key": 18,
+        "type": 7
+      },
+      "villager_data": {
+        "key": 19,
+        "type": 16
+      }
+    }
+  },
+  "husk": {
+    "parent": "zombie",
+    "metadata": {}
+  },
+  "drowned": {
+    "parent": "zombie",
+    "metadata": {}
+  },
+  "zombified_piglin": {
+    "parent": "zombie",
+    "metadata": {}
+  },
+  "enderman": {
+    "parent": "monster",
+    "metadata": {
+      "carried_block": {
+        "key": 15,
+        "type": 13
+      },
+      "is_screaming": {
+        "key": 16,
+        "type": 7
+      },
+      "is_staring": {
+        "key": 17,
+        "type": 7
+      }
+    }
+  },
+  "ender_dragon": {
+    "parent": "mob",
+    "metadata": {
+      "dragon_phase": {
+        "key": 15,
+        "type": 1
+      }
+    }
+  },
+  "flying": {
+    "parent": "mob",
+    "metadata": {}
+  },
+  "ghast": {
+    "parent": "flying",
+    "metadata": {
+      "is_attacking": {
+        "key": 15,
+        "type": 7
+      }
+    }
+  },
+  "phantom": {
+    "parent": "flying",
+    "metadata": {
+      "size": {
+        "key": 15,
+        "type": 1
+      }
+    }
+  },
+  "slime": {
+    "parent": "mob",
+    "metadata": {
+      "size": {
+        "key": 15,
+        "type": 1
+      }
+    }
+  },
+  "llama_spit": {
+    "parent": "entity",
+    "metadata": {}
+  },
+  "abstract_minecart": {
+    "parent": "entity",
+    "metadata": {
+      "shaking_power": {
+        "key": 7,
+        "type": 1
+      },
+      "shaking_direction": {
+        "key": 8,
+        "type": 1
+      },
+      "shaking_multiplier": {
+        "key": 9,
+        "type": 2
+      },
+      "custom_block_id_and_damage": {
+        "key": 10,
+        "type": 1
+      },
+      "custom_block_y_position": {
+        "key": 11,
+        "type": 1
+      },
+      "show_custom_block": {
+        "key": 12,
+        "type": 7
+      }
+    }
+  },
+  "minecart": {
+    "parent": "abstract_minecart",
+    "metadata": {}
+  },
+  "abstract_minecart_container": {
+    "parent": "abstract_minecart",
+    "metadata": {}
+  },
+  "minecart_hopper": {
+    "parent": "abstract_minecart_container",
+    "metadata": {}
+  },
+  "minecart_chest": {
+    "parent": "abstract_minecart_container",
+    "metadata": {}
+  },
+  "minecart_furnace": {
+    "parent": "abstract_minecart",
+    "metadata": {
+      "has_fuel": {
+        "key": 13,
+        "type": 7
+      }
+    }
+  },
+  "minecart_tnt": {
+    "parent": "abstract_minecart",
+    "metadata": {}
+  },
+  "minecart_spawner": {
+    "parent": "abstract_minecart",
+    "metadata": {}
+  },
+  "minecart_command_block": {
+    "parent": "abstract_minecart",
+    "metadata": {
+      "command": {
+        "key": 13,
+        "type": 3
+      },
+      "last_output": {
+        "key": 14,
+        "type": 4
+      }
+    }
+  },
+  "primed_tnt": {
+    "parent": "entity",
+    "metadata": {
+      "fuse_time": {
+        "key": 7,
+        "type": 1
+      }
+    }
+  }
+}
