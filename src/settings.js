@@ -19,7 +19,7 @@ const {
 
 const booleanify = variable => variable?.toLowerCase() === 'true'
 
-export const VERSION = '1.16.3'
+export const VERSION = '1.16.5'
 export const ONLINE_MODE = booleanify(online_mode)
 export const USE_PERSISTENT_STORAGE = booleanify(use_persistent_storage)
 export const USE_BLOCKCHAIN = booleanify(use_blockchain)
