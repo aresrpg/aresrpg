@@ -2,7 +2,7 @@ import { World } from './events.js'
 import { SERVER_UUID } from './settings.js'
 
 /**
- * Take a string or a chat component as an input and output a chat component
+ * Take anything as an input and output an array of chat component
  */
 export function normalize_chat_component(component) {
   if (!component) return [{ text: '' }]
