@@ -36,7 +36,7 @@ export const floor1 = {
 log.info(
   {
     world: 'floor1',
-    mobs: floor1.mobs.length,
+    mobs: floor1.mob_positions.length,
     items: Object.entries(floor1.items).length,
     teleportation_stones: floor1.teleportation_stones.length,
   },
