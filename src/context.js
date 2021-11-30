@@ -72,6 +72,7 @@ const initial_world = {
   next_window_id: 1, // 0 is the player inventory
   /** @type {() => Object} Remove type to remove circular references */
   get: () => world,
+  screens: {},
 }
 
 const world_reducers = [
@@ -84,8 +85,12 @@ const world_reducers = [
   register_player_item_loot,
 ]
 
-/** @type {World} */
-const world = world_reducers.reduce((world, fn) => fn(world), initial_world)
+const world = /** @type {World} */ (
+  world_reducers.reduce(
+    (world, fn) => fn(world),
+    /** @type {any} */ (initial_world)
+  )
+)
 
 const initial_state = {
   nickname: undefined,
@@ -109,7 +114,6 @@ const initial_state = {
   inventory_sequence_number: 0,
   inventory_cursor: null,
   inventory_cursor_index: 0,
-  /** @type {0|1|2|3|4|5|6|7|8} */
   held_slot_index: 0,
   game_mode: 2,
   experience: 0,
@@ -172,6 +176,7 @@ const saved_state = ({
  ** @typedef {import('./types').Await<U>} Await */
 
 /** @typedef {Readonly<typeof initial_world>} InitialWorld */
+/** @typedef {Readonly<ReturnType<typeof register_mobs>>} InitialWorldWithMobs */
 /** @typedef {ReturnType<typeof world_reducers[number]>} WorldReducers */
 /** @typedef {Readonly<UnionToIntersection<WorldReducers>>} ReducedWorld */
 /** @typedef {InitialWorld & ReducedWorld} World */

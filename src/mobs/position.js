@@ -8,7 +8,7 @@ import { Context, Mob } from '../events.js'
 
 import { path_to_positions } from './path.js'
 
-/** @param {import('../context.js').InitialWorld} world */
+/** @param {import('../context.js').InitialWorldWithMobs} world */
 export function register(world) {
   const mobs_positions = new EventEmitter()
 
