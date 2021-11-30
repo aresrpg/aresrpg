@@ -24,6 +24,7 @@ import player_gamemode from './player/gamemode.js'
 import player_scoreboard from './player/scoreboard.js'
 import player_block_place from './player/block_placement.js'
 import player_bossbar from './player/boss_bar.js'
+import player_action_bar from './player/action_bar.js'
 import player_traders, {
   register as register_player_traders,
 } from './player/traders.js'
@@ -125,6 +126,7 @@ const initial_state = {
   health: 40,
   // player's energy, losing after each death
   soul: 100,
+
   // last time the player joined,
   // can be used for example to calcule regenerated soul while offline
   last_connection_time: undefined,
@@ -256,6 +258,7 @@ export async function observe_client(context) {
   player_teleportation_stones.observe(context)
   player_tablist.observe(context)
   player_sync.observe(context)
+  player_action_bar.observe(context)
   player_scoreboard.observe(context)
   player_block_place.observe(context)
   player_item_loot.observe(context)
