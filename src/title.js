@@ -1,12 +1,24 @@
 const Actions = {
   SET_TITLE: 0,
   SET_SUBSTITLE: 1,
+  SET_ACTION_BAR: 2,
   HIDE_TITLE: 4,
   RESET_TITLE: 5,
   SET_TIMES: 3,
 }
 
 const empty_component = { text: '' }
+
+// better to have separate functions
+// because title timings doesn't impact action bar but only real titles
+// so it can be confusing to send timings with an action bar
+// as it will actually fuck up real titles
+export function write_action_bar({ client, text }) {
+  client.write('title', {
+    action: Actions.SET_ACTION_BAR,
+    text: JSON.stringify(text),
+  })
+}
 
 /**
  * Send a title to a client, all times are in seconds
