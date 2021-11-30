@@ -34,7 +34,7 @@ function observe_mobs(mobs) {
 
 /** @param {import('./context.js').InitialWorld} world */
 export function register(world) {
-  const mobs = world.mobs.map(({ position, mob, level }, i) => {
+  const mobs = world.mob_positions.map(({ position, mob, level }, i) => {
     const initial_state = {
       path: [position],
       open: [],

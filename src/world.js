@@ -16,7 +16,7 @@ const world_folder = join(
 export const floor1 = {
   spawn_position: { x: 469.5, y: 162, z: 646.5, yaw: 25, pitch: 0 },
   chunks: chunks(join(world_folder, 'floor1', 'region')),
-  mobs: JSON.parse(
+  mob_positions: JSON.parse(
     fs.readFileSync(join(world_folder, 'floor1', 'mobs.json'), 'utf8')
   ),
   items: JSON.parse(
