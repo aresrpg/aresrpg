@@ -7,7 +7,7 @@ import uuid from 'uuid-1345'
 
 /**
  * @typedef Option
- * @property {client} client - the client
+ * @property {any} client - the client
  * @property {any} entityUUID - the entity_id
  * @property {any} title - chat component
  * @property {number} health - min: 0.0 , max: 1.0
@@ -46,7 +46,6 @@ export const Divisions = {
 
 export const Flags = { DARKEN_SKY: 0x1, BOSS_BAR: 0x2, CREATE_FOG: 0x04 }
 
-/** @type {(options: any) => any} */
 /**
  * Display Boss bar at the top of the game window.
  * Here is an example of how to use it:
@@ -64,6 +63,7 @@ export const Flags = { DARKEN_SKY: 0x1, BOSS_BAR: 0x2, CREATE_FOG: 0x04 }
  *   flags: Flags.CREATE_FOG
  * }
  * ```
+ * @type {(options: any) => any}
  */
 export const write_bossbar = ({
   client,

@@ -23,6 +23,7 @@ import player_held_item from './player/held_item.js'
 import player_gamemode from './player/gamemode.js'
 import player_scoreboard from './player/scoreboard.js'
 import player_block_place from './player/block_placement.js'
+import player_bossbar from './player/boss_bar.js'
 import player_traders, {
   register as register_player_traders,
 } from './player/traders.js'
@@ -259,6 +260,7 @@ export async function observe_client(context) {
   player_block_place.observe(context)
   player_item_loot.observe(context)
   player_soul.observe(context)
+  player_bossbar.observe(context)
 
   commands_declare.observe(context)
 
