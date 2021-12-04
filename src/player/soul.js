@@ -41,7 +41,7 @@ export default {
   /** @type {import('../context.js').Observer} */
   observe({ events, signal, dispatch, get_state }) {
     // regenerate soul every 10 minute while online
-    aiter(abortable(setInterval(MINUTE_10, { signal }))).forEach(() => {
+    aiter(abortable(setInterval(MINUTE_10, null, { signal }))).forEach(() => {
       const { soul } = get_state()
       if (soul !== 0)
         dispatch(Action.REGENERATE_SOUL, {
