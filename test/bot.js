@@ -1,3 +1,4 @@
+import '../src/index'
 import mineflayer from 'mineflayer'
 
 export default mineflayer.createBot({
