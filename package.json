@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node src/index.js | pino-human",
-    "test": "node ./test/test_runner.js",
+    "test": "node ./test/test_runner.js | pino-human",
     "debug": "node --inspect=0.0.0.0 src/index.js | pino-human",
     "lint": "eslint . && prettier . --check && npm run typecheck",
     "typecheck": "tsc --build",
