@@ -5,8 +5,7 @@ import { aiter } from 'iterator-helper'
 import { MobAction, Context, Mob } from '../events.js'
 import logger from '../logger.js'
 import { abortable } from '../iterator.js'
-
-import { Types } from './types.js'
+import Entities from '../../data/entities.json'
 
 const log = logger(import.meta)
 const invulnerability_time = 500
@@ -42,7 +41,7 @@ export default {
           mouse === Mouse.LEFT_CLICK
         ) {
           const mob = world.mobs.by_entity_id(target)
-          const { type } = Types[mob?.mob]
+          const { type } = Entities[mob?.mob]
           if (mob && type !== 'npc') {
             mob.dispatch(MobAction.DEAL_DAMAGE, {
               damage: 1,

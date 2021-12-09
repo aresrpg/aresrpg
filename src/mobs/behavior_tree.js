@@ -5,11 +5,10 @@ import { fileURLToPath } from 'url'
 import { DOMParser } from 'xmldom'
 
 import run from '../behavior.js'
-
-import { Types } from './types.js'
+import Entities from '../../data/entities.json'
 
 export const trees = Object.fromEntries(
-  Object.keys(Types).map(id => {
+  Object.keys(Entities).map(id => {
     const tree = new DOMParser().parseFromString(
       fs.readFileSync(
         join(dirname(fileURLToPath(import.meta.url)), 'behavior', `${id}.xml`),

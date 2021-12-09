@@ -1,9 +1,8 @@
 import { Position } from '../chat.js'
-
-import { Types } from './types.js'
+import Entities from '../../data/entities.json'
 
 export function speak_to(mob, { client }) {
-  const { dialogs, displayName } = Types[mob.mob]
+  const { dialogs, displayName } = Entities[mob.mob]
   if (dialogs !== undefined) {
     const x = Math.floor(Math.random() * dialogs.length)
     const message = JSON.stringify([

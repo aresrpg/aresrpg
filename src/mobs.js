@@ -4,7 +4,8 @@ import { EventEmitter } from 'events'
 import minecraft_data from 'minecraft-data'
 import { aiter } from 'iterator-helper'
 
-import { Types } from './mobs/types.js'
+import Entities from '../data/entities.json'
+
 import { last_event_value, Mob } from './events.js'
 import { path_end, path_position } from './mobs/path.js'
 import mobs_goto from './mobs/goto.js'
@@ -39,7 +40,7 @@ const MOVEMENT_SPEED_TO_BLOCKS_PER_SECOND = 10
 /** @param {import('./context.js').InitialWorld} world */
 export function register(world) {
   const mobs = world.mob_positions.map(({ position, mob, level }, i) => {
-    const { speed = DEFAULT_SPEED, health } = Types[mob]
+    const { speed = DEFAULT_SPEED, health } = Entities[mob]
     const initial_state = {
       path: [position],
       open: [],
@@ -82,7 +83,7 @@ export function register(world) {
       level,
       events,
       get_state,
-      constants: entitiesByName[Types[mob].mob],
+      constants: entitiesByName[Entities[mob].mob],
       position(time = Date.now()) {
         const { path, start_time, speed } = get_state()
 

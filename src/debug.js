@@ -5,9 +5,10 @@ import fastifyCors from 'fastify-cors'
 import { XMLSerializer } from 'xmldom'
 import { aiter } from 'iterator-helper'
 
+import Entities from '../data/entities.json'
+
 import logger from './logger.js'
 import { trees } from './mobs/behavior_tree.js'
-import { Types } from './mobs/types.js'
 import { SUCCESS, FAILURE, RUNNING } from './behavior.js'
 
 const log = logger(import.meta)
@@ -20,7 +21,7 @@ function behavior({ world, app }) {
 
   const behavior_trees = Object.entries(trees).map(([id, tree]) => ({
     id,
-    name: Types[id].displayName,
+    name: Entities[id].displayName,
     tree: serializer.serializeToString(tree),
     instances: world.mobs.all
       .filter(({ mob }) => mob === id)

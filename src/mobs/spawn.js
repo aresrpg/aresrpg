@@ -6,8 +6,7 @@ import { aiter } from 'iterator-helper'
 
 import { VERSION } from '../settings.js'
 import { Context } from '../events.js'
-
-import { Types } from './types.js'
+import Entities from '../../data/entities.json'
 
 const { entitiesByName } = minecraft_data(VERSION)
 
@@ -33,7 +32,7 @@ function despawn_signal({ events, entity_id }) {
 
 export function spawn_mob(client, { mob, position, events }) {
   const { entity_id, mob: mob_type, level } = mob
-  const { type, mob: entity_type, displayName } = Types[mob_type]
+  const { type, mob: entity_type, displayName } = Entities[mob_type]
 
   client.write('spawn_entity_living', {
     entityId: entity_id,
