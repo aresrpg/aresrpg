@@ -4,8 +4,7 @@ import { aiter } from 'iterator-helper'
 
 import { Context, Mob, Action } from '../events.js'
 import { abortable } from '../iterator.js'
-
-import { Types } from './types.js'
+import Entities from '../../data/entities.json'
 
 export default {
   /** @type {import('../context.js').Observer} */
@@ -17,7 +16,7 @@ export default {
             target === client.uuid &&
             attack_sequence_number !== last_attack_sequence_number
           ) {
-            dispatch(Action.DAMAGE, { damage: Types[mob.mob].damage })
+            dispatch(Action.DAMAGE, { damage: Entities[mob.mob].damage })
           }
           return attack_sequence_number
         },

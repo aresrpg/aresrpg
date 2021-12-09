@@ -7,8 +7,8 @@ import combineAsyncIterators from 'combine-async-iterators'
 import { abortable } from '../iterator.js'
 import { Context } from '../events.js'
 import { write_bossbar, Colors, Divisions, Actions } from '../boss_bar.js'
-import { Types } from '../mobs/types.js'
 import logger from '../logger.js'
+import Entities from '../../data/entities.json'
 
 const BOSS_BAR_AMOUNT = 3
 const BOSS_BAR_TTL = 5000
@@ -76,7 +76,7 @@ export default {
         ]
       }
 
-      const { displayName, health: max_health = 20 } = Types[mob.mob]
+      const { displayName, health: max_health = 20 } = Entities[mob.mob]
       const { health } = mob.get_state()
       const entityUUID = format_uuid(mob.entity_id)
       const display_health = Math.max(0, Math.min(1, health / max_health))
@@ -86,7 +86,6 @@ export default {
         bossbars.find(({ entityUUID: uuid } = {}) => uuid === entityUUID) ?? {}
 
       if (last_entity_uuid) {
-        log.info({ display_health, color, entityUUID }, 'update bossbar')
         write_bossbar({
           client,
           entityUUID,
@@ -128,7 +127,6 @@ export default {
 
         const { entityUUID: evicted_uuid } = bossbars.at(-1) ?? {}
         if (evicted_uuid) {
-          log.info({ evicted_uuid }, 'evict bossbar')
           write_bossbar({
             client,
             entityUUID: evicted_uuid,
