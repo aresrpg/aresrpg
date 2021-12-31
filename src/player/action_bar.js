@@ -65,12 +65,13 @@ export default {
   observe({ client, get_state, world, events, signal }) {
     aiter(abortable(setInterval(2000, { signal }))).forEach(() => {
       const state = get_state()
-      update_action_bar({
-        client,
-        health: state.health,
-        max_health: get_max_health(state),
-        remaining_stats_point: get_remaining_stats_point(state),
-      })
+      if (state)
+        update_action_bar({
+          client,
+          health: state.health,
+          max_health: get_max_health(state),
+          remaining_stats_point: get_remaining_stats_point(state),
+        })
     })
 
     aiter(abortable(on(events, Context.STATE, { signal }))).reduce(
