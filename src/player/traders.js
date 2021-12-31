@@ -5,6 +5,7 @@ import { chunk_position, chunk_index } from '../chunk.js'
 import { VERSION } from '../settings.js'
 import { empty_slot, item_to_slot } from '../items.js'
 import { Context } from '../events.js'
+import items from '../../data/items.json'
 
 const mcData = minecraft_data(VERSION)
 
@@ -111,7 +112,7 @@ function open_trade({ client, world }) {
       const mc_recipe = ares_recipe.map(trade => {
         const { inputItem1, inputItem2, outputItem } = trade
         const to_slot = item =>
-          item ? item_to_slot(world.items[item.type], item.count) : empty_slot
+          item ? item_to_slot(items[item.type], item.count) : empty_slot
         return {
           inputItem1: to_slot(inputItem1),
           inputItem2: to_slot(inputItem2),

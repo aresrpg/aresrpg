@@ -7,6 +7,7 @@ import execute_command from '../commands/commands.js'
 import { VERSION } from '../settings.js'
 import { world_chat_msg } from '../chat.js'
 import { World } from '../events.js'
+import items from '../../data/items.json'
 
 const mcData = minecraftData(VERSION)
 const log = logger(import.meta)
@@ -54,7 +55,7 @@ export default {
           const item = inventory[slot_number]
           if (item) {
             const { type, count } = item
-            return slot_to_chat(item_to_slot(world.items[type], count))
+            return slot_to_chat(item_to_slot(items[type], count))
           }
         }
         return { text: part }

@@ -5,6 +5,8 @@ import { VERSION } from '../settings.js'
 import { chunk_position } from '../chunk.js'
 import { Action, Context } from '../events.js'
 import { empty_slot, item_to_slot } from '../items.js'
+import items from '../../data/items.json'
+
 const mcData = minecraftData(VERSION)
 
 // TODO: export that outside, but where ?
@@ -273,9 +275,7 @@ function on_window_click({ world, client, dispatch, get_state }) {
           ...inventory
             .slice(9, 45)
             .map(item =>
-              item
-                ? item_to_slot(world.items[item.type], item.count)
-                : empty_slot
+              item ? item_to_slot(items[item.type], item.count) : empty_slot
             ),
         ],
       })

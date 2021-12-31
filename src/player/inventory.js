@@ -6,6 +6,7 @@ import { empty_slot, item_to_slot } from '../items.js'
 import { PLAYER_INVENTORY_ID } from '../settings.js'
 import { abortable } from '../iterator.js'
 import { Action, Context } from '../events.js'
+import items from '../../data/items.json'
 
 const FORBIDDEN_SLOTS = [
   0, // Craft Output
@@ -78,7 +79,7 @@ export default {
   /** @type {import('../context.js').Observer} */
   observe({ client, events, world, get_state, signal }) {
     const to_slot = item =>
-      item ? item_to_slot(world.items[item.type], item.count) : empty_slot
+      item ? item_to_slot(items[item.type], item.count) : empty_slot
 
     const write_inventory = inventory =>
       client.write('window_items', {
