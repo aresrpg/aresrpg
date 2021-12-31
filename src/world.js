@@ -19,9 +19,6 @@ export const floor1 = {
   mob_positions: JSON.parse(
     fs.readFileSync(join(world_folder, 'floor1', 'mobs.json'), 'utf8')
   ),
-  items: JSON.parse(
-    fs.readFileSync(join(world_folder, 'floor1', 'items.json'), 'utf8')
-  ),
   traders: JSON.parse(
     fs.readFileSync(join(world_folder, 'floor1', 'traders.json'), 'utf8')
   ),
@@ -37,7 +34,6 @@ log.info(
   {
     world: 'floor1',
     mobs: floor1.mob_positions.length,
-    items: Object.entries(floor1.items).length,
     teleportation_stones: floor1.teleportation_stones.length,
   },
   'World loaded'
