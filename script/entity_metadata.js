@@ -30,14 +30,15 @@ const Type = {
   Pose: 18,
 }
 
-const Renames = {
-  0: 'flags',
+const Renames = entity_name => ({
+  0: `${entity_name}_flags`,
   'ignore_radius_and_show_effect_as_single_point,_not_area': 'ignore_radius',
   entity_id_of_entity_which_used_firework: 'owner_id',
   the_displayed_skin_parts_bit_mask_that_is_sent_in_client_settings:
     'skin_parts',
   'the_#particle': 'particle',
-}
+  'hooked_entity_id_+_1': 'hooked_entity_id',
+})
 
 function snake_case(e) {
   return e.replaceAll(' ', '_').toLowerCase()
@@ -82,7 +83,7 @@ const start = $('#Entity').parent()
 
 const entities = Object.fromEntries(
   [start, ...start.nextAll('h3').toArray()].map(title => {
-    const name = snake_case($(title).text().trim())
+    const entity_name = snake_case($(title).text().trim())
     const desc = $(title).next('p').text().trim()
     const table1 = $(title).next('p').next('table')
     const table2 = $(title).next('p').next('p').next('table')
@@ -102,7 +103,7 @@ const entities = Object.fromEntries(
         const key = parseInt($(values[0]).text().trim(), 10)
         const type = $(values[1]).text().trim()
         const meaning = $(values[2]).text().trim()
-        const name = snake_case(meaning.split(/ \(|[.?:,]/, 1)[0])
+        const meta_name = snake_case(meaning.split(/ \(|[.?:,]/, 1)[0])
 
         const bitflags =
           raw_bitflags &&
@@ -120,11 +121,15 @@ const entities = Object.fromEntries(
               ])
           )
 
-        return [Renames[name] ?? name, { key, type: Type[type], bitflags }]
+        const renames = Renames(entity_name)
+        return [
+          renames[meta_name] ?? meta_name,
+          { key, type: Type[type], bitflags },
+        ]
       })
     )
 
-    return [name, { parent, metadata }]
+    return [entity_name, { parent, metadata }]
   })
 )
 

@@ -1,7 +1,7 @@
 {
   "entity": {
     "metadata": {
-      "flags": {
+      "entity_flags": {
         "key": 0,
         "type": 0,
         "bitflags": {
@@ -128,7 +128,7 @@
   "fishing_hook": {
     "parent": "entity",
     "metadata": {
-      "hooked_entity_id_+_1": {
+      "hooked_entity_id": {
         "key": 7,
         "type": 1
       },
@@ -141,7 +141,7 @@
   "abstract_arrow": {
     "parent": "entity",
     "metadata": {
-      "flags": {
+      "abstract_arrow_flags": {
         "key": 7,
         "type": 0,
         "bitflags": {
@@ -369,7 +369,7 @@
   "armor_stand": {
     "parent": "living_entity",
     "metadata": {
-      "flags": {
+      "armor_stand_flags": {
         "key": 14,
         "type": 0,
         "bitflags": {
@@ -402,7 +402,7 @@
   "mob": {
     "parent": "living_entity",
     "metadata": {
-      "flags": {
+      "mob_flags": {
         "key": 14,
         "type": 0,
         "bitflags": {
@@ -420,7 +420,7 @@
   "bat": {
     "parent": "ambient_creature",
     "metadata": {
-      "flags": {
+      "bat_flags": {
         "key": 15,
         "type": 0,
         "bitflags": {
@@ -509,7 +509,7 @@
   "abstract_horse": {
     "parent": "animal",
     "metadata": {
-      "flags": {
+      "abstract_horse_flags": {
         "key": 16,
         "type": 0,
         "bitflags": {
@@ -751,7 +751,7 @@
   "sheep": {
     "parent": "animal",
     "metadata": {
-      "flags": {
+      "sheep_flags": {
         "key": 16,
         "type": 0,
         "bitflags": {
@@ -781,7 +781,7 @@
   "tameable_animal": {
     "parent": "animal",
     "metadata": {
-      "flags": {
+      "tameable_animal_flags": {
         "key": 16,
         "type": 0,
         "bitflags": {
@@ -872,7 +872,7 @@
   "iron_golem": {
     "parent": "abstract_golem",
     "metadata": {
-      "flags": {
+      "iron_golem_flags": {
         "key": 15,
         "type": 0,
         "bitflags": {
@@ -952,7 +952,7 @@
   "blaze": {
     "parent": "monster",
     "metadata": {
-      "flags": {
+      "blaze_flags": {
         "key": 15,
         "type": 0,
         "bitflags": {
@@ -1069,7 +1069,7 @@
   "vex": {
     "parent": "monster",
     "metadata": {
-      "flags": {
+      "vex_flags": {
         "key": 15,
         "type": 0,
         "bitflags": {
@@ -1097,7 +1097,7 @@
   "spider": {
     "parent": "monster",
     "metadata": {
-      "flags": {
+      "spider_flags": {
         "key": 15,
         "type": 0,
         "bitflags": {
