@@ -46,7 +46,7 @@
     "minecraft-protocol": "1.26.5",
     "node-fetch": "^3.1.0",
     "pino": "7.5.1",
-    "prismarine-provider-anvil": "2.4.0",
+    "prismarine-provider-anvil": "2.5.1",
     "pusher-js": "7.0.3",
     "uuid-1345": "^1.0.2",
     "vec3": "0.1.7",
