@@ -4,6 +4,7 @@ import minecraftData from 'minecraft-data'
 import UUID from 'uuid-1345'
 import Vec3 from 'vec3'
 
+import { to_metadata } from '../entity_metadata.js'
 import { Context } from '../events.js'
 import { floor_pos, intersect_ray_plane, to_direction } from '../math.js'
 import { VERSION } from '../settings.js'
@@ -49,27 +50,23 @@ export function spawn_item_frame(
 
   client.write('entity_metadata', {
     entityId,
-    metadata: [
-      {
-        key: 7,
-        value: {
-          present: true,
-          itemId: mcData.itemsByName.filled_map.id,
-          itemCount: 1,
-          nbtData: {
-            type: 'compound',
-            name: 'tag',
-            value: {
-              map: {
-                type: 'int',
-                value: entityId,
-              },
+    metadata: to_metadata('item_frame', {
+      item: {
+        present: true,
+        itemId: mcData.itemsByName.filled_map.id,
+        itemCount: 1,
+        nbtData: {
+          type: 'compound',
+          name: 'tag',
+          value: {
+            map: {
+              type: 'int',
+              value: entityId,
             },
           },
         },
-        type: 6,
       },
-    ],
+    }),
   })
 }
 

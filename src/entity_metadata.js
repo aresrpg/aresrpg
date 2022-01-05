@@ -36,31 +36,24 @@ function to_bitmask(bitflags, object) {
 }
 
 export function to_metadata(entity, metadatas) {
-  const meta_entity = entity_metadata[entity]
-  if (!meta_entity) throw new Error(`${entity} is not a valid entity`)
-
-  const known = Object.entries(metadatas).filter(
-    ([name]) => name in meta_entity.metadata
-  )
+  const { parent, metadata } = entity_metadata[entity] ?? {}
+  if (!metadata) throw new Error(`${entity} doesn't have any metadata`)
+  const known = Object.entries(metadatas).filter(([name]) => name in metadata)
   const leftover = Object.entries(metadatas).filter(
-    ([name]) => !(name in meta_entity.metadata)
+    ([name]) => !(name in metadata)
   )
 
-  if (!meta_entity.parent && leftover.length !== 0)
+  if (!parent && leftover.length !== 0)
     throw new Error(`unknown keys: ${leftover.map(([key]) => key)}`)
 
   return known
     .map(([meta_name, meta_value]) => {
-      const { key, type, bitflags } = meta_entity.metadata[meta_name]
+      const { key, type, bitflags } = metadata[meta_name]
       return {
         key,
         type,
         value: bitflags ? to_bitmask(bitflags, meta_value) : meta_value,
       }
     })
-    .concat(
-      meta_entity.parent
-        ? to_metadata(meta_entity.parent, Object.fromEntries(leftover))
-        : []
-    )
+    .concat(parent ? to_metadata(parent, Object.fromEntries(leftover)) : [])
 }

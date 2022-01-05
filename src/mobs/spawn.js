@@ -7,6 +7,8 @@ import { aiter } from 'iterator-helper'
 import { VERSION } from '../settings.js'
 import { Context } from '../events.js'
 import Entities from '../../data/entities.json'
+import { to_metadata } from '../entity_metadata.js'
+
 
 const { entitiesByName } = minecraft_data(VERSION)
 
@@ -51,22 +53,14 @@ export function spawn_mob(client, { mob, position, events }) {
 
   client.write('entity_metadata', {
     entityId: entity_id,
-    metadata: [
-      {
-        key: 2,
-        type: 5,
-        value: JSON.stringify({
-          text: displayName + `(${entity_id})`,
-          color: color_by_type[type],
-          extra: level && [{ text: ` [Lvl ${level}]`, color: 'dark_red' }],
-        }),
-      },
-      {
-        key: 3,
-        type: 7,
-        value: true,
-      },
-    ],
+    metadata: to_metadata('entity', {
+      custom_name: JSON.stringify({
+        text: displayName + `(${entity_id})`,
+        color: color_by_type[type],
+        extra: level && [{ text: ` [Lvl ${level}]`, color: 'dark_red' }],
+      }),
+      is_custom_name_visible: true,
+    }),
   })
 
   events.emit(Context.MOB_SPAWNED, {

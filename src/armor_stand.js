@@ -2,6 +2,7 @@ import UUID from 'uuid-1345'
 import minecraftData from 'minecraft-data'
 
 import { VERSION } from './settings.js'
+import { to_metadata } from './entity_metadata.js'
 
 const mcData = minecraftData(VERSION)
 
@@ -36,21 +37,12 @@ export function create_armor_stand(
 
   const metadata = {
     entityId: entity_id,
-    metadata: [
-      // TODO: fix magic number
-      { key: 0, type: 0, value: 0x20 },
-      {
-        key: 2,
-        value: JSON.stringify(display_name),
-        type: 5,
-      },
-      {
-        key: 3,
-        type: 7,
-        value: true,
-      },
-      { key: 14, type: 0, value: 0x10 },
-    ],
+    metadata: to_metadata('armor_stand', {
+      entity_flags: { is_invisible: true },
+      armor_stand_flags: { is_marker: true },
+      custom_name: JSON.stringify(display_name),
+      is_custom_name_visible: true,
+    }),
   }
 
   client.write('spawn_entity_living', mob)
