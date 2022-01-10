@@ -36,8 +36,9 @@ function to_bitmask(bitflags, object) {
 }
 
 export function to_metadata(entity, metadatas) {
-  const { parent, metadata } = entity_metadata[entity] ?? {}
-  if (!metadata) throw new Error(`${entity} doesn't have any metadata`)
+  if (!(entity in entity_metadata))
+    throw new Error(`${entity} doesn't have any metadata`)
+  const { parent, metadata } = entity_metadata[entity]
   const known = Object.entries(metadatas).filter(([name]) => name in metadata)
   const leftover = Object.entries(metadatas).filter(
     ([name]) => !(name in metadata)

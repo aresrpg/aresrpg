@@ -9,7 +9,6 @@ import { Context } from '../events.js'
 import Entities from '../../data/entities.json'
 import { to_metadata } from '../entity_metadata.js'
 
-
 const { entitiesByName } = minecraft_data(VERSION)
 
 const color_by_type = {
