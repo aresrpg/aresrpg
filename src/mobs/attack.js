@@ -16,7 +16,7 @@ export default {
             target === client.uuid &&
             attack_sequence_number !== last_attack_sequence_number
           ) {
-            dispatch(Action.DAMAGE, { damage: Entities[mob.mob].damage })
+            dispatch(Action.DAMAGE, { damage: Entities[mob.type].damage })
           }
           return attack_sequence_number
         },

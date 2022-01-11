@@ -11,7 +11,7 @@ import { to_metadata } from '../entity_metadata.js'
 
 const { entitiesByName } = minecraft_data(VERSION)
 
-const color_by_type = {
+const color_by_category = {
   mob: 'white',
   archiMob: 'gold',
   boss: 'red',
@@ -32,13 +32,13 @@ function despawn_signal({ events, entity_id }) {
 }
 
 export function spawn_mob(client, { mob, position, events }) {
-  const { entity_id, mob: mob_type, level } = mob
-  const { type, mob: entity_type, displayName } = Entities[mob_type]
+  const { entity_id, type, level } = mob
+  const { category, minecraft_entity, displayName } = Entities[type]
 
   client.write('spawn_entity_living', {
     entityId: entity_id,
     entityUUID: UUID.v4(),
-    type: entitiesByName[entity_type].id,
+    type: entitiesByName[minecraft_entity].id,
     x: position.x,
     y: position.y,
     z: position.z,
@@ -54,8 +54,8 @@ export function spawn_mob(client, { mob, position, events }) {
     entityId: entity_id,
     metadata: to_metadata('entity', {
       custom_name: JSON.stringify({
-        text: displayName + `(${entity_id})`,
-        color: color_by_type[type],
+        text: displayName,
+        color: color_by_category[category],
         extra: level && [{ text: ` [Lvl ${level}]`, color: 'dark_red' }],
       }),
       is_custom_name_visible: true,

@@ -1,8 +1,8 @@
 {
   "talus_pig": {
     "displayName": "Porc de Talus",
-    "type": "mob",
-    "mob": "pig",
+    "category": "mob",
+    "minecraft_entity": "pig",
     "xp": 10,
     "loots": [
       {
@@ -50,11 +50,11 @@
   },
   "chicken": {
     "displayName": "Poule",
-    "type": "mob",
-    "mob": "chicken",
+    "category": "mob",
+    "minecraft_entity": "chicken",
     "equipment": {
       "main_hand": {
-        "type": "menitrass_100",
+        "category": "menitrass_100",
         "count": 1
       }
     },
@@ -92,8 +92,8 @@
   },
   "sick_chicken": {
     "displayName": "Poule Malade",
-    "type": "mob",
-    "mob": "chicken",
+    "category": "mob",
+    "minecraft_entity": "chicken",
     "xp": 3,
     "loots": [
       {
@@ -133,8 +133,8 @@
   },
   "rat": {
     "displayName": "Rat",
-    "type": "mob",
-    "mob": "silverfish",
+    "category": "mob",
+    "minecraft_entity": "silverfish",
     "xp": 4,
     "loots": [
       {
@@ -158,8 +158,8 @@
   },
   "young_wolf": {
     "displayName": "Jeune Loup",
-    "type": "mob",
-    "mob": "wolf",
+    "category": "mob",
+    "minecraft_entity": "wolf",
     "xp": 10,
     "loots": [
       {
@@ -187,8 +187,8 @@
   },
   "wolf": {
     "displayName": "Loup",
-    "type": "mob",
-    "mob": "wolf",
+    "category": "mob",
+    "minecraft_entity": "wolf",
     "xp": 10,
     "loots": [
       {
@@ -228,8 +228,8 @@
   },
   "hungry_wolf": {
     "displayName": "Loup Affamé",
-    "type": "mob",
-    "mob": "wolf",
+    "category": "mob",
+    "minecraft_entity": "wolf",
     "xp": 70,
     "loots": [
       {
@@ -265,8 +265,8 @@
   },
   "antic_wolf": {
     "displayName": "Loup Antique",
-    "type": "mob",
-    "mob": "wolf",
+    "category": "mob",
+    "minecraft_entity": "wolf",
     "xp": 1800,
     "loots": [
       {
@@ -306,8 +306,8 @@
   },
   "white_wolf": {
     "displayName": "Loup Blanc",
-    "type": "mob",
-    "mob": "wolf",
+    "category": "mob",
+    "minecraft_entity": "wolf",
     "xp": 350,
     "loots": [
       {
@@ -347,8 +347,8 @@
   },
   "caverns_wolf": {
     "displayName": "Loup des Cavernes",
-    "type": "mob",
-    "mob": "wolf",
+    "category": "mob",
+    "minecraft_entity": "wolf",
     "xp": 1000,
     "loots": [
       {
@@ -388,8 +388,8 @@
   },
   "enraged_wolf": {
     "displayName": "Loup Enragé",
-    "type": "mob",
-    "mob": "wolf",
+    "category": "mob",
+    "minecraft_entity": "wolf",
     "xp": 350,
     "loots": [
       {
@@ -433,8 +433,8 @@
   },
   "cub": {
     "displayName": "Louveteau",
-    "type": "mob",
-    "mob": "wolf",
+    "category": "mob",
+    "minecraft_entity": "wolf",
     "xp": 41,
     "loots": [
       {
@@ -465,8 +465,8 @@
   },
   "she_wolf": {
     "displayName": "Louve",
-    "type": "mob",
-    "mob": "wolf",
+    "category": "mob",
+    "minecraft_entity": "wolf",
     "xp": 350,
     "loots": [
       {
@@ -502,8 +502,8 @@
   },
   "ramick": {
     "displayName": "Ramick Eymouse",
-    "type": "archiMob",
-    "mob": "silverfish",
+    "category": "archiMob",
+    "minecraft_entity": "silverfish",
     "xp": 20,
     "loots": [
       {
@@ -527,8 +527,8 @@
   },
   "severin": {
     "displayName": "Severin le boursouflé",
-    "type": "archiMob",
-    "mob": "pig",
+    "category": "archiMob",
+    "minecraft_entity": "pig",
     "xp": 250,
     "loots": [
       {
@@ -564,8 +564,8 @@
   },
   "moutron": {
     "displayName": "Moutron l'Epique",
-    "type": "archiMob",
-    "mob": "sheep",
+    "category": "archiMob",
+    "minecraft_entity": "sheep",
     "xp": 125,
     "loots": [],
     "speed": 0.35,
@@ -584,8 +584,8 @@
   },
   "nofus": {
     "displayName": "Nofus le Chafer",
-    "type": "archiMob",
-    "mob": "skeleton",
+    "category": "archiMob",
+    "minecraft_entity": "skeleton",
     "xp": 2000,
     "loots": [
       {
@@ -617,8 +617,8 @@
   },
   "sparot": {
     "displayName": "Sparot le Pirate",
-    "type": "archiMob",
-    "mob": "zombie",
+    "category": "archiMob",
+    "minecraft_entity": "zombie",
     "xp": 850,
     "loots": [
       {
@@ -642,8 +642,8 @@
   },
   "araknea": {
     "displayName": "Araknéa la Couveuse",
-    "type": "archiMob",
-    "mob": "spider",
+    "category": "archiMob",
+    "minecraft_entity": "spider",
     "xp": 5000,
     "loots": [
       {
@@ -679,8 +679,8 @@
   },
   "tormented_skull": {
     "displayName": "Crane Tourmenté",
-    "type": "mob",
-    "mob": "skeleton",
+    "category": "mob",
+    "minecraft_entity": "skeleton",
     "xp": 200,
     "loots": [
       {
@@ -708,8 +708,8 @@
   },
   "draugr": {
     "displayName": "Draugr",
-    "type": "mob",
-    "mob": "skeleton",
+    "category": "mob",
+    "minecraft_entity": "skeleton",
     "xp": 50,
     "loots": [
       {
@@ -757,8 +757,8 @@
   },
   "antic_draugr": {
     "displayName": "Draugr Antique",
-    "type": "mob",
-    "mob": "skeleton",
+    "category": "mob",
+    "minecraft_entity": "skeleton",
     "xp": 400,
     "loots": [
       {
@@ -794,8 +794,8 @@
   },
   "archer_draugr": {
     "displayName": "Draugr Archer",
-    "type": "mob",
-    "mob": "skeleton",
+    "category": "mob",
+    "minecraft_entity": "skeleton",
     "xp": 80,
     "loots": [
       {
@@ -831,8 +831,8 @@
   },
   "lancer_draugr": {
     "displayName": "Draugr Lancier",
-    "type": "mob",
-    "mob": "skeleton",
+    "category": "mob",
+    "minecraft_entity": "skeleton",
     "xp": 450,
     "loots": [
       {
@@ -868,8 +868,8 @@
   },
   "possesses_draugr": {
     "displayName": "Draugr Possédé",
-    "type": "mob",
-    "mob": "skeleton",
+    "category": "mob",
+    "minecraft_entity": "skeleton",
     "xp": 200,
     "loots": [
       {
@@ -901,15 +901,15 @@
   },
   "skeleton": {
     "displayName": "Squelette",
-    "type": "mob",
-    "mob": "skeleton",
+    "category": "mob",
+    "minecraft_entity": "skeleton",
     "equipment": {
       "main_hand": {
-        "type": "menitrass_100",
+        "category": "menitrass_100",
         "count": 1
       },
       "chestplate": {
-        "type": "numen_armor",
+        "category": "numen_armor",
         "count": 1
       }
     },
@@ -956,8 +956,8 @@
   },
   "brittle_skeleton": {
     "displayName": "Squelette Fragile",
-    "type": "mob",
-    "mob": "skeleton",
+    "category": "mob",
+    "minecraft_entity": "skeleton",
     "xp": 20,
     "loots": [
       {
@@ -993,8 +993,8 @@
   },
   "nordic_skeleton": {
     "displayName": "Squelette Nordique",
-    "type": "mob",
-    "mob": "skeleton",
+    "category": "mob",
+    "minecraft_entity": "skeleton",
     "xp": 110,
     "loots": [
       {
@@ -1042,11 +1042,11 @@
   },
   "abrakleur": {
     "displayName": "Abrakleur",
-    "type": "mob",
-    "mob": "enderman",
+    "category": "mob",
+    "minecraft_entity": "enderman",
     "equipments": {
       "main_hand": {
-        "type": "menitrass_100",
+        "category": "menitrass_100",
         "count": 1
       }
     },
@@ -1096,8 +1096,8 @@
   },
   "centenary_abrakleur": {
     "displayName": "Abrakleur Centenaire",
-    "type": "mob",
-    "mob": "enderman",
+    "category": "mob",
+    "minecraft_entity": "enderman",
     "xp": 800,
     "loots": [
       {
@@ -1136,8 +1136,8 @@
   },
   "cannibal": {
     "displayName": "Cannibale",
-    "type": "mob",
-    "mob": "villager",
+    "category": "mob",
+    "minecraft_entity": "villager",
     "xp": 500,
     "loots": [
       {
@@ -1176,8 +1176,8 @@
   },
   "shaman": {
     "displayName": "Chaman",
-    "type": "mob",
-    "mob": "villager",
+    "category": "mob",
+    "minecraft_entity": "villager",
     "xp": 300,
     "loots": [
       {
@@ -1228,8 +1228,8 @@
   },
   "war_chief": {
     "displayName": "Chef de Guerre",
-    "type": "mob",
-    "mob": "villager",
+    "category": "mob",
+    "minecraft_entity": "villager",
     "xp": 650,
     "loots": [
       {
@@ -1268,8 +1268,8 @@
   },
   "claqueur": {
     "displayName": "Claqueur",
-    "type": "mob",
-    "mob": "zombie",
+    "category": "mob",
+    "minecraft_entity": "zombie",
     "xp": 110,
     "loots": [
       {
@@ -1301,8 +1301,8 @@
   },
   "decomposed_claqueur": {
     "displayName": "Claqueur Décomposé",
-    "type": "mob",
-    "mob": "zombie",
+    "category": "mob",
+    "minecraft_entity": "zombie",
     "xp": 180,
     "loots": [
       {
@@ -1338,8 +1338,8 @@
   },
   "dark_claqueur": {
     "displayName": "Claqueur Sombre",
-    "type": "mob",
-    "mob": "zombie",
+    "category": "mob",
+    "minecraft_entity": "zombie",
     "xp": 700,
     "loots": [
       {
@@ -1387,8 +1387,8 @@
   },
   "snow_spirit": {
     "displayName": "Esprit des Glaces",
-    "type": "mob",
-    "mob": "skeleton",
+    "category": "mob",
+    "minecraft_entity": "skeleton",
     "xp": 550,
     "loots": [
       {
@@ -1428,8 +1428,8 @@
   },
   "wolf_guardian": {
     "displayName": "Guerrier Loup",
-    "type": "mob",
-    "mob": "zombie",
+    "category": "mob",
+    "minecraft_entity": "zombie",
     "xp": 55,
     "loots": [
       {
@@ -1472,8 +1472,8 @@
   },
   "infected": {
     "displayName": "Infécté",
-    "type": "mob",
-    "mob": "zombie",
+    "category": "mob",
+    "minecraft_entity": "zombie",
     "xp": 60,
     "loots": [
       {
@@ -1501,8 +1501,8 @@
   },
   "young_savage": {
     "displayName": "Jeune Sauvageon",
-    "type": "mob",
-    "mob": "villager",
+    "category": "mob",
+    "minecraft_entity": "villager",
     "xp": 1,
     "loots": [
       {
@@ -1528,8 +1528,8 @@
   },
   "white_walker": {
     "displayName": "Marcheur Blanc",
-    "type": "mob",
-    "mob": "zombie",
+    "category": "mob",
+    "minecraft_entity": "zombie",
     "xp": 140,
     "loots": [
       {
@@ -1564,8 +1564,8 @@
   },
   "plains_boar": {
     "displayName": "Sanglier des Plaines",
-    "type": "mob",
-    "mob": "pig",
+    "category": "mob",
+    "minecraft_entity": "pig",
     "xp": 2000,
     "loots": [
       {
@@ -1605,8 +1605,8 @@
   },
   "savage": {
     "displayName": "Sauvageon",
-    "type": "mob",
-    "mob": "villager",
+    "category": "mob",
+    "minecraft_entity": "villager",
     "xp": 1,
     "loots": [
       {
@@ -1640,8 +1640,8 @@
   },
   "aggressive_savage": {
     "displayName": "Sauvageon Agressif",
-    "type": "mob",
-    "mob": "villager",
+    "category": "mob",
+    "minecraft_entity": "villager",
     "xp": 25,
     "loots": [
       {
@@ -1688,8 +1688,8 @@
   },
   "fallen_savage": {
     "displayName": "Sauvageon Déchu",
-    "type": "mob",
-    "mob": "villager",
+    "category": "mob",
+    "minecraft_entity": "villager",
     "xp": 70,
     "loots": [
       {
@@ -1720,8 +1720,8 @@
   },
   "slinger_savage": {
     "displayName": "Sauvageon Frondeur",
-    "type": "mob",
-    "mob": "villager",
+    "category": "mob",
+    "minecraft_entity": "villager",
     "xp": 12,
     "loots": [
       {
@@ -1768,8 +1768,8 @@
   },
   "savagene": {
     "displayName": "Sauvageonne",
-    "type": "mob",
-    "mob": "villager",
+    "category": "mob",
+    "minecraft_entity": "villager",
     "xp": 115,
     "loots": [
       {
@@ -1812,8 +1812,8 @@
   },
   "fertile_savagene": {
     "displayName": "Sauvageonne Féconde",
-    "type": "mob",
-    "mob": "villager",
+    "category": "mob",
+    "minecraft_entity": "villager",
     "xp": 200,
     "loots": [
       {
@@ -1872,8 +1872,8 @@
   },
   "savage_perjurer": {
     "displayName": "Sauvageon Parjure",
-    "type": "mob",
-    "mob": "villager",
+    "category": "mob",
+    "minecraft_entity": "villager",
     "xp": 2,
     "loots": [
       {
@@ -1908,8 +1908,8 @@
   },
   "cow": {
     "displayName": "Vache",
-    "type": "mob",
-    "mob": "cow",
+    "category": "mob",
+    "minecraft_entity": "cow",
     "xp": 7,
     "loots": [
       {
@@ -1956,8 +1956,8 @@
   },
   "guardian": {
     "displayName": "Garde",
-    "type": "npc",
-    "mob": "villager",
+    "category": "npc",
+    "minecraft_entity": "villager",
     "speed": 0.35,
     "health": 500,
     "damage": 500,
@@ -1973,8 +1973,8 @@
   },
   "warthog": {
     "displayName": "Phacochère",
-    "type": "boss",
-    "mob": "pig",
+    "category": "boss",
+    "minecraft_entity": "pig",
     "xp": 300,
     "loots": [
       {
@@ -2034,8 +2034,8 @@
   },
   "abyss_guardian": {
     "displayName": "Gardien des Abysses",
-    "type": "mob",
-    "mob": "zombified_piglin",
+    "category": "mob",
+    "minecraft_entity": "zombified_piglin",
     "xp": 1200,
     "loots": [
       {
@@ -2058,8 +2058,8 @@
   },
   "insolent_spirit": {
     "displayName": "Esprit Insolent",
-    "type": "mob",
-    "mob": "blaze",
+    "category": "mob",
+    "minecraft_entity": "blaze",
     "xp": 1000,
     "loots": [
       {
@@ -2086,8 +2086,8 @@
   },
   "cerbere": {
     "displayName": "Cerbère",
-    "type": "mob",
-    "mob": "wolf",
+    "category": "mob",
+    "minecraft_entity": "wolf",
     "xp": 2350,
     "loots": [
       {
@@ -2114,8 +2114,8 @@
   },
   "hungry_demon": {
     "displayName": "Démon Affamé",
-    "type": "mob",
-    "mob": "zombified_piglin",
+    "category": "mob",
+    "minecraft_entity": "zombified_piglin",
     "xp": 2200,
     "loots": [
       {
@@ -2150,8 +2150,8 @@
   },
   "darkness_archer": {
     "displayName": "Archer des Ténèbres",
-    "type": "mob",
-    "mob": "zombified_piglin",
+    "category": "mob",
+    "minecraft_entity": "zombified_piglin",
     "xp": 1900,
     "loots": [
       {
@@ -2178,8 +2178,8 @@
   },
   "darkness_soldier": {
     "displayName": "Soldat des Ténèbres",
-    "type": "mob",
-    "mob": "zombified_piglin",
+    "category": "mob",
+    "minecraft_entity": "zombified_piglin",
     "xp": 2000,
     "loots": [
       {
@@ -2206,8 +2206,8 @@
   },
   "bamboula_pig": {
     "displayName": "Porc Bamboula",
-    "type": "mob",
-    "mob": "pig",
+    "category": "mob",
+    "minecraft_entity": "pig",
     "xp": 5,
     "loots": [
       {
@@ -2243,8 +2243,8 @@
   },
   "savannah_pig": {
     "displayName": "Porc de Savanne",
-    "type": "mob",
-    "mob": "pig",
+    "category": "mob",
+    "minecraft_entity": "pig",
     "xp": 5,
     "loots": [
       {
@@ -2284,8 +2284,8 @@
   },
   "monk_chicken": {
     "displayName": "Poulet Moîne",
-    "type": "mob",
-    "mob": "chicken",
+    "category": "mob",
+    "minecraft_entity": "chicken",
     "xp": 2,
     "loots": [
       {
@@ -2321,8 +2321,8 @@
   },
   "atrophy_ankre": {
     "displayName": "Ankre Atrophié",
-    "type": "mob",
-    "mob": "squid",
+    "category": "mob",
+    "minecraft_entity": "squid",
     "xp": 50,
     "loots": [
       {
@@ -2361,8 +2361,8 @@
   },
   "harpoon_ankre": {
     "displayName": "Ankre Harpon",
-    "type": "mob",
-    "mob": "squid",
+    "category": "mob",
+    "minecraft_entity": "squid",
     "xp": 200,
     "loots": [
       {
@@ -2397,8 +2397,8 @@
   },
   "depths_ankre": {
     "displayName": "Ankre des Profondeurs",
-    "type": "mob",
-    "mob": "squid",
+    "category": "mob",
+    "minecraft_entity": "squid",
     "xp": 380,
     "loots": [
       {
@@ -2429,8 +2429,8 @@
   },
   "venerable_ankre": {
     "displayName": "Ankre Vénérables",
-    "type": "mob",
-    "mob": "squid",
+    "category": "mob",
+    "minecraft_entity": "squid",
     "xp": 650,
     "loots": [
       {
@@ -2465,8 +2465,8 @@
   },
   "hungry_arakne": {
     "displayName": "Arakne Affamée",
-    "type": "mob",
-    "mob": "cave_spider",
+    "category": "mob",
+    "minecraft_entity": "cave_spider",
     "xp": 550,
     "loots": [
       {
@@ -2506,8 +2506,8 @@
   },
   "elven_arakne": {
     "displayName": "Arakne Elfique",
-    "type": "mob",
-    "mob": "spider",
+    "category": "mob",
+    "minecraft_entity": "spider",
     "xp": 1300,
     "loots": [
       {
@@ -2555,8 +2555,8 @@
   },
   "harmless_arakne": {
     "displayName": "Arakne Innofensive",
-    "type": "mob",
-    "mob": "cave_spider",
+    "category": "mob",
+    "minecraft_entity": "cave_spider",
     "xp": 12,
     "loots": [
       {
@@ -2592,8 +2592,8 @@
   },
   "darker_arakne": {
     "displayName": "Arakne Sombre",
-    "type": "mob",
-    "mob": "spider",
+    "category": "mob",
+    "minecraft_entity": "spider",
     "xp": 600,
     "loots": [
       {
@@ -2637,8 +2637,8 @@
   },
   "caverns_devourer": {
     "displayName": "Dévoreuse des Cavernes",
-    "type": "mob",
-    "mob": "spider",
+    "category": "mob",
+    "minecraft_entity": "spider",
     "xp": 220,
     "loots": [
       {
@@ -2678,8 +2678,8 @@
   },
   "hairy_devourer": {
     "displayName": "Dévoreuse Velue",
-    "type": "mob",
-    "mob": "spider",
+    "category": "mob",
+    "minecraft_entity": "spider",
     "xp": 75,
     "loots": [
       {
@@ -2711,8 +2711,8 @@
   },
   "young_poisonous": {
     "displayName": "Jeune Venimeuse",
-    "type": "mob",
-    "mob": "cave_spider",
+    "category": "mob",
+    "minecraft_entity": "cave_spider",
     "xp": 70,
     "loots": [
       {
@@ -2752,8 +2752,8 @@
   },
   "nephilainaurata": {
     "displayName": "Néphila Inaurata",
-    "type": "mob",
-    "mob": "spider",
+    "category": "mob",
+    "minecraft_entity": "spider",
     "xp": 350,
     "loots": [
       {
@@ -2785,8 +2785,8 @@
   },
   "golden_nephile": {
     "displayName": "Néphile Dorée",
-    "type": "mob",
-    "mob": "spider",
+    "category": "mob",
+    "minecraft_entity": "spider",
     "xp": 180,
     "loots": [
       {
@@ -2822,8 +2822,8 @@
   },
   "immature_nephile": {
     "displayName": "Néphile Immature",
-    "type": "mob",
-    "mob": "cave_spider",
+    "category": "mob",
+    "minecraft_entity": "cave_spider",
     "xp": 230,
     "loots": [
       {
@@ -2859,8 +2859,8 @@
   },
   "agressive_tegenarian": {
     "displayName": "Tégénaire Agressive",
-    "type": "mob",
-    "mob": "spider",
+    "category": "mob",
+    "minecraft_entity": "spider",
     "xp": 35,
     "loots": [
       {
@@ -2896,8 +2896,8 @@
   },
   "forest_tegenarian": {
     "displayName": "Tégénaire de Foret",
-    "type": "mob",
-    "mob": "spider",
+    "category": "mob",
+    "minecraft_entity": "spider",
     "xp": 35,
     "loots": [
       {
@@ -2933,8 +2933,8 @@
   },
   "hook_poisonous": {
     "displayName": "Venimeuse à Crochets",
-    "type": "mob",
-    "mob": "cave_spider",
+    "category": "mob",
+    "minecraft_entity": "cave_spider",
     "xp": 115,
     "loots": [
       {
@@ -2966,8 +2966,8 @@
   },
   "kraken": {
     "displayName": "Kraken",
-    "type": "boss",
-    "mob": "skeleton",
+    "category": "boss",
+    "minecraft_entity": "skeleton",
     "xp": 9000,
     "loots": [
       {
@@ -3018,8 +3018,8 @@
   },
   "thebes_citizen": {
     "displayName": "Citoyen de Thebes",
-    "type": "npc",
-    "mob": "villager",
+    "category": "npc",
+    "minecraft_entity": "villager",
     "dialogs": [
       "C'est incroyable ce beau temps !",
       "C'est toi {player} ? Je pensais que tu étais plus grand !",
@@ -3043,8 +3043,8 @@
   },
   "segeste_citizen": {
     "displayName": "Citoyen de Ségeste",
-    "type": "npc",
-    "mob": "villager",
+    "category": "npc",
+    "minecraft_entity": "villager",
     "dialogs": [
       "A Ségeste nous aimons la pêche et les belles villageoises !",
       "Teh c'est le petit {player} ! On m'avait dit que tu étais moche mais je ne pensais pas à ce point !",
@@ -3071,8 +3071,8 @@
   },
   "numen_citizen": {
     "displayName": "Citoyen de Nùmen",
-    "type": "npc",
-    "mob": "villager",
+    "category": "npc",
+    "minecraft_entity": "villager",
     "dialogs": [
       "O man dôr túliel le ?",
       "Man anírach cerin an le ?",
@@ -3096,8 +3096,8 @@
   },
   "monk": {
     "displayName": "Moine",
-    "type": "npc",
-    "mob": "villager",
+    "category": "npc",
+    "minecraft_entity": "villager",
     "dialogs": [
       "A Bien le bonjour étranger !",
       "Le père Niflard n'est pas rentré de sa ceuillette de choux..",
@@ -3124,8 +3124,8 @@
   },
   "sheep": {
     "displayName": "Mouton de Thebes",
-    "type": "mob",
-    "mob": "sheep",
+    "category": "mob",
+    "minecraft_entity": "sheep",
     "xp": 5,
     "loots": [
       {
@@ -3165,8 +3165,8 @@
   },
   "nerak": {
     "displayName": "Nérak l'Invoqué",
-    "type": "boss",
-    "mob": "skeleton",
+    "category": "boss",
+    "minecraft_entity": "skeleton",
     "xp": 3000,
     "loots": [
       {
@@ -3218,8 +3218,8 @@
   },
   "aragog": {
     "displayName": "Aragog L'Acromentule",
-    "type": "boss",
-    "mob": "spider",
+    "category": "boss",
+    "minecraft_entity": "spider",
     "xp": 17000,
     "loots": [
       {

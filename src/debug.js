@@ -19,12 +19,12 @@ const log = logger(import.meta)
 function behavior({ world, app }) {
   const serializer = new XMLSerializer()
 
-  const behavior_trees = Object.entries(trees).map(([id, tree]) => ({
-    id,
-    name: Entities[id].displayName,
+  const behavior_trees = Object.entries(trees).map(([type, tree]) => ({
+    id: type,
+    name: Entities[type].displayName,
     tree: serializer.serializeToString(tree),
     instances: world.mobs.all
-      .filter(({ mob }) => mob === id)
+      .filter(mob => mob.type === type)
       .map(({ entity_id }) => ({
         id: entity_id,
       })),
