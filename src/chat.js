@@ -56,6 +56,17 @@ export const Formats = {
   },
 }
 
+export function to_rgb(percent) {
+  if (percent < 50)
+    return { red: 255, green: Math.round(5.1 * percent), blue: 0 }
+  return { red: Math.round(510 - 5.1 * percent), green: 255, blue: 0 }
+}
+
+export function to_hex({ red, green, blue }) {
+  const hue = red * 0x10000 + green * 0x100 + blue * 0x1
+  return `#${hue.toString(16).padStart(6, '0')}`
+}
+
 export const Position = {
   CHAT: 0, // appears in the chat box
   SYSTEM_MESSAGE: 1, // appears in the chat box
