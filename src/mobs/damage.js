@@ -8,7 +8,7 @@ import { abortable } from '../iterator.js'
 import Entities from '../../data/entities.json'
 
 const log = logger(import.meta)
-const invulnerability_time = 500
+const invulnerability_time = 350
 const Mouse = {
   LEFT_CLICK: 1,
 }
@@ -17,15 +17,21 @@ export default {
   reduce_mob(state, { type, payload }) {
     if (type === MobAction.DEAL_DAMAGE) {
       const { damage, damager } = payload
-      const health = Math.max(0, state.health - damage)
+      const { last_hit = -1 } = state
+      const now = Date.now()
 
-      log.info({ damage, health }, 'Deal Damage')
+      if (last_hit + invulnerability_time < now) {
+        const health = Math.max(0, state.health - damage)
 
-      return {
-        first_damager: damager,
-        ...state,
-        last_damager: damager,
-        health,
+        log.info({ damage, health }, 'Deal Damage')
+
+        return {
+          first_damager: damager,
+          ...state,
+          last_damager: damager,
+          health,
+          last_hit: now,
+        }
       }
     }
     return state
@@ -33,27 +39,18 @@ export default {
 
   /** @type {import('../context.js').Observer} */
   observe({ client, world, events, signal }) {
-    aiter(abortable(on(client, 'use_entity', { signal }))).reduce(
-      (last_hit, [{ target, mouse }]) => {
-        const now = Date.now()
-        if (
-          last_hit + invulnerability_time < now &&
-          mouse === Mouse.LEFT_CLICK
-        ) {
-          const mob = world.mobs.by_entity_id(target)
-          const { type } = Entities[mob?.mob]
-          if (mob && type !== 'npc') {
-            mob.dispatch(MobAction.DEAL_DAMAGE, {
-              damage: 1,
-              damager: client.uuid,
-            })
-          }
-          return now
+    client.on('use_entity', ({ target, mouse }) => {
+      if (mouse === Mouse.LEFT_CLICK) {
+        const mob = world.mobs.by_entity_id(target)
+        const { category } = Entities[mob?.type]
+        if (mob && category !== 'npc') {
+          mob.dispatch(MobAction.DEAL_DAMAGE, {
+            damage: 1,
+            damager: client.uuid,
+          })
         }
-        return last_hit
-      },
-      0
-    )
+      }
+    })
 
     events.on(Context.MOB_SPAWNED, ({ mob, signal }) => {
       aiter(abortable(on(mob.events, Mob.STATE, { signal })))
