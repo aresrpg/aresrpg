@@ -2,7 +2,7 @@ import { Position } from '../chat.js'
 import Entities from '../../data/entities.json'
 
 export function speak_to(mob, { client }) {
-  const { dialogs, displayName } = Entities[mob.mob]
+  const { dialogs, displayName } = Entities[mob.type]
   if (dialogs !== undefined) {
     const x = Math.floor(Math.random() * dialogs.length)
     const message = JSON.stringify([

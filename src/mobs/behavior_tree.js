@@ -8,23 +8,27 @@ import run from '../behavior.js'
 import Entities from '../../data/entities.json'
 
 export const trees = Object.fromEntries(
-  Object.keys(Entities).map(id => {
+  Object.keys(Entities).map(type => {
     const tree = new DOMParser().parseFromString(
       fs.readFileSync(
-        join(dirname(fileURLToPath(import.meta.url)), 'behavior', `${id}.xml`),
+        join(
+          dirname(fileURLToPath(import.meta.url)),
+          'behavior',
+          `${type}.xml`
+        ),
         'utf8'
       ),
       'text/xml'
     )
 
-    return [id, tree]
+    return [type, tree]
   })
 )
 
 export default {
   async reduce_mob(state, action, context) {
     if (state.health > 0) {
-      const tree = trees[context.mob]
+      const tree = trees[context.type /* ares mob type */]
       const { state: next_state } = await run(tree.documentElement, state, {
         path: 'tree',
         action,
