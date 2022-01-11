@@ -3,7 +3,7 @@ import { setInterval } from 'timers/promises'
 
 import { aiter } from 'iterator-helper'
 
-import { Formats } from '../chat.js'
+import { Formats, to_hex, to_rgb } from '../chat.js'
 import { Context } from '../events.js'
 import { abortable } from '../iterator.js'
 import {
@@ -11,17 +11,6 @@ import {
   get_remaining_stats_point,
 } from '../player_statistics.js'
 import { write_action_bar } from '../title.js'
-
-function to_rgb(percent) {
-  if (percent < 50)
-    return { red: 255, green: Math.round(5.1 * percent), blue: 0 }
-  return { red: Math.round(510 - 5.1 * percent), green: 255, blue: 0 }
-}
-
-function to_hex({ red, green, blue }) {
-  const hue = red * 0x10000 + green * 0x100 + blue * 0x1
-  return `#${hue.toString(16).padStart(6, '0')}`
-}
 
 function compute_health_component(health, max_health) {
   const percent = (100 * health) / max_health
@@ -63,7 +52,7 @@ function update_action_bar({
 export default {
   /** @type {import('../context.js').Observer} */
   observe({ client, get_state, world, events, signal }) {
-    aiter(abortable(setInterval(2000, { signal }))).forEach(() => {
+    aiter(abortable(setInterval(2000, null, { signal }))).forEach(() => {
       const state = get_state()
       if (state)
         update_action_bar({
