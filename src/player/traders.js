@@ -6,6 +6,7 @@ import { VERSION } from '../settings.js'
 import { empty_slot, item_to_slot } from '../items.js'
 import { Context } from '../events.js'
 import items from '../../data/items.json'
+import { to_metadata } from '../entity_metadata.js'
 
 const mcData = minecraft_data(VERSION)
 
@@ -71,21 +72,15 @@ function spawn_merchants({ client, events, world }) {
           velocityY: 0,
           velocityZ: 0,
         }
+
         const metadata = {
           entityId: id,
-          metadata: [
-            {
-              key: 2,
-              value: JSON.stringify(`${name}`),
-              type: 5,
-            },
-            {
-              key: 3,
-              type: 7,
-              value: true,
-            },
-          ],
+          metadata: to_metadata('villager', {
+            custom_name: JSON.stringify(`${name}`),
+            is_custom_name_visible: true,
+          }),
         }
+
         client.write('spawn_entity_living', villager)
         client.write('entity_metadata', metadata)
       }
