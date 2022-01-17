@@ -9,6 +9,7 @@ import { Context } from '../events.js'
 import { write_bossbar, Colors, Divisions, Actions } from '../boss_bar.js'
 import logger from '../logger.js'
 import Entities from '../../data/entities.json'
+import { Formats, to_hex, to_rgb } from '../chat.js'
 
 const BOSS_BAR_AMOUNT = 3
 const BOSS_BAR_TTL = 5000
@@ -38,6 +39,39 @@ const mob_bar_division = ({ max_health }) => {
   else return Divisions.NOTCHES_20
 }
 
+const format_title = ({
+  displayName,
+  level,
+  health,
+  max_health,
+  entity_id,
+}) => [
+  {
+    text: displayName,
+  },
+  {
+    text: ` [Lvl ${level}] `,
+    color: '#C0392B', // https://materialui.co/flatuicolors #pomegranate
+  },
+  {
+    text: '(',
+  },
+  {
+    text: health,
+    color: to_hex(to_rgb((100 * health) / max_health)),
+  },
+  {
+    text: '/',
+  },
+  {
+    text: max_health,
+    ...Formats.SUCCESS,
+  },
+  {
+    text: ')',
+  },
+]
+
 const purge_outdated = ({ client, bossbars }) => {
   bossbars
     .filter(is_present)
@@ -62,85 +96,97 @@ export default {
         // @ts-ignore
         combineAsyncIterators(
           on(events, Context.MOB_DAMAGE, { signal }),
-          setInterval(1000, [], { signal })
+          setInterval(1000, [{ timer: true }], { signal })
         )
       )
       // @ts-ignore
-    ).reduce((bossbars, [{ mob, damage } = {}]) => {
-      if (!mob) {
-        // entering here means the iteration is trigered by the interval
-        const next_bossbars = purge_outdated({ client, bossbars })
-        return [
-          ...next_bossbars,
-          ...Array.from({ length: BOSS_BAR_AMOUNT - next_bossbars.length }),
-        ]
-      }
-
-      const { displayName, health: max_health = 20 } = Entities[mob.mob]
-      const { health } = mob.get_state()
-      const entityUUID = format_uuid(mob.entity_id)
-      const display_health = Math.max(0, Math.min(1, health / max_health))
-      const color = mob_bar_color({ health, max_health })
-
-      const { entityUUID: last_entity_uuid } =
-        bossbars.find(({ entityUUID: uuid } = {}) => uuid === entityUUID) ?? {}
-
-      if (last_entity_uuid) {
-        write_bossbar({
-          client,
-          entityUUID,
-          action: Actions.UPDATE_HEALTH,
-          health: display_health,
-        })
-        write_bossbar({
-          client,
-          entityUUID,
-          action: Actions.UPDATE_STYLE,
-          color,
-        })
-        return [
-          { entityUUID, age: Date.now() },
-          ...bossbars.filter(
-            ({ entityUUID: uuid } = {}) => uuid !== entityUUID
-          ),
-        ]
-      } else {
-        log.info({ display_health, entityUUID }, 'create bossbar')
-        write_bossbar({
-          client,
-          entityUUID,
-          title: [
-            {
-              text: displayName,
-            },
-            {
-              text: ` (${mob.entity_id})`,
-              color: '#03A9F4',
-              bold: true,
-              underline: true,
-            },
-          ],
-          color,
-          health: display_health,
-          dividers: mob_bar_division({ max_health }),
-        })
-
-        const { entityUUID: evicted_uuid } = bossbars.at(-1) ?? {}
-        if (evicted_uuid) {
-          write_bossbar({
-            client,
-            entityUUID: evicted_uuid,
-            action: Actions.REMOVE,
-          })
+    ).reduce(
+      (
+        bossbars,
+        // @ts-ignore
+        [{ mob: { get_state, type, entity_id } = {}, damage, timer } = {}]
+      ) => {
+        if (timer) {
+          // entering here means the iteration is trigered by the interval
+          const next_bossbars = purge_outdated({ client, bossbars })
+          return [
+            ...next_bossbars,
+            ...Array.from({ length: BOSS_BAR_AMOUNT - next_bossbars.length }),
+          ]
         }
 
-        return [
-          { entityUUID, age: Date.now() },
-          ...bossbars
-            .filter(({ entityUUID: uuid } = {}) => uuid !== entityUUID)
-            .slice(0, -1),
-        ]
-      }
-    }, Array.from({ length: BOSS_BAR_AMOUNT }))
+        const { displayName, health: max_health = 20 } = Entities[type]
+        const { health, level = 1 /* the level feature is a WIP */ } =
+          get_state()
+        const entityUUID = format_uuid(entity_id)
+        const display_health = Math.max(0, Math.min(1, health / max_health))
+        const color = mob_bar_color({ health, max_health })
+        const title = format_title({
+          displayName,
+          level,
+          health,
+          max_health,
+          entity_id,
+        })
+
+        const { entityUUID: last_entity_uuid } =
+          bossbars.find(({ entityUUID: uuid } = {}) => uuid === entityUUID) ??
+          {}
+
+        if (last_entity_uuid) {
+          write_bossbar({
+            client,
+            entityUUID,
+            action: Actions.UPDATE_HEALTH,
+            health: display_health,
+          })
+          write_bossbar({
+            client,
+            entityUUID,
+            action: Actions.UPDATE_STYLE,
+            color,
+          })
+          write_bossbar({
+            client,
+            entityUUID,
+            action: Actions.UPDATE_TITLE,
+            title,
+          })
+          return [
+            { entityUUID, age: Date.now() },
+            ...bossbars.filter(
+              ({ entityUUID: uuid } = {}) => uuid !== entityUUID
+            ),
+          ]
+        } else {
+          log.info({ display_health, entityUUID }, 'create bossbar')
+          write_bossbar({
+            client,
+            entityUUID,
+            title,
+            color,
+            health: display_health,
+            dividers: mob_bar_division({ max_health }),
+          })
+
+          const { entityUUID: evicted_uuid } = bossbars.at(-1) ?? {}
+          if (evicted_uuid) {
+            write_bossbar({
+              client,
+              entityUUID: evicted_uuid,
+              action: Actions.REMOVE,
+            })
+          }
+
+          return [
+            { entityUUID, age: Date.now() },
+            ...bossbars
+              .filter(({ entityUUID: uuid } = {}) => uuid !== entityUUID)
+              .slice(0, -1),
+          ]
+        }
+      },
+      Array.from({ length: BOSS_BAR_AMOUNT })
+    )
   },
 }
