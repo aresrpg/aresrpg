@@ -1,4 +1,4 @@
-import entity_metadata from './entity_metadata.json'
+import entity_metadata from '../data/entity_metadata.json'
 
 export const villager_types = {
   DESERT: 0,
