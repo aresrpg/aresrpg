@@ -6,6 +6,9 @@ import { MobAction, Context, Mob } from '../events.js'
 import logger from '../logger.js'
 import { abortable } from '../iterator.js'
 import Entities from '../../data/entities.json'
+import { to_metadata } from '../entity_metadata.js'
+
+import { color_by_category } from './spawn.js'
 
 const log = logger(import.meta)
 const invulnerability_time = 350
@@ -57,13 +60,31 @@ export default {
         .map(([{ health }]) => health)
         .reduce((last_health, health) => {
           if (last_health !== health) {
+            const { entity_id, type, level } = mob
+            const { category, displayName } = Entities[type]
             client.write('entity_status', {
-              entityId: mob.entity_id,
+              entityId: entity_id,
               entityStatus: health > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
             })
             events.emit(Context.MOB_DAMAGE, {
               mob,
               damage: last_health - health,
+            })
+
+            client.write('entity_metadata', {
+              entityId: mob.entity_id,
+              metadata: to_metadata('entity', {
+                custom_name: JSON.stringify({
+                  text: displayName,
+                  color: color_by_category[category],
+                  extra: level && [
+                    { text: ` [Lvl ${level}] `, color: 'dark_red' },
+                    { text: '(', color: 'white' },
+                    { text: health, color: '#BA68C8' },
+                    { text: ')', color: 'white' },
+                  ],
+                }),
+              }),
             })
 
             if (health === 0) {
