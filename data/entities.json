@@ -38,10 +38,10 @@
     "health": 50,
     "damage": 15,
     "sounds": {
-      "say": "mob.pig.say",
-      "hit": "mob.pig.say",
-      "death": "mob.pig.death",
-      "step": "mob.pig.step"
+      "ambient": "entity.pig.ambient",
+      "hurt": "entity.pig.hurt",
+      "death": "entity.pig.death",
+      "step": "entity.pig.step"
     },
     "level": {
       "min": 4,
@@ -61,10 +61,10 @@
     "speed": 0.25,
     "health": 5,
     "sounds": {
-      "say": "mob.chicken.say",
-      "hit": "mob.chicken.hurt",
-      "death": "mob.chicken.hurt",
-      "step": "mob.chicken.step"
+      "ambient": "entity.chicken.ambient",
+      "hurt": "entity.chicken.hurt",
+      "death": "entity.chicken.hurt",
+      "step": "entity.chicken.step"
     },
     "xp": 2,
     "loots": [
@@ -121,10 +121,10 @@
     "health": 10,
     "damage": 4,
     "sounds": {
-      "say": "mob.chicken.say",
-      "hit": "mob.chicken.hurt",
-      "death": "mob.chicken.hurt",
-      "step": "mob.chicken.step"
+      "ambient": "entity.chicken.ambient",
+      "hurt": "entity.chicken.hurt",
+      "death": "entity.chicken.hurt",
+      "step": "entity.chicken.step"
     },
     "level": {
       "min": 1,
@@ -146,10 +146,10 @@
     "health": 20,
     "damage": 6,
     "sounds": {
-      "say": "mob.silverfish.say",
-      "hit": "mob.silverfish.hit",
-      "death": "mob.silverfish.kill",
-      "step": "mob.silverfish.step"
+      "ambient": "entity.silverfish.ambient",
+      "hurt": "entity.silverfish.hurt",
+      "death": "entity.silverfish.death",
+      "step": "entity.silverfish.step"
     },
     "level": {
       "min": 2,
@@ -175,10 +175,10 @@
     "health": 25,
     "damage": 5,
     "sounds": {
-      "say": "mob.wolf.howl",
-      "hit": "mob.wolf.hurt",
-      "death": "mob.wolf.death",
-      "step": "mob.wolf.step"
+      "ambient": "entity.wolf.howl",
+      "hurt": "entity.wolf.hurt",
+      "death": "entity.wolf.death",
+      "step": "entity.wolf.step"
     },
     "level": {
       "min": 2,
@@ -216,10 +216,10 @@
     "health": 45,
     "damage": 12,
     "sounds": {
-      "say": "mob.wolf.howl",
-      "hit": "mob.wolf.hurt",
-      "death": "mob.wolf.death",
-      "step": "mob.wolf.step"
+      "ambient": "entity.wolf.howl",
+      "hurt": "entity.wolf.hurt",
+      "death": "entity.wolf.death",
+      "step": "entity.wolf.step"
     },
     "level": {
       "min": 4,
@@ -253,10 +253,10 @@
     "health": 150,
     "damage": 22,
     "sounds": {
-      "say": "mob.wolf.howl",
-      "hit": "mob.wolf.hurt",
-      "death": "mob.wolf.death",
-      "step": "mob.wolf.step"
+      "ambient": "entity.wolf.howl",
+      "hurt": "entity.wolf.hurt",
+      "death": "entity.wolf.death",
+      "step": "entity.wolf.step"
     },
     "level": {
       "min": 6,
@@ -294,10 +294,10 @@
     "health": 2400,
     "damage": 400,
     "sounds": {
-      "say": "mob.wolf.howl",
-      "hit": "mob.wolf.hurt",
-      "death": "mob.wolf.death",
-      "step": "mob.wolf.step"
+      "ambient": "entity.wolf.howl",
+      "hurt": "entity.wolf.hurt",
+      "death": "entity.wolf.death",
+      "step": "entity.wolf.step"
     },
     "level": {
       "min": 33,
@@ -335,10 +335,10 @@
     "health": 600,
     "damage": 60,
     "sounds": {
-      "say": "mob.wolf.howl",
-      "hit": "mob.wolf.hurt",
-      "death": "mob.wolf.death",
-      "step": "mob.wolf.step"
+      "ambient": "entity.wolf.howl",
+      "hurt": "entity.wolf.hurt",
+      "death": "entity.wolf.death",
+      "step": "entity.wolf.step"
     },
     "level": {
       "min": 15,
@@ -376,10 +376,10 @@
     "health": 1400,
     "damage": 240,
     "sounds": {
-      "say": "mob.wolf.howl",
-      "hit": "mob.wolf.hurt",
-      "death": "mob.wolf.death",
-      "step": "mob.wolf.step"
+      "ambient": "entity.wolf.howl",
+      "hurt": "entity.wolf.hurt",
+      "death": "entity.wolf.death",
+      "step": "entity.wolf.step"
     },
     "level": {
       "min": 25,
@@ -421,10 +421,10 @@
     "health": 400,
     "damage": 40,
     "sounds": {
-      "say": "mob.wolf.howl",
-      "hit": "mob.wolf.hurt",
-      "death": "mob.wolf.death",
-      "step": "mob.wolf.step"
+      "ambient": "entity.wolf.howl",
+      "hurt": "entity.wolf.hurt",
+      "death": "entity.wolf.death",
+      "step": "entity.wolf.step"
     },
     "level": {
       "min": 10,
@@ -453,10 +453,10 @@
     "speed": 0.3,
     "health": 80,
     "sounds": {
-      "say": "mob.wolf.howl",
-      "hit": "mob.wolf.hurt",
-      "death": "mob.wolf.death",
-      "step": "mob.wolf.step"
+      "ambient": "entity.wolf.howl",
+      "hurt": "entity.wolf.hurt",
+      "death": "entity.wolf.death",
+      "step": "entity.wolf.step"
     },
     "level": {
       "min": 5,
@@ -490,10 +490,10 @@
     "health": 2000,
     "damage": 250,
     "sounds": {
-      "say": "mob.wolf.howl",
-      "hit": "mob.wolf.hurt",
-      "death": "mob.wolf.death",
-      "step": "mob.wolf.step"
+      "ambient": "entity.wolf.howl",
+      "hurt": "entity.wolf.hurt",
+      "death": "entity.wolf.death",
+      "step": "entity.wolf.step"
     },
     "level": {
       "min": 18,
@@ -515,10 +515,10 @@
     "health": 100,
     "damage": 5,
     "sounds": {
-      "say": "mob.silverfish.say",
-      "hit": "mob.silverfish.hit",
-      "death": "mob.silverfish.kill",
-      "step": "mob.silverfish.step"
+      "ambient": "entity.silverfish.ambient",
+      "hurt": "entity.silverfish.hurt",
+      "death": "entity.silverfish.death",
+      "step": "entity.silverfish.step"
     },
     "level": {
       "min": 2,
@@ -552,10 +552,10 @@
     "health": 400,
     "damage": 15,
     "sounds": {
-      "say": "mob.silverfish.say",
-      "hit": "mob.silverfish.hit",
-      "death": "mob.silverfish.kill",
-      "step": "mob.silverfish.step"
+      "ambient": "entity.silverfish.ambient",
+      "hurt": "entity.silverfish.hurt",
+      "death": "entity.silverfish.death",
+      "step": "entity.silverfish.step"
     },
     "level": {
       "min": 7,
@@ -572,10 +572,10 @@
     "health": 75,
     "damage": 10,
     "sounds": {
-      "say": "mob.sheep.say",
-      "hit": "mob.sheep.say",
-      "death": "mob.sheep.say",
-      "step": "mob.skeleton.step"
+      "ambient": "entity.sheep.ambient",
+      "hurt": "entity.sheep.hurt",
+      "death": "entity.sheep.death",
+      "step": "entity.skeleton.step"
     },
     "level": {
       "min": 4,
@@ -605,10 +605,10 @@
     "health": 2500,
     "damage": 150,
     "sounds": {
-      "say": "mob.skeleton.say",
-      "hit": "mob.skeleton.hurt",
-      "death": "mob.skeleton.remedy",
-      "step": "mob.skeleton.step"
+      "ambient": "entity.skeleton.ambient",
+      "hurt": "entity.skeleton.hurt",
+      "death": "entity.skeleton.death",
+      "step": "entity.skeleton.step"
     },
     "level": {
       "min": 15,
@@ -630,10 +630,10 @@
     "health": 1300,
     "damage": 190,
     "sounds": {
-      "say": "mob.villager.haggle",
-      "hit": "mob.villager.hit",
-      "death": "mob.whiter.shoot",
-      "step": "mob.skeleton.step"
+      "ambient": "entity.villager.ambient",
+      "hurt": "entity.villager.hurt",
+      "death": "entity.whiter.shoot",
+      "step": "entity.skeleton.step"
     },
     "level": {
       "min": 10,
@@ -667,10 +667,10 @@
     "health": 7000,
     "damage": 350,
     "sounds": {
-      "say": "mob.spider.say",
-      "hit": "mob.spider.say",
-      "death": "mob.spider.scream",
-      "step": "mob.spider.step"
+      "ambient": "entity.spider.ambient",
+      "hurt": "entity.spider.hurt",
+      "death": "entity.spider.death",
+      "step": "entity.spider.step"
     },
     "level": {
       "min": 27,
@@ -696,10 +696,10 @@
     "health": 400,
     "damage": 55,
     "sounds": {
-      "say": "mob1",
-      "hit": "mob.ghast.scream",
-      "death": "mob.zombie.death",
-      "step": "mob.skeleton.step"
+      "ambient": "mob1",
+      "hurt": "entity.ghast.scream",
+      "death": "entity.zombie.death",
+      "step": "entity.skeleton.step"
     },
     "level": {
       "min": 9,
@@ -745,10 +745,10 @@
     "health": 80,
     "damage": 30,
     "sounds": {
-      "say": "mob.skeleton.say",
-      "hit": "mob.skeleton.hurt",
-      "death": "mob.skeleton.death",
-      "step": "mob.skeleton.step"
+      "ambient": "entity.skeleton.ambient",
+      "hurt": "entity.skeleton.hurt",
+      "death": "entity.skeleton.death",
+      "step": "entity.skeleton.step"
     },
     "level": {
       "min": 5,
@@ -782,10 +782,10 @@
     "health": 700,
     "damage": 150,
     "sounds": {
-      "say": "mob.skeleton.say",
-      "hit": "mob.skeleton.hurt",
-      "death": "mob.skeleton.death",
-      "step": "mob.skeleton.step"
+      "ambient": "entity.skeleton.ambient",
+      "hurt": "entity.skeleton.hurt",
+      "death": "entity.skeleton.death",
+      "step": "entity.skeleton.step"
     },
     "level": {
       "min": 14,
@@ -819,10 +819,10 @@
     "health": 130,
     "damage": 27,
     "sounds": {
-      "say": "mob.skeleton.say",
-      "hit": "mob.skeleton.hurt",
-      "death": "mob.skeleton.death",
-      "step": "mob.skeleton.step"
+      "ambient": "entity.skeleton.ambient",
+      "hurt": "entity.skeleton.hurt",
+      "death": "entity.skeleton.death",
+      "step": "entity.skeleton.step"
     },
     "level": {
       "min": 7,
@@ -856,10 +856,10 @@
     "health": 550,
     "damage": 60,
     "sounds": {
-      "say": "mob.skeleton.say",
-      "hit": "mob.skeleton.hurt",
-      "death": "mob.silverfish.kill",
-      "step": "mob.skeleton.step"
+      "ambient": "entity.skeleton.ambient",
+      "hurt": "entity.skeleton.hurt",
+      "death": "entity.silverfish.death",
+      "step": "entity.skeleton.step"
     },
     "level": {
       "min": 13,
@@ -889,10 +889,10 @@
     "health": 480,
     "damage": 48,
     "sounds": {
-      "say": "mob.skeleton.say",
-      "hit": "mob.blaze.death",
-      "death": "mob.skeleton.death",
-      "step": "mob.skeleton.step"
+      "ambient": "entity.skeleton.ambient",
+      "hurt": "entity.blaze.death",
+      "death": "entity.skeleton.death",
+      "step": "entity.skeleton.step"
     },
     "level": {
       "min": 10,
@@ -917,10 +917,10 @@
     "health": 90,
     "damage": 20,
     "sounds": {
-      "say": "mob.skeleton.say",
-      "hit": "mob.skeleton.hurt",
-      "death": "mob.skeleton.death",
-      "step": "mob.skeleton.step"
+      "ambient": "entity.skeleton.ambient",
+      "hurt": "entity.skeleton.hurt",
+      "death": "entity.skeleton.death",
+      "step": "entity.skeleton.step"
     },
     "xp": 35,
     "loots": [
@@ -981,10 +981,10 @@
     "health": 20,
     "damage": 10,
     "sounds": {
-      "say": "mob.skeleton.say",
-      "hit": "mob.skeleton.hurt",
-      "death": "mob.skeleton.death",
-      "step": "mob.skeleton.step"
+      "ambient": "entity.skeleton.ambient",
+      "hurt": "entity.skeleton.hurt",
+      "death": "entity.skeleton.death",
+      "step": "entity.skeleton.step"
     },
     "level": {
       "min": 4,
@@ -1030,10 +1030,10 @@
     "health": 240,
     "damage": 35,
     "sounds": {
-      "say": "mob.skeleton.say",
-      "hit": "mob.skeleton.hurt",
-      "death": "mob.skeleton.death",
-      "step": "mob.skeleton.step"
+      "ambient": "entity.skeleton.ambient",
+      "hurt": "entity.skeleton.hurt",
+      "death": "entity.skeleton.death",
+      "step": "entity.skeleton.step"
     },
     "level": {
       "min": 8,
@@ -1085,9 +1085,9 @@
     "health": 1500,
     "damage": 120,
     "sounds": {
-      "say": "roar1",
-      "hit": "mob.endermen.hit",
-      "death": "mob.endermen.death"
+      "ambient": "roar1",
+      "hurt": "entity.endermen.hurt",
+      "death": "entity.endermen.death"
     },
     "level": {
       "min": 18,
@@ -1125,9 +1125,9 @@
     "health": 1800,
     "damage": 0,
     "sounds": {
-      "say": "roar1",
-      "hit": "mob.endermen.hit",
-      "death": "mob.endermen.death"
+      "ambient": "roar1",
+      "hurt": "entity.endermen.hurt",
+      "death": "entity.endermen.death"
     },
     "level": {
       "min": 26,
@@ -1165,9 +1165,9 @@
     "health": 920,
     "damage": 190,
     "sounds": {
-      "say": "mob.villager.idle",
-      "hit": "mob.villager.hit",
-      "death": "mob.villager.death"
+      "ambient": "entity.villager.ambient",
+      "hurt": "entity.villager.hurt",
+      "death": "entity.villager.death"
     },
     "level": {
       "min": 17,
@@ -1217,9 +1217,9 @@
     "health": 800,
     "damage": 70,
     "sounds": {
-      "say": "mob.villager.idle",
-      "hit": "mob.villager.hit",
-      "death": "mob.villager.death"
+      "ambient": "entity.villager.ambient",
+      "hurt": "entity.villager.hurt",
+      "death": "entity.villager.death"
     },
     "level": {
       "min": 15,
@@ -1257,9 +1257,9 @@
     "health": 1600,
     "damage": 220,
     "sounds": {
-      "say": "mob.villager.idle",
-      "hit": "mob.villager.hit",
-      "death": "mob.villager.death"
+      "ambient": "entity.villager.ambient",
+      "hurt": "entity.villager.hurt",
+      "death": "entity.villager.death"
     },
     "level": {
       "min": 23,
@@ -1289,10 +1289,10 @@
     "health": 380,
     "damage": 50,
     "sounds": {
-      "say": "mob.sheep.step",
-      "hit": "claqueurhit",
+      "ambient": "entity.sheep.step",
+      "hurt": "claqueurhit",
       "death": "claqueurdeath",
-      "step": "mob.cow.step"
+      "step": "entity.cow.step"
     },
     "level": {
       "min": 6,
@@ -1326,10 +1326,10 @@
     "health": 450,
     "damage": 65,
     "sounds": {
-      "say": "mob.sheep.step",
-      "hit": "claqueurhit",
+      "ambient": "entity.sheep.step",
+      "hurt": "claqueurhit",
       "death": "claqueurdeath",
-      "step": "mob.cow.step"
+      "step": "entity.cow.step"
     },
     "level": {
       "min": 10,
@@ -1375,10 +1375,10 @@
     "health": 1300,
     "damage": 250,
     "sounds": {
-      "say": "mob.sheep.step",
-      "hit": "claqueurhit",
+      "ambient": "entity.sheep.step",
+      "hurt": "claqueurhit",
       "death": "claqueurdeath",
-      "step": "mob.cow.step"
+      "step": "entity.cow.step"
     },
     "level": {
       "min": 18,
@@ -1416,10 +1416,10 @@
     "health": 1300,
     "damage": 150,
     "sounds": {
-      "say": "mob1",
-      "hit": "mob.ghast.scream",
-      "death": "mob.zombie.death",
-      "step": "mob.skeleton.step"
+      "ambient": "mob1",
+      "hurt": "entity.ghast.scream",
+      "death": "entity.zombie.death",
+      "step": "entity.skeleton.step"
     },
     "level": {
       "min": 20,
@@ -1461,9 +1461,9 @@
     "health": 90,
     "damage": 25,
     "sounds": {
-      "say": "mob.wolf.growl",
-      "hit": "mob.wolf.hurt",
-      "death": "mob.zombie.death"
+      "ambient": "entity.wolf.growl",
+      "hurt": "entity.wolf.hurt",
+      "death": "entity.zombie.death"
     },
     "level": {
       "min": 3,
@@ -1489,10 +1489,10 @@
     "health": 100,
     "damage": 25,
     "sounds": {
-      "say": "mob.sheep.step",
-      "hit": "claqueurhit",
+      "ambient": "entity.sheep.step",
+      "hurt": "claqueurhit",
       "death": "claqueurdeath",
-      "step": "mob.cow.step"
+      "step": "entity.cow.step"
     },
     "level": {
       "min": 1,
@@ -1517,9 +1517,9 @@
     "speed": 0.4,
     "health": 10,
     "sounds": {
-      "say": "mob.villager.idle",
-      "hit": "mob.villager.hit",
-      "death": "mob.villager.death"
+      "ambient": "entity.villager.ambient",
+      "hurt": "entity.villager.hurt",
+      "death": "entity.villager.death"
     },
     "level": {
       "min": 1,
@@ -1553,8 +1553,8 @@
     "health": 2700,
     "damage": 45,
     "sounds": {
-      "say": "nazgulcry",
-      "hit": "nazgulhit",
+      "ambient": "nazgulcry",
+      "hurt": "nazgulhit",
       "death": "nazguldeath"
     },
     "level": {
@@ -1593,10 +1593,10 @@
     "health": 8000,
     "damage": 500,
     "sounds": {
-      "say": "mob.pig.say",
-      "hit": "mob.zombiepig.zpighurt",
-      "death": "mob.pig.death",
-      "step": "mob.pig.step"
+      "ambient": "entity.pig.ambient",
+      "hurt": "entity.zombiepig.zpighurt",
+      "death": "entity.pig.death",
+      "step": "entity.pig.step"
     },
     "level": {
       "min": 35,
@@ -1629,9 +1629,9 @@
     "speed": 0.25,
     "health": 20,
     "sounds": {
-      "say": "mob.villager.idle",
-      "hit": "mob.villager.hit",
-      "death": "mob.villager.death"
+      "ambient": "entity.villager.ambient",
+      "hurt": "entity.villager.hurt",
+      "death": "entity.villager.death"
     },
     "level": {
       "min": 1,
@@ -1677,9 +1677,9 @@
     "health": 50,
     "damage": 15,
     "sounds": {
-      "say": "mob.villager.idle",
-      "hit": "mob.villager.hit",
-      "death": "mob.villager.death"
+      "ambient": "entity.villager.ambient",
+      "hurt": "entity.villager.hurt",
+      "death": "entity.villager.death"
     },
     "level": {
       "min": 3,
@@ -1709,9 +1709,9 @@
     "health": 180,
     "damage": 20,
     "sounds": {
-      "say": "mob.villager.idle",
-      "hit": "mob.villager.hit",
-      "death": "mob.villager.death"
+      "ambient": "entity.villager.ambient",
+      "hurt": "entity.villager.hurt",
+      "death": "entity.villager.death"
     },
     "level": {
       "min": 5,
@@ -1757,9 +1757,9 @@
     "health": 23,
     "damage": 4,
     "sounds": {
-      "say": "mob.villager.idle",
-      "hit": "mob.villager.hit",
-      "death": "mob.villager.death"
+      "ambient": "entity.villager.ambient",
+      "hurt": "entity.villager.hurt",
+      "death": "entity.villager.death"
     },
     "level": {
       "min": 2,
@@ -1801,9 +1801,9 @@
     "health": 185,
     "damage": 30,
     "sounds": {
-      "say": "mob.villager.idle",
-      "hit": "mob.villager.hit",
-      "death": "mob.villager.death"
+      "ambient": "entity.villager.ambient",
+      "hurt": "entity.villager.hurt",
+      "death": "entity.villager.death"
     },
     "level": {
       "min": 8,
@@ -1861,9 +1861,9 @@
     "health": 500,
     "damage": 55,
     "sounds": {
-      "say": "mob.villager.idle",
-      "hit": "mob.villager.hit",
-      "death": "mob.villager.death"
+      "ambient": "entity.villager.ambient",
+      "hurt": "entity.villager.hurt",
+      "death": "entity.villager.death"
     },
     "level": {
       "min": 13,
@@ -1897,9 +1897,9 @@
     "health": 15,
     "damage": 3,
     "sounds": {
-      "say": "mob.villager.idle",
-      "hit": "mob.villager.hit",
-      "death": "mob.villager.death"
+      "ambient": "entity.villager.ambient",
+      "hurt": "entity.villager.hurt",
+      "death": "entity.villager.death"
     },
     "level": {
       "min": 1,
@@ -1944,10 +1944,10 @@
     "speed": 0.5,
     "health": 60,
     "sounds": {
-      "say": "mob.cow.say",
-      "hit": "mob.cow.hurt",
-      "death": "mob.cow.death",
-      "step": "mob.cow.step"
+      "ambient": "entity.cow.ambient",
+      "hurt": "entity.cow.hurt",
+      "death": "entity.cow.death",
+      "step": "entity.cow.step"
     },
     "level": {
       "min": 3,
@@ -1962,9 +1962,9 @@
     "health": 500,
     "damage": 500,
     "sounds": {
-      "say": "mob.villager.idle",
-      "hit": "mob.villager.hit",
-      "death": "mob.villager.idle"
+      "ambient": "entity.villager.ambient",
+      "hurt": "entity.villager.hurt",
+      "death": "entity.villager.ambient"
     },
     "level": {
       "min": 2100,
@@ -2022,10 +2022,10 @@
     "health": 300,
     "damage": 30,
     "sounds": {
-      "say": "mob.pig.say",
-      "hit": "mob.pig.say",
-      "death": "mob.pig.death",
-      "step": "mob.pig.step"
+      "ambient": "entity.pig.ambient",
+      "hurt": "entity.pig.ambient",
+      "death": "entity.pig.death",
+      "step": "entity.pig.step"
     },
     "level": {
       "min": 5,
@@ -2047,9 +2047,9 @@
     "health": 2600,
     "damage": 320,
     "sounds": {
-      "say": "mob.zombiepig.zpig",
-      "hit": "mob.zombiepig.zpighurt",
-      "death": "mob.zombiepig.zpigdeath"
+      "ambient": "entity.zoglin.ambient",
+      "hurt": "entity.zoglin.hurt",
+      "death": "entity.zoglin.death"
     },
     "level": {
       "min": 26,
@@ -2075,9 +2075,9 @@
     "health": 2100,
     "damage": 250,
     "sounds": {
-      "say": "mob.blaze.breathe",
-      "hit": "mob.blaze.hit",
-      "death": "mob.blaze.death"
+      "ambient": "entity.blaze.ambient",
+      "hurt": "entity.blaze.hurt",
+      "death": "entity.blaze.death"
     },
     "level": {
       "min": 25,
@@ -2102,10 +2102,10 @@
     "speed": 0.4,
     "health": 6000,
     "sounds": {
-      "say": "mob.wolf.howl",
-      "hit": "mob.wolf.hurt",
-      "death": "mob.wolf.death",
-      "step": "mob.wolf.step"
+      "ambient": "entity.wolf.growl",
+      "hurt": "entity.wolf.hurt",
+      "death": "entity.wolf.death",
+      "step": "entity.wolf.step"
     },
     "level": {
       "min": 35,
@@ -2139,9 +2139,9 @@
     "health": 4350,
     "damage": 400,
     "sounds": {
-      "say": "mob.zombiepig.zpig",
-      "hit": "mob.zombiepig.zpigangry",
-      "death": "mob.zombiepig.zpigdeath"
+      "ambient": "entity.zombified_piglin.ambient",
+      "hurt": "entity.zombified_piglin.hurt",
+      "death": "entity.zombified_piglin.death"
     },
     "level": {
       "min": 31,
@@ -2167,9 +2167,9 @@
     "health": 2600,
     "damage": 260,
     "sounds": {
-      "say": "mob.zombiepig.zpig",
-      "hit": "mob.zombiepig.zpighurt",
-      "death": "mob.zombiepig.zpigdeath"
+      "ambient": "entity.zombified_piglin.ambient",
+      "hurt": "entity.zombified_piglin.hurt",
+      "death": "entity.zombified_piglin.death"
     },
     "level": {
       "min": 28,
@@ -2195,9 +2195,9 @@
     "health": 3200,
     "damage": 350,
     "sounds": {
-      "say": "mob.zombiepig.zpig",
-      "hit": "mob.zombiepig.zpighurt",
-      "death": "mob.zombiepig.zpigdeath"
+      "ambient": "entity.zombified_piglin.ambient",
+      "hurt": "entity.zombified_piglin.hurt",
+      "death": "entity.zombified_piglin.death"
     },
     "level": {
       "min": 28,
@@ -2231,10 +2231,10 @@
     "health": 20,
     "damage": 7,
     "sounds": {
-      "say": "mob.pig.say",
-      "hit": "mob.pig.say",
-      "death": "mob.pig.death",
-      "step": "mob.pig.step"
+      "ambient": "entity.pig.ambient",
+      "hurt": "entity.pig.hurt",
+      "death": "entity.pig.death",
+      "step": "entity.pig.step"
     },
     "level": {
       "min": 2,
@@ -2272,10 +2272,10 @@
     "health": 30,
     "damage": 10,
     "sounds": {
-      "say": "mob.pig.say",
-      "hit": "mob.pig.say",
-      "death": "mob.pig.death",
-      "step": "mob.pig.step"
+      "ambient": "entity.pig.ambient",
+      "hurt": "entity.pig.hurt",
+      "death": "entity.pig.death",
+      "step": "entity.pig.step"
     },
     "level": {
       "min": 3,
@@ -2309,10 +2309,10 @@
     "health": 12,
     "damage": 4,
     "sounds": {
-      "say": "mob.chicken.say",
-      "hit": "mob.chicken.hurt",
-      "death": "mob.chicken.hurt",
-      "step": "mob.chicken.step"
+      "ambient": "entity.chicken.ambient",
+      "hurt": "entity.chicken.hurt",
+      "death": "entity.chicken.hurt",
+      "step": "entity.chicken.step"
     },
     "level": {
       "min": 1,
@@ -2350,8 +2350,8 @@
     "health": 70,
     "damage": 20,
     "sounds": {
-      "say": "ankresay",
-      "hit": "ankrehit",
+      "ambient": "ankresay",
+      "hurt": "ankrehit",
       "death": "ankresay"
     },
     "level": {
@@ -2386,8 +2386,8 @@
     "health": 400,
     "damage": 70,
     "sounds": {
-      "say": "ankresay",
-      "hit": "ankrehit",
+      "ambient": "ankresay",
+      "hurt": "ankrehit",
       "death": "ankresay"
     },
     "level": {
@@ -2418,8 +2418,8 @@
     "health": 800,
     "damage": 150,
     "sounds": {
-      "say": "ankresay",
-      "hit": "ankrehit",
+      "ambient": "ankresay",
+      "hurt": "ankrehit",
       "death": "ankresay"
     },
     "level": {
@@ -2454,8 +2454,8 @@
     "health": 1300,
     "damage": 260,
     "sounds": {
-      "say": "ankresay",
-      "hit": "ankrehit",
+      "ambient": "ankresay",
+      "hurt": "ankrehit",
       "death": "ankresay"
     },
     "level": {
@@ -2494,10 +2494,10 @@
     "health": 1000,
     "damage": 180,
     "sounds": {
-      "say": "mob.spider.say",
-      "hit": "mob.spider.say",
-      "death": "mob.spider.death",
-      "step": "mob.spider.step"
+      "ambient": "entity.spider.ambient",
+      "hurt": "entity.spider.hurt",
+      "death": "entity.spider.death",
+      "step": "entity.spider.step"
     },
     "level": {
       "min": 17,
@@ -2543,10 +2543,10 @@
     "health": 2000,
     "damage": 350,
     "sounds": {
-      "say": "mob.spider.say",
-      "hit": "mob.spider.say",
-      "death": "mob.spider.death",
-      "step": "mob.spider.step"
+      "ambient": "entity.spider.ambient",
+      "hurt": "entity.spider.hurt",
+      "death": "entity.spider.death",
+      "step": "entity.spider.step"
     },
     "level": {
       "min": 27,
@@ -2580,10 +2580,10 @@
     "health": 15,
     "damage": 4,
     "sounds": {
-      "say": "mob.spider.say",
-      "hit": "mob.spider.say",
-      "death": "mob.spider.death",
-      "step": "mob.spider.step"
+      "ambient": "entity.spider.ambient",
+      "hurt": "entity.spider.hurt",
+      "death": "entity.spider.death",
+      "step": "entity.spider.step"
     },
     "level": {
       "min": 2,
@@ -2625,10 +2625,10 @@
     "health": 1100,
     "damage": 235,
     "sounds": {
-      "say": "mob.spider.say",
-      "hit": "mob.spider.say",
-      "death": "mob.spider.death",
-      "step": "mob.spider.step"
+      "ambient": "entity.spider.ambient",
+      "hurt": "entity.spider.hurt",
+      "death": "entity.spider.death",
+      "step": "entity.spider.step"
     },
     "level": {
       "min": 23,
@@ -2666,10 +2666,10 @@
     "health": 880,
     "damage": 95,
     "sounds": {
-      "say": "mob.spider.say",
-      "hit": "mob.spider.say",
-      "death": "mob.spider.death",
-      "step": "mob.spider.step"
+      "ambient": "entity.spider.ambient",
+      "hurt": "entity.spider.hurt",
+      "death": "entity.spider.death",
+      "step": "entity.spider.step"
     },
     "level": {
       "min": 15,
@@ -2699,10 +2699,10 @@
     "health": 450,
     "damage": 60,
     "sounds": {
-      "say": "mob.spider.say",
-      "hit": "mob.spider.say",
-      "death": "mob.spider.death",
-      "step": "mob.spider.step"
+      "ambient": "entity.spider.ambient",
+      "hurt": "entity.spider.hurt",
+      "death": "entity.spider.death",
+      "step": "entity.spider.step"
     },
     "level": {
       "min": 10,
@@ -2740,10 +2740,10 @@
     "health": 100,
     "damage": 20,
     "sounds": {
-      "say": "mob.spider.say",
-      "hit": "mob.spider.say",
-      "death": "mob.spider.death",
-      "step": "mob.spider.step"
+      "ambient": "entity.spider.ambient",
+      "hurt": "entity.spider.hurt",
+      "death": "entity.spider.death",
+      "step": "entity.spider.step"
     },
     "level": {
       "min": 6,
@@ -2773,10 +2773,10 @@
     "health": 800,
     "damage": 80,
     "sounds": {
-      "say": "mob.spider.say",
-      "hit": "mob.spider.say",
-      "death": "mob.spider.death",
-      "step": "mob.spider.step"
+      "ambient": "entity.spider.ambient",
+      "hurt": "entity.spider.hurt",
+      "death": "entity.spider.death",
+      "step": "entity.spider.step"
     },
     "level": {
       "min": 14,
@@ -2810,10 +2810,10 @@
     "health": 650,
     "damage": 70,
     "sounds": {
-      "say": "mob.spider.say",
-      "hit": "mob.spider.say",
-      "death": "mob.spider.death",
-      "step": "mob.spider.step"
+      "ambient": "entity.spider.ambient",
+      "hurt": "entity.spider.hurt",
+      "death": "entity.spider.death",
+      "step": "entity.spider.step"
     },
     "level": {
       "min": 12,
@@ -2847,10 +2847,10 @@
     "health": 500,
     "damage": 50,
     "sounds": {
-      "say": "mob.spider.say",
-      "hit": "mob.spider.say",
-      "death": "mob.spider.death",
-      "step": "mob.spider.step"
+      "ambient": "entity.spider.ambient",
+      "hurt": "entity.spider.hurt",
+      "death": "entity.spider.death",
+      "step": "entity.spider.step"
     },
     "level": {
       "min": 10,
@@ -2884,10 +2884,10 @@
     "health": 30,
     "damage": 10,
     "sounds": {
-      "say": "mob.spider.say",
-      "hit": "mob.spider.say",
-      "death": "mob.spider.death",
-      "step": "mob.spider.step"
+      "ambient": "entity.spider.ambient",
+      "hurt": "entity.spider.hurt",
+      "death": "entity.spider.death",
+      "step": "entity.spider.step"
     },
     "level": {
       "min": 4,
@@ -2921,10 +2921,10 @@
     "health": 55,
     "damage": 18,
     "sounds": {
-      "say": "mob.spider.say",
-      "hit": "mob.spider.say",
-      "death": "mob.spider.death",
-      "step": "mob.spider.step"
+      "ambient": "entity.spider.ambient",
+      "hurt": "entity.spider.hurt",
+      "death": "entity.spider.death",
+      "step": "entity.spider.step"
     },
     "level": {
       "min": 5,
@@ -2954,10 +2954,10 @@
     "health": 315,
     "damage": 30,
     "sounds": {
-      "say": "mob.spider.say",
-      "hit": "mob.spider.say",
-      "death": "mob.spider.death",
-      "step": "mob.spider.step"
+      "ambient": "entity.spider.ambient",
+      "hurt": "entity.spider.hurt",
+      "death": "entity.spider.death",
+      "step": "entity.spider.step"
     },
     "level": {
       "min": 8,
@@ -3007,8 +3007,8 @@
     "health": 16000,
     "damage": 330,
     "sounds": {
-      "say": "ankresay",
-      "hit": "ankrehit",
+      "ambient": "ankresay",
+      "hurt": "ankrehit",
       "death": "ankresay"
     },
     "level": {
@@ -3032,9 +3032,9 @@
     "speed": 0.35,
     "health": 20,
     "sounds": {
-      "say": "mob.villager.idle",
-      "hit": "mob.villager.idle",
-      "death": "mob.villager.idle"
+      "ambient": "entity.villager.ambient",
+      "hurt": "entity.villager.ambient",
+      "death": "entity.villager.ambient"
     },
     "level": {
       "min": null,
@@ -3060,9 +3060,9 @@
     "speed": 0.35,
     "health": 20,
     "sounds": {
-      "say": "mob.villager.idle",
-      "hit": "mob.villager.idle",
-      "death": "mob.villager.idle"
+      "ambient": "entity.villager.ambient",
+      "hurt": "entity.villager.ambient",
+      "death": "entity.villager.ambient"
     },
     "level": {
       "min": null,
@@ -3085,9 +3085,9 @@
     "speed": 0.35,
     "health": 20,
     "sounds": {
-      "say": "mob.villager.idle",
-      "hit": "mob.villager.hit",
-      "death": "mob.villager.death"
+      "ambient": "entity.villager.ambient",
+      "hurt": "entity.villager.hurt",
+      "death": "entity.villager.death"
     },
     "level": {
       "min": null,
@@ -3113,9 +3113,9 @@
     "speed": 0.35,
     "health": 20,
     "sounds": {
-      "say": "mob.villager.idle",
-      "hit": "mob.villager.idle",
-      "death": "mob.villager.idle"
+      "ambient": "entity.villager.ambient",
+      "hurt": "entity.villager.ambient",
+      "death": "entity.villager.ambient"
     },
     "level": {
       "min": null,
@@ -3153,10 +3153,10 @@
     "health": 16,
     "damage": 4,
     "sounds": {
-      "say": "mob.sheep.say",
-      "hit": "mob.sheep.say",
-      "death": "mob.sheep.say",
-      "step": "mob.cow.step"
+      "ambient": "entity.sheep.ambient",
+      "hurt": "entity.sheep.hurt",
+      "death": "entity.sheep.death",
+      "step": "entity.cow.step"
     },
     "level": {
       "min": 2,
@@ -3206,10 +3206,10 @@
     "health": 6000,
     "damage": 200,
     "sounds": {
-      "say": "mob.skeleton.say",
-      "hit": "mob.skeleton.hurt",
-      "death": "mob.wither.death",
-      "step": "mob.skeleton.step"
+      "ambient": "entity.skeleton.ambient",
+      "hurt": "entity.skeleton.hurt",
+      "death": "entity.wither.death",
+      "step": "entity.skeleton.step"
     },
     "level": {
       "min": 18,
@@ -3275,10 +3275,10 @@
     "health": 25000,
     "damage": 450,
     "sounds": {
-      "say": "mob.spider.say",
-      "hit": "mob.spider.say",
-      "death": "mob.spider.death",
-      "step": "mob.spider.step"
+      "ambient": "entity.spider.ambient",
+      "hurt": "entity.spider.hurt",
+      "death": "entity.spider.death",
+      "step": "entity.spider.step"
     },
     "level": {
       "min": 31,
