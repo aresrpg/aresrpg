@@ -13,7 +13,7 @@ const log = logger(import.meta)
 const server = protocol.createServer({
   version: VERSION,
   'online-mode': ONLINE_MODE,
-  motd: 'AresRPG',
+  motd: 'loading...',
   favicon: `data:image/png;base64,${fs.readFileSync(
     join(dirname(fileURLToPath(import.meta.url)), '../media/favicon.png'),
     'base64'
