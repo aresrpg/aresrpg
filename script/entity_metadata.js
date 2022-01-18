@@ -133,4 +133,4 @@ const entities = Object.fromEntries(
   })
 )
 
-fs.writeFileSync('src/entity_metadata.json', JSON.stringify(entities, null, 2))
+fs.writeFileSync('data/entity_metadata.json', JSON.stringify(entities, null, 2))
