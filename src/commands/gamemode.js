@@ -47,8 +47,8 @@ export default function gamemode({ args, sender, dispatch }) {
     const [input_mode] = args
     const game_mode = parse_gamemode(input_mode)
 
+    // value can be 0 so chill and don't refac u nerd
     if (game_mode !== undefined) {
-      // value can be 0 so chill and don't refac u nerd
       sender.write('game_state_change', {
         reason: 3, // @see https://wiki.vg/Protocol#Change_Game_State
         gameMode: game_mode,
