@@ -11,7 +11,7 @@ import { to_metadata } from '../entity_metadata.js'
 
 const { entitiesByName } = minecraft_data(VERSION)
 
-const color_by_category = {
+export const color_by_category = {
   mob: 'white',
   archiMob: 'gold',
   boss: 'red',
