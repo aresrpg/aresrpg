@@ -2,13 +2,6 @@ import logger from './logger.js'
 
 const log = logger(import.meta)
 
-export const SOUND = {
-  LEVEL_UP: 'entity.player.levelup',
-  EXPERIENCE_ORB: 'entity.experience_orb.pickup',
-  FIREWORK_LARGE_BLAST: 'entity.firework_rocket.large_blast',
-  ZOMBIE_VILLAGER_CONVERTED: 'entity.zombie_villager.converted',
-}
-
 export const CATEGORY = {
   MASTER: 0,
   MUSIC: 1,
@@ -22,19 +15,22 @@ export const CATEGORY = {
   VOICE: 9,
 }
 
-export const write_sound = ({
+export const play_sound = ({
   client,
   sound,
+  category = CATEGORY.MASTER,
   x,
   y,
   z,
-  pitch, // to ignore passing a player location
 }) => {
-  log.info({ sound, pseudo: client.username }, 'playing sound')
+  log.info({ sound, pseudo: client.username }, 'playing named sound')
   client.write('named_sound_effect', {
     soundName: sound,
+    soundCategory: category,
     x: x * 8,
     y: y * 8,
     z: z * 8,
+    volume: 1,
+    pitch: 1,
   })
 }

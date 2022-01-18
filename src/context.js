@@ -59,6 +59,7 @@ import mobs_look_at from './mobs/look_at.js'
 import mobs_wakeup from './mobs/wakeup.js'
 import mobs_loot from './mobs/loot.js'
 import mobs_attack from './mobs/attack.js'
+import mobs_sound from './mobs/sound.js'
 import commands_declare from './commands/declare.js'
 import start_debug_server from './debug.js'
 import blockchain from './blockchain.js'
@@ -274,6 +275,7 @@ export async function observe_client(context) {
   mobs_wakeup.observe(context)
   mobs_loot.observe(context)
   mobs_attack.observe(context)
+  mobs_sound.observe(context)
 
   chunk_update.observe(context)
 }

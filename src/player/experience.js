@@ -8,7 +8,7 @@ import Nbt from 'prismarine-nbt'
 import { Context, Action } from '../events.js'
 import { abortable } from '../iterator.js'
 import { write_title } from '../title.js'
-import { write_sound, SOUND } from '../sound.js'
+import { play_sound } from '../sound.js'
 import { client_chat_msg } from '../chat.js'
 import { VERSION } from '../settings.js'
 import { to_metadata } from '../entity_metadata.js'
@@ -267,9 +267,9 @@ export default {
                 message,
               })
 
-              write_sound({
+              play_sound({
                 client,
-                sound: SOUND.LEVEL_UP,
+                sound: 'entity.player.levelup',
                 ...position,
               })
 
@@ -345,9 +345,9 @@ export default {
                 entityStatus: 17,
               })
             } else {
-              write_sound({
+              play_sound({
                 client,
-                sound: SOUND.EXPERIENCE_ORB,
+                sound: 'entity.experience_orb.pickup',
                 ...position,
               })
             }
