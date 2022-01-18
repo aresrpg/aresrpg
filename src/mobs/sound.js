@@ -8,8 +8,6 @@ import Entities from '../../data/entities.json'
 import { abortable } from '../iterator.js'
 import { distance3d_squared } from '../math.js'
 
-const random_percent = () => Math.floor(Math.random() * 100) + 1
-
 export default {
   /** @type {import('../context.js').Observer} */
   observe({ events, dispatch, client, world, signal, get_state }) {
@@ -39,7 +37,7 @@ export default {
       const { position: player_position } = get_state() ?? {}
       if (player_position)
         world.mobs.all
-          .filter(() => random_percent() < 6)
+          .filter(() => Math.random() < 0.05)
           .map(({ type, position }) => ({ type, position: position() }))
           .filter(
             ({ position }) =>
