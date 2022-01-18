@@ -8,6 +8,11 @@ import logger from '../logger.js'
 
 const log = logger(import.meta)
 
+const SCOREBOARD_NAME = 'life'
+const CREATE_OBJECTIVE_ACTION = 0
+const INTEGER_TYPE = 0
+const BELOW_NAME_POSITION = 2
+
 export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
@@ -26,6 +31,20 @@ export default {
 
   /** @type {import('../context.js').Observer} */
   observe({ client, events, signal, dispatch }) {
+    events.once(Context.STATE, state => {
+      client.write('scoreboard_objective', {
+        name: SCOREBOARD_NAME,
+        action: CREATE_OBJECTIVE_ACTION,
+        displayText: JSON.stringify([{ text: 'hp', color: 'green' }]),
+        type: INTEGER_TYPE,
+      })
+
+      client.write('scoreboard_display_objective', {
+        name: SCOREBOARD_NAME,
+        position: BELOW_NAME_POSITION,
+      })
+    })
+
     aiter(abortable(on(events, Context.STATE, { signal })))
       .map(([{ health }]) => health)
       .reduce((last_health, health) => {
