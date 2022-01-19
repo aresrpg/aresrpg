@@ -23,8 +23,10 @@ import player_held_item from './player/held_item.js'
 import player_gamemode from './player/gamemode.js'
 import player_scoreboard from './player/scoreboard.js'
 import player_block_place from './player/block_placement.js'
+import player_respawn from './player/respawn.js'
 import player_bossbar from './player/boss_bar.js'
 import player_action_bar from './player/action_bar.js'
+import player_heartbeat from './player/heartbeat.js'
 import player_traders, {
   register as register_player_traders,
 } from './player/traders.js'
@@ -67,6 +69,7 @@ import observe_performance from './performance.js'
 import { abortable } from './iterator.js'
 import Database from './database.js'
 import { USE_RESSOURCE_PACK } from './settings.js'
+import { GameMode } from './gamemode.js'
 
 const log = logger(import.meta)
 
@@ -118,7 +121,7 @@ const initial_state = {
   inventory_cursor: null,
   inventory_cursor_index: 0,
   held_slot_index: 0,
-  game_mode: 2,
+  game_mode: GameMode.ADVENTURE,
   experience: 0,
   health: 40,
   // player's energy, losing after each death
@@ -261,6 +264,8 @@ export async function observe_client(context) {
   player_item_loot.observe(context)
   player_soul.observe(context)
   player_bossbar.observe(context)
+  player_respawn.observe(context)
+  player_heartbeat.observe(context)
 
   commands_declare.observe(context)
 
