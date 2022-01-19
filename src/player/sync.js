@@ -42,8 +42,8 @@ export default {
       }
     }
 
-    world.events.on(World.PLAYER, on_player)
     client.once('end', () => world.events.off(World.PLAYER, on_player))
+    events.once(Context.STATE, () => world.events.on(World.PLAYER, on_player))
 
     aiter(abortable(on(events, Context.STATE, { signal })))
       .map(([{ position }]) => position)
