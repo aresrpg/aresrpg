@@ -5,6 +5,7 @@ import { aiter } from 'iterator-helper'
 import { Context, Action } from '../events.js'
 import { abortable } from '../iterator.js'
 import logger from '../logger.js'
+import { play_sound } from '../sound.js'
 
 const log = logger(import.meta)
 
@@ -46,8 +47,8 @@ export default {
     })
 
     aiter(abortable(on(events, Context.STATE, { signal })))
-      .map(([{ health }]) => health)
-      .reduce((last_health, health) => {
+      .map(([{ health, position }]) => ({ position, health }))
+      .reduce((last_health, { position, health }) => {
         if (last_health !== health) {
           client.write('update_health', {
             health,
@@ -55,7 +56,14 @@ export default {
             foodSaturation: 0.0,
           })
 
-          if (health === 0) dispatch(Action.DEATH)
+          if (health === 0) {
+            dispatch(Action.DEATH)
+            play_sound({
+              client,
+              sound: 'entity.zombie_villager.converted',
+              ...position,
+            })
+          }
         }
         return health
       }, 0)

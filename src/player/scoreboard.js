@@ -84,7 +84,16 @@ export default {
     })
 
     aiter(abortable(on(events, Context.STATE, { signal }))).reduce(
-      (last, [{ experience }]) => {
+      (
+        last,
+        [
+          {
+            experience,
+            soul,
+            enjin: { kares },
+          },
+        ]
+      ) => {
         const { level, remaining_experience } = experience_to_level(experience)
         const progress = level_progress({ level, remaining_experience })
         const next = Array.from({
@@ -92,8 +101,8 @@ export default {
           14: '',
           13: Slots.CLASS({ name: '<Classe>' }),
           12: Slots.PROGRESS({ level, progress }),
-          11: Slots.SOUL({ soul: 100 }),
-          10: Slots.KARES({ kares: 0 }),
+          11: Slots.SOUL({ soul }),
+          10: Slots.KARES({ kares }),
           9: '',
           8: { color: 'gray', underline: true, text: 'Groupe:' },
           7: Slots.EMPTY_GROUP_SLOT,

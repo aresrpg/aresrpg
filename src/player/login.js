@@ -44,6 +44,8 @@ export default {
         isFlat: false,
       })
 
+      client.write('spawn_position', { location: world.spawn_position })
+
       write_brand(client, { brand: 'AresRPG' })
 
       client.write('position', {

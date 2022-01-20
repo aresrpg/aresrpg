@@ -19,6 +19,9 @@ const FORBIDDEN_SLOTS = [
 export const USABLE_INVENTORY_START = 9
 export const USABLE_INVENTORY_END = 44
 
+const to_slot = item =>
+  item ? item_to_slot(items[item.type], item.count) : empty_slot
+
 const BlockDigStatus = {
   STARTED_DIGGING: 0,
   CANCELLED_DIGGING: 1,
@@ -29,6 +32,12 @@ const BlockDigStatus = {
   FINISH_EATING: 5,
   SWAP_ITEM_IN_HAND: 6,
 }
+
+export const write_inventory = ({ client, inventory }) =>
+  client.write('window_items', {
+    windowId: PLAYER_INVENTORY_ID,
+    items: inventory.map(to_slot),
+  })
 
 export default {
   /** @type {import('../context.js').Reducer} */
@@ -78,22 +87,13 @@ export default {
   },
   /** @type {import('../context.js').Observer} */
   observe({ client, events, world, get_state, signal }) {
-    const to_slot = item =>
-      item ? item_to_slot(items[item.type], item.count) : empty_slot
-
-    const write_inventory = inventory =>
-      client.write('window_items', {
-        windowId: PLAYER_INVENTORY_ID,
-        items: inventory.map(to_slot),
-      })
-
     aiter(abortable(on(events, Context.STATE, { signal }))).reduce(
       (
         last_sequence_number,
         [{ inventory, inventory_cursor, inventory_sequence_number }]
       ) => {
         if (last_sequence_number !== inventory_sequence_number) {
-          write_inventory(inventory)
+          write_inventory({ client, inventory })
 
           client.write('set_slot', {
             windowId: -1,
@@ -111,7 +111,7 @@ export default {
         status === BlockDigStatus.DROP_ITEM ||
         status === BlockDigStatus.DROP_ITEM_STACK
       ) {
-        write_inventory(get_state().inventory)
+        write_inventory({ client, inventory: get_state().inventory })
       }
     })
   },

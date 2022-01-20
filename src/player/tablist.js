@@ -17,7 +17,6 @@ export default {
         data: [info],
       })
     }
-    world.events.on(World.ADD_PLAYER(client.uuid), add_player)
 
     const on_player = info => {
       // Add player to tab list
@@ -30,7 +29,6 @@ export default {
         )
       }
     }
-    world.events.on(World.PLAYER, on_player)
 
     client.once('end', () => {
       world.events.off(World.ADD_PLAYER(client.uuid), add_player)
@@ -38,6 +36,8 @@ export default {
     })
 
     events.once(Context.STATE, ({ position }) => {
+      world.events.on(World.ADD_PLAYER(client.uuid), add_player)
+      world.events.on(World.PLAYER, on_player)
       world.events.emit(World.PLAYER, player_info(position))
     })
   },
