@@ -1,9 +1,0 @@
-mutation create_player($uuid: String!) {
-  CreateEnjinUser(name: $uuid) {
-    accessTokens
-    identities {
-      id
-      linkingCode
-    }
-  }
-}

@@ -64,7 +64,6 @@ import mobs_attack from './mobs/attack.js'
 import mobs_sound from './mobs/sound.js'
 import commands_declare from './commands/declare.js'
 import start_debug_server from './debug.js'
-import blockchain from './blockchain.js'
 import observe_performance from './performance.js'
 import { abortable } from './iterator.js'
 import Database from './database.js'
@@ -131,24 +130,8 @@ const initial_state = {
   // can be used for example to calcule regenerated soul while offline
   last_connection_time: undefined,
   last_disconnection_time: undefined,
-  enjin: {
-    // an idendity represent a single ETH address
-    // if it stays undefined then their may be probleme with account creation
-    // and the user should not be allowed to interract with Enjin
-    identity_id: undefined,
-    // code used to link and identity to an ETH address
-    wallet_linking_code: undefined,
-    // an user that didn't linked his ETH wallet can't claim real tokens
-    wallet_linked: false,
-    // the ETH address (after link)
-    wallet_address: undefined,
-    // the amount of coin stored on the wallet
-    // when the wallet is linked we override this value
-    // otherwise we use the last saved value (in DB)
-    kares: 0,
-    // all others NFTs (a future PR on items implementation would precise this field)
-    items: [],
-  },
+
+  kares: undefined,
 }
 
 // Add here all fields that you want to save in the database
@@ -162,7 +145,6 @@ const saved_state = ({
   health,
   soul,
   last_disconnection_time,
-  enjin,
 }) => ({
   nickname,
   position,
@@ -173,7 +155,6 @@ const saved_state = ({
   health,
   soul,
   last_disconnection_time,
-  enjin,
 })
 
 /** @template U
@@ -212,7 +193,6 @@ function reduce_state(state, action) {
     player_soul.reduce,
     player_health.reduce,
     player_experience.reduce,
-    blockchain.reduce,
     chunk_update.reduce,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
 }
@@ -235,12 +215,6 @@ export async function observe_client(context) {
   finalization.observe(context)
 
   if (USE_RESSOURCE_PACK) await player_resource_pack.observe(context)
-
-  // this is also an asynchrone observer initialization
-  // but i think it's fine to let it run alone without waiting for it
-  // not awaiting will enhance the UX, but we may have to restrict some actions
-  // until all datas are fully loaded from the blockchain
-  blockchain.observe(context)
 
   // login has to stay on top
   player_login.observe(context)

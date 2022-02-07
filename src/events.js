@@ -5,7 +5,6 @@ export function last_event_value(emitter, event) {
 }
 
 export const Action = {
-  ENJIN: 'ENJIN',
   DAMAGE: 'DAMAGE',
   HEALTH: 'HEALTH',
   TELEPORT: 'TELEPORT',
