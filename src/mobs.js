@@ -4,7 +4,7 @@ import { EventEmitter } from 'events'
 import minecraft_data from 'minecraft-data'
 import { aiter } from 'iterator-helper'
 
-import Entities from '../data/entities.json'
+import Entities from '../data/entities.json' assert { type: 'json' }
 
 import { last_event_value, Mob } from './events.js'
 import { path_end, path_position } from './mobs/path.js'

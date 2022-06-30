@@ -1,10 +1,6 @@
 import net from 'net'
 
 declare module 'minecraft-protocol' {
-  interface ServerOptions {
-    favicon: string
-  }
-
   interface Server {
     socketServer: net.Server
   }
@@ -17,7 +13,7 @@ declare module 'minecraft-protocol' {
 
 declare module 'minecraft-data' {
   interface IndexedData {
-    loginPacket: any
+    loginPacket: LoginPacket
   }
 }
 

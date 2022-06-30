@@ -5,7 +5,7 @@ import { chunk_position, chunk_index } from '../chunk.js'
 import { VERSION } from '../settings.js'
 import { empty_slot, item_to_slot } from '../items.js'
 import { Context } from '../events.js'
-import items from '../../data/items.json'
+import items from '../../data/items.json' assert { type: 'json' }
 import { to_metadata } from '../entity_metadata.js'
 
 const mcData = minecraft_data(VERSION)
