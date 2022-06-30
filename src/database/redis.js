@@ -10,6 +10,11 @@ export default {
   },
   async pull(key) {
     const state = await slave_client.call('JSON.GET', key)
-    return JSON.parse(state)
+    try {
+      // @ts-ignore
+      return JSON.parse(state)
+    } catch {
+      return undefined
+    }
   },
 }

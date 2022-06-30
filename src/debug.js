@@ -1,11 +1,11 @@
 import { PassThrough, Readable } from 'stream'
 
 import fastify from 'fastify'
-import fastifyCors from 'fastify-cors'
+import cors from '@fastify/cors'
 import { XMLSerializer } from 'xmldom'
 import { aiter } from 'iterator-helper'
 
-import Entities from '../data/entities.json'
+import Entities from '../data/entities.json' assert { type: 'json' }
 
 import logger from './logger.js'
 import { trees } from './mobs/behavior_tree.js'
@@ -93,11 +93,11 @@ function behavior({ world, app }) {
 export default function start_debug_server({ world }) {
   const app = fastify({ logger: log })
 
-  app.register(fastifyCors, {
+  app.register(cors, {
     origin: true,
   })
 
-  app.listen(4242).then(address => {
+  app.listen({ port: 4242 }).then(address => {
     log.info(
       `Arborist https://aresrpg-arborist.netlify.app/${encodeURIComponent(
         `${address}/behavior`

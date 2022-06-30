@@ -4,7 +4,7 @@ import { aiter } from 'iterator-helper'
 
 import { Context, Mob, Action } from '../events.js'
 import { abortable } from '../iterator.js'
-import Entities from '../../data/entities.json'
+import Entities from '../../data/entities.json' assert { type: 'json' }
 
 export default {
   /** @type {import('../context.js').Observer} */

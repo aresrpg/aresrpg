@@ -4,7 +4,7 @@ import { aiter } from 'iterator-helper'
 
 import update_sidebar_for from '../scoreboard/update_sidebar.js'
 import { abortable } from '../iterator.js'
-import package_json from '../../package.json'
+import package_json from '../../package.json' assert { type: 'json' }
 import { Context } from '../events.js'
 
 import { experience_to_level, level_progress } from './experience.js'

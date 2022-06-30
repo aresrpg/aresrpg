@@ -5,7 +5,7 @@ import { VERSION } from '../settings.js'
 import { chunk_position } from '../chunk.js'
 import { Action, Context } from '../events.js'
 import { empty_slot, item_to_slot } from '../items.js'
-import items from '../../data/items.json'
+import items from '../../data/items.json' assert { type: 'json' }
 import { create_armor_stand } from '../armor_stand.js'
 import { to_metadata } from '../entity_metadata.js'
 

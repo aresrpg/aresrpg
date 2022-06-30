@@ -8,11 +8,13 @@ const bottom_line = '→ A delightful mmorpg experience in minecraft !'
 const TOP_COLOR_FROM = '#FB8C00'
 const TOP_COLOR_TO = '#FFD54F'
 
-top_gradient.setMidpoint(top_line.length)
-top_gradient.setGradient(TOP_COLOR_FROM, TOP_COLOR_TO)
+top_gradient
+  .setMidpoint(top_line.length)
+  .setColorGradient(TOP_COLOR_FROM, TOP_COLOR_TO)
 
-bottom_gradient.setMidpoint(bottom_line.length)
-bottom_gradient.setGradient('#95A5A6', '#34495E')
+bottom_gradient
+  .setMidpoint(bottom_line.length)
+  .setColorGradient('#95A5A6', '#34495E')
 
 export default [
   {
@@ -20,7 +22,7 @@ export default [
     color: TOP_COLOR_FROM,
     bold: true,
   },
-  ...top_gradient.getArray().map((color, index) => ({
+  ...top_gradient.getColors().map((color, index) => ({
     text: top_line[index],
     color,
     bold: true,
@@ -34,7 +36,7 @@ export default [
   {
     text: '\n',
   },
-  ...bottom_gradient.getArray().map((color, index) => ({
+  ...bottom_gradient.getColors().map((color, index) => ({
     text: bottom_line[index],
     color,
     bold: false,

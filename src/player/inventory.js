@@ -6,7 +6,7 @@ import { empty_slot, item_to_slot } from '../items.js'
 import { PLAYER_INVENTORY_ID } from '../settings.js'
 import { abortable } from '../iterator.js'
 import { Action, Context } from '../events.js'
-import items from '../../data/items.json'
+import items from '../../data/items.json' assert { type: 'json' }
 
 const FORBIDDEN_SLOTS = [
   0, // Craft Output

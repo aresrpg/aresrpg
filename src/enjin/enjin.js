@@ -5,7 +5,7 @@ import { Action, Context } from '../events.js'
 
 import { Events, emitter } from './pusher.js'
 import Queries from './graphql/index.js'
-import Items from './kovan.json'
+import Items from './kovan.json' assert { type: 'json' }
 
 const log = logger(import.meta)
 const tap = consume => payload => {
@@ -67,6 +67,7 @@ export default {
   async observe({ events, dispatch, client, signal, get_state }) {
     const blockchain_subscribe = ({ event, payload }) =>
       events.emit(event, payload)
+    // @ts-ignore
     client.once('end', () => emitter.off('enjin', blockchain_subscribe))
     emitter.on('enjin', blockchain_subscribe)
 

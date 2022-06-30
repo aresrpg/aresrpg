@@ -7,7 +7,7 @@ import execute_command from '../commands/commands.js'
 import { VERSION } from '../settings.js'
 import { world_chat_msg } from '../chat.js'
 import { World } from '../events.js'
-import items from '../../data/items.json'
+import items from '../../data/items.json' assert { type: 'json' }
 
 const mcData = minecraftData(VERSION)
 const log = logger(import.meta)
