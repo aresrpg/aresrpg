@@ -69,7 +69,7 @@ of a floor system and more classes than the v1, with an overall gameplay upgrade
 
 # Requirements
 
-- NodeJS >= 16
+- NodeJS >= 18.4
 - npm
 
 ## Install

@@ -16,6 +16,7 @@ export const Action = {
   RESYNC_INVENTORY: 'RESYNC_INVENTORY',
   GAMEMODE: 'GAMEMODE',
   ADD_EXPERIENCE: 'ADD_EXPERIENCE',
+  DATABASE_SYNC: 'DATABASE_SYNC',
 }
 
 export const Context = {

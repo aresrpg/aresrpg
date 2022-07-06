@@ -1,20 +1,39 @@
-import { master_client, slave_client } from './sentinel.js'
+import events from 'events'
+
+import Redis from 'ioredis'
+
+import logger from '../logger.js'
+import { REDIS_HOST } from '../settings.js'
+
+const log = logger(import.meta)
+const client = new Redis(REDIS_HOST)
+const subscribe_client = new Redis(REDIS_HOST)
+const emitter = new events.EventEmitter()
+
+await Promise.all([
+  events.once(client, 'ready'),
+  events.once(subscribe_client, 'ready'),
+])
+
+await subscribe_client.psubscribe('__keyevent*__:*')
+
+subscribe_client.on('pmessage', (_, __, key) => emitter.emit(key, null))
+
+log.info('redis initialized')
 
 export default {
-  async push({ key, value }) {
+  async push(key, value) {
     // TODO: maybe implement a way to only push changes and not the whole state everytime
     // @see https://oss.redis.com/redisjson/path/
-    return master_client.call('JSON.SET', key, '.', JSON.stringify(value))
-
-    // we should also trigger a redis subscription here to sync all nodes
+    return client.call('JSON.SET', key, '.', JSON.stringify(value))
   },
   async pull(key) {
-    const state = await slave_client.call('JSON.GET', key)
     try {
       // @ts-ignore
-      return JSON.parse(state)
+      return JSON.parse(await client.call('JSON.GET', key))
     } catch {
       return undefined
     }
   },
+  emitter,
 }
