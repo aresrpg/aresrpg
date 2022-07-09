@@ -8,6 +8,7 @@ import { VERSION } from '../settings.js'
 import { Formats, world_chat_msg } from '../chat.js'
 import { World } from '../events.js'
 import items from '../../data/items.json' assert { type: 'json' }
+
 import { closest_stone } from './teleportation_stones.js'
 
 const mcData = minecraftData(VERSION)

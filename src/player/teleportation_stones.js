@@ -63,8 +63,8 @@ function teleportation_stones_in_chunk(world, chunk_x, chunk_z) {
   )
 }
 
- function is_player_close(Xplayer,Yplayer, Xstone, Ystone) {
-  let radius = 30; 
+ function is_player_near(Xplayer,Yplayer, Xstone, Ystone) {
+  const radius = 30
   if((Math.abs(Xstone-Xplayer) <= radius) && (Math.abs(Ystone-Yplayer) <= radius)) {
     return true
   }else{
@@ -81,16 +81,13 @@ function teleportation_stones_in_chunk(world, chunk_x, chunk_z) {
  */
 export function closest_stone(world,player_pos_x,player_pos_y) {
   const stones = world.teleportation_stones
-  for (var i in stones) {
-    var x = stones[i].position.x
-    var y = stones[i].position.y 
-    if (is_player_close(player_pos_x, player_pos_y, x, y)) {
-      return stones[i].name
-    }
+  const zone = stones
+  .filter(stone => is_player_near(player_pos_x, player_pos_y, stone.position.x, stone.position.y))
+  if(zone.length === 0) {
+    return "wilderness"
   }
-  return "wilderness"
-}
-
+  return `${zone.map(stone => stone.name)}`
+  }
 
 /**
  * create a slime which will be used as a button hitbox

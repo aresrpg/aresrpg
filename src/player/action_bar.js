@@ -11,6 +11,7 @@ import {
   get_remaining_stats_point,
 } from '../player_statistics.js'
 import { write_action_bar } from '../title.js'
+
 import { closest_stone } from './teleportation_stones.js'
 
 function compute_health_component(health, max_health) {
@@ -63,7 +64,7 @@ export default {
           health: state.health,
           max_health: get_max_health(state),
           remaining_stats_point: get_remaining_stats_point(state),
-          zone: closest_stone(world,position["x"],position["y"]),
+          zone: closest_stone(world,position.x,position.y),
         })
     })
 
@@ -88,7 +89,7 @@ export default {
             health,
             max_health,
             remaining_stats_point,
-            zone: closest_stone(world,position["x"],position["y"]),
+            zone: closest_stone(world,position.x,position.y),
           })
         return {
           last_health: health,
