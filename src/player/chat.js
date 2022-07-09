@@ -34,6 +34,17 @@ function slot_to_chat({ nbtData, itemCount, itemId }) {
   return chat
 }
 
+function share_pos(x,y) {
+  const chat = {
+    translate:"chat.type.text",
+    text:"Position", color: 'gold', 
+    hoverEvent: {
+      action:"show_text",
+      value:"X: "+x+" Y: "+y},
+    }
+  return chat
+}
+
 export default {
   /** @type {import('../context.js').Observer} */
   observe({ client, get_state, world, dispatch }) {
@@ -48,32 +59,115 @@ export default {
         log.info({ sender: client.uuid, message }, 'Message')
       }
 
-      const formatted_message = message.split(/(%item\d%)/).map(part => {
-        if (part.match(/(%item\d%)/)) {
-          const slot_number = parseInt(part.match(/\d/)[0]) + 36 // For the player 0 is the first item in hotbar. But for the game the hotbat begin at 36.
-          const { inventory } = get_state()
-          const item = inventory[slot_number]
-          if (item) {
-            const { type, count } = item
-            return slot_to_chat(item_to_slot(items[type], count))
-          }
-        }
-        return { text: part }
-      })
-
-      world_chat_msg({
-        world,
-        message: {
-          translate: 'chat.type.text',
-          with: [
-            {
-              text: client.username,
+      function sh_item(){
+        if (message.match(/(%item\d%)/)){
+          const share_specific_item = message.split(/(%item\d%)/).map(part => {
+            if (part.match(/(%item\d%)/)) {
+              const slot_number = parseInt(part.match(/\d/)[0]) + 36 // For the player 0 is the first item in hotbar. But for the game the hotbat begin at 36.
+              const { inventory } = get_state()
+              const item = inventory[slot_number]
+              if (item) {
+                const { type, count } = item
+                return slot_to_chat(item_to_slot(items[type], count))
+              }
+            }
+            return { text: part }
+          })
+          world_chat_msg({
+            world,
+            message: {
+              translate: 'chat.type.text',
+              with: [
+                {
+                  text: client.username,
+                },
+                share_specific_item,
+              ],
             },
-            formatted_message,
-          ],
-        },
-        client,
-      })
+            client,
+          })
+        }
+
+        else if (message.match(/(%pos%)/)) {
+          const pos_link = message.split(/(%pos%)/).map(part => {
+            if (part.match(/(%pos%)/)) {
+              const { position } = get_state()
+              var posX = position["x"]
+              var posY = position["y"]
+              const StrPos = share_pos(posX,posY)
+              if (StrPos){
+                return StrPos
+              }
+            }
+            return { text: part }
+          })
+          world_chat_msg({
+            world,
+            message: {
+              translate: 'chat.type.text',
+              with: [
+                {
+                  text: client.username,
+                },
+                [pos_link],
+              ],
+            },
+            client,
+          })
+        }
+
+        else if (message.match(/(%item%)/)) {
+          const share_hand_item = message.split(/(%item%)/).map(part => {
+            if (part.match(/(%item%)/)) {
+              const { held_slot_index } = get_state()
+              const { inventory } = get_state()
+              const slot_number = held_slot_index + 36; //Same here
+              const item = inventory[slot_number]
+              if (item) {
+                const { type, count } = item
+                return slot_to_chat(item_to_slot(items[type], count))
+              }
+            }
+            return { text: part }
+          })
+          world_chat_msg({
+            world,
+            message: {
+              translate: 'chat.type.text',
+              with: [
+                {
+                  text: client.username,
+                },
+                share_hand_item
+              ],
+            },
+            client,
+          })
+        }
+
+        else{
+          return true
+        }
+      }
+
+      if(message){
+        if (sh_item() == true){
+          world_chat_msg({
+            world,
+            message: {
+              translate: 'chat.type.text',
+              with: [
+                {
+                  text: client.username,
+                },
+                message,
+              ],
+            },
+            client
+          })
+        }
+      }
+      
     })
     const on_chat = options => client.write('chat', options)
     const on_private_message = ({ receiver_username, options }) => {
