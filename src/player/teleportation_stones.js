@@ -63,6 +63,35 @@ function teleportation_stones_in_chunk(world, chunk_x, chunk_z) {
   )
 }
 
+ function is_player_close(Xplayer,Yplayer, Xstone, Ystone) {
+  let radius = 30; 
+  if((Math.abs(Xstone-Xplayer) <= radius) && (Math.abs(Ystone-Yplayer) <= radius)) {
+    return true
+  }else{
+    return false
+  }
+}
+
+/**
+ * Return the closest teleportation stone from the player
+ * @param {*} world 
+ * @param {*} player_pos_x 
+ * @param {*} player_pos_y 
+ * @returns {stones} name of the teleportation stone
+ */
+export function closest_stone(world,player_pos_x,player_pos_y) {
+  const stones = world.teleportation_stones
+  for (var i in stones) {
+    var x = stones[i].position.x
+    var y = stones[i].position.y 
+    if (is_player_close(player_pos_x, player_pos_y, x, y)) {
+      return stones[i].name
+    }
+  }
+  return "wilderness"
+}
+
+
 /**
  * create a slime which will be used as a button hitbox
  * @param {any} client

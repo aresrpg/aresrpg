@@ -5,9 +5,10 @@ import { item_to_slot } from '../items.js'
 import logger from '../logger.js'
 import execute_command from '../commands/commands.js'
 import { VERSION } from '../settings.js'
-import { world_chat_msg } from '../chat.js'
+import { Formats, world_chat_msg } from '../chat.js'
 import { World } from '../events.js'
 import items from '../../data/items.json' assert { type: 'json' }
+import { closest_stone } from './teleportation_stones.js'
 
 const mcData = minecraftData(VERSION)
 const log = logger(import.meta)
@@ -19,7 +20,6 @@ function is_command_function(message) {
 function slot_to_chat({ nbtData, itemCount, itemId }) {
   const tag = nbt.simplify(nbtData)
   const { name } = mcData.items[itemId]
-
   const chat = {
     ...JSON.parse(tag.display.Name),
     hoverEvent: {
@@ -34,13 +34,14 @@ function slot_to_chat({ nbtData, itemCount, itemId }) {
   return chat
 }
 
-function share_pos(x,y) {
+function position_to_chat(zone,x,y) {
   const chat = {
     translate:"chat.type.text",
-    text:"Position", color: 'gold', 
+    text:`§6§nPosition:§r§a ${zone}`,
     hoverEvent: {
       action:"show_text",
-      value:"X: "+x+" Y: "+y},
+      value:`§dX: ${x} Y: ${y}`,
+      },
     }
   return chat
 }
@@ -48,8 +49,35 @@ function share_pos(x,y) {
 export default {
   /** @type {import('../context.js').Observer} */
   observe({ client, get_state, world, dispatch }) {
+    const chat_mapper = {
+      '%item%': () => {
+        const { held_slot_index, inventory } = get_state()
+        const item = inventory[held_slot_index + 36] // For the player 0 is the first item in hotbar. But for the game the hotbat begin at 36.
+        if (item) {
+          const { type, count } = item
+          return slot_to_chat(item_to_slot(items[type], count))
+        }
+      },
+      '%item\\d%': word => {
+        const slot_number = parseInt(word.match(/\d/)[0]) + 36 // same
+        const { inventory } = get_state()
+        const item = inventory[slot_number]
+        if (item) {
+          const { type, count } = item
+          return slot_to_chat(item_to_slot(items[type], count))
+        }
+      },
+      '%pos%': () => {
+        const {
+          position: { x, y },
+        } = get_state()
+        return position_to_chat(closest_stone(world,x,y),Math.round(x),Math.round(y))
+      },
+    }
+
     client.on('chat', packet => {
       const { message } = packet
+      const { nickname } = get_state()
 
       if (is_command_function(message)) {
         log.info({ sender: client.uuid, command: message }, 'Command')
@@ -59,115 +87,18 @@ export default {
         log.info({ sender: client.uuid, message }, 'Message')
       }
 
-      function sh_item(){
-        if (message.match(/(%item\d%)/)){
-          const share_specific_item = message.split(/(%item\d%)/).map(part => {
-            if (part.match(/(%item\d%)/)) {
-              const slot_number = parseInt(part.match(/\d/)[0]) + 36 // For the player 0 is the first item in hotbar. But for the game the hotbat begin at 36.
-              const { inventory } = get_state()
-              const item = inventory[slot_number]
-              if (item) {
-                const { type, count } = item
-                return slot_to_chat(item_to_slot(items[type], count))
-              }
-            }
-            return { text: part }
-          })
-          world_chat_msg({
-            world,
-            message: {
-              translate: 'chat.type.text',
-              with: [
-                {
-                  text: client.username,
-                },
-                share_specific_item,
-              ],
-            },
-            client,
-          })
-        }
-
-        else if (message.match(/(%pos%)/)) {
-          const pos_link = message.split(/(%pos%)/).map(part => {
-            if (part.match(/(%pos%)/)) {
-              const { position } = get_state()
-              var posX = position["x"]
-              var posY = position["y"]
-              const StrPos = share_pos(posX,posY)
-              if (StrPos){
-                return StrPos
-              }
-            }
-            return { text: part }
-          })
-          world_chat_msg({
-            world,
-            message: {
-              translate: 'chat.type.text',
-              with: [
-                {
-                  text: client.username,
-                },
-                [pos_link],
-              ],
-            },
-            client,
-          })
-        }
-
-        else if (message.match(/(%item%)/)) {
-          const share_hand_item = message.split(/(%item%)/).map(part => {
-            if (part.match(/(%item%)/)) {
-              const { held_slot_index } = get_state()
-              const { inventory } = get_state()
-              const slot_number = held_slot_index + 36; //Same here
-              const item = inventory[slot_number]
-              if (item) {
-                const { type, count } = item
-                return slot_to_chat(item_to_slot(items[type], count))
-              }
-            }
-            return { text: part }
-          })
-          world_chat_msg({
-            world,
-            message: {
-              translate: 'chat.type.text',
-              with: [
-                {
-                  text: client.username,
-                },
-                share_hand_item
-              ],
-            },
-            client,
-          })
-        }
-
-        else{
-          return true
-        }
-      }
-
-      if(message){
-        if (sh_item() == true){
-          world_chat_msg({
-            world,
-            message: {
-              translate: 'chat.type.text',
-              with: [
-                {
-                  text: client.username,
-                },
-                message,
-              ],
-            },
-            client
-          })
-        }
-      }
-      
+      world_chat_msg({
+        world,
+        message: [
+          { text: `${nickname}: `, ...Formats.BASE, italic: false },
+          ...message.split(' ').map(word => {
+            for (const pattern in chat_mapper)
+              if (word.match(pattern)) return chat_mapper[pattern](word)
+            return { text: `${word} `, ...Formats.BASE, italic: false }
+          }),
+        ],
+        client,
+      })
     })
     const on_chat = options => client.write('chat', options)
     const on_private_message = ({ receiver_username, options }) => {

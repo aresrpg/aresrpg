@@ -11,6 +11,7 @@ import {
   get_remaining_stats_point,
 } from '../player_statistics.js'
 import { write_action_bar } from '../title.js'
+import { closest_stone } from './teleportation_stones.js'
 
 function compute_health_component(health, max_health) {
   const percent = (100 * health) / max_health
@@ -33,6 +34,7 @@ function update_action_bar({
   health,
   max_health,
   remaining_stats_point,
+  zone,
 }) {
   write_action_bar({
     client,
@@ -42,7 +44,7 @@ function update_action_bar({
       { text: '/', ...Formats.BASE, italic: false, bold: true },
       { text: max_health, ...Formats.SUCCESS },
       { text: ' | Zone: ', ...Formats.BASE, italic: false, bold: true },
-      { text: 'Thebes (F1)', ...Formats.INFO },
+      { text: zone, ...Formats.INFO },
       ...compute_stats_component(remaining_stats_point),
       { text: ' <<', ...Formats.BASE, italic: false, bold: true },
     ],
@@ -54,12 +56,14 @@ export default {
   observe({ client, get_state, world, events, signal }) {
     aiter(abortable(setInterval(2000, null, { signal }))).forEach(() => {
       const state = get_state()
+      const { position } = get_state()
       if (state)
         update_action_bar({
           client,
           health: state.health,
           max_health: get_max_health(state),
           remaining_stats_point: get_remaining_stats_point(state),
+          zone: closest_stone(world,position["x"],position["y"]),
         })
     })
 
@@ -76,6 +80,7 @@ export default {
         const max_health_changed = last_max_health !== max_health
         const stats_points_changed =
           last_remaining_stats_point !== remaining_stats_point
+        const { position } = get_state()
 
         if (health_changed || max_health_changed || stats_points_changed)
           update_action_bar({
@@ -83,6 +88,7 @@ export default {
             health,
             max_health,
             remaining_stats_point,
+            zone: closest_stone(world,position["x"],position["y"]),
           })
         return {
           last_health: health,
