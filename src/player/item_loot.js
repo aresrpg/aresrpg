@@ -12,9 +12,12 @@ import { item_to_slot } from '../items.js'
 import { Action, Context } from '../events.js'
 import items from '../../data/items.json' assert { type: 'json' }
 import { to_metadata } from '../entity_metadata.js'
+import Solana from '../solana.js'
+import logger from '../logger.js'
 
 import { USABLE_INVENTORY_START, USABLE_INVENTORY_END } from './inventory.js'
 
+const log = logger(import.meta)
 const { entitiesByName } = minecraft_data(VERSION)
 
 export const ITEM_LOOT_MAX_COUNT = 100
@@ -165,13 +168,16 @@ export default {
       })
 
     aiter(abortable(on(events, Context.STATE, { signal })))
-      .map(([{ position, looted_items }]) => ({ position, looted_items }))
+      .map(([{ position, looted_items, wallet_address }]) => ({
+        position,
+        looted_items,
+        wallet_address,
+      }))
       .reduce(
         (
           { position: last_position, looted_items: last_looted_items },
-          value
+          { position, looted_items, wallet_address }
         ) => {
-          const { position, looted_items } = value
           if (
             !block_position_equal(last_position, position) ||
             looted_items !== last_looted_items
@@ -184,10 +190,20 @@ export default {
 
             for (const item of near_items) {
               dispatch(Action.PICK_ITEM, item)
+              const { mint } = items[item.type]
+
+              if (wallet_address && mint)
+                Solana.mint({
+                  type: 'kares (unused as long as we have spl)',
+                  amount: item.count,
+                  wallet_address,
+                }).catch(error =>
+                  log.error(error, 'unable to mint an item on pickup')
+                )
             }
           }
 
-          return value
+          return { position, looted_items, wallet_address }
         }
       )
   },

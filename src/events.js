@@ -17,6 +17,7 @@ export const Action = {
   GAMEMODE: 'GAMEMODE',
   ADD_EXPERIENCE: 'ADD_EXPERIENCE',
   DATABASE_SYNC: 'DATABASE_SYNC',
+  BLOCKCHAIN_SYNC: 'BLOCKCHAIN_SYNC',
 }
 
 export const Context = {

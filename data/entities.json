@@ -82,7 +82,7 @@
       },
       {
         "item": "bronze_coin",
-        "chance": 0.01
+        "chance": 1
       }
     ],
     "level": {

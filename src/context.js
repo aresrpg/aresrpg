@@ -27,6 +27,8 @@ import player_respawn from './player/respawn.js'
 import player_bossbar from './player/boss_bar.js'
 import player_action_bar from './player/action_bar.js'
 import player_heartbeat from './player/heartbeat.js'
+import player_database from './player/database.js'
+import player_wallet_link from './player/wallet_link.js'
 import player_traders, {
   register as register_player_traders,
 } from './player/traders.js'
@@ -67,6 +69,7 @@ import start_debug_server from './debug.js'
 import observe_performance from './performance.js'
 import { abortable } from './iterator.js'
 import Database from './database.js'
+import Solana from './solana.js'
 import { USE_RESSOURCE_PACK } from './settings.js'
 import { GameMode } from './gamemode.js'
 
@@ -109,8 +112,8 @@ const initial_state = {
   inventory: Array.from({
     length: 46,
     36: { type: 'spellbook', count: 1 },
-    37: { type: 'bronze_coin', count: 10 },
-    38: { type: 'menitrass_100', count: 1 },
+    37: { type: 'menitrass_100', count: 1 },
+    // 38: { type: 'bronze_coin', count: 10 },
   }),
   looted_items: {
     pool: Array.from({ length: ITEM_LOOT_MAX_COUNT }),
@@ -131,30 +134,35 @@ const initial_state = {
   last_connection_time: undefined,
   last_disconnection_time: undefined,
 
+  wallet_address: undefined,
   kares: undefined,
 }
 
-// Add here all fields that you want to save in the database
-const saved_state = ({
+// Add here all fields that you want to save
+export const saved_state = ({
   nickname,
   position,
-  inventory,
   held_slot_index,
   game_mode,
-  experience,
   health,
   soul,
   last_disconnection_time,
+
+  // this is used by the ares-auth service
+  // we have to add it here to avoid any override of datas saved by an external service
+  // while still keeping the ability to push without pulling
+  wallet_signing_message,
+  wallet_address,
 }) => ({
   nickname,
   position,
-  inventory,
   held_slot_index,
   game_mode,
-  experience,
   health,
   soul,
   last_disconnection_time,
+  wallet_signing_message,
+  wallet_address,
 })
 
 /** @template U
@@ -193,6 +201,7 @@ function reduce_state(state, action) {
     player_soul.reduce,
     player_health.reduce,
     player_experience.reduce,
+    player_database.reduce,
     chunk_update.reduce,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
 }
@@ -240,6 +249,9 @@ export async function observe_client(context) {
   player_bossbar.observe(context)
   player_respawn.observe(context)
   player_heartbeat.observe(context)
+  player_wallet_link.observe(context)
+
+  player_database.observe(context)
 
   commands_declare.observe(context)
 
@@ -304,17 +316,15 @@ export async function create_context(client) {
   const save_state = state => {
     log.info(
       { username: client.username, uuid: client.uuid },
-      'Saving to database'
+      'Saving transient state to database'
     )
-    Database.push({
-      key: client.uuid.toLowerCase(),
-      value: saved_state(state),
-    })
+    Database.push(client.uuid.toLowerCase(), saved_state(state))
   }
 
   /** @type {NodeJS.EventEmitter} */
   const events = new EventEmitter()
   const player_state = await Database.pull(client.uuid.toLowerCase())
+  const solana_state = await Solana.get_state(player_state?.wallet_address)
 
   aiter(combineAsyncIterators(actions[Symbol.asyncIterator](), packets))
     .map(transform_action)
@@ -329,6 +339,7 @@ export async function create_context(client) {
         ...initial_state,
         nickname: client.username,
         ...player_state,
+        ...solana_state,
         last_connection_time: Date.now(),
       }
     )
@@ -336,6 +347,7 @@ export async function create_context(client) {
       ...state,
       last_disconnection_time: Date.now(),
     }))
+    // this is only used to save the up to date last_disconnection_time
     .then(save_state)
     .catch(error => {
       // TODO: what to do here if we can't save the client ?

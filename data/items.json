@@ -15,7 +15,8 @@
   "bronze_coin": {
     "name": "Pièce de Bronze",
     "item": "gold_nugget",
-    "type": "money"
+    "type": "money",
+    "mint": "GLrq3DTmpu5hV5FMaPutpH1LjkpASxJ8nmsGvzsMw4bc"
   },
   "wooden_headdress": {
     "name": "Coiffe en Bois",

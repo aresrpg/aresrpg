@@ -21,8 +21,10 @@ const Slots = {
     { text: `${name} `, color: 'white', bold: true },
     { text: '(', color: 'gray' },
     {
-      text: `${wallet_address.slice(0, 2)}..${wallet_address.slice(-2)}`,
-      color: 'white',
+      text: wallet_address
+        ? `${wallet_address.slice(0, 2)}..${wallet_address.slice(-2)}`
+        : 'unlinked',
+      color: 'purple',
       italic: true,
     }, // faction
     { text: ')', color: 'gray' },

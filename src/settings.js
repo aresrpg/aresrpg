@@ -9,6 +9,7 @@ const {
   USE_SOLANA: use_solana = 'false',
   SOLANA_MASTER_SECRET_KEY,
   SOLANA_RPC_URL = 'http://0.0.0.0:8899',
+  SOLANA_WS_URL = 'ws://0.0.0.0:8900',
 } = process.env
 
 const booleanify = variable => variable?.toLowerCase() === 'true'
@@ -22,7 +23,7 @@ export const USE_RESSOURCE_PACK = booleanify(use_ressource_pack)
 export const USE_PERSISTENT_STORAGE = booleanify(use_persistent_storage)
 export const USE_SOLANA = booleanify(use_solana)
 
-export { REDIS_HOST, SOLANA_RPC_URL, SOLANA_MASTER_SECRET_KEY }
+export { REDIS_HOST, SOLANA_RPC_URL, SOLANA_WS_URL, SOLANA_MASTER_SECRET_KEY }
 
 const hide = value => (value ? '<hidden>' : 'undefined')
 
@@ -35,6 +36,7 @@ log.info(
     REDIS_HOST,
     SOLANA_MASTER_SECRET_KEY: hide(SOLANA_MASTER_SECRET_KEY),
     SOLANA_RPC_URL,
+    SOLANA_WS_URL,
   },
   'aresrpg settings'
 )
