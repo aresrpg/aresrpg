@@ -80,9 +80,8 @@ export default {
 
         const health_changed = last_health !== health
         const max_health_changed = last_max_health !== max_health
-        const { position } = get_state()
         const closest_zone =
-          closest_stone(world, position)?.name ?? 'Wilderness'
+          closest_stone(world, state.position)?.name ?? 'Wilderness'
         const stats_points_changed =
           last_remaining_stats_point !== remaining_stats_point
 
