@@ -10,7 +10,6 @@ import { World } from '../events.js'
 import items from '../../data/items.json' assert { type: 'json' }
 
 import { closest_stone } from './teleportation_stones.js'
-
 const mcData = minecraftData(VERSION)
 const log = logger(import.meta)
 
@@ -32,18 +31,6 @@ function slot_to_chat({ nbtData, itemCount, itemId }) {
       },
     },
   }
-  return chat
-}
-
-function position_to_chat(zone,x,y) {
-  const chat = {
-    translate:"chat.type.text",
-    text:`§6§nPosition:§r§a ${zone}`,
-    hoverEvent: {
-      action:"show_text",
-      value:`§dX: ${x} Y: ${y}`,
-      },
-    }
   return chat
 }
 
@@ -69,10 +56,18 @@ export default {
         }
       },
       '%pos%': () => {
-        const {
-          position: { x, y },
-        } = get_state()
-        return position_to_chat(closest_stone(world,x,y),Math.round(x),Math.round(y))
+        const { position } = get_state()
+        const closest_zone =
+          closest_stone(world, position)?.name ?? 'Wilderness'
+        const chat = {
+          text: `Position: ${closest_zone}`,
+          color: 'gold',
+          hoverEvent: {
+            action: 'show_text',
+            value: `X: ${Math.round(position.x)} Y: ${Math.round(position.y)}`,
+          },
+        }
+        return chat
       },
     }
 
