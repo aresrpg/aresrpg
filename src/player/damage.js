@@ -20,6 +20,7 @@ export function register({ next_entity_id, ...world }) {
   return {
     ...world,
     damage_indicator_start_id: next_entity_id,
+    mob_death_id: next_entity_id,
     next_entity_id: next_entity_id + DAMAGE_INDICATORS_AMOUNT,
   }
 }
