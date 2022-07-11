@@ -31,14 +31,14 @@ export function path_position({
 }) {
   const t = Math.max(0, (time - start_time) / speed)
   const current = Math.floor(t)
-  const remain = block_position ? t % 1 : 0
+  const remain = block_position ? 0 : t % 1
 
   const from = path[Math.min(current, path.length - 1)]
   const to = path[Math.min(current + 1, path.length - 1)]
 
   return {
     x: from.x + (to.x - from.x) * remain,
-    y: from.y + (to.y - from.y) * remain,
+    y: from.y,
     z: from.z + (to.z - from.z) * remain,
   }
 }
