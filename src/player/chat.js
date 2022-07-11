@@ -41,19 +41,21 @@ export default {
       '%item%': () => {
         const { held_slot_index, inventory } = get_state()
         const item = inventory[held_slot_index + 36] // For the player 0 is the first item in hotbar. But for the game the hotbat begin at 36.
-        if (item) {
+        if (item !== undefined) {
           const { type, count } = item
           return slot_to_chat(item_to_slot(items[type], count))
         }
+        return undefined
       },
       '%item\\d%': word => {
         const slot_number = parseInt(word.match(/\d/)[0]) + 36 // same
         const { inventory } = get_state()
         const item = inventory[slot_number]
-        if (item) {
+        if (item !== undefined) {
           const { type, count } = item
           return slot_to_chat(item_to_slot(items[type], count))
         }
+        return undefined
       },
       '%pos%': () => {
         const { position } = get_state()
@@ -64,7 +66,7 @@ export default {
           color: 'gold',
           hoverEvent: {
             action: 'show_text',
-            value: `X: ${Math.round(position.x)} Y: ${Math.round(position.y)}`,
+            value: `X: ${Math.round(position.x)} Z: ${Math.round(position.z)}`,
           },
         }
         return chat
@@ -73,7 +75,6 @@ export default {
 
     client.on('chat', packet => {
       const { message } = packet
-      const { nickname } = get_state()
 
       if (is_command_function(message)) {
         log.info({ sender: client.uuid, command: message }, 'Command')
@@ -85,14 +86,23 @@ export default {
 
       world_chat_msg({
         world,
-        message: [
-          { text: `${nickname}: `, ...Formats.BASE, italic: false },
-          ...message.split(' ').map(word => {
-            for (const pattern in chat_mapper)
-              if (word.match(pattern)) return chat_mapper[pattern](word)
-            return { text: `${word} `, ...Formats.BASE, italic: false }
-          }),
-        ],
+        message: {
+          translate: 'chat.type.text',
+          with: [
+            {
+              text: client.username,
+            },
+            message.split(' ').map(word => {
+              for (const pattern in chat_mapper)
+                if (
+                  word.match(pattern) &&
+                  chat_mapper[pattern](word) !== undefined
+                )
+                  return chat_mapper[pattern](word)
+              return { text: `${word}`, ...Formats.BASE, italic: false }
+            }),
+          ],
+        },
         client,
       })
     })
