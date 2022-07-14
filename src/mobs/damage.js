@@ -41,12 +41,13 @@ export default {
   },
 
   /** @type {import('../context.js').Observer} */
-  observe({ client, world, events, signal }) {
+  observe({ client, get_state, world, events, signal }) {
     client.on('use_entity', ({ target, mouse }) => {
       if (mouse === Mouse.LEFT_CLICK) {
         const mob = world.mobs.by_entity_id(target)
         const { category } = Entities[mob?.type] ?? {}
-        if (mob && category !== 'npc') {
+        const state = get_state()
+        if (state.health > 0 && mob && category !== 'npc') {
           mob.dispatch(MobAction.DEAL_DAMAGE, {
             damage: 1,
             damager: client.uuid,
