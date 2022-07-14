@@ -1,6 +1,7 @@
 import fs from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { EventEmitter } from 'events'
 
 import pino from 'pino'
 import protocol from 'minecraft-protocol'
@@ -8,6 +9,8 @@ import protocol from 'minecraft-protocol'
 import motd_component from './motd.js'
 import { ONLINE_MODE, VERSION } from './settings.js'
 import logger from './logger.js'
+
+EventEmitter.defaultMaxListeners = Infinity
 
 const log = logger(import.meta)
 const MAX_PLAYERS = -1
