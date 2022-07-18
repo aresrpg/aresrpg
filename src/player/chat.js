@@ -5,7 +5,7 @@ import { item_to_slot } from '../items.js'
 import logger from '../logger.js'
 import execute_command from '../commands/commands.js'
 import { VERSION } from '../settings.js'
-import { Formats, world_chat_msg } from '../chat.js'
+import { world_chat_msg } from '../chat.js'
 import { World } from '../events.js'
 import items from '../../data/items.json' assert { type: 'json' }
 
@@ -47,7 +47,7 @@ export default {
         }
         return undefined
       },
-      '%item\\d%': word => {
+      [/%item\d%/.source]: word => {
         const slot_number = parseInt(word.match(/\d/)[0]) + 36 // same
         const { inventory } = get_state()
         const item = inventory[slot_number]
@@ -92,15 +92,17 @@ export default {
             {
               text: client.username,
             },
-            message.split(' ').map(word => {
-              for (const pattern in chat_mapper)
-                if (
-                  word.match(pattern) &&
-                  chat_mapper[pattern](word) !== undefined
-                )
-                  return chat_mapper[pattern](word)
-              return { text: `${word}`, ...Formats.BASE, italic: false }
-            }),
+            message
+              .split(new RegExp(`(${Object.keys(chat_mapper).join('|')})`))
+              .map(part => {
+                for (const pattern in chat_mapper)
+                  if (
+                    part.match(pattern) &&
+                    chat_mapper[pattern](part) !== undefined
+                  )
+                    return chat_mapper[pattern](part)
+                return { text: part }
+              }),
           ],
         },
         client,
