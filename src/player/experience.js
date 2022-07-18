@@ -12,7 +12,6 @@ import { play_sound } from '../sound.js'
 import { client_chat_msg } from '../chat.js'
 import { VERSION } from '../settings.js'
 import { to_metadata } from '../entity_metadata.js'
-import { create_armor_stand } from '../armor_stand.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
 
 const mcData = minecraftData(VERSION)
@@ -360,17 +359,8 @@ export default {
       null
     )
     events.on(Context.MOB_DEATH, ({ mob }) => {
-      const position = mob.position()
       const { xp } = Entities[mob.type]
-
       dispatch(Action.ADD_EXPERIENCE, { experience: +xp })
-
-      const { mob_death_id } = world
-      const entity_id = mob_death_id
-      create_armor_stand(client, entity_id, position, {
-        text: `+${xp}xp`,
-        color: '#A6CD57',
-      })
     })
   },
 }
