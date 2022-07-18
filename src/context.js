@@ -14,6 +14,7 @@ import player_experience, {
 import player_attributes from './player/attributes.js'
 import player_health from './player/health.js'
 import player_fall_damage from './player/fall_damage.js'
+import player_fire_damage from './player/fire_damage.js'
 import player_position from './player/position.js'
 import player_view_distance, { inside_view } from './player/view_distance.js'
 import player_chat from './player/chat.js'
@@ -250,6 +251,7 @@ export async function observe_client(context) {
   player_traders.observe(context)
   player_statistics.observe(context)
   player_fall_damage.observe(context)
+  player_fire_damage.observe(context)
   player_health.observe(context)
   player_attributes.observe(context)
   player_chat.observe(context)

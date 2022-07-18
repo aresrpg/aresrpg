@@ -5,8 +5,6 @@ import { aiter } from 'iterator-helper'
 import { get_block } from '../chunk.js'
 import { Action, Context } from '../events.js'
 import { abortable } from '../iterator.js'
-import logger from '../logger.js'
-const log = logger(import.meta)
 
 export default {
   /** @type {import('../context.js').Observer} */
@@ -63,19 +61,21 @@ export default {
         const { position } = state
         const under = await get_block(world, position)
         const inFire = isInFire(under)
-        if (fireTicks === 0 && !inFire) {
-          log.info('Clearing interval')
+        if (fireTicks === 0 && !inFire && fire_handle != null) {
           clearInterval(fire_handle)
-          return { fireTicks: -1, fire_handle: undefined }
+          return { fireTicks: 0, fire_handle: undefined }
         } else if (fireTicks <= 0 && inFire) {
-          log.info('New interval')
           applyFireDamage(dispatch)
+          fireTicks = 10
           return {
-            fireTicks: 1,
+            fireTicks,
             fire_handle: setInterval(() => {
               if (fireTicks > 0) {
                 applyFireDamage(dispatch)
                 fireTicks--
+              } else {
+                clearInterval(fire_handle)
+                fire_handle = null
               }
             }, 1000),
           }
@@ -83,7 +83,7 @@ export default {
 
         return { fireTicks, fire_handle }
       },
-      { fireTicks: -1, fire_handle: undefined }
+      { fireTicks: 0, fire_handle: undefined }
     )
   },
 
