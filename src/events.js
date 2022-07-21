@@ -51,4 +51,5 @@ export const World = {
   PLAYER: 'PLAYER',
   ADD_PLAYER: uuid => `ADD_PLAYER_${uuid}`,
   CHUNK_POSITION: chunk_index => `POSITION_${chunk_index}`,
+  PARTICLES: 'PARTICLES',
 }
