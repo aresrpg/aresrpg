@@ -60,10 +60,10 @@ export default {
       .map(([{ mob }]) => ({ mob })) // use damage for more blood?
       .reduce(({ mob }) => {
         const state = mob.get_state()
-        const {path} = state
+        const { path } = state
         const size = path.length
         const { x, y, z } = path[size - 1]
-        const {height} = mob.constants
+        const { height } = mob.constants
         world_particle(
           'block',
           world,
