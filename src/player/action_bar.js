@@ -12,6 +12,8 @@ import {
 } from '../player_statistics.js'
 import { write_action_bar } from '../title.js'
 
+import { closest_stone } from './teleportation_stones.js'
+
 function compute_health_component(health, max_health) {
   const percent = (100 * health) / max_health
   const color = to_hex(to_rgb(percent))
@@ -33,6 +35,7 @@ function update_action_bar({
   health,
   max_health,
   remaining_stats_point,
+  zone,
 }) {
   write_action_bar({
     client,
@@ -42,7 +45,7 @@ function update_action_bar({
       { text: '/', ...Formats.BASE, italic: false, bold: true },
       { text: max_health, ...Formats.SUCCESS },
       { text: ' | Zone: ', ...Formats.BASE, italic: false, bold: true },
-      { text: 'Thebes (F1)', ...Formats.INFO },
+      { text: zone, ...Formats.INFO },
       ...compute_stats_component(remaining_stats_point),
       { text: ' <<', ...Formats.BASE, italic: false, bold: true },
     ],
@@ -54,12 +57,15 @@ export default {
   observe({ client, get_state, world, events, signal }) {
     aiter(abortable(setInterval(2000, null, { signal }))).forEach(() => {
       const state = get_state()
+      const closest_zone =
+        closest_stone(world, state.position)?.name ?? 'Wilderness'
       if (state)
         update_action_bar({
           client,
           health: state.health,
           max_health: get_max_health(state),
           remaining_stats_point: get_remaining_stats_point(state),
+          zone: closest_zone,
         })
     })
 
@@ -74,6 +80,8 @@ export default {
 
         const health_changed = last_health !== health
         const max_health_changed = last_max_health !== max_health
+        const closest_zone =
+          closest_stone(world, state.position)?.name ?? 'Wilderness'
         const stats_points_changed =
           last_remaining_stats_point !== remaining_stats_point
 
@@ -83,6 +91,7 @@ export default {
             health,
             max_health,
             remaining_stats_point,
+            zone: closest_zone,
           })
         return {
           last_health: health,

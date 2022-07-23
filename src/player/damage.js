@@ -9,8 +9,9 @@ import { create_armor_stand } from '../armor_stand.js'
 import logger from '../logger.js'
 import { GameMode } from '../gamemode.js'
 import { abortable } from '../iterator.js'
+import Entities from '../../data/entities.json' assert { type: 'json' }
 
-const DAMAGE_INDICATORS_AMOUNT = 5
+const DAMAGE_INDICATORS_AMOUNT = 10
 const DAMAGE_INDICATOR_TTL = 1200
 
 const log = logger(import.meta)
@@ -48,6 +49,7 @@ export default {
         // @ts-ignore
         combineAsyncIterators(
           on(events, Context.MOB_DAMAGE, { signal }),
+          on(events, Context.MOB_DEATH, { signal }),
           setInterval(DAMAGE_INDICATOR_TTL / 2, [{ timer: true }], { signal })
         )
       )
@@ -79,11 +81,19 @@ export default {
             z: z + (Math.random() * 2 - 1) * 0.25,
           }
 
-          create_armor_stand(client, entity_id, position, {
-            text: `-${damage}`,
-            color: '#E74C3C', // https://materialui.co/flatuicolors Alizarin
-          })
-
+          if (damage !== undefined) {
+            create_armor_stand(client, entity_id, position, {
+              text: `-${damage}`,
+              color: '#E74C3C', // https://materialui.co/flatuicolors Alizarin
+            })
+          } else {
+            // Death
+            const { xp } = Entities[mob.type]
+            create_armor_stand(client, entity_id, position, {
+              text: `+${xp} xp`,
+              color: '#A6CD57',
+            })
+          }
           return {
             cursor,
             ids: [
