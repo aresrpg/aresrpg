@@ -12,8 +12,8 @@ import { to_metadata } from '../entity_metadata.js'
 import { world_particle } from '../world/particles.js'
 
 import { color_by_category } from './spawn.js'
-
 const log = logger(import.meta)
+
 const invulnerability_time = 350
 const Mouse = {
   LEFT_CLICK: 1,
@@ -28,7 +28,6 @@ export default {
       if (last_hit + invulnerability_time < now) {
         const health = Math.max(0, state.health - damage)
         log.info({ damage, health }, 'Deal Damage')
-
         return {
           first_damager: damager,
           ...state,
@@ -46,21 +45,9 @@ export default {
     client.on('use_entity', ({ target, mouse }) => {
       if (mouse === Mouse.LEFT_CLICK) {
         const mob = world.mobs.by_entity_id(target)
-        // const { category } = Entities[mob?.type] ?? {}
+        const { category } = Entities[mob?.type] ?? {}
         const state = get_state()
-        if (state.health > 0 /* && mob && category !== 'npc' */) {
-          const blockstate = mcData.blocksByName.redstone_block.defaultState
-          log.info(world)
-          world_particle(
-            'block',
-            world,
-            Vec3([465, 163, 647]),
-            {
-              count: 12,
-              size: Vec3([0, 0, 0]),
-            },
-            blockstate
-          )
+        if (state.health > 0 && mob && category !== 'npc') {
           mob.dispatch(MobAction.DEAL_DAMAGE, {
             damage: 1,
             damager: client.uuid,
@@ -68,7 +55,24 @@ export default {
         }
       }
     })
-
+    // Gestion des particules de sang
+    aiter(abortable(on(events, Context.MOB_DAMAGE, { signal })))
+      .map(([{ mob }]) => ({ mob })) // use damage for more blood?
+      .reduce(({ mob }) => {
+        const state = mob.get_state()
+        const {path} = state
+        const size = path.length
+        const { x, y, z } = path[size - 1]
+        const {height} = mob.constants
+        world_particle(
+          'block',
+          world,
+          Vec3([x, y + height * 0.7, z]),
+          { count: 10, size: Vec3([0, 0, 0]) },
+          mcData.blocksByName.redstone_block.defaultState
+        )
+        return {}
+      })
     events.on(Context.MOB_SPAWNED, ({ mob, signal }) => {
       aiter(abortable(on(mob.events, Mob.STATE, { signal })))
         .map(([{ health }]) => health)
