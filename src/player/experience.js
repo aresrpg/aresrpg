@@ -12,6 +12,7 @@ import { play_sound } from '../sound.js'
 import { client_chat_msg } from '../chat.js'
 import { VERSION } from '../settings.js'
 import { to_metadata } from '../entity_metadata.js'
+import Entities from '../../data/entities.json' assert { type: 'json' }
 
 const mcData = minecraftData(VERSION)
 
@@ -187,7 +188,7 @@ export default {
   },
 
   /** @type {import('../context.js').Observer} */
-  observe({ client, events, signal, world }) {
+  observe({ client, events, signal, world, dispatch }) {
     aiter(abortable(on(events, Context.STATE, { signal }))).reduce(
       (last_total_experience, [{ experience: total_experience, position }]) => {
         if (last_total_experience !== total_experience) {
@@ -357,5 +358,9 @@ export default {
       },
       null
     )
+    events.on(Context.MOB_DEATH, ({ mob }) => {
+      const { xp } = Entities[mob.type]
+      dispatch(Action.ADD_EXPERIENCE, { experience: +xp })
+    })
   },
 }

@@ -9,6 +9,7 @@ import { world_chat_msg } from '../chat.js'
 import { World } from '../events.js'
 import items from '../../data/items.json' assert { type: 'json' }
 
+import { closest_stone } from './teleportation_stones.js'
 const mcData = minecraftData(VERSION)
 const log = logger(import.meta)
 
@@ -19,7 +20,6 @@ function is_command_function(message) {
 function slot_to_chat({ nbtData, itemCount, itemId }) {
   const tag = nbt.simplify(nbtData)
   const { name } = mcData.items[itemId]
-
   const chat = {
     ...JSON.parse(tag.display.Name),
     hoverEvent: {
@@ -37,6 +37,42 @@ function slot_to_chat({ nbtData, itemCount, itemId }) {
 export default {
   /** @type {import('../context.js').Observer} */
   observe({ client, get_state, world, dispatch }) {
+    const chat_mapper = {
+      '%item%': () => {
+        const { held_slot_index, inventory } = get_state()
+        const item = inventory[held_slot_index + 36] // For the player 0 is the first item in hotbar. But for the game the hotbat begin at 36.
+        if (item !== undefined) {
+          const { type, count } = item
+          return slot_to_chat(item_to_slot(items[type], count))
+        }
+        return undefined
+      },
+      [/%item\d%/.source]: word => {
+        const slot_number = parseInt(word.match(/\d/)[0]) + 36 // same
+        const { inventory } = get_state()
+        const item = inventory[slot_number]
+        if (item !== undefined) {
+          const { type, count } = item
+          return slot_to_chat(item_to_slot(items[type], count))
+        }
+        return undefined
+      },
+      '%pos%': () => {
+        const { position } = get_state()
+        const closest_zone =
+          closest_stone(world, position)?.name ?? 'Wilderness'
+        const chat = {
+          text: `Position: ${closest_zone}`,
+          color: 'gold',
+          hoverEvent: {
+            action: 'show_text',
+            value: `X: ${Math.round(position.x)} Z: ${Math.round(position.z)}`,
+          },
+        }
+        return chat
+      },
+    }
+
     client.on('chat', packet => {
       const { message } = packet
 
@@ -48,19 +84,6 @@ export default {
         log.info({ sender: client.uuid, message }, 'Message')
       }
 
-      const formatted_message = message.split(/(%item\d%)/).map(part => {
-        if (part.match(/(%item\d%)/)) {
-          const slot_number = parseInt(part.match(/\d/)[0]) + 36 // For the player 0 is the first item in hotbar. But for the game the hotbat begin at 36.
-          const { inventory } = get_state()
-          const item = inventory[slot_number]
-          if (item) {
-            const { type, count } = item
-            return slot_to_chat(item_to_slot(items[type], count))
-          }
-        }
-        return { text: part }
-      })
-
       world_chat_msg({
         world,
         message: {
@@ -69,7 +92,17 @@ export default {
             {
               text: client.username,
             },
-            formatted_message,
+            message
+              .split(new RegExp(`(${Object.keys(chat_mapper).join('|')})`))
+              .map(part => {
+                for (const pattern in chat_mapper)
+                  if (
+                    part.match(pattern) &&
+                    chat_mapper[pattern](part) !== undefined
+                  )
+                    return chat_mapper[pattern](part)
+                return { text: part }
+              }),
           ],
         },
         client,
