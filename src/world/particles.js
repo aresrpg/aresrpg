@@ -1,14 +1,17 @@
 import { on } from 'events'
+import fs from 'fs'
 
 import Vec3 from 'Vec3'
 import mdata from 'minecraft-data'
 import { aiter } from 'iterator-helper'
 import combineAsyncIterators from 'combine-async-iterators'
 
+import logger from '../logger.js'
 import { Context, World } from '../events.js'
 import { abortable } from '../iterator.js'
 
 const mcData = mdata('1.16.5')
+const log = logger(import.meta)
 export default {
   /** @type {import('../context.js').Observer} */
   observe({ events, dispatch, client, world, signal }) {
@@ -60,7 +63,9 @@ export function world_particle(
   { size = Vec3([1, 1, 1]), count = 1 } = {},
   blockStateId = null
 ) {
-  const particle = mcData.particlesByName[particleName]
+  const particle = particleByName(particleName)
+
+  log.info(particle)
   const options = {
     particleId: particle.id,
     longDistance: true,
@@ -78,4 +83,14 @@ export function world_particle(
   }
   if (blockStateId == null) options.data = null
   world.events.emit(World.PARTICLES, options)
+}
+
+export function particleByName(name) {
+  const json = JSON.parse(
+    fs.readFileSync(
+      'node_modules/minecraft-data/minecraft-data/data/pc/1.16/particles.json',
+      'utf8'
+    )
+  )
+  return json.filter(particle => particle.name === name)[0]
 }
