@@ -1,15 +1,12 @@
 import { on } from 'events'
 
 import { aiter } from 'iterator-helper'
-import Vec3 from 'vec3'
-import mdata from 'minecraft-data'
 
 import { MobAction, Context, Mob } from '../events.js'
 import logger from '../logger.js'
 import { abortable } from '../iterator.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
 import { to_metadata } from '../entity_metadata.js'
-import { world_particle } from '../world/particles.js'
 
 import { color_by_category } from './spawn.js'
 const log = logger(import.meta)
@@ -18,7 +15,6 @@ const invulnerability_time = 350
 const Mouse = {
   LEFT_CLICK: 1,
 }
-const mcData = mdata('1.16.5')
 export default {
   reduce_mob(state, { type, payload }) {
     if (type === MobAction.DEAL_DAMAGE) {
@@ -55,24 +51,7 @@ export default {
         }
       }
     })
-    // Gestion des particules de sang
-    aiter(abortable(on(events, Context.MOB_DAMAGE, { signal })))
-      .map(([{ mob }]) => ({ mob })) // use damage for more blood?
-      .reduce(({ mob }) => {
-        const state = mob.get_state()
-        const { path } = state
-        const size = path.length
-        const { x, y, z } = path[size - 1]
-        const { height } = mob.constants
-        world_particle(
-          'block',
-          world,
-          Vec3([x, y + height * 0.7, z]),
-          { count: 10, size: Vec3([0, 0, 0]) },
-          mcData.blocksByName.redstone_block.defaultState
-        )
-        return {}
-      })
+
     events.on(Context.MOB_SPAWNED, ({ mob, signal }) => {
       aiter(abortable(on(mob.events, Mob.STATE, { signal })))
         .map(([{ health }]) => health)

@@ -1,10 +1,49 @@
+import { on } from 'events'
+
 import Vec3 from 'Vec3'
 import mdata from 'minecraft-data'
+import { aiter } from 'iterator-helper'
+import combineAsyncIterators from 'combine-async-iterators'
 
-import { World } from '../events.js'
+import { Context, World } from '../events.js'
+import { abortable } from '../iterator.js'
+
 const mcData = mdata('1.16.5')
 export default {
-  observe({ client, get_state, world, dispatch }) {
+  /** @type {import('../context.js').Observer} */
+  observe({ events, dispatch, client, world, signal }) {
+    aiter(
+      abortable(
+        // @ts-ignore
+        combineAsyncIterators(
+          on(events, Context.MOB_DAMAGE, { signal })
+          // on(events, Context.MOB_DEATH, { signal }),
+        )
+      )
+    )
+      .map(([{ mob }]) => ({ mob }))
+      .reduce(
+        ({ lastParticle }, { mob }) => {
+          const state = mob.get_state()
+          const { path } = state
+          const size = path.length
+          const { x, y, z } = path[size - 1]
+          const { height } = mob.constants
+          const time = Date.now()
+          world_particle(
+            'block',
+            world,
+            Vec3([x, y + height * 0.7, z]),
+            { count: 10, size: Vec3([0, 0, 0]) },
+            mcData.blocksByName.redstone_block.defaultState
+          )
+          return {
+            lastParticle: time,
+          }
+        },
+        { lastParticle: 0 }
+      )
+
     const on_particle = options => client.write('world_particles', options)
 
     world.events.on(World.PARTICLES, on_particle)
