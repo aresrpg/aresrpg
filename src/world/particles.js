@@ -1,7 +1,7 @@
 import { on } from 'events'
 import fs from 'fs'
 
-import Vec3 from 'Vec3'
+import Vec3 from 'vec3'
 import mdata from 'minecraft-data'
 import { aiter } from 'iterator-helper'
 import combineAsyncIterators from 'combine-async-iterators'
