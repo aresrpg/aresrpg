@@ -44,7 +44,7 @@
     "node-fetch": "^3.2.6",
     "pino": "8.1.0",
     "prismarine-provider-anvil": "2.7.0",
-    "pusher-js": "7.0.6",
+    "pusher-js": "7.3.0",
     "uuid-1345": "^1.0.2",
     "vec3": "0.1.7",
     "xmldom": "0.6.0"
