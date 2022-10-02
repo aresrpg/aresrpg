@@ -5,7 +5,6 @@ export function last_event_value(emitter, event) {
 }
 
 export const Action = {
-  ENJIN: 'ENJIN',
   DAMAGE: 'DAMAGE',
   HEALTH: 'HEALTH',
   TELEPORT: 'TELEPORT',
@@ -17,6 +16,8 @@ export const Action = {
   RESYNC_INVENTORY: 'RESYNC_INVENTORY',
   GAMEMODE: 'GAMEMODE',
   ADD_EXPERIENCE: 'ADD_EXPERIENCE',
+  DATABASE_SYNC: 'DATABASE_SYNC',
+  BLOCKCHAIN_SYNC: 'BLOCKCHAIN_SYNC',
 }
 
 export const Context = {

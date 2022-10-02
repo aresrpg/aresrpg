@@ -17,10 +17,16 @@ const KARES_FORMATER = Intl.NumberFormat('en', { notation: 'compact' })
 
 const Slots = {
   EMPTY_GROUP_SLOT: { color: 'gray', text: '-' },
-  CLASS: ({ name }) => [
+  CLASS: ({ name, wallet_address }) => [
     { text: `${name} `, color: 'white', bold: true },
     { text: '(', color: 'gray' },
-    { text: 'none', color: 'white', italic: true }, // faction
+    {
+      text: wallet_address
+        ? `${wallet_address.slice(0, 2)}..${wallet_address.slice(-2)}`
+        : 'unlinked',
+      color: 'purple',
+      italic: true,
+    }, // faction
     { text: ')', color: 'gray' },
   ],
 
@@ -84,22 +90,13 @@ export default {
     })
 
     aiter(abortable(on(events, Context.STATE, { signal }))).reduce(
-      (
-        last,
-        [
-          {
-            experience,
-            soul,
-            enjin: { kares },
-          },
-        ]
-      ) => {
+      (last, [{ experience, soul, kares, wallet_address }]) => {
         const { level, remaining_experience } = experience_to_level(experience)
         const progress = level_progress({ level, remaining_experience })
         const next = Array.from({
           length: 15,
           14: '',
-          13: Slots.CLASS({ name: '<Classe>' }),
+          13: Slots.CLASS({ name: '<Classe>', wallet_address }),
           12: Slots.PROGRESS({ level, progress }),
           11: Slots.SOUL({ soul }),
           10: Slots.KARES({ kares }),

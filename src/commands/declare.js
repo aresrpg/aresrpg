@@ -13,7 +13,6 @@ import { tg_nodes } from './tg.js'
 import { thug_nodes } from './thug.js'
 import { msg_nodes } from './msg.js'
 import { CommandNodeTypes } from './declare_options.js'
-import { nodes as enjin_nodes } from './enjin.js'
 import { nodes as health_nodes } from './health.js'
 import { nodes as xp_nodes } from './experience.js'
 
@@ -46,7 +45,6 @@ const nodes = flatten({
     ...tg_nodes,
     ...thug_nodes,
     ...msg_nodes,
-    ...enjin_nodes,
     ...health_nodes,
     ...xp_nodes,
   ], // add the nodes of all the commands. exemple : [...command_1,...comand_2,...comand_3]

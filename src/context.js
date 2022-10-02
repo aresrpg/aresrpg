@@ -27,6 +27,8 @@ import player_respawn from './player/respawn.js'
 import player_bossbar from './player/boss_bar.js'
 import player_action_bar from './player/action_bar.js'
 import player_heartbeat from './player/heartbeat.js'
+import player_database from './player/database.js'
+import player_wallet_link from './player/wallet_link.js'
 import player_traders, {
   register as register_player_traders,
 } from './player/traders.js'
@@ -64,10 +66,10 @@ import mobs_attack from './mobs/attack.js'
 import mobs_sound from './mobs/sound.js'
 import commands_declare from './commands/declare.js'
 import start_debug_server from './debug.js'
-import blockchain from './blockchain.js'
 import observe_performance from './performance.js'
 import { abortable } from './iterator.js'
 import Database from './database.js'
+import Solana from './solana.js'
 import { USE_RESSOURCE_PACK } from './settings.js'
 import { GameMode } from './gamemode.js'
 
@@ -110,8 +112,8 @@ const initial_state = {
   inventory: Array.from({
     length: 46,
     36: { type: 'spellbook', count: 1 },
-    37: { type: 'bronze_coin', count: 10 },
-    38: { type: 'menitrass_100', count: 1 },
+    37: { type: 'menitrass_100', count: 1 },
+    // 38: { type: 'bronze_coin', count: 10 },
   }),
   looted_items: {
     pool: Array.from({ length: ITEM_LOOT_MAX_COUNT }),
@@ -131,49 +133,36 @@ const initial_state = {
   // can be used for example to calcule regenerated soul while offline
   last_connection_time: undefined,
   last_disconnection_time: undefined,
-  enjin: {
-    // an idendity represent a single ETH address
-    // if it stays undefined then their may be probleme with account creation
-    // and the user should not be allowed to interract with Enjin
-    identity_id: undefined,
-    // code used to link and identity to an ETH address
-    wallet_linking_code: undefined,
-    // an user that didn't linked his ETH wallet can't claim real tokens
-    wallet_linked: false,
-    // the ETH address (after link)
-    wallet_address: undefined,
-    // the amount of coin stored on the wallet
-    // when the wallet is linked we override this value
-    // otherwise we use the last saved value (in DB)
-    kares: 0,
-    // all others NFTs (a future PR on items implementation would precise this field)
-    items: [],
-  },
+
+  wallet_address: undefined,
+  kares: undefined,
 }
 
-// Add here all fields that you want to save in the database
-const saved_state = ({
+// Add here all fields that you want to save
+export const saved_state = ({
   nickname,
   position,
-  inventory,
   held_slot_index,
   game_mode,
-  experience,
   health,
   soul,
   last_disconnection_time,
-  enjin,
+
+  // this is used by the ares-auth service
+  // we have to add it here to avoid any override of datas saved by an external service
+  // while still keeping the ability to push without pulling
+  wallet_signing_message,
+  wallet_address,
 }) => ({
   nickname,
   position,
-  inventory,
   held_slot_index,
   game_mode,
-  experience,
   health,
   soul,
   last_disconnection_time,
-  enjin,
+  wallet_signing_message,
+  wallet_address,
 })
 
 /** @template U
@@ -212,7 +201,7 @@ function reduce_state(state, action) {
     player_soul.reduce,
     player_health.reduce,
     player_experience.reduce,
-    blockchain.reduce,
+    player_database.reduce,
     chunk_update.reduce,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
 }
@@ -235,12 +224,6 @@ export async function observe_client(context) {
   finalization.observe(context)
 
   if (USE_RESSOURCE_PACK) await player_resource_pack.observe(context)
-
-  // this is also an asynchrone observer initialization
-  // but i think it's fine to let it run alone without waiting for it
-  // not awaiting will enhance the UX, but we may have to restrict some actions
-  // until all datas are fully loaded from the blockchain
-  blockchain.observe(context)
 
   // login has to stay on top
   player_login.observe(context)
@@ -266,6 +249,9 @@ export async function observe_client(context) {
   player_bossbar.observe(context)
   player_respawn.observe(context)
   player_heartbeat.observe(context)
+  player_wallet_link.observe(context)
+
+  player_database.observe(context)
 
   commands_declare.observe(context)
 
@@ -330,17 +316,15 @@ export async function create_context(client) {
   const save_state = state => {
     log.info(
       { username: client.username, uuid: client.uuid },
-      'Saving to database'
+      'Saving transient state to database'
     )
-    Database.push({
-      key: client.uuid.toLowerCase(),
-      value: saved_state(state),
-    })
+    Database.push(client.uuid.toLowerCase(), saved_state(state))
   }
 
   /** @type {NodeJS.EventEmitter} */
   const events = new EventEmitter()
   const player_state = await Database.pull(client.uuid.toLowerCase())
+  const solana_state = await Solana.get_state(player_state?.wallet_address)
 
   aiter(combineAsyncIterators(actions[Symbol.asyncIterator](), packets))
     .map(transform_action)
@@ -355,6 +339,7 @@ export async function create_context(client) {
         ...initial_state,
         nickname: client.username,
         ...player_state,
+        ...solana_state,
         last_connection_time: Date.now(),
       }
     )
@@ -362,6 +347,7 @@ export async function create_context(client) {
       ...state,
       last_disconnection_time: Date.now(),
     }))
+    // this is only used to save the up to date last_disconnection_time
     .then(save_state)
     .catch(error => {
       // TODO: what to do here if we can't save the client ?
