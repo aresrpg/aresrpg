@@ -56,7 +56,6 @@ import mobs_spawn from './mobs/spawn.js'
 import mobs_movements from './mobs/movements.js'
 import mobs_damage from './mobs/damage.js'
 import mobs_goto from './mobs/goto.js'
-import particles from './world/particles.js'
 import mobs_target from './mobs/target.js'
 import mobs_look_at from './mobs/look_at.js'
 import mobs_wakeup from './mobs/wakeup.js'
@@ -283,7 +282,6 @@ export async function observe_client(context) {
   mobs_sound.observe(context)
 
   chunk_update.observe(context)
-  particles.observe(context)
 }
 
 /**

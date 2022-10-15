@@ -1,3 +1,7 @@
+import logger from './logger.js'
+
+const log = logger(import.meta)
+
 export const CATEGORY = {
   MASTER: 0,
   MUSIC: 1,
@@ -19,7 +23,7 @@ export const play_sound = ({
   y,
   z,
 }) => {
-  // log.info({ sound, pseudo: client.username }, 'playing named sound')
+  log.info({ sound, pseudo: client.username }, 'playing named sound')
   client.write('named_sound_effect', {
     soundName: sound,
     soundCategory: category,
