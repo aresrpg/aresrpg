@@ -35,6 +35,7 @@ import player_deal_damage, {
   register as register_player_deal_damage,
 } from './player/damage.js'
 import player_inventory from './player/inventory.js'
+import player_chest from './player/chest.js'
 import player_teleportation_stones, {
   register as register_player_teleportation_stones,
 } from './player/teleportation_stones.js'
@@ -108,6 +109,10 @@ const initial_state = {
   inventory: Array.from({
     length: 46,
   }),
+  bank: Array.from({
+    length: 53,
+    0: { type: 'bronze_coin', count: 50 },
+  }),
   looted_items: {
     pool: Array.from({ length: ITEM_LOOT_MAX_COUNT }),
     cursor: 0,
@@ -134,6 +139,7 @@ const saved_state = ({
   nickname,
   position,
   inventory,
+  bank,
   held_slot_index,
   game_mode,
   experience,
@@ -144,6 +150,7 @@ const saved_state = ({
   nickname,
   position,
   inventory,
+  bank,
   held_slot_index,
   game_mode,
   experience,
