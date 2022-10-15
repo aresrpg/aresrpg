@@ -8,6 +8,7 @@ import { empty_slot, item_to_slot } from '../items.js'
 import items from '../../data/items.json' assert { type: 'json' }
 import { create_armor_stand } from '../armor_stand.js'
 import { to_metadata } from '../entity_metadata.js'
+import { distance2d_squared } from '../math.js'
 
 const mcData = minecraftData(VERSION)
 
@@ -60,6 +61,23 @@ function teleportation_stones_in_chunk(world, chunk_x, chunk_z) {
   return world.teleportation_stones.filter(
     ({ position: { x, z } }) =>
       chunk_position(x) === chunk_x && chunk_position(z) === chunk_z
+  )
+}
+
+/**
+ * Return the closest teleportation stone from the player
+ * @param {*} world
+ * @param {*} player_pos_x
+ * @param {*} player_pos_y
+ * @returns {stones} name of the teleportation stone
+ */
+const PLAYER_ZONE_DISTANCE = 30
+export function closest_stone(world, player_position) {
+  const stones = world.teleportation_stones
+  return stones.find(
+    stone =>
+      Math.sqrt(distance2d_squared(stone.position, player_position)) <=
+      PLAYER_ZONE_DISTANCE
   )
 }
 
