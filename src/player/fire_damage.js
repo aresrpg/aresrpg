@@ -1,124 +1,87 @@
 import { on } from 'events'
+import { setInterval } from 'timers/promises'
 
 import { aiter } from 'iterator-helper'
+import Vec3 from 'vec3'
 
 import { get_block } from '../chunk.js'
 import { Action, Context } from '../events.js'
 import { abortable } from '../iterator.js'
-
 export default {
   /** @type {import('../context.js').Observer} */
-  /* async observe({ client, get_state, events, dispatch, signal, world}) {
-    aiter(abortable(
-     // @ts-ignore
-      combineAsyncIterators(
-        on(events, Context.STATE, { signal }),
-        setInterval(1000, [{ timer: true }], { signal })
-      )
-      ))
-      .map(([{timer},]) => ({ timer }))
-      .reduce(async ({ fireTicks },{ timer }) => {
-          const { position } = get_state()
-          const now = Date.now()
-          const maxFireTicks = 1;
-          const blockName = 'stone_brick_slab'
-          const under = await get_block(world, position)
-          if(timer){
-            log.info("TIMER " + now)
-            if(fireTicks >= 0){
-              if(fireTicks > 0){
-                applyFireDamage(dispatch)
-                log.info("TIMER " + now)
-              }
-              
-              fireTicks --
-            }
-          }else{
-            if(fireTicks < 0){
-              if(under.name === blockName){
-                applyFireDamage(dispatch)
-                setInterval(10000)
-                setTimeout(10000)
-                setImmediate(10000)
-                log.info("RESPOUSSER " + now)
-                fireTicks = 1
-
-              }
-            }
-          }
-          return {
-            fireTicks
-          }
-        },
-        { fireTicks: 0 }
-      )
-      
-  }, */
-
-  observe({ client, events, signal, dispatch, world }) {
+  observe({ client, get_state, events, dispatch, signal, world }) {
     aiter(abortable(on(events, Context.STATE, { signal }))).reduce(
-      async ({ fireTicks, fire_handle }, [state]) => {
+      async ({ fireTicks }, [state]) => {
         const { position } = state
-        const under = await get_block(world, position)
-        const inFire = isInFire(under)
-        if (fireTicks === 0 && !inFire && fire_handle != null) {
-          clearInterval(fire_handle)
-          return { fireTicks: 0, fire_handle: undefined }
-        } else if (fireTicks <= 0 && inFire) {
-          applyFireDamage(dispatch)
-          fireTicks = 10
-          return {
-            fireTicks,
-            fire_handle: setInterval(() => {
-              if (fireTicks > 0) {
+        const inFire = await isInFire(world, position)
+        if (inFire) {
+          if (fireTicks.ticks <= 0) {
+            // TODO: set entity fire animation (entity metadata)
+            applyFireDamage(dispatch)
+            aiter(abortable(setInterval(1000, null, { signal })))
+              .takeWhile(() => fireTicks.ticks > 1)
+              .forEach(() => {
                 applyFireDamage(dispatch)
-                fireTicks--
-              } else {
-                clearInterval(fire_handle)
-                fire_handle = null
-              }
-            }, 1000),
+                fireTicks.ticks--
+              })
+              .then(() => {
+                fireTicks.ticks = 0
+              })
           }
+          fireTicks.ticks = 5
         }
 
-        return { fireTicks, fire_handle }
+        return { fireTicks }
       },
-      { fireTicks: 0, fire_handle: undefined }
+      { fireTicks: { ticks: 0 } }
     )
   },
-
-  /* observe({ client, events, signal, dispatch, get_state, world }) {
-    aiter(abortable(on(events, Context.STATE, { signal })))
-      .map(([{ position, fireTicks }]) => ({
-        position, fireTicks
-      }))
-      .reduce(async (fireTicks, { position }) => {
-          const under = await get_block(world, position)
-          log.info("OUT : " + fireTicks)
-          if(isInFire(under) && fireTicks == 0){
-            log.info("New interval")
-            fireTicks = 10
-            aiter(abortable(setInterval(1000, null, { signal })))
-            .take(fireTicks)
-            .asIndexedPairs()
-            // invert
-            .map(([index]) => fireTicks - index)
-            .forEach(remaining => {
-              fireTicks = remaining
-              log.info("INSIDE : " + remaining)
-            })
-          }
-
-        return fireTicks
-      }, 0)
-  }, */
 }
-export function isInFire(under) {
-  return under.name === 'stone_brick_slab'
+export async function isInFire(world, location) {
+  return await isBlockInsidePlayer(world, location, 'fire')
 }
 export function applyFireDamage(dispatch) {
   const damage = 2
   if (damage > 0) {
     dispatch(Action.DAMAGE, { damage })
   }
+}
+export async function isBlockInsidePlayer(world, location, blockName) {
+  const cursor = Vec3([0, 0, 0])
+  const width = 0.6 // player bb width
+  const height = 1.8 // player bb height //TODO: sneaking
+  const queryBB = {
+    minX: location.x - width / 2,
+    minY: location.y,
+    minZ: location.z - width / 2,
+    maxX: location.x + width / 2,
+    maxY: location.y + height,
+    maxZ: location.z + width / 2,
+  }
+  for (
+    cursor.y = Math.floor(queryBB.minY);
+    cursor.y <= Math.floor(queryBB.maxY);
+    cursor.y++
+  ) {
+    for (
+      cursor.z = Math.floor(queryBB.minZ);
+      cursor.z <= Math.floor(queryBB.maxZ);
+      cursor.z++
+    ) {
+      for (
+        cursor.x = Math.floor(queryBB.minX);
+        cursor.x <= Math.floor(queryBB.maxX);
+        cursor.x++
+      ) {
+        const block = await get_block(world, cursor)
+        if (block) {
+          const { name } = block
+          if (name === blockName) {
+            return true
+          }
+        }
+      }
+    }
+  }
+  return false
 }
