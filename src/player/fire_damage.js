@@ -20,7 +20,7 @@ export async function isInLava(world, location) {
   return await isBlockInsidePlayer(world, location, 'lava')
 }
 /**
- * Starts an interval that damage every seconds until fireticks or lavaticks is 0
+ * Starts an interval that damage every seconds until fireticks and lavaticks is 0
  */
 async function startDamage(dispatch, signal, damageTicks, lava = false) {
   lava ? applyLavaDamage(dispatch) : applyFireDamage(dispatch)
@@ -42,13 +42,13 @@ async function startDamage(dispatch, signal, damageTicks, lava = false) {
     })
 }
 export function applyFireDamage(dispatch) {
-  const damage = 1
+  const damage = 1 // TODO : calculate damage
   if (damage > 0) {
     dispatch(Action.DAMAGE, { damage })
   }
 }
 export function applyLavaDamage(dispatch) {
-  const damage = 2
+  const damage = 2 // TODO : calculate damage
   if (damage > 0) {
     dispatch(Action.DAMAGE, { damage })
   }
