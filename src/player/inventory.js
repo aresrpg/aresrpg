@@ -22,7 +22,7 @@ export const USABLE_INVENTORY_END = 44
 const to_slot = item =>
   item ? item_to_slot(items[item.type], item.count) : empty_slot
 
-const BlockDigStatus = {
+export const BlockDigStatus = {
   STARTED_DIGGING: 0,
   CANCELLED_DIGGING: 1,
   FINISHED_DIGGING: 2,
