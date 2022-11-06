@@ -6,13 +6,14 @@ import combineAsyncIterators from 'combine-async-iterators'
 
 import { last_event_value, Context } from './events.js'
 import { floor1 } from './world.js'
-import { register_screen } from './player/screen.js'
 import logger from './logger.js'
 import player_login from './player/login.js'
 import player_experience, {
   register as register_experience,
 } from './player/experience.js'
-import player_menu from './player/menu.js'
+import player_menu, {
+  register as register_class_selection_mobs,
+} from './player/menu.js'
 import player_attributes from './player/attributes.js'
 import player_health from './player/health.js'
 import player_fall_damage from './player/fall_damage.js'
@@ -83,24 +84,6 @@ const initial_world = {
   next_window_id: 1, // 0 is the player inventory
   /** @type {() => Object} Remove type to remove circular references */
   get: () => world,
-  screens: {
-    right: {
-      size: { width: 1, height: 4 },
-      start_id: 9999
-    },
-      
-    right2: {
-      size: { width: 1, height: 4 },
-    },
-    left: {
-      size: { width: 1, height: 4 },
-    },
-    player_screen: {
-      size: { width: 5, height: 4 },
-      start_id: 99999
-    }
-  }
-  
 }
 
 const world_reducers = [
@@ -112,6 +95,7 @@ const world_reducers = [
   register_experience,
   register_player_teleportation_stones,
   register_player_item_loot,
+  register_class_selection_mobs,
 ]
 
 const world = /** @type {World} */ (
