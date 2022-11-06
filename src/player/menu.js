@@ -4,15 +4,80 @@ import minecraftData from 'minecraft-data'
 
 import { VERSION } from '../settings.js'
 import { to_metadata } from '../entity_metadata.js'
-import { item_to_slot } from '../items.js'
+import { empty_slot, item_to_slot } from '../items.js'
 import items from '../../data/items.json' assert { type: 'json' }
 
 import { BlockDigStatus } from './inventory.js'
-
 const mcData = minecraftData(VERSION)
 
-function create_class_stand(client, { x, y, z }, yaw, selectedClasse) {
-  const { entityId } = selectedClasse
+const to_slot = item =>
+  item ? item_to_slot(items[item.type], item.count) : empty_slot
+
+const classes = {
+  barbare: {
+    entityId: null,
+    name: {
+      text: 'Barbare',
+      color: 'blue',
+    },
+    stand_item: [
+      { type: 'menitrass_100', count: 1 },
+      null,
+      { type: 'shrek_boots', count: 1 },
+      { type: 'artaen_pants', count: 1 },
+      { type: 'strauss_armor', count: 1 },
+      { type: 'pommo_helm', count: 1 },
+    ],
+  },
+  paladin: {
+    entityId: null,
+    name: {
+      text: 'Paladin',
+      color: 'gold',
+    },
+    stand_item: [
+      { type: 'nitrildin_100', count: 1 },
+      null,
+      { type: 'shrek_boots', count: 1 },
+      { type: 'artaen_pants', count: 1 },
+      { type: 'strauss_armor', count: 1 },
+      { type: 'pommo_helm', count: 1 },
+    ],
+  },
+  archer: {
+    entityId: null,
+    name: {
+      text: 'Archer',
+      color: 'green',
+    },
+    stand_item: [
+      { type: 'svidriin_100', count: 1 },
+      null,
+      { type: 'shrek_boots', count: 1 },
+      { type: 'artaen_pants', count: 1 },
+      { type: 'strauss_armor', count: 1 },
+      { type: 'pommo_helm', count: 1 },
+    ],
+  },
+  mage: {
+    entityId: null,
+    name: {
+      text: 'Mage',
+      color: 'dark_purple',
+    },
+    stand_item: [
+      { type: 'ulkrann_100_staff', count: 1 },
+      null,
+      { type: 'shrek_boots', count: 1 },
+      { type: 'artaen_pants', count: 1 },
+      { type: 'strauss_armor', count: 1 },
+      { type: 'pommo_helm', count: 1 },
+    ],
+  },
+}
+
+function create_class_stand(client, { x, y, z }, yaw, selectedClass) {
+  const { entityId, stand_item, name } = selectedClass
   const stand = {
     entityId,
     entityUUID: UUID.v4(),
@@ -32,7 +97,7 @@ function create_class_stand(client, { x, y, z }, yaw, selectedClasse) {
   const metadata = {
     entityId,
     metadata: to_metadata('armor_stand', {
-      custom_name: JSON.stringify(selectedClasse),
+      custom_name: JSON.stringify(name),
       is_custom_name_visible: true,
       has_no_gravity: true,
       armor_stand_flags: {
@@ -42,67 +107,17 @@ function create_class_stand(client, { x, y, z }, yaw, selectedClasse) {
     }),
   }
 
-  const equipment_map = {
-    main_hand: 0,
-    off_hand: 1,
-    boots: 2,
-    leggings: 3,
-    chestplate: 4,
-    helmet: 5,
-  }
-
-  const equipment = {
-    main_hand: { type: 'menitrass_100', count: 1 },
-    helmet: { type: 'majestic_crown_of_hades', count: 1 },
-    chestplate: { type: 'majestic_hades_armor', count: 1 },
-    leggings: { type: 'fabulous_bottoms_of_hades', count: 1 },
-    boots: { type: 'fabulous_hades_boots', count: 1 },
-  }
-
   const entity_equipement = {
     entityId,
-    equipments: Object.keys(equipment).map(slot => ({
-      slot: equipment_map[slot],
-      item: item_to_slot(items[equipment[slot].type], equipment[slot].count),
+    equipments: stand_item.map(item => ({
+      slot: stand_item.indexOf(item),
+      item: to_slot(item),
     })),
   }
+
   client.write('spawn_entity_living', stand)
   client.write('entity_metadata', metadata)
-
-  console.log(entity_equipement)
-  // crash player
-  // client.write('entity_equipement', entity_equipement)
-}
-
-const classes = {
-  barbare: {
-    entityId: null,
-    text: 'Barbare',
-    color: 'blue',
-    item: Array.from({
-      length: 6,
-      0: { type: 'menitrass_100', count: 1 },
-      5: { type: 'majestic_crown_of_hades', count: 1 },
-      4: { type: 'majestic_hades_armor', count: 1 },
-      3: { type: 'fabulous_bottoms_of_hades', count: 1 },
-      2: { type: 'fabulous_hades_boots', count: 1 },
-    }),
-  },
-  paladin: {
-    entityId: null,
-    text: 'Paladin',
-    color: 'gold',
-  },
-  archer: {
-    entityId: null,
-    text: 'Archer',
-    color: 'green',
-  },
-  mage: {
-    entityId: null,
-    text: 'Mage',
-    color: 'dark_purple',
-  },
+  client.write('entity_equipment', entity_equipement)
 }
 
 /** @param {import('../context.js').InitialWorld} world */
