@@ -11,15 +11,10 @@ import { BlockDigStatus } from './inventory.js'
 
 const mcData = minecraftData(VERSION)
 
-function create_class_stand(
-  client,
-  entity_id,
-  { x, y, z },
-  yaw,
-  selectedClasse
-) {
+function create_class_stand(client, { x, y, z }, yaw, selectedClasse) {
+  const { entityId } = selectedClasse
   const stand = {
-    entityId: entity_id,
+    entityId,
     entityUUID: UUID.v4(),
     type: mcData.entitiesByName.armor_stand.id,
     x,
@@ -35,7 +30,7 @@ function create_class_stand(
   }
 
   const metadata = {
-    entityId: entity_id,
+    entityId,
     metadata: to_metadata('armor_stand', {
       custom_name: JSON.stringify(selectedClasse),
       is_custom_name_visible: true,
@@ -65,18 +60,18 @@ function create_class_stand(
   }
 
   const entity_equipement = {
-    entityId: entity_id,
+    entityId,
     equipments: Object.keys(equipment).map(slot => ({
       slot: equipment_map[slot],
       item: item_to_slot(items[equipment[slot].type], equipment[slot].count),
     })),
   }
-
   client.write('spawn_entity_living', stand)
   client.write('entity_metadata', metadata)
 
+  console.log(entity_equipement)
   // crash player
-  client.write('entity_equipement', entity_equipement)
+  // client.write('entity_equipement', entity_equipement)
 }
 
 const classes = {
@@ -159,35 +154,12 @@ export default {
         status === BlockDigStatus.DROP_ITEM_STACK
       ) {
         const position = v(get_state().position)
+        const { barbare, paladin, archer, mage } = classes
 
-        create_class_stand(
-          client,
-          4243,
-          position.offset(0, 0, 2),
-          127,
-          classes.barbare
-        ) // front
-        create_class_stand(
-          client,
-          4244,
-          position.offset(2, 0, 0),
-          65,
-          classes.paladin
-        ) // left
-        create_class_stand(
-          client,
-          4245,
-          position.offset(-2, 0, 0),
-          -65,
-          classes.archer
-        ) // right
-        create_class_stand(
-          client,
-          4246,
-          position.offset(0, 0, -2),
-          0,
-          classes.mage
-        ) // back
+        create_class_stand(client, position.offset(0, 0, 2), 127, barbare) // front
+        create_class_stand(client, position.offset(2, 0, 0), 65, paladin) // left
+        create_class_stand(client, position.offset(-2, 0, 0), -65, archer) // right
+        create_class_stand(client, position.offset(0, 0, -2), 0, mage) // back
       }
     })
   },
