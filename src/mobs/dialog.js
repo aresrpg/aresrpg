@@ -2,7 +2,7 @@ import { Position } from '../chat.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
 import { play_sound } from '../sound.js'
 
-export function speak_to(mob, { client, get_state }) {
+export function speak_to(mob, { client, position }) {
   const { dialogs, displayName, sounds } = Entities[mob.type]
   if (dialogs !== undefined) {
     const x = Math.floor(Math.random() * dialogs.length)
@@ -23,7 +23,7 @@ export function speak_to(mob, { client, get_state }) {
     play_sound({
       client,
       sound: ambient,
-      ...get_state().position,
+      ...position,
     })
   }
 }
@@ -37,7 +37,8 @@ export default {
       if (mouse === right_click && sneaking === false && hand === main_hand) {
         const mob = world.mobs.by_entity_id(target)
         if (mob) {
-          speak_to(mob, { client, get_state })
+          const { position } = get_state()
+          speak_to(mob, { client, position })
         }
       }
     })
