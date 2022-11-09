@@ -31,7 +31,7 @@ export async function pathfinding({
 
   const insert = sorted_insert.bind(null, open, 'distance')
 
-  while (open.length >= 0 && closed.length < max_depth) {
+  while (open.length > 0 && closed.length < max_depth) {
     const head = open.shift()
 
     if (is_target(head.node))
