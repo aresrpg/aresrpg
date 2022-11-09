@@ -1,9 +1,6 @@
 import { Position } from '../chat.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
 import { play_sound } from '../sound.js'
-import logger from '../logger.js'
-
-const log = logger(import.meta)
 
 export function speak_to(mob, { client, get_state }) {
   const { dialogs, displayName, sounds } = Entities[mob.type]
@@ -22,7 +19,6 @@ export function speak_to(mob, { client, get_state }) {
       position: Position.CHAT,
       sender: client.uuid,
     })
-    log.info('chat')
     const { ambient } = sounds
     play_sound({
       client,
