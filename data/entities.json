@@ -3122,6 +3122,23 @@
       "max": null
     }
   },
+  "fox": {
+    "displayName": "Renard",
+    "category": "npc",
+    "minecraft_entity": "fox",
+    "dialogs": ["*jappe*", "*glapit*", "*trompette*"],
+    "speed": 0.35,
+    "health": 20,
+    "sounds": {
+      "ambient": "entity.fox.ambient",
+      "hurt": "entity.fox.ambient",
+      "death": "entity.fox.ambient"
+    },
+    "level": {
+      "min": null,
+      "max": null
+    }
+  },
   "sheep": {
     "displayName": "Mouton de Thebes",
     "category": "mob",
