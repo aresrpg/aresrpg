@@ -47,6 +47,7 @@
     "pusher-js": "7.0.6",
     "uuid-1345": "^1.0.2",
     "vec3": "0.1.7",
+    "vecmath": "^0.1.4",
     "xmldom": "0.6.0"
   },
   "devDependencies": {
