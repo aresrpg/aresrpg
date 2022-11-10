@@ -15,6 +15,7 @@ import player_attributes from './player/attributes.js'
 import player_health from './player/health.js'
 import player_fall_damage from './player/fall_damage.js'
 import player_position from './player/position.js'
+import player_spell from './player/spell.js'
 import player_view_distance, { inside_view } from './player/view_distance.js'
 import player_chat from './player/chat.js'
 import player_resource_pack from './player/resource_pack.js'
@@ -251,6 +252,7 @@ export async function observe_client(context) {
   player_statistics.observe(context)
   player_fall_damage.observe(context)
   player_health.observe(context)
+  player_spell.observe(context)
   player_attributes.observe(context)
   player_chat.observe(context)
   player_deal_damage.observe(context)
