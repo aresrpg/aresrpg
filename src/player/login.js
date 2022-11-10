@@ -1,4 +1,4 @@
-// import vecmath from 'vecmath'
+import vecmath from 'vecmath'
 
 import { chunk_position } from '../chunk.js'
 import { write_brand } from '../plugin_channels.js'
@@ -10,20 +10,20 @@ import { Context } from '../events.js'
 import { Formats, world_chat_msg } from '../chat.js'
 
 import { set_world_border } from './world_border.js'
-// import { rainbow_geometry, sphere_geometry } from './particles/geometries.js'
-// import {
-//   mesh,
-//   render_mesh,
-//   render_particles,
-//   updateMaterial,
-//   updateTransformMatrix,
-// } from './particles/particles.js'
-// import {
-//   basic_material,
-//   rainbow_rainbow_material,
-// } from './particles/materials.js'
+import { rainbow_geometry, sphere_geometry } from './particles/geometries.js'
+import {
+  mesh,
+  render_mesh,
+  render_particles,
+  updateMaterial,
+  updateTransformMatrix,
+} from './particles/particles.js'
+import {
+  basic_material,
+  rainbow_rainbow_material,
+} from './particles/materials.js'
 
-// const { Vector3 } = vecmath
+const { Vector3 } = vecmath
 
 export default {
   /** @type {import('../context.js').Observer} */
@@ -108,52 +108,51 @@ export default {
           ],
         })
 
-      // const particle_pos = {
-      //   ...world.spawn_position,
-      //   y: world.spawn_position.y + 30,
-      // }
+      const particle_pos = {
+        ...world.spawn_position,
+        y: world.spawn_position.y + 30,
+      }
 
-      // const rainbow = mesh({
-      //   geometry: rainbow_geometry({
-      //     min_radius: 3,
-      //     max_radius: 5,
-      //     center: { x: 0, y: 0, z: 0 },
-      //     segments: 60,
-      //   }),
-      //   material: rainbow_rainbow_material({ progress: 1 }),
-      //   position: particle_pos,
-      //   rotation: new Vector3(0, 0, 0),
-      //   scale: new Vector3(2, 2, 2),
-      // })
+      const rainbow = mesh({
+        geometry: rainbow_geometry({
+          min_radius: 3,
+          max_radius: 5,
+          center: { x: 0, y: 0, z: 0 },
+          segments: 60,
+        }),
+        material: rainbow_rainbow_material({ progress: 1 }),
+        position: particle_pos,
+        rotation: new Vector3(0, 0, 0),
+        scale: new Vector3(2, 2, 2),
+      })
 
-      // const sphere = mesh({
-      //   geometry: sphere_geometry({
-      //     radius: 2.5,
-      //     height_segments: 15,
-      //     width_segments: 30,
-      //   }),
-      //   material: basic_material({
-      //     color: { red: 1, green: 0, blue: 0 },
-      //     scale: 2,
-      //   }),
-      //   position: particle_pos,
-      //   rotation: new Vector3(0, 0, 0),
-      //   scale: new Vector3(1, 1, 1),
-      // })
+      const sphere = mesh({
+        geometry: sphere_geometry({
+          radius: 2.5,
+          height_segments: 15,
+          width_segments: 30,
+        }),
+        material: basic_material({
+          color: { red: 1, green: 0, blue: 0 },
+          scale: 2,
+        }),
+        position: particle_pos,
+        rotation: new Vector3(0, 0, 0),
+        scale: new Vector3(1, 1, 1),
+      })
+      let t = 0
+      setInterval(() => {
+        t += 0.01
+        updateMaterial(rainbow, rainbow_rainbow_material({ progress: t }))
+        const final_vertex = render_mesh(rainbow).concat(render_mesh(sphere))
 
-      // let t = 0
-      // setInterval(() => {
-      //   t += 0.01
-      //   updateMaterial(rainbow, rainbow_rainbow_material({ progress: t }))
-      //   const final_vertex = render_mesh(rainbow).concat(render_mesh(sphere))
-
-      //   render_particles(client, final_vertex)
-      //   if (t >= 1) {
-      //     t = 0
-      //     rainbow.rotation.y += Math.PI
-      //     updateTransformMatrix(rainbow)
-      //   }
-      // }, 100)
+        render_particles(client, final_vertex)
+        if (t >= 1) {
+          t = 0
+          rainbow.rotation.y += Math.PI
+          updateTransformMatrix(rainbow)
+        }
+      }, 500)
     })
   },
 }
