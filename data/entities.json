@@ -3137,6 +3137,30 @@
     "level": {
       "min": null,
       "max": null
+    },
+    "custom": {
+      "type": { "is_sleeping": true }
+    }
+  },
+  "baby_fox": {
+    "displayName": "Bébé Renard",
+    "category": "npc",
+    "minecraft_entity": "fox",
+    "dialogs": ["*jappe*", "*glapit*", "*trompette*"],
+    "speed": 0.35,
+    "health": 10,
+    "sounds": {
+      "ambient": "entity.fox.ambient",
+      "hurt": "entity.fox.ambient",
+      "death": "entity.fox.ambient"
+    },
+    "level": {
+      "min": null,
+      "max": null
+    },
+    "custom": {
+      "is_baby": true,
+      "type": { "is_sleeping": true }
     }
   },
   "sheep": {

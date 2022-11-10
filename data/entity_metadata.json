@@ -602,8 +602,8 @@
     "parent": "animal",
     "metadata": {
       "type": {
-        "key": 16,
-        "type": 1,
+        "key": 17,
+        "type": 0,
         "bitflags": {
           "is_sitting": 0,
           "unused": 1,
