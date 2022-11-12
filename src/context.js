@@ -13,7 +13,7 @@ import player_experience, {
 } from './player/experience.js'
 import player_menu, {
   register as register_class_selection_mobs,
-} from './player/menu.js'
+} from './player/class-selection.js'
 import player_attributes from './player/attributes.js'
 import player_health from './player/health.js'
 import player_fall_damage from './player/fall_damage.js'
