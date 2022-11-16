@@ -22,6 +22,7 @@ export const play_sound = ({
   x,
   y,
   z,
+  volume = 1,
 }) => {
   log.info({ sound, pseudo: client.username }, 'playing named sound')
   client.write('named_sound_effect', {
@@ -30,7 +31,7 @@ export const play_sound = ({
     x: x * 8,
     y: y * 8,
     z: z * 8,
-    volume: 1,
+    volume,
     pitch: 1,
   })
 }
