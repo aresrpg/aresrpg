@@ -1,4 +1,4 @@
-/*import { hsl_to_rgb } from '../../color.js'
+import { hsl_to_rgb } from '../../color.js'
 
 import { ParticlesTypes } from './particles.js'
 import logger from '../../logger.js'
@@ -172,5 +172,3 @@ export function basic_material({ color: { red, green, blue }, scale = 1, particl
     },
   }
 }
-
-I HAD TO COMMENT EVERYTHING BECAUSE OF HUSKY*/
