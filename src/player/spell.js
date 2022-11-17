@@ -1,8 +1,9 @@
 import Items from '../../data/items.json' assert { type: 'json' }
 import { Action, Context } from '../events.js'
-import { mesh } from './particles/particles.js'
+import { mesh, spawn_particle } from './particles/particles.js'
 import { circle_geometry, ring_geometry } from './particles/geometries.js'
 import { basic_material } from './particles/materials.js'
+import { to_slot } from './inventory.js'
 import vecmath from 'vecmath'
 
 import logger from '../logger.js'
@@ -50,7 +51,7 @@ export default {
 }
 
 function test_aoe(client, get_state) {
-  const {position} = get_state()
+  const {inventory, position, held_slot_index} = get_state()
   const circle1 = mesh({
     geometry: circle_geometry({
     radius: 2,
@@ -144,7 +145,37 @@ function test_aoe(client, get_state) {
   
   //spawn_sword_slash({client, position: {...position, y: position.y+1}, radius: 3, amount: 30})
   //spawn_firework({client, position: {...position, x: position.x+15, y: position.y+1}, max_radius: 20, amount: 10})
-  spawn_thunderbolts({client, position: {...position, x: position.x, y: position.y+20}, radius: 20})
+  //spawn_thunderbolts({client, position: {...position, x: position.x, y: position.y+20}, radius: 20})
+  
+  /*spawn_particle(client, {
+    particle_id: 49,
+    position,
+    data: {item_id: 1},
+    long_distance: false,
+    offset: {offsetX: 0, offsetY: 0, offsetZ: 0}
+  })*/
+
+  /* ---Totem Animation---
+  const old_item = inventory[HOTBAR_OFFSET+held_slot_index+1]
+  const temp_item = to_slot(old_item)
+  temp_item.itemId = 904
+  temp_item.nbtData.value.CustomModelData.value = 100
+  delete temp_item.nbtData.value.Enchantments
+  log.info(temp_item.nbtData, 'temp_item')
+  client.write('set_slot', {
+    windowId: 0,
+    slot: HOTBAR_OFFSET+held_slot_index,
+    item: temp_item,
+  })
+  client.write('entity_status', {
+    entityId: client.entity_id,
+    entityStatus: 35
+  })
+  client.write('set_slot', {
+    windowId: 0,
+    slot: HOTBAR_OFFSET+held_slot_index,
+    item: to_slot(inventory[HOTBAR_OFFSET+held_slot_index]),
+  })*/
 }
 
 /*function cast_spell_effect({component}) {
