@@ -1,0 +1,21 @@
+{
+  "sweep_attack": {
+    "flaming": {
+      "type": "sweep_effect",
+      "rarity": "rare",
+      "effects": [
+        {"particle_type": "FLAME", "delay": 0, "color": null},
+        {"particle_type": "SMOKE", "delay": 0.4, "color": null}
+      ]
+    },
+    "hellish": { 
+      "type": "sweep_effect",
+      "rarity": "legendary",
+      "effects": [
+        {"particle_type": "FLAME", "delay": 0, "color": null},
+        {"particle_type": "BIG_SMOKE", "delay": 0.2, "color": null},
+        {"particle_type": "LAVA", "delay": 0.4, "color": null}
+      ]
+    }
+  }
+}

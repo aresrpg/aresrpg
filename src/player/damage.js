@@ -10,13 +10,16 @@ import { GameMode } from '../gamemode.js'
 import { abortable } from '../iterator.js'
 import logger from '../logger.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
+import Animations from './spells/animations.json' assert { type: 'json' }
 
-import { spawn_sweep_attack } from './spells/animations.js'
+import { spawn_sweep_attack, to_sweep } from './spells/animations.js'
+import { ParticlesTypes } from './particles/particles.js'
 
 const DAMAGE_INDICATORS_AMOUNT = 10
 const DAMAGE_INDICATOR_TTL = 1200
 
 const log = logger(import.meta)
+const {sweep_attack} = Animations
 
 /** @param {import('../context.js').InitialWorld} world */
 export function register({ next_entity_id, ...world }) {
@@ -90,13 +93,13 @@ export default {
             })
 
             const { position } = get_state()
+            log.info(to_sweep(sweep_attack.hellish), "to_sweep")
             spawn_sweep_attack({
               client,
               position: { ...position, y: position.y + 1 },
               radius: 2,
               amount: 15,
-              scale: 1.25,
-              colors: [],
+              effects: to_sweep(sweep_attack.hellish)
             })
           } else {
             // Death

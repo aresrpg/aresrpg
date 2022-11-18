@@ -9,10 +9,9 @@ import {
 } from '../particles/geometries.js'
 import {
   basic_material,
-  fire_slash_material,
   lava_column_material,
   rainbow_material,
-  rgb_slash_material,
+  slash_material,
 } from '../particles/materials.js'
 import {
   mesh,
@@ -25,6 +24,7 @@ import {
 } from '../particles/particles.js'
 import { play_sound } from '../../sound.js'
 import { to_direction } from '../../math.js'
+
 const { Vector3 } = vecmath
 
 export const spawn_sweep_attack = ({
@@ -33,8 +33,7 @@ export const spawn_sweep_attack = ({
   radius,
   amount,
   speed = 0.2,
-  scale = 1,
-  colors = [{ red: 1, green: 1, blue: 1, delay: 0 }],
+  effects = [{ particle_id: ParticlesTypes.RGB, delay: 0, color: {red: 1, green: 1, blue: 1, scale: 1} }],
 }) => {
   const slash = mesh({
     geometry: sphere_geometry({
@@ -43,7 +42,7 @@ export const spawn_sweep_attack = ({
       width_segments: 1,
       randomness: 0.01,
     }),
-    material: rgb_slash_material({ progress: 0.0 }),
+    material: slash_material({ progress: 0.0 }),
     position,
     rotation: new Vector3(
       -((Math.PI / 3) * 2) + (Math.random() * Math.PI) / 3,
@@ -53,7 +52,7 @@ export const spawn_sweep_attack = ({
     scale: new Vector3(1, 1, 1),
   })
 
-  if (colors.length === 0) {
+  if (effects.length === 0) {
     const direction = to_direction(position.yaw, position.pitch)
     spawn_particle(client, {
       particle_id: ParticlesTypes.SWORD_SLASH,
@@ -67,8 +66,8 @@ export const spawn_sweep_attack = ({
   } else {
     const max_delay = () => {
       let max = 0
-      colors.forEach(color => {
-        max = Math.max(max, color.delay)
+      effects.forEach(effect => {
+        max = Math.max(max, effect.delay)
       })
       return max
     }
@@ -77,12 +76,13 @@ export const spawn_sweep_attack = ({
       if (t > 1 + max_delay()) {
         clearInterval(interval)
       } else {
-        colors.forEach(color => {
+        effects.forEach(effect => {
           updateMaterial(
             slash,
-            rgb_slash_material({
-              progress: t - color.delay,
-              color: { scale, ...color },
+            slash_material({
+              progress: t - effect.delay,
+              color: effect.color,
+              particle_id: effect.particle_id
             })
           )
           render_particles(client, render_mesh(slash))
@@ -91,42 +91,6 @@ export const spawn_sweep_attack = ({
       t += speed
     }, 50)
   }
-}
-
-export const spawn_sword_slash = ({
-  client,
-  position,
-  radius,
-  amount,
-  speed = 0.2,
-}) => {
-  const fire_slash = mesh({
-    geometry: sphere_geometry({
-      radius,
-      height_segments: amount,
-      width_segments: 1,
-      randomness: 0.01,
-    }),
-    material: fire_slash_material({ progress: 0.0 }),
-    position,
-    rotation: new Vector3(
-      Math.PI - Math.random() * Math.PI,
-      Math.PI / 2 - (position.yaw * Math.PI) / 180.0,
-      0
-    ),
-    scale: new Vector3(1, 1, 1),
-  })
-
-  let t = 0
-  const interval = setInterval(() => {
-    if (t > 1) {
-      clearInterval(interval)
-    } else {
-      updateMaterial(fire_slash, fire_slash_material({ progress: t }))
-      render_particles(client, render_mesh(fire_slash))
-    }
-    t += speed
-  }, 50)
 }
 
 export const spawn_firework = ({
@@ -317,4 +281,17 @@ export const spawn_lava_collumns = ({
     }
     t += speed
   }, 50)
+}
+
+export function to_sweep(sweep_effect) {
+  if (sweep_effect.type !== 'sweep_effect') return
+  const effects = []
+  sweep_effect.effects.forEach((effect) => {
+    effects.push({
+      particle_id: ParticlesTypes[[effect.particle_type]],
+      delay: effect.delay,
+      color: effect.color
+    })
+  })
+  return effects
 }
