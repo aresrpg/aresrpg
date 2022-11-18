@@ -1,9 +1,5 @@
 import { hsl_to_rgb } from '../../color.js'
-
 import { ParticlesTypes } from './particles.js'
-import logger from '../../logger.js'
-
-const log = logger(import.meta)
 
 export function rainbow_rainbow_material({ progress }) {
   return {
@@ -44,8 +40,6 @@ export function rainbow_material({ progress }) {
 export function rgb_slash_material({ progress, color={red: 1, green: 1, blue: 1, scale: 1} }) {
   return {
     colorize_vertice({geometry, index}) {
-      const circle_index = index % geometry.max_circles
-      const h = circle_index / geometry.max_circles
       const side_index = Math.min(
         1,
         index / geometry.vertices.length
@@ -64,8 +58,6 @@ export function rgb_slash_material({ progress, color={red: 1, green: 1, blue: 1,
 export function fire_slash_material({ progress }) {
   return {
     colorize_vertice({geometry, index}) {
-      const circle_index = index % geometry.max_circles
-      const h = circle_index / geometry.max_circles
       const side_index = Math.min(
         1,
         index / geometry.vertices.length
@@ -84,8 +76,6 @@ export function fire_slash_material({ progress }) {
 export function fire_tornado_material({}) {
   return {
     colorize_vertice({geometry, index}) {
-      const circle_index = index % geometry.max_circles
-      const h = circle_index / geometry.max_circles
       const side_index = Math.min(
         1,
         index / geometry.vertices.length
@@ -104,8 +94,6 @@ export function fire_tornado_material({}) {
 export function permanent_fire_slash_material({ progress, max_progress = 1}) {
   return {
     colorize_vertice({geometry, index}) {
-      const circle_index = index % geometry.max_circles
-      const h = circle_index / geometry.max_circles
       const side_index = Math.min(
         1,
         index / geometry.vertices.length
@@ -124,19 +112,12 @@ export function permanent_fire_slash_material({ progress, max_progress = 1}) {
 export function lava_column_material({ progress }) {
   return {
     colorize_vertice({geometry, index}) {
-      const circle_index = index % geometry.max_circles
-      const h = circle_index / geometry.max_circles
-      const side_index = Math.min(
-        1,
-        index / geometry.vertices.length
-      )
-      //log.info(side_index)
       return {
         particle_id: ParticlesTypes.LAVA,
         data: {
           scale: 2,
         },
-        visible: index/geometry.vertices.length < progress && progress < 3,
+        visible: index/geometry.vertices.length < progress && progress < 1,
       }
     },
   }
@@ -144,20 +125,14 @@ export function lava_column_material({ progress }) {
 
 export function smoke_material({}) {
   return {
-    colorize_vertice({geometry, index}) {
-      const circle_index = index % geometry.max_circles
-      const h = circle_index / geometry.max_circles
-      const side_index = Math.min(
-        1,
-        index / geometry.segments
-      )
+    colorize_vertice({}) {
       return {
         particle_id: ParticlesTypes.RGB,
         data: {
           color: {red: 0, green: 0, blue: 0},
           scale: 1,
         },
-        visible: true//side_index > progress - 0.1 && side_index < progress + 0.1,
+        visible: true
       }
     },
   }

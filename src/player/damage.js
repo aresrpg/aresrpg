@@ -1,16 +1,15 @@
 import { on } from 'events'
 import { setInterval } from 'timers/promises'
-
 import { aiter } from 'iterator-helper'
-import combineAsyncIterators from 'combine-async-iterators'
-
 import { Action, Context } from '../events.js'
 import { create_armor_stand } from '../armor_stand.js'
-import logger from '../logger.js'
 import { GameMode } from '../gamemode.js'
 import { abortable } from '../iterator.js'
-import Entities from '../../data/entities.json' assert { type: 'json' }
 import { spawn_sweep_attack } from './spells/animations.js'
+
+import combineAsyncIterators from 'combine-async-iterators'
+import logger from '../logger.js'
+import Entities from '../../data/entities.json' assert { type: 'json' }
 
 const DAMAGE_INDICATORS_AMOUNT = 10
 const DAMAGE_INDICATOR_TTL = 1200

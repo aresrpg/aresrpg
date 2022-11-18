@@ -1,10 +1,7 @@
 import Items from '../../data/items.json' assert { type: 'json' }
-import { Action, Context } from '../events.js'
-import vecmath from 'vecmath'
 
-import logger from '../logger.js'
-const log = logger(import.meta)
-const { Vector3 } = vecmath
+import { Action, Context } from '../events.js'
+
 const visible_mobs = {}
 
 const HOTBAR_OFFSET = 36
@@ -32,11 +29,10 @@ export default {
         if (item && state.health > 0) {
           const { type } = item
           const itemData = Items[type]
-          log.info(itemData, "ItemData")
           if (itemData.type === 'spellbook') {
-            //spawn_sword_slash({client, position: {...position, y: position.y+1}, radius: 3, amount: 30})
-            //spawn_firework({client, position: {...position, x: position.x+15, y: position.y+1}, max_radius: 20, amount: 10})
-            //spawn_thunderbolts({client, position: {...position, x: position.x, y: position.y+20}, radius: 20})
+            // spawn_sword_slash({client, position: {...position, y: position.y+1}, radius: 3, amount: 30})
+            // spawn_firework({client, position: {...position, x: position.x+15, y: position.y+1}, max_radius: 20, amount: 10})
+            // spawn_thunderbolts({client, position: {...position, x: position.x, y: position.y+20}, radius: 20})
 
             /* ---Totem Animation---
             const old_item = inventory[HOTBAR_OFFSET+held_slot_index+1]
@@ -58,7 +54,7 @@ export default {
               windowId: 0,
               slot: HOTBAR_OFFSET+held_slot_index,
               item: to_slot(inventory[HOTBAR_OFFSET+held_slot_index]),
-            })*/
+            }) */
             dispatch(Action.CAST_SPELL, {
 
             })
