@@ -1,3 +1,4 @@
+
 import { hsl_to_rgb } from '../../color.js'
 import { ParticlesTypes } from './particles.js'
 
@@ -24,7 +25,7 @@ export function rainbow_rainbow_material({ progress }) {
 
 export function rainbow_material({ progress }) {
   return {
-    colorize_vertice({}) {
+    colorize_vertice() {
       return {
         particle_id: ParticlesTypes.RGB,
         data: {
@@ -73,24 +74,6 @@ export function fire_slash_material({ progress }) {
   }
 }
 
-export function fire_tornado_material({}) {
-  return {
-    colorize_vertice({geometry, index}) {
-      const side_index = Math.min(
-        1,
-        index / geometry.vertices.length
-      )
-      return {
-        particle_id: ParticlesTypes.FIRE,
-        data: {
-          scale: 2,
-        },
-        visible: side_index < 0 || side_index > 0.75,
-      }
-    },
-  }
-}
-
 export function permanent_fire_slash_material({ progress, max_progress = 1}) {
   return {
     colorize_vertice({geometry, index}) {
@@ -123,21 +106,6 @@ export function lava_column_material({ progress }) {
   }
 }
 
-export function smoke_material({}) {
-  return {
-    colorize_vertice({}) {
-      return {
-        particle_id: ParticlesTypes.RGB,
-        data: {
-          color: {red: 0, green: 0, blue: 0},
-          scale: 1,
-        },
-        visible: true
-      }
-    },
-  }
-}
-
 export function rainbow_torus_material() {
   return {
     colorize_vertice({geometry, index}) {
@@ -158,7 +126,7 @@ export function rainbow_torus_material() {
 
 export function basic_material({ color: { red, green, blue }, scale = 1, particle_type = ParticlesTypes.RGB }) {
   return {
-    colorize_vertice({}) {
+    colorize_vertice() {
       return {
         particle_id: particle_type,
         data: { red, green, blue, scale },

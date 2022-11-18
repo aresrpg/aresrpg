@@ -1,5 +1,4 @@
 import Items from '../../data/items.json' assert { type: 'json' }
-
 import { Action, Context } from '../events.js'
 
 const visible_mobs = {}
