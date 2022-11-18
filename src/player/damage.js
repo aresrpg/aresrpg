@@ -1,15 +1,17 @@
 import { on } from 'events'
 import { setInterval } from 'timers/promises'
+
 import { aiter } from 'iterator-helper'
+import combineAsyncIterators from 'combine-async-iterators'
+
 import { Action, Context } from '../events.js'
 import { create_armor_stand } from '../armor_stand.js'
 import { GameMode } from '../gamemode.js'
 import { abortable } from '../iterator.js'
-import { spawn_sweep_attack } from './spells/animations.js'
-
-import combineAsyncIterators from 'combine-async-iterators'
 import logger from '../logger.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
+
+import { spawn_sweep_attack } from './spells/animations.js'
 
 const DAMAGE_INDICATORS_AMOUNT = 10
 const DAMAGE_INDICATOR_TTL = 1200
@@ -86,15 +88,15 @@ export default {
               text: `-${damage}`,
               color: '#E74C3C', // https://materialui.co/flatuicolors Alizarin
             })
-            
+
             const { position } = get_state()
             spawn_sweep_attack({
-              client, 
-              position: {...position, y: position.y+1}, 
-              radius: 2, 
-              amount:15, 
-              scale: 1.25, 
-              colors: []
+              client,
+              position: { ...position, y: position.y + 1 },
+              radius: 2,
+              amount: 15,
+              scale: 1.25,
+              colors: [],
             })
           } else {
             // Death
