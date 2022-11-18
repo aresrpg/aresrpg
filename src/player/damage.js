@@ -10,6 +10,7 @@ import logger from '../logger.js'
 import { GameMode } from '../gamemode.js'
 import { abortable } from '../iterator.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
+import { spawn_sweep_attack } from './spells/animations.js'
 
 const DAMAGE_INDICATORS_AMOUNT = 10
 const DAMAGE_INDICATOR_TTL = 1200
@@ -43,7 +44,7 @@ export default {
   },
 
   /** @type {import('../context.js').Observer} */
-  observe({ events, dispatch, client, world, signal }) {
+  observe({ events, dispatch, client, get_state, world, signal }) {
     aiter(
       abortable(
         // @ts-ignore
@@ -75,21 +76,31 @@ export default {
           const entity_id = damage_indicator_start_id + cursor
           const { x, y, z } = mob.position()
           const { height } = mob.constants
-          const position = {
+          const mob_position = {
             x: x + (Math.random() * 2 - 1) * 0.25,
             y: y + height - 0.25 + (Math.random() * 2 - 1) * 0.15,
             z: z + (Math.random() * 2 - 1) * 0.25,
           }
 
           if (damage !== undefined) {
-            create_armor_stand(client, entity_id, position, {
+            create_armor_stand(client, entity_id, mob_position, {
               text: `-${damage}`,
               color: '#E74C3C', // https://materialui.co/flatuicolors Alizarin
+            })
+            
+            const { position } = get_state()
+            spawn_sweep_attack({
+              client, 
+              position: {...position, y: position.y+1}, 
+              radius: 2, 
+              amount:15, 
+              scale: 1.25, 
+              colors: []
             })
           } else {
             // Death
             const { xp } = Entities[mob.type]
-            create_armor_stand(client, entity_id, position, {
+            create_armor_stand(client, entity_id, mob_position, {
               text: `+${xp} xp`,
               color: '#A6CD57',
             })

@@ -1,14 +1,65 @@
 import vecmath from 'vecmath'
 
 import { circle_geometry, line_geometry, ring_geometry, sphere_geometry } from "../particles/geometries.js"
-import { basic_material, fire_slash_material, rainbow_material } from "../particles/materials.js"
-import { mesh, ParticlesTypes, render_mesh, render_particles, updateMaterial, updateTransformMatrix } from "../particles/particles.js"
+import { basic_material, fire_slash_material, rainbow_material, rgb_slash_material } from "../particles/materials.js"
+import { mesh, ParticlesTypes, render_mesh, render_particles, spawn_particle, updateMaterial, updateTransformMatrix } from "../particles/particles.js"
 import { play_sound } from '../../sound.js'
+import { parseType } from 'graphql'
+import { Colors } from '../../boss_bar.js'
+import { copyFileSync } from 'fs'
+import { direction_to_yaw_pitch, to_direction } from '../../math.js'
 const { Vector3 } = vecmath
 
 /*function delay_manager() {
 
 }*/
+
+export const spawn_sweep_attack = ({ client, position, radius, amount, speed = 0.2, scale = 1, colors = [{red: 1, green: 1, blue: 1, delay: 0}] }) => {
+  const slash = mesh({
+    geometry: sphere_geometry({
+      radius,
+      height_segments: amount,
+      width_segments: 1,
+      randomness: 0.01,
+    }),
+    material: rgb_slash_material({progress: 0.0}),
+    position: position,
+    rotation: new Vector3(-((Math.PI/3)*2)+Math.random()*Math.PI/3, 0 , Math.PI/2 - (position.yaw * Math.PI)/180.0),
+    scale: new Vector3(1, 1, 1),
+  })
+
+  if (colors.length === 0) {
+    const direction = to_direction(position.yaw, position.pitch)
+    spawn_particle(
+      client,
+      {
+        particle_id: ParticlesTypes.SWORD_SLASH,
+        position: {y: position.y+direction.y, x: position.x+direction.x, z: position.z+direction.z},
+        data: {},
+      }
+    )
+  } else {
+    const max_delay = () => {
+      let max = 0
+      colors.forEach(color => {
+        max = Math.max(max, color.delay)
+      })
+      return max
+    }
+    let t = 0
+    const interval = setInterval(() => {
+      if (t > 1+max_delay()) {
+        clearInterval(interval)
+      } else {
+        colors.forEach(color => {
+          updateMaterial(slash, rgb_slash_material({progress: t-color.delay, color: {scale, ...color}}))
+          render_particles(client, render_mesh(slash))
+        });
+      }
+      t += speed
+    }, 50)
+  }
+}
 
 export const spawn_sword_slash = ({ client, position, radius, amount, speed = 0.2 }) => {
   const fire_slash = mesh({
