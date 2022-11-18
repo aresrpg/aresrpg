@@ -7,7 +7,7 @@ const log = logger(import.meta)
 
 export function rainbow_rainbow_material({ progress }) {
   return {
-    colorize_vertice(geometry, vertice, index) {
+    colorize_vertice({geometry, index}) {
       const circle_index = index % geometry.max_circles
       const h = circle_index / geometry.max_circles
       const side_index = Math.min(
@@ -28,7 +28,7 @@ export function rainbow_rainbow_material({ progress }) {
 
 export function rainbow_material({ progress }) {
   return {
-    colorize_vertice(geometry, vertice, index) {
+    colorize_vertice({}) {
       return {
         particle_id: ParticlesTypes.RGB,
         data: {
@@ -43,7 +43,7 @@ export function rainbow_material({ progress }) {
 
 export function rgb_slash_material({ progress, color={red: 1, green: 1, blue: 1, scale: 1} }) {
   return {
-    colorize_vertice(geometry, vertice, index) {
+    colorize_vertice({geometry, index}) {
       const circle_index = index % geometry.max_circles
       const h = circle_index / geometry.max_circles
       const side_index = Math.min(
@@ -63,7 +63,7 @@ export function rgb_slash_material({ progress, color={red: 1, green: 1, blue: 1,
 
 export function fire_slash_material({ progress }) {
   return {
-    colorize_vertice(geometry, vertice, index) {
+    colorize_vertice({geometry, index}) {
       const circle_index = index % geometry.max_circles
       const h = circle_index / geometry.max_circles
       const side_index = Math.min(
@@ -83,7 +83,7 @@ export function fire_slash_material({ progress }) {
 
 export function fire_tornado_material({}) {
   return {
-    colorize_vertice(geometry, vertice, index) {
+    colorize_vertice({geometry, index}) {
       const circle_index = index % geometry.max_circles
       const h = circle_index / geometry.max_circles
       const side_index = Math.min(
@@ -103,7 +103,7 @@ export function fire_tornado_material({}) {
 
 export function permanent_fire_slash_material({ progress, max_progress = 1}) {
   return {
-    colorize_vertice(geometry, vertice, index) {
+    colorize_vertice({geometry, index}) {
       const circle_index = index % geometry.max_circles
       const h = circle_index / geometry.max_circles
       const side_index = Math.min(
@@ -123,7 +123,7 @@ export function permanent_fire_slash_material({ progress, max_progress = 1}) {
 
 export function lava_column_material({ progress }) {
   return {
-    colorize_vertice(geometry, vertice, index) {
+    colorize_vertice({geometry, index}) {
       const circle_index = index % geometry.max_circles
       const h = circle_index / geometry.max_circles
       const side_index = Math.min(
@@ -142,9 +142,9 @@ export function lava_column_material({ progress }) {
   }
 }
 
-export function smoke_material({ progress }) {
+export function smoke_material({}) {
   return {
-    colorize_vertice(geometry, vertice, index) {
+    colorize_vertice({geometry, index}) {
       const circle_index = index % geometry.max_circles
       const h = circle_index / geometry.max_circles
       const side_index = Math.min(
@@ -165,7 +165,7 @@ export function smoke_material({ progress }) {
 
 export function rainbow_torus_material() {
   return {
-    colorize_vertice(geometry, vertice, index) {
+    colorize_vertice({geometry, index}) {
       const circle_index = Math.floor(index / geometry.radial_segments)
       const h = Math.min(1, circle_index / geometry.tubular_segments)
 
@@ -183,7 +183,7 @@ export function rainbow_torus_material() {
 
 export function basic_material({ color: { red, green, blue }, scale = 1, particle_type = ParticlesTypes.RGB }) {
   return {
-    colorize_vertice(geometry, vertice, index) {
+    colorize_vertice({}) {
       return {
         particle_id: particle_type,
         data: { red, green, blue, scale },
