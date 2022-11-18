@@ -215,8 +215,8 @@ export function item_to_slot(
         },
         CustomModelData: {
           type: 'int',
-          value: custom_model_data
-        }
+          value: custom_model_data,
+        },
       },
     },
   }
