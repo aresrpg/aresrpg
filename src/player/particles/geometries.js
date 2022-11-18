@@ -53,7 +53,13 @@ export function torus_geometry({
   }
 }
 
-export function ring_geometry({ min_radius, max_radius, segments, center, max_radian = Math.PI*2 }) {
+export function ring_geometry({
+  min_radius,
+  max_radius,
+  segments,
+  center,
+  max_radian = Math.PI * 2,
+}) {
   const vertices = []
   const steps = max_radian / segments
 
@@ -78,15 +84,21 @@ export function ring_geometry({ min_radius, max_radius, segments, center, max_ra
   }
 }
 
-export function collumn_geometry({ radius, height, segments, center, height_scale = 0.1 }) {
+export function collumn_geometry({
+  radius,
+  height,
+  segments,
+  center,
+  height_scale = 0.1,
+}) {
   const vertices = []
-  const steps = Math.PI*2 / segments
+  const steps = (Math.PI * 2) / segments
 
-  for (let a = 0; a < (2 * Math.PI)*height/height_scale; a += steps) {
+  for (let a = 0; a < (2 * Math.PI * height) / height_scale; a += steps) {
     const position = new Vector3({
       x: center.x + Math.cos(a) * radius,
       y: center.y + Math.sin(a) * radius,
-      z: center.z + a/(2 * Math.PI / height_scale),
+      z: center.z + a / ((2 * Math.PI) / height_scale),
     })
     vertices.push(position)
   }
@@ -118,19 +130,19 @@ export function sphere_geometry({
     const v = iy / height_segments
 
     for (let ix = 0; ix <= width_segments; ix++) {
-      const u = (ix / width_segments)
-      const ru = (r*Math.random()*randomness) / width_segments
-      const rv = (r*Math.random()*randomness) / height_segments
+      const u = ix / width_segments
+      const ru = (r * Math.random() * randomness) / width_segments
+      const rv = (r * Math.random() * randomness) / height_segments
 
       vertices.push(
         new Vector3(
           -radius *
-            Math.cos(phi_start + (u+ru) * phi_length) *
-            Math.sin(theta_start + (v+rv) * theta_length),
+            Math.cos(phi_start + (u + ru) * phi_length) *
+            Math.sin(theta_start + (v + rv) * theta_length),
           radius * Math.cos(theta_start + v * theta_length),
           radius *
-            Math.sin(phi_start + (u+ru) * phi_length) *
-            Math.sin(theta_start + (v+rv) * theta_length)
+            Math.sin(phi_start + (u + ru) * phi_length) *
+            Math.sin(theta_start + (v + rv) * theta_length)
         )
       )
     }

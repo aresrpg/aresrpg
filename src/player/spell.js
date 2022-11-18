@@ -11,11 +11,10 @@ const Hand = {
 export default {
   /** @type {import('../context.js').Observer} */
   observe({ client, get_state, dispatch, events }) {
-
-    events.on(Context.MOB_SPAWNED, ({mob}) => {
+    events.on(Context.MOB_SPAWNED, ({ mob }) => {
       visible_mobs[mob.entity_id] = mob
     })
-    events.on(Context.MOB_DESPAWNED, ({entity_id}) => {
+    events.on(Context.MOB_DESPAWNED, ({ entity_id }) => {
       delete visible_mobs[entity_id]
     })
 
@@ -54,12 +53,10 @@ export default {
               slot: HOTBAR_OFFSET+held_slot_index,
               item: to_slot(inventory[HOTBAR_OFFSET+held_slot_index]),
             }) */
-            dispatch(Action.CAST_SPELL, {
-
-            })
+            dispatch(Action.CAST_SPELL, {})
           }
         }
       }
     })
-  }
+  },
 }

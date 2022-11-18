@@ -1,4 +1,3 @@
-
 import { chunk_position } from '../chunk.js'
 import { write_brand } from '../plugin_channels.js'
 import { dimension_codec, overworld } from '../world/codec.js'
@@ -7,6 +6,7 @@ import { PLAYER_ENTITY_ID } from '../settings.js'
 import { write_title } from '../title.js'
 import { Context } from '../events.js'
 import { Formats, world_chat_msg } from '../chat.js'
+
 import { set_world_border } from './world_border.js'
 
 export default {
