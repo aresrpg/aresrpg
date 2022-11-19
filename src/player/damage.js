@@ -95,7 +95,7 @@ export default {
               position: { ...position, y: position.y + 1 },
               radius: 2,
               amount: 15,
-              effects: to_sweep(cosmetics.sweep_attack)
+              effects: to_sweep(cosmetics.sweep_attack),
             })
           } else {
             // Death

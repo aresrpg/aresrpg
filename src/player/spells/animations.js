@@ -33,7 +33,13 @@ export const spawn_sweep_attack = ({
   radius,
   amount,
   speed = 0.2,
-  effects = [{ particle_id: ParticlesTypes.RGB, delay: 0, color: {red: 1, green: 1, blue: 1, scale: 1} }],
+  effects = [
+    {
+      particle_id: ParticlesTypes.RGB,
+      delay: 0,
+      color: { red: 1, green: 1, blue: 1, scale: 1 },
+    },
+  ],
 }) => {
   const slash = mesh({
     geometry: sphere_geometry({
@@ -82,7 +88,7 @@ export const spawn_sweep_attack = ({
             slash_material({
               progress: t - effect.delay,
               color: effect.color,
-              particle_id: effect.particle_id
+              particle_id: effect.particle_id,
             })
           )
           render_particles(client, render_mesh(slash))
@@ -286,11 +292,11 @@ export const spawn_lava_collumns = ({
 export function to_sweep(sweep_effect) {
   if (sweep_effect.type !== 'sweep_effect') return
   const effects = []
-  sweep_effect.effects.forEach((effect) => {
+  sweep_effect.effects.forEach(effect => {
     effects.push({
       particle_id: ParticlesTypes[[effect.particle_type]],
       delay: effect.delay,
-      color: effect.color
+      color: effect.color,
     })
   })
   return effects

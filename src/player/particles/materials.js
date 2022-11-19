@@ -41,7 +41,7 @@ export function rainbow_material({ progress }) {
 export function slash_material({
   progress,
   color = { red: 1, green: 1, blue: 1, scale: 1 }, // Only used when particle_id is PartycleType.RGB
-  particle_id = ParticlesTypes.RGB
+  particle_id = ParticlesTypes.RGB,
 }) {
   return {
     colorize_vertice({ geometry, index }) {

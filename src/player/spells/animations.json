@@ -11,7 +11,11 @@
       "name": "Red",
       "rarity": "common",
       "effects": [
-        {"particle_type": "RGB", "delay": 0, "color": {"red": 1, "green": 0, "blue": 0, "scale": 1}}
+        {
+          "particle_type": "RGB",
+          "delay": 0,
+          "color": { "red": 1, "green": 0, "blue": 0, "scale": 1 }
+        }
       ]
     },
     "green": {
@@ -19,7 +23,11 @@
       "name": "Green",
       "rarity": "common",
       "effects": [
-        {"particle_type": "RGB", "delay": 0, "color": {"red": 0, "green": 1, "blue": 0, "scale": 1}}
+        {
+          "particle_type": "RGB",
+          "delay": 0,
+          "color": { "red": 0, "green": 1, "blue": 0, "scale": 1 }
+        }
       ]
     },
     "blue": {
@@ -27,7 +35,11 @@
       "name": "Blue",
       "rarity": "common",
       "effects": [
-        {"particle_type": "RGB", "delay": 0, "color": {"red": 0, "green": 0, "blue": 1, "scale": 1}}
+        {
+          "particle_type": "RGB",
+          "delay": 0,
+          "color": { "red": 0, "green": 0, "blue": 1, "scale": 1 }
+        }
       ]
     },
     "gold": {
@@ -35,7 +47,11 @@
       "name": "Gold",
       "rarity": "uncommon",
       "effects": [
-        {"particle_type": "RGB", "delay": 0, "color": {"red": 1, "green": 1, "blue": 0, "scale": 1}}
+        {
+          "particle_type": "RGB",
+          "delay": 0,
+          "color": { "red": 1, "green": 1, "blue": 0, "scale": 1 }
+        }
       ]
     },
     "diamond": {
@@ -43,7 +59,11 @@
       "name": "Diamond",
       "rarity": "uncommon",
       "effects": [
-        {"particle_type": "RGB", "delay": 0, "color": {"red": 0, "green": 1, "blue": 1, "scale": 1}}
+        {
+          "particle_type": "RGB",
+          "delay": 0,
+          "color": { "red": 0, "green": 1, "blue": 1, "scale": 1 }
+        }
       ]
     },
     "rose_quartz": {
@@ -51,7 +71,11 @@
       "name": "Rose Quartz",
       "rarity": "uncommon",
       "effects": [
-        {"particle_type": "RGB", "delay": 0, "color": {"red": 1, "green": 0, "blue": 1, "scale": 1}}
+        {
+          "particle_type": "RGB",
+          "delay": 0,
+          "color": { "red": 1, "green": 0, "blue": 1, "scale": 1 }
+        }
       ]
     },
     "emerald": {
@@ -59,23 +83,25 @@
       "name": "Emerald",
       "rarity": "uncommon",
       "effects": [
-        {"particle_type": "RGB", "delay": 0, "color": {"red": 0.2, "green": 0.9, "blue": 0.2, "scale": 1}}
+        {
+          "particle_type": "RGB",
+          "delay": 0,
+          "color": { "red": 0.2, "green": 0.9, "blue": 0.2, "scale": 1 }
+        }
       ]
     },
     "water splash": {
       "type": "sweep_effect",
       "name": "Water Splash",
       "rarity": "uncommon",
-      "effects": [
-        {"particle_type": "SPLASH", "delay": 0, "color": null}
-      ]
+      "effects": [{ "particle_type": "SPLASH", "delay": 0, "color": null }]
     },
     "angry": {
       "type": "sweep_effect",
       "name": "Angry",
       "rarity": "uncommon",
       "effects": [
-        {"particle_type": "ANGRY_VILLAGER", "delay": 0, "color": null}
+        { "particle_type": "ANGRY_VILLAGER", "delay": 0, "color": null }
       ]
     },
     "flaming": {
@@ -83,8 +109,8 @@
       "name": "Flaming",
       "rarity": "rare",
       "effects": [
-        {"particle_type": "FLAME", "delay": 0, "color": null},
-        {"particle_type": "SMOKE", "delay": 0.4, "color": null}
+        { "particle_type": "FLAME", "delay": 0, "color": null },
+        { "particle_type": "SMOKE", "delay": 0.4, "color": null }
       ]
     },
     "permafrost": {
@@ -92,10 +118,10 @@
       "name": "Permafrost",
       "rarity": "rare",
       "effects": [
-        {"particle_type": "SNOW_POWDER", "delay": 0, "color": null},
-        {"particle_type": "SNOW", "delay": 0, "color": null},
-        {"particle_type": "SNOW_POWDER", "delay": 1, "color": null},
-        {"particle_type": "SNOW_POWDER", "delay": 2, "color": null}
+        { "particle_type": "SNOW_POWDER", "delay": 0, "color": null },
+        { "particle_type": "SNOW", "delay": 0, "color": null },
+        { "particle_type": "SNOW_POWDER", "delay": 1, "color": null },
+        { "particle_type": "SNOW_POWDER", "delay": 2, "color": null }
       ]
     },
     "water_flow": {
@@ -103,8 +129,8 @@
       "name": "Water Flow",
       "rarity": "rare",
       "effects": [
-        {"particle_type": "SPLASH", "delay": 0, "color": null},
-        {"particle_type": "FALLING_WATER", "delay": 0.4, "color": null}
+        { "particle_type": "SPLASH", "delay": 0, "color": null },
+        { "particle_type": "FALLING_WATER", "delay": 0.4, "color": null }
       ]
     },
     "honney_pot": {
@@ -112,8 +138,8 @@
       "name": "Honney Pot",
       "rarity": "rare",
       "effects": [
-        {"particle_type": "FALLING_HONEY", "delay": 0, "color": null},
-        {"particle_type": "LANDING_HONEY", "delay": 0, "color": null}
+        { "particle_type": "FALLING_HONEY", "delay": 0, "color": null },
+        { "particle_type": "LANDING_HONEY", "delay": 0, "color": null }
       ]
     },
     "nectar": {
@@ -121,26 +147,24 @@
       "name": "Nectar",
       "rarity": "rare",
       "effects": [
-        {"particle_type": "FALLING_SPORE", "delay": 0, "color": null},
-        {"particle_type": "FALLING_NECTAR", "delay": 0.2, "color": null}
+        { "particle_type": "FALLING_SPORE", "delay": 0, "color": null },
+        { "particle_type": "FALLING_NECTAR", "delay": 0.2, "color": null }
       ]
     },
     "big_sweep": {
       "type": "sweep_effect",
       "name": "Big Sweep",
       "rarity": "rare",
-      "effects": [
-        {"particle_type": "SWEEP", "delay": 0, "color": null}
-      ]
+      "effects": [{ "particle_type": "SWEEP", "delay": 0, "color": null }]
     },
     "spore": {
       "type": "sweep_effect",
       "name": "Spore",
       "rarity": "rare",
       "effects": [
-        {"particle_type": "CRIMSON_SPORE", "delay": 0, "color": null},
-        {"particle_type": "SPORE_AIR", "delay": 0, "color": null},
-        {"particle_type": "CRIMSON_SPORE", "delay": 0.5, "color": null}
+        { "particle_type": "CRIMSON_SPORE", "delay": 0, "color": null },
+        { "particle_type": "SPORE_AIR", "delay": 0, "color": null },
+        { "particle_type": "CRIMSON_SPORE", "delay": 0.5, "color": null }
       ]
     },
     "water_bubble": {
@@ -148,9 +172,9 @@
       "name": "Water Bubble",
       "rarity": "epic",
       "effects": [
-        {"particle_type": "SPLASH", "delay": 0, "color": null},
-        {"particle_type": "BUBBLE_POP", "delay": 0.2, "color": null},
-        {"particle_type": "FALLING_WATER", "delay": 0.4, "color": null}
+        { "particle_type": "SPLASH", "delay": 0, "color": null },
+        { "particle_type": "BUBBLE_POP", "delay": 0.2, "color": null },
+        { "particle_type": "FALLING_WATER", "delay": 0.4, "color": null }
       ]
     },
     "soul_flame": {
@@ -158,37 +182,35 @@
       "name": "Soul Flame",
       "rarity": "epic",
       "effects": [
-        {"particle_type": "SOUL_FLAME", "delay": 0, "color": null},
-        {"particle_type": "SMOKE", "delay": 0.2, "color": null},
-        {"particle_type": "SOUL", "delay": 0.4, "color": null}
+        { "particle_type": "SOUL_FLAME", "delay": 0, "color": null },
+        { "particle_type": "SMOKE", "delay": 0.2, "color": null },
+        { "particle_type": "SOUL", "delay": 0.4, "color": null }
       ]
     },
     "megumin": {
       "type": "sweep_effect",
       "name": "Megumin",
       "rarity": "epic",
-      "effects": [
-        {"particle_type": "EXPLOSION", "delay": 0, "color": null}
-      ]
+      "effects": [{ "particle_type": "EXPLOSION", "delay": 0, "color": null }]
     },
     "frost_water": {
       "type": "sweep_effect",
       "name": "Frost Water",
       "rarity": "legendary",
       "effects": [
-        {"particle_type": "SPLASH", "delay": 0, "color": null},
-        {"particle_type": "SNOW_POWDER", "delay": 0.2, "color": null},
-        {"particle_type": "FALLING_WATER", "delay": 0.4, "color": null}
+        { "particle_type": "SPLASH", "delay": 0, "color": null },
+        { "particle_type": "SNOW_POWDER", "delay": 0.2, "color": null },
+        { "particle_type": "FALLING_WATER", "delay": 0.4, "color": null }
       ]
     },
-    "hellish": { 
+    "hellish": {
       "type": "sweep_effect",
       "name": "Hellish",
       "rarity": "legendary",
       "effects": [
-        {"particle_type": "FLAME", "delay": 0, "color": null},
-        {"particle_type": "BIG_SMOKE", "delay": 0.2, "color": null},
-        {"particle_type": "LAVA", "delay": 0.4, "color": null}
+        { "particle_type": "FLAME", "delay": 0, "color": null },
+        { "particle_type": "BIG_SMOKE", "delay": 0.2, "color": null },
+        { "particle_type": "LAVA", "delay": 0.4, "color": null }
       ]
     }
   }

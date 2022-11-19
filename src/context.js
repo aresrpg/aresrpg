@@ -131,7 +131,7 @@ const initial_state = {
   soul: 100,
 
   cosmetics: {
-    sweep_attack: Animations.sweep_attack.default
+    sweep_attack: Animations.sweep_attack.default,
   },
 
   // last time the player joined,

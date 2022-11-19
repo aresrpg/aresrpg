@@ -13,13 +13,12 @@ export default {
       log.info({ category, effect }, 'cosmetic update')
       const cosmetics = {
         ...state.cosmetics,
-        sweep_attack: Animations[category][effect]
+        sweep_attack: Animations[category][effect],
       }
-
 
       return {
         ...state,
-        cosmetics
+        cosmetics,
       }
     }
     return state

@@ -6,7 +6,7 @@ export const ParticlesTypes = {
   AMBIENT_ENTITY: 0,
   ANGRY_VILLAGER: 1,
   BLOCK: 2, // Default: Barrier
-  BLOCK_MARKER: 3, 
+  BLOCK_MARKER: 3,
   WATER_BUBBLE: 4,
   CLOUD: 5,
   CRIT: 6,
@@ -157,7 +157,11 @@ export function render_mesh(mesh) {
   if (mesh.properties_dirty) {
     mesh.properties_dirty = false
     mesh.transformed_properies = mesh.geometry.vertices.map((vertice, index) =>
-      mesh.material.colorize_vertice({geometry: mesh.geometry, vertice, index})
+      mesh.material.colorize_vertice({
+        geometry: mesh.geometry,
+        vertice,
+        index,
+      })
     )
   }
 

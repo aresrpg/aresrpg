@@ -3,11 +3,10 @@ import { Action } from '../events.js'
 import { client_chat_msg, Formats } from '../chat.js'
 
 import { write_error } from './commands.js'
-import { literal} from './declare_options.js'
-
+import { literal } from './declare_options.js'
 
 const CATEGORIES = {
-  SWEEP: "sweep_attack"
+  SWEEP: 'sweep_attack',
 }
 
 export const nodes = [
@@ -21,11 +20,11 @@ export const nodes = [
             ...Object.keys(Animations[CATEGORIES[key]]).map(key =>
               literal({
                 value: key,
-              }),
-            )
+              })
+            ),
           ],
-        }),
-      )
+        })
+      ),
     ],
   }),
 ]
@@ -34,12 +33,18 @@ export default function cosmetic({ sender, dispatch, args }) {
   if (args.length === 2) {
     const [category, effect] = args
     if (category !== undefined && effect !== undefined) {
-      dispatch(Action.COSMETIC, { category: CATEGORIES[category.toUpperCase()], effect })
+      dispatch(Action.COSMETIC, {
+        category: CATEGORIES[category.toUpperCase()],
+        effect,
+      })
       client_chat_msg({
         client: sender,
         message: [
           { text: 'cosmetic updated: ', ...Formats.BASE },
-          { text: Animations[CATEGORIES[category.toUpperCase()]][effect].name, ...Formats.SUCCESS },
+          {
+            text: Animations[CATEGORIES[category.toUpperCase()]][effect].name,
+            ...Formats.SUCCESS,
+          },
         ],
       })
       return
