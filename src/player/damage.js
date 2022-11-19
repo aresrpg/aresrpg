@@ -8,18 +8,15 @@ import { Action, Context } from '../events.js'
 import { create_armor_stand } from '../armor_stand.js'
 import { GameMode } from '../gamemode.js'
 import { abortable } from '../iterator.js'
+import { spawn_sweep_attack, to_sweep } from './spells/animations.js'
+
 import logger from '../logger.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
-import Animations from './spells/animations.json' assert { type: 'json' }
-
-import { spawn_sweep_attack, to_sweep } from './spells/animations.js'
-import { ParticlesTypes } from './particles/particles.js'
 
 const DAMAGE_INDICATORS_AMOUNT = 10
 const DAMAGE_INDICATOR_TTL = 1200
 
 const log = logger(import.meta)
-const {sweep_attack} = Animations
 
 /** @param {import('../context.js').InitialWorld} world */
 export function register({ next_entity_id, ...world }) {
@@ -92,14 +89,13 @@ export default {
               color: '#E74C3C', // https://materialui.co/flatuicolors Alizarin
             })
 
-            const { position } = get_state()
-            log.info(to_sweep(sweep_attack.hellish), "to_sweep")
+            const { position, cosmetics } = get_state()
             spawn_sweep_attack({
               client,
               position: { ...position, y: position.y + 1 },
               radius: 2,
               amount: 15,
-              effects: to_sweep(sweep_attack.hellish)
+              effects: to_sweep(cosmetics.sweep_attack)
             })
           } else {
             // Death

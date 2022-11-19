@@ -1,5 +1,10 @@
 {
   "sweep_attack": {
+    "default": {
+      "type": "sweep_effect",
+      "rarity": "common",
+      "effects": []
+    },
     "flaming": {
       "type": "sweep_effect",
       "rarity": "rare",

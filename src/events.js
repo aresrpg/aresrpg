@@ -18,6 +18,7 @@ export const Action = {
   GAMEMODE: 'GAMEMODE',
   ADD_EXPERIENCE: 'ADD_EXPERIENCE',
   CAST_SPELL: 'CAST_SPELL',
+  COSMETIC: 'COSMETIC',
 }
 
 export const Context = {
