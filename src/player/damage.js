@@ -8,10 +8,11 @@ import { Action, Context } from '../events.js'
 import { create_armor_stand } from '../armor_stand.js'
 import { GameMode } from '../gamemode.js'
 import { abortable } from '../iterator.js'
-import { spawn_sweep_attack, to_sweep } from './spells/animations.js'
 
 import logger from '../logger.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
+
+import { spawn_sweep_attack, to_sweep } from './spells/animations.js'
 
 const DAMAGE_INDICATORS_AMOUNT = 10
 const DAMAGE_INDICATOR_TTL = 1200

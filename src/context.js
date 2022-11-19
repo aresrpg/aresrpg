@@ -72,7 +72,6 @@ import { abortable } from './iterator.js'
 import Database from './database.js'
 import { USE_RESSOURCE_PACK } from './settings.js'
 import { GameMode } from './gamemode.js'
-
 import Animations from './player/spells/animations.json' assert { type: 'json' }
 
 const log = logger(import.meta)

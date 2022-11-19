@@ -1,5 +1,4 @@
 import { Action } from '../events.js'
-
 import logger from '../logger.js'
 import Animations from '../player/spells/animations.json' assert { type: 'json' }
 
