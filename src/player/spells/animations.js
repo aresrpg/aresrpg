@@ -55,7 +55,7 @@ export const spawn_sweep_attack = ({
   if (effects.length === 0) {
     const direction = to_direction(position.yaw, position.pitch)
     spawn_particle(client, {
-      particle_id: ParticlesTypes.SWORD_SLASH,
+      particle_id: ParticlesTypes.SWEEP,
       position: {
         y: position.y + direction.y,
         x: position.x + direction.x,

@@ -38,7 +38,7 @@ export default function cosmetic({ sender, dispatch, args }) {
         client: sender,
         message: [
           { text: 'cosmetic updated: ', ...Formats.BASE },
-          { text: effect, ...Formats.SUCCESS },
+          { text: Animations[CATEGORIES[category.toUpperCase()]][effect]['name'], ...Formats.SUCCESS },
         ],
       })
       return
