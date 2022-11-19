@@ -1,10 +1,10 @@
 import Animations from '../player/spells/animations.json' assert { type: 'json' }
-
-import { client_chat_msg, Formats } from '../chat.js'
 import { Action } from '../events.js'
+import { client_chat_msg, Formats } from '../chat.js'
 
 import { write_error } from './commands.js'
 import { literal} from './declare_options.js'
+
 
 const CATEGORIES = {
   SWEEP: "sweep_attack"

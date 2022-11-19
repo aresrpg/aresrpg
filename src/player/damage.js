@@ -8,7 +8,6 @@ import { Action, Context } from '../events.js'
 import { create_armor_stand } from '../armor_stand.js'
 import { GameMode } from '../gamemode.js'
 import { abortable } from '../iterator.js'
-
 import logger from '../logger.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
 
