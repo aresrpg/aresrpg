@@ -30,6 +30,7 @@ export const Context = {
   MOB_DAMAGE: 'MOB_DAMAGE',
   MOB_DEATH: 'MOB_DEATH',
   SCREEN_INTERRACT: 'SCREEN_INTERRACT',
+  SHOOT: 'SHOOT',
 }
 
 export const Mob = {

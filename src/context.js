@@ -27,7 +27,9 @@ import player_respawn from './player/respawn.js'
 import player_bossbar from './player/boss_bar.js'
 import player_action_bar from './player/action_bar.js'
 import player_heartbeat from './player/heartbeat.js'
-import player_archery from './player/archery.js'
+import player_archery, {
+  register as register_player_archery,
+} from './player/archery.js'
 import player_traders, {
   register as register_player_traders,
 } from './player/traders.js'
@@ -94,6 +96,7 @@ const world_reducers = [
   register_experience,
   register_player_teleportation_stones,
   register_player_item_loot,
+  register_player_archery,
 ]
 
 const world = /** @type {World} */ (
