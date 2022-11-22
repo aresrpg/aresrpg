@@ -5,14 +5,11 @@ import { on } from 'events'
 import { aiter } from 'iterator-helper'
 import combineAsyncIterators from 'combine-async-iterators'
 import Items from '../../data/items.json' assert { type: 'json' }
-import { Action, Context, MobAction } from '../events.js'
-import { direction_to_yaw_pitch, distance2d_squared, distance3d_squared, sort_by_distance2d, to_direction } from '../math.js'
+import { Context, MobAction } from '../events.js'
+import { direction_to_yaw_pitch, distance3d_squared, to_direction } from '../math.js'
 import logger from '../logger.js'
-import position from './position.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
 import { get_block } from '../chunk.js'
-import { block_center_position } from '../position.js'
-import { world_chat_msg } from '../chat.js'
 
 const log = logger(import.meta)
 const visible_mobs = {}
@@ -35,18 +32,19 @@ export function register({ next_entity_id, ...world }) {
 }
 
 async function get_path_collision(world, position, velocity, steps) {
-  for (let id = 1; id < steps; id++) {
-    velocity.y = Math.max(-32768, velocity.y-98)
-    position.x+=velocity.x/8000
-    position.y+=velocity.y/8000
-    position.z+=velocity.z/8000
+  const pos = {x: position.x, y: position.y, z: position.z}
+  for (let id = 0; id < steps; id++) {
+    // velocity.y = Math.max(-32768, velocity.y-98)
+    pos.x+=velocity.x/8000
+    pos.y+=velocity.y/8000
+    pos.z+=velocity.z/8000
 
-    const block = await get_block(world, position)
+    const block = await get_block(world, pos)
     if (block.boundingBox === 'block') {
-      return id
+      break
     }
-    id++
   }
+  return {x: pos.x - position.x, y: pos.y - position.y, z: pos.z - position.z}
 }
 
 export default {
@@ -61,9 +59,9 @@ export default {
         )
       )
     )
-      .map(([{sender, position, velocity, wall_predict, timer}]) => ({sender, position, velocity, wall_predict, timer}))
+      .map(([{sender, position, velocity, timer}]) => ({sender, position, velocity, timer}))
       .reduce(
-        ({ cursor: last_cursor, ids }, { sender, position, velocity, wall_predict, timer }) => {
+        ({ cursor: last_cursor, ids }, { sender, position, velocity, timer }) => {
           if (timer) {
             // entering here means the iteration is trigered by the interval
             const now = Date.now()
@@ -77,6 +75,8 @@ export default {
             return { cursor: last_cursor, ids }
           }
 
+          let wall_predict = {x: 0, y: 0, z: 0}
+          get_path_collision(world, position, velocity, 60).then((result) => {wall_predict = result})
           const { arrow_start_id } = world
           const delta = 0.05
           const cursor = (last_cursor + 1) % ARROW_AMOUNT
@@ -99,26 +99,30 @@ export default {
           })
           let t = 0
           const interval = setInterval(() => {
-            velocity.y = Math.max(-32768, velocity.y-98)
-            if (wall_predict === t/delta) {
-              client.write('rel_entity_move', {
-                entityId: arrow.entityId,
-                dX: velocity.x,
-                dY: velocity.y,
-                dZ: velocity.z,
-                onGround: true
-              })
-              return
-            }
             if (t > ARROW_LIFE_TIME/1000) {
               clearInterval(interval)
             } else {
               const cur_pos = {
+                ...arrow.position,
                 x: arrow.position.x+velocity.x/8000,
                 y: arrow.position.y+velocity.y/8000,
                 z: arrow.position.z+velocity.z/8000,
               }
+              const dif = {x: position.x - cur_pos.x, y: position.y - cur_pos.y, z: position.z - cur_pos.z}
               
+              if (Math.abs(wall_predict.x)-1 <= Math.abs(dif.x) && Math.abs(wall_predict.y)-1 <= Math.abs(dif.y) && Math.abs(wall_predict.z)-1 <= Math.abs(dif.z)) {
+                client.write('spawn_entity', {
+                  ...arrow,
+                  type: 2,
+                  ...cur_pos,
+                  ...direction_to_yaw_pitch(to_direction(position.yaw, position.pitch)),
+                  velocityX: velocity.x,
+                  velocityY: velocity.y,
+                  velocityZ: velocity.z,
+                })
+                clearInterval(interval)
+                return
+              }
               Object.values(visible_mobs).forEach((mob) => {
                 if (mob.health === 0) return 
                 const mob_pos = mob.position()
@@ -139,7 +143,7 @@ export default {
                 dX: velocity.x,
                 dY: velocity.y,
                 dZ: velocity.z,
-                onGround: false
+                onGround: true
               })
               client.write('entity_velocity', {
                 entityId: arrow.entityId,
@@ -191,10 +195,7 @@ export default {
             const direction = to_direction(position.yaw, position.pitch)
             const pos = {...position, y: position.y+1}
             const velocity = { x: direction.x*6000, y: direction.y*4000, z: direction.z*6000 }
-            const wall_predict = get_path_collision(world, position, velocity, 60)
-            wall_predict.then((result) => {
-              events.emit(Context.SHOOT, {sender: client, position: pos, velocity, wall_predict: result})
-            })
+            events.emit(Context.SHOOT, {sender: client, position: pos, velocity})
           }
         }
       }
