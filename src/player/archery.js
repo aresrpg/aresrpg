@@ -1,17 +1,22 @@
-import UUID from 'uuid-1345'
-import { abortable } from '../iterator.js'
-import { setInterval as interval} from 'timers/promises'
+import { setInterval as interval } from 'timers/promises'
 import { on } from 'events'
+
+import UUID from 'uuid-1345'
 import { aiter } from 'iterator-helper'
 import combineAsyncIterators from 'combine-async-iterators'
+
+import { abortable } from '../iterator.js'
 import Items from '../../data/items.json' assert { type: 'json' }
 import { Context, MobAction } from '../events.js'
-import { direction_to_yaw_pitch, distance3d_squared, to_direction } from '../math.js'
+import {
+  direction_to_yaw_pitch,
+  distance3d_squared,
+  to_direction,
+} from '../math.js'
 import logger from '../logger.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
 import { get_block } from '../chunk.js'
 
-const log = logger(import.meta)
 const visible_mobs = {}
 
 const HOTBAR_OFFSET = 36
@@ -31,26 +36,29 @@ export function register({ next_entity_id, ...world }) {
   }
 }
 
-function get_pos(origin, velocity, step) { // TODO: add gravity that sync with client
+function get_pos(origin, velocity, step) {
+  // TODO: add gravity that sync with client
   return {
-    x: origin.x+(velocity.x/8000)*(step),
-    y: origin.y+(velocity.y/8000)*(step), // (Math.max(-32768, velocity.y-(98*step))/8000)*(step),
-    z: origin.z+(velocity.z/8000)*(step),
+    x: origin.x + (velocity.x / 8000) * step,
+    y: origin.y + (velocity.y / 8000) * step, // (Math.max(-32768, velocity.y-(98*step))/8000)*(step),
+    z: origin.z + (velocity.z / 8000) * step,
   }
 }
 
 async function get_path_collision(world, position, velocity, steps) {
   for (let id = 1; id < steps; id++) {
     // velocity.y = Math.max(-32768, velocity.y-98)
-    const pos = {...position, ...get_pos(position, velocity, id)}
-
-    log.info(pos, "pre pos")
+    const pos = { ...position, ...get_pos(position, velocity, id) }
     const block = await get_block(world, pos)
     if (block.boundingBox === 'block') {
-      return {x: pos.x - position.x, y: pos.y - position.y, z: pos.z - position.z}
+      return {
+        x: pos.x - position.x,
+        y: pos.y - position.y,
+        z: pos.z - position.z,
+      }
     }
   }
-  return {x: 255, y: 255, z: 255}
+  return { x: 255, y: 255, z: 255 }
 }
 
 export default {
@@ -65,9 +73,17 @@ export default {
         )
       )
     )
-      .map(([{sender, position, velocity, timer}]) => ({sender, position, velocity, timer}))
+      .map(([{ sender, position, velocity, timer }]) => ({
+        sender,
+        position,
+        velocity,
+        timer,
+      }))
       .reduce(
-        ({ cursor: last_cursor, ids }, { sender, position, velocity, timer }) => {
+        (
+          { cursor: last_cursor, ids },
+          { sender, position, velocity, timer }
+        ) => {
           if (timer) {
             // entering here means the iteration is trigered by the interval
             const now = Date.now()
@@ -81,8 +97,10 @@ export default {
             return { cursor: last_cursor, ids }
           }
 
-          let wall_predict = {x: 0, y: 0, z: 0}
-          get_path_collision(world, position, velocity, 60).then((result) => {wall_predict = result})
+          let wall_predict = { x: 0, y: 0, z: 0 }
+          get_path_collision(world, position, velocity, 60).then(result => {
+            wall_predict = result
+          })
           const { arrow_start_id } = world
           const delta = 0.05
           const cursor = (last_cursor + 1) % ARROW_AMOUNT
@@ -91,42 +109,46 @@ export default {
             objectUUID: UUID.v4(),
             objectData: sender.ids,
             damage: 5,
-            position
+            position,
           }
           client.write('spawn_entity', {
             ...arrow,
             type: 2,
             ...position,
-            ...direction_to_yaw_pitch(to_direction(position.yaw, position.pitch)),
+            ...direction_to_yaw_pitch(
+              to_direction(position.yaw, position.pitch)
+            ),
             velocityX: velocity.x,
             velocityY: velocity.y,
             velocityZ: velocity.z,
           })
           let t = 0
           const interval = setInterval(() => {
-            const step = Math.round(t/delta)
-            if (t > ARROW_LIFE_TIME/1000) {
+            const step = Math.round(t / delta)
+            if (t > ARROW_LIFE_TIME / 1000) {
               clearInterval(interval)
             } else {
               const cur_pos = {
                 ...arrow.position,
-                ...get_pos(arrow.position, velocity, step)
+                ...get_pos(arrow.position, velocity, step),
               }
               const dif = {
                 x: arrow.position.x - cur_pos.x,
                 y: arrow.position.y - cur_pos.y,
-                z: arrow.position.z - cur_pos.z
+                z: arrow.position.z - cur_pos.z,
               }
-              if ( Math.abs(wall_predict.x)-1 <= Math.abs(dif.x) // Change to -0.3 to stuck arrow in the walls
-                && Math.abs(wall_predict.y)-1 <= Math.abs(dif.y)
-                && Math.abs(wall_predict.z)-1 <= Math.abs(dif.z)
+              if (
+                Math.abs(wall_predict.x) - 1 <= Math.abs(dif.x) && // Change to -0.3 to stuck arrow in the walls
+                Math.abs(wall_predict.y) - 1 <= Math.abs(dif.y) &&
+                Math.abs(wall_predict.z) - 1 <= Math.abs(dif.z)
               ) {
-                log.info(cur_pos, "step")
                 client.write('spawn_entity', {
                   ...arrow,
                   type: 2,
                   ...cur_pos,
-                  ...direction_to_yaw_pitch(to_direction(position.yaw, position.pitch)),
+                  ...direction_to_yaw_pitch(
+                    to_direction(position.yaw, position.pitch)
+                  ),
                   velocityX: velocity.x,
                   velocityY: velocity.y,
                   velocityZ: velocity.z,
@@ -134,8 +156,8 @@ export default {
                 clearInterval(interval)
                 return
               }
-              Object.values(visible_mobs).forEach((mob) => {
-                if (mob.health === 0) return 
+              Object.values(visible_mobs).forEach(mob => {
+                if (mob.health === 0) return
                 const mob_pos = mob.position()
                 const dist = distance3d_squared(cur_pos, mob_pos)
                 if (dist < 1) {
@@ -152,9 +174,9 @@ export default {
               client.write('rel_entity_move', {
                 entityId: arrow.entityId,
                 dX: velocity.x,
-                dY: velocity.y, //Math.max(-32768, velocity.y-(98*step)),
+                dY: velocity.y, // Math.max(-32768, velocity.y-(98*step)),
                 dZ: velocity.z,
-                onGround: false
+                onGround: false,
               })
               client.write('entity_velocity', {
                 entityId: arrow.entityId,
@@ -165,7 +187,7 @@ export default {
               client.write('entity_velocity', {
                 entityId: arrow.entityId,
                 velocityX: velocity.x,
-                velocityY: velocity.y, //Math.max(-32768, velocity.y-(98*step)),
+                velocityY: velocity.y, // Math.max(-32768, velocity.y-(98*step)),
                 velocityZ: velocity.z,
               })
             }
@@ -190,12 +212,10 @@ export default {
 
     events.on(Context.MOB_SPAWNED, ({ mob }) => {
       const { category } = Entities[mob?.type] ?? {}
-      if (category !== 'npc')
-        visible_mobs[mob.entity_id] = mob
+      if (category !== 'npc') visible_mobs[mob.entity_id] = mob
     })
     events.on(Context.MOB_DESPAWNED, ({ entity_id }) => {
-      if (entity_id in visible_mobs)
-        delete visible_mobs[entity_id]
+      if (entity_id in visible_mobs) delete visible_mobs[entity_id]
     })
 
     client.on('use_item', ({ hand }) => {
@@ -209,12 +229,20 @@ export default {
           const itemData = Items[type]
           if (itemData.type === 'weapon' && itemData.item === 'bow') {
             const direction = to_direction(position.yaw, position.pitch)
-            const pos = {...position, y: position.y+1}
-            const velocity = { x: direction.x*6000, y: direction.y*4000, z: direction.z*6000 }
-            events.emit(Context.SHOOT, {sender: client, position: pos, velocity})
+            const pos = { ...position, y: position.y + 1 }
+            const velocity = {
+              x: direction.x * 6000,
+              y: direction.y * 4000,
+              z: direction.z * 6000,
+            }
+            events.emit(Context.SHOOT, {
+              sender: client,
+              position: pos,
+              velocity,
+            })
           }
         }
       }
-    }
-  )}
+    })
+  },
 }
