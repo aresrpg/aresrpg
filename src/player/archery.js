@@ -31,20 +31,26 @@ export function register({ next_entity_id, ...world }) {
   }
 }
 
-async function get_path_collision(world, position, velocity, steps) {
-  const pos = {x: position.x, y: position.y, z: position.z}
-  for (let id = 0; id < steps; id++) {
-    // velocity.y = Math.max(-32768, velocity.y-98)
-    pos.x+=velocity.x/8000
-    pos.y+=velocity.y/8000
-    pos.z+=velocity.z/8000
+function get_pos(origin, velocity, step) { // TODO: add gravity that sync with client
+  return {
+    x: origin.x+(velocity.x/8000)*(step),
+    y: origin.y+(velocity.y/8000)*(step), // (Math.max(-32768, velocity.y-(98*step))/8000)*(step),
+    z: origin.z+(velocity.z/8000)*(step),
+  }
+}
 
+async function get_path_collision(world, position, velocity, steps) {
+  for (let id = 1; id < steps; id++) {
+    // velocity.y = Math.max(-32768, velocity.y-98)
+    const pos = {...position, ...get_pos(position, velocity, id)}
+
+    log.info(pos, "pre pos")
     const block = await get_block(world, pos)
     if (block.boundingBox === 'block') {
-      break
+      return {x: pos.x - position.x, y: pos.y - position.y, z: pos.z - position.z}
     }
   }
-  return {x: pos.x - position.x, y: pos.y - position.y, z: pos.z - position.z}
+  return {x: 255, y: 255, z: 255}
 }
 
 export default {
@@ -85,7 +91,6 @@ export default {
             objectUUID: UUID.v4(),
             objectData: sender.ids,
             damage: 5,
-            originalVelocity: velocity,
             position
           }
           client.write('spawn_entity', {
@@ -99,18 +104,24 @@ export default {
           })
           let t = 0
           const interval = setInterval(() => {
+            const step = Math.round(t/delta)
             if (t > ARROW_LIFE_TIME/1000) {
               clearInterval(interval)
             } else {
               const cur_pos = {
                 ...arrow.position,
-                x: arrow.position.x+velocity.x/8000,
-                y: arrow.position.y+velocity.y/8000,
-                z: arrow.position.z+velocity.z/8000,
+                ...get_pos(arrow.position, velocity, step)
               }
-              const dif = {x: position.x - cur_pos.x, y: position.y - cur_pos.y, z: position.z - cur_pos.z}
-              
-              if (Math.abs(wall_predict.x)-1 <= Math.abs(dif.x) && Math.abs(wall_predict.y)-1 <= Math.abs(dif.y) && Math.abs(wall_predict.z)-1 <= Math.abs(dif.z)) {
+              const dif = {
+                x: arrow.position.x - cur_pos.x,
+                y: arrow.position.y - cur_pos.y,
+                z: arrow.position.z - cur_pos.z
+              }
+              if ( Math.abs(wall_predict.x)-1 <= Math.abs(dif.x) // Change to -0.3 to stuck arrow in the walls
+                && Math.abs(wall_predict.y)-1 <= Math.abs(dif.y)
+                && Math.abs(wall_predict.z)-1 <= Math.abs(dif.z)
+              ) {
+                log.info(cur_pos, "step")
                 client.write('spawn_entity', {
                   ...arrow,
                   type: 2,
@@ -141,17 +152,22 @@ export default {
               client.write('rel_entity_move', {
                 entityId: arrow.entityId,
                 dX: velocity.x,
-                dY: velocity.y,
+                dY: velocity.y, //Math.max(-32768, velocity.y-(98*step)),
                 dZ: velocity.z,
-                onGround: true
+                onGround: false
+              })
+              client.write('entity_velocity', {
+                entityId: arrow.entityId,
+                velocityX: 0,
+                velocityY: 0,
+                velocityZ: 0,
               })
               client.write('entity_velocity', {
                 entityId: arrow.entityId,
                 velocityX: velocity.x,
-                velocityY: velocity.y,
+                velocityY: velocity.y, //Math.max(-32768, velocity.y-(98*step)),
                 velocityZ: velocity.z,
               })
-              arrow.position = cur_pos
             }
             t += delta
           }, 50)
