@@ -2,6 +2,7 @@ import { setInterval as interval } from 'timers/promises'
 import { on } from 'events'
 
 import UUID from 'uuid-1345'
+import logger from '../logger.js'
 import { aiter } from 'iterator-helper'
 import combineAsyncIterators from 'combine-async-iterators'
 
@@ -13,16 +14,19 @@ import {
   distance3d_squared,
   to_direction,
 } from '../math.js'
-import logger from '../logger.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
 import { get_block } from '../chunk.js'
+import { client_chat_msg, Formats } from '../chat.js'
 
+const log = logger(import.meta)
 const visible_mobs = {}
 
 const HOTBAR_OFFSET = 36
 const Hand = {
   MAINHAND: 0,
 }
+
+const ACCURACY_BLOCK = "Glowstone"
 
 const ARROW_AMOUNT = 50
 const ARROW_LIFE_TIME = 3000
@@ -47,18 +51,20 @@ function get_pos(origin, velocity, step) {
 
 async function get_path_collision(world, position, velocity, steps) {
   for (let id = 1; id < steps; id++) {
-    // velocity.y = Math.max(-32768, velocity.y-98)
     const pos = { ...position, ...get_pos(position, velocity, id) }
     const block = await get_block(world, pos)
     if (block.boundingBox === 'block') {
       return {
-        x: pos.x - position.x,
-        y: pos.y - position.y,
-        z: pos.z - position.z,
+        block,
+        position: {
+          x: pos.x - position.x,
+          y: pos.y - position.y,
+          z: pos.z - position.z,
+        }
       }
     }
   }
-  return { x: 255, y: 255, z: 255 }
+  return {block: null, position: { x: 255, y: 255, z: 255 }}
 }
 
 export default {
@@ -97,9 +103,13 @@ export default {
             return { cursor: last_cursor, ids }
           }
 
-          let wall_predict = { x: 0, y: 0, z: 0 }
+          let wall_predict = {block: null, position: { x: 255, y: 255, z: 255 }}
+          let predict_pos = wall_predict.position
+          let predict_block = wall_predict.block
           get_path_collision(world, position, velocity, 60).then(result => {
             wall_predict = result
+            predict_pos = result.position
+            predict_block = result.block
           })
           const { arrow_start_id } = world
           const delta = 0.05
@@ -116,7 +126,7 @@ export default {
             type: 2,
             ...position,
             ...direction_to_yaw_pitch(
-              to_direction(position.yaw, position.pitch)
+              to_direction(-position.yaw, -position.pitch)
             ),
             velocityX: velocity.x,
             velocityY: velocity.y,
@@ -138,10 +148,31 @@ export default {
                 z: arrow.position.z - cur_pos.z,
               }
               if (
-                Math.abs(wall_predict.x) - 1 <= Math.abs(dif.x) && // Change to -0.3 to stuck arrow in the walls
-                Math.abs(wall_predict.y) - 1 <= Math.abs(dif.y) &&
-                Math.abs(wall_predict.z) - 1 <= Math.abs(dif.z)
+                Math.abs(predict_pos.x) - 0.3 <= Math.abs(dif.x) && // Change to -0.3 to stuck arrow in the walls
+                Math.abs(predict_pos.y) - 0.3 <= Math.abs(dif.y) &&
+                Math.abs(predict_pos.z) - 0.3 <= Math.abs(dif.z)
               ) {
+                if (predict_block?.displayName === ACCURACY_BLOCK) {
+                  const pos = get_pos(arrow.position, velocity, step-1)
+                  const accuracy = {
+                    x: Math.round(Math.sin(pos.x*Math.PI)*100),
+                    y: -Math.round(Math.sin(pos.y*Math.PI)*100),
+                    z: Math.round(Math.sin(pos.z*Math.PI)*100)
+                  }
+                  const choosen = (accuracy.x < accuracy.z) ? accuracy.z : accuracy.x
+                  const value = (Math.abs(choosen*accuracy.y)*0.01).toFixed(2)
+                  log.info({int: parseInt(value)}, 'value')
+                  let format = Formats.SUCCESS
+                  if (parseInt(value) < 25) format = Formats.DANGER 
+                  else if (parseInt(value) < 60) format = Formats.WARN
+                  client_chat_msg({
+                    client: sender,
+                    message: [
+                      { text: 'Accuracy: ', ...Formats.BASE },
+                      { text: value+"%", ...format },
+                    ]
+                  })
+                }
                 client.write('spawn_entity', {
                   ...arrow,
                   type: 2,
@@ -177,12 +208,6 @@ export default {
                 dY: velocity.y, // Math.max(-32768, velocity.y-(98*step)),
                 dZ: velocity.z,
                 onGround: false,
-              })
-              client.write('entity_velocity', {
-                entityId: arrow.entityId,
-                velocityX: 0,
-                velocityY: 0,
-                velocityZ: 0,
               })
               client.write('entity_velocity', {
                 entityId: arrow.entityId,
