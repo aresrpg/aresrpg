@@ -5,7 +5,6 @@ import UUID from 'uuid-1345'
 import { aiter } from 'iterator-helper'
 import combineAsyncIterators from 'combine-async-iterators'
 
-import logger from '../logger.js'
 import { abortable } from '../iterator.js'
 import Items from '../../data/items.json' assert { type: 'json' }
 import { Context, MobAction } from '../events.js'
@@ -18,7 +17,6 @@ import Entities from '../../data/entities.json' assert { type: 'json' }
 import { get_block } from '../chunk.js'
 import { client_chat_msg, Formats } from '../chat.js'
 
-const log = logger(import.meta)
 const visible_mobs = {}
 
 const HOTBAR_OFFSET = 36
@@ -167,7 +165,6 @@ export default {
                   const value = (Math.abs(choosen * accuracy.y) * 0.01).toFixed(
                     2
                   )
-                  log.info({ int: parseInt(value) }, 'value')
                   let format = Formats.SUCCESS
                   if (parseInt(value) < 25) format = Formats.DANGER
                   else if (parseInt(value) < 60) format = Formats.WARN
