@@ -2,10 +2,10 @@ import { setInterval as interval } from 'timers/promises'
 import { on } from 'events'
 
 import UUID from 'uuid-1345'
-import logger from '../logger.js'
 import { aiter } from 'iterator-helper'
 import combineAsyncIterators from 'combine-async-iterators'
 
+import logger from '../logger.js'
 import { abortable } from '../iterator.js'
 import Items from '../../data/items.json' assert { type: 'json' }
 import { Context, MobAction } from '../events.js'
@@ -26,7 +26,7 @@ const Hand = {
   MAINHAND: 0,
 }
 
-const ACCURACY_BLOCK = "Glowstone"
+const ACCURACY_BLOCK = 'Glowstone'
 
 const ARROW_AMOUNT = 50
 const ARROW_LIFE_TIME = 3000
@@ -60,11 +60,11 @@ async function get_path_collision(world, position, velocity, steps) {
           x: pos.x - position.x,
           y: pos.y - position.y,
           z: pos.z - position.z,
-        }
+        },
       }
     }
   }
-  return {block: null, position: { x: 255, y: 255, z: 255 }}
+  return { block: null, position: { x: 255, y: 255, z: 255 } }
 }
 
 export default {
@@ -103,7 +103,10 @@ export default {
             return { cursor: last_cursor, ids }
           }
 
-          let wall_predict = {block: null, position: { x: 255, y: 255, z: 255 }}
+          let wall_predict = {
+            block: null,
+            position: { x: 255, y: 255, z: 255 },
+          }
           let predict_pos = wall_predict.position
           let predict_block = wall_predict.block
           get_path_collision(world, position, velocity, 60).then(result => {
@@ -153,24 +156,27 @@ export default {
                 Math.abs(predict_pos.z) - 0.3 <= Math.abs(dif.z)
               ) {
                 if (predict_block?.displayName === ACCURACY_BLOCK) {
-                  const pos = get_pos(arrow.position, velocity, step-1)
+                  const pos = get_pos(arrow.position, velocity, step - 1)
                   const accuracy = {
-                    x: Math.round(Math.sin(pos.x*Math.PI)*100),
-                    y: -Math.round(Math.sin(pos.y*Math.PI)*100),
-                    z: Math.round(Math.sin(pos.z*Math.PI)*100)
+                    x: Math.round(Math.sin(pos.x * Math.PI) * 100),
+                    y: -Math.round(Math.sin(pos.y * Math.PI) * 100),
+                    z: Math.round(Math.sin(pos.z * Math.PI) * 100),
                   }
-                  const choosen = (accuracy.x < accuracy.z) ? accuracy.z : accuracy.x
-                  const value = (Math.abs(choosen*accuracy.y)*0.01).toFixed(2)
-                  log.info({int: parseInt(value)}, 'value')
+                  const choosen =
+                    accuracy.x < accuracy.z ? accuracy.z : accuracy.x
+                  const value = (Math.abs(choosen * accuracy.y) * 0.01).toFixed(
+                    2
+                  )
+                  log.info({ int: parseInt(value) }, 'value')
                   let format = Formats.SUCCESS
-                  if (parseInt(value) < 25) format = Formats.DANGER 
+                  if (parseInt(value) < 25) format = Formats.DANGER
                   else if (parseInt(value) < 60) format = Formats.WARN
                   client_chat_msg({
                     client: sender,
                     message: [
                       { text: 'Accuracy: ', ...Formats.BASE },
-                      { text: value+"%", ...format },
-                    ]
+                      { text: value + '%', ...format },
+                    ],
                   })
                 }
                 client.write('spawn_entity', {
