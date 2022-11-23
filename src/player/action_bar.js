@@ -57,6 +57,7 @@ export default {
   observe({ client, get_state, world, events, signal }) {
     aiter(abortable(setInterval(2000, null, { signal }))).forEach(() => {
       const state = get_state()
+      if (!state) return
       const closest_zone =
         closest_stone(world, state.position)?.name ?? 'Wilderness'
       if (state)
