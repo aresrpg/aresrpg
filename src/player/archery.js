@@ -163,16 +163,15 @@ export default {
                   const choosen =
                     accuracy.x < accuracy.z ? accuracy.z : accuracy.x
                   const values = {
-                    accuracy: (Math.abs(choosen * accuracy.y) * 0.01)
-                    .toFixed(2),
-                    distance: distance3d_squared(pos, cur_pos)
+                    accuracy: (Math.abs(choosen * accuracy.y) * 0.01).toFixed(
+                      2
+                    ),
+                    distance: distance3d_squared(pos, cur_pos),
                   }
 
                   let format = Formats.SUCCESS
-                  if (parseInt(values.accuracy) < 25)
-                    format = Formats.DANGER
-                  else if (parseInt(values.accuracy) < 60)
-                    format = Formats.WARN
+                  if (parseInt(values.accuracy) < 25) format = Formats.DANGER
+                  else if (parseInt(values.accuracy) < 60) format = Formats.WARN
 
                   client_chat_msg({
                     client: sender,
