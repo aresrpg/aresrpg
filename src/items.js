@@ -97,6 +97,7 @@ export function item_to_slot(
     critical,
     description = [],
     enchants = {},
+    custom_model_data = 0,
   },
   count
 ) {
@@ -211,6 +212,10 @@ export function item_to_slot(
               },
             })),
           },
+        },
+        CustomModelData: {
+          type: 'int',
+          value: custom_model_data,
         },
       },
     },

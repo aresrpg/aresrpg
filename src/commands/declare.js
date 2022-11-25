@@ -16,6 +16,7 @@ import { CommandNodeTypes } from './declare_options.js'
 import { nodes as enjin_nodes } from './enjin.js'
 import { nodes as health_nodes } from './health.js'
 import { nodes as xp_nodes } from './experience.js'
+import { nodes as cosmetic_nodes } from './cosmetic.js'
 
 function flatten(node, index = 0) {
   const { children, list } = node.children.reduce(
@@ -49,6 +50,7 @@ const nodes = flatten({
     ...enjin_nodes,
     ...health_nodes,
     ...xp_nodes,
+    ...cosmetic_nodes,
   ], // add the nodes of all the commands. exemple : [...command_1,...comand_2,...comand_3]
 })
 

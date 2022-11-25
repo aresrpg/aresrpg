@@ -15,6 +15,7 @@ import player_attributes from './player/attributes.js'
 import player_health from './player/health.js'
 import player_fall_damage from './player/fall_damage.js'
 import player_position from './player/position.js'
+import player_spell from './player/spell.js'
 import player_view_distance, { inside_view } from './player/view_distance.js'
 import player_chat from './player/chat.js'
 import player_resource_pack from './player/resource_pack.js'
@@ -44,6 +45,7 @@ import player_item_loot, {
   ITEM_LOOT_MAX_COUNT,
 } from './player/item_loot.js'
 import player_soul from './player/soul.js'
+import player_cosmetic from './player/cosmetic.js'
 import finalization from './finalization.js'
 import plugin_channels from './plugin_channels.js'
 import chunk_update from './chunk/update.js'
@@ -70,6 +72,7 @@ import { abortable } from './iterator.js'
 import Database from './database.js'
 import { USE_RESSOURCE_PACK } from './settings.js'
 import { GameMode } from './gamemode.js'
+import Animations from './player/spells/animations.json' assert { type: 'json' }
 
 const log = logger(import.meta)
 
@@ -126,6 +129,10 @@ const initial_state = {
   health: 40,
   // player's energy, losing after each death
   soul: 100,
+
+  cosmetics: {
+    sweep_attack: Animations.sweep_attack.default,
+  },
 
   // last time the player joined,
   // can be used for example to calcule regenerated soul while offline
@@ -212,6 +219,7 @@ function reduce_state(state, action) {
     player_soul.reduce,
     player_health.reduce,
     player_experience.reduce,
+    player_cosmetic.reduce,
     blockchain.reduce,
     chunk_update.reduce,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
@@ -251,6 +259,7 @@ export async function observe_client(context) {
   player_statistics.observe(context)
   player_fall_damage.observe(context)
   player_health.observe(context)
+  player_spell.observe(context)
   player_attributes.observe(context)
   player_chat.observe(context)
   player_deal_damage.observe(context)

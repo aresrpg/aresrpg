@@ -15,6 +15,7 @@ import msg from './msg.js'
 import enjin from './enjin.js'
 import health from './health.js'
 import experience from './experience.js'
+import cosmetic from './cosmetic.js'
 
 export function write_error({ sender }) {
   sender.write('chat', {
@@ -90,6 +91,9 @@ export default function execute_command({
     case 'xp':
     case 'experience':
       experience(command)
+      break
+    case 'cosmetic':
+      cosmetic(command)
       break
 
     default:
