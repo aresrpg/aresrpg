@@ -251,6 +251,7 @@ export async function observe_client(context) {
   player_statistics.observe(context)
   player_fall_damage.observe(context)
   player_health.observe(context)
+  player_attributes.observe(context)
   player_chat.observe(context)
   player_deal_damage.observe(context)
   player_inventory.observe(context)

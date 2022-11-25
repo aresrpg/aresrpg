@@ -3126,7 +3126,7 @@
     "displayName": "Renard",
     "category": "npc",
     "minecraft_entity": "fox",
-    "dialogs": ["*jappe*", "*glapit*", "*trompette*"],
+    "dialogs": ["zzzz", "zzz", "zzzzz"],
     "speed": 0.35,
     "health": 20,
     "sounds": {
@@ -3138,7 +3138,7 @@
       "min": null,
       "max": null
     },
-    "custom": {
+    "metadata": {
       "type": { "is_sleeping": true }
     }
   },
@@ -3146,7 +3146,7 @@
     "displayName": "Bébé Renard",
     "category": "npc",
     "minecraft_entity": "fox",
-    "dialogs": ["*jappe*", "*glapit*", "*trompette*"],
+    "dialogs": ["zzzz", "zzz", "zzzzz"],
     "speed": 0.35,
     "health": 10,
     "sounds": {
@@ -3158,7 +3158,7 @@
       "min": null,
       "max": null
     },
-    "custom": {
+    "metadata": {
       "is_baby": true,
       "type": { "is_sleeping": true }
     }

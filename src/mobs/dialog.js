@@ -19,12 +19,14 @@ export function speak_to(mob, { client, position }) {
       position: Position.CHAT,
       sender: client.uuid,
     })
-    const { ambient } = sounds
-    play_sound({
-      client,
-      sound: ambient,
-      ...position,
-    })
+    if (Object.keys(sounds).length > 0) {
+      const { ambient } = sounds
+      play_sound({
+        client,
+        sound: ambient,
+        ...position,
+      })
+    }
   }
 }
 

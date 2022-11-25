@@ -33,7 +33,7 @@ function despawn_signal({ events, entity_id }) {
 
 export function spawn_mob(client, { mob, position, events }) {
   const { entity_id, type, level } = mob
-  const { category, minecraft_entity, displayName, custom } = Entities[type]
+  const { category, minecraft_entity, displayName, metadata } = Entities[type]
 
   client.write('spawn_entity_living', {
     entityId: entity_id,
@@ -62,15 +62,10 @@ export function spawn_mob(client, { mob, position, events }) {
     }),
   })
 
-  if (custom !== undefined) {
-    Object.entries(custom).forEach(custom_data => {
-      const [key, value] = custom_data
-      client.write('entity_metadata', {
-        entityId: entity_id,
-        metadata: to_metadata(minecraft_entity, {
-          [key]: value,
-        }),
-      })
+  if (metadata) {
+    client.write('entity_metadata', {
+      entityId: entity_id,
+      metadata: to_metadata(minecraft_entity, metadata),
     })
   }
 
