@@ -23,10 +23,9 @@ export function speak_to(mob, { client, position }) {
       sender: client.uuid,
     })
     if (Object.keys(sounds).length) {
-      const { ambient } = sounds
       play_sound({
         client,
-        sound: ambient,
+        sound: sounds.ambient,
         ...position,
       })
     }
