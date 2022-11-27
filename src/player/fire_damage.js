@@ -1,65 +1,17 @@
-import { on } from 'events'
 import { setInterval } from 'timers/promises'
 
 import { aiter } from 'iterator-helper'
 import Vec3 from 'vec3'
 
 import { get_block } from '../chunk.js'
-import { Action, Context } from '../events.js'
+import { Action } from '../events.js'
 import { abortable } from '../iterator.js'
-/**
- * @returns true if the damage interval is working
- */
-function isWorking(damageTicks) {
-  return damageTicks.fireTicks > 0 || damageTicks.lavaTicks > 0
-}
-export async function isInFire(world, location) {
-  return await isBlockInsidePlayer(world, location, 'fire')
-}
-export async function isInLava(world, location) {
-  return await isBlockInsidePlayer(world, location, 'lava')
-}
-/**
- * Starts an interval that damage every seconds until fireticks and lavaticks is 0
- */
-async function startDamage(dispatch, signal, damageTicks, lava = false) {
-  lava ? applyLavaDamage(dispatch) : applyFireDamage(dispatch)
-  aiter(abortable(setInterval(1000, null, { signal })))
-    .takeWhile(() => damageTicks.fireTicks > 1 || damageTicks.lavaTicks > 1)
-    .forEach(() => {
-      if (damageTicks.lavaTicks > 1) {
-        damageTicks.lavaTicks--
-        damageTicks.fireTicks = 5
-        applyLavaDamage(dispatch)
-      } else if (damageTicks.fireTicks > 1) {
-        damageTicks.fireTicks--
-        applyFireDamage(dispatch)
-      }
-    })
-    .then(() => {
-      damageTicks.fireTicks = 0
-      damageTicks.lavaTicks = 0
-    })
-}
-export function applyFireDamage(dispatch) {
-  const damage = 1 // TODO : calculate damage
-  if (damage > 0) {
-    dispatch(Action.DAMAGE, { damage })
-  }
-}
-export function applyLavaDamage(dispatch) {
-  const damage = 2 // TODO : calculate damage
-  if (damage > 0) {
-    dispatch(Action.DAMAGE, { damage })
-  }
-}
-/**
- * @returns true if a specific block is inside player boundingbox
- */
-export async function isBlockInsidePlayer(world, location, blockName) {
+
+export async function getDamageSource(world, location) {
   const cursor = Vec3([0, 0, 0])
   const width = 0.6 // player bb width
   const height = 1.8 // player bb height //TODO: sneaking
+  let bestDamageSource
   const queryBB = {
     minX: location.x - width / 2,
     minY: location.y,
@@ -86,51 +38,45 @@ export async function isBlockInsidePlayer(world, location, blockName) {
         const block = await get_block(world, cursor)
         if (block) {
           const { name } = block
-          if (name === blockName) {
-            return true
-          }
+          const damageType = Object.keys(damageSource).find(key =>
+            Object.keys(damageSource[key]).some(
+              () => damageSource[key].block === name
+            )
+          )
+          const source = damageSource[damageType]
+          if (
+            source !== undefined &&
+            (bestDamageSource === undefined ||
+              source.damage > bestDamageSource.damage)
+          )
+            bestDamageSource = source
         }
       }
     }
   }
-  return false
+  return bestDamageSource
 }
-
+const damageSource = {
+  FIRE: {
+    damage: 0.5,
+    block: 'fire',
+  },
+  LAVA: {
+    damage: 1,
+    block: 'lava',
+  },
+}
 export default {
   /** @type {import('../context.js').Observer} */
-  observe({ client, get_state, events, dispatch, signal, world }) {
-    aiter(abortable(on(events, Context.STATE, { signal }))).reduce(
-      async ({ damageTicks }, [state]) => {
-        const { position } = state
-        const inFire = await isInFire(world, position)
-        const inLava = await isInLava(world, position)
-        if (inLava) {
-          if (!isWorking(damageTicks)) {
-            // TODO: set entity fire animation (entity metadata)
-            startDamage(dispatch, signal, damageTicks, true)
-          }
-          damageTicks.lavaTicks = 2
-          damageTicks.fireTicks = 5
-        } else {
-          // out of lava
-          if (damageTicks.lavaTicks > 0) {
-            damageTicks.lavaTicks = 0
-            if (!isWorking(damageTicks)) {
-              startDamage(dispatch, signal, damageTicks)
-            }
-          }
+  observe({ client, get_state, world, dispatch, events, signal }) {
+    aiter(abortable(setInterval(1000, null, { signal }))).forEach(async () => {
+      const { position } = get_state()
+      const source = await getDamageSource(world, position)
 
-          if (inFire) {
-            if (!isWorking(damageTicks)) {
-              startDamage(dispatch, signal, damageTicks)
-            }
-            damageTicks.fireTicks = 5
-          }
-        }
-
-        return { damageTicks }
-      },
-      { damageTicks: { fireTicks: 0, lavaTicks: 0 } }
-    )
+      if (source !== undefined) {
+        const { damage } = source
+        dispatch(Action.DAMAGE, { damage })
+      }
+    })
   },
 }
