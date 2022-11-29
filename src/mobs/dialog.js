@@ -22,11 +22,10 @@ export function speak_to(mob, { client, position }) {
       position: Position.CHAT,
       sender: client.uuid,
     })
-    if (Object.keys(sounds).length) {
-      const { ambient } = sounds
+    if (sounds?.ambient) {
       play_sound({
         client,
-        sound: ambient,
+        sound: sounds.ambient,
         ...position,
       })
     }
