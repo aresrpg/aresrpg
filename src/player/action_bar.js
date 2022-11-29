@@ -57,15 +57,13 @@ export default {
   observe({ client, get_state, world, events, signal }) {
     aiter(abortable(setInterval(2000, null, { signal }))).forEach(() => {
       const state = get_state()
-      const closest_zone =
-        closest_stone(world, state.position)?.name ?? 'Wilderness'
       if (state)
         update_action_bar({
           client,
           health: state.health,
           max_health: get_max_health(state),
           remaining_stats_point: get_remaining_stats_point(state),
-          zone: closest_zone,
+          zone: closest_stone(world, state.position)?.name ?? 'Wilderness',
         })
     })
 
