@@ -51,7 +51,6 @@ export function spawn_item_frame(
   client.write('entity_metadata', {
     entityId,
     metadata: to_metadata('item_frame', {
-      entity_flags: { is_invisible: true },
       item: {
         present: true,
         itemId: mcData.itemsByName.filled_map.id,
@@ -116,7 +115,7 @@ export function update_screen(
 
   for (let frame_x = 0; frame_x < size.width; frame_x++) {
     for (let frame_y = 0; frame_y < size.height; frame_y++) {
-      const { data } = new_canvas
+      const new_image_data = new_canvas
         .getContext('2d')
         .getImageData(128 * frame_x, 128 * frame_y, 128, 128)
       const old_image_data = old_canvas
@@ -124,16 +123,16 @@ export function update_screen(
         .getImageData(128 * frame_x, 128 * frame_y, 128, 128)
       const equals =
         old_image_data &&
-        Buffer.from(old_image_data.data.buffer).equals(Buffer.from(data.buffer))
+        Buffer.from(old_image_data.data.buffer).equals(
+          Buffer.from(new_image_data.data.buffer)
+        )
       if (!equals) {
         const buff = Buffer.alloc(128 * 128, 4)
-        for (let i = 0; i < data.length; i += 4) {
-          const red = data[i]
-          const green = data[i + 1]
-          const blue = data[i + 2]
-          const alpha = data[i + 3]
-          if (alpha === 0) buff[i / 4] = 0
-          else buff[i / 4] = nearestMatch(red, green, blue)
+        for (let i = 0; i < new_image_data.data.length; i += 4) {
+          const r = new_image_data.data[i]
+          const g = new_image_data.data[i + 1]
+          const b = new_image_data.data[i + 2]
+          buff[i / 4] = nearestMatch(r, g, b)
         }
         client.write('map', {
           itemDamage: start_id + frame_x + frame_y * size.width,
@@ -203,6 +202,8 @@ export function create_screen_canvas(screen) {
   const { size } = screen
   const canvas = createCanvas(size.width * 128, size.height * 128)
   const ctx = canvas.getContext('2d')
+  ctx.fillStyle = 'black'
+  ctx.fillRect(0, 0, size.width * 128, size.height * 128)
   return { canvas, ctx }
 }
 

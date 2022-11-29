@@ -3122,6 +3122,47 @@
       "max": null
     }
   },
+  "fox": {
+    "displayName": "Renard",
+    "category": "npc",
+    "minecraft_entity": "fox",
+    "dialogs": ["zzzz", "zzz", "zzzzz"],
+    "speed": 0.35,
+    "health": 20,
+    "sounds": {
+      "ambient": "entity.fox.ambient",
+      "hurt": "entity.fox.ambient",
+      "death": "entity.fox.ambient"
+    },
+    "level": {
+      "min": null,
+      "max": null
+    },
+    "metadata": {
+      "type": { "is_sleeping": true }
+    }
+  },
+  "baby_fox": {
+    "displayName": "Bébé Renard",
+    "category": "npc",
+    "minecraft_entity": "fox",
+    "dialogs": ["zzzz", "zzz", "zzzzz"],
+    "speed": 0.35,
+    "health": 10,
+    "sounds": {
+      "ambient": "entity.fox.ambient",
+      "hurt": "entity.fox.ambient",
+      "death": "entity.fox.ambient"
+    },
+    "level": {
+      "min": null,
+      "max": null
+    },
+    "metadata": {
+      "is_baby": true,
+      "type": { "is_sleeping": true }
+    }
+  },
   "sheep": {
     "displayName": "Mouton de Thebes",
     "category": "mob",
