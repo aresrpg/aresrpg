@@ -28,6 +28,12 @@ export const floor1 = {
       'utf8'
     )
   ),
+  interactable_object: JSON.parse(
+    fs.readFileSync(
+      join(world_folder, 'floor1', 'interactable_object.json'),
+      'utf8'
+    )
+  ),
 }
 
 log.info(
@@ -35,6 +41,7 @@ log.info(
     world: 'floor1',
     mobs: floor1.mob_positions.length,
     teleportation_stones: floor1.teleportation_stones.length,
+    interactable_object: floor1.interactable_object.length,
   },
   'World loaded'
 )

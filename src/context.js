@@ -43,6 +43,7 @@ import player_item_loot, {
   register as register_player_item_loot,
   ITEM_LOOT_MAX_COUNT,
 } from './player/item_loot.js'
+import player_interactable_object from './player/interactable_object.js'
 import player_soul from './player/soul.js'
 import finalization from './finalization.js'
 import plugin_channels from './plugin_channels.js'
@@ -266,6 +267,7 @@ export async function observe_client(context) {
   player_bossbar.observe(context)
   player_respawn.observe(context)
   player_heartbeat.observe(context)
+  player_interactable_object.observe(context)
 
   commands_declare.observe(context)
 
