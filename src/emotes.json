@@ -1,0 +1,32 @@
+{
+  "providers": [
+    {
+      "type": "bitmap",
+      "file": "aresrpg:memes/emotes/ban.png",
+      "ascent": 9,
+      "height": 10,
+      "chars": [""]
+    },
+    {
+      "type": "bitmap",
+      "file": "aresrpg:memes/emotes/lumiw.png",
+      "ascent": 9,
+      "height": 10,
+      "chars": [""]
+    },
+    {
+      "type": "bitmap",
+      "file": "aresrpg:memes/emotes/sheeeesh.png",
+      "ascent": 9,
+      "height": 20,
+      "chars": [""]
+    },
+    {
+      "type": "bitmap",
+      "file": "aresrpg:memes/emotes/pepe.png",
+      "ascent": 9,
+      "height": 20,
+      "chars": [""]
+    }
+  ]
+}
