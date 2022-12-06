@@ -1,4 +1,4 @@
-import entity_metadata from '../data/entity_metadata.json' assert { type: 'json' }
+import entity_metadata from './entity_metadata.json' assert { type: 'json' }
 
 export const villager_types = {
   DESERT: 0,

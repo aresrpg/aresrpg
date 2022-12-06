@@ -81,6 +81,13 @@ $ git submodule update --init
 $ npm install
 ```
 
+If you have access to AresRPG's proprietary data, you can run
+
+```
+git -C data remote add -f private git@github.com:aresrpg/data-closed.git
+git -C data checkout private/master
+```
+
 ## Usage
 
 ```bash

@@ -1,3 +1,6 @@
 [submodule "world/floor1"]
 	path = world/floor1
 	url = ../../aresrpg/floor1.git
+[submodule "data"]
+	path = data
+	url = ../../aresrpg/data.git
