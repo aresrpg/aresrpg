@@ -8,6 +8,7 @@ import { abortable } from '../iterator.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
 import { to_metadata } from '../entity_metadata.js'
 
+import knockback from './knockback.js'
 import { color_by_category } from './spawn.js'
 
 const log = logger(import.meta)
@@ -48,6 +49,7 @@ export default {
         const { category } = Entities[mob?.type] ?? {}
         const state = get_state()
         if (state.health > 0 && mob && category !== 'npc') {
+          knockback(client, state, mob)
           mob.dispatch(MobAction.DEAL_DAMAGE, {
             damage: 1,
             damager: client.uuid,
