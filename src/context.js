@@ -27,6 +27,7 @@ import player_respawn from './player/respawn.js'
 import player_bossbar from './player/boss_bar.js'
 import player_action_bar from './player/action_bar.js'
 import player_heartbeat from './player/heartbeat.js'
+import player_bells from './player/bells.js'
 import player_traders, {
   register as register_player_traders,
 } from './player/traders.js'
@@ -266,6 +267,7 @@ export async function observe_client(context) {
   player_bossbar.observe(context)
   player_respawn.observe(context)
   player_heartbeat.observe(context)
+  player_bells.observe(context)
 
   commands_declare.observe(context)
 
