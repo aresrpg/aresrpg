@@ -22,7 +22,7 @@ const FORBIDDEN_SLOTS = [
 export const USABLE_INVENTORY_START = 9
 export const USABLE_INVENTORY_END = 44
 
-const to_slot = item => {
+export const to_slot = item => {
   const item_definition = items[item?.type]
   if (!item_definition) {
     // in case the item is provided but no match was found in item.js
@@ -33,7 +33,7 @@ const to_slot = item => {
   return item_to_slot(item_definition, item.count)
 }
 
-const BlockDigStatus = {
+export const BlockDigStatus = {
   STARTED_DIGGING: 0,
   CANCELLED_DIGGING: 1,
   FINISHED_DIGGING: 2,
