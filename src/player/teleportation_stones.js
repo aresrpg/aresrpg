@@ -258,7 +258,7 @@ export function register(world) {
       world.next_entity_id +
       world.teleportation_stones.length * lines.length * 2,
     next_window_id: world.next_window_id + world.teleportation_stones.length,
-    /** @type {TeleportationStone} */
+    /** @type {TeleportationStone[]} */
     teleportation_stones: world.teleportation_stones.map(
       (stone, stone_index) => ({
         ...stone,
