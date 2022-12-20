@@ -29,7 +29,7 @@
   - [Usage](#usage)
     - [Enable data persistence](#enable-data-persistence)
   - [Contributing](#contributing)
-  - [Roadmap](#roadmap)
+    - [where to start](#where-to-start)
   - [License](#license)
 
 # A _bit_ of history
@@ -63,13 +63,13 @@ This version made AresRPG [quite famous](https://www.youtube.com/watch?v=dEELCqY
 
 ## The `v2`
 
-The V2 is [an unreleased version](https://www.youtube.com/watch?v=LkzGcEcBP1Q) of AresRPG,
+The V2 is (and will stay) [an unreleased version](https://www.youtube.com/watch?v=LkzGcEcBP1Q) of AresRPG,
 the goal of this version was to have a procedural open-world instead
 of a floor system and more classes than the v1, with an overall gameplay upgrade.
 
 # Requirements
 
-- NodeJS >= 16
+- NodeJS `>= 19`
 - npm
 
 ## Install
@@ -86,6 +86,12 @@ If you have access to AresRPG's proprietary data, you can run
 ```
 git -C data remote add -f private git@github.com:aresrpg/data-closed.git
 git -C data checkout private/master
+```
+
+For mac M1 users you may [have problems](https://github.com/Automattic/node-canvas/issues/1733) while installing `node-canvas`
+
+```
+arch -arm64 brew install pkg-config cairo pango libpng jpeg giflib librsvg
 ```
 
 ## Usage
@@ -108,14 +114,25 @@ $ USE_PERSISTENT_STORAGE="true" npm start
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md)
+> AresRPG is an open-source project, which means that anyone is welcome to participate in the design of the server and in particular its code.
 
-## Roadmap
+AresRPG is written entirely in JavaScript, and you will need a significant level of experience to really help the server. Although we welcome all contributions, it is important to know that the senior developers of the project will invest time in reviewing your code, make sure to come up with clean, readable, and functional code before submitting a Pull Request.
 
-- Reimplement AresRPG v1:
-  - TODO
-- Develop AresRPG v2:
-  - TODO
+The commit history should also be clean in an understandable way.
+Issues, code, documentations and any type of text should be written in English only
+
+### where to start
+
+- Read [CONTRIBUTING.md](CONTRIBUTING.md)
+- We use the [Prismarine protocol library](https://github.com/PrismarineJS/node-minecraft-protocol)
+- Find packets informations on [prismarine.js.org](https://minecraft-data.prismarine.js.org/?d=protocol&v=1.16.4)
+- A more verbose description of the packets can be found on [wiki.vg](https://wiki.vg/Protocol)
+- [Burger datas](https://pokechu22.github.io/Burger/1.16.5.html)
+- More global informations (NBT, etc) can be found on [Minecraft fandom](https://minecraft.fandom.com/wiki/Java_Edition)
+
+Start by forking the repo and run it locally, then try to modify or implement simple little things to learn about the state system and how to observe packets/actions.
+
+Once you feel ready, go to the [issues](https://github.com/aresrpg/aresrpg/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc) and open your first PR.
 
 ## License
 
