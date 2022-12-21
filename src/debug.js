@@ -21,7 +21,7 @@ function behavior({ world, app }) {
 
   const behavior_trees = Object.entries(trees).map(([type, tree]) => ({
     id: type,
-    name: Entities[type].displayName,
+    name: Entities[type].display_name,
     tree: serializer.serializeToString(tree),
     instances: world.mobs.all
       .filter(mob => mob.type === type)

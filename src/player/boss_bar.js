@@ -40,14 +40,14 @@ const mob_bar_division = ({ max_health }) => {
 }
 
 const format_title = ({
-  displayName,
+  display_name,
   level,
   health,
   max_health,
   entity_id,
 }) => [
   {
-    text: displayName,
+    text: display_name,
   },
   {
     text: ` [Lvl ${level}] `,
@@ -115,14 +115,14 @@ export default {
           ]
         }
 
-        const { displayName, health: max_health = 20 } = Entities[type]
+        const { display_name, health: max_health = 20 } = Entities[type]
         const { health, level = 1 /* the level feature is a WIP */ } =
           get_state()
         const entityUUID = format_uuid(entity_id)
         const display_health = Math.max(0, Math.min(1, health / max_health))
         const color = mob_bar_color({ health, max_health })
         const title = format_title({
-          displayName,
+          display_name,
           level,
           health,
           max_health,

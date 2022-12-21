@@ -62,7 +62,7 @@ export default {
         .reduce((last_health, health) => {
           if (last_health !== health) {
             const { entity_id, type, level } = mob
-            const { category, displayName } = Entities[type]
+            const { category, display_name } = Entities[type]
             client.write('entity_status', {
               entityId: entity_id,
               entityStatus: health > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
@@ -76,7 +76,7 @@ export default {
               entityId: mob.entity_id,
               metadata: to_metadata('entity', {
                 custom_name: JSON.stringify({
-                  text: displayName,
+                  text: display_name,
                   color: color_by_category[category],
                   extra: level && [
                     { text: ` [Lvl ${level}] `, color: 'dark_red' },
