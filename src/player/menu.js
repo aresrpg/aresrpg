@@ -1,4 +1,4 @@
-import { destroy_inventory, display_menu, Menus } from '../player_menu.js'
+import { destroy_menu, display_menu, Menus } from '../player_menu.js'
 import freeze_player from '../freeze_player.js'
 import { SCREENS } from '../settings.js'
 import { Context } from '../events.js'
@@ -31,7 +31,7 @@ export default {
         })
 
         events.on(Context.SCREEN_INTERRACT, payload => {
-          const { x, y } = payload
+          const { x, y, screen_id } = payload
 
           const click_position = {
             x,
@@ -50,6 +50,7 @@ export default {
           }
 
           console.log('position:', click_position)
+          console.log('screen:', screen_id)
 
           if (is_inside(interactables.stats, click_position)) {
             display_menu({
@@ -77,7 +78,7 @@ export default {
     const screenids = [SCREENS.player_screen, SCREENS.clone_background]
     client.on('steer_vehicle', ({ jump }) => {
       if (jump === 0x2) {
-        destroy_inventory(client, world, entityids, screenids)
+        destroy_menu(client, world, entityids, screenids)
       }
     })
 

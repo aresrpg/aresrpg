@@ -111,7 +111,7 @@ export async function display_menu({
   }
 }
 
-export function destroy_inventory(client, world, entityIds, screenIds) {
+export function destroy_menu(client, world, entityIds, screenIds) {
   client.write('entity_destroy', {
     entityIds,
   })
