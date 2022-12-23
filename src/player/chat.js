@@ -8,6 +8,7 @@ import { VERSION } from '../settings.js'
 import { world_chat_msg } from '../chat.js'
 import { WorldRequest } from '../events.js'
 import items from '../../data/items.json' assert { type: 'json' }
+import emotes from '../../data/emotes.json' assert { type: 'json' }
 
 import { closest_stone } from './teleportation_stones.js'
 const mcData = minecraftData(VERSION)
@@ -36,9 +37,14 @@ function slot_to_chat({ nbtData, itemCount, itemId }) {
 
 function emote_to_chat(emote) {
   const emote_name = `${emote.split(':')[1]}`
+
+  if (!emotes.includes(emote_name)) {
+    return { text: emote }
+  }
+
   return {
     translate: `aresrpg.emotes.${emote_name}`,
-    font: 'minecraft:emotes',
+    font: 'aresrpg:emotes',
     hoverEvent: {
       action: 'show_text',
       value: emote,
@@ -88,7 +94,7 @@ export default {
         }
         return chat
       },
-      [/:.*:/.source]: emote => emote_to_chat(emote.match(/.*/)[0]),
+      [/:.*:/.source]: emote => emote_to_chat(emote.match(/.*/)[0]), // all emotes name are between ":"
     }
 
     client.on('chat', ({ message }) => {
