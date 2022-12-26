@@ -1,12 +1,10 @@
-import { promisify } from 'util'
 import { on } from 'events'
+import { setTimeout } from 'timers/promises'
 
 import { aiter } from 'iterator-helper'
 
 import { MobAction, Mob, Context } from '../events.js'
 import { async_tail_recursive, abortable } from '../iterator.js'
-
-const setTimeoutPromise = promisify(setTimeout)
 
 async function* raw_wakeup_to_end(stream, value = stream.next()) {
   const { value: { wakeup_at } = { wakeup_at: null }, done } = await value
@@ -17,7 +15,7 @@ async function* raw_wakeup_to_end(stream, value = stream.next()) {
   const time = Date.now()
 
   const path_end = await Promise.race([
-    setTimeoutPromise(wakeup_at - time, true),
+    setTimeout(wakeup_at - time, true, { ref: false }),
     next.then(() => false),
   ])
 
