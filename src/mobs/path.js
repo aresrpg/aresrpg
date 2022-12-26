@@ -1,5 +1,5 @@
-import { promisify } from 'util'
 import { on } from 'events'
+import { setTimeout } from 'timers/promises'
 
 import { aiter } from 'iterator-helper'
 
@@ -8,8 +8,6 @@ import logger from '../logger.js'
 import { async_tail_recursive } from '../iterator.js'
 
 const log = logger(import.meta)
-
-const setTimeoutPromise = promisify(setTimeout)
 
 export function path_ended({ path, time, start_time, speed }) {
   const current = Math.floor((time - start_time) / speed)
@@ -69,7 +67,7 @@ async function* raw_path_to_positions(stream, value = stream.next()) {
     const next_time = (Math.floor(time / PATH_UPDATE_MS) + 1) * PATH_UPDATE_MS
 
     const new_path = await Promise.race([
-      setTimeoutPromise(next_time - time, false),
+      setTimeout(next_time - time, false, { ref: false }),
       next.then(() => true),
     ])
 
@@ -94,7 +92,7 @@ async function* raw_path_to_end(stream, value = stream.next()) {
   const next_time = start_time + path.length * speed
 
   const path_end = await Promise.race([
-    setTimeoutPromise(next_time - time, true),
+    setTimeout(next_time - time, true, { ref: false }),
     next.then(() => false),
   ])
 
