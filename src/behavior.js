@@ -18,7 +18,7 @@ import random from './behavior/random.js'
 import sleep from './behavior/sleep.js'
 import repeat from './behavior/repeat.js'
 import attack_target from './behavior/attack_target.js'
-import { debug } from './context.js'
+import debug from './debug.js'
 
 const log = logger(import.meta)
 
@@ -51,8 +51,8 @@ export default async function run(node, state, context) {
     path,
   }
   const result = await nodes[node.tagName](node, state, node_context)
-  log.debug({ path, status: result.status.toString() }, 'Runned')
-  debug.behavior({ context: node_context, result })
+  log.debug({ path, status: result.status.toString() }, 'Ran')
+  debug.behavior?.({ context: node_context, result })
   return result
 }
 
