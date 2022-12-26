@@ -24,6 +24,7 @@
   - [Install](#install)
   - [Usage](#usage)
     - [Enable data persistence](#enable-data-persistence)
+  - [Test](#test)
   - [Contributing](#contributing)
     - [where to start](#where-to-start)
   - [License](#license)
@@ -107,6 +108,15 @@ Aresrpg is using redis with the rejson module to persist player's state
 $ docker-compose up
 $ USE_PERSISTENT_STORAGE="true" npm start
 ```
+
+## Test
+
+```bash
+npm test
+```
+
+> The reporter [doesn't support errors yet](https://github.com/tapjs/tap-mocha-reporter/issues/72)
+> so to have a detailed version of you stacktrace just run `node --test`
 
 ## Contributing
 
