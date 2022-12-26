@@ -18,7 +18,6 @@ const { entitiesByName } = minecraft_data(VERSION)
 
 function reduce_mob(state, action, context) {
   return [
-    //
     mobs_goto.reduce_mob,
     mobs_damage.reduce_mob,
     behavior_tree.reduce_mob,

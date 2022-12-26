@@ -21,12 +21,6 @@ const missing_entities = [
   ...new Set(mobs.map(({ type }) => type).filter(type => !Entities[type])),
 ]
 
-if (missing_entities.length)
-  log.warn(
-    { missing_entities },
-    'Some entities are unknown, they will be ignored'
-  )
-
 export const floor1 = {
   spawn_position: { x: 469.5, y: 162, z: 646.5, yaw: 25, pitch: 0 },
   chunks: chunks(join(world_folder, 'floor1', 'region')),
@@ -40,6 +34,7 @@ log.info(
     world: 'floor1',
     mobs: floor1.mob_positions.length,
     teleportation_stones: floor1.teleportation_stones.length,
+    missing_entities,
   },
   'World loaded'
 )

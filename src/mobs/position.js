@@ -54,7 +54,7 @@ export function register(world) {
   }
 }
 
-export default function observe_world({ mobs }) {
+export default function mobs_position_factory({ mobs }) {
   const actions = new PassThrough({ objectMode: true })
 
   mobs.positions.on('*', payload =>

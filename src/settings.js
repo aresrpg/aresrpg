@@ -1,6 +1,3 @@
-import logger from './logger.js'
-
-const log = logger(import.meta)
 const {
   ONLINE_MODE: online_mode = 'false',
 
@@ -10,6 +7,9 @@ const {
   REDIS_MASTER_NAME = 'rejson-master',
 
   USE_RESSOURCE_PACK: use_ressource_pack = 'true',
+
+  LOG_LEVEL = 'info',
+  DEBUG_SERVER: debug_server = 'false',
 } = process.env
 
 const booleanify = variable => variable?.toLowerCase() === 'true'
@@ -22,17 +22,10 @@ export const PLAYER_ENTITY_ID = 0
 export const PLAYER_INVENTORY_ID = 0
 export const SERVER_UUID = '00000000000000000000000000000000'
 export const USE_RESSOURCE_PACK = booleanify(use_ressource_pack)
+export const DEBUG_SERVER = booleanify(debug_server)
 
-export { REDIS_HOST, REDIS_MASTER_NAME }
-
-log.info(
-  {
-    ONLINE_MODE,
-    VERSION,
-    USE_PERSISTENT_STORAGE,
-    REDIS_HOST,
-    REDIS_SENTINEL_PORT,
-    REDIS_MASTER_NAME,
-  },
-  'aresrpg settings'
-)
+export {
+  REDIS_HOST,
+  REDIS_MASTER_NAME,
+  LOG_LEVEL,
+}

@@ -10,7 +10,7 @@ import Entities from '../data/entities.json' assert { type: 'json' }
 import logger from './logger.js'
 import { trees } from './mobs/behavior_tree.js'
 import { SUCCESS, FAILURE, RUNNING } from './behavior.js'
-import { world as server_world } from './server.js'
+import { world as server_world } from './context.js'
 import { DEBUG_SERVER } from './settings.js'
 
 const log = logger(import.meta)

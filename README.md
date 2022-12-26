@@ -98,6 +98,9 @@ $ npm start
 
 # Start with packet logging
 $ DEBUG="minecraft-protocol*" npm start
+
+# Start with debug server
+$ DEBUG_SERVER="true" npm start
 ```
 
 ### Enable data persistence
