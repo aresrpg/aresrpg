@@ -84,16 +84,7 @@ export default {
     })
 
     aiter(abortable(on(events, Context.STATE, { signal }))).reduce(
-      (
-        last,
-        [
-          {
-            experience,
-            soul,
-            enjin: { kares },
-          },
-        ]
-      ) => {
+      (last, [{ experience, soul, kares }]) => {
         const { level, remaining_experience } = experience_to_level(experience)
         const progress = level_progress({ level, remaining_experience })
         const next = Array.from({

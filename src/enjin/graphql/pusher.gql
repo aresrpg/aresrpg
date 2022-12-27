@@ -1,5 +1,0 @@
-query pusher {
-  Platform {
-    notifications
-  }
-}
