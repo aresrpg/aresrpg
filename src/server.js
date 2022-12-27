@@ -80,6 +80,7 @@ export function create_server() {
     log.info(server.socketServer.address(), 'Listening')
   })
 
+  // @ts-ignore Prismarine seems to override the types but this event truely exist
   server.once('close', () => {
     if (debug_server.app) debug_server.app.close()
   })

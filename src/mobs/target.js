@@ -6,6 +6,7 @@ import { MobAction, Mob, Context } from '../events.js'
 import { abortable } from '../iterator.js'
 
 export default {
+  /** @type {import('../mobs').MobsReducer} */
   reduce_mob(state, { type, payload }) {
     if (type === MobAction.TARGET_POSITION) {
       return {

@@ -16,6 +16,29 @@ import { VERSION } from './settings.js'
 
 const { entitiesByName } = minecraft_data(VERSION)
 
+const initial_state = {
+  path: [],
+  open: [],
+  closed: [],
+  start_time: 0,
+  speed: 0,
+  health: 0,
+  blackboard: {},
+  attack_sequence_number: 0,
+  wakeup_at: 0,
+  sleep_id: null,
+  look_at: { player: false, yaw: 0, pitch: 0 },
+  first_damager: null,
+  last_damager: null,
+  last_hit: 0,
+  target_position: null,
+}
+
+/** @typedef {Readonly<typeof initial_state>} MobState */
+/** @typedef {{ type: string, payload: any, time: number }} MobAction */
+/** @typedef {{ world: import('./context').World, type: string, entity_id: number }} MobContext */
+/** @typedef {(state: MobState, action: MobAction, context?: MobContext) => MobState} MobsReducer */
+
 function reduce_mob(state, action, context) {
   return [
     mobs_goto.reduce_mob,
@@ -40,20 +63,13 @@ const MOVEMENT_SPEED_TO_BLOCKS_PER_SECOND = 10
 export function register(world) {
   const mobs = world.mob_positions.map(({ position, type, level }, i) => {
     const { speed = DEFAULT_SPEED, health } = Entities[type]
-    const initial_state = {
+    const mob_state = {
+      ...initial_state,
       path: [position],
-      open: [],
-      closed: [],
-      start_time: 0,
       speed:
         (1 / (speed * MOVEMENT_SPEED_TO_BLOCKS_PER_SECOND)) *
         1000 /* ms/block */,
       health /* halfheart */,
-      blackboard: {},
-      attack_sequence_number: 0,
-      wakeup_at: 0,
-      sleep_id: null,
-      look_at: { player: false, yaw: 0, pitch: 0 },
     }
 
     const actions = new PassThrough({ objectMode: true })
@@ -70,9 +86,9 @@ export function register(world) {
       })
       events.emit(Mob.STATE, state)
       return state
-    }, initial_state)
+    }, mob_state)
 
-    setImmediate(() => events.emit(Mob.STATE, initial_state))
+    setImmediate(() => events.emit(Mob.STATE, mob_state))
 
     const get_state = last_event_value(events, Mob.STATE)
 
