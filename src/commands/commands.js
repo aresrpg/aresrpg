@@ -12,7 +12,6 @@ import rt from './rt.js'
 import tg from './tg.js'
 import thug from './thug.js'
 import msg from './msg.js'
-import enjin from './enjin.js'
 import health from './health.js'
 import experience from './experience.js'
 
@@ -80,9 +79,6 @@ export default function execute_command({
       break
     case 'thug':
       thug(command)
-      break
-    case 'enjin':
-      enjin(command)
       break
     case 'health':
       health(command)

@@ -1,5 +1,0 @@
-query authenticate($appId: Int!, $appSecret: String!) {
-  AuthApp(id: $appId, secret: $appSecret) {
-    accessToken
-  }
-}
