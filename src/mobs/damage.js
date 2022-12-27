@@ -17,6 +17,7 @@ const Mouse = {
 }
 
 export default {
+  /** @type {import('../mobs').MobsReducer} */
   reduce_mob(state, { type, payload }) {
     if (type === MobAction.DEAL_DAMAGE) {
       const { damage, damager } = payload

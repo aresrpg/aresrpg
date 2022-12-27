@@ -26,6 +26,7 @@ export const trees = Object.fromEntries(
 )
 
 export default {
+  /** @type {import('../mobs').MobsReducer} */
   async reduce_mob(state, action, context) {
     if (state.health > 0) {
       const tree = trees[context.type /* ares mob type */]

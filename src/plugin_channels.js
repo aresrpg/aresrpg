@@ -17,7 +17,10 @@ const DEBUG_GAME_TEST_CLEAR = 'minecraft:debug/game_test_clear'
 
 const proto = new protodef.ProtoDef()
 
-proto.addTypes(mc_data.protocol.types)
+/** @type {any} */
+const { protocol } = mc_data
+
+proto.addTypes(protocol.types)
 proto.addTypes(minecraft_types)
 
 proto.addType(BRAND_CHANNEL, 'string')
