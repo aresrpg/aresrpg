@@ -24,8 +24,4 @@ export const SERVER_UUID = '00000000000000000000000000000000'
 export const USE_RESSOURCE_PACK = booleanify(use_ressource_pack)
 export const DEBUG_SERVER = booleanify(debug_server)
 
-export {
-  REDIS_HOST,
-  REDIS_MASTER_NAME,
-  LOG_LEVEL,
-}
+export { REDIS_HOST, REDIS_MASTER_NAME, LOG_LEVEL }

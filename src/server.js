@@ -20,23 +20,15 @@ import mobs_position_factory from './mobs/position.js'
 import debug_server from './debug.js'
 
 const log = logger(import.meta)
-const { VERSION, ONLINE_MODE, ENJIN_APP_SECRET } = settings
+const { VERSION, ONLINE_MODE } = settings
 const MAX_PLAYERS = -1
 const favicon = `data:image/png;base64,${fs.readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), '../media/favicon.png'),
   'base64'
 )}`
 
-const hide = value => (value ? '<hidden>' : null)
-
 export function create_server() {
-  log.info(
-    {
-      ...settings,
-      ENJIN_APP_SECRET: hide(ENJIN_APP_SECRET),
-    },
-    `Starting AresRPG ${package_json.version}`
-  )
+  log.info(settings, `Starting AresRPG ${package_json.version}`)
 
   const server = protocol.createServer({
     version: VERSION,
