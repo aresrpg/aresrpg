@@ -3,7 +3,7 @@ import { setTimeout } from 'timers/promises'
 
 import { aiter } from 'iterator-helper'
 
-import { MobAction, Mob } from '../events.js'
+import { MobAction, MobEvent } from '../events.js'
 import logger from '../logger.js'
 import { async_tail_recursive } from '../iterator.js'
 
@@ -105,14 +105,16 @@ export const path_to_end = async_tail_recursive(raw_path_to_end)
 
 export function path_end(mobs) {
   for (const mob of mobs) {
-    const state = aiter(on(mob.events, Mob.STATE)).map(([state]) => state)
+    const state = aiter(on(mob.events, MobEvent.STATE_UPDATED)).map(
+      ([state]) => state
+    )
 
     const end = path_to_end(state)
 
     aiter(end).reduce((last_time, time) => {
       if (last_time !== time) {
         log.debug({ at: time }, 'Path Ended')
-        mob.dispatch(MobAction.PATH_ENDED, null, time)
+        mob.dispatch(MobAction.END_PATH, null, time)
       }
       return time
     })

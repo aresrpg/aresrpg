@@ -4,7 +4,7 @@ import { dimension_codec, overworld } from '../world/codec.js'
 import { load_chunks } from '../chunk/update.js'
 import { PLAYER_ENTITY_ID } from '../settings.js'
 import { write_title } from '../title.js'
-import { Context } from '../events.js'
+import { PlayerEvent } from '../events.js'
 import { Formats, world_chat_msg } from '../chat.js'
 
 import { set_world_border } from './world_border.js'
@@ -12,7 +12,7 @@ import { set_world_border } from './world_border.js'
 export default {
   /** @type {import('../context.js').Observer} */
   observe({ client, events, world, signal, dispatch }) {
-    events.once(Context.STATE, state => {
+    events.once(PlayerEvent.STATE_UPDATED, state => {
       const {
         nickname,
         game_mode,

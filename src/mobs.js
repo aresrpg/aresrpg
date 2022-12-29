@@ -6,7 +6,7 @@ import { aiter } from 'iterator-helper'
 
 import Entities from '../data/entities.json' assert { type: 'json' }
 
-import { last_event_value, Mob } from './events.js'
+import { last_event_value, MobEvent } from './events.js'
 import { path_end, path_position } from './mobs/path.js'
 import mobs_goto from './mobs/goto.js'
 import mobs_damage from './mobs/damage.js'
@@ -84,13 +84,13 @@ export function register(world) {
         type,
         entity_id,
       })
-      events.emit(Mob.STATE, state)
+      events.emit(MobEvent.STATE_UPDATED, state)
       return state
     }, mob_state)
 
-    setImmediate(() => events.emit(Mob.STATE, mob_state))
+    setImmediate(() => events.emit(MobEvent.STATE_UPDATED, mob_state))
 
-    const get_state = last_event_value(events, Mob.STATE)
+    const get_state = last_event_value(events, MobEvent.STATE_UPDATED)
 
     return {
       entity_id,

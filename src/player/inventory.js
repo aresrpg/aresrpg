@@ -5,7 +5,7 @@ import { aiter } from 'iterator-helper'
 import { empty_slot, item_to_slot } from '../items.js'
 import { PLAYER_INVENTORY_ID } from '../settings.js'
 import { abortable } from '../iterator.js'
-import { Action, Context } from '../events.js'
+import { PlayerEvent, PlayerAction } from '../events.js'
 import items from '../../data/items.json' assert { type: 'json' }
 import logger from '../logger.js'
 
@@ -89,7 +89,7 @@ export default {
           }
         }
       }
-    } else if (type === Action.RESYNC_INVENTORY)
+    } else if (type === PlayerAction.RESYNC_INVENTORY)
       return {
         ...state,
         inventory_sequence_number: state.inventory_sequence_number + 1,
@@ -98,7 +98,7 @@ export default {
   },
   /** @type {import('../context.js').Observer} */
   observe({ client, events, world, get_state, signal }) {
-    aiter(abortable(on(events, Context.STATE, { signal }))).reduce(
+    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal }))).reduce(
       (
         last_sequence_number,
         [{ inventory, inventory_cursor, inventory_sequence_number }]

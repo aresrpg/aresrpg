@@ -5,7 +5,7 @@ import { aiter } from 'iterator-helper'
 import combineAsyncIterators from 'combine-async-iterators'
 
 import { abortable } from '../iterator.js'
-import { Context } from '../events.js'
+import { PlayerEvent } from '../events.js'
 import { write_bossbar, Colors, Divisions, Actions } from '../boss_bar.js'
 import logger from '../logger.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
@@ -95,7 +95,7 @@ export default {
       abortable(
         // @ts-ignore
         combineAsyncIterators(
-          on(events, Context.MOB_DAMAGE, { signal }),
+          on(events, PlayerEvent.MOB_DAMAGED, { signal }),
           setInterval(1000, [{ timer: true }], { signal })
         )
       )

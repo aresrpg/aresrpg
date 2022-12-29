@@ -1,4 +1,4 @@
-import { Context } from '../events.js'
+import { PlayerEvent } from '../events.js'
 
 import { gamemode_nodes } from './gamemode.js'
 import { dislike_nodes } from './dislike.js'
@@ -52,7 +52,7 @@ const nodes = flatten({
 
 export default {
   observe({ client, events }) {
-    events.once(Context.STATE, () => {
+    events.once(PlayerEvent.STATE_UPDATED, () => {
       client.write('declare_commands', {
         nodes,
         rootIndex: 0,

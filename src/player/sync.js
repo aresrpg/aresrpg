@@ -5,7 +5,7 @@ import { aiter } from 'iterator-helper'
 
 import { chunk_position, chunk_index, same_chunk } from '../chunk.js'
 import { abortable } from '../iterator.js'
-import { Context, World } from '../events.js'
+import { PlayerEvent, WorldRequest } from '../events.js'
 
 function insert(array, value) {
   const nullIdx = array.indexOf(null)
@@ -42,10 +42,14 @@ export default {
       }
     }
 
-    client.once('end', () => world.events.off(World.PLAYER, on_player))
-    events.once(Context.STATE, () => world.events.on(World.PLAYER, on_player))
+    client.once('end', () =>
+      world.events.off(WorldRequest.ADD_PLAYER_TO_WORLD, on_player)
+    )
+    events.once(PlayerEvent.STATE_UPDATED, () =>
+      world.events.on(WorldRequest.ADD_PLAYER_TO_WORLD, on_player)
+    )
 
-    aiter(abortable(on(events, Context.STATE, { signal })))
+    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
       .map(([{ position }]) => position)
       .reduce((last_position, position) => {
         if (position !== last_position) {
@@ -53,7 +57,7 @@ export default {
           const chunk_z = chunk_position(position.z)
 
           world.events.emit(
-            World.CHUNK_POSITION(chunk_index(chunk_x, chunk_z)),
+            WorldRequest.CHUNK_POSITION_UPDATE(chunk_index(chunk_x, chunk_z)),
             {
               uuid: client.uuid,
               last_position,
@@ -66,7 +70,9 @@ export default {
             const last_chunk_z = chunk_position(last_position.z)
 
             world.events.emit(
-              World.CHUNK_POSITION(chunk_index(last_chunk_x, last_chunk_z)),
+              WorldRequest.CHUNK_POSITION_UPDATE(
+                chunk_index(last_chunk_x, last_chunk_z)
+              ),
               {
                 uuid: client.uuid,
                 last_position,
@@ -78,10 +84,16 @@ export default {
         return position
       })
 
-    events.on(Context.CHUNK_LOADED, ({ x, z, signal }) => {
+    events.on(PlayerEvent.CHUNK_LOADED, ({ x, z, signal }) => {
       aiter(
         abortable(
-          on(world.events, World.CHUNK_POSITION(chunk_index(x, z)), { signal })
+          on(
+            world.events,
+            WorldRequest.CHUNK_POSITION_UPDATE(chunk_index(x, z)),
+            {
+              signal,
+            }
+          )
         )
       )
         .map(([event]) => event)
