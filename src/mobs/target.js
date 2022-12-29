@@ -2,7 +2,7 @@ import { on } from 'events'
 
 import { aiter } from 'iterator-helper'
 
-import { MobAction, Mob, Context } from '../events.js'
+import { MobAction, MobEvent, PlayerEvent } from '../events.js'
 import { abortable } from '../iterator.js'
 
 export default {
@@ -18,22 +18,22 @@ export default {
   },
   /** @type {import('../context.js').Observer} */
   observe({ client, events }) {
-    events.on(Context.MOB_SPAWNED, ({ mob, signal }) => {
+    events.on(PlayerEvent.MOB_ENTER_VIEW, ({ mob, signal }) => {
       const send_position = ({ position }) =>
         mob.dispatch(MobAction.TARGET_POSITION, position)
 
-      aiter(abortable(on(mob.events, Mob.STATE, { signal }))).reduce(
-        (last_target, [{ target }]) => {
-          if (last_target !== target) {
-            if (target === client.uuid) events.on(Context.STATE, send_position)
+      aiter(
+        abortable(on(mob.events, MobEvent.STATE_UPDATED, { signal }))
+      ).reduce((last_target, [{ target }]) => {
+        if (last_target !== target) {
+          if (target === client.uuid)
+            events.on(PlayerEvent.STATE_UPDATED, send_position)
 
-            if (last_target === client.uuid)
-              events.off(Context.STATE, send_position)
-          }
-          return target
-        },
-        null
-      )
+          if (last_target === client.uuid)
+            events.off(PlayerEvent.STATE_UPDATED, send_position)
+        }
+        return target
+      }, null)
     })
   },
 }

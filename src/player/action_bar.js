@@ -4,7 +4,7 @@ import { setInterval } from 'timers/promises'
 import { aiter } from 'iterator-helper'
 
 import { Formats, to_hex, to_rgb } from '../chat.js'
-import { Context } from '../events.js'
+import { PlayerEvent } from '../events.js'
 import { abortable } from '../iterator.js'
 import {
   get_max_health,
@@ -67,7 +67,7 @@ export default {
         })
     })
 
-    aiter(abortable(on(events, Context.STATE, { signal }))).reduce(
+    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal }))).reduce(
       (
         { last_health, last_max_health, last_remaining_stats_point },
         [state]

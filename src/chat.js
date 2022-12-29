@@ -1,4 +1,4 @@
-import { World } from './events.js'
+import { WorldRequest } from './events.js'
 import { SERVER_UUID } from './settings.js'
 
 /**
@@ -90,5 +90,5 @@ export function world_chat_msg({ world, message, client: { uuid: sender } }) {
     position: Position.CHAT,
     sender,
   }
-  world.events.emit(World.CHAT, options)
+  world.events.emit(WorldRequest.SEND_CHAT_MESSAGE, options)
 }

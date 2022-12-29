@@ -2,7 +2,7 @@ import { on } from 'events'
 
 import { aiter } from 'iterator-helper'
 
-import { MobAction, Context, Mob } from '../events.js'
+import { MobAction, MobEvent, PlayerEvent } from '../events.js'
 import logger from '../logger.js'
 import { abortable } from '../iterator.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
@@ -19,7 +19,7 @@ const Mouse = {
 export default {
   /** @type {import('../mobs').MobsReducer} */
   reduce_mob(state, { type, payload }) {
-    if (type === MobAction.DEAL_DAMAGE) {
+    if (type === MobAction.RECEIVE_DAMAGE) {
       const { damage, damager } = payload
       const { last_hit = -1 } = state
       const now = Date.now()
@@ -49,7 +49,7 @@ export default {
         const { category } = Entities[mob?.type] ?? {}
         const state = get_state()
         if (state.health > 0 && mob && category !== 'npc') {
-          mob.dispatch(MobAction.DEAL_DAMAGE, {
+          mob.dispatch(MobAction.RECEIVE_DAMAGE, {
             damage: 1,
             damager: client.uuid,
           })
@@ -57,8 +57,8 @@ export default {
       }
     })
 
-    events.on(Context.MOB_SPAWNED, ({ mob, signal }) => {
-      aiter(abortable(on(mob.events, Mob.STATE, { signal })))
+    events.on(PlayerEvent.MOB_ENTER_VIEW, ({ mob, signal }) => {
+      aiter(abortable(on(mob.events, MobEvent.STATE_UPDATED, { signal })))
         .map(([{ health }]) => health)
         .reduce((last_health, health) => {
           if (last_health !== health) {
@@ -68,7 +68,7 @@ export default {
               entityId: entity_id,
               entityStatus: health > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
             })
-            events.emit(Context.MOB_DAMAGE, {
+            events.emit(PlayerEvent.MOB_DAMAGED, {
               mob,
               damage: last_health - health,
             })
@@ -90,7 +90,7 @@ export default {
             })
 
             if (health === 0) {
-              events.emit(Context.MOB_DEATH, { mob })
+              events.emit(PlayerEvent.MOB_DEATH, { mob })
             }
           }
           return health

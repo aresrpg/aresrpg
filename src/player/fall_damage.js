@@ -2,13 +2,13 @@ import { on } from 'events'
 
 import { aiter } from 'iterator-helper'
 
-import { Action, Context } from '../events.js'
+import { PlayerEvent, PlayerAction } from '../events.js'
 import { abortable } from '../iterator.js'
 
 export default {
   /** @type {import('../context.js').Observer} */
   observe({ events, dispatch, signal }) {
-    aiter(abortable(on(events, Context.STATE, { signal })))
+    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
       .map(
         ([
           {
@@ -27,7 +27,7 @@ export default {
             const raw_damage = fall_distance / 2 - 1.5
             const damage = Math.round(raw_damage * 2) / 2
 
-            if (damage > 0) dispatch(Action.DAMAGE, { damage })
+            if (damage > 0) dispatch(PlayerAction.RECEIVE_DAMAGE, { damage })
             return {
               highest_y: y,
               was_on_ground: true,
