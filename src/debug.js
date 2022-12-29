@@ -101,7 +101,7 @@ function start_debug_server() {
 
   app.listen({ port: 4242 }).then(address => {
     log.info(
-      `Arborist https://aresrpg-arborist.netlify.app/${encodeURIComponent(
+      `Arborist https://arborist.aresrpg.world/${encodeURIComponent(
         `${address}/behavior`
       )}`
     )

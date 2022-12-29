@@ -7,11 +7,11 @@ on:
 jobs:
   fast_forward_job:
     name: Fast Forward
-    if: github.event.issue.pull_request != '' && contains(github.event.comment.body, '/fast-forward')
+    if: github.event.issue.pull_request != '' && contains(github.event.comment.body, '/merge')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Fast Forward PR
