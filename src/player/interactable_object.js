@@ -48,30 +48,23 @@ export default {
     client.on('block_place', async ({ location }) => {
       const block = await get_block(world, location)
 
-      const handle_interactable = async ({
-        allow,
-        position,
-        message,
-        type,
-      }) => {
-        if (!allow) {
-          client_chat_msg({ client, message })
+      const handle_interactable = async ({ position, message, type }) => {
+        if (message) client_chat_msg({ client, message })
 
-          if (type === interactable_types.door) {
-            update_door(position).forEach(block => {
-              client.write('block_change', block)
-            })
-          } else {
-            client.write('block_change', {
-              location: position,
-              type: block.stateId,
-            })
-          }
+        if (type === interactable_types.door) {
+          update_door(position).forEach(block => {
+            client.write('block_change', block)
+          })
+        } else {
+          client.write('block_change', {
+            location,
+            type: block.stateId,
+          })
         }
       }
 
       const interacted_object = world.interactable_object.find(payload => {
-        const { position } = payload
+        const { position, type } = payload
 
         if (block.type === interactable_types.door) {
           // check if the upper block is interacted
@@ -87,9 +80,13 @@ export default {
 
         if (equal(position, location)) return payload
 
-        // NEED TO REMOVE
-        return payload
+        // NEED TO CHANGE
+        if (position === '*' && type === block.type) return payload
+
+        return undefined
       })
+
+      console.log(interacted_object)
 
       if (interacted_object) handle_interactable(interacted_object)
     })
