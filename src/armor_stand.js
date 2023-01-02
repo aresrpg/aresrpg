@@ -40,8 +40,8 @@ export function create_armor_stand(
     metadata: to_metadata('armor_stand', {
       entity_flags: { is_invisible: true },
       armor_stand_flags: { is_marker: true },
-      custom_name: JSON.stringify(display_name),
-      is_custom_name_visible: true,
+      custom_name: display_name && JSON.stringify(display_name),
+      is_custom_name_visible: !!display_name,
     }),
   }
 

@@ -4,6 +4,17 @@ export function is_inside({ min, max }, { x, y }) {
   return x >= min.x && x <= max.x && y >= min.y && y <= max.y
 }
 
+export function is_inside3d({ min, max }, { x, y, z }) {
+  return (
+    x >= min.x &&
+    x <= max.x &&
+    y >= min.y &&
+    y <= max.y &&
+    z >= min.z &&
+    z <= max.z
+  )
+}
+
 /**
  * Get the symmetric difference of two squares of the same size
  *

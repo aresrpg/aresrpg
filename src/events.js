@@ -64,6 +64,20 @@ export const MobEvent = {
   STATE_UPDATED: 'MOB:EVENT:STATE_UPDATED',
 }
 
+export const Platform = {
+  /** a platform state has been updated */
+  STATE_UPDATED: 'PLATFORM:EVENT:STATE_UPDATED',
+}
+
+export const PlatformAction = {
+  /** a platform is moving up or down */
+  MOVE: 'PLATFORM:ACTION:MOVE',
+  /** a player is entering the platform */
+  PLAYER_ENTER_PLATFORM: 'PLATFORM:ACTION:PLAYER_ENTER_PLATFORM',
+  /** a player is leaving the platform */
+  PLAYER_LEAVE_PLATFORM: 'PLATFORM:ACTION:PLAYER_LEAVE_PLATFORM',
+}
+
 export const WorldRequest = {
   /** a new player joined the world */
   ADD_PLAYER_TO_WORLD: 'WORLD:ADD_PLAYER_TO_WORLD',
