@@ -22,17 +22,20 @@ export function write_action_bar({ client, text }) {
 
 /**
  * Send a title to a client, all times are in seconds
- * @param {{ client: any, title?: any, subtitle?: any, times?: any }} arg
+ * @param {{ client: any, title?: any, subtitle?: any, times?: any, force_reset?: boolean }} arg
  */
 export function write_title({
   client,
   title = empty_component,
   subtitle = empty_component,
   times,
+  force_reset = true,
 }) {
-  client.write('title', {
-    action: Actions.RESET_TITLE,
-  })
+  if (force_reset) {
+    client.write('title', {
+      action: Actions.RESET_TITLE,
+    })
+  }
   client.write('title', {
     action: Actions.SET_TITLE,
     text: JSON.stringify(title),

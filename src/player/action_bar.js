@@ -57,7 +57,7 @@ export default {
   observe({ client, get_state, world, events, signal }) {
     aiter(abortable(setInterval(2000, null, { signal }))).forEach(() => {
       const state = get_state()
-      if (state)
+      if (state && !state.class_selection_open)
         update_action_bar({
           client,
           health: state.health,
@@ -83,7 +83,10 @@ export default {
         const stats_points_changed =
           last_remaining_stats_point !== remaining_stats_point
 
-        if (health_changed || max_health_changed || stats_points_changed)
+        if (
+          !state.class_selection_open &&
+          (health_changed || max_health_changed || stats_points_changed)
+        )
           update_action_bar({
             client,
             health,

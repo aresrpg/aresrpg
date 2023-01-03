@@ -24,6 +24,10 @@ export const PlayerAction = {
   SWITCH_GAMEMODE: 'PLAYER:ACTION:SWITCH_GAMEMODE',
   /** the player should receive experience */
   RECEIVE_EXPERIENCE: 'PLAYER:ACTION:RECEIVE_EXPERIENCE',
+  /** open the class selection menu */
+  OPEN_CLASS_SELECTION: 'PLAYER:ACTION:OPEN_CLASS_SELECTION',
+  /** open the class selection menu */
+  SELECT_CLASS: 'PLAYER:ACTION:SELECT_CLASS',
 }
 
 export const PlayerEvent = {
