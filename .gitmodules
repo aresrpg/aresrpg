@@ -1,6 +1,7 @@
 [submodule "world/floor1"]
 	path = world/floor1
 	url = ../../aresrpg/floor1.git
+	branch = interactable_object
 [submodule "data"]
 	path = data
 	url = ../../aresrpg/data.git
