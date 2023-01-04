@@ -36,7 +36,7 @@ function slot_to_chat({ nbtData, itemCount, itemId }) {
 }
 
 function emote_to_chat(emote) {
-  const emote_name = `${emote.split(':')[1]}`
+  const emote_name = emote.slice(1, -1)
 
   if (!emotes.includes(emote_name)) {
     return { text: emote }
@@ -94,7 +94,7 @@ export default {
         }
         return chat
       },
-      [/:.*:/.source]: emote => emote_to_chat(emote.match(/.*/)[0]), // all emotes name are between ":"
+      [/:.*:/.source]: emote_to_chat, // all emotes name are between ":"
     }
 
     client.on('chat', ({ message }) => {
