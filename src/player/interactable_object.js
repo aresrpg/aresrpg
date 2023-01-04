@@ -43,8 +43,7 @@ function update_door(position) {
  */
 export default {
   /** @type {import('../context.js').Observer} */
-  observe(context) {
-    const { client, world } = context
+  observe({ client, world }) {
     client.on('block_place', async ({ location }) => {
       const block = await get_block(world, location)
 
@@ -85,8 +84,6 @@ export default {
 
         return undefined
       })
-
-      console.log(interacted_object)
 
       if (interacted_object) handle_interactable(interacted_object)
     })

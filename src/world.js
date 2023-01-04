@@ -5,6 +5,7 @@ import Entities from '../data/entities.json' assert { type: 'json' }
 import mobs from '../world/floor1/mobs.json' assert { type: 'json' }
 import traders from '../world/floor1/traders.json' assert { type: 'json' }
 import teleportation_stones from '../world/floor1/teleportation_stones.json' assert { type: 'json' }
+import interactable_object from '../world/floor1/interactable_object.json' assert { type: 'json' }
 
 import logger from './logger.js'
 import { chunks } from './chunk.js'
@@ -24,27 +25,10 @@ const missing_entities = [
 export const floor1 = {
   spawn_position: { x: 469.5, y: 162, z: 646.5, yaw: 25, pitch: 0 },
   chunks: chunks(join(world_folder, 'floor1', 'region')),
-  mob_positions: JSON.parse(
-    fs.readFileSync(join(world_folder, 'floor1', 'mobs.json'), 'utf8')
-  ),
-  traders: JSON.parse(
-    fs.readFileSync(join(world_folder, 'floor1', 'traders.json'), 'utf8')
-  ),
-  teleportation_stones: JSON.parse(
-    fs.readFileSync(
-      join(world_folder, 'floor1', 'teleportation_stones.json'),
-      'utf8'
-    )
-  ),
-  interactable_object: JSON.parse(
-    fs.readFileSync(
-      join(world_folder, 'floor1', 'interactable_object.json'),
-      'utf8'
-    )
-  ),
   mob_positions: mobs.filter(({ type }) => Entities[type]),
   traders,
   teleportation_stones,
+  interactable_object,
 }
 
 log.info(
