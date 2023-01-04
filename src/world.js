@@ -1,6 +1,10 @@
-import fs from 'fs'
 import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
+
+import Entities from '../data/entities.json' assert { type: 'json' }
+import mobs from '../world/floor1/mobs.json' assert { type: 'json' }
+import traders from '../world/floor1/traders.json' assert { type: 'json' }
+import teleportation_stones from '../world/floor1/teleportation_stones.json' assert { type: 'json' }
 
 import logger from './logger.js'
 import { chunks } from './chunk.js'
@@ -12,6 +16,10 @@ const world_folder = join(
   '..',
   'world'
 )
+
+const missing_entities = [
+  ...new Set(mobs.map(({ type }) => type).filter(type => !Entities[type])),
+]
 
 export const floor1 = {
   spawn_position: { x: 469.5, y: 162, z: 646.5, yaw: 25, pitch: 0 },
@@ -34,6 +42,9 @@ export const floor1 = {
       'utf8'
     )
   ),
+  mob_positions: mobs.filter(({ type }) => Entities[type]),
+  traders,
+  teleportation_stones,
 }
 
 log.info(
@@ -42,6 +53,7 @@ log.info(
     mobs: floor1.mob_positions.length,
     teleportation_stones: floor1.teleportation_stones.length,
     interactable_object: floor1.interactable_object.length,
+    missing_entities,
   },
   'World loaded'
 )

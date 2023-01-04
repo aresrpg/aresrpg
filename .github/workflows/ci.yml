@@ -7,16 +7,32 @@ on:
   pull_request:
 
 jobs:
-  test:
+  lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v3
         with:
-          node-version: 17
+          submodules: 'recursive'
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 19
           cache: 'npm'
       - run: npm ci
       - run: npm run lint
+        env:
+          CI: true
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 19
+          cache: 'npm'
+      - run: npm i
+      - run: npm test
         env:
           CI: true
 

@@ -1,4 +1,4 @@
-import { Context, World } from '../events.js'
+import { PlayerEvent, WorldRequest } from '../events.js'
 
 export default {
   observe({ world, client, events, get_state }) {
@@ -20,25 +20,25 @@ export default {
 
     const on_player = info => {
       // Add player to tab list
-      world.events.emit(World.ADD_PLAYER(client.uuid), info)
+      world.events.emit(WorldRequest.NOTIFY_PRESENCE_TO(client.uuid), info)
       if (info.UUID !== client.uuid) {
         // Send my info to new player
         world.events.emit(
-          World.ADD_PLAYER(info.UUID),
+          WorldRequest.NOTIFY_PRESENCE_TO(info.UUID),
           player_info(get_state().position)
         )
       }
     }
 
     client.once('end', () => {
-      world.events.off(World.ADD_PLAYER(client.uuid), add_player)
-      world.events.off(World.PLAYER, on_player)
+      world.events.off(WorldRequest.NOTIFY_PRESENCE_TO(client.uuid), add_player)
+      world.events.off(WorldRequest.ADD_PLAYER_TO_WORLD, on_player)
     })
 
-    events.once(Context.STATE, ({ position }) => {
-      world.events.on(World.ADD_PLAYER(client.uuid), add_player)
-      world.events.on(World.PLAYER, on_player)
-      world.events.emit(World.PLAYER, player_info(position))
+    events.once(PlayerEvent.STATE_UPDATED, ({ position }) => {
+      world.events.on(WorldRequest.NOTIFY_PRESENCE_TO(client.uuid), add_player)
+      world.events.on(WorldRequest.ADD_PLAYER_TO_WORLD, on_player)
+      world.events.emit(WorldRequest.ADD_PLAYER_TO_WORLD, player_info(position))
     })
   },
 }

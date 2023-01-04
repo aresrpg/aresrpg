@@ -3,7 +3,7 @@ import minecraftData from 'minecraft-data'
 
 import { VERSION } from '../settings.js'
 import { chunk_position } from '../chunk.js'
-import { Action, Context } from '../events.js'
+import { PlayerEvent, PlayerAction } from '../events.js'
 import { empty_slot, item_to_slot } from '../items.js'
 import items from '../../data/items.json' assert { type: 'json' }
 import { create_armor_stand } from '../armor_stand.js'
@@ -226,7 +226,7 @@ function on_window_click({ world, client, dispatch, get_state }) {
         if (available_teleportations_stones[slot]) {
           client.write('close_window', { windowId })
           dispatch(
-            Action.TELEPORT,
+            PlayerAction.TELEPORT_TO,
             available_teleportations_stones[slot].position
           )
         }
@@ -258,7 +258,7 @@ export function register(world) {
       world.next_entity_id +
       world.teleportation_stones.length * lines.length * 2,
     next_window_id: world.next_window_id + world.teleportation_stones.length,
-    /** @type {TeleportationStone} */
+    /** @type {TeleportationStone[]} */
     teleportation_stones: world.teleportation_stones.map(
       (stone, stone_index) => ({
         ...stone,
@@ -276,8 +276,8 @@ export default {
   /** @type {import('../context.js').Observer} */
   observe(context) {
     const { events, client } = context
-    events.on(Context.CHUNK_LOADED, on_chunk_loaded(context))
-    events.on(Context.CHUNK_UNLOADED, on_chunk_unloaded(context))
+    events.on(PlayerEvent.CHUNK_LOADED, on_chunk_loaded(context))
+    events.on(PlayerEvent.CHUNK_UNLOADED, on_chunk_unloaded(context))
 
     client.on('use_entity', on_use_entity(context))
     client.on('window_click', on_window_click(context))

@@ -1,13 +1,9 @@
+<p align=center>
+  <img src="https://user-images.githubusercontent.com/11330271/208825167-77d7bc78-17d0-4f33-ad35-d108b6fac730.gif" height="237px" width="344"/>
+</p>
 <h1 align=center>AresRPG</h1>
 <p align=center>
-  <img src="media/logo.png" />
-</p>
-<p align=center>
-  <a href="https://hydre.io">
-    <img src="https://raw.githubusercontent.com/HydreIO/artwork/master/badge/hydre.svg" alt="hydre.io"/>
-  </a>
   <img src="https://img.shields.io/badge/Made%20with-Javascript-%23f7df1e?style=for-the-badge" alt="fully in javascript"/>
-  <img src="https://img.shields.io/badge/Built%20With-%E2%99%A5-pink?style=for-the-badge" alt="built with muscles"/>
   <img src="https://img.shields.io/badge/Powered%20By-Black%20Magic-blueviolet?style=for-the-badge" alt="powered by lsd"/>
   <a href="CONTRIBUTING.md">
     <img src="https://img.shields.io/badge/contributions-welcome-blue.svg?style=for-the-badge" alt="Contributions welcome"/>
@@ -28,8 +24,9 @@
   - [Install](#install)
   - [Usage](#usage)
     - [Enable data persistence](#enable-data-persistence)
+  - [Test](#test)
   - [Contributing](#contributing)
-  - [Roadmap](#roadmap)
+    - [where to start](#where-to-start)
   - [License](#license)
 
 # A _bit_ of history
@@ -63,13 +60,13 @@ This version made AresRPG [quite famous](https://www.youtube.com/watch?v=dEELCqY
 
 ## The `v2`
 
-The V2 is [an unreleased version](https://www.youtube.com/watch?v=LkzGcEcBP1Q) of AresRPG,
+The V2 is (and will stay) [an unreleased version](https://www.youtube.com/watch?v=LkzGcEcBP1Q) of AresRPG,
 the goal of this version was to have a procedural open-world instead
 of a floor system and more classes than the v1, with an overall gameplay upgrade.
 
 # Requirements
 
-- NodeJS >= 16
+- NodeJS `>= 19`
 - npm
 
 ## Install
@@ -81,6 +78,19 @@ $ git submodule update --init
 $ npm install
 ```
 
+If you have access to AresRPG's proprietary data, you can run
+
+```
+git -C data remote add -f private git@github.com:aresrpg/data-closed.git
+git -C data checkout private/master
+```
+
+For mac M1 users you may [have problems](https://github.com/Automattic/node-canvas/issues/1733) while installing `node-canvas`
+
+```
+arch -arm64 brew install pkg-config cairo pango libpng jpeg giflib librsvg
+```
+
 ## Usage
 
 ```bash
@@ -88,6 +98,9 @@ $ npm start
 
 # Start with packet logging
 $ DEBUG="minecraft-protocol*" npm start
+
+# Start with debug server
+$ DEBUG_SERVER="true" npm start
 ```
 
 ### Enable data persistence
@@ -99,16 +112,36 @@ $ docker-compose up
 $ USE_PERSISTENT_STORAGE="true" npm start
 ```
 
+## Test
+
+```bash
+npm test
+```
+
+> The reporter [doesn't support errors yet](https://github.com/tapjs/tap-mocha-reporter/issues/72)
+> so to have a detailed version of you stacktrace just run `node --test`
+
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md)
+> AresRPG is an open-source project, which means that anyone is welcome to participate in the design of the server and in particular its code.
 
-## Roadmap
+AresRPG is written entirely in JavaScript, and you will need a significant level of experience to really help the server. Although we welcome all contributions, it is important to know that the senior developers of the project will invest time in reviewing your code, make sure to come up with clean, readable, and functional code before submitting a Pull Request.
 
-- Reimplement AresRPG v1:
-  - TODO
-- Develop AresRPG v2:
-  - TODO
+The commit history should also be clean in an understandable way.
+Issues, code, documentations and any type of text should be written in English only
+
+### where to start
+
+- Read [CONTRIBUTING.md](CONTRIBUTING.md)
+- We use the [Prismarine protocol library](https://github.com/PrismarineJS/node-minecraft-protocol)
+- Find packets informations on [prismarine.js.org](https://minecraft-data.prismarine.js.org/?d=protocol&v=1.16.4)
+- A more verbose description of the packets can be found on [wiki.vg](https://wiki.vg/Protocol)
+- [Burger datas](https://pokechu22.github.io/Burger/1.16.5.html)
+- More global informations (NBT, etc) can be found on [Minecraft fandom](https://minecraft.fandom.com/wiki/Java_Edition)
+
+Start by forking the repo and run it locally, then try to modify or implement simple little things to learn about the state system and how to observe packets/actions.
+
+Once you feel ready, go to the [issues](https://github.com/aresrpg/aresrpg/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc) and open your first PR.
 
 ## License
 

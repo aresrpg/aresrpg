@@ -24,7 +24,7 @@ export function literal({ value, flags = {}, children = [] }) {
       command_node_type: CommandNodeTypes.LITERAL,
       ...flags,
     },
-    extraNodeData: value,
+    extraNodeData: { name: value },
     children,
   }
 }

@@ -5,8 +5,11 @@ import { aiter } from 'iterator-helper'
 import { empty_slot, item_to_slot } from '../items.js'
 import { PLAYER_INVENTORY_ID } from '../settings.js'
 import { abortable } from '../iterator.js'
-import { Action, Context } from '../events.js'
+import { PlayerEvent, PlayerAction } from '../events.js'
 import items from '../../data/items.json' assert { type: 'json' }
+import logger from '../logger.js'
+
+const log = logger(import.meta)
 
 const FORBIDDEN_SLOTS = [
   0, // Craft Output
@@ -19,8 +22,16 @@ const FORBIDDEN_SLOTS = [
 export const USABLE_INVENTORY_START = 9
 export const USABLE_INVENTORY_END = 44
 
-const to_slot = item =>
-  item ? item_to_slot(items[item.type], item.count) : empty_slot
+const to_slot = item => {
+  const item_definition = items[item?.type]
+  if (!item_definition) {
+    // in case the item is provided but no match was found in item.js
+    // we log the problem
+    if (item) log.warn(item, 'Tried to spawn an unexisting item, ignoring..')
+    return empty_slot
+  }
+  return item_to_slot(item_definition, item.count)
+}
 
 const BlockDigStatus = {
   STARTED_DIGGING: 0,
@@ -78,7 +89,7 @@ export default {
           }
         }
       }
-    } else if (type === Action.RESYNC_INVENTORY)
+    } else if (type === PlayerAction.RESYNC_INVENTORY)
       return {
         ...state,
         inventory_sequence_number: state.inventory_sequence_number + 1,
@@ -87,7 +98,7 @@ export default {
   },
   /** @type {import('../context.js').Observer} */
   observe({ client, events, world, get_state, signal }) {
-    aiter(abortable(on(events, Context.STATE, { signal }))).reduce(
+    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal }))).reduce(
       (
         last_sequence_number,
         [{ inventory, inventory_cursor, inventory_sequence_number }]

@@ -5,7 +5,7 @@ import UUID from 'uuid-1345'
 import minecraftData from 'minecraft-data'
 import Nbt from 'prismarine-nbt'
 
-import { Context, Action } from '../events.js'
+import { PlayerEvent, PlayerAction } from '../events.js'
 import { abortable } from '../iterator.js'
 import { write_title } from '../title.js'
 import { play_sound } from '../sound.js'
@@ -167,7 +167,7 @@ export function level_progress({ level, remaining_experience }) {
 export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
-    if (type === Action.ADD_EXPERIENCE) {
+    if (type === PlayerAction.RECEIVE_EXPERIENCE) {
       const { experience } = payload
       const { level: last_level } = experience_to_level(state.experience)
       const { level } = experience_to_level(state.experience + experience)
@@ -189,7 +189,7 @@ export default {
 
   /** @type {import('../context.js').Observer} */
   observe({ client, events, signal, world, dispatch }) {
-    aiter(abortable(on(events, Context.STATE, { signal }))).reduce(
+    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal }))).reduce(
       (last_total_experience, [{ experience: total_experience, position }]) => {
         if (last_total_experience !== total_experience) {
           const { level, remaining_experience } =
@@ -358,9 +358,9 @@ export default {
       },
       null
     )
-    events.on(Context.MOB_DEATH, ({ mob }) => {
+    events.on(PlayerEvent.MOB_DEATH, ({ mob }) => {
       const { xp } = Entities[mob.type]
-      dispatch(Action.ADD_EXPERIENCE, { experience: +xp })
+      dispatch(PlayerAction.RECEIVE_EXPERIENCE, { experience: +xp })
     })
   },
 }

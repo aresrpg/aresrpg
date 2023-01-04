@@ -4,7 +4,7 @@ import { setInterval } from 'timers/promises'
 import { aiter } from 'iterator-helper'
 import combineAsyncIterators from 'combine-async-iterators'
 
-import { Action, Context } from '../events.js'
+import { PlayerAction, PlayerEvent } from '../events.js'
 import { create_armor_stand } from '../armor_stand.js'
 import logger from '../logger.js'
 import { GameMode } from '../gamemode.js'
@@ -28,7 +28,10 @@ export function register({ next_entity_id, ...world }) {
 export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
-    if (type === Action.DAMAGE && state.game_mode !== GameMode.CREATIVE) {
+    if (
+      type === PlayerAction.RECEIVE_DAMAGE &&
+      state.game_mode !== GameMode.CREATIVE
+    ) {
       const { damage } = payload
       const health = Math.max(0, state.health - damage)
 
@@ -48,8 +51,8 @@ export default {
       abortable(
         // @ts-ignore
         combineAsyncIterators(
-          on(events, Context.MOB_DAMAGE, { signal }),
-          on(events, Context.MOB_DEATH, { signal }),
+          on(events, PlayerEvent.MOB_DAMAGED, { signal }),
+          on(events, PlayerEvent.MOB_DEATH, { signal }),
           setInterval(DAMAGE_INDICATOR_TTL / 2, [{ timer: true }], { signal })
         )
       )

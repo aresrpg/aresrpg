@@ -10,6 +10,8 @@ import Entities from '../data/entities.json' assert { type: 'json' }
 import logger from './logger.js'
 import { trees } from './mobs/behavior_tree.js'
 import { SUCCESS, FAILURE, RUNNING } from './behavior.js'
+import { world as server_world } from './context.js'
+import { DEBUG_SERVER } from './settings.js'
 
 const log = logger(import.meta)
 
@@ -21,7 +23,7 @@ function behavior({ world, app }) {
 
   const behavior_trees = Object.entries(trees).map(([type, tree]) => ({
     id: type,
-    name: Entities[type].displayName,
+    name: Entities[type].display_name,
     tree: serializer.serializeToString(tree),
     instances: world.mobs.all
       .filter(mob => mob.type === type)
@@ -90,7 +92,7 @@ function behavior({ world, app }) {
   }
 }
 
-export default function start_debug_server({ world }) {
+function start_debug_server() {
   const app = fastify({ logger: log })
 
   app.register(cors, {
@@ -99,13 +101,21 @@ export default function start_debug_server({ world }) {
 
   app.listen({ port: 4242 }).then(address => {
     log.info(
-      `Arborist https://aresrpg-arborist.netlify.app/${encodeURIComponent(
+      `Arborist https://arborist.aresrpg.world/${encodeURIComponent(
         `${address}/behavior`
       )}`
     )
   })
 
   return {
-    behavior: behavior({ world, app }),
+    behavior: behavior({ world: server_world, app }),
+    app,
   }
 }
+
+export default DEBUG_SERVER
+  ? start_debug_server()
+  : {
+      behavior: null,
+      app: null,
+    }

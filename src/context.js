@@ -4,7 +4,7 @@ import { PassThrough } from 'stream'
 import { aiter } from 'iterator-helper'
 import combineAsyncIterators from 'combine-async-iterators'
 
-import { last_event_value, Context } from './events.js'
+import { last_event_value, PlayerEvent } from './events.js'
 import { floor1 } from './world.js'
 import logger from './logger.js'
 import player_login from './player/login.js'
@@ -27,6 +27,7 @@ import player_respawn from './player/respawn.js'
 import player_bossbar from './player/boss_bar.js'
 import player_action_bar from './player/action_bar.js'
 import player_heartbeat from './player/heartbeat.js'
+import player_bells from './player/bells.js'
 import player_traders, {
   register as register_player_traders,
 } from './player/traders.js'
@@ -50,9 +51,7 @@ import plugin_channels from './plugin_channels.js'
 import chunk_update from './chunk/update.js'
 import { register as register_mobs } from './mobs.js'
 import mobs_dialog from './mobs/dialog.js'
-import mobs_position_factory, {
-  register as register_mobs_position,
-} from './mobs/position.js'
+import { register as register_mobs_position } from './mobs/position.js'
 import mobs_spawn from './mobs/spawn.js'
 import mobs_movements from './mobs/movements.js'
 import mobs_damage from './mobs/damage.js'
@@ -64,9 +63,6 @@ import mobs_loot from './mobs/loot.js'
 import mobs_attack from './mobs/attack.js'
 import mobs_sound from './mobs/sound.js'
 import commands_declare from './commands/declare.js'
-import start_debug_server from './debug.js'
-import blockchain from './blockchain.js'
-import observe_performance from './performance.js'
 import { abortable } from './iterator.js'
 import Database from './database.js'
 import { USE_RESSOURCE_PACK } from './settings.js'
@@ -76,6 +72,8 @@ const log = logger(import.meta)
 
 const initial_world = {
   ...floor1,
+  // this eventEmitter is there to init typings
+  // but it is replaced while creating a new server in server.js
   /** @type {NodeJS.EventEmitter} */
   events: new EventEmitter(),
   next_entity_id: 1,
@@ -96,7 +94,7 @@ const world_reducers = [
   register_player_item_loot,
 ]
 
-const world = /** @type {World} */ (
+export const world = /** @type {World} */ (
   world_reducers.reduce(
     (world, fn) => fn(world),
     /** @type {any} */ (initial_world)
@@ -105,14 +103,11 @@ const world = /** @type {World} */ (
 
 const initial_state = {
   nickname: undefined,
-  position: world.spawn_position,
+  position: floor1.spawn_position,
   teleport: null,
   view_distance: 0,
   inventory: Array.from({
     length: 46,
-    36: { type: 'spellbook', count: 1 },
-    37: { type: 'bronze_coin', count: 10 },
-    38: { type: 'menitrass_100', count: 1 },
   }),
   looted_items: {
     pool: Array.from({ length: ITEM_LOOT_MAX_COUNT }),
@@ -127,29 +122,12 @@ const initial_state = {
   health: 40,
   // player's energy, losing after each death
   soul: 100,
-
+  // player's money
+  kares: 0,
   // last time the player joined,
   // can be used for example to calcule regenerated soul while offline
   last_connection_time: undefined,
   last_disconnection_time: undefined,
-  enjin: {
-    // an idendity represent a single ETH address
-    // if it stays undefined then their may be probleme with account creation
-    // and the user should not be allowed to interract with Enjin
-    identity_id: undefined,
-    // code used to link and identity to an ETH address
-    wallet_linking_code: undefined,
-    // an user that didn't linked his ETH wallet can't claim real tokens
-    wallet_linked: false,
-    // the ETH address (after link)
-    wallet_address: undefined,
-    // the amount of coin stored on the wallet
-    // when the wallet is linked we override this value
-    // otherwise we use the last saved value (in DB)
-    kares: 0,
-    // all others NFTs (a future PR on items implementation would precise this field)
-    items: [],
-  },
 }
 
 // Add here all fields that you want to save in the database
@@ -163,7 +141,6 @@ const saved_state = ({
   health,
   soul,
   last_disconnection_time,
-  enjin,
 }) => ({
   nickname,
   position,
@@ -174,7 +151,6 @@ const saved_state = ({
   health,
   soul,
   last_disconnection_time,
-  enjin,
 })
 
 /** @template U
@@ -213,7 +189,6 @@ function reduce_state(state, action) {
     player_soul.reduce,
     player_health.reduce,
     player_experience.reduce,
-    blockchain.reduce,
     chunk_update.reduce,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
 }
@@ -226,78 +201,72 @@ function transform_action(action) {
   ].reduce((intermediate, fn) => fn(intermediate), action)
 }
 
-const mobs_position = mobs_position_factory(world)
+export function observe_client({ mobs_position }) {
+  /** @type Observer */
+  return async context => {
+    /* Observers that handle the protocol part.
+     * They get the client and should map it to minecraft protocol */
 
-/** @type Observer */
-export async function observe_client(context) {
-  /* Observers that handle the protocol part.
-   * They get the client and should map it to minecraft protocol */
+    finalization.observe(context)
 
-  finalization.observe(context)
+    if (USE_RESSOURCE_PACK) await player_resource_pack.observe(context)
 
-  if (USE_RESSOURCE_PACK) await player_resource_pack.observe(context)
+    // login has to stay on top
+    player_login.observe(context)
 
-  // this is also an asynchrone observer initialization
-  // but i think it's fine to let it run alone without waiting for it
-  // not awaiting will enhance the UX, but we may have to restrict some actions
-  // until all datas are fully loaded from the blockchain
-  blockchain.observe(context)
+    player_attributes.observe(context)
+    player_experience.observe(context)
+    player_traders.observe(context)
+    player_statistics.observe(context)
+    player_fall_damage.observe(context)
+    player_health.observe(context)
+    player_attributes.observe(context)
+    player_chat.observe(context)
+    player_deal_damage.observe(context)
+    player_inventory.observe(context)
+    player_teleportation_stones.observe(context)
+    player_tablist.observe(context)
+    player_sync.observe(context)
+    player_action_bar.observe(context)
+    player_scoreboard.observe(context)
+    player_block_place.observe(context)
+    player_item_loot.observe(context)
+    player_soul.observe(context)
+    player_bossbar.observe(context)
+    player_respawn.observe(context)
+    player_heartbeat.observe(context)
+    player_bells.observe(context)
+    player_interactable_object.observe(context)
 
-  // login has to stay on top
-  player_login.observe(context)
+    commands_declare.observe(context)
 
-  player_attributes.observe(context)
-  player_experience.observe(context)
-  player_traders.observe(context)
-  player_statistics.observe(context)
-  player_fall_damage.observe(context)
-  player_health.observe(context)
-  player_attributes.observe(context)
-  player_chat.observe(context)
-  player_deal_damage.observe(context)
-  player_inventory.observe(context)
-  player_teleportation_stones.observe(context)
-  player_tablist.observe(context)
-  player_sync.observe(context)
-  player_action_bar.observe(context)
-  player_scoreboard.observe(context)
-  player_block_place.observe(context)
-  player_item_loot.observe(context)
-  player_soul.observe(context)
-  player_bossbar.observe(context)
-  player_respawn.observe(context)
-  player_heartbeat.observe(context)
-  player_interactable_object.observe(context)
+    mobs_position.observe(context)
+    mobs_spawn.observe(context)
+    mobs_movements.observe(context)
+    mobs_goto.observe(context)
+    mobs_dialog.observe(context)
+    mobs_damage.observe(context)
+    mobs_target.observe(context)
+    mobs_look_at.observe(context)
+    mobs_wakeup.observe(context)
+    mobs_loot.observe(context)
+    mobs_attack.observe(context)
+    mobs_sound.observe(context)
 
-  commands_declare.observe(context)
-
-  mobs_position.observe(context)
-  mobs_spawn.observe(context)
-  mobs_movements.observe(context)
-  mobs_goto.observe(context)
-  mobs_dialog.observe(context)
-  mobs_damage.observe(context)
-  mobs_target.observe(context)
-  mobs_look_at.observe(context)
-  mobs_wakeup.observe(context)
-  mobs_loot.observe(context)
-  mobs_attack.observe(context)
-  mobs_sound.observe(context)
-
-  chunk_update.observe(context)
+    chunk_update.observe(context)
+  }
 }
 
 /**
- * The following code handle the pipeline, it works as following
+ * The following code handle the pipeline, it works as described below
  *
  * state = initial_state
  * on packets + on actions
  *   |> transform_action
  *   |> (state = reduce_state(state))
  *
- * @param {import('minecraft-protocol').Client} client
  */
-export async function create_context(client) {
+export async function create_context({ client, world }) {
   log.info(
     {
       username: client.username,
@@ -308,7 +277,10 @@ export async function create_context(client) {
   )
 
   const controller = new AbortController()
-  const actions = new PassThrough({ objectMode: true })
+  const actions = new PassThrough({
+    objectMode: true,
+    signal: controller.signal,
+  })
 
   client.once('end', () => {
     log.info(
@@ -323,7 +295,7 @@ export async function create_context(client) {
   client.on('error', error => log.error(error, 'Client error'))
 
   const packets = aiter(
-    abortable(on(client, 'packet', { signal: controller.signal }))
+    on(client, 'packet', { signal: controller.signal })
   ).map(([payload, { name }]) => ({
     type: `packet/${name}`,
     payload,
@@ -344,12 +316,14 @@ export async function create_context(client) {
   const events = new EventEmitter()
   const player_state = await Database.pull(client.uuid.toLowerCase())
 
-  aiter(combineAsyncIterators(actions[Symbol.asyncIterator](), packets))
+  aiter(
+    abortable(combineAsyncIterators(actions[Symbol.asyncIterator](), packets))
+  )
     .map(transform_action)
     .reduce(
       (last_state, action) => {
         const state = reduce_state(last_state, action)
-        events.emit(Context.STATE, state)
+        events.emit(PlayerEvent.STATE_UPDATED, state)
         return state
       },
       // default nickname is the client username, and is overriden by the loaded player state
@@ -370,7 +344,7 @@ export async function create_context(client) {
       log.error(error, 'State error')
     })
 
-  const get_state = last_event_value(events, Context.STATE)
+  const get_state = last_event_value(events, PlayerEvent.STATE_UPDATED)
 
   return {
     client,
@@ -384,6 +358,3 @@ export async function create_context(client) {
     },
   }
 }
-
-observe_performance()
-export const debug = start_debug_server({ world })

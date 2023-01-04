@@ -6,7 +6,7 @@ import logger from '../logger.js'
 import execute_command from '../commands/commands.js'
 import { VERSION } from '../settings.js'
 import { world_chat_msg } from '../chat.js'
-import { World } from '../events.js'
+import { WorldRequest } from '../events.js'
 import items from '../../data/items.json' assert { type: 'json' }
 
 import { closest_stone } from './teleportation_stones.js'
@@ -113,12 +113,12 @@ export default {
       if (receiver_username === client.username) client.write('chat', options)
     }
 
-    world.events.on(World.CHAT, on_chat)
-    world.events.on(World.PRIVATE_MESSAGE, on_private_message)
+    world.events.on(WorldRequest.SEND_CHAT_MESSAGE, on_chat)
+    world.events.on(WorldRequest.PRIVATE_MESSAGE, on_private_message)
 
     client.once('end', () => {
-      world.events.off(World.CHAT, on_chat)
-      world.events.off(World.PRIVATE_MESSAGE, on_private_message)
+      world.events.off(WorldRequest.SEND_CHAT_MESSAGE, on_chat)
+      world.events.off(WorldRequest.PRIVATE_MESSAGE, on_private_message)
     })
   },
 }

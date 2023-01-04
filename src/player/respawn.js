@@ -4,7 +4,7 @@ import { setInterval } from 'timers/promises'
 import { aiter } from 'iterator-helper'
 
 import { overworld } from '../world/codec.js'
-import { Action, Context } from '../events.js'
+import { PlayerEvent, PlayerAction } from '../events.js'
 import { abortable } from '../iterator.js'
 import logger from '../logger.js'
 import { GameMode } from '../gamemode.js'
@@ -23,7 +23,7 @@ const BLINDNESS = 15
 export default {
   /** @type {import('../context.js').Observer} */
   observe({ client, events, signal, dispatch, get_state }) {
-    aiter(abortable(on(events, Context.STATE, { signal })))
+    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
       .map(([{ health, game_mode }]) => ({
         health,
         game_mode,
@@ -63,7 +63,9 @@ export default {
 
                 const state = get_state()
 
-                dispatch(Action.HEALTH, { health: get_max_health(state) })
+                dispatch(PlayerAction.UPDATE_HEALTH, {
+                  health: get_max_health(state),
+                })
                 write_inventory({ client, inventory: state.inventory })
 
                 client.write('entity_update_attributes', {

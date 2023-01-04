@@ -63,6 +63,9 @@ export const overworld = {
   },
 }
 
+/** @type {any} */
+const { dimensionCodec } = loginPacket
+
 export const dimension_codec = {
   type: 'compound',
   name: '',
@@ -96,6 +99,6 @@ export const dimension_codec = {
       },
     },
     'minecraft:worldgen/biome':
-      loginPacket.dimensionCodec.value['minecraft:worldgen/biome'],
+      dimensionCodec.value['minecraft:worldgen/biome'],
   },
 }

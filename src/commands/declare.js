@@ -1,4 +1,4 @@
-import { Context } from '../events.js'
+import { PlayerEvent } from '../events.js'
 
 import { gamemode_nodes } from './gamemode.js'
 import { dislike_nodes } from './dislike.js'
@@ -13,7 +13,6 @@ import { tg_nodes } from './tg.js'
 import { thug_nodes } from './thug.js'
 import { msg_nodes } from './msg.js'
 import { CommandNodeTypes } from './declare_options.js'
-import { nodes as enjin_nodes } from './enjin.js'
 import { nodes as health_nodes } from './health.js'
 import { nodes as xp_nodes } from './experience.js'
 
@@ -46,7 +45,6 @@ const nodes = flatten({
     ...tg_nodes,
     ...thug_nodes,
     ...msg_nodes,
-    ...enjin_nodes,
     ...health_nodes,
     ...xp_nodes,
   ], // add the nodes of all the commands. exemple : [...command_1,...comand_2,...comand_3]
@@ -54,7 +52,7 @@ const nodes = flatten({
 
 export default {
   observe({ client, events }) {
-    events.once(Context.STATE, () => {
+    events.once(PlayerEvent.STATE_UPDATED, () => {
       client.write('declare_commands', {
         nodes,
         rootIndex: 0,

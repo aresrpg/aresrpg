@@ -5,7 +5,7 @@ import { aiter } from 'iterator-helper'
 import combineAsyncIterators from 'combine-async-iterators'
 
 import { abortable } from '../iterator.js'
-import { Context } from '../events.js'
+import { PlayerEvent } from '../events.js'
 import { write_bossbar, Colors, Divisions, Actions } from '../boss_bar.js'
 import logger from '../logger.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
@@ -40,14 +40,14 @@ const mob_bar_division = ({ max_health }) => {
 }
 
 const format_title = ({
-  displayName,
+  display_name,
   level,
   health,
   max_health,
   entity_id,
 }) => [
   {
-    text: displayName,
+    text: display_name,
   },
   {
     text: ` [Lvl ${level}] `,
@@ -95,7 +95,7 @@ export default {
       abortable(
         // @ts-ignore
         combineAsyncIterators(
-          on(events, Context.MOB_DAMAGE, { signal }),
+          on(events, PlayerEvent.MOB_DAMAGED, { signal }),
           setInterval(1000, [{ timer: true }], { signal })
         )
       )
@@ -115,14 +115,14 @@ export default {
           ]
         }
 
-        const { displayName, health: max_health = 20 } = Entities[type]
+        const { display_name, health: max_health = 20 } = Entities[type]
         const { health, level = 1 /* the level feature is a WIP */ } =
           get_state()
         const entityUUID = format_uuid(entity_id)
         const display_health = Math.max(0, Math.min(1, health / max_health))
         const color = mob_bar_color({ health, max_health })
         const title = format_title({
-          displayName,
+          display_name,
           level,
           health,
           max_health,

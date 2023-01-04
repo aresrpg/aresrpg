@@ -1,15 +1,13 @@
-import { promisify } from 'util'
 import { on } from 'events'
+import { setTimeout } from 'timers/promises'
 
 import { aiter } from 'iterator-helper'
 
-import { MobAction, Mob } from '../events.js'
+import { MobAction, MobEvent } from '../events.js'
 import logger from '../logger.js'
 import { async_tail_recursive } from '../iterator.js'
 
 const log = logger(import.meta)
-
-const setTimeoutPromise = promisify(setTimeout)
 
 export function path_ended({ path, time, start_time, speed }) {
   const current = Math.floor((time - start_time) / speed)
@@ -69,7 +67,7 @@ async function* raw_path_to_positions(stream, value = stream.next()) {
     const next_time = (Math.floor(time / PATH_UPDATE_MS) + 1) * PATH_UPDATE_MS
 
     const new_path = await Promise.race([
-      setTimeoutPromise(next_time - time, false),
+      setTimeout(next_time - time, false, { ref: false }),
       next.then(() => true),
     ])
 
@@ -94,7 +92,7 @@ async function* raw_path_to_end(stream, value = stream.next()) {
   const next_time = start_time + path.length * speed
 
   const path_end = await Promise.race([
-    setTimeoutPromise(next_time - time, true),
+    setTimeout(next_time - time, true, { ref: false }),
     next.then(() => false),
   ])
 
@@ -107,14 +105,16 @@ export const path_to_end = async_tail_recursive(raw_path_to_end)
 
 export function path_end(mobs) {
   for (const mob of mobs) {
-    const state = aiter(on(mob.events, Mob.STATE)).map(([state]) => state)
+    const state = aiter(on(mob.events, MobEvent.STATE_UPDATED)).map(
+      ([state]) => state
+    )
 
     const end = path_to_end(state)
 
     aiter(end).reduce((last_time, time) => {
       if (last_time !== time) {
         log.debug({ at: time }, 'Path Ended')
-        mob.dispatch(MobAction.PATH_ENDED, null, time)
+        mob.dispatch(MobAction.END_PATH, null, time)
       }
       return time
     })

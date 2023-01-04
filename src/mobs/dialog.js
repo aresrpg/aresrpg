@@ -2,11 +2,11 @@ import { Position } from '../chat.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
 
 export function speak_to(mob, { client }) {
-  const { dialogs, displayName } = Entities[mob.type]
+  const { dialogs, display_name } = Entities[mob.type]
   if (dialogs !== undefined) {
     const x = Math.floor(Math.random() * dialogs.length)
     const message = JSON.stringify([
-      { text: displayName, color: 'green' },
+      { text: display_name, color: 'green' },
       { text: ' : ', color: 'gray' },
       {
         text: dialogs[x].replace('{player}', client.username),
