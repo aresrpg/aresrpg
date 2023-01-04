@@ -5,6 +5,7 @@ import Entities from '../data/entities.json' assert { type: 'json' }
 import mobs from '../world/floor1/mobs.json' assert { type: 'json' }
 import traders from '../world/floor1/traders.json' assert { type: 'json' }
 import teleportation_stones from '../world/floor1/teleportation_stones.json' assert { type: 'json' }
+import interactable_object from '../world/floor1/interactable_object.json' assert { type: 'json' }
 
 import logger from './logger.js'
 import { chunks } from './chunk.js'
@@ -27,6 +28,7 @@ export const floor1 = {
   mob_positions: mobs.filter(({ type }) => Entities[type]),
   traders,
   teleportation_stones,
+  interactable_object,
 }
 
 log.info(
@@ -34,6 +36,7 @@ log.info(
     world: 'floor1',
     mobs: floor1.mob_positions.length,
     teleportation_stones: floor1.teleportation_stones.length,
+    interactable_object: floor1.interactable_object.length,
     missing_entities,
   },
   'World loaded'
