@@ -109,10 +109,16 @@ const initial_state = {
   inventory: Array.from({
     length: 46,
   }),
-  bank: Array.from({
-    length: 53,
-    0: { type: 'bronze_coin', count: 50 },
-  }),
+  bank: [
+    // Bank chests 1 -> 3
+    Array.from({ length: 53 }),
+    Array.from({ length: 53 }),
+    Array.from({ length: 53 }),
+  ],
+  bank_id: null,
+  bank_cursor: null,
+  bank_cursor_index: 0,
+  bank_sequence_number: 0,
   looted_items: {
     pool: Array.from({ length: ITEM_LOOT_MAX_COUNT }),
     cursor: 0,
@@ -189,6 +195,7 @@ function reduce_state(state, action) {
     plugin_channels.reduce,
     player_deal_damage.reduce,
     player_inventory.reduce,
+    player_chest.reduce,
     player_gamemode.reduce,
     player_held_item.reduce,
     player_item_loot.reduce,
