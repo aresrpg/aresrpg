@@ -1,15 +1,15 @@
 import { on } from 'events'
 
-import UUID from 'uuid-1345'
-import minecraftData from 'minecraft-data'
 import { aiter } from 'iterator-helper'
+import minecraftData from 'minecraft-data'
+import UUID from 'uuid-1345'
 
+import { to_metadata } from '../entity_metadata.js'
+import { ProjectileInstanceEvent } from '../events.js'
+import { distance3d_squared } from '../math.js'
+import { position_equal } from '../position.js'
 import { register_projectile } from '../projectiles.js'
 import { VERSION } from '../settings.js'
-import { to_metadata } from '../entity_metadata.js'
-import { ProjectileInstanceAction, ProjectileInstanceEvent } from '../events.js'
-import { direction_to_yaw_pitch, distance3d_squared } from '../math.js'
-import { position_equal } from '../position.js'
 
 const mcData = minecraftData(VERSION)
 
@@ -36,6 +36,8 @@ export default {
     const { instances } = arrow_projectile
     instances.forEach(
       ({ events: projectile_events, dispatch }, instance_id) => {
+        const entity_id = arrow_projectile.start_id + instance_id
+
         // const arrow_context = { instance_id, projectile: arrow_projectile }
 
         // projectile_events.on(
@@ -50,11 +52,11 @@ export default {
         aiter(on(projectile_events, ProjectileInstanceEvent.STATE_UPDATED))
           .map(([state]) => state)
           .reduce(
-            (state, { position, velocity, alive }) => {
-              const entity_id = arrow_projectile.start_id + instance_id
-              const { prev_position, prev_velocity, was_alive } = state
+            (state, { position, velocity, yaw, pitch, alive, uuid, hit_object, prev_velocity }) => {
+              const { prev_position, was_alive, prev_uuid, prev_hit } = state
+              const dirty =  (prev_uuid !== uuid) || hit_object !== prev_hit;
 
-              if (!position_equal(prev_position, position)) {
+              if (!position_equal(prev_position, position) || dirty) {
                 if (
                   prev_position &&
                   distance3d_squared(position, prev_position) < 64
@@ -66,16 +68,16 @@ export default {
                     dZ: (position.z * 32 - prev_position.z * 32) * 128,
                   })
                 } else {
+                  console.log('position',  yaw, pitch)
                   client.write('entity_teleport', {
                     entityId: entity_id,
                     ...position,
-                    yaw: 0,
-                    pitch: 0,
+                    yaw, pitch,
                     onGround: false,
                   })
                 }
               }
-              if (!position_equal(prev_velocity, velocity)) {
+              if (!position_equal(prev_velocity, velocity) || dirty) {
                 client.write('entity_velocity', {
                   entityId: entity_id,
                   velocityX: velocity.x * 8000,
@@ -88,14 +90,14 @@ export default {
                 client.write('entity_destroy', { entityIds: [entity_id] })
               }
 
-              if (!was_alive && alive) {
+              if ((!was_alive && alive) || dirty) {
+                console.log('position',  yaw, pitch)
                 const mob = {
                   entityId: entity_id,
                   objectUUID: UUID.v4(),
                   type: mcData.entitiesByName.arrow.id,
                   ...position,
-                  yaw: 0,
-                  pitch: 0,
+                  yaw, pitch,
                   velocityX: velocity.x * 8000,
                   velocityY: velocity.y * 8000,
                   velocityZ: velocity.z * 8000,
@@ -109,9 +111,9 @@ export default {
                 }
                 client.write('entity_metadata', metadata)
 
-                setTimeout(() => {
-                  dispatch(ProjectileInstanceAction.KILL)
-                }, 10000)
+                // setTimeout(() => {
+                //   dispatch(ProjectileInstanceAction.KILL)
+                // }, 10000)
               }
 
               return {
@@ -119,12 +121,15 @@ export default {
                 prev_velocity: velocity,
                 prev_position: position,
                 was_alive: alive,
+                prev_uuid: uuid,
+                prev_hit: hit_object,
               }
             },
             {
-              prev_velocity: null,
               prev_position: null,
               was_alive: false,
+              prev_uuid: null,
+              prev_hit: null,
             }
           )
       }

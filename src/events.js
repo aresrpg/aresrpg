@@ -1,5 +1,5 @@
-import { PassThrough } from 'stream'
 import EventEmitter from 'events'
+import { PassThrough } from 'stream'
 
 import { aiter } from 'iterator-helper'
 
@@ -79,6 +79,7 @@ export const MobEvent = {
 
 export const ProjectileInstanceEvent = {
   STATE_UPDATED: 'PROJECTILE_INSTANCE:EVENT:STATE_UPDATED',
+  HIT_OBJECT: 'PROJECTILE_INSTANCE:EVENT:HIT_OBJECT',
   SPAWN: 'PROJECTILE_INSTANCE:EVENT:SPAWN',
   DESPAWN: 'PROJECTILE_INSTANCE:EVENT:DESPAWN',
 }

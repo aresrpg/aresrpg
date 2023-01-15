@@ -46,6 +46,9 @@
     "pino": "8.8.0",
     "prismarine-provider-anvil": "2.7.0",
     "pusher-js": "8.0.0",
+    "ray-3d": "^1.1.1",
+    "ray-aabb": "^3.0.2",
+    "ray-aabb-intersection": "^1.0.1",
     "uuid-1345": "^1.0.2",
     "vec3": "0.1.7",
     "xmldom": "0.6.0"
