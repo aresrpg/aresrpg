@@ -1,6 +1,6 @@
 const OFF_HAND_SLOT = 45
 const SWAP_HAND_STATUS = 6
-const hotbar_to_inventory_slot = slot_id => slot_id + 36
+export const hotbar_to_inventory_slot = slot_id => slot_id + 36
 
 export default {
   /** @type {import('../context.js').Reducer} */

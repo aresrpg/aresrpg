@@ -1,8 +1,7 @@
-export function last_event_value(emitter, event) {
-  let value = null
-  emitter.on(event, new_value => (value = new_value))
-  return () => value
-}
+import { PassThrough } from 'stream'
+import EventEmitter from 'events'
+
+import { aiter } from 'iterator-helper'
 
 export const PlayerAction = {
   /** the player is receiving raw damage */
@@ -47,6 +46,8 @@ export const PlayerEvent = {
   MOB_DAMAGED: 'PLAYER:EVENT:MOB_DAMAGED',
   /** a mob visible by the player just died */
   MOB_DEATH: 'PLAYER:EVENT:MOB_DEATH',
+  /** the player launched a projectile */
+  LAUNCH_PROJECTILE: 'PLAYER:EVENT:LAUNCH_PROJECTILE',
 }
 
 export const MobAction = {
@@ -64,6 +65,30 @@ export const MobEvent = {
   STATE_UPDATED: 'MOB:EVENT:STATE_UPDATED',
 }
 
+// export const ProjectileAction = {
+//   SPAWN_NEXT: 'PROJECTILE:ACTION:SPAWN_NEXT',
+//   // KILL_INSTANCE: 'PROJECTILE:ACTION:KILL_INSTANCE',
+// }
+
+// export const ProjectileEvent = {
+//   /** a projectile state has been updated */
+//   STATE_UPDATED: 'PROJECTILE:EVENT:STATE_UPDATED',
+//   // SPAWN_INSTANCE: 'PROJECTILE:EVENT:SPAWN_INSTANCE',
+//   // DESPAWN_INSTANCE: 'PROJECTILE:EVENT:DESPAWN_INSTANCE',
+// }
+
+export const ProjectileInstanceEvent = {
+  STATE_UPDATED: 'PROJECTILE_INSTANCE:EVENT:STATE_UPDATED',
+  SPAWN: 'PROJECTILE_INSTANCE:EVENT:SPAWN',
+  DESPAWN: 'PROJECTILE_INSTANCE:EVENT:DESPAWN',
+}
+
+export const ProjectileInstanceAction = {
+  INIT: 'PROJECTILE_INSTANCE:ACTION:INIT',
+  UPDATE_MOVEMENT: 'PROJECTILE_INSTANCE:ACTION:UPDATE_MOVEMENT',
+  KILL: 'PROJECTILE_INSTANCE:ACTION:KILL',
+}
+
 export const WorldRequest = {
   /** a new player joined the world */
   ADD_PLAYER_TO_WORLD: 'WORLD:ADD_PLAYER_TO_WORLD',
@@ -75,4 +100,40 @@ export const WorldRequest = {
   NOTIFY_PRESENCE_TO: uuid => `WORLD:ADD_PLAYER_${uuid}`,
   /** a chunk position should be updated */
   CHUNK_POSITION_UPDATE: chunk_index => `WORLD:POSITION_${chunk_index}`,
+}
+
+export function last_event_value(emitter, event) {
+  let value = null
+  emitter.on(event, new_value => (value = new_value))
+  return () => value
+}
+
+export function create_state(
+  { state_event, initial_state, state_reducer },
+  context
+) {
+  const actions = new PassThrough({ objectMode: true })
+  const events = new EventEmitter()
+  events.setMaxListeners(Infinity)
+
+  aiter(actions).reduce(async (last_state, action) => {
+    const state = await state_reducer(last_state, action, context())
+    events.emit(state_event, state)
+    return state
+  }, initial_state)
+
+  setImmediate(() => events.emit(state_event, initial_state))
+
+  const get_state = last_event_value(events, state_event)
+
+  return {
+    events,
+    get_state,
+    dispatch(action_type, payload, time = Date.now()) {
+      actions.write({ type: action_type, payload, time })
+    },
+    reset() {
+      setImmediate(() => events.emit(state_event, initial_state))
+    },
+  }
 }

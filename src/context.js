@@ -28,6 +28,7 @@ import player_bossbar from './player/boss_bar.js'
 import player_action_bar from './player/action_bar.js'
 import player_heartbeat from './player/heartbeat.js'
 import player_bells from './player/bells.js'
+import player_bow from './player/bow.js'
 import player_traders, {
   register as register_player_traders,
 } from './player/traders.js'
@@ -66,6 +67,8 @@ import { abortable } from './iterator.js'
 import Database from './database.js'
 import { USE_RESSOURCE_PACK } from './settings.js'
 import { GameMode } from './gamemode.js'
+import projectiles, { register as register_projectiles } from './projectiles.js'
+import basic_arrow from './projectiles/basic_arrow.js'
 
 const log = logger(import.meta)
 
@@ -91,6 +94,7 @@ const world_reducers = [
   register_experience,
   register_player_teleportation_stones,
   register_player_item_loot,
+  register_projectiles,
 ]
 
 export const world = /** @type {World} */ (
@@ -107,6 +111,7 @@ const initial_state = {
   view_distance: 0,
   inventory: Array.from({
     length: 46,
+    39: { type: 'basic_bow', count: 1 },
   }),
   looted_items: {
     pool: Array.from({ length: ITEM_LOOT_MAX_COUNT }),
@@ -188,6 +193,8 @@ function reduce_state(state, action) {
     player_soul.reduce,
     player_health.reduce,
     player_experience.reduce,
+    player_bow.reduce,
+    projectiles.reduce,
     chunk_update.reduce,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
 }
@@ -235,8 +242,12 @@ export function observe_client({ mobs_position }) {
     player_respawn.observe(context)
     player_heartbeat.observe(context)
     player_bells.observe(context)
+    player_bow.observe(context)
 
     commands_declare.observe(context)
+
+    projectiles.observe(context)
+    basic_arrow.observe(context)
 
     mobs_position.observe(context)
     mobs_spawn.observe(context)

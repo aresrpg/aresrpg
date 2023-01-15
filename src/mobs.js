@@ -1,12 +1,8 @@
-import { PassThrough } from 'stream'
-import { EventEmitter } from 'events'
-
 import minecraft_data from 'minecraft-data'
-import { aiter } from 'iterator-helper'
 
 import Entities from '../data/entities.json' assert { type: 'json' }
 
-import { last_event_value, MobEvent } from './events.js'
+import { create_state, MobEvent } from './events.js'
 import { path_end, path_position } from './mobs/path.js'
 import mobs_goto from './mobs/goto.js'
 import mobs_damage from './mobs/damage.js'
@@ -71,42 +67,32 @@ export function register(world) {
         1000 /* ms/block */,
       health /* halfheart */,
     }
-
-    const actions = new PassThrough({ objectMode: true })
-    const events = new EventEmitter()
-    events.setMaxListeners(Infinity)
-
     const entity_id = world.next_entity_id + i
 
-    aiter(actions).reduce(async (last_state, action) => {
-      const state = await reduce_mob(last_state, action, {
+    const state = create_state(
+      {
+        state_event: MobEvent.STATE_UPDATED,
+        initial_state: mob_state,
+        state_reducer: reduce_mob,
+      },
+      () => ({
         world: world.get(),
         type,
         entity_id,
       })
-      events.emit(MobEvent.STATE_UPDATED, state)
-      return state
-    }, mob_state)
-
-    setImmediate(() => events.emit(MobEvent.STATE_UPDATED, mob_state))
-
-    const get_state = last_event_value(events, MobEvent.STATE_UPDATED)
+    )
 
     return {
       entity_id,
       type,
       level,
-      events,
-      get_state,
       constants: entitiesByName[Entities[type].minecraft_entity],
       position(time = Date.now()) {
-        const { path, start_time, speed } = get_state()
+        const { path, start_time, speed } = state.get_state()
 
         return path_position({ path, time, start_time, speed })
       },
-      dispatch(action_type, payload, time = Date.now()) {
-        actions.write({ type: action_type, payload, time })
-      },
+      ...state,
     }
   })
 
