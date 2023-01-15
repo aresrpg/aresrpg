@@ -80,6 +80,7 @@ export default {
         },
       })
 
+      // meaning the player is joining for the first time
       if (!last_disconnection_time) {
         world_chat_msg({
           world,
