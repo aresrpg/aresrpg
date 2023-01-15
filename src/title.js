@@ -29,13 +29,7 @@ export function write_title({
   title = empty_component,
   subtitle = empty_component,
   times,
-  force_reset = true,
 }) {
-  if (force_reset) {
-    client.write('title', {
-      action: Actions.RESET_TITLE,
-    })
-  }
   client.write('title', {
     action: Actions.SET_TITLE,
     text: JSON.stringify(title),
@@ -54,6 +48,12 @@ export function write_title({
       stay: stay * 20,
     })
   }
+}
+
+export function reset_title({ client }) {
+  client.write('title', {
+    action: Actions.RESET_TITLE,
+  })
 }
 
 export function delete_title({ client }) {

@@ -1,18 +1,18 @@
 import { on } from 'events'
 
 import { aiter } from 'iterator-helper'
-import UUID from 'uuid-1345'
 import minecraftData from 'minecraft-data'
 import Nbt from 'prismarine-nbt'
+import UUID from 'uuid-1345'
 
-import { PlayerEvent, PlayerAction } from '../events.js'
-import { abortable } from '../iterator.js'
-import { write_title } from '../title.js'
-import { play_sound } from '../sound.js'
-import { client_chat_msg } from '../chat.js'
-import { VERSION } from '../settings.js'
-import { to_metadata } from '../entity_metadata.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
+import { client_chat_msg } from '../chat.js'
+import { to_metadata } from '../entity_metadata.js'
+import { PlayerAction, PlayerEvent } from '../events.js'
+import { abortable } from '../iterator.js'
+import { VERSION } from '../settings.js'
+import { play_sound } from '../sound.js'
+import { write_title } from '../title.js'
 
 const mcData = minecraftData(VERSION)
 

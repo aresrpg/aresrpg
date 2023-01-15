@@ -26,7 +26,7 @@ export const PlayerAction = {
   RECEIVE_EXPERIENCE: 'PLAYER:ACTION:RECEIVE_EXPERIENCE',
   /** open the class selection menu */
   OPEN_CLASS_SELECTION: 'PLAYER:ACTION:OPEN_CLASS_SELECTION',
-  /** open the class selection menu */
+  /** update the current selected class */
   SELECT_CLASS: 'PLAYER:ACTION:SELECT_CLASS',
 }
 

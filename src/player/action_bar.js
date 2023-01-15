@@ -67,45 +67,44 @@ export default {
         })
     })
 
-    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal }))).reduce(
-      (
-        { last_health, last_max_health, last_remaining_stats_point },
-        [state]
-      ) => {
-        const { health } = state
-        const max_health = get_max_health(state)
-        const remaining_stats_point = get_remaining_stats_point(state)
+    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
+      .filter(([{ class_selection_open }]) => !class_selection_open)
+      .reduce(
+        (
+          { last_health, last_max_health, last_remaining_stats_point },
+          [state]
+        ) => {
+          const { health } = state
+          const max_health = get_max_health(state)
+          const remaining_stats_point = get_remaining_stats_point(state)
 
-        const health_changed = last_health !== health
-        const max_health_changed = last_max_health !== max_health
-        const closest_zone =
-          closest_stone(world, state.position)?.name ?? 'Wilderness'
-        const stats_points_changed =
-          last_remaining_stats_point !== remaining_stats_point
+          const health_changed = last_health !== health
+          const max_health_changed = last_max_health !== max_health
+          const closest_zone =
+            closest_stone(world, state.position)?.name ?? 'Wilderness'
+          const stats_points_changed =
+            last_remaining_stats_point !== remaining_stats_point
 
-        if (
-          !state.class_selection_open &&
-          (health_changed || max_health_changed || stats_points_changed)
-        )
-          update_action_bar({
-            client,
-            health,
-            max_health,
-            remaining_stats_point,
-            zone: closest_zone,
-          })
-        return {
-          last_health: health,
-          last_max_health: max_health,
-          last_remaining_stats_point: remaining_stats_point,
+          if (health_changed || max_health_changed || stats_points_changed)
+            update_action_bar({
+              client,
+              health,
+              max_health,
+              remaining_stats_point,
+              zone: closest_zone,
+            })
+          return {
+            last_health: health,
+            last_max_health: max_health,
+            last_remaining_stats_point: remaining_stats_point,
+          }
+        },
+        {
+          // thanks ts-lint to make the code more verbose
+          last_health: undefined,
+          last_max_health: undefined,
+          last_remaining_stats_point: undefined,
         }
-      },
-      {
-        // thanks ts-lint to make the code more verbose
-        last_health: undefined,
-        last_max_health: undefined,
-        last_remaining_stats_point: undefined,
-      }
-    )
+      )
   },
 }

@@ -5,9 +5,9 @@ import combineAsyncIterators from 'combine-async-iterators'
 import { aiter } from 'iterator-helper'
 
 import { PlayerAction, PlayerEvent } from '../events.js'
+import { GameMode } from '../gamemode.js'
 import { abortable } from '../iterator.js'
 import { delete_title, write_action_bar, write_title } from '../title.js'
-import { GameMode } from '../gamemode.js'
 
 const KITS_AMOUNT = 4
 
@@ -36,7 +36,6 @@ function send_selection_menu(client, selected) {
       fade_out: 0,
       stay: 5,
     },
-    force_reset: false,
   })
 
   write_action_bar({
