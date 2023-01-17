@@ -60,6 +60,24 @@ export function create_server() {
   const mobs_position = mobs_position_factory(world)
 
   server.on('login', client => {
+    const {
+      // @ts-ignore
+      mcversion: { minecraftVersion, version },
+    } = server
+
+    // check protocol versions
+    if (client.protocolVersion !== version) {
+      client.end(`Wrong minecraft version, expected: ${minecraftVersion}`)
+      log.info(
+        {
+          username: client.username,
+          uuid: client.uuid,
+        },
+        'Client refused: wrong minecraft version'
+      )
+      return
+    }
+
     create_context({ client, world })
       .then(observe_client({ mobs_position }))
       .catch(error => {
