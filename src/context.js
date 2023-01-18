@@ -44,6 +44,7 @@ import player_item_loot, {
   register as register_player_item_loot,
   ITEM_LOOT_MAX_COUNT,
 } from './player/item_loot.js'
+import player_class_selection from './player/class_selection.js'
 import player_soul from './player/soul.js'
 import finalization from './finalization.js'
 import plugin_channels from './plugin_channels.js'
@@ -117,6 +118,8 @@ const initial_state = {
   inventory_cursor_index: 0,
   held_slot_index: 0,
   game_mode: GameMode.ADVENTURE,
+  class_selection_open: false,
+  selected_class: 0,
   experience: 0,
   health: 40,
   // player's energy, losing after each death
@@ -140,6 +143,7 @@ const saved_state = ({
   health,
   soul,
   last_disconnection_time,
+  selected_class,
 }) => ({
   nickname,
   position,
@@ -150,6 +154,7 @@ const saved_state = ({
   health,
   soul,
   last_disconnection_time,
+  selected_class,
 })
 
 /** @template U
@@ -188,6 +193,7 @@ function reduce_state(state, action) {
     player_soul.reduce,
     player_health.reduce,
     player_experience.reduce,
+    player_class_selection.reduce,
     chunk_update.reduce,
   ].reduce((intermediate, fn) => fn(intermediate, action), state)
 }
@@ -235,6 +241,7 @@ export function observe_client({ mobs_position }) {
     player_respawn.observe(context)
     player_heartbeat.observe(context)
     player_bells.observe(context)
+    player_class_selection.observe(context)
 
     commands_declare.observe(context)
 

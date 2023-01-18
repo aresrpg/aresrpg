@@ -4,7 +4,7 @@ import { dimension_codec, overworld } from '../world/codec.js'
 import { load_chunks } from '../chunk/update.js'
 import { PLAYER_ENTITY_ID } from '../settings.js'
 import { write_title } from '../title.js'
-import { PlayerEvent } from '../events.js'
+import { PlayerAction, PlayerEvent } from '../events.js'
 import { Formats, world_chat_msg } from '../chat.js'
 
 import { set_world_border } from './world_border.js'
@@ -80,7 +80,8 @@ export default {
         },
       })
 
-      if (!last_disconnection_time)
+      // meaning the player is joining for the first time
+      if (!last_disconnection_time) {
         world_chat_msg({
           world,
           client,
@@ -91,6 +92,9 @@ export default {
             { text: ' for the first time', ...Formats.BASE },
           ],
         })
+
+        dispatch(PlayerAction.OPEN_CLASS_SELECTION, { open: true })
+      }
     })
   },
 }
