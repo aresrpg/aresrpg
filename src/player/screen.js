@@ -204,6 +204,15 @@ export function screen_ray_intersection(screen, position) {
         }
       }
     }
+    /*
+    if (hit) {
+      const x = dir.dot(hit.minus(screen_pos)) * 100
+      const y = hit.y
+      return {
+        x,
+        y,
+      }
+    } */
   }
   return false
 }
@@ -223,11 +232,13 @@ export default {
         const { position } = state
         for (const [screen_id, screen] of Object.entries(world.screens)) {
           const intersect = screen_ray_intersection(screen, position)
+          const {
+            position: { x, y },
+          } = screen
           if (intersect && SPAWNED_SCREENS.screens.includes(screen_id)) {
-            const { x, y } = intersect
             events.emit(PlayerEvent.SCREEN_INTERRACTED, {
-              x,
-              y,
+              screen_position: { x, y },
+              intersect,
               screen_id,
               hand,
             })

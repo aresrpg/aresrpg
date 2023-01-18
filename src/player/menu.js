@@ -1,7 +1,7 @@
 import { destroy_menu, display_menu, Menus } from '../player_menu.js'
 import freeze_player from '../freeze_player.js'
 import { SCREENS } from '../settings.js'
-import { Context } from '../events.js'
+import { PlayerEvent } from '../events.js'
 import { is_inside } from '../math.js'
 import { world_chat_msg } from '../chat.js'
 
@@ -30,18 +30,20 @@ export default {
           clone_id,
         })
 
-        events.on(Context.SCREEN_INTERRACT, payload => {
-          const { x, y, screen_id } = payload
-
-          const click_position = {
-            x,
-            y,
-          }
+        events.on(PlayerEvent.SCREEN_INTERRACTED, payload => {
+          const { intersect, screen_position, screen_id } = payload
 
           const interactables = {
             stats: {
-              min: { x: 500, y: 0 },
-              max: { x: 1000, y: 1000 },
+              id: SCREENS.player_screen,
+              min: {
+                x: screen_position.x + 5.5,
+                y: screen_position.y + 0.5,
+              },
+              max: {
+                x: screen_position.x + 6,
+                y: screen_position.y + 1,
+              },
             },
             trade: {
               min: { x: 0, y: 500 },
@@ -49,10 +51,14 @@ export default {
             },
           }
 
-          console.log('position:', click_position)
+          console.log('click:', intersect)
           console.log('screen:', screen_id)
+          console.log('area:', interactables.stats)
 
-          if (is_inside(interactables.stats, click_position)) {
+          if (
+            is_inside(interactables.stats, intersect) &&
+            interactables.stats.id === screen_id
+          ) {
             display_menu({
               client,
               world,
@@ -61,7 +67,7 @@ export default {
             })
           }
 
-          if (is_inside(interactables.trade, click_position)) {
+          if (is_inside(interactables.trade, intersect)) {
             client.write('block_change', {
               location: position,
               type: 3412,

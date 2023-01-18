@@ -24,30 +24,8 @@ export const SERVER_UUID = '00000000000000000000000000000000'
 export const USE_RESSOURCE_PACK = booleanify(use_ressource_pack)
 export const DEBUG_SERVER = booleanify(debug_server)
 
-<<<<<<< HEAD
 export { REDIS_HOST, REDIS_MASTER_NAME, LOG_LEVEL }
-=======
 export const SCREENS = {
   player_screen: 'player_screen',
   clone_background: 'clone_background',
 }
-export { ENJIN_ENDPOINT, ENJIN_APP_SECRET, REDIS_HOST, REDIS_MASTER_NAME }
-
-const hide = value => (value ? '<hidden>' : 'undefined')
-
-log.info(
-  {
-    ONLINE_MODE,
-    VERSION,
-    USE_BLOCKCHAIN,
-    ENJIN_ENDPOINT,
-    ENJIN_APP_SECRET: hide(ENJIN_APP_SECRET),
-    ENJIN_APP_ID,
-    USE_PERSISTENT_STORAGE,
-    REDIS_HOST,
-    REDIS_SENTINEL_PORT,
-    REDIS_MASTER_NAME,
-  },
-  'aresrpg settings'
-)
->>>>>>> 10c7a08 (feat: update context & exports)

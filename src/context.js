@@ -246,6 +246,8 @@ export function observe_client({ mobs_position }) {
     player_respawn.observe(context)
     player_heartbeat.observe(context)
     player_bells.observe(context)
+    player_menu.observe(context)
+    player_screen.observe(context)
 
     commands_declare.observe(context)
 
