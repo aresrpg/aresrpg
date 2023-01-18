@@ -11,6 +11,7 @@ import player_login from './player/login.js'
 import player_experience, {
   register as register_experience,
 } from './player/experience.js'
+import player_menu from './player/menu.js'
 import player_attributes from './player/attributes.js'
 import player_health from './player/health.js'
 import player_fall_damage from './player/fall_damage.js'
@@ -28,6 +29,7 @@ import player_bossbar from './player/boss_bar.js'
 import player_action_bar from './player/action_bar.js'
 import player_heartbeat from './player/heartbeat.js'
 import player_bells from './player/bells.js'
+import player_screen from './player/screen.js'
 import player_traders, {
   register as register_player_traders,
 } from './player/traders.js'
@@ -79,7 +81,16 @@ const initial_world = {
   next_window_id: 1, // 0 is the player inventory
   /** @type {() => Object} Remove type to remove circular references */
   get: () => world,
-  screens: {},
+  screens: {
+    player_screen: {
+      size: { width: 6, height: 4 },
+      start_id: 99999,
+    },
+    clone_background: {
+      size: { width: 3, height: 5 },
+      start_id: 98000,
+    },
+  },
 }
 
 const world_reducers = [
@@ -235,6 +246,8 @@ export function observe_client({ mobs_position }) {
     player_respawn.observe(context)
     player_heartbeat.observe(context)
     player_bells.observe(context)
+    player_menu.observe(context)
+    player_screen.observe(context)
 
     commands_declare.observe(context)
 

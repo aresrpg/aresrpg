@@ -25,3 +25,7 @@ export const USE_RESSOURCE_PACK = booleanify(use_ressource_pack)
 export const DEBUG_SERVER = booleanify(debug_server)
 
 export { REDIS_HOST, REDIS_MASTER_NAME, LOG_LEVEL }
+export const SCREENS = {
+  player_screen: 'player_screen',
+  clone_background: 'clone_background',
+}

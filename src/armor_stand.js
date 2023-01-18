@@ -18,7 +18,7 @@ export function create_armor_stand(
   client,
   entity_id,
   { x, y, z },
-  display_name
+  display_name = null
 ) {
   const mob = {
     entityId: entity_id,
@@ -34,17 +34,28 @@ export function create_armor_stand(
     velocityY: 0,
     velocityZ: 0,
   }
-
-  const metadata = {
-    entityId: entity_id,
-    metadata: to_metadata('armor_stand', {
-      entity_flags: { is_invisible: true },
-      armor_stand_flags: { is_marker: true },
-      custom_name: JSON.stringify(display_name),
-      is_custom_name_visible: true,
-    }),
-  }
-
   client.write('spawn_entity_living', mob)
-  client.write('entity_metadata', metadata)
+
+  if (display_name != null) {
+    const metadata = {
+      entityId: entity_id,
+      metadata: to_metadata('armor_stand', {
+        entity_flags: { is_invisible: true },
+        armor_stand_flags: { is_marker: true },
+        custom_name: JSON.stringify(display_name),
+        is_custom_name_visible: true,
+      }),
+    }
+    client.write('entity_metadata', metadata)
+  } else {
+    const metadata = {
+      entityId: entity_id,
+      metadata: to_metadata('armor_stand', {
+        entity_flags: { is_invisible: true },
+        armor_stand_flags: { is_marker: true },
+      }),
+    }
+
+    client.write('entity_metadata', metadata)
+  }
 }

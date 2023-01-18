@@ -14,6 +14,10 @@ const mcData = minecraftData(VERSION)
 const { nearestMatch } = mapcolors
 const { createCanvas } = canvas
 
+const SPAWNED_SCREENS = {
+  screens: [],
+}
+
 export function register_screen({ id, size: { width, height } }) {
   return world => ({
     ...world,
@@ -106,6 +110,8 @@ export function spawn_screen(
       })
     }
   }
+
+  SPAWNED_SCREENS.screens[SPAWNED_SCREENS.screens.length] = screen_id
 }
 
 export function update_screen(
@@ -154,12 +160,15 @@ export function update_screen(
 
 export function destroy_screen({ client, world }, { screen_id }) {
   const { size, start_id } = world.screens[screen_id]
-
   client.write('entity_destroy', {
     entityIds: Array.from({
       length: size.width * size.height,
     }).map((v, index) => start_id + index),
   })
+
+  SPAWNED_SCREENS.screens = SPAWNED_SCREENS.screens.filter(
+    id => id !== screen_id
+  )
 }
 
 export function copy_canvas(old_canvas) {
@@ -195,6 +204,15 @@ export function screen_ray_intersection(screen, position) {
         }
       }
     }
+    /*
+    if (hit) {
+      const x = dir.dot(hit.minus(screen_pos)) * 100
+      const y = hit.y
+      return {
+        x,
+        y,
+      }
+    } */
   }
   return false
 }
@@ -214,11 +232,13 @@ export default {
         const { position } = state
         for (const [screen_id, screen] of Object.entries(world.screens)) {
           const intersect = screen_ray_intersection(screen, position)
-          if (intersect) {
-            const { x, y } = intersect
+          const {
+            position: { x, y },
+          } = screen
+          if (intersect && SPAWNED_SCREENS.screens.includes(screen_id)) {
             events.emit(PlayerEvent.SCREEN_INTERRACTED, {
-              x,
-              y,
+              screen_position: { x, y },
+              intersect,
               screen_id,
               hand,
             })
