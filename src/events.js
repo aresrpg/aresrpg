@@ -29,6 +29,8 @@ export const PlayerAction = {
 export const PlayerEvent = {
   /** the player state has been updated */
   STATE_UPDATED: 'PLAYER:EVENT:STATE_UPDATED',
+  /** Ressource pack loaded to player */
+  PACK_LOAD: 'PLAYER:EVENT:PACK_LOAD',
   /** the player interracted with a screen */
   SCREEN_INTERRACTED: 'PLAYER:EVENT:SCREEN_INTERRACTED',
   /** a chunk has been loaded */

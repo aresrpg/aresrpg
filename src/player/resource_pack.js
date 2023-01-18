@@ -1,10 +1,11 @@
 import { once } from 'events'
 
+import { PlayerEvent } from '../events.js'
 import logger from '../logger.js'
 
 const log = logger(import.meta)
 
-const Status = {
+export const Status = {
   SUCCESS: 0,
   DECLINED: 1,
   FAILED: 2,
@@ -13,7 +14,7 @@ const Status = {
 
 export default {
   /** @type {import('../context.js').Observer} */
-  async observe({ client }) {
+  async observe({ client, events }) {
     client.write('resource_pack_send', {
       url: 'https://github.com/aresrpg/resourcepacks/releases/download/v1.0.4/ares-public.zip',
       hash: 'c57a27ac8dbde4f39dce0194b139dea18eb90021',
@@ -23,6 +24,7 @@ export default {
       const status = Object.entries(Status).find(
         ([key, value]) => value === result
       )
+      events.emit(PlayerEvent.PACK_LOAD, result)
       log.info({ status }, 'Ressource pack status')
     })
 

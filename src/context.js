@@ -45,6 +45,7 @@ import player_item_loot, {
   ITEM_LOOT_MAX_COUNT,
 } from './player/item_loot.js'
 import player_soul from './player/soul.js'
+import player_sounds from './player/sounds.js'
 import finalization from './finalization.js'
 import plugin_channels from './plugin_channels.js'
 import chunk_update from './chunk/update.js'
@@ -235,6 +236,7 @@ export function observe_client({ mobs_position }) {
     player_respawn.observe(context)
     player_heartbeat.observe(context)
     player_bells.observe(context)
+    player_sounds.observe(context)
 
     commands_declare.observe(context)
 
