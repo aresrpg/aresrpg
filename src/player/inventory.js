@@ -6,8 +6,8 @@ import { empty_slot, item_to_slot } from '../items.js'
 import { PLAYER_INVENTORY_ID } from '../settings.js'
 import { abortable } from '../iterator.js'
 import { PlayerEvent, PlayerAction } from '../events.js'
-import items from '../../data/items.json' assert { type: 'json' }
 import logger from '../logger.js'
+import { Items } from '../data.js'
 
 const log = logger(import.meta)
 
@@ -23,7 +23,7 @@ export const USABLE_INVENTORY_START = 9
 export const USABLE_INVENTORY_END = 44
 
 const to_slot = item => {
-  const item_definition = items[item?.type]
+  const item_definition = Items[item?.type]
   if (!item_definition) {
     // in case the item is provided but no match was found in item.js
     // we log the problem

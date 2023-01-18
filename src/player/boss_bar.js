@@ -8,8 +8,8 @@ import { abortable } from '../iterator.js'
 import { PlayerEvent } from '../events.js'
 import { write_bossbar, Colors, Divisions, Actions } from '../boss_bar.js'
 import logger from '../logger.js'
-import Entities from '../../data/entities.json' assert { type: 'json' }
 import { Formats, to_hex, to_rgb } from '../chat.js'
+import { Entities } from '../data.js'
 
 const BOSS_BAR_AMOUNT = 3
 const BOSS_BAR_TTL = 5000

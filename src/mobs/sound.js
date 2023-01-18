@@ -4,9 +4,9 @@ import { aiter } from 'iterator-helper'
 
 import { PlayerEvent } from '../events.js'
 import { play_sound } from '../sound.js'
-import Entities from '../../data/entities.json' assert { type: 'json' }
 import { abortable } from '../iterator.js'
 import { distance3d_squared } from '../math.js'
+import { Entities } from '../data.js'
 
 export default {
   /** @type {import('../context.js').Observer} */

@@ -4,8 +4,6 @@ import { EventEmitter } from 'events'
 import minecraft_data from 'minecraft-data'
 import { aiter } from 'iterator-helper'
 
-import Entities from '../data/entities.json' assert { type: 'json' }
-
 import { last_event_value, MobEvent } from './events.js'
 import { path_end, path_position } from './mobs/path.js'
 import mobs_goto from './mobs/goto.js'
@@ -13,6 +11,7 @@ import mobs_damage from './mobs/damage.js'
 import mobs_target from './mobs/target.js'
 import behavior_tree from './mobs/behavior_tree.js'
 import { VERSION } from './settings.js'
+import { Entities } from './data.js'
 
 const { entitiesByName } = minecraft_data(VERSION)
 

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url'
 import { DOMParser } from 'xmldom'
 
 import run from '../behavior.js'
-import Entities from '../../data/entities.json' assert { type: 'json' }
+import { Entities } from '../data.js'
 
 export const trees = Object.fromEntries(
   Object.keys(Entities).map(type => {

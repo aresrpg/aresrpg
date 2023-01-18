@@ -2,9 +2,9 @@ import { on } from 'events'
 
 import { aiter } from 'iterator-helper'
 
+import { Entities } from '../data.js'
 import { MobEvent, PlayerAction, PlayerEvent } from '../events.js'
 import { abortable } from '../iterator.js'
-import Entities from '../../data/entities.json' assert { type: 'json' }
 
 export default {
   /** @type {import('../context.js').Observer} */

@@ -9,7 +9,7 @@ import { create_armor_stand } from '../armor_stand.js'
 import logger from '../logger.js'
 import { GameMode } from '../gamemode.js'
 import { abortable } from '../iterator.js'
-import Entities from '../../data/entities.json' assert { type: 'json' }
+import { Entities } from '../data.js'
 
 const DAMAGE_INDICATORS_AMOUNT = 10
 const DAMAGE_INDICATOR_TTL = 1200

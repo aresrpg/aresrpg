@@ -12,7 +12,7 @@ import { play_sound } from '../sound.js'
 import { client_chat_msg } from '../chat.js'
 import { VERSION } from '../settings.js'
 import { to_metadata } from '../entity_metadata.js'
-import Entities from '../../data/entities.json' assert { type: 'json' }
+import { Entities } from '../data.js'
 
 const mcData = minecraftData(VERSION)
 

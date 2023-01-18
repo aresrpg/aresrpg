@@ -7,8 +7,7 @@ import execute_command from '../commands/commands.js'
 import { VERSION } from '../settings.js'
 import { world_chat_msg } from '../chat.js'
 import { WorldRequest } from '../events.js'
-import items from '../../data/items.json' assert { type: 'json' }
-import emotes from '../../data/emotes.json' assert { type: 'json' }
+import { Emotes, Items } from '../data.js'
 
 import { closest_stone } from './teleportation_stones.js'
 const mcData = minecraftData(VERSION)
@@ -38,7 +37,7 @@ function slot_to_chat({ nbtData, itemCount, itemId }) {
 function emote_to_chat(emote) {
   const emote_name = emote.slice(1, -1)
 
-  if (!emotes.includes(emote_name)) {
+  if (!Emotes.includes(emote_name)) {
     return { text: emote }
   }
 
@@ -66,7 +65,7 @@ export default {
         const item = inventory[held_slot_index + 36] // For the player 0 is the first item in hotbar. But for the game the hotbat begin at 36.
         if (item !== undefined) {
           const { type, count } = item
-          return slot_to_chat(item_to_slot(items[type], count))
+          return slot_to_chat(item_to_slot(Items[type], count))
         }
         return undefined
       },
@@ -76,7 +75,7 @@ export default {
         const item = inventory[slot_number]
         if (item !== undefined) {
           const { type, count } = item
-          return slot_to_chat(item_to_slot(items[type], count))
+          return slot_to_chat(item_to_slot(Items[type], count))
         }
         return undefined
       },

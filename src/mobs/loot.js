@@ -1,6 +1,6 @@
 import { block_center_position } from '../position.js'
 import { PlayerEvent, PlayerAction } from '../events.js'
-import Entities from '../../data/entities.json' assert { type: 'json' }
+import { Entities } from '../data.js'
 
 export default {
   /** @type {import('../context.js').Observer} */

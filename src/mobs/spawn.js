@@ -6,8 +6,8 @@ import { aiter } from 'iterator-helper'
 
 import { VERSION } from '../settings.js'
 import { PlayerEvent } from '../events.js'
-import Entities from '../../data/entities.json' assert { type: 'json' }
 import { to_metadata } from '../entity_metadata.js'
+import { Entities } from '../data.js'
 
 const { entitiesByName } = minecraft_data(VERSION)
 

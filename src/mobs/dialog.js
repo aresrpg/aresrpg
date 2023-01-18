@@ -1,5 +1,5 @@
 import { Position } from '../chat.js'
-import Entities from '../../data/entities.json' assert { type: 'json' }
+import { Entities } from '../data.js'
 
 export function speak_to(mob, { client }) {
   const { dialogs, display_name } = Entities[mob.type]

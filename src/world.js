@@ -1,11 +1,11 @@
 import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
 
-import Entities from '../data/entities.json' assert { type: 'json' }
 import mobs from '../world/floor1/mobs.json' assert { type: 'json' }
 import traders from '../world/floor1/traders.json' assert { type: 'json' }
 import teleportation_stones from '../world/floor1/teleportation_stones.json' assert { type: 'json' }
 
+import { Entities } from './data.js'
 import logger from './logger.js'
 import { chunks } from './chunk.js'
 

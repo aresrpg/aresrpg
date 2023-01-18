@@ -5,8 +5,8 @@ import { aiter } from 'iterator-helper'
 import { MobAction, MobEvent, PlayerEvent } from '../events.js'
 import logger from '../logger.js'
 import { abortable } from '../iterator.js'
-import Entities from '../../data/entities.json' assert { type: 'json' }
 import { to_metadata } from '../entity_metadata.js'
+import { Entities } from '../data.js'
 
 import { color_by_category } from './spawn.js'
 
