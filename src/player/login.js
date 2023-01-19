@@ -8,6 +8,7 @@ import { PlayerEvent } from '../events.js'
 import { Formats, world_chat_msg } from '../chat.js'
 
 import { set_world_border } from './world_border.js'
+import { BLOCK_TAGS, ENTITY_TAGS, FLUID_TAGS, ITEM_TAGS } from './tags.js'
 
 export default {
   /** @type {import('../context.js').Observer} */
@@ -91,6 +92,13 @@ export default {
             { text: ' for the first time', ...Formats.BASE },
           ],
         })
+
+      client.write('tags', {
+        blockTags: BLOCK_TAGS,
+        itemTags: ITEM_TAGS,
+        fluidTags: FLUID_TAGS,
+        entityTags: ENTITY_TAGS,
+      })
     })
   },
 }
