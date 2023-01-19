@@ -10,6 +10,7 @@ import logger from '../logger.js'
 import { GameMode } from '../gamemode.js'
 import { abortable } from '../iterator.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
+import { show_blood, show_death_smoke } from '../particules.js'
 
 const DAMAGE_INDICATORS_AMOUNT = 10
 const DAMAGE_INDICATOR_TTL = 1200
@@ -78,24 +79,30 @@ export default {
           const entity_id = damage_indicator_start_id + cursor
           const { x, y, z } = mob.position()
           const { height } = mob.constants
-          const position = {
+          const damage_position = {
             x: x + (Math.random() * 2 - 1) * 0.25,
             y: y + height - 0.25 + (Math.random() * 2 - 1) * 0.15,
             z: z + (Math.random() * 2 - 1) * 0.25,
           }
+          const particle_position = { x, y: y + height * 0.7, z }
+          // the MOB_DEATH event doesn't emit a damage value
+          // so we can safely assume that if damage is undefined
+          // the mob is dead
+          const is_dead = damage === undefined
 
-          if (damage !== undefined) {
-            create_armor_stand(client, entity_id, position, {
+          if (!is_dead) {
+            create_armor_stand(client, entity_id, damage_position, {
               text: `-${damage}`,
               color: '#E74C3C', // https://materialui.co/flatuicolors Alizarin
             })
+            show_blood({ client, position: particle_position })
           } else {
-            // Death
             const { xp } = Entities[mob.type]
-            create_armor_stand(client, entity_id, position, {
+            create_armor_stand(client, entity_id, damage_position, {
               text: `+${xp} xp`,
               color: '#A6CD57',
             })
+            show_death_smoke({ client, position: particle_position })
           }
           return {
             cursor,
