@@ -6,7 +6,9 @@ const {
   REDIS_SENTINEL_PORT: redis_sentinel_port = 26379,
   REDIS_MASTER_NAME = 'rejson-master',
 
-  USE_RESSOURCE_PACK: use_ressource_pack = 'true',
+  USE_RESOURCE_PACK: use_resource_pack = 'true',
+  RESOURCE_PACK_URI = 'https://github.com/aresrpg/resourcepacks/releases/download/v1.0.4/ares-public.zip',
+  RESOURCE_PACK_HASH = 'c57a27ac8dbde4f39dce0194b139dea18eb90021',
 
   LOG_LEVEL = 'info',
   DEBUG_SERVER: debug_server = 'false',
@@ -21,7 +23,13 @@ export const REDIS_SENTINEL_PORT = +redis_sentinel_port
 export const PLAYER_ENTITY_ID = 0
 export const PLAYER_INVENTORY_ID = 0
 export const SERVER_UUID = '00000000000000000000000000000000'
-export const USE_RESSOURCE_PACK = booleanify(use_ressource_pack)
+export const USE_RESOURCE_PACK = booleanify(use_resource_pack)
 export const DEBUG_SERVER = booleanify(debug_server)
 
-export { REDIS_HOST, REDIS_MASTER_NAME, LOG_LEVEL }
+export {
+  REDIS_HOST,
+  REDIS_MASTER_NAME,
+  LOG_LEVEL,
+  RESOURCE_PACK_URI,
+  RESOURCE_PACK_HASH,
+}
