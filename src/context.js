@@ -64,7 +64,7 @@ import mobs_sound from './mobs/sound.js'
 import commands_declare from './commands/declare.js'
 import { abortable } from './iterator.js'
 import Database from './database.js'
-import { USE_RESSOURCE_PACK } from './settings.js'
+import { USE_RESOURCE_PACK } from './settings.js'
 import { GameMode } from './gamemode.js'
 
 const log = logger(import.meta)
@@ -208,7 +208,7 @@ export function observe_client({ mobs_position }) {
 
     finalization.observe(context)
 
-    if (USE_RESSOURCE_PACK) await player_resource_pack.observe(context)
+    if (USE_RESOURCE_PACK) await player_resource_pack.observe(context)
 
     // login has to stay on top
     player_login.observe(context)
