@@ -15,7 +15,7 @@ import player_attributes from './player/attributes.js'
 import player_health from './player/health.js'
 import player_fall_damage from './player/fall_damage.js'
 import player_position from './player/position.js'
-import player_view_distance, { inside_view } from './player/view_distance.js'
+import player_view_distance from './player/view_distance.js'
 import player_chat from './player/chat.js'
 import player_resource_pack from './player/resource_pack.js'
 import player_statistics from './player/statistics.js'
@@ -40,10 +40,6 @@ import player_teleportation_stones, {
 } from './player/teleportation_stones.js'
 import player_tablist from './player/tablist.js'
 import player_sync from './player/sync.js'
-import player_item_loot, {
-  register as register_player_item_loot,
-  ITEM_LOOT_MAX_COUNT,
-} from './player/item_loot.js'
 import player_soul from './player/soul.js'
 import finalization from './finalization.js'
 import plugin_channels from './plugin_channels.js'
@@ -66,6 +62,7 @@ import { abortable } from './iterator.js'
 import Database from './database.js'
 import { USE_RESOURCE_PACK } from './settings.js'
 import { GameMode } from './gamemode.js'
+import { inside_view } from './view_distance.js'
 
 const log = logger(import.meta)
 
@@ -90,7 +87,6 @@ const world_reducers = [
   register_player_deal_damage,
   register_experience,
   register_player_teleportation_stones,
-  register_player_item_loot,
 ]
 
 export const world = /** @type {World} */ (
@@ -105,12 +101,24 @@ const initial_state = {
   position: floor1.spawn_position,
   teleport: null,
   view_distance: 0,
-  inventory: Array.from({
-    length: 46,
-  }),
-  looted_items: {
-    pool: Array.from({ length: ITEM_LOOT_MAX_COUNT }),
-    cursor: 0,
+  inventory: {
+    head: null,
+    neck: null,
+    chest: null,
+    rings: Array.from({ length: 2 }),
+    belt: null,
+    legs: null,
+    feet: null,
+    pet: null,
+    relics: Array.from({ length: 6 }),
+    crafting_output: null,
+    crafting_input: Array.from({ length: 4 }),
+    main_inventory: Array.from({
+      length: 27,
+      0: { item: 'stone', name: 'idk', count: 70 },
+    }),
+    hotbar: Array.from({ length: 9 }),
+    off_hand: null,
   },
   inventory_sequence_number: 0,
   inventory_cursor: null,
@@ -118,11 +126,21 @@ const initial_state = {
   held_slot_index: 0,
   game_mode: GameMode.ADVENTURE,
   experience: 0,
-  health: 40,
+  health: 20,
   // player's energy, losing after each death
   soul: 100,
   // player's money
   kares: 0,
+  // represents the base stats increased by the player
+  // (not equipments bonuses)
+  characteristics: {
+    vitality: 0,
+    mind: 0,
+    strength: 0,
+    intelligence: 0,
+    chance: 0,
+    agility: 0,
+  },
   // last time the player joined,
   // can be used for example to calcule regenerated soul while offline
   last_connection_time: undefined,
@@ -184,7 +202,6 @@ function reduce_state(state, action) {
     player_inventory.reduce,
     player_gamemode.reduce,
     player_held_item.reduce,
-    player_item_loot.reduce,
     player_soul.reduce,
     player_health.reduce,
     player_experience.reduce,
@@ -204,7 +221,7 @@ export function observe_client({ mobs_position }) {
   /** @type Observer */
   return async context => {
     /* Observers that handle the protocol part.
-     * They get the client and should map it to minecraft protocol */
+      They get the client and should map it to minecraft protocol */
 
     finalization.observe(context)
 
@@ -228,7 +245,6 @@ export function observe_client({ mobs_position }) {
     player_action_bar.observe(context)
     player_scoreboard.observe(context)
     player_block_place.observe(context)
-    player_item_loot.observe(context)
     player_soul.observe(context)
     player_bossbar.observe(context)
     player_respawn.observe(context)

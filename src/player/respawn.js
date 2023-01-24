@@ -10,10 +10,9 @@ import logger from '../logger.js'
 import { GameMode } from '../gamemode.js'
 import { write_title } from '../title.js'
 import { Formats } from '../chat.js'
-import { get_max_health } from '../player_statistics.js'
 import { PLAYER_ENTITY_ID } from '../settings.js'
-
-import { write_inventory } from './inventory.js'
+import { get_max_health } from '../characteristics.js'
+import { write_inventory } from '../inventory.js'
 
 const log = logger(import.meta)
 const MIN_RESPAWN_TIME = 3
@@ -64,7 +63,7 @@ export default {
                 const state = get_state()
 
                 dispatch(PlayerAction.UPDATE_HEALTH, {
-                  health: get_max_health(state),
+                  health: get_max_health(state) * 0.05, // respawn with 5% life
                 })
                 write_inventory({ client, inventory: state.inventory })
 

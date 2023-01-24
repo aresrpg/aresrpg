@@ -4,9 +4,9 @@ import { aiter } from 'iterator-helper'
 
 import { PlayerEvent } from '../events.js'
 import { abortable } from '../iterator.js'
-import { get_max_health } from '../player_statistics.js'
 import { play_sound } from '../sound.js'
 import logger from '../logger.js'
+import { get_max_health } from '../characteristics.js'
 
 import { normal_screen, red_screen } from './world_border.js'
 

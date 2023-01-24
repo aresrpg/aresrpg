@@ -1,11 +1,11 @@
 import UUID from 'uuid-1345'
 import minecraftData from 'minecraft-data'
+import Nbt from 'prismarine-nbt'
 
 import { VERSION } from '../settings.js'
 import { chunk_position } from '../chunk.js'
 import { PlayerEvent, PlayerAction } from '../events.js'
-import { empty_slot, item_to_slot } from '../items.js'
-import items from '../../data/items.json' assert { type: 'json' }
+import { empty_slot, to_vanilla_item } from '../items.js'
 import { create_armor_stand } from '../armor_stand.js'
 import { to_metadata } from '../entity_metadata.js'
 import { distance2d_squared } from '../math.js'
@@ -163,21 +163,11 @@ function stone_to_item({ name }) {
     present: true,
     itemId: mcData.itemsByName.nether_star.id,
     itemCount: 1,
-    nbtData: {
-      type: 'compound',
-      name: 'tag',
-      value: {
-        display: {
-          type: 'compound',
-          value: {
-            Name: {
-              type: 'string',
-              value: JSON.stringify({ text: name }),
-            },
-          },
-        },
-      },
-    },
+    nbtData: Nbt.comp({
+      display: Nbt.comp({
+        Name: Nbt.string(JSON.stringify({ text: name })),
+      }),
+    }),
   }
 }
 
@@ -238,11 +228,7 @@ function on_window_click({ world, client, dispatch, get_state }) {
           ...available_teleportations_stones.map(stone =>
             stone ? stone_to_item(stone) : empty_slot
           ),
-          ...inventory
-            .slice(9, 45)
-            .map(item =>
-              item ? item_to_slot(items[item.type], item.count) : empty_slot
-            ),
+          ...inventory.main_inventory.map(to_vanilla_item),
         ],
       })
       client.write('set_slot', { ...CURSOR, item: empty_slot })

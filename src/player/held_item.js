@@ -1,6 +1,4 @@
-const OFF_HAND_SLOT = 45
 const SWAP_HAND_STATUS = 6
-const hotbar_to_inventory_slot = slot_id => slot_id + 36
 
 export default {
   /** @type {import('../context.js').Reducer} */
@@ -13,16 +11,21 @@ export default {
       }
     }
     if (type === 'packet/block_dig' && payload.status === SWAP_HAND_STATUS) {
-      const { held_slot_index } = state
-      const inventory_slot = hotbar_to_inventory_slot(held_slot_index)
-      const inventory = [...state.inventory]
-      ;[inventory[OFF_HAND_SLOT], inventory[inventory_slot]] = [
-        inventory[inventory_slot],
-        inventory[OFF_HAND_SLOT],
-      ]
+      const { held_slot_index, inventory } = state
+      const { off_hand, hotbar } = inventory
+      const held_item = hotbar[held_slot_index]
+
       return {
         ...state,
-        inventory,
+        inventory: {
+          ...inventory,
+          off_hand: held_item,
+          hotbar: [
+            ...hotbar.slice(0, held_slot_index),
+            off_hand,
+            ...hotbar.slice(held_slot_index + 1),
+          ],
+        },
         inventory_sequence_number: state.inventory_sequence_number + 1,
       }
     }

@@ -6,11 +6,11 @@ import { aiter } from 'iterator-helper'
 import { Formats, to_hex, to_rgb } from '../chat.js'
 import { PlayerEvent } from '../events.js'
 import { abortable } from '../iterator.js'
+import { write_action_bar } from '../title.js'
 import {
   get_max_health,
   get_remaining_stats_point,
-} from '../player_statistics.js'
-import { write_action_bar } from '../title.js'
+} from '../characteristics.js'
 
 import { closest_stone } from './teleportation_stones.js'
 

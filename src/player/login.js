@@ -6,9 +6,9 @@ import { PLAYER_ENTITY_ID } from '../settings.js'
 import { write_title } from '../title.js'
 import { PlayerEvent } from '../events.js'
 import { Formats, world_chat_msg } from '../chat.js'
+import { BLOCK_TAGS, ENTITY_TAGS, FLUID_TAGS, ITEM_TAGS } from '../tags.js'
 
 import { set_world_border } from './world_border.js'
-import { BLOCK_TAGS, ENTITY_TAGS, FLUID_TAGS, ITEM_TAGS } from './tags.js'
 
 export default {
   /** @type {import('../context.js').Observer} */
