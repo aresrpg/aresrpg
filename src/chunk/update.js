@@ -219,17 +219,19 @@ export default {
         return state
       })
       .then(state => {
-        const chunk_point = {
-          x: chunk_position(state.position.x),
-          z: chunk_position(state.position.z),
-        }
+        if (state) {
+          const chunk_point = {
+            x: chunk_position(state.position.x),
+            z: chunk_position(state.position.z),
+          }
 
-        for (let x = -state.view_distance; x <= state.view_distance; x++) {
-          for (let z = -state.view_distance; z <= state.view_distance; z++) {
-            events.emit(PlayerEvent.CHUNK_UNLOADED, {
-              x: chunk_point.x + x,
-              z: chunk_point.z + z,
-            })
+          for (let x = -state.view_distance; x <= state.view_distance; x++) {
+            for (let z = -state.view_distance; z <= state.view_distance; z++) {
+              events.emit(PlayerEvent.CHUNK_UNLOADED, {
+                x: chunk_point.x + x,
+                z: chunk_point.z + z,
+              })
+            }
           }
         }
       })

@@ -1,13 +1,12 @@
 import nbt from 'prismarine-nbt'
 import minecraftData from 'minecraft-data'
 
-import { item_to_slot } from '../items.js'
+import { to_vanilla_item } from '../items.js'
 import logger from '../logger.js'
 import execute_command from '../commands/commands.js'
 import { VERSION } from '../settings.js'
 import { world_chat_msg } from '../chat.js'
 import { WorldRequest } from '../events.js'
-import items from '../../data/items.json' assert { type: 'json' }
 import emotes from '../../data/emotes.json' assert { type: 'json' }
 
 import { closest_stone } from './teleportation_stones.js'
@@ -18,7 +17,7 @@ function is_command_function(message) {
   return message.trimStart()[0] === '/'
 }
 
-function slot_to_chat({ nbtData, itemCount, itemId }) {
+function serialize_item({ nbtData, itemCount, itemId }) {
   const tag = nbt.simplify(nbtData)
   const { name } = mcData.items[itemId]
   const chat = {
@@ -35,7 +34,7 @@ function slot_to_chat({ nbtData, itemCount, itemId }) {
   return chat
 }
 
-function emote_to_chat(emote) {
+function serialize_emote(emote) {
   const emote_name = emote.slice(1, -1)
 
   if (!emotes.includes(emote_name)) {
@@ -63,21 +62,22 @@ export default {
     const chat_mapper = {
       '%item%': () => {
         const { held_slot_index, inventory } = get_state()
-        const item = inventory[held_slot_index + 36] // For the player 0 is the first item in hotbar. But for the game the hotbat begin at 36.
-        if (item !== undefined) {
-          const { type, count } = item
-          return slot_to_chat(item_to_slot(items[type], count))
-        }
+        const item = inventory.hotbar[held_slot_index]
+        console.dir({
+          item,
+          hotbar: inventory.hotbar,
+        })
+        if (item !== undefined) return serialize_item(to_vanilla_item(item))
         return undefined
       },
       [/%item\d%/.source]: word => {
-        const slot_number = parseInt(word.match(/\d/)[0]) + 36 // same
+        const slot_number = Math.max(
+          0,
+          Math.min(parseInt(word.match(/\d/)[0]), 8)
+        )
         const { inventory } = get_state()
-        const item = inventory[slot_number]
-        if (item !== undefined) {
-          const { type, count } = item
-          return slot_to_chat(item_to_slot(items[type], count))
-        }
+        const item = inventory.hotbar[slot_number]
+        if (item !== undefined) return serialize_item(to_vanilla_item(item))
         return undefined
       },
       '%pos%': () => {
@@ -94,8 +94,10 @@ export default {
         }
         return chat
       },
-      [/:.*:/.source]: emote_to_chat, // all emotes name are between ":"
+      [/:.*:/.source]: serialize_emote, // all emotes name are between ":"
     }
+
+    const split_regex = new RegExp(`(${Object.keys(chat_mapper).join('|')})`)
 
     client.on('chat', ({ message }) => {
       if (is_command_function(message)) {
@@ -114,17 +116,15 @@ export default {
             {
               text: client.username,
             },
-            message
-              .split(new RegExp(`(${Object.keys(chat_mapper).join('|')})`))
-              .map(part => {
-                for (const pattern in chat_mapper)
-                  if (
-                    part.match(pattern) &&
-                    chat_mapper[pattern](part) !== undefined
-                  )
-                    return chat_mapper[pattern](part)
-                return { text: part }
-              }),
+            message.split(split_regex).map(part => {
+              for (const pattern in chat_mapper)
+                if (
+                  part.match(pattern) &&
+                  chat_mapper[pattern](part) !== undefined
+                )
+                  return chat_mapper[pattern](part)
+              return { text: part }
+            }),
           ],
         },
         client,

@@ -1,6 +1,6 @@
 import minecraftData from 'minecraft-data'
 
-import { VERSION } from '../settings.js'
+import { VERSION } from './settings.js'
 
 const {
   blocksByName: { ladder, vine },
