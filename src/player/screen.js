@@ -204,15 +204,6 @@ export function screen_ray_intersection(screen, position) {
         }
       }
     }
-    /*
-    if (hit) {
-      const x = dir.dot(hit.minus(screen_pos)) * 100
-      const y = hit.y
-      return {
-        x,
-        y,
-      }
-    } */
   }
   return false
 }
