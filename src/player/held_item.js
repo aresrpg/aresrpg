@@ -1,3 +1,5 @@
+import { get_held_item } from '../items.js'
+
 const SWAP_HAND_STATUS = 6
 
 export default {
@@ -13,13 +15,12 @@ export default {
     if (type === 'packet/block_dig' && payload.status === SWAP_HAND_STATUS) {
       const { held_slot_index, inventory } = state
       const { off_hand, hotbar } = inventory
-      const held_item = hotbar[held_slot_index]
 
       return {
         ...state,
         inventory: {
           ...inventory,
-          off_hand: held_item,
+          off_hand: get_held_item(state),
           hotbar: [
             ...hotbar.slice(0, held_slot_index),
             off_hand,

@@ -50,7 +50,7 @@ export const PlayerEvent = {
 }
 
 export const MobAction = {
-  /** a mob is receiving */
+  /** a mob is receiving damages */
   RECEIVE_DAMAGE: 'MOB:ACTION:RECEIVE_DAMAGE',
   /** a mob is going toward a position */
   GOTO: 'MOB:ACTION:GOTO',

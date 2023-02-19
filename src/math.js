@@ -154,3 +154,25 @@ export function direction_to_yaw_pitch(direction) {
     pitch,
   }
 }
+
+/** offer a number between a lower and upper bound
+ * but biased toward the lows
+ */
+export function random_bias_low(lower, upper) {
+  // the bias is 20% of the given range
+  const bias = ((upper - lower) * 20) / 100 + lower
+  const random = Math.random() * (upper - lower) + lower
+  const mix = Math.random() * 0.9 // random mixer
+  return Math.round(random * (1 - mix) + bias * mix)
+}
+
+/**
+ * Fits a number from a range, into another range
+ */
+export function normalize_range(value, first_range, second_range) {
+  return (
+    ((value - first_range.min) / (first_range.max - first_range.min)) *
+      (second_range.max - second_range.min) +
+    second_range.min
+  )
+}
