@@ -11,7 +11,7 @@ const xp_args = [
     // max: 9999999,
   }),
 ]
-export const nodes = [
+export const xp_nodes = [
   literal({
     value: 'experience',
     children: xp_args,

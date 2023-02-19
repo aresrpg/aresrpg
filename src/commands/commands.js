@@ -14,6 +14,8 @@ import thug from './thug.js'
 import msg from './msg.js'
 import health from './health.js'
 import experience from './experience.js'
+import attack_speed from './attack_speed.js'
+import help from './help.js'
 
 export function write_error({ sender }) {
   sender.write('chat', {
@@ -86,6 +88,13 @@ export default function execute_command({
     case 'xp':
     case 'experience':
       experience(command)
+      break
+    case 'attackspeed':
+      attack_speed(command)
+      break
+    case 'h':
+    case 'help':
+      help(command)
       break
 
     default:

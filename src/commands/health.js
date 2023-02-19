@@ -4,7 +4,7 @@ import { PlayerAction } from '../events.js'
 import { write_error } from './commands.js'
 import { integer, literal } from './declare_options.js'
 
-export const nodes = [
+export const health_nodes = [
   literal({
     value: 'health',
     children: [
