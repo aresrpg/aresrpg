@@ -63,6 +63,7 @@ export default {
         ({ cursor: last_cursor, ids }, { mob, damage, timer }) => {
           if (timer) {
             // entering here means the iteration is trigered by the interval
+            // we only handle the removing of damage indicators
             const now = Date.now()
             ids
               .filter(({ age }) => age + DAMAGE_INDICATOR_TTL < now)
