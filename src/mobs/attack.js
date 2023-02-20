@@ -2,7 +2,7 @@ import { on } from 'events'
 
 import { aiter } from 'iterator-helper'
 
-import { MobEvent, PlayerAction, PlayerEvent } from '../events.js'
+import { MobEvent, PlayerEvent } from '../events.js'
 import { abortable } from '../iterator.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
 
@@ -18,7 +18,7 @@ export default {
             target === client.uuid &&
             attack_sequence_number !== last_attack_sequence_number
           ) {
-            dispatch(PlayerAction.RECEIVE_DAMAGE, {
+            dispatch(PlayerEvent.RECEIVE_DAMAGE, {
               damage: Entities[mob.type].damage,
             })
           }

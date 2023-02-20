@@ -2,7 +2,8 @@ import { on } from 'events'
 
 import { aiter } from 'iterator-helper'
 
-import { PlayerEvent, PlayerAction } from '../events.js'
+import { get_max_health } from '../characteristics.js'
+import { PlayerEvent, WorldRequest } from '../events.js'
 import { abortable } from '../iterator.js'
 import logger from '../logger.js'
 import { play_sound } from '../sound.js'
@@ -17,8 +18,9 @@ const BELOW_NAME_POSITION = 2
 export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
-    if (type === PlayerAction.UPDATE_HEALTH) {
-      const health = Math.max(0, payload.health)
+    if (type === PlayerEvent.UPDATE_HEALTH) {
+      const max_health = get_max_health(state)
+      const health = Math.max(0, Math.min(max_health, payload.health))
 
       log.info({ health }, 'direct health update')
 
@@ -31,7 +33,7 @@ export default {
   },
 
   /** @type {import('../context.js').Observer} */
-  observe({ client, events, signal, dispatch }) {
+  observe({ client, events, signal, dispatch, world }) {
     events.once(PlayerEvent.STATE_UPDATED, state => {
       client.write('scoreboard_objective', {
         name: SCOREBOARD_NAME,
@@ -56,8 +58,13 @@ export default {
             foodSaturation: 0.0,
           })
 
+          world.events.emit(WorldRequest.PLAYER_HEALTH_UPDATE, {
+            uuid: client.uuid,
+            health,
+          })
+
           if (health === 0) {
-            dispatch(PlayerAction.DIE)
+            dispatch(PlayerEvent.DIE)
             play_sound({
               client,
               sound: 'entity.zombie_villager.converted',

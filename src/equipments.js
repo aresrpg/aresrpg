@@ -1,5 +1,3 @@
-import { CHARACTERISTICS } from './characteristics.js'
-
 function pad_end(array, length) {
   return [...array, ...Array.from({ length })].slice(0, length)
 }
@@ -19,6 +17,7 @@ export function to_inventory_array({
   main_inventory = [],
   hotbar = [],
   off_hand,
+  weapon,
 }) {
   return [
     crafting_output,
@@ -28,7 +27,7 @@ export function to_inventory_array({
     legs,
     feet,
     ...pad_end(main_inventory, 27),
-    ...pad_end(hotbar, 9),
+    ...pad_end([weapon, ...hotbar.slice(1)], 9),
     off_hand,
   ]
 }
@@ -62,17 +61,10 @@ const characteristics_sum = items => characteristic =>
       0
     )
 
-export function get_equipped_characteristics({
-  head,
-  neck,
-  chest,
-  rings,
-  belt,
-  legs,
-  feet,
-  pet,
-  relics,
-}) {
+export function get_equipped_characteristic(
+  characteristic_name,
+  { head, neck, chest, rings, belt, legs, feet, pet, relics, weapon }
+) {
   const sum = characteristics_sum([
     head,
     neck,
@@ -82,9 +74,9 @@ export function get_equipped_characteristics({
     legs,
     feet,
     pet,
+    weapon,
     ...relics,
   ])
-  return Object.fromEntries(
-    CHARACTERISTICS.map(characteristic => [characteristic, sum(characteristic)])
-  )
+
+  return sum(characteristic_name)
 }

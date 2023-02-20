@@ -4,6 +4,8 @@ import { PassThrough } from 'stream'
 import { aiter } from 'iterator-helper'
 import combineAsyncIterators from 'combine-async-iterators'
 
+import items from '../data/items.json' assert { type: 'json' }
+
 import { last_event_value, PlayerEvent } from './events.js'
 import { floor1 } from './world.js'
 import logger from './logger.js'
@@ -63,6 +65,7 @@ import Database from './database.js'
 import { USE_RESOURCE_PACK } from './settings.js'
 import { GameMode } from './gamemode.js'
 import { inside_view } from './view_distance.js'
+import { generate_item } from './items.js'
 
 const log = logger(import.meta)
 
@@ -110,13 +113,11 @@ const initial_state = {
     legs: null,
     feet: null,
     pet: null,
+    weapon: generate_item(items.default_sword),
     relics: Array.from({ length: 6 }),
     crafting_output: null,
     crafting_input: Array.from({ length: 4 }),
-    main_inventory: Array.from({
-      length: 27,
-      0: { item: 'stone', name: 'idk', count: 70 },
-    }),
+    main_inventory: Array.from({ length: 27 }),
     hotbar: Array.from({ length: 9 }),
     off_hand: null,
   },
@@ -278,6 +279,9 @@ export function observe_client({ mobs_position }) {
  *   |> transform_action
  *   |> (state = reduce_state(state))
  *
+ * @param {object} options
+ * @param {import('minecraft-protocol').Client} options.client
+ * @param {World} options.world
  */
 export async function create_context({ client, world }) {
   log.info(

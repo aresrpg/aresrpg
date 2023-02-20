@@ -1,5 +1,5 @@
 import { get_block } from '../chunk.js'
-import { PlayerAction } from '../events.js'
+import { PlayerEvent } from '../events.js'
 import logger from '../logger.js'
 
 const log = logger(import.meta)
@@ -11,7 +11,7 @@ export default {
       get_block(world, location)
         .then(({ name, stateId }) => {
           if (name === 'flower_pot') {
-            dispatch(PlayerAction.RESYNC_INVENTORY)
+            dispatch(PlayerEvent.RESYNC_INVENTORY)
             client.write('block_change', {
               location,
               type: stateId,

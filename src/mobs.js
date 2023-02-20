@@ -35,9 +35,9 @@ const initial_state = {
 }
 
 /** @typedef {Readonly<typeof initial_state>} MobState */
-/** @typedef {{ type: string, payload: any, time: number }} MobAction */
+/** @typedef {{ type: string, payload: any, time: number }} MobEvent */
 /** @typedef {{ world: import('./context').World, type: string, entity_id: number }} MobContext */
-/** @typedef {(state: MobState, action: MobAction, context?: MobContext) => MobState} MobsReducer */
+/** @typedef {(state: MobState, action: MobEvent, context?: MobContext) => MobState} MobsReducer */
 
 function reduce_mob(state, action, context) {
   return [

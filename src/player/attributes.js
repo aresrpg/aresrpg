@@ -3,7 +3,11 @@ import { on } from 'events'
 import { aiter } from 'iterator-helper'
 
 import { delay_to_generic_attack_speed } from '../attribute.js'
-import { get_attack_delay, get_haste } from '../characteristics.js'
+import {
+  Characteristic,
+  get_attack_delay,
+  get_total_characteristic,
+} from '../characteristics.js'
 import { PlayerEvent } from '../events.js'
 import { abortable } from '../iterator.js'
 import { PLAYER_ENTITY_ID } from '../settings.js'
@@ -20,7 +24,10 @@ export default {
       .map(([state]) => state)
       .reduce(
         ({ last_attack_speed }, { inventory, characteristics }) => {
-          const haste = get_haste({ inventory, characteristics })
+          const haste = get_total_characteristic(Characteristic.HASTE, {
+            inventory,
+            characteristics,
+          })
           const delay = get_attack_delay(haste)
           const attack_speed = delay_to_generic_attack_speed(delay)
 
