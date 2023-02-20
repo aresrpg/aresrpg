@@ -4,7 +4,7 @@ import { setInterval } from 'timers/promises'
 import { aiter } from 'iterator-helper'
 
 import { overworld } from '../world/codec.js'
-import { PlayerEvent, PlayerAction } from '../events.js'
+import { PlayerEvent } from '../events.js'
 import { abortable } from '../iterator.js'
 import logger from '../logger.js'
 import { GameMode } from '../gamemode.js'
@@ -62,7 +62,7 @@ export default {
 
                 const state = get_state()
 
-                dispatch(PlayerAction.UPDATE_HEALTH, {
+                dispatch(PlayerEvent.UPDATE_HEALTH, {
                   health: get_max_health(state) * 0.05, // respawn with 5% life
                 })
                 write_inventory({ client, inventory: state.inventory })

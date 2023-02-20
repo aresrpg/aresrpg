@@ -4,7 +4,7 @@ import { aiter } from 'iterator-helper'
 
 import { abortable } from '../iterator.js'
 import logger from '../logger.js'
-import { PlayerEvent, PlayerAction } from '../events.js'
+import { PlayerEvent } from '../events.js'
 
 const log = logger(import.meta)
 
@@ -16,7 +16,7 @@ const SOUL_REGEN_PER_ONLINE_HOUR = 12
 export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
-    if (type === PlayerAction.DIE) {
+    if (type === PlayerEvent.DIE) {
       const soul = Math.max(0, state.soul - 10)
 
       log.info({ soul }, 'lost soul')
@@ -28,7 +28,7 @@ export default {
       // here we forbid soul regeneration when the player is a ghost
       // the player first have to get out of that ghost mode
       // before being able to gain soul in any way
-    } else if (type === PlayerAction.REGENERATE_SOUL) {
+    } else if (type === PlayerEvent.REGENERATE_SOUL) {
       const { amount } = payload
       return {
         ...state,
@@ -44,7 +44,7 @@ export default {
     aiter(abortable(setInterval(MINUTE_10, null, { signal }))).forEach(() => {
       const { soul } = get_state()
       if (soul !== 0)
-        dispatch(PlayerAction.REGENERATE_SOUL, {
+        dispatch(PlayerEvent.REGENERATE_SOUL, {
           amount: Math.round(SOUL_REGEN_PER_ONLINE_HOUR / 6),
         })
     })
@@ -59,7 +59,7 @@ export default {
             last_connection_time - last_disconnection_time
           )
           const hours_offline = Math.round(time_offline / HOUR_1)
-          dispatch(PlayerAction.REGENERATE_SOUL, {
+          dispatch(PlayerEvent.REGENERATE_SOUL, {
             amount: SOUL_REGEN_PER_OFFLINE_HOUR * hours_offline,
           })
         }

@@ -1,5 +1,5 @@
 import { client_chat_msg, Formats } from '../chat.js'
-import { PlayerAction } from '../events.js'
+import { PlayerEvent } from '../events.js'
 
 import { write_error } from './commands.js'
 import { integer, literal } from './declare_options.js'
@@ -21,7 +21,7 @@ export default function health({ world, sender, dispatch, args }) {
   if (args.length === 1) {
     const [health] = args
     if (!Number.isNaN(+health)) {
-      dispatch(PlayerAction.UPDATE_HEALTH, { health: +health })
+      dispatch(PlayerEvent.UPDATE_HEALTH, { health: +health })
       client_chat_msg({
         client: sender,
         message: [

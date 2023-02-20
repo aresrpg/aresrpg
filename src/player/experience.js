@@ -5,7 +5,7 @@ import UUID from 'uuid-1345'
 import minecraftData from 'minecraft-data'
 import Nbt from 'prismarine-nbt'
 
-import { PlayerEvent, PlayerAction } from '../events.js'
+import { PlayerEvent } from '../events.js'
 import { abortable } from '../iterator.js'
 import { write_title } from '../title.js'
 import { play_sound } from '../sound.js'
@@ -30,7 +30,7 @@ export function register(world) {
 export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
-    if (type === PlayerAction.RECEIVE_EXPERIENCE) {
+    if (type === PlayerEvent.RECEIVE_EXPERIENCE) {
       const { experience } = payload
       const { level: last_level } = experience_to_level(state.experience)
       const { level } = experience_to_level(state.experience + experience)
@@ -209,7 +209,7 @@ export default {
     )
     events.on(PlayerEvent.MOB_DEATH, ({ mob }) => {
       const { xp } = Entities[mob.type]
-      dispatch(PlayerAction.RECEIVE_EXPERIENCE, { experience: +xp })
+      dispatch(PlayerEvent.RECEIVE_EXPERIENCE, { experience: +xp })
     })
   },
 }

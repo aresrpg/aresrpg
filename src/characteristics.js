@@ -34,11 +34,26 @@ export const Characteristic = {
   HASTE: 'haste',
 }
 
+export function characteristic_from_element(element) {
+  switch (element) {
+    case 'earth':
+      return Characteristic.STRENGTH
+    case 'fire':
+      return Characteristic.INTELLIGENCE
+    case 'water':
+      return Characteristic.CHANCE
+    case 'air':
+      return Characteristic.AGILITY
+    default:
+      throw new Error(`${element} is not a valid element`)
+  }
+}
+
 /**
  * Compute base stats with equipped items to
  * return the total characteristic value for a player
  */
-function get_total_characteristic(
+export function get_total_characteristic(
   characteristic_name,
   { inventory, characteristics }
 ) {
@@ -64,11 +79,8 @@ export function get_max_health({ experience, inventory, characteristics }) {
   return BASE_LIFE + life_level_bonus + life_vitality_bonus
 }
 
-export function get_haste({ inventory, characteristics }) {
-  return get_total_characteristic(Characteristic.HASTE, {
-    inventory,
-    characteristics,
-  })
+export function get_fixed_damage({ inventory }) {
+  return 0
 }
 
 /** Calculate the MS delay between arm attack from the haste stat */

@@ -4,7 +4,7 @@ import Nbt from 'prismarine-nbt'
 
 import { VERSION } from '../settings.js'
 import { chunk_position } from '../chunk.js'
-import { PlayerEvent, PlayerAction } from '../events.js'
+import { PlayerEvent } from '../events.js'
 import { empty_slot, to_vanilla_item } from '../items.js'
 import { create_armor_stand } from '../armor_stand.js'
 import { to_metadata } from '../entity_metadata.js'
@@ -216,7 +216,7 @@ function on_window_click({ world, client, dispatch, get_state }) {
         if (available_teleportations_stones[slot]) {
           client.write('close_window', { windowId })
           dispatch(
-            PlayerAction.TELEPORT_TO,
+            PlayerEvent.TELEPORT_TO,
             available_teleportations_stones[slot].position
           )
         }

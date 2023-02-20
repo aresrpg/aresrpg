@@ -1,14 +1,19 @@
 import { on } from 'events'
 
 import { aiter } from 'iterator-helper'
+import combineAsyncIterators from 'combine-async-iterators'
 
-import { MobAction, MobEvent, PlayerEvent } from '../events.js'
+import { MobEvent, PlayerEvent, WorldRequest } from '../events.js'
 import logger from '../logger.js'
 import { abortable } from '../iterator.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
 import { to_metadata } from '../entity_metadata.js'
 import { compute_weapon_dealt_damage } from '../damage.js'
-import { get_attack_delay, get_haste } from '../characteristics.js'
+import {
+  Characteristic,
+  get_attack_delay,
+  get_total_characteristic,
+} from '../characteristics.js'
 
 import { color_by_category } from './spawn.js'
 
@@ -20,7 +25,7 @@ const Mouse = {
 export default {
   /** @type {import('../mobs').MobsReducer} */
   reduce_mob(state, { type, payload }) {
-    if (type === MobAction.RECEIVE_DAMAGE) {
+    if (type === MobEvent.RECEIVE_DAMAGE) {
       const { damage, damager } = payload
 
       const health = Math.max(0, state.health - damage)
@@ -38,48 +43,82 @@ export default {
   },
 
   /** @type {import('../context.js').Observer} */
-  observe({ client, get_state, world, events, signal }) {
-    aiter(abortable(on(client, 'use_entity', { signal })))
+  observe({ client, get_state, world, events, signal, dispatch }) {
+    aiter(
+      abortable(
+        combineAsyncIterators(
+          on(client, 'use_entity', { signal }),
+          on(events, PlayerEvent.PLAYER_INTERRACTED, { signal })
+        )
+      )
+    )
       .map(([event]) => event)
       .dropWhile(({ mouse }) => mouse !== Mouse.LEFT_CLICK)
-      .map(({ target }) => {
-        const { health, inventory, characteristics } = get_state()
-        const mob = world.mobs.by_entity_id(target)
-        const { category } = Entities[mob?.type] ?? {}
+      .map(({ target, player }) => {
+        const state = get_state()
         return {
-          player_health: health,
-          player_haste: get_haste({ inventory, characteristics }),
-          mob,
-          category,
+          state,
+          target,
+          player,
         }
       })
-      .dropWhile(
-        ({ player_health, mob, category }) =>
-          player_health <= 0 || !mob || category === 'npc'
-      )
+      // if player is dead, he shouldn't interract
+      .dropWhile(({ state: { health } }) => health <= 0)
       .reduce(
-        ({ frame_expiration, last_entities_ids }, { player_haste, mob }) => {
+        (
+          { frame_expiration, last_entities_ids },
+          { target, player, state }
+        ) => {
           const new_hit_frame = Date.now() > frame_expiration
           const entities_ids = new_hit_frame ? [] : last_entities_ids
 
-          if (!entities_ids.includes(mob.entity_id)) {
-            console.dir(
-              { mob: mob.entity_id, delay: get_attack_delay(player_haste) },
-              { depth: Infinity }
-            )
+          if (!entities_ids.includes(target)) {
+            entities_ids.push(target)
             // hit
-            const { damage } = compute_weapon_dealt_damage({})
-            mob.dispatch(MobAction.RECEIVE_DAMAGE, {
-              damage,
-              damager: client.uuid,
-            })
-            entities_ids.push(mob.entity_id)
+            const { damage, life_stolen, heal } =
+              compute_weapon_dealt_damage(state)
+
+            if (player) {
+              // target is a player
+              if (life_stolen) {
+                // healing the player accordingly before damaging the other player
+                const real_life_stolen = Math.min(player.health, life_stolen)
+                dispatch(PlayerEvent.UPDATE_HEALTH, {
+                  health: state.health + real_life_stolen,
+                })
+              }
+              world.events.emit(WorldRequest.PLAYER_RECEIVE_DAMAGE, {
+                player,
+                damage: damage + life_stolen - heal,
+                damager: client.uuid,
+              })
+            } else {
+              const targeted_mob = world.mobs.by_entity_id(target)
+              const { category } = Entities[targeted_mob?.type] ?? {}
+
+              if (targeted_mob && category !== 'npc') {
+                if (life_stolen) {
+                  // healing the player accordingly before damaging the mob
+                  const { health: mob_health } = targeted_mob.get_state()
+                  const real_life_stolen = Math.min(mob_health, life_stolen)
+                  dispatch(PlayerEvent.UPDATE_HEALTH, {
+                    health: state.health + real_life_stolen,
+                  })
+                }
+                targeted_mob.dispatch(MobEvent.RECEIVE_DAMAGE, {
+                  // if more heal, then it will receive negative dmg (heal)
+                  damage: damage + life_stolen - heal,
+                  damager: client.uuid,
+                })
+              }
+            }
           }
 
+          const haste = get_total_characteristic(Characteristic.HASTE, state)
           return {
             last_entities_ids: entities_ids,
             frame_expiration: new_hit_frame
-              ? Date.now() + get_attack_delay(player_haste)
+              ? Date.now() + get_attack_delay(haste)
               : frame_expiration,
           }
         },

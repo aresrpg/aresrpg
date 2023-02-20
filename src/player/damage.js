@@ -4,7 +4,7 @@ import { setInterval } from 'timers/promises'
 import { aiter } from 'iterator-helper'
 import combineAsyncIterators from 'combine-async-iterators'
 
-import { PlayerAction, PlayerEvent } from '../events.js'
+import { PlayerEvent, WorldRequest } from '../events.js'
 import { create_armor_stand } from '../armor_stand.js'
 import logger from '../logger.js'
 import { GameMode } from '../gamemode.js'
@@ -30,7 +30,7 @@ export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
     if (
-      type === PlayerAction.RECEIVE_DAMAGE &&
+      type === PlayerEvent.RECEIVE_DAMAGE &&
       state.game_mode !== GameMode.CREATIVE
     ) {
       const { damage } = payload
@@ -46,21 +46,37 @@ export default {
     return state
   },
 
+  // TODO: Handle reception of worldrequest.DAMAGE_PLAYER for damage and heal
+
   /** @type {import('../context.js').Observer} */
   observe({ events, dispatch, client, world, signal }) {
+    // here we handle the damage taken by our observed client
+    // this come all the way from sync.js which listens for `use_entity` packet and match uuids
+    aiter(
+      abortable(
+        on(world.events, WorldRequest.PLAYER_RECEIVE_DAMAGE, { signal })
+      )
+    )
+      .map(([event]) => event)
+      .dropWhile(({ uuid }) => uuid !== client.uuid)
+      .forEach(({ damage }) => {
+        dispatch(PlayerEvent.RECEIVE_DAMAGE, { damage })
+      })
+
     aiter(
       abortable(
         // @ts-ignore
         combineAsyncIterators(
           on(events, PlayerEvent.MOB_DAMAGED, { signal }),
           on(events, PlayerEvent.MOB_DEATH, { signal }),
+          on(world.events, WorldRequest.PLAYER_RECEIVE_DAMAGE, { signal }),
           setInterval(DAMAGE_INDICATOR_TTL / 2, [{ timer: true }], { signal })
         )
       )
     )
-      .map(([{ mob, damage, timer }]) => ({ mob, damage, timer }))
+      .map(([event]) => event)
       .reduce(
-        ({ cursor: last_cursor, ids }, { mob, damage, timer }) => {
+        ({ cursor: last_cursor, ids }, { mob, player, damage, timer }) => {
           if (timer) {
             // entering here means the iteration is trigered by the interval
             // we only handle the removing of damage indicators
@@ -78,9 +94,9 @@ export default {
           const { damage_indicator_start_id } = world
           const cursor = (last_cursor + 1) % DAMAGE_INDICATORS_AMOUNT
           const entity_id = damage_indicator_start_id + cursor
-          const { x, y, z } = mob.position()
-          const { height } = mob.constants
-          const damage_position = {
+          const { x, y, z } = player?.position ?? mob.position()
+          const { height } = player ? { height: 2 } : mob.constants
+          const position = {
             x: x + (Math.random() * 2 - 1) * 0.25,
             y: y + height - 0.25 + (Math.random() * 2 - 1) * 0.15,
             z: z + (Math.random() * 2 - 1) * 0.25,
@@ -92,16 +108,17 @@ export default {
           const is_dead = damage === undefined
 
           if (!is_dead) {
-            create_armor_stand(client, entity_id, damage_position, {
-              text: `-${damage}`,
-              color: '#E74C3C', // https://materialui.co/flatuicolors Alizarin
+            const sign = damage <= 0 ? '' : '-'
+            create_armor_stand(client, entity_id, position, {
+              text: `${sign}${damage}`,
+              color: damage <= 0 ? '#2ECC71' : '#E74C3C', // https://materialui.co/flatuicolors Emerland / Alizarin
             })
             show_blood({ client, position: particle_position })
           } else {
             const { xp } = Entities[mob.type]
             create_armor_stand(client, entity_id, damage_position, {
               text: `+${xp} xp`,
-              color: '#A6CD57',
+              color: '#3498DB',
             })
             show_death_smoke({ client, position: particle_position })
           }

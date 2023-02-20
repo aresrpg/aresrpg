@@ -136,11 +136,11 @@ export default {
     }
 
     world.events.on(WorldRequest.SEND_CHAT_MESSAGE, on_chat)
-    world.events.on(WorldRequest.PRIVATE_MESSAGE, on_private_message)
+    world.events.on(WorldRequest.SEND_PRIVATE_MESSAGE, on_private_message)
 
     client.once('end', () => {
       world.events.off(WorldRequest.SEND_CHAT_MESSAGE, on_chat)
-      world.events.off(WorldRequest.PRIVATE_MESSAGE, on_private_message)
+      world.events.off(WorldRequest.SEND_PRIVATE_MESSAGE, on_private_message)
     })
   },
 }

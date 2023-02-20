@@ -3,7 +3,7 @@ import { setTimeout } from 'timers/promises'
 
 import { aiter } from 'iterator-helper'
 
-import { MobAction, MobEvent } from '../events.js'
+import { MobEvent } from '../events.js'
 import logger from '../logger.js'
 import { async_tail_recursive } from '../iterator.js'
 
@@ -114,7 +114,7 @@ export function path_end(mobs) {
     aiter(end).reduce((last_time, time) => {
       if (last_time !== time) {
         log.debug({ at: time }, 'Path Ended')
-        mob.dispatch(MobAction.END_PATH, null, time)
+        mob.dispatch(MobEvent.END_PATH, null, time)
       }
       return time
     })

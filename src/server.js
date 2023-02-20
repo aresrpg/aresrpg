@@ -55,6 +55,7 @@ export function create_server() {
     },
   })
 
+  /** @type {import('./context').World & { events: EventEmitter }} */
   const world = { ...original_world, events: new EventEmitter() }
   const mobs_position = mobs_position_factory(world)
 

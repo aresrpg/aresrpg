@@ -4,8 +4,13 @@ import minecraftData from 'minecraft-data'
 import Nbt from 'prismarine-nbt'
 
 import { VERSION } from './settings.js'
+import { random_bias_low } from './math.js'
 
 const { itemsByName } = minecraftData(VERSION)
+const ITEM_GENERATION_BIAS = 0.6
+
+/** @typedef {import('./types').ItemTemplate} ItemTemplate */
+/** @typedef {import('./types').Item} Item */
 
 export const empty_slot = {
   present: false,
@@ -84,9 +89,9 @@ export function to_vanilla_item(ares_item) {
     custom_model_data,
     enchanted,
     description: !!description,
-    stats: !!stats,
+    stats: JSON.stringify(stats),
     critical: JSON.stringify(critical),
-    damage,
+    damage: JSON.stringify(damage),
   }).map(([key, value]) => ({ text: `${key}: ${value}` }))
 
   return {
@@ -106,5 +111,38 @@ export function to_vanilla_item(ares_item) {
         ),
       }),
     }),
+  }
+}
+
+function generate_stats(stats) {
+  return Object.fromEntries(
+    Object.entries(stats)
+      // only keep existing stats (not 0)
+      .filter(([, [from, to]]) => from || to)
+      .map(([stat_name, [from, to]]) => [
+        stat_name,
+        random_bias_low(from, to, ITEM_GENERATION_BIAS),
+      ])
+  )
+}
+
+/** @type {(state) => Item | null} */
+export function get_held_item({ held_slot_index, inventory: { hotbar } }) {
+  const held_item = hotbar[held_slot_index]
+  return held_item
+}
+
+/** @type {(item: ItemTemplate, count: number) => Item} */
+export function generate_item({ stats, ...template }, count = 1) {
+  if (stats)
+    return {
+      ...template,
+      stats: generate_stats(stats),
+      count,
+    }
+
+  return {
+    ...template,
+    count,
   }
 }

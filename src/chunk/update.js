@@ -12,7 +12,7 @@ import {
 } from '../math.js'
 import { PLAYER_ENTITY_ID } from '../settings.js'
 import { abortable } from '../iterator.js'
-import { PlayerAction, PlayerEvent } from '../events.js'
+import { PlayerEvent } from '../events.js'
 
 function fix_light(chunk) {
   for (let x = 0; x < 16; x++) {
@@ -117,7 +117,7 @@ export function unload_chunks(state, { client, events, chunks, world }) {
 export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
-    if (type === PlayerAction.TELEPORT_TO) {
+    if (type === PlayerEvent.TELEPORT_TO) {
       return {
         ...state,
         teleport: payload,

@@ -2,7 +2,7 @@ import { on } from 'events'
 
 import { aiter } from 'iterator-helper'
 
-import { PlayerEvent, PlayerAction } from '../events.js'
+import { PlayerEvent } from '../events.js'
 import { abortable } from '../iterator.js'
 
 export default {
@@ -27,7 +27,7 @@ export default {
             const raw_damage = fall_distance / 2 - 1.5
             const damage = Math.round(raw_damage * 2) / 2
 
-            if (damage > 0) dispatch(PlayerAction.RECEIVE_DAMAGE, { damage })
+            if (damage > 0) dispatch(PlayerEvent.RECEIVE_DAMAGE, { damage })
             return {
               highest_y: y,
               was_on_ground: true,

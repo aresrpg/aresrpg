@@ -4,7 +4,7 @@ import { aiter } from 'iterator-helper'
 
 import { PLAYER_INVENTORY_ID } from '../settings.js'
 import { abortable } from '../iterator.js'
-import { PlayerEvent, PlayerAction } from '../events.js'
+import { PlayerEvent } from '../events.js'
 import { assign_items, similar, split_item, to_vanilla_item } from '../items.js'
 import { write_inventory } from '../inventory.js'
 import { from_inventory_array, to_inventory_array } from '../equipments.js'
@@ -15,6 +15,7 @@ const FORBIDDEN_SLOTS = [
   6, // Chestplate
   7, // Leggings
   8, // Boots
+  36, // equipped weapon slot (hotbar 0)
 ]
 
 const BlockDigStatus = {
@@ -80,8 +81,15 @@ export default {
 
     if (type === 'packet/window_click') {
       const { windowId, slot, mode, mouseButton: right_click } = payload
-
-      if (windowId === PLAYER_INVENTORY_ID && !FORBIDDEN_SLOTS.includes(slot)) {
+      if (
+        FORBIDDEN_SLOTS.includes(slot) ||
+        type === PlayerEvent.RESYNC_INVENTORY
+      )
+        return {
+          ...state,
+          inventory_sequence_number: inventory_sequence_number + 1,
+        }
+      else if (windowId === PLAYER_INVENTORY_ID) {
         if (mode === 0) {
           const drop = slot === -999
           const index = drop ? inventory_cursor_index : slot
@@ -118,11 +126,7 @@ export default {
           }
         }
       }
-    } else if (type === PlayerAction.RESYNC_INVENTORY)
-      return {
-        ...state,
-        inventory_sequence_number: inventory_sequence_number + 1,
-      }
+    }
     return state
   },
   /** @type {import('../context.js').Observer} */

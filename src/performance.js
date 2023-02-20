@@ -44,7 +44,8 @@ function create_debounced_observer({
 
       for (const entry of entries) {
         counter++
-        if (with_histogram) histogram.record(Math.floor(entry.duration))
+        const duration = Math.floor(entry.duration)
+        if (with_histogram && duration > 0) histogram.record(duration)
       }
     }
   }
