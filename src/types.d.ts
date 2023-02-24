@@ -28,21 +28,7 @@ type Await<T> = T extends Promise<infer U> ? U : T
 
 type ItemBase = {
   name: string
-  type:
-    | 'helmet'
-    | 'chestplate'
-    | 'leggings'
-    | 'boots'
-    | 'necklace'
-    | 'ring'
-    | 'belt'
-    | 'shield'
-    | 'sword'
-    | 'axe'
-    | 'bow'
-    | 'stick'
-    | 'misc'
-    | 'consumable'
+  type: string
   item: string
   custom_model_data: number
   enchanted: boolean
@@ -57,42 +43,44 @@ type ItemBase = {
   damage: {
     from: number
     to: number
-    type: 'damage' | 'life_steal' | 'heal'
-    element: 'earth' | 'fire' | 'water' | 'air'
+    type: string
+    element: string
   }[]
+}
+
+type ItemStatisticsTemplate = {
+  vitality: number[]
+  mind: number[]
+  strength: number[]
+  intelligence: number[]
+  chance: number[]
+  agility: number[]
+  speed: number[]
+  reach: number[]
+  haste: number[]
+}
+
+type ItemStatistics = {
+  vitality: number | undefined
+  mind: number | undefined
+  strength: number | undefined
+  intelligence: number | undefined
+  chance: number | undefined
+  agility: number | undefined
+  speed: number | undefined
+  reach: number | undefined
+  haste: number | undefined
 }
 
 /** An item template is a static json object representing the schema of an item,
  * it is used to generate real items
  */
 type ItemTemplate = ItemBase & {
-  stats:
-    | {
-        vitality: [number, number]
-        mind: [number, number]
-        strength: [number, number]
-        intelligence: [number, number]
-        chance: [number, number]
-        agility: [number, number]
-        speed: [number, number]
-        reach: [number, number]
-        haste: [number, number]
-      }
-    | undefined
+  stats?: ItemStatisticsTemplate
 }
 
 /** Represent an item ready to be used, it has fixed stats and a count */
 type Item = ItemBase & {
-  stats: {
-    vitality: number | undefined
-    mind: number | undefined
-    strength: number | undefined
-    intelligence: number | undefined
-    chance: number | undefined
-    agility: number | undefined
-    speed: number | undefined
-    reach: number | undefined
-    haste: number | undefined
-  }
+  stats?: ItemStatistics
   count: number
 }

@@ -7,10 +7,11 @@ import { PlayerEvent, WorldRequest } from '../events.js'
 import { abortable } from '../iterator.js'
 import logger from '../logger.js'
 import { play_sound } from '../sound.js'
+import { synchronisation_payload } from '../sync.js'
 
 const log = logger(import.meta)
 
-const SCOREBOARD_NAME = 'life'
+export const SCOREBOARD_NAME = 'life'
 const CREATE_OBJECTIVE_ACTION = 0
 const INTEGER_TYPE = 0
 const BELOW_NAME_POSITION = 2
@@ -49,22 +50,35 @@ export default {
     })
 
     aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
-      .map(([{ health, position }]) => ({ position, health }))
-      .reduce((last_health, { position, health }) => {
-        if (last_health !== health) {
+      .map(([state]) => state)
+      .reduce((last_health, state) => {
+        const { position, health } = state
+        if (last_health !== null && last_health !== health) {
           client.write('update_health', {
             health,
             food: 20,
             foodSaturation: 0.0,
           })
 
-          world.events.emit(WorldRequest.PLAYER_HEALTH_UPDATE, {
-            uuid: client.uuid,
-            health,
-          })
+          // if just respawned, we need more information for sync
+          if (last_health === 0)
+            world.events.emit(
+              WorldRequest.PLAYER_RESPAWNED,
+              synchronisation_payload(client, state)
+            )
+          else
+            world.events.emit(WorldRequest.PLAYER_HEALTH_UPDATE, {
+              uuid: client.uuid,
+              username: client.username,
+              health,
+            })
 
           if (health === 0) {
             dispatch(PlayerEvent.DIE)
+            setTimeout(() => {
+              // delaying to let the time of the death animation
+              world.events.emit(WorldRequest.PLAYER_DIED, { uuid: client.uuid })
+            }, 700)
             play_sound({
               client,
               sound: 'entity.zombie_villager.converted',
@@ -73,6 +87,6 @@ export default {
           }
         }
         return health
-      }, 0)
+      }, null)
   },
 }

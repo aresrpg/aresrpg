@@ -7,9 +7,10 @@ import { VERSION } from './settings.js'
 import { random_bias_low } from './math.js'
 
 const { itemsByName } = minecraftData(VERSION)
-const ITEM_GENERATION_BIAS = 0.6
 
 /** @typedef {import('./types').ItemTemplate} ItemTemplate */
+/** @typedef {import('./types').ItemStatisticsTemplate} ItemStatisticsTemplate */
+/** @typedef {import('./types').ItemStatistics} ItemStatistics */
 /** @typedef {import('./types').Item} Item */
 
 export const empty_slot = {
@@ -100,6 +101,7 @@ export function to_vanilla_item(ares_item) {
     itemCount: count,
     // https://minecraft.gamepedia.com/Player.dat_format#Item_structure
     nbtData: Nbt.comp({
+      CustomModelData: Nbt.int(custom_model_data),
       display: Nbt.comp({
         Name: Nbt.string(JSON.stringify(display_name)),
         Lore: Nbt.list(Nbt.string(lore.map(line => JSON.stringify(line)))),
@@ -114,15 +116,14 @@ export function to_vanilla_item(ares_item) {
   }
 }
 
+/** @type {(stats: ItemStatisticsTemplate) => ItemStatistics} */
 function generate_stats(stats) {
   return Object.fromEntries(
     Object.entries(stats)
       // only keep existing stats (not 0)
       .filter(([, [from, to]]) => from || to)
-      .map(([stat_name, [from, to]]) => [
-        stat_name,
-        random_bias_low(from, to, ITEM_GENERATION_BIAS),
-      ])
+      .map(([stat_name, [from, to]]) => [stat_name, random_bias_low(from, to)])
+      .filter(([name, value]) => !!value)
   )
 }
 
@@ -132,7 +133,11 @@ export function get_held_item({ held_slot_index, inventory: { hotbar } }) {
   return held_item
 }
 
-/** @type {(item: ItemTemplate, count: number) => Item} */
+export function is_yielding_weapon({ held_slot_index, inventory: { weapon } }) {
+  return held_slot_index === 0 && weapon
+}
+
+/** @type {(item: ItemTemplate, count?: number) => Item} */
 export function generate_item({ stats, ...template }, count = 1) {
   if (stats)
     return {

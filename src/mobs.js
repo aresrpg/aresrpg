@@ -32,6 +32,8 @@ const initial_state = {
   last_damager: null,
   last_hit: 0,
   target_position: null,
+  /** last damage taken by this mob was a critical hit */
+  last_hit_was_critical: false,
 }
 
 /** @typedef {Readonly<typeof initial_state>} MobState */

@@ -4,6 +4,10 @@ export function last_event_value(emitter, event) {
   return () => value
 }
 
+/** Local events which can be
+ * - emited and then listened
+ * - dispatched and then reduced
+ */
 export const PlayerEvent = {
   /** the player state has been updated */
   STATE_UPDATED: 'PLAYER:STATE_UPDATED',
@@ -64,6 +68,7 @@ export const MobEvent = {
   WAKE_UP: 'MOB:WAKE_UP',
 }
 
+/** World events meant to be used in synchronizations */
 export const WorldRequest = {
   /** a new player joined the world */
   ADD_PLAYER_TO_WORLD: 'WORLD:ADD_PLAYER_TO_WORLD',
@@ -72,11 +77,27 @@ export const WorldRequest = {
   /** an user is sending a private message to another player */
   SEND_PRIVATE_MESSAGE: 'WORLD:SEND_PRIVATE_MESSAGE',
   /** reach a specific player to notify him of the current observed player presence */
-  NOTIFY_PRESENCE_TO: uuid => `WORLD:ADD_PLAYER_${uuid}`,
-  /** a chunk position should be updated */
-  CHUNK_POSITION_UPDATE: chunk_index => `WORLD:POSITION_${chunk_index}`,
-  /** another player should be damaged (or healed) */
+  NOTIFY_PRESENCE_TO: uuid => `WORLD:NOTIFY_PRESENCE_TO_${uuid}`,
+  /** a player's position should be updated */
+  POSITION_UPDATE: chunk_index => `WORLD:POSITION_${chunk_index}`,
+  /**
+   * a player's chunk position should be update
+   * this event only compare chunk positions instead of raw position,
+   * which greatly reduce the calls
+   */
+  CHUNK_POSITION_UPDATE: chunk_index => `WORLD:CHUNK_POSITION_${chunk_index}`,
+  /**
+   * another player should be damaged (or healed).
+   * This event is different from PLAYER_HEALTH_UPDATE as it is used for duels or healing,
+   * we can't handle the potential canceling of damage or reduction, so we send the action of damaging.
+   * While the direct health update is to notify other players in the world of our own life changes
+   * TODO: it's a bit tricky for life_steal damages as we should be aware of the final inflicted damage to steal properly
+   */
   PLAYER_RECEIVE_DAMAGE: 'WORLD:PLAYER_RECEIVE_DAMAGE',
   /** the health of another player was updated */
   PLAYER_HEALTH_UPDATE: 'WORLD:PLAYER_HEALTH_UPDATE',
+  /** a player just died */
+  PLAYER_DIED: 'WORLD:PLAYER_DIED',
+  /** a player just respawned */
+  PLAYER_RESPAWNED: 'WORLD:PLAYER_RESPAWNED',
 }

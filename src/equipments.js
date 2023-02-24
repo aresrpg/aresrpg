@@ -53,13 +53,19 @@ export function from_inventory_array({ inventory, inventory_array }) {
   }
 }
 
-const characteristics_sum = items => characteristic =>
-  items
-    .filter(item => item?.stats)
-    .reduce(
-      (total, { stats: { [characteristic]: value = 0 } }) => total + value,
-      0
-    )
+/** @typedef {import('./types').Item} Item */
+/** @typedef {import('./types').ItemStatistics} ItemStatistics */
+
+/** @type {(items: Item[]) => (characteristic: keyof ItemStatistics) => number} */
+function characteristics_sum(items) {
+  return characteristic =>
+    items
+      .filter(item => item?.stats)
+      .reduce(
+        (total, { stats: { [characteristic]: value = 0 } }) => total + value,
+        0
+      )
+}
 
 export function get_equipped_characteristic(
   characteristic_name,

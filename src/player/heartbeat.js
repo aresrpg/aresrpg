@@ -20,7 +20,7 @@ export default {
       ({ heartbeating, sound_handle }, [state]) => {
         const { health } = state
         const max_health = get_max_health(state)
-        const health_percent = (100 * health) / max_health
+        const health_percent = Math.round((100 * health) / max_health)
 
         if (heartbeating && health_percent > HEALTH_THRESHOLD) {
           normal_screen({ client })

@@ -15,7 +15,6 @@ export default {
   observe({ client, events, world, signal, dispatch }) {
     events.once(PlayerEvent.STATE_UPDATED, state => {
       const {
-        nickname,
         game_mode,
         position,
         view_distance,
@@ -86,7 +85,7 @@ export default {
           world,
           client,
           message: [
-            { text: nickname, ...Formats.SUCCESS },
+            { text: client.username, ...Formats.SUCCESS },
             { text: ' just joined ', ...Formats.BASE },
             { text: 'AresRPG', ...Formats.INFO },
             { text: ' for the first time', ...Formats.BASE },

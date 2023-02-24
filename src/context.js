@@ -100,7 +100,6 @@ export const world = /** @type {World} */ (
 )
 
 const initial_state = {
-  nickname: undefined,
   position: floor1.spawn_position,
   teleport: null,
   view_distance: 0,
@@ -150,7 +149,6 @@ const initial_state = {
 
 // Add here all fields that you want to save in the database
 const saved_state = ({
-  nickname,
   position,
   inventory,
   held_slot_index,
@@ -160,7 +158,6 @@ const saved_state = ({
   soul,
   last_disconnection_time,
 }) => ({
-  nickname,
   position,
   inventory,
   held_slot_index,
@@ -173,6 +170,8 @@ const saved_state = ({
 
 /** @template U
  ** @typedef {import('./types').UnionToIntersection<U>} UnionToIntersection */
+
+/** @typedef {import('minecraft-protocol').Client} Client */
 
 /** @template U
  ** @typedef {import('./types').Await<U>} Await */
@@ -187,12 +186,12 @@ const saved_state = ({
 /** @typedef {{ type: string, payload: any }} Action */
 /** @typedef {Readonly<Await<ReturnType<typeof create_context>>>} Context */
 
-/** @typedef {(state: State, action: Action) => State} Reducer */
+/** @typedef {(state: State, action: Action, client: Client) => State} Reducer */
 /** @typedef {(action: Action) => Action} Transformer */
 /** @typedef {(context: Context) => void} Observer */
 
 /** @type Reducer */
-function reduce_state(state, action) {
+function reduce_state(state, action, client) {
   return [
     /* Reducers that map the incomming actions (packet, ...)
      * to a new state */
@@ -207,7 +206,7 @@ function reduce_state(state, action) {
     player_health.reduce,
     player_experience.reduce,
     chunk_update.reduce,
-  ].reduce((intermediate, fn) => fn(intermediate, action), state)
+  ].reduce((intermediate, fn) => fn(intermediate, action, client), state)
 }
 
 /** @type Transformer */
@@ -251,6 +250,7 @@ export function observe_client({ mobs_position }) {
     player_respawn.observe(context)
     player_heartbeat.observe(context)
     player_bells.observe(context)
+    player_position.observe(context)
 
     commands_declare.observe(context)
 
@@ -280,7 +280,7 @@ export function observe_client({ mobs_position }) {
  *   |> (state = reduce_state(state))
  *
  * @param {object} options
- * @param {import('minecraft-protocol').Client} options.client
+ * @param {Client} options.client
  * @param {World} options.world
  */
 export async function create_context({ client, world }) {
@@ -339,14 +339,12 @@ export async function create_context({ client, world }) {
     .map(transform_action)
     .reduce(
       (last_state, action) => {
-        const state = reduce_state(last_state, action)
+        const state = reduce_state(last_state, action, client)
         events.emit(PlayerEvent.STATE_UPDATED, state)
         return state
       },
-      // default nickname is the client username, and is overriden by the loaded player state
       {
         ...initial_state,
-        nickname: client.username,
         ...player_state,
         last_connection_time: Date.now(),
       }

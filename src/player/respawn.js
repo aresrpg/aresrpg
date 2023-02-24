@@ -23,10 +23,7 @@ export default {
   /** @type {import('../context.js').Observer} */
   observe({ client, events, signal, dispatch, get_state }) {
     aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
-      .map(([{ health, game_mode }]) => ({
-        health,
-        game_mode,
-      }))
+      .map(([{ health, game_mode }]) => ({ health, game_mode }))
       .reduce((last_health, { health, game_mode }) => {
         if (last_health !== health && health === 0) {
           const respawn_in =
@@ -61,10 +58,15 @@ export default {
                 })
 
                 const state = get_state()
+                const respawn_health = Math.min(
+                  1,
+                  Math.floor(get_max_health(state) * 0.05)
+                )
 
                 dispatch(PlayerEvent.UPDATE_HEALTH, {
-                  health: get_max_health(state) * 0.05, // respawn with 5% life
+                  health: respawn_health, // respawn with 5% life
                 })
+
                 write_inventory({ client, inventory: state.inventory })
 
                 client.write('entity_update_attributes', {

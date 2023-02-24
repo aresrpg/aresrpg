@@ -3,9 +3,12 @@ import { PassThrough } from 'stream'
 
 import { aiter } from 'iterator-helper'
 
-import { chunk_position, chunk_index, same_chunk } from '../chunk.js'
+import { chunk_index } from '../chunk.js'
 import { abortable } from '../iterator.js'
 import { PlayerEvent, WorldRequest } from '../events.js'
+import { to_metadata } from '../entity_metadata.js'
+
+import { SCOREBOARD_NAME } from './health.js'
 
 function insert(array, value) {
   const nullIdx = array.indexOf(null)
@@ -27,55 +30,74 @@ function to_angle(raw) {
   return Math.floor((bounded / 360) * 255)
 }
 
-const SYNCED_WORLD_REQUESTS = [
-  WorldRequest.ADD_PLAYER_TO_WORLD,
-  WorldRequest.PLAYER_HEALTH_UPDATE,
-]
-
 const SYNCED_PACKETS = ['use_entity']
 
 const Synchroniser = {
   world_request(
     header,
-    { players, storage: last_storage },
+    { players: last_players, storage: last_storage },
     { world, client, inside_view },
     data
   ) {
-    function handle_movement({ uuid, position, last_position }) {
-      const playerIdx = players.indexOf(uuid)
-      // player is unknown
-      if (playerIdx === -1) {
-        const { array, index } = insert(players, uuid)
-        const entity_id = world.next_entity_id + index
+    function send_health({ entity_id, health, username }) {
+      client.write('entity_metadata', {
+        entityId: entity_id,
+        metadata: to_metadata('player', { health }),
+      })
+      client.write('scoreboard_score', {
+        itemName: username,
+        action: 0, // create / update
+        scoreName: SCOREBOARD_NAME,
+        value: health,
+      })
+    }
 
-        client.write('named_entity_spawn', {
-          entityId: entity_id,
-          playerUUID: uuid,
-          ...position,
-          yaw: to_angle(position.yaw),
-          pitch: to_angle(position.pitch),
-        })
+    function insert_new_index(uuid, position) {
+      const { array, index } = insert(last_players, uuid)
+      const entity_id = world.next_entity_id + index
 
-        const storage = {
-          ...last_storage,
-          [uuid]: { entity_id },
-        }
-        return { players: array, storage }
-      }
+      client.write('named_entity_spawn', {
+        entityId: entity_id,
+        playerUUID: uuid,
+        ...position,
+        yaw: to_angle(position.yaw),
+        pitch: to_angle(position.pitch),
+      })
 
-      // Exit view distance
+      return { players: array, player_index: index }
+    }
+
+    function handle_presence({
+      uuid,
+      position,
+      last_position = position,
+      position_only,
+      // sync datas below
+      username,
+      health,
+    }) {
+      const unsafe_player_index = last_players.indexOf(uuid)
+      const is_unknown = unsafe_player_index === -1
+
+      const { players: intermediary_players, player_index } = is_unknown
+        ? insert_new_index(uuid, position)
+        : { players: last_players, player_index: unsafe_player_index }
+
+      const entity_id = world.next_entity_id + player_index
+
+      // left view, removing
       if (!inside_view(position) && inside_view(last_position)) {
         client.write('entity_destroy', {
-          entityIds: [world.next_entity_id + playerIdx],
+          entityIds: [entity_id],
         })
 
-        const { [uuid]: destroyed, ...storage } = last_storage
+        const { [uuid]: unregistered, ...storage } = last_storage
 
         return {
           players: [
-            ...players.slice(0, playerIdx),
+            ...intermediary_players.slice(0, player_index),
             null,
-            ...players.slice(playerIdx + 1),
+            ...intermediary_players.slice(player_index + 1),
           ],
           storage,
         }
@@ -88,7 +110,7 @@ const Synchroniser = {
       const yaw = to_angle(position.yaw)
 
       client.write('entity_move_look', {
-        entityId: world.next_entity_id + playerIdx,
+        entityId: entity_id,
         dX: delta_x,
         dY: delta_y,
         dZ: delta_z,
@@ -98,83 +120,130 @@ const Synchroniser = {
       })
 
       client.write('entity_head_rotation', {
-        entityId: world.next_entity_id + playerIdx,
+        entityId: entity_id,
         headYaw: yaw,
       })
 
       const { [uuid]: stored_player } = last_storage
 
+      // the position update is so fast,
+      // we handle it with a separate packet that contains only the position
+      // while when it's a chunk position update, it contains infos like health, armor..
+      if (position_only)
+        return {
+          players: intermediary_players,
+          storage: {
+            ...last_storage,
+            [uuid]: {
+              // here we keep a default health value
+              // this allows to automatically handle respawns without a specific respawn event
+              // otherwise respawned players will have a health of 0 until the next update
+              ...stored_player,
+              position,
+              entity_id,
+            },
+          },
+        }
+
+      send_health({ health, username, entity_id })
+
       return {
-        players,
+        players: intermediary_players,
         storage: {
           ...last_storage,
           [uuid]: {
             ...stored_player,
             position,
+            entity_id,
+            health,
+            username,
           },
         },
       }
     }
 
-    switch (header) {
-      case WorldRequest.ADD_PLAYER_TO_WORLD:
-        if (data.UUID !== client.uuid && inside_view(data.position))
-          return handle_movement({
-            uuid: data.UUID,
-            position: data.position,
-            last_position: data.position,
-          })
-        break
-      case WorldRequest.PLAYER_HEALTH_UPDATE:
-        if (data.uuid !== client.uuid) {
-          // TODO: client.write(notify ourselve that a player updated his health)
-          const { [data.uuid]: stored_player } = last_storage
-          return {
-            players,
-            storage: {
-              ...last_storage,
-              [data.uuid]: {
-                ...stored_player,
-                health: data.health,
+    const { uuid } = data
+    const { [uuid]: stored_player } = last_storage
+
+    if (uuid !== client.uuid) {
+      if (header.startsWith('WORLD:POSITION'))
+        return handle_presence({ ...data, position_only: true })
+      if (header.startsWith('WORLD:CHUNK_POSITION'))
+        return handle_presence(data)
+
+      switch (header) {
+        case WorldRequest.NOTIFY_PRESENCE_TO(client.uuid):
+          if (inside_view(data.position)) return handle_presence(data)
+          break
+        case WorldRequest.PLAYER_HEALTH_UPDATE: {
+          if (stored_player) {
+            const { health, username } = data
+            const { entity_id } = stored_player
+            send_health({ health, username, entity_id })
+            return {
+              players: last_players,
+              storage: {
+                ...last_storage,
+                [data.uuid]: {
+                  ...stored_player,
+                  health,
+                },
               },
-            },
+            }
           }
+          break
         }
-        break
-      default:
-        // this may be a computed event, we will try to match the payload to handle movements
-        if (
-          data.uuid &&
-          data.position &&
-          data.last_position &&
-          data.uuid !== client.uuid
-        )
-          handle_movement(data)
-        break
+        case WorldRequest.PLAYER_DIED:
+          // if we know about this player
+          if (stored_player) {
+            const { position } = stored_player
+            // @ts-expect-error
+            return handle_presence({
+              uuid,
+              last_position: position,
+              // this is fine because we checked first if the player was stored
+              // this will simply destroy the entity
+              position: null,
+            })
+          }
+          break
+        case WorldRequest.PLAYER_RESPAWNED:
+          if (inside_view(data.position)) return handle_presence(data)
+          break
+      }
     }
 
-    return { players, storage: last_storage }
+    return { players: last_players, storage: last_storage }
   },
+
   packet(
     header,
     { players, storage: last_storage },
-    { world, client, dispatch, get_state },
+    { world, client, dispatch, get_state, events },
     data
   ) {
     switch (header) {
       case 'use_entity': {
         const { target, mouse } = data
-        const uuid = players[target - world.next_entity_id]
-        const { position, health } = last_storage[uuid]
+        // if entity_id of a player
+        if (target >= world.next_entity_id) {
+          const uuid = players[target - world.next_entity_id]
+          // if player is visible by us (stored)
+          if (uuid) {
+            const { position, health, username } = last_storage[uuid]
 
-        dispatch(PlayerEvent.PLAYER_INTERRACTED, {
-          player: {
-            uuid,
-            position,
-            health,
-          },
-          mouse,
-        })
+            events.emit(PlayerEvent.PLAYER_INTERRACTED, {
+              player: {
+                uuid,
+                position,
+                health,
+                username,
+                entity_id: target,
+              },
+              mouse,
+            })
+          }
+        }
         break
       }
     }
@@ -186,69 +255,52 @@ export default {
   /** @type {import('../context.js').Observer} */
   observe({ world, client, events, inside_view, signal, dispatch, get_state }) {
     const player_stream = new PassThrough({ objectMode: true })
+
+    // @ts-expect-error No overload matches this call.
     client.once('end', () => player_stream.end())
 
-    const forward = (type, event_source) => header =>
-      aiter(abortable(on(event_source, header, { signal }))).forEach(([data]) =>
-        player_stream.write({ type, header, data })
-      )
+    const forward =
+      (type, event_source, local_signal = signal) =>
+      header =>
+        aiter(
+          abortable(on(event_source, header, { signal: local_signal }))
+        ).forEach(([data]) => player_stream.write({ type, header, data }))
 
-    events.once(PlayerEvent.STATE_UPDATED, () =>
-      SYNCED_WORLD_REQUESTS.forEach(forward('world_request', world.events))
-    )
+    events.once(PlayerEvent.STATE_UPDATED, () => {
+      const synced_requests = [
+        WorldRequest.PLAYER_HEALTH_UPDATE,
+        WorldRequest.NOTIFY_PRESENCE_TO(client.uuid),
+        WorldRequest.PLAYER_DIED,
+        WorldRequest.PLAYER_RESPAWNED,
+      ]
+      synced_requests.forEach(forward('world_request', world.events))
+    })
 
     SYNCED_PACKETS.forEach(forward('packet', client))
 
-    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
-      .map(([{ position }]) => position)
-      .reduce((last_position, position) => {
-        if (position !== last_position) {
-          const chunk_x = chunk_position(position.x)
-          const chunk_z = chunk_position(position.z)
+    events.on(PlayerEvent.CHUNK_LOADED, ({ x, z, signal: chunk_signal }) => {
+      const chunk = chunk_index(x, z)
+      const synced_events = [
+        WorldRequest.POSITION_UPDATE(chunk),
+        WorldRequest.CHUNK_POSITION_UPDATE(chunk),
+      ]
 
-          world.events.emit(
-            WorldRequest.CHUNK_POSITION_UPDATE(chunk_index(chunk_x, chunk_z)),
-            {
-              uuid: client.uuid,
-              last_position,
-              position,
-            }
-          )
-
-          if (!same_chunk(position, last_position)) {
-            const last_chunk_x = chunk_position(last_position.x)
-            const last_chunk_z = chunk_position(last_position.z)
-
-            world.events.emit(
-              WorldRequest.CHUNK_POSITION_UPDATE(
-                chunk_index(last_chunk_x, last_chunk_z)
-              ),
-              {
-                uuid: client.uuid,
-                last_position,
-                position,
-              }
-            )
-          }
-        }
-        return position
-      })
-
-    events.on(PlayerEvent.CHUNK_LOADED, ({ x, z, signal }) => {
-      forward(
-        'world_request',
-        world.events
-      )(WorldRequest.CHUNK_POSITION_UPDATE(chunk_index(x, z)))
+      synced_events.forEach(
+        forward('world_request', world.events, chunk_signal)
+      )
     })
 
     aiter(player_stream).reduce(
-      ({ players, storage }, { type, data, header }) =>
-        Synchroniser[type](
+      ({ players, storage }, { type, data, header }) => {
+        const result = Synchroniser[type](
           header,
           { players, storage },
-          { world, client, inside_view, dispatch, get_state },
+          { world, client, inside_view, dispatch, get_state, events },
           data
-        ),
+        )
+        // console.dir({ username: client.username, result }, { depth: Infinity })
+        return result
+      },
       { players: [], storage: {} }
     )
   },
