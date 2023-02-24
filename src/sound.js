@@ -11,14 +11,14 @@ export const CATEGORY = {
   VOICE: 9,
 }
 
-export const play_sound = ({
+export function play_sound({
   client,
   sound,
   category = CATEGORY.MASTER,
   x,
   y,
   z,
-}) => {
+}) {
   client.write('named_sound_effect', {
     soundName: sound,
     soundCategory: category,

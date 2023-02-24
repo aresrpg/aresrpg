@@ -11,6 +11,7 @@ import { GameMode } from '../gamemode.js'
 import { abortable } from '../iterator.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
 import { show_blood, show_death_smoke } from '../particules.js'
+import { CATEGORY, play_sound } from '../sound.js'
 
 const DAMAGE_INDICATORS_AMOUNT = 10
 const DAMAGE_INDICATOR_TTL = 1200
@@ -58,10 +59,18 @@ export default {
       )
     )
       .map(([event]) => event)
-      .forEach(({ damage, player: { uuid, entity_id, health } }) => {
+      .forEach(({ damage, player: { uuid, entity_id, health, position } }) => {
+        // if ourselves
         if (uuid === client.uuid)
           dispatch(PlayerEvent.RECEIVE_DAMAGE, { damage })
+        // otherwise
         else {
+          play_sound({
+            client,
+            sound: 'entity.player.hurt',
+            category: CATEGORY.PLAYERS,
+            ...position,
+          })
           client.write('entity_status', {
             entityId: entity_id,
             entityStatus: health - damage > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
@@ -134,7 +143,7 @@ export default {
             show_blood({ client, position: particle_position })
           } else {
             const { xp } = Entities[mob.type]
-            create_armor_stand(client, entity_id, damage_position, {
+            create_armor_stand(client, entity_id, position, {
               text: `+${xp} xp`,
               color: '#3498DB',
             })
