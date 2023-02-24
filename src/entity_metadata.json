@@ -309,6 +309,10 @@
           "is_in_riptide_spin_attack": 2
         }
       },
+      "health": {
+        "key": 8,
+        "type": 2
+      },
       "potion_effect_color": {
         "key": 9,
         "type": 1

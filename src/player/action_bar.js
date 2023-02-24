@@ -98,7 +98,6 @@ export default {
         }
       },
       {
-        // thanks ts-lint to make the code more verbose
         last_health: undefined,
         last_max_health: undefined,
         last_remaining_stats_point: undefined,

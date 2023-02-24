@@ -7,8 +7,8 @@ const {
   REDIS_MASTER_NAME = 'rejson-master',
 
   USE_RESOURCE_PACK: use_resource_pack = 'true',
-  RESOURCE_PACK_URI = 'https://github.com/aresrpg/resourcepacks/releases/download/v1.0.4/ares-public.zip',
-  RESOURCE_PACK_HASH = 'c57a27ac8dbde4f39dce0194b139dea18eb90021',
+  RESOURCE_PACK_URI = 'https://github.com/aresrpg/resourcepacks/releases/download/v1.1.0/ares-pack.zip',
+  RESOURCE_PACK_HASH = 'd8a9c0bf01d0c08d88790f4d6701e96de213d5f6',
 
   LOG_LEVEL = 'info',
   DEBUG_SERVER: debug_server = 'false',

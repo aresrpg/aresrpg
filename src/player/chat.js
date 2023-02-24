@@ -17,7 +17,17 @@ function is_command_function(message) {
   return message.trimStart()[0] === '/'
 }
 
-function serialize_item({ nbtData, itemCount, itemId }) {
+/**
+ *
+ * @param {object} options
+ * @param {boolean} options.present
+ * @param {any=} options.nbtData
+ * @param {number=} options.itemCount
+ * @param {number=} options.itemId
+ */
+function serialize_item({ present, nbtData, itemCount, itemId }) {
+  if (present === false) return undefined
+
   const tag = nbt.simplify(nbtData)
   const { name } = mcData.items[itemId]
   const chat = {
@@ -63,12 +73,7 @@ export default {
       '%item%': () => {
         const { held_slot_index, inventory } = get_state()
         const item = inventory.hotbar[held_slot_index]
-        console.dir({
-          item,
-          hotbar: inventory.hotbar,
-        })
-        if (item !== undefined) return serialize_item(to_vanilla_item(item))
-        return undefined
+        return serialize_item(to_vanilla_item(item))
       },
       [/%item\d%/.source]: word => {
         const slot_number = Math.max(
@@ -77,8 +82,7 @@ export default {
         )
         const { inventory } = get_state()
         const item = inventory.hotbar[slot_number]
-        if (item !== undefined) return serialize_item(to_vanilla_item(item))
-        return undefined
+        return serialize_item(to_vanilla_item(item))
       },
       '%pos%': () => {
         const { position } = get_state()

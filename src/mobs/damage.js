@@ -26,7 +26,7 @@ export default {
   /** @type {import('../mobs').MobsReducer} */
   reduce_mob(state, { type, payload }) {
     if (type === MobEvent.RECEIVE_DAMAGE) {
-      const { damage, damager } = payload
+      const { damage, damager, critical_hit } = payload
 
       const health = Math.max(0, state.health - damage)
 
@@ -36,6 +36,7 @@ export default {
         first_damager: damager,
         ...state,
         last_damager: damager,
+        last_hit_was_critical: critical_hit,
         health,
       }
     }
@@ -47,13 +48,13 @@ export default {
     aiter(
       abortable(
         combineAsyncIterators(
-          on(client, 'use_entity', { signal }),
-          on(events, PlayerEvent.PLAYER_INTERRACTED, { signal })
+          on(events, PlayerEvent.PLAYER_INTERRACTED, { signal }),
+          on(client, 'use_entity', { signal })
         )
       )
     )
       .map(([event]) => event)
-      .dropWhile(({ mouse }) => mouse !== Mouse.LEFT_CLICK)
+      .filter(({ mouse }) => mouse === Mouse.LEFT_CLICK)
       .map(({ target, player }) => {
         const state = get_state()
         return {
@@ -63,7 +64,7 @@ export default {
         }
       })
       // if player is dead, he shouldn't interract
-      .dropWhile(({ state: { health } }) => health <= 0)
+      .filter(({ state: { health } }) => health > 0)
       .reduce(
         (
           { frame_expiration, last_entities_ids },
@@ -75,7 +76,7 @@ export default {
           if (!entities_ids.includes(target)) {
             entities_ids.push(target)
             // hit
-            const { damage, life_stolen, heal } =
+            const { damage, life_stolen, heal, critical_hit } =
               compute_weapon_dealt_damage(state)
 
             if (player) {
@@ -91,7 +92,18 @@ export default {
                 player,
                 damage: damage + life_stolen - heal,
                 damager: client.uuid,
+                critical_hit,
+                entity_id: player.entity_id,
               })
+              log.info(
+                {
+                  damager: client.username,
+                  damage: damage + life_stolen - heal,
+                  damaged: player.username,
+                  critical_hit,
+                },
+                'A player inflicted damage to another one'
+              )
             } else {
               const targeted_mob = world.mobs.by_entity_id(target)
               const { category } = Entities[targeted_mob?.type] ?? {}
@@ -109,6 +121,7 @@ export default {
                   // if more heal, then it will receive negative dmg (heal)
                   damage: damage + life_stolen - heal,
                   damager: client.uuid,
+                  critical_hit,
                 })
               }
             }
@@ -127,18 +140,23 @@ export default {
 
     events.on(PlayerEvent.MOB_ENTER_VIEW, ({ mob, signal }) => {
       aiter(abortable(on(mob.events, MobEvent.STATE_UPDATED, { signal })))
-        .map(([{ health }]) => health)
-        .reduce((last_health, health) => {
-          if (last_health !== health) {
+        .map(([{ health, last_hit_was_critical }]) => ({
+          health,
+          last_hit_was_critical,
+        }))
+        .reduce((last_health, { health, last_hit_was_critical }) => {
+          if (last_health !== null && last_health !== health) {
             const { entity_id, type, level } = mob
             const { category, display_name } = Entities[type]
             client.write('entity_status', {
               entityId: entity_id,
               entityStatus: health > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
+              // TODO: fix sound
             })
             events.emit(PlayerEvent.MOB_DAMAGED, {
               mob,
               damage: last_health - health,
+              critical_hit: last_hit_was_critical,
             })
 
             client.write('entity_metadata', {
@@ -158,11 +176,14 @@ export default {
             })
 
             if (health === 0) {
-              events.emit(PlayerEvent.MOB_DEATH, { mob })
+              events.emit(PlayerEvent.MOB_DEATH, {
+                mob,
+                critical_hit: last_hit_was_critical,
+              })
             }
           }
           return health
-        })
+        }, null)
     })
   },
 }

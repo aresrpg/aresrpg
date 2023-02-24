@@ -4,7 +4,7 @@ import {
   get_fixed_damage,
   get_total_characteristic,
 } from './characteristics.js'
-import { get_held_item } from './items.js'
+import { is_yielding_weapon } from './items.js'
 import { normalize_range } from './math.js'
 
 const BARE_HAND_CRITICAL = 6
@@ -19,7 +19,9 @@ function random_base_damage({ from, to }) {
 
 function compute_damage({ base_damage, characteristic_amount, fixed_damage }) {
   // Dégâts = (Base * (100 + Caractéristique + Puissance) / 100 + Dommages Fixes) * (1 - % résistance correspondant a l'élément de l'attaque)
-  return (base_damage * (100 + characteristic_amount)) / 100 + fixed_damage
+  return Math.round(
+    (base_damage * (100 + characteristic_amount)) / 100 + fixed_damage
+  )
 }
 
 function is_critical(outcomes) {
@@ -31,14 +33,12 @@ export function compute_weapon_dealt_damage({
   inventory,
   characteristics,
 }) {
-  const is_weilding_weapon = held_slot_index === 0
   const fixed_damage = get_fixed_damage({ inventory })
 
-  if (is_weilding_weapon) {
-    const { critical, damage: all_damages } = get_held_item({
-      held_slot_index,
-      inventory,
-    })
+  if (is_yielding_weapon({ held_slot_index, inventory })) {
+    const {
+      weapon: { critical, damage: all_damages },
+    } = inventory
     const critical_hit = is_critical(critical.outcomes)
 
     return all_damages
@@ -46,7 +46,8 @@ export function compute_weapon_dealt_damage({
         computed_damage: compute_damage({
           base_damage: random_base_damage({ from, to }),
           characteristic_amount: get_total_characteristic(
-            characteristic_from_element(element)
+            characteristic_from_element(element),
+            { inventory, characteristics }
           ),
           fixed_damage,
         }),

@@ -9,9 +9,9 @@ export default {
     // we should also trigger a redis subscription here to sync all nodes
   },
   async pull(key) {
+    /** @type {any} */
     const state = await slave_client.call('JSON.GET', key)
     try {
-      // @ts-ignore
       return JSON.parse(state)
     } catch {
       return undefined

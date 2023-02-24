@@ -28,7 +28,7 @@ export function register({ next_entity_id, ...world }) {
 
 export default {
   /** @type {import('../context.js').Reducer} */
-  reduce(state, { type, payload }) {
+  reduce(state, { type, payload }, client) {
     if (
       type === PlayerEvent.RECEIVE_DAMAGE &&
       state.game_mode !== GameMode.CREATIVE
@@ -36,7 +36,7 @@ export default {
       const { damage } = payload
       const health = Math.max(0, state.health - damage)
 
-      log.info({ damage, health }, 'took damage')
+      log.info({ username: client.username, damage, health }, 'took damage')
 
       return {
         ...state,
@@ -58,14 +58,21 @@ export default {
       )
     )
       .map(([event]) => event)
-      .dropWhile(({ uuid }) => uuid !== client.uuid)
-      .forEach(({ damage }) => {
-        dispatch(PlayerEvent.RECEIVE_DAMAGE, { damage })
+      .forEach(({ damage, player: { uuid, entity_id, health } }) => {
+        if (uuid === client.uuid)
+          dispatch(PlayerEvent.RECEIVE_DAMAGE, { damage })
+        else {
+          client.write('entity_status', {
+            entityId: entity_id,
+            entityStatus: health - damage > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
+            // TODO: fix sound
+          })
+        }
       })
 
     aiter(
       abortable(
-        // @ts-ignore
+        // @ts-expect-error No overload matches this call
         combineAsyncIterators(
           on(events, PlayerEvent.MOB_DAMAGED, { signal }),
           on(events, PlayerEvent.MOB_DEATH, { signal }),
@@ -75,20 +82,28 @@ export default {
       )
     )
       .map(([event]) => event)
+      // not showing damage indicator if the player is the target
+      .filter(({ player }) => player?.uuid !== client.uuid)
       .reduce(
-        ({ cursor: last_cursor, ids }, { mob, player, damage, timer }) => {
+        (
+          { cursor: last_cursor, ids },
+          { mob, player, damage, timer, critical_hit }
+        ) => {
           if (timer) {
             // entering here means the iteration is trigered by the interval
             // we only handle the removing of damage indicators
             const now = Date.now()
             ids
-              .filter(({ age }) => age + DAMAGE_INDICATOR_TTL < now)
+              .filter(({ age }) => age + DAMAGE_INDICATOR_TTL <= now)
               .forEach(({ entity_id }) =>
                 client.write('entity_destroy', {
                   entityIds: [entity_id],
                 })
               )
-            return { cursor: last_cursor, ids }
+            return {
+              cursor: last_cursor,
+              ids: ids.filter(({ age }) => age + DAMAGE_INDICATOR_TTL > now),
+            }
           }
 
           const { damage_indicator_start_id } = world
@@ -107,11 +122,14 @@ export default {
           // the mob is dead
           const is_dead = damage === undefined
 
+          const color = damage <= 0 ? '#2ECC71' : '#E74C3C' // https://materialui.co/flatuicolors Emerland / Alizarin
+          const critical_color = damage <= 0 ? '#C0392B' : '#27AE60' // Pomegranate / Nephritis
+
           if (!is_dead) {
             const sign = damage <= 0 ? '' : '-'
             create_armor_stand(client, entity_id, position, {
               text: `${sign}${damage}`,
-              color: damage <= 0 ? '#2ECC71' : '#E74C3C', // https://materialui.co/flatuicolors Emerland / Alizarin
+              color: critical_hit ? critical_color : color,
             })
             show_blood({ client, position: particle_position })
           } else {
