@@ -100,4 +100,9 @@ export const WorldRequest = {
   PLAYER_DIED: 'WORLD:PLAYER_DIED',
   /** a player just respawned */
   PLAYER_RESPAWNED: 'WORLD:PLAYER_RESPAWNED',
+  /**
+   * a player updated his equiped items or switched hotbar slot,
+   * we notify the world that it should update the displayed inventory of that player
+   */
+  RESYNC_DISPLAYED_INVENTORY: 'WORLD:RESYNC_DISPLAYED_INVENTORY',
 }

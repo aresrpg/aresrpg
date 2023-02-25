@@ -16,7 +16,7 @@ export function show_blood({ client, position }) {
     offsetY: 0.1,
     offsetZ: 0.1,
     particleData: 0.5, // maxspeed
-    particles: 15, // particles count
+    particles: 30, // particles count
     data: {
       blockState: redstone_wire.defaultState,
     },
@@ -35,7 +35,7 @@ export function show_death_smoke({ client, position }) {
     offsetY: 0.5,
     offsetZ: 0.5,
     particleData: 1.5, // maxspeed
-    particles: 10, // particles count
+    particles: 20, // particles count
     data: {
       red: 0,
       green: 0,

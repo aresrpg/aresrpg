@@ -18,16 +18,15 @@ const DAMAGE_INDICATOR_TTL = 1200
 
 const log = logger(import.meta)
 
-/** @param {import('../context.js').InitialWorld} world */
-export function register({ next_entity_id, ...world }) {
-  return {
-    ...world,
-    damage_indicator_start_id: next_entity_id,
-    next_entity_id: next_entity_id + DAMAGE_INDICATORS_AMOUNT,
-  }
-}
-
 export default {
+  /** @param {import('../context.js').InitialWorld} world */
+  register({ next_entity_id, ...world }) {
+    return {
+      ...world,
+      damage_indicator_start_id: next_entity_id,
+      next_entity_id: next_entity_id + DAMAGE_INDICATORS_AMOUNT,
+    }
+  },
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }, client) {
     if (
@@ -46,8 +45,6 @@ export default {
     }
     return state
   },
-
-  // TODO: Handle reception of worldrequest.DAMAGE_PLAYER for damage and heal
 
   /** @type {import('../context.js').Observer} */
   observe({ events, dispatch, client, world, signal }) {
@@ -129,7 +126,7 @@ export default {
           // the MOB_DEATH event doesn't emit a damage value
           // so we can safely assume that if damage is undefined
           // the mob is dead
-          const is_dead = damage === undefined
+          const is_dead = damage === undefined || player?.health - damage <= 0
 
           const color = damage <= 0 ? '#2ECC71' : '#E74C3C' // https://materialui.co/flatuicolors Emerland / Alizarin
           const critical_color = damage <= 0 ? '#C0392B' : '#27AE60' // Pomegranate / Nephritis
@@ -142,11 +139,18 @@ export default {
             })
             show_blood({ client, position: particle_position })
           } else {
-            const { xp } = Entities[mob.type]
-            create_armor_stand(client, entity_id, position, {
-              text: `+${xp} xp`,
-              color: '#3498DB',
-            })
+            // if damaged entity is not a player
+            if (mob) {
+              const { xp } = Entities[mob.type]
+              events.emit(PlayerEvent.RECEIVE_EXPERIENCE, { experience: xp })
+              const should_receive_xp = true // TODO: https://github.com/aresrpg/aresrpg/issues/633
+              if (should_receive_xp)
+                create_armor_stand(client, entity_id, position, {
+                  text: `+${xp} xp`,
+                  color: '#3498DB',
+                })
+            }
+
             show_death_smoke({ client, position: particle_position })
           }
           return {

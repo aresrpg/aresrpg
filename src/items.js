@@ -128,9 +128,12 @@ function generate_stats(stats) {
 }
 
 /** @type {(state) => Item | null} */
-export function get_held_item({ held_slot_index, inventory: { hotbar } }) {
-  const held_item = hotbar[held_slot_index]
-  return held_item
+export function get_held_item({
+  held_slot_index,
+  inventory: { hotbar, weapon },
+}) {
+  const hotbar_with_weapon = [weapon, ...hotbar.slice(1)]
+  return hotbar_with_weapon[held_slot_index]
 }
 
 export function is_yielding_weapon({ held_slot_index, inventory: { weapon } }) {

@@ -1,4 +1,10 @@
+import { on } from 'events'
+
+import { aiter } from 'iterator-helper'
+
+import { WorldRequest } from '../events.js'
 import { get_held_item } from '../items.js'
+import { abortable } from '../iterator.js'
 
 const SWAP_HAND_STATUS = 6
 
@@ -31,5 +37,18 @@ export default {
       }
     }
     return state
+  },
+
+  /** @type {import('../context.js').Observer} */
+  observe({ world, client, signal }) {
+    aiter(abortable(on(client, 'held_item_slot', { signal })))
+      .map(([{ slotId }]) => slotId)
+      .reduce((last_slot, { slotId }) => {
+        if (last_slot !== slotId)
+          world.emit(WorldRequest.RESYNC_DISPLAYED_INVENTORY, {
+            uuid: client.uuid,
+          })
+        return slotId
+      })
   },
 }

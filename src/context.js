@@ -10,9 +10,7 @@ import { last_event_value, PlayerEvent } from './events.js'
 import { floor1 } from './world.js'
 import logger from './logger.js'
 import player_login from './player/login.js'
-import player_experience, {
-  register as register_experience,
-} from './player/experience.js'
+import player_experience from './player/experience.js'
 import player_attributes from './player/attributes.js'
 import player_health from './player/health.js'
 import player_fall_damage from './player/fall_damage.js'
@@ -30,16 +28,10 @@ import player_bossbar from './player/boss_bar.js'
 import player_action_bar from './player/action_bar.js'
 import player_heartbeat from './player/heartbeat.js'
 import player_bells from './player/bells.js'
-import player_traders, {
-  register as register_player_traders,
-} from './player/traders.js'
-import player_deal_damage, {
-  register as register_player_deal_damage,
-} from './player/damage.js'
+import player_traders from './player/traders.js'
+import player_deal_damage from './player/damage.js'
 import player_inventory from './player/inventory.js'
-import player_teleportation_stones, {
-  register as register_player_teleportation_stones,
-} from './player/teleportation_stones.js'
+import player_teleportation_stones from './player/teleportation_stones.js'
 import player_tablist from './player/tablist.js'
 import player_sync from './player/sync.js'
 import player_soul from './player/soul.js'
@@ -86,10 +78,10 @@ const world_reducers = [
   // Reducers that augment the world with extra properties
   register_mobs,
   register_mobs_position,
-  register_player_traders,
-  register_player_deal_damage,
-  register_experience,
-  register_player_teleportation_stones,
+  player_traders.register,
+  player_deal_damage.register,
+  player_experience.register,
+  player_teleportation_stones.register,
 ]
 
 export const world = /** @type {World} */ (
@@ -112,6 +104,8 @@ const initial_state = {
     legs: null,
     feet: null,
     pet: null,
+    // separated from hotbar to keep the equipped stats
+    // but the hotbar[0] is used for attacks
     weapon: generate_item(items.default_sword),
     relics: Array.from({ length: 6 }),
     crafting_output: null,
