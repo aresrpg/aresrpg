@@ -58,11 +58,15 @@ export default {
               const delta_y = (position.y * 32 - last_position.y * 32) * 128
               const delta_z = (position.z * 32 - last_position.z * 32) * 128
 
+              // delta must be a float or the client will crash (minecraft-protocol also)
+              const bounded_delta = value =>
+                Math.max(-32768, Math.min(value, 32767))
+
               client.write('entity_move_look', {
                 entityId: mob.entity_id,
-                dX: delta_x,
-                dY: delta_y,
-                dZ: delta_z,
+                dX: bounded_delta(delta_x),
+                dY: bounded_delta(delta_y),
+                dZ: bounded_delta(delta_z),
                 yaw,
                 pitch,
                 onGround: true,
