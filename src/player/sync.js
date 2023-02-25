@@ -10,6 +10,8 @@ import { to_metadata } from '../entity_metadata.js'
 
 import { SCOREBOARD_NAME } from './health.js'
 
+const SYNCED_PACKETS = ['use_entity']
+
 function insert(array, value) {
   const nullIdx = array.indexOf(null)
 
@@ -30,7 +32,34 @@ function to_angle(raw) {
   return Math.floor((bounded / 360) * 255)
 }
 
-const SYNCED_PACKETS = ['use_entity']
+function send_health(client, { entity_id, health, username }) {
+  client.write('entity_metadata', {
+    entityId: entity_id,
+    metadata: to_metadata('player', { health }),
+  })
+  client.write('scoreboard_score', {
+    itemName: username,
+    action: 0, // create / update
+    scoreName: SCOREBOARD_NAME,
+    value: health,
+  })
+}
+
+function send_equipment(
+  client,
+  { entity_id, helmet, chestplate, leggings, boots, held_item }
+) {
+  client.write('entity_equipment', {
+    entityId: entity_id,
+    equipments: [
+      { slot: 0, item: held_item },
+      { slot: 2, item: boots },
+      { slot: 3, item: leggings },
+      { slot: 4, item: chestplate },
+      { slot: 5, item: helmet },
+    ],
+  })
+}
 
 const Synchroniser = {
   world_request(
@@ -39,19 +68,6 @@ const Synchroniser = {
     { world, client, inside_view },
     data
   ) {
-    function send_health({ entity_id, health, username }) {
-      client.write('entity_metadata', {
-        entityId: entity_id,
-        metadata: to_metadata('player', { health }),
-      })
-      client.write('scoreboard_score', {
-        itemName: username,
-        action: 0, // create / update
-        scoreName: SCOREBOARD_NAME,
-        value: health,
-      })
-    }
-
     function insert_new_index(uuid, position) {
       const { array, index } = insert(last_players, uuid)
       const entity_id = world.next_entity_id + index
@@ -64,26 +80,51 @@ const Synchroniser = {
         pitch: to_angle(position.pitch),
       })
 
-      return { players: array, player_index: index }
+      return { players: array, index }
     }
 
-    function handle_presence({
-      uuid,
-      position,
-      last_position = position,
-      position_only,
-      // sync datas below
-      username,
-      health,
-    }) {
-      const unsafe_player_index = last_players.indexOf(uuid)
-      const is_unknown = unsafe_player_index === -1
-
-      const { players: intermediary_players, player_index } = is_unknown
-        ? insert_new_index(uuid, position)
-        : { players: last_players, player_index: unsafe_player_index }
-
+    function handle_presence(
+      {
+        uuid,
+        position,
+        last_position = position,
+        username,
+        health,
+        helmet,
+        chestplate,
+        leggings,
+        boots,
+        held_item,
+      },
+      { position_only } = {}
+    ) {
+      const player_index = last_players.indexOf(uuid)
       const entity_id = world.next_entity_id + player_index
+      const stored_player = {
+        position,
+        entity_id,
+        username,
+        health,
+        helmet,
+        chestplate,
+        leggings,
+        boots,
+        held_item,
+      }
+
+      if (player_index === -1) {
+        const { players, index } = insert_new_index(uuid, position)
+        return {
+          players,
+          storage: {
+            ...last_storage,
+            [uuid]: {
+              ...stored_player,
+              entity_id: world.next_entity_id + index,
+            },
+          },
+        }
+      }
 
       // left view, removing
       if (!inside_view(position) && inside_view(last_position)) {
@@ -95,9 +136,9 @@ const Synchroniser = {
 
         return {
           players: [
-            ...intermediary_players.slice(0, player_index),
+            ...last_players.slice(0, player_index),
             null,
-            ...intermediary_players.slice(player_index + 1),
+            ...last_players.slice(player_index + 1),
           ],
           storage,
         }
@@ -106,14 +147,16 @@ const Synchroniser = {
       const delta_x = (position.x * 32 - last_position.x * 32) * 128
       const delta_y = (position.y * 32 - last_position.y * 32) * 128
       const delta_z = (position.z * 32 - last_position.z * 32) * 128
-
       const yaw = to_angle(position.yaw)
+
+      // delta must be a float or the client will crash (minecraft-protocol also)
+      const bounded_delta = value => Math.max(-32768, Math.min(value, 32767))
 
       client.write('entity_move_look', {
         entityId: entity_id,
-        dX: delta_x,
-        dY: delta_y,
-        dZ: delta_z,
+        dX: bounded_delta(delta_x),
+        dY: bounded_delta(delta_y),
+        dZ: bounded_delta(delta_z),
         pitch: to_angle(position.pitch),
         yaw,
         onGround: position.onGround,
@@ -124,40 +167,32 @@ const Synchroniser = {
         headYaw: yaw,
       })
 
-      const { [uuid]: stored_player } = last_storage
-
       // the position update is so fast,
       // we handle it with a separate packet that contains only the position
       // while when it's a chunk position update, it contains infos like health, armor..
-      if (position_only)
+      if (position_only) {
+        const { [uuid]: stored_player } = last_storage
         return {
-          players: intermediary_players,
+          players: last_players,
           storage: {
             ...last_storage,
             [uuid]: {
-              // here we keep a default health value
-              // this allows to automatically handle respawns without a specific respawn event
-              // otherwise respawned players will have a health of 0 until the next update
               ...stored_player,
               position,
               entity_id,
             },
           },
         }
+      }
 
-      send_health({ health, username, entity_id })
+      send_health(client, stored_player)
+      send_equipment(client, stored_player)
 
       return {
-        players: intermediary_players,
+        players: last_players,
         storage: {
           ...last_storage,
-          [uuid]: {
-            ...stored_player,
-            position,
-            entity_id,
-            health,
-            username,
-          },
+          [uuid]: stored_player,
         },
       }
     }
@@ -167,7 +202,7 @@ const Synchroniser = {
 
     if (uuid !== client.uuid) {
       if (header.startsWith('WORLD:POSITION'))
-        return handle_presence({ ...data, position_only: true })
+        return handle_presence(data, { position_only: true })
       if (header.startsWith('WORLD:CHUNK_POSITION'))
         return handle_presence(data)
 
@@ -179,7 +214,7 @@ const Synchroniser = {
           if (stored_player) {
             const { health, username } = data
             const { entity_id } = stored_player
-            send_health({ health, username, entity_id })
+            send_health(client, { health, username, entity_id })
             return {
               players: last_players,
               storage: {
@@ -210,6 +245,10 @@ const Synchroniser = {
         case WorldRequest.PLAYER_RESPAWNED:
           if (inside_view(data.position)) return handle_presence(data)
           break
+        case WorldRequest.RESYNC_DISPLAYED_INVENTORY: {
+          if (stored_player) send_equipment(client, stored_player)
+          break
+        }
       }
     }
 
@@ -272,6 +311,7 @@ export default {
         WorldRequest.NOTIFY_PRESENCE_TO(client.uuid),
         WorldRequest.PLAYER_DIED,
         WorldRequest.PLAYER_RESPAWNED,
+        WorldRequest.RESYNC_DISPLAYED_INVENTORY,
       ]
       synced_requests.forEach(forward('world_request', world.events))
     })

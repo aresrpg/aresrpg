@@ -44,17 +44,18 @@ export default {
               position,
             }
             if (chunk !== last_chunk_index)
-              // here we send a much bigger payload to inform newly emt players
+              // here we send a much bigger payload to inform newly met players
               // of every physical info like health, armor, etc
               world.events.emit(
                 WorldRequest.CHUNK_POSITION_UPDATE(chunk),
                 synchronisation_payload(client, state)
               )
-            else
-              world.events.emit(
-                WorldRequest.POSITION_UPDATE(chunk),
-                position_payload
-              )
+            // we still send the small update as the chunk_position_update doesn't contain the last_position
+            // it is more comprehensive that way
+            world.events.emit(
+              WorldRequest.POSITION_UPDATE(chunk),
+              position_payload
+            )
 
             if (!same_chunk(position, last_position)) {
               const last_chunk_x = chunk_position(last_position.x)
