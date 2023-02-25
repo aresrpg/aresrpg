@@ -2,15 +2,9 @@ import { on } from 'events'
 
 import { aiter } from 'iterator-helper'
 
-import { delay_to_generic_attack_speed } from '../attribute.js'
-import {
-  Characteristic,
-  get_attack_delay,
-  get_total_characteristic,
-} from '../characteristics.js'
+import { get_attack_speed, send_attributes } from '../attribute.js'
 import { PlayerEvent } from '../events.js'
 import { abortable } from '../iterator.js'
-import { PLAYER_ENTITY_ID } from '../settings.js'
 import logger from '../logger.js'
 
 const DEFAULT_ATTACK_SPEED = 5
@@ -23,32 +17,12 @@ export default {
     aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
       .map(([state]) => state)
       .reduce(
-        ({ last_attack_speed }, { inventory, characteristics }) => {
-          const haste = get_total_characteristic(Characteristic.HASTE, {
-            inventory,
-            characteristics,
-          })
-          const delay = get_attack_delay(haste)
-          const attack_speed = delay_to_generic_attack_speed(delay)
+        ({ last_attack_speed }, state) => {
+          const attack_speed = get_attack_speed(state)
 
           if (last_attack_speed !== attack_speed) {
-            log.info({ attack_speed, delay }, 'attack speed updated')
-
-            client.write('entity_update_attributes', {
-              entityId: PLAYER_ENTITY_ID,
-              properties: [
-                {
-                  key: 'generic.max_health',
-                  value: 40,
-                  modifiers: [],
-                },
-                {
-                  key: 'generic.attack_speed',
-                  value: attack_speed,
-                  modifiers: [],
-                },
-              ],
-            })
+            log.info({ attack_speed }, 'attack speed updated')
+            send_attributes(client, { attack_speed })
           }
 
           return { last_attack_speed: attack_speed }

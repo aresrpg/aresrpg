@@ -236,28 +236,29 @@ function on_window_click({ world, client, dispatch, get_state }) {
   }
 }
 
+/** @param {import('../context.js').InitialWorld} world */
+export function register(world) {
+  return {
+    ...world,
+    next_entity_id:
+      world.next_entity_id +
+      world.teleportation_stones.length * lines.length * 2,
+    next_window_id: world.next_window_id + world.teleportation_stones.length,
+    /** @type {TeleportationStone[]} */
+    teleportation_stones: world.teleportation_stones.map(
+      (stone, stone_index) => ({
+        ...stone,
+        window_id: world.next_window_id + stone_index,
+        entity_ids: Array.from({ length: lines.length * 2 }).map(
+          (_, index) =>
+            world.next_entity_id + stone_index * lines.length * 2 + index
+        ),
+      })
+    ),
+  }
+}
+
 export default {
-  /** @param {import('../context.js').InitialWorld} world */
-  register(world) {
-    return {
-      ...world,
-      next_entity_id:
-        world.next_entity_id +
-        world.teleportation_stones.length * lines.length * 2,
-      next_window_id: world.next_window_id + world.teleportation_stones.length,
-      /** @type {TeleportationStone[]} */
-      teleportation_stones: world.teleportation_stones.map(
-        (stone, stone_index) => ({
-          ...stone,
-          window_id: world.next_window_id + stone_index,
-          entity_ids: Array.from({ length: lines.length * 2 }).map(
-            (_, index) =>
-              world.next_entity_id + stone_index * lines.length * 2 + index
-          ),
-        })
-      ),
-    }
-  },
   /** @type {import('../context.js').Observer} */
   observe(context) {
     const { events, client } = context

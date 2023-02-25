@@ -18,15 +18,16 @@ const DAMAGE_INDICATOR_TTL = 1200
 
 const log = logger(import.meta)
 
+/** @param {import('../context.js').InitialWorld} world */
+export function register({ next_entity_id, ...world }) {
+  return {
+    ...world,
+    damage_indicator_start_id: next_entity_id,
+    next_entity_id: next_entity_id + DAMAGE_INDICATORS_AMOUNT,
+  }
+}
+
 export default {
-  /** @param {import('../context.js').InitialWorld} world */
-  register({ next_entity_id, ...world }) {
-    return {
-      ...world,
-      damage_indicator_start_id: next_entity_id,
-      next_entity_id: next_entity_id + DAMAGE_INDICATORS_AMOUNT,
-    }
-  },
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }, client) {
     if (

@@ -105,4 +105,6 @@ export const WorldRequest = {
    * we notify the world that it should update the displayed inventory of that player
    */
   RESYNC_DISPLAYED_INVENTORY: 'WORLD:RESYNC_DISPLAYED_INVENTORY',
+  /** a player is sneaking */
+  PLAYER_SNEAKING: 'WORLD:PLAYER_SNEAKING',
 }

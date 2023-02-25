@@ -95,15 +95,6 @@ export default {
                 critical_hit,
                 entity_id: player.entity_id,
               })
-              log.info(
-                {
-                  damager: client.username,
-                  damage: damage + life_stolen - heal,
-                  damaged: player.username,
-                  critical_hit,
-                },
-                'A player inflicted damage to another one'
-              )
             } else {
               const targeted_mob = world.mobs.by_entity_id(target)
               const { category } = Entities[targeted_mob?.type] ?? {}

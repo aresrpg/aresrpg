@@ -10,9 +10,9 @@ import logger from '../logger.js'
 import { GameMode } from '../gamemode.js'
 import { write_title } from '../title.js'
 import { Formats } from '../chat.js'
-import { PLAYER_ENTITY_ID } from '../settings.js'
 import { get_max_health } from '../characteristics.js'
 import { write_inventory } from '../inventory.js'
+import { get_attack_speed, send_attributes } from '../attribute.js'
 
 const log = logger(import.meta)
 const MIN_RESPAWN_TIME = 3
@@ -58,26 +58,17 @@ export default {
                 })
 
                 const state = get_state()
+                // respawn with 5% life
                 const respawn_health = Math.min(
                   1,
                   Math.floor(get_max_health(state) * 0.05)
                 )
 
-                dispatch(PlayerEvent.UPDATE_HEALTH, {
-                  health: respawn_health, // respawn with 5% life
-                })
+                dispatch(PlayerEvent.UPDATE_HEALTH, { health: respawn_health })
 
                 write_inventory({ client, inventory: state.inventory })
-
-                client.write('entity_update_attributes', {
-                  entityId: PLAYER_ENTITY_ID,
-                  properties: [
-                    {
-                      key: 'generic.max_health',
-                      value: 40,
-                      modifiers: [],
-                    },
-                  ],
+                send_attributes(client, {
+                  attack_speed: get_attack_speed(state),
                 })
               } else {
                 log.info({ remaining }, 'respawning in seconds')
