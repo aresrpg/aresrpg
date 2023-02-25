@@ -17,16 +17,17 @@ import { experience_to_level, level_progress } from '../experience.js'
 
 const mcData = minecraftData(VERSION)
 
+/** @param {import('../context.js').InitialWorld} world */
+export function register(world) {
+  const { next_entity_id } = world
+  return {
+    ...world,
+    new_level_firework_entity_id: next_entity_id,
+    next_entity_id: next_entity_id + 1,
+  }
+}
+
 export default {
-  /** @param {import('../context.js').InitialWorld} world */
-  register(world) {
-    const { next_entity_id } = world
-    return {
-      ...world,
-      new_level_firework_entity_id: next_entity_id,
-      next_entity_id: next_entity_id + 1,
-    }
-  },
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
     if (type === PlayerEvent.RECEIVE_EXPERIENCE) {

@@ -74,6 +74,7 @@ export default {
             })
 
           if (health === 0) {
+            dispatch(PlayerEvent.TELEPORT_TO, world.spawn_position)
             dispatch(PlayerEvent.DIE)
             setTimeout(() => {
               // delaying to let the time of the death animation

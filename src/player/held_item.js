@@ -45,7 +45,7 @@ export default {
       .map(([{ slotId }]) => slotId)
       .reduce((last_slot, { slotId }) => {
         if (last_slot !== slotId)
-          world.emit(WorldRequest.RESYNC_DISPLAYED_INVENTORY, {
+          world.events.emit(WorldRequest.RESYNC_DISPLAYED_INVENTORY, {
             uuid: client.uuid,
           })
         return slotId

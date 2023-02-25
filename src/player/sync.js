@@ -7,10 +7,16 @@ import { chunk_index } from '../chunk.js'
 import { abortable } from '../iterator.js'
 import { PlayerEvent, WorldRequest } from '../events.js'
 import { to_metadata } from '../entity_metadata.js'
+import logger from '../logger.js'
 
 import { SCOREBOARD_NAME } from './health.js'
 
-const SYNCED_PACKETS = ['use_entity']
+const SYNCED_PACKETS = ['use_entity', 'entity_action']
+const Pose = {
+  STANDING: 0,
+  SNEAKING: 5,
+}
+const log = logger(import.meta)
 
 function insert(array, value) {
   const nullIdx = array.indexOf(null)
@@ -49,6 +55,7 @@ function send_equipment(
   client,
   { entity_id, helmet, chestplate, leggings, boots, held_item }
 ) {
+  log.info({ entity_id }, 'syncing equipment')
   client.write('entity_equipment', {
     entityId: entity_id,
     equipments: [
@@ -96,7 +103,7 @@ const Synchroniser = {
         boots,
         held_item,
       },
-      { position_only } = {}
+      { position_only = false } = {}
     ) {
       const player_index = last_players.indexOf(uuid)
       const entity_id = world.next_entity_id + player_index
@@ -114,6 +121,11 @@ const Synchroniser = {
 
       if (player_index === -1) {
         const { players, index } = insert_new_index(uuid, position)
+
+        log.info(
+          { entity_id, username, x: position.x, y: position.y, z: position.z },
+          'adding player to sync stream'
+        )
         return {
           players,
           storage: {
@@ -134,6 +146,11 @@ const Synchroniser = {
 
         const { [uuid]: unregistered, ...storage } = last_storage
 
+        log.info(
+          { entity_id, username: unregistered.username },
+          'removing player from sync string'
+        )
+
         return {
           players: [
             ...last_players.slice(0, player_index),
@@ -144,23 +161,40 @@ const Synchroniser = {
         }
       }
 
-      const delta_x = (position.x * 32 - last_position.x * 32) * 128
-      const delta_y = (position.y * 32 - last_position.y * 32) * 128
-      const delta_z = (position.z * 32 - last_position.z * 32) * 128
       const yaw = to_angle(position.yaw)
+      const pitch = to_angle(position.pitch)
 
-      // delta must be a float or the client will crash (minecraft-protocol also)
-      const bounded_delta = value => Math.max(-32768, Math.min(value, 32767))
+      if (
+        Math.abs(position.x - last_position.x) >= 8 ||
+        Math.abs(position.y - last_position.y) >= 8 ||
+        Math.abs(position.z - last_position.z) >= 8
+      ) {
+        client.write('entity_teleport', {
+          entityId: entity_id,
+          ...position,
+          yaw,
+          pitch,
+          onGround: true,
+        })
+        log.info(
+          { entity_id, username, x: position.x, y: position.y, z: position.z },
+          'moving player by using teleport'
+        )
+      } else {
+        const delta_x = (position.x * 32 - last_position.x * 32) * 128
+        const delta_y = (position.y * 32 - last_position.y * 32) * 128
+        const delta_z = (position.z * 32 - last_position.z * 32) * 128
 
-      client.write('entity_move_look', {
-        entityId: entity_id,
-        dX: bounded_delta(delta_x),
-        dY: bounded_delta(delta_y),
-        dZ: bounded_delta(delta_z),
-        pitch: to_angle(position.pitch),
-        yaw,
-        onGround: position.onGround,
-      })
+        client.write('entity_move_look', {
+          entityId: entity_id,
+          dX: delta_x,
+          dY: delta_y,
+          dZ: delta_z,
+          pitch,
+          yaw,
+          onGround: position.onGround,
+        })
+      }
 
       client.write('entity_head_rotation', {
         entityId: entity_id,
@@ -249,6 +283,20 @@ const Synchroniser = {
           if (stored_player) send_equipment(client, stored_player)
           break
         }
+        case WorldRequest.PLAYER_SNEAKING: {
+          if (stored_player) {
+            const { is_crouching } = data
+            const { entity_id } = stored_player
+            client.write('entity_metadata', {
+              entityId: entity_id,
+              metadata: to_metadata('player', {
+                entity_flags: { is_crouching },
+                pnose: is_crouching ? Pose.SNEAKING : Pose.STANDING,
+              }),
+            })
+          }
+          break
+        }
       }
     }
 
@@ -285,6 +333,16 @@ const Synchroniser = {
         }
         break
       }
+      case 'entity_action': {
+        const { entityId, actionId } = data
+        if (entityId === 0) {
+          const is_crouching = !actionId // 0: start sneaking, 1: stop
+          world.events.emit(WorldRequest.PLAYER_SNEAKING, {
+            uuid: client.uuid,
+            is_crouching,
+          })
+        }
+      }
     }
     return { players, storage: last_storage }
   },
@@ -312,6 +370,7 @@ export default {
         WorldRequest.PLAYER_DIED,
         WorldRequest.PLAYER_RESPAWNED,
         WorldRequest.RESYNC_DISPLAYED_INVENTORY,
+        WorldRequest.PLAYER_SNEAKING,
       ]
       synced_requests.forEach(forward('world_request', world.events))
     })
