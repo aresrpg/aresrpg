@@ -21,7 +21,7 @@ const BLINDNESS = 15
 
 export default {
   /** @type {import('../context.js').Observer} */
-  observe({ client, events, signal, dispatch, get_state }) {
+  observe({ client, events, signal, dispatch, get_state, world }) {
     aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
       .map(([{ health, game_mode }]) => ({ health, game_mode }))
       .reduce((last_health, { health, game_mode }) => {

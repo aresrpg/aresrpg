@@ -128,7 +128,7 @@ const initial_state = {
   held_slot_index: 0,
   game_mode: GameMode.ADVENTURE,
   experience: 0,
-  health: 20,
+  health: 25,
   // player's energy, losing after each death
   soul: 100,
   // player's money
@@ -137,7 +137,7 @@ const initial_state = {
   // (not equipments bonuses)
   characteristics: {
     vitality: 0,
-    mind: 0,
+    mind: 100,
     strength: 0,
     intelligence: 0,
     chance: 0,

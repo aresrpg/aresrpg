@@ -129,11 +129,11 @@ export default {
           // the mob is dead
           const is_dead = damage === undefined || player?.health - damage <= 0
 
-          const color = damage <= 0 ? '#2ECC71' : '#E74C3C' // https://materialui.co/flatuicolors Emerland / Alizarin
-          const critical_color = damage <= 0 ? '#C0392B' : '#27AE60' // Pomegranate / Nephritis
+          const color = damage > 0 ? '#E74C3C' : '#2ECC71' // https://materialui.co/flatuicolors Alizarin / Emerland
+          const critical_color = damage > 0 ? '#C0392B' : '#27AE60' // Pomegranate / Nephritis
 
           if (!is_dead) {
-            const sign = damage <= 0 ? '' : '-'
+            const sign = damage > 0 ? '-' : ''
             create_armor_stand(client, entity_id, position, {
               text: `${sign}${damage}`,
               color: critical_hit ? critical_color : color,

@@ -70,19 +70,23 @@ export default {
           { frame_expiration, last_entities_ids },
           { target, player, state }
         ) => {
+          // should we start a new frame
           const new_hit_frame = Date.now() > frame_expiration
+          // we either keep going with the entities of the last frame, or we reset
           const entities_ids = new_hit_frame ? [] : last_entities_ids
 
+          // for the frame, we allow to attack the same entity only once
           if (!entities_ids.includes(target)) {
             entities_ids.push(target)
             // hit
             const { damage, life_stolen, heal, critical_hit } =
               compute_weapon_dealt_damage(state)
 
+            // target is a player
             if (player) {
-              // target is a player
+              // healing the player accordingly before damaging the other player
+              // TODO: note that we can't know if the player will reduce damage, we naively steal life here
               if (life_stolen) {
-                // healing the player accordingly before damaging the other player
                 const real_life_stolen = Math.min(player.health, life_stolen)
                 dispatch(PlayerEvent.UPDATE_HEALTH, {
                   health: state.health + real_life_stolen,
