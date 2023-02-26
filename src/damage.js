@@ -17,7 +17,11 @@ function random_base_damage({ from, to }) {
   )
 }
 
-function compute_damage({ base_damage, characteristic_amount, fixed_damage }) {
+export function compute_damage({
+  base_damage,
+  characteristic_amount,
+  fixed_damage = 0,
+}) {
   // Dégâts = (Base * (100 + Caractéristique + Puissance) / 100 + Dommages Fixes) * (1 - % résistance correspondant a l'élément de l'attaque)
   return Math.round(
     (base_damage * (100 + characteristic_amount)) / 100 + fixed_damage

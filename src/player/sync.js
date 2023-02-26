@@ -3,7 +3,7 @@ import { PassThrough } from 'stream'
 
 import { aiter } from 'iterator-helper'
 
-import { chunk_index } from '../chunk.js'
+import { chunk_index, same_chunk } from '../chunk.js'
 import { abortable } from '../iterator.js'
 import { PlayerEvent, WorldRequest } from '../events.js'
 import { to_metadata } from '../entity_metadata.js'
@@ -87,7 +87,7 @@ const Synchroniser = {
         pitch: to_angle(position.pitch),
       })
 
-      return { players: array, index }
+      return { players: array, player_index: index }
     }
 
     function handle_presence(
@@ -105,38 +105,43 @@ const Synchroniser = {
       },
       { position_only = false } = {}
     ) {
-      const player_index = last_players.indexOf(uuid)
+      const unsafe_index = last_players.indexOf(uuid)
+      const new_player = unsafe_index === -1
+
+      const { players, player_index } = new_player
+        ? insert_new_index(uuid, position)
+        : {
+            players: last_players,
+            player_index: unsafe_index,
+          }
+
       const entity_id = world.next_entity_id + player_index
+      const { [uuid]: last_stored_player } = last_storage
       const stored_player = {
-        position,
-        entity_id,
-        username,
-        health,
-        helmet,
-        chestplate,
-        leggings,
-        boots,
-        held_item,
+        ...last_stored_player,
+        ...(position && { position }),
+        ...(entity_id && { entity_id }),
+        ...(username && { username }),
+        ...(health && { health }),
+        ...(helmet && { helmet }),
+        ...(chestplate && { chestplate }),
+        ...(leggings && { leggings }),
+        ...(boots && { boots }),
+        ...(held_item && { held_item }),
       }
 
-      if (player_index === -1) {
-        const { players, index } = insert_new_index(uuid, position)
-
+      if (new_player)
         log.info(
-          { entity_id, username, x: position.x, y: position.y, z: position.z },
+          {
+            entity_id,
+            username,
+            x: position.x,
+            y: position.y,
+            z: position.z,
+            header,
+          },
           'adding player to sync stream'
         )
-        return {
-          players,
-          storage: {
-            ...last_storage,
-            [uuid]: {
-              ...stored_player,
-              entity_id: world.next_entity_id + index,
-            },
-          },
-        }
-      }
 
       // left view, removing
       if (!inside_view(position) && inside_view(last_position)) {
@@ -148,14 +153,14 @@ const Synchroniser = {
 
         log.info(
           { entity_id, username: unregistered.username },
-          'removing player from sync string'
+          'removing player from sync stream'
         )
 
         return {
           players: [
-            ...last_players.slice(0, player_index),
+            ...players.slice(0, player_index),
             null,
-            ...last_players.slice(player_index + 1),
+            ...players.slice(player_index + 1),
           ],
           storage,
         }
@@ -163,11 +168,16 @@ const Synchroniser = {
 
       const yaw = to_angle(position.yaw)
       const pitch = to_angle(position.pitch)
-
-      if (
+      const distance_with_last_position_above_8 =
         Math.abs(position.x - last_position.x) >= 8 ||
         Math.abs(position.y - last_position.y) >= 8 ||
         Math.abs(position.z - last_position.z) >= 8
+
+      if (
+        distance_with_last_position_above_8 ||
+        // absolute position sync when chunk is different
+        // just to avoid desyncing over time
+        !same_chunk(position, last_position)
       ) {
         client.write('entity_teleport', {
           entityId: entity_id,
@@ -176,10 +186,6 @@ const Synchroniser = {
           pitch,
           onGround: true,
         })
-        log.info(
-          { entity_id, username, x: position.x, y: position.y, z: position.z },
-          'moving player by using teleport'
-        )
       } else {
         const delta_x = (position.x * 32 - last_position.x * 32) * 128
         const delta_y = (position.y * 32 - last_position.y * 32) * 128
@@ -205,13 +211,13 @@ const Synchroniser = {
       // we handle it with a separate packet that contains only the position
       // while when it's a chunk position update, it contains infos like health, armor..
       if (position_only) {
-        const { [uuid]: stored_player } = last_storage
+        const { [uuid]: current_stored_player } = last_storage
         return {
-          players: last_players,
+          players,
           storage: {
             ...last_storage,
             [uuid]: {
-              ...stored_player,
+              ...current_stored_player,
               position,
               entity_id,
             },
@@ -223,7 +229,7 @@ const Synchroniser = {
       send_equipment(client, stored_player)
 
       return {
-        players: last_players,
+        players,
         storage: {
           ...last_storage,
           [uuid]: stored_player,
@@ -265,11 +271,10 @@ const Synchroniser = {
         case WorldRequest.PLAYER_DIED:
           // if we know about this player
           if (stored_player) {
-            const { position } = stored_player
             // @ts-expect-error
             return handle_presence({
               uuid,
-              last_position: position,
+              last_position: stored_player.position,
               // this is fine because we checked first if the player was stored
               // this will simply destroy the entity
               position: null,
@@ -291,7 +296,7 @@ const Synchroniser = {
               entityId: entity_id,
               metadata: to_metadata('player', {
                 entity_flags: { is_crouching },
-                pnose: is_crouching ? Pose.SNEAKING : Pose.STANDING,
+                pose: is_crouching ? Pose.SNEAKING : Pose.STANDING,
               }),
             })
           }
@@ -397,7 +402,6 @@ export default {
           { world, client, inside_view, dispatch, get_state, events },
           data
         )
-        // console.dir({ username: client.username, result }, { depth: Infinity })
         return result
       },
       { players: [], storage: {} }
