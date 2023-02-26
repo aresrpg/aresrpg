@@ -57,19 +57,20 @@ function spawn_merchants({ client, events, world }) {
 }
 
 /** @type {import('../context.js').Observer} */
-function open_trade({ client, world }) {
+function open_trade({ client, world, get_state }) {
   const { windowIds } = world.traders
   const right_click = 2
   const inventoryType = 18
   client.on('use_entity', ({ target, mouse, sneaking }) => {
     if (windowIds.has(target) && mouse === right_click && sneaking === false) {
       const { name, windowId, recipes: ares_recipe } = windowIds.get(target)
+      const state = get_state()
       const mc_recipe = ares_recipe.map(trade => {
         const { inputItem1, inputItem2, outputItem } = trade
         return {
-          inputItem1: to_vanilla_item(inputItem1),
-          inputItem2: to_vanilla_item(inputItem2),
-          outputItem: to_vanilla_item(outputItem),
+          inputItem1: to_vanilla_item(inputItem1, state),
+          inputItem2: to_vanilla_item(inputItem2, state),
+          outputItem: to_vanilla_item(outputItem, state),
           maximumNbTradeUses: 99999,
         }
       })

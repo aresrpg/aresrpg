@@ -5,6 +5,8 @@ import Nbt from 'prismarine-nbt'
 
 import { VERSION } from './settings.js'
 import { random_bias_low } from './math.js'
+import { compute_outcomes } from './damage.js'
+import { Characteristic, get_total_characteristic } from './characteristics.js'
 
 const { itemsByName } = minecraftData(VERSION)
 
@@ -54,7 +56,7 @@ export function assign_items(
 }
 
 /** Map an aresrpg item to a minecraft item */
-export function to_vanilla_item(ares_item) {
+export function to_vanilla_item(ares_item, { inventory, characteristics }) {
   if (!ares_item) return empty_slot
 
   const {
@@ -82,6 +84,13 @@ export function to_vanilla_item(ares_item) {
     ],
   }
 
+  const base_outcomes = critical?.outcomes ?? 100
+  const agility = get_total_characteristic(Characteristic.AGILITY, {
+    inventory,
+    characteristics,
+  })
+  const critical_outcomes = compute_outcomes({ base_outcomes, agility })
+
   const lore = Object.entries({
     name,
     type,
@@ -91,7 +100,10 @@ export function to_vanilla_item(ares_item) {
     enchanted,
     description: !!description,
     stats: JSON.stringify(stats),
-    critical: JSON.stringify(critical),
+    ...(critical && {
+      critical: `1/${critical_outcomes} (+${critical.bonus})`,
+      critical_default: `1/${base_outcomes}`,
+    }),
     damage: JSON.stringify(damage),
   }).map(([key, value]) => ({ text: `${key}: ${value}` }))
 

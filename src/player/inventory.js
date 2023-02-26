@@ -134,15 +134,25 @@ export default {
     aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal }))).reduce(
       (
         last_sequence_number,
-        [{ inventory, inventory_cursor, inventory_sequence_number }]
+        [
+          {
+            inventory,
+            inventory_cursor,
+            inventory_sequence_number,
+            characteristics,
+          },
+        ]
       ) => {
         if (last_sequence_number !== inventory_sequence_number) {
-          write_inventory({ client, inventory })
+          write_inventory(client, { inventory, characteristics })
 
           client.write('set_slot', {
             windowId: -1,
             slot: -1,
-            item: to_vanilla_item(inventory_cursor),
+            item: to_vanilla_item(inventory_cursor, {
+              inventory,
+              characteristics,
+            }),
           })
         }
         return inventory_sequence_number
@@ -155,7 +165,7 @@ export default {
         status === BlockDigStatus.DROP_ITEM ||
         status === BlockDigStatus.DROP_ITEM_STACK
       ) {
-        write_inventory({ client, inventory: get_state().inventory })
+        write_inventory(client, get_state())
       }
     })
   },

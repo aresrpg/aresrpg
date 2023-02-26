@@ -137,7 +137,7 @@ const initial_state = {
   // (not equipments bonuses)
   characteristics: {
     vitality: 0,
-    mind: 100,
+    mind: 0,
     strength: 0,
     intelligence: 0,
     chance: 0,

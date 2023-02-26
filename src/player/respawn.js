@@ -66,7 +66,7 @@ export default {
 
                 dispatch(PlayerEvent.UPDATE_HEALTH, { health: respawn_health })
 
-                write_inventory({ client, inventory: state.inventory })
+                write_inventory(client, state)
                 send_attributes(client, {
                   attack_speed: get_attack_speed(state),
                 })

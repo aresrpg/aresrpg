@@ -8,6 +8,8 @@ import { is_yielding_weapon } from './items.js'
 import { normalize_range } from './math.js'
 
 const BARE_HAND_CRITICAL = 6
+const CRITICAL_OUTCOMES_MODIFIER = 2.9901
+const CRITICAL_OUTCOMES_INCREASE = 12
 
 function random_base_damage({ from, to }) {
   return normalize_range(
@@ -32,6 +34,13 @@ function is_critical(outcomes) {
   return Math.floor(Math.random() * outcomes) + 1 === 1
 }
 
+export function compute_outcomes({ base_outcomes, agility }) {
+  return Math.floor(
+    (base_outcomes * CRITICAL_OUTCOMES_MODIFIER) /
+      Math.log(agility + CRITICAL_OUTCOMES_INCREASE)
+  )
+}
+
 export function compute_weapon_dealt_damage({
   held_slot_index,
   inventory,
@@ -43,7 +52,14 @@ export function compute_weapon_dealt_damage({
     const {
       weapon: { critical, damage: all_damages },
     } = inventory
-    const critical_hit = is_critical(critical.outcomes)
+    const outcomes = compute_outcomes({
+      base_outcomes: critical.outcomes,
+      agility: get_total_characteristic(Characteristic.AGILITY, {
+        inventory,
+        characteristics,
+      }),
+    })
+    const critical_hit = is_critical(outcomes)
 
     return (
       all_damages

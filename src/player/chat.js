@@ -71,18 +71,22 @@ export default {
   observe({ client, get_state, world, dispatch }) {
     const chat_mapper = {
       '%item%': () => {
-        const { held_slot_index, inventory } = get_state()
+        const { held_slot_index, inventory, characteristics } = get_state()
         const item = inventory.hotbar[held_slot_index]
-        return serialize_item(to_vanilla_item(item))
+        return serialize_item(
+          to_vanilla_item(item, { inventory, characteristics })
+        )
       },
       [/%item\d%/.source]: word => {
         const slot_number = Math.max(
           0,
           Math.min(parseInt(word.match(/\d/)[0]), 8)
         )
-        const { inventory } = get_state()
+        const { inventory, characteristics } = get_state()
         const item = inventory.hotbar[slot_number]
-        return serialize_item(to_vanilla_item(item))
+        return serialize_item(
+          to_vanilla_item(item, { inventory, characteristics })
+        )
       },
       '%pos%': () => {
         const { position } = get_state()
