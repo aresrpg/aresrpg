@@ -45,42 +45,46 @@ export function compute_weapon_dealt_damage({
     } = inventory
     const critical_hit = is_critical(critical.outcomes)
 
-    return all_damages
-      .map(({ from, to, type, element }) => ({
-        computed_damage: compute_damage({
-          base_damage: random_base_damage({ from, to }),
-          characteristic_amount: get_total_characteristic(
-            characteristic_from_element(element),
-            { inventory, characteristics }
-          ),
-          fixed_damage,
-        }),
-        type,
-      }))
-      .reduce(
-        (result, { computed_damage, type }) => {
-          switch (type) {
-            case 'damage':
-              return {
-                ...result,
-                damage: result.damage + computed_damage,
-              }
-            case 'life_steal':
-              return {
-                ...result,
-                life_steal: result.life_stolen + computed_damage,
-              }
-            case 'heal':
-              return {
-                ...result,
-                heal: result.heal + computed_damage,
-              }
-            default:
-              return result
-          }
-        },
-        { damage: 0, life_stolen: 0, heal: 0, critical_hit }
-      )
+    return (
+      all_damages
+        // the default element is fire as only `heal` type of damage has no `element` property
+        // and heal is impacted by fire stat
+        .map(({ from, to, type, element = 'fire' }) => ({
+          computed_damage: compute_damage({
+            base_damage: random_base_damage({ from, to }),
+            characteristic_amount: get_total_characteristic(
+              characteristic_from_element(element),
+              { inventory, characteristics }
+            ),
+            fixed_damage,
+          }),
+          type,
+        }))
+        .reduce(
+          (result, { computed_damage, type }) => {
+            switch (type) {
+              case 'damage':
+                return {
+                  ...result,
+                  damage: result.damage + computed_damage,
+                }
+              case 'life_steal':
+                return {
+                  ...result,
+                  life_steal: result.life_stolen + computed_damage,
+                }
+              case 'heal':
+                return {
+                  ...result,
+                  heal: result.heal + computed_damage,
+                }
+              default:
+                return result
+            }
+          },
+          { damage: 0, life_stolen: 0, heal: 0, critical_hit }
+        )
+    )
   }
 
   const critical_hit = is_critical(100) // 1/100 chances of critical when not using weapon
