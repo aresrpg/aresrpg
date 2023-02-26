@@ -76,9 +76,8 @@ const format_title = ({
 
 /** @type {({ client, bossbars }: { client: Client, bossbars: BossBar[] }) => BossBar[]} */
 const purge_outdated = ({ client, bossbars }) => {
-  const bars = bossbars.filter(bar => !!bar)
-  // pruning outdated
-  bars
+  bossbars
+    .filter(bar => !!bar)
     .filter(({ age }) => age + BOSS_BAR_TTL <= Date.now())
     .forEach(({ entityUUID }) => {
       log.info({ entityUUID }, 'purge outdated bossbar')
@@ -88,8 +87,8 @@ const purge_outdated = ({ client, bossbars }) => {
         action: Actions.REMOVE,
       })
     })
-  // returning up to date
-  return bars.filter(({ age }) => age + BOSS_BAR_TTL > Date.now())
+  // @ts-expect-error
+  return bossbars.filter(({ age } = {}) => age + BOSS_BAR_TTL > Date.now())
 }
 
 export default {

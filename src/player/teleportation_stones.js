@@ -221,14 +221,17 @@ function on_window_click({ world, client, dispatch, get_state }) {
           )
         }
       }
-      const { inventory } = get_state()
+      const { inventory, characteristics } = get_state()
       client.write('window_items', {
         windowId: current_teleportation_stone.window_id,
         items: [
           ...available_teleportations_stones.map(stone =>
             stone ? stone_to_item(stone) : empty_slot
           ),
-          ...inventory.main_inventory.map(to_vanilla_item),
+          ...inventory.main_inventory.map(to_vanilla_item, {
+            inventory,
+            characteristics,
+          }),
         ],
       })
       client.write('set_slot', { ...CURSOR, item: empty_slot })
