@@ -1,5 +1,5 @@
 import logger from '../logger.js'
-import { block_position } from '../position.js'
+import { block_center_position } from '../position.js'
 import { path_position, path_remain_time } from '../mobs/path.js'
 import {
   path_between,
@@ -12,7 +12,9 @@ const log = logger(import.meta)
 
 export default async function goto(node, state, { world, action }) {
   const { time } = action
-  const to = block_position(state.blackboard[node.getAttribute('target')])
+  const to = block_center_position(
+    state.blackboard[node.getAttribute('target')]
+  )
   const from = path_position({
     path: state.path,
     start_time: state.start_time,

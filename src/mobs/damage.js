@@ -16,19 +16,59 @@ import {
 } from '../characteristics.js'
 
 import { color_by_category } from './spawn.js'
+import { path_position } from './path.js'
 
 const log = logger(import.meta)
 const Mouse = {
   LEFT_CLICK: 1,
 }
+const KNOCKBACK_STRENGTH_BASE = 1
+const KNOCKBACK_STRENGTH_REDUCTION = 0.0025
+
+function get_knockback_position({
+  damager_position,
+  damaged_position,
+  strength,
+}) {
+  const dX = damager_position.x - damaged_position.x
+  const dZ = damager_position.z - damaged_position.z
+
+  const length = Math.sqrt(dX * dX + dZ * dZ)
+  const force_applied =
+    Math.floor(
+      (strength * KNOCKBACK_STRENGTH_REDUCTION + KNOCKBACK_STRENGTH_BASE) * 100
+    ) / 100
+
+  return {
+    x: damaged_position.x - (dX / length) * force_applied,
+    y: damaged_position.y,
+    z: damaged_position.z - (dZ / length) * force_applied,
+  }
+}
 
 export default {
   /** @type {import('../mobs').MobsReducer} */
-  reduce_mob(state, { type, payload }) {
+  reduce_mob(state, { type, payload, time }) {
     if (type === MobEvent.RECEIVE_DAMAGE) {
-      const { damage, damager, critical_hit } = payload
+      const {
+        damage,
+        damager,
+        critical_hit,
+        damager_position,
+        damager_strength,
+      } = payload
 
       const health = Math.max(0, state.health - damage)
+      const knockback_target_block = get_knockback_position({
+        damager_position,
+        damaged_position: path_position({
+          path: state.path,
+          start_time: state.start_time,
+          speed: state.speed,
+          time,
+        }),
+        strength: damager_strength,
+      })
 
       log.info({ damage, health }, 'Deal Damage')
 
@@ -38,6 +78,7 @@ export default {
         last_damager: damager,
         last_hit_was_critical: critical_hit,
         health,
+        path: [knockback_target_block],
       }
     }
     return state
@@ -74,6 +115,7 @@ export default {
           const new_hit_frame = Date.now() > frame_expiration
           // we either keep going with the entities of the last frame, or we reset
           const entities_ids = new_hit_frame ? [] : last_entities_ids
+          const { health, position } = state
 
           // for the frame, we allow to attack the same entity only once
           if (!entities_ids.includes(target)) {
@@ -89,7 +131,7 @@ export default {
               if (life_stolen) {
                 const real_life_stolen = Math.min(player.health, life_stolen)
                 dispatch(PlayerEvent.UPDATE_HEALTH, {
-                  health: state.health + real_life_stolen,
+                  health: health + real_life_stolen,
                 })
               }
               world.events.emit(WorldRequest.PLAYER_RECEIVE_DAMAGE, {
@@ -109,13 +151,19 @@ export default {
                   const { health: mob_health } = targeted_mob.get_state()
                   const real_life_stolen = Math.min(mob_health, life_stolen)
                   dispatch(PlayerEvent.UPDATE_HEALTH, {
-                    health: state.health + real_life_stolen,
+                    health: health + real_life_stolen,
                   })
                 }
+
                 targeted_mob.dispatch(MobEvent.RECEIVE_DAMAGE, {
                   // if more heal, then it will receive negative dmg (heal)
                   damage: damage + life_stolen - heal,
                   damager: client.uuid,
+                  damager_position: position,
+                  damager_strength: get_total_characteristic(
+                    Characteristic.STRENGTH,
+                    state
+                  ),
                   critical_hit,
                 })
               }

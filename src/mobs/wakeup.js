@@ -21,7 +21,10 @@ async function* raw_wakeup_to_end(stream, value = stream.next()) {
 
   if (path_end) yield wakeup_at
 
-  return [raw_wakeup_to_end, stream, next]
+  return {
+    next_stream: raw_wakeup_to_end,
+    parameters: [stream, next],
+  }
 }
 
 const wakeup_to_end = async_tail_recursive(raw_wakeup_to_end)

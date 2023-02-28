@@ -59,15 +59,20 @@ export function horizontal_diagonal_distance(a, b) {
   return diagonal_distance({ ...a, y: 0 }, { ...b, y: 0 })
 }
 
+function has_bounding_box({ boundingBox }) {
+  return boundingBox === 'block'
+}
+
+// TODO: support entity height (a chicken can fit 1 block)
 export async function is_walkable(world, { x, y, z }) {
-  const under = await get_block(world, { x, y: y - 1, z })
+  const below = await get_block(world, { x, y: y - 1, z })
   const block = await get_block(world, { x, y, z })
-  const front = await get_block(world, { x, y: y + 1, z })
+  const above = await get_block(world, { x, y: y + 1, z })
 
   return (
-    under.boundingBox === 'block' &&
-    block.boundingBox === 'empty' &&
-    front.boundingBox === 'empty'
+    has_bounding_box(below) &&
+    !has_bounding_box(block) &&
+    !has_bounding_box(above)
   )
 }
 
