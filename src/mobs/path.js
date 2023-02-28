@@ -27,21 +27,21 @@ export function path_position({
   speed,
   block_position = false,
 }) {
-  const t = Math.max(0, (time - start_time) / speed)
-  const current = Math.floor(t)
-  const remain = block_position ? t % 1 : 0
+  const block_traveled = Math.max(0, (time - start_time) / speed)
+  const current = Math.floor(block_traveled)
+  const remain = block_position ? 0 : block_traveled % 1
 
   const from = path[Math.min(current, path.length - 1)]
   const to = path[Math.min(current + 1, path.length - 1)]
 
   return {
     x: from.x + (to.x - from.x) * remain,
-    y: from.y + (to.y - from.y) * remain,
+    y: from.y,
     z: from.z + (to.z - from.z) * remain,
   }
 }
 
-const PATH_UPDATE_MS = 1000 / 20 /* 1 update each minecraft tick */
+const PATH_UPDATE_MS = 50 /* 1 update each minecraft tick */
 
 async function* raw_path_to_positions(stream, value = stream.next()) {
   const {
@@ -58,12 +58,13 @@ async function* raw_path_to_positions(stream, value = stream.next()) {
 
     yield {
       position: path_position({ path, time, start_time, speed }),
-      target: path[path.length - 1],
+      target: path.at(-1),
     }
 
     /* End of path, wait for next path */
     if (path_ended({ path, time, start_time, speed })) break
 
+    // gives current time with 1 path_update_ms added (more precise)
     const next_time = (Math.floor(time / PATH_UPDATE_MS) + 1) * PATH_UPDATE_MS
 
     const new_path = await Promise.race([
@@ -74,8 +75,12 @@ async function* raw_path_to_positions(stream, value = stream.next()) {
     if (new_path) break
   }
 
-  return [raw_path_to_positions, stream, next]
+  return {
+    next_stream: raw_path_to_positions,
+    parameters: [stream, next],
+  }
 }
+
 export const path_to_positions = async_tail_recursive(raw_path_to_positions)
 
 async function* raw_path_to_end(stream, value = stream.next()) {
@@ -98,7 +103,10 @@ async function* raw_path_to_end(stream, value = stream.next()) {
 
   if (path_end) yield next_time
 
-  return [raw_path_to_end, stream, next]
+  return {
+    next_stream: raw_path_to_end,
+    parameters: [stream, next],
+  }
 }
 
 export const path_to_end = async_tail_recursive(raw_path_to_end)

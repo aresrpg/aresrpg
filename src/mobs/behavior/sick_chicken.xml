@@ -1,15 +1,15 @@
-<reactive-fallback>
-	<reactive-sequence>
-		<get_biggest_damager output="damager"/>
-		<set_target input="damager"/>
-		<target_position output="position"/>
-		<goto target="position" distance="1"/>
-		<sequence>
-			<attack_target />
-			<sleep time="1"/>
-		</sequence>
-	</reactive-sequence>
-	<repeat>
+<repeat>
+	<reactive-fallback>
+		<reactive-sequence>
+			<get_biggest_damager output="damager"/>
+			<set_target input="damager"/>
+			<target_position output="position"/>
+			<goto target="position" distance="1"/>
+			<sequence>
+				<attack_target />
+				<sleep time="1"/>
+			</sequence>
+		</reactive-sequence>
 		<fallback>
 			<sequence>
 				<random chance="0.16"/>
@@ -28,5 +28,5 @@
 			</sequence>
 			<sleep time="1"/>
 		</fallback>
-	</repeat>
-</reactive-fallback>
+	</reactive-fallback>
+</repeat>

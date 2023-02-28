@@ -3,7 +3,12 @@ import EventEmitter, { on } from 'events'
 
 import { aiter } from 'iterator-helper'
 
-import { chunk_position, same_chunk, chunk_index } from '../chunk.js'
+import {
+  chunk_position,
+  same_chunk,
+  chunk_index,
+  same_position,
+} from '../chunk.js'
 import { MobEvent, PlayerEvent } from '../events.js'
 
 import { path_to_positions } from './path.js'
@@ -20,7 +25,7 @@ export function register(world) {
     const positions = path_to_positions(state)
 
     aiter(positions).reduce((last_position, { position, target }) => {
-      if (last_position !== position) {
+      if (!same_position(last_position, position)) {
         const chunk_x = chunk_position(position.x)
         const chunk_z = chunk_position(position.z)
 
