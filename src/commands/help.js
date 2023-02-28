@@ -36,6 +36,8 @@ export default function help({ world, sender }) {
       { text: '/xp <amount>\n', color: LIGHT_GRAY },
       { text: '    ├─ ', color: GRAY },
       { text: '/gm <mode>\n', color: LIGHT_GRAY },
+      { text: '    ├─ ', color: GRAY },
+      { text: '/speed <value>\n', color: LIGHT_GRAY },
       { text: '    └─ ', color: GRAY },
       { text: '/health <amount>\n', color: LIGHT_GRAY },
     ],
