@@ -30,6 +30,7 @@ import player_bossbar from './player/boss_bar.js'
 import player_action_bar from './player/action_bar.js'
 import player_heartbeat from './player/heartbeat.js'
 import player_bells from './player/bells.js'
+import player_environmental_damage from './player/environmental_damage.js'
 import player_traders, {
   register as register_player_traders,
 } from './player/traders.js'
@@ -254,6 +255,7 @@ export function observe_client({ mobs_position }) {
     player_heartbeat.observe(context)
     player_bells.observe(context)
     player_position.observe(context)
+    player_environmental_damage.observe(context)
 
     commands_declare.observe(context)
 

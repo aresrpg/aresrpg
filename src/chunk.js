@@ -15,6 +15,14 @@ export function chunk_from_index(index) {
   return { x: Number(x), z: Number(z) }
 }
 
+export function same_position(first_position, second_position) {
+  return (
+    first_position?.x === second_position?.x &&
+    first_position?.y === second_position?.y &&
+    first_position?.z === second_position?.z
+  )
+}
+
 export function same_chunk(first_position, second_position) {
   const first_chunk_x = chunk_position(first_position.x)
   const first_chunk_z = chunk_position(first_position.z)
@@ -27,6 +35,7 @@ export function same_chunk(first_position, second_position) {
   return same_x && same_z
 }
 
+/** @returns {Promise<import('prismarine-block').Block>} */
 export async function get_block(world, { x, y, z }) {
   const chunk = await world.chunks.load(chunk_position(x), chunk_position(z))
 

@@ -8,7 +8,7 @@ import {
   reactive_fallback,
 } from './behavior/control.js'
 import goto from './behavior/goto.js'
-import get_biggest_damager from './behavior/damager.js'
+import get_biggest_damager from './behavior/get_biggest_damager.js'
 import set_target from './behavior/set_target.js'
 import target_position from './behavior/target_position.js'
 import random_block_position from './behavior/random_position.js'
@@ -18,7 +18,6 @@ import random from './behavior/random.js'
 import sleep from './behavior/sleep.js'
 import repeat from './behavior/repeat.js'
 import attack_target from './behavior/attack_target.js'
-import debug from './debug.js'
 
 const log = logger(import.meta)
 
@@ -40,6 +39,8 @@ const nodes = {
   attack_target,
 }
 
+const debug = import('./debug.js').then(module => module.default)
+
 export const SUCCESS = Symbol('SUCCESS')
 export const RUNNING = Symbol('RUNNING')
 export const FAILURE = Symbol('FAILURE')
@@ -52,7 +53,10 @@ export default async function run(node, state, context) {
   }
   const result = await nodes[node.tagName](node, state, node_context)
   log.debug({ path, status: result.status.toString() }, 'Ran')
-  debug.behavior?.({ context: node_context, result })
+
+  await debug.then(({ behavior }) =>
+    behavior?.({ context: node_context, result })
+  )
   return result
 }
 
