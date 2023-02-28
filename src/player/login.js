@@ -7,6 +7,7 @@ import { write_title } from '../title.js'
 import { PlayerEvent } from '../events.js'
 import { Formats, world_chat_msg } from '../chat.js'
 import { BLOCK_TAGS, ENTITY_TAGS, FLUID_TAGS, ITEM_TAGS } from '../tags.js'
+import { send_max_health } from '../attribute.js'
 
 import { set_world_border } from './world_border.js'
 
@@ -79,6 +80,8 @@ export default {
           stay: 10,
         },
       })
+
+      send_max_health(client)
 
       if (!last_disconnection_time)
         world_chat_msg({

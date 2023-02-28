@@ -12,7 +12,13 @@ import { write_title } from '../title.js'
 import { Formats } from '../chat.js'
 import { get_max_health } from '../characteristics.js'
 import { write_inventory } from '../inventory.js'
-import { get_attack_speed, send_attributes } from '../attribute.js'
+import {
+  get_attack_speed,
+  get_movement_speed,
+  send_attack_speed,
+  send_max_health,
+  send_movement_speed,
+} from '../attribute.js'
 
 const log = logger(import.meta)
 const MIN_RESPAWN_TIME = 3
@@ -67,9 +73,9 @@ export default {
                 dispatch(PlayerEvent.UPDATE_HEALTH, { health: respawn_health })
 
                 write_inventory(client, state)
-                send_attributes(client, {
-                  attack_speed: get_attack_speed(state),
-                })
+                send_attack_speed(client, get_attack_speed(state))
+                send_max_health(client)
+                send_movement_speed(client, get_movement_speed(state))
               } else {
                 log.info({ remaining }, 'respawning in seconds')
                 write_title({

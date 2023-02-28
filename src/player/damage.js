@@ -35,7 +35,7 @@ export default {
       state.game_mode !== GameMode.CREATIVE
     ) {
       const { damage } = payload
-      const health = Math.max(0, state.health - damage)
+      const health = Math.max(0, Math.round((state.health - damage) * 2) / 2)
 
       log.info({ username: client.username, damage, health }, 'took damage')
 

@@ -166,3 +166,17 @@ export function generate_item({ stats, ...template }, count = 1) {
     count,
   }
 }
+
+/**
+ * Compute the final drop_chance based on multiple factors
+ * @param {number} base_drop_chance the drop percentage 10 means 10%
+ */
+export function should_loot(base_drop_chance, { inventory, characteristics }) {
+  const chance = get_total_characteristic(Characteristic.CHANCE, {
+    inventory,
+    characteristics,
+  })
+  const prospection = chance / 10 + 100
+  const drop_chance = (base_drop_chance * prospection) / 100
+  return Math.random() * 100 < drop_chance
+}

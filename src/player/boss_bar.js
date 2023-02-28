@@ -27,14 +27,14 @@ const mob_bar_color = ({ health, max_health }) => {
   return Colors.RED
 }
 
-// those levels could be according to the player average damage ?
+// TODO: those levels could be according to the player average damage ?
 // or computed according to the floor strongest mob vs weakest
 // we'll see
 const mob_bar_division = ({ max_health }) => {
-  if (max_health < 30) return Divisions.NOTCHES_NONE
-  else if (max_health < 50) return Divisions.NOTCHES_6
-  else if (max_health < 100) return Divisions.NOTCHES_10
-  else if (max_health < 300) return Divisions.NOTCHES_12
+  if (max_health < 50) return Divisions.NOTCHES_NONE
+  else if (max_health < 100) return Divisions.NOTCHES_6
+  else if (max_health < 500) return Divisions.NOTCHES_10
+  else if (max_health < 2000) return Divisions.NOTCHES_12
   else return Divisions.NOTCHES_20
 }
 
@@ -71,14 +71,22 @@ const format_title = ({
   },
 ]
 
+function pad_end(array, length) {
+  return [...array, ...Array.from({ length }).fill({})].slice(0, length)
+}
+
 /** @typedef {import('minecraft-protocol').Client} Client */
 /** @typedef {{entityUUID: string, age: number }} BossBar */
 
 /** @type {({ client, bossbars }: { client: Client, bossbars: BossBar[] }) => BossBar[]} */
 const purge_outdated = ({ client, bossbars }) => {
+  const now = Date.now()
+  const is_expired = ({ age = 0 }) => age + BOSS_BAR_TTL <= now
+  const is_valid = ({ age = 0 }) => age + BOSS_BAR_TTL > now
+
   bossbars
-    .filter(bar => !!bar)
-    .filter(({ age }) => age + BOSS_BAR_TTL <= Date.now())
+    .filter(is_expired)
+    .filter(({ entityUUID }) => entityUUID != null)
     .forEach(({ entityUUID }) => {
       log.info({ entityUUID }, 'purge outdated bossbar')
       write_bossbar({
@@ -87,8 +95,8 @@ const purge_outdated = ({ client, bossbars }) => {
         action: Actions.REMOVE,
       })
     })
-  // @ts-expect-error
-  return bossbars.filter(({ age } = {}) => age + BOSS_BAR_TTL > Date.now())
+
+  return bossbars.filter(is_valid)
 }
 
 export default {
@@ -112,11 +120,8 @@ export default {
         ) => {
           if (timer) {
             // entering here means the iteration is trigered by the interval
-            const next_bossbars = purge_outdated({ client, bossbars })
-            return [
-              ...next_bossbars,
-              ...Array.from({ length: BOSS_BAR_AMOUNT - next_bossbars.length }),
-            ]
+            const valid_bars = purge_outdated({ client, bossbars })
+            return pad_end(valid_bars, 3)
           }
 
           const { get_state, type, entity_id } = mob
@@ -160,9 +165,7 @@ export default {
             })
             return [
               { entityUUID, age: Date.now() },
-              ...bossbars
-                .filter(bar => !!bar)
-                .filter(({ entityUUID: uuid }) => uuid !== entityUUID),
+              ...bossbars.filter(({ entityUUID: uuid }) => uuid !== entityUUID),
             ]
           } else {
             log.info({ display_health, entityUUID }, 'create bossbar')
@@ -175,7 +178,7 @@ export default {
               dividers: mob_bar_division({ max_health }),
             })
 
-            const { entityUUID: evicted_uuid } = bossbars.at(-1) ?? {}
+            const { entityUUID: evicted_uuid } = bossbars.at(-1)
             if (evicted_uuid) {
               write_bossbar({
                 client,
@@ -187,13 +190,12 @@ export default {
             return [
               { entityUUID, age: Date.now() },
               ...bossbars
-                .filter(bar => !!bar)
                 .filter(({ entityUUID: uuid }) => uuid !== entityUUID)
                 .slice(0, -1),
             ]
           }
         },
-        Array.from({ length: BOSS_BAR_AMOUNT })
+        Array.from({ length: BOSS_BAR_AMOUNT }).fill({})
       )
   },
 }
