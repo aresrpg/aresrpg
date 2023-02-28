@@ -15,6 +15,7 @@ import msg from './msg.js'
 import health from './health.js'
 import experience from './experience.js'
 import attack_speed from './attack_speed.js'
+import speed from './speed.js'
 import help from './help.js'
 
 export function write_error({ sender }) {
@@ -91,6 +92,9 @@ export default function execute_command({
       break
     case 'attackspeed':
       attack_speed(command)
+      break
+    case 'speed':
+      speed(command)
       break
     case 'h':
     case 'help':

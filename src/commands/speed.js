@@ -1,12 +1,12 @@
-import { send_attack_speed } from '../attribute.js'
+import { send_movement_speed } from '../attribute.js'
 import { client_chat_msg, Formats } from '../chat.js'
 
 import { write_error } from './commands.js'
 import { double, literal } from './declare_options.js'
 
-export const atk_nodes = [
+export const speed_nodes = [
   literal({
-    value: 'attackspeed',
+    value: 'speed',
     children: [
       double({
         name: 'amount',
@@ -17,15 +17,15 @@ export const atk_nodes = [
   }),
 ]
 
-export default function attack_speed({ sender, dispatch, args }) {
+export default function speed({ sender, dispatch, args }) {
   if (args.length === 1) {
     const [speed] = args
     if (!Number.isNaN(+speed)) {
-      send_attack_speed(sender, +speed)
+      send_movement_speed(sender, +speed)
       client_chat_msg({
         client: sender,
         message: [
-          { text: 'generic.attack_speed updated: ', ...Formats.BASE },
+          { text: 'generic.movement_speed updated: ', ...Formats.BASE },
           { text: speed, ...Formats.SUCCESS },
         ],
       })
