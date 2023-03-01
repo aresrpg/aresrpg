@@ -47,7 +47,7 @@
     "prismarine-provider-anvil": "2.7.0",
     "pusher-js": "8.0.0",
     "uuid-1345": "^1.0.2",
-    "vec3": "0.1.7",
+    "vec3": "0.1.8",
     "xmldom": "0.6.0"
   },
   "devDependencies": {
