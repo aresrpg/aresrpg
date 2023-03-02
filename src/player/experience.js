@@ -13,7 +13,7 @@ import { client_chat_msg } from '../chat.js'
 import { VERSION } from '../settings.js'
 import { to_metadata } from '../entity_metadata.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
-import { experience_to_level, level_progress } from '../experience.js'
+import { experience_to_level } from '../experience.js'
 
 const mcData = minecraftData(VERSION)
 
@@ -55,15 +55,7 @@ export default {
     aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal }))).reduce(
       (last_total_experience, [{ experience: total_experience, position }]) => {
         if (last_total_experience !== total_experience) {
-          const { level, remaining_experience } =
-            experience_to_level(total_experience)
-          const progress = level_progress({ level, remaining_experience })
-
-          client.write('experience', {
-            totalExperience: total_experience,
-            level,
-            experienceBar: progress,
-          })
+          const { level } = experience_to_level(total_experience)
 
           if (last_total_experience !== null) {
             const { level: last_level } = experience_to_level(

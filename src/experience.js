@@ -114,6 +114,12 @@ export function experience_to_level(total_experience) {
   const [current_level, current_level_experience] = reversed_levels.find(
     ([level, level_experience]) => level_experience <= total_experience
   )
+
+  if (current_level + 1 >= levels.length)
+    return {
+      level: levels.length,
+      remaining_experience: 0,
+    }
   return {
     level: current_level,
     remaining_experience: total_experience - current_level_experience,
@@ -123,15 +129,33 @@ export function experience_to_level(total_experience) {
 /**
  * calculate the level progression from the
  * current level and the remaining experience
- * @param {{level: number, remaining_experience: number}} level_data
+ * @param {number} total_experience experience of player
  */
-export function level_progress({ level, remaining_experience }) {
-  const current_level_experience = levels[level]
-  if (level + 1 >= levels.length) {
-    return 0
-  }
-  const next_level_experience = levels[level + 1]
-  return (
-    remaining_experience / (next_level_experience - current_level_experience)
+export function level_progression(total_experience) {
+  const [current_level, current_level_experience] = reversed_levels.find(
+    ([level, level_experience]) => level_experience <= total_experience
   )
+
+  if (current_level + 1 >= levels.length)
+    return {
+      experience_of_level: 0,
+      experience_of_next_level: -1,
+      experience_percent: 100,
+    }
+
+  // total experience of next level
+  const next_level_experience = levels[current_level + 1]
+  // naming can be ambiguous but this is the experience required from lvl to lvl+1
+  const experience_of_next_level =
+    next_level_experience - current_level_experience
+  const experience_of_level = total_experience - current_level_experience
+
+  return {
+    // current raw experience representing the progression for the current level
+    experience_of_level,
+    experience_of_next_level,
+    experience_percent: Math.round(
+      (100 * experience_of_level) / experience_of_next_level
+    ),
+  }
 }

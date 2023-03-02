@@ -1,7 +1,7 @@
 import nbt from 'prismarine-nbt'
 import minecraftData from 'minecraft-data'
 
-import { to_vanilla_item } from '../items.js'
+import { get_held_item, to_vanilla_item } from '../items.js'
 import logger from '../logger.js'
 import execute_command from '../commands/commands.js'
 import { VERSION } from '../settings.js'
@@ -30,7 +30,7 @@ function serialize_item({ present, nbtData, itemCount, itemId }) {
 
   const tag = nbt.simplify(nbtData)
   const { name } = mcData.items[itemId]
-  const chat = {
+  return {
     ...JSON.parse(tag.display.Name),
     hoverEvent: {
       action: 'show_item',
@@ -41,7 +41,6 @@ function serialize_item({ present, nbtData, itemCount, itemId }) {
       },
     },
   }
-  return chat
 }
 
 function serialize_emote(emote) {
@@ -58,11 +57,6 @@ function serialize_emote(emote) {
       action: 'show_text',
       value: emote,
     },
-    with: [
-      {
-        text: emote_name,
-      },
-    ],
   }
 }
 
@@ -71,19 +65,21 @@ export default {
   observe({ client, get_state, world, dispatch }) {
     const chat_mapper = {
       '%item%': () => {
-        const { held_slot_index, inventory, characteristics } = get_state()
-        const item = inventory.hotbar[held_slot_index]
-        return serialize_item(
-          to_vanilla_item(item, { inventory, characteristics })
-        )
+        const state = get_state()
+        return serialize_item(to_vanilla_item(get_held_item(state), state))
       },
       [/%item\d%/.source]: word => {
         const slot_number = Math.max(
           0,
           Math.min(parseInt(word.match(/\d/)[0]), 8)
         )
-        const { inventory, characteristics } = get_state()
-        const item = inventory.hotbar[slot_number]
+        const {
+          inventory,
+          inventory: { weapon, hotbar },
+          characteristics,
+        } = get_state()
+        const hotbar_with_weapon = [weapon, ...hotbar.slice(1)]
+        const item = hotbar_with_weapon[slot_number]
         return serialize_item(
           to_vanilla_item(item, { inventory, characteristics })
         )
@@ -92,7 +88,7 @@ export default {
         const { position } = get_state()
         const closest_zone =
           closest_stone(world, position)?.name ?? 'Wilderness'
-        const chat = {
+        return {
           text: `Position: ${closest_zone}`,
           color: 'gold',
           hoverEvent: {
@@ -100,7 +96,6 @@ export default {
             value: `X: ${Math.round(position.x)} Z: ${Math.round(position.z)}`,
           },
         }
-        return chat
       },
       [/:.*:/.source]: serialize_emote, // all emotes name are between ":"
     }

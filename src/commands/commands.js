@@ -17,6 +17,7 @@ import experience from './experience.js'
 import attack_speed from './attack_speed.js'
 import speed from './speed.js'
 import help from './help.js'
+import settings from './settings.js'
 
 export function write_error({ sender }) {
   sender.write('chat', {
@@ -99,6 +100,9 @@ export default function execute_command({
     case 'h':
     case 'help':
       help(command)
+      break
+    case 'settings':
+      settings(command)
       break
 
     default:
