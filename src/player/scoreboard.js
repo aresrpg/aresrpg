@@ -6,7 +6,6 @@ import update_sidebar_for from '../scoreboard/update_sidebar.js'
 import { abortable } from '../iterator.js'
 import package_json from '../../package.json' assert { type: 'json' }
 import { PlayerEvent } from '../events.js'
-import { experience_to_level, level_progress } from '../experience.js'
 
 const SCOREBOARD_NAME = 'aresrpg'
 const CREATE_OBJECTIVE_ACTION = 0
@@ -83,14 +82,12 @@ export default {
     })
 
     aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal }))).reduce(
-      (last, [{ experience, soul, kares }]) => {
-        const { level, remaining_experience } = experience_to_level(experience)
-        const progress = level_progress({ level, remaining_experience })
+      (last, [{ soul, kares }]) => {
         const next = Array.from({
           length: 15,
           14: '',
           13: Slots.CLASS({ name: '<Classe>' }),
-          12: Slots.PROGRESS({ level, progress }),
+          // 12: Slots.PROGRESS({ level, progress }),
           11: Slots.SOUL({ soul }),
           10: Slots.KARES({ kares }),
           9: '',

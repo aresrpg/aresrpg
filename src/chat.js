@@ -44,16 +44,6 @@ export const Formats = {
     bold: true,
     underline: false,
   },
-  CLICKABLE_ITEM: {
-    color: '#9B59B6',
-    underline: true,
-    italic: false,
-  },
-  CLICKABLE_ENTITY: {
-    color: '#34495E',
-    underline: true,
-    italic: false,
-  },
 }
 
 export function to_rgb(percent) {

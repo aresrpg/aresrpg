@@ -26,11 +26,12 @@ import player_gamemode from './player/gamemode.js'
 import player_scoreboard from './player/scoreboard.js'
 import player_block_place from './player/block_placement.js'
 import player_respawn from './player/respawn.js'
-import player_bossbar from './player/boss_bar.js'
 import player_action_bar from './player/action_bar.js'
 import player_heartbeat from './player/heartbeat.js'
 import player_bells from './player/bells.js'
 import player_environmental_damage from './player/environmental_damage.js'
+import player_settings from './player/settings.js'
+import player_ui from './player/ui.js'
 import player_traders, {
   register as register_player_traders,
 } from './player/traders.js'
@@ -137,7 +138,7 @@ const initial_state = {
   // represents the base stats increased by the player
   // (not equipments bonuses)
   characteristics: {
-    vitality: 0,
+    vitality: 10000,
     mind: 0,
     strength: 0,
     intelligence: 0,
@@ -148,6 +149,18 @@ const initial_state = {
   // can be used for example to calcule regenerated soul while offline
   last_connection_time: undefined,
   last_disconnection_time: undefined,
+  // variables handling the user interface
+  user_interface: {
+    // using a IO call to fetch the player head texture
+    head_texture: undefined,
+    // we should fetch again when the cache is expired (/login.js)
+    head_texture_expiration: -1,
+  },
+  settings: {
+    // top left ui offset
+    // depending on the player screen size, he may want to adjust this position of the UI
+    top_left_ui_offset: -450,
+  },
 }
 
 // Add here all fields that you want to save in the database
@@ -159,7 +172,12 @@ const saved_state = ({
   experience,
   health,
   soul,
+  kares,
+  characteristics,
+  last_connection_time,
   last_disconnection_time,
+  user_interface,
+  settings,
 }) => ({
   position,
   inventory,
@@ -168,7 +186,12 @@ const saved_state = ({
   experience,
   health,
   soul,
+  kares,
+  characteristics,
+  last_connection_time,
   last_disconnection_time,
+  user_interface,
+  settings,
 })
 
 /** @template U
@@ -209,6 +232,8 @@ function reduce_state(state, action, client) {
     player_soul.reduce,
     player_health.reduce,
     player_experience.reduce,
+    player_login.reduce,
+    player_settings.reduce,
     chunk_update.reduce,
   ].reduce((intermediate, fn) => fn(intermediate, action, client), state)
 }
@@ -250,7 +275,7 @@ export function observe_client({ mobs_position }) {
     player_scoreboard.observe(context)
     player_block_place.observe(context)
     player_soul.observe(context)
-    player_bossbar.observe(context)
+    player_ui.observe(context)
     player_respawn.observe(context)
     player_heartbeat.observe(context)
     player_bells.observe(context)

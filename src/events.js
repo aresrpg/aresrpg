@@ -54,6 +54,10 @@ export const PlayerEvent = {
   SWITCH_GAMEMODE: 'PLAYER:SWITCH_GAMEMODE',
   /** the player should receive experience */
   RECEIVE_EXPERIENCE: 'PLAYER:RECEIVE_EXPERIENCE',
+  /** save the player's head texture */
+  STORE_HEAD_TEXTURE: 'PLAYER:STORE_HEAD_TEXTURE',
+  /** some settings of the player should be updated */
+  UPDATE_SETTINGS: 'PLAYER:UPDATE_SETTINGS',
 }
 
 export const MobEvent = {
