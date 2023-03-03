@@ -34,3 +34,10 @@ export const play_sound = ({
     pitch: 1,
   })
 }
+
+export const stop_sound = ({ client, sound }) => {
+  client.write('stop_sound', {
+    flags: 1,
+    sound,
+  })
+}
