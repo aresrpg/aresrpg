@@ -35,6 +35,7 @@ import player_deal_damage, {
   register as register_player_deal_damage,
 } from './player/damage.js'
 import player_inventory from './player/inventory.js'
+import player_chest from './player/chest.js'
 import player_teleportation_stones, {
   register as register_player_teleportation_stones,
 } from './player/teleportation_stones.js'
@@ -108,6 +109,16 @@ const initial_state = {
   inventory: Array.from({
     length: 46,
   }),
+  bank: [
+    // Bank chests 1 -> 3
+    Array.from({ length: 53 }),
+    Array.from({ length: 53 }),
+    Array.from({ length: 53 }),
+  ],
+  bank_id: null,
+  bank_cursor: null,
+  bank_cursor_index: 0,
+  bank_sequence_number: 0,
   looted_items: {
     pool: Array.from({ length: ITEM_LOOT_MAX_COUNT }),
     cursor: 0,
@@ -134,6 +145,7 @@ const saved_state = ({
   nickname,
   position,
   inventory,
+  bank,
   held_slot_index,
   game_mode,
   experience,
@@ -144,6 +156,7 @@ const saved_state = ({
   nickname,
   position,
   inventory,
+  bank,
   held_slot_index,
   game_mode,
   experience,
@@ -182,6 +195,7 @@ function reduce_state(state, action) {
     plugin_channels.reduce,
     player_deal_damage.reduce,
     player_inventory.reduce,
+    player_chest.reduce,
     player_gamemode.reduce,
     player_held_item.reduce,
     player_item_loot.reduce,
