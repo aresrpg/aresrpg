@@ -15,6 +15,10 @@ export function chunk_from_index(index) {
   return { x: Number(x), z: Number(z) }
 }
 
+export function in_chunk({ x, z }, { x: chunk_x, z: chunk_z }) {
+  return chunk_position(x) === chunk_x && chunk_position(z) === chunk_z
+}
+
 export function same_chunk(first_position, second_position) {
   const first_chunk_x = chunk_position(first_position.x)
   const first_chunk_z = chunk_position(first_position.z)

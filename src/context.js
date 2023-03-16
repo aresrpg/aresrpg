@@ -34,6 +34,9 @@ import player_traders, {
 import player_deal_damage, {
   register as register_player_deal_damage,
 } from './player/damage.js'
+import platform, {
+  register as register_platforms,
+} from './platforms/platform.js'
 import player_inventory from './player/inventory.js'
 import player_teleportation_stones, {
   register as register_player_teleportation_stones,
@@ -66,6 +69,8 @@ import { abortable } from './iterator.js'
 import Database from './database.js'
 import { USE_RESOURCE_PACK } from './settings.js'
 import { GameMode } from './gamemode.js'
+import platform_interaction from './platforms/interaction.js'
+import platform_spawn from './platforms/spawn.js'
 
 const log = logger(import.meta)
 
@@ -91,6 +96,7 @@ const world_reducers = [
   register_experience,
   register_player_teleportation_stones,
   register_player_item_loot,
+  register_platforms,
 ]
 
 export const world = /** @type {World} */ (
@@ -249,6 +255,10 @@ export function observe_client({ mobs_position }) {
     mobs_loot.observe(context)
     mobs_attack.observe(context)
     mobs_sound.observe(context)
+
+    platform.observe(context)
+    platform_interaction.observe(context)
+    platform_spawn.observe(context)
 
     chunk_update.observe(context)
   }
