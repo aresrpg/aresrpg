@@ -44,6 +44,21 @@ export function string({ name, properties, flags = {}, children = [] }) {
   }
 }
 
+export function chunkPosition({ name, properties, flags = {}, children = [] }) {
+  return {
+    flags: {
+      command_node_type: CommandNodeTypes.ARGUMENT,
+      ...flags,
+    },
+    extraNodeData: {
+      name,
+      parser: 'minecraft:vec2',
+      properties,
+    },
+    children,
+  }
+}
+
 export function entity({ name, properties, flags = {}, children = [] }) {
   return {
     flags: {
