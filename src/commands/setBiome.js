@@ -65,15 +65,36 @@ function updateChunkBiome({ client, chunk, position, biomeId }) {
   performance.measure('load_chunk', 'load_chunk_start', 'load_chunk_end')
 }
 
-export default async function setBiome({ world, sender, args }) {
-  if (args.length === 3) {
-    const [x, z, biomeId] = args
+function positionToChunk(position) {
+  return {
+    x: chunk_position(position.x),
+    z: chunk_position(position.z),
+  }
+}
 
-    const pos = {
-      x: chunk_position(x),
-      z: chunk_position(z),
-    }
+function toInt(coord) {
+  return Number(coord.split('~')[1])
+}
 
+function handleShortcut({ position, get_state }) {
+  const { x, z } = position
+
+  if (isNaN(x) || isNaN(z)) {
+    const { position } = get_state()
+
+    position.x = toInt(x) + position.x
+    position.z = toInt(z) + position.z
+
+    return positionToChunk(position)
+  }
+  return positionToChunk(position)
+}
+
+export default async function setBiome({ world, sender, args, get_state }) {
+  const [x, z, biomeId] = args
+
+  if (args.length === 3 && !isNaN(biomeId)) {
+    const pos = handleShortcut({ position: { x, z }, get_state })
     const chunk = await world.chunks.load(pos.x, pos.z)
 
     updateChunkBiome({
@@ -82,6 +103,7 @@ export default async function setBiome({ world, sender, args }) {
       position: pos,
       biomeId,
     })
+
     client_chat_msg({
       client: sender,
       message: [
