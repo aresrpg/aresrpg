@@ -2,6 +2,7 @@ import minecraft_data from 'minecraft-data'
 
 import { VERSION } from '../settings.js'
 
+import customBiomes from './customBiomes.json' assert { type: 'json' }
 const { loginPacket } = minecraft_data(VERSION)
 
 export const overworld = {
@@ -65,6 +66,13 @@ export const overworld = {
 
 /** @type {any} */
 const { dimensionCodec } = loginPacket
+
+// Add custom biomes to existing ones
+customBiomes.data.forEach(biome => {
+  dimensionCodec.value['minecraft:worldgen/biome'].value.value.value.value.push(
+    biome
+  )
+})
 
 export const dimension_codec = {
   type: 'compound',

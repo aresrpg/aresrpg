@@ -1,0 +1,166 @@
+{
+  "data": [
+    {
+      "name": {
+        "type": "string",
+        "value": "thebes"
+      },
+      "id": {
+        "type": "int",
+        "value": 174
+      },
+      "element": {
+        "type": "compound",
+        "value": {
+          "category": {
+            "type": "string",
+            "value": "plains"
+          },
+          "temperature": {
+            "type": "float",
+            "value": 0.5
+          },
+          "downfall": {
+            "type": "float",
+            "value": 0.5
+          },
+          "depth": {
+            "type": "float",
+            "value": -1
+          },
+          "effects": {
+            "type": "compound",
+            "value": {
+              "water_fog_color": {
+                "type": "int",
+                "value": 329011
+              },
+              "water_color": {
+                "type": "int",
+                "value": 16768256
+              },
+              "fog_color": {
+                "type": "int",
+                "value": 10404863
+              },
+              "mood_sound": {
+                "type": "compound",
+                "value": {
+                  "offset": {
+                    "type": "double",
+                    "value": 2
+                  },
+                  "sound": {
+                    "type": "string",
+                    "value": "minecraft:ambient.cave"
+                  },
+                  "block_search_extent": {
+                    "type": "int",
+                    "value": 8
+                  },
+                  "tick_delay": {
+                    "type": "int",
+                    "value": 6000
+                  }
+                }
+              },
+              "sky_color": {
+                "type": "int",
+                "value": 16753152
+              }
+            }
+          },
+          "precipitation": {
+            "type": "string",
+            "value": "rain"
+          },
+          "scale": {
+            "type": "float",
+            "value": 0.10000000149011612
+          }
+        }
+      }
+    },
+    {
+      "name": {
+        "type": "string",
+        "value": "segeste"
+      },
+      "id": {
+        "type": "int",
+        "value": 175
+      },
+      "element": {
+        "type": "compound",
+        "value": {
+          "category": {
+            "type": "string",
+            "value": "plains"
+          },
+          "temperature": {
+            "type": "float",
+            "value": 0.5
+          },
+          "downfall": {
+            "type": "float",
+            "value": 0.5
+          },
+          "depth": {
+            "type": "float",
+            "value": -1
+          },
+          "effects": {
+            "type": "compound",
+            "value": {
+              "water_fog_color": {
+                "type": "int",
+                "value": 321211
+              },
+              "water_color": {
+                "type": "int",
+                "value": 16712256
+              },
+              "fog_color": {
+                "type": "int",
+                "value": 10124863
+              },
+              "mood_sound": {
+                "type": "compound",
+                "value": {
+                  "offset": {
+                    "type": "double",
+                    "value": 2
+                  },
+                  "sound": {
+                    "type": "string",
+                    "value": "minecraft:ambient.cave"
+                  },
+                  "block_search_extent": {
+                    "type": "int",
+                    "value": 8
+                  },
+                  "tick_delay": {
+                    "type": "int",
+                    "value": 6000
+                  }
+                }
+              },
+              "sky_color": {
+                "type": "int",
+                "value": 16713252
+              }
+            }
+          },
+          "precipitation": {
+            "type": "string",
+            "value": "rain"
+          },
+          "scale": {
+            "type": "float",
+            "value": 0.10000000149011612
+          }
+        }
+      }
+    }
+  ]
+}
