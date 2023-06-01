@@ -43,7 +43,7 @@
     "minecraft-data": "3.28.0",
     "minecraft-protocol": "1.36.2",
     "node-fetch": "^3.3.0",
-    "pino": "8.8.0",
+    "pino": "8.14.1",
     "prismarine-provider-anvil": "2.7.0",
     "pusher-js": "8.0.0",
     "uuid-1345": "^1.0.2",
