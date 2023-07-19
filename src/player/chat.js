@@ -150,7 +150,7 @@ export default {
                 return { text: part }
               })
               // make sure we don't send any nulls
-              .filter(value => !!value),
+              .filter(Boolean),
           ],
         },
         client,

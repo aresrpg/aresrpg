@@ -1,30 +1,95 @@
-export const Font = {
-  BOSSBAR: 'aresrpg:bossbar',
-  BOSSBAR_HEALTH_ASCII: 'aresrpg:bossbar_health_ascii',
-  BOSSBAR_XP_ASCII: 'aresrpg:bossbar_xp_ascii',
-  SPACE: 'space:default',
-  DEFAULT: 'minecraft:default',
-  EMOTES: 'aresrpg:emotes',
-  KITS: 'aresrpg:kits',
+function with_translate(font) {
+  return translate => ({
+    font,
+    translate: `${font}:${translate}`,
+  })
 }
 
-export const Texture = {
-  top_health: index => `${Font.BOSSBAR}:health:${index}`,
-  top_xp: index => `${Font.BOSSBAR}:xp:${index}`,
-  top_head_slot: `${Font.BOSSBAR}:head_slot`,
-  top_pixel: index => `${Font.BOSSBAR}:pixel:${index}`,
+function with_text(font, base_options = {}) {
+  return (text, color, options) => ({
+    font,
+    text,
+    ...(color && { color }),
+    ...base_options,
+    ...options,
+  })
 }
 
-export function cursor(offset) {
+function no_italic(component) {
   return {
-    translate: `space.${offset}`,
-    font: Font.SPACE,
+    ...component,
+    italic: false,
+    color: '#ffffff',
   }
 }
 
-export function component(font) {
-  return (offset, texture, color) => ({
-    ...cursor(offset),
-    with: [{ font, translate: texture, ...(color && { color }) }],
-  })
+function tooltip_component(position) {
+  return type =>
+    no_italic(with_translate('aresrpg:item_tooltip')(`${position}:${type}`))
+}
+
+export const Font = {
+  EMOTES: with_translate('aresrpg:emotes'),
+  CHAT: {
+    item_prefix: with_translate('aresrpg:chat')('item:prefix'),
+  },
+  ITEM: {
+    tooltip_top: tooltip_component('top'),
+    tooltip_middle: tooltip_component('middle'),
+    tooltip_bottom: tooltip_component('bottom'),
+    type_icon: type =>
+      no_italic(with_translate('aresrpg:item_type_icon')(type)),
+    stat_icon: stat =>
+      no_italic(with_translate('aresrpg:item_stat_icon')(stat)),
+  },
+  ITEM_ASCII: with_text('aresrpg:item_ascii', { italic: false }),
+  ITEM_LEVEL_ASCII: with_text('aresrpg:item_level_ascii'),
+  GROUP: {
+    header: with_translate('aresrpg:group_header')('background'),
+    group: (index, value) => ({
+      font: `aresrpg:group_${index}`,
+      translate: `aresrpg:group:${value}`,
+    }),
+  },
+  HOTBAR: {
+    experience: (value, part) =>
+      with_translate('aresrpg:hotbar')(`${value}:${part}`),
+    spell_select: (value, part) =>
+      with_translate('aresrpg:spell_selected')(`${value}:${part}`),
+    spell_load: (index, value, part) => ({
+      font: `aresrpg:spell_load_${index}`,
+      translate: `aresrpg:spell_load:${value}:${part}`,
+    }),
+    spell_icon: (classe, value, part) => ({
+      font: `aresrpg:spell_icon_${classe}`,
+      translate: `aresrpg:spell_icon_${classe}:${value}:${part}`,
+    }),
+  },
+  KITS: with_translate('aresrpg:kits'),
+  PLAYER_HEALTH_ASCII: with_text('aresrpg:player_health_ascii'),
+  PLAYER_HEALTH_PIXEL: with_translate('aresrpg:player_health_pixel'),
+  PLAYER: {
+    health: (value, part) =>
+      with_translate('aresrpg:player_health')(`${value}:${part}`),
+    soul: (value, part) =>
+      with_translate('aresrpg:player_soul')(`${value}:${part}`),
+  },
+  PLAYER_SOUL_ASCII: with_text('aresrpg:player_soul_ascii'),
+  HOTBAR_XP_ASCII: with_text('aresrpg:hotbar_xp_ascii'),
+  SPACE: {
+    cursor: offset => ({
+      font: 'space:default',
+      translate: `space.${Math.round(offset)}`,
+    }),
+    negative_max: {
+      font: 'space:default',
+      translate: `space.-max`,
+    },
+    center: (offset, component) => ({
+      font: 'space:default',
+      translate: `offset.${Math.round(offset)}`,
+      with: [component],
+    }),
+  },
+  DEFAULT: with_text('minecraft:default'),
 }

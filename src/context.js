@@ -21,12 +21,10 @@ import player_view_distance from './player/view_distance.js'
 import player_chat from './player/chat.js'
 import player_resource_pack from './player/resource_pack.js'
 import player_statistics from './player/statistics.js'
-import player_held_item from './player/held_item.js'
+import player_spell from './player/spell.js'
 import player_gamemode from './player/gamemode.js'
-import player_scoreboard from './player/scoreboard.js'
 import player_block_place from './player/block_placement.js'
 import player_respawn from './player/respawn.js'
-import player_action_bar from './player/action_bar.js'
 import player_heartbeat from './player/heartbeat.js'
 import player_bells from './player/bells.js'
 import player_environmental_damage from './player/environmental_damage.js'
@@ -114,20 +112,22 @@ const initial_state = {
     legs: null,
     feet: null,
     pet: null,
-    // separated from hotbar to keep the equipped stats
-    // but the hotbar[0] is used for attacks
-    weapon: generate_item(items.default_sword),
+    weapon: generate_item(items.default_axe),
+    // off hand
+    consumable: null,
     relics: Array.from({ length: 6 }),
     crafting_output: null,
     crafting_input: Array.from({ length: 4 }),
-    main_inventory: Array.from({ length: 27 }),
-    hotbar: Array.from({ length: 9 }),
-    off_hand: null,
+    main_inventory: Array.from({
+      length: 27,
+      10: generate_item(items.default_helmet),
+      11: generate_item(items.default_boots),
+      12: generate_item(items.default_ring),
+    }),
   },
   inventory_sequence_number: 0,
   inventory_cursor: null,
   inventory_cursor_index: 0,
-  held_slot_index: 0,
   game_mode: GameMode.ADVENTURE,
   experience: 0,
   health: 25,
@@ -138,7 +138,7 @@ const initial_state = {
   // represents the base stats increased by the player
   // (not equipments bonuses)
   characteristics: {
-    vitality: 10000,
+    vitality: 0,
     mind: 0,
     strength: 0,
     intelligence: 0,
@@ -159,15 +159,33 @@ const initial_state = {
   settings: {
     // top left ui offset
     // depending on the player screen size, he may want to adjust this position of the UI
-    top_left_ui_offset: -450,
+    top_left_ui_offset: -350,
   },
+  selected_spell: 0,
+  spells: Array.from({
+    length: 8,
+    0: {
+      name: 'test',
+      couldown: 8000,
+      // storing the last cast time because we need to be able to display the reloading UI
+      // at any moment from the state only (no reducers)
+      cast_time: 0,
+    },
+    // 1: {
+    //   name: 'test',
+    //   couldown: 5000,
+    //   // storing the last cast time because we need to be able to display the reloading UI
+    //   // at any moment from the state only (no reducers)
+    //   cast_time: 0,
+    // },
+  }),
 }
 
 // Add here all fields that you want to save in the database
 const saved_state = ({
   position,
   inventory,
-  held_slot_index,
+  selected_spell,
   game_mode,
   experience,
   health,
@@ -181,7 +199,7 @@ const saved_state = ({
 }) => ({
   position,
   inventory,
-  held_slot_index,
+  selected_spell,
   game_mode,
   experience,
   health,
@@ -228,12 +246,12 @@ function reduce_state(state, action, client) {
     player_deal_damage.reduce,
     player_inventory.reduce,
     player_gamemode.reduce,
-    player_held_item.reduce,
     player_soul.reduce,
     player_health.reduce,
     player_experience.reduce,
     player_login.reduce,
     player_settings.reduce,
+    player_spell.reduce,
     chunk_update.reduce,
   ].reduce((intermediate, fn) => fn(intermediate, action, client), state)
 }
@@ -271,8 +289,7 @@ export function observe_client({ mobs_position }) {
     player_teleportation_stones.observe(context)
     player_tablist.observe(context)
     player_sync.observe(context)
-    player_action_bar.observe(context)
-    player_scoreboard.observe(context)
+    player_spell.observe(context)
     player_block_place.observe(context)
     player_soul.observe(context)
     player_ui.observe(context)
@@ -337,7 +354,10 @@ export async function create_context({ client, world }) {
     controller.abort()
   })
 
-  client.on('error', error => log.error(error, 'Client error'))
+  client.on('error', error => {
+    if (error.message !== 'This socket has been ended by the other party')
+      log.error(error, 'Client error')
+  })
 
   const packets = aiter(
     on(client, 'packet', { signal: controller.signal })
@@ -387,6 +407,7 @@ export async function create_context({ client, world }) {
       log.error(error, 'State error')
     })
 
+  /** @type {() => State} */
   const get_state = last_event_value(events, PlayerEvent.STATE_UPDATED)
 
   return {
