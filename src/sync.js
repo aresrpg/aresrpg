@@ -1,4 +1,4 @@
-import { get_held_item, to_vanilla_item } from './items.js'
+import { to_vanilla_item } from './items.js'
 
 /** Provide the exact fields required to send a synchronisation of a player from its client and state */
 export function synchronisation_payload(
@@ -6,10 +6,9 @@ export function synchronisation_payload(
   {
     health,
     position,
-    held_slot_index,
     inventory,
     characteristics,
-    inventory: { head, chest, legs, feet, hotbar },
+    inventory: { head, chest, legs, feet, weapon },
   }
 ) {
   const options = { inventory, characteristics }
@@ -22,9 +21,6 @@ export function synchronisation_payload(
     chestplate: to_vanilla_item(chest, options),
     leggings: to_vanilla_item(legs, options),
     boots: to_vanilla_item(feet, options),
-    held_item: to_vanilla_item(
-      get_held_item({ held_slot_index, inventory }),
-      options
-    ),
+    weapon: to_vanilla_item(weapon, options),
   }
 }

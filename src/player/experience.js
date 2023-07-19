@@ -32,18 +32,19 @@ export default {
   reduce(state, { type, payload }) {
     if (type === PlayerEvent.RECEIVE_EXPERIENCE) {
       const { experience } = payload
-      const { level: last_level } = experience_to_level(state.experience)
-      const { level } = experience_to_level(state.experience + experience)
+      const last_level = experience_to_level(state.experience)
+      const new_experience = Math.max(0, state.experience + experience)
+      const level = experience_to_level(new_experience)
       if (level !== last_level) {
         return {
           ...state,
           soul: 100,
-          experience: state.experience + experience,
+          experience: new_experience,
         }
       } else {
         return {
           ...state,
-          experience: state.experience + experience,
+          experience: new_experience,
         }
       }
     }
@@ -55,12 +56,10 @@ export default {
     aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal }))).reduce(
       (last_total_experience, [{ experience: total_experience, position }]) => {
         if (last_total_experience !== total_experience) {
-          const { level } = experience_to_level(total_experience)
+          const level = experience_to_level(total_experience)
 
           if (last_total_experience !== null) {
-            const { level: last_level } = experience_to_level(
-              last_total_experience
-            )
+            const last_level = experience_to_level(last_total_experience)
 
             if (level > last_level) {
               write_title({
