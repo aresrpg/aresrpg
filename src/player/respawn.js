@@ -16,9 +16,10 @@ import {
   get_attack_speed,
   get_movement_speed,
   send_attack_speed,
-  send_max_health,
   send_movement_speed,
 } from '../attribute.js'
+
+import { stop_fire } from './environmental_damage.js'
 
 const log = logger(import.meta)
 const MIN_RESPAWN_TIME = 3
@@ -63,6 +64,8 @@ export default {
                   copyMetadata: false,
                 })
 
+                stop_fire(client)
+
                 const state = get_state()
                 // respawn with 5% life
                 const respawn_health = Math.min(
@@ -74,7 +77,6 @@ export default {
 
                 write_inventory(client, state)
                 send_attack_speed(client, get_attack_speed(state))
-                send_max_health(client)
                 send_movement_speed(client, get_movement_speed(state))
               } else {
                 log.info({ remaining }, 'respawning in seconds')

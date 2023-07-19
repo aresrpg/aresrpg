@@ -8,6 +8,7 @@ import { is_yielding_weapon } from './items.js'
 import { normalize_range } from './math.js'
 
 const BARE_HAND_CRITICAL = 6
+const MIN_AGILITY_FOR_CRITICAL = 8
 const CRITICAL_OUTCOMES_MODIFIER = 2.9901
 const CRITICAL_OUTCOMES_INCREASE = 12
 
@@ -35,6 +36,8 @@ function is_critical(outcomes) {
 }
 
 export function compute_outcomes({ base_outcomes, agility }) {
+  if (agility < MIN_AGILITY_FOR_CRITICAL) return base_outcomes
+
   return Math.floor(
     (base_outcomes * CRITICAL_OUTCOMES_MODIFIER) /
       Math.log(agility + CRITICAL_OUTCOMES_INCREASE)

@@ -50,7 +50,7 @@ function set_on_fire(client) {
   })
 }
 
-function stop_fire(client) {
+export function stop_fire(client) {
   client.write('entity_metadata', {
     entityId: PLAYER_ENTITY_ID,
     metadata: to_metadata('entity', {
@@ -106,7 +106,7 @@ export default {
                   took_damage: false,
                 }
               }
-              dispatch(PlayerEvent.RECEIVE_DAMAGE, {
+              events.emit(PlayerEvent.RECEIVE_DAMAGE, {
                 damage: (last_fire_damage / 100) * max_health,
               })
               // set fire_tick TICK_PER_INTERVAL * remaining_fire_loop
@@ -119,7 +119,7 @@ export default {
                 fire_damage = 0,
                 fire_loop = -1,
               } = damage_from_block
-              dispatch(PlayerEvent.RECEIVE_DAMAGE, {
+              events.emit(PlayerEvent.RECEIVE_DAMAGE, {
                 damage: (damage / 100) * max_health,
               })
 
@@ -140,7 +140,7 @@ export default {
                 fire_damage = 0,
                 fire_loop = -1,
               } = damage_from_surface
-              dispatch(PlayerEvent.RECEIVE_DAMAGE, {
+              events.emit(PlayerEvent.RECEIVE_DAMAGE, {
                 damage: (damage / 100) * max_health,
               })
 
