@@ -27,7 +27,7 @@ export default {
             const raw_damage = fall_distance / 2 - 1.5
             const damage = Math.round(raw_damage * 2) / 2
 
-            if (damage > 0) dispatch(PlayerEvent.RECEIVE_DAMAGE, { damage })
+            if (damage > 0) events.emit(PlayerEvent.RECEIVE_DAMAGE, { damage })
             return {
               highest_y: y,
               was_on_ground: true,

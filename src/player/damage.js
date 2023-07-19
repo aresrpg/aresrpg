@@ -12,6 +12,7 @@ import { abortable } from '../iterator.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
 import { show_blood, show_death_smoke } from '../particules.js'
 import { CATEGORY, play_sound } from '../sound.js'
+import { PLAYER_ENTITY_ID } from '../settings.js'
 
 const DAMAGE_INDICATORS_AMOUNT = 10
 const DAMAGE_INDICATOR_TTL = 1200
@@ -48,9 +49,19 @@ export default {
   },
 
   /** @type {import('../context.js').Observer} */
-  observe({ events, dispatch, client, world, signal }) {
-    // here we handle the damage taken by our observed client
-    // this come all the way from sync.js which listens for `use_entity` packet and match uuids
+  observe({ events, dispatch, client, world, signal, get_state }) {
+    aiter(
+      abortable(on(events, PlayerEvent.RECEIVE_DAMAGE, { signal }))
+    ).forEach(([{ damage }]) => {
+      const { health } = get_state()
+      client.write('entity_status', {
+        entityId: PLAYER_ENTITY_ID,
+        entityStatus: health - damage > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
+      })
+      dispatch(PlayerEvent.RECEIVE_DAMAGE, { damage })
+    })
+
+    // @see more in src/SYNC.md
     aiter(
       abortable(
         on(world.events, WorldRequest.PLAYER_RECEIVE_DAMAGE, { signal })
@@ -60,7 +71,7 @@ export default {
       .forEach(({ damage, player: { uuid, entity_id, health, position } }) => {
         // if ourselves
         if (uuid === client.uuid)
-          dispatch(PlayerEvent.RECEIVE_DAMAGE, { damage })
+          events.emit(PlayerEvent.RECEIVE_DAMAGE, { damage })
         // otherwise
         else {
           play_sound({
@@ -150,9 +161,7 @@ export default {
                   text: `+${xp} xp`,
                   color: '#3498DB',
                 })
-            }
-
-            show_death_smoke({ client, position: particle_position })
+            } else show_death_smoke({ client, position: particle_position })
           }
           return {
             cursor,

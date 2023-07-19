@@ -18,7 +18,7 @@ export default {
             target === client.uuid &&
             attack_sequence_number !== last_attack_sequence_number
           ) {
-            dispatch(PlayerEvent.RECEIVE_DAMAGE, {
+            events.emit(PlayerEvent.RECEIVE_DAMAGE, {
               damage: Entities[mob.type].damage,
             })
           }
