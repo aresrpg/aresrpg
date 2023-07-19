@@ -4,6 +4,9 @@ import { PlayerEvent } from '../events.js'
 import { write_error } from './commands.js'
 import { integer, literal } from './declare_options.js'
 
+const MIN_UI_LEFT_OFFSET = -900
+const MAX_UI_LEFT_OFFSET = -100
+
 export const settings_nodes = [
   literal({
     value: 'settings',
@@ -31,7 +34,10 @@ export default function settings({ sender, dispatch, args }) {
   switch (cmd) {
     case 'top_left_ui_offset':
       if (!Number.isNaN(value)) {
-        const top_left_ui_offset = Math.max(-700, Math.min(-100, value))
+        const top_left_ui_offset = Math.max(
+          MIN_UI_LEFT_OFFSET,
+          Math.min(MAX_UI_LEFT_OFFSET, value)
+        )
         dispatch(PlayerEvent.UPDATE_SETTINGS, { top_left_ui_offset })
         client_chat_msg({
           client: sender,
