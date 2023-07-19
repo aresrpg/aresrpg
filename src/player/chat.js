@@ -1,13 +1,14 @@
 import nbt from 'prismarine-nbt'
 import minecraftData from 'minecraft-data'
 
-import { get_held_item, to_vanilla_item } from '../items.js'
+import { to_vanilla_item } from '../items.js'
 import logger from '../logger.js'
 import execute_command from '../commands/commands.js'
 import { VERSION } from '../settings.js'
 import { world_chat_msg } from '../chat.js'
 import { WorldRequest } from '../events.js'
 import emotes from '../../data/emotes.json' assert { type: 'json' }
+import { Font } from '../font.js'
 
 import { closest_stone } from './teleportation_stones.js'
 const mcData = minecraftData(VERSION)
@@ -25,22 +26,25 @@ function is_command_function(message) {
  * @param {number=} options.itemCount
  * @param {number=} options.itemId
  */
-function serialize_item({ present, nbtData, itemCount, itemId }) {
+function serialize_item(name, { present, nbtData, itemCount, itemId }) {
   if (present === false) return undefined
 
   const tag = nbt.simplify(nbtData)
-  const { name } = mcData.items[itemId]
-  return {
-    ...JSON.parse(tag.display.Name),
-    hoverEvent: {
-      action: 'show_item',
-      contents: {
-        id: name,
-        itemCount,
-        tag: JSON.stringify(tag),
+  return [
+    Font.ITEM.chat_prefix,
+    {
+      ...Font.DEFAULT(` [${name}]`),
+      color: '#BDC3C7',
+      hoverEvent: {
+        action: 'show_item',
+        contents: {
+          id: mcData.items[itemId].name,
+          itemCount,
+          tag: JSON.stringify(tag),
+        },
       },
     },
-  }
+  ]
 }
 
 function serialize_emote(emote) {
@@ -51,8 +55,7 @@ function serialize_emote(emote) {
   }
 
   return {
-    translate: `aresrpg.emotes.${emote_name}`,
-    font: 'aresrpg:emotes',
+    ...Font.EMOTES(emote_name),
     hoverEvent: {
       action: 'show_text',
       value: emote,
@@ -60,30 +63,39 @@ function serialize_emote(emote) {
   }
 }
 
+function printable_items({
+  head,
+  neck,
+  chest,
+  rings,
+  belt,
+  legs,
+  feet,
+  pet,
+  weapon,
+  relics,
+}) {
+  return {
+    head,
+    neck,
+    chest,
+    ring1: rings[0],
+    ring2: rings[1],
+    belt,
+    legs,
+    feet,
+    pet,
+    weapon,
+    ...Object.fromEntries(
+      relics.map((relic, index) => [`relic${index + 1}`, relic])
+    ),
+  }
+}
+
 export default {
   /** @type {import('../context.js').Observer} */
   observe({ client, get_state, world, dispatch }) {
     const chat_mapper = {
-      '%item%': () => {
-        const state = get_state()
-        return serialize_item(to_vanilla_item(get_held_item(state), state))
-      },
-      [/%item\d%/.source]: word => {
-        const slot_number = Math.max(
-          0,
-          Math.min(parseInt(word.match(/\d/)[0]), 8)
-        )
-        const {
-          inventory,
-          inventory: { weapon, hotbar },
-          characteristics,
-        } = get_state()
-        const hotbar_with_weapon = [weapon, ...hotbar.slice(1)]
-        const item = hotbar_with_weapon[slot_number]
-        return serialize_item(
-          to_vanilla_item(item, { inventory, characteristics })
-        )
-      },
       '%pos%': () => {
         const { position } = get_state()
         const closest_zone =
@@ -96,6 +108,13 @@ export default {
             value: `X: ${Math.round(position.x)} Z: ${Math.round(position.z)}`,
           },
         }
+      },
+      [/%.*%/.source]: name => {
+        const state = get_state()
+        const { inventory } = state
+        const printable = printable_items(inventory)
+        const item = printable[name.slice(1, -1)]
+        if (item) return serialize_item(item.name, to_vanilla_item(item, state))
       },
       [/:.*:/.source]: serialize_emote, // all emotes name are between ":"
     }
@@ -119,15 +138,19 @@ export default {
             {
               text: client.username,
             },
-            message.split(split_regex).map(part => {
-              for (const pattern in chat_mapper)
-                if (
-                  part.match(pattern) &&
-                  chat_mapper[pattern](part) !== undefined
-                )
-                  return chat_mapper[pattern](part)
-              return { text: part }
-            }),
+            message
+              .split(split_regex)
+              .flatMap(part => {
+                for (const pattern in chat_mapper)
+                  if (
+                    part.match(pattern) &&
+                    chat_mapper[pattern](part) !== undefined
+                  )
+                    return chat_mapper[pattern](part)
+                return { text: part }
+              })
+              // make sure we don't send any nulls
+              .filter(value => !!value),
           ],
         },
         client,
