@@ -27,20 +27,6 @@ export function get_movement_speed({ inventory, characteristics }) {
   return VANILLA_MOVEMENT_SPEED + SPEED_INCREASE * speed
 }
 
-export function send_max_health(client) {
-  log.info({ health: 40, username: client.username }, 'send generic.max_health')
-  client.write('entity_update_attributes', {
-    entityId: PLAYER_ENTITY_ID,
-    properties: [
-      {
-        key: 'generic.max_health',
-        value: 40,
-        modifiers: [],
-      },
-    ],
-  })
-}
-
 export function send_attack_speed(client, attack_speed) {
   log.info(
     { attack_speed, username: client.username },

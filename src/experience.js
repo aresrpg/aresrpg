@@ -107,23 +107,15 @@ const reversed_levels = [...levels.entries()].reverse()
 /**
  * find the current level and the remaining
  * experience from the total experience
- * @param {number} total_experience
- * @returns {{level: number, remaining_experience: number}}
+ * @type {(total_experience: number) => number}
  */
 export function experience_to_level(total_experience) {
-  const [current_level, current_level_experience] = reversed_levels.find(
+  const [current_level] = reversed_levels.find(
     ([level, level_experience]) => level_experience <= total_experience
-  )
+  ) ?? [levels.length]
 
-  if (current_level + 1 >= levels.length)
-    return {
-      level: levels.length,
-      remaining_experience: 0,
-    }
-  return {
-    level: current_level,
-    remaining_experience: total_experience - current_level_experience,
-  }
+  if (current_level + 1 >= levels.length) return levels.length - 1
+  return current_level
 }
 
 /**
@@ -132,9 +124,10 @@ export function experience_to_level(total_experience) {
  * @param {number} total_experience experience of player
  */
 export function level_progression(total_experience) {
-  const [current_level, current_level_experience] = reversed_levels.find(
-    ([level, level_experience]) => level_experience <= total_experience
-  )
+  const [current_level, current_level_experience] =
+    reversed_levels.find(
+      ([level, level_experience]) => level_experience <= total_experience
+    ) ?? []
 
   if (current_level + 1 >= levels.length)
     return {

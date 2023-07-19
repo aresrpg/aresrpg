@@ -40,7 +40,7 @@ type ItemBase = {
         bonus: number
       }
     | undefined
-  damage: {
+  damage?: {
     from: number
     to: number
     type: string

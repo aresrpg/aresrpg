@@ -66,7 +66,7 @@ export function get_total_characteristic(
 }
 
 export function get_max_health({ experience, inventory, characteristics }) {
-  const { level } = experience_to_level(experience)
+  const level = experience_to_level(experience)
   // it's okay to include lvl 1 here, let's start at 25
   const life_level_bonus = level * LIFE_PER_LEVEL
   const life_vitality_bonus = get_total_characteristic(
@@ -107,7 +107,7 @@ export function get_attack_delay(unsafe_haste) {
 }
 
 export function get_remaining_stats_point({ characteristics, experience }) {
-  const { level } = experience_to_level(experience)
+  const level = experience_to_level(experience)
   const attributed = Object.values(characteristics).reduce((a, b) => a + b, 0)
   const total_for_level = (level - 1) * STAT_POINT_PER_LEVEL
   return total_for_level - attributed
