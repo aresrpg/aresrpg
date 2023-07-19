@@ -1,16 +1,25 @@
 import { on } from 'events'
+import { setInterval } from 'timers/promises'
 
 import { aiter } from 'iterator-helper'
 
 import { abortable } from '../iterator.js'
 import { PlayerEvent } from '../events.js'
-import { update_top } from '../ui.js'
+import UI from '../ui.js'
 import { get_max_health } from '../characteristics.js'
-import { level_progression } from '../experience.js'
 
 export default {
   /** @type {import('../context.js').Observer} */
-  observe({ events, dispatch, client, world, signal }) {
+  observe({ events, dispatch, client, world, signal, get_state }) {
+    const { display_health_profile, display_hotbar } = UI(client)
+
+    // every half second to handle the spells couldown display
+    // additionally to not letting fade the action bar
+    aiter(abortable(setInterval(500, null, { signal })))
+      .map(get_state)
+      .filter(state => !!state)
+      .forEach(display_hotbar)
+
     aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
       .map(([state]) => state)
       .reduce(
@@ -20,13 +29,18 @@ export default {
             last_max_health,
             last_head_texture,
             last_experience,
+            last_soul,
             last_top_left_ui_offset,
+            last_selected_spell,
           },
           {
             experience,
+            selected_spell,
             inventory,
             characteristics,
             health,
+            soul,
+            spells,
             user_interface: { head_texture },
             settings: { top_left_ui_offset },
           }
@@ -38,38 +52,33 @@ export default {
           })
 
           if (
+            last_experience !== experience ||
+            last_selected_spell !== selected_spell
+          )
+            display_hotbar({ experience, selected_spell, spells })
+          if (
             last_health !== health ||
             last_max_health !== max_health ||
             last_head_texture !== head_texture ||
-            last_experience !== experience ||
+            last_soul !== soul ||
             last_top_left_ui_offset !== top_left_ui_offset
-          ) {
-            const {
-              experience_of_level,
-              experience_of_next_level,
-              experience_percent,
-            } = level_progression(experience)
-            const health_percent = (100 * health) / max_health
-
-            update_top(client, {
-              top_left_ui_offset,
+          )
+            display_health_profile({
               health,
               max_health,
-              health_perten: Math.round(health_percent / 10),
-              experience_of_level,
-              experience_of_next_level,
-              experience_percent,
-              experience_perten: Math.round(experience_percent / 10),
               head_texture,
+              soul,
+              top_left_ui_offset,
             })
-          }
 
           return {
             last_health: health,
             last_max_health: max_health,
             last_head_texture: head_texture,
             last_experience: experience,
+            last_soul: soul,
             last_top_left_ui_offset: top_left_ui_offset,
+            last_selected_spell: selected_spell,
           }
         },
         {
@@ -77,7 +86,9 @@ export default {
           last_max_health: null,
           last_head_texture: null,
           last_experience: null,
+          last_soul: null,
           last_top_left_ui_offset: null,
+          last_selected_spell: null,
         }
       )
   },
