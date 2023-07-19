@@ -9,9 +9,8 @@ import { write_title } from '../title.js'
 import { PlayerEvent } from '../events.js'
 import { Formats, world_chat_msg } from '../chat.js'
 import { BLOCK_TAGS, ENTITY_TAGS, FLUID_TAGS, ITEM_TAGS } from '../tags.js'
-import { send_max_health } from '../attribute.js'
 import logger from '../logger.js'
-import { display_top } from '../ui.js'
+import UI from '../ui.js'
 
 import { set_world_border } from './world_border.js'
 
@@ -67,7 +66,6 @@ export default {
         game_mode,
         position,
         view_distance,
-        held_slot_index,
         last_disconnection_time,
         user_interface: { head_texture_expiration },
       } = state
@@ -118,7 +116,7 @@ export default {
 
       load_chunks(state, { client, world, events, chunks: [chunk] })
 
-      client.write('held_item_slot', { slot: held_slot_index })
+      client.write('held_item_slot', { slot: 0 })
 
       write_title({
         client,
@@ -130,8 +128,7 @@ export default {
         },
       })
 
-      send_max_health(client)
-      display_top(client)
+      UI(client).create_health_profile()
 
       if (head_texture_expiration <= Date.now())
         fetch_head_pixels(client)

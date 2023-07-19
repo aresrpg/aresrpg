@@ -11,6 +11,11 @@ export const CATEGORY = {
   VOICE: 9,
 }
 
+export const Sound = {
+  SWITCH_SPELL: 'aresrpg:ui_spell_switch',
+  SPELL_FAILED: 'aresrpg:ui_spell_failed',
+}
+
 export function play_sound({
   client,
   sound,
