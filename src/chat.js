@@ -1,3 +1,4 @@
+import Colors from './colors.js'
 import { WorldRequest } from './events.js'
 import { SERVER_UUID } from './settings.js'
 
@@ -15,31 +16,31 @@ export const MAGIC_RESET = '§r'
 
 export const Formats = {
   BASE: {
-    color: '#ECF0F1',
+    color: Colors.GRAY,
     italic: true,
     bold: false,
     underline: false,
   },
   SUCCESS: {
-    color: '#2ECC71',
+    color: Colors.GREEN,
     italic: false,
     bold: true,
     underline: false,
   },
   WARN: {
-    color: '#F1C40F',
+    color: Colors.YELLOW,
     italic: false,
     bold: true,
     underline: false,
   },
   INFO: {
-    color: '#3498DB',
+    color: Colors.BLUE,
     italic: false,
     bold: true,
     underline: false,
   },
   DANGER: {
-    color: '#E74C3C',
+    color: Colors.RED,
     italic: false,
     bold: true,
     underline: false,
@@ -66,7 +67,7 @@ export const Position = {
 export function client_chat_msg({ client, message }) {
   client.write('chat', {
     message: JSON.stringify([
-      { text: '> ', color: '#C0392B' },
+      { text: '> ', color: Colors.DARK_RED },
       ...[message].flat(),
     ]),
     position: Position.CHAT,
