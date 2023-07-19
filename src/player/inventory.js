@@ -4,7 +4,7 @@ import { aiter } from 'iterator-helper'
 
 import { PLAYER_INVENTORY_ID } from '../settings.js'
 import { abortable } from '../iterator.js'
-import { PlayerEvent } from '../events.js'
+import { PlayerEvent, WorldRequest } from '../events.js'
 import { assign_items, similar, split_item, to_vanilla_item } from '../items.js'
 import { write_inventory } from '../inventory.js'
 import { from_inventory_array, to_inventory_array } from '../equipments.js'
@@ -15,7 +15,15 @@ const FORBIDDEN_SLOTS = [
   6, // Chestplate
   7, // Leggings
   8, // Boots
-  36, // equipped weapon slot (hotbar 0)
+  36, // hotbar [...]
+  37,
+  38,
+  39,
+  40,
+  41,
+  42,
+  43,
+  44,
 ]
 
 const BlockDigStatus = {
@@ -131,6 +139,47 @@ export default {
   },
   /** @type {import('../context.js').Observer} */
   observe({ client, events, world, get_state, signal }) {
+    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
+      .map(([state]) => state)
+      .filter(state => !!state)
+      .map(({ inventory }) => inventory)
+      .reduce(
+        (
+          {
+            last_head,
+            last_chest,
+            last_legs,
+            last_feet,
+            last_weapon,
+            last_consumable,
+            last_pet,
+          },
+          { head, chest, legs, feet, weapon, consumable, pet }
+        ) => {
+          if (
+            last_head !== head ||
+            last_chest !== chest ||
+            last_legs !== legs ||
+            last_feet !== feet ||
+            last_weapon !== weapon ||
+            last_consumable !== consumable ||
+            last_pet !== pet
+          )
+            world.events.emit(WorldRequest.RESYNC_DISPLAYED_INVENTORY, {
+              uuid: client.uuid,
+            })
+
+          return {
+            last_head: head,
+            last_chest: chest,
+            last_legs: legs,
+            last_feet: feet,
+            last_weapon: weapon,
+            last_consumable: consumable,
+            last_pet: pet,
+          }
+        }
+      )
     aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal }))).reduce(
       (
         last_sequence_number,

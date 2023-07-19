@@ -53,13 +53,13 @@ function send_health(client, { entity_id, health, username }) {
 
 function send_equipment(
   client,
-  { entity_id, helmet, chestplate, leggings, boots, held_item }
+  { entity_id, helmet, chestplate, leggings, boots, weapon }
 ) {
   log.info({ entity_id }, 'syncing equipment')
   client.write('entity_equipment', {
     entityId: entity_id,
     equipments: [
-      { slot: 0, item: held_item },
+      { slot: 0, item: weapon },
       { slot: 2, item: boots },
       { slot: 3, item: leggings },
       { slot: 4, item: chestplate },
@@ -101,7 +101,7 @@ const Synchroniser = {
         chestplate,
         leggings,
         boots,
-        held_item,
+        weapon,
       },
       { position_only = false } = {}
     ) {
@@ -127,7 +127,7 @@ const Synchroniser = {
         ...(chestplate && { chestplate }),
         ...(leggings && { leggings }),
         ...(boots && { boots }),
-        ...(held_item && { held_item }),
+        ...(weapon && { weapon }),
       }
 
       if (new_player)
