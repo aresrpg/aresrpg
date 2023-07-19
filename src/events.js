@@ -58,6 +58,10 @@ export const PlayerEvent = {
   STORE_HEAD_TEXTURE: 'PLAYER:STORE_HEAD_TEXTURE',
   /** some settings of the player should be updated */
   UPDATE_SETTINGS: 'PLAYER:UPDATE_SETTINGS',
+  /** player switched hotbar slot */
+  SWITCH_SPELL: 'PLAYER:SWITCH_SPELL',
+  /** player casting a spell */
+  CAST_SPELL: 'PLAYER:CAST_SPELL',
 }
 
 export const MobEvent = {
@@ -91,10 +95,8 @@ export const WorldRequest = {
    */
   CHUNK_POSITION_UPDATE: chunk_index => `WORLD:CHUNK_POSITION_${chunk_index}`,
   /**
-   * another player should be damaged (or healed).
-   * This event is different from PLAYER_HEALTH_UPDATE as it is used for duels or healing,
-   * we can't handle the potential canceling of damage or reduction, so we send the action of damaging.
-   * While the direct health update is to notify other players in the world of our own life changes
+   * A player is receiving damage (or heal) from an external event, like from another player.
+   * It is important to receive the action of "being inflicted damage" to be able to reduce/cancel those damages.
    * TODO: it's a bit tricky for life_steal damages as we should be aware of the final inflicted damage to steal properly
    */
   PLAYER_RECEIVE_DAMAGE: 'WORLD:PLAYER_RECEIVE_DAMAGE',
@@ -105,7 +107,7 @@ export const WorldRequest = {
   /** a player just respawned */
   PLAYER_RESPAWNED: 'WORLD:PLAYER_RESPAWNED',
   /**
-   * a player updated his equiped items or switched hotbar slot,
+   * a player updated his equiped items,
    * we notify the world that it should update the displayed inventory of that player
    */
   RESYNC_DISPLAYED_INVENTORY: 'WORLD:RESYNC_DISPLAYED_INVENTORY',
