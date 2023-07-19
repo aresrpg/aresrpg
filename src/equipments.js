@@ -2,11 +2,6 @@ function pad_end(array, length) {
   return [...array, ...Array.from({ length })].slice(0, length)
 }
 
-export const START_SLOT_MAIN_INVENTORY = 9
-export const END_SLOT_MAIN_INVENTORY = 35
-export const START_SLOT_HOTBAR = 36
-export const END_SLOT_HOTBAR = 45
-
 export function to_inventory_array({
   crafting_output,
   crafting_input = [],
@@ -15,9 +10,8 @@ export function to_inventory_array({
   legs,
   feet,
   main_inventory = [],
-  hotbar = [],
-  off_hand,
   weapon,
+  consumable,
 }) {
   return [
     crafting_output,
@@ -27,8 +21,8 @@ export function to_inventory_array({
     legs,
     feet,
     ...pad_end(main_inventory, 27),
-    ...pad_end([weapon, ...hotbar.slice(1)], 9),
-    off_hand,
+    ...pad_end([weapon], 9), // hotbar
+    consumable,
   ]
 }
 
@@ -48,8 +42,8 @@ export function from_inventory_array({ inventory, inventory_array }) {
     legs: inventory_array[7],
     feet: inventory_array[8],
     main_inventory: inventory_array.slice(9, 35),
-    hotbar: inventory_array.slice(36, 45),
-    off_hand: inventory_array[45],
+    weapon: inventory_array[36],
+    consumable: inventory_array[45],
   }
 }
 
