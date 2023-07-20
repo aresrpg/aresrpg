@@ -6,6 +6,6 @@ export const write_inventory = (client, { inventory, characteristics }) =>
   client.write('window_items', {
     windowId: PLAYER_INVENTORY_ID,
     items: to_inventory_array(inventory).map(item =>
-      to_vanilla_item(item, { inventory, characteristics })
+      to_vanilla_item(item, { inventory, characteristics }),
     ),
   })

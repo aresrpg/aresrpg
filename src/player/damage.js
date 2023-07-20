@@ -51,7 +51,7 @@ export default {
   /** @type {import('../context.js').Observer} */
   observe({ events, dispatch, client, world, signal, get_state }) {
     aiter(
-      abortable(on(events, PlayerEvent.RECEIVE_DAMAGE, { signal }))
+      abortable(on(events, PlayerEvent.RECEIVE_DAMAGE, { signal })),
     ).forEach(([{ damage }]) => {
       const { health } = get_state()
       client.write('entity_status', {
@@ -64,8 +64,8 @@ export default {
     // @see more in src/SYNC.md
     aiter(
       abortable(
-        on(world.events, WorldRequest.PLAYER_RECEIVE_DAMAGE, { signal })
-      )
+        on(world.events, WorldRequest.PLAYER_RECEIVE_DAMAGE, { signal }),
+      ),
     )
       .map(([event]) => event)
       .forEach(({ damage, player: { uuid, entity_id, health, position } }) => {
@@ -95,9 +95,9 @@ export default {
           on(events, PlayerEvent.MOB_DAMAGED, { signal }),
           on(events, PlayerEvent.MOB_DEATH, { signal }),
           on(world.events, WorldRequest.PLAYER_RECEIVE_DAMAGE, { signal }),
-          setInterval(DAMAGE_INDICATOR_TTL / 2, [{ timer: true }], { signal })
-        )
-      )
+          setInterval(DAMAGE_INDICATOR_TTL / 2, [{ timer: true }], { signal }),
+        ),
+      ),
     )
       .map(([event]) => event)
       // not showing damage indicator if the player is the target
@@ -105,7 +105,7 @@ export default {
       .reduce(
         (
           { cursor: last_cursor, ids },
-          { mob, player, damage, timer, critical_hit }
+          { mob, player, damage, timer, critical_hit },
         ) => {
           if (timer) {
             // entering here means the iteration is trigered by the interval
@@ -116,7 +116,7 @@ export default {
               .forEach(({ entity_id }) =>
                 client.write('entity_destroy', {
                   entityIds: [entity_id],
-                })
+                }),
               )
             return {
               cursor: last_cursor,
@@ -177,7 +177,7 @@ export default {
           ids: Array.from({ length: DAMAGE_INDICATORS_AMOUNT }).fill({
             age: Infinity,
           }),
-        }
+        },
       )
   },
 }

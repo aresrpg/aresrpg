@@ -105,14 +105,14 @@ export function compute_string_length(str, factor = 1) {
     CHARS_LENGTH.reduce((count, { regex, length }) => {
       const matches = str.match(regex) || []
       return count + matches.length * length
-    }, 0) * factor
+    }, 0) * factor,
   )
 }
 
 function make_pixel_matrix({ head_texture }) {
   const { length } = head_texture
   const transposed = head_texture[0].map((_, i) =>
-    head_texture.map(row => row[i])
+    head_texture.map(row => row[i]),
   )
 
   return Array.from({ length }, (_, x) => [
@@ -156,7 +156,7 @@ export default function UI(client) {
 
       const experience_text_length = compute_string_length(
         experience_text,
-        experience_ascii_reduction_factor
+        experience_ascii_reduction_factor,
       )
 
       // the hotbar textures need to be splitted in 4
@@ -181,8 +181,8 @@ export default function UI(client) {
                 min: 0,
                 max: couldown,
               },
-              { min: 0, max: 4 /* highest reloading state texture */ }
-            )
+              { min: 0, max: 4 /* highest reloading state texture */ },
+            ),
           )
         }
         return 4 // return the last reloading state (spell will appear closed)
@@ -277,7 +277,7 @@ export default function UI(client) {
         action: Actions.UPDATE_TITLE,
         title: [
           Font.SPACE.cursor(
-            top_left_ui_offset + (health_text_length + soul_text_length) / 2
+            top_left_ui_offset + (health_text_length + soul_text_length) / 2,
           ),
           ...make_pixel_matrix({ head_texture: final_head_texture }),
           Font.SPACE.cursor(-10),

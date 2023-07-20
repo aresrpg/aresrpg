@@ -36,7 +36,7 @@ export default function settings({ sender, dispatch, args }) {
       if (!Number.isNaN(value)) {
         const top_left_ui_offset = Math.max(
           MIN_UI_LEFT_OFFSET,
-          Math.min(MAX_UI_LEFT_OFFSET, value)
+          Math.min(MAX_UI_LEFT_OFFSET, value),
         )
         dispatch(PlayerEvent.UPDATE_SETTINGS, { top_left_ui_offset })
         client_chat_msg({

@@ -18,7 +18,7 @@ export default {
             })
           }
         })
-        .catch(error => log.error(error))
+        .catch(error => log.error(error)),
     )
   },
 }

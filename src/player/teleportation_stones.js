@@ -60,7 +60,7 @@ const line_offset = 0.3
 function teleportation_stones_in_chunk(world, chunk_x, chunk_z) {
   return world.teleportation_stones.filter(
     ({ position: { x, z } }) =>
-      chunk_position(x) === chunk_x && chunk_position(z) === chunk_z
+      chunk_position(x) === chunk_x && chunk_position(z) === chunk_z,
   )
 }
 
@@ -77,7 +77,7 @@ export function closest_stone(world, player_position) {
   return stones.find(
     stone =>
       Math.sqrt(distance2d_squared(stone.position, player_position)) <=
-      PLAYER_ZONE_DISTANCE
+      PLAYER_ZONE_DISTANCE,
   )
 }
 
@@ -152,7 +152,7 @@ function on_chunk_unloaded({ client, world }) {
   return ({ x, z }) => {
     client.write('entity_destroy', {
       entityIds: teleportation_stones_in_chunk(world, x, z).flatMap(
-        ({ entity_ids }) => entity_ids
+        ({ entity_ids }) => entity_ids,
       ),
     })
   }
@@ -174,12 +174,12 @@ function stone_to_item({ name }) {
 function on_use_entity({ client, world }) {
   return ({ target, mouse, hand }) => {
     const current_teleportation_stone = world.teleportation_stones.find(stone =>
-      stone.entity_ids.includes(target)
+      stone.entity_ids.includes(target),
     )
     if (current_teleportation_stone && hand === 1 && mouse === 2) {
       const items = Array.from({
         ...world.teleportation_stones.filter(
-          stone => stone !== current_teleportation_stone
+          stone => stone !== current_teleportation_stone,
         ),
         // TODO: inventory size depending on the number of teleportation stones
         length: GENERIC_9X2_INVENTORY_SIZE,
@@ -201,13 +201,13 @@ function on_use_entity({ client, world }) {
 function on_window_click({ world, client, dispatch, get_state }) {
   return ({ windowId, slot }) => {
     const current_teleportation_stone = world.teleportation_stones.find(
-      ({ window_id: stone_window_id }) => stone_window_id === windowId
+      ({ window_id: stone_window_id }) => stone_window_id === windowId,
     )
 
     if (current_teleportation_stone) {
       const available_teleportations_stones = Array.from({
         ...world.teleportation_stones.filter(
-          stone => stone !== current_teleportation_stone
+          stone => stone !== current_teleportation_stone,
         ),
         // TODO: inventory size depending on the number of teleportation stones
         length: GENERIC_9X2_INVENTORY_SIZE,
@@ -217,7 +217,7 @@ function on_window_click({ world, client, dispatch, get_state }) {
           client.write('close_window', { windowId })
           dispatch(
             PlayerEvent.TELEPORT_TO,
-            available_teleportations_stones[slot].position
+            available_teleportations_stones[slot].position,
           )
         }
       }
@@ -226,7 +226,7 @@ function on_window_click({ world, client, dispatch, get_state }) {
         windowId: current_teleportation_stone.window_id,
         items: [
           ...available_teleportations_stones.map(stone =>
-            stone ? stone_to_item(stone) : empty_slot
+            stone ? stone_to_item(stone) : empty_slot,
           ),
           ...inventory.main_inventory.map(to_vanilla_item, {
             inventory,
@@ -254,9 +254,9 @@ export function register(world) {
         window_id: world.next_window_id + stone_index,
         entity_ids: Array.from({ length: lines.length * 2 }).map(
           (_, index) =>
-            world.next_entity_id + stone_index * lines.length * 2 + index
+            world.next_entity_id + stone_index * lines.length * 2 + index,
         ),
-      })
+      }),
     ),
   }
 }

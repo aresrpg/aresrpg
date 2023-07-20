@@ -50,7 +50,7 @@ function behavior({ world, app }) {
     const { params } = request
 
     const instance = instances.find(
-      ({ entity_id }) => entity_id === Number(params.id)
+      ({ entity_id }) => entity_id === Number(params.id),
     )
 
     const stream = new PassThrough()
@@ -60,7 +60,7 @@ function behavior({ world, app }) {
     }
 
     Readable.from(
-      aiter(instance.stream[Symbol.asyncIterator]()).map(format)
+      aiter(instance.stream[Symbol.asyncIterator]()).map(format),
     ).pipe(stream)
 
     reply.send(stream)
@@ -102,8 +102,8 @@ function start_debug_server() {
   app.listen({ port: 4242 }).then(address => {
     log.info(
       `Arborist https://arborist.aresrpg.world/${encodeURIComponent(
-        `${address}/behavior`
-      )}`
+        `${address}/behavior`,
+      )}`,
     )
   })
 

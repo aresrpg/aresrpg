@@ -56,14 +56,14 @@ export default {
         if (last_disconnection_time !== undefined) {
           const time_offline = Math.max(
             0,
-            last_connection_time - last_disconnection_time
+            last_connection_time - last_disconnection_time,
           )
           const hours_offline = Math.round(time_offline / HOUR_1)
           dispatch(PlayerEvent.REGENERATE_SOUL, {
             amount: SOUL_REGEN_PER_OFFLINE_HOUR * hours_offline,
           })
         }
-      }
+      },
     )
   },
 }

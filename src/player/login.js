@@ -37,7 +37,7 @@ function fetch_head_pixels(client) {
           return `#${((pixelData[0] << 16) | (pixelData[1] << 8) | pixelData[2])
             .toString(16)
             .padStart(6, '0')}`
-        })
+        }),
       )
     })
 }
@@ -133,10 +133,13 @@ export default {
       if (head_texture_expiration <= Date.now())
         fetch_head_pixels(client)
           .then(pixel_matrix =>
-            dispatch(PlayerEvent.STORE_HEAD_TEXTURE, pixel_matrix)
+            dispatch(PlayerEvent.STORE_HEAD_TEXTURE, pixel_matrix),
           )
           .catch(error =>
-            log.error(error, `unable to fetch ${client.username}'s head pixels`)
+            log.error(
+              error,
+              `unable to fetch ${client.username}'s head pixels`,
+            ),
           )
 
       if (!last_disconnection_time)

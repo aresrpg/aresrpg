@@ -87,7 +87,7 @@ function printable_items({
     pet,
     weapon,
     ...Object.fromEntries(
-      relics.map((relic, index) => [`relic${index + 1}`, relic])
+      relics.map((relic, index) => [`relic${index + 1}`, relic]),
     ),
   }
 }

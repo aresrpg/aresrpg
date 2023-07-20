@@ -30,7 +30,7 @@ export function get_movement_speed({ inventory, characteristics }) {
 export function send_attack_speed(client, attack_speed) {
   log.info(
     { attack_speed, username: client.username },
-    'send generic.attack_speed'
+    'send generic.attack_speed',
   )
   client.write('entity_update_attributes', {
     entityId: PLAYER_ENTITY_ID,

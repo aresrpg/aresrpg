@@ -91,7 +91,7 @@ export async function load_chunks(state, { client, events, world, chunks }) {
       x: chunk_position(state.position.x),
       y: chunk_position(state.position.z),
     },
-    points
+    points,
   )
   for (const { x, y } of sorted) {
     await load_chunk({ client, world, x, z: y })
@@ -177,7 +177,7 @@ export default {
                 x: chunk_position(state.position.x),
                 y: chunk_position(state.position.z),
               },
-              state.view_distance
+              state.view_distance,
             )
 
           client.write('update_view_position', {
@@ -200,7 +200,7 @@ export default {
           const points = square_difference(
             chunk_point,
             last_state.view_distance,
-            state.view_distance
+            state.view_distance,
           )
           const chunks = points.map(({ x, y }) => ({ x, z: y }))
 

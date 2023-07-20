@@ -18,8 +18,8 @@ const { itemsByName } = minecraftData(VERSION)
 // keeping corresponding sets in memory to avoid unnecessary lookups
 const SET_BY_ITEM = new Map(
   Object.entries(sets).flatMap(([set_name, { items }]) =>
-    items.map(item => [item, sets[set_name]])
-  )
+    items.map(item => [item, sets[set_name]]),
+  ),
 )
 
 const TOOLTIP_START_OFFSET = -4
@@ -35,9 +35,9 @@ function split_description(description) {
     description
       .slice(
         index * CHARACTERS_PER_LINE,
-        index * CHARACTERS_PER_LINE + CHARACTERS_PER_LINE
+        index * CHARACTERS_PER_LINE + CHARACTERS_PER_LINE,
       )
-      .trim()
+      .trim(),
   )
 }
 
@@ -60,14 +60,14 @@ export function split_item(item, amount = Math.floor(item.count / 2)) {
 export function similar(target_item, source_item) {
   return isDeepStrictEqual(
     { ...target_item, count: 0 },
-    { ...source_item, count: 0 }
+    { ...source_item, count: 0 },
   )
 }
 
 export function assign_items(
   target_item,
   source_item,
-  amount = source_item.count
+  amount = source_item.count,
 ) {
   const normalized_amount = Math.min(amount, source_item.count)
   return (
@@ -163,7 +163,7 @@ function get_damage_type_displayname(type) {
 /** @type {(ares_item: Item, options: import('./context.js').State) => Object} Map an aresrpg item to a minecraft item */
 export function to_vanilla_item(
   ares_item,
-  { inventory, characteristics, experience }
+  { inventory, characteristics, experience },
 ) {
   if (!ares_item) return empty_slot
 
@@ -248,14 +248,14 @@ export function to_vanilla_item(
             Font.SPACE.cursor(4), // title padding
             Font.ITEM_ASCII(name, Colors.WHITE),
             Font.SPACE.negative_max,
-          ])
+          ]),
         ),
         Lore: Nbt.list(
           Nbt.string([
             // ============ item type
             middle_component(
               Font.SPACE.cursor(20),
-              Font.ITEM_LEVEL_ASCII(get_descriptive_type(type), Colors.SKY)
+              Font.ITEM_LEVEL_ASCII(get_descriptive_type(type), Colors.SKY),
             ),
             // ============ item level
             middle_component(
@@ -269,9 +269,9 @@ export function to_vanilla_item(
                 Font.ITEM_LEVEL_ASCII(
                   level,
                   level > player_level ? Colors.DARK_RED : Colors.DARK_GREEN,
-                  { italic: false }
-                )
-              )
+                  { italic: false },
+                ),
+              ),
             ),
             // ============ space
             middle_component(),
@@ -285,16 +285,16 @@ export function to_vanilla_item(
                   Font.ITEM_ASCII(`${to} `, Colors.GRAY),
                   Font.ITEM_ASCII(
                     get_damage_type_displayname(type),
-                    Colors.DARK_GRAY
+                    Colors.DARK_GRAY,
                   ),
                   ...insert_if(
                     element,
-                    Font.ITEM_ASCII(` ${element}`, get_element_color(element))
-                  )
-                )
+                    Font.ITEM_ASCII(` ${element}`, get_element_color(element)),
+                  ),
+                ),
               ),
               // ============ space
-              middle_component()
+              middle_component(),
             ),
             // ============ item critical
             ...insert_if(
@@ -306,10 +306,10 @@ export function to_vanilla_item(
                 Font.ITEM_ASCII(' (', Colors.DARK_GRAY),
                 Font.ITEM_ASCII(`+${critical?.bonus}`, Colors.GRAY),
                 Font.ITEM_ASCII(')', Colors.DARK_GRAY),
-                Font.ITEM_ASCII(' criticals', Colors.DARK_GRAY)
+                Font.ITEM_ASCII(' criticals', Colors.DARK_GRAY),
               ),
               // ============ space
-              middle_component()
+              middle_component(),
             ),
             // ============ item stats
             ...Object.entries(stats).map(([stat_name, stat_value]) => {
@@ -322,7 +322,7 @@ export function to_vanilla_item(
                 Font.ITEM.stat_icon(stat_name),
                 Font.SPACE.cursor(5),
                 Font.ITEM_ASCII(`${sign}${normalized_stat_value} `, stat_color),
-                Font.ITEM_ASCII(stat_name, get_stat_color(stat_name))
+                Font.ITEM_ASCII(stat_name, get_stat_color(stat_name)),
               )
             }),
             // ============ space
@@ -334,9 +334,9 @@ export function to_vanilla_item(
                 middle_component(
                   Font.ITEM_LEVEL_ASCII(line, Colors.DARKER_GRAY, {
                     italic: true,
-                  })
-                )
-              )
+                  }),
+                ),
+              ),
             ),
             // ============ footer
             JSON.stringify([
@@ -344,13 +344,13 @@ export function to_vanilla_item(
               Font.ITEM.tooltip_bottom(tooltip_type),
               Font.SPACE.cursor(TOOLTIP_END_OFFSET),
             ]),
-          ])
+          ]),
         ),
       }),
       HideFlags: Nbt.int(127),
       ...(enchanted && {
         Enchantments: Nbt.list(
-          Nbt.comp([{ id: Nbt.int(0), lvl: Nbt.short(0) }])
+          Nbt.comp([{ id: Nbt.int(0), lvl: Nbt.short(0) }]),
         ),
       }),
     }),
@@ -364,7 +364,7 @@ function generate_stats(stats) {
       // only keep existing stats (not 0)
       .filter(([, [from, to]]) => from || to)
       .map(([stat_name, [from, to]]) => [stat_name, random_bias_low(from, to)])
-      .filter(([name, value]) => !!value)
+      .filter(([name, value]) => !!value),
   )
 }
 

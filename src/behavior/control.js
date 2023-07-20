@@ -68,9 +68,9 @@ function create_control(expected_status) {
 }
 
 export const { normal: sequence, reactive: reactive_sequence } = create_control(
-  () => SUCCESS
+  () => SUCCESS,
 )
 
 export const { normal: fallback, reactive: reactive_fallback } = create_control(
-  () => FAILURE
+  () => FAILURE,
 )

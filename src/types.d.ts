@@ -19,7 +19,7 @@ declare module 'minecraft-data' {
 }
 
 type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
-  k: infer I
+  k: infer I,
 ) => void
   ? I
   : never

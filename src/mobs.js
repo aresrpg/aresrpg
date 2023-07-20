@@ -49,7 +49,7 @@ function reduce_mob(state, action, context) {
     mobs_target.reduce_mob,
   ].reduce(
     async (intermediate, fn) => fn(await intermediate, action, context),
-    state
+    state,
   )
 }
 

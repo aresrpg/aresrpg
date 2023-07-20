@@ -29,7 +29,7 @@ export function register_screen({ id, size: { width, height } }) {
 
 export function spawn_item_frame(
   client,
-  { entityId, position: { x, y, z }, rotation: { yaw, pitch } }
+  { entityId, position: { x, y, z }, rotation: { yaw, pitch } },
 ) {
   client.write('spawn_entity', {
     entityId,
@@ -72,7 +72,7 @@ export function spawn_item_frame(
 
 export function spawn_screen(
   { client, world },
-  { screen_id, position, direction }
+  { screen_id, position, direction },
 ) {
   const up = Vec3([0, 1, 0])
   const right = Vec3([1, 0, 0])
@@ -109,7 +109,7 @@ export function spawn_screen(
 
 export function update_screen(
   { client, world },
-  { screen_id, new_canvas, old_canvas }
+  { screen_id, new_canvas, old_canvas },
 ) {
   const { size, start_id } = world.screens[screen_id]
 
@@ -181,7 +181,7 @@ export function screen_ray_intersection(screen, position) {
       Vec3(position).offset(0, 0.62, 0),
       player_forward,
       normal,
-      -normal.dot(screen_pos) - 0.0625 - 0.0078125
+      -normal.dot(screen_pos) - 0.0625 - 0.0078125,
     )
 
     if (hit) {

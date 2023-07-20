@@ -111,7 +111,7 @@ const reversed_levels = [...levels.entries()].reverse()
  */
 export function experience_to_level(total_experience) {
   const [current_level] = reversed_levels.find(
-    ([level, level_experience]) => level_experience <= total_experience
+    ([level, level_experience]) => level_experience <= total_experience,
   ) ?? [levels.length]
 
   if (current_level + 1 >= levels.length) return levels.length - 1
@@ -126,7 +126,7 @@ export function experience_to_level(total_experience) {
 export function level_progression(total_experience) {
   const [current_level, current_level_experience] =
     reversed_levels.find(
-      ([level, level_experience]) => level_experience <= total_experience
+      ([level, level_experience]) => level_experience <= total_experience,
     ) ?? []
 
   if (current_level + 1 >= levels.length)
@@ -148,7 +148,7 @@ export function level_progression(total_experience) {
     experience_of_level,
     experience_of_next_level,
     experience_percent: Math.round(
-      (100 * experience_of_level) / experience_of_next_level
+      (100 * experience_of_level) / experience_of_next_level,
     ),
   }
 }

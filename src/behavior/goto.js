@@ -13,7 +13,7 @@ const log = logger(import.meta)
 export default async function goto(node, state, { world, action }) {
   const { time } = action
   const to = block_center_position(
-    state.blackboard[node.getAttribute('target')]
+    state.blackboard[node.getAttribute('target')],
   )
   const from = path_position({
     path: state.path,

@@ -114,7 +114,7 @@ export const path_to_end = async_tail_recursive(raw_path_to_end)
 export function path_end(mobs) {
   for (const mob of mobs) {
     const state = aiter(on(mob.events, MobEvent.STATE_UPDATED)).map(
-      ([state]) => state
+      ([state]) => state,
     )
 
     const end = path_to_end(state)

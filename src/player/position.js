@@ -47,14 +47,14 @@ export default {
               // of every physical info like health, armor, etc
               world.events.emit(
                 WorldRequest.CHUNK_POSITION_UPDATE(chunk),
-                synchronisation_payload(client, state)
+                synchronisation_payload(client, state),
               )
             }
             // we still send the small update as the chunk_position_update doesn't contain the last_position
             // it is more comprehensive that way
             world.events.emit(
               WorldRequest.POSITION_UPDATE(chunk),
-              position_payload
+              position_payload,
             )
 
             if (!same_chunk(position, last_position)) {
@@ -65,9 +65,9 @@ export default {
               // we don't need to see the big info payload
               world.events.emit(
                 WorldRequest.POSITION_UPDATE(
-                  chunk_index(last_chunk_x, last_chunk_z)
+                  chunk_index(last_chunk_x, last_chunk_z),
                 ),
-                position_payload
+                position_payload,
               )
             }
           }
@@ -76,7 +76,7 @@ export default {
         {
           last_position: {},
           last_chunk_index: undefined,
-        }
+        },
       )
   },
 }

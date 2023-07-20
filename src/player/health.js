@@ -52,7 +52,7 @@ export default {
       })
     })
 
-    aiter(abortable(setInterval(1000, { signal })))
+    aiter(abortable(setInterval(1000, null, { signal })))
       .map(get_state)
       .filter(state => !!state)
       .forEach(({ health, inventory, characteristics }) => {
@@ -79,7 +79,7 @@ export default {
             health: normalize_range(
               health,
               { min: 0, max: get_max_health(state) },
-              { min: 0, max: 40 }
+              { min: 0, max: 40 },
             ),
             food: 20,
             foodSaturation: 0.0,
@@ -89,7 +89,7 @@ export default {
           if (last_health === 0)
             world.events.emit(
               WorldRequest.PLAYER_RESPAWNED,
-              synchronisation_payload(client, state)
+              synchronisation_payload(client, state),
             )
           else
             world.events.emit(WorldRequest.PLAYER_HEALTH_UPDATE, {

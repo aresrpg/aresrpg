@@ -19,7 +19,7 @@ export function register(world) {
 
   for (const mob of world.mobs.all) {
     const state = aiter(on(mob.events, MobEvent.STATE_UPDATED)).map(
-      ([state]) => state
+      ([state]) => state,
     )
 
     const positions = path_to_positions(state)
@@ -65,7 +65,7 @@ export default function mobs_position_factory({ mobs }) {
   const actions = new PassThrough({ objectMode: true })
 
   mobs.positions.on('*', payload =>
-    actions.write({ type: 'mob_position', payload })
+    actions.write({ type: 'mob_position', payload }),
   )
 
   /** @type {import('../context.js').Observer} */
@@ -81,7 +81,7 @@ export default function mobs_position_factory({ mobs }) {
       actions.write({
         type: 'client_chunk_unloaded',
         payload: { events, x, z },
-      })
+      }),
     )
   }
 
@@ -127,7 +127,7 @@ export default function mobs_position_factory({ mobs }) {
 
       return mobs_by_chunk
     },
-    new Map()
+    new Map(),
   )
 
   return {

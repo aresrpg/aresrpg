@@ -33,8 +33,8 @@ export default {
         setImmediate(() =>
           world.events.emit(
             WorldRequest.NOTIFY_PRESENCE_TO(info.uuid),
-            player_info(get_state())
-          )
+            player_info(get_state()),
+          ),
         )
       }
     }

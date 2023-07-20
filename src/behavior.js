@@ -55,13 +55,13 @@ export default async function run(node, state, context) {
   log.debug({ path, status: result.status.toString() }, 'Ran')
 
   await debug.then(({ behavior }) =>
-    behavior?.({ context: node_context, result })
+    behavior?.({ context: node_context, result }),
   )
   return result
 }
 
 export function childs(node) {
   return Array.from(node.childNodes).filter(
-    child => child.nodeType === Node.ELEMENT_NODE
+    child => child.nodeType === Node.ELEMENT_NODE,
   )
 }

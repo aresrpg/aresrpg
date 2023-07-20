@@ -10,7 +10,7 @@ export default function random_block_position(node, state, { action }) {
       start_time: state.start_time,
       speed: state.speed,
       time,
-    })
+    }),
   )
 
   const x_delta = Math.floor(Math.random() * 15 - 7)

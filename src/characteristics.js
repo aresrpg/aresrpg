@@ -55,12 +55,12 @@ export function characteristic_from_element(element) {
  */
 export function get_total_characteristic(
   characteristic_name,
-  { inventory, characteristics }
+  { inventory, characteristics },
 ) {
   const from_base = characteristics[characteristic_name] ?? 0
   const from_equipments = get_equipped_characteristic(
     characteristic_name,
-    inventory
+    inventory,
   )
   return from_base + from_equipments
 }
@@ -74,7 +74,7 @@ export function get_max_health({ experience, inventory, characteristics }) {
     {
       inventory,
       characteristics,
-    }
+    },
   )
   return BASE_LIFE + life_level_bonus + life_vitality_bonus
 }
@@ -87,22 +87,22 @@ export function get_fixed_damage({ inventory }) {
 export function get_attack_delay(unsafe_haste) {
   const haste = Math.max(
     ESTIMATED_HASTE_LOWER_BOUND,
-    Math.min(ESTIMATED_HASTE_UPPER_BOUND, unsafe_haste)
+    Math.min(ESTIMATED_HASTE_UPPER_BOUND, unsafe_haste),
   )
   if (haste >= 0)
     return Math.round(
       normalize_range(
         haste,
         { min: 0, max: ESTIMATED_HASTE_UPPER_BOUND },
-        { min: BASE_DELAY_BETWEEN_HITS, max: MIN_DELAY_BETWEEN_HITS }
-      )
+        { min: BASE_DELAY_BETWEEN_HITS, max: MIN_DELAY_BETWEEN_HITS },
+      ),
     )
   return Math.round(
     normalize_range(
       haste,
       { min: ESTIMATED_HASTE_LOWER_BOUND, max: 0 },
-      { min: MAX_DELAY_BETWEEN_HITS, max: BASE_DELAY_BETWEEN_HITS }
-    )
+      { min: MAX_DELAY_BETWEEN_HITS, max: BASE_DELAY_BETWEEN_HITS },
+    ),
   )
 }
 

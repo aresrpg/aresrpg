@@ -36,7 +36,7 @@ function get_knockback_position({
   const length = Math.sqrt(dX * dX + dZ * dZ)
   const force_applied =
     Math.floor(
-      (strength * KNOCKBACK_STRENGTH_REDUCTION + KNOCKBACK_STRENGTH_BASE) * 100
+      (strength * KNOCKBACK_STRENGTH_REDUCTION + KNOCKBACK_STRENGTH_BASE) * 100,
     ) / 100
 
   return {
@@ -90,9 +90,9 @@ export default {
       abortable(
         combineAsyncIterators(
           on(events, PlayerEvent.PLAYER_INTERRACTED, { signal }),
-          on(client, 'use_entity', { signal })
-        )
-      )
+          on(client, 'use_entity', { signal }),
+        ),
+      ),
     )
       .map(([event]) => event)
       .filter(({ mouse }) => mouse === Mouse.LEFT_CLICK)
@@ -109,7 +109,7 @@ export default {
       .reduce(
         (
           { frame_expiration, last_entities_ids },
-          { target, player, state }
+          { target, player, state },
         ) => {
           // should we start a new frame
           const new_hit_frame = Date.now() > frame_expiration
@@ -162,7 +162,7 @@ export default {
                   damager_position: position,
                   damager_strength: get_total_characteristic(
                     Characteristic.STRENGTH,
-                    state
+                    state,
                   ),
                   critical_hit,
                 })
@@ -178,7 +178,7 @@ export default {
               : frame_expiration,
           }
         },
-        { frame_expiration: -1, last_entities_ids: [] }
+        { frame_expiration: -1, last_entities_ids: [] },
       )
 
     events.on(PlayerEvent.MOB_ENTER_VIEW, ({ mob, signal }) => {

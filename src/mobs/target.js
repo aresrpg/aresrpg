@@ -23,7 +23,7 @@ export default {
         mob.dispatch(MobEvent.TARGET_POSITION, position)
 
       aiter(
-        abortable(on(mob.events, MobEvent.STATE_UPDATED, { signal }))
+        abortable(on(mob.events, MobEvent.STATE_UPDATED, { signal })),
       ).reduce((last_target, [{ target }]) => {
         if (last_target !== target) {
           if (target === client.uuid)

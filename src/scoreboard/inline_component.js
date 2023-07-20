@@ -34,7 +34,7 @@ const component_to_legacy = ({ text, extra = [], color, ...modifiers }) => {
       if (modifiers[key.toLowerCase()]) return `${combined}${value}`
       return combined
     },
-    ''
+    '',
   )
 
   return `${Colors[color?.toUpperCase()] ?? ''}${inline_modifiers}${text}${extra

@@ -31,7 +31,7 @@ export const villager_professions = {
 function to_bitmask(bitflags, object) {
   return Object.entries(bitflags).reduce(
     (result, [name, value]) => result | (object[name] << value),
-    0
+    0,
   )
 }
 
@@ -41,7 +41,7 @@ export function to_metadata(entity, metadatas) {
   const { parent, metadata } = entity_metadata[entity]
   const known = Object.entries(metadatas).filter(([name]) => name in metadata)
   const leftover = Object.entries(metadatas).filter(
-    ([name]) => !(name in metadata)
+    ([name]) => !(name in metadata),
   )
 
   if (!parent && leftover.length !== 0)

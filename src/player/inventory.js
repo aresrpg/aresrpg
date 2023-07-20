@@ -154,7 +154,7 @@ export default {
             last_consumable,
             last_pet,
           },
-          { head, chest, legs, feet, weapon, consumable, pet }
+          { head, chest, legs, feet, weapon, consumable, pet },
         ) => {
           if (
             last_head !== head ||
@@ -178,7 +178,7 @@ export default {
             last_consumable: consumable,
             last_pet: pet,
           }
-        }
+        },
       )
     aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal }))).reduce(
       (
@@ -190,7 +190,7 @@ export default {
             inventory_sequence_number,
             characteristics,
           },
-        ]
+        ],
       ) => {
         if (last_sequence_number !== inventory_sequence_number) {
           write_inventory(client, { inventory, characteristics })
@@ -206,7 +206,7 @@ export default {
         }
         return inventory_sequence_number
       },
-      null
+      null,
     )
 
     client.on('block_dig', ({ status }) => {

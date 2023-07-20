@@ -46,7 +46,7 @@ export default {
 
         return { heartbeating, sound_handle }
       },
-      { heartbeating: false, sound_handle: undefined }
+      { heartbeating: false, sound_handle: undefined },
     )
   },
 }

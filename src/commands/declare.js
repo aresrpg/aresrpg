@@ -26,7 +26,7 @@ function flatten(node, index = 0) {
       children: [...children, index + 1 + list.length],
       list: [...list, ...flatten(child, index + 1 + list.length)],
     }),
-    { children: [], list: [] }
+    { children: [], list: [] },
   )
 
   return [{ ...node, children }, ...list]

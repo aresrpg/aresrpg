@@ -29,7 +29,7 @@ export function is_inside({ min, max }, { x, y }) {
 export function square_symmetric_difference(
   { x: ax, y: ay },
   { x: bx, y: by },
-  demi_length
+  demi_length,
 ) {
   const a = []
   const b = []
@@ -69,7 +69,7 @@ export function square_symmetric_difference(
 export function square_difference(
   { x: cx, y: cy },
   demi_length_a,
-  demi_length_b
+  demi_length_b,
 ) {
   const from = Math.min(demi_length_a, demi_length_b)
   const to = Math.max(demi_length_a, demi_length_b)
@@ -95,7 +95,7 @@ export function distance2d_squared({ x: ax, y: ay }, { x: bx, y: by }) {
 
 export function distance3d_squared(
   { x: ax, y: ay, z: az },
-  { x: bx, y: by, z: bz }
+  { x: bx, y: by, z: bz },
 ) {
   return (ax - bx) ** 2 + (ay - by) ** 2 + (az - bz) ** 2
 }
@@ -143,10 +143,10 @@ export function intersect_ray_plane(origin, direction, normal, dist) {
 export function direction_to_yaw_pitch(direction) {
   const distance = Math.sqrt(direction.x ** 2 + direction.z ** 2)
   const pitch = Math.floor(
-    (-Math.atan2(direction.y, distance) / Math.PI) * (255 / 2)
+    (-Math.atan2(direction.y, distance) / Math.PI) * (255 / 2),
   )
   const yaw = Math.floor(
-    (-Math.atan2(direction.x, direction.z) / Math.PI) * (255 / 2)
+    (-Math.atan2(direction.x, direction.z) / Math.PI) * (255 / 2),
   )
 
   return {

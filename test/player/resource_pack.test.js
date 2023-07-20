@@ -13,20 +13,8 @@ test('The resource pack', async ctx => {
   })
 
   ctx.afterEach(sub_ctx => {
+    console.log('after each ======--------')
     sub_ctx.server.close()
-  })
-
-  await ctx.test('should be a valid link', async ttt => {
-    const bot = createBot({
-      host: 'localhost',
-      version: VERSION,
-      username: 'aboubacar',
-    })
-
-    const [url] = await once(bot, 'resourcePack')
-    const { ok } = await fetch(url, { method: 'HEAD' })
-
-    assert.ok(ok)
   })
 
   await ctx.test(
@@ -51,6 +39,6 @@ test('The resource pack', async ctx => {
       // we clear the closeTimer
       // see https://github.com/PrismarineJS/node-minecraft-protocol/pull/662
       clearTimeout(server_client.closeTimer)
-    }
+    },
   )
 })

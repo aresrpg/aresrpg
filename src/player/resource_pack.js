@@ -22,7 +22,7 @@ export default {
 
     client.on('resource_pack_receive', ({ result }) => {
       const status = Object.entries(Status).find(
-        ([key, value]) => value === result
+        ([key, value]) => value === result,
       )
       log.info({ status }, 'Ressource pack status')
     })
@@ -69,7 +69,7 @@ export default {
             { text: ': ', color: 'white' },
             { translate: 'addServer.resourcePack.enabled', color: 'white' },
             { text: '.\n', color: 'yellow' },
-          ])
+          ]),
         )
         break
       default:
