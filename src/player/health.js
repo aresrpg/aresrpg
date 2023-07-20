@@ -64,6 +64,8 @@ export default {
           base_damage: mind / REGENERATION_MIND_DIVIDER,
           characteristic_amount: mind,
         })
+
+        // Regenerate only if the player is not dead
         if (health > 0)
           dispatch(PlayerEvent.UPDATE_HEALTH, {
             health: health + regeneration_per_second,

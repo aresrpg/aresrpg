@@ -101,6 +101,8 @@ const CHARS_LENGTH = [
 ]
 
 export function compute_string_length(str, factor = 1) {
+  if (!str) return 0
+
   return Math.round(
     CHARS_LENGTH.reduce((count, { regex, length }) => {
       const matches = str.match(regex) || []
