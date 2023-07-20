@@ -152,3 +152,9 @@ export function level_progression(total_experience) {
     ),
   }
 }
+
+export function compute_received_experience(base_xp, { soul }) {
+  if (soul === 0) return 0
+  // TODO: compute based on groups @see https://github.com/aresrpg/aresrpg/issues/633
+  return base_xp
+}

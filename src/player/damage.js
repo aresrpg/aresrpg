@@ -7,12 +7,14 @@ import combineAsyncIterators from 'combine-async-iterators'
 import { PlayerEvent, WorldRequest } from '../events.js'
 import { create_armor_stand } from '../armor_stand.js'
 import logger from '../logger.js'
-import { GameMode } from '../gamemode.js'
 import { abortable } from '../iterator.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
 import { show_blood, show_death_smoke } from '../particules.js'
 import { CATEGORY, play_sound } from '../sound.js'
 import { PLAYER_ENTITY_ID } from '../settings.js'
+import { compute_received_experience } from '../experience.js'
+import Colors from '../colors.js'
+import { can_receive_damage } from '../permissions.js'
 
 const DAMAGE_INDICATORS_AMOUNT = 10
 const DAMAGE_INDICATOR_TTL = 1200
@@ -31,10 +33,7 @@ export function register({ next_entity_id, ...world }) {
 export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }, client) {
-    if (
-      type === PlayerEvent.RECEIVE_DAMAGE &&
-      state.game_mode !== GameMode.CREATIVE
-    ) {
+    if (type === PlayerEvent.RECEIVE_DAMAGE && can_receive_damage(state)) {
       const { damage } = payload
       const health = Math.max(0, Math.round((state.health - damage) * 2) / 2)
 
@@ -88,6 +87,9 @@ export default {
         }
       })
 
+    // The reason we need to pack all those events
+    // is because we reduce data over time and they are cached in the reducer scope
+    // this is a clever way to avoid overusing the player state
     aiter(
       abortable(
         // @ts-expect-error No overload matches this call
@@ -100,7 +102,9 @@ export default {
       ),
     )
       .map(([event]) => event)
-      // not showing damage indicator if the player is the target
+      // the player object is only available for the PLAYER_RECEIVE_DAMAGE event
+      // so this filter only takes effect for this particular event
+      // and prevent doing computation if the player is its own target (sync logic)
       .filter(({ player }) => player?.uuid !== client.uuid)
       .reduce(
         (
@@ -140,8 +144,9 @@ export default {
           // the mob is dead
           const is_dead = damage === undefined || player?.health - damage <= 0
 
-          const color = damage > 0 ? '#E74C3C' : '#2ECC71' // https://materialui.co/flatuicolors Alizarin / Emerland
-          const critical_color = damage > 0 ? '#C0392B' : '#27AE60' // Pomegranate / Nephritis
+          const color = damage > 0 ? Colors.RED : Colors.GREEN
+          const critical_color =
+            damage > 0 ? Colors.DARK_RED : Colors.DARK_GREEN
 
           if (!is_dead) {
             const sign = damage > 0 ? '-' : ''
@@ -154,13 +159,17 @@ export default {
             // if damaged entity is not a player
             if (mob) {
               const { xp } = Entities[mob.type]
-              events.emit(PlayerEvent.RECEIVE_EXPERIENCE, { experience: xp })
-              const should_receive_xp = true // TODO: https://github.com/aresrpg/aresrpg/issues/633
-              if (should_receive_xp)
+              const received_experience = compute_received_experience(
+                xp,
+                get_state(),
+              )
+              if (received_experience) {
+                events.emit(PlayerEvent.RECEIVE_EXPERIENCE, { experience: xp })
                 create_armor_stand(client, entity_id, position, {
                   text: `+${xp} xp`,
                   color: '#3498DB',
                 })
+              }
             } else show_death_smoke({ client, position: particle_position })
           }
           return {

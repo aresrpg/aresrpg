@@ -25,10 +25,12 @@ export default {
         ...state,
         soul,
       }
-      // here we forbid soul regeneration when the player is a ghost
+    } else if (type === PlayerEvent.REGENERATE_SOUL) {
+      // we forbid soul regeneration when the player is a ghost
       // the player first have to get out of that ghost mode
       // before being able to gain soul in any way
-    } else if (type === PlayerEvent.REGENERATE_SOUL) {
+      if (state.soul === 0) return state
+
       const { amount } = payload
       return {
         ...state,

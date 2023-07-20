@@ -1,11 +1,16 @@
+import { on } from 'events'
+
 import minecraft_data from 'minecraft-data'
 import UUID from 'uuid-1345'
+import { aiter } from 'iterator-helper'
 
-import { chunk_position, chunk_index } from '../chunk.js'
+import { chunk_position, chunk_index, same_position } from '../chunk.js'
 import { VERSION } from '../settings.js'
 import { to_vanilla_item } from '../items.js'
 import { PlayerEvent } from '../events.js'
 import { to_metadata } from '../entity_metadata.js'
+import { can_interract_with_npcs } from '../permissions.js'
+import { abortable } from '../iterator.js'
 
 const mcData = minecraft_data(VERSION)
 
@@ -61,68 +66,77 @@ function open_trade({ client, world, get_state }) {
   const { windowIds } = world.traders
   const right_click = 2
   const inventoryType = 18
+
   client.on('use_entity', ({ target, mouse, sneaking }) => {
     if (windowIds.has(target) && mouse === right_click && sneaking === false) {
       const { name, windowId, recipes: ares_recipe } = windowIds.get(target)
       const state = get_state()
-      const mc_recipe = ares_recipe.map(trade => {
-        const { inputItem1, inputItem2, outputItem } = trade
-        return {
-          inputItem1: to_vanilla_item(inputItem1, state),
-          inputItem2: to_vanilla_item(inputItem2, state),
-          outputItem: to_vanilla_item(outputItem, state),
-          maximumNbTradeUses: 99999,
+      if (can_interract_with_npcs(state)) {
+        const mc_recipe = ares_recipe.map(trade => {
+          const { inputItem1, inputItem2, outputItem } = trade
+          return {
+            inputItem1: to_vanilla_item(inputItem1, state),
+            inputItem2: to_vanilla_item(inputItem2, state),
+            outputItem: to_vanilla_item(outputItem, state),
+            maximumNbTradeUses: 99999,
+          }
+        })
+
+        const trade = {
+          windowId,
+          trades: mc_recipe,
         }
-      })
 
-      const trade = {
-        windowId,
-        trades: mc_recipe,
+        const window = {
+          windowId,
+          inventoryType,
+          windowTitle: JSON.stringify({ text: name ?? 'default' }),
+        }
+
+        client.write('open_window', window)
+        client.write('trade_list', trade)
       }
-
-      const window = {
-        windowId,
-        inventoryType,
-        windowTitle: JSON.stringify({ text: name ?? 'default' }),
-      }
-
-      client.write('open_window', window)
-      client.write('trade_list', trade)
     }
   })
 }
 
 /** @type {import('../context.js').Observer} */
-function look_player({ client, world, events }) {
-  events.on(PlayerEvent.STATE_UPDATED, ({ position: { x, z } }) => {
-    const { by_chunk } = world.traders
-    const x_chunks = [
-      chunk_position(x) - 1,
-      chunk_position(x),
-      chunk_position(x) + 1,
-    ]
-    const z_chunks = [
-      chunk_position(z) - 1,
-      chunk_position(z),
-      chunk_position(z) + 1,
-    ]
-    for (const i of x_chunks) {
-      for (const j of z_chunks) {
-        if (by_chunk.has(chunk_index(i, j))) {
-          for (const trader of by_chunk.get(chunk_index(i, j))) {
-            const yaw = Math.floor(
-              (-Math.atan2(x - trader.x, z - trader.z) / Math.PI) * (255 / 2),
-            )
-            const entityId = trader.id
-            client.write('entity_head_rotation', {
-              entityId,
-              headYaw: yaw,
+function look_player({ client, world, events, signal }) {
+  aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
+    .map(([state]) => state)
+    .dropWhile(state => !can_interract_with_npcs(state))
+    .reduce((last_position, { position }) => {
+      if (!same_position(last_position, position)) {
+        const { x, z } = position
+        const { by_chunk } = world.traders
+        const x_chunks = [
+          chunk_position(x) - 1,
+          chunk_position(x),
+          chunk_position(x) + 1,
+        ]
+        const z_chunks = [
+          chunk_position(z) - 1,
+          chunk_position(z),
+          chunk_position(z) + 1,
+        ]
+        for (const chunk_x of x_chunks) {
+          for (const chunk_z of z_chunks) {
+            const traders = by_chunk.get(chunk_index(chunk_x, chunk_z))
+            traders?.forEach(trader => {
+              const yaw = Math.floor(
+                (-Math.atan2(x - trader.x, z - trader.z) / Math.PI) * (255 / 2),
+              )
+              const entityId = trader.id
+              client.write('entity_head_rotation', {
+                entityId,
+                headYaw: yaw,
+              })
             })
           }
         }
       }
-    }
-  })
+      return position
+    })
 }
 
 /** @param {import('../context.js').InitialWorld} world */

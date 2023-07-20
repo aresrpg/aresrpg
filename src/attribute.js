@@ -19,7 +19,10 @@ export function get_attack_speed({ inventory, characteristics }) {
   return Math.round((1 / delay_in_seconds) * 100) / 100
 }
 
-export function get_movement_speed({ inventory, characteristics }) {
+export function get_movement_speed({ inventory, characteristics, soul }) {
+  // a ghost must move slowly
+  if (soul === 0) return 0.02
+
   const speed = get_total_characteristic(Characteristic.SPEED, {
     inventory,
     characteristics,
