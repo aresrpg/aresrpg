@@ -95,7 +95,7 @@ const world_reducers = [
 export const world = /** @type {World} */ (
   world_reducers.reduce(
     (world, fn) => fn(world),
-    /** @type {any} */ (initial_world)
+    /** @type {any} */ (initial_world),
   )
 )
 
@@ -335,7 +335,7 @@ export async function create_context({ client, world }) {
       uuid: client.uuid,
       id: client.id,
     },
-    'Client connected'
+    'Client connected',
   )
 
   const controller = new AbortController()
@@ -347,7 +347,7 @@ export async function create_context({ client, world }) {
   client.once('end', () => {
     log.info(
       { username: client.username, uuid: client.uuid },
-      'Client disconnected'
+      'Client disconnected',
     )
 
     actions.end()
@@ -360,7 +360,7 @@ export async function create_context({ client, world }) {
   })
 
   const packets = aiter(
-    on(client, 'packet', { signal: controller.signal })
+    on(client, 'packet', { signal: controller.signal }),
   ).map(([payload, { name }]) => ({
     type: `packet/${name}`,
     payload,
@@ -369,7 +369,7 @@ export async function create_context({ client, world }) {
   const save_state = state => {
     log.info(
       { username: client.username, uuid: client.uuid },
-      'Saving to database'
+      'Saving to database',
     )
     Database.push({
       key: client.uuid.toLowerCase(),
@@ -382,7 +382,7 @@ export async function create_context({ client, world }) {
   const player_state = await Database.pull(client.uuid.toLowerCase())
 
   aiter(
-    abortable(combineAsyncIterators(actions[Symbol.asyncIterator](), packets))
+    abortable(combineAsyncIterators(actions[Symbol.asyncIterator](), packets)),
   )
     .map(transform_action)
     .reduce(
@@ -395,7 +395,7 @@ export async function create_context({ client, world }) {
         ...initial_state,
         ...player_state,
         last_connection_time: Date.now(),
-      }
+      },
     )
     .then(state => ({
       ...state,

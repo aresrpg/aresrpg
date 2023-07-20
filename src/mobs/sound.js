@@ -41,7 +41,7 @@ export default {
           .map(({ type, position }) => ({ type, position: position() }))
           .filter(
             ({ position }) =>
-              distance3d_squared(position, player_position) <= 30 ** 2
+              distance3d_squared(position, player_position) <= 30 ** 2,
           )
           .forEach(({ type, position }) => {
             const {

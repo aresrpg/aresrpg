@@ -39,7 +39,7 @@ export default {
         mob.dispatch(MobEvent.WAKE_UP, null, time)
 
       const state = aiter(
-        abortable(on(mob.events, MobEvent.STATE_UPDATED, { signal }))
+        abortable(on(mob.events, MobEvent.STATE_UPDATED, { signal })),
       ).map(([state]) => state)
 
       const wakeups = wakeup_to_end(state)

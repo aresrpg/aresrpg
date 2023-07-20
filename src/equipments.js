@@ -57,13 +57,13 @@ function characteristics_sum(items) {
       .filter(item => item?.stats)
       .reduce(
         (total, { stats: { [characteristic]: value = 0 } }) => total + value,
-        0
+        0,
       )
 }
 
 export function get_equipped_characteristic(
   characteristic_name,
-  { head, neck, chest, rings, belt, legs, feet, pet, relics, weapon }
+  { head, neck, chest, rings, belt, legs, feet, pet, relics, weapon },
 ) {
   const sum = characteristics_sum([
     head,

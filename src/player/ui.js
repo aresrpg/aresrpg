@@ -43,7 +43,7 @@ export default {
             spells,
             user_interface: { head_texture },
             settings: { top_left_ui_offset },
-          }
+          },
         ) => {
           const max_health = get_max_health({
             inventory,
@@ -89,7 +89,7 @@ export default {
           last_soul: null,
           last_top_left_ui_offset: null,
           last_selected_spell: null,
-        }
+        },
       )
   },
 }

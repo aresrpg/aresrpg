@@ -53,7 +53,7 @@ function send_health(client, { entity_id, health, username }) {
 
 function send_equipment(
   client,
-  { entity_id, helmet, chestplate, leggings, boots, weapon }
+  { entity_id, helmet, chestplate, leggings, boots, weapon },
 ) {
   log.info({ entity_id }, 'syncing equipment')
   client.write('entity_equipment', {
@@ -73,7 +73,7 @@ const Synchroniser = {
     header,
     { players: last_players, storage: last_storage },
     { world, client, inside_view },
-    data
+    data,
   ) {
     function insert_new_index(uuid, position) {
       const { array, index } = insert(last_players, uuid)
@@ -103,7 +103,7 @@ const Synchroniser = {
         boots,
         weapon,
       },
-      { position_only = false } = {}
+      { position_only = false } = {},
     ) {
       const unsafe_index = last_players.indexOf(uuid)
       const new_player = unsafe_index === -1
@@ -140,7 +140,7 @@ const Synchroniser = {
             z: position.z,
             header,
           },
-          'adding player to sync stream'
+          'adding player to sync stream',
         )
 
       // left view, removing
@@ -153,7 +153,7 @@ const Synchroniser = {
 
         log.info(
           { entity_id, username: unregistered.username },
-          'removing player from sync stream'
+          'removing player from sync stream',
         )
 
         return {
@@ -312,7 +312,7 @@ const Synchroniser = {
     header,
     { players, storage: last_storage },
     { world, client, dispatch, get_state, events },
-    data
+    data,
   ) {
     switch (header) {
       case 'use_entity': {
@@ -365,7 +365,7 @@ export default {
       (type, event_source, local_signal = signal) =>
       header =>
         aiter(
-          abortable(on(event_source, header, { signal: local_signal }))
+          abortable(on(event_source, header, { signal: local_signal })),
         ).forEach(([data]) => player_stream.write({ type, header, data }))
 
     events.once(PlayerEvent.STATE_UPDATED, () => {
@@ -390,7 +390,7 @@ export default {
       ]
 
       synced_events.forEach(
-        forward('world_request', world.events, chunk_signal)
+        forward('world_request', world.events, chunk_signal),
       )
     })
 
@@ -400,11 +400,11 @@ export default {
           header,
           { players, storage },
           { world, client, inside_view, dispatch, get_state, events },
-          data
+          data,
         )
         return result
       },
-      { players: [], storage: {} }
+      { players: [], storage: {} },
     )
   },
 }

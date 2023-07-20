@@ -21,7 +21,7 @@ export default {
         })
 
         const yaw = Math.floor(
-          (-Math.atan2(x - position.x, z - position.z) / Math.PI) * (255 / 2)
+          (-Math.atan2(x - position.x, z - position.z) / Math.PI) * (255 / 2),
         )
 
         client.write('entity_head_rotation', {
@@ -31,7 +31,7 @@ export default {
       }
 
       aiter(
-        abortable(on(mob.events, MobEvent.STATE_UPDATED, { signal }))
+        abortable(on(mob.events, MobEvent.STATE_UPDATED, { signal })),
       ).reduce((last_look_at, [{ look_at }]) => {
         if (last_look_at !== look_at) {
           if (last_look_at.player)

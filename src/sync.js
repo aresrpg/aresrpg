@@ -9,7 +9,7 @@ export function synchronisation_payload(
     inventory,
     characteristics,
     inventory: { head, chest, legs, feet, weapon },
-  }
+  },
 ) {
   const options = { inventory, characteristics }
   return {

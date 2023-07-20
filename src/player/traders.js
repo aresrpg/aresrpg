@@ -16,7 +16,7 @@ function spawn_merchants({ client, events, world }) {
   events.on(PlayerEvent.CHUNK_LOADED, ({ x: chunk_x, z: chunk_z }) => {
     if (by_chunk.has(chunk_index(chunk_x, chunk_z))) {
       for (const { id, name, x, y, z } of by_chunk.get(
-        chunk_index(chunk_x, chunk_z)
+        chunk_index(chunk_x, chunk_z),
       )) {
         const villager = {
           entityId: id,
@@ -111,7 +111,7 @@ function look_player({ client, world, events }) {
         if (by_chunk.has(chunk_index(i, j))) {
           for (const trader of by_chunk.get(chunk_index(i, j))) {
             const yaw = Math.floor(
-              (-Math.atan2(x - trader.x, z - trader.z) / Math.PI) * (255 / 2)
+              (-Math.atan2(x - trader.x, z - trader.z) / Math.PI) * (255 / 2),
             )
             const entityId = trader.id
             client.write('entity_head_rotation', {
@@ -150,7 +150,7 @@ export function register(world) {
         recipes,
         name,
       },
-    ])
+    ]),
   )
 
   return {

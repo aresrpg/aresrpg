@@ -21,14 +21,14 @@ function create_debounced_observer({
           min: histogram.min,
           percentile: { 99: histogram.percentile(99) },
         },
-        'Ended'
+        'Ended',
       )
     else
       log.info(
         {
           counter,
         },
-        'Ended'
+        'Ended',
       )
 
     timer = null
@@ -41,6 +41,7 @@ function create_debounced_observer({
       if (timer == null) log.info('Started')
       else clearTimeout(timer)
       timer = setTimeout(end, timeout)
+      timer.unref()
 
       for (const entry of entries) {
         counter++

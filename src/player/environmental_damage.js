@@ -75,7 +75,7 @@ export default {
             last_fire_damage,
             remaining_fire_loop,
           },
-          { position, ...state }
+          { position, ...state },
         ) => {
           const current_block_position = block_position(position)
 
@@ -174,7 +174,7 @@ export default {
           took_damage: false,
           last_fire_damage: 0,
           remaining_fire_loop: -1,
-        }
+        },
       )
   },
 }

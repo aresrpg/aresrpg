@@ -14,7 +14,7 @@ const log = logger(import.meta)
 const world_folder = join(
   dirname(fileURLToPath(import.meta.url)),
   '..',
-  'world'
+  'world',
 )
 
 const missing_entities = [
@@ -36,5 +36,5 @@ log.info(
     teleportation_stones: floor1.teleportation_stones.length,
     missing_entities,
   },
-  'World loaded'
+  'World loaded',
 )

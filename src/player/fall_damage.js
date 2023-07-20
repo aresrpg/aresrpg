@@ -15,12 +15,12 @@ export default {
             position: { y, onGround },
             teleport,
           },
-        ]) => ({ y, onGround, teleport })
+        ]) => ({ y, onGround, teleport }),
       )
       .reduce(
         (
           { highest_y, was_on_ground, last_teleport },
-          { y, onGround, teleport }
+          { y, onGround, teleport },
         ) => {
           if (!was_on_ground && onGround) {
             const fall_distance = highest_y - y
@@ -43,7 +43,7 @@ export default {
             last_teleport: teleport,
           }
         },
-        { highest_y: 0, was_on_ground: true, last_teleport: null }
+        { highest_y: 0, was_on_ground: true, last_teleport: null },
       )
   },
 }

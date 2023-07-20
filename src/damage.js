@@ -16,7 +16,7 @@ function random_base_damage({ from, to }) {
   return normalize_range(
     Math.random(),
     { min: 0, max: 1 },
-    { min: from, max: to }
+    { min: from, max: to },
   )
 }
 
@@ -27,7 +27,7 @@ export function compute_damage({
 }) {
   // Dégâts = (Base * (100 + Caractéristique + Puissance) / 100 + Dommages Fixes) * (1 - % résistance correspondant a l'élément de l'attaque)
   return Math.round(
-    (base_damage * (100 + characteristic_amount)) / 100 + fixed_damage
+    (base_damage * (100 + characteristic_amount)) / 100 + fixed_damage,
   )
 }
 
@@ -40,7 +40,7 @@ export function compute_outcomes({ base_outcomes, agility }) {
 
   return Math.floor(
     (base_outcomes * CRITICAL_OUTCOMES_MODIFIER) /
-      Math.log(agility + CRITICAL_OUTCOMES_INCREASE)
+      Math.log(agility + CRITICAL_OUTCOMES_INCREASE),
   )
 }
 
@@ -73,7 +73,7 @@ export function compute_weapon_dealt_damage({
             base_damage: random_base_damage({ from, to }),
             characteristic_amount: get_total_characteristic(
               characteristic_from_element(element),
-              { inventory, characteristics }
+              { inventory, characteristics },
             ),
             fixed_damage,
           }),
@@ -101,7 +101,7 @@ export function compute_weapon_dealt_damage({
                 return result
             }
           },
-          { damage: 0, life_stolen: 0, heal: 0, critical_hit }
+          { damage: 0, life_stolen: 0, heal: 0, critical_hit },
         )
     )
   }

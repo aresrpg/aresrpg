@@ -11,7 +11,7 @@ export default {
   observe({ events, client, dispatch }) {
     events.on(PlayerEvent.MOB_ENTER_VIEW, ({ mob, signal }) => {
       aiter(
-        abortable(on(mob.events, MobEvent.STATE_UPDATED, { signal }))
+        abortable(on(mob.events, MobEvent.STATE_UPDATED, { signal })),
       ).reduce(
         (last_attack_sequence_number, [{ attack_sequence_number, target }]) => {
           if (
@@ -24,7 +24,7 @@ export default {
           }
           return attack_sequence_number
         },
-        0
+        0,
       )
     })
   },

@@ -16,7 +16,7 @@ export default {
   observe({ client, events, world, inside_view }) {
     events.on(PlayerEvent.CHUNK_LOADED_WITH_MOBS, ({ x, z, signal }) => {
       aiter(
-        abortable(on(world.mobs.positions, chunk_index(x, z), { signal }))
+        abortable(on(world.mobs.positions, chunk_index(x, z), { signal })),
       ).forEach(([{ mob, position, last_position, target }]) => {
         if (inside_view(position) && !inside_view(last_position)) {
           // Mob entered view
@@ -34,11 +34,11 @@ export default {
 
           if (chunk_x === x && chunk_z === z) {
             const { yaw: headYaw, pitch } = direction_to_yaw_pitch(
-              Vec3(target).subtract(Vec3(position))
+              Vec3(target).subtract(Vec3(position)),
             )
 
             const { yaw } = direction_to_yaw_pitch(
-              Vec3(position).subtract(Vec3(last_position))
+              Vec3(position).subtract(Vec3(last_position)),
             )
 
             if (

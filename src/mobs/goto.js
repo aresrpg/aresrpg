@@ -21,7 +21,7 @@ export default {
           start_time: state.start_time,
           speed: state.speed,
           time,
-        })
+        }),
       )
 
       const start_time = time
@@ -45,7 +45,7 @@ export default {
             from,
             to,
           },
-          'No Path Found'
+          'No Path Found',
         )
         return {
           ...state,
@@ -71,7 +71,7 @@ export default {
             mob.dispatch(MobEvent.GOTO, {
               position,
             })
-          }, 5000)
+          }, 5000).unref()
         }
       }
     })

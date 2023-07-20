@@ -70,7 +70,7 @@ export default {
                 // respawn with 5% life
                 const respawn_health = Math.min(
                   1,
-                  Math.floor(get_max_health(state) * 0.05)
+                  Math.floor(get_max_health(state) * 0.05),
                 )
 
                 dispatch(PlayerEvent.UPDATE_HEALTH, { health: respawn_health })

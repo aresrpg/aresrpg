@@ -74,7 +74,7 @@ export function chunks(region_folder) {
       const { x, z } = chunk_from_index(key)
       return provider.load(x, z)
     },
-    () => performance.mark('chunk_gc')
+    () => performance.mark('chunk_gc'),
   )
 
   return {

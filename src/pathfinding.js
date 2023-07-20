@@ -46,12 +46,12 @@ export async function pathfinding({
       const distance = cost + heuristic(neighbor)
       const visited = closed.some(
         ({ node, cost: closed_cost }) =>
-          equal(node, neighbor) && closed_cost <= cost
+          equal(node, neighbor) && closed_cost <= cost,
       )
 
       if (!visited) {
         const pending_index = open.findIndex(({ node }) =>
-          equal(node, neighbor)
+          equal(node, neighbor),
         )
         const pending = pending_index >= 0 && open[pending_index].cost <= cost
 

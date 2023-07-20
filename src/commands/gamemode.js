@@ -21,7 +21,7 @@ const gamemode_args = [
       flags: {
         has_command: true,
       },
-    })
+    }),
   ),
   integer({
     name: 'number',
@@ -59,7 +59,7 @@ export default function gamemode({ args, sender, dispatch }) {
           with: [
             {
               translate: `gameMode.${gamemode_from_value(
-                game_mode
+                game_mode,
               ).toLowerCase()}`,
             },
           ],

@@ -45,7 +45,7 @@ function snake_case(e) {
 }
 
 const html = await fetch(
-  'https://wiki.vg/index.php?title=Entity_metadata&oldid=16539'
+  'https://wiki.vg/index.php?title=Entity_metadata&oldid=16539',
 ).then(res => res.text())
 const $ = cheerio.load(html)
 
@@ -94,7 +94,7 @@ const entities = Object.fromEntries(
       : undefined
 
     const values = Array.from(
-      flatten_bitflags(table.find('tbody > tr').toArray().slice(1))
+      flatten_bitflags(table.find('tbody > tr').toArray().slice(1)),
     )
 
     const metadata = Object.fromEntries(
@@ -113,12 +113,12 @@ const entities = Object.fromEntries(
                 $(el)
                   .children('td')
                   .toArray()
-                  .map(td => $(td).text().trim())
+                  .map(td => $(td).text().trim()),
               )
               .map(([value, name]) => [
                 snake_case(name.split(/ \(|[.?:,]/, 1)[0]),
                 Math.log2(parseInt(value, 16)),
-              ])
+              ]),
           )
 
         const renames = Renames(entity_name)
@@ -126,11 +126,11 @@ const entities = Object.fromEntries(
           renames[meta_name] ?? meta_name,
           { key, type: Type[type], bitflags },
         ]
-      })
+      }),
     )
 
     return [entity_name, { parent, metadata }]
-  })
+  }),
 )
 
 fs.writeFileSync('data/entity_metadata.json', JSON.stringify(entities, null, 2))

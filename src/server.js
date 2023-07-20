@@ -24,7 +24,7 @@ const { VERSION, ONLINE_MODE } = settings
 const MAX_PLAYERS = -1
 const favicon = `data:image/png;base64,${fs.readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), '../media/favicon.png'),
-  'base64'
+  'base64',
 )}`
 
 export function create_server() {
@@ -69,10 +69,10 @@ export function create_server() {
             uuid: client.uuid,
             error: pino.stdSerializers.err(error),
           },
-          'Create context error'
+          'Create context error',
         )
         client.end(
-          'There was a problem while initializing your character, please retry or contact us'
+          'There was a problem while initializing your character, please retry or contact us',
         )
       })
   })

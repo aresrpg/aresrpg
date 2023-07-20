@@ -23,7 +23,7 @@ export function inside_view(get_state) {
             y: player_chunk_z + view_distance,
           },
         },
-        { x: chunk_x, y: chunk_z }
+        { x: chunk_x, y: chunk_z },
       )
     }
 

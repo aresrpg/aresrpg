@@ -14,15 +14,15 @@ export const trees = Object.fromEntries(
         join(
           dirname(fileURLToPath(import.meta.url)),
           'behavior',
-          `${type}.xml`
+          `${type}.xml`,
         ),
-        'utf8'
+        'utf8',
       ),
-      'text/xml'
+      'text/xml',
     )
 
     return [type, tree]
-  })
+  }),
 )
 
 export default {

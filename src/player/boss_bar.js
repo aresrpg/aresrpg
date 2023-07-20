@@ -107,16 +107,16 @@ export default {
         // @ts-expect-error No overload matches this call
         combineAsyncIterators(
           on(events, PlayerEvent.MOB_DAMAGED, { signal }),
-          setInterval(1000, [{ timer: true }], { signal })
-        )
-      )
+          setInterval(1000, [{ timer: true }], { signal }),
+        ),
+      ),
     )
       .map(([event]) => event)
       .reduce(
         (
           /** @type {BossBar[]} */
           bossbars,
-          { mob, timer }
+          { mob, timer },
         ) => {
           if (timer) {
             // entering here means the iteration is trigered by the interval
@@ -195,7 +195,7 @@ export default {
             ]
           }
         },
-        Array.from({ length: BOSS_BAR_AMOUNT }).fill({})
+        Array.from({ length: BOSS_BAR_AMOUNT }).fill({}),
       )
   },
 }

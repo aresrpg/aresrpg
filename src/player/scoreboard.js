@@ -39,7 +39,7 @@ const Slots = {
 
   KARES({ kares }) {
     const formatted = KARES_FORMATER.formatToParts(kares).map(
-      ({ value }) => value
+      ({ value }) => value,
     )
     const amount = formatted.slice(0, -1).join('')
     const compact = formatted.at(-1)
@@ -105,7 +105,7 @@ export default {
         update_sidebar({ last, next })
         return next
       },
-      []
+      [],
     )
   },
 }

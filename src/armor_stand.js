@@ -18,7 +18,7 @@ export function create_armor_stand(
   client,
   entity_id,
   { x, y, z },
-  display_name
+  display_name,
 ) {
   const mob = {
     entityId: entity_id,

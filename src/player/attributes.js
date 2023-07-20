@@ -31,7 +31,7 @@ export default {
         {
           last_attack_speed: null,
           last_speed: null,
-        }
+        },
       )
   },
 }

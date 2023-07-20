@@ -171,7 +171,7 @@ export default {
                                 Flicker: Nbt.byte(1),
                                 Trail: Nbt.byte(1),
                               },
-                            ])
+                            ]),
                           ),
                           Flight: Nbt.byte(0),
                         }),
@@ -196,7 +196,7 @@ export default {
         }
         return total_experience
       },
-      null
+      null,
     )
     events.on(PlayerEvent.MOB_DEATH, ({ mob }) => {
       const { xp } = Entities[mob.type]

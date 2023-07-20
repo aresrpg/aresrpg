@@ -29,9 +29,9 @@ export function neighbors(world) {
               x: x + dt.x,
               y: y + i - jump_height,
               z: z + dt.z,
-            }))
+            })),
           )
-          .map(async point => [point, await is_walkable(world, point)])
+          .map(async point => [point, await is_walkable(world, point)]),
       )
     )
       .filter(([point, walkable]) => walkable)
