@@ -35,7 +35,12 @@ export function same_chunk(first_position, second_position) {
   return same_x && same_z
 }
 
-/** @returns {Promise<import('prismarine-block').Block>} */
+/**
+ * @typedef {ReturnType<import('prismarine-block')>} BlockLoader
+ * @typedef {InstanceType<BlockLoader>} Block
+ */
+
+/** @returns {Promise<Block>} */
 export async function get_block(world, { x, y, z }) {
   const chunk = await world.chunks.load(chunk_position(x), chunk_position(z))
 

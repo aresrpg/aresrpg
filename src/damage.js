@@ -44,14 +44,10 @@ export function compute_outcomes({ base_outcomes, agility }) {
   )
 }
 
-export function compute_weapon_dealt_damage({
-  held_slot_index,
-  inventory,
-  characteristics,
-}) {
+export function compute_weapon_dealt_damage({ inventory, characteristics }) {
   const fixed_damage = get_fixed_damage({ inventory })
 
-  if (is_yielding_weapon({ held_slot_index, inventory })) {
+  if (is_yielding_weapon({ inventory })) {
     const {
       weapon: { critical, damage: all_damages },
     } = inventory
