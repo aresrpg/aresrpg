@@ -172,7 +172,7 @@ export default function UI(client) {
         Font.SPACE.cursor(-3),
       ]).flat()
 
-      const get_reloading_index = ({ couldown, cast_time } = {}) => {
+      const get_reloading_index = ({ couldown = 0, cast_time = 0 } = {}) => {
         if (couldown) {
           const elapsed = Date.now() - cast_time
           const remaining = Math.min(couldown, Math.max(0, couldown - elapsed))

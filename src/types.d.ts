@@ -27,6 +27,7 @@ type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
 type Await<T> = T extends Promise<infer U> ? U : T
 
 type ItemBase = {
+  id: string
   name: string
   type: string
   item: string
@@ -34,7 +35,7 @@ type ItemBase = {
   enchanted: boolean
   description: string
   level: number
-  critical:
+  critical?:
     | {
         outcomes: number
         bonus: number
@@ -44,7 +45,7 @@ type ItemBase = {
     from: number
     to: number
     type: string
-    element: string
+    element?: string
   }[]
 }
 

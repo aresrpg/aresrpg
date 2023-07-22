@@ -68,7 +68,6 @@
     "lint-staged": "13.2.3",
     "mineflayer": "^4.10.1",
     "prettier": "3.0.0",
-    "prismarine-block": "^1.17.0",
     "typescript": "5.1.6"
   },
   "husky": {

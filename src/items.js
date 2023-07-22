@@ -368,7 +368,7 @@ function generate_stats(stats) {
   )
 }
 
-export function is_yielding_weapon({ held_slot_index, inventory: { weapon } }) {
+export function is_yielding_weapon({ inventory: { weapon } }) {
   return weapon && Array.isArray(weapon.damage)
 }
 
