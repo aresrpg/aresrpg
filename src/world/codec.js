@@ -70,7 +70,7 @@ const { dimensionCodec } = loginPacket
 // Add custom biomes to existing ones
 customBiomes.data.forEach(biome => {
   dimensionCodec.value['minecraft:worldgen/biome'].value.value.value.value.push(
-    biome
+    biome,
   )
 })
 

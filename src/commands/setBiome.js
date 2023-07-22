@@ -1,7 +1,9 @@
 import { performance } from 'perf_hooks'
+import { join } from 'path'
 
 import { client_chat_msg } from '../chat.js'
-import { chunk_position } from '../chunk.js'
+import { chunk_position, save_chunk } from '../chunk.js'
+import { world_folder } from '../world.js'
 
 import { chunkPosition, integer, literal } from './declare_options.js'
 import { write_error } from './commands.js'
@@ -32,9 +34,11 @@ export const setBiome_nodes = [
   }),
 ]
 
-function updateChunkBiome({ client, chunk, position, biomeId }) {
-  const biomes = chunk.dumpBiomes()
+async function updateChunkBiome({ world, client, position, biomeId }) {
   const { x, z } = position
+
+  const chunk = await world.chunks.load(x, z)
+  const biomes = chunk.dumpBiomes()
 
   // update the biome foreach block in the chunk
   biomes.forEach((value, index, array) => {
@@ -63,12 +67,18 @@ function updateChunkBiome({ client, chunk, position, biomeId }) {
   })
   performance.mark('load_chunk_end')
   performance.measure('load_chunk', 'load_chunk_start', 'load_chunk_end')
+  save_chunk({
+    region_folder: join(world_folder, 'floor1', 'region'),
+    x,
+    z,
+    chunk,
+  })
 }
 
-function positionToChunk(position) {
+function positionToChunk({ x, z }) {
   return {
-    x: chunk_position(position.x),
-    z: chunk_position(position.z),
+    x: chunk_position(x),
+    z: chunk_position(z),
   }
 }
 
@@ -95,11 +105,10 @@ export default async function setBiome({ world, sender, args, get_state }) {
 
   if (args.length === 3 && !isNaN(biomeId)) {
     const pos = handleShortcut({ position: { x, z }, get_state })
-    const chunk = await world.chunks.load(pos.x, pos.z)
 
     updateChunkBiome({
+      world,
       client: sender,
-      chunk,
       position: pos,
       biomeId,
     })

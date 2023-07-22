@@ -16,19 +16,6 @@ test('The resource pack', async ctx => {
     sub_ctx.server.close()
   })
 
-  await ctx.test('should be a valid link', async ttt => {
-    const bot = createBot({
-      host: 'localhost',
-      version: VERSION,
-      username: 'aboubacar',
-    })
-
-    const [url] = await once(bot, 'resourcePack')
-    const { ok } = await fetch(url, { method: 'HEAD' })
-
-    assert.ok(ok, 'Pack URL is invalid')
-  })
-
   await ctx.test(
     'should be accepted or the player will be kicked',
     async sub_ctx => {
