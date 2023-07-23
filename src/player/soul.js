@@ -1,10 +1,12 @@
 import { setInterval } from 'timers/promises'
+import { on } from 'events'
 
 import { aiter } from 'iterator-helper'
 
 import { abortable } from '../iterator.js'
 import logger from '../logger.js'
 import { PlayerEvent } from '../events.js'
+import { set_invisible } from '../player.js'
 
 const log = logger(import.meta)
 
@@ -16,32 +18,42 @@ const SOUL_REGEN_PER_ONLINE_HOUR = 12
 export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
-    if (type === PlayerEvent.DIE) {
-      const soul = Math.max(0, state.soul - 10)
+    switch (type) {
+      case PlayerEvent.DIE: {
+        const soul = Math.max(0, state.soul - 10)
+        log.info({ soul }, 'lost soul')
 
-      log.info({ soul }, 'lost soul')
-
-      return {
-        ...state,
-        soul,
+        return {
+          ...state,
+          soul,
+        }
       }
-    } else if (type === PlayerEvent.REGENERATE_SOUL) {
-      // we forbid soul regeneration when the player is a ghost
-      // the player first have to get out of that ghost mode
-      // before being able to gain soul in any way
-      if (state.soul === 0) return state
+      case PlayerEvent.REGENERATE_SOUL: {
+        // we forbid soul regeneration when the player is a ghost
+        // the player first have to get out of that ghost mode
+        // before being able to gain soul in any way
+        if (state.soul === 0) return state
 
-      const { amount } = payload
-      return {
-        ...state,
-        soul: Math.min(100, state.soul + amount),
+        const { amount } = payload
+        return {
+          ...state,
+          soul: Math.min(100, state.soul + amount),
+        }
+      }
+      case PlayerEvent.UPDATE_SOUL: {
+        const { soul } = payload
+        log.info({ soul }, 'direct soul update')
+        return {
+          ...state,
+          soul: Math.min(100, Math.max(0, soul)),
+        }
       }
     }
     return state
   },
 
   /** @type {import('../context.js').Observer} */
-  observe({ events, signal, dispatch, get_state }) {
+  observe({ events, signal, dispatch, get_state, client }) {
     // regenerate soul every 10 minute while online
     aiter(abortable(setInterval(MINUTE_10, null, { signal }))).forEach(() => {
       const { soul } = get_state()
@@ -50,6 +62,14 @@ export default {
           amount: Math.round(SOUL_REGEN_PER_ONLINE_HOUR / 6),
         })
     })
+
+    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
+      .map(([{ soul }]) => soul)
+      .reduce((last_soul, soul) => {
+        // allows to leave the fantom mode after losing all soul
+        if (soul > 0 && last_soul === 0) set_invisible(client, false)
+        return soul
+      }, -1)
 
     events.once(
       PlayerEvent.STATE_UPDATED,

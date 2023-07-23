@@ -4,11 +4,10 @@ import { aiter } from 'iterator-helper'
 
 import { get_max_health } from '../characteristics.js'
 import { get_block, same_position } from '../chunk.js'
-import { to_metadata } from '../entity_metadata.js'
 import { PlayerEvent } from '../events.js'
 import { abortable } from '../iterator.js'
 import { block_position } from '../position.js'
-import { PLAYER_ENTITY_ID } from '../settings.js'
+import { set_on_fire } from '../player.js'
 
 const INTERVAL = 500
 
@@ -37,28 +36,6 @@ const SURFACE_BLOCKS = {
     fire_damage: 2,
     fire_loop: 4,
   },
-}
-
-function set_on_fire(client) {
-  client.write('entity_metadata', {
-    entityId: PLAYER_ENTITY_ID,
-    metadata: to_metadata('entity', {
-      entity_flags: {
-        is_on_fire: true,
-      },
-    }),
-  })
-}
-
-export function stop_fire(client) {
-  client.write('entity_metadata', {
-    entityId: PLAYER_ENTITY_ID,
-    metadata: to_metadata('entity', {
-      entity_flags: {
-        is_on_fire: false,
-      },
-    }),
-  })
 }
 
 export default {
@@ -98,7 +75,7 @@ export default {
 
             if (remaining_fire_loop > 0) {
               if (block.name === 'water') {
-                stop_fire(client)
+                set_on_fire(client, false)
                 return {
                   last_block_position: current_block_position,
                   last_fire_damage: 0,
@@ -110,7 +87,7 @@ export default {
                 damage: (last_fire_damage / 100) * max_health,
               })
               // set fire_tick TICK_PER_INTERVAL * remaining_fire_loop
-            } else if (remaining_fire_loop === 0) stop_fire(client)
+            } else if (remaining_fire_loop === 0) set_on_fire(client, false)
 
             // if inside a dangerous block
             if (damage_from_block) {
