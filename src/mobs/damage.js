@@ -14,6 +14,7 @@ import {
   get_attack_delay,
   get_total_characteristic,
 } from '../characteristics.js'
+import { can_interract_with_entities } from '../permissions.js'
 
 import { color_by_category } from './spawn.js'
 import { path_position } from './path.js'
@@ -96,16 +97,12 @@ export default {
     )
       .map(([event]) => event)
       .filter(({ mouse }) => mouse === Mouse.LEFT_CLICK)
-      .map(({ target, player }) => {
-        const state = get_state()
-        return {
-          state,
-          target,
-          player,
-        }
-      })
-      // if player is dead, he shouldn't interract
-      .filter(({ state: { health } }) => health > 0)
+      .map(({ target, player }) => ({
+        state: get_state(),
+        target,
+        player,
+      }))
+      .filter(({ state }) => can_interract_with_entities(state))
       .reduce(
         (
           { frame_expiration, last_entities_ids },
