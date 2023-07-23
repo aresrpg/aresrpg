@@ -4,9 +4,9 @@ import { PlayerEvent } from '../events.js'
 import { write_error } from './commands.js'
 import { integer, literal } from './declare_options.js'
 
-export const health_nodes = [
+export const soul_nodes = [
   literal({
-    value: 'health',
+    value: 'soul',
     children: [
       integer({
         name: 'amount',
@@ -17,16 +17,16 @@ export const health_nodes = [
   }),
 ]
 
-export default function health_command({ world, sender, dispatch, args }) {
+export default function soul_command({ world, sender, dispatch, args }) {
   if (args.length === 1) {
-    const [health] = args
-    if (!Number.isNaN(+health)) {
-      dispatch(PlayerEvent.UPDATE_HEALTH, { health: +health })
+    const [soul] = args
+    if (!Number.isNaN(+soul)) {
+      dispatch(PlayerEvent.UPDATE_SOUL, { soul: +soul })
       client_chat_msg({
         client: sender,
         message: [
-          { text: 'health updated: ', ...Formats.BASE },
-          { text: health, ...Formats.DANGER },
+          { text: 'soul updated: ', ...Formats.BASE },
+          { text: soul, ...Formats.DANGER },
         ],
       })
       return

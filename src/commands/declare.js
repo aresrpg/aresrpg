@@ -19,6 +19,7 @@ import { atk_nodes } from './attack_speed.js'
 import { help_nodes } from './help.js'
 import { speed_nodes } from './speed.js'
 import { settings_nodes } from './settings.js'
+import { soul_nodes } from './soul.js'
 
 function flatten(node, index = 0) {
   const { children, list } = node.children.reduce(
@@ -55,6 +56,7 @@ const nodes = flatten({
     ...help_nodes,
     ...speed_nodes,
     ...settings_nodes,
+    ...soul_nodes,
   ], // add the nodes of all the commands. exemple : [...command_1,...comand_2,...comand_3]
 })
 
