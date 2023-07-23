@@ -46,6 +46,10 @@ export const PlayerEvent = {
   PICK_ITEM: 'PLAYER:ACTION:PICK_ITEM', // TODO: deprecate (no items will be on the EVENT ares)
   /** the soul of player should regenerate a bit */
   REGENERATE_SOUL: 'PLAYER:REGENERATE_SOUL',
+  /** the player's soul needs a direct update
+   * this is only used as an admin interraction through commands
+   */
+  UPDATE_SOUL: 'PLAYER:UPDATE_SOUL',
   /** the player should die */
   DIE: 'PLAYER:DIE',
   /** the inventory of the player should be resynced */
@@ -74,6 +78,10 @@ export const MobEvent = {
   END_PATH: 'MOB:END_PATH',
   TARGET_POSITION: 'MOB:TARGET_POSITION',
   WAKE_UP: 'MOB:WAKE_UP',
+  /** sometimes the mobs need to forget about his current target
+   * ex: like when the player died
+   */
+  FORGET_TARGET: 'MOB:FORGET_TARGET',
 }
 
 /** World events meant to be used in synchronizations */

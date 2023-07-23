@@ -18,8 +18,7 @@ import {
   send_attack_speed,
   send_movement_speed,
 } from '../attribute.js'
-
-import { stop_fire } from './environmental_damage.js'
+import { set_invisible, set_on_fire } from '../player.js'
 
 const log = logger(import.meta)
 const MIN_RESPAWN_TIME = 3
@@ -64,7 +63,7 @@ export default {
                   copyMetadata: false,
                 })
 
-                stop_fire(client)
+                set_on_fire(client, false)
 
                 const state = get_state()
                 // respawn with 5% life
@@ -78,6 +77,9 @@ export default {
                 write_inventory(client, state)
                 send_attack_speed(client, get_attack_speed(state))
                 send_movement_speed(client, get_movement_speed(state))
+
+                // if the player became a ghost, he must become invisible
+                if (state.soul === 0) set_invisible(client)
               } else {
                 log.info({ remaining }, 'respawning in seconds')
                 write_title({

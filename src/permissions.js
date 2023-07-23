@@ -12,14 +12,16 @@ export function can_receive_damage({
   return true
 }
 
-export function can_interract_with_npcs({ soul = undefined } = {}) {
-  // a ghost can't interact with npcs
+export function can_interract_with_entities({ soul, health }) {
+  // a ghost can't interact with entities
   if (!soul) return false
+  // a dead player can't interract with entities
+  if (!health) return false
 
   return true
 }
 
-export function can_use_teleportation_stone({ soul = undefined } = {}) {
+export function can_use_teleportation_stone({ soul }) {
   // a ghost can't use teleportation stones
   if (!soul) return false
 

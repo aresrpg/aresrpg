@@ -9,7 +9,7 @@ import { VERSION } from '../settings.js'
 import { to_vanilla_item } from '../items.js'
 import { PlayerEvent } from '../events.js'
 import { to_metadata } from '../entity_metadata.js'
-import { can_interract_with_npcs } from '../permissions.js'
+import { can_interract_with_entities } from '../permissions.js'
 import { abortable } from '../iterator.js'
 
 const mcData = minecraft_data(VERSION)
@@ -71,7 +71,7 @@ function open_trade({ client, world, get_state }) {
     if (windowIds.has(target) && mouse === right_click && sneaking === false) {
       const { name, windowId, recipes: ares_recipe } = windowIds.get(target)
       const state = get_state()
-      if (can_interract_with_npcs(state)) {
+      if (can_interract_with_entities(state)) {
         const mc_recipe = ares_recipe.map(trade => {
           const { inputItem1, inputItem2, outputItem } = trade
           return {
@@ -104,7 +104,7 @@ function open_trade({ client, world, get_state }) {
 function look_player({ client, world, events, signal }) {
   aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
     .map(([state]) => state)
-    .dropWhile(state => !can_interract_with_npcs(state))
+    .filter(state => can_interract_with_entities(state))
     .reduce((last_position, { position }) => {
       if (!same_position(last_position, position)) {
         const { x, z } = position
