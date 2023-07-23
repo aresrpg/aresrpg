@@ -272,7 +272,7 @@ export function observe_client({ mobs_position }) {
 
     finalization.observe(context)
 
-    if (USE_RESOURCE_PACK) await player_resource_pack.observe(context)
+    if (USE_RESOURCE_PACK) player_resource_pack.observe(context)
 
     // login has to stay on top
     player_login.observe(context)
