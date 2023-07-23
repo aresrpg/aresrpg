@@ -18,9 +18,8 @@ export default {
             target === client.uuid &&
             attack_sequence_number !== last_attack_sequence_number
           ) {
-            events.emit(PlayerEvent.RECEIVE_DAMAGE, {
-              damage: Entities[mob.type].damage,
-            })
+            const { damage } = Entities[mob.type]
+            events.emit(PlayerEvent.RECEIVE_DAMAGE, { damage })
           }
           return attack_sequence_number
         },

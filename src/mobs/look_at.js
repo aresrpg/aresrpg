@@ -4,14 +4,19 @@ import { aiter } from 'iterator-helper'
 
 import { MobEvent, PlayerEvent } from '../events.js'
 import { abortable } from '../iterator.js'
+import { can_interract_with_entities } from '../permissions.js'
 
 import { path_position } from './path.js'
 
 export default {
   observe({ client, events }) {
     events.on(PlayerEvent.MOB_ENTER_VIEW, ({ mob, signal }) => {
-      const look_at_player = ({ position: { x, z } }) => {
+      const look_at_player = player_state => {
+        if (!can_interract_with_entities(player_state)) return
         const state = mob.get_state()
+        const {
+          position: { x, z },
+        } = player_state
 
         const position = path_position({
           path: state.path,
