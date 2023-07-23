@@ -12,7 +12,7 @@
     "format": "prettier . --write && eslint . --fix",
     "rendermedia": "mmdc -c media/mermaid.json -i media/flow.mermaid -o media/flow.svg",
     "generate:metadata": "node script/entity_metadata.js",
-    "test": "LOG_LEVEL='silent' node --test"
+    "test": "NODE_NO_WARNINGS=1 LOG_LEVEL='silent' node --test"
   },
   "repository": {
     "type": "git",
