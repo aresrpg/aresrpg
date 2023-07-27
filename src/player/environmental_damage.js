@@ -13,27 +13,27 @@ const INTERVAL = 500
 
 const BLOCKS = {
   fire: {
-    damage: 10, // %
-    fire_damage: 5, // %
+    damage_percent: 10, // %
+    fire_damage_percent: 5, // %
     fire_loop: 5, // in interval loops
   },
   lava: {
-    damage: 25,
-    fire_damage: 5,
+    damage_percent: 25,
+    fire_damage_percent: 5,
     fire_loop: 10,
   },
   sweet_berry_bush: {
-    damage: 2,
+    damage_percent: 2,
   },
 }
 
 const SURFACE_BLOCKS = {
   cactus: {
-    damage: 2,
+    damage_percent: 2,
   },
   magma_block: {
-    damage: 5,
-    fire_damage: 2,
+    damage_percent: 5,
+    fire_damage_percent: 2,
     fire_loop: 4,
   },
 }
@@ -92,19 +92,19 @@ export default {
             // if inside a dangerous block
             if (damage_from_block) {
               const {
-                damage,
-                fire_damage = 0,
+                damage_percent,
+                fire_damage_percent = 0,
                 fire_loop = -1,
               } = damage_from_block
               events.emit(PlayerEvent.RECEIVE_DAMAGE, {
-                damage: (damage / 100) * max_health,
+                damage: (damage_percent / 100) * max_health,
               })
 
               if (fire_loop > 0) set_on_fire(client)
 
               return {
                 last_block_position: current_block_position,
-                last_fire_damage: fire_damage,
+                last_fire_damage: fire_damage_percent,
                 remaining_fire_loop: fire_loop,
                 took_damage: true,
               }
@@ -113,19 +113,19 @@ export default {
             // if above a dangerous block
             if (damage_from_surface) {
               const {
-                damage,
-                fire_damage = 0,
+                damage_percent,
+                fire_damage_percent = 0,
                 fire_loop = -1,
               } = damage_from_surface
               events.emit(PlayerEvent.RECEIVE_DAMAGE, {
-                damage: (damage / 100) * max_health,
+                damage: (damage_percent / 100) * max_health,
               })
 
               if (fire_loop > 0) set_on_fire(client)
 
               return {
                 last_block_position: current_block_position,
-                last_fire_damage: fire_damage,
+                last_fire_damage: fire_damage_percent,
                 remaining_fire_loop: fire_loop,
                 took_damage: true,
               }

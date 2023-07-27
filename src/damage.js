@@ -5,7 +5,6 @@ import {
   get_total_characteristic,
 } from './characteristics.js'
 import { is_yielding_weapon } from './items.js'
-import { normalize_range } from './math.js'
 
 const BARE_HAND_CRITICAL = 6
 const MIN_AGILITY_FOR_CRITICAL = 8

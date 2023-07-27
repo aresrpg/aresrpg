@@ -20,6 +20,7 @@ const A_WEEK = 1000 * 60 * 60 * 24 * 7
 /** returns a 8x8 pixels matrix from an uuid */
 function fetch_head_pixels(client) {
   log.info({ player: client.username }, `fetch head's pixels`)
+  // TODO: do not rely on third parties https://github.com/aresrpg/aresrpg/issues/682
   return fetch(`https://minotar.net/avatar/${client.uuid}/8`)
     .then(response => response.arrayBuffer())
     .then(array_buffer => Buffer.from(array_buffer))

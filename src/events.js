@@ -43,7 +43,6 @@ export const PlayerEvent = {
   TELEPORT_TO: 'PLAYER:TELEPORT_TO',
   /** the player needs to receive a new item */
   LOOT_ITEM: 'PLAYER:LOOT_ITEM',
-  PICK_ITEM: 'PLAYER:ACTION:PICK_ITEM', // TODO: deprecate (no items will be on the EVENT ares)
   /** the soul of player should regenerate a bit */
   REGENERATE_SOUL: 'PLAYER:REGENERATE_SOUL',
   /** the player's soul needs a direct update

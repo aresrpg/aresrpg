@@ -1,7 +1,7 @@
 import { Actions, write_bossbar } from './boss_bar.js'
 import { level_progression } from './experience.js'
 import { Font } from './font.js'
-import { normalize_range } from './math.js'
+import { map_range } from './math.js'
 import { write_action_bar } from './title.js'
 
 export const UI_PLAYER_UUID = '00000000-0bad-cafe-babe-000000000000'
@@ -177,7 +177,7 @@ export default function UI(client) {
           const elapsed = Date.now() - cast_time
           const remaining = Math.min(couldown, Math.max(0, couldown - elapsed))
           return Math.round(
-            normalize_range(
+            map_range(
               remaining,
               {
                 min: 0,

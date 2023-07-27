@@ -1,9 +1,6 @@
 import { GameMode } from './gamemode.js'
 
-export function can_receive_damage({
-  game_mode = undefined,
-  soul = undefined,
-} = {}) {
+export function can_receive_damage({ game_mode, soul }) {
   // a creative player can't take damage
   if (game_mode === GameMode.CREATIVE) return false
   // a ghost can't take damage
