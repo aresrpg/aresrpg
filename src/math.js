@@ -169,10 +169,10 @@ export function random_bias_low(lower, upper) {
 /**
  * Fits a number from a range, into another range
  */
-export function normalize_range(value, first_range, second_range) {
+export function map_range(value, from_range, to_range) {
   return (
-    ((value - first_range.min) / (first_range.max - first_range.min)) *
-      (second_range.max - second_range.min) +
-    second_range.min
+    ((value - from_range.min) / (from_range.max - from_range.min)) *
+      (to_range.max - to_range.min) +
+    to_range.min
   )
 }

@@ -141,7 +141,6 @@ export default {
   observe({ client, events, world, get_state, signal }) {
     aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
       .map(([state]) => state)
-      .filter(state => !!state)
       .map(({ inventory }) => inventory)
       .reduce(
         (

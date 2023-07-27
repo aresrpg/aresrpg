@@ -54,7 +54,7 @@ export function spawn_mob(client, { mob, position, events }) {
     entityId: entity_id,
     metadata: to_metadata('entity', {
       custom_name: JSON.stringify({
-        text: display_name + ' ' + entity_id,
+        text: display_name,
         color: color_by_category[category],
         extra: level && [{ text: ` [Lvl ${level}]`, color: 'dark_red' }],
       }),

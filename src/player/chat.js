@@ -119,8 +119,6 @@ export default {
       [/:.*:/.source]: serialize_emote, // all emotes name are between ":"
     }
 
-    const split_regex = new RegExp(`(${Object.keys(chat_mapper).join('|')})`)
-
     client.on('chat', ({ message }) => {
       if (is_command_function(message)) {
         log.info({ sender: client.uuid, command: message }, 'Command')
@@ -139,7 +137,7 @@ export default {
               text: client.username,
             },
             message
-              .split(split_regex)
+              .split(new RegExp(`(${Object.keys(chat_mapper).join('|')})`))
               .flatMap(part => {
                 for (const pattern in chat_mapper)
                   if (

@@ -11,7 +11,7 @@ import {
 import { compute_damage } from '../damage.js'
 import { PlayerEvent, WorldRequest } from '../events.js'
 import { abortable } from '../iterator.js'
-import { normalize_range } from '../math.js'
+import { map_range } from '../math.js'
 import { play_sound } from '../sound.js'
 import { synchronisation_payload } from '../sync.js'
 
@@ -54,7 +54,7 @@ export default {
 
     aiter(abortable(setInterval(1000, null, { signal })))
       .map(get_state)
-      .filter(state => !!state)
+      .dropWhile(state => !state)
       .forEach(({ health, inventory, characteristics }) => {
         const mind = get_total_characteristic(Characteristic.MIND, {
           inventory,
@@ -78,7 +78,7 @@ export default {
         const { position, health } = state
         if (last_health !== health) {
           client.write('update_health', {
-            health: normalize_range(
+            health: map_range(
               health,
               { min: 0, max: get_max_health(state) },
               { min: 0, max: 40 },

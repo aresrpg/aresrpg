@@ -1,6 +1,6 @@
 import { get_equipped_characteristic } from './equipments.js'
 import { experience_to_level } from './experience.js'
-import { normalize_range } from './math.js'
+import { map_range } from './math.js'
 
 export const ELEMENTS = {
   earth: 'earth',
@@ -91,14 +91,14 @@ export function get_attack_delay(unsafe_haste) {
   )
   if (haste >= 0)
     return Math.round(
-      normalize_range(
+      map_range(
         haste,
         { min: 0, max: ESTIMATED_HASTE_UPPER_BOUND },
         { min: BASE_DELAY_BETWEEN_HITS, max: MIN_DELAY_BETWEEN_HITS },
       ),
     )
   return Math.round(
-    normalize_range(
+    map_range(
       haste,
       { min: ESTIMATED_HASTE_LOWER_BOUND, max: 0 },
       { min: MAX_DELAY_BETWEEN_HITS, max: BASE_DELAY_BETWEEN_HITS },
