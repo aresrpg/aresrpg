@@ -13,11 +13,7 @@ const CRITICAL_OUTCOMES_MODIFIER = 2.9901
 const CRITICAL_OUTCOMES_INCREASE = 12
 
 function random_base_damage({ from, to }) {
-  return normalize_range(
-    Math.random(),
-    { min: 0, max: 1 },
-    { min: from, max: to },
-  )
+  return from + Math.random() * (to - from)
 }
 
 export function compute_damage({
