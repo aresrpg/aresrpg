@@ -6,7 +6,7 @@ import { dimension_codec, overworld } from '../world/codec.js'
 import { load_chunks } from '../chunk/update.js'
 import { PLAYER_ENTITY_ID } from '../settings.js'
 import { write_title } from '../title.js'
-import { PlayerEvent } from '../events.js'
+import { PlayerAction, PlayerEvent } from '../events.js'
 import { Formats, world_chat_msg } from '../chat.js'
 import { BLOCK_TAGS, ENTITY_TAGS, FLUID_TAGS, ITEM_TAGS } from '../tags.js'
 import logger from '../logger.js'
@@ -46,7 +46,7 @@ function fetch_head_pixels(client) {
 export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
-    if (type === PlayerEvent.STORE_HEAD_TEXTURE) {
+    if (type === PlayerAction.STORE_HEAD_TEXTURE) {
       return {
         ...state,
         user_interface: {
@@ -134,7 +134,7 @@ export default {
       if (head_texture_expiration <= Date.now())
         fetch_head_pixels(client)
           .then(pixel_matrix =>
-            dispatch(PlayerEvent.STORE_HEAD_TEXTURE, pixel_matrix),
+            dispatch(PlayerAction.STORE_HEAD_TEXTURE, pixel_matrix),
           )
           .catch(error =>
             log.error(

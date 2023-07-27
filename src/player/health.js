@@ -9,7 +9,7 @@ import {
   get_total_characteristic,
 } from '../characteristics.js'
 import { compute_damage } from '../damage.js'
-import { PlayerEvent, WorldRequest } from '../events.js'
+import { PlayerAction, PlayerEvent, WorldRequest } from '../events.js'
 import { abortable } from '../iterator.js'
 import { map_range } from '../math.js'
 import { play_sound } from '../sound.js'
@@ -26,7 +26,9 @@ export default {
   reduce(state, { type, payload }) {
     if (type === PlayerEvent.UPDATE_HEALTH) {
       const max_health = get_max_health(state)
-      const health = Math.max(0, Math.min(max_health, payload.health))
+      // make sure the health is rounded to 0.5
+      const payload_health = Math.round(payload.health * 2) / 2
+      const health = Math.max(0, Math.min(max_health, payload_health))
 
       return {
         ...state,
@@ -67,7 +69,7 @@ export default {
 
         // Regenerate only if the player is not dead
         if (health > 0)
-          dispatch(PlayerEvent.UPDATE_HEALTH, {
+          dispatch(PlayerAction.UPDATE_HEALTH, {
             health: health + regeneration_per_second,
           })
       })
@@ -101,12 +103,12 @@ export default {
             })
 
           if (health === 0) {
-            dispatch(PlayerEvent.DIE)
+            dispatch(PlayerAction.DIE)
             setTimeout(() => {
               // delaying to let the time of the death animation
               world.events.emit(WorldRequest.PLAYER_DIED, { uuid: client.uuid })
               // allows a correct handling of the position
-              dispatch(PlayerEvent.TELEPORT_TO, world.spawn_position)
+              dispatch(PlayerAction.TELEPORT_TO, world.spawn_position)
             }, 700)
             play_sound({
               client,

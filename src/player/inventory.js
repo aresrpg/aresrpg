@@ -4,7 +4,7 @@ import { aiter } from 'iterator-helper'
 
 import { PLAYER_INVENTORY_ID } from '../settings.js'
 import { abortable } from '../iterator.js'
-import { PlayerEvent, WorldRequest } from '../events.js'
+import { PlayerAction, PlayerEvent, WorldRequest } from '../events.js'
 import { assign_items, similar, split_item, to_vanilla_item } from '../items.js'
 import { write_inventory } from '../inventory.js'
 import { from_inventory_array, to_inventory_array } from '../equipments.js'
@@ -91,7 +91,7 @@ export default {
       const { windowId, slot, mode, mouseButton: right_click } = payload
       if (
         FORBIDDEN_SLOTS.includes(slot) ||
-        type === PlayerEvent.RESYNC_INVENTORY
+        type === PlayerAction.RESYNC_INVENTORY
       )
         return {
           ...state,
