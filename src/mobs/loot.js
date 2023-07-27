@@ -1,5 +1,5 @@
 import { block_center_position } from '../position.js'
-import { PlayerEvent } from '../events.js'
+import { PlayerAction, PlayerEvent } from '../events.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
 
 export default {
@@ -12,7 +12,7 @@ export default {
       if (owner === client.uuid) {
         for (const { chance, item } of Entities[mob.type].loots) {
           if (chance >= Math.random()) {
-            dispatch(PlayerEvent.LOOT_ITEM, {
+            dispatch(PlayerAction.LOOT_ITEM, {
               type: item,
               count: 1,
               position: block_center_position(position),

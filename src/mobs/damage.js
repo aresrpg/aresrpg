@@ -3,7 +3,13 @@ import { on } from 'events'
 import { aiter } from 'iterator-helper'
 import combineAsyncIterators from 'combine-async-iterators'
 
-import { MobEvent, PlayerEvent, WorldRequest } from '../events.js'
+import {
+  MobAction,
+  MobEvent,
+  PlayerAction,
+  PlayerEvent,
+  WorldRequest,
+} from '../events.js'
 import logger from '../logger.js'
 import { abortable } from '../iterator.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
@@ -50,7 +56,7 @@ function get_knockback_position({
 export default {
   /** @type {import('../mobs').MobsReducer} */
   reduce_mob(state, { type, payload, time }) {
-    if (type === MobEvent.RECEIVE_DAMAGE) {
+    if (type === MobAction.RECEIVE_DAMAGE) {
       const {
         damage,
         damager,
@@ -127,7 +133,7 @@ export default {
               // TODO: note that we can't know if the player will reduce damage, we naively steal life here
               if (life_stolen) {
                 const real_life_stolen = Math.min(player.health, life_stolen)
-                dispatch(PlayerEvent.UPDATE_HEALTH, {
+                dispatch(PlayerAction.UPDATE_HEALTH, {
                   health: health + real_life_stolen,
                 })
               }
@@ -147,12 +153,12 @@ export default {
                   // healing the player accordingly before damaging the mob
                   const { health: mob_health } = targeted_mob.get_state()
                   const real_life_stolen = Math.min(mob_health, life_stolen)
-                  dispatch(PlayerEvent.UPDATE_HEALTH, {
+                  dispatch(PlayerAction.UPDATE_HEALTH, {
                     health: health + real_life_stolen,
                   })
                 }
 
-                targeted_mob.dispatch(MobEvent.RECEIVE_DAMAGE, {
+                targeted_mob.dispatch(MobAction.RECEIVE_DAMAGE, {
                   // if more heal, then it will receive negative dmg (heal)
                   damage: damage + life_stolen - heal,
                   damager: client.uuid,

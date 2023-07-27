@@ -12,7 +12,6 @@ import { play_sound } from '../sound.js'
 import { client_chat_msg } from '../chat.js'
 import { VERSION } from '../settings.js'
 import { to_metadata } from '../entity_metadata.js'
-import Entities from '../../data/entities.json' assert { type: 'json' }
 import { experience_to_level } from '../experience.js'
 
 const mcData = minecraftData(VERSION)
@@ -198,9 +197,5 @@ export default {
       },
       null,
     )
-    events.on(PlayerEvent.MOB_DEATH, ({ mob }) => {
-      const { xp } = Entities[mob.type]
-      dispatch(PlayerEvent.RECEIVE_EXPERIENCE, { experience: +xp })
-    })
   },
 }

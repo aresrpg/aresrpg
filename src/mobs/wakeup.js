@@ -3,7 +3,7 @@ import { setTimeout } from 'timers/promises'
 
 import { aiter } from 'iterator-helper'
 
-import { MobEvent, PlayerEvent } from '../events.js'
+import { MobAction, MobEvent, PlayerEvent } from '../events.js'
 import { async_tail_recursive, abortable } from '../iterator.js'
 
 async function* raw_wakeup_to_end(stream, value = stream.next()) {
@@ -36,7 +36,7 @@ export default {
       const time = Date.now()
 
       if (mob.get_state().wakeup_at <= time)
-        mob.dispatch(MobEvent.WAKE_UP, null, time)
+        mob.dispatch(MobAction.WAKE_UP, null, time)
 
       const state = aiter(
         abortable(on(mob.events, MobEvent.STATE_UPDATED, { signal })),
@@ -46,7 +46,7 @@ export default {
 
       aiter(wakeups).reduce((last_time, time) => {
         if (last_time !== time) {
-          mob.dispatch(MobEvent.WAKE_UP, null, time)
+          mob.dispatch(MobAction.WAKE_UP, null, time)
         }
         return time
       }, null)

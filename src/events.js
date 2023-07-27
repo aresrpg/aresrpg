@@ -4,10 +4,7 @@ export function last_event_value(emitter, event) {
   return () => value
 }
 
-/** Local events which can be
- * - emited and then listened
- * - dispatched and then reduced
- */
+/** Local events which can be emited and then listened */
 export const PlayerEvent = {
   /** the player state has been updated */
   STATE_UPDATED: 'PLAYER:STATE_UPDATED',
@@ -35,9 +32,11 @@ export const PlayerEvent = {
    * health update as damage reduction may be applied, or canceled according to the gamemode
    */
   RECEIVE_DAMAGE: 'PLAYER:RECEIVE_DAMAGE',
-  /** the player's health needs a direct update,
-   * this will bypass any armor or gamemode
-   */
+}
+
+/** Distributed actions which can be dispatched and then reduced */
+export const PlayerAction = {
+  /** the player's health needs a direct update */
   UPDATE_HEALTH: 'PLAYER:UPDATE_HEALTH',
   /** the player needs to be teleported */
   TELEPORT_TO: 'PLAYER:TELEPORT_TO',
@@ -70,6 +69,9 @@ export const PlayerEvent = {
 export const MobEvent = {
   /** a mob state has been updated */
   STATE_UPDATED: 'MOB:STATE_UPDATED',
+}
+
+export const MobAction = {
   /** a mob is receiving damages */
   RECEIVE_DAMAGE: 'MOB:RECEIVE_DAMAGE',
   /** a mob is going toward a position */

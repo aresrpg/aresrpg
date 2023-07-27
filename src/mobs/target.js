@@ -2,19 +2,19 @@ import { on } from 'events'
 
 import { aiter } from 'iterator-helper'
 
-import { MobEvent, PlayerEvent } from '../events.js'
+import { MobAction, MobEvent, PlayerEvent } from '../events.js'
 import { abortable } from '../iterator.js'
 
 export default {
   /** @type {import('../mobs').MobsReducer} */
   reduce_mob(state, { type, payload }) {
-    if (type === MobEvent.TARGET_POSITION) {
+    if (type === MobAction.TARGET_POSITION) {
       return {
         ...state,
         target_position: payload,
       }
     }
-    if (type === MobEvent.FORGET_TARGET) {
+    if (type === MobAction.FORGET_TARGET) {
       return {
         ...state,
         target: null,
@@ -26,7 +26,7 @@ export default {
   observe({ client, events, get_state }) {
     events.on(PlayerEvent.MOB_ENTER_VIEW, ({ mob, signal }) => {
       const send_position = ({ position, health }) =>
-        mob.dispatch(MobEvent.TARGET_POSITION, position)
+        mob.dispatch(MobAction.TARGET_POSITION, position)
 
       aiter(
         abortable(on(mob.events, MobEvent.STATE_UPDATED, { signal })),
@@ -34,7 +34,7 @@ export default {
         // the mob can't keep targetting a dead player
         if (target === client.uuid) {
           const { health } = get_state()
-          if (health === 0) mob.dispatch(MobEvent.FORGET_TARGET)
+          if (health === 0) mob.dispatch(MobAction.FORGET_TARGET)
         }
 
         if (last_target !== target) {

@@ -4,9 +4,8 @@ import { setInterval } from 'timers/promises'
 import { aiter } from 'iterator-helper'
 import combineAsyncIterators from 'combine-async-iterators'
 
-import { PlayerEvent, WorldRequest } from '../events.js'
+import { PlayerAction, PlayerEvent, WorldRequest } from '../events.js'
 import { create_armor_stand } from '../armor_stand.js'
-import logger from '../logger.js'
 import { abortable } from '../iterator.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
 import { show_blood, show_death_smoke } from '../particules.js'
@@ -14,12 +13,9 @@ import { CATEGORY, play_sound } from '../sound.js'
 import { PLAYER_ENTITY_ID } from '../settings.js'
 import { compute_received_experience } from '../experience.js'
 import Colors from '../colors.js'
-import { can_receive_damage } from '../permissions.js'
 
 const DAMAGE_INDICATORS_AMOUNT = 10
 const DAMAGE_INDICATOR_TTL = 1200
-
-const log = logger(import.meta)
 
 /** @param {import('../context.js').InitialWorld} world */
 export function register({ next_entity_id, ...world }) {
@@ -31,22 +27,6 @@ export function register({ next_entity_id, ...world }) {
 }
 
 export default {
-  /** @type {import('../context.js').Reducer} */
-  reduce(state, { type, payload }, client) {
-    if (type === PlayerEvent.RECEIVE_DAMAGE && can_receive_damage(state)) {
-      const { damage } = payload
-      const health = Math.max(0, Math.round((state.health - damage) * 2) / 2)
-
-      log.info({ username: client.username, damage, health }, 'took damage')
-
-      return {
-        ...state,
-        health,
-      }
-    }
-    return state
-  },
-
   /** @type {import('../context.js').Observer} */
   observe({ events, dispatch, client, world, signal, get_state }) {
     aiter(
@@ -57,7 +37,7 @@ export default {
         entityId: PLAYER_ENTITY_ID,
         entityStatus: health - damage > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
       })
-      dispatch(PlayerEvent.RECEIVE_DAMAGE, { damage })
+      dispatch(PlayerAction.UPDATE_HEALTH, { health: health - damage })
     })
 
     // @see more in src/SYNC.md
@@ -151,7 +131,7 @@ export default {
           if (!is_dead) {
             const sign = damage > 0 ? '-' : ''
             create_armor_stand(client, entity_id, position, {
-              text: `${sign}${damage}`,
+              text: `${sign}${Math.abs(damage)}`,
               color: critical_hit ? critical_color : color,
             })
             show_blood({ client, position: particle_position })
@@ -164,7 +144,9 @@ export default {
                 get_state(),
               )
               if (received_experience) {
-                events.emit(PlayerEvent.RECEIVE_EXPERIENCE, { experience: xp })
+                dispatch(PlayerAction.RECEIVE_EXPERIENCE, {
+                  experience: received_experience,
+                })
                 create_armor_stand(client, entity_id, position, {
                   text: `+${xp} xp`,
                   color: '#3498DB',

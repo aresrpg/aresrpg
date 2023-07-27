@@ -243,7 +243,6 @@ function reduce_state(state, action, client) {
     player_position.reduce,
     player_view_distance.reduce,
     plugin_channels.reduce,
-    player_deal_damage.reduce,
     player_inventory.reduce,
     player_gamemode.reduce,
     player_soul.reduce,
