@@ -40,8 +40,7 @@ function create_debounced_observer({
     if (entries.length !== 0) {
       if (timer == null) log.info('Started')
       else clearTimeout(timer)
-      timer = setTimeout(end, timeout)
-      timer.unref()
+      timer = setTimeout(end, timeout).unref()
 
       for (const entry of entries) {
         counter++
