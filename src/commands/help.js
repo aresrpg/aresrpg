@@ -31,7 +31,7 @@ export default function help({ world, sender }) {
       { text: ' └─ ', color: GRAY },
       { text: 'dev\n', color: LIGHT_GRAY },
       { text: '    ├─ ', color: GRAY },
-      { text: '/attackspeed <value>\n', color: LIGHT_GRAY },
+      { text: '/attack_speed <value>\n', color: LIGHT_GRAY },
       { text: '    ├─ ', color: GRAY },
       { text: '/xp <amount>\n', color: LIGHT_GRAY },
       { text: '    ├─ ', color: GRAY },

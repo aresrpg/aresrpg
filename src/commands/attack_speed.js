@@ -6,7 +6,7 @@ import { double, literal } from './declare_options.js'
 
 export const atk_nodes = [
   literal({
-    value: 'attackspeed',
+    value: 'attack_speed',
     children: [
       double({
         name: 'amount',
