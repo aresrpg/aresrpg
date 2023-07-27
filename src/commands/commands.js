@@ -92,7 +92,7 @@ export default function execute_command({
     case 'experience':
       experience(command)
       break
-    case 'attackspeed':
+    case 'attack_speed':
       attack_speed(command)
       break
     case 'speed':
