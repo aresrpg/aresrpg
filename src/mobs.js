@@ -6,7 +6,7 @@ import { aiter } from 'iterator-helper'
 
 import Entities from '../data/entities.json' assert { type: 'json' }
 
-import { last_event_value, MobEvent } from './events.js'
+import { last_event_value } from './events.js'
 import { path_end, path_position } from './mobs/path.js'
 import mobs_goto from './mobs/goto.js'
 import mobs_damage from './mobs/damage.js'
@@ -38,10 +38,11 @@ const initial_state = {
 }
 
 /** @typedef {Readonly<typeof initial_state>} MobState */
-/** @typedef {{ type: string, payload: any, time: number }} MobEvent */
+/** @typedef {import('./types').MobAction} Action */
 /** @typedef {{ world: import('./context').World, type: string, entity_id: number }} MobContext */
-/** @typedef {(state: MobState, action: MobEvent, context?: MobContext) => MobState} MobsReducer */
+/** @typedef {(state: MobState, action: Action, context?: MobContext) => Promise<MobState>} MobsReducer */
 
+/** @type {MobsReducer} */
 function reduce_mob(state, action, context) {
   return [
     mobs_goto.reduce_mob,
@@ -50,7 +51,7 @@ function reduce_mob(state, action, context) {
     mobs_target.reduce_mob,
   ].reduce(
     async (intermediate, fn) => fn(await intermediate, action, context),
-    state,
+    Promise.resolve(state),
   )
 }
 
@@ -76,6 +77,8 @@ export function register(world) {
     }
 
     const actions = new PassThrough({ objectMode: true })
+
+    /** @type {import('./types').MobEvents} */
     const events = new EventEmitter()
     events.setMaxListeners(Infinity)
 
@@ -87,13 +90,13 @@ export function register(world) {
         type,
         entity_id,
       })
-      events.emit(MobEvent.STATE_UPDATED, state)
+      events.emit('STATE_UPDATED', state)
       return state
     }, mob_state)
 
-    setImmediate(() => events.emit(MobEvent.STATE_UPDATED, mob_state))
+    setImmediate(() => events.emit('STATE_UPDATED', mob_state))
 
-    const get_state = last_event_value(events, MobEvent.STATE_UPDATED)
+    const get_state = last_event_value(events, 'STATE_UPDATED')
 
     return {
       entity_id,
@@ -107,6 +110,10 @@ export function register(world) {
 
         return path_position({ path, time, start_time, speed })
       },
+      /**
+       * @template {keyof import('./types').MobActions} K
+       * @param {K} action_type
+       * @param {import('./types').MobActions[K]} [payload] */
       dispatch(action_type, payload, time = Date.now()) {
         actions.write({ type: action_type, payload, time })
       },

@@ -8,13 +8,12 @@ import {
   send_attack_speed,
   send_movement_speed,
 } from '../attribute.js'
-import { PlayerEvent } from '../events.js'
 import { abortable } from '../iterator.js'
 
 export default {
   /** @type {import('../context.js').Observer} */
   observe({ client, events, signal }) {
-    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
+    aiter(abortable(on(events, 'STATE_UPDATED', { signal })))
       .map(([state]) => state)
       .reduce(
         ({ last_attack_speed, last_speed }, state) => {

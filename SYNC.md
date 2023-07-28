@@ -5,7 +5,7 @@ it gets a bit more complex as the server is distributed out of the box with a st
 
 ## Synchronizing players presence
 
-- Starts in `src/player/tablist.js` where `once(PlayerEvent.STATE_UPDATED)`
+- Starts in `src/player/tablist.js` where `once('STATE_UPDATED')`
   - we listen for any incomming `WorldRequest.NOTIFY_PRESENCE_TO(my_uuid)` in order to fill the tab list
   - we listen for any incomming `WorldRequest.ADD_PLAYER_TO_WORLD` to trigger the initialization of a player
   - we triggers the emition of a `WorldRequest.ADD_PLAYER_TO_WORLD`
@@ -31,11 +31,11 @@ it gets a bit more complex as the server is distributed out of the box with a st
 - Starts in `src/player/sync.js` where the `use_entity` packet is listened to
 - the `entity_id` will be matched with the known stream of players currently visible by us (inside_view)
   - if the target is not visible then we won't know its info and it will stop here
-- a `PlayerEvent.PLAYER_INTERRACTED` is emitted with nescessary infos
+- a `'PLAYER_INTERRACTED'` is emitted with nescessary infos
 - the observer inside `src/mobs/damage.js` catches that event and handles it exactly like for a mob
   - with the exception of emiting a `WorldRequest.PLAYER_RECEIVE_DAMAGE` in case of a player
 - the observer inside `src/player/damage.js` catches the event and
-  - if the uuid is ours => dispatch `PlayerEvent.RECEIVE_DAMAGE`
+  - if the uuid is ours => dispatch `'RECEIVE_DAMAGE'`
     - it will be caught by the reducer and remove the life accordingly (unless GM)
     - in case the life falls to `0` it will handle the death and emit a `WorldRequest.PLAYER_DIED`
     - which will be caught in `src/player/sync.js` and other players will be able to destroy the entity

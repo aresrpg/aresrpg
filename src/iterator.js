@@ -15,7 +15,7 @@ export function async_tail_recursive(generator) {
 
 /**
  * @template T
- * @param {AsyncIterableIterator<T>} iterator
+ * @param {AsyncIterableIterator<T> | AsyncIterable<T>} iterator
  * @returns {AsyncIterator<T>}
  */
 export async function* abortable(iterator) {

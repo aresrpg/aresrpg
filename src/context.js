@@ -6,7 +6,7 @@ import combineAsyncIterators from 'combine-async-iterators'
 
 import items from '../data/items.json' assert { type: 'json' }
 
-import { last_event_value, PlayerEvent } from './events.js'
+import { last_event_value } from './events.js'
 import { floor1 } from './world.js'
 import logger from './logger.js'
 import player_login from './player/login.js'
@@ -213,12 +213,12 @@ const saved_state = ({
 })
 
 /** @template U
- ** @typedef {import('./types').UnionToIntersection<U>} UnionToIntersection */
+ * @typedef {import('./types').UnionToIntersection<U>} UnionToIntersection */
 
 /** @typedef {import('minecraft-protocol').Client} Client */
 
 /** @template U
- ** @typedef {import('./types').Await<U>} Await */
+ * @typedef {import('./types').Await<U>} Await */
 
 /** @typedef {Readonly<typeof initial_world>} InitialWorld */
 /** @typedef {Readonly<ReturnType<typeof register_mobs>>} InitialWorldWithMobs */
@@ -227,14 +227,14 @@ const saved_state = ({
 /** @typedef {InitialWorld & ReducedWorld} World */
 
 /** @typedef {Readonly<typeof initial_state>} State */
-/** @typedef {{ type: string, payload: any }} Action */
+/** @typedef {import('./types').PlayerAction} Action */
 /** @typedef {Readonly<Await<ReturnType<typeof create_context>>>} Context */
 
 /** @typedef {(state: State, action: Action, client: Client) => State} Reducer */
 /** @typedef {(action: Action) => Action} Transformer */
 /** @typedef {(context: Context) => void} Observer */
 
-/** @type Reducer */
+/** @type {Reducer} */
 function reduce_state(state, action, client) {
   return [
     /**
@@ -376,7 +376,7 @@ export async function create_context({ client, world }) {
     })
   }
 
-  /** @type {import('./types').TypedEmitter<{ state: State }>} */
+  /** @type {import('./types').PlayerEvents} */
   const events = new EventEmitter()
   const player_state = await Database.pull(client.uuid.toLowerCase())
 
@@ -387,7 +387,7 @@ export async function create_context({ client, world }) {
     .reduce(
       (last_state, action) => {
         const state = reduce_state(last_state, action, client)
-        events.emit(PlayerEvent.STATE_UPDATED, state)
+        events.emit('STATE_UPDATED', state)
         return state
       },
       {
@@ -407,7 +407,7 @@ export async function create_context({ client, world }) {
     })
 
   /** @type {() => State} */
-  const get_state = last_event_value(events, PlayerEvent.STATE_UPDATED)
+  const get_state = last_event_value(events, 'STATE_UPDATED')
 
   return {
     client,
@@ -416,6 +416,10 @@ export async function create_context({ client, world }) {
     signal: controller.signal,
     get_state,
     inside_view: inside_view(get_state),
+    /**
+     * @template {keyof import('./types').PlayerActions} K
+     * @param {K} type
+     * @param {import('./types').PlayerActions[K]} [payload] */
     dispatch(type, payload) {
       actions.write({ type, payload })
     },

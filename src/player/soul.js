@@ -5,7 +5,6 @@ import { aiter } from 'iterator-helper'
 
 import { abortable } from '../iterator.js'
 import logger from '../logger.js'
-import { PlayerAction, PlayerEvent } from '../events.js'
 import { set_invisible } from '../player.js'
 
 const log = logger(import.meta)
@@ -19,7 +18,7 @@ export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
     switch (type) {
-      case PlayerAction.DIE: {
+      case 'DIE': {
         const soul = Math.max(0, state.soul - 10)
         log.info({ soul }, 'lost soul')
 
@@ -28,7 +27,7 @@ export default {
           soul,
         }
       }
-      case PlayerAction.REGENERATE_SOUL: {
+      case 'REGENERATE_SOUL': {
         // we forbid soul regeneration when the player is a ghost
         // the player first have to get out of that ghost mode
         // before being able to gain soul in any way
@@ -40,7 +39,7 @@ export default {
           soul: Math.min(100, state.soul + amount),
         }
       }
-      case PlayerAction.UPDATE_SOUL: {
+      case 'UPDATE_SOUL': {
         const { soul } = payload
         log.info({ soul }, 'direct soul update')
         return {
@@ -58,12 +57,12 @@ export default {
     aiter(abortable(setInterval(MINUTE_10, null, { signal }))).forEach(() => {
       const { soul } = get_state()
       if (soul !== 0)
-        dispatch(PlayerAction.REGENERATE_SOUL, {
+        dispatch('REGENERATE_SOUL', {
           amount: Math.round(SOUL_REGEN_PER_ONLINE_HOUR / 6),
         })
     })
 
-    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
+    aiter(abortable(on(events, 'STATE_UPDATED', { signal })))
       .map(([{ soul }]) => soul)
       .reduce((last_soul, soul) => {
         // allows to leave the fantom mode after losing all soul
@@ -72,7 +71,7 @@ export default {
       }, -1)
 
     events.once(
-      PlayerEvent.STATE_UPDATED,
+      'STATE_UPDATED',
       ({ last_connection_time, last_disconnection_time }) => {
         // when the player join, we give him the soul he regenerated while offline
         if (last_disconnection_time !== undefined) {
@@ -81,7 +80,7 @@ export default {
             last_connection_time - last_disconnection_time,
           )
           const hours_offline = Math.round(time_offline / HOUR_1)
-          dispatch(PlayerAction.REGENERATE_SOUL, {
+          dispatch('REGENERATE_SOUL', {
             amount: SOUL_REGEN_PER_OFFLINE_HOUR * hours_offline,
           })
         }

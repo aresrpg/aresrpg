@@ -4,7 +4,6 @@ import { aiter } from 'iterator-helper'
 
 import { get_max_health } from '../characteristics.js'
 import { get_block, same_position } from '../chunk.js'
-import { PlayerEvent } from '../events.js'
 import { abortable } from '../iterator.js'
 import { block_position } from '../position.js'
 import { set_on_fire } from '../player.js'
@@ -83,7 +82,7 @@ export default {
                   took_damage: false,
                 }
               }
-              events.emit(PlayerEvent.RECEIVE_DAMAGE, {
+              events.emit('RECEIVE_DAMAGE', {
                 damage: (last_fire_damage / 100) * max_health,
               })
               // set fire_tick TICK_PER_INTERVAL * remaining_fire_loop
@@ -96,7 +95,7 @@ export default {
                 fire_damage_percent = 0,
                 fire_loop = -1,
               } = damage_from_block
-              events.emit(PlayerEvent.RECEIVE_DAMAGE, {
+              events.emit('RECEIVE_DAMAGE', {
                 damage: (damage_percent / 100) * max_health,
               })
 
@@ -117,7 +116,7 @@ export default {
                 fire_damage_percent = 0,
                 fire_loop = -1,
               } = damage_from_surface
-              events.emit(PlayerEvent.RECEIVE_DAMAGE, {
+              events.emit('RECEIVE_DAMAGE', {
                 damage: (damage_percent / 100) * max_health,
               })
 

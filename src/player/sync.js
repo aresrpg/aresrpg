@@ -5,7 +5,7 @@ import { aiter } from 'iterator-helper'
 
 import { chunk_index, same_chunk } from '../chunk.js'
 import { abortable } from '../iterator.js'
-import { PlayerEvent, WorldRequest } from '../events.js'
+import { WorldRequest } from '../events.js'
 import { to_metadata } from '../entity_metadata.js'
 import logger from '../logger.js'
 
@@ -324,7 +324,7 @@ const Synchroniser = {
           if (uuid) {
             const { position, health, username } = last_storage[uuid]
 
-            events.emit(PlayerEvent.PLAYER_INTERRACTED, {
+            events.emit('PLAYER_INTERRACTED', {
               player: {
                 uuid,
                 position,
@@ -368,7 +368,7 @@ export default {
           abortable(on(event_source, header, { signal: local_signal })),
         ).forEach(([data]) => player_stream.write({ type, header, data }))
 
-    events.once(PlayerEvent.STATE_UPDATED, () => {
+    events.once('STATE_UPDATED', () => {
       const synced_requests = [
         WorldRequest.PLAYER_HEALTH_UPDATE,
         WorldRequest.NOTIFY_PRESENCE_TO(client.uuid),
@@ -382,7 +382,7 @@ export default {
 
     SYNCED_PACKETS.forEach(forward('packet', client))
 
-    events.on(PlayerEvent.CHUNK_LOADED, ({ x, z, signal: chunk_signal }) => {
+    events.on('CHUNK_LOADED', ({ x, z, signal: chunk_signal }) => {
       const chunk = chunk_index(x, z)
       const synced_events = [
         WorldRequest.POSITION_UPDATE(chunk),

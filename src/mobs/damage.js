@@ -3,13 +3,7 @@ import { on } from 'events'
 import { aiter } from 'iterator-helper'
 import combineAsyncIterators from 'combine-async-iterators'
 
-import {
-  MobAction,
-  MobEvent,
-  PlayerAction,
-  PlayerEvent,
-  WorldRequest,
-} from '../events.js'
+import { WorldRequest } from '../events.js'
 import logger from '../logger.js'
 import { abortable } from '../iterator.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
@@ -55,8 +49,8 @@ function get_knockback_position({
 
 export default {
   /** @type {import('../mobs').MobsReducer} */
-  reduce_mob(state, { type, payload, time }) {
-    if (type === MobAction.RECEIVE_DAMAGE) {
+  async reduce_mob(state, { type, payload, time }) {
+    if (type === 'RECEIVE_DAMAGE') {
       const {
         damage,
         damager,
@@ -96,7 +90,7 @@ export default {
     aiter(
       abortable(
         combineAsyncIterators(
-          on(events, PlayerEvent.PLAYER_INTERRACTED, { signal }),
+          on(events, 'PLAYER_INTERRACTED', { signal }),
           on(client, 'use_entity', { signal }),
         ),
       ),
@@ -133,7 +127,7 @@ export default {
               // TODO: note that we can't know if the player will reduce damage, we naively steal life here
               if (life_stolen) {
                 const real_life_stolen = Math.min(player.health, life_stolen)
-                dispatch(PlayerAction.UPDATE_HEALTH, {
+                dispatch('UPDATE_HEALTH', {
                   health: health + real_life_stolen,
                 })
               }
@@ -153,12 +147,12 @@ export default {
                   // healing the player accordingly before damaging the mob
                   const { health: mob_health } = targeted_mob.get_state()
                   const real_life_stolen = Math.min(mob_health, life_stolen)
-                  dispatch(PlayerAction.UPDATE_HEALTH, {
+                  dispatch('UPDATE_HEALTH', {
                     health: health + real_life_stolen,
                   })
                 }
 
-                targeted_mob.dispatch(MobAction.RECEIVE_DAMAGE, {
+                targeted_mob.dispatch('RECEIVE_DAMAGE', {
                   // if more heal, then it will receive negative dmg (heal)
                   damage: damage + life_stolen - heal,
                   damager: client.uuid,
@@ -184,8 +178,8 @@ export default {
         { frame_expiration: -1, last_entities_ids: [] },
       )
 
-    events.on(PlayerEvent.MOB_ENTER_VIEW, ({ mob, signal }) => {
-      aiter(abortable(on(mob.events, MobEvent.STATE_UPDATED, { signal })))
+    events.on('MOB_ENTER_VIEW', ({ mob, signal }) => {
+      aiter(abortable(on(mob.events, 'STATE_UPDATED', { signal })))
         .map(([{ health, last_hit_was_critical }]) => ({
           health,
           last_hit_was_critical,
@@ -199,7 +193,7 @@ export default {
               entityStatus: health > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
               // TODO: fix sound
             })
-            events.emit(PlayerEvent.MOB_DAMAGED, {
+            events.emit('MOB_DAMAGED', {
               mob,
               damage: last_health - health,
               critical_hit: last_hit_was_critical,
@@ -222,7 +216,7 @@ export default {
             })
 
             if (health === 0) {
-              events.emit(PlayerEvent.MOB_DEATH, {
+              events.emit('MOB_DEATH', {
                 mob,
                 critical_hit: last_hit_was_critical,
               })

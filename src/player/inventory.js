@@ -4,7 +4,7 @@ import { aiter } from 'iterator-helper'
 
 import { PLAYER_INVENTORY_ID } from '../settings.js'
 import { abortable } from '../iterator.js'
-import { PlayerAction, PlayerEvent, WorldRequest } from '../events.js'
+import { WorldRequest } from '../events.js'
 import { assign_items, similar, split_item, to_vanilla_item } from '../items.js'
 import { write_inventory } from '../inventory.js'
 import { from_inventory_array, to_inventory_array } from '../equipments.js'
@@ -87,59 +87,65 @@ export default {
       inventory,
     } = state
 
-    if (type === 'packet/window_click') {
-      const { windowId, slot, mode, mouseButton: right_click } = payload
-      if (
-        FORBIDDEN_SLOTS.includes(slot) ||
-        type === PlayerAction.RESYNC_INVENTORY
-      )
+    switch (type) {
+      case 'packet/window_click':
+        {
+          const { windowId, slot, mode, mouseButton: right_click } = payload
+          if (FORBIDDEN_SLOTS.includes(slot))
+            return {
+              ...state,
+              inventory_sequence_number: inventory_sequence_number + 1,
+            }
+          if (windowId === PLAYER_INVENTORY_ID) {
+            if (mode === 0) {
+              const drop = slot === -999
+              const index = drop ? inventory_cursor_index : slot
+              const inventory_array = to_inventory_array(inventory)
+              const { cursor: next_cursor_content, slot: next_slot_content } =
+                handle_cursor({
+                  right_click,
+                  slot_content: inventory_array[index],
+                  cursor_content: inventory_cursor,
+                })
+
+              return {
+                ...state,
+                inventory: from_inventory_array({
+                  inventory,
+                  inventory_array: [
+                    ...inventory_array.slice(0, index),
+                    next_slot_content,
+                    ...inventory_array.slice(index + 1),
+                  ],
+                }),
+                inventory_cursor: next_cursor_content,
+                // Resync if we drop
+                inventory_sequence_number: inventory_sequence_number + +drop,
+                inventory_cursor_index: inventory_cursor
+                  ? inventory_cursor_index
+                  : index,
+              }
+            }
+            /* Unhandled action resync inventory */
+            return {
+              ...state,
+              inventory_sequence_number: inventory_sequence_number + 1,
+            }
+          }
+        }
+        break
+
+      case 'RESYNC_INVENTORY':
         return {
           ...state,
           inventory_sequence_number: inventory_sequence_number + 1,
         }
-      else if (windowId === PLAYER_INVENTORY_ID) {
-        if (mode === 0) {
-          const drop = slot === -999
-          const index = drop ? inventory_cursor_index : slot
-          const inventory_array = to_inventory_array(inventory)
-          const { cursor: next_cursor_content, slot: next_slot_content } =
-            handle_cursor({
-              right_click,
-              slot_content: inventory_array[index],
-              cursor_content: inventory_cursor,
-            })
-
-          return {
-            ...state,
-            inventory: from_inventory_array({
-              inventory,
-              inventory_array: [
-                ...inventory_array.slice(0, index),
-                next_slot_content,
-                ...inventory_array.slice(index + 1),
-              ],
-            }),
-            inventory_cursor: next_cursor_content,
-            // Resync if we drop
-            inventory_sequence_number: inventory_sequence_number + +drop,
-            inventory_cursor_index: inventory_cursor
-              ? inventory_cursor_index
-              : index,
-          }
-        } else {
-          /* Unhandled action resync inventory */
-          return {
-            ...state,
-            inventory_sequence_number: inventory_sequence_number + 1,
-          }
-        }
-      }
     }
     return state
   },
   /** @type {import('../context.js').Observer} */
   observe({ client, events, world, get_state, signal }) {
-    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
+    aiter(abortable(on(events, 'STATE_UPDATED', { signal })))
       .map(([state]) => state)
       .map(({ inventory }) => inventory)
       .reduce(
@@ -179,7 +185,7 @@ export default {
           }
         },
       )
-    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal }))).reduce(
+    aiter(abortable(on(events, 'STATE_UPDATED', { signal }))).reduce(
       (last_sequence_number, [state]) => {
         const { inventory_cursor, inventory_sequence_number } = state
         if (last_sequence_number !== inventory_sequence_number) {

@@ -5,7 +5,6 @@ import { aiter } from 'iterator-helper'
 import update_sidebar_for from '../scoreboard/update_sidebar.js'
 import { abortable } from '../iterator.js'
 import package_json from '../../package.json' assert { type: 'json' }
-import { PlayerEvent } from '../events.js'
 
 const SCOREBOARD_NAME = 'aresrpg'
 const CREATE_OBJECTIVE_ACTION = 0
@@ -59,7 +58,7 @@ export default {
       scoreboard_name: SCOREBOARD_NAME,
     })
 
-    events.once(PlayerEvent.STATE_UPDATED, state => {
+    events.once('STATE_UPDATED', state => {
       client.write('scoreboard_objective', {
         name: SCOREBOARD_NAME,
         action: CREATE_OBJECTIVE_ACTION,
@@ -81,7 +80,7 @@ export default {
       })
     })
 
-    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal }))).reduce(
+    aiter(abortable(on(events, 'STATE_UPDATED', { signal }))).reduce(
       (last, [{ soul, kares }]) => {
         const next = Array.from({
           length: 15,

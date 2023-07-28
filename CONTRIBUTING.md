@@ -92,7 +92,7 @@ The `world` is an immutable object see [World](#World)
 
 ```js
 function observe_state({ client, events, ... }) {
-	events.on('state', state => {
+	events.on('STATE_UPDATED', state => {
 		...
 	})
 }

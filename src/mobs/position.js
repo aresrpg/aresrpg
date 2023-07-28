@@ -9,7 +9,6 @@ import {
   chunk_index,
   same_position,
 } from '../chunk.js'
-import { MobEvent, PlayerEvent } from '../events.js'
 
 import { path_to_positions } from './path.js'
 
@@ -18,9 +17,7 @@ export function register(world) {
   const mobs_positions = new EventEmitter()
 
   for (const mob of world.mobs.all) {
-    const state = aiter(on(mob.events, MobEvent.STATE_UPDATED)).map(
-      ([state]) => state,
-    )
+    const state = aiter(on(mob.events, 'STATE_UPDATED')).map(([state]) => state)
 
     const positions = path_to_positions(state)
 
@@ -70,14 +67,14 @@ export default function mobs_position_factory({ mobs }) {
 
   /** @type {import('../context.js').Observer} */
   function observe({ events }) {
-    events.on(PlayerEvent.CHUNK_LOADED, ({ x, z, signal }) => {
+    events.on('CHUNK_LOADED', ({ x, z, signal }) => {
       actions.write({
         type: 'client_chunk_loaded',
         payload: { events, x, z, signal },
       })
     })
 
-    events.on(PlayerEvent.CHUNK_UNLOADED, ({ x, z }) =>
+    events.on('CHUNK_UNLOADED', ({ x, z }) =>
       actions.write({
         type: 'client_chunk_unloaded',
         payload: { events, x, z },
@@ -90,14 +87,14 @@ export default function mobs_position_factory({ mobs }) {
       const mobs = mobs_by_chunk.get(chunk_index(x, z)) ?? []
 
       if (type === 'client_chunk_loaded')
-        payload.events.emit(PlayerEvent.CHUNK_LOADED_WITH_MOBS, {
+        payload.events.emit('CHUNK_LOADED_WITH_MOBS', {
           mobs,
           x,
           z,
           signal: payload.signal,
         })
       else if (type === 'client_chunk_unloaded')
-        payload.events.emit(PlayerEvent.CHUNK_UNLOADED_WITH_MOBS, {
+        payload.events.emit('CHUNK_UNLOADED_WITH_MOBS', {
           mobs,
           x,
           z,

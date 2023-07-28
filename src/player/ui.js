@@ -4,7 +4,6 @@ import { setInterval } from 'timers/promises'
 import { aiter } from 'iterator-helper'
 
 import { abortable } from '../iterator.js'
-import { PlayerEvent } from '../events.js'
 import UI from '../ui.js'
 import { get_max_health } from '../characteristics.js'
 
@@ -20,7 +19,7 @@ export default {
       .filter(state => !!state)
       .forEach(display_hotbar)
 
-    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
+    aiter(abortable(on(events, 'STATE_UPDATED', { signal })))
       .map(([state]) => state)
       .reduce(
         (

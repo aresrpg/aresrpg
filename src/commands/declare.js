@@ -1,5 +1,3 @@
-import { PlayerEvent } from '../events.js'
-
 import { gamemode_nodes } from './gamemode.js'
 import { dislike_nodes } from './dislike.js'
 import { fragile_nodes } from './fragile.js'
@@ -62,7 +60,7 @@ const nodes = flatten({
 
 export default {
   observe({ client, events }) {
-    events.once(PlayerEvent.STATE_UPDATED, () => {
+    events.once('STATE_UPDATED', () => {
       client.write('declare_commands', {
         nodes,
         rootIndex: 0,
