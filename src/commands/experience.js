@@ -1,5 +1,4 @@
 import { client_chat_msg, Formats } from '../chat.js'
-import { PlayerAction } from '../events.js'
 
 import { write_error } from './commands.js'
 import { integer, literal } from './declare_options.js'
@@ -26,7 +25,7 @@ export default function experience({ sender, dispatch, args }) {
   if (args.length === 1) {
     const [experience] = args
     if (!Number.isNaN(+experience)) {
-      dispatch(PlayerAction.RECEIVE_EXPERIENCE, { experience: +experience })
+      dispatch('RECEIVE_EXPERIENCE', { experience: +experience })
       client_chat_msg({
         client: sender,
         message: [

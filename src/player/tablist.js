@@ -1,7 +1,8 @@
-import { PlayerEvent, WorldRequest } from '../events.js'
+import { WorldRequest } from '../events.js'
 import { synchronisation_payload } from '../sync.js'
 
 export default {
+  /** @type {import('../context').Observer} */
   observe({ world, client, events, get_state }) {
     const player_info = state => ({
       properties: client.profile?.properties ?? [],
@@ -44,7 +45,7 @@ export default {
       world.events.off(WorldRequest.ADD_PLAYER_TO_WORLD, on_player)
     })
 
-    events.once(PlayerEvent.STATE_UPDATED, state => {
+    events.once('STATE_UPDATED', state => {
       world.events.on(WorldRequest.NOTIFY_PRESENCE_TO(client.uuid), add_player)
       world.events.on(WorldRequest.ADD_PLAYER_TO_WORLD, on_player)
       world.events.emit(WorldRequest.ADD_PLAYER_TO_WORLD, player_info(state))

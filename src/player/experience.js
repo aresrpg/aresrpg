@@ -5,7 +5,6 @@ import UUID from 'uuid-1345'
 import minecraftData from 'minecraft-data'
 import Nbt from 'prismarine-nbt'
 
-import { PlayerEvent } from '../events.js'
 import { abortable } from '../iterator.js'
 import { write_title } from '../title.js'
 import { play_sound } from '../sound.js'
@@ -29,7 +28,7 @@ export function register(world) {
 export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
-    if (type === PlayerEvent.RECEIVE_EXPERIENCE) {
+    if (type === 'RECEIVE_EXPERIENCE') {
       const { experience } = payload
       const last_level = experience_to_level(state.experience)
       const new_experience = Math.max(0, state.experience + experience)
@@ -52,7 +51,7 @@ export default {
 
   /** @type {import('../context.js').Observer} */
   observe({ client, events, signal, world, dispatch }) {
-    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal }))).reduce(
+    aiter(abortable(on(events, 'STATE_UPDATED', { signal }))).reduce(
       (last_total_experience, [{ experience: total_experience, position }]) => {
         if (last_total_experience !== total_experience) {
           const level = experience_to_level(total_experience)

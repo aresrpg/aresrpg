@@ -7,7 +7,6 @@ import { aiter } from 'iterator-helper'
 import { chunk_position, chunk_index, same_position } from '../chunk.js'
 import { VERSION } from '../settings.js'
 import { to_vanilla_item } from '../items.js'
-import { PlayerEvent } from '../events.js'
 import { to_metadata } from '../entity_metadata.js'
 import { can_interract_with_entities } from '../permissions.js'
 import { abortable } from '../iterator.js'
@@ -18,7 +17,7 @@ const mcData = minecraft_data(VERSION)
 function spawn_merchants({ client, events, world }) {
   const { by_chunk } = world.traders
   const { id: type } = mcData.entitiesByName.villager
-  events.on(PlayerEvent.CHUNK_LOADED, ({ x: chunk_x, z: chunk_z }) => {
+  events.on('CHUNK_LOADED', ({ x: chunk_x, z: chunk_z }) => {
     if (by_chunk.has(chunk_index(chunk_x, chunk_z))) {
       for (const { id, name, x, y, z } of by_chunk.get(
         chunk_index(chunk_x, chunk_z),
@@ -52,7 +51,7 @@ function spawn_merchants({ client, events, world }) {
     }
   })
 
-  events.on(PlayerEvent.CHUNK_UNLOADED, ({ x, z }) => {
+  events.on('CHUNK_UNLOADED', ({ x, z }) => {
     if (by_chunk.has(chunk_index(x, z))) {
       client.write('entity_destroy', {
         entityIds: by_chunk.get(chunk_index(x, z)).map(({ id }) => id),
@@ -102,7 +101,7 @@ function open_trade({ client, world, get_state }) {
 
 /** @type {import('../context.js').Observer} */
 function look_player({ client, world, events, signal }) {
-  aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
+  aiter(abortable(on(events, 'STATE_UPDATED', { signal })))
     .map(([state]) => state)
     .filter(state => can_interract_with_entities(state))
     .reduce((last_position, { position }) => {

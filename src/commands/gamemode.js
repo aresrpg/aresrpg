@@ -1,7 +1,6 @@
 import { Position } from '../chat.js'
 import { SERVER_UUID } from '../settings.js'
 import { GameMode } from '../gamemode.js'
-import { PlayerAction } from '../events.js'
 
 import { write_error } from './commands.js'
 import { literal, integer } from './declare_options.js'
@@ -67,7 +66,7 @@ export default function gamemode({ args, sender, dispatch }) {
         position: Position.CHAT,
         sender: SERVER_UUID,
       })
-      dispatch(PlayerAction.SWITCH_GAMEMODE, { game_mode })
+      dispatch('SWITCH_GAMEMODE', { game_mode })
       return
     }
   }

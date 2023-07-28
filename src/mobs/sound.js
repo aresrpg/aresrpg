@@ -2,7 +2,6 @@ import { setInterval } from 'timers/promises'
 
 import { aiter } from 'iterator-helper'
 
-import { PlayerEvent } from '../events.js'
 import { play_sound } from '../sound.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
 import { abortable } from '../iterator.js'
@@ -11,7 +10,7 @@ import { distance3d_squared } from '../math.js'
 export default {
   /** @type {import('../context.js').Observer} */
   observe({ events, dispatch, client, world, signal, get_state }) {
-    events.on(PlayerEvent.MOB_DAMAGED, ({ mob: { type, position } }) => {
+    events.on('MOB_DAMAGED', ({ mob: { type, position } }) => {
       const {
         sounds: { hurt },
       } = Entities[type]
@@ -22,7 +21,7 @@ export default {
       })
     })
 
-    events.on(PlayerEvent.MOB_DEATH, ({ mob: { type, position } }) => {
+    events.on('MOB_DEATH', ({ mob: { type, position } }) => {
       const {
         sounds: { death },
       } = Entities[type]

@@ -2,7 +2,6 @@ import { on } from 'events'
 
 import { aiter } from 'iterator-helper'
 
-import { PlayerAction } from '../events.js'
 import { abortable } from '../iterator.js'
 import { play_sound, Sound } from '../sound.js'
 import logger from '../logger.js'
@@ -13,7 +12,7 @@ const log = logger(import.meta)
 export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
-    if (type === PlayerAction.SWITCH_SPELL) {
+    if (type === 'SWITCH_SPELL') {
       const selected_spell = Math.max(0, Math.min(payload, 7))
 
       log.info({ selected_spell }, 'switched spell')
@@ -23,7 +22,7 @@ export default {
       }
     }
 
-    if (type === PlayerAction.CAST_SPELL) {
+    if (type === 'CAST_SPELL') {
       const { selected_spell } = payload
       const { spells } = state
       // a casted spell will always be defined
@@ -55,7 +54,7 @@ export default {
         if (spell) {
           const { couldown, cast_time } = spell
           if (cast_time + couldown < Date.now()) {
-            dispatch(PlayerAction.CAST_SPELL, { selected_spell })
+            dispatch('CAST_SPELL', { selected_spell })
             client_chat_msg({
               client,
               message: [{ text: `cast spell ${selected_spell}` }],
@@ -82,7 +81,7 @@ export default {
             sound: Sound.SWITCH_SPELL,
             ...position,
           })
-          dispatch(PlayerAction.SWITCH_SPELL, slot - 1)
+          dispatch('SWITCH_SPELL', slot - 1)
         }
 
         client.write('held_item_slot', {

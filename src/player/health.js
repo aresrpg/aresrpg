@@ -9,7 +9,7 @@ import {
   get_total_characteristic,
 } from '../characteristics.js'
 import { compute_damage } from '../damage.js'
-import { PlayerAction, PlayerEvent, WorldRequest } from '../events.js'
+import { WorldRequest } from '../events.js'
 import { abortable } from '../iterator.js'
 import { map_range } from '../math.js'
 import { play_sound } from '../sound.js'
@@ -24,15 +24,17 @@ const REGENERATION_MIND_DIVIDER = 50
 export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
-    if (type === PlayerEvent.UPDATE_HEALTH) {
-      const max_health = get_max_health(state)
-      // make sure the health is rounded to 0.5
-      const payload_health = Math.round(payload.health * 2) / 2
-      const health = Math.max(0, Math.min(max_health, payload_health))
+    switch (type) {
+      case 'UPDATE_HEALTH': {
+        const max_health = get_max_health(state)
+        // make sure the health is rounded to 0.5
+        const payload_health = Math.round(payload.health * 2) / 2
+        const health = Math.max(0, Math.min(max_health, payload_health))
 
-      return {
-        ...state,
-        health,
+        return {
+          ...state,
+          health,
+        }
       }
     }
     return state
@@ -40,7 +42,7 @@ export default {
 
   /** @type {import('../context.js').Observer} */
   observe({ client, events, signal, dispatch, world, get_state }) {
-    events.once(PlayerEvent.STATE_UPDATED, state => {
+    events.once('STATE_UPDATED', state => {
       client.write('scoreboard_objective', {
         name: SCOREBOARD_NAME,
         action: CREATE_OBJECTIVE_ACTION,
@@ -69,12 +71,12 @@ export default {
 
         // Regenerate only if the player is not dead
         if (health > 0)
-          dispatch(PlayerAction.UPDATE_HEALTH, {
+          dispatch('UPDATE_HEALTH', {
             health: health + regeneration_per_second,
           })
       })
 
-    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
+    aiter(abortable(on(events, 'STATE_UPDATED', { signal })))
       .map(([state]) => state)
       .reduce((last_health, state) => {
         const { position, health } = state
@@ -103,12 +105,12 @@ export default {
             })
 
           if (health === 0) {
-            dispatch(PlayerAction.DIE)
+            dispatch('DIE')
             setTimeout(() => {
               // delaying to let the time of the death animation
               world.events.emit(WorldRequest.PLAYER_DIED, { uuid: client.uuid })
               // allows a correct handling of the position
-              dispatch(PlayerAction.TELEPORT_TO, world.spawn_position)
+              dispatch('TELEPORT_TO', world.spawn_position)
             }, 700)
             play_sound({
               client,

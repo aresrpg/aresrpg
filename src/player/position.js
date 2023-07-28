@@ -3,7 +3,7 @@ import { on } from 'events'
 import { aiter } from 'iterator-helper'
 
 import { chunk_index, chunk_position, same_chunk } from '../chunk.js'
-import { PlayerEvent, WorldRequest } from '../events.js'
+import { WorldRequest } from '../events.js'
 import { abortable } from '../iterator.js'
 import { synchronisation_payload } from '../sync.js'
 
@@ -26,7 +26,7 @@ export default {
 
   /** @type {import('../context.js').Observer} */
   observe({ world, client, signal, events }) {
-    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
+    aiter(abortable(on(events, 'STATE_UPDATED', { signal })))
       .map(([state]) => state)
       .reduce(
         ({ last_position, last_chunk_index }, state) => {

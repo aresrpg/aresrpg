@@ -1,6 +1,5 @@
 import logger from '../logger.js'
 import { block_position } from '../position.js'
-import { MobAction } from '../events.js'
 
 import { path_position } from './path.js'
 import { path_between } from './navigation.js'
@@ -10,7 +9,7 @@ const log = logger(import.meta)
 export default {
   /** @type {import('../mobs').MobsReducer} */
   async reduce_mob(state, { type, payload, time }, { world }) {
-    if (type === MobAction.GOTO) {
+    if (type === 'GOTO') {
       const { position } = payload
 
       const to = block_position(position)
@@ -68,7 +67,7 @@ export default {
         if (mob) {
           setTimeout(() => {
             const { position } = get_state()
-            mob.dispatch(MobAction.GOTO, {
+            mob.dispatch('GOTO', {
               position,
             })
           }, 5000).unref()

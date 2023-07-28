@@ -1,5 +1,4 @@
 import { client_chat_msg, Formats } from '../chat.js'
-import { PlayerAction } from '../events.js'
 
 import { write_error } from './commands.js'
 import { integer, literal } from './declare_options.js'
@@ -38,7 +37,7 @@ export default function settings({ sender, dispatch, args }) {
           MIN_UI_LEFT_OFFSET,
           Math.min(MAX_UI_LEFT_OFFSET, value),
         )
-        dispatch(PlayerAction.UPDATE_SETTINGS, { top_left_ui_offset })
+        dispatch('UPDATE_SETTINGS', { top_left_ui_offset })
         client_chat_msg({
           client: sender,
           message: [

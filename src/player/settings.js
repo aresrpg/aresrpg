@@ -1,9 +1,7 @@
-import { PlayerAction } from '../events.js'
-
 export default {
   /** @type {import('../context.js').Reducer} */
   reduce(state, { type, payload }) {
-    if (type === PlayerAction.UPDATE_SETTINGS)
+    if (type === 'UPDATE_SETTINGS')
       return {
         ...state,
         settings: {

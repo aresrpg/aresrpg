@@ -4,7 +4,7 @@ import { setInterval } from 'timers/promises'
 import { aiter } from 'iterator-helper'
 import combineAsyncIterators from 'combine-async-iterators'
 
-import { PlayerAction, PlayerEvent, WorldRequest } from '../events.js'
+import { WorldRequest } from '../events.js'
 import { create_armor_stand } from '../armor_stand.js'
 import { abortable } from '../iterator.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
@@ -29,16 +29,16 @@ export function register({ next_entity_id, ...world }) {
 export default {
   /** @type {import('../context.js').Observer} */
   observe({ events, dispatch, client, world, signal, get_state }) {
-    aiter(
-      abortable(on(events, PlayerEvent.RECEIVE_DAMAGE, { signal })),
-    ).forEach(([{ damage }]) => {
-      const { health } = get_state()
-      client.write('entity_status', {
-        entityId: PLAYER_ENTITY_ID,
-        entityStatus: health - damage > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
-      })
-      dispatch(PlayerAction.UPDATE_HEALTH, { health: health - damage })
-    })
+    aiter(abortable(on(events, 'RECEIVE_DAMAGE', { signal }))).forEach(
+      ([{ damage }]) => {
+        const { health } = get_state()
+        client.write('entity_status', {
+          entityId: PLAYER_ENTITY_ID,
+          entityStatus: health - damage > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
+        })
+        dispatch('UPDATE_HEALTH', { health: health - damage })
+      },
+    )
 
     // @see more in src/SYNC.md
     aiter(
@@ -49,8 +49,7 @@ export default {
       .map(([event]) => event)
       .forEach(({ damage, player: { uuid, entity_id, health, position } }) => {
         // if ourselves
-        if (uuid === client.uuid)
-          events.emit(PlayerEvent.RECEIVE_DAMAGE, { damage })
+        if (uuid === client.uuid) events.emit('RECEIVE_DAMAGE', { damage })
         // otherwise
         else {
           play_sound({
@@ -74,8 +73,8 @@ export default {
       abortable(
         // @ts-expect-error No overload matches this call
         combineAsyncIterators(
-          on(events, PlayerEvent.MOB_DAMAGED, { signal }),
-          on(events, PlayerEvent.MOB_DEATH, { signal }),
+          on(events, 'MOB_DAMAGED', { signal }),
+          on(events, 'MOB_DEATH', { signal }),
           on(world.events, WorldRequest.PLAYER_RECEIVE_DAMAGE, { signal }),
           setInterval(DAMAGE_INDICATOR_TTL / 2, [{ timer: true }], { signal }),
         ),
@@ -144,7 +143,7 @@ export default {
                 get_state(),
               )
               if (received_experience) {
-                dispatch(PlayerAction.RECEIVE_EXPERIENCE, {
+                dispatch('RECEIVE_EXPERIENCE', {
                   experience: received_experience,
                 })
                 create_armor_stand(client, entity_id, position, {

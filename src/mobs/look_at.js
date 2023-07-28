@@ -2,7 +2,6 @@ import { on } from 'events'
 
 import { aiter } from 'iterator-helper'
 
-import { MobEvent, PlayerEvent } from '../events.js'
 import { abortable } from '../iterator.js'
 import { can_interract_with_entities } from '../permissions.js'
 
@@ -10,7 +9,7 @@ import { path_position } from './path.js'
 
 export default {
   observe({ client, events }) {
-    events.on(PlayerEvent.MOB_ENTER_VIEW, ({ mob, signal }) => {
+    events.on('MOB_ENTER_VIEW', ({ mob, signal }) => {
       const look_at_player = player_state => {
         if (!can_interract_with_entities(player_state)) return
         const state = mob.get_state()
@@ -35,23 +34,21 @@ export default {
         })
       }
 
-      aiter(
-        abortable(on(mob.events, MobEvent.STATE_UPDATED, { signal })),
-      ).reduce((last_look_at, [{ look_at }]) => {
-        if (last_look_at !== look_at) {
-          if (last_look_at.player)
-            events.off(PlayerEvent.STATE_UPDATED, look_at_player)
-          if (look_at.player)
-            events.on(PlayerEvent.STATE_UPDATED, look_at_player)
-          else {
-            client.write('entity_head_rotation', {
-              entityId: mob.entity_id,
-              headYaw: look_at.yaw,
-            })
+      aiter(abortable(on(mob.events, 'STATE_UPDATED', { signal }))).reduce(
+        (last_look_at, [{ look_at }]) => {
+          if (last_look_at !== look_at) {
+            if (last_look_at.player) events.off('STATE_UPDATED', look_at_player)
+            if (look_at.player) events.on('STATE_UPDATED', look_at_player)
+            else {
+              client.write('entity_head_rotation', {
+                entityId: mob.entity_id,
+                headYaw: look_at.yaw,
+              })
+            }
           }
-        }
-        return look_at
-      })
+          return look_at
+        },
+      )
     })
   },
 }

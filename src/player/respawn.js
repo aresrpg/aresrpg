@@ -4,7 +4,6 @@ import { setInterval } from 'timers/promises'
 import { aiter } from 'iterator-helper'
 
 import { overworld } from '../world/codec.js'
-import { PlayerAction, PlayerEvent } from '../events.js'
 import { abortable } from '../iterator.js'
 import logger from '../logger.js'
 import { GameMode } from '../gamemode.js'
@@ -28,7 +27,7 @@ const BLINDNESS = 15
 export default {
   /** @type {import('../context.js').Observer} */
   observe({ client, events, signal, dispatch, get_state, world }) {
-    aiter(abortable(on(events, PlayerEvent.STATE_UPDATED, { signal })))
+    aiter(abortable(on(events, 'STATE_UPDATED', { signal })))
       .map(([{ health, game_mode }]) => ({ health, game_mode }))
       .reduce((last_health, { health, game_mode }) => {
         if (last_health !== health && health === 0) {
@@ -72,7 +71,7 @@ export default {
                   Math.floor(get_max_health(state) * 0.05),
                 )
 
-                dispatch(PlayerAction.UPDATE_HEALTH, { health: respawn_health })
+                dispatch('UPDATE_HEALTH', { health: respawn_health })
 
                 write_inventory(client, state)
                 send_attack_speed(client, get_attack_speed(state))
