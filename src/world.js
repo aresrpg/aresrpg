@@ -11,7 +11,7 @@ import { chunks } from './chunk.js'
 
 const log = logger(import.meta)
 
-const world_folder = join(
+export const world_folder = join(
   dirname(fileURLToPath(import.meta.url)),
   '..',
   'world',

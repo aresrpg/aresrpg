@@ -88,3 +88,8 @@ export function chunks(region_folder) {
     },
   }
 }
+
+export function save_chunk({ region_folder, x, z, chunk }) {
+  const provider = new AnvilWorld(region_folder)
+  return provider.save(x, z, chunk)
+}

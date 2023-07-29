@@ -19,6 +19,7 @@ import speed from './speed.js'
 import help from './help.js'
 import settings from './settings.js'
 import soul from './soul.js'
+import setBiome from './setBiome.js'
 
 export function write_error({ sender }) {
   sender.write('chat', {
@@ -107,6 +108,9 @@ export default function execute_command({
       break
     case 'soul':
       soul(command)
+      break
+    case 'setBiome':
+      setBiome(command)
       break
 
     default:
