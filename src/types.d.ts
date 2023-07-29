@@ -3,6 +3,12 @@ import net from 'net'
 declare module 'minecraft-protocol' {
   interface Server {
     socketServer: net.Server
+    mcversion: {
+      minecraftVersion: string
+      majorVersion: string
+      version: number
+      [key: string]: any
+    }
   }
 
   interface Client {
