@@ -61,7 +61,6 @@ export function create_server() {
 
   server.on('login', client => {
     const {
-      // @ts-ignore
       mcversion: { minecraftVersion, version },
     } = server
 
