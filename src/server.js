@@ -67,13 +67,25 @@ export function create_server() {
 
     // check protocol versions
     if (client.protocolVersion !== version) {
-      client.end(`Wrong minecraft version, expected: ${minecraftVersion}`)
+      client.end(
+        'Wrong minecraft version',
+        JSON.stringify([
+          { text: 'Currently only the version ', color: 'yellow' },
+          { text: minecraftVersion, color: 'red' },
+          { text: ' is supported.', color: 'yellow' },
+          { text: '\n\n' },
+          {
+            text: 'Try restarting your game with this version.',
+            color: 'gray',
+          },
+        ]),
+      )
       log.info(
         {
           username: client.username,
           uuid: client.uuid,
         },
-        'Client refused: wrong minecraft version'
+        'Client refused: wrong minecraft version',
       )
       return
     }
