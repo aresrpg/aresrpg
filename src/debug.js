@@ -2,7 +2,7 @@ import { PassThrough, Readable } from 'stream'
 
 import fastify from 'fastify'
 import cors from '@fastify/cors'
-import { XMLSerializer } from 'xmldom'
+import { XMLSerializer } from '@xmldom/xmldom'
 import { aiter } from 'iterator-helper'
 
 import Entities from '../data/entities.json' assert { type: 'json' }
