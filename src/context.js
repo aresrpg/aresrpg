@@ -60,7 +60,7 @@ import mobs_loot from './mobs/loot.js'
 import mobs_attack from './mobs/attack.js'
 import mobs_sound from './mobs/sound.js'
 import commands_declare from './commands/declare.js'
-import { abortable } from './iterator.js'
+import { abortable, unfazed } from './iterator.js'
 import Database from './database.js'
 import { USE_RESOURCE_PACK } from './settings.js'
 import { GameMode } from './gamemode.js'
@@ -353,13 +353,8 @@ export async function create_context({ client, world }) {
     controller.abort()
   })
 
-  client.on('error', error => {
-    if (error.message !== 'This socket has been ended by the other party')
-      log.error(error, 'Client error')
-  })
-
   const packets = aiter(
-    on(client, 'packet', { signal: controller.signal }),
+    unfazed(on(client, 'packet', { signal: controller.signal })),
   ).map(([payload, { name }]) => ({
     type: `packet/${name}`,
     payload,
@@ -402,7 +397,7 @@ export async function create_context({ client, world }) {
     }))
     .then(save_state)
     .catch(error => {
-      // TODO: what to do here if we can't save the client ?
+      // this should never occur
       log.error(error, 'State error')
     })
 

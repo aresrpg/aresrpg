@@ -25,3 +25,14 @@ export async function* abortable(iterator) {
     if (!(error instanceof Error && error.name === 'AbortError')) throw error
   }
 }
+
+/**
+ * @template T
+ * @param {AsyncIterableIterator<T> | AsyncIterable<T>} iterator
+ * @returns {AsyncIterator<T>}
+ */
+export async function* unfazed(iterator) {
+  try {
+    yield* iterator
+  } catch {}
+}
