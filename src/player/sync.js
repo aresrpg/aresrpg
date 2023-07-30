@@ -250,6 +250,13 @@ const Synchroniser = {
         case WorldRequest.NOTIFY_PRESENCE_TO(client.uuid):
           if (inside_view(data.position)) return handle_presence(data)
           break
+        case WorldRequest.REMOVE_PLAYER_FROM_WORLD: {
+          const { entity_id } = stored_player
+          client.write('entity_destroy', {
+            entityIds: [entity_id],
+          })
+          break
+        }
         case WorldRequest.PLAYER_HEALTH_UPDATE: {
           if (stored_player) {
             const { health, username } = data
@@ -372,6 +379,7 @@ export default {
       const synced_requests = [
         WorldRequest.PLAYER_HEALTH_UPDATE,
         WorldRequest.NOTIFY_PRESENCE_TO(client.uuid),
+        WorldRequest.REMOVE_PLAYER_FROM_WORLD,
         WorldRequest.PLAYER_DIED,
         WorldRequest.PLAYER_RESPAWNED,
         WorldRequest.RESYNC_DISPLAYED_INVENTORY,
