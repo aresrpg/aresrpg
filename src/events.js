@@ -9,6 +9,8 @@ export function last_event_value(emitter, event) {
 export const WorldRequest = {
   /** a new player joined the world */
   ADD_PLAYER_TO_WORLD: 'WORLD:ADD_PLAYER_TO_WORLD',
+  /** a player left the world */
+  REMOVE_PLAYER_FROM_WORLD: 'WORLD:REMOVE_PLAYER_FROM_WORLD',
   /** an user is sending a message in the chat */
   SEND_CHAT_MESSAGE: 'WORLD:SEND_CHAT_MESSAGE',
   /** an user is sending a private message to another player */
