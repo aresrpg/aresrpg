@@ -13,6 +13,7 @@ import { CATEGORY, play_sound } from '../sound.js'
 import { PLAYER_ENTITY_ID } from '../settings.js'
 import { compute_received_experience } from '../experience.js'
 import Colors from '../colors.js'
+import { can_receive_damage } from '../permissions.js'
 
 const DAMAGE_INDICATORS_AMOUNT = 10
 const DAMAGE_INDICATOR_TTL = 1200
@@ -31,12 +32,15 @@ export default {
   observe({ events, dispatch, client, world, signal, get_state }) {
     aiter(abortable(on(events, 'RECEIVE_DAMAGE', { signal }))).forEach(
       ([{ damage }]) => {
-        const { health } = get_state()
-        client.write('entity_status', {
-          entityId: PLAYER_ENTITY_ID,
-          entityStatus: health - damage > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
-        })
-        dispatch('UPDATE_HEALTH', { health: health - damage })
+        const state = get_state()
+        if (can_receive_damage(state)) {
+          const { health } = state
+          client.write('entity_status', {
+            entityId: PLAYER_ENTITY_ID,
+            entityStatus: health - damage > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
+          })
+          dispatch('UPDATE_HEALTH', { health: health - damage })
+        }
       },
     )
 
