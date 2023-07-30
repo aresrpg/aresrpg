@@ -36,6 +36,17 @@ export function create_server() {
     motd: 'loading...',
     maxPlayers: MAX_PLAYERS,
     favicon,
+    errorHandler: (client, error) => {
+      switch (error.message) {
+        case 'read ECONNRESET':
+        case 'This socket has been ended by the other party':
+          break
+        default:
+          log.error(error, 'Client error')
+          break
+      }
+      client.end(error.message)
+    },
     beforePing: (response, client) => {
       return {
         ...response,
