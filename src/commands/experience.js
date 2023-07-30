@@ -6,8 +6,8 @@ import { integer, literal } from './declare_options.js'
 const xp_args = [
   integer({
     name: 'amount',
-    // min: 0,
-    // max: 9999999,
+    min: 0,
+    max: 9999999,
   }),
 ]
 export const xp_nodes = [

@@ -70,9 +70,13 @@ const number =
       name,
       parser: `brigadier:${type}`,
       properties: {
-        flags: { min_present: min !== null, max_present: max !== null },
-        min,
-        max,
+        flags: {
+          unused: 0,
+          min_present: Number(min != null),
+          max_present: Number(max != null),
+        },
+        ...(min != null && { min }),
+        ...(max != null && { max }),
       },
     },
     children,

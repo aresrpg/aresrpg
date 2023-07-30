@@ -9,8 +9,8 @@ export const soul_nodes = [
     children: [
       integer({
         name: 'amount',
-        // min: 0,
-        // max: 9999999,
+        min: 0,
+        max: 100,
       }),
     ],
   }),
