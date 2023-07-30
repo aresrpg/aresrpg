@@ -16,7 +16,7 @@ test('The resource pack', async ctx => {
     sub_ctx.server.close()
   })
 
-  await ctx.test('should be a valid link', async ttt => {
+  await ctx.test('should be a valid link', async () => {
     const bot = createBot({
       host: 'localhost',
       version: VERSION,

@@ -2,7 +2,7 @@ import fs from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
-import { DOMParser } from 'xmldom'
+import { DOMParser } from '@xmldom/xmldom'
 
 import run from '../behavior.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }

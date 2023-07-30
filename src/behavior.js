@@ -1,4 +1,4 @@
-import { Node } from 'xmldom/lib/dom.js'
+import { Node } from '@xmldom/xmldom/lib/dom.js'
 
 import logger from './logger.js'
 import {
