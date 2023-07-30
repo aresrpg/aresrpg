@@ -15,6 +15,8 @@ export const settings_nodes = [
         children: [
           integer({
             name: 'Offset of the top left UI',
+            min: MIN_UI_LEFT_OFFSET,
+            max: MAX_UI_LEFT_OFFSET,
           }),
         ],
       }),
