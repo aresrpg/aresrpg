@@ -10,8 +10,9 @@ const Categories = {
   CUSTOM: 8,
 }
 
+/** @type {import('../context.js').Module} */
 export default {
-  /** @type {import('../context.js').Observer} */
+  name: 'player_statistics',
   observe({ client }) {
     client.on('client_command', actionId => {
       if (actionId.actionId === 1) {

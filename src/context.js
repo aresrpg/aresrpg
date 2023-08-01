@@ -30,6 +30,7 @@ import player_bells from './player/bells.js'
 import player_environmental_damage from './player/environmental_damage.js'
 import player_settings from './player/settings.js'
 import player_ui from './player/ui.js'
+import player_modules from './player/modules.js'
 import player_traders, {
   register as register_player_traders,
 } from './player/traders.js'
@@ -73,7 +74,7 @@ const initial_world = {
   ...floor1,
   // this eventEmitter is there to init typings
   // but it is replaced while creating a new server in server.js
-  /** @type {NodeJS.EventEmitter} */
+  /** @type {EventEmitter} */
   events: new EventEmitter(),
   next_entity_id: 1,
   next_window_id: 1, // 0 is the player inventory
@@ -232,7 +233,8 @@ const saved_state = ({
 
 /** @typedef {(state: State, action: Action, client: Client) => State} Reducer */
 /** @typedef {(action: Action) => Action} Transformer */
-/** @typedef {(context: Context) => void} Observer */
+/** @typedef {(context: Context, options?: Record<string, any>) => void} Observer */
+/** @typedef {{name: keyof typeof import('./types').AresModules, reduce?: Reducer, observe?: Observer,}} Module */
 
 /** @type {Reducer} */
 function reduce_state(state, action, client) {
@@ -269,51 +271,61 @@ export function observe_client({ mobs_position }) {
     /* Observers that handle the protocol part.
       They get the client and should map it to minecraft protocol */
 
-    finalization.observe(context)
+    const modules = [
+      finalization,
+      ...(USE_RESOURCE_PACK ? [player_resource_pack] : []),
+      // login has to stay on top
+      player_login,
 
-    if (USE_RESOURCE_PACK) player_resource_pack.observe(context)
+      player_attributes,
+      player_bells,
+      player_block_place,
+      player_chat,
+      player_deal_damage,
+      player_environmental_damage,
+      player_experience,
+      player_fall_damage,
+      player_health,
+      player_heartbeat,
+      player_inventory,
+      player_position,
+      player_respawn,
+      player_soul,
+      player_spell,
+      player_statistics,
+      player_sync,
+      player_tablist,
+      player_teleportation_stones,
+      player_traders,
+      player_ui,
 
-    // login has to stay on top
-    player_login.observe(context)
+      chunk_update,
 
-    player_attributes.observe(context)
-    player_experience.observe(context)
-    player_traders.observe(context)
-    player_statistics.observe(context)
-    player_fall_damage.observe(context)
-    player_health.observe(context)
-    player_chat.observe(context)
-    player_deal_damage.observe(context)
-    player_inventory.observe(context)
-    player_teleportation_stones.observe(context)
-    player_tablist.observe(context)
-    player_sync.observe(context)
-    player_spell.observe(context)
-    player_block_place.observe(context)
-    player_soul.observe(context)
-    player_ui.observe(context)
-    player_respawn.observe(context)
-    player_heartbeat.observe(context)
-    player_bells.observe(context)
-    player_position.observe(context)
-    player_environmental_damage.observe(context)
+      commands_declare,
 
-    commands_declare.observe(context)
+      mobs_attack,
+      mobs_damage,
+      mobs_dialog,
+      mobs_goto,
+      mobs_look_at,
+      mobs_loot,
+      mobs_movements,
+      mobs_position,
+      mobs_sound,
+      mobs_spawn,
+      mobs_target,
+      mobs_wakeup,
+    ]
 
-    mobs_position.observe(context)
-    mobs_spawn.observe(context)
-    mobs_movements.observe(context)
-    mobs_goto.observe(context)
-    mobs_dialog.observe(context)
-    mobs_damage.observe(context)
-    mobs_target.observe(context)
-    mobs_look_at.observe(context)
-    mobs_wakeup.observe(context)
-    mobs_loot.observe(context)
-    mobs_attack.observe(context)
-    mobs_sound.observe(context)
+    player_modules.observe(context, modules)
 
-    chunk_update.observe(context)
+    // enable a few modules by default
+    context.events.emit('MODULES', {
+      finalization: true,
+      player_login: true,
+      player_attributes: true,
+      commands_declare: true,
+    })
   }
 }
 

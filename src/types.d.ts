@@ -110,10 +110,17 @@ interface TypedEmitter<T extends EventMap> {
   off<K extends EventName<T>>(eventName: K, listener: EventListener<T[K]>): this
   off(eventName: string | symbol, listener: (arg: any) => void): this
 
+  removeListener<K extends EventName<T>>(
+    eventName: K,
+    listener: EventListener<T[K]>,
+  ): this
+  removeListener(eventName: string | symbol, listener: (arg: any) => void): this
+
   emit<K extends EventName<T>>(eventName: K, arg: T[K]): boolean
   emit(eventName: string | symbol, arg: any): boolean
 
   setMaxListeners(number): this
+  removeAllListeners(): this
 }
 
 type Dispatcher<T extends EventMap, K extends EventName<T>> = (
@@ -192,6 +199,7 @@ type PlayerEvents = TypedEmitter<{
     mouse: number
   } // the player interacted with another player
   RECEIVE_DAMAGE: { damage: number } // the player is receiving raw damage, this is not a direct health update as damage reduction may be applied, or canceled according to the gamemode
+  MODULES: Record<AresModules, boolean>
 }>
 
 // Distributed actions which can be dispatched and then reduced
@@ -249,3 +257,47 @@ type PlayerAction = {
 type MobAction = {
   [K in keyof MobActions]: { type: K; payload: MobActions[K]; time: number }
 }[keyof MobActions]
+
+enum AresModules {
+  player_modules = 'player_modules',
+
+  finalization = 'finalization',
+  player_resource_pack = 'player_resource_pack',
+  player_login = 'player_login',
+  player_attributes = 'player_attributes',
+  player_bells = 'player_bells',
+  player_block_place = 'player_block_place',
+  player_chat = 'player_chat',
+  player_deal_damage = 'player_deal_damage',
+  player_environmental_damage = 'player_environmental_damage',
+  player_experience = 'player_experience',
+  player_fall_damage = 'player_fall_damage',
+  player_health = 'player_health',
+  player_heartbeat = 'player_heartbeat',
+  player_inventory = 'player_inventory',
+  player_position = 'player_position',
+  player_respawn = 'player_respawn',
+  player_soul = 'player_soul',
+  player_spell = 'player_spell',
+  player_statistics = 'player_statistics',
+  player_sync = 'player_sync',
+  player_tablist = 'player_tablist',
+  player_teleportation_stones = 'player_teleportation_stones',
+  player_traders = 'player_traders',
+  player_ui = 'player_ui',
+  player_classes = 'player_classes',
+  chunk_update = 'chunk_update',
+  commands_declare = 'commands_declare',
+  mobs_attack = 'mobs_attack',
+  mobs_damage = 'mobs_damage',
+  mobs_dialog = 'mobs_dialog',
+  mobs_goto = 'mobs_goto',
+  mobs_look_at = 'mobs_look_at',
+  mobs_loot = 'mobs_loot',
+  mobs_movements = 'mobs_movements',
+  mobs_position = 'mobs_position',
+  mobs_sound = 'mobs_sound',
+  mobs_spawn = 'mobs_spawn',
+  mobs_target = 'mobs_target',
+  mobs_wakeup = 'mobs_wakeup',
+}

@@ -58,7 +58,9 @@ const nodes = flatten({
   ], // add the nodes of all the commands. exemple : [...command_1,...comand_2,...comand_3]
 })
 
+/** @type {import('../context.js').Module} */
 export default {
+  name: 'commands_declare',
   observe({ client, events }) {
     events.once('STATE_UPDATED', () => {
       client.write('declare_commands', {

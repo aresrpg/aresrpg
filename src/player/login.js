@@ -42,8 +42,9 @@ function fetch_head_pixels(client) {
     })
 }
 
+/** @type {import('../context.js').Module} */
 export default {
-  /** @type {import('../context.js').Reducer} */
+  name: 'player_login',
   reduce(state, { type, payload }) {
     if (type === 'STORE_HEAD_TEXTURE') {
       return {
@@ -59,7 +60,6 @@ export default {
     return state
   },
 
-  /** @type {import('../context.js').Observer} */
   observe({ client, events, world, signal, dispatch }) {
     events.once('STATE_UPDATED', state => {
       const {

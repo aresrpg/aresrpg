@@ -14,7 +14,9 @@ function register(object) {
   return new Promise(resolve => resolve_map.set(symbol, resolve))
 }
 
+/** @type {import('./context.js').Module} */
 export default {
+  name: 'finalization',
   observe(context) {
     const { id } = context.client
     Promise.all([

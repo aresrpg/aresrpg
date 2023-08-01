@@ -10,8 +10,9 @@ import {
 } from '../attribute.js'
 import { abortable } from '../iterator.js'
 
+/** @type {import('../context.js').Module} */
 export default {
-  /** @type {import('../context.js').Observer} */
+  name: 'player_attributes',
   observe({ client, events, signal }) {
     aiter(abortable(on(events, 'STATE_UPDATED', { signal })))
       .map(([state]) => state)
