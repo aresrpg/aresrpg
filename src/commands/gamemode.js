@@ -1,6 +1,6 @@
-import { Position } from '../chat.js'
+import { Position } from '../core/chat.js'
+import { GameMode } from '../core/gamemode.js'
 import { SERVER_UUID } from '../settings.js'
-import { GameMode } from '../gamemode.js'
 
 import { write_error } from './commands.js'
 import { literal, integer } from './declare_options.js'

@@ -1,4 +1,4 @@
-import run, { SUCCESS, childs } from '../behavior.js'
+import run, { SUCCESS, childs } from '../core/entity_behavior.js'
 
 export default async function repeat(node, state, context) {
   const [child] = childs(node)

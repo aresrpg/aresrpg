@@ -1,4 +1,4 @@
-import { SUCCESS } from '../behavior.js'
+import { SUCCESS } from '../core/entity_behavior.js'
 
 export default function look_at_player(node, state) {
   return {

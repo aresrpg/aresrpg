@@ -1,4 +1,4 @@
-import { client_chat_msg, Formats } from '../chat.js'
+import { client_chat_msg, Formats } from '../core/chat.js'
 
 import { write_error } from './commands.js'
 import { integer, literal } from './declare_options.js'

@@ -1,5 +1,5 @@
-import { Position } from '../chat.js'
-import { WorldRequest } from '../events.js'
+import { Position } from '../core/chat.js'
+import { WorldRequest } from '../core/events.js'
 
 import { write_error } from './commands.js'
 import { ParserProperties, literal, string, entity } from './declare_options.js'

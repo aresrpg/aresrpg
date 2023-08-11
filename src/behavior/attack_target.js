@@ -1,4 +1,4 @@
-import { SUCCESS, RUNNING, FAILURE } from '../behavior.js'
+import { SUCCESS, RUNNING, FAILURE } from '../core/entity_behavior.js'
 
 export default function attack_target(node, state) {
   if (!state.target) {

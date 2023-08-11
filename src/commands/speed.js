@@ -1,5 +1,5 @@
-import { send_movement_speed } from '../attribute.js'
-import { client_chat_msg, Formats } from '../chat.js'
+import { send_movement_speed } from '../core/attribute.js'
+import { client_chat_msg, Formats } from '../core/chat.js'
 
 import { write_error } from './commands.js'
 import { double, literal } from './declare_options.js'

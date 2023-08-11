@@ -1,4 +1,4 @@
-import { SUCCESS, FAILURE } from '../behavior.js'
+import { SUCCESS, FAILURE } from '../core/entity_behavior.js'
 
 export default function get_biggest_damager(node, state) {
   if (state.last_damager == null) {

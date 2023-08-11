@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node --experimental-json-modules -r dotenv/config src/index.js | pino-human",
-    "debug": "node --experimental-json-modules -r dotenv/config --inspect=0.0.0.0 src/index.js | pino-human",
+    "debug": "node --experimental-json-modules -r dotenv/config --expose-gc --inspect=0.0.0.0 src/index.js | pino-human",
     "lint": "eslint . && prettier . --check && npm run typecheck",
     "typecheck": "tsc --build",
     "format": "prettier . --write && eslint . --fix",

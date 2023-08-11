@@ -110,10 +110,17 @@ interface TypedEmitter<T extends EventMap> {
   off<K extends EventName<T>>(eventName: K, listener: EventListener<T[K]>): this
   off(eventName: string | symbol, listener: (arg: any) => void): this
 
+  removeListener<K extends EventName<T>>(
+    eventName: K,
+    listener: EventListener<T[K]>,
+  ): this
+  removeListener(eventName: string | symbol, listener: (arg: any) => void): this
+
   emit<K extends EventName<T>>(eventName: K, arg: T[K]): boolean
   emit(eventName: string | symbol, arg: any): boolean
 
   setMaxListeners(number): this
+  removeAllListeners(): this
 }
 
 type Dispatcher<T extends EventMap, K extends EventName<T>> = (
@@ -161,30 +168,29 @@ declare module 'events' {
   }
 }
 
-type State = import('./context.js').State
+type State = import('./player').State
+type Position = State['position']
+type SimplePosition = { x: number; y: number; z: number }
 type MobState = import('./mobs.js').MobState
+type Chunk = { x: number; z: number }
 
 // Local events which can be emited and then listened
 type PlayerEvents = TypedEmitter<{
   STATE_UPDATED: State // the player state has been updated
-  CHUNK_LOADED: { x: number; z: number; signal: AbortSignal } // a chunk has been loaded
-  CHUNK_UNLOADED: { x: number; z: number; signal: AbortSignal } // a chunk has been unloaded
+  REQUEST_CHUNKS_LOAD: Chunk[] // chunks needs to be loaded
+  REQUEST_CHUNKS_UNLOAD: Chunk[] // chunks needs to be unloaded
+  CHUNK_LOADED: Chunk & { signal: AbortSignal } // a chunk has been loaded
+  CHUNK_UNLOADED: Chunk // a chunk has been unloaded
   SCREEN_INTERRACTED: { x: number; y: number; screen_id: string; hand: number } // the player interacted with a screen_id
-  CHUNK_LOADED_WITH_MOBS: {
-    mobs: any
-    x: number
-    z: number
-    signal: AbortSignal
-  } // a chunk has been loaded with mobs
-  CHUNK_UNLOADED_WITH_MOBS: { mobs: any; x: number; z: number } // a chunk has been unloaded with mobs
-  MOB_ENTER_VIEW: { mob: any; signal: AbortSignal } // a mob is now visible by the player
-  MOB_LEAVE_VIEW: number // a mob is no longer visible by the player
+  REQUEST_ENTITY_SPAWN: { mob: Mob; position: SimplePosition } // an entity needs to spawn
+  REQUEST_ENTITIES_DESPAWN: { ids: number[] } // an entity needs to despawn
+  ENTITY_ENTER_VIEW: { mob: Mob; signal: AbortSignal } // an entity is now visible by the player
   MOB_DAMAGED: { mob: any; damage: number; critical_hit: boolean } // a mob visible by the player took damage
   MOB_DEATH: { mob: any; critical_hit: boolean } // a mob visible by the player died
   PLAYER_INTERRACTED: {
     player: {
       uuid: string
-      position: State['position']
+      position: Position
       health: number
       username: string
       entity_id: number
@@ -197,7 +203,7 @@ type PlayerEvents = TypedEmitter<{
 // Distributed actions which can be dispatched and then reduced
 type PlayerActions = {
   UPDATE_HEALTH: { health: number } // the player's health needs a direct update
-  TELEPORT_TO: State['position'] // the player needs to be teleported
+  TELEPORT_TO: Position // the player needs to be teleported
   LOOT_ITEM: {
     type: string
     count: number
@@ -213,6 +219,7 @@ type PlayerActions = {
   UPDATE_SETTINGS: { top_left_ui_offset: number } // some settings of the player should be updated
   SWITCH_SPELL: number // player switched hotbar slot
   CAST_SPELL: { selected_spell: number } // player casting a spell
+  LOAD_GAME_STATE: GameState // load a different game state
 
   'packet/position': any
   'packet/position_look': any
@@ -226,21 +233,44 @@ type MobEvents = TypedEmitter<{
   STATE_UPDATED: MobState // a mob state has been updated
 }>
 
+type Mob = import('./mobs').Mob
+
 // Distributed actions which can be dispatched and then reduced
 type MobActions = {
   RECEIVE_DAMAGE: {
     damage: number
     damager: string
-    damager_position: State['position']
+    damager_position: Position
     damager_strength: number
     critical_hit: boolean
   } // a mob is receiving damages
-  GOTO: { position: State['position'] } // a mob is going toward a position
+  GOTO: { position: Position } // a mob is going toward a position
   END_PATH: any
-  TARGET_POSITION: State['position']
+  TARGET_POSITION: Position
   WAKE_UP: any
   FORGET_TARGET: null // sometimes the mobs need to forget about his current target, like when the player died
+  MOB_POSITION: {
+    mob: Mob
+    position: Position
+    last_position: Position
+    x: number
+    z: number
+  }
 }
+
+type MobPositionsEvents = TypedEmitter<{
+  PROVIDE_MOBS: (mobs: Map<string, Mob[]>) => void
+  [key: string]: {
+    mob: Mob
+    position: { x: number; y: number; z: number }
+    last_position: { x: number; y: number; z: number }
+    target: { x: number; y: number; z: number }
+    x: number
+    z: number
+  }
+}>
+
+type MobPositionsActions = {}
 
 type PlayerAction = {
   [K in keyof PlayerActions]: { type: K; payload: PlayerActions[K] }
@@ -249,3 +279,5 @@ type PlayerAction = {
 type MobAction = {
   [K in keyof MobActions]: { type: K; payload: MobActions[K]; time: number }
 }[keyof MobActions]
+
+type GameState = 'GAME:ALIVE' | 'GAME:GHOST'
