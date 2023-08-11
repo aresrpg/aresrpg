@@ -45,7 +45,7 @@ export default {
     }
     return state
   },
-  observe({ client, events, world, signal, dispatch, get_state, on_unload }) {
+  observe({ client, events, world, signal, dispatch, get_state }) {
     events.on('REQUEST_CHUNKS_LOAD', async chunks => {
       const state = get_state()
       const points = chunks.map(({ x, z }) => ({ x, y: z }))

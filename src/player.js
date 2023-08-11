@@ -176,11 +176,6 @@ function create_context({ client, world }) {
     world,
     events,
     signal: controller.signal,
-    on_unload(unload_handler) {
-      controller.signal.addEventListener('abort', unload_handler, {
-        once: true,
-      })
-    },
     get_state,
     inside_view: inside_view(get_state),
     /**
