@@ -1,4 +1,4 @@
-import { SUCCESS } from '../behavior.js'
+import { SUCCESS } from '../core/entity_behavior.js'
 
 export default function set_target(node, state) {
   const target = state.blackboard[node.getAttribute('input')]

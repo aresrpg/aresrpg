@@ -1,4 +1,9 @@
-import run, { SUCCESS, RUNNING, FAILURE, childs } from '../behavior.js'
+import run, {
+  SUCCESS,
+  RUNNING,
+  FAILURE,
+  childs,
+} from '../core/entity_behavior.js'
 
 /**
  * Create a control node

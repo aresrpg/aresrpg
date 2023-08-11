@@ -1,4 +1,4 @@
-import { Position } from '../chat.js'
+import { Position } from '../core/chat.js'
 
 import gamemode from './gamemode.js'
 import dislike from './dislike.js'
@@ -19,6 +19,7 @@ import speed from './speed.js'
 import help from './help.js'
 import settings from './settings.js'
 import soul from './soul.js'
+import switch_game_state from './switch_game_state.js'
 
 export function write_error({ sender }) {
   sender.write('chat', {
@@ -107,6 +108,9 @@ export default function execute_command({
       break
     case 'soul':
       soul(command)
+      break
+    case 'switch_game_state':
+      switch_game_state(command)
       break
 
     default:

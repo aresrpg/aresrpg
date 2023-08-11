@@ -1,4 +1,4 @@
-import { world_chat_msg } from '../chat.js'
+import { world_chat_msg } from '../core/chat.js'
 
 import { literal } from './declare_options.js'
 

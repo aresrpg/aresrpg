@@ -1,6 +1,6 @@
-import { block_position } from '../position.js'
-import { path_position } from '../mobs/path.js'
-import { SUCCESS } from '../behavior.js'
+import { SUCCESS } from '../core/entity_behavior.js'
+import { path_position } from '../core/entity_path.js'
+import { block_position } from '../core/position.js'
 
 export default function random_block_position(node, state, { action }) {
   const { time } = action

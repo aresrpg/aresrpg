@@ -1,4 +1,4 @@
-import { SUCCESS, RUNNING } from '../behavior.js'
+import { RUNNING, SUCCESS } from '../core/entity_behavior.js'
 
 export default function sleep(node, state, { action, path }) {
   const { time } = action

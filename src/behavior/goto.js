@@ -1,12 +1,12 @@
 import logger from '../logger.js'
-import { block_center_position } from '../position.js'
-import { path_position, path_remain_time } from '../mobs/path.js'
 import {
   path_between,
   diagonal_distance,
   horizontal_diagonal_distance,
-} from '../mobs/navigation.js'
-import { SUCCESS, FAILURE, RUNNING } from '../behavior.js'
+} from '../core/navigation.js'
+import { SUCCESS, FAILURE, RUNNING } from '../core/entity_behavior.js'
+import { block_center_position } from '../core/position.js'
+import { path_position, path_remain_time } from '../core/entity_path.js'
 
 const log = logger(import.meta)
 
