@@ -8,7 +8,7 @@ import { abortable } from '../core/iterator.js'
 
 /** @type {import('../server').Module} */
 export default {
-  observe({ client, events, signal, world, on_unload }) {
+  observe({ client, events, signal, world }) {
     events.on('REQUEST_ENTITY_SPAWN', ({ mob, position }) => {
       spawn_entity(client, { mob, position })
       const entity_despawn_controller = new AbortController()

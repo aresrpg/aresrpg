@@ -73,15 +73,6 @@ export default {
                   client: proxied_client,
                   events: proxied_events,
                   signal: controller.signal,
-                  on_unload(unload_handler) {
-                    controller.signal.addEventListener(
-                      'abort',
-                      unload_handler,
-                      {
-                        once: true,
-                      },
-                    )
-                  },
                 }),
               )
 
