@@ -147,6 +147,7 @@ function look_player({ client, world, events, signal }) {
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'entity_trader',
   observe(context) {
     spawn_merchants(context)
     open_trade(context)

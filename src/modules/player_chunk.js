@@ -1,6 +1,6 @@
 import { on } from 'events'
 
-import { aiter } from 'iterator-helper'
+import { aiter, iter } from 'iterator-helper'
 
 import {
   chunk_position,
@@ -15,13 +15,14 @@ import {
   square_symmetric_difference,
 } from '../core/math.js'
 import { PLAYER_ENTITY_ID } from '../settings.js'
-import { abortable } from '../core/iterator.js'
+import { abortable, combine, named_on } from '../core/iterator.js'
 import logger from '../logger.js'
 
 const log = logger(import.meta)
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_chunk',
   reduce(state, { type, payload }) {
     if (type === 'packet/settings') {
       log.info({ view_distance: payload.viewDistance }, 'update view distance')
@@ -46,43 +47,84 @@ export default {
     return state
   },
   observe({ client, events, world, signal, dispatch, get_state }) {
-    events.on('REQUEST_CHUNKS_LOAD', async chunks => {
-      const state = get_state()
-      const points = chunks.map(({ x, z }) => ({ x, y: z }))
-      const sorted = sort_by_distance2d(
-        {
-          x: chunk_position(state.position.x),
-          y: chunk_position(state.position.z),
-        },
-        points,
-      )
+    function unload_and_abort({ x, z, controller }) {
+      controller.abort()
+      unload_chunk({ client, x, z })
+      events.emit('CHUNK_UNLOADED', { x, z })
+    }
 
-      for (const { x, y: z } of sorted) {
-        const chunk_unload_controller = new AbortController()
+    aiter(
+      abortable(
+        combine(
+          named_on(events, 'REQUEST_CHUNKS_LOAD', { signal }),
+          named_on(events, 'REQUEST_CHUNKS_UNLOAD', { signal }),
+          named_on(events, 'PROVIDE_CHUNKS', { signal }),
+        ),
+      ),
+    )
+      .reduce(async (loaded_chunks, { event, payload }) => {
+        if (event === 'PROVIDE_CHUNKS') {
+          // removing the abort controller when providing chunks
+          payload(loaded_chunks.map(({ x, z }) => ({ x, z })))
+          return loaded_chunks
+        }
 
-        // allows to run only once when the chunk is unloaded
-        aiter(abortable(on(events, 'REQUEST_CHUNKS_UNLOAD', { signal })))
-          .map(([chunks]) => chunks)
-          .dropWhile(
-            chunks => !chunks.some(chunk => chunk.x === x && chunk.z === z),
+        if (event === 'REQUEST_CHUNKS_UNLOAD') {
+          const unloaded_chunks = loaded_chunks.filter(loaded_chunk =>
+            payload.some(
+              unloaded_chunk =>
+                loaded_chunk.x === unloaded_chunk.x &&
+                loaded_chunk.z === unloaded_chunk.z,
+            ),
           )
-          .take(1)
-          .toArray()
-          .finally(() => {
-            chunk_unload_controller.abort()
-            unload_chunk({ client, x, z })
-            events.emit('CHUNK_UNLOADED', chunk)
-          })
 
-        await load_chunk({ client, world, x, z }) // TODO: handle errors somehow, kick client ?
+          unloaded_chunks.forEach(unload_and_abort)
 
-        events.emit('CHUNK_LOADED', {
-          x,
-          z,
-          signal: chunk_unload_controller.signal,
-        })
-      }
-    })
+          return loaded_chunks.filter(loaded_chunk =>
+            payload.every(
+              unloaded_chunk =>
+                loaded_chunk.x !== unloaded_chunk.x ||
+                loaded_chunk.z !== unloaded_chunk.z,
+            ),
+          )
+        }
+
+        if (event === 'REQUEST_CHUNKS_LOAD') {
+          const state = get_state()
+          const points = payload.map(({ x, z }) => ({ x, y: z }))
+          const sorted = sort_by_distance2d(
+            {
+              x: chunk_position(state.position.x),
+              y: chunk_position(state.position.z),
+            },
+            points,
+          )
+
+          const newly_loaded_chunks = await iter(sorted)
+            .toAsyncIterator()
+            .map(async ({ x, y: z }) => {
+              const chunk_unload_controller = new AbortController()
+
+              await load_chunk({ client, world, x, z }) // TODO: handle errors somehow, kick client ?
+              events.emit('CHUNK_LOADED', {
+                x,
+                z,
+                signal: chunk_unload_controller.signal,
+              })
+
+              return {
+                x,
+                z,
+                controller: chunk_unload_controller,
+              }
+            })
+            .toArray()
+
+          return [...loaded_chunks, ...newly_loaded_chunks]
+        }
+      }, [])
+      // ! very important, when the module is unloaded we need to unload all the chunks
+      .then(loaded_chunks => loaded_chunks.forEach(unload_and_abort))
 
     aiter(abortable(on(events, 'STATE_UPDATED', { signal })))
       .map(([{ position, view_distance, teleport }]) => ({
@@ -182,39 +224,20 @@ export default {
           teleport: null,
         },
       )
-      .finally(() => {
-        const state = get_state()
-        if (state) {
-          const chunk_point = {
-            x: chunk_position(state.position.x),
-            z: chunk_position(state.position.z),
-          }
 
-          for (let x = -state.view_distance; x <= state.view_distance; x++) {
-            for (let z = -state.view_distance; z <= state.view_distance; z++) {
-              events.emit('CHUNK_UNLOADED', {
-                x: chunk_point.x + x,
-                z: chunk_point.z + z,
-              })
-            }
-          }
-        }
+    // load first chunk of the player
+    events.once('STATE_UPDATED', ({ position }) => {
+      const chunk = {
+        x: chunk_position(position.x),
+        z: chunk_position(position.z),
+      }
+
+      client.write('update_view_position', {
+        chunkX: chunk.x,
+        chunkZ: chunk.z,
       })
 
-    // load first chunk on player position ================
-    const { position } = get_state()
-
-    const chunk = {
-      x: chunk_position(position.x),
-      z: chunk_position(position.z),
-    }
-
-    client.write('update_view_position', {
-      chunkX: chunk.x,
-      chunkZ: chunk.z,
+      events.emit('REQUEST_CHUNKS_LOAD', [chunk])
     })
-
-    events.emit('REQUEST_CHUNKS_LOAD', [chunk])
-    // ====================================================
   },
 }

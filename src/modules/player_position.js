@@ -11,6 +11,7 @@ const types = ['packet/position', 'packet/position_look', 'packet/look']
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_position',
   reduce(state, { type, payload }) {
     if (types.includes(type)) {
       return {

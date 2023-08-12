@@ -67,7 +67,7 @@ import { create_client_handler } from './player.js'
 /** @typedef {import("./player").Observer} Observer */
 /** @typedef {import("./mobs").MobsReducer} MobsReducer */
 /** @typedef {import("./mobs").MobObserver} MobObserver */
-/** @typedef {{reduce?: Reducer, observe?: Observer, reduce_mob?: MobsReducer, observe_mob?: MobObserver }} Module */
+/** @typedef {{name: string, reduce?: Reducer, observe?: Observer, reduce_mob?: MobsReducer, observe_mob?: MobObserver }} Module */
 
 /** @typedef {typeof initial_world_reducers} WorldReducers */
 /** @typedef {Readonly<UnionToIntersection<ReturnType<typeof initial_world_reducers[number]>>>} World */
@@ -113,7 +113,12 @@ const world = await Promise.resolve(entity_modules)
 const observables = {
   /** @type {import("./player").Observables} */
   optional_modules: {
-    'GAME:GHOST': [player_attributes, player_block_placement, player_inventory],
+    'GAME:GHOST': [
+      player_attributes,
+      player_block_placement,
+      player_inventory,
+      player_chunk,
+    ],
     'GAME:ALIVE': [
       player_attributes,
       player_bells,

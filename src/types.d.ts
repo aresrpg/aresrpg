@@ -198,6 +198,7 @@ type PlayerEvents = TypedEmitter<{
     mouse: number
   } // the player interacted with another player
   RECEIVE_DAMAGE: { damage: number } // the player is receiving raw damage, this is not a direct health update as damage reduction may be applied, or canceled according to the gamemode
+  PROVIDE_CHUNKS: (chunks: Chunk[]) => void // the player is requesting informations about loaded chunks
 }>
 
 // Distributed actions which can be dispatched and then reduced

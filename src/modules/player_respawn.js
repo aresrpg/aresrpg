@@ -26,6 +26,7 @@ const BLINDNESS = 15
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_respawn',
   observe({ client, events, signal, dispatch, get_state, world }) {
     aiter(abortable(on(events, 'STATE_UPDATED', { signal })))
       .map(([{ health, game_mode, soul }]) => ({ health, game_mode, soul }))

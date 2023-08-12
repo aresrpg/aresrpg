@@ -18,6 +18,7 @@ const CANCELLING_FALL_DAMAGE_BLOCKS = [
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_fall_damage',
   observe({ events, dispatch, signal, world }) {
     aiter(abortable(on(events, 'STATE_UPDATED', { signal })))
       .map(([{ position, teleport }]) => ({ position, teleport }))

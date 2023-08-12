@@ -39,6 +39,7 @@ const SURFACE_BLOCKS = {
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_environmental_damage',
   observe({ client, get_state, world, dispatch, events, signal }) {
     aiter(abortable(setInterval(INTERVAL, null, { signal })))
       .map(get_state)

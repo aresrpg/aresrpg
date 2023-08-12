@@ -3,6 +3,7 @@ import Entities from '../../data/entities.json' assert { type: 'json' }
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'entity_loot',
   observe({ client, events, dispatch }) {
     events.on('MOB_DEATH', ({ mob }) => {
       const position = mob.position()

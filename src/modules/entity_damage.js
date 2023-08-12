@@ -1,11 +1,10 @@
 import { on } from 'events'
 
 import { aiter } from 'iterator-helper'
-import combineAsyncIterators from 'combine-async-iterators'
 
 import { WorldRequest } from '../core/events.js'
 import logger from '../logger.js'
-import { abortable } from '../core/iterator.js'
+import { abortable, combine } from '../core/iterator.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
 import { to_metadata } from '../core/entity_metadata.js'
 import { compute_weapon_dealt_damage } from '../core/damage.js'
@@ -48,6 +47,7 @@ function get_knockback_position({
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'entity_damage',
   async reduce_mob(state, { type, payload, time }) {
     if (type === 'RECEIVE_DAMAGE') {
       const {
@@ -87,7 +87,7 @@ export default {
   observe({ client, get_state, world, events, signal, dispatch }) {
     aiter(
       abortable(
-        combineAsyncIterators(
+        combine(
           on(events, 'PLAYER_INTERRACTED', { signal }),
           on(client, 'use_entity', { signal }),
         ),

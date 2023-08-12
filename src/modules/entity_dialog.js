@@ -2,6 +2,7 @@ import { speak_to } from '../core/entity_dialog.js'
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'entity_dialog',
   observe({ client, world }) {
     const right_click = 2
     client.on('use_entity', ({ target, mouse, sneaking }) => {

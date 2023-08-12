@@ -2,11 +2,10 @@ import { on } from 'events'
 import { setInterval } from 'timers/promises'
 
 import { aiter } from 'iterator-helper'
-import combineAsyncIterators from 'combine-async-iterators'
 
 import { WorldRequest } from '../core/events.js'
 import { create_armor_stand } from '../core/armor_stand.js'
-import { abortable } from '../core/iterator.js'
+import { abortable, combine } from '../core/iterator.js'
 import Entities from '../../data/entities.json' assert { type: 'json' }
 import { show_blood, show_death_smoke } from '../core/particules.js'
 import { CATEGORY, play_sound } from '../core/sound.js'
@@ -21,6 +20,7 @@ import {
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_damage',
   observe({ events, dispatch, client, world, signal, get_state }) {
     aiter(abortable(on(events, 'RECEIVE_DAMAGE', { signal }))).forEach(
       ([{ damage }]) => {
@@ -67,8 +67,7 @@ export default {
     // this is a clever way to avoid overusing the player state
     aiter(
       abortable(
-        // @ts-expect-error No overload matches this call
-        combineAsyncIterators(
+        combine(
           on(events, 'MOB_DAMAGED', { signal }),
           on(events, 'MOB_DEATH', { signal }),
           on(world.events, WorldRequest.PLAYER_RECEIVE_DAMAGE, { signal }),

@@ -7,6 +7,7 @@ import { abortable } from '../core/iterator.js'
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'entity_attack',
   observe({ events, client, dispatch }) {
     events.on('ENTITY_ENTER_VIEW', ({ mob, signal }) => {
       aiter(abortable(on(mob.events, 'STATE_UPDATED', { signal }))).reduce(

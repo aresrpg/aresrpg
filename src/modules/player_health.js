@@ -23,6 +23,7 @@ const REGENERATION_MIND_DIVIDER = 50
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_health',
   reduce(state, { type, payload }) {
     switch (type) {
       case 'UPDATE_HEALTH': {

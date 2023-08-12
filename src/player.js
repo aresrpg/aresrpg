@@ -2,7 +2,6 @@ import { EventEmitter, on } from 'events'
 import { PassThrough } from 'stream'
 
 import { aiter, iter } from 'iterator-helper'
-import combineAsyncIterators from 'combine-async-iterators'
 import { pino } from 'pino'
 
 import items from '../data/items.json' assert { type: 'json' }
@@ -15,7 +14,7 @@ import plugin_channels from './core/plugin_channels.js'
 import player_modules from './modules/player_modules.js'
 import { inside_view } from './core/view_distance.js'
 import { GameMode } from './core/gamemode.js'
-import { abortable, unfazed } from './core/iterator.js'
+import { abortable, combine, unfazed } from './core/iterator.js'
 import { Worlds } from './world.js'
 
 const log = logger(import.meta)
@@ -130,6 +129,7 @@ const saved_state = ({
   last_disconnection_time,
   user_interface,
   settings,
+  game_state,
 }) => ({
   position,
   inventory,
@@ -144,6 +144,7 @@ const saved_state = ({
   last_disconnection_time,
   user_interface,
   settings,
+  game_state,
 })
 
 /** @type Transformer */
@@ -275,11 +276,7 @@ export function create_client_handler({
       }
 
       // handling actions and packets
-      aiter(
-        abortable(
-          combineAsyncIterators(actions[Symbol.asyncIterator](), packets),
-        ),
-      )
+      aiter(abortable(combine(actions[Symbol.asyncIterator](), packets)))
         .map(transform_action)
         .reduce(
           (last_state, action) => {

@@ -6,6 +6,7 @@ const BELL_BLOCK_ID = 667
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_bells',
   observe(context) {
     const { client, world } = context
     client.on('block_place', async ({ location, direction }) => {

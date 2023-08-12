@@ -3,6 +3,7 @@ import { synchronisation_payload } from '../core/sync.js'
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_tablist',
   observe({ world, client, events, get_state }) {
     const player_info = state => ({
       properties: client.profile?.properties ?? [],

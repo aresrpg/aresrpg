@@ -12,6 +12,7 @@ const Categories = {
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_statistics',
   observe({ client }) {
     client.on('client_command', actionId => {
       if (actionId.actionId === 1) {

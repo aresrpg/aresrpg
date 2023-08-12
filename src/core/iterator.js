@@ -1,3 +1,7 @@
+import { on } from 'events'
+
+import merge from 'fast-merge-async-iterators'
+
 export function async_tail_recursive(generator) {
   return async function* (...args) {
     let stream = generator(...args)
@@ -35,4 +39,14 @@ export async function* unfazed(iterator) {
   try {
     yield* iterator
   } catch {}
+}
+
+export async function* named_on(events, event, options) {
+  for await (const [payload] of on(events, event, options))
+    yield { event, payload }
+}
+
+export function combine(...iterables) {
+  // @ts-ignore weird
+  return merge.default('iters-close-wait', ...iterables)
 }

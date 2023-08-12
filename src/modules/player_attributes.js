@@ -12,6 +12,7 @@ import { abortable } from '../core/iterator.js'
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_attributes',
   observe({ client, events, signal }) {
     aiter(abortable(on(events, 'STATE_UPDATED', { signal })))
       .map(([state]) => state)

@@ -10,6 +10,7 @@ import { abortable } from '../core/iterator.js'
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'entity_movements',
   observe({ client, events, world, inside_view, signal: player_signal }) {
     events.on('CHUNK_LOADED', ({ x, z, signal }) => {
       aiter(

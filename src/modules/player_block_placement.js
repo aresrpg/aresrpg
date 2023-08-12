@@ -5,6 +5,7 @@ const log = logger(import.meta)
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_block_placement',
   observe({ dispatch, client, world }) {
     client.on('block_place', ({ location }) =>
       get_block(world, location)
