@@ -9,6 +9,7 @@ import { distance3d_squared } from '../core/math.js'
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'entity_sound',
   observe({ events, dispatch, client, world, signal, get_state }) {
     events.on('MOB_DAMAGED', ({ mob: { type, position } }) => {
       const {

@@ -8,6 +8,7 @@ import { path_position } from '../core/entity_path.js'
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'entity_look_at',
   observe({ client, events }) {
     events.on('ENTITY_ENTER_VIEW', ({ mob, signal }) => {
       const look_at_player = player_state => {

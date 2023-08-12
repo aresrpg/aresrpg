@@ -362,6 +362,7 @@ const Synchroniser = {
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_sync',
   observe({ world, client, events, inside_view, signal, dispatch, get_state }) {
     const player_stream = new PassThrough({ objectMode: true })
 

@@ -6,6 +6,7 @@ import { abortable } from '../core/iterator.js'
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'entity_target',
   async reduce_mob(state, { type, payload }) {
     if (type === 'TARGET_POSITION') {
       return {

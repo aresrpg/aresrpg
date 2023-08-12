@@ -17,6 +17,7 @@ const mcData = minecraftData(VERSION)
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_experience',
   reduce(state, { type, payload }) {
     if (type === 'RECEIVE_EXPERIENCE') {
       const { experience } = payload

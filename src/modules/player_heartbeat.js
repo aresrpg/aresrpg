@@ -13,6 +13,7 @@ const log = logger(import.meta)
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_heartbeat',
   observe({ client, events, signal, dispatch }) {
     aiter(abortable(on(events, 'STATE_UPDATED', { signal }))).reduce(
       ({ heartbeating, sound_handle }, [state]) => {

@@ -94,6 +94,7 @@ function printable_items({
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_chat',
   observe({ client, get_state, world, dispatch }) {
     const chat_mapper = {
       '%pos%': () => {

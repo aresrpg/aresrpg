@@ -62,6 +62,7 @@ const nodes = flatten({
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_commands',
   observe({ client, events }) {
     events.once('STATE_UPDATED', () => {
       client.write('declare_commands', {

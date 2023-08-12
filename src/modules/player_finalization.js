@@ -16,6 +16,7 @@ function register(object) {
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_finalization',
   observe(context) {
     const { id } = context.client
     Promise.all([

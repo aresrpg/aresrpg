@@ -52,6 +52,7 @@ const Slots = {
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_scoreboard',
   observe({ events, dispatch, signal, client, get_state }) {
     const update_sidebar = update_sidebar_for({
       client,

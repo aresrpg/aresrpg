@@ -16,6 +16,7 @@ const SOUL_REGEN_PER_ONLINE_HOUR = 12
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_soul',
   reduce(state, { type, payload }) {
     switch (type) {
       case 'DIE': {

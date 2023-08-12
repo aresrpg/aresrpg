@@ -9,6 +9,7 @@ import { get_max_health } from '../core/characteristics.js'
 
 /** @type {import("../server").Module} */
 export default {
+  name: 'player_ui',
   observe({ events, dispatch, client, world, signal, get_state }) {
     const {
       display_health_profile,

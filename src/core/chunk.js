@@ -157,3 +157,21 @@ export function chunks(region_folder) {
     },
   }
 }
+
+export function surrounding_chunks({ position, view_distance }) {
+  const chunks = []
+  const { x, z } = position
+  const chunkX = chunk_position(x)
+  const chunkZ = chunk_position(z)
+
+  for (let dx = -view_distance; dx <= view_distance; dx++) {
+    for (let dz = -view_distance; dz <= view_distance; dz++) {
+      chunks.push({
+        x: chunkX + dx,
+        z: chunkZ + dz,
+      })
+    }
+  }
+
+  return chunks
+}

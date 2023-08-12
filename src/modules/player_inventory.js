@@ -84,6 +84,7 @@ function handle_cursor({ right_click, cursor_content, slot_content }) {
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_inventory',
   reduce(state, { type, payload }) {
     const {
       inventory_sequence_number,

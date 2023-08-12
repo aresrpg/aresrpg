@@ -30,6 +30,7 @@ const wakeup_to_end = async_tail_recursive(raw_wakeup_to_end)
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'entity_wakeup',
   observe({ events }) {
     events.on('ENTITY_ENTER_VIEW', ({ mob, signal }) => {
       const time = Date.now()

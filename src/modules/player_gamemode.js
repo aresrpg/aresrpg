@@ -4,6 +4,7 @@ const log = logger(import.meta)
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_gamemode',
   reduce(state, { type, payload }) {
     if (type === 'SWITCH_GAMEMODE') {
       const { game_mode } = payload

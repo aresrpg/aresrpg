@@ -9,6 +9,7 @@ const log = logger(import.meta)
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'entity_path',
   observe_mob({ events, dispatch }) {
     const state = aiter(on(events, 'STATE_UPDATED')).map(([state]) => state)
     const end = path_to_end(state)

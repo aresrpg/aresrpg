@@ -11,6 +11,7 @@ const log = logger(import.meta)
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_spell',
   reduce(state, { type, payload }) {
     if (type === 'SWITCH_SPELL') {
       const selected_spell = Math.max(0, Math.min(payload, 7))
@@ -47,8 +48,6 @@ export default {
       .forEach(() => {
         const { selected_spell, spells, position } = get_state()
         const spell = spells[selected_spell]
-
-        console.dir({ spell })
 
         if (spell) {
           const { couldown, cast_time } = spell

@@ -191,6 +191,7 @@ function on_window_click({ world, client, dispatch, get_state }) {
 
 /** @type {import("../server").Module} */
 export default {
+  name: 'player_teleportation_stones',
   observe(context) {
     const { events, client } = context
     events.on('CHUNK_LOADED', on_chunk_loaded(context))

@@ -7,6 +7,7 @@ const log = logger(import.meta)
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'entity_goto',
   async reduce_mob(state, { type, payload, time }, { world }) {
     if (type === 'GOTO') {
       const { position } = payload

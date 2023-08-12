@@ -40,6 +40,7 @@ function fetch_head_pixels(client) {
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_login',
   reduce(state, { type, payload }) {
     if (type === 'STORE_HEAD_TEXTURE') {
       return {

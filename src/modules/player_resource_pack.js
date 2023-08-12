@@ -12,6 +12,7 @@ const Status = {
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_resource_pack',
   observe({ client }) {
     client.write('resource_pack_send', {
       url: RESOURCE_PACK_URI,

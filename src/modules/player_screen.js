@@ -2,6 +2,7 @@ import { screen_ray_intersection } from '../core/screen.js'
 
 /** @type {import('../server').Module} */
 export default {
+  name: 'player_screen',
   observe({ client, events, world }) {
     client.on('arm_animation', ({ hand }) => {
       events.once('STATE_UPDATED', state => {
