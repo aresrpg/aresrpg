@@ -4,7 +4,7 @@ import { synchronisation_payload } from '../core/sync.js'
 /** @type {import('../server').Module} */
 export default {
   name: 'player_tablist',
-  observe({ world, client, events, get_state }) {
+  observe({ world, client, events, get_state, signal }) {
     const player_info = state => ({
       properties: client.profile?.properties ?? [],
       latency: client.latency,
@@ -49,13 +49,20 @@ export default {
       }
     }
 
-    client.once('end', () => {
-      world.events.off(WorldRequest.NOTIFY_PRESENCE_TO(client.uuid), add_player)
-      world.events.off(WorldRequest.ADD_PLAYER_TO_WORLD, on_player)
-      world.events.emit(WorldRequest.REMOVE_PLAYER_FROM_WORLD, {
-        uuid: client.uuid,
-      })
-    })
+    signal.addEventListener(
+      'abort',
+      () => {
+        world.events.off(
+          WorldRequest.NOTIFY_PRESENCE_TO(client.uuid),
+          add_player,
+        )
+        world.events.off(WorldRequest.ADD_PLAYER_TO_WORLD, on_player)
+        world.events.emit(WorldRequest.REMOVE_PLAYER_FROM_WORLD, {
+          uuid: client.uuid,
+        })
+      },
+      { once: true },
+    )
 
     events.once('STATE_UPDATED', state => {
       // listening to request intended to us from a new player joining

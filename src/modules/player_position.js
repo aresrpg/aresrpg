@@ -25,7 +25,7 @@ export default {
     return state
   },
 
-  observe({ world, client, signal, events }) {
+  observe({ world, client, signal, events, dispatch }) {
     aiter(abortable(on(events, 'STATE_UPDATED', { signal })))
       .map(([state]) => state)
       .reduce(
@@ -78,5 +78,10 @@ export default {
           last_chunk_index: undefined,
         },
       )
+
+    // when the module is loaded, teleport to the last known position
+    events.once('STATE_UPDATED', state => {
+      dispatch('TELEPORT_TO', state.position)
+    })
   },
 }
