@@ -3,7 +3,7 @@ import { client_chat_msg, Formats } from '../core/chat.js'
 import { write_error } from './commands.js'
 import { literal } from './declare_options.js'
 
-const GameStates = ['GAME_ALIVE', 'GAME_GHOST']
+const GameStates = ['GAME_ALIVE', 'GAME_GHOST', 'MAIN_MENU']
 
 export const switch_game_state_nodes = [
   literal({

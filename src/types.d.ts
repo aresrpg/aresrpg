@@ -283,4 +283,4 @@ type MobAction = {
   [K in keyof MobActions]: { type: K; payload: MobActions[K]; time: number }
 }[keyof MobActions]
 
-type GameState = 'GAME:ALIVE' | 'GAME:GHOST'
+type GameState = 'GAME:ALIVE' | 'GAME:GHOST' | 'MAIN:MENU'

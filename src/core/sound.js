@@ -14,6 +14,7 @@ export const CATEGORY = {
 export const Sound = {
   SWITCH_SPELL: 'aresrpg:ui_spell_switch',
   SPELL_FAILED: 'aresrpg:ui_spell_failed',
+  MUSIC_MANRACNI: 'aresrpg:music_manracni',
 }
 
 export function play_sound({

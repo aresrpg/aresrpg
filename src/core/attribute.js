@@ -61,3 +61,26 @@ export function send_movement_speed(client, speed) {
     ],
   })
 }
+
+function abilities_flags({
+  invulnerable = false,
+  flying = false,
+  allow_flying = false,
+  creative_mode = false,
+}) {
+  return (
+    (invulnerable ? 0x01 : 0) |
+    (flying ? 0x02 : 0) |
+    (allow_flying ? 0x04 : 0) |
+    (creative_mode ? 0x08 : 0)
+  )
+}
+
+export function set_flying(client, flying) {
+  log.info({ flying, username: client.username }, 'send flying')
+  client.write('abilities', {
+    flags: abilities_flags({ flying }),
+    flyingSpeed: 0.05,
+    walkingSpeed: 0.1,
+  })
+}
