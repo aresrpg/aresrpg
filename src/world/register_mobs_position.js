@@ -33,19 +33,19 @@ export default function register_mobs_position(world) {
     if (last_position == null)
       return new Map([
         ...mobs_by_chunk.entries(),
-        [chunk_index(x, z), [...mobs, { mob, position }]],
+        [chunk_index(x, z), [...mobs, mob]],
       ])
     else if (!same_chunk(last_position, position)) {
       const last_x = chunk_position(last_position.x)
       const last_z = chunk_position(last_position.z)
       const last_mobs = mobs_by_chunk
         .get(chunk_index(last_x, last_z))
-        .filter(({ mob: { entity_id } }) => entity_id !== mob.entity_id)
+        .filter(({ entity_id }) => entity_id !== mob.entity_id)
 
       return new Map([
         ...mobs_by_chunk.entries(),
         [chunk_index(last_x, last_z), last_mobs],
-        [chunk_index(x, z), [...mobs, { mob, position }]],
+        [chunk_index(x, z), [...mobs, mob]],
       ])
     }
     return mobs_by_chunk

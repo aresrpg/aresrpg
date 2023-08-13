@@ -35,8 +35,8 @@ export default {
         })
       }
 
-      aiter(abortable(on(mob.events, 'STATE_UPDATED', { signal }))).reduce(
-        (last_look_at, [{ look_at }]) => {
+      aiter(abortable(on(mob.events, 'STATE_UPDATED', { signal })))
+        .reduce((last_look_at, [{ look_at }]) => {
           if (last_look_at !== look_at) {
             if (last_look_at.player) events.off('STATE_UPDATED', look_at_player)
             if (look_at.player) events.on('STATE_UPDATED', look_at_player)
@@ -48,8 +48,10 @@ export default {
             }
           }
           return look_at
-        },
-      )
+        })
+        .then(() => {
+          events.off('STATE_UPDATED', look_at_player)
+        })
     })
   },
 }

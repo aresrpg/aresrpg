@@ -20,7 +20,7 @@ export default {
       ).forEach(([{ mob, position, last_position, target }]) => {
         if (inside_view(position) && !inside_view(last_position)) {
           // Mob entered view
-          events.emit('REQUEST_ENTITY_SPAWN', { mob, position })
+          events.emit('REQUEST_ENTITY_SPAWN', mob)
         } else if (!inside_view(position) && inside_view(last_position)) {
           // Mob exited view
           events.emit('REQUEST_ENTITIES_DESPAWN', { ids: [mob.entity_id] })

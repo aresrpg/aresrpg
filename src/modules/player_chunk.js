@@ -3,20 +3,21 @@ import { on } from 'events'
 import { aiter, iter } from 'iterator-helper'
 
 import {
+  chunk_index,
   chunk_position,
   load_chunk,
   same_chunk,
   unload_chunk,
 } from '../core/chunk.js'
-import { position_equal } from '../core/position.js'
 import {
   sort_by_distance2d,
   square_difference,
   square_symmetric_difference,
 } from '../core/math.js'
-import { PLAYER_ENTITY_ID } from '../settings.js'
 import { abortable, combine, named_on } from '../core/iterator.js'
 import logger from '../logger.js'
+import { position_equal } from '../core/position.js'
+import { PLAYER_ENTITY_ID } from '../settings.js'
 
 const log = logger(import.meta)
 
@@ -91,7 +92,12 @@ export default {
 
         if (event === 'REQUEST_CHUNKS_LOAD') {
           const state = get_state()
-          const points = payload.map(({ x, z }) => ({ x, y: z }))
+          const loaded_chunk_keys = new Set(loaded_chunks.map(chunk_index))
+          // avoid loading already loaded chunks
+          const points = payload
+            .filter(chunk => !loaded_chunk_keys.has(chunk_index(chunk)))
+            .map(({ x, z }) => ({ x, y: z }))
+
           const sorted = sort_by_distance2d(
             {
               x: chunk_position(state.position.x),

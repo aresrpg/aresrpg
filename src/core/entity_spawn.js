@@ -16,8 +16,9 @@ export const color_by_category = {
   garde: 'blue',
 }
 
-export function spawn_entity(client, { mob, position }) {
+export function spawn_entity(client, mob) {
   const { entity_id, type, level } = mob
+  const position = mob.position()
   const { category, minecraft_entity, display_name } = Entities[type]
 
   client.write('spawn_entity_living', {

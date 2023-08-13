@@ -68,9 +68,10 @@ export default {
 
     events.once(
       'STATE_UPDATED',
-      ({ last_connection_time, last_disconnection_time }) => {
+      ({ last_connection_time, last_disconnection_time, soul }) => {
         // when the player join, we give him the soul he regenerated while offline
-        if (last_disconnection_time !== undefined) {
+        // unless he is a ghost (0 soul)
+        if (last_disconnection_time !== undefined && soul !== 0) {
           const time_offline = Math.max(
             0,
             last_connection_time - last_disconnection_time,

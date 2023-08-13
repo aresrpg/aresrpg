@@ -4,6 +4,10 @@ import { chunk_index } from '../core/chunk.js'
 import { destroy_entities, spawn_entity } from '../core/entity_spawn.js'
 import { abortable, combine, named_on } from '../core/iterator.js'
 
+function mob_already_spawned(entities_in_view, mob) {
+  return entities_in_view.some(({ id }) => id === mob.entity_id)
+}
+
 /** @type {import('../server').Module} */
 export default {
   name: 'entity_spawn',
@@ -17,12 +21,15 @@ export default {
       ),
     )
       .reduce((entities_in_view, { event, payload }) => {
-        if (event === 'REQUEST_ENTITY_SPAWN') {
-          const { mob, position } = payload
+        if (
+          event === 'REQUEST_ENTITY_SPAWN' &&
+          !mob_already_spawned(entities_in_view, payload)
+        ) {
+          const mob = payload
 
           if (mob.get_state().health <= 0) return entities_in_view
 
-          spawn_entity(client, { mob, position })
+          spawn_entity(client, mob)
           const entity_despawn_controller = new AbortController()
 
           events.emit('ENTITY_ENTER_VIEW', {
@@ -60,12 +67,9 @@ export default {
     events.on('CHUNK_LOADED', ({ x, z }) => {
       world.mobs_positions_emitter.emit('PROVIDE_MOBS', mobs_by_chunk => {
         const mobs = mobs_by_chunk.get(chunk_index(x, z)) ?? []
-        mobs.forEach(({ mob, position }) =>
-          events.emit('REQUEST_ENTITY_SPAWN', {
-            mob,
-            position,
-          }),
-        )
+        mobs.forEach(mob => {
+          events.emit('REQUEST_ENTITY_SPAWN', mob)
+        })
       })
     })
 
@@ -86,12 +90,9 @@ export default {
         world.mobs_positions_emitter.emit('PROVIDE_MOBS', mobs_by_chunk => {
           chunks
             .flatMap(({ x, z }) => mobs_by_chunk.get(chunk_index(x, z)) ?? [])
-            .forEach(({ mob, position }) =>
-              events.emit('REQUEST_ENTITY_SPAWN', {
-                mob,
-                position,
-              }),
-            )
+            .forEach(mob => {
+              events.emit('REQUEST_ENTITY_SPAWN', mob)
+            })
         })
       })
     })

@@ -176,8 +176,12 @@ export default {
         { frame_expiration: -1, last_entities_ids: [] },
       )
 
-    events.on('ENTITY_ENTER_VIEW', ({ mob, signal }) => {
-      aiter(abortable(on(mob.events, 'STATE_UPDATED', { signal })))
+    events.on('ENTITY_ENTER_VIEW', ({ mob, signal: mob_despawn_signal }) => {
+      aiter(
+        abortable(
+          on(mob.events, 'STATE_UPDATED', { signal: mob_despawn_signal }),
+        ),
+      )
         .map(([{ health, last_hit_was_critical }]) => ({
           health,
           last_hit_was_critical,
