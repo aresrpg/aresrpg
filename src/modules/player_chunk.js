@@ -65,8 +65,13 @@ export default {
     )
       .reduce(async (loaded_chunks, { event, payload }) => {
         if (event === 'PROVIDE_CHUNKS') {
-          // removing the abort controller when providing chunks
-          payload(loaded_chunks.map(({ x, z }) => ({ x, z })))
+          payload(
+            loaded_chunks.map(({ x, z, controller }) => ({
+              x,
+              z,
+              signal: controller.signal,
+            })),
+          )
           return loaded_chunks
         }
 

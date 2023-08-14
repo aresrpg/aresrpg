@@ -66,6 +66,7 @@ export function create_mob_handler(modules) {
       const events = new EventEmitter()
       // events.setMaxListeners(Infinity)
       const entity_id = world.next_entity_id + index
+      /** @type {() => MobState} */
       const get_state = last_event_value(events, 'STATE_UPDATED')
 
       const mob = {

@@ -185,8 +185,9 @@ type PlayerEvents = TypedEmitter<{
   REQUEST_ENTITY_SPAWN: { mob: Mob; position: SimplePosition } // an entity needs to spawn
   REQUEST_ENTITIES_DESPAWN: { ids: number[] } // an entity needs to despawn
   ENTITY_ENTER_VIEW: { mob: Mob; signal: AbortSignal } // an entity is now visible by the player
-  MOB_DAMAGED: { mob: any; damage: number; critical_hit: boolean } // a mob visible by the player took damage
-  MOB_DEATH: { mob: any; critical_hit: boolean } // a mob visible by the player died
+  ENTITY_DAMAGED_IN_VIEW: { mob: any; damage: number; critical_hit: boolean } // a mob visible by the player took damage
+  ENTITY_DIED_IN_VIEW: { mob: any; critical_hit: boolean } // a mob visible by the player died
+  ENTITY_MOVED_IN_VIEW: MobActions['MOB_POSITION'] // an entity moved in the player's view
   PLAYER_INTERRACTED: {
     player: {
       uuid: string
@@ -252,6 +253,7 @@ type MobActions = {
   FORGET_TARGET: null // sometimes the mobs need to forget about his current target, like when the player died
   MOB_POSITION: {
     mob: Mob
+    target: Position
     position: Position
     last_position: Position
     x: number

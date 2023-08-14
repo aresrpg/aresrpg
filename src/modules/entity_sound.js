@@ -11,7 +11,7 @@ import { distance3d_squared } from '../core/math.js'
 export default {
   name: 'entity_sound',
   observe({ events, dispatch, client, world, signal, get_state }) {
-    events.on('MOB_DAMAGED', ({ mob: { type, position } }) => {
+    events.on('ENTITY_DAMAGED_IN_VIEW', ({ mob: { type, position } }) => {
       const {
         sounds: { hurt },
       } = Entities[type]
@@ -22,7 +22,7 @@ export default {
       })
     })
 
-    events.on('MOB_DEATH', ({ mob: { type, position } }) => {
+    events.on('ENTITY_DIED_IN_VIEW', ({ mob: { type, position } }) => {
       const {
         sounds: { death },
       } = Entities[type]
