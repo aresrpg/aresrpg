@@ -1,84 +1,72 @@
-import { aiter } from 'iterator-helper'
-
 import { chunk_index } from '../core/chunk.js'
 import { destroy_entities, spawn_entity } from '../core/entity_spawn.js'
-import { abortable, combine, named_on } from '../core/iterator.js'
-import { inside_view } from '../core/view_distance.js'
-
-function mob_in_view(entities_in_view, mob) {
-  return entities_in_view.some(({ id }) => id === mob.entity_id)
-}
 
 /** @type {import('../server').Module} */
 export default {
   name: 'entity_spawn',
-  observe({ client, events, signal, world }) {
-    aiter(
-      abortable(
-        combine(
-          named_on(events, 'REQUEST_ENTITY_SPAWN', { signal }),
-          named_on(events, 'REQUEST_ENTITIES_DESPAWN', { signal }),
-          named_on(world.mobs_positions_emitter, 'MOB_POSITION', { signal }),
-        ),
-      ),
-    )
-      .reduce((entities_in_view, { event, payload }) => {
-        if (
-          event === 'MOB_POSITION' &&
-          mob_in_view(entities_in_view, payload.mob)
-        ) {
-          const { mob, position, last_position } = payload
-          if (inside_view(position) && !inside_view(last_position)) {
-            // Mob entered view
-            events.emit('REQUEST_ENTITY_SPAWN', mob)
-          } else if (!inside_view(position) && inside_view(last_position)) {
-            // Mob exited view
-            events.emit('REQUEST_ENTITIES_DESPAWN', { ids: [mob.entity_id] })
-          } else events.emit('ENTITY_MOVED_IN_VIEW', payload)
-        }
+  observe({ client, events, signal, world, inside_view }) {
+    // A Set being O(1) and an array O(n), what if we give up a bit of functionnal for simplicity ?
+    // TODO: maybe we should try to give modules a more standalone outlook
+    // TODO: and replace reducers by forEachs along with their own scoped variables
+    // this would help clarify the code as there would be no more need to combine iterators
+    const spawned_entities = new Set()
+    const entities_controllers = new Map()
 
-        if (
-          event === 'REQUEST_ENTITY_SPAWN' &&
-          !mob_in_view(entities_in_view, payload)
-        ) {
-          const mob = payload
+    events.on('REQUEST_ENTITY_SPAWN', mob => {
+      if (mob.get_state().health > 0 && !spawned_entities.has(mob.entity_id)) {
+        spawn_entity(client, mob)
+        const entity_despawn_controller = new AbortController()
 
-          if (mob.get_state().health <= 0) return entities_in_view
+        spawned_entities.add(mob.entity_id)
+        entities_controllers.set(mob.entity_id, entity_despawn_controller)
 
-          spawn_entity(client, mob)
-          const entity_despawn_controller = new AbortController()
-
-          events.emit('ENTITY_ENTER_VIEW', {
-            mob,
-            signal: entity_despawn_controller.signal,
-          })
-
-          return [
-            ...entities_in_view,
-            {
-              id: mob.entity_id,
-              controller: entity_despawn_controller,
-            },
-          ]
-        }
-
-        if (event === 'REQUEST_ENTITIES_DESPAWN') {
-          const { ids } = payload
-          destroy_entities(client, ids)
-          return entities_in_view.filter(({ id }) => !ids.includes(id))
-        }
-
-        return entities_in_view
-      }, [])
-      .then(entities => {
-        entities.forEach(({ controller }) => {
-          controller.abort()
+        events.emit('ENTITY_ENTER_VIEW', {
+          mob,
+          signal: entity_despawn_controller.signal,
         })
-        destroy_entities(
-          client,
-          entities.map(({ id }) => id),
-        )
+      }
+    })
+
+    events.on('REQUEST_ENTITIES_DESPAWN', ids => {
+      destroy_entities(client, ids)
+      ids.forEach(id => {
+        spawned_entities.delete(id)
+        entities_controllers.get(id).abort()
+        entities_controllers.delete(id)
       })
+    })
+
+    signal.addEventListener(
+      'abort',
+      () => {
+        entities_controllers.forEach(controller => controller.abort())
+        destroy_entities(client, [...spawned_entities.values()])
+      },
+      { once: true },
+    )
+
+    world.mobs_positions_emitter.on(
+      'MOB_POSITION',
+      ({ mob, position, last_position, ...event }) => {
+        const position_inside_view = inside_view(position)
+        const last_position_inside_view = inside_view(last_position)
+
+        if (position_inside_view && !last_position_inside_view) {
+          // Mob entered view
+          events.emit('REQUEST_ENTITY_SPAWN', mob)
+        } else if (!position_inside_view && last_position_inside_view) {
+          // Mob exited view
+          events.emit('REQUEST_ENTITIES_DESPAWN', [mob.entity_id])
+        } else if (spawned_entities.has(mob.entity_id)) {
+          events.emit('ENTITY_MOVED_IN_VIEW', {
+            mob,
+            position,
+            last_position,
+            ...event,
+          })
+        }
+      },
+    )
 
     events.on('CHUNK_LOADED', ({ x, z }) => {
       world.mobs_positions_emitter.emit('PROVIDE_MOBS', mobs_by_chunk => {
@@ -93,9 +81,10 @@ export default {
       world.mobs_positions_emitter.emit('PROVIDE_MOBS', mobs_by_chunk => {
         const mobs = mobs_by_chunk.get(chunk_index(x, z)) ?? []
         if (mobs.length)
-          events.emit('REQUEST_ENTITIES_DESPAWN', {
-            ids: mobs.map(({ entity_id }) => entity_id),
-          })
+          events.emit(
+            'REQUEST_ENTITIES_DESPAWN',
+            mobs.map(({ entity_id }) => entity_id),
+          )
       })
     })
 

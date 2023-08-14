@@ -23,7 +23,7 @@ export default {
     return state
   },
   // this module allows the player to enable and disable other modules
-  observe({ client, events, signal, ...context }, observables) {
+  observe({ client, events, world, signal, ...context }, observables) {
     // when we receive a MODULES event, we need to enable or disable modules
     aiter(abortable(on(events, 'STATE_UPDATED', { signal })))
       .map(([{ game_state }]) => game_state)
@@ -58,6 +58,9 @@ export default {
                 const controller = new AbortController()
                 const proxied_events = events_interceptor(events)
                 const proxied_client = events_interceptor(client)
+                const proxied_world = events_interceptor(
+                  world.mobs_positions_emitter,
+                )
 
                 // when the global controller is aborted, we simply abort the local controller
                 // as everything will be garbage collected, we don't need to do anything else
@@ -74,6 +77,8 @@ export default {
                     proxied_client.remove_all_intercepted_listeners()
                     // and all local listeners that were added to the global events
                     proxied_events.remove_all_intercepted_listeners()
+                    // and all local listeners that were added to the world
+                    proxied_world.remove_all_intercepted_listeners()
                     // lastly we remove the listener from the global signal as we don't need it anymore
                     signal.removeEventListener('abort', handle_global_abort)
                   },
@@ -85,6 +90,10 @@ export default {
                   client: proxied_client,
                   events: proxied_events,
                   signal: controller.signal,
+                  world: {
+                    ...world,
+                    mobs_positions_emitter: proxied_world,
+                  },
                 })
 
                 return {

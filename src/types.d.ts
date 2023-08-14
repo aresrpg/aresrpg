@@ -182,8 +182,8 @@ type PlayerEvents = TypedEmitter<{
   CHUNK_LOADED: Chunk & { signal: AbortSignal } // a chunk has been loaded
   CHUNK_UNLOADED: Chunk // a chunk has been unloaded
   SCREEN_INTERRACTED: { x: number; y: number; screen_id: string; hand: number } // the player interacted with a screen_id
-  REQUEST_ENTITY_SPAWN: { mob: Mob; position: SimplePosition } // an entity needs to spawn
-  REQUEST_ENTITIES_DESPAWN: { ids: number[] } // an entity needs to despawn
+  REQUEST_ENTITY_SPAWN: Mob // an entity needs to spawn
+  REQUEST_ENTITIES_DESPAWN: number[] // an entity needs to despawn
   ENTITY_ENTER_VIEW: { mob: Mob; signal: AbortSignal } // an entity is now visible by the player
   ENTITY_DAMAGED_IN_VIEW: { mob: any; damage: number; critical_hit: boolean } // a mob visible by the player took damage
   ENTITY_DIED_IN_VIEW: { mob: any; critical_hit: boolean } // a mob visible by the player died
