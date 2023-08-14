@@ -195,7 +195,7 @@ export default {
               entityStatus: health > 0 ? 2 : 3, // Hurt Animation and Hurt Sound (sound not working)
               // TODO: fix sound
             })
-            events.emit('MOB_DAMAGED', {
+            events.emit('ENTITY_DAMAGED_IN_VIEW', {
               mob,
               damage: last_health - health,
               critical_hit: last_hit_was_critical,
@@ -218,7 +218,7 @@ export default {
             })
 
             if (health === 0) {
-              events.emit('MOB_DEATH', {
+              events.emit('ENTITY_DIED_IN_VIEW', {
                 mob,
                 critical_hit: last_hit_was_critical,
               })

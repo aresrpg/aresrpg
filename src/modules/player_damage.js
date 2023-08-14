@@ -68,8 +68,8 @@ export default {
     aiter(
       abortable(
         combine(
-          on(events, 'MOB_DAMAGED', { signal }),
-          on(events, 'MOB_DEATH', { signal }),
+          on(events, 'ENTITY_DAMAGED_IN_VIEW', { signal }),
+          on(events, 'ENTITY_DIED_IN_VIEW', { signal }),
           on(world.events, WorldRequest.PLAYER_RECEIVE_DAMAGE, { signal }),
           setInterval(DAMAGE_INDICATOR_TTL / 2, [{ timer: true }], { signal }),
         ),
@@ -113,7 +113,7 @@ export default {
             z: z + (Math.random() * 2 - 1) * 0.25,
           }
           const particle_position = { x, y: y + height * 0.7, z }
-          // the MOB_DEATH event doesn't emit a damage value
+          // the ENTITY_DIED_IN_VIEW event doesn't emit a damage value
           // so we can safely assume that if damage is undefined
           // the mob is dead
           const is_dead = damage === undefined || player?.health - damage <= 0

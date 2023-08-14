@@ -5,7 +5,7 @@ import Entities from '../../data/entities.json' assert { type: 'json' }
 export default {
   name: 'entity_loot',
   observe({ client, events, dispatch }) {
-    events.on('MOB_DEATH', ({ mob }) => {
+    events.on('ENTITY_DIED_IN_VIEW', ({ mob }) => {
       const position = mob.position()
       const owner = mob.get_state().first_damager
 
