@@ -49,9 +49,7 @@ export default {
           }
           return look_at
         })
-        .then(() => {
-          events.off('STATE_UPDATED', look_at_player)
-        })
+        .then(() => events.off('STATE_UPDATED', look_at_player))
     })
   },
 }
