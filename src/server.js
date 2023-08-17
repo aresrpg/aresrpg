@@ -59,6 +59,7 @@ import player_resource_pack from './modules/player_resource_pack.js'
 import player_login from './modules/player_login.js'
 import player_statistics from './modules/player_statistics.js'
 import { create_client_handler } from './player.js'
+import player_main_menu from './modules/player_main_menu.js'
 
 /** @template U
  * @typedef {import('./types').UnionToIntersection<U>} UnionToIntersection */
@@ -113,16 +114,23 @@ const world = await Promise.resolve(entity_modules)
 const observables = {
   /** @type {import("./player").Observables} */
   optional_modules: {
+    'MAIN:MENU': [player_main_menu],
     'GAME:GHOST': [
       player_attributes,
+      player_bells,
       player_block_placement,
-      player_inventory,
+      player_position,
+      player_soul,
+      player_sync,
+      player_tablist,
+      player_ui,
       player_chunk,
     ],
     'GAME:ALIVE': [
       player_attributes,
       player_bells,
       player_block_placement,
+      player_position,
       player_damage,
       player_environmental_damage,
       player_experience,
@@ -153,7 +161,6 @@ const observables = {
     ...(USE_RESOURCE_PACK ? [player_resource_pack] : []),
     player_login,
     player_statistics,
-    player_position,
     player_commands,
     player_chat,
   ],
