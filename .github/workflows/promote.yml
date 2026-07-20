@@ -4,17 +4,26 @@
 #
 # Master never takes a merge COMMIT: promotion is a fast-forward push of the exact approved
 # head SHA, so master's commits stay BYTE-IDENTICAL to edge's (signatures survive perfectly)
-# and the pusher is the Actions bot — "reviewer ≠ pusher" holds naturally, required-review
-# stays. Trigger = the owner commenting `/promote` on a PR targeting edge OR master (explicit
+# and the pusher is the Actions bot — "reviewer ≠ pusher" holds by construction. Trigger = the
+# owner commenting `/promote` on a PR targeting edge OR master (explicit
 # command, never an approval side-effect). The job refuses unless: commenter is the owner · the
 # approval story holds (owner-authored PRs: the /promote comment IS the owner's approval act —
 # GitHub forbids self-review, so a review assert would be unsatisfiable by construction;
 # foreign-authored PRs: the owner's APPROVED review is required ON TOP of his /promote) · every
 # check on the head is green · the push is a true fast-forward (the base is an ancestor of the
 # head). GOVERNANCE LINE: the master hop is deploy-class and fires only on the repository
-# owner's explicit word; the edge hop is routine integration. Ruleset story: required-review
-# stays ON at the ruleset layer (it blocks raw pushes); the bot is a bypass actor whose own
-# asserts above are the real gate. THAT LAST ASSERT ENFORCES
+# owner's explicit word; the edge hop is routine integration. RULESET STORY (audit-corrected):
+# master/edge carry NO pull_request rule and an EMPTY bypass list (current_user_can_bypass:
+# never) — this bot has zero bypass privilege; it clears the exact same required status checks,
+# signatures, linear-history and fast-forward rules as any other pusher. "Who may land code" is
+# enforced entirely by THIS job's asserts above, never by a ruleset review rule or a bypass
+# grant — which is exactly why any collaborator's own signed, green-on-`gate`, ff direct push to
+# master was previously indistinguishable from a real promotion (audit finding F1a). The
+# `promoted` status stamped below closes that: only this job can mint it, and only after its
+# asserts pass, so once master's ruleset requires `promoted` alongside `gate` (a follow-up
+# ruleset edit, sequenced AFTER this workflow itself reaches master) a direct push's SHA can
+# never carry it and master becomes bot-exclusive by construction. THAT FAST-FORWARD ASSERT
+# ALSO ENFORCES
 # ALWAYS-REBASE BY CONSTRUCTION: an unrebased branch cannot fast-forward — the linear law is
 # mechanical, not convention. After a MASTER promotion the job also aligns edge to the same
 # SHA (skip-warn when edge has already moved ahead), so the branches never drift at release
@@ -31,6 +40,7 @@ permissions:
   contents: write
   actions: write
   pull-requests: write # read the PR + open the next standing draft after a master promotion
+  statuses: write # stamp the `promoted` commit status (F1a — closes the direct-push-to-master hole)
 jobs:
   fast-forward:
     if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/promote')
@@ -70,6 +80,26 @@ jobs:
             --jq '[.check_runs[] | select(.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral")] | length')
           test "$NOT_GREEN" = "0" || { echo "$NOT_GREEN check(s) not green on $HEAD_SHA — refusing"; exit 1; }
           echo "sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+      - name: stamp the promoted status on $SHA (master only — BEFORE the push, never after)
+        if: steps.pr.outputs.base == 'master'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # ORDER IS LOAD-BEARING — do not "simplify" by moving this after the push. GitHub's
+          # required-status-checks ruleset rule evaluates the SHA being written to a protected
+          # ref AT PUSH TIME, against whatever statuses already exist on that SHA (statuses
+          # attach to the commit object, not to a ref). Once master's ruleset requires
+          # `promoted` (a follow-up ruleset edit, sequenced after this workflow itself reaches
+          # master), a ff-push writes $SHA onto master VERBATIM — no new merge commit — so
+          # `promoted` must already be posted on $SHA before that push happens, or the push is
+          # rejected before any post-push step could ever run. Stamping here is safe: $SHA
+          # already exists as a commit object in the repo (the full-history checkout above has
+          # it, as the PR's approved head) even though it isn't on master yet — a
+          # stamped-but-never-pushed SHA is harmless, a commit status carries no permission of
+          # its own.
+          SHA=${{ steps.pr.outputs.sha }}
+          gh api "repos/${GITHUB_REPOSITORY}/statuses/${SHA}" -f state=success -f context=promoted \
+            -f description="fast-forwarded to master by the promote workflow"
       - name: fast-forward the base (refuses non-ff by construction — the always-rebase tooth)
         run: |
           SHA=${{ steps.pr.outputs.sha }}
