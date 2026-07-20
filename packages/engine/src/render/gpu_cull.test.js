@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Headless tests for the GPU cull's CPU-side frustum plane extraction (src/render/gpu_cull.js `run`).
 // The cull kernel itself is a WebGPU compute pass (exercised on real Metal by the cube_planes +
 // streaming bench gates), but run() extracts the 6 camera frustum planes on the CPU and uploads them —

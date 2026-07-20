@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // BAKE-THEN-STAMP A/B — headless (pure bun test, NO browser). Answers the complaint ("the
 // schematics were loading way faster than the procedural trees") with the number the brief asks for:
 // time spent in TREE GENERATION for a representative forest ring.

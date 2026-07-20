@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Class swatch colors — the 12-class UI color vocabulary (mirrors the approved character-create
 // presentation map's swatches; UI metadata, never game data). ONE home: marketplace character rows,
 // sell-side character cells, and any future class-colored chip all import from here.

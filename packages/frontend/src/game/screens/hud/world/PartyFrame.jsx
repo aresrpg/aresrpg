@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Party frame — the roster is an exact character-keyed Member[] (maximum six). Every display read resolves
 // `member.character` directly through `/v1/characters?ids=`, so a wallet's sibling characters can never stand in
 // for the character that actually joined. P2P identity uses that same exact Character ID.

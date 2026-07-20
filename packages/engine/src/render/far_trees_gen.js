@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FAR-TREE IMPOSTOR DERIVATION (ENGINE_AAA_PLAN §3.6, Lane B3) — the PURE, worker-safe half of the far
 // tree impostor system: given a gen context + a far section's world footprint, re-derive the PROCEDURAL
 // trees whose anchor lands in that footprint and emit a tight per-tree instance record (world base,

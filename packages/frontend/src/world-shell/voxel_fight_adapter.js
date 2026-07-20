@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D137 — THE VOXEL FIGHT ADAPTER: the bridge that lets the engine's tactical BoardHandle paint the SAME truth
 // the isometric fight-overlay.js does. PURE WIRING — zero game logic. Every cell set / legality / timing comes
 // from fight-engine/overlay_intents.js + the stores; every entity/model/color from the fight slice + the seat;

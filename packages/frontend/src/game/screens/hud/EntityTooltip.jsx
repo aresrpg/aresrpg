@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Board-hover fight tooltip — the fighter under the cursor on the tactical board, shown with its name + a
 // TWEENED HP (hp eases at the house pace, never snaps — use_tweened_hp) and, while a spell is armed,
 // the EXACT PREDICTED OUTCOME of that cast on the target: show exactly what will happen — damage

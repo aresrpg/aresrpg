@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The small HUD minimap's VIEW hook (Minimap.jsx) — the oblique 2.5-D relief. ROUND 5: the expanded map
 // (MinimapModal.jsx) dropped this hook entirely for its own bespoke, region-scale, paint-once architecture
 // (see MinimapModal.jsx's header) — this file is oblique-map-only now. Splits the two costs the Cube-World

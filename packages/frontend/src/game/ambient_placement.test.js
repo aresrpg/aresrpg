@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure headless tests for the resurrected per-member WANDER core: the on-chain mob-group
 // members amble a few blocks around their spawn anchor. The invariants that matter are the LEASH (a member
 // never strays past its anchor radius), DETERMINISM (a seed replays the same amble → refreshes don't teleport),

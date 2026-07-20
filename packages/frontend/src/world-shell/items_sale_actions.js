@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ITEMS MINT-ON-SALE buy ORCHESTRATOR — REAL on-chain purchase against `aresrpg_items::shop::buy`/`buy_many`
 // via the SDK builders (the &Clock + &Random terminal ABI). Supersedes the retired world-shell/m1_buy_ptb.js
 // (which lacked the &Clock arg). The id home is the SDK's deployment/items.js (SINGLE home): the SDK builders

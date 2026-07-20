@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE WORLD→FIGHT HANDOFF SEAM — the composition-root integration test the two headless scenarios stop short
 // of: @aresrpg/world's W4 journey ENDS at `claim_receipt → fight_entry {fight_id}` and @aresrpg/fight's solo
 // scenario STARTS from an opened door — nothing crossed the seam between them. Five composite driven-gate

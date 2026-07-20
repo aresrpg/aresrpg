@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // KIOSK CHARACTER-TYPE FILTER — derived from the SDK deployment home, NEVER a hardcoded lineage (audit row 12).
 //
 // The bug this replaces: a retired `DEMO_PACKAGE_ID` (0xaa8ea807…) was the ONLY accepted Character type, so a

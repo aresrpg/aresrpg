@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ② ZERO-CASTER PARITY — a board hazard (trap/glyph) scales off the TARGET's resistances ONLY, never the placer's
 // live stats. Twin of the chain (cast.move::apply_board_batch — `final_damage(base, el, &ZERO, target_stats)`):
 // by detonation time the placer is dead/anonymous, so its damage stats must NOT amplify the payload.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD TRAVEL — the pure derivations behind the sidebar WORLDS panel + the travel modal: a simple "you are
 // in <world>" status line + button, backed by a modal with world cards, filtering, level gates, and
 // resource/mob details.

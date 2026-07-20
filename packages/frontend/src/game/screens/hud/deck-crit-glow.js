@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure §7 TURN-SEED CRIT PREVIEW for the DeckCluster spell bar — split out (deck-key-arm.js pattern) so the
 // decision unit-tests without the component's store/auth imports. The chain rolls each action's crit off a
 // PUBLIC per-turn seed and the action's SLOT index (cast.move: crit_at(slot_crit_roll(turn_seed, slot), rate, 0)

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* PET LOOT-BOX reveal overlay — dark-fantasy terminal: SOLID near-black backdrop (fight-overlay law: no
  * see-through), gold #c8963c / cyan #4a9eff palette, JetBrains Mono, sharp corners, uppercase labels. Every
  * phase is driven off the container's [data-phase] so the keyframes live HERE, not in JSX. */

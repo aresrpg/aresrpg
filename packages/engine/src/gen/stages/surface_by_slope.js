@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SLOPE/SNOW SURFACE stage (FIVE-WORLDS §P3 shared stage 3 — Everest). Overrides a column's SURFACE
 // (top-of-column) block by (altitude, slope):
 //   • high + flat   (world_y ≥ snow_line AND slope ≤ grass_slope) → SNOW cap;

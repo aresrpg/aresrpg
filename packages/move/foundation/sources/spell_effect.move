@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// SPELL EFFECT ENVELOPE — the composable, data-only representation a spell entry carries. A spell is a
 /// LIST of `Effect`s (the 1.29 model: `{effectId, base, area, targetFilter, chance, duration}`), each effect
 /// selecting one of ~24 MECHANICS by a `kind` u8 discriminant (the codebase idiom — no native enums; cf.

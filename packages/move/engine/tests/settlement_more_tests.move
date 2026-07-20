@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Coverage for `settlement`'s zero-covered `FightOutcome` getters (brand, fight_id, team, winner_team, world) — the
 /// existing settlement tests in fight_tests.move only assert outcome/character/final_hp/xp_share.
 #[test_only]

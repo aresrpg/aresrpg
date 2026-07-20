@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Canonical scalar math helpers — the ONE home for clamp / lerp / smoothstep, replacing the
 // byte-identical per-file copies that had drifted across the tree (repo audit 2026-07-10). Pure,
 // stable, dependency-free. NOTE: `smoothstep` here is the CLASSIC Hermite (3t²−2t³); it is NOT the

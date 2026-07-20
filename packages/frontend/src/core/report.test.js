@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // report.js unit + headless boot proof. NO network ever: init uses a FAKE DSN + an injected capturing
 // transport (the Sentry client hands every outbound envelope to it — asserting on those IS asserting the
 // send was attempted), and the pure before_send/should_drop/fingerprint functions are tested directly.

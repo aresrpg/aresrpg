@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S-57 — raw chain reads for the RUN + FIGHT driver (extracted from dungeon_store.js for the ≤600-LoC law).
 // gRPC Core only (json + object version — the W1 monotonic guard consumes the version); every read degrades to
 // null/empty on error at the CALLER (honest-empty law) — nothing here fabricates.

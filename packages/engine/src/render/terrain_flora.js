@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLORA-CHAOS cross-billboard vertex (§3.6) — the per-plane scatter math, extracted from
 // terrain_material.js so that file stays under the ≤600-LoC law and the flora geometry has ONE home
 // (same split discipline as registry_nodes.js / terrain_ao.js / terrain_winding.js). Pure TSL node

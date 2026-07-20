@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Schema-validates the seeded content (scripts/seed-content.js output): the
 // generated spells.json / items.json / classes.json must carry the required
 // fields in the right shape so the sim can consume them. This is a structural

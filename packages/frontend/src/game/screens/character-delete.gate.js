@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE DELETE GATE — the ONE pure block-reason fold both character-delete UI variants (the in-world
 // drawer and the companion page master-detail, CharactersDrawer.jsx) render the delete affordance from.
 // Split from character-delete.js (the tx action) so the fold stays importable under DOM-less bun:test —

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Hydrology gates — the CONTAINMENT invariant (v3 pour-point lake fix, 2026-07-03) + flood-core
 // correctness. Owner defect class: un-contained "glass wedge" water proud on open slopes (false
 // basins: the old per-column spill filled to base_y−2 with no enclosure test). Three suites:

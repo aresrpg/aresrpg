@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// RED-FIRST: mob spell cooldown / per-turn enforcement in `resolve_mob_cast` — the chain gaining the enforcement
 /// @aresrpg/sim already models uniformly (`check_cast_limits`). At HEAD the mob path recorded nothing and gated
 /// nothing, so a cooldown-violating mob cast succeeded on-chain while the client refused it (the divergence).

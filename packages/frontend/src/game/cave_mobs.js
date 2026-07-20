@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D224 ("There is no mob model in the dungeon cave with me??") + D227 (blocked: "the mob
 // has no nameplate… how do i start that damn fight?") — THE CAVE MOB PACK.
 // dungeon_dimension replays the group-spawn wire event → mob_groups folds it into

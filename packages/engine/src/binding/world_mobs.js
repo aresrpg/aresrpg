@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SEAM 7 — WORLD MOB-GROUP rendering feed (SPEC §8: "groups of 1–6 spawn at their discovered point and
 // roam near it — never far", with the aging progress bar in the group's nametag).
 //

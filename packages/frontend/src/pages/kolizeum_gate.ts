@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // KOLIZEUM LEVEL HONESTY — the create/join CTA's affordance pre-check label, split out
 // of kolizeum.tsx so it's importable WITHOUT pulling in the page's auth/SDK/RPC import graph (kolizeum.tsx →
 // ../auth registers Enoki wallets at module load, which touches `window` unconditionally — this repo's

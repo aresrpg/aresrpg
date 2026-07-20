@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [team-outline] weld_smoothed_normals — the position-weld + angle-average that kills the voxel
 // corner-noise on the entity outline. Locks the core property: on a HARD-normal cube the 24 per-face
 // normals collapse to the 8 exact corner-diagonal normals (so an inflated shell separates only at the

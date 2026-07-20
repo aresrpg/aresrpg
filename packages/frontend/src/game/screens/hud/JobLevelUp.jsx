@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // JOB level-up congrats card — the sibling of LevelUp.jsx (character), for a GATHER/CRAFT job crossing a
 // level. Same locked house language as the character card (glass over the live world, the glowing level
 // number in a ring, the ice-blue accent, mono nums) reusing result.css atoms, so the two celebrations read

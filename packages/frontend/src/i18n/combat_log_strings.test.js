@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // COMBAT-LOG COLOUR GRAMMAR — i18n RUNTIME proof for the world_chat.log_* templates.
 // scripts/i18n_coverage.mjs only checks that a key RESOLVES in all 6 locales; this pins the actual
 // INTERPOLATED OUTPUT, because fight.js's segment_template (co-located with emit_cast_log) depends on the

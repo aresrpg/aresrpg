@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import fs from 'node:fs'
 
 import { expect, test, type Page } from '@playwright/test'

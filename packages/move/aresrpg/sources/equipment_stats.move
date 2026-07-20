@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// EQUIPMENT STATS — signed centered-item folding over the frozen unsigned combat block.
 ///
 /// `ItemStatistics` stores signed lines around 32768, while `spell::Stats` is all `u64`. Positive and negative

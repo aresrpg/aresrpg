@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SKY→TERRAIN LIGHT COUPLING (the "2 different engines in one render" fix). Before this, the terrain's
 // three scene lights (sun DirectionalLight, warm back-fill, HemisphereLight ambient) were FIXED colours,
 // night-dimmed by a crude intensity ramp — so the physical Hillaire sky reddened at dusk while the GROUND

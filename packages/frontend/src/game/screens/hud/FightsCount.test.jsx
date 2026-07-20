@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Nearby-fights count card — the sword badge's bare count ("1") sits glued
 // against the label text, which ALSO embeds the count ("1 fights nearby") — the same number renders
 // twice. ONE count home: the badge digit stays, the label goes count-less.

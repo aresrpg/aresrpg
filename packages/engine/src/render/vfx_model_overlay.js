@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX — ON-MODEL MATERIAL OVERLAYS: effects rendered directly onto character/mob models, not just their projectiles/impacts.
 // TWO faithful TSL ports, both applied as a slightly-GROWN SHELL of the ENTITY'S OWN mesh (Godot `material_overlay`
 // on the demo mannequin's MeshInstance — the body's own humanoid silhouette glows, NOT an egg/ellipsoid):

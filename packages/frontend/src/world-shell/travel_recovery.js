@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ETravelTooFar RECOVERY — turn checkpoint::102 into an in-place return to chain truth. The failed tx is
 // NEVER retried here (an executed failure may already have burned gas): the action only re-reads the character's
 // proven checkpoint and asks the live voxel session to move its body there. The player's original action remains

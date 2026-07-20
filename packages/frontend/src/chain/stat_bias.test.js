@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Safety proof for the on-chain item-stat bias round trip. The admin WRITES ItemTemplates on-chain, so a
 // wrong encode corrupts EVERY template — this test locks the read (decode) and write (encode) as exact
 // inverses, and proves a template read → edit-nothing → write reproduces byte-identical on-chain stats.

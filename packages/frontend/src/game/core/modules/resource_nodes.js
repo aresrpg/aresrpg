@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Resource nodes — folds the server's spawn/despawn packets into state.visible_resource_nodes so the
 // imperative roam scene renders each node as a placeholder gather-node prop. Mirrors mob_groups.js for
 // the live entity Map (the scene reconciles Three props against it each frame — spawn on first sighting,

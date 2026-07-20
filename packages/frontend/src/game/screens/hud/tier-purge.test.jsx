@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NO QUALITY TIERS (regression: the pet unseal card once
 // printed "UNCOMMON"): tier vocabulary must NEVER reach the DOM — no badge text, no data-quality
 // hook, no q-<tier> class. Items still carry a residual `quality`/`rarity` template field (inert

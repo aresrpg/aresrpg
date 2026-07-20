@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PER-REGION ZONE MUSIC — unit coverage of the pure decision core (region_music.js): the zone-key format
 // (`${world}:${region}` when a region names itself, base biome otherwise — the coordinator's 2026-07-13
 // ruling superseding D-2710's plain biome hash on region worlds) and the hysteresis follower (a region

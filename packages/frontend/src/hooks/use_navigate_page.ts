@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useCallback } from 'react'
 

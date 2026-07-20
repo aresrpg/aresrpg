@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// COMMISSION — the artisan-commission crafting flow (supersedes the pay-X escrow
 /// v1): "the CUSTOMER provides the RESOURCES and an OPTIONAL payment; the ARTISAN provides the KNOWLEDGE". A customer
 /// who can't (or won't) craft a recipe themselves asks a qualified artisan to craft it FOR them, from the customer's

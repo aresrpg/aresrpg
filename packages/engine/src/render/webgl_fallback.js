@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-20 — WEBGL FALLBACK RENDERER. 2026-07-05.
 // ============================================================================================
 // SPEC: a WebGL fallback that is only a

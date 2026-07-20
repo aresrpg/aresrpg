@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // AOE + GLYPH HOVER FOOTPRINT (a "cross 1" must show its full 5-cell plus, not a single-cell blob, and the
 // entire glyph zone must show when hovering the target cell, like for AoE). The hover telegraph must paint the FULL zone
 // shape. These prove the fold that derives it: the UNION / DEDUPE / caster→target ORIENTATION layered on top of

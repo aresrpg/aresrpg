@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// KOLIZEUM real-door tests: the PUBLIC `create_public` + `join` entries read the fighter's AUTHENTIC on-chain
 /// level off a real kiosk-locked `Character` (the money-core unit suite injects the level via `*_for_testing`;
 /// THIS drives the real level-reading doors). The kolizeum level gate is lowered to 1 so a fresh level-1 character

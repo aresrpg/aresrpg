@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Basic enemy AI: a pure turn planner the reducer runs for mob entities.
 //
 // SCOPE (per the port task): "move toward + cast on the nearest enemy if in range, else move." This is the

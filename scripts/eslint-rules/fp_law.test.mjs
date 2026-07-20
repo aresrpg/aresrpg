@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RuleTester suite for the FP-LAW tripwires (scripts/eslint-rules/fp_law.mjs).
 // The invalid fixtures ARE the red: each is a real shape of the class its law bans
 // (docs/CODE_LAW.md L-N1 naming, L-I1/L-I2 mutation, L-P3 module-load purity).

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SWITCH-PARITY LEG ① — the character-switch seam consumed by CharactersDrawer's `switch_to`. Split out of
 // CharactersDrawer.jsx (not inlined) because that file's import graph pulls in Vite-only virtual modules
 // (Inventory.jsx → `virtual:item_catalog`) that bun:test cannot resolve — this leaf stays node-clean so the

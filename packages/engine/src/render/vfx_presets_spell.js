@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX — the SPELL-CHAIN preset families (phase 2): the Godot magic packs ported into the same
 // billboard-particle vocabulary as the Explosion/Hit library (vfx_presets_data.js), covering the cast beat's
 // non-impact stages (CHARGE windup · BOLT projectile · LOOP remnant/status/aura · BURST eruption/soul/slash) so NO

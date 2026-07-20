@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // AresRPG equipment snapshot fold. Item stats are centered u16 values: 32768 is neutral, values above add,
 // and values below subtract. Deltas are summed before the zero floor so the result is independent of item order.
 

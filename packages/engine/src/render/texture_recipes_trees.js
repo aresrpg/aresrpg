@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PROCEDURAL-TREE species art RECIPES (ENGINE_AAA_PLAN §3.4/§3.7, Lane A1) — the leaf/crown, bark and
 // twig-card texture atoms for the procedural tree roster. AUTHORED AS DATA (the house baker style); each
 // row maps to a §3.4 species need. ART ATOMS ONLY: these are new atlas layers consumed by NOTHING yet

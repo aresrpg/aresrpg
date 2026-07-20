@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Coverage for `fight`'s zero-covered accessors and the REAL branded `join<W>` door — every existing test drives
 /// joins through `fight::join_for_testing`/`join_with_cap_for_testing` (which bypass `join` and call `seat_joiner`
 /// directly), so `join` itself has never been exercised. Defines its own witness `W` (a `TestBrand` value can only

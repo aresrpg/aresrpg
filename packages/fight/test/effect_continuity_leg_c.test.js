@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LEG C — EFFECT CONTINUITY ACROSS ADOPTION (still due): ① invisibility FLICKERS visible→invisible
 // at turn boundaries; ② a 3-turn +1 MP buff applied turn 1 goes missing turn 2, back turn 3. The shipped
 // replay-deferral (a wholesale adopt waits behind a draining foreign wave) + the committed floor should hold both

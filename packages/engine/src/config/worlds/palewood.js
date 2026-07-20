@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD 08 · PALEWOOD (on-chain `08_palewood`, biome `pale_forest`) — the ghost-forest planet. Seed
 // identity (seed/mainnet/08_palewood/world.json): air+water elements, "fog-phase mobs — shapes fade in
 // and out of the mist", "dread emptiness by design — low variety, the best rare rates in the band;

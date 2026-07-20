@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Wave-A (c_melee + e_status_impact) WebGPU still proof. Drives demo/vfx_wavea_probe.html on real Metal for 4
 // named scenes (2 melee, 2 status), asserts the WGSL compiled clean (no window.__probe_err), the burst is VISIBLE
 // (bright pixels over the near-black bg), and writes each still to /tmp/aresrpg-engine-artifacts/wavea_melee/.

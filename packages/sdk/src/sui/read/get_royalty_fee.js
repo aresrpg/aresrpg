@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { bcs } from '@mysten/sui/bcs'
 
 // royalty_rule::Config — the DF value struct behind a TransferPolicy's RuleKey<royalty_rule::Rule>.

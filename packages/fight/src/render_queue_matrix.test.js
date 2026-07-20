@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, test, expect } from 'bun:test'
 
 import { FIGHT_RENDER_TIMINGS, produce_receipt_render_turns } from './fight_render_events.js'

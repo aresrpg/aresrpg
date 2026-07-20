@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SHARED CHAIN-READ HELPERS for the NEW on-chain package reads (game / pools / dungeon / kolizeum). Zero-backend
 // object fetches via the house gRPC Core client, mirroring `deployment/items.js`'s reads. One home for the
 // getObject-to-json + Option/Balance/bigint normalizers so each package read module stays a thin decoder.

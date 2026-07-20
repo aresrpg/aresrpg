@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Terrain height shaping via piecewise Catmull-Rom splines (§4.2). Generalizes the legacy 1-D
 // BiomeLands `threshold → elevation` tables to the multi-dimensional Minecraft-1.18 approach:
 //   continentalness → base_height   (ocean floor ↔ inland plateau)

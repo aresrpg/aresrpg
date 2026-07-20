@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D167-B (2026-07-05) — feathered occlusion mask (pure host mirror) + centroid + seating quantization.
 //
 // The TSL node fn can't run under bun (no WebGPU), so we pin its RAMP against the pure JS mirror

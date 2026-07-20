@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // CONFIG-FIRST world-generation schema (plan §10-bis(2), playbook §2.3, lane NG1-E).
 //
 // ONE plain, serializable JS object = the ENTIRE world recipe. The north star is

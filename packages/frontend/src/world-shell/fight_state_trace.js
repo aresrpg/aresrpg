@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Fight-state switchboard for deterministic wedge captures. Disabled by default; enable with `?fighttrace=1`
 // or `window.__ARES_FIGHT_TRACE_ENABLED = true`, then read `window.__ARES_FIGHT_TRACE` from the same page.
 

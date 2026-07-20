@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // CF-B (client half) — proves the mount roam-speed SELECTION: a character with a mount equipped scales
 // ×1.5, everyone else ×1.0. This is the pure selection the controller's ground-speed knob consumes; the
 // engine applies it (controller.js ground_speed). Guards the "only an item-like slot counts" contract so a

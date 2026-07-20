@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // CHECKPOINT SPAWN — the pure half (D770a W2, moved verbatim from world-shell/world_checkpoint.js): resolve
 // the character's on-chain checkpoint (chain truth) to a WORLD render position for a (re)join/reload. THE fix
 // for the "reload spawns at the origin" bug: a zone SEARCH advances the per-world checkpoint (§5 — zones.move

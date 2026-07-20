@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// JOB XP CURVE — the exact 100-level job progression table, immutable law like the character curve (SPEC §6:
 /// "The job experience curve is hardcoded and immutable (like the character curve)"). Values copied VERBATIM
 /// from the reference corpus's `JobExperience.java` (`TABLE`, formulas annex

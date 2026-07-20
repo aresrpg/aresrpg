@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// SPELL BOARD TESTS — coverage for the #69 state-gated-cast query surface and the generic status writers not
 /// exercised by the source-file inline trap/glyph/DoT lifecycle tests: `add_status`, `fighter_has_state`,
 /// `fighter_status_of`, `clear_fighter_status_kind`, `dispel_fighter`, `fighter_alter_rows`.

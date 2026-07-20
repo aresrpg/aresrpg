@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Spectate-until-joined — the session gate's core suite, ported from the frontend
 // singleton to the D770a factory: every row drives a FRESH atom through the one `input(msg, now)` door. The
 // three gates the coordinator named: unbound→spectate, bind→resident, failure→stays spectate — plus the

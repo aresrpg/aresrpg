@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Walk-mode driver for the demo (ENG-8) — the toggle-able character-controller experience that lives
 // ALONGSIDE the fly camera in main.js. It owns the wiring of the four ENG-8 subsystems against the
 // frozen engine facade: movement input → controller (physics + anim state) → shoulder camera rig →

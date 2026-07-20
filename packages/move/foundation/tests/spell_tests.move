@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// SPELL MODULE TESTS — coverage for the `Stats` §5h-fidelity/D172 gear-fold surface not exercised by the
 /// source-file inline damage/heal/crit pipeline tests: the extension-field getters on a zero block, the
 /// `set_ext_gear` writer, `stats_add`/`stats_sub` (the equip fold-in/fold-out), and `sub_stat`/`sub_resist`.

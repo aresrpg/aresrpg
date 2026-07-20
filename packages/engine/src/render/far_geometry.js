@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Far-shell CPU geometry builders (§11 NG-LOD) — the PURE main-thread expansion of a built far mesh into
 // an indexed three BufferGeometry, split out of far_field.js so the renderer handle keeps only scene/
 // material/mask duties (≤600-LoC law). Two mesh kinds:

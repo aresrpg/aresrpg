@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PURE loot-box pool display math (no React / no RPC / no window) — the shop's drop-rate transparency panel
 // shows every possible pet with its % chance listed. weight -> percent-of-pool mirrors
 // loot_box.move's `pick()` denominator exactly: a row's weight over the pool's total weight (see

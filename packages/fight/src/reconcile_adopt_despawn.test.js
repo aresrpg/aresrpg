@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ③ RECONCILE-ADOPTED DEATH → DESPAWN — a mob dying still kept its model on the fight
 // board instead of disappearing. kill_confirm_despawn.test.js locks the PREDICTED/confirmed kill path; this
 // locks the OTHER input class — a death proven ONLY by the receipt (the unpredicted trap-kill),

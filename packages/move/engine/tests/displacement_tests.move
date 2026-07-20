@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Move-side executable twin of the shared displacement vector shards.
 #[test_only]
 module aresrpg_fight::displacement_tests;

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // M0 scenario (b) — the 2,000+ bundled-chunk SYNTHETIC that proves the three.js #31055
 // per-render-item overhead is retired via sector BundleGroups (§2.2, §3.5, §8 M0 checkpoint):
 // "a synthetic ring-layout scene at 2x the §5.1-derived ULTRA worst case (≈4.6k bundled

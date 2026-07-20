@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // engine_flags_pref unit tests (FLAGS → SETTINGS PAGE lane: the engine's keeper URL flags become real
 // settings-page options). The module is pure localStorage + URL-string parsing (quality_pref/hp_display_pref
 // idiom), so persistence and URL-override precedence are both testable at the module seam with zero DOM

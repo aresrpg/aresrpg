@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PRE-FLIGHT "MUST SAY WHY" leaf (a generic refusal with zero indication of the actual
 // reason): the gRPC Core simulate result's ExecutionError carries a STRUCTURAL `$kind` tag for every failure
 // class, not only MoveAbort — parseGrpcExecutionError (@mysten/sui/dist/grpc/core.mjs) also emits

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Critical cases for sui_mist.ts — backend has the exhaustive suite; these are
 // the cases most likely to break under frontend-side input (commas, leading
 // spaces, scientific notation, boundary values, fee identity).

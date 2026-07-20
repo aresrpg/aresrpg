@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SPAWNS RECONCILE — the pure machinery under the spawns_zones door (D770a W2): the moved rule homes
 // (searchable / claimable / hysteresis), the chain→world row ingest, the [G]/[R] retargeting fold, and the
 // two reconcile folds (versioned snapshot + chain-direct top-up) that make the atom order-independent —

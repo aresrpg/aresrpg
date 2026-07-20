@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // item_send_modal.tsx — escrow-recoverable ITEM GIFT-send modal (gift.move · resolved DECISIONS 2026-07-13).
 // Recipient modes: raw 0x address, SuiNS, or exact player-name lookup through /v1/names.
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX — the DARK (necro) b_spell family: DarkMagicFX ball / projectile / area scenes ported into the
 // house billboard-particle vocabulary and spread across the Yajin necromancer's spellbook for maximum variety.
 // Wave-A coverage lane (docs/VFX_FULL_UTILIZATION_PLAN.md §L3 / scripts/vfx_scene_consumers.json b_spell):

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D33 shipped-default verification (throwaway probe, not a committed gate). Boots the demo at the
 // SHIPPED LOAD_RADIUS_CHUNKS (no ?load_radius override), on a settled tree, and asserts the render is
 // clean: zero WebGPU errors during a settled window + a short fly, a non-black frame, and captures the

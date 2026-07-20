@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // shop_renders_to_public.mjs — publish the already-rendered shop worn-cosmetic PNGs into the frontend's
 // SHIPPED static tree (packages/frontend/public/shop/<slug>.png), so the shop vitrine cards show the real
 // "example character wearing it" render with ZERO CDN/Walrus dependency.

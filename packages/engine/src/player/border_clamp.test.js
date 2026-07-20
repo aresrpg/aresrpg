@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [D204] the fence is PHYSICAL for the controller body — jump arcs blocked, escapees rescued.
 import { describe, expect, test, test as d215_test, expect as d215_expect } from 'bun:test'
 

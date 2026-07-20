@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { SELF_PAY_THRESHOLD_MIST } from '../chain/money_route'
 
 export const BALANCE_FRESH_MS = 30_000

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Controller math + animation-state-machine unit tests (ENG-8 acceptance). Pure — a synthetic block
 // world; no three, no renderer. Verifies feel-parity constants produce the right states/transitions.
 

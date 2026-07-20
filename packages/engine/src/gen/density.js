@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Unified 3D density field (§2.2 NG1-A) — the keystone. ONE analytic function whose zero-isosurface
 // IS the world surface: `density(x,y,z) > 0` ⇒ solid, `<= 0` ⇒ air/void. Generalizes GPU Gems 3
 // ch.1 so surface shaping + overhang/cliff lips + cave subtraction + Pandora floating islands all

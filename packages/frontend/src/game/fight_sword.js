@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D280 — the FIGHT-START CEREMONY sword. Ported from the legacy dapp's spawn_crescent_sword
 // (aresrpg-legacy/packages/dapp/src/core/utils/game/objects.js): a fight-marker GLB appears in the sky, grows,
 // spins, and SLAMS down to PLANT at the mob pack's spot as the tx-wait beacon. The legacy motion is preserved

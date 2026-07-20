@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // key_candidates — the pure §9 key selection from the loaded bag (the ~10s-stall fast path's core). It must
 // keep ONLY key rows carrying the full burn-PTB {id, kiosk_id, kiosk_cap_id} triple, drop everything else, and
 // never throw on an unloaded (non-array) bag.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG-LOD PHASE B far-shell gate (bench). Proves the far shell is ACTIVE and reads to the horizon on
 // the Studio's real Metal GPU (headed, 2560×1440 @ dsf2), and that the ~168 m near-ring fog wall is
 // GONE. Captures:

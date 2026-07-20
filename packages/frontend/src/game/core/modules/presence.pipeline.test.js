@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D770a-GONE PROOF (BRIDGE-A) — presence.js's observe() must be a THIN EDGE that only FORWARDS peer facts
 // (mirrors chat.test.js's mount_chat idiom): it may never reach into `get_state()` and mutate
 // `visible_characters` itself. The actual spawn/retarget/despawn projection lives in reduce(), reached only

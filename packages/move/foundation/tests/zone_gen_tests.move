@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// ZONE GEN TESTS — the seed-derived zone composition kernel (search-cost rework + the 20-block spawn-spacing
 /// law). The PARITY tests pin reference vectors captured LIVE from the JS mirror `packages/sim/src/zone_derive.js`
 /// (its own suite `zone_derive.test.js` asserts the identical vectors) — if either side drifts, one suite fails

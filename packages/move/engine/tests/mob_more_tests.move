@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Pure unit coverage for `mob`'s zero-covered getters: a bare `FightMob` (via the existing
 /// `new_mob_for_testing` fixture) exercises `ap`; a `MobLootEntry` exercises its four field getters. No Scenario
 /// needed — these are plain-data constructors + accessors.

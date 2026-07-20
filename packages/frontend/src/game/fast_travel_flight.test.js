@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FAST-TRAVEL FLIGHT math — proves the pure autopilot step: RUN-speed cap (never ×1.5), no overshoot, heading
 // straight at the target, altitude shaping (climb → cruise ground+12 → descend ground+3), hold-last-y on a null
 // ground sample, and the arrival test. No engine, no effects — the same headless discipline as auto_run.test.js.

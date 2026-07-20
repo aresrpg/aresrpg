@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THROWAWAY world&discovery design-pass harness — NOT part of the app, NOT imported by main.tsx, NOT built
 // into the production bundle (a separate Vite HTML entry: design-harness-discovery.html). Per the
 // PICK#3 ruling, World switcher and the top-strip Compass are ALREADY DECIDED

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Quest-ladder pure-core tests: the detection reducer (event → advance/progress, strictly sequential +
 // cascade), skip semantics, and the versioned localStorage round-trip. Pure module → a plain in-memory
 // localStorage shim, ZERO mock.module (process-global collision law).

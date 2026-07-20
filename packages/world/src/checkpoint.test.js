@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, it } from 'bun:test'
 
 import { checkpoint_to_world, resolve_boot_spawn, AGREE_RADIUS_M } from './checkpoint.js'

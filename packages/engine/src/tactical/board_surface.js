@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [D264b reference: no visible gaps between tiles, fully procedural texturing] THE BOARD SURFACE — one
 // CONTIGUOUS paved-stone slab + one procedurally BAKED
 // texture for the whole board. This replaces the per-cell instanced floor tiles (which could only ever

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // draft-budget — the PURE turn-draft gating math the dungeon board rides on, locked against aresrpg_fight::cast
 // (enforce_and_record_cast) + participant.move (give_points) + the auto-commit buffer the visible timer shares.
 // These are the exact predicates DungeonBoard wires into its castable gate / optimistic MP pool and FightTimeline

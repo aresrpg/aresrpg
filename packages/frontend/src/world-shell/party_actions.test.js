@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { afterAll, afterEach, beforeEach, expect, spyOn, test } from 'bun:test'
 import * as social from '@aresrpg/sdk/social'
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD SPAWNS — the last visible link of the discovery loop: render the CHAIN spawns of the CURRENT +
 // adjacent discovered zones as real, interactable fixtures in the overworld. Where the CompassStrip only
 // draws bearing pips, this places the actual rigs you walk up to, attack, and stand near to gather.

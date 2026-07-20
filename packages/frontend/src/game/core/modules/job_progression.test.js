@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Unit proof for the JOB level-up transition detector + slice fold (job_progression.js). Feeds synthetic
 // per-job xp maps (the `character.jobs` shape the roster projects) and asserts a card fires ONLY on a real
 // job level crossing. Pure — no mocks (the detector core takes plain maps in; the observe wiring is a thin

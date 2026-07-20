@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX — the fight-grade GPU particle PRESET RUNTIME (Godot 4 GPUParticles3D → Three.js/TSL port).
 // A preset is plain data mirroring a .tscn node graph: N EMITTERS, each a burst of camera-facing billboards whose
 // motion is a PURE FUNCTION of (per-particle seed, age) — analytic ballistics (velocity + exp-drag + gravity + the

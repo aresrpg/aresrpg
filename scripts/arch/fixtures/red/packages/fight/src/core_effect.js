@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED fixture — arch-fight-effect-free must flag EVERY effect shape below (7 findings):
 // the await, the async function declaration, .then, .catch, .finally, new Promise, Promise.all.
 export const load_snapshot = async (fetch_snapshot) => {

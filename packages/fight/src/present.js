@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // fight/present.js — the ONE presentation queue: it PACES the ordered log for the eye; it never owns state.
 //
 // The committed state is armed the instant the log folds (store.js). Presentation is a SEPARATE cursor over that

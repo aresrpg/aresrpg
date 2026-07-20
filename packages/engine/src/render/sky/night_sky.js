@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NIGHT SKY — the real one — target: "the moon still looks like a lamp, it should
 // illuminate a bit the sky, we should see beautiful stars, and according to the world seed and settings,
 // even other planets, milky way, a real amazing sky"). ONE home consumed by BOTH sky paths — sky_node.js

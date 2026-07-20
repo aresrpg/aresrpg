@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // EVEREST / ICE-AGE lane VISUAL + DATA smoke (FIVE-WORLDS §P3.3). Proves the everest.js recipe with a
 // no-WebGPU data raster (deterministic, shell-portable): validates the config, checks its identity hash
 // differs from DEFAULT, sweeps candidate seeds for the best tall-massif-with-coastline framing, measures

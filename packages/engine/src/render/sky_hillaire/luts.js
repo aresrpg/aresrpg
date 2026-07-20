@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // C9 Hillaire sky — THE FOUR LUTs as WebGPU/TSL compute kernels (the house `Fn(()=>{…}).compute(N)`
 // idiom, copied from render/sky/clouds.js's bake kernels) + their sampler nodes. One thread per texel;
 // `renderer.computeAsync(kernel)` runs them. All math is in KM (physics.js); the atmosphere uniform bag

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Move-side executable twins of `packages/sim/test/vectors/statuses_golden.json`.
 #[test_only]
 module aresrpg_fight::invisibility_tests;

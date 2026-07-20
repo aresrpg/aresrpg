@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // COMBAT GRID — pure integer board geometry (cell = y*GRID_W + x), the varied-grid SHAPE VOCABULARY, the
 // king-isolation blocker placer, and zone containment. A faithful mirror of the needed subset of
 // aresrpg_foundation::combat_grid.move (S-16 parity): the draw-order-relevant geometry `board_gen.js` derives a

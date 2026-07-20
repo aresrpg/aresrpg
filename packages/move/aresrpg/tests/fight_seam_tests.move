@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// FIGHT-SEAM tests: the cross-package reads/writes the `aresrpg_fight` lane consumes — `zones::claim_mob_group`
 /// (travel-verify + entry checkpoint + free the spawn; happy path, double-claim, travel-too-far), the
 /// `character_link::combat_stats` snapshot (fresh-character defaults), the cap-gated progression writes

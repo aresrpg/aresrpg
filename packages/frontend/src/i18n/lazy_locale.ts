@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Lazy per-language locale loading — the single home for "fetch everything this language needs".
 // Only the ACTIVE language's chunks are ever downloaded/retained: the ~150-230 KB main translation
 // bundle (locales/<lang>.json) AND the ~290-435 KB item-description catalog (catalogs/item_desc.<lang>.json)

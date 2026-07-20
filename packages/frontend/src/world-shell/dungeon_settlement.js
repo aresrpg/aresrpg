@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S-57 — the SETTLEMENT CHAIN (extracted from dungeon_store.js for the ≤600-LoC law): the background,
 // single-flight sequence that turns a TERMINAL fight into landed spoils. The settle→open GAP is CLOSED — a fresh
 // terminal fight settles AND opens in ONE ATOMIC PTB (`settle_and_open`): either the fight deletes, my

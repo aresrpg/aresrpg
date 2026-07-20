@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-21 BLOCKY far-mesh tests (target: "voxel-look everywhere, detailed nearby"). Covers:
 // (1) DISPATCH — build_far_mesh emits a 'voxel' mesh for L1/L2, a 'smooth' mesh for L3/L4;
 // (2) FLAT SECTION — a constant-height section yields only flat top faces (up-normals), no risers/skirt;

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// EXTRACT — the TWO-FLAVOR seam that pulls a kiosk-LOCKED item back out for the two legitimate reasons an item
 /// leaves the market: to be WORN by a character, or to be DESTROYED. Both are royalty-safe by CONSTRUCTION, not by
 /// trust (DECISIONS 2026-07-08 "Extract-seam ruling").

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { useEffect } from 'react'
 
 // The HUD chrome is authored at this REFERENCE viewport (the demo capture size); the global UI-scale

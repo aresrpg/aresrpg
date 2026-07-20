@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // @aresrpg/fight harness — the pseudo-CLI's plumbing: beat rows → human lines, and the core wave → §7b
 // BeatTraceRow rows (the machine twin's input), clocked EXACTLY like the serial render queue (each turn from
 // its own head). The optional `vfx` lane marks each cast's NATURAL impact — delivery = cast start + the

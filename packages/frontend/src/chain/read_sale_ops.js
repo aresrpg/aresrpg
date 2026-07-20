@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SALE OPS read (RPC) — the admin SALE OPS panel's data (S-41 observability). Per first-party shop sale:
 // supply remaining, sold count, and revenue IN — off the read-API `/v1/shop` view (the same shared `shop::Sale`
 // facts the /mint catalog reads, but here we keep the RAW `minted` counter and ALL sales, including sold-out and

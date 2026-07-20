@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // INVISIBILITY — a real vanish, not a visibility toggle. The body is reduced to a faint translucent trace and
 // replaced by a skinned heat-haze shell that samples a blurred, wobble-offset copy of the opaque scene behind it.
 // The shell shares each source mesh's geometry/skeleton, so the distortion follows idle/walk/cast animation.

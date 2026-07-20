@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// ITEM_LISTING_RULE — the ANTI-GHOST-STACK gate on item resale: a kiosk TRANSFER-POLICY rule on
 /// `TransferPolicy<Item>` that BLOCKS the sale of an amount-0 stack instance (the "ghost" the pool-refill design
 /// keeps in a player kiosk so buys top up ONE object instead of minting a fresh one). This rule

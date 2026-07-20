@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The `ares` CLI dispatcher. Domains live in scripts/ares/ (lib = shared kernel, status = the
 // liveness/drift board); the test-selector pipeline and publish pre-flight stay here — they ARE
 // the dispatch surface CLAUDE.md's testing gate names (`ares test …`).

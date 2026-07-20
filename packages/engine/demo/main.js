@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Demo page entry (§7 — "this page IS the acceptance surface per milestone"). Boots the engine
 // against the frozen facade (`src/engine.js`), drives a pointer-lock fly camera, and wires the
 // lil-gui control panel (seed reload / tier override / time-of-day) + the HUD overlay.

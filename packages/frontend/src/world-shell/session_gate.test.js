@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // W1 ADAPTER suite — the fold/projection semantics live in @aresrpg/world/src/session_gate.test.js (ported
 // there with the core). THIS file proves the frontend edge: the one singleton atom behind the wrapper
 // vocabulary, the W1 fold-completion contract visible through it (pending IN the atom, the failsafe as an

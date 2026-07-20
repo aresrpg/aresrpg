@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE WITNESS-PRODUCER PARITY PIN (fight-create compute diet, 2026-07-17). Proves the /v1 zone-state
 // SHAPE this api serves (`seed` string + `discovered_at_ms` + `group_root` byte array + `group_count`
 // — see views.js shape_zone / snapshot.rs map_group_root_field) composes into the EXACT authenticated

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WorldJoined event decode — the join-tx twin of zone_searched.js's ZoneSearched decoder. FIRST JOIN rolls the
 // character's spawn position via on-chain `&Random` (zones::join_internal) — the client cannot predict it
 // offline, so the event is the ONLY place the exact position is knowable, and it rides the SAME receipt the

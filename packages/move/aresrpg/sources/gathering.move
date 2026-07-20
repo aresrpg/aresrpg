@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// GATHERING — the §6 instant single-transaction harvest. One terminal `&Random` call: travel-verify to the node,
 /// prove the job tool is equipped, roll the yield (scaling HARDER with job level — the level bonus replaces the
 /// removed gather-time, §6/§18 annex §5), grant job XP (tier in-band rule), consume the node, roll the 2%

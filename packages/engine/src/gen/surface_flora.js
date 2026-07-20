@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Cross-flora placement — the grass-OCEAN rule: the ONE cross-quad plant a land column grows (or bare).
 // Extracted VERBATIM from surface_decorator.js (byte-identical placement stream) to give flora its own home
 // and keep both files under the LoC law; decorate_chunk (surface_decorator.js) calls surface_flora per column.

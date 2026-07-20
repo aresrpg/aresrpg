@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // @aresrpg/party — import-graph hermeticity (a module-boundary law): the headless core may
 // import ITSELF (sibling files) and zustand/vanilla, NOTHING else — no React, no DOM, no three, no
 // frontend, no engine. Also pins package.json dependencies exactly, so a drive-by `bun add` is a red

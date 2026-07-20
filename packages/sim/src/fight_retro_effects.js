@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Wave-12 retro status application. AresRPG brand law keeps source-game names out of runtime vocabulary.
 // Ambiguities are explicit: critical-failure rows use the smallest live positive 1-in-X denominator; named
 // damage rows are independent timed stacks keyed by caster + current spell + selected fighter; stance replacement

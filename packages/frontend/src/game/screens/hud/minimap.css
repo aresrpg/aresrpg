@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* Cube-World MINIMAP — a free-floating isometric relief SLAB (top-right), + the expanded map MODAL (round 5:
  * a flat, north-up, region-scale 2-D read — minimap_engine.js's render_flat_terrain/render_flat_overlay).
  * Design system: near-black bg, gold #c8963c accent, JetBrains Mono, sharp corners, a scanline overlay.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// INTERLEAVE — §17.28 GLOBAL turn order (no initiative stat). All fighters weave into ONE deterministic
 /// sequence that alternates the two sides as evenly as unequal team sizes allow; join/spawn order fixes the
 /// order WITHIN a side. Replaces the harvested dungeon HP-ranked queue (1.29 has no initiative; agility feeds

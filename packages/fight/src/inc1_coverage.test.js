@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // INC-1 — receipt coverage: the apply_action arms the fold dropped/misread, the invisibility snapshot mapping,
 // and instant teleport (VIOLATION_REGISTER #13 #26 #27 #53). Chain field names are GROUND TRUTH from
 // packages/move/engine/sources/fight_events.move (Revealed{is_mob,idx} · Drain{target_*,point_kind,removed} ·

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S-67 — the floating "player actions" menu. Renders ONCE (mounted by GameWorldHud); shows only when a seam
 // (chat name click / in-world nameplate click) has set a target in player_menu_store. Actions: Add Friend
 // + Invite to Party (SPEC §13 "invite by clicking a player" — the party-invite that

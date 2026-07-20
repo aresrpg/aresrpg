@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD 20 · ZENITH SCAR (on-chain `20_zenith_scar`, biome `fractured_zenith`) — the endgame wound.
 // Seed identity (seed/mainnet/20_zenith_scar/world.json): earth+water elements, "the scar — reality
 // frays at the zenith; the last wall before the wound", the L200 wall, the Last Guardian, wisdom lean.

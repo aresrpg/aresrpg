@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure decision helpers for wave-12 incoming-hit reactions. The caller owns health mutations so this module
 // stays acyclic with fight_actions. Ordering is fixed: inversion chooses heal/damage first; a zero-value redirect
 // changes the damage recipient; actual HP loss then drives erosion and punishment; positive redirect values reflect

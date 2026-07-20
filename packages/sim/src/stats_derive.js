@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // STATS DERIVE — the live-stat re-derivation law, a mirror of participant.move `refresh_stats` /
 // `alter_base_stat` (S-16 parity). A fighter's LIVE stats are ALWAYS re-derived from the base block + the live
 // timed alter rows: every addition first, then ONE saturating subtraction pass per stat. The rows are the single

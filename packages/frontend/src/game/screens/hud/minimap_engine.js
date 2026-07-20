@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Cube-World minimap CORE (no React) — a genuine OBLIQUE 2.5-D EXTRUDED relief, not a flat top-down blob.
 // Each world column is drawn as a raised tile: a hill-shaded TOP face lifted up-screen by its height, over a
 // darker SIDE wall — and the columns are painted BACK-TO-FRONT so near/taller terrain OCCLUDES what's behind

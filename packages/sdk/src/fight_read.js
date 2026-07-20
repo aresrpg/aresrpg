@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { get_object_json, option_value, to_bigint } from './sui/read/_object.js'
 
 // FIGHT READS + DECODERS for `aresrpg_fight` — pure normalizers over the `json:true`-flattened Fight /

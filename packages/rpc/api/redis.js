@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Redis access for the read API. Uses Bun's built-in RedisClient (zero-dep) —
 // the SAME Redis 8 instance the indexer writes to and the rate limiter counts
 // against. Read-only here: the API never mutates game state, only reads the

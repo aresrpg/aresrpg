@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RIG BUDGET + DISPOSAL — proof for the P0 world-entry OOM: the mob-density dial went
 // 3-8 → 12-24 groups/zone with NO concurrent-rig cap, so a dense neighbourhood (or a small admin zone_size)
 // resident hundreds of SkeletonUtils clones — mounted in a single on-entry burst — and OOM'd the tab. Three

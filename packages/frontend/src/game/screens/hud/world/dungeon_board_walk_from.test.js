@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RE-WALK REGRESSION (walk-window out-of-fence finding) — DungeonBoard.optimistic_walk must anchor the walk's
 // `from_enc` on the DRAFTED path, NOT the display-held fighter cell. Since d4f9e748 ("display_state holds every
 // mover's cell until its walk presents") the PRESENTED cell (`fight.fighters.get(me).cell`, = engine_view) lags at

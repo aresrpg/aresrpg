@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RECEIPT-LAW coverage (SHOP TRIO (a) root fix, 2026-07-17): the reauthor ceremony must write the
 // corrected template ids back into out/seed_manifest.json in the SAME RUN that mints (or first
 // observes) them — the 2026-07-16 run skipped this and 5 live sales vanished behind the frontend's

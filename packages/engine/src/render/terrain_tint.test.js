@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure-math unit tests for NG-TINT (terrain_tint.js) — no GPU, no TSL evaluation. TSL nodes can't be
 // evaluated headlessly, so this file mirrors the shader's FIELD math (value/climate/dirt/roughness) in
 // plain JS off the exported NG_TINT / TERRAIN_PBR constants + tint_class_of / base_roughness_of (the

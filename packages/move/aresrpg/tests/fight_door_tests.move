@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// FIGHT-DOOR tests (S-69 — the defeat-brick fix): drive the REAL `fight::create` / `fight::join` doors
 /// end-to-end (world → search → claim ticket → engine create/join) and prove the seat snapshot SETTLES lazy
 /// natural regen (ANNEX §5.4) before the engine's §17.23 0-HP gate:

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
 # check-constraints.sh — the AresRPG constraint gate.
 #
 # Mechanical checks that keep the tree honest, wired into `bun run lint`:

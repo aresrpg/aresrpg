@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-1 / NG-TINT PROOF spec — the world-space macro ground-shade + PBR roughness field
 // (src/render/terrain_tint.js, wired into terrain_material.js). Two jobs:
 //

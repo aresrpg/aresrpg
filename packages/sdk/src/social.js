@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SOCIAL — the public per-domain home for the STANDALONE `aresrpg_social` package (§13): FRIENDS + PARTY. A
 // `FriendList` is a NON-TRANSFERABLE, address-bound personal whitelist: ONE-WAY (no invite / accept / request),
 // its owner adds or removes addresses directly (DECISIONS 07-08). The friends write builders live in

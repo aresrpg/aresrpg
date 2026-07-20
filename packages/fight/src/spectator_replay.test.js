@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SPECTATOR REPLAY PACING — ① other players' actions render instantly, using the same sequences a local
 // turn uses, and ② a peer killing a mob must show during the replay, never delayed to the next turn.
 // A peer's committed turn reaches this client ONLY through the poll's

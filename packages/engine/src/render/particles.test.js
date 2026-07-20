@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure-math tests for the NG2-ATMO ambient particles. Pins the MATH the TSL positionNode mirrors:
 // (1) every particle, at every time, lands INSIDE the camera-following box (no escapees),
 // (2) motion wraps seamlessly (fractional drift ⇒ bounded, continuous re-entry),

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Same-wallet dungeon companion settlement. The active seat's settlement receipt mints one exact FightOutcome
 // for every seat; each alt then advances its own RunPass and opens its own outcome through an existing self-pay PTB.
 // This tail deliberately does not drive the active victory card or room recap.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Close-on-anywhere for transient context menus (pet / loot-box): while `open` is truthy, any window
 // click or Escape fires `on_close`. Extracted from Inventory.jsx's two byte-identical effects (one home).
 import { useEffect } from 'react'

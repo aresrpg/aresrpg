@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Active-character selection orchestration shared by CharacterSwitcher and its store-level proof. This leaf
 // accepts the concrete stores/actions as dependencies so the state transition has one explicit order and the
 // test can exercise it without process-global module mocks.

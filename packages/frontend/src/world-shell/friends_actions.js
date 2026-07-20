@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FRIENDS actions (S-18 Command Roster) — the tx seam over @aresrpg/sdk/social's friend-list builders, funneled
 // through the ONE instrumented run_tx choke point (world-shell/tx.js) like every gameplay tx. The builders
 // target the STANDALONE `aresrpg_social` package via the SDK's stamp-or-throw deployment home: until the

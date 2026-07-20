@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Pet-power tests: one item per UTC day, a 60-feed template-max curve, and equipped-cache refresh.
 #[test_only]
 module aresrpg::pet_tests;

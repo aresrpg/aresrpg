@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FAST-TRAVEL PILOT — the browserful flight EDGE (plan §3.4). Owns the dragon-ride LOOP: while the store is in
 // a flying/landing phase it spawns the dragon (injected mount_dragon), integrates the PURE flight_step each
 // frame and hard-places the body (injected teleport = ctl.teleport, mirroring the TR-1 creative-fly branch,

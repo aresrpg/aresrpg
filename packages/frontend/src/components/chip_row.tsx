@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ChipRow — the QTY_STEPS-pattern chip strip (bordered row of tiny toggle chips), generalized. ONE home:
 // marketplace character filters, kolizeum format/access filters, and any future chip strip. Clicking the
 // active chip clears it (null = "all") unless `required` pins one always-on.

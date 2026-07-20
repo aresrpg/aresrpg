@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Shared cosmetic-colour helpers. The on-chain `color_1` is stored as a packed 24-bit RGB NUMBER
 // (Move u32 → indexer u32 → FalkorDB property), and the sprite renderer wants a skin hue in degrees
 // [0..360]. `color_to_hue` is the single source of truth for that conversion — used by the local

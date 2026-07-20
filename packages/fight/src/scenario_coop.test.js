@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // M1 COOP SCENARIO (D768 / census M1-ii): TWO actors as two store instances fed ONE receipt feed — the
 // join door, seat-keyed locality (R1: my turn paints instantly for me, paces as a wave for my peer),
 // byte-identical committed convergence, and PER-SEAT settlement (each seat runs its own bounded attempt;

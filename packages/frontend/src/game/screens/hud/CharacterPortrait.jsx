@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Shared character sprite portrait — mounts the imperative sprite_preview (opaque-bbox CENTERED via
 // `contain`) into a canvas, owning the preview lifecycle. One home for the characters drawer + the
 // character surfaces so the sprite reads identically (centered, hue-shaded) everywhere.

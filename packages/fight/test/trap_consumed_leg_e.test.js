@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LEG E — CONSUMED TRAP RESURRECTED BY ADOPTION — placing a trap and pushing a mob onto it predicted correctly,
 // but the chain's correction showed the trap back as armed even though it had already triggered. A trap that
 // KILLS the mob it pushed onto must stay consumed: the receipt-proven death ON the

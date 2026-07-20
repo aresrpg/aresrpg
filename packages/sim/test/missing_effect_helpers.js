@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { process_spell_cast } from '../src/fight_spells.js'
 import { create_fight_state } from '../src/reduce.js'
 import { SHAPE_POINT, TF_NOT_TEAM } from '../src/spell_effect.js'

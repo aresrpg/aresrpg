@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Issue-4 (regression: Send-SUI display stayed stale) — proves settle_balance_after_tx defeats the fullnode's
 // coin-balance index lag by re-driving the store's single-writer refresh until the value CHANGES, early-stopping
 // the instant it does, and giving up bounded (never an infinite loop). Pure callbacks — no store/network mocks.

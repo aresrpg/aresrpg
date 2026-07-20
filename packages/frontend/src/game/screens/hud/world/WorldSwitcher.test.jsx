@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The collapsed WORLD PANEL (redesigned from an earlier "too big and polluting" layout): ONE compact
 // identity-guarded row — globe + the bare world label (the localized "you are in <world>" sentence rides
 // the title, same i18n key) + a small inline travel text-button (short `join` label; `travel_cta` as

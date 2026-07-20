@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // resolve_key_arm unit tests — the keyboard-arm decision is a PURE function (no dispatch, no DOM), extracted
 // from DeckCluster's keydown effect so this exact contract is unit-testable: a key press must arm the SAME
 // spell_id a click on the matching socket would (WeaponSocket.onPick / SpellSocket.onPick gate identically).

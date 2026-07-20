@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The client mirror of the chain's §8 aging XP bonus must match aresrpg_fight::fight::aging_bp EXACTLY (whole-
 // hour floor, +1%/h, capped at +100%) — the card previews what a fight started now would bank, so a lie here
 // is a lie to the player. These pin the formula against the Move kernel (fight.move:383-389 + config defaults).

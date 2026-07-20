@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // One populated spell socket — split out of DeckCluster.jsx (senshi spell-bar icons
 // stuck on the fallback blob after a class switch, only clearing on a full page refresh) so its icon-load
 // lifecycle is unit-testable without dragging in DeckCluster's heavy game-store import graph (game/store.js

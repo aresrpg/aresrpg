@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S-57 — WORLD JOIN actions (supersedes the [J] prompt): joining a world is (1) AUTOMATIC
 // right after character creation — MONEY-ROUTED exactly like create: a fresh zkLogin wallet
 // (≤ 0.2 SUI) rides the SPONSORED door (sponsor_and_execute_transaction), a FUNDED wallet (> 0.2 SUI, which the

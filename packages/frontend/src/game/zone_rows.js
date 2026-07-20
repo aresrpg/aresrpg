@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ZONE ROWS — the ONE frontend home turning a zone's on-chain STATE into its live spawn rows (search-cost
 // rework): the chain stores only `{ seed, consumed bitmaps }` per discovered zone, and the
 // row list DERIVES from the seed via `@aresrpg/sim`'s `derive_zone` — the byte-exact mirror of the chain's own

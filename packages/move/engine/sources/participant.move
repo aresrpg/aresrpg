@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// PARTICIPANT — one fighter's live per-fight state (a player seat). Owns the mutable combat values the turn
 /// machine + cast resolver read and write: position, AP/MP economy, live stats (RE-DERIVED from the base block +
 /// the effect board's live timed alter rows — see `refresh_stats`), and HP. The `Fight` holds a

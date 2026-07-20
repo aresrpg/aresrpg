@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// LOOT BOX tests — the §11 gacha PET box over the real cross-package scaffold (items + game booted & enabled, the
 /// item marketplace + extraction policies, a real personal kiosk holding a locked box stack, the shared
 /// `LootRegistry`). Proves the two-phase door end-to-end: `admin_set_loot_table` upserts + validates; `open_box`

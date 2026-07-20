@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG-LOD section downsample tests (survey S2). Covers: (1) DETERMINISM — same sampler ⇒ byte-identical
 // section, twice, and across two independently-built world gen contexts on the same seed; (2) 2×2→1
 // GOLDEN — a hand-computed L1 downsample (max height, mode block) over a scripted sampler; (3) SHAPE —

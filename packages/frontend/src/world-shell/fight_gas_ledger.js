@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT COST LEDGER (07-11: "show exactly on the fight result card how much the fight cost in
 // SUI"). Standalone — zero imports from dungeon_actions.js / dungeon_store.js in EITHER direction, so this
 // seam can never become a circular-import trap between the store and the tx module that feeds it.

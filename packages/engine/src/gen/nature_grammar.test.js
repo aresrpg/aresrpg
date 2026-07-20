@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NATURE-PLACEMENT GRAMMAR (GEN_VERSION 11) — the ecological tree/rock placement that replaces the
 // uniform grove-cell sprinkle (uniform sprinkle placement reads as random, not natural —
 // see Conquest Reforged and Massive Mountains for the target). Proves: the shared helpers behave

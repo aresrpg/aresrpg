@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // sync_eta — pure local predictor for "how long until the indexer catches up" (ONE-PIPELINE LAW: a
 // single pure fold over polled samples; RpcLagBanner is the only edge that feeds it and reads it — no
 // network, no timers, no store here). Every function is a deterministic transform over plain data,

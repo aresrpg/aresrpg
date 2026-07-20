@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-20 fallback — the node-material PARK invariant (the resolveIncludes crash class, 2026-07-12).
 // The classic WebGLRenderer cannot compile three/webgpu NodeMaterials (undefined vertexShader →
 // `resolveIncludes: Cannot read properties of undefined (reading 'replace')` — an UNHANDLED throw that

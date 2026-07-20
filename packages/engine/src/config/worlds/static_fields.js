@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD 12 · STATIC FIELDS (on-chain `12_static_fields`, biome `storm_plateau`) — the storm-plateau
 // planet. Seed identity (seed/mainnet/12_static_fields/world.json): air+fire elements, "static charge —
 // storm cells roll the plateau; metal gear hums before every strike", "thunder-herd country — rex packs

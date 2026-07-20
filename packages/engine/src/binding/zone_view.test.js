@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Seam 5 gate — the wayfinding view is pure, grids the world correctly, and produces HUD-ready pips +
 // zone-overlay states from pushed data.
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// CHECKPOINT — the proof-of-time value type + travel-verification math (§5, §17.2/.3). A `Checkpoint` is the
 /// "proven position + proven time" a character stamps on every position-proving action (world join, zone
 /// discovery, gather, world-fight entry); it lives as a PER-WORLD dynamic field on the Character (attached through

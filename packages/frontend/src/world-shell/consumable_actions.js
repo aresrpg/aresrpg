@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // #31 — REAL on-chain consumable use against `consume::use_many` (permissionless, structural correctness via the
 // player's PersonalKioskCap). Drinking a potion from the bag heals the kiosk-locked Character's missing HP.
 // Mirrors equip_actions.js EXACTLY: same get_sdk() instance, same personal-kiosk resolution, same run_tx path.

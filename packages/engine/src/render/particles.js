@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG2-ATMO ambient particles — floating motes near the ground + drifting leaves near trees. Minimal
 // GPU particles: a tier-gated count of instanced camera-facing quads whose motion is a PURE FUNCTION
 // of (per-particle seed, time). NO per-frame simulation state, no feedback buffer, no collision — a

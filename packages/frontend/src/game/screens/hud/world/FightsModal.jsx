@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHTS PANEL — opened by the [V] "See fights in the area" prompt / the FightsCount card — the
 // list of the current fights in range, friends on top, capped at 20, with the two filter toggles + per-row
 // SPECTATE (a started fight) / JOIN (public + placement). Pure render off state.visible_fights (reconciled by

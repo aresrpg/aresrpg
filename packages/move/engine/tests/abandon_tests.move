@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// ABANDON tests — any fight can be abandoned; abandoning is considered a death. Covers
 /// the death + turn-handoff branches (on-turn advances the queue, off-turn leaves it intact), the terminal folds
 /// (last player quits → DEFEAT → settlement mints the outcome normally), the PLACEMENT collapse (non-emptying

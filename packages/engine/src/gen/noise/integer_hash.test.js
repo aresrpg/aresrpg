@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DETERMINISM PIN for the consolidated integer hashes (repo audit 2026-07-10). Before this module
 // existed, sky_islands / strata / icebergs / cirque / caves each carried their own byte-for-byte copy
 // of the same splitmix-lineage hash2/hash3, differing only cosmetically (`salt|0` vs `salt`, `& U32`

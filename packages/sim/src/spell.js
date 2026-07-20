@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SPELL — Stats + element vocabulary, the deterministic subset of aresrpg_foundation::spell.move.
 //
 // PARITY MIRROR (S-16): byte-for-byte the on-chain `spell` module's Stats block + saturating stat/resist

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // USE_IS_TOUCH — the capability hook's pure core, proven against a device matrix and CONTRASTED with
 // `use_is_mobile`'s width query (the §3.1 ruling: touch-capability ≠ viewport-width). bun:test has no
 // DOM, so we drive `detect_touch` with fake windows and exercise `subscribe`'s reactive plumbing via a

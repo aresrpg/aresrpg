@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// KOLIZEUM abuse tests — the money-attack sad paths beyond the core suite (`kolizeum_tests`, whose harness this
 /// file reuses via its public helpers). Two families:
 ///   • REFUND ABUSE — a pledger cannot drain the pot by exiting twice (double-refund), and no refund path (exit

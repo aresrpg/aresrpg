@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Onboarding persistence — PREFERENCES ONLY (the in-progress character draft + the zkLogin
 // preference), in IndexedDB so the choice survives reload and the OAuth popup round-trip. Never
 // gameplay: the character roster comes from the server (FalkorDB read-model, written by the

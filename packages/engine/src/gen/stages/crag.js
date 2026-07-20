@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RELIEF LADDER stage (TERRAIN REALISM BASELINE — docs/TERRAIN_REALISM_BASELINE.md). Grew out of the
 // GLACIAL §A crag/gully spectrum repair into the DEFAULT multi-scale realism ladder: FOUR additive
 // height terms composed into raw_land alongside mountain_relief/canyon (one height home):

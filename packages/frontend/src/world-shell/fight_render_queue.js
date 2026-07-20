@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // One renderer-neutral fight presentation queue. Producers build every render closure before enqueueing a
 // complete source-turn batch; this module only owns timing, cancellation, and strict serial playback.
 

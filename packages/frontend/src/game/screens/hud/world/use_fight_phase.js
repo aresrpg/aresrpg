@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // W4 — the React bridge to the pure phase machine (fight-engine/phase.js). Components are READ-ONLY
 // subscribers: this hook folds the live dungeon read + the engine fight slice + my seat into the derived
 // { phase, unmet, outcome } and hands it to the mount decisions. No component writes fight state — they ask

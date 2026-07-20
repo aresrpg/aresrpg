@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // CHARACTER↔WORLD SESSION BINDING (v33) — the FIGHT half of an active-character switch, as a PURE
 // decision with its effects INJECTED at the edge (CLIENT-INDEPENDENCE: effects live at the edges, the core
 // computes). The world scene re-keys off the session gate (session_gate.js); the fight board mounts off

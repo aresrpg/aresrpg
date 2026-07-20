@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D770a W3b regression — incoming PEER chat must reach message_history THROUGH @aresrpg/world's presence atom
 // (the WS-era `packet/chatMessage` shim is dead). Drives the real wire: a `chat_received` input on the presence
 // store → chat.js's observe subscription → an `action/chat_message` dispatch, with from_me computed off my wallet.

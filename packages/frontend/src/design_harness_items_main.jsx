@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THROWAWAY items&economy design-pass harness — NOT part of the app, NOT imported by main.tsx, NOT built
 // into the production bundle (a separate Vite HTML entry: design-harness-items.html). Per the
 // PICK#2 ruling: pet feeding = right-click the EXISTING inventory item → Feed →

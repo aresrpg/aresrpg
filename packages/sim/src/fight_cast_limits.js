@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Cast cooldown/count bookkeeping, split from the spell resolver so each engine module stays below 600 lines.
 
 import { CASTS_UNLIMITED } from './spell_templates.js'

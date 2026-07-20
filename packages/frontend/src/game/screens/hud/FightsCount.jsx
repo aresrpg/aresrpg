@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Nearby-fights count card (Wave SPECTATE) — a small card showing how many fights are in range. Clicking it
 // opens the fights modal (the full list with Join / Spectate). Sits near the craft-queue area (bottom-left,
 // above the chat) without overlapping. Hidden when there are no fights in range or while I'm in my own fight.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LOCAL PLAYER BEAT — the ONE seam to fire a one-shot avatar clip (ENG-16 `avatar.play_beat`) on the LOCAL
 // roam avatar from OUTSIDE the render loop. `embed_voxel_player` owns the avatar handle: on mount it registers
 // a trigger here (which fires the beat AND pauses locomotion for the clip's duration so `update()` can't fade

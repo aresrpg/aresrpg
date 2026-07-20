@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD 11 · ROOTHEART (on-chain `11_rootheart`, biome `world_tree`) — the heartwood planet. Seed
 // identity (seed/mainnet/11_rootheart/world.json): earth+water elements, "living-wood regrowth — the
 // tree heals its own wounds; nodes regrow visibly", "lumberjack paradise inside one continent-sized

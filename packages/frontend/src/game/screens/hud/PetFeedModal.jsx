@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PET FEED — choose one owned resource, preview the Move-projected pet state, then submit one irreversible feed.
 // Move owns the UTC-day/60-feed gates and stat curve; this modal only presents projected values and composes it.
 

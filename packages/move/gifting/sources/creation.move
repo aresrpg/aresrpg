@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// CREATION — the GATE that owns character minting: the name registry, the class whitelist, the free/paid split,
 /// price and pause. A single shared `Creation` object is a vending machine for characters. Two mint paths (§2):
 /// `create_character_free` mints the account's FIRST character for FREE (one per ADDRESS, derivation-enforced);

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Presentation-only decode of the authoritative Fight.fx fighter-status rows omitted by @aresrpg/sdk/fight.
 // The raw json:true Fight document still carries these nested fields, so the frontend can bind status visuals to
 // chain duration without widening the SDK surface owned by another lane.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FULL SESSION CLOSURE (acceptance-pack row 6) — the solo lifecycle extended to the OPEN-RESULT edge in ONE
 // unbroken store: create → placement → activation → cast → single-PTB receipt + mob wave + acks → kill →
 // victory → the FightResult claim/open intent SURFACES AS AN EFFECT REQUEST OUTPUT (board_view

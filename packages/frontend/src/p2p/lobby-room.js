@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Trystero-based serverless presence + chat for the World-tab lobby (final-design plan decision #2:
 // "P2P = Trystero (nostr default, torrent fallback) — genuinely serverless"). No signaling server we
 // run, no backend WS — Trystero's public nostr relays do peer discovery, then it's straight WebRTC.

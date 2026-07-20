@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { test, expect } from '@playwright/test'
 
 // WS-B — World tab free (mouse-or-keys) locomotion (final-design plan decision #7: the World tab is

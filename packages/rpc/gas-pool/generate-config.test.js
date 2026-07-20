@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Anti-drain cap rendering (constitution, 2026-07-10) — the station's config MUST carry the
 // 0.2 SUI/day global cap + the 0.1 SUI/request ceiling BY DEFAULT (a bare `docker compose --profile gas up`
 // is constitution-compliant; raising a cap is a deliberate env override, never an accident).

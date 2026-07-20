@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D164 REFERENCE-STYLE LEAF SPRITE CLUSTERS + SNOW-ON-LEAF DEPOSITS (addendum 3), extracted from
 // mesher.js so it stays under the ≤600-LoC law. Leaf voxels DON'T render as cubes: every SURFACE leaf cell
 // (≥1 exposed non-solid neighbour) emits a sprite CLUSTER — K crossed pairs (faces 6/7, leaf id → CUTOUT

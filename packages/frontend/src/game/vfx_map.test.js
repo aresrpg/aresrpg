@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Unit coverage for the fight-VFX choreography map's pure helpers + data integrity. Phase 2: the map names 3D
 // GPU-particle PRESETS (preset_3d) exclusively — NO sprite sheets on any fight surface — so
 // the integrity sweep proves EVERY attack layer AND the reserved shelves resolve to a real preset in

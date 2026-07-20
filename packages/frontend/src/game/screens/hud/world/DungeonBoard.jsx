@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // board #13 — the on-chain dungeon's turn-INPUT bridge + status chrome. The BOARD ITSELF is the rich 3D
 // renderer (fight-overlay.js + fight-board-render.js), mounted into the roam scene at DUNGEON_BOARD_ORIGIN.
 // What lives HERE is the real on-chain wiring: the turn-draft (a cumulative move PATH + ≤1 cast, mirroring

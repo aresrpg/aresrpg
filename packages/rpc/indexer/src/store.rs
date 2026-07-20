@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 //! Redis store for the `sui-indexer-alt-framework`.
 //!
 //! Implements the framework's sequential-pipeline store traits over Redis 8:

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LANE SIMDRIVE · S1 — the fight turn is EVENT/SIM-DRIVEN; snapshots only reconcile (lag may
 // delay reconciliation, never playability). The PRODQA dead-turn class: after a player ends a turn, the on-chain
 // `resolve_from` runs the mob wave INLINE and emits TurnStarted(next player) back in the SAME receipt the client

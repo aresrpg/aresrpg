@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // HP MATH — the SINGLE off-chain home for character HP derivation, a PURE mirror of the on-chain kernels so a
 // client read matches chain truth EXACTLY. Ports `aresrpg_foundation::progression_math` (max_hp + lazy natural
 // regen, ANNEX §4c/§5.4) VERBATIM, plus the per-class BASE-HP defaults from `aresrpg::config` (§17.31). Zero

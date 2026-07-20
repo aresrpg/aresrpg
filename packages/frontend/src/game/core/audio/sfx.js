@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Sound effects — UI cues (ported aac one-shots) + synthesized COMBAT cues. The combat cues are pure
 // Web Audio (oscillator + noise envelopes, zero assets) so the fight has instant juice without shipping
 // audio files: cast (rising blip), hit (noise thwack), heal (soft chime), turn (two-note ping), warn

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* THROWAWAY items&economy design-pass CSS — isolated `.mmi-*` namespace. Reuses REAL house classes
  * (.inv__cell/.inv__grid from hud-panels.css, .item-card from item-card.css, .gw-panel) wherever the
  * surface already has an approved visual language — new classes only for the genuinely novel bits (the

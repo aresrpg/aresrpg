@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Quests drawer body — the tutorial questbook. A master/detail panel: a LEFT ordered-chain rail
 // (done / active / locked rows with a per-quest progress chip) + a RIGHT detail panel (quest header,
 // status, the objective copy, and a count/required progress bar).

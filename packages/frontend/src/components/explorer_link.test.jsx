@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST regression for the inventory context-menu's "See on explorer" row (right-click
 // an item, reach its on-chain object page). ExplorerMenuRow is the ONE shared row every popover (pet/box/crush)
 // renders — proven here in isolation; crush_menu.test.tsx proves one real menu actually wires it in.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // #31 — the out-of-fight consumable USE builder (consume::use_many). OFFLINE: the deployment override seam
 // (context.ids.aresrpg) builds the tx without a live publish; asserts the target + arg shape (12) + the single
 // deterministic call (no &Random) + the loud refusals (undeployed / missing template / bad quantity). Mirrors

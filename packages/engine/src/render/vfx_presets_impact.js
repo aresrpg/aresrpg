@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX — STATUS / WARD / VORTEX / IMPACT (class e_status_impact). The remaining e-class pack scenes ported
 // to their consumers: BattleFX shield (14 = 7 el × 2 tiers) → `shield_ward_<el>_<tier>` defensive-ward LOOP blooms;
 // DarkMagicFX vortex (3) → `dark_vortex_<tint>` pull/summon bursts; ElectricFX impact (6) → `air_impact_pack_N`

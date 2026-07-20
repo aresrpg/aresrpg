@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D3a — TACKLE PAINT = THE EXACT CHAIN CONTEST — the red band must match the chain's actual contest: a
 // player who saw red but tried to move anyway must NOT walk free. A PLAYER move's tackle roll is DETERMINISTIC + CLIENT-
 // PREVIEWABLE (actions.move apply_move: `spell_formula::tackle_seed(fight::turn_seed(fight, seat), slot, mp)`

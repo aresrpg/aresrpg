@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Build-simulator content source. Maps the seeded content (@aresrpg/sdk classes / items / spells)
 // into the exact template shapes pages/simulator.tsx consumes, so the simulator runs fully on local
 // data with no server round-trip. The simulator's own balance math (constants/simulator.ts) reads a

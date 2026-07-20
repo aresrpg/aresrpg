@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure WASD/arrow movement-key resolver — split out of embed_voxel_player.js's on_key SPECIFICALLY so the
 // "arrows alias WASD" contract is unit-testable without mounting the player (embed_voxel_player.js pulls in
 // the engine + p2p/lobby-room + store.js, which touch `window`/zkLogin at import time — the same bun:test

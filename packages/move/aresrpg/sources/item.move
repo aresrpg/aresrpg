@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// ITEM — the generic on-chain item base: pure DATA + package-private factories, ZERO game semantics and ZERO
 /// authority plumbing. An `Item` is a minted NFT stamped with its blueprint (`template`) and the catalog slug
 /// its art is keyed by (`item_type`); an `ItemTemplate` is the shared authoring blueprint. Meaning (categories,

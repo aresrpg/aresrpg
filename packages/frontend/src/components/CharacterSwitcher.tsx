@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // #29 PART 2 — sidebar character switcher, docked at the bottom of the left sidebar (the freed
 // `#game-online-slot` region — Option B dropped OnlinePlayers there). World-tab only. Lets the player see
 // their whole on-chain roster grouped IN DUNGEON / IN LOBBY, click to either RESUME a live dungeon fight

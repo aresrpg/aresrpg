@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Opt-in bridge from frontend-owned animation callbacks to the engine CPU probe. The disabled path returns the
 // original callback by identity: no clock reads, events, wrapper allocation, observer, or timer in the hot loop.
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD 09 · CORAL THRONE (on-chain `09_coral_throne`, biome `reef_city`) — the drowned-reef planet.
 // Seed identity (seed/mainnet/09_coral_throne/world.json): water+air elements, "tide-gated access —
 // cave mouths and the dungeon open at low tide", "fisher-alchemist hub — the drowned court holds

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// FIGHT_REGISTRY — the fight domain's ONE shared coordination object. Two jobs:
 ///
 ///  1. FIRST-COME DERIVATION PARENT (§7 first-come-first-served). A Fight is created at the address DERIVED

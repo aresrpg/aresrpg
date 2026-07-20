@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Fixtures for js/aresrpg/boundary-mutation (CODE_LAW L-I2) — parameters are the caller's.
 
 // RED A — direct property write through an exported function's parameter.

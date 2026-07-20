@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DISCOVERY prompt sources (S-18, DECISIONS 07-09 pick + addendum) — renderless registrars feeding the
 // PromptStack (keys: F search · G gather · R ride; E dungeon lives in NpcPrompt.jsx):
 //

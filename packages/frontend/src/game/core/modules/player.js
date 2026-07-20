@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Local scene/UI state the client publishes to the engine store: the player avatar's current
 // world cell (for the React Minimap), the tactical fight-mode toggle, and the server's
 // authoritative position for OUR character. The scene dispatches `action/player_cell` ONLY when the

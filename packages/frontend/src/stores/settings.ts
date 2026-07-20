@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { create } from 'zustand'
 
 // Player-facing SETTINGS store — the one home for client-side gameplay preferences that must survive a

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // #55 — proves abort humanization survives the #23 gRPC cutover: the Core receipt's `effects.status.error` is a
 // STRUCTURED object `{ $kind:'MoveAbort', MoveAbort:{ abortCode, location:{ module } } }` (parseGrpcExecutionError),
 // NOT the legacy JSON-RPC abort STRING — the string-only regex used to collapse it to "[object Object]". These

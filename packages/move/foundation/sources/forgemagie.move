@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// FORGEMAGIE — the rune SCRIBING closed form, a VERBATIM port of the sealed reference-corpus `ForgemagieService.applyRune`
 /// (docs/HYTALE_FORMULAS_VENDORED.md §2; DECISIONS 2026-07-09 `ANNEX_SHAPE_FREEZE:149` "ports verbatim"). PURE
 /// math: no objects, no events, no `sui::random` — rng threads as `&mut u64` per `prng` conventions; the item's

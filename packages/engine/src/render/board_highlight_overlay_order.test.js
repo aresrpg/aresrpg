@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // POST-AgX GRAPH ORDER (②) — proves create_post_stack WIRES the board-highlight overlay into its output graph
 // and composites it AFTER the tonemap/grade (so the night auto-exposure swing never reaches it). The overlay is
 // constructed INSIDE create_post_stack with no returned handle, and `window` is undefined under bun, so the

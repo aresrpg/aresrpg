@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TOUCH_INPUT — the state singleton's contract: the [-1,1] movement invariant (diagonals preserved, NO
 // dead zone — that's M-03's stick), the accumulate→consume→zeroed drain semantics for look/pinch, and
 // the armed × text_focused gate. Singleton state persists across tests, so beforeEach re-zeros it.

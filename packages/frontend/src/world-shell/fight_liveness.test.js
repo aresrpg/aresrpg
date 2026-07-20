@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // P0 fight teardown — absence is authoritative, refresh-resume validates the Fight before mounting, and a
 // confirmed forfeit receipt owns immediate local teardown. These tests use the real dungeon/world-fight stores;
 // only the chain transport and transaction writer are replaced at their module boundaries.

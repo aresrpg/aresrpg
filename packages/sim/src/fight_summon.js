@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Summon (minion) lifecycle: spawn an AI-driven fighter onto the caster's team mid-fight.
 //
 // A AresRPG `summon` spell effect drops a mob-shaped fighter at/near the cast cell, on the caster's team, INTO

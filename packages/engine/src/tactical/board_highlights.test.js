@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-16 / D150 — highlight tile SHAPE + channel routing invariants (three node graph builds under bun;
 // no WebGPU device — the TSL fragment is only COMPILED at render time, so constructing the controller +
 // its node materials is valid here). Locks:

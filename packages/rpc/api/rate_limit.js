@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Per-IP rate limiting backed by Redis (INCR + EXPIRE).
 //
 // A fixed window admits up to RATE_LIMIT_MAX requests per RATE_LIMIT_WINDOW_SEC.

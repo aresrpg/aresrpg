@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// GIFT — escrow-recoverable player-to-player item send (design doc
 /// `docs/ITEM_SEND_PLAN.md` §A4). A direct simplification of `commission.move`'s shared-escrow shape
 /// (send/claim/recall ≈ request/execute/cancel), specialised for MOVING kiosk-locked items instead of paying an

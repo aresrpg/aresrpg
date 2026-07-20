@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ①② TRAP PREDICTION DAMAGE — a live symptom where pushing a mob onto a trap floated the push number but not
 // the trap damage; trap damage only reconciled after, sometimes ending the fight retroactively.
 //

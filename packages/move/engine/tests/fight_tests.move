@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// ENGINE tests — the adversarial lifecycle cases over the full cross-package scaffold (enabled GameConfig +
 /// fight Version/registry + a minted mob template): first-come race, 0-HP entry gate (§17.23), party-only join
 /// rejection + dup-seat rejection (F-01), weapon-AP repeatability (§17.27), the aging snapshot (§8 — parking

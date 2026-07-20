@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [victim-reaction PROOF] The "got hit" flinch on the REAL GPU (headed Metal). Boots the ?team=1 flat
 // open-sky board and drives scripted damage/heal/death beats on the fighters, capturing the recoil + the
 // emissive tint at each impact frame:

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-13 UNDERWATER acceptance — drives the LIVE engine (WebGPU/Metal) at the deep lake near spawn
 // (gen-verified: water cells y110..127 at (31,171), so the SURFACE PLANE = top of cell 127 = world-y
 // 128; bed sand at y109). Proves the underwater feature — blue and distorted on the camera:

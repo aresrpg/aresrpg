@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SEED_TESTNET — S-21-seed. The DISPOSABLE minimal-E2E content seed for the FRESHLY-PUBLISHED testnet lineage
 // (scripts/out/ceremony_manifest.json). SANCTIONED, TESTNET ONLY — none of this survives (real content is
 // redeployed manually later). Authoring runs while the packages are DARK (every door gates on

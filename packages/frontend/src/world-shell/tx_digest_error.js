@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /**
  * Stamp a failure raised after transaction submission with the digest that proves gas was already burned.
  * Mutate ordinary Error objects so their original stack/cause survive; wrap frozen objects and primitives.

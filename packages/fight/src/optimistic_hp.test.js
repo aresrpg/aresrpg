@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST regression for died×2: DungeonBoard subtracts the whole queued cast damage from a mob HP base.
 // That base must exclude this turn's own optimistic Hit intents, or cast 2 subtracts casts 1+2 from an HP value
 // that already includes cast 1. Peer/receipt Hits remain committed and must still lower the base.

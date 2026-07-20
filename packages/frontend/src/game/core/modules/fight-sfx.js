@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Fight cast SFX — the CASTER-LAYER voice for the PLAYER's own casts (F1 2-layer grammar).
 // Subscribes to the SAME raw `packet/fightCastResult` event the optimistic own-turn cast and the chain
 // reconcile dispatch, so a player's wind-up whoosh fires the instant they cast. This is HALF of the

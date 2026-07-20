@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LEG G — TELEPORT CAST ROLLED BACK — a bug where a teleport cast kept getting rolled back. A
 // teleport-class cast relocates the CASTER (an instant self-Displaced, effect_kind 14). Its
 // predicted cell must (1) paint this frame, (2) survive the confirming receipt, and (3) never be un-teleported

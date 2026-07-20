@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // CRUSH actions (SINGLE TX) — the tx seam over @aresrpg/sdk/game's `crush_ptb`,
 // funneled through the terminal-&Random door (world-shell/tx.js `run_tx_random` — keep-budget class, the shop
 // buy idiom). ONE user action: right-click → confirm → `forgemagie::crush` destroys the gear, rolls the yield

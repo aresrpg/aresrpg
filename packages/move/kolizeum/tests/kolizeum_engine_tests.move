@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// KOLIZEUM engine-bridge e2e — the fight-composition surface the money-core unit suite punts here. Stands up the
 /// core half (koli_world) + the branded fight engine and drives the REAL own-branded bridge: `start` (creator
 /// commits the lobby to a `KolizeumBrand` PvP `Fight` on the generic engine) → `seat` (a member self-seats via

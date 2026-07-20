@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Regression + unit coverage for the seed-batching primitives added to ceremony_lib.mjs (critical-path
 // seeder optimization: PTBs cap at 1024 operations per tx — batch the
 // ~1,850-row item/mob/spell one-per-tx phases in seed_full_corpus.mjs). Pure — no chain, no client, no

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // scripts/eslint-rules/typed_fp.config.mjs — THE TYPED-FP TIER (docs/CODE_LAW.md).
 //
 // Type-aware strict-FP enforcement, layered AFTER the untyped fp_law tiers. Census 2026-07-17

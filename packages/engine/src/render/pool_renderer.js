@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG-MEGA terrain renderer (plan §11 PERF NORTH STAR) — THE GPU-driven terrain renderer. The legacy
 // sector-bundled path (per-chunk InstancedMesh/material + BundleGroups + compileAsync-on-upload) was
 // measured against this at the exit gate (2026-07-03, headed Metal 5K) and deleted: this path is ≥ the

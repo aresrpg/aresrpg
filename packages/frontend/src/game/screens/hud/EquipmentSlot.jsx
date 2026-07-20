@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // One paper-doll equipment slot. Renders the slot art + a level badge + a rarity-tinted bottom edge
 // when filled, or a per-slot line glyph + caption when empty (canon-04 "Loadout" doll). Wires the
 // select/unequip/drag-drop/right-click handlers. Hover → the SHARED onchain item tooltip (Inventory.jsx owns

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { test, expect, type Page } from '@playwright/test'
 
 // SESSION POSITION RESTORE — regression: refreshing the page did not restore the last on-foot position —

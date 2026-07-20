@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Regression gate for the item-icon resolver (src/jobs.js) — the SDK SSOT the whole HUD renders item art through
 // (ItemIcon.jsx). Pins BOTH resolution modes: the CDN fallback (default, no quilt configured) and the S-20 Walrus
 // path (by-quilt-id/<quilt>/<item_type>.png — the exact shape the on-chain Item Display uses, ported from koshi-2d).

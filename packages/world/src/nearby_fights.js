@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NEARBY FIGHTS — the PURE panel/discovery logic for the "See fights in the area" feature: a
 // 50-block proximity prompt → a panel of the current fights in range, spectate once started / join if public +
 // in placement; the dungeon twin lists room-fights, friends on top, capped at 20. Zero IO here: shaping an

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// CHARACTER — the generic on-chain character base: pure DATA + package-private factory, ZERO gameplay systems
 /// and ZERO authority plumbing. A `Character` is a minted NFT carrying only the base fields
 /// (name / class / male / customization / experience / created_at_ms / a position anchor). Stats, hp, jobs,

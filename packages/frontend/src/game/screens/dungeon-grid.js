@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D75 DETERMINISTIC VARIED FIGHT GRID.
 //
 // ⚠️ RUNTIME READS STORED MASKS — `generateGrid` IS A DEV/TEST TWIN, NEVER A RUNTIME PATH. ⚠️

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// <reference types="vite/client" />
 import './boot_shim' // D146: MUST stay the first import — see boot_shim.ts (hoisting-safe process global)
 import './stale_deploy_recovery'

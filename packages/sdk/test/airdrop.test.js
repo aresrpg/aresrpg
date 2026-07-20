@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // AIRDROP PTB builders (airdrop::claim + admin create/add/remove/close). OFFLINE: the deployment override seam
 // builds each tx without a live publish; asserts the targets + arg shapes and the loud arg refusals. Reconciled
 // against packages/move/aresrpg/sources/airdrop.move. Mirrors lootbox.test.js's builder-shape pattern.

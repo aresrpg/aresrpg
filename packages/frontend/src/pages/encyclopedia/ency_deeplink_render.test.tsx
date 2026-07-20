@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST render proof (ency deep-links): the DungeonsModal need_key sentence rendered PLAIN
 // TEXT at HEAD; now the key name is an <a> to its encyclopedia item page (via the ONE idiom, EncyclopediaLink +
 // the Trans <link> slot). No browser — server static render (react-dom/server), the world_tab.test precedent.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Seam 2 gate — the board derives deterministically from (seed, anchor), varies with the anchor, and
 // every derived board is a well-formed, king-isolated, seat-able board.build() spec.
 

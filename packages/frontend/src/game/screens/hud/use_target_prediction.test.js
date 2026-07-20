@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LIVE-FLOW repro (hovering a mob with a spell must show what will happen: damage taken,
 // critical chance, effects, kill). Drives the REAL fight core (seed_fight_core → the ONE input door) + the real
 // board_view/engine_view projections + the real senshi spell corpus, then exercises compute_target_prediction —

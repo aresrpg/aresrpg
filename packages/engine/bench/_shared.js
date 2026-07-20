@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Shared bench primitives — the camera-pin protocol, stream settle, and the voxel-true HOLE
 // CLASSIFIER, extracted from the old 876-line streaming.spec.js so both split gates
 // (streaming.spec.js perf + holes_flight.spec.js) stay under the 600-LoC law and share ONE copy

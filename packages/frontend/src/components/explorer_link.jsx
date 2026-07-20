@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SSOT on-chain explorer link — a small house-styled link (external-link icon + uppercase label) that opens
 // a Sui object's page on the block explorer in a NEW tab. ONE shared component reused across surfaces
 // (characters today; items / dungeons later — D39). The explorer base lives in a SINGLE constant so a mainnet

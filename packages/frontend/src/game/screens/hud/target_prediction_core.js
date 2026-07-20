@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The STORE-FREE core of the board-hover cast preview — show exactly what will happen: damage
 // taken, critical chance, effects, kill. Isolated from the React hook's store/auth graph (which needs a browser
 // window) so the unit test drives it through the REAL fight core + spell corpus without a DOM — the same

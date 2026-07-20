@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S-30 HEALTHZ — assert the on-chain stack is LIVE before any golden-path step. The truth is the switches,
 // not a port probe: GameConfig.enabled + every package Version.enabled + the seed objects readable.
 import { IDS, seed, ceremony, fields, getObj, balanceMist, ADDR, logline } from './_qa.mjs'

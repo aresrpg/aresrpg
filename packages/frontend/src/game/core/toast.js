@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Toast store — two distinct, complementary channels, both ephemeral UI (deliberately NOT engine
 // game-state). Framework-agnostic (an EventEmitter + snapshots); React binds via useSyncExternalStore.
 //

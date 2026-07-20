@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // IN-FIGHT VEIL — hide EVERY roam population while a world fight is mounted, then hand them all back on the flip.
 // Fixes: other mobs must not be visible during a fight (2026-07-15), reconciled with the earlier requirement to
 // release mobs back after a fight so they're visible again (2026-07-13): the rigs STAY resident + roaming under the tactical board so

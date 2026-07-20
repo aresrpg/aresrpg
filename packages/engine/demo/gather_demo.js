@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GATHER-NODE PROCEDURAL PROP DEMO HARNESS (?gather=1) — the acceptance surface for the resource-node
 // visual rework ("procedurally generate real wheat like grass textures, same for herbs +
 // ores"). Boots the engine, grounds a wall of gather props on REAL terrain grass (the exact context where

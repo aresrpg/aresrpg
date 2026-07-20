@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The door-exemption minimal pair: identical async dispatch, only the writer's citizenship differs.
 import { create } from 'zustand'
 

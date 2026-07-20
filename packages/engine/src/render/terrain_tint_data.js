@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG-TINT (ENG-1) PURE DATA + classification — the three-FREE half of terrain_tint.js. Split out
 // [D162 2026-07-05] so the far-shell CPU tint (lod/far_mesher.js, which runs in a pure worker that must
 // NOT import three/tsl) can single-source the SAME amplitudes + per-block tint class as the near

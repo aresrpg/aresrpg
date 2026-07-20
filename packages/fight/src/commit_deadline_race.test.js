@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ③ COMMIT vs THE DEADLINE — a live race where "Ending turn — committing your drafted actions" is followed by
 // "Turn lost: The turn timer ran out before your actions committed — they were rolled back". INSTRUMENT-FIRST
 // (scratchpad probe, captured in the return): the pure draft→commit timeline is clean — the deadline auto-commit

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Seeded content source for the encyclopedia (PHASE 3 meta-tab swap). The AresRPG companion
 // encyclopedia originally read its item/mob/dungeon/class/npc templates from the template server via
 // `use_ws()`; this module is a drop-in `use_content()` that serves the SAME shapes from the seeded

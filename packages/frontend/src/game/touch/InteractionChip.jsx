@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { use_mobile_input_mode } from './mobile_input_mode.js'
 
 export const key_cap_for_mode = (key_cap, mobile) => (mobile ? null : key_cap)

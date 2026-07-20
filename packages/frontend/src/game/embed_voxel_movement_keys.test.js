@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // resolve_movement_key / is_movement_key unit tests — witness-r4 (2026-07-11): "arrow keys don't move the
 // world, WASD works". Proves the arrow codes resolve to the IDENTICAL {axis,sign} their WASD partner does
 // (embed_voxel_player.js's on_key just reads this map), and that the preventDefault gate (is_movement_key)

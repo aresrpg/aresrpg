@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-16 Phase B — TACTICAL FIGHTBOARD GEOMETRY (the flat voxel-scale board mesh).
 //
 // Builds the board substrate as four InstancedMesh classes over the flat cave floor (D142) — the

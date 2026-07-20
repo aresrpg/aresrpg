@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Party proof — every declared party MoveAbort renders HUMANIZED, never a raw abort code / English /
 // "[object Object]".
 // Exercises the exact chain party_store now uses: party_actions throws `tx_error(raw)` (human .message + the

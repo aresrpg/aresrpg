@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// RUNE CATALOG — the RETRO/1.29 rune system as HARDCODED CONTENT (DECISIONS 2026-07-09 2143-2145:
 /// "runes never change → they live as constants, not admin data"). PURE data + accessors: no objects, no
 /// events, no state. The crush (yield) and scribe (`forgemagie`) lanes read this table; `taux` takes the

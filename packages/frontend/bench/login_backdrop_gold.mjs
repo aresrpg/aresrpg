@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LOGIN BACKDROP GOLD — the golden pixel row proving the login page keeps its live 3D world backdrop
 // rendering behind the login card; render-suite order — the render_gold idiom.
 //

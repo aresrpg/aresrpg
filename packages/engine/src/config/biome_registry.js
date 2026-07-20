@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Biome registry (§4.3) — FROZEN SCHEMA. WS2 (gen/biome_placer, column_gen) writes `biome`
 // ids into ChunkRecords against this table; WS4/WS6 (materials, foliage) read surface/spawn
 // rules; WS9 (structures) reads structure pools. Adding biomes later is additive-only — the

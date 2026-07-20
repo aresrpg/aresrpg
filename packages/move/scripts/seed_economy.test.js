@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Unit coverage of the ceremony money-path helpers (seed_economy.mjs) — the two ceremony-blocking bugs:
 //   • shop price SUI→MIST (a 10^9 shortfall would list the whole catalog for dust);
 //   • crafting::create_recipe arity (required_job: u8 + craft_xp: u64 must be sourced, never invented).

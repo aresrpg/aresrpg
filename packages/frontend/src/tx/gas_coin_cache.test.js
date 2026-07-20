@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GAS-COIN PIN (<1s lane) — the per-fight-session pin that chains the wallet's gas coin across a
 // fight's commits so each commit's build resolves ZERO gas round-trip. Proves: the pin applies ONLY with both a
 // coin + price (all-or-nothing, else the build still resolves), chains the fresh ref from a landed receipt,

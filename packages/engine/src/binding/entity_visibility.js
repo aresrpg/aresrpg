@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SEAM 4 — PHASE-OUT VISIBILITY (SPEC §7: "a fight phases its participants out of the open world").
 //
 // "fighters stop seeing all players and mobs not in the fight, and everyone else stops seeing the fight's

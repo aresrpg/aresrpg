@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S-25 SUB-BIOME REGION LAYER — the "world-as-planet" region field is a REAL, isolated, deterministic
 // lever: enabling it on a massif world changes the generated columns (terrain + biome + palette), disabling
 // it returns to the massif-only world byte-for-byte, and the same recipe reproduces the same world. Also

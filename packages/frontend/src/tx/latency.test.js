@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FINALITY POLL DIET (latency lever 2) — proves our custom pollSchedule detects a final tx FASTER than
 // @mysten/sui's default. `detect()` replicates CoreClient.waitForTransaction's algorithm (dist/client/core.mjs
 // @2.20.1): it polls at cumulative offsets from submit and returns at the FIRST poll ≥ the tx's finality time,

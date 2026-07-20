@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // In-fight ARMED-SPELL READOUT (canon/14) — the compact bottom-left card shown while the local player has a
 // spell armed (drag-and-drop aiming). It REUSES the shared DECK-B `SpellDetail` panel (the SAME schema the
 // out-of-fight deck builder renders) so the in-fight readout never drifts from combat truth — the "compact

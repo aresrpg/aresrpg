@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT-FEEL — the on-impact screen grade: a thin element-coloured vignette that pulses over the game viewport the instant a cast
 // LANDS (voxel_fight_adapter.impact_package → trigger_fight_flash), plus an optional full-screen GRADE moment:
 // 'warm' (a heal glows warm), 'desaturate' (a death blow drains colour), 'element-wash' (a big AoE washes the

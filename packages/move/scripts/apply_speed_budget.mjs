@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // One-shot: align every world's on-chain speed_budget with the ENGINE's real movement ceiling.
 // 2026-07-15 incident: the S-73 movement-feel pass raised engine RUN_SPEED to 10.5 m/s while worlds
 // still carried DEFAULT_SPEED=550 (5.5 blocks/s, authored for a ~6.5 flat-line era) — every RUNNING

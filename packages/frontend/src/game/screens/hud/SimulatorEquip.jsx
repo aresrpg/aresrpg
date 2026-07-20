@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Simulator equipment picker — each slot is a BUTTON that opens an encyclopedia-style item
 // PICKER (browse the seeded items VALID for that slot + select one), replacing the old native <select>.
 // Choosing a template equips it; "Empty" clears it. The chosen items flow up to the SimulatorDrawer, which

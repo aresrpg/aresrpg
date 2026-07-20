@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Proves the character-mint MONEY ROUTING (the live-400 fix): a wallet holding > 0.2 SUI
 // self-pays the SAME free-mint PTB, ≤ 0.2 SUI stays sponsored, and a FRESH balance-read failure surfaces an
 // honest error and NEVER silently falls through to the sponsor (the funded-wallet 400 this fixes). All effects

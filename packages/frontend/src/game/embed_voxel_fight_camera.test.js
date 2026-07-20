@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT-ENTRY CINEMATIC — headless proof of the fight camera's prepare→settle state machine:
 // begin_prepare snaps to iso + slowly ORBITS a synthetic anchor frame while the board builds;
 // set_active(true) (board ready) SETTLES the azimuth into the canonical corner with the zoom-punch boom;

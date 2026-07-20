@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// ZONE GEN — the SEED-DERIVED zone composition kernel (search-cost rework, "good search
 /// design"). `search_zone` no longer MATERIALISES spawns as on-chain rows (the searcher paid ~0.1 SUI of storage
 /// whose rebate later flowed to OTHER players' fights — the redistribution bug): it stores ONLY the zone's

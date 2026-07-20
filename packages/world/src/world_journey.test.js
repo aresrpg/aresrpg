@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // W4 — THE WORLD-JOURNEY headless scenario (D770a): the world twin of the fight core's solo-lifecycle harness.
 // ONE join → spawn → search → claim walk across ALL THREE cores driven by plain-object inputs — session_gate
 // (which session is live), spawns_zones (where I am proven + what is claimable), presence (who is around) —

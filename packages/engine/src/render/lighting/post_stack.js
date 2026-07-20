@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // One output graph: scene → clouds/froxels → AgX → display grade/effects. Scene reconstruction uses
 // explicit camera uniforms because the post quad's own camera is orthographic.
 

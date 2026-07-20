@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Far-section streamer (§11 NG-LOD phase B) — schedules WHICH far sections get built and DISPATCHES the
 // builds to a DEDICATED worker pool (far_section_worker.js), uploading each finished FarMesh to the
 // far-shell renderer (far_field.js). Implements the Distant-Horizons two-selection flow for GAPLESS,

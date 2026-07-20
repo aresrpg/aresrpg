@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ③b RECEIPT DISPLACEMENT-LEG DEDUPE (ruled 07-19): the prediction predicts the slide (client-independence) and
 // windows it; when the receipt for MY OWN turn arrives, its displacement_leg is RECONCILED in the fold —
 // a receipt displacement MATCHING the already-presented predicted displacement (same target + same to_cell) is

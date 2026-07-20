@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT MUSIC = THE ARMED ZONE'S `_battle` TWIN: the battle bed is the zone's own twin — if the roam
 // bed picked arctic for a biome, a battle in this biome plays arctic_battle. The twin invariant is a PURE
 // property of resolve_tracks: roam `${name}.mp3` and battle `${name}_battle.mp3` come off the SAME

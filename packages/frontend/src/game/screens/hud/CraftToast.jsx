@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Center-top craft-queue toast (Wave CRAFT). Shows the ACTIVE craft (result icon + name), the queue
 // length (remaining / total), and a live progress bar for the in-flight craft. The SERVER is the sole
 // authority: this only renders the `state.craft` slice the server pushes (per_ms + started_at_ms), and

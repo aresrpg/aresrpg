@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PER-FIGHT BUDGET CACHE (latency lever 1) — proves the shape key ignores per-act args but pins the fight,
 // that a remembered budget is reused (hit) until invalidated, and that the GAS_CEILING refuse stays ARMED on a
 // cached value. The cache is what lets a turn's 2nd/3rd leg skip the ~0.5s dry-run round-trip.

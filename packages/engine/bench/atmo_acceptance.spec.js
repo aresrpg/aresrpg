@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG2-ATMO acceptance gate — the cinematic-landing checks from the phase-2 brief:
 //   1. boot clean (ZERO WebGPU/page errors with the full post stack mounted)
 //   2. grade A/B (default punchy grade vs all-neutral — same pose)

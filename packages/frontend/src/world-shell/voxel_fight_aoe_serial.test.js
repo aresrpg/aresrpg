@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PROOF: AoE victim beats are STRICTLY SEQUENTIAL — on a multi-target cast, one victim's
 // WHOLE beat (hit flinch → floating number → death → poof) completes before the NEXT victim's beat starts.
 // NEVER a simultaneous Promise.all. This is the "single queue per turn, NOTHING parallel ever" rule

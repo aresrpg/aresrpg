@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// DUNGEON tests — the COMPOSITION-LAYER surfaces the run-primitive suite (`run_tests`) does not reach:
 ///   • the ENTRY version gate (dark/stale) — the "no dungeon activates before launch / on a stale package" law
 ///     (activate's `config.assert_enabled` + `version.assert_enabled` proxy — activate itself needs a full world);

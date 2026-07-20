@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE COMBINATION MATRIX — breadth over depth: every effect kind / AoE shape / displacement / trap / kill
 // sequence exercised at least once in a real FIGHT context (not isolation), each a deterministic seeded combo
 // the driver replays. Breadth mandate: exercise many fight combinations and movements with multiple mobs —

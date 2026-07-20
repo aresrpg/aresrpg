@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S-84 — contracts_paused_store unit tests. DOM-less by construction (see the file header in
 // contracts_paused_store.ts): only zustand + abort_copy.js/log.js, both already proven safe in a plain
 // bun:test elsewhere in this repo (abort_copy.test.js, report.test.js).

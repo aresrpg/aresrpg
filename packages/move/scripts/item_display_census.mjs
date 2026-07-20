@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // item_display_census.mjs — the ITEM DISPLAY-TRUTH census + root diagnosis (a live bug, 2026-07-20:
 // the explorer shows a stale name and no icon for a cosmetic — "Lorito Cloak (Emerald)" on-chain vs
 // "Lorito Cloak (Opal)" in-game, and a dead image_url). READS ONLY — never signs, never writes chain.

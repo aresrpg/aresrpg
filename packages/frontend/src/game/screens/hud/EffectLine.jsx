@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The ONE effect-line renderer (no cards, just lines). Renders a structured
 // `seed_effect_parts` view: [stat icon | element dot] grey text with the VALUE as its own coloured span
 // (`+` grey `1` green ` AP` grey — the exact Vanish-screenshot grammar), and a dim meta suffix (duration /

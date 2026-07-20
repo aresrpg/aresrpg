@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure planning core for reseed_driver.mjs. No client, signer, filesystem, or transaction imports live here:
 // fixture tests can prove every diff, batch, DRY_RUN guard, and failure-latch rule without network access.
 

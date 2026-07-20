@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 export const DUNGEON_CEREMONY_STARTED = 'dungeon_ceremony_started'
 export const DUNGEON_CEREMONY_FINISHED = 'dungeon_ceremony_finished'
 

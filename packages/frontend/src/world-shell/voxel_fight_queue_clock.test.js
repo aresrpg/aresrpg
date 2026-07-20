@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // M3 P3 — THE QUEUE-CLOCK ASSERT (M1a's named follow-up, the wave-clock conviction's guard at the ADAPTER
 // tier). The core stamps every wave turn's beats on a PER-TURN clock (present.js pace_segment: `at` from 0 at
 // the turn's OWN head — the §A1 fix), and the adapter's serial render queue (fight_render_queue) anchors each

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
 # depcruise-gate.sh — the IMPORT-GRAPH half of the arch gate (docs/CODE_LAW.md "Arch gates").
 # Rules live in .dependency-cruiser.cjs: fight-core-hermetic (generalizes `ares test fightcore`
 # gate a to a resolved allowlist) · engine-quarantine (engine3 only under game/ + world-shell/) ·

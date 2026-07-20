@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // #23 gRPC receipt adapter (SSOT) — the Core API transaction result is a { Transaction | FailedTransaction }
 // union whose effects carry `changedObjects` (with `idOperation`) + an `objectTypes` id→type map + `events`
 // ({ eventType, json }). Every tx-result consumer in the app was written against the JSON-RPC receipt

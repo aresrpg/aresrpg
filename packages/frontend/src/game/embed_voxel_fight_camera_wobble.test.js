@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [D248] IDLE WOBBLE — the idle float, explicitly kept when isometric became the
 // default. It ran unconditionally even pre-iso-default
 // (never gated by mobile/isometric) — this file proves the extracted pure fn (embed_voxel_fight_camera.js's

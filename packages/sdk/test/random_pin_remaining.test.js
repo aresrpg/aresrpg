@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LATENCY FOLLOW-UP (lane 2 continued) — proves the 7 REMAINING &Random builders (game.js: crush_ptb/
 // scribe_rune_ptb; items_shop.js: buy_ptb/buy_many_ptb; game_world.js: join_world_ptb/search_zone_ptb/
 // gather_ptb) also PIN the 0x8 Random system object via `random_shared_ref` instead of the SDK's unresolved

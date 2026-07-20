@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE RECEIPT PRODUCER (the bridge) — translate a driven @aresrpg/sim fight into the CHAIN-shaped raw events
 // the fight fold consumes, plus the initial-state snapshot. No sim→chain translator existed (register #60 is a
 // separate dormant PREDICTION path); this is the receipt-path bridge the brief names: sim outcomes → chain

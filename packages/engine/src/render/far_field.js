@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Far-shell renderer (§11 NG-LOD phase B) — the DEDICATED far-field draw path. Turns each built far
 // Section's smooth-heightfield FarMesh (far_mesher.js) into a CONTINUOUS interpolated terrain surface
 // and adds it to the scene as its own indexed `Mesh`. Separate from the near-terrain quad pool by

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-24 / D160 (2026-07-05) — the spawn column scan, PROMOTED verbatim from demo/walk_mode.js into
 // the public player surface: the ONE home for "never spawn in a tree canopy, never in a lake" (the
 // dapp's D156v2.1 app-side duplicate swaps to this per the agreed one-home plan). Pure functions over

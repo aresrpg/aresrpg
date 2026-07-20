@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RPC read-API client (SPEC §14) — the SINGLE fetch home for the `/v1/*` view layer.
 //
 // Keyless and read-only by construction: these are GETs against packages/rpc/api, which signs nothing and

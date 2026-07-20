@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Per-hat camera auto-fit for the worn-cosmetic head renders. Framing history:
 //   v1 — ONE tuned close-up constant (radius 2.4): tall hats poked out the top and were CLIPPED
 //        (regression: tall hats were still half-clipped).

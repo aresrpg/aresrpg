@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RIDER B(a) — the FRESH-ROOM-FIGHT collapse (BACKLOG adoption-seam NEEDS-LEAD #1) + RIDER A — the honest
 // surface on a foreground commit refusal (the "turn couldn't be committed" wedge).
 //

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure-math tests for the NG2-A analytic sky reference (`sample_sky_rgb`) and the tod→sun mapping.
 // GPU/TSL behavior is the wiring wave's concern; these pin the shipped color MATH the TSL mirrors:
 // halo monotonicity across sun angles, day>night brightness, the dusk warmth ramp, and that the sun

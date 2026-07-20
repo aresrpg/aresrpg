@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Red-first units for the GROUP LOOP reducer (D769b design note, MULTICHAR lane): per input kind, the
 // emit-once request latches, the teleport-if-stuck pure rule, and the owned/world/seat eligibility fences.
 // Fixtures reuse the REAL party member shape ({ character, owner, order }) and chain ids.

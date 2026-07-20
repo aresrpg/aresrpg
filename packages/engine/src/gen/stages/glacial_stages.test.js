@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GLACIAL GENERATION shared stages — per-stage sensitivity + parity + the plan's oracles (§A crag/micro,
 // §B.1 trough, §B.2 cirque, §B.3 glacier, §B.4 scree, §C snow-score). Every stage: ENABLING it changes the
 // world deterministically; DISABLING it returns byte-for-byte to the DEFAULT column. Oracles are mostly

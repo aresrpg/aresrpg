@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// DUNGEON_EVENTS tests: the run-lifecycle event emitters are `public(package)` doors `dungeon` fires. They carry
 /// no state and no return — this only proves the two currently-uncovered emitters are callable (a compile+run
 /// guard; the live emit paths are exercised end-to-end by the dungeon suite).

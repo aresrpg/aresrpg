@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// DUNGEON engine-bridge tests — the fight-composition surfaces the run unit suite punts to the e2e layer.
 /// Stands up BOTH package halves (game + the branded fight engine) and drives the real bridge doors:
 ///   • dungeon `next_fight` (mint a room fight from the roster + latch the pass) and `join_fight` (a party member

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Deterministic seeded PRNG (mulberry32), threaded functionally through fight state.
 //
 // DETERMINISM IS LAW: state is a single uint32, advanced purely. Same seed -> same sequence on every

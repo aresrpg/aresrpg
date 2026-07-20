@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TOUCH_LOOK — the canvas gesture → look/pinch accumulator wiring (M-04). Verifies the pointer bookkeeping
 // against a fake canvas (bun:test has no DOM): one finger sums look px deltas, two fingers convert spread
 // change into pinch deltas, the is_active() gate silences everything mid-fight/typing, and non-touch pointers

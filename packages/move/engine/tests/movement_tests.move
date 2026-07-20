@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Ordinary-movement trap parity cases; sim reads the matching cases from `ordinary_movement_golden.json`.
 #[test_only]
 module aresrpg_fight::movement_tests;

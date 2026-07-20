@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D153 fight-end machine — proposal smoke coverage (proves the fold + drivers + transition inertia).
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 

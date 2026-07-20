@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure §9 dungeon-key candidate selection from the ALREADY-LOADED bag (`s.sui.items`) — the fast path that
 // killed the ~10s entry stall (a live regression: "Entering the dungeon… ~10s, this is a violation").
 //

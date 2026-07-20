@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Unit proof for the level-up UNLOCK MATH (level_unlocks.js) — the "what did I just unlock" core both
 // congrats cards render. Pure functions over the @aresrpg/sdk/jobs SSOT + the chain gather-yield formula;
 // no mocks (nothing to stub — the bun mock.module hazard is avoided entirely by keeping the core pure).

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Binary greedy mesher core (§3.5) — per-axis u32 occupancy masks, 32-at-a-time face culling via
 // bit ops, then greedy merge of same-class faces into maximal quads. Ported concepts from
 // cgerikj/binary-greedy-meshing and TanTanDev's binary_greedy_mesher_demo (0fps background).

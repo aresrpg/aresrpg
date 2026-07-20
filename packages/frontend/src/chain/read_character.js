@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Read ONE on-chain Character's fields, chain-direct (no server, no WS), and normalise them into the
 // flat shape every off-chain consumer wants. SINGLE source of truth for "what a Character looks like
 // off the chain": the Move `Character` struct (packages/move/sources/character/character.move) → a flat

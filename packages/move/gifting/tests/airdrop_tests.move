@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// AIRDROP tests: whitelist claim-mint (`airdrop`). Drives the REAL mint-lock path (`mint_and_lock_output`) into
 /// genuine personal kiosks. Covers: a whitelisted claim mints + locks EXACTLY one into the claimer's own kiosk
 /// and removes them from the whitelist (minted counter ticks); a second claim by the same address aborts

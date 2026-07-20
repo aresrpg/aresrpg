@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
 # scripts/arch/laundered_extract.yml — EXTRACTION pack for the laundered-store-write join (L-P4).
 #
 # These two rules are NOT violations: they are INFO-tier extraction probes whose matches are joined

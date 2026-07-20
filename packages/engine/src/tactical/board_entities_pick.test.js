@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENTITY HOVER = THE CELL RULE (D1): a mob's hitbox must not block clicking the cell behind it —
 // hovering in fights uses only the cell hitbox, not the mob model.
 //

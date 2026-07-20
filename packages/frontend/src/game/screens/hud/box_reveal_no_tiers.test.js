@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D4 regression fence — QUALITY TIERS ARE A DEAD CONCEPT.
 // BoxReveal once rendered a quality badge + 'uncommon' fallbacks; the concept is purged. RevealStage is
 // JSX and drags `../auth`→window at import, so it cannot be render-tested under bun:test — this fence

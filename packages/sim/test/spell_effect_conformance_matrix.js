@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE SPELL-EFFECT CONFORMANCE MATRIX ENGINE (pure; no bun:test — imported by the .test.js gate AND by the
 // MATRIX_CONVICTIONS.md generator, so the conviction computation has ONE HOME).
 //

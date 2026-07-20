@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Shared #[test_only] scaffold for the dungeon engine-bridge suite — the WORLD+CHARACTER+ITEM slice of core's
 /// `test_world` (which lives in the core package's tests/ and a dependent package's test build cannot see). Boots
 /// core's Version + AdminCap + GameConfig + Catalog + BOTH transfer policies + the extract policy + the `resource`

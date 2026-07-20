@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { get_object_json } from './_object.js'
 
 // DUNGEON READS for `aresrpg_dungeon` — the bound `RunPass` state (which world, which room, the pre-entry teleport

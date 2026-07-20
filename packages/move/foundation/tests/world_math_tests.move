@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// WORLD MATH TESTS — coverage for the overworld travel-plausibility law and the zone spawn-roll helpers; this
 /// module ships with NO source-file inline tests at all (0% baseline). `abs_diff`/`budget_blocks`/`isqrt` are
 /// PRIVATE with no public wrapper — covered TRANSITIVELY: `travel_ok`/`wait_seconds` call `abs_diff` +

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-18 — WORLD BORDER (physics + signal half). The PURE side of the mana barrier: it owns the
 // active zone bounds, the position soft-clamp the camera funnels through, and the border-proximity
 // signal the dapp drives its hum loop from. NO three.js here — this is the single home for the border

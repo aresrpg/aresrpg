@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // B2 scale-identity anchor scan — locates procedural-tree clusters for the four contact-sheet biomes
 // (taiga / temperate_forest / swamp / desert) in the DEFAULT "aresrpg" world, so the contact-sheet spec
 // can PARK a camera on a real cluster per biome. Pure/deterministic gen decision (mirrors the decorator's

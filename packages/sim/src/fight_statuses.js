@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Fight-status semantics over immutable ActiveEffect rows.
 //
 // AresRPG 1.29 brand law: kind 27 is authoritative invisibility; enemies cannot directly select a hidden

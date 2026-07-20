@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { defineConfig, devices } from '@playwright/test'
 
 // #42 exploration-loop E2E — drives the REAL app (chain-direct, backend-off) against testnet.

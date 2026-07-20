@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // A9 VICTORY-UNDER-LAG — the dead-air seam (seat ruling 2026-07-19, constitution hardened): the Victory dialog
 // MUST mount on CLIENT-KNOWABLE, RECEIPT-PROVEN fight-over state — never gated solely on the terminal settle read.
 // Under lag A9 won the fight ON SCHEDULE (Strawman dead in 5 casts) yet the dialog never mounted >150s: the whole

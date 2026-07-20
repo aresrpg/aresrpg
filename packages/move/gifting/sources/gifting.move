@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// GIFTING — the witness + shared item-burn helper for the `aresrpg_gifting` satellite package (package-split
 /// 2026-07-13). This module owns the ONE brand witness the whole package authenticates with, and the single home
 /// of the fungible burn-all + re-mint-remainder path that `loot_box` and `consume` share.

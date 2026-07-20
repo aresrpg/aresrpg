@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TIMELINE — the deterministic fight-replay capsule: format, physics invariants, replay harness.
 //
 // A CAPSULE is a self-contained JSON record of one fight sequence: arena + raw spell templates +

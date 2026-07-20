@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure-math unit tests for water_material.js — the JS reference helpers the TSL nodes mirror
 // (no GPU, no TSL evaluation, same discipline as sky_node.test.js). We can't execute the shader
 // graph here, so we pin the physical PROPERTIES of the ported math: Fresnel monotonicity + endpoints,

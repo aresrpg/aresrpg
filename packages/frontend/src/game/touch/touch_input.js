@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TOUCH INPUT STATE — the plain mutable singleton the touch scheme WRITES and the walk loop READS
 // each frame. State + accessors stay separate from the React gesture layer and world-session adapter.
 //

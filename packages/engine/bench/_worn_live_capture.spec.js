@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SCRATCH capture — the equipped HAT + CLOAK proof (not part of the bench suite). Films the
 // worn_cosmetics_showcase with the REAL create_worn_cosmetics rig (the aresrpg-legacy equip_hat/equip_cape
 // mechanism transcribed: Head/cape bone children) on the real create_character_avatar rig — the SAME engine

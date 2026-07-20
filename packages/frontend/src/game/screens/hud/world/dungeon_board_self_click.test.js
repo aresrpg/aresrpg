@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ② SELF-CLICK IS NOT A ROLLBACK (regression: walking, placing a trap, then clicking on yourself rolled the
 // action back — canceling and replaying it should not be possible).
 // on_cell_click carried a D254 "click the last drafted step to UNDO it" branch (`cell === last_step ⇒

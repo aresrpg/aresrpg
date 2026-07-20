@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Playwright config (§7) — HEADED Chromium against real hardware GPU. The Studio's headed run
 // is the source of truth for bench numbers; see bench/harness.js for the documented Linux/CI
 // headless recipe (trend-only, never the source of truth per §7/§9.11).

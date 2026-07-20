@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // CHECKPOINT SPAWN — the frontend EDGE (D770a W2): the async chain read + the synchronous boot cache.
 // The pure half (checkpoint_to_world / resolve_boot_spawn / AGREE_RADIUS_M) lives in @aresrpg/world
 // (packages/world/src/checkpoint.js) — one home for the boot-arbiter rule; this file owns exactly the

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG-LOD SMOOTH far-mesh tests (design pivot: continuous heightfield, not box-columns). Covers:
 // (1) CORNER GRID — a section's 32×32 cells become a 33×33 corner grid; each corner height is the
 // AVERAGE of the ≤4 touching cells (interior corners see 4, edge corners 2, section corners 1);

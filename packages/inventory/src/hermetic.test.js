@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // @aresrpg/inventory — import-graph hermeticity (M2 rung, module law): the merge core may
 // import ITSELF (sibling files) and @aresrpg/sdk, NOTHING else — no React, no DOM, no three, no
 // zustand, no frontend, no engine. Also pins package.json dependencies exactly, so a drive-by

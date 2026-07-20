@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { beforeEach, describe, expect, it } from 'bun:test'
 
 import { character_cast_clock, use_dungeon_turn } from './dungeon-turn.js'

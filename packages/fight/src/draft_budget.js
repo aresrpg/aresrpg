@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // draft-budget.js — the PURE turn-draft gating math the dungeon board rides on: the client mirror of
 // aresrpg_fight::cast::enforce_and_record_cast (cooldown / casts_per_target) + the give_points(MP) fold +
 // the auto-commit buffer the visible turn timer shares. Extracted here (no React) so the subtle across-turn

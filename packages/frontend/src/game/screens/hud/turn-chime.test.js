@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // is_turn_start unit tests — the your-turn ding must fire EXACTLY on the rising edge: never for an opponent's
 // turn, never twice for the same held turn (TurnBanner's 4/s-adjacent re-renders must not double-voice it).
 

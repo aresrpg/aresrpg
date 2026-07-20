@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LEVEL-UP UNLOCK MATH — the pure "what did I just unlock" computations for the two congrats cards
 // (LevelUp.jsx = character, JobLevelUp.jsx = job). Every function is a pure transform over plain data
 // (no I/O, no React) so the unlock logic is unit-tested in isolation (level_unlocks.test.js). Content +

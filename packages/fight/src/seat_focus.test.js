@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST for the MULTICHAR seat focus (lane 07-18): the `ctx` input door merges `my_entity_id` but never
 // re-resolves `my_key`, so once a seat is stamped at adoption the projection pins it FOREVER — during an owned
 // alt's turn the HUD + transaction_character_id keep composing the LEADER's transactions (an on-chain abort =

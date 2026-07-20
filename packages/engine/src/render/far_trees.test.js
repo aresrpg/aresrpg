@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FAR-TREE IMPOSTOR render-half wiring tests (ENGINE_AAA_PLAN §8 B3). No GPU: builds the handle + its
 // TSL materials in bun exactly as far_field.test.js does, and drives the per-section lifecycle (upload /
 // count / instance attributes / spawn stamping / remove / retire+reap cross-fade). Pixel proof (forests

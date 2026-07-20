@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // suins.ts — forward SuiNS name → address resolution for the Send-SUI recipient field. Display reads stay on
 // the keyless /v1 read API; the browser never constructs a chain client for this lookup.
 

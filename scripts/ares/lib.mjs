@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Shared kernel for the `ares` CLI (scripts/ares.mjs dispatcher + scripts/ares/* subcommand
 // modules): repo-root resolution, repo-root .env defaults, and the one error/one-line home.
 import fs from 'node:fs'

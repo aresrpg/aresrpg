@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE COMBINATORIAL ORACLES — pure verdicts over one folded fight's presentation output.
 //
 // Every function here is a PURE transform: it takes the paced `wave` (the store's beat stream) and/or the

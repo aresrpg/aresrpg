@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RECIPE + INGREDIENT OF item-detail sections — sourced from the ON-CHAIN `crafting::Recipe` objects via
 // /v1/encyclopedia?kind=recipes (the indexer object-snapshots each shared Recipe: rpc:recipe:{id}), NOT the
 // static @aresrpg/sdk seed catalog. Every value shown is the chain's own: the exact ingredient list +

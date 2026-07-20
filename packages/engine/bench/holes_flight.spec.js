@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // HOLE FLIGHT GATE (split out of the old 876-line streaming.spec.js under the B2 LoC law — the
 // streaming/perf scenario stays in streaming.spec.js; this file owns the no-holes gate). A permanent
 // gate that would have caught every "sky-hole along the terrace contours" defect found: fly LOW

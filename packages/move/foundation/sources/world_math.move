@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// WORLD MATH — the overworld's pure kernels (S-70 size split, moved VERBATIM from core `checkpoint`/`zones`):
 /// travel-budget plausibility (§17.3 speed-budget law), the join spawn roll, and the §4 distance-difficulty
 /// curve. Pure transforms over plain scalars — zero objects, zero events, zero state (quarantine law). Core

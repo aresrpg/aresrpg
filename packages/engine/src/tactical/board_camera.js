@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-16 Phase B — TACTICAL BOARD CAMERA RIG (the "locked isometric").
 //
 // A CONSTRAINED PERSPECTIVE rig (never orthographic — the study §3 law, both AresRPG eras used a

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT-VIEW CULL — a world-layer remote-player rig must never render on the tactical board (
 // screenshot: "the other player model still appear in the middle of the board like if we were in the world and
 // it wasn't removed properly" — a peer's WORLD avatar stood mid-board like a ghost). The cull keys on VIEW MODE

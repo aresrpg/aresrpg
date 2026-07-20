@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FAST-TRAVEL STORE — the ONE pure reducer that owns the dragon-ride state machine (plan §3.1; model:
 // packages/world/src/presence.js). `reduce(state, input) → state`; effects live at the edges (resolve/join =
 // fast_travel_target.js + the wiring, flight = fast_travel_pilot.js). No async callback ever `set()`s this store

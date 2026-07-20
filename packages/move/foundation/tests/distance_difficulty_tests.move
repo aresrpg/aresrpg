@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// DISTANCE-DIFFICULTY TESTS (§4 wave-2b) — the pure curve kernels in `world_math`: the piecewise-linear
 /// `distance_progress` fit through three world-1 anchors, `level_cap`'s roster lerp (incl. the
 /// single-level no-div-by-zero edge), `size_cap`'s group-size ramp (incl. the team_bound < 2 underflow guard),

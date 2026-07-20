@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { ITEM_CATEGORY } from '@aresrpg/sdk/items'
 
 const MAX_PARTY_MEMBERS = 6

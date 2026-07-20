@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TR-97 — the MOUNT rig: the ridden creature GLB beneath a player. ONE home for loading + posing + tearing
 // down a mount model, used by BOTH the local rider (embed_voxel.js) and remote riders (remote_players.js).
 //

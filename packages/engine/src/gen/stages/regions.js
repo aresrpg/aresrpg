@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SUB-BIOME REGION LAYER (S-25 "world-as-planet") — a low-frequency field that partitions a massif
 // world into named terrain REGIONS (taiga / glacier / peaks / ice_wasteland / ice_forest — "each
 // world should have a lot of terrain variety, no locations look the same"). Each region carries a

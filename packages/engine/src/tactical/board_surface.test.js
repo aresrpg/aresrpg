@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Board surface invariants — the reference-frame laws, pinned:
 //   • the slab is CONTIGUOUS (adjacent cells share exact corner coordinates — zero spacing),
 //   • the grid reads through BAKED darker seams (texture, not geometry gaps),

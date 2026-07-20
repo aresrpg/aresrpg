@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { COSMETICS_CATEGORY } from '../game/item_classification'
 
 export const ITEM_CATEGORIES = [

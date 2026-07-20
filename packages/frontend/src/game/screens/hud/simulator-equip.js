@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Simulator equipment helpers (NO JSX). Lets the build planner equip seeded template items per slot
 // and feeds their stat contributions into the SDK stat math. SSOT reuse: the slot set + slot-validity
 // come from inventory-equip.js (the inventory paper-doll), the fine->slot category bridge from

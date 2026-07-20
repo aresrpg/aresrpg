@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Trap + glyph placement and triggers.
 //
 // PORTED from koshi-2d/.../shared/src/fight/spell_processing/placement.ts. Determinism fixes vs the donor:

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Burn-tally regression for the craft ingredient selector. crafting::craft burns WHOLE stacks and requires the
 // tally to land EXACT (EIngredientOverSupply on any over-large stack, EMissingIngredient on a shortfall), and
 // item::split is public(package) — the client cannot split. So the selector MUST pick a subset summing exactly

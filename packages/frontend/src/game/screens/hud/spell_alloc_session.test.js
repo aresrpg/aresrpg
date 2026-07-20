@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST (Leg A — a spell can level but every indication stays lvl 1, available points stay 1,
 // while the toast confirmed). A store-level proof of the receipt floor: a success receipt must raise the spell +
 // decrement the available point, and a STALE chain-direct read (the fullnode lagging the just-committed tx) must

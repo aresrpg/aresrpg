@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PURE projection: the fight core's committed roster (fight_view().fighters) → the `action/fight_summary/open`
 // payload — ONE home for BOTH outcomes. The victory card's DEFEATED-ENEMY block reads the same recap slice as
 // the defeat card (FightResult.jsx / FightSummary.jsx both project `summary.participants`); the engine rewrite

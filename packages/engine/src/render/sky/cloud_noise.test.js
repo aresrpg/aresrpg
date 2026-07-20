@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure-math tests for the GPU-free cloud math (`cloud_noise.js`): seed determinism of the value
 // noise / fbm / bake offsets (the "cloud noise determinism from seed" requirement — the baked mx_
 // weather/base volumes can't run headless, this CPU reference can) + the tier-knob contracts the

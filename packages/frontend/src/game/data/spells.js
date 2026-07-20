@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Display-only spell rosters per class — class-id → spell list (name + public icon path).
 // No combat logic here; the HUD spellbar reads this to render icons. Art lives in public/spells/<class>/.
 // Ported from aresrpg-legacy dapp's spells_per_class.js. Only senshi + yajin have art yet.

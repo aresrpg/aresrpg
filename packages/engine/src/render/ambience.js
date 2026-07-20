@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENVIRONMENT AMBIENCE DIRECTOR (S-AMBIENCE, owner wishlist: "terrain particles according to the
 // environment — subtle leaves falling / dust under canopies, bubbles + blur underwater, heat vision in
 // the desert, snowflakes in the mountains"). This is the PARTICLE POLICY layer over the ONE particle

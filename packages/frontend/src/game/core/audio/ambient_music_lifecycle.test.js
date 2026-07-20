@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { afterAll, describe, expect, test } from 'bun:test'
 
 import { install_browser_globals } from '../../../test_helpers/browser_globals.js'

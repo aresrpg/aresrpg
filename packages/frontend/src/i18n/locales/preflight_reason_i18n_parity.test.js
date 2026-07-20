@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // i18n PARITY GUARD — the pre-flight refusal "must say why" bundle: replaces the 3rd generic
 // refusal that night — "The transaction was refused before sending — no gas was spent. Try again." with zero
 // indication of the actual reason). The 6-locale law (CLAUDE.md): every user-facing string lands in ALL locales;

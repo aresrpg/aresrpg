@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LEG F — TACKLE FROM A PUSHED-AWAY MOB — a bug where pushing a mob away still let it tackle, because the
 // fight thought it was still adjacent. The client's move-tackle preview (project.next_move_tackle / move_wash)
 // must read the POST-push predicted cells: a mob a drafted push has already displaced out of adjacency locks

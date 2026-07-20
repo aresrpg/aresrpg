@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Redis-free coverage for the RunPass character projection. The integration suite remains the store oracle.
 
 import { describe, expect, mock, test } from 'bun:test'

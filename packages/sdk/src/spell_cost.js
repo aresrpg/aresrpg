@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Reference-corpus stamina-cost -> turn-based AP-cost conversion. THE single source of truth for the spell
 // cost scale, shared by the content seed (scripts/seed-content.js) and any regeneration of spells.json.
 //

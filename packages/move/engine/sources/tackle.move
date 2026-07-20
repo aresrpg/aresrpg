@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// TACKLE — the ordinary-movement escape contest (chain twin of the sim's shipped rule,
 /// packages/sim/src/fight_actions.js:63-100; formula layer in `spell_formula::tackle_*`). A fighter standing
 /// orthogonally adjacent to a LIVING enemy sits in its tackle zone: an ordinary move out of the zone rolls one

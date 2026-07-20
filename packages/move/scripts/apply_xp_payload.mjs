@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // apply_xp_payload.mjs — apply the retuned mob STAT surface (base_hp, ap, mp, the centered Stats block, xp_reward)
 // to every live MobTemplate IN PLACE via the additive `aresrpg::mob_template::set_stats` setter ("set_stats
 // which takes everything for the mob, xp hp ap mp resistance"). No burn/remint — the

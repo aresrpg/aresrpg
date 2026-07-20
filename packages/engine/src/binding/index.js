@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // BINDING — the on-chain world binding seams (S-17). The engine side of "the world is derivable from
 // the seed": a canonical Y-oracle, deterministic board-from-anchor, the gather glow/affordance feed, the
 // phase-out visibility registry, the pure compass/zone wayfinding view, world-from-template (chain world

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Seam 6 gate — the chain world template maps onto engine inputs (gen recipe + barrier bounds) correctly,
 // reconciling the u64 seed + u32 (0-based) coords, without mutating the shared biome registry.
 

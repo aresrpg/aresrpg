@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG-MEGA GPU cull (plan §11 / playbook #9 rung 2 / survey S22) — the compute pass that frustum-culls
 // every occupied pool slot each frame and writes the per-slot indirect draw args. ONE thread per slot
 // tests the slot's chunk AABB against the 6 camera planes and writes the slot's `instanceCount` (0 =

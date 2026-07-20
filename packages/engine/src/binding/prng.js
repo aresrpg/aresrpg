@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // BINDING — deterministic PRNG + anchor hashing (the portable twin surface).
 //
 // This is a VENDORED, byte-identical copy of the game's canonical mulberry32 PRNG + FNV-1a seed hash.

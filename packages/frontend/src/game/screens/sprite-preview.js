@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // 2D pixel-sprite preview for the create/select carousels — draws a class's idle frame into
 // the existing <canvas class="fog-sprite"> with crisp (nearest) upscaling and a CSS-style
 // hue-rotate for the skin hue. Same { set_hue, destroy } handle the old 3D class_preview

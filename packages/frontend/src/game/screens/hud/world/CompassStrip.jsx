@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // COMPASS STRIP — the "option 3A" top-strip compass design (zone mobs+resources render through the
 // top-strip compass), translated from the
 // mockup (mockups_design/world_discovery/3a_compass_top_strip.html) into the GOLD GOTHIC terminal per the

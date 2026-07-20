@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { useEffect, useRef, useState } from 'react'
 import { BookOpen, Globe2, Menu, MessageCircle, SlidersHorizontal, Swords, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'

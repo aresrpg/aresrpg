@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Seam 8 gate — the cosmetic head-slot precedence (SPEC §7.11: hat renders INSTEAD of helmet).
 
 import { test, expect, describe } from 'bun:test'

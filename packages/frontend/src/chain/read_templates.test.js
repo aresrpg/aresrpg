@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LOOTBOX RESOLVER regression (live Sui testnet) — pins the item.move event-type + field-name fix.
 //
 // WHY THIS EXISTS: get_item_templates discovered ItemTemplate object ids by replaying a Move event type,

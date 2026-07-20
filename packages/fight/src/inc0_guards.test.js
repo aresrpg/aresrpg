@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // INC-0 — the additive guards + honest oracle (CONSENSUS_PLAN §2/§3, VIOLATION_REGISTER #6 #9(part) #18
 // #30(part) #42 #50 #52). RED-FIRST: every row below FAILS against HEAD (no provider token, no session-identity
 // drop, no rollback input, a blind parity oracle) and GREENS once the guards land. Plain objects through the ONE

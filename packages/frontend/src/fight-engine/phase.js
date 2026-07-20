@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT ENGINE · W4 — THE PHASE MACHINE (D73 pillar 5).
 //
 // The night's stuck-screen / ghost-board / phantom-card class is one root: mount decisions were smeared across

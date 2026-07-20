@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // #39 — the SINGLE instrumented sign→execute→wait choke point every gameplay tx funnels through (was
 // duplicated verbatim in staking/equip/sale actions as a private `sign()`). Two jobs:
 //   1) LATENCY NUMBERS — time each pipeline phase per tx CLASS (wallet sign+submit, fullnode index-wait)

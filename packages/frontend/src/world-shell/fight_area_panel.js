@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // short_fighter_id moved to character_name_resolve.js (07-19 "ONE HOME" — the same fallback the live
 // fight-HUD roster now shares). Re-exported so existing importers of this module are untouched.
 import { short_fighter_id } from './character_name_resolve.js'

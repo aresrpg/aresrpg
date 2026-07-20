@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D206 — REMOTE PLAYERS in the voxel world (feature #19's render half; replaces roam.js's dead
 // foreign-player sprites). ONE home for BOTH modes: the walk session AND the logged-out spectate
 // diorama create this layer; it renders every presence entry (visible_characters — fed by p2p

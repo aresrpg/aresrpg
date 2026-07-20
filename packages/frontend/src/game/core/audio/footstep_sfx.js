@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Procedural footsteps — subtle procedural sounds for steps depending on the block below.
 // Zero assets — short filtered-noise bursts synthesized on the SAME shared AudioContext as sfx.js
 // (get_ctx/tone, exported from there for exactly this reuse). Cadence is a DISTANCE ACCUMULATOR (a step

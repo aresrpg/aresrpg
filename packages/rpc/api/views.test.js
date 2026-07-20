@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // View tests over a seeded Redis 8 (JSON + query modules), exercising the REAL
 // read path: each view issues the same JSON.MGET / SMEMBERS / JSON.GET the API
 // serves in production. Point REDIS_URL at a throwaway redis:8 and run:

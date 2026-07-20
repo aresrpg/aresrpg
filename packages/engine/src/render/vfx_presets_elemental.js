@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX — the ELEMENTAL-MAGIC variant b_spell family: ElementalMagicFX's OWN fire / nature / electric
 // cast+projectile+area scenes, reclaimed as element-flavoured spell variants (today fire/air borrow FlameFX/
 // ElectricFX entirely — this puts the paid ElementalMagic variants on screen). Wave-A coverage lane

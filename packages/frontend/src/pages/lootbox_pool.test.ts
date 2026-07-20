@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure-function tests for lootbox_pool.ts's weight -> percent math. No React, no RPC.
 import { describe, test, expect } from 'bun:test'
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pivot proof — the deck / level-up card / build planner now derive their spell lists from the fight-spells.json
 // SSOT (resolve_class_spells / class_spells via the pure spell-unlock-select selectors), NOT the legacy
 // classes.json `{ level -> ONE id }` map. That map could hold a single spell per level; the SSOT filter

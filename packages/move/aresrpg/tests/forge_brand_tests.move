@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// FORGE-BRAND DOOR TESTS (2026-07-12 forge split): the brand-gated core value twins — the ONLY cross-package
 /// write surface the extracted rune-forge sibling gets. Per twin: closed-by-default abort (no pin → EWrongBrand),
 /// wrong-witness abort (a decoy type), right-witness pass with the delegated write PROVEN by state read-back

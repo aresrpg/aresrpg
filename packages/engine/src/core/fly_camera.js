@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Minimal fly camera rig for M0 (engine.js helper, kept out of engine.js to hold its LoC
 // budget). Owns only position/orientation state + applying it to a three.js camera each frame —
 // no input handling (that's the demo app's job; engine.js exposes set_camera_position/

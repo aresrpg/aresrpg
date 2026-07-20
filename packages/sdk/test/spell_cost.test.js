@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Regression gate for the reference-corpus stamina -> AP-cost conversion (src/spell_cost.js) and the resulting
 // castability invariant: EVERY one of the 12 classes must have at least one spell castable within the
 // base AP budget (<= 6), and every spell cost must be a positive integer in [1, 6]. This locks the

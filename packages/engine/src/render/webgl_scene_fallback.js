@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Classic-WebGL scene compatibility for the minimal heightmap renderer. The fallback scene has no
 // lights and cannot compile three/webgpu NodeMaterials, so every app-owned subtree is prepared once
 // when mounted and again whenever an async GLB/hair/cosmetic child is added beneath it.

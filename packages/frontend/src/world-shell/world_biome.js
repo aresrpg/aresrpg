@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD BIOME — resolve + cache the bound world's on-chain `biome` (world.move's `biome: String` field,
 // WorldCreated.biome) for create_session's SYNCHRONOUS engine-recipe pick (embed_voxel.js, DECISIONS
 // 2026-07-12 frontend wiring lane). Mirrors world_checkpoint.js's async-resolve-before-mount + sync-cache-

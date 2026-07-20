@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TACKLE — the pure contest math of the ordinary-movement escape roll (the rule of record: extracted verbatim
 // from fight_actions.js apply_move so the Move chain twin — aresrpg_foundation::spell_formula tackle_* +
 // aresrpg_fight::tackle — pins the identical fraction/loss layer through shared golden vectors

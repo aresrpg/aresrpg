@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-8 owner-bug fix verification (2026-07-03 rate-limit-killed fix-wave resume). Proves the THREE
 // landed character-controller fixes on the LIVE render, records a ~15 s .webm + 3 stills:
 //   (1) CAMERA PITCH — drag UP (movementY<0) eases toward the horizon (pitch RISES); drag DOWN

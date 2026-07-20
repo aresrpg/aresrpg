@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { get_object_json, to_bigint } from './_object.js'
 
 // AIRDROP chain-direct READ (pre-flight). Owner display data + the drop's live counters; the sidebar page is

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ARCHIMOB SPAWN-ODDS chip — the bestiary detail's "0.5% chance to spawn as an archimob" line. Archimob
 // eligibility is an AUTHORED per-mob fact (world_corpus.ts CorpusMob/CorpusMobFacts `role`): only a mob
 // whose kit was authored with `role: 'archi'` has an archimob variant, so ONLY those may advertise the

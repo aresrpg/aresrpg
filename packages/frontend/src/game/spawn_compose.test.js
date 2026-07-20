@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SPAWN COMPOSITION — cross-language determinism proof. The oracle is the CHAIN's own FROZEN vector
 // (packages/move/engine/tests/pure_tests.move `spawn_seeded_pinned_vector_freezes_stream`, derived by hand
 // from the prng.move reference vectors and pinned "forever"): seed 0, band [10,20], archimob_bp 0 →

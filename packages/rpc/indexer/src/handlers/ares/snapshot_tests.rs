@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 //! Offline unit tests for the object-snapshot + taux projection (mirrors the
 //! `tests.rs` pattern: synthetic/real BCS in → exact write batch out).
 

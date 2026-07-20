@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Equipment tests: the slot ORCHESTRATION over the real extract seam (extract_for_equip → equip → confirm; unequip
 /// → LockPledge re-lock) plus the adversarial floor — class-lock violation, dual same-type relic, weapon-slot
 /// occupancy, non-equippable category, and the level gate. The gear-stat FOLD math (cosmetic zero-fold + exact

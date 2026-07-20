@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PET LOOT-BOX reveal overlay — the OPEN → CHARGE → BURST → REVEAL lifecycle for a bought box, with the
 // collection AUTOMATIC (claiming a pet is automatic at opening). The container (`BoxReveal`)
 // OWNS the phase machine + the two tx calls (open_box / claim_pet, lootbox_actions.js) and NOTHING ELSE renders

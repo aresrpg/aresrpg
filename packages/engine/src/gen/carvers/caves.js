@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Cave carver family (§4.5 NG1-B, item 5) — the deterministic, region-local cave systems that
 // subtract density through density.js's existing cave seam. Three carvers:
 //

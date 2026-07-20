@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// POOL — the constant-product AMM for one STACKABLE item template vs SUI. ONE pool per template, its object id
 /// DERIVED from the template id under a shared `PoolRegistry` gate, so a second pool for the same template is
 /// impossible (the claim aborts) and no `Coin<T>` per resource is ever needed — template-id keying gives

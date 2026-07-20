@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // reset_mob_decals.mjs — [S-82] ONE-TIME re-bake that resets each ambient critter's skin_decal atlas to its
 // VANILLA legacy-corpus source skin (original alpha, NO feather, NO dark-key), WITHOUT re-running the full converter.
 // Re-baking from the source model format (locked in the 3.4 GB Assets.zip) risks regressing the hard-won FK /

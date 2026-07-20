@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The character GLB-render util — ported 1:1 from the AresRPG production character render
 // (`aresrpg-legacy/.../core/utils/three/load_model.js` `load` + `create_custom_colors_api`,
 // `core/game/models.js` `find_bone`, and `core/game/entities.js` `equip_hat` + `set_colors` +

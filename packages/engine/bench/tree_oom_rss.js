@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // P0 OOM REPRO / REGRESSION HARNESS — worker-realistic memory curve for the procedural-tree gen path.
 // Drives generate_world_chunk (the EXACT gen_worker.js codepath) over a contiguous taiga region — one
 // process = one gen worker's lifetime (the _tree_memo + the tree_gen scratch are module-level per worker).

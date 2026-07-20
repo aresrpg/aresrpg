@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Fixture tests for the item-display census pure helpers. The RED-FIRST anchor is
 // `diff_object_vs_template`: the real production bug (a minted object whose `name` froze an old value while
 // its template already carries the corrected one) MUST be bucketed `stale`. A template-only census — the

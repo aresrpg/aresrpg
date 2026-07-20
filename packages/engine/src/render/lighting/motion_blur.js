@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [D258 — the character must never visibly duplicate itself; screen borders should blur in a
 // VIGNETTE instead] RADIAL EDGE (vignette) motion blur. The old D214 effect blurred the
 // whole frame with directional taps along the pan axis — at speed those 6 taps became 6 discrete COPIES

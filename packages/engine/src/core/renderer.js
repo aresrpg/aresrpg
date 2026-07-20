@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WebGPURenderer boot (§2.1, §2.2). Detects navigator.gpu → WebGPU backend, else falls back to
 // the WebGPURenderer's built-in WebGL2 backend. `reversedDepthBuffer` is enabled ONLY on the
 // WebGPU path — the WebGL backend has open reversed-Z bugs (three.js #31413, §2.1/§9.4) — so we

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// LOT_RULE tests: all four legal stack lots resolve, invalid resource/rune lots abort, unique items bypass the
 /// amount restriction while still resolving the policy, and the item-id binding rejects receipt substitution.
 #[test_only]

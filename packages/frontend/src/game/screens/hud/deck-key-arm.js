@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure keyboard-arm decision for the DeckCluster spell bar — split out of DeckCluster.jsx SPECIFICALLY so it
 // unit-tests without pulling in the component's other imports (use_game_state/use_dungeon transitively load
 // auth/index.ts -> @mysten/enoki's wallet registration, which touches `window` at MODULE-LOAD time and

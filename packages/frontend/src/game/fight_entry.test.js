@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT-ENTRY — deterministic proof of the trigger contract:
 //   • OPTIMISTIC (the engage must be visible IN PARALLEL of the tx, not gated behind it): the engage PRESS
 //     ('fight_entry/engage' on the shared bus, emitted by world_spawns BEFORE the claim+create tx) starts the

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Fixtures-only unit test for the seed-local mapper (never reads live seed — another lane rewrites those files,
 // so live counts would flap the suite). Proves: file-kind routing, world derivation, dedup, and that the
 // modal `default_prompt` mirrors the census `one_line(description)` rule.

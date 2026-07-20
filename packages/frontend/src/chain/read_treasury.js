@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TREASURY / ROYALTY reads for the admin SUI tab — PURE chain reads, NO backend, NO new service.
 // Migrates the vaporized `get_admin_sui` treasury/royalty numbers to chain-direct sources:
 //   • treasury balance — the treasury address is CONFIGURATION (TREASURY_ADDRESS below), then a Core gRPC

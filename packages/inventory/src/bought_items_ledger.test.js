@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Unit coverage of the optimistic bought-item ledger (the ADDITION twin of the consumable delta ledger).
 // Proves the fix's bar: a just-bought row survives a chain reconcile that DOESN'T yet include it (indexer
 // lag), then SELF-DRAINS the instant a reconcile does include its id (the authoritative row takes over, no

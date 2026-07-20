@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The ROOM-CLEARED reward recap. NON-GATING (one-toast / no-modal constitution): when a room
 // clears, the fight board unmounts and the player free-roams the plane; this slides a compact "what you found"
 // card in from the top-right off the store's `room_recap` slice (set by dungeon_store._claim_cleared_room after

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure party reducer — per Action, per input kind, the negative latch (M4 audit row 4), idempotent dedupe, and the
 // deadline-drain divergence. Fixtures are the REAL /v1 party projection shape ({ id, leader_character, members:
 // [{ character, owner, order }] }, from read_party.js + party_store.character.test.js), never fabricated.

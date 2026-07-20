@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NIGHT-SKY OPTION PRESETS — the three fully-styled directions the design pass renders for review to
 // pick from (never picked here). Each is a complete NightSkyCfg (see src/render/sky/night_sky.js) fed to
 // create_night_sky_node with with_base/with_milky_way true (the MEDIUM/HIGH night actually seen in-game).

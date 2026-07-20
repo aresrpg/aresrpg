@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SPAWN RIG LAYERS — the 3D side of an on-chain zone spawn. TWO rig layers live here (both driven by chain
 // rows, both extracted from world_spawns.js under the 600-LoC law):
 //   • create_rig_layer  — MOB GROUPS: seed the members around the anchor, load+normalise+mount each GLB rig,

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Issue-1 (funded-wallet join regression + money-UX review) — proves the SPONSOR-REFUSAL →
 // SELF-PAY detection seam and its HARD split: ONLY the > 0.2-SUI balance rule is tagged for a SILENT self-pay
 // re-route (a funded wallet was always meant to pay its own gas). Every free-tier CAP/LIMIT (daily, global,

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S-67 — the ONE "target a player" home. Two seams open it (chat name click · in-world nameplate click) and
 // one component renders it (PlayerActionMenu). Kept a bare store (no React) so remote_players.js — a plain rAF
 // module outside the React tree — can open it imperatively via `open_player_menu` with the same contract the

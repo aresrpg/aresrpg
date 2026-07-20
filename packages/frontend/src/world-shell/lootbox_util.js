@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PURE loot-box helpers — NO imports (so bun:test can import them; the sibling lootbox_actions/BoxReveal drag
 // `../auth` → enoki → `window` at load and are unimportable under bun:test, the repo-wide constraint). The ONE
 // home for the box detector, receipt suffixes, and reveal timing/dismiss rules; heavy modules use/re-export here.

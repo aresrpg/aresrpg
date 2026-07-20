@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // api/sponsor.mjs anti-drain caps over a REAL throwaway Redis — proves the per-IP / per-address rate
 // windows are SHARED across serverless instances (not per-instance memory that loosens ~N× when the
 // sponsor scales out). A SECOND RedisClient stands in for a "second function instance": it seeds the

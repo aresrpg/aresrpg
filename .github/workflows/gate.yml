@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
 # The CI gate — every PR into edge/master passes it; master merges deploy (Vercel git integration).
 # Fork-safe by construction: no secrets in this workflow, ever (FROZEN.md rule 8).
 # The ladder only grows: today it runs the proven-green core (the deterministic fight-replay gate

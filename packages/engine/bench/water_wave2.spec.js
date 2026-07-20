@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WATER WAVE 2 acceptance captures + WebGPU-error gate. Proves the four owner fixes on the LIVE engine
 // (WebGPU/Metal) at 2560×1440 @ deviceScaleFactor 2 (dsf2), pin+settle:
 //   1. ocean glancing — the seabed is GONE (opaque deep water) + the dispersed sun sparkle PATH shows;

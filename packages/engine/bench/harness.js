@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Playwright bench harness (§7) — shared page-driving + capture logic consumed by every
 // bench/*.spec.js scenario file. Runs HEADED Chromium on real hardware (the Studio's Metal
 // GPU) per the plan: "headed Chromium on the Studio (real Metal GPU; honest vsync) ... the

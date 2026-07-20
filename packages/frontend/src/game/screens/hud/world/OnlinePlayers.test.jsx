@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST regression: the friend roster showed a raw address slice instead of the character name — FriendRow
 // fell back through rpc/use_address_names + components/address_name's SuiNS/truncated-address chain, a SECOND
 // resolution path parallel to world-shell/character_name_resolve.js's ONE HOME for id→name display, whose own

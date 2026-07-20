@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S2 SYNC SEAM — the chain-read → core-snapshot leg extracted from dungeon_fight_shim.js (thin-shim ≤120 LoC gate).
 // It owns NO fight logic: it only decodes a Fight OBJECT read and feeds it through the core's ONE snapshot door,
 // plus the per-world render offset the read is placed against. The shim re-exports both so importers are unchanged.

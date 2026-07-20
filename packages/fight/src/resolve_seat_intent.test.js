@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST regression for the resolve_seat INTENT lane (BACKLOG row 14 — the dead fight-prediction arm):
 // a draft click dispatches a CHARACTER-keyed Moved intent (DungeonBoard.jsx optimistic_walk — the real shape:
 // { kind: 'move', character, to_cell }). The store's intent door must default resolve_seat to the view-derived

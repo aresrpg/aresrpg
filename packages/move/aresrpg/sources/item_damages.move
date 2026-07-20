@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// ITEM DAMAGES — the typed damage lines attached as a DYNAMIC FIELD (a `vector<ItemDamages>`) to an
 /// `ItemTemplate`. Same shape as the legacy pattern and the same placement as `item_stats`: the item base owns
 /// the storage, this module owns the data shape + attach/read. A weapon template can carry several lines (e.g.

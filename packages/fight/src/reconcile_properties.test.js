@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WAVE A — the ALGEBRA PROPERTIES (BLANKPAGE_RECONCILIATION §⑤ classes 1/2/6 + SEAT_DERIVATION §4 T-B), the
 // written specs this wave implements (not my own semantics). They exercise the reducer through the ONE store door
 // and assert the commutative-fold guarantees: monotonic-idempotence, retirement-permanence, fold-catch-up, and

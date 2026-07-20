@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // World-join physics readiness. A checkpoint/session restore carries x/z only and seeds a provisional Y, so
 // readiness can never be inferred from the single voxel at `seed_y - 1`. The streamed column is the truth:
 // once its generated-ground chunk is resident, raw ground is available and the analytic collision floor keeps

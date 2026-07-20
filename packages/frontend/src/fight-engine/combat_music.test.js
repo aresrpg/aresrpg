@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D111 — battle music fires at ACTIVE, never at placement/board-mount. Unit coverage of the pure derivation
 // (fight-engine/combat_music.js `combat_music_active`) the combat-music listener drives. The live wiring (the
 // listener fires this on action/fight_mode + every placement-flipping action) is exercised end-to-end by the

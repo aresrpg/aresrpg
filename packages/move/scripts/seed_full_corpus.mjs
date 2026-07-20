@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SEED_FULL_CORPUS — the FULL authored-corpus seeder for the CURRENT Move lineage (out/ceremony_manifest.json).
 // Closes the localnet seed-parity gap (DECISIONS 07-11): "local seeds represent the EXACT mainnet gameplay."
 // Walks seed/mainnet/** and mints EVERYTHING through the live admin PTBs: item templates, mob templates (incl.

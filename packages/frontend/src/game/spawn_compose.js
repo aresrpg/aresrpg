@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SPAWN COMPOSITION MIRROR — the level is picked at discovery time, like the presence of an archi: the PURE
 // client mirror of the chain's seeded group composition. The chain resolves every
 // member at DISCOVERY: zones.move rolls `MobGroupSpawn.group_seed` with the zone's own `&Random`, and

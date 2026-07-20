@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT-VFX POST-AgX OVERLAY PASS — the display-space additive composite that makes the purchased BinbunVFX
 // pack read as authored (fixes "vfx look like flat washed-out images, miles from the pack").
 //

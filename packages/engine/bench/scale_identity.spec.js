@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // B2 PER-BIOME SCALE IDENTITY contact sheet (ENGINE_AAA_PLAN §8 B2 proof bar, P4 "scale as emotion").
 // Boots ?proctrees=1 and captures a VISTA per contact-sheet biome (taiga / temperate_forest / swamp /
 // desert) on the real GPU, then composes a 2×2 side-by-side sheet that SHOWS the scale contrast: taiga

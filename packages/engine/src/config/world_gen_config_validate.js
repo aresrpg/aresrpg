@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // World-gen config VALIDATION + IDENTITY HASH (lane NG1-E). Split from world_gen_config.js so the
 // schema+defaults DATA and the validation+hash LOGIC each stay one concern (and well under the
 // ≤600-LoC law). Pure, dependency-free, non-throwing.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Character avatar (ENG-8) — loads the default AresRPG character GLB (DRACO-compressed, the SAME rig
 // the dapp ships: senshi_male, copied into engine/assets/characters) and drives its animation state
 // machine from the controller's `anim` state with cross-fade transitions. Ports the clip-selection +

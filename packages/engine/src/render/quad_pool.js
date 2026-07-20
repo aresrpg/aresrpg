@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG-MEGA quad pool (plan §11 PERF NORTH STAR / playbook #9 / survey S22+rowannadon) — ONE mega
 // storage buffer of terrain quads for a whole material class, drawn by ONE pipeline via per-slot
 // `drawIndirect` with `firstInstance` addressing (three r185 `geometry.setIndirect(attr, [offsets])`

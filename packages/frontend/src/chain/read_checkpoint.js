@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The CHAIN-TRUE per-world CHECKPOINT read (§5 position-truth). A character's checkpoint — proven position +
 // proven time — lives as a namespaced dynamic field on the Character under `character_link::CheckpointKey
 // { world: ID }` (namespace NS_CHARACTER_WORLD), advanced by every position-proving tx (world join, zone

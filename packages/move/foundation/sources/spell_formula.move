@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// SPELL FORMULA — the EXACT 1.29 value layer (taxonomy §5h/§A/§B), integer-only + deterministic. This is
 /// the load-bearing math the (held) `apply_cast` rewrite calls to turn a fixed `base` + caster/target
 /// `spell::Stats` into a final integer. No damage RANGES: `base` is a constant; only the

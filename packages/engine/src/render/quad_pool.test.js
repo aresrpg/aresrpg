@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Unit tests for the NG-MEGA quad pool (src/render/quad_pool.js) — the slot allocator, firstInstance
 // addressing, multi-slot split, partial-upload ranges, and occupancy stats. All CPU-side (no GPU): the
 // pool builds typed-array attributes + a geometry; the WebGPURenderer only materializes GPU buffers on

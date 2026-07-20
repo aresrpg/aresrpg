@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The ONE network-edge scheduler for the world shell's recurring /v1 reads. Callers keep their domain-owned
 // timers/reducers, but every character/party/zones/fights request enters this single FIFO before it can touch
 // fetch. Exact URL duplicates share one promise and unique URLs start at a bounded cadence, so the 3x3 zone

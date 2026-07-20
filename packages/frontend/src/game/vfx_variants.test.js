@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Unit coverage for the pure per-spell VFX variant selector (the b_spell spread strategy). Proves the selector is
 // deterministic, maps each (class/element/role) branch to the DOCUMENTED ported-pack variant, only ever returns a
 // name from the real b_spell preset set (never a typo), and — driven over the whole 240-spell corpus — spreads

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD PROPS — DISABLED: the bonfire ambience camps were cut, nobody asked to add any.
 //
 // This module USED to dust the overworld with sparse FlameFX ambience camps (a bonfire brazier + candle

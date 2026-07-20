@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Tactical-board entity lifecycle: idempotent avatar upsert/remove, constant-speed waypoint locomotion,
 // impact-frame attack/hit/death beats, and camera-facing combat floats. The board rAF calls tick(dt).
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// SPELL TEMPLATES — the LIVE-tunable spell-data layer (pkg #4). Each spell is its OWN SHARED object, exactly ONE
 /// per (class, unlock_level, name), made unique by DERIVED OBJECT under the registry gate's UID (§17.16 amended:
 /// N spells per unlock level, unique by (class, unlock, name) — a class fields MULTIPLE spells at one unlock level

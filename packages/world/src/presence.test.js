@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // W3 gate suite (D770a presence) — red-first per the design note: (1) the CHEATER-PLAUSIBILITY DROP lives in
 // the fold (impossible speed dropped; a broadcast-declared mount earns exactly its headroom); (2) the
 // JOIN-REPLAY facts (my cell/state) live in the atom, not transport module scope; (3) MARKER CONVERGENCE —

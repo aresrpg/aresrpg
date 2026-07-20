@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD 13 · MIRRORMERE (on-chain `13_mirrormere`, biome `frost_lake`) — the mirror-lake planet. Seed
 // identity (seed/mainnet/13_mirrormere/world.json): water+air elements, "mirror ice — the lake reflects
 // a second world; the reflection walks at night", "the frost-forge crafting hub — THE first +1 AP ring

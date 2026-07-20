@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // MOVE-SOURCES CONTENT HASH — the staleness anchor shared by `release:prepare` (which stamps it into
 // release_manifest.json) and the dev-only `/__move_sources_hash` endpoint (packages/frontend/dev/
 // move_hash_plugin.ts, which recomputes it LIVE from the working tree). The admin RELEASE page compares the

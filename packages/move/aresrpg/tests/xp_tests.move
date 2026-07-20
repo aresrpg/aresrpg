@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Raw XP-curve tests — the immutable tables under `progression`: the 200-level character curve
 /// (`character_xp`) and the 100-level job curve + tier→level map (`job_xp`). These lock the verbatim tables
 /// and the shared binary search against off-by-one drift.

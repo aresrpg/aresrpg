@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PLACEMENT GHOSTS — the fold-state home for a PEER's uncommitted placement pick, broadcast p2p: picks
 // aren't committed pre-start, so teammates SEE where others intend to stand. Mirrors my_traps_fold /
 // my_glyphs_fold structurally: a durable per-store accumulator, GC'd in recompute (fold.js), projected through

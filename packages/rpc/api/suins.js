@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SuiNS resolution for the /v1 read layer (D52, SPEC §13 "Identity"). Both directions stay
 // SERVER-SIDE here: /v1/names resolves address → default @handle, while /v1/suins resolves a
 // recipient name → target address. The frontend remains a thin /v1 client with zero chain-direct reads.

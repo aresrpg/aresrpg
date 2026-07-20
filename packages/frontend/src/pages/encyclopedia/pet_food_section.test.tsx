@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Render proof for the two pet-food display surfaces (pet_food_section.tsx) — real EN i18n, real
 // markup, the same static-render idiom as mob_spells_section.test.tsx. The pure join laws live in
 // pet_foods.test.ts; here we pin that the components actually SHOW the food:

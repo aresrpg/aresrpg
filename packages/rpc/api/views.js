@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // View handlers for the AresRPG RPC read layer (SPEC §14).
 //
 // Each handler returns a descriptor `{ status, data, headers? }` (see respond.js)

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NIGHT-UNLIT — fight-board cell highlights are UI-class overlays: their color must be CONSTANT
 // regardless of scene lighting / day-night. Root cause of "at night the highlights lost their color":
 // three's NodeMaterial.setupOutput mixes scene.fogNode into ANY material whose `.fog` is true (the

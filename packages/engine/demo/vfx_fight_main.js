@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Thin bootstrap for the in-engine VFX AgX capture (vfx_fight.html). Grabs the canvas + gate and hands off to
 // boot_vfx_fight_demo (kept separate from main.js so the capture surface is independent of the main demo).
 import { boot_vfx_fight_demo } from './vfx_fight_demo.js'

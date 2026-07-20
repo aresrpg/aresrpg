@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-20 — WEBGL-FALLBACK HEIGHTMAP EXTRACTION. 2026-07-05.
 // ============================================================================================
 // The cheapest possible SURFACE probe for the WebGL fallback renderer (render/webgl_fallback.js):

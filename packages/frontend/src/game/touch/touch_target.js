@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 const INTERACTIVE_SELECTOR =
   'button, a[href], input, textarea, select, option, [contenteditable="true"], [role="button"], [role="dialog"]'
 

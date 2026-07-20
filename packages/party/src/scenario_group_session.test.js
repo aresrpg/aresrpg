@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GROUP SESSION SCENARIO (MULTICHAR lane, the brief's headless story): ONE human drives a leader + 2 owned
 // alts through the whole loop — invite → world alignment → follow ticks → the leader engages → members
 // auto-join → turn-order HUD focus → victory — as one input sequence against the group store, asserting the

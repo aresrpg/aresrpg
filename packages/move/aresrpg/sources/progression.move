@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// PROGRESSION — the character-progression face over the FOUNDATION kernels (S-70 size split: every pure
 /// formula + frozen constant moved VERBATIM to `aresrpg_foundation::progression_math`; this module stays — the
 /// upgrade law forbids removing modules — as thin delegates that keep every published signature and add the

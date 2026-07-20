@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // @aresrpg/world — the headless world core (D770a): THREE reducer atoms behind three input doors,
 // effects as exported subscriptions, renderers consume projections and compute nothing.
 //

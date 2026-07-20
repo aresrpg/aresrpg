@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
 # AresRPG RPC — self-hostable read stack.
 #
 #   docker compose up                → redis + indexer + read-api (serves live testnet views)

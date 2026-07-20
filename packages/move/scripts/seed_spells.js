@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SEED-LEG #0 — the MVP-12 spell seed (#57 size-split de-inline). 12 `spell_registry::add_spell` PTBs, the
 // 1:1 TRANSLATION of the `#[test_only]` builders in sources/spell/spell_registry.move (the in-repo SSOT the
 // test suite still seeds from — reviewed line-by-line against it; any drift here is a defect).

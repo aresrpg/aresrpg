@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PRE-FLIGHT "MUST SAY WHY" — a decoded refusal reason now rides as a second \n-separated
 // line (abort_copy.js humanize_tx_error's `errors.tx_refusal_reason` template) into EVERY toast surface that
 // shows a humanized tx error, including the in-game event-toast stack (GameWorldHud.jsx's local Toasts(),

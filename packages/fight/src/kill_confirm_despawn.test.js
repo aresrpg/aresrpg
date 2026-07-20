@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // KILL → DESPAWN, and the REVIVE that reads as "the model doesn't disappear".
 //
 // SYMPTOM: killing a mob makes the turn card grey, but the model doesn't disappear. ROOT (proven here): the

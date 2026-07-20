@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ROUND-3 flora acceptance — the three tuning deltas, in the target pose class: a third-person
 // AVATAR standing in a meadow with the sun toward the camera. HEADED Chromium on the Studio's Metal GPU
 // (§7), 2560×1440 @ dsf-2, sun pinned to a low bright day sun. Boots walk mode (the avatar GLB + shoulder

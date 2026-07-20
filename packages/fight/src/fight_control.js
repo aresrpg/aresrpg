@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Character-level control selectors for on-chain fights. A participant's character id is the
 // entity identity; its owner address is authorization metadata. Keeping those two facts separate
 // prevents multiple characters owned by one wallet from collapsing into one renderer/input row.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The onboarding OBJECTIVE CARD — the compact HUD readout of the quest ladder (quest_ladder_store.js).
 // Terminal house DNA: near-black SOLID panel (fight-HUD opacity law — never see-through over the board),
 // gold accents, uppercase micro-labels, sharp corners, monospace. Shows the ACTIVE quest's number, title,

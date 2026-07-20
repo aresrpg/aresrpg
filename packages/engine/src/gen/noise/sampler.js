@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Seeded simplex + fbm sampler (§4.1, ports the aresrpg-world Noise2dSampler CONCEPT).
 //
 // DETERMINISM LAW (§3.7): arithmetic + Math.floor/Math.sqrt ONLY. NO Math.sin/cos/tan/pow/exp/

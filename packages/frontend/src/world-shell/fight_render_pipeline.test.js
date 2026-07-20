@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RECEIPT RENDER PIPELINE — a chain receipt's inline-resolved wave (turns.move `resolve_from`) is produced into
 // ordered render turns (produce_receipt_render_turns) and paced through ONE non-overlapping queue
 // (create_fight_render_queue). The predicted half moved into the fight core (fight/present.js — the local wave

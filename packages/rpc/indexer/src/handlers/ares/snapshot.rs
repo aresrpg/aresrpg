@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 //! AresRPG object-snapshot + taux projection — the S-15c read-model slice.
 //!
 //! A SEPARATE sequential pipeline (`ares_snapshot`, its own watermark) from the

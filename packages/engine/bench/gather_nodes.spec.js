@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GATHER-NODE PROCEDURAL PROP CAPTURE (rework) — the pixel proof that a resource node now
 // renders REAL procedural wheat/herb/ore (synth_gather_buffer → crossed-billboard sprite) instead of the
 // rejected item-ICON card. Drives the ?gather=1 demo (gather_demo.js) — 7 showcase nodes on a grass ground +

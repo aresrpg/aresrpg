@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // OWNER BUG: the combat log printed literal "Mob hit … for 9" instead of the real mob template name.
 // Root cause: fight_bridge.js's build_fighters stamps `name: view.mob_names?.[m.template] || 'Mob'` for a mob
 // whose template hasn't resolved yet (dungeon_store's `_resolve_mob_identities` is async fire-and-forget), and

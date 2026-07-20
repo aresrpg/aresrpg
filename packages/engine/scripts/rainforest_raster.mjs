@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RAINFOREST v2 lane VISUAL PROOF + coverage histogram (no WebGPU) of the DECORATED gen pipeline under
 // the RAINFOREST_WORLD recipe. Measures the ground-material mix (sand vs forest-floor vs rock), canopy
 // coverage, and water coverage over the ±256 region, and renders top-down + ground-pose rasters + a

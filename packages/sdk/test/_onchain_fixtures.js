@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Shared fixtures + helpers for the on-chain builder tests. Offline only: a full placeholder id set for THE merged
 // `aresrpg` package (injected via `context.ids.aresrpg` — the deployment override seam) so every PTB BUILDS without
 // a live publish, plus a `move_calls` inspector over `tx.getData()` to assert targets + arg shapes, and a

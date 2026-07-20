@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
 # Container entrypoint: render the config from env (keeps the sponsor secret out
 # of the image), then hand off to the gas station. GAS_STATION_AUTH is read from
 # the environment by the station itself.

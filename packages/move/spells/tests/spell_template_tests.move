@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Spell-template tests: derived-object canonicity, exact six-level shape, structural effect-vocabulary rejection,
 /// uncapped numeric admission/tuning, version gating, and a full 12-class starter fixture.
 #[test_only]

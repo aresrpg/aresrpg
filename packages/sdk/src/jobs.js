@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Jobs / gathering SSOT — ported faithfully (1:1) from the reference corpus:
 //   - Job definitions
 //   - Job XP table          (retro 1.29 curve, 100 lvls)

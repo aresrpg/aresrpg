@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT-ENTRY CINEMATIC — the store lifecycle hook that drives the fight-start
 // sequence: "when I start a fight, we should instantly pass into isometrical view with the camera rotating, the
 // fight sword appearing and once the fight is ready boom the board appears and the camera becomes static again."

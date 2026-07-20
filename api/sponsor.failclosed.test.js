@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // api/sponsor.mjs FAIL-CLOSED proof: when Redis is UNREACHABLE, every anti-drain gate REFUSES
 // (never fail-open on the money path). Point REDIS_URL at a DEAD port (nothing
 // listening) so the first op errors and the circuit breaker trips:

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORN-COSMETIC world regression: the live /v1 Character projection carries a template OBJECT id in
 // `worn.<slot>.template_id`; the cosmetic quilt is keyed by the seed appearance slug. Prove the complete
 // consumer seam as state in -> rig.set_slots out, including the clearing call on unequip.

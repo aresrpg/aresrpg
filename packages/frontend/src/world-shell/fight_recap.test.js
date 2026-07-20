@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D2: the victory card must still show the defeated enemy team — the recap payload now opens for
 // BOTH outcomes off the session's OWN committed roster (fight_recap_payload, pure). The WIN rows here are the
 // regression pin: the engine rewrite (8c3ec0c) had narrowed the recap-open to defeats, so FightResult.jsx's

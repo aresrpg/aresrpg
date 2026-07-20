@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S2 — the DUNGEON/WORLD context SHIM over the generic fight core (fight/). It owns NO fight logic (gate c
 // verb-ban): only (a) OPEN a fight in the core with the run's identity ctx, (b) feed a decoded Fight OBJECT read
 // into the core's snapshot door, (c) hold a terminal collapse until the core's presentation wave drains, (d)

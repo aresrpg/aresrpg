@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PRESENCE ADAPTER (D770a W3) — the frontend edge of @aresrpg/world's presence core: THE one store
 // instance, the dispatch helper, the React binding, and the chain-identity EFFECT executor (the core
 // requests a resolve on first sighting; this edge reads the Character object chain-direct and answers

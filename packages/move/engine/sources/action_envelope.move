@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Additive receipt boundaries for committed spell/weapon actions. The deployed `Cast` event stays frozen; this
 /// module owns the stable action key, immutable identity snapshots, and the mob-side turn/action dynamic field.
 module aresrpg_fight::action_envelope;

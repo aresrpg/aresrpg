@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // MONEY ROUTING for character creation (the live-400 fix).
 //
 // The @server sponsor enforces an anti-drain law: a wallet holding > 0.2 SUI ALWAYS pays its own gas

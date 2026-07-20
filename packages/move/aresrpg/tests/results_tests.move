@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// RESULTS tests — the core claims-v2 settlement landing. A branded `FightOutcome` (fabricated via the engine's
 /// `settlement::outcome_for_testing`, stamped with core's OWN `fight::brand_type()` so the brand-assert accepts it)
 /// is OPENED: HP/XP write-backs + the dirty-counter clear land on the kiosk-borrowed character, the loot checklist

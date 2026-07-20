@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // One-off converter: aresrpg-legacy Sponge `.schem` (gzip NBT) packs → the engine's compact house
 // format at packages/engine/assets/schematics/schematics.json. Bun/Node runnable, node builtins
 // only (zlib, fs, path) — HOUSE LAW: no new deps. Re-run to regenerate the shipped asset.

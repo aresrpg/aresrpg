@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE ONE encyclopedia entity-link idiom. Any entity reference anywhere in the app — a dungeon
 // key name, a world-picker's mob/resource counts — routes to its encyclopedia page through here, so there is a
 // SINGLE link system, never two. The URLs mirror exactly what EncyclopediaPage routes on (index.tsx:

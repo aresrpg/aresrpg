@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Local class roster for the offline Stage-0 visual (server delivers these in Stage 2).
 // Public class names (Japanese) per SPEC.md / the reference-corpus SPEC.md. The private genre-inspiration
 // class equivalents must NEVER surface in public ids/labels/assets.

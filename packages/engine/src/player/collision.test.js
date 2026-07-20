@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Collision resolution unit tests (ENG-8 acceptance: step-up, wall slide, corner, jump apex,
 // no-tunnel at sprint). Pure — a synthetic block world via a `solid(x,y,z)` closure, no renderer.
 

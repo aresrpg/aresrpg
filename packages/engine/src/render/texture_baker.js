@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Procedural block-texture atlas baker (§3.6) — CPU-side, Canvas-FREE, headless. Bakes N RGBA layers/
 // recipe into one flat Uint8Array [layer][row][col][rgba] for a three DataArrayTexture. Deterministic:
 // same seed ⇒ byte-identical (integer FNV/splitmix hash only; Math.sin/cos/random BANNED). Recipes are

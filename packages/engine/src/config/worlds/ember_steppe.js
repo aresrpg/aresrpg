@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIVE WORLDS · EMBER-STEPPE (world 03 = on-chain `03_emberfall_steppe`, biome `ash_steppe`) — the
 // volcanic ash-plain planet. WORLD→RECIPE MAPPING (grounded, DECLARED): the three release worlds map
 // first_shore→paradise, verdant_hollow→rainforest, emberfall_steppe→THIS. World 03 had NO engine recipe

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* Launcher notification badges (c149) — a small corner count chip on a HUD launcher icon when there
    is something actionable behind it (e.g. an in-progress quest on the Quests launcher). Data-driven +
    honest: the count comes from the live store, never a fabricated number (see TopLaunchers.jsx +

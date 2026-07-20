@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD 15 · SILENT ATOLL (on-chain `15_silent_atoll`, biome `dead_calm_sea`) — the becalmed-sea
 // planet. Seed identity (seed/mainnet/15_silent_atoll/world.json): water+earth elements, "the becalm —
 // no wind, no tide; sound carries forever across the flat sea", barren of gather nodes, wisdom lean.

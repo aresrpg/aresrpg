@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // i18n PARITY GUARD — party.invite_awaiting_toast / cancel_invite_cta / invite_cancel_notice: the pending-invite
 // toast stays visible until the invitee accepts or declines, with a cancel affordance. The 6-locale law (CLAUDE.md): every
 // user-facing string lands in ALL locales; a missing/empty locale would print the raw key on the pending-invite

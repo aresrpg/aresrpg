@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // world_gen.js gate — the decorated world-chunk path the island loader consumes. Covers the four
 // invariants from the WS2 first-cut brief. NOTE: the golden world-identity hash for the terrain
 // CORE lives in column_gen.test.js (generate_column, decoration-free); this file guards the

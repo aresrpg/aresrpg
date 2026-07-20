@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SHOP BUY DECISION — the pure transform behind the ACQUIRE button: given a catalog row's price/supply and the
 // wallet balance, decide whether to (a) show the restored "you're broke" card or (b) open the quantity modal.
 // THE MODAL IS THE UNIVERSAL GATE (2026-07-18): buying anything in the shop triggers the modal to ask

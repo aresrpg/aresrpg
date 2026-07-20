@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, it } from 'bun:test'
 
 // No mocking needed — get_block_by_id (@aresrpg/engine3/player) is a pure, real lookup (the same pattern

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX — the FLAME colour-variant b_spell family: FlameFX's five recoloured fire scenes reclaimed as
 // element-flavoured flame LOOPs (a lingering coloured flame — status flame / remnant / flavour layer, faithful to
 // the pack's STANDING-flame scene). Wave-A coverage lane (docs/VFX_FULL_UTILIZATION_PLAN.md §L6 /

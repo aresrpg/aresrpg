@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FAST-TRAVEL FLIGHT — the PURE autopilot math (headless, unit-tested): a per-frame integration step that
 // beelines the dragon to the target at RUN speed and shapes altitude (climb → cruise ground+12 → descend
 // ground+3), plus the arrival test. NO effects, NO engine handles — the browserful edge (fast_travel_pilot.js)

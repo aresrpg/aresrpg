@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S-85 ULTRA godrays proof (real-GPU headed, studio-metal). Two independent fixes make the shadow-volume
 // GodraysNode shippable inside the HIGH (ceiling) tier, each proven by a DIFFERENT pose:
 //  • BASE strength cut (GODRAYS_GAIN 0.4→0.026): the term is added in LINEAR HDR × the bright ~8 sun

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // @aresrpg/fight — the ONE generic HEADLESS fight core (world · dungeon · kolizeum). One state atom behind one
 // input door `input(msg, now)`; three cooperating pure folds (chain log · settlement · presentation); outputs =
 // projections + THE BEAT STREAM (`state.wave` rows of beats `{kind, at, duration, payload}`) the renderer plays

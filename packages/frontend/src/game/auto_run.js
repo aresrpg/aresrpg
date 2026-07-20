@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // AUTO-RUN — MAP-CLICK steer-to-target + auto-interact ("clicking a mob group or a resource on the
 // big map should make the character auto run towards it and start the fight or gathering upon reach if
 // conditions are respected, like a tool"). The MAP lane emits `context.events.emit('map/auto_run', { type,

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// CHARACTER-LISTING-RULE tests: the anti-name-squat level gate on character resale (`character_listing_rule`).
 /// Drives the REAL transfer-policy rule against the `test_world` harness + a genuinely xp-leveled character:
 /// below-gate purchase can't be proven (no sale), at/above-gate proves and `confirm_request` completes, the live

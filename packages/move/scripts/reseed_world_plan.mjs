@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure world-table planning for reseed_driver.mjs. Kept separate so every driver file stays below 600 LoC.
 
 const fields_of = (value) => value?.fields ?? value ?? {}

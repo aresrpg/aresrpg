@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-8 character-controller acceptance (headed WebGPU). Boots the demo, streams the world, toggles
 // WALK mode (key G), and proves the controller end-to-end against the LIVE render: the avatar GLB
 // loads + animates, the player spawns ON the ground, walks / sprints / jumps with the right animation

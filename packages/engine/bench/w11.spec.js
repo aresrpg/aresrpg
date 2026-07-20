@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // W11 measurement spec — before/after for the five render-lane tasks (shadow-follow, shadow-cache,
 // fog/pop-in pairing, per-chunk upload cost, riser readability) + the dispose teardown is unit-tested
 // in src/render/pool_renderer.test.js. HEADED Chromium on the Studio's Metal GPU (the source of

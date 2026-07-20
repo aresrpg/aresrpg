@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 module aresrpg_kolizeum::kolizeum;
 
 use aresrpg::fight as core_fight;

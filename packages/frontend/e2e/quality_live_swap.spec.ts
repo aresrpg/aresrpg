@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { test, expect } from '@playwright/test'
 
 // PROOF — a live graphics-tier change re-boots the render pipeline IN PLACE with NO page reload (the prior

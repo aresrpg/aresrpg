@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SEED_TIER1_BOOTSTRAP — S-21 additive QA seed closing the CORRECTED tier-1 tool loop. DISPOSABLE, TESTNET ONLY.
 //
 // CORRECTION to the original jade_pickaxe plan: jade is a tier-3/level-20 production MINER resource (seed/gathering/

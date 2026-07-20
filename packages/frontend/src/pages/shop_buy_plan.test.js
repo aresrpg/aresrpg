@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure-function tests for shop_buy_plan.js — plan_purchase, the ACQUIRE decision (broke card vs the universal
 // quantity modal — there is NO straight-buy branch since the 2026-07-18 change). No React, no RPC, no
 // chain. GAS_RESERVE_MIST = 0.2 SUI (the house gas reserve the broke gate keys on).

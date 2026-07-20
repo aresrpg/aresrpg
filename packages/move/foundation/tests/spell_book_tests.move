@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// SPELL BOOK TESTS — coverage for `is_learned`/`max_level`, not exercised by the source-file inline tests
 /// (which check `current_level(...) >= 1` directly rather than through the `is_learned` convenience wrapper).
 #[test_only]

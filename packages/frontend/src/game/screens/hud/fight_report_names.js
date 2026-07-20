@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // End-fight card row NAME resolution — the ONE HOME (character_name_resolve.js) applied to fight-summary rows.
 // ROOT CAUSE (a party row showed "0xDEE0…AD38"): packages/fight/src/project.js:321 bakes a fighter's
 // `name` as `row.name || roster_name || \`${addr.slice(0,6)}…${addr.slice(-4)}\`` — whenever the live mid-fight

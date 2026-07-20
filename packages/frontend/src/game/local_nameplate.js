@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D227 (the mob had no nameplate, and neither did the local player — lost in the migration) —
 // THE LOCAL PLAYER'S NAMEPLATE. D206's projected chips were REMOTE-only (remote_players.js draws every
 // presence entry); the local walker — rendered separately by embed_voxel — never got the legacy overhead

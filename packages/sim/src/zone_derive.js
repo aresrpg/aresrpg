@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ZONE DERIVE — the client mirror of the chain's SEED-DERIVED zone composition (search-cost rework, owner
 // 2026-07-13 "good search design"). A discovered zone stores ONLY its composition SEED + consumed-BITMAPS on
 // chain (never the spawn rows — the searcher no longer pays storage whose rebate leaks to other players); the

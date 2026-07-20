@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT ENGINE · fight-end machine (D153 — the canonical fight-END authority).
 //
 // THE BUG THIS KILLS: a NON-TERMINAL room clear (rooms remaining) had no single fold that remembered "this

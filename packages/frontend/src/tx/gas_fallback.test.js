@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GAS-STATION FALLBACK LAW — the routing matrix for the low-balance sponsored
 // re-route. Pure module, every effect injected (money_route.test.js pattern): ZERO module mocks, so this
 // file can never collide with the process-global bun mock.module registry.

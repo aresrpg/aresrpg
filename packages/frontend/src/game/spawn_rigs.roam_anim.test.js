@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST PROBE (2026-07-19): mobs roaming in the world were not using a walk/run
 // animation — they glided without animation. This is the INSTRUMENT-BEFORE-FIX proof for create_rig_layer's
 // idle↔move blend (spawn_rigs.js): loads a REAL reference-corpus mob GLB (hy_bunny — IDLE/WALK/RUN, the same

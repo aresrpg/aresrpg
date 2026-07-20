@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Event-contract twins for the two chain-side observability fixes (07-18 night):
 ///   • TELEPORT emits a movement event — the `k_teleport` caster relocation rides the SAME `Displaced` seam
 ///     push/pull use (from→to, side+idx), so the client renders it instead of the fighter silently warping
