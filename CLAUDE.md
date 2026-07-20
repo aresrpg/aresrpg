@@ -47,11 +47,11 @@ api/             # stateless sponsored-transaction service
 ## Workflow — edge and master
 
 Work is PR-shaped and history is LINEAR, always: one branch per feature/fix, **always
-rebased** on the latest `edge` (merge commits never enter a branch; PRs land by rebase-merge
-only) → **PR into `edge`** (the CI gate must pass — `.github/workflows/gate.yml`) → `edge`
-soaks → promotion to `master` is the owner's `/promote` comment: a bot FAST-FORWARDS master to
-the approved head (byte-identical commits — signatures survive). Nobody pushes `master` —
-including maintainers. Hotfixes ride
+rebased** on the latest `edge` — enforced by construction: landings on both hops go through
+the `/promote` fast-forward bot, which refuses anything unrebased → **PR into `edge`** (the CI
+gate must pass — `.github/workflows/gate.yml`) → `edge` soaks → `/promote` on the edge→master
+PR fast-forwards production (byte-identical commits — signatures survive; edge auto-aligns
+after). Nobody pushes `master` or `edge` — including maintainers. Hotfixes ride
 edge. The promotion PR carries the `package.json` version bump — the only human-touched version
 artifact; on merge, CI tags `vX.Y.Z` and publishes the GitHub Release while Vercel deploys off
 the same push. Tags are never created locally (a ruleset enforces it). `FROZEN.md` lists the

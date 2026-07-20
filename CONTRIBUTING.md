@@ -15,14 +15,14 @@ History is linear by law; nothing ever rewrites what landed.
 
 1. Branch off `edge`, one branch per feature/fix.
 2. **Always rebase** — keep your branch rebased on the latest `edge`; a merge commit never
-   enters a branch. PRs merge into `edge` by **rebase-merge only** (the other buttons are
-   disabled).
-3. `edge` → `master` is never a merge: the owner comments `/promote` and a bot
-   **fast-forwards** master to the approved head — the rebase discipline's terminal form.
-   Master's commits are byte-identical to edge's, so signatures survive untouched.
-4. Signing note: the GitHub UI's rebase-merge re-creates commits (re-signed by GitHub, not
-   you). If you sign your commits, prefer keeping your branch rebased yourself so the final
-   fast-forward carries YOUR signatures end-to-end.
+   enters a branch. **This is enforced by construction:** landings happen via the `/promote`
+   fast-forward bot, and an unrebased branch cannot fast-forward — the bot refuses it.
+3. Landings on BOTH hops are `/promote` (owner-triggered after review): the bot pushes the
+   exact approved SHA — your commits land byte-identical, so your signatures survive
+   untouched (the merge buttons are ceremonial; UI rebase-merge would re-create commits
+   unsigned, which is exactly why the bot exists).
+4. `edge` → `master` is the same mechanic — the rebase discipline's terminal form — and each
+   master promotion re-aligns `edge` so the branches never drift at release points.
 
 ## The quality bar
 
