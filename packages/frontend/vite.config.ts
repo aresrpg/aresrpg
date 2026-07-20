@@ -8,10 +8,37 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
-import { local_content_plugin } from './dev/local_content_plugin'
-import { cosmetic_glb_plugin } from './dev/cosmetic_glb_plugin'
-import { move_hash_plugin } from './dev/move_hash_plugin'
-import { item_catalog_plugin } from './dev/item_catalog_plugin'
+// CONTENT AUTHORING lives with the private authoring tree — its vite middlewares (local
+// content, cosmetic GLB linking, move-hash, the seed-derived catalog) never ship here. The
+// virtual catalog resolves to a LOUD empty fallback: the encyclopedia's slug/stat maps degrade
+// to their miss paths until the published-catalog artifact lands (the content-seam ticket
+// upgrades this resolver to read the committed artifact).
+// The engine's default avatar rig (a heritage-derived GLB) never ships in git — it serves from
+// the app's asset route at runtime (the CDN seam). This resolver maps the engine's ?url import
+// to that route; absent the asset, the avatar loader errors LOUDLY (the debug-cube class).
+const avatar_url_plugin = {
+  name: 'default-avatar-cdn-url',
+  resolveId(id: string) {
+    return id.endsWith('assets/characters/senshi_male.glb?url') ? '\0avatar-url' : undefined
+  },
+  load(id: string) {
+    return id === '\0avatar-url' ? "export default '/sprites/characters/senshi_male.glb'" : undefined
+  },
+}
+
+const catalog_fallback_plugin = {
+  name: 'item-catalog-empty-fallback',
+  resolveId(id: string) {
+    return id === 'virtual:item_catalog' ? '\0virtual:item_catalog' : undefined
+  },
+  load(id: string) {
+    if (id !== '\0virtual:item_catalog') return undefined
+    console.warn(
+      '[item-catalog] virtual:item_catalog resolves EMPTY (published catalog artifact pending — encyclopedia maps degrade to miss paths)'
+    )
+    return 'export const slugs = []\nexport const pet_food_slugs = []\nexport const catalog = {}\n'
+  },
+}
 
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))
 
@@ -185,10 +212,8 @@ export default defineConfig({
     tailwindcss(),
     vfx_lab_dev_plugin(),
     publish_dev_plugin(),
-    local_content_plugin(),
-    cosmetic_glb_plugin(), // TR-97 — GLB linking/serving for cosmetics + mounts (sibling to local_content)
-    move_hash_plugin(), // /__move_sources_hash — the admin RELEASE page's staleness guard (dev-only)
-    item_catalog_plugin(), // virtual:item_catalog — encyclopedia stat/slug maps DERIVED from seed at build (SSOT)
+    catalog_fallback_plugin, // virtual:item_catalog — see the content-authoring note above
+    avatar_url_plugin, // default rig via the runtime asset route (heritage GLBs never in git)
     // The vendored game engine + @koshi/protocol's create_client use node
     // `stream` (PassThrough) + `events` (EventEmitter) + `buffer`; polyfill for the browser.
     nodePolyfills({ include: ['stream', 'events', 'buffer', 'process', 'util'] }),
