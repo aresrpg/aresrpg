@@ -941,6 +941,7 @@ describe('execute_sponsored_tx — two-call station flow', () => {
     features: {
       'sui:signPersonalMessage': { signPersonalMessage: mock(async () => ({ signature: 'zk-sig' })) },
       'sui:signTransaction': { signTransaction: st_spy },
+      'enoki:getSession': { getSession: async () => ({}) }, // zkLogin marker — the sponsor door is zkLogin-only (#73)
     },
   })
   const ok_json = (body) => ({ ok: true, json: async () => body })

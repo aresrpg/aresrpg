@@ -67,7 +67,9 @@ export function WalletConnectSection({
   const wallets = use_connectable_wallets()
 
   if (wallets.length === 0)
-    return <div className="text-muted/70 text-[10px] tracking-[0.12em] text-center py-1">{t('auth.no_wallet_detected')}</div>
+    return (
+      <div className="text-muted/70 text-[10px] tracking-[0.12em] text-center py-1">{t('auth.no_wallet_detected')}</div>
+    )
 
   return (
     <div className="flex flex-col items-stretch gap-2 w-full">

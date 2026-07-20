@@ -494,12 +494,9 @@ export async function execute_sponsored_tx({
   build_client?: unknown
   sponsor_url: string
 }): Promise<SponsoredReceipt> {
-  // MONEY LAW (#73, structural — SINGLE HOME): sponsorship is zkLogin-only. Every sponsored path —
-  // gameplay sponsor-first, the gas-selection fallback, and create/join — funnels through this one door,
-  // so refusing a non-Enoki (wallet-standard) session HERE makes the sponsor endpoint structurally
-  // unreachable for a connected wallet: it self-pays every transaction. Defense in depth over the sponsor
-  // server's own zkLogin assertion; the throw is PRE-network (no /reserve, no /execute — zero traffic) and
-  // humanized (no-silent-failure law). Unit-tested in tx/wallet_self_pay.test.ts.
+  // MONEY LAW (#73, structural single-home): sponsorship is zkLogin-only. Every sponsored path funnels
+  // through this one door, so refusing a non-Enoki (wallet) session HERE — PRE-network, humanized — makes
+  // the sponsor structurally unreachable for a connected wallet (it self-pays). Test: wallet_self_pay.test.ts.
   if (!is_zklogin_wallet(wallet)) throw new Error(i18n.t('errors.sponsor_zklogin_only'))
 
   // (The S-64 client-direct station flag that used to branch here was DELETED 07-10: the

@@ -1485,9 +1485,7 @@
       "限定チャットタグカラー",
       "ショップ永久30%割引"
     ],
-    "veteran_app_perks": [
-      "全メンバー特典"
-    ],
+    "veteran_app_perks": ["全メンバー特典"],
     "min_level": "最低レベル",
     "recommended_level": "推奨レベル",
     "dungeon_mobs": "モンスター",

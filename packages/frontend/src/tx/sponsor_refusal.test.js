@@ -17,7 +17,10 @@ import { execute_sponsored_tx, is_sponsor_self_pay_refusal, SPONSOR_REFUSAL_SELF
 // needs no mock — keeping this file free of the shared '../chain/sdk' module mock (process-global hazard).
 const make_tx = () => ({ setSenderIfNotSet() {}, build: async () => new Uint8Array([1, 2, 3]) })
 const make_wallet = () => ({
-  features: { 'sui:signPersonalMessage': { signPersonalMessage: async () => ({ signature: 'zklogin-sig' }) } },
+  features: {
+    'sui:signPersonalMessage': { signPersonalMessage: async () => ({ signature: 'zklogin-sig' }) },
+    'enoki:getSession': { getSession: async () => ({}) }, // zkLogin marker — the sponsor door is zkLogin-only (#73)
+  },
 })
 const mock_sponsor_400 = (detail) => {
   globalThis.fetch = mock(async () => ({ ok: false, status: 400, text: async () => detail }))
@@ -85,6 +88,7 @@ describe('execute_sponsored_tx — a fresh-zkLogin sign failure throws BEFORE th
             throw new Error('Enoki: zkLogin proof not ready')
           },
         },
+        'enoki:getSession': { getSession: async () => ({}) }, // zkLogin marker — the door is zkLogin-only (#73)
       },
     }
     const error = await execute_sponsored_tx({
