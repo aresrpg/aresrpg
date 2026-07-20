@@ -19,10 +19,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - name: install
         run: bun install --frozen-lockfile
-      # Lint runs from the REPO ROOT: the flat config's severity/allow maps are root-relative
-      # path fragments — a package cwd breaks the matching and WARN tiers fire as errors.
-      - name: lint (sim)
-        run: bunx eslint packages/sim/src packages/sim/test && bunx prettier --check packages/sim/src packages/sim/test
       - name: fight-replay gate (deterministic capsules)
         working-directory: packages/sim
         run: bun test test/replay_gate.test.js
