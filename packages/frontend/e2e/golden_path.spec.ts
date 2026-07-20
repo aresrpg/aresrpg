@@ -48,9 +48,7 @@ import { test, expect, type Page } from '@playwright/test'
 
 const DEV_KEY = process.env.VITE_DEV_KEY ?? ''
 const OUT =
-  process.env.GOLDEN_OUT ??
-  process.env.ARES_TEST_OUT ??
-  new URL('../test-results/out/golden', import.meta.url).pathname
+  process.env.GOLDEN_OUT ?? process.env.ARES_TEST_OUT ?? new URL('../test-results/out/golden', import.meta.url).pathname
 const ONLY = (process.env.E2E_ONLY ?? '')
   .split(',')
   .map((s) => s.trim())

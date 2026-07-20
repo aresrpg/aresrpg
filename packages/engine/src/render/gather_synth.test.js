@@ -8,7 +8,14 @@
 
 import { describe, expect, it } from 'bun:test'
 
-import { GATHER_NIGHT_FLOOR, GATHER_TEX_SIZE, gather_night_tint, node_glow, ore_visual, synth_gather_buffer } from './gather_synth.js'
+import {
+  GATHER_NIGHT_FLOOR,
+  GATHER_TEX_SIZE,
+  gather_night_tint,
+  node_glow,
+  ore_visual,
+  synth_gather_buffer,
+} from './gather_synth.js'
 import {
   GATHER_BASE_IDS,
   GATHER_EMISSION_LUMA_CEILING,

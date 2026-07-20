@@ -92,16 +92,14 @@ export const drive_combo = (combo) => {
 
   const store = create_fight_store()
   const T0 = 1_000
-  store
-    .getState()
-    .input(
-      {
-        type: 'init',
-        fight_id: initial.fight_id,
-        ctx: { my_entity_id: '0xspectator', address: '0xspectator', beat_ctx: { grid_width: GRID_W } },
-      },
-      T0
-    )
+  store.getState().input(
+    {
+      type: 'init',
+      fight_id: initial.fight_id,
+      ctx: { my_entity_id: '0xspectator', address: '0xspectator', beat_ctx: { grid_width: GRID_W } },
+    },
+    T0
+  )
   store.getState().input({ type: 'snapshot', fight: snapshot, version: 1 }, T0 + 10)
   store
     .getState()

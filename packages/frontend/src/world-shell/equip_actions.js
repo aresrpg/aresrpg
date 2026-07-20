@@ -64,7 +64,7 @@ export async function equip_items({ character_id, to_equip, to_unequip }) {
       const item_kiosk_cap_id = row.kiosk_cap_id || (await cap_for_kiosk(sdk, address, row.kiosk_id))
       if (!item_kiosk_cap_id) throw new Error(i18n.t('errors.item_wrong_kiosk'))
       return { ...row, item_kiosk_id: row.kiosk_id, item_kiosk_cap_id }
-    }),
+    })
   )
 
   let tx

@@ -76,13 +76,11 @@ const degraded_fight = () => ({
 
 const boot = () => {
   const store = create_fight_store()
-  store
-    .getState()
-    .input({
-      type: 'init',
-      fight_id: FIGHT,
-      ctx: { my_entity_id: ME, address: OWNER, creator: OWNER, beat_ctx: { grid_width: 20 } },
-    })
+  store.getState().input({
+    type: 'init',
+    fight_id: FIGHT,
+    ctx: { my_entity_id: ME, address: OWNER, creator: OWNER, beat_ctx: { grid_width: 20 } },
+  })
   return store
 }
 

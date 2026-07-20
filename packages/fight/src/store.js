@@ -510,7 +510,13 @@ const make_input =
                 // B (register): `basis_version` = the floor this cast predicts. Once an authoritative receipt raises
                 // the applied floor to/past it, the trap is COMMITTED chain truth and drop_traps can no longer evict
                 // it (version-gated input, composite §1) — the boundary-rollback race becomes structurally inert.
-                { draft_id: msg.intent_id ?? null, basis_version: base_version, cells: trap_cells, gone: false, payload: trap_payload },
+                {
+                  draft_id: msg.intent_id ?? null,
+                  basis_version: base_version,
+                  cells: trap_cells,
+                  gone: false,
+                  payload: trap_payload,
+                },
               ]
             : s.my_traps
           // fold any glyph THIS cast places into the durable my_glyphs home (predict_cast.placed_glyphs): each entry

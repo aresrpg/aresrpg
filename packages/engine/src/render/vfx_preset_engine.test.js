@@ -240,7 +240,7 @@ describe('presets', () => {
 
 // ── PHASE B: the remaining packs ported to REAL .gdshader looks (ElementalMagic/Electric/Battle/Explosion/
 // Status), replacing the generic FBM `flame` that faked water/air/neutral/heal + the aura shelf in phase A. ──
-describe("phase-B pack ports — real shader math per element slot", () => {
+describe('phase-B pack ports — real shader math per element slot', () => {
   test('every phase-B appearance is registered in PACK_BILLBOARD (so the engine routes it to billboard_pack2)', () => {
     expect(PACK2_BILLBOARD.size).toBeGreaterThanOrEqual(16)
     for (const k of PACK2_BILLBOARD) expect(PACK_BILLBOARD.has(k), `${k} routed`).toBe(true)

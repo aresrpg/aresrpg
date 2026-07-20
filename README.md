@@ -33,6 +33,7 @@ ares test              # the sole test gate (gold | anchor | unit)
 
 Read `CLAUDE.md` (the house rules) and `/SPEC.md` (the game design truth) first. Contributions
 build AresRPG — proposals that fight the spec argue the spec change first, as an issue. Need
+
 ## License — source-available, in plain words
 
 This is **source-available** software, developed in the open — not open-source. See

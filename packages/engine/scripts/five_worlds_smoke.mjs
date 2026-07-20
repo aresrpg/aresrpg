@@ -356,7 +356,7 @@ results.push([
   schematic_scene('05_mangrove', 'MANGROVE_G2', SEA_LEVEL - 4, SEA_LEVEL),
 ])
 results.push([
-  'PALM (Paradise) — hand-composed from the reference corpus\'s palm materials',
+  "PALM (Paradise) — hand-composed from the reference corpus's palm materials",
   schematic_scene('06_palm', 'PALM_TREE_G4', SEA_LEVEL + 1, null),
 ])
 

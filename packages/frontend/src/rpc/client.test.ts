@@ -356,7 +356,8 @@ describe('rpc GET request control', () => {
     const retry_timers: Array<{ delay_ms: number; run: () => void }> = []
     globalThis.setTimeout = ((handler: TimerHandler, delay?: number, ...args: unknown[]) => {
       const delay_ms = Number(delay ?? 0)
-      if (delay_ms !== 8000) // 8000 = the fetch abort timeout — left inert, matching the file's other tests
+      if (delay_ms !== 8000)
+        // 8000 = the fetch abort timeout — left inert, matching the file's other tests
         retry_timers.push({
           delay_ms,
           run: () => {
@@ -375,11 +376,11 @@ describe('rpc GET request control', () => {
       const count = (calls.get(url) ?? 0) + 1
       calls.set(url, count)
       if (count === 1)
-        return json_response(
-          { error: 'rate_limited', limit: 300, retry_after_seconds: 3 },
-          429,
-          { 'retry-after': '3', 'x-ratelimit-limit': '300', 'x-ratelimit-remaining': '0' }
-        )
+        return json_response({ error: 'rate_limited', limit: 300, retry_after_seconds: 3 }, 429, {
+          'retry-after': '3',
+          'x-ratelimit-limit': '300',
+          'x-ratelimit-remaining': '0',
+        })
       return json_response({ zones: [] })
     })
     globalThis.fetch = fetch_mock as unknown as typeof fetch
@@ -403,6 +404,9 @@ describe('rpc GET request control', () => {
     for (const [url, n] of calls) expect(n, `over-fetched ${url}`).toBeLessThanOrEqual(2)
     // NEVER DROPS A ZONE (never-cache-absence law): every key's single gated retry lands once the shared
     // window opens — none rejects, none silently vanishes from the poll.
-    expect(results.every((r) => r.status === 'fulfilled'), JSON.stringify(results)).toBe(true)
+    expect(
+      results.every((r) => r.status === 'fulfilled'),
+      JSON.stringify(results)
+    ).toBe(true)
   })
 })

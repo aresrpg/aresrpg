@@ -22,10 +22,26 @@ const fight_object = ({ mob_hp = 20, my_hp = 50 } = {}) => ({
   width: 20,
   height: 19,
   participants: [
-    { owner: '0xa', character: ME, class: 'w', team: 0, hp: my_hp, max_hp: 50, ap: 6, mp: 3, base_ap: 6, base_mp: 3, cell: 10, ready: true },
+    {
+      owner: '0xa',
+      character: ME,
+      class: 'w',
+      team: 0,
+      hp: my_hp,
+      max_hp: 50,
+      ap: 6,
+      mp: 3,
+      base_ap: 6,
+      base_mp: 3,
+      cell: 10,
+      ready: true,
+    },
   ],
   mobs: [{ template: '0xm', level: 1, hp: mob_hp, max_hp: 20, cell: 20, ap: 4, mp: 3 }],
-  queue: [{ is_mob: false, idx: 0 }, { is_mob: true, idx: 0 }],
+  queue: [
+    { is_mob: false, idx: 0 },
+    { is_mob: true, idx: 0 },
+  ],
   turn_ptr: 0,
   turn_deadline_ms: 90_000,
   last_action_ms: 0,
@@ -63,7 +79,9 @@ describe('WAVE-A V3 — equal-version snapshot is discarded (keystone #3 deleted
 
   test('an equal-version re-read at an ALREADY-ADOPTED version is deduped, never a rollback (view_version === version)', () => {
     const store = create_fight_store()
-    store.getState().input({ type: 'init', fight_id: FIGHT, ctx: { my_entity_id: ME, beat_ctx: { grid_width: 20 } } }, T0)
+    store
+      .getState()
+      .input({ type: 'init', fight_id: FIGHT, ctx: { my_entity_id: ME, beat_ctx: { grid_width: 20 } } }, T0)
     store.getState().input({ type: 'snapshot', fight: fight_object({ mob_hp: 20 }), version: 5 }, T0)
     store.getState().input({ type: 'snapshot', fight: fight_object({ mob_hp: 12 }), version: 6 }, T0 + 100) // adopt v6
     expect(store.getState().view_version).toBe(6)

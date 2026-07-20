@@ -51,14 +51,12 @@ const FIGHT_OBJECT = {
 
 const boot = () => {
   const store = create_fight_store()
-  store
-    .getState()
-    .input({
-      type: 'init',
-      fight_id: FIGHT,
-      my_key: 'p0',
-      ctx: { my_entity_id: CHAR, beat_ctx: { grid_width: GRID_W } },
-    })
+  store.getState().input({
+    type: 'init',
+    fight_id: FIGHT,
+    my_key: 'p0',
+    ctx: { my_entity_id: CHAR, beat_ctx: { grid_width: GRID_W } },
+  })
   store.getState().input({ type: 'snapshot', fight: FIGHT_OBJECT, version: 5 }, 1_000)
   return store
 }

@@ -1008,15 +1008,13 @@ export const use_dungeon = create((set, get) => ({
       const receipt = await tx_place(fight_id, character_id, to_fight_cell(cell, dungeon?.width ?? 0))
       const version = fight_change_version(receipt, fight_id)
       if (version != null)
-        fight_store
-          .getState()
-          .input({
-            type: 'receipt',
-            receipt,
-            version,
-            fight_id,
-            trap_cells: project.engine_view(fight_store.getState()).my_traps,
-          })
+        fight_store.getState().input({
+          type: 'receipt',
+          receipt,
+          version,
+          fight_id,
+          trap_cells: project.engine_view(fight_store.getState()).my_traps,
+        })
       await get().refresh()
     } catch (error) {
       game_log('dungeon', 'place_at failed', error)
@@ -1104,15 +1102,13 @@ export const use_dungeon = create((set, get) => ({
       // folded receipt. The two reads reconcile through one door, not two clocks.
       const version = fight_change_version(receipt, fight_id)
       if (version != null)
-        fight_store
-          .getState()
-          .input({
-            type: 'receipt',
-            receipt,
-            version,
-            fight_id,
-            trap_cells: project.engine_view(fight_store.getState()).my_traps,
-          })
+        fight_store.getState().input({
+          type: 'receipt',
+          receipt,
+          version,
+          fight_id,
+          trap_cells: project.engine_view(fight_store.getState()).my_traps,
+        })
       await get().refresh()
       ok = true
     } catch (error) {
@@ -1174,15 +1170,13 @@ export const use_dungeon = create((set, get) => ({
     // commit path's `if (version != null)` guard exactly.
     const version = fight_change_version(receipt, fight_id)
     if (version != null)
-      fight_store
-        .getState()
-        .input({
-          type: 'receipt',
-          receipt,
-          version,
-          fight_id,
-          trap_cells: project.engine_view(fight_store.getState()).my_traps,
-        })
+      fight_store.getState().input({
+        type: 'receipt',
+        receipt,
+        version,
+        fight_id,
+        trap_cells: project.engine_view(fight_store.getState()).my_traps,
+      })
     const { characters } = context.get_state().sui
     const defeated = apply_fight_receipt_to_roster(characters, { character_id, final_hp: 0 })
     if (defeated !== characters) context.dispatch('action/sui_data', { characters: defeated })

@@ -474,7 +474,11 @@ export const wave_turns_of = (draft, raw_events, version, trap_cells = []) => {
  *  mover's Cast so the replay carries the SAME walk/cast/damage/death sequence classes the local path emits; with no
  *  identifiable foreign mover the damage rides bare Hits (a paced 'fight' turn — floater + death, no cast animation).
  *  Only cell/hp deltas drive it; ap/mp/status differences adopt wholesale (no spurious replay). @returns raw events. */
-export const foreign_replay_events = (prev, next, { escrow = [], my_key = null, fight_id = null, presented_dead = null } = {}) => {
+export const foreign_replay_events = (
+  prev,
+  next,
+  { escrow = [], my_key = null, fight_id = null, presented_dead = null } = {}
+) => {
   const ev = (kind, json) => ({ type: `0x0::fight_events::${kind}`, parsedJson: { fight: fight_id, ...json } })
   const prev_f = prev?.fighters ?? {}
   const next_f = next?.fighters ?? {}

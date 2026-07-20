@@ -85,7 +85,11 @@ const active_store = () => {
     T0 + 500
   )
   store.getState().input(
-    { type: 'receipt', receipt: { events: [ev('TurnStarted', { is_mob: false, idx: 0, deadline_ms: D1 })] }, version: 3 },
+    {
+      type: 'receipt',
+      receipt: { events: [ev('TurnStarted', { is_mob: false, idx: 0, deadline_ms: D1 })] },
+      version: 3,
+    },
     T0 + 1_000
   )
   return store
@@ -166,14 +170,22 @@ describe('INC-0 · session identity (B-F02/F06 — A→B crossings drop, id-less
 describe('INC-0 · rollback input (B-F03 — a reverted tx clears predicted state)', () => {
   test('a reverted tx clears exactly the predicted entry; recompute falls back to committed', () => {
     const store = active_store()
-    store
-      .getState()
-      .input(
-        { type: 'intent', intent: { kind: 'cast', ap_cost: 5, damaging: true, target_cell: 45 }, version: 4, event_idx: 0 },
-        T0 + 1_100
-      )
     store.getState().input(
-      { type: 'intent', intent: { kind: 'Hit', victim_is_mob: true, victim_idx: 0, remaining_hp: 8 }, version: 4, event_idx: 1 },
+      {
+        type: 'intent',
+        intent: { kind: 'cast', ap_cost: 5, damaging: true, target_cell: 45 },
+        version: 4,
+        event_idx: 0,
+      },
+      T0 + 1_100
+    )
+    store.getState().input(
+      {
+        type: 'intent',
+        intent: { kind: 'Hit', victim_is_mob: true, victim_idx: 0, remaining_hp: 8 },
+        version: 4,
+        event_idx: 1,
+      },
       T0 + 1_100
     )
     // the prediction painted: mob HP shows 8, my AP debited to 7
@@ -191,11 +203,21 @@ describe('INC-0 · rollback input (B-F03 — a reverted tx clears predicted stat
   test('a targeted rollback removes only the named predicted entry', () => {
     const store = active_store()
     store.getState().input(
-      { type: 'intent', intent: { kind: 'Hit', victim_is_mob: true, victim_idx: 0, remaining_hp: 12 }, version: 4, event_idx: 0 },
+      {
+        type: 'intent',
+        intent: { kind: 'Hit', victim_is_mob: true, victim_idx: 0, remaining_hp: 12 },
+        version: 4,
+        event_idx: 0,
+      },
       T0 + 1_100
     )
     store.getState().input(
-      { type: 'intent', intent: { kind: 'Hit', victim_is_mob: true, victim_idx: 0, remaining_hp: 4 }, version: 4, event_idx: 1 },
+      {
+        type: 'intent',
+        intent: { kind: 'Hit', victim_is_mob: true, victim_idx: 0, remaining_hp: 4 },
+        version: 4,
+        event_idx: 1,
+      },
       T0 + 1_200
     )
     store.getState().input({ type: 'rollback', predicts: { version: 4, event_idx: 1 } }, T0 + 1_300)
@@ -266,7 +288,10 @@ describe('INC-0 · honest oracle (B-F18 — the load-bearing widening)', () => {
     const clean = folded()
     const clean_hash = state_hash(clean)
     // plant an AP-only corruption — nothing else changes
-    const corrupt = { ...clean, fighters: { ...clean.fighters, p0: { ...clean.fighters.p0, ap: clean.fighters.p0.ap - 1 } } }
+    const corrupt = {
+      ...clean,
+      fighters: { ...clean.fighters, p0: { ...clean.fighters.p0, ap: clean.fighters.p0.ap - 1 } },
+    }
     expect(canonical_state(corrupt).fighters.find((f) => f.key === 'p0').ap).not.toBe(
       canonical_state(clean).fighters.find((f) => f.key === 'p0').ap
     )

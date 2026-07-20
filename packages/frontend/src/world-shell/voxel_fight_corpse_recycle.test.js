@@ -163,7 +163,9 @@ describe('voxel fight adapter — a corpse despawns even after its id already di
     expect(died, 'the poll-only death was never folded into a death beat').toBe(true)
     const removed = await poll(() => board.calls.removes.includes('mob-0'))
     expect(removed, 'the corpse never despawned (entity_remove never called)').toBe(true)
-    expect(engine_view(fight_store.getState()).fighters.get('mob-0').committed_dead, 'mob-0 is floor-dead at v6').toBe(true)
+    expect(engine_view(fight_store.getState()).fighters.get('mob-0').committed_dead, 'mob-0 is floor-dead at v6').toBe(
+      true
+    )
 
     // ── NO REVIVE (V1 · symptom ②) — a later, higher-version read carrying mob-0 ALIVE again is a parity incident,
     // held DEAD by the retirement floor. The old keystone re-adopt that would have resurrected it is DELETED (V3).

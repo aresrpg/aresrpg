@@ -36,4 +36,4 @@ against it and files an issue on any breach. The article's law, made a file.
 10. **The owner is the only unverified terminal.** Every green path bottoms out at an anchor or at
     him; no cycle certifies itself.
 
-*(Amendments follow rule 7's own process.)*
+_(Amendments follow rule 7's own process.)_

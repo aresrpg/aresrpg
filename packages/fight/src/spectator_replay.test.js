@@ -72,16 +72,14 @@ const alice_store = () => {
       T0
     )
   // room opens with both seats + a mob, adopted as the FIRST snapshot (a seed, never a replay).
-  store
-    .getState()
-    .input(
-      {
-        type: 'snapshot',
-        fight: fight_object({ seats: [participant('0xa11ce', ALICE, 21), participant('0xb0b', BOB, 22)] }),
-        version: 1,
-      },
-      T0 + 10
-    )
+  store.getState().input(
+    {
+      type: 'snapshot',
+      fight: fight_object({ seats: [participant('0xa11ce', ALICE, 21), participant('0xb0b', BOB, 22)] }),
+      version: 1,
+    },
+    T0 + 10
+  )
   return store
 }
 
@@ -120,29 +118,25 @@ describe('spectator replay — a peer’s committed turn paces through the SAME 
   // ② VECTOR B — a peer's KILL must present its death beat INSIDE that turn's replay, not a turn late.
   test('a peer kill revealed by a snapshot presents the mob’s death beat DURING the paced replay', () => {
     const alice = create_fight_store()
-    alice
-      .getState()
-      .input(
-        {
-          type: 'init',
-          fight_id: FIGHT,
-          ctx: { my_entity_id: ALICE, address: '0xa11ce', beat_ctx: { grid_width: 20 } },
-        },
-        T0
-      )
-    alice
-      .getState()
-      .input(
-        {
-          type: 'snapshot',
-          fight: fight_object({
-            seats: [participant('0xa11ce', ALICE, 21), participant('0xb0b', BOB, 22)],
-            mob: { hp: 8 },
-          }),
-          version: 1,
-        },
-        T0 + 10
-      )
+    alice.getState().input(
+      {
+        type: 'init',
+        fight_id: FIGHT,
+        ctx: { my_entity_id: ALICE, address: '0xa11ce', beat_ctx: { grid_width: 20 } },
+      },
+      T0
+    )
+    alice.getState().input(
+      {
+        type: 'snapshot',
+        fight: fight_object({
+          seats: [participant('0xa11ce', ALICE, 21), participant('0xb0b', BOB, 22)],
+          mob: { hp: 8 },
+        }),
+        version: 1,
+      },
+      T0 + 10
+    )
 
     // BOB walks up (22→44) and lands the killing blow (mob hp 8→0) — revealed to ALICE only as the wholesale read.
     const after_kill = fight_object({

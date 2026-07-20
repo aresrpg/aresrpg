@@ -150,16 +150,35 @@ test('terrain-discovery spike capture (per-frame crossing attribution)', async (
     hitches_on_crossing: hitch_crossed,
     hitch_crossing_rate: hitches.length ? +(hitch_crossed / hitches.length).toFixed(2) : 0,
     crossing_frames: crossFrames.length,
-    cross_ms: { p50: cross_ms_vals[Math.floor(cross_ms_vals.length / 2)] || 0, p99: +cross_p99.toFixed(3), max: +Math.max(0, ...crossFrames.map((s) => s.cross_ms)).toFixed(3) },
-    worst_frames: worst.map((s) => ({ dt: +s.dt.toFixed(1), crossed: s.crossed, cross_ms: +s.cross_ms.toFixed(2), evicted: s.evicted, mesh_ms: +s.mesh_ms.toFixed(2), q: s.q, pend: s.pend })),
+    cross_ms: {
+      p50: cross_ms_vals[Math.floor(cross_ms_vals.length / 2)] || 0,
+      p99: +cross_p99.toFixed(3),
+      max: +Math.max(0, ...crossFrames.map((s) => s.cross_ms)).toFixed(3),
+    },
+    worst_frames: worst.map((s) => ({
+      dt: +s.dt.toFixed(1),
+      crossed: s.crossed,
+      cross_ms: +s.cross_ms.toFixed(2),
+      evicted: s.evicted,
+      mesh_ms: +s.mesh_ms.toFixed(2),
+      q: s.q,
+      pend: s.pend,
+    })),
     hitch_probe_lines: hitch_lines.slice(0, 30),
   }
   await writeFile(`${ART}/trace_${TAG}.json`, JSON.stringify(report, null, 2), 'utf8')
   console.log(`\n===== TERRAIN SPIKE TRACE [${TAG}] =====`)
-  console.log(`frames=${report.frames}  frame_ms p50=${report.frame_ms.p50.toFixed(1)} p99=${report.frame_ms.p99.toFixed(1)} max=${report.frame_ms.max.toFixed(1)}`)
-  console.log(`hitches>24ms=${report.hitches_over_24ms}  on_crossing=${report.hitches_on_crossing} (${report.hitch_crossing_rate})  cross_ms p99=${report.cross_ms.p99} max=${report.cross_ms.max}`)
+  console.log(
+    `frames=${report.frames}  frame_ms p50=${report.frame_ms.p50.toFixed(1)} p99=${report.frame_ms.p99.toFixed(1)} max=${report.frame_ms.max.toFixed(1)}`
+  )
+  console.log(
+    `hitches>24ms=${report.hitches_over_24ms}  on_crossing=${report.hitches_on_crossing} (${report.hitch_crossing_rate})  cross_ms p99=${report.cross_ms.p99} max=${report.cross_ms.max}`
+  )
   console.log(`worst frames:`)
-  for (const w of report.worst_frames) console.log(`  dt=${w.dt}ms crossed=${w.crossed} cross_ms=${w.cross_ms} evicted=${w.evicted} mesh_ms=${w.mesh_ms} q=${w.q} pend=${w.pend}`)
+  for (const w of report.worst_frames)
+    console.log(
+      `  dt=${w.dt}ms crossed=${w.crossed} cross_ms=${w.cross_ms} evicted=${w.evicted} mesh_ms=${w.mesh_ms} q=${w.q} pend=${w.pend}`
+    )
   console.log(`hitch lines: ${hitch_lines.length}`)
   for (const l of hitch_lines.slice(0, 12)) console.log('  ' + l)
   console.log(`trace → ${ART}/trace_${TAG}.json`)
