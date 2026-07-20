@@ -17,7 +17,10 @@ History is linear by law; nothing ever rewrites what landed.
 2. **Always rebase** — keep your branch rebased on the latest `edge`; a merge commit never
    enters a branch. **This is enforced by construction:** landings happen via the `/promote`
    fast-forward bot, and an unrebased branch cannot fast-forward — the bot refuses it.
-3. Landings on BOTH hops are `/promote` (owner-triggered after review): the bot pushes the
+3. Landings on BOTH hops are `/promote` — the repository owner's explicit word (on his own
+   PRs the comment itself is the approval, since GitHub forbids self-review; on contributor
+   PRs his approving review is required first). The **master hop is deploy-class**; the edge
+   hop is routine integration. The bot pushes the
    exact approved SHA — your commits land byte-identical, so your signatures survive
    untouched (the merge buttons are ceremonial; UI rebase-merge would re-create commits
    unsigned, which is exactly why the bot exists).
