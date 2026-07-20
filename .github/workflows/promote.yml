@@ -30,15 +30,18 @@ on:
 permissions:
   contents: write
   actions: write
-  pull-requests: read
+  pull-requests: write # read the PR + open the next standing draft after a master promotion
 jobs:
   fast-forward:
     if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/promote')
     runs-on: ubuntu-latest
     steps:
-      - name: assert commenter is the owner
+      - name: assert commenter is the owner (numeric id is immortal; login is a readable second factor)
         run: |
-          test "${{ github.event.comment.user.login }}" = "Sceat" || { echo "not the owner — refusing"; exit 1; }
+          # Numeric user IDs never change and freed logins are re-registerable — pin the id and
+          # keep the login as a human-readable second factor. BOTH must hold.
+          test "${{ github.event.comment.user.id }}" = "11330271" || { echo "commenter is not the owner (id mismatch) — refusing"; exit 1; }
+          test "${{ github.event.comment.user.login }}" = "Sceat" || { echo "commenter is not the owner (login mismatch) — refusing"; exit 1; }
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -52,8 +55,11 @@ jobs:
           case "$BASE" in edge|master) ;; *) echo "PR targets $BASE — /promote serves edge and master only"; exit 1;; esac
           echo "base=$BASE" >> "$GITHUB_OUTPUT" 
           HEAD_SHA=$(gh pr view "$PR" --json headRefOid -q .headRefOid)
-          AUTHOR=$(gh pr view "$PR" --json author -q .author.login)
-          if [ "$AUTHOR" = "Sceat" ]; then
+          # Pin the PR author by numeric id (immortal), login as a readable second factor — BOTH
+          # must hold. gh pr view's author.id is a GraphQL node id, so read the REST numeric id.
+          AUTHOR_ID=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR}" --jq '.user.id')
+          AUTHOR_LOGIN=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR}" --jq '.user.login')
+          if [ "$AUTHOR_ID" = "11330271" ] && [ "$AUTHOR_LOGIN" = "Sceat" ]; then
             echo "owner-authored PR — the /promote comment is the owner's approval act (self-review is impossible on GitHub)"
           else
             APPROVED=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR}/reviews" \
@@ -84,3 +90,22 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run release.yml --ref master
+      - name: open the next standing draft PR (master promotions only; idempotent)
+        if: steps.pr.outputs.base == 'master'
+        continue-on-error: true # bookkeeping — never red an already-completed promotion
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Keep exactly one edge→master "preparing" draft open so the next release always has a
+          # PR to /promote. Idempotent (gh pr list guard) and non-blocking: right after the align
+          # edge==master has no diff, so gh pr create is a quiet no-op until edge advances.
+          OPEN=$(gh pr list --base master --head edge --state open --json number --jq 'length')
+          if [ "$OPEN" != "0" ]; then echo "an edge→master PR is already open — nothing to do"; exit 0; fi
+          SHA=${{ steps.pr.outputs.sha }}
+          # Next version = patch-bump of the just-released frontend version (single source of truth).
+          git show "${SHA}:packages/frontend/package.json" > "${RUNNER_TEMP}/pkg.json"
+          NEXT=$(node -e "const v=require('${RUNNER_TEMP}/pkg.json').version.split('.'); console.log(v[0]+'.'+v[1]+'.'+(+v[2]+1))")
+          gh pr create --base master --head edge --draft \
+            --title "release: v${NEXT} (preparing)" \
+            --body "Standing release draft, opened automatically after the previous promotion. Bump packages/frontend/package.json to v${NEXT} and add changelog/NNN-RELEASE-v${NEXT}.md before /promote." \
+            || echo "no diff between edge and master yet (or a draft already exists) — non-blocking"
