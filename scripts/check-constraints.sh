@@ -390,6 +390,29 @@ if ! test_reachability_gate; then
   FAIL=1
 fi
 
+# ── SPDX header gate: every source file carries the license identity ─────────────────────────
+# The per-file marking travels with snippets (survives separation from LICENSE); the stamper
+# (scripts/stamp_copyright.mjs) writes it, THIS leg keeps every NEW file honest.
+spdx_gate() {
+  echo "== SPDX license-header gate =="
+  local missing
+  missing="$(git ls-files -- '*.js' '*.mjs' '*.cjs' '*.ts' '*.tsx' '*.jsx' '*.move' '*.rs' '*.css' '*.sh' '*.yml' '*.yaml' \
+    | while IFS= read -r f; do
+        head -3 "$f" | grep -q 'SPDX-License-Identifier' || echo "$f"
+      done)"
+  if [ -n "$missing" ]; then
+    red "  ✗ FAIL: source file(s) missing the SPDX header (run: node scripts/stamp_copyright.mjs):"
+    echo "$missing" | sed 's/^/      /' | head -20
+    return 1
+  fi
+  grn "  ✓ every source file carries the SPDX header"
+}
+
+echo
+if ! spdx_gate; then
+  FAIL=1
+fi
+
 # ── secret-leak gate (S-22, 2026-07-09): no hardcoded Sui private keys, ever ────────────────────────
 # A `suiprivkey1` bech32 literal long enough to be a real secret (>=20 chars past the prefix — a doc
 # example like `suiprivkey1...` never matches) must NEVER land in any tracked or untracked-but-added
