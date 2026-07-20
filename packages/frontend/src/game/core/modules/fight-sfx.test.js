@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { afterAll, afterEach, describe, expect, it, spyOn } from 'bun:test'
 
 import * as sfx from '../audio/sfx.js'

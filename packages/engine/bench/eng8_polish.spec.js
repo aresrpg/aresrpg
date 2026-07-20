@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-8 owner feel-polish acceptance (2026-07-03): (1) FALL anim only past a >3-block drop — terrace
 // walks / 2-block drops / jump arcs keep the locomotion cycle or a brief airborne coast; (2) auto-step
 // rendered as a ~STEP_SMOOTH_MS visual ease (sim/collision snap unchanged) instead of a teleport read.

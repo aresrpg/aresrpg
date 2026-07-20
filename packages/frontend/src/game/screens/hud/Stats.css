@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* HUD button reset outranks the global classes, so bridge the documented house buttons for this tab. */
 .hud-root .stats__assign-btn {
   padding: var(--s-1) var(--s-2);

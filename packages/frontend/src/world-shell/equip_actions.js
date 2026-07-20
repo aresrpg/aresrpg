@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // board #7 — REAL on-chain equip/unequip via the merged package's EXTRACT seam (permissionless, structural
 // correctness via the player's PersonalKioskCap): equip = `extract::extract_for_equip` → `extract::confirm_equip`
 // (the EquipPledge hot potato discharges in-tx), unequip = `extract::unequip` → `item::lock_in_kiosk` (the

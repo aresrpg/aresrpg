@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 const member_character_id = (member) => (typeof member === 'string' ? member : member?.character_id)
 
 const annotate_owned_failure = (error, character_id) => {

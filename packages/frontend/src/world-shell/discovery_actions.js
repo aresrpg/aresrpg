@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DISCOVERY actions (S-18) — the SEARCH ZONE tx seam + its progress-toast RP beat (search
 // plays a progress-bar toast in the REAL top-right .gw-toasts stack — "searching takes a beat").
 //

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // C9 Hillaire sky — the SHARED TSL PHYSICS consumed by all four LUT kernels and their samplers:
 // medium (Rayleigh/Mie/ozone) sampling, the Rayleigh + Henyey-Greenstein phase functions, ray↔sphere
 // geometry, and the transmittance + sky-view LUT parameterizations (both directions). Pure node-

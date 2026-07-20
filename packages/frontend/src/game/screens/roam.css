@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* Stage-0c roam scene — full-viewport canvas + a DOM nametag overlay layer. */
 .roam-root {
   position: fixed;

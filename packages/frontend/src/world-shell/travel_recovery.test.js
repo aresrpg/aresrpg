@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, it, mock } from 'bun:test'
 
 import { create_travel_recovery, is_travel_too_far } from './travel_recovery.js'

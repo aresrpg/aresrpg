@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // One-attempt auto-claim coordinator. `run_latched_claim` keeps its registry injected for headless units;
 // `run_signal_settlement` adds the app edge that feeds confirmations/outcomes through the fight reducer.
 

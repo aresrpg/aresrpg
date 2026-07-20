@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // 4-directional movement over the tactical grid: shortest path + reachable cells.
 //
 // Unit step cost → BFS is optimal and simpler than A* (no priority heap, no float heuristic), and fully

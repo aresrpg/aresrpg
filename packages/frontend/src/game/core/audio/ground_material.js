@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Block id → footstep TIMBRE bucket — subtle procedural sounds for steps depending on the block
 // below. REUSE-FIRST: block_registry.js already tags every block with `sounds: { step, place, break }`
 // (a footstep sound-set id — 'grass'|'dirt'|'stone'|'sand'|'water'|'wood'|'leaves'|'snow'|'none', 100%

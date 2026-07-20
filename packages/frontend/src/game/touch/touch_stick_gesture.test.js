@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { beforeEach, describe, expect, it } from 'bun:test'
 
 import { read_movement, reset as reset_touch, set_move } from './touch_input.js'

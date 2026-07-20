@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ATOMIC mint+burn settlement (recurring abort-105, 07-11 — the TRUE fix): `results::burn_result`
 // aborts 105 ENotEmpty while `rolled` loot remains (results.move:170). The ROOT was NOT mint-failure tracking:
 // `decode_fight_result` mis-modelled the CURRENT plain `vector<RolledLoot>` as the pre-S-46 `Option<vector>` and

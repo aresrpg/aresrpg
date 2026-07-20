@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Inventory equip/slot logic — the canonical paper-doll slot set, slot-validity predicates, and the
 // staged equip/unequip reducer. Extracted verbatim from Inventory.jsx (pure logic, no JSX). See the
 // slot-set note in Inventory.jsx for the on-chain `verify_slot` rationale.

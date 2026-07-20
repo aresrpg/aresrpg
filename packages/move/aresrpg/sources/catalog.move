@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// CATALOG — the admin-editable ITEM CATEGORY whitelist. A single shared `Catalog` holds the set of valid
 /// item categories (`sword`, `ring`, `consumable`, `tool_farmer`, …). `admin::create_template` asserts the
 /// authored category is in this set, so the category domain is DATA (admin-editable post-publish), never a

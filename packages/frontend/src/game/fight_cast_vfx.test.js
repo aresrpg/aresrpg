@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // F1 — headless regression for the FLAGSHIP 3D cast player (phase 2: every layer is a GPU-particle preset, the
 // sprite sheets are deleted). Proves the invariants that outlived the sprite→preset swap:
 //   • the beat composes caster-cell + windup + a MOVING projectile at t0, then impact + a lingering remnant LOOP

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 export type WalrusAssetResolver = (url_class: string, filename: string) => string | null
 
 /** Walrus store-quilt receipts identify patches by basename, even when the source file is nested. */

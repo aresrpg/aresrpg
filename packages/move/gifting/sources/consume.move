@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// CONSUME — the fight-side entry for USING a consumable (SPEC §10). Placement follows the AUTHORITY, not the
 /// name: a heal writes the character's PERSISTENT HP under NS_CHARACTER_PROGRESSION, whose ONE `ExtensionCap` is
 /// custodied in THIS package's `FightRegistry` (the `results::open` / `character_link::write_back_hp` precedent);

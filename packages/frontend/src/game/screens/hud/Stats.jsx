@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Chain-backed character sheet: stage six primaries, then compose one stat-allocation PTB.
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'

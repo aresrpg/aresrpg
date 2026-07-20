@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // EFFECT BADGES — compact persistent-effect chips for every fight nameplate: a cast persistent effect
 // must show in its target's nametag, naming the effect and how many turns remain — every
 // persistent effect renders in the nametag, compact but intuitive. Own + enemy + peer fighters

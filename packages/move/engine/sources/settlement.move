@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// SETTLEMENT — the engine's RESOLUTION half of claims v2 (S-46 final split): `settle_and_destroy` is
 /// PERMISSIONLESS once terminal — it mints ONE soulbound `FightOutcome` per seat (`key` only: untradeable,
 /// unwrappable) to the seat's owner and deletes the shared Fight in the SAME call. The outcome ECHOES the

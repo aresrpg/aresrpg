@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D307 — the consumable PENDING-DELTA LEDGER + trailing-click batcher. PURE, dependency-free (unit-testable):
 // the wiring to the real tx/toasts lives in consumable_actions.js.
 //

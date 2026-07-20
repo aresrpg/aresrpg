@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // use_sponsor_allowance — the ONE reader of the per-zkLogin daily FREE-GAMEPLAY allowance (SPEC §14).
 //
 // Polls /v1/sponsor/remaining for the connected zkLogin address (idle when logged out — no address, no

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// BOARD TESTS — coverage for the deterministic board generator's public surface (`board_seed_from_anchor`,
 /// `generate`, `generate_for_anchor`, the `GridSpec` getters). Every internal draw step (`build_shape`,
 /// `min_u64`, `placeable_candidates`, `place_blockers`, `open_cells`, `pick_starts`, `tail_after`) is PRIVATE

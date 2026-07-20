@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// COMMISSION tests: the artisan-commission crafting flow (customer brings the
 /// RESOURCES + optional payment, artisan brings the KNOWLEDGE; the craft ROLLS the reference-corpus
 /// success chance at the ARTISAN's level). Proves the 3-tx choreography end-to-end — request (customer) → accept (a

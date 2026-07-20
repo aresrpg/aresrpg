@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S-12 §17.27 CLIENT AP BUDGET (repeated weapon-attack casts within a single turn, bounded by AP).
 // The chain repeats weapon strikes / spells ONLY while AP lasts (each costs its own ap_cost; every seeded spell is
 // casts_per_turn 255 = unlimited today, so AP is the sole live limiter). The client mirrors it: a turn drafts a

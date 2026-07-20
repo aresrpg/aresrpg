@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Canyon / ravine carving (§2.1 NG1-B, item 3) — steep-walled erosion channels cut into inland
 // plateaus (ref #3). Uses the INVERTED-RIDGE-CREASE technique, NOT Minecraft's stateful ravine
 // walker (DO-NOT #11 — that walk is not region-local): a domain-warped ridged-multifractal crest

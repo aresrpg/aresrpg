@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // In-world minimap (top-left). Reuses the SAME deterministic terrain SSOT the roam scene streams
 // (@aresrpg/sim world_biome / world_cell + the shared biome palette) so the readout can never drift
 // from the world; companion-token chrome. Redraws only when the player's cell, seed, or the visible

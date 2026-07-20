@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // App-global chain-freshness chip. Checkpoint lag uses the one sanctioned chain-direct DISPLAY read: a detector
 // cannot learn the real chain tip from the lagging projection it is measuring. Fight deadline starvation rides
 // the existing fight projection, so it adds no poller/store. A failed sample never falsely declares recovery.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, test } from 'bun:test'
 
 import { WORLD_POLL_STAGGER_MS, create_world_poll_scheduler } from './world_poll_scheduler'

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The persisted HP-GEM DISPLAY preference (keep in localStorage whether we're showing
 // health as percent or as stacked) — the ONE home for the stored mode, mirroring the quality_pref.js
 // idiom (world/quality_pref.js): a pure-localStorage module importing NOTHING, guarded getters, an

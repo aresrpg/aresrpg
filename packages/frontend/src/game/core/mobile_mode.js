@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // MOBILE MODE — the ONE home for "is this a touch/mobile session" (drives a fully
 // tailored mobile experience — controller + HUD). Every mobile-conditional surface imports THIS flag;
 // duplicating the media queries elsewhere is a defect (single source of truth).

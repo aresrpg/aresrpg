@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLOATER BEAT TIMING — the damage floater lands ≥1s AFTER the hit VFX on a paced
 // mob turn. ROOT: pace_segment's rescale STRETCHED every beat proportionally to fill the ~3s slot — a
 // cast+damage turn (raw 1400+350ms) became cast≈2400ms, so the 'damage' queue slot (the floater) fired at

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// WORLD — the §4 world TEMPLATE: a shared, admin-minted object defining one playable world's identity and its
 /// spawn philosophy. A world carries a `seed` (procedural voxel terrain — the client derives Y; the chain stores
 /// only (x,z), §4), a `biome` (visual/audio identity), a `required_level` to enter, finite `bounds` (energy

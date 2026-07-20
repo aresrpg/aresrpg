@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Feature #19 (read-only SPECTATE) proof, D770a W3b — the presence BRIDGE (game/core/modules/presence.js) must
 // render a remote avatar from a peer's presence ALONE, with ZERO own-roster / own-session state (a logged-out
 // spectator has no characters, no wallet, no selected id). The peer truth now lives in @aresrpg/world's presence

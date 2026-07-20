@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Far-shell TSL material graph. Kept separate from the CPU residency/mesh handle so each module
 // stays below the 600-LoC ceiling; all graph inputs and numeric values remain owned by the caller.
 

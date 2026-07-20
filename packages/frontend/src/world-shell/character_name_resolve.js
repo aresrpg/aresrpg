@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE ONE HOME for "character id → display name" resolution off the /v1 read layer (07-19: raw
 // addresses were leaking onto the fights-in-range modal AND the live fight-HUD turn order — two surfaces,
 // two ad hoc resolutions, one bug class). rpc/client's get_characters is the ONE fetch home (its own LRU

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Deterministic seeded PRNG (mulberry32) — faithful Move port of packages/sim/src/prng.js.
 ///
 /// DETERMINISM IS LAW. The JS keeps state as a 32-bit value and uses `Math.imul` (wrapping 32-bit

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The world's ARTISAN COMMISSION modal — a world-tab overlay that MIRRORS DungeonsModal's mount: a
 // store-flag-gated panel (`s.commissions_modal`, toggled by `action/commissions_modal`) rendered once in
 // GameWorldHud, closing on backdrop click / the ✕ / Esc. Two views share the panel behind a tab row:

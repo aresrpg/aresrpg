@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // AMBIENT-TINT acceptance (reference: sky-lit shade reads COOL, sunlit ground stays WARM). Verifies
 // the atmosphere.js `ambient_tint` node applied on terrain_material.js's ambient-floor term:
 //   1. OPEN sunlit terrain is UNCHANGED (de-cyan regression guard — tint is neutral white at v_sun=1).

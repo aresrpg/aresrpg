@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// FORGEMAGIE DOORS — the S-48 upgrade-#2 payload: the Retro rune system's game-side gates over foundation's
 /// pure libs (`forgemagie` applyRune / `taux` inflation / `rune_catalog` hardcode). Canon:
 /// docs/RETRO_RUNES_RESEARCH.md + DECISIONS 2026-07-09 riders.

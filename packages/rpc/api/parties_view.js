@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Party read view. The Rust event projector owns the mirrored Redis contract:
 //   rpc:char_party:<character> -> "<party id>"
 //   rpc:party:<party> -> { id, leader_character, members:[{character,owner,order}] }

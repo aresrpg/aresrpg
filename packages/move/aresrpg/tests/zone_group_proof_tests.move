@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Proof-taking mob-group claim tests. Search commits chain-derived group facts; claims authenticate one group
 /// without re-running zone derivation, then reuse the original travel/bitmap/checkpoint/GroupTicket gauntlet.
 #[test_only]

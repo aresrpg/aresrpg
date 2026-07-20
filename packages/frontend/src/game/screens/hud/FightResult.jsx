@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // End-of-fight VICTORY card — shown on a player WIN. Feeds the shared canon <FightReport> (dark dramatic
 // modal, spec_fightend_cards.md): party + enemy rows (shared format, the local player ALWAYS present) + an
 // inline SILENT receipt (SPOILS: +XP, loot tiles — no claim/mint buttons; fight-end auto-settles same-tx).

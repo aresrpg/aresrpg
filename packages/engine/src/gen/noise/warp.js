@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // 3D domain warp (§2.1 NG1-A) — iq's fbm-of-a-warped-domain trick. Instead of sampling detail at
 // the raw point, we OFFSET the point by a low-frequency vector noise field first: straight ridges
 // bend into meandering canyon walls, flat contours become organic (refs #1/#3 "meander"). Cheap:

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAT cloud layer + top-down cloud SHADOW — the ground-MMO replacement for the old per-pixel
 // volumetric march (ENG-15, 2026-07-04). CONSTRAINT: clouds are low priority — they should look good
 // but never cost performance; the game will not fly through them.

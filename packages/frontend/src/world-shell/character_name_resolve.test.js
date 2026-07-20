@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST (07-19): before this file existed, FightsModal and fight.js each hand-rolled their own
 // "ids → /v1/characters docs" glue — this proves the extracted ONE HOME resolves real names off a batched
 // read and only ever falls back to the truncated id when a doc is genuinely missing (never invents one).

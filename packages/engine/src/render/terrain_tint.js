@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG-TINT (ENG-1) — world-space MACRO ground-shade + PBR roughness field for the terrain material.
 // Visual-only shader noise (determinism-legal, zero quad-format change): a low-frequency, world-XZ
 // CONTINUOUS tint layered OVER W17's per-cell micro grain so the per-block tiles dissolve into

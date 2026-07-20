@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FRIENDS reads (S-18 Command Roster) — assemble the roster the page renders. TWO honest data sources, no fakes:
 //   1. The friend list itself = chain-direct via the SDK grpc (`get_friend_list_by_owner`) — the soulbound
 //      whitelist of addresses. Null/empty until the social package is stamped + the player creates a list.

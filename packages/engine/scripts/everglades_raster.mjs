@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // EVERGLADES lane VISUAL PROOF — data raster (no WebGPU) of the DECORATED gen pipeline under the
 // EVERGLADES_WORLD recipe. Proves the flat waterland + channel/pool mosaic + water levels + sawgrass +
 // water-anchored mangroves fall out of the real gen. PNGs → a local gitignored output dir.

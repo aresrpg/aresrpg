@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DOUBLE-CLICK CURSOR LOCK — unit proof (this session): dblclick toggles native Pointer Lock on the world
 // canvas, `pointerlockchange` is the SOLE source of truth for lock state (never a parallel boolean — an
 // Esc/tab-switch/dev-tools force-exit must fire on_change(false) exactly like our own exit), and the

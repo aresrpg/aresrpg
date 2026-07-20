@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WALK-CAMERA FOV PULSE — a brief zoom-punch on the roam shoulder rig for reward beats (the search-zone
 // juice — screen camera effects need strong feedback). Decoupled from the engine handle: the
 // walk frame (embed_voxel_player.js) ADDS walk_fov_pulse(dt) to the shoulder-rig fov each frame, a gameplay

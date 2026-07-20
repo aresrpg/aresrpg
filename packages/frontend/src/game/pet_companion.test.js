@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PET COMPANION — the pure decision helper (RED-FIRST unit; see the module header for the "never built"
 // finding). Before this module existed, `character.pet`/`pet_equipped` reached the roster card and
 // stopped — nothing decided spawn/despawn/appearance. This proves the decision in isolation, matching

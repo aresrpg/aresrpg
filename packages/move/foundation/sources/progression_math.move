@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// PROGRESSION MATH — the frozen character-progression kernels as PURE transforms over plain scalars (S-70 size
 /// split: moved VERBATIM from core `aresrpg::progression`, which stays as thin delegates — the core package sits
 /// against the 102,400-byte protocol cap and foundation is the library home for stateless calculators). Zero

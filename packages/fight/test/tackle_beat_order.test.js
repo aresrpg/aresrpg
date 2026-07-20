@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D3 BEAT ORDER — a tackled player plays the hit animation just before moving —
 // the Tackled chain event (fight_events.move: {fight, runner_is_mob, runner_idx, ap_lost, mp_lost, num, den})
 // must present as the runner's HIT/forfeit beat, landing IMMEDIATELY BEFORE the move (or standing alone as

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* The canvas is full-bleed; only its chrome consumes the global --safe-* insets. Keep this eager so the
    logged-out spectate canvas gets the same viewport sizing as the authenticated HUD's canvas. */
 html {

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [D162] Far-shell CPU macro-tint tests — the parity color-source contract: the far shell tints its near
 // LOD rings with the SAME per-block tint class + amplitudes as the near terrain (single-sourced from
 // terrain_tint_data.js), so sand/grass read as the same material family across the seam. Covers class

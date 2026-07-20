@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // BOOT SHIM (D146) — MUST be main.tsx's FIRST import. ES imports are hoisted: an inline assignment in
 // main.tsx runs only AFTER every static import's module body has evaluated — too late for a module deep in
 // the graph that touches `process` at module scope. As a standalone module imported first, THIS body runs

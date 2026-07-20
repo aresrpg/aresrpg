@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// MOB_TEMPLATE tests: an admin-minted mob blueprint round-trips its authored content through the free getters
 /// (min/max level, xp reward, loot table). Cap + version gated at mint; the getters are free reads the world's
 /// mob entries and the fight-door spec mirror consume.

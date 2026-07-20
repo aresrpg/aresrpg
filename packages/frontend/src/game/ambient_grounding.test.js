@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // REGRESSION — the mob FEET-Y convention (world mobs spawned 1 block BELOW the
 // terrain surface; instrumented capture on real gen: controller feet 129, terrain top face 129, mounted rig
 // 128). The law this locks: a feet-origin rig's mounted y is NEVER below the ground's top face, and equals

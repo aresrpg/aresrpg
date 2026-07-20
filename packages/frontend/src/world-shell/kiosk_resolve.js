@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S-57 — THE ONE kiosk-resolution home: NEVER pick a kiosk from the wallet's cap
 // list — a zkLogin address accumulates kiosks across lineages (0x2 objects are lineage-agnostic) and a
 // first-cap pick built PTBs against a kiosk that does NOT hold the character (a real live

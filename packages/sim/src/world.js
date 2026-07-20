@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Infinite, deterministic overworld terrain — the random-access counterpart to the finite fight
 // carve (arena.js). `world_cell(seed, x, y)` returns a cell type for ANY integer coordinate, a pure
 // function of (seed, x, y): the same world on every machine, every reload, no generation order.

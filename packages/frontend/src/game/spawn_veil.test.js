@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // IN-FIGHT VEIL contract (a gatherable resource used to float above the fight board): entering a
 // world fight must hide EVERY roam population from the tactical board — mob groups AND gatherable resource nodes
 // alike — and hand them all back when the fight unmounts. RED-FIRST proof at the applier level: the reported

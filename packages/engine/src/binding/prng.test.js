@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Determinism contract for the vendored PRNG + anchor hash. The reference vectors are captured LIVE
 // from packages/sim/src/prng.js and asserted verbatim in packages/move/foundation/sources/prng.move —
 // if these drift, the engine's board derivation has desynced from the sim + chain twins.

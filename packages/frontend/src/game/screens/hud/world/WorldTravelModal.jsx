@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD TRAVEL MODAL — a modal with world cards, filtering, level gates, and resource/mob details — the destination picker the
 // sidebar panel collapsed away. PURE VIEW: the caller derives the cards (world_travel_state.js — live /v1
 // join gates + authored corpus knowledge) and owns every piece of state; this renders props and calls back.

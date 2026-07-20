@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// RED-FIRST contract for the additive remote-action envelope. The deployed `Cast` event is frozen and remains
 /// dual-emitted. A committed spell or weapon action additionally emits exactly one terminal `ActionResolved`
 /// AFTER its effect events and legacy `Cast`. Its explicit action/effect ordinals make the preceding events one

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // CRIT-FOLD RESEED AUDIT (D765). DRY-RUN ONLY — this tool makes ZERO chain calls: the lead fires the actual
 // on-chain reseed (reseed_driver.mjs) at ceremony time. seed/mainnet was already folded in the crit-convergence
 // commit, so there is NOTHING to patch (and the fence forbids it) — this script instead RE-DERIVES the fold

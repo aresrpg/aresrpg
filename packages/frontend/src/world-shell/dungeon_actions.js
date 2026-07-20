@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S-57 — the S-46 FIGHT + DUNGEON lifecycle tx seam (replaces the dead board-13 driver wholesale; every old
 // `dungeon::*_registered` / `dungeon_turn::*` / `dungeon_claim::*` Move target died in the S-46 engine split).
 // One fn per DEPLOYED door, built by the `@aresrpg/sdk` per-domain builders (ids resolve through the SDK's ONE

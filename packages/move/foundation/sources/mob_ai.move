@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// MOB AI + spawn derivation — the §17.21 deterministic mob policy and the spawn-roll math, as PURE transforms
 /// over plain data (S-46 extraction: moved verbatim from `aresrpg::mob`, `self: &FightMob` unrolled into the
 /// four fields the policy actually reads — cell / ap / mp / spells). Zero state, zero objects, zero events:

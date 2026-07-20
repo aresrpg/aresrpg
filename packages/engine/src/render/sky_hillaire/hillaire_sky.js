@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // C9 — the HILLAIRE SKY orchestrator. Builds the atmosphere uniform bag from a parameter set, owns the
 // four LUTs' lifecycle (bake once, param-LUTs rebuilt on set_atmosphere_params, view-LUTs rebuilt per
 // frame — or on sun-angle change at LOW), and exposes the TWO flag-switched consumers:

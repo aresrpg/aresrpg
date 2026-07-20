@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// TAUX TESTS — golden vectors for the brisage coefficient economy (R3 canon + declared OURS curves),
 /// derived from a byte-exact JS twin. Covers bounds clamping, the front-loaded per-item decay (incl. the
 /// floor-terminal case), the lazy-accrual pressure settle with remainder carry (split-vs-single equivalence),

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The publish/upgrade tail writes the only checked-in deployment-ID artifact.
 // Content object ids remain in out/seed_manifest.json and are never folded here.
 import { createHash as create_hash, randomUUID as random_uuid } from 'node:crypto'

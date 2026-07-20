@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE ONE MOB-MODEL RENDER SDK — the single home for "load a creature GLB and make it render right".
 //
 // Born 2026-07-13 (constraint: mob-fight GLB rendering needs ONE sdk to render models, not

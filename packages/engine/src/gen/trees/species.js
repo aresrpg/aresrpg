@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PROCEDURAL TREE SPECIES ROSTER (ENGINE AAA PLAN §3.4 — the scale-identity home). Pure DATA: seed +
 // these params → a deterministic voxel skeleton + canopy (tree_gen.js). No render/ imports, no engine
 // state — a species is a plain record the generator reads. Block references are NAMES (resolved through

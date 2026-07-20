@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Fast-slots — a small bottom bar of consumable quick-slots. Drag a consumable from the inventory grid
 // into a slot; left-click (or the right-click menu's "Use") consumes it. #31/D307: uses go through the
 // BATCHED chain-direct consume (world-shell/consumable_actions.js) — each click paints one unit off the

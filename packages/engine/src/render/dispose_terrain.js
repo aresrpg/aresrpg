@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [MEMORY perf-③ #1] The terrain renderer holds the world's fixed GPU pools (~221 MB medium base +
 // ~78 MB canopy) plus capacity-sized CPU ArrayBuffers, and create_engine roots it on
 // window.__terrain_renderer for the bench pool-stats harness. engine.dispose() used to free every

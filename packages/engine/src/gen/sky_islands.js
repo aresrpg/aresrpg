@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pandora-style floating islands (§2.2 sky-island lane; the target look: "Pandora style,
 // not fish bones floating the sky"). The v4 placeholder was a thin ridged SHELL — a horizontal noise
 // slab that produced fish-bone ribbons everywhere in the band. This module RETIRES that and generates

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // MP-ZONE HIDES DURING SPELL SEQUENCES: when the vfx/sequence of a spell is played, the MP zone stays
 // hidden, so a misclick can't move the character mid-sequence. Two homes: the CORE projection (project.js move_wash,
 // pinned in move_wash.test.js) suppresses the paint; this file pins the CLICK half — DungeonBoard's `reachable`

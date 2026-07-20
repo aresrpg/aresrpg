@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // MANIFEST RECEIPT WRITE-BACK (SHOP TRIO (a) root fix, 2026-07-17). The 2026-07-16 reauthor ceremony
 // (apply_shop_payload.mjs + box_reauthor.mjs) burned 5 live sales and minted FRESH replacement
 // templates — and never wrote the fresh ids back into out/seed_manifest.json. The frontend's

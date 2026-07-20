@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST regression: a spell armed during my turn must NOT survive into the next turn. `armed_spell_id` is a
 // fight-session UI pick meaningful only on my turn; a stale one would CAST on the first click of a fresh turn
 // (DungeonBoard casts an armed spell on a castable click — an unintended cast). The reducer derives it null

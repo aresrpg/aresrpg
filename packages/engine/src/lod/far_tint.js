@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [D162] Far-shell CPU MACRO TINT — the pure-JS twin of terrain_tint.js's shader tint, baked per-vertex
 // into the near LOD rings (L0/L1) so the far shell reads as the SAME material family as the near voxel
 // terrain across the seam (target: "same for the material, bright reflecting sand vs opaque yellow

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // COMPASS MATH — pure bearing/format helpers for the 3A top-strip compass (CompassStrip.jsx). One home
 // for the angle conventions so the strip, its tests, and any future consumer can never drift:
 //   • World axes are the voxel scene's: +X = east, +Z = south → NORTH = -Z (the minimap's up).

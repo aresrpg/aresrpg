@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Fixtures for js/aresrpg/effect-escapes-the-edge (CODE_LAW L-P4/L-P1) — the fight fold must be
 // pure over (msg, now); effects live at the seam (txs.js) or enter as inputs.
 import { create } from 'zustand'

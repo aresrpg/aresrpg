@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// EVENTS — the single home for every Fight lifecycle event (§7 "every state change observable via events" —
 /// the RPC indexer + the client's optimistic-prediction reconciliation feed). One module so the indexer watches
 /// one file for the whole fight contract. Every transition has an event: created / joined / placed / ready /

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FAR-TREE IMPOSTORS pose capture + proof (ENGINE_AAA_PLAN §8 B3). Boots the demo with
 // ?proctrees=1&impostors=1 on the real GPU and proves the §8 B3 bar:
 //   • HORIZON: forests visible to the horizon — far_impostor_count > 0 at a vista (runtime provenance),

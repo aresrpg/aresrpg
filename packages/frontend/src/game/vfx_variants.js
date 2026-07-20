@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PER-SPELL VFX VARIANT SELECTOR — the b_spell "spread strategy" (docs/VFX_FULL_UTILIZATION_PLAN.md §(b)): today
 // vfx_map.js collapses all 276 spells to ~6 element beats (every fire spell shares one flame). This PURE selector
 // breaks that: keyed by (class, element, role, hash(spell_id)) it picks a DIFFERENT ported pack variant per spell,

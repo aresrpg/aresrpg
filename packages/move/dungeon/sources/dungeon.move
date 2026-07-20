@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// DUNGEON — the composition layer over the `RunPass` security core (§9 "the key IS the run"). Wires the run
 /// lifecycle to items' cap-gated key burn, the game's character world lock + checkpoint, and the fight bridge.
 ///

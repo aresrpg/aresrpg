@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Menu launcher dock — the icon cluster (bottom-right slots) that opens the one open panel. Owner
 // law: the menu icons live in the BOTTOM-RIGHT slots (where spell icons were wrongly shown); spell
 // icons NEVER appear outside a fight. Panels open as a RIGHT DRAWER. Fights START from the world

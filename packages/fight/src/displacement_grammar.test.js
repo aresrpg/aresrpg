@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // §7b DISPLACEMENT/TRAP RENDER GRAMMAR — the RECEIPT-path invariants for a push.
 //
 // These lock the beat grammar the CHAIN authors: a push renders caster swing → VFX → slide → trap impact, the

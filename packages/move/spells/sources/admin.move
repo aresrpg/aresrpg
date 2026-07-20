@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// ADMIN — the engine package's authority: one SUPER AdminCap (epoch-scoped temp caps), Version enable/bump.
 /// No authoring doors — the engine carries NO content (content lives in the core package's templates).
 module aresrpg_spells::admin;

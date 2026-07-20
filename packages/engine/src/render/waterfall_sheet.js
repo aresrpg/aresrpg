@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WATERFALL SHEETS + spray + basin foam (ENGINE_AAA_PLAN §4.2 step 2-4, lane B4) — an ADDITIVE
 // render overlay, DEFAULT ON since 2026-07-11 (?falls=0 = escape hatch; A/B-proven at +0.1 ms p50).
 // ZERO water_material.js edits (the frozen-tuning law): the voxel water keeps its depth + placeholder

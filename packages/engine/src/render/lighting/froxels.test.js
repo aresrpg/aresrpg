@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure-math tests for the froxel integrator — the load-bearing correctness claim of NG2-F. The
 // shipped closed-form front-to-back integral `integrate_slices` is pinned against an INDEPENDENT
 // brute-force radiative-transfer reference (fine Euler sub-stepping of dL=S·T·dt, T·=e^(−σ·dt)),

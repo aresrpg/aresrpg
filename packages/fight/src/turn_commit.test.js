@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SINGLE-PTB TURN COMMIT — pure-core proof: the staged-intent → SDK-batch mapping (batch
 // path + the empty skip + the loud staging-bug drop) and the executed-failure latch discipline. Zero mocks.
 // The effectful retry rows live beside their code: world-shell/overdue_retry.test.js.

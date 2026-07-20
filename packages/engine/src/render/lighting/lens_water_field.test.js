@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Lens-water FIELD — the ROUND-8 FLUID LAW suite (target: "too linear … flowing patch with less
 // straightness, we should not be able to detect the shape because water is fluid"). Pins the pure fluid
 // geometry twins (trail_center_x / trail_halfwidth / trail_edge_rag / meniscus_bump + the surging wander

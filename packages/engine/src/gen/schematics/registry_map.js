@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Schematic block mapping (§4.6 vegetation/schematics wave, phase A) — legacy Minecraft block base
 // names (from the Sponge `.schem` packs, blockstate properties already stripped by the converter)
 // → this engine's block_registry ids. block_registry.js is read READ-ONLY; targets are resolved by

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D105 CLASS-KILLER — network-hitting regression test (live Sui testnet) for the gRPC `{ object }` /
 // `{ objects }` / `{ dynamicFields }` / `{ dynamicField }` / `{ balance }` wrapper class.
 //

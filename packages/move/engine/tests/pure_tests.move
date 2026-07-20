@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// PURE tests — the judgment-dense algorithms that need NO on-chain scaffold: the §17.28 global-interleave
 /// order (determinism + even distribution across uneven teams), the deterministic board derivation, the
 /// harvested claim kernels (/700 loot, /600 xp), and the reference-corpus hp scaling.

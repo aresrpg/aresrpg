@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // AO terrace-stripe A/B (scope-add). Captures the target scenario — a GENTLE terraced dirt
 // slope (all 1-block steps, gen-scan verified at (50,144) y≈115) close-up — so the flattened AO_LEVELS
 // curve's effect on the horizontal-striping defect is visible. Run TWICE from the runner: once with

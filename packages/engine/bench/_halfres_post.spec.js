@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // HALF-RES POST — instrument-first attribution + A/B proof (medium tier, 13.2 Mpx / dpr2 5K-class).
 // Probe (underscore): measures the real per-pixel post breakdown that the perf mandate targets and the
 // before/after of the __half_res_post feature. Mirrors _gov_pipeline_race's rAF-delta protocol; own

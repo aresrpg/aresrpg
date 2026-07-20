@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // UNDERWATER BUBBLE-FOG PROOF (invisible-submerged-bubble fix, 2026-07-12). Proves the one-line root-cause
 // fix in src/render/particles.js: the ambient BUBBLE material now writes its OWN depth (depthWrite:true).
 //

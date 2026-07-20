@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // COSMETIC → ICON SLUG (encyclopedia/wiki fix). Owner bug: "cosmetics don't even show in the wiki."
 //
 // ROOT CAUSE (traced, not guessed): a shop cosmetic's on-chain `item_type` is the EQUIP SLOT word

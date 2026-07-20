@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // B4 waterfall overlay — pure-geometry + tier-ladder + refcount-lifecycle tests. The GPU draw (sheet
 // scroll, spray arc, foam) is the headed pose spec's concern (bench/waterfall_poses.spec.js); here we
 // pin the deterministic CPU half: span→quad geometry, basin selection, the tier ladder, and the

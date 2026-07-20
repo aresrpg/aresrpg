@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SEAM 6 — WORLD-FROM-TEMPLATE (SPEC §4: "Worlds are admin-minted templates").
 //
 // The chain stores a world as a template (aresrpg_game::world::World): a seed, a biome name, a required

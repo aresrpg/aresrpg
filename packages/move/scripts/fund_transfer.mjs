@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // fund_transfer.mjs — SELF-CONSOLIDATION of a wallet's SUI coins into ONE, over JSON-RPC with the CLI
 // keystore signer. Promoted from the 07-16 `fund_custody.mjs` scratchpad pattern (the qa-identities
 // memory ordered promotion to a repo tool on next use). WHY JSON-RPC and NOT the gRPC client.js path:

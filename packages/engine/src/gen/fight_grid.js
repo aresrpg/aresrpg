@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ============================================================================================
 // DETERMINISTIC FIGHT-GRID GENERATOR (§6.6, ticket #25) — SHARED SPEC OF RECORD
 // ============================================================================================

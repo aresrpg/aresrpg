@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // MASSIF COMPOSITE surface stage (S-24) — a single coherent per-column relief that OWNS the land
 // surface for a world when enabled (Everest), replacing the spline+erosion+canyon+trough composition
 // with one scale-coupled function. It is the picked "mix of the 3" from the S-24 candidate

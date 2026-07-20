@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Line of sight — symmetric shadowcasting (octant-based, rational slopes).
 //
 // PORTED VERBATIM from koshi-2d/.../shared/src/visibility.ts. The donor's SDK float-geometry LoS

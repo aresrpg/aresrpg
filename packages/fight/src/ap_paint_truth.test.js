@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // AP-PAINT TRUTH — a live symptom where the AP display didn't decrement after a cast, so spells stayed
 // clickable past the true budget while the underlying reducer already blocked the cast: a desync between
 // two systems computing AP independently. Ratified diagnosis: TWO homes for one fact.

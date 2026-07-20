@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// GAS-DIET proofs for the mob-AI compute crank (money-path — the crank cost is compute-dominated + was unbounded
 /// per living mob). Covers the sanctioned/behavior-neutral changes landed in `mob_ai` + `combat_grid`:
 ///   (a) bfs_cast_cell EARLY-EXIT is RESULT-PRESERVING — it returns the exact cell a full-scan would, proven

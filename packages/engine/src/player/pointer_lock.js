@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // "Free mouse except when rotating" input scheme (ENG-8) — the exact interaction that was called out
 // as "already implemented in the current game". Ported from packages/frontend player-camera.js's
 // pointer-lock drag block (the LOCK_DRAG_PX gesture): the OS cursor is FREE and visible by default;

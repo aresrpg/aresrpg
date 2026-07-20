@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TR-97 — SSOT for cosmetic / mount 3D-model resolution + mount detection.
 //
 // Models are convention-linked, not stored as on-chain URLs (no Move change is in scope). Mount authoring

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// GIFT tests: escrow-recoverable item send (`gift`). Drives the REAL flow against an Item `TransferPolicy` that
 /// carries the FULL ceremony rule set (royalty + kiosk_lock + personal_kiosk + item_listing + lot), two genuine
 /// personal kiosks (sender + recipient), and gear items actually kiosk-locked in the sender's kiosk — so `claim`

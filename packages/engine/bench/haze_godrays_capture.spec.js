@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TASTE-PASS capture (visual review gate): before/after PAIRS for the godrays-more-present +
 // cinematic-blue-haze tuning. Drives the frozen engine facade under ?nocam=1 (the demo's rAF camera
 // loop would overwrite our pose each frame). godrays are DEFAULT-OFF (#71/#73/#74 pitch-wash revert),

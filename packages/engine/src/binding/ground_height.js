@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SEAM 1 — the canonical Y-ORACLE (SPEC §4: "Y does not exist on chain").
 //
 // On chain, positions are (X, Z) only; every client must derive the IDENTICAL Y for any (x,z) so a

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Worker RPC protocol. Payload buffers use one transfer-only mode.
 
 /** Main → gen: set the world recipe (WorldGenConfig) this worker generates from. Posted ONCE to each

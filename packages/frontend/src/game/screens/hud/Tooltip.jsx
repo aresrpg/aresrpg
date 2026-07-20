@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // House Tooltip primitive — ONE reusable glass tooltip for the whole HUD, the single home that
 // replaces native `title=` everywhere. It:
 //   - portals the card to <body> so it escapes drawer/overflow clipping and stacks above everything,

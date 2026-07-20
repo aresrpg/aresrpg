@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SPELL EFFECT ENVELOPE — the composable, data-only effect record, a byte-for-byte mirror of
 // aresrpg_foundation::spell_effect.move (S-16 parity). A spell is a LIST of `Effect`s, each selecting one of
 // ~30 mechanics by a `kind` discriminant; element/stat are PARAMETERS, not opcodes. PURE DATA — no coupling to

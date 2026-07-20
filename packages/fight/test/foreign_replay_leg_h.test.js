@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LEG H — FOREIGN REPLAY DEAD ON THE PEER CLIENT — 2-account coop: a peer sees no replay for what other
 // players are doing in the fight, including the mob wave that follows another player's turn.
 // A peer's committed turn reaches this client ONLY as the poll's wholesale Fight

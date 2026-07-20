@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST regression (fresh-character "could not verify your position" — QUEUE row 2): a JUST-JOINED
 // character's on-chain checkpoint is proven by the join tx's OWN WorldJoined event the instant it confirms,
 // but world_checkpoint.js's boot-spawn cache used to learn that fact ONLY through a SEPARATE chain-direct DF

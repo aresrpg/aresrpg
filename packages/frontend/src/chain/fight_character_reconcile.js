@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Bounded post-fight Character projection reconcile. The settlement receipt updates the shared roster
 // immediately, then this waits for the read layer to expose at least that XP total before replacing the
 // character from `/v1`. The caller owns the event wiring + concrete read/store dependencies.

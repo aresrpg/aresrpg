@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // HUD pin-forever image regression (encyclopedia-proven class): a cold Walrus quilt patch
 // takes ~2-3s to reconstruct and can fail under a concurrent burst. SpellArt and ItemIcon treated that
 // very first transient error as PERMANENT — onError pinned the fallback (tinted initial / category

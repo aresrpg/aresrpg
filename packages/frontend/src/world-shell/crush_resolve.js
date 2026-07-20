@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /**
  * Select the ItemTemplate row for one owned item. New `/v1/owner-items` rows carry the exact stamped template id;
  * never fall back to the lossy slug map when that identity is present. Legacy chain-read rows have no template id

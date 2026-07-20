@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Encyclopedia content data + helpers (NO JSX). The single home for the seeded content casts
 // (items.json / spells.json / classes.json from @aresrpg/sdk), the derived browse lists the panes
 // iterate, and the small formatting/colour helpers they share. The drawer computes no balance and

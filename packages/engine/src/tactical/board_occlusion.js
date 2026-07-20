@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D167-B (2026-07-05) — FEATHERED FIGHT-BOARD OCCLUSION (see-through the forest to the arena).
 //
 // When a tactical board is mounted, world geometry (trees, canopy, terrain bumps) standing BETWEEN the

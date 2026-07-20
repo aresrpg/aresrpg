@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Schematic stamper (§4.6 vegetation/schematics wave, phase A) — deterministic, region-local
 // placement of resolved schematics into a single chunk record. PURE FUNCTIONS ONLY, integer
 // hashing only (§3.7 determinism law): every placement is a pure function of (seed, anchor world

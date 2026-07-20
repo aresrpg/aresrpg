@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Shared test harness for the world / zones / gathering suites: stands up the ONE merged aresrpg package,
 /// enables every gate (S-46: no cap-deposit ceremony — first-party writes are public(package) now), creates the
 /// Character + Item transfer policies, and offers factories for a configured World, a resource ItemTemplate, and a

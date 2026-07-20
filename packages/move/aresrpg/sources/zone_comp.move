@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// ZONE COMP — the seed → composition pipeline of the search-cost rework: snapshots a World's tables + the §4
 /// distance-difficulty inputs (the EXACT inputs the retired materialising search computed) and runs the pure
 /// `aresrpg_foundation::zone_gen` kernel. ONE home for "what does zone (zx,zy) of this world contain at seed S" —

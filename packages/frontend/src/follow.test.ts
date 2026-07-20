@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // follow.test.ts — proves world_to_biome resolves the REAL per-world chain biome (not the flat DEFAULT_BIOME
 // 'arctic' every non-dungeon caller got before tonight's fix), and that those biome strings fan out across
 // ambient_music's owned tracks — different worlds must SOUND different.

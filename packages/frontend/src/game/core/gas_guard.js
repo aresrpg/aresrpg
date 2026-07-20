@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GAS PREFLIGHT — the pure money-decision behind auth/index.ts's preflight_gas_guard (gas-burn emergency 07-06).
 // NO I/O here (that lives in auth): this is the unit-tested verdict a simulateTransaction result + the signer's
 // balance produce. GAS_CEILING_SUI is the ONE standing ceiling for every app PTB — a tx that would cost more is

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Far-field block → map color (§11 NG-LOD). The quadtree far-shell (far_mesher.js) renders
 // flat-shaded colored box-columns — DH-style "colored boxes, no textures by design" (survey S4).
 // Each far column needs ONE representative RGB per dominant block: its map color.

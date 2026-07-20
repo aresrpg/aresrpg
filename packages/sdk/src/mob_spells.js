@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Mob basic-attack spell templates — derived 1:1 from each mob's authored `melee_damage`
 // ({ element, min, max }) in mobs.json. This unblocks c101 (mobs never attack): a mob FightEntity needs a
 // CASTABLE attack for the AI to use, and that attack's DATA is the donor's per-mob melee damage.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // STATUS/WARD/VORTEX/IMPACT (e_status_impact) preset-table test. The 23 remaining e-class pack scenes each resolve
 // to a preset: 14 shield-ward LOOP blooms (7 el × 2 tiers), 3 dark-vortex bursts, 6 air-impact bursts. Shield wards
 // are LOOPs that stay under the halo ceiling (a sustained ward never blooms); vortex/impact are one-shot bursts;

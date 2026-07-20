@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // zkLogin (Enoki) wallet helpers. The fork keeps ONE Enoki registration owned by the companion shell
 // (src/auth/index.ts): it does the single wallet-standard Enoki registration. The game receives the
 // authenticated session via the one-way session bridge (action/sui_login) and reads the chain through the

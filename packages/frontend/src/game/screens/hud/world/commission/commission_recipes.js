@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SDK-backed recipe derivation for a commission — kept OUT of commission_logic.js so the pure greying tests
 // import no heavy graph. REUSE: recipe + ingredient DATA come straight from @aresrpg/sdk/jobs
 // (`craft_recipes` / `recipe_ingredients` / `job_level_progress`) — the SAME SSOT the JobsDrawer renders — so

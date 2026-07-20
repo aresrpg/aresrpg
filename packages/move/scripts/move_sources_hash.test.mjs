@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Proves the move-sources staleness anchor is well-formed + stable — the foundation of the RELEASE page's
 // "never publish stale bytecode" guard. (The live-vs-manifest COMPARISON is proven in the frontend
 // release_staleness.test.ts; asserting the current manifest is fresh here would flake against any in-flight

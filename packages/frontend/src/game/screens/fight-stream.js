@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // board #49 (FIGHT — STREAM-PREVIEW clause): in a multi-peer dungeon fight the ACTIVE player's client
 // STREAMS its turn actions (the drafted move / cast targets — PRE-commit) live over the p2p lobby room; RECEIVERS
 // SIM-VERIFY each against THEIR OWN chain-derived Dungeon (AP/MP budget, range, LOS, legality — the SAME gates

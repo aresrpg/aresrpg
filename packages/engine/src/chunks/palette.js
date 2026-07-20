@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ≤256-unique palette compression for chunk `ids` arrays (§3.4). At rest, the overwhelmingly
 // common case (≤256 distinct block ids in a chunk) compresses 64 KB Uint16 → ~33 KB
 // (Uint8 indices + small palette table). Falls back to raw Uint16 passthrough above that.

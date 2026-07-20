@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /** Gemini model for image generation/editing — Gemini 3 Pro ONLY (never flash/2.x).
  *  gemini-3-pro-image = Nano Banana Pro, the stable flagship (verified ai.google.dev 2026-07-10). */
 export const GENERATE_MODEL = 'gemini-3-pro-image'

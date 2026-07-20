@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Mob look resolver: maps a wire mob `Entity` to its real 3D art. Used by BOTH the roam world and the fight
 // board (each renders the GLB creature via the rig loader). ONE seam — switching it flips world_spawns,
 // spawn_rigs, cave_mobs, the dungeon dimension AND the fight board (voxel_fight_folds) at once.

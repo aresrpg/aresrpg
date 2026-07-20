@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Shared Spell Detail panel — the per-card readout that visualizes one spell's full schema (header art /
 // name / school·kind / AP pill, a facts grid, and an effects list). The in-fight armed-spell readout
 // (FightArmedReadout, canon/14) renders it over the normalized sim SpellTemplate (spell-deck-data.js).

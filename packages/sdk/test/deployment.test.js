@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DEPLOYMENT TEST (S-51a) — proves aresrpg_shared_ref resolves a static {objectId, initialSharedVersion,
 // mutable} pair OFFLINE via the injection seam (mirrors aresrpg_deployment's `overrides`), and refuses
 // rather than guesses when data is missing or `mutable` isn't stated explicitly by the caller.

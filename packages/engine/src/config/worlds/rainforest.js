@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIVE WORLDS · RAINFOREST / VIETNAM (BIOMES_EXECUTION_PLAN §P3.1) — the karst limestone world.
 //
 // Visual north star ("realistic-but-fantastic", Ha Long Bay / Ninh Binh karst country): steep-

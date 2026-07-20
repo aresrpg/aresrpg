@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FULL-CHAIN P2P BRIDGE REPRO — a peer that reaches the transport must become a visible player, bump the
 // aggregate online count, AND land a chat line — through the REAL game.js module wiring (presence + chat
 // modules observing the real context), NOT a hand-rolled context (presence.spectate.test.js bypasses game.js).

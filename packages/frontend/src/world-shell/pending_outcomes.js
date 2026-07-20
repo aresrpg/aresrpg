@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // UNOPENED FIGHT RESULTS — the PERMANENT post-settle surface (not a recovery edge case).
 // `settlement::settle_and_destroy` transfers ONE soulbound `FightOutcome` to EVERY seat owner silently, so any
 // non-janitor participant holds unopened results until their own `results::open` lands (which is also the ONLY

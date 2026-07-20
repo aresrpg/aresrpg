@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // BAKE-THEN-STAMP for procedural trees (perf lane 2026-07-12 — schematics were loading measurably
 // faster than the procedural trees). generate_tree (tree_gen.js) runs the full recursive branch/canopy
 // math; the live decorator ran it once PER FOREST COLUMN (every tree unique = the load cost that was

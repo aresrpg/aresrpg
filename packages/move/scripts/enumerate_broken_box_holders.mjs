@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LB3 — enumerate the current HOLDERS of the 3 broken pet loot-boxes (a remediation target), so
 // remediation can target the exact owner of each un-openable box. READ-ONLY. The broken box template ids are
 // the PINNED incident facts in BOX_APPROVALS (box_reauthor.mjs) — NOT the seed manifest, which is the reauthor

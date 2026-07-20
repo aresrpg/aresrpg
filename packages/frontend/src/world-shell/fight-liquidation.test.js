@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D110 PLACEMENT FORCE-START liquidation proof (board #49 sibling of the turn-crank liquidation), on the S-46
 // ENGINE doors: drives `maybe_force_start` with a synthetic EXPIRED placement deadline and asserts the
 // permissionless `turns::force_start` seam fires EXACTLY ONCE (single-flight across re-probes), stays SILENT,

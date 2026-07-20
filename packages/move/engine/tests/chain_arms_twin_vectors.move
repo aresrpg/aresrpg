@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// RED-FIRST Move twins for the ruled chain arms. These vectors deliberately describe the required end-state,
 /// not today's partial record/no-op behavior. They mirror the sim fixtures with a plain player, one plain mob,
 /// fixed values, deterministic point zones, and the standard Fight event stream.

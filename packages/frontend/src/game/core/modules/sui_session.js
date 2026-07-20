@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Session + sui state reducer: the zkLogin wallet/account/address, the selected character, and
 // server-pushed sui data (characters/items/balance/...). Pure reducer, no I/O — the React
 // onboarding dispatches action/sui_login after Enoki connect, then connect().

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Version + admin coverage: version bump/enable round-trip, the super-cap/temp-cap authority split (mint,
 /// delete, epoch expiry), and is_super. Mirrors the byte-identical admin/version modules' own test pattern in
 /// aresrpg::admin_tests (aresrpg package) — same shape, this package's address.

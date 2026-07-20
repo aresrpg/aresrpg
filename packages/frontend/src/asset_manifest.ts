@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
 
 // ── THE ONE HOME for loading the Walrus asset manifest (regression: icons intermittently required a

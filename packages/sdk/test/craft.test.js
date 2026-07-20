@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Crafting math + affordability — the shared SSOT both the server (queue timer enforcement) and the
 // client (toast estimate + ingredient GREEN/ORANGE rows) consume. The duration lerp is pure integer
 // math, so the client's estimate must equal the server's wall-clock enforcement exactly.

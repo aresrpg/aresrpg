@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE NO-TRAP-STATE INVARIANT (a legacy-compat rider, lane 46b): a legacy V1 party (address-keyed
 // `{ id, leader: address, members: address[] }` — the pre-republish `aresrpg::party` shape, see
 // bd4ea8e:packages/frontend/src/chain/read_party.js) either resolves READABLE+LEAVABLE or degrades

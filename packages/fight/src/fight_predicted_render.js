@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // fight/fight_predicted_render.js — the SIM-prediction render path: run the deterministic @aresrpg/sim command
 // and turn its semantic output into renderer-neutral, ordered queue beats. Split out of fight_render_events.js
 // (the ≤600-LoC law); register #60 called this lane dormant at the split — STALE since cd383d920 (2026-07-19)

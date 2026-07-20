@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S-17a — WORLD BINDING SEAMS demo harness (binding.html). Boots the REAL engine and drives the two
 // render-bound seams behind ?seam= flags (defaults-off, engine worker law):
 //   ?seam=glow   → create_gather_feed: glowing ground-ring outlines on resource nodes + the gather

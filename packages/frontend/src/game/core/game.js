@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The client engine — a framework-agnostic state core + WS netcode, extracted from the AresRPG
 // dapp's core/game/game.js (the proven module/reducer/observer system), stripped of Three.js,
 // voxel, and Vue. React binds to it via src/store.js (useSyncExternalStore over STATE_UPDATED);

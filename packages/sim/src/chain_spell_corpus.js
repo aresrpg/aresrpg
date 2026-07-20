@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The chain-spell corpus door. Seed/mainnet rows use the Move SpellTemplate shape; the sim owns the one
 // normalization algebra for that shape. Product consumers pass the already-loaded rows through this pure
 // package boundary and receive only authored chain templates (the sim's built-in mob attack is intentionally

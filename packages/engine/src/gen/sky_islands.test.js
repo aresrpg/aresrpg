@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pandora sky-island generator unit tests (gen/sky_islands.js). These pin the DETERMINISM law and the
 // grammar/shape guarantees of the module in isolation (its integration into the density field + the
 // block palette + the LOD far-shell are covered by density.test.js, column_gen.test.js, and

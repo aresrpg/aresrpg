@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Dynamic-resolution governor policy tests. The policy is a pure state machine over frame-time samples
 // (no GPU, no renderer) — feed synthetic frame traces, assert the applied render_scale. These prove the
 // policy's guarantee mechanically: rest = native (identical to today), sustained load = trimmed to hold

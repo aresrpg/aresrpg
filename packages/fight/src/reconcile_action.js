@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Per-action prediction reconciliation. Only actions whose receipt carries the same absolute/delta fact are
 // comparable; silent chain mutations (for example Granted) deliberately wait for the object snapshot.
 

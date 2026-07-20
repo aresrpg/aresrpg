@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure friend-input orchestration. The rendered inputs live in game/** (a fenced lane), but both already pass
 // their raw text through the shared world-shell action. Keeping prefix detection + name resolution here lets
 // every current/future friend surface share the same behavior without UI-local fetches or transaction forks.

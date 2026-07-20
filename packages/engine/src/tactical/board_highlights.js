@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-16 Phase B — TACTICAL BOARD HIGHLIGHTS (per-cell gradient tiles, rounded corners, per channel).
 //
 // The current-prod CPU-flat-tile model (C fight-overlay.js), ported to WebGPU: each cell in a channel

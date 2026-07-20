@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // One-time post-publish setup: create the standard TransferPolicy + the AresRPG protected policy
 // for Character and Item, and attach (1) the Mysten royalty rule that enforces the trading fee and
 // (2) the Mysten personal_kiosk_rule that enforces personal-kiosk-only ownership for our NFTs.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Chat — serverless P2P (no WS server exists). `send_chat_message` broadcasts a line to the
 // Trystero lobby (or the party room for GROUP) via lobby-room.js and echoes it locally. Incoming PEER
 // messages flow through @aresrpg/world's presence atom (D770a W3b — the WS-era `packet/chatMessage` shim is

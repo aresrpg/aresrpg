@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // MARKETPLACE reads.
 //
 // BUY listings (S-86): the store reads the keyless `/v1/listings` indexer view (packages/rpc) in ONE call and

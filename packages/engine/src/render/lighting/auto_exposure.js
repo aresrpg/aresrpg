@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // AUTO-EXPOSURE — transient eye adaptation (target: the white flood "should probably be the 'eye
 // adaptation' feeling" — a TRANSIENT exposure event, never a standing veil). Before this, exposure was a
 // STATIC constant (renderer.toneMappingExposure = 1.1); nothing could ever decay, so any bright step read

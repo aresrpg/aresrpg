@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // board #47 → D224 — the DUNGEON DIMENSION, voxel edition: the room ROSTER publisher + the ENGAGE action.
 // The roam-era PLANE slice (terrain override, bounded box) is DELETED — the ENG-17 cave room replaced the
 // plane wholesale and cave_session owns that transition; nothing read `plane` anymore (dead code = defect).

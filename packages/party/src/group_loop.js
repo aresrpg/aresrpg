@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE GROUP LOOP REDUCER (MULTICHAR lane, D769b design note) — the pure sequencer of a player's
 // multi-character loop: ONE human drives N owned characters as a party. Membership truth stays in
 // reduce.js (chain-reconciled); THIS reducer owns the leader-session orchestration facts and emits

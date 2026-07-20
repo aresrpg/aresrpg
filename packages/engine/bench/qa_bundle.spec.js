@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // QA EVIDENCE BUNDLE producer (T2). Regenerates the artifacts an independent reviewer needs as
 // 1280×720 STILLS (the known-good canvas readback) + numeric gate JSON, on the live :5199 world with
 // the pin+settle protocol. Sections mirror the ticket:

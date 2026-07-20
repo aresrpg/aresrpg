@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // @aresrpg/engine3/vfx — the public barrel for the flagship fight-VFX preset system. The frontend fight
 // renderer (fight_cast_vfx.js) imports `create_vfx_preset` + `PRESETS` here to play a 3D GPU-particle burst
 // at an impact instead of a sprite sheet; the runtime + data live one module deeper (vfx_preset_engine.js /

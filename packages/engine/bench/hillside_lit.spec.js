@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PROOF spec (light_engine BFS, brief §6): capture the previously-black terraced hillside now
 // sun-graded. Bare headed launch (no custom GPU args), hard-navigate the demo so the world
 // regenerates from scratch with the new skylight flood, monkeypatch the `__engine` camera setters

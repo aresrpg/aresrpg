@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The SDK-backed recipe DERIVATION (artisan_craftable_recipes) over the real @aresrpg/sdk/jobs content: the
 // per-job level FILTER, the gathering-job exclusion, the recipe-id de-dupe, and the level→name sort. Kept
 // separate from commission_logic.test.js (the SDK-free greying core) so that suite stays dependency-light.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // #96 LOCAL ITEM AUTHORING — browser client for the DEV-ONLY `local_content_plugin` middleware. The
 // admin item editor authors items into the repo's seed JSON + local PNGs through here, sees them badged
 // LOCAL-ONLY vs ON-CHAIN, then publishes (mint PTB + this module's bucket upload). Guarded by `LOCAL_AUTHORING`

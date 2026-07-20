@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX — the AIR (electric) b_spell family: ElectricFX ball / zap scenes ported into the house
 // billboard vocabulary and spread across the 54 air-element spells for maximum variety (six distinct tints so a
 // Senshi Gale Slash and a Storm Arc land DIFFERENT bolts). Wave-A coverage lane (docs/VFX_FULL_UTILIZATION_PLAN.md

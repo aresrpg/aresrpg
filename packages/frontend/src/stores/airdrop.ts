@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // airdrop.ts — whitelist claim-MINT airdrops for external-collection holders (airdrop.move,
 // DECISIONS 2026-07-13 18:4x). Each drop mints ONE reserved item into the whitelisted signer's OWN kiosk,
 // kiosk-locked (mint-lock — no royalty, none bypassed); the claim REMOVES the address from the whitelist

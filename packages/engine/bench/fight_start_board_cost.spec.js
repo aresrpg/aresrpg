@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT-START board-build CPU cost probe (freeze trace). Times build_board_geometry
 // (slab bake + slab geo + materials + fill loop) at realistic fight-board sizes to decide whether the
 // fight-start hitch is the CPU board construction (amortizable) or elsewhere (GPU pipeline compiles).

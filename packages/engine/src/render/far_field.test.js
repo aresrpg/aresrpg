@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG-LOD SMOOTH far-field renderer tests. The material is a TSL NodeMaterial (compiled on GPU only),
 // so these cover CPU-side behavior: (1) SMOOTH GEOMETRY — build_section_geometry turns a corner-grid
 // FarMesh into an INDEXED BufferGeometry (33×33 grid verts + a skirt ring), world-space positions,

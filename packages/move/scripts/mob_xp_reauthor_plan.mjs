@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // MOB-XP REAUTHOR — the SHARED diff/read truth. Owner re-aim 2026-07-20 (verbatim: "we probably need an admin
 // stat setter?"): the PRIMARY xp chain path is now an additive `aresrpg::mob_template::set_xp_reward` setter +
 // upgrade built in a PARALLEL lane (mirroring the 07-15 `set_level_targeting` precedent) — an IN-PLACE mutation,

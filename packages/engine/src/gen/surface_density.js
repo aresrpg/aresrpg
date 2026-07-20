@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ORGANIC GRASS-DENSITY FIELD (§4.6 decorators) — the continuous humidity+altitude coverage probability
 // the meadow carpet is gated by, extracted from surface_decorator.js so that file stays under the
 // ≤600-LoC law and the density math has ONE home (same split discipline as terrain_flora.js /

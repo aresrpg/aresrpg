@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure commission logic — the CUSTOMER-side greying/stock math, split out so it is unit-testable with ZERO
 // React / chain / SDK-render coupling (component tests exercise the greying/stock logic as pure
 // fns). Every chain/SDK read + the tx compose live behind commission_actions.js; the SDK-backed recipe

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SWITCH-PARITY LEG ① — proves CharactersDrawer's switch path (character_switch.js's
 // switch_active_character, consumed by CharactersDrawer.jsx's switch_to) routes through the SAME seam
 // CharacterSwitcher.tsx uses, mirroring character_selection.test.js's "the switch SEAM rebinds the fight

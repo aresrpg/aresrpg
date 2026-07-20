@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIVE WORLDS · EVERGLADES / SWAMP (BIOMES_EXECUTION_PLAN §P3.4) — the "river of grass" wetland world.
 //
 // Visual north star ("realistic-but-fantastic", Florida Everglades sawgrass sea): a FLAT

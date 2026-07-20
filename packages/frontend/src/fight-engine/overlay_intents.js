@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT ENGINE · overlay_intents — the RENDERER-NEUTRAL semantics of the tactical overlay (the voxel-MVP
 // keystone). fight-overlay.js (a Three.js god-file) used to MIX "which cells are castable / reachable / a
 // placement start" (the SEMANTICS) with "stamp a mesh there" (the RENDER). This module owns the SEMANTICS as

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // W2 gate suite (D770a spawns_zones) — red-first per the design note: (1) a search RECEIPT advances
 // checkpoint + zone + hunt_zone ATOMICALLY; (2) a poll after a receipt converges as a NO-OP (order
 // independence — grace-shielded adds, tombstoned removals); (3) a claim removes the group and hands off to

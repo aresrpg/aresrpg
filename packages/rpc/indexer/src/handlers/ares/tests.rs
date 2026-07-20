@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 //! Unit tests for the pure event→Redis projection ([`super::map`]).
 //!
 //! Each test builds a synthetic event body, BCS-encodes it exactly as the chain

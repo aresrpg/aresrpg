@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Tiny single-modal store for the "fund your wallet" onboarding — framework-agnostic (an
 // EventEmitter + a snapshot), mirroring toast.js so vanilla screens (character-create.js) and the
 // React chrome can both open it. Ephemeral UI state, deliberately NOT engine game-state.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // On-chain MARKETPLACE writes, signed by the connected wallet. LIST / DELIST keep their existing local kiosk
 // transaction shape. Item and character BUY pre-flight the live TransferPolicy over gRPC, then delegate the whole
 // four-rule purchase PTB to the context-bound SDK marketplace builders. That SDK seam validates the policy's live

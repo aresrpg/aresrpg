@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // board #13 (rich-board wave) — the WIRING between a click on the rich 3D board (fight-overlay.js, imperative
 // Three code) and DungeonBoard.jsx's existing on-chain turn-draft logic (React). DungeonBoard.jsx keeps 100%
 // of the game rules (a cumulative MOVE PATH + ≤1 cast, reachable/castable gates mirroring dungeon_turn.move exactly) — this

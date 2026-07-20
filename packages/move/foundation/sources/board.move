@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// BOARD — deterministic fight-board derivation. THE canonical generator: `(world_seed, anchor) -> board
 /// layout`, byte-identical to the harvested `aresrpg::dungeon_grid` draw sequence (the frontend/engine twin
 /// aligns to THIS; the dungeon reuses it per-room). PURE — seed only, no time / IO / stored roll (§7 "nothing

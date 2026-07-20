@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // i18n PARITY GUARD — the fast_travel.* bundle (dragon fast-travel: the third player-menu option, the
 // realm-unreachable refusal, and the flight-lifecycle toasts). The 6-locale law (CLAUDE.md): every
 // user-facing string lands in ALL locales; a missing/empty locale would print the raw key. This pins presence

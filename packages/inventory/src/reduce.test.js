@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Lane M5 — the roster/bag spine ONE-PIPELINE merge core. Pure reducer, no mock.module (house convention).
 // The three RED scenarios from the audit (row #3): XP regression, outside-writer lost update, enrichment
 // clobber — each proven by the bug's shape (a blind spread / stale-captured array) then the fix.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TSL terrain material (§3.6) — decodes the frozen 8-byte quad instance (quad_buffer.js) on the
 // GPU and expands it into a unit quad, entirely inside positionNode/colorNode. Extends
 // MeshStandardNodeMaterial to keep the full PBR lighting model (§3.6). M0 scope: FLAT colors from

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// EVENTS — the single home for every Kolizeum lobby lifecycle event (§7 observability — the RPC indexer + the
 /// client's optimistic reconciliation feed). One module so the indexer watches one file for the whole lobby
 /// contract. Every money-moving transition has an event: created / joined / exited / cancelled / started /

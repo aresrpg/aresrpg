@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The world's DUNGEON panel (§9 "the key IS the run"). SPEC §9 collapsed the old registry/browse/create
 // model: there is no DungeonRegistry, no "create", no "browse" — a world HAS one dungeon, and you CONSUME A
 // KEY to enter it. This modal is now purely the PRE-ENTRY panel: ONE key row + ONE action, or a single

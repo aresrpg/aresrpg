@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Surface decoration (§4.6 decorators) — deterministic per-column scatter of the DIVERGENCE WAVE grass
 // OCEAN (waist-high tall_grass across meadows, shore reeds, meadow flower patches, forest-floor fern
 // undergrowth — surface_flora) PLUS the REAL legacy schematic vegetation (trees + rocks) over the

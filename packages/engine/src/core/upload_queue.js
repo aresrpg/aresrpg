@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Per-frame GPU-upload byte budget with nearest-first priority (§3.2, §9.6). Meshed chunks
 // (packed quad buffers, §3.5) arrive from the mesh worker pool faster than we want to hand them
 // to the GPU in a single frame — this queue caps bytes + measured main-thread time per frame and

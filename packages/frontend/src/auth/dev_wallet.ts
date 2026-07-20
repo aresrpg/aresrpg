@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DEV-ONLY native-wallet login. Provably ABSENT from production builds: this module is imported
 // only via `await import('./dev_wallet')` inside an `if (import.meta.env.DEV)` branch in ./index,
 // so rollup dead-code-eliminates the dynamic import (and this whole module + its crypto) when DEV

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ─────────────────────────────────────────────────────────────────────────────
 //  game_log — the ONE namespaced diagnostic logger (S-Sentry · pre-testnet law)
 // ─────────────────────────────────────────────────────────────────────────────

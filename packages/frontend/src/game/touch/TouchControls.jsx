@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Mobile roam controls: a conventional dynamic left joystick plus held JUMP and one-shot MOUNT buttons.
 // This React overlay writes the existing touch_input intent shape; embed_voxel_player merges it into the
 // same ctl.set_input call as WASD/Space. The lead-owned mobile_mode source is the only viewport/device gate.

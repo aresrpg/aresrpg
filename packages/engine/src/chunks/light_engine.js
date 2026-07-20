@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Light engine (§3.4 / §5.3) — per-chunk skylight flood-fill (Minecraft sun model). Replaces the
 // M0 flat-column stub. Two phases, all integer arithmetic (determinism law §3.7 — no sin/cos/pow/
 // random; only Math.max/min/floor):

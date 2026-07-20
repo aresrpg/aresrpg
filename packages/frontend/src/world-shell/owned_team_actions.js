@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Multi-character transaction orchestration. Every loop delegates to the existing single-character self-pay seam,
 // awaits its receipt, then advances. A refusal propagates immediately: no later member runs and no tx is retried.
 

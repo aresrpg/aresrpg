@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD 19 · HOLLOW CROWN (on-chain `19_hollow_crown`, biome `celestial_ruin`) — the dead-god highland
 // planet. Seed identity (seed/mainnet/19_hollow_crown/world.json): air+fire elements, "the hollow crown
 // — the dead god's halo bends light; auras invert at the maw", the second AP crown, agility lean. The

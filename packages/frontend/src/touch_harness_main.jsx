@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THROWAWAY M-04 verification harness — NOT part of the app, NOT imported by main.tsx, NOT built into prod
 // (a separate Vite HTML entry: touch-harness.html). Renders the REAL <TouchControls/> (the pure prop-driven
 // component + the shipped touch-controls.css skin) over a dark game-ish backdrop so the CONVENTIONAL mobile

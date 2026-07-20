@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S-AMBIENCE — the environment ambience DIRECTOR's pure core (render/ambience.js). The GPU mount + engine
 // wiring are DEFAULT ON (?ambience=0 escapes — the TORMENTOR arc-shell defect is fixed, see the file
 // header) and proven by the standalone probe; here we unit-test the PURE policy: the config table, the

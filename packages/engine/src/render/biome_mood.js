@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // B5 BIOME MOOD CROSSFADER (ENGINE_AAA_PLAN §2 P2 / §6, behind ?mood=1). A CPU driver that samples the
 // camera's biome and LERPS the ALREADY-LIVE atmosphere uniforms toward that biome's mood preset over
 // ~4 s — per-biome AAA identity (fog / grade / cloud / particle mood) at ~zero GPU cost. NO new shader,

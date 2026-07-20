@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DRAFTED-SEQUENCE TACKLE PARITY (#24, bug reports ⑥ + ⑭) — the client's move legality MUST obey the D99
 // COMMIT order, not the draft-fold order. THE CHAIN IS THE ORACLE:
 //

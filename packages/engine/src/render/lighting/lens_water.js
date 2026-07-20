@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Wet-lens GPU graph. The field/lifecycle math lives in lens_water_field.js. apply(source, false)
 // is the exact dry identity; apply(source, true) preserves the established film/bead/trail graph.
 

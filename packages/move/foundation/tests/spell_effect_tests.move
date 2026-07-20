@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// SPELL EFFECT TESTS — coverage for the getters/constructors/setters not exercised by the source-file inline
 /// tests: kind/point/flag/stat-id constant getters, the movement and common combat convenience
 /// constructors + the raw `flags()` field accessor, and the `SpellLevel` state getters + live-tune setters.

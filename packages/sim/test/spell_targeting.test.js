@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SPELL TARGETING — can_target's free_cell gate (traps/glyphs/teleport land on a FREE, NON-BLOCKED cell).
 // The chain twin is spell_target::can_cast_at; the client twin is overlay_intents.cast_range_set_dungeon.
 

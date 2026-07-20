@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The overdue auto-crank retry discipline (crank ONCE on the distinct class only, never a blind retry,
 // second failure surfaces). Zero mocks — injected effects. Pure-half rows live in @aresrpg/fight
 // (packages/fight/src/turn_commit.test.js).

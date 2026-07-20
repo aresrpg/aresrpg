@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX bench — fires each ported preset on the standalone probe (bench/../demo/vfx_presets_probe.html,
 // its OWN WebGPURenderer) and captures a DETERMINISTIC frame series per archetype: ?preset&t sets the exact
 // age, so each screenshot is a named build-up→peak→dissipation frame. Proves (1) no GPU/init error, (2) the

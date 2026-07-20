@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PER-REGION ZONE MUSIC: each world's 5-6 biomes get a music track taken randomly from the pool of
 // musics, with the equivalent battle track for each. The player's CURRENT sub-biome
 // region — sampled from position via the engine's `world_region_at` probe — drives the zone key

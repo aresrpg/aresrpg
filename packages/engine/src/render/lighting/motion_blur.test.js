@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [ENG camera-feel 2026-07-12] motion_blur.js pure-math regression. update() only touches three's
 // Vector3/PerspectiveCamera math (no DOM/GPU) — same headless house pattern as camera_shake.test.js.
 // Covers the NEW explicit run-speed trigger (added alongside the pre-existing D258 camera-motion

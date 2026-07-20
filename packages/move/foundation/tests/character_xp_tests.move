@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// CHARACTER XP TESTS — coverage for `level_from_xp`/`max_level`. `xp_for_level` already has inline coverage
 /// via `progression_math`'s source-file tests.
 #[test_only]

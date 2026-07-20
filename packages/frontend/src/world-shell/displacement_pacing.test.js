@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PUSH/DISPLACEMENT-AS-BEAT (live-QA 2026-07-17): a pushed mob could land correctly on-chain while the
 // client rendering desynced — during its turn it walked back by teleporting first onto the cell where
 // it should have been pushed. SPEC §7b grammar: "Push / displacement: caster's swing → VFX → the slide (per

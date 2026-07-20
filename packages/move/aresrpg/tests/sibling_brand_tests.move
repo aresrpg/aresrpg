@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// SIBLING-BRAND DOOR TESTS (2026-07-13 gifting/dungeon split): the brand-gated core value twins — the ONLY
 /// cross-package write surface the extracted gift/airdrop/loot_box/consume/pool/creation cluster and the
 /// dungeon-run cluster get. Mirrors forge_brand_tests.move verbatim in shape: per twin, closed-by-default abort

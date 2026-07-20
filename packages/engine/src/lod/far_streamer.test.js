@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG-LOD phase-B far-streamer schedule tests. Covers the SCHEDULING contract (no three, no GPU, no
 // worker) with a fake far_field + a SYNCHRONOUS-resolving submit_build stub: (1) GAPLESS COVERAGE —
 // once the coarse (L4) roots are built the DH keep set covers EVERY footprint (parent-substitution), so

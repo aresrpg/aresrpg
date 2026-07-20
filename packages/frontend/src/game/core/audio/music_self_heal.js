@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { configure_walrus_assets, walrus_asset_url } from '@aresrpg/sdk/jobs'
 
 export const MUSIC_RETRY_DELAYS_MS = [750, 2_000, 5_000, 10_000, 30_000]

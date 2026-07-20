@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RpcStale — the shared "this data isn't live right now" chip (SPEC §14 UI-DATA LAW).
 //
 // The one visible affordance the no-silent-stale rule demands: any surface reading through use_rpc_view drops

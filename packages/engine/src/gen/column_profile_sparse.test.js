@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SPARSE ≡ DENSE COLUMN EQUIVALENCE — the far-shell contract (§3.7 sibling of the golden hash).
 // The far LOD sampler (lod/section_builder.js) taps SPARSE columns through fill_profile_column
 // instead of building full 1024-column chunk profiles (the far-fill lever: far sections read only

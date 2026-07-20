@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // BOX REAUTHOR — the `reauthor_boxes` op set consumed by apply_shop_payload.mjs (LB3). The 3 §11 pet loot-box
 // templates were seeded WITHOUT the KIND_GACHA_ROLL effect (seed/mainnet/
 // pet_boxes.json omitted `gacha:true`), so loot_box.move::is_gacha_box rejects them and open_box aborts

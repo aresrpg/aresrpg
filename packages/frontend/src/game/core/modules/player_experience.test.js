@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // W2 — the rescue-path receipt: resume_dungeon's boot-rescue (dungeon_store.js) now announces a seated WON
 // with `action/fight/ended { winner: 0 }` BEFORE its silent claim — the SAME event claim() fires — so this
 // module must open FightResult PENDING off that event (the card then resolves from the claim's OWN settlement

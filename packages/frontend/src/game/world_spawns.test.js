@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Route-away regression: the projected GROUP / LV / +XP mob card layer is appended to <body>, outside the
 // persistent world host. Pausing the world on a fullscreen meta route must hide that layer synchronously,
 // and returning to `/` must wait for one fresh projection frame before exposing it again.

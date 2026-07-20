@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // #23 gRPC: getObjects entries are `Object|Error`; json:true exposes the TransferPolicy's `balance` field directly.
 const balance = result => (result instanceof Error ? 0 : result.json?.balance)
 

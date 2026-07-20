@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// ADMIN — the ONE public authoring surface + the package authority model. A single SUPER `AdminCap` (never
 /// expires) is minted at publish to the publishing admin; it can mint short-lived TEMP admin caps that expire at the next
 /// epoch (≈24h), so day-to-day authoring runs from a throwaway cap while the root key stays cold.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // fight/project.js — projections of the committed fight state. The HUD and the board read ONLY these selectors;
 // they NEVER read `entries`/`log`/`sim` directly and NEVER write. `state = fold(log)`; every value here is a pure
 // projection of that state (FIGHT_REWRITE_DESIGN §3). No fight logic lives here — only reads.

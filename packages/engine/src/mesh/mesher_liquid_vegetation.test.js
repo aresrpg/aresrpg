@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Golden mesher test — liquid faces vs. FOLIAGE neighbors (split out to keep mesher_liquid.test.js
 // under the 600-LoC ceiling; same convention as the mesher.test.js / mesher_liquid.test.js split).
 //

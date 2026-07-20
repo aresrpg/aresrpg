@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { test, expect } from 'bun:test'
 import { verifyPersonalMessageSignature } from '@mysten/sui/verify'
 import { fromBase64 } from '@mysten/sui/utils'

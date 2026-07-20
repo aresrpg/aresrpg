@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // T64 TEMPLATE reads — chain-direct (no server) readers for the game-content catalog: `template::MobTemplate`
 // and `template::ItemTemplate` (both SHARED objects, so there's no "list owned objects" shortcut — we replay
 // the mint events to discover every template id ever minted, then batch-fetch the live objects). Feeds the

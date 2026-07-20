@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { ITEM_CATEGORY as item_category } from '@aresrpg/sdk/items'
 import { mask_pending_items, merge_pending_buys } from '@aresrpg/inventory'
 

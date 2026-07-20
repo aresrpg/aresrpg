@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// ACTIONS — the player's in-turn actions: MOVE (AP-free MP economy, BFS reachability around bodies/blockers),
 /// CAST (the resolver), WEAPON attack (§17.27, AP-priced, repeatable while AP lasts), and PASS (end turn).
 /// SINGLE-PTB TURN LAW — a turn is a single PTB: MOVE/CAST/WEAPON are fully

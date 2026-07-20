@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { test, expect, chromium, type Page } from '@playwright/test'
 
 // WS-B — serverless p2p lobby contract, proven over REAL Trystero (final-design plan decision #2:

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { get_object_json, balance_value, to_bigint } from './_object.js'
 
 // KOLIZEUM READS for `aresrpg_kolizeum` — the live lobby state a consumer needs to render / gate join/exit. Status is

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PROMPT STACK registry (S-18 discovery, DECISIONS 07-09 pick + addendum) — the ONE home for world
 // proximity prompts. Sources (dungeon NPC, zone search, gather, ride) REGISTER a prompt when their signal
 // is live and CLEAR it when it dies; the PromptStack HUD component renders every live prompt as the shipped

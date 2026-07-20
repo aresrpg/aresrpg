@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* ════════════════════════ WORLD MAP — player marker overlay ════════════════════════
  * The base .map / .map__bar / .map__stage / .map__canvas / .map__loading chrome lives in admin.css;
  * this file is just the live player marker drawn over the colored terrain blit — a positioned ice

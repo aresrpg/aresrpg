@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SHOP COLOR VARIANT → GEM badge mapping — the SINGLE home for the cosmetic variant label: badges show
 // elemental cosmetics as e.g. "lorito cloak [emerald]" instead of "air".
 //

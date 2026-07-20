@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Seeded world-generation context and pure per-column surface queries.
 
 import { SEA_LEVEL, WORLD_HEIGHT, derive_world_seeds } from '../config/world_config.js'

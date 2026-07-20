@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORN COSMETICS — equipped HAT + CLOAK GLBs on the roam avatar: the aresrpg-legacy mechanism TRANSCRIBED
 // (never imported — legacy is the spec, this is the port). Legacy shipped exactly two worn slots:
 //   • hat  — the model parented to the rig's 'Head' bone, RAW (legacy entities.js:101-120 equip_hat:

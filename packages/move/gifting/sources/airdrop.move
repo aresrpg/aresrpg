@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// AIRDROP — whitelist claim-MINT for external-collection holders (design
 /// doc `docs/ITEM_SEND_PLAN.md` Part B). An off-chain process snapshots an external NFT collection's holders,
 /// whitelists them on a shared `Airdrop`, and each holder connects and claims — the reserved item MINTS directly

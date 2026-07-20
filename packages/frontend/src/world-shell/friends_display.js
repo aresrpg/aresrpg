@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE friend-row name derivation (a raw address slice was leaking onto freshly-added friends —
 // OnlinePlayers' FriendRow fell back through rpc/use_address_names + components/address_name's SuiNS/truncated-
 // address chain, a SECOND resolution path parallel to character_name_resolve.js's ONE HOME for id→name display).

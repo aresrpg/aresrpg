@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ceremony_lib.mjs — helpers for the 5-package PUBLISH CEREMONY orchestrator (S-46 merge). SCRIPT ONLY.
 //
 // Split out of ceremony.mjs (the 600-LoC file cap): pure, side-effect-light helpers — constants, the

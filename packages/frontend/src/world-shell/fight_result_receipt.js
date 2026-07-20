@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Atomic settlement receipt correlation. `ResultOpened` proves the result/XP/loot but carries no HP;
 // `ResultMinted` carries final_hp for every settled seat, so it MUST be matched by character before use.
 

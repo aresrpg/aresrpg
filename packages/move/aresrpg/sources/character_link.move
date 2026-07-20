@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// CHARACTER_LINK — the character-state write + read surface for progression, world, jobs, spells, equipment
 /// bridges, and the game-side item mint/burn/scribe/pet doors. Historically the SINGLE seam between the game and
 /// items PACKAGES; S-46 dissolved that boundary (one package now), so the four custodied `ExtensionCap`s and the

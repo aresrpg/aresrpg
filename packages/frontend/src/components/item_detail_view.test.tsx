@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // item_detail_view.test.tsx — DOM-less proof of ItemDetailView's honest-rendering invariants without a
 // jsdom/RTL harness (none exists in this repo, and adding one for these would violate minimal-deps):
 // react-dom/server's renderToStaticMarkup needs no jsdom, and a scoped i18next instance sidesteps the

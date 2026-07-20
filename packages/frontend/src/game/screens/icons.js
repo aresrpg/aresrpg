@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Single source of truth for inline SVG icons shared by the vanilla DOM screens
 // (character-select.js / character-create.js — consumed via innerHTML) and the one
 // React HUD component (Hud.jsx — consumed via dangerouslySetInnerHTML).

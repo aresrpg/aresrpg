@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // hp_display_pref unit test (the HP gem's percent-vs-stacked mode must survive a reload).
 // The module is pure localStorage (quality_pref idiom), so the toggle → persist → fresh-mount-read loop is
 // tested at the module seam: GameWorldHud's Vitals hydrates via `useState(() => get_saved_hp_display() ===

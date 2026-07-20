@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /*
  * Jobs drawer — master/detail. LEFT: a job-list rail grouped by category (selectable rows + level
  * chip). RIGHT: the selected job's detail (header, XP bar, Resources | Recipes sub-tabs). Ported in

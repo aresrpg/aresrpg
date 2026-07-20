@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D36 — AUTO-COMMIT AT TIMER EXPIRY + D254 CUMULATIVE MOVE. An UNCOMMITTED move/cast draft must
 // AUTO-COMMIT the SAME batch the confirm button fires when the 90s turn deadline hits (never silently discarded);
 // an IDLE turn (no draft) does NOTHING — the public post-expiry pass_turn (fight-liquidation) is the bystander

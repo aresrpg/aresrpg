@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // BOARD-HIGHLIGHT POST-AgX OVERLAY PASS — the display-space ALPHA composite that holds tactical board
 // highlights colour-CONSTANT across the day↔night auto-exposure swing (reported: "highlight colors washed
 // at night"). PRECEDENT-MIRROR of vfx_overlay_pass.js — same isolated-layer + post-AgX composite CLASS; the

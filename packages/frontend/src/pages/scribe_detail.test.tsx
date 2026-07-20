@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // scribe_detail.test.tsx — RED-FIRST regression: the runeforge LEFT card (scribe.tsx) must render the
 // selected gear's REAL rolled stats, not the template catalog's permanently-hardcoded '{}' (prod
 // regression, live v35 — see scribe_detail.ts for the full diagnosis). Proven DOM-less

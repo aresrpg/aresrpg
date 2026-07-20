@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // In-app CONFIRM dialog — replaces the native browser `window.confirm` (standing house law: NEVER a native
 // dialog; every prompt is the app modal, so it matches the gothic-terminal DNA and can't be styled by the OS).
 // Pure, prop-driven view: the caller owns `open` (a local state flag), passes the copy + the two handlers, and

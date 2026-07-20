@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // M1 HERMETICITY GATE (node-side twin of ares-test fightcore gate a + depcruise fight-core-hermetic):
 // the package's ENTIRE src import graph resolves inside {itself, @aresrpg/sim, @aresrpg/sdk, zustand/vanilla,
 // node:*} — zero DOM, zero React, zero three.js, zero frontend reach-back. Runs with the package suite, so a

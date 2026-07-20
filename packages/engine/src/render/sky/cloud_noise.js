@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure cloud math — the GPU-free half of the clouds system. Holds the deterministic seeded noise (the
 // CPU reference/fallback for the baked `mx_` weather/base fields, and the surface the "cloud noise
 // determinism from seed" tests exercise), the shadow-transmittance extinction coefficient, and the

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// POLICY proofs for the §17.21 ATTACK-DOMINANT draw (stochastic + rush behavior).
 /// The bug these pin: a mob adjacent to a player could draw `reposition` and WANDER instead of hitting
 /// ("came → walked back → came, then didn't attack me"), and the multi-target weighted reposition flip-flopped

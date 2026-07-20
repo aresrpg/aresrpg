@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LEG A — KILL DOESN'T STICK — a regression from v32 where a lethal cast made the mob die locally, then it
 // got its hp back on the next turn. The lethal cast was PREDICTED locally (mob 0 hp) but the turn's tx
 // reverted (the end-turn brick, tracked separately — SDK act_pass after a winning cast), so the chain never saw

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Character-core tests: the lock-pledge constitution (mint → PERSONAL-kiosk lock, pledge id-match, plain-kiosk
 /// refusal), the colour-range validity, the `Display<Character>` fields, and the character-owner-signed `anchor_position`
 /// entry (stamps + overwrites, non-owner refused, dark-package refused). Name uniqueness / class whitelist /

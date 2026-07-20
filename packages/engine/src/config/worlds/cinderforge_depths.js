@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD 07 · CINDERFORGE DEPTHS (on-chain `07_cinderforge_depths`, biome `magma_foundry`) — THE
 // cave/forge planet. Seed identity (seed/mainnet/07_cinderforge_depths/world.json): fire+air elements,
 // "heat-tiered veins — deeper and hotter mines richer", "the ore-farm world — best duskite rate in the

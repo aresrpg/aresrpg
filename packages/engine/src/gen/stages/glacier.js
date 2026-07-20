@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GLACIER RIBBON + MORAINES stage (GLACIAL GENERATION §B.3). A SURFACE-MATERIAL stage that paints the flat
 // trough floors of the ice-altitude band as a glacier ribbon (ref R3): ICE/firn surface, a dark MEDIAL
 // moraine stripe down the valley centreline, dark LATERAL moraines hugging the walls, periodic CREVASSE

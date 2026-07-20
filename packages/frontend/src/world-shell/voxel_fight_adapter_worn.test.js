@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST regression (v1.12.31 ② "cosmetics are not rendering in fights"): the engine fight-rig now mounts
 // worn cosmetics (board_entities' create_worn_cosmetics per player) and voxel_fight_folds forwards
 // `worn: fighter.worn ?? null` — but the fighter payload NEVER carries `worn`. The ADAPTER is the last seam: it

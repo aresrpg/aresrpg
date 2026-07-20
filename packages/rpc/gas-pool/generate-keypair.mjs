@@ -1,4 +1,6 @@
 #!/usr/bin/env bun
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Generate a FRESH, dedicated ed25519 sponsor keypair for the local gas pool.
 //
 // The gas pool signs the SPONSOR half of player transactions, so its key must be

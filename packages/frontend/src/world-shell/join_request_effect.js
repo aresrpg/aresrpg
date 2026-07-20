@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // JOIN-REQUEST EFFECT (character↔world session binding) — the create RECEIPT drives the actual world
 // join. The session gate's pure core emits a `join_request` EFFECT REQUEST on begin_join (roster/store.ts, the
 // instant the create tx lands); THIS edge runs the money-routed auto_join_world for that character — receipt-

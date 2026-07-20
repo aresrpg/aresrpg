@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // apply_loot_payload.mjs — apply the seed-authored LOOT TABLE to every live MobTemplate IN PLACE via the
 // additive `aresrpg::mob_template::set_loot` setter (ceremony-1's 988 loot edits AND
 // the wool-floor NEVER reached chain — `MobTemplate.loot` still serves MINT-TIME rates; no setter existed).

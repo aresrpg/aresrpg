@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Fight-status combat semantics over the upgrade-safe `spell_board` rows.
 ///
 /// AresRPG 1.29 brand rules implemented here: kind 27 is the authoritative invisibility state; enemies cannot

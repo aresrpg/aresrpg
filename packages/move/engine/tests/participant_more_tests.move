@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Pure unit coverage for `participant`'s zero-covered getters/mutators over a bare `Participant` — no Fight or
 /// Scenario needed (`participant::new` + the HP/AP/MP/stat mutators are `public(package)`, directly callable from
 /// any module in this package).

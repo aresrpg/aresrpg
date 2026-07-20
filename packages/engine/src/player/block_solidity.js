@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Block-class → collision predicates (ENG-8). SINGLE SOURCE OF TRUTH for "what does the character
 // collide with vs swim in", derived from the frozen block_registry classes so adding a block never
 // needs a second edit here. Solid = the `solid` class (stone/dirt/grass/sand/log/leaves/snow/glowstone);

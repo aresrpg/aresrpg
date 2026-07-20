@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PROOF: the delivery VFX for a
 // PLAYER cast no longer fires the instant the swing STARTS — it now waits for MOST of the swing to play (not
 // just its W4 impact-frame resolve, which every hit/death/float timing still reads unchanged — board_entities'

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-24 / D160 — the public character-controller facade contract. The underlying physics
 // (step_controller) has its own suite (controller.test.js); here we pin the FACADE semantics the dapp
 // builds against: fixed-step determinism from any tick cadence, input merging, transform shape,

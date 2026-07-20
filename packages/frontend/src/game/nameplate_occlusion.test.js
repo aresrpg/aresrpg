@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The shared nameplate home, headless: (1) plate_occluded over a scripted voxel field — a solid slab between
 // anchor and eye must occlude, a clear span must not, the endpoint skip must keep a ground block from
 // self-occluding; (2) project_plate over a REAL three PerspectiveCamera — the behind-camera cull and the

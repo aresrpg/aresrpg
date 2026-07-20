@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-12 REGRESSION capture (throwaway diagnostic) — the froxel god-ray blowout that was flagged:
 //   (a) open lakeside ground-level  — white VERTICAL streak-walls near lake/forest
 //   (b) sun-toward at LOW sun        — CONCENTRIC WHITE ARCS radiating from the sun (froxel HG phase blown)

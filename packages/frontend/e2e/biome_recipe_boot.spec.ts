@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { test, expect, type Page } from '@playwright/test'
 
 // Frontend wiring lane (DECISIONS 2026-07-12) — the "headless recipe-identity proof": the existing engine-side

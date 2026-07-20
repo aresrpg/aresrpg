@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // B7 BIOME PARTICLE KINDS pose proof (ENGINE_AAA_PLAN §8 B7 bar). Renders each PARTICLE_KINDS kind on a
 // standalone WebGPURenderer (demo/particles_probe.html) and proves it actually draws a moving field —
 // fireflies against night, pollen in a lit meadow, embers over scorched, snow, under-canopy leaf-fall.

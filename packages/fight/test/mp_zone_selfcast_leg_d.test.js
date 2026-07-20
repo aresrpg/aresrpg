@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LEG D — MP-ZONE LATCH AFTER SELF-CAST — after casting invisibility, the mp range didn't update: hovering
 // showed nothing since the light-green zone never re-rendered. The
 // light-green move zone (move_wash.reach) is suppressed WHILE my own cast VFX presents (cast_presenting) — a

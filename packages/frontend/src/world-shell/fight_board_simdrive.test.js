@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LANE SIMDRIVE · S2 — the fight BOARD is SIM-DRIVEN through the ONE reducer; a /v1 poll ENTERS the fold normally
 // and is DEDUPED when it carries no unseen action (2026-07-16: "the poll just enters the reducers normally
 // and is deduped if already played by the sim ... a mob should not rollback after being pushed"). Action identity

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LEAF-2 auto-settle mirror — split out of dungeon_settlement.test.js to respect the ≤600-LoC law
 // (docs/CODE_LAW.md; the recap-truth lane's leg② additions pushed the parent file over it). dungeon_settlement.js
 // itself is unloadable headless: it pulls the whole SDK/auth/i18n/game-store graph (same class as

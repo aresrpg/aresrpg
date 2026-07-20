@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PET COMPANION — never built until now: `/v1` characters carry `pet`/`pet_equipped`
 // (packages/rpc/api/views.js's `character_pet_projection`) all the way through boot_roster.js's
 // `rpc_to_card` ("the later world lane decides how that pet becomes a companion or mount prompt"), but

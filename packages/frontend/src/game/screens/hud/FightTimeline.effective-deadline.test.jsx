@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIX 2 — the VISIBLE turn timer must count to the EFFECTIVE deadline (deadline − COMMIT_BUFFER_MS) while I hold
 // a live draft, so it never reads "time left" after the draft has already auto-committed. This is
 // the DISPLAY proof: FightTimeline rendered through the REAL stores (renderToStaticMarkup, the FightReport.test

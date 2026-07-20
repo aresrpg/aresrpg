@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // MOB GROUP CARD — the structured overhead card for an on-chain mob group. Split out of world_spawns.js (a
 // 2026-07-10: header restructure pushed the file past the 600-LoC law → extract the card render). The card is a
 // UNIT, not a player plate: a HEADER band (the group level + the time-XP aging bonus) over one row PER member.

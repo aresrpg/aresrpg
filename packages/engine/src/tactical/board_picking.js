@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-16 Phase B — TACTICAL BOARD PICKING (ray → cell) + raw pointer events.
 //
 // Picking is an ANALYTIC Y-PLANE intersection with FLOOR snapping — NEVER a mesh raycast (the study

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DEV-ONLY synthetic terminal-fight harness — the D139 revival (the old __ARES_DEV_FORCE_FIGHT_BOARD died with
 // the isometric renderer it mounted; this one drives the VOXEL pipeline through the REAL adapters). Sibling of
 // dev_cast.js/dev_probe.js: registered by GameWorldHud's import.meta.env.DEV block, tree-shaken from prod,

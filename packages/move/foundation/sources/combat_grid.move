@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// COMBAT GRID + FIXED DAMAGE — pure, integer-only board geometry (cell = y*GRID_W + x), Chebyshev distance, the
 /// greedy mob-approach AI step, and the FIXED-damage pipeline (the spell formula with the per-cast RNG pinned out).
 /// Extracted from `aresrpg_foundation::combat` so the combat module stays focused on the Fight lifecycle. REUSES `spell`'s

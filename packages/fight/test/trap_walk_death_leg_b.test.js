@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LEG B — TRAP-DEATH ROLLBACK — a bug where a mob that walked onto a trap and died would roll back to its
 // initial position instead of disappearing, keeping its glb model. Chain movement.move truncates the walk at the
 // first trap cell and it dies THERE (parity: sim reduce.js mirrors). The final projection the rig consumes must

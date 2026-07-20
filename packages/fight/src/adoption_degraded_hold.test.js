@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE ADOPTION HOLD-NOT-DEGRADE LAW (the 07-18 adaptive-run mechanism, lane ADOPTION_SEAM). On fight adoption
 // the exact object read can return a TORN record: the json's `board: BoardGeom` missing, which decode_fight
 // maps to `width: 0, height: 0` + empty vectors (fight_read.js:81-90 `Number(board.width ?? 0)`). Adopting

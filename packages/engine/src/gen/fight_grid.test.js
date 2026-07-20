@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Fight-grid derivation tests (§6.6, ticket #25). Three gates:
 //   1. GOLDEN      — a fixed (hash, room) yields exact grid bytes + starts (locks determinism +
 //                    the Move-twin contract; any drift here is a world/on-chain fork).

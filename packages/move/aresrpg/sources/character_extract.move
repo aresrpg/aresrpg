@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// CHARACTER_EXTRACT — the zero-price seam that pulls a kiosk-LOCKED Character back out of its personal kiosk
 /// for the ONE legitimate non-trade reason a character leaves the market: to be DELETED —
 /// characters must be deletable from the characters tab, provided everything is unequipped first, even the free one.

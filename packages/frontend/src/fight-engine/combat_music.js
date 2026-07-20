@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT ENGINE — D111 combat-music gate. A pure derivation of "should the tenser BATTLE bed play right now",
 // kept env-free (no store/audio imports) so it is unit-testable in isolation alongside phase.js / chain_frame.js.
 //

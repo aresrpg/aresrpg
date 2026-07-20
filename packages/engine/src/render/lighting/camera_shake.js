@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [D248] TRIGGERED CAMERA SHAKE — the impact cue for the fight cast-VFX wave. Fired by the app when a
 // hit lands (engine.shake_camera(mag)); the engine applies a decaying, NON-accumulating offset to the
 // camera right before the frame renders, then restores the base pose so the shake never drifts the rig.

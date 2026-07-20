@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GATHERABLE sprite OPS (ENGINE_AAA_PLAN §5 — rider 2 "beautiful sprites for wheats, ores, plants") — the
 // three procedural shape ops for the job-content art system: wheat_sheaf (FARMER), ore_vein (MINER),
 // herb_cluster (HERBALIST). SELF-CONTAINED BY DESIGN, exactly like texture_ops_flora.js: these import ONLY

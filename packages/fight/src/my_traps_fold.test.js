@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ④+⑦b MY_TRAPS — the ONE fold-state home (ruled 07-19): the store's durable `my_traps`, populated by the
 // trap-cast fold, sprung by the COMMITTED (receipt-proven) fold, projected LIVE by engine_view, read by the sim
 // door. trap_overlay is render-only — ZERO sim reads from it. This drives the whole lifecycle end to end.

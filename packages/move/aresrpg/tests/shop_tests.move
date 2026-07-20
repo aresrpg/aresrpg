@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Shop (sale-gate) tests: the happy buy + pack buy (mint, ROLL stats, lock in the buyer's PERSONAL kiosk, pay
 /// @treasury the exact price × quantity, refund change once, bump the supply counter), plus every abort —
 /// paused, wrong template, short payment, sold-out at the cap, buy_many over-reserve, quantity 0 / over-cap, sale

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // address_name.test.tsx — D52 SuiNS display resolution.
 //
 // No DOM/RTL harness (none exists in this repo — see item_detail_view.test.tsx's own note; adding one

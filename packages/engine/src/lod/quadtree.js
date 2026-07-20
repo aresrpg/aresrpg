@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Far-shell LOD quadtree + per-frame selection (§11 NG-LOD, survey S1) — the Distant Horizons
 // selection state machine, ported wholesale. A single square quadtree tiles the XZ plane in FAR
 // sections (section_builder.js). Each node owns ONE fixed-resolution 32×32 section; only its world

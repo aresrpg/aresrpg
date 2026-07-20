@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SEAM 5 — COMPASS / ZONE FEED (SPEC §5 wayfinding, the "information-parity law").
 //
 // "bots read spawn positions straight off the chain, so the client MUST surface the same public facts

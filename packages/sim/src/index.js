@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // @aresrpg/sim — the deterministic turn-based combat reducer.
 //
 // reduce(state, command, grid) -> { state, events }. Pure, integer-only, seeded-PRNG. The combat AUTHORITY is

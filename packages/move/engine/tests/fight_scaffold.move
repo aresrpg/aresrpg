@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Shared #[test_only] scaffold for the engine fight suites: stand up + ENABLE the package (GameConfig switch +
 /// the fight Version dark-ship + registry), plus the punching-bag factories (mob spec, combatant, clock, and the
 /// create_fight doors). Split out of fight_tests.move (the ≤600-LoC file cap); the tests import these verbatim.

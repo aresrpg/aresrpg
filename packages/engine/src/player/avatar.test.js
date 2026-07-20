@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D193 — the CPU recolor compositor math, pinned against the legacy shader semantics
 // (customizable-texture.js fragment + blend state): alpha<0.5 discard, src.rgb·color srcAlpha-blend,
 // accumulator alpha untouched.

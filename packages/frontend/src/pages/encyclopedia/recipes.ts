@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure recipe-structure mapping for the §14 encyclopedia (no React / no RPC — plain data, unit-tested
 // offline against the /v1 contract, exactly like loot.ts). The /v1 `recipes` rows (object-snapshotted
 // on-chain `crafting::Recipe`s) are the SINGLE source of crafting truth; these helpers answer the two

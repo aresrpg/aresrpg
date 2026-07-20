@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Batch-render the encyclopedia mob icons (mob_icon quilt: {glb}.png + {glb}_hd.png). Recreates the
 // pipeline census.mjs / WALRUS_ASSETS.md already reference. Each creature GLB is loaded through the REAL
 // game render SDK (packages/engine/src/player/mob_model.js → create_mob_model: the shared DRACO/GLTF loader,

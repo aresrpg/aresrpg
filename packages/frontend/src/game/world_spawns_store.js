@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Live overworld SPAWN SNAPSHOT — the read seam between world_spawns.js (the 3-D rig driver + the SPEC §14
 // zone-spawns reader/reconciler) and the HUD minimap overlay. world_spawns.js already fetches + reconciles
 // the discovered 3×3 zone neighbourhood's mob GROUPS + resource NODES (event-fresh: the search fast-path tops

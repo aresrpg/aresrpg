@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
 # scripts/codeql/db-create.sh — build (or rebuild) the CodeQL databases for the repo.
 #
 #   js    — javascript-typescript over the whole repo (~50s cold / ~21s warm, ~350 MB)

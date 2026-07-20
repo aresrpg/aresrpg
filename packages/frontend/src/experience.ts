@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Retro 1.29 XP curve — copied from plugins/core/.../Experience.java
 // Index 0 unused, levels 1–200
 

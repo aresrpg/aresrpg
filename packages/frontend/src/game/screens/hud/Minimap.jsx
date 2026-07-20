@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Cube-World MINIMAP (top-right) — a live 3-D relief map of the REAL voxel world around the player. The
 // terrain is the engine's analytic per-column {height, map-colour} (world_minimap_column), hill-shaded and
 // drawn under an oblique tilt that ROTATES with the camera (an EASED heading, round 5 — see use_minimap.js)

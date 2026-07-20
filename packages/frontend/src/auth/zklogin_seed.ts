@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PURE zkLogin address-seed derivation + the mandatory address guard (P0 create fix, coordinator-ruled).
 // Why this exists: Enoki generates the zkLogin PROOF lazily on the first SIGN (`createZkLoginZkp`), so a
 // fresh Google login reaching first-character-create has `session.proof` (and its addressSeed) undefined.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Mob basic-attack spell DATA (c101: mobs need a castable attack). Proves the per-mob attack templates are
 // derived faithfully from mobs.json melee_damage and carry the spells.json template SHAPE the sim's
 // `normalize_spell_templates` consumes (cost / range / base_effects{type,min,max,element,target,chance}).

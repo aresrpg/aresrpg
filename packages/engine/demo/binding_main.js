@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S-17a — standalone entry for the world-binding-seams demo (binding.html). Thin bootstrap: grab the
 // canvas + gate and hand off to boot_binding_demo (kept separate from main.js so the seam acceptance
 // surface is independent of the main demo).

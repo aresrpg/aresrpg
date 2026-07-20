@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 //! AresRPG event-projection handler — the game read-model spine.
 //!
 //! One sequential pipeline (`ares`) that walks every event in a checkpoint,

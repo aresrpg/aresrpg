@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Unit tests for the pure joystick math (M-03). No DOM, no React — see touch_stick.js header for the
 // sign-convention + no-independent-axis-clamp contracts this asserts.
 import { describe, expect, test } from 'bun:test'

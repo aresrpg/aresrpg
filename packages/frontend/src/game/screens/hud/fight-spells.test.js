@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Resolver unit tests — offline, against the authored spell corpus joined to the current seed receipt. Proves
 // the bar renders EXCLUSIVELY the on-chain spells a character can reach and every cast has an object id.
 

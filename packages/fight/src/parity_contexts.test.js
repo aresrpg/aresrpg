@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GATE D — cross-context state-hash parity (FIGHT_REWRITE_DESIGN enforcement §2): the SAME
 // scripted fight driven through all three contexts (world · dungeon · kolizeum) must produce IDENTICAL
 // fight-core state-transition hashes — context cannot alter fight semantics BY CONSTRUCTION. The contexts

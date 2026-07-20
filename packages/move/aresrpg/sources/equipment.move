@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// EQUIPMENT — the 17 combat + 3 cosmetic slots on a Character (SPEC §10), the ONLY home of slot bookkeeping.
 /// It sits ON TOP of the items `extract` seam: an item is pulled out of the holder's kiosk (`extract_for_equip` →
 /// `(Item, EquipPledge)`), this module enforces the SLOT RULES and folds its stats, then discharges the pledge

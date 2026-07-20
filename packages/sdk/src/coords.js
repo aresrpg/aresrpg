@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD ↔ CHAIN COORDINATE CODEC — the world must extend in all directions, which requires signed
 // coordinates. The chain stores block coords as UNSIGNED u32 in `[0, bounds)` (world.move
 // `assert_in_bounds`), so an origin at (0,0) can only ever grow one way. To let the world extend in ALL

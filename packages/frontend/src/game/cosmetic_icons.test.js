@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // COSMETIC_ICON map: drift-proof coverage of the generator SSOT (seed/mainnet/shop.json) + the resolver
 // that fixes "cosmetics don't show in the wiki" (broken item_type-as-slot-word icon urls).
 import { readFileSync } from 'node:fs'

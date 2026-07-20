@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [owner: right-click dead app-wide] regression proof — the contextmenu suppressor (`sc`) must bind to
 // the CANVAS render target ONLY, never `window`. Before this fix it rode window, so the spectate
 // backdrop (which sits behind the whole app) killed native right-click/inspect-element on every route,

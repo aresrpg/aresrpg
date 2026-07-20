@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [owner: HD icons 404 for thumb-only assets] regression proof — Fuwa Hood (White) and 60 other item/
 // cosmetic slugs have a thumb (`{slug}.png`) but no `_hd.png` variant yet (2026-07-13 icon-cache census:
 // 1038 hd files, 61 thumb-only). An `hd` ItemIcon request that 404s must retry the BASE icon before

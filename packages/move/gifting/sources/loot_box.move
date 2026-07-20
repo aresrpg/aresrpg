@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// LOOT BOX — the §11 gacha PET box: a consumable whose USE rolls on-chain randomness across a weighted table of
 /// pet templates and mints ONE of them, kiosk-locked. This module owns BOTH the admin-authored loot TABLE (a
 /// shared `LootRegistry`, keyed by box template id — the same shape as `pet::PetFeedConfig` /

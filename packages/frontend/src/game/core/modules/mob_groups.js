@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Mob groups — folds the server's per-group spawn/despawn packets into state.visible_mobs_group so the
 // imperative roam scene can render each group's members as sprites AROUND the group's FIXED anchor.
 //

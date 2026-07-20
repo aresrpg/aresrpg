@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // fight/inputs.js — the ONE reducer for ALL fight contexts (world / dungeon / kolizeum).
 //
 // A classic tactical fight is an ordered action log; `state = fold(log)`; every view is a projection of it and nothing

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The item detail's "DROPPED BY" mob list — extracted verbatim from items_tab.tsx (pure presentation,
 // ≤600-LoC law). Rows come pre-sorted best-chance-first from the live /v1 inversion; the empty state is
 // the honest no-drops line, never a fabrication.

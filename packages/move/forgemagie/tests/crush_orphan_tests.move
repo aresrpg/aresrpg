@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// CRUSH ORPHAN tests: the template-less crush twin for gear whose ItemTemplate was
 /// burned on-chain. PARITY IS THE ORACLE — orphan-crushing an item MUST yield IDENTICALLY to crushing the SAME
 /// item (same rolled stats, same seed, virgin board) under a REAL L50 template, proving the fixed-level anchor

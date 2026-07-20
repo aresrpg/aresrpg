@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* board #13 (rich-board wave) — the dungeon turn-input/status chrome ONLY (the board itself is the rich 3D
    renderer — fight-overlay.js + fight-board-render.js — so this panel hugs the BOTTOM edge, clear of the
    board center, per spec_fight_ui's zone map). Gothic-terminal DNA retheme (#16 spec_fight_retheme_tokenmap):

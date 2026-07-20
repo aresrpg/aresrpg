@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Gas-burn emergency 07-06 — proves the pure pre-flight verdict: a would-fail simulation and an over-ceiling
 // cost are BOTH refused BEFORE any signing (zero gas), and a normal tx gets an explicit 1.5× budget. The MIST
 // vectors mirror a real grpc simulateTransaction `effects` block (gasUsed = computation + storage − rebate).

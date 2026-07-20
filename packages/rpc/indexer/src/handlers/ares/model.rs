@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 //! Typed AresRPG (and native kiosk) event bodies — the BCS decode targets.
 //!
 //! Each struct mirrors an on-chain `event::emit` payload **field-for-field, in

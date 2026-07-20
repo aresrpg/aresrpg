@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // First-time coachmark tour (#15) — a SHORT, linear "how to play" spotlight tour for a brand-new player
 // (naive-user law: understand AND enjoy in ~10s, zero text walls). It dims the live world, spotlights ONE
 // element at a time (the in-world minimap + vitals, then the companion SIDEBAR meta-tabs where the breadth

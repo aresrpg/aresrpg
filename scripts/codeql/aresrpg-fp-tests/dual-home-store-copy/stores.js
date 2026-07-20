@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Fixtures for js/aresrpg/dual-home-store-copy (CODE_LAW L-P4, ONE reducer per domain).
 // RED cases are violations the query MUST flag; GREEN cases are sanctioned shapes it must NOT.
 import { create } from 'zustand'

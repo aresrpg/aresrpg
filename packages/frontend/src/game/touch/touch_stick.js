@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure vector math for the left-thumb virtual joystick (MOBILE_SUPPORT_PLAN.md M-03 / §2.1). Zero DOM,
 // zero React — a drag delta in pixels goes in, a normalized {forward, strafe} in the engine's documented
 // -1..1 contract comes out (packages/engine/src/player/character_controller.js:49-51 — "forward positive",

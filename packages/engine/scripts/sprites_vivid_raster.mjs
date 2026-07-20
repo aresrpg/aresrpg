@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // VIVID-WORLD sprite SHOWCASE — bakes every new flora sprite (texture_recipes_flora.js via the
 // self-contained FLORA_OPS) into PNGs so the art is eyeball-verifiable WITHOUT wiring into the hot base
 // baker files. Each sprite → its own named PNG (variants side by side over an alpha checker) + one combined

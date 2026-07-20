@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
 # check-constraints.sh — the AresRPG constraint gate.
 #
 # Mechanical checks that keep the tree honest, wired into `bun run lint`:
@@ -385,6 +387,29 @@ fi
 
 echo
 if ! test_reachability_gate; then
+  FAIL=1
+fi
+
+# ── SPDX header gate: every source file carries the license identity ─────────────────────────
+# The per-file marking travels with snippets (survives separation from LICENSE); the stamper
+# (scripts/stamp_copyright.mjs) writes it, THIS leg keeps every NEW file honest.
+spdx_gate() {
+  echo "== SPDX license-header gate =="
+  local missing
+  missing="$(git ls-files -- '*.js' '*.mjs' '*.cjs' '*.ts' '*.tsx' '*.jsx' '*.move' '*.rs' '*.css' '*.sh' '*.yml' '*.yaml' \
+    | while IFS= read -r f; do
+        head -3 "$f" | grep -q 'SPDX-License-Identifier' || echo "$f"
+      done)"
+  if [ -n "$missing" ]; then
+    red "  ✗ FAIL: source file(s) missing the SPDX header (run: node scripts/stamp_copyright.mjs):"
+    echo "$missing" | sed 's/^/      /' | head -20
+    return 1
+  fi
+  grn "  ✓ every source file carries the SPDX header"
+}
+
+echo
+if ! spdx_gate; then
   FAIL=1
 fi
 

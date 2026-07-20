@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // COSMETIC → STATUS AURA (display concern, frontend home). When a mapped cosmetic is equipped, the roam
 // avatar's OWN silhouette glows with the aura's pack colour (engine attach_status_overlay + STATUS_OVERLAY).
 //

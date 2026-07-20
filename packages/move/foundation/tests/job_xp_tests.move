@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// JOB XP TESTS — coverage for the immutable 100-level job progression table's public surface. No private
 /// helpers in this module (unlike `character_xp`, everything here is a direct, fully-public formula).
 #[test_only]

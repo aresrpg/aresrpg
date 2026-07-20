@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SEED_SPELLS_PHASE — the SPELLS-ONLY seeder (seed_full_corpus.mjs PHASE 8, extracted verbatim).
 //
 // WHY A DEDICATED RUNNER: the 2026-07-13 SPELL_KITS reseed mints ONLY the new 240-spell kit corpus

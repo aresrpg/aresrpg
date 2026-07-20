@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pet loot-box two-phase door builders (loot_box::open_box + loot_box::claim_pet). OFFLINE: the deployment override
 // seam (context.ids.aresrpg) builds each tx without a live publish; asserts the targets + arg shapes (10 / 6), the
 // terminal-vs-composable split (open_box carries &Random ⇒ terminal single call; claim_pet is deterministic), the

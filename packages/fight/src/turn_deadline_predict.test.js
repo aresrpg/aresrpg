@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST regression for the D36 turn-theft wall: deadline auto-commit used to live in a setTimeout closure.
 // A new TurnStarted could fold a fresh deadline while that closure still held the prior turn's deadline, so the
 // callback committed in the middle of the live turn. Time now enters the reducer as `tick`; its decision must read

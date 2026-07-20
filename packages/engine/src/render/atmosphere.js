@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG2-ATMO composition — the single module that wires the shelf-ready atmosphere pieces (sky_node,
 // clouds, froxels) + god-rays + the ambient particle layer into ONE coherent stack, and owns the
 // tunable config (cloud altitudes retuned for OUR world scale, froxel NEAR-haze floor, ambient-depth

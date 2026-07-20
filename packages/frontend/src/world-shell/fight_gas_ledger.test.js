@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT COST LEDGER — proves the accumulator's arithmetic (07-11): multi-tx fold, rebate
 // subtraction (including a rebate-heavy total going negative → refund), and reset-on-fresh-fight-start.
 import { afterEach, describe, expect, test } from 'bun:test'

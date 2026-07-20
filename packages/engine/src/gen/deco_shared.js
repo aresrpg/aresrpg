@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Shared decoration config + column-hash helpers used by BOTH the schematic placer (surface_decorator.js)
 // AND the cross-flora placer (surface_flora.js). Extracted VERBATIM from surface_decorator.js to (a) break
 // the import cycle — decorate_chunk imports surface_flora, and surface_flora needs these helpers — and (b)

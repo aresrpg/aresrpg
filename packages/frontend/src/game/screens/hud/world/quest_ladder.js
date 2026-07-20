@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The onboarding QUEST LADDER — PURE CORE (no React, no engine, no side effects). The single home for
 // the 5-quest tutorial chain, its detection logic, and its versioned localStorage persistence. Split out
 // of the runtime store (quest_ladder_store.js) so the whole reducer is unit-testable with a plain

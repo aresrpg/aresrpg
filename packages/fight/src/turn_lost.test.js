@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST (PASS-53 MUST-2 — a bug where the auto-pass silently rolled back a movement): a drafted turn that
 // expires UNCOMMITTED — busy past the deadline ('missed'), an executed on-chain failure ('latched'), or a
 // consumed submit epoch with no receipt ('burned') — must surface ONCE as a reducer OUTPUT (`turn_lost`),

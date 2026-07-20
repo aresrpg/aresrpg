@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // i18n PARITY GUARD — fights.tackled (the TACKLED floater tag shown on a denied move). The 6-locale law
 // (CLAUDE.md): every user-facing string lands in ALL locales. The fight adapter renders
 // i18n.t('fights.tackled') on the player's own denied move; a locale missing the key would print the raw

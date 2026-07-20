@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Fight turn controls — End-turn, Ready, and Forfeit grouped CENTER-BOTTOM next to the vitals card (a
 // correction: they were scattered — end-turn in the turn list, ready floating center, leave-combat top-
 // center). Big, clear targets sitting beside the bottom-center life card so the player's eyes never leave

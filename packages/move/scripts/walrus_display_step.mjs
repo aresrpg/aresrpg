@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // packages/move/scripts/walrus_display_step.mjs — S-20 tail: the STANDALONE Display-swap ceremony step.
 //
 // Swaps the three on-chain Display image_url templates (Item / ItemTemplate / Character — the only

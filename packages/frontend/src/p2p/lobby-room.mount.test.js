@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TR-97 — the MOUNTED speed WHITELIST: a peer whose broadcast `state` says it's mounted gets extra speed
 // headroom so its legit ×1.5 roam is never mistaken for a speed-hack and dropped. Drives the REAL inbound path
 // (trystero mocked, the app's own state_action/pos_action.onMessage fired) and observes acceptance in the

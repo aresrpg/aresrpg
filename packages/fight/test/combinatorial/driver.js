@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE COMBINATORIAL DRIVER — run one chain-free sim combination end-to-end through the REAL pipeline and judge
 // it. Flow (the brief's step 2/3): drive the sim (auto-AI mob turns + the combo's scripted player turns) →
 // bridge the ordered sim events into chain receipts + the initial snapshot → fold through the store (the SAME

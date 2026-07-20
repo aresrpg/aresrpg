@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // CRIT FOLD — the pure crit-convergence transform + its law verification. No filesystem, git, chain, or
 // client import lives here: every fold, delta, pin, envelope, and drift rule is proven by fixtures alone.
 //

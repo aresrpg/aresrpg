@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Quality tier table — the single source of truth for the 3-tier ladder (S-85, 2026-07-10). WS1
 // (governor.js, detect.js), the render features (render_scale, foliage_shadows, displacement, grass
 // sway, weather particles, atlas texel size), and the satellite name-keyed tables (cloud_noise.js,

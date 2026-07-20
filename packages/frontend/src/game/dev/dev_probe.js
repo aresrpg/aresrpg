@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DEV-ONLY diagnostic hooks (P0 sweep drive — items 2/9/11 evidence). Sibling of dev_cast.js, the SAME
 // live-module access pattern: real imports inside the app bundle, registered at boot by GameWorldHud's
 // import.meta.env.DEV block, tree-shaken out of prod. These hooks exist because a Playwright-side

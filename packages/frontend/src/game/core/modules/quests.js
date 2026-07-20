@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Tutorial questbook — client engine module. The SERVER is the sole authority on quest progress
 // (transient Redis runtime state); this module only folds the pushed `questsUpdate` snapshot into the
 // `quests` store slice. The QuestsDrawer renders the STATIC chain (@aresrpg/sdk/quests) merged with this

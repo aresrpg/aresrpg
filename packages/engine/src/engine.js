@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Public facade (§3.1) — FROZEN SHAPE, M0 implementation. This is the ONLY entry point
 // downstream code (the demo app, and eventually packages/frontend's World tab) imports.
 //

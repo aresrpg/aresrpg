@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX — IN-ENGINE AgX CAPTURE (?preset=<name>). Plays a fight-VFX preset through the REAL engine
 // render path (create_engine → renderer.js AgX tone-map + grade + bloom post stack), on a FLAT board floating
 // in open sky (the team_demo idiom — the same substrate every dungeon fight uses). This is the honest proof

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Position-trace tap — records tactical entity world trajectories at a throttled rate, so the driven
 // oracle can assert entities are at the RIGHT PLACE THROUGHOUT a move, not just at its endpoints —
 // every glb position gets logged every frame, so movements are checked at every intermediate frame,

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SINGLE HOME for the on-chain item-stat bias. item_stats.move stores every ItemStatistics field as a u16
 // CENTERED at 32768 (`// All values centered at SHIFT_U16 (32768)`), so the unsigned int can carry a signed
 // delta: 32768 = 0, 32773 = +5, 32763 = -5, and the sentinel [32768,32768] = a fixed "no bonus" stat.

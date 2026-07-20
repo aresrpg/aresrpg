@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D157 — the WORLD-tab render-quality dropdown. A tiny 3-step ladder (low / medium / high) [S-85]
 // that pins the voxel engine's manual tier via render_quality.js (engine.set_tier). Empty value = the
 // no-override default (the engine's auto-governor stays in charge). Persists to localStorage; the world

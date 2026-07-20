@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE ACK-WINDOW MOB ROLLBACK (BOOT23 headed-run regression: "there is still the rollback
 // of mobs movements" — the rig walks to its target, snaps back to its pre-turn cell, then re-corrects).
 //

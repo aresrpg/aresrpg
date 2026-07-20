@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The roster/bag spine's ONE-PIPELINE merge core (audit row #3, lane M5). Pure typed-input reducer for
 // `action/sui_data`: every async source (a /v1 snapshot, the client's OWN signed-tx receipt, a chain-direct
 // enrichment read) DISPATCHES a typed input here instead of read-modify-writing `state.sui` from outside.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GAME-FEEL regression fixture (2026-07-07 pro-feel pass — still-to-run felt too fast and sliding,
 // tight spaces were hard to control, and jumps/parkour on single blocks were very hard). Pure math, no
 // renderer: a seeded human-like bot drives the REAL controller across a single-block parkour course,

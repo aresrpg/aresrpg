@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Far-section worker entry (NG-LOD phase B) — runs the PURE, expensive far-LOD build off the main
 // thread so the render thread never stalls on it. A section build downsamples up to 256 chunk-column
 // profiles through the real generator (phase-A report: cold L4 ≈ 550 ms/section) — far too heavy for a

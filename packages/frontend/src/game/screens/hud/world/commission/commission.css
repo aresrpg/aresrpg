@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* Artisan Commission modal — house DNA (near-black glass, gold primary, JetBrains mono, uppercase, sharp,
    zero radius, gold hover glow). Reuses the world modal chrome (.gw-dg-backdrop + .gw-panel) from
    game-world-hud.css; everything below is the commission-specific body. Two views (CUSTOMER / ARTISAN)

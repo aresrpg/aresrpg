@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The client module pipeline (reducer/observer system). Each module is a factory
 // `() => { reduce?, observe? }`. Order matters only if reducers depend on each other's
 // output within a single action; today they're independent. Grows per stage.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SSOT for the fight VFX + floating-number colours: the house element ramp (fire/water/earth/air)
 // plus the combat semantic colours (damage/heal/crit + the AP/MP resource-spend colours). One canonical
 // home so the fight overlay, deck, encyclopedia and item views stop each carrying a drifted copy.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // KILL-DESPAWN PACING (live-QA P1, 2026-07-17): a killed mob must not despawn before the attack, the vfx,
 // the hit, and the floating number play out — the
 // canonical order law: "the HIT, then the numbers, THEN the death").

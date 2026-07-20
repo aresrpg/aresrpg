@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD 10 · SUNSPIRE DUNES (on-chain `10_sunspire_dunes`, biome `glass_desert`) — the golden-desert
 // planet. Seed identity (seed/mainnet/10_sunspire_dunes/world.json): fire+earth elements, "mirages —
 // false oases and mirage-cloaked elites; read the shimmer", "archimob country — elite density ×2; the

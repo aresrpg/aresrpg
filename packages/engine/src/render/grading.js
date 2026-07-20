@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG2-ATMO output color grade (playbook §3.1 "filmic grade"; owner goal: "improved contrast and
 // punchy colors for a realistic cinematic look"). FINAL display grade — composes AFTER AgX, on the
 // tonemapped [0,1] signal, in display space. AgX did HDR highlight roll-off + a gentle desaturation;

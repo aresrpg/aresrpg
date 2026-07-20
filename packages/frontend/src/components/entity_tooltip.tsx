@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import type { ReactNode } from 'react'
 
 import { use_template_t } from '../i18n/template_t'

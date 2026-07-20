@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GIFT + AIRDROP on-chain WRITES — chain-direct (no server) PTB submits for the escrow-recoverable item SEND,
 // the receiver CLAIM / sender RECALL, and the whitelist airdrop CLAIM. The ONE frontend home wiring the frozen
 // @aresrpg/sdk composers (gift_send_ptb / gift_claim_ptb / gift_recall_ptb / airdrop_claim_ptb — read-only to

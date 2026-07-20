@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// PARTY — AresRPG's character-keyed social group. Accepted membership is capped at six CHARACTERS, so one
 /// wallet may occupy several distinct slots.
 ///

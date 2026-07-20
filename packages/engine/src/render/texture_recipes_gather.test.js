@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GATHERABLE sprite tests (ENGINE_AAA_PLAN §5 lane A3). The core deliverable is the ΔE PERCEPTUAL-SPACING
 // guard: each family's 11-step level ramp must keep every sibling tellable apart at gather distance (64px
 // sprite AND 32px icon). Plus: the no-white-halo emission ceiling, the 33+43 count/append-only structure,

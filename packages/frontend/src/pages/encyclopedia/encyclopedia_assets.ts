@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { item_icon_url, walrus_asset_url } from '@aresrpg/sdk/jobs'
 
 import { cosmetic_icon_of } from '../../game/cosmetic_icons'

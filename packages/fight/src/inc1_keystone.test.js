@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WAVE-A V3 (VIOLATION_REGISTER V3, seat §5d): the equal-version compare-adopt (the old "keystone #3") is DELETED.
 // The monotonic gate is now ABSOLUTE — vN ≤ canonical ⇒ DISCARD ENTIRELY, regardless of content, no re-adopt, no
 // divergence log. The sticky-stale case it patched is handled at the SOURCE: RECEIPT is the one-way floor (V9) and

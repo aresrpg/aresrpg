@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The reducer spine: reduce(state, command, ctx) -> { state, events }.
 //
 // This REPLACES the donor's async, callback-driven run_fight_loop (loop.ts) — that file's job (turn

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ABORT-CODE → PLAYER COPY (the no-jargon law: raw chain text NEVER reaches a player surface).
 // One abort-code → i18n-key table PER MODULE; unknown module/code pairs fall back to a generic human line
 // (the digest stays in the console for devs — run_tx already logs it). Grow the table as findings file in;

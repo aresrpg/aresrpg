@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { KioskClient } from '@mysten/kiosk'
 import { SuiGraphQLClient } from '@mysten/sui/graphql'
 import { SuiGrpcClient } from '@mysten/sui/grpc'

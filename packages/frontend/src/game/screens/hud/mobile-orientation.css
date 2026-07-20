@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* Portrait fallback: block the world instead of rotating fragile canvas/layout coordinates in CSS. */
 .mobile-orientation-overlay {
   position: fixed;

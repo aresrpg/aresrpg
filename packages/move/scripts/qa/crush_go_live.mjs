@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // CRUSH GO-LIVE — full rune-registry seed + real-crush gas measurement (release-blocking).
 // Signs with VITE_DEV_KEY (goofy-sphene = AdminCap owner + player). DISPOSABLE testnet op, resumable.
 //   env $(grep '^VITE_DEV_KEY=' ../../../.env | sed 's/VITE_DEV_KEY/PRIVATE_KEY/') \

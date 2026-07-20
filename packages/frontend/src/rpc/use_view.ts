@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // use_rpc_view — the reactive short-poll reader (SPEC §14 UI-DATA LAW).
 //
 // THE LAW, enforced here so no surface can break it:

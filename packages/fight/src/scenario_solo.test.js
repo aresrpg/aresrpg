@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // M1 HEADLESS SCENARIO — a COMPLETE solo fight driven with PLAIN OBJECTS through the ONE door (D768:
 // "test a fight programatically with simple objects"). No DOM, no React, no chain: explicit clocks, synthetic
 // Fight objects and receipts, every assertion a projection read. Covers: create → placement → activation

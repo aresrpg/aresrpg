@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE UNPUBLISHED-DOOR GATE (ship-breaker fix): the character-delete UI ships a Delete button whose
 // on-chain door (`aresrpg::character_extract`, published at a FUTURE Move-wave ceremony) does not exist
 // yet on any live network — the SDK builder throws a raw dev error, and before this gate the button was

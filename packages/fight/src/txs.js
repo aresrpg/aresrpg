@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // fight/txs.js — the transaction seam: staged intents → a chain turn batch, and every authoritative receipt
 // (my own commit, a liquidation, a poll catch-up) → back through the ONE input door. No fight state is written
 // here — txs only STAGES drafts and PIPES receipts into `input()`; the reducer owns all state.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WAVE A — red-first violation repros (register V1/V2/V3/V9). Each reproduces the register's exact input
 // sequence on the reducer; RED on the pre-fix code, GREEN after the algebra-on-substrate fix. These are the
 // per-violation gates; the algebra PROPERTIES (BLANKPAGE §⑤ 1/2/6 + SEAT §4 T-B) live in reconcile_properties.test.js.

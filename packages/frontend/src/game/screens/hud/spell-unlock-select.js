@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure selectors over the fight-spell SSOT rows (fight-spells.js `resolve_class_spells` / `class_spells`
 // output). The deck, the level-up card, and the build planner all derive "which spells are unlocked / newly
 // unlocked" from HERE, so the `unlock_level <= level` filter has ONE home and NO per-level cap: the legacy

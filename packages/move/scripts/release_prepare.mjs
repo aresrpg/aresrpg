@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // release_prepare.mjs — "the ceremony, serialized for the browser." Compiles all six Move packages and emits
 // ONE static release_manifest.json the self-serve admin RELEASE page (packages/frontend/src/components/
 // admin_release.tsx) loads and drives with the connected deployer wallet. SCRIPT ONLY — it fires NO

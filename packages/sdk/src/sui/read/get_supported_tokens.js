@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /**
  * #23 gRPC: core.listCoins → { objects:[{ objectId, balance }], cursor } (was jsonRpc getCoins → { data, nextCursor }
  * with `coinObjectId`). Callers below already read `.balance`; `.coinObjectId` is remapped to `.objectId` here.

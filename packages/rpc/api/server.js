@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // AresRPG RPC — read-only HTTP JSON API (SPEC §14).
 //
 // Serves preprocessed views of AresRPG on-chain state from the indexer's Redis

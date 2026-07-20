@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // AresRPG spell corpus -> sim SpellLevel/SpellEffect normalizer.
 //
 // The donor's spell logic is UPPERCASE-discriminant (DamageEffect.type === 'DAMAGE', area_type 'CIRCLE');

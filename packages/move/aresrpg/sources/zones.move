@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// ZONES — world membership, sparse search state, and authenticated mob/resource consumption. Search stores a
 /// seed, bitmaps, and an adjacent mob-root DF derived on chain from the advertised facts. Original claims retain
 /// live derivation; proof claims authenticate committed search-time facts before sharing the same security tail.

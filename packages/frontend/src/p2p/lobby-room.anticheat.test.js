@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ANTI-CHEAT WIRING VERIFICATION — a CENSUS of what packages/world/src/presence.js's
 // CHEATER-PLAUSIBILITY DROP actually catches on the inbound WebRTC peer-state path, driven through the REAL
 // lobby-room.js wiring (the lobby-room mock idiom — trystero mocked, the app's own pos_action/state_action

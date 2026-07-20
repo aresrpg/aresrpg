@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GATHER action seam (UI map #9 rewire) — the [G] prompt's real on-chain submit, the twin of the [F]
 // search seam. `gathering::gather` is a terminal `&Random` entry (its own tx, Random-PTB rule); the SDK
 // builder carries the ITEM_POLICY / GameConfig / Version refs, nothing here guesses gas.

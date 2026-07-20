@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST (EFFECT-BADGES lane): a cast effect (e.g. a shield spell) must be visible on the fighter's
 // nametag — every persistent effect renders there with its remaining turn count, compact but intuitive.
 // RED at HEAD: EffectBadges.jsx does not exist yet.

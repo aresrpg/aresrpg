@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD 18 · ABYSSAL WEALD (on-chain `18_abyssal_weald`, biome `abyssal_forest`) — the lightless-forest
 // planet. Seed identity (seed/mainnet/18_abyssal_weald/world.json): water+air elements, "anglerlight —
 // bioluminescent lures in the deep weald; follow the wrong light and it follows back", co-op pack

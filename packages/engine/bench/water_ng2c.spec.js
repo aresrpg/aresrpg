@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG2-C water shading capture + gate. Drives the live engine (WebGPU/Metal) at the real lake near
 // spawn (found by a gen scan: a large body at water-surface y≈127, centroid ~(31,171), 168 shoreline
 // cells; NO exposed vertical waterfall faces near spawn — the watertight-water fix encloses water

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // use_address_names — D52 SuiNS reverse resolution for the frontend, one call per PANEL, never per row.
 //
 // Unlike the live §14 views (use_rpc_view's continuous short-poll), SuiNS names change rarely — this is

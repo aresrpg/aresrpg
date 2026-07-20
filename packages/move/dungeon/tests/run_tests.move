@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// RUN tests — the RunPass SECURITY CORE (§9 "the key IS the run object; ownership is the security"). Covers
 /// every adversarial case the ticket names at the primitive level: a fresh run starts at room 1 · exit restores
 /// the EXACT stored position (consume returns it byte-for-byte) · victory advances a party's passes · the

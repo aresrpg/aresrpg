@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 const slot_framing = Object.freeze({
   // Sane-distance front view (reframe law: move the camera away — never the old close-up
   // zoom). The per-hat bbox autofit (shop_head_autofit) overrides dolly + aim for every measurable hat;

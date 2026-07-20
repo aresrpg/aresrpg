@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Reframe law regression (too tight and too high — needed to move the camera away, not zoom in):
 // the head fit must frame the model's WHOLE measured bounding box centered at showcase distance — a
 // position/dolly reframe, never a bust-crop zoom. Expectations are hand-derived from the documented

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { get_object_json, balance_value } from './_object.js'
 
 // GIFT chain-direct READ (pre-flight). The live inbox is projected by the packages/rpc `/v1` indexer (a separate

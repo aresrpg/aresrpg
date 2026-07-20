@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // World-chunk entry point (§4) — the decorated generation path the streaming loader consumes.
 // THIN ORCHESTRATOR: the heavy lifting (6-param climate fields, Catmull-Rom height splines,
 // weighted biome placement, solid/water fill + occupancy + light) already lives in column_gen.js

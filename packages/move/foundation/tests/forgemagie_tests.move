@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// FORGEMAGIE TESTS — golden vectors for the sealed applyRune port (docs/HYTALE_FORMULAS_VENDORED.md §2),
 /// derived from a byte-exact JS twin of the integer math threading the shipped mulberry32 `prng::draw` stream.
 /// Covers the 3 outcomes, proximity 0/1 boundaries, exotic floor (level bonus bypass), over-mage penalty,

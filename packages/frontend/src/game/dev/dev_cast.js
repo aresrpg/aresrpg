@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DEV-ONLY cast hook — lets HEADLESS qa land a REAL spell cast when arm→target board clicks won't register
 // (Playwright can't drive the 3D raycast). It drives the IDENTICAL path a spell-card-drop + End-Turn produces:
 // draft the cast on the target cell (use_dungeon_turn.set_cast_target — the same gold-ring readback the board

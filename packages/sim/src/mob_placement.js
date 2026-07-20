@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // MOB PLACEMENT — the collision-free deterministic mirror of the chain's per-group mob seating. PURE (seed +
 // board geometry only; no time / IO / stored roll). Mirrors `aresrpg_foundation::mob_ai::seeded_spawn_cell`
 // (mob_ai.move) + the spawn loop in `aresrpg_fight::fight::create_inner` (fight.move) — the SAME pattern

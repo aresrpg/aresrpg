@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // CF-B (client half) — MOUNT = +50% roam movement speed. A character with a mount equipped moves ×1.5
 // in the roam world. SINGLE home for the multiplier VALUE and the equip → scale SELECTION; the value is
 // applied at exactly one place downstream (the controller's ground-speed knob, via embed_voxel's

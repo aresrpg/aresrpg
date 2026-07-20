@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Golden mesher tests. Three suites:
 //  1. 2×2×1 exposed box → exactly 6 merged quads (one per face) with exact size/pos/block/AO/light.
 //  2. Height-step side faces (sky-leak regression): two columns of heights 5 vs 3 → the taller

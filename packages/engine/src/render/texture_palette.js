@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PER-BIOME TEXTURE IDENTITY (FIVE-WORLDS — each biome must have its own texture identity: grass,
 // sand, sprites, leaves, wood, water take on the style/atmosphere and colors of the biome). A world's
 // `config.textures` carries per-block-FAMILY colour transforms (HSV hue/sat/val) that the baker applies to

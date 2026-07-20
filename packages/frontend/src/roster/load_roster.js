@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Roster ENRICHMENT loader (S-53 → roster /v1 cutover). #53/T53.
 //
 // OWNER BUG (2026-07-10): "[load_roster] read TIMED OUT (10000ms), skipped: getKiosk 0x0dee…" — the OLD

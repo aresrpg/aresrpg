@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The BRIDGE from the settings-page graphics section to the live voxel engine — mirrors render_quality.js's
 // split (quality_pref.js = pure boot-read; render_quality.js = the reboot-triggering bridge only the HUD/
 // settings UI imports, never embed_voxel.js itself, to avoid a cycle). Three of the six graduated flags

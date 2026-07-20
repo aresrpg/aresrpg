@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* The live world backdrop behind every front-of-game screen — a fixed full-viewport layer pinned
  * UNDER the select page (.fog, z-index:1) and the login gate. The rule: load the game
  * behind, never a flat dark page. The roam scene paints its own canvas; this just owns the z-layer.

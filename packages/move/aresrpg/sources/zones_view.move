@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// ZONES VIEW — the DERIVED zone getters (RPC + tests): every value here is recomputed from the zone's stored
 /// seed through `zone_comp` (the search-cost rework stores seed+bitmaps, never rows). Per-index getters take the
 /// DERIVATION index (stream order — stable across consumption, unlike the retired swap-remove positional index).

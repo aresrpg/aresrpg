@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FEED-PET DIET: the empty-food state used to say only "you have no feedable
 // resources" without naming what the pet actually eats. It now always shows the D757 global food display
 // (pet_food_section.tsx's PetFoodHoverRow) inside the empty box, alongside the existing caption.

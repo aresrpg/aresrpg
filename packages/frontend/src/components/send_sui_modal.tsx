@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // send_sui_modal.tsx — P2P SUI transfer modal.
 //
 // State machine: IDLE → BUILDING → AWAITING_SIGNATURE → EXECUTING →

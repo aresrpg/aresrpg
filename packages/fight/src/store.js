@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // fight/store.js — the ONE zustand store and the ONE write door for ALL fight state.
 //
 // THE ONE-REDUCER LAW (enforced by ares test fightcore gate b): `input(msg, now)` is the ONLY

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from '@playwright/test'
 
 const APP_URL = '/lane66-harness?debug=1&biome=rainforest'

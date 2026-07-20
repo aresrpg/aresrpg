@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST: other players must project onto the minimap. presence_markers.js is the pure adapter between
 // core/modules/presence.js's `visible_characters` Map and the {x,z,kind,key} marker shape minimap_engine.js's
 // draw_marker already dispatches on (mob/resource) — see Minimap.jsx for the wiring.

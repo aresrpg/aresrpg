@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // fight/fold.js — the PURE fold/merge/base functions behind the store's ONE door (split out of store.js to keep
 // each file ≤600 LoC; INC-0). Nothing here reads `get`/`set`: every function is a plain transform over state.
 //

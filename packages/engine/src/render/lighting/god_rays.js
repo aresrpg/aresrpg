@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PHYSICALLY-BASED GOD RAYS — shadow-map-gated volumetric in-scatter (Hillaire-style single-scatter
 // raymarch), the CONTRAST-not-density cure for the froxel/addon whiteout that was parked default-OFF.
 //

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DAY-NIGHT CYCLE — a small hud indicator with a progress line and shadows that follow it, presented as a
 // subtle progress bar on the compass. This
 // module owns the whole cycle:

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // fight/fight_render_prims.js — the PURE render primitives behind the two beat producers (split out of
 // fight_render_events.js to keep each file ≤600 LoC). Reference gait/timing constants, grid<->cell geometry,
 // the cardinal path walker, trap-diff, the beat writer, and beat durations. Nothing here decodes an event or

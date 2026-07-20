@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DEV-ONLY qa rig for the voxel session (split from embed_voxel.js at the 600-LoC law). Window hooks
 // the probes/qa drives lean on (pointer lock is blocked under automation — camera drives go through
 // cam.rotate, the engine bench's own pattern). __dev_engage / __dev_start_fight are the D166/D169

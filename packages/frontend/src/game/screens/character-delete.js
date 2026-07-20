@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // CHARACTER DELETE (BACKLOG 18, design ruling 2026-07-15: delete characters in the characters tab, provided
 // everything was unequipped first — even the free one). The chain-direct action behind the drawer/page delete confirm:
 // resolve the character's OWN kiosk (S-57 law — derive from the character, never a first-cap scan), compose

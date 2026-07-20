@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Fresh SPEC §12 template catalog — DERIVED FROM seed/mainnet/**/*.json (the SAME corpus that mints on-chain
 // templates) at build/serve time via the `virtual:item_catalog` module (packages/frontend/dev/item_catalog_plugin.ts),
 // over the ONE shared transform (scripts/lib/item_catalog_transform.mjs). There is NO checked-in item_catalog.json /

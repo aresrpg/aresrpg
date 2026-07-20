@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Per-spell SpellDetail view (NO JSX). The shared SpellDetail panel's data home: `spell_detail_view` +
 // `area_label`, rendered by SpellDetail.jsx (FightArmedReadout — template / non-dungeon fights).
 // LEGACY-RESIDUAL: it reads the sim's normalized SpellTemplate map (@aresrpg/sim via fight.js) because that map

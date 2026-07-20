@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Ambient music — two preloaded looping beds with exactly ONE active HTMLAudioElement at a time. The calm
 // roam bed and tenser fight bed are served from Walrus (the `music` quilt, T-59). Transitions pause the prior
 // stream before playing the next; duck + master volume share one ramp. Element construction is gesture-deferred,

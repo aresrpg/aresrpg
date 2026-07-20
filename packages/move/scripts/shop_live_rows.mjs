@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LIVE /v1 shop snapshot for the shop content ceremony (extracted from apply_shop_payload.mjs —
 // the 600-LoC file law). Runtime truth comes from the keyless read layer: `/v1/shop?active=false`
 // (every sale, paused included) joined with `/v1/encyclopedia?kind=items` on template_id, every row

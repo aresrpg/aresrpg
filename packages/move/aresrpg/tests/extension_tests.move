@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Extension-gate tests (G8), post S-46: the MINT door (mints an item + forces a personal-kiosk lock; aborts
 /// while dark), the namespaced DF writes (write → free read round-trip on both Item and Character), the
 /// NAMESPACE ISOLATION invariant (two namespaces writing the SAME logical key coexist in distinct slots), and

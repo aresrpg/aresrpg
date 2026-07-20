@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Regression gate for MULTI-QUILT asset resolution (src/jobs.js walrus_asset_url). A Walrus quilt caps
 // at 666 blobs, so an over-cap class (item icons: 2137 files → 4 quilts) ships as a SHARDED set: N
 // quilts, each owning a sorted [first,last] identifier range, resolved by binary search. This pins:

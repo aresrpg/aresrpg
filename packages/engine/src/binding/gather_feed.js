@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SEAM 3 — SPAWN GLOW + GATHER AFFORDANCE FEED (SPEC §5 wayfinding + §6 gathering).
 //
 // "discovered resources render with a glowing outline; close enough shows 'press F to gather' — or 'equip

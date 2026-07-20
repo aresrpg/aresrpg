@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // §7 TURN-SEED SLOTS — the CLIENT MIRROR of the on-chain per-turn CRIT determinism contract
 // (aresrpg_foundation::spell_formula + aresrpg_fight::fight::turn_seed), byte-identical so a client preview
 // matches the chain's settlement exactly.

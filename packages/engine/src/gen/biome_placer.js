@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Biome placement (§4.3) — nearest-fit lookup in the 6-parameter climate space with smoothstep
 // transition weights. Generalizes the legacy 3×3 heat/rain BiomesMapping (Biome.ts) from 2 axes
 // to 5 (temperature, humidity, continentalness, erosion, pv), keeping its influence-blending idea:

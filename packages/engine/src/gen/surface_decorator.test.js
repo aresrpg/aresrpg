@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // surface_decorator.js gate (VEG PHASE B) — proves the schematic-forest swap: the biome→species
 // mapping is coherent, the cross-chunk HALO makes wide canopies straddle chunk borders identically
 // regardless of stream order, stamped canopies actually MESH (the historic bald-tree/invisible-canopy

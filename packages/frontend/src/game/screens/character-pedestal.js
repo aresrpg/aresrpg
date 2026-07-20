@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The char-create PEDESTAL — an imperative Three.js scene that renders the haired character GLB on
 // a soft-shadow pedestal with drag-to-rotate, live 3-colour recolour, and the IDLE animation loop.
 // It owns its own WebGLRenderer (the recolour composite needs a renderer, exactly as production

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIRST-LOAD radial REVEAL FRONT — a shader loading-feel effect. ONE global uniform
 // set — a centre (spawn/player XZ) + an expanding radius — threaded into every terrain-class material
 // (like board_occlusion). Terrain beyond the front is hidden/faded by a ~band-metre smoothstep, so a

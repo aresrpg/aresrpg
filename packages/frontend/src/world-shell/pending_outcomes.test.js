@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // pending_outcomes.js — the unopened-results surface's pure core: the /v1 row mapper, the per-wallet memo,
 // the auto-open attempt registry (burn-law latch), and the failure classifier. Everything is exercised via
 // plain arguments (the module is a deliberate leaf) — ZERO `mock.module` (process-global collision law).

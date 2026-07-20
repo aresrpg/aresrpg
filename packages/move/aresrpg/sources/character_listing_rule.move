@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// CHARACTER_LISTING_RULE — the anti-name-squat LEVEL GATE on character resale (§17.30 / DECISIONS 2026-07-08:
 /// "LISTING a character requires level ≥ 30 — squatting now costs playing"). A kiosk TRANSFER-POLICY rule on the
 /// `TransferPolicy<Character>`, mirroring the Mysten `royalty_rule` / `kiosk_lock_rule` receipt pattern exactly:

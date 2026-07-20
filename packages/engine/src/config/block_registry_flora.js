@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // VIVID-WORLD flora sprite BLOCKS (2026-07-07) — the registry entries for the new clutter-sprite roster
 // (many more sprites, for a vivid world). All shape:'cross' foliage (class 'foliage', no occupancy,
 // walk-through), 1:1 by NAME with the recipes in texture_recipes_flora.js (the baker auto-wires block.id →

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Seam 3 gate — the pure proximity helper + the feed's affordance emission + marker bookkeeping (headless;
 // the visual glow is proven by the demo screenshot).
 

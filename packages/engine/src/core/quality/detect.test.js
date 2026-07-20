@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S1 device-detection unit tests. pick_starting_tier is a PURE classifier over injected DetectSignals
 // (no GPU / navigator needed), so it tests deterministically with synthetic signals. The behavior the
 // owner GO'd (2026-07-14): mobile FLOORS to 'low' regardless of adapter strength; scarce RAM biases down;

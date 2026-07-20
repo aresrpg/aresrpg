@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // b_spell coverage-lane preset-table test — mirrors the StatusFX aura-lane / WORLD-PROPS pattern for the four
 // DarkMagic / ElectricFX / ElementalMagic / FlameFX spell-variant families ported in vfx_presets_{dark,air,
 // elemental,flame}.js. Proves: every one of the 35 presets exists (so every b_spell pack scene has a LIVE

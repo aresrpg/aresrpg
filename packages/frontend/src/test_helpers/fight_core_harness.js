@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // test_helpers/fight_core_harness.js — the TEST seeding door for the fight core singleton (S2 mirror kill). The old HUD
 // tests drove `state.fight` through the mirror's projection dispatch with slice-shaped literals; the mirror is
 // dead, so a test now drives the REAL core through its ONE input door (init → snapshot [→ receipt/intent]) and

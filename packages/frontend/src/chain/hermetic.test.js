@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // CHAIN READ-CLIENT HERMETICITY RATCHET (D770c) — the mechanical fence that keeps src/chain/ (minus
 // write/) a HEADLESS-DRIVABLE read client: pure request/response transforms over exactly two effect
 // edges (sdk.ts chain-direct gRPC + ../rpc/client's /v1 fetch), forever importable in plain node/bun.

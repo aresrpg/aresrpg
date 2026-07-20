@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Friends tests — the soulbound, one-per-address whitelist. Covers add/remove/query, the DUPLICATE-ADD ABORT
 /// choice (documented: aborts, mirroring party's `invite`), one-list-per-address (a second create aborts), the
 /// owner-binding guard, and the dark-ship gate.

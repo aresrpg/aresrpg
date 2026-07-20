@@ -1,0 +1,86 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
+# promote.yml — the fast-forward promotion bot (owner-triggered, signature-preserving).
+#
+# Master never takes a merge COMMIT: promotion is a fast-forward push of the exact approved
+# head SHA, so master's commits stay BYTE-IDENTICAL to edge's (signatures survive perfectly)
+# and the pusher is the Actions bot — "reviewer ≠ pusher" holds naturally, required-review
+# stays. Trigger = the owner commenting `/promote` on a PR targeting edge OR master (explicit
+# command, never an approval side-effect). The job refuses unless: commenter is the owner · the
+# approval story holds (owner-authored PRs: the /promote comment IS the owner's approval act —
+# GitHub forbids self-review, so a review assert would be unsatisfiable by construction;
+# foreign-authored PRs: the owner's APPROVED review is required ON TOP of his /promote) · every
+# check on the head is green · the push is a true fast-forward (the base is an ancestor of the
+# head). GOVERNANCE LINE: the master hop is deploy-class and fires only on the repository
+# owner's explicit word; the edge hop is routine integration. Ruleset story: required-review
+# stays ON at the ruleset layer (it blocks raw pushes); the bot is a bypass actor whose own
+# asserts above are the real gate. THAT LAST ASSERT ENFORCES
+# ALWAYS-REBASE BY CONSTRUCTION: an unrebased branch cannot fast-forward — the linear law is
+# mechanical, not convention. After a MASTER promotion the job also aligns edge to the same
+# SHA (skip-warn when edge has already moved ahead), so the branches never drift at release
+# points.
+#
+# NOTE (GitHub semantics): pushes made with GITHUB_TOKEN don't trigger push-workflows, so this
+# job explicitly dispatches release.yml after the ff-push (Vercel deploys regardless — app
+# webhooks are not suppressed).
+name: promote
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: write
+  actions: write
+  pull-requests: read
+jobs:
+  fast-forward:
+    if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/promote')
+    runs-on: ubuntu-latest
+    steps:
+      - name: assert commenter is the owner
+        run: |
+          test "${{ github.event.comment.user.login }}" = "Sceat" || { echo "not the owner — refusing"; exit 1; }
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: resolve + assert the PR (approved by owner, checks green, base ∈ {edge, master})
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR=${{ github.event.issue.number }}
+          BASE=$(gh pr view "$PR" --json baseRefName -q .baseRefName)
+          case "$BASE" in edge|master) ;; *) echo "PR targets $BASE — /promote serves edge and master only"; exit 1;; esac
+          echo "base=$BASE" >> "$GITHUB_OUTPUT" 
+          HEAD_SHA=$(gh pr view "$PR" --json headRefOid -q .headRefOid)
+          AUTHOR=$(gh pr view "$PR" --json author -q .author.login)
+          if [ "$AUTHOR" = "Sceat" ]; then
+            echo "owner-authored PR — the /promote comment is the owner's approval act (self-review is impossible on GitHub)"
+          else
+            APPROVED=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR}/reviews" \
+              --jq '[.[] | select(.user.login=="Sceat")] | last | .state')
+            test "$APPROVED" = "APPROVED" || { echo "foreign-authored PR without a standing owner review — refusing"; exit 1; }
+          fi
+          NOT_GREEN=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/check-runs" \
+            --jq '[.check_runs[] | select(.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral")] | length')
+          test "$NOT_GREEN" = "0" || { echo "$NOT_GREEN check(s) not green on $HEAD_SHA — refusing"; exit 1; }
+          echo "sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+      - name: fast-forward the base (refuses non-ff by construction — the always-rebase tooth)
+        run: |
+          SHA=${{ steps.pr.outputs.sha }}
+          BASE=${{ steps.pr.outputs.base }}
+          git merge-base --is-ancestor "origin/$BASE" "$SHA" || { echo "not a fast-forward of $BASE — rebase the branch first"; exit 1; }
+          git push origin "$SHA:$BASE"   # plain push: git itself rejects anything non-ff
+      - name: align edge to master (master promotions only; skip-warn when edge is ahead)
+        if: steps.pr.outputs.base == 'master'
+        run: |
+          SHA=${{ steps.pr.outputs.sha }}
+          if git merge-base --is-ancestor origin/edge "$SHA"; then
+            git push origin "$SHA:edge" && echo "edge aligned to master ($SHA)"
+          else
+            echo "edge has moved ahead of the promoted head — no align needed"
+          fi
+      - name: dispatch the release workflow (master promotions only)
+        if: steps.pr.outputs.base == 'master'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run release.yml --ref master

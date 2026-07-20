@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIRST-LOAD "materialization floor" (target: "shader/effects to have a loading feel without blocking
 // player movements"). A brand-styled holo grid — near-black fill + gold scanline grid (DESIGN.md:
 // bg #0a0a0f, gold #c8963c) — that hugs the generator's ANALYTIC surface, follows the player, and shows

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // scripts/eslint-rules/one_pipeline.mjs — THE ONE-REDUCER TRIPWIRE (CLAUDE.md CLIENT-INDEPENDENCE/ONE-PIPELINE).
 //
 // The class it catches: an async callback (timer / promise chain / event listener / await continuation) writing a

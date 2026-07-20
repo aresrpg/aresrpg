@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PET FOOD — the two pet-food display surfaces: the encyclopedia shows what food a pet is
 // using, and the item detail card in the inventory (hover) does too. The mechanic is
 // PET-AGNOSTIC (D757 — see pet_foods.ts): every pet eats the ONE global configured food set, one unit

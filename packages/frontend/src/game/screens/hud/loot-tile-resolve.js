@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure resolution logic for ONE FightReport victory-card loot tile (FightReport.jsx's LootTile) — split out
 // so the D53 rendering CONTRACT (a loot slot must NEVER render as an empty un-hoverable box, no matter how
 // broken the drop's metadata is) is unit-testable without mounting the Tooltip's lazy hover portal (its

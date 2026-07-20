@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ORPHANED-ITEM detection — the ONE home for "this owned item's ItemTemplate was deleted on-chain"
 // (templates won't be deleted in prod, but if it ever happens, the app should
 // properly handle it and say 'this item was removed from the game, please crush it for runes').

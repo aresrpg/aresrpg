@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD FIGHT — the two overworld entry points (ENTER create-handoff · RESUME reconnect) for a BARE on-chain Fight
 // (no RunPass); the SAME store + core play/settle it (`run_pass_id: null`). `dungeon_id`=fight id; `in_session`=false.
 

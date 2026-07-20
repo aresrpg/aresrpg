@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// CHARACTER_LINK spell-ledger + progression-read tests: the per-spell invested-level slot (set → read), the
 /// running spent-spell-points counter (add → read), the DERIVED unspent-points view (saturating floor at 0), and
 /// the live progression HP read (born via a fight HP write-back). These are the `public(package)` write doors the

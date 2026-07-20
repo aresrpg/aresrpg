@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST (the end-fight card's party row showed "0xDEE0…AD38" — a raw address slice baked by
 // packages/fight/src/project.js:321 whenever the live mid-fight roster resolve hadn't landed by fight-end).
 // Proves the card's OWN re-resolution never lets that slice — or any other pre-existing garbage name — survive

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SCRIBE actions (S-18 Runeforge → S-57 forgemagie re-point) — the tx seam over @aresrpg/sdk/game's
 // `scribe_rune_ptb`, funneled through the ONE instrumented run_tx choke point (world-shell/tx.js) like every
 // gameplay tx. The DEPLOYED door is `forgemagie::scribe_rune` (upgrade #2): apply exactly ONE rune to a

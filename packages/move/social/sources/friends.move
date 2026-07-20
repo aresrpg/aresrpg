@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// FRIENDS — a NON-TRANSFERABLE, address-bound personal whitelist (§13). Add or remove addresses freely; NO
 /// invites, NO acceptance, NO symmetry required (unlike a party). Powers friends-only Kolizeum creation (the
 /// reader snapshots the list at creation time — it takes `&FriendList`, owner-signed) and the social UI.

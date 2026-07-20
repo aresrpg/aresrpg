@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D183/D184/D201 — the SPECTATE diorama camera (login backdrop). Split from embed_voxel.js at the
 // 600-LoC law when D201's hands-on pan landed. NO game logic, NO controller, NO avatar — a camera and
 // its leash: LMB-drag PANS the focus across the lite world (clamped inside the zone with a margin so

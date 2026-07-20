@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX — WORLD/AMBIENCE PROPS (class d_world). The FlameFX bonfire (6) + candle (12) pack scenes ported
 // to PERSISTENT light-source fixtures for the dungeon rooms + the overworld: `world_bonfire_<tint>` campfires/
 // braziers and `world_candle_<tint>_0N` wall-torches. Each is a LOOP preset (every particle's age wraps its

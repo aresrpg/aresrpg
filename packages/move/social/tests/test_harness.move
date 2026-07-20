@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Shared #[test_only] stand-up for the social suites (friends + party): init the ONE Version + AdminCap plus the
 /// friends registry, then optionally enable the package. `enable = false` leaves it dark (exercises the dark-ship
 /// gate). `OWNER` matches each suite's begin-tx address, so the AdminCap minted in tx0 is take-able here.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Mesh worker entry (§3.2 "MESH POOL: light BFS → binary greedy → quad packing"). Module worker speaking
 // the frozen rpc.js envelope: receives MSG_MESH_REQUEST with a serialized chunk + its 1-voxel neighbour rim
 // (mesh_halo.js), runs the FULL near-mesh pipeline off the main thread (mesh_chunk: greedy solid pass, AO,

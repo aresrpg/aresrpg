@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SEARCH-ZONE JUICE — the pure seams that carry the search feedback from press/chain → screen:
 //   1) read_zone_searched: the on-chain ZoneSearched event → the banner's findings counts (the contract
 //      coupling — pins the event type suffix + field names so a Move rename can't silently zero the banner).

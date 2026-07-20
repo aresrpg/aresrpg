@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SEED-MANIFEST RECEIPT ↔ LIVING-CORPUS FENCE (SHOP TRIO (a), found 2026-07-17).
 // The frontend drops every /v1 shop sale whose template id is absent from the seed-manifest receipt:
 // read_shop_sales.js:89 → living_corpus.ts is_living_item → Object.values(seed_manifest.items). The

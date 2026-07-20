@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // BOOT22 dead-click regression — the arena projection must carry the TRUE board walkability.
 //
 // Live capture (fight 0xa2c0…e23ac, localnet 2026-07-17): the chain board is a 15×16 OCTAGON (shape_mask

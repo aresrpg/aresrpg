@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD ↔ CHAIN coordinate codec (2026-07-10 signed-world ruling). The chain keeps UNSIGNED u32 block
 // coords in [0, bounds); the client works in SIGNED world space centred on bounds/2. These tests pin the
 // round-trip, the boundary vectors, the offset derivation, and — the load-bearing one — that zone keys

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Texture-baker tests: determinism (byte-identical across runs + seed sensitivity), atlas
 // dimensions/mappings, alpha-clip vs opaque alpha invariants, the painterly grain bound, the three
 // DataArrayTexture wiring, and a raw-RGBA preview dump (/tmp/baker_preview.rgba) for eyeball review.

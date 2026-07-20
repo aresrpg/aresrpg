@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure-math tests for the flagship VFX preset runtime. Pins the MATH the TSL nodes mirror:
 // (1) seeds are deterministic + in-range (dir unit, speed/size within min/max, birth within its window),
 // (2) emission shapes sample where they should (sphere within radius, cone within spread of the axis),

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// MOB EFFECTS — proof that points/alter effects LAND on mobs for real (the old
 /// `apply_to_mob` "skipped (flagged)" no-op is gone). Drives the exact dispatch two ways: player→mob effects
 /// through `cast::apply_effect_for_testing` (a hand-built `Effect`, no SpellTemplate/band ceremony), and mob→ally

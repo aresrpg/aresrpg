@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ─────────────────────────────────────────────────────────────────────────────
 //  TX LATENCY PLUMBING — the finality poll DIET (lever 2) + the ?txtiming=1 per-leg
 //  instrumentation (lever 3). Both are read by the two halves of the tx choke: src/tx's

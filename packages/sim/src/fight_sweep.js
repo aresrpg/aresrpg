@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Permissionless fight-sweep parity kernel.
 //
 // The Move entry can currently authenticate only the placement-expiry branch: exact PLACEMENT status, the

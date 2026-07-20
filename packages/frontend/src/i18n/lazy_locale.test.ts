@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LAZY-LOCALE proof — the active-locale-only loader. Boot statically bundles EN only; every other
 // language's main translation bundle AND item-description catalog are code-split and loaded on demand
 // (index.ts wires load_locale to the initial + every subsequent `languageChanged`). This pins that

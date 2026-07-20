@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Shell: entity_display.tsx used to hold every entity-display concern in one 900+ LoC file. It's now
 // split into cohesive sibling modules (colors/labels, the "new" badge, shared section chrome, the item
 // view, the mob view, and the shared on-chain tooltip hook) and re-exported here so every existing

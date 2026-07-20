@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-16 Phase B — TACTICAL BOARD FACADE (the one dapp-facing surface).
 //
 // Assembles the five tactical modules (geometry / picking / highlights / camera / entities) into ONE

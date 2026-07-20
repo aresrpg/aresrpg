@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /** Equipment refusal with an in-place refresh action only for digest-proven failures. */
 export function EquipmentLockNotice({ copy, refresh_label, on_refresh }) {
   return (

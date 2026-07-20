@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { experience_to_level } from './experience.js'
 
 const LIFE_PER_LEVEL = 5

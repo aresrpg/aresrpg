@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Block registry v0 (§3.6) — FROZEN SCHEMA. WS2 (gen/decorators) and WS4 (texture_baker,
 // terrain_material) both code against this exact shape. Adding blocks later is additive-only;
 // do not change field names/types without a version bump.

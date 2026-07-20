@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FAST-TRAVEL TARGET resolution — proves the pure `resolve_route`: /v1 world truth (never p2p), the anchor-vs-
 // live coordinate rule, and the raw gate facts (required_level, catalog membership) the reducer folds. RpcCharacter-
 // shaped fixtures inline (the rpc/fixtures idiom), so the routing law is pinned without a live indexer.

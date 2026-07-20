@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT-REPLAY GATE — the deterministic capsule gate (see src/timeline.js for the format).
 //
 // Each scenario below is authored in code, golden-recorded ONCE into test/fixtures/replay/*.json

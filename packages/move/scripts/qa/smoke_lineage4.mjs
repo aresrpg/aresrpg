@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SMOKE (lineage-4 republish) — DISPOSABLE. Drives the PLAYER doors on the fresh testnet lineage via the REAL
 // SDK builders (stamped fresh): admin set cheap price → paid create → join Testlands → search spawn zone →
 // gather DRY-RUN against the golden-linked iron_ore. Signs with goofy-sphene (the AdminCap + player wallet).

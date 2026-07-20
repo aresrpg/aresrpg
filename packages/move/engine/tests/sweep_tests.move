@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Move-side executable twins of `packages/sim/test/vectors/sweep_golden.json`. The shipped permissionless
 /// entry is intentionally placement-only: all three authenticated guards must pass before auto-abandon and
 /// ordinary settlement can consume the fight. BRAND LAW: assertions use only AresRPG status/event vocabulary.

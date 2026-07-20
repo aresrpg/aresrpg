@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SPAWNS ADAPTER (D770a W2) — the frontend edge of @aresrpg/world's spawns_zones core: THE one store
 // instance, the session_gate → spawns ferry (a bound-world change is a typed RESET input, never a shared
 // reference), and the dispatch helper every effect edge uses. The renderer (game/world_spawns.js) syncs its

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-24 / D160 (2026-07-05) — the PUBLIC character-controller facade: the engine owns walk PHYSICS,
 // the app sends INPUT and reads the TRANSFORM. Promoted surface over the already-proven src/player
 // physics (controller.js step_controller + block_solidity env — the demo's walk mode and the D141

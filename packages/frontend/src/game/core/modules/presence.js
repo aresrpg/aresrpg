@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Presence — the CORE→CONTEXT BRIDGE (D770a W3b; reshaped BRIDGE-A pipeline-conformance pass). The peer
 // TRUTH lives in @aresrpg/world's presence atom (fed typed inputs by the p2p transport adapter — the WS-era
 // `packet/*` shim is dead); this module projects `visible_players` into the stable `state.visible_characters`

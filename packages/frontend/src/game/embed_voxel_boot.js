@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The BOOT VEIL + daylight assert (split from embed_voxel.js at the 600-LoC law). One lifecycle: the
 // D161 blur that melts when the world is honestly ready, the D205 focus signals that decide "ready",
 // and the D177 time-of-day poke that survives the engine's silent pre-boot window. All timers are

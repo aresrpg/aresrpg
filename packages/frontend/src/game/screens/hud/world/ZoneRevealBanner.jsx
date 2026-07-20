@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ZONE-REVEAL BANNER (SEARCH-ZONE JUICE) — the center-screen cinematic reward when an [F] search resolves
 // — sound, a popup effect, and plenty of feedback on a successful search. Pure presentation: the SEAM (discovery_actions.js) fires the discovery chime + the walk-cam
 // FOV pulse + reveal_zone() on tx success; this just renders the current reveal slot with the findings

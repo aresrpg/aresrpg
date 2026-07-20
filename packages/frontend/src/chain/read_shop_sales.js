@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SHOP SALES read (RPC) — the /mint catalog from the read-API `/v1/shop` view (SPEC §14 read layer), replacing
 // the retired GraphQL `SaleCreated` event-replay (read_items_sales.js). The indexer serves each Sale's FACTS
 // (price / supply_remaining / paused / window) off the shared `shop::Sale` — one keyless GET, no per-sale gRPC

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D203/T76 regression — can_consume (the full-HP pre-check): a heal consumable can only abort
 // on-chain (ENoMissingHp) once the character is at max_hp, so the client refuses BEFORE any tx. The chain
 // regens FIRST then checks (consumable.move:62-63), so the gate folds lazy regen via the chain-exact

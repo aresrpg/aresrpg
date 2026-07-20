@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Canonical spell displacement for participant and mob targets.
 /// Direction is the dominant cardinal axis from origin to target (x wins ties); PUSH and GEOMETRIC_PUSH go away,
 /// PULL goes toward. Geometry-driven distance is the count of steps that remain inside the cast's frozen zone.

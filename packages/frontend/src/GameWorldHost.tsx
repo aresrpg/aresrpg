@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { lazy, Profiler, Suspense, useEffect, useRef, type CSSProperties, type ReactElement } from 'react'
 import { useLocation } from 'react-router-dom'
 import { plan_scene } from '@aresrpg/world'

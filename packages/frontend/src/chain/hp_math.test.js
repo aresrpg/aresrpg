@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // HP KERNEL PARITY — proves hp_math.js reproduces aresrpg_foundation::progression_math BYTE-FOR-BYTE (the same
 // integer arithmetic, the same branch table). Vectors mirror the Move module's OWN tests
 // (packages/move/foundation/sources/progression_math.move `max_hp_slope_and_floor` + `regen_carries_remainder`)

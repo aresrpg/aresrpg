@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-18 — THE MANA BARRIER. The VISIBLE half of the world border (physics + proximity live in
 // core/zone_border.js): a translucent arcane-energy wall standing on the zone perimeter, drawn as a
 // rounded-rect extrusion so the 4 faces meet in soft corners. House gothic-terminal palette — deep

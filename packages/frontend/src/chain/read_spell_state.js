@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // #55 — the CHAIN-TRUE spell allocation read. The S-46 merge killed the Character struct's `spells:
 // SpellAllocation` field: per-spell invested levels now live as namespaced dynamic fields on the Character
 // under `character_link::SpellLevelKey { spell: ID }` (the SpellTemplate OBJECT id; absent slot = the free

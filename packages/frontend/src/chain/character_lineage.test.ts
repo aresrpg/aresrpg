@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Proves the kiosk CHARACTER filter derives from the CURRENT deployment (audit row 12) — it ACCEPTS a character
 // of the live lineage (and would follow a fresh-publish re-stamp automatically) and REJECTS the retired demo
 // lineage that used to be the ONLY accepted id. A pure leaf test — no store/game imports, no module mocks.

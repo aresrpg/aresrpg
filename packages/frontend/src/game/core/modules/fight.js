@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Fight — the game-core EDGE of the fight system. The `state.fight` MIRROR IS DEAD (ratified:
 // the copy folded through game.js's ASYNC action pump, so every HUD read lagged the core ≥1
 // dispatch cycle — the AP-desync / "two systems fighting" root). Fight truth now has ONE home

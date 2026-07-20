@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D137/D158/D160/D161 — the voxel WORLD mount: THE renderer, the ONE engine session, the player's avatar.
 //
 // D158 SINGLE-BOOT LAW: the engine session is a MODULE SINGLETON — mounts ATTACH (reparent container+overlay),

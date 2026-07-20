@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PRE-FLIGHT REFUSAL VISIBILITY — a kiosk RPC read can fail before a buy PTB exists. The shop's real
 // toast path must name that phase honestly, while the opaque RPC payload stays in game_log for diagnosis.
 

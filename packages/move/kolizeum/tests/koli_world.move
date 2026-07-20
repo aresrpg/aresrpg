@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Shared #[test_only] scaffold for the kolizeum suites — the CHARACTER-ONLY slice of core's `test_world` (that
 /// module lives in the core package's tests/ directory, which a dependent package's test build cannot see; the
 /// core #[test_only] SOURCE helpers — `config::test_init`, `character::new_for_testing`, … — remain available and

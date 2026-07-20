@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// TURNS — the placement phase, the §17.28 global-interleave queue build, and THE CRANK. Harvests
 /// `dungeon_turn`'s committed-turn engine but REPLACES its HP-ranked queue with `interleave::order`. Turn
 /// order is STRICT (single-PTB turn law): a player action requires `turn_ptr` to BE the

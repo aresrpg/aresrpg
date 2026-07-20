@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // status: 0 ACTIVE, 1 RETURNING, 2 DEAD (aresrpg::expedition)
 const STATUS_LABELS = ['active', 'returning', 'dead']
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [C1 SLICED PIPELINE COMPILE] Unit contract for the frame-budgeted pipeline warm queue — the D221-class
 // warm generalized to LATE-ARRIVING renderables (entity/avatar/cosmetic GLBs). House law (engine.js D1
 // SHADER-DIET): only the REAL render path compiles the pipelines the live frame reuses (a depth-0

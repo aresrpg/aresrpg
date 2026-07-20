@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [D252] obstacle prop archetypes — determinism + geometry invariants (three core runs under bun).
 //
 // Locks: the archetype/rotation picks are pure over the cell hash (a same-args rebuild reproduces the

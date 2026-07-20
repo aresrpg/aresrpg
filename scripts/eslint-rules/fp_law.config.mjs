@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // scripts/eslint-rules/fp_law.config.mjs — THE FP-LAW LAYER (docs/CODE_LAW.md).
 //
 // Importable flat-config layer, spread into eslint.config.js after the base blocks. Severity design

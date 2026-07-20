@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* JOB level-up card atoms (JobLevelUp.jsx). Rides the shared .result / .lvl* / .unlock glass base from
    result.css (one family with the character card); this file adds only the unlocked-resource/recipe CHIP
    list + the "better harvests" yield row spacing. House DNA: mono, tabular nums, sharp radii 2-7, one

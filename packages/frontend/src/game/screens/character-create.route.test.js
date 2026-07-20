@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PAID-vs-FREE create routing + price-copy proofs (the second zkLogin character costs 10 SUI — swap free
 // for paid and label the button accordingly). `is_paid_create` is THE single home
 // both the creator's price button and the hosts' PTB route (free create_character vs paid

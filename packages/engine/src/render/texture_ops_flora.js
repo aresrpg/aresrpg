@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // VIVID-WORLD flora sprite OPS (2026-07-07) — the procedural shape ops for the new clutter-sprite roster
 // (bush, branch, pebbles, mushroom, shell, starfish, cattail, lilypad + self-contained stalk/bloom
 // primitives). SELF-CONTAINED BY DESIGN: these import ONLY the pure noise/math helpers from

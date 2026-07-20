@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D-WORLD AMBIENCE-PROP ANCHORS for the cave room — a PURE (integer-only, no three) placement pass split out of
 // gen/cave_room.js (the ≤600-LoC law). Produces deterministic bonfire-brazier + candle-torch anchors in the room's
 // PERIMETER band (between the flat board region and the walls), so a fixture never sits under a fight. The whole

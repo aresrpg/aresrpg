@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // BOARD — deterministic fight-board derivation: (world_seed, anchor) → board layout. A mirror of
 // aresrpg_fight::board.move (S-16 parity). PURE — seed only, no time / IO / stored roll. This module owns the
 // DRAW ORDER, which IS the cross-language contract: NEVER reorder / insert / remove a draw without mirroring

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PET LOOT-BOX action seam — the two-phase OPEN → COLLECT flow against the (parallel-lane) `aresrpg::loot_box`
 // door. Mirrors items_sale_actions.js (buy orchestrator) + consume_actions.js (kiosk-resolve + template map):
 //   1. open_box  — TERMINAL &Random: burns the bought box, rolls, transfers a SOULBOUND PetBoxClaim to the

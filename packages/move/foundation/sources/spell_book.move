@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// SPELL BOOK — spell DEFINITIONS and per-character allocation (exact 1.29). A spell is NOT a flat
 /// struct: every spell has 6 LEVELS, and a character raises a spell 1→6 by spending 1 SPELL POINT per level
 /// (mirroring stat-point allocation). Each level tweaks its `SpellLevel` params (lower AP cost, +range, bigger

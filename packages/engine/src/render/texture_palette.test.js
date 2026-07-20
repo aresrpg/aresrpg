@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PER-BIOME TEXTURE IDENTITY gate (FIVE-WORLDS). Proves:
 //   1. PARITY — an absent / all-identity `config.textures` bakes a BYTE-IDENTICAL atlas (the seed-
 //      deterministic bake is unchanged by the config; the layer INDICES are a frozen material contract).

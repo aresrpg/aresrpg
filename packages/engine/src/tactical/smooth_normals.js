@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [team-outline] POSITION-WELDED, ANGLE-WEIGHTED smoothed normals — the fix that turns the inverted-hull
 // entity outline from voxel corner-noise into one clean silhouette rim.
 //

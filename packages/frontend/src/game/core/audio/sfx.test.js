@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, it, afterEach } from 'bun:test'
 
 // Headless unit tests for the SFX VARIANT ROTATION (sounds were too repetitive). All pure

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // MELEE BURST (c_melee) preset-table test — mirrors the world/status lane assertions. The 20 BattleFX claw/swing/
 // element-slash scenes each resolve to a burst preset; every one uses a REAL pack appearance (slash_arc crescent +
 // spark, never a generic disc); every burst stays under the engine's no-halo luma ceiling; the resolver maps

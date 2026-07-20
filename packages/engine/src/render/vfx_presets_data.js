@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX — the PRESET LIBRARY: 44 fight effects ported from the Godot BinbunVFX_Vol2 ExplosionFX (16)
 // + StylizedHitFX (28) packs. Each preset is a plain data object (VfxPreset) consumed by vfx_preset_engine's
 // `create_vfx_preset`. The PORT is transcribing each .tscn's GPUParticles3D emitters into `emitters` rows —

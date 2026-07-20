@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // P0 create fix — proves the zkLogin seed DERIVE path (used when the Enoki session has no lazy proof yet):
 // (1) determinism — the (salt, sub, aud) vector always yields the SAME seed (frozen constant, computed once
 // from @mysten/sui/zklogin's own genAddressSeed and pinned here as the regression anchor); (2) the MANDATORY

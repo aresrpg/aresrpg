@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // T75 WORLD reads — chain-direct (no server) reader for `world::World` (a SHARED, enumerable-by-constant
 // object — unlike templates, worlds don't need event-replay discovery since T62_WORLDS already lists every
 // world id the game seeded). Feeds the admin WORLD tab — replaces the dead backend WS path that left the

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Linked raw-787 payloads live on their bearer and fire at that bearer's turn start after exactly N starts.
 // Their original source supplies stats even if dead; removal precedes dispatch so a payload cannot re-enter.
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// TAUX DE BRISAGE — the Retro crushing-coefficient INFLATION ECONOMY as pure math (R3 canon:
 /// docs/RETRO_RUNES_RESEARCH.md; design rulings DECISIONS 2026-07-09: ONE shared object, no bracket sharding,
 /// bulk crush in one tx with the per-item sequential formula preserved, one write per crush tx). NO state, NO

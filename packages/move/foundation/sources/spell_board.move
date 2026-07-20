@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// SPELL BOARD STATE — the persistent, consensus-critical on-board bookkeeping the headline "traps / glyphs /
 /// poisons" feature needs (taxonomy §1i / §5c / §C). Two maps:
 ///

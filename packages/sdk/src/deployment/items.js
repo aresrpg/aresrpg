@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ITEMS DEPLOYMENT — back-compat shim over THE single merged home (`deployment/aresrpg.js`). The S-46
 // single-package merge collapsed the `aresrpg_items` lineage (and its siblings) into the ONE `aresrpg`
 // package: same map, same gate, same override seam. Kept because this path is a public package export

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Confirmed-empty WORLD-SLOT onboarding. The roster state is explicit: loading never flashes create,
 // read failure offers retry, zero characters mounts the inline creator, and the first optimistic roster
 // insert swaps the slot straight back to the resident world. Meta tabs return `inactive`, never redirect.

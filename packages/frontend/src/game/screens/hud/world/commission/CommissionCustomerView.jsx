@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // CUSTOMER view — pick an artisan, see the recipes THAT ARTISAN can craft (their on-chain job levels
 // filter the list; recipe level requirements + success chance ride each row), each row's ingredient bill
 // checked against the CUSTOMER's OWN kiosk stock (`s.sui.items`, the same chain-truth bag the JobsDrawer

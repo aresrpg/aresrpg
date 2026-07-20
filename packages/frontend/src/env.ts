@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The app is backend-off (on-chain build): it reads/writes the chain directly (SDK PTBs + zkLogin self-pay)
 // and never connects a WS backend — every export here has a working default, so a bare boot never throws.
 const env = (import.meta as unknown as { env: Record<string, string> }).env ?? {}

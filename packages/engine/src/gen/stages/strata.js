@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // STRATA BANDING stage (FIVE-WORLDS §P3 shared stage 1 — Riviera limestone terraces). Quantizes the
 // exposed rock of STEEP columns into horizontal sedimentary BANDS: a solid voxel on a column whose slope
 // is at/above `slope_gate` takes a band block hash-bucketed by its world-y (floor(y / band_height)), with

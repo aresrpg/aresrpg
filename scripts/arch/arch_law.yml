@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
 # scripts/arch/arch_law.yml — DATAFLOW/CONTEXT rules the lexical eslint layer cannot express
 # (docs/CODE_LAW.md "Arch gates"). Run via scripts/semgrep-gate.sh — never bare semgrep: the gate
 # joins the extraction pack (laundered_extract.yml), self-tests both packs on scripts/arch/fixtures,

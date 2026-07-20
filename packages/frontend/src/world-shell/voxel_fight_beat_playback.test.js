@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // BEAT PLAYBACK — the mount seam (regression coverage: "there is no more floating numbers in fights").
 //
 // THE CONTRACT UNDER TEST: the render adapter's playback leg. The core paces receipt turns into `state.wave`

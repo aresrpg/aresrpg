@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Explicit shared/CDN cache allowlist. Every route absent from this map safely
 // defaults to no-store; additions require an address-independent response.
 

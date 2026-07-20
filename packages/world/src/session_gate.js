@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SPECTATE-UNTIL-JOINED — the session gate CORE: the player never holds the controller until their character
 // has joined a world; until then only the pre-load spectate effect renders — the world is truly entered
 // only once the character has joined.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Regression coverage for the CEREMONY-BLOCKER fixed 2026-07-12 in seed_full_corpus.mjs PHASE 6 (world author):
 // the resource-entry `protector` (a Move `Option<ID>`) was threaded as the whole MINTED mob OBJECT
 // (`OUT.mobs[key]` = { id, name, role }) instead of its id STRING. `tx.pure.option('id', <object>)` serializes via

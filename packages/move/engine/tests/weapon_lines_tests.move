@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// §17.27 wave-2a — the equipped-weapon damage LINES resolution (killing the WL_DAMAGE-as-combat-truth shim). A
 /// seat's authored item lines (attached at seat time) drive `act_weapon`: each line is amplified by the caster's
 /// element-primary stat then resisted by the TARGET's per-element resist and SUMMED (the multi-element-spell rule).

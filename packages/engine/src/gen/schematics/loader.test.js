@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Gate for the schematic loader + registry mapping (§4.6 phase A). Golden fixtures pin the CONVERTED
 // pack (dims + block counts + palette→registry mapping for 3 real schematics incl. the biggest
 // tree), and the coverage report proves every legacy block in the shipped bundle resolves to a real

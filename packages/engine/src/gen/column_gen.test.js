@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DETERMINISM GATE (§3.7) — the cross-machine world-identity contract for WS2's generation core.
 //
 //   1. GOLDEN HASH: hash a fixed canonical set of columns for the hardcoded seed and assert the

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LEAVES-2X Rung 2 band math — the pure JS mirror of the vertex-collapse crossfade (leaf_band.js). Pins
 // the invariants the TSL vertex stage relies on: full sprites near, full cubes far, a strict crossfade
 // (keeps sum to 1) so the canopy silhouette is continuous across the seam, and a degenerate (keep === 0)

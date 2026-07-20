@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* FAST char-create — companion design (gold + SUI-cyan, JetBrains, sharp corners), built to design's
    mockup p2-charcreate-v827-grid.png. The companion tokens are scoped locally to .cc so the screen
    keeps its approved look regardless of the mount context (the game HUD uses other tokens). */

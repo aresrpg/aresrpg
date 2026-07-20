@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-13 UNDERWATER IMMERSION (target: "underwater should feel blue and distorded on the camera") —
 // 2026-07-03. When the camera EYE is inside a water voxel the frame gets (a) a blue-green depth-graded
 // fog toward a deep-water colour, (b) a vertical brightness gradient (cyan looking UP toward the

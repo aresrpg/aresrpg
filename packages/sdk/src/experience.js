@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // CHARACTER XP CURVE — the exact 1.29 cumulative XP→level table. SSOT:
 // packages/move/sources/character/character_xp.move (`XP_CURVE` const + `level_from_xp`) — the on-chain
 // contract this SDK talks to. Do NOT hand-edit or rescale a single value here; port any curve change from

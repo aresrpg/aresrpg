@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GATHERABLE sprite RECIPES (ENGINE_AAA_PLAN §5 — rider 2 "all our 11 wheat types, the ores, and the
 // plants for herbalist, proper texture color scales and glows"). Counts VERIFIED against the live seeds
 // (seed/gathering/{farmer,herbalist,miner}/{base,rare}_resources.json): FARMER 11 base + 11 rare · HERBALIST

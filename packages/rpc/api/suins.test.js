@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // suins.js / handle_names tests — SuiNS reverse resolution (D52).
 //
 // resolve_names hits Redis for real (the cache-through behavior IS the thing under test — a mocked

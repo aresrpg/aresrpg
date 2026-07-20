@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // buy_destination_kiosk resolution tests (the mirror of the settlement bug): a purchase must land in the ACTIVE
 // character's kiosk (the SAME kiosk equip/dungeon-burn resolve), not a first-cap sibling that strands it. Pure
 // injection — every function takes `sdk` as a param, so a plain mock drives it; ZERO mock.module (process-global

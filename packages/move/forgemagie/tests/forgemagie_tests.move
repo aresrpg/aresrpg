@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// FORGEMAGIE DOOR TESTS (S-48 upgrade-#2 payload; crush reshaped to the 2026-07-11 single-tx door):
 ///  • SCRIBE — outcome coverage over a deterministic seed sweep with a FULL write-shape parity audit per branch
 ///    (stack −1 exactly, full rolled block, ForgeState DF, xp on success only, puits ledger), plus the

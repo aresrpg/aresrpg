@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // EFFECT BOARD — the persistent on-board combat bookkeeping (traps / glyphs / DoT), a mirror of
 // aresrpg_foundation::spell_board.move (S-16 parity). Two maps: CELL ENTRIES (cell → trap|glyph) and FIGHTER
 // STATUSES (fighter → DoT|buff|state). Pure primitives; the §5d tick ORDERING is the deterministic contract the

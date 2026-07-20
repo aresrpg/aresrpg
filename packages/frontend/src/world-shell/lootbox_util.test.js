@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure loot-box helpers — the box detector + the reveal phase order. Imports the import-free leaf directly:
 // lootbox_actions/BoxReveal drag `../auth` → enoki → `window` at load and are unimportable under bun:test (the
 // repo-wide constraint the deck tests note), so the pure bits live in lootbox_util.js precisely to be testable.

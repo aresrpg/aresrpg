@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Characters meta-tab (P3). Drops the legacy WS-era `use_ws` link flow and renders the already-built
 // CharactersDrawer (the on-chain roster switcher/creator, sourced from the game engine store +
 // @aresrpg/sdk) inside the companion shell, scoped to `.gw-tab` (game-tab.css) so the game tokens

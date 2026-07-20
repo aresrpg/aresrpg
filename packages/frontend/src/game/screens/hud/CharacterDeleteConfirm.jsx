@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // BACKLOG 18 — the character-delete CONFIRM card: deletion is allowed once everything is
 // unequipped, even for the free starter. Deletion is IRREVERSIBLE and the NAME stays reserved forever
 // (derived_object has no unclaim), so the confirm is NAME-TYPED: the destroy button stays disarmed until

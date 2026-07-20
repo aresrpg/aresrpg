@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FAR-TREE IMPOSTORS — render half (ENGINE_AAA_PLAN §3.6, Lane B3). Turns the per-section procedural-tree
 // instances the far worker derives (far_trees_gen.js) into cylindrical billboard cards drawn from the near
 // ring edge to the horizon, so forests reach the vista instead of vanishing at 224 m — and the SAME trees

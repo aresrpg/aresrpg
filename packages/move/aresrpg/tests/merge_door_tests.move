@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// MERGE-DOOR tests: `extract::merge_locked_stacks` — the ghost-zero-refill / stack-dedup door. Folds two
 /// kiosk-LOCKED stacks of the SAME template (in ONE personal kiosk ⇒ ONE owner) into a
 /// single object, re-locked. Proves: amount CONSERVED (no value created/lost), object COUNT drops to 1 (the

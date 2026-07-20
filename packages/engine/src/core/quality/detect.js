@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Adapter-only quality detection (§5.2 step 1). M0 picks a STARTING tier from GPUAdapter.info +
 // adapter.limits + navigator.deviceMemory/hardwareConcurrency + platform — no micro-bench yet
 // (that's §5.2 step 2, M1+). MOBILE (iOS + Android/handheld UA) FLOORS to LOW by design

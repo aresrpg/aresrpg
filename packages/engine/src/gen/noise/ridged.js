@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Ridged-multifractal 3D noise (§2.1 NG1-A) — the sharp-crease detail that turns the smooth spline
 // heightfield into jagged ridgelines + overhang lips (refs #2/#3). Musgrave ridged multifractal:
 // each octave folds `1 − |noise|` into a hard crease, squares it for sharpness, and weights the

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /*
  * EffectBadges.jsx — persistent-effect chips inside a fight nameplate (.hud-turn__body). Scoped .hud-effects
  * block; inherits the fight-chrome tokens (--accent/--fg-muted/--edge/--font-mono/--r-*) the ancestor

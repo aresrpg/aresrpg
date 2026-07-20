@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { clamp_stick_origin, compute_stick_vector, STICK_MAX_RADIUS_PX } from './touch_stick.js'
 import { accepts_touch_pointer } from './touch_target.js'
 

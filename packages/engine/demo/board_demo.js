@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-16 Phase B — TACTICAL BOARD DEMO HARNESS (?board=1).
 //
 // Boots the engine, then mounts a test tactical fightboard over the flat cave-floor pose and drives it

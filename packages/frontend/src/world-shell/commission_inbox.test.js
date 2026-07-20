@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D770a W3b regression — incoming commission nudges must reach the inbox THROUGH @aresrpg/world's presence atom
 // (the WS-era `peer/commissionRequest` bus event is dead). Drives the real wire: wire_commission_p2p subscribes
 // to the core's commission stream head; a `commission_received` row addressed to MY wallet lands as an inbox row,

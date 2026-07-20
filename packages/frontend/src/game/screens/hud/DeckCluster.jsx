@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Spell hand — the optE SPELL BAR: the equipped-WEAPON basic attack (slot 0) + a FIXED set of SPELL_SLOTS
 // sockets: the spell hotbar has a fixed size and slot count, it does not scale
 // with the spell amounts — supersedes the earlier S-25 "no empty placeholder slots" rider below this bar

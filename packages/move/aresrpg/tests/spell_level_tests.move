@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// SPELL_LEVEL spend-door test: `raise_spell_level` reads a cross-package `SpellTemplate` (class-matched to the
 /// character), gates on the target level's `min_char_level` + the character's UNSPENT spell points, then invests
 /// one level (spending `current` points). Drives it end to end off a kiosk-locked character leveled via the real

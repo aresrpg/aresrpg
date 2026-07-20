@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Night-sky pure math — illuminate the sky: beautiful stars, planets, milky way.
 // Pins: (1) the anti-"lamp" kernels are BOUNDARY-FREE + monotone (the windowed-corona disease can never
 // return), (2) the dusk gate is gradual and exactly 0 in daylight, (3) star fades behave, (4) the seed →

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { test, expect } from '@playwright/test'
 
 // COMPASS-STRIP STATES PROOF — drives the REAL app and pins the two fixed states:

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // #39 — direct engine-store (s.sui) patches from a tx's OWN result: the "reconcile" half of predict+reconcile.
 // Instead of a blocking full chain refetch (load_roster) after every tx, apply the objects the tx already
 // returned to the bag slice so the UI updates instantly; the load_roster background poll stays the safety net.

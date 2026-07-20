@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The tactical-fight camera — split from embed_voxel.js at the 600-LoC law. A FIXED-angle orthographic pose
 // on EVERY device (the isometric view is the default now, replacing the old flag —
 // D238's free-orbit drag is retired), wheel/pinch dolly (D256/D264a/D281a) scaling the ortho frustum,

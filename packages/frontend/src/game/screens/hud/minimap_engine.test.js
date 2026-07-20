@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Cube-World minimap CORE — pure-logic contract tests (no canvas): the relief-grid sampler (colour hill-shade
 // + prominence for the extruded walls) + the map projection maths. The imperative render_oblique (clip /
 // depth-sort / tile+wall fillRects) is proven by the headless side-by-side screenshot, not here.

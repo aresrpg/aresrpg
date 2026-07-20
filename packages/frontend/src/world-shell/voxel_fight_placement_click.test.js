@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST regression: a legal placement click must move the projected fighter before READY/receipt. The
 // adapter already stored the READY target, but dropping the local Placed reducer input left the rendered fighter
 // on its chain cell, making the click look dead. This mounts the real adapter and drives its real cell_click seam.

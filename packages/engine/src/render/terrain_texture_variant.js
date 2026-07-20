@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SPATIALLY-COHERENT per-block atlas VARIANT + ROTATION pick — the fix for grass texture reading too
 // repetitive, lacking connected textures to form ground gradients instead of repeating the same block
 // everywhere. terrain_material.js's generic per-cell hash (`h_variant`) picks a fresh atlas variant on

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Dungeon-ENTRY key resolution: the ~10s-stall fast path + its /v1 refetch-then-refuse fallback (V1 sweep —
 // the old O(kiosks×items) live kiosk walk `find_key_item` is DELETED; NO chain-direct kiosk scan remains).
 //
