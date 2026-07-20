@@ -171,7 +171,13 @@ function run_world_core(run = run_test_command) {
 // fight-core + world-core + ledger, no constraints sweep, no browser suites. Also the default pipeline's
 // opening legs.
 function run_unit_slice(run = run_test_command) {
-  let exit_code = run('bun', ['test', ...unit_test_files], repo_root)
+  // Existence-filtered: rows whose files aren't in THIS tree self-drop (tree-subset builds —
+  // e.g. the public repo without the content/rig trees — run the surviving slice; a missing
+  // file is a routing fact, never a red).
+  const present_unit_files = unit_test_files.filter(f => fs.existsSync(path.join(repo_root, f)))
+  if (present_unit_files.length < unit_test_files.length)
+    console.log(`ares: unit slice filtered to ${present_unit_files.length}/${unit_test_files.length} rows present in this tree`)
+  let exit_code = run('bun', ['test', ...present_unit_files], repo_root)
   if (exit_code !== 0) return exit_code
   exit_code = run_fight_core(run) // S2: the 4 fight-core gates + core units are part of the default gate
   if (exit_code !== 0) return exit_code

@@ -11,13 +11,14 @@ Load these before working — they are the operating rules of this codebase:
 @.claude/rules/craft.md
 @.claude/rules/code-law.md
 
-## The two-repo structure
+## The content boundary
 
-**aresrpg** (this repo, public) owns the game. **aresrpg-seed** (private) owns content, balance,
-and publish-ceremony custody. Neither reaches into the other's tree: cross-repo needs travel as
-GitHub issues on the target repo, written for a cold reader (exact paths, current state, expected
-output, success criteria). Each repo protects its own domain and its own simplicity — a
-well-argued refusal is a first-class answer to any feature request.
+This repo owns the GAME — every mechanic, every line of shipped code. Game content (items,
+mobs, spells, balance) is authored privately and reaches the game only as published chain
+state and CDN-served assets; this repo consumes those published artifacts and never contains
+the content pipeline. Proposals that touch content or balance start as issues here — they are
+design conversations, not PRs. Each domain protects its own simplicity: a well-argued refusal
+is a first-class answer to any feature request.
 
 ## Architecture
 

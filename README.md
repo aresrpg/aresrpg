@@ -15,11 +15,10 @@
 
 AresRPG is a browser MMORPG where every character, item, fight and trade is a Sui object — the
 client is a renderer of chain truth, with zkLogin onboarding and sponsored gameplay transactions.
-It is built as two focused repos: **aresrpg** (this repo — the whole game: frontend, 3D voxel
-engine, deterministic combat sim + its Move twin, SDK, test rig, the keyless `/v1` read layer,
-and the transaction sponsor), and **aresrpg-seed** (private — the content corpus, its
-validation, and publish-ceremony custody). Cross-repo requests travel as GitHub issues on the
-target repo.
+This repository is the whole game: frontend, 3D voxel engine, deterministic combat sim + its
+Move twin, SDK, test rig, the keyless `/v1` read layer, and the transaction sponsor. Game
+content (items, mobs, spells, worlds) is published on-chain and served via the asset CDN — it
+is not part of this repository.
 
 ## Install / run / test
 

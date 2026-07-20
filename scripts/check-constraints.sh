@@ -12,7 +12,7 @@
 # "Green" is then impossible while a brand word reaches a shippable surface.
 #
 # Scope: shipped source + data (js/jsx/ts/tsx/css/html/json/move/rs/vue/proto). Markdown docs
-# (CLAUDE.md, SPEC.md, seed/generators/*.md) legitimately DISCUSS the bans and are excluded.
+# (CLAUDE.md and design docs) legitimately DISCUSS the bans and are excluded.
 #
 # Two documented escape hatches, both tracked for a coordinated follow-up (see the BRAND-SCRUB
 # report / docs):
@@ -406,10 +406,9 @@ EXCLUDE_PLUMBING=(
   # gitignore timing. The analysis docs (PACING_FUN.md, CORPUS.md) are markdown — already outside
   # this gate's extension scan by design.
   ':(exclude)docs/dofus129_corpus/**'
-  # 07-12 item-census raw FalkorDB pull (seed/census/pull_census.mjs artifact) — prod-snapshot class:
+  # legacy census-pull artifacts — prod-snapshot class:
   # never shipped, read-only sourcing oracle for the import pipeline; brand words live in the donor
   # data's own interactionsJson strings and cannot be reworded without falsifying the oracle.
-  ':(exclude)seed/census/**'
 )
 
 # Flagged identifier tokens that legitimately remain in scanned files until the engine/wire rename.
