@@ -30,6 +30,29 @@ History is linear by law; nothing ever rewrites what landed.
    push. Direct pushes to `edge` are reserved for operator alignment acts (branch recreation,
    post-squash alignment) and are expected to be rare and always signed.
 
+## Releases & rollback
+
+`master` deploys to Vercel **production** — and only on a release. Interim work and hotfixes
+accumulate on `edge` until a release promotes them; nothing else ever reaches production.
+
+1. The publisher bumps `packages/frontend/package.json` and adds
+   `changelog/NNN-RELEASE-vX.Y.Z.md` as `edge`'s **final** commit, titled `release: vX.Y.Z`.
+2. `/promote` the standing edge→master draft PR (opened automatically after the previous
+   release — see `promote.yml`). The bot refuses the hop unless the promoted commit's subject
+   matches `release: vX.Y.Z` — master cannot carry a non-release tip.
+3. The push triggers `release.yml`: it tags `vX.Y.Z` from `package.json`, publishes the GitHub
+   Release (notes = the newest changelog file), and announces on Discord.
+4. Vercel builds **production** from that same push. `packages/frontend/vercel.json`'s
+   `ignoreCommand` skips the build whenever `$VERCEL_ENV=production` and the head commit isn't
+   release-tipped — the two gates (this one and step 2's) enforce the same law independently.
+   Preview deployments (every PR, every branch) are unaffected; the check only activates in
+   production.
+
+**Rollback:** every production deployment maps 1:1 to a release tag. Roll back with Vercel's
+instant rollback (dashboard → Deployments, or `vercel rollback`) to alias production onto the
+previous tag's deployment — no revert commit, no re-promotion needed. Diff two releases with
+`git diff vX.Y.Z..vA.B.C`.
+
 ## The quality bar
 
 - `.claude/rules/craft.md` + `docs/CODE_LAW.md` are the operating rules — pure functions,

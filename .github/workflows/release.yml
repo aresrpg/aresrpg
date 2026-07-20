@@ -1,8 +1,13 @@
 # SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 # © 2026 Sceat — All rights reserved. See LICENSE.
 # Release bookkeeping — every master push tags vX.Y.Z from package.json and publishes the GitHub
-# Release. ONE SOURCE OF TRUTH: Vercel deploys off the same master push
-# via git integration — the tag is bookkeeping + the changelog anchor, NEVER a deploy trigger.
+# Release. PRODUCTION IS RELEASE-ONLY (maintainer ruling): master only reaches Vercel production
+# on a release-tipped push. Two independent gates enforce it — promote.yml's master-hop refuses
+# to even push a SHA that isn't a `release: vX.Y.Z` commit, and packages/frontend/vercel.json's
+# ignoreCommand separately skips the Vercel production build for any commit that isn't (defense
+# in depth for whatever path could still land on master). The tag itself is STILL never the
+# deploy trigger — it's minted by THIS workflow, after the push already happened — it's the
+# release-shaped commit subject Vercel keys off, not the tag.
 # Tags are never created locally (a tag ruleset restricts creation to the Actions app); the
 # promotion PR's package.json bump is the only human-touched version artifact.
 #
