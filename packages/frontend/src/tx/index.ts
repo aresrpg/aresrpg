@@ -16,6 +16,7 @@ import { tx_error } from '../game/core/abort_copy.js'
 import { gas_guard_decision, sim_gas, GAS_CEILING_SUI, GAS_CEILING_MIST } from '../game/core/gas_guard.js'
 import { SPONSOR_URL } from '../env'
 import { read_sui_balance_mist } from '../auth/sui_balance'
+import { is_zklogin_wallet } from '../auth/zklogin_wallet'
 import { use_settings } from '../stores/settings'
 import { game_log } from '../core/log.js'
 import { attach_executed_digest } from '../world-shell/tx_digest_error.js'
@@ -200,7 +201,7 @@ export async function execute_tx({
   const feature = wallet.features['sui:signAndExecuteTransaction'] as SignAndExecuteFeature | undefined
   if (!feature?.signAndExecuteTransaction) throw new Error('Wallet does not support signAndExecuteTransaction')
 
-  const is_zklogin = 'enoki:getSession' in wallet.features
+  const is_zklogin = is_zklogin_wallet(wallet)
   // The sponsor door + fresh-balance reader, resolved ONCE (real in prod, injected in tests). Used by BOTH the
   // sponsor-FIRST route and the gas-selection fallback in the catch.
   const deps = sponsor_fallback ?? {
@@ -493,6 +494,14 @@ export async function execute_sponsored_tx({
   build_client?: unknown
   sponsor_url: string
 }): Promise<SponsoredReceipt> {
+  // MONEY LAW (#73, structural — SINGLE HOME): sponsorship is zkLogin-only. Every sponsored path —
+  // gameplay sponsor-first, the gas-selection fallback, and create/join — funnels through this one door,
+  // so refusing a non-Enoki (wallet-standard) session HERE makes the sponsor endpoint structurally
+  // unreachable for a connected wallet: it self-pays every transaction. Defense in depth over the sponsor
+  // server's own zkLogin assertion; the throw is PRE-network (no /reserve, no /execute — zero traffic) and
+  // humanized (no-silent-failure law). Unit-tested in tx/wallet_self_pay.test.ts.
+  if (!is_zklogin_wallet(wallet)) throw new Error(i18n.t('errors.sponsor_zklogin_only'))
+
   // (The S-64 client-direct station flag that used to branch here was DELETED 07-10: the
   // Mysten sui-gas-pool is an identity-blind internal primitive — only the fronting sponsor service may
   // reach it. sponsor.mjs delegating its gas mechanics to the station later is a backend-only swap; this

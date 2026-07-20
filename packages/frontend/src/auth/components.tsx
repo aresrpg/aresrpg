@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+
+import { list_wallets, subscribe_wallets, type ConnectableWallet } from './index'
+
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24">
     <path
@@ -32,5 +37,53 @@ export function GoogleButton({ onClick, loading }: { onClick: () => void; loadin
       <GoogleIcon />
       <span>{loading ? 'Connecting...' : 'Continue with Google'}</span>
     </button>
+  )
+}
+
+// Wallets register asynchronously (an extension injects itself after page load), so read once then re-read
+// on every register/unregister — a wallet enabled after first paint appears without a manual refresh.
+function use_connectable_wallets(): ConnectableWallet[] {
+  const [wallets, set_wallets] = useState<ConnectableWallet[]>(list_wallets)
+  useEffect(() => {
+    set_wallets(list_wallets()) // catch any that registered between first render and this effect
+    return subscribe_wallets(() => set_wallets(list_wallets()))
+  }, [])
+  return wallets
+}
+
+// NON-PRODUCTION wallet-standard connect (#73). The login popup renders this only when the build-time gate
+// allows it (preview/dev — never a production release). Each installed Sui wallet connects through the shared
+// auth store's login(name) — the SAME path the Google/zkLogin wallet uses — so the connected address flows
+// into the same store shape and every downstream read stays identity-agnostic. A wallet session self-pays
+// every transaction: sponsorship is zkLogin-only (enforced structurally in tx/index.ts).
+export function WalletConnectSection({
+  on_connect,
+  loading,
+}: {
+  on_connect: (wallet_name: string) => void
+  loading?: boolean
+}) {
+  const { t } = useTranslation()
+  const wallets = use_connectable_wallets()
+
+  if (wallets.length === 0)
+    return <div className="text-muted/70 text-[10px] tracking-[0.12em] text-center py-1">{t('auth.no_wallet_detected')}</div>
+
+  return (
+    <div className="flex flex-col items-stretch gap-2 w-full">
+      {wallets.map((wallet) => (
+        <button
+          key={wallet.name}
+          type="button"
+          onClick={() => on_connect(wallet.name)}
+          disabled={loading}
+          className="flex items-center justify-center gap-2.5 w-full h-11 border border-gold/30 text-gold text-[11px] tracking-[0.16em] uppercase font-semibold cursor-pointer transition-all hover:border-gold/60 hover:bg-gold/8 disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{ borderRadius: 5 }}
+        >
+          {wallet.icon ? <img src={wallet.icon} alt="" width={16} height={16} style={{ borderRadius: 3 }} /> : null}
+          <span>{wallet.name}</span>
+        </button>
+      ))}
+    </div>
   )
 }

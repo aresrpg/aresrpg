@@ -289,7 +289,9 @@
     "spectate": "Ver el mundo en vivo",
     "spectating": "Observando el mundo en vivo",
     "entering_world": "Entrando al mundo",
-    "connecting": "Conectando..."
+    "connecting": "Conectando...",
+    "connect_wallet": "Conectar cartera",
+    "no_wallet_detected": "No se detectó ninguna cartera Sui"
   },
   "gate": {
     "members_only": "SOLO MIEMBROS",
@@ -1483,7 +1485,9 @@
       "Color de tag exclusivo en chat",
       "Descuento permanente del 30% en la tienda"
     ],
-    "veteran_app_perks": ["Todas las ventajas de Miembro"],
+    "veteran_app_perks": [
+      "Todas las ventajas de Miembro"
+    ],
     "min_level": "NIVEL MÍN",
     "recommended_level": "NIVEL RECOMENDADO",
     "dungeon_mobs": "MONSTRUOS",
@@ -2763,7 +2767,8 @@
     "airdrop_wrong_template": "Este objeto de airdrop ya no está disponible — actualiza e inténtalo de nuevo.",
     "delete_items_equipped": "Este personaje todavía tiene objetos equipados. Desequipa todo y vuelve a intentarlo.",
     "delete_unfinished_fight": "Este personaje tiene un resultado de combate sin abrir. Ábrelo primero y vuelve a intentarlo.",
-    "delete_in_dungeon": "Este personaje está en plena mazmorra. Sal o abandónala primero."
+    "delete_in_dungeon": "Este personaje está en plena mazmorra. Sal o abandónala primero.",
+    "sponsor_zklogin_only": "El gas patrocinado es solo para el inicio de sesión con Google: esta cartera paga su propio gas."
   },
   "vault": {
     "connect_wallet": "Conectar billetera",

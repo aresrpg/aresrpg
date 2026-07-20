@@ -289,7 +289,9 @@
     "spectate": "ライブワールドを観る",
     "spectating": "ライブワールドを観戦中",
     "entering_world": "ワールドに入っています",
-    "connecting": "接続中..."
+    "connecting": "接続中...",
+    "connect_wallet": "ウォレットを接続",
+    "no_wallet_detected": "Suiウォレットが見つかりません"
   },
   "gate": {
     "members_only": "メンバー限定",
@@ -1483,7 +1485,9 @@
       "限定チャットタグカラー",
       "ショップ永久30%割引"
     ],
-    "veteran_app_perks": ["全メンバー特典"],
+    "veteran_app_perks": [
+      "全メンバー特典"
+    ],
     "min_level": "最低レベル",
     "recommended_level": "推奨レベル",
     "dungeon_mobs": "モンスター",
@@ -2763,7 +2767,8 @@
     "airdrop_wrong_template": "このエアドロップアイテムは利用できなくなりました — 更新して再試行してください。",
     "delete_items_equipped": "このキャラクターはまだアイテムを装備しています。すべて外してから再試行してください。",
     "delete_unfinished_fight": "このキャラクターには未開封の戦闘結果があります。先に開いてから再試行してください。",
-    "delete_in_dungeon": "このキャラクターはダンジョンの最中です。先に退出するか放棄してください。"
+    "delete_in_dungeon": "このキャラクターはダンジョンの最中です。先に退出するか放棄してください。",
+    "sponsor_zklogin_only": "スポンサー付きガスはGoogleサインイン専用です。このウォレットはガスを自己負担します。"
   },
   "vault": {
     "connect_wallet": "ウォレットを接続",

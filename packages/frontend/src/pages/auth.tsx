@@ -5,7 +5,8 @@ import { useTranslation } from 'react-i18next'
 
 import { use_auth, type AuthState } from '../auth'
 import { use_spectate_gate } from '../stores/spectate_gate'
-import { GoogleButton } from '../auth/components'
+import { GoogleButton, WalletConnectSection } from '../auth/components'
+import { is_wallet_connect_enabled } from '../auth/wallet_connect_gate'
 import { Logo } from '../components/logo'
 // The world chat is a READ-ONLY overlay on the spectate view; the
 // lines flow over the #19 silent p2p join the spectate backdrop already holds.
@@ -80,13 +81,26 @@ function PulseDots() {
   )
 }
 
+// A hairline rule with a centered uppercase label — the login popup's section separator.
+function Divider({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 my-0.5">
+      <div className="flex-1 h-px bg-white/10" />
+      <span className="text-muted text-[9px] tracking-[0.25em] uppercase">{label}</span>
+      <div className="flex-1 h-px bg-white/10" />
+    </div>
+  )
+}
+
 // The glass login popup over the blurred world + the SPECTATE option.
 function LoginPopup({
   on_login,
+  on_connect_wallet,
   on_spectate,
   loading,
 }: {
   on_login: () => void
+  on_connect_wallet: (wallet_name: string) => void
   on_spectate: () => void
   loading: boolean
 }) {
@@ -98,11 +112,16 @@ function LoginPopup({
         <Wordmark subtitle={t('auth.sign_in_to_play')} />
         <div className="flex flex-col items-stretch gap-3 w-full">
           <GoogleButton onClick={on_login} loading={loading} />
-          <div className="flex items-center gap-3 my-0.5">
-            <div className="flex-1 h-px bg-white/10" />
-            <span className="text-muted text-[9px] tracking-[0.25em] uppercase">{t('auth.or')}</span>
-            <div className="flex-1 h-px bg-white/10" />
-          </div>
+          {/* #73 — zkLogin can't complete on Vercel preview URLs (dynamic OAuth redirect), so preview/dev
+              builds offer a direct wallet-standard connect. Build-time gate: a production release never
+              renders this branch (asserted in auth/wallet_connect_gate.test.ts, not hidden by CSS). */}
+          {is_wallet_connect_enabled() && (
+            <>
+              <Divider label={t('auth.connect_wallet')} />
+              <WalletConnectSection on_connect={on_connect_wallet} loading={loading} />
+            </>
+          )}
+          <Divider label={t('auth.or')} />
           <button
             type="button"
             onClick={on_spectate}
@@ -222,6 +241,13 @@ export function SpectateLanding() {
         on_login={() => {
           set_signing_in(true)
           void login('Sign in with Google').finally(() => set_signing_in(false))
+        }}
+        on_connect_wallet={(wallet_name) => {
+          // The SAME login(name) path zkLogin uses — the connected wallet address lands in the same auth
+          // store shape, so downstream reads stay identity-agnostic. Sponsorship is zkLogin-only: a wallet
+          // session self-pays every transaction.
+          set_signing_in(true)
+          void login(wallet_name).finally(() => set_signing_in(false))
         }}
       />
     </>

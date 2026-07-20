@@ -289,7 +289,9 @@
     "spectate": "Watch the live world",
     "spectating": "Spectating the live world",
     "entering_world": "Entering the world",
-    "connecting": "Connecting..."
+    "connecting": "Connecting...",
+    "connect_wallet": "Connect wallet",
+    "no_wallet_detected": "No Sui wallet detected"
   },
   "gate": {
     "members_only": "MEMBERS ONLY",
@@ -1483,7 +1485,9 @@
       "Exclusive chat tag color",
       "Lifetime 30% shop discount"
     ],
-    "veteran_app_perks": ["All Member advantages"],
+    "veteran_app_perks": [
+      "All Member advantages"
+    ],
     "min_level": "MIN LEVEL",
     "recommended_level": "RECOMMENDED LEVEL",
     "dungeon_mobs": "MONSTERS",
@@ -2763,7 +2767,8 @@
     "airdrop_wrong_template": "This airdrop item is no longer available — refresh and retry.",
     "delete_items_equipped": "This character still has items equipped. Unequip everything, then try again.",
     "delete_unfinished_fight": "This character has an unopened fight result. Open it first, then try again.",
-    "delete_in_dungeon": "This character is in the middle of a dungeon. Leave or abandon it first."
+    "delete_in_dungeon": "This character is in the middle of a dungeon. Leave or abandon it first.",
+    "sponsor_zklogin_only": "Sponsored gas is for Google sign-in only — this wallet pays its own gas."
   },
   "vault": {
     "connect_wallet": "Connect Wallet",

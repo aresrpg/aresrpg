@@ -11,7 +11,7 @@
 
 import { join_world_ptb } from '@aresrpg/sdk/game'
 
-import { use_auth, sponsor_and_execute_transaction } from '../auth'
+import { use_auth, sponsor_and_execute_transaction, is_zklogin_session } from '../auth'
 import { read_sui_balance_mist } from '../auth/sui_balance'
 import { get_sdk } from '../chain/sdk'
 import { normalize_receipt } from '../chain/receipt'
@@ -169,11 +169,14 @@ export async function auto_join_world({ character_id, world_id = T62_WORLDS[0].i
   // wallet holding > 0.2 SUI (api/sponsor.mjs SELF_PAY_MIST), so a funded zkLogin player must SELF-PAY the join
   // rather than dead-ending on a "self-pay-required" 400. A FRESH on-chain read decides the door; a read failure
   // (null) defaults to SPONSORED because the reactive fallback above still catches a funded 400 (never a dead end).
+  // MONEY LAW (#73): only a zkLogin (Enoki) identity is sponsor-eligible — a CONNECTED WALLET self-pays
+  // EVERY tx and never rides the sponsor door regardless of balance. A funded zkLogin wallet (> 0.2 SUI)
+  // self-pays too; a low-balance zkLogin wallet goes sponsored (the reactive fallback above still catches a
+  // funded 400). A read failure (null) leaves a zkLogin wallet on the sponsored default (fallback-safe).
   const balance_mist = await read_sui_balance_mist(address)
-  const digest =
-    balance_mist != null && route_create_payment(balance_mist) === 'self_pay'
-      ? await self_pay()
-      : await sponsored_join()
+  const must_self_pay =
+    !is_zklogin_session() || (balance_mist != null && route_create_payment(balance_mist) === 'self_pay')
+  const digest = must_self_pay ? await self_pay() : await sponsored_join()
 
   // DEFER to a manual travel that raced this in-flight heal: if the player picked a world while we were sending,
   // DO NOT clobber their chosen binding with First Shore (their explicit join wins). The heal tx already landed
