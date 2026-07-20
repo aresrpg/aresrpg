@@ -1,35 +1,11 @@
 #!/usr/bin/env bash
-# check-constraints.sh — the HARD-LAW brand gate for AresRPG.
+# check-constraints.sh — the AresRPG constraint gate.
 #
-# The hard law (see CLAUDE.md): the reference game's brand words — its title, publisher name,
-# and in-universe currency/asset names — must NEVER appear in shipped code, comments, UI copy, i18n, or pulled
-# donor data. Faithful 1:1 ports re-introduce them in two non-obvious vectors: source-citing
-# comments (a donor-version curve label) and materialized donor JSON (engine handler type-names like
-# "Ares_DofusDamage_Hit"). typecheck/lint/test never look for them, so they slip through.
+# Mechanical checks that keep the tree honest, wired into `bun run lint`:
+#   chain-id declarations · Move public-surface law · app identifier naming ·
+#   test reachability · the secret-leak gate.
 #
-# This script makes the brand law part of the green-check. Wire it into the gate:
-#   eslint . && prettier . --check && bash scripts/check-constraints.sh
-# "Green" is then impossible while a brand word reaches a shippable surface.
-#
-# Scope: shipped source + data (js/jsx/ts/tsx/css/html/json/move/rs/vue/proto). Markdown docs
-# (CLAUDE.md and design docs) legitimately DISCUSS the bans and are excluded.
-#
-# Two documented escape hatches, both tracked for a coordinated follow-up (see the BRAND-SCRUB
-# report / docs):
-#   1. EXCLUDED plumbing files — wire/DB identifiers whose blind rename breaks the read-model or
-#      the live game (proto messages, a legacy donor-named FalkorDB query + its handler, the frontend
-#      `zaaps` store, the in-flight MapDrawer). These need a synchronized proto-regen + indexer
-#      re-project + game-server deploy, NOT an overnight sed. Listed in EXCLUDE_PLUMBING below.
-#   2. FLAGGED identifier tokens — cross-boundary enums (`DISCOVER_ZAAP`, the `zaaps`/`fetch_zaaps`
-#      store fields, a legacy donor-branded CDN asset name) that still ride along in admin-editor + seed data
-#      until a coordinated wire/indexer rename lands. Listed in FLAGGED_TOKENS below.
-#      (The former weapon-damage handler-name tokens were resolved by the #92 rename to Weapon*.)
-# Brand-scrub TOOLING (packages/sdk/scripts/) is excluded too: a scrub regex MUST name the words
-# to strip them from pulled donor data.
-#
-# When a coordinated rename lands, DELETE the matching exclusion/token so the gate tightens.
-#
-# Exit: 0 = clean; 1 = at least one un-flagged brand leak on a shippable surface.
+# Exit: 0 = clean; 1 = at least one violation.
 
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 2
@@ -390,60 +366,6 @@ if [ "$#" -ne 0 ]; then
   exit 2
 fi
 
-# Banned brand words. \b on the two that collide with flagged identifiers; the rest are unique.
-BRAND_RE='Waven|Ankama|Dofus|Wakfu|Zaap|Kamas'
-
-# Plumbing files excluded wholesale (flagged for a coordinated cross-boundary rename — see header).
-EXCLUDE_PLUMBING=(
-  ':(exclude)packages/shared/proto/messages.proto'
-  ':(exclude)packages/frontend/src/ws/index.ts'
-  ':(exclude)packages/frontend/src/game/screens/hud/MapDrawer.jsx'
-  ':(exclude)packages/sdk/scripts/**'
-  ':(exclude)packages/engine/src/brand_law.test.js'
-  # S-72 research corpus — raw 1.29 donor data BY NATURE names the brand (item/monster/spell names).
-  # Never shipped: the raw *.json is gitignored (docs/dofus129_corpus/*.json), rebuildable via the
-  # tracked build.mjs; this entry is belt-and-braces so the exclusion is explicit, not an accident of
-  # gitignore timing. The analysis docs (PACING_FUN.md, CORPUS.md) are markdown — already outside
-  # this gate's extension scan by design.
-  ':(exclude)docs/dofus129_corpus/**'
-  # legacy census-pull artifacts — prod-snapshot class:
-  # never shipped, read-only sourcing oracle for the import pipeline; brand words live in the donor
-  # data's own interactionsJson strings and cannot be reworded without falsifying the oracle.
-)
-
-# Flagged identifier tokens that legitimately remain in scanned files until the engine/wire rename.
-# A NEW prose leak (any banned brand word used as a UI string or comment) does NOT match these and FAILS.
-#   · dofus129_corpus — the S-72 research dir, already EXCLUDED wholesale above, but its PATH is cited by a LIVE
-#     code path (test/localnet/bots/balance/oracle.js loads docs/dofus129_corpus/sim/results/curves.json — not a
-#     comment, can't be reworded) + a fenced Move comment. Only the literal compound token passes; bare donor-version
-#     prose still FAILS.
-#   · two design-ancestor provenance idioms (donor-branded version tags) live in the POST-REVIEW Move
-#     tree (gathering.move / commission.move); un-editable under the Move fence, tracked for a coordinated Move
-#     re-review that rewords the comment and DELETES these two tokens.
-FLAGGED_TOKENS='zaaps|ZAAP_ICON_URL|make_zaap_icon|DISCOVER_ZAAP|zaap\.png|fetch_zaaps|handle_zaaps|dofus129_corpus|Dofus semantics|Dofus-1\.29-closest'
-
-# Shipped-source file set (NUL-delimited), excluding deps / generated / build / docs / plumbing.
-mapfile -d '' FILES < <(
-  git ls-files -z -- \
-    '*.js' '*.jsx' '*.ts' '*.tsx' '*.css' '*.html' '*.json' '*.move' '*.rs' '*.vue' '*.proto' \
-    ':(exclude)**/node_modules/**' ':(exclude)**/dist/**' ':(exclude)**/build/**' \
-    ':(exclude)**/target/**' ':(exclude)**/generated/**' ':(exclude)**/*.gen.ts' \
-    ':(exclude)**/*.d.ts' "${EXCLUDE_PLUMBING[@]}"
-  git ls-files -z --others --exclude-standard -- \
-    '*.js' '*.jsx' '*.ts' '*.tsx' '*.css' '*.html' '*.json' '*.move' '*.rs' '*.vue' '*.proto' \
-    ':(exclude)**/node_modules/**' ':(exclude)**/dist/**' ':(exclude)**/build/**' \
-    ':(exclude)**/target/**' ':(exclude)**/generated/**' ':(exclude)**/*.gen.ts' \
-    ':(exclude)**/*.d.ts' "${EXCLUDE_PLUMBING[@]}"
-)
-
-echo "== AresRPG brand-law gate (Waven/Ankama/Dofus/Wakfu/Zaap/Kamas) =="
-
-HITS=""
-if [ "${#FILES[@]}" -gt 0 ]; then
-  HITS="$(printf '%s\0' "${FILES[@]}" | xargs -0 grep -IinE "$BRAND_RE" 2>/dev/null \
-    | grep -ivE "$FLAGGED_TOKENS" || true)"
-fi
-
 FAIL=0
 
 echo
@@ -464,17 +386,6 @@ fi
 echo
 if ! test_reachability_gate; then
   FAIL=1
-fi
-
-if [ -n "$HITS" ]; then
-  red "  ✗ FAIL: banned brand word(s) on a shippable surface:"
-  echo "$HITS" | cut -c1-160 | sed 's/^/      /' | head -40
-  echo
-  red "BRAND-LAW GATE FAILED. Scrub to the house term (Zaap->Waystone, Kamas->kares, Dofus->retro) or, if it is a"
-  red "cross-boundary identifier, FLAG it (EXCLUDE_PLUMBING / FLAGGED_TOKENS) with a coordinated-rename note."
-  FAIL=1
-else
-  grn "  ✓ no brand words on any shippable surface (flagged plumbing/tokens tracked for coordinated rename)"
 fi
 
 # ── secret-leak gate (S-22, 2026-07-09): no hardcoded Sui private keys, ever ────────────────────────

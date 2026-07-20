@@ -107,7 +107,7 @@ public fun slot_crit_roll(turn_seed: u64, slot: u64): u64 {
 // exactly like a crit. `dodge_seed` yields a per-CAST prng STATE (not a bounded roll): the resolver threads it
 // through `remove_points`'s per-point loop, so one seed decorrelates every point of every drain in the cast, and
 // the client mirrors it byte-for-byte. Mob-cast drains instead thread the crank's live `&Random` (mob actions are
-// crank-entropy-driven, never previewable). The exact 1.29 esquive ratio is ABSENT from docs/dofus129_corpus/
+// crank-entropy-driven, never previewable). The exact reference escape ratio is absent from the research corpus
 // (only the effect-id enum 160-163) — so the contest reuses THIS module's already-cited Araknemu `remove_points`
 // formula, re-keyed by the resolver so the DEFENDER term = agility (+ap/mp_dodge), remover = wisdom.
 const DOMAIN_DODGE: u64 = 0xD0D6E; // dodge stream domain tag (≠ DOMAIN_CRIT = 0)
@@ -152,7 +152,7 @@ public fun apply_variance(base: u64, factor: u64): u64 {
 // ╔════════════════ [ TACKLE — the ordinary-movement escape contest ] ═════════════ ]
 //
 // Chain twin of the sim's shipped rule (packages/sim/src/fight_actions.js:63-100 — the in-repo authority: SPEC
-// is silent on tackle and docs/dofus129_corpus carries only the dodge/lock stat-family enum, CORPUS.md:125 —
+// is silent on tackle and the research corpus carries only the dodge/lock stat-family enum —
 // the same authority precedent as the esquive contest above). A fighter leaving a LIVING adjacent enemy's
 // tackle zone rolls ONE combined contest: dodge = agility/10 + 2; per locker i, den_i = 2·(agility_i/10 + 2),
 // num_i = min(den_i, dodge); escape iff roll ∈ [0, Π den_i) < Π num_i (equal agility ⇒ 1/2; dodge ≥ 2·lock ⇒
