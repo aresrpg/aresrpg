@@ -190,8 +190,8 @@ let ambient_night_floor = AMBIENT_NIGHT_FLOOR_DEFAULT
  */
 export function configure_night_lighting(cfg) {
   if (!cfg) return
-  if (typeof cfg.moon_mul === 'number') moon_mul = cfg.moon_mul
-  if (typeof cfg.ambient_night_floor === 'number') ambient_night_floor = cfg.ambient_night_floor
+  if (typeof cfg.moon_mul === 'number') ({ moon_mul } = cfg)
+  if (typeof cfg.ambient_night_floor === 'number') ({ ambient_night_floor } = cfg)
 }
 
 /** The live night dials (for tests / introspection). @returns {{ moon_mul:number, ambient_night_floor:number }} */
