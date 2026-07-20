@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
 # The enforcement ladder in CI (docs/CODE_LAW.md). Two jobs:
 #   ladder    — `bun run lint`: eslint + prettier + the constraint gate (keystroke + commit tiers).
 #   fp-codeql — the custom FP query pack as a native GitHub code-scanning analysis (the deep tier).

@@ -19,27 +19,27 @@ const CLASSES = [
   { exts: ['sh', 'yml', 'yaml'], open: '# ', close: '' },
 ]
 
-const class_of = file => {
+const class_of = (file) => {
   const ext = file.split('.').pop()
-  return CLASSES.find(c => c.exts.includes(ext))
+  return CLASSES.find((c) => c.exts.includes(ext))
 }
 
 const files = execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8' })
   .split('\0')
   .filter(Boolean)
-  .filter(f => class_of(f) !== undefined)
+  .filter((f) => class_of(f) !== undefined)
 
-const stamped = files.filter(file => {
+const stamped = files.filter((file) => {
   const text = readFileSync(file, 'utf8')
   const head = text.split('\n').slice(0, 3).join('\n')
   if (head.includes('SPDX-License-Identifier')) return false // idempotent
   const { open, close } = class_of(file)
   const header = `${open}${SPDX}${close}\n${open}${OWNER}${close}\n`
   // shebang stays line 1
-  const out = text.startsWith('#!')
-    ? text.replace(/^(#![^\n]*\n)/, `$1${header}`)
-    : header + text
+  const out = text.startsWith('#!') ? text.replace(/^(#![^\n]*\n)/, `$1${header}`) : header + text
   writeFileSync(file, out)
   return true
 })
-console.log(`stamped ${stamped.length}/${files.length} files (${files.length - stamped.length} already carried the header)`)
+console.log(
+  `stamped ${stamped.length}/${files.length} files (${files.length - stamped.length} already carried the header)`
+)
