@@ -23,7 +23,9 @@ jobs:
       - name: install deps
         run: bun install --frozen-lockfile
       - name: install semgrep (dataflow leg — commit tier)
-        run: pipx install semgrep
+        # Pinned: semgrep-gate.sh's fixture self-test compares exact match counts, which can shift
+        # between semgrep versions. This is the version the committed baselines were validated against.
+        run: pipx install semgrep==1.170.0
       - name: enforcement ladder — bun run lint
         run: bun run lint
 
