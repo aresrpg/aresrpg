@@ -1,9 +1,3 @@
----
-type: release
-date: 2026-07-21
-title: v1.12.36 — AresRPG goes source-available
----
-
 # v1.12.36 — AresRPG goes source-available
 
 The lands of Ares have a new home: the whole game — client, voxel engine, combat
