@@ -76,6 +76,9 @@ jobs:
           URL="https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
           NOTES_FILE=$(ls changelog/*-RELEASE-*.md 2>/dev/null | sort | tail -1 || true)
           if [ -n "$NOTES_FILE" ]; then BODY=$(cat "$NOTES_FILE"); else BODY="AresRPG ${TAG} is live."; fi
+          # The embed title owns the version line, so strip a leading H1 (and the blank line after
+          # it) — otherwise the changelog's "# vX.Y.Z — …" doubles the card title.
+          BODY=$(printf '%s\n' "$BODY" | awk 'NR==1 && /^# /{s=1;next} s{s=0;if($0=="")next} {print}')
           # One branded embed card: gold border, banner strip (attachment://), the changelog as
           # markdown. Links inside an embed description never sprout preview cards, so the ugly
           # auto-embeds die naturally — no SUPPRESS_EMBEDS flag needed (content stays empty).
