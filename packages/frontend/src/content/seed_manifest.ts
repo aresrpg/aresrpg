@@ -47,10 +47,26 @@ const manifest_modules: Record<string, unknown> = bun_runtime
     }
   : import.meta.glob('../../../move/scripts/out/seed_manifest.json', { eager: true, import: 'default' })
 
-const manifests = Object.values(manifest_modules)
-if (manifests.length !== 1) throw new Error(`expected one seed manifest, found ${manifests.length}`)
+const EMPTY_SEED_MANIFEST: SeedManifest = { items: {}, mobs: {}, spells: {}, worlds: [] }
 
-export const seed_manifest = manifests[0] as SeedManifest
+// Resolves the single seed manifest the build inlined. Zero manifests — the deployment-pin artifact
+// never shipped (issue #94) — DEGRADES loudly to an inert manifest so the client still boots; the >1
+// case stays a hard guard (a build must never inline two).
+export function resolve_seed_manifest(modules: Readonly<Record<string, unknown>>): SeedManifest {
+  const manifests = Object.values(modules)
+  if (manifests.length > 1) throw new Error(`expected one seed manifest, found ${manifests.length}`)
+  if (manifests.length === 0) {
+    console.error(
+      '[seed_manifest] no seed manifest at packages/move/scripts/out/seed_manifest.json — content ' +
+        'features (encyclopedia, shop living-corpus fence, spell rows) are inert until a build inlines ' +
+        'this deployment pin.'
+    )
+    return EMPTY_SEED_MANIFEST
+  }
+  return manifests[0] as SeedManifest
+}
+
+export const seed_manifest = resolve_seed_manifest(manifest_modules)
 
 export function is_object_id(value: unknown): value is string {
   return typeof value === 'string' && /^0x[0-9a-fA-F]{64}$/.test(value)
