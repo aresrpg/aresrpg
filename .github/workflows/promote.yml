@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
 # promote.yml — the fast-forward promotion bot (owner-triggered, signature-preserving).
 #
 # Master never takes a merge COMMIT: promotion is a fast-forward push of the exact approved
