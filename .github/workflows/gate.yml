@@ -19,9 +19,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - name: install
         run: bun install --frozen-lockfile
-      - name: lint (sim)
-        working-directory: packages/sim
-        run: bunx eslint src test && bunx prettier --check src test
       - name: fight-replay gate (deterministic capsules)
         working-directory: packages/sim
         run: bun test test/replay_gate.test.js

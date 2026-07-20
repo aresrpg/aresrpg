@@ -63,8 +63,6 @@
     "./items-data": "./src/items.json",
     "./classes": "./src/classes.json",
     "./mobs": "./src/mobs.json",
-    "./mob-models": "./src/mob_models.json",
-    "./hytale-appearances": "./src/hytale_appearances.json",
     "./mastery": "./src/mastery.json",
     "./zones": "./src/zones.json",
     "./quests": "./src/quests.json",

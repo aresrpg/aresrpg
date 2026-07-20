@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "cd ../.. && bun install",
+  "buildCommand": "bunx vite build && node scripts/assert_clean_bundle.mjs",
+  "outputDirectory": "dist"
+}

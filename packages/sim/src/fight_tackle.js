@@ -2,7 +2,7 @@
 // from fight_actions.js apply_move so the Move chain twin — aresrpg_foundation::spell_formula tackle_* +
 // aresrpg_fight::tackle — pins the identical fraction/loss layer through shared golden vectors
 // (test/vectors/tackle_golden.json). SPEC is silent on tackle and the 1.29 corpus carries only the dodge/lock
-// stat-family enum (docs/dofus129_corpus/CORPUS.md:125), so THIS module is the formula's single home sim-side.
+// stat-family enum (the reference-corpus stat-family enum), so THIS module is the formula's single home sim-side.
 //
 // Contest: dodge = floor(agility/10) + 2; per adjacent living enemy i, den_i = 2·(floor(agility_i/10) + 2),
 // num_i = min(den_i, dodge); escape iff a roll in [0, Π den_i) lands below Π num_i (equal agility ⇒ 1/2,

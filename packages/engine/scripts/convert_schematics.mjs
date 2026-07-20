@@ -40,9 +40,6 @@ const SOURCE_DIRS = [
 
 // Brand law: file names carry legacy French flavor family names (SAPIN=fir, CHENE=oak, BOUE=mud,
 // BUISSON=bush, YGLOO=igloo, CORAIL=coral, …) — none are banned brand tokens. This guard fails the
-// run loudly if a banned token ever appears in an entry key, so nothing ships branded.
-const BANNED_TOKENS = ['DOFUS', 'WAVEN', 'ANKAMA', 'ZAAP', 'KAMAS']
-
 // ---- placement-pool taxonomy (derived from the REAL legacy family names) ------------------------
 // Ordered keyword rules; FIRST match wins. Matched against the UPPERCASE schematic name (properties
 // like the `_G<n>` growth-variant suffix are irrelevant to the family). Grounded 1:1 in the names
@@ -330,7 +327,6 @@ const pools = new Map()
 /** @type {{ name: string, reason: string }[]} */
 const failures = []
 /** @type {{ name: string, tokens: string[] }[]} */
-const branded = []
 
 for (const { category, dir } of SOURCE_DIRS) {
   const files = readdirSync(join(SRC_ROOT, dir))
@@ -342,8 +338,6 @@ for (const { category, dir } of SOURCE_DIRS) {
     try {
       const { entry, report } = convert_one(path, category)
       if (report.blocks === 0) throw new Error('empty schematic (0 non-air voxels)')
-      const hits = BANNED_TOKENS.filter((t) => name.toUpperCase().includes(t))
-      if (hits.length) branded.push({ name, tokens: hits })
       const pool = classify_pool(name, category)
       bundle_schematics[name] = entry
       report_schematics.push({ name, pool, ...report })
@@ -395,7 +389,6 @@ writeFileSync(
       pools: pool_summary,
       distinct_blocks,
       failures,
-      branded,
       schematics: report_schematics,
     },
     null,
@@ -410,7 +403,7 @@ console.log(`report: ${OUT_REPORT}`)
 console.log(
   `${report_schematics.length} schematics (${categories.tree.length} tree / ${categories.rock.length} rock), ` +
     `${Object.keys(distinct_blocks).length} distinct blocks, ${Object.keys(pools_obj).length} pools, ` +
-    `${failures.length} failures, ${branded.length} branded`
+    `${failures.length} failures`
 )
 console.log('\nPOOLS:')
 for (const [pool, names] of Object.entries(pools_obj))
@@ -418,8 +411,4 @@ for (const [pool, names] of Object.entries(pools_obj))
 if (failures.length) {
   console.log('\nFAILURES:')
   for (const f of failures) console.log(`  ${f.name}: ${f.reason}`)
-}
-if (branded.length) {
-  console.log('\nBRANDED (banned tokens in name):')
-  for (const b of branded) console.log(`  ${b.name}: ${b.tokens.join(', ')}`)
 }

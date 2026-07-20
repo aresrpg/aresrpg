@@ -9,9 +9,6 @@ build/
 !.env.example
 
 # S-72 research corpus: raw 1.29 donor dumps (huge + brand-laden by nature; rebuildable via
-# docs/dofus129_corpus/build.mjs — the recipe & analysis docs stay tracked, the raws don't)
-docs/dofus129_corpus/*.json
-docs/dofus129_corpus/raw/
 
 *.log
 logs/
