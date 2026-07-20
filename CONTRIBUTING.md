@@ -26,6 +26,9 @@ History is linear by law; nothing ever rewrites what landed.
    unsigned, which is exactly why the bot exists).
 4. `edge` → `master` is the same mechanic — the rebase discipline's terminal form — and each
    master promotion re-aligns `edge` so the branches never drift at release points.
+5. Feature work reaches `edge` exclusively via a pull request + `/promote` — never a direct
+   push. Direct pushes to `edge` are reserved for operator alignment acts (branch recreation,
+   post-squash alignment) and are expected to be rare and always signed.
 
 ## The quality bar
 
