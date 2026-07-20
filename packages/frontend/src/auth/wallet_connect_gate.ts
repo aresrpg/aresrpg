@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // BUILD-TIME visibility gate for the non-production wallet-standard connect path (#73).
 //
 // zkLogin (Google/Enoki) needs pre-registered OAuth redirect URLs, so it cannot complete on Vercel

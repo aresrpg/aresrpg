@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import type { Wallet as WalletStandard } from '@mysten/wallet-standard'
 
 // SINGLE HOME — "is this the sponsorable zkLogin (Enoki) identity?" The Enoki wallet registered by

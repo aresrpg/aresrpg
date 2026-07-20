@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { afterEach, describe, expect, mock, test } from 'bun:test'
 
 import { set_expedition_sdk_mock } from '../test_helpers/expedition_sdk_mock.js'
