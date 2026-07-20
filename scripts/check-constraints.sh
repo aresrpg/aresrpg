@@ -371,8 +371,13 @@ fi
 FAIL=0
 
 echo
-if ! node scripts/check-chain-ids.mjs; then
-  FAIL=1
+if [ -f scripts/check-chain-ids.mjs ]; then
+  if ! node scripts/check-chain-ids.mjs; then
+    FAIL=1
+  fi
+else
+  ylw "== AresRPG hardcoded chain-id gate =="
+  ylw "  SKIP: scripts/check-chain-ids.mjs not present in this checkout (see .github/workflows/checks.yml — CI-vs-local leg split)."
 fi
 
 echo
@@ -545,8 +550,13 @@ fi
 # The LimitsVerifier struct-field cap, sourced from the 04:09 gold-rig publish failure. The offline
 # source counter refuses absent/stale build output so this pre-publish guard can never lie green.
 echo
-if ! node scripts/check-move-field-limits.mjs; then
-  FAIL=1
+if [ -f scripts/check-move-field-limits.mjs ]; then
+  if ! node scripts/check-move-field-limits.mjs; then
+    FAIL=1
+  fi
+else
+  ylw "== AresRPG Move field-definition cap gate =="
+  ylw "  SKIP: scripts/check-move-field-limits.mjs not present in this checkout (see .github/workflows/checks.yml — CI-vs-local leg split)."
 fi
 
 # ── i18n coverage gate (ticket #18) ──────────────────────────────────────────────────────────────
@@ -573,13 +583,17 @@ fi
 # rows between `## OPEN` and the next `## ` section header; >40 is red.
 echo
 echo "== AresRPG BACKLOG OPEN-count gate (OPEN ≤ 40 rows — flip-your-own-row law) =="
-OPEN_ROW_COUNT="$(awk '/^## OPEN$/{f=1;next} /^## /{f=0} f && /^- \[/{n++} END{print n+0}' BACKLOG.md)"
-if [ "$OPEN_ROW_COUNT" -gt 40 ]; then
-  red "  ✗ FAIL: BACKLOG.md OPEN section holds $OPEN_ROW_COUNT rows (law: ≤40 — this wave + next only)."
-  red "OPEN-COUNT GATE FAILED. Flip landed rows to DONE (with proof paths), collapse superseded ones (name the D-number/design), ICEBOX the real-but-not-next."
-  FAIL=1
+if [ ! -f BACKLOG.md ]; then
+  ylw "  SKIP: BACKLOG.md not present in this checkout."
 else
-  grn "  ✓ BACKLOG OPEN section holds $OPEN_ROW_COUNT rows (≤ 40)"
+  OPEN_ROW_COUNT="$(awk '/^## OPEN$/{f=1;next} /^## /{f=0} f && /^- \[/{n++} END{print n+0}' BACKLOG.md)"
+  if [ "$OPEN_ROW_COUNT" -gt 40 ]; then
+    red "  ✗ FAIL: BACKLOG.md OPEN section holds $OPEN_ROW_COUNT rows (law: ≤40 — this wave + next only)."
+    red "OPEN-COUNT GATE FAILED. Flip landed rows to DONE (with proof paths), collapse superseded ones (name the D-number/design), ICEBOX the real-but-not-next."
+    FAIL=1
+  else
+    grn "  ✓ BACKLOG OPEN section holds $OPEN_ROW_COUNT rows (≤ 40)"
+  fi
 fi
 
 # ── arch gates (docs/CODE_LAW.md "Arch gates", 2026-07-17) ──────────────────────────────────────
@@ -610,7 +624,18 @@ fi
 # clone without the personal agent-fleet dotfiles) falls back to today's ungated call.
 echo
 PEAK_LOCK_HELPER="$HOME/.claude/hooks/peak-lock.sh"
-if [ -r "$PEAK_LOCK_HELPER" ]; then
+# The docker-containerised deep tier is the LOCAL pre-ship gate. In CI it is REPLACED by the native
+# github/codeql-action (.github/workflows/checks.yml → fp-codeql job = the JS/TS FP-pack ratchet), so
+# skip it under CI or when the codeql image is not built on this host (a bounded inspect never hangs a
+# wedged daemon). Coverage is not lost — it moves to native code scanning; gate.sh's mechanics are intact.
+CODEQL_TIMEOUT="$(command -v timeout || command -v gtimeout || true)"
+codeql_image_present() {
+  command -v docker >/dev/null 2>&1 || return 1
+  ${CODEQL_TIMEOUT:+$CODEQL_TIMEOUT 20} docker image inspect aresrpg-codeql:2.26.1 >/dev/null 2>&1
+}
+if [ "${CI:-}" = "true" ] || [ -n "${GITHUB_ACTIONS:-}" ] || ! codeql_image_present; then
+  ylw "  SKIP (codeql deep tier): not run here — CI uses the native github/codeql-action fp-codeql job; locally it runs when the aresrpg-codeql image is built."
+elif [ -r "$PEAK_LOCK_HELPER" ]; then
   # shellcheck disable=SC1090
   . "$PEAK_LOCK_HELPER"
   if acquire_peak_or_skip CODEQL-JAVA "${CODEQL_PEAK_WAIT_S:-20}"; then
