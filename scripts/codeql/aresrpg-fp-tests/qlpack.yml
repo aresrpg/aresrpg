@@ -1,0 +1,6 @@
+name: aresrpg/fp-queries-tests
+version: 0.1.0
+description: CodeQL-native unit tests (red/green fixtures) for the aresrpg-fp query pack
+extractor: javascript
+dependencies:
+  aresrpg/fp-queries: '*'

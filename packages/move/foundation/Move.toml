@@ -1,0 +1,24 @@
+# aresrpg_foundation — the PURE-MATH combat foundation (spell/effect/formula/target/grid/prng/book/board).
+# Split out of `aresrpg` (#57): testnet max_move_package_size=102400 — the single package was 17KB over.
+# Value-semantics only (no objects, no capabilities, no transfers): everything public here is safe by
+# construction. Published FIRST; the core `aresrpg` package depends on it.
+[package]
+name = "aresrpg_foundation"
+version = "0.1.0"
+edition = "2024.alpha"
+authors = ["AresRPG"]
+
+[dependencies.Sui]
+git = "https://github.com/MystenLabs/sui.git"
+subdir = "crates/sui-framework/packages/sui-framework"
+rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+override = true
+
+[dependencies.MoveStdlib]
+git = "https://github.com/MystenLabs/sui.git"
+subdir = "crates/sui-framework/packages/move-stdlib"
+rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+override = true
+
+[addresses]
+# `aresrpg_foundation = "0x0"` is implicit via the package name (same convention as core).

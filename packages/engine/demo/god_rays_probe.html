@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <title>AresRPG — God Rays Probe (shadow-gated volumetric in-scatter)</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #05060a;
+      }
+      #canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <!--
+      Standalone proof for src/render/lighting/god_rays.js — its OWN WebGPURenderer (no engine), a real
+      directional SHADOW MAP, and PostProcessing(pass→color+depth) compositing the physically-based
+      in-scatter additively in linear HDR before AgX (exactly where post_stack will add it).
+
+      SCENES (?scene):
+        cave (default) — a ground slab + a floating ROOF with a HOLE. The shadow map shadows ALL the air
+             under the roof except the column under the hole, so a raking sun paints a single visible SHAFT
+             ("hole / cave mouth / under canopy"). This is the acceptance-1/2 scene.
+        open          — the ground slab ALONE (no occluder): the acceptance-3 non-washout scene.
+
+      TOGGLES:
+        ?godrays=0|1  (default 1)   — god rays off/on (off = the true baseline for the luma-delta proof).
+        ?view=toward|away (cave)    — camera looks TOWARD the sun through the hole (shaft) or AWAY (phase proof).
+        ?view=offsun|sunward (open) — level clearing view off-axis (≈0 veil) or straight at the sun (bounded glow).
+        ?density=<n>  ?strength=<n>  ?steps=<n>  ?g=<n>  — live knobs (steps rebuilds; the rest are uniforms).
+
+      Sets window.__probe_ready once the first post frame draws; window.__probe_err on any GPU/init failure.
+      Exposes window.__gr (the god_rays handle) for live tuning from the capture rig.
+    -->
+    <script type="module">
+      import * as THREE from 'three'
+      import { WebGPURenderer, PostProcessing } from 'three/webgpu'
+      import { pass } from 'three/tsl'
+      import { create_god_rays, GODRAYS_DEFAULTS } from '/src/render/lighting/god_rays.js'
+
+      const q = new URLSearchParams(location.search)
+      const scene_mode = q.get('scene') || 'cave'
+      const godrays_on = q.get('godrays') !== '0'
+      const num = (k, d) => (q.get(k) != null && Number.isFinite(Number(q.get(k))) ? Number(q.get(k)) : d)
+      const steps = Math.max(1, Math.floor(num('steps', GODRAYS_DEFAULTS.steps)))
+
+      // Sun raking down and to +x (up-forward). Direction TO the sun (what the phase dots against).
+      const SUN_DIR = new THREE.Vector3(0.34, 0.86, 0.06).normalize()
+      // Warm-ish key (colour × intensity ≈ the coupled Hillaire sun the production wiring will feed).
+      const SUN_COLOR = [3.0, 2.75, 2.4]
+
+      // Camera poses per (scene, view). Cave: look up the hole toward the sun (shaft) vs away (phase gone).
+      const POSES = {
+        cave: {
+          // in the roof's SHADOW, looking steeply up through the hole toward the high sun (cos≈0.88) ⇒ the shaft blooms.
+          toward: { pos: [-16, 1.5, 6], look: [2, 30, 0] },
+          // SAME position, rotated 180° (look flipped through the eye) ⇒ shaft leaves frame + phase collapses.
+          away: { pos: [-16, 1.5, 6], look: [-34, -27, 12] },
+        },
+        open: {
+          offsun: { pos: [6, 3, 20], look: [-30, 2, -8] }, // level clearing, view away from the sun ⇒ ≈0 veil
+          sunward: { pos: [0, 3, 26], look: [24, 20, -2] }, // straight toward the sun ⇒ bounded physical glow
+        },
+      }
+      const view = q.get('view') || (scene_mode === 'open' ? 'offsun' : 'toward')
+      const pose = (POSES[scene_mode] && POSES[scene_mode][view]) || POSES.cave.toward
+
+      /** A shadow-casting/receiving standard mesh. */
+      function solid(geo, color, opts = {}) {
+        const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color, roughness: 0.95, metalness: 0 }))
+        m.castShadow = opts.cast ?? true
+        m.receiveShadow = opts.receive ?? true
+        return m
+      }
+
+      try {
+        const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('canvas'))
+        const renderer = new WebGPURenderer({ canvas, antialias: true })
+        await renderer.init()
+        renderer.setPixelRatio(1)
+        renderer.setSize(window.innerWidth, window.innerHeight)
+        // Match the engine's look pipeline so the in-scatter reads through the SAME AgX the post stack uses.
+        renderer.shadowMap.enabled = true
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap
+        renderer.toneMapping = THREE.AgXToneMapping
+        renderer.toneMappingExposure = 1.1
+
+        const scene = new THREE.Scene()
+        scene.background = new THREE.Color(0x05070c)
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1200)
+        camera.position.set(pose.pos[0], pose.pos[1], pose.pos[2])
+        camera.lookAt(pose.look[0], pose.look[1], pose.look[2])
+
+        // Lights: the shadow-casting sun + a low ambient so surfaces aren't pitch black (the shaft is the star).
+        const sun = new THREE.DirectionalLight(0xfff1d8, 3.0)
+        sun.position.copy(SUN_DIR.clone().multiplyScalar(320))
+        sun.target.position.set(0, 0, 0)
+        sun.castShadow = true
+        sun.shadow.camera.left = -70
+        sun.shadow.camera.right = 70
+        sun.shadow.camera.top = 70
+        sun.shadow.camera.bottom = -70
+        sun.shadow.camera.near = 1
+        sun.shadow.camera.far = 700
+        sun.shadow.mapSize.set(2048, 2048)
+        sun.shadow.bias = -0.0004
+        sun.shadow.normalBias = 0.4
+        scene.add(sun)
+        scene.add(sun.target)
+        scene.add(new THREE.HemisphereLight(0x2a3550, 0x10131c, 0.2)) // low fill ⇒ dark cave, shaft-contrast reads
+
+        // Ground slab (always present).
+        const ground = solid(new THREE.BoxGeometry(400, 2, 400), 0x3a4152, { cast: false })
+        ground.position.set(0, -1, 0)
+        scene.add(ground)
+
+        if (scene_mode === 'cave') {
+          // Floating ROOF at y=24 covering x,z∈[-40,40] with a 12×12 HOLE at the centre — four border slabs.
+          // The shadow map shadows all air under the roof except the hole column ⇒ one clean raking shaft.
+          const RY = 24
+          const T = 2 // roof thickness
+          const H = 6 // half hole size
+          const E = 40 // roof half extent
+          const roof_color = 0x23262e
+          const slabs = [
+            // [cx, cz, sx, sz]
+            [0, (H + E) / 2, 2 * E, E - H], // +z border
+            [0, -(H + E) / 2, 2 * E, E - H], // -z border
+            [(H + E) / 2, 0, E - H, 2 * H], // +x border (between the z borders)
+            [-(H + E) / 2, 0, E - H, 2 * H], // -x border
+          ]
+          for (const [cx, cz, sx, sz] of slabs) {
+            const slab = solid(new THREE.BoxGeometry(sx, T, sz), roof_color, { receive: false })
+            slab.position.set(cx, RY, cz)
+            scene.add(slab)
+          }
+        }
+
+        // Allocate the sun shadow map with ONE direct render BEFORE building the god-rays node (it reads
+        // light.shadow.map.depthTexture at graph-build time — the exact deferred-mount dependency post_stack has).
+        await renderer.renderAsync(scene, camera)
+
+        const scene_pass = pass(scene, camera)
+        const scene_color = scene_pass.getTextureNode()
+        const scene_depth = scene_pass.getTextureNode('depth')
+
+        let gr = null
+        const post = new PostProcessing(renderer)
+        if (godrays_on) {
+          gr = create_god_rays({
+            light: sun,
+            camera,
+            scene_depth,
+            sun_direction: [SUN_DIR.x, SUN_DIR.y, SUN_DIR.z],
+            sun_color: SUN_COLOR,
+            steps,
+            density: num('density', GODRAYS_DEFAULTS.density),
+            strength: num('strength', GODRAYS_DEFAULTS.strength),
+            g: num('g', GODRAYS_DEFAULTS.g),
+          })
+          post.outputNode = scene_color.add(gr.in_scatter)
+          window.__gr = gr
+        } else {
+          post.outputNode = scene_color
+        }
+
+        Object.assign(window, { __probe_scene: scene_mode, __probe_view: view, __probe_godrays: godrays_on })
+        const loop = async () => {
+          if (gr) gr.update({ sun_direction: [SUN_DIR.x, SUN_DIR.y, SUN_DIR.z], sun_color: SUN_COLOR })
+          await post.renderAsync()
+          window.__probe_ready = true
+          requestAnimationFrame(loop)
+        }
+        requestAnimationFrame(loop)
+      } catch (e) {
+        window.__probe_err = String(e && e.stack ? e.stack : e)
+        console.error('[god-rays-probe] FAILED', e)
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,507 @@
+/* FAST char-create — companion design (gold + SUI-cyan, JetBrains, sharp corners), built to design's
+   mockup p2-charcreate-v827-grid.png. The companion tokens are scoped locally to .cc so the screen
+   keeps its approved look regardless of the mount context (the game HUD uses other tokens). */
+.cc {
+  --cc-gold: #c8963c;
+  --cc-gold-light: #f5d0a9;
+  --cc-cyan: #4a9eff;
+  --cc-text: #e8e4dc;
+  --cc-muted: #6b7280;
+  --cc-border: #1e1e2e;
+  --cc-green: #4ade80;
+  position: fixed;
+  inset: 0;
+  /* above the whole in-game HUD (max ~z-60) but below the fund-wallet modal (z-1200), which the
+     create flow can open on top via on_fund. */
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 26px;
+  font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  color: var(--cc-text);
+}
+
+/* The forced FIRST create replaces only the world slot. The base `.cc` overlay remains active for the
+   additional-character modal; this explicit variant is bounded by GameWorldHost's desktop card / mobile
+   world frame and stays below the mobile HUD navigation (z-90). */
+.world-character-create {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  pointer-events: auto;
+}
+.cc.cc--inline {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.cc--inline .cc__panel {
+  width: min(1040px, 100%);
+  max-width: 100%;
+  max-height: 100%;
+}
+.world-character-create--error {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: radial-gradient(ellipse 120% 95% at 50% 36%, #1e1e2e 0%, #141420 46%, #0a0a0f 100%);
+}
+/* The screen background is the COMPANION body gradient (index.css `body`) — the same surface the
+   shop/encyclopedia render over (no black/flat-dark anywhere). The create overlay
+   covers the game-world canvas, so the veil PAINTS the gradient; its glow is centred behind the create
+   card (a centred modal, vs the shop's top-down page) so the card reads lit, never the old near-black. */
+.cc__veil {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 120% 95% at 50% 36%, #1e1e2e 0%, #141420 46%, #0a0a0f 100%);
+}
+
+.cc__panel {
+  position: relative;
+  width: 1040px;
+  max-width: 98vw;
+  max-height: 94vh;
+  overflow: auto;
+  padding: 24px 30px 22px;
+  /* translucent companion glass over the gradient veil (matches the encyclopedia's transparent
+     surfaces) — never the near-black it was. */
+  background: linear-gradient(160deg, rgba(26, 26, 38, 0.55), rgba(18, 18, 26, 0.5));
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--cc-border);
+  border-top: 2px solid var(--cc-gold);
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.45);
+  animation: cc-rise 280ms ease-out both;
+}
+@keyframes cc-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cc__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.cc__head h1 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.cc__free {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cc-green);
+}
+/* PAID variant (account already claimed its free character, or it already holds one): gold cost tone,
+   never the green "free" colour, so a claimed-then-emptied account is never visually promised free. */
+.cc__free.is-paid {
+  color: var(--cc-gold);
+}
+.cc__lead {
+  margin: 3px 0 16px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: #9aa0ab;
+}
+
+/* "new era" context notice — low-emphasis, sharp, muted gold border (shown only when the wallet owns
+   older-era characters). Reassurance, not an error. */
+.cc__era {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: -6px 0 16px;
+  padding: 8px 12px;
+  border: 1px solid rgba(200, 150, 60, 0.25);
+  background: rgba(200, 150, 60, 0.05);
+}
+.cc__era-tag {
+  flex-shrink: 0;
+  color: #c8963c;
+  font-size: 9px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+}
+.cc__era-note {
+  font-size: 11px;
+  line-height: 1.45;
+  color: #6b7280;
+}
+
+.cc__body {
+  display: flex;
+  gap: 24px;
+  align-items: stretch;
+}
+.cc__label {
+  margin: 0 0 9px;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cc-muted);
+}
+
+/* LEFT — pedestal */
+.cc__hero {
+  flex: 0.9;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--cc-border);
+  background:
+    radial-gradient(78% 50% at 50% 34%, rgba(200, 150, 60, 0.09), transparent 72%), rgba(255, 255, 255, 0.012);
+}
+.cc__stage {
+  flex: 1;
+  position: relative;
+  min-height: 380px;
+  overflow: hidden;
+}
+.cc__stage::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  width: 180px;
+  height: 28px;
+  background: radial-gradient(50% 50% at 50% 50%, rgba(0, 0, 0, 0.55), transparent 70%);
+  pointer-events: none;
+}
+.cc__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+.cc__canvas:active {
+  cursor: grabbing;
+}
+.cc__soon {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cc-muted);
+  opacity: 0.6;
+  pointer-events: none;
+}
+/* readable over the lit pedestal: brighter ink + a tinted dark backdrop pill. */
+.cc__rot {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cc-gold-light);
+  padding: 4px 9px;
+  background: rgba(10, 11, 16, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  backdrop-filter: blur(4px);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+  pointer-events: none;
+}
+.cc__meta {
+  padding: 13px 16px 15px;
+  border-top: 1px solid var(--cc-border);
+}
+.cc__meta h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--cc-gold-light);
+}
+.cc__role {
+  margin: 5px 0 10px;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: #9aa0ab;
+}
+.cc__tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.cc__tag {
+  padding: 3px 8px;
+  font-size: 8.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid var(--cc-border);
+  color: var(--cc-text);
+}
+
+/* RIGHT — controls */
+.cc__ctl {
+  flex: 1.05;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.cc__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+}
+.cc__cls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 6px 7px;
+  border: 1px solid var(--cc-border);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition:
+    border-color 120ms,
+    background 120ms;
+}
+.cc__cls:hover {
+  border-color: rgba(200, 150, 60, 0.35);
+  background: rgba(200, 150, 60, 0.04);
+}
+.cc__cls.is-sel {
+  border-color: var(--cc-gold);
+  background: rgba(200, 150, 60, 0.1);
+  box-shadow: 0 0 14px rgba(200, 150, 60, 0.12);
+}
+.cc__sq {
+  width: 100%;
+  height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.cc__thumb {
+  width: 100%;
+  height: 36px;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+.cc__cn {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--cc-text);
+}
+/* Locked (not in the allowlist) — dimmed, ungrabbable, "coming soon" badge below the name. */
+.cc__cls.is-soon {
+  cursor: not-allowed;
+}
+.cc__cls.is-soon:hover {
+  border-color: var(--cc-border);
+  background: rgba(255, 255, 255, 0.02);
+}
+.cc__cls.is-soon .cc__sq,
+.cc__cls.is-soon .cc__thumb {
+  opacity: 0.3;
+  filter: grayscale(0.7);
+}
+.cc__cls.is-soon .cc__cn {
+  color: var(--cc-muted);
+}
+.cc__soonbadge {
+  font-size: 7.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cc-gold);
+}
+
+.cc__swrow {
+  display: flex;
+  gap: 10px;
+}
+.cc__sw {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  cursor: pointer;
+}
+.cc__sw-c {
+  width: 100%;
+  height: 40px;
+  border: 1px solid var(--cc-border);
+}
+.cc__sw-l {
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cc-muted);
+}
+.cc__sw input[type='color'] {
+  position: absolute;
+  inset: 0 0 18px 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+.cc__foot {
+  display: flex;
+  gap: 14px;
+  align-items: flex-end;
+  margin-top: 6px;
+}
+.cc__namebox {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.cc__name {
+  padding: 13px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--cc-border);
+  color: var(--cc-text);
+  font-family: inherit;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  outline: none;
+}
+.cc__name:focus {
+  border-color: rgba(200, 150, 60, 0.45);
+}
+.cc__name.is-invalid {
+  border-color: #b23838;
+}
+.cc__inputmeta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9.5px;
+  min-height: 12px;
+}
+.cc__err {
+  color: #e06a6a;
+}
+.cc__count {
+  color: var(--cc-muted);
+}
+
+.cc__go {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  /* lift the buttons by the namebox's reserved meta row (7px gap + 12px err/count min-height) so the
+     Create button's bottom edge lines up with the name input's bottom. */
+  margin-bottom: 19px;
+}
+.cc__cancel {
+  padding: 14px 18px;
+  background: transparent;
+  border: 1px solid var(--cc-border);
+  color: var(--cc-muted);
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.cc__cancel:hover:not(:disabled) {
+  color: var(--cc-text);
+  border-color: var(--cc-muted);
+}
+.cc__create {
+  padding: 15px 28px;
+  background: linear-gradient(135deg, #8b6914, #c8963c, #8b6914);
+  color: #0a0a0f;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow:
+    0 0 20px rgba(200, 150, 60, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  white-space: nowrap;
+}
+.cc__create:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.cc__create[aria-busy='true'] {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+@media (max-width: 900px) {
+  .cc.cc--inline {
+    place-items: stretch;
+    padding:
+      calc(72px + var(--safe-top)) max(12px, var(--safe-right))
+      calc(88px + var(--safe-bottom)) max(12px, var(--safe-left));
+  }
+  .cc--inline .cc__panel {
+    width: 100%;
+  }
+  .cc__body {
+    flex-direction: column;
+  }
+}
+
+/* D212 — the gender picker (house DNA: mono, uppercase, gold active; sharp corners) */
+.cc__gender {
+  display: flex;
+  gap: 6px;
+  margin: 8px 0 6px;
+}
+.cc__gender-opt {
+  flex: 1;
+  padding: 7px 0;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #1e1e2e;
+  color: #6b7280;
+  font: 600 10px/1 'JetBrains Mono', monospace;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.cc__gender-opt:hover {
+  color: #e8e4dc;
+  border-color: #c8963c;
+}
+.cc__gender-opt.is-sel {
+  color: #c8963c;
+  border-color: #c8963c;
+  background: rgba(200, 150, 60, 0.08);
+  box-shadow: 0 0 12px rgba(200, 150, 60, 0.15);
+}
+/* tomoda's female rig is a broken artist export — greyed + inert until re-exported */
+.cc__gender-opt.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+.cc__gender-opt.is-disabled:hover {
+  color: #6b7280;
+  border-color: #1e1e2e;
+}

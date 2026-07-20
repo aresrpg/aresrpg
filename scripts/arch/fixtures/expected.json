@@ -1,0 +1,22 @@
+{
+  "red": {
+    "packages/fight/src/core_effect.js": { "arch-fight-effect-free": 7 },
+    "packages/frontend/src/laundered_write.js": {
+      "x-arch-writer-def": 3,
+      "x-arch-async-ref": 3,
+      "arch-laundered-store-write": 3
+    },
+    "packages/frontend/src/map_smuggled.js": {
+      "arch-map-smuggled-store-write": 2,
+      "x-arch-writer-def": 2
+    },
+    "packages/frontend/src/foreach_async.js": { "arch-foreach-async-dropped-promises": 1 },
+    "packages/frontend/src/foreach_async_fnexpr.jsx": { "arch-foreach-async-dropped-promises": 1 }
+  },
+  "green": {
+    "packages/fight/src/core_pure.js": {},
+    "packages/frontend/src/laundered_green.js": {},
+    "packages/frontend/src/map_pure.js": {},
+    "packages/frontend/src/foreach_ok.js": {}
+  }
+}

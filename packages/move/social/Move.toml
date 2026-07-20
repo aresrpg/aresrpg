@@ -1,0 +1,34 @@
+# aresrpg_social — the STANDALONE social package (S-46 final split): shared-object PARTY with leader election +
+# soulbound FRIENDS whitelist. Zero money, zero coupling; core reads FriendList read-only (core → social).
+[package]
+name = "aresrpg_social"
+version = "0.1.0"
+edition = "2024.alpha"
+
+[dependencies.Sui]
+git = "https://github.com/MystenLabs/sui.git"
+subdir = "crates/sui-framework/packages/sui-framework"
+rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+override = true
+
+[dependencies.MoveStdlib]
+git = "https://github.com/MystenLabs/sui.git"
+subdir = "crates/sui-framework/packages/move-stdlib"
+rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+override = true
+
+# Party proves current character custody through the same personal-kiosk capability seam as
+# `aresrpg::fight::join`. Default = testnet lineage; mainnet is pinned below like the core package.
+[dependencies.Kiosk]
+git = "https://github.com/MystenLabs/apps.git"
+subdir = "kiosk"
+rev = "testnet"
+
+[environments]
+testnet = { chain-id = "4c78adac" }
+mainnet = { chain-id = "35834a8a" }
+
+[dep-replacements.mainnet]
+Kiosk = { git = "https://github.com/MystenLabs/apps.git", subdir = "kiosk", rev = "mainnet" }
+
+[addresses]

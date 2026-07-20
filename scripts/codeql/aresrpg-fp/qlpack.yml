@@ -1,0 +1,5 @@
+name: aresrpg/fp-queries
+version: 0.1.0
+description: AresRPG FP-constitution deep queries (docs/CODE_LAW.md) — the interprocedural tier above the eslint tripwires
+dependencies:
+  codeql/javascript-all: '*'

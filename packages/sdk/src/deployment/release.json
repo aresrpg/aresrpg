@@ -1,0 +1,450 @@
+{
+  "schema": 1,
+  "generated_at": "2026-07-19T21:34:02.764Z",
+  "networks": {
+    "testnet": {
+      "chain_id": "",
+      "source_hash": "8731e8b894a5437e138b40dd1750fd7aa52a22f328b0f38c0fdd7497d0701688",
+      "packages": {
+        "foundation": {
+          "origin": "0xdddba0b8cef57969c920a39a989fd2e4744164e2072d1215e50d2d21c97bc4e8",
+          "latest": "0x45ecb708a615dae112f3c99a4166b5be98ef9f4cf4c44999c30920cc3431c0aa",
+          "upgrade_cap": "0x4ae5d75fe6b6fb40941d3bad8fa30fe2badd7a839c15cb6c5aff56da26e7d960",
+          "admin": "",
+          "caps": {},
+          "publishers": {},
+          "displays": {}
+        },
+        "spells": {
+          "origin": "0x44e7d0aae7858f4aa83eef223d4c0f1e45d18929f0bd1b3044be98f0572861c8",
+          "latest": "0x44e7d0aae7858f4aa83eef223d4c0f1e45d18929f0bd1b3044be98f0572861c8",
+          "upgrade_cap": "0x6013501c3ab5856b605957603cd2ded85de7c9888609663ed065cd495bd0f2e8",
+          "admin": "0x4312de1b8c584a4110909b2f3e1aae9ba9af35acb3b8aefe6e1a1f943380c4e0",
+          "caps": {},
+          "publishers": {},
+          "displays": {}
+        },
+        "social": {
+          "origin": "0x2620af297e913e99310f5966981e25d16c44edf3d03c4d8d13e2f0f6755b0983",
+          "latest": "0x2620af297e913e99310f5966981e25d16c44edf3d03c4d8d13e2f0f6755b0983",
+          "upgrade_cap": "0x1df358088163686dd5e7dc0d92ba6ed9817f3f101fb2a9ab3bbf0d4750ee49f2",
+          "admin": "0xfb9def8fc64ebd07477ede45d3b109b47bc86e089f315ab0174e7ab4ea91b5bb",
+          "caps": {},
+          "publishers": {},
+          "displays": {}
+        },
+        "engine": {
+          "origin": "0x599bda2208863411b5753d1fee3af86095a26b625ee4136ba7469f7d5e23dafb",
+          "latest": "0x6145a3ecffe1f32f56d1ff973904aa342248feb3d9364639dba746cb492a0070",
+          "upgrade_cap": "0x99998b458da902e95e89a1954ab28b13d6e02c1025172a3146c099f45f76a4fb",
+          "admin": "0xd7468c4625f6a27cb3d863931db1267b8978811ac1677862e27fb97f5de02d84",
+          "caps": {},
+          "publishers": {},
+          "displays": {}
+        },
+        "aresrpg": {
+          "origin": "0x4217b46f8dfe7c1ccc6a5e1c37e012a53bf25b07e0edb228a3c5a1575eeb2b06",
+          "latest": "0xae597a84ce38729bc0c2f272f9f76513c857fb95d8d571867f6253f9d5935083",
+          "upgrade_cap": "0xa2fde4c7b23fd512ed1cf6cfe5abc4e86fda95509bdc68219bd80a7d79148432",
+          "admin": "0x60200a144b9a6e2a69cb685bd6291c07207bbc7a02f2988e3680f7674b4f7d19",
+          "caps": {},
+          "publishers": {
+            "character": "0x2628acb855216ea5ced61261e36214c2fb932179f9edc52c0dd5a216f0ad3467",
+            "item": "0x4d2e47a6eb27e0b25097f4ba671a400b27df98767f41bad7c8835bda4c931280"
+          },
+          "displays": {
+            "Character": "0xeb8b42535a929b952eab1cdf0ff45c7a4e8dd42ae6eec8760ff17d1e513a3bc1",
+            "ItemTemplate": "0xf766362b82d4545a65cbcd935ae4509483c17cf36c69ae2b4c2cd94b5fad8950",
+            "Item": "0xf9eb60e58df58c713a566a7de4c0a8d3d80e5572029c90ae049d7fc70abbd32a"
+          }
+        },
+        "kolizeum": {
+          "origin": "0x09415bbbe02a4e544f69f544ea9af9a780d772490414fcf5d765a03ed3dd9382",
+          "latest": "0x09415bbbe02a4e544f69f544ea9af9a780d772490414fcf5d765a03ed3dd9382",
+          "upgrade_cap": "0xc617b9f5d101acebe620b9c57d49b23d376452de79ac8024570b2d5eb23fcdd1",
+          "admin": "",
+          "caps": {},
+          "publishers": {},
+          "displays": {}
+        },
+        "forgemagie": {
+          "origin": "0xa17b84ab53dc6240f4cce252e659ccb8a0cf1cee63f19e45dbbbff2ab18c1ecd",
+          "latest": "0xa17b84ab53dc6240f4cce252e659ccb8a0cf1cee63f19e45dbbbff2ab18c1ecd",
+          "upgrade_cap": "0x976d47d1b383d9b24e92ff3fc84c947602fbb486e67316c44472eb6281882273",
+          "admin": "",
+          "caps": {},
+          "publishers": {},
+          "displays": {}
+        },
+        "gifting": {
+          "origin": "0xba6478830d79cb391c2a625ee1ed013ede2b91022cf6057bb0613a08f7e64b7a",
+          "latest": "0xba6478830d79cb391c2a625ee1ed013ede2b91022cf6057bb0613a08f7e64b7a",
+          "upgrade_cap": "0xa1756c0c1ae1d7ff07e91ff67aaed0ed8854009a31195fd569b3316e2df73c3e",
+          "admin": "",
+          "caps": {},
+          "publishers": {},
+          "displays": {}
+        },
+        "dungeon": {
+          "origin": "0x1d9c1359a63bc181906cb3795f9991d4a14dbf810bde69adc8b5ef642bd20940",
+          "latest": "0x1d9c1359a63bc181906cb3795f9991d4a14dbf810bde69adc8b5ef642bd20940",
+          "upgrade_cap": "0xfec792f01316b7d5516e1f23c34c469be1fd1a0ebef39e732d990e2a52b9b1ea",
+          "admin": "",
+          "caps": {},
+          "publishers": {},
+          "displays": {}
+        }
+      },
+      "shared": {
+        "SPELLS_VERSION": {
+          "id": "0x53a2062e567814ed8286e5a3a3dd4bdbe50a2500f465480e5ca7c23ea824b773",
+          "initial_shared_version": "1"
+        },
+        "SPELL_REGISTRY": {
+          "id": "0x0a6f41995a3d27b157dc8abc81209c0a0de8d3dcf09429785f2098fa4aa3bab2",
+          "initial_shared_version": "1"
+        },
+        "SOCIAL_VERSION": {
+          "id": "0xf271f23a707a3dd7fb6bd21350e17039619450fe3bb639745d622266c43f3d9c",
+          "initial_shared_version": "1"
+        },
+        "SOCIAL_FRIEND_REGISTRY": {
+          "id": "0xd7f135a62ef072a8f6cc65ed78f88e8fd37e47aacea97a28747f18819f6b4682",
+          "initial_shared_version": "1"
+        },
+        "ENGINE_VERSION": {
+          "id": "0x983ebb635339f21bda360088c349961ab76cd4d24527906d8319cb028d76ccec",
+          "initial_shared_version": "1"
+        },
+        "FIGHT_REGISTRY": {
+          "id": "0x06109048503c4895c48c64c46907b8bf9542ceaf9b2d16018a0d57c9b77a425b",
+          "initial_shared_version": "1"
+        },
+        "VERSION": {
+          "id": "0xe1eea0728c6f631f3d24e8cfce8f59a75f1baf0fac5245c5d9350ba14c83a82c",
+          "initial_shared_version": "1"
+        },
+        "GAME_CONFIG": {
+          "id": "0x1d905f5da96a4b0bed3e1e12ab0205cc809162763cd16cc8b2ec9131b3ff5734",
+          "initial_shared_version": "1"
+        },
+        "CATALOG": {
+          "id": "0x7e5fa280d75f3d25ddc3d372ae32d258eb2efb1c804d04ac4a949df9be5f4b00",
+          "initial_shared_version": "1"
+        },
+        "SCRIBE_CONFIG": {
+          "id": "0x27632ca4177ab32a572d4bc0f127a311da5d5581510fa82ca3264ca777482ff3",
+          "initial_shared_version": "1"
+        },
+        "PET_FEED_CONFIG": {
+          "id": "0x0305c90a518e339790421074adea8db423dea238a0940833046a635dca9551e0",
+          "initial_shared_version": "1"
+        },
+        "CREATION": {
+          "id": "0x8b71e53a1aa165ee162c3ac68d8fc272310f7d882bc4e424f4d368799095f29e",
+          "initial_shared_version": "1"
+        },
+        "POOL_REGISTRY": {
+          "id": "0x2bb14878cdbaccf746afb134901399df6870966befb9a83ed00a0000ce030c5e",
+          "initial_shared_version": "1"
+        },
+        "LOOT_REGISTRY": {
+          "id": "0x57547db72cf98a65008c19d7d274eea6af50da8619e5ac8ad2594a7d86efa0ca",
+          "initial_shared_version": "1"
+        },
+        "CRUSH_BOARD": {
+          "id": "0xd9a50f3910c91cb963069ddcc5e3808b5b39dafddcab9831e89685c63faa2542",
+          "initial_shared_version": "248"
+        }
+      },
+      "policies": {
+        "character": {
+          "id": "0x7518bcafc2acd44b4ea8eda6e7f466ecc0c5ca0721bbf1b9d14f1c802ba83854",
+          "initial_shared_version": "2",
+          "cap": "0xae65c35817f65c0230d00eae5f7b76c87f3b31526ebf42eded8bde7b30228d43"
+        },
+        "item": {
+          "id": "0xc07b818f82ccee1c6a783852ba7a9fbae95baac158a12123c25444d47b6b86dc",
+          "initial_shared_version": "2",
+          "cap": "0xb6554976c7e28efbc78fdf33fae464d7f636f30f93fff22611ac30a7aeb6e948"
+        },
+        "extract": {
+          "id": "0xfe3516264c94d8b1ea1ecc59104cf49b7a79111baedab17bafad1bfbc9545088",
+          "initial_shared_version": "3",
+          "cap": ""
+        },
+        "legacy": {
+          "package_id": "0x7fb388c7d46eedc2ae55c0e78b6571eb1d9df1e3524fd204f2bde2ddef08f5e2",
+          "character_policy": "0xd8302dc7a57ea406493c5fc59c213c9e8574aff017f77623819573ee3242efb1",
+          "item_policy": "0x21d04bbdf3d357c7a23dd1eb72ce68a3904b3324de00f6abf718db90cf921aa0"
+        }
+      },
+      "type_origins": {
+        "zone_group_root": "0x37b108c10c3872a58a397b436151e84e3bf084fcccf061ba617f6cce37670c5b"
+      },
+      "rules_package": "0x0717a13f43deaf5345682153e3633f76cdcf695405959697fcd63f63f289320b",
+      "external_coin_types": {
+        "HSUI": {
+          "type": "0x02a56d35041b2974ec23aff7889d8f7390b53b08e8d8bb91aa55207a0d5dd723::hsui::HSUI",
+          "decimal": 9,
+          "icon_url": "/assets/tokens/hsui.png",
+          "symbol": "HSUI"
+        },
+        "AFSUI": {
+          "type": "0x02a56d35041b2974ec23aff7889d8f7390b53b08e8d8bb91aa55207a0d5dd723::afsui::AFSUI",
+          "decimal": 9,
+          "icon_url": "/assets/tokens/afsui.png",
+          "symbol": "AFSUI"
+        }
+      },
+      "actors": {
+        "signer": "0x087aa862ca645c0b94400c49e11b491011fca35db837361ccfc4c6f69d356e86",
+        "station": "",
+        "owner": "0x3d1342fb7de99c69ce821183bcfc5b6374d81453bf5ca9bf7e383e75b3722983",
+        "treasury": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      },
+      "system": {
+        "random": {
+          "id": "0x0000000000000000000000000000000000000000000000000000000000000008",
+          "initial_shared_version": "43342337"
+        },
+        "sponsor_framework_packages": [
+          "0x2",
+          "0x06f6bdd3f2e2e759d8a4b9c252f379f7a05e72dfe4c0b9311cdac27b8eb791b1",
+          "0xbd8fc1947cf119350184107a3087e2dc27efefa0dd82e25a1f699069fe81a585",
+          "0x0cb4bcc0560340eb1a1b929cabe56b33fc6449820ec8c1980d69bb98b649b802",
+          "0x434b5bd8f6a7b05fede0ff46c6e511d71ea326ed38056e3bcd681d2d7c2a7879",
+          "0x34cc6762780f4f6f153c924c0680cfe2a1fb4601e7d33cc28a92297b62de1e0e"
+        ],
+        "personal_kiosk_rule_package": ""
+      },
+      "constants": {
+        "item_royalty_min_mist": "10000000",
+        "legacy_cosmetic_variants": {
+          "0xb9b0fb6110e158cd67dc79f003d5b2ac7d06c8720280ed27a59eb70dbb075cef": {
+            "appearance": "cape_lorito",
+            "variant": "air"
+          },
+          "0x39c094492394cece3cd26cd8c7b93b9f4fcc96e3d429341ebe4c8595455706ed": {
+            "appearance": "cape_lorito",
+            "variant": "earth"
+          },
+          "0x6a7dc4b36dfbbfd08bfab714fa09cd78943407406991291fef54ac88ae468917": {
+            "appearance": "cape_lorito",
+            "variant": "fire"
+          },
+          "0x791954b3fe41ad5fe32bd8afc0f01c6900fc9f470f015732a0e3eee8087ec05f": {
+            "appearance": "cape_lorito",
+            "variant": "water"
+          }
+        }
+      }
+    },
+    "mainnet": {
+      "chain_id": "",
+      "source_hash": "",
+      "packages": {
+        "foundation": {
+          "origin": "",
+          "latest": "",
+          "upgrade_cap": "",
+          "admin": "",
+          "caps": {},
+          "publishers": {},
+          "displays": {}
+        },
+        "spells": {
+          "origin": "",
+          "latest": "",
+          "upgrade_cap": "",
+          "admin": "",
+          "caps": {},
+          "publishers": {},
+          "displays": {}
+        },
+        "social": {
+          "origin": "",
+          "latest": "",
+          "upgrade_cap": "",
+          "admin": "",
+          "caps": {},
+          "publishers": {},
+          "displays": {}
+        },
+        "engine": {
+          "origin": "",
+          "latest": "",
+          "upgrade_cap": "",
+          "admin": "",
+          "caps": {},
+          "publishers": {},
+          "displays": {}
+        },
+        "aresrpg": {
+          "origin": "",
+          "latest": "",
+          "upgrade_cap": "",
+          "admin": "",
+          "caps": {},
+          "publishers": {},
+          "displays": {}
+        },
+        "kolizeum": {
+          "origin": "",
+          "latest": "",
+          "upgrade_cap": "",
+          "admin": "",
+          "caps": {},
+          "publishers": {},
+          "displays": {}
+        },
+        "forgemagie": {
+          "origin": "",
+          "latest": "",
+          "upgrade_cap": "",
+          "admin": "",
+          "caps": {},
+          "publishers": {},
+          "displays": {}
+        },
+        "gifting": {
+          "origin": "",
+          "latest": "",
+          "upgrade_cap": "",
+          "admin": "",
+          "caps": {},
+          "publishers": {},
+          "displays": {}
+        },
+        "dungeon": {
+          "origin": "",
+          "latest": "",
+          "upgrade_cap": "",
+          "admin": "",
+          "caps": {},
+          "publishers": {},
+          "displays": {}
+        }
+      },
+      "shared": {
+        "SPELLS_VERSION": {
+          "id": "",
+          "initial_shared_version": ""
+        },
+        "SPELL_REGISTRY": {
+          "id": "",
+          "initial_shared_version": ""
+        },
+        "SOCIAL_VERSION": {
+          "id": "",
+          "initial_shared_version": ""
+        },
+        "SOCIAL_FRIEND_REGISTRY": {
+          "id": "",
+          "initial_shared_version": ""
+        },
+        "ENGINE_VERSION": {
+          "id": "",
+          "initial_shared_version": ""
+        },
+        "FIGHT_REGISTRY": {
+          "id": "",
+          "initial_shared_version": ""
+        },
+        "VERSION": {
+          "id": "",
+          "initial_shared_version": ""
+        },
+        "GAME_CONFIG": {
+          "id": "",
+          "initial_shared_version": ""
+        },
+        "CATALOG": {
+          "id": "",
+          "initial_shared_version": ""
+        },
+        "SCRIBE_CONFIG": {
+          "id": "",
+          "initial_shared_version": ""
+        },
+        "PET_FEED_CONFIG": {
+          "id": "",
+          "initial_shared_version": ""
+        },
+        "CREATION": {
+          "id": "",
+          "initial_shared_version": ""
+        },
+        "POOL_REGISTRY": {
+          "id": "",
+          "initial_shared_version": ""
+        },
+        "LOOT_REGISTRY": {
+          "id": "",
+          "initial_shared_version": ""
+        },
+        "CRUSH_BOARD": {
+          "id": "",
+          "initial_shared_version": ""
+        }
+      },
+      "policies": {
+        "character": {
+          "id": "",
+          "initial_shared_version": "",
+          "cap": ""
+        },
+        "item": {
+          "id": "",
+          "initial_shared_version": "",
+          "cap": ""
+        },
+        "extract": {
+          "id": "",
+          "initial_shared_version": "",
+          "cap": ""
+        },
+        "legacy": {
+          "package_id": "0x7fb388c7d46eedc2ae55c0e78b6571eb1d9df1e3524fd204f2bde2ddef08f5e2",
+          "character_policy": "0xd8302dc7a57ea406493c5fc59c213c9e8574aff017f77623819573ee3242efb1",
+          "item_policy": "0x21d04bbdf3d357c7a23dd1eb72ce68a3904b3324de00f6abf718db90cf921aa0"
+        }
+      },
+      "rules_package": "",
+      "external_coin_types": {
+        "HSUI": {
+          "type": "0x8c47c0bde84b7056520a44f46c56383e714cc9b6a55e919d8736a34ec7ccb533::suicune::SUICUNE",
+          "decimal": 9,
+          "icon_url": "/assets/tokens/hsui.png",
+          "symbol": "HSUI"
+        },
+        "AFSUI": {
+          "type": "0xf325ce1300e8dac124071d3152c5c5ee6174914f8bc2161e88329cf579246efc::afsui::AFSUI",
+          "decimal": 9,
+          "icon_url": "/assets/tokens/afsui.png",
+          "symbol": "AFSUI"
+        }
+      },
+      "actors": {
+        "signer": "",
+        "station": "",
+        "owner": "0x3d1342fb7de99c69ce821183bcfc5b6374d81453bf5ca9bf7e383e75b3722983",
+        "treasury": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      },
+      "system": {
+        "random": {
+          "id": "0x0000000000000000000000000000000000000000000000000000000000000008",
+          "initial_shared_version": ""
+        },
+        "sponsor_framework_packages": [],
+        "personal_kiosk_rule_package": "0x0cb4bcc0560340eb1a1b929cabe56b33fc6449820ec8c1980d69bb98b649b802"
+      },
+      "constants": {
+        "item_royalty_min_mist": ""
+      },
+      "type_origins": {
+        "zone_group_root": ""
+      }
+    }
+  }
+}

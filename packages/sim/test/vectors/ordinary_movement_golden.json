@@ -1,0 +1,168 @@
+{
+  "cases": [
+    {
+      "id": "participant_ordinary_move_triggers_own_crossed_trap_and_stops",
+      "input": {
+        "fight": "fight_1",
+        "board": "standard",
+        "source": {
+          "type": "movement"
+        },
+        "mover": {
+          "target_is_mob": false,
+          "idx": 0
+        },
+        "path": [165, 166, 167],
+        "fighters": [
+          {
+            "target_is_mob": false,
+            "idx": 0,
+            "cell": 164,
+            "hp": 100,
+            "mp": 3
+          },
+          {
+            "target_is_mob": true,
+            "idx": 0,
+            "cell": 200,
+            "hp": 100
+          }
+        ],
+        "traps": [
+          {
+            "anchor_cell": 166,
+            "zone_shape": "point",
+            "zone_size": 0,
+            "owner_recorded": true,
+            "owner_is_mob": false,
+            "owner_seat": 0,
+            "payload": [
+              {
+                "kind": 0,
+                "element": 2,
+                "value": 7
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "fighters": [
+          {
+            "target_is_mob": false,
+            "idx": 0,
+            "cell": 166,
+            "hp": 93
+          },
+          {
+            "target_is_mob": true,
+            "idx": 0,
+            "cell": 200,
+            "hp": 100
+          }
+        ],
+        "traps": [],
+        "events": {
+          "moved": {
+            "entity_id": "p0",
+            "path": [165, 166],
+            "mp_remaining": 1
+          },
+          "trap_triggered": {
+            "entity_id": "p0",
+            "cell": 166,
+            "hits": [
+              {
+                "target_id": "p0",
+                "amount": 7,
+                "remaining_hp": 93
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "mob_ordinary_move_triggers_crossed_trap_and_stops",
+      "input": {
+        "fight": "fight_1",
+        "board": "standard",
+        "source": {
+          "type": "movement"
+        },
+        "mover": {
+          "target_is_mob": true,
+          "idx": 0
+        },
+        "path": [166, 167, 168],
+        "fighters": [
+          {
+            "target_is_mob": false,
+            "idx": 0,
+            "cell": 100,
+            "hp": 100
+          },
+          {
+            "target_is_mob": true,
+            "idx": 0,
+            "cell": 165,
+            "hp": 100,
+            "mp": 3
+          }
+        ],
+        "traps": [
+          {
+            "anchor_cell": 167,
+            "zone_shape": "point",
+            "zone_size": 0,
+            "owner_recorded": true,
+            "owner_is_mob": false,
+            "owner_seat": 0,
+            "payload": [
+              {
+                "kind": 0,
+                "element": 2,
+                "value": 7
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "fighters": [
+          {
+            "target_is_mob": false,
+            "idx": 0,
+            "cell": 100,
+            "hp": 100
+          },
+          {
+            "target_is_mob": true,
+            "idx": 0,
+            "cell": 167,
+            "hp": 93
+          }
+        ],
+        "traps": [],
+        "events": {
+          "moved": {
+            "entity_id": "m0",
+            "path": [166, 167],
+            "mp_remaining": 1
+          },
+          "trap_triggered": {
+            "entity_id": "m0",
+            "cell": 167,
+            "hits": [
+              {
+                "target_id": "m0",
+                "amount": 7,
+                "remaining_hp": 93
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

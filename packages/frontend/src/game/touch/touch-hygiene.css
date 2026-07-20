@@ -1,0 +1,56 @@
+.mobile-game-input-active,
+.mobile-game-input-active body {
+  overscroll-behavior: none;
+}
+
+.mobile-game-input-active body {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.mobile-game-input-active button,
+.mobile-game-input-active a,
+.mobile-game-input-active [role='button'] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-game-input-active input,
+.mobile-game-input-active textarea,
+.mobile-game-input-active [contenteditable='true'] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.mobile-game-input-surface,
+.mobile-game-input-hud {
+  overscroll-behavior: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.mobile-game-input-surface,
+.mobile-game-input-surface canvas {
+  touch-action: none;
+}
+
+.mobile-game-input-hud {
+  touch-action: pan-x pan-y;
+}
+
+.mobile-game-input-hud button,
+.mobile-game-input-hud a,
+.mobile-game-input-hud [role='button'] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-game-input-hud input,
+.mobile-game-input-hud textarea,
+.mobile-game-input-hud [contenteditable='true'] {
+  -webkit-user-select: text;
+  user-select: text;
+  touch-action: manipulation;
+}

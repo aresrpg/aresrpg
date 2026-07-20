@@ -1,0 +1,398 @@
+{
+  "cases": [
+    {
+      "id": "push_crossed_trap_trigger_stop",
+      "input": {
+        "fight": "fight_1",
+        "board": "standard",
+        "source": {
+          "type": "spell",
+          "caster_is_mob": false,
+          "caster_idx": 0,
+          "origin_cell": 164,
+          "level": 50
+        },
+        "effect": {
+          "kind": 12,
+          "requested": 3
+        },
+        "target": {
+          "target_is_mob": true,
+          "idx": 0
+        },
+        "fighters": [
+          {
+            "target_is_mob": false,
+            "idx": 0,
+            "cell": 164,
+            "hp": 100
+          },
+          {
+            "target_is_mob": true,
+            "idx": 0,
+            "cell": 165,
+            "hp": 100
+          }
+        ],
+        "traps": [
+          {
+            "anchor_cell": 167,
+            "zone_shape": "point",
+            "zone_size": 0,
+            "owner_recorded": false,
+            "payload": [
+              {
+                "kind": 0,
+                "element": 2,
+                "value": 7
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "fighters": [
+          {
+            "target_is_mob": false,
+            "idx": 0,
+            "cell": 164,
+            "hp": 100
+          },
+          {
+            "target_is_mob": true,
+            "idx": 0,
+            "cell": 167,
+            "hp": 93
+          }
+        ],
+        "traps": [],
+        "events": {
+          "displaced": [
+            {
+              "fight": "fight_1",
+              "target_is_mob": true,
+              "target_idx": 0,
+              "kind": 12,
+              "from_cell": 165,
+              "to_cell": 167,
+              "requested": 3,
+              "blocked": 0
+            }
+          ],
+          "hits": [
+            {
+              "fight": "fight_1",
+              "victim_is_mob": true,
+              "victim_idx": 0,
+              "amount": 7,
+              "remaining_hp": 93
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "push_diagonal_tie_resolves_x",
+      "input": {
+        "fight": "fight_1",
+        "board": "standard",
+        "source": {
+          "type": "spell",
+          "caster_is_mob": false,
+          "caster_idx": 0,
+          "origin_cell": 63,
+          "level": 50
+        },
+        "effect": {
+          "kind": 12,
+          "requested": 2
+        },
+        "target": {
+          "target_is_mob": true,
+          "idx": 0
+        },
+        "fighters": [
+          {
+            "target_is_mob": false,
+            "idx": 0,
+            "cell": 63,
+            "hp": 100
+          },
+          {
+            "target_is_mob": true,
+            "idx": 0,
+            "cell": 105,
+            "hp": 100
+          }
+        ],
+        "traps": []
+      },
+      "expected": {
+        "fighters": [
+          {
+            "target_is_mob": false,
+            "idx": 0,
+            "cell": 63,
+            "hp": 100
+          },
+          {
+            "target_is_mob": true,
+            "idx": 0,
+            "cell": 107,
+            "hp": 100
+          }
+        ],
+        "traps": [],
+        "events": {
+          "displaced": [
+            {
+              "fight": "fight_1",
+              "target_is_mob": true,
+              "target_idx": 0,
+              "kind": 12,
+              "from_cell": 105,
+              "to_cell": 107,
+              "requested": 2,
+              "blocked": 0
+            }
+          ],
+          "hits": []
+        }
+      }
+    },
+    {
+      "id": "push_diagonal_y_dominant",
+      "input": {
+        "fight": "fight_1",
+        "board": "standard",
+        "source": {
+          "type": "spell",
+          "caster_is_mob": false,
+          "caster_idx": 0,
+          "origin_cell": 124,
+          "level": 50
+        },
+        "effect": {
+          "kind": 12,
+          "requested": 2
+        },
+        "target": {
+          "target_is_mob": true,
+          "idx": 0
+        },
+        "fighters": [
+          {
+            "target_is_mob": false,
+            "idx": 0,
+            "cell": 124,
+            "hp": 100
+          },
+          {
+            "target_is_mob": true,
+            "idx": 0,
+            "cell": 165,
+            "hp": 100
+          }
+        ],
+        "traps": []
+      },
+      "expected": {
+        "fighters": [
+          {
+            "target_is_mob": false,
+            "idx": 0,
+            "cell": 124,
+            "hp": 100
+          },
+          {
+            "target_is_mob": true,
+            "idx": 0,
+            "cell": 205,
+            "hp": 100
+          }
+        ],
+        "traps": [],
+        "events": {
+          "displaced": [
+            {
+              "fight": "fight_1",
+              "target_is_mob": true,
+              "target_idx": 0,
+              "kind": 12,
+              "from_cell": 165,
+              "to_cell": 205,
+              "requested": 2,
+              "blocked": 0
+            }
+          ],
+          "hits": []
+        }
+      }
+    },
+    {
+      "id": "dead_body_does_not_block",
+      "input": {
+        "fight": "fight_1",
+        "board": "standard",
+        "source": {
+          "type": "spell",
+          "caster_is_mob": false,
+          "caster_idx": 0,
+          "origin_cell": 164,
+          "level": 50
+        },
+        "effect": {
+          "kind": 12,
+          "requested": 2
+        },
+        "target": {
+          "target_is_mob": true,
+          "idx": 0
+        },
+        "fighters": [
+          {
+            "target_is_mob": false,
+            "idx": 0,
+            "cell": 164,
+            "hp": 100
+          },
+          {
+            "target_is_mob": true,
+            "idx": 0,
+            "cell": 165,
+            "hp": 100
+          },
+          {
+            "target_is_mob": true,
+            "idx": 1,
+            "cell": 166,
+            "hp": 0
+          }
+        ],
+        "traps": []
+      },
+      "expected": {
+        "fighters": [
+          {
+            "target_is_mob": false,
+            "idx": 0,
+            "cell": 164,
+            "hp": 100
+          },
+          {
+            "target_is_mob": true,
+            "idx": 0,
+            "cell": 167,
+            "hp": 100
+          },
+          {
+            "target_is_mob": true,
+            "idx": 1,
+            "cell": 166,
+            "hp": 0
+          }
+        ],
+        "traps": [],
+        "events": {
+          "displaced": [
+            {
+              "fight": "fight_1",
+              "target_is_mob": true,
+              "target_idx": 0,
+              "kind": 12,
+              "from_cell": 165,
+              "to_cell": 167,
+              "requested": 2,
+              "blocked": 0
+            }
+          ],
+          "hits": []
+        }
+      }
+    },
+    {
+      "id": "springjaw_anchor_origin_mob_free",
+      "input": {
+        "fight": "fight_1",
+        "board": "standard",
+        "source": {
+          "type": "trap",
+          "anchor_cell": 164,
+          "owner_seat": 0,
+          "owner_level": 36,
+          "owner_recorded": true
+        },
+        "effect": {
+          "kind": 12,
+          "requested": 2
+        },
+        "target": {
+          "target_is_mob": true,
+          "idx": 0
+        },
+        "fighters": [
+          {
+            "target_is_mob": false,
+            "idx": 0,
+            "cell": 100,
+            "hp": 100,
+            "level": 36
+          },
+          {
+            "target_is_mob": true,
+            "idx": 0,
+            "cell": 165,
+            "hp": 100
+          }
+        ],
+        "traps": [
+          {
+            "anchor_cell": 164,
+            "zone_shape": "circle",
+            "zone_size": 1,
+            "payload": [
+              {
+                "kind": 12,
+                "value": 2
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "effective_collision_level": 36,
+        "fighters": [
+          {
+            "target_is_mob": false,
+            "idx": 0,
+            "cell": 100,
+            "hp": 100,
+            "level": 36
+          },
+          {
+            "target_is_mob": true,
+            "idx": 0,
+            "cell": 167,
+            "hp": 100
+          }
+        ],
+        "traps": [],
+        "events": {
+          "displaced": [
+            {
+              "fight": "fight_1",
+              "target_is_mob": true,
+              "target_idx": 0,
+              "kind": 12,
+              "from_cell": 165,
+              "to_cell": 167,
+              "requested": 2,
+              "blocked": 0
+            }
+          ],
+          "hits": []
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,162 @@
+/*
+ * First-time coachmark tour (#15). Lives UNDER the .gw-tab token bridge (companion re-skin: gold accent,
+ * JetBrains Mono, sharp 0px corners) so its tokens resolve and the glass card sits over the LIVE world
+ * (glass-over-imagery is allowed; the rest of house law stands). A dim spotlight cutout highlights one HUD
+ * section at a time; the card carries a one-line how-to + Next / Skip. No emoji, no em-dashes. Honours
+ * prefers-reduced-motion.
+ */
+
+.tut {
+  position: fixed;
+  inset: 0;
+  z-index: 1000; /* above the launcher dock (28) and the right drawers (26) */
+  pointer-events: none; /* children opt back in; the layer itself never eats clicks */
+}
+
+/* transparent full-screen click-catcher so the world / dock can't be clicked mid-tour (modal). The dim
+   comes from the spotlight box-shadow; on a centered step (no spotlight) the backdrop dims itself. */
+.tut__backdrop {
+  position: fixed;
+  inset: 0;
+  pointer-events: auto;
+}
+.tut__backdrop[data-dim='true'] {
+  background: rgba(8, 8, 12, 0.6);
+  animation: tut-fade var(--dur-2) var(--ease);
+}
+
+/* the spotlight: a clear window over the target HUD section; its huge box-shadow dims everything else */
+.tut__spot {
+  position: fixed;
+  pointer-events: none;
+  border: 1px solid var(--accent);
+  border-radius: var(--r-1);
+  box-shadow:
+    0 0 0 9999px rgba(8, 8, 12, 0.62),
+    0 0 0 1px var(--accent-glow),
+    inset 0 0 18px var(--accent-glow);
+  transition:
+    left var(--dur-2) var(--ease),
+    top var(--dur-2) var(--ease),
+    width var(--dur-2) var(--ease),
+    height var(--dur-2) var(--ease);
+}
+
+/* the how-to card */
+.tut__card {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 250px;
+  padding: var(--s-3) var(--s-4);
+  pointer-events: auto;
+  color: var(--fg);
+  background: linear-gradient(160deg, var(--glass-hi), var(--glass));
+  border: 1px solid var(--hair-strong);
+  border-top-color: var(--edge-top);
+  border-radius: var(--r-2);
+  box-shadow:
+    0 16px 40px -12px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  transition:
+    left var(--dur-2) var(--ease),
+    top var(--dur-2) var(--ease),
+    opacity var(--dur-2) var(--ease);
+}
+.tut__x {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  color: var(--fg-faint);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--dur-1) var(--ease);
+}
+.tut__x:hover {
+  color: var(--fg);
+}
+.tut__x svg {
+  width: 12px;
+  height: 12px;
+}
+.tut__eyebrow {
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.tut__title {
+  padding-right: 16px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+.tut__body {
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--fg-muted);
+}
+.tut__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--s-3);
+}
+.tut__skip {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--fg-faint);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--dur-1) var(--ease);
+}
+.tut__skip:hover {
+  color: var(--fg-muted);
+}
+.tut__next {
+  padding: 6px 14px;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border: none;
+  border-radius: var(--r-1);
+  cursor: pointer;
+  transition:
+    background var(--dur-1) var(--ease),
+    transform var(--dur-1) var(--ease);
+}
+.tut__next:hover {
+  background: var(--accent-strong);
+  transform: translateY(-1px);
+}
+
+@keyframes tut-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tut__backdrop,
+  .tut__spot,
+  .tut__card {
+    animation: none;
+    transition: none;
+  }
+}

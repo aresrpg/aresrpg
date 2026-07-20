@@ -1,0 +1,126 @@
+/* In-app confirm dialog — gothic terminal DNA: near-black glass card, gold accent, sharp corners, monospace
+   uppercase, dimmed scrim. Replaces the OS-native window.confirm (standing house law). */
+
+.confirm-dialog__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 9500; /* D59e: the escape's dialog lives ABOVE the fixed escape slot (9000) + every fight layer — a confirm that opens under the board is an invisible dead end */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 4, 8, 0.72);
+  backdrop-filter: blur(4px);
+  animation: confirm-dialog-fade 0.16s ease-out;
+}
+
+.confirm-dialog {
+  width: min(92vw, 30rem);
+  padding: 1.5rem 1.5rem 1.25rem;
+  background: rgba(18, 18, 26, 0.96);
+  border: 1px solid rgba(200, 150, 60, 0.28);
+  box-shadow:
+    0 0 40px rgba(0, 0, 0, 0.6),
+    0 0 24px rgba(200, 150, 60, 0.08);
+  font-family: 'JetBrains Mono', monospace;
+  color: #e8e4dc;
+  animation: confirm-dialog-rise 0.18s ease-out;
+}
+
+.confirm-dialog__title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #c8963c;
+  margin-bottom: 0.75rem;
+}
+
+.confirm-dialog__msg {
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  color: #b8b4ac;
+  margin-bottom: 1.5rem;
+}
+
+.confirm-dialog__btns {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+/* BUTTON LAW (standing DNA rule): these buttons live inside `.hud-root`, whose global
+   `button { background:none; border:none }` reset (0,1,1) OUT-WEIGHS a bare `.confirm-dialog__btn--*`
+   (0,1,0) and SILENTLY STRIPS the border+fill → bare text (the re-caught D10 ghost). Every rule below is
+   scoped under `.confirm-dialog` (0,2,0) so it BEATS the reset and the chrome actually renders. */
+.confirm-dialog .confirm-dialog__btn {
+  padding: 0.55rem 1.25rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: transparent;
+  transition:
+    box-shadow 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    background 0.18s ease;
+}
+
+/* SECONDARY / cancel — GOLD OUTLINE at rest (was muted #6b7280 = read as disabled). Visibly a button. */
+.confirm-dialog .confirm-dialog__btn--cancel {
+  color: #c8963c;
+  border-color: rgba(200, 150, 60, 0.4);
+}
+.confirm-dialog .confirm-dialog__btn--cancel:hover {
+  color: #f5d0a9;
+  border-color: rgba(200, 150, 60, 0.7);
+  background: rgba(200, 150, 60, 0.08);
+  box-shadow: 0 0 18px rgba(200, 150, 60, 0.18);
+}
+
+/* PRIMARY (non-danger confirm) — gold gradient fill. */
+.confirm-dialog .confirm-dialog__btn--confirm {
+  color: #0a0a0f;
+  background: linear-gradient(180deg, #c8963c, #8b6914);
+  border-color: rgba(200, 150, 60, 0.6);
+}
+.confirm-dialog .confirm-dialog__btn--confirm:hover {
+  box-shadow: 0 0 20px rgba(200, 150, 60, 0.35);
+}
+
+/* DESTRUCTIVE confirm — canon .btn-outline--danger: red #f87171 border + red text at REST (transparent
+   fill), never a washed dark-red ghost backdrop. Hover intensifies. */
+.confirm-dialog .confirm-dialog__btn--danger {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.55);
+  background: transparent;
+}
+.confirm-dialog .confirm-dialog__btn--danger:hover {
+  color: #fca5a5;
+  border-color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+  box-shadow: 0 0 20px rgba(248, 113, 113, 0.3);
+}
+
+@keyframes confirm-dialog-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes confirm-dialog-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

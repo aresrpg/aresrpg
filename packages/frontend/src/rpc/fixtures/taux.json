@@ -1,0 +1,22 @@
+{
+  "taux": [
+    {
+      "template_id": "0xec8b1444018aa34a552289698500fb0e5d6cf62eec29c0d80ce7ca7bdab30225",
+      "coeff_milli": 100000,
+      "coeff_percent": 100,
+      "recipe_less": false,
+      "source": "neutral"
+    },
+    {
+      "template_id": "0x2e8c98cc35ea3a7e9bc5ce3ba7f014498d75942467bfa65e690e4381c4914b62",
+      "coeff_milli": 100000,
+      "coeff_percent": 100,
+      "recipe_less": false,
+      "source": "neutral"
+    }
+  ],
+  "neutral_milli": 100000,
+  "bracket_size": 20,
+  "floor_milli": 1000,
+  "cap_milli": 4000000
+}

@@ -1,0 +1,47 @@
+[package]
+# Package name stays "aresrpg": the deployed testnet package, the Move.lock pin
+# ([pinned.testnet.aresrpg], root = true) and all 18 `module aresrpg::*` declarations
+# bind to the implicit `aresrpg = "0x0"` named address this name provides. The public
+# game is Koshi; the on-chain namespace rebrand is a deliberate later republish+reindex,
+# never a rename that silently breaks the build + desyncs from the live package.
+name = "aresrpg"
+version = "0.1.0"
+edition = "2024.alpha"
+
+authors = ["AresRPG"]
+
+[dependencies.Kiosk]
+git = "https://github.com/MystenLabs/apps.git"
+subdir = "kiosk"
+rev = "testnet"
+
+# FRAMEWORK REV PIN (upgrade-safety, the FeatureNotYetSupported saga): Kiosk's floating `rev="testnet"` pulled the
+# Sui framework at ff1fe0ec while the active CLI's implicit system framework is 8fc60f1f → TWO framework revs in
+# one build. A package linking a DUAL framework rev is rejected by testnet-128's UPGRADE path (FeatureNotYetSupported);
+# a trivial single-rev pkg upgraded fine (devops control) — so it's the DUAL, not the version. These `override = true`
+# pins force the ENTIRE graph (incl Kiosk's transitive) to ONE rev = 8fc60f1f, the ACTIVE sui CLI's own framework
+# (`sui --version` → 1.74.1-8fc60f1fa966), which the control PROVED testnet-128 accepts for upgrades.
+# VERIFICATION: Move.lock has ONE sui-framework + ONE move-stdlib rev (no duals). STANDING RULE: NO floating revs —
+# pins only, and the pin MUST match the build CLI's framework hash (re-pin to the new `sui --version` hash if the CLI changes).
+[dependencies.Sui]
+git = "https://github.com/MystenLabs/sui.git"
+subdir = "crates/sui-framework/packages/sui-framework"
+rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+override = true
+
+[dependencies.MoveStdlib]
+git = "https://github.com/MystenLabs/sui.git"
+subdir = "crates/sui-framework/packages/move-stdlib"
+rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+override = true
+
+[addresses]
+# `aresrpg` (the package's own modules) is bound implicitly to 0x0 by the [package]
+# name under modern Sui address management; the per-network published id self-records
+# in Move.lock. `server` is the sponsor/authority key asserted by auth::authenticate.
+server = "0xc96926171ab8aa859296a7e051f2aee6986603e32e663e4f38cf1901fa00024a"
+# SEC-2: the paid-character price sink. Caller-supplied price/treasury made the 10-SUI gate decorative
+# (mint for 1 MIST paid to yourself) — the contract is now the sole authority on both.
+treasury = "0x3d1342fb7de99c69ce821183bcfc5b6374d81453bf5ca9bf7e383e75b3722983"
+[dependencies.aresrpg_foundation]
+local = "foundation"

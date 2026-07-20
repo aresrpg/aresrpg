@@ -1,0 +1,48 @@
+# aresrpg_gifting — the standalone player-facing satellite package (package-split 2026-07-13: the aresrpg core
+# exceeded the 102,400-byte protocol publish cap; the leaf item/character lifecycle modules extracted here,
+# mirroring the kolizeum/forgemagie pattern). Holds gift + airdrop + loot_box + consume + pool + creation: all
+# authored by the single pinned `Gifting` witness. Feature → core arrows only: it READS core (config dials,
+# templates, character reads) and drives the brand-gated core value doors (`mint_and_lock_output_brand` /
+# `heal_hp_brand` / `character::new_brand`) with its OWN `Gifting` witness pinned in GameConfig. Core never names
+# this package (ledgered law).
+[package]
+name = "aresrpg_gifting"
+version = "0.1.0"
+edition = "2024.alpha"
+authors = ["AresRPG"]
+
+# FRAMEWORK PIN: single-rev, matched to the active CLI's own framework hash — identical to every sibling package
+# so the whole graph compiles against one lineage.
+[dependencies.Sui]
+git = "https://github.com/MystenLabs/sui.git"
+subdir = "crates/sui-framework/packages/sui-framework"
+rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+override = true
+
+[dependencies.MoveStdlib]
+git = "https://github.com/MystenLabs/sui.git"
+subdir = "crates/sui-framework/packages/move-stdlib"
+rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+override = true
+
+# Kiosk (PersonalKioskCap + kiosk lock/rules — the ownership proof + the kiosk-lock constitution the gift/airdrop/
+# loot_box/pool doors thread). Default = testnet lineage; [dep-replacements.mainnet] re-pins like the core package.
+[dependencies.Kiosk]
+git = "https://github.com/MystenLabs/apps.git"
+subdir = "kiosk"
+rev = "testnet"
+
+# THE core game package (config / version / admin / character / character_link / item / item_listing_rule /
+# extract / extension / consumable_effect / fight_marker). Arrow flows feature → core, never back.
+[dependencies.aresrpg]
+local = "../aresrpg"
+
+[environments]
+testnet = { chain-id = "4c78adac" }
+mainnet = { chain-id = "35834a8a" }
+
+[dep-replacements.mainnet]
+Kiosk = { git = "https://github.com/MystenLabs/apps.git", subdir = "kiosk", rev = "mainnet" }
+
+[addresses]
+# `aresrpg_gifting` binds implicitly to 0x0 via the [package] name; per-network published ids self-record.

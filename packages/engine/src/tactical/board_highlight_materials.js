@@ -1,0 +1,187 @@
+// Tactical highlight GPU/material construction. Semantic channel config lives in board_highlight_style;
+// pure mask constants/oracles live in board_highlight_shapes. This module owns their exact TSL mirrors.
+
+import { CanvasTexture, Color, ConeGeometry, DoubleSide } from 'three'
+import { MeshBasicNodeMaterial } from 'three/webgpu'
+import { Fn, float, max, mix, smoothstep, uniform, uv, vec3, vec4 } from 'three/tsl'
+
+import {
+  CORNER_RADIUS,
+  EDGE_SOFTNESS,
+  ENTITY_ANCHOR_EDGE_OPACITY,
+  ENTITY_ANCHOR_EDGE_WIDTH,
+  ENTITY_ANCHOR_FILL_OPACITY,
+  GRADIENT_REACH,
+  RIM_BRIGHT,
+  rounded_rect_gradient,
+} from './board_highlight_shapes.js'
+import { resolve_highlight_style } from './board_highlight_style.js'
+
+/** Build one unlit gradient/rounded material for a semantic channel. */
+export function make_gradient_tile_material(
+  /** @type {{ color: number, opacity: number, border?: boolean, unlit_gain?: number,
+   * center_dim?: number, center_alpha?: number }} */ spec
+) {
+  const mat = new MeshBasicNodeMaterial()
+  mat.transparent = true
+  mat.depthWrite = false
+  mat.side = DoubleSide
+  // A UI overlay: immune to scene lighting/day-night. Unlit (MeshBasicNodeMaterial), fog-exempt (three
+  // mixes scene.fogNode into ANY material whose .fog is true, so at night the dark aerial fog would drain
+  // the color), and tone-map-exempt. The engine's shared whole-scene AgX post still applies.
+  mat.toneMapped = false
+  mat.fog = false
+  const u_fade = uniform(1)
+  const { unlit_gain, center_dim, center_alpha } = resolve_highlight_style(spec)
+  const base = new Color(spec.color)
+  const base_rgb = vec3(base.r, base.g, base.b)
+  const rim_rgb = unlit_gain === 1 ? base_rgb : base_rgb.mul(float(unlit_gain))
+
+  mat.colorNode = /** @type {any} */ (
+    Fn(() => {
+      const p = uv()
+      const px = p.x.sub(0.5).abs()
+      const py = p.y.sub(0.5).abs()
+      const half = float(0.5)
+      const qx = px.sub(half.sub(CORNER_RADIUS))
+      const qy = py.sub(half.sub(CORNER_RADIUS))
+      const ox = max(qx, float(0))
+      const oy = max(qy, float(0))
+      const d = ox.mul(ox).add(oy.mul(oy)).sqrt().sub(CORNER_RADIUS)
+      const coverage = smoothstep(float(0), float(-EDGE_SOFTNESS), d)
+      const rim_t = max(px, py).div(half)
+      const edge_band = smoothstep(float(1 - GRADIENT_REACH), float(1), rim_t)
+      const grad = RIM_BRIGHT ? edge_band : float(1).sub(edge_band)
+      const is_border = spec.border === true
+      const rgb = is_border ? rim_rgb : rim_rgb.mul(mix(float(center_dim), float(1), grad))
+      const alpha_profile = is_border ? grad : mix(float(center_alpha), float(1), grad)
+      const alpha = float(spec.opacity).mul(alpha_profile).mul(coverage).mul(u_fade)
+      return vec4(rgb, alpha)
+    })()
+  )
+  return { mat, u_fade }
+}
+
+/** Build one team-colored, unlit entity-anchor material. */
+export function make_entity_anchor_material(/** @type {number} */ color_int) {
+  const mat = new MeshBasicNodeMaterial()
+  mat.transparent = true
+  mat.depthWrite = false
+  mat.side = DoubleSide
+  mat.toneMapped = false
+  mat.fog = false
+  const base = new Color(color_int)
+  mat.color = base
+  const rgb = vec3(base.r, base.g, base.b)
+  mat.colorNode = /** @type {any} */ (
+    Fn(() => {
+      const p = uv()
+      const px = p.x.sub(0.5).abs()
+      const py = p.y.sub(0.5).abs()
+      const half = float(0.5)
+      const qx = px.sub(half.sub(CORNER_RADIUS))
+      const qy = py.sub(half.sub(CORNER_RADIUS))
+      const ox = max(qx, float(0))
+      const oy = max(qy, float(0))
+      const d = ox.mul(ox).add(oy.mul(oy)).sqrt().sub(CORNER_RADIUS)
+      const fill = smoothstep(float(0), float(-EDGE_SOFTNESS), d).mul(ENTITY_ANCHOR_FILL_OPACITY)
+      const edge = float(1)
+        .sub(smoothstep(float(0), float(ENTITY_ANCHOR_EDGE_WIDTH), d.abs()))
+        .mul(ENTITY_ANCHOR_EDGE_OPACITY)
+      return vec4(rgb, max(fill, edge))
+    })()
+  )
+  return mat
+}
+
+/** Build the selection-diamond frame material. */
+export function make_outline_material(
+  /** @type {{ color: number, opacity: number }} */ spec,
+  /** @type {CanvasTexture | null} */ tex
+) {
+  const mat = new MeshBasicNodeMaterial()
+  mat.transparent = true
+  mat.depthWrite = false
+  mat.side = DoubleSide
+  mat.toneMapped = false
+  mat.fog = false
+  mat.color = new Color(spec.color)
+  mat.opacity = spec.opacity
+  if (tex) mat.map = tex
+  return mat
+}
+
+/** Draw the hollow selection-diamond texture; null under headless tests. */
+export function make_diamond_texture() {
+  if (typeof document === 'undefined') return null
+  const s = 128
+  const c = document.createElement('canvas')
+  c.width = c.height = s
+  const ctx = /** @type {CanvasRenderingContext2D} */ (c.getContext('2d'))
+  const m = s * 0.12
+  const mid = s / 2
+  ctx.beginPath()
+  ctx.moveTo(mid, m)
+  ctx.lineTo(s - m, mid)
+  ctx.lineTo(mid, s - m)
+  ctx.lineTo(m, mid)
+  ctx.closePath()
+  ctx.lineJoin = 'round'
+  ctx.lineWidth = s * 0.08
+  ctx.strokeStyle = 'rgba(255,255,255,1)'
+  ctx.shadowColor = 'rgba(120,180,255,0.9)'
+  ctx.shadowBlur = s * 0.06
+  ctx.stroke()
+  const t = new CanvasTexture(c)
+  t.needsUpdate = true
+  return t
+}
+
+export const TRAP_BLOB_COLOR = 0x0a0a0c
+export const TRAP_BLOB_OPACITY = 0.88
+
+// SPIKE accent dims (× cell_size — the shared cone geometry is sized when board_highlights builds it).
+export const TRAP_SPIKE_RADIUS = 0.12
+export const TRAP_SPIKE_HEIGHT = 0.42
+export const TRAP_SPIKE_COLOR = 0x1a1d24
+const TRAP_SPIKE_SEGMENTS = 6
+
+/** Pure coverage oracle for the trap BASE — it is the shared cell-bounded rounded-rect tile (a dark
+ *  highlight, NOT the old organic soft-shadow island), so its coverage IS the wash
+ *  mask. Kept as the trap's shape SSOT for the headless shape tests. */
+export function trap_blob_alpha(/** @type {number} */ u, /** @type {number} */ v) {
+  return rounded_rect_gradient(u, v).coverage
+}
+
+/** Build the trap BASE: a dark, cell-bounded highlight in the shared gradient-tile-wash idiom (dark
+ *  palette + a solid-biased center so it reads as a filled dark blob, not a hollow ring). The center
+ *  dials + shade are OWNER-TUNE — the pixel look is the screenshot pass's call. */
+export function make_trap_blob_material() {
+  return make_gradient_tile_material({
+    color: TRAP_BLOB_COLOR,
+    opacity: TRAP_BLOB_OPACITY,
+    center_dim: 0.9,
+    center_alpha: 0.92,
+  }).mat
+}
+
+/** Build the shared upright SPIKE geometry (a small cone) — base seated on the tile plane (translated up
+ *  by height/2), apex rising from the cell center. @param {number} radius @param {number} height */
+export function make_trap_spike_geometry(/** @type {number} */ radius, /** @type {number} */ height) {
+  const geo = new ConeGeometry(radius, height, TRAP_SPIKE_SEGMENTS)
+  geo.translate(0, height / 2, 0)
+  return geo
+}
+
+/** Build the dark unlit SPIKE material — a night-immune UI overlay (fog + tone-map exempt), like the
+ *  rest of the highlight family. Solid dark iron; the exact shade is OWNER-TUNE (screenshot pass). */
+export function make_trap_spike_material() {
+  const mat = new MeshBasicNodeMaterial()
+  mat.transparent = true
+  mat.depthWrite = false
+  mat.side = DoubleSide
+  mat.toneMapped = false
+  mat.fog = false
+  mat.color = new Color(TRAP_SPIKE_COLOR)
+  return mat
+}

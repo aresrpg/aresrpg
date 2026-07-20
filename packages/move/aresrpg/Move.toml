@@ -1,0 +1,59 @@
+# aresrpg — THE core game package (S-46 merge of items/game/kolizeum/dungeon/pools into one module set).
+# Cross-module trust within it is now public(package); the multi-package cap machinery (ExtensionCap/CreatorCap/custody)
+# is dissolved. Depends on Sui + Kiosk + the sibling packages aresrpg_foundation / aresrpg_fight / aresrpg_social / aresrpg_spells.
+[package]
+name = "aresrpg"
+version = "0.1.0"
+edition = "2024.alpha"
+authors = ["AresRPG"]
+
+# FRAMEWORK PIN: single-rev, matched to the active CLI's own framework hash (`sui --version` →
+# 1.74.1-8fc60f1fa966) — identical to every source package so the whole graph compiles against one lineage.
+[dependencies.Sui]
+git = "https://github.com/MystenLabs/sui.git"
+subdir = "crates/sui-framework/packages/sui-framework"
+rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+override = true
+
+[dependencies.MoveStdlib]
+git = "https://github.com/MystenLabs/sui.git"
+subdir = "crates/sui-framework/packages/move-stdlib"
+rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+override = true
+
+# Kiosk LOCK + TransferPolicy (the kiosk-lock constitution: every item/character in a personal kiosk). The default
+# dep serves testnet; [dep-replacements.mainnet] re-pins to the mainnet kiosk lineage under `--build-env mainnet`.
+[dependencies.Kiosk]
+git = "https://github.com/MystenLabs/apps.git"
+subdir = "kiosk"
+rev = "testnet"
+
+# The pure-math combat foundation (spell/effect/formula/target/grid/prng/book/board). Stays standalone (S-46:
+# "only generic math lives elsewhere"). Arrow flows downward (aresrpg → foundation), never back.
+[dependencies.aresrpg_foundation]
+local = "../foundation"
+
+# The GENERIC branded combat engine (S-46 final split): core doors construct the private FightBrand witness and
+# call `create<W>/join<W>`; claims assert the echoed brand. Arrow: core → engine, never back.
+[dependencies.aresrpg_fight]
+local = "../engine"
+
+# Standalone social (party + friends). Core reads FriendList read-only (kolizeum allowlist snapshot).
+[dependencies.aresrpg_social]
+local = "../social"
+
+# Standalone spell data. Core reads SpellTemplate read-only (spell_level spend door).
+[dependencies.aresrpg_spells]
+local = "../spells"
+
+[environments]
+testnet = { chain-id = "4c78adac" }
+mainnet = { chain-id = "35834a8a" }
+
+[dep-replacements.mainnet]
+Kiosk = { git = "https://github.com/MystenLabs/apps.git", subdir = "kiosk", rev = "mainnet" }
+
+[addresses]
+# `aresrpg` binds implicitly to 0x0 via the [package] name; the per-network published id self-records in Move.lock.
+# Fixed proceeds/royalty sink for shop + pool sales (one home, never a per-sale field).
+treasury = "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"

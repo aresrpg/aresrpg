@@ -1,0 +1,122 @@
+// Timed stat and AP/MP-pool effects, including the live dodge contest. Explicit AP/MP dodge stats augment the
+// defender's agility term; physical damage remains an ordinary timed stat consumed only by EARTH/NONE damage.
+
+import { rng_range } from './prng.js'
+import { add_effect } from './fight_actions.js'
+import { effective_stats, next_id, update_entity } from './fight_state.js'
+import {
+  FLAG_DODGE,
+  K_REMOVE_POINTS,
+  K_STEAL_POINTS,
+  K_STEAL_STAT,
+} from './spell_effect.js'
+import { remove_points } from './spell_formula.js'
+
+const add_row = (state, target_id, caster_id, effect, value, force_type) => {
+  const allocated = next_id(state)
+  return add_effect(allocated.state, target_id, {
+    id: allocated.id,
+    type: force_type ?? (effect.type === 'ADD' ? 'STAT_BUFF' : 'STAT_DEBUFF'),
+    timing: 'TURN_START',
+    source_id: caster_id,
+    stat: effect.stat,
+    value,
+    turns_remaining: Math.max(1, effect.turns ?? 1),
+  })
+}
+
+/** Apply ADD/REMOVE, returning handled=false for every other internal type. */
+export const apply_stat_effect = (state, effect, caster, target) => {
+  if (effect.type !== 'ADD' && effect.type !== 'REMOVE')
+    return { handled: false, state, effects: [] }
+  if (!effect.stat) return { handled: true, state, effects: [] }
+
+  if (
+    effect.type === 'REMOVE' &&
+    (effect.kind === K_REMOVE_POINTS || effect.kind === K_STEAL_POINTS) &&
+    (effect.stat === 'ap' || effect.stat === 'mp')
+  ) {
+    const requested = Math.max(0, Math.floor(effect.value ?? 0))
+    const target_stats = effective_stats(target)
+    const dodge_stat =
+      effect.stat === 'ap' ? target_stats.ap_dodge : target_stats.mp_dodge
+    const result = remove_points(
+      state.rng,
+      requested,
+      ((effect.flags ?? 0) & FLAG_DODGE) !== 0,
+      effective_stats(caster).wisdom ?? 0,
+      (target_stats.agility ?? 0) + Math.max(0, dodge_stat ?? 0),
+      target[effect.stat],
+      effect.stat === 'ap' ? target.ap_max : target.mp_max,
+    )
+    const with_rng = { ...state, rng: result.state }
+    if (result.removed === 0)
+      return {
+        handled: true,
+        state: with_rng,
+        effects: [{ target_id: target.id, status: 'POINT_DODGED' }],
+      }
+    const stored = add_row(
+      with_rng,
+      target.id,
+      caster.id,
+      effect,
+      result.removed,
+    )
+    const drained = update_entity(stored, target.id, entity => ({
+      ...entity,
+      [effect.stat]: Math.max(0, entity[effect.stat] - result.removed),
+    }))
+    // STEAL: feed the ACTUAL post-dodge removed count to the caster now (immediate-use, no credit row) —
+    // mirrors give_caster_points (cast.move:585-586, 1056-1060); on-chain give_points does not cap at max.
+    const after =
+      effect.kind === K_STEAL_POINTS
+        ? update_entity(drained, caster.id, entity => ({
+            ...entity,
+            [effect.stat]: entity[effect.stat] + result.removed,
+          }))
+        : drained
+    return {
+      handled: true,
+      state: after,
+      effects: [
+        { target_id: target.id, status: 'STAT_DEBUFF', value: result.removed },
+      ],
+    }
+  }
+
+  if (effect.min === undefined || effect.max === undefined)
+    return { handled: true, state, effects: [] }
+  const draw = rng_range(state.rng, effect.min, effect.max)
+  const with_rng = { ...state, rng: draw.state }
+  const stored = add_row(with_rng, target.id, caster.id, effect, draw.value)
+  const delta = effect.type === 'ADD' ? draw.value : -draw.value
+  const after =
+    effect.stat === 'ap' || effect.stat === 'mp'
+      ? update_entity(stored, target.id, entity => ({
+          ...entity,
+          [effect.stat]: Math.max(0, entity[effect.stat] + delta),
+        }))
+      : stored
+  // STEAL_STAT mirror leg: the debited `draw.value` ALSO lands on the CASTER as a same-stat, same-duration timed
+  // STAT_BUFF — target LOSES it, caster GAINS it, both revert on expiry (spell_effect.move:33 declared intent; the
+  // K_STEAL_POINTS twin feeds the caster the same way, immediate-pool there / timed-row here since stats are folded
+  // by effective_stats and decayed by process_turn_effects, not a consumable pool). Chain arm rides the next train.
+  const with_caster_gain =
+    effect.kind === K_STEAL_STAT
+      ? add_row(after, caster.id, caster.id, effect, draw.value, 'STAT_BUFF')
+      : after
+  return {
+    handled: true,
+    state: with_caster_gain,
+    effects: [
+      {
+        target_id: target.id,
+        status: effect.type === 'ADD' ? 'STAT_BUFF' : 'STAT_DEBUFF',
+      },
+      ...(effect.kind === K_STEAL_STAT
+        ? [{ target_id: caster.id, status: 'STAT_BUFF', value: draw.value }]
+        : []),
+    ],
+  }
+}

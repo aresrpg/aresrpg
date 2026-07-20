@@ -1,0 +1,19 @@
+/* The canvas is full-bleed; only its chrome consumes the global --safe-* insets. Keep this eager so the
+   logged-out spectate canvas gets the same viewport sizing as the authenticated HUD's canvas. */
+html {
+  height: 100%;
+  height: -webkit-fill-available;
+  height: 100dvh;
+}
+
+body,
+#root {
+  height: 100%;
+  min-height: 100%;
+}
+
+/* The mobile canvas is sized inline by GameWorldHost (position:fixed, 100lvw x 100dvh) — edge-to-edge under
+   viewport-fit=cover with NO JS measurement. The old measure-and-bleed rule (keyed off a data-attribute on the
+   host) is GONE: it sourced the canvas height from the visual-viewport API, whose size iOS Safari shrinks by
+   the safe-area insets, letterboxing the game (VERBORDER proved the horizontal bleed clamp mathematically
+   inert; the same held vertically). One home, one truth — insets live on the HUD chrome, never the world. */

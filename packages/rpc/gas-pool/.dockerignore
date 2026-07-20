@@ -1,0 +1,11 @@
+# Build context hygiene. Mirrors gas-pool/.gitignore — keep the sponsor secret
+# and any rendered config out of the build context, even though the Dockerfile
+# only COPYs specific files today.
+.env
+.env.*
+node_modules
+target
+*.log
+.DS_Store
+config.local.yaml
+*.key

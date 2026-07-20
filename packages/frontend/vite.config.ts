@@ -1,0 +1,261 @@
+import { readFileSync, writeFileSync, existsSync, renameSync } from 'fs'
+import { join } from 'path'
+import { execFileSync } from 'child_process'
+
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import { VitePWA } from 'vite-plugin-pwa'
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
+
+import { local_content_plugin } from './dev/local_content_plugin'
+import { cosmetic_glb_plugin } from './dev/cosmetic_glb_plugin'
+import { move_hash_plugin } from './dev/move_hash_plugin'
+import { item_catalog_plugin } from './dev/item_catalog_plugin'
+
+const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))
+
+// D260: deployed version string for the sidebar tag. APP_VERSION (set by publish:testnet via --build-env) wins;
+// else the current git tag (local builds); else pkg.version. try/catch so a git-less build (Vercel remote) never breaks.
+const APP_VERSION =
+  process.env.APP_VERSION ||
+  (() => {
+    try {
+      return execFileSync('git', ['describe', '--tags', '--always'], { encoding: 'utf-8' }).trim()
+    } catch {
+      return pkg.version
+    }
+  })()
+
+// The exact git sha, injected as the Sentry release (core/report.js) so every reported error pins the
+// commit it fired from. Falls back to pkg.version on a git-less build (Vercel remote), mirroring APP_VERSION.
+const GIT_SHA =
+  process.env.APP_VERSION ||
+  (() => {
+    try {
+      return execFileSync('git', ['rev-parse', '--short', 'HEAD'], { encoding: 'utf-8' }).trim()
+    } catch {
+      return pkg.version
+    }
+  })()
+
+// DEV-only VFX-LAB capture endpoint (canon 33): `/__vfx_capture` writes a recorded webm to /tmp
+// (so the CTO can batch-capture demos). `apply: 'serve'` ⇒ it never exists in a production build.
+function vfx_lab_dev_plugin(): import('vite').Plugin {
+  const read_body = (req: import('http').IncomingMessage): Promise<Buffer> =>
+    new Promise((resolve) => {
+      const chunks: Buffer[] = []
+      req.on('data', (c) => chunks.push(c as Buffer))
+      req.on('end', () => resolve(Buffer.concat(chunks)))
+    })
+  return {
+    name: 'ares-vfx-lab-dev',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const url = req.url ?? ''
+        if (req.method === 'POST' && url.startsWith('/__vfx_capture')) {
+          const buf = await read_body(req)
+          const raw = new URLSearchParams(url.split('?')[1] ?? '').get('name') ?? 'effect'
+          const name = raw.replace(/[^a-z0-9_-]/gi, '_')
+          const path = `/tmp/ares-vfx-${name}-${Date.now()}.webm`
+          writeFileSync(path, buf)
+          res.setHeader('content-type', 'application/json')
+          res.end(JSON.stringify({ path, bytes: buf.length }))
+          return
+        }
+        next()
+      })
+    },
+  }
+}
+
+// DEV-only PUBLISH endpoint (D118): the admin PUBLISH tab's executing buttons POST here so the Move package
+// is compiled LOCALLY by the sui CLI (the browser can't) — the browser then builds the publish/upgrade PTB
+// from the returned bytes and the CONNECTED WALLET signs it. `apply: 'serve'` ⇒ this whole plugin is absent
+// from any production build (mirrors vfx_lab_dev_plugin). The endpoint NAME is the entire allowlist: NO
+// request field ever reaches a shell — `/__publish_build` runs one fixed argv (execFileSync, no shell); the
+// only request-derived bit (`fresh`) toggles a Published.toml rename, never a shell arg. Ports the legacy
+// dapp's `move-build-api` middleware. (Ids are written back by a MANUAL clipboard copy in the tab, exactly
+// as the legacy dapp did — an auto-write-deployment.ts endpoint is a deliberate deferred follow-up.)
+const MOVE_DIR = join(process.cwd(), '../move')
+
+function publish_dev_plugin(): import('vite').Plugin {
+  const send = (res: import('http').ServerResponse, code: number, body: unknown) => {
+    res.statusCode = code
+    res.setHeader('content-type', 'application/json')
+    res.end(JSON.stringify(body))
+  }
+  return {
+    name: 'ares-publish-dev',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const url = req.url ?? ''
+        if (req.method !== 'POST') return next()
+
+        // ── /__publish_build — compile the Move package, return the publish bytes ──────────────────
+        // Runs the koshi/legacy-dapp publish command as a FIXED argv (execFileSync ⇒ no shell, no string
+        // interpolation): the sui CLI emits one JSON line `{modules,dependencies,digest}` the browser feeds
+        // straight into tx.publish(). The ONLY request-derived bit is the `fresh` flag — it never reaches the
+        // shell; it just decides whether to hide Published.toml so the build emits at 0x0 (a NEW publish)
+        // instead of the recorded upgrade id. `--no-tree-shaking` mirrors the legacy dapp (a tree-shaken
+        // build can drop a module and desync the publish). Restored in `finally`, always.
+        if (url.startsWith('/__publish_build')) {
+          const fresh = new URLSearchParams(url.split('?')[1] ?? '').get('fresh') === 'true'
+          const published_toml = join(MOVE_DIR, 'Published.toml')
+          const published_bak = join(MOVE_DIR, 'Published.toml.bak')
+          let moved = false
+          try {
+            if (fresh && existsSync(published_toml)) {
+              renameSync(published_toml, published_bak)
+              moved = true
+            }
+            const out = execFileSync(
+              'sui',
+              [
+                'move',
+                'build',
+                '--dump-bytecode-as-base64',
+                '--no-tree-shaking',
+                '--build-env',
+                'testnet',
+                '--path',
+                MOVE_DIR,
+              ],
+              { encoding: 'utf-8', maxBuffer: 64 * 1024 * 1024 }
+            )
+            // The CLI prints build progress on stderr and the JSON manifest on stdout; some versions add a
+            // leading blank/warning line, so take the last line that parses as the {modules,…} object.
+            const line = out
+              .split('\n')
+              .map((l) => l.trim())
+              .filter(Boolean)
+              .reverse()
+              .find((l) => l.startsWith('{'))
+            if (!line) throw new Error('sui move build produced no JSON manifest')
+            // `digest` (the compiled-package byte array) is only needed by the UPGRADE ceremony
+            // (authorize_upgrade takes it); a fresh publish ignores it. Pass all three through.
+            const { modules, dependencies, digest } = JSON.parse(line) as {
+              modules: string[]
+              dependencies: string[]
+              digest: number[]
+            }
+            send(res, 200, { modules, dependencies, digest })
+          } catch (error) {
+            const stderr = (error as { stderr?: Buffer | string })?.stderr
+            send(res, 500, {
+              error: (stderr ? String(stderr) : '') || (error as Error)?.message || String(error),
+            })
+          } finally {
+            if (moved && existsSync(published_bak)) renameSync(published_bak, published_toml)
+          }
+          return
+        }
+
+        return next()
+      })
+    },
+  }
+}
+
+// [P0 balloon 2026-07-11] DEV-ONLY: replace every transformed module's inline source map with an empty
+// one (same plugin as packages/engine/vite.config.js — see the full rationale there). Vite dev inlines
+// maps as base64 `data:` URIs retained by V8 in EVERY realm loading the module; the dapp serves the
+// engine's gen-worker graph, so on a 16-core machine the maps alone cost ~600 MB of renderer RSS — a
+// big slice of the tab-killing OOM (real Aw-Snaps in dev). `apply: 'serve'` ⇒ absent from prod builds
+// (which already set build.sourcemap: false). Opt back in with ARES_DEV_SOURCEMAPS=1 when debugging.
+function strip_dev_sourcemaps(): import('vite').Plugin {
+  return {
+    name: 'ares:strip-dev-sourcemaps',
+    apply: 'serve',
+    enforce: 'post',
+    transform(code) {
+      return { code, map: { version: 3, sources: [], sourcesContent: [], names: [], mappings: '' } }
+    },
+  }
+}
+
+export default defineConfig({
+  // D155: ONE three instance forever (dual = instanceof/backend breakage)
+  resolve: { dedupe: ['three', 'three/webgpu'] },
+  plugins: [
+    ...(process.env.ARES_DEV_SOURCEMAPS ? [] : [strip_dev_sourcemaps()]),
+    react(),
+    tailwindcss(),
+    vfx_lab_dev_plugin(),
+    publish_dev_plugin(),
+    local_content_plugin(),
+    cosmetic_glb_plugin(), // TR-97 — GLB linking/serving for cosmetics + mounts (sibling to local_content)
+    move_hash_plugin(), // /__move_sources_hash — the admin RELEASE page's staleness guard (dev-only)
+    item_catalog_plugin(), // virtual:item_catalog — encyclopedia stat/slug maps DERIVED from seed at build (SSOT)
+    // The vendored game engine + @koshi/protocol's create_client use node
+    // `stream` (PassThrough) + `events` (EventEmitter) + `buffer`; polyfill for the browser.
+    nodePolyfills({ include: ['stream', 'events', 'buffer', 'process', 'util'] }),
+    VitePWA({
+      registerType: 'autoUpdate',
+      workbox: {
+        // autoUpdate already implies both flags; keep them explicit so every new worker activates and claims
+        // open tabs promptly instead of waiting for every old tab to close.
+        skipWaiting: true,
+        clientsClaim: true,
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        // [PRECACHE DIET, PERF_MOBILE_PLAN C4 pulled forward 2026-07-14] Precache ONLY the boot shell —
+        // the old '**/*.{js,...}' glob installed EVERY hashed chunk (~21 MB) into CacheStorage on first
+        // visit, hammering phones during the exact window they're drowning (iPhone trace: wedged from
+        // t=0). Entry + css stay precached; every lazy chunk is fetched (and HTTP-cached) on demand — a SW
+        // cache miss is a normal network fetch, never a failure.
+        // HTML must never ride the immutable precache: an old worker would keep returning an old index whose
+        // hashed chunks disappear on the next Vercel deploy. Navigations fetch/revalidate before cache fallback.
+        globPatterns: ['assets/index-*.{js,css}'],
+        navigateFallback: null,
+        runtimeCaching: [
+          {
+            urlPattern: ({ request, url }) => request.mode === 'navigate' && url.pathname !== '/discord-callback.html',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'navigation-shell',
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+          // (the retired assets.aresrpg.world rule died here 2026-07-14 — host deleted, owner strike #10)
+          {
+            // Walrus aggregator (item/spell/vanilla PNGs, mob/character/cosmetic GLBs, music mp3s served via
+            // by-quilt-id/{quilt}/{file}). The aggregator is already Cloudflare-fronted (24h), so SWR mirrors
+            // that TTL client-side rather than fighting it — the SW never revalidates faster than the CDN edge.
+            urlPattern: /^https:\/\/[^/]+\.walrus\.space\/v1\/blobs\/.+/,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'walrus-assets',
+              expiration: { maxEntries: 800, maxAgeSeconds: 86400 },
+            },
+          },
+        ],
+      },
+      manifest: {
+        name: 'AresRPG',
+        short_name: 'AresRPG',
+        theme_color: '#0a0a0f',
+        background_color: '#0a0a0f',
+        description:
+          'Web companion for AresRPG — manage characters, browse the encyclopedia, and explore the world of AresRPG.',
+        display: 'standalone',
+        icons: [
+          { src: '/logo-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/logo-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/logo-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
+      },
+    }),
+  ],
+  // D260: version shown in the sidebar = the git TAG (e.g. testnet-0.1.0), not pkg.version. publish:testnet
+  // passes it via --build-env APP_VERSION (Vercel's remote build has no .git); local/dev falls back to git
+  // describe, then pkg.version. So the sidebar always reflects the deployed tag.
+  define: { __APP_VERSION__: JSON.stringify(APP_VERSION), __GIT_SHA__: JSON.stringify(GIT_SHA) },
+  envDir: '../../',
+  build: { sourcemap: false },
+  // NO_HMR=1 freezes the running page: agents constantly edit the shared working tree, and every save
+  // hot-reloading into a live dev session = half-written code on screen. With HMR off, file
+  // changes apply only on a manual refresh. Agent dev servers on their own ports simply don't set the flag.
+  server: { port: 5173, hmr: process.env.NO_HMR ? false : undefined },
+})

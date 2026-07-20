@@ -1,0 +1,85 @@
+/*
+ * Game design tokens — FROSTED OBSIDIAN (chosen design system).
+ * Cool blue-black frosted glass, ONE ice-blue accent spent ~3x, fine hairlines, premium minimal.
+ * Components read tokens only. Glass recipe: --glass surface + 1px --edge-top light edge + blur.
+ */
+:root {
+  /* bg ramp — frosted obsidian (cool blue-black, tinted neutral) */
+  --bg: #07090d;
+  --surface-1: #0b1018;
+  --surface-2: #11161f;
+  --surface-3: #1b2330;
+  --steel: #1b2330;
+  --slate: #2a3340;
+
+  /* ink ramp — cool steel. Raised for readable contrast on the dark glass (the grey used to read
+   * unreadable): muted ~AA on the panels, faint still secondary but no longer washed out. */
+  --fg: #eaf0f7;
+  --fg-muted: #a9b4c4;
+  --fg-faint: #7e8a99;
+
+  /* the one accent — ice blue (spend ~3x: primary CTA, selection, live status) */
+  --accent: #5db4ff;
+  --accent-strong: #7cc4ff;
+  --accent-ink: #07090d;
+  --accent-dim: rgba(93, 180, 255, 0.14);
+  --accent-glow: rgba(93, 180, 255, 0.35);
+
+  /* rare cool glint (selection glints only — not an accent-budget spend) */
+  --gold: #a9c2d8;
+
+  /* NO QUALITY TIERS: the per-tier --q-* rarity ramp died with the
+     concept — the one neutral item tone lives in screens/hud/quality.js (NEUTRAL #a9b4c4). */
+
+  /* hairlines + glass edges */
+  --hair: rgba(255, 255, 255, 0.07);
+  --hair-strong: rgba(255, 255, 255, 0.18);
+  --edge: rgba(255, 255, 255, 0.08);
+  --edge-top: rgba(255, 255, 255, 0.18);
+
+  /* frosted-glass surfaces (translucent, for backdrop-filter panels/overlays) */
+  --glass: rgba(20, 27, 38, 0.55);
+  --glass-hi: rgba(38, 48, 64, 0.6);
+
+  /* status */
+  --good: #4fd6a0;
+  --warn: #ffb454;
+  --bad: #ff6b6b;
+
+  /* combat-log token palette — MOVED (07-12, D151 mount-tree fix). The --clog-* SSOT now lives in
+     screens/hud/hud.css on `.hud-chat-line.is-combat` (the live combat-log line), because THIS file's `:root`
+     is not loaded in the running app: base.css @imports it but nothing imports base.css (main.tsx loads
+     index.css + game-tab.css only). Defining --clog-* here painted NOTHING on screen (they resolved empty →
+     grey). Retune the combat-log colours in hud.css, not here. */
+
+  /* radii — chrome 4-10px (obsidian premium; still no pills) */
+  --r-1: 4px;
+  --r-2: 6px;
+  --r-3: 10px;
+
+  /* spacing — 4/8 grid */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  /* bottom-dock clearance (SSOT) — the fixed bottom-right launcher dock (hud.css .hud-dock, z-28) is
+     ~111px tall + a 16px offset = ~127px of occlusion. This is the padding-bottom every drawer content
+     scroll needs so its LAST rows clear the dock; spent once on .hud-drawer__body (the shared scroll
+     container every tab renders into). Bump this ONE value to retune clearance everywhere. */
+  --dock-clear: 132px;
+
+  /* motion */
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 300ms;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* type */
+  --font-ui: 'Space Grotesk Variable', 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'Martian Mono Variable', 'Martian Mono', ui-monospace, 'SFMono-Regular', monospace;
+}

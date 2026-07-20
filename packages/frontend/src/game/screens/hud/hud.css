@@ -1,0 +1,2607 @@
+/* In-game HUD — a React overlay above the imperative Three scene. A pure chrome layer: corner
+ * clusters (launchers center-top, players top-right under the minimap, chat bottom-left, vitals +
+ * deck along the bottom), a right-side inventory drawer (hidden off-screen until toggled), and the
+ * combat-only deck cluster + interleaved initiative timeline.
+ *
+ * The look is lifted VERBATIM from the two approved demos (public/hud-design/*):
+ *   - chat, bottom vitals strip, online player list, toast  → demo-command-deck.html
+ *   - party rows, deck cluster, AP/MP gauges + reserve, timeline → demo-tacticians-table.html
+ * Frosted Obsidian tokens only (tokens.css). The root is click-through; only interactive children
+ * capture pointers. */
+
+.hud-root {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  font-family: var(--font-ui);
+  color: var(--fg);
+  /* GLOBAL responsive UI-scale (the single lever for a px-heavy HUD): the whole overlay is scaled to fit
+     any viewport by --ui-scale (driven off the viewport in use-ui-scale.js). transform:scale catches BOTH
+     px and rem uniformly (a root font-size lever would miss the ~1057 px literals). transform-origin keeps
+     the pivot at the top-left corner; the inverse-scaled width/height counter-size the box so that AFTER
+     the scale the overlay still exactly covers the viewport (width 100%/scale * scale = 100%). With inset:0
+     the box is anchored top-left (the explicit width/height win over right/bottom on a fixed box), so the
+     fixed children re-base onto this scaled box and scale with it. The 3D canvas is a SIBLING node (not
+     under .hud-root), so the scene + the fight-board cell raycast are unaffected by this transform. */
+  transform: scale(var(--ui-scale, 1));
+  transform-origin: top left;
+  width: calc(100% / var(--ui-scale, 1));
+  height: calc(100% / var(--ui-scale, 1));
+}
+.hud-root button {
+  pointer-events: auto;
+  font-family: var(--font-ui);
+  color: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+/* The tactical fight board is rendered INTO the roam Three scene (fight-overlay.js) — combat never
+ * leaves the world. The HUD combat chrome (turn-order, hand, ready, leave-combat) floats over it; each
+ * fixed cluster carries its own z-index. */
+
+/* ===== shared glass recipe (lifted from the demo .glass) ===== */
+.glass-panel {
+  pointer-events: auto;
+  background: linear-gradient(160deg, var(--glass-hi), var(--glass));
+  border: 1px solid var(--edge);
+  border-top-color: var(--edge-top);
+  border-radius: var(--r-3);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
+
+/* panel title row (demo .ptitle) — used by chat / players / deck cluster */
+.hud-panel-label {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-bottom: var(--s-2);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.hud-panel-label__spacer {
+  flex: 1;
+}
+.hud-panel-label__count,
+.hud-chat-channel-note {
+  color: var(--fg-muted);
+}
+
+/* presence / status dot (demo .dot) */
+.hud-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--fg-faint);
+}
+.hud-dot.on {
+  background: var(--good);
+}
+.hud-dot.idle {
+  background: var(--warn);
+}
+.hud-dot.off {
+  background: var(--fg-faint);
+}
+.hud-dot.acc {
+  background: var(--fg-muted);
+}
+
+.hud-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== menu launchers — BOTTOM-RIGHT dock, TWO TIERED ROWS =====
+ * The dock is a glass strip anchored bottom-right holding two rows: PRIMARY gameplay launchers
+ * (inventory / character / characters / jobs / quests / spells / market) — louder, accent ornament +
+ * higher contrast; and SECONDARY meta launchers (encyclopedia / leaderboards / simulator /
+ * map / admin) — muted, a smaller row. The dock sits at the right edge and grows LEFTWARD; the
+ * consumable fast-slots live in the bottom-center column (fast-slots.css), so the two never overlap.
+ * The dock is z-28 so it stays ON TOP of every right drawer (z-26), never covered. */
+.hud-dock {
+  position: fixed;
+  right: var(--s-4);
+  bottom: var(--s-4);
+  z-index: 28; /* launcher buttons ALWAYS on top of the right drawer (drawer z-index 26), never covered */
+  pointer-events: none;
+}
+.hud-launchers {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--s-2);
+  padding: var(--s-2);
+  background: linear-gradient(160deg, var(--glass-hi), var(--glass));
+  border: 1px solid var(--edge);
+  border-top-color: var(--edge-top);
+  border-radius: var(--r-3);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
+.hud-launchers__row {
+  display: flex;
+  gap: 6px;
+}
+/* the muted meta row reads as a second, quieter zone: a hairline divider above + tighter scale */
+.hud-launchers__row--secondary {
+  padding-top: var(--s-2);
+  border-top: 1px solid var(--hair);
+}
+.hud-lbtn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-2);
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--hair);
+  transition:
+    color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease),
+    transform var(--dur-1) var(--ease);
+}
+.hud-lbtn:hover {
+  color: var(--fg);
+  transform: translateY(-1px);
+}
+/* PRIMARY gameplay launchers — larger, higher contrast, an ice-blue ornament dot top-right */
+.hud-lbtn--primary {
+  width: 42px;
+  height: 42px;
+  color: var(--fg);
+  border-color: var(--hair-strong);
+}
+.hud-lbtn--primary::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.55;
+  transition: opacity var(--dur-1) var(--ease);
+}
+.hud-lbtn--primary:hover::after {
+  opacity: 1;
+}
+.hud-lbtn--primary svg {
+  width: 22px;
+  height: 22px;
+}
+/* SECONDARY meta launchers — smaller + muted (less contrast), no ornament */
+.hud-lbtn--secondary {
+  width: 34px;
+  height: 34px;
+  color: var(--fg-faint);
+  background: rgba(0, 0, 0, 0.14);
+}
+.hud-lbtn--secondary:hover {
+  color: var(--fg-muted);
+}
+.hud-lbtn--secondary svg {
+  width: 18px;
+  height: 18px;
+}
+.hud-lbtn.active {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: var(--accent-strong);
+}
+.hud-lbtn.active::after {
+  background: var(--accent-ink);
+  opacity: 0.5;
+}
+
+/* ===== top-left merged controls: online players + sound + change-character (OFF the minimap) ===== */
+.hud-players {
+  position: fixed;
+  top: var(--s-4);
+  left: var(--s-4);
+  z-index: 20;
+  width: 232px;
+  padding: var(--s-3);
+}
+.hud-players__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--s-2);
+}
+.hud-players__count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fg);
+}
+.hud-players__title {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.hud-players__ctl {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-1);
+  color: var(--fg-muted);
+  border: 1px solid var(--hair);
+  background: rgba(0, 0, 0, 0.22);
+  transition:
+    color var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease);
+}
+.hud-players__ctl:hover {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.hud-players__ctl svg {
+  width: 15px;
+  height: 15px;
+}
+.hud-players__list {
+  display: flex;
+  flex-direction: column;
+}
+.hud-prow {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: 26px;
+  padding: 0 var(--s-2);
+  border-radius: var(--r-1);
+  cursor: default;
+  transition: background var(--dur-1) var(--ease);
+}
+.hud-prow:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.hud-prow__glyph {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: var(--fg-faint);
+  display: inline-flex;
+}
+.hud-prow__glyph svg {
+  width: 16px;
+  height: 16px;
+}
+.hud-prow__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hud-prow.you .hud-prow__name {
+  color: var(--fg);
+}
+.hud-prow__you {
+  color: var(--fg-faint);
+  font-size: 10px;
+}
+.hud-prow__lvl {
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+
+/* ===== chat, bottom-left (demo #chat — Command Deck look on the Tactician glass) ===== */
+.hud-chat {
+  position: fixed;
+  left: var(--s-4);
+  bottom: var(--s-4);
+  z-index: 20;
+  width: 420px;
+  max-width: 32vw;
+  padding: var(--s-3);
+}
+.hud-chat-log {
+  height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-right: var(--s-1);
+  margin-bottom: var(--s-2);
+  scrollbar-width: thin;
+}
+.hud-chat-line {
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+/* per-line channel tint — `--ch` is set inline per channel (grey/brown/blue/purple/blue/red) */
+.hud-chat-tag {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ch, var(--fg-faint));
+  opacity: 0.75;
+  margin-right: 5px;
+}
+.hud-chat-pm {
+  font-size: 10px;
+  font-style: italic;
+  color: var(--ch, var(--accent));
+  margin-right: 5px;
+}
+/* .hud-chat-prefix beats `.hud-root button { color: inherit }` (0,1,1) so --ch tint wins */
+.hud-chat .hud-chat-from {
+  font-weight: 600;
+  margin-right: 6px;
+  color: var(--ch, var(--fg-muted));
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+.hud-chat-from:hover {
+  text-decoration: underline;
+}
+.hud-chat-text {
+  color: var(--fg);
+}
+.hud-chat-line.me .hud-chat-from {
+  color: var(--accent);
+}
+
+/* ── combat log (client-only fight lines) — a GREEN-TINTED channel band sets them apart from the neutral chat
+   above, and each token span paints from a --clog-* theme token so design retunes the palette in one place.
+   D127: a real 3-stop green gradient ("subtle greenish gradient background") + a tokenised left accent
+   bar; the token tiers (gold names / sage lore / element numbers) carry the retro-1.29 log hierarchy.
+
+   D151 MOUNT-TREE FIX (07-12): the --clog-* SSOT lives HERE, on the combat-log line itself — the ONLY element
+   every `.clog-*` span mounts inside (WorldChat.jsx renders combat lines as `.gw-chat__sys.hud-chat-line.is-combat`,
+   the spans as its children). They previously lived in game/styles/tokens.css `:root`, but that file is imported
+   ONLY by game/styles/base.css, which NO entry imports (main.tsx loads index.css + game-tab.css only). So `:root`
+   never entered the document; every `--clog-*` resolved EMPTY and `color: var(--clog-name)` fell back to the
+   inherited Tailwind `--color-muted` (#6b7280 grey). The chat mounts under `.gw-hud` / `.spectate-chat` (never
+   `.gw-tab`), so scoping to the `.gw-tab` bridge would not reach it either — hence the line itself. Values are the
+   house frosted-obsidian grammar (07-12: name gold, spell violet, damage red, crit amber, heal pink, AP blue,
+   MP green), resolved concrete because the game rarity/status base tokens are NOT in scope outside `.gw-tab`.
+   Retune the combat-log colours HERE. */
+.hud-chat-line.is-combat {
+  --clog-name: #ffce85; /* actor names — warm gold pop (tier 1: who) [= --q-legendary] */
+  --clog-target: #5db4ff; /* target names — ice (tier 1: whom) [= frosted --accent] */
+  --clog-verb: #79917a; /* lore / connective text — muted sage-green (tier 2: recedes below names + numbers) */
+  --clog-spell: #b07cff; /* spell names — arcane violet [= --q-epic] */
+  --clog-num: #ff6b6b; /* damage numbers — damage-read red (tier 3: loudest) [= --bad] */
+  --clog-num-crit: #ffb454; /* crit number — amber pop [= --warn] */
+  --clog-num-heal: #ff6bb0; /* heal number — rose-pink (sibling of --bad, hue-shifted) */
+  --clog-num-ap: #5db4ff; /* AP-removal number — house ice-blue [= frosted --accent] */
+  --clog-num-mp: #4fd6a0; /* MP-removal number — mint [= --good] */
+  --clog-death: #ff6b6b; /* "died" — damage red [= --bad] */
+  --clog-wash: rgba(79, 214, 160, 0.14); /* channel band — strong edge (near the accent bar) */
+  --clog-wash-mid: rgba(79, 214, 160, 0.05); /* channel band — mid stop before it fades out */
+  --clog-edge: rgba(79, 214, 160, 0.55); /* the 2px left accent bar */
+  background: linear-gradient(90deg, var(--clog-wash) 0%, var(--clog-wash-mid) 55%, transparent 100%);
+  border-left: 2px solid var(--clog-edge);
+  padding: 2px 4px 2px 7px;
+  border-radius: var(--r-1);
+}
+.clog-name {
+  color: var(--clog-name);
+  font-weight: 600;
+}
+.clog-target {
+  color: var(--clog-target);
+  font-weight: 600;
+}
+.clog-verb {
+  color: var(--clog-verb);
+}
+.clog-spell {
+  color: var(--clog-spell);
+  font-weight: 600;
+}
+.clog-num {
+  color: var(--clog-num);
+  font-weight: 700;
+}
+.clog-num--crit {
+  color: var(--clog-num-crit);
+}
+.clog-num--heal {
+  color: var(--clog-num-heal);
+}
+.clog-num--ap {
+  color: var(--clog-num-ap);
+}
+.clog-num--mp {
+  color: var(--clog-num-mp);
+}
+.clog-death {
+  color: var(--clog-death);
+  font-weight: 600;
+}
+
+/* per-channel show/hide toggles in the panel header */
+.hud-chat-filters {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.hud-chat .hud-chat-filter {
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ch, var(--fg-muted));
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-1);
+  padding: 1px 5px;
+  cursor: pointer;
+}
+.hud-chat-filter.is-off {
+  color: var(--fg-faint);
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+/* private-compose target bar */
+.hud-chat-pmbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--accent);
+  padding: 2px var(--s-2);
+  margin-bottom: var(--s-1);
+  border-radius: var(--r-1);
+  background: rgba(74, 158, 255, 0.1);
+  border: 1px solid var(--hair);
+}
+.hud-chat-pmbar button {
+  background: none;
+  border: none;
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+.hud-chat-pmbar button:hover {
+  color: var(--fg);
+}
+
+.hud-chat-form {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: 30px;
+  padding: 0 var(--s-2);
+  border-radius: var(--r-1);
+  background: rgba(0, 0, 0, 0.34);
+  border: 1px solid var(--hair);
+}
+
+/* send-channel selector dropdown */
+.hud-chat-selector {
+  position: relative;
+  flex: none;
+}
+.hud-chat .hud-chat-canal {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ch, var(--fg-faint));
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-1);
+  padding: 3px 6px;
+  cursor: pointer;
+}
+.hud-chat-canal:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.hud-chat-caret {
+  font-size: 7px;
+  opacity: 0.7;
+}
+.hud-chat-menu {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  z-index: 30;
+  min-width: 110px;
+  display: flex;
+  flex-direction: column;
+  padding: 3px;
+  border-radius: var(--r-2);
+  background: var(--glass-hi);
+  border: 1px solid var(--hair-strong);
+  backdrop-filter: blur(10px);
+}
+.hud-chat .hud-chat-menu-item {
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--ch, var(--fg));
+  background: none;
+  border: none;
+  border-radius: var(--r-1);
+  padding: 5px 8px;
+  cursor: pointer;
+}
+.hud-chat-menu-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* social context menu (left-click a name) — floats at the cursor, fast-slots-menu pattern */
+.hud-chat-social {
+  position: fixed;
+  z-index: 40;
+  min-width: 168px;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  border-radius: var(--r-2);
+  background: var(--glass-hi);
+  border: 1px solid var(--hair-strong);
+  backdrop-filter: blur(10px);
+  /* solid surface even inside the pointer-events:none HUD root (the world PlayerMenu mounts there),
+     so a click on the menu padding/header never falls through to the canvas behind it */
+  pointer-events: auto;
+}
+.hud-chat-social-head {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  padding: 4px 8px 6px;
+  border-bottom: 1px solid var(--hair);
+  margin-bottom: 3px;
+}
+.hud-chat-social-item {
+  text-align: left;
+  font-size: 12px;
+  color: var(--fg);
+  background: none;
+  border: none;
+  border-radius: var(--r-1);
+  padding: 6px 8px;
+  cursor: pointer;
+}
+.hud-chat-social-item:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+}
+.hud-chat-social-item:disabled {
+  color: var(--fg-faint);
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.hud-chat-input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--fg);
+  font: inherit;
+  font-size: 12px;
+}
+.hud-chat-input::placeholder {
+  color: var(--fg-faint);
+}
+
+/* ===== bottom command bar — vitals strip centered along the bottom ===== */
+.hud-bottom {
+  position: fixed;
+  left: 50%;
+  bottom: var(--s-4);
+  transform: translateX(-50%);
+  z-index: 22;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: var(--s-3);
+  pointer-events: none;
+}
+
+/* ===== combat: TURN CONTROLS — End-turn / Ready / Abandon grouped CENTER-BOTTOM beside the vitals card.
+ * A COMPACT stack on the vitals' left (T-B6: smaller so the column clears the deck
+ * cards above it at bottom:112px, and never collides with the bottom-right launcher dock). The primary
+ * action (End turn / Ready) is the accent CTA; Abandon is a subordinate ghost beneath it. */
+.hud-fightctl {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  align-items: stretch;
+  /* sit flush with the bottom of the vitals card */
+  padding-bottom: 2px;
+}
+/* SPECIFICITY NOTE (this bug recurred twice): the global `.hud-root button { background: none; border:
+ * none }` reset (0,1,1) OUT-WEIGHS a bare `.hud-fightctl__ready` (0,1,0) — so the prior fills were silently
+ * wiped and the buttons rendered as bare TEXT. Every fight-control button rule below is scoped under
+ * `.hud-fightctl` (0,2,0+) so it BEATS the reset and the opaque fills actually render. */
+.hud-fightctl .hud-fightctl__btn {
+  pointer-events: auto;
+  min-width: 104px;
+  padding: 9px 16px;
+  border-radius: var(--r-2);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: 1px solid var(--edge);
+  border-top-color: var(--edge-top);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.42);
+  transition:
+    transform var(--dur-2) var(--ease),
+    opacity var(--dur-2) var(--ease),
+    border-color var(--dur-2) var(--ease);
+}
+.hud-fightctl .hud-fightctl__btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+.hud-fightctl .hud-fightctl__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.hud-fightctl .hud-fightctl__end,
+.hud-fightctl .hud-fightctl__ready {
+  /* primary CTA — house gold gradient (135deg gold-dark → gold → gold-dark) + dark ink */
+  background: linear-gradient(135deg, #8b6914, #c8963c, #8b6914);
+  color: var(--accent-ink);
+  border-color: var(--accent-strong);
+  box-shadow: 0 8px 22px var(--accent-glow);
+}
+/* gold hover-glow on the primary CTA (house DNA) — the subordinate Abandon ghost keeps its amber hover */
+.hud-fightctl .hud-fightctl__end:hover:not(:disabled),
+.hud-fightctl .hud-fightctl__ready:hover:not(:disabled) {
+  box-shadow:
+    0 10px 26px var(--accent-glow),
+    0 0 20px rgba(200, 150, 60, 0.35);
+}
+.hud-fightctl .hud-fightctl__ready.is-ready {
+  background: linear-gradient(160deg, #12121a, #0a0a0f);
+  color: var(--fg-muted);
+  border-color: var(--edge);
+  box-shadow: none;
+  cursor: default;
+}
+.hud-fightctl .hud-fightctl__abandon {
+  /* BUTTON LAW (standing DNA rule — SUPERSEDES the old §16 "never a loud red resting" note): the
+   * escape control is a canon .btn-outline--danger — red #f87171 border + red text at REST, visibly a
+   * destructive button (the old muted-ink dark ghost was the re-caught D10 violation). It stays clearly
+   * distinct from the GOLD-FILLED End turn (outline vs fill, red vs gold) so it never fat-fingers as End
+   * turn. Hover intensifies the red.
+   * FIGHT-HUD OPACITY LAW (a fully transparent fill over a bright scene left the
+   * red border floating with unreadable text): the FILL is now the same solid near-black house surface
+   * every other fight-chrome tile uses (.hud-turn / .hud-spellico / .hud-socket); only the border/ink
+   * stays red so this never gets mistaken for End turn. */
+  background: linear-gradient(165deg, #12121a, #0a0a0f);
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.5);
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 104px;
+  padding: 7px 16px;
+}
+.hud-fightctl .hud-fightctl__abandon:hover {
+  color: #fca5a5;
+  border-color: #f87171;
+  /* stays SOLID on hover too — a translucent red wash would reopen the see-through gap on hover */
+  background: linear-gradient(165deg, #1a1212, #0a0a0f);
+}
+
+/* ===== combat: PLACEMENT banner — prominent top-center prep prompt + the 60s countdown.
+ * Sits high-center over the board so the timer is unmissable; the READY / ABANDON actions stay in the
+ * bottom FightControls. A glass card (overlay over the live world — house law). pointer-events:none so it
+ * never eats a board click behind it. */
+.hud-placement {
+  position: fixed;
+  top: 86px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 24;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 28px 12px;
+  border-radius: var(--r-3);
+  /* FIGHT-HUD OPACITY LAW: a translucent glass banner over a bright scene read as
+     unreadable — solid near-black house fill, same recipe as the other fight-chrome cards, replaces the
+     shared glass gradient. */
+  background: linear-gradient(165deg, #12121a, #0a0a0f);
+  border: 1px solid var(--edge);
+  border-top-color: var(--edge-top);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55);
+  text-align: center;
+  pointer-events: none;
+}
+.hud-placement__title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.hud-placement__timer {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.04;
+  color: var(--fg);
+}
+.hud-placement__timer.is-urgent {
+  color: var(--bad);
+  animation: hud-placement-pulse 1s steps(2, jump-none) infinite;
+}
+.hud-placement__hint {
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+/* D242 rider: a wrong placement click shakes the banner + reddens the hint — a silent no-op click was a
+   real "clicking doesn't move" failure mode (no dead interactions). */
+.hud-placement.is-wrong {
+  animation: hud-placement-shake 0.4s ease-in-out;
+  border-color: var(--bad);
+}
+.hud-placement.is-wrong .hud-placement__hint {
+  color: var(--bad);
+}
+@keyframes hud-placement-shake {
+  0%,
+  100% {
+    transform: translateX(-50%);
+  }
+  20% {
+    transform: translateX(calc(-50% - 6px));
+  }
+  40% {
+    transform: translateX(calc(-50% + 6px));
+  }
+  60% {
+    transform: translateX(calc(-50% - 4px));
+  }
+  80% {
+    transform: translateX(calc(-50% + 4px));
+  }
+}
+/* Your-turn cue banner (D242 rider) — a transient prominent beat at active turn-start. Shares the placement
+   banner's glass DNA but flashes in/out over its ~1.5s life (the show state unmounts it). pointer-events:none so
+   it never eats a board click. The 3D ground flash under the player is the engine polish track.
+   ⚠ CLASS NAMESPACE (P0 root — regression: turn cards show ~1s then VANISH): this banner was born `.hud-turn` —
+   COLLIDING with the initiative timeline's card class below (:1190). The banner's `animation …-flash 1.5s
+   forwards` (ends at opacity:0) applied to EVERY timeline card → every card self-faded to invisible 1.5s
+   after mount. The banner now owns `.hud-turnbanner`; never reuse `.hud-turn`. */
+.hud-turnbanner {
+  position: fixed;
+  top: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  padding: 12px 40px;
+  /* FIGHT-HUD OPACITY LAW: sharp corners + a solid near-black fill, matching every
+     other fight-phase banner/card, instead of the translucent shared glass gradient. */
+  border-radius: 0;
+  background: linear-gradient(165deg, #12121a, #0a0a0f);
+  border: 1px solid var(--accent);
+  box-shadow:
+    0 0 32px rgba(200, 150, 60, 0.4),
+    0 16px 44px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+  animation: hud-turn-flash 1.5s ease-out forwards;
+}
+.hud-turnbanner__title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+  text-shadow: 0 0 18px rgba(200, 150, 60, 0.6);
+}
+@keyframes hud-turn-flash {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px) scale(0.96);
+  }
+  14% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+@keyframes hud-placement-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+/* spectate (view-only) label beside the Leave-spectate button */
+.hud-fightctl__watching {
+  align-self: center;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* D110 placement force-start countdown — the "fight starts in Ns" cue sitting above the READY button (same
+ * gold terminal language as the ACTIVE-turn .dgb-commit-cue). Centered in the column-flex fightctl stack. */
+.hud-fightctl__countdown {
+  align-self: center;
+  padding: 3px 12px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--accent);
+  border: 1px solid rgba(200, 150, 60, 0.45);
+  /* FIGHT-HUD OPACITY LAW: a 0.08-alpha wash was effectively no background at all —
+     solid near-black fill, same family as the other fight-chrome chips. */
+  background: linear-gradient(165deg, #12121a, #0a0a0f);
+}
+
+/* identity + vitals card — bust, name/level, RED-gradient HP bar, AP/MP/Reserve as single icon+number,
+ * and a thin global XP bar along the bottom. Compact + centered, off the borders. */
+.hud-vitals {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-3) 0;
+  width: 400px;
+  overflow: hidden;
+}
+.hud-vitals__top {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+.hud-vitals__bust {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--r-2);
+  flex: none;
+  border: 1px solid var(--hair-strong);
+  background: radial-gradient(circle at 38% 30%, #33485f, #0e141d);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--fg);
+}
+.hud-vitals__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.hud-vitals__id {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+.hud-vitals__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hud-vitals__lvl {
+  flex: none;
+  font-size: 11px;
+  color: var(--accent);
+}
+/* RED-gradient health bar ONLY (no rainbow), with the live HP number inset right */
+.hud-hpbar {
+  position: relative;
+  height: 16px;
+  border-radius: var(--r-1);
+  background: rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  border: 1px solid var(--hair);
+}
+.hud-hpbar__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7a1f1f, #ff5a5a);
+  transition: width var(--dur-3) var(--ease);
+}
+.hud-hpbar__num {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 7px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--fg);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* AP / MP / Reserve — each a SINGLE icon + SINGLE number (no /max, no bar, no count) */
+.hud-vitals__stats {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex: none;
+}
+.hud-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: var(--r-2);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--hair);
+}
+.hud-stat__icon {
+  display: inline-flex;
+  width: 15px;
+  height: 15px;
+}
+.hud-stat__icon svg {
+  width: 15px;
+  height: 15px;
+}
+.hud-stat__val {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--fg);
+  min-width: 9px;
+  text-align: right;
+}
+.hud-stat--ap .hud-stat__icon {
+  color: var(--accent);
+}
+.hud-stat--mp .hud-stat__icon {
+  color: var(--good);
+}
+.hud-stat--reserve {
+  cursor: pointer;
+  color: var(--fg-muted);
+  transition: border-color var(--dur-2) var(--ease);
+}
+.hud-stat--reserve .hud-stat__icon {
+  color: var(--fg-muted);
+}
+.hud-stat--reserve:not(:disabled):hover {
+  border-color: var(--accent-glow);
+}
+.hud-stat--reserve:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* thin GLOBAL xp bar along the card bottom — full-bleed, ice-blue fill */
+.hud-xpbar {
+  height: 4px;
+  margin: 0 calc(-1 * var(--s-3));
+  background: rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.hud-xpbar__fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+  transition: width var(--dur-3) var(--ease);
+}
+
+/* ===== combat: SPELL CARDS — DISSOCIATED independent cards, no containing panel =====
+ * Ported from demo-command-deck.html `.card`: each spell is its own self-contained glass card (element
+ * strip + cost + pip + art + name) floating in a row ABOVE the bottom vitals card. The host is a
+ * transparent, click-through flow box; only the cards capture pointers. */
+/* ===== FIGHT CHROME RETHEME (#16) — the HUD ships the Frosted-Obsidian skin (tokens.css: ice-blue accent,
+ * Space Grotesk, 4–10px radii), but the fight CHROME must wear the AresRPG house gothic-terminal DNA (gold
+ * accent, JetBrains Mono, sharp corners, near-black glass). These token re-points are SCOPED to the four
+ * fight hosts only — the deck hand, the turn timeline, the turn controls, and the body-portaled grabbed
+ * card — so they inherit down to every fight-chrome child WITHOUT mutating the shared HUD tokens, the rest
+ * of the HUD, or the 3D fight board (rendered into the Three scene, a canvas sibling never under .hud-root).
+ * Chrome only; the bright sunlit stage stays bright. ===== */
+.hud-hand,
+.hud-spellbar,
+.hud-turns,
+.hud-fightctl,
+.hud-placement {
+  --accent: #c8963c; /* ice-blue → house gold (primary interactive accent) */
+  --accent-strong: #c8963c;
+  --accent-ink: #17130a; /* dark ink on gold buttons */
+  --accent-glow: rgba(200, 150, 60, 0.35);
+  --bad: #f87171; /* danger / enemy / low-HP → house red */
+  --warn: #fbbf24; /* abandon-hover caution → house amber */
+  --fg: #e8e4dc; /* body ink → house warm off-white */
+  --fg-muted: #6b7280; /* secondary ink → house muted */
+  --fg-faint: #6b7280;
+  --edge: #1e1e2e; /* hairline → house border */
+  --edge-top: rgba(200, 150, 60, 0.35); /* top glass edge → gold-tint */
+  --hair: #1e1e2e;
+  --slate: #1e1e2e; /* portrait ring base → house border */
+  --surface-1: #0a0a0f; /* abandon-ghost fill → house bg */
+  --surface-2: #12121a; /* abandon-ghost fill → house surface */
+  --font-ui: 'JetBrains Mono', monospace;
+  --font-mono: 'JetBrains Mono', monospace;
+  --r-1: 0; /* sharp corners everywhere in the fight chrome */
+  --r-2: 0;
+  --r-3: 0;
+  --deck-ico: 52px; /* one spell-icon tile — the width of each 2-row grid column (S-25) */
+  font-family: var(--font-mono);
+}
+
+.hud-hand-host {
+  position: fixed;
+  left: 50%;
+  bottom: 112px;
+  transform: translateX(-50%);
+  z-index: 23;
+  pointer-events: none;
+}
+/* ===== SPELL BAR (S-25) — the bottom-center fight bar: the corner-rounded stat box (Vitals) on the
+   LEFT, the double-row of spell icons on the RIGHT, as one flex unit. Mounted by GameWorldHud into `.hud-root`
+   (a transformed containing block), so `position:absolute` re-bases to the game area — clearing the sidebar. */
+.hud-spellbar {
+  position: absolute;
+  /* CHAT-POSITION INVARIANT: true viewport-centering (left:50%) put this bar's left edge inside the
+     chat's fixed bottom-left footprint below ~1600px game-area width — the bar's content is ~496 LOCAL px
+     since the 07-11 two-row compaction (FIXED width: full-height weapon + the 5+4 socket grid + the gem
+     vitals — no longer hand-size-dependent), and game-world-hud.css .gw-chat is left/bottom:10px, width
+     up to 440px → right edge ≤450 REAL px. The bar renders at ×--ui-scale (its containing block is the
+     scaled fight layer; the chat is unscaled). Fix: shift the centering ANCHOR itself right by a fixed
+     140px, still via translateX(-50%) — NOT a left+right forced width (that fought
+     `.hud-spellbar--optE`'s align-items:stretch: the deck row and the XP strip below it both stretch to
+     the CONTAINER's width, so forcing the container wide desynced them from the actual, narrower,
+     content). A shrink-to-fit box anchored 140px right of true-center clears the chat by ≥16px REAL at
+     every matrix width (measured this ticket: ~29px at 1280×800/scale .8, ~55px at 1440×900/scale .9 —
+     DOM-boxes asserted, tightest first) and FightControls' bottom-right column by ~90px+ — re-measure
+     both if `.gw-chat`'s geometry, the socket/gem sizes, or SPELL_SLOTS ever change. A touch
+     right-of-true-center on ultra-wide screens is the accepted trade (the fight UI accommodates the
+     chat, not the reverse) — and it shrinks toward true-center as the viewport grows, since 140px is a
+     smaller fraction of a wider box. */
+  left: calc(50% + 140px);
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 23;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s-3);
+  max-width: 96vw;
+  pointer-events: none; /* the bar is transparent; the icons (and the stat box) capture their own pointers */
+}
+/* The +140px anchor shift exists ONLY for the chat collision, which geometry rules out above ~1600px
+   game-area width (chat right edge 450px vs a centered deck's left edge ≥719px at 1920) — wide screens keep
+   the true bottom-center deck (the reference layout); the shift stays as the
+   narrow-screen accommodation. Threshold = 1600px game area + the host frame's 24px inset + margin. */
+@media (min-width: 1651px) {
+  .hud-spellbar {
+    left: 50%;
+  }
+}
+/* the stat box (`.gw-vitals`, already `.gw-panel`-rounded — a scoped corner exception) drops its own
+   bottom-center anchoring inside the bar and sits inline as the left cell; a hair of bottom pad aligns its
+   baseline to the icon rows. Its rounded corners are the ONLY rounding here — the icons stay house-sharp. */
+.hud-spellbar .gw-vitals {
+  position: static;
+  left: auto;
+  bottom: auto;
+  transform: none;
+}
+
+/* ===== S-25 DESIGN-PASS — ROUND 2 (the whole round-1 batch was rejected as "hideous" — the miss was
+   MATERIAL, not geometry). Definitive reference: a warm, colorful, game-y gem-and-socket bar. Faceted hex
+   gem badges (HP/AP/MP) + a small level chip, rounded-corner CARVED sockets with glossy circular icon-gems
+   — the sharp-corner web law is OVERRIDDEN for this one component (the rounding exception now covers the
+   whole bar, not just a stat box) — plus pagination + an XP strip. DORMANT until GameWorldHud swaps in the
+   bespoke Round2Bar composition (design_harness_main.jsx) behind one of these modifier classes; the classless
+   v1 default is untouched. Screenshot via design-harness.html?variant=optE|optF.
+   RIDER 2 (the exact ASCII layout law, binds BOTH options): ONE vitals box — big HP gem LEFT, AP/MP gems
+   STACKED right, whole box capped ~20% of the bar width; spell rows take the other ~80%; level chip is now a
+   SUBTLE corner badge, not a fourth same-weight element. optE/optF no longer differ in the box — only in the
+   XP-strip scope (full bar vs grid-only). See .hud-vbox / .hud-gem2--stat / .hud-lvlchip below. */
+
+/* shared material — both optE and optF compose from these */
+.hud-spellbar.hud-spellbar--optE,
+.hud-spellbar.hud-spellbar--optF {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 8px 10px; /* 10/12 → 8/10 with the 07-11 compaction (~15% tighter bar) */
+  background: linear-gradient(180deg, rgba(14, 14, 20, 0.94), rgba(7, 7, 11, 0.96));
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  border-radius: 10px;
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+/* FINAL REFINEMENT (tighten shape/alignments) — stretch so the vitals box and the grid share the
+   EXACT same height (the grid, 2×50px+gap = 104px since the 07-11 two-row compaction, is the taller
+   sibling); .hud-vbox centers its own content inside that stretched height, so the box reads as one
+   grounded unit instead of floating against the grid. */
+.hud-spellbar2__top {
+  display: flex;
+  align-items: stretch;
+  gap: 12px; /* 14 → 12 with the 07-11 compaction */
+}
+/* RIDER 2 (the exact ASCII law): the vitals box caps at ~20% of the bar, the grid section takes the
+   other ~80%. The bar has no forced width (sizes to content, like every other option so far), so the ratio
+   is hit by deliberate gem/socket sizing below (measured ~19-20% in the harness screenshot), not by a
+   flex-basis percentage against an indefinite container (which CSS resolves as content-based anyway). */
+.hud-vbox {
+  display: flex;
+  align-items: center;
+  /* trimmed with the 07-11 compaction refinement (was 10px / 10px 12px) — the whole bar targets ~15% tighter */
+  gap: 8px;
+  padding: 8px 10px;
+  flex: none;
+}
+.hud-spellbar2__gridwrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+.hud-spellbar2__gridcol {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* faceted hex gem (HP/AP/MP) — a clipped rim layer + an inset gradient-fill layer, both hexagons; the fill's
+   ::after adds a glossy facet highlight. Color comes from --gem-lt/--gem-mid/--gem-dk per modifier class. */
+.hud-gem2 {
+  position: relative;
+  display: grid;
+  place-items: center;
+  /* GEM LAW BUG (found via ruler verification): this used to DECLARE `--gsz: 50px` on itself — a custom
+     property set directly on the element beats an INHERITED value from an ancestor no matter the selector
+     specificity, so `.hud-gem2--hp` (which relies on inheriting --gsz from its `.hud-gem-bezel` wrapper)
+     was silently pinned to 50px the whole time, never the bezel's 86/88/156px. Fallback-only via var(),
+     never a declared value here, so a real ancestor value (the bezel) or a sibling modifier's own --gsz
+     (ap/mp/stat) both win as intended. */
+  width: var(--gsz, 50px);
+  height: var(--gsz, 50px);
+  flex: none;
+}
+.hud-gem2__rim,
+.hud-gem2__fill {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+}
+.hud-gem2__rim {
+  background: rgba(0, 0, 0, 0.6);
+}
+.hud-gem2__fill {
+  inset: 3px;
+  background: linear-gradient(155deg, var(--gem-lt) 0%, var(--gem-mid) 48%, var(--gem-dk) 100%);
+}
+.hud-gem2__fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  clip-path: inherit;
+  background: radial-gradient(ellipse 60% 40% at 34% 20%, rgba(255, 255, 255, 0.55), transparent 62%);
+}
+.hud-gem2 span {
+  position: relative;
+  z-index: 1;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  font-size: 12px;
+}
+/* POLISH ROUND 3 ("you increased the entire hud instead of just increasing the hp gem and reducing
+   its padding") — REVERTED: the previous rider gave `.hud-gem2--hp` its OWN `--gsz:100px`, a SECOND sizing
+   knob independent of the bezel's `--gsz` (which was also bumped to 156px) — two knobs out of sync, and the
+   bezel's growth alone dragged the whole vitals box / bar height up with it. Back to ONE knob: the hex
+   inherits `--gsz` from `.hud-gem-bezel` (below) — no override here. The "bigger gem, same box" fix lives
+   entirely in the bezel's own padding math. */
+.hud-gem2--hp span {
+  font-size: 16px; /* 19→16 with the 07-11 compaction (the stone shrank 86→72; the readout tracks it) */
+  /* POLISH ROUND 4 (the shadow must stay CRISP on the bright red facets, not a blur wash) — a tight
+     4-direction hard outline (1px, no blur) + a small close drop-shadow, instead of one soft blurred halo
+     that washes out against the lighter top facets. */
+  text-shadow:
+    1px 0 0 rgba(0, 0, 0, 0.85),
+    -1px 0 0 rgba(0, 0, 0, 0.85),
+    0 1px 0 rgba(0, 0, 0, 0.85),
+    0 -1px 0 rgba(0, 0, 0, 0.85),
+    0 2px 2px rgba(0, 0, 0, 0.55);
+}
+/* POLISH ROUND 4 — click-to-toggle: current/max FRACTION instead of the percent, stacked with a
+   thin divider bar, sized to fit the stone (72px since the 07-11 compaction). Same crisp shadow treatment
+   as the percent readout. */
+.hud-gem2__frac {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  line-height: 1;
+}
+.hud-gem2__frac-n {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  text-shadow:
+    1px 0 0 rgba(0, 0, 0, 0.85),
+    -1px 0 0 rgba(0, 0, 0, 0.85),
+    0 1px 0 rgba(0, 0, 0, 0.85),
+    0 -1px 0 rgba(0, 0, 0, 0.85),
+    0 2px 2px rgba(0, 0, 0, 0.55);
+}
+.hud-gem2__frac-bar {
+  width: 22px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
+}
+.hud-gem2--ap {
+  --gem-lt: #a9d4ff;
+  --gem-mid: #3f8fe2;
+  --gem-dk: #123a63;
+}
+.hud-gem2--mp {
+  --gem-lt: #b6f5b0;
+  --gem-mid: #3fbf4e;
+  --gem-dk: #14471c;
+}
+/* the two RIGHT-side stat gems (AP/MP) — small, stacked (rider 2), so the pair's combined height (2× + gap)
+   lands close to the bezelled HP gem's own footprint beside them (kept in visual balance by the shared
+   `align-items:stretch` on .hud-vbox rather than exact px matching). 43→36px with the 07-11 compaction —
+   exactly half the 72px HP hex (GEM LAW). */
+.hud-gem2--stat {
+  --gsz: 36px;
+}
+.hud-gem2--stat span {
+  font-size: 11px;
+}
+
+/* POLISH ROUND 3 ("improve ... gem/relief design for health", called ugly TWICE) — the HP gem is the
+   bar's hero: a recessed circular BEZEL (inset shadow — reads as carved into the bar surface) holds a hex
+   gem built from SIX conic-gradient facet wedges separated by thin dark SEAM lines (real cut-plane edges,
+   not a smooth gradient wheel) + a two-layer specular (a soft glint + a small sharp sparkle point, no blur
+   — blur was reading as one flat "blobby" highlight) + a drop-shadow so the gem pops OUT of the bezel.
+   FIX 1 (container growth reverted): bezel footprint restored to 94px (was blown up to 172px by a stray 2×
+   on `--gsz` — the vitals box / bar height regression traced to THIS number, not the hex itself).
+   FIX 2 (bigger gem, same box): the padding ring between hex and bezel rim shrank from 8px/side to 3px/side
+   — the hex grows from 78px to 88px purely by eating its own dead padding, footprint unchanged. */
+.hud-gem-bezel {
+  /* GEM LAW (measured, not vibed): rendered HP hex flat-to-flat = EXACTLY 2× the AP/MP hex — held
+     through the 07-11 compaction refinement (bar reads oversized → ~15% tighter): 86px ⇒ 72px here,
+     43px ⇒ 36px on `.hud-gem2--stat` below, 72 = 2×36 exactly. The bezel stays a thin hugging rim. */
+  --gsz: 72px; /* the HEX size — the single source of truth; hud-gem2--hp inherits this (no local override) */
+  width: calc(var(--gsz) + 8px); /* 80px bezel footprint — a 4px/side mounting rim, not a dead ring */
+  height: calc(var(--gsz) + 8px);
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #040405, #0e0e15);
+  box-shadow:
+    inset 0 5px 10px rgba(0, 0, 0, 0.82),
+    inset 0 -2px 3px rgba(255, 255, 255, 0.05),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.hud-gem-bezel .hud-gem2 {
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.55));
+}
+/* POLISH ROUND 4 — the HP gem is now a real click-toggle <button>, not a decorative div. Neutralize
+   UA button chrome (same pattern as button.hud-socket) and opt back into pointer-events (the bar itself is
+   pointer-events:none). A gold focus/hover ring — the bezel has no border of its own to repurpose. */
+button.hud-gem-bezel {
+  padding: 0;
+  border: none;
+  font: inherit;
+  color: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: box-shadow var(--dur-2) var(--ease);
+}
+button.hud-gem-bezel:hover,
+button.hud-gem-bezel:focus-visible {
+  box-shadow:
+    inset 0 5px 10px rgba(0, 0, 0, 0.82),
+    inset 0 -2px 3px rgba(255, 255, 255, 0.05),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 0 0 2px var(--accent-glow);
+}
+button.hud-gem-bezel:focus-visible {
+  outline: none;
+}
+.hud-gem2__facets {
+  position: absolute;
+  inset: 3px;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  /* 6 main facets (57deg each) + 6 thin near-black SEAMS (3deg) at every wedge boundary — the seams are what
+     sell "distinct cut planes" instead of one smooth hue-rotating gradient. */
+  background: conic-gradient(
+    from -30deg,
+    #ffc7c7 0deg 57deg,
+    #200808 57deg 60deg,
+    #e2453f 60deg 117deg,
+    #200808 117deg 120deg,
+    #a3282a 120deg 177deg,
+    #200808 177deg 180deg,
+    #6b1414 180deg 237deg,
+    #200808 237deg 240deg,
+    #8f1f22 240deg 297deg,
+    #200808 297deg 300deg,
+    #d43e3e 300deg 357deg,
+    #200808 357deg 360deg
+  );
+}
+/* specular — a soft directional glint (radial, no blur filter — a filter:blur is what read as "blobby")
+   plus a small sharp sparkle core layered in the same element, the classic two-part cut-gem glint. */
+.hud-gem2__spec {
+  position: absolute;
+  top: 9%;
+  left: 16%;
+  width: 30%;
+  height: 20%;
+  z-index: 1;
+  transform: rotate(-15deg);
+  background:
+    radial-gradient(circle at 68% 60%, #fff 0%, #fff 8%, transparent 42%),
+    radial-gradient(ellipse at 32% 30%, rgba(255, 255, 255, 0.8), transparent 68%);
+}
+
+/* S-25 rider: the HP-gem LEVEL CHIP was REMOVED — the character level now renders as a plain number
+   at the right end of the XP strip (see `.hud-xplvl` below). `.hud-lvlchip` deleted (not left dormant — the
+   rider explicitly killed it). */
+
+/* RIDER 2 (the exact ASCII law): ONE vitals box — big HP gem LEFT, AP/MP gems STACKED right, capped at
+   ~20% of the bar (see .hud-vbox above). Shared by both optE and optF (no more per-option arrangement). */
+.hud-vbox__hp {
+  position: relative;
+  flex: none;
+}
+.hud-vbox__side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* the socket grid — chunky, SHARP, CARVED tiles; spell art fills each populated slot edge-to-edge.
+   TWO-ROW LAYOUT (07-11 refinement — the fixed 10-slot single row stretched wide enough to touch the
+   chat): the weapon is a FULL-HEIGHT anchor column on the left (spans both rows), the 9 fixed spell slots
+   fill a 5-over-4 grid beside it — 5+4 (not 4+5) because default grid auto-flow gives it for free AND the
+   keybind order reads naturally: 1-5 across the top, 6-9 below, ragged edge ending bottom-right where
+   left-to-right/top-to-bottom reading terminates. This roughly halves the bar width (~625px grid → 320px).
+   Sockets 58→50px + gap 5→4px is the "scale content" part of the same refinement (~15% tighter). A >9-spell
+   hand (the never-hides-a-spell floor case) auto-flows extra sockets into a third row. */
+.hud-socketgrid {
+  --sock: 50px;
+  --sockgap: 4px;
+  position: relative; /* the empty-state hint below overlays the spell region absolutely */
+  display: grid;
+  grid-template-columns: repeat(6, var(--sock));
+  grid-auto-rows: var(--sock);
+  gap: var(--sockgap);
+}
+/* the weapon anchor — first child, explicit 2-row span in column 1; `height: auto` releases .hud-socket's
+   fixed --sock height so the default align-self:stretch fills both rows + the gap (104px). */
+.hud-socketgrid .hud-socket.weapon {
+  grid-row: 1 / span 2;
+  height: auto;
+}
+/* S-12: the honest "no spells learned" hint when a character has no seeded spells — never an empty-looking
+   deck (the weapon slot alone still fights). Muted/tiny/uppercase, on-brand. Absolutely positioned so it
+   OVERLAYS the (all-hollow) spell region centered, instead of occupying a grid cell and pushing the fixed
+   5+4 slots out of shape — the empty sockets under it are aria-hidden and non-interactive, so the solid
+   chip covering two of them costs nothing. */
+.hud-socket__hint {
+  position: absolute;
+  left: calc(var(--sock) + var(--sockgap));
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0 auto;
+  width: fit-content;
+  max-width: 150px;
+  z-index: 2;
+  /* FIGHT-HUD OPACITY LAW: this hint had NO background at all — bare text floating
+     over the board beside the socket tiles. A solid chip in the same near-black family as `.hud-socket`
+     + a hairline border so it reads as a deliberate callout, never stray see-through text. */
+  padding: 6px 8px;
+  border-radius: 0;
+  background: linear-gradient(165deg, #12121a, #0a0a0f);
+  border: 1px solid var(--edge);
+  border-top-color: var(--edge-top);
+  color: #6b7280;
+  font-size: 9px;
+  line-height: 1.3;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.hud-socket {
+  width: var(--sock, 58px);
+  height: var(--sock, 58px);
+  flex: none;
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 0;
+  background: linear-gradient(180deg, #0c0c11, #18181f);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  box-shadow:
+    inset 0 3px 6px rgba(0, 0, 0, 0.65),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+}
+.hud-socket__key {
+  position: absolute;
+  top: 3px;
+  left: 5px;
+  z-index: 2;
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+/* Empty spell slot (the spell hotbar has a fixed size and slot, it should
+   not scale with the spell amounts"): the SAME hollow carved tile as a filled socket (no gem/cost drawn) —
+   just a touch more border presence than the near-invisible default so an unlearned slot reads as a
+   deliberate frame, not a rendering gap, and its keybind number sits dimmer than a filled socket's (0.4
+   alpha) so the eye lands on what you CAN cast first. */
+.hud-socket.empty {
+  border-color: rgba(255, 255, 255, 0.07);
+}
+.hud-socket.empty .hud-socket__key {
+  color: rgba(255, 255, 255, 0.22);
+}
+.hud-socket__gem {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 0;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 15px;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  background: radial-gradient(
+    circle at 35% 28%,
+    color-mix(in srgb, var(--el) 85%, #fff),
+    color-mix(in srgb, var(--el) 60%, #000) 75%
+  );
+  box-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 0.35);
+}
+.hud-socket__gem-shine {
+  position: absolute;
+  top: 8%;
+  left: 18%;
+  width: 42%;
+  height: 26%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  filter: blur(1.5px);
+  transform: rotate(-20deg);
+}
+.hud-socket__cost {
+  position: absolute;
+  right: 3px;
+  bottom: 2px;
+  z-index: 2;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+/* FIX 4 cooldown badge (07-14) — turns-remaining, the socket's one free corner (key top-left, cost
+   bottom-right). House red (--bad) rather than white so a glance tells "on cooldown" from "costs N AP". */
+.hud-socket__cd {
+  position: absolute;
+  right: 3px;
+  top: 3px;
+  z-index: 2;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--bad);
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+.hud-socket.weapon .hud-socket__gem--weapon {
+  /* the weapon socket is FULL-HEIGHT (2 rows) since the 07-11 two-row refinement — a %-height gem would
+     stretch into an oval there; width% + aspect-ratio keeps the icon-gem square (so the squircle radius
+     reads correctly) at any socket height. */
+  width: 66%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  border-radius: 22%; /* same iOS squircle as the spell gems — one shape language across the bar */
+  display: grid;
+  place-items: center;
+  color: #17130a;
+  background: radial-gradient(circle at 35% 28%, #f5d0a9, #8b6914 75%);
+  box-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 0.35);
+}
+/* ===== S-25 WIRING — the socket is INTERACTIVE now (the harness sockets were static aria-hidden mockups).
+   These add the pick / hover / greyed FEEDBACK states the design's static tiles never needed. New selectors
+   only — the base optE socket look above is untouched (design-fidelity law). ===== */
+button.hud-socket {
+  /* neutralize the UA button chrome so the interactive socket renders identically to the harness div */
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  pointer-events: auto; /* the bar is pointer-events:none (transparent); the socket opts back in, like v1 */
+  transition:
+    transform var(--dur-2) var(--ease),
+    border-color var(--dur-2) var(--ease),
+    box-shadow var(--dur-2) var(--ease);
+}
+/* The socket is driven by mouse-click + numkeys and shows selection ONLY via `.armed` (the gold ring); it is
+   tabIndex=-1 and never meant to hold focus, so suppress the UA focus ring entirely (a
+   stale mouse-focus otherwise painted a blue keyboard-modality ring on the next numkey press). */
+button.hud-socket:focus,
+button.hud-socket:focus-visible {
+  outline: none;
+}
+.hud-socket:not(.disabled):hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow:
+    inset 0 3px 6px rgba(0, 0, 0, 0.65),
+    0 0 16px rgba(200, 150, 60, 0.35);
+  z-index: 5;
+}
+/* PICKED (armed): a persistent gold ring + glow — "this spell is selected, now click a target cell" */
+.hud-socket.armed {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 1px var(--accent),
+    inset 0 3px 6px rgba(0, 0, 0, 0.65),
+    0 0 18px rgba(200, 150, 60, 0.5);
+}
+/* §7 TURN-SEED CRIT GLOW ("TURN-SEED CRITS…UI"): the NEXT queued action CRITS with this
+   spell/weapon — a SOLID, readable gold halo on the socket (the house gold-glow family as a box-shadow
+   variant; no extra radius, no badge/label/number — the exact figure rides the tooltip's "next hit" line).
+   Slow house-tempo pulse so it reads as charged, not alarmed; distinguishable from `.armed` (thin ring) by
+   its filled inner gold wash. Stacks WITH .armed/.disabled — the crit fact is orthogonal to selection. */
+.hud-socket.crit-glow {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 1px var(--accent),
+    inset 0 0 10px rgba(200, 150, 60, 0.45),
+    inset 0 3px 6px rgba(0, 0, 0, 0.65),
+    0 0 14px rgba(200, 150, 60, 0.8);
+  animation: hud-crit-glow 2.4s ease-in-out infinite;
+}
+@keyframes hud-crit-glow {
+  50% {
+    box-shadow:
+      0 0 0 1px var(--accent),
+      inset 0 0 14px rgba(200, 150, 60, 0.6),
+      inset 0 3px 6px rgba(0, 0, 0, 0.65),
+      0 0 24px rgba(200, 150, 60, 1);
+  }
+}
+/* unaffordable / off-turn — dim the gem + block the pointer, but stay OPAQUE (never let the board show
+   through) and NEVER use the native `disabled` attr (that kills the hover tooltip — React 19; gated in JS). */
+.hud-socket.disabled {
+  cursor: not-allowed;
+}
+.hud-socket.disabled .hud-socket__gem {
+  filter: saturate(0.4) brightness(0.7);
+}
+.hud-socket.disabled .hud-socket__cost {
+  color: var(--bad);
+}
+
+/* XP strip — thin, yellow-green, rounded; optE renders it as a sibling of `.hud-spellbar2__top` (full bar
+   width, matching the reference which runs it under everything); optF renders it inside `.hud-spellbar2__
+   gridcol` instead, so it naturally matches just the grid's own width (see design_harness_main.jsx). */
+.hud-xpstrip2 {
+  height: 6px;
+  width: 100%;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  margin-top: 8px;
+}
+.hud-xpstrip2 span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #7a8f1f, #d4e157);
+}
+
+/* S-25 rider — the character LEVEL renders as a small mono number at the RIGHT END of the XP strip
+   (the old HP-gem level chip is gone). The strip flexes to fill the row; the level sits just after it. optE
+   mounts the strip inside `.hud-xprow` (this row); optF's grid-only strip is unaffected. */
+.hud-xprow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.hud-xprow .hud-xpstrip2 {
+  flex: 1;
+  margin-top: 0;
+}
+.hud-xplvl {
+  flex: none;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: #d4e157; /* the XP strip's own yellow-green (same family) */
+}
+
+/* DEAD AFTER THE S-25 FLIP (kept dormant one release for safety, per item 4): everything from `.hud-hand`
+   through the `.hud-spellico*` rules below styled the v1 spell bar. DeckCluster now renders the optE socket
+   grid (`.hud-socketgrid`/`.hud-socket*` above), so nothing renders `.hud-hand` or `.hud-spellico` anymore —
+   PRUNE this whole v1 block (down to `.hud-spellico.disabled .hud-spellico__cost`) next cleanup pass. */
+/* DOUBLE-ROW GRID (S-25): columns = ceil(n/2) set inline (n = weapon slot 0 + the hand), so the icons
+   fill left-to-right across exactly two rows and scale without overflow. */
+.hud-hand {
+  display: grid;
+  grid-auto-rows: var(--deck-ico);
+  gap: 6px;
+  pointer-events: none; /* the grid is transparent; icons capture pointers */
+}
+.hud-hand__empty {
+  grid-column: 1 / -1;
+  pointer-events: none;
+  align-self: center;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--fg-faint);
+  padding: 0 var(--s-2);
+  white-space: nowrap;
+}
+/* ===== spell ICON — a bare square tile in the 2-row grid (S-25): a select-key cap (top-left), an
+   element strip (top), the art (or a tinted initial when the CDN art is missing), and an AP pip (bottom-
+   right). ALL the detail (name / element / AP / range / damage) rides the hover TOOLTIP above the icon.
+   Left-click PICKS (arms) it; the picked icon holds a gold glow while you aim at a target cell. Sharp
+   corners (house law — only the stat box rounds). Every state animates (house envelopes). */
+.hud-spellico {
+  pointer-events: auto;
+  position: relative;
+  width: var(--deck-ico);
+  height: var(--deck-ico);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--r-3); /* 0 — sharp */
+  /* OPAQUE tile (no per-icon backdrop-filter — perf law). Solid near-black house fill keeps it crisp. */
+  background: linear-gradient(165deg, #12121a, #0a0a0f);
+  border: 1px solid var(--edge);
+  border-top-color: var(--edge-top);
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  color: var(--fg-muted);
+  cursor: pointer;
+  transform-origin: bottom center;
+  animation: deck-box-in var(--dur-3) var(--ease) backwards;
+  transition:
+    transform var(--dur-2) var(--ease),
+    border-color var(--dur-2) var(--ease),
+    box-shadow var(--dur-2) var(--ease),
+    filter var(--dur-2) var(--ease);
+}
+@keyframes deck-box-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+.hud-spellico:hover:not(.disabled) {
+  transform: translateY(-4px) scale(1.05);
+  border-color: var(--accent);
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.6),
+    0 0 18px rgba(200, 150, 60, 0.35);
+  z-index: 5;
+}
+/* PICKED (armed): a persistent gold ring + glow that gently pulses — "this spell is selected, now click a
+   target cell". The icon STAYS visible (no drag ghost anymore); disarm (re-click / Esc / turn flip) clears it. */
+.hud-spellico.armed {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 12px 30px rgba(0, 0, 0, 0.6),
+    0 0 20px rgba(200, 150, 60, 0.45);
+  animation: spellico-armed 1.6s var(--ease) infinite;
+}
+@keyframes spellico-armed {
+  50% {
+    box-shadow:
+      0 0 0 1px var(--accent),
+      0 12px 30px rgba(0, 0, 0, 0.6),
+      0 0 26px rgba(200, 150, 60, 0.6);
+  }
+}
+.hud-spellico.disabled {
+  /* OPAQUE even when unavailable (a tile must NEVER go see-through to the board). Convey "can't cast" with a
+     darker desaturated SOLID fill + dimmed ink, never transparency. NOT the native `disabled` attr (that
+     would suppress mouseenter → no hover tooltip on a greyed icon — React 19); the click is gated in JS. */
+  background: linear-gradient(165deg, #101015, #0a0a0f);
+  filter: saturate(0.45) brightness(0.78);
+  cursor: not-allowed;
+}
+/* the WEAPON / hand basic-attack tile (slot 0) — a faint gold wash + warmer border so the basic attack reads
+   as distinct from the elemental spells. */
+.hud-spellico.weapon {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--edge));
+  background:
+    radial-gradient(circle at 50% 30%, rgba(200, 150, 60, 0.16), transparent 70%),
+    linear-gradient(165deg, #14130f, #0a0a0f);
+}
+/* select-key cap — the digit that arms this slot (0 weapon, 1-9 spells) */
+.hud-spellico__key {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  z-index: 2;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--fg-muted);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+.hud-spellico.armed .hud-spellico__key {
+  color: var(--accent);
+}
+/* element color strip across the tile top */
+.hud-spellico__strip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 1;
+}
+/* the art fills the tile centre */
+.hud-spellico__art {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+.hud-spellico__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Missing/404 CDN icon -> a clean element-tinted initial (toggled in from the <img> onError, see DeckCluster) */
+.hud-spellico__fallback {
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  font-family: var(--font-ui);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  color: color-mix(in srgb, var(--el, var(--accent)) 78%, #ffffff);
+  background: radial-gradient(
+    circle at 50% 38%,
+    color-mix(in srgb, var(--el, var(--accent)) 34%, transparent),
+    transparent 72%
+  );
+}
+/* AP cost pip — bottom-right, on a legible dark chip */
+.hud-spellico__cost {
+  position: absolute;
+  right: 2px;
+  bottom: 1px;
+  z-index: 2;
+  padding: 0 3px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--fg);
+  background: rgba(10, 10, 15, 0.82);
+  border-radius: 2px;
+}
+.hud-spellico.disabled .hud-spellico__cost {
+  color: var(--bad);
+}
+
+/* ===== combat: TURN ORDER — INDEPENDENT floating cards, no containing panel =====
+ * Ported from demo-tacticians-table.html `.token` initiative row: each fighter is its OWN card (square
+ * portrait + name/Lv + red HP bar). The active card scales up + accent (enemy = red) border; dead dims.
+ * The row sits top-center BELOW the leave-combat button; the host is transparent + click-through. */
+.hud-turns {
+  position: fixed;
+  left: var(--s-3);
+  z-index: 22;
+  /* SAFE BAND, not full-viewport centering (P0 crop fix — regression: a 3-fighter fight was cropped
+     mid-card against the chat). This must still honor "the cards must not hug the
+     TOP" (they used to sit too high) — but a box mathematically centered on the FULL viewport can only grow
+     as tall as 2x its distance to the nearest obstruction, so the old approach forced this column to also
+     reserve a phantom, unused mirror of the chat's clearance ABOVE itself. On an 800px-tall viewport that
+     phantom reservation alone ate ~692 of the 800px before a single card was drawn — reproduced exactly
+     with this ticket's verification harness (fight-timeline-harness.html, deleted after verification): the
+     old `max-height: calc(100vh - 716px)` rendered only ~67px tall at 1280x800 (under 1.5 cards) and, at
+     1920x1080 with a 6v6 roster, OVERLAPPED `.gw-chat` by ~11px (see the --ui-scale note below for why).
+     Anchoring `top`+`bottom` to a SAFE BAND instead reserves the chat's clearance ONCE, not twice, and
+     still reads as centered via `justify-content` below — just centered in the column's own available
+     space (the room nothing else in the fight chrome uses) rather than the full viewport.
+     BOTTOM clears `.gw-chat` (game-world-hud.css: left/bottom:10px, height:320px) plus one more gap so the
+     column never touches its top edge; the two chat numbers are SSOT'd as --gw-chat-h/--gw-chat-bottom in
+     game-world-hud.css's :root (update them there if `.gw-chat`'s footprint ever changes).
+     /var(--ui-scale) on BOTH edges is load-bearing, not decoration: `.hud-turns` lives inside
+     `.gw-fight-layer.gw-tab`, which carries `.hud-root`'s `transform:scale(--ui-scale)` and so becomes
+     the containing block for every `position:fixed` descendant — every px authored here is in that LOCAL
+     (pre-scale) coordinate system, while `.gw-chat` is a plain, unscaled sibling under `.gw-hud`. The old
+     calc never divided by ui-scale, so its RENDERED size silently drifted with the screen (ui-scale is
+     0.8/0.9/1.15 at the three viewports above, never 1) instead of holding the real px gap it was aiming
+     for. Dividing first keeps the rendered gap a constant real px figure regardless of screen size. */
+  top: calc(var(--s-4) / var(--ui-scale, 1));
+  bottom: calc((var(--gw-chat-h, 320px) + var(--gw-chat-bottom, 10px) + var(--s-3)) / var(--ui-scale, 1));
+  display: flex;
+  flex-direction: column; /* turn order on the LEFT, as rows (vertical stack of row-cards) */
+  /* `safe center`: centers the roster when it fits inside the band (the common case — a small roster
+     renders at its natural height, unclamped, same as before). The instant a roster is tall enough to
+     overflow the band (a big 6v6, SPEC max), this degrades to start-anchored so every card stays reachable
+     by scrolling — plain `center` lets a flex container clip overflow off BOTH ends, stranding the top
+     cards unreachable no matter how far down you scroll. */
+  justify-content: safe center;
+  align-items: stretch;
+  gap: var(--s-2);
+  /* ACTIVE-CARD RIGHT-CLIP FIX (round 4 — the recurring "crop" was HORIZONTAL): `overflow-y: auto`
+     below forces overflow-x to compute to auto too (spec: one non-visible axis makes the other
+     non-visible), so this column CLIPS at its padding-box right edge — and its width is the 236px BASE
+     card, while the ACTIVE card's `transform: translateX(6px) scale(1.04)` overhangs it by
+     236×0.04/2 + 6 ≈ 10.7px (transforms never grow layout). Exactly as observed: "Lv N"
+     truncated, HP/timer flush against the cut, inactive cards fine. Fix: SIZE THE COLUMN TO THE ACTIVE
+     card's real footprint — reserve the overhang as padding-right (10.7px + up to ~8px a painted classic
+     scrollbar steals from the clip edge when the roster overflows → 20px covers both). The approved
+     active pop (scale + shift + ring) is untouched; it just finally has room to exist. */
+  padding-right: 20px;
+  overflow-y: auto;
+  /* visible overflow affordance (the old hard max-height crop had NONE — a silent clip read as
+     broken). House-pattern thin scrollbar (index.css: 6px), gold-tinted to match this chrome's re-pointed
+     accent (:1005 below) — it only ever paints when the roster actually overflows the band. A faint inset
+     edge line backs it up so the boundary reads even before you notice the scrollbar itself. */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(200, 150, 60, 0.4) transparent;
+  box-shadow: inset 0 -10px 8px -8px rgba(0, 0, 0, 0.45);
+  pointer-events: none; /* the column is transparent; the cards capture pointers */
+}
+.hud-turns::-webkit-scrollbar {
+  width: 6px;
+}
+.hud-turns::-webkit-scrollbar-track {
+  background: transparent;
+}
+.hud-turns::-webkit-scrollbar-thumb {
+  background: rgba(200, 150, 60, 0.4);
+}
+.hud-turns::-webkit-scrollbar-thumb:hover {
+  background: rgba(200, 150, 60, 0.6);
+}
+.hud-turn {
+  pointer-events: auto;
+  position: relative;
+  width: 236px;
+  display: flex;
+  flex-direction: row; /* portrait | body(name/lvl/hp/timer) as a ROW */
+  align-items: center;
+  gap: var(--s-2);
+  /* CARD-FOOTPRINT FIX (repro'd with a Playwright geometry probe, this ticket): the safe-band anchoring
+     above is sound (its real height is provably ui-scale-invariant, and never overlaps `.gw-chat` — proven
+     across the 3 "verified" viewports + short-window/mobile-frame cases), but the CARD size was never
+     checked against a realistic roster. At the old padding (--s-2 = 8px) + 48px portrait (64px/card), a
+     routine 6-fighter (3v3) roster already overflows the band and clips a card at 1920×1080 — one of the
+     three explicitly "proven" sizes — because that verification only ever exercised a small roster. Tighter
+     padding (8px → 6px, below) buys real headroom without touching the safe-band math or the SPEC-max 6v6
+     scroll fallback (still intentional, still scrolls sometimes — see justify-content: safe center above). */
+  padding: 6px;
+  border-radius: var(--r-3);
+  /* OPAQUE card (no per-card backdrop-filter — perf law: one per fighter, stacked + animated; a blur
+     on each is wasted GPU. Solid near-black house fill stays legible over the world). */
+  background: linear-gradient(165deg, #12121a, #0a0a0f);
+  border: 1px solid var(--edge);
+  border-top-color: var(--edge-top);
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition:
+    transform var(--dur-2) var(--ease),
+    border-color var(--dur-2) var(--ease),
+    box-shadow var(--dur-2) var(--ease);
+}
+.hud-turn.active {
+  transform: translateX(6px) scale(1.04);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+  z-index: 3;
+}
+/* the name/lvl + hp + timer stack vertically beside the portrait (row-card body) */
+.hud-turn__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.hud-turn.active.ally {
+  border-color: #4a9eff; /* ally team ring → house cyan (semantic map) */
+}
+.hud-turn.active.enemy {
+  border-color: var(--bad); /* enemy team ring → house red */
+}
+.hud-turn.dead {
+  opacity: 0.4;
+  filter: saturate(0.3) grayscale(0.4);
+}
+.hud-turn__portrait {
+  align-self: center;
+  /* 48px -> 40px (CARD-FOOTPRINT FIX above): the single biggest lever on how many cards the safe band can
+     hold before scrolling. The active card's body (name/lvl + hp + timer rows, ~47px) now slightly exceeds
+     this, so the CURRENT turn's card is a hair taller than the rest — harmless (it already stands out via
+     the accent border + scale(1.04) below) and never worth shrinking the timer/hp rows over. */
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--fg);
+  border: 2px solid var(--slate);
+  background: linear-gradient(150deg, #14141c, #0a0a0f);
+}
+.hud-turn.ally .hud-turn__portrait {
+  border-color: color-mix(in srgb, #4a9eff 55%, var(--slate));
+}
+.hud-turn.enemy .hud-turn__portrait {
+  border-color: color-mix(in srgb, var(--bad) 55%, var(--slate));
+}
+.hud-turn.active.ally .hud-turn__portrait {
+  border-color: #4a9eff;
+}
+.hud-turn.active.enemy .hud-turn__portrait {
+  border-color: var(--bad);
+}
+
+/* [fight-polish 07-12] REAL active-turn highlight ("I don't see which mob is currently playing — instead
+   of a blue border we should have a real highlight"). TWO variants behind FightTimeline's ACTIVE_HIGHLIGHT_VARIANT
+   const — ship A now, pick the final variant post-hoc. Both obey the FIGHT-HUD opacity law: solid near-black base + gold accent,
+   zero transparent-over-scene. Gold is hardcoded (#c8963c / #f5d0a9) — the in-world HUD's --gold token resolves to
+   a cool blue-grey; the timer-fill already hardcodes #8b6914 for exactly this reason. These rules follow the
+   .active.ally/.enemy team-border rules above so they override that blue/red edge at equal specificity (source order). */
+/* Variant A (SHIPPED) — GOLD-FILLED ROW + GLOW: the whole active row fills near-black→gold with a solid gold border,
+   a gold glow halo, and a gold name — dominant, unmistakable "this unit is playing NOW". */
+.hud-turn.active.active-a {
+  background: linear-gradient(165deg, #4a3714, #171208);
+  border-color: #c8963c;
+  box-shadow:
+    0 0 22px rgba(200, 150, 60, 0.55),
+    0 16px 40px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(245, 208, 169, 0.16);
+}
+.hud-turn.active.active-a .hud-turn__name {
+  color: #f5d0a9;
+}
+.hud-turn.active.active-a .hud-turn__portrait {
+  border-color: #c8963c;
+  box-shadow: 0 0 12px rgba(200, 150, 60, 0.5);
+}
+/* Variant B — GOLD EDGE + BIGGER SCALE + BRIGHTENED PORTRAIT: near-black stays, a crisp gold edge, a stronger pop
+   (scale 1.08), and the portrait brightens + gold-glows as the focal point. Subtler fill, punchier framing. */
+.hud-turn.active.active-b {
+  transform: translateX(6px) scale(1.08);
+  border-color: #c8963c;
+  box-shadow:
+    0 0 16px rgba(200, 150, 60, 0.42),
+    0 18px 44px rgba(0, 0, 0, 0.6);
+}
+.hud-turn.active.active-b .hud-turn__portrait {
+  border-color: #c8963c;
+  filter: brightness(1.35);
+  box-shadow: 0 0 14px rgba(200, 150, 60, 0.6);
+}
+.hud-turn__id {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+.hud-turn__name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hud-turn__lvl {
+  font-size: 9px;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  flex: 0 0 auto;
+}
+.hud-turn__hp {
+  position: relative;
+  height: 13px;
+  border-radius: var(--r-1);
+  background: rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  border: 1px solid var(--hair);
+}
+.hud-turn__hp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #5c1a1a, #f87171);
+  transition: width var(--dur-3) var(--ease);
+}
+.hud-turn__hp-num {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 5px;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--fg);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+}
+.hud-turn__timer {
+  position: relative;
+  height: 10px;
+  border-radius: var(--r-1);
+  background: rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  border: 1px solid var(--hair);
+}
+.hud-turn__timer-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #8b6914, var(--accent));
+  transition: width 0.25s linear;
+}
+.hud-turn__timer-fill.urgent {
+  background: linear-gradient(90deg, #5c1a1a, var(--bad));
+}
+.hud-turn__timer-num {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 5px;
+  font-size: 8px;
+  color: var(--fg);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+}
+
+/* ===== middle — the one open NON-inventory panel (stats / quests / spells / market) ===== */
+.hud-middle {
+  position: fixed;
+  inset: 0;
+  z-index: 24;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.hud-modal {
+  pointer-events: auto;
+  width: min(560px, 92vw);
+  max-height: 78vh;
+  background: linear-gradient(160deg, var(--glass-hi), var(--glass));
+  border: 1px solid var(--edge);
+  border-top-color: var(--edge-top);
+  border-radius: var(--r-3);
+  box-shadow:
+    0 12px 40px rgb(0 0 0 / 0.45),
+    inset 0 1px 0 rgb(255 255 255 / 0.04);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* shared middle-panel chrome (header + close) */
+.hud-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-4) var(--s-4) var(--s-3);
+  border-bottom: 1px solid var(--hair);
+}
+.hud-panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+  color: var(--fg);
+}
+.hud-panel-close {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--hair);
+  border-radius: var(--r-1);
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition:
+    color var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease);
+}
+.hud-panel-close:hover {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.hud-icon {
+  display: block;
+}
+.hud-panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--s-4);
+}
+.hud-panel-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  color: var(--fg-faint);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ===== detailed end-of-fight REPORT (FightReport.jsx — shared by win + loss) — reuses .hud-modal chrome.
+ * House design: NO left-accent rails (the prior recap's banned AI-slop); accent spent on the verdict + the
+ * local player's row only. ===== */
+.fight-report {
+  z-index: 40; /* above the board overlay so the result persists past despawn */
+}
+.fight-report__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.fight-report__banner {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.fight-report__verdict {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.fight-report__verdict.is-defeat {
+  color: var(--bad);
+}
+.fight-report__duration {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.fight-report__teams {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.fight-report__team-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.fight-report__rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+/* a fighter row — flat tinted surface, NO left rail */
+.fight-report__row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 8px var(--s-3);
+  border-radius: var(--r-2);
+  background: rgba(0, 0, 0, 0.24);
+  border: 1px solid var(--hair);
+  font-size: 0.8rem;
+}
+.fight-report__row.is-down {
+  opacity: 0.55;
+}
+/* the LOCAL player's rich row — accent tint (NOT a rail) + a vertical column for the reward block */
+.fight-report__row--me {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  background: var(--accent-dim);
+  border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+}
+.fight-report__row-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.fight-report__name {
+  flex: 1 1 auto;
+  color: var(--fg);
+  font-weight: 600;
+}
+.fight-report__lvl {
+  color: var(--fg-muted);
+  font-size: 0.72rem;
+}
+.fight-report__state {
+  font-size: 0.64rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.fight-report__xp-gain {
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+/* XP progression bar */
+.fight-report__bar {
+  height: 7px;
+  border-radius: 99px;
+  background: rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+.fight-report__bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--accent);
+  transition: width var(--dur-3) var(--ease);
+}
+.fight-report__bar-fill.is-pending {
+  width: 100%;
+  background: linear-gradient(90deg, var(--accent-dim), var(--accent), var(--accent-dim));
+  background-size: 200% 100%;
+  animation: fight-report-sweep 1.1s linear infinite;
+}
+@keyframes fight-report-sweep {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+.fight-report__levelup {
+  font-size: 0.74rem;
+  color: var(--fg-muted);
+}
+.fight-report__loot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: 2px;
+}
+.fight-report__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ===== level-up congrats card (LevelUp.jsx) — reuses .hud-modal chrome, momentary punch-in ===== */
+.level-up {
+  z-index: 45; /* above the fight-result modal (a level-up rides on top of the win) */
+  width: min(420px, 92vw);
+  animation: level-up-punch var(--dur-3) var(--ease);
+}
+@keyframes level-up-punch {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(8px);
+  }
+  60% {
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.level-up__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+  text-align: center;
+}
+.level-up__badge {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.6rem;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: var(--r-3);
+  box-shadow: 0 0 24px var(--accent-glow);
+}
+.level-up__title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+.level-up__multi {
+  color: var(--accent);
+}
+.level-up__copy {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--fg-muted);
+}
+.level-up__rewards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-2);
+  width: 100%;
+}
+.level-up__reward {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s-3) var(--s-2);
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-2);
+}
+.level-up__reward-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.2rem;
+  color: var(--accent);
+}
+.level-up__reward-label {
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.level-up__actions {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+/* ── Nearby fights (Wave SPECTATE): the count card + the chooser modal ──────────── */
+
+/* count card — bottom-left, above chat, near the craft-queue area. Clickable; opens the modal. */
+.hud-fights-count {
+  position: fixed;
+  left: var(--s-4);
+  /* sits as a small card ABOVE the chat panel (chat is bottom-left, ~344px tall from bottom:16, so
+     its top is ~360px). 372px clears the chat top with a gap so the two never overlap (a standing rule:
+     no UI overlaps). Measured empirically across 1024-1440 widths. */
+  bottom: 372px;
+  z-index: 22;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  background: linear-gradient(160deg, var(--glass-hi), var(--glass));
+  border: 1px solid var(--edge);
+  border-top-color: var(--edge-top);
+  border-radius: var(--r-2);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.35);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  color: var(--fg);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-1) var(--ease),
+    transform var(--dur-1) var(--ease);
+}
+.hud-fights-count:hover {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  transform: translateY(-1px);
+}
+.hud-fights-count__icon {
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+}
+.hud-fights-count__icon svg {
+  width: 18px;
+  height: 18px;
+}
+.hud-fights-count__num {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.hud-fights-count__label {
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+
+/* chooser modal — reuses .hud-middle / .hud-modal; per-fight teams + Join/Spectate */
+.fights-modal {
+  width: min(540px, 92vw);
+}
+.fights-modal__head-icon {
+  display: grid;
+  place-items: center;
+  margin-right: var(--s-2);
+  color: var(--accent);
+}
+.fights-modal__head-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.fights-modal__body {
+  padding: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  overflow-y: auto;
+}
+.fights-modal__fight {
+  padding: var(--s-3);
+  background: rgb(255 255 255 / 0.02);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.fights-modal__teams {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
+  gap: var(--s-3);
+}
+.fights-modal__vs {
+  align-self: center;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.fights-modal__team-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  margin-bottom: var(--s-2);
+}
+.fights-modal__team.is-human .fights-modal__team-label {
+  color: var(--accent);
+}
+.fights-modal__roster {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fights-modal__member {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  font-size: 13px;
+  color: var(--fg);
+}
+.fights-modal__member-lvl {
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+.fights-modal__empty {
+  font-size: 12px;
+  color: var(--fg-faint);
+}
+.fights-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* D59e + D65b — the ALWAYS-THERE dungeon escape, BOTTOM-RIGHT card slot (we ONLY want the
+   bottom right card" — the top-right position is DEAD in all states). One place to look for exit
+   controls in and out of fights. Sits ABOVE the two-row launcher dock (dock anchors bottom: var(--s-4);
+   124px clears both rows), independent of the fight HUD so a half-initialised fight can never strand
+   the player without an exit. */
+.hud-leave-persistent {
+  position: fixed;
+  /* D213-addendum: "leave dungeon should be near the bottom" — bottom-right corner
+     (chat owns bottom-left, fast-slots bottom-center; FightControls replaces this slot during fights). */
+  bottom: 14px;
+  right: 14px;
+  z-index: 9000;
+  pointer-events: auto;
+}
+
+/* D107: boot-placement prompt — non-intrusive, bottom-center above vitals; the board mounts on ENTER only */
+
+/* REAL spell art in the socket gem — fills the complete sharp slot under the shine; the
+   tinted-letter D53 fallback renders instead when the art 404s. */
+.hud-socket__gem-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0;
+  image-rendering: auto;
+  z-index: 0; /* under the gloss — the shine (DOM-earlier sibling) must stay the top highlight */
+}
+.hud-socket__gem-shine {
+  z-index: 1; /* keep the glossy highlight OVER the real art (art is a z-0 absolute sibling) */
+}

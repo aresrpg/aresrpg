@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <title>AresRPG — VFX Wave-A (melee + impact) Probe</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #0a0a0f;
+      }
+      #c {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+    <!--
+      Wave-A (c_melee + e_status_impact) preset proof — clones vfx_presets_probe.html's standard render path but
+      resolves from the NEW MELEE_PRESETS + IMPACT_PRESETS tables directly (they are not yet merged into the master
+      PRESETS — that is the NOTED 1-line wire in vfx_presets_data.js, deliberately left to the Wave-owned file). Renders
+      ONE preset on its OWN WebGPURenderer: ?preset=<name>&t=<seconds>&scale=<n>. window.__probe_ready on first draw,
+      window.__probe_err on any GPU/init failure — so the bench proves the WGSL compiles + the burst is visible.
+    -->
+    <script type="module">
+      import * as THREE from 'three'
+      import { WebGPURenderer } from 'three/webgpu'
+      import { create_vfx_preset } from '/src/render/vfx_preset_engine.js'
+      import { MELEE_PRESETS } from '/src/render/vfx_presets_melee.js'
+      import { IMPACT_PRESETS } from '/src/render/vfx_presets_impact.js'
+
+      const TABLE = { ...MELEE_PRESETS, ...IMPACT_PRESETS }
+      const q = new URLSearchParams(location.search)
+      const name = q.get('preset') || 'melee_claw_fire'
+      const fixed_t = q.has('t') ? Number(q.get('t')) : null
+      const bg = q.has('bg') ? Number('0x' + q.get('bg')) : 0x0a0a12
+
+      try {
+        const preset = TABLE[name]
+        if (!preset) throw new Error(`unknown preset "${name}"`)
+        const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('c'))
+        const renderer = new WebGPURenderer({ canvas, antialias: true })
+        await renderer.init()
+        renderer.setPixelRatio(1)
+        renderer.setSize(window.innerWidth, window.innerHeight)
+        renderer.setClearColor(bg, 1)
+
+        const scene = new THREE.Scene()
+        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 500)
+        camera.position.set(0, 2.6, 9)
+        camera.lookAt(0, 1.2, 0)
+
+        const scale = q.has('scale') ? Number(q.get('scale')) : 1.6
+        const t0 = performance.now()
+        const handle = create_vfx_preset(preset, { position: [0, 0.5, 0], scale })
+        window.__probe_ms = performance.now() - t0
+        scene.add(handle.object3d)
+        window.__probe_preset = name
+        window.__probe_particles = handle.particle_count
+        window.__probe_draws = handle.draw_calls
+
+        if (fixed_t != null) handle.age.value = fixed_t
+        let last = performance.now()
+        const loop = (now) => {
+          if (fixed_t == null) handle.update((now - last) / 1000)
+          last = now
+          renderer.render(scene, camera)
+          window.__probe_ready = true
+          requestAnimationFrame(loop)
+        }
+        requestAnimationFrame(loop)
+      } catch (e) {
+        window.__probe_err = String(e && e.stack ? e.stack : e)
+        console.error('[vfx-wavea-probe] FAILED', e)
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "status": "ok",
+  "redis": "up",
+  "network": "testnet",
+  "indexed": true,
+  "latest_checkpoint": 361360287,
+  "epoch": 1163,
+  "checkpoint_timestamp_ms": 1784306554308,
+  "committer_watermark": 361360287,
+  "lag_ms": 630,
+  "lag_seconds": 1
+}

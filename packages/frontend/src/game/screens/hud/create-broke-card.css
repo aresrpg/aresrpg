@@ -1,0 +1,148 @@
+/* D50 — the "you're broke" pre-validation card. Shown INSTEAD of the paid create flow when the wallet
+   can't cover price + gas headroom. Gothic-terminal house style: near-black glass, gold ADD FUNDS CTA,
+   amber caution icon, sharp corners, mono type. Portalled to <body>, so it uses the house palette hex
+   directly (the HUD var(--…) tokens are scoped to .hud-root and would not resolve here). */
+
+.chr-broke {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(7, 9, 13, 0.62);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.chr-broke__card {
+  width: min(380px, 92vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 24px 22px;
+  text-align: center;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  color: #e8e4dc;
+  /* Near-opaque surface (house surface hex, ≥0.97 alpha) — the translucent 0.58-0.62 gradient this used to
+     carry let the drop-rates list behind the modal bleed through the copy. Backdrop-blur
+     stays as a fallback frost; the panel itself no longer relies on it for readability. */
+  background: linear-gradient(160deg, rgba(30, 30, 42, 0.98), rgba(18, 18, 26, 0.98));
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(200, 150, 60, 0.4);
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.6),
+    0 0 32px rgba(200, 150, 60, 0.08);
+  animation: chr-broke-rise 0.22s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@keyframes chr-broke-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.chr-broke__icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  background: rgba(251, 191, 36, 0.08);
+}
+.chr-broke__icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.chr-broke__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #f5d0a9;
+  text-shadow: 0 0 18px rgba(200, 150, 60, 0.35);
+}
+
+.chr-broke__msg {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: #9a9488;
+}
+
+.chr-broke__meta {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+}
+.chr-broke__chip {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+.chr-broke__chip b {
+  font-size: 0.56rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+.chr-broke__chip span {
+  font-size: 0.82rem;
+  color: #e8e4dc;
+}
+/* The balance chip is the shortfall — render it in danger red so the "why" reads instantly. */
+.chr-broke__chip--low span {
+  color: #ef4444;
+}
+
+.chr-broke__actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  margin-top: 6px;
+}
+.chr-broke__cancel,
+.chr-broke__fund {
+  flex: 1;
+  padding: 10px;
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    color 0.16s ease;
+}
+.chr-broke__cancel {
+  color: #6b7280;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.chr-broke__cancel:hover {
+  color: #e8e4dc;
+  border-color: rgba(255, 255, 255, 0.24);
+}
+.chr-broke__fund {
+  color: #0a0a0f;
+  background: linear-gradient(160deg, #c8963c, #8b6914);
+  border: 1px solid #c8963c;
+}
+.chr-broke__fund:hover {
+  box-shadow: 0 0 20px rgba(200, 150, 60, 0.45);
+}

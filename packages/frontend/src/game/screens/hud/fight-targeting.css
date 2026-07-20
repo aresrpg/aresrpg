@@ -1,0 +1,78 @@
+/* In-fight ARMED-SPELL READOUT (canon/14) — the compact bottom-left card wrapping the shared SpellDetail
+   (.sd) panel while a spell is armed. House DNA: glass ONLY as an overlay over the live 3D board, ice-blue
+   accent, tinted neutrals, mono tabular-nums, no pills. The board telegraph itself (range / AOE / cursor /
+   reticles / damage preview) is drawn in the Three layer (fight-targeting.js), not here.
+
+   "Compact mode" is achieved purely by scoping under .fight-readout — SpellDetail.jsx is reused untouched. */
+
+.fight-readout {
+  position: fixed;
+  /* RIGHT edge, anchored above the dock launchers (design placement call): the only fight quadrant with no
+     panel/feature — clears the Map (top-right, ends ~y190) above and the dock (starts ~y620) below at 720p,
+     so it never collides with B's bottom-left chat/combat-log, the center deck, or the dock. */
+  right: var(--s-4);
+  bottom: 150px;
+  z-index: 24;
+  width: 272px;
+  padding: var(--s-3);
+  border-radius: var(--r-3);
+  /* glass over the live board (overlay-only) */
+  background: linear-gradient(
+    165deg,
+    rgba(28, 38, 54, 0.82),
+    rgba(11, 16, 25, 0.86)
+  );
+  border: 1px solid var(--edge-top);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  /* a readout, never an interaction surface — let the board clicks/drag pass straight through */
+  pointer-events: none;
+}
+
+/* DESKTOP HOVER ANCHOR (a tooltip of the spell itself, not on the right): portalled to <body> and
+   positioned ABOVE the hovered socket via the inline tooltip_anchor left/top (which override the base right/bottom
+   dock). Sits above the board/deck chrome like the other hover cards. */
+.fight-readout--anchored {
+  z-index: 90;
+}
+
+/* ── compact overrides (scoped to the in-fight readout only — the deck-builder .sd is unaffected) ── */
+.fight-readout .sd {
+  gap: var(--s-2);
+}
+.fight-readout .sd__head {
+  padding: var(--s-2);
+}
+.fight-readout .sd__head-art {
+  width: 36px;
+  height: 36px;
+}
+.fight-readout .sd__head-name {
+  font-size: 13px;
+}
+.fight-readout .sd__fact {
+  padding: 5px var(--s-2);
+}
+.fight-readout .sd__fact-label {
+  font-size: 0.66rem;
+}
+.fight-readout .sd__fact-val {
+  font-size: 0.74rem;
+}
+.fight-readout .sd__effect-text {
+  font-size: 0.76rem;
+}
+
+/* one-line aiming hint under the facts/effects */
+.fight-readout__hint {
+  margin-top: var(--s-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: var(--fg-muted);
+}
+.fight-readout__hint b {
+  color: var(--accent-strong);
+  font-weight: 600;
+}

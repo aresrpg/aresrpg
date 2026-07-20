@@ -1,0 +1,27 @@
+{
+  "name": "@aresrpg/party",
+  "version": "0.0.0",
+  "description": "AresRPG headless party client core — one pure reducer behind one vanilla-store write door: reduce(state, input) -> {state, outputs}. Drives the webapp edge and headless bots alike; effects (PTBs, p2p, polling, toasts) live at the caller's edge.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "lint": "eslint . && prettier . --check",
+    "typecheck": "tsc --build",
+    "format": "prettier . --write && eslint . --fix",
+    "test": "bun test"
+  },
+  "engines": {
+    "node": ">=21.0.0"
+  },
+  "exports": {
+    ".": {
+      "import": "./src/index.js",
+      "types": "./types/index.d.ts"
+    }
+  },
+  "author": "AresRPG's Team",
+  "license": "SEE LICENSE IN LICENSE",
+  "dependencies": {
+    "zustand": "^5.0.14"
+  }
+}

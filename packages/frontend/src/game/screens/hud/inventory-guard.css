@@ -1,0 +1,83 @@
+.inv__listed-note {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  background: rgba(251, 191, 36, 0.08);
+  color: #fbbf24;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+}
+
+.inv__cell-shell {
+  position: relative;
+  width: 58px;
+  height: 58px;
+}
+
+.inv__cell-shell > .inv__cell {
+  position: absolute;
+  inset: 0;
+}
+
+.inv__cell.is-action-disabled {
+  filter: saturate(0.45) brightness(0.7);
+  cursor: not-allowed;
+}
+
+.inv__cell-listed,
+.inv__cell-delist {
+  position: absolute;
+  z-index: 3;
+  left: 3px;
+  right: 3px;
+  overflow: hidden;
+  border-radius: 2px;
+  font-size: 7px;
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: 0.05em;
+  text-align: center;
+  text-transform: uppercase;
+  /* the state must read WHOLE in every locale — wrap, never ellipsize ("RETRY BLOC…", design ruling 2026-07-18) */
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.inv__cell-listed {
+  top: 3px;
+  color: #fbbf24;
+  background: rgba(20, 13, 2, 0.9);
+  pointer-events: none;
+}
+
+.inv__cell-listed--blocked {
+  color: #fca5a5;
+  background: rgba(34, 5, 5, 0.92);
+}
+
+.inv__cell-delist {
+  bottom: 3px;
+  border: 1px solid rgba(251, 191, 36, 0.65);
+  background: rgba(20, 13, 2, 0.94);
+  color: #fde68a;
+  cursor: pointer;
+}
+
+.inv__cell-delist:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.inv__cell-removed {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 15, 0.58);
+  color: var(--accent, #c8963c);
+  font-size: 15px;
+  font-weight: 600;
+  pointer-events: none;
+}

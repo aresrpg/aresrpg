@@ -1,0 +1,16 @@
+{
+  "include": ["src/**/*", "types.d.ts"],
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "target": "esnext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowSyntheticDefaultImports": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "resolveJsonModule": true,
+    "outDir": "types",
+    "skipLibCheck": true
+  }
+}

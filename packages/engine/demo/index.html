@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Inline empty favicon: silences the console 404 the bench console-error filter would trip on. -->
+    <link rel="icon" href="data:," />
+    <title>AresRPG Engine — Demo</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: #0a0a0f;
+        overflow: hidden;
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+      }
+      #canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+      }
+      #gate {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #0a0a0f;
+        color: #c8963c;
+        font-size: 13px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        text-align: center;
+        padding: 24px;
+        z-index: 100;
+      }
+      #gate[data-hidden='true'] {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <div id="gate">Booting engine…</div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

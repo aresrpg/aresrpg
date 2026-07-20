@@ -1,0 +1,95 @@
+@import './tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  /* frosted obsidian: near-black cool ramp + two faint ice/steel auras */
+  background:
+    radial-gradient(
+      1100px 700px at 78% -8%,
+      var(--accent-dim),
+      transparent 60%
+    ),
+    radial-gradient(
+      900px 600px at 12% 108%,
+      rgba(60, 90, 130, 0.1),
+      transparent 55%
+    ),
+    linear-gradient(160deg, var(--surface-1) 0%, var(--bg) 55%, #05070a 100%);
+  background-attachment: fixed;
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+/* very subtle global grain — non-intrusive, sits above everything */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+button {
+  font-family: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+input {
+  font-family: inherit;
+}
+
+/* selection — the one accent */
+::selection {
+  background: var(--accent-dim);
+  color: var(--fg);
+}
+
+/* scrollbars — thin, cool, hairline track */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-3) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: var(--r-3);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--slate);
+  background-clip: padding-box;
+}

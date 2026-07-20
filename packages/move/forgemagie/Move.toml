@@ -1,0 +1,50 @@
+# aresrpg_forgemagie — the standalone Retro rune-forge package (package-split 2026-07-12: the aresrpg core
+# measured 102,193 B of a 102,400 B protocol publish cap — 207 B headroom; forgemagie was the DECISIONS-ledgered
+# next candidate after the kolizeum split). Feature → core arrows only: it READS core (config dials, character
+# job xp, item templates/stats) and drives the brand-gated core value doors (`*_brand` twins) with its OWN
+# `Forge` witness pinned in GameConfig. Core never names this package (ledgered law).
+[package]
+name = "aresrpg_forgemagie"
+version = "0.1.0"
+edition = "2024.alpha"
+authors = ["AresRPG"]
+
+# FRAMEWORK PIN: single-rev, matched to the active CLI's own framework hash — identical to every sibling package
+# so the whole graph compiles against one lineage.
+[dependencies.Sui]
+git = "https://github.com/MystenLabs/sui.git"
+subdir = "crates/sui-framework/packages/sui-framework"
+rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+override = true
+
+[dependencies.MoveStdlib]
+git = "https://github.com/MystenLabs/sui.git"
+subdir = "crates/sui-framework/packages/move-stdlib"
+rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+override = true
+
+# Kiosk (PersonalKioskCap — the ownership proof the scribe/crush doors thread). Default = testnet lineage;
+# [dep-replacements.mainnet] re-pins exactly like the core package.
+[dependencies.Kiosk]
+git = "https://github.com/MystenLabs/apps.git"
+subdir = "kiosk"
+rev = "testnet"
+
+# THE core game package (config / version / admin / character_link / item / item_stats / extract / extension /
+# fight_marker). Arrow flows feature → core, never back.
+[dependencies.aresrpg]
+local = "../aresrpg"
+
+# The pure-math combat foundation (the sealed forgemagie closed form + taux + rune_catalog + prng + job_xp).
+[dependencies.aresrpg_foundation]
+local = "../foundation"
+
+[environments]
+testnet = { chain-id = "4c78adac" }
+mainnet = { chain-id = "35834a8a" }
+
+[dep-replacements.mainnet]
+Kiosk = { git = "https://github.com/MystenLabs/apps.git", subdir = "kiosk", rev = "mainnet" }
+
+[addresses]
+# `aresrpg_forgemagie` binds implicitly to 0x0 via the [package] name; per-network published ids self-record.

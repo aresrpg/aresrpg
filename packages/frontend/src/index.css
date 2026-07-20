@@ -1,0 +1,921 @@
+@import 'tailwindcss';
+@import './game/canvas-viewport.css';
+
+@theme {
+  --color-bg: #0a0a0f;
+  --color-surface: #12121a;
+  --color-border: #1e1e2e;
+  --color-gold: #c8963c;
+  --color-gold-light: #f5d0a9;
+  --color-gold-dark: #8b6914;
+  --color-cyan: #4a9eff;
+  --color-text: #e8e4dc;
+  --color-muted: #6b7280;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+/* M-01: one CSS home for safe-area insets (notch/home-indicator clearance). Requires index.html's
+   `viewport-fit=cover` to be non-zero — inert (0px) otherwise, which the fallback covers. Every
+   fixed-edge overlay reads these vars instead of raw env() so there is one source of truth. */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+
+/* Insurance: iOS Safari paints the overscroll/safe-area gutter from `html`'s background, not `body`'s —
+   an unset html background flashes the UA-default WHITE there instead of the dark theme. */
+html {
+  background: #0a0a0f;
+}
+
+body {
+  margin: 0;
+  /* DNA background (project design law): a subtle top spotlight from #141420 → #0a0a0f. The prior top
+     stop was #1e1e2e (= the --color-border blue-purple grey) at 50% 0% — placing the brightest, bluest
+     tone across the top of every page, which read as an off-brand PURPLE cast on the dense admin dashboard.
+     Restored to the canonical warm-neutral dark radial. */
+  background: radial-gradient(ellipse at 50% 20%, #141420 0%, #0a0a0f 70%);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  -webkit-font-smoothing: antialiased;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(200, 150, 60, 0.015) 2px,
+    rgba(200, 150, 60, 0.015) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-gold) 30%, transparent);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: #353548;
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes border-glow {
+  0%,
+  100% {
+    border-color: rgba(200, 150, 60, 0.2);
+  }
+  50% {
+    border-color: rgba(200, 150, 60, 0.5);
+  }
+}
+
+@keyframes slide-up-fade {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(30px, -20px);
+  }
+}
+
+.glass-panel {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(24px);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transform: translateZ(0);
+  animation: slide-up-fade 0.4s ease-out;
+}
+
+.glass-panel:hover {
+  border-color: rgba(200, 150, 60, 0.18);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 0 30px rgba(200, 150, 60, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #fad9b3 0%, #d4a145 50%, #f0c474 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.btn-gold {
+  background: linear-gradient(135deg, var(--color-gold-dark), var(--color-gold), var(--color-gold-dark));
+  color: #0a0a0f;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  box-shadow:
+    0 0 20px rgba(200, 150, 60, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.btn-gold:hover {
+  box-shadow:
+    0 0 30px rgba(200, 150, 60, 0.4),
+    0 0 60px rgba(200, 150, 60, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.btn-gold:active {
+  transform: translateY(0);
+}
+
+.btn-gold:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Gold text halo — documented design-system canon (CLAUDE.md). Was previously a no-op (undefined). */
+.gold-glow {
+  text-shadow: 0 0 14px rgba(200, 150, 60, 0.4);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid rgba(200, 150, 60, 0.3);
+  color: var(--color-gold);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+.btn-outline:hover {
+  border-color: rgba(200, 150, 60, 0.6);
+  background: rgba(200, 150, 60, 0.08);
+  box-shadow: 0 0 20px rgba(200, 150, 60, 0.1);
+}
+
+/* Destructive outline (BUTTON CANON) — visible-at-rest red border + red text; glow on hover. Same shape as
+   .btn-outline, red accent. For DELIST / ABANDON / DELETE actions. */
+.btn-outline--danger {
+  background: transparent;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  color: #f87171;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+.btn-outline--danger:hover {
+  border-color: rgba(248, 113, 113, 0.8);
+  background: rgba(248, 113, 113, 0.08);
+  box-shadow: 0 0 20px rgba(248, 113, 113, 0.12);
+}
+
+.btn-outline--danger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ─── Cyan theme cousins (for SUI marketplace card) ──────────────── */
+
+.btn-cyan {
+  background: linear-gradient(135deg, #1f5a9e, #4a9eff, #1f5a9e);
+  color: #0a0a0f;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  box-shadow:
+    0 0 20px rgba(74, 158, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.btn-cyan:hover {
+  box-shadow:
+    0 0 30px rgba(74, 158, 255, 0.45),
+    0 0 60px rgba(74, 158, 255, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.btn-cyan:active {
+  transform: translateY(0);
+}
+
+.btn-cyan:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.cyan-glow {
+  color: var(--color-cyan);
+  text-shadow: 0 0 8px rgba(74, 158, 255, 0.4);
+}
+
+.text-gradient-cyan {
+  background: linear-gradient(135deg, #b3d9ff 0%, #4a9eff 50%, #80b8ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.category-pill-cyan {
+  padding: 4px 12px;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.category-pill-cyan:hover {
+  color: var(--color-cyan);
+}
+
+.category-pill-cyan.active {
+  color: var(--color-cyan);
+  border-bottom-color: var(--color-cyan);
+}
+
+.nav-item {
+  transition: all 0.2s ease;
+  border-left: 2px solid transparent;
+}
+
+.nav-item:hover {
+  background: rgba(200, 150, 60, 0.05);
+}
+
+.nav-item.active {
+  color: var(--color-gold);
+  border-left-color: var(--color-gold);
+  background: rgba(200, 150, 60, 0.08);
+}
+
+/* #29 sidebar character switcher — docked in the freed #game-online-slot region, World tab only.
+   Flat by design (no box chrome) — no border/bg/shadow on the container, only the hairline
+   separators on the header/group labels below. */
+.chsw {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 4px 4px;
+}
+
+.chsw-header {
+  color: var(--color-muted);
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 0 8px 6px;
+}
+
+.chsw-header--skeleton {
+  height: 8px;
+  margin: 0 8px 6px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.chsw-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 168px; /* ~6 rows before scroll */
+  overflow-y: auto;
+}
+
+.chsw-group__label {
+  color: var(--color-muted);
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 6px 8px 3px;
+  border-top: 1px solid var(--color-border);
+}
+
+.chsw-group:first-child .chsw-group__label {
+  border-top: none;
+}
+
+.chsw-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 8px;
+  border: none;
+  border-left: 2px solid transparent;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.chsw-row:hover {
+  color: var(--color-gold);
+  background: rgba(200, 150, 60, 0.05);
+  box-shadow: inset 0 0 12px rgba(200, 150, 60, 0.08);
+}
+
+.chsw-row.is-active {
+  color: var(--color-gold-light);
+  border-left-color: var(--color-gold);
+  background: rgba(200, 150, 60, 0.08);
+}
+
+/* EXPLORING (staked/idle-farming) — a cyan tint so it never reads as a plain, free-to-embody lobby row. */
+.chsw-row.is-exploring:not(.is-active) {
+  border-left-color: rgba(74, 158, 255, 0.4);
+}
+
+.chsw-row__exploring {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  color: var(--color-cyan);
+  opacity: 0.75;
+}
+
+.chsw-row--skeleton {
+  height: 22px;
+  margin: 2px 0;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: default;
+}
+
+.chsw-row__glyph {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--color-text);
+  background: color-mix(in srgb, hsl(var(--hue) 65% 45%) 35%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, hsl(var(--hue) 65% 55%) 50%, transparent);
+}
+
+.chsw-row__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Encyclopedia entity deep-link: a clickable entity reference (dungeon key, world counts). Keeps
+   its host row's colour/layout so it can wrap a muted facts line OR a gold key name, and reveals the house gold
+   accent + glow on hover — the interactive tell without recolouring the resting state. */
+.ency-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    text-shadow 0.2s ease;
+}
+.ency-link:hover {
+  color: var(--color-gold-light);
+  text-decoration: underline;
+  text-shadow: 0 0 8px rgba(200, 150, 60, 0.5);
+}
+
+.chsw-row__lvl {
+  flex-shrink: 0;
+  color: var(--color-muted);
+  font-size: 9px;
+  letter-spacing: 0.05em;
+}
+
+.chsw-row__dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f87171;
+  box-shadow: 0 0 6px rgba(248, 113, 113, 0.6);
+  animation: chsw-pulse 2s ease-in-out infinite;
+}
+
+@keyframes chsw-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* board #47: an in-dungeon row pairs the resume click with an ABANDON escape so an address's active dungeon
+   can never trap all its characters — the escape is reachable from ANY character (the whole roster is listed). */
+.chsw-rowwrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.chsw-rowwrap .chsw-row {
+  flex: 1;
+  min-width: 0;
+}
+.chsw-row__status {
+  flex-shrink: 0;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-cyan);
+  opacity: 0.8;
+}
+.chsw-row__abandon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.chsw-row__abandon:hover {
+  color: #f87171;
+}
+.chsw-row__abandon:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.chsw-empty {
+  padding: 10px 8px 4px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.character-card {
+  border: 1px solid var(--color-border);
+  background: linear-gradient(160deg, rgba(200, 150, 60, 0.02) 0%, transparent 50%);
+  transition: all 0.25s ease;
+}
+
+.character-card:hover {
+  border-color: rgba(200, 150, 60, 0.3);
+  background: linear-gradient(160deg, rgba(200, 150, 60, 0.05) 0%, transparent 50%);
+  box-shadow: 0 0 24px rgba(200, 150, 60, 0.07);
+}
+
+.profile-option {
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.profile-option:hover {
+  border-color: rgba(200, 150, 60, 0.4);
+  background: rgba(200, 150, 60, 0.05);
+}
+
+/* ─── Leaderboard ──────────────────────────────────────────────── */
+
+.category-pill {
+  padding: 4px 12px;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.category-pill:hover {
+  color: var(--color-gold);
+}
+
+.category-pill.active {
+  color: var(--color-gold);
+  border-bottom-color: var(--color-gold);
+}
+
+.time-tab {
+  padding: 3px 10px;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.time-tab:hover {
+  color: var(--color-gold);
+}
+
+.time-tab.active {
+  color: var(--color-gold);
+  border-bottom-color: var(--color-gold);
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 48px 1fr auto 64px;
+  align-items: center;
+  padding: 8px 12px;
+  border-left: 2px solid transparent;
+  transition: all 0.15s ease;
+  cursor: default;
+}
+
+.leaderboard-row:hover {
+  background: rgba(200, 150, 60, 0.04);
+  border-left-color: rgba(200, 150, 60, 0.3);
+}
+
+.leaderboard-row-self {
+  border-left: 2px solid var(--color-gold);
+  background: rgba(200, 150, 60, 0.05);
+}
+
+.leaderboard-podium {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 12px;
+  border: 1px solid var(--color-border);
+  background: linear-gradient(180deg, rgba(200, 150, 60, 0.03) 0%, transparent 60%);
+  transition: all 0.25s ease;
+  animation: slide-up-fade 0.4s ease-out both;
+}
+
+.leaderboard-podium:hover {
+  border-color: rgba(200, 150, 60, 0.25);
+  background: linear-gradient(180deg, rgba(200, 150, 60, 0.06) 0%, transparent 60%);
+  box-shadow: 0 0 24px rgba(200, 150, 60, 0.07);
+}
+
+/* ─── Admin ────────────────────────────────────────────────────── */
+
+.admin-tab {
+  padding: 5px 14px;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font-family: var(--font-mono);
+}
+
+.admin-tab:hover {
+  color: var(--color-gold);
+}
+
+.admin-tab.active {
+  color: var(--color-gold);
+  border-bottom-color: var(--color-gold);
+}
+
+/* T91: tabs irrelevant to the on-chain (backendless) system are greyed + disabled (only TEMPLATES + SUI
+   stay active). */
+.admin-tab:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.admin-tab:disabled:hover {
+  color: var(--color-muted);
+}
+
+/* The marketplace BUY|SELL PRIMARY mode switch is bigger + stronger than the
+   filter-chip .admin-tab, reads as the page's main toggle. Gold-FILLED active state (unmistakable), generous
+   hit area. Scoped modifier so the shared admin/browse .admin-tab stays as-is. */
+.admin-tab--primary {
+  padding: 11px 32px;
+  font-size: 13px;
+  letter-spacing: 0.3em;
+  border-bottom-width: 3px;
+}
+.admin-tab--primary.active {
+  color: var(--color-bg);
+  background: linear-gradient(180deg, var(--color-gold-light), var(--color-gold-dark));
+  border-bottom-color: var(--color-gold-dark);
+  box-shadow: 0 0 22px rgba(200, 150, 60, 0.4);
+}
+.admin-tab--primary:hover:not(.active) {
+  color: var(--color-gold);
+  box-shadow: 0 0 16px rgba(200, 150, 60, 0.2);
+}
+
+/* Marketplace primary MODE switch (supersedes .admin-tab--primary there): a full
+   BUTTON switch — three equal segments with a sliding thumb that FILLS with a distinct colour per tab. The
+   active tab sets --active (0..2 segment index) + --tab-color inline; the thumb slides via transform and
+   cross-fades its background to that hue. Sharp corners, big + punchy hit area. Under prefers-reduced-motion
+   the thumb still lands + colours correctly, just without the slide/fade. */
+.mkt-switch {
+  position: relative;
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.02);
+}
+.mkt-switch-thumb {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: calc(100% / var(--tab-count, 3));
+  transform: translateX(calc(var(--active) * 100%));
+  background: var(--tab-color);
+  box-shadow:
+    0 0 22px color-mix(in srgb, var(--tab-color) 45%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transition:
+    transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.28s ease,
+    box-shadow 0.28s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+.mkt-switch-btn {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  min-width: 10rem;
+  text-align: center;
+  padding: 11px 30px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.28s ease;
+  white-space: nowrap;
+}
+.mkt-switch-btn:hover[aria-selected='false'] {
+  color: var(--color-text);
+}
+.mkt-switch-btn[aria-selected='true'] {
+  color: var(--color-bg);
+  font-weight: 600;
+}
+.mkt-switch-btn:focus-visible {
+  outline: 2px solid var(--color-gold-light);
+  outline-offset: -2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mkt-switch-thumb,
+  .mkt-switch-btn {
+    transition: none;
+  }
+}
+
+/* static KPI/stat chip (mob detail view, encyclopedia bestiary) — matches the house .glass-panel
+   translucency (index.css:109), NOT the darker --color-border (#1e1e2e reads purple at scale, see the
+   body-gradient note above) outline it had. Non-interactive: no hover — hover belongs on
+   controls, never a static display card. */
+.stat-card {
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.alert-row {
+  padding: 10px 14px;
+  border-left: 2px solid #ef4444;
+  background: rgba(239, 68, 68, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.template-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+}
+
+.template-input {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 6px 10px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.template-input:focus {
+  border-color: rgba(200, 150, 60, 0.4);
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ─── Founders' Vault (crowdfund /mint) ──────────────────────────── */
+
+/* The live SUI-raised number: the page's ONE gradient text (gold → cyan), with a gentle glow-pulse. */
+@keyframes vault-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 0 rgba(200, 150, 60, 0));
+  }
+  50% {
+    filter: drop-shadow(0 0 22px rgba(200, 150, 60, 0.35));
+  }
+}
+.vault-raised {
+  background: linear-gradient(100deg, var(--color-gold-light), var(--color-gold) 40%, var(--color-cyan));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: vault-glow 4s ease-in-out infinite;
+}
+
+/* Overflow "overpowered" sheen: a cyan highlight sweeping across the full gold bar once the goal is met. */
+@keyframes vault-sheen {
+  0% {
+    background-position: -60% 0;
+  }
+  100% {
+    background-position: 160% 0;
+  }
+}
+.vault-sheen {
+  background: linear-gradient(100deg, transparent, rgba(74, 158, 255, 0.85) 50%, transparent);
+  background-size: 60% 100%;
+  background-repeat: no-repeat;
+  mix-blend-mode: screen;
+  animation: vault-sheen 2.6s linear infinite;
+}
+
+/* Scroll cue below the hero: a slow drift-down-and-fade loop nudging the buyer toward the peeking item grid. */
+@keyframes vault-scroll-cue {
+  0%,
+  100% {
+    transform: translateY(-2px);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateY(7px);
+    opacity: 0.95;
+  }
+}
+.vault-scroll-cue {
+  animation: vault-scroll-cue 2.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .vault-scroll-cue {
+    animation: none;
+  }
+}
+
+/* Dynamic N-card tier grid: auto-fill card-width columns (any N flows/wraps), collapsing to 1-col ≤820px. */
+.vault-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  align-items: stretch;
+}
+@media (max-width: 820px) {
+  .vault-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Mobile ──────────────────────────────────────────────── */
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .leaderboard-row {
+    grid-template-columns: 32px 1fr auto;
+    padding: 6px 8px;
+  }
+  .leaderboard-row > :nth-child(4) {
+    display: none;
+  }
+}

@@ -1,0 +1,288 @@
+// The character GLB-render util — ported 1:1 from the AresRPG production character render
+// (`aresrpg-legacy/.../core/utils/three/load_model.js` `load` + `create_custom_colors_api`,
+// `core/game/models.js` `find_bone`, and `core/game/entities.js` `equip_hat` + `set_colors` +
+// the IDLE animation loop). It loads a DRACO-compressed base body GLB (the head is the helmet
+// slot, so the base is HAIRLESS), attaches the separate `_hair` mesh to the model's Head BONE
+// exactly as production equips a hat (parented to the bone -> follows the skinned animation, NOT
+// world-placed), and wires the 3-colour mesh recolour (the `diffuse`/`emissive` base + color1/2/3
+// mask layers) via the customizable-texture SSOT. Reusable by the char-create pedestal and (later)
+// the in-game render.
+
+import { AnimationMixer, Color, LoopRepeat, Mesh } from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
+import { clone as clone_skinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
+
+import { walrus_asset_url } from '@aresrpg/sdk/jobs'
+
+import { create_customizable_texture } from './customizable-texture.js'
+
+// Walrus (boot manifest) first — the decentralized home — else the bundled /sprites/characters copy
+// (progressive migration; the manifest carries `character` only after the upload lane publishes it).
+// Resolved at load time (not at module init) so a manifest fetched after boot still wins. The quilt is
+// keyed by GLB basename, so a `/sprites/characters/senshi_male.glb` local path maps to identifier
+// `senshi_male.glb`. Null-safe: a bald class/gender passes undefined `hair` straight through. Exported so
+// the in-world avatar, remote players, and the fight board (which read CHARACTER_MODELS directly) resolve
+// through the SAME seam as the pedestal — one home for "class GLB → its live URL".
+/** @param {string | null | undefined} local_url @returns {string | null | undefined} */
+export const character_glb_url = (local_url) =>
+  local_url ? (walrus_asset_url('character', local_url.split('/').pop() ?? '') ?? local_url) : local_url
+
+// Class id -> per-gender GLB urls (public/sprites/characters, the same bundled-asset convention as the mob
+// GLBs in /sprites/mobs/models). The 4 RIGGED classes ship a model (senshi/shugo/tomoda/yajin, each male +
+// female); the other classes have none, so `has_character_model` returns false and the caller falls back to
+// the 2D directional sprite (the pedestal shows "model soon"). `hair` is OPTIONAL per gender — the base body
+// is hairless (the head is the helmet slot), so a row with no `hair` simply renders bald (shugo + tomoda-male
+// ship no hair mesh). Add a row here as each new rig arrives; the URL pattern is `<class>_<gender>[_hair]`.
+/**
+ * @typedef {{ body: string, hair?: string }} ModelUrls
+ * @typedef {{ male: ModelUrls, female: ModelUrls }} ClassModels
+ */
+/** @type {Record<string, ClassModels>} */
+export const CHARACTER_MODELS = {
+  senshi: {
+    male: { body: '/sprites/characters/senshi_male.glb', hair: '/sprites/characters/senshi_male_hair.glb' },
+    female: { body: '/sprites/characters/senshi_female.glb', hair: '/sprites/characters/senshi_female_hair.glb' },
+  },
+  shugo: {
+    male: { body: '/sprites/characters/shugo_male.glb' },
+    female: { body: '/sprites/characters/shugo_female.glb' },
+  },
+  tomoda: {
+    male: { body: '/sprites/characters/tomoda_male.glb' },
+    female: { body: '/sprites/characters/tomoda_female.glb', hair: '/sprites/characters/tomoda_female_hair.glb' },
+  },
+  yajin: {
+    male: { body: '/sprites/characters/yajin_male.glb', hair: '/sprites/characters/yajin_male_hair.glb' },
+    female: { body: '/sprites/characters/yajin_female.glb', hair: '/sprites/characters/yajin_female_hair.glb' },
+  },
+}
+
+/** @param {string} class_id @returns {boolean} */
+export const has_character_model = (class_id) => class_id in CHARACTER_MODELS
+
+// ONE shared GLTFLoader + DRACOLoader (the GLBs are KHR_draco_mesh_compression — without a
+// DRACOLoader the load throws "No DRACOLoader instance provided"). Decoder served from /draco/.
+let _loader = /** @type {GLTFLoader | null} */ (null)
+const get_loader = () => {
+  if (!_loader) {
+    const draco = new DRACOLoader().setDecoderPath('/draco/')
+    _loader = new GLTFLoader().setDRACOLoader(draco)
+  }
+  return _loader
+}
+
+// Parsed-GLTF cache keyed by url so re-selecting a class is instant (parse once). Each consumer
+// clones the parsed scene (SkeletonUtils.clone rebinds the skeleton so the rig animates correctly).
+/** @type {Map<string, Promise<import('three').Group & { animations: import('three').AnimationClip[] }>>} */
+const _cache = new Map()
+const load_glb = (url) => {
+  let p = _cache.get(url)
+  if (!p) {
+    p = new Promise((resolve, reject) =>
+      get_loader().load(
+        url,
+        (gltf) => {
+          gltf.scene.animations = gltf.animations
+          resolve(/** @type {any} */ (gltf.scene))
+        },
+        undefined,
+        reject
+      )
+    )
+    _cache.set(url, p)
+  }
+  return p
+}
+
+// find_bone — port of models.js: the first bone whose name CONTAINS `name` (case-insensitive), so
+// 'Head' resolves 'mixamorig:Head'. Returns null instead of asserting (the caller decides).
+/** @param {import('three').Object3D} origin @param {string} name @returns {import('three').Object3D | null} */
+const find_bone = (origin, name) => {
+  let bone = /** @type {import('three').Object3D | null} */ (null)
+  const want = name.toLowerCase()
+  origin.traverse((child) => {
+    if (!bone && /** @type {any} */ (child).isBone && child.name.toLowerCase().includes(want)) bone = child
+  })
+  return bone
+}
+
+/**
+ * Attach a class's `_hair` mesh to a loaded body rig — the production "equip hat" path: cloned hair
+ * parented to the Head BONE (inherits the skinned transform — never world-placed). PEDESTAL-ONLY since
+ * D193: the in-world engine avatar mounts its own hair via create_character_avatar({ hair_url }).
+ * Resolves the attached hair node, or null (class/gender ships no hair, or no Head bone) — bald is fine.
+ * @param {import('three').Object3D} model
+ * @param {string} class_id
+ * @param {{ male?: boolean }} [opts]
+ * @returns {Promise<import('three').Object3D | null>}
+ */
+async function attach_class_hair(model, class_id, { male = true } = {}) {
+  const urls = CHARACTER_MODELS[class_id]?.[male ? 'male' : 'female']
+  if (!urls?.hair) return null
+  const head = find_bone(model, 'Head')
+  if (!head) return null
+  const hair = clone_skinned(await load_glb(character_glb_url(urls.hair)))
+  head.clear() // production's atomic no-double-headgear rule
+  head.add(hair)
+  return hair
+}
+
+/**
+ * Build the 3-colour recolour API for a cloned model — port of load_model.js
+ * `create_custom_colors_api`, generalised to where these assets actually store the layer textures:
+ * every layer (diffuse AND emissive) is a baseColorTexture (material `.map`), so we group textures
+ * by the `(.+)_base` / `(.+)_colorN` naming and swap each `<base>_base` material's `.map` for the
+ * composited customizable texture. Returns null when the model carries no customizable layers.
+ * @param {import('three').Object3D} model
+ * @returns {{
+ *   set_color1: (c: Color) => void, set_color2: (c: Color) => void, set_color3: (c: Color) => void,
+ *   needsUpdate: () => boolean, update: (r: import('three').WebGLRenderer) => void, dispose: () => void,
+ * } | null}
+ */
+const create_custom_colors = (model) => {
+  // collect every named texture reachable from the materials (map + emissiveMap)
+  /** @type {Map<string, import('three').Texture>} */
+  const textures = new Map()
+  model.traverse((child) => {
+    const mat = /** @type {any} */ (child).material
+    if (!mat) return
+    for (const m of Array.isArray(mat) ? mat : [mat])
+      for (const tex of [m.map, m.emissiveMap]) if (tex?.name) textures.set(tex.name, tex)
+  })
+
+  // base groups: `<base>_base` plus its `<base>_color1/2/3` masks
+  const customizables = /** @type {Map<string, ReturnType<typeof create_customizable_texture>>} */ (new Map())
+  for (const [tex_name, base_texture] of textures.entries()) {
+    const match = tex_name.match(/^(.+)_base$/)
+    if (!match || !match[1]) continue
+    const base = match[1]
+    const additional = new Map()
+    for (const layer of ['color1', 'color2', 'color3']) {
+      const layer_tex = textures.get(`${base}_${layer}`)
+      if (layer_tex) additional.set(layer, layer_tex)
+    }
+    if (additional.size === 0) continue
+    customizables.set(base, create_customizable_texture({ baseTexture: base_texture, additionalTextures: additional }))
+  }
+
+  if (customizables.size === 0) return null
+
+  // swap each `<base>_base` material's map for the composited customizable texture (clone the
+  // material once so two characters sharing a parsed scene never recolour each other)
+  const used = new Set()
+  model.traverse((child) => {
+    const mesh = /** @type {any} */ (child)
+    if (!mesh.material) return
+    const mat = mesh.material
+    if (Array.isArray(mat)) return
+    const map_name = mat.map?.name ?? ''
+    const base_match = map_name.match(/^(.+)_base$/)
+    if (!base_match || !base_match[1]) return
+    const customizable = customizables.get(base_match[1])
+    if (!customizable) return
+    mesh.material = mat.clone()
+    mesh.material.map = customizable.texture
+    mesh.material.needsUpdate = true
+    used.add(customizable)
+  })
+
+  for (const [base, c] of customizables.entries())
+    if (!used.has(c)) {
+      c.dispose()
+      customizables.delete(base)
+    }
+
+  const all = () => Array.from(customizables.values())
+  const set_layer = (name, color) => {
+    for (const c of all()) c.setLayerColor(name, color)
+  }
+  return {
+    set_color1: (c) => set_layer('color1', c),
+    set_color2: (c) => set_layer('color2', c),
+    set_color3: (c) => set_layer('color3', c),
+    needsUpdate: () => all().some((c) => c.needsUpdate()),
+    update: (renderer) => {
+      for (const c of all()) if (c.needsUpdate()) c.update(renderer)
+    },
+    dispose: () => {
+      for (const c of all()) c.dispose()
+    },
+  }
+}
+
+/**
+ * Load a haired character model for a class + gender. Resolves null for a class with no local GLB (the
+ * pedestal renders a "model soon" placeholder instead). The returned `object3d` is the posed, haired model;
+ * `set_colors` recolours the real mesh live (needs the pedestal's renderer to composite the layers, exactly
+ * as production `set_colors(colors, renderer)`).
+ *
+ * @param {string} class_id
+ * @param {{ male?: boolean }} [opts]  gender selector (the on-chain Character carries `male: bool`); defaults
+ *   to male (the only variant some data paths carry today — a female char falls back to male until presence
+ *   / the read-model projects `sex`).
+ * @returns {Promise<{
+ *   object3d: import('three').Group,
+ *   mixer: AnimationMixer | null,
+ *   clips: import('three').AnimationClip[],
+ *   set_colors: (colors: [string, string, string], renderer: import('three').WebGLRenderer) => void,
+ *   dispose: () => void,
+ * } | null>}
+ */
+export async function load_character_model(class_id, { male = true } = {}) {
+  const models = CHARACTER_MODELS[class_id]
+  if (!models) return null
+  const urls = male ? models.male : models.female
+
+  const body_scene = await load_glb(character_glb_url(urls.body))
+  const model = clone_skinned(body_scene)
+  const body_colors = create_custom_colors(model)
+
+  // animation: play IDLE (or the first clip) so we never show the bind T-pose (entities.js plays
+  // actions.IDLE on spawn).
+  const clips = body_scene.animations ?? []
+  let mixer = /** @type {AnimationMixer | null} */ (null)
+  if (clips.length) {
+    mixer = new AnimationMixer(model)
+    const idle = clips.find((c) => /idle/i.test(c.name)) ?? clips[0]
+    if (idle) mixer.clipAction(idle).setLoop(LoopRepeat, Infinity).play()
+  }
+
+  // hair = the production "equip hat" path: attach_class_hair parents the `_hair` mesh to the Head
+  // bone; colors wrap it for the pedestal recolour.
+  const hair = await attach_class_hair(model, class_id, { male })
+  const hair_colors = hair ? create_custom_colors(hair) : null
+
+  return {
+    object3d: /** @type {import('three').Group} */ (model),
+    mixer,
+    // The body rig's embedded clips (IDLE/WALK/RUN/ATTACK/SPELL_*/DEATH/...) — exposed so the in-game
+    // player_model can categorise + drive them (walk on move, attack/spell on cast), exactly as mob_model
+    // drives the mob rig's clips. The pedestal ignores these (it only wants the IDLE the mixer already plays).
+    clips,
+    // set_colors — port of entities.js: apply each colour to the body AND the hair customizable
+    // textures, then composite once with the renderer (skip the RT render when nothing changed).
+    set_colors([color_1, color_2, color_3], renderer) {
+      for (const colors of [body_colors, hair_colors]) {
+        if (!colors) continue
+        colors.set_color1(new Color(color_1))
+        colors.set_color2(new Color(color_2))
+        colors.set_color3(new Color(color_3))
+        if (colors.needsUpdate()) colors.update(renderer)
+      }
+    },
+    dispose() {
+      mixer?.stopAllAction()
+      body_colors?.dispose()
+      hair_colors?.dispose()
+      model.traverse((o) => {
+        if (o instanceof Mesh) {
+          o.geometry?.dispose()
+          const mat = /** @type {any} */ (o.material)
+          if (Array.isArray(mat)) mat.forEach((m) => m.dispose())
+          else mat?.dispose()
+        }
+      })
+    },
+  }
+}

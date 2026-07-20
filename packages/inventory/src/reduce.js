@@ -1,0 +1,222 @@
+// The roster/bag spine's ONE-PIPELINE merge core (audit row #3, lane M5). Pure typed-input reducer for
+// `action/sui_data`: every async source (a /v1 snapshot, the client's OWN signed-tx receipt, a chain-direct
+// enrichment read) DISPATCHES a typed input here instead of read-modify-writing `state.sui` from outside.
+// The merge law lives in ONE place, so a receipt and a stale snapshot that race can no longer clobber each
+// other — they fold through this in dispatch order, against the LATEST state, deterministically.
+//
+// Inputs (`payload.kind`):
+//   'snapshot'      — chain-truth roster/items/flags from /v1 (roster/load_roster). Never regresses a
+//                     receipt-proven XP floor; owned items pass through the consumable/bought pending
+//                     ledgers. KEEP-on-omit for owned-item feeds: an indexer-lagging read that OMITS a
+//                     just-bought/owned item must never vanish it (merge_pending_buys re-adds the pending
+//                     row until the id appears) — ONLY an explicit receipt delta removes an item.
+//   'receipt_patch' — a delta PROVEN by the client's own signed tx: a fight settlement (HP/XP → RAISES the
+//                     per-character XP floor), an equip/consume/buy bag delta, or the create ghost row.
+//                     Authoritative — folds against the latest state, never a stale captured array.
+//   'enrichment'    — a chain-direct cosmetics/stats read (colors, vitality) that must NEVER clobber a
+//                     newer receipt-proven fact (XP / level / current HP); it carries the immutable base.
+//   (no kind)       — legacy full merge (boot_roster, equip reconcile, create, defeat): spread as today
+//                     PLUS the XP floor, so those paths also stop regressing a fresh fight's XP.
+
+import { experience_to_level } from '@aresrpg/sdk/experience'
+
+import { apply_fight_receipt_to_roster } from './fight_receipt_roster.js'
+import { mask_pending_items } from './consumable_ledger.js'
+import { merge_pending_buys } from './bought_items_ledger.js'
+
+const is_ghost = (/** @type {any} */ c) => String(c?.id ?? '').startsWith('ghost:')
+
+/**
+ * Never let a snapshot regress a character's experience below the receipt-proven floor. A character with no
+ * floor entry, or already at/above it, passes through by reference (referential stability for selectors).
+ * @param {any[]} characters @param {Record<string, number>} [xp_floor]
+ */
+function floor_characters(characters, xp_floor) {
+  if (!Array.isArray(characters) || !xp_floor) return characters
+  let changed = false
+  const next = characters.map((c) => {
+    const floor = xp_floor[c?.id]
+    if (floor == null || Number(c?.experience ?? 0) >= floor) return c
+    changed = true
+    return { ...c, experience: floor, level: experience_to_level(floor) }
+  })
+  return changed ? next : characters
+}
+
+/**
+ * Raise the XP floor for `character_id` to its post-receipt experience (monotone — only ever climbs). The
+ * floor is what a later stale `/v1` snapshot can never dip below.
+ * @param {Record<string, number>} xp_floor @param {any[]} characters @param {string} character_id
+ */
+function raise_floor(xp_floor, characters, character_id) {
+  const character = characters.find((c) => c?.id === character_id)
+  const experience = Number(character?.experience ?? NaN)
+  if (!Number.isFinite(experience) || (xp_floor?.[character_id] ?? 0) >= experience) return xp_floor ?? {}
+  return { ...(xp_floor ?? {}), [character_id]: experience }
+}
+
+/**
+ * Never let a snapshot RESURRECT a receipt-proven character burn (BACKLOG 18 delete): drop tombstoned ids.
+ * Referentially stable when nothing matches.
+ * @param {any[]} characters @param {Record<string, true>} [deleted_ids]
+ */
+function drop_deleted(characters, deleted_ids) {
+  if (!Array.isArray(characters) || !deleted_ids) return characters
+  return characters.some((c) => deleted_ids[c?.id]) ? characters.filter((c) => !deleted_ids[c?.id]) : characters
+}
+
+/** Snapshot: floor characters, run items through the pending ledgers, spread flags. */
+function merge_snapshot(sui, { kind, characters, items, ...flags }) {
+  const next = { ...sui, ...flags }
+  if (characters) next.characters = floor_characters(drop_deleted(characters, sui.deleted_ids), sui.xp_floor)
+  // KEEP-on-omit: mask consumed units, then re-add any pending-buy the feed hasn't projected yet.
+  if (items) next.items = merge_pending_buys(mask_pending_items(items))
+  return next
+}
+
+/** Legacy full merge (no kind): spread + floor characters (items already ledger-merged by the caller). */
+function merge_default(sui, payload) {
+  const next = { ...sui, ...payload }
+  if (payload.characters)
+    next.characters = floor_characters(drop_deleted(payload.characters, sui.deleted_ids), sui.xp_floor)
+  return next
+}
+
+/**
+ * The client's OWN signed equip tx (a digest exists) PROVES the cosmetic-slot transition — project it onto
+ * the character row NOW so the world rig re-dresses THIS frame (client-independence §1), instead of waiting
+ * on (or losing to) the /v1 reconcile, whose confirmed row adopts chain truth wholesale right after.
+ * [Bug fix 2026-07-17: cape swap succeeded, the rig kept the old cape — the reconcile threw on indexer
+ * lag and nothing else ever rewrote `worn`.] `set` rows are WornCosmetic-shaped
+ * ({ item_id, template_id, category }); `clear` lists the categories the tx emptied.
+ * @param {any} sui @param {{ character_id: string, set?: Record<string, any>, clear?: string[] }} payload
+ */
+function apply_equip_worn(sui, { character_id, set = {}, clear = [] }) {
+  const index = sui.characters.findIndex((/** @type {any} */ c) => c?.id === character_id)
+  if (index === -1) return sui
+  const current = sui.characters[index]
+  const worn = { ...(current.worn ?? {}) }
+  /** rpc_to_card also spreads worn categories FLAT onto the row (back-compat readers) — mirror it. */
+  const flat = /** @type {Record<string, any>} */ ({})
+  let changed = false
+  for (const category of clear) {
+    if (worn[category] === undefined) continue
+    delete worn[category]
+    flat[category] = null
+    changed = true
+  }
+  for (const [category, row] of Object.entries(set)) {
+    if (worn[category]?.item_id != null && worn[category].item_id === row?.item_id) continue
+    worn[category] = row
+    flat[category] = row
+    changed = true
+  }
+  if (!changed) return sui
+  const characters = sui.characters.slice()
+  characters[index] = { ...current, ...flat, worn }
+  return { ...sui, characters }
+}
+
+/** A receipt-proven delta from the client's OWN tx — folds against the latest state, raises the XP floor. */
+function apply_receipt_patch(sui, payload) {
+  switch (payload.op) {
+    case 'fight_receipt': {
+      // HP/XP write-back mirror (results::write_back_hp + the XP delta). apply_fight_receipt_to_roster ADDS
+      // the xp_share once and stamps final_hp — the SAME helper the outside writers used, now folded here so
+      // the XP floor is raised in the same step (a stale snapshot can never regress it afterward).
+      const characters = apply_fight_receipt_to_roster(sui.characters, {
+        character_id: payload.character_id,
+        xp_share: payload.xp_share,
+        final_hp: payload.final_hp,
+      })
+      const xp_floor = raise_floor(sui.xp_floor, characters, payload.character_id)
+      if (characters === sui.characters && xp_floor === sui.xp_floor) return sui
+      return { ...sui, characters, xp_floor }
+    }
+    case 'add_items': {
+      // De-dupe by id (unequip / just-bought paint). A racing snapshot's own pending ledger keeps these.
+      const rows = payload.rows ?? []
+      if (!rows.length) return sui
+      const have = new Set(sui.items.map((/** @type {any} */ i) => i?.id))
+      const add = rows.filter((/** @type {any} */ i) => i?.id && !have.has(i.id))
+      return add.length ? { ...sui, items: [...sui.items, ...add] } : sui
+    }
+    case 'remove_items': {
+      // Equip / consume-to-zero: drop the ids from the LATEST bag (never a stale captured array — that WAS
+      // the lost-update race). KEEP-on-omit does not apply here: a receipt is explicit proof the item left.
+      const drop = new Set(payload.ids ?? [])
+      if (!drop.size) return sui
+      const items = sui.items.filter((/** @type {any} */ i) => !drop.has(i?.id))
+      return items.length === sui.items.length ? sui : { ...sui, items }
+    }
+    case 'decrement_item': {
+      const { id, units = 1 } = payload
+      const target = sui.items.find((/** @type {any} */ i) => i?.id === id)
+      if (!target) return sui
+      const amount = (Number(target.amount) || 1) - units
+      const items =
+        amount > 0
+          ? sui.items.map((/** @type {any} */ i) => (i?.id === id ? { ...i, amount } : i))
+          : sui.items.filter((/** @type {any} */ i) => i?.id !== id)
+      return { ...sui, items }
+    }
+    case 'equip_worn':
+      return apply_equip_worn(sui, payload)
+    case 'remove_character': {
+      // Character DELETE receipt (BACKLOG 18): the client's own signed burn tx proves the character is
+      // GONE — drop it from the LATEST roster NOW and TOMBSTONE the id so an indexer-lagging /v1 snapshot
+      // can never resurrect it (the never-regress-a-receipt-proven-fact law, same class as the XP floor).
+      const { id } = payload
+      if (!id) return sui
+      const deleted_ids = { ...(sui.deleted_ids ?? {}), [id]: /** @type {true} */ (true) }
+      const characters = sui.characters.filter((/** @type {any} */ c) => c?.id !== id)
+      return { ...sui, characters, deleted_ids }
+    }
+    case 'set_ghost':
+      // D9 click-instant create prediction — one ghost row, replacing any prior ghost.
+      return { ...sui, characters: [...sui.characters.filter((c) => !is_ghost(c)), payload.ghost] }
+    case 'clear_ghosts':
+      return { ...sui, characters: sui.characters.filter((c) => !is_ghost(c)) }
+    default:
+      return sui
+  }
+}
+
+/** Chain-direct cosmetics/stats that must not clobber a newer receipt-proven fact (XP/level/HP). */
+function apply_enrichment(sui, { character_id, enrichment }) {
+  if (!character_id || !enrichment) return sui
+  const index = sui.characters.findIndex((c) => c?.id === character_id)
+  if (index === -1) return sui
+  const current = sui.characters[index]
+  const characters = sui.characters.slice()
+  characters[index] = {
+    ...current,
+    ...enrichment,
+    // receipt-proven fields WIN over the immutable base the enrichment read carries (RED#3): XP/level are
+    // read-model-owned; current HP survives if a settlement receipt already stamped it.
+    experience: current.experience,
+    level: current.level,
+    current_hp: current.current_hp ?? enrichment.current_hp,
+    hp_updated_ms: current.hp_updated_ms ?? enrichment.hp_updated_ms,
+    available_points: current.available_points ?? enrichment.available_points,
+  }
+  return { ...sui, characters }
+}
+
+/**
+ * The ONE `action/sui_data` merge. `state.sui` in → next `state.sui` out (pure). Dispatchers send a TYPED
+ * input; the merge law (XP floor, pending ledgers, receipt-over-snapshot) lives only here.
+ * @param {any} sui @param {any} payload
+ */
+export function reduce_sui_data(sui, payload) {
+  switch (payload?.kind) {
+    case 'snapshot':
+      return merge_snapshot(sui, payload)
+    case 'receipt_patch':
+      return apply_receipt_patch(sui, payload)
+    case 'enrichment':
+      return apply_enrichment(sui, payload)
+    default:
+      return merge_default(sui, payload)
+  }
+}

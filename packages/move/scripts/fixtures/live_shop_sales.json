@@ -1,0 +1,303 @@
+{
+  "_source": "https://rpc.aresrpg.world/v1/shop?active=false joined with /v1/encyclopedia?kind=items on template_id",
+  "_captured": "2026-07-17",
+  "_refresh": "re-run the _source join after any legitimate reauthor ceremony (the ceremony writes the manifest; this capture pins the live catalog)",
+  "sales": [
+    {
+      "sale_id": "0x6a3d7985a0ca970821e697b68b7ff8556ffa9215e7541554bc5969363e1e077b",
+      "template_id": "0x1b00ccb3641b27721f717610529c9798833f3d9cecd1f5d6cbbae601f9de5150",
+      "item_type": "cloak",
+      "name": "Enka Muru Cloak",
+      "price_mist": "165000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x2571e8ca608d38d043c3d08f9cf40c10c083432b7f41568d6def30ded65f026c",
+      "template_id": "0x1c8d0706431cfdea9ad5b28c67c60892df6ba62054ddc2e71cc0392e6172706d",
+      "item_type": "cloak",
+      "name": "Mo Hood",
+      "price_mist": "40000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x4595b3580b2d5dcf4b1412cbfa96e43aed711f63b7ba035048aad62099915d29",
+      "template_id": "0xac63b0e6ac4d82acdd06ba845569f7772447b284ad4f37233a0cf7de91be94b4",
+      "item_type": "hat",
+      "name": "Parrot Hat",
+      "price_mist": "186000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x145bb112fea25eef846daa23ee09f91d409e71f57ebab5cf3a9403bc5c0b78cb",
+      "template_id": "0x273ff9ca4ab9b327ea485d23e6f8bbfd16bbb3cd275b27d7c75c3a90af852a79",
+      "item_type": "cloak",
+      "name": "Lorito Cloak (Ruby)",
+      "price_mist": "7000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x4f9db1b7513967002adf64a80df45d51e8a09e45c9855b4e31f48fbec8b814c6",
+      "template_id": "0x1faf95bb4a7098ff71d70116058a2a232dd9f3e58effe2695d07e9172c5c2c4f",
+      "item_type": "hat",
+      "name": "Bara Hood",
+      "price_mist": "12000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0xd7b88357328e653e2606b9e349c65f80bd6d48b270163e7817acb755e4057bdb",
+      "template_id": "0x2ba1b49981cdab537ffea765d867976d4763149b1f04cbf7b5f47c7799435648",
+      "item_type": "hat",
+      "name": "Hayate Helm",
+      "price_mist": "499000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x7d2d505b7a12e38ec4e0c17928508261b7e0575724152a4c6596192aad487ba2",
+      "template_id": "0x55b62dba92bb5f3f4e25cb0568955a32db69bac94443ad126d4932bdbfed02b3",
+      "item_type": "hat",
+      "name": "Fuwa Hood (White)",
+      "price_mist": "144000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0xae64d569cac3151c424a766a052198be55c15db22d8a75402fdcbab61a359690",
+      "template_id": "0x01229549bb153e4f44b59190590a572180bdb2939e22e6ff917ccdaebe830c23",
+      "item_type": "cloak",
+      "name": "Lorito Cloak (Amethyst)",
+      "price_mist": "11000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x8bc03e25360d877623fcb91103886d1d7024df0497811602533a24be5c938134",
+      "template_id": "0x0edb0089486d8164e7be36fc4b368d8801cdea8e1196d523d7ac3e17351c55df",
+      "item_type": "hat",
+      "name": "Bara Hood (Wisdom)",
+      "price_mist": "18000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x48b1862492a0820b7c9d14cba5f9a97f7ded86acaf5e0f6a91195991d4877003",
+      "template_id": "0xbfe5569775f31007744bffd02f59749dd7fa863408eb94c784057b1ecd7372d0",
+      "item_type": "hat",
+      "name": "Mokan Hat",
+      "price_mist": "175000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x8cd268b3126af2a34832d49af0903031720bd4b64e959ceadb5b7f0e5998c267",
+      "template_id": "0x42ec5a7a23c0684227aadb4073779486e1ec90d696c682ce605947f6e5d0af8c",
+      "item_type": "hat",
+      "name": "Fuwa Hood (Black)",
+      "price_mist": "133000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x47427ed43d2739b10035c443dab39bb86df4c85b5ae63f1602547bd1af69179d",
+      "template_id": "0x2521c902ae440a18c3cfd7ca5906b17d6ad6c3d754054c37d861c6b86938d80d",
+      "item_type": "cloak",
+      "name": "Lorito Cloak (Sapphire)",
+      "price_mist": "4000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0xcfa21492629f6388cc6d54fec0552c7a0e75f2fa0421bb902241e8af8cf34c3c",
+      "template_id": "0xa3b4c08e5e7e570bc7de880a840e83c643aa3e90e6af02e191e07f6b6ce8976c",
+      "item_type": "title",
+      "name": "Mark of the Unbroken",
+      "price_mist": "500000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0xa3fd481e932dfc1d836aca5c0dbd54880e0d0d247512561cb60d5186aff035c3",
+      "template_id": "0x72fbd02fb69b1ee01ea05153ad065b1dc7876c6adbde81a688a0840ca40eb990",
+      "item_type": "hat",
+      "name": "Bara Hood (Amber)",
+      "price_mist": "14000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0xcec5c743649dcfcc898779d11c20efb79709b890d2530f1ab96b34495c795260",
+      "template_id": "0xf88e66dc564f43dfcdf1fa98f52041ae953f605a1c73d9c0efac8b08c78b818f",
+      "item_type": "cloak",
+      "name": "Kamui Cloak",
+      "price_mist": "480000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x314bc25c5032d11b7fdbcec1707a0331adecd070e0a943c56191dfa4ca7c75e1",
+      "template_id": "0x0e79fc2f491e745de48a4fec15c9bb01874318680590f7a970e91b5359c56924",
+      "item_type": "pet_arisen_lootbox",
+      "name": "Mystery Arisen Pet Box",
+      "price_mist": "200000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0xd94744667652f94ba6dbfcea2cd0f966a303fabc307123f0723ee6a78f05bbc1",
+      "template_id": "0x0f6f2a7940c372165079017bf10cce41422a2cbd70f677c3ca3ddf1d30d33edb",
+      "item_type": "hat",
+      "name": "Ekusoni Mask",
+      "price_mist": "154000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x4fdf92f1d590732f4c713298d55b5d77740f47c2899448ce7f58fe9396a27fdc",
+      "template_id": "0x8d4d2cb8340c14dde13a0147c178d2cf28f310fb1ee609df2c7e86964b3f6caa",
+      "item_type": "hat",
+      "name": "Drakar Helm",
+      "price_mist": "540000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x87132a233d482715368729708df7c331093e2bfa4f48bff2bdfd929a8b553165",
+      "template_id": "0xf296a0233b9e055364eae64e4f5cf639105c8e846b71ec7008162b8f8af213a1",
+      "item_type": "cloak",
+      "name": "Lorito Cloak (Emerald)",
+      "price_mist": "2000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x0b0c61e400d9b28503d7f860df44a4053450e3ee98a16c22eaf9489b819ee7d9",
+      "template_id": "0x6927d4d16002012f369b825f205cfe2f9709e640b1250bc8c673e9bb8d16501d",
+      "item_type": "hat",
+      "name": "Bara Hood (Emerald)",
+      "price_mist": "13000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x55755aa777fc6b3ae5e55187e5aefd08b96fd2fabd01797f82b31ca16334bd91",
+      "template_id": "0x60c78a235d96b4b65bb76b9d8a47a8a208251c0617d1e7481ed7ab81046a8371",
+      "item_type": "cloak",
+      "name": "Fuwa Cloak (White)",
+      "price_mist": "123000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x6aaf140ce67171fb18cdb4f765d9a04066c058bf84f6a3eab32ce64767067c1f",
+      "template_id": "0x5bad1219aaedbe9554e38210c01e016300add6cd986e9bde1cdafe8384d029b7",
+      "item_type": "pet_lootbox",
+      "name": "Mystery Pet Box",
+      "price_mist": "25000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x2c2866c71514145f1719ddddd5c0b9d7aed6743a5f2008f840cad8b45b5d331f",
+      "template_id": "0x85795bc248325273ad480fd66789ff6214f777efaa82027a273fec8c5832790a",
+      "item_type": "hat",
+      "name": "Berserker Helm",
+      "price_mist": "460000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0xfa273b4d70d52c846c07115b619883ff5e009ef088d9fc09cac6104c2f690182",
+      "template_id": "0xac1cadd0465cc4b46f71b0f8cf0a96e0af843e099513b40310dff4fda629fd8c",
+      "item_type": "hat",
+      "name": "Pepe Hat",
+      "price_mist": "46000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0xc8eb0f6efabdb0b3b55b09afdf468a959d791fb81fb04ac0b9c31a3784184337",
+      "template_id": "0x71e0fd36e0856fbbf0d38e9e0283b664505b78450805790b88800aeb4ba29575",
+      "item_type": "hat",
+      "name": "Bara Hood (Sapphire)",
+      "price_mist": "17000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x6201d38697c537c05d595090f728ff5f076d24124c0f666fc8bff29700ffcc63",
+      "template_id": "0x95bdc7d60e1e68c2666712108568a1a54e69787d2962c49e3f1f843c8fe06d91",
+      "item_type": "hat",
+      "name": "Lorito Helmet",
+      "price_mist": "58000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x53ee4a321931f5984281306267821c734412a55b648430334d84c0d15e3eea05",
+      "template_id": "0x291b6cd49da8ce0af1309857baf236b8a949da8da7f9b0c8fd9d4c1ccd298ebf",
+      "item_type": "hat",
+      "name": "Solomonk Cowl",
+      "price_mist": "580000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x9e526e6ca8a36cf7e58b5e356288118c9459be9831770e1b06290783aab51b25",
+      "template_id": "0x70f2f52d1d05f974e954c64974049747f3df66c414c64c38e76619762b6a334c",
+      "item_type": "pet_ocean_lootbox",
+      "name": "Mystery Ocean Pet Box",
+      "price_mist": "60000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x0a0c4600f8e80d4c8341ab1be8093e900f841debb281f7ec785add27546db099",
+      "template_id": "0x09d79515fa639b222c79755a75bf8ff323f325d66abf1bbd0890a891f3761664",
+      "item_type": "hat",
+      "name": "Bara Hood (Ruby)",
+      "price_mist": "15000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x67f13f5e0e1f6169ff327257e4ed7e5aff83a68a4d90318ff266f0f3604b7507",
+      "template_id": "0x5e3639cfe220a9a651cfc398be53ad496e8232f54ac46e1ffc3e2b7a2a1fc23b",
+      "item_type": "hat",
+      "name": "Bara Hood (Vitality)",
+      "price_mist": "16000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0xa7fe57371e95b19a864a017deeb2a546749bf701a42b84cdaa3e738d77749021",
+      "template_id": "0x257136d3c50daba6f27532573a356e63835c7887aa20186a8399cda689fc5cb6",
+      "item_type": "cloak",
+      "name": "Fuwa Cloak (Black)",
+      "price_mist": "112000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x3c8d1b7251b1cdc8e17cc844b02e5c1907171d6f2e13e8594b324f97ee14f184",
+      "template_id": "0x5bf96597b4f43f492f83de168ae6e32e1822845ca96db96c491333ef52bcec98",
+      "item_type": "cloak",
+      "name": "Lorito Cloak (Rose Quartz)",
+      "price_mist": "9000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0xe3f30377638ee618ff931c227a89b04072a0e5e066ecd08f9d5f4653e1378c0e",
+      "template_id": "0xc83f53eb7ead82db859c80a54e7943e55009289b98f7c78b0e8b6a7b0fc85f72",
+      "item_type": "cloak",
+      "name": "Momaku Cloak",
+      "price_mist": "560000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0xb11e398d46fe16b790338792918bc7047eceef6b09a75752c0504ddc55caaf7c",
+      "template_id": "0x422088b34d1c21060e31ef23dc58bc2cd53b0e661fa1df51633bf1fcfd290476",
+      "item_type": "hat",
+      "name": "Zukin Muru Cowl",
+      "price_mist": "196000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0x764455e6dc20d2614942b2a87757737083fe33707bcb163b117341b7f6fd9ca6",
+      "template_id": "0x9068cd8615e262b7e785687dbf1e38a1ab42f2484aa6d2f8c67762ba82266145",
+      "item_type": "cloak",
+      "name": "Lorito Cloak (Amber)",
+      "price_mist": "8000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0xd60e858a5a5d55c9c4c45f35c9e0ece14de06a110e8a945c0c028d17b51984a4",
+      "template_id": "0x91e6196ebdc62d6b7d9841134833d3ed1dba3c62e85e3a3b7ef2b99cefcbfe97",
+      "item_type": "hat",
+      "name": "Corbac Headdress",
+      "price_mist": "520000000000",
+      "paused": false
+    },
+    {
+      "sale_id": "0xc8c1e30276f98304b74df3cdf17238b0a6bdecebc06f4c41666aca93500ca202",
+      "template_id": "0xe85068fa24309ffea4ceeecc5962a28f4a35c63254b4e60365e04b787bfea5a6",
+      "item_type": "hat",
+      "name": "Pepe Royal Crown",
+      "price_mist": "1500000000000",
+      "paused": false
+    }
+  ]
+}

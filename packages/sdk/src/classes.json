@@ -1,0 +1,152 @@
+{
+  "senshi": {
+    "id": "senshi",
+    "name": "Senshi",
+    "title": "Warrior",
+    "health": 70,
+    "stamina": 80,
+    "starter_weapon": "senshi_starter_sword",
+    "weapon_category": "longsword",
+    "spells": {
+      "1": "senshi_charge",
+      "10": "senshi_power",
+      "30": "senshi_pressure",
+      "50": "senshi_powerstorm",
+      "80": "senshi_deflagration",
+      "100": "senshi_wrath"
+    }
+  },
+  "yajin": {
+    "id": "yajin",
+    "name": "Yajin",
+    "title": "Assassin",
+    "health": 45,
+    "stamina": 120,
+    "starter_weapon": "yajin_starter_dagger",
+    "weapon_category": "daggers",
+    "spells": {
+      "30": "yajin_shadow_trap",
+      "50": "yajin_mutilation",
+      "80": "yajin_arise",
+      "100": "yajin_death_attack"
+    }
+  },
+  "ikari": {
+    "id": "ikari",
+    "name": "Ikari",
+    "title": "Berserker",
+    "health": 120,
+    "stamina": 40,
+    "starter_weapon": "starter_weapon_ikari",
+    "weapon_category": "battleaxe",
+    "spells": {
+      "50": "ikari_haki",
+      "80": "ikari_senzu",
+      "100": "ikari_unleashed"
+    }
+  },
+  "mori": {
+    "id": "mori",
+    "name": "Mori",
+    "title": "Druid",
+    "health": 55,
+    "stamina": 90,
+    "starter_weapon": "starter_weapon_mori",
+    "weapon_category": "spear",
+    "spells": {}
+  },
+  "tokei": {
+    "id": "tokei",
+    "name": "Tokei",
+    "title": "Chronomancer",
+    "health": 45,
+    "stamina": 120,
+    "starter_weapon": "starter_weapon_tokei",
+    "weapon_category": "staff",
+    "spells": {
+      "30": "tokei_memento",
+      "50": "tokei_blink",
+      "80": "tokei_shards",
+      "100": "tokei_zawarudo"
+    }
+  },
+  "shugo": {
+    "id": "shugo",
+    "name": "Shugo",
+    "title": "Guardian",
+    "health": 50,
+    "stamina": 80,
+    "starter_weapon": "starter_weapon_shugo",
+    "weapon_category": "spellbook",
+    "spells": {}
+  },
+  "yogen": {
+    "id": "yogen",
+    "name": "Yogen",
+    "title": "Archer",
+    "health": 30,
+    "stamina": 90,
+    "starter_weapon": "starter_weapon_yogen",
+    "weapon_category": "bow",
+    "spells": {
+      "50": "yogen_bubonic_arrow",
+      "80": "yogen_swarm_arrow",
+      "100": "yogen_storm_white_flames"
+    }
+  },
+  "rojin": {
+    "id": "rojin",
+    "name": "Rojin",
+    "title": "Prospector",
+    "health": 50,
+    "stamina": 60,
+    "starter_weapon": "starter_weapon_rojin",
+    "weapon_category": "axe",
+    "spells": {}
+  },
+  "shusen": {
+    "id": "shusen",
+    "name": "Shusen",
+    "title": "Brawler",
+    "health": 65,
+    "stamina": 70,
+    "starter_weapon": "starter_weapon_shusen",
+    "weapon_category": "mace",
+    "spells": {}
+  },
+  "tomoda": {
+    "id": "tomoda",
+    "name": "Tomoda",
+    "title": "Tomoda",
+    "health": 30,
+    "stamina": 110,
+    "starter_weapon": "starter_weapon_tomoda",
+    "weapon_category": "club",
+    "spells": {}
+  },
+  "asobi": {
+    "id": "asobi",
+    "name": "Asobi",
+    "title": "Gambler",
+    "health": 55,
+    "stamina": 70,
+    "starter_weapon": "starter_weapon_asobi",
+    "weapon_category": "sword",
+    "spells": {}
+  },
+  "iyashi": {
+    "id": "iyashi",
+    "name": "Iyashi",
+    "title": "Healer",
+    "health": 50,
+    "stamina": 120,
+    "starter_weapon": "starter_staff",
+    "weapon_category": "staff",
+    "spells": {
+      "30": "iyashi_breath_of_life",
+      "50": "iyashi_stimulation",
+      "80": "iyashi_lin_lian",
+      "100": "iyashi_word_of_altruism"
+    }
+  }
+}

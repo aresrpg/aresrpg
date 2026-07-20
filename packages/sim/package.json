@@ -1,0 +1,42 @@
+{
+  "name": "@aresrpg/sim",
+  "version": "0.0.0",
+  "description": "AresRPG deterministic turn-based combat reducer — reduce(state, command, grid) -> {state, events}. Shared by server (authority) and client (prediction).",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "lint": "eslint . && prettier . --check && bun run typecheck",
+    "typecheck": "tsc --build",
+    "format": "prettier . --write && eslint . --fix",
+    "test": "bun test"
+  },
+  "engines": {
+    "node": ">=21.0.0"
+  },
+  "exports": {
+    ".": {
+      "import": "./src/index.js",
+      "types": "./types/index.d.ts"
+    }
+  },
+  "author": "AresRPG's Team",
+  "license": "SEE LICENSE IN LICENSE",
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^25.9.5",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-import": "2.32.0",
+    "globals": "^17.7.0",
+    "prettier": "3.9.5",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.64.0"
+  },
+  "lint-staged": {
+    "*.js": [
+      "bun x prettier --write",
+      "bun x eslint --fix"
+    ],
+    "*.json": "bun x prettier --write"
+  }
+}

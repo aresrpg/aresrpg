@@ -1,0 +1,2277 @@
+/* Companion-styled in-world HUD overlay (P2 game-world tab). Built to design's mockup
+ * (canon/25 + p2-gameworld-LIVE-fork.png); reference layout: minimap top-left, toast stack
+ * top-right, chat bottom-left (lowered, no roam spell-hotbar), vitals bottom-center, online list
+ * docked in the sidebar. Companion tokens ONLY (gold/cyan/JetBrains/sharp) — no old game ice-blue.
+ * Panels stay glass (allowed over the live world). All classes prefixed gw- so they never collide
+ * with the full vendored hud-* set. */
+
+.gw-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-family: var(--font-mono);
+  color: var(--color-text);
+}
+.gw-hud > * {
+  pointer-events: auto;
+}
+
+/* shared glass panel (over the live world — glass allowed). Option B "Minimal
+ * Float" runs darker/more opaque than the original mockup glass so panels stay legible over a bright 3D
+ * world (was rgba(12,12,20,0.62) — washed out in daylight scenes). */
+.gw-panel {
+  background: rgba(6, 6, 12, 0.8);
+  border: 1px solid var(--color-border);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  /* DELIBERATE EXCEPTION: the house rule is ZERO border-radius everywhere, but this surface explicitly
+     wants the IN-WORLD HUD panels ONLY (party / online / chat / selfplate / vitals / quality — every
+     .gw-panel) to have subtly rounded corners. Keep this — do NOT "fix" it back to sharp. Scoped to
+     .gw-panel so it never leaks to the sidebar, nav, modals, cards, or any non-world surface.
+     (9px — tasteful, not pill-shaped.) */
+  border-radius: 9px;
+}
+
+/* ── minimap → top-LEFT ─────────────────────────────── */
+.gw-minimap {
+  position: absolute;
+  /* Moved top-left → BOTTOM-RIGHT so the explore worlds/exploring-chars panel owns the top-left. */
+  bottom: 14px;
+  right: 14px;
+  width: 150px;
+  height: 150px;
+}
+.gw-minimap__lbl {
+  position: absolute;
+  top: 6px;
+  left: 9px;
+  z-index: 1;
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+.gw-minimap__map {
+  position: absolute;
+  inset: 24px 8px 8px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+.gw-minimap__map canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+/* ── top-RIGHT = clean toast stack, LAYERED ABOVE the minimap ───────────
+   Anchored at the SAME corner as the minimap (Minimap.jsx `.mm`, also top:14/right:14) instead of the old
+   "reserve a below-minimap row" layout — that required a hand-tuned top offset bumped every time the minimap
+   resized (round 5's `.mm` doubling to 400px was exactly that kind of drift). A z-index above `.mm`'s
+   (minimap.css, z-index:6) is what makes an active toast paint OVER the corner rather than under it; both
+   are absolute/fixed-positioned siblings under `.gw-hud` sharing the same local stacking context (see
+   GameWorldHost.tsx), so this is a plain z-index comparison, no new machinery. */
+.gw-toasts {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 7; /* above .mm (z-index:6) — toasts stack ON TOP of the minimap corner, not below it */
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  align-items: flex-end;
+}
+.gw-toast {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 13px;
+  max-width: 260px;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  color: var(--color-text);
+  background: rgba(12, 12, 20, 0.66);
+  border: 1px solid var(--color-border);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: slide-in 0.3s ease-out;
+  /* pre-flight "must say why" (2026-07-19): a decoded refusal reason rides as a second \n-separated line
+     (abort_copy.js humanize_tx_error) — inherited onto the title/message spans below so it renders as an
+     actual line break instead of collapsing to a space (default `white-space: normal`). */
+  white-space: pre-wrap;
+}
+.gw-toast__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--color-gold);
+  box-shadow: 0 0 6px rgba(200, 150, 60, 0.6);
+}
+.gw-toast b {
+  color: var(--color-gold-light);
+  font-weight: 600;
+}
+.gw-toast--q .gw-toast__dot {
+  background: var(--color-cyan);
+  box-shadow: 0 0 6px rgba(74, 158, 255, 0.6);
+}
+.gw-toast--q b {
+  color: var(--color-cyan);
+}
+.gw-toast--err .gw-toast__dot {
+  background: #ff6b6b;
+  box-shadow: 0 0 6px rgba(255, 107, 107, 0.6);
+}
+.gw-toast--err b {
+  color: #ff8c8c;
+}
+
+/* ── SEARCH-ZONE JUICE: the center-screen zone-reveal banner ───────────────────────────────────────
+   The reward beat when an [F] search resolves — sound, popup effect, and plenty of feedback. A SNAPPY
+   flash — the ONE house moment that deliberately breaks slow-atmospheric, because
+   it's a reward. Mirrors .hud-turnbanner's flash-forwards life: the animation runs its full 2.5s (fade
+   in → hold → fade out) exactly as the reveal store TTL unmounts it, so the exit is seamless. Terminal
+   DNA: gold glass, uppercase, monospace, sharp edges. pointer-events:none — never eats a click. */
+.gw-reveal {
+  position: fixed;
+  top: 26%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 18px 46px;
+  text-align: center;
+  /* FIGHT-HUD OPACITY LAW (extends to every 3D-viewport overlay — a transparent card over the live world is
+     unreadable): the near-invisible white wash is replaced with
+     the house solid near-black fill (same recipe as .hud-turnbanner/.hud-placement) so the findings text
+     reads over ANY scene. Sharp corners + no backdrop-filter — an opaque fill has nothing left to blur. */
+  border-radius: 0;
+  background: linear-gradient(165deg, #12121a, #0a0a0f);
+  border: 1px solid var(--color-gold);
+  box-shadow:
+    0 0 44px rgba(200, 150, 60, 0.34),
+    0 18px 52px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  animation: gw-reveal-flash 2.5s ease-out forwards;
+}
+.gw-reveal__title {
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+  text-shadow: 0 0 20px rgba(200, 150, 60, 0.6);
+}
+.gw-reveal__coords {
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+.gw-reveal__findings {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-gold-light);
+}
+@keyframes gw-reveal-flash {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-12px) scale(0.9);
+  }
+  9% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1.03);
+  }
+  16% {
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  82% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px) scale(1);
+  }
+}
+/* reduced-motion: the banner still shows (the camera pulse is what's suppressed, in the seam) — a pure
+   crossfade with zero scale/slide, honoring the OS motion preference for the DOM half too. */
+@media (prefers-reduced-motion: reduce) {
+  .gw-reveal {
+    animation: gw-reveal-fade 2.5s ease-out forwards;
+  }
+  @keyframes gw-reveal-fade {
+    0% {
+      opacity: 0;
+    }
+    12% {
+      opacity: 1;
+    }
+    82% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+}
+
+/* ── SEARCH-PRESS JUICE: full-viewport border-flash pulse ──────────────────────────────────────────
+   Fires the INSTANT [F] search is pressed (search_flash_store / trigger_search_flash, toast.js;
+   ZoneSearchFlash.jsx renders it) — optimistic, before the kiosk resolve/tx ever settles. A thin gold
+   vignette pulses once over the game viewport; a React `key` remount (the component) restarts the
+   animation on every press, even back-to-back. Sits ABOVE every glass panel (z-index) so the edge glow
+   isn't clipped behind an opaque `.gw-panel` background at the screen corners — it only ever paints the
+   inset edges (box-shadow), so the center stays fully clear regardless. pointer-events:none — it must
+   never eat a click/drag on the world beneath it. Zero border-radius (house law — this isn't a panel). */
+.gw-search-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow:
+    inset 0 0 0 2px rgba(200, 150, 60, 0.9),
+    inset 0 0 90px rgba(200, 150, 60, 0.4);
+  animation: gw-search-flash-pulse 600ms ease-out;
+}
+@keyframes gw-search-flash-pulse {
+  0% {
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+/* reduced-motion: ONE static pulse — a flat linear appear/disappear, no eased ramp (mirrors .gw-reveal's
+   own reduced-motion swap: the effect still fires, just calmer). */
+@media (prefers-reduced-motion: reduce) {
+  .gw-search-flash {
+    animation: gw-search-flash-static 600ms linear;
+  }
+  @keyframes gw-search-flash-static {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    50% {
+      opacity: 0.85;
+    }
+  }
+}
+
+/* ── FIGHT-FEEL impact flash (FightImpactFlash.jsx) ────────────────────────────────────────────────
+   An element-coloured screen-edge vignette that pulses the instant a cast LANDS, plus optional full-screen
+   GRADE moments. Pure CSS — no post-process pass (engine ban). Paints only the inset edges (box-shadow) so the
+   board stays clear; pointer-events:none so it never eats a board click/drag; zero border-radius (house law).
+   Colour + peak-opacity ride CSS vars set inline; the grade a data-attr. Subtle + ~220 ms + store-throttled. */
+.fight-impact-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 44;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow:
+    inset 0 0 4px 1px var(--flash-color, #ffffff),
+    inset 0 0 130px 14px var(--flash-color, #ffffff);
+  animation: fight-impact-pulse 240ms ease-out;
+}
+@keyframes fight-impact-pulse {
+  0% {
+    opacity: 0;
+  }
+  22% {
+    opacity: var(--flash-intensity, 0.4);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+/* GRADE — warm: a heal glows warm (a soft amber wash, no white halo per the halo law). */
+.fight-impact-flash[data-grade='warm'] {
+  background: radial-gradient(ellipse at 50% 55%, rgba(240, 211, 138, 0.16), transparent 72%);
+  animation: fight-impact-pulse 360ms ease-out; /* heals linger a touch longer + calmer */
+}
+/* GRADE — desaturate: a death blow briefly drains the board's colour (backdrop-filter, not a post pass).
+   Pulsed by the element opacity, so it fully clears once the one-shot ends. */
+.fight-impact-flash[data-grade='desaturate'] {
+  backdrop-filter: saturate(0.4) brightness(0.9);
+  -webkit-backdrop-filter: saturate(0.4) brightness(0.9);
+  animation: fight-impact-pulse 300ms ease-out;
+}
+/* GRADE — element-wash: a big AoE washes the whole edge in the element colour (a broader radial vignette). */
+.fight-impact-flash[data-grade='element-wash'] {
+  background: radial-gradient(ellipse at center, transparent 42%, var(--flash-color, #ffffff) 145%);
+}
+/* reduced-motion: a calmer single pulse, and drop the desaturate backdrop flip (a saturation swing can jar). */
+@media (prefers-reduced-motion: reduce) {
+  .fight-impact-flash {
+    animation: fight-impact-static 240ms linear;
+  }
+  .fight-impact-flash[data-grade='desaturate'] {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  @keyframes fight-impact-static {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    50% {
+      opacity: calc(var(--flash-intensity, 0.4) * 0.7);
+    }
+  }
+}
+
+/* ── render-quality dropdown → BOTTOM-RIGHT settings control (D157; resolved 2026-07-13 relocate) ─────────
+   Moved out of the top-right corner (reserved for the minimap) to the bottom-right — the anchor the old
+   day-night dial vacated. Exploration-only (GameWorldHud gates it on !fight_mode): bottom-right is the
+   fight controls' spot, so it steps aside in combat rather than overlapping them. Terminal DNA: near-black
+   glass panel, gold-muted label, monospace, uppercase, tiny. .gw-panel supplies the subtle D157 rounding. */
+.gw-quality {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 9px;
+  cursor: pointer;
+}
+.gw-quality__k {
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  pointer-events: none;
+}
+.gw-quality__sel {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 2px 20px 2px 8px;
+  /* a tiny gold caret drawn as an inline SVG background (no asset, CSP-safe) */
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6' viewBox='0 0 8 6'%3E%3Cpath d='M0 0l4 6 4-6z' fill='%23c8963c'/%3E%3C/svg%3E")
+      no-repeat right 7px center / 8px 6px,
+    rgba(200, 150, 60, 0.06);
+  border: 1px solid rgba(200, 150, 60, 0.3);
+  border-radius: 4px;
+  color: var(--color-gold-light, #f5d0a9);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+.gw-quality__sel:hover,
+.gw-quality__sel:focus {
+  outline: none;
+  border-color: rgba(200, 150, 60, 0.55);
+  box-shadow: 0 0 12px rgba(200, 150, 60, 0.3);
+}
+/* native option list styling is OS-bound; force a dark, readable palette where honored (Chromium/FF). */
+.gw-quality__sel option {
+  background: #12121a;
+  color: var(--color-text);
+}
+
+/* ── party frame → top-LEFT (Option B "Minimal Float") ───────────────────────────────────────────
+   Compact vertical roster (<=6 members): name + thin HP bar + level chip. Renders nothing when solo
+   (honest empty, no chrome for an empty party). Darker glass (visibility over a
+   bright 3D world). Leader gets a subtle gold accent on the name. */
+.gw-party {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 190px;
+  padding: 8px 0;
+}
+.gw-party__h {
+  padding: 0 10px 7px;
+  font-size: 9px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+.gw-party__row {
+  padding: 5px 10px;
+}
+.gw-party__row + .gw-party__row {
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+.gw-party__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+.gw-party__name {
+  /* Keep the FULL character name in the "bring your characters" rows (no "immor…" clip). Long
+     names wrap within the fixed-width party card instead of truncating; min-width:0 + overflow-wrap let a long
+     single-token name break rather than overflow the flex row. */
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-gold-light);
+}
+.gw-party__row.leader .gw-party__name {
+  color: var(--color-gold);
+  text-shadow: 0 0 8px rgba(200, 150, 60, 0.4);
+}
+.gw-party__lvl {
+  flex: none;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+.gw-party__bar {
+  height: 3px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+}
+.gw-party__bar-fill {
+  display: block; /* inline <span> ignores height/width — must be block to paint the fill (matches .gw-hp__fill) */
+  height: 100%;
+  background: #4ade80;
+  transition: width 0.25s ease;
+}
+
+/* ── self plate → bottom-CENTER (Option B "Minimal Float") ───────────────────────────────────────
+   Always-on exploration HP plate (lobby only — combat keeps `Vitals` for AP/MP pips). Compact: level
+   badge + name, an HP bar (value/max), and a thin XP sliver below. */
+.gw-selfplate {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  width: 340px;
+  padding: 10px 16px;
+}
+.gw-selfplate__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+.gw-selfplate__name {
+  color: var(--color-gold-light);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gw-selfplate__lvl {
+  flex: none;
+  color: var(--color-muted);
+  font-size: 9px;
+  letter-spacing: 0.15em;
+}
+.gw-selfplate__hp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.gw-selfplate__hp-bar {
+  position: relative; /* frames the absolutely-stacked ghost + main fills */
+  flex: 1;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+/* GHOST fill sits BEHIND the main fill and lags it: on a hit the main fill snaps down fast while the
+   ghost eases down slowly (after a short hold), so the exposed sliver reads as receding lost HP. */
+.gw-selfplate__hp-ghost {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  background: rgba(248, 113, 113, 0.35); /* pale house-red trail */
+  transition: width 0.55s ease 0.12s;
+}
+.gw-selfplate__hp-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    #5c1a1a,
+    #f87171
+  ); /* HP = house red (token-map canon), unified w/ timeline+vitals */
+  transition: width 0.18s ease; /* leads the ghost — fast drain */
+}
+.gw-selfplate__hp-t {
+  flex: none;
+  font-size: 9px;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* XP row mirrors the HP row (bar + tabular numbers), one notch more subdued: a thinner gold bar + muted
+   current/needed numbers (yellow bar, below the health bar). */
+.gw-selfplate__xp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.gw-selfplate__xp-bar {
+  position: relative;
+  height: 3px; /* thinner than the 5px HP bar — visually secondary */
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+}
+.gw-selfplate__xp-t {
+  flex: none;
+  font-size: 9px;
+  color: var(--color-gold-dark); /* faint gold — ties the numbers to the XP bar, still secondary to HP */
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.gw-selfplate__xp-fill {
+  display: block; /* inline <span> ignores height/width — must be block to paint the fill (matches .gw-hp__fill) */
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-gold-dark), var(--color-gold)); /* XP = house gold (was cyan) */
+  transition: width 0.25s ease;
+}
+/* XP GAIN → a brief gold bloom on the sliver (motion-only cue that the bar grew). */
+.gw-selfplate__xp-bar--pulse .gw-selfplate__xp-fill {
+  animation: gw-selfplate-xp 0.4s var(--ease, ease-out);
+}
+@keyframes gw-selfplate-xp {
+  0% {
+    filter: brightness(1);
+    box-shadow: none;
+  }
+  40% {
+    filter: brightness(1.9);
+    box-shadow: 0 0 8px 1px rgba(200, 150, 60, 0.75);
+  }
+  100% {
+    filter: brightness(1);
+    box-shadow: none;
+  }
+}
+/* DAMAGE → decaying micro-jitter. The base transform carries the -50% centering, so every keyframe
+   MUST re-assert it (a bare translateX would yank the card off-centre). */
+.gw-selfplate--hit {
+  animation: gw-selfplate-hit 0.3s ease;
+}
+@keyframes gw-selfplate-hit {
+  0%,
+  100% {
+    transform: translateX(-50%);
+  }
+  15% {
+    transform: translateX(calc(-50% - 3px));
+  }
+  35% {
+    transform: translateX(calc(-50% + 3px));
+  }
+  55% {
+    transform: translateX(calc(-50% - 2px));
+  }
+  75% {
+    transform: translateX(calc(-50% + 1px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gw-selfplate--hit {
+    animation: none;
+  }
+  .gw-selfplate__xp-bar--pulse .gw-selfplate__xp-fill {
+    animation: none;
+  }
+}
+
+/* ── chat → bottom-LEFT, CHAT-POSITION INVARIANT ──── */
+/* Canon (optionB-lobby.png reference — the chat needed to be substantially bigger): a substantial, fully
+   readable panel, not a faint sliver. Sized to the mockup's footprint and using the SAME solid
+   `.gw-panel` skin as every other HUD card (no bespoke lighter/transparent variant) so it reads as a
+   solid panel over a bright 3D world, same as party/vitals/self-plate.
+   INVARIANT (supersedes the old fight-lift below): the chat position never
+   changes between the world and the fights — ONE rule, no `.gw-hud--fight` override. Tight to the
+   corner (was 14/16 — trimmed to kill the dead gap); `.hud-turns` in hud.css caps its own height off
+   THESE two numbers (bottom + height) to clear this panel's top edge — update both together. */
+/* SSOT for the two `.gw-chat` numbers `.hud-turns` (hud.css) needs to clear it — named here instead of a
+   second hand-copied magic constant baked into that calc, so a future resize of THIS panel has one other
+   place to update instead of a silent drift. The literal `bottom`/`height` below stay hand-authored (the
+   fence on this ticket froze that rule); keep these two in lockstep with them. */
+:root {
+  --gw-chat-h: 320px;
+  --gw-chat-bottom: 10px;
+}
+.gw-chat {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  width: min(38%, 440px);
+  height: 320px;
+  display: flex;
+  flex-direction: column;
+}
+.gw-chat__hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 10px;
+  flex-wrap: wrap;
+  padding: 6px 10px;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+.gw-chat__title {
+  flex: none;
+}
+.gw-chat__hdr b {
+  color: #4ade80;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.gw-chat__log {
+  flex: 1;
+  overflow-y: auto;
+  padding: 7px 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.gw-chat__line {
+  word-break: break-word;
+}
+/* subtle per-line channel tag (merged log) */
+.gw-chat__tag {
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-cyan);
+  opacity: 0.6;
+  margin-right: 5px;
+}
+.gw-chat__name {
+  color: #4ade80;
+  font-weight: 600;
+}
+.gw-chat__name.me {
+  color: var(--color-cyan);
+}
+.gw-chat__sys {
+  color: var(--color-muted);
+}
+.gw-chat__form {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-top: 1px solid var(--color-border);
+}
+/* READ-FILTER CHECKBOXES — now in the HEADER beside the title; toggle what merges into the log.
+   Sharp square, fills gold when checked, no invented palette (gold/cyan/muted only). */
+.gw-chat__channels {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+}
+.gw-chat__check {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+}
+.gw-chat__check input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+.gw-chat__box {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.gw-chat__check input:checked + .gw-chat__box {
+  background: var(--color-gold);
+  border-color: var(--color-gold);
+  box-shadow: 0 0 6px rgba(200, 150, 60, 0.5);
+}
+.gw-chat__check-label {
+  font-size: 7px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  max-width: 44px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transition: color 0.15s ease;
+}
+.gw-chat__check input:checked ~ .gw-chat__check-label {
+  color: var(--color-gold);
+}
+/* SPEAK selector — input-left GENERAL|PARTY toggle; the only two postable channels.
+   Segmented, gold-active to match the checked-checkbox accent. */
+.gw-chat__speak {
+  flex: none;
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+}
+.gw-chat__speak-opt {
+  padding: 7px 8px;
+  font-family: inherit;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.gw-chat__speak-opt + .gw-chat__speak-opt {
+  border-left: 1px solid var(--color-border);
+}
+.gw-chat__speak-opt:hover {
+  color: var(--color-gold);
+}
+.gw-chat__speak-opt.active {
+  color: var(--color-gold);
+  background: rgba(200, 150, 60, 0.12);
+  box-shadow: inset 0 0 8px rgba(200, 150, 60, 0.25);
+}
+.gw-chat__input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.gw-chat__input:focus {
+  border-color: var(--color-gold);
+}
+.gw-chat__input::placeholder {
+  color: var(--color-muted);
+}
+
+/* ── vitals → bottom-CENTER (HP bar + AP/MP pips, no hotbar) ─────── */
+.gw-vitals {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 14px;
+}
+.gw-vitals__av {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--color-gold);
+  border: 1px solid var(--color-gold);
+  background: radial-gradient(circle at 50% 35%, rgba(200, 150, 60, 0.3), transparent);
+  font-variant-numeric: tabular-nums;
+}
+.gw-hp {
+  position: relative;
+  width: 220px;
+  height: 13px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--color-border);
+}
+.gw-hp__fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    #5c1a1a,
+    #f87171
+  ); /* HP = house red (was off-palette pink), unified w/ timeline+selfplate */
+  transition: width 0.25s ease;
+}
+.gw-hp__t {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.gw-pools {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.gw-pool {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.gw-pool__k {
+  letter-spacing: 0.08em;
+}
+.gw-pool__v {
+  font-variant-numeric: tabular-nums;
+}
+.gw-pool--ap .gw-pool__k,
+.gw-pool--ap .gw-pool__v {
+  color: var(--color-cyan);
+}
+.gw-pool--mp .gw-pool__k,
+.gw-pool--mp .gw-pool__v {
+  color: #4ade80;
+}
+
+/* ── online player list → docked in the left SIDEBAR ── */
+.gw-players {
+  border-top: 1px solid var(--color-border);
+  margin-top: 6px;
+  padding: 11px 0 6px;
+}
+/* MP-loop re-home (item 25, design canon): OnlinePlayers was dropped from Option B's sidebar (slot reused by
+   #29). Re-homed into the top-LEFT SOCIAL CLUSTER (top-right is the reserved toast zone), stacked UNDER
+   PartyFrame: a compact "PLAYERS ONLINE" panel = the party-invite entry. Minimal Float restyle below. */
+.gw-social {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 190px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none; /* children re-enable */
+}
+.gw-social > * {
+  pointer-events: auto;
+}
+/* PartyFrame is absolute top-left on its own; inside the cluster it FLOWS so OnlinePlayers stacks below it. */
+.gw-social .gw-party {
+  position: static;
+  top: auto;
+  left: auto;
+  width: 100%;
+}
+.gw-players--float {
+  border-top: none;
+  margin-top: 0;
+  width: 100%;
+  padding: 8px 0 6px;
+  background: rgba(6, 6, 12, 0.8);
+  border: 1px solid rgba(200, 150, 60, 0.28);
+  backdrop-filter: blur(24px);
+}
+.gw-players--float .gw-players__h b {
+  color: var(--color-cyan, #4a9eff);
+}
+.gw-players__list {
+  max-height: 152px; /* ~4 rows, then scroll — DEFAULT EXPANDED for discoverability (dropped-surface law) */
+  overflow-y: auto;
+}
+.gw-players__empty {
+  padding: 6px 16px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--color-muted);
+}
+.gw-prow__invite {
+  margin-left: auto;
+  padding: 1px 7px;
+  color: var(--color-gold, #c8963c);
+  border: 1px solid rgba(200, 150, 60, 0.4);
+  background: transparent;
+  font-size: 12px;
+  line-height: 1.3;
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+.gw-prow__invite:hover {
+  box-shadow: 0 0 12px rgba(200, 150, 60, 0.4);
+}
+.gw-players__h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 8px;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+.gw-players__h b {
+  color: #4ade80;
+  font-variant-numeric: tabular-nums;
+}
+.gw-prow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 16px;
+  font-size: 11px;
+}
+.gw-prow__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+  background: #4ade80;
+  box-shadow: 0 0 6px #4ade80;
+}
+.gw-prow__name {
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gw-prow__lvl {
+  margin-left: auto;
+  flex: none;
+  font-size: 9px;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+.gw-prow.me .gw-prow__name {
+  color: var(--color-cyan);
+}
+.gw-prow.me .gw-prow__dot {
+  background: var(--color-cyan);
+  box-shadow: 0 0 6px var(--color-cyan);
+}
+
+/* ── PRESENCE panel — collapsible ONLINE·FRIENDS header, friend rows, add bar ── */
+.gw-players__h--btn {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 10px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.gw-players__h--btn:hover {
+  color: var(--color-gold, #c8963c);
+}
+.gw-players__h--btn > svg {
+  margin-left: auto;
+  flex: none;
+  opacity: 0.6;
+}
+.gw-players__stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.gw-players__stat b {
+  color: #4ade80;
+  font-variant-numeric: tabular-nums;
+}
+.gw-players__fcount {
+  color: var(--color-gold, #c8963c) !important;
+}
+.gw-prow--friend .gw-prow__name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.gw-prow--friend.off {
+  opacity: 0.5;
+}
+.gw-prow__dot.off {
+  background: transparent;
+  border: 1px solid #353548;
+  box-shadow: none;
+}
+.gw-prow__rm {
+  margin-left: 8px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--color-muted, #6b7280);
+  background: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+.gw-prow--friend:hover .gw-prow__rm {
+  opacity: 1;
+}
+.gw-prow__rm:hover {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.4);
+}
+.gw-players__group {
+  padding: 6px 16px 3px;
+  font-size: 8px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-muted, #6b7280);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  margin-top: 4px;
+}
+.gw-players__add {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px 4px;
+  border-top: 1px solid var(--color-border, #1e1e2e);
+  margin-top: 4px;
+}
+.gw-players__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(200, 150, 60, 0.25);
+  color: var(--color-text, #e8e4dc);
+  font:
+    400 10px/1.4 'JetBrains Mono',
+    monospace;
+  letter-spacing: 0.06em;
+  padding: 5px 8px;
+  outline: none;
+}
+.gw-players__input:focus {
+  border-color: rgba(200, 150, 60, 0.55);
+}
+.gw-players__addbtn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  color: var(--color-gold, #c8963c);
+  background: transparent;
+  border: 1px solid rgba(200, 150, 60, 0.4);
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+.gw-players__addbtn:hover:not(:disabled) {
+  box-shadow: 0 0 12px rgba(200, 150, 60, 0.4);
+}
+.gw-players__addbtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── WORLD PANEL (redesigned from an earlier "too big and polluting" layout) — ONE compact row in
+   the tiny-chrome idiom: globe + world label + a small inline text travel button (the picker lives in
+   the .gw-travel modal below). No inner bordered button, minimal padding — reads like the other
+   .gw-social lines. ── */
+.gw-worlds {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  background: rgba(6, 6, 12, 0.8);
+  border: 1px solid rgba(200, 150, 60, 0.28);
+  backdrop-filter: blur(24px);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted, #6b7280);
+}
+.gw-worlds__icon {
+  opacity: 0.6;
+  flex: none;
+}
+.gw-worlds__now {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gw-worlds__now.in-world {
+  color: var(--color-gold, #c8963c);
+}
+/* The travel action: a small inline text-button — borderless, gold, glows on hover (house idiom). */
+.gw-worlds__travel {
+  flex: none;
+  padding: 2px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--color-gold, #c8963c);
+  opacity: 0.85;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition:
+    opacity 0.2s,
+    text-shadow 0.2s;
+}
+.gw-worlds__travel:hover:not(:disabled) {
+  opacity: 1;
+  text-shadow: 0 0 10px rgba(200, 150, 60, 0.7);
+}
+.gw-worlds__travel:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+/* Not-in-a-world: the button IS the call-to-action (the honest empty state points at travel) —
+   a compact gold chip, still one row tall. */
+.gw-worlds__travel.cta {
+  background: linear-gradient(135deg, #8b6914, #c8963c, #8b6914);
+  color: #17130a;
+  font-weight: 600;
+  padding: 2px 7px;
+  opacity: 1;
+}
+.gw-worlds__travel.cta:hover:not(:disabled) {
+  box-shadow: 0 0 14px rgba(200, 150, 60, 0.45);
+  text-shadow: none;
+}
+
+/* ── WORLD TRAVEL MODAL — portaled to <body> (explicit colours; no companion vars out here). Glass shell
+   mirrors .gw-dg; sits UNDER the ConfirmDialog scrim (9500) so the travel confirm always tops it. ── */
+.gw-travel__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 6, 10, 0.62);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.gw-travel {
+  width: min(680px, 94vw);
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+  background: rgba(10, 10, 16, 0.94);
+  border: 1px solid #8b6914;
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.6),
+    0 0 32px rgba(200, 150, 60, 0.12);
+  font-family: 'JetBrains Mono', monospace;
+  color: #e8e4dc;
+}
+.gw-travel__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid rgba(200, 150, 60, 0.18);
+}
+.gw-travel__title {
+  margin: 0;
+  color: #c8963c;
+  font-size: 15px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  text-shadow: 0 0 16px rgba(200, 150, 60, 0.35);
+}
+.gw-travel__sub {
+  margin: 5px 0 0;
+  color: #6b7280;
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.gw-travel .gw-travel__x {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(200, 150, 60, 0.28);
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 12px;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
+}
+.gw-travel .gw-travel__x:hover {
+  color: #c8963c;
+  border-color: #c8963c;
+}
+.gw-travel__filters {
+  display: flex;
+  gap: 6px;
+  padding: 10px 18px 0;
+}
+.gw-travel .gw-travel__ftab {
+  padding: 5px 12px;
+  border: 1px solid rgba(200, 150, 60, 0.25);
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 8.5px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
+}
+.gw-travel .gw-travel__ftab:hover {
+  color: #e8e4dc;
+}
+.gw-travel .gw-travel__ftab.active {
+  color: #c8963c;
+  border-color: rgba(200, 150, 60, 0.6);
+  background: rgba(200, 150, 60, 0.08);
+}
+.gw-travel__grid {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+  padding: 14px 18px 18px;
+}
+.gw-travel__card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid rgba(200, 150, 60, 0.18);
+  background: rgba(255, 255, 255, 0.02);
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.gw-travel__card:hover {
+  border-color: rgba(200, 150, 60, 0.45);
+  box-shadow: 0 0 16px rgba(200, 150, 60, 0.12);
+}
+.gw-travel__card.here {
+  border-color: rgba(200, 150, 60, 0.55);
+  background: rgba(200, 150, 60, 0.05);
+}
+.gw-travel__card.locked {
+  opacity: 0.55;
+}
+.gw-travel__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.gw-travel__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #e8e4dc;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.gw-travel__card.here .gw-travel__name {
+  color: #f5d0a9;
+}
+/* The LIVE join gate ("Lv N+") — gold when passable, amber when it is the lock reason. */
+.gw-travel__gate {
+  flex: none;
+  color: #c8963c;
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+.gw-travel__card.locked .gw-travel__gate {
+  color: #d99a3c;
+}
+.gw-travel__meta {
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+.gw-travel__band {
+  flex: none;
+  white-space: nowrap;
+}
+.gw-travel__facts {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 6px;
+  row-gap: 2px;
+  font-size: 8.5px;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+}
+.gw-travel__facts span + span::before {
+  content: '· ';
+  opacity: 0.6;
+}
+.gw-travel .gw-travel__go {
+  margin-top: 2px;
+  padding: 6px 10px;
+  border: 1px solid rgba(200, 150, 60, 0.4);
+  background: transparent;
+  color: #c8963c;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 8.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  transition:
+    box-shadow 0.2s,
+    background 0.2s;
+}
+.gw-travel .gw-travel__go:hover:not(:disabled) {
+  box-shadow: 0 0 14px rgba(200, 150, 60, 0.35);
+  background: rgba(200, 150, 60, 0.08);
+}
+.gw-travel .gw-travel__go:disabled {
+  cursor: default;
+  color: #6b7280;
+  border-color: rgba(107, 114, 128, 0.35);
+}
+.gw-travel__card.here .gw-travel__go:disabled {
+  color: #c8963c;
+  border-color: rgba(200, 150, 60, 0.4);
+}
+.gw-travel__none {
+  grid-column: 1 / -1;
+  margin: 18px 0;
+  text-align: center;
+  color: #6b7280;
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ── S-67 PLAYER ACTION MENU — portaled to <body> (explicit colours; no companion vars out here) ── */
+.gw-pmenu__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+.gw-pmenu {
+  position: fixed;
+  z-index: 41;
+  min-width: 160px;
+  background: rgba(6, 6, 12, 0.95);
+  border: 1px solid rgba(200, 150, 60, 0.5);
+  backdrop-filter: blur(24px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  font-family: 'JetBrains Mono', monospace;
+}
+.gw-pmenu__name {
+  padding: 7px 12px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #f5d0a9;
+  border-bottom: 1px solid rgba(200, 150, 60, 0.25);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gw-pmenu__act {
+  padding: 8px 12px;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font:
+    400 10px/1 'JetBrains Mono',
+    monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #e8e4dc;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.gw-pmenu__act:hover:not(:disabled) {
+  background: rgba(200, 150, 60, 0.12);
+  color: #c8963c;
+}
+.gw-pmenu__act:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── S-67 in-world nameplate = a click target; chat names = click targets ── */
+.gw-nameplate {
+  transition:
+    box-shadow 0.18s ease,
+    opacity 0.18s ease !important;
+}
+.gw-nameplate:hover {
+  box-shadow: 0 0 14px rgba(200, 150, 60, 0.75);
+}
+.gw-chat__name--btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: inherit;
+}
+.gw-chat__name--btn:hover {
+  text-decoration: underline;
+  filter: brightness(1.2);
+}
+
+/* ── vendored game HUD launcher dock + right-drawers (TopLaunchers + *Drawer) ────────
+   The built game HUD (hud.css / hud-panels.css) reads the game "Frosted Obsidian" tokens, which are
+   NOT on the companion :root — they live scoped under .gw-tab (game-tab.css, the meta-tab bridge).
+   This carrier REUSES that SAME .gw-tab token set (SSOT, companion gold/cyan/sharp re-skin) but as
+   display:contents, so it paints NO box (no obsidian fill / padding / scroll over the live world) and
+   forms no containing block — the fixed .hud-dock + .hud-drawer keep their own positioning and
+   pointer-events. --dock-clear is restored: the meta-tab bridge zeroes it (no fixed dock there), but
+   here the launcher dock IS present, so every drawer body must clear it. */
+.gw-tab.gw-tab--carrier {
+  display: contents;
+  --dock-clear: 132px;
+}
+
+/* ── COMBAT chrome (#54) ──────────────────────────────────────────────────────────────────────────
+   The proven fight HUD (hud.css `.hud-*`) is mounted as a `.hud-root.gw-tab` sibling of `.gw-hud`
+   during a fight (GameWorldHud.jsx). Two integration fixes vs the game-native full-viewport HUD:
+
+   1) FILL THE GAME AREA, NOT THE VIEWPORT. `.hud-root` is `position:fixed; inset:0` = the full window, so
+      its fixed children collide with the companion's left sidebar. Re-base it to `position:absolute` so it
+      fills the game-area container (exactly like `.gw-hud`); its `transform:scale(--ui-scale)` stays the
+      containing block for the fixed fight children, so they now position relative to the game area and
+      clear the sidebar. width/height keep `.hud-root`'s ui-scale counter-sizing. (Unlike `.gw-tab--carrier`'s
+      display:contents carrier — that intentionally forms NO containing block because the launcher dock +
+      drawers it hosts are right-anchored; the fight TIMELINE is left-anchored, so it MUST re-base.)
+   2) NEUTRALIZE `.gw-tab`'s drawer-host layout — it is borrowed only for the companion token bridge
+      (gold canon); this is a fixed overlay, not a scrolling meta-tab body, so drop padding/overflow/bg. */
+.gw-fight-layer.gw-tab {
+  position: absolute;
+  inset: 0;
+  width: calc(100% / var(--ui-scale, 1));
+  height: calc(100% / var(--ui-scale, 1));
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+}
+/* turn controls (Ready / End turn / Abandon) -> bottom-RIGHT of the game area. The game layout pairs them
+   with the vitals card bottom-CENTER, but the companion keeps its own bottom-center vitals (`.gw-vitals`)
+   and freed the bottom-right launcher dock — so anchor them there: present + clickable, no overlap with the
+   vitals / chat / timeline / deck hand. `.hud-fightctl` keeps its own pointer-events. Token-free px. */
+.gw-fight-layer .hud-bottom {
+  left: auto;
+  right: 16px;
+  bottom: 16px;
+  transform: none;
+  justify-content: flex-end;
+}
+
+/* ── WS-B lobby NPC prompt (bottom-center, above the vitals) + dungeon modal shell ───────────────── */
+.gw-npc-prompt {
+  position: absolute;
+  left: 50%;
+  bottom: 96px; /* clear of the bottom-center vitals */
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transition:
+    box-shadow 0.2s,
+    border-color 0.2s;
+}
+.gw-npc-prompt:hover {
+  border-color: var(--color-gold);
+  box-shadow: 0 0 20px rgba(200, 150, 60, 0.35);
+}
+.gw-npc-prompt__key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid var(--color-gold);
+  color: var(--color-gold);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  box-shadow: inset 0 0 8px rgba(200, 150, 60, 0.2);
+}
+.gw-npc-prompt__label {
+  color: var(--color-gold-light);
+}
+
+/* SEARCHABLE ATTENTION PULSE (refined): the relocated [F] search-zone pill (CompassStrip.jsx)
+ * glows gold while its own gate is live — search_prompt truthy IS the condition that renders this button at
+ * all, so this modifier always rides alongside it (kept explicit + shared with the compass ring's identical
+ * flag rather than folded into a bare unconditional rule — one home per fact, same as every other pill
+ * modifier here). This is an EYE-ATTENTION cue, not the house's slow ambient glow (6s+,
+ * CLAUDE.md) — deliberately faster (~2.4s) and a much wider trough→peak swing (border+shadow both animate)
+ * than the compass ring's OWN subtler sympathetic pulse (compass-strip.css .gw-compass--searchable, left at
+ * its original 4.2s/gentler amplitude on purpose — only the pill needs to catch peripheral vision). Still
+ * ease-in-out, never a snap/strobe — the house never blinks. */
+.gw-npc-prompt--searchable {
+  animation: gw-npc-prompt-searchable-pulse 2.4s ease-in-out infinite;
+}
+@keyframes gw-npc-prompt-searchable-pulse {
+  0%,
+  100% {
+    border-color: rgba(200, 150, 60, 0.35);
+    box-shadow:
+      0 0 0 1px rgba(200, 150, 60, 0.2),
+      0 0 14px rgba(200, 150, 60, 0.25);
+  }
+  50% {
+    border-color: var(--color-gold);
+    box-shadow:
+      0 0 0 1px rgba(200, 150, 60, 0.9),
+      0 0 34px rgba(200, 150, 60, 0.8);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gw-npc-prompt--searchable {
+    animation: none;
+    border-color: var(--color-gold);
+    box-shadow:
+      0 0 0 1px rgba(200, 150, 60, 0.55),
+      0 0 24px rgba(200, 150, 60, 0.5);
+  }
+}
+
+/* #2/#3 gate: the SELECTED character is exploring/in_dungeon — the prompt stays clickable (still toasts
+   the honest reason) but visually reads as unavailable, never a plain gold CTA. */
+.gw-npc-prompt--busy {
+  cursor: not-allowed;
+}
+.gw-npc-prompt--busy:hover {
+  border-color: var(--color-muted);
+  box-shadow: none;
+}
+.gw-npc-prompt--busy .gw-npc-prompt__key {
+  border-color: var(--color-muted);
+  color: var(--color-muted);
+  box-shadow: none;
+}
+.gw-npc-prompt--busy .gw-npc-prompt__label {
+  color: var(--color-muted);
+}
+
+/* STUCK-ESCROWED exit (coordinator): the in_dungeon gate offers RESUME / ABANDON right here, so it becomes a
+   column (label + actions), NOT the compact not-allowed pill — the way OUT at the point of discovery. */
+.gw-npc-prompt--stuck {
+  flex-direction: column;
+  gap: 10px;
+  cursor: default;
+  padding: 12px 16px;
+}
+.gw-npc-prompt--stuck:hover {
+  border-color: var(--color-border);
+  box-shadow: none;
+}
+.gw-npc-prompt--stuck .gw-npc-prompt__label {
+  color: var(--color-text);
+}
+.gw-npc-prompt__actions {
+  display: flex;
+  gap: 8px;
+}
+.gw-npc-prompt__btn {
+  padding: 5px 14px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--color-text);
+  transition:
+    box-shadow 0.2s,
+    border-color 0.2s,
+    color 0.2s;
+}
+.gw-npc-prompt__btn:hover:not(:disabled) {
+  border-color: var(--color-gold);
+  box-shadow: 0 0 16px rgba(200, 150, 60, 0.3);
+}
+.gw-npc-prompt__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.gw-npc-prompt__btn--gold {
+  border-color: var(--color-gold);
+  color: var(--color-gold-light);
+}
+.gw-npc-prompt__btn--danger {
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #f87171;
+}
+.gw-npc-prompt__btn--danger:hover:not(:disabled) {
+  border-color: #f87171;
+  box-shadow: 0 0 16px rgba(248, 113, 113, 0.3);
+}
+
+/* D37c ROOM-CLEARED reward recap — a NON-GATING slide-in (top-right). Clickable to dismiss; never blocks the
+   plane behind it (it self-dismisses on a timer). */
+.gw-recap {
+  position: absolute;
+  top: 76px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px;
+  min-width: 180px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  animation: gw-recap-in 0.35s ease-out;
+}
+.gw-recap__title {
+  color: var(--color-gold);
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+.gw-recap__rewards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.gw-recap__xp {
+  color: var(--color-cyan);
+  font-size: 13px;
+}
+.gw-recap__loot {
+  color: var(--color-gold-light);
+  font-size: 13px;
+}
+.gw-recap__hint {
+  color: var(--color-muted);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+@keyframes gw-recap-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.gw-dg-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 6, 10, 0.62);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+/* FightsModal-ONLY override (a world nameplate was bleeding through the fights panel) — this one modal
+   portals to <body> (FightsModal.jsx createPortal, mirrors PlayerActionMenu's own body-portal) to escape the
+   buried game-frame stacking context; position:absolute has no positioned ancestor left to inset against once
+   portaled, so this switches it to position:fixed at the same "world modal" tier .gw-travel__backdrop/.wsh-modal
+   already use — above every fixed HUD/canvas/nameplate layer. DungeonsModal/CommissionModal stay inline and
+   untouched (.gw-dg-backdrop alone), so this rule only ever fires alongside the .gw-ft-backdrop marker class. */
+.gw-ft-backdrop {
+  position: fixed;
+  z-index: 60;
+}
+.gw-dg {
+  width: min(560px, 92%);
+  max-height: 82%;
+  display: flex;
+  flex-direction: column;
+  border-color: var(--color-gold-dark);
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.6),
+    0 0 32px rgba(200, 150, 60, 0.12);
+  font-family: var(--font-mono);
+}
+.gw-dg__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+.gw-dg__title {
+  margin: 0;
+  color: var(--color-gold);
+  font-size: 15px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  text-shadow: 0 0 16px rgba(200, 150, 60, 0.35);
+}
+.gw-dg__sub {
+  margin: 5px 0 0;
+  color: var(--color-muted);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.gw-dg__x {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  font-size: 12px;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
+}
+.gw-dg__x:hover {
+  color: var(--color-gold);
+  border-color: var(--color-gold);
+}
+.gw-dg__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 22px 18px;
+}
+.gw-dg__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 30px 14px;
+  text-align: center;
+}
+.gw-dg__empty-h {
+  color: var(--color-muted);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  max-width: 340px;
+  line-height: 1.5;
+}
+/* THE key row: inline icon + name + a "×N when >1" amount, same shape as the bag/marketplace
+   item rows (sell_panel.tsx/browse_panel.tsx text-[10px]/text-[9px] tokens) — never a bare sentence. */
+.gw-dg__key {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+.gw-dg__key-icon {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  /* host slot for ItemIcon (its .item-icon fills 100% of this) — sized here, load-order-robust. */
+  display: inline-flex;
+}
+.gw-dg__key-name {
+  color: var(--color-text);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.gw-dg__key-amount {
+  color: var(--color-muted);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+.gw-dg__cta {
+  margin-top: 6px;
+  padding: 9px 18px;
+  border: 1px solid var(--color-gold);
+  background: linear-gradient(135deg, var(--color-gold-dark), var(--color-gold), var(--color-gold-dark));
+  color: #17130a;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transition: box-shadow 0.2s;
+}
+.gw-dg__cta:hover {
+  box-shadow: 0 0 20px rgba(200, 150, 60, 0.45);
+}
+.gw-dg__cta:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.gw-dg__error {
+  display: block;
+  margin-top: 8px;
+  color: #ff6b6b;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+/* ── FIGHTS PANEL (the [V] "See fights in the area" list) — reuses the .gw-dg glass shell; adds the two filter
+   toggles + the single-line fight rows. House DNA: sharp, mono, uppercase, gold sparingly, status dots, NO
+   left-accent rails (design law), strictly one line per row. */
+.gw-ft {
+  width: min(900px, 94vw);
+}
+.gw-ft__layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(390px, 1.2fr);
+  gap: 14px;
+  min-height: 390px;
+}
+.gw-ft__list-pane {
+  min-width: 0;
+  max-height: 56vh;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  background: rgba(5, 5, 9, 0.38);
+}
+.gw-ft__section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.gw-ft__section-head--root {
+  color: var(--color-gold);
+  background: rgba(200, 150, 60, 0.08);
+}
+.gw-ft__section + .gw-ft__section {
+  border-top: 1px solid rgba(200, 150, 60, 0.24);
+}
+.gw-ft__section-count {
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+.gw-ft__hover-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgba(200, 150, 60, 0.34);
+  background: linear-gradient(145deg, rgba(200, 150, 60, 0.08), transparent 42%), rgba(7, 7, 12, 0.88);
+}
+.gw-ft__hover-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 13px;
+  border-bottom: 1px solid var(--color-border);
+}
+.gw-ft__hover-title {
+  flex: 1;
+  margin: 0;
+  color: var(--color-text);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.gw-ft__teams {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  margin-top: 16px;
+}
+.gw-ft__team {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.025);
+}
+.gw-ft__team-title {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-gold);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.gw-ft__team--enemy .gw-ft__team-title {
+  color: #e47777;
+}
+.gw-ft__roster {
+  list-style: none;
+  margin: 0;
+  padding: 5px 10px 9px;
+}
+.gw-ft__member {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+}
+.gw-ft__member:last-child {
+  border-bottom: 0;
+}
+.gw-ft__member-name {
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gw-ft__member-meta {
+  color: var(--color-muted);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.gw-ft__member-class {
+  grid-column: 1 / -1;
+  margin-top: -4px;
+  color: var(--color-muted);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.gw-ft__filters {
+  display: flex;
+  gap: 14px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--color-border);
+}
+.gw-ft__filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 2px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: color 0.2s;
+}
+.gw-ft__filter:hover {
+  color: var(--color-gold-light);
+}
+.gw-ft__filter--on {
+  color: var(--color-gold);
+}
+.gw-ft__filter-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  background: var(--color-border);
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
+}
+.gw-ft__filter--on .gw-ft__filter-dot {
+  background: var(--color-gold);
+  box-shadow: 0 0 8px rgba(200, 150, 60, 0.6);
+}
+.gw-ft__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.gw-ft__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 4px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  cursor: default;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.gw-ft__row:hover,
+.gw-ft__row--selected {
+  background: rgba(200, 150, 60, 0.1);
+}
+.gw-ft__row:last-child {
+  border-bottom: 0;
+}
+/* friend fight = whole-row tint (design law: never a left bar) */
+.gw-ft__row--friend {
+  background: rgba(200, 150, 60, 0.06);
+}
+.gw-ft__dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  background: var(--color-muted);
+}
+.gw-ft__row--friend .gw-ft__dot {
+  background: var(--color-cyan);
+  box-shadow: 0 0 8px rgba(74, 158, 255, 0.6);
+}
+.gw-ft__who {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-text);
+  text-transform: uppercase;
+}
+.gw-ft__phase {
+  color: var(--color-muted);
+}
+.gw-ft__room {
+  color: var(--color-gold);
+}
+.gw-ft__badge {
+  flex: none;
+  padding: 2px 7px;
+  border: 1px solid rgba(200, 150, 60, 0.4);
+  color: var(--color-gold);
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.gw-ft__badge--group {
+  border-color: rgba(74, 158, 255, 0.4);
+  color: var(--color-cyan);
+}
+.gw-ft__dist {
+  flex: none;
+  min-width: 34px;
+  text-align: right;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+.gw-ft__act {
+  flex: none;
+  min-width: 62px;
+  padding: 5px 10px;
+  text-align: center;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-muted);
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: default;
+}
+.gw-ft__act--join {
+  border-color: var(--color-gold);
+  background: linear-gradient(135deg, var(--color-gold-dark), var(--color-gold), var(--color-gold-dark));
+  color: #17130a;
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+.gw-ft__act--join:hover:not(:disabled) {
+  box-shadow: 0 0 16px rgba(200, 150, 60, 0.45);
+}
+.gw-ft__act:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.gw-ft__act--muted {
+  border-color: transparent;
+}
+
+@media (max-width: 760px) {
+  .gw-ft__layout {
+    grid-template-columns: 1fr;
+  }
+  .gw-ft__hover-card {
+    min-height: 270px;
+  }
+}
+
+/* ── FIGHT OPENNESS TOGGLE — the HUD control that sets whether the NEXT fight you start is public or group-only.
+   A two-state segmented control (sharp, gold on the active half), not a switch (design law). */
+.gw-openness {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--color-border);
+  background: rgba(10, 10, 15, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-family: var(--font-mono);
+}
+.gw-openness__label {
+  padding: 0 9px;
+  color: var(--color-muted);
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.gw-openness__opt {
+  padding: 5px 10px;
+  background: transparent;
+  border: 0;
+  border-left: 1px solid var(--color-border);
+  color: var(--color-muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition:
+    color 0.2s,
+    background 0.2s;
+}
+.gw-openness__opt:hover {
+  color: var(--color-gold-light);
+}
+.gw-openness__opt--on {
+  color: #17130a;
+  background: linear-gradient(135deg, var(--color-gold-dark), var(--color-gold), var(--color-gold-dark));
+}
+/* the spectate chat was too narrow — the read-only overlay variant is WIDE-SHORT. The base
+   .gw-chat is absolute + width:min(38%,440px) (38% of MY 460px wrapper = the thin default column);
+   the variant fills the wrapper instead and halves the height. */
+.spectate-chat .gw-chat {
+  position: static;
+  width: 100%;
+  height: 200px;
+}
+.spectate-chat .gw-chat__log {
+  max-height: 150px;
+}
+
+/* D229 — the inviter confirm strip inside the online panel (house glass, no new chrome) */
+.gw-players__confirm {
+  padding: 8px 10px;
+  border-top: 1px solid rgba(200, 150, 60, 0.25);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+}
+.gw-players__confirm-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* ── S-18 discovery: the prompt STACK + the search progress toast ─────────────────────────────────
+   Stack (DECISIONS 07-09 addendum): the closest/most-actionable pill sits at the SAME bottom-center
+   anchor the single [E] pill occupied; others stack UPWARD (column-reverse) so the anchor never jumps.
+   Pills reuse .gw-npc-prompt verbatim — --stacked only strips the per-pill absolute positioning. */
+.gw-prompt-stack {
+  position: absolute;
+  left: 50%;
+  bottom: 96px; /* the exact single-pill anchor (clear of the bottom-center vitals) */
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 8px;
+}
+.gw-npc-prompt--stacked {
+  position: static;
+  left: auto;
+  bottom: auto;
+  transform: none;
+}
+
+/* Progress toast (approved harness language: head = breathing dot + title, gold bar below). */
+.gw-toast--progress {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: 210px;
+  /* FIGHT-HUD OPACITY LAW sibling fix: the "Searching Zone…" toast is the discovery flow's OWN card (same
+     flow as .gw-reveal above), so it earns the same solid house fill rather than the shared .gw-toast
+     0.66-alpha wash — scoped to THIS variant only; the general loot/player/error toast stack is untouched. */
+  background: linear-gradient(165deg, #12121a, #0a0a0f);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.gw-toast__head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.gw-toast__bar {
+  height: 3px;
+  background: rgba(200, 150, 60, 0.15);
+  overflow: hidden;
+}
+.gw-toast__bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, var(--color-gold-dark, #8b6914), var(--color-gold, #c8963c));
+  box-shadow: 0 0 8px rgba(200, 150, 60, 0.5);
+  transition: width 140ms linear;
+}
+.gw-toast__dot--breathe {
+  animation: gw-dot-breathe 1.6s ease-in-out infinite;
+}
+@keyframes gw-dot-breathe {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* RESPONSIVE reflow is GONE (chat-position-invariant ticket, supersedes both the
+   07-09 spellbar dodge and the 07-10 timeline dodge): the chat never lifts/shifts for a fight anymore
+   — see the CHAT-POSITION INVARIANT comment on `.gw-chat` above. The two collisions this used to dodge
+   (the centered spellbar's left edge, and `.hud-turns`' left column) are now resolved on THEIR OWN
+   anchors instead: `.hud-spellbar` reserves a right-side gutter past the chat (below), and `.hud-turns`
+   caps its own height off the chat's geometry (hud.css). */

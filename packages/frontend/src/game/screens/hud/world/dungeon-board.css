@@ -1,0 +1,171 @@
+/* board #13 (rich-board wave) — the dungeon turn-input/status chrome ONLY (the board itself is the rich 3D
+   renderer — fight-overlay.js + fight-board-render.js — so this panel hugs the BOTTOM edge, clear of the
+   board center, per spec_fight_ui's zone map). Gothic-terminal DNA retheme (#16 spec_fight_retheme_tokenmap):
+   gold/cyan/JetBrains/sharp house tokens throughout; the semantic red/emerald accents (reachable/castable, now
+   drawn ON the 3D board itself) are pinned to the DNA red #f87171 / emerald #34d399 ramp (Tailwind
+   red-400/emerald-400), never a bespoke hex. */
+
+/* D36 commit-urgency cue — a small amber pill beside END TURN when a moved-but-unended turn is about to
+   auto-commit before the deadline (so the countdown reads as "handled", never "stuck"/lost to liquidation). */
+.dgb-commit-cue {
+  align-self: flex-end;
+  margin-right: 10px;
+  padding: 4px 12px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  /* FIGHT-HUD OPACITY LAW: a 0.08-alpha wash over the live board was effectively no
+     background — solid near-black fill, same family as the rest of the fight chrome. */
+  background: linear-gradient(165deg, #12121a, #0a0a0f);
+  animation: dgb-cue-pulse 1s ease-in-out infinite;
+}
+@keyframes dgb-cue-pulse {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 14px rgba(251, 191, 36, 0.4);
+  }
+}
+
+.dgb {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  z-index: 5;
+}
+
+.dgb__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.dgb__hint {
+  color: var(--color-muted);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  min-height: 12px;
+}
+.dgb__btns {
+  display: flex;
+  gap: 8px;
+}
+/* BUTTON LAW: the ROOM-CLEARED console renders inside `.hud-root`, whose `button { background:none;
+   border:none }` reset (0,1,1) strips a bare `.dgb__btn` (0,1,0) — NEXT ROOM's gold fill vanished (dark ink
+   on dark) and ABANDON's red border vanished. Scope under `.dgb` (0,2,0) so the chrome survives. */
+.dgb .dgb__btn {
+  padding: 8px 16px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+.dgb .dgb__btn:hover:not(:disabled) {
+  border-color: var(--color-gold);
+  box-shadow: 0 0 16px rgba(200, 150, 60, 0.3);
+}
+.dgb .dgb__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.dgb .dgb__btn--gold {
+  border-color: var(--color-gold);
+  background: linear-gradient(135deg, var(--color-gold-dark), var(--color-gold), var(--color-gold-dark));
+  color: #17130a;
+  font-weight: 600;
+}
+.dgb .dgb__btn--gold:disabled {
+  background: none;
+  color: var(--color-muted);
+}
+
+/* status-machine outcome panels (ROOM CLEARED / VICTORY / DEFEAT) — glass card, gold=win red=loss */
+.dgb__outcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border: 1px solid var(--color-border);
+  background: rgba(6, 6, 12, 0.78);
+  backdrop-filter: blur(24px);
+}
+.dgb__outcome-title {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.dgb__outcome-title--win {
+  color: var(--color-gold);
+  text-shadow: 0 0 12px rgba(200, 150, 60, 0.5);
+}
+.dgb__outcome-title--loss {
+  color: #f87171;
+  text-shadow: 0 0 12px rgba(248, 113, 113, 0.4);
+}
+/* DESTRUCTIVE — canon .btn-outline--danger: red #f87171 border + red text at rest. */
+.dgb .dgb__btn--danger {
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #f87171;
+}
+.dgb .dgb__btn--danger:hover:not(:disabled) {
+  border-color: #f87171;
+  box-shadow: 0 0 16px rgba(248, 113, 113, 0.3);
+}
+
+/* #22-A per-room CLAIM — the PRIMARY reward action: bigger, brighter, softly pulsing so it out-weighs the
+   secondary Next Room / Abandon buttons beside it (CLAIM must be visually primary). */
+.dgb__btn--claim {
+  padding: 10px 26px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  box-shadow: 0 0 20px rgba(200, 150, 60, 0.35);
+  animation: dgb-claim-pulse 2.4s ease-in-out infinite;
+}
+.dgb__btn--claim:hover:not(:disabled) {
+  box-shadow: 0 0 28px rgba(200, 150, 60, 0.55);
+}
+@keyframes dgb-claim-pulse {
+  0%, 100% { box-shadow: 0 0 16px rgba(200, 150, 60, 0.3); }
+  50% { box-shadow: 0 0 28px rgba(200, 150, 60, 0.55); }
+}
+.dgb__claimed {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #34d399;
+  text-shadow: 0 0 10px rgba(52, 211, 153, 0.4);
+}
+/* the forfeit warning below Next Room — amber, unmissable, honest about the cost of advancing unclaimed. */
+.dgb__forfeit {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fbbf24;
+  text-align: center;
+  max-width: 280px;
+}

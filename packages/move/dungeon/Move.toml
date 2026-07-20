@@ -1,0 +1,52 @@
+# aresrpg_dungeon — the standalone dungeon-run package (package-split 2026-07-13: the aresrpg core exceeded the
+# 102,400-byte protocol publish cap; the dungeon/run/dungeon_events cluster extracted here, mirroring the
+# kolizeum/forgemagie pattern). The `RunPass` security core + its composition layer + its events. Feature → core
+# arrows only: it READS core (world/checkpoint/character reads, config dials) and drives the brand-gated core
+# fight doors (`create_dungeon_fight_brand` / `join_vouched_brand`) with its OWN `Dungeon` witness pinned in
+# GameConfig; it also burns dungeon keys through the public `extract` doors. Core never names this package.
+[package]
+name = "aresrpg_dungeon"
+version = "0.1.0"
+edition = "2024.alpha"
+authors = ["AresRPG"]
+
+# FRAMEWORK PIN: single-rev, matched to the active CLI's own framework hash — identical to every sibling package
+# so the whole graph compiles against one lineage.
+[dependencies.Sui]
+git = "https://github.com/MystenLabs/sui.git"
+subdir = "crates/sui-framework/packages/sui-framework"
+rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+override = true
+
+[dependencies.MoveStdlib]
+git = "https://github.com/MystenLabs/sui.git"
+subdir = "crates/sui-framework/packages/move-stdlib"
+rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+override = true
+
+# Kiosk (PersonalKioskCap — the ownership proof the activate/next-fight doors thread). Default = testnet lineage.
+[dependencies.Kiosk]
+git = "https://github.com/MystenLabs/apps.git"
+subdir = "kiosk"
+rev = "testnet"
+
+# THE core game package (config / version / character / character_link / world / checkpoint / mob_template /
+# extract / item + the fight brand doors). Arrow flows feature → core, never back.
+[dependencies.aresrpg]
+local = "../aresrpg"
+
+# The GENERIC branded combat engine: the dungeon room fight rides core's `create_dungeon_fight_brand`, which
+# constructs core's FightBrand internally; the sibling also names the engine's Fight / FightRegistry / settlement
+# types directly (join + settle read them). Arrow: feature → engine, never back.
+[dependencies.aresrpg_fight]
+local = "../engine"
+
+[environments]
+testnet = { chain-id = "4c78adac" }
+mainnet = { chain-id = "35834a8a" }
+
+[dep-replacements.mainnet]
+Kiosk = { git = "https://github.com/MystenLabs/apps.git", subdir = "kiosk", rev = "mainnet" }
+
+[addresses]
+# `aresrpg_dungeon` binds implicitly to 0x0 via the [package] name; per-network published ids self-record.

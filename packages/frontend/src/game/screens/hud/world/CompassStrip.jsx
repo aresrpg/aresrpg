@@ -1,0 +1,444 @@
+// COMPASS STRIP — the "option 3A" top-strip compass design (zone mobs+resources render through the
+// top-strip compass), translated from the
+// mockup (mockups_design/world_discovery/3a_compass_top_strip.html) into the GOLD GOTHIC terminal per the
+// same house design-system line (frosted-obsidian REJECTED — .gw-panel tokens only). Feature riders (07-09):
+//   • MERGES the old top-center coords/fps DOM chip (D188(b)/D199 — deleted in embed_voxel.js): position
+//     gold-left, fps cyan-right, fed by the %10-frame `player_pose` publish (pos + camera yaw + fps).
+//   • ZONE STATE line: current zone via zone_of(pose) — undiscovered → UNSEARCHED; cooling down → "ZONE
+//     REFRESH m:ss" + an explainer tooltip, off RpcZone.discovered_at_ms + the World's own zone_ttl_ms (chain
+//     doc, §17.1 lazy TTL); TTL-expired (ready) → no label at all (a text state here read
+//     as a fake button — the [F] SEARCH pill, still owned by the PromptStack/untouched, is the real affordance
+//     once it's wired to re-arm on expiry, a declared gap — see the zone_state comment below); honest '—'
+//     whenever a source is absent.
+//   • PIPS: the zone's live mob groups (red) + resource nodes (cyan) by bearing relative to the CAMERA
+//     heading, distance-faded (near/mid/far), sliding on the ±100° ruler with the cardinals. Spawn truth is
+//     the /v1/zones single-zone read (rpc/client get_zone — the Zone DF state in ONE fetch) DERIVED into rows
+//     by zone_rows.js (the seed-derivation home), polled on the zone cadence for discovered zones only. Every pip is
+//     public chain data — the UI is your bot.
+//     DENSITY (the density dial turned this into "pip soup"): cap_nearest_pips → cluster_pips
+//     → thin_pip_labels (compass_math, pure + unit-tested, in that exact order) BEFORE any strip projection
+//     — nearest ~5 of each kind survive, near-identical bearings (≤2°) merge into one ×N marker, only the
+//     nearest ~3 of each kind keep a distance label (the rest are dot-only). Falloff stays pip_tier, unchanged.
+//   • EDGE MARKERS (answers "how do I reach the next zone"): the nearest 1-2 boundaries of the
+//     CURRENT zone cell (compass_math zone_edge_distances/nearest_zone_edges — pure geometry off the
+//     player's world pos + zone_size), projected through the SAME bearing→x math as the cardinals/pips
+//     above (one home). Tinted by the NEIGHBOR zone's discovered flag — a free `.find()` against the SAME
+//     zones store zone_row already reads below, zero extra fetch: undiscovered = gold, discovered = muted.
+// Self-gates on `player_pose` (null in spectate / before the walker's first frame → renders nothing).
+// DEV seam: window.__ARES_COMPASS_SYNTH = { world_id?, zone?, zone_ttl_ms?, spawns?, zones? } overrides the
+// network sources for harness/QA drives (zones? feeds the edge-marker neighbor-discovered lookup; mirrors
+// __ARES_WORLD_READS; tree-shaken from prod).
+
+import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useShallow } from 'zustand/react/shallow'
+
+import { get_world } from '@aresrpg/sdk/game'
+import { GATHER_RESOURCES } from '@aresrpg/sdk/jobs'
+
+import './compass-strip.css'
+import { DayNightBar } from './DayNightDial.jsx' // day-night cycle indicator — the subtle progress line on the strip's bottom edge
+import { use_game_state, context } from '../../../store.js'
+import { play_sfx } from '../../../core/audio/sfx.js'
+import { InteractionChip } from '../../../touch/InteractionChip.jsx'
+import { use_rpc_view } from '../../../../rpc/use_view'
+import { get_zones, get_zone } from '../../../../rpc/client'
+import { zone_rows_v1 } from '../../../zone_rows.js'
+import { use_world_binding } from '../../../../world-shell/session_gate.js'
+import { use_spawns } from '../../../../world-shell/spawns_adapter.js'
+import { use_prompt_stack, visible_prompts } from '../../../../world-shell/prompt_stack.js'
+import { zone_of, zone_of_world, world_offsets, chain_to_world, DEFAULT_ZONE_SIZE } from '@aresrpg/sdk/coords'
+import { get_sdk } from '../../../../chain/sdk'
+import { game_log } from '../../../../core/log.js'
+import {
+  CARDINALS,
+  bearing_of,
+  camera_heading,
+  cap_nearest_pips,
+  cluster_pips,
+  format_mmss,
+  nearest_zone_edges,
+  neighbor_zone_key,
+  pip_tier,
+  relative_bearing,
+  strip_x,
+  thin_pip_labels,
+  zone_reconciled,
+  reconciled_zone_row,
+  ZONE_REFRESH_TRIES,
+  ZONE_REFRESH_INTERVAL_MS,
+} from './compass_math.js'
+import { reroll_at, zone_row_of } from '@aresrpg/world'
+
+// A resource node's (job u8 0/1/2, tier 1-11) → its gatherable display NAME (the @aresrpg/sdk/jobs roster —
+// the ONE home shared with the 3D node prop's resource_visual). Design ruling 2026-07-12: the pip label shows the real
+// name, never the "(N left)" charge counter. Null (unmapped) falls back to the localized `compass.resource`.
+const JOB_KEYS = ['farmer', 'herbalist', 'miner']
+const resource_name = (job, tier) => {
+  const roster = GATHER_RESOURCES[JOB_KEYS[Math.max(0, Math.min(2, Number(job) | 0))]] ?? []
+  const t = Math.max(1, Math.min(11, Number(tier) | 0))
+  return (roster.find((r) => r.tier === t) ?? roster[0])?.name
+}
+
+// One world-doc read per world per session (zone_size / zone_ttl_ms are config-grade). A failed or empty
+// read is NOT cached — a later mount retries instead of freezing on a boot-time hiccup.
+const world_docs = new Map()
+function fetch_world_doc(world_id) {
+  if (!world_docs.has(world_id)) {
+    const read = get_sdk()
+      .then((sdk) => get_world({ grpc_client: sdk.grpc_client })(world_id))
+      .then((doc) => {
+        if (!doc) world_docs.delete(world_id)
+        return doc
+      })
+      .catch(() => {
+        world_docs.delete(world_id)
+        return null
+      })
+    world_docs.set(world_id, read)
+  }
+  return world_docs.get(world_id)
+}
+
+async function fetch_zone_spawns(world_id, zx, zy) {
+  return zone_rows_v1(world_id, zx, zy) // rows DERIVE from the zone's stored seed (zone_rows.js — the one home)
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/**
+ * SEARCH-SUCCESS RECONCILE (UX-latency fix: the compass used to take a bit of time to update after
+ * searching a zone): fired off the player's OWN `discovery/zone_searched` broadcast (discovery_actions.js,
+ * the instant the search tx confirms). The indexer still needs 1-2 checkpoints (~1-3s) to project the fresh
+ * Zone DF snapshot, so this polls the single-zone read FRESH (cache-bypassed — ZONE_REFRESH_INTERVAL_MS sits
+ * under the client LRU's 3s TTL; without the bypass every retry would just hand back the same pre-search
+ * snapshot) until `zone_reconciled` (compass_math.js) confirms the timestamp moved, then syncs both views
+ * ONCE so the strip repaints from confirmed chain truth. Gives up silently past ZONE_REFRESH_TRIES — the
+ * normal 6s poll still catches it eventually; a UX nicety never grows into an unbounded wait. Logs the
+ * measured latency either way (the [discovery] bracket idiom) so the fix is provable in the live console.
+ */
+async function wait_compass_reconciled({ world_id, zx, zy, prior_at_ms, prior_count, started, on_reconciled }) {
+  for (let i = 0; i < ZONE_REFRESH_TRIES; i += 1) {
+    await sleep(ZONE_REFRESH_INTERVAL_MS)
+    const zone = await get_zone(world_id, zx, zy, undefined, true).catch(() => null)
+    if (zone_reconciled(zone, prior_at_ms)) {
+      on_reconciled()
+      const count = Number(zone.mob_groups ?? 0) + Number(zone.resource_nodes ?? 0) // the projected event counts
+      game_log(
+        'discovery',
+        `compass zone refreshed +${count - prior_count} spawns in ${Date.now() - started}ms post-search`
+      )
+      return
+    }
+  }
+  game_log(
+    'discovery',
+    `compass zone refresh gave up after ${Date.now() - started}ms post-search — the next 6s poll will catch up`
+  )
+}
+
+/**
+ * @param {{ mobile?: boolean }} props
+ * @returns {import('react').ReactElement | null}
+ */
+export function CompassStrip({ mobile = false } = {}) {
+  const { t } = useTranslation()
+  const pose = use_game_state((s) => s.player_pose)
+  const character_id = use_game_state((s) => s.selected_character_id)
+  // The selected character's world binding — session_gate is the ONE binding home (three writers heal it);
+  // no extra character-doc poll here. undefined (unknown) and null (unbound) both read as "no world yet".
+  const bound_char = use_world_binding((s) => s.character_id)
+  const bound_world = use_world_binding((s) => s.world)
+  const synth = import.meta.env.DEV ? /** @type {any} */ (window.__ARES_COMPASS_SYNTH ?? null) : null
+  const world_id = synth?.world_id ?? (bound_char === character_id ? (bound_world ?? null) : null)
+
+  // World doc (zone_size + zone_ttl_ms) — one chain read per world per session.
+  const [world_doc, set_world_doc] = useState(null)
+  const synth_on = !!synth
+  useEffect(() => {
+    if (!world_id || synth_on) return
+    let dead = false
+    fetch_world_doc(world_id).then((doc) => {
+      if (!dead) set_world_doc(doc)
+    })
+    return () => {
+      dead = true
+    }
+  }, [world_id, synth_on])
+  const zone_size = Number(world_doc?.zone_size ?? 0) || DEFAULT_ZONE_SIZE
+  const zone_ttl_ms = synth?.zone_ttl_ms ?? (world_doc ? Number(world_doc.zone_ttl_ms ?? 0) || null : null)
+
+  // World↔chain codec: the pose is SIGNED WORLD space (render origin-centred); the zone KEY is chain-space
+  // (data lookups + spawn reads), so translate world→chain then floor. The origin's chain zone re-centres the
+  // DISPLAY label so world (0,0) reads ZONE 0·0 (never fed to a tx).
+  const off = world_offsets(world_doc)
+  const cell = pose ? zone_of_world(pose.x, pose.z, zone_size, off.x, off.z) : null
+  const origin_zone = zone_of(off.x, off.z, zone_size)
+
+  // Discovered-zone set — the same RPC view/cadence DiscoveryPrompts polls (UI-DATA LAW short-poll).
+  const zones_view = use_rpc_view((signal) => (world_id ? get_zones(world_id, signal) : Promise.resolve(null)), {
+    interval_ms: 6000,
+    enabled: !!world_id && !synth_on,
+    deps: [world_id],
+  })
+  const rpc_zone_row = cell ? (zones_view.data?.zones?.find((z) => z.zx === cell.zx && z.zy === cell.zy) ?? null) : null
+  // RECEIPT vs POLL (UX-latency fix — the compass used to stay on UNSEARCHED far too long after the search
+  // was revealed): the search tx's OWN receipt already flipped this cell inside the shared spawns/zones core
+  // the instant it certified (discovery_actions.js's zone_searched dispatch → spawns_zones.js's
+  // fold_zone_searched) — read it back here (zone_row_of) so the strip never has to wait out ITS OWN poll
+  // cadence for a fact the client already proved (pipeline law №1: predict off the receipt; the poll only
+  // reconciles later and never regresses it — reconciled_zone_row, compass_math.js). Skipped in the DEV synth
+  // harness (synth.zone below is the whole point of that override — no real receipt to react to).
+  const spawns_zones = use_spawns((s) => s.zones)
+  const store_zone_row = !synth_on && cell ? zone_row_of(spawns_zones, cell.zx, cell.zy) : null
+  const zone_row = synth?.zone ?? reconciled_zone_row(store_zone_row, rpc_zone_row)
+  const discovered = !!zone_row && zone_row.discovered !== false
+
+  // Live spawns — chain-direct (the Zone DF in one fetch), discovered zones only, zone cadence.
+  const spawns_view = use_rpc_view(
+    () => (world_id && cell && discovered ? fetch_zone_spawns(world_id, cell.zx, cell.zy) : Promise.resolve(null)),
+    {
+      interval_ms: 6000,
+      enabled: !!world_id && !!cell && discovered && !synth_on,
+      deps: [world_id, cell?.zx, cell?.zy, discovered],
+    }
+  )
+  const spawns = synth?.spawns ?? spawns_view.data ?? []
+
+  // Latest zone_row/spawns snapshot, read from the search-success effect below WITHOUT forcing it to
+  // re-subscribe on every 6s poll tick (a ref sidesteps the stale-closure trap; only world_id/synth_on
+  // change actually need a fresh subscription — see the effect's own deps). Written from an effect (never
+  // inline in the render body — this project runs StrictMode, whose dev double-invoke replays render
+  // bodies) so a discarded render can never leave a stray write behind.
+  const latest_ref = useRef(null)
+  useEffect(() => {
+    latest_ref.current = { cell, zone_row, spawns_count: spawns_view.data?.length ?? 0 }
+  })
+
+  // COMPASS REFRESH ON SEARCH (UX-latency fix — the compass used to take a bit of time to update after
+  // searching a zone): discovery_actions.js broadcasts `discovery/zone_searched` the instant the player's
+  // OWN search tx confirms (context.events — the same cross-module bus fight_entry/* already uses). Only
+  // reacts to a search of the CURRENT cell — a search always targets the searcher's own live position
+  // (zones.move derives zx/zy from x/z), so this only misses a same-tick zone-boundary crossing between
+  // press and confirm, an honest, rare miss the normal 6s poll still closes. Never wired for the DEV synth
+  // harness (it has no real search tx to react to).
+  useEffect(() => {
+    if (!world_id || synth_on) return undefined
+    let dead = false
+    const on_searched = (payload) => {
+      if (dead || payload?.world_id !== world_id) return
+      const { cell: cur_cell, zone_row: cur_row, spawns_count } = latest_ref.current ?? {}
+      if (!cur_cell || payload.zx !== cur_cell.zx || payload.zy !== cur_cell.zy) return
+      void wait_compass_reconciled({
+        world_id,
+        zx: payload.zx,
+        zy: payload.zy,
+        prior_at_ms: cur_row?.discovered_at_ms ?? null,
+        prior_count: spawns_count ?? 0,
+        started: Date.now(),
+        on_reconciled: () => {
+          if (dead) return
+          zones_view.refetch()
+          spawns_view.refetch()
+        },
+      })
+    }
+    context.events.on('discovery/zone_searched', on_searched)
+    return () => {
+      dead = true
+      context.events.off('discovery/zone_searched', on_searched)
+    }
+  }, [world_id, synth_on, zones_view.refetch, spawns_view.refetch])
+
+  // Reroll countdown — a 1 s local tick, armed only while a real deadline exists (reroll_at: the ONE home,
+  // compass_math — shared with the DiscoveryPrompts [F] re-arm so the countdown and the affordance never drift).
+  const reroll = reroll_at(zone_row, zone_ttl_ms)
+  const [now, set_now] = useState(() => Date.now())
+  useEffect(() => {
+    if (!reroll) return
+    set_now(Date.now())
+    const timer = setInterval(() => set_now(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [reroll])
+
+  // SEARCH-ZONE RELOCATE (moved from the bottom-center prompt stack to sit directly under the
+  // strip): DiscoveryPrompts.jsx still OWNS the registration/gate (zone_searchable)/pending-optimism/F-keybind
+  // (PromptStack.jsx's ONE listener still routes the key here) — this only renders THAT prompt's pill in the
+  // new spot. PromptStack.jsx excludes id 'search' from its own stack so it never renders twice.
+  const search_prompt =
+    use_prompt_stack(useShallow((s) => visible_prompts(s).filter((p) => p.id === 'search')))[0] ?? null
+  const trigger_search = () => {
+    play_sfx('button') // S-71 §2.11 — the same press cue every world-prompt trigger fires (PromptStack.jsx's trigger)
+    use_prompt_stack.getState().trigger_prompt('search')
+  }
+  // SEARCHABLE GLOW: search_prompt truthy IS "the zone is actionable" —
+  // DiscoveryPrompts' `searchable` gate (zone_searchable: undiscovered OR TTL-elapsed), mirrored through the
+  // prompt store. Reused verbatim rather than re-derived from discovered/reroll so the glow can never drift
+  // off the pill's own real gate (one home per fact) — an earlier pass here glowed only on `!discovered`,
+  // missing the TTL-elapsed re-search case where the pill is ALSO live. Drives both this pill's and the
+  // strip's persistent gold pulse below.
+  const searchable_now = !!search_prompt
+
+  // Spectate / pre-first-frame: the walker never published a pose — no strip (PartyFrame's render-nothing idiom).
+  if (!pose) return null
+
+  // Zone-state line — honest '—' whenever a source is absent (never an invented state). RETENTION FIX:
+  // the READY state ("reroll ready") read as a confusing dead label — a zone
+  // whose TTL elapsed is re-searchable, so the [F] SEARCH ZONE prompt (DiscoveryPrompts arms it via the shared
+  // `zone_searchable` — undiscovered OR TTL-elapsed) is the honest affordance for it, not compass text. This
+  // strip renders NOTHING for that state (zone_state stays '') rather than a second, redundant label; while
+  // COOLING DOWN it shows the "ZONE REFRESH" countdown + an explainer tooltip ("expired zones can be
+  // re-searched, fresh spawns for everyone").
+  let zone_state = '—'
+  let zone_tooltip = null
+  if (world_id && cell && (zones_view.data || synth || store_zone_row)) {
+    if (!discovered) zone_state = t('compass.unsearched')
+    else if (reroll == null) zone_state = t('compass.searched')
+    else if (reroll - now > 0) {
+      zone_state = t('compass.zone_refresh_in', { time: format_mmss(reroll - now) })
+      zone_tooltip = t('compass.zone_refresh_tooltip')
+    } else zone_state = ''
+  }
+
+  const heading = camera_heading(pose.yaw ?? 0)
+  const marks = CARDINALS.map((c) => ({ ...c, x: strip_x(relative_bearing(c.bearing, heading)) })).filter(
+    (m) => m.x != null
+  )
+  // Pip pipeline (the density dial turned the strip into "pip soup", ~40 overlapping dots):
+  // build every candidate's raw bearing/dist, then cap → cluster → label-thin (pure, compass_math, one
+  // home — unit-tested there) BEFORE ever projecting to a strip position, so a merged/dropped pip never
+  // even reaches strip_x. Size/opacity falloff stays pip_tier's job, unchanged, applied to what survives.
+  const pip_candidates = spawns.map((s) => {
+    // Spawn x/z are CHAIN-absolute blocks; the pose is WORLD space → bring the spawn into world space first.
+    const dx = chain_to_world(s.x, off.x) - pose.x
+    const dz = chain_to_world(s.z, off.z) - pose.z
+    return {
+      id: `${s.kind}:${s.spawn_id}`,
+      kind: s.kind,
+      bearing: bearing_of(dx, dz),
+      dist: Math.round(Math.hypot(dx, dz)),
+      title:
+        s.kind === 'mob'
+          ? t('compass.mob_group', { size: s.size ?? 0 })
+          : resource_name(s.job, s.tier) || t('compass.resource'), // real name, no "(N left)" counter
+    }
+  })
+  const pips = thin_pip_labels(cluster_pips(cap_nearest_pips(pip_candidates)))
+    .map((p) => {
+      const x = strip_x(relative_bearing(p.bearing, heading))
+      if (x == null) return null
+      return { ...p, x, tier: pip_tier(p.dist) }
+    })
+    .filter(Boolean)
+
+  // Edge markers — the nearest 1-2 boundaries of the CURRENT zone cell, tinted by the neighbor zone's
+  // discovered flag (free lookup against the same store zone_row already reads above; no new fetch).
+  const zones_list = synth?.zones ?? zones_view.data?.zones
+  const edge_markers = cell
+    ? nearest_zone_edges(pose.x, pose.z, cell.zx, cell.zy, zone_size, off.x, off.z)
+        .map((e) => {
+          const x = strip_x(relative_bearing(e.bearing, heading))
+          if (x == null) return null
+          const nb = neighbor_zone_key(cell.zx, cell.zy, e.edge)
+          const nb_row = zones_list?.find((z) => z.zx === nb.zx && z.zy === nb.zy)
+          const nb_discovered = !!nb_row && nb_row.discovered !== false
+          return { id: `edge:${e.edge}`, x, dist: Math.round(e.dist), discovered: nb_discovered }
+        })
+        .filter(Boolean)
+    : []
+
+  return (
+    <div className="gw-compass-wrap">
+      <div
+        className={`gw-compass gw-panel${searchable_now ? ' gw-compass--searchable' : ''}`}
+        aria-label={t('compass.label')}
+      >
+        <div className="gw-compass__band" aria-hidden="true">
+          <div className="gw-compass__ruler" />
+          {marks.map((m) => (
+            <span
+              key={m.label}
+              className={`gw-compass__card${m.major ? ' gw-compass__card--major' : ''}`}
+              style={{ left: `${m.x * 100}%` }}
+            >
+              {m.label}
+            </span>
+          ))}
+          <div className="gw-compass__fwd">
+            <span className="gw-compass__caret" />
+            <span className="gw-compass__stem" />
+          </div>
+          {pips.map((p) => (
+            <span
+              key={p.id}
+              title={p.count > 1 ? `${p.title} · ${t('compass.cluster_count', { extra: p.count - 1 })}` : p.title}
+              className={`gw-compass__pip gw-compass__pip--${p.kind} gw-compass__pip--${p.tier}`}
+              style={{ left: `${p.x * 100}%` }}
+            >
+              <span className="gw-compass__pip-dot-row">
+                <span className="gw-compass__pip-dot" />
+                {p.count > 1 && <span className="gw-compass__pip-count">×{p.count}</span>}
+              </span>
+              {p.show_label && <span className="gw-compass__pip-dist">{p.dist}m</span>}
+            </span>
+          ))}
+          {edge_markers.map((m) => (
+            <span
+              key={m.id}
+              title={t('compass.zone_edge', { dist: `${m.dist}m` })}
+              className={`gw-compass__edge gw-compass__edge--${m.discovered ? 'discovered' : 'undiscovered'}`}
+              style={{ left: `${m.x * 100}%` }}
+            >
+              <span className="gw-compass__edge-tick" />
+              <span className="gw-compass__edge-label">{t('compass.zone_edge', { dist: `${m.dist}m` })}</span>
+            </span>
+          ))}
+        </div>
+        {mobile && (
+          <span className="gw-compass__mobile-zone" title={zone_tooltip ?? undefined}>
+            {cell && origin_zone
+              ? `${t('compass.zone')} ${cell.zx - origin_zone.zx}·${cell.zy - origin_zone.zy}`
+              : t('compass.out_of_bounds')}
+          </span>
+        )}
+        {!mobile && (
+          <div className="gw-compass__info">
+            {/* coords as whole blocks (no decimals), one subtle chip per axis */}
+            <span className="gw-compass__pos">
+              <span className="gw-compass__pos-chip">{Math.round(pose.x)}</span>
+              <span className="gw-compass__pos-chip">{Math.round(pose.y)}</span>
+              <span className="gw-compass__pos-chip">{Math.round(pose.z)}</span>
+            </span>
+            <span className="gw-compass__zone" title={zone_tooltip ?? undefined}>
+              {/* the zone under the avatar, ALWAYS. SIGNED display: the chain zone key re-centred on the world
+                  origin (world (0,0) → ZONE 0·0, walking west → −1·0), so the label matches the signed coord
+                  chips. Past the world's low edge (translated chain < 0) the cell is null → the honest
+                  OUT-OF-BOUNDS label instead of a dead '—' (fixes a vanished-zone-info regression). */}
+              {cell && origin_zone
+                ? `${t('compass.zone')} ${cell.zx - origin_zone.zx}·${cell.zy - origin_zone.zy}${zone_state ? ` · ${zone_state}` : ''}`
+                : t('compass.out_of_bounds')}
+            </span>
+            <span className="gw-compass__fps">{`${pose.fps} FPS`}</span>
+          </div>
+        )}
+        {/* DAY-NIGHT indicator: the subtle time-of-day progress line hugging the strip's bottom
+            edge — the old top-right dome dial folded into the compass. Pure reader of the cycle clock. */}
+        <DayNightBar />
+      </div>
+      {/* SEARCH-ZONE (relocate + style-revert): the [F] search-zone prompt's pill, moved here
+          from the bottom-center prompt stack — same gate/label/keybind (DiscoveryPrompts.jsx) — but the
+          relocate moves POSITION ONLY: same .gw-npc-prompt pill markup/classes as every bottom-stack prompt
+          (PromptStack.jsx), never a bespoke look (an earlier pass here swapped in the
+          house .btn-outline CTA idiom). --searchable adds the persistent gold pulse (game-world-hud.css)
+          while the zone is actionable — the exact gate that renders this button at all, so it's on
+          whenever the pill exists (searchable_now above). */}
+      {search_prompt && (
+        <InteractionChip
+          prompt={search_prompt}
+          on_trigger={trigger_search}
+          class_name={`gw-npc-prompt gw-npc-prompt--stacked gw-panel pointer-events-auto${searchable_now ? ' gw-npc-prompt--searchable' : ''}`}
+        />
+      )}
+    </div>
+  )
+}

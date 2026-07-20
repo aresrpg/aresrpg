@@ -1,0 +1,44 @@
+{
+  "results": [
+    {
+      "result_id": "0x24530d8cae8a7d8313e54b4838e7bebb061bea5b840810bc446a26bfb583ed26",
+      "fight_id": "0x27856457109172d3b6ba1b6df7070e89ee78cf38d50ba9081791d08f7a7260c3",
+      "character": "0xbb07fa5dedd33ba4a8c58e654ff4123e42f7ec104d7841854d686c0f040df8e3",
+      "outcome": "defeat",
+      "xp_share": 0,
+      "final_hp": 0,
+      "opened": false,
+      "loot_units": 0
+    },
+    {
+      "result_id": "0x6825046e7f514fc6e3315ac8dd19aec933603dc3dc55fda8d84fadf5438fa962",
+      "fight_id": null,
+      "character": "0xbb07fa5dedd33ba4a8c58e654ff4123e42f7ec104d7841854d686c0f040df8e3",
+      "outcome": null,
+      "xp_share": 0,
+      "final_hp": 0,
+      "opened": true,
+      "loot_units": 0
+    },
+    {
+      "result_id": "0xed17579d7e8817506ce192c1c444839dfaeb23e1c287d201ab0b9fc024435118",
+      "fight_id": "0x15e3d65a8e25f31cdb7a35666810ce7f6a2d591c1d79469a96cd0eabb3aed58c",
+      "character": "0xbb07fa5dedd33ba4a8c58e654ff4123e42f7ec104d7841854d686c0f040df8e3",
+      "outcome": "victory",
+      "xp_share": 4,
+      "final_hp": 39,
+      "opened": false,
+      "loot_units": 0
+    },
+    {
+      "result_id": "0x10abf721ce061c1ff82b0091ff37ed0871a2c47b06183c71ee1e0e41452c6119",
+      "fight_id": "0x7cdc59f27303d92c0e777e6f8c3022567ddf333e44d7aee95cc455c6d92ee928",
+      "character": "0xbb07fa5dedd33ba4a8c58e654ff4123e42f7ec104d7841854d686c0f040df8e3",
+      "outcome": "defeat",
+      "xp_share": 0,
+      "final_hp": 0,
+      "opened": false,
+      "loot_units": 0
+    }
+  ]
+}

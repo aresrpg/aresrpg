@@ -1,0 +1,236 @@
+{
+  "schema_version": 1,
+  "mapping": {
+    "centered_shift": 32768,
+    "catalog_order": [
+      "vitality",
+      "wisdom",
+      "strength",
+      "intelligence",
+      "chance",
+      "agility",
+      "range",
+      "movement",
+      "action",
+      "critical",
+      "raw_damage",
+      "critical_chance",
+      "critical_outcomes",
+      "earth_resistance",
+      "fire_resistance",
+      "water_resistance",
+      "air_resistance"
+    ],
+    "fold": {
+      "vitality": "vitality",
+      "wisdom": "wisdom",
+      "strength": "strength",
+      "intelligence": "intelligence",
+      "chance": "chance",
+      "agility": "agility",
+      "range": "range",
+      "movement": "mp_bonus",
+      "action": "ap_bonus",
+      "critical": "critical_hit",
+      "raw_damage": "raw_damage",
+      "critical_chance": null,
+      "critical_outcomes": null,
+      "earth_resistance": "earth_resistance",
+      "fire_resistance": "fire_resistance",
+      "water_resistance": "water_resistance",
+      "air_resistance": "air_resistance"
+    },
+    "element_characteristic": {
+      "FIRE": "intelligence",
+      "WATER": "chance",
+      "EARTH": "strength",
+      "AIR": "agility",
+      "NONE": "strength"
+    },
+    "ignored_item_keys": ["critical_chance", "critical_outcomes"]
+  },
+  "cases": [
+    {
+      "id": "earth_strength_percentage",
+      "scenario": "damage",
+      "input": {
+        "base": 20,
+        "element": "EARTH",
+        "stats": { "strength": 200 },
+        "level": 1
+      },
+      "expected": { "raw_range": { "min": 60, "max": 60 }, "damage": 60 }
+    },
+    {
+      "id": "fire_intelligence_percentage",
+      "scenario": "damage",
+      "input": {
+        "base": 20,
+        "element": "FIRE",
+        "stats": { "intelligence": 50 },
+        "level": 1
+      },
+      "expected": { "raw_range": { "min": 30, "max": 30 }, "damage": 30 }
+    },
+    {
+      "id": "water_chance_percentage",
+      "scenario": "damage",
+      "input": {
+        "base": 20,
+        "element": "WATER",
+        "stats": { "chance": 75 },
+        "level": 1
+      },
+      "expected": { "raw_range": { "min": 35, "max": 35 }, "damage": 35 }
+    },
+    {
+      "id": "air_agility_percentage",
+      "scenario": "damage",
+      "input": {
+        "base": 20,
+        "element": "AIR",
+        "stats": { "agility": 25 },
+        "level": 1
+      },
+      "expected": { "raw_range": { "min": 25, "max": 25 }, "damage": 25 }
+    },
+    {
+      "id": "percent_and_physical_damage_formula",
+      "scenario": "damage",
+      "input": {
+        "base": 20,
+        "element": "EARTH",
+        "stats": {
+          "strength": 200,
+          "percent_damage": 30,
+          "raw_damage": 5,
+          "physical_damage": 10
+        },
+        "level": 1
+      },
+      "expected": { "raw_range": { "min": 81, "max": 81 }, "damage": 81 }
+    },
+    {
+      "id": "neutral_strength_and_physical_damage",
+      "scenario": "damage",
+      "input": {
+        "base": 20,
+        "element": "NONE",
+        "stats": { "strength": 50, "raw_damage": 3, "physical_damage": 7 },
+        "level": 1
+      },
+      "expected": { "raw_range": { "min": 40, "max": 40 }, "damage": 40 }
+    },
+    {
+      "id": "intelligence_heal_percentage",
+      "scenario": "heal",
+      "input": { "base": 30, "stats": { "intelligence": 55, "heal": 0 } },
+      "expected": { "heal": 46 }
+    },
+    {
+      "id": "flat_heal_after_intelligence",
+      "scenario": "heal",
+      "input": { "base": 30, "stats": { "intelligence": 55, "heal": 4 } },
+      "expected": { "heal": 50 }
+    },
+    {
+      "id": "raw_damage_post_amplification_not_level_scaled",
+      "scenario": "damage",
+      "input": {
+        "base": 100,
+        "element": "FIRE",
+        "stats": { "intelligence": 0, "raw_damage": 10 },
+        "level": 50
+      },
+      "expected": {
+        "raw_range": { "min": 110, "max": 110 },
+        "damage": 110
+      }
+    },
+    {
+      "id": "critical_denominator_floor_two",
+      "scenario": "critical",
+      "input": { "seed": 1, "rate": 3, "bonus": 2 },
+      "expected": { "denominator": 2, "critical": false }
+    },
+    {
+      "id": "critical_fold_reaches_pvm_weapon",
+      "scenario": "critical_slot_fold",
+      "input": {
+        "roll": 4673,
+        "rate": 3,
+        "bonus": 1,
+        "normal_damage": 50,
+        "critical_damage": 90
+      },
+      "expected": {
+        "old_critical": false,
+        "new_critical": true,
+        "selected_damage": 90
+      }
+    },
+    {
+      "id": "action_movement_fold_into_turn_refill",
+      "scenario": "fold_refill",
+      "input": {
+        "base_stats": {},
+        "base_ap": 6,
+        "base_mp": 3,
+        "items": [{ "action": 32769, "movement": 32769 }]
+      },
+      "expected": {
+        "ap_bonus": 1,
+        "mp_bonus": 1,
+        "ap_max": 7,
+        "mp_max": 4,
+        "refilled_ap": 7,
+        "refilled_mp": 4
+      }
+    },
+    {
+      "id": "below_center_malus_subtracts",
+      "scenario": "fold_order",
+      "input": {
+        "base_stats": { "strength": 10 },
+        "base_ap": 6,
+        "base_mp": 3,
+        "items": [{ "strength": 32798 }, { "strength": 32748 }]
+      },
+      "expected": { "strength": 20, "reverse_strength": 20 }
+    },
+    {
+      "id": "malus_saturates_without_u64_underflow",
+      "scenario": "fold",
+      "input": {
+        "base_stats": { "strength": 3 },
+        "base_ap": 6,
+        "base_mp": 3,
+        "items": [{ "strength": 0 }]
+      },
+      "expected": { "strength": 0 }
+    },
+    {
+      "id": "invented_critical_keys_are_ignored",
+      "scenario": "fold_critical_keys",
+      "input": {
+        "base_stats": { "critical_hit": 4 },
+        "base_ap": 6,
+        "base_mp": 3,
+        "items": [
+          {
+            "critical": 32770,
+            "critical_chance": 32868,
+            "critical_outcomes": 32868
+          }
+        ]
+      },
+      "expected": { "critical_hit": 6 }
+    },
+    {
+      "id": "resistance_caps_at_fifty",
+      "scenario": "resistance",
+      "input": { "damage": 100, "element": "FIRE", "resistance": 120 },
+      "expected": { "damage": 50 }
+    }
+  ]
+}

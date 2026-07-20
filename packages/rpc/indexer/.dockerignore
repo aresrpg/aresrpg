@@ -1,0 +1,7 @@
+# Build context hygiene. Mirrors indexer/.gitignore.
+.env
+.env.*
+node_modules
+target
+*.log
+.DS_Store

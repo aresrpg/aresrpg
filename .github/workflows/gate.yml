@@ -1,0 +1,27 @@
+# The CI gate — every PR into edge/master passes it; master merges deploy (Vercel git integration).
+# Fork-safe by construction: no secrets in this workflow, ever (FROZEN.md rule 8).
+# The ladder only grows: today it runs the proven-green core (the deterministic fight-replay gate
+# + lint on the sim). The full constraint gates (check-constraints, semgrep/depcruise/CodeQL,
+# localnet suite) join as they are wired for CI — each addition is a PR like any other.
+name: gate
+on:
+  pull_request:
+    branches: [edge, master]
+  push:
+    branches: [edge, master]
+permissions:
+  contents: read
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: install
+        run: bun install --frozen-lockfile
+      - name: lint (sim)
+        working-directory: packages/sim
+        run: bunx eslint src test && bunx prettier --check src test
+      - name: fight-replay gate (deterministic capsules)
+        working-directory: packages/sim
+        run: bun test test/replay_gate.test.js

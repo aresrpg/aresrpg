@@ -1,0 +1,28 @@
+{
+  "//": "LINT-ONLY project (docs/CODE_LAW.md typed tier) — never a build/typecheck input. Gives the eslint typed-FP rules (functional/immutable-data, @typescript-eslint/no-floating-promises, …) a ts.Program for the TS/JS surfaces that no package tsconfig covers: gold rig specs, frontend e2e/dev plugins, the api sponsor (money path), and the rpc read-API + gas-pool JS. Scope changes here must mirror the typed-tier `files` globs in scripts/eslint-rules/typed_fp.config.mjs (project-mode parses error on out-of-project files).",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "types": ["node"]
+  },
+  "include": [
+    "test/gold/**/*.ts",
+    "packages/frontend/e2e/**/*.ts",
+    "packages/frontend/dev/**/*.ts",
+    "api/**/*.mjs",
+    "api/**/*.js",
+    "packages/rpc/api/**/*.js",
+    "packages/rpc/gas-pool/**/*.js",
+    "packages/rpc/gas-pool/**/*.mjs"
+  ],
+  "exclude": ["**/node_modules", "test/gold/.build", "test/gold/out"]
+}

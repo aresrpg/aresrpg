@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <meta name="theme-color" content="#0a0a0f" />
+    <meta
+      name="description"
+      content="AresRPG is a browser-based MMORPG on the Sui blockchain — a voxel open world where your characters, items and progression are on-chain NFTs you truly own."
+    />
+
+    <!-- Open Graph — AresRPG is a web MMORPG on Sui (SPA: one shared head across every route). -->
+    <meta property="og:title" content="AresRPG · Web MMORPG on Sui" />
+    <meta
+      property="og:description"
+      content="A voxel open world you play right in your browser — no download. Your characters, items and progression are real on-chain NFTs on Sui that you truly own and can trade."
+    />
+    <meta property="og:image" content="https://testnet.aresrpg.world/og-image.png" />
+    <meta property="og:url" content="https://testnet.aresrpg.world/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="AresRPG" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="AresRPG · Web MMORPG on Sui" />
+    <meta
+      name="twitter:description"
+      content="A voxel open world you play right in your browser — no download. Your characters, items and progression are real on-chain NFTs on Sui that you truly own and can trade."
+    />
+    <meta name="twitter:image" content="https://testnet.aresrpg.world/og-image.png" />
+
+    <!-- Favicon -->
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <title>AresRPG · MMORPG Companion</title>
+    <!-- The manifest spec has no device-scoped display member. Insert the phone manifest first so installed
+         mobile sessions get landscape/fullscreen, while VitePWA's later default manifest remains desktop
+         standalone. The media signal mirrors game/core/mobile_mode.js without changing desktop layout. -->
+    <script>
+      if (matchMedia('(pointer: coarse) and (max-width: 900px), (pointer: coarse) and (max-height: 600px)').matches) {
+        var mobile_manifest = document.createElement('link')
+        mobile_manifest.rel = 'manifest'
+        mobile_manifest.href = '/manifest-mobile.webmanifest'
+        document.head.appendChild(mobile_manifest)
+        addEventListener(
+          'DOMContentLoaded',
+          function () {
+            document.querySelectorAll('link[rel~="manifest"]').forEach(function (candidate) {
+              if (candidate !== mobile_manifest) candidate.remove()
+            })
+          },
+          { once: true }
+        )
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- D146 BOOT SHIM: a CLASSIC inline script — the only ground guaranteed to run before ANY module chunk
+         (rollup hoists cross-chunk imports, so no in-graph shim can beat a vendor chunk that touches `process`
+         at module scope; vite-plugin-node-polyfills' build-time global injection is broken under oxc). -->
+    <script>
+      if (!globalThis.process)
+        globalThis.process = {
+          env: {},
+          argv: [],
+          browser: true,
+          version: '',
+          emit: function () {},
+          nextTick: function (f) {
+            var a = [].slice.call(arguments, 1)
+            queueMicrotask(function () {
+              f.apply(null, a)
+            })
+          },
+        }
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

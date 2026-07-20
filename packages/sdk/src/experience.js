@@ -1,0 +1,270 @@
+// CHARACTER XP CURVE — the exact 1.29 cumulative XP→level table. SSOT:
+// packages/move/sources/character/character_xp.move (`XP_CURVE` const + `level_from_xp`) — the on-chain
+// contract this SDK talks to. Do NOT hand-edit or rescale a single value here; port any curve change from
+// character_xp.move verbatim. Index i = the TOTAL xp required to REACH level i (index 0 unused, index 1 =
+// level 1 = 0 xp).
+export const levels = [
+  0, // index 0 (unused)
+  0, // index 1 (level 1)
+  110, // index 2 (level 2)
+  650, // index 3 (level 3)
+  1500, // index 4 (level 4)
+  2800, // index 5 (level 5)
+  4800, // index 6 (level 6)
+  7300, // index 7 (level 7)
+  10500, // index 8 (level 8)
+  14500, // index 9 (level 9)
+  19200, // index 10 (level 10)
+  25200, // index 11 (level 11)
+  32600, // index 12 (level 12)
+  41000, // index 13 (level 13)
+  50500, // index 14 (level 14)
+  61000, // index 15 (level 15)
+  75000, // index 16 (level 16)
+  91000, // index 17 (level 17)
+  115000, // index 18 (level 18)
+  142000, // index 19 (level 19)
+  171000, // index 20 (level 20)
+  202000, // index 21 (level 21)
+  235000, // index 22 (level 22)
+  270000, // index 23 (level 23)
+  310000, // index 24 (level 24)
+  353000, // index 25 (level 25)
+  398500, // index 26 (level 26)
+  448000, // index 27 (level 27)
+  503000, // index 28 (level 28)
+  561000, // index 29 (level 29)
+  621600, // index 30 (level 30)
+  687000, // index 31 (level 31)
+  755000, // index 32 (level 32)
+  829000, // index 33 (level 33)
+  910000, // index 34 (level 34)
+  1000000, // index 35 (level 35)
+  1100000, // index 36 (level 36)
+  1240000, // index 37 (level 37)
+  1400000, // index 38 (level 38)
+  1580000, // index 39 (level 39)
+  1780000, // index 40 (level 40)
+  2000000, // index 41 (level 41)
+  2250000, // index 42 (level 42)
+  2530000, // index 43 (level 43)
+  2850000, // index 44 (level 44)
+  3200000, // index 45 (level 45)
+  3570000, // index 46 (level 46)
+  3960000, // index 47 (level 47)
+  4400000, // index 48 (level 48)
+  4860000, // index 49 (level 49)
+  5350000, // index 50 (level 50)
+  5860000, // index 51 (level 51)
+  6390000, // index 52 (level 52)
+  6950000, // index 53 (level 53)
+  7530000, // index 54 (level 54)
+  8130000, // index 55 (level 55)
+  8765100, // index 56 (level 56)
+  9420000, // index 57 (level 57)
+  10150000, // index 58 (level 58)
+  10894000, // index 59 (level 59)
+  11655000, // index 60 (level 60)
+  12450000, // index 61 (level 61)
+  13278000, // index 62 (level 62)
+  14138000, // index 63 (level 63)
+  15171000, // index 64 (level 64)
+  16251000, // index 65 (level 65)
+  17377000, // index 66 (level 66)
+  18553000, // index 67 (level 67)
+  19778000, // index 68 (level 68)
+  21055000, // index 69 (level 69)
+  22385000, // index 70 (level 70)
+  23769000, // index 71 (level 71)
+  25209000, // index 72 (level 72)
+  26707000, // index 73 (level 73)
+  28264000, // index 74 (level 74)
+  29882000, // index 75 (level 75)
+  31563000, // index 76 (level 76)
+  33307000, // index 77 (level 77)
+  35118000, // index 78 (level 78)
+  36997000, // index 79 (level 79)
+  38945000, // index 80 (level 80)
+  40965000, // index 81 (level 81)
+  43059000, // index 82 (level 82)
+  45229000, // index 83 (level 83)
+  47476000, // index 84 (level 84)
+  49803000, // index 85 (level 85)
+  52211000, // index 86 (level 86)
+  54704000, // index 87 (level 87)
+  57284000, // index 88 (level 88)
+  59952000, // index 89 (level 89)
+  62712000, // index 90 (level 90)
+  65565000, // index 91 (level 91)
+  68514000, // index 92 (level 92)
+  71561000, // index 93 (level 93)
+  74710000, // index 94 (level 94)
+  77963000, // index 95 (level 95)
+  81323000, // index 96 (level 96)
+  84792000, // index 97 (level 97)
+  88374000, // index 98 (level 98)
+  92071000, // index 99 (level 99)
+  95886000, // index 100 (level 100)
+  99823000, // index 101 (level 101)
+  103885000, // index 102 (level 102)
+  108075000, // index 103 (level 103)
+  112396000, // index 104 (level 104)
+  116853000, // index 105 (level 105)
+  121447000, // index 106 (level 106)
+  126184000, // index 107 (level 107)
+  131066000, // index 108 (level 108)
+  136098000, // index 109 (level 109)
+  141283000, // index 110 (level 110)
+  146626000, // index 111 (level 111)
+  152130000, // index 112 (level 112)
+  157800000, // index 113 (level 113)
+  163640000, // index 114 (level 114)
+  169655000, // index 115 (level 115)
+  175848000, // index 116 (level 116)
+  182225000, // index 117 (level 117)
+  188791000, // index 118 (level 118)
+  195550000, // index 119 (level 119)
+  202507000, // index 120 (level 120)
+  209667000, // index 121 (level 121)
+  217037000, // index 122 (level 122)
+  224620000, // index 123 (level 123)
+  232424000, // index 124 (level 124)
+  240452000, // index 125 (level 125)
+  248712000, // index 126 (level 126)
+  257209000, // index 127 (level 127)
+  265949000, // index 128 (level 128)
+  274939000, // index 129 (level 129)
+  284186000, // index 130 (level 130)
+  293694000, // index 131 (level 131)
+  303473000, // index 132 (level 132)
+  313527000, // index 133 (level 133)
+  323866000, // index 134 (level 134)
+  334495000, // index 135 (level 135)
+  345423000, // index 136 (level 136)
+  356657000, // index 137 (level 137)
+  368206000, // index 138 (level 138)
+  380076000, // index 139 (level 139)
+  392278000, // index 140 (level 140)
+  404818000, // index 141 (level 141)
+  417706000, // index 142 (level 142)
+  430952000, // index 143 (level 143)
+  444564000, // index 144 (level 144)
+  458551000, // index 145 (level 145)
+  472924000, // index 146 (level 146)
+  487693000, // index 147 (level 147)
+  502867000, // index 148 (level 148)
+  518458000, // index 149 (level 149)
+  534476000, // index 150 (level 150)
+  550933000, // index 151 (level 151)
+  567839000, // index 152 (level 152)
+  585206000, // index 153 (level 153)
+  603047000, // index 154 (level 154)
+  621374000, // index 155 (level 155)
+  640199000, // index 156 (level 156)
+  659536000, // index 157 (level 157)
+  679398000, // index 158 (level 158)
+  699798000, // index 159 (level 159)
+  720751000, // index 160 (level 160)
+  742272000, // index 161 (level 161)
+  764374000, // index 162 (level 162)
+  787074000, // index 163 (level 163)
+  810387000, // index 164 (level 164)
+  834329000, // index 165 (level 165)
+  858917000, // index 166 (level 166)
+  884167000, // index 167 (level 167)
+  910098000, // index 168 (level 168)
+  936727000, // index 169 (level 169)
+  964073000, // index 170 (level 170)
+  992154000, // index 171 (level 171)
+  1020991000, // index 172 (level 172)
+  1050603000, // index 173 (level 173)
+  1081010000, // index 174 (level 174)
+  1112235000, // index 175 (level 175)
+  1144298000, // index 176 (level 176)
+  1177222000, // index 177 (level 177)
+  1211030000, // index 178 (level 178)
+  1245745000, // index 179 (level 179)
+  1281393000, // index 180 (level 180)
+  1317997000, // index 181 (level 181)
+  1355584000, // index 182 (level 182)
+  1404179000, // index 183 (level 183)
+  1463811000, // index 184 (level 184)
+  1534506000, // index 185 (level 185)
+  1616294000, // index 186 (level 186)
+  1709205000, // index 187 (level 187)
+  1813267000, // index 188 (level 188)
+  1928513000, // index 189 (level 189)
+  2054975000, // index 190 (level 190)
+  2192686000, // index 191 (level 191)
+  2341679000, // index 192 (level 192)
+  2501990000, // index 193 (level 193)
+  2673655000, // index 194 (level 194)
+  2856710000, // index 195 (level 195)
+  3051194000, // index 196 (level 196)
+  3257146000, // index 197 (level 197)
+  3474606000, // index 198 (level 198)
+  3703616000, // index 199 (level 199)
+  7407232000, // index 200 (level 200)
+]
+
+const MAX_LEVEL = levels.length - 1 // 200 — mirrors character_xp.move's `MAX_LEVEL`
+
+/**
+ * Character level from total xp — binary search for the highest level whose curve threshold is <= xp.
+ * MUST mirror the on-chain `character_xp::level_from_xp` EXACTLY: xp<=0 -> 1; xp>=levels[MAX_LEVEL] -> MAX_LEVEL;
+ * otherwise low/high converge upward (`mid = floor((low+high+1)/2)`) so the search lands on the FLOOR level,
+ * never aborting on an oversized xp value.
+ * @type {(total_experience: number) => number}
+ */
+export function experience_to_level(total_experience) {
+  const xp = total_experience ?? 0
+  if (xp <= 0) return 1
+  if (xp >= levels[MAX_LEVEL]) return MAX_LEVEL
+
+  let low = 1
+  let high = MAX_LEVEL
+  while (low < high) {
+    const mid = Math.floor((low + high + 1) / 2)
+    if (levels[mid] <= xp) low = mid
+    else high = mid - 1
+  }
+  return low
+}
+
+export function level_to_experience(level = 1) {
+  return levels[level] ?? 0
+}
+
+// Wisdom XP bonus (the reference corpus's "Wisdom XP Bonus" note, l.970: `xp *= (1 + wisdom / 600)` — 600 wisdom = double
+// XP, diminishing returns). The single home for the wisdom-derived XP multiplier the fight reward path applies.
+const WISDOM_XP_DENOM = 600
+
+/**
+ * Apply the reference corpus's wisdom XP bonus to a base XP award. Integer + floored to keep the on-chain XP curve clean:
+ * `floor(xp * (600 + wisdom) / 600)`. wisdom defaults to 0 (no bonus -> xp unchanged).
+ * @param {number} xp      base xp before the wisdom bonus
+ * @param {number} [wisdom] the awardee's total wisdom stat
+ * @returns {number} xp after the wisdom multiplier
+ */
+export function apply_wisdom_xp(xp, wisdom = 0) {
+  const w = Math.max(0, wisdom)
+  return Math.floor((xp * (WISDOM_XP_DENOM + w)) / WISDOM_XP_DENOM)
+}
+
+/**
+ * Level + within-level XP progress off the SDK curve (min level 1). `into`/`span` are the raw XP into the
+ * current level and that level's XP span; `pct` is the clamped 0-100 progress (UNROUNDED — callers round
+ * for display). The single home for the level/xp-bar math the HUD computed in four places.
+ * @param {number} [experience]
+ * @returns {{ level: number, into: number, span: number, pct: number }}
+ */
+export function xp_progress(experience) {
+  const xp = experience ?? 0
+  const level = experience_to_level(xp)
+  const floor = level_to_experience(level)
+  const ceil = level_to_experience(level + 1)
+  const span = Math.max(1, ceil - floor)
+  const into = Math.max(0, xp - floor)
+  const pct = Math.max(0, Math.min(100, (into / span) * 100))
+  return { level, into, span, pct }
+}

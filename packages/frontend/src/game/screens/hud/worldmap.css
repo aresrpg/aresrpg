@@ -1,0 +1,85 @@
+/* ════════════════════════ WORLD MAP — player marker overlay ════════════════════════
+ * The base .map / .map__bar / .map__stage / .map__canvas / .map__loading chrome lives in admin.css;
+ * this file is just the live player marker drawn over the colored terrain blit — a positioned ice
+ * beacon that pulses. House design: cyan/ice (#5db4ff) reserved for the player; SHARP; glass only
+ * over the map imagery.
+ */
+
+/* overlay layer aligned to the CSS-stretched canvas */
+.map__overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* live player pulse — ice beacon */
+.map__player {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.map__player-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  transform: translate(-50%, -50%);
+  background: #5db4ff;
+  border: 2px solid rgba(7, 9, 13, 0.85);
+  border-radius: 50%;
+}
+.map__player-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  margin: -6.5px 0 0 -6.5px;
+  border-radius: 50%;
+  background: rgba(93, 180, 255, 0.4);
+  animation: map-player-pulse 1.9s var(--ease) infinite;
+}
+@keyframes map-player-pulse {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(3.4);
+    opacity: 0;
+  }
+}
+
+/* ════════════════════ companion /map page — gradient page + framed world ════════════════════
+ * Owner review #1 (19): the flat black .gw-tab fill (var(--bg)) read as a dead black background. We
+ * swap it for the companion radial gradient (the body SSOT, index.css) and present the world render as a
+ * centered, framed panel sitting on it ("a bit like the game" — the in-world map window), not an
+ * edge-to-edge black void. Scoped to .gw-tab--map (pages/map.tsx) so the other meta-tabs
+ * (characters / marketplace) keep their own surface untouched. */
+.gw-tab--map {
+  background: radial-gradient(ellipse at 50% 0%, #1e1e2e 0%, #141420 45%, #0a0a0f 100%);
+}
+
+/* the world render is a centered, framed map panel on the gradient (capped so it never stretches into a
+   thin band on ultrawide; the gradient breathes around it via the .gw-tab padding) */
+.gw-tab--map .map {
+  width: 100%;
+  max-width: 1180px;
+  margin-inline: auto;
+}
+
+/* the framed map window — a gold-tinted companion edge + a soft drop so it reads as a game-style panel
+   floating on the gradient, with a deep interior distinct from the page behind it */
+.gw-tab--map .map__stage {
+  background: #0b0d12;
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--edge));
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.gw-tab--map .map__loading {
+  background: #0b0d12;
+}

@@ -1,0 +1,198 @@
+# AresRPG RPC — self-hostable read stack.
+#
+#   docker compose up                → redis + indexer + read-api (serves live testnet views)
+#   docker compose --profile gas up  → also the Mysten sui-gas-pool sponsor (opt-in; heavy build)
+#
+# Config comes from the environment / a sibling .env (see .env.example). Every
+# value has a safe default, so a bare `docker compose up` indexes Sui testnet and
+# serves reads with no extra setup.
+
+name: aresrpg-rpc
+
+services:
+  # The station-fronting sponsor is opt-in with the gas profile: it keeps the zkLogin/money gates,
+  # while gas-pool exclusively owns signing and submission. The repo mount stays read-only.
+  sponsor:
+    profiles: ['gas']
+    image: oven/bun:1.3-slim
+    working_dir: /app
+    command: ['bun', 'api/sponsor.mjs']
+    depends_on:
+      redis:
+        condition: service_healthy
+      gas-pool:
+        condition: service_healthy
+    environment:
+      # Internal station base; sponsor appends /v1/reserve_gas and /v1/execute_tx.
+      GAS_STATION_URL: ${GAS_STATION_URL:-http://gas-pool:9527}
+      # Same server-only bearer passed to gas-pool below; empty fails closed at sponsor boot.
+      GAS_STATION_AUTH: ${GAS_STATION_AUTH:-}
+      # Per-tx ceiling 0.2 SUI = the self-pay threshold (search_zone dryRun×1.5 budgets ~0.167 —
+      # the old 0.08 refused legit gameplay; per-player 1 SUI/day still bounds drain. Lead 2026-07-13.)
+      SPONSOR_GAS_BUDGET: ${SPONSOR_GAS_BUDGET:-200000000}
+      # Shared per-player daily-cap store: the sponsor INCRBYs sponsor:spent:{date}:{addr} here so the
+      # 1-SUI/day cap holds across instances AND /v1/sponsor/remaining can read it. Unreachable ⇒ the
+      # sponsor fail-closes to its in-memory cap (never fail-open). Same redis the api/indexer use.
+      REDIS_URL: redis://redis:6379
+      # The per-player daily allowance — MUST match the api service's value below (one .env home) so the
+      # remaining the client shows equals the cap the sponsor enforces. Default 1 SUI.
+      SPONSOR_ADDR_DAILY_CAP_MIST: ${SPONSOR_ADDR_DAILY_CAP_MIST:-1000000000}
+      # GAMEPLAY-RATE limits (2026-07-11, sponsored-FIRST routing live — every fight turn is a sponsored
+      # tx for ≤0.2-SUI wallets): the old per-IP 5/10min demo default 429'd a player mid-dungeon after
+      # 5 turns. Per-IP must EXCEED per-address (NAT'd players share an IP); money safety stays with the
+      # per-player 1 SUI/day + zkLogin gates, not these rate shapers. Global daily ceiling raised for
+      # testnet play (0.2 SUI = ~100 tx/day would starve a single active player; sponsor wallet is
+      # testnet-funded — revisit both before mainnet).
+      SPONSOR_RL_MAX: ${SPONSOR_RL_MAX:-240}
+      SPONSOR_DAILY_CAP_MIST: ${SPONSOR_DAILY_CAP_MIST:-50000000000}
+    volumes:
+      - ../..:/app:ro
+    ports:
+      - '127.0.0.1:9528:9528'
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'bun -e "await fetch(\"http://localhost:9528/\").then(r=>{if(!r.ok)throw 0})"']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  redis:
+    # Pinned by digest (tag: redis:8, resolved via `docker buildx imagetools
+    # inspect redis:8` on 2026-07-08 — re-resolve + bump when upgrading).
+    image: redis:8@sha256:2838d5524559494f6f1cd66e97e76b200d64a633a8614200620755ed395daf32
+    # Redis 8 ships JSON (ReJSON) + the query engine (search) in-core — no module
+    # image needed (verified in the spike). AOF on: the store is a re-derivable
+    # cache of chain truth, so append-only persistence is plenty and RAM stays hot.
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      # Loopback-only: redis carries no auth. Exposing it beyond localhost
+      # requires `--requirepass` added to `command` above (see README/.env.example).
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  indexer:
+    build: ./indexer
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: redis://redis:6379
+      # Reliable HTTP checkpoint source (backfill + polling). Watermark advances
+      # from this alone.
+      REMOTE_STORE_URL: ${REMOTE_STORE_URL:-https://checkpoints.testnet.sui.io}
+      # Optional gRPC live-streaming primary; empty = remote-store polling only.
+      # Bare (null) form, not ${STREAMING_URL:-}: the indexer binds this to a
+      # clap Option<Url> (framework StreamingClientArgs) that errors on an
+      # empty-string env value ("invalid value '' for '--streaming-url'") —
+      # it must be genuinely ABSENT to parse as None. Compose's bare-key form
+      # passes the var through when set and omits the key entirely when unset,
+      # instead of always defining it (even to "").
+      STREAMING_URL:
+      NETWORK: ${NETWORK:-testnet}
+      # Empty = genesis backfill. Set to a recent checkpoint to index live from
+      # near the chain tip (see .env.example). Bare (null) form — same
+      # empty-string-vs-absent clap pitfall as STREAMING_URL (Option<u64>).
+      FIRST_CHECKPOINT:
+      # Optional AresRPG package allowlist for the game pipeline (see .env.example).
+      # Bare (null) form — same empty-string-vs-absent pitfall, but silent here
+      # instead of a crash: an empty env value would clap-parse to a one-element
+      # Vec![""] (not an empty Vec), turning "unfiltered" (None) into "allow
+      # nothing but kiosk" (Some({""})) and dropping every AresRPG event with no
+      # error. Must be genuinely absent to parse as the empty Vec that means None.
+      ARES_PACKAGES:
+      RUST_LOG: ${RUST_LOG:-info}
+    # No healthcheck: the binary exposes no HTTP/TCP surface (pure Redis writer)
+    # and the debian:bookworm-slim runtime has no curl/wget/bun to add one
+    # without a new dependency. Liveness = `docker compose ps` + /v1/status lag.
+    restart: unless-stopped
+
+  api:
+    build: ./api
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      PORT: '3000'
+      REDIS_URL: redis://redis:6379
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-120}
+      RATE_LIMIT_WINDOW_SEC: ${RATE_LIMIT_WINDOW_SEC:-60}
+      # /v1/sponsor/remaining reports this as the allowance — MUST equal the sponsor service's cap above.
+      SPONSOR_ADDR_DAILY_CAP_MIST: ${SPONSOR_ADDR_DAILY_CAP_MIST:-1000000000}
+      # D52 /v1/names: which chain's SuiNS registry to resolve against (must match the indexer's own
+      # NETWORK — a mismatch would resolve names off the wrong chain) + the Redis cache TTL.
+      NETWORK: ${NETWORK:-testnet}
+      NAMES_CACHE_TTL_SEC: ${NAMES_CACHE_TTL_SEC:-21600}
+      # §17.22 gather-ambush resolver on /v1/config (`protector_templates`): seed key → minted
+      # protector MobTemplate id, JSON. Fed from the ceremony seed manifest — the chain carries
+      # no protector marker, so this deploy config is the only honest key→id source. Empty = {}.
+      PROTECTOR_TEMPLATES: ${PROTECTOR_TEMPLATES:-}
+    ports:
+      - '${API_PORT:-3000}:3000'
+    healthcheck:
+      # No curl/wget in oven/bun:1-slim — bun itself is the cheapest in-image
+      # prober (already the ENTRYPOINT runtime, no new deps).
+      test:
+        [
+          'CMD',
+          'bun',
+          '-e',
+          "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # Opt-in sponsor (Mysten sui-gas-pool). No public image exists and the source
+  # build is the full Sui cargo compile, so it is gated behind `--profile gas` —
+  # the default `docker compose up` stays lean. Requires a FRESH, funded testnet
+  # sponsor key in GAS_POOL_KEYPAIR (NEVER SUI_MASTER_KEY). See gas-pool/README.md.
+  gas-pool:
+    profiles: ['gas']
+    build: ./gas-pool
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      # Validated at container start by generate-config.mjs (NOT with compose's
+      # `:?` — that interpolates for every command and would break the default
+      # `docker compose up`/`build`, defeating the profile gate). A fresh, funded
+      # sponsor key is required here; NEVER SUI_MASTER_KEY.
+      GAS_POOL_KEYPAIR: ${GAS_POOL_KEYPAIR:-}
+      GAS_POOL_REDIS_URL: redis://redis:6379
+      SUI_FULLNODE_URL: ${SUI_FULLNODE_URL:-https://fullnode.testnet.sui.io:443}
+      GAS_STATION_AUTH: ${GAS_STATION_AUTH:-}
+      # ANTI-DRAIN (constitution, ledgered 07-10 — the old 1500 SUI/day default was a 7500×
+      # landmine): 0.2 SUI/UTC-day global spend + 0.1 SUI per reserve_gas request (= the app's
+      # GAS_CEILING_SUI). The station is identity-blind BY DESIGN — only the fronting sponsor
+      # service holds its bearer; these native caps are the defense-in-depth floor behind that
+      # service's per-identity gates. Raising either is a deliberate env override.
+      GAS_POOL_DAILY_CAP: ${GAS_POOL_DAILY_CAP:-200000000}
+      GAS_POOL_MAX_PER_REQUEST: ${GAS_POOL_MAX_PER_REQUEST:-100000000}
+    ports:
+      - '${GAS_POOL_PORT:-9527}:9527'
+    healthcheck:
+      # rpc-port always binds 9527 inside the container (GAS_POOL_PORT only
+      # remaps the host side); `/` is the documented unauthenticated liveness
+      # route (gas-pool/README.md). bun is already the runtime's config-render
+      # tool, so this is a no-new-deps probe like the api service's.
+      test:
+        [
+          'CMD',
+          'bun',
+          '-e',
+          "fetch('http://localhost:9527/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  redis-data:

@@ -1,0 +1,430 @@
+import { KioskClient, KioskTransaction } from '@mysten/kiosk'
+import { Transaction } from '@mysten/sui/transactions'
+
+import {
+  aresrpg_deployment,
+  character_type,
+  item_type,
+} from '../../deployment/aresrpg.js'
+import { as_object_arg } from '../object_arg.js'
+import {
+  policy_rule_package,
+  resolve_marketplace_rule_targets,
+} from '../transfer_policies.js'
+
+import { borrow_personal_kiosk_cap } from './borrow_personal_kiosk_cap.js'
+
+/**
+ * @typedef {Object} MarketplacePolicy
+ * @property {string} id
+ * @property {string[] | { contents?: ({ name?: string } | string)[] }} rules
+ *
+ * @typedef {Object} MarketplaceBuyBase
+ * @property {string} seller_kiosk_id
+ * @property {bigint | string} price_mist seller ask only; the wallet debit before gas is ask + royalty, exposed by
+ * `marketplace_purchase_total_mist`
+ * @property {string | null} [kiosk_id]
+ * @property {string | null} [personal_kiosk_cap_id]
+ * @property {MarketplacePolicy} policy
+ * @property {Transaction} [tx]
+ *
+ * @typedef {MarketplaceBuyBase & { item_id: string }} MarketplaceItemBuy
+ * @typedef {MarketplaceBuyBase & { character_id: string }} MarketplaceCharacterBuy
+ *
+ * @typedef {Object} MarketplaceStackList
+ * @property {string} kiosk_id
+ * @property {string} personal_kiosk_cap_id
+ * @property {string} item_id
+ * @property {bigint | number | string} amount
+ * @property {bigint | number | string} price_mist seller ask for the complete lot, excluding royalty
+ * @property {MarketplacePolicy} policy
+ * @property {Transaction} [tx]
+ */
+
+// ITEMS MARKETPLACE PTB BUILDERS — P2P resale of a kiosk-LOCKED item via the Sui kiosk framework (NOT a custom Move
+// module). `list`/`delist` are plain `0x2::kiosk` calls on the seller's PERSONAL kiosk (the inner owner cap borrowed
+// via the personal-cap dance), so they are pure offline builders. A locked item CAN be listed — that is exactly how a
+// kiosk-locked item is offered for sale; the actual transfer happens at purchase, which re-locks it via the policy.
+//
+// BUY hand-resolves the live TransferPolicy receipts because purchaseAndResolve cannot resolve AresRPG's custom
+// rules. Item purchases resolve royalty + listing + lot + kiosk-lock + personal-kiosk; Character purchases keep
+// royalty + listing + kiosk-lock + personal-kiosk. The caller supplies the TransferPolicy snapshot fetched during
+// pre-flight; its rule TypeNames prove which receipts are required. Move calls target the ceremony-stamped
+// linkage/core ids, never TypeName defining ids, environment defaults, or KioskClient.getRulePackageId fallbacks
+// (see transfer_policies.js).
+//
+// FROZEN framework signatures:
+//   0x2::kiosk::list<T>(self: &mut Kiosk, cap: &KioskOwnerCap, id: ID, price: u64)
+//   0x2::kiosk::delist<T>(self: &mut Kiosk, cap: &KioskOwnerCap, id: ID)
+
+/** Native marketplace lot sizes accepted for stackable Item listings. */
+export const LEGAL_LOT_SIZES = Object.freeze([1n, 10n, 100n, 1000n])
+/** Universal Item-policy royalty authored by the ceremony (10%). */
+export const MARKETPLACE_ROYALTY_BPS = 1000n
+const BPS_DENOMINATOR = 10_000n
+
+/** @param {bigint | number | string} amount */
+export function is_legal_lot_size(amount) {
+  try {
+    const value = BigInt(amount)
+    return LEGAL_LOT_SIZES.includes(value)
+  } catch {
+    return false
+  }
+}
+
+/** @param {bigint | number | string} amount */
+function assert_legal_lot_size(amount) {
+  if (!is_legal_lot_size(amount))
+    throw new Error(
+      `[items_marketplace] stack amount must be one of 1, 10, 100, 1000; got ${String(amount)}`,
+    )
+}
+
+/**
+ * Exact royalty debit for a kiosk ask: max(floor(ask × 1000 / 10000), the stamped policy floor).
+ * @param {bigint | number | string} price_mist seller ask, excluding royalty
+ * @param {bigint | number | string} min_amount_mist stamped Item-policy royalty floor
+ */
+export function marketplace_fee_mist(price_mist, min_amount_mist) {
+  const price = BigInt(price_mist)
+  const minimum = BigInt(min_amount_mist)
+  if (price < 0n) throw new Error('[items_marketplace] price_mist must be >= 0')
+  if (minimum < 1n)
+    throw new Error(
+      '[items_marketplace] royalty min_amount_mist must be stamped and >= 1',
+    )
+  const proportional = (price * MARKETPLACE_ROYALTY_BPS) / BPS_DENOMINATOR
+  return proportional > minimum ? proportional : minimum
+}
+
+/**
+ * Exact wallet debit before gas for a kiosk purchase: seller ask + universal royalty fee.
+ * @param {bigint | number | string} price_mist seller ask, excluding royalty
+ * @param {bigint | number | string} min_amount_mist stamped Item-policy royalty floor
+ */
+export function marketplace_total_mist(price_mist, min_amount_mist) {
+  const price = BigInt(price_mist)
+  return price + marketplace_fee_mist(price, min_amount_mist)
+}
+
+/**
+ * Bind the exact purchase-total helper to this network's stamped Item-policy royalty floor.
+ * @param {import("../../../types.js").Context} context
+ */
+export function marketplace_purchase_total_mist(context) {
+  const { network } = context
+  /** @type {(price_mist: bigint | number | string) => bigint} */
+  return price_mist => {
+    const a = aresrpg_deployment(network, context.ids?.aresrpg)
+    return marketplace_total_mist(price_mist, a.ITEM_ROYALTY_MIN_MIST)
+  }
+}
+
+/** @param {{ id?: string }} policy @param {string} expected_id */
+function assert_policy_id(policy, expected_id) {
+  if (!policy?.id || policy.id.toLowerCase() !== expected_id.toLowerCase())
+    throw new Error(
+      `[items_marketplace] expected TransferPolicy ${expected_id}, got ${policy?.id ?? '<missing>'}`,
+    )
+}
+
+/**
+ * @param {import('../../../types.js').Context} context
+ * @param {string} personal_kiosk_package_id
+ */
+function policy_kiosk_client(context, personal_kiosk_package_id) {
+  return new KioskClient({
+    client: context.kiosk_client?.client,
+    network: context.network,
+    packageIds: { personalKioskRulePackageId: personal_kiosk_package_id },
+  })
+}
+
+/**
+ * @param {import('../../../types.js').Context} context
+ * @param {import('@mysten/sui/transactions').Transaction} tx
+ * @param {string | null | undefined} kiosk_id
+ * @param {string | null | undefined} personal_kiosk_cap_id
+ * @param {string} personal_kiosk_package_id
+ */
+function buyer_kiosk(
+  context,
+  tx,
+  kiosk_id,
+  personal_kiosk_cap_id,
+  personal_kiosk_package_id,
+) {
+  if (Boolean(kiosk_id) !== Boolean(personal_kiosk_cap_id))
+    throw new Error(
+      '[items_marketplace] kiosk_id and personal_kiosk_cap_id must be supplied together',
+    )
+
+  const kiosk_client = policy_kiosk_client(context, personal_kiosk_package_id)
+  if (kiosk_id && personal_kiosk_cap_id) {
+    const personal_cap = tx.object(personal_kiosk_cap_id)
+    const [owner_cap, promise] = tx.moveCall({
+      target: `${personal_kiosk_package_id}::personal_kiosk::borrow_val`,
+      arguments: [personal_cap],
+    })
+    const ktx = new KioskTransaction({
+      transaction: tx,
+      kioskClient: kiosk_client,
+    })
+      .setKiosk(tx.object(kiosk_id))
+      .setKioskCap(owner_cap)
+    return {
+      ktx,
+      finalize() {
+        tx.moveCall({
+          target: `${personal_kiosk_package_id}::personal_kiosk::return_val`,
+          arguments: [personal_cap, owner_cap, promise],
+        })
+      },
+    }
+  }
+
+  const ktx = new KioskTransaction({
+    transaction: tx,
+    kioskClient: kiosk_client,
+  }).createPersonal(true)
+  return { ktx, finalize: () => ktx.finalize() }
+}
+
+/**
+ * LIST the locked item `item_id` for sale at `price_mist` in the seller's personal kiosk (borrow the KioskOwnerCap, list,
+ * return the cap). A buyer later purchases + resolves the transfer policy (re-lock + 10% royalty).
+ * @param {import("../../../types.js").Context} context
+ */
+export function list_ptb(context) {
+  const { network } = context
+  return ({
+    kiosk_id,
+    personal_kiosk_cap_id,
+    item_id,
+    price_mist,
+    policy,
+    tx = new Transaction(),
+  }) => {
+    const a = aresrpg_deployment(network, context.ids?.aresrpg)
+    assert_policy_id(policy, a.ITEM_POLICY)
+    const rule_targets = resolve_marketplace_rule_targets({
+      policy,
+      kiosk_rule_package_id: a.KIOSK_ROYALTY_RULE_PACKAGE_ID,
+      listing_rule_module: 'item_listing_rule',
+      listing_rule_package_id: a.LATEST_PACKAGE_ID,
+    })
+    borrow_personal_kiosk_cap(context)({
+      personal_kiosk_cap_id,
+      personal_kiosk_package_id: rule_targets.personal_kiosk_rule,
+      tx,
+      handler: owner_cap => {
+        tx.moveCall({
+          target: '0x2::kiosk::list',
+          typeArguments: [item_type(a)],
+          arguments: [
+            as_object_arg(tx, kiosk_id), // self: &mut Kiosk (ref-or-id seam — a cached ref must be mutable:true)
+            owner_cap, // cap: &KioskOwnerCap
+            tx.pure.id(item_id), // id: ID
+            tx.pure.u64(BigInt(price_mist)), // price: u64
+          ],
+        })
+      },
+    })
+    return tx
+  }
+}
+
+/**
+ * LIST a stack through the native Item listing path after enforcing the client-side lot contract. `amount` is a
+ * pre-flight snapshot of the listed object's on-chain amount; the universal `lot_rule` repeats this check against
+ * the purchased Item at policy resolution, so a stale or hostile client cannot bypass it.
+ * @param {import("../../../types.js").Context} context
+ * @returns {(args: MarketplaceStackList) => Transaction}
+ */
+export function list_stack_ptb(context) {
+  const list_item = list_ptb(context)
+  return ({
+    kiosk_id,
+    personal_kiosk_cap_id,
+    item_id,
+    amount,
+    price_mist,
+    policy,
+    tx = new Transaction(),
+  }) => {
+    assert_legal_lot_size(amount)
+    return list_item({
+      kiosk_id,
+      personal_kiosk_cap_id,
+      item_id,
+      price_mist,
+      policy,
+      tx,
+    })
+  }
+}
+
+/**
+ * DELIST the item `item_id` (pull a live listing) from the seller's personal kiosk.
+ * @param {import("../../../types.js").Context} context
+ */
+export function delist_ptb(context) {
+  const { network } = context
+  return ({
+    kiosk_id,
+    personal_kiosk_cap_id,
+    item_id,
+    policy,
+    tx = new Transaction(),
+  }) => {
+    const a = aresrpg_deployment(network, context.ids?.aresrpg)
+    assert_policy_id(policy, a.ITEM_POLICY)
+    const rule_targets = resolve_marketplace_rule_targets({
+      policy,
+      kiosk_rule_package_id: a.KIOSK_ROYALTY_RULE_PACKAGE_ID,
+      listing_rule_module: 'item_listing_rule',
+      listing_rule_package_id: a.LATEST_PACKAGE_ID,
+    })
+    borrow_personal_kiosk_cap(context)({
+      personal_kiosk_cap_id,
+      personal_kiosk_package_id: rule_targets.personal_kiosk_rule,
+      tx,
+      handler: owner_cap => {
+        tx.moveCall({
+          target: '0x2::kiosk::delist',
+          typeArguments: [item_type(a)],
+          arguments: [
+            as_object_arg(tx, kiosk_id), // self: &mut Kiosk (ref-or-id seam — a cached ref must be mutable:true)
+            owner_cap, // cap: &KioskOwnerCap
+            tx.pure.id(item_id), // id: ID
+          ],
+        })
+      },
+    })
+    return tx
+  }
+}
+
+/**
+ * @param {import('../../../types.js').Context} context
+ * @param {'item' | 'character'} kind
+ */
+function marketplace_buy_ptb(context, kind) {
+  const { network } = context
+  return ({
+    item_id,
+    character_id,
+    seller_kiosk_id,
+    price_mist,
+    kiosk_id = null,
+    personal_kiosk_cap_id = null,
+    policy,
+    tx = new Transaction(),
+  }) => {
+    const a = aresrpg_deployment(network, context.ids?.aresrpg)
+    const is_item = kind === 'item'
+    const policy_id = is_item ? a.ITEM_POLICY : a.CHARACTER_POLICY
+    const listing_rule_module = is_item
+      ? 'item_listing_rule'
+      : 'character_listing_rule'
+    const asset_type = is_item ? item_type(a) : character_type(a)
+    const asset_id = is_item ? item_id : character_id
+    if (!asset_id || !seller_kiosk_id)
+      throw new Error(
+        `[items_marketplace] ${is_item ? 'item_id' : 'character_id'} and seller_kiosk_id are required`,
+      )
+    assert_policy_id(policy, policy_id)
+
+    const rule_targets = resolve_marketplace_rule_targets({
+      policy,
+      kiosk_rule_package_id: a.KIOSK_ROYALTY_RULE_PACKAGE_ID,
+      listing_rule_module,
+      listing_rule_package_id: a.LATEST_PACKAGE_ID,
+    })
+    let lot_rule_target = null
+    if (is_item) {
+      policy_rule_package(policy, 'lot_rule')
+      lot_rule_target = a.LATEST_PACKAGE_ID
+    }
+
+    // Preserve the live marketplace command shape: branded header, personal-cap borrow/create, purchase, policy
+    // receipts, confirm, then return/share the personal cap.
+    tx.moveCall({ target: `${a.LATEST_PACKAGE_ID}::header::aresrpg` })
+    const binding = buyer_kiosk(
+      context,
+      tx,
+      kiosk_id,
+      personal_kiosk_cap_id,
+      rule_targets.personal_kiosk_rule,
+    )
+    const { ktx } = binding
+    const [asset, request] = ktx.purchase({
+      itemType: asset_type,
+      itemId: asset_id,
+      price: BigInt(price_mist),
+      sellerKiosk: seller_kiosk_id,
+    })
+    const policy_arg = tx.object(policy.id)
+    const fee = tx.moveCall({
+      target: `${rule_targets.royalty_rule}::royalty_rule::fee_amount`,
+      typeArguments: [asset_type],
+      arguments: [policy_arg, tx.pure.u64(BigInt(price_mist))],
+    })
+    const [fee_coin] = tx.splitCoins(tx.gas, [fee])
+    tx.moveCall({
+      target: `${rule_targets.royalty_rule}::royalty_rule::pay`,
+      typeArguments: [asset_type],
+      arguments: [policy_arg, request, fee_coin],
+    })
+
+    tx.moveCall({
+      target: `${rule_targets.listing_rule}::${listing_rule_module}::${is_item ? 'prove_amount' : 'prove_level'}`,
+      arguments: is_item
+        ? [asset, request]
+        : [asset, tx.object(a.GAME_CONFIG), request],
+    })
+    if (lot_rule_target)
+      tx.moveCall({
+        target: `${lot_rule_target}::lot_rule::prove`,
+        arguments: [asset, request],
+      })
+    ktx.lock({ itemType: asset_type, item: asset, policy: policy_arg })
+    const kiosk = ktx.getKiosk()
+    tx.moveCall({
+      target: `${rule_targets.kiosk_lock_rule}::kiosk_lock_rule::prove`,
+      typeArguments: [asset_type],
+      arguments: [request, kiosk],
+    })
+    tx.moveCall({
+      target: `${rule_targets.personal_kiosk_rule}::personal_kiosk_rule::prove`,
+      typeArguments: [asset_type],
+      arguments: [kiosk, request],
+    })
+    tx.moveCall({
+      target: '0x2::transfer_policy::confirm_request',
+      typeArguments: [asset_type],
+      arguments: [policy_arg, request],
+    })
+    binding.finalize()
+    return tx
+  }
+}
+
+/**
+ * Build a secondary-market Item purchase from an already-fetched TransferPolicy snapshot.
+ * @param {import('../../../types.js').Context} context
+ * @returns {(args: MarketplaceItemBuy) => Transaction}
+ */
+export function marketplace_buy_item_ptb(context) {
+  return marketplace_buy_ptb(context, 'item')
+}
+
+/**
+ * Build a secondary-market Character purchase from an already-fetched TransferPolicy snapshot.
+ * @param {import('../../../types.js').Context} context
+ * @returns {(args: MarketplaceCharacterBuy) => Transaction}
+ */
+export function marketplace_buy_character_ptb(context) {
+  return marketplace_buy_ptb(context, 'character')
+}

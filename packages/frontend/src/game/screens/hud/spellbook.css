@@ -1,0 +1,556 @@
+/* Spellbook (GRIMOIRE) — the character-detail SPELLS tab (D30 LIST layout, mockups/spellbook/list.png).
+   Ported to the house Tailwind @theme tokens (warm --color-gold), the SAME accent the HUD tab canon uses, so
+   the panel sits flush with its neighbour drawers. Scoped `.sb*`; renders inside the shared .hud-drawer body. */
+
+.sb {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  font-family: var(--font-mono);
+  color: var(--color-text);
+}
+
+/* ── header: identity + spell-points capital ── */
+.sb__top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-bottom: var(--s-4);
+}
+.sb__crest {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+}
+.sb__sigil {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  background: linear-gradient(135deg, rgba(200, 150, 60, 0.12), transparent);
+  color: var(--color-gold);
+}
+.sb__name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--color-gold-light);
+}
+.sb__sub {
+  font-size: 0.5rem;
+  letter-spacing: 0.28em;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+.sb__points {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+  position: relative;
+  border: 1px solid var(--color-border);
+  background: rgba(6, 6, 12, 0.6);
+  padding: 8px 15px 8px 14px;
+}
+.sb__points::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-gold);
+}
+.sb__points-lab {
+  font-size: 0.5rem;
+  letter-spacing: 0.24em;
+  color: var(--color-muted);
+  text-transform: uppercase;
+}
+.sb__points-sub {
+  font-size: 0.5rem;
+  letter-spacing: 0.22em;
+  color: var(--color-gold-light);
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+.sb__points-val {
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--color-gold);
+  text-shadow: 0 0 14px rgba(200, 150, 60, 0.4);
+}
+
+/* ── tab strip (canon: gold underline active) ── */
+.sb__tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--s-4);
+  flex: none;
+}
+.sb__tab {
+  padding: 10px 24px;
+  font-family: inherit;
+  font-size: 0.62rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  transition: all var(--dur-1) var(--ease);
+}
+.sb__tab:hover {
+  color: var(--color-gold);
+  text-shadow: 0 0 8px rgba(200, 150, 60, 0.35);
+}
+.sb__tab.is-active {
+  color: var(--color-gold);
+  border-bottom-color: var(--color-gold);
+  background: linear-gradient(180deg, rgba(200, 150, 60, 0.08), transparent);
+}
+
+/* ── main split: list | detail ── */
+.sb__main {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 38fr 62fr;
+  gap: var(--s-4);
+}
+
+/* ── LIST ── */
+.sb__list {
+  border: 1px solid var(--color-border);
+  background: rgba(6, 6, 12, 0.5);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.sb__lhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 11px 15px;
+  border-bottom: 1px solid rgba(200, 150, 60, 0.08);
+  flex: none;
+}
+.sb__lhead-t {
+  font-size: 0.62rem;
+  letter-spacing: 0.28em;
+  color: var(--color-gold);
+  text-transform: uppercase;
+}
+.sb__lhead-n {
+  font-size: 0.56rem;
+  letter-spacing: 0.18em;
+  color: var(--color-muted);
+}
+.sb__rows {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+.sb__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 15px 11px 13px;
+  border-bottom: 1px solid rgba(200, 150, 60, 0.06);
+  border-left: 2px solid transparent;
+  background: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease);
+}
+.sb__row:hover {
+  background: rgba(200, 150, 60, 0.04);
+}
+.sb__row.is-sel {
+  border-left-color: var(--color-gold);
+  background: linear-gradient(90deg, rgba(200, 150, 60, 0.1), rgba(200, 150, 60, 0.01));
+}
+.sb__ic {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border: 1px solid var(--color-border);
+  object-fit: cover;
+  background: #05050a;
+}
+.sb__art--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--el, var(--color-gold));
+  background: #05050a;
+}
+.sb__meta {
+  flex: 1;
+  min-width: 0;
+  /* #17c — STACK the name over the element·type subline. Without this the two spans are inline and run
+     together ("FIRE STRIKE" + "FIRE · RANGED" → "…STRIKEFIRE · RANGED"); a prior margin-top on .sb__rl was a
+     no-op (vertical margin does nothing on an inline span). Flex-column makes the gap effective. */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.sb__nm {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sb__row.is-sel .sb__nm {
+  color: var(--color-gold-light);
+}
+.sb__rl {
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+.sb__right {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: none;
+}
+.sb__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--el, var(--color-gold));
+  box-shadow: 0 0 8px var(--el, var(--color-gold));
+}
+.sb__lvbadge {
+  font-size: 0.56rem;
+  letter-spacing: 0.1em;
+  color: var(--color-gold);
+  border: 1px solid var(--color-border);
+  padding: 3px 7px;
+  background: rgba(200, 150, 60, 0.05);
+  white-space: nowrap;
+}
+/* locked rows stay clickable (aspirational browsing), so the cursor stays the row's normal pointer;
+   only the dimmed art/name/sub + the lock chip signal "not yet unlocked". */
+.sb__row.is-locked .sb__ic {
+  filter: grayscale(1) brightness(0.4);
+  opacity: 0.6;
+}
+.sb__row.is-locked .sb__nm {
+  color: #4a4a52;
+}
+.sb__row.is-locked .sb__rl {
+  color: #3d3d45;
+}
+.sb__lockchip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  color: #5a5a64;
+  border: 1px dashed rgba(107, 114, 128, 0.4);
+  padding: 3px 7px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ── DETAIL ── */
+.sb__detail {
+  border: 1px solid var(--color-border);
+  background: rgba(6, 6, 12, 0.5);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+.sb__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-muted);
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.sb__dhead {
+  display: flex;
+  gap: 18px;
+  padding: 20px 22px;
+  border-bottom: 1px solid rgba(200, 150, 60, 0.08);
+  align-items: center;
+}
+.sb__bigic {
+  width: 84px;
+  height: 84px;
+  flex: none;
+  border: 1px solid var(--color-border);
+  background: #05050a;
+  object-fit: cover;
+  box-shadow: 0 0 26px rgba(200, 150, 60, 0.18);
+}
+.sb__dtitle {
+  flex: 1;
+  min-width: 0;
+}
+.sb__dtitle h2 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-gold-light);
+  text-shadow: 0 0 18px rgba(200, 150, 60, 0.3);
+}
+.sb__tagrow {
+  display: flex;
+  gap: 10px;
+  margin-top: 13px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+/* element/type CHIPS (D49b): padded off the name + filled tint for contrast (was a washed-out thin outline). */
+.sb__chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.56rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border: 1px solid;
+}
+.sb__chip--el {
+  color: var(--el, var(--color-gold));
+  border-color: color-mix(in srgb, var(--el, var(--color-gold)) 55%, transparent);
+  background: color-mix(in srgb, var(--el, var(--color-gold)) 15%, transparent);
+}
+.sb__chip--el .sb__chip-d {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--el, var(--color-gold));
+  box-shadow: 0 0 7px var(--el, var(--color-gold));
+}
+.sb__chip--type {
+  color: var(--color-gold-light);
+  border-color: rgba(200, 150, 60, 0.4);
+  background: rgba(200, 150, 60, 0.09);
+}
+.sb__clvl {
+  margin-left: 2px;
+  font-size: 0.52rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+.sb__clvl b {
+  color: var(--color-gold);
+  font-size: 0.7rem;
+}
+
+/* stat grid */
+.sb__sgrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: rgba(200, 150, 60, 0.08);
+  border-bottom: 1px solid rgba(200, 150, 60, 0.08);
+}
+.sb__scell {
+  background: var(--color-surface);
+  padding: 12px 14px;
+}
+.sb__scell-k {
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  color: var(--color-muted);
+  text-transform: uppercase;
+}
+.sb__scell-v {
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--color-text);
+  margin-top: 6px;
+  letter-spacing: 0.03em;
+}
+.sb__scell-v small {
+  font-size: 0.56rem;
+  color: var(--color-muted);
+  letter-spacing: 0.08em;
+}
+
+.sb__desc {
+  padding: 15px 22px;
+  border-bottom: 1px solid rgba(200, 150, 60, 0.08);
+  font-size: 0.68rem;
+  line-height: 1.7;
+  color: #b8b3a8;
+  font-weight: 300;
+}
+.sb__desc-lab,
+.sb__ltabs-lab {
+  display: block;
+  font-size: 0.5rem;
+  letter-spacing: 0.28em;
+  color: var(--color-gold);
+  text-transform: uppercase;
+  margin-bottom: 9px;
+}
+/* ── LEVEL TABS 1..6 (D49b) — locked levels stay clickable to preview their numbers ── */
+.sb__ltabs {
+  padding: 15px 22px 16px;
+  border-bottom: 1px solid rgba(200, 150, 60, 0.08);
+}
+.sb__ltabs-row {
+  display: flex;
+  gap: 6px;
+}
+.sb__ltab {
+  flex: 1;
+  position: relative;
+  padding: 9px 0;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: center;
+  color: var(--color-muted);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: all var(--dur-1) var(--ease);
+}
+.sb__ltab:hover {
+  color: var(--color-gold-light);
+  border-color: rgba(200, 150, 60, 0.4);
+}
+/* current level = a gold pip under the number; locked (above current) = greyed dashed but browsable */
+.sb__ltab.is-cur::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-gold);
+  box-shadow: 0 0 6px var(--color-gold);
+}
+.sb__ltab.is-locked {
+  color: #4a4a52;
+  border-style: dashed;
+  border-color: rgba(107, 114, 128, 0.3);
+}
+.sb__ltab.is-sel {
+  color: var(--color-gold);
+  border-color: var(--color-gold);
+  background: linear-gradient(180deg, rgba(200, 150, 60, 0.18), rgba(200, 150, 60, 0.02));
+  box-shadow: 0 0 14px rgba(200, 150, 60, 0.2);
+}
+/* ── EFFECTS — compact lines (no cards; row internals live in effect-line.css `.fxl*`) ── */
+.sb__fx {
+  padding: 15px 22px;
+  border-bottom: 1px solid rgba(200, 150, 60, 0.08);
+}
+.sb__fx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+/* upgrade block — current → current+1 (D49b) */
+.sb__lup {
+  margin: 16px 22px 20px;
+  border: 1px solid var(--color-border);
+  background: linear-gradient(180deg, rgba(200, 150, 60, 0.05), transparent);
+}
+/* actions */
+.sb__actions {
+  padding: 15px;
+  display: flex;
+  justify-content: flex-end;
+}
+.sb__btn-gold {
+  width: 100%;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: #1a1206;
+  border: 1px solid var(--color-gold);
+  cursor: pointer;
+  background: linear-gradient(180deg, var(--color-gold-light), var(--color-gold) 45%, var(--color-gold-dark));
+  box-shadow: 0 0 18px rgba(200, 150, 60, 0.25);
+  transition: box-shadow var(--dur-1) var(--ease);
+}
+.sb__btn-gold:hover {
+  box-shadow: 0 0 26px rgba(200, 150, 60, 0.45);
+}
+.sb__btn-off {
+  width: 100%;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: inherit;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: #55555e;
+  border: 1px solid rgba(107, 114, 128, 0.25);
+  background: rgba(107, 114, 128, 0.05);
+  cursor: not-allowed;
+}
+.sb__btn-off .sb__btn-x {
+  color: #7a4a4a;
+}
+/* #17d — the COMPACT level-up CTA: auto-width (not the full-bleed gold/off bar), so the header row's
+   LV→LV + point line carries the detail and the button is a small, unambiguous action. Placed AFTER
+   .sb__btn-gold/.sb__btn-off so its width/padding/size win at equal specificity (combined on one button). */
+.sb__btn-compact {
+  width: auto;
+  min-width: 150px;
+  padding: 9px 22px;
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+}
+.sb__mastered {
+  margin: 16px 22px 20px;
+  padding: 14px;
+  text-align: center;
+  border: 1px solid var(--color-gold);
+  background: linear-gradient(180deg, rgba(200, 150, 60, 0.14), transparent);
+  color: var(--color-gold);
+  font-size: 0.66rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  font-weight: 600;
+  text-shadow: 0 0 12px rgba(200, 150, 60, 0.4);
+}

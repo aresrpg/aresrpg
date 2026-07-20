@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "dials": {
+    "gifting_brand": 1,
+    "dungeon_brand": 1
+  },
+  "classes": {},
+  "protector_templates": {},
+  "creation": {
+    "price_mist": null,
+    "paused": null,
+    "free": null,
+    "sponsor": null,
+    "classes": ["senshi", "yajin", "tomoda", "shugo"],
+    "starters": {}
+  }
+}

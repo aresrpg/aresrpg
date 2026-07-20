@@ -1,0 +1,93 @@
+/* JOB level-up card atoms (JobLevelUp.jsx). Rides the shared .result / .lvl* / .unlock glass base from
+   result.css (one family with the character card); this file adds only the unlocked-resource/recipe CHIP
+   list + the "better harvests" yield row spacing. House DNA: mono, tabular nums, sharp radii 2-7, one
+   ice-blue accent, no pills, no gold. */
+
+/* section wrapper — the labelled blocks under the level hero (resources / recipes / yield) */
+.jlu-sec {
+  margin-top: 14px;
+}
+
+/* section label (label + count) — mirrors the fight-end .fe-lbl idiom */
+.jlu-lbl {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-faint, #6b7280);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.jlu-lbl .hud-num {
+  color: var(--accent-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+/* the unlocked-items chip grid — wraps, so 1 or 12 resources both read cleanly */
+.jlu-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.jlu-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px 5px 6px;
+  max-width: 100%;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--hair, rgba(255, 255, 255, 0.08));
+  border-radius: var(--r-2, 4px);
+}
+.jlu-chip__art {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-1, 2px);
+  background: radial-gradient(circle at 50% 40%, var(--accent-glow, rgba(74, 158, 255, 0.28)), transparent 72%);
+  border: 1px solid color-mix(in srgb, var(--accent, #4a9eff) 30%, var(--edge, rgba(255, 255, 255, 0.06)));
+}
+.jlu-chip__art img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.5));
+}
+.jlu-chip__art svg {
+  width: 15px;
+  height: 15px;
+  color: var(--accent-strong, #6cb0ff);
+}
+.jlu-chip__name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg, #e8e4dc);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* the "better harvests" yield row reuses .unlock (result.css) verbatim; no extra rule needed beyond the
+   sickle glyph well already inheriting .unlock__well. Kept as a named hook for future tuning. */
+.jlu-yield {
+  margin-top: 0;
+}
+
+/* mount juice — the sections rise in after the level number pops (reuses the character card's lvl-rise
+   keyframe from result.css; scoped to .jlu-stage so only the job card animates). */
+.jlu-stage .jlu-sec {
+  animation: lvl-rise var(--dur-3, 360ms) var(--ease, ease) both;
+  animation-delay: 260ms;
+}
+.jlu-stage .jlu-sec:nth-of-type(2) {
+  animation-delay: 320ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .jlu-stage .jlu-sec {
+    animation: none;
+  }
+}

@@ -1,0 +1,439 @@
+// Station-only: zkLogin client reserves/signs; the internal gas station signs/submits exactly once.
+import { readFileSync as read_file } from 'node:fs'
+
+import { Transaction, TransactionDataBuilder } from '@mysten/sui/transactions'
+import { parseSerializedSignature } from '@mysten/sui/cryptography'
+import { fromBase64, normalizeSuiAddress, toBase64 } from '@mysten/sui/utils'
+import { SuiGrpcClient } from '@mysten/sui/grpc'
+import { verifyPersonalMessageSignature } from '@mysten/sui/verify'
+
+import checked_in_release from '../packages/sdk/src/deployment/release.json' with { type: 'json' }
+
+import {
+  ADDR_DAILY_CAP_MIST,
+  ADDR_RL_MAX,
+  PER_TX_BUDGET_CEILING_MIST,
+  RL_WINDOW_MS,
+  SELF_PAY_MIST,
+  addr_daily_record,
+  addr_daily_would_exceed,
+  addr_rate_limited,
+  rate_limited,
+  stash_reservation,
+  take_reservation,
+  utc_date,
+} from './sponsor_state.mjs'
+export {
+  ADDR_DAILY_CAP_MIST,
+  PER_TX_BUDGET_CEILING_MIST,
+  addr_daily_record,
+  addr_daily_would_exceed,
+  addr_rate_limited,
+  addr_rl_key,
+  addr_spent_key,
+  ip_rl_key,
+  rate_limited,
+  stash_reservation,
+} from './sponsor_state.mjs'
+
+const NETWORK = process.env.VITE_NETWORK || 'testnet'
+const release = process.env.SPONSOR_RELEASE_PATH
+  ? JSON.parse(read_file(process.env.SPONSOR_RELEASE_PATH, 'utf8'))
+  : checked_in_release
+const GRPC_URL = process.env.SPONSOR_GRPC_URL || `https://fullnode.${NETWORK}.sui.io:443`
+const client = new SuiGrpcClient({ network: NETWORK, baseUrl: GRPC_URL })
+const CORS = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-headers': 'content-type',
+  'access-control-allow-methods': 'POST,OPTIONS',
+}
+const RESERVE_DURATION_SECS = Number(process.env.SPONSOR_RESERVE_DURATION_SECS || 60)
+const CHALLENGE_TTL_MS = Number(process.env.SPONSOR_CHALLENGE_TTL_MS || 5 * 60_000)
+const ZKLOGIN_ISS_ALLOWLIST = new Set(
+  (process.env.SPONSOR_ZKLOGIN_ISS || 'https://accounts.google.com,accounts.google.com')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+)
+const normalize_set = (csv) =>
+  new Set(
+    String(csv)
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .map((value) => normalizeSuiAddress(value))
+  )
+
+const network_release = release.networks[NETWORK]
+const release_package_ids = [
+  ...Object.values(network_release?.packages ?? {}).flatMap(({ origin, latest }) => [origin, latest]),
+  network_release?.rules_package,
+].filter(Boolean)
+
+const ARESRPG_PACKAGES = normalize_set(release_package_ids.join(','))
+const FRAMEWORK_PACKAGES = normalize_set((network_release?.system.sponsor_framework_packages ?? []).join(','))
+
+export function require_station_config() {
+  if (!process.env.GAS_STATION_URL?.trim() || !process.env.GAS_STATION_AUTH?.trim())
+    throw new Error('sponsor-misconfig: GAS_STATION_URL + GAS_STATION_AUTH required — refusing to boot (fail-closed)')
+}
+
+export function assert_ptb_scope(txKindBytes) {
+  let commands
+  try {
+    ;({ commands } = Transaction.fromKind(fromBase64(txKindBytes)).getData())
+  } catch (error) {
+    throw new Error(`sponsor-scope: unparseable PTB (${error?.message ?? error}) — refusing`)
+  }
+  let aresrpg_calls = 0
+  for (const command of commands) {
+    if (command.$kind === 'Publish' || command.$kind === 'Upgrade')
+      throw new Error('sponsor-scope: PTB publishes/upgrades a package — never sponsored')
+    if (command.$kind !== 'MoveCall') continue
+    const package_id = normalizeSuiAddress(command.MoveCall.package)
+    const is_aresrpg = ARESRPG_PACKAGES.has(package_id)
+    if (!is_aresrpg && !FRAMEWORK_PACKAGES.has(package_id))
+      throw new Error(
+        `sponsor-scope: MoveCall targets non-allowlisted package ${package_id}::${command.MoveCall.module} — only aresrpg + composed framework packages are sponsored`
+      )
+    if (is_aresrpg) aresrpg_calls += 1
+  }
+  if (!aresrpg_calls)
+    throw new Error(
+      'sponsor-scope: PTB has no aresrpg MoveCall — bare-transfer / framework-only PTBs are not sponsored'
+    )
+}
+
+async function assert_zklogin_challenge(sender, challenge, signature) {
+  // Env-gated QA escape hatch, default off, with a deliberately loud warning.
+  if (process.env.SPONSOR_DEV_BYPASS_ZKLOGIN === '1') {
+    console.warn('[sponsor] ⚠️ DEV zkLogin bypass ON — QA/dev throwaway only, never prod')
+    return
+  }
+  if (!challenge || !signature) throw new Error('zklogin-required: challenge + signature required')
+  const prefix = `aresrpg-sponsor:${sender}:`
+  if (!challenge.startsWith(prefix)) throw new Error('zklogin-invalid: challenge does not match sender')
+  const encoded_ts = challenge.slice(prefix.length)
+  const timestamp = Number(encoded_ts)
+  if (!Number.isFinite(timestamp) || String(timestamp) !== encoded_ts)
+    throw new Error('zklogin-invalid: malformed challenge timestamp')
+  const age = Date.now() - timestamp
+  if (age < 0 || age >= CHALLENGE_TTL_MS) throw new Error('zklogin-stale: challenge expired — retry')
+  let parsed
+  try {
+    parsed = parseSerializedSignature(signature)
+  } catch {
+    throw new Error('zklogin-invalid: unparseable signature')
+  }
+  if (parsed.signatureScheme !== 'ZkLogin')
+    throw new Error(`zklogin-required: signature scheme is ${parsed.signatureScheme}, not zkLogin`)
+  const issuer = parsed.zkLogin?.iss
+  if (!ZKLOGIN_ISS_ALLOWLIST.has(issuer))
+    throw new Error(`zklogin-issuer: issuer ${issuer ?? '(none)'} is not sponsored`)
+  await verifyPersonalMessageSignature(new TextEncoder().encode(challenge), signature, { client, address: sender })
+}
+
+export function derive_budget_mist(gas_used) {
+  const gross = BigInt(gas_used?.computationCost ?? 0) + BigInt(gas_used?.storageCost ?? 0)
+  if (gross <= 0n)
+    throw new Error('sponsor-unpriceable: simulation returned no gas — refusing (never sign an unpriced budget)')
+  const budget = (gross * 3n) / 2n
+  if (budget > PER_TX_BUDGET_CEILING_MIST)
+    throw new Error(
+      `sponsor-over-ceiling: derived gas budget ${(Number(budget) / 1e9).toFixed(4)} SUI exceeds the ` +
+        `${(Number(PER_TX_BUDGET_CEILING_MIST) / 1e9).toFixed(3)} SUI per-tx ceiling — refusing (client PTB too gas-heavy)`
+    )
+  return budget
+}
+export function real_charge_mist(gas_used) {
+  const computation = BigInt(gas_used?.computationCost ?? 0)
+  const net = computation + BigInt(gas_used?.storageCost ?? 0) - BigInt(gas_used?.storageRebate ?? 0)
+  return net < computation ? computation : net
+}
+
+const initial_refusals = () => ({
+  zklogin: 0,
+  scope: 0,
+  balance: 0,
+  rate: 0,
+  daily: 0,
+  ceiling: 0,
+  station: 0,
+  mismatch: 0,
+  execreject: 0,
+})
+const stats = {
+  day: '',
+  reserved: 0,
+  sponsored: 0,
+  spent: 0n,
+  charged_total: 0n,
+  refused: initial_refusals(),
+  addresses: new Set(),
+}
+function roll_stats() {
+  const day = utc_date()
+  if (day === stats.day) return
+  if (stats.day)
+    console.log(
+      `[sponsor] DAILY ${stats.day} — sponsored=${stats.sponsored} refused=${JSON.stringify(stats.refused)} unique_addrs=${stats.addresses.size} spent≈${(Number(stats.spent) / 1e9).toFixed(4)} SUI`
+    )
+  Object.assign(stats, {
+    day,
+    reserved: 0,
+    sponsored: 0,
+    spent: 0n,
+    charged_total: 0n,
+    refused: initial_refusals(),
+    addresses: new Set(),
+  })
+}
+export function sponsor_stats() {
+  roll_stats()
+  return {
+    day: stats.day,
+    mode: 'station',
+    reserved: stats.reserved,
+    sponsored: stats.sponsored,
+    refused: stats.refused,
+    unique_addresses: stats.addresses.size,
+    spent_sui: +(Number(stats.spent) / 1e9).toFixed(6),
+    charged_total_sui: +(Number(stats.charged_total) / 1e9).toFixed(6),
+    per_address_max_per_window: ADDR_RL_MAX,
+    per_address_window_min: Math.round(RL_WINDOW_MS / 60_000),
+    self_pay_over_sui: Number(SELF_PAY_MIST) / 1e9,
+    per_player_daily_cap_sui: Number(ADDR_DAILY_CAP_MIST) / 1e9,
+    per_tx_budget_ceiling_sui: Number(PER_TX_BUDGET_CEILING_MIST) / 1e9,
+  }
+}
+
+export async function station_reserve({ gas_budget, reserve_duration_secs }) {
+  require_station_config()
+  let response
+  try {
+    response = await fetch(`${process.env.GAS_STATION_URL}/v1/reserve_gas`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.GAS_STATION_AUTH}` },
+      body: JSON.stringify({ gas_budget, reserve_duration_secs }),
+    })
+  } catch (error) {
+    throw new Error(`sponsor-station-down: reserve_gas unreachable (${error?.message ?? error}) — refusing`)
+  }
+  if (!response.ok) throw new Error(`sponsor-station-error: reserve_gas HTTP ${response.status} — refusing`)
+  const body = await response.json().catch(() => ({}))
+  if (body?.error || !body?.result)
+    throw new Error(`sponsor-reserve-failed: ${body?.error ?? 'no reservation returned'} — refusing`)
+  const { sponsor_address, reservation_id, gas_coins } = body.result
+  if (!sponsor_address || reservation_id == null || !Array.isArray(gas_coins) || !gas_coins.length)
+    throw new Error('sponsor-reserve-failed: malformed reservation (missing sponsor/id/coins) — refusing')
+  return { sponsor_address, reservation_id, gas_coins }
+}
+async function station_execute({ reservation_id, tx_bytes, user_sig }) {
+  require_station_config()
+  let response
+  try {
+    response = await fetch(`${process.env.GAS_STATION_URL}/v1/execute_tx`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.GAS_STATION_AUTH}` },
+      body: JSON.stringify({ reservation_id, tx_bytes, user_sig }),
+    })
+  } catch (error) {
+    throw new Error(`sponsor-station-down: execute_tx unreachable (${error?.message ?? error}) — refusing`)
+  }
+  if (!response.ok) throw new Error(`sponsor-station-error: execute_tx HTTP ${response.status} — refusing`)
+  const body = await response.json().catch(() => ({}))
+  return { effects: body?.effects ?? null, error: body?.error ?? null }
+}
+
+export function assert_tx_matches_reservation(tx_bytes, reservation) {
+  let data
+  try {
+    data = TransactionDataBuilder.fromBytes(fromBase64(tx_bytes))
+  } catch (error) {
+    throw new Error(`sponsor-tx-invalid: unparseable tx bytes (${error?.message ?? error}) — refusing`)
+  }
+  const address = (value) => normalizeSuiAddress(String(value ?? ''))
+  if (address(data.sender) !== address(reservation.sender))
+    throw new Error('sponsor-tx-mismatch: sender does not match the reservation — refusing')
+  if (address(data.gasData?.owner) !== address(reservation.sponsor_address))
+    throw new Error('sponsor-tx-mismatch: gas owner is not the reserved sponsor — refusing')
+  if (String(data.gasData?.budget ?? '') !== String(reservation.budget))
+    throw new Error('sponsor-tx-mismatch: gas budget does not match the reserved budget — refusing')
+  const expected_coins = new Set((reservation.gas_coins || []).map((coin) => address(coin.objectId)))
+  const actual_coins = new Set((data.gasData?.payment || []).map((coin) => address(coin.objectId)))
+  if (expected_coins.size !== actual_coins.size || [...expected_coins].some((id) => !actual_coins.has(id)))
+    throw new Error('sponsor-tx-mismatch: gas payment coins are not the reserved coins — refusing')
+  if (toBase64(data.build({ onlyTransactionKind: true })) !== reservation.kind)
+    throw new Error('sponsor-tx-mismatch: transaction kind differs from what was priced (scope-bypass) — refusing')
+}
+
+export async function reserveSponsored({ txKindBytes, sender, challenge, signature }) {
+  require_station_config()
+  if (!txKindBytes || !sender) throw new Error('txKindBytes + sender required')
+  roll_stats()
+  try {
+    await assert_zklogin_challenge(sender, challenge, signature)
+  } catch (error) {
+    stats.refused.zklogin += 1
+    throw error
+  }
+  const { balance } = await client.core.getBalance({ owner: sender })
+  if (BigInt(balance.balance) > SELF_PAY_MIST) {
+    stats.refused.balance += 1
+    throw new Error('self-pay-required: balance exceeds 0.2 SUI — sign with your own gas')
+  }
+  try {
+    assert_ptb_scope(txKindBytes)
+  } catch (error) {
+    stats.refused.scope += 1
+    throw error
+  }
+  if (await addr_rate_limited(sender)) {
+    stats.refused.rate += 1
+    throw new Error('rate-limited: too many sponsorships for this address, retry later')
+  }
+  let simulation
+  try {
+    const transaction = Transaction.fromKind(fromBase64(txKindBytes))
+    transaction.setSender(sender)
+    transaction.setGasBudget(Number(PER_TX_BUDGET_CEILING_MIST))
+    simulation = await client.core.simulateTransaction({ transaction, include: { effects: true } })
+  } catch (error) {
+    stats.refused.ceiling += 1
+    throw new Error(`sponsor-unpriceable: simulation failed (${error?.message ?? error}) — refusing`)
+  }
+  const gas_used = (simulation?.Transaction ?? simulation?.FailedTransaction)?.effects?.gasUsed
+  let budget
+  try {
+    budget = derive_budget_mist(gas_used)
+  } catch (error) {
+    stats.refused.ceiling += 1
+    throw error
+  }
+  if (await addr_daily_would_exceed(sender, real_charge_mist(gas_used))) {
+    stats.refused.daily += 1
+    throw new Error('daily free gameplay limit reached — transactions now require your own gas until tomorrow')
+  }
+  let reservation
+  try {
+    reservation = await station_reserve({ gas_budget: Number(budget), reserve_duration_secs: RESERVE_DURATION_SECS })
+  } catch (error) {
+    stats.refused.station += 1
+    throw error
+  }
+  const { sponsor_address, reservation_id, gas_coins } = reservation
+  if (normalizeSuiAddress(sender) === normalizeSuiAddress(sponsor_address))
+    throw new Error('sender must differ from @server (ctx.sponsor() would be None)')
+  await stash_reservation(reservation_id, {
+    sender,
+    sponsor_address,
+    gas_coins,
+    budget: String(budget),
+    kind: txKindBytes,
+  })
+  stats.reserved += 1
+  stats.addresses.add(sender)
+  return {
+    reservationId: reservation_id,
+    sponsorAddress: sponsor_address,
+    gasCoins: gas_coins,
+    gasBudget: Number(budget),
+  }
+}
+
+export async function executeSponsored({ reservationId, txBytes, userSig }) {
+  require_station_config()
+  if (reservationId == null || !txBytes || !userSig) throw new Error('reservationId + txBytes + userSig required')
+  roll_stats()
+  const reservation = await take_reservation(reservationId)
+  if (!reservation)
+    throw new Error(
+      'sponsor-reservation-unknown: no such reservation (expired, already used, or foreign) — reserve again'
+    )
+  try {
+    assert_tx_matches_reservation(txBytes, reservation)
+  } catch (error) {
+    stats.refused.mismatch += 1
+    throw error
+  }
+  // Exactly one execute call: effects mean gas burned, so this path never auto-retries.
+  const { effects, error } = await station_execute({
+    reservation_id: reservationId,
+    tx_bytes: txBytes,
+    user_sig: userSig,
+  })
+  if (!effects) {
+    stats.refused.execreject += 1
+    throw new Error(`sponsor-exec-rejected: ${error ?? 'no effects'} — pre-execution rejection, no gas charged`)
+  }
+  const charge = real_charge_mist(effects.gasUsed)
+  await addr_daily_record(reservation.sender, charge)
+  stats.sponsored += 1
+  stats.spent += charge
+  stats.charged_total += charge
+  stats.addresses.add(reservation.sender)
+  return { effects, digest: effects?.transactionDigest ?? null }
+}
+
+async function handle_sponsor_post(pathname, body) {
+  if (pathname.endsWith('/reserve')) return { status: 200, json: await reserveSponsored(body) }
+  if (pathname.endsWith('/execute')) return { status: 200, json: await executeSponsored(body) }
+  return { status: 410, json: { error: 'sponsor-two-call-upgrade' } }
+}
+
+export default async function handler(request, response) {
+  Object.entries(CORS).forEach(([key, value]) => response.setHeader(key, value))
+  if (request.method === 'OPTIONS') return response.status(204).end()
+  if (request.method === 'GET') return response.status(200).json(sponsor_stats())
+  if (request.method !== 'POST') return response.status(405).json({ error: 'POST only' })
+  try {
+    require_station_config()
+  } catch (error) {
+    return response.status(503).json({ error: String(error?.message ?? error) })
+  }
+  const ip =
+    String(request.headers['x-forwarded-for'] || '')
+      .split(',')[0]
+      .trim() ||
+    request.socket?.remoteAddress ||
+    'unknown'
+  if (await rate_limited(ip)) return response.status(429).json({ error: 'rate limited — retry shortly' })
+  try {
+    const body = typeof request.body === 'string' ? JSON.parse(request.body) : request.body
+    const [pathname] = String(request.url || '/api/sponsor').split('?')
+    const result = await handle_sponsor_post(pathname, body)
+    response.status(result.status).json(result.json)
+  } catch (error) {
+    response.status(400).json({ error: String(error?.message ?? error) })
+  }
+}
+
+if (typeof Bun !== 'undefined' && import.meta.main) {
+  const port = Number(process.env.SPONSOR_PORT || 9528)
+  require_station_config()
+  console.log(`[sponsor] station-only net=${NETWORK} :${port}`)
+  Bun.serve({
+    port,
+    async fetch(request) {
+      const url = new URL(request.url)
+      if (request.method === 'OPTIONS') return new Response(null, { headers: CORS })
+      if (url.pathname === '/') return new Response('OK', { headers: CORS })
+      if ((url.pathname === '/stats' || url.pathname === '/api/stats') && request.method === 'GET')
+        return Response.json(sponsor_stats(), { headers: CORS })
+      if (
+        request.method === 'POST' &&
+        ['/api/sponsor', '/api/sponsor/reserve', '/api/sponsor/execute'].includes(url.pathname)
+      ) {
+        const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'local'
+        if (await rate_limited(ip)) return Response.json({ error: 'rate limited' }, { status: 429, headers: CORS })
+        try {
+          const result = await handle_sponsor_post(url.pathname, await request.json())
+          return Response.json(result.json, { status: result.status, headers: CORS })
+        } catch (error) {
+          return Response.json({ error: String(error?.message ?? error) }, { status: 400, headers: CORS })
+        }
+      }
+      return Response.json({ error: 'not found' }, { status: 404, headers: CORS })
+    },
+  })
+}

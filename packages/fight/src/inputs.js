@@ -1,0 +1,475 @@
+// fight/inputs.js — the ONE reducer for ALL fight contexts (world / dungeon / kolizeum).
+//
+// A classic tactical fight is an ordered action log; `state = fold(log)`; every view is a projection of it and nothing
+// else is state (FIGHT_REWRITE_DESIGN §2). This module owns: (1) normalize {intent · receipt · snapshot · p2p ·
+// poll} into ordered ACTIONS keyed `(version, event_idx)`, and (2) the pure `apply_action` fold + `fold_log`.
+// There are NO context branches here — the shims (S2) only supply the fight id + roster and route settlement.
+//
+// Chain events are the authoritative log entries (move/engine/sources/fight_events.move). The client NEVER
+// re-guesses them by snapshot-diffing (the dead mess) — it decodes the exact ordered events with the SDK's
+// proven `decode_fight_event` and applies each event's declared delta. `@aresrpg/sim` is the PREDICTION source
+// for my own intents (same deterministic reducer the chain mirrors); its events feed the SAME action vocabulary,
+// so there is one fold, one home for fight state.
+
+import { decode_fight_event } from '@aresrpg/sdk/fight'
+
+import { INVISIBILITY_STATUS_KIND } from './fight_status_snapshot.js'
+
+/** Canonical fighter key. idx-keyed events (turn/cast/hit/move/displace) all resolve here; `character`-keyed
+ *  `Moved` uses the injected seat resolver (roster, S2) or falls back to a `c:<addr>` key until the alias lands. */
+export const fighter_key = ({ is_mob, idx, character, resolve_seat }) => {
+  if (character != null) {
+    const seat = resolve_seat ? resolve_seat(character) : null
+    if (seat == null) return `c:${character}`
+    return `p${seat}`
+  }
+  return `${is_mob ? 'm' : 'p'}${Number(idx)}`
+}
+
+const empty_fighter = (key) => ({
+  key,
+  is_mob: key.startsWith('m'),
+  cell: null,
+  hp: null,
+  ap: null, // turn-start budget: null until a TurnStarted predicts the begin_turn refill; project.js falls back to the snapshot
+  mp: null,
+  alive: true,
+  invisible: false,
+})
+
+/** The committed fight state — the ONLY thing the parity hash and every projection read. Plain data. */
+export const empty_state = (fight_id = null) => ({
+  fight_id,
+  phase: 'active',
+  fighters: {},
+  active: null,
+  turn_deadline_ms: null,
+  // Provenance bit folded with the current turn. The numeric clock may be held monotonically by store.js across
+  // a torn read, but only a positive deadline observed on THIS folded TurnStarted/snapshot may drive an action.
+  turn_deadline_fresh: false,
+  winner: -1,
+})
+
+const terminal_source_priority = { receipt: 1, poll: 1, p2p: 1, snapshot: 2, settlement_snapshot: 3 }
+
+export const empty_settlement = () => ({ chain_terminal: null, attempt: null })
+
+export const pending_settlement = (value) =>
+  value?.chain_terminal && !['opened', 'executed_failure'].includes(value.attempt?.verdict) ? value : empty_settlement()
+
+export const is_settlement_input = (type) =>
+  ['terminal_confirmation', 'settlement_attempt', 'settlement_outcome', 'settlement_request_consumed'].includes(type)
+
+/** Extract terminal chain truth without consulting optimistic intents. */
+export const chain_confirmation = ({ actions = [], fight = null, phase = null, source, version, last_room = true }) => {
+  const terminal_action = actions.reduce(
+    (found, action) => (action.kind === 'Victory' || action.kind === 'Defeat' ? action : found),
+    null
+  )
+  const action_phase = terminal_action?.kind === 'Victory' ? 'victory' : terminal_action ? 'defeat' : null
+  const fight_status = Number(fight?.status ?? 0)
+  const fight_phase = fight_status === 3 ? 'defeat' : fight_status !== 0 && fight_status !== 1 ? 'victory' : null
+  const terminal_phase = phase ?? action_phase ?? fight_phase
+  if (terminal_phase !== 'victory' && terminal_phase !== 'defeat') return null
+  return {
+    type: 'terminal_confirmation',
+    phase: terminal_phase,
+    last_room: terminal_phase === 'defeat' || !!last_room,
+    source,
+    version: Number(version ?? 0),
+  }
+}
+
+/** Pure settlement request machine: one attempt per newer confirmation; executed failures latch forever. */
+export const reduce_settlement = (value, msg) => {
+  const state = value ?? empty_settlement()
+  if (msg.type === 'terminal_confirmation') {
+    const priority = terminal_source_priority[msg.source] ?? 0
+    const signal = `${Number(msg.version ?? 0)}:${priority}:${msg.phase}`
+    const current = state.chain_terminal
+    if (
+      current &&
+      (Number(msg.version ?? 0) < current.version ||
+        (Number(msg.version ?? 0) === current.version && priority <= current.priority))
+    )
+      return state
+    return {
+      ...state,
+      chain_terminal: {
+        phase: msg.phase,
+        last_room: !!msg.last_room,
+        source: msg.source,
+        version: Number(msg.version ?? 0),
+        priority,
+        signal,
+      },
+    }
+  }
+  if (msg.type === 'settlement_attempt') {
+    const terminal = state.chain_terminal
+    const retryable = !state.attempt || (state.attempt.verdict === 'transient' && state.attempt.signal !== msg.signal)
+    return terminal?.signal === msg.signal && retryable
+      ? { ...state, attempt: { signal: msg.signal, verdict: 'inflight' } }
+      : state
+  }
+  if (msg.type === 'settlement_request_consumed') {
+    const terminal = state.chain_terminal
+    return terminal?.signal === msg.signal && !terminal.consumed
+      ? { ...state, chain_terminal: { ...terminal, consumed: true } }
+      : state
+  }
+  if (msg.type === 'settlement_outcome') {
+    if (state.attempt?.signal !== msg.signal || state.attempt.verdict !== 'inflight') return state
+    const verdict = ['opened', 'transient', 'executed_failure'].includes(msg.verdict) ? msg.verdict : 'executed_failure'
+    return { ...state, attempt: { signal: msg.signal, verdict } }
+  }
+  return state
+}
+
+/** Reconcile chain terminal evidence already present in the snapshot + authoritative event tail. */
+export const reconcile_settlement = (value, base, log = [], draft = {}) => {
+  const terminal = log.reduce(
+    (found, action) => (action.kind === 'Victory' || action.kind === 'Defeat' ? action : found),
+    null
+  )
+  const phase = terminal?.kind === 'Victory' ? 'victory' : terminal?.kind === 'Defeat' ? 'defeat' : base?.phase
+  if (phase !== 'victory' && phase !== 'defeat') return value
+  const ctx = draft.ctx ?? {}
+  const last_room = !(ctx.run && Number(ctx.rooms_total) > 0 && Number(ctx.run.room ?? 1) < Number(ctx.rooms_total))
+  const confirmation = chain_confirmation({
+    phase,
+    source: terminal?.source ?? 'snapshot',
+    version: terminal?.version ?? draft.view_version ?? -1,
+    last_room,
+  })
+  return reduce_settlement(value, confirmation)
+}
+
+const ensure = (state, key) =>
+  state.fighters[key] ? state : { ...state, fighters: { ...state.fighters, [key]: empty_fighter(key) } }
+
+const positive_deadline = (value) => {
+  const deadline = Number(value)
+  return deadline > 0 ? deadline : null
+}
+
+const patch_fighter = (state, key, delta) => {
+  const base = ensure(state, key)
+  return { ...base, fighters: { ...base.fighters, [key]: { ...base.fighters[key], ...delta } } }
+}
+
+/**
+ * Fold ONE action into the committed state. Pure: `apply_action(state, action)` is byte-deterministic. Every
+ * arm mirrors a `fight_events.move` struct; `Displaced`/`Hit`/`Moved` set the AUTHORITATIVE post-event value
+ * (never a re-simulated guess). Invisibility: a DAMAGING `Cast` reveals its caster with NO chain event —
+ * `aresrpg_spells::statuses::reveal` fires inside cast resolution (cast.move:164/291/372/414), so the reducer
+ * mirrors it here (optimistic on my own cast; applied from the receipt for peers — the chain emits no StanceChanged).
+ * @param {ReturnType<typeof empty_state>} state
+ * @param {Record<string, any>} action
+ */
+export const apply_action = (state, action) => {
+  const rs = action.resolve_seat
+  switch (action.kind) {
+    case 'TurnStarted': {
+      const key = fighter_key({ is_mob: action.is_mob, idx: action.idx, resolve_seat: rs })
+      const next = ensure(state, key)
+      const observed_deadline = positive_deadline(action.deadline_ms)
+      const withturn = {
+        ...next,
+        active: key,
+        turn_deadline_ms: observed_deadline,
+        turn_deadline_fresh: observed_deadline != null,
+      }
+      // CLIENT-INDEPENDENCE turn-start budget: the TurnStarted event carries NO ap/mp (fight_events.move:24), so
+      // predict the deterministic begin_turn refill — base_ap/base_mp injected at the normalize door below. Without
+      // it the projected budget stays the stale pre-refill snapshot (0) → a live turn with a dead move/cast range
+      // (the v1.12.28 dead opening click). The snapshot reconciles for FREE: a post-refill object read prunes this
+      // overlay entry, `f.ap/mp` go null, and project.js falls back to the authoritative row.ap/mp (drained-safe).
+      return action.ap == null && action.mp == null
+        ? withturn
+        : patch_fighter(withturn, key, { ap: action.ap, mp: action.mp })
+    }
+    case 'TurnEnded': {
+      const key = fighter_key({ is_mob: action.is_mob, idx: action.idx, resolve_seat: rs })
+      return state.active === key ? { ...state, active: null, turn_deadline_fresh: false } : state
+    }
+    case 'MobMoved':
+      return patch_fighter(state, fighter_key({ is_mob: true, idx: action.idx }), { cell: action.to_cell })
+    case 'Moved': {
+      const key = fighter_key({ character: action.character, resolve_seat: rs })
+      const moved = patch_fighter(state, key, { cell: action.to_cell })
+      // AP-PAINT TRUTH twin (MP): only MY optimistic intent carries mp_left (chain Moved events never do) —
+      // adopt the draft's ABSOLUTE remaining MP so the range/HUD shrink AND an undone step restores honestly.
+      return action.mp_left != null ? patch_fighter(moved, key, { mp: action.mp_left }) : moved
+    }
+    case 'Placed':
+      // Placement commit (turns.move: participant::set_cell + emit Placed{character, cell}, fight_events.move:22).
+      // The AUTHORITATIVE placed cell — character-keyed, so it consumes resolve_seat exactly like Moved. Without
+      // this case the event was silently DROPPED (Ready only sets ready:true), so me.cell never reflected the
+      // placed cell — the v1.12.28-class dropped fold flagged at DungeonBoard.jsx:897-898.
+      return patch_fighter(state, fighter_key({ character: action.character, resolve_seat: rs }), {
+        cell: action.cell,
+      })
+    case 'Displaced':
+      return patch_fighter(
+        state,
+        fighter_key({ is_mob: action.target_is_mob, idx: action.target_idx, resolve_seat: rs }),
+        { cell: action.to_cell }
+      )
+    case 'Cast': {
+      const key = fighter_key({ is_mob: action.caster_is_mob, idx: action.caster_idx, resolve_seat: rs })
+      const next = ensure(state, key)
+      // AP-PAINT TRUTH: MY optimistic cast intent carries
+      // ap_cost — debit the projected budget in the SAME fold every HUD surface reads. Receipt/poll Cast events
+      // carry no ap_cost (the chain debits server-side; the object read reconciles row.ap), so this arm only
+      // ever fires for the prediction — purged by the receipt like every intent.
+      const ap = next.fighters[key]?.ap
+      const spent =
+        action.ap_cost != null && ap != null ? patch_fighter(next, key, { ap: Math.max(0, ap - action.ap_cost) }) : next
+      // Reveal on a damaging cast — mirror of statuses::reveal (no chain event exists to carry it).
+      return action.damaging ? patch_fighter(spent, key, { invisible: false }) : spent
+    }
+    case 'Hit': {
+      const key = fighter_key({ is_mob: action.victim_is_mob, idx: action.victim_idx, resolve_seat: rs })
+      return patch_fighter(state, key, {
+        hp: action.remaining_hp,
+        alive: Number(action.remaining_hp) > 0,
+      })
+    }
+    case 'Tackled': {
+      // The escape-contest bite (tackle.move resolve → fight_events emit_tackled): the chain emits the DELTAS
+      // it stripped from BOTH pools. Adopt them onto the runner's OVERLAY pools only when they exist (the
+      // TurnStarted refill seeded them — the Cast ap_cost arm's exact pattern): a delta on a null base would
+      // invent a number; absent overlays reconcile through the object read's row.ap/mp instead. u64 fields
+      // ride as strings off Sui JSON — coerce here. Entries fold once (version:event_idx), so the delta is
+      // idempotent by identity.
+      const key = fighter_key({ is_mob: action.runner_is_mob, idx: Number(action.runner_idx) })
+      const f = state.fighters[key]
+      if (f?.ap == null || f?.mp == null) return state
+      return patch_fighter(state, key, {
+        ap: Math.max(0, Math.floor(f.ap) - (Number(action.ap_lost) || 0)),
+        mp: Math.max(0, Math.floor(f.mp) - (Number(action.mp_lost) || 0)),
+      })
+    }
+    case 'StanceChanged': {
+      // Chain shape: StanceChanged{ fighter_is_mob, fighter_idx, stance, active } — the register #13 fix reads
+      // fighter_* (the chain names, NOT the obsolete target_*) and maps ONLY the invisibility stance (kind 27) to
+      // `invisible` via `active` (on/off); every other stance is a no-op (most reveals ride the damaging-cast rule).
+      // BRIDGE B-STANCE (expiry INC-4/P1): the client's optimistic fan-out (DungeonBoard predict_cast) still
+      // dispatches the LEGACY { target_is_mob, target_idx, invisible } intent shape. Chain events never carry
+      // `invisible`, so the shapes never collide — accept both until predict_cast unifies through spell_effect.js
+      // and the .jsx fan-out is deleted, so my-cast optimistic invisibility does not regress in the interim.
+      const chain = action.stance != null
+      if (chain && Number(action.stance) !== INVISIBILITY_STATUS_KIND) return state
+      const invisible = chain ? !!action.active : action.invisible
+      if (invisible == null) return state
+      const is_mob = chain ? action.fighter_is_mob : action.target_is_mob
+      const idx = chain ? action.fighter_idx : action.target_idx
+      return patch_fighter(state, fighter_key({ is_mob, idx, resolve_seat: rs }), { invisible: !!invisible })
+    }
+    case 'Revealed':
+      // A fighter is un-hidden (fight_events Revealed{ is_mob, idx } — statuses::reveal's explicit event, distinct
+      // from the damaging-cast mirror). Idx-keyed like TurnStarted; clears invisibility on peer turns.
+      return patch_fighter(state, fighter_key({ is_mob: action.is_mob, idx: action.idx }), { invisible: false })
+    case 'Drain': {
+      // A resource drain (fight_events Drain{ target_is_mob, target_idx, point_kind, removed }). point_kind 0 = AP,
+      // else MP (mob.move give/drain_points). Adopt onto the OVERLAY pool only when it exists — a delta on a null
+      // base would invent a number (the Cast/Tackled pattern); an absent overlay reconciles through the object
+      // read's row.ap/mp. u64/u8 fields ride as strings off Sui JSON — coerce here.
+      const key = fighter_key({ is_mob: action.target_is_mob, idx: action.target_idx, resolve_seat: rs })
+      const f = state.fighters[key]
+      const pool = Number(action.point_kind) === 0 ? 'ap' : 'mp'
+      if (f?.[pool] == null) return state
+      return patch_fighter(state, key, { [pool]: Math.max(0, Math.floor(f[pool]) - (Number(action.removed) || 0)) })
+    }
+    case 'Granted': {
+      // The SYMMETRIC TWIN of Drain — a resource GRANT (give_points: +n to a pool). point_kind 0 = AP else MP.
+      // WHY its own kind, not a signed Drain: the chain's Drain carries `removed: u64`
+      // (fight_events.move:128) which can NEVER be negative, so a grant can neither ride it truthfully nor ever
+      // ARRIVE as one — the honest name is the only expressible shape. THE ONE HOME both grant doors fold through:
+      //  · the PREDICTION (predict_cast.changed_actions emits it on a pool INCREASE), and
+      //  · any AUTHORITATIVE grant. Note give_points emits NO chain event (cast.move:997-1001 → participant.move
+      //    give_points mutates the pool silently), so the DURABLE chain truth rides base_from_view's already-granted
+      //    row.mp — this arm carries the OPTIMISTIC grant so the HUD number + MP blob reflect it the instant it's
+      //    cast, before the snapshot round-trips. Overlay-only (a delta on a null base would invent a number — the
+      //    Drain/Cast/Tackled pattern); an absent overlay reconciles through row.ap/mp. u64 rides as a string — coerce.
+      const key = fighter_key({ is_mob: action.target_is_mob, idx: action.target_idx, resolve_seat: rs })
+      const f = state.fighters[key]
+      const pool = Number(action.point_kind) === 0 ? 'ap' : 'mp'
+      if (f?.[pool] == null) return state
+      return patch_fighter(state, key, { [pool]: Math.max(0, Math.floor(f[pool]) + (Number(action.granted) || 0)) })
+    }
+    case 'Abandoned':
+      // A seat forfeited the fight (actions::abandon → fight_events Abandoned{ character, seat }) — the character
+      // dies through the ordinary liveness write. Seat-keyed (a forfeit is always a player), so no resolver needed.
+      return patch_fighter(state, fighter_key({ is_mob: false, idx: Number(action.seat) }), { hp: 0, alive: false })
+    case 'CriticalFailure':
+      // A fumbled cast (fight_events CriticalFailure{ caster_is_mob, caster_idx }) — the AP was already debited by
+      // the Cast and no Hit follows, so there is NO fold delta. Recognized (not dropped) so the render producer's
+      // pending-effect ordering stays correct (#27); the object read reconciles the spent AP.
+      return state
+    case 'Ready': {
+      // Placement: a seat placed + readied (turns.move place). Keyed by `character` (the receipt's own seat).
+      const key = fighter_key({ character: action.character, resolve_seat: rs })
+      return patch_fighter(state, key, { ready: true })
+    }
+    case 'Victory':
+      return { ...state, phase: 'victory', winner: 0, turn_deadline_fresh: false }
+    case 'Defeat':
+      return { ...state, phase: 'defeat', winner: 1, turn_deadline_fresh: false }
+    default:
+      return state
+  }
+}
+
+/** Fold a whole (sorted) action log into committed state. `state = fold(log)` — the design's core identity. */
+export const fold_log = (log, fight_id = null) => log.reduce(apply_action, empty_state(fight_id))
+
+// ── Normalizers: every input door → ordered actions keyed (version, event_idx) ────────────────────────────────
+
+/** A Cast is DAMAGING if a later Hit in the same segment strikes a fighter OTHER than the caster (before the next
+ *  Cast / turn boundary). Drives the optimistic invisibility reveal for receipt/peer segments. */
+const mark_damaging_casts = (decoded) => {
+  const out = decoded.map((e) => ({ ...e }))
+  for (let i = 0; i < out.length; i++) {
+    if (out[i].kind !== 'Cast') continue
+    const caster_key = fighter_key({ is_mob: out[i].caster_is_mob, idx: out[i].caster_idx })
+    for (let j = i + 1; j < out.length; j++) {
+      if (out[j].kind === 'Cast' || out[j].kind === 'TurnStarted' || out[j].kind === 'TurnEnded') break
+      if (out[j].kind !== 'Hit') continue
+      const victim_key = fighter_key({ is_mob: out[j].victim_is_mob, idx: out[j].victim_idx })
+      if (victim_key !== caster_key) {
+        out[i].damaging = true
+        break
+      }
+    }
+  }
+  return out
+}
+
+/**
+ * Normalize a receipt / poll / p2p relay ({ events: [{ type, parsedJson }] } or a bare event array) into ordered
+ * actions keyed `(version, event_idx)`. `version` scopes the batch; `event_idx` its position — the dedupe key is
+ * `version:event_idx`. Reuses the SDK's proven `decode_fight_event` verbatim (FIGHTREAL: zero shape drift).
+ */
+export const normalize_events = (
+  receipt,
+  { version, source = 'receipt', fight_id = null, resolve_seat = null, base_of = null } = {}
+) => {
+  const raw = Array.isArray(receipt) ? receipt : (receipt?.events ?? [])
+  // event_idx = the event's position in the RAW receipt (same clock as the render producer's event_index) —
+  // the presentation windows (store.presented_state) join the two lanes on this one index.
+  const decoded = raw
+    .map((event, event_idx) => {
+      const e = decode_fight_event(event)
+      return e ? { ...e, event_idx } : null
+    })
+    .filter((e) => e && (!fight_id || String(e.fight) === String(fight_id)))
+  return mark_damaging_casts(decoded).map((e) => {
+    // TURN-START BUDGET: a player TurnStarted predicts the begin_turn refill — inject the seat's base_ap/base_mp
+    // (from the current view via `base_of`) so the fold paints the budget the event itself omits (see apply_action).
+    const budget = base_of && e.kind === 'TurnStarted' && !e.is_mob ? base_of(Number(e.idx)) : null
+    return { ...e, version, source, resolve_seat, ...(budget ? { ap: budget.ap, mp: budget.mp } : {}) }
+  })
+}
+
+/** My fighter identity from my key: `p0` → { is_mob:false, idx:0 }, `m2` → { is_mob:true, idx:2 }. */
+export const actor_from_key = (key) =>
+  key && (key[0] === 'p' || key[0] === 'm') ? { is_mob: key[0] === 'm', idx: Number(key.slice(1)) } : null
+
+/** D-resolve_seat: character id → its seat INDEX in the view's escrow roster (fighter_key prepends 'p');
+ *  null when unresolvable. Every input door defaults its resolve_seat to this — without it, character-keyed
+ *  events orphan onto `c:<id>` and the `p<idx>`-reading projection never sees them. */
+export const seat_resolver = (view) => (character) => {
+  if (character == null) return null
+  const idx = (view?.escrow ?? []).findIndex((p) => String(p.character ?? '') === String(character))
+  return idx >= 0 ? idx : null
+}
+
+/**
+ * Normalize a local intent (my click) into ONE canonical chain-event action, so the whole log folds through the
+ * single `apply_action` (no second reducer). `end_turn`→TurnEnded, `cast`→Cast, `move`→Moved — all keyed to MY
+ * seat (`actor`). A damaging cast carries `damaging:true` so the invisibility reveal fires THIS frame (prediction),
+ * before any receipt. `version`/`event_idx` place it deterministically in the ordered log.
+ */
+export const normalize_intent = (intent, { version, event_idx = 0, actor = null, resolve_seat = null } = {}) => {
+  const base = { version, event_idx, source: 'intent', resolve_seat }
+  const is_mob = actor?.is_mob ?? false
+  const idx = actor?.idx ?? 0
+  switch (intent.kind) {
+    case 'end_turn':
+      return { ...base, kind: 'TurnEnded', is_mob, idx }
+    case 'cast':
+      return {
+        ...base,
+        kind: 'Cast',
+        caster_is_mob: is_mob,
+        caster_idx: idx,
+        target_cell: intent.target_cell ?? null,
+        damaging: !!intent.damaging,
+        // AP-PAINT TRUTH: MY drafted cast carries its cost so the ONE fold debits the
+        // projected budget the same tick (chain-parity safe: receipt Cast events never carry it — the object
+        // read's row.ap is the authority the purge reconciles to).
+        ...(intent.ap_cost != null ? { ap_cost: Number(intent.ap_cost) } : {}),
+      }
+    case 'move':
+      return {
+        ...base,
+        kind: 'Moved',
+        character: intent.character ?? actor?.character ?? null,
+        to_cell: intent.to_cell ?? null,
+        // the MP twin of ap_cost above — ABSOLUTE remaining MP after the whole draft (the board's own draft
+        // math), so an undone step re-raises the projected budget honestly. Chain Moved events never carry it.
+        ...(intent.mp_left != null ? { mp_left: Number(intent.mp_left) } : {}),
+      }
+    default:
+      return { ...base, ...intent } // already-canonical action passthrough
+  }
+}
+
+/** Stable byte image of the committed state — fighters sorted by key. Equal strings ⇒ byte parity.
+ *  ORACLE WIDENING (B-F18, INC-0): AP/MP/ready and the presentation/settlement surface join the image — exactly
+ *  the fields the reconcile bugs corrupt, invisible to the old oracle (a green fightcore was a partial lie).
+ *  `?? null` / `?? []` defaults keep a bare committed fold byte-identical to a quiescent store fold, so the
+ *  parity proof (store vs direct fold) survives; a live store's draining wave / terminal signal now register. */
+export const canonical_state = (state) => ({
+  fight_id: state.fight_id,
+  phase: state.phase,
+  active: state.active,
+  turn_deadline_ms: state.turn_deadline_ms,
+  winner: state.winner,
+  fighters: Object.keys(state.fighters)
+    .sort()
+    .map((key) => {
+      const f = state.fighters[key]
+      return {
+        key,
+        cell: f.cell,
+        hp: f.hp,
+        alive: f.alive,
+        invisible: f.invisible,
+        ap: f.ap ?? null,
+        mp: f.mp ?? null,
+        ready: f.ready ?? null,
+      }
+    }),
+  wave: (state.wave ?? []).map((t) => ({
+    seq: t.seq,
+    version: t.version,
+    source_id: t.source_id ?? null,
+    is_local: !!t.is_local,
+  })),
+  presented_seq: state.presented_seq ?? 0,
+  settlement: state.settlement?.chain_terminal?.signal ?? null,
+})
+
+/** Compact FNV-1a digest of the canonical state — the parity "hash" for reports/logs. */
+export const state_hash = (state) => {
+  const text = JSON.stringify(canonical_state(state))
+  let h = 0x811c9dc5
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
+  }
+  return (h >>> 0).toString(16).padStart(8, '0')
+}

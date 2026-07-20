@@ -1,0 +1,365 @@
+{
+  "aliases": {
+    "aetherwing": "aetherwing",
+    "arisen_bouloute": "pet_arisen_bouloute",
+    "arisen_corbac": "pet_arisen_corbac",
+    "arisen_modni": "pet_arisen_modni",
+    "arisen_timon": "pet_arisen_timon",
+    "arisen_tokeko": "arisen_tokeko",
+    "bara_hood": "capuche_bara",
+    "bara_hood_amber": "capuche_bara_earth",
+    "bara_hood_emerald": "capuche_bara_air",
+    "bara_hood_ruby": "capuche_bara_fire",
+    "bara_hood_sapphire": "capuche_bara_water",
+    "bara_hood_vitality": "capuche_bara_vitality",
+    "bara_hood_wisdom": "capuche_bara_wisdom",
+    "berserk": "berserk",
+    "berserker_helm": "berserk",
+    "bouloute": "pet_bouloute",
+    "cape_fuwa_black": "cape_fuwa_black",
+    "cape_fuwa_white": "cape_fuwa_white",
+    "cape_kamui": "cape_kamui",
+    "cape_lorito_agility": "cape_lorito_agility",
+    "cape_lorito_chance": "cape_lorito_chance",
+    "cape_lorito_intelligence": "cape_lorito_intelligence",
+    "cape_lorito_strength": "cape_lorito_strength",
+    "cape_lorito_vitality": "cape_lorito_vitality",
+    "cape_lorito_wisdom": "cape_lorito_wisdom",
+    "capuche_bara": "capuche_bara",
+    "capuche_bara_air": "capuche_bara_air",
+    "capuche_bara_earth": "capuche_bara_earth",
+    "capuche_bara_fire": "capuche_bara_fire",
+    "capuche_bara_vitality": "capuche_bara_vitality",
+    "capuche_bara_water": "capuche_bara_water",
+    "capuche_bara_wisdom": "capuche_bara_wisdom",
+    "capuche_mo": "capuche_mo",
+    "casque_hayate": "casque_hayate",
+    "chomperion": "pet_chomperion",
+    "chromafin": "pet_chromafin",
+    "coiffe_fuwa_black": "coiffe_fuwa_black",
+    "coiffe_fuwa_white": "coiffe_fuwa_white",
+    "coiffe_pepe": "coiffe_pepe",
+    "coiffe_pepe_royal": "coiffe_pepe_royal",
+    "corbac_head": "corbac_head",
+    "corbac_headdress": "corbac_head",
+    "cryofin": "pet_cryofin",
+    "doris": "pet_doris",
+    "drakar": "drakar",
+    "drakar_helm": "drakar",
+    "ekusoni": "ekusoni",
+    "ekusoni_mask": "ekusoni",
+    "enka_muru": "enka_muru",
+    "enka_muru_cloak": "enka_muru",
+    "fuwa_cloak_black": "cape_fuwa_black",
+    "fuwa_cloak_white": "cape_fuwa_white",
+    "fuwa_hood_black": "coiffe_fuwa_black",
+    "fuwa_hood_white": "coiffe_fuwa_white",
+    "hayate_helm": "casque_hayate",
+    "kamui_cloak": "cape_kamui",
+    "lorito_cloak_amber": "cape_lorito_strength",
+    "lorito_cloak_amethyst": "cape_lorito_wisdom",
+    "lorito_cloak_emerald": "cape_lorito_agility",
+    "lorito_cloak_rose_quartz": "cape_lorito_vitality",
+    "lorito_cloak_ruby": "cape_lorito_intelligence",
+    "lorito_cloak_sapphire": "cape_lorito_chance",
+    "lorito_helmet": "lorito_helmet",
+    "mark_of_the_unbroken": "title_veteran",
+    "mo_hood": "capuche_mo",
+    "modni_lyk": "pet_modni_lyk",
+    "mokan": "mokan",
+    "mokan_hat": "mokan",
+    "momaku": "momaku",
+    "momaku_cloak": "momaku",
+    "moray": "pet_moray",
+    "parrot_hat": "parrot_hat",
+    "pepe_hat": "coiffe_pepe",
+    "pepe_royal_crown": "coiffe_pepe_royal",
+    "pet_arisen_bouloute": "pet_arisen_bouloute",
+    "pet_arisen_corbac": "pet_arisen_corbac",
+    "pet_arisen_modni": "pet_arisen_modni",
+    "pet_arisen_timon": "pet_arisen_timon",
+    "pet_bouloute": "pet_bouloute",
+    "pet_chomperion": "pet_chomperion",
+    "pet_chromafin": "pet_chromafin",
+    "pet_cryofin": "pet_cryofin",
+    "pet_doris": "pet_doris",
+    "pet_modni_lyk": "pet_modni_lyk",
+    "pet_moray": "pet_moray",
+    "pet_timon": "pet_timon",
+    "pet_tokeko": "pet_tokeko",
+    "solomonk": "solomonk",
+    "solomonk_cowl": "solomonk",
+    "timon": "pet_timon",
+    "title_veteran": "title_veteran",
+    "tokeko": "pet_tokeko",
+    "veteran_scroll": "title_veteran",
+    "zukin_muru": "zukin_muru",
+    "zukin_muru_cowl": "zukin_muru"
+  },
+  "renders": {
+    "aetherwing": {
+      "kind": "pet",
+      "png": null,
+      "png_hd": null,
+      "video": "aetherwing_pet.webm"
+    },
+    "arisen_tokeko": {
+      "kind": "pet",
+      "png": null,
+      "png_hd": null,
+      "video": "arisen_tokeko_pet.webm"
+    },
+    "berserk": {
+      "kind": "worn",
+      "png": "berserk.png",
+      "png_hd": "berserk_hd.png",
+      "video": "berserk_worn.webm"
+    },
+    "cape_fuwa_black": {
+      "kind": "worn",
+      "png": "cape_fuwa_black.png",
+      "png_hd": "cape_fuwa_black_hd.png",
+      "video": "cape_fuwa_black_worn.webm"
+    },
+    "cape_fuwa_white": {
+      "kind": "worn",
+      "png": "cape_fuwa_white.png",
+      "png_hd": "cape_fuwa_white_hd.png",
+      "video": "cape_fuwa_white_worn.webm"
+    },
+    "cape_kamui": {
+      "kind": "worn",
+      "png": "cape_kamui.png",
+      "png_hd": "cape_kamui_hd.png",
+      "video": "cape_kamui_worn.webm"
+    },
+    "cape_lorito_agility": {
+      "kind": "worn",
+      "png": "cape_lorito_agility.png",
+      "png_hd": "cape_lorito_agility_hd.png",
+      "video": "cape_lorito_agility_worn.webm"
+    },
+    "cape_lorito_chance": {
+      "kind": "worn",
+      "png": "cape_lorito_chance.png",
+      "png_hd": "cape_lorito_chance_hd.png",
+      "video": "cape_lorito_chance_worn.webm"
+    },
+    "cape_lorito_intelligence": {
+      "kind": "worn",
+      "png": "cape_lorito_intelligence.png",
+      "png_hd": "cape_lorito_intelligence_hd.png",
+      "video": "cape_lorito_intelligence_worn.webm"
+    },
+    "cape_lorito_strength": {
+      "kind": "worn",
+      "png": "cape_lorito_strength.png",
+      "png_hd": "cape_lorito_strength_hd.png",
+      "video": "cape_lorito_strength_worn.webm"
+    },
+    "cape_lorito_vitality": {
+      "kind": "worn",
+      "png": "cape_lorito_vitality.png",
+      "png_hd": "cape_lorito_vitality_hd.png",
+      "video": "cape_lorito_vitality_worn.webm"
+    },
+    "cape_lorito_wisdom": {
+      "kind": "worn",
+      "png": "cape_lorito_wisdom.png",
+      "png_hd": "cape_lorito_wisdom_hd.png",
+      "video": "cape_lorito_wisdom_worn.webm"
+    },
+    "capuche_bara": {
+      "kind": "worn",
+      "png": "capuche_bara.png",
+      "png_hd": "capuche_bara_hd.png",
+      "video": "capuche_bara_worn.webm"
+    },
+    "capuche_bara_air": {
+      "kind": "worn",
+      "png": "capuche_bara_air.png",
+      "png_hd": "capuche_bara_air_hd.png",
+      "video": "capuche_bara_air_worn.webm"
+    },
+    "capuche_bara_earth": {
+      "kind": "worn",
+      "png": "capuche_bara_earth.png",
+      "png_hd": "capuche_bara_earth_hd.png",
+      "video": "capuche_bara_earth_worn.webm"
+    },
+    "capuche_bara_fire": {
+      "kind": "worn",
+      "png": "capuche_bara_fire.png",
+      "png_hd": "capuche_bara_fire_hd.png",
+      "video": "capuche_bara_fire_worn.webm"
+    },
+    "capuche_bara_vitality": {
+      "kind": "worn",
+      "png": "capuche_bara_vitality.png",
+      "png_hd": "capuche_bara_vitality_hd.png",
+      "video": "capuche_bara_vitality_worn.webm"
+    },
+    "capuche_bara_water": {
+      "kind": "worn",
+      "png": "capuche_bara_water.png",
+      "png_hd": "capuche_bara_water_hd.png",
+      "video": "capuche_bara_water_worn.webm"
+    },
+    "capuche_bara_wisdom": {
+      "kind": "worn",
+      "png": "capuche_bara_wisdom.png",
+      "png_hd": "capuche_bara_wisdom_hd.png",
+      "video": "capuche_bara_wisdom_worn.webm"
+    },
+    "capuche_mo": {
+      "kind": "worn",
+      "png": "capuche_mo.png",
+      "png_hd": "capuche_mo_hd.png",
+      "video": null
+    },
+    "casque_hayate": {
+      "kind": "worn",
+      "png": "casque_hayate.png",
+      "png_hd": "casque_hayate_hd.png",
+      "video": "casque_hayate_worn.webm"
+    },
+    "coiffe_fuwa_black": {
+      "kind": "worn",
+      "png": "coiffe_fuwa_black.png",
+      "png_hd": "coiffe_fuwa_black_hd.png",
+      "video": "coiffe_fuwa_black_worn.webm"
+    },
+    "coiffe_fuwa_white": {
+      "kind": "worn",
+      "png": "coiffe_fuwa_white.png",
+      "png_hd": "coiffe_fuwa_white_hd.png",
+      "video": "coiffe_fuwa_white_worn.webm"
+    },
+    "coiffe_pepe": {
+      "kind": "worn",
+      "png": "coiffe_pepe.png",
+      "png_hd": "coiffe_pepe_hd.png",
+      "video": "coiffe_pepe_worn.webm"
+    },
+    "coiffe_pepe_royal": {
+      "kind": "worn",
+      "png": "coiffe_pepe_royal.png",
+      "png_hd": "coiffe_pepe_royal_hd.png",
+      "video": "coiffe_pepe_royal_worn.webm"
+    },
+    "corbac_head": {
+      "kind": "worn",
+      "png": "corbac_head.png",
+      "png_hd": "corbac_head_hd.png",
+      "video": "corbac_head_worn.webm"
+    },
+    "drakar": {
+      "kind": "worn",
+      "png": "drakar.png",
+      "png_hd": "drakar_hd.png",
+      "video": "drakar_worn.webm"
+    },
+    "ekusoni": {
+      "kind": "worn",
+      "png": "ekusoni.png",
+      "png_hd": "ekusoni_hd.png",
+      "video": "ekusoni_worn.webm"
+    },
+    "enka_muru": {
+      "kind": "worn",
+      "png": "enka_muru.png",
+      "png_hd": "enka_muru_hd.png",
+      "video": null
+    },
+    "lorito_helmet": {
+      "kind": "worn",
+      "png": "lorito_helmet.png",
+      "png_hd": "lorito_helmet_hd.png",
+      "video": "lorito_helmet_worn.webm"
+    },
+    "mokan": {
+      "kind": "worn",
+      "png": "mokan.png",
+      "png_hd": "mokan_hd.png",
+      "video": "mokan_worn.webm"
+    },
+    "momaku": {
+      "kind": "worn",
+      "png": "momaku.png",
+      "png_hd": "momaku_hd.png",
+      "video": null
+    },
+    "parrot_hat": {
+      "kind": "worn",
+      "png": "parrot_hat.png",
+      "png_hd": "parrot_hat_hd.png",
+      "video": "parrot_hat_worn.webm"
+    },
+    "pet_arisen_bouloute": {
+      "kind": "pet",
+      "png": "pet_arisen_bouloute.png",
+      "png_hd": "pet_arisen_bouloute_hd.png",
+      "video": "pet_arisen_bouloute_pet.webm"
+    },
+    "pet_arisen_corbac": {
+      "kind": "pet",
+      "png": "pet_arisen_corbac.png",
+      "png_hd": "pet_arisen_corbac_hd.png",
+      "video": "pet_arisen_corbac_pet.webm"
+    },
+    "pet_arisen_modni": {
+      "kind": "pet",
+      "png": "pet_arisen_modni.png",
+      "png_hd": "pet_arisen_modni_hd.png",
+      "video": "pet_arisen_modni_pet.webm"
+    },
+    "pet_arisen_timon": {
+      "kind": "pet",
+      "png": "pet_arisen_timon.png",
+      "png_hd": "pet_arisen_timon_hd.png",
+      "video": "pet_arisen_timon_pet.webm"
+    },
+    "pet_bouloute": {
+      "kind": "pet",
+      "png": "pet_bouloute.png",
+      "png_hd": "pet_bouloute_hd.png",
+      "video": "pet_bouloute_pet.webm"
+    },
+    "pet_chomperion": {
+      "kind": "pet",
+      "png": "pet_chomperion.png",
+      "png_hd": "pet_chomperion_hd.png",
+      "video": "pet_chomperion_pet.webm"
+    },
+    "pet_modni_lyk": {
+      "kind": "pet",
+      "png": "pet_modni_lyk.png",
+      "png_hd": "pet_modni_lyk_hd.png",
+      "video": "pet_modni_lyk_pet.webm"
+    },
+    "pet_timon": {
+      "kind": "pet",
+      "png": "pet_timon.png",
+      "png_hd": "pet_timon_hd.png",
+      "video": "pet_timon_pet.webm"
+    },
+    "pet_tokeko": {
+      "kind": "pet",
+      "png": "pet_tokeko.png",
+      "png_hd": "pet_tokeko_hd.png",
+      "video": "pet_tokeko_pet.webm"
+    },
+    "solomonk": {
+      "kind": "worn",
+      "png": "solomonk.png",
+      "png_hd": "solomonk_hd.png",
+      "video": "solomonk_worn.webm"
+    },
+    "zukin_muru": {
+      "kind": "worn",
+      "png": "zukin_muru.png",
+      "png_hd": "zukin_muru_hd.png",
+      "video": "zukin_muru_worn.webm"
+    }
+  }
+}

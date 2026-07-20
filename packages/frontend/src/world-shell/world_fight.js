@@ -1,0 +1,103 @@
+// WORLD FIGHT — the two overworld entry points (ENTER create-handoff · RESUME reconnect) for a BARE on-chain Fight
+// (no RunPass); the SAME store + core play/settle it (`run_pass_id: null`). `dungeon_id`=fight id; `in_session`=false.
+
+import { use_auth } from '../auth'
+import { get_fights } from '../rpc/client'
+import { game_log } from '../core/log.js'
+
+import { use_dungeon } from './dungeon_store.js'
+import { use_party } from './party_store.js'
+import { fight_state_trace } from './fight_state_trace.js'
+import { poll_receipt_fight, receipt_entry_decision } from './world_fight_receipt.js'
+import { init_dungeon_fight } from './dungeon_fight_shim.js'
+import { ensure_resumable_placement } from './fight-liquidation.js'
+
+const { getState } = use_dungeon
+/** True while a fight/dungeon session already owns the shared store (never stomp a live board). */
+const session_busy = () => getState().fight_id != null || getState().run_pass_id != null
+const is_live = (f) => !!f && (f.status === 'placement' || f.status === 'active') // the two hostable statuses
+
+/** ENTER: publish the minted id as a run-pass-LESS session, OPEN it in the core, start the poll (idempotent; a live
+ *  session is never stomped; `resumed` suppresses the cinematic). `is_public` gates the owned-party auto-form: a
+ *  PUBLIC fight discards the party id, so forming one is a wasted create tx (defaults false — form, for every
+ *  non-engage entry that stays on today's behavior). @param {{fight_id,world_id?,character_id,resumed?,is_public?}} */
+export function enter_world_fight({ fight_id, world_id = null, character_id, resumed = false, is_public = false }) {
+  const store = getState()
+  const decision = receipt_entry_decision({
+    current_fight_id: store.fight_id,
+    current_run_pass_id: store.run_pass_id,
+    next_fight_id: fight_id,
+    character_id,
+  })
+  fight_state_trace('fight_create_adopt', { fight_id, character_id, resumed, decision })
+  if (decision === 'invalid' || decision === 'same') return // same receipt id enriches the existing mount
+  if (decision === 'busy')
+    return game_log('world-fight', 'enter refused — a session is already live', { have: store.fight_id })
+  const { address } = use_auth.getState()
+  use_dungeon.setState({
+    fight_id,
+    fight_fresh: !resumed, // fresh create vs reload-resume — the entry cinematic gates on this stamp
+    dungeon_id: fight_id, // the session identity → GameWorldHud in_dungeon stays true (no dead WS chrome)
+    world_id,
+    template_id: world_id,
+    character_id,
+    run_pass_id: null, // a world fight has no RunPass — refresh()/settle take their world (no-run) branches
+    run: null,
+    rooms: [], // no dungeon rooms → the core resolves victory as terminal WON (not ROOM_CLEARED)
+    result_id: null,
+    phase: 'playing',
+    error: null,
+    fight_syncing: !resumed, // create/join receipt truth outranks a temporarily-missing serving-node read
+    session_address: address,
+  })
+  init_dungeon_fight({ fight_id, character_id, address }) // OPEN it in the core (refresh feeds the snapshot)
+  fight_state_trace('fight_create_published', { fight_id, character_id, resumed, fight_syncing: !resumed })
+  getState()._start_polling()
+  if (resumed) return void getState().refresh()
+  // Auto-form the owned party at engagement; the GROUP LOOP (group_wiring → @aresrpg/party group_loop)
+  // watches this fight's placement window and seats every aligned owned member exactly once — the join
+  // decision left this file (one home: the reducer; the per-member tx stays owned_team_actions). A PUBLIC
+  // fight carries no party id (anyone may join), so forming one here is a discarded on-chain create tx — skip it.
+  if (!is_public)
+    void use_party
+      .getState()
+      .ensure_owned_party()
+      .catch((error) => game_log('world-fight', 'owned party auto-form stopped', error))
+  void poll_receipt_fight({ fight_id, get_state: getState, refresh: () => getState().refresh() })
+}
+
+/** RESUME after a reload: discover the candidate, then validate it is still live BEFORE entry (absent/terminal
+ *  stays in-world; a transient read holds for a later boot pass). A PLACEMENT candidate must ALSO pass the
+ *  chain-truth presentability gate (fight-liquidation.js — the REJOIN-SPAWN root: an expired window liquidates
+ *  via force_start BEFORE adoption, never entered as-is; 'active' passes untouched, the P0 refresh law).
+ *  @param {string} character_id @param {{ force_start_door?: Function }} [deps] unit seam only */
+export async function resume_world_fight(character_id, deps = {}) {
+  if (!character_id || session_busy()) return
+  let fights
+  try {
+    fights = await get_fights({ character: character_id })
+  } catch (error) {
+    return game_log('world-fight', 'resume read failed — no reconnect this pass', error)
+  }
+  const live = (fights ?? []).find(is_live)
+  const fight_id = live?.fight_id ?? live?.fight
+  if (!fight_id) return // nothing resumable — stay in the world
+  let current
+  try {
+    current = (await get_fights({ id: fight_id })).find((f) => (f.fight_id ?? f.fight) === fight_id && is_live(f))
+  } catch (error) {
+    return game_log('world-fight', 'resume liveness read failed — staying in the world', error)
+  }
+  if (!current) {
+    if (session_busy())
+      return fight_state_trace('fight_resume_validation_superseded', {
+        candidate_fight_id: fight_id,
+        current_fight_id: getState().fight_id,
+      })
+    return getState()._recover_dead_fight_reference({ character_id, state: 'absent' })
+  }
+  if (current.status === 'placement' && (await ensure_resumable_placement(fight_id, deps.force_start_door)) !== 'enter')
+    return
+  if (session_busy()) return // a session opened while the read was in flight — never stomp it
+  enter_world_fight({ fight_id, world_id: current.world ?? live.world ?? null, character_id, resumed: true })
+}

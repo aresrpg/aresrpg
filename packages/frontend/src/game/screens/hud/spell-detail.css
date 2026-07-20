@@ -1,0 +1,189 @@
+/*
+ * Spell Detail panel (`.sd*`) — the reusable per-spell readout (SpellDetail.jsx). House Frosted-Obsidian
+ * tokens (tokens.css): ONE ice-blue accent, element tint only on art/cost/dots via `--el`, hairline
+ * dividers, mono tabular-nums. Rendered by the in-fight ARMED-SPELL readout (FightArmedReadout, canon/14),
+ * whose "compact mode" is pure CSS scoped under `.fight-readout` (fight-targeting.css) — SpellDetail itself
+ * is reused untouched. Self-contained: no `.deck`/`.hud-root`/`.gw-tab` ancestor rules (the deck builder
+ * that formerly co-owned this stylesheet was removed in D30 — the grimoire owns the SPELLS tab now).
+ */
+.sd {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.sd--empty {
+  min-height: 120px;
+  align-items: center;
+  justify-content: center;
+}
+.sd__empty-text {
+  color: var(--fg-faint);
+  font-size: 0.82rem;
+}
+
+.sd__head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-2);
+  border: 1px solid color-mix(in srgb, var(--el) 40%, var(--edge));
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--el) 18%, var(--surface-2)),
+    var(--surface-2)
+  );
+}
+.sd__head-art {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--r-2);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--el) 50%, var(--edge));
+  background: var(--surface-3);
+  flex: none;
+}
+.sd__head-id {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.sd__head-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sd__head-sub {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--el);
+}
+.sd__cost {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  padding: 4px 6px;
+  border-radius: var(--r-2);
+  background: var(--el);
+  color: var(--accent-ink);
+  flex: none;
+}
+.sd__cost-n {
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.sd__cost-unit {
+  font-size: 0.54rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+/* facts grid — hairline-separated cells (gap shows the panel bg through) */
+.sd__facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--hair);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-2);
+  overflow: hidden;
+}
+.sd__fact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding: var(--s-2);
+  background: var(--surface-2);
+}
+.sd__fact-label {
+  font-size: 0.72rem;
+  color: var(--fg-muted);
+}
+.sd__fact-val {
+  font-size: 0.8rem;
+  color: var(--fg);
+}
+
+/* effects list */
+.sd__effects {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.sd__section-head {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.sd__effect {
+  display: flex;
+  gap: var(--s-2);
+  align-items: flex-start;
+}
+.sd__effect-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex: none;
+}
+.sd__effect-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-width: 0;
+}
+.sd__effect-text {
+  font-size: 0.82rem;
+  color: var(--fg);
+}
+.sd__effect-badges {
+  display: flex;
+  gap: var(--s-1);
+  flex-wrap: wrap;
+}
+.sd__badge {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: var(--r-1);
+  background: var(--surface-3);
+  border: 1px solid var(--hair);
+  color: var(--fg-muted);
+}
+.sd__badge--target {
+  color: var(--accent);
+  background: var(--accent-dim);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+/* shared art base (img + fallback span) — fills its sized container */
+.sd__art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.sd__art--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: var(--el);
+  background: color-mix(in srgb, var(--el) 20%, var(--surface-3));
+}

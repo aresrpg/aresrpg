@@ -1,0 +1,55 @@
+# aresrpg_kolizeum — the standalone PvP wager-arena package (package-split 2026-07-11: the aresrpg core hit the
+# 102,400-byte protocol publish cap; the kolizeum family extracted into this sibling, mirroring the
+# foundation/engine/social/spells pattern). Feature → core arrows only: it READS core (config dials, character
+# level, the public combat/dial snapshot factories) and drives the GENERIC branded engine with its OWN
+# `KolizeumBrand` witness. Core never names this package (ledgered law).
+[package]
+name = "aresrpg_kolizeum"
+version = "0.1.0"
+edition = "2024.alpha"
+authors = ["AresRPG"]
+
+# FRAMEWORK PIN: single-rev, matched to the active CLI's own framework hash — identical to every sibling package
+# so the whole graph compiles against one lineage.
+[dependencies.Sui]
+git = "https://github.com/MystenLabs/sui.git"
+subdir = "crates/sui-framework/packages/sui-framework"
+rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+override = true
+
+[dependencies.MoveStdlib]
+git = "https://github.com/MystenLabs/sui.git"
+subdir = "crates/sui-framework/packages/move-stdlib"
+rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+override = true
+
+# Kiosk (PersonalKioskCap — the ownership proof the seat/start doors thread). Default = testnet lineage;
+# [dep-replacements.mainnet] re-pins exactly like the core package.
+[dependencies.Kiosk]
+git = "https://github.com/MystenLabs/apps.git"
+subdir = "kiosk"
+rev = "testnet"
+
+# THE core game package (config / version / character / character_link / fight snapshot factories). Arrow flows
+# feature → core, never back.
+[dependencies.aresrpg]
+local = "../aresrpg"
+
+# The GENERIC branded combat engine: this package constructs its own `KolizeumBrand` witness and calls
+# `create_pvp<W>/join<W>` directly; settlement outcomes echo the brand.
+[dependencies.aresrpg_fight]
+local = "../engine"
+
+# Standalone social (friends): the friends-only lobby snapshots the creator's FriendList (read-only).
+[dependencies.aresrpg_social]
+local = "../social"
+
+[environments]
+testnet = { chain-id = "4c78adac" }
+mainnet = { chain-id = "35834a8a" }
+
+[dep-replacements.mainnet]
+Kiosk = { git = "https://github.com/MystenLabs/apps.git", subdir = "kiosk", rev = "mainnet" }
+
+[addresses]
+# `aresrpg_kolizeum` binds implicitly to 0x0 via the [package] name; per-network published ids self-record.

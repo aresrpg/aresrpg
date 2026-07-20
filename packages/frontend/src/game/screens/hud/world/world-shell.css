@@ -1,0 +1,456 @@
+/* World + Fights SHELL (T85) — companion gold DNA via .gw-tab tokens. Mock-fed shell; visuals match the
+   banked RP mockups (world-tab-rp / fights-tab-rp). No DeFi words anywhere. */
+
+/* ───────────────────────── WORLD tab ───────────────────────── */
+.wsh {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  gap: var(--s-4);
+}
+.wsh__head {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-4);
+  padding-left: var(--s-4);
+  padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--steel);
+}
+.wsh__title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.wsh__sub {
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.wsh__cols {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--s-5);
+  padding: 0 var(--s-2) var(--s-2) var(--s-4);
+}
+.wsh__col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+.wsh__lab {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-bottom: var(--s-3);
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.wsh__lab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.wsh__lab-cnt {
+  margin-left: auto;
+  color: var(--fg-faint);
+  font-size: 0.56rem;
+  letter-spacing: 0.14em;
+}
+
+/* world card */
+.wsh-world {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-3) var(--s-4);
+  margin-bottom: var(--s-3);
+  border: 1px solid var(--steel);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 6%, transparent), var(--surface-2));
+}
+.wsh-world.is-locked {
+  opacity: 0.62;
+}
+.wsh-world__biome {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border: 1px solid var(--accent-dim, #8b6914);
+}
+.wsh-world__biome--grassland {
+  background: linear-gradient(135deg, #3a5a2a, #1a2a14);
+}
+.wsh-world__biome--scorched {
+  background: linear-gradient(135deg, #5a3a2a, #2a1a14);
+}
+.wsh-world__biome--swamp {
+  background: linear-gradient(135deg, #2a3a2a, #14201a);
+}
+.wsh-world__mid {
+  flex: 1;
+  min-width: 0;
+}
+.wsh-world__name {
+  font-size: 0.92rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg);
+  font-weight: 700;
+}
+.wsh-world__meta {
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  margin-top: 5px;
+}
+.wsh-world__meta b {
+  color: var(--cyan);
+}
+.wsh-world__drops {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+}
+.wsh-world__drops-label {
+  font-size: 0.52rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  margin-right: 2px;
+}
+.wsh-chip {
+  font-size: 0.56rem;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border: 1px solid var(--hair);
+  background: var(--surface-1);
+  color: var(--fg-muted);
+}
+.wsh-chip--cy {
+  color: var(--cyan);
+  border-color: color-mix(in srgb, var(--cyan) 35%, transparent);
+}
+.wsh-world__gate {
+  font-size: 0.54rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--good);
+  margin-top: 7px;
+}
+.wsh-world__gate.is-locked {
+  color: #ffd27a;
+}
+.wsh-world__act {
+  flex: none;
+}
+
+/* buttons */
+.wsh-btn {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--accent-dim, #8b6914);
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    box-shadow var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease);
+}
+.wsh-btn:hover {
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.wsh-btn--gold {
+  background: linear-gradient(180deg, var(--accent), var(--accent-dim, #8b6914));
+  color: #16110a;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.wsh-btn--block {
+  display: block;
+  width: 100%;
+  text-align: center;
+  margin-top: var(--s-3);
+}
+.wsh-btn.is-locked {
+  border-color: var(--steel);
+  color: var(--fg-faint);
+  cursor: not-allowed;
+}
+
+/* exploring row */
+.wsh-stk {
+  border: 1px solid var(--steel);
+  background: var(--surface-1);
+  padding: var(--s-3);
+  margin-bottom: var(--s-3);
+}
+.wsh-stk__row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+.wsh-stk__art {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--hair);
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.wsh-stk__id {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.wsh-stk__name {
+  font-size: 0.76rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg);
+  font-weight: 700;
+}
+.wsh-stk__cls {
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  margin-top: 2px;
+}
+.wsh-stk__in {
+  margin-left: auto;
+  font-size: 0.56rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+.wsh-stk__acc {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+  margin-top: var(--s-3);
+  padding-top: var(--s-2);
+  border-top: 1px solid var(--hair);
+}
+.wsh-acc {
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.wsh-acc b {
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+.wsh-acc--cy b {
+  color: var(--cyan);
+}
+.wsh-recall {
+  margin-left: auto;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border: 1px solid var(--good);
+  color: var(--good);
+  background: color-mix(in srgb, var(--good) 8%, transparent);
+  cursor: pointer;
+}
+.wsh-recall:hover {
+  box-shadow: 0 0 14px color-mix(in srgb, var(--good) 22%, transparent);
+}
+.wsh__empty {
+  padding: var(--s-4);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  color: var(--fg-faint);
+  border: 1px dashed var(--steel);
+  background: var(--surface-1);
+}
+.wsh__playable {
+  margin-top: auto;
+  padding-top: var(--s-3);
+  font-size: 0.56rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+/* modal (picker + haul) */
+.wsh-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: rgba(6, 7, 11, 0.72);
+  backdrop-filter: blur(3px);
+}
+.wsh-modal__panel {
+  width: 440px;
+  max-width: 92vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  border: 1px solid var(--accent-dim, #8b6914);
+  background: linear-gradient(180deg, var(--surface-2), var(--bg));
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  padding: var(--s-4);
+}
+.wsh-modal__panel--haul {
+  width: 380px;
+  text-align: center;
+}
+.wsh-modal__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+}
+.wsh-modal__title {
+  margin: 0;
+  flex: 1;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.wsh-modal__x {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--steel);
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+.wsh-modal__sub {
+  margin: var(--s-2) 0 var(--s-4);
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  color: var(--fg-muted);
+  line-height: 1.6;
+}
+.wsh-modal__empty {
+  padding: var(--s-4);
+  font-size: 0.62rem;
+  color: var(--fg-faint);
+  text-align: center;
+}
+.wsh-modal__roster {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.wsh-pick {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--steel);
+  background: var(--surface-1);
+  cursor: pointer;
+  text-align: left;
+}
+.wsh-pick:hover {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.wsh-pick__art {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--hair);
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.wsh-pick__id {
+  display: flex;
+  flex-direction: column;
+}
+.wsh-pick__name {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg);
+  font-weight: 700;
+}
+.wsh-pick__cls {
+  font-size: 0.54rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-faint);
+}
+.wsh-pick__go {
+  margin-left: auto;
+  font-size: 0.56rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.wsh-haul__title {
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: var(--s-2);
+}
+.wsh-haul__sub {
+  font-size: 0.56rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  margin-bottom: var(--s-4);
+}
+.wsh-haul__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-3);
+  margin-bottom: var(--s-3);
+}
+.wsh-haul__stat {
+  border: 1px solid var(--steel);
+  background: var(--surface-1);
+  padding: var(--s-3) var(--s-2);
+}
+.wsh-haul__stat b {
+  display: block;
+  font-size: 1.3rem;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+.wsh-haul__stat span {
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.wsh-haul__stat--cy b {
+  color: var(--cyan);
+}
+.wsh-haul__note {
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  color: var(--cyan);
+  margin-bottom: var(--s-3);
+}

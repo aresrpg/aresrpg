@@ -1,0 +1,27 @@
+# aresrpg_spells — the STANDALONE spell-data package (S-46 final split). Per-(class,unlock) SpellTemplate shared
+# objects, admitted + live-tuned behind version+admin; the effect vocabulary lives in aresrpg_foundation.
+[package]
+name = "aresrpg_spells"
+version = "0.1.0"
+edition = "2024.alpha"
+
+[dependencies.Sui]
+git = "https://github.com/MystenLabs/sui.git"
+subdir = "crates/sui-framework/packages/sui-framework"
+rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+override = true
+
+[dependencies.MoveStdlib]
+git = "https://github.com/MystenLabs/sui.git"
+subdir = "crates/sui-framework/packages/move-stdlib"
+rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
+override = true
+
+[dependencies.aresrpg_foundation]
+local = "../foundation"
+
+[environments]
+testnet = { chain-id = "4c78adac" }
+mainnet = { chain-id = "35834a8a" }
+
+[addresses]

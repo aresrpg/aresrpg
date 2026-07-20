@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "rules": {
+    "explicit_dodge": "agility_plus_pool_specific_dodge_stat",
+    "critical_failure": "lowest_live_one_in_n_commits_cast_without_payload",
+    "physical_damage": "flat_bonus_on_earth_and_neutral_only"
+  },
+  "cases": [
+    {
+      "id": "stat_ids_normalize",
+      "scenario": "normalize_stats",
+      "input": { "ids": [12, 13, 14, 8] },
+      "expected": {
+        "types": ["ADD", "ADD", "ADD", "ADD"],
+        "stats": ["ap_dodge", "mp_dodge", "physical_damage", "percent_damage"]
+      }
+    },
+    {
+      "id": "explicit_ap_dodge_feeds_contest",
+      "scenario": "ap_dodge",
+      "input": {
+        "seed": 0,
+        "requested": 3,
+        "caster_wisdom": 100,
+        "target_agility": 0,
+        "explicit_ap_dodge": 100
+      },
+      "expected": { "without_explicit": 3, "with_explicit": 0 }
+    },
+    {
+      "id": "explicit_mp_dodge_feeds_contest",
+      "scenario": "mp_dodge",
+      "input": {
+        "seed": 0,
+        "requested": 3,
+        "caster_wisdom": 100,
+        "target_agility": 0,
+        "explicit_mp_dodge": 100
+      },
+      "expected": { "without_explicit": 3, "with_explicit": 0 }
+    },
+    {
+      "id": "negative_ap_dodge_is_live_debuff",
+      "scenario": "negative_ap_dodge",
+      "input": { "base_ap_dodge": 100, "debuff": 40 },
+      "expected": {
+        "normalized_type": "REMOVE",
+        "event": "STAT_DEBUFF",
+        "effective_ap_dodge": 60
+      }
+    },
+    {
+      "id": "one_in_one_fumble_commits_cost_history",
+      "scenario": "fumble",
+      "input": { "denominator": 1, "ap_cost": 3, "damage": 20 },
+      "expected": {
+        "fumbled": true,
+        "caster_ap": 7,
+        "caster_ap_used": 3,
+        "history_rows": 2,
+        "target_hp": 100,
+        "hand": 0,
+        "discard": 1
+      }
+    },
+    {
+      "id": "physical_bonus_element_gate",
+      "scenario": "physical_damage",
+      "input": { "base": 10, "bonus": 7 },
+      "expected": { "earth": 17, "neutral": 17, "fire": 10 }
+    }
+  ]
+}

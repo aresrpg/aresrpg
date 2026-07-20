@@ -1,0 +1,207 @@
+/*
+ * House Tooltip — the floating glass card portalled to <body> by Tooltip.jsx. Glass is sanctioned
+ * here because a tooltip is a transient OVERLAY over the live world / HUD (house law). One ice accent,
+ * tinted neutrals, mono tabular-nums for numbers, hairline edges, radii 2-7px.
+ */
+.tt-card {
+  position: fixed;
+  z-index: 9000;
+  max-width: 280px;
+  padding: 9px 11px;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--fg);
+  background: var(--glass-hi);
+  -webkit-backdrop-filter: blur(16px) saturate(1.25);
+  backdrop-filter: blur(16px) saturate(1.25);
+  border: 1px solid var(--hair-strong);
+  border-top-color: var(--edge-top);
+  border-radius: var(--r-2);
+  box-shadow:
+    0 10px 30px -10px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  pointer-events: none; /* never steal the pointer from the trigger beneath */
+  animation: tt-in var(--dur-1) var(--ease);
+}
+@keyframes tt-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tt-card {
+    animation: none;
+  }
+}
+
+.tt-text {
+  display: block;
+}
+
+/* naked card — the content brings its OWN surface (e.g. the nametag chip), so the tooltip card drops
+   its glass/padding to avoid a double surface (glass-on-glass). */
+.tt-card--naked {
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* FIGHT-HUD OPACITY LAW (the spell tooltip needs the same treatment for readability) — the deck/weapon
+   socket hover tooltip (DeckCluster) floats directly over the live 3D board, so the shared translucent
+   glass recipe (--glass-hi + blur) reads as unreadable there. This card is body-PORTALLED (Tooltip.jsx),
+   so it sits outside the `.hud-spellbar` DOM subtree and never inherits that scope's gold token re-point —
+   colors are hardcoded here to match the sibling fight-chrome tiles (.hud-socket / .hud-turn) exactly.
+   Opt in via `className="tt-card--solid"` from the call site; the shared `.tt-card` glass stays untouched
+   for every other tooltip in the HUD (stats, launchers, drawers — not named in the violation). */
+.tt-card.tt-card--solid {
+  background: linear-gradient(165deg, #12121a, #0a0a0f);
+  border: 1px solid #1e1e2e;
+  border-top-color: rgba(200, 150, 60, 0.35);
+  border-radius: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* ── rich content: shared bits ─────────────────────────────────────────────── */
+.tt-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.tt-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  margin-bottom: 5px;
+}
+.tt-name {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.78rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tt-lvl {
+  margin-left: auto;
+  flex: 0 0 auto;
+  color: var(--fg-muted);
+  font-size: 0.66rem;
+}
+.tt-sub {
+  color: var(--fg-faint);
+  font-size: 0.64rem;
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+}
+.tt-divider {
+  height: 1px;
+  margin: 7px 0;
+  background: var(--hair);
+}
+.tt-blurb {
+  color: var(--fg-muted);
+}
+
+/* ── stat tooltip ──────────────────────────────────────────────────────────── */
+.tt-stat .tt-name {
+  font-size: 0.74rem;
+}
+.tt-stat-value {
+  color: var(--accent);
+  font-size: 0.7rem;
+  margin: 2px 0 3px;
+}
+.tt-stat .tt-blurb {
+  max-width: 220px;
+}
+
+/* ── shared line item (spell effects list) ─────────────────────────────────*/
+.tt-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 1px 0;
+}
+.tt-line-name {
+  color: var(--fg-muted);
+  text-transform: capitalize;
+}
+.tt-eff {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  margin: 6px 0 3px;
+}
+
+/* ── spell tooltip ─────────────────────────────────────────────────────────── */
+.tt-spell-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  margin-top: 2px;
+}
+.tt-spell-grid dt {
+  color: var(--fg-faint);
+  text-transform: uppercase;
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  align-self: center;
+}
+.tt-spell-grid dd {
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.68rem;
+}
+
+/* ── spell-socket HOVER card (hover = compact anchored ESSENTIALS above the socket;
+   the full facts stay on the armed readout). Tokens here are :root-level (tokens.css), so they DO
+   reach this body-portalled card — only the .hud-spellbar re-pointed scope doesn't. ─────────────── */
+.tt-ap-pill {
+  margin-left: auto;
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border-radius: var(--r-1);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent-ink); /* dark ink on the element-tinted pill (the armed card's .sd__cost recipe) */
+  white-space: nowrap;
+}
+.tt-fx {
+  margin-top: 6px;
+}
+.tt-fx-dot {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.tt-fx-text {
+  color: var(--fg-muted);
+  font-size: 0.68rem;
+}
+
+/* FIX 4 (07-14) — the one-line "why this socket is greyed beyond AP" cue (on cooldown / casts_per_turn
+   exhausted). Hardcoded house red (not var(--bad)): this card is body-portalled outside `.hud-spellbar`'s
+   scope (see the tt-card--solid note above), so the HUD-scoped token never reaches it. */
+.tt-status {
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: #f87171;
+  font-size: 0.66rem;
+}

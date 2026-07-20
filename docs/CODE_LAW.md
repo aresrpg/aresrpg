@@ -1,0 +1,189 @@
+# CODE LAW — the FP constitution
+
+The law lint messages cite. Sources: **[MAG]** Professor Frisby's Mostly Adequate Guide (ch01–05,
+ch08, read 2026-07-17) · **[CS]** Eric Elliott's Composing Software series + related posts (the
+Geoff-Ford curated list; the pillar articles read 2026-07-17) · **[HOUSE]** CLAUDE.md conventions.
+Enforcement: an eslint rule id (layer: `scripts/eslint-rules/fp_law.config.mjs`), a gate, or
+**judgment** (reviewed, not mechanized). Severities are a ratchet: ERROR where the repo is clean,
+WARN where the census found mass — a cleaned domain gets promoted, never the reverse.
+
+## Purity
+
+- **L-P1 — Pure by default.** Same input → same output, no observable side effect; core logic is
+  transforms over plain data. _Why:_ cacheable, portable, testable, reasonable, parallel — purity
+  is what makes code equational. [MAG ch03: "given the same input, will always return the same
+  output… no observable side effect"; CS Pure Functions] → judgment + the reducer gates (below).
+- **L-P2 — Sound equality.** `===` everywhere `==` isn't provably safe. _Why:_ coercion breaks the
+  substitution reasoning purity buys. [CS Pure Functions: referential transparency] →
+  `eqeqeq` ('smart') **ERROR** (clean 2026-07-17).
+- **L-P3 — Importing a module is pure.** Timers/network/listeners/DOM fire from entries, workers,
+  and lifecycle edges — never from module load. _Why:_ "the wise think before acting" — a load-time
+  effect runs at an uncontrolled time, order, and count. [Dao of Immutability; MAG ch08: pure code
+  builds effect descriptions, the boundary executes them] → `fp-law/no-module-scope-effects`
+  **WARN** (3 sites), edges allow-listed.
+- **L-P4 — Effects at the edges; ONE reducer per domain.** Async results re-enter as INPUTS
+  through the reducer door; no callback writes a store. [MAG ch08 IO/Task; HOUSE ONE-PIPELINE] →
+  `one-pipeline/no-async-store-write` + `no-settimeout-in-stores` (ERROR on fight core); deep
+  tier: codeql `js/aresrpg/laundered-store-write` (interprocedural — any call depth, named
+  helpers included; 157 baselined) + `js/aresrpg/effect-escapes-the-edge` (the fight fold is
+  measured pure — 0 findings, empty baseline = hard ratchet); composite tier (semgrep, in
+  `bun run lint`): `arch-laundered-store-write` (1-hop name join, provenance-filtered — the
+  5-site high-confidence cut, .jsx included) + `arch-fight-effect-free` (zero promise machinery
+  in fight/; txs.js's ONE commit edge baselined at 3, every other core file hard-zero).
+- **L-P5 — Every promise is handled or explicitly voided.** A fire-and-forget promise is an
+  unobserved effect AND a swallowed failure; `void promise` is the sanctioned explicit discard.
+  _Why:_ effects are values you must run at the boundary — dropping one on the floor is a silent
+  failure. [MAG ch08: IO/Task hold effects as values, the boundary executes them; HOUSE Agent
+  Standard #3: no silent failure, ever] → `@typescript-eslint/no-floating-promises` +
+  `no-misused-promises` + `await-thenable`: **ERROR** on the strong-typed clean surfaces
+  (validation, gold rig, frontend e2e/dev), WARN on frontend src (45/22/4) — stays ON in tests
+  (an unawaited assertion is a false green).
+
+## Immutability
+
+- **L-I1 — Never mutate shared state.** No `.push/.sort/.splice/…`, `Object.assign`, or `delete`
+  on a value this function did not just create. _Why:_ "Mutation hides change. Hidden change
+  manifests chaos." [Dao; MAG ch01 seagull, ch03 slice-vs-splice] → `fp-law/no-mutating-methods`
+  **WARN** (142) + typed teeth on every ts.Program surface: `functional/immutable-data` WARN
+  (1,576) — catches what syntax can't see: writes through aliases, property/index assignment on
+  shared values (freshness allowances mirror L-I3/L-I4/L-I5).
+- **L-I2 — Parameters are the caller's.** Return new values; never reassign or write through a
+  parameter. [CS Pure Functions: "Never mutate external state or object parameters"] →
+  `no-param-reassign` {props: true} **WARN** (139) + the rule above's param verdict; deep tier:
+  codeql `js/aresrpg/boundary-mutation` (alias- and call-chain-aware, cross-module boundary
+  params only; 125 baselined).
+- **L-I3 — Construction is local.** Mutating a value in the function that created it — including a
+  `reduce` accumulator — is construction, not mutation. Copy-first (`[...x].sort()`, `toSorted`,
+  spread) makes freshness visible. [MAG ch03: purity is about the observable; CS Reduce] → encoded
+  as `fp-law/no-mutating-methods`' allowances.
+- **L-I4 — No mutable module bindings.** A top-level `let` is hidden global state. [Dao: "the wise
+  embrace history"] → `functional/no-let` (module scope) **WARN** (142).
+- **L-I5 — Map/Set are explicitly mutable contracts.** Allowed as local machinery; a long-lived one
+  is a store and belongs behind a reducer door (L-P4). → judgment.
+- **L-I6 — Declare immutability at the boundary.** An explicitly-typed parameter is a contract:
+  type it `Readonly` so the signature promises what L-I2 enforces; a never-reassigned class member
+  (sanctioned seams only) declares `readonly`. _Why:_ "Mutation hides change" — a signature that
+  admits mutation it never performs hides the opposite. [Dao; CS Pure Functions: "never mutate…
+  object parameters"] → `functional/prefer-immutable-types` (params, shallow, inferred exempt)
+  WARN (752) · `@typescript-eslint/prefer-readonly` **ERROR** (clean, probe-proven).
+
+## Composition
+
+- **L-C1 — Compose, don't orchestrate.** Build features as pipelines of small functions whose
+  outputs feed inputs; composition is associative, so refactors are regroupings. [MAG ch05
+  `compose`; CS Introduction: "the essence of software development is composition"] → judgment;
+  ceilings below keep units composable; the import graph stays a DAG — depcruise `no-circular`
+  (42 census cycle edges baselined, any NEW cycle red).
+- **L-C2 — Functions are values.** First-class, lambda-shaped; no `function` callback machinery, no
+  needless wrappers (`x => f(x)` is `f`). [MAG ch02; CS Higher Order Functions] →
+  `prefer-arrow-callback` **ERROR** (clean) + existing `prefer-rest-params`/`prefer-spread`;
+  wrapper elimination is judgment on untyped surfaces (arity traps) and mechanized where the
+  checker proves the trap away: `functional/prefer-tacit` WARN (33, typed tier).
+- **L-C3 — Small composable units.** Cyclomatic complexity ≤30 (target far lower), nesting ≤5,
+  files ≤600 LoC (HOUSE Agent Standard #7). [CS: "less code = less surface area for bugs"] →
+  `complexity` **WARN** (66) · `max-depth` **WARN** (29) · `max-lines` **WARN** (62).
+- **L-C4 — Fold, don't iterate — where honest.** `map/filter/reduce` express intent; a loop is a
+  perf tool, not a default. Engine hot paths (voxel meshing, gen) are sanctioned loop country.
+  [CS Reduce: map/filter derive from reduce; MAG ch05] → `functional/no-loop-statements` **WARN**
+  on api/ + packages/rpc (near-clean); judgment elsewhere.
+- **L-C5 — Pointfree is seasoning, not law.** Use it where it clarifies; "pointfree is a
+  double-edged sword and can sometimes obfuscate intention". [MAG ch05] → judgment.
+- **L-C6 — Data last, curry to specialize.** Order params specializer-first/data-last so partial
+  application composes. [MAG ch04; CS Curry] → judgment (not lintable untyped).
+
+## Paradigm
+
+- **L-F1 — No classes, no `this`.** Factories, closures, and plain data. "Class inheritance is the
+  tightest form of coupling available" — you wanted a banana, you got the gorilla and the jungle.
+  Three sanctioned platform seams: React error boundaries (`*ErrorBoundary`), `extends Error`,
+  Three.js `extends PhysicalLightingModel`. [CS Why-Composition-Is-Harder-with-Classes, Factory
+  Functions; MAG ch02: avoid `this` "like a dirty nappy"; HOUSE: no classes] →
+  `functional/no-classes` **WARN** (6) · `functional/no-this-expressions` **WARN** (4, product).
+- **L-F2 — Favor object composition over inheritance.** Mix behaviors by composing
+  functions/objects, never by hierarchy. [CS Introduction, quoting GoF] → L-F1's rules + judgment.
+
+## Data & errors
+
+- **L-D1 — Nulls and failures flow as data.** Reducer-shaped returns (`{state, events}`,
+  `{ok, error}`) over thrown control flow; throw only at boundaries, decode once (HOUSE error
+  decoder law). [MAG ch08 Maybe/Either: no silent failure, handling forced at the seam] →
+  judgment + `arch-foreach-async-dropped-promises` (an await inside `.forEach` = promises nobody
+  holds; clean 2026-07-17, hard-zero ratchet).
+- **L-D2 — Containers obey the functor laws.** `map` composes (`F.map(g).map(f)` ≡
+  `F.map(f∘g)`); chains of array/promise transforms stay lawful — no side effects smuggled into
+  `map`. [CS Functors & Categories; Monads Made Simple; MAG ch08] → judgment +
+  `arch-map-smuggled-store-write` (store write inside map/filter/flatMap; clean 2026-07-17,
+  hard-zero ratchet — also covers the .jsx files outside the eslint net).
+- **L-D3 — Sum types are handled totally.** A `switch` over a union covers every member or
+  declares an explicit `default`. _Why:_ Maybe/Either work because the seam is FORCED to handle
+  both branches — an unhandled union member is a silent fall-through. [MAG ch08: handling forced
+  at the seam; CS Monads Made Simple] → `@typescript-eslint/switch-exhaustiveness-check`
+  **ERROR** (clean repo-wide, probe-proven; typed tier).
+- **L-D4 — Decode tests assert CAPTURED WIRE BYTES, never self-round-trip alone.** A codec test
+  that encodes with the same model it decodes with proves only internal consistency — it encodes
+  the bug on both sides by construction. Every BCS/wire decode surface pins at least one REAL
+  captured payload (provenance comment: source object id/version + capture date) and asserts the
+  decoded fields against independently known truth. _Why:_ the 2026-07-17 XP incident — the
+  indexer's ProgressionField model missed one hidden byte; its self-round-trip test stayed green
+  while every character's XP/HP silently failed to project since genesis (session lying-green #2;
+  #1 was the SDK localnet claim). [house; reference implementation:
+  packages/rpc/indexer progression real-wire fixtures] → review judgment at the seam; the
+  fixture files themselves are the ratchet (a model drift reds them).
+
+## Naming
+
+- **L-N1 — Dev-chosen bindings are snake_case.** camelCase is a library's name, never a
+  declaration choice; PascalCase = components; SCREAMING_SNAKE = constants. [HOUSE] →
+  `fp-law/snake-case` **WARN** (616).
+- **L-N2 — Name by meaning, generically.** Data-tied names shrink reuse ("compact", not
+  "validArticles"); if the honest name is awkward, the design is. [MAG ch02] → judgment.
+
+## Operating the law
+
+- Escape hatches: rule option `allow: ['path-fragment']` (repo-relative) per module class;
+  `// eslint-disable-next-line <rule> -- reason` per line. Every disable carries its reason.
+- The deep tier (CodeQL): eslint is the keystroke tripwire; `scripts/codeql/gate.sh` is the
+  interprocedural pass — a fresh database of the tree, the `scripts/codeql/aresrpg-fp` query
+  pack, and a fingerprint ratchet against `scripts/codeql/baseline/aresrpg-fp.baseline.txt`
+  (exit 0 = no NEW findings; baselined mass is the burn-down worklist; `--rebaseline` is an
+  explicit, reviewed act). Query semantics red/green-proven by `codeql test run
+scripts/codeql/aresrpg-fp-tests --additional-packs=scripts/codeql`. Run it at the deep/CI
+  cadence (~55s typical), not per keystroke. Coverage map: JS/TS = whole repo (fresh DB per run);
+  Rust = packages/rpc/indexer via the standard `codeql/rust-queries` security suite (DB rebuilt
+  only when the crate changed, ~1m50s); **Move has NO CodeQL extractor** — the contracts stay
+  under the D321 grep gates. CLI note: CodeQL is licensed free for OSS/research; private
+  automated CI use falls under GitHub Advanced Security terms — confirm licensing before CI wiring.
+- The arch gates (semgrep + dependency-cruiser — `scripts/semgrep-gate.sh` /
+  `scripts/depcruise-gate.sh`, both wired into `bun run lint` via check-constraints, ~9s): the
+  composite-speed cross-function tier between the eslint tripwire and the CodeQL deep pass.
+  Semgrep rules (`scripts/arch/arch_law.yml` + the laundered-write extraction join) self-test on
+  `scripts/arch/fixtures` (pinned red/green counts — a semgrep upgrade that shifts matching fails
+  there first) and ratchet the tree against `scripts/arch/semgrep_baseline.json`; import law lives
+  in `.dependency-cruiser.cjs` — `fight-core-hermetic` (resolved ALLOWLIST generalizing
+  `ares test fightcore` gate a), `engine-quarantine` (engine3 only under game/ + world-shell/,
+  both clean = hard-zero), `no-circular` — ratcheted by `.dependency-cruiser-known-violations.json`
+  (42 census cycle edges). The baselines ARE the burn-down worklist; `--write-baseline` tightens
+  after a fix, never absorbs new debt unreviewed. semgrep binary absent → that half SKIPs green
+  (`uv tool install semgrep` | `brew install semgrep`); depcruise runs under bun (node 25 is
+  outside its support matrix).
+- Burn-down protocol: clean a domain → flip it to **ERROR** with a `files` block in
+  `scripts/eslint-rules/fp_law.config.mjs` / `typed_fp.config.mjs` (the fight core's one-pipeline
+  block is the template).
+- The typed tier (`scripts/eslint-rules/typed_fp.config.mjs`, 2026-07-17): type-aware rules run
+  wherever a ts.Program covers the file — frontend src (its tsconfig, `allowJs` carries the .js
+  game tree), validation (src+test), and gold rig / frontend e2e+dev / api sponsor / rpc api +
+  gas-pool via the lint-only `/tsconfig.lint.json` (its `include` and the layer's TT3 globs move
+  together). Not typed: engine (its tsconfig excludes 60+ files; mutation-exempt by T4 anyway),
+  scripts/seed/test-bots (no tsconfig, sparse JSDoc), sdk/sim/move (own pipelines by design).
+  `functional/no-expression-statements` is rejected as enforcement: its one honest mode
+  (`ignoreVoid`) crashes upstream in v10.0.0 — L-P1 keeps it covered by judgment, and L-P5 catches
+  the discarded-promise subset that matters.
+- Scope debt: `.tsx` joined the net with the typed tier (eqeqeq/prefer-arrow-callback ratchets
+  held at 0 on opt-in). `.jsx` remains outside (pre-existing F-1: 15 stale react-hooks disable
+  comments error on opt-in) — cleaning those comments and opting `.jsx` in is a standing janitor
+  ticket.
+- Tests/benches (`*.test.*`, `*.spec.*`, e2e/, bench/) choreograph state: mutation-family rules are
+  off there (typed ones included: `immutable-data`, `prefer-immutable-types`); naming, classes, and
+  size laws still apply — and L-P5 deliberately stays ON (an unawaited assertion is a false green).
+  The engine tier (packages/engine) is exempt from the mutation family by design — L-C4's
+  sanctioned loop country.

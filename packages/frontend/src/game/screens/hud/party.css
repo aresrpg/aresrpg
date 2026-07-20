@@ -1,0 +1,177 @@
+/* Parties / groups — the left-center party frame + the center-top invite prompt. Frosted Obsidian
+ * tokens only (reuses .glass-panel / .hud-panel-label / .hud-dot / .hud-num / .stats__bar / .hud-btn).
+ * Roam-only party frame; the invite prompt is global. No gold-gothic, ice-blue accent spent sparingly. */
+
+/* ===== party frame — left-center, clear of players (top-left) + chat (bottom-left) ===== */
+.hud-party {
+  position: fixed;
+  left: var(--s-4);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  width: 232px;
+  padding: var(--s-3);
+}
+.hud-party__count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fg);
+}
+.hud-party__leave {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  padding: 2px var(--s-2);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-1);
+  background: rgba(0, 0, 0, 0.22);
+  transition:
+    color var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease);
+}
+.hud-party__leave:hover {
+  color: var(--bad);
+  border-color: color-mix(in srgb, var(--bad) 40%, transparent);
+}
+
+.hud-party__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.hud-pmember {
+  padding: var(--s-2);
+  border-radius: var(--r-1);
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--hair);
+}
+.hud-pmember.me {
+  border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+  background: var(--accent-dim);
+}
+.hud-pmember__top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+.hud-pmember__crown {
+  flex: none;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--accent);
+}
+.hud-pmember__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--fg);
+}
+.hud-pmember__you {
+  color: var(--fg-faint);
+  font-size: 10px;
+}
+.hud-pmember__lvl {
+  flex: none;
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+.hud-pmember__kick {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--fg-faint);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-1);
+  background: transparent;
+  transition:
+    color var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease);
+}
+.hud-pmember__kick:hover {
+  color: var(--bad);
+  border-color: color-mix(in srgb, var(--bad) 40%, transparent);
+}
+.hud-pmember__hp {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.hud-pmember__hp .stats__bar {
+  flex: 1;
+}
+.hud-pmember__hp-num {
+  flex: none;
+  font-size: 10px;
+  color: var(--fg-muted);
+}
+
+/* ===== invite prompt — center-top, below the minimap/craft-toast line, instant Accept/Decline ===== */
+.party-invite {
+  position: fixed;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-2) var(--s-3);
+  animation: party-invite-in var(--dur-2) var(--ease);
+}
+@keyframes party-invite-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+.party-invite__text {
+  font-size: 13px;
+  color: var(--fg-muted);
+}
+.party-invite__name {
+  color: var(--accent);
+  font-weight: 600;
+}
+.party-invite__actions {
+  display: flex;
+  gap: var(--s-2);
+}
+/* BUTTON LAW: Accept/Decline sit inside `.hud-root`, whose `button { background:none; border:none }` reset
+   (0,1,1) strips the shared `.hud-btn` chrome (0,1,0) to bare text — Accept's accent fill vanished (dark ink
+   on dark), Decline was muted text. Re-assert at `.party-invite` scope (0,2,0): Accept = accent fill,
+   Decline = a real bordered button. Both read as buttons at rest. */
+.party-invite .hud-btn {
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--hair-strong);
+}
+.party-invite .hud-btn:hover:not(:disabled) {
+  color: var(--fg);
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+.party-invite .hud-btn--accent {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.party-invite .hud-btn--accent:hover:not(:disabled) {
+  color: var(--accent-ink);
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}

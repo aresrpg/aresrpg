@@ -1,0 +1,244 @@
+{
+  "config": {
+    "id": "mastery_config",
+    "xp_per_mob_kill": 500,
+    "xp_per_hour_played": 100,
+    "xp_per_vote": 200,
+    "xp_per_daily_quest": 2000,
+    "xp_per_sui_spent": 1000,
+    "xp_per_booster_day": 500
+  },
+  "rewards": [
+    {
+      "id": "reward_level1_kares",
+      "level": 1,
+      "type": "kares",
+      "value": "100",
+      "amount": 100
+    },
+    {
+      "id": "reward_level2_item",
+      "level": 2,
+      "type": "item",
+      "value": "green_stew",
+      "amount": 5
+    },
+    {
+      "id": "reward_level3_item",
+      "level": 3,
+      "type": "item",
+      "value": "holy_bible",
+      "amount": 1
+    },
+    {
+      "id": "reward_level5_item",
+      "level": 5,
+      "type": "item",
+      "value": "phacochere_key",
+      "amount": 5
+    },
+    {
+      "id": "reward_level6_shop_discount",
+      "level": 6,
+      "type": "shop_discount",
+      "value": "shop_discount",
+      "amount": 5
+    },
+    {
+      "id": "reward_level7_item",
+      "level": 7,
+      "type": "item",
+      "value": "pocari_sweat",
+      "amount": 10
+    },
+    {
+      "id": "reward_level8_kares",
+      "level": 8,
+      "type": "kares",
+      "value": "1000",
+      "amount": 1000
+    },
+    {
+      "id": "reward_level9_item",
+      "level": 9,
+      "type": "item",
+      "value": "energy_bar",
+      "amount": 5
+    },
+    {
+      "id": "reward_level10_kares",
+      "level": 10,
+      "type": "kares",
+      "value": "10000",
+      "amount": 10000
+    },
+    {
+      "id": "reward_level11_item",
+      "level": 11,
+      "type": "item",
+      "value": "dungeon_key_goblin_cave",
+      "amount": 5
+    },
+    {
+      "id": "reward_level12_item",
+      "level": 12,
+      "type": "item",
+      "value": "orb_of_purity",
+      "amount": 0
+    },
+    {
+      "id": "reward_level13_item",
+      "level": 13,
+      "type": "item",
+      "value": "reset_spells_scroll",
+      "amount": 0
+    },
+    {
+      "id": "reward_level14_item",
+      "level": 14,
+      "type": "item",
+      "value": "crude_branch",
+      "amount": 10
+    },
+    {
+      "id": "reward_level1_daily_quest_difficulty",
+      "level": 15,
+      "type": "daily_quest_difficulty",
+      "value": "daily_quest_difficulty",
+      "amount": 30
+    },
+    {
+      "id": "reward_level18_item",
+      "level": 18,
+      "type": "item",
+      "value": "ensable_key",
+      "amount": 5
+    },
+    {
+      "id": "reward_level20_item",
+      "level": 20,
+      "type": "item",
+      "value": "pet_rock_koa",
+      "amount": 1
+    },
+    {
+      "id": "reward_level22_item",
+      "level": 22,
+      "type": "item",
+      "value": "nerak_key",
+      "amount": 5
+    },
+    {
+      "id": "reward_level25_daily_quest_difficulty",
+      "level": 25,
+      "type": "daily_quest_difficulty",
+      "value": "daily_quest_difficulty",
+      "amount": 100
+    },
+    {
+      "id": "reward_level26_item",
+      "level": 26,
+      "type": "item",
+      "value": "key_aragog",
+      "amount": 5
+    },
+    {
+      "id": "reward_level29_item",
+      "level": 29,
+      "type": "item",
+      "value": "pet_lasgalen_rabbit",
+      "amount": 1
+    },
+    {
+      "id": "reward_level30_item",
+      "level": 30,
+      "type": "item",
+      "value": "pet_melted_koa",
+      "amount": 1
+    },
+    {
+      "id": "reward_level31_item",
+      "level": 31,
+      "type": "item",
+      "value": "kraken_key",
+      "amount": 5
+    },
+    {
+      "id": "reward_level35_shop_discount",
+      "level": 35,
+      "type": "shop_discount",
+      "value": "shop_discount",
+      "amount": 10
+    },
+    {
+      "id": "reward_level37_item",
+      "level": 37,
+      "type": "item",
+      "value": "hades_key",
+      "amount": 5
+    },
+    {
+      "id": "reward_level38_item",
+      "level": 38,
+      "type": "item",
+      "value": "pet_lootbox",
+      "amount": 0
+    },
+    {
+      "id": "reward_level40_item",
+      "level": 40,
+      "type": "item",
+      "value": "liquid_koa",
+      "amount": 0
+    },
+    {
+      "id": "reward_level41_daily_quest_difficulty",
+      "level": 41,
+      "type": "daily_quest_difficulty",
+      "value": "daily_quest_difficulty",
+      "amount": 300
+    },
+    {
+      "id": "reward_level42_item",
+      "level": 42,
+      "type": "item",
+      "value": "velkarion_key",
+      "amount": 5
+    },
+    {
+      "id": "reward_level45_item",
+      "level": 45,
+      "type": "item",
+      "value": "pet_wind_koa",
+      "amount": 0
+    },
+    {
+      "id": "reward_level46_item",
+      "level": 46,
+      "type": "item",
+      "value": "pet_talokan_feu",
+      "amount": 1
+    },
+    {
+      "id": "reward_level50_item",
+      "level": 50,
+      "type": "item",
+      "value": "membership_scroll",
+      "amount": 0
+    },
+    {
+      "id": "reward_level60_daily_quest_difficulty",
+      "level": 60,
+      "type": "daily_quest_difficulty",
+      "value": "daily_quest_difficulty",
+      "amount": 1000
+    },
+    {
+      "id": "reward_level70_shop_discount",
+      "level": 70,
+      "type": "shop_discount",
+      "value": "shop_discount",
+      "amount": 20
+    }
+  ]
+}

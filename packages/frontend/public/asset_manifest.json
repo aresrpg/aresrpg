@@ -1,0 +1,54 @@
+{
+  "network": "testnet",
+  "aggregator": "https://cdn.aresrpg.world/walrus",
+  "classes": {
+    "mob": {
+      "quilt": "BxyR4mkAgTQ2s3NBytTar_Skzhec5vTP8gmkEt3aTDk"
+    },
+    "character": {
+      "quilt": "HEw9YiusBednaPTJ3QEB8My9JQkdkeyZLfwEVagXRWU"
+    },
+    "cosmetic": {
+      "quilt": "UpF_6MMrAb2Wz6uxXe9hrrxUNVPmOqT0qJxvpw7RSaU"
+    },
+    "cosmetic_icon": {
+      "quilt": "Fqb8X05WyLjWIOtdRlq_6d6yKoymgZD5dYkLlET7Hpo"
+    },
+    "music": {
+      "quilt": "eUZWOvFX92nSHikgRrMiXxLvE4K0rZL6cazrqxLqtEA"
+    },
+    "spell": {
+      "quilt": "URoggq0Mi8MDADv4QSZLSAh4RpmsEYdOA6xxLMjG16k"
+    },
+    "mob_icon": {
+      "quilt": "OH39H3f7sUFVSLY_FpPExa_6i_gTdP9P2zLYkhLvMqQ"
+    },
+    "item": {
+      "quilts": [
+        {
+          "id": "GFwmQjUVLPrqanmZV1m2qVW7fEqqE_Utn7wvNawNPx0",
+          "first": "aberrant_faceguard.png",
+          "last": "frost_shard_spear.png"
+        },
+        {
+          "id": "-TEi2iUTk50pyc3zpfNukt-K8xNRDEZeI0n2NTokKfg",
+          "first": "frost_shard_spear_hd.png",
+          "last": "pet_suize_bricheton_hd.png"
+        },
+        {
+          "id": "Le1wBtCzvzMKhvohW7jFF6_4zCketPoTHCOacsHzNXY",
+          "first": "pet_talokan_feu.png",
+          "last": "void_eye_talisman.png"
+        },
+        {
+          "id": "xNsOFiS8VXqcoq3CR1oplxTIBcFzkVjZctHHjzpTKnU",
+          "first": "void_eye_talisman_hd.png",
+          "last": "zukin_muru.png"
+        }
+      ]
+    },
+    "shop_render": {
+      "quilt": "LcYyANl0YvjLfXeWfJKm-Lcf_GHukWsOzS-Ok8luWSI"
+    }
+  }
+}

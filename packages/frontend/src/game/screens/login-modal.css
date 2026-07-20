@@ -1,0 +1,349 @@
+/* The live world backdrop behind every front-of-game screen — a fixed full-viewport layer pinned
+ * UNDER the select page (.fog, z-index:1) and the login gate. The rule: load the game
+ * behind, never a flat dark page. The roam scene paints its own canvas; this just owns the z-layer.
+ * A gentle blur softens the moving world so it reads as a soft backdrop behind the select/roster
+ * screen (a bit more blurred), while staying visibly alive. The login overlay adds its own
+ * heavier backdrop-filter on top when the gate is up; this base blur covers the logged-in roster. */
+.world-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  /* a touch more blur so the moving world reads soft + alive behind the roster, not sharp. Gentle (5px) —
+   * softens, never mushes; the login gate adds its own heavier blur on top. */
+  filter: blur(5px);
+}
+
+/* Login gate — a polished glass card floating over the BLURRED live world (no dark page). The
+ * overlay blurs + faintly dims the whole world+select page behind the card so it recedes; the card
+ * itself is the one bright surface. Clicking the backdrop is inert (the overlay swallows the click;
+ * React handler stops propagation) — the gate can't be dismissed by mis-clicking the world. */
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  /* a faint cool scrim + a soft top aura — NOT an opaque dark page; the world reads through the blur */
+  background:
+    radial-gradient(680px 320px at 50% 12%, var(--accent-dim), transparent 70%),
+    rgba(7, 9, 13, 0.32);
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  animation: login-fade 0.22s var(--ease);
+}
+
+.login-card {
+  width: min(348px, 92vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 32px 30px 28px;
+  text-align: center;
+  border-radius: var(--r-3);
+  background: linear-gradient(160deg, var(--glass-hi), var(--glass));
+  border: 1px solid var(--edge);
+  border-top-color: var(--edge-top);
+  box-shadow:
+    0 28px 70px -28px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(26px) saturate(170%);
+  -webkit-backdrop-filter: blur(26px) saturate(170%);
+  animation: login-rise 0.3s var(--ease);
+}
+
+/* a single quiet droplet mark in the lone ice accent — the one accent spend on this card */
+.login-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: var(--r-2);
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+}
+.login-mark svg {
+  width: 22px;
+  height: 22px;
+}
+
+.login-heads {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.login-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--fg);
+}
+.login-sub {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--fg-muted);
+}
+
+/* glass Google button — translucent frosted surface + 1px light edge, colored G mark. Lifts to the
+ * accent edge on hover (no fill — the accent budget stays calm). */
+.login-google {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  width: 100%;
+  margin-top: 2px;
+  padding: 12px 18px;
+  border-radius: var(--r-2);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg);
+  cursor: pointer;
+  background: linear-gradient(180deg, var(--glass-hi), var(--glass));
+  border: 1px solid var(--edge);
+  border-top-color: var(--edge-top);
+  backdrop-filter: blur(10px) saturate(150%);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+  transition:
+    border-color var(--dur-2) var(--ease),
+    background var(--dur-2) var(--ease),
+    transform var(--dur-2) var(--ease);
+}
+.login-google:hover:not(:disabled) {
+  border-color: var(--accent-glow);
+  transform: translateY(-1px);
+}
+.login-google:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.login-google svg {
+  flex: none;
+}
+
+@keyframes login-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes login-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Account chrome (create/select) — a frosted-glass WALLET CHIP, top-right (the status toast drops
+ * below it). One capsule, one elevation (1px light-top edge + a single tucked shadow, no glow):
+ * the SUI balance reads loudest (mono, tabular, full ink); the droplet mark + unit recede in steel;
+ * a fading hairline divider (house signature) splits off a quiet logout that lifts to ink on hover.
+ * Accent budget untouched — nothing here spends the ice-blue, so the Create CTA keeps it. */
+.account-bar {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 300;
+  display: inline-flex;
+  align-items: stretch;
+  height: 44px;
+  overflow: hidden;
+  border-radius: var(--r-3);
+  background: linear-gradient(160deg, var(--glass-hi), var(--glass));
+  border: 1px solid var(--edge);
+  border-top-color: var(--edge-top);
+  box-shadow:
+    0 12px 32px -16px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  font-family: var(--font-ui);
+  animation: login-rise 0.3s var(--ease);
+}
+.account-wallet {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 0 13px;
+  color: var(--fg);
+  cursor: pointer;
+  transition: background var(--dur-2) var(--ease);
+}
+.account-wallet:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+/* "+" add-funds affordance — muted until hover so the readout stays calm, lifts to ink on hover. */
+.account-add {
+  display: inline-flex;
+  margin-left: 1px;
+  color: var(--fg-faint);
+  transition: color var(--dur-2) var(--ease);
+}
+.account-add svg {
+  width: 14px;
+  height: 14px;
+}
+.account-wallet:hover .account-add {
+  color: var(--fg);
+}
+.account-mark {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  color: var(--fg-muted);
+}
+.account-num {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+}
+.account-unit {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--fg-muted);
+  transform: translateY(0.5px);
+}
+/* fading hairline divider — dissolves at both ends (house signature), not a hard rule. */
+.account-div {
+  width: 1px;
+  align-self: stretch;
+  margin: 9px 0;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--hair-strong),
+    transparent
+  );
+}
+.account-logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  color: var(--fg-faint);
+  cursor: pointer;
+  transition:
+    color var(--dur-2) var(--ease),
+    background var(--dur-2) var(--ease);
+}
+.account-logout:hover {
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.05);
+}
+.account-logout svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* Boot error — a connect/roster-fetch failure surfaced as a GLASS CARD over the blurred live world
+ * (never a flat dark page): the reason + a retry, so a dropped socket never reads as data loss.
+ * Mirrors the login gate: dim+blur the world, float one bright card centered. */
+.boot-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px;
+  background: rgba(7, 9, 13, 0.32);
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  font-family: var(--font-ui);
+  text-align: center;
+}
+.boot-error-title {
+  color: var(--fg);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.boot-error-msg {
+  max-width: 320px;
+  color: var(--fg-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+}
+.boot-retry {
+  margin-top: 6px;
+  padding: 9px 22px;
+  border-radius: var(--r-2);
+  background: linear-gradient(160deg, var(--glass-hi), var(--glass));
+  border: 1px solid var(--edge);
+  border-top-color: var(--edge-top);
+  color: var(--fg);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color var(--dur-2) var(--ease);
+}
+.boot-retry:hover:not(:disabled) {
+  border-color: var(--accent-glow);
+}
+.boot-retry:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* TERMINAL session-takeover lockout — a blocking glass overlay over the frozen game (newest-tab-wins).
+   Highest z so it sits over the HUD/world; the dimmed backdrop + blur make the dead session unreachable. */
+.takeover-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: rgba(7, 9, 13, 0.58);
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  font-family: var(--font-ui);
+}
+.takeover-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 380px;
+  padding: 28px 30px;
+  text-align: center;
+  border-radius: var(--r-3);
+  background: linear-gradient(160deg, var(--glass-hi), var(--glass));
+  border: 1px solid var(--edge);
+  border-top-color: var(--edge-top);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(26px) saturate(170%);
+  -webkit-backdrop-filter: blur(26px) saturate(170%);
+}
+.takeover-title {
+  color: var(--fg);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.takeover-msg {
+  color: var(--fg-muted);
+  font-size: 13px;
+  line-height: 1.55;
+  letter-spacing: 0.02em;
+}

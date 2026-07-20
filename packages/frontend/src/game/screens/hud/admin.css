@@ -1,0 +1,379 @@
+/*
+ * Admin console styles. RESTORED after being skinned with the Frosted-Obsidian fight/HUD tokens by
+ * mistake (see game/styles/tokens.css / game-tab.css comments): Frosted-Obsidian is the FIGHT/HUD
+ * look, deliberately game-native, and never meant for admin.
+ *
+ * `.adm` is scoped back to the house companion look — the SAME system pages/admin.tsx already uses
+ * (index.css `@theme` gold tokens + the `.glass-panel` recipe, index.css:109): near-black floor, GOLD
+ * accent (not ice-blue), light TRANSLUCENT glass panels (white-tint, not a dark-blue gradient), sharp
+ * (0px) corners, JetBrains Mono, uppercase labels. Overrides are scoped to `.adm` only — the World map
+ * drawer below (`.map`) intentionally keeps reading the global Frosted-Obsidian tokens.css `:root`
+ * (fight/HUD surface, out of scope for this restore).
+ */
+
+/* ════════════════════════ ADMIN CONSOLE ════════════════════════ */
+.adm {
+  /* house token bridge (index.css @theme + .glass-panel, SSOT — mirrors pages/admin.tsx) */
+  --bg: #0a0a0f;
+  --surface-1: #0d0d14;
+  --surface-2: #12121a;
+  --surface-3: #1a1a26;
+
+  --fg: #e8e4dc;
+  --fg-muted: #9a9488;
+  --fg-faint: #6b7280;
+
+  /* the one accent — house GOLD, not ice-blue */
+  --accent: #c8963c;
+  --accent-strong: #f5d0a9;
+  --accent-ink: #0a0a0f;
+  --accent-dim: rgba(200, 150, 60, 0.14);
+
+  --hair: rgba(255, 255, 255, 0.09);
+  --edge: rgba(255, 255, 255, 0.09);
+  --edge-top: rgba(255, 255, 255, 0.09);
+
+  /* .glass-panel recipe (index.css:109) — light translucent glass, NOT the dark-blue obsidian gradient */
+  --glass-hi: rgba(255, 255, 255, 0.06);
+  --glass: rgba(255, 255, 255, 0.02);
+
+  /* sharp corners — house law */
+  --r-1: 0px;
+  --r-2: 0px;
+  --r-3: 0px;
+
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  height: 100%;
+  min-height: 0;
+}
+
+/* tab strip — segments, NOT pills (house law). Hairline underline marks the active tab. */
+.adm__tabs {
+  display: flex;
+  gap: var(--s-1);
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--hair);
+  padding-bottom: var(--s-2);
+  flex: none;
+}
+.adm__tab {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: var(--s-2) var(--s-3);
+  cursor: pointer;
+  transition:
+    color var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease);
+}
+.adm__tab:hover {
+  color: var(--fg-muted);
+}
+.adm__tab.is-active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.adm__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.adm-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+/* KPI grid */
+.adm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--s-3);
+}
+.adm-grid--2 {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.adm-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding: var(--s-3);
+  /* .glass-panel recipe (index.css:109) — static, no container hover */
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border-radius: var(--r-2);
+}
+.adm-stat__label {
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.adm-stat__value {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+.adm-stat.is-accent .adm-stat__value {
+  color: var(--accent);
+}
+
+/* cards / sections */
+.adm-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-4);
+  /* .glass-panel recipe (index.css:109) — static, no container hover */
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border-radius: var(--r-3);
+}
+.adm-card.is-muted {
+  opacity: 0.82;
+}
+.adm-card__head {
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  margin-bottom: var(--s-1);
+}
+.adm-prose {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--fg-muted);
+}
+.adm-empty {
+  font-size: 0.72rem;
+  color: var(--fg-faint);
+  padding: var(--s-2) 0;
+}
+
+/* distribution bars (class distribution) */
+.adm-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-1) 0;
+}
+.adm-bar__label {
+  width: 8rem;
+  flex: none;
+  font-size: 0.72rem;
+  color: var(--fg);
+  text-transform: capitalize;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.adm-bar__track {
+  flex: 1;
+  height: 6px;
+  background: var(--surface-3);
+  border-radius: var(--r-1);
+  overflow: hidden;
+}
+.adm-bar__fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+}
+.adm-bar__num {
+  width: 2.5rem;
+  flex: none;
+  text-align: right;
+  font-size: 0.72rem;
+  color: var(--fg-muted);
+}
+
+/* quest rows */
+.adm-quest {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) 0;
+  border-bottom: 1px solid var(--hair);
+}
+.adm-quest:last-child {
+  border-bottom: 0;
+}
+.adm-quest.is-locked {
+  opacity: 0.5;
+}
+.adm-quest__num {
+  width: 1.8rem;
+  flex: none;
+  text-align: right;
+  color: var(--fg-faint);
+  font-size: 0.72rem;
+}
+.adm-quest__id {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.adm-quest__name {
+  font-size: 0.82rem;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.adm-quest__trigger {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  color: var(--fg-faint);
+}
+/* settings fields */
+.adm-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+.adm-field__label {
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.adm-field__input {
+  background: var(--surface-1);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-1);
+  padding: var(--s-2) var(--s-3);
+  color: var(--fg);
+  font-size: 0.85rem;
+}
+.adm-field__input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.adm-field__hint {
+  font-size: 0.62rem;
+  color: var(--fg-faint);
+}
+.adm-save {
+  align-self: flex-start;
+}
+
+/* flagged "no live endpoint yet" banner — honest stand-in, never fake numbers */
+.adm-flag {
+  font-size: 0.7rem;
+  line-height: 1.5;
+  color: var(--fg-muted);
+  background: var(--accent-dim);
+  border: 1px solid var(--hair);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--r-1);
+  padding: var(--s-2) var(--s-3);
+}
+
+/* address-locked state */
+.adm-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  height: 100%;
+  text-align: center;
+  padding: var(--s-6);
+}
+.adm-locked__title {
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.adm-locked__sub {
+  margin: 0;
+  max-width: 32ch;
+  font-size: 0.78rem;
+  color: var(--fg-muted);
+}
+
+/* ════════════════════════ WORLD MAP ════════════════════════ */
+.map {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  height: 100%;
+  min-height: 0;
+}
+.map__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex: none;
+}
+.map__region {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+.map__coords {
+  font-size: 0.74rem;
+  color: var(--fg-muted);
+}
+.map__recenter {
+  margin-left: auto;
+}
+.map__stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-3);
+  overflow: hidden;
+  background: var(--bg);
+}
+.map__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+.map__canvas:active {
+  cursor: grabbing;
+}
+.map__loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  background: var(--bg);
+}
+.map__hint {
+  flex: none;
+  font-size: 0.66rem;
+  line-height: 1.5;
+  color: var(--fg-faint);
+}

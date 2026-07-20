@@ -1,0 +1,60 @@
+# Release bookkeeping — every master push tags vX.Y.Z from package.json and publishes the GitHub
+# Release. ONE SOURCE OF TRUTH: Vercel deploys off the same master push
+# via git integration — the tag is bookkeeping + the changelog anchor, NEVER a deploy trigger.
+# Tags are never created locally (a tag ruleset restricts creation to the Actions app); the
+# promotion PR's package.json bump is the only human-touched version artifact.
+# FROZEN rule 8: GITHUB_TOKEN only, zero external secrets.
+name: release
+on:
+  push:
+    branches: [master]
+permissions:
+  contents: write
+jobs:
+  tag-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # tags visible for the idempotence check
+      # The player-visible version lives in packages/frontend/package.json (the badge the client
+      # renders) — NOT the workspace root (which idles at 1.0.x). First fresh-repo tag = v1.12.36:
+      # CONTINUITY with the monorepo era (ruled 2026-07-20 — players saw v35; the badge history
+      # and Sentry release-over-release comparisons need one unbroken series).
+      - name: resolve version
+        id: v
+        run: echo "version=$(node -p "require('./packages/frontend/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: tag + release if absent (idempotent)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v${{ steps.v.outputs.version }}"
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "tag $TAG already exists — no-op"
+            exit 0
+          fi
+          # Release notes = the newest release-changelog when the publisher has written one
+          # (changelog/NNN-RELEASE-*.md, NNN zero-padded monotonic); else GitHub-generated notes.
+          NOTES_FILE=$(ls changelog/*-RELEASE-*.md 2>/dev/null | sort | tail -1 || true)
+          if [ -n "$NOTES_FILE" ]; then
+            gh release create "$TAG" --title "$TAG" --notes-file "$NOTES_FILE" --target "$GITHUB_SHA"
+          else
+            gh release create "$TAG" --title "$TAG" --generate-notes --target "$GITHUB_SHA"
+          fi
+      - name: announce on Discord (skip-quiet without the secret — forks never fail)
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK" ]; then echo "no webhook secret — skipping announce"; exit 0; fi
+          TAG="v$(node -p "require('./packages/frontend/package.json').version")"
+          NOTES_FILE=$(ls changelog/*-RELEASE-*.md 2>/dev/null | sort | tail -1 || true)
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
+          # Discord content cap is 2000 chars — verbatim changelog body, truncated with the
+          # release URL as the always-present tail. No role ping (silent default, owner-amendable).
+          if [ -n "$NOTES_FILE" ]; then BODY=$(head -c 1700 "$NOTES_FILE"); else BODY="AresRPG ${TAG} is live."; fi
+          jq -n --arg c "**AresRPG ${TAG}**
+
+          ${BODY}
+
+          ${URL}" '{content: $c}' | curl -sf -H 'Content-Type: application/json' -d @- "$DISCORD_WEBHOOK" \
+            || echo "webhook POST failed (non-blocking — the release itself already succeeded)"

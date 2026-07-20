@@ -1,0 +1,3 @@
+provide:
+  - 'aresrpg-fp/qlpack.yml'
+  - 'aresrpg-fp-tests/qlpack.yml'

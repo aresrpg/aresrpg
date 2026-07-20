@@ -1,0 +1,34 @@
+# Loop rubric — meta-audit (the loop that audits the loops)
+
+**Pace:** slow — after incidents, and periodically (quarterly is plenty). **Substrate:**
+fresh-context agent run. **Pairing declaration:** the cheap way to win is auditing the loops'
+OUTPUT VOLUME (issues filed, runs green) — the counter is that this rubric only accepts
+evidence about whether each loop still touches reality (its anchor), not whether it's busy.
+
+## Inputs
+- Every loop's script (`scripts/loops/`), workflow, and standing issue history.
+- `FROZEN.md` (the anchor register + frozen rules).
+- Incident records since the last meta-audit (post-mortems, reverted merges, break-glass uses).
+
+## The rubric
+1. **Goodhart check, per loop:** re-derive the cheap way to win its metric from scratch (ignore
+   the declared pairing). Has the loop's subject learned to satisfy the measurement without
+   satisfying the intent? Evidence: cases where the loop was green while reality was red.
+2. **Anchor integrity:** does every loop's verdict still bottom out at an argue-proof measurement
+   (executed suite, chain readback, production telemetry, committed capsule)? Name any loop whose
+   evidence chain now passes through a REPORT (a summary, a dashboard, another loop's issue)
+   without touching ground — that loop is circling.
+3. **Watcher independence:** has any loop's script, baseline, or rubric been edited by the party
+   it audits since the last meta-audit? (git log on the guard-class files answers this.)
+4. **Blindspot hunt:** for each incident since the last audit — which loop SHOULD have caught it
+   and didn't? What invariant, fixture, or census row would have? Draft it.
+5. **Cadence sanity:** is any fast loop thrashing what a slow loop stewards (fixes racing
+   setpoint revisions)? Is any slow loop so slow its subject drifted a full generation?
+6. **Deletion pass:** does every loop still pay rent? A loop whose issues nobody has acted on in
+   two cycles is either mis-targeted or theater — retune it or propose its deletion.
+
+## Output contract
+- One comment on the standing meta-audit issue: per-loop verdict (grounded / circling / gamed /
+  theater) with evidence.
+- New invariants/fixtures from rubric 4 → issues labeled `anchor`.
+- Guard-class integrity findings (rubric 3) → escalate immediately (`owner-gated`), never batch.

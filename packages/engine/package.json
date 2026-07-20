@@ -1,0 +1,34 @@
+{
+  "name": "@aresrpg/engine3",
+  "version": "0.0.1",
+  "private": true,
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "exports": {
+    ".": "./src/engine.js",
+    "./tactical": "./src/tactical/index.js",
+    "./player": "./src/player/character_controller.js",
+    "./cave": "./src/scene/cave_scene.js",
+    "./vfx": "./src/render/vfx_presets.js",
+    "./gather": "./src/render/gather_synth.js"
+  },
+  "scripts": {
+    "dev": "vite --port 5199",
+    "preview": "vite preview --port 5199",
+    "build": "vite build",
+    "test": "bun test src bench/tree_bake_ab.test.js bench/degenerate_render.test.js",
+    "bench": "playwright test",
+    "typecheck": "tsc --noEmit --checkJs"
+  },
+  "dependencies": {
+    "three": "0.185.1",
+    "simplex-noise": "^4.0.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@types/bun": "^1.3.14",
+    "@types/three": "^0.185.1",
+    "lil-gui": "^0.21.0",
+    "vite": "^8.1.4"
+  }
+}

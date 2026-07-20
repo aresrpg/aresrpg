@@ -1,0 +1,69 @@
+// Fight victory-card loot-tile CONTRACT (a loot slot must never render as an empty
+// un-hoverable box, no matter how broken the drop's metadata is). Pure-logic tests — no DOM, no Tooltip
+// portal — proving the enrichment decision + the fallback name chain + the tooltip's honest disclaimer.
+import { describe, expect, test } from 'bun:test'
+
+import { resolve_loot_tile } from './loot-tile-resolve.js'
+
+const t = (key) => key // stub — returns the i18n key itself, deterministic for assertions
+
+describe('resolve_loot_tile — the enrichment signal', () => {
+  test('a bag match (items[]) alone resolves it, even with an empty template map', () => {
+    const entry = { item_type: 'rusty_blade', name: 'Rusty Blade', amount: 1 }
+    const items = [{ item_type: 'rusty_blade', name: 'Rusty Blade', category: 'sword', quality: 'common' }]
+    const out = resolve_loot_tile(entry, items, new Map(), undefined, t)
+    expect(out.resolved).toBe(true)
+    expect(out.name).toBe('Rusty Blade')
+  })
+
+  test('a template-map match alone resolves it, even with an empty bag', () => {
+    const entry = { item_type: 'rusty_blade', name: 'Rusty Blade', amount: 1 }
+    const template_map = new Map([['rusty_blade', { name: 'Rusty Blade', category: 'sword', level: 4 }]])
+    const out = resolve_loot_tile(entry, [], template_map, undefined, t)
+    expect(out.resolved).toBe(true)
+  })
+
+  test('neither a bag match NOR a template row → unresolved (the orphaned-drop case)', () => {
+    const entry = { item_type: 'qa_ghost_blade_01', name: 'QA Ghost Blade', amount: 1 }
+    const out = resolve_loot_tile(entry, [], new Map(), undefined, t)
+    expect(out.resolved).toBe(false)
+    expect(out.name).toBe('QA Ghost Blade') // the entry's own name still wins — never discarded
+  })
+})
+
+describe('resolve_loot_tile — the fallback name chain (template name → entry name → item_type words → \'?\')', () => {
+  test('entry.name present, unresolved → the entry name is used verbatim', () => {
+    const out = resolve_loot_tile({ item_type: 'qa_thing', name: 'QA Thing', amount: 1 }, [], new Map(), undefined, t)
+    expect(out.name).toBe('QA Thing')
+  })
+
+  test('entry.name MISSING, unresolved → the item_type slug humanized to words', () => {
+    const out = resolve_loot_tile({ item_type: 'qa_ghost_blade_01', name: undefined, amount: 1 }, [], new Map(), undefined, t)
+    expect(out.name).toBe('qa ghost blade 01')
+  })
+
+  test('nothing at all rode the wire (no name, no item_type) → the literal \'?\' last resort', () => {
+    const out = resolve_loot_tile({ item_type: undefined, name: undefined, amount: 1 }, [], new Map(), undefined, t)
+    expect(out.name).toBe('?')
+  })
+})
+
+describe('resolve_loot_tile — the tooltip never lies about what it knows', () => {
+  test('unresolved but a name exists → NO false "metadata unavailable" disclaimer', () => {
+    const out = resolve_loot_tile({ item_type: 'qa_thing', name: 'QA Thing', amount: 1 }, [], new Map(), undefined, t)
+    expect(out.detail.description).toBeUndefined()
+  })
+
+  test('unresolved AND no name at all → the honest i18n disclaimer rides the tooltip description', () => {
+    const out = resolve_loot_tile({ item_type: 'qa_ghost_blade_01', name: undefined, amount: 1 }, [], new Map(), undefined, t)
+    expect(out.detail.description).toBe('fight_end.loot_metadata_unavailable')
+  })
+
+  test('resolved via a real template → the template Display description wins (unaffected by the new branch)', () => {
+    const template_map = new Map([
+      ['rusty_blade', { name: 'Rusty Blade', category: 'sword', level: 4, display: { description: 'A worn blade.' } }],
+    ])
+    const out = resolve_loot_tile({ item_type: 'rusty_blade', name: 'Rusty Blade', amount: 1 }, [], template_map, undefined, t)
+    expect(out.detail.description).toBe('A worn blade.')
+  })
+})

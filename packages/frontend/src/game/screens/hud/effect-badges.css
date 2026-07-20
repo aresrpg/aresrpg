@@ -1,0 +1,54 @@
+/*
+ * EffectBadges.jsx — persistent-effect chips inside a fight nameplate (.hud-turn__body). Scoped .hud-effects
+ * block; inherits the fight-chrome tokens (--accent/--fg-muted/--edge/--font-mono/--r-*) the ancestor
+ * `.hud-turns` scope already sets (hud.css) — no re-declaration here, one token source.
+ */
+.hud-effects {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+}
+
+.hud-effect {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 4px;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-1);
+  background: rgba(255, 255, 255, 0.04);
+  line-height: 1.5;
+  transition:
+    border-color var(--dur-1, 0.15s) var(--ease, ease),
+    box-shadow var(--dur-1, 0.15s) var(--ease, ease);
+}
+.hud-effect:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow, rgba(200, 150, 60, 0.35));
+  cursor: default;
+}
+
+.hud-effect__glyph {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+.hud-effect__turns {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* the "+N" overflow tile — same footprint, no glyph/turns split, never triggers a tooltip (no per-effect
+   detail to show — the shown chips already covered every distinct effect). */
+.hud-effect--more {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--fg-muted);
+}

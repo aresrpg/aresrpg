@@ -1,0 +1,46 @@
+/* Launcher notification badges (c149) — a small corner count chip on a HUD launcher icon when there
+   is something actionable behind it (e.g. an in-progress quest on the Quests launcher). Data-driven +
+   honest: the count comes from the live store, never a fabricated number (see TopLaunchers.jsx +
+   quests-data.js). House design: warm-amber attention tint (the only warm accent, --warn) on dark ink
+   for punchy contrast, a tinted-neutral separating ring so it reads off the glass dock, radius within
+   the house 2-7px range (no pills), mono tabular-nums. Scoped to .hud-lbtn so it never leaks. */
+
+/* the icon wrapper collapses out of layout (display:contents) so the existing `.hud-lbtn svg` sizing +
+   flex centering apply to the glyph exactly as before; the wrapper only exists to free the button to
+   also host the absolutely-positioned badge as a sibling. */
+.hud-lbtn__icon {
+  display: contents;
+}
+
+.hud-lbtn__badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  z-index: 1;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  background: var(--warn);
+  color: var(--accent-ink);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  border: 1.5px solid var(--surface-1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  /* clicks pass through to the launcher button beneath */
+  pointer-events: none;
+}
+
+/* a badged primary launcher supersedes its decorative ice-blue ornament dot — the badge IS the signal,
+   two corner marks would read as clutter. */
+.hud-lbtn.has-badge::after {
+  opacity: 0;
+}

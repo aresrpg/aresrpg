@@ -1,0 +1,407 @@
+// SPAWNS + ZONES — the D770a W2 core: where am I PROVEN to be and what exists/is claimable there. ONE atom
+// behind ONE `input(msg, now)` door; every fact advances on the same clock — tx RECEIPTS (a search advances
+// the checkpoint AND discovers the zone AND seeds rows; a claim advances the checkpoint AND removes the
+// group) reconciled with the versioned 6s /v1 snapshot, order-independently: a poll never regresses a
+// receipt-proven fact (grace-shielded adds, tombstoned removals), and a poll that agrees converges as a
+// no-op. The two render-contract violations the census convicted move IN here: the gather-target HYSTERESIS
+// and the [G]/[R] PROXIMITY ARMING are fold state now — the renderer reports `player_pos` and reads targets;
+// it decides nothing. The pure machinery (rules, ingest, reconcile folds) lives in spawns_reconcile.js.
+//
+// Effects live at the edges as exported subscriptions: tx intents come in through the door, the core emits
+// `tx_request` rows (search_tx / claim_tx / gather_tx) an adapter executes, and receipts/failures come back
+// through the door as typed inputs. Presentation is DATA: the beat stream ({kind, duration, payload}) carries
+// the search progress sweep and the reveal chime/banner/FOV-pulse the frontend previously inlined.
+
+import { createStore } from 'zustand/vanilla'
+import { zone_of, zone_of_world, world_offsets, DEFAULT_ZONE_SIZE, chain_to_world } from '@aresrpg/sdk/coords'
+
+import { OPENNESS_PUBLIC, OPENNESS_GROUP } from './openness.js'
+import { resolve_boot_spawn } from './checkpoint.js'
+import {
+  PROXIMITY_M,
+  SEARCH_PROGRESS_MS,
+  zone_searchable,
+  is_group_claimable,
+  zone_key,
+  zone_row_of,
+  parse_key,
+  blank_world,
+  with_beats,
+  with_request,
+  remove_row_proven,
+  clear_pending,
+  retarget,
+  fold_snapshot,
+  fold_zone_rows,
+} from './spawns_reconcile.js'
+
+/** @typedef {import('./spawns_reconcile.js').SpawnBeat} SpawnBeat */
+/** @typedef {import('./spawns_reconcile.js').SpawnTxRequest} SpawnTxRequest */
+/**
+ * @typedef {ReturnType<typeof blank_world> & {
+ *   openness: 'public'|'group',
+ *   beats: SpawnBeat[], beat_seq: number,
+ *   tx_request: SpawnTxRequest|null, req_seq: number,
+ *   fight_entry: { seq: number, fight_id: string }|null,
+ *   input: (input: any, now?: number) => void,
+ * }} SpawnsState
+ */
+
+// ── the per-input folds (composed inside the one door) ───────────────────────────────────────────────────────
+
+const fold_world_doc = (state, { doc }) => {
+  if (!doc) return state
+  const off = world_offsets(doc)
+  const zone_size = Number(doc.zone_size ?? 0) || DEFAULT_ZONE_SIZE
+  const zone_ttl_ms = Number(doc.zone_ttl_ms ?? 0) || null
+  const same =
+    state.zone_size === zone_size &&
+    state.offset_x === off.x &&
+    state.offset_z === off.z &&
+    state.zone_ttl_ms === zone_ttl_ms
+  return same ? state : { ...state, zone_size, offset_x: off.x, offset_z: off.z, zone_ttl_ms }
+}
+
+// chain-space {x,z}. 'read' (chain-direct) is truth and applies; 'indexed' (/v1 doc position, laggy) only
+// SEEDS when this session holds no better fact — never clobbers a live receipt/read value.
+const fold_checkpoint_resolved = (state, input) => {
+  if (input.world_id && state.world_id && input.world_id !== state.world_id) return state
+  if (!Number.isFinite(Number(input.x)) || !Number.isFinite(Number(input.z))) return state
+  if (input.source === 'indexed' && (state.checkpoint || state.hunt_zone)) return state
+  const cell = zone_of(Number(input.x), Number(input.z), state.zone_size)
+  const checkpoint =
+    input.source === 'indexed'
+      ? state.checkpoint // an indexed doc position seeds the hunt zone only (not a boot-grade position)
+      : { x: chain_to_world(Number(input.x), state.offset_x), z: chain_to_world(Number(input.z), state.offset_z) }
+  return { ...state, checkpoint, hunt_zone: cell ? { zx: cell.zx, zy: cell.zy } : state.hunt_zone }
+}
+
+const fold_search_intent = (state, input, now) => {
+  if (!state.world_id || !Number.isFinite(Number(input.x)) || !Number.isFinite(Number(input.z))) return state
+  const cell = zone_of_world(Number(input.x), Number(input.z), state.zone_size, state.offset_x, state.offset_z)
+  if (!cell) return state
+  const row = zone_row_of(state.zones, cell.zx, cell.zy)
+  if (!zone_searchable(row, state.zone_ttl_ms, now)) return state // EZoneFresh mirror — never a doomed tx
+  const subject = `search:${cell.zx}:${cell.zy}`
+  if (state.pending.has(subject)) return state // single-flight as data — a press in flight never re-fires
+  const pending = new Map(state.pending)
+  pending.set(subject, { kind: 'search', at: now })
+  return with_beats(
+    with_request({ ...state, pending }, 'search', {
+      world_id: state.world_id,
+      x: Number(input.x),
+      z: Number(input.z),
+      zx: cell.zx,
+      zy: cell.zy,
+    }),
+    now,
+    [{ kind: 'search_progress', duration: SEARCH_PROGRESS_MS, payload: { zx: cell.zx, zy: cell.zy } }]
+  )
+}
+
+// THE SEARCH RECEIPT — one clock: the SAME input advances the checkpoint (the proven standing position the
+// tx was fired with, SIGNED WORLD), discovers/refreshes the zone (receipt-proven, so a lagging snapshot
+// cannot un-discover it inside the grace), re-keys the hunt zone, resolves the pending press, and emits the
+// reveal beats. Rows ride the paired chain-direct `zone_rows` input (same receipt clock).
+const fold_zone_searched = (state, input, now) => {
+  const zx = Number(input.zx)
+  const zy = Number(input.zy)
+  if (!Number.isFinite(zx) || !Number.isFinite(zy)) return state
+  const zk = zone_key(zx, zy)
+  const prev = state.zones.get(zk)
+  const zones = new Map(state.zones)
+  zones.set(zk, {
+    discovered_at_ms: now, // provisional stamp; the snapshot adopts the indexer's real stamp on catch-up
+    proven_at: now,
+    rows: prev?.rows ?? new Map(),
+    row_proven: prev?.row_proven ?? new Map(),
+  })
+  const x = Number(input.x)
+  const z = Number(input.z)
+  const checkpoint = Number.isFinite(x) && Number.isFinite(z) ? { x, z } : state.checkpoint
+  const next = clear_pending({ ...state, zones, checkpoint, hunt_zone: { zx, zy } }, `search:${zx}:${zy}`)
+  return with_beats(next, now, [
+    { kind: 'reveal_chime' },
+    { kind: 'reveal_banner', payload: input.found ?? null },
+    { kind: 'fov_pulse' },
+  ])
+}
+
+const fold_claim_intent = (state, input, now) => {
+  const { key } = input
+  const k = parse_key(key)
+  const row = state.zones.get(k.zone)?.rows.get(k.rk)
+  if (!row || row.kind !== 'mob' || state.pending.has(`claim:${key}`)) return state
+  if (!state.player || !is_group_claimable(state.player.x, state.player.z, row.x, row.z, PROXIMITY_M)) return state
+  const pending = new Map(state.pending)
+  pending.set(`claim:${key}`, { kind: 'claim', at: now })
+  return retarget(
+    with_request({ ...state, pending }, 'claim', {
+      world_id: state.world_id,
+      key,
+      spawn_id: row.spawn_id,
+      zx: k.zx,
+      zy: k.zy,
+      template_id: row.template_id,
+      is_public: state.openness === OPENNESS_PUBLIC,
+    })
+  )
+}
+
+// THE CLAIM RECEIPT — the same clock again: the group is GONE (receipt-proven removal, tombstoned against
+// lagging polls), the checkpoint advances to the group's position (the door travel-verified the character
+// to it), the hunt zone follows, and the fight handoff row is emitted — the exact seam the fight core's
+// solo-lifecycle scenario picks up.
+const fold_claim_receipt = (state, input, now) => {
+  const k = parse_key(input.key)
+  const row = state.zones.get(k.zone)?.rows.get(k.rk)
+  const removed = remove_row_proven(clear_pending(state, `claim:${input.key}`), input.key, now)
+  const checkpoint = row ? { x: row.x, z: row.z } : removed.checkpoint
+  const hunt_zone = Number.isFinite(k.zx) && Number.isFinite(k.zy) ? { zx: k.zx, zy: k.zy } : removed.hunt_zone
+  const fight_id = input.fight_id ?? null
+  return retarget({
+    ...removed,
+    checkpoint,
+    hunt_zone,
+    fight_entry: fight_id ? { seq: (state.fight_entry?.seq ?? 0) + 1, fight_id } : removed.fight_entry,
+  })
+}
+
+const fold_gather_intent = (state, _input, now) => {
+  const key = state.gather_target_key
+  if (!key) return state
+  const k = parse_key(key)
+  const row = state.zones.get(k.zone)?.rows.get(k.rk)
+  if (!row || row.kind !== 'resource' || state.pending.has(`gather:${key}`)) return state
+  const pending = new Map(state.pending)
+  pending.set(`gather:${key}`, { kind: 'gather', at: now })
+  return with_request({ ...state, pending }, 'gather', {
+    world_id: state.world_id,
+    key,
+    spawn_id: row.spawn_id,
+    zx: k.zx,
+    zy: k.zy,
+    template_id: row.template_id,
+    job: Number(row.job) || 0,
+    tier: Number(row.tier) || 0,
+  })
+}
+
+// THE GATHER RECEIPT — one charge consumed on-chain: decrement `remaining` (receipt-shielded so the lagging
+// poll cannot bounce it back up); the LAST charge removes the node (tombstoned removal).
+const fold_gather_receipt = (state, input, now) => {
+  const k = parse_key(input.key)
+  const zone = state.zones.get(k.zone)
+  const row = zone?.rows.get(k.rk)
+  const cleared = clear_pending(state, `gather:${input.key}`)
+  if (!zone || !row) return cleared
+  const remaining = Math.max(0, (Number(row.remaining) || 0) - 1)
+  if (remaining === 0) return retarget(remove_row_proven(cleared, input.key, now))
+  const rows = new Map(zone.rows)
+  rows.set(k.rk, { ...row, remaining })
+  const row_proven = new Map(zone.row_proven)
+  row_proven.set(k.rk, now) // shield the decremented fact from the pre-receipt snapshot
+  const zones = new Map(cleared.zones)
+  zones.set(k.zone, { ...zone, rows, row_proven })
+  return { ...cleared, zones }
+}
+
+const fold_player_pos = (state, input) => {
+  const x = Number(input.x)
+  const z = Number(input.z)
+  if (!Number.isFinite(x) || !Number.isFinite(z)) return state
+  if (state.player && state.player.x === x && state.player.z === z) return state
+  return retarget({ ...state, player: { x, z } })
+}
+
+// A PLACED mob group's member positions (world space) — the typed input feeding the [R] visibility ring's
+// nearest-member basis. The renderer feeds its rig positions on placement and clears them (empty
+// list) on teardown; the core never reaches out for them. Re-arms the [R] target off the new geometry.
+const fold_member_positions = (state, input) => {
+  const { key } = input
+  if (!key) return state
+  const list = Array.isArray(input.members) ? input.members : []
+  if (list.length === 0) {
+    if (!state.members.has(key)) return state
+    const members = new Map(state.members)
+    members.delete(key)
+    return retarget({ ...state, members })
+  }
+  const members = new Map(state.members)
+  members.set(
+    key,
+    list.map((m) => ({ x: Number(m.x), z: Number(m.z) }))
+  )
+  return retarget({ ...state, members })
+}
+
+// ── the door ─────────────────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * THE pure spawns/zones fold. Time is an input (`now`); the fold never reads a clock, never performs an
+ * effect, and returns the SAME state reference when an input changes nothing.
+ * @param {SpawnsState} state
+ * @param {any} input
+ * @param {number} now
+ * @returns {SpawnsState}
+ */
+export function reduce_spawns(state, input, now) {
+  switch (input.type) {
+    case 'world_bound': {
+      const world_id = input.world_id ?? null
+      // a world change is a RESET input: zone facts never survive a rebind; the openness pref does.
+      return world_id === state.world_id ? state : { ...state, ...blank_world(), world_id }
+    }
+    case 'world_doc':
+      return fold_world_doc(state, input)
+    case 'checkpoint_resolved':
+      return fold_checkpoint_resolved(state, input)
+    case 'zones_rows_snapshot':
+      return fold_snapshot(state, input, now)
+    case 'zone_rows':
+      return fold_zone_rows(state, input, now)
+    case 'search_intent':
+      return fold_search_intent(state, input, now)
+    case 'search_failed':
+      return clear_pending(state, `search:${input.zx}:${input.zy}`)
+    case 'zone_searched':
+      return fold_zone_searched(state, input, now)
+    case 'claim_intent':
+      return fold_claim_intent(state, input, now)
+    case 'claim_receipt':
+      return fold_claim_receipt(state, input, now)
+    case 'claim_failed': {
+      const cleared = clear_pending(state, `claim:${input.key}`)
+      // zones::ESpawnNotFound (108): the rendered group no longer exists on-chain — drop the ghost NOW.
+      return retarget(input.ghost ? remove_row_proven(cleared, input.key, now) : cleared)
+    }
+    case 'gather_intent':
+      return fold_gather_intent(state, input, now)
+    case 'gather_receipt':
+      return fold_gather_receipt(state, input, now)
+    case 'gather_failed':
+      return clear_pending(state, `gather:${input.key}`)
+    case 'player_pos':
+      return fold_player_pos(state, input)
+    case 'member_positions':
+      return fold_member_positions(state, input)
+    case 'openness_set': {
+      const openness = input.value === OPENNESS_GROUP ? OPENNESS_GROUP : OPENNESS_PUBLIC
+      return openness === state.openness ? state : { ...state, openness }
+    }
+    default:
+      return state
+  }
+}
+
+// ── store + subscriptions (the package exports subscriptions, never performs effects) ────────────────────────
+
+const make_spawns_input =
+  (set, get) =>
+  (input, now = Date.now()) => {
+    const state = get()
+    const next = reduce_spawns(state, input, now)
+    if (next !== state) set(next, true)
+  }
+
+/** @returns {import('zustand/vanilla').StoreApi<SpawnsState>} */
+export function create_spawns_store() {
+  return createStore((set, get) => ({
+    ...blank_world(),
+    openness: OPENNESS_PUBLIC,
+    beats: [],
+    beat_seq: 0,
+    tx_request: null,
+    req_seq: 0,
+    fight_entry: null,
+    input: make_spawns_input(set, get),
+  }))
+}
+
+/** Effect edge: one call per NEW tx request row (search_tx / claim_tx / gather_tx). */
+export function subscribe_spawn_tx(store, on_request) {
+  return store.subscribe((state, prev) => {
+    if (state.tx_request && state.tx_request !== prev.tx_request) on_request(state.tx_request)
+  })
+}
+
+/** Effect edge: one call per NEW presentation beat, in order. */
+export function subscribe_spawn_beats(store, on_beat) {
+  let last = store.getState().beat_seq
+  return store.subscribe((state) => {
+    if (state.beat_seq === last) return
+    for (const b of state.beats) if (b.seq > last) on_beat(b)
+    last = state.beat_seq
+  })
+}
+
+/** Effect edge: the claim → fight handoff (the exact seam the fight core's solo scenario picks up). */
+export function subscribe_fight_entry(store, on_entry) {
+  return store.subscribe((state, prev) => {
+    if (state.fight_entry && state.fight_entry !== prev.fight_entry) on_entry(state.fight_entry)
+  })
+}
+
+// ── projections (renderer-complete data — consumers compute nothing) ─────────────────────────────────────────
+
+/** Flat spawn rows for the rig renderer: `{key, zx, zy, kind, row, pending}` — a pending claim marks the row
+ *  (the renderer hides it: the optimistic fight-entry beat as data; a failed claim clears it back). */
+export function spawn_rows(state) {
+  const out = []
+  for (const [zk, zone] of state.zones) {
+    const [zx, zy] = zk.split(':').map(Number)
+    for (const [rk, row] of zone.rows) {
+      const key = `${zk}:${rk}`
+      out.push({ key, zx, zy, kind: row.kind, row, pending: state.pending.get(`claim:${key}`)?.kind ?? null })
+    }
+  }
+  return out
+}
+
+/** The armed [G] target's full row (or null) — the hysteresis decision, already made. */
+export function gather_target(state) {
+  if (!state.gather_target_key) return null
+  const k = parse_key(state.gather_target_key)
+  const row = state.zones.get(k.zone)?.rows.get(k.rk)
+  return row ? { key: state.gather_target_key, zx: k.zx, zy: k.zy, row } : null
+}
+
+/** The armed [R] target's full row (or null) — nearest claimable group within proximity. */
+export function attack_target(state) {
+  if (!state.attack_target_key) return null
+  const k = parse_key(state.attack_target_key)
+  const row = state.zones.get(k.zone)?.rows.get(k.rk)
+  return row ? { key: state.attack_target_key, zx: k.zx, zy: k.zy, row } : null
+}
+
+/** The zone under the player when it is searchable NOW (the [F] gate), else null. */
+export function searchable_zone(state, now) {
+  if (!state.world_id || !state.player) return null
+  const cell = zone_of_world(state.player.x, state.player.z, state.zone_size, state.offset_x, state.offset_z)
+  if (!cell) return null
+  const row = zone_row_of(state.zones, cell.zx, cell.zy)
+  return zone_searchable(row, state.zone_ttl_ms, now) ? cell : null
+}
+
+/** The [F]/[G]/[R] AFFORDANCE ROWS as data, pending-until-settle included — the one prompt contract. */
+export function affordance_rows(state, now) {
+  const rows = []
+  const search = searchable_zone(state, now)
+  if (search)
+    rows.push({
+      id: 'search',
+      key: 'F',
+      pending: state.pending.has(`search:${search.zx}:${search.zy}`),
+      payload: search,
+    })
+  const g = gather_target(state)
+  if (g) rows.push({ id: 'gather', key: 'G', pending: state.pending.has(`gather:${g.key}`), payload: g })
+  const r = attack_target(state)
+  if (r) rows.push({ id: 'attack', key: 'R', pending: state.pending.has(`claim:${r.key}`), payload: r })
+  return rows
+}
+
+/** The boot-spawn arbiter over the atom's checkpoint (chain truth wins — see checkpoint.js). */
+export function boot_spawn(state, { session, fallback, y_seed }) {
+  return resolve_boot_spawn({ checkpoint: state.checkpoint, session, fallback, y_seed })
+}

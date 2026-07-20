@@ -1,0 +1,57 @@
+/* HUD button reset outranks the global classes, so bridge the documented house buttons for this tab. */
+.hud-root .stats__assign-btn {
+  padding: var(--s-1) var(--s-2);
+  border-radius: 0;
+}
+
+.hud-root .stats__assign-btn.btn-outline {
+  color: var(--color-gold);
+  background: transparent;
+  border: 1px solid rgba(200, 150, 60, 0.3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+}
+
+.hud-root .stats__assign-btn.btn-outline:hover:not(:disabled) {
+  background: rgba(200, 150, 60, 0.08);
+  border-color: rgba(200, 150, 60, 0.6);
+  box-shadow: 0 0 20px rgba(200, 150, 60, 0.1);
+}
+
+.hud-root .stats__assign-btn.btn-gold {
+  color: #0a0a0f;
+  background: linear-gradient(135deg, var(--color-gold-dark), var(--color-gold), var(--color-gold-dark));
+  border: none;
+  box-shadow:
+    0 0 20px rgba(200, 150, 60, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+}
+
+.hud-root .stats__assign-btn.btn-gold:hover:not(:disabled) {
+  box-shadow:
+    0 0 30px rgba(200, 150, 60, 0.4),
+    0 0 60px rgba(200, 150, 60, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.hud-root .stats__assign-btn.btn-gold:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.hud-root .stats__assign-btn.btn-outline:disabled,
+.hud-root .stats__assign-btn.btn-gold:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}

@@ -1,0 +1,1971 @@
+/*
+ * HUD panels — Inventory (paper-doll + grid + item description) and Stats (characteristics).
+ * FROSTED OBSIDIAN on the game tokens (../../styles/tokens.css, @imported globally): cool
+ * blue-black glass surfaces (--glass + --edge-top light edge), ONE ice-blue accent spent ~3x per
+ * panel (selection + allocation), fine hairlines for elevation (no glow soup, no left-accent
+ * rails, no pills). Numbers use the mono face + tabular figures. Each panel fills its Hud slot
+ * (100%/100%); the Hud shell owns positioning/glass.
+ */
+
+.hud-panel {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ── shared item icon (ItemIcon.jsx) ──────────────────────────────────────────
+   The art well + glyph fallback used across every HUD surface. The image sits over the glyph; on a
+   failed load the glyph is what shows. Sizing is owned by the host slot (width/height on .item-icon). */
+.item-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  color: var(--fg-faint);
+}
+
+.item-icon__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.item-icon__glyph {
+  display: inline-flex;
+  width: 62%;
+  height: 62%;
+  opacity: 0.5;
+}
+
+.item-icon__glyph svg {
+  width: 100%;
+  height: 100%;
+}
+
+.hud-panel__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 160px;
+  color: var(--fg-faint);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ════════════════════════ RIGHT-SIDE INVENTORY DRAWER ════════════════════════
+ * The inventory is the LEAST-invasive surface: a drawer that lives off-screen to the right
+ * (translateX(100%)) and slides in only when the inventory launcher is toggled (.is-open →
+ * translateX(0)). It never covers the center of the screen and is hidden by default. Frosted
+ * Obsidian glass; mounted always so the slide transition can play. */
+.hud-drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  z-index: 26;
+  width: min(440px, 94vw);
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+  transform: translateX(100%);
+  transition: transform var(--dur-3) var(--ease);
+  background: linear-gradient(160deg, var(--glass-hi), var(--glass));
+  border-left: 1px solid var(--edge);
+  box-shadow: -16px 0 48px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+.hud-drawer.is-open {
+  transform: translateX(0);
+}
+/* per-panel width — content-heavy panels grow so the user never scrolls. Still a
+   right-side slide-out, just wider. Encyclopedia (~fullscreen) lands with the Wave-3 companion port. */
+.hud-drawer--market {
+  width: min(64vw, 1180px);
+}
+.hud-drawer--jobs {
+  width: min(62vw, 1040px);
+}
+/* the world MAP is a wide canvas pan/zoom; the ADMIN console is a multi-tab dashboard — both want
+   horizontal room (size by content, avoid scroll). Still a right-side slide-out. */
+.hud-drawer--map {
+  width: min(72vw, 1280px);
+}
+.hud-drawer--admin {
+  width: min(58vw, 980px);
+}
+/* Wave-3 companion-port drawers — each sized by its content so the player never scrolls.
+   Still a right-side slide-out; the bottom-right dock stays on top (z-28 > drawer z-26). */
+.hud-drawer--characters {
+  width: min(48vw, 720px);
+}
+.hud-drawer--leaderboards {
+  width: min(56vw, 920px);
+}
+.hud-drawer--simulator {
+  width: min(68vw, 1100px);
+}
+/* SPELLS = the grimoire spellbook: a two-pane list | detail sheet, wants the wide surface (
+   size by content, no scroll). Still a right-side slide-out. */
+.hud-drawer--spells {
+  width: min(70vw, 1200px);
+}
+/* inventory fills a wide two-pane surface (paper-doll + sheet | bag grid) — the drawer IS the
+   inventory, not a small box dropped inside it (canon-04). */
+.hud-drawer--inventory {
+  width: min(56vw, 940px);
+}
+.hud-drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-4) var(--s-4) var(--s-3);
+  border-bottom: 1px solid var(--hair);
+  flex: none;
+}
+.hud-drawer__title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+  color: var(--fg);
+}
+.hud-drawer__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--s-4);
+  /* SSOT dock clearance: EVERY tab renders inside this body, so one padding-bottom here lifts the last
+     rows of every scrolling tab clear of the fixed bottom-right launcher dock (hud.css .hud-dock, z-28 >
+     drawer z-26). Body-scroll tabs (jobs, leaderboards, simulator) scroll here directly; height:100% tabs
+     (inventory, stats, market, encyclopedia, characters, quests, admin) have their inner scroll
+     shrunk by this padding so its bottom edge lands above the dock too. One value -> lands everywhere. */
+  padding-bottom: var(--dock-clear);
+}
+
+/* ── shared chrome ─────────────────────────────────────────────────────────── */
+.hud-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-btn {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-1);
+  padding: var(--s-1) var(--s-3);
+  cursor: pointer;
+  transition:
+    color var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease);
+}
+
+.hud-btn:hover:not(:disabled) {
+  color: var(--fg);
+  border-color: var(--hair-strong);
+}
+
+.hud-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.hud-btn--accent {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.hud-btn--accent:hover:not(:disabled) {
+  color: var(--accent-ink);
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+/* ════════════════════════ INVENTORY ════════════════════════
+ * The drawer IS the inventory (canon-04 "Loadout"): a 2-column fill — LEFT gear column
+ * (character chip → a framed EQUIPMENT paper-doll → equipped totals → the selected item's detail card
+ * BELOW) and a full-width RIGHT bag (header + count, underline tabs, a real capacity slot grid). Not a
+ * nested "inventory in a box"; the left sub-panels (gear / totals / detail) are Jobs-clean framed
+ * sections. On a narrow viewport it collapses to a single column. */
+.inv {
+  display: grid;
+  grid-template-columns: minmax(320px, 372px) 1fr;
+  gap: var(--s-5);
+  height: 100%;
+  min-height: 0;
+}
+.inv__side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: var(--s-2);
+  border-right: 1px solid var(--hair);
+}
+@media (max-width: 720px) {
+  .inv {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .inv__side {
+    border-right: none;
+  }
+}
+
+/* section eyebrow label (Jobs-clean) — an accent <b> marks the two primary heads (Equipment / Bag) */
+.inv__eyebrow {
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.inv__eyebrow b {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* character chip — compact identity (jobs__detail-head twin) */
+.inv__chip {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+.inv__chip-port {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: var(--r-2);
+  overflow: hidden;
+  border: 1px solid var(--hair-strong);
+}
+.inv__chip-id {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.inv__chip-name {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.inv__chip-class {
+  font-size: 0.7rem;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+.inv__chip-lvl {
+  flex: none;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  color: var(--fg-muted);
+}
+
+/* the framed EQUIPMENT paper-doll panel — the single "gear" frame (relics rail + anatomical body grid).
+   A subtle hairline section, NOT an opaque card-in-card (canon-04: no nested boxes). */
+.inv__doll {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-3);
+}
+
+/* the Accept/Cancel commit bar (only when staged) — a static row under the doll, never overlapping it */
+.inv__doll-edit {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--s-2);
+}
+
+/* body — the 6-relic left rail + the 3-col anatomical body grid */
+.inv__doll-body {
+  display: flex;
+  gap: var(--s-3);
+  align-items: flex-start;
+  justify-content: center;
+}
+.inv__relics {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+  width: 52px;
+  flex: none;
+}
+.inv__relics .inv__slot {
+  width: 52px;
+  height: 52px;
+}
+
+/* anatomical body grid — DOM reading order IS the layout (auto-flow): title/hat/amulet,
+ * gauntlets/chestplate/weapon (chestplate dead-centre, weapon on the RIGHT), left_ring/belt/right_ring,
+ * pet/pants/boots. Slots stretch to fill the column so the grid fills the frame at any drawer width. */
+.inv__rig {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-2);
+}
+.inv__rig .inv__slot {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+/* #23: TITLE moved out of the doll to the Cosmetics section. An invisible grid spacer holds its old
+   top-left cell so the spine (hat/chestplate/belt/pants) stays column-centred (no reflow). */
+.inv__slot-gap {
+  aspect-ratio: 1;
+}
+
+/* #23: COSMETICS section — same slot grid as the equipment rig (reuses EquipmentSlot), a 3-up row for
+   HAT / CLOAK / TITLE, sitting between the doll and the equipped totals. */
+.inv__cosmetics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-2);
+}
+.inv__cosmetics .inv__slot {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+/* one slot */
+.inv__slot {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+  border: 1px solid var(--hair);
+  border-radius: var(--r-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  transition:
+    border-color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease),
+    box-shadow var(--dur-1) var(--ease);
+}
+
+.inv__slot:hover {
+  border-color: var(--hair-strong);
+}
+
+/* weapon = the hero slot (weapon on the RIGHT) — a faint ice-blue wash */
+.inv__slot--weapon {
+  background: linear-gradient(150deg, rgba(93, 180, 255, 0.1), rgba(0, 0, 0, 0.26));
+}
+
+.inv__slot.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 0 16px -4px var(--accent-dim);
+}
+
+.inv__slot.is-valid {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+/* D11 SSOT: a filled slot's rarity is the shared inset radial tint (--q-tint = rarity_tint(), quality.js),
+   painted as a background layer over the base glass — NOT a bottom edge/border (the old ::after rarity bar
+   was the "weird edge" bug class). The neutral hairline border from .inv__slot stays; hover/selected own
+   their own borders (separate paths). */
+.inv__slot.is-filled:not(.is-selected):not(.is-valid) {
+  background-image: var(--q-tint, none), linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+}
+
+.inv__slot-lvl {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.54rem;
+  color: var(--fg-muted);
+  pointer-events: none;
+}
+
+/* empty-slot line glyph + caption */
+.inv__slot-glyph {
+  width: 42%;
+  height: 42%;
+  opacity: 0.5;
+  color: var(--fg-faint);
+}
+.inv__slot-label {
+  position: absolute;
+  bottom: 4px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.46rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  pointer-events: none;
+}
+
+/* art wrapper hosts the shared ItemIcon (image + glyph fallback) at slot size. */
+.inv__slot-art {
+  width: 100%;
+  height: 100%;
+  padding: 5px;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: flex;
+}
+
+/* equipped totals strip */
+.inv__totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-4);
+  padding: var(--s-3);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-2);
+  background: rgba(0, 0, 0, 0.2);
+}
+.inv__total {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 0.74rem;
+}
+.inv__total-v {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+.inv__total-k {
+  color: var(--fg-faint);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.inv__totals-empty {
+  color: var(--fg-faint);
+  font-size: 0.72rem;
+  font-style: italic;
+}
+
+/* NO QUALITY TIERS: the legendary-apex pulse (q-legendary-pulse +
+   .enc__sheet.is-legendary) died with the concept — no tier ever gets a distinct treatment. */
+
+.inv__feed {
+  margin-top: var(--s-2);
+  font-size: 0.72rem;
+  color: var(--fg-muted);
+}
+
+.inv__feed-bar {
+  margin-top: var(--s-1);
+  height: 6px;
+  border-radius: var(--r-1);
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.inv__feed-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width var(--dur-2) var(--ease);
+}
+
+/* ── RIGHT bag — full-width (no nested card): header + count, underline tabs, capacity slot grid ── */
+.inv__bag {
+  display: flex;
+  flex-flow: column nowrap;
+  gap: var(--s-3);
+  min-height: 0;
+  height: 100%;
+}
+@media (max-width: 720px) {
+  .inv__bag {
+    height: auto;
+    max-height: 60vh;
+  }
+}
+
+.inv__baghead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.inv__bagcount {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.72rem;
+  color: var(--fg-faint);
+}
+
+/* underline tabs (NOT pills). Scoped to `.inv__tabs .inv__tab` (0,2,0) — NOT `.hud-root .inv__tab` — so the
+   Gothic-terminal treatment ALSO lands on the Characters PAGE bag, which renders WITHOUT a .hud-root wrapper
+   (pages/characters.tsx → CharactersDrawer variant="page" → Inventory). The old .hud-root scope left those
+   page-side tabs as unstyled mixed-case text with only the container hairline — live QA flagged "ugly
+   tabs" (07-12). Two classes still beat the global `.hud-root button { background:none; border:none }` reset
+   (0,1,1), so the in-HUD border/underline is unchanged; the same `.inv__tabs` wrapper is present in both
+   mount contexts, so one rule now serves both. */
+.inv__tabs {
+  display: flex;
+  gap: var(--s-4);
+  border-bottom: 1px solid var(--hair);
+}
+/* CANONICAL TAB (spec_tab_canon.md — one treatment shared with .admin-tab / chat tabs). REST = legible
+   muted mono label + count (a real tab, not a hover-ghost, per the BUTTON LAW); HOVER = gold + faint glow;
+   ACTIVE = gold label + gold 2px underline. */
+.inv__tabs .inv__tab {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: var(--s-1) 0 var(--s-2);
+  margin-bottom: -1px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition:
+    color var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease),
+    text-shadow var(--dur-1) var(--ease);
+}
+.inv__tabs .inv__tab:hover {
+  color: var(--color-gold);
+  text-shadow: 0 0 8px rgba(200, 150, 60, 0.35);
+}
+.inv__tabs .inv__tab.is-active {
+  color: var(--color-gold);
+  border-bottom-color: var(--color-gold);
+}
+.inv__tabs .inv__tab.is-active .inv__tab-ct {
+  color: var(--color-gold);
+}
+/* count = a dimmer, smaller suffix (house style) */
+.inv__tab-ct {
+  color: var(--fg-faint);
+  font-size: 0.85em;
+}
+
+.inv__grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 58px);
+  grid-auto-rows: 58px;
+  gap: var(--s-2);
+  align-content: start;
+  /* dock clearance is the shared .hud-drawer__body --dock-clear (SSOT) — do not re-add it here. */
+}
+
+.inv__cell {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+  border: 1px solid var(--hair);
+  border-radius: var(--r-2);
+  cursor: pointer;
+  padding: 0;
+  transition:
+    border-color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease),
+    box-shadow var(--dur-1) var(--ease);
+}
+
+.inv__cell:hover {
+  border-color: var(--hair-strong);
+}
+
+.inv__cell.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* #22a / D11: a FILLED cell drops the resting hairline border (transparent, keeps the 1px box model for
+   grid alignment with the dashed EMPTY cells) — rarity reads via the SHARED inset radial tint ONLY
+   (--q-tint = rarity_tint(), quality.js), painted as a background layer over the base glass. NO rarity
+   edge/border (the old ::after bar was the same bug class as the white border). Hover/selected own theirs. */
+.inv__cell--filled {
+  border-color: transparent;
+  background-image: var(--q-tint, none), linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+}
+
+/* D11: a MOUSE click on an item cell must not leave a stray light focus outline ("white
+   borders" must never appear). Suppress the outline only for pointer focus; a keyboard :focus-visible ring is kept
+   for a11y. Folded into the shared cell source — covers the in-world bag cell + paper-doll slot AND the
+   .chr-detail characters-page cells (same classes). */
+.inv__cell:focus:not(:focus-visible),
+.inv__slot:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* dashed empty capacity slot (so the full-width bag reads as a real inventory, not a sparse cluster) */
+.inv__cell--empty {
+  cursor: default;
+  background: rgba(0, 0, 0, 0.18);
+  border-style: dashed;
+}
+.inv__cell--empty:hover {
+  border-color: var(--hair);
+}
+
+.inv__cell-art {
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+.inv__cell-amount {
+  position: absolute;
+  bottom: 1px;
+  right: 2px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.6rem;
+  line-height: 1;
+  color: var(--fg);
+  background: rgba(4, 6, 10, 0.78);
+  /* D34: a dark halo/outline so the count reads on BRIGHT icons (e.g. ×109 white-wool) — the semi-opaque chip
+     bg alone washes out over a near-white tile. Subtle, doesn't fight the dark theme. */
+  text-shadow:
+    0 0 3px rgba(0, 0, 0, 0.9),
+    0 1px 2px rgba(0, 0, 0, 0.85);
+  padding: 1px 3px;
+  border-radius: var(--r-1);
+  pointer-events: none;
+}
+
+/* ════════════════════════ STATS (character sheet) ════════════════════════
+ * Ported from the AresRPG dapp game-characteristic.vue (icon rows + `+` upgrade + capital + commit),
+ * rebuilt on Frosted Obsidian: per-stat icon chips with a muted tint, exact-xp meter, vitals strip,
+ * a read-only secondary section. ice-blue accent only on the `+` step + commit CTA. */
+.stats {
+  display: flex;
+  flex-flow: column nowrap;
+  gap: var(--s-2);
+  /* fit-to-viewport: fill the drawer slot, never grow past it. The hero + capital card stay pinned
+     while the stat sections scroll inside .stats__scroll (the inv/mkt/enc pinned-head + flex:1
+     min-height:0 scroll-body SSOT), so the player never scroll-hunts for the allocate CTA. */
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  /* owner review #1 (8): in the wide companion detail panel the sheet stretched to ~980px, so a stat
+     label and its value sat far apart (hard to map). Cap + center the sheet so each row reads compact;
+     in the narrow in-world drawer (~440px) it still fills 100% (cap > width, auto margins are no-ops). */
+  width: 100%;
+  max-width: 600px;
+  margin-inline: auto;
+}
+
+/* pinned regions: identity + the points-to-assign CTA stay visible while the rest scrolls */
+.stats__hero,
+.stats__assign {
+  flex: none;
+}
+
+/* the scrolling remainder (vitals, characteristics, resistances, secondary) */
+.stats__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-flow: column nowrap;
+  gap: var(--s-3);
+  /* dock clearance is the shared .hud-drawer__body --dock-clear (SSOT) — do not re-add it here. */
+  /* a hair of right padding so rows clear the scrollbar gutter */
+  padding-right: 2px;
+}
+
+/* hero header — portrait + identity + class + experience, on a faint tinted card */
+.stats__hero {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-3);
+}
+
+.stats__hero-portrait {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--r-2);
+  background: rgba(0, 0, 0, 0.28);
+  box-shadow: inset 0 0 0 1px var(--hair);
+}
+
+.stats__hero-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-flow: column nowrap;
+  gap: 3px;
+}
+
+.stats__hero-top {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.stats__hero-name {
+  font-weight: 600;
+  font-size: 1.02rem;
+  letter-spacing: 0.01em;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stats__hero-lvl {
+  flex: none;
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding: 1px var(--s-1);
+  background: var(--accent-dim);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: var(--r-1);
+}
+
+.stats__hero-class {
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+.stats__hero-xp-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 2px;
+}
+
+.stats__hero-xp-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+.stats__hero-xp-value {
+  font-size: 0.72rem;
+  color: var(--fg-muted);
+}
+
+.stats__bar {
+  height: 7px;
+  border-radius: var(--r-1);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--hair);
+  overflow: hidden;
+}
+
+.stats__bar-fill {
+  height: 100%;
+  background: var(--bad);
+  transition: width var(--dur-2) var(--ease);
+}
+
+/* Experience = ice-blue (progression toward the next level) */
+.stats__bar-fill--xp {
+  background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+/* vitals strip — health / action / movement, evenly split, each element-tinted */
+.stats__vitals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-2);
+}
+
+.stats__vital {
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: center;
+  gap: 2px;
+  padding: var(--s-2) var(--s-1);
+  background: color-mix(in srgb, var(--tint, transparent) 12%, rgba(0, 0, 0, 0.22));
+  border: 1px solid color-mix(in srgb, var(--tint, transparent) 26%, var(--hair));
+  border-radius: var(--r-2);
+}
+
+.stats__vital--health {
+  --tint: #ef5350;
+}
+.stats__vital--action {
+  --tint: var(--accent);
+}
+.stats__vital--move {
+  --tint: #66bb6a;
+}
+
+.stats__vital-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.stats__vital-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+.stats__vital-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  color: var(--fg);
+}
+
+.stats__section {
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  margin-top: var(--s-1);
+}
+
+/* a stat card groups the rows on a faint tinted surface */
+.stats__card {
+  display: flex;
+  flex-flow: column nowrap;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-2);
+  overflow: hidden;
+}
+
+/* PRIMARY (allocatable) row */
+.stats__prow {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+}
+
+.stats__prow:not(:last-child) {
+  border-bottom: 1px solid var(--hair);
+}
+
+.stats__prow-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: var(--r-1);
+  background: color-mix(in srgb, var(--tint) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 40%, transparent);
+}
+
+.stats__prow-icon img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.stats__prow-label {
+  flex: 1;
+  font-size: 0.84rem;
+  color: var(--fg);
+}
+
+.stats__prow-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.84rem;
+  color: var(--fg);
+  /* keep clear whitespace between the number and the +/- steppers */
+  margin-right: var(--s-1);
+}
+
+/* equipment contribution — muted gold-light: distinct from the orange live allocation below,
+   still inside the one-accent gold family rather than an off-palette status colour. */
+.stats__prow-bonus {
+  color: var(--accent-strong);
+  font-size: 0.74rem;
+}
+
+/* current-session allocation — the orange "+N" (already correct, keep as-is). */
+.stats__prow-pending {
+  color: var(--accent);
+  font-size: 0.74rem;
+}
+
+/* +/- assign buttons (the + button needed a better design — the old per-stat rainbow
+   fill read as a plain flat glyph in a box, off the house language). House idiom now, same recipe as this
+   panel's own Reset/Confirm pair (Stats.css .btn-outline/.btn-gold): − mirrors Reset (gold hairline,
+   transparent), + mirrors Confirm (gold gradient, glow) — the button that spends a point carries the same
+   weight as the panel's own primary CTA. Sharp corners (var(--r-2) resolves to 0 in this scope), consistent
+   32px hit area on both. `.hud-root` prefix beats the global `.hud-root button { background:none;
+   border:none }` reset (0,1,1) so the fill + border actually paint (the recurring HUD-button specificity
+   bug, owner hit 2x). */
+.hud-root .stats__step {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  line-height: 1;
+  font-size: 1.2rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  display: grid;
+  place-items: center;
+  color: var(--color-gold);
+  background: transparent;
+  border: 1px solid rgba(200, 150, 60, 0.3);
+  border-radius: var(--r-2);
+  cursor: pointer;
+  padding: 0;
+  transition:
+    background var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease),
+    box-shadow var(--dur-1) var(--ease);
+}
+
+.stats__step:hover:not(:disabled) {
+  background: rgba(200, 150, 60, 0.08);
+  border-color: rgba(200, 150, 60, 0.6);
+  box-shadow: 0 0 20px rgba(200, 150, 60, 0.1);
+}
+
+.hud-root .stats__step--add {
+  color: #0a0a0f;
+  background: linear-gradient(135deg, var(--color-gold-dark), var(--color-gold), var(--color-gold-dark));
+  border: none;
+  box-shadow:
+    0 0 20px rgba(200, 150, 60, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.stats__step--add:hover:not(:disabled) {
+  box-shadow:
+    0 0 30px rgba(200, 150, 60, 0.4),
+    0 0 60px rgba(200, 150, 60, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.stats__step:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* capital card — the "points to assign" (c198: obvious + prominent). Ice-blue when there is capital. */
+.stats__assign {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-3);
+  transition:
+    background var(--dur-2) var(--ease),
+    border-color var(--dur-2) var(--ease);
+}
+
+.stats__assign.is-active {
+  background: var(--accent-dim);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.stats__assign-num {
+  flex: none;
+  width: 38px;
+  text-align: center;
+  font-size: 1.7rem;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--fg-faint);
+}
+
+.stats__assign.is-active .stats__assign-num {
+  color: var(--accent);
+}
+
+.stats__assign-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-flow: column nowrap;
+  gap: 1px;
+}
+
+.stats__assign-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.stats__assign-sub {
+  font-size: 0.64rem;
+  line-height: 1.25;
+  color: var(--fg-faint);
+}
+
+.stats__assign-actions {
+  flex: none;
+  display: flex;
+  gap: var(--s-1);
+}
+
+.hud-root .stats__assign-btn {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--hair-strong);
+  border-radius: var(--r-1);
+  padding: var(--s-1) var(--s-2);
+  cursor: pointer;
+  transition:
+    color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease);
+}
+
+.stats__assign-btn:hover:not(:disabled) {
+  color: var(--fg);
+  border-color: var(--hair-strong);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.hud-root .stats__assign-btn--confirm {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.stats__assign-btn--confirm:hover:not(:disabled) {
+  color: var(--accent-ink);
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+.stats__assign-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* RESISTANCES — a dedicated element-coloured block of four shield chips with fill bars */
+.stats__resists {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--s-2);
+}
+
+.stats__resist {
+  display: flex;
+  flex-flow: column nowrap;
+  gap: var(--s-1);
+  padding: var(--s-2) var(--s-1) calc(var(--s-1) + 1px);
+  background: color-mix(in srgb, var(--rc) 10%, rgba(0, 0, 0, 0.22));
+  border: 1px solid color-mix(in srgb, var(--rc) 30%, var(--hair));
+  border-radius: var(--r-2);
+  cursor: default;
+}
+
+.stats__resist-head {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.stats__resist-glyph {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  color: var(--rc);
+}
+
+.stats__resist-label {
+  font-size: 0.56rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+.stats__resist-value {
+  margin-left: auto;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.stats__resist-bar {
+  height: 3px;
+  border-radius: var(--r-1);
+  background: rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.stats__resist-fill {
+  height: 100%;
+  min-width: 2px;
+  background: var(--rc);
+  border-radius: inherit;
+  transition: width var(--dur-2) var(--ease);
+}
+
+/* SECONDARY (read-only derived) rows — two-up grid, denser than the primaries */
+.stats__card--secondary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.stats__srow {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border-bottom: 1px solid var(--hair);
+  cursor: default;
+}
+
+/* drop the bottom hairline on the last row of each column */
+.stats__srow:nth-last-child(-n + 2) {
+  border-bottom: none;
+}
+
+.stats__srow:nth-child(odd) {
+  border-right: 1px solid var(--hair);
+}
+
+.stats__srow-mark {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--tint);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #000 25%, transparent);
+}
+
+.stats__srow-label {
+  flex: 1;
+  font-size: 0.78rem;
+  color: var(--fg-muted);
+}
+
+.stats__srow-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+  color: var(--fg);
+}
+
+/* ════════════════════════ MARKETPLACE (Sui NFT) ════════════════════════
+ * Frosted Obsidian, ice-blue accent (selection + buy CTA), tinted neutrals, mono tabular-nums for
+ * prices, no gold/pills/rails. Lives in the right drawer over the live world. */
+.mkt {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  height: 100%;
+  min-height: 0;
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+}
+
+/* top bar — underline tabs (left) + the live SUI balance chip (right) */
+.mkt__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  flex: none;
+}
+.mkt__tabs {
+  display: flex;
+  gap: var(--s-4);
+  flex: none;
+}
+.mkt__tab {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: var(--s-1) 2px var(--s-2);
+  cursor: pointer;
+  transition: color var(--dur-1) var(--ease);
+}
+.mkt__tab:hover {
+  color: var(--fg-muted);
+}
+.mkt__tab.is-active {
+  color: var(--fg);
+  border-bottom-color: var(--accent);
+}
+.mkt__chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  border-radius: var(--r-2);
+  border: 1px solid var(--hair);
+  background: rgba(255, 255, 255, 0.025);
+  flex: none;
+}
+.mkt__chip-k {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.mkt__chip-v {
+  font-size: 0.8rem;
+  color: var(--accent);
+}
+
+/* category filter segments (house: no pills) */
+.mkt__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  flex: none;
+}
+.mkt__filter {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  background: var(--surface-2);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-1);
+  padding: var(--s-1) var(--s-2);
+  cursor: pointer;
+  transition:
+    color var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease);
+}
+.mkt__filter:hover {
+  color: var(--fg-muted);
+}
+.mkt__filter.is-active {
+  color: var(--fg);
+  border-color: var(--accent);
+}
+
+/* search — inline icon box, pushed to the end of the filter row */
+.mkt__search {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  background: var(--surface-1);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-1);
+  min-width: 200px;
+  transition: border-color var(--dur-1) var(--ease);
+}
+.mkt__search:focus-within {
+  border-color: var(--accent);
+}
+.mkt__search svg {
+  width: 13px;
+  height: 13px;
+  color: var(--fg-faint);
+  flex: none;
+}
+.mkt__search-input {
+  width: 100%;
+  color: var(--fg);
+  background: none;
+  border: none;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  outline: none;
+}
+.mkt__search-input::placeholder {
+  color: var(--fg-faint);
+}
+.mkt__sell-input {
+  width: 100%;
+  box-sizing: border-box;
+  color: var(--fg);
+  background: var(--surface-1);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-1);
+  padding: var(--s-2) var(--s-3);
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color var(--dur-1) var(--ease);
+}
+.mkt__sell-input:focus {
+  border-color: var(--accent);
+}
+
+/* shared price chrome */
+.mkt__price {
+  color: var(--fg);
+  font-size: 0.92rem;
+}
+.mkt__sui {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+
+/* two-pane browse: LEFT item-type list | RIGHT detail (order book + chart) */
+.mkt__panes {
+  display: grid;
+  grid-template-columns: 286px 1fr;
+  gap: var(--s-4);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* rarity-tinted icon well (shared by the type rows + the detail head; --rq = rarity tint) */
+.mkt__well {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  padding: 3px;
+  box-sizing: border-box;
+  border-radius: var(--r-2);
+  background:
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--rq) 20%, transparent), transparent 70%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.012));
+  border: 1px solid color-mix(in srgb, var(--rq) 45%, var(--edge));
+}
+.mkt__floor-label {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+/* LEFT — item-type list */
+.mkt__typelist {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--hair);
+  border-radius: var(--r-3);
+  background: rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+.mkt__typelist-head {
+  display: flex;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--hair);
+  flex: none;
+}
+.mkt__typelist-scroll {
+  overflow-y: auto;
+  min-height: 0;
+}
+.mkt__trow {
+  display: grid;
+  grid-template-columns: 38px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-left: 2px solid transparent;
+  color: var(--fg);
+}
+.mkt__trow:nth-child(even) {
+  background: rgba(255, 255, 255, 0.018);
+}
+.mkt__trow:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.mkt__trow.is-sel {
+  background: var(--accent-dim);
+  border-left-color: var(--accent);
+}
+.mkt__trow-id {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.mkt__trow-name {
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mkt__trow-meta {
+  font-size: 0.58rem;
+  letter-spacing: 0.04em;
+  color: var(--fg-faint);
+}
+.mkt__trow-floor {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+/* RIGHT — detail */
+.mkt__detail {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: var(--s-3);
+}
+.mkt__detail--empty {
+  align-items: center;
+  justify-content: center;
+}
+.mkt__dhead {
+  display: flex;
+  gap: var(--s-4);
+  padding: var(--s-3);
+  flex: none;
+  border: 1px solid var(--edge);
+  border-top-color: var(--edge-top);
+  border-radius: var(--r-3);
+  background: linear-gradient(160deg, #232c3a, #131922);
+}
+.mkt__dwell {
+  width: 92px;
+  height: 92px;
+  padding: 6px;
+}
+.mkt__dwell-lv {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  font-size: 0.5rem;
+  color: var(--fg);
+  background: rgba(4, 6, 10, 0.82);
+  padding: 1px 4px;
+  border-radius: var(--r-1);
+}
+.mkt__dhead-id {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.mkt__dhead-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.mkt__dhead-sub {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.mkt__dmg {
+  display: flex;
+  gap: 14px;
+  margin-top: 3px;
+}
+.mkt__dmg span {
+  font-size: 0.78rem;
+  color: var(--fg-muted);
+}
+.mkt__dmg b {
+  font-weight: 600;
+}
+.mkt__dhead-stats {
+  margin-top: 4px;
+}
+.mkt__statline {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  padding: 2px 0;
+}
+.mkt__statline-n {
+  color: var(--fg-muted);
+}
+.mkt__statline-v {
+  color: var(--fg);
+}
+
+/* the order book (left) + chart (right) row */
+.mkt__listings-row {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: var(--s-4);
+  flex: 1;
+  min-height: 0;
+}
+.mkt__lbox {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--hair);
+  border-radius: var(--r-3);
+  background: rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+.mkt__lbox-head {
+  display: flex;
+  justify-content: space-between;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--hair);
+  flex: none;
+}
+.mkt__lbox-head--split {
+  border-top: 1px solid var(--hair);
+  margin-top: var(--s-2);
+}
+.mkt__orderbook {
+  overflow-y: auto;
+  min-height: 0;
+}
+.mkt__lr {
+  display: grid;
+  grid-template-columns: 84px 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--hair);
+}
+.mkt__lr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.018);
+}
+.mkt__lr-rar {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rq, var(--fg-muted));
+}
+.mkt__lr-seller {
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mkt__lr-price {
+  text-align: right;
+}
+
+/* buyer quantity tiers (stackables only) — buy x1 / x10 / x100 */
+.mkt__qtiers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-2);
+  padding: 12px 14px 0;
+}
+.mkt__qtier {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 9px 12px;
+  cursor: pointer;
+  text-align: left;
+  border: 1px solid var(--hair);
+  border-radius: var(--r-3);
+  background: rgba(255, 255, 255, 0.02);
+  transition:
+    border-color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease);
+}
+.mkt__qtier:hover {
+  background: rgba(255, 255, 255, 0.045);
+}
+.mkt__qtier.is-sel {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: var(--accent-dim);
+}
+.mkt__qtier-q {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--fg);
+  letter-spacing: 0.04em;
+}
+.mkt__qtier-p {
+  font-size: 0.82rem;
+  color: var(--fg);
+}
+.mkt__qtier-cta {
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-top: 1px;
+}
+.mkt__qhint {
+  font-size: 0.7rem;
+  color: var(--fg-faint);
+  padding: 6px 14px 0;
+}
+
+/* price chart */
+.mkt__chart {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--hair);
+  border-radius: var(--r-3);
+  background: rgba(0, 0, 0, 0.22);
+  padding: 12px;
+}
+.mkt__chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+}
+.mkt__rangetog {
+  display: flex;
+  gap: 2px;
+}
+.mkt__range {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.06em;
+  padding: 3px 7px;
+  border-radius: var(--r-1);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--fg-faint);
+  cursor: pointer;
+}
+.mkt__range.is-active {
+  background: var(--accent-dim);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--accent);
+}
+.mkt__plot {
+  position: relative;
+  flex: 1;
+  margin-top: 10px;
+  min-height: 150px;
+}
+.mkt__plot svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.mkt__chart-thin {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.mkt__chart-foot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 10px;
+  flex: none;
+}
+.mkt__chart-foot span {
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.mkt__chart-foot b {
+  color: var(--fg);
+  font-size: 0.72rem;
+  margin-left: 4px;
+}
+.mkt__chart-flag {
+  margin-left: auto;
+  color: var(--warn) !important;
+  opacity: 0.8;
+}
+
+/* empty + hint states */
+.mkt__hint {
+  padding: var(--s-4) 0;
+  text-align: center;
+  color: var(--fg-faint);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+}
+.mkt__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-7) var(--s-4);
+  text-align: center;
+}
+/* a quiet basket mark above the honest empty copy (browse is indexer-blocked, c114) */
+.mkt__empty-mark {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: var(--s-1);
+  border-radius: var(--r-3);
+  color: var(--fg-faint);
+  background: radial-gradient(circle at 50% 40%, var(--accent-dim), transparent 70%);
+  border: 1px solid var(--hair);
+}
+.mkt__empty-mark svg {
+  width: 22px;
+  height: 22px;
+}
+.mkt__empty-title {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.mkt__empty-sub {
+  font-size: 0.78rem;
+  color: var(--fg-faint);
+  max-width: 28ch;
+  line-height: 1.5;
+}
+
+/* sell tab */
+.mkt__sell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.mkt__sell-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 48px);
+  grid-auto-rows: 48px;
+  gap: var(--s-2);
+  justify-content: space-evenly;
+  padding: var(--s-1);
+}
+.mkt__sell-cell {
+  position: relative;
+  background: var(--surface-2);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-1);
+  cursor: pointer;
+  padding: 0;
+  transition: border-color var(--dur-1) var(--ease);
+}
+.mkt__sell-cell:hover {
+  border-color: var(--hair-strong);
+}
+.mkt__sell-cell.is-selected {
+  border-color: var(--accent);
+}
+.mkt__sell-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.mkt__sell-amount {
+  position: absolute;
+  right: 2px;
+  bottom: 1px;
+  font-size: 0.6rem;
+  color: var(--fg);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+.mkt__sell-form {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  border-top: 1px solid var(--hair);
+  padding-top: var(--s-3);
+}
+.mkt__sell-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+/* "buyer pays X incl. royalty" preview under the price input */
+.mkt__sell-hint {
+  font-size: 0.66rem;
+  color: var(--fg-faint);
+  letter-spacing: 0.02em;
+}
+.mkt__sell-price {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.mkt__sell-price-label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  flex: none;
+}
+.mkt__sell-input {
+  flex: 1 1 auto;
+}
+.mkt__sell-list {
+  width: 100%;
+  padding: var(--s-2) 0;
+}
+
+/* buy-confirm (transient center modal) */
+.mkt__confirm-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(7, 9, 13, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.mkt__confirm {
+  width: min(360px, 92vw);
+  background: linear-gradient(160deg, var(--glass-hi), var(--glass));
+  border: 1px solid var(--edge-top);
+  border-radius: var(--r-3);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  overflow: hidden;
+}
+.mkt__confirm-head {
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--hair);
+  font-size: 0.94rem;
+  font-weight: 600;
+}
+.mkt__confirm-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-4);
+}
+.mkt__confirm-img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  filter: drop-shadow(1px 3px 5px rgba(0, 0, 0, 0.4));
+}
+.mkt__confirm-name {
+  font-size: 0.92rem;
+  text-align: center;
+}
+.mkt__confirm-lines {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  margin-top: var(--s-2);
+}
+.mkt__confirm-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+}
+.mkt__confirm-line--muted {
+  color: var(--fg-faint);
+}
+.mkt__confirm-line--total {
+  border-top: 1px solid var(--hair);
+  padding-top: var(--s-2);
+  margin-top: var(--s-1);
+  color: var(--accent);
+  font-weight: 600;
+}
+.mkt__confirm-foot {
+  display: flex;
+  gap: var(--s-2);
+  justify-content: flex-end;
+  padding: var(--s-3) var(--s-4);
+  border-top: 1px solid var(--hair);
+}
+
+/* footnote */
+.mkt__foot {
+  flex: none;
+  text-align: center;
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  padding-top: var(--s-1);
+}

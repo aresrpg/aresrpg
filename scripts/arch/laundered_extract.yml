@@ -1,0 +1,105 @@
+# scripts/arch/laundered_extract.yml — EXTRACTION pack for the laundered-store-write join (L-P4).
+#
+# These two rules are NOT violations: they are INFO-tier extraction probes whose matches are joined
+# by scripts/arch/semgrep_verdict.mjs into the real finding, `arch-laundered-store-write`:
+#
+#   a helper function whose body performs a DIRECT external store write ($S.setState /
+#   $S.getState().field = / Object.assign($S.getState(), …)) …            [x-arch-writer-def]
+#   … whose NAME is referenced as a callback, or called, inside an async
+#   context (timer / promise method / listener / rAF) …                   [x-arch-async-ref]
+#
+# This is the cross-function form of scripts/eslint-rules/one_pipeline.mjs `no-async-store-write`,
+# which is lexical BY DESIGN ("a write hidden behind a named helper that a timer merely calls is
+# out of scope"). The join closes exactly that hole.
+#
+# HONEST DEPTH (semgrep OSS taint is intraprocedural — a real source→sink taint across function
+# boundaries needs the Pro engine, so the join is name-based instead):
+#   · 1 hop: the async context must name the writer helper directly (ref or call). A → B → write
+#     with the async site calling A only is NOT caught.
+#   · name-based, repo-wide within packages/frontend/src: two same-named helpers can cross-match
+#     (the verdict lists every writer-def site so a human can dismiss in seconds).
+#   · bare identifiers only: `obj.method` indirection, dynamic dispatch, and function-expression
+#     (`const f = function …`) writers are out of scope.
+#   · SANCTIONED and therefore ignored: bare `set(…)` helpers inside a store creator (those are the
+#     action door itself — one_pipeline.mjs owns their async misuse lexically), and any helper that
+#     re-enters through `getState().input(…)` / a store action (a call, never a write).
+#   · arrow patterns are modifier/body-agnostic (see arch_law.yml semantics note), so async inline
+#     callbacks are covered by the same `(...) => { ... }` patterns.
+rules:
+  - id: x-arch-writer-def
+    languages: [js, ts]
+    severity: INFO
+    metadata:
+      law: L-P4
+      role: extraction — never a finding by itself
+    message: 'x-writer-def:$F'
+    paths:
+      include:
+        - '**/packages/frontend/src/**'
+      exclude:
+        - '**/*.test.*'
+        - '**/test_helpers/**'
+    patterns:
+      - pattern-either:
+          - pattern-inside: function $F(...) { ... }
+          - pattern-inside: const $F = (...) => { ... }
+          - pattern-inside: let $F = (...) => { ... }
+          - pattern-inside: var $F = (...) => { ... }
+      - pattern-either:
+          - pattern: $S.setState($...A)
+          - pattern: $S.getState().$P = $V
+          - pattern: Object.assign($S.getState(), $...A)
+
+  - id: x-arch-async-ref
+    languages: [js, ts]
+    severity: INFO
+    metadata:
+      law: L-P4
+      role: extraction — never a finding by itself
+    message: 'x-async-ref:$F'
+    paths:
+      include:
+        - '**/packages/frontend/src/**'
+      exclude:
+        - '**/*.test.*'
+        - '**/test_helpers/**'
+    patterns:
+      - pattern-either:
+          # ── ref form: the helper itself handed over as the callback ──
+          - pattern: setTimeout($F, ...)
+          - pattern: setInterval($F, ...)
+          - pattern: queueMicrotask($F)
+          - pattern: requestAnimationFrame($F)
+          - pattern: requestIdleCallback($F)
+          - pattern: $P.then($F)
+          - pattern: $P.then($F, ...)
+          - pattern: $P.catch($F)
+          - pattern: $P.finally($F)
+          - pattern: $X.addEventListener($E, $F)
+          - pattern: $X.addEventListener($E, $F, ...)
+          - pattern: $X.addListener($E, $F)
+          - pattern: $X.on($E, $F)
+          - pattern: $X.once($E, $F)
+          - pattern: $X.subscribe($F)
+          - pattern: $X.subscribe($SEL, $F)
+          # ── call form: the helper invoked inside an inline async callback ──
+          - patterns:
+              - pattern-either:
+                  - pattern-inside: setTimeout((...) => { ... }, ...)
+                  - pattern-inside: setInterval((...) => { ... }, ...)
+                  - pattern-inside: queueMicrotask((...) => { ... })
+                  - pattern-inside: requestAnimationFrame((...) => { ... })
+                  - pattern-inside: requestIdleCallback((...) => { ... })
+                  - pattern-inside: $P.then((...) => { ... }, ...)
+                  - pattern-inside: $P.catch((...) => { ... })
+                  - pattern-inside: $P.finally((...) => { ... })
+                  - pattern-inside: $X.addEventListener($E, (...) => { ... }, ...)
+                  - pattern-inside: $X.addListener($E, (...) => { ... })
+                  - pattern-inside: $X.on($E, (...) => { ... })
+                  - pattern-inside: $X.once($E, (...) => { ... })
+                  - pattern-inside: $X.subscribe((...) => { ... })
+                  - pattern-inside: $X.subscribe($SEL, (...) => { ... })
+              - pattern: $F(...)
+      - metavariable-regex:
+          metavariable: $F
+          regex: ^[A-Za-z_$][A-Za-z0-9_$]*$

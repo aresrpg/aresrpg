@@ -1,0 +1,1039 @@
+// WORLD SPAWNS — the last visible link of the discovery loop: render the CHAIN spawns of the CURRENT +
+// adjacent discovered zones as real, interactable fixtures in the overworld. Where the CompassStrip only
+// draws bearing pips, this places the actual rigs you walk up to, attack, and stand near to gather.
+//
+// DATA (SPEC §14 /v1 read layer): the SAME sources the CompassStrip reads — `get_zones` tells us which of
+// the 3×3 neighbourhood zones are discovered; zone_rows.js (the search-cost-rework seed-derivation home)
+// turns each zone's stored {seed, bitmaps} into the live rows {spawn_id, kind, index, x, z, template_id,
+// size|remaining, job, tier, spawned_at_ms, group_seed} with WORLD-ABSOLUTE x/z. The mob row's `template_id` is a Sui object
+// ID → `get_mob_template` resolves it (cached) to the roster NAME + level band; `group_seed` + the /v1/config
+// dials derive each member's EXACT level + archi flag (spawn_compose.js — the chain's own discovery-time
+// derivation); `spawned_at_ms` feeds the §8 aging XP bonus. ONE 6 s short-poll, paused while the tab is hidden.
+//
+// RENDER (ported, not reinvented): the rig lifecycle is lifted from ambient_mobs.js — the module-cached
+// GLB fetch+SkeletonUtils-clone, apply_avatar_material, the idle mixer, world-size normalisation, and the
+// feet_of(ground_surface_y) grounding law — but driven by CHAIN rows. Each group member independently ambles a
+// few blocks around its OWN spawn anchor (ambient_placement.js WANDER core, seeded off spawn_id
+// so refreshes never teleport it) or holds idle, cross-blending an idle↔walk clip; the group ANCHOR + the
+// claim logic never move. Resource nodes render ONE instance per chain row (client rider, UPGRADE_NOTES2.md
+// §CLIENT RIDER — a "wheat field" is now K adjacent ResourceSpawn rows the CHAIN itself grows via
+// foundation/world_math.move::grow_cluster, each remaining:1 at its own authored (x,z); the client no longer
+// grows a blob off one anchor — see spawn_rigs.js create_gather_layer), textured with the gatherable's own
+// procedural art (ENGINE_AAA_PLAN §5.3, B8): wheat/herb/ore read distinctly at gather distance, a harvested
+// cell's whole row disappears from /v1 on the next poll (reconcile/teardown below — generic, no per-node
+// special-casing), apex-tier nodes carry a capped gold glow. Range-gated like ambient; suspended in a dungeon.
+//
+// INTERACT: the group card is a HEADER (group level band + the ticking §8 aging XP bonus)
+// over ONE LINE PER MOB (no ×N collapse) — a UNIT, visibly unlike a player's single bold pill. Within
+// PROXIMITY_M — mirroring the gather distance — a mob group gets a gold
+// card HIGHLIGHT + the [R] ATTACK prompt in the shared PromptStack (same F/G/E language); a resource arms the
+// [G] gather prompt via action/gather_target, held with HYSTERESIS (pick_gather_target — spawn_rigs.js) so the
+// reticle doesn't flicker between two chain cells ~1 block apart as the player crosses their equidistant line.
+// [R] press OR a click fires the EXISTING `create_world_fight` claim+create PTB (spawn_id + world_id +
+// mob_template_id — the row carries all three); on success we re-poll so the claimed group vanishes. We only
+// manage the gather target WE set, never stomping a JobsDrawer selection.
+
+import { Raycaster, Vector2 } from 'three'
+import { get_mob_template } from '@aresrpg/sdk/game'
+import { zone_of_world } from '@aresrpg/sdk/coords'
+import { spawn_rows as core_spawn_rows, group_engage_blocked } from '@aresrpg/world'
+
+import i18n from '../i18n'
+import { game_log } from '../core/log.js'
+import { get_zones, get_config } from '../rpc/client'
+import { zone_rows_v1, zone_rows_chain, zone_world_doc } from './zone_rows.js'
+import { get_sdk } from '../chain/sdk'
+import { use_world_binding } from '../world-shell/session_gate.js'
+import { spawns_store, spawns_input } from '../world-shell/spawns_adapter.js'
+import { create_world_fight } from '../world-shell/dungeon_engage_actions.js'
+import { instrument_cpu_callback } from './cpu_span.js'
+import { use_dungeon } from '../world-shell/dungeon_store.js'
+import { use_party } from '../world-shell/party_store.js'
+import { enter_world_fight, resume_world_fight } from '../world-shell/world_fight.js'
+import { use_prompt_stack } from '../world-shell/prompt_stack.js'
+
+import { use_world_spawns } from './world_spawns_store.js'
+import { push_event_toast } from './core/toast.js'
+import { context } from './core/game.js'
+import { fight_view } from '@aresrpg/fight'
+import { parse_move_abort } from './core/abort_copy.js'
+import { plate_occluded, project_plate } from './nameplate_occlusion.js'
+import { render_group_card, update_group_aging } from './spawn_card.js'
+import {
+  create_rig_layer,
+  create_gather_layer,
+  resource_visual,
+  resolve_group_seat,
+  select_rig_budget,
+} from './spawn_rigs.js'
+import { apply_veil } from './spawn_veil.js'
+
+const POLL_MS = 6000 // the CompassStrip zone cadence — reused, never a second loop
+// (The search fast-path grace + all receipt/poll reconcile discipline live in the spawns CORE now —
+// @aresrpg/world spawns_zones: receipt-proven adds are grace-shielded, removals are tombstoned there.)
+const LOAD_RADIUS_M = 90 // place a spawn's rigs once the player is this close
+const DESPAWN_RADIUS_M = 120 // …and drop them past this (hysteresis: no spawn/despawn thrash at the edge)
+// RIG BUDGET (P0 OOM ceiling 2026-07-11): hard caps on concurrent RESIDENT rigs, independent of the on-chain
+// density dial (which went 3-8 → 12-24 groups/zone with no cap). Groups are the heavy tier — each member is a
+// SkeletonUtils clone (skeleton + mixer, MB each) — so they cap tighter; resource clusters are light billboards.
+// PLACE_PER_FRAME makes spawn-in INCREMENTAL: even if the initial ingest lands hundreds of in-range spawns, at
+// most this many rigs of each kind mount per frame → no single-frame burst on world entry. Eviction is
+// nearest-first (farthest despawns first) with a swap-margin hysteresis so boundary jitter can't thrash.
+const GROUP_BUDGET = 32 // max resident mob GROUPS (tunable; each is 1–6 skinned rigs)
+// max resident resource-node PATCHES (lighter: shared geo/mat, ONE (or two, ore) InstancedMesh draw call each
+// regardless of its up-to-20-instance patch size — see spawn_rigs.js create_gather_layer).
+const NODE_BUDGET = 48
+const PLACE_PER_FRAME = 4 // ≤ this many NEW groups AND nodes mount per frame — the anti-burst incremental gate
+const SWAP_MARGIN_M = 12 // a resident rig is only displaced by an unplaced one nearer by more than this (blocks)
+const SWAP_MARGIN_SQ = SWAP_MARGIN_M * SWAP_MARGIN_M
+const TELEMETRY_MS = 60000 // house telemetry: one rig/node/heap line per minute so a live session self-reports
+const HEAPTRACE_MS = 10000 // [heaptrace] dev leak-hunt cadence (gated on ?heaptrace=1) — dense enough for a 10-min sweep
+// PROXIMITY / GATHER HYSTERESIS moved INTO the spawns core (D770a W2 — the render-contract fix): the fold
+// arms the [G]/[R] targets off `player_pos` + row anchors; this renderer only routes them (frame loop below).
+const NAMETAG_CULL_M = 40 // hide a plate past this many blocks
+const NAMETAG_FADE_M = 34 // …fade it in over the last few blocks instead of a hard pop
+const OCCLUDED_OPACITY = 0.2 // plate faded when terrain sits between it and the eye
+const CLICK_SLOP_PX = 6 // pointerdown→up drift under which a press counts as a CLICK not a drag (drag-click law)
+
+/**
+ * @param {{ engine: any, canvas?: HTMLElement | null, get_player_pos: () => ArrayLike<number> }} args
+ * @returns {{ set_hidden: (h: boolean) => void, dispose: () => void }}
+ */
+export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
+  const sample = (/** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ z) =>
+    engine.sample_block?.(x, y, z) ?? 0
+  const raycaster = new Raycaster()
+  const ndc = new Vector2()
+  let raf = 0
+  let last_t = performance.now()
+  let fight_veiled = false // in-fight visual veil (edge-detected in frame_body; see the block there)
+  let last_telemetry = 0 // house telemetry throttle (rig/node/heap once per TELEMETRY_MS)
+  let last_heaptrace = 0 // [heaptrace] leak-hunt throttle (gated on ?heaptrace=1)
+  const HEAPTRACE = typeof location !== 'undefined' && location.search.includes('heaptrace')
+  let disposed = false
+  let dims_world = /** @type {string | null} */ (null) // world whose doc facts were fed into the spawns core
+  let poll_seq = 0 // versioned-snapshot stamp (the core discards out-of-order polls)
+  let polling = false
+  let engaging = false
+  let resumed = false // one-shot guard: fire the world-fight reconnect read once the world binds (see poll)
+  let my_gather_key = /** @type {string | null} */ (null) // the gather_target WE set (never stomp another writer's)
+  let attack_entry = /** @type {any} */ (null) // the mob group the [R] prompt + card-highlight point at
+  let attack_target_engageable = false // is attack_entry within the ENGAGE ring (gold) or only VISIBLE?
+  let render_probe_at = /** @type {number | null} */ (null) // cert ts of the latest search fast-path → one cert→visible log
+
+  /** @type {Map<string, any>} */
+  const entries = new Map() // key `${zx}:${zy}:${kind}:${spawn_id}` → live spawn entry
+  // Retained rig-budget views. Entries themselves carry the transient d2 field, avoiding four arrays plus
+  // one `{key,d2}` object per tracked spawn on every display frame.
+  /** @type {{key:string,d2:number}[]} */ const mob_placed = []
+  /** @type {{key:string,d2:number}[]} */ const mob_cand = []
+  /** @type {{key:string,d2:number}[]} */ const res_placed = []
+  /** @type {{key:string,d2:number}[]} */ const res_cand = []
+  const projected_plate = { left: 0, top: 0 }
+
+  // GameConfig dials the composition mirror needs (spawn_compose.js): archimob_bp + team_size_bound off
+  // /v1/config `dials{}` — a dial only exists there once a DialChanged ever fired, so absent/failed reads
+  // leave `null` and the card falls back to the chain defaults (50 bp / 6). One-shot fetch (config-grade);
+  // placed cards re-render when it lands so a pre-fetch render never sticks with drifted flags.
+  let dials = /** @type {{ archimob_bp: number | null, team_bound: number | null }} */ ({
+    archimob_bp: null,
+    team_bound: null,
+  })
+  get_config()
+    .then((cfg) => {
+      dials = {
+        archimob_bp: cfg?.dials?.archimob_bp != null ? Number(cfg.dials.archimob_bp) : null,
+        team_bound: cfg?.dials?.team_size_bound != null ? Number(cfg.dials.team_size_bound) : null,
+      }
+      if (dials.archimob_bp == null && dials.team_bound == null) return
+      for (const e of entries.values()) if (e.kind === 'mob' && e.chip) render_mob_card(e)
+    })
+    .catch(() => {}) // defaults hold — the card mirrors config.move's own DEFAULT_* constants
+
+  // template_id (Sui object ID) → { name, min_level, max_level } roster facts, resolved once per template on chain
+  // (min/max = the template BAND the per-member level roll draws within — spawn_compose derives the exact levels).
+  /** @type {Map<string, { name: string, min_level: number, max_level: number, element: number } | null>} */
+  const tmpl_cache = new Map()
+  const tmpl_pending = new Set()
+  const short_id = (/** @type {string} */ id) => String(id).slice(0, 8) // transient placeholder until the read lands
+  const resolve_template = (/** @type {string} */ id) => {
+    if (tmpl_cache.has(id)) return tmpl_cache.get(id)
+    if (!tmpl_pending.has(id)) {
+      tmpl_pending.add(id)
+      get_sdk()
+        .then((sdk) => get_mob_template({ grpc_client: sdk.grpc_client })(id))
+        .then((tpl) => {
+          tmpl_cache.set(
+            id,
+            tpl
+              ? {
+                  name: tpl.name || short_id(id),
+                  min_level: tpl.min_level,
+                  max_level: tpl.max_level ?? tpl.min_level,
+                  element: tpl.element ?? 255, // carried into note_group_identity so the fight board resolves the mob's cast element
+                }
+              : null
+          )
+          refresh_mob_card(id) // re-render any placed group of this template now its name is known
+        })
+        .catch(() => tmpl_cache.set(id, null))
+        .finally(() => tmpl_pending.delete(id))
+    }
+    return undefined // not resolved yet
+  }
+
+  // the 3D mob-group rig layer (member placement + GLB load + per-member roam) — bound to this instance's engine,
+  // ground oracle, and template resolver; `is_disposed` lets a mid-flight async GLB load bail after teardown.
+  const rigs = create_rig_layer({
+    engine,
+    sample,
+    resolve_template,
+    is_disposed: () => disposed,
+    is_veiled: () => fight_veiled,
+  })
+  // the resource-node FIELD PATCH layer (spawn_rigs.js) — builds/teardowns each node's grid-adjacent instanced
+  // patch and drives its per-frame sway + depletion state; bound to this instance's engine + ground oracle (every
+  // patch cell seats independently via the SAME sample() the mob rig layer above already uses).
+  const gather = create_gather_layer({ engine, sample })
+
+  // one fixed overlay for every nameplate (the z law: z-11, body-appended, under the HUD, over the world).
+  const layer = document.createElement('div')
+  layer.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:11'
+  document.body.appendChild(layer)
+  let cinematic_hidden = false
+  let world_paused = false
+  let resume_projection_pending = false
+  const sync_layer_hidden = () => {
+    layer.style.display = cinematic_hidden || world_paused || resume_projection_pending ? 'none' : ''
+  }
+
+  const canvas_rect = () => {
+    const cv = canvas ?? /** @type {HTMLElement | null} */ (document.querySelector('canvas'))
+    return cv?.getBoundingClientRect() ?? { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight }
+  }
+
+  // ── data sources (SHARED with the CompassStrip — same binding home, same RPC cache, same SDK read) ─────────
+  const current_world_id = () => {
+    const character_id = context.get_state().selected_character_id
+    const b = use_world_binding.getState()
+    return b.character_id === character_id ? (b.world ?? null) : null
+  }
+  const fetch_zone_spawns = async (
+    /** @type {string} */ world_id,
+    /** @type {number} */ zx,
+    /** @type {number} */ zy
+  ) => zone_rows_v1(world_id, zx, zy) // rows DERIVE from the zone's stored seed (zone_rows.js — the one home)
+
+  // Resolve zone_size + the world↔chain offset (bounds/2) once per world, off the SHARED World-doc read
+  // (zone_rows.js home), and feed it into the spawns CORE — the one place chain coords become world space.
+  const ensure_world_dims = async (/** @type {string} */ world_id) => {
+    if (dims_world === world_id) return
+    const doc = await zone_world_doc(world_id)
+    spawns_input({ type: 'world_doc', doc })
+    if (doc) dims_world = world_id
+  }
+
+  // SYNC the render residency from the CORE's row projection (D770a W2): the core owns WHICH rows exist
+  // (receipt/poll reconcile, grace shields, tombstones); this map owns only their RENDER lifecycle (rigs,
+  // chips, budget). A `pending` claim row hides its group — the optimistic fight-entry beat as data.
+  const sync_from_core = () => {
+    /** @type {Map<string, any>} */
+    const listed = new Map()
+    for (const r of core_spawn_rows(spawns_store.getState())) listed.set(r.key, r)
+    for (const [key, entry] of entries)
+      if (!listed.has(key)) {
+        teardown(entry)
+        entries.delete(key)
+      }
+    for (const [key, next] of listed) {
+      const cur = entries.get(key)
+      if (cur) {
+        cur.row = next.row // keep the placed rig; refresh the row (remaining/size can change)
+        const engaged = next.pending === 'claim'
+        if (engaged !== !!cur.engaged) set_group_engaged(cur, engaged)
+      } else {
+        entries.set(key, {
+          key,
+          row: next.row,
+          zx: next.zx,
+          zy: next.zy,
+          kind: next.kind,
+          placed: false,
+          cx: 0,
+          cy: 0,
+          cz: 0,
+          members: [],
+          mesh: null,
+          chip: null,
+          engaged: next.pending === 'claim',
+        })
+      }
+    }
+    publish_spawns() // mirror the synced set to the minimap store
+  }
+
+  // Publish the reconciled spawn set to the HUD minimap store (world_spawns_store.js) — flat marker rows the
+  // minimap/big-map overlay plots. The ANCHOR (row x/z, world space) is the stable position (mobs roam a few
+  // blocks around it; the compass/claim use the same); mob level band comes best-effort from the template
+  // cache (null until the read lands — refresh_mob_card re-publishes then). No fetch here: this only mirrors
+  // `entries`, so the minimap reuses the SAME data source with zero extra polling.
+  const publish_spawns = () => {
+    /** @type {import('./world_spawns_store.js').SpawnMarker[]} */
+    const list = []
+    for (const e of entries.values()) {
+      const row = e.row
+      /** @type {any} */
+      const m = {
+        key: e.key,
+        kind: e.kind,
+        x: Number(row.x),
+        z: Number(row.z),
+        spawn_id: row.spawn_id,
+        zx: e.zx,
+        zy: e.zy,
+        template_id: row.template_id,
+        job: Number(row.job) || 0,
+        tier: Number(row.tier) || 0,
+      }
+      if (e.kind === 'mob') {
+        const tpl = tmpl_cache.get(row.template_id)
+        if (tpl) {
+          m.name = tpl.name
+          m.level_min = tpl.min_level
+          m.level_max = tpl.max_level
+        }
+      } else m.name = resource_visual(Number(row.job) || 0, Number(row.tier) || 1).name
+      list.push(m)
+    }
+    use_world_spawns.getState().set_spawns(list)
+  }
+
+  // ── the ONE short-poll: current + adjacent discovered zones → ONE versioned snapshot into the core ─────────
+  const poll = async () => {
+    if (disposed || polling || document.hidden) return
+    const world_id = current_world_id()
+    if (!world_id) {
+      if (entries.size) {
+        spawns_input({ type: 'world_bound', world_id: null }) // left the world → the core resets
+        sync_from_core() // …and every rig tears down
+      }
+      return
+    }
+    // RECONNECT (one-shot per session): the first poll with a bound world re-mounts a world fight the character
+    // is mid-way through (page refresh / fresh boot). resume_world_fight is a keyless RPC read that no-ops when
+    // there is no live fight or a session is already up — safe to fire exactly once here.
+    if (!resumed) {
+      resumed = true
+      const character_id = context.get_state().selected_character_id
+      if (character_id) void resume_world_fight(character_id)
+    }
+    polling = true
+    try {
+      await ensure_world_dims(world_id)
+      if (spawns_store.getState().world_id !== world_id) spawns_input({ type: 'world_bound', world_id }) // ferry belt
+      const { zone_size, offset_x, offset_z } = spawns_store.getState()
+      const p = get_player_pos()
+      // Player pos is SIGNED WORLD space → the chain zone KEY (data/claim/gather) translates world→chain then floors.
+      const cell = zone_of_world(Number(p[0]), Number(p[2]), zone_size, offset_x, offset_z)
+      if (!cell) return
+      const zdata = await get_zones(world_id).catch(() => null)
+      const discovered = (zdata?.zones ?? []).filter((z) => z.discovered !== false)
+      const discovered_keys = new Set(discovered.map((z) => `${z.zx}:${z.zy}`))
+      /** @type {Array<{zx:number,zy:number}>} */
+      const cells = []
+      for (let dx = -1; dx <= 1; dx += 1)
+        for (let dy = -1; dy <= 1; dy += 1) {
+          const zx = cell.zx + dx
+          const zy = cell.zy + dy
+          if (zx >= 0 && zy >= 0 && discovered_keys.has(`${zx}:${zy}`)) cells.push({ zx, zy })
+        }
+      const fetched = await Promise.all(
+        cells.map(async (c) => ({ ...c, rows: await fetch_zone_spawns(world_id, c.zx, c.zy).catch(() => null) }))
+      )
+      if (disposed) return
+      // ONE atomic reconcile input: the discovered-zone list + the fetched neighbourhood rows. The CORE owns
+      // the discipline (stale-version discard, receipt grace shields, tombstones); this adapter only ferries.
+      poll_seq += 1
+      spawns_input({
+        type: 'zones_rows_snapshot',
+        version: poll_seq,
+        zones: discovered.map((z) => ({ zx: z.zx, zy: z.zy, discovered_at_ms: z.discovered_at_ms ?? null })),
+        cells: fetched.filter((c) => Array.isArray(c.rows)),
+      })
+      sync_from_core()
+    } finally {
+      polling = false
+    }
+  }
+
+  // ── SEARCH FAST-PATH — the gap between mobs appearing and search done was too slow ──
+  // discovery_actions.js dispatches the `zone_searched` RECEIPT into the core the instant the tx CERTIFIES
+  // (checkpoint+zone+hunt_zone advance atomically there) and broadcasts the same beat on the shared bus. The
+  // steady-state /v1 poll would only SEE the new spawns seconds later (indexer ~1.5s + api cache 5s + client
+  // LRU 3s), so THIS listener reads the zone the tx just wrote CHAIN-DIRECT (zone_rows_chain — atomically
+  // consistent post-cert) and ferries the rows in as a PROVEN top-up: the core grace-shields them against the
+  // lagging poll, the next frame places them. READ-ONLY: no tx, zero gas, money rails untouched.
+  const on_zone_searched = async (/** @type {{ world_id:string, zx:number, zy:number, at_cert?:number }} */ ev) => {
+    const { world_id, zx, zy, at_cert } = ev ?? {}
+    if (disposed || !world_id || world_id !== current_world_id()) return
+    await ensure_world_dims(world_id)
+    const rows = await zone_rows_chain(world_id, zx, zy).catch(() => null)
+    if (disposed || !rows?.length) return
+    // Tag the cert instant BEFORE the ferry so place() emits the one-shot cert→visible delta for the first
+    // NEW spawn (the fix's own proof it renders < 1s); _searched marks ride the sync below.
+    if (at_cert != null) render_probe_at = at_cert
+    const before = new Set(entries.keys())
+    spawns_input({ type: 'zone_rows', zx, zy, proven: true, rows })
+    sync_from_core() // search fast-path: new rows in-world + on the minimap the same beat
+    for (const [key, e] of entries) if (!before.has(key)) e._searched = true
+    console.info(
+      `[world-spawns] search fast-path: zone ${zx}:${zy} → ${rows.length} spawns chain-direct` +
+        (at_cert != null ? ` (data @ ${Math.round(performance.now() - at_cert)}ms after cert)` : '')
+    )
+  }
+
+  // Feed the spawns core a mob group's member positions (world space, the STABLE spawn anchors mem.ax/az) as the
+  // typed `member_positions` input backing the [R] visibility ring's nearest-member basis. An empty
+  // e.members (a torn-down group) clears the core entry — reverting that group to its anchor basis.
+  const feed_members = (/** @type {any} */ e) =>
+    spawns_input({
+      type: 'member_positions',
+      key: e.key,
+      members: e.members.map((/** @type {any} */ m) => ({ x: m.ax, z: m.az })),
+    })
+
+  // ── placement (in-range only) ──────────────────────────────────────────────────────────────────────────────
+  const place = (/** @type {any} */ e) => {
+    // MobTemplate carries no visual field — the model resolves off its NAME (get_mob_model), not the raw
+    // template_id, so the rig layer needs the read resolve_template already fetches for the card. Block mob
+    // placement until it settles (success or a definitive miss) so a rig never spawns on a wrong archetype it
+    // can't self-correct — same "retry next scan" shape as the unstreamed-column guard below.
+    if (e.kind === 'mob' && resolve_template(e.row.template_id) === undefined) return false
+    // ONE seat resolver (spawn_rigs.js): a clean walkable column when there is one (mobs nudge off tree/cliff/
+    // water; a resource takes its exact point), else FLOAT on the surface so a group over WATER or steep terrain
+    // still RENDERS instead of silently vanishing while its compass pip shows it. null =
+    // the column is genuinely unstreamed → retry on the next scan as chunks arrive.
+    const seat = resolve_group_seat({
+      sample,
+      x: e.row.x,
+      z: e.row.z,
+      scan_from_y: Number(get_player_pos()[1]),
+      nudge: e.kind === 'mob',
+    })
+    if (!seat) return false
+    e.cx = seat.x
+    e.cz = seat.z
+    e.cy = seat.y
+    if (seat.mode === 'float')
+      // house telemetry (never a silent skip): one line naming why the anchor couldn't seat cleanly.
+      console.info(
+        `[world-spawns] ${e.kind} ${e.row.spawn_id} floated on the surface — no dry footing near its anchor ` +
+          `(over water or steep terrain); rendering there instead of skipping`
+      )
+    if (e.kind === 'mob') {
+      rigs.place_members(e)
+      // Feed the placed group's member spawn anchors (world space) to the spawns core as a TYPED INPUT — the
+      // nearest-member basis of the [R] visibility ring. Stable leash centres (mem.ax/az), not the
+      // live roam, so the widened prompt never flickers as members amble. Cleared on teardown.
+      feed_members(e)
+    } else gather.build(e) // resource → the crossed-card sprite cluster (spawn_rigs.js)
+    e.placed = true
+    spawn_chip(e)
+    // SEARCH FAST-PATH proof (one line per search): the first chain-direct spawn to become VISIBLE reports the
+    // full cert→visible latency. Nulls render_probe_at so only the first entry logs.
+    if (render_probe_at != null && e._searched) {
+      console.info(
+        `[world-spawns] search fast-path: first spawn VISIBLE ${Math.round(performance.now() - render_probe_at)}ms after cert`
+      )
+      render_probe_at = null
+    }
+    return true
+  }
+
+  // ── the group card: ONE plate, ONE LINE PER MOB (no ×N collapse) ────────────────────────
+  const render_mob_card = (/** @type {any} */ e) => {
+    if (!e.chip) return
+    const tpl = resolve_template(e.row.template_id) // place() gated placement on this settling → resolved here
+    render_group_card(e.chip, {
+      name: tpl?.name ?? short_id(e.row.template_id),
+      min_level: tpl?.min_level ?? 0,
+      max_level: tpl?.max_level ?? tpl?.min_level ?? 0,
+      size: Number(e.row.size) || 1,
+      spawned_at_ms: Number(e.row.spawned_at_ms) || 0,
+      // the DISCOVERY-time composition seed + the config dials → exact per-member levels + archi rows
+      // (spawn_compose.js mirrors the chain's derivation; null dials fall back to the chain defaults there).
+      group_seed: e.row.group_seed ?? null,
+      archimob_bp: dials.archimob_bp,
+      team_bound: dials.team_bound,
+    })
+  }
+  const refresh_mob_card = (/** @type {string} */ template_id) => {
+    for (const e of entries.values())
+      if (e.kind === 'mob' && e.chip && e.row.template_id === template_id) render_mob_card(e)
+    publish_spawns() // the template name/level band just landed → fill it into the minimap markers
+  }
+
+  const spawn_chip = (/** @type {any} */ e) => {
+    const chip = document.createElement('div')
+    const mob = e.kind === 'mob'
+    chip.style.cssText =
+      'position:absolute;transform:translate(-50%,-100%);padding:3px 8px;white-space:nowrap;text-align:center;' +
+      'font:600 10px/1.5 "JetBrains Mono",monospace;letter-spacing:.14em;text-transform:uppercase;' +
+      `color:${mob ? '#f5d0a9' : '#bfe0ff'};background:rgba(10,10,15,.78);` +
+      `border:1px solid ${mob ? 'rgba(200,150,60,.5)' : 'rgba(74,158,255,.5)'};` +
+      `text-shadow:0 0 6px ${mob ? 'rgba(200,150,60,.6)' : 'rgba(74,158,255,.6)'};` +
+      'display:none;pointer-events:none;transition:opacity .18s ease,border-color .18s ease,box-shadow .18s ease'
+    layer.appendChild(chip)
+    e.chip = chip
+    if (mob) render_mob_card(e)
+    // Design ruling 2026-07-12: the plate shows the REAL resource name (from the @aresrpg/sdk/jobs roster — the item
+    // display name), never the "(N left)" charge counter. One node = one gather is a SEED knob (world
+    // re_min_qty/re_max_qty), not a client artifact — the chain's `remaining` still drives the depletion
+    // visual for any world seeded with multi-charge nodes; `compass.resource` is the localized fallback.
+    else
+      chip.textContent =
+        resource_visual(Number(e.row.job) || 0, Number(e.row.tier) || 1).name || i18n.t('compass.resource')
+  }
+
+  // Card treatment on the group you're close enough to target: GOLD glow when claimable (design-system gold
+  // #c8963c + the house glow), default border otherwise.
+  const set_highlight = (/** @type {any} */ e, /** @type {'off'|'claimable'} */ mode) => {
+    if (!e?.chip) return
+    e.chip.style.borderColor = mode === 'claimable' ? '#c8963c' : 'rgba(200,150,60,.5)'
+    e.chip.style.boxShadow = mode === 'claimable' ? '0 0 20px rgba(200,150,60,.55)' : 'none'
+  }
+
+  // GLOBAL-SEARCH claim: the proximity gate lives in the CORE now (claim_intent refuses a
+  // far press off the ROW anchor — the exact chain position `zones::claim_mob_group_in_zone` travel-verifies).
+  // A refused intent on the CLICK path (on_up raycasts placed rigs to the despawn radius) teaches "get
+  // closer" instead of firing a doomed claim.
+  const hint_too_far = () => push_event_toast({ state: 'info', title: i18n.t('discovery.engage_too_far') })
+
+  // FIGHT-ENTRY OPTIMISTIC BEAT (press → spectacle BEFORE the tx) — the engaged group hides the
+  // instant the claim is pressed (mob disappearance is part of the beat) and returns on a failed/refused tx.
+  // `e.engaged` parks the frame loop for this entry (roam/draw_chip/nearest-targeting all skip it — draw_chip
+  // re-writes chip display every frame, so a bare style write would be stomped); the visibility one-shots here.
+  // The cinematic itself (camera/sword/sting) is fight_entry.js's, driven over the shared bus (events below).
+  const set_group_engaged = (/** @type {any} */ e, /** @type {boolean} */ on) => {
+    e.engaged = on
+    for (const mem of e.members) if (mem.rig) mem.rig.root.visible = !on
+    if (e.mesh) e.mesh.visible = !on
+    if (e.chip) e.chip.style.display = on ? 'none' : '' // !on hands display back to the frame loop's draw_chip
+  }
+
+  // register/clear the [R] ATTACK prompt in the shared PromptStack (same F/G/E language) for `e`, moving the card
+  // highlight with it. The core now arms on the WIDER visibility ring (ATTACK_VISIBLE_M from the nearest member —
+  // design ruling 2026-07-18), so an armed group is not always claimable: `engageable` (the core's ENGAGE-ring flag) drives
+  // GOLD when claimable, the default border when only VISIBLE (a press there gets engage()'s honest "get closer").
+  // Idempotent per (target, engageable). The PromptStack renderer owns the key + click.
+  const set_attack_target = (/** @type {any} */ e, /** @type {boolean} */ engageable = false) => {
+    if (e === attack_entry && engageable === attack_target_engageable) return
+    if (attack_entry && attack_entry !== e) set_highlight(attack_entry, 'off')
+    attack_entry = e
+    attack_target_engageable = engageable
+    const { register_prompt, clear_prompt } = use_prompt_stack.getState()
+    if (e) {
+      set_highlight(e, engageable ? 'claimable' : 'off')
+      register_prompt({
+        id: 'attack',
+        key: 'R', // ride is a non-registering seam (DECISIONS 07-09) so R is free at runtime; AZERTY-safe (KeyR)
+        label: i18n.t('discovery.attack'),
+        priority: 90, // most-actionable: a group you're standing in anchors the stack bottom
+        on_trigger: () => engage(e),
+      })
+    } else {
+      clear_prompt('attack')
+    }
+  }
+
+  const teardown = (/** @type {any} */ e) => {
+    for (const mem of e.members) rigs.dispose_member(mem) // stop mixer + dispose per-clone skeleton, REMOVE-ONLY
+    e.members = []
+    if (e.kind === 'mob') feed_members(e) // empty now → clear this group's member_positions in the core
+    if (e.mesh) gather.teardown(e) // resource cluster: remove the group (shared geo/tex kept) + free its material
+    e.chip?.remove()
+    e.chip = null
+    e.placed = false
+    if (e === attack_entry) set_attack_target(null) // the highlighted target left → drop its [R] prompt
+    if (my_gather_key && my_gather_key === `${e.zx}:${e.zy}:${e.row.spawn_id}`) release_gather()
+  }
+
+  // ── gather proximity (feeds the existing [G] PromptStack prompt via action/gather_target) ────────────────────
+  const set_gather = (/** @type {any} */ e) => {
+    const world_id = current_world_id()
+    my_gather_key = `${e.zx}:${e.zy}:${e.row.spawn_id}`
+    context.dispatch('action/gather_target', {
+      node_id: my_gather_key,
+      resource_id: e.row.template_id, // JobsDrawer falls back to the raw id when unmapped
+      template_id: e.row.template_id,
+      tier: Number(e.row.tier) || 0,
+      job: Number(e.row.job) || 0,
+      remaining: Number(e.row.remaining) || 0,
+      world_id,
+      zx: e.zx,
+      zy: e.zy,
+      spawn_id: e.row.spawn_id, // STABLE per-world node handle; gather_actions resolves the live positional node_index
+    })
+  }
+  const release_gather = () => {
+    const cur = context.get_state().gather_target
+    if (my_gather_key && cur?.node_id === my_gather_key) context.dispatch('action/gather_target', null)
+    my_gather_key = null
+  }
+
+  // ── click OR [R] on a mob group → claim_intent through the CORE door, then the EXISTING claim+create PTB ────
+  // ENGAGE-GROUP GATE: a mob group a LIVE fight already claimed is un-attackable.
+  // The truth is CHAIN/RPC (the nearby-fights poll folds OTHER players' + my alt's fights into visible_fights,
+  // keyed by the claimed spawn_id) — NEVER local session state, which account 2 could not have known. ONE home
+  // for the decision, read by both the [R] affordance arming and engage() below.
+  const group_has_live_fight = (/** @type {any} */ e) =>
+    e?.kind === 'mob' && group_engage_blocked(context.get_state().visible_fights, e.row?.spawn_id)
+
+  const engage = async (/** @type {any} */ e) => {
+    if (engaging || !e) return
+    // [world-fight mobs] rigs now stay placed during a WORLD fight (in_cave = cave-only), so a direct rig
+    // CLICK could reach here mid-fight (the [R] prompt is already fight-gated) — never fire a second
+    // claim+create tx while any fight/dungeon session is live. Cross-domain locks are ADAPTER logic (the
+    // core never reads another domain's store — seams law).
+    if (use_dungeon.getState().fight_id || use_dungeon.getState().run_pass_id) return
+    const character_id = context.get_state().selected_character_id
+    if (!character_id) return
+    // ENGAGE-GROUP GATE (leg ①): refuse LOCALLY here — BEFORE claim_intent / compose / submit — with the SAME
+    // honest "already taken" copy the on-chain zones-108 abort surfaces, so account 2's engage of a group
+    // account 1 already claimed never composes a doomed, gas-burning tx. The pre-sign liveness re-check
+    // (create_world_fight) shrinks the residual poll-lag window this 6s-polled truth can't.
+    if (group_has_live_fight(e)) {
+      push_event_toast({ state: 'info', title: i18n.t('errors.fight_group_claimed') })
+      return
+    }
+    // THE DOOR DECIDES (D770a W2): claim_intent re-checks proximity off the ROW anchor + pending state in the
+    // fold. A refused intent (far click — on_up raycasts placed rigs to the despawn radius) teaches "get
+    // closer" instead of firing a doomed claim; an accepted one marks the row pending (the optimistic hide as
+    // data) and emits the claim_tx request THIS adapter executes.
+    spawns_input({ type: 'claim_intent', key: e.key })
+    if (!spawns_store.getState().pending.has(`claim:${e.key}`)) return hint_too_far()
+    const request = spawns_store.getState().tx_request
+    engaging = true
+    set_attack_target(null) // drop the [R] pill immediately; the receipt removes the claimed group
+    // OPTIMISTIC — the sword/camera/mob-disappearance beat plays BEFORE the tx, not after: the pending row hides
+    // THIS group NOW (sync below) + hands the battlefield
+    // anchor to the fight-entry cinematic — the claim+create runs UNDER it. Success keeps the group hidden
+    // (the receipt removes the row); failure restores it + aborts the beat (honest rollback, one toast).
+    const anchor = e.placed ? [e.cx, e.cy, e.cz] : [e.row.x, Number(get_player_pos()[1]), e.row.z]
+    sync_from_core()
+    context.events.emit('fight_entry/engage', { anchor })
+    try {
+      // OPENNESS (HUD toggle): a PUBLIC fight anyone in placement may join; a GROUP fight only my current
+      // party (fight.move public_fight + party_id). GROUP with no party → a truly private solo fight (the
+      // on-chain join gate refuses everyone), a valid choice. One home: the spawns core atom (the claim_tx
+      // request carries is_public). Land same-wallet Party membership first so a private fight carries the
+      // real Party id and each owned alt's later character-specific join PTB can pass ENotParty.
+      // A PUBLIC fight discards the party id (party_id stays null below), so pre-forming an owned party is a
+      // wasted on-chain create tx — skip it entirely. Only a GROUP (private) fight seats the party FIRST.
+      if (!request.payload.is_public) {
+        const owned_party_ready = await use_party.getState().ensure_owned_party()
+        if (!owned_party_ready) {
+          const reason = use_party.getState().error ?? i18n.t('errors.tx_failed')
+          push_event_toast({ state: 'error', title: reason })
+          throw new Error(reason)
+        }
+      }
+      const { world_id, spawn_id, zx, zy, template_id, is_public } = request.payload
+      const party_id = is_public ? null : use_party.getState().party_id
+      // the request carries spawn_id + template + the GROUP's zone (zx,zy) → the global-search claim door;
+      // claim any discovered zone's group you can reach (create_world_fight toasts itself).
+      const { fight_id } = await create_world_fight({
+        world_id,
+        spawn_id,
+        zx,
+        zy,
+        mob_template_id: template_id,
+        character_id,
+        is_public,
+        party_id,
+      })
+      // MOUNT the tactical board on the minted fight — the create receipt carries its id. Same run-pass-less
+      // session the reconnect leg enters; the shared dungeon store's refresh/sync_engine paints the board+HUD.
+      if (fight_id) {
+        // CARRY THE CLAIMED GROUP'S IDENTITY across the claim into the fight escrow's ONE home (the store's
+        // mob_names/mob_levels — exactly what a dungeon fight gets from load_world_meta). The group card already
+        // resolved this template's name/level (placement gated on it), and the Fight's group_template equals this
+        // spawn's template_id (the claim PTB asserts EWrongTemplate), so the board renders the real skin+nameplate
+        // from the first frame instead of the 'Mob'/hash fallback while _resolve_mob_identities backfills.
+        const tpl = resolve_template(e.row.template_id)
+        if (tpl?.name)
+          use_dungeon.getState().note_group_identity(e.row.template_id, tpl.name, tpl.min_level, tpl.element)
+        enter_world_fight({ fight_id, world_id, character_id, is_public })
+      }
+      // THE CLAIM RECEIPT through the door: removes the row (tombstoned against the lagging poll), advances
+      // checkpoint+hunt_zone to the group, emits the fight_entry handoff. The re-poll stays for freshness.
+      spawns_input({ type: 'claim_receipt', key: e.key, fight_id: fight_id ?? null })
+      sync_from_core()
+      void poll()
+    } catch (error) {
+      /* already surfaced by create_world_fight's sign() humaniser */
+      // GRACEFUL 108 (zones::ESpawnNotFound — the rendered group no longer exists in that zone: claimed by
+      // another player, or a stale gRPC read served a ghost row): the honest reaction is claim_failed with
+      // ghost=true — the fold DROPS the row NOW — plus ONE re-poll; never a retry of an EXECUTED failure
+      // (tx-retry burn law). A non-ghost failure clears the pending row → the group returns with the world view.
+      const abort = parse_move_abort(error)
+      const ghost = abort?.module === 'zones' && abort.code === 108
+      spawns_input({ type: 'claim_failed', key: e.key, ghost })
+      sync_from_core()
+      context.events.emit('fight_entry/abort') // fight_entry releases the camera + despawns its sword
+      if (ghost) void poll()
+    } finally {
+      engaging = false
+    }
+  }
+
+  /** @type {{ x:number, y:number, button:number } | null} */
+  let press = null
+  const on_down = (/** @type {PointerEvent} */ ev) => {
+    press = { x: ev.clientX, y: ev.clientY, button: ev.button }
+  }
+  const on_up = (/** @type {PointerEvent} */ ev) => {
+    const p = press
+    press = null
+    if (!p || p.button !== 0) return
+    if (Math.hypot(ev.clientX - p.x, ev.clientY - p.y) > CLICK_SLOP_PX) return // a drag (camera), not a click
+    if (fight_view() || use_dungeon.getState().dungeon_id != null) return // never mid-fight/in-cave (core view — S2 mirror kill)
+    const cam = engine.get_camera?.()
+    if (!cam) return
+    const rect = canvas_rect()
+    const locked = !!document.pointerLockElement // FPS aim → screen centre; free mouse → the cursor
+    ndc.set(
+      locked ? 0 : ((ev.clientX - rect.left) / rect.width) * 2 - 1,
+      locked ? 0 : -((ev.clientY - rect.top) / rect.height) * 2 + 1
+    )
+    raycaster.setFromCamera(ndc, cam)
+    /** @type {any[]} */
+    const roots = []
+    for (const e of entries.values())
+      if (e.kind === 'mob' && e.placed) for (const mem of e.members) if (mem.rig) roots.push(mem.rig.root)
+    if (!roots.length) return
+    const hit = raycaster.intersectObjects(roots, true)[0]
+    if (!hit) return
+    let o = hit.object
+    while (o && !o.userData?.__spawn_entry) o = o.parent
+    if (o?.userData?.__spawn_entry) void engage(o.userData.__spawn_entry)
+  }
+  ;(canvas ?? window).addEventListener('pointerdown', /** @type {any} */ (on_down))
+  window.addEventListener('pointerup', /** @type {any} */ (on_up))
+
+  // Apply the rig budget for ONE kind (P0): evict the farthest over-budget/displaced residents, then place the
+  // nearest under-budget candidates — at most PLACE_PER_FRAME per call (incremental spawn-in, no burst). place()
+  // may defer on an unstreamed column (returns false) → it simply retries next frame as chunks arrive.
+  const apply_budget = (
+    /** @type {{key:string,d2:number}[]} */ placed,
+    /** @type {{key:string,d2:number}[]} */ candidates,
+    /** @type {number} */ budget
+  ) => {
+    if (candidates.length === 0 && placed.length <= budget) return
+    const { evict, place: to_place } = select_rig_budget({
+      placed,
+      candidates,
+      budget,
+      swap_margin_sq: SWAP_MARGIN_SQ,
+      place_limit: PLACE_PER_FRAME,
+    })
+    for (const key of evict) {
+      const e = entries.get(key)
+      if (e) teardown(e)
+    }
+    for (const key of to_place) {
+      const e = entries.get(key)
+      if (e && !e.placed) place(e)
+    }
+  }
+
+  // House telemetry (P0 probe): one throttled line — resident groups/rigs vs budget, resident nodes vs budget,
+  // JS heap (Chrome-only), total tracked entries. The no-cap crash was invisible with no counter; this makes the
+  // live load LOUD so the next live session self-reports whether the cap binds and the heap holds flat.
+  // Design ruling 2026-07-19 (annoying logs): this used to be a raw console.info, printing unconditionally on EVERY
+  // player's console for the whole session. game_log is the house gate (core/log.js — DEV build / `?debug=1` /
+  // localStorage.ares_debug only); ring-buffered+breadcrumbed either way, so a crash report still carries the
+  // last telemetry line even when the console stayed silent for a real player.
+  const log_telemetry = () => {
+    let groups = 0
+    let rigs = 0
+    let nodes = 0
+    for (const e of entries.values()) {
+      if (!e.placed) continue
+      if (e.kind === 'mob') {
+        groups += 1
+        for (const mem of e.members) if (mem.rig) rigs += 1
+      } else nodes += 1
+    }
+    const heap = /** @type {any} */ (performance)?.memory?.usedJSHeapSize
+    const heap_mb = heap ? `${(heap / 1048576).toFixed(0)}MB` : 'n/a'
+    game_log(
+      'world-spawns',
+      `telemetry: groups=${groups}/${GROUP_BUDGET} rigs=${rigs} nodes=${nodes}/${NODE_BUDGET} ` +
+        `heap=${heap_mb} entries=${entries.size}`
+    )
+  }
+
+  // [heaptrace] ONE-SHOT DEV LEAK PROBE (P0 OOM hunt 2026-07-12; gated ?heaptrace=1 → zero-cost off, delete with
+  // the fix). The house telemetry above tracks only PLACED spawn entries — the OOM climbs while those stay flat,
+  // so the leak is an UNTRACKED population. `usedJSHeapSize` is JS-side, so this counts the JS retainers the heap
+  // sees: the whole render scene-graph (the UNION of every mounted subsystem — fight board, VFX, remotes, auras,
+  // rigs), the unique geometry/material JS wrappers under it, the game EventEmitter's listener population (the
+  // torn-listener class), live DOM nodes (detached-but-referenced plates), and the growable store arrays. The
+  // counter that climbs monotonically WITH the heap names the leak.
+  const log_heaptrace = () => {
+    /** @type {Record<string, number>} */ const by_type = {}
+    const geos = new Set()
+    const mats = new Set()
+    let scene_nodes = 0
+    const scene = engine.get_scene?.()
+    if (scene)
+      scene.traverse((/** @type {any} */ o) => {
+        scene_nodes += 1
+        by_type[o.type] = (by_type[o.type] ?? 0) + 1
+        if (o.geometry?.uuid) geos.add(o.geometry.uuid)
+        const m = o.material
+        if (Array.isArray(m)) for (const mm of m) mm?.uuid && mats.add(mm.uuid)
+        else if (m?.uuid) mats.add(m.uuid)
+      })
+    // game EventEmitter listener census (setMaxListeners(0) means a leak here never warns)
+    const ev = /** @type {any} */ (context).events
+    let listeners = 0
+    const names = ev?.eventNames?.() ?? []
+    for (const n of names) listeners += ev.listenerCount?.(n) ?? 0
+    const su = ev?.listenerCount?.('STATE_UPDATED') ?? 0
+    const gs = /** @type {any} */ (context.get_state?.() ?? {})
+    const { fight } = gs
+    const stats = engine.get_stats?.() ?? {}
+    const top = Object.entries(by_type)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([k, v]) => `${k}:${v}`)
+      .join(' ')
+    const heap = /** @type {any} */ (performance)?.memory?.usedJSHeapSize
+    console.info(
+      `[heaptrace] heap=${heap ? (heap / 1048576).toFixed(0) : '?'}MB | scene=${scene_nodes} geo=${geos.size} mat=${mats.size} ` +
+        `| dom=${document.getElementsByTagName('*').length} layer=${layer.childElementCount} ` +
+        `| listeners=${listeners}(${names.length}ev,su=${su}) ` +
+        `| fighters=${fight?.fighters?.size ?? 0} msgs=${gs.message_history?.length ?? 0} ` +
+        `chars=${gs.sui?.characters?.length ?? 0} items=${gs.sui?.items?.length ?? 0} toks=${gs.sui?.tokens?.length ?? 0} ` +
+        `| chunks=${stats.resident_chunks ?? '?'} far=${stats.far_section_count ?? '?'} entries=${entries.size} ` +
+        `| top=[${top}]`
+    )
+  }
+
+  // ── per-frame: range-gate placement, roam + tick rigs, project plates, pulse crystals, arm the prompts ────────
+  const frame_body = (/** @type {number} */ now) => {
+    raf = requestAnimationFrame(frame)
+    const dt = Math.min(0.1, (now - last_t) / 1000)
+    last_t = now
+    const cam = engine.get_camera?.()
+    const p = get_player_pos()
+    const px = Number(p[0])
+    const pz = Number(p[2])
+    // BUGFIX 2026-07-13 (world-fight mobs going missing mid-fight): the suspend
+    // signal is the CAVE plane (`in_session` — dungeon create/join/resume set it; cave_session mounts on it),
+    // NOT `dungeon_id`: enter_world_fight sets dungeon_id = fight_id as its session alias, so the old read
+    // treated every WORLD fight as a cave and TORE DOWN every spawn rig in the surrounding world for the
+    // fight's whole duration — the defeat card then overlooked an emptied world. A world fight keeps the
+    // world alive (rigs roam on; the engaged group stays hidden via e.engaged; the [R]/[G] interactions are
+    // fight-gated below so no second create/gather tx can fire mid-fight).
+    const in_cave = use_dungeon.getState().in_session
+    const rect = canvas_rect()
+    const t = now / 1000
+    gather.tick(t) // one global pulse of the shared apex-node glow
+
+    // RENDER CONTRACT (D770a W2): the renderer only REPORTS where the body is — the core's fold owns the
+    // [G] hysteresis + [R] proximity arming off the row anchors (a standing-still frame is a no-op commit).
+    spawns_input({ type: 'player_pos', x: px, z: pz })
+
+    // IN-FIGHT VISUAL VEIL: mobs should stay invisible mid-fight, but the rigs themselves STAY resident/roaming
+    // so the post-fight world is instantly alive; only their VISUALS hide while a world-fight session is live.
+    // The mask covers EVERY roam population — mob rigs AND gatherable node meshes + their chips (a gatherable
+    // resource used to render above the fight board): apply_veil is kind-agnostic, so a node no longer
+    // floats above the board. fight_id is the world-fight session alias (enter_world_fight); flips are
+    // edge-detected so the veil costs one pass per transition, not per frame.
+    const in_world_fight = !!use_dungeon.getState().fight_id
+    if (in_world_fight !== fight_veiled) {
+      fight_veiled = in_world_fight
+      apply_veil(entries.values(), fight_veiled)
+    }
+
+    // RIG-BUDGET views — resident (in-range) vs unplaced-in-load-range, per kind. Built every frame (suspended in
+    // a cave); the arbiter after the loop caps each set nearest-first + incrementally. Placement flows ONLY there.
+    const placing = !in_cave
+    mob_placed.length = 0
+    mob_cand.length = 0
+    res_placed.length = 0
+    res_cand.length = 0
+
+    for (const e of entries.values()) {
+      const ax = e.placed ? e.cx : e.row.x
+      const az = e.placed ? e.cz : e.row.z
+      const d2 = (ax - px) ** 2 + (az - pz) ** 2
+      if (e.placed && (in_cave || d2 > DESPAWN_RADIUS_M * DESPAWN_RADIUS_M)) {
+        teardown(e)
+        continue
+      }
+      if (placing) {
+        e.d2 = d2
+        if (e.placed) (e.kind === 'mob' ? mob_placed : res_placed).push(e)
+        else if (d2 <= LOAD_RADIUS_M * LOAD_RADIUS_M) (e.kind === 'mob' ? mob_cand : res_cand).push(e)
+      }
+      if (!e.placed) continue // placement is arbitrated by the rig budget after the loop (capped, nearest-first)
+      if (e.engaged) continue // fight-entry optimistic beat owns this group (hidden; no roam/chip/targeting)
+      if (fight_veiled) continue // in-fight veil owns EVERY population's visuals (no roam/sway/chip re-stomps)
+
+      if (e.kind === 'mob') {
+        // per-member wander (idle/walk state machine + ground-snap + rig transform + anim blend), then anchor the
+        // card on the live CENTROID of the members so it stays glued to the visible cluster as they amble.
+        let sx = 0
+        let sy = 0
+        let sz = 0
+        let max_h = 0 // [reference-faithful-mob-sizes 2026-07-13] tallest MEASURED member (mem.rig.h) — see below
+        for (const mem of e.members) {
+          rigs.roam_member(mem, dt)
+          sx += mem.mx
+          sy += mem.cy
+          sz += mem.mz
+          if (mem.rig && mem.rig.h > max_h) max_h = mem.rig.h
+        }
+        const cnt = e.members.length
+        // [reference-faithful-mob-sizes 2026-07-13] the chip used to float at a CONSTANT MOB_TARGET_H+0.35 — with
+        // every mob now rendered at its own intrinsic (source-authored) height, a flat constant would float a
+        // silkling's tag a body-length above its head while a bear's sinks into its own back. Anchor at the
+        // group's tallest MEASURED member's head + the same 0.35 margin instead (mirrors cave_mobs.js's tag
+        // lift exactly); max_h is 0 before any rig has loaded, so the 1.4 floor covers that window.
+        const lift = Math.max(1.4, max_h + 0.35)
+        draw_chip(e, cam, rect, cnt ? sx / cnt : e.cx, cnt ? sy / cnt : e.cy, cnt ? sz / cnt : e.cz, lift)
+        if (e.row.spawned_at_ms) update_group_aging(e.chip, Number(e.row.spawned_at_ms))
+      } else {
+        // sway the cluster (family-aware; ore stays static) + re-fold depletion when `remaining` changes.
+        gather.sway(e, t)
+        if (e.row.remaining !== e.applied_remaining) gather.apply_state(e)
+        draw_chip(e, cam, rect, e.cx, e.cy, e.cz, (e.visual?.h ?? 1.2) + 0.4)
+      }
+    }
+
+    // [G]/[R] TARGETS ARE CORE DECISIONS (D770a W2 — hysteresis + proximity arming live in the fold, keyed
+    // exactly like `entries`): this adapter only routes them into the existing PromptStack / gather_target
+    // plumbing, gated by the cross-domain fight/cave locks IT owns (the core never reads another store).
+    const core = spawns_store.getState()
+    const target_res =
+      !in_cave && !fight_view() && core.gather_target_key ? (entries.get(core.gather_target_key) ?? null) : null
+
+    // arm/clear the [G] gather prompt — only for targets WE own (never stomp a JobsDrawer selection).
+    // [world-fight mobs] fight-gated like [R] below: rigs stay VISIBLE during a world fight, but no gather
+    // prompt arms mid-fight (a [G] press firing a gather tx from inside a fight would be a second tx door).
+    const cur = context.get_state().gather_target
+    const mine = my_gather_key != null && cur?.node_id === my_gather_key
+    if (target_res) {
+      const key = `${target_res.zx}:${target_res.zy}:${target_res.row.spawn_id}`
+      if ((cur == null || mine) && key !== my_gather_key) set_gather(target_res)
+    } else if (mine) {
+      release_gather()
+    }
+
+    // arm/clear the [R] ATTACK prompt + card highlight off the core's WIDER visibility ring; `attack_engageable`
+    // decides gold-vs-visible (PromptStack owns key+click). The core owns both flags — this only routes them.
+    const attack_armed =
+      !in_cave && !engaging && !fight_view() && core.attack_target_key
+        ? (entries.get(core.attack_target_key) ?? null)
+        : null
+    // a group a LIVE fight already claimed arms VISIBLE, never gold-claimable — the honest "taken" cue paired with
+    // the observer sword world_fights_discovery already plants on it; a press still routes to engage()'s refuse.
+    set_attack_target(attack_armed, !!(attack_armed && core.attack_engageable) && !group_has_live_fight(attack_armed))
+
+    // RIG BUDGET (P0): cap resident rigs nearest-first, INCREMENTALLY (≤ PLACE_PER_FRAME each). Placement flows
+    // ONLY here (never inline) so the cap + anti-burst hold from the very first frame in the world.
+    if (placing) {
+      // veiled: no NEW rigs of EITHER kind (a mob rig OR a gatherable node born mid-fight would bypass the
+      // edge-detected flip-pass veil and mount visible above the board — bug 07-19); all resume on unveil.
+      if (!fight_veiled) {
+        apply_budget(mob_placed, mob_cand, GROUP_BUDGET)
+        apply_budget(res_placed, res_cand, NODE_BUDGET)
+      }
+    }
+    if (now - last_telemetry >= TELEMETRY_MS) {
+      last_telemetry = now
+      log_telemetry()
+    }
+    if (HEAPTRACE && now - last_heaptrace >= HEAPTRACE_MS) {
+      last_heaptrace = now
+      log_heaptrace()
+    }
+    // Route return exposes the layer only after this frame refreshed every projected card. Because the layer
+    // is body-appended, showing it before the first frame would briefly revive the stale pre-route pixels.
+    if (resume_projection_pending) {
+      resume_projection_pending = false
+      sync_layer_hidden()
+    }
+  }
+
+  const frame = instrument_cpu_callback('scene', frame_body)
+
+  // Project the card at its (centroid) head anchor through the ONE shared plate projector — world-locked (bob
+  // cancelled at source) + behind-camera culled (nameplate_occlusion.js). This owns only the range-fade band +
+  // occlusion opacity; position + visibility live in the shared home so all three plate paths behave identically.
+  const draw_chip = (/** @type {any} */ e, /** @type {any} */ cam, /** @type {any} */ rect, x, y, z, lift) => {
+    if (!e.chip || !cam) return
+    const head_y = y + lift
+    const dist = Math.hypot(x - cam.position.x, head_y - cam.position.y, z - cam.position.z)
+    const dfade = Math.max(0, Math.min(1, (NAMETAG_CULL_M - dist) / (NAMETAG_CULL_M - NAMETAG_FADE_M)))
+    const px = dfade > 0 ? project_plate(cam, rect, x, head_y, z, projected_plate) : null
+    e.chip.style.display = px ? 'block' : 'none'
+    if (!px) return
+    e.chip.style.left = `${px.left}px`
+    e.chip.style.top = `${px.top}px`
+    const occ = plate_occluded(engine, x, head_y, z, cam) ? OCCLUDED_OPACITY : 1
+    e.chip.style.opacity = `${(occ * dfade).toFixed(3)}`
+  }
+
+  raf = requestAnimationFrame(frame)
+  void poll()
+  const timer = setInterval(poll, POLL_MS)
+  // OPTIMISTIC render on search-cert (see on_zone_searched): the /v1 poll above is the steady-state reconciler;
+  // this collapses the cert→mobs-visible gap from a 6s poll tick + indexer/cache lag to one chain-direct read.
+  context.events.on('discovery/zone_searched', on_zone_searched)
+
+  return {
+    // CLEAN FOOTAGE parity (ambient/remotes): hide every plate for cinematic recording (rigs stay in scene).
+    set_hidden(h) {
+      cinematic_hidden = !!h
+      sync_layer_hidden()
+    },
+    // RENDER-PAUSE (pauses the webgpu stuff off the game-world route): this loop's own rAF is
+    // independent of the engine's frame_loop, so engine.stop() alone never stopped spawn range-gating/DOM-
+    // plate projection while browsing a meta page. Cancel/re-arm in lockstep (embed_voxel.js's set_paused).
+    // The setInterval poll (chain reads) is left running — cheap, and a route-return should show fresh state.
+    set_paused(p) {
+      const next_paused = !!p
+      if (next_paused !== world_paused) {
+        world_paused = next_paused
+        resume_projection_pending = !world_paused
+      }
+      sync_layer_hidden()
+      if (world_paused) {
+        if (raf) cancelAnimationFrame(raf)
+        raf = 0
+      } else if (!raf) {
+        last_t = performance.now()
+        raf = requestAnimationFrame(frame)
+      }
+    },
+    dispose() {
+      disposed = true
+      cancelAnimationFrame(raf)
+      clearInterval(timer)
+      context.events.off('discovery/zone_searched', on_zone_searched)
+      ;(canvas ?? window).removeEventListener('pointerdown', /** @type {any} */ (on_down))
+      window.removeEventListener('pointerup', /** @type {any} */ (on_up))
+      release_gather()
+      set_attack_target(null)
+      for (const e of entries.values()) teardown(e)
+      entries.clear()
+      use_world_spawns.getState().set_spawns([]) // session gone → clear the minimap overlay
+      layer.remove()
+    },
+  }
+}
