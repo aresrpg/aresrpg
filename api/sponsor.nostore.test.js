@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // api/sponsor.mjs NO-STORE mode (Vercel/Node class): when NO Redis store is CONFIGURED (here: explicit
 // REDIS_URL='' — the same `_redis === null` state Vercel/Node reaches with `typeof Bun === 'undefined'`),
 // the rate windows must fall back to PER-INSTANCE IN-MEMORY fixed windows and STILL ENFORCE their limits —

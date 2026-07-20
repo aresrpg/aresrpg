@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// WAVE 12 FOUNDATION GOLDEN TESTS — executable Move twin of
 /// `packages/sim/test/vectors/missing_effect_stats_golden.json`.
 ///

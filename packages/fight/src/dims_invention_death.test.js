@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RIDER B(b) — the two dims-INVENTIONS die (D771: "we never need fallback of proper systems"; hold on
 // not-found, never invent dims). A dims-less record used to fabricate a phantom full GRID_W×GRID_H (20×19)
 // frame at two seams; both now HOLD at 0 (an unrepresentable board) instead.

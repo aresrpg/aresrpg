@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // CONFIG-ADOPTION GATE (BIOMES_EXECUTION_PLAN Phase 0 keystone). Proves three things:
 //   1. GOLDEN PARITY — with the DEFAULT recipe, the full DECORATED gen pipeline (generate_world_chunk:
 //      terrain core + beach flatten + decoration + relight) is BYTE-IDENTICAL to before config adoption.

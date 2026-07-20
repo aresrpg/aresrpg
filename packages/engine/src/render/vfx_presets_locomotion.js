@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX — LOCOMOTION PROPS (class d_world). One-shot movement puffs mounted in the ROAM scene by the
 // frontend player (embed_voxel_player.js) at the feet on a controller cue. Today: `dust_puff` — the DOUBLE-JUMP
 // bounce kick — a proper double-jump bounce smoke effect. A quick, subtle, dissipating

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ③ PREDICTED-DISPLACEMENT WINDOW (ruled 2026-07-19, option a): a predicted Displaced is the SAME class as a
 // Moved intent — a mover whose motion beat is in flight — so display_state must HOLD the victim at the pre-push
 // cell until the predicted slide beat presents (the walk-window d4f9e748 mechanism, EXTENDED not forked). The

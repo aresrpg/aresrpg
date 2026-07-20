@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT OPENNESS TOGGLE — the HUD control that sets whether the NEXT world fight you start is PUBLIC (anyone in placement may
 // join) or GROUP-only (your party). The choice lives in the spawns core atom (D770a W2 — the claim_tx effect
 // request carries it); this control renders + flips it through the fight_openness adapter. A two-state

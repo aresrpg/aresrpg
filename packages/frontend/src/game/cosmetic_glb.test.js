@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TR-97 — the mount RESOLUTION state machine (the pure half of the ride toggle): a mount is available to ride
 // when the character has an item-like `.mount` slot (or the trailer `?mount=` dev override), else not; the GLB
 // URL derives by convention from the template id. `../env` is mocked so the ASSETS_URL assertions are hermetic.

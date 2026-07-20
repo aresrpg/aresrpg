@@ -1,4 +1,6 @@
 #!/usr/bin/env bun
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Generate the Mysten sui-gas-pool config from the environment, so the sponsor
 // secret NEVER lands in a committed file. Writes gitignored config.local.yaml
 // next to this script.

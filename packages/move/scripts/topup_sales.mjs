@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TOPUP SALES — one-shot shop delta for the 2026-07-13 re-mint wave: (1) create the Veteran title sale
 // (mark_of_the_unbroken / slug title_veteran, 500 SUI × supply 150 — fixed reference numbers) and (2) re-price
 // casque_hayate 500 → 499 via shop::set_price (Sales are MUTABLE: set_price exists in shop.move v3 — no sale

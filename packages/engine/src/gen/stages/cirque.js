@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // CIRQUE SCOOP stage (GLACIAL GENERATION §B.2). Carves amphitheater bowls into high ridge heads (ref R4 —
 // ref_cirque_basecamp IS one): a flat floor, a steep encircling headwall, and a subtle raised lip at the
 // rim. Cirque centres are scattered by the region-hash technique (same integer-hash lineage as

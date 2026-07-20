@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S-57 session-gate ADAPTER (D770a W1) — the frontend edge of @aresrpg/world's session_gate core. The FOLD,
 // the projections (plan_scene / scene_target / resolved_mode) and the typed-input contract live in the
 // package; THIS file owns exactly the effects: the one store instance + its React binding, the join-failsafe

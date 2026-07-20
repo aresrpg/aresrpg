@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Jobs drawer body — a master/detail panel ported from the aresrpg companion encyclopedia JOBS tab
 // (../../aresrpg/packages/frontend/src/pages/encyclopedia/jobs_tab.tsx): a LEFT job-list rail
 // (grouped by the 4 categories, with a per-job level chip) + a RIGHT detail panel (job header, XP

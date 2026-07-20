@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// COMBAT-INTEGRITY suite — the two exploit closures riding the engine upgrade:
 ///   1. MIN-TURN gate — `act_pass` refuses to end a turn faster than MIN_TURN_MS (instant-pass bot floor); the
 ///      mob wave + the permissionless `crank` stay unthrottled (they never route through a pass).

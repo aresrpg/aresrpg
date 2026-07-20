@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NAMEPLATE PREDICTED OUTCOME: show exactly what will happen — damage taken, critical ?, effects,
 // kill — e.g. life (6 −4) with the −4 in red, "kills the mob". The nameplate reads the EXACT outcome of the armed
 // cast on the hovered target from the client cast-prediction path (predict_cast → @aresrpg/sim, the ONE damage

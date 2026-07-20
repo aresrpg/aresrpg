@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD 16 · THE SUNDERING (on-chain `16_the_sundering`, biome `sundered_waste`) — the shattered-rift
 // planet. Seed identity (seed/mainnet/16_the_sundering/world.json): fire+air elements, "the rift —
 // gravity thins at the sundering; falls are slow and the ash never lands", the L100 gate (first

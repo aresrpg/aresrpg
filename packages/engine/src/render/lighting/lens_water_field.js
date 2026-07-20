@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LENS WATER — FIELD MATH (pure CPU twins the GPU shader reads verbatim). Split out of lens_water.js at
 // round-7 (the burst/splinter/trail lifecycle pushed the pass past 600 LoC): this module owns the DATA
 // (the LENS_WATER knobs) and the pure, seed-driven, unit-tested functions; lens_water.js owns the TSL

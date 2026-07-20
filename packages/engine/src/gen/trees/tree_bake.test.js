@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // BAKE-THEN-STAMP — tests. The bake module reuses tree_gen's frozen output (generate_tree), so this file
 // guards the BAKE contract, not the generator math (that's tree_gen.test.js's golden hash):
 //   (1) n<=0 is BYTE-IDENTICAL to the live per-column generate_tree (the `?baketrees=0` escape contract).

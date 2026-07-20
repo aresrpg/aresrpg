@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE KNOCKBACK THAT HEALS (a phantom purple "+4" heal number) — a push-collision on a mob carrying DAMAGE_TO_HEAL used
 // to render a HEAL floater on the OPTIMISTIC-PREDICTION lane while the CHAIN (receipt) authored raw collision
 // DAMAGE — a twin divergence. Move applies a collision via `hit_mob`/`hit_player` (raw, no reaction pipeline), so

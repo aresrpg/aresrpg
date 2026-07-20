@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RENDER-HOLE REGRESSION (live bug 2026-07-12, ~world 268,127,-214, water/beach: "character stands
 // mid-air on invisible terrain — collision exists but the blocks don't render; a chunk-shaped region shows
 // the water plane/void where ground should be"). Root diagnosis: NOT a gen/mesh defect (proven below) —

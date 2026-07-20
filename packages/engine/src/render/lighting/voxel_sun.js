@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG2-SHAFT voxel sun-visibility — a VIEW-INDEPENDENT shadow volume for the froxel light shafts.
 //
 // The froxel scatter pass (froxels.js) currently fakes canopy/terrain occlusion with a 5-tap

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* D50 — the "you're broke" pre-validation card. Shown INSTEAD of the paid create flow when the wallet
    can't cover price + gas headroom. Gothic-terminal house style: near-black glass, gold ADD FUNDS CTA,
    amber caution icon, sharp corners, mono type. Portalled to <body>, so it uses the house palette hex

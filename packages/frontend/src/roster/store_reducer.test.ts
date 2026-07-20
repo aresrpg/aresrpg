@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SWITCH-PARITY LEG ② — proves adopt_predicted_character (the create-receipt adoption effect
 // roster/store.ts's create_character calls) targets selection AND the join gate with the SAME id,
 // unconditionally, using the REAL stores (context, session_gate.js) so "the gate agrees" is an actual

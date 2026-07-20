@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FAST char-create — class + 3 colours + name only (hats/capes moved to in-game
 // equipment). LEFT = the haired character GLB on a drag-to-rotate pedestal with LIVE 3-colour mesh
 // recolour (the real production render path: DRACO base body + the `_hair` mesh parented to the head

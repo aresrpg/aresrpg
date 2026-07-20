@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX — PACK APPEARANCE LAYER II (phase B): faithful TSL ports of the REMAINING BinbunVFX_Vol2
 // .gdshader files, extending vfx_pack_shaders.js past its LoC line. Phase A ported Flame / StylizedHit /
 // DarkMagic; THIS file ports the rest, per the ruled element↔pack mapping:

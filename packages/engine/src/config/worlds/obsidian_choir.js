@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD 17 · OBSIDIAN CHOIR (on-chain `17_obsidian_choir`, biome `volcanic_cathedral`) — the black-glass
 // cathedral planet. Seed identity (seed/mainnet/17_obsidian_choir/world.json): fire+earth elements,
 // "obsidian resonance — the choir sings; matching its pitch opens the pyre doors", resist-wall teaching,

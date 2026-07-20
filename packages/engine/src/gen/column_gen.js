@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Column generation (§4) — orchestrates ONE 32×384×32 world column through the deterministic
 // CPU pipeline: sample the 6-param climate fields → spline-shape the surface height → place biomes
 // → fill block ids + occupancy + height + biome meta, then seed light. Produces the 12 stacked

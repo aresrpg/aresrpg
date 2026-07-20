@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WINDING DERIVATION RECORD (extracted from terrain_material.js — the shading builder does not read
 // these at runtime; they exist ONLY as the pure-math record behind the FrontSide-vs-DoubleSide
 // verdict, exercised by terrain_material.test.js so the correct winding math is preserved and the

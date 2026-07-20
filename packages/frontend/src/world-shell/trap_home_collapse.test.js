@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TRAP HOME-B COLLAPSE (kill-revert cluster, 2nd half) — the frontend's parallel trap home (trap_overlay.js)
 // is DEAD; render + cast-legality + the receipt trap_cells all read the fold's ONE projection, engine_view.my_traps
 // (own-only — the caster knows only their OWN casts, mirroring the retired overlay's coverage exactly). The divergent

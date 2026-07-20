@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // C9 Hillaire sky ACCEPTANCE (Appendix R2 bar): per-time-of-day SKY triptychs (dawn/noon/sunset/night)
 // physical-sky DEFAULT vs the analytic-sky override (__ARES_SKY_ANALYTIC) at MEDIUM + HIGH; the horizon ozone-blue +
 // sunset colour propagation read; the LUT-rebuild + sky-draw frame cost per tier; and the flag-OFF

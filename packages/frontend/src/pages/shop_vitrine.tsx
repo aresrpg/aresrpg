@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SHOP vitrine cards — the Armory Grid card anatomy (option-2 mockup). Pure presentation:
 // every mechanic (buy flow, supply math, pool math, catalog mapping) stays in shop.tsx and arrives as props.
 //

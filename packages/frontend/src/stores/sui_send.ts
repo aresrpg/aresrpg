@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // sui_send.ts — client-side P2P SUI transfer store (no backend).
 //
 // The whole send flow lives here: recipient resolution (address or player-name), PTB build, and

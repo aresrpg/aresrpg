@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// MOB — the spawned `FightMob` instance + its §17.21 STOCHASTIC turn AI + the plain `MobSpec` input (S-46
 /// final split: the engine knows NOTHING of content objects — the consumer package passes a plain spec built
 /// from ITS templates; loot rows ride the spec as plain data for the fight's win-content cache). `spawn_seeded`

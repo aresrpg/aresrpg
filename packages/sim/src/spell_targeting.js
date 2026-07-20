@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Spell range / linearity / AoE / targeting validation.
 //
 // PORTED from koshi-2d/.../shared/src/spells/targeting.ts. Pure integer math. REUSES the sim's own

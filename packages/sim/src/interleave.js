@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // INTERLEAVE — §17.28 GLOBAL turn order. A byte-for-byte mirror of aresrpg_fight::interleave.move (S-16
 // parity). Both sides weave into ONE deterministic sequence that alternates as evenly as unequal team sizes
 // allow; join/spawn order fixes the order WITHIN a side. Pure — no RNG, no clock; same inputs → same queue.

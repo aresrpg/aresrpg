@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // kolizeum.test.tsx — KOLIZEUM LEVEL HONESTY: the create/join CTA must show WHY it's
 // disabled (the level gate), not just refuse silently. KolizeumPage itself can't be mounted here at all:
 // it imports ../auth, which calls registerEnokiWallets() at MODULE LOAD (not even needing a render) — that

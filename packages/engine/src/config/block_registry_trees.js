@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PROCEDURAL-TREE species BLOCKS (ENGINE_AAA_PLAN §3.3/§3.7, lane B1 — the A1 art wave's block handoff).
 // Registry rows for the per-species LEAF blocks and the NEW twig-card foliage blocks, 1:1 by NAME with the
 // A1 recipes in texture_recipes_trees.js (the baker auto-wires block.id → recipe base layer via the recipe's

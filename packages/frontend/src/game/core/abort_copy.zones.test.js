@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENGAGE-GROUP GATE (leg ②) — the world-fight CLAIM door (`zones::claim_mob_group[_in_zone][_with_proof]`, the
 // first call inside create_world_fight) has TWO first-come TOCTOU aborts a racing engage surfaces AFTER the S-54
 // dry-run passed: ESpawnNotFound/108 (the group was claimed/consumed between poll and press — "already taken") and

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LIVE cast-prediction hook for the board-hover tooltip — show exactly what will happen: damage
 // taken, critical chance, effects, kill. Thin store wiring only: it reads the three live slices — the fight view
 // (armed spell + fighters), the hovered id, the dungeon escrow — and hands them to the STORE-FREE core

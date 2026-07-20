@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TR-97 — the SKY DRAGON: a scripted ambient dragon soaring a slow, high, banking circle across the demo
 // sky, for the trailer. Spawnable via `?dragon=1` (variant via `?dragon=frost|fire|void`) for capturing it;
 // absent by default (zero cost when the flag is off — the module never imports). Client-only, zero

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE ASSERT-ENV GATE + SWITCH-BACK LAW (seat tripwire, DECISIONS 2026-07-19 13:35/13:40).
 //
 // The CLI's ambient active-env is GROUND TRUTH for any op that shells out to `sui client` / `sui move

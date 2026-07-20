@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SEED effect → one localized effect LINE (NO JSX). The single home for turning a projected spell effect
 // into the player-facing line every spell surface renders: the grimoire (Spellbook.jsx), the encyclopedia
 // class page (classes_tab.tsx) — both via the structured `seed_effect_parts` + the shared <EffectLine>

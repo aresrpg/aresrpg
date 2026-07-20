@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT ENGINE · overlay_intents.js — unit coverage of the renderer-neutral overlay SEMANTICS: the move-reachable
 // set (dungeon BFS twin + world sim reach), the D113 cast-range set (Manhattan range + integer LOS edges), the
 // D112 placement phase-gate, and the W4 impact-beat ordering/preempt contract. The live half (driven Playwright)

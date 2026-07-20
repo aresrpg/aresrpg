@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Party character-roster tests. The fixture `Character` is admin-pinned as the canonical nominal type, exactly
 /// as deployment pins AresRPG's core Character without creating a forbidden social→core dependency.
 #[test_only]

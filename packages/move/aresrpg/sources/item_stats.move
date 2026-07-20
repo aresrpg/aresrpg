@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// ITEM STATISTICS — the typed stat block attached as a DYNAMIC FIELD to an `ItemTemplate`. The item base owns
 /// the storage (it exposes the template UID package-privately); THIS module owns the data shape + the attach/read
 /// (placement law — meaning lives in DATA). Ported verbatim from the legacy stat block: 17 `u16` fields, ALL

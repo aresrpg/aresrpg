@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 //! The frozen 1.29 XP→level curve — a byte-for-byte mirror of the on-chain law
 //! `aresrpg_foundation::character_xp` (SPEC §3: "the immutable 200-level retro
 //! curve"). The character object carries raw `experience` (a base field, no event);

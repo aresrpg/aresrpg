@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SEAM 8 — COSMETIC HEAD-SLOT PRECEDENCE (SPEC §7.11: "an equipped cosmetic hat renders INSTEAD of the
 // combat helmet's appearance; the cloak is purely visual").
 //

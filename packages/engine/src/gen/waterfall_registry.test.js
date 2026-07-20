@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Waterfall registry gates (ENGINE_AAA_PLAN.md §4.2 step 1, lane A5). Two suites:
 //
 //   1. SPAN MERGING (synthetic): hand-built ColumnWindow fixtures prove the merge rules in isolation

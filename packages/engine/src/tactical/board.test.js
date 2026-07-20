@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-16 Phase B — board geometry invariants (three.js core instantiates under bun; no WebGPU here).
 //
 // Locks: per-class instance counts match the mask, the single cell→world mapper's centering, and the

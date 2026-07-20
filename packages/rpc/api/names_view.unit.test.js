@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Offline unit coverage for the `/v1/names?name=` branch. views.test.js remains the real Redis integration
 // oracle; these injected reads keep validation/keying/shaping executable in the network/Redis-free sandbox.
 

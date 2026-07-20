@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PURE projection of a cast prediction onto the hovered target's nameplate — show exactly what will
 // happen: not the range, but damage taken, critical chance, effects, kill. Isolated in its own dependency-free module so
 // the unit test exercises the derivation WITHOUT dragging in the wiring hook's store/auth graph (which needs a

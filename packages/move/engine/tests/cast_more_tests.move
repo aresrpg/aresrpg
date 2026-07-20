@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Coverage for `cast`'s zero-covered functions — the meatiest cluster. Three access strategies:
 ///  (a) `public(package)` accessors called DIRECTLY (`cell_occupied`, `trigger_on_enter`, `weapon_strike_player`).
 ///  (b) private effect-dispatch helpers (`apply_alter`/`apply_to_mob`/`record_timed`/`refresh_player_stats`/

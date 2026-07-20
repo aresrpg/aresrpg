@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // World map — a lazy pan/zoom blit of the real @aresrpg/sim 2000x2000 seeded world, colored per biome
 // cell (the same terrain SSOT as the HUD minimap, via worldmap-data.js / biome-colors.js), with the
 // live player marker on top. Drag to pan, scroll to zoom around the cursor, Recenter to snap back to

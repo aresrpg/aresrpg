@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Character-keyed party store consent and six-slot invariants.
 import { afterAll, beforeEach, expect, spyOn, test } from 'bun:test'
 

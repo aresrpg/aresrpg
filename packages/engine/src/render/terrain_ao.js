@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Vertex-AO brightness curve for the terrain material — the flattened level→fraction lookup that
 // cures the terrace-stripe striping. Extracted from terrain_material.js so that (600-LoC-law) file
 // stays under budget and the AO curve has ONE home (constant + JS mirror + the shape tests import

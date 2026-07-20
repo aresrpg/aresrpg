@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Character-extract (DELETE door) tests — characters are deletable from the characters tab, provided
 /// everything was unequipped first (even the free one). Covers the whole guard matrix:
 /// unequipped fresh character burns (the free-starter shape), the REAL derived-name-claimed shape burns, a

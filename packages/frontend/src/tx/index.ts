@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The single S-54 transaction door: simulate before signing, refuse failed/over-ceiling transactions, and pin
 // self-pay gas to simulated storage + computation ×1.5. `keep_budget` preserves a builder-pinned maximum.
 // Eligible gameplay may use sponsor-first/fallback routes; money PTBs set `sponsor_excluded` so sponsor gas

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST (ency deep-links): entity references — the dungeon key name, the world-picker
 // counts — become clickable links INTO the encyclopedia. encyclopedia_path is the ONE link idiom (a single
 // home, never two link systems): it builds the exact deep-link URL the EncyclopediaPage routes on

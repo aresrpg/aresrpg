@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-11 WATER-POLISH — the target framing recreated. The live complaint: the sun
 // reflection in water is "a clean airbrushed white ellipse" — imperceptible sparkle. This spec is the
 // TASTE GATE: it drives a GENUINE low sun (not the tod=0.3 near-noon default the old water specs used,

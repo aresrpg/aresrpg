@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { aresrpg_id } from '../../deployment/aresrpg.js'
 
 // CRUSH RUNE REGISTRY read — the on-chain `forgemagie::CrushBoard.runes` table (`Table<ID, RuneRef>`: rune

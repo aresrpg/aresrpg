@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { ItemDetailView } from '../item_detail_view'
 
 import type { MarketplaceDetailItem } from './marketplace_model'

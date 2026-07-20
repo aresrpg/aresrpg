@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // HTTP response helper — the single home for how the API renders JSON.
 //
 // Handlers return a plain descriptor `{ status, data, headers? }`; this turns it

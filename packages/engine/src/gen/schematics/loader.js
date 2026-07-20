@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Schematic loader (§4.6 vegetation/schematics wave, phase A) — reads the compact house-format
 // bundle shipped at assets/schematics/schematics.json (produced by scripts/convert_schematics.mjs
 // from the aresrpg-legacy Sponge `.schem` packs) and resolves each entry into a runtime schematic

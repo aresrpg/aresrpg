@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure-config/-math tests for the NG2-ATMO composition module. Pins the CONFIG contracts + the pure
 // helpers the phase-2 wiring depends on: cloud altitudes clear the sky-island band (design note),
 // the default config validates, the NEAR-haze ramp (the "more haze" requirement) behaves, the ambient-depth

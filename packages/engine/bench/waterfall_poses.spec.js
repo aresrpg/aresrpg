@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WATERFALL SHEETS pose capture (ENGINE_AAA_PLAN §8 B4 proof bar) — boots the demo with ?falls=1 and
 // captures a spawn-near cascade at 32 / 96 / 224 m across 3 times-of-day on the real GPU, plus a LOW
 // sheet-only pose and a flag on/off frame-ms A/B (the z-fight sweep = the same fall at the 3 distances;

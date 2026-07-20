@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST regression — THE FROZEN COOLDOWN CLOCK (register #34: a side-store clock deriving domain truth from a
 // transport edge, R7). The old my-turn counter lived in DungeonBoard and bumped ONLY when a POSITIVE, CHANGED
 // turn_deadline_ms arrived while I was the active seat. Under lag/starvation the chain deadline lands stale /

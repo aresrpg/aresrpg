@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ONE movement-tick hook for procedural world-ambience audio. embed_voxel_player.js's frame2 calls
 // tick_environment_audio once per roam frame (never during a fight — see footstep_sfx.js's docblock);
 // this fans out to the footstep engine so the player-movement code only grows a single audio call site.

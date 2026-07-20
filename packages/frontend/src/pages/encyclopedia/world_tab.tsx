@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD tab — shared by the real encyclopedia (pages/encyclopedia/index.tsx, chain-listed) AND the admin
 // SEEDS tab (components/admin_seeds_tab.tsx, local-seed-sourced). ONE presentational component, fed a plain
 // WorldRow[] by each caller — it knows nothing about /v1 or seed JSON (the same idea of clickable mobs

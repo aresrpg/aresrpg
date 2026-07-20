@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Grid coordinate primitive + distance/neighbor helpers for the tactical fight.
 // Pure integer math — the spatial foundation the reducer and arena are built on.
 

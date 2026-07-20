@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RuleTester suite for the ONE-REDUCER tripwire (scripts/eslint-rules/one_pipeline.mjs).
 // The invalid fixtures ARE the red: each is a real shape of the async-callback-store-write class,
 // headlined by the v1.12.28 prod crash (a setTimeout writing fight state off a stale closure).

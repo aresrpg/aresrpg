@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure data + geometry helpers for the world map (MapDrawer.jsx). No React, no I/O — the seed-terrain
 // sampler and the world<->bitmap<->screen coordinate transform. Kept here (SSOT) so MapDrawer stays a
 // thin view and the transform can never drift between the terrain blit and the player marker.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Smoke coverage for the `fight_events` emit wrappers that no lifecycle test happens to exercise yet
 /// (creator-cap issuance, loot mint, move, displacement, result burn/open, sweep). Exact displacement payload
 /// assertions live in `displacement_tests`; these calls prove the remaining wrappers execute without a Scenario.

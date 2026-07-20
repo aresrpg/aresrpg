@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SNAP-THEN-RUN — the board projection must serve PRESENTED cells for in-flight movers: a release-blocking bug
 // where a character would appear on the target cell FIRST, then visibly run from the start to the target —
 // for EVERY mover, local AND non-local. The DISPLAY cell must hold at the pre-move cell until

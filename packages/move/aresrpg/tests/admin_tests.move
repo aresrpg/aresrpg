@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Admin-authority tests: the super cap authors; a temp cap authors within its epoch but EXPIRES the next
 /// epoch; only the super cap mints temp caps; the super cap can never be deleted while a temp cap can; the
 /// enabled switch toggles; a stale version blocks authoring. Plus the v2 authoring surface: the category

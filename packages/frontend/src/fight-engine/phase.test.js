@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT ENGINE · W4 phase.js — unit coverage: every transition + every unmet-precondition HOLD.
 // The live half (driven Playwright) proves the mount decisions on the real dev server; this proves the pure
 // derivation exhaustively, including the D81 terminal latch (out-of-fight leave NEVER reaches TERMINAL).

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Unit tests for the NG-MEGA terrain renderer (src/render/pool_renderer.js): the quad→class
 // partition (word-level alignment, the "sky-blue holes clustered along contours" regression) and the
 // renderer's CPU-side contract — upload/remove/replace into the mega pool, the get_stats counters

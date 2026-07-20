@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ─────────────────────────────────────────────────────────────────────────────
 // mp_rig.mjs — 4-INSTANCE HUMAN-PLAY MULTIPLAYER RIG (standing test infra)
 // QA-User owned. Plays the game as N separate humans: N headed browser contexts,

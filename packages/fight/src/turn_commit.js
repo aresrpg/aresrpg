@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SINGLE-PTB TURN COMMIT — the pure core of the turn-commit system: a turn
 // is a single PTB. Small pure helpers the store composes with its effects:
 //

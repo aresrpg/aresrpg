@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // M3 RENDER RUNG — the MOVE-WASH decision lives in the CORE (D768/D769 clause 3: the renderer computes
 // nothing). These rows pin the tackle-paint rules exactly:
 //   · still respects max range and drops the mouse-hover preview — shows the reachable cells in green and

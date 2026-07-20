@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ARTISAN view — the incoming commission queue. Reads /v1/commissions (the live `{ as_artisan, as_customer }`
 // shape) through the chain-decoupled stub and renders `as_artisan` (other players asking ME to craft): each
 // row is the customer, the requested recipe (icon + name), the offered payment, and an ACCEPT CRAFT action.

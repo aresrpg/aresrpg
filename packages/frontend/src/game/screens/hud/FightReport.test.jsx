@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT COST card-render proof: FightReport is a pure-props shell (no stores, no
 // react-i18next context — `t` rides in as a prop), so renderToStaticMarkup (react-dom/server, already a
 // dependency — no new dep) is enough to assert the formatted cost line actually reaches the DOM markup.

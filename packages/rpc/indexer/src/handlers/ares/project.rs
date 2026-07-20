@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 //! The handler mapping: `(module, name, contents) -> Redis writes`.
 //!
 //! [`map`] is a **pure** function — it BCS-decodes one event body and returns the

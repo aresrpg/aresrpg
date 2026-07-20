@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // check_keepset.mjs — S-46 train-checklist gate (advisor rider 8): re-grep every PTB target string consumed by
 // the SDK builders + the move scripts against the MERGED package surface, and fail if any target's function is
 // missing or no longer public/entry. Pure static check — zero chain calls.

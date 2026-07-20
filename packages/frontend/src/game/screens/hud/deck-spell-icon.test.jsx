@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DECK SPELL-BAR ICON regression ("no icon for senshi spell ? they reapeared only
 // after a refresh"). SpellSocket (DeckCluster.jsx) carried its OWN bare useState(false)+onError latch — the
 // exact pin-forever bug already fixed for SpellArt (SpellDetail.jsx) / ItemIcon via the shared retry ladder

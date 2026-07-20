@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Party driver EDGE (composition root): the pure state machine lives in @aresrpg/party; this shell reads ambient
 // identity (selected character, wallet address, owned roster), builds inputs, DISPATCHES them into the ONE reducer,
 // and executes the reducer's effect requests — self-paid party PTBs (party_actions), the p2p broadcast, the /v1

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // B5 BIOME MOOD acceptance capture (real-GPU headed). Proves the ?mood=1 crossfader end-to-end on the
 // running engine: crossing a biome border smoothly crossfades the atmosphere mood over ~4 s with NO POP.
 //

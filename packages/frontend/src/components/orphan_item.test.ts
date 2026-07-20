@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // orphan_item.test.ts — the ONE "this item's template was deleted on-chain" gate,
 // read by the inventory grid/tooltip, the crush action and the equip/use guard. Pure + DOM-less (the
 // forge_eligibility split pattern). The load-vs-delete distinction is the whole safety argument, so it is the

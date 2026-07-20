@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // api/sponsor.mjs is station-only (the Mysten gas station is THE only gas infra).
 // sponsor.mjs keeps EVERY identity/money rail but delegates the gas half to the station: reserve_gas →
 // (client builds+signs) → execute_tx (station signs+submits, returns EXACT effects). Proven here WITHOUT any

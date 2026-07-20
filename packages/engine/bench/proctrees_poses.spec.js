@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PROCEDURAL TREES pose capture (ENGINE_AAA_PLAN C4 proof bar) — boots the demo at the NEW DEFAULT (no
 // proctrees flag ⇒ procedural trees) and captures 6 pinned poses across 3 biomes (taiga incl. a pine_cathedral UNDER-CROWN pose,
 // dense_forest, temperate_forest) on the real GPU, asserting the console stays clean of mesher/light

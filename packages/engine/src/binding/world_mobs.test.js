@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Seam 7 gate — deterministic roam-near-anchor placement, bounded roam, and the nametag aging math.
 
 import { test, expect, describe } from 'bun:test'

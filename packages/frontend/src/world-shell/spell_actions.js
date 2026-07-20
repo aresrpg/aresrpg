@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // #55 — REAL on-chain spell LEVEL-UP against `spell_level::raise_spell_level` (permissionless, structural
 // correctness via the player's PersonalKioskCap). Spending spell points raises ONE owned spell one level on the
 // kiosk-locked Character; the door takes the spell's shared `SpellTemplate` object (fight-spells.js rows carry

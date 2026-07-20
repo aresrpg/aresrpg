@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // HP TWEEN pure core (life updates were too fast on the hud and the nameplate). rAF drives the
 // hook; the STEP math is pure + deterministic and proven here. RED at HEAD: hp_tween_step does not exist.
 

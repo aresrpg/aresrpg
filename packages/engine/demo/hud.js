@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Debug HUD overlay (§7) — reads `engine.get_stats()` every frame and renders the acceptance
 // surface for M0: fps, p50/p75/p99 frame ms, draw calls, quad count, plus any queue/worker/
 // upload fields WS1 exposes later. Every field is read defensively (`?? '—'`) since WS1's

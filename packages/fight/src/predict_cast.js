@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Own-cast prediction is a thin adapter around @aresrpg/sim's spell reducer. The chain corpus is normalized
 // before it reaches here; this module only selects the publicly-known branch, excludes unshipped chain kinds,
 // runs the sim once, and projects the resulting state delta into the fight reducer's canonical action shapes.

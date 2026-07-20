@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // VISUAL PROOF spec (texture appeal, W4 seam/repetition pass) — captures the three owner-complaint
 // poses so before/after can be diffed by eye:
 //   (a) low grazing over a meadow  → the "grid of 1m tiles + seam shimmer" pose

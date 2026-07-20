@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [2026-07-05 FROXEL REBUILD — PLAN A] Camera-following HEIGHT FIELD for the froxel fog's sun occlusion.
 //
 // ANCESTRY RULING (architect): froxels.js was ported from a demo whose sun coupling was a SMOOTH 2D

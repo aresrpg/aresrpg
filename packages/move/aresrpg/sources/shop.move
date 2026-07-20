@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// SHOP — the SALE GATE that owns supply, price, an optional time window, and pause. A `Sale` is a shared
 /// vending machine for one item template; `buy` mints ONE item and `buy_many` mints N — each mints through the
 /// package-private `item::mint`, ROLLS stats from the template's [min,max] ranges (if any), and LOCKS the

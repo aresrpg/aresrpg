@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // C9 Hillaire sky lifecycle — the same disposed-subsystem-unreachable-from-the-ticker law clouds.test.js
 // pins (the logout crash class), plus the LUT rebuild policy (param LUTs on set_atmosphere_params, view
 // LUTs per frame / on sun-change at LOW) and the flag-consumer nodes building CPU-side. Fake renderer:

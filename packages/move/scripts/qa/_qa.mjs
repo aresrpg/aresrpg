@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S-30 E2E QA shared lib — THROWAWAY. Loads live ids from the manifests, binds the JSON-RPC client to the
 // publicnode RPC (fullnode.testnet is dead), signs with the dev-key wallet. NEVER echoes the key.
 import { readFileSync, appendFileSync } from 'node:fs'

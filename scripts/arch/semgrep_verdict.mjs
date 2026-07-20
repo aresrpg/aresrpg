@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // scripts/arch/semgrep_verdict.mjs — turns raw semgrep JSON into the arch-gate verdict.
 // Invoked by scripts/semgrep-gate.sh, never directly by CI.
 //

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Continuous celestial clock + closed sun/moon orbit. Time-of-day callers may publish a fresh phase at any
 // cadence; the renderer advances that phase from a monotonic wall-clock anchor on every frame, so the visible
 // bodies never inherit the publisher's cadence.

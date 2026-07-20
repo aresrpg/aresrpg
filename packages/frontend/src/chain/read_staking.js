@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // OWNED-OBJECT reads for a player's loose bag Items. get_owned_items is /v1-FIRST (the indexer's
 // owner→kiosk→items join) with the chain walk demoted to the sanctioned /v1-outage fallback.
 //

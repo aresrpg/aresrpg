@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE COMBINATORIAL FIGHT GATE — sim-driven, chain-free, every combination folded through the REAL pipeline
 // (sim reduce → the receipt bridge → the store's beat/fold door) and judged by four oracle families. Owner
 // mandate: "TEST many fight combination and movements with multiple mobs, use yajin and place traps, push,

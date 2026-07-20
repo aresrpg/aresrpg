@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Unit coverage of the consumable pending-delta ledger + trailing-click batcher (the PURE half of the
 // rapid-use flow; the tx/toast wiring in consumable_actions.js is the live half). Proves the brief's bar:
 // 5 rapid clicks fold into ONE flush carrying amount 5; a chain landing racing an in-flight batch renders

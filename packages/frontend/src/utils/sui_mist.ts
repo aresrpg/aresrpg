@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // sui_mist.ts — pure BigInt helpers for SUI/MIST money math (frontend mirror).
 // Exact port of backend/src/sui_mist.js with TypeScript types. All money-path
 // code in the frontend must import from here. No Number() casts on MIST values.

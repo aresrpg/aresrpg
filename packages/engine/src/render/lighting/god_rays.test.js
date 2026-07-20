@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure-math tests for the physically-based god rays — the load-bearing correctness the TSL shader
 // mirrors. Same split as froxels.test.js: the GPU node is proven by the probe screenshots; here we pin
 // the three formulas the shader copies (HG phase / height density / front-to-back in-scatter) against

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// RUNE CATALOG TESTS — table integrity against the R1/DECISIONS canon (docs/RETRO_RUNES_RESEARCH.md):
 /// scaled unit weights, derived rune weights (= retro weight ×5 for every row), amounts, caps, tiers, the two
 /// NOT-RUNEABLE fields, and the abort surfaces.

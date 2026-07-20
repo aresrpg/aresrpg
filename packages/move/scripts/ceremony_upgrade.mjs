@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // CF-train COMPATIBLE upgrade ceremony (2026-07-06) — SDK path (authorize → upgrade → commit), one package
 // per invocation. Derived from upgrade.js with four deliberate deltas:
 //   1. NO `sui client switch` — never writes the ambient client config; the build reads it read-only.

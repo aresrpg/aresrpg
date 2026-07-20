@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* THROWAWAY world&discovery design-pass CSS — isolated `.mmd-*` namespace, never collides with real HUD
  * classes. Reuses REAL `.gw-panel`/`.gw-npc-prompt`-family tokens (--color-gold etc. from index.css) so the
  * gold-terminal-only ruling ("keep our design gold terminal, do not change for glassmorphism") is

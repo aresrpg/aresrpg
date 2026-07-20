@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GATHER GATE — the LOCAL [G] affordance pre-check: no need to fire a TX just to learn the tool
 // isn't equipped, the app checks that itself first. Mirrors the on-chain refusals in
 // `aresrpg::gathering::gather` (104/105 no/wrong tool · 106 tier-locked) off the SAME read-model the paperdoll

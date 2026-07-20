@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Tactical highlight GPU/material construction. Semantic channel config lives in board_highlight_style;
 // pure mask constants/oracles live in board_highlight_shapes. This module owns their exact TSL mirrors.
 

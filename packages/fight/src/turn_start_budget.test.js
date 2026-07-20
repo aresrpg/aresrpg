@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST regression for the TURN-START BUDGET (advisor pass-19, the client-independence / ONE-PIPELINE law).
 // On-chain, begin_turn refills a seat's ap/mp to base the instant its turn lands (participant.move:220-224), but the
 // TurnStarted event (fight_events.move:24) carries NO ap/mp — and the fight fold had no ap/mp vocabulary at all

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // read_staking tests.
 // get_owned_items: /v1-FIRST (the indexer's owner→kiosk→items join) with a chain-direct kiosk-union
 // FALLBACK. The union bag is `::item::Item` LOCKED across ALL the wallet's personal kiosks (every item is

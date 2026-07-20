@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SPELL DESELECT IS A CORE RULE: clicking any non-targetable cell with a spell armed deselects it. The
 // decision moves OFF the HUD (DungeonBoard used an arm-toggle — fragile, and off-board
 // clicks never even reached it) into the ONE state atom: a `board_click` input carries the click cell (null =

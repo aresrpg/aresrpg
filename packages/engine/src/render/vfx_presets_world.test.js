@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD-PROPS (d_world) preset-table test — mirrors the StatusFX aura-lane's preset assertions for the FlameFX
 // bonfire/candle LOOP fixtures: the 18 scenes each resolve to a preset, every one is a LOOP, none breaches the
 // halo ceiling while it SUSTAINS (a persistent world fire must never bloom — colours are clamp1'd), and the

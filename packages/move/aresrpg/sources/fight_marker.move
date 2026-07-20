@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// FIGHT MARKER — the "unfinished business" DIRTY COUNTER.
 ///
 /// A PvM fight increments the character's pending-obligations counter at SEAT time; it decrements ONLY when the

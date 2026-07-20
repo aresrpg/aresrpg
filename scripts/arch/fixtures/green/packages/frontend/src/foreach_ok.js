@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GREEN fixture — held promises: sequential for..of await, and Promise.all over map(async …).
 export const save_sequential = async (items, save_item) => {
   for (const item of items) await save_item(item)

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// CHARACTER XP CURVE — the exact 1.29 XP→level table, the immutable progression law (SPEC §3: "the immutable
 /// 200-level retro curve"). Copied VERBATIM from `packages/move/sources/character/character_xp.move` (the
 /// abandoned root lineage's canonical on-chain SSOT), which was itself verified exact against

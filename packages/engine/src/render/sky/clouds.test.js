@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Lifecycle regression for the LOGOUT crash: "THREE.WebGPUTextureUtils: Texture already initialized",
 // thrown uncaught (and repeating) from clouds.refresh_shadow after the voxel world was torn down. Root
 // cause: a disposed subsystem stayed reachable from a live time-of-day ticker — on logout the renderer is

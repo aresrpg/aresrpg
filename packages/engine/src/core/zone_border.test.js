@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-18 — zone border MATH unit tests (the physics + proximity-signal contract). Pure, no GPU.
 import { test, expect } from 'bun:test'
 

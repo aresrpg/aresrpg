@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// ITEM-LISTING-RULE tests: the amount-0 sale block (`item_listing_rule`) — the OBJECT-leg half of the
 /// royalty-bypass fix: a "ghost" stack (amount 0) can be listed but NO SALE CAN COMPLETE, so
 /// ghosts stay bound to their owner and can never launder value between kiosks. Drives the REAL transfer-policy

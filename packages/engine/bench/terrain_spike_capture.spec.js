@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TERRAIN-DISCOVERY LAG-SPIKE capture (reported: "huge lag spike when discovering terrain").
 // Instruments a long multi-leg traverse and, PER FRAME, records the rAF delta alongside the ring's
 // crossing-path telemetry (_stream_debug: cross_ms_last / crossed_last / evicted_last / mesh_ms_last /

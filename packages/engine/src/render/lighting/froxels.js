@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG2-F froxel volumetrics — TSL/GPU factory ported from fable5-world-demo's
 // `src/gpu/passes/Froxels.ts`. Portions adapted from fable5-world-demo, MIT,
 // Copyright (c) 2026 Remi Sebastian Kits.

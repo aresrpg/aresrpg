@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The companion -> game embed entry. Lazily imported by the shell's GameWorldHost on the FIRST
 // game-world tab enter (a dynamic import() splits this + the whole game bundle into its own chunk), so
 // the engine + WS + Three.js scene boot only when the player opens the world, never at app boot.

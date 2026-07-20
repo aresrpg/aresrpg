@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // VEG PHASE B exit probe — surveys the schematic-forest decorator over a wide world region and
 // writes /tmp/aresrpg-engine-artifacts/veg_b_report.json with per-biome tree/rock counts + the full
 // species distribution, PROVING all 10 tree families (every one of the 20 variants) + ≥5 rock

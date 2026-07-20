@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { SDK } from '@aresrpg/sdk/sui'
 
 // S-61 — ids live in the SDK's ONE deployment home (deployment/aresrpg.js): the S-57 per-domain builders

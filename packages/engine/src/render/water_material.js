@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG2-C water shading — the "drastically better water" material for the liquid render class.
 // Ported (SHADING ONLY) from Braffolk/fable5-world-demo (MIT, © 2026 Remi Sebastian Kits) —
 // specifically render/WaterMaterial.ts's Fresnel-flatten + depth-tint + two-phase flow normals +

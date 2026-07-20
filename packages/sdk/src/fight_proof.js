@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { bcs } from '@mysten/sui/bcs'
 import { PublicKey } from '@mysten/sui/cryptography'
 import { fromHex } from '@mysten/sui/utils'

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST (dungeon-modal deep-link): the DungeonsModal deep-links the entry-key name to its
 // encyclopedia item page, and must resolve the key's TEMPLATE id WITHOUT a fetch — even in the no-key branch.
 // CorpusWorld.dungeon_key_template_id is that resolution (world.json `dungeonKey` slug → seed_manifest.items);

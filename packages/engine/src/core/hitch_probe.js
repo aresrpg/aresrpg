@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Camera-turn hitch attribution. Opt-in with `?hitch=1`: production pays only no-op hook calls.
 // Counters belong to the interval BETWEEN render callbacks. `frame()` is called at the start of the
 // next callback, snapshots the work that accumulated since the previous one, then resets exactly once.

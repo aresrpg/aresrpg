@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DEGENERATE-RENDER FLOOR — a pure, dependency-free verdict over one rendered frame's RGBA bytes.
 // Failure class it exists for (proven live, naga-127 nesting cliff): the fragment pipeline dies
 // SILENTLY — terrain stops drawing while collision and every data oracle stay green — so the only

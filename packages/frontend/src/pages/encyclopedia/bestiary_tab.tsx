@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // §14 encyclopedia bestiary — reads ON-CHAIN LIVENESS from the /v1 RPC indexer (get_encyclopedia('mobs')), the
 // single source of truth, NOT a client-side chain replay. The indexer serves each minted MobTemplate's snapshot
 // prefix (name / level range / hp / element) — the fields the bestiary list + element filter + level brackets

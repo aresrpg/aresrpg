@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Ring manager unit tests (§3.2 M1 streaming). Drives create_ring_manager with a FAKE gen pool
 // (deferred, inspectable — so we can assert the in-flight budget before resolving) and a FAKE
 // terrain renderer (counts upload/remove calls, no GPU). Meshing runs for real on real ChunkRecords

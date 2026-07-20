@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // M1 scenario — "world LAZY-LOADS around the camera; no synchronous boot freeze" (§3.2 streaming
 // ring). Proves the non-blocking goal: engine.start() returns immediately and terrain streams in
 // around the camera over the following seconds, at ≥60 fps, with new chunks appearing ahead as the

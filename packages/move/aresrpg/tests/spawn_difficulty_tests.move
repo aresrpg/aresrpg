@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Regression for Lane 69: the full 1000×1000 first-join box is the floor ring, then the authored continuous
 /// distance curve begins at its boundary. These are geometry/cap assertions, so PRNG luck cannot make the test
 /// pass while a high roster tier remains eligible next to spawn.

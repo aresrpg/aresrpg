@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// MOB TEMPLATE — the admin-minted mob CONTENT blueprint (stats, a ≤4-spell kit, a ≤16-entry loot table, xp).
 /// S-46 final split: the ENGINE spawns from a plain `MobSpec` — this module owns the shared authoring object and
 /// mirrors it into the spec at the core fight doors (`to_spec` — resistances stored CENTERED here are DECENTERED

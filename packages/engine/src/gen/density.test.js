@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG1-A density/shaping tests — the unified 3D density field + its ridged/warp noise helpers.
 // Covers: (1) DETERMINISM — same seed ⇒ bit-identical samples across independent contexts;
 // (2) BANDING — is_solid's heightfield fast path agrees with the full field outside the active

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LIVING-generation filter (burial-reseed ghost fence, 2026-07-13 — PART 2b, id-keyed). Multiple on-chain
 // template generations share this testnet lineage (historic seed trains + the pre-purge 22:55 corpus), and
 // /v1's encyclopedia honestly lists every template ever minted. The wiki must show ONLY the living

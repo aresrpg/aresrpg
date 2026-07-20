@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Per-quad 8-byte instance packing (§3.5) — FROZEN CONTRACT. WS3 (binary_greedy.js /
 // mesher.js) writes this exact bit layout; WS4 (terrain_material.js, TSL/GPU side) decodes
 // the SAME layout on the GPU. Any change here is a wire-format break — bump a version and

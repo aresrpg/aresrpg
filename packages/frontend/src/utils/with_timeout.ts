@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // with_timeout — bound a chain read so a hung RPC can NEVER freeze a loading state.
 //
 // Never hang forever (mirrors load_roster.js's private guard: "a read MUST always terminate — a partial result + a

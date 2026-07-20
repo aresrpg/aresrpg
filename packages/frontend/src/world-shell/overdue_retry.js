@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SINGLE-PTB overdue auto-crank — the tx-EDGE half of the turn-commit system (its pure half —
 // stage_to_batch / keys / epochs / auto_commit_decision — lives in @aresrpg/fight turn_commit.js).
 // This stays at the frontend tx edge because it RUNS commits and speaks the tx error vocabulary

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-13 underwater — pure-logic tests for the submerged-flag HYSTERESIS (the CPU detection). The TSL
 // immersion/warp nodes are GPU wiring (bench/eng13_underwater.spec.js verifies them live); here we pin
 // the pure state machine that decides submerged vs not, which is the one piece with real branching to

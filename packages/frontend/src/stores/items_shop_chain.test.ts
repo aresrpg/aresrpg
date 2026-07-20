@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // dedupe_shop_sales — pure unit tests (items_shop_chain.ts). No React, no RPC, no chain: covers the
 // owner-adjudicated shop-listing rule that killed the "same item renders up to 4x" bug (superseded paused
 // sales from pause+recreate rounds rendering beside the live one).

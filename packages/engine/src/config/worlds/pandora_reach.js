@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD 06 · PANDORA REACH (on-chain `06_pandora_reach`, biome `floating_islands`) — the lush alien-
 // jungle flagship. Seed identity (seed/mainnet/06_pandora_reach/world.json): earth+air elements,
 // "low-gravity island-drift — fall-and-drift between floating islands", "the mesmerizing flagship —

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [W7] FLOATING COMBAT NUMBERS — feel proof (headed WebGPU, isolated port).
 //
 // Owner FEEL DEMAND (2026-07-11, live fight): "floating numbers too small and not bouncy enough." Boots

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FROXEL STATIC-OVERLAY DETECTOR (2026-07-05 froxel rebuild) — THE gate that decides whether the
 // camera-following "white static circle texture" is dead. A live bisection convicted the
 // froxel VOLUME (?froxels=0 was the ONLY kill across a 3-day, 6-suspect acquittal ladder). The

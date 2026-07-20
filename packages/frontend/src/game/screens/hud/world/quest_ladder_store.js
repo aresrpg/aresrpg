@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The onboarding QUEST LADDER — RUNTIME STORE (the side-effecting half; the pure reducer + data live in
 // quest_ladder.js). Framework-agnostic (a snapshot + subscribe pair, useSyncExternalStore-safe, mirroring
 // toast.js), so the objective card binds without prop-drilling. Three jobs:

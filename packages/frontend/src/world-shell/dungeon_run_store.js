@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S2 — the RUN + WORLD-FIGHT LIFECYCLE store. It owns the on-chain run/session lifecycle (enter, engage, resume,
 // settle, recover) and signs every gameplay tx, but it holds ZERO fight state: the generic fight core (fight/)
 // is the single owner of board/turn/prediction state. This store feeds the core through the thin

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// CHECKPOINT tests: the proof-of-time travel math as PROPERTY tests (§5, §17.2/.3) — teleport rejected, honest
 /// walk accepted, the ×1.5 mount allowance that requires the pet at BOTH ends, clock-regression refusal, the
 /// teach-don't-reject `wait_seconds`, and the 500k-coordinate OVERFLOW probe (a huge distance must return a

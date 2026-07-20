@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import type { MarketplaceListing } from '../../types/chain'
 import { is_cosmetic_item } from '../../game/item_classification'
 import { EQUIPMENT_CATEGORIES, PET_CATEGORIES, RUNE_CATEGORIES } from '../../constants/item_categories'

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GIFT PTB builders (gift::send / gift::claim / gift::recall). OFFLINE: the deployment override seam
 // (context.ids.aresrpg) builds each tx without a live publish; send's royalty-floor funding reads the STAMPED
 // ITEM_ROYALTY_MIN_MIST constant off that same seam (no chain read, no gRPC stub

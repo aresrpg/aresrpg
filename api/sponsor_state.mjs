@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Shared anti-drain counters and once-only reservation state for the station sponsor.
 export const RL_WINDOW_MS = Number(process.env.SPONSOR_RL_WINDOW_MS || 600_000)
 const RL_MAX = Number(process.env.SPONSOR_RL_MAX || 5)

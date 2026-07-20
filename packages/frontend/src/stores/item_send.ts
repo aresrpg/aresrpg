@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // item_send.ts — client-side ITEM GIFT-send state machine (no backend). Sibling of stores/sui_send.ts, but for
 // the escrow-recoverable player-to-player item send (gift.move · resolved DECISIONS 2026-07-13). The modal
 // collects the recipient (the items are picked on the inventory grid and passed in); this store owns the async

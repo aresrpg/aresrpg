@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // craft_ptb — the single-tx recipe craft builder. Offline: the merged-package ids are injected through the
 // deployment override seam (context.ids.aresrpg), so the PTB BUILDS with no live publish, and we assert the frozen
 // crafting::craft target + its 11-arg shape (adds character_id + the terminal &Random) against

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // simulator.test.tsx — MOBFIX defect #4 (full-app mobile audit, /simulator at 390px): "RIGHT-CLICK TO
 // CLEAR" is meaningless on touch (no right-click exists), and the equipment paperdoll's bordered frame
 // left a large dead void on its right on a 390px phone. SimulatorPage can't be mounted here — it isn't

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // recap-truth lane leg① — STORE-LEVEL pin for the fight-duration source. dungeon_run_store.js itself pulls the
 // whole SDK/auth/i18n/game-store graph (unloadable headless — same class documented atop dungeon_settlement.test.js),
 // so this mirrors the store's bind-time field-setting 1:1 (every `set({ fight_started_at_ms, fight_start_partial })`

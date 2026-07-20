@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ITEM_CATEGORY is a 1:1 mirror of the Move contract's `item::verify_category` allow-list
 // (packages/move/sources/item/item.move). The contract is the source of truth — never add a
 // category here that verify_category doesn't accept, it will abort item::new with EWrongCategory.

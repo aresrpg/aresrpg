@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, test } from 'bun:test'
 
 import public_manifest from '../../../public/asset_manifest.json' with { type: 'json' }

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // inbox.ts — escrow-recoverable item GIFT inbox (gift.move · resolved DECISIONS 2026-07-13). INCOMING gifts
 // are claimed (free to the receiver — royalty prepaid); OUTGOING gifts you sent can be recalled (
 // NO return-to-sender, but the SENDER's own recall stays). Reads flow through the keyless /v1 read layer

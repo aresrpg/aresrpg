@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // AUTO-RUN steerer — proves the pure math (direction / arrive / stuck / payload normalise) and the factory
 // state machine (steer → arrive → fire the same [R]/[G] prompt; manual cancel; stuck → honest toast). No DOM,
 // no live prompt stack: the effects (trigger_interact / notify_blocked / clock) are injected as stubs so the

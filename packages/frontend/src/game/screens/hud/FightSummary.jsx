@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // End-of-fight DEFEAT card — shown on a LOSS / abandon / death. Reads the PERSISTENT `fight_summary` slice
 // (owned by fight.js), so it SURVIVES the teardown that clears the live `fight` slice. On a WIN the
 // experience-driven FightResult owns the celebration, so this renders ONLY on a defeat. Feeds the shared

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// RED-FIRST mob-side identity/ordinal contract for the additive action envelope. Mob kits retain no
 /// SpellTemplate object, so a receipt identifies an ability by the snapshotted group template, kit ordinal, and
 /// exact SpellLevel/effect descriptors. A Fight-UID turn clock gives repeated mob actions monotonic turn keys.

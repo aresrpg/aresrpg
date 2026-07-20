@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure registry→TSL select-ladder + hash/color helper nodes, extracted VERBATIM from
 // terrain_material.js (2026-07-03, ≤600-LoC law split — the material file had accreted four lanes'
 // landings). No behavior change: these are the same module-private helpers, now shared via import.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PARTY actions — every membership mutation is keyed by one exact Character ID and proves current custody
 // through that character's personal kiosk + PersonalKioskCap. The SDK builders own the Move call shapes and target
 // `SOCIAL_LATEST_PACKAGE_ID::party`; this seam owns proof resolution, wallet signing, and receipt handling.

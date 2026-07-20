@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// COMBAT GRID TESTS — coverage for the D75 shape vocabulary (rect/ellipse/rounded/blob/cross masks + their
 /// shape-code getters), the king-isolation placer, start-cell/path-sentinel helpers, and the fixed (no-RNG)
 /// damage pipeline. `fill_row`/`corner_cut` are PRIVATE per-row fill helpers with no public wrapper — covered

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure loot-display mapping for the §14 encyclopedia (no React / no RPC — plain data, so it is unit-tested
 // offline against the /v1 contract). The /v1 mob doc's server-joined ON-CHAIN drops (RpcMobDrop) are the SINGLE
 // source of truth for a mob's loot; this maps each row into the MobDetailView drop shape.

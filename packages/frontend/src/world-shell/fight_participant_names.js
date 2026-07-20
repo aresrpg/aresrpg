@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Fight player identity enrichment. Engine Fight participants carry character ids + owners, but no names;
 // resolve every seat in one keyless `/v1/characters?ids=` read before the view reaches build_fighters. Real
 // names are immutable character identity, so successful rows are cached for the tab. Missing/error rows are

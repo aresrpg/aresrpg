@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // reduce — pure unit tests (marketplace_chain.ts). No React, no RPC, no chain: covers CLIENT_DESIGN_AUDIT.md
 // row #2 — the wholesale `set({listings})` clobber of optimistic list/delist/buy rows, and the stale-rollback
 // that restored a captured pre-tx value instead of re-deriving. House convention bans mock.module — the reducer

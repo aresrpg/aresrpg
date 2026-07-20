@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { ITEM_CATEGORY, WEAPONS } from '@aresrpg/sdk/items'
 
 import { is_lootbox } from '../world-shell/lootbox_util.js'

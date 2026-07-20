@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TR-5 — veteran-title aura LAYOUT unit tests (the pure ring placement the flame shader rides on). The
 // TSL flame material + camera billboard are GPU/screenshot-verified (own-port + qa frame-grade); here we
 // prove the deterministic, bottom-anchored wisp layout: count, feet-anchoring, value ranges, decorrelation.

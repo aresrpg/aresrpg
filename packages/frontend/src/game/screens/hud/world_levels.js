@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD ACCESS GATES — the seeded worlds + each world's on-chain `required_level`, for the character
 // level-up card's "you now have access to X and Y worlds" row. The required_level — the field zones.move
 // actually asserts join against — is sourced by DELEGATING to read_worlds.js's `get_worlds` (the ONE World

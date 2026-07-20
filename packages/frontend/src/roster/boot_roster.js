@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RPC-sourced BOOT roster (S-53). The first roster load on a game-world / characters enter reads the
 // player's characters in ONE call to the read-API indexer (GET /v1/characters?owner=…) instead of the
 // multi-second chain-direct kiosk+stake+dungeon scan load_roster runs. Two owner-blocking wins:

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, test, expect } from 'bun:test'
 
 import { rng_seed, rng_next, rng_int, rng_range } from '../src/prng.js'

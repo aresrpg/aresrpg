@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PRESENCE panel (S-67 rework) — the top-left world-HUD panel, formerly the party-invite roster. Now it is
 // the FRIENDS-first presence surface that replaced the retired /friends page:
 //   COLLAPSED → FRIENDS + the online friends' rows (dot / name / Lv)

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LEAVES-2X Rung 2 — the near→far canopy BAND. Single home for the distance rule + a pure JS mirror of
 // the vertex-collapse crossfade so terrain_material.js (TSL) and the unit test read ONE source.
 //

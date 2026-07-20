@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TR-5 — the VETERAN TITLE aura: soft LIGHT-BLUE flame/heat wisps licking up around the ROAM avatar.
 //
 // Technique (the classic scrolled-noise flame, ref frame-driven): 3-5 camera-facing billboard quads

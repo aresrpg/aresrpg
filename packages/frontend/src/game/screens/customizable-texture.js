@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The 3-colour mesh-recolour SSOT, ported 1:1 from the AresRPG production engine
 // (`aresrpg-legacy/packages/engine/src/lib/helpers/customizable-texture.ts` +
 // `fullscreen-quad.ts`). The character GLBs ship a `diffuse_base` albedo plus three mask

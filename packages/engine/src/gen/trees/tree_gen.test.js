@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PROCEDURAL TREE GENERATOR CORE — tests (ENGINE AAA PLAN §8 lane A2 proof bar). Covers:
 //   (1) DETERMINISM (§3.2/§3.7) — byte-identical output for identical args, call-order independence
 //       (pure, no module state ⇒ worker/main parity), and a FROZEN golden hash over 320 trees.

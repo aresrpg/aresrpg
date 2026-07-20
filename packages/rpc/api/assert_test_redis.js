@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TEST-ONLY SAFETY RAIL — the ONLY sanctioned way for a suite to FLUSH Redis.
 //
 // Incident #1: a wave FLUSHALL'd the LIVE indexer cache by running `bun test` with

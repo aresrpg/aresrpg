@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// STAT ALLOCATION (§3) — the character-holder's spend door that turns earned STAT points into per-stat allocations, the twin of
 /// `spell_level::raise_spell_level`. SPEC §3: "each level from 2 grants 5 stat points to assign freely and 1 spell
 /// point." Before this door the stat half of `progression::points_for_level_range` was DISCARDED at every call site

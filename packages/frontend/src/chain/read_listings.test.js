@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S-87 SELL PICKER — offline-fixture proof of `build_listable_items` / `build_listable_characters`, the pure
 // mappers behind `get_listable_items` / `get_listable_characters` (S-87: /v1/owner-items + /v1/characters?owner=
 // replaced the chain-direct kiosk-SDK sweep — no gRPC, no GraphQL). Locks the resolution rules: category comes

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure economy helpers for the ceremony seeder (seed_full_corpus.mjs) — extracted so the MONEY-PATH conversions
 // are unit-testable in isolation (no chain deps, no client.js). Two ceremony-blocking bugs live here:
 //   • shop prices are authored in SUI but shop::create_sale takes per-item MIST (a 10^9 shortfall = catalog for dust);

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D164-B pure-math unit tests for the leaf-realism wave's two tested twins — no GPU, no TSL evaluation
 // (same discipline as terrain_tint.test.js's straw_tip_ratio and terrain_material.test.js's winding math):
 //   • leaf_tilt_angle  — the per-plane PITCH the cutout vertex applies (terrain_flora.js). The KEY property

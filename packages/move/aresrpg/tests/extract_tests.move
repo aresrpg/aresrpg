@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Extract-seam tests (c): the two royalty-safe ways a kiosk-LOCKED item leaves the market. EQUIP — pull it out
 /// (`extract_for_equip`) and re-attach it onto a character (`confirm_equip`), then reverse (`unequip` → a
 /// `LockPledge` forcing a personal re-lock). CONSUME — pull it out (`extract_for_burn`) and DESTROY it (`burn`),

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// FIGHT (core doors) — the game-side gateway onto the GENERIC branded combat engine (S-46 final split). THIS
 /// module owns every game semantic the engine deliberately does not know: authentic character snapshots
 /// (kiosk-borrowed, gear-folded), zone-ticket provenance, the dirty-counter mark, the global freeze + the

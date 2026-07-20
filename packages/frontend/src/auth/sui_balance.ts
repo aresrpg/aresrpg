@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SINGLE home for the wallet-bar SUI balance fetch + the post-tx invalidation trigger (regression: the
 // displayed balance was not refreshed fast enough after a tx). The auth store's
 // `refresh_sui_balance` — the ONE writer of `sui_balance_mist` — wraps `read_sui_balance_mist`; every

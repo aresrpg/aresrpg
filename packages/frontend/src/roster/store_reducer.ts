@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 export type ExpeditionInput = Readonly<{ type: 'wallet_session/reset' }>
 
 export type ResettableExpeditionState = Readonly<{

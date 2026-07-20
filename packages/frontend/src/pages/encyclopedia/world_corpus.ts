@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // AUTHORED world knowledge (burial-reseed corpus join, 2026-07-13). The encyclopedia is STATIC
 // KNOWLEDGE: a world's display name, level band, mob roster and gatherable resources are authored
 // corpus facts (seed/mainnet/<wid>/{world.json,mobs.json,resources.json}), not live chain state.

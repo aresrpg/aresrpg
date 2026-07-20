@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GATHER-NODE VISUAL RESOLVER — proof that a chain ResourceSpawn's (job, tier) maps to the right gatherable
 // identity + family silhouette (ENGINE_AAA_PLAN §5.3). Pure, headless — no three, no engine. The map is the
 // single home the in-world procedural prop (spawn_rigs.js create_gather_layer → synth_gather_buffer) reads. The

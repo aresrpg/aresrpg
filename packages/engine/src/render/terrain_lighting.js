@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Terrain per-face brightness table + BFS sun-leak gate (§3.6) — module-level DATA + the pure JS mirror
 // of the sun-leak smoothstep, extracted VERBATIM from terrain_material.js (2026-07-03, ≤600-LoC law split
 // — same discipline as registry_nodes.js / terrain_flora.js / terrain_ao.js / terrain_winding.js). No

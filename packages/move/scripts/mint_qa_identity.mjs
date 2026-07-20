@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // QA IDENTITY MINTER — creates a funded, character-owning THROWAWAY testnet wallet for independent
 // QA drives (the release-gate wall, 2026-07-15: prod auth is zkLogin-only, so no QA agent can obtain a
 // character; independent verification needs exactly one funded char-owning suiprivkey).

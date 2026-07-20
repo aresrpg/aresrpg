@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // POST-BUILD bundle-cleanliness gate (2026-07-14). The `prebuild` secret-leak gate
 // (scripts/check-constraints.sh) scans tracked SOURCE but deliberately excludes dist/ — so it is
 // structurally BLIND to a secret that Vite BAKES into the client bundle from a VITE_* env var.

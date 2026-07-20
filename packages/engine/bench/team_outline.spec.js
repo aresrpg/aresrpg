@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [team-outline PROOF] Close-ups of the fight ENTITY OUTLINE on the REAL GPU (headed Metal, the studio
 // project). Boots the ?team=1 flat open-sky board, dollies the locked iso rig in close, and screenshots
 // the senshi ally rig at IDLE and mid-ATTACK.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ARESRPG DEPLOYMENT — THE single SDK home for the merged `aresrpg` package (S-46: the 8 per-package
 // lineages — items/game/fight/dungeon/kolizeum/pools/spells/social — collapsed into ONE package) plus its
 // `aresrpg_foundation` math-library dependency. The six per-domain files under src/deployment/ are

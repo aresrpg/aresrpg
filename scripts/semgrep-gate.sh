@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
 # semgrep-gate.sh — the DATAFLOW half of the arch gate (docs/CODE_LAW.md "Arch gates").
 #
 # What runs, in order:

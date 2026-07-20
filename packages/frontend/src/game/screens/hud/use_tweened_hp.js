@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // HP TWEEN (life updates were too fast on the hud and the nameplate). ONE animation home for
 // the DISPLAYED health number — the fight HUD Vitals gem AND the board nameplate (EntityTooltip) both consume
 // it, so life never snaps and the two surfaces ease identically. Presentation only: the fight fold sets HP

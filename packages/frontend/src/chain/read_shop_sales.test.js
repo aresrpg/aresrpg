@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure-function tests for read_shop_sales.js — to_shop_row (RPC sale -> Sale mapping) and sale_supply_progress
 // (the shop/vault "N of M remaining" supply-bar math). No React, no RPC, no chain.
 import { describe, test, expect } from 'bun:test'

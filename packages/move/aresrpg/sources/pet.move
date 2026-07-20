@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// PET POWER — one item burned per UTC day grows a pet from neutral stats to its template maximum in 60 feeds.
 /// The count and day stamp are additive item dynamic fields; the effective stat block itself is written onto the
 /// pet Item after every feed. Equipped pets also refresh the character's folded-stat cache in the same transaction.

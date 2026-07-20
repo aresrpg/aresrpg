@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Headless units for the GROUP WIRING seam (MULTICHAR lane): the DI core drives the pure group loop and
 // executes its requests through injected fakes — no module mocks (bun mock.module is process-global), no DOM.
 import { describe, expect, test } from 'bun:test'

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// (d) MEMO correctness — the mob crank builds the off-shape wall set ONCE per `resolve_from` and threads it into
 /// every mob turn (gas diet). This proves the memo twin `cast::move_blocked_cells_memo` is BIT-IDENTICAL (both are
 /// canonical MASK_WORDS-word wall bitsets — gas-diet #1) to a FRESH `cast::move_blocked_cells` rebuild AT ALL

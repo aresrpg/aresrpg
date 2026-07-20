@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SEED-LOCAL corpus source — surfaces the entire local seed data with icon/no-icon status for one-click
 // generation. A DEV/ADMIN-ONLY reader of the repo seed JSON (seed/mainnet/**) via
 // `import.meta.glob`, mapped into a flat row shape the icon-workflow view + the shared ImageGeneratorModal

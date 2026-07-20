@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { encode } from '@aresrpg/fight'
 
 import { dungeon_grid_of, wallCells } from '../game/screens/dungeon-grid.js'

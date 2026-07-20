@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Timed stat and AP/MP-pool effects, including the live dodge contest. Explicit AP/MP dodge stats augment the
 // defender's agility term; physical damage remains an ordinary timed stat consumed only by EARTH/NONE damage.
 

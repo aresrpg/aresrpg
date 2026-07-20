@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// GATHERING tests: the §6 instant harvest end-to-end (travel-verify → node consume → job XP → checkpoint move →
 /// mint+lock the yield through the cap door) plus the full abort matrix (no equipment map, wrong tool, depleted
 /// node, tier-locked, travel-too-far, template mismatch) and the pure formula/protector-rate property tests. The

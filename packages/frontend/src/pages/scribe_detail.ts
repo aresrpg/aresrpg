@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // scribe_detail.ts — the runeforge LEFT card's pure detail-props builder, split out of scribe.tsx so it is
 // unit-testable without dragging in scribe.tsx's `../auth` import: auth/index.ts calls registerEnokiWallets()
 // at MODULE LOAD, which crashes on `window is not defined` in this repo's DOM-less bun:test env (no jsdom —

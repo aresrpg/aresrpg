@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PARADISE BEACH lane VISUAL + DATA smoke (FIVE-WORLDS §P3.5). Proves the paradise.js recipe with a
 // no-WebGPU data raster (deterministic, shell-portable): validates the config, checks its identity hash
 // differs from DEFAULT, sweeps candidate seeds for the best lagoon+beach+islet framing near the origin,

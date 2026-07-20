@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // COMBAT-LOG REALTIME — the interleaving proof for a reported bug: "the combat log doesn't
 // appear during the fight, it's flushing after instead of real time." ROOT: the log lines were composed in
 // fight.js's fightCastResult dispatch handler, which fires for a WHOLE turn cascade in ONE synchronous poll — so

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Receipt-first world-fight convergence. A successful create/join transaction already proves the Fight id; the
 // full object may still be temporarily unreadable from the serving node. Keep that receipt-owned id mounted and
 // retry the existing full-board reader forever with capped exponential backoff. Cancellation is state-driven: a

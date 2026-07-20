@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-10 voxel_sun pure-helper tests (GPU-free): the occupancy build + world→cell mapping that feed
 // the DDA sun-visibility march. Locks the solidity rule (leaves/solids occlude; air/liquid do not),
 // the 2×2×2 voxel→cell stamping, and the out-of-volume bounds guard.

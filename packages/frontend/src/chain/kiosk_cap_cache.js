@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // CACHED getOwnedKiosks preflight — these per-flow discovery queries were slowing
 // down the UX. Kills the per-flow-open `kiosk_client.getOwnedKiosks` discovery query that write_gift.js and
 // write_listings.js each ran on their own before every gift/listing/buy PTB. S-51 owned-object law: the client

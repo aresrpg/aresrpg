@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// MOB AI TESTS — coverage for the spawn-derivation math (`scaled_hp`, `seeded_spawn_cell`, `draw_spawn_cell`)
 /// and the total-idle fallback path. `nearest_target` is PRIVATE with no public wrapper — covered TRANSITIVELY:
 /// `decide_turn` calls it only on the fully-stuck path (no viable attack/heal AND zero reposition budget), which

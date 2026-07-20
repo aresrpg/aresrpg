@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Party reads live on the indexed `/v1` projection. Membership is character-keyed, so the selected character
 // is the complete lookup key; no shared-object gRPC read or owner-wide roster inference remains here.
 

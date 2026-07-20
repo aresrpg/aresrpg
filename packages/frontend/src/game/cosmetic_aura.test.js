@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // COSMETIC → AURA map: owner-pinned crowns, faithful STATUS_OVERLAY keys, and drift-proof coverage of the
 // generator SSOT (seed/mainnet/shop.json). Plus the equipped-slug resolver the roam avatar drives.
 import { readFileSync } from 'node:fs'

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
 
 import { resolve_box_template } from './lootbox_util.js'

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ① VANISH +MP · move-wash ↔ move-gate ONE-HOME — a Vanish MP grant wasn't usable for movement even though the
 // green zones showed it should be. Two consumers of the post-Vanish movement
 // budget: the GREEN WASH (project.move_wash, off the PRESENTED pool — grant folded ALWAYS via the Granted arm) and

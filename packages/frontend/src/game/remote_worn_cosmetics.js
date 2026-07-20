@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // REMOTE WORN COSMETICS — the peer half of TR-97's cosmetic resolution. cosmetic_glb.js's resolve_worn_cosmetics
 // already joins a `/v1/characters` doc against the `/v1/encyclopedia` template catalog into `{head,back}` rig
 // slots for the LOCAL player (embed_voxel_player.js); this is the SAME join applied to every REMOTE peer.

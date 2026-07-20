@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Gen produces fresh ArrayBuffer-backed chunk records and transfers every buffer to the main realm.
 
 import { MSG_GEN_CONFIG, MSG_GEN_REQUEST, MSG_GEN_RESULT, MSG_ERROR, decode_message } from '../workers/rpc.js'

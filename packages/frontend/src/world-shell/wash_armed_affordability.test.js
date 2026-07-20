@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // AP-AFFORDABILITY WASH GATE + TRAP DRAFT PAINT:
 //  · "range highlight persists post-cast" — the cast wash must clear (and the idle MP wash return) the moment
 //    the LIVE folded AP can't afford one more cast of the armed spell; wash_armed_spell is the pure verdict.

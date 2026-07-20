@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D141 — CAVE ROOM DEMO HARNESS (?cave=1). 2026-07-04.
 //
 // Boots the engine into an ISOLATED, generated cave dungeon room (no outdoor world streaming) and drops

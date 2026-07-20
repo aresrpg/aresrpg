@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIVE WORLDS registry (BIOMES_EXECUTION_PLAN Phase 0) — the named single-biome trailer worlds the
 // `?biome=` switch selects. Each entry is a full, self-contained WorldGenConfig: a deep clone of the
 // DEFAULT recipe + a `name` + a `biome_pin` PLACEHOLDER MARKER. Phase 0 ships the SELECTION MECHANISM

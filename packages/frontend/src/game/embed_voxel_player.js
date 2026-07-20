@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The LOCAL PLAYER — split from embed_voxel.js at the 600-LoC law. Everything about the player's own body and
 // its control: the engine shoulder camera + input (WASD/arrows, the mouse-or-keys law), the on-chain avatar
 // (+ hair, #20 recolor, senshi fallback), the veteran-title aura, the local nameplate, the TR-97 mount ride,

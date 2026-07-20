@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TEAM READ DEMO (?team=1) — a CLEAN verification surface for the fight team-read features:
 //   • every entity gets a TEAM-COLORED OUTLINE (inverted hull) — ally ice-blue, enemy red;
 //   • every fighter's CELL gets a SQUARED, team-colored marker (entity-anchor: subtle fill + crisp

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Move-side executable twin of the shared geometric-push vector shards.
 #[test_only]
 module aresrpg_fight::geometric_push_tests;

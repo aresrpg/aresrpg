@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // JOB PROGRESSION — the transient JOB level-up congrats card slice + its transition detector. The sibling of
 // player_experience.js's CHARACTER level-up detection, kept as its OWN module (single responsibility, trivially
 // deletable) so the freshly-tuned fight-result loop stays untouched. Truth is the chain: gathering.move /

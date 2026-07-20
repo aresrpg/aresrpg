@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D141 — CAVE ROOM acceptance capture. Boots ?cave=1 (and ?cave=1&board=1) against a DEDICATED vite
 // (ARES_DEMO_ORIGIN, default :5263 — NEVER the main dev :5199) and captures the acceptance surface:
 //   • wide interior, board region, glow clusters, ceiling shafts, stalactites/debris close-ups;

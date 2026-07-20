@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED fixture — the function-expression variant, in a .jsx file ON PURPOSE: proves the semgrep
 // net covers the component files outside the eslint FP layer (fp_law.config.mjs F-1 debt).
 // Expected: 1 arch-foreach-async-dropped-promises finding.

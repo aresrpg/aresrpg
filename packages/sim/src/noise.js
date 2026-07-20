@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Stateless integer position-hash noise (SquirrelNoise5, Eiserloh 'Noise-Based RNG', GDC 2017).
 //
 // DETERMINISM IS LAW: this is a PURE FUNCTION of (x, y, seed) — no PRNG state threaded, no order

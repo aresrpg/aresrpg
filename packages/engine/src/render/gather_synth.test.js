@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GATHER-NODE SPRITE SYNTHESIS — proof the frontend resource-node prop gets a REAL procedural sprite per id
 // (the fix: "procedurally generate real wheat like grass textures, same for herbs + ores"), NOT an item
 // icon. Pure + headless (no three): synth_gather_buffer returns raw RGBA bytes. Asserts every one of the 33 node

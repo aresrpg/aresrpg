@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Transfer only the one-voxel shell mesh_chunk can read. mesh_halo.test.js pins worker/inline bytes.
 
 import { CHUNK_SIZE } from '../config/world_config.js'

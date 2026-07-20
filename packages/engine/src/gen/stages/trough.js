@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GLACIAL TROUGH stage (GLACIAL GENERATION §B.1). Reshapes the PV valley network into a parameterized
 // U-profile: a wide FLAT floor + STEEP walls (ref R2 — the glacier/outwash plain between rock walls),
 // replacing the smooth Catmull bowl our splines produce. PV is the folded-ridge valley field (0 at the

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 
 import { add_pending_buy, merge_pending_buys, reset_pending_buys } from '@aresrpg/inventory'

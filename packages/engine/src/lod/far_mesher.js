@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Far-section SMOOTH-HEIGHTFIELD mesher (§11 NG-LOD, design pivot 2026-07-03) — turns one
 // downsampled Section (section_builder.js) into a CONTINUOUS interpolated terrain surface, replacing
 // the earlier DH box-columns. The verdict on box-columns at distance: distant L3/L4 columns

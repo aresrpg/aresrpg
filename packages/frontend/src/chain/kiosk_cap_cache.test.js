@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // kiosk_cap_cache tests — kill the per-flow-open getOwnedKiosks discovery query with a
 // client-side cache (S-51 owned-object law). Pure injection, ZERO mock.module (house convention — a
 // process-global mock segfaults/order-flickers the suite when shared modules double-mock, per the codebase's

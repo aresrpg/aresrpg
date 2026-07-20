@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The companion P2 in-world HUD overlay (game-world tab) — PURE game visualization: the Play view is the
 // live world plus only the genuine pure-game HUD essentials. The breadth
 // (inventory / character / spells / jobs / quests / market / ...) lives in the companion META-TABS (the

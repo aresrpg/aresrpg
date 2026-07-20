@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // repro_mob_freeze.mjs — REAL-ENGINE reproduction of the "world freezes when a mob enters the frustum"
 // P0. Boots the ACTUAL engine demo (create_engine → full atmosphere/post/shadow/voxel-terrain pipeline)
 // headless on real Metal, injects ONE mob GLB via the engine's OWN loader path (get_glb_loader +

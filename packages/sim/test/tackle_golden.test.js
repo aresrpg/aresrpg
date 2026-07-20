@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TACKLE golden parity — Move↔sim contract over test/vectors/tackle_golden.json (ids twin
 // aresrpg_foundation::spell_formula t_tackle_* + aresrpg_fight::tackle_tests, where the SAME numbers are
 // asserted through the real on-chain act_move/crank doors). Three layers:

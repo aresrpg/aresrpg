@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GAS-COIN PIN — THE ROUND-TRIP PROOF (<1s lane). The commit-latency blocker is the gas-selection
 // round-trip @mysten/sui's `Transaction.build()` fires when gas is unpinned (VERIFIED: Enoki's wallet re-parses
 // `transaction.toJSON()` — which preserves a pre-set gasData WITHOUT resolving — then calls this SAME

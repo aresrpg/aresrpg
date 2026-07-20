@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [MEMORY perf-③ #1] Engine teardown MUST free the terrain renderer and release its window
 // diagnostics hook, or window.__terrain_renderer pins the full fixed-pool renderer (~299 MB of GPU
 // pools + capacity-sized CPU ArrayBuffers) across every scene swap / tier reboot. dispose_terrain is

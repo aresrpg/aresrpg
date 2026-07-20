@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ─────────────────────────────────────────────────────────────────────────────
 //  PER-FIGHT-SESSION GAS-COIN PIN (latency lane 4 — the <1s turn commit, design ruling 2026-07-11)
 // ─────────────────────────────────────────────────────────────────────────────

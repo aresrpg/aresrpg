@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Spellbook — the character-detail SPELLS tab (D30 owner LIST layout, mockups/spellbook/list.png). A tactical-RPG
 // grimoire: a scrollable spell LIST (left) + a per-spell DETAIL panel (right). The detail panel's field order
 // reads: identity header → clickable LEVEL TABS 1..6 (locked levels stay browsable to preview their numbers) →

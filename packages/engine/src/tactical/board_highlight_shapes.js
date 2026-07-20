@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure tactical-highlight shape SSOT. The CPU helpers are exact mirrors of the TSL masks in
 // board_highlight_materials.js, keeping visual geometry testable without a GPU.
 

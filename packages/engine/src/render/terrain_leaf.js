@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D164 terrain APPEARANCE nodes — the cutout-leaf backlight + moisture-driven moss overlay, extracted
 // so terrain_material.js stays under the ≤600-LoC law (same split discipline as terrain_flora.js /
 // terrain_tint.js / registry_nodes.js). Pure TSL node builders consumed ONLY by build_terrain_material;

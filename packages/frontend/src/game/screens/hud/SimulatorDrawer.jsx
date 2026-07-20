@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Build simulator drawer body — a tactical build planner adapted from the aresrpg companion
 // simulator (../../aresrpg/packages/frontend/src/pages/simulator.tsx). The companion simulator was
 // built for the legacy reference game's REAL-TIME combat math (cooldowns, stamina, dps, crit denominators). This game is

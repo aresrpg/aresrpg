@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // scale_proof.mjs — the "scale ruler" screenshot for the ambient-mob retune (regression: mobs read too small).
 // Renders the PLAYER character (senshi_male.glb, normalized to CHARACTER_HEIGHT=1.5 blocks exactly as the
 // engine does) standing beside ambient mobs scaled to their NEW SPAWN_TABLE target_h (blocks) — the player

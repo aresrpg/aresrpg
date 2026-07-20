@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Inventory HUD: staged loadout + usable-item bag. Sale-listed rows are hidden at their owner-items source and
 // remain rejected by the UI, reducer, and fresh Accept preflight if stale state ever reaches an equip path.
 

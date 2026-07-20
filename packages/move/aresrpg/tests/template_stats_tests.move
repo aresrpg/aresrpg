@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Live ItemTemplate stat-range update tests: all 17 min/max slots replace in place, an invalid (expired) AdminCap
 /// is rejected, and a stale Version is rejected. The production door lives in `admin` so authority stays single-homed.
 #[test_only]

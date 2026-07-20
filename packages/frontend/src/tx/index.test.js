@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S-54 — proves THE tx door never signs a would-fail tx (no execute on dry-run failure =
 // no real-fund drain), pins storage + computation ×1.5, refuses over GAS_CEILING_SUI, KEEPS the builder budget for
 // &Random buys while STILL dry-running them (bypass closed), and NEVER retries an executed failure. The gRPC

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // In-world chat (bottom-left, lowered per owner 819). Lean companion restyle of the vendored chat.
 // Owner v2 (0702): channels are READ FILTERS as CHECKBOXES in the HEADER (pick-many-to-view, alongside the
 // "Chat · N online" title) — every checked channel's lines interleave into ONE merged, chronological log

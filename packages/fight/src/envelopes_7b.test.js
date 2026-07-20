@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // §7b IN NODE (M1 / D768: "the presentation BEAT STREAM is a first-class output so §7b conformance runs in
 // node"): the core's paced wave, converted to the SAME BeatTraceRow shape the browser probe emits, evaluated by
 // the SAME machine twin (test/gold/specs_anchor/pacing_envelopes.ts evaluate_trace) — no browser, no renderer.

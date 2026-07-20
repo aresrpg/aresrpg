@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Capsule-vs-voxel collision resolution (ENG-8). PURE MATH — no three.js, no engine coupling: it
 // takes the player as an axis-aligned box (a vertical capsule approximated by its AABB, which is
 // what voxel worlds want — the corners never need the rounded cap and an AABB never tunnels) plus

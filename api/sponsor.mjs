@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Station-only: zkLogin client reserves/signs; the internal gas station signs/submits exactly once.
 import { readFileSync as read_file } from 'node:fs'
 

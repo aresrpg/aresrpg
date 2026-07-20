@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX — the preset TYPE surface (JSDoc typedefs, erased at runtime). Split out of vfx_preset_engine.js so
 // that file stays ≤600 LoC; the engine re-aliases these, so every `import('./vfx_preset_engine.js').Vfx*` keeps working.
 

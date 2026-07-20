@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // i18n PARITY GUARD — the FRONTEND MICRO-BUNDLE strings (navbar legend · auto-follow CTA ·
 // 16:14 dungeon-key deep-link). The 6-locale law (CLAUDE.md): every user-facing string lands in ALL locales;
 // a missing/empty locale would print the raw key (or drop the Trans <link> slot). This pins presence +

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Unit tests for the render policy used inside create_mob_model. The real rabbit-GLB cross-context proof lives
 // in tactical/mob_render_parity.test.js; these synthetic meshes isolate scaling/material edge cases GPU-free.
 //

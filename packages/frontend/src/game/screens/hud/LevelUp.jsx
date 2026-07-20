@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Level-up congrats card (T-U9 "Level Burst", owner-locked) — a transient center celebration that fires
 // ON the active character crossing a level. Mock-to-match the locked design (/tmp/ares-mock/levelup-LOCKED
 // .html): the big glowing level number in a ring + sparks, the class line, the two points-gained tiles, an

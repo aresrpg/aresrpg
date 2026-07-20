@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
 # scripts/codeql/gate.sh — the CodeQL ratchet gate (deep tier of the FP constitution, docs/CODE_LAW.md).
 #
 # Two legs, one baseline:

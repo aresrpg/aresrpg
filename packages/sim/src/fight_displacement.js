@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Canonical PUSH/PULL displacement twin. Direction, blockers, trap stopping, collision math, and recipients
 // mirror the Move helper; PUSH and PULL intentionally use the same blocked-cell collision formula.
 

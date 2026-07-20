@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// SPELL BANDS — the MAGNITUDE LAW (annex §3 / SPEC §17.17 — review finding F1). `spell_effect::is_legal` proves
 /// an effect is STRUCTURALLY executable (known kind/shape/flags/element); this module proves a whole `SpellLevel`
 /// is IN-BAND — the sealed clamps a spell may never exceed. It is the SINGLE home for those bands: `aresrpg_spells`

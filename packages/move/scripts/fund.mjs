@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Generic SUI fund helper — bun-signs from PRIVATE_KEY (env) so it NEVER switches the global active address
 // (never switches the active address) and NEVER writes a key to a file. Usage:
 //   PRIVATE_KEY=<suiprivkey…> NETWORK=testnet bun run fund.mjs <toAddress> <amountSUI>

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PRESENCE — the core: who/what is around me NOW. Ephemera under the freshness law — peer facts
 // arrive as realtime p2p ticks, expire on peer_leave, and NOTHING here feeds claimability (claimability =
 // checkpoint zone + proximity + row liveness, spawns-internal — the seams law). ONE atom behind ONE

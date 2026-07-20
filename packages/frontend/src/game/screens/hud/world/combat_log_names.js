@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure combat-log name resolution, split out of WorldChat.jsx for bun:test coverage (mirrors the
 // compass_math.js co-location pattern — presentation logic a .jsx test can't cheaply import directly).
 

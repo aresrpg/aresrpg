@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* In-game HUD — a React overlay above the imperative Three scene. A pure chrome layer: corner
  * clusters (launchers center-top, players top-right under the minimap, chat bottom-left, vitals +
  * deck along the bottom), a right-side inventory drawer (hidden off-screen until toggled), and the

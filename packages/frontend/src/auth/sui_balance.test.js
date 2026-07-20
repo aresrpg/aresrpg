@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Proves the wallet-balance invalidation primitives (the stale-display fix): the fetch returns
 // fresh MIST and KEEPS last-known on failure (never blanks), and the post-tx trigger fires ONLY after a tx
 // executes (gas moved), never on a pre-sign refusal. get_sdk is injected — no process-global module mock.

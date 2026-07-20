@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED fixture — the laundered store write (L-P4 cross-function form).
 // Three helpers below write the store directly; each is driven from an async context.
 // Expected: x-arch-writer-def 3 · x-arch-async-ref 3 · joined arch-laundered-store-write 3.

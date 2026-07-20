@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Fix 2 — NO DISCARDED TX. A PUBLIC world fight discards the party id (anyone in placement may join), so
 // auto-forming an owned party on that entry is a wasted on-chain create tx. enter_world_fight (the fresh-create
 // ferry, reached from world_spawns.engage) must skip the pre-form when the fight is public and keep forming it

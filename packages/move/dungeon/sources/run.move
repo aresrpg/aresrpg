@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// RUN — the `RunPass`: §9's "the key IS the run object." A NON-TRANSFERABLE bound pass minted when a key is
 /// consumed, carrying the room counter (starts at 1), the activation character, the pre-entry world position
 /// (§17.25), and — while a room fight is live — a `commit` LATCH to that fight. This module owns the TYPE + its

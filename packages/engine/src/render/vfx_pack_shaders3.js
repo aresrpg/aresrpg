@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX — PACK APPEARANCE LAYER III (phase B2, the FINAL exactness lane): the last REAL BinbunVFX_Vol2
 // .gdshader fragments transcribed op-for-op to TSL, extending vfx_pack_shaders.js/2.js past their LoC line. Owner
 // mandate 2026-07-12 ("cut EVERY non-Godot effect"): every generic FBM `spark`/cross-pack `star4` borrow the audit

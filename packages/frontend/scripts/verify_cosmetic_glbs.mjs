@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Deterministic, GPU-free oracle for owner-flagged cosmetic GLB defects. Run BEFORE the fix
 // to reproduce the failures (RED) and AFTER to prove them closed (GREEN). It asserts on the GLB bytes — a
 // noise-free signal stronger than a WebGPU render — and is the RED-FIRST regression evidence.

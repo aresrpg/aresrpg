@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // REJOIN-SPAWN regression (gate5 evidence): a character REJOINING a world while a
 // ZOMBIE world fight (status PLACEMENT, placement window expired long ago — left by a dead session) is still
 // on-chain got its whole boot HIJACKED: the one-shot boot resume (world_spawns → resume_world_fight) adopted

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-18 — WORLD BORDER acceptance (headed WebGPU, ISOLATED port 5281 / border.html — NEVER :5199).
 //
 // Proves the mana-barrier acceptance surface against the LIVE render + a 30 s video @ 1440·dsf2:

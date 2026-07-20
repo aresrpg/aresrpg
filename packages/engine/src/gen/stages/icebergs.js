@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ICEBERG PLACER stage (FIVE-WORLDS §P3 shared stage 4 — Everest oceans). Buoyant ICE masses floating in
 // below-sea columns — the sky-island region-gate technique INVERTED and anchored at sea level: the world
 // XZ plane is tiled into `region_size` cells; a hashed fraction (`region_rate`) are ICEBERG regions, each

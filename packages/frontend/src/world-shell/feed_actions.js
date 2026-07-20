@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PET FEED action — one signed Move call burns one food unit, advances one loose/equipped pet's daily count,
 // and derives its item stats from the authenticated template. Submission stays on the execute-once run_tx seam.
 // NO toast here — the caller (PetFeedModal) drives the toast via use_toast.promise (the friends/kolizeum seam

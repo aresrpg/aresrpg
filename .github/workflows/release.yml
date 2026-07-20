@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
 # Release bookkeeping — every master push tags vX.Y.Z from package.json and publishes the GitHub
 # Release. ONE SOURCE OF TRUTH: Vercel deploys off the same master push
 # via git integration — the tag is bookkeeping + the changelog anchor, NEVER a deploy trigger.
@@ -8,6 +10,7 @@ name: release
 on:
   push:
     branches: [master]
+  workflow_dispatch: {} # promote.yml dispatches this after its ff-push (GITHUB_TOKEN pushes don't self-trigger)
 permissions:
   contents: write
 jobs:

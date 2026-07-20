@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Chunk → quad buffer (§3.5). Orchestrates binary_greedy.js (face culling + rectangle merge)
 // per material class, computes per-corner vertex AO from neighbor occupancy, and encodes the
 // result via the frozen quad_buffer.js wire format. Three passes into the SAME buffer:

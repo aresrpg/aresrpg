@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Approved shop content correction. Runtime truth comes from the /v1 read
 // layer and the corrected seed; sale ids are never embedded here (the PINNED
 // reauthor old-template ids are incident facts, not runtime state). DRY_RUN is

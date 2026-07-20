@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The ONE tooltip-positioning derivation (extracted from Tooltip.jsx so the same math anchors the house Tooltip
 // AND the fight spell-bar readout — design ruling 2026-07-20: a tooltip of the spell itself, not on the right). Pure: measured
 // rects in → viewport-clamped { left, top } out. Preferred side is `placement`; it edge-FLIPS to the other side

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Post-fight receipt → roster patch. ResultOpened carries the XP delta; the same settlement receipt's correlated
 // ResultMinted carries exact final HP. Apply both before any later roster enrichment read. Pure + immutable.
 

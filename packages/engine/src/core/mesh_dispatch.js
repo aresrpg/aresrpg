@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Off-thread near-mesh dispatcher (§3.2 MESH POOL). The ring's mesh stage, when a mesh worker pool is
 // available: instead of running mesh_chunk() on the render thread (a dense chunk = 76-510 ms of greedy
 // merge + AO + sprites = a frame stall), it serializes each ready chunk + its neighbour rim (mesh_halo.js)

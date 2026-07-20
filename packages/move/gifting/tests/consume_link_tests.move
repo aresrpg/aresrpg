@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// CONSUME-LINK tests: the game-side `character_link::consume_units` primitive the `aresrpg::consume` lane
 /// calls — the burn-N-of-a-stack door. It composes ONLY public items doors + this package's custodied NS_BURN +
 /// NS_MINT caps: extract the whole stack, BURN it, and (when it held more than `units`) RE-MINT the remainder and

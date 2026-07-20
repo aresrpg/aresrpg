@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // world_gen_config gate (lane NG1-E). Covers the three exit criteria:
 //   1. VALIDATION accept/reject — the default passes; each structural/range violation is caught.
 //   2. DEFAULT COMPLETENESS — every inventoried live constant is present in DEFAULT_WORLD_GEN_CONFIG

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FAST-TRAVEL TARGET RESOLUTION (plan §3.2) — the edge that turns a target character id into the `resolved`
 // facts the reducer folds. PURE core (`resolve_route`, unit-tested) + a thin async wrapper that does the /v1
 // reads (the SAME get_characters + encyclopedia the friends/world-switcher surfaces read) and the presence live

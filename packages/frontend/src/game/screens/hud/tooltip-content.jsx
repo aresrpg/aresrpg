@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Rich tooltip CONTENT renderers fed into the <Tooltip content={...}> primitive. Pure presentational
 // components, no state, no I/O. Two kinds left the HUD needs:
 //   - <StatTip>  a stat explains itself (label + plain-language effect),

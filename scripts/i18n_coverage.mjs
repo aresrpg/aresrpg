@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // i18n coverage gate: extract every static t('a.b.c') / i18nKey="a.b.c" from frontend/src, PLUS every
 // t(cond ? 'a.b' : 'c.d') ternary (both branches are static — fully resolvable), assert each resolves in
 // ALL 6 locales. Also report plural-normalized, symmetric en-vs-others leaf-key parity, and

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Characters right-drawer — the in-world character switcher + creator that REPLACES the old select
 // carousel: spawn in-game directly, switch/create from this drawer; the select screen is
 // gone. Lists every on-chain character (s.sui.characters, read chain-direct) with class portrait,

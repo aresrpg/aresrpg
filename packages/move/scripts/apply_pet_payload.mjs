@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Apply the pet-power admin payload derived directly from the current seed receipt. One PTB per batch, in order
 // (template stats first, then foods), on ceremony_lib's primitives: dryRun-derived ceiling-guarded budgets +
 // the no-retry SUCCESS runner (an executed failure has a digest and is NEVER auto-retried — it THROWS, which

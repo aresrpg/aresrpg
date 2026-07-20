@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [2026-07-05 FROXEL REBUILD — PLAN A] fog_height pure/CPU tests: texel↔world mapping, the edge fade
 // contract (fades to MEAN at the border — the cloud-edge halo lesson), re-bake hysteresis, and the
 // amortized re-bake state machine (scratch fill → atomic swap → crossfade restart). GPU-free.

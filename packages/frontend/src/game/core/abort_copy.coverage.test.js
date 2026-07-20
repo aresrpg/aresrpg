@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DECODER-COVERAGE GATE (seat order 07-19 — recurrence→mechanism from the pet-equip class): a MoveAbort from an
 // abort-capable Move module that the ONE decoder table (abort_copy.js TABLE) doesn't map renders the raw generic
 // `tx_failed` line — exactly what item_stats::EInvalidScale did on a pet-equip. This gate ENUMERATES every

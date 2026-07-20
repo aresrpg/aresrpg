@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // §7 turn-seed crit-glow predicate — pure-module tests (no component mount, no store mocks; deck-crit-glow.js
 // imports only @aresrpg/sim). The fight tuple below is the SAME golden vector pinned by the sim's parity suite
 // (packages/sim/test/turn_seed.test.js), extracted from the REAL Move packages via a `sui move test` debug

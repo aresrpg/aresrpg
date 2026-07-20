@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GATHER-NODE SPRITE SYNTHESIS — the frontend resource-node prop's procedural art, built from the SAME
 // grass-idiom synthesis the world's flora uses. A node is NOT an item-icon card (the dead B8 approach that was
 // rejected: "that's the wheat ITEM icon — procedurally generate real wheat like you did for grass textures");

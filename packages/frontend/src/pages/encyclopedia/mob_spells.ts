@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // MOB SPELL display decode (pure data mapping, no JSX). The authored corpus kit (world_corpus.ts
 // CorpusMobSpell — the exact rows seed_full_corpus.mjs PHASE 5 minted into the MobTemplate's
 // SpellLevels) becomes the SAME display shape the class-spell surfaces render: string kinds +

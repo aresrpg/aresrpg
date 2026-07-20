@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LATENCY LANE 2 — the per-fight-session Fight shared-ref cache: hit/miss, one owner-read then cache-hit
 // (zero further reads), graceful null on read failure / non-shared object (⇒ id-string fallback, never a
 // fabricated ref), and boundary clear. No module mocking — `ensure_fight_shared_ref` takes the sdk seam as a

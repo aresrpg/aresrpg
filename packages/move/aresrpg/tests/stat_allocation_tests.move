@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// STAT-ALLOCATION spend-door tests (§3 rider): `stat_allocation::raise_stat` turns earned STAT points (the half
 /// of `points_for_level_range` that was DISCARDED before this rider) into per-stat allocations, and the allocated
 /// VITALITY flows into the HP formula while the full block flows into `equipment::folded_stats` (the combat

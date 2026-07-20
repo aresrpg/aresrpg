@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D211 ("I should have been teleported in the cave directly, no questions asked") — the CAVE
 // TRANSITION. The dungeon plane always published off dungeon_store.in_session (optimistic, pre-tx), but
 // its only consumer was roam.js — DEAD since D139: join/create/resume all set state into the void and the

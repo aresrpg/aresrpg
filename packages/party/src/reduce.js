@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE ONE-PIPELINE PARTY REDUCER (M1 template — CLIENT-INDEPENDENCE law, project CLAUDE.md Principle 6 +
 // CLIENT_DESIGN_AUDIT row #4). Pure: no react/zustand/sdk/fetch/Date.now — `now` is injected, ambient identity
 // (selected character, wallet address) arrives IN the input, so the SAME reducer drives the webapp store AND a

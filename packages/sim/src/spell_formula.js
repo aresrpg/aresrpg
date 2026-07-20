@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SPELL FORMULA (drain slice) — the JS twin of aresrpg_foundation::spell_formula's AP/MP-removal contest, so a
 // client previews a drain's agility-contested dodge byte-for-byte with the chain. The legacy
 // koshi damage/heal math lives in spell_calculator.js; this file mirrors ONLY the drain primitive the on-chain

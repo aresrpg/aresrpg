@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Version + admin tests — the upgrade/enable gate and the SUPER/temp AdminCap machine. Covers the
 /// enabled-switch toggle, version bump (stale → package version), super-vs-temp cap distinction, temp-cap
 /// minting/expiry/deletion, and the super-cap-cannot-be-deleted guard. Runs RAW (no test_harness stand_up) —

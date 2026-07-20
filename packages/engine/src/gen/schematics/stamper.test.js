@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Gate for the deterministic stamper (§4.6 phase A). Proves the three properties phase B depends on:
 // determinism (same seed ⇒ byte-identical, distinct chunks ⇒ independent), cross-border clip
 // correctness (union of every touched chunk's clipped output == the unclipped whole, and the slices

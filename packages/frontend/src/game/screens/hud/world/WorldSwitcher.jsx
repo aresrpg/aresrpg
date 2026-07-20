@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD PANEL (S-67 → design redesign 2026-07-17: remove that picker and replace it with a simple "you are in
 // <world>" and a button "travel to another world" → design ruling 2026-07-18: that was too big and polluting). The
 // sidebar surface is ONE compact row in the house tiny-chrome idiom — globe icon + the current world's

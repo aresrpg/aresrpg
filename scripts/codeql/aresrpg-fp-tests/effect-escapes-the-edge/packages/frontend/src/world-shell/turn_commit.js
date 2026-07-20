@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // A generic helper OUTSIDE fight/ — pulled into fold territory the moment the fold calls it.
 // RED D — nondeterminism on a path the reducer folds over (interprocedural, cross-file).
 export const decide = (s) => Date.now() > s.deadline

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RELEASE_PREPARE TEST — proves the release manifest the admin RELEASE page loads is a faithful serialization
 // of the real publish ceremony (the "manifest is the ceremony serialized for the browser" claim), so the page
 // can never silently advertise a step the ceremony doesn't actually run:

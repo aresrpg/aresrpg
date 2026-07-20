@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIRST-LOAD boot trace probe (Agent Standard #1 — instrument before you fix). Behind `?boot_trace=1`
 // (default off, shippable): captures the first ~15 s of engine boot as compact JSON console lines +
 // a single SUMMARY blob, and stashes the raw arrays on `window.__boot_trace` so a headed capture rig

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GATHERABLE base BLOCKS (ENGINE_AAA_PLAN §5.2) — the in-world voxel nodes for the 33 BASE gatherables
 // (11 wheats · 11 ores · 11 herbs). All shape:'cross' foliage, 1:1 by NAME with the base recipes in
 // texture_recipes_gather.js (the baker auto-wires block.id → recipe base layer via the default `blocks:

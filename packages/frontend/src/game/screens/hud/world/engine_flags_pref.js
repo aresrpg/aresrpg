@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The KEEPER set of engine dev-URL flags graduated into real settings on the settings page. Pure
 // localStorage + URL-precedence module — the quality_pref.js
 // idiom: imports NOTHING, so embed_voxel.js can read the boot-time values without pulling in the heavier

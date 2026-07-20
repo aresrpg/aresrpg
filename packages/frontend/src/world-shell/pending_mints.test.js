@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // pending_mints.js — the receipt-driven mint+burn queue, exercised through PLAIN INJECTED ARGS (the module is a
 // deliberate leaf — the chain read / mint composer / /v1 fetch / toast all arrive as deps). ZERO `mock.module`
 // (process-global collision law). Proves the stranded-loot recovery contract:

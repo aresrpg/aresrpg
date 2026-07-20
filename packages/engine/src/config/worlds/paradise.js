@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIVE WORLDS · PARADISE BEACH (BIOMES_EXECUTION_PLAN §P3.5) — the white-sand / turquoise-lagoon world.
 //
 // Visual north star ("realistic-but-fantastic", Maldives / Seychelles postcard): a long, wide

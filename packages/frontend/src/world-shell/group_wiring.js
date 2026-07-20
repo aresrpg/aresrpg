@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GROUP LOOP production binding (MULTICHAR lane) — arms the DI wiring core (group_wiring_core.js) with the
 // real edges: the party/roster feeders, the throttled pose feed, the fight-view watcher, and the executors
 // (self-pay `join_world_action` per alt, the per-member world-fight join, the fight store's ctx seat door,

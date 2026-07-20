@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The ring owns eviction; the store is a bounded, insertion-ordered resident map.
 
 import { test, expect, describe } from 'bun:test'

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Immersive shoulder camera rig (ENG-8). A hand-rolled over-the-shoulder third-person orbit — NO
 // camera-controls dependency (house law: port the technique, never import the lib). It reproduces the
 // FEEL of the shipped dapp camera (packages/frontend player-camera.js): a spring-damped follow of the

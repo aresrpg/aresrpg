@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Far-section VOXEL mesher (ENG-21 D206-C — the LOD read as ugly and undetailed even at close range;
 // target: a voxel look EVERYWHERE). Turns one downsampled Section (section_builder.js) into a BLOCKY,
 // hard-stepped terrain surface — the antidote to the smooth-heightfield "melted sheet" (far_mesher.js's

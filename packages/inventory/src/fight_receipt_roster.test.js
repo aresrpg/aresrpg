@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, test } from 'bun:test'
 
 import { apply_fight_receipt_to_roster } from './fight_receipt_roster.js'

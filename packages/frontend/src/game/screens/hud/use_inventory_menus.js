@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Bag right-click menus (pet / crush / lootbox) + the equipped-slot context menu + the box-open reveal
 // overlay — grouped state and handlers extracted from Inventory.jsx (mechanical file-size split, the
 // 600-LoC cap; behavior byte-identical). `t`/`slugs` and the shared retry-guard rerender trigger are

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // inbox.test.ts — the ONE-PIPELINE reducer (M2 twin of the M1 shop template). Pure reducer tests (no React, no
 // RPC, no zustand store) proving the three doctrine reds for CLIENT_DESIGN_AUDIT row #5: a stale 20s poll must
 // never resurrect a just-claimed / just-recalled gift.

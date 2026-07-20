@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Lens-water — pure-math tests for the decay envelope, the FILM drain timeline, and the round-7 BURST
 // LIFECYCLE over the chaotic bead field (the CPU twins the GPU shader mirrors term-for-term; see
 // lens_water_field.js). The round-8 FLUID-LAW geometry suite (no straight lines, no clean shapes) lives in

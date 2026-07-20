@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Item-core tests: the lock-pledge constitution (mint → lock, pledge id-match), the `item_type` snapshot that
 /// backs Display, the template getters, and the marketplace policy seam. No caps, no supply — those live in the
 /// `admin` and `shop` tests.

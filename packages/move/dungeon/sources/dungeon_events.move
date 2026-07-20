@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// EVENTS — the single home for dungeon run lifecycle events (§9 observability — the RPC indexer + the client
 /// feed). One module so the indexer watches one file for the run contract. This module owns every edge of the
 /// RUN's own timeline: activation (a key became a run), NEXT-FIGHT/join (the pass entered a room fight),

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // @aresrpg/fight harness — shared HEADLESS fixtures + drivers for the acceptance pack (test/**).
 // Plain chain-shaped objects driven through the ONE door `input(msg, now)`: no DOM, no chain, explicit
 // clocks. Anything that speaks this protocol can play the game — the CLI playthrough test is the proof.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // VIVID-WORLD flora sprite RECIPES (2026-07-07 — target: way more sprites for a vivid world, covering
 // grass, bush, corals, branches, and similar clutter). The new clutter-sprite roster, authored as PROCEDURAL
 // recipes (the house style — per-world palette tint rides for free on the ones registered in a

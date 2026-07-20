@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-18 — mana-barrier GEOMETRY unit tests (the pure perimeter-path + wall-extrusion contract). The
 // TSL material + sprite banners are GPU-verified by bench/eng18_border.spec.js; here we prove the
 // geometry the shader rides on: a closed rounded-rect ring, arc-length continuity, correct wall topology.

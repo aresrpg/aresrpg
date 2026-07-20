@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-20 backend-selection unit tests. pick_renderer_backend is the PURE gate that forks the engine
 // between the full WebGPU stack and the minimal WebGL heightmap fallback. It reads only an injected
 // navigator.gpu presence bit + a force flag, so it tests with zero GPU.

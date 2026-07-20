@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// WORLD tests: template creation defaults, setter clamping (coercion not rejection), the well-formed-range
 /// aborts, and the OVERFLOW-PROOF zone coordinate math at the interesting edges — zone 0, the max in-bounds edge,
 /// out-of-bounds abort, and the default 500k×500k probe (§17.10 "no coordinate overflow, ever").

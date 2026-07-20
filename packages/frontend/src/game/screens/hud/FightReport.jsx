@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // End-of-fight summary card (canon: dark dramatic modal — spec_fightend_cards.md). ONE shared shell for
 // both outcomes: FightResult.jsx (verdict="Victory", spoils present) and FightSummary.jsx (verdict="Defeat",
 // spoils=null). Near-black card + vignette + grain over a heavily-dimmed scrim; restrained accent (gold on a

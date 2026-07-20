@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure procedural-texture NOISE + math helpers for the block-texture baker (§3.6), extracted VERBATIM
 // from texture_baker.js (2026-07-05, ≤600-LoC law split — the baker had accreted D159 realism + D164
 // leaf ops and crossed the ceiling). No behavior change: byte-identical integer FNV/splitmix hashing,

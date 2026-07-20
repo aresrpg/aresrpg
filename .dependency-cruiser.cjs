@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // .dependency-cruiser.cjs — the IMPORT-GRAPH constitution (docs/CODE_LAW.md "Arch gates").
 // Run via scripts/depcruise-gate.sh (ratchet: .dependency-cruiser-known-violations.json holds the
 // census-day debt via --ignore-known; anything NEW is red). Scope: packages/frontend/src.

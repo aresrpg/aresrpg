@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// CRAFTING — admin-authored RECIPES + the single-transaction craft (§6/§10/§12;
 /// craft is NOT deterministic — it rolls a reference-formula SUCCESS CHANCE off the
 /// crafter's job level). A recipe is EXACT-INGREDIENT: a fixed list of `(input template, quantity)` folds toward a

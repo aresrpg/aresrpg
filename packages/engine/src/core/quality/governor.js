@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Runtime quality governor (§5.2 step 3) — the DYNAMIC-RESOLUTION policy that holds ≥120fps by
 // trimming the swapchain pixel scale under fill pressure and restoring it when the GPU has room.
 // This is the M3 deliverable the old stub reserved the seam for (tiers.js:26 — render_scale_max

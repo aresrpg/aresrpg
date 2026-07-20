@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LAST OVERWORLD POSITION — refresh continuity over the on-chain checkpoint. Free walking is local, so the
 // checkpoint can legitimately trail the avatar between position-proving transactions. This per-character
 // localStorage cache supplies only the fine-grained "session restore" candidate to resolve_boot_spawn; that

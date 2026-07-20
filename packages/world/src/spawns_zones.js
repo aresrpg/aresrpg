@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SPAWNS + ZONES — the D770a W2 core: where am I PROVEN to be and what exists/is claimable there. ONE atom
 // behind ONE `input(msg, now)` door; every fact advances on the same clock — tx RECEIPTS (a search advances
 // the checkpoint AND discovers the zone AND seeds rows; a claim advances the checkpoint AND removes the

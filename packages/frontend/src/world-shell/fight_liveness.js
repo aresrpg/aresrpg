@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { decode_fight } from '@aresrpg/sdk/fight'
 
 import { is_gone_error, read_object } from './run_reads.js'

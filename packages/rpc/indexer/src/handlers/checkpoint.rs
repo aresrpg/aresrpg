@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 //! Checkpoint ingestion handler — the read spine.
 //!
 //! Records the latest ingested checkpoint (sequence, epoch, timestamp) into Redis

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DEPTH-FEEL PROOF (the parallax fix — ambient particles read as flat screen-space stickers instead of
 // occupying 3D space). The ambient field's positionNode was CAMERA-RELATIVE (a fract wrap inside a box re-centred on the
 // camera every frame) ⇒ every mote held a CONSTANT offset from the camera = a HUD sticker. render/particles.js

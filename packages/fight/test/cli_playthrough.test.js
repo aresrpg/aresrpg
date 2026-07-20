@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE CLI IMAGE PROOF (acceptance-pack row 7): an ENTIRE fight played through a
 // ~20-line pseudo-CLI loop — read the beat stream → print beat lines → answer with inputs. Nothing in the
 // loop knows the game beyond the door protocol (`input(msg, now)`) and the projections: swap `print` for

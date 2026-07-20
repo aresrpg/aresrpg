@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RPC read-API view contract (SPEC §14) — the TypeScript mirror of packages/rpc/api/views.js.
 //
 // This is the frontend's single home for the `/v1/*` response shapes. It is a HAND-MIRRORED contract

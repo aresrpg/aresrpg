@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LEG 0a — CAST AUTO-RETARGET ON INVALIDATION (the "cast not committed because target no longer
 // valid"). A drafted cast whose target fighter moved off the drafted cell is RECOMPOSED against the target's CURRENT
 // committed cell when the spell still legally reaches it (reusing the draft's OWN range/LoS footprint — one home);

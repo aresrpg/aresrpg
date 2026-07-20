@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24">
     <path

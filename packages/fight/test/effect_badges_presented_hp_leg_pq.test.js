@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LEG P — presented HP paces with the beat: the turn card only updates once the vfx ends. engine_view
 // exposes `presented_health` = the beat-paced presented fold while a wave drains, the settled committed value when
 // nothing presents. LEG Q — every active fighter status (was invisibility-only, kind 27) rides engine_view.effects

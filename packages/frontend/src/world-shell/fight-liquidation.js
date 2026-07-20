@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // board #49 (FIGHT — LIQUIDATION clause) on the S-46 ENGINE: the post-deadline janitors are PUBLIC
 // and the app EMBODIES them — EVERY client watching a fight auto-fires the permissionless door the moment it
 // observes an expired on-chain deadline, so a fight can never wedge on an away player:

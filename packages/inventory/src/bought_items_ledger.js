@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Optimistic BOUGHT-ITEM injection ledger — the ADDITION twin of consumable_ledger's mask_pending_items.
 // PURE, dependency-free (unit-testable); the tx/store wiring lives in store_patch.js + shop.tsx.
 //

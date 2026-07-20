@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // React ↔ engine binding. The engine (src/core/game.js) is the single source of state; React
 // subscribes to its STATE_UPDATED emitter via useSyncExternalStore and renders. React NEVER
 // mutates state directly — it dispatches actions / sends packets through the context.

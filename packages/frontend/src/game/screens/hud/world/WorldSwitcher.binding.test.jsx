@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // REGRESSION: the panel claimed "HERE in First Shore" for the FIRST roster
 // character while the SELECTED character was another one (in NO world → the app spectates). Mechanism:
 // use_rpc_view KEEPS its last-landed data across a deps change (selection switch) and on failed polls,

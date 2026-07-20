@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Apply the mob-distance payload derived from the current seed receipt. One PTB per world; dry-run is the
 // default. LIVE uses the ceremony runner's dryRun×1.5 budget and never retries an executed digest.
 //

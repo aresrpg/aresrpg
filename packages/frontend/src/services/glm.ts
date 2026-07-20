@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ---------------------------------------------------------------------------
 //  GLM-5.1 (Zhipu AI / Z.ai) — OpenAI-compatible text generation
 // ---------------------------------------------------------------------------

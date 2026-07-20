@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // F1 — CAST VFX: the FLAGSHIP 3D spell-effect player for a fight cast (windup at the caster → projectile in
 // flight → impact burst at the target → lingering remnant). Every visible stage is a @aresrpg/engine3/vfx
 // GPU-particle PRESET (vfx_map.js names them via `preset_3d`); the sprite sheets that used to play these attacks

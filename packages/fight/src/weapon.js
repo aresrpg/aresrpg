@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // fight/weapon.js — the equipped-WEAPON basic-attack sentinel (S-25) and its pre-read fallbacks, moved into
 // the fight core from core/modules/fight.js (2026-07-17): the sentinel is fight-session vocabulary (it arms
 // through the SAME armed_spell_id machinery every spell uses), and living here lets leaf consumers

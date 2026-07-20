@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The mob look-up catalog — ONE published Walrus blob (mob_catalog.json), fetched at boot like every other
 // asset. It is the merged projection of the two heritage tables (mob_models: catalog-key/variant → {appearance};
 // hytale_appearances: appearance → extracted-GLB basename), COLLAPSED to one hop at PUBLISH time (the seed

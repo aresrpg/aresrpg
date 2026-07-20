@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG2-A analytic sky KEYSTONE (playbook §3, TL;DR #1) — ONE function of (view·up, view·sun)
 // that clouds, fog color, and water sky-miss ALL sample. Zero physical scattering: a 3-color
 // vertical mix + a hand-fit rational sun-glare halo + a dusk warmth ramp, parameterized by a

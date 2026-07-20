@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Spellbook (GRIMOIRE) data derivations — NO JSX. The single home for the character-detail SPELLS tab's
 // list + per-level detail + upgrade-state logic. The grimoire renders EXACTLY the spells DEPLOYED on-chain:
 // its rows/levels come from the fight-spells.js projection over the authored corpus + seed receipt, each row

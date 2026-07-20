@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Canonical ordinary movement path for participants and mobs.
 ///
 /// The public fight MOVE door is destination-only, so the engine reconstructs the same deterministic shortest

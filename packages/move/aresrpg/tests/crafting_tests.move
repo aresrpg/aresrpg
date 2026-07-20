@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Crafting tests: the ported craft tx — consume the crafter's kiosk-locked inputs, ROLL the success chance off the
 /// crafter's job level, mint the output ON SUCCESS (locked), and credit the craft job XP either way. Adversarial-first:
 /// a short / missing / wrong / over-supplied ingredient aborts in `craft_consume` BEFORE the roll (reverting the burns

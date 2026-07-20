@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* Companion app mobile layout. `.app-shell--mobile` comes only from mobile_layout.js; desktop has no overrides. */
 
 .app-page-tabs--compact::-webkit-scrollbar,

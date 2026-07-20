@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Progression math tests: level_from_xp edges (1, threshold-exact, 199↔200, clamp), the 5-stat/1-spell grant
 /// per level, xp accrual with multiplier + cap-discard (and the frozen-config refusal), and the ANNEX §4c
 /// max-HP formula off the GameConfig class rows.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure-function tests for the item characteristics join (item_catalog.ts) — pins a rage-bug case
 // ("Koa Slime Codex" rendering another item's stat lines) and the join-key laws that fix it:
 //   1. EXACT OWN STATS — a pinned item's rendered stat lines are its OWN authored ranges, nothing else's.

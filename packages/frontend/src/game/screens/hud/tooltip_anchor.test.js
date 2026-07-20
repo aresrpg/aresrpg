@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TOOLTIP ANCHOR derivation (fixes the hover card sitting to the right instead of anchoring like a tooltip of
 // the spell itself). The spell-bar hover readout anchors ABOVE its slot via this pure derivation — the SAME
 // math the house Tooltip primitive uses (ONE positioning home): slot rect in → viewport-clamped {left, top} out,

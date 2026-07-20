@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-18 — WORLD BORDER demo harness (border.html). Boots the engine in the FIXED WORLD (a 300 m zone),
 // which AUTO-ARMS the mana barrier from its zone bounds on boot; the demo just sets the banner text and
 // drives a fly/walk camera. The engine owns the wall + the soft-clamp (set_camera_position funnels through

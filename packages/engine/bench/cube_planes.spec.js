@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GATE ZERO (§7) — the pixel-exact face-plane test that would have caught the "+1 positive-face
 // plane" bug on day one. A single known SOLID CUBE is injected into an otherwise EMPTY stage
 // (?synthetic_chunks=0 → sky + lights, no terrain) and rendered through the REAL pipeline: the real

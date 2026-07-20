@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Generic module-worker pool over the rpc.js protocol (§3.2). Owns spawning, job-queue
 // backpressure, and result correlation. Gen/mesh worker *entry* scripts (gen_worker.js,
 // mesh_worker.js) are owned by WS2/WS3 — this file only knows how to talk rpc.js to whatever

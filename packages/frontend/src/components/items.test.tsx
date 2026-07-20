@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // items.test.tsx — ItemImage's HOST-FREE guard + HD-detail request, proven via react-dom/server (no jsdom,
 // mirroring item_detail_view.test.tsx). The external asset CDN host is DELETED, and a
 // stale on-chain Display `image_url` still pointing at ANY external host must be dropped to the origin-relative

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // P0 STORAGE-BINDING GATE (QA F2 / B2) — the HIGH-tier tab-crash fix, proven on the real Metal GPU.
 //
 // ROOT CAUSE: core/renderer.js requested only maxTextureArrayLayers at WebGPU device creation, so the

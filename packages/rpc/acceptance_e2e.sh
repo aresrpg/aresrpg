@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
 # §14 ACCEPTANCE E2E — proves a FRESH MACHINE can stand the whole read stack:
 # from a clean checkout, `docker compose` brings up redis+indexer+api, the indexer backfills from
 # FIRST_CHECKPOINT, and EVERY live /v1 view serves a real, correctly-shaped response over that

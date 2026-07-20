@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // fight/board_state.js — the PURE chain→client decoder for a fight board: a decoded `aresrpg_fight::fight::Fight`
 // (+ run context) → the rich board view every consumer reads (escrow rows, mobs, board geometry, turn machine).
 // MOVED VERBATIM from the deleted fight_bridge.js `fight_view` half (S2 flip) — the renderer contract is

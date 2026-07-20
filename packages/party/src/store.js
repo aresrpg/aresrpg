@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // @aresrpg/party — the headless party client core: ONE vanilla-store atom per instance behind ONE
 // write door. The reducer (reduce.js / group_loop.js) owns every domain transition; this factory
 // binds it to a zustand/vanilla atom whose `input` action IS the door (CODE_LAW L-P4 — async

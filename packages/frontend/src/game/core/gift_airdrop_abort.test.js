@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // gift + airdrop lane — proves (1) the abort decoder maps every gift/airdrop Move code to real player copy (never
 // the generic "failed" line, never "[object Object]"), and (2) the i18n law: all SIX locales carry an IDENTICAL
 // set of the new gift.* / airdrop.* / nav.airdrop keys (no key added to one locale and forgotten in another).

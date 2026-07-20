@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DETERMINISTIC WORLD-BOARD SEAT — the fix for a refresh that used to teleport the board 20 cells down.
 // The board's X/Z anchor is chain-derived (deterministic); its Y is terrain-derived, so it MUST be
 // sampled from the FULLY-STREAMED footprint. Worldgen is seed-deterministic → once every footprint chunk is

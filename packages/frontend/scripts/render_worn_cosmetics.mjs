@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Batch-render the shop's wearable cosmetics on the production avatar. The render scene accepts explicit
 // camera query parameters, so every mount slot is framed by shop_render_framing.mjs instead of sharing the
 // full-body default. Run this before rebuilding and uploading the shop_render quilt.

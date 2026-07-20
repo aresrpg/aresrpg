@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// CAST — the 1.29 effect resolver (harvested from `dungeon_cast`, rewired off the dead `spell_registry` onto
 /// `aresrpg::spell_template` + the frozen `aresrpg_foundation` algebra). Resolves a caster's spell level
 /// → `spell_target::can_cast_at` (geometry/occupancy/LOS) → per-effect zone (`combat_grid::zone_cells`) →

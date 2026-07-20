@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // MOB-XP REAUTHOR — the SHARED diff/read truth, fixture-proven (no chain). Owner re-aim 2026-07-20: this lane is
 // the FALLBACK; the primary xp path is an additive `mob_template::set_xp_reward` setter (parallel lane). BOTH
 // paths consume `diff_mob_xp` — so this pure core is the one place the changed-set is defined, and its buckets

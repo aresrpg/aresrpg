@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ── first-fetch resilience, the HUD home ("pictures missing unless I refresh") ─────────
 // A cold Walrus edge reconstructs each quilt patch in ~2-3s (curl-measured) and can fail under a
 // concurrent burst. Any component whose onError PINS its fallback treats that transient first error as

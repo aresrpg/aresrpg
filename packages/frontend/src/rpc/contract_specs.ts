@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // /v1 VIEW CONTRACT SPECS (D770c) — the RUNTIME twin of views.ts, pinned per-field.
 //
 // Each table below is a `Spec<T>` over its views.ts interface: `required` must list EXACTLY the

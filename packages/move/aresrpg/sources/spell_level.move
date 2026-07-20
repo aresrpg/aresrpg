@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// LEARNED-SPELL LEVELS (S-12d) — the character-holder's spend door that turns earned spell points into per-spell levels.
 /// SPEC §3 ("each level from 2 grants ... 1 spell point") + §7 ("spell points level it up; spell points bind to
 /// the spell on the character"). This is the SINGLE game→spells contact in the package: the authoritative

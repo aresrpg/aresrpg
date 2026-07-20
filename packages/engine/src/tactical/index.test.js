@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [p0-fight-init] FACADE REGRESSION — the handle's event bus + picking survive teardown→rebuild.
 //
 // Root of the first-transition-fight dead-input family: the dapp adapter subscribes board.on('cell_click'…)

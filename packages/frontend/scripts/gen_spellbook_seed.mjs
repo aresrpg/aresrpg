@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // gen_spellbook_seed.mjs — GENERATE the grimoire's display SSOT from the on-chain spell seed.
 //
 // WHY: the SPELLS-tab grimoire must render the EXACT spells the chain was seeded with (D53) — never a

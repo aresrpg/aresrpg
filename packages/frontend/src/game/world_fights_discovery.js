@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD FIGHTS DISCOVERY — the "See fights in the area" proximity loop: players within 50 blocks of a fight
 // see a "see fights in the area" prompt (the same idiom as "press to gather"), opening a panel with the
 // current fights in range. A SIBLING of world_spawns.js: same

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import merge_import from 'fast-merge-async-iterators'
 
 // fast-merge-async-iterators is CJS (`exports.default = fn`, `__esModule:true`). Under Bun the

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The PLANE "Leave dungeon" HUD button (unconditional) — the SIBLING of the mid-fight
 // ABANDON. During an ACTIVE board fight the FightControls ABANDON (bottom-right) is the exit; on the plane
 // (OPEN waiting-room / ROOM_CLEARED between rooms) that control isn't mounted, so the ONLY "exit" was the

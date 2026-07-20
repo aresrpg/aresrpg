@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Hydrology (§4.4 NG1-B, item 4) — rivers, lakes, and waterfalls, all region-local + deterministic
 // (NO flow-accumulation, NO hydraulic simulation — DO-NOT #1 / stealmap H2). Water is placed by a
 // per-column WATER LEVEL that column_gen's block_at fills up to; the LAND surface is carved by the

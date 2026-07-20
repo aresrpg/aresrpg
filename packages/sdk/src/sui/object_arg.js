@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // OBJECT-ARG SEAM (S-51b) — THE one home for the builders' ref-or-id contract. Every PTB builder object
 // parameter accepts EITHER a plain object-id string (the historical shape — resolved by the client at build
 // time, one `getObject` round-trip each) OR a caller-cached resolved ref, letting a hot caller build

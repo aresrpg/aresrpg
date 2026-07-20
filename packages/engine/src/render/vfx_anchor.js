@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX — the ENTITY ANCHOR (follow primitive). A persistent aura preset is a LOOP whose particles are
 // placed in WORLD space by the runtime's `origin` uniform (NOT root.position — see vfx_preset_engine). So making
 // an aura "ride the rig" is exactly the moving-emitter primitive the projectile already uses (fight_cast_vfx

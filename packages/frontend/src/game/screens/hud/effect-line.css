@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* Effect LINES (`.fxl*`) — the house grammar: no per-effect card boxes, compact mono lines. The text
    is GREY; only the VALUE span carries colour (element hue / buff green / penalty red / heal pink — inline
    from the parts). Shared by the grimoire + the encyclopedia class page (EffectLine.jsx imports this). */

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX — MELEE / WEAPON BURSTS (class c_melee). The BattleFX claw (7) + swing (7) + element-slash (6)
 // pack scenes ported to element-keyed IMPACT bursts. 2D-sprite reality (VFX_FULL_UTILIZATION_PLAN §c): the
 // fight-board avatars are Koshi2D directional pixel sprites with NO weapon bone — so a "melee" reads as a VFX

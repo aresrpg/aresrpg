@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // /v1 CONTRACT TEST (D770c) — the client driven headless against RECORDED live-server truth.
 //
 // FIXTURE PROVENANCE (recorded 2026-07-17 from the LIVE testnet read-API, then PINNED — this suite runs

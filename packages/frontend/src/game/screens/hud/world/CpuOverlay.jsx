@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { useEffect, useState } from 'react'
 
 const CPU_SAMPLE_EVENT = 'ares:cpu-sample'

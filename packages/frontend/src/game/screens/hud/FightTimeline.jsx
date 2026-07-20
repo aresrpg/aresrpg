@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Turn order — INDEPENDENT floating cards (no containing panel). Each fighter in the
 // resolved initiative order (the server's interleaved `turn_order`) is its OWN card, ported from the
 // approved initiative tokens in public/hud-design/demo-tacticians-table.html (the `.token` row: an

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /** An ACTIVE fight has no actionable turn until its actor resolves to a fighter row. */
 export function fight_actor_unresolved(fight) {
   const actor_id = fight?.active_entity_id

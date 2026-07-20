@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // glb_mount_bounds.mjs — pure GLB JSON-chunk geometry math shared by the cosmetic GLB corrective editor
 // (fix_cosmetic_glbs.mjs) and its RED/GREEN oracle (verify_cosmetic_glbs.mjs). Mount space = the GLB scene
 // root frame, i.e. the frame the engine parents to the rig bone (Head / cape) when the cosmetic is worn.

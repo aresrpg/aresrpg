@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Scribe-module tests, post S-48: `scribe_stats` (the clamp-band rewrite) is DELETED — superseded by the
 /// Retro forgemagie system (`aresrpg::forgemagie`, its own suite). What remains here is the upgrade-frozen
 /// public admin surface: `set_band` + the band reads must stay callable (the band data is inert but the

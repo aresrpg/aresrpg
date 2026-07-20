@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// SPELL FORMULA TESTS — the AP/MP-removal DODGE SEED: a per-cast prng STATE threaded
 /// from the public turn-seed stream (its own `DOMAIN_DODGE` tag decorrelates it from the crit stream), so a client
 /// mirrors a drain's dodge byte-for-byte before commit. The source-file inline tests cover the §5h damage/heal

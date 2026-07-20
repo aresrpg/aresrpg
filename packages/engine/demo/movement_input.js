@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Movement input for demo walk mode (ENG-8) — a pure DOM listener → axis state, ported 1:1 in spirit
 // from packages/frontend player-controller.js (mouse OR keys, never click-to-move). Keys: WASD + ZQSD
 // (AZERTY) + arrows; Space = jump; holding BOTH mouse buttons = forward (the legacy "both-buttons run"

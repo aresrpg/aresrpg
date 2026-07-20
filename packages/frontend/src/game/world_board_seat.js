@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD-BOARD SEAT — robust grounding for a world fight board (the async/IO wrapper over the pure seat folds).
 //
 // A world fight's board seats FLAT on open terrain. Sampling the ground at the SINGLE anchor column was

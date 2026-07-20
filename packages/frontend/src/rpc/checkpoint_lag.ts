@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Global indexer-lag decision. The chain tip comes from Mysten gRPC while the committed tip comes from
 // `/v1/status`; keeping the comparison pure makes the exact alert boundary independently testable.
 

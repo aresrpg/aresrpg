@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Placement-phase banner — the prominent top-center prep prompt during the pre-fight placement window
 // (no visible 60-SECOND placement timer). Shows the live countdown to the server's
 // `placement_deadline_ms` (a wall-clock epoch the server stamps = now + 60s) + a one-line instruction so a

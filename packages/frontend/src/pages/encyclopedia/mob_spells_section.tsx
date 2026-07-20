@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // MOB SPELLS — the bestiary detail's spell-kit section: displays the mob spells like the
 // other sections, hover shows the exact details. Mob spells are anonymous authored kits (no name/icon
 // on-chain), so each row leads with its effect LINES — the shared EffectLine + seed_effect_parts grammar

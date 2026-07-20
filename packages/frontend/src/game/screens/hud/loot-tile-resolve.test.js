@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Fight victory-card loot-tile CONTRACT (a loot slot must never render as an empty
 // un-hoverable box, no matter how broken the drop's metadata is). Pure-logic tests — no DOM, no Tooltip
 // portal — proving the enrichment decision + the fallback name chain + the tooltip's honest disclaimer.

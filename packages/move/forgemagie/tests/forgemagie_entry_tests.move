@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// FORGEMAGIE real-`&Random`-ENTRY coverage: the money-core scribe/crush BODIES are proven deterministically in
 /// `forgemagie_tests.move` through the `*_for_testing` seed twins; THIS file drives the two live `entry` doors
 /// (`scribe_rune`, `crush`) that draw their seed from a framework `&Random`, so the thin entry wrappers (seed

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT SPELL RESOLVER — the ONE home mapping a character's (class, level) to the on-chain spells it can cast.
 //
 // Rows derive synchronously from the authored spell corpus plus packages/move/scripts/out/seed_manifest.json.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure-math tests for the NG2-ATMO output grade. Pins the shipped color MATH the TSL node mirrors:
 // (1) contrast is a MONOTONE map with EXACT fixed endpoints (no black-crush / white-clip),
 // (2) the low-freq operator lifts REGIONAL (plane) separation while preserving per-cell grain

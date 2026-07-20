@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Skylight flood-fill tests (§3.4 / §5.3). Covers the Minecraft sun model `fill_simple_light`
 // installs: top-down sky seeding + 6-neighbour lateral BFS with per-block opacity travel cost.
 //

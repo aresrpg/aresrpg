@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THROWAWAY S-25 verification harness — NOT part of the app, NOT imported by main.tsx, NOT built into the
 // production bundle (a separate Vite HTML entry: design-harness.html). It now renders the SHIPPED optE bar:
 // the REAL <DeckCluster/> (the fixed socket grid + real pager) inside the real `.hud-spellbar--optE` skeleton,

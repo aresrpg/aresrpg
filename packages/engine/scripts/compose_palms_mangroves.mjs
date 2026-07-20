@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIVE-WORLDS hand-composed schematics: PALM trees (Paradise) built
 // from the reference corpus's palm materials (palm_log/palm_leaves blocks) + MANGROVE trees (Everglades) that
 // water-anchor. Appends entries to assets/schematics/schematics.json in the same compact house format the

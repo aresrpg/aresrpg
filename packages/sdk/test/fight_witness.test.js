@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, test, expect } from 'bun:test'
 
 // TEST-ONLY cross-package oracle (the pattern packages/rpc/api/group_witness.unit.test.js established):

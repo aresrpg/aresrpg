@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NEARBY FIGHTS — pure panel logic proof: the shaping tolerates BOTH the
 // served shape_fight and the stale RpcFight twin, proximity gates at 50 blocks, join/spectate legality matches
 // the on-chain gate (join = public or exact-group placement, spectate = started), friends sort to the top,

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Canonical deterministic integer hashes — the ONE home for the splitmix-lineage hash2/hash3 that
 // were copied byte-for-byte across gen stages (sky_islands, strata, icebergs, cirque, caves) with
 // only cosmetic drift (`salt|0` vs `salt`, `& U32` vs none). Those variants are OUTPUT-IDENTICAL:

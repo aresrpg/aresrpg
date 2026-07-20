@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // gRPC reads and PTB composition for reseed_driver.mjs. The pure diff/latch contract stays in reseed_plan.mjs.
 
 import { Transaction as transaction_class } from '@mysten/sui/transactions'

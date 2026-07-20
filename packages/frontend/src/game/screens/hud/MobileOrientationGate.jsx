@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { RotateCw, Smartphone } from 'lucide-react'
 import { useTranslation } from 'react-i18next'

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GREEN fixture — sanctioned re-entry: async results enter through the reducer door
 // (`input(msg)` / a store action). A helper that CALLS the door is a re-entry, never a write.
 // Expected: 0 joined findings (via_door has no write sink; the inline .then goes through input).

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LEAVES-2X Rung 2 — near→far canopy BAND proof (dual-emit: airy sprites near, opaque early-Z cubes far).
 // The design is fully built + headless-proven (mesher dual-emit parity, band math, canopy pool sizing, the
 // render_hole dropped_uploads=0 seam invariant, TSL graph builds). This bench is the GPU half — it must run

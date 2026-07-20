@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Creation-gate tests: the free path (mints the first character FOR FREE, locked in the creator's PERSONAL
 /// kiosk — NO weapon is ever granted, design ruling 2026-07-08: early weapons are admin-authored easy loot), the paid path
 /// (additional character for `price`, exact treasury split + change refund), and every gate — one-free-per-

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // /v1/sponsor/remaining over a real Redis 8 — the READ half of the daily sponsor
 // allowance. It proves the shared-counter CONTRACT with api/sponsor.mjs: the sponsor
 // INCRBYs `sponsor:spent:{UTC-date}:{addr}` on each grant, and this view GETs the SAME

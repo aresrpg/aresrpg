@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Forward SuiNS read view. This stays separate from the Redis-backed projection views because its
 // upstream is the API's existing keyless Mysten GraphQL lane (suins.js), not an indexer document.
 

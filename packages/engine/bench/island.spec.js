@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // M0 scenario (a) — "7×7-chunk island at 120 fps on the Studio" (§8 M0 checkpoint).
 // Loads the demo at the default seed, waits for the world to settle, captures 60 frames,
 // writes the §7 JSON result + a committed screenshot, and asserts the canvas is NOT all-black.

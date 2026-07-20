@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-20 heightmap-extraction unit tests. Covers the WebGL fallback's SURFACE probe (gen/heightmap.js):
 //   (1) DETERMINISM — the same (seed, region) yields a bit-identical grid across fresh calls;
 //   (2) SHAPE / INDEXING — grid dims, origin, and row-major (z-outer/x-inner) layout are correct;

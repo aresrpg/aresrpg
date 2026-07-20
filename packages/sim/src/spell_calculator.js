@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // AresRPG damage / heal / shield / crit math. Rolls use the threaded PRNG; every stored result is integer-only.
 // The value layer mirrors the chain's reference-corpus formula: element characteristic + percent damage amplify
 // the authored base, flat damage lands afterward, target resistance is capped at 50%, and crit odds cap at 1/2.

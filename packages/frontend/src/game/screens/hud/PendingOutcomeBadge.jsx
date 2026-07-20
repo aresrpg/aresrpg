@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // UNOPENED FIGHT RESULTS — the roster pill, a pure RENDERER (detection/firing moved to
 // the boot + abort-111 refusal wires in dungeon_store.js — "auto open whenever DETECTED" must not depend on a
 // UI surface mounting, since a session can restore straight into the world without this badge ever mounting). A

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PROCEDURAL TREE GENERATOR CORE (ENGINE AAA PLAN §3 — the centerpiece). Pure generation: a seed + a
 // species record → a deterministic voxel skeleton + sprite-leaf/branch-card placement, emitted as a
 // synthesized `ResolvedSchematic` (loader.js:48-58 shape) so the EXISTING stamper/halo/grounding/clip

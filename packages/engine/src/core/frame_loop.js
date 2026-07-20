@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Fixed-timestep sim accumulator + rAF render (§3.1). Per-frame frame-time accounting keeps a
 // rolling window of render-frame deltas and exposes p50/p75/p99 in ms. Percentiles are computed
 // lazily when a diagnostics reader asks for them; the governor consumes raw frame time directly.

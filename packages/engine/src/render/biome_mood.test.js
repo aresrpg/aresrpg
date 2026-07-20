@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // B5 biome mood crossfader — pure-logic proof (no GPU). Pins the four invariants the wiring cannot:
 //  (1) VALIDATE: every preset — and every crossfade midpoint between the extremes — resolves inside
 //      validate_atmo_config's accepted ranges (no whiteout, no crushed grade). The proof-bar gate.

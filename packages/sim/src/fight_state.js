@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Fight state shape + turn-order/lookup helpers.
 //
 // Ported from koshi-2d/.../shared/src/fight/types.ts (FightState / FightEntity / generate_turn_order /

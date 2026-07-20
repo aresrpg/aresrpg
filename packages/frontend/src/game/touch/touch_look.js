@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // TOUCH LOOK — the roam camera's touch driver. Binds POINTER events on
 // the game canvas: a one-finger drag in the look region → look-delta (drained into cam.rotate by the frame
 // loop), two fingers → pinch → dolly-delta (drained into cam.dolly). It only ACCUMULATES into touch_input;

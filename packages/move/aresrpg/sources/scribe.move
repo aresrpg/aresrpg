@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// SCRIBE CONFIG — the admin-set per-item-LEVEL MAX stat BAND table, and NOTHING else. The actual scribe
 /// transaction (the player-initiated rune rewrite of an owned item's stats) lives in the SIBLING
 /// `aresrpg_forgemagie` package (`scribe_rune`, the S-48 Retro forgemagie system; extracted 2026-07-12 —

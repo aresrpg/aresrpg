@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure-function tests for the encyclopedia loot mapping (loot.ts) — the two design laws made executable:
 //   1. EXACT CHANCE — the on-chain basis-point chance (served by /v1 as `chance_percent`) is carried through
 //      VERBATIM and never rounded (a 0.10% drop stays 0.10%, never collapses to 0%).

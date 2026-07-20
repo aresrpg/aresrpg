@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Shoulder-camera pitch/anchor unit tests (ENG-8, 2026-07-03 regression fix). Pure math —
 // create_shoulder_camera touches no DOM at construction and update() is a pure pose function, so it runs
 // headless. Locks the fix for the reported bug "camera can look up and be near the ground, instead of being

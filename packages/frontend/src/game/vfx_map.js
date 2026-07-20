@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE FIGHT-VFX CHOREOGRAPHY MAP — the single home for every per-beat presentation decision: which 3D preset
 // plays, its world footprint, its travel/anchor class, and (IMPACT_FEEL) the on-land camera shake, screen-flash
 // colour, and screen-grade moment. fight_cast_vfx.js (the three.js renderer) reads CAST_VFX/BURST_VFX/BEAT; the

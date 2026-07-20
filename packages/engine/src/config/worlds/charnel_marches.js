@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD 14 · CHARNEL MARCHES (on-chain `14_charnel_marches`, biome `ashen_marsh`) — the war-graves
 // marsh planet. Seed identity (seed/mainnet/14_charnel_marches/world.json): fire+earth elements,
 // "war-barrow wights — the graves open at dusk; the marches remember their war", drop-income valley,

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // forge_eligibility.test.ts — the runeforge/crush item classification (the ONE home the forge page, the
 // crush right-click menu and the inventory all read). Pure data logic, proven directly — the page itself
 // can't be mounted in this DOM-less bun:test env (it imports ../auth → registerEnokiWallets at module load,

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SIZE-LAW SPLIT (2026-07-20) of dungeon_actions.js (785 LoC, over the house ≤600 cap). This sibling holds the
 // pieces with ZERO cycle-embedded consumer: create_world_fight (+ its exclusive claim/proof helpers) and the
 // standalone mint_rolled / burn_result doors. Everything else stayed put on purpose — owned_team_actions.js,

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LB3 — box reauthor ceremony coverage. Proves build_box_plan diffs the 3 broken pet boxes against the corrected
 // seed and that reauthor_box_tx composes the ATOMIC fix PTB (pause→burn→create-WITH-gacha-effect→sale→loot_table).
 // Pure — reads the REAL pet_boxes.json + seed_manifest so a seed drift breaks the test, and builds REAL @mysten

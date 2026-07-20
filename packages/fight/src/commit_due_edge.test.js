@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST money-critical regression: commit_due is level-triggered by the reducer clock, but transaction submit
 // is an EDGE. A slow or failed submit must be claimed once for the playable turn before async work starts; repeated
 // due ticks (including a busy clear after an executed failure) must never invoke submit again and re-burn gas.

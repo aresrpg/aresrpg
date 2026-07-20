@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD 05 · DROWNED FEN (on-chain `05_drowned_fen`, biome `swamp`) — the black-water fen planet.
 // Seed identity (seed/mainnet/05_drowned_fen/world.json): water+earth elements, "nocturnal bloom nodes —
 // the best herbs surface only at night", herbalist-focus barge villages, the Flooded Nave. The engine

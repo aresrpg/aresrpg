@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // KOLIZEUM lobby actions (S-18 War Table) — the tx seam over @aresrpg/sdk/kolizeum's lobby builders, funneled
 // through the ONE instrumented run_tx choke point (world-shell/tx.js) like every gameplay tx. The builders
 // target the MERGED `aresrpg` package via the SDK's stamp-or-throw deployment home: until the publish

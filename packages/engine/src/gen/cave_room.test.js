@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D141 — CAVE ROOM GENERATOR tests. Four gates:
 //   1. CONFIG        — defaults resolve; invalid recipes fail loud (board contract + degenerate room).
 //   2. DETERMINISM   — same (config,seed) ⇒ byte-identical block set (hashed); different seed differs.

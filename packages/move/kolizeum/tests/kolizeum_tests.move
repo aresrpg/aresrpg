@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// KOLIZEUM tests — the MONEY core ships COMPLETE and TESTED regardless of the declared fight bridge. Covers
 /// every adversarial money property the ticket names: pledge mismatch aborts · early-exit FULL refund (exact) ·
 /// cancel refunds ALL · equal split + deterministic remainder (exact) · NO pot leak (sum-in == sum-out, driven

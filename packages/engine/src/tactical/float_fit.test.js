@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST (regression: "TACKLED badge oversized+cropped"): the TACKLED status floater — e.g. the composed
 // "TACKLED  -2 MP  -1 AP" tag — is far wider than a damage number, yet the float sprite rasterizes into a
 // FIXED-width canvas. At the base font a long tag overflows and CLIPS. fit_float_font_px is the shrink-to-fit

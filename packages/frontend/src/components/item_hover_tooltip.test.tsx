@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Regression guard: hovering a listed cosmetic cloak showed NO image — the hover fed ItemImage the
 // on-chain template id (a 0x object id) with no cosmetic lookup, so it 404'd. to_detail_item must resolve
 // the icon through the ONE marketplace home (cosmetic_icons.js via shop_item_icon), exactly like the shop.

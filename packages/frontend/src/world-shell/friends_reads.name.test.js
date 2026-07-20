@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { afterEach, describe, expect, mock, test } from 'bun:test'
 
 import { get_owner_by_name } from './friends_reads.js'

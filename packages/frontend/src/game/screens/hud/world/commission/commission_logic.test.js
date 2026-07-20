@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure greying / stock logic. Imports ONLY commission_logic.js — the SDK-free core — so
 // the suite is headless-safe, fast, and never couples to the content seed. The SDK-backed derivation
 // (commission_recipes.js) is exercised at runtime in the harness, not here.

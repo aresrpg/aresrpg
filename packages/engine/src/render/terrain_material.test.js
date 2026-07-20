@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure-math unit tests for the terrain material's per-face winding DERIVATION RECORD (the exported
 // AXIS_FACE_TABLE / WINDING_FLIP_FACES / AO_VMIRROR_REMAP constants) — no GPU, no TSL evaluation.
 // The material ships DoubleSide (winding is irrelevant when both faces draw); the correctly-wound

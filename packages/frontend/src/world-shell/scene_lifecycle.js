@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 const noop = () => {}
 
 const load_lobby = () => import('../p2p/lobby-room.js')

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Regression gate for the CHARACTER XP CURVE (src/experience.js). The curve + lookup math MUST stay
 // byte-identical to the on-chain SSOT: packages/move/sources/character/character_xp.move (`XP_CURVE` const
 // + `level_from_xp`). A prior bug had `levels` holding the retro curve DIVIDED BY 10 (wrong) — this test

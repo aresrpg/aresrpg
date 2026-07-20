@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // pos-trace recorder unit — the driven-oracle trajectory tap that logs every glb position every
 // frame, to verify entities are at the right place throughout movements. The recorder is pure/injectable
 // (now + sink), so throttle, ring-cap, and the disabled-no-op path are all verified headless without a

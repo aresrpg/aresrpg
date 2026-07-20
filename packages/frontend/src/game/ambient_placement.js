@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GROUND PLACEMENT + PER-MEMBER WANDER — the shared grounding helper plus the pure, headless-testable roam
 // core the chain mob groups drive. Split out of the deleted TR-3 ambient-mob feature ("we
 // don't want ambient mobs, only the on-chain ones") — `feet_of` is genuine shared grounding infra (three live

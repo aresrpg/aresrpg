@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Quest chain data + live-status helpers (NO JSX). The single home for the static tutorial chain
 // (@aresrpg/sdk/quests, sorted by `order`) and the pure functions that fold the server-authoritative
 // progress slice (core/modules/quests.js) into a per-quest status. Shared by the QuestsDrawer (the

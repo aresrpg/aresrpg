@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The persisted render-quality PREFERENCE — the ONE home for the stored label, its migration, and the
 // label→engine-tier map. Split out of render_quality.js (D157/S-85) so the ENGINE MOUNT (embed_voxel.js)
 // can read the saved pick at BOOT — feeding it into create_engine({ tier }) so every boot-time dial

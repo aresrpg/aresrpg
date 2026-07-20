@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // CORPSE PERMANENCE — reconciled to WAVE-A V1 (retirement floor) + V3 (keystone deleted). Seat §5d.
 //
 // THE ORIGINAL TEST (git history) drove alive → poll-only death → corrected-snapshot REVIVE → poll-only death

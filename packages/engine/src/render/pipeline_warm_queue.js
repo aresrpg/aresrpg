@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // [C1 SLICED PIPELINE COMPILE — the residual warm freeze] Frame-budgeted pipeline warm for renderables
 // that arrive AFTER the D221 boot pre-warm: entity/avatar/cosmetic GLBs (loaded async, post-login) whose
 // first visible frame otherwise SYNC-compiles every scene-pass + shadow-depth pipeline variant on the

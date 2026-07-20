@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // P0 teardown liveness: a RunPass can keep pointing at a Fight after another sender settled and deleted it.
 // The object read is authoritative; rehydrate must never publish that dead id into the shared fight store.
 

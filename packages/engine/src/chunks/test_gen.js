@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // M0 test data generator (§8 M0 "flat-ish test gen") — a deterministic low dome/plateau island:
 // grass-over-dirt-over-stone, water filling anything below sea level. This is a placeholder for
 // WS2's real terrain generator; it exists purely so WS3/WS4 have real surfaces to mesh/render.

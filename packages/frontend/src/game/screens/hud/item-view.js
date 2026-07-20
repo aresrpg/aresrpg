@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Canonical item presentation model (c143) — the SINGLE normalized shape every item surface renders
 // through <ItemCard>: inventory, the encyclopedia detail modal, jobs/crafting, the marketplace. One card,
 // one model, identical everywhere. `to_item_view()` maps BOTH a raw on-chain/inventory item (flat stat

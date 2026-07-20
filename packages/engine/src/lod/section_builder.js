@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Per-section downsample (§11 NG-LOD, survey S2) — the "fixed logical resolution" rule: every far
 // section is ALWAYS 32×32 cells; only the world footprint grows per level (block size doubles
 // L1=2m … L4=16m, so span = 32·2^L = 64/128/256/512 m, 2:1 between levels). This gives a hard,

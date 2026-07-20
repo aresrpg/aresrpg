@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// CONSUMABLE EFFECT — the typed effect block attached as a DYNAMIC FIELD to a consumable `ItemTemplate`. This
 /// is the on-chain HOME for a consumable's gameplay effect: `{ kind, amount }`. Same placement as `item_stats`/
 /// `item_damages` — the item base owns the storage (it exposes the template UID package-privately), THIS module

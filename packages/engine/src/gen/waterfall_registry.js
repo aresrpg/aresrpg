@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Waterfall fall registry (ENGINE_AAA_PLAN.md §4.2 step 1, lane A5) — PURE gen-side detection only.
 // Turns the hydrology pass's per-column `is_waterfall` flag into FALL SPANS: runs of adjacent
 // waterfall columns sharing a fall face, merged so a later render wave (B4, `render/waterfall_sheet.js`)

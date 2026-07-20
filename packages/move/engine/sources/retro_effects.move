@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// WAVE 12 RETRO EFFECTS — stateful mechanics that cannot live in the frozen `Fight` layout.
 ///
 /// Compatibility: queues and named-stack windows are dynamic fields under the fight UID; no published struct

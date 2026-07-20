@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NO QUALITY TIERS:
 // this module was the SSOT for quality -> colour/tint/order across every HUD surface. It stays as
 // the single seam every consumer imports, but every quality now resolves to the SAME neutral steel

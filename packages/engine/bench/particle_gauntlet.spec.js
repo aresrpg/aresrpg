@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE TORMENTOR GAUNTLET (S-AMBIENCE, the named re-enable gate, automated). The ambient particle DRAW
 // was disabled for release (atmosphere.js:726) after the camera-following field read as CONCENTRIC ARC-SHELLS
 // / "a huge low-res circle following me" — root cause: semi-transparent SQUARE sprites (no round soft falloff)

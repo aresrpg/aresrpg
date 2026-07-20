@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D157 — the WORLD-tab render-quality override. The persisted preference lives in quality_pref.js (the ONE
 // home, shared with the engine mount so BOOT reads the pick); this module is the BRIDGE to the live voxel
 // engine — the instant render-scale swap + the re-boot that applies the boot-time dials a pref change needs.

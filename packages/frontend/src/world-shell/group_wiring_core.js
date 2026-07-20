@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GROUP WIRING CORE (MULTICHAR lane) — dependency-injected orchestration between the pure group loop
 // (@aresrpg/party group_loop) and the production edges. The reducer DECIDES; this seam FEEDS it (membership,
 // worlds, pose ticks, fight facts) and EXECUTES its effect requests through injected single-character seams

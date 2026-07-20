@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Corrective editor for owner-flagged cosmetic GLB defects (models/equipment is gitignored — THIS script is
 // the durable, replayable custody of every byte-level correction; verify_cosmetic_glbs.mjs is its RED/GREEN
 // oracle). Fix 1 (lane GLBFIX): the two variant-mapping defects. Both turned out

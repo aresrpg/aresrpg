@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Self-contained, seed-generated tactical arena — the radius-carve that ISOLATES a finite fight grid
 // out of the unbounded procedural world (MVP-PLAN Phase 2).
 //

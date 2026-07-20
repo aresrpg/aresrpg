@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // W1 HERMETICITY GATE (node-side twin of the depcruise world-core-hermetic rule, the @aresrpg/fight idiom):
 // the package's ENTIRE src import graph resolves inside {itself, @aresrpg/sdk, zustand/vanilla, node:*} —
 // zero DOM, zero React, zero three.js, zero frontend reach-back. Runs with the package suite, so a

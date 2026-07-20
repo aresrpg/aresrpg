@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D50 — the "you're broke" pre-validation card. Shown INSTEAD of the paid character-create flow when
 // the connected wallet can't cover the price + gas headroom. It never attempts a doomed mint tx and
 // never toasts an error — it just explains the shortfall and offers ADD FUNDS. The gate that decides to

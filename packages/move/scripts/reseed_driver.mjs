@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RESEED DRIVER (`ares sync` embryo). Default is DRY_RUN; only LIVE=1 can reach signing. Reads are gRPC through
 // ./client.js, object ids come only from out/seed_manifest.json, and call targets are ceremony latest ?? origin.
 

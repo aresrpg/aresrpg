@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WALK-CAMERA FOV PULSE unit proof (SEARCH-ZONE JUICE) — the reward-beat zoom-punch math. Pure, no DOM.
 // The module holds one process-global pulse clock, so each test first DRAINS it (advance past the duration)
 // back to idle before firing a fresh pulse.

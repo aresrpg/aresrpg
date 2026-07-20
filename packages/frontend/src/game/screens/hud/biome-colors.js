@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SSOT for the world TERRAIN palette — keyed by `world_biome` (@aresrpg/sim). Both the HUD Minimap (canvas
 // fillStyle, hex strings) and the big MapDrawer (ImageData bytes, rgb tuples) paint terrain from THIS one
 // table, so the two readouts can never drift. The roam scene tints ground from roam.js BIOME_TINT; `water`

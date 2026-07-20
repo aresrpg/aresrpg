@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// GameConfig tests: init defaults land the ratified values (§17.20/.26/.31); dark authoring works while
 /// the global switch is off; every clamped setter COERCES out-of-band inputs to the band edge (never stores an
 /// out-of-band value); the class-index setters ABORT on a bad id (indices can't be clamped); an expired temp

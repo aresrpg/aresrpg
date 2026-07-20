@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // COMMISSION INBOX (Commission Flow v2) — the live, this-session store of incoming artisan-commission requests
 // delivered over the p2p presence overlay (lobby-room `crequest`). No server push exists; the Trystero lobby room
 // is the channel (the SAME one the party-invite nudge rides). When a customer requests a craft, the NAMED artisan's

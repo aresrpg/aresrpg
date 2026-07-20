@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DOUBLE-CLICK CURSOR LOCK: double click keeps the cursor locked for more comfortable exploration,
 // double click again or echap to unlock, same toast as 'cinematic mode on'. A STICKY companion to the
 // shoulder rig's existing HOLD-drag pointer lock (engine/player/pointer_lock.js — hold LMB, drag past the

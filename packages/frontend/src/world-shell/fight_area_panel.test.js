@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, it } from 'bun:test'
 
 import { fight_hover_teams, section_fight_rows, short_fighter_id } from './fight_area_panel.js'

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // scripts/eslint-rules/fp_law.mjs — THE FP-LAW TRIPWIRES (docs/CODE_LAW.md).
 //
 // Three lexical rules the mature plugins cannot express without typed linting (the root lint runs

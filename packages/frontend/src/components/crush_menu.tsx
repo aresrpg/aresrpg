@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // CRUSH — the right-click item action: crushing is like feeding a pet — a simple
 // right-click > crush on the item. NOT a page section anymore. This is the reusable seam used EVERYWHERE
 // the inventory renders — the runeforge's right panel AND the main inventory grid — mirroring the S-18 pet

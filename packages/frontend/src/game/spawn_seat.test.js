@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SPAWN SEAT — regression proof: a mob group whose chain anchor sat over WATER
 // showed a compass pip at 1m but rendered NO rig anywhere. Root: `find_open_spawn`/`ground_surface_y` reject
 // fluid columns (water is a real voxel, id 5 — column_gen.js block_at: `world_y < water_level ? WATER : AIR`),

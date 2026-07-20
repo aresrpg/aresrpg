@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PointerLockControls — release-provenance regression test (this session). The world canvas's double-click
 // sticky lock (packages/frontend/src/game/embed_voxel_cursor_lock.js) can put THIS SAME element into pointer
 // lock without ever calling requestPointerLock() from inside this module. Before this fix, on_mouseup exited

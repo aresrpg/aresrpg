@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // An executed/uncertain loot-box open must not be submitted again while its outcome is unknown. The tx choke
 // attaches the digest for the lootbox classes, so an executed failure carries its proof; ambiguity still latches.
 // SELF-CLEAR (D1 + P3 receipt-grade): the box latch releases through a PURE predicate over observed chain truth —

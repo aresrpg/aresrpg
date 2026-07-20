@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { useTranslation } from 'react-i18next'
 
 import { STAT_COLORS, sort_stat_entries, stat_color_key, stat_label } from './entity_colors'

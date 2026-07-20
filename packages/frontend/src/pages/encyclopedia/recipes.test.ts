@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure-function tests for the encyclopedia recipe mapping (recipes.ts) — the house laws made executable,
 // mirroring loot.test.ts:
 //   1. EXACT VALUES — quantities / required job+level / craft xp pass through VERBATIM from the /v1 rows

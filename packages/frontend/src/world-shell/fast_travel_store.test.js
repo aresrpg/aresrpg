@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FAST-TRAVEL STORE — proves the pure phase machine + the ROUTING LAW (plan §2-①/§3.1). The reducer is tested
 // directly (like presence's reduce_presence): begin gates, same-world fly, foreign-world join, the level +
 // non-catalog realm refusals, /v1-first (a live p2p pos with a mismatched world never flies), retarget/lost/

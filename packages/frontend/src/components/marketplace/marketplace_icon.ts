@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { item_icon_url } from '@aresrpg/sdk/jobs'
 
 import { shop_item_icon } from '../../pages/shop_icon'

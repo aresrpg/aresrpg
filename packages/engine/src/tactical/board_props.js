@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // OBSTACLE PROP ARCHETYPES — the OPT-IN obstacle style (board.js obstacle_style:'props', for later
 // dungeon theming). The DEFAULT board obstacle is a clean retro-style half-height
 // BLOCK (simple readable mass), built inline in board.js; these multi-voxel props are kept as a themed

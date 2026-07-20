@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // INSTRUMENT + PROOF for reported mob-walk bugs:
 //   (1) BACKTRACK — a mob "goes, falls back, and goes again" inside a single move.
 //   (2) ALLY-CROSSING — a mob walks THROUGH an ally mid-move.

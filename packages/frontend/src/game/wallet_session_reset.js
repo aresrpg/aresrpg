@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WALLET-SWITCH SESSION RESET (P0/D286) — the ONE authority that tears a wallet session down.
 //
 // The bug: a player disconnects account A and connects account B, but keeps controlling A's character. The

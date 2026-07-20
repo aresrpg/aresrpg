@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX bench — Wave-A b_spell (DarkMagic / ElectricFX / ElementalMagic / FlameFX variant) preset proof.
 // Fires ONE representative preset per sub-family on the standalone probe (demo/vfx_wavea_spell_probe.html, its OWN
 // WebGPURenderer), captures a build-up→peak frame series (?preset&t sets the exact age), and proves per preset:

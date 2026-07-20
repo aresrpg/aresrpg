@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Self plate (Option B "Minimal Float") — bottom-center, ALWAYS-ON exploration HP plate. Vitals
 // (GameWorldHud.jsx) stays fight-only (HP + AP/MP pips); this is the lobby equivalent: level + name,
 // an HP bar (value/max), and a thin XP sliver. HP/max/level derivation is copied verbatim from Vitals'

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D237 INSTANCE SCOPE proof — the peer `state` wire carries `dungeon_id` end-to-end, and the render/chat scope
 // filter (mine === theirs) drops an out-of-instance peer. This drives the REAL inbound path: trystero is mocked
 // (a captured `makeAction` returns a live { send, onMessage } pair — the same shape the app uses), `join_lobby`

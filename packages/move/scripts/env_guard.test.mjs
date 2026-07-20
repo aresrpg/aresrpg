@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Coverage for THE ASSERT-ENV GATE + SWITCH-BACK LAW (env_guard.mjs). Pure/injected for the primitives;
 // one subprocess proves a WIRED script (ceremony_upgrade) refuses under a mocked MAINNET active-env.
 import { describe, test, expect } from 'bun:test'

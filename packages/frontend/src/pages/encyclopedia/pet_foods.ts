@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PET FOOD display joins: the encyclopedia shows what food a pet is
 // using, and the item detail card in the inventory (hover) does too — pure data, no JSX; the components
 // (pet_food_section.tsx + the entity_tooltip hover row) only resolve display names and render.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Mountain erosion LOOK (§2.1 NG1-B, item 2) — the per-column relief that turns the smooth spline
 // heightfield into eroded, jagged ridgelines with vertical gully channels (refs #2 alpine / #3
 // canyon walls), WITHOUT any hydraulic/thermal simulation (DO-NOT #1) and WITHOUT touching the

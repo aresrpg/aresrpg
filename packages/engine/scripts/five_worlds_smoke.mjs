@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIVE-WORLDS shared-stage VISUAL SMOKE — renders side-view cross-sections of stage-CRANKED worlds,
 // coloured by the REAL block map_colors, to prove each stage manifests in the generated voxels. Data
 // raster (no WebGPU) → reliable + deterministic; the RENDERED-pixel QA at each pose class is the

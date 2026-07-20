@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /**
  * Whether a chat line belongs in the current world/fight log after its channel checkbox passed. Combat is a
  * client-local presentation stream and has no p2p peer scope; treating its synthetic id like a peer hid the whole

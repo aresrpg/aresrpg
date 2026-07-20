@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// CONFIG — GameConfig, THE game object. ONE shared object created at init, carrying EVERY gameplay dial the
 /// spec leaves admin-definable (§15's total-definability law): the §17.20 economy clamps, the §17.26 engine
 /// dials, and the §17.31 per-class combat rows. Hot paths across every package take it by IMMUTABLE reference

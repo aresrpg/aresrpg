@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Seam 4 gate — the registry hides/shows sets by id via .visible, preserving objects (no despawn), and
 // reconciles entities registered mid-filter.
 

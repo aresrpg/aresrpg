@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Chain-arm parity vector for `packages/sim/test/dispel.test.js`.
 ///
 /// The sim seeds one three-turn, +5 strength row carrying `FLAG_DISPELLABLE` and one

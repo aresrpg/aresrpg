@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 //! AresRPG RPC — Sui checkpoint indexer.
 //!
 //! Streams Sui checkpoints into Redis for the read-only AresRPG RPC. This binary

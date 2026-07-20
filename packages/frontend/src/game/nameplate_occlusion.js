@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NAMEPLATE PROJECTION + OCCLUSION — the ONE shared home for turning an overhead plate's WORLD anchor into a
 // screen pixel and testing whether terrain hides it. Every plate path (world_spawns.js mob cards,
 // remote_players.js, local_nameplate.js) routes through `project_plate` so the two things that must be right

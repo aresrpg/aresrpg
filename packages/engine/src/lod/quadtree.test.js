@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG-LOD quadtree selection tests (survey S1). Covers: (1) CRACK-FREE — no two adjacent selected
 // sections differ by >1 level, under 200 random cameras and across the near/far radii; (2) LOG-DISTANCE
 // TARGET — target_level is monotone non-decreasing in distance and 1-Lipschitz in ring index (the

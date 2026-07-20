@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// SPELL TARGETING — the TWO independent 1.29 layers (taxonomy §2), the exact structural gap the ticket
 /// names. The live contract only allows "living-enemy, range ≥ 1"; this splits validation into:
 ///

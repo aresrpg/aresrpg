@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX — the PACK APPEARANCE LAYER: faithful TSL ports of the actual BinbunVFX_Vol2 .gdshader files
 // (licensed asset pack, vfx/extracted/**). This is the "look" layer the runtime (vfx_preset_engine.js) mounts:
 // vfx_preset_engine owns MOTION (analytic ballistics, seeding, the instanced billboard mount + the sphere-hero

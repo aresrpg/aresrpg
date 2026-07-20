@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, test } from 'bun:test'
 
 import { DEAD_CRIT_KEYS, fold_corpus, fold_side, verify_drift, verify_folded } from './crit_fold.mjs'

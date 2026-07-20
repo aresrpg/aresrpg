@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // M0 seam glue (§brief RENDER↔CORE SEAM): loads the demo island by driving the REAL world
 // generator (gen/world_gen.js — terrain + biomes + surface decoration) through WS3/WS4's
 // synchronous mesh→upload pipeline on the main thread. This is an M0-only shortcut — M1 replaces

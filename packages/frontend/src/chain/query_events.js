@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // #23/D79 P2 — the SINGLE event-replay helper (GraphQL). The JSON-RPC event-query API is gone (testnet JSON-RPC
 // endpoints die wk of Jul 6), so every "replay every event of this Move type to discover object ids" read now
 // pages the Sui GraphQL `events(filter:{type}, after)` connection instead. Three consumers use it today —

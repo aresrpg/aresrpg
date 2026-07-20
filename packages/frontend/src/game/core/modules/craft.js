@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Craft client module (Wave CRAFT) — PURE RENDERER. The SERVER is the sole authority on the craft
 // queue + the per-craft timer + the off-chain ledger (#39 on-chain settle parked). This module folds
 // the server's pushes into client state: `craftProgress` -> state.craft (the center-top CraftToast

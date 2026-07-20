@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The thin CHAIN-DECOUPLED seam for artisan commissions — the SDK WIRING CONTRACT. The Move v2 commission
 // redesign runs in PARALLEL; until it lands every read/write here returns MOCK data so the modal is complete
 // and demoable NOW. When the chain lands ONLY THIS FILE changes — the views never do:

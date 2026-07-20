@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIVE-WORLDS shared gated stages — per-stage sensitivity + parity gate (BIOMES_EXECUTION_PLAN §P3).
 // For every stage: ENABLING it in a test config CHANGES the generated columns deterministically, and
 // DISABLING it returns to the DEFAULT (parity) column byte-for-byte. The golden DEFAULT parity itself is

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// RESULTS — the CORE half of claims v2 (S-46 final split): the engine's permissionless settlement minted a
 /// brand-echoing soulbound `FightOutcome` per seat; THIS module is where game truth lands. `open` consumes the
 /// outcome, ASSERTS THE BRAND (compile-time self-authentication — only outcomes of fights created through

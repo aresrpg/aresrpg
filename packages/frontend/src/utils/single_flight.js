@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // A latching single-flight guard for money/tx actions that must fire AT MOST ONCE per screen (e.g. the
 // character-create sponsored mint — repeat clicks must never trigger a second sponsor/payment).
 //

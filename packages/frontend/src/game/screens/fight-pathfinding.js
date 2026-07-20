@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Fight movement geometry — the PURE steered-MP-path + reachability helpers shared by the tactical
 // overlay's hover preview (fight-overlay.js) and the on-chain dungeon draft gate (DungeonBoard.jsx), so
 // the highlighted path, the move-range wash, and what a click actually drafts NEVER drift apart.

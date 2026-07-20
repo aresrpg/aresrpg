@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FAR-TREE IMPOSTOR DERIVATION tests (ENGINE_AAA_PLAN §8 B3). Covers the PURE half: the species×age→layer
 // bijection, the per-level stride, determinism, the level cap, and — the load-bearing one — SEAM
 // AGREEMENT: every impostor the far shell derives is a REAL procedural tree the near ring's own

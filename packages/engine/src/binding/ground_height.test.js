@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Seam 1 gate — the Y-oracle is pure, deterministic, matches the generated terrain, and rejects fluids.
 
 import { test, expect, describe } from 'bun:test'

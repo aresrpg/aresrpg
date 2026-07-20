@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// Coverage for the bare `entry fun` doors in `turns`/`actions` that no existing test drives DIRECTLY — every
 /// prior suite exercises their logic exclusively through the `#[test_only]` `_for_testing` twins (which
 /// reimplement the gate + call the shared private helper, bypassing the entry shell itself: e.g.

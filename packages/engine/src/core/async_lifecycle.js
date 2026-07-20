@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /**
  * Adopt a resource produced by an asynchronous boot only while its owner is still live. A resource that
  * resolves after dispose is released immediately and is never published to the dead owner.

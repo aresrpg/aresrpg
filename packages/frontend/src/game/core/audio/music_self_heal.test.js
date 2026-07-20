@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, it } from 'bun:test'
 
 import { create_music_self_heal, is_autoplay_block, music_retry_delay } from './music_self_heal.js'

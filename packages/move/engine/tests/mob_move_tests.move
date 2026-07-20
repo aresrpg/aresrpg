@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// MOB-MOVE observability (chain-forensics 2026-07-11): a mob whose turn draws REPOSITION-ONLY (no cast) used to
 /// emit NOTHING, so no client/indexer could ever render the move (`emit_moved` had a single call site — the
 /// player's own move). `resolve_mob_turn` now fires `MobMoved` on any cell change. This drives a real

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// ZONES tests: world MEMBERSHIP (first join rolls a spawn + inits the checkpoint; rejoin RESTORES it — never a
 /// re-roll or teleport-home; required-level gate) and ZONE DISCOVERY (search proves the claimed STANDING POSITION:
 /// travel-verified from the checkpoint and the checkpoint ADVANCES there — the S-71 walked-to-zone unlock; a

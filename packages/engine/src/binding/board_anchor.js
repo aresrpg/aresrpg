@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SEAM 2 — BOARD-FROM-ANCHOR (SPEC §7: "the board IS the world").
 //
 // A world fight's board "generates deterministically from the mob group's position (world seed + spawn

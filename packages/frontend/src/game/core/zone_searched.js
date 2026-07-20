@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ZoneSearched event decode (SEARCH-ZONE JUICE) — the pure contract-coupling seam between the search tx
 // receipt and the reveal banner's findings counts. Split out of the effect-heavy discovery_actions seam so
 // it's a pure transform over plain data (unit-testable without the auth/SDK import graph). Pins the on-chain

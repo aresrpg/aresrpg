@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Block-texture recipe set (data) for texture_baker.js — the atlas layer order IS this array order
 // (deterministic). Colours authored here, independent of the registry's flat map_color. Split out of
 // the baker so the engine (noise/ops/bake) and the content (recipes) each stay a single responsibility.

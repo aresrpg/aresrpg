@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LATENCY LANE 2 — proves the &Random builders PIN the 0x8 Random system object (a static SharedObjectRef)
 // instead of the SDK's unresolved `tx.object.random()`, so a fight act PTB whose runtime Fight is also passed
 // as a cached ref carries ZERO unresolved inputs and BUILDS FULLY OFFLINE (no client, no resolve round-trip).

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Character movement controller (ENG-8) — the locomotion brain. Ports the *feel constants* of the
 // shipped dapp controller (aresrpg-legacy player_movement.js + packages/frontend player-controller.js)
 // onto our voxel collision solver: WASD relative to the camera yaw, linear accel/brake ground curves

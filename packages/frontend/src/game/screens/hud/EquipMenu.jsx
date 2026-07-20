@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // EQUIP-SLOT MENU — right-click on an EQUIPPED paper-doll/cosmetic slot (right-clicking
 // gear/a cosmetic fell through to the native browser menu, no "See on explorer"). Explorer-only on purpose:
 // UNEQUIP already has a working click affordance on the slot art itself (EquipmentSlot.jsx

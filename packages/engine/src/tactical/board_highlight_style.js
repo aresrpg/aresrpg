@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Tactical highlight visual SSOT. The frontend adapter selects semantic channel names; this module owns
 // every channel's color, opacity, stack order, and lighting-independent center/output dials.
 

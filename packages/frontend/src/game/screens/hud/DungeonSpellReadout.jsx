@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DUNGEON in-fight SPELL READOUT (D113 / D299a lineage) — THE ONE spell tooltip (there should
 // only be the big tooltip): the big aiming card shown for the HOVERED spell (preview) OR the ARMED spell
 // (own turn), on every platform. Hover previews outrank the armed aim; a socket hover feeds it via the

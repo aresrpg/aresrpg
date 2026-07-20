@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PROMPT STACK renderer (S-18 discovery — DECISIONS 07-09 pick option 1 + addendum). Renders every live
 // world prompt from the prompt_stack registry in the shipped [E]-pill language: the highest-priority
 // (closest / most-actionable) prompt sits at the bottom-center ANCHOR — the exact spot the single dungeon

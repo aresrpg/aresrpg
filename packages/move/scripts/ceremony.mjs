@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ceremony.mjs — the 7-package PUBLISH CEREMONY orchestrator (S-46 merge + the 07-11/12 size splits; publishes foundation → spells → social → engine → aresrpg → kolizeum → forgemagie). SCRIPT ONLY:
 // nothing here fires a real publish/sign/faucet unless EXECUTE mode is explicitly requested; `--dry-run` prints the
 // whole plan with ZERO chain calls (no key required). Only an explicit execute run fires the real transactions.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // The 6 Minecraft-1.18 climate/shape parameters (§4.1) — a superset of the legacy heat/rain pair.
 //
 // DETERMINISM LAW (§3.7): arithmetic + Math.floor/Math.sqrt only. PV (peaks-and-valleys) is

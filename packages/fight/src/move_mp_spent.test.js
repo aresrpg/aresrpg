@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // GREEN MP-SPENT FLOATER — the move beat must carry `mp_spent`: a move shows its own green floating
 // number for the spent MP. The chain Moved event carries NO cost, so the beat producers derive
 // it from the traversed path (origin-EXCLUSIVE, cardinal, 1 MP/cell). BOTH lanes must emit it, twin-identical:

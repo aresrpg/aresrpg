@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D3b — THE OPTIMISTIC MOVE OBEYS THE TACKLE: tackles are deterministic, so the walk is never allowed at all.
 // The move EXECUTION path — not only the paint (D3a move_wash) — now consults the
 // SAME seed-derived contest the chain enforces. `next_move_tackle` mirrors ONE actions.move roll

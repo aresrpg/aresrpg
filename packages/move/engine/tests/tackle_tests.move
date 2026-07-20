@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// TACKLE — the ordinary-movement escape contest (chain twin of packages/sim/src/fight_actions.js:63-100, the
 /// repo's shipped deterministic-sim rule; SPEC.md is silent on tackle and the research corpus carries only the
 /// dodge/lock stat-family enum — CORPUS.md:125 — so the sim rule is the authority, same precedent as the esquive

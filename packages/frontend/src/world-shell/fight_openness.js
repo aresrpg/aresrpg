@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT OPENNESS — the HUD toggle ("a toggle on the hud to start fights as group only or
 // as public"). A world fight you START carries an on-chain openness (fight.move `public_fight` + `party_id`).
 // D770a W2: the VALUE lives in the spawns core atom (`openness` — the claim_tx effect request carries it), and

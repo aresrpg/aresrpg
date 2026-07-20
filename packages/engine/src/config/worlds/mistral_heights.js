@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD 04 · MISTRAL HEIGHTS (on-chain `04_mistral_heights`, biome `mesa`) — the windswept-highlands
 // planet. Seed identity (seed/mainnet/04_mistral_heights/world.json): air+fire elements, "thermal
 // updrafts — vertical lift between mesa tiers", miner-focus sky-ore veins, the Goblin Cave. The engine

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { readFileSync, writeFileSync, existsSync, renameSync } from 'fs'
 import { join } from 'path'
 import { execFileSync } from 'child_process'

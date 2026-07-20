@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D137 — the voxel fight adapter's PURE FOLDS (the renderer-neutral data transforms), split out from
 // voxel_fight_adapter.js so they're unit-testable in ISOLATION — the SAME discipline overlay_intents.js follows.
 // The adapter proper imports the live stores + engine (context / auth / three), which drag browser-only modules

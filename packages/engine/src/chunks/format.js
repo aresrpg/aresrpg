@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Chunk record layout (§3.4) — FROZEN CONTRACT. WS2 (gen) writes these fields, WS3 (mesh)
 // reads them, WS9 (structures) writes cross-chunk overflow into neighbor records. Do not
 // change shapes without a version bump + golden-hash re-cut (§3.7).

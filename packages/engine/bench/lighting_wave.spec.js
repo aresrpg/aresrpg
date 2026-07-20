@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // LIGHTING WAVE capture (visual review gate) — before/after PAIRS for the auto-exposure + haze-scope +
 // grade pass. Drives the frozen engine facade under ?nocam=1 (the demo's rAF camera loop would
 // overwrite our pose each frame). CAP_DIR=before|after pairs two runs; screenshots are the proof.

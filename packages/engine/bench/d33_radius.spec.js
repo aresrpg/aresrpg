@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // D33 view-distance A/B sweep (view distance needed to increase — the default read as mostly fog
 // in the distance). Measures the streaming-ring load radius at r5 (the pre-D33 control), r6, r7,
 // and r8 on the Studio's Metal GPU (HEADED — the source of truth, §7) and PICKS the largest radius that

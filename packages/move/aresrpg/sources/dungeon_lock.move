@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// DUNGEON LOCK — additive dynamic state that makes a character's `world:dungeon` transition enforceable.
 /// The lock is keyed directly on the kiosk-locked Character, so its layout does not alter the frozen Character
 /// struct. Ordinary world writes consult `assert_unlocked`; only the pinned dungeon witness can add/remove a lock

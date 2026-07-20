@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* SHOP vitrine card anatomy (option-2 Armory Grid mockup) — the glass case, supply bar,
  * buy row, pet diorama, and the loot-box vault ledger. Page-level chrome (masthead/tabs/grid) lives in
  * shop.css; both scope under .shop-armory. Imported by shop_vitrine.tsx. */

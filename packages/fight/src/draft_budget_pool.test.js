@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST regression for the DRAFT-BUDGET DOUBLE-SUBTRACTION (P1 release blocker, driven-gate evidence
 // multiturn_v29_gate9: exactly ONE cast per turn landed with 12 AP shown — 2 Ghost Talons must be affordable).
 //

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // §14 liveness/supply/sales/loot/recipes come from /v1. Authored characteristics and icon slugs join the same
 // seed/mainnet corpus that mints templates, by slug only; missing joins remain honestly empty. See item_catalog.ts.
 import { useEffect, useMemo } from 'react'

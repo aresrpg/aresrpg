@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FAST-TRAVEL EFFECTS (plan leg F / §3.2·§3.6) — the async edges wired ONCE per session (mirrors
 // wire_group_loop / wire_party_p2p, idempotent): the RESOLVE effect (phase 'resolving' → read the /v1 docs +
 // gate → dispatch resolved/refused), the JOIN effect (phase 'joining' → join_world_action → world_joined/

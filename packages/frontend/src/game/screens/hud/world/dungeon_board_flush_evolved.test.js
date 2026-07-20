@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ⑭ FLUSH VALIDATES THE EVOLVED SEQUENCE (regression: a turn could commit without the spell — a trap placed
 // behind a mob then pushed onto it made the cast look invalid when everything was actually valid). The chain commits ONE PTB in D99
 // order, each action reading LIVE evolved state — so a drafted cast MUST be judged against the board the chain

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Mesh-halo (de)serialization tests — the PIXEL-IDENTITY contract. Proves that meshing a chunk through
 // the off-thread path (serialize_mesh_job → deserialize_mesh_job → mesh_chunk) produces a quad buffer
 // BYTE-FOR-BYTE identical to meshing it inline against store.neighbor_halos. Uses REAL world_gen chunks

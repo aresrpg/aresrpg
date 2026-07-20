@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST regression for D-resolve_seat (over-engineering advisor 07-16): a CHARACTER-keyed Moved event must
 // fold onto the player's SEAT (p0), never orphan onto c:<id>. Before the fix the store's input door defaulted
 // resolve_seat to null, so the projected me.cell (the p<idx> seat) never reflected a local OR committed

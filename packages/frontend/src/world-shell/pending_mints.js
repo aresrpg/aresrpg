@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // pending_mints.js — THE RECEIPT-DRIVEN MINT+BURN QUEUE (stranded-loot recovery). Decouples the loot mint from
 // the flaky bounded display read that stranded 41 FightResults soulbound: the mint no longer rides a
 // ~5s read that gives up SILENTLY (finish_result's old `if (result)` gate — a null read SKIPPED mint_all_and_burn,

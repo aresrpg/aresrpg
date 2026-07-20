@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-16 Phase B — TACTICAL BOARD acceptance (headed WebGPU, isolated port).
 //
 // Boots the ?board=1 demo, waits for the board mount, and proves the full acceptance surface against

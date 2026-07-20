@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FIX 4 cooldown clock — the store half is now ONLY last_cast_turn (spell name_key → the turn it cast). The
 // seat-turn counter `my_turn_no` moved to the fight CORE (fold-derived, DEADLINE-INDEPENDENT — register #34 —
 // so lag/starvation can no longer freeze it and pin every cd>0 spell on-cooldown forever). This suite locks the

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WS-B — the lobby NPC proximity affordance. The roam scene dispatches `action/npc_prompt` when the
 // avatar walks within range of the Dungeon Master (and null when it leaves); this SOURCE registers the
 // "[E] enter the dungeons" prompt into the PROMPT STACK (S-18 pick: all proximity prompts render together

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Findable-item resolution for the EXPLORATION world cards — maps a World's on-chain `drop_table`
 // (`[{ item_template, percent }]`) to the two labelled clusters the card shows: GEAR (non-stackable
 // equippables) and RESOURCES (stackable). The gear/resource split comes from each template's

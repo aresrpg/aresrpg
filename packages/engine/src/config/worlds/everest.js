@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // EVEREST / ICE-AGE world recipe — v3 REWORK. v2 was rejected against a reference image:
 // not realistic — mountains should read as way wider, indistinguishable as a single peak from
 // ground level and only resolved by shape at LOD distance, and palm trees had no place in an

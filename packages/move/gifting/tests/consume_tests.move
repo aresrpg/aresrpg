@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// CONSUME tests — the fight-side `consume::use_consumable` / `use_many` flow over the FULL cross-package scaffold
 /// (items + game + fight booted & enabled, the four game→items caps in CharacterLink, the NS_PROGRESSION cap in
 /// the FightRegistry, a real kiosk-locked Character + a locked consumable stack). Proves: HEAL applies × quantity

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Golden mesher tests — LIQUID + surface-coverage suites (split out of mesher.test.js to keep both
 // files under the 600-LoC ceiling; pure move, no behavior change). Covers:
 //  1. Liquid surface pass: a pool emits ONE merged water top, zero liquid side/bottom faces, and

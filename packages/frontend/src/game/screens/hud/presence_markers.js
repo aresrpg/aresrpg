@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Projects core/modules/presence.js's `visible_characters` Map into minimap marker rows — the SAME
 // {x,z,kind,key} shape world_spawns_store.js already feeds the minimap (Minimap.jsx concatenates this with
 // its spawn markers; minimap_engine.js's draw_marker dispatches on `kind`, and 'peer' paints a small cyan dot

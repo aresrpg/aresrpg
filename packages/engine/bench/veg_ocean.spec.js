@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DIVERGENCE WAVE acceptance captures — the grass OCEAN (waist-high cross-flora, shore reeds, meadow
 // flowers, forest-floor fern) + wind sway, recreating the Hodilton reed-marshland reference. HEADED
 // Chromium on the Studio's Metal GPU (§7 source of truth). Pins fixed poses (the demo rAF loop pushes

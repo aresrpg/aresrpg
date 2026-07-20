@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // MY_GLYPHS — the fold-state home for the caster's OWN placed glyphs (the orange ground zone that STAYS).
 // Mirrors my_traps_fold.js structurally, but the glyph LIFECYCLE differs (sim/fight_traps.js is the truth):
 // a glyph is PERSISTENT — check_glyphs ticks anyone standing on it at TURN_START and NEVER removes it; it dies

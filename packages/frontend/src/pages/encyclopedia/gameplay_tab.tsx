@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Swords, Sparkles, Zap, Users, TrendingUp, Activity, DoorOpen, Crown, Coins } from 'lucide-react'

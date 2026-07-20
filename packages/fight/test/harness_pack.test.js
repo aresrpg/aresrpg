@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE HEADLESS PLAY HARNESS — ACCEPTANCE PACK (night ladder item b). Every row is a requirement sentence made a
 // named scenario over the ONE door `input(msg, now)` + the {kind, at, duration, payload} beat stream: the
 // game is provable through anything that speaks the door protocol. EXTENDS the M1a suite

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // HP TRUTH — proves character_max_hp / projected_hp reproduce the LIVE on-chain kernels EXACTLY
 // (aresrpg_foundation::progression_math max_hp_from_base + regen_hp, via hp_math.js), so a client read matches
 // what a chain settle computes. max_hp = per-class base_hp (config default_classes) + 5·(level−1) + (vitality +

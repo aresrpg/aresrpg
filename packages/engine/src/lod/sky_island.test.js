@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // NG-LOD sky-island proof (survey S2 — sky islands get a coarse 3D shell lane). The far-shell
 // pipeline must carry the Pandora floating islands (v5) that the ground heightmap structurally cannot.
 // This test PROVES the islands are reachable from the column/density modules alone (no phase-B GPU

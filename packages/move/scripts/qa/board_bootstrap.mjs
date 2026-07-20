@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // One-shot QA: create the CrushBoard + register the 2 seeded runes (disposable testnet).
 import { Transaction } from '@mysten/sui/transactions'
 import { keypair, sui_client } from '../client.js'

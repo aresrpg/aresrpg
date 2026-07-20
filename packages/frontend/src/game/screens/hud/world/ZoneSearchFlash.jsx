@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SEARCH-PRESS JUICE — the ON-PRESS border-flash pulse: a subtle flashing-border effect layered onto what used to be just a button sound. Pure presentation:
 // DiscoveryPrompts.jsx's [F] on_trigger calls trigger_search_flash() the INSTANT the press lands (optimistic
 // — before the kiosk resolve/tx ever await), so the acknowledgement never waits on chain truth. This just

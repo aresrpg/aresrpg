@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Proves the creator's color-transition seam (a male/female switch in character
 // creation must never reset the color). Root cause was structural: the sex toggle routed through
 // select_class, whose class-arm re-derives the authored DEFAULT colors — wiping the player's picks. The

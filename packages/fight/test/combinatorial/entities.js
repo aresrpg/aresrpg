@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // THE FIGHT GENERATOR (sim side) — build a chain-free deterministic fight: an arena, a yajin caster, N mobs,
 // an optional 2nd player, and the spell templates. Every spell is resolved by the REAL @aresrpg/sim reducer;
 // the combination spells are SYNTHESIZED single-/dual-effect templates (full control over kind + AoE shape,

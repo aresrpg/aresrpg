@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // S-84 — the CONTRACTS PAUSED store. Split out from contracts_paused_modal.tsx on purpose: this file's only
 // imports are zustand + the two leaf modules abort_copy.test.js/report.test.js already prove safe in a
 // DOM-less bun:test (no jsdom/RTL harness exists in this repo — item_detail_view.test.tsx's header notes why

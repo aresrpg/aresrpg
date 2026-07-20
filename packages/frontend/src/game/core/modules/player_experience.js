@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Player experience / end-of-fight result — the SSOT for the post-fight reward modal. Ported from
 // the AresRPG dapp's core/modules/player_experience.js (the per-character experience delta tracker
 // that emitted LEVEL_UP + a "+N XP" toast) and the game-fight-result.vue / game-popup-levelup.vue

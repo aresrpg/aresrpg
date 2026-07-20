@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX — the BURST (impact-only) preset builders, split from vfx_presets_spell.js to keep every file
 // ≤600 LoC. These are the strikes with NO windup/projectile (the swing/kill IS the beat):
 //   • eruption_preset — the earth ground eruption (ExplosionFX molten chunks + billow + ElementalMagic ground ring)

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // FAR-MASK TRAVERSE gate (night-watch 2026-07-04) — the traveled-session "far sheet" oracle.
 //
 // A long-session screenshot showed the far-shell sheet over near drawn terrain while

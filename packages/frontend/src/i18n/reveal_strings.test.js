@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SEARCH-ZONE JUICE — i18n RUNTIME proof for the zone-reveal banner strings. The i18n coverage gate only
 // checks that keys RESOLVE; this pins the actual rendered output: the plural base+_one+_other wiring picks
 // the right form per count, and {{count}}/{{zx}}/{{zy}} interpolate. Uses a standalone i18next instance (no

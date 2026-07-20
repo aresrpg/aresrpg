@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // MOB-XP REAUTHOR driver. Owner re-aim 2026-07-20 — this lane is the FALLBACK; the PRIMARY xp path is an additive
 // `aresrpg::mob_template::set_xp_reward` setter + upgrade (parallel lane, 07-15 set_level_targeting precedent).
 // Because the setter mutates xp IN PLACE, template ids do NOT change and NO world-table repoint is needed.

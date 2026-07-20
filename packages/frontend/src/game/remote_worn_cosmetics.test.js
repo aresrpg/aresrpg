@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // RED-FIRST (COSMETICS TRANSPORT RULING): cosmetics are not trusted over WebRTC — they load from the rpc
 // directly. Proves the peer-worn cache resolves a peer's hat/cloak from a /v1/characters row (the
 // SAME shape views.js's handle_characters serves — worn keyed by category {item_id,template_id,category})

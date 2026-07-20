@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-15 WATER DISTANCE-SHADING — reopened 2026-07-04: distant water at a grazing angle over a large
 // body toward a low sun read as a FLAT GRAY MIRROR of the sky (clean sun ellipse, zero undulation) + a
 // waffle/dot lattice in the mid-distance transition band. Verbatim: "water should not be a strict mirror,

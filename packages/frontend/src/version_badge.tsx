@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 import type { CSSProperties } from 'react'
 
 import { COARSE, NARROW, PHONE_SHORT } from './game/core/mobile_mode.js'

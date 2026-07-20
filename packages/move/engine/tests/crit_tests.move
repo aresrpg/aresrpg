@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// TURN-SEED CRIT wiring (damage variance reverted same day: no global
 /// band, damage is exactly the authored base). The foundation suite proves the pure derivation (`prng`/
 /// `spell_formula`); THIS suite proves the engine feeds it correctly end-to-end: the seat- and slot-bound turn

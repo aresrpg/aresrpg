@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-18 — standalone entry for the world-border demo (border.html). Thin bootstrap: grab the canvas +
 // gate and hand off to boot_border_demo. Kept separate from main.js so the border acceptance surface is
 // independent of the concurrent ENG-19/20 main.js rewrite.

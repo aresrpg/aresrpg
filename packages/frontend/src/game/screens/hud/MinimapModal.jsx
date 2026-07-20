@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Expanded MAP MODAL — the big map (click-to-open from the minimap), presented like a modal on top of
 // everything, with no gold ring or border chrome.
 // The ring/border chrome (.mmx-ring) is GONE outright — the map's own edge is the only boundary now (the same

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // board #13 (WS-C) — CLIENT-SIDE integer shadowcast, ported 1:1 from `combat_grid::line_of_sight` /
 // `combat_grid::blocks` (packages/move/sources/combat/combat_grid.move) — the on-chain co-op dungeon LOS check
 // (an EXACT integer adaptation of 1.29 reference shadow-casting, `ShadowCasting.getAccesibleCells`, proven

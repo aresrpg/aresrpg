@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Canonical ITEM-CARD (c143) — ported FAITHFULLY from the AresRPG donor item-description.vue
 // (aresrpg-legacy/packages/dapp/src/components/cards/item-*.vue), Vue -> React. The approved shape:
 // a HEADER (name + set + level on the right), then a two-column body — the ICON top-LEFT with its

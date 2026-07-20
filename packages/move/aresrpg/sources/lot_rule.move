@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 /// LOT_RULE — the native-kiosk lot-size gate for `Item` secondary purchases.
 ///
 /// The game has one universal `TransferPolicy<Item>`, so every purchase proves this rule. Stackability remains

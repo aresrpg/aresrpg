@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 export const LEADERBOARD_CATEGORIES = ['XP', 'KILLS', 'TIME_PLAYED', 'DUNGEONS', 'SUI_SPENT', 'JOBS'] as const
 export const TIMEFRAMES = ['DAILY', 'WEEKLY', 'MONTHLY', 'ALL TIME'] as const
 export const TIMEFRAME_KEYS: Record<string, string> = {

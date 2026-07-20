@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // Your-turn cue — the unmissable "it's your move" beat at the ACTIVE turn-start, closing the no-dead-interactions
 // gap with a reference-feel turn banner. On the RISING EDGE of my active turn it fires a corpus-extracted ding
 // (the reference corpus's sound for a new turn, replacing the synthesized chime that lived in sfx.js but was never

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // World-level constants + deterministic seed derivation (§3.4, §3.7, §10.5).
 //
 // DETERMINISM LAW (§3.7): integer arithmetic ONLY. splitmix64 uses BigInt (arbitrary-precision
