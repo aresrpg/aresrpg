@@ -1,0 +1,1422 @@
+[
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/auth/index.ts",
+    "to": "packages/frontend/src/game/wallet_session_reset.js",
+    "unresolvedTo": "../game/wallet_session_reset",
+    "dependencyTypes": ["local", "dynamic-import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/p2p/lobby-room.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/player_experience.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/components/entity_display.tsx",
+    "to": "packages/frontend/src/components/entity_tooltip.tsx",
+    "unresolvedTo": "./entity_tooltip",
+    "dependencyTypes": ["local", "export"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/components/entity_tooltip.tsx",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/frontend/src/components/item_detail_view.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/components/items.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/components/entity_display.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/components/entity_display.tsx",
+    "to": "packages/frontend/src/components/item_detail_view.tsx",
+    "unresolvedTo": "./item_detail_view",
+    "dependencyTypes": ["local", "export"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/components/item_detail_view.tsx",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/frontend/src/components/items.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/components/entity_display.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/components/entity_tooltip.tsx",
+    "to": "packages/frontend/src/components/items.tsx",
+    "unresolvedTo": "./items",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/components/items.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/components/entity_display.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/components/entity_tooltip.tsx",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/game/core/game.js",
+    "to": "packages/frontend/src/game/core/modules/index.js",
+    "unresolvedTo": "./modules/index.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/chat.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/game/core/modules/chat.js",
+    "to": "packages/frontend/src/p2p/lobby-room.js",
+    "unresolvedTo": "../../../p2p/lobby-room.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/p2p/lobby-room.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/chat.js",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/game/core/modules/fight.js",
+    "to": "packages/frontend/src/game/core/modules/chat.js",
+    "unresolvedTo": "./chat.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/game/core/modules/chat.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/p2p/lobby-room.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/fight.js",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/game/store.js",
+    "to": "packages/frontend/src/game/core/game.js",
+    "unresolvedTo": "./core/game.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/player_experience.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_store.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_run_store.js",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/frontend/src/game/store.js",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/game/wallet_session_reset.js",
+    "to": "packages/frontend/src/game/core/game.js",
+    "unresolvedTo": "./core/game.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/player_experience.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/game/wallet_session_reset.js",
+    "to": "packages/frontend/src/roster/store.ts",
+    "unresolvedTo": "../roster/store",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/roster/store.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/game/wallet_session_reset.js",
+    "to": "packages/frontend/src/world-shell/dungeon_store.js",
+    "unresolvedTo": "../world-shell/dungeon_store.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_store.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_run_store.js",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/game/wallet_session_reset.js",
+    "to": "packages/frontend/src/world-shell/party_store.js",
+    "unresolvedTo": "../world-shell/party_store.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/world-shell/party_store.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/roster/boot_roster.js",
+    "to": "packages/frontend/src/auth/index.ts",
+    "unresolvedTo": "../auth",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/p2p/lobby-room.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/player_experience.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/boot_roster.js",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/roster/boot_roster.js",
+    "to": "packages/frontend/src/game/core/game.js",
+    "unresolvedTo": "../game/core/game.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/player_experience.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/boot_roster.js",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/roster/boot_roster.js",
+    "to": "packages/frontend/src/roster/load_roster.js",
+    "unresolvedTo": "./load_roster",
+    "dependencyTypes": ["local", "dynamic-import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/boot_roster.js",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/roster/load_roster.js",
+    "to": "packages/frontend/src/game/core/game.js",
+    "unresolvedTo": "../game/core/game.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/player_experience.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/roster/load_roster.js",
+    "to": "packages/frontend/src/world-shell/dungeon_store.js",
+    "unresolvedTo": "../world-shell/dungeon_store.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_store.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_run_store.js",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/roster/store.ts",
+    "to": "packages/frontend/src/game/core/game.js",
+    "unresolvedTo": "../game/core/game.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/player_experience.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/store.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/roster/store.ts",
+    "to": "packages/frontend/src/roster/load_roster.js",
+    "unresolvedTo": "./load_roster",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/store.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/tx/gas_fallback.ts",
+    "to": "packages/frontend/src/tx/index.ts",
+    "unresolvedTo": "./index",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/tx/index.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "packages/frontend/src/tx/gas_fallback.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/world-shell/dungeon_actions.js",
+    "to": "packages/frontend/src/auth/index.ts",
+    "unresolvedTo": "../auth",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/p2p/lobby-room.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/player_experience.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_store.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_run_store.js",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_actions.js",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/world-shell/dungeon_fight_shim.js",
+    "to": "packages/frontend/src/world-shell/dungeon_settlement.js",
+    "unresolvedTo": "./dungeon_settlement.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_settlement.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/p2p/lobby-room.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/player_experience.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_store.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_run_store.js",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_fight_shim.js",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/world-shell/dungeon_run_store.js",
+    "to": "packages/frontend/src/auth/index.ts",
+    "unresolvedTo": "../auth",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/p2p/lobby-room.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/player_experience.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_store.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_run_store.js",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/world-shell/dungeon_run_store.js",
+    "to": "packages/frontend/src/world-shell/dungeon_settlement.js",
+    "unresolvedTo": "./dungeon_settlement.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_settlement.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/p2p/lobby-room.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/player_experience.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_store.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_run_store.js",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/world-shell/dungeon_run_store.js",
+    "to": "packages/frontend/src/world-shell/fight-liquidation.js",
+    "unresolvedTo": "./fight-liquidation.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/world-shell/fight-liquidation.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_actions.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/p2p/lobby-room.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/player_experience.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_store.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_run_store.js",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/world-shell/dungeon_run_store.js",
+    "to": "packages/frontend/src/world-shell/owned_dungeon_settlement.js",
+    "unresolvedTo": "./owned_dungeon_settlement.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/world-shell/owned_dungeon_settlement.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/store.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/player_experience.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_store.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_run_store.js",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/world-shell/dungeon_run_store.js",
+    "to": "packages/frontend/src/world-shell/owned_team_actions.js",
+    "unresolvedTo": "./owned_team_actions.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/world-shell/owned_team_actions.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_actions.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/p2p/lobby-room.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/player_experience.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_store.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_run_store.js",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/world-shell/dungeon_run_store.js",
+    "to": "packages/frontend/src/world-shell/party_store.js",
+    "unresolvedTo": "./party_store.js",
+    "dependencyTypes": ["local", "dynamic-import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/world-shell/party_store.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/p2p/lobby-room.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/player_experience.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_store.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_run_store.js",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/world-shell/dungeon_settlement.js",
+    "to": "packages/frontend/src/game/store.js",
+    "unresolvedTo": "../game/store.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/game/store.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/player_experience.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_store.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_run_store.js",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_settlement.js",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/world-shell/dungeon_settlement.js",
+    "to": "packages/frontend/src/world-shell/dungeon_actions.js",
+    "unresolvedTo": "./dungeon_actions",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_actions.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/p2p/lobby-room.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/player_experience.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_store.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_run_store.js",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_settlement.js",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/world-shell/owned_dungeon_settlement.js",
+    "to": "packages/frontend/src/world-shell/owned_team_actions.js",
+    "unresolvedTo": "./owned_team_actions.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/world-shell/owned_team_actions.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_actions.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/p2p/lobby-room.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/player_experience.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_store.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_run_store.js",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/owned_dungeon_settlement.js",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/world-shell/party_actions.js",
+    "to": "packages/frontend/src/auth/index.ts",
+    "unresolvedTo": "../auth",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/p2p/lobby-room.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/player_experience.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_store.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_run_store.js",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/party_store.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/party_actions.js",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/world-shell/party_store.js",
+    "to": "packages/frontend/src/game/store.js",
+    "unresolvedTo": "../game/store.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/game/store.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/player_experience.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/party_store.js",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/world-shell/party_store.js",
+    "to": "packages/frontend/src/p2p/lobby-room.js",
+    "unresolvedTo": "../p2p/lobby-room",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/p2p/lobby-room.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/game.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/index.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/core/modules/player_experience.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/roster/load_roster.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/party_store.js",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/world-shell/party_store.js",
+    "to": "packages/frontend/src/world-shell/dungeon_store.js",
+    "unresolvedTo": "./dungeon_store.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_store.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/dungeon_run_store.js",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/party_store.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/frontend/src/world-shell/party_store.js",
+    "to": "packages/frontend/src/world-shell/party_actions.js",
+    "unresolvedTo": "./party_actions",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/frontend/src/world-shell/party_actions.js",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/auth/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/frontend/src/game/wallet_session_reset.js",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "packages/frontend/src/world-shell/party_store.js",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  }
+]

@@ -1,0 +1,26 @@
+# Vendored game source + sim/sdk packages self-format (own prettier configs).
+# The indexer is Rust. Keep them out of the companion format/check.
+packages/frontend/src/game/
+packages/frontend/public/sprites/
+packages/frontend/public/vfx/
+packages/frontend/public/forest/
+packages/frontend/public/draco/
+packages/engine/public/draco/
+public/draco/
+packages/sim/
+packages/sdk/
+# Generated data assets (schematics, etc. — machine-emitted, never hand-formatted).
+packages/engine/assets/
+# Generated type surfaces (tsc emit — never hand-formatted).
+packages/party/types/
+packages/inventory/types/
+packages/move/
+packages/rpc/indexer/
+bun.lock
+dist/
+node_modules/
+.claude/
+test/gold/.build/
+test/gold/out/
+test/gold/.gold-*.json
+scripts/walrus/out/quilt_receipt_*.json
