@@ -5,12 +5,26 @@
 # via git integration — the tag is bookkeeping + the changelog anchor, NEVER a deploy trigger.
 # Tags are never created locally (a tag ruleset restricts creation to the Actions app); the
 # promotion PR's package.json bump is the only human-touched version artifact.
-# FROZEN rule 8: GITHUB_TOKEN only, zero external secrets.
+#
+# CHANGELOG CONVENTION: changelog/NNN-RELEASE-vX.Y.Z.md are PURE MARKDOWN — no YAML frontmatter.
+# The version/tag is derived from packages/frontend/package.json (never parsed out of the file);
+# the H1 is the human title. The newest file is posted verbatim to BOTH the GitHub release notes
+# and the Discord embed, so it must stay clean markdown — anything in it renders as-is.
+#
+# FROZEN rule 8: GITHUB_TOKEN only (plus the optional DISCORD_WEBHOOK for the announce).
 name: release
 on:
   push:
     branches: [master]
-  workflow_dispatch: {} # promote.yml dispatches this after its ff-push (GITHUB_TOKEN pushes don't self-trigger)
+  # promote.yml dispatches this (no inputs) after its ff-push — GITHUB_TOKEN pushes don't self-trigger.
+  # announce_only=true re-posts the newest changelog to Discord and skips tag/release creation
+  # (used once to cleanly re-announce a version whose tag already exists).
+  workflow_dispatch:
+    inputs:
+      announce_only:
+        description: 'Re-post the newest changelog to Discord; skip tag/release creation'
+        type: boolean
+        default: false
 permissions:
   contents: write
 jobs:
@@ -28,12 +42,15 @@ jobs:
         id: v
         run: echo "version=$(node -p "require('./packages/frontend/package.json').version")" >> "$GITHUB_OUTPUT"
       - name: tag + release if absent (idempotent)
+        id: tag
+        if: ${{ !inputs.announce_only }} # announce_only dispatch re-announces only; never tags
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="v${{ steps.v.outputs.version }}"
           if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
-            echo "tag $TAG already exists — no-op"
+            echo "tag $TAG already exists — no-op (announce is gated on created=true, so no re-announce)"
+            echo "created=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           # Release notes = the newest release-changelog when the publisher has written one
@@ -44,20 +61,43 @@ jobs:
           else
             gh release create "$TAG" --title "$TAG" --generate-notes --target "$GITHUB_SHA"
           fi
+          echo "created=true" >> "$GITHUB_OUTPUT"
       - name: announce on Discord (skip-quiet without the secret — forks never fail)
+        # Fires ONLY when THIS run minted a fresh tag (created=true) OR on an explicit
+        # announce_only dispatch. A master push that re-runs release.yml against an
+        # already-existing tag (e.g. a promotion merge that didn't bump the version) skips
+        # it — that is the duplicate-announce fix. The step's OWN errors are always non-blocking.
+        if: ${{ steps.tag.outputs.created == 'true' || inputs.announce_only }}
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
           if [ -z "$DISCORD_WEBHOOK" ]; then echo "no webhook secret — skipping announce"; exit 0; fi
-          TAG="v$(node -p "require('./packages/frontend/package.json').version")"
-          NOTES_FILE=$(ls changelog/*-RELEASE-*.md 2>/dev/null | sort | tail -1 || true)
+          TAG="v${{ steps.v.outputs.version }}"
           URL="https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
-          # Discord content cap is 2000 chars — verbatim changelog body, truncated with the
-          # release URL as the always-present tail. No role ping (silent default, owner-amendable).
-          if [ -n "$NOTES_FILE" ]; then BODY=$(head -c 1700 "$NOTES_FILE"); else BODY="AresRPG ${TAG} is live."; fi
-          jq -n --arg c "**AresRPG ${TAG}**
-
-          ${BODY}
-
-          ${URL}" '{content: $c}' | curl -sf -H 'Content-Type: application/json' -d @- "$DISCORD_WEBHOOK" \
+          NOTES_FILE=$(ls changelog/*-RELEASE-*.md 2>/dev/null | sort | tail -1 || true)
+          if [ -n "$NOTES_FILE" ]; then BODY=$(cat "$NOTES_FILE"); else BODY="AresRPG ${TAG} is live."; fi
+          # One branded embed card: gold border, banner strip (attachment://), the changelog as
+          # markdown. Links inside an embed description never sprout preview cards, so the ugly
+          # auto-embeds die naturally — no SUPPRESS_EMBEDS flag needed (content stays empty).
+          # Embed descriptions cap at 4096 chars: truncate at a paragraph boundary and link out.
+          MAX=3900
+          if [ "${#BODY}" -gt "$MAX" ]; then
+            CUT=$(printf '%s' "$BODY" | head -c "$MAX")
+            BODY="${CUT%$'\n\n'*}"$'\n\n'"[Full notes →](${URL})"
+          fi
+          PAYLOAD="${RUNNER_TEMP:-/tmp}/discord_payload.json"
+          jq -n --arg t "AresRPG ${TAG}" --arg u "$URL" --arg d "$BODY" '{
+            embeds: [{
+              title: $t,
+              url: $u,
+              description: $d,
+              color: 13145660,
+              image: { url: "attachment://discord_banner.png" },
+              footer: { text: "AresRPG — source-available" }
+            }]
+          }' > "$PAYLOAD"
+          curl -sf \
+            -F "payload_json=<${PAYLOAD};type=application/json" \
+            -F "files[0]=@.github/assets/discord_banner.png;type=image/png" \
+            "$DISCORD_WEBHOOK" \
             || echo "webhook POST failed (non-blocking — the release itself already succeeded)"
