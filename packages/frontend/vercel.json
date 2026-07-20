@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
+  "ignoreCommand": "if [ \"$VERCEL_ENV\" != \"production\" ]; then exit 1; fi\nSUBJECT=$(printf '%s' \"$VERCEL_GIT_COMMIT_MESSAGE\" | head -n 1)\ncase \"$SUBJECT\" in\n  \"release: v\"*) exit 1 ;;\n  *) exit 0 ;;\nesac\n",
   "installCommand": "cd ../.. && bun install",
   "buildCommand": "bunx vite build && node scripts/assert_clean_bundle.mjs",
   "outputDirectory": "dist"

@@ -80,6 +80,21 @@ jobs:
             --jq '[.check_runs[] | select(.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral")] | length')
           test "$NOT_GREEN" = "0" || { echo "$NOT_GREEN check(s) not green on $HEAD_SHA — refusing"; exit 1; }
           echo "sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+      - name: assert master promotions carry a release-prep tip (release-only-production law)
+        # RULING (maintainer): master only deploys to Vercel production on a release-tipped
+        # promotion. This is the mechanical half of that law — refusing here means a non-release
+        # commit never reaches master at all. packages/frontend/vercel.json's ignoreCommand is the
+        # other half: an independent, defense-in-depth check that skips the Vercel production
+        # build itself for any commit whose subject isn't release-shaped (covers the rare operator
+        # direct-push-to-master path CONTRIBUTING.md carves out, which this job never sees).
+        if: steps.pr.outputs.base == 'master'
+        run: |
+          SHA=${{ steps.pr.outputs.sha }}
+          SUBJECT=$(git log -1 --pretty=%s "$SHA")
+          case "$SUBJECT" in
+            "release: v"*) echo "release-tipped ($SUBJECT) — proceeding" ;;
+            *) echo "master promotions carry a release-prep tip; land the version bump + changelog on edge first"; exit 1 ;;
+          esac
       - name: stamp the promoted status on $SHA (master only — BEFORE the push, never after)
         if: steps.pr.outputs.base == 'master'
         env:
