@@ -156,8 +156,8 @@ js/aresrpg/laundered-store-write|packages/frontend/src/stores/item_send.ts|36481
 js/aresrpg/laundered-store-write|packages/frontend/src/stores/item_send.ts|970ec8fa4ee4e878:1
 js/aresrpg/laundered-store-write|packages/frontend/src/stores/item_send.ts|dfb52559148a801e:1
 js/aresrpg/laundered-store-write|packages/frontend/src/stores/item_send.ts|f47f70b009d87c34:1
-js/aresrpg/laundered-store-write|packages/frontend/src/stores/items_shop_chain.ts|478452b578d5b14c:1
-js/aresrpg/laundered-store-write|packages/frontend/src/stores/items_shop_chain.ts|ba14e0c458178691:1
+js/aresrpg/laundered-store-write|packages/frontend/src/stores/items_shop_chain.ts|ba14e0c4a0dfcf37:1
+js/aresrpg/laundered-store-write|packages/frontend/src/stores/items_shop_chain.ts|be4672ca89e6161e:1
 js/aresrpg/laundered-store-write|packages/frontend/src/stores/marketplace_chain.ts|19d4ace28db1c9b9:1
 js/aresrpg/laundered-store-write|packages/frontend/src/stores/marketplace_chain.ts|22c4b4462feb1e3d:1
 js/aresrpg/laundered-store-write|packages/frontend/src/stores/marketplace_chain.ts|25170d3d082cd4de:1
@@ -176,19 +176,20 @@ js/aresrpg/laundered-store-write|packages/frontend/src/stores/marketplace_chain.
 js/aresrpg/laundered-store-write|packages/frontend/src/stores/sui_send.ts|253b97cc327a59aa:1
 js/aresrpg/laundered-store-write|packages/frontend/src/stores/sui_send.ts|dac1c13dcab70292:1
 js/aresrpg/laundered-store-write|packages/frontend/src/stores/sui_send.ts|fcb070e9ba385f7f:1
-js/aresrpg/laundered-store-write|packages/frontend/src/toast.ts|1236d6f831adaae8:1
 js/aresrpg/laundered-store-write|packages/frontend/src/toast.ts|192f67a5a317e1e4:1
-js/aresrpg/laundered-store-write|packages/frontend/src/toast.ts|44d591e66799298c:1
+js/aresrpg/laundered-store-write|packages/frontend/src/toast.ts|42d7a242460ff66a:1
+js/aresrpg/laundered-store-write|packages/frontend/src/toast.ts|9245dc863255f53:1
 js/aresrpg/laundered-store-write|packages/frontend/src/toast.ts|960cff6ac4dbc35b:1
 js/aresrpg/laundered-store-write|packages/frontend/src/toast.ts|d3d3a7c03e9c862e:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_dimension.js|ce342834c79563e7:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|11a84aa0e254f697:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|19ad15f32b8edc12:1
-js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|213b236ad284dc5f:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|25637f098b20ab6b:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|269350c5f6e8ebd3:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|299d4f2f515d174f:1
+js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|2d7865d9d08a517e:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|2eb54ecbf7be773a:1
+js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|3581e010856ead7f:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|36002af38b923b97:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|3856cda4e5a44eee:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|3da7ce594ba7d5fa:1
@@ -197,10 +198,9 @@ js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_s
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|46af40e129ffcfa3:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|46f4aea364b3d8de:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|587d75202287b928:1
+js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|6459898c780b6da:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|6805fe325b3414fa:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|6a10fbb685e9f2ff:1
-js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|6ae69b30555ff489:1
-js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|79e857b72d8d3e6c:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|7ac71f2fefe515b6:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|7c9083ba966d7df:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|8e10fdf7477ad210:1
@@ -218,42 +218,20 @@ js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_s
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|e2860c652cadf7ee:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|e5ea0c07f33169ba:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|eff02ff3507243a:1
-js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|f22364263837ac61:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|f230f9cb7b399a11:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|f4236bf0405f4419:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|f4236bf040651830:1
+js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|f8fb4c8607241ca9:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|fded9fa6b74c4d5a:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|fe9605c77e908c97:1
-# ADJUDICATED 2026-07-20 (lane/dungeon-codeql) — 4 rows below: dungeon_run_store's OWN async DOORS writing their own
-# run-lifecycle state via set() after the door's OWN `await` (origin = "await continuation", NOT a timer/listener/
-# promise-continuation; awaits 479/557/795/801). 490 start_when_ready · 560 join_shared_dungeon · 815/817 refresh.
-# The input-door class already baselined here (fight STATE routes through fight_store.input(); the run store holds no
-# fight state). c5d2c889 (recap-truth) added fight_started_at_ms → re-hashed 490/560/817 and drifted 815's neighbor
-# hash; shape unchanged. CLEAN per CODE_LAW L-P4 (the write IS the door) — NOT the v1.12.28 timer→helper→set() class.
-js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|2d7865d9d08a517e:1
-js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|3581e010856ead7f:1
-js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|6459898c780b6da:1
-js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_run_store.js|f8fb4c8607241ca9:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_settlement.js|2ee49b5e91f7746d:1
-js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_settlement.js|428733c3b4a9b5bc:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_settlement.js|5fc2ca77c1c14c99:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_settlement.js|63bca459dc2bde62:1
-js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_settlement.js|7aa6de50266bdef0:1
+js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_settlement.js|7aa6de50266bdeb1:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_settlement.js|7e0fa6d39632134f:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_settlement.js|b3ed7324ce8051ae:1
-js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_settlement.js|c0b01eb19967c2da:1
+js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_settlement.js|c9b3722345470005:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_settlement.js|d1c0516548cc32ba:1
-# ADJUDICATED 2026-07-20 (lane/a2-teeth, SEAT-BARRED — full trace, not a race-day rebaseline; this is the mint
-# path) — finish_result's line-297 `setState({ result_id: null })` re-hashed, not a new class: this file's other
-# 9 findings above (incl. line 244's `setState({result_id})`, hash b3ed7324ce8051ae) share the IDENTICAL 12-origin
-# taint shape — same await-continuations through settle_chain/land_outcome + the use_auth.subscribe boot-open
-# listener at dungeon_run_store.js:1458 — already bulk-accepted (8aa7e318). 98948ecc (mint-recovery) moved the
-# post-mint reset from inside the try/catch after `await mint_all_and_burn` to right after the new
-# `enqueue_mint(result_id)`, since pending_mints.js's receipt-driven queue now owns the mint's own retry/latch.
-# Traced dataflow to the write: pending_mints.js's queue is a plain Map (`queue.set`, never a zustand setter) —
-# the mint/burn/retry path itself never touches this or any store; only this one line writes state, from a
-# receipt-derived value, in the settlement chain's own synchronous continuation. CLEAN per CODE_LAW L-P4 (receipt
-# as input) — NOT the v1.12.28 timer→helper→set() class. Gate rerun: 0 new.
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/dungeon_settlement.js|e75319aae860ae2e:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/prompt_stack.js|8728089e29981e23:1
 js/aresrpg/laundered-store-write|packages/frontend/src/world-shell/world_fight.js|d5d9acb374d2ea49:1
