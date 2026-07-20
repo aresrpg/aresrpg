@@ -54,12 +54,44 @@ for (const f of files) {
   }
 }
 
-if (hits.length) {
-  console.error('\n✗ BUNDLE-CLEANLINESS GATE FAILED — the built bundle contains forbidden content:\n')
-  for (const h of hits) console.error(`  ${h.file}\n    matched: ${h.match}…\n    reason:  ${h.why}\n`)
-  console.error('Fix: remove the offending value from every uploaded .env* file (prod config belongs in')
-  console.error('the Vercel dashboard, not a shipped .env), then rebuild.\n')
+// REQUIRED-CONTENT gate (issue #94). The seed manifest is a deployment pin the Vite build inlines
+// (src/content/seed_manifest.ts globs packages/move/scripts/out/seed_manifest.json). The resolver now
+// DEGRADES to an empty manifest when the artifact is absent instead of crashing the boot — so a
+// manifest-less build no longer fails on its own. This is the CI backstop: assert the manifest actually
+// RESOLVED into the shipped bundle (resolved-value, per this file's law), so a degraded/empty deploy
+// fails here rather than shipping a client with no content. Returns '' when OK, else the failure reason.
+function seed_manifest_problem(dist_files) {
+  const rel = 'packages/move/scripts/out/seed_manifest.json'
+  const src = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'move', 'scripts', 'out', 'seed_manifest.json')
+  let manifest
+  try {
+    manifest = JSON.parse(readFileSync(src, 'utf8'))
+  } catch {
+    return `deployment-pin manifest missing/unreadable (${rel}) — the build inlines it; without it the client boots with EMPTY content (encyclopedia, shop fence, spell rows). Commit the manifest, then rebuild.`
+  }
+  const ids = [...Object.values(manifest.items ?? {}), ...(manifest.worlds ?? []).map((world) => world?.id)].filter(
+    (value) => typeof value === 'string' && /^0x[0-9a-fA-F]{64}$/.test(value)
+  )
+  if (ids.length === 0) return `the manifest at ${rel} carries no on-chain object ids (empty/degenerate).`
+  const [sample_id] = ids
+  if (!dist_files.some((f) => readFileSync(f, 'utf8').includes(sample_id)))
+    return `the manifest did NOT resolve into the shipped bundle (sample id ${sample_id} absent from every dist file) — the build inlined an empty manifest. Ensure ${rel} ships, then rebuild.`
+  return ''
+}
+
+const manifest_error = seed_manifest_problem(files)
+
+if (hits.length || manifest_error) {
+  if (hits.length) {
+    console.error('\n✗ BUNDLE-CLEANLINESS GATE FAILED — the built bundle contains forbidden content:\n')
+    for (const h of hits) console.error(`  ${h.file}\n    matched: ${h.match}…\n    reason:  ${h.why}\n`)
+    console.error('Fix: remove the offending value from every uploaded .env* file (prod config belongs in')
+    console.error('the Vercel dashboard, not a shipped .env), then rebuild.\n')
+  }
+  if (manifest_error) console.error(`\n✗ SEED-MANIFEST GATE FAILED — ${manifest_error}\n`)
   process.exit(1)
 }
 
-console.log(`✓ bundle-cleanliness gate OK (${files.length} dist files scanned — no leaked keys, no dead hosts)`)
+console.log(
+  `✓ bundle-cleanliness gate OK (${files.length} dist files scanned — no leaked keys, no dead hosts; seed manifest resolved into the bundle)`
+)
