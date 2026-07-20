@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // stamp_copyright.mjs — per-file SPDX license headers, idempotent.
 //
 // Every SOURCE file carries the license identity so snippets travel with their terms (per-file

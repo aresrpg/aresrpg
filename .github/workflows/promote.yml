@@ -1,0 +1,57 @@
+# promote.yml — the fast-forward promotion bot (owner-triggered, signature-preserving).
+#
+# Master never takes a merge COMMIT: promotion is a fast-forward push of the exact approved
+# head SHA, so master's commits stay BYTE-IDENTICAL to edge's (signatures survive perfectly)
+# and the pusher is the Actions bot — "reviewer ≠ pusher" holds naturally, required-review
+# stays. Trigger = the owner commenting `/promote` on a PR targeting master (explicit command,
+# never an accidental approval side-effect). The job refuses unless: commenter is the owner ·
+# the PR carries the owner's APPROVED review · every check on the head is green · the push is
+# a true fast-forward (master is an ancestor of the head).
+#
+# NOTE (GitHub semantics): pushes made with GITHUB_TOKEN don't trigger push-workflows, so this
+# job explicitly dispatches release.yml after the ff-push (Vercel deploys regardless — app
+# webhooks are not suppressed).
+name: promote
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: write
+  actions: write
+  pull-requests: read
+jobs:
+  fast-forward:
+    if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/promote')
+    runs-on: ubuntu-latest
+    steps:
+      - name: assert commenter is the owner
+        run: |
+          test "${{ github.event.comment.user.login }}" = "Sceat" || { echo "not the owner — refusing"; exit 1; }
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: resolve + assert the PR (approved by owner, checks green, targets master)
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR=${{ github.event.issue.number }}
+          BASE=$(gh pr view "$PR" --json baseRefName -q .baseRefName)
+          test "$BASE" = "master" || { echo "PR targets $BASE, not master — refusing"; exit 1; }
+          HEAD_SHA=$(gh pr view "$PR" --json headRefOid -q .headRefOid)
+          APPROVED=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR}/reviews" \
+            --jq '[.[] | select(.user.login=="Sceat")] | last | .state')
+          test "$APPROVED" = "APPROVED" || { echo "no standing owner approval — refusing"; exit 1; }
+          NOT_GREEN=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/check-runs" \
+            --jq '[.check_runs[] | select(.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral")] | length')
+          test "$NOT_GREEN" = "0" || { echo "$NOT_GREEN check(s) not green on $HEAD_SHA — refusing"; exit 1; }
+          echo "sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+      - name: fast-forward master (refuses non-ff by construction)
+        run: |
+          SHA=${{ steps.pr.outputs.sha }}
+          git merge-base --is-ancestor origin/master "$SHA" || { echo "not a fast-forward — refusing"; exit 1; }
+          git push origin "$SHA:master"   # plain push: git itself rejects anything non-ff
+      - name: dispatch the release workflow (GITHUB_TOKEN pushes don't self-trigger)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run release.yml --ref master

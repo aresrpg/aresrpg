@@ -10,6 +10,7 @@ name: release
 on:
   push:
     branches: [master]
+  workflow_dispatch: {} # promote.yml dispatches this after its ff-push (GITHUB_TOKEN pushes don't self-trigger)
 permissions:
   contents: write
 jobs:
