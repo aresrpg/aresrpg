@@ -1,0 +1,52 @@
+# The enforcement ladder in CI (docs/CODE_LAW.md). Two jobs:
+#   ladder    — `bun run lint`: eslint + prettier + the constraint gate (keystroke + commit tiers).
+#   fp-codeql — the custom FP query pack as a native GitHub code-scanning analysis (the deep tier).
+#
+# gate.yml stays the fast deterministic fight-replay gate and is untouched; this file adds the
+# constraint + dataflow tiers. Fork-safe: no secrets. Legs whose tooling is absent on a hosted
+# runner SKIP loudly via the repo's own fail-open-on-absence mechanism — never weakened, never
+# deleted. See the PR / CODE_LAW for the CI-vs-local leg split.
+name: checks
+on:
+  pull_request:
+    branches: [edge, master]
+  push:
+    branches: [edge, master]
+permissions:
+  contents: read
+jobs:
+  ladder:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: install deps
+        run: bun install --frozen-lockfile
+      - name: install semgrep (dataflow leg — commit tier)
+        run: pipx install semgrep
+      - name: enforcement ladder — bun run lint
+        run: bun run lint
+
+  fp-codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: init CodeQL (FP query pack only)
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          # Only the aresrpg FP pack (docs/CODE_LAW.md deep tier). Default security-and-quality
+          # queries are left to GitHub's default CodeQL setup — this job does not duplicate them.
+          config: |
+            disable-default-queries: true
+            queries:
+              - uses: ./scripts/codeql/aresrpg-fp
+      - name: analyze (native code scanning — baseline ratchet)
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: aresrpg-fp
