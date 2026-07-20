@@ -76,29 +76,23 @@ jobs:
           URL="https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
           NOTES_FILE=$(ls changelog/*-RELEASE-*.md 2>/dev/null | sort | tail -1 || true)
           if [ -n "$NOTES_FILE" ]; then BODY=$(cat "$NOTES_FILE"); else BODY="AresRPG ${TAG} is live."; fi
-          # The embed title owns the version line, so strip a leading H1 (and the blank line after
-          # it) — otherwise the changelog's "# vX.Y.Z — …" doubles the card title.
+          # Strip a leading H1 (kept from the prior cut) so the message opens on the first
+          # paragraph rather than a giant version header.
           BODY=$(printf '%s\n' "$BODY" | awk 'NR==1 && /^# /{s=1;next} s{s=0;if($0=="")next} {print}')
-          # One branded embed card: gold border, banner strip (attachment://), the changelog as
-          # markdown. Links inside an embed description never sprout preview cards, so the ugly
-          # auto-embeds die naturally — no SUPPRESS_EMBEDS flag needed (content stays empty).
-          # Embed descriptions cap at 4096 chars: truncate at a paragraph boundary and link out.
-          MAX=3900
-          if [ "${#BODY}" -gt "$MAX" ]; then
-            CUT=$(printf '%s' "$BODY" | head -c "$MAX")
-            BODY="${CUT%$'\n\n'*}"$'\n\n'"[Full notes →](${URL})"
+          # A NORMAL full-width message (not an embed): Discord renders ## headers, bold and
+          # bullets natively. flags:4 (SUPPRESS_EMBEDS) kills the link-preview cards that bare
+          # URLs in normal content otherwise spawn. The banner rides as a file attachment and
+          # renders full-width BELOW the text (Discord can't place an attachment above content).
+          # Content caps at 2000 chars: reserve room for the release link, then truncate the
+          # body at a paragraph boundary.
+          FOOTER=$'\n\n'"Full notes → ${URL}"
+          BUDGET=$((2000 - ${#FOOTER}))
+          if [ "${#BODY}" -gt "$BUDGET" ]; then
+            CUT=$(printf '%s' "$BODY" | head -c "$BUDGET")
+            BODY="${CUT%$'\n\n'*}"
           fi
           PAYLOAD="${RUNNER_TEMP:-/tmp}/discord_payload.json"
-          jq -n --arg t "AresRPG ${TAG}" --arg u "$URL" --arg d "$BODY" '{
-            embeds: [{
-              title: $t,
-              url: $u,
-              description: $d,
-              color: 13145660,
-              image: { url: "attachment://discord_banner.png" },
-              footer: { text: "AresRPG — source-available" }
-            }]
-          }' > "$PAYLOAD"
+          jq -n --arg c "${BODY}${FOOTER}" '{content: $c, flags: 4}' > "$PAYLOAD"
           curl -sf \
             -F "payload_json=<${PAYLOAD};type=application/json" \
             -F "files[0]=@.github/assets/discord_banner.png;type=image/png" \
