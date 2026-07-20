@@ -19,33 +19,6 @@
         "typescript-eslint": "^8.64.0",
       },
     },
-    "apps/admin": {
-      "name": "@aresrpg/admin",
-      "version": "0.0.0",
-      "dependencies": {
-        "@aresrpg/sdk": "workspace:*",
-        "@mysten/enoki": "^1.2.3",
-        "@mysten/sui": "^2.20.3",
-        "@mysten/wallet-standard": "^0.21.5",
-        "i18next": "^25.10.10",
-        "lucide-react": "^0.577.0",
-        "react": "^19.2.7",
-        "react-dom": "^19.2.7",
-        "react-i18next": "^16.6.6",
-        "react-router-dom": "^7.18.1",
-        "zustand": "^5.0.14",
-      },
-      "devDependencies": {
-        "@tailwindcss/vite": "^4.3.2",
-        "@types/react": "^19.2.17",
-        "@types/react-dom": "^19.2.3",
-        "@vitejs/plugin-react": "^6.0.3",
-        "tailwindcss": "^4.3.2",
-        "typescript": "^5.9.3",
-        "vite": "^8.1.4",
-        "vite-plugin-node-polyfills": "^0.24.0",
-      },
-    },
     "packages/engine": {
       "name": "@aresrpg/engine3",
       "version": "0.0.1",
@@ -72,7 +45,7 @@
     },
     "packages/frontend": {
       "name": "@aresrpg/frontend",
-      "version": "1.12.33",
+      "version": "1.12.36",
       "dependencies": {
         "@aresrpg/engine3": "workspace:*",
         "@aresrpg/fight": "workspace:*",
@@ -198,28 +171,6 @@
         "typescript-eslint": "^8.64.0",
       },
     },
-    "packages/simlab": {
-      "name": "@aresrpg/simlab",
-      "version": "0.0.0",
-      "dependencies": {
-        "@aresrpg/sim": "workspace:*",
-        "react": "^19.2.7",
-        "react-dom": "^19.2.7",
-      },
-      "devDependencies": {
-        "vite": "^8.1.4",
-      },
-    },
-    "packages/validation": {
-      "name": "@aresrpg/validation",
-      "version": "0.1.0",
-      "bin": {
-        "aresrpg-validate": "./src/cli.ts",
-      },
-      "devDependencies": {
-        "typescript": "^5.9.3",
-      },
-    },
     "packages/world": {
       "name": "@aresrpg/world",
       "version": "0.0.0",
@@ -241,8 +192,6 @@
 
     "@apideck/better-ajv-errors": ["@apideck/better-ajv-errors@0.3.6", "", { "dependencies": { "json-schema": "^0.4.0", "jsonpointer": "^5.0.0", "leven": "^3.1.0" }, "peerDependencies": { "ajv": ">=8" } }, "sha512-P+ZygBLZtkp0qqOAJJVX4oX/sFo5JR3eBWwwuqHHhK0GIgQOKWrAfiAaWX0aArHkRWHMuggFEgAZNxVPwPZYaA=="],
 
-    "@aresrpg/admin": ["@aresrpg/admin@workspace:apps/admin"],
-
     "@aresrpg/engine3": ["@aresrpg/engine3@workspace:packages/engine"],
 
     "@aresrpg/fight": ["@aresrpg/fight@workspace:packages/fight"],
@@ -258,10 +207,6 @@
     "@aresrpg/sdk": ["@aresrpg/sdk@workspace:packages/sdk"],
 
     "@aresrpg/sim": ["@aresrpg/sim@workspace:packages/sim"],
-
-    "@aresrpg/simlab": ["@aresrpg/simlab@workspace:packages/simlab"],
-
-    "@aresrpg/validation": ["@aresrpg/validation@workspace:packages/validation"],
 
     "@aresrpg/world": ["@aresrpg/world@workspace:packages/world"],
 
