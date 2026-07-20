@@ -22,8 +22,8 @@
 
 import { play_element_sfx, play_sfx } from '../audio/sfx.js'
 import { element_of_spell } from '../../../world-shell/voxel_fight_folds.js'
-import { WEAPON_ATTACK_ID } from '@aresrpg/fight'
-import { fight_view } from '@aresrpg/fight'
+import { WEAPON_ATTACK_ID } from '@aresrpg/fight/weapon'
+import { fight_view } from '@aresrpg/fight/project'
 
 // One caster whoosh per caster inside this window — a duplicate dispatch of the same cast is dropped.
 const CAST_THROTTLE_MS = 300

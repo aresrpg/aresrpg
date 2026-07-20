@@ -14,9 +14,21 @@
     "node": ">=21.0.0"
   },
   "exports": {
-    ".": {
-      "import": "./src/index.js",
-      "types": "./types/index.d.ts"
+    "./reduce": {
+      "types": "./types/reduce.d.ts",
+      "import": "./src/reduce.js"
+    },
+    "./consumable_ledger": {
+      "types": "./types/consumable_ledger.d.ts",
+      "import": "./src/consumable_ledger.js"
+    },
+    "./bought_items_ledger": {
+      "types": "./types/bought_items_ledger.d.ts",
+      "import": "./src/bought_items_ledger.js"
+    },
+    "./fight_receipt_roster": {
+      "types": "./types/fight_receipt_roster.d.ts",
+      "import": "./src/fight_receipt_roster.js"
     }
   },
   "author": "AresRPG's Team",

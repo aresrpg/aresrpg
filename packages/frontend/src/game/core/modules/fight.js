@@ -19,8 +19,8 @@ import i18n from '../../../i18n'
 import { CHANNEL } from './chat.js'
 import { fight_spell, fight_spells_data } from '../../screens/hud/fight-spells.js'
 import { resolve_character_docs, missing_roster_character_ids } from '../../../world-shell/character_name_resolve.js'
-
-import { fight_store, fight_view } from '@aresrpg/fight'
+import { fight_store } from '@aresrpg/fight/store'
+import { fight_view } from '@aresrpg/fight/project'
 
 // The live chain corpus, already normalized through @aresrpg/sim by fight-spells' package door. The map is
 // keyed by the armed name_key; no SDK gameplay feed or copied seed fallback participates in fight truth.
@@ -466,7 +466,7 @@ export const emit_death_line = (get_state, dispatch, { target_id }) => {
 // The equipped-WEAPON basic-attack sentinel + pre-read fallbacks now LIVE in the fight core
 // (fight/weapon.js — fight-session vocabulary; the move broke the fight-sfx→this-module dependency cycle).
 // Re-exported verbatim so every existing importer keeps working.
-export { WEAPON_ATTACK_ID, WEAPON_ATTACK_RANGE, WEAPON_ATTACK_AP } from '@aresrpg/fight'
+export { WEAPON_ATTACK_ID, WEAPON_ATTACK_RANGE, WEAPON_ATTACK_AP } from '@aresrpg/fight/weapon'
 
 // Arm (or toggle off) a hand card for casting. THE ONE DOOR (fight/store.js): the core owns the toggle; every
 // consumer reads `armed_spell_id` synchronously off the projected view (use_fight_view). The board reads it to

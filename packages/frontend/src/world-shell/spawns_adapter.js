@@ -7,7 +7,7 @@
 // gather_actions / world_spawns' claim executor) dispatch intents and receipts through here.
 
 import { useStore } from 'zustand'
-import { create_spawns_store } from '@aresrpg/world'
+import { create_spawns_store } from '@aresrpg/world/spawns_zones'
 
 import { use_world_binding } from './session_gate.js'
 

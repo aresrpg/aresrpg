@@ -9,7 +9,7 @@
 // race). Now each dispatches a TYPED receipt_patch DELTA; the sui_session reducer folds it against the LATEST
 // bag. Same exported signatures — callers (Inventory equip, shop buy, consume) are untouched.
 
-import { add_pending_buy } from '@aresrpg/inventory'
+import { add_pending_buy } from '@aresrpg/inventory/bought_items_ledger'
 
 import { context } from '../game/core/game.js'
 

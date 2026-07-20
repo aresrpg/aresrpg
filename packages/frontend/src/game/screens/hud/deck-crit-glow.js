@@ -12,7 +12,7 @@
 // base, nothing else moves (the pre-ceremony ±15% variance band was removed on-chain). `next_hit` is that rule's
 // one client home.
 
-import { turn_seed, slot_crit_roll, crit_at } from '@aresrpg/sim'
+import { turn_seed, slot_crit_roll, crit_at } from '@aresrpg/sim/turn_seed'
 
 /**
  * The crit PREVIEW for the NEXT action slot, or null when unknowable. Non-null only on MY active turn with the

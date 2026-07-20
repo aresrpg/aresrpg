@@ -17,7 +17,9 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { create_fight_store, engine_view, presented_state, local_move_beats } from '@aresrpg/fight'
+import { create_fight_store, presented_state } from '@aresrpg/fight/store'
+import { engine_view } from '@aresrpg/fight/project'
+import { local_move_beats } from '@aresrpg/fight/present'
 
 const GRID_W = 20
 const FIGHT = '0xf1'

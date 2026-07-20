@@ -10,7 +10,7 @@
 // shapes the sim output for the two call sites (LoC law: keep the ~1600-line overlay from growing further,
 // keep ONE home for the movement math so the preview == the committed route).
 
-import { find_path_4dir, get_reachable_cells } from '@aresrpg/sim'
+import { find_path_4dir, get_reachable_cells } from '@aresrpg/sim/pathfind'
 
 /** @typedef {{ x: number, y: number }} Cell */
 /** @typedef {(cell: Cell) => boolean} IsWalkable  walkable terrain AND unoccupied (the start cell is allowed) */

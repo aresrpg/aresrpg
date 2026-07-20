@@ -6,7 +6,7 @@
 // through the door — the exact read the old presence module performed inline).
 
 import { useStore } from 'zustand'
-import { create_presence_store, subscribe_identity_requests } from '@aresrpg/world'
+import { create_presence_store, subscribe_identity_requests } from '@aresrpg/world/presence'
 
 /** THE one presence atom for the app (the package factory owns its shape + door). */
 export const presence_store = create_presence_store()

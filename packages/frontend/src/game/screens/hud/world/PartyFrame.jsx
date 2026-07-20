@@ -13,7 +13,7 @@ import { v1_character_to_party_row } from '../../../../chain/read_staking.js'
 import './game-world-hud.css'
 import { use_game_state } from '../../../store.js'
 import { get_peer_state } from '../../../../p2p/lobby-room.js'
-import { project_party_view } from '@aresrpg/party'
+import { project_party_view } from '@aresrpg/party/reduce'
 
 import { use_party } from '../../../../world-shell/party_store.js'
 import { use_dungeon } from '../../../../world-shell/dungeon_store.js'

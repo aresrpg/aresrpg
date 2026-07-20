@@ -18,7 +18,7 @@
 // restores. Reconciles racing an active batch can't bounce the number: load_roster's dispatch renders
 // chain_amount − pending (consumable_ledger.mask_pending_items).
 
-import { create_consume_batcher } from '@aresrpg/inventory'
+import { create_consume_batcher } from '@aresrpg/inventory/consumable_ledger'
 
 import { use_auth } from '../auth'
 import { get_sdk } from '../chain/sdk'

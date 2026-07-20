@@ -25,7 +25,7 @@
 // placed_cell before playing. With placed == chain-cell, the reconcile sees NO drift → no redundant walk.
 
 import { describe, expect, it } from 'bun:test'
-import { GRID_W, GRID_H, encode, decode } from '@aresrpg/fight'
+import { GRID_W, GRID_H, encode, decode } from '@aresrpg/fight/los'
 
 import { legal_move_path } from '../game/screens/dungeon-grid.js'
 import { create_pace_queue } from '../fight-engine/overlay_intents.js'

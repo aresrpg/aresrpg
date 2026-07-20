@@ -11,7 +11,8 @@
 //      dead-air class (turn N playing (N−1)×3s late) cannot re-enter through the adapter tier.
 
 import { describe, expect, test } from 'bun:test'
-import { create_fight_store, MOB_TURN_MS } from '@aresrpg/fight'
+import { create_fight_store } from '@aresrpg/fight/store'
+import { MOB_TURN_MS } from '@aresrpg/fight/present'
 
 import { create_fight_render_queue } from './fight_render_queue.js'
 

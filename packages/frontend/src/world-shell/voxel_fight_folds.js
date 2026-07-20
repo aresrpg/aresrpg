@@ -9,12 +9,12 @@
 //
 // CONTRACT: every export is a pure `(inputs) -> value`. No store reads, no IO, no three.js scene work.
 
-import { decode as decode_cell, encode as encode_cell } from '@aresrpg/fight'
-import { engine_view } from '@aresrpg/fight'
+import { decode as decode_cell, encode as encode_cell } from '@aresrpg/fight/los'
+import { engine_view } from '@aresrpg/fight/project'
 // get_aoe_cells is the ONE shape home the sim + chain use to enumerate a spell's affected cells (spell_targeting.js:
 // CIRCLE/CROSS/RING/LINE/TBAR/CONE). The hover footprint below REUSES it verbatim so the telegraph can never
 // diverge from what the reducer actually hits — never a second shape implementation.
-import { get_aoe_cells } from '@aresrpg/sim'
+import { get_aoe_cells } from '@aresrpg/sim/spell_targeting'
 
 import { dungeon_grid_of } from '../game/screens/dungeon-grid.js'
 import { get_mob_model } from '../game/data/mobs.js'
@@ -470,7 +470,7 @@ export function my_seat_of(dungeon, entity_id) {
 // END-TURN PRESS LAW predicate — MOVED to the core (M3 render contract: the input-arming DECISION is core law,
 // @aresrpg/fight project.turn_input_armed carries the full 07-11 rationale). Re-exported here so the legacy
 // import surface (FightControls + the adapter) stays stable — one home, one rule.
-export { turn_input_armed } from '@aresrpg/fight'
+export { turn_input_armed } from '@aresrpg/fight/project'
 
 // ── [p0-fight-init] BOARD LIFECYCLE DECISION — the adapter's ONE mount/teardown verdict, pure. ──────────────
 // Root of the first-transition-fight dead-input family: the placement→active flip re-spawns the fight slice in

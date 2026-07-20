@@ -8,7 +8,7 @@
 // inputs through the core's one door.
 
 import { useStore } from 'zustand'
-import { create_session_gate_store, subscribe_join_failsafe, subscribe_stale_poll } from '@aresrpg/world'
+import { create_session_gate_store, subscribe_join_failsafe, subscribe_stale_poll } from '@aresrpg/world/session_gate'
 
 import { game_log } from '../core/log.js'
 

@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 
-import { add_pending_buy, merge_pending_buys, reset_pending_buys } from '@aresrpg/inventory'
+import { add_pending_buy, merge_pending_buys, reset_pending_buys } from '@aresrpg/inventory/bought_items_ledger'
 
 import { tx_error } from '../../core/abort_copy.js'
 

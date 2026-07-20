@@ -11,7 +11,7 @@
 // is pinned in spawn_compose.test.js so any drift on either side breaks a test before it lies to a player.
 // Pure module on purpose (only the sim import — no i18n/DOM) so bun test loads it headless.
 
-import { rng_seed, rng_int, rng_range } from '@aresrpg/sim'
+import { rng_seed, rng_int, rng_range } from '@aresrpg/sim/prng'
 
 // GameConfig dial fallbacks (config.move:90/97 DEFAULT_ARCHIMOB_BP / DEFAULT_TEAM_SIZE) — the live dials ride
 // /v1/config `dials{}` but only exist there once a DialChanged event ever fired; absent = the chain defaults.

@@ -15,9 +15,9 @@
 import { useEffect, useRef } from 'react'
 
 import { play_fight_sfx } from '../../core/audio/sfx.js'
-import { fight_store } from '@aresrpg/fight'
+import { fight_store } from '@aresrpg/fight/store'
 import { use_fight_view } from '../../store.js'
-import { COMMIT_BUFFER_MS, effective_deadline } from '@aresrpg/fight'
+import { COMMIT_BUFFER_MS, effective_deadline } from '@aresrpg/fight/draft_budget'
 import { Tooltip } from './Tooltip.jsx'
 import { EffectBadges } from './EffectBadges.jsx'
 import { game_log } from '../../../core/log.js'

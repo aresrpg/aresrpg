@@ -13,8 +13,8 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-import { create_fight_state } from '@aresrpg/sim'
-import { normalize_spell_templates } from '@aresrpg/sim'
+import { create_fight_state } from '@aresrpg/sim/reduce'
+import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
 
 import * as SE from '../../../sim/src/spell_effect.js'
 

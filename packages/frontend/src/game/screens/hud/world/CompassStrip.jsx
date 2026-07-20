@@ -70,7 +70,7 @@ import {
   ZONE_REFRESH_TRIES,
   ZONE_REFRESH_INTERVAL_MS,
 } from './compass_math.js'
-import { reroll_at, zone_row_of } from '@aresrpg/world'
+import { reroll_at, zone_row_of } from '@aresrpg/world/spawns_reconcile'
 
 // A resource node's (job u8 0/1/2, tier 1-11) → its gatherable display NAME (the @aresrpg/sdk/jobs roster —
 // the ONE home shared with the 3D node prop's resource_visual). Design ruling 2026-07-12: the pip label shows the real

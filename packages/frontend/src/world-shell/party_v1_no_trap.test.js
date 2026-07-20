@@ -10,7 +10,7 @@
 // tests fence the CLIENT layers — the reducer's snapshot merge and the store's mutation doors — against any
 // V1-shaped frame that still reaches them (stale cache, legacy p2p party_id, corrupted read).
 import { afterAll, beforeEach, expect, spyOn, test } from 'bun:test'
-import { reduce, empty_party_state, project_party_view, is_bound_member } from '@aresrpg/party'
+import { reduce, empty_party_state, project_party_view, is_bound_member } from '@aresrpg/party/reduce'
 
 import { reset_auth_mock } from '../test_helpers/auth_mock.js'
 

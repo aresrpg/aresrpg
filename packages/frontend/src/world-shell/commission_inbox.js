@@ -10,7 +10,7 @@
 // truth. Mirrors party_store's wire_party_p2p: one idempotent wire, filtered by MY wallet address off use_auth.
 
 import { create } from 'zustand'
-import { subscribe_commissions } from '@aresrpg/world'
+import { subscribe_commissions } from '@aresrpg/world/presence'
 
 import { use_auth } from '../auth'
 import { use_toast } from '../toast'

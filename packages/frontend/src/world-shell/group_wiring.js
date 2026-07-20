@@ -6,7 +6,8 @@
 // the presence layer the remote-player renderer consumes). Wired ONCE per session next to wire_party_p2p.
 // The reducer (@aresrpg/party group_loop) owns every decision; nothing here decides — it feeds and obeys.
 
-import { fight_store, fight_view } from '@aresrpg/fight'
+import { fight_store } from '@aresrpg/fight/store'
+import { fight_view } from '@aresrpg/fight/project'
 
 import { context } from '../game/store.js'
 import { use_auth } from '../auth'

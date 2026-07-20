@@ -8,7 +8,7 @@
 
 import { useMemo } from 'react'
 
-import { encode } from '@aresrpg/fight'
+import { encode } from '@aresrpg/fight/los'
 
 import { use_fight_view, use_game_state } from '../../store.js'
 import { use_dungeon } from '../../../world-shell/dungeon_store.js'

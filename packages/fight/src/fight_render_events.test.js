@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, test } from 'bun:test'
-import { create_fight_state, find_path_4dir, normalize_spell_templates, reduce } from '@aresrpg/sim'
+import { create_fight_state, reduce } from '@aresrpg/sim/reduce'
+import { find_path_4dir } from '@aresrpg/sim/pathfind'
+import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
 
 import {
   CAST_BEAT_MS,

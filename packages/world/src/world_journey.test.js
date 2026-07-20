@@ -10,9 +10,8 @@
 
 import { describe, expect, it } from 'bun:test'
 
+import { create_session_gate_store, plan_scene } from './session_gate.js'
 import {
-  create_session_gate_store,
-  plan_scene,
   create_spawns_store,
   boot_spawn,
   spawn_rows,
@@ -21,12 +20,9 @@ import {
   subscribe_spawn_tx,
   subscribe_spawn_beats,
   subscribe_fight_entry,
-  create_presence_store,
-  visible_players,
-  see_fights_count,
-  to_fight_marker,
-  is_join_legal,
-} from './index.js'
+} from './spawns_zones.js'
+import { create_presence_store, visible_players, see_fights_count } from './presence.js'
+import { to_fight_marker, is_join_legal } from './nearby_fights.js'
 
 const WORLD = `0x${'a'.repeat(64)}`
 const ALICE = `0x${'1'.repeat(64)}`

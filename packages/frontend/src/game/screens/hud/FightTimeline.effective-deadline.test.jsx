@@ -13,7 +13,8 @@ import { renderToStaticMarkup } from 'react-dom/server'
 
 import { FightTimeline } from './FightTimeline.jsx'
 import { seed_fight_core, reset_fight_core } from '../../../test_helpers/fight_core_harness.js'
-import { COMMIT_BUFFER_MS, fight_store } from '@aresrpg/fight'
+import { COMMIT_BUFFER_MS } from '@aresrpg/fight/draft_budget'
+import { fight_store } from '@aresrpg/fight/store'
 
 const ME = '0xme'
 

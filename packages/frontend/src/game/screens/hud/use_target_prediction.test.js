@@ -10,7 +10,8 @@
 
 import { afterEach, describe, expect, test } from 'bun:test'
 
-import { board_view, engine_view, fight_store } from '@aresrpg/fight'
+import { board_view, engine_view } from '@aresrpg/fight/project'
+import { fight_store } from '@aresrpg/fight/store'
 
 import { seed_fight_core, reset_fight_core } from '../../../test_helpers/fight_core_harness.js'
 import { compute_target_prediction, crit_percent } from './target_prediction_core.js'

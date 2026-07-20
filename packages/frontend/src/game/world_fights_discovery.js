@@ -15,7 +15,12 @@
 import { get_world } from '@aresrpg/sdk/game'
 import { world_offsets, chain_to_world } from '@aresrpg/sdk/coords'
 import { ground_surface_y } from '@aresrpg/engine3/player'
-import { to_fight_marker, to_dungeon_fight, forming_fight_sword_markers, FIGHT_PROXIMITY_M } from '@aresrpg/world'
+import {
+  to_fight_marker,
+  to_dungeon_fight,
+  forming_fight_sword_markers,
+  FIGHT_PROXIMITY_M,
+} from '@aresrpg/world/nearby_fights'
 
 import i18n from '../i18n'
 import { get_fights, get_dungeon_runs } from '../rpc/client'

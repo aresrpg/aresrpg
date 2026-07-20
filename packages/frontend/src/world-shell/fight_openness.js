@@ -8,7 +8,7 @@
 // reload. Default PUBLIC — the friendliest, most-discoverable default; a solo player with no party who picked
 // GROUP would otherwise create un-joinable fights unknowingly.
 
-import { OPENNESS_PUBLIC, OPENNESS_GROUP } from '@aresrpg/world'
+import { OPENNESS_PUBLIC, OPENNESS_GROUP } from '@aresrpg/world/openness'
 
 import { spawns_store, spawns_input, use_spawns } from './spawns_adapter.js'
 

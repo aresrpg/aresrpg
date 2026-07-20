@@ -14,9 +14,17 @@
     "node": ">=21.0.0"
   },
   "exports": {
-    ".": {
-      "import": "./src/index.js",
-      "types": "./types/index.d.ts"
+    "./reduce": {
+      "types": "./types/reduce.d.ts",
+      "import": "./src/reduce.js"
+    },
+    "./store": {
+      "types": "./types/store.d.ts",
+      "import": "./src/store.js"
+    },
+    "./group_loop": {
+      "types": "./types/group_loop.d.ts",
+      "import": "./src/group_loop.js"
     }
   },
   "author": "AresRPG's Team",

@@ -6,7 +6,8 @@
 
 import { useSyncExternalStore } from 'react'
 
-import { fight_view, fight_store } from '@aresrpg/fight'
+import { fight_view } from '@aresrpg/fight/project'
+import { fight_store } from '@aresrpg/fight/store'
 
 import { context } from './core/game.js'
 

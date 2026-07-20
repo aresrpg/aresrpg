@@ -9,7 +9,8 @@ import { I18nextProvider, initReactI18next } from 'react-i18next'
 
 import en from '../../../i18n/locales/en.json'
 
-import { fight_store, fight_view } from '@aresrpg/fight'
+import { fight_store } from '@aresrpg/fight/store'
+import { fight_view } from '@aresrpg/fight/project'
 import { seed_fight_core, reset_fight_core } from '../../../test_helpers/fight_core_harness.js'
 import { DungeonSpellReadout } from './DungeonSpellReadout.jsx'
 import { fight_spells_data } from './fight-spells.js'

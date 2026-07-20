@@ -11,7 +11,7 @@
 // would close a dependency cycle (depcruise no-circular). Nothing imports this module except the boot seam
 // (embed_voxel.js calls wire_join_request_effect beside wire_fast_travel_effects), so the graph stays a DAG.
 
-import { subscribe_join_request } from '@aresrpg/world'
+import { subscribe_join_request } from '@aresrpg/world/session_gate'
 
 import { push_event_toast } from '../game/core/toast.js'
 import { game_log } from '../core/log.js'

@@ -7,7 +7,7 @@
 // Tree-shaken from prod (the caller is inside `if (import.meta.env.DEV)`).
 
 import { context } from './store.js'
-import { fight_view } from '@aresrpg/fight'
+import { fight_view } from '@aresrpg/fight/project'
 import { HIT_FLASH_TINT } from '../world-shell/voxel_fight_adapter.js'
 import { game_log } from '../core/log.js'
 

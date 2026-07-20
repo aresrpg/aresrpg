@@ -18,8 +18,8 @@
 // the tick watchdog) is the one input that reveals the corpse. No timers anywhere: the drain is the clock.
 
 import { describe, expect, test } from 'bun:test'
-import { create_fight_store, WAVE_ACK_GRACE_MS } from '@aresrpg/fight'
-import { local_intent_beats, synthetic_cast_events } from '@aresrpg/fight'
+import { create_fight_store, WAVE_ACK_GRACE_MS } from '@aresrpg/fight/store'
+import { local_intent_beats, synthetic_cast_events } from '@aresrpg/fight/present'
 
 import { board_fight_authority, entity_fold_action } from './voxel_fight_folds.js'
 

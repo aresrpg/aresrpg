@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { WORLD_SEED } from '@aresrpg/sim'
+import { WORLD_SEED } from '@aresrpg/sim/world'
 
 import { CANVAS_H, CANVAS_W, MAP_PX, sample_world, world_to_screen } from './worldmap-data.js'
 import { use_game_state } from '../../store.js'

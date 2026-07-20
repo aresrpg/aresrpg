@@ -24,9 +24,11 @@
 
 import { Vector3 } from 'three'
 import { TEAM_COLORS } from '@aresrpg/engine3/tactical'
-import { project, fight_store, fight_view } from '@aresrpg/fight'
-import { GRID_CELLS } from '@aresrpg/fight'
-import { fight_cast_beat_effects } from '@aresrpg/fight'
+import * as project from '@aresrpg/fight/project'
+import { fight_store } from '@aresrpg/fight/store'
+import { fight_view } from '@aresrpg/fight/project'
+import { GRID_CELLS } from '@aresrpg/fight/los'
+import { fight_cast_beat_effects } from '@aresrpg/fight/fight_render_events'
 
 import {
   move_reachable_set,

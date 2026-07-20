@@ -9,7 +9,7 @@
 // The strip shows a ±HALF_SPAN window centered on the heading; strip_x maps a relative bearing into
 // 0..1 across it (null outside — a mark UNMOUNTS at the edge instead of sliding across on wraparound).
 
-import { zone_discovered } from '@aresrpg/world'
+import { zone_discovered } from '@aresrpg/world/spawns_reconcile'
 
 export const TWO_PI = Math.PI * 2
 

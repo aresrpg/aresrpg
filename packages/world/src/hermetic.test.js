@@ -49,7 +49,10 @@ describe('@aresrpg/world hermeticity (D769 MODULE LAW)', () => {
   })
 
   test('the whole surface imports clean in node (no lazy browser reference at module scope)', async () => {
-    const surface = await import('./index.js')
+    const pkg = JSON.parse(fs.readFileSync(path.join(pkg_dir, 'package.json'), 'utf8'))
+    const targets = Object.values(pkg.exports).map((entry) => entry.import)
+    const loaded = await Promise.all(targets.map((t) => import(path.join(pkg_dir, t))))
+    const surface = Object.assign({}, ...loaded)
     expect(typeof surface.create_session_gate_store).toBe('function')
     expect(typeof surface.reduce_session_gate).toBe('function')
     expect(typeof surface.plan_scene).toBe('function')

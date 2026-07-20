@@ -22,8 +22,8 @@
 // revealed cell and the fold verdict for the just-presented mob is a benign same-cell upsert, never a walk.
 
 import { describe, expect, test } from 'bun:test'
-import { create_fight_store } from '@aresrpg/fight'
-import { engine_view } from '@aresrpg/fight'
+import { create_fight_store } from '@aresrpg/fight/store'
+import { engine_view } from '@aresrpg/fight/project'
 
 import { board_fight_authority, entity_fold_action } from './voxel_fight_folds.js'
 

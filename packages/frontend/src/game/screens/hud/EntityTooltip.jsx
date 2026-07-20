@@ -21,7 +21,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { decode } from '@aresrpg/fight'
+import { decode } from '@aresrpg/fight/los'
 
 import './entity-tooltip.css'
 import { use_game_state, use_fight_view } from '../../store.js'

@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'bun:test'
 // fight-los is the shared math home; the test asserts overlay_intents stays verdict-identical to these gates
 // (bfsReachable / bfsPath / lineOfSight) — the whole point of the extraction — so import it FIRST (import/order).
-import { encode, GRID_W, bfsReachable, bfsPath, lineOfSight } from '@aresrpg/fight'
+import { encode, GRID_W, bfsReachable, bfsPath, lineOfSight } from '@aresrpg/fight/los'
 
 import {
   move_reachable_set,

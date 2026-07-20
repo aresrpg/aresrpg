@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
-import { handle_character_click, select_character_session } from '@aresrpg/world'
+import { handle_character_click, select_character_session } from '@aresrpg/world/character_selection'
 
 import { context } from '../game/core/game.js'
 

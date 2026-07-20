@@ -9,7 +9,8 @@
 // stay exact character-keyed Member[] (never an address slot); signed on-chain accept/decline owns consent, p2p only nudges.
 
 import { useStore } from 'zustand'
-import { create_party_store, is_bound_member, has_character, party_invite_verdict, POLL_MS } from '@aresrpg/party'
+import { create_party_store } from '@aresrpg/party/store'
+import { is_bound_member, has_character, party_invite_verdict, POLL_MS } from '@aresrpg/party/reduce'
 
 import i18n from '../i18n'
 import { context } from '../game/store.js'

@@ -24,11 +24,13 @@
 // it); project.js/engine_view.placement_ghosts is the ONE render source, no second path here.
 
 import { context } from '../store.js'
-import { fight_view, fight_store, STATUS_PLACEMENT } from '@aresrpg/fight'
+import { fight_view } from '@aresrpg/fight/project'
+import { fight_store } from '@aresrpg/fight/store'
+import { STATUS_PLACEMENT } from '@aresrpg/fight/board_state'
 import { use_dungeon } from '../../world-shell/dungeon_store.js'
 import { broadcast_fight_stream } from '../../p2p/lobby-room.js'
 import { game_log } from '../../core/log.js'
-import { GRID_W, GRID_H, encode, lineOfSight } from '@aresrpg/fight'
+import { GRID_W, GRID_H, encode, lineOfSight } from '@aresrpg/fight/los'
 import { steered_path } from './fight-pathfinding.js'
 import { use_dungeon_turn } from './dungeon-turn.js'
 

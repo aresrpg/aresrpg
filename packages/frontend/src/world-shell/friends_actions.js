@@ -11,7 +11,7 @@
 // resolve the new list id from the tx result and chain the first add.
 
 import { create_friend_list_ptb, add_friend_ptb, remove_friend_ptb } from '@aresrpg/sdk/social'
-import { submit_friend_target } from '@aresrpg/world'
+import { submit_friend_target } from '@aresrpg/world/friend_target'
 
 import { DEMO_NETWORK } from '../chain/deployment'
 import { use_toast } from '../toast'

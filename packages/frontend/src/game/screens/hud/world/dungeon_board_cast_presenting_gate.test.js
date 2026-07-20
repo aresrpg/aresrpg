@@ -12,7 +12,9 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { create_fight_store, engine_view, local_intent_beats, synthetic_cast_events } from '@aresrpg/fight'
+import { create_fight_store } from '@aresrpg/fight/store'
+import { engine_view } from '@aresrpg/fight/project'
+import { local_intent_beats, synthetic_cast_events } from '@aresrpg/fight/present'
 
 const GRID_W = 20
 const FIGHT = '0xf1'

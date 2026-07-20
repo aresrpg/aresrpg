@@ -7,8 +7,8 @@
 import { decode_fight } from '@aresrpg/sdk/fight'
 import { world_offsets } from '@aresrpg/sdk/coords'
 import { get_world } from '@aresrpg/sdk/game'
-import { fight_store } from '@aresrpg/fight'
-import { read_fighter_statuses } from '@aresrpg/fight'
+import { fight_store } from '@aresrpg/fight/store'
+import { read_fighter_statuses } from '@aresrpg/fight/fight_status_snapshot'
 
 // A world fight's UNSIGNED chain anchor → signed WORLD render space via the per-world `bounds/2` offset (immutable
 // on-chain, so resolved ONCE per world, tab-cached). A miss falls back to the default-bounds offset (near origin).

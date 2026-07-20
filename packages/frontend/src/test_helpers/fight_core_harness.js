@@ -9,7 +9,7 @@
 // gate a never scan test choreography as reducer core). Everything flows through `input()` — the one-reducer law holds even
 // in the harness (no setState back door).
 
-import { fight_store } from '@aresrpg/fight'
+import { fight_store } from '@aresrpg/fight/store'
 
 /** One chain-shaped participant row for `seats[i]` (character id + per-seat overrides). */
 const participant = ({ character, owner = '0xaaa', team = 0, ap = 6, mp = 3, hp = 50, cell = 100, ...rest }) => ({

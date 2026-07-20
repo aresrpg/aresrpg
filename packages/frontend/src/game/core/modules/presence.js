@@ -24,7 +24,7 @@
 // falls back to the peer's self-declared p2p identity; this bridge maps classe→sprites and color→hue at
 // the edge (frontend data lookups the hermetic core cannot own).
 
-import { visible_players } from '@aresrpg/world'
+import { visible_players } from '@aresrpg/world/presence'
 
 import { get_class } from '../../data/classes.js'
 import { color_to_hue } from '../../data/color.js'

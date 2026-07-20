@@ -16,7 +16,7 @@ import {
   crossMask,
   dungeon_blocked_cells,
 } from './dungeon-grid.js'
-import { encode, bfsPathCost, bfsPath, GRID_W, GRID_CELLS } from '@aresrpg/fight'
+import { encode, bfsPathCost, bfsPath, GRID_W, GRID_CELLS } from '@aresrpg/fight/los'
 
 // D75 — cells are CANONICAL stride-20 (fight-los GRID_W) everywhere in the client. The Move determinism
 // contract is pinned MOVE-NATIVE (dungeon_grid_test.move golden vectors); `generateGrid` is a DEV/TEST twin

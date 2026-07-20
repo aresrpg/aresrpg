@@ -7,7 +7,7 @@
 // sequential queue; an EXECUTED failure (digest exists) latches the member out via `member_blocked` and is
 // never re-fired (tx-retry burn law). Production supplies the deps in group_wiring.js; tests drive fakes.
 
-import { create_group_store } from '@aresrpg/party'
+import { create_group_store } from '@aresrpg/party/store'
 
 /** Pure: extract the group-loop fight facts from one memoized engine view (fight_view()). */
 export function fight_facts_of(view) {

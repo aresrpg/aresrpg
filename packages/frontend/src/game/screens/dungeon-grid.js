@@ -16,9 +16,9 @@
 // Move-NATIVE (dungeon_grid_test.move), NOT against this file, so the two are never a load-bearing contract.
 // Cells use the CANONICAL stride-20 encoding (`encode(x,y)=y*20+x`, fight-los GRID_W=20).
 
-import { rng_seed, rng_int, rng_range } from '@aresrpg/sim'
+import { rng_seed, rng_int, rng_range } from '@aresrpg/sim/prng'
 
-import { GRID_W, GRID_H, GRID_CELLS, encode, decode, bfsPath } from '@aresrpg/fight'
+import { GRID_W, GRID_H, GRID_CELLS, encode, decode, bfsPath } from '@aresrpg/fight/los'
 
 const MASK32 = 0xffffffff
 const MIN_W = 7 // min playable width (RECT vocab low bound)

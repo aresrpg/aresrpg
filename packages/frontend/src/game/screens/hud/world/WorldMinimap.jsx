@@ -9,7 +9,7 @@
 
 import { useEffect, useRef } from 'react'
 
-import { CELL, WORLD_SEED, world_biome, world_cell } from '@aresrpg/sim'
+import { CELL, WORLD_SEED, world_biome, world_cell } from '@aresrpg/sim/world'
 
 import { BIOME_FILL, OBSTACLE_SHADE } from '../biome-colors.js'
 import { use_game_state, context } from '../../../store.js'

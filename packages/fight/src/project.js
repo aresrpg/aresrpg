@@ -14,7 +14,9 @@
 // Both project the PRESENTED state (fold at the renderer's ack floor) so the eye never sees state ahead of the
 // beats; terminal truth (winner/is_over) reads COMMITTED so fight-end logic never hangs on presentation.
 
-import { tackle_contest, tackle_losses, tackle_seed, turn_seed, rng_next, rng_seed } from '@aresrpg/sim'
+import { tackle_contest, tackle_losses } from '@aresrpg/sim/fight_tackle'
+import { tackle_seed, turn_seed } from '@aresrpg/sim/turn_seed'
+import { rng_next, rng_seed } from '@aresrpg/sim/prng'
 
 import { GRID_W, GRID_H, decode as decode_xy, encode as encode_xy, bfsReachable } from './los.js'
 import { movement_grant } from './draft_budget.js'

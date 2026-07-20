@@ -8,7 +8,7 @@
 // dispatches a TYPED input and the merge law (XP floor, pending ledgers, receipt-over-snapshot) lives
 // in one place — @aresrpg/inventory (reduce.js). See its header for the input kinds.
 
-import { reduce_sui_data } from '@aresrpg/inventory'
+import { reduce_sui_data } from '@aresrpg/inventory/reduce'
 
 /** @type {import('../game.js').Module} */
 export default function sui_session() {

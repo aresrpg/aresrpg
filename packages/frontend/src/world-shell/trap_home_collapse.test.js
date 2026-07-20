@@ -9,7 +9,9 @@
 // consumer now reads the fold, and the overlay module is gone.
 
 import { describe, expect, test } from 'bun:test'
-import { create_fight_store, engine_view, produce_receipt_render_turns } from '@aresrpg/fight'
+import { create_fight_store } from '@aresrpg/fight/store'
+import { engine_view } from '@aresrpg/fight/project'
+import { produce_receipt_render_turns } from '@aresrpg/fight/fight_render_events'
 
 import { cast_range_set_dungeon } from '../fight-engine/overlay_intents.js'
 

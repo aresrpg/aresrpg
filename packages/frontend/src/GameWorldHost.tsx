@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { lazy, Profiler, Suspense, useEffect, useRef, type CSSProperties, type ReactElement } from 'react'
 import { useLocation } from 'react-router-dom'
-import { plan_scene } from '@aresrpg/world'
+import { plan_scene } from '@aresrpg/world/session_gate'
 
 import { use_auth, type AuthState } from './auth'
 import { use_spectate_gate } from './stores/spectate_gate'

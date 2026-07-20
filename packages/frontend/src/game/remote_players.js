@@ -11,7 +11,7 @@
 // dispose() tears everything down. NO game logic here.
 
 import { create_character_avatar, create_title_aura, create_worn_cosmetics, ground_surface_y } from '@aresrpg/engine3/player'
-import { should_snap_to_leader } from '@aresrpg/party'
+import { should_snap_to_leader } from '@aresrpg/party/group_loop'
 
 import { get_peer_state } from '../p2p/lobby-room.js'
 import { use_dungeon } from '../world-shell/dungeon_store.js'

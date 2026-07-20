@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { afterEach, describe, expect, test } from 'bun:test'
-import { create_fight_store, STATUS_FAILED } from '@aresrpg/fight'
+import { create_fight_store } from '@aresrpg/fight/store'
+import { STATUS_FAILED } from '@aresrpg/fight/board_state'
 
 import { run_latched_claim, run_signal_settlement } from './fight_claim_latch.js'
 import { is_preflight_failure, reset_attempts_for_test } from './pending_outcomes.js'

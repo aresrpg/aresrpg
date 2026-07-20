@@ -7,7 +7,7 @@
 // trap-push beat ORDER a mob cascade plays, and that the queue drains to empty.
 
 import { expect, test } from 'bun:test'
-import { produce_receipt_render_turns } from '@aresrpg/fight'
+import { produce_receipt_render_turns } from '@aresrpg/fight/fight_render_events'
 
 import { create_fight_render_queue } from './fight_render_queue.js'
 

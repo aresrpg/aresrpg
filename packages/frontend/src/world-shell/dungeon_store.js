@@ -5,4 +5,4 @@
 // consumers stay untouched. ZERO logic, zero state, zero fight verbs — the gate guards it.
 
 export { use_dungeon } from './dungeon_run_store.js'
-export { DUNGEON_BOARD_ORIGIN } from '@aresrpg/fight'
+export { DUNGEON_BOARD_ORIGIN } from '@aresrpg/fight/project'

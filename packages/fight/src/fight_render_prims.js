@@ -6,7 +6,7 @@
 // touches state — every function is a plain transform. The producers import these; the public timing constants
 // are re-exported from fight_render_events.js so existing consumers keep their import path.
 
-import { find_path_4dir } from '@aresrpg/sim'
+import { find_path_4dir } from '@aresrpg/sim/pathfind'
 
 // The retro-1.29 reference gait arrays — vendored verbatim from the reference client's sprite mover (both
 // reference emulators carry the same arrays): px/ms by facing octant, the straight octants (0, 4) the

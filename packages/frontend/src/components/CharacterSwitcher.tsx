@@ -13,7 +13,7 @@
 import { useTranslation } from 'react-i18next'
 import { Compass } from 'lucide-react'
 import { experience_to_level } from '@aresrpg/sdk/experience'
-import { handle_character_click } from '@aresrpg/world'
+import { handle_character_click } from '@aresrpg/world/character_selection'
 
 import { use_game_state, context, use_fight_view } from '../game/store.js'
 import { use_follow } from '../follow'

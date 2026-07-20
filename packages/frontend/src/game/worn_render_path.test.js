@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs'
 
 import { describe, expect, test } from 'bun:test'
 import { legacy_cosmetic_variants } from '@aresrpg/sdk/deployment/aresrpg'
-import { reduce_sui_data } from '@aresrpg/inventory'
+import { reduce_sui_data } from '@aresrpg/inventory/reduce'
 
 import '../test_helpers/env_mock.js'
 

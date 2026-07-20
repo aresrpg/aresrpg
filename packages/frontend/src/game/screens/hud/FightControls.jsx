@@ -21,9 +21,9 @@ import { useTranslation } from 'react-i18next'
 import { use_dungeon } from '../../../world-shell/dungeon_store.js'
 import { turn_input_armed } from '../../../world-shell/voxel_fight_folds.js'
 import { use_dungeon_turn } from '../dungeon-turn.js'
-import { fight_store } from '@aresrpg/fight'
+import { fight_store } from '@aresrpg/fight/store'
 import { use_fight, use_fight_view } from '../../store.js'
-import { min_turn_left } from '@aresrpg/fight'
+import { min_turn_left } from '@aresrpg/fight/project'
 import { ConfirmDialog } from './world/ConfirmDialog.jsx'
 
 // DEFAULT handlers = the live on-chain path (the ONLY fight backend now the WS server is gone). The dungeon

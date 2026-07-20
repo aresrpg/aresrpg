@@ -6,7 +6,8 @@
 // the sim must too: a knockback is DAMAGE-or-none, NEVER heal. Both render lanes must agree, beat for beat.
 
 import { describe, expect, test } from 'bun:test'
-import { create_fight_state, normalize_spell_templates, reduce } from '@aresrpg/sim'
+import { create_fight_state, reduce } from '@aresrpg/sim/reduce'
+import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
 
 import { produce_predicted_render_events, produce_receipt_render_turns } from './fight_render_events.js'
 

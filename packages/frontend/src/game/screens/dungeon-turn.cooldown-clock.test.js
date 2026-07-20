@@ -10,7 +10,7 @@
 import { beforeEach, describe, expect, it } from 'bun:test'
 
 import { use_dungeon_turn } from './dungeon-turn.js'
-import { on_cooldown, cooldown_left } from '@aresrpg/fight'
+import { on_cooldown, cooldown_left } from '@aresrpg/fight/draft_budget'
 
 beforeEach(() => {
   use_dungeon_turn.getState().reset_cast_clock()

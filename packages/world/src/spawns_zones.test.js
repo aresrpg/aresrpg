@@ -15,12 +15,14 @@ import {
   gather_target,
   attack_target,
   searchable_zone,
-  zone_row_of,
   affordance_rows,
   boot_spawn,
   subscribe_spawn_tx,
   subscribe_spawn_beats,
   subscribe_fight_entry,
+} from './spawns_zones.js'
+import {
+  zone_row_of,
   pick_gather_target,
   is_group_claimable,
   zone_searchable,
@@ -28,8 +30,8 @@ import {
   GATHER_HYSTERESIS_M,
   RECEIPT_GRACE_MS,
   SEARCH_PROGRESS_MS,
-  OPENNESS_GROUP,
-} from './index.js'
+} from './spawns_reconcile.js'
+import { OPENNESS_GROUP } from './openness.js'
 
 const WORLD = `0x${'a'.repeat(64)}`
 const TMPL = `0x${'b'.repeat(64)}`

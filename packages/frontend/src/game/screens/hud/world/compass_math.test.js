@@ -24,7 +24,7 @@ import {
   PIP_CAP,
   LABEL_CAP,
 } from './compass_math.js'
-import { zone_discovered, reroll_at, zone_searchable } from '@aresrpg/world'
+import { zone_discovered, reroll_at, zone_searchable } from '@aresrpg/world/spawns_reconcile'
 
 const DEG = Math.PI / 180
 

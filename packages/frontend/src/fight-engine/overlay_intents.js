@@ -18,8 +18,10 @@
 //   • WORLD (legacy WS fight): reach = @aresrpg/sim `get_reachable_cells`; cast = `get_targetable_cells` — the sim's
 //     own range/linear/LOS/free-cell gate. The caller injects walkability/occupancy predicates.
 
-import { get_reachable_cells, get_targetable_cells, cell_key } from '@aresrpg/sim'
-import { encode, decode, GRID_W, GRID_H, bfsReachable, bfsPath, lineOfSight } from '@aresrpg/fight'
+import { get_reachable_cells } from '@aresrpg/sim/pathfind'
+import { get_targetable_cells } from '@aresrpg/sim/spell_targeting'
+import { cell_key } from '@aresrpg/sim/cell'
+import { encode, decode, GRID_W, GRID_H, bfsReachable, bfsPath, lineOfSight } from '@aresrpg/fight/los'
 
 // ── DEATH / TRAP BEAT TIMING (resolution pacing, owner L/N) — the constants that time the SEEN death + the
 //    trap→blast→damage cadence. Renderer-neutral (seconds), so both boards linger a killed body the same beat. ──

@@ -7,7 +7,7 @@
 // `observe` subscribes to it and folds each row into message_history (session-local, no backlog). CHANNEL
 // routes the render color; `address` (= the sender's character id off the wire) drives the "me" test.
 
-import { subscribe_chat } from '@aresrpg/world'
+import { subscribe_chat } from '@aresrpg/world/presence'
 
 import { context } from '../game.js'
 import { broadcast_chat, broadcast_party_chat } from '../../../p2p/lobby-room.js'

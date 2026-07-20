@@ -12,10 +12,10 @@
 //
 // import.meta.env.DEV-gated by the caller (GameWorldHud) — this whole module tree-shakes out of prod.
 
-import { encode } from '@aresrpg/fight'
+import { encode } from '@aresrpg/fight/los'
 import { context } from '../store.js'
 import { use_dungeon } from '../../world-shell/dungeon_store.js'
-import { fight_view } from '@aresrpg/fight'
+import { fight_view } from '@aresrpg/fight/project'
 import { spell_object_id, resolve_class_spells } from '../screens/hud/fight-spells.js'
 import { use_dungeon_turn } from '../screens/dungeon-turn.js'
 

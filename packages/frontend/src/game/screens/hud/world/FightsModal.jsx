@@ -32,7 +32,7 @@ import {
   party_character_ids,
   section_fight_rows,
   FIGHT_LIST_CAP,
-} from '@aresrpg/world'
+} from '@aresrpg/world/nearby_fights'
 
 const close = () => context.dispatch('action/fights_modal', null)
 

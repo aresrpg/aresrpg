@@ -16,9 +16,9 @@
 // and the mob's next walk beat originates from the receipt's own settled (pushed) cell.
 
 import { describe, expect, test } from 'bun:test'
-import { DISPLACEMENT_CELL_MS } from '@aresrpg/fight'
-import { create_fight_store, presented_state, WAVE_ACK_GRACE_MS } from '@aresrpg/fight'
-import { presenting } from '@aresrpg/fight'
+import { DISPLACEMENT_CELL_MS } from '@aresrpg/fight/fight_render_events'
+import { create_fight_store, presented_state, WAVE_ACK_GRACE_MS } from '@aresrpg/fight/store'
+import { presenting } from '@aresrpg/fight/project'
 
 import { board_fight_authority } from './voxel_fight_folds.js'
 

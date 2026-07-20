@@ -3,9 +3,9 @@
 // One-attempt auto-claim coordinator. `run_latched_claim` keeps its registry injected for headless units;
 // `run_signal_settlement` adds the app edge that feeds confirmations/outcomes through the fight reducer.
 
-import { project } from '@aresrpg/fight'
-import { STATUS_FAILED } from '@aresrpg/fight'
-import { fight_store } from '@aresrpg/fight'
+import * as project from '@aresrpg/fight/project'
+import { STATUS_FAILED } from '@aresrpg/fight/board_state'
+import { fight_store } from '@aresrpg/fight/store'
 
 import { get_sdk } from '../chain/sdk'
 

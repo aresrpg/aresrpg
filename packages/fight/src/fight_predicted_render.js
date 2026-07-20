@@ -7,7 +7,7 @@
 // LIVE producer behind every own-cast prediction. The RECEIPT render path (produce_receipt_render_turns) stays
 // in fight_render_events.js — both share the pure primitives in fight_render_prims.js.
 
-import { reduce } from '@aresrpg/sim'
+import { reduce } from '@aresrpg/sim/reduce'
 
 import {
   CAST_BEAT_MS,

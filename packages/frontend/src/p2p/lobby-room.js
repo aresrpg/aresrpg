@@ -32,7 +32,7 @@ import {
   LINK_HEALTH_POLL_MS,
   LINK_GRACE_MS,
   REJOIN_JITTER_MS,
-} from '@aresrpg/world'
+} from '@aresrpg/world/presence'
 
 import { context } from '../game/core/game.js'
 import { game_log } from '../core/log.js'

@@ -7,7 +7,7 @@
 // SAME reference vectors prng.move's `prng_matches_js_reference` pins — so a drift on EITHER side (Move or
 // sim) breaks a test here before the card ever lies to a player about a mob's level.
 import { test, expect } from 'bun:test'
-import { rng_seed, rng_next } from '@aresrpg/sim'
+import { rng_seed, rng_next } from '@aresrpg/sim/prng'
 
 import { derive_group_members, DEFAULT_ARCHIMOB_BP, DEFAULT_TEAM_BOUND } from './spawn_compose.js'
 

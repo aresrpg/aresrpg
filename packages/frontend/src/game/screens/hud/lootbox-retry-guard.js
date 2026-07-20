@@ -16,7 +16,7 @@
 // Module scope survives drawer remounts; a full page refresh reconciles box latches (session-scoped) but the
 // executed-failed CLAIM latch outlives it (the boot sweep is an AUTO gas path — it must).
 
-import { drop_pending_buy } from '@aresrpg/inventory'
+import { drop_pending_buy } from '@aresrpg/inventory/bought_items_ledger'
 
 import { is_preflight_refusal } from '../../core/abort_copy.js'
 import { error_executed_digest } from '../../../world-shell/tx_digest_error.js'

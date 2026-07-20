@@ -7,8 +7,10 @@
 //
 // Determinism: the whole run is seeded by arena_seed; a failure replays byte-identically from { name, seed }.
 
-import { reduce, get_current_turn_entity, find_entity, is_invisible } from '@aresrpg/sim'
-import { create_fight_store, committed_state } from '@aresrpg/fight'
+import { reduce } from '@aresrpg/sim/reduce'
+import { get_current_turn_entity, find_entity } from '@aresrpg/sim/fight_state'
+import { is_invisible } from '@aresrpg/sim/fight_statuses'
+import { create_fight_store, committed_state } from '@aresrpg/fight/store'
 
 import { build_templates, build_state } from './entities.js'
 import { sim_to_chain, snapshot_of, entity_index } from './bridge.js'

@@ -13,7 +13,7 @@
 // this leaf existed, CharactersDrawer's switch_to only dispatched selection — the world/fight stayed bound to
 // the outgoing character (the exact bug session-binding (37cd67a0) fixed for CharacterSwitcher, unfixed here).
 
-import { handle_character_click } from '@aresrpg/world'
+import { handle_character_click } from '@aresrpg/world/character_selection'
 
 import { context } from '../../store.js'
 import { use_follow } from '../../../follow'

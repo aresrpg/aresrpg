@@ -14,7 +14,7 @@
 // HERE, keyed by `name_key`. A class with no seeded spells resolves to [] (weapon + move only — the honest
 // on-chain state), so nothing renders a stub.
 
-import { normalize_chain_spell_corpus } from '@aresrpg/sim'
+import { normalize_chain_spell_corpus } from '@aresrpg/sim/chain_spell_corpus'
 
 import { bun_runtime, seed_manifest } from '../../../content/seed_manifest'
 

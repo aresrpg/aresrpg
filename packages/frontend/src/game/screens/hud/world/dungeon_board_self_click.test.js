@@ -13,7 +13,8 @@
 // locks that on_cell_click no longer maps a click on the last drafted step to pop_move_step (the red at HEAD).
 import { describe, expect, test } from 'bun:test'
 
-import { create_fight_store, presented_state, local_move_beats } from '@aresrpg/fight'
+import { create_fight_store, presented_state } from '@aresrpg/fight/store'
+import { local_move_beats } from '@aresrpg/fight/present'
 
 const GRID_W = 20
 const FIGHT = '0xf1'

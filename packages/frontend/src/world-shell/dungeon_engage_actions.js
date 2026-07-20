@@ -19,7 +19,7 @@ import {
   burn_result_ptb,
 } from '@aresrpg/sdk/fight'
 import { get_zone_state } from '@aresrpg/sdk/game'
-import { group_engage_blocked } from '@aresrpg/world'
+import { group_engage_blocked } from '@aresrpg/world/nearby_fights'
 
 import { use_auth } from '../auth'
 import { get_sdk } from '../chain/sdk'

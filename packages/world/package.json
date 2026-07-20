@@ -11,8 +11,35 @@
     "node": ">=21.0.0"
   },
   "exports": {
-    ".": {
-      "import": "./src/index.js"
+    "./session_gate": {
+      "import": "./src/session_gate.js"
+    },
+    "./character_selection": {
+      "import": "./src/character_selection.js"
+    },
+    "./spawns_zones": {
+      "import": "./src/spawns_zones.js"
+    },
+    "./spawns_reconcile": {
+      "import": "./src/spawns_reconcile.js"
+    },
+    "./checkpoint": {
+      "import": "./src/checkpoint.js"
+    },
+    "./gather_gate": {
+      "import": "./src/gather_gate.js"
+    },
+    "./openness": {
+      "import": "./src/openness.js"
+    },
+    "./presence": {
+      "import": "./src/presence.js"
+    },
+    "./nearby_fights": {
+      "import": "./src/nearby_fights.js"
+    },
+    "./friend_target": {
+      "import": "./src/friend_target.js"
     }
   },
   "author": "AresRPG's Team",

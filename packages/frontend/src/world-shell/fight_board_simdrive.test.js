@@ -8,8 +8,8 @@
 // every board consumer reads. (The inputs-level convergence proof lives in fight/parity.test.js.)
 
 import { describe, test, expect } from 'bun:test'
-import { create_fight_store } from '@aresrpg/fight'
-import { project } from '@aresrpg/fight'
+import { create_fight_store } from '@aresrpg/fight/store'
+import * as project from '@aresrpg/fight/project'
 
 const FIGHT_ID = '0xboard-fight'
 

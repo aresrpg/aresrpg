@@ -4,7 +4,9 @@ import { readFileSync } from 'node:fs'
 
 import { describe, expect, mock, test } from 'bun:test'
 import { GrpcWebFetchTransport, SuiGrpcClient } from '@mysten/sui/grpc'
-import { board_view, create_fight_store, subscribe_commit_due } from '@aresrpg/fight'
+import { board_view } from '@aresrpg/fight/project'
+import { create_fight_store } from '@aresrpg/fight/store'
+import { subscribe_commit_due } from '@aresrpg/fight/txs'
 
 import { normalize_receipt } from '../chain/receipt.ts'
 import { humanize_abort } from '../game/core/abort_copy.js'

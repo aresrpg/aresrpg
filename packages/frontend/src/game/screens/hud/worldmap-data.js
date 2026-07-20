@@ -4,7 +4,7 @@
 // sampler and the world<->bitmap<->screen coordinate transform. Kept here (SSOT) so MapDrawer stays a
 // thin view and the transform can never drift between the terrain blit and the player marker.
 
-import { CELL, world_biome, world_cell } from '@aresrpg/sim'
+import { CELL, world_biome, world_cell } from '@aresrpg/sim/world'
 
 import { biome_rgb, shade_obstacle } from './biome-colors.js'
 

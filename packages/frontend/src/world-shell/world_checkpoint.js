@@ -7,7 +7,7 @@
 // ferry that publishes every resolved checkpoint into the spawns core atom (checkpoint_resolved input).
 
 import { get_world } from '@aresrpg/sdk/game'
-import { checkpoint_to_world } from '@aresrpg/world'
+import { checkpoint_to_world } from '@aresrpg/world/checkpoint'
 
 import { read_checkpoint } from '../chain/read_checkpoint.js'
 import { get_sdk } from '../chain/sdk'

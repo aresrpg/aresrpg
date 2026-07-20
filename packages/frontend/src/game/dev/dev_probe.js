@@ -16,10 +16,10 @@
 
 import { Vector3 } from 'three'
 
-import { encode } from '@aresrpg/fight'
+import { encode } from '@aresrpg/fight/los'
 import { context } from '../store.js'
 import { use_dungeon } from '../../world-shell/dungeon_store.js'
-import { fight_view } from '@aresrpg/fight'
+import { fight_view } from '@aresrpg/fight/project'
 import { use_dungeon_turn } from '../screens/dungeon-turn.js'
 import { fight_end_state } from '../../fight-engine/fight_end_machine.js'
 import { cast_vfx, burst_vfx, is_burst_element } from '../fight_cast_vfx.js'

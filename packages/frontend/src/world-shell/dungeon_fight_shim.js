@@ -5,9 +5,9 @@
 // into the core's snapshot door, (c) hold a terminal collapse until the core's presentation wave drains, (d)
 // route a terminal/room-cleared status to the reused settlement chain. The core is the single fight-state owner.
 
-import { fight_store } from '@aresrpg/fight'
-import { project } from '@aresrpg/fight'
-import { STATUS_ROOM_CLEARED } from '@aresrpg/fight'
+import { fight_store } from '@aresrpg/fight/store'
+import * as project from '@aresrpg/fight/project'
+import { STATUS_ROOM_CLEARED } from '@aresrpg/fight/board_state'
 
 import { TERMINAL_HOLD_CAP_MS } from '../fight-engine/overlay_intents.js'
 

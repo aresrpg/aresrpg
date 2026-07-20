@@ -4,15 +4,11 @@
 // before it reaches here; this module only selects the publicly-known branch, excludes unshipped chain kinds,
 // runs the sim once, and projects the resulting state delta into the fight reducer's canonical action shapes.
 
-import {
-  create_fight_state,
-  crit_at,
-  find_entity,
-  is_invisible,
-  normalize_spell_templates,
-  slot_crit_roll,
-  turn_seed,
-} from '@aresrpg/sim'
+import { create_fight_state } from '@aresrpg/sim/reduce'
+import { crit_at, slot_crit_roll, turn_seed } from '@aresrpg/sim/turn_seed'
+import { find_entity } from '@aresrpg/sim/fight_state'
+import { is_invisible } from '@aresrpg/sim/fight_statuses'
+import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
 
 import { produce_predicted_render_events } from './fight_predicted_render.js'
 import { DISPLACE_TELEPORT } from './fight_render_prims.js'

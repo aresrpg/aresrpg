@@ -7,7 +7,9 @@
 // fight view + dungeon escrow (mirroring DungeonBoard.optimistic_cast) and runs the ONE damage home twice —
 // never a second formula. The hook (use_target_prediction.js) only feeds it the three live slices.
 
-import { predict_cast, weapon_spell_template, WEAPON_ATTACK_ID, encode } from '@aresrpg/fight'
+import { predict_cast, weapon_spell_template } from '@aresrpg/fight/predict_cast'
+import { WEAPON_ATTACK_ID } from '@aresrpg/fight/weapon'
+import { encode } from '@aresrpg/fight/los'
 
 import { fight_spell } from './fight-spells.js'
 

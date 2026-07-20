@@ -40,7 +40,7 @@ import {
 } from './session_position.js'
 import { resume_zone_music, set_zone_music, stop_zone_music, suspend_zone_music } from './core/audio/ambient_music.js'
 import { create_region_follower, region_zone_key } from './core/audio/region_music.js'
-import { resolve_boot_spawn } from '@aresrpg/world'
+import { resolve_boot_spawn } from '@aresrpg/world/checkpoint'
 
 import { read_checkpoint_spawn, resolve_checkpoint_spawn } from '../world-shell/world_checkpoint.js'
 import { register_travel_resync_target } from '../world-shell/travel_recovery.js'

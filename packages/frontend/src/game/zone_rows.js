@@ -14,7 +14,7 @@
 // `team_size_bound` config dial — cached here (config-grade data; a world's tables change only at
 // admin-authoring time, and a TTL re-search re-rolls the zone anyway).
 
-import { derive_zone } from '@aresrpg/sim'
+import { derive_zone } from '@aresrpg/sim/zone_derive'
 import { get_world, get_zone_state } from '@aresrpg/sdk/game'
 
 import { DEMO_NETWORK } from '../chain/deployment'

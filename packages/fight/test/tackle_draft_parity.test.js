@@ -17,7 +17,9 @@
 // slot bump AND its displacement. Result: the client shows the move FREE while the chain tackles it.
 
 import { describe, expect, test } from 'bun:test'
-import { tackle_contest, tackle_losses, tackle_seed, turn_seed, rng_next, rng_seed } from '@aresrpg/sim'
+import { tackle_contest, tackle_losses } from '@aresrpg/sim/fight_tackle'
+import { tackle_seed, turn_seed } from '@aresrpg/sim/turn_seed'
+import { rng_next, rng_seed } from '@aresrpg/sim/prng'
 
 import { next_move_tackle } from '../src/project.js'
 import { create_fight_store } from '../src/store.js'

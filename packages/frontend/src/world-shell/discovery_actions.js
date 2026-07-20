@@ -10,7 +10,8 @@
 
 import { search_zone_ptb, get_world } from '@aresrpg/sdk/game'
 import { world_offsets } from '@aresrpg/sdk/coords'
-import { subscribe_spawn_beats, SEARCH_PROGRESS_MS } from '@aresrpg/world'
+import { subscribe_spawn_beats } from '@aresrpg/world/spawns_zones'
+import { SEARCH_PROGRESS_MS } from '@aresrpg/world/spawns_reconcile'
 
 import i18n from '../i18n'
 import { DEMO_NETWORK } from '../chain/deployment'

@@ -7,7 +7,7 @@
 // engaging, not mid-board) — mirrors the compass/day-night HUD chrome gate.
 
 import { useTranslation } from 'react-i18next'
-import { OPENNESS_PUBLIC, OPENNESS_GROUP } from '@aresrpg/world'
+import { OPENNESS_PUBLIC, OPENNESS_GROUP } from '@aresrpg/world/openness'
 
 import { use_openness, set_openness } from '../../../../world-shell/fight_openness.js'
 
