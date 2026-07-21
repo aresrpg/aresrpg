@@ -324,6 +324,21 @@ export const committed_state = (s) => {
   return { ...committed, fighters: apply_retirement(committed.fighters, s.retired) }
 }
 
+/** Fold keys `p{seat}`/`m{idx}` whose DEATH beat still rides an UNACKED wave turn — the same wave fact
+ *  project.death_presenting_ids reads for `engine_view.dead`, expressed in fold-key space (fold.js can't import
+ *  project.js). Read straight off the death beat's source Hit (`victim_is_mob`/`victim_idx` → the key), so no
+ *  entity resolver is needed. A masked killing Hit means the fighter is still ALIVE at pre-death HP in the re-fold;
+ *  these keys mark "its death is presenting RIGHT NOW", distinct from an already-presented death. */
+export const death_presenting_keys = (wave) => {
+  const keys = new Set()
+  for (const t of wave ?? [])
+    for (const b of t.beats ?? []) {
+      const e = b.kind === 'death' ? b.payload?.source_event : null
+      if (e && e.victim_idx != null) keys.add(`${e.victim_is_mob ? 'm' : 'p'}${Number(e.victim_idx)}`)
+    }
+  return keys
+}
+
 /** The wave-masked fold behind BOTH projections below: base view + tail with every still-unacked window's
  *  entries removed; my own segments and every acked turn's events show instantly — hold-at-last-shown with
  *  per-turn reveal (the D115 guarantee, rebuilt on the log). Never folds from empty: if the adopted view ever
@@ -345,8 +360,18 @@ const wave_masked_fold = (s, hold_intents) => {
   // then dies a SECOND time when the wave acks (the double-death). The floor holds authoritative deaths only
   // (intents never retire), so a live prediction is untouched; the death-present HOLD stays owned by
   // project.death_presenting_ids (engine_view.dead), never by this fold's `alive`.
+  //
+  // #8 · DEATH-PRESENTING HP HOLD — but a fighter whose killing beat is STILL PRESENTING (its Hit sits inside a
+  // masked window, so the re-fold already holds it alive at pre-death HP) must NOT be floored here: flooring snaps
+  // its card HP to 0 seconds before the death floater lands (engine_view.dead already holds the visual death via
+  // the same wave fact). It dies exactly when its beat acks — the turn drains, the key leaves this set, the floor
+  // binds. Every OTHER retired fighter still floors (the #134 stale-resurrection of an ALREADY-presented death).
   const folded = log.reduce(apply_action, base)
-  return { ...s, ...folded, fighters: apply_retirement(folded.fighters, s.retired) }
+  const presenting = death_presenting_keys(s.wave)
+  const floor = presenting.size
+    ? Object.fromEntries(Object.entries(s.retired ?? {}).filter(([key]) => !presenting.has(key)))
+    : s.retired
+  return { ...s, ...folded, fighters: apply_retirement(folded.fighters, floor) }
 }
 
 /** The EFFECTIVE projection — legality, budget, tackle reach read it. My own INTENTS paint first (prediction
