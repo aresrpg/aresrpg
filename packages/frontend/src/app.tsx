@@ -23,7 +23,6 @@ import { InboxExternalPage } from './pages/inbox'
 import { SettingsPage } from './pages/settings'
 import { GameWorldHost } from './GameWorldHost'
 import { WalletBar } from './components/wallet_bar'
-import { ImageQueuePanel } from './components/image_queue_panel'
 import { SponsorRunoutModalHost } from './components/sponsor_runout_modal'
 import { ContractsPausedModalHost } from './components/contracts_paused_modal'
 import { RpcLagBanner } from './components/RpcLagBanner'
@@ -298,7 +297,6 @@ function AppBody() {
       <GameWorldHost />
       <Toasts />
       {in_app && <RpcLagBanner />}
-      <ImageQueuePanel />
       {/* Daily FREE-GAMEPLAY run-out modal — opens when the sponsor allowance is spent (self-gates on the
           connected address; renders nothing otherwise). App-global, same tier as Toasts. */}
       <SponsorRunoutModalHost />

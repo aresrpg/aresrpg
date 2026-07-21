@@ -22,7 +22,6 @@ import { use_image_version } from '../stores/image_version'
 import { use_content } from '../pages/encyclopedia/content'
 import { type ItemInfo } from '../types/chain'
 import { safe_json_parse } from '../safe_json_parse'
-import { local_item_image_url } from '../lib/local_items'
 import { use_template_t } from '../i18n/template_t'
 // Rarity SSOT: QUALITY_COLOR-derived tint + hue (quality.js) so an item's rarity reads the SAME here as
 // on every HUD surface. Replaces the old whitish RARITY_COLORS border with a per-tier inset radial tint.
@@ -84,14 +83,6 @@ export function ItemImage({
   const vanilla_url = appearance
     ? (walrus_asset_url('vanilla', `${appearance}.png`) ?? `${ASSET_BASE}/vanilla/${appearance}.png`)
     : null
-  // #96: DEV-ONLY local candidate — a just-generated icon shows immediately from the local seed dir
-  // BEFORE it's published to the bucket. Placed AFTER the bucket url so a bucket-existing id "displays right
-  // away" and the local file is only the fallback while it's still LOCAL-ONLY. null in prod → filtered.
-  // D133b: also skipped whenever `category` is passed — that's the caller opting INTO the glyph degrade (a
-  // read-only display surface: encyclopedia/shop/marketplace, never the admin's own authoring preview, which
-  // never passes category), so trying the dev-only local endpoint is a known-dead request for that id — pure
-  // console 404 noise (the S-84 retention audit's "all item icons 404" finding on QA items with no bucket art).
-  const local_url = category ? null : local_item_image_url(id, hd)
   // HD DETAIL ("the detail page still points to /items/<slug>.png, not the _hd variant"): a
   // Display `image_url` is the BASE `.png`, so when it's present it used to win the whole race and the _hd
   // variant was never requested. In hd mode, derive the `_hd.png` twin of the Display url and try it FIRST; the
@@ -106,11 +97,9 @@ export function ItemImage({
     hd && display_url && /\.png(\?|$)/i.test(display_url) && !/_hd\.png/i.test(display_url)
       ? display_url.replace(/\.png(\?|$)/i, '_hd.png$1')
       : null
-  // Ordered fallback: (hd) Display _hd → canonical Display url → slug icon (→ base icon when hd) → local dev
-  // image → vanilla appearance → hidden.
-  const candidates = [image_url_hd, display_url, icon_url, icon_url_base, local_url, vanilla_url].filter(
-    Boolean
-  ) as string[]
+  // Ordered fallback: (hd) Display _hd → canonical Display url → slug icon (→ base icon when hd) →
+  // vanilla appearance → hidden.
+  const candidates = [image_url_hd, display_url, icon_url, icon_url_base, vanilla_url].filter(Boolean) as string[]
   const base = candidates[0] ?? null
   const primary = base && v ? `${base}?v=${v}` : base
   // Advance the ordered fallback (Display url → slug icon → vanilla appearance → hidden). Shared by

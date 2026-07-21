@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { readFileSync, writeFileSync, existsSync, renameSync } from 'fs'
-import { join } from 'path'
+import { readFileSync, writeFileSync } from 'fs'
 import { execFileSync } from 'child_process'
 
 import { defineConfig } from 'vite'
@@ -99,95 +98,6 @@ function vfx_lab_dev_plugin(): import('vite').Plugin {
   }
 }
 
-// DEV-only PUBLISH endpoint (D118): the admin PUBLISH tab's executing buttons POST here so the Move package
-// is compiled LOCALLY by the sui CLI (the browser can't) — the browser then builds the publish/upgrade PTB
-// from the returned bytes and the CONNECTED WALLET signs it. `apply: 'serve'` ⇒ this whole plugin is absent
-// from any production build (mirrors vfx_lab_dev_plugin). The endpoint NAME is the entire allowlist: NO
-// request field ever reaches a shell — `/__publish_build` runs one fixed argv (execFileSync, no shell); the
-// only request-derived bit (`fresh`) toggles a Published.toml rename, never a shell arg. Ports the legacy
-// dapp's `move-build-api` middleware. (Ids are written back by a MANUAL clipboard copy in the tab, exactly
-// as the legacy dapp did — an auto-write-deployment.ts endpoint is a deliberate deferred follow-up.)
-const MOVE_DIR = join(process.cwd(), '../move')
-
-function publish_dev_plugin(): import('vite').Plugin {
-  const send = (res: import('http').ServerResponse, code: number, body: unknown) => {
-    res.statusCode = code
-    res.setHeader('content-type', 'application/json')
-    res.end(JSON.stringify(body))
-  }
-  return {
-    name: 'ares-publish-dev',
-    apply: 'serve',
-    configureServer(server) {
-      server.middlewares.use(async (req, res, next) => {
-        const url = req.url ?? ''
-        if (req.method !== 'POST') return next()
-
-        // ── /__publish_build — compile the Move package, return the publish bytes ──────────────────
-        // Runs the koshi/legacy-dapp publish command as a FIXED argv (execFileSync ⇒ no shell, no string
-        // interpolation): the sui CLI emits one JSON line `{modules,dependencies,digest}` the browser feeds
-        // straight into tx.publish(). The ONLY request-derived bit is the `fresh` flag — it never reaches the
-        // shell; it just decides whether to hide Published.toml so the build emits at 0x0 (a NEW publish)
-        // instead of the recorded upgrade id. `--no-tree-shaking` mirrors the legacy dapp (a tree-shaken
-        // build can drop a module and desync the publish). Restored in `finally`, always.
-        if (url.startsWith('/__publish_build')) {
-          const fresh = new URLSearchParams(url.split('?')[1] ?? '').get('fresh') === 'true'
-          const published_toml = join(MOVE_DIR, 'Published.toml')
-          const published_bak = join(MOVE_DIR, 'Published.toml.bak')
-          let moved = false
-          try {
-            if (fresh && existsSync(published_toml)) {
-              renameSync(published_toml, published_bak)
-              moved = true
-            }
-            const out = execFileSync(
-              'sui',
-              [
-                'move',
-                'build',
-                '--dump-bytecode-as-base64',
-                '--no-tree-shaking',
-                '--build-env',
-                'testnet',
-                '--path',
-                MOVE_DIR,
-              ],
-              { encoding: 'utf-8', maxBuffer: 64 * 1024 * 1024 }
-            )
-            // The CLI prints build progress on stderr and the JSON manifest on stdout; some versions add a
-            // leading blank/warning line, so take the last line that parses as the {modules,…} object.
-            const line = out
-              .split('\n')
-              .map((l) => l.trim())
-              .filter(Boolean)
-              .reverse()
-              .find((l) => l.startsWith('{'))
-            if (!line) throw new Error('sui move build produced no JSON manifest')
-            // `digest` (the compiled-package byte array) is only needed by the UPGRADE ceremony
-            // (authorize_upgrade takes it); a fresh publish ignores it. Pass all three through.
-            const { modules, dependencies, digest } = JSON.parse(line) as {
-              modules: string[]
-              dependencies: string[]
-              digest: number[]
-            }
-            send(res, 200, { modules, dependencies, digest })
-          } catch (error) {
-            const stderr = (error as { stderr?: Buffer | string })?.stderr
-            send(res, 500, {
-              error: (stderr ? String(stderr) : '') || (error as Error)?.message || String(error),
-            })
-          } finally {
-            if (moved && existsSync(published_bak)) renameSync(published_bak, published_toml)
-          }
-          return
-        }
-
-        return next()
-      })
-    },
-  }
-}
-
 // [P0 balloon 2026-07-11] DEV-ONLY: replace every transformed module's inline source map with an empty
 // one (same plugin as packages/engine/vite.config.js — see the full rationale there). Vite dev inlines
 // maps as base64 `data:` URIs retained by V8 in EVERY realm loading the module; the dapp serves the
@@ -213,7 +123,6 @@ export default defineConfig({
     react(),
     tailwindcss(),
     vfx_lab_dev_plugin(),
-    publish_dev_plugin(),
     catalog_fallback_plugin, // virtual:item_catalog — see the content-authoring note above
     avatar_url_plugin, // default rig via the runtime asset route (heritage GLBs never in git)
     // The vendored game engine + @koshi/protocol's create_client use node
