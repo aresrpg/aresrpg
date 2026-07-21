@@ -8,6 +8,16 @@
 // bun never counts it as an empty suite; lives OUTSIDE src/fight/ so the CodeQL hermetic-core effect rule and
 // gate a never scan test choreography as reducer core). Everything flows through `input()` — the one-reducer law holds even
 // in the harness (no setState back door).
+//
+// TEST CONVENTION (#26, test ceremony): `fight_store` (and its process-wide siblings — use_dungeon,
+// presence_store, spawns_store, use_world_binding — every world-shell/*_adapter.js singleton) is ONE ES
+// module instance for the WHOLE bun test run, not one per file. A test file that seeds it must reset it
+// before its own assertions run (`reset_fight_core()` here, `presence_store.getState().input({type:'reset'})`,
+// `spawns_input({type:'world_bound', world_id:null})`, `reset_world_binding()`) — reset-BEFORE-use, not
+// reset-after — so file execution order never matters (a file that forgets to clean up after itself still
+// can't poison a well-behaved consumer; the audited convention is to make EVERY consumer self-defend). Never
+// assume a fresh/empty world at the top of a test file; a "later row" is just whichever file the shared
+// process happens to run next.
 
 import { fight_store } from '@aresrpg/fight/store'
 
