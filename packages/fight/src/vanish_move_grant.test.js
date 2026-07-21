@@ -63,7 +63,30 @@ const vanish_cast = (target) => ({
   target_cell: target,
   damaging: false,
 })
+const cast_data = {
+  fight: FIGHT,
+  caster_is_mob: false,
+  caster_idx: 0,
+  target_cell: START,
+}
+const confirm_cast = {
+  receipt: () => ({
+    type: 'receipt',
+    version: 6,
+    receipt: { events: [{ type: '0xpkg::fight_events::Cast', parsedJson: cast_data }] },
+  }),
+  journal: () => ({
+    type: 'journal',
+    fight_id: FIGHT,
+    page: {
+      fight: FIGHT,
+      journal_head: '1',
+      events: [{ seq: '0', version: '6', kind: 'Cast', data: cast_data }],
+    },
+  }),
+}
 const wash_reach = (store) => project.move_wash(store.getState(), { busy: false, targeting: false }).reach.length
+const wash_cells = (store) => new Set(project.move_wash(store.getState(), { busy: false, targeting: false }).reach)
 const wash_blocked = (store) => {
   const p = presented_state(store.getState())
   const blocked = new Set()
@@ -82,6 +105,49 @@ describe('① Vanish +MP — the next move consumes the ordered draft prefix', (
     expect(presented_state(store.getState()).fighters.p0.mp).toBe(4)
     expect(wash_reach(store)).toBe(expected)
   })
+
+  for (const source of ['receipt', 'journal'])
+    test(`M2b ${source.toUpperCase()}: the Cast claim preserves its chain-silent grant across a checkpoint`, () => {
+      const store = boot()
+      const four_steps_away = cell(9, 5)
+      expect(wash_cells(store).has(four_steps_away), 'base 3 MP cannot reach a cell four steps away').toBe(false)
+
+      store.getState().input(
+        {
+          type: 'predicted',
+          intent_id: `cast:vanish:${source}`,
+          actions: [vanish_cast(START), granted_mp(1)],
+          basis_version: 6,
+        },
+        2_000
+      )
+      expect(presented_state(store.getState()).fighters.p0.mp).toBe(4)
+      expect(wash_cells(store).has(four_steps_away), 'the optimistic +1 MP extends the overlay').toBe(true)
+
+      // M2b accepts the same canonical Cast through either transport. Cast is the batch's claim anchor, while
+      // give_points emits no journal event; settling the claim must retire the prediction without erasing the
+      // current-turn grant it proved. This is the boundary the pre-M2b tests never crossed.
+      store.getState().input(confirm_cast[source](), 2_100)
+      expect(Object.values(store.getState().entries).some((e) => e.source === 'intent')).toBe(false)
+      expect(presented_state(store.getState()).fighters.p0.mp, 'the accepted Cast keeps its +1 MP').toBe(4)
+      expect(wash_cells(store).has(four_steps_away), 'the accepted grant keeps the range overlay extended').toBe(true)
+      expect(store.getState().divergence).toBeNull()
+
+      // A post-M2b object read is checkpoint-only. Even though its row also says mp=4, it cannot be the repair
+      // path: the accepted claim overlay above must already hold, and the bootstrap view remains at version 5.
+      store.getState().input(
+        {
+          type: 'snapshot',
+          version: 7,
+          journal_head: '1',
+          fight: { ...FIGHT_OBJECT, participants: [{ ...FIGHT_OBJECT.participants[0], mp: 4 }] },
+        },
+        2_200
+      )
+      expect(store.getState().view_version).toBe(5)
+      expect(presented_state(store.getState()).fighters.p0.mp).toBe(4)
+      expect(wash_cells(store).has(four_steps_away)).toBe(true)
+    })
 
   test('move→Vanish→move: the grant funds the second move, never retroactively regroups before the first', () => {
     const store = boot()
