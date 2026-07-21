@@ -251,12 +251,24 @@ export async function create_renderer({
   // requestDevice and kills the boot); a genuine adapter shortfall degrades LOUDLY, never a silent crash.
   /** @type {Record<string, number> | undefined} */
   let required_limits
+  // #158 DIAGNOSTIC UNLOCK: captured off the SAME probe_adapter request below (no extra requestAdapter
+  // call) — GPUAdapterInfo's spec fields (vendor/architecture/device/description; three.js source's
+  // gather_detect_signals in quality/detect.js reads the same shape). Logged once, post-init, alongside
+  // the resolved backend + reversedDepthBuffer (see the console.info a few lines under `backend` below).
+  /** @type {{vendor?: string, architecture?: string, device?: string, description?: string} | null} */
+  let adapter_info = null
   if (requested_webgpu && typeof navigator !== 'undefined' && navigator.gpu) {
     const probe_adapter = await navigator.gpu.requestAdapter({
       powerPreference: 'high-performance',
       featureLevel: 'compatibility',
     })
     if (probe_adapter) {
+      adapter_info = {
+        vendor: probe_adapter.info?.vendor,
+        architecture: probe_adapter.info?.architecture,
+        device: probe_adapter.info?.device,
+        description: probe_adapter.info?.description,
+      }
       const lim = probe_adapter.limits
       required_limits = {}
 
@@ -362,6 +374,38 @@ export async function create_renderer({
   // `isWebGPUBackend` is a runtime-only flag on the concrete WebGPUBackend class (three.js
   // source, three.webgpu.js) not surfaced on the public `Backend` type — cast narrowly here.
   const backend = /** @type {{isWebGPUBackend?: boolean}} */ (renderer.backend)?.isWebGPUBackend ? 'webgpu' : 'webgl2'
+
+  // #158 CAPABILITY-DETECTION CORRECTION. `reversedDepthBuffer: requested_webgpu` above was requested
+  // from the PRE-init navigator.gpu probe — but three's own fallback wiring (WebGPURenderer's
+  // `getFallback`, invoked from Renderer.init() on ANY `WebGPUBackend.init()` throw: bad adapter,
+  // requestDevice rejection, a driver that advertises navigator.gpu but can't actually stand up a
+  // device) can still swap the ACTIVE backend to WebGL2 *inside* `renderer.init()` above, for reasons
+  // the pre-init probe cannot predict. `renderer.reversedDepthBuffer` is a plain constructor-time flag
+  // (Renderer.js) that three never resets on that fallback, so it can be left `true` on a backend that
+  // actually resolved to WebGL2 — exactly the case this file's header warns about ("the WebGL backend
+  // has open reversed-Z bugs, three.js #31413 — reversedDepthBuffer must stay off"). Left stale, EVERY
+  // reversed-Z-branching depth read (perspectiveDepthToViewZ's `builder.renderer.reversedDepthBuffer`
+  // branch; PassNode.setup()'s own depth-texture format pick, PassNode.js:770) silently uses the wrong
+  // convention — not a thrown error, just wrong numbers — which is how the fight-VFX overlay's depth-
+  // fade mask (vfx_overlay_pass.js) can collapse to 0 (particles invisible) on a machine that requested
+  // WebGPU but actually renders on WebGL2. Correct the flag to the ACTUAL resolved backend the same way
+  // `backend` itself is computed above — before anything downstream (water, the vfx overlay, any future
+  // PassNode) reads it.
+  if (backend !== 'webgpu') renderer.reversedDepthBuffer = false
+
+  // #158 DIAGNOSTIC UNLOCK (owner: still-zero VFX post-.42, never supplied F12 adapter info — make the
+  // answer AUTOMATIC). ONE always-on boot line naming the adapter identity the engine actually got, the
+  // RESOLVED backend, and the FINAL (post-correction, above) reversedDepthBuffer state — the exact three
+  // facts a human would otherwise have to dig out of F12 by hand. Same boot-line idiom as the atlas /
+  // terrain-pool lines in this function; every future console screenshot carries the backend answer.
+  const adapter_identity = adapter_info
+    ? `${adapter_info.vendor || 'unknown-vendor'}/${adapter_info.architecture || 'unknown-arch'}` +
+      (adapter_info.description ? ` "${adapter_info.description}"` : '') +
+      (adapter_info.device ? ` (device ${adapter_info.device})` : '')
+    : 'no GPUAdapter (WebGPU unavailable or requestAdapter() failed)'
+  console.info(
+    `[renderer] adapter: ${adapter_identity} · backend=${backend} · reversedDepthBuffer=${renderer.reversedDepthBuffer}`
+  )
 
   // RUNTIME PROVENANCE (QA F2/B2). Log the storage-binding limit the device ACTUALLY got vs the largest
   // terrain pool buffer it must bind — a headless HIGH boot asserts granted ≥ needed on this line, and any
