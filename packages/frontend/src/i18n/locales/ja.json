@@ -290,8 +290,7 @@
     "spectating": "ライブワールドを観戦中",
     "entering_world": "ワールドに入っています",
     "connecting": "接続中...",
-    "connect_wallet": "ウォレットを接続",
-    "no_wallet_detected": "Suiウォレットが見つかりません"
+    "connect_wallet": "ウォレットを接続"
   },
   "gate": {
     "members_only": "メンバー限定",

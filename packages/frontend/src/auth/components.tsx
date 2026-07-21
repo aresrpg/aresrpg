@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ConnectModal, useCurrentWallet } from '@mysten/dapp-kit'
+import { isWalletWithRequiredFeatureSet, type WalletWithRequiredFeatures } from '@mysten/wallet-standard'
 
-import { list_wallets, subscribe_wallets, type ConnectableWallet } from './index'
+import { is_zklogin_wallet } from './zklogin_wallet'
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24">
@@ -40,22 +42,37 @@ export function GoogleButton({ onClick, loading }: { onClick: () => void; loadin
   )
 }
 
-// Wallets register asynchronously (an extension injects itself after page load), so read once then re-read
-// on every register/unregister — a wallet enabled after first paint appears without a manual refresh.
-function use_connectable_wallets(): ConnectableWallet[] {
-  const [wallets, set_wallets] = useState<ConnectableWallet[]>(list_wallets)
-  useEffect(() => {
-    set_wallets(list_wallets()) // catch any that registered between first render and this effect
-    return subscribe_wallets(() => set_wallets(list_wallets()))
-  }, [])
-  return wallets
+// The picker's candidate pool: any wallet-standard wallet capable of signing (the SAME required-feature
+// set auth/index.ts's own is_sui_wallet checks — sui:signPersonalMessage + sui:signTransaction), EXCEPT
+// the Enoki (Google/zkLogin) wallet — it keeps its own dedicated GoogleButton above, never doubled up
+// inside the picker. Module-scope: a pure, stable predicate, not recreated every render.
+const wallet_filter = (wallet: WalletWithRequiredFeatures): boolean =>
+  isWalletWithRequiredFeatureSet(wallet, ['sui:signPersonalMessage', 'sui:signTransaction']) &&
+  !is_zklogin_wallet(wallet)
+
+// PURE — the dapp-kit connection -> session-bridge decision, extracted so it is unit-testable without a
+// live wallet/DOM (this repo has no jsdom/RTL — renderToStaticMarkup can't await dapp-kit's async connect
+// handshake; see auth/components.test.tsx). Returns the wallet name to adopt, or null while
+// disconnected/connecting.
+export function bridge_wallet_name(wallet_state: {
+  isConnected: boolean
+  currentWallet: { name: string } | null
+}): string | null {
+  return wallet_state.isConnected && wallet_state.currentWallet ? wallet_state.currentWallet.name : null
 }
 
 // NON-PRODUCTION wallet-standard connect (#73). The login popup renders this only when the build-time gate
-// allows it (preview/dev — never a production release). Each installed Sui wallet connects through the shared
-// auth store's login(name) — the SAME path the Google/zkLogin wallet uses — so the connected address flows
-// into the same store shape and every downstream read stays identity-agnostic. A wallet session self-pays
-// every transaction: sponsorship is zkLogin-only (enforced structurally in tx/index.ts).
+// allows it (preview/dev — never a production release; auth/wallet_connect_gate.ts, asserted in its own
+// test, never hidden by CSS). The picker is the REAL @mysten/dapp-kit ConnectModal (Mysten's official
+// wallet picker) — maintainer ruling (public-repo review) replacing the old hand-rolled per-wallet button
+// list. Our own gothic trigger opens it; the picker UI itself stays 100% the official component.
+//
+// SESSION BRIDGE: dapp-kit's own connection is transient UI plumbing, never a second auth home. The
+// moment it lands a wallet, this feeds on_connect(name) — auth.tsx wires that to the SAME login(name) the
+// Google/zkLogin button already uses, so the connected address lands in the ONE use_auth store shape and
+// every downstream read stays identity-agnostic (unchanged from #73). A wallet already authorized by
+// dapp-kit's own standard:connect answers login()'s follow-up connect() instantly per the wallet-standard
+// spec (no second approval prompt), so this is not a double consent step for the player.
 export function WalletConnectSection({
   on_connect,
   loading,
@@ -64,28 +81,29 @@ export function WalletConnectSection({
   loading?: boolean
 }) {
   const { t } = useTranslation()
-  const wallets = use_connectable_wallets()
+  const { currentWallet, isConnected } = useCurrentWallet()
 
-  if (wallets.length === 0)
-    return (
-      <div className="text-muted/70 text-[10px] tracking-[0.12em] text-center py-1">{t('auth.no_wallet_detected')}</div>
-    )
+  useEffect(() => {
+    // Fires only on a genuine connection-state transition. `on_connect` is intentionally left out of the
+    // dependency array: auth.tsx passes a fresh closure every render, and re-including it would re-fire
+    // this (and re-call login()) on every unrelated re-render while a wallet stays connected.
+    const wallet_name = bridge_wallet_name({ isConnected, currentWallet })
+    if (wallet_name) on_connect(wallet_name)
+  }, [isConnected, currentWallet])
 
   return (
-    <div className="flex flex-col items-stretch gap-2 w-full">
-      {wallets.map((wallet) => (
+    <ConnectModal
+      walletFilter={wallet_filter}
+      trigger={
         <button
-          key={wallet.name}
           type="button"
-          onClick={() => on_connect(wallet.name)}
           disabled={loading}
-          className="flex items-center justify-center gap-2.5 w-full h-11 border border-gold/30 text-gold text-[11px] tracking-[0.16em] uppercase font-semibold cursor-pointer transition-all hover:border-gold/60 hover:bg-gold/8 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex items-center justify-center w-full h-11 border border-gold/30 text-gold text-[11px] tracking-[0.16em] uppercase font-semibold cursor-pointer transition-all hover:border-gold/60 hover:bg-gold/8 disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ borderRadius: 5 }}
         >
-          {wallet.icon ? <img src={wallet.icon} alt="" width={16} height={16} style={{ borderRadius: 3 }} /> : null}
-          <span>{wallet.name}</span>
+          {t('auth.connect_wallet')}
         </button>
-      ))}
-    </div>
+      }
+    />
   )
 }

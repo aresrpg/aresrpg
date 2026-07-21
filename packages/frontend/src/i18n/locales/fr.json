@@ -290,8 +290,7 @@
     "spectating": "Observation du monde en direct",
     "entering_world": "Entrée dans le monde",
     "connecting": "Connexion...",
-    "connect_wallet": "Connecter un portefeuille",
-    "no_wallet_detected": "Aucun portefeuille Sui détecté"
+    "connect_wallet": "Connecter un portefeuille"
   },
   "gate": {
     "members_only": "MEMBRES UNIQUEMENT",

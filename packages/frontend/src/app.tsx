@@ -7,6 +7,7 @@ import { Analytics } from '@vercel/analytics/react'
 
 import i18n from './i18n'
 import { use_auth, type AuthState } from './auth'
+import { DappKitProviders } from './auth/dapp_kit_providers'
 import { use_toast, TOAST_CONTAINER_CLASS } from './toast'
 import { Sidebar, LanguageCard, DiscordCard } from './components/sidebar'
 import { MobileSwitcher } from './components/mobile_switcher'
@@ -339,7 +340,13 @@ export function App() {
             ENTIRE tree to a silent blank page (React 19 routes it to onUncaughtError only — no console
             error, no recovery). This wrap + the chunk-reload latch in componentDidCatch close the class. */}
         <ErrorBoundary>
-          <AppBody />
+          {/* dapp-kit providers wrap the app root — the #dappkit-modal CONNECT WALLET picker (rendered
+              deep inside the spectate landing) needs SuiClientProvider/WalletProvider ancestors to mount
+              at all (auth/dapp_kit_providers.tsx). Mounting is unconditional and cheap (no network calls
+              on the connect path); the #73 build-time gate still owns whether the picker ITSELF renders. */}
+          <DappKitProviders>
+            <AppBody />
+          </DappKitProviders>
         </ErrorBoundary>
       </BrowserRouter>
     </>
