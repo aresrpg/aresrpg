@@ -99,7 +99,7 @@ describe('tick auto-commit — the reducer reads the live folded deadline', () =
     expect(commit_due(store.getState()), 'the live 100s deadline becomes due inside its commit buffer').toBe(true)
   })
 
-  test('a last-mob kill waits for the chain action floor and receipt, then becomes due', () => {
+  test('a last-mob kill waits for the chain action floor, then the drained optimistic kill auto-commits', () => {
     const store = create_fight_store()
     store.getState().input({ type: 'init', fight_id: FIGHT, my_key: 'p0', ctx: { my_entity_id: CHAR } })
     store.getState().input({ type: 'snapshot', fight: FIGHT_WITH_MOBS, version: 5 }, 1_000)
@@ -117,8 +117,12 @@ describe('tick auto-commit — the reducer reads the live folded deadline', () =
     store.getState().input({ type: 'tick' }, 14_999)
     expect(commit_due(store.getState()), 'the final kill cannot bypass last_action_ms + 5s').toBe(false)
     store.getState().input({ type: 'tick' }, 15_000)
-    expect(commit_due(store.getState()), 'an optimistic final kill cannot auto-submit before its receipt').toBe(false)
+    expect(
+      commit_due(store.getState()),
+      'the drained optimistic final kill auto-commits once the action floor passes (owner ruling 2026-07-21)'
+    ).toBe(true)
 
+    // and it stays due through its confirming receipt (committed now agrees with the prediction).
     store.getState().input({ type: 'receipt', receipt: { events: [hit_mob(0, 0), hit_mob(1, 0)] }, version: 6 }, 15_000)
     store.getState().input({ type: 'tick' }, 15_000)
     expect(commit_due(store.getState())).toBe(true)

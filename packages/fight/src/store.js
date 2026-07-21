@@ -41,6 +41,7 @@ import {
   foreign_replay_turns,
   last_action_of,
   merge_entries,
+  presented_state,
   recompute,
   wave_turns_of,
 } from './fold.js'
@@ -714,11 +715,19 @@ const make_input =
         // latency; auto_commit_fire_at clamps a short admin dial to actions.move::assert_min_turn's legal boundary.
         // The distinct last_action_ms pacing floor remains on the mid-turn KILL path alone (kill_due below).
         const deadline_due = deadline_fresh && now >= auto_commit_fire_at(deadline, state.view?.turn_ms)
-        const mobs = Object.values(committed_state(state).fighters ?? {}).filter((fighter) => fighter.is_mob)
+        // LETHAL AUTO-COMMIT (owner ruling 2026-07-21): the killing blow that leaves zero living enemies auto-fires
+        // the turn commit the moment its vfx sequence + death animation have PRESENTED (the wave fully drained) — no
+        // manual END TURN. Reads the LOCAL fold (presented_state — my OPTIMISTIC kill counts; the prior committed-only
+        // rule kept a prediction "manual"), and requires an EMPTY wave so the death beat plays out first and no
+        // queued action is still mid-flight. The commit's receipt still drives decided_winner exactly as today — no
+        // optimistic victory is ever painted (no-false-victory intact). commit_due below routes this through the
+        // epoch/latch, so it fires exactly ONCE and an executed-failed commit is never auto-retried.
+        const local_mobs = Object.values(presented_state(state).fighters ?? {}).filter((fighter) => fighter.is_mob)
         const kill_due =
           deadline_fresh &&
-          mobs.length > 0 &&
-          mobs.every((fighter) => !fighter.alive) &&
+          local_mobs.length > 0 &&
+          local_mobs.every((fighter) => !fighter.alive) &&
+          (state.wave ?? []).length === 0 && // the vfx sequence + death animation have drained; nothing mid-flight
           state.turn_started_at != null &&
           now >= state.turn_started_at + PLAYER_TURN_FLOOR_MS &&
           now >= last_action_ms + MIN_ACTION_MS

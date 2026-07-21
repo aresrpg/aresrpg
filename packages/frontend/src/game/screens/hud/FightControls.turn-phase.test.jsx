@@ -66,7 +66,7 @@ const seed = ({ active = ME, my = ME, seats = [{ character: ME }], version = 1 }
 afterEach(reset_fight_core)
 
 describe('fight turn controls — one phase source for the button and countdown', () => {
-  test('a cast stays END-TURN armed after the one turn floor while its receipt is still absent', () => {
+  test('a LETHAL cast auto-commits after the one turn floor, no manual END TURN (owner ruling 2026-07-21)', () => {
     const store = seed()
     const start = store.getState().turn_started_at
     let dungeon_busy = false
@@ -97,9 +97,9 @@ describe('fight turn controls — one phase source for the button and countdown'
 
     const phase = fight_turn_control_phase(engine_view(store.getState()), dungeon_busy)
     const button = FightEndTurnButton({ phase, on_end_turn: () => {}, end_label: 'END' })
-    expect(phase, 'END TURN stays armed after the one per-turn floor without waiting on a receipt').toBe('armed')
-    expect(button.props.disabled).toBe(false)
-    expect(submissions, 'a prediction cannot auto-submit before its receipt confirms the committed kill').toBe(0)
+    expect(phase, 'the killing blow flips the button to committing — the app fires the turn itself').toBe('committing')
+    expect(button.props.disabled).toBe(true)
+    expect(submissions, 'a drained lethal prediction auto-commits the turn exactly once (owner ruling)').toBe(1)
     stop()
   })
 

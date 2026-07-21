@@ -121,8 +121,11 @@ describe('intent-free authoritative floor', () => {
   })
 })
 
-describe('receipt-confirmed kill auto-commit floor', () => {
-  test('an all-dead prediction stays manual after the floor; its receipt may auto-commit', () => {
+describe('lethal auto-commit floor', () => {
+  // Owner ruling 2026-07-21: the killing blow auto-commits after the death beat drains — the LOCAL prediction now
+  // fires it (this REPLACES the old "prediction stays manual, only the receipt auto-commits" rule). The full drain
+  // + only-lethal + single-fire + failure-latch matrix lives in lethal_auto_commit.test.js; here we hold the FLOOR.
+  test('a drained lethal prediction auto-commits after the player-turn floor', () => {
     const store = store_from_snapshot()
     store.getState().input({ type: 'stage', intent: { kind: 1, target: 120 } })
     store
@@ -130,18 +133,12 @@ describe('receipt-confirmed kill auto-commit floor', () => {
       .input({ type: 'intent', intent: { kind: 'Hit', victim_is_mob: true, victim_idx: 0, remaining_hp: 0 } })
 
     store.getState().input({ type: 'tick' }, TURN_STARTED_AT + PLAYER_TURN_FLOOR_MS - 1)
-    expect(project.commit_due(store.getState()), 'kill_due must wait for the player-turn floor').toBe(false)
+    expect(project.commit_due(store.getState()), 'the min-turn floor still gates the auto-commit').toBe(false)
 
     store.getState().input({ type: 'tick' }, TURN_STARTED_AT + PLAYER_TURN_FLOOR_MS)
-    expect(project.commit_due(store.getState()), 'prediction alone keeps END TURN armed').toBe(false)
-
-    store
-      .getState()
-      .input(
-        { type: 'receipt', receipt: { events: [peer_hit(0)] }, version: 6 },
-        TURN_STARTED_AT + PLAYER_TURN_FLOOR_MS
-      )
-    store.getState().input({ type: 'tick' }, TURN_STARTED_AT + PLAYER_TURN_FLOOR_MS)
-    expect(project.commit_due(store.getState())).toBe(true)
+    expect(
+      project.commit_due(store.getState()),
+      'the lethal prediction auto-commits once the floor passes and its beat has drained'
+    ).toBe(true)
   })
 })
