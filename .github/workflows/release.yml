@@ -21,7 +21,8 @@ name: release
 on:
   push:
     branches: [master]
-  # promote.yml dispatches this (no inputs) after its ff-push — GITHUB_TOKEN pushes don't self-trigger.
+  # the promote engine (promote.yml / promote-queue.yml → promote-land.sh) dispatches this (no
+  # inputs) after a master ff-push — GITHUB_TOKEN pushes don't self-trigger.
   # announce_only=true re-posts the newest changelog to Discord and skips tag/release creation
   # (used once to cleanly re-announce a version whose tag already exists).
   workflow_dispatch:
