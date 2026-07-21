@@ -38,7 +38,14 @@ import { subscribe_commit_due, subscribe_divergence, subscribe_turn_lost, staged
 import { fight_store } from '@aresrpg/fight/store'
 import { fight_view } from '@aresrpg/fight/project'
 import { committed_mob_hp } from '@aresrpg/fight/project'
-import { strike_flush_illegal, announce_auto_commit, announce_turn_lost } from '@aresrpg/fight/turn_commit'
+import {
+  CAST_DROP_STALE_TARGET,
+  CAST_DROP_TARGET_OUT_OF_REACH,
+  announce_auto_commit,
+  announce_turn_lost,
+  local_commit_cast_drop,
+  strike_flush_illegal,
+} from '@aresrpg/fight/turn_commit'
 import { retarget_cast } from '@aresrpg/fight/txs'
 import { synthetic_tackled_events, local_intent_beats, local_move_beats } from '@aresrpg/fight/present'
 import { predict_cast, weapon_spell_template, evolve_flush_casts, evolve_caster_cell } from '@aresrpg/fight/predict_cast'
@@ -65,6 +72,7 @@ import './dungeon-board.css'
 import { game_log } from '../../../../core/log.js'
 import { fight_state_trace } from '../../../../world-shell/fight_state_trace.js'
 import { humanize_abort } from '../../../core/abort_copy.js'
+import { emit_local_cast_drop_toast } from './cast_drop_toast.js'
 
 // FALLBACK cast economics (senshi fire_strike L1) — used only when the class/seed can't be resolved. The LIVE
 // values are read per-class from the seeded primary spell (D98 cast_params memo below): range/AP differ by class
@@ -712,14 +720,10 @@ export function DungeonBoard() {
     const trap_placed = []
     const trap_dropped = []
     let dropped = 0
-    // LEG 0a — CAST AUTO-RETARGET (a mob shifting one cell silently invalidated a drafted
-    // cast). Counts the SUBSET of `dropped` specifically caused by retarget_cast's own reach failure, so the
-    // post-loop toast picks the honest reason (§ below) instead of always saying "stale".
-    let retarget_unreachable = 0
-    // HONEST TOAST (#321): the dropped spells' own display names, per toast category — the end-of-flush toast
-    // names WHAT was dropped instead of a bare generic notice.
-    const stale_spell_names = []
-    const unreachable_spell_names = []
+    // Only this local commit-removal edge creates cast-drop events. Re-validation, evolved fighters, canonical
+    // ingress, claim retirement, peers, and mobs return domain/state results but cannot request UI; the successful
+    // commit consumes these records below.
+    const cast_drops = []
     if (me && dungeon && anchor != null)
       for (const [cast_i, entry] of (cast_queue ?? []).entries()) {
         const is_weapon = entry.spell_key === WEAPON_ATTACK_ID
@@ -752,7 +756,7 @@ export function DungeonBoard() {
           ? (committed_state(fight_store.getState()).fighters?.[`${eye_target.kind === 'mob' ? 'm' : 'p'}${eye_target.idx}`]
               ?.cell ?? null)
           : null
-        const drop_entry = (reason, bucket) => {
+        const drop_entry = (reason) => {
           game_log('board', `flush_commit: staged strike dropped — ${reason}`, {
             cell: entry.cell,
             anchor: cast_anchor,
@@ -760,7 +764,7 @@ export function DungeonBoard() {
             background,
           })
           dropped += 1
-          bucket.push(spell_display_name)
+          cast_drops.push(local_commit_cast_drop({ actor_id: entity_id, spell_name: spell_display_name, reason }))
           // a dropped trap draft never reaches the chain — its click-time optimistic marker rolls back below.
           if ((drafted_spell?.levels?.[0]?.effects ?? []).some((e) => e.kind === 'PLACE_TRAP'))
             trap_dropped.push(entry.cell)
@@ -784,8 +788,7 @@ export function DungeonBoard() {
             reaches: (cell) => footprint.has(cell),
           })
           if (retargeted.dropped) {
-            drop_entry('target moved out of reach at flush', unreachable_spell_names)
-            retarget_unreachable += 1
+            drop_entry(CAST_DROP_TARGET_OUT_OF_REACH)
             continue
           }
           target_cell = retargeted.target
@@ -829,8 +832,7 @@ export function DungeonBoard() {
                 reaches: (cell) => footprint.has(cell),
               })
           if (retargeted.dropped) {
-            drop_entry('target moved out of reach at flush', unreachable_spell_names)
-            retarget_unreachable += 1
+            drop_entry(CAST_DROP_TARGET_OUT_OF_REACH)
             continue
           }
           target_cell = retargeted.target
@@ -843,7 +845,7 @@ export function DungeonBoard() {
           })
         }
         if (illegal) {
-          drop_entry('target no longer valid at flush', stale_spell_names)
+          drop_entry(CAST_DROP_STALE_TARGET)
           continue
         }
         // VOID CASTS ARE LEGAL (a cast at any legal-geometry cell is the player's right). Weapon → {kind:2}
@@ -865,10 +867,9 @@ export function DungeonBoard() {
             spell_key: entry.spell_key,
           })
       }
-    // ROLLBACK LAW (regression: "mobs regain health"): a dropped strike's optimistic AP/HP must not sit dropped while
-    // the poll catches up — THE ONE DOOR's own receipt purge handles this now (an authoritative receipt at
-    // version V discards every optimistic intent at/below V, dropped or not; fight-intents.js's manual clear is
-    // gone with it).
+    // ROLLBACK LAW (regression: "mobs regain health"): predictions now retire through the ONE receipt ingress by
+    // claim identity; the receipt's TurnEnded expires any local cast prediction the committed batch omitted. An
+    // unrelated receipt never purges it, and object snapshots never re-adopt over the fold (M6 + M2b).
     // ARRAY ORDER (D99): casts-first vs moves-first, the whole batch in one commit_turn.
     actions.push(...(cast_first ? [...cast_actions, ...move_actions] : [...move_actions, ...cast_actions]))
     fight_state_trace('flush_started', {
@@ -910,16 +911,19 @@ export function DungeonBoard() {
     // FIX 2 (overrules D97 silence): a flush-time cast DROP surfaces ONE honest event toast — the moves
     // committed, the spell did not (its target went stale). Only on a SUCCESSFUL commit; a FAILED commit already
     // surfaces its own single toast (manual via tx_commit_turn, background via commit_turn's catch below).
-    // LEG 0a: a target that moved OUT OF REACH gets its OWN toast (dungeons.cast_target_unreachable) — distinct
-    // from the generic "stale" drop so the player learns WHY (a chase that failed vs. some other invalidation).
-    // #321 HONEST TOAST: both fire ONLY on a genuine drop (dropped is incremented nowhere else) and NAME the
-    // spell(s) actually dropped — never a bare "something was invalid" notice.
-    if (ok && retarget_unreachable > 0)
-      push_event_toast({
-        state: 'info',
-        title: t('dungeons.cast_target_unreachable', { spell: unreachable_spell_names.join(', ') }),
-      })
-    if (ok && dropped > retarget_unreachable)
+    // The named out-of-reach toast has exactly one input: a genuine local cast-drop record from drop_entry above,
+    // consumed only after the surviving batch commits. Accepted events and claim retirement stay state-only.
+    emit_local_cast_drop_toast({
+      commit_succeeded: ok,
+      drops: cast_drops,
+      local_actor_id: entity_id,
+      t,
+      emit: push_event_toast,
+    })
+    const stale_spell_names = cast_drops
+      .filter((drop) => drop.reason === CAST_DROP_STALE_TARGET)
+      .map((drop) => drop.spell_name)
+    if (ok && stale_spell_names.length > 0)
       push_event_toast({
         state: 'info',
         title: t('dungeons.cast_dropped_stale', { spell: stale_spell_names.join(', ') }),

@@ -36,7 +36,7 @@ describe('DungeonBoard flush — each cast validated against the evolved sequenc
 
 // LEG 0a — CAST AUTO-RETARGET (a mob shifting one cell silently invalidated a drafted cast).
 // The pure decision (follow a moved target to its committed cell when the draft's own footprint still reaches it,
-// else drop + toast) is unit-locked in @aresrpg/fight/test/cast_retarget_leg_0a.test.js. This locks the WIRING —
+// else report a domain drop) is unit-locked in @aresrpg/fight/test/cast_retarget_leg_0a.test.js. This locks the WIRING —
 // same un-driveable-component rationale as the describe above (source-contract, no browser/jsdom).
 describe('DungeonBoard flush — a drafted cast auto-retargets onto its moved target (txs.retarget_cast wiring)', () => {
   test('flush_commit resolves the target fighter through the EYE-STATE occupancy, calls retarget_cast, and ships the retargeted cell', async () => {
@@ -61,10 +61,10 @@ describe('DungeonBoard flush — a drafted cast auto-retargets onto its moved ta
     expect(body).toMatch(/target_cell = retargeted\.target/)
     expect(body).toMatch(/kind: 2, target: target_cell/)
     expect(body).toMatch(/kind: 1,\s*\n\s*target: target_cell/)
-    // an unreachable retarget drops (never silently) and requests the additive toast — never re-using the generic
-    // "stale" key, so the player learns WHY (a chase that failed vs. some other flush-time invalidation).
+    // An unreachable retarget reports only a domain drop. Toast policy is absent from this re-validation pass;
+    // the actual local commit-removal event is the sole feedback input (locked below).
     expect(body).toMatch(/if \(retargeted\.dropped\)/)
-    expect(body).toMatch(/dungeons\.cast_target_unreachable/)
+    expect(body).not.toMatch(/dungeons\.cast_target_unreachable/)
   })
 })
 
@@ -103,15 +103,27 @@ describe('DungeonBoard flush — the footprint anchor evolves PER CAST, and grou
     expect(body).toMatch(/const ground_targeted = !is_weapon && drafted_spell\?\.levels\?\.\[0\]\?\.free_cell === true/)
   })
 
-  test('the end-of-flush toast names the actually-dropped spell(s) — never a bare generic notice', async () => {
+  test('only the successful local commit-drop event can emit the named out-of-reach toast', async () => {
     const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
     const start = src.indexOf('const flush_commit = async')
     const end = src.indexOf('auto_submit_ref.current =', start)
     const body = src.slice(start, end)
-    expect(body).toMatch(/bucket\.push\(spell_display_name\)/)
-    expect(body).toMatch(
-      /title:\s*t\('dungeons\.cast_target_unreachable',\s*\{\s*spell:\s*unreachable_spell_names\.join\(', '\)\s*\}\)/
-    )
+    const committed = body.indexOf('const ok = await commit_turn(actions')
+    const emitted = body.indexOf('emit_local_cast_drop_toast({')
+
+    // The cancellation record is created exactly where drop_entry omits the cast from cast_actions.
+    expect((body.match(/cast_drops\.push\(local_commit_cast_drop\(/g) ?? []).length).toBe(1)
+    expect((body.match(/drop_entry\(CAST_DROP_TARGET_OUT_OF_REACH\)/g) ?? []).length).toBe(2)
+    // Consumption is downstream of the real commit result and explicitly gated/scoped by it.
+    expect(committed).toBeGreaterThan(-1)
+    expect(emitted).toBeGreaterThan(committed)
+    expect((body.match(/emit_local_cast_drop_toast\(\{/g) ?? []).length).toBe(1)
+    expect(body).toMatch(/commit_succeeded:\s*ok/)
+    expect(body).toMatch(/drops:\s*cast_drops/)
+    expect(body).toMatch(/local_actor_id:\s*entity_id/)
+    // The board no longer emits this i18n key from validation/counters; the dedicated helper owns the one push.
+    expect(body).not.toMatch(/dungeons\.cast_target_unreachable/)
+    // The unrelated stale-target notice remains named too.
     expect(body).toMatch(
       /title:\s*t\('dungeons\.cast_dropped_stale',\s*\{\s*spell:\s*stale_spell_names\.join\(', '\)\s*\}\)/
     )
