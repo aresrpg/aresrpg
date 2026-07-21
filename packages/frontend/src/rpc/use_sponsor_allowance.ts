@@ -11,7 +11,7 @@
 import { use_auth, type AuthState } from '../auth'
 
 import { get_sponsor_remaining } from './client'
-import { use_rpc_view } from './use_view'
+import { create_shared_poll } from './shared_poll'
 
 export interface SponsorAllowance {
   allowance_mist: bigint
@@ -28,13 +28,14 @@ export interface SponsorAllowance {
 // slower than the 5s data views — enough to feel live, frugal on requests (token discipline).
 const POLL_MS = 15000
 
+// ONE shared poll for every mount site (the sidebar gauge, the pre-fight hint, the run-out modal, settings —
+// #242 read-layer census: each used to run its OWN use_rpc_view instance for the SAME address, so "ONE poll"
+// above was a claim the code never actually enforced). create_shared_poll makes it literally true.
+const sponsor_poll = create_shared_poll((address) => get_sponsor_remaining(address), POLL_MS)
+
 export function use_sponsor_allowance(): SponsorAllowance | null {
   const address = use_auth((s: AuthState) => s.address)
-  const { data, loading, stale } = use_rpc_view((signal) => get_sponsor_remaining(address as string, signal), {
-    enabled: !!address,
-    deps: [address],
-    interval_ms: POLL_MS,
-  })
+  const { data, loading, stale } = sponsor_poll.use_shared_poll(address ?? null)
 
   if (!address) return null
   if (!data) return { allowance_mist: 0n, spent_mist: 0n, remaining_mist: 0n, resets_at: null, loading, stale }
