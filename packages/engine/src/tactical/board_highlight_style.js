@@ -50,7 +50,7 @@ export function resolve_fade(spec) {
 export const CHANNELS = {
   // §7 CellState vocabulary
   highlight: { color: 0x2f7bf5, opacity: 0.8, order: 1 },
-  path: { color: 0x0d6b16, opacity: 0.94, order: 4 }, // DARK movement path
+  path: { color: 0x0b4712, opacity: 0.94, order: 4 }, // [#212] DARK movement path — darkened again, see mp_range
   aoe: { color: 0xa01414, opacity: 0.86, order: 3 },
   start_a: { color: 0x2f6bd8, opacity: 0.8, order: 2 },
   start_b: { color: 0xff7a2c, opacity: 0.8, order: 2 },
@@ -69,13 +69,17 @@ export const CHANNELS = {
   range: { color: 0x35b34a, opacity: 0.8, order: 1 }, // MEDIUM hovered-fighter movement range
   target: { color: 0x3358f5, opacity: 0.92, order: 5 },
   mp_range: {
-    color: 0x5ed82e,
+    color: 0x6ee85c,
     opacity: 0.72,
     order: 1,
     unlit_gain: 1.35,
     center_dim: 0.72,
     center_alpha: 0.72,
-  }, // LIGHT local-player movement range; raised center survives a dark floor
+  }, // [#212] LIGHT local-player movement range; raised center survives a dark floor. Owner 2026-07-21
+  // live-QA on v1.12.39: the D302 mp_range/path pair still read "too little difference" — this recolor
+  // (0x5ed82e → 0x6ee85c here, path 0x0d6b16 → 0x0b4712) widens the lum-delta floor 180 → 300 (see the
+  // [#212] test below) so "clear light green" vs "clear dark green" is unmistakable at fight-camera
+  // distance, not just on paper.
   los_blocked: { color: 0x7a95f8, opacity: 0.82, order: 5 },
   // The TACKLE-LOST band (project.move_wash tackle_lost — the at-risk cells while actually tackled). WAY
   // SOFTER than every strike red — soft enough to not feel

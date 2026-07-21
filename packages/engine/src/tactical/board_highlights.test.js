@@ -147,12 +147,14 @@ describe('D256 punchy channel palette — deliberate saturation override', () =>
     expect(CHANNELS.range.color).not.toBe(CHANNELS.mp_range.color)
     expect(CHANNELS.path.color).not.toBe(CHANNELS.mp_range.color)
   })
-  test('[D302] path is DARK ENOUGH vs mp_range — lum-delta pin ≥180 (live-QA: "the green is not dark enough")', () => {
+  test('[#212] path is DARK ENOUGH vs mp_range — lum-delta pin ≥300 (live-QA on v1.12.39, 2026-07-21: "the difference between walkable cell range and the hover path to walk on is too little, we want clear light green and dark green")', () => {
     // lum proxy = R+G+B channel sum (0..765) — the same house metric as the D283 sibling test below.
-    // The old 0x1a9622 sat only 146 below mp_range and read too close on the tan board; the D302
-    // darken (0x0d6b16) pins the separation at ≥180 so no future recolor drifts the two greens back together.
+    // D302 (0x1a9622 → 0x0d6b16) pinned the separation at ≥180 and STILL read too close live — the
+    // owner filed #212 on the shipped v1.12.39 build carrying that fix. This is round TWO: the #212
+    // recolor (0x0d6b16 → 0x0b4712 path, 0x5ed82e → 0x6ee85c mp_range) pins a materially wider floor
+    // (≥300, was ≥180) so a future recolor can't drift back to a "too little difference" read.
     const lum = (/** @type {number} */ c) => ((c >> 16) & 0xff) + ((c >> 8) & 0xff) + (c & 0xff)
-    expect(lum(CHANNELS.mp_range.color) - lum(CHANNELS.path.color)).toBeGreaterThanOrEqual(180)
+    expect(lum(CHANNELS.mp_range.color) - lum(CHANNELS.path.color)).toBeGreaterThanOrEqual(300)
   })
   test('shipped night grade keeps the three movement greens in a DARK < MEDIUM < LIGHT luminance ladder', () => {
     const path = center_luma_at_night(CHANNELS.path)
