@@ -14,6 +14,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const DIST = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist')
+const VERCEL_CONFIG = join(dirname(fileURLToPath(import.meta.url)), '..', 'vercel.json')
 
 // Each rule: a forbidden pattern that must NEVER appear in a shipped bundle, + why.
 const FORBIDDEN = [
@@ -35,6 +36,26 @@ function walk(dir) {
     else if (/\.(js|mjs|css|html|json)$/.test(name)) out.push(p)
   }
   return out
+}
+
+function vercel_config_problem() {
+  try {
+    const vercel_config = JSON.parse(readFileSync(VERCEL_CONFIG, 'utf8'))
+    if (
+      !Array.isArray(vercel_config?.rewrites) ||
+      !vercel_config.rewrites.some((rewrite) => rewrite?.destination === '/index.html')
+    )
+      return 'vercel.json has no rewrite with destination "/index.html"'
+  } catch {
+    return 'vercel.json is missing, unreadable, or invalid JSON'
+  }
+  return ''
+}
+
+const vercel_config_error = vercel_config_problem()
+if (vercel_config_error) {
+  console.error(`[assert-clean-bundle] ${vercel_config_error}`)
+  process.exit(1)
 }
 
 let files
@@ -93,5 +114,5 @@ if (hits.length || manifest_error) {
 }
 
 console.log(
-  `✓ bundle-cleanliness gate OK (${files.length} dist files scanned — no leaked keys, no dead hosts; seed manifest resolved into the bundle)`
+  `✓ bundle-cleanliness gate OK (${files.length} dist files scanned — no leaked keys, no dead hosts; seed manifest resolved into the bundle; SPA rewrite configured)`
 )
