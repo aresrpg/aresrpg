@@ -78,7 +78,9 @@ export function PlayerActionMenu() {
     // OWN owned alt characters into the party as real, accepted on-chain members — inviting one specific other
     // player never means "also enroll my siblings"; that stays the explicit picker's job (invite_owned).
     if (!use_party.getState().party_id) await use_party.getState().create_bare()
-    await use_party.getState().invite(target.id, address)
+    // The menu already carries the resolved display name (its own header renders target.name) — thread it
+    // through so the invite toast shows the NAME, never a truncated address (#328).
+    await use_party.getState().invite(target.id, address, target.name)
   }
   const on_fast_travel = () => {
     close()

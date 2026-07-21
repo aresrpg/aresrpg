@@ -74,6 +74,12 @@ async function resolve_invitee_name(character_id) {
   return docs.get(character_id)?.name || short_fighter_id(character_id)
 }
 
+/** OWNED-character display names from the local roster, synchronous — feeds the per-alt toast label (#328). */
+const owned_names_by_id = (/** @type {string[]} */ character_ids) =>
+  Object.fromEntries(
+    character_ids.map((id) => [id, (context.get_state().sui?.characters ?? []).find((c) => c.id === id)?.name ?? null])
+  )
+
 // THE party atom is the package's vanilla store — created once here, with the edge-owned tx-phase
 // flags riding the same atom. Methods are edge closures injected onto the atom right below (consumers
 // select them exactly as before); `fold_party` is the package's ONE domain write door.
@@ -99,15 +105,18 @@ party_store.setState({
         'membership divergence — predicted a departure the chain still lists (adopting chain)',
         outputs.divergence
       )
-    for (const character_id of outputs.joined)
-      push_event_toast({
-        state: 'success',
-        title: i18n.t('party.member_joined_toast', { addr: character_id.slice(0, 6) }),
-      })
+    for (const character_id of outputs.joined) void get()._announce_member_joined(character_id)
     for (const request of outputs.pending_invite_requests) get()._handle_pending_invite_request(request)
     if (outputs.stale_reread) void get().refresh()
     if (outputs.publish) get()._publish_state()
     return outputs
+  },
+
+  /** "X joined the party" via the ONE character_name_resolve home (#328 — never a raw address slice). */
+  async _announce_member_joined(character_id) {
+    const docs = await resolve_character_docs([character_id])
+    const name = docs.get(character_id)?.name || short_fighter_id(character_id)
+    push_event_toast({ state: 'success', title: i18n.t('party.member_joined_toast', { name }) })
   },
 
   /** Turn one reducer toast request into the real use_toast call — see header (the OUTGOING pending-invite
@@ -175,6 +184,7 @@ party_store.setState({
           party_id,
           leader_character_id: character_id,
           invited_character_ids,
+          invited_names: owned_names_by_id(invited_character_ids),
           on_joined: (joined_character_id) =>
             get()._dispatch({ kind: 'receipt_patch', action: 'join', character_id: joined_character_id, address }),
         })
@@ -208,6 +218,7 @@ party_store.setState({
         party_id: get().party_id,
         leader_character_id,
         invited_character_ids: chosen,
+        invited_names: owned_names_by_id(chosen),
         on_joined: (joined_character_id) =>
           get()._dispatch({ kind: 'receipt_patch', action: 'join', character_id: joined_character_id, address }),
       })
@@ -239,6 +250,7 @@ party_store.setState({
         party_id,
         leader_character_id,
         invited_character_ids,
+        invited_names: owned_names_by_id(invited_character_ids),
         on_joined: (joined_character_id) =>
           get()._dispatch({ kind: 'receipt_patch', action: 'join', character_id: joined_character_id, address }),
       })
@@ -271,9 +283,10 @@ party_store.setState({
     return !!get().party_id && !has_blocked_owned_join(get().party, get()._owned_join_blocked_ids)
   },
 
-  /** The selected leader character invites one exact character. Accepted membership remains capped at six. Arms
-   *  the persistent "waiting for a reply" toast once the invite tx lands — see _handle_pending_invite_request. */
-  async invite(invited_character_id, invited_owner) {
+  /** The selected leader character invites one exact character (caps at six). Arms the persistent "waiting for
+   *  a reply" toast once the tx lands. `invited_name` is the caller's already-resolved name (#328, e.g.
+   *  PlayerActionMenu's `target.name`) — falls back to the network resolve only when absent. */
+  async invite(invited_character_id, invited_owner, invited_name = null) {
     const { party_id, busy, pending_invites } = get()
     const leader_character_id = selected_character_id()
     if (busy || !party_id || !leader_character_id || !invited_character_id || !invited_owner) return
@@ -292,17 +305,15 @@ party_store.setState({
     const me = selected_character()
     get()._tx_phase({ busy: true, error: null })
     try {
-      const [, invited_name] = await Promise.all([
-        invite_to_party(party_id, leader_character_id, invited_character_id, invited_owner),
-        resolve_invitee_name(invited_character_id),
-      ])
+      const resolved_name = invited_name || (await resolve_invitee_name(invited_character_id))
+      await invite_to_party(party_id, leader_character_id, invited_character_id, invited_owner, resolved_name)
       nudge_party_invite(invited_owner, party_id, invited_character_id, me?.name ?? '')
       get()._dispatch({
         kind: 'intent',
         action: 'invite_sent',
         party_id,
         invited_character_id,
-        invited_name,
+        invited_name: resolved_name,
         now: Date.now(),
       })
     } catch (error) {

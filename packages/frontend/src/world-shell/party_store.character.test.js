@@ -136,6 +136,7 @@ test('the active leader adds same-world owned roster characters as distinct conf
         party_id: party.id,
         leader_character_id: selected.id,
         invited_character_ids: [owned_alt.id],
+        invited_names: { [owned_alt.id]: owned_alt.name },
         on_joined: expect.any(Function),
       },
     ],
@@ -220,7 +221,7 @@ test('invite() arms a persistent pending toast carrying the resolved invitee nam
 
   await use_party.getState().invite('0xtarget', '0xtarget-owner')
 
-  expect(action_calls).toEqual([['invite', party.id, selected.id, '0xtarget', '0xtarget-owner']])
+  expect(action_calls).toEqual([['invite', party.id, selected.id, '0xtarget', '0xtarget-owner', 'Ares']])
   expect(use_party.getState().pending_invites).toEqual([
     { party_id: party.id, invited_character_id: '0xtarget', invited_name: 'Ares', deadline: expect.any(Number) },
   ])
@@ -234,6 +235,55 @@ test('invite() arms a persistent pending toast carrying the resolved invitee nam
   await use_party.getState().invite('0xtarget', '0xtarget-owner')
   expect(action_calls).toHaveLength(1)
   expect(use_toast.getState().toasts).toHaveLength(1)
+})
+
+// ── #328: the initiating UI (PlayerActionMenu, a friend row, a party-member row) already carries the
+// invitee's resolved display name — invite() must thread it straight through and skip the network resolve
+// entirely (zero added latency ahead of the wallet prompt), never wait on/overwrite it with the async lookup. ──
+test('invite() prefers a caller-supplied name over the network resolve — zero resolve calls on that path', async () => {
+  let resolve_calls = 0
+  resolve_docs_impl = async (ids) => {
+    resolve_calls++
+    return new Map(ids.map((id) => [id, { id, name: 'NetworkName' }]))
+  }
+  use_party.setState({
+    party_id: party.id,
+    party: { ...party, leader_character: selected.id, members: [party.members[1]] },
+    _party_character_id: selected.id,
+  })
+
+  await use_party.getState().invite('0xtarget', '0xtarget-owner', 'CallerName')
+
+  expect(action_calls).toEqual([['invite', party.id, selected.id, '0xtarget', '0xtarget-owner', 'CallerName']])
+  expect(resolve_calls).toBe(0) // the caller already had the name — no round-trip needed
+  expect(use_party.getState().pending_invites).toEqual([
+    { party_id: party.id, invited_character_id: '0xtarget', invited_name: 'CallerName', deadline: expect.any(Number) },
+  ])
+})
+
+// ── #328: a member appearing in a fresh snapshot (accepted our invite / joined via another surface) is
+// announced by NAME — never a raw address/id slice. ──
+test('a fresh member appearing in the snapshot announces by NAME, not a raw address slice', async () => {
+  resolve_docs_impl = async (ids) => new Map(ids.map((id) => [id, { id, name: 'Ares' }]))
+  use_party.setState({
+    party_id: party.id,
+    party: { ...party, leader_character: selected.id, members: [party.members[1]] },
+    _party_character_id: selected.id,
+  })
+  core_toast.push_event_toast.mockClear()
+
+  projected_party = {
+    ...party,
+    leader_character: selected.id,
+    members: [party.members[1], { character: '0xnew-member', owner: '0xnew-owner', order: 1 }],
+  }
+  await use_party.getState().refresh()
+  await Promise.resolve() // let the fire-and-forget name announcement settle
+
+  expect(core_toast.push_event_toast).toHaveBeenCalledWith({
+    state: 'success',
+    title: i18n.t('party.member_joined_toast', { name: 'Ares' }),
+  })
 })
 
 test('the pending toast is dismissed the moment a fresh snapshot shows the invitee joined', async () => {

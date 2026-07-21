@@ -7,6 +7,7 @@ import { reset_auth_mock, set_auth_mock_implementation } from '../test_helpers/a
 import { reset_expedition_sdk_mock, set_expedition_sdk_mock } from '../test_helpers/expedition_sdk_mock.js'
 import { use_toast } from '../toast'
 import * as report from '../core/report.js'
+import i18n from '../i18n'
 
 import * as kiosk_resolve from './kiosk_resolve.js'
 
@@ -63,8 +64,14 @@ const kiosk_for_character = spyOn(kiosk_resolve, 'kiosk_for_character').mockImpl
   })
 )
 
-const { create_party, invite_to_party, join_owned_alts_to_party, accept_party_invite, decline_party_invite } =
-  await import('./party_actions.js')
+const {
+  create_party,
+  invite_to_party,
+  join_owned_alts_to_party,
+  accept_party_invite,
+  decline_party_invite,
+  kick_from_party,
+} = await import('./party_actions.js')
 
 beforeEach(() => {
   composed.length = 0
@@ -284,4 +291,62 @@ test('an executed-failed silent create is signed once, never refired, and its fa
   expect(signed.map((row) => row.tx.name)).toEqual(['create']) // ONE submission, no refire
   expect(report_spy).toHaveBeenCalledTimes(1) // silenced toast, but the failure telemetry survives
   report_spy.mockRestore()
+})
+
+// ── #328: every party toast shows the character NAME the caller already resolved — never a raw id/address
+// slice. short_id() is the LAST-RESORT fallback only, unreachable once a caller supplies a name. ──
+
+test('invite_to_party threads the caller-supplied name into its toast label — never the raw id', async () => {
+  toast_promise.mockClear()
+  await invite_to_party('0xparty', '0xleader', '0xinvited', '0xinvited-owner', 'Zephyra')
+
+  const [, options] = toast_promise.mock.calls.at(-1)
+  expect(options.success).toBe(i18n.t('party.action_invite', { name: 'Zephyra' }))
+  expect(options.pending).toBe(i18n.t('party.tx_pending', { label: options.success }))
+  expect(options.success).not.toContain('0xinvited')
+})
+
+test('invite_to_party falls back to the truncated id ONLY when no name is supplied (unreachable in the normal flow)', async () => {
+  toast_promise.mockClear()
+  const id = '0xinvited-fallback-id'
+  await invite_to_party('0xparty', '0xleader', id, '0xinvited-owner')
+
+  const [, options] = toast_promise.mock.calls.at(-1)
+  expect(options.success).toBe(i18n.t('party.action_invite', { name: `${id.slice(0, 6)}…${id.slice(-4)}` }))
+})
+
+test('kick_from_party threads the caller-supplied target name into its toast label — never the raw id', async () => {
+  toast_promise.mockClear()
+  await kick_from_party('0xparty', '0xleader', '0xtarget', 'Borgrim')
+
+  const [, options] = toast_promise.mock.calls.at(-1)
+  expect(options.success).toBe(i18n.t('party.action_kick', { name: 'Borgrim' }))
+  expect(options.success).not.toContain('0xtarget')
+})
+
+test("owned-alt joins thread each alt's given name into its toast label — never the raw id", async () => {
+  toast_promise.mockClear()
+  await join_owned_alts_to_party({
+    party_id: '0xparty',
+    leader_character_id: '0xleader',
+    invited_character_ids: ['0xalt-a'],
+    invited_names: { '0xalt-a': 'Kessa' },
+  })
+
+  const [, options] = toast_promise.mock.calls.at(-1)
+  expect(options.success).toBe(i18n.t('party.action_invite', { name: 'Kessa' }))
+  expect(options.success).not.toContain('0xalt-a')
+})
+
+test('an owned-alt join with no given name falls back to the truncated id (last resort)', async () => {
+  toast_promise.mockClear()
+  const id = '0xalt-noname'
+  await join_owned_alts_to_party({
+    party_id: '0xparty',
+    leader_character_id: '0xleader',
+    invited_character_ids: [id],
+  })
+
+  const [, options] = toast_promise.mock.calls.at(-1)
+  expect(options.success).toBe(i18n.t('party.action_invite', { name: `${id.slice(0, 6)}…${id.slice(-4)}` }))
 })
