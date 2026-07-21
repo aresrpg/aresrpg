@@ -31,6 +31,27 @@ jobs:
       - name: enforcement ladder — bun run lint
         run: bun run lint
 
+  smoke:
+    # BOOT SMOKE — the class killer for the migration-stub throw family (a shape-correct-but-empty content
+    # stub that throws at module load: invisible to lint + unit tests, fatal in the browser). Builds the
+    # frontend, serves dist, drives the logged-out landing headless, and FAILS on any uncaught page error or
+    # any non-allowlisted console.error at boot (scripts/boot_smoke.mjs owns the allowlist + its rationale).
+    # Fork-safe: no secrets, no backend. Budget < 3 min.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: install deps
+        run: bun install --frozen-lockfile
+      - name: install Playwright chromium (the version the frontend devDep pins)
+        run: bunx playwright install --with-deps chromium
+        working-directory: packages/frontend
+      - name: boot smoke — zero uncaught errors + zero unexpected console.error on the default page
+        run: |
+          bunx vite build
+          node scripts/boot_smoke.mjs
+        working-directory: packages/frontend
+
   fp-codeql:
     runs-on: ubuntu-latest
     permissions:
