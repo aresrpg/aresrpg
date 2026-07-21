@@ -106,4 +106,124 @@ describe('silent grant claims rebase when an earlier prediction disappears', () 
     expect(presented_state(store.getState()).fighters.p0.mp).toBe(4)
     expect(project.board_view(store.getState()).escrow[0].committed.pending_mp).toBe(1)
   })
+
+  test('p2p-first move confirmation cannot displace the absolute spend needed by a later delta grant', () => {
+    const store = boot()
+    const destination = START + 1
+    const moved = { fight: FIGHT, character: CHAR, to_cell: destination }
+    store
+      .getState()
+      .input({ type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: destination, mp_left: 2 } }, 2_000)
+    store.getState().input(
+      {
+        type: 'predicted',
+        intent_id: 'vanish:after-move',
+        actions: [{ ...vanish[0], target_cell: destination }, vanish[1]],
+        basis_version: 6,
+      },
+      2_010
+    )
+    expect(presented_state(store.getState()).fighters.p0.mp).toBe(3)
+
+    // The early canonical Moved occupies the prediction's exact (version,event_idx), but cannot carry mp_left.
+    store.getState().input(
+      {
+        type: 'p2p',
+        version: 6,
+        receipt: { events: [{ type: '0xpkg::fight_events::Moved', parsedJson: moved }] },
+      },
+      2_050
+    )
+    expect(presented_state(store.getState()).fighters.p0.mp).toBe(3)
+
+    store.getState().input(
+      {
+        type: 'journal',
+        fight_id: FIGHT,
+        page: {
+          fight: FIGHT,
+          journal_head: '2',
+          events: [{ seq: '0', version: '6', kind: 'Moved', data: moved }],
+        },
+      },
+      2_100
+    )
+    expect(presented_state(store.getState()).fighters.p0.mp).toBe(3)
+
+    store.getState().input(
+      {
+        type: 'journal',
+        fight_id: FIGHT,
+        page: {
+          fight: FIGHT,
+          journal_head: '2',
+          events: [
+            {
+              seq: '1',
+              version: '6',
+              kind: 'Cast',
+              data: { fight: FIGHT, caster_is_mob: false, caster_idx: 0, target_cell: destination },
+            },
+          ],
+        },
+      },
+      2_200
+    )
+    expect(store.getState().budget_predictions).toEqual([])
+    expect(
+      store
+        .getState()
+        .claimed_budget.map((row) => row.action.kind)
+        .sort()
+    ).toEqual(['Granted', 'Moved'])
+    expect(presented_state(store.getState()).fighters.p0.mp).toBe(3)
+  })
+
+  test('a confirmed move keeps its own spend when the cast that funded its absolute remainder fumbles', () => {
+    const store = boot()
+    const destination = START + 1
+    predict(store, 'vanish:before-move', 2_000)
+    store
+      .getState()
+      .input({ type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: destination, mp_left: 3 } }, 2_010)
+
+    store.getState().input(
+      {
+        type: 'receipt',
+        version: 6,
+        receipt: {
+          events: [
+            {
+              type: '0xpkg::fight_events::CriticalFailure',
+              parsedJson: { fight: FIGHT, caster_is_mob: false, caster_idx: 0 },
+            },
+            {
+              type: '0xpkg::fight_events::Cast',
+              parsedJson: { fight: FIGHT, caster_is_mob: false, caster_idx: 0, target_cell: START },
+            },
+            {
+              type: '0xpkg::fight_events::Moved',
+              parsedJson: { fight: FIGHT, character: CHAR, to_cell: destination },
+            },
+          ],
+        },
+      },
+      2_100
+    )
+
+    expect(presented_state(store.getState()).fighters.p0.mp).toBe(2)
+  })
+
+  test('a pending move keeps its own spend when the preceding grant is rolled back', () => {
+    const store = boot()
+    predict(store, 'vanish:before-move', 2_000)
+    store.getState().input(
+      { type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: START + 1, mp_left: 3 } },
+      2_010
+    )
+
+    store.getState().input({ type: 'rollback', intent_id: 'vanish:before-move' }, 2_100)
+
+    expect(presented_state(store.getState()).fighters.p0.mp).toBe(2)
+  })
 })
