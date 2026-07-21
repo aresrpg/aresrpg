@@ -67,31 +67,41 @@ const opened = () => {
   return store
 }
 
-describe('SIMDRIVE — version dedup: a pushed mob never rolls back on a stale re-read', () => {
-  test('a snapshot at an already-folded version is DEDUPED; the mob keeps its pushed cell', () => {
+// M2b · ONE INGRESS (#291): the board advances on CANONICAL events (the accept-machine door), never a re-adopted
+// object read. A stale Fight-object re-read is an inert CHECKPOINT, so a pushed mob can never roll back — the
+// no-rollback guarantee is now structural, not a version-dedup on the object read.
+const push_mob = (store, to_cell, version) =>
+  store.getState().input({
+    type: 'receipt',
+    version,
+    receipt: { events: [{ type: '0x0::fight_events::MobMoved', parsedJson: { fight: FIGHT_ID, idx: 0, to_cell } }] },
+  })
+
+describe('SIMDRIVE — a pushed mob never rolls back on a stale re-read (checkpoint inertness)', () => {
+  test('a stale object re-read is an inert checkpoint; the canonical push keeps the mob cell', () => {
     const store = opened()
 
-    store.getState().input({ type: 'snapshot', fight: decoded_fight({ mob_cell: 100 }), version: 1 })
+    store.getState().input({ type: 'snapshot', fight: decoded_fight({ mob_cell: 100 }), version: 1 }) // bootstrap base
     expect(board(store).mobs[0].cell).toBe(100)
 
-    // the push landed on-chain (a strictly-newer read) → folds forward
-    store.getState().input({ type: 'snapshot', fight: decoded_fight({ mob_cell: 105 }), version: 2 })
+    // the push landed on-chain as a canonical event (the receipt) → the mob folds forward
+    push_mob(store, 105, 2)
     expect(board(store).mobs[0].cell).toBe(105)
 
-    // a lagging poll re-delivers the OLD cell at the OLD version → dropped below the applied floor: NO ROLLBACK
+    // a lagging poll re-delivers the OLD cell as an object read → an inert CHECKPOINT: NO ROLLBACK
     store.getState().input({ type: 'snapshot', fight: decoded_fight({ mob_cell: 100 }), version: 1 })
     expect(board(store).mobs[0].cell).toBe(105)
 
-    // an exact-version re-read (equal, not strictly newer) is likewise a no-op — still no regression
+    // an equal-version object re-read is likewise inert — still no regression
     store.getState().input({ type: 'snapshot', fight: decoded_fight({ mob_cell: 100 }), version: 2 })
     expect(board(store).mobs[0].cell).toBe(105)
   })
 
-  test('the board only advances on a strictly-newer version', () => {
+  test('the board only advances on canonical events, never a re-adopted object read', () => {
     const store = opened()
     store.getState().input({ type: 'snapshot', fight: decoded_fight({ mob_cell: 100 }), version: 3 })
     expect(board(store).mobs[0].cell).toBe(100)
-    store.getState().input({ type: 'snapshot', fight: decoded_fight({ mob_cell: 111 }), version: 4 })
+    push_mob(store, 111, 4)
     expect(board(store).mobs[0].cell).toBe(111)
     expect(board(store).status).toBe(1) // STATUS_ACTIVE — the board is live
   })

@@ -305,12 +305,13 @@ const make_input =
         return
       }
       case 'journal': {
-        // THE AUTHORITATIVE CATCH-UP / BACKFILL (M2b · ONE INGRESS). A journal PAGE carries the real per-fight seqs,
-        // so it folds straight through the accept door: a redelivered page dedupes by seq, a hole requests its own
-        // fill (the walker re-drives from `from`). Pure canonical fold — no presentation pacing here (backfilled
+        // THE AUTHORITATIVE CATCH-UP / BACKFILL (M2b · ONE INGRESS). A journal batch (a page ALREADY normalized by
+        // the effectful walker, rpc/fight_journal.js — one normalize home, at the edge) carries the real per-fight
+        // seqs, so it folds straight through the accept door: a redelivered page dedupes by seq, a hole requests its
+        // own fill (the walker re-drives from `from`). Pure canonical fold — no presentation pacing here (backfilled
         // history is not re-animated; a live peer/mob turn's presentation rides the receipt/peer lane). `journal_gap`
         // clears when this page catches the frontier up (no fetch effect), or re-arms if it reveals a further hole.
-        const batch = normalize_journal_page(msg.page, { fight_id: msg.fight_id ?? state.fight_id })
+        const batch = msg.batch ?? normalize_journal_page(msg.page, { fight_id: msg.fight_id ?? state.fight_id })
         set((s) => {
           const { accept_state, actions, gap, fault } = accept_and_decode(s, batch)
           return recompute(

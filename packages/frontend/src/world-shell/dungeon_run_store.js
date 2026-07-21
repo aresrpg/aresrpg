@@ -42,6 +42,7 @@ import { use_auth } from '../auth'
 import { get_sdk } from '../chain/sdk'
 import { get_owned_items } from '../chain/read_staking'
 import { get_dungeon_runs } from '../rpc/client'
+import { paginate_fight_journal } from '../rpc/fight_journal.js'
 import { T62_WORLDS, DEMO_NETWORK } from '../chain/deployment'
 import { push_event_toast } from '../game/core/toast.js'
 import i18n from '../i18n'
@@ -909,6 +910,17 @@ export const use_dungeon = create((set, get) => ({
             beat_ctx: { grid_width: 20 },
           },
         })
+        // M2b · ONE INGRESS (#291): the object read above is a bootstrap/checkpoint only — canonical events fold
+        // from the JOURNAL. When the checkpoint saw the object's journalHead run ahead of our accepted frontier it
+        // flagged a gap; walk the read-layer journal from there and feed each normalized page through the ONE journal
+        // door. The accept machine dedupes re-delivery (a re-walk is idempotent); a pre-deploy 404 degrades to a no-op.
+        const journal_gap = fight_store.getState().journal_gap
+        if (journal_gap && String(journal_gap.fight_id ?? live_fight_id) === String(live_fight_id)) {
+          const walked = await paginate_fight_journal(live_fight_id, { from: journal_gap.from }).catch(() => null)
+          if (walked?.ok)
+            for (const batch of walked.batches)
+              fight_store.getState().input({ type: 'journal', fight_id: live_fight_id, batch })
+        }
       } else if (run) {
         // roam: a live run with no room fight — feed the OPEN view (versioned by the pass so a room advance
         // re-adopts) so the mirror keeps showing the plane and the next cluster stays clickable.
