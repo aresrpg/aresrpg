@@ -35,7 +35,9 @@
 // dust_puff stay in the AgX'd main pass — they are tuned for the world lighting, not the pack's fight bar.
 
 import { Layers } from 'three'
-import { pass, perspectiveDepthToViewZ, smoothstep, uniform, vec4 } from 'three/tsl'
+import { float, pass, perspectiveDepthToViewZ, smoothstep, uniform, vec4 } from 'three/tsl'
+
+import { smoothstep as smoothstep_scalar } from '../core/math_utils.js'
 
 import { FIGHT_VFX_LAYER } from './vfx_preset_engine.js'
 
@@ -46,6 +48,23 @@ import { FIGHT_VFX_LAYER } from './vfx_preset_engine.js'
  *  base melts into the floor without eating the visible body; larger = more melt, smaller = crisper (was a hard 1e-4
  *  reversed-Z occlusion bias — the binary cut this fade generalises). */
 const SOFT_FADE_DIST = 0.4
+
+/**
+ * The soft-particle depth-fade mask from a view-space gap (vfx viewZ − scene viewZ), mirroring the TSL
+ * `composite()` math op-for-op (JS reference for the unit tests — same idiom as particles.js's
+ * `sprite_falloff`; this function is NOT itself called by the shader, the TSL graph below mirrors it).
+ *
+ * #158 BACKEND-ROBUSTNESS: FAILS OPEN. A non-finite gap (NaN/±Infinity — e.g. `perspectiveDepthToViewZ`
+ * dividing by a degenerate near≈far, or a backend depth-format mismatch corrupting the sampled depth —
+ * renderer.js's reversedDepthBuffer correction fixes the known cause, this is the belt-and-suspenders
+ * layer for any OTHER way the comparison goes degenerate) resolves to FULL VISIBILITY instead of
+ * collapsing the mask to 0. A fade/occlusion miss is a cosmetic error (a particle reads unfaded through
+ * a wall); an invisible fight-VFX pack is a functional one — never invert that priority.
+ * @param {number} gap @param {number} [fade_dist] @returns {number} mask ∈ [0,1]
+ */
+export function depth_fade_mask(gap, fade_dist = SOFT_FADE_DIST) {
+  return Number.isFinite(gap) ? smoothstep_scalar(0, fade_dist, gap) : 1
+}
 
 /** Display-space additive GAIN. The pack's emission (authored 1.6–2.2 for the AAA
  *  main-pass accumulation) ACCUMULATES across overlapping additive particles far past 1.0; added at full strength
@@ -127,7 +146,10 @@ export function create_vfx_overlay({ scene, camera, scene_depth }) {
       const gap = perspectiveDepthToViewZ(vfx_depth.r, cam_near, cam_far).sub(
         perspectiveDepthToViewZ(scene_depth.r, cam_near, cam_far)
       )
-      const soft = smoothstep(0, SOFT_FADE_DIST, gap)
+      // FAIL-OPEN GUARD (#158, depth_fade_mask — unit-tested JS mirror above). `gap.notEqual(gap)` is
+      // the IEEE-754 NaN test (NaN is the only float that compares unequal to itself): on a genuine NaN
+      // gap the mask opens to fully VISIBLE instead of smoothstep's otherwise-degenerate result.
+      const soft = gap.notEqual(gap).select(float(1), smoothstep(0, SOFT_FADE_DIST, gap))
       // ADD the isolated VFX as display-space light: the authored linear colour, damped by the gain (so the coloured
       // body reads instead of blowing to white), added straight onto the graded sRGB frame. Adding LINEAR values (no
       // sRGB lift) keeps the faint billboard fringe near-zero ⇒ no grey-quad halo; only real energy brightens.
