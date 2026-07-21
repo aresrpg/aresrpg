@@ -676,13 +676,21 @@ export function DungeonBoard() {
     // committed without the spell, though everything was valid): the chain commits ONE PTB in D99 order, each action reading LIVE evolved
     // state, so a drafted cast is judged against the board the CHAIN sees WHEN IT FIRES — the committed base
     // folded through the PRIOR casts' displacements/kills via the sim door — NEVER the optimistic end-state,
-    // where THIS cast's own push already moved its target and made its own valid cast look stale. Moves never
-    // displace a mob, so the fold is move-independent (the caster's cell stays `anchor`); `occupied` is the
-    // pre-fight fallback.
+    // where THIS cast's own push already moved its target and made its own valid cast look stale. Drafted MOVES
+    // never displace a mob, so the mob-occupancy fold only ever needs to walk the drafted CASTS; `occupied` is
+    // the pre-fight fallback.
+    // #321 PER-CAST CASTER ANCHOR: `anchor` above is only the sequence's STARTING cell — a caster-relocating cast
+    // (teleport, dash) drafted earlier in the SAME queue has already moved the caster by the time a LATER cast
+    // fires, so evolve_flush_casts is seeded at `anchor` (caster_seed_cell) and returns the caster's own evolved
+    // cell per index too (`evolved[cast_i].caster_cell`) — the exact footprint origin each cast is judged from
+    // below, never one static pre-loop cell (the caster's cell no longer just "stays `anchor`"). This was the
+    // drop-valid-stationary-targets class: an in-range target fell out of a footprint drawn from the caster's
+    // STALE pre-teleport corner of the board.
     const evolved = evolve_flush_casts({
       view: fight_view(),
       committed: committed_state(fight_store.getState()),
       caster_id: entity_id,
+      caster_seed_cell: anchor,
       casts: (cast_queue ?? []).map((entry) => {
         const weapon = entry.spell_key === WEAPON_ATTACK_ID
         const drafted = weapon ? null : (my_spells.find((sp) => sp.name_key === entry.spell_key) ?? null)
@@ -708,33 +716,51 @@ export function DungeonBoard() {
     // cast). Counts the SUBSET of `dropped` specifically caused by retarget_cast's own reach failure, so the
     // post-loop toast picks the honest reason (§ below) instead of always saying "stale".
     let retarget_unreachable = 0
+    // HONEST TOAST (#321): the dropped spells' own display names, per toast category — the end-of-flush toast
+    // names WHAT was dropped instead of a bare generic notice.
+    const stale_spell_names = []
+    const unreachable_spell_names = []
     if (me && dungeon && anchor != null)
       for (const [cast_i, entry] of (cast_queue ?? []).entries()) {
         const is_weapon = entry.spell_key === WEAPON_ATTACK_ID
         const drafted_spell = is_weapon ? null : (my_spells.find((sp) => sp.name_key === entry.spell_key) ?? null)
+        // #321 GROUND-TARGET EXEMPTION: a free_cell spell (trap/glyph/teleport) targets the CELL itself, not a
+        // fighter standing on it — cells don't move, so it must never enter the fighter retarget/drop path below,
+        // whatever occupies that cell by flush time (a body walking onto a drafted trap cell must not un-draft it).
+        const ground_targeted = !is_weapon && drafted_spell?.levels?.[0]?.free_cell === true
+        // #321 PER-CAST ANCHOR: this cast's own footprint origin — the caster's cell evolved through casts
+        // 1..cast_i-1's OWN displacement effects (a drafted teleport/dash among them), never the sequence's
+        // static starting anchor. That staleness was the drop-valid-stationary-targets class: an in-range target
+        // fell out of a footprint drawn from the caster's pre-relocation corner of the board.
+        const cast_anchor = evolved[cast_i]?.caster_cell ?? anchor
+        const spell_display_name = is_weapon
+          ? t('fight.weapon_attack')
+          : t(`spells.spell_${entry.spell_key}`, { defaultValue: drafted_spell?.name ?? entry.spell_key })
         // ⑭ the board the chain evolves to JUST BEFORE this cast fires; the eye-state occupancy is the fallback.
         const occ = evolved[cast_i]?.occupied ?? occupied
         const los = [...obstacles]
         for (const [c, o] of occ) if (o.alive && !(o.kind === 'player' && o.idx === caster_seat)) los.push(c)
         // Resolve the drafted cast's target FIGHTER through the EYE-STATE occupancy (`occupied` — the last-rendered
         // board; it still shows the click-time cell even once a fresher committed/evolved read has moved the
-        // fighter on, which is exactly what makes it useful here). No fighter found (a void cast, or the ground
-        // itself) resolves a null committed_cell — txs.retarget_cast's own null branch composes the drafted cell
-        // unchanged, so a void cast is untouched by this lookup. Same p{seat}/m{idx} key format base_from_view
-        // writes (fold.js) — mob_key/seat_key aren't exported; `occupied`'s idx already matches that indexing.
-        const eye_target = occupied.get(entry.cell)
+        // fighter on, which is exactly what makes it useful here). No fighter found (a void cast, the ground
+        // itself, or a ground_targeted cast — #321, cells don't move) resolves a null committed_cell —
+        // txs.retarget_cast's own null branch composes the drafted cell unchanged, so none of those are touched by
+        // this lookup. Same p{seat}/m{idx} key format base_from_view writes (fold.js) — mob_key/seat_key aren't
+        // exported; `occupied`'s idx already matches that indexing.
+        const eye_target = ground_targeted ? null : occupied.get(entry.cell)
         const target_committed_cell = eye_target
           ? (committed_state(fight_store.getState()).fighters?.[`${eye_target.kind === 'mob' ? 'm' : 'p'}${eye_target.idx}`]
               ?.cell ?? null)
           : null
-        const drop_entry = (reason) => {
+        const drop_entry = (reason, bucket) => {
           game_log('board', `flush_commit: staged strike dropped — ${reason}`, {
             cell: entry.cell,
-            anchor,
+            anchor: cast_anchor,
             weapon: is_weapon,
             background,
           })
           dropped += 1
+          bucket.push(spell_display_name)
           // a dropped trap draft never reaches the chain — its click-time optimistic marker rolls back below.
           if ((drafted_spell?.levels?.[0]?.effects ?? []).some((e) => e.kind === 'PLACE_TRAP'))
             trap_dropped.push(entry.cell)
@@ -747,7 +773,7 @@ export function DungeonBoard() {
           const reach = me.weapon?.reach ?? WEAPON_ATTACK_RANGE[1]
           const footprint = cast_range_set_dungeon(
             [1, reach],
-            { cell: decode(anchor) },
+            { cell: decode(cast_anchor) },
             dungeon_grid_of(dungeon),
             los,
             { los: true, linear: false }
@@ -758,7 +784,7 @@ export function DungeonBoard() {
             reaches: (cell) => footprint.has(cell),
           })
           if (retargeted.dropped) {
-            drop_entry('target moved out of reach at flush')
+            drop_entry('target moved out of reach at flush', unreachable_spell_names)
             retarget_unreachable += 1
             continue
           }
@@ -780,26 +806,30 @@ export function DungeonBoard() {
           const range = lvl?.range ?? [cast_params.range_min, cast_params.range_max]
           // SELF-ONLY BUFF (#321/#323): rmax 0 (invisibility/vanish — the spellbook 'self' marker) targets the
           // caster's OWN tile. It can never move out of reach of itself, so it NEVER re-validates (the twin of the
-          // trap rule, cells don't move) — commit it on the caster's CURRENT cell (`anchor`), never dropped. A
-          // stale adoption that shifted the eye/committed cell used to false-drop it, reverting the buff AND the
-          // MP it granted — the "turn auto-ends right after a cast, the cast then reverts" report.
+          // trap rule, cells don't move) — commit it on the caster's CURRENT cell (`cast_anchor`, this cast's own
+          // per-cast-evolved cell — never dropped). A stale adoption that shifted the eye/committed cell used to
+          // false-drop it, reverting the buff AND the MP it granted — the "turn auto-ends right after a cast, the
+          // cast then reverts" report.
           const self_cast = (range?.[1] ?? 0) === 0
           const footprint = cast_range_set_dungeon(
             range,
-            { cell: decode(anchor) },
+            { cell: decode(cast_anchor) },
             dungeon_grid_of(dungeon),
             los,
             { los: lvl?.line_of_sight !== false, linear: lvl?.linear === true }
           )
+          // #321 + #323: "the caster's own cell" for a self-cast drafted after a teleport/dash earlier in the SAME
+          // sequence is that cast's per-cast EVOLVED cell, never the sequence's static starting anchor (the same
+          // staleness class #321 fixes for every other cast; a self-buff is no exception).
           const retargeted = self_cast
-            ? { target: anchor }
+            ? { target: cast_anchor }
             : retarget_cast({
                 target_cell: entry.cell,
                 committed_cell: target_committed_cell,
                 reaches: (cell) => footprint.has(cell),
               })
           if (retargeted.dropped) {
-            drop_entry('target moved out of reach at flush')
+            drop_entry('target moved out of reach at flush', unreachable_spell_names)
             retarget_unreachable += 1
             continue
           }
@@ -813,7 +843,7 @@ export function DungeonBoard() {
           })
         }
         if (illegal) {
-          drop_entry('target no longer valid at flush')
+          drop_entry('target no longer valid at flush', stale_spell_names)
           continue
         }
         // VOID CASTS ARE LEGAL (a cast at any legal-geometry cell is the player's right). Weapon → {kind:2}
@@ -882,8 +912,18 @@ export function DungeonBoard() {
     // surfaces its own single toast (manual via tx_commit_turn, background via commit_turn's catch below).
     // LEG 0a: a target that moved OUT OF REACH gets its OWN toast (dungeons.cast_target_unreachable) — distinct
     // from the generic "stale" drop so the player learns WHY (a chase that failed vs. some other invalidation).
-    if (ok && retarget_unreachable > 0) push_event_toast({ state: 'info', title: t('dungeons.cast_target_unreachable') })
-    if (ok && dropped > retarget_unreachable) push_event_toast({ state: 'info', title: t('dungeons.cast_dropped_stale') })
+    // #321 HONEST TOAST: both fire ONLY on a genuine drop (dropped is incremented nowhere else) and NAME the
+    // spell(s) actually dropped — never a bare "something was invalid" notice.
+    if (ok && retarget_unreachable > 0)
+      push_event_toast({
+        state: 'info',
+        title: t('dungeons.cast_target_unreachable', { spell: unreachable_spell_names.join(', ') }),
+      })
+    if (ok && dropped > retarget_unreachable)
+      push_event_toast({
+        state: 'info',
+        title: t('dungeons.cast_dropped_stale', { spell: stale_spell_names.join(', ') }),
+      })
     fight_store.getState().input({ type: 'clear_staged' })
     return ok
   }

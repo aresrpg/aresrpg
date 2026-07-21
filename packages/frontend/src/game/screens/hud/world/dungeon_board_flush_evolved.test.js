@@ -46,8 +46,9 @@ describe('DungeonBoard flush — a drafted cast auto-retargets onto its moved ta
     const body = src.slice(start, end)
     // identity resolution: the ONLY sanctioned `occupied.get(entry.cell)` call — the eye-state still remembers the
     // click-time cell once a fresher committed/evolved read has moved the fighter on, which is exactly why it (and
-    // not `occ`) is the right source for "who did I click on".
-    expect(body).toMatch(/const eye_target = occupied\.get\(entry\.cell\)/)
+    // not `occ`) is the right source for "who did I click on". #321: gated by ground_targeted (a free_cell cast
+    // never resolves it at all — see the describe block below) but still the only call site.
+    expect(body).toMatch(/const eye_target = ground_targeted \? null : occupied\.get\(entry\.cell\)/)
     expect((body.match(/occupied\.get\(entry\.cell\)/g) ?? []).length).toBe(1)
     // its committed cell (committed_state, my drafts excluded) feeds txs.retarget_cast alongside the SAME
     // cast_range_set_dungeon footprint the legality check itself reaches through — one geometry home, never a
@@ -64,5 +65,55 @@ describe('DungeonBoard flush — a drafted cast auto-retargets onto its moved ta
     // "stale" key, so the player learns WHY (a chase that failed vs. some other flush-time invalidation).
     expect(body).toMatch(/if \(retargeted\.dropped\)/)
     expect(body).toMatch(/dungeons\.cast_target_unreachable/)
+  })
+})
+
+// #321 THE COMMIT-TIME CAST FOOTPRINT ANCHOR — the same wrong-anchor disease as #300 (the movement-draft cost
+// anchor), but on the FLUSH side: the footprint origin for cast N must be the caster's cell evolved through casts
+// 1..N-1's OWN displacement effects (a drafted teleport/dash among them), never one static pre-loop anchor — that
+// staleness dropped valid STATIONARY targets ("Turn committed without the spell — its target was no longer
+// valid") the instant any earlier drafted cast relocated the caster. A free_cell (ground-targeted) cast — trap,
+// glyph, teleport — additionally never enters the fighter retarget/drop path at all: cells don't move. The pure
+// per-cast evolution is unit-locked in @aresrpg/fight (predict_cast.test.js → evolve_flush_casts's `caster_cell`);
+// the ground-target null-input behavior is unit-locked in cast_retarget_leg_0a.test.js. This locks the WIRING —
+// same un-driveable-component rationale as the describe blocks above.
+describe('DungeonBoard flush — the footprint anchor evolves PER CAST, and ground-targeted casts never target-revalidate (#321)', () => {
+  test('flush_commit seeds evolve_flush_casts at the sequence anchor and reads its per-cast caster_cell as EVERY cast’s footprint origin', async () => {
+    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const start = src.indexOf('const flush_commit = async')
+    const end = src.indexOf('auto_submit_ref.current =', start)
+    const body = src.slice(start, end)
+    // evolve_flush_casts is seeded at the sequence's own starting anchor (cast_first's committed cell, or the
+    // post-move cell) — the SAME `anchor` the pre-#321 code reused as its one static footprint origin.
+    expect(body).toMatch(/caster_seed_cell:\s*anchor,/)
+    // every cast reads ITS OWN evolved cell — never falls back to silently re-reading the raw pre-loop anchor
+    // while some other cast in the SAME queue relocates the caster.
+    expect(body).toMatch(/const cast_anchor = evolved\[cast_i\]\?\.caster_cell \?\? anchor/)
+    // BOTH footprint constructions (weapon + spell) anchor on the per-cast cell — the bare pre-loop `anchor` is
+    // never decoded as a footprint origin any more (that was the drop-valid-stationary-targets bug).
+    expect((body.match(/\{ cell: decode\(cast_anchor\) \}/g) ?? []).length).toBe(2)
+    expect(body).not.toMatch(/\{ cell: decode\(anchor\) \}/)
+  })
+
+  test('a free_cell (ground-targeted) cast never resolves eye_target — cells do not retarget or drop on account of who now stands there', async () => {
+    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const start = src.indexOf('const flush_commit = async')
+    const end = src.indexOf('auto_submit_ref.current =', start)
+    const body = src.slice(start, end)
+    expect(body).toMatch(/const ground_targeted = !is_weapon && drafted_spell\?\.levels\?\.\[0\]\?\.free_cell === true/)
+  })
+
+  test('the end-of-flush toast names the actually-dropped spell(s) — never a bare generic notice', async () => {
+    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const start = src.indexOf('const flush_commit = async')
+    const end = src.indexOf('auto_submit_ref.current =', start)
+    const body = src.slice(start, end)
+    expect(body).toMatch(/bucket\.push\(spell_display_name\)/)
+    expect(body).toMatch(
+      /title:\s*t\('dungeons\.cast_target_unreachable',\s*\{\s*spell:\s*unreachable_spell_names\.join\(', '\)\s*\}\)/
+    )
+    expect(body).toMatch(
+      /title:\s*t\('dungeons\.cast_dropped_stale',\s*\{\s*spell:\s*stale_spell_names\.join\(', '\)\s*\}\)/
+    )
   })
 })

@@ -42,4 +42,13 @@ describe('LEG 0a — a drafted cast follows its target to the committed cell, or
   test('a void cast (no tracked target fighter) composes the drafted cell unchanged', () => {
     expect(retarget_cast({ target_cell: A, committed_cell: null, reaches: () => false })).toEqual({ target: A })
   })
+
+  // #321 GROUND-TARGET EXEMPTION: a free_cell spell (trap/glyph/teleport) targets the CELL, not a fighter — cells
+  // don't move, so it must never retarget/drop on account of who now stands there. DungeonBoard.flush_commit gates
+  // this by forcing `committed_cell: null` for a ground-targeted entry (never resolving `eye_target` at all), which
+  // is exactly the "void cast" input above — pinned again here under its OWN name so the #321 use case reads
+  // explicitly, not just as a side effect of the void-cast case.
+  test('#321 a ground-targeted cast (the caller forces committed_cell null — cells never retarget) composes its drafted cell unchanged, even though a fighter now stands there', () => {
+    expect(retarget_cast({ target_cell: A, committed_cell: null, reaches: () => true })).toEqual({ target: A })
+  })
 })

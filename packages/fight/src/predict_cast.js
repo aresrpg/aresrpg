@@ -465,11 +465,18 @@ export const predict_cast = ({
  * swapped to chain truth (my optimistic drafts EXCLUDED) — the exact state the chain evolves from. A fighter
  * absent from `committed` keeps its view row. Shared by evolve_flush_casts (per-cast occupancy) and
  * evolve_caster_cell (the post-cast move anchor) so both read the SAME chain base — one home for the evolution.
- * @param {{ view:object, committed:{fighters?:Record<string,{cell:number,hp:number,alive:boolean}>}, caster_id:string, resolve_ref:(id:string)=>{is_mob:boolean,idx:number}|null }} params
+ * `caster_seed_cell` (#321) overrides the CASTER's own seeded cell — the committed-fighters row alone can only
+ * express chain-confirmed truth, never "already moved by a drafted-but-uncommitted action" (a moves-first turn's
+ * post-move cell — the cell the chain's evolved cast sequence must actually start from).
+ * @param {{ view:object, committed:{fighters?:Record<string,{cell:number,hp:number,alive:boolean}>}, caster_id:string, resolve_ref:(id:string)=>{is_mob:boolean,idx:number}|null, caster_seed_cell?:number|null }} params
  */
-const committed_sim_base = ({ view, committed, caster_id, resolve_ref }) => {
+const committed_sim_base = ({ view, committed, caster_id, resolve_ref, caster_seed_cell = null }) => {
   const base_fighters = new Map()
   for (const [id, fighter] of view.fighters ?? new Map()) {
+    if (id === caster_id && caster_seed_cell != null) {
+      base_fighters.set(id, { ...fighter, cell: decode(caster_seed_cell) })
+      continue
+    }
     const ref = resolve_ref(id)
     const row = ref ? committed?.fighters?.[`${ref.is_mob ? 'm' : 'p'}${ref.idx}`] : null
     base_fighters.set(id, row ? { ...fighter, cell: decode(row.cell), health: row.hp } : fighter)
@@ -526,7 +533,11 @@ export const evolve_caster_cell = ({ view, committed, caster_id, casts, resolve_
  * Returns, per cast IN DRAFT ORDER, the occupancy the chain sees JUST BEFORE that cast fires — the SAME
  * `Map<encoded_cell, { kind:'player'|'mob', idx, alive }>` shape the board's own `occupied` uses, so the flush
  * gate swaps it in and reuses its OWN geometry (cast_range_set_dungeon) against THAT: client legality never
- * drifts from the chain.
+ * drifts from the chain. ALSO returns the CASTER's own encoded cell just before that cast fires (#321) — a
+ * caster-relocating cast earlier in the SAME draft (teleport, dash) moves the caster, so the footprint ORIGIN for
+ * every later cast must be this evolved cell too, never one static pre-loop anchor. That was the drop-valid-
+ * targets class: the caster's own geometry origin went stale, not the target's, and a plainly in-range stationary
+ * target fell out of a footprint drawn from the wrong corner of the board.
  *
  * @param {object} params
  * @param {object} params.view                    live engine_view (arena/metadata; its fighter CELLS are replaced by committed truth)
@@ -534,11 +545,20 @@ export const evolve_caster_cell = ({ view, committed, caster_id, casts, resolve_
  * @param {string} params.caster_id
  * @param {Array<{ spell: object|null, target: number, spell_level?: number }>} params.casts  drafted casts, D99 order
  * @param {(id:string)=>{is_mob:boolean,idx:number}|null} [params.resolve_ref]  entity id → seat/mob ref (dungeon escrow home)
- * @returns {Array<{ occupied: Map<number, { kind:'player'|'mob', idx:number, alive:boolean }> }>}
+ * @param {number|null} [params.caster_seed_cell]  the caster's cell at the START of the sequence — the committed
+ *   cell (cast_first) or the post-move cell (moves-first); see committed_sim_base.
+ * @returns {Array<{ occupied: Map<number, { kind:'player'|'mob', idx:number, alive:boolean }>, caster_cell: number|null }>}
  */
-export const evolve_flush_casts = ({ view, committed, caster_id, casts, resolve_ref = entity_ref }) => {
+export const evolve_flush_casts = ({
+  view,
+  committed,
+  caster_id,
+  casts,
+  resolve_ref = entity_ref,
+  caster_seed_cell = null,
+}) => {
   if (!view || !caster_id || !casts?.length) return []
-  const { state, arena } = committed_sim_base({ view, committed, caster_id, resolve_ref })
+  const { state, arena } = committed_sim_base({ view, committed, caster_id, resolve_ref, caster_seed_cell })
   let sim = state
   const occupancy = () => {
     const occ = new Map()
@@ -553,9 +573,14 @@ export const evolve_flush_casts = ({ view, committed, caster_id, casts, resolve_
     }
     return occ
   }
+  const caster_cell_of = () => {
+    const caster = find_entity(sim, caster_id)
+    return caster?.cell ? encode(caster.cell.x, caster.cell.y) : null
+  }
   const out = []
   for (const cast of casts) {
-    out.push({ occupied: occupancy() }) // the board the chain sees BEFORE this cast — snapshot, THEN evolve it.
+    // the board AND the caster's own footprint origin the chain sees BEFORE this cast — snapshot, THEN evolve both.
+    out.push({ occupied: occupancy(), caster_cell: caster_cell_of() })
     if (!cast?.spell) continue
     const pred = predict_sim_cast({
       state: sim,

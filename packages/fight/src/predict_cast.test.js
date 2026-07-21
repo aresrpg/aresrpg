@@ -41,6 +41,8 @@ import { apply_action, empty_state } from './inputs.js'
 import { base_from_view } from './fold.js'
 import { engine_view, move_wash } from './project.js'
 import { STATUS_ACTIVE } from './board_state.js'
+import { retarget_cast } from './txs.js'
+import { strike_flush_illegal } from './turn_commit.js'
 
 const FIGHT = '0xf1'
 const CHAR = '0xc1'
@@ -305,6 +307,160 @@ describe('⑭ evolve_flush_casts — each cast validated against the chain-evolv
     // cast 1 sees the push ALREADY applied: the mob vacated 7,5 and now sits at its full-slide landing 12,5.
     expect(evolved[1].occupied.get(enc(7, 5))).toBeUndefined()
     expect(evolved[1].occupied.get(enc(12, 5))).toMatchObject({ kind: 'mob', idx: 0, alive: true })
+  })
+})
+
+describe('#321 evolve_flush_casts — the per-cast CASTER anchor (a caster-relocating cast among the drafted casts moved the footprint origin for every cast that follows it; a static pre-loop anchor dropped a valid stationary target as "no longer valid")', () => {
+  const W = 20
+  const enc = (x, y) => y * W + x
+  const dec = (c) => ({ x: c % W, y: Math.floor(c / W) })
+  const manhattan = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y)
+  const tp_spell = single_effect_spell(
+    'tp321',
+    { kind: SE.K_TELEPORT, value: 3, target_filter: SE.TF_ONLY_CASTER },
+    3,
+    true
+  )
+  const dmg_spell = single_effect_spell(
+    'dmg321',
+    { kind: SE.K_DAMAGE, value: 10, element: 2, target_filter: SE.TF_NOT_TEAM },
+    3,
+    false
+  )
+  const push_spell = single_effect_spell(
+    'push321',
+    { kind: SE.K_PUSH, value: 5, target_filter: SE.TF_NOT_TEAM },
+    3,
+    false
+  )
+  const view = (mob_cell) => ({
+    fight_id: '0x321',
+    arena: { width: W, height: 19, cells: new Uint8Array(W * 19) },
+    fighters: new Map([
+      [
+        'p0',
+        {
+          id: 'p0',
+          cell: dec(enc(2, 4)),
+          team: 0,
+          health: 120,
+          health_max: 200,
+          ap: 99,
+          ap_max: 99,
+          mp: 20,
+          mp_max: 20,
+          is_player: true,
+        },
+      ],
+      [
+        'mob-0',
+        {
+          id: 'mob-0',
+          cell: dec(mob_cell),
+          team: 1,
+          health: 200,
+          health_max: 200,
+          ap: 99,
+          ap_max: 99,
+          mp: 20,
+          mp_max: 20,
+          is_player: false,
+        },
+      ],
+    ]),
+    turn_order: ['p0', 'mob-0'],
+    turn_number: 1,
+  })
+
+  test('RED-FIRST: [teleport, cast-on-adjacent-stationary-target] — cast 2 anchors from the LANDING cell, in range; the stale sequence-start cell a single anchor would have reused was NOT', () => {
+    // caster at (2,4); the teleport jumps 9 cells east (single_effect_spell's own range_max — legally in its own
+    // reach) to (11,4); a stationary mob sits 1 cell further at (12,4) — it never moves.
+    const mob_cell = enc(12, 4)
+    const committed = {
+      fighters: { p0: { cell: enc(2, 4), hp: 120, alive: true }, m0: { cell: mob_cell, hp: 200, alive: true } },
+    }
+    const evolved = evolve_flush_casts({
+      view: view(mob_cell),
+      committed,
+      caster_id: 'p0',
+      caster_seed_cell: committed.fighters.p0.cell, // the flush's own pre-loop `anchor` (cast_first: the committed cell)
+      casts: [
+        { spell: tp_spell, target: enc(11, 4) }, // cast 0 — self-teleport, 9 cells east (its own range_max)
+        { spell: dmg_spell, target: mob_cell }, // cast 1 — the stationary mob, adjacent to the LANDING cell
+      ],
+    })
+    // Before #321, evolve_flush_casts returned no caster_cell at all — every cast in a multi-cast draft anchored
+    // on ONE static pre-loop cell regardless of what a prior cast in the SAME draft did to the caster.
+    expect(evolved[0].caster_cell).toBe(enc(2, 4)) // cast 0 — nothing yet to evolve past
+    expect(evolved[1].caster_cell).toBe(enc(11, 4)) // cast 1 — evolved through cast 0's OWN teleport
+    // THE BUG, pinned as a reachability delta (same style as #300's 3-vs-1 MP pin): the mob sits 1 cell from the
+    // evolved anchor (well within ANY real spell's range) but 10 cells from the STALE pre-teleport anchor a
+    // single-anchor flush reuses for every cast — OUT of dmg_spell's own range_max (9) — a footprint drawn from
+    // that stale corner of the board excludes this stationary, unmoved, perfectly-legal target and drops the cast
+    // as "no longer valid" (#321's report).
+    expect(manhattan(dec(evolved[1].caster_cell), dec(mob_cell))).toBe(1)
+    expect(manhattan(dec(evolved[0].caster_cell), dec(mob_cell))).toBe(10)
+    expect(manhattan(dec(evolved[0].caster_cell), dec(mob_cell))).toBeGreaterThan(dmg_spell.levels[0].range[1])
+    expect(manhattan(dec(evolved[1].caster_cell), dec(mob_cell))).toBeLessThanOrEqual(dmg_spell.levels[0].range[1])
+  })
+
+  test('a non-relocating cast ahead of it leaves the per-cast anchor unchanged — matches the single pre-#321 anchor exactly', () => {
+    const mob_cell = enc(9, 4)
+    const committed = {
+      fighters: { p0: { cell: enc(2, 4), hp: 120, alive: true }, m0: { cell: mob_cell, hp: 200, alive: true } },
+    }
+    const evolved = evolve_flush_casts({
+      view: view(mob_cell),
+      committed,
+      caster_id: 'p0',
+      caster_seed_cell: committed.fighters.p0.cell,
+      casts: [
+        { spell: dmg_spell, target: mob_cell },
+        { spell: dmg_spell, target: mob_cell },
+      ],
+    })
+    expect(evolved[0].caster_cell).toBe(enc(2, 4))
+    expect(evolved[1].caster_cell).toBe(enc(2, 4)) // no relocation anywhere in the draft → identical to the old static anchor
+  })
+
+  test('STEP 3 no-teleport probe — an intra-draft PUSH (no teleport anywhere) never relocates the CASTER: retarget_cast and strike_flush_illegal both stay clean for the pushed targets own follow-up cast', () => {
+    // caster (5,5) never moves this turn; mob starts at (7,5), cast 0 pushes it 5 cells to its slide landing
+    // (12,5) — the SAME push fixture as the ⑭ describe above; cast 1 (drafted at the OPTIMISTIC post-push cell,
+    // exactly what the player clicked) targets it there.
+    const mob_start = enc(7, 5)
+    const landing = enc(12, 5)
+    const committed = {
+      fighters: { p0: { cell: enc(5, 5), hp: 120, alive: true }, m0: { cell: mob_start, hp: 200, alive: true } },
+    }
+    const evolved = evolve_flush_casts({
+      view: view(mob_start),
+      committed,
+      caster_id: 'p0',
+      caster_seed_cell: committed.fighters.p0.cell,
+      casts: [
+        { spell: push_spell, target: mob_start },
+        { spell: dmg_spell, target: landing },
+      ],
+    })
+    // the caster's OWN anchor never moves — a push relocates the TARGET, never the caster.
+    expect(evolved[0].caster_cell).toBe(enc(5, 5))
+    expect(evolved[1].caster_cell).toBe(enc(5, 5))
+    // the SAME flush-time decision chain DungeonBoard.jsx composes: the eye-state poll hasn't caught up to this
+    // turn's own not-yet-committed push, so the target fighter's committed cell resolves unchanged (a void-cast-
+    // shaped input — the exact case cast_retarget_leg_0a.test.js locks) — retarget_cast is a clean no-op…
+    const reaches = (cell) => manhattan(dec(evolved[1].caster_cell), dec(cell)) <= 9 // single_effect_spell's own range_max
+    const retargeted = retarget_cast({ target_cell: landing, committed_cell: null, reaches })
+    expect(retargeted).toEqual({ target: landing })
+    // …and strike_flush_illegal sees the landing cell IN the (correctly caster-anchored) footprint — never dropped.
+    const tgt = evolved[1].occupied.get(landing)
+    expect(tgt).toMatchObject({ kind: 'mob', alive: true })
+    const illegal = strike_flush_illegal({
+      in_footprint: reaches(landing),
+      is_weapon: false,
+      free_cell: false,
+      occupied_alive: !!tgt?.alive,
+    })
+    expect(illegal).toBe(false) // VERDICT: the no-teleport, push-adjacent class does NOT reproduce #321's drop
   })
 })
 
