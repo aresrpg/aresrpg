@@ -371,13 +371,8 @@ fi
 FAIL=0
 
 echo
-if [ -f scripts/check-chain-ids.mjs ]; then
-  if ! node scripts/check-chain-ids.mjs; then
-    FAIL=1
-  fi
-else
-  ylw "== AresRPG hardcoded chain-id gate =="
-  ylw "  SKIP: scripts/check-chain-ids.mjs not present in this checkout (see .github/workflows/checks.yml — CI-vs-local leg split)."
+if ! node scripts/check-chain-ids.mjs; then
+  FAIL=1
 fi
 
 echo
@@ -550,13 +545,8 @@ fi
 # The LimitsVerifier struct-field cap, sourced from the 04:09 gold-rig publish failure. The offline
 # source counter refuses absent/stale build output so this pre-publish guard can never lie green.
 echo
-if [ -f scripts/check-move-field-limits.mjs ]; then
-  if ! node scripts/check-move-field-limits.mjs; then
-    FAIL=1
-  fi
-else
-  ylw "== AresRPG Move field-definition cap gate =="
-  ylw "  SKIP: scripts/check-move-field-limits.mjs not present in this checkout (see .github/workflows/checks.yml — CI-vs-local leg split)."
+if ! node scripts/check-move-field-limits.mjs; then
+  FAIL=1
 fi
 
 # ── i18n coverage gate (ticket #18) ──────────────────────────────────────────────────────────────
