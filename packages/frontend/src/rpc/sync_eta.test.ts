@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, test } from 'bun:test'
 
-import { MEASURING_TIMEOUT_MS, fold_sync_sample, format_eta_duration, project_sync_status } from './sync_eta'
+import { fold_sync_sample, format_eta_duration, project_sync_status } from './sync_eta'
 
 describe('sync_eta · fold_sync_sample (pure EMA fold)', () => {
   test('converging: a steady shrink yields a negative rate and a matching ETA', () => {
@@ -18,7 +18,7 @@ describe('sync_eta · fold_sync_sample (pure EMA fold)', () => {
     expect(projection.progress).toBeCloseTo(0.3, 5) // consumed 30 of the peak 100
   })
 
-  test('stalled: a flat remaining count (rate ~= 0) reports stalled with no ETA', () => {
+  test('stalled: a second landed sample with the same remaining count exits measuring with no ETA', () => {
     let state = fold_sync_sample(null, { t: 0, remaining: 50 })
     state = fold_sync_sample(state, { t: 15_000, remaining: 50 })
     state = fold_sync_sample(state, { t: 30_000, remaining: 50 })
@@ -90,31 +90,6 @@ describe('sync_eta · fold_sync_sample (pure EMA fold)', () => {
 
   test('project_sync_status(null) is the safe zero value', () => {
     expect(project_sync_status(null)).toEqual({ status: 'unknown', eta_ms: null, progress: 0 })
-  })
-
-  // RED-FIRST (#293): the sync header's "measuring speed…" phase used to have no exit besides a 2nd sample
-  // landing — under the SAME gateway throttling #242 fixes, RpcLagBanner's own poll could go starved long
-  // enough that a 2nd sample never arrives, and `rate_per_sec == null` short-circuits BEFORE the growing-
-  // streak stall check ever runs, so the header claimed "measuring" forever. RpcLagBanner re-renders (and
-  // re-derives this projection) on every poll ATTEMPT — success or failure — so passing the real wall clock
-  // in is enough to bound the phase even while the estimator itself stays frozen.
-  test('measuring never claims "speed" forever — a long-stuck first sample times out into stalled', () => {
-    const state = fold_sync_sample(null, { t: 0, remaining: 42 })
-
-    const still_measuring = project_sync_status(state, MEASURING_TIMEOUT_MS - 1)
-    expect(still_measuring.status).toBe('unknown') // under the ceiling — an honest "not enough history yet"
-
-    const timed_out = project_sync_status(state, MEASURING_TIMEOUT_MS)
-    expect(timed_out.status).toBe('stalled') // the SAME honest label a flat-rate stall already uses
-    expect(timed_out.eta_ms).toBeNull()
-  })
-
-  test('a converging/stalled-via-growing-streak projection is unaffected by the measuring-timeout param', () => {
-    // Once rate_per_sec is non-null, the timeout branch never runs — `now` defaulting to state.last.t is a
-    // pure convenience for existing single-arg call sites, never a second clock disagreeing with the fold.
-    let state = fold_sync_sample(null, { t: 0, remaining: 100 })
-    state = fold_sync_sample(state, { t: 15_000, remaining: 90 })
-    expect(project_sync_status(state, 999_999_999).status).toBe('converging')
   })
 })
 

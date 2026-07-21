@@ -19,9 +19,6 @@ export interface SyncEstimatorState {
   /** running peak remaining seen this episode — the progress bar's denominator. */
   peak_remaining: number
   last: SyncSample
-  /** wall-clock ms this episode's FIRST sample landed — never touched again. Bounds how long project_sync_status
-   *  may keep claiming "measuring" (rate_per_sec still null) before honestly degrading to 'stalled' (#293). */
-  episode_started_at: number
 }
 
 export type SyncStatus = 'unknown' | 'converging' | 'stalled'
@@ -36,10 +33,6 @@ export interface SyncProjection {
 export const EMA_ALPHA = 0.3
 export const GROWING_STREAK_STALL_THRESHOLD = 3
 export const RATE_EPSILON_PER_SEC = 0.02
-// #293: past this much wall-clock time stuck on the FIRST sample (no rate yet — RpcLagBanner's own poll
-// starved, e.g. by the SAME gateway throttling #242 fixes), "measuring speed…" stops being an honest claim.
-// ~2 poll intervals (RpcLagBanner's POLL_MS is 15s) — long enough that one slow tick never false-positives.
-export const MEASURING_TIMEOUT_MS = 30_000
 
 /** Pure fold: one new sample in, next estimator state out. `state = null` starts a fresh episode. */
 export function fold_sync_sample(
@@ -47,14 +40,7 @@ export function fold_sync_sample(
   sample: SyncSample,
   alpha: number = EMA_ALPHA
 ): SyncEstimatorState {
-  if (!state)
-    return {
-      rate_per_sec: null,
-      growing_streak: 0,
-      peak_remaining: sample.remaining,
-      last: sample,
-      episode_started_at: sample.t,
-    }
+  if (!state) return { rate_per_sec: null, growing_streak: 0, peak_remaining: sample.remaining, last: sample }
 
   const dt_sec = (sample.t - state.last.t) / 1000
   // Duplicate or out-of-order timestamp: no time elapsed to derive a rate from — skip it for timing
@@ -73,31 +59,17 @@ export function fold_sync_sample(
     growing_streak,
     peak_remaining: Math.max(state.peak_remaining, sample.remaining),
     last: sample,
-    episode_started_at: state.episode_started_at,
   }
 }
 
-/**
- * Pure derivation: current estimator state → what the chip should show. `now` defaults to the state's own
- * last-sample time (zero elapsed — every existing single-arg call site keeps its exact prior behavior); a
- * caller that re-derives this on every render (RpcLagBanner) passes the REAL wall clock, which is what lets
- * the measuring-timeout below fire even while the estimator itself is frozen (no new sample landing).
- */
-export function project_sync_status(
-  state: SyncEstimatorState | null,
-  now: number = state?.last.t ?? 0
-): SyncProjection {
+/** Pure derivation: current estimator state → what the chip should show. */
+export function project_sync_status(state: SyncEstimatorState | null): SyncProjection {
   if (!state) return { status: 'unknown', eta_ms: null, progress: 0 }
 
   const progress =
     state.peak_remaining > 0 ? Math.min(1, Math.max(0, 1 - state.last.remaining / state.peak_remaining)) : 0
 
-  if (state.rate_per_sec == null) {
-    // #293: never a PERMANENT "measuring speed…" — past the ceiling this degrades to the SAME honest
-    // 'stalled' label a flat-rate stall already uses (no new UI), instead of claiming "measuring" forever.
-    if (now - state.episode_started_at >= MEASURING_TIMEOUT_MS) return { status: 'stalled', eta_ms: null, progress }
-    return { status: 'unknown', eta_ms: null, progress }
-  }
+  if (state.rate_per_sec == null) return { status: 'unknown', eta_ms: null, progress }
 
   const stalled =
     state.growing_streak > GROWING_STREAK_STALL_THRESHOLD || Math.abs(state.rate_per_sec) < RATE_EPSILON_PER_SEC

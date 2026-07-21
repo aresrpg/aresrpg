@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { readFileSync } from 'node:fs'
+
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
@@ -39,5 +41,20 @@ describe('rpc_sync_header', () => {
         remaining: 42,
       })
     ).toBeNull()
+  })
+})
+
+describe('RpcLagBanner estimator ingress', () => {
+  test('every landed lag sample re-enters the estimator when the remaining count is unchanged', () => {
+    // This suite is intentionally DOM-free, so lock the hook wiring at its source seam and leave the
+    // equal-sample transition itself to sync_eta.test.ts. A timestamp is the by-value identity of a sample:
+    // without it in both places React collapses equal checkpoint counts before the reducer sees sample #2.
+    const source = readFileSync(new URL('./RpcLagBanner.tsx', import.meta.url), 'utf8')
+    const estimator_effect = source.match(/useEffect\(\(\) => \{([\s\S]*?fold_sync_sample[\s\S]*?)\}, \[([^\]]*)\]\)/)
+    const dependencies = (estimator_effect?.[2] ?? '').split(',').map((dependency) => dependency.trim())
+
+    expect(estimator_effect).not.toBeNull()
+    expect(estimator_effect?.[1]).toContain('t: sampled_at')
+    expect(dependencies).toContain('sampled_at')
   })
 })

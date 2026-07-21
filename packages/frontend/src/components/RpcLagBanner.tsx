@@ -27,7 +27,11 @@ import { rpc_sync_header } from './rpc_sync_header'
 
 const POLL_MS = 15_000
 
-async function read_checkpoint_lag(signal: AbortSignal): Promise<CheckpointLag> {
+interface CheckpointLagSample extends CheckpointLag {
+  sampled_at: number
+}
+
+async function read_checkpoint_lag(signal: AbortSignal): Promise<CheckpointLagSample> {
   const chain_tip = get_sdk().then(async ({ grpc_client }) => {
     const result = await grpc_client.ledgerService.getServiceInfo({}, { abort: signal })
     return result.response.checkpointHeight
@@ -36,7 +40,7 @@ async function read_checkpoint_lag(signal: AbortSignal): Promise<CheckpointLag> 
 
   const lag = resolve_checkpoint_lag(checkpoint_height, status.status === 'ok' ? status.committer_watermark : null)
   if (!lag) throw new Error('checkpoint lag sample has no committed watermark')
-  return lag
+  return { ...lag, sampled_at: Date.now() }
 }
 
 export function RpcLagBanner() {
@@ -48,26 +52,25 @@ export function RpcLagBanner() {
 
   const lagging = data?.lagging ?? false
   const remaining = data?.remaining_checkpoints
+  const sampled_at = data?.sampled_at
 
-  // The one edge that feeds the pure fold: a new polled count in, next estimator state out. Resets the
-  // fold when a lag episode freshly starts so the peak checkpoint count always tracks THIS episode.
+  // The one edge that feeds the pure fold: every successful async observation re-enters as an input,
+  // including a later sample whose remaining count is unchanged. `sampled_at` is its by-value identity;
+  // failed polls retain the prior data and therefore cannot fabricate a measurement. A fresh lag episode
+  // resets the fold so the peak checkpoint count always tracks THIS episode.
   useEffect(() => {
-    if (!lagging || remaining == null) {
+    if (!lagging || remaining == null || sampled_at == null) {
       was_lagging_ref.current = false
       return
     }
     const episode_started = !was_lagging_ref.current
     was_lagging_ref.current = true
-    set_estimator((prev) => fold_sync_sample(episode_started ? null : prev, { t: Date.now(), remaining }))
-  }, [remaining, lagging])
+    set_estimator((prev) => fold_sync_sample(episode_started ? null : prev, { t: sampled_at, remaining }))
+  }, [lagging, remaining, sampled_at])
 
   if (!lagging && !fight_deadline_starved) return null
 
-  // The real wall clock, not the estimator's own last-sample time (#293): this component re-renders on
-  // EVERY poll attempt (success or failure — use_rpc_view's set_error also triggers one), so even while the
-  // estimator itself is frozen (no new sample landing, e.g. the poll is starved), Date.now() keeps moving —
-  // exactly what lets the measuring-timeout bound the phase instead of it staying stuck forever.
-  const projection = project_sync_status(estimator, Date.now())
+  const projection = project_sync_status(estimator)
   const stalled = fight_deadline_starved || projection.status === 'stalled'
 
   const status_label = fight_deadline_starved
