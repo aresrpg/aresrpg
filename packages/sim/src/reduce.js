@@ -19,7 +19,7 @@ import {
   update_entity,
 } from './fight_state.js'
 import {
-  apply_move,
+  contest_tackle,
   advance_turn,
   abandon_fight,
   check_victory,
@@ -409,73 +409,91 @@ const handle_move = (state, cmd, ctx) => {
   const current = acting_entity(state, cmd.entity_id)
   if (!current) return { state, events: [] }
 
-  // Validate the path is contiguous + walkable; reject otherwise (no partial trust of client paths).
+  // Validate the path is contiguous + walkable, and that MP covers the WHOLE submitted route (no partial trust
+  // of client paths). A covered trap no longer shortens the MP a route costs — the mover pays for every cell it
+  // actually walks, so an over-budget path is rejected uniformly whether or not it happens to cross a trap.
   const is_walkable = make_is_walkable(state, ctx.arena, cmd.entity_id)
   if (!is_path_valid(current.cell, cmd.path, is_walkable))
     return { state, events: [] }
+  if (current.mp < cmd.path.length) return { state, events: [] }
 
-  // Owner-blind 1.29 entry: the first covered cell truncates the ordinary route for players AND mobs. Validate
-  // the whole submitted path first, then spend only the traversed prefix; the existing trap sink resolves after
-  // the mover is standing on that cell, exactly like displacement.
-  const trap_step = cmd.path.findIndex(cell =>
-    state.traps.some(trap =>
-      trap.cells.some(c => c.x === cell.x && c.y === cell.y),
-    ),
-  )
-  const path = trap_step === -1 ? cmd.path : cmd.path.slice(0, trap_step + 1)
-  const res = apply_move(state, cmd.entity_id, [current.cell, ...path])
-  const moved = find_entity(res.state, cmd.entity_id)
+  const walked = walk_path(state, cmd, ctx)
+  const moved = find_entity(walked.state, cmd.entity_id)
   const moved_event = {
     type: 'fight_moved',
     fight_id: state.fight_id,
     entity_id: cmd.entity_id,
-    path: res.tackled ? [moved?.cell ?? current.cell] : path,
-    tackled: res.tackled ?? false,
+    path: walked.tackled ? [moved?.cell ?? current.cell] : walked.traversed,
+    tackled: walked.tackled,
     mp_remaining: moved?.mp ?? 0,
   }
-  // A tackle interrupts the move (no displacement), so no trap is crossed. On a real move, check the path
-  // for a trap (first one fires, deals damage, may kill -> end). Traps are placed on the AoE of a trap-cast.
-  if (res.tackled || res.success === false)
-    return { state: res.state, events: [moved_event] }
-  const stepped = step_traps(res.state, cmd.entity_id, path, cell =>
-    terrain_walkable(ctx.arena, cell),
-  )
-  const won = with_victory(state.winner, stepped.state, [
+  if (walked.tackled) return { state: walked.state, events: [moved_event] }
+  const won = with_victory(state.winner, walked.state, [
     moved_event,
-    ...stepped.events,
+    ...walked.events,
   ])
-  // If the mover died on an ENEMY trap but the fight continues, its turn ends now (c156: no dead-actor turn).
+  // If the mover died on a trap but the fight continues, its turn ends now (c156: no dead-actor turn).
   return advance_if_dead(won, cmd.entity_id)
 }
 
 /**
- * Fire the first trap (if any) the mover stepped onto along the already-truncated `path`. The mover sits on that
- * entered trap cell (apply_move relocated it there), so the shared payload—including displacement—starts from
- * the authoritative stop cell. One trap fires per ordinary move.
+ * Walk the validated path one cell at a time so a covered trap fires the INSTANT the mover ENTERS its cell and
+ * the route RESUMES afterward (#325). Tackle contests once at the start cell (apply_move parity); each entered
+ * trap resolves through the shared check_traps door — owner/ally-blind, every entry kind triggers (#320) — as an
+ * INTERLEAVED effect, never a turn-terminal one. The walk stops early ONLY when the trigger removes the mover
+ * from the route: it DIED, or a payload (a repulsive trap) displaced it off the cell it just entered. Every
+ * crossed trap fires, in path order (a path may cross more than one).
  * @param {import('./fight_state.js').FightState} state
- * @param {string} entity_id
- * @param {import('./cell.js').Cell[]} path  excludes start
- * @param {(cell: import('./cell.js').Cell) => boolean} terrain_walkable
- * @returns {{ state: import('./fight_state.js').FightState, events: import('./reduce.js').FightEvent[] }}
+ * @param {CmdMove} cmd
+ * @param {ReduceContext} ctx
+ * @returns {{ state: import('./fight_state.js').FightState, traversed: import('./cell.js').Cell[], events: FightEvent[], tackled: boolean }}
  */
-const step_traps = (state, entity_id, path, terrain_walkable) => {
-  for (const cell of path) {
-    const trap = check_traps(state, cell, entity_id, terrain_walkable)
-    if (trap.triggered)
+const walk_path = (state, cmd, ctx) => {
+  const terrain = cell => terrain_walkable(ctx.arena, cell)
+  const contest = contest_tackle(state, cmd.entity_id)
+  if (!contest.escaped)
+    return { state: contest.state, traversed: [], events: [], tackled: true }
+  const walked = cmd.path.reduce(
+    (acc, target) => {
+      if (acc.stop) return acc
+      // Enter the next cell (relocate + spend 1 MP), then resolve any trap covering it from the authoritative
+      // entered cell — displacement in the payload therefore originates from the true stop, exactly as before.
+      const relocated = update_entity(acc.state, cmd.entity_id, e => ({
+        ...e,
+        cell: target,
+        mp: Math.max(0, e.mp - 1),
+        mp_used: e.mp_used + 1,
+      }))
+      const trap = check_traps(relocated, target, cmd.entity_id, terrain)
+      const after = find_entity(trap.state, cmd.entity_id)
+      const off_route =
+        !!after && (after.cell.x !== target.x || after.cell.y !== target.y)
       return {
         state: trap.state,
-        events: [
-          {
-            type: 'fight_trap_triggered',
-            fight_id: state.fight_id,
-            entity_id,
-            cell,
-            effects: trap.effects,
-          },
-        ],
+        traversed: [...acc.traversed, target],
+        events: trap.triggered
+          ? [
+              ...acc.events,
+              {
+                type: 'fight_trap_triggered',
+                fight_id: state.fight_id,
+                entity_id: cmd.entity_id,
+                cell: target,
+                effects: trap.effects,
+              },
+            ]
+          : acc.events,
+        stop: !after || after.health <= 0 || off_route,
       }
+    },
+    { state: contest.state, traversed: [], events: [], stop: false },
+  )
+  return {
+    state: walked.state,
+    traversed: walked.traversed,
+    events: walked.events,
+    tackled: false,
   }
-  return { state, events: [] }
 }
 
 /**

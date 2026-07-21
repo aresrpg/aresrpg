@@ -59,7 +59,7 @@ fun apply_move(fight: &mut Fight, seat: u64, cell: u64) {
     let (_state, draw) = prng::rng_next(seed);
     if (!tackle::resolve(fight, false, seat, &lockers, draw)) return // tackled — penalty committed, move denied
   };
-  let (legal, cost, entered_trap) = movement::walk(fight, false, seat, cell, &wall_mask, mp);
+  let (legal, cost) = movement::walk(fight, false, seat, cell, &wall_mask, mp);
   assert!(legal, EIllegalMove);
   {
     let p = fight::participants_mut(fight).borrow_mut(seat);
@@ -67,7 +67,7 @@ fun apply_move(fight: &mut Fight, seat: u64, cell: u64) {
   };
   let landed = participant::cell(fight::participants(fight).borrow(seat));
   fight_events::emit_moved(fight::id(fight), cid, landed);
-  if (entered_trap) cast::trigger_on_enter(fight, false, seat);
+  // `movement::walk` fires any crossed trap inline (entrant-blind) and resumes the route — no post-walk sink here.
 }
 
 // ╔════════════════ [ WEAPON attack (§17.27) ] ══════════════════════════════ ]

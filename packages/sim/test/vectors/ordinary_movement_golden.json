@@ -1,7 +1,7 @@
 {
   "cases": [
     {
-      "id": "participant_ordinary_move_triggers_own_crossed_trap_and_stops",
+      "id": "participant_ordinary_move_triggers_own_crossed_trap_and_resumes",
       "input": {
         "fight": "fight_1",
         "board": "standard",
@@ -51,7 +51,7 @@
           {
             "target_is_mob": false,
             "idx": 0,
-            "cell": 166,
+            "cell": 167,
             "hp": 93
           },
           {
@@ -65,8 +65,8 @@
         "events": {
           "moved": {
             "entity_id": "p0",
-            "path": [165, 166],
-            "mp_remaining": 1
+            "path": [165, 166, 167],
+            "mp_remaining": 0
           },
           "trap_triggered": {
             "entity_id": "p0",
@@ -83,7 +83,7 @@
       }
     },
     {
-      "id": "mob_ordinary_move_triggers_crossed_trap_and_stops",
+      "id": "mob_ordinary_move_triggers_crossed_trap_and_resumes",
       "input": {
         "fight": "fight_1",
         "board": "standard",
@@ -139,7 +139,7 @@
           {
             "target_is_mob": true,
             "idx": 0,
-            "cell": 167,
+            "cell": 168,
             "hp": 93
           }
         ],
@@ -147,8 +147,8 @@
         "events": {
           "moved": {
             "entity_id": "m0",
-            "path": [166, 167],
-            "mp_remaining": 1
+            "path": [166, 167, 168],
+            "mp_remaining": 0
           },
           "trap_triggered": {
             "entity_id": "m0",
