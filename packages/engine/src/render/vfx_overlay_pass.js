@@ -49,6 +49,20 @@ import { FIGHT_VFX_LAYER } from './vfx_preset_engine.js'
  *  reversed-Z occlusion bias — the binary cut this fade generalises). */
 const SOFT_FADE_DIST = 0.4
 
+/** #158 FIX — the soft-fade FLOOR: the smallest the depth-fade mask may ever drive an overlay-class burst.
+ *  ROOT CAUSE (board-harness proven, apple/metal-3): a GROUND-ANCHORED fight cast (fight_cast_vfx.js:41 drops the
+ *  preset to the caster's feet) sits ~coplanar with the board the top-down fight camera frames — so `gap` (vfx
+ *  viewZ − scene viewZ) is ≈0 across the WHOLE burst, and `smoothstep(0, 0.4, gap)` collapses it to ~0: the
+ *  entire cast VFX vanishes (a clear-air burst, gap≫0, renders — the exact fade toggle that isolated it). The
+ *  fade's DESIGN intent (header) is to melt the base into the floor WITHOUT eating the visible body, and this
+ *  file's own stated priority is "an invisible fight-VFX pack is a functional error; a fade/occlusion miss is a
+ *  cosmetic one — never invert that priority". A floor honours both: the burst always READS (≥ floor of its
+ *  additive light), the smoothstep still softens the hard PNG-on-terrain edge ABOVE the floor, and a burst behind
+ *  geometry dims to the floor (soft occlusion) instead of a hard cut — the accepted cosmetic cost. Live-tunable
+ *  (window.__vfx_overlay.soft_floor.value) so the owner grades visibility↔occlusion with his eye; 0 restores the
+ *  pre-fix hard fade. */
+const OVERLAY_SOFT_FLOOR = 0.5
+
 /**
  * The soft-particle depth-fade mask from a view-space gap (vfx viewZ − scene viewZ), mirroring the TSL
  * `composite()` math op-for-op (JS reference for the unit tests — same idiom as particles.js's
@@ -60,10 +74,18 @@ const SOFT_FADE_DIST = 0.4
  * layer for any OTHER way the comparison goes degenerate) resolves to FULL VISIBILITY instead of
  * collapsing the mask to 0. A fade/occlusion miss is a cosmetic error (a particle reads unfaded through
  * a wall); an invisible fight-VFX pack is a functional one — never invert that priority.
- * @param {number} gap @param {number} [fade_dist] @returns {number} mask ∈ [0,1]
+ * #158 DIAGNOSTIC BYPASS (`no_fade`): the live knob `window.__vfx_overlay.no_fade` mirrors here — a truthy
+ * value forces the mask fully OPEN (1), the permanent one-cast lever to test whether this fade is masking a
+ * ground-anchored cast in a live fight (see composite()'s `.max(u_no_fade)`).
+ * #158 FIX (`soft_floor`): the mask is CLAMPED UP to this floor so a ground-anchored cast (gap≈0) never
+ * collapses to invisible — see OVERLAY_SOFT_FLOOR. Mirrors composite()'s `.max(u_soft_floor)`.
+ * @param {number} gap @param {number} [fade_dist] @param {number} [no_fade] 1 ⇒ force full visibility
+ * @param {number} [soft_floor] the minimum mask (#158 floor) @returns {number} mask ∈ [0,1]
  */
-export function depth_fade_mask(gap, fade_dist = SOFT_FADE_DIST) {
-  return Number.isFinite(gap) ? smoothstep_scalar(0, fade_dist, gap) : 1
+export function depth_fade_mask(gap, fade_dist = SOFT_FADE_DIST, no_fade = 0, soft_floor = OVERLAY_SOFT_FLOOR) {
+  if (no_fade) return 1
+  const m = Number.isFinite(gap) ? smoothstep_scalar(0, fade_dist, gap) : 1
+  return Math.max(m, soft_floor)
 }
 
 /** Display-space additive GAIN. The pack's emission (authored 1.6–2.2 for the AAA
@@ -80,6 +102,9 @@ const OVERLAY_GAIN = 0.3
  * @property {(out: *) => *} composite wraps the graded display-space vec4 — adds the depth-masked, sRGB-encoded
  *   fight-VFX light. Call it inside build_output (safe to re-call on a graph rebuild — it only wires nodes).
  * @property {*} gain the display-space additive-gain uniform (live knob — window.__vfx_overlay.gain).
+ * @property {*} no_fade diagnostic bypass uniform — set .value=1 to force the soft depth fade fully open (#158).
+ * @property {*} soft_floor the #158 soft-fade FLOOR uniform (live: window.__vfx_overlay.soft_floor) — the mask
+ *   is clamped up to this so a ground-anchored cast never vanishes; 0 restores the pre-fix hard fade.
  * @property {() => void} dispose releases the overlay pass's render target.
  * @property {*} vfx_pass the underlying PassNode (bench/probe handle).
  */
@@ -134,7 +159,14 @@ export function create_vfx_overlay({ scene, camera, scene_depth }) {
   const cam_near = /** @type {any} */ (vfx_pass)._cameraNear
   const cam_far = /** @type {any} */ (vfx_pass)._cameraFar
   const u_gain = uniform(OVERLAY_GAIN)
-  if (typeof window !== 'undefined') /** @type {any} */ (window).__vfx_overlay = { gain: u_gain } // live-tuning knob (console access)
+  // #158 DIAGNOSTIC KNOB — force the soft-particle depth fade fully OPEN (soft ≡ 1). Default 0 ⇒ no change.
+  // Set `window.__vfx_overlay.no_fade.value = 1` in a live fight to test whether the fade is masking a
+  // ground-anchored cast (gap≈0 under the top-down fight camera). If the VFX reappear, the fade is the culprit.
+  const u_no_fade = uniform(0)
+  // #158 FIX — the soft-fade floor (OVERLAY_SOFT_FLOOR): live-tunable so the owner grades visibility↔occlusion.
+  const u_soft_floor = uniform(OVERLAY_SOFT_FLOOR)
+  if (typeof window !== 'undefined')
+    /** @type {any} */ (window).__vfx_overlay = { gain: u_gain, no_fade: u_no_fade, soft_floor: u_soft_floor } // live-tuning knobs (console access)
 
   return {
     composite(out) {
@@ -149,7 +181,14 @@ export function create_vfx_overlay({ scene, camera, scene_depth }) {
       // FAIL-OPEN GUARD (#158, depth_fade_mask — unit-tested JS mirror above). `gap.notEqual(gap)` is
       // the IEEE-754 NaN test (NaN is the only float that compares unequal to itself): on a genuine NaN
       // gap the mask opens to fully VISIBLE instead of smoothstep's otherwise-degenerate result.
-      const soft = gap.notEqual(gap).select(float(1), smoothstep(0, SOFT_FADE_DIST, gap))
+      // `.max(u_no_fade)` = the diagnostic bypass (soft→1 when no_fade=1, no-op at 0). `.max(u_soft_floor)` =
+      // the #158 FIX: clamp the mask up to the floor so a ground-anchored cast (gap≈0) never collapses to
+      // invisible while the smoothstep still softens the edge ABOVE the floor (mirrors depth_fade_mask op-for-op).
+      const soft = gap
+        .notEqual(gap)
+        .select(float(1), smoothstep(0, SOFT_FADE_DIST, gap))
+        .max(u_no_fade)
+        .max(u_soft_floor)
       // ADD the isolated VFX as display-space light: the authored linear colour, damped by the gain (so the coloured
       // body reads instead of blowing to white), added straight onto the graded sRGB frame. Adding LINEAR values (no
       // sRGB lift) keeps the faint billboard fringe near-zero ⇒ no grey-quad halo; only real energy brightens.
@@ -157,6 +196,8 @@ export function create_vfx_overlay({ scene, camera, scene_depth }) {
       return vec4(out.rgb.add(light), 1)
     },
     gain: u_gain,
+    no_fade: u_no_fade,
+    soft_floor: u_soft_floor,
     dispose() {
       vfx_pass.dispose?.()
     },
