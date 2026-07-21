@@ -186,11 +186,10 @@ export function FightTimeline() {
                   <span className="hud-turn__hp-num hud-num">{hp}</span>
                 </div>
               </Tooltip>
-              {/* PERSISTENT EFFECTS (a fighter's nametag must show any active effect and for how
-                  much turn") — f.effects is a BLOCKED-COORDINATE getter (see EffectBadges.jsx docblock): absent
-                  on every fighter until packages/fight's engine_view projects it, so this renders nothing at
-                  HEAD today and lights up the instant the getter merges. Own + enemy + peer all get it — chain
-                  truth is public. */}
+              {/* PERSISTENT EFFECTS (#301 — a fighter's active effects must show with their remaining turns):
+                  f.effects is engine_view's live per-fighter status projection (project.js `effects_of`,
+                  LEG Q) — own + enemy + peer all get it, chain truth is public. The board nameplate
+                  (EntityTooltip.jsx) renders the SAME truth as compact colored dots. */}
               <EffectBadges effects={f.effects} />
               {active && !fight.presenting && remaining_s != null && (
                 <div className="hud-turn__timer">

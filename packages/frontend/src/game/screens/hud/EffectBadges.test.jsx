@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// RED-FIRST (EFFECT-BADGES lane): a cast effect (e.g. a shield spell) must be visible on the fighter's
-// nametag — every persistent effect renders there with its remaining turn count, compact but intuitive.
-// RED at HEAD: EffectBadges.jsx does not exist yet.
+// (#301) EFFECT BADGES — the turn card's persistent-effect chips: a cast effect (e.g. a shield spell) is
+// visible on the fighter's turn card, with its remaining turn count, compact but intuitive.
 //
-// engine_view.fighters[].effects is a BLOCKED-COORDINATE getter (packages/fight/src/project.js only ever
-// projected a boolean `invisible`, never a generic per-fighter effect+duration list — see the lane return for
-// the exact proposed shape) — so this component is built + proven against a FIXTURE of the shape it needs; the
-// wiring is a one-line prop-pass the moment the getter merges (see FightTimeline.jsx `f.effects`).
+// engine_view.fighters[].effects (packages/fight/src/project.js `effects_of`, LEG Q) is the live per-fighter
+// effect+duration list this component renders — wired via the one-line prop-pass in FightTimeline.jsx
+// (`f.effects`). This suite proves the pure projection (effect_badge_view) + the render output against
+// fixtures shaped exactly like that getter's rows.
 
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'

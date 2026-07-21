@@ -5,20 +5,19 @@
 // persistent effect renders in the nametag, compact but intuitive. Own + enemy + peer fighters
 // all render the same chips — chain truth is public, nothing here reads whose turn it is.
 //
-// DATA SOURCE (BLOCKED-COORDINATE at ship time — see the lane return): packages/fight's engine_view fighters
-// projection currently exposes only a boolean `invisible` (project.js:343/368), folded from a single-kind
-// decode (fight_status_snapshot.js hardcodes INVISIBILITY_STATUS_KIND=27 and drops every other status row —
-// the chain's Fight.fx.statuses / spell_board::FighterStatus{fighter,kind,effect,remaining_turns,source} is
-// already generic). This component takes the general shape that getter needs to grow into: `effects` is an
+// DATA SOURCE (#301 — the coordinate is MERGED): packages/fight's engine_view fighters projection exposes the
+// full per-fighter status list (project.js `effects_of`, LEG Q) — the chain's Fight.fx.statuses /
+// spell_board::FighterStatus{fighter,kind,effect,remaining_turns,source} decoded generically end to end
+// (fight_status_snapshot.js → board_state.js → fold.js `statuses` → project.js `f.effects`). `effects` is an
 // array of raw per-fighter status rows `{ id, kind, remaining_turns, element?, value?, stat?, chance? }` —
-// undecoded chain ints, same convention project.js already uses for `element` on mobs. Until the getter merges,
-// `effects` is simply absent on every fighter and this renders nothing (verified below) — the wire-up the
-// moment it lands is the one-line `f.effects` prop pass in FightTimeline.jsx.
+// undecoded chain ints, same convention project.js already uses for `element` on mobs — wired live via the
+// one-line `f.effects` prop pass in FightTimeline.jsx.
 //
 // DECODE REUSE (one grammar, zero drift): `project_spell_effect` (fight-spells.js) turns the raw ints into the
 // SAME display shape the grimoire/armed-readout already use; `seed_effect_line` (seed-effect-line.js) turns
-// that + a turns count into the exact localized sentence spell-coverage.test.js already locks — reused
-// verbatim for the hover tooltip, never a second copy of the fx_* grammar.
+// that + a turns count into the exact localized sentence spell-coverage.test.js already locks. The board
+// nameplate (EntityTooltip.jsx → tooltip_card.js `status_dot_view`) reuses the SAME two functions for its
+// compact colored-dot form — one grammar, two renderings, never a second copy of the fx_* decode.
 
 import { useTranslation } from 'react-i18next'
 

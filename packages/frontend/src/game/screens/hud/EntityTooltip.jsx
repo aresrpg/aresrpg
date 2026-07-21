@@ -132,7 +132,17 @@ export function EntityTooltip() {
     ? displacement_of(fighter.cell, outcome.displaced_to, fight?.fighters?.get(fight?.my_entity_id)?.cell)
     : (last_vm.current?.displacement ?? null)
   const vm = active
-    ? { ...build_vm(hover, fighter), outcome, displacement, is_crit, effects, key: hover.entity_id }
+    ? {
+        ...build_vm(hover, fighter),
+        outcome,
+        displacement,
+        is_crit,
+        effects,
+        // (#301) fighter.effects = engine_view's persistent-status projection (same source EffectBadges.jsx
+        // reads for the turn card) — distinct from `effects` above, the armed-spell PREVIEW lines.
+        status_effects: fighter.effects,
+        key: hover.entity_id,
+      }
     : null
   if (vm) last_vm.current = vm
 
@@ -170,6 +180,7 @@ export function EntityTooltip() {
       is_crit={view.is_crit}
       displacement={view.displacement}
       effects={view.effects}
+      status_effects={view.status_effects}
       t={t}
     />
   )
