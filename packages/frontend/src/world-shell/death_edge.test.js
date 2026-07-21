@@ -23,40 +23,52 @@ describe('#170 (5th recurrence) is_death_edge — the presented-state alive→de
     expect(is_death_edge(/* was_dead */ false, /* dead */ true)).toBe(true)
   })
 
-  test('RED-FIRST: a SECOND (or third, or fourth) re-assertion of the SAME still-dead fighter is a no-op — ' +
-    'death===death, whichever source re-asserts it (receipt wave, poll adoption, a second poll…)', () => {
-    expect(is_death_edge(/* was_dead */ true, /* dead */ true)).toBe(false)
-  })
+  test(
+    'RED-FIRST: a SECOND (or third, or fourth) re-assertion of the SAME still-dead fighter is a no-op — ' +
+      'death===death, whichever source re-asserts it (receipt wave, poll adoption, a second poll…)',
+    () => {
+      expect(is_death_edge(/* was_dead */ true, /* dead */ true)).toBe(false)
+    }
+  )
 
-  test('a genuine committed-fold revival (the dead→alive edge, the #260 poofed-guard door) is never itself a ' +
-    'death trigger — the caller records it, but this reports false (the wrong direction to play a death beat)', () => {
-    expect(is_death_edge(/* was_dead */ true, /* dead */ false)).toBe(false)
-  })
+  test(
+    'a genuine committed-fold revival (the dead→alive edge, the #260 poofed-guard door) is never itself a ' +
+      'death trigger — the caller records it, but this reports false (the wrong direction to play a death beat)',
+    () => {
+      expect(is_death_edge(/* was_dead */ true, /* dead */ false)).toBe(false)
+    }
+  )
 
-  test('a LATER genuine re-death after a revival is a fresh false→true edge — it presents again, correctly ' +
-    '(no permanent latch: the accumulator only ever reflects the LAST observed value)', () => {
-    expect(is_death_edge(/* was_dead */ false, /* dead */ true)).toBe(true) // the post-revival accumulator state
-  })
+  test(
+    'a LATER genuine re-death after a revival is a fresh false→true edge — it presents again, correctly ' +
+      '(no permanent latch: the accumulator only ever reflects the LAST observed value)',
+    () => {
+      expect(is_death_edge(/* was_dead */ false, /* dead */ true)).toBe(true) // the post-revival accumulator state
+    }
+  )
 
   test('a standing (never-dead) fighter observed alive stays a no-op', () => {
     expect(is_death_edge(/* was_dead */ false, /* dead */ false)).toBe(false)
   })
 
-  test('THE FULL SEQUENCE — a fighter observed through its whole lifecycle: 3 redundant kill sources, one ' +
-    'presented death; a genuine revival; a genuine second death, presented again', () => {
-    let was_dead = false
-    const observe = (dead) => {
-      const edge = is_death_edge(was_dead, dead)
-      was_dead = dead
-      return edge
+  test(
+    'THE FULL SEQUENCE — a fighter observed through its whole lifecycle: 3 redundant kill sources, one ' +
+      'presented death; a genuine revival; a genuine second death, presented again',
+    () => {
+      let was_dead = false
+      const observe = (dead) => {
+        const edge = is_death_edge(was_dead, dead)
+        was_dead = dead
+        return edge
+      }
+      // receipt wave, poll adoption, a second poll — all racing the same still-unacked kill.
+      expect(observe(true)).toBe(true) // receipt wave: presents
+      expect(observe(true)).toBe(false) // poll adoption: no-op
+      expect(observe(true)).toBe(false) // a second poll: no-op
+      // the committed-fold genuine-revival door (sync_entities, mirrors #260's removed_corpses.delete site).
+      expect(observe(false)).toBe(false) // never itself a death trigger
+      // a genuine new kill, post-revival.
+      expect(observe(true)).toBe(true) // presents again — correct, not suppressed
     }
-    // receipt wave, poll adoption, a second poll — all racing the same still-unacked kill.
-    expect(observe(true)).toBe(true) // receipt wave: presents
-    expect(observe(true)).toBe(false) // poll adoption: no-op
-    expect(observe(true)).toBe(false) // a second poll: no-op
-    // the committed-fold genuine-revival door (sync_entities, mirrors #260's removed_corpses.delete site).
-    expect(observe(false)).toBe(false) // never itself a death trigger
-    // a genuine new kill, post-revival.
-    expect(observe(true)).toBe(true) // presents again — correct, not suppressed
-  })
+  )
 })

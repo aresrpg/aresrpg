@@ -125,7 +125,9 @@ export const beat_grammar_violations = (wave, { trap_cells = [], grid_width = 20
     //     never desync — the presenter's whole edge-detection trusts `killed` as the honest cause signal.
     for (const b of beats)
       if (b.kind === 'damage' && b.payload.new_health === 0 && !b.payload.killed)
-        out.push(`grammar.death_beat: turn ${ti} lethal hit on ${b.payload.target_id} (new_health 0) missing killed flag`)
+        out.push(
+          `grammar.death_beat: turn ${ti} lethal hit on ${b.payload.target_id} (new_health 0) missing killed flag`
+        )
 
     // (e) MOVE path integrity — the arrival beat's cell equals the walked path's end, and the path is a
     //     contiguous 4-dir cardinal sequence (a gap/diagonal is a malformed render path).
