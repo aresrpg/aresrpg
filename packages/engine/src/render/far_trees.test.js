@@ -3,7 +3,7 @@
 // FAR-TREE IMPOSTOR render-half wiring tests (ENGINE_AAA_PLAN §8 B3). No GPU: builds the handle + its
 // TSL materials in bun exactly as far_field.test.js does, and drives the per-section lifecycle (upload /
 // count / instance attributes / spawn stamping / remove / retire+reap cross-fade). Pixel proof (forests
-// to the horizon, ring cross-fade, ms budget, reload mask) is bench/impostors_poses.spec.js on the GPU.
+// to the horizon, ring cross-fade, ms budget, reload mask) is bench/impostors_poses.spec.js [retired, issue #74] on the GPU.
 
 import { test, expect, describe } from 'bun:test'
 import { DataTexture, RedFormat, UnsignedByteType, Vector2 } from 'three'

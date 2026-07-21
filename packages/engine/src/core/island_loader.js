@@ -165,7 +165,7 @@ function ring_grid_coords(chunk_count) {
 /**
  * §7/§8 bench SYNTHETIC hook: loads exactly `chunk_count` test chunks in a ring/grid layout
  * (single Y layer, cy=0) instead of the fixed 7×7 island, via the same real gen→mesh→upload
- * pipeline as `load_test_island` — so `synthetic-2000.spec.js` exercises the actual sector
+ * pipeline as `load_test_island` — so `synthetic-2000.spec.js [retired, issue #74]` exercises the actual sector
  * BundleGroup path at scale, not a synthetic stat injected after the fact. Used by
  * `create_engine({ synthetic_chunks })` (see engine.js).
  * @param {object} params

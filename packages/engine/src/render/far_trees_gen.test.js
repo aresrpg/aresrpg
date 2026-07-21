@@ -5,7 +5,7 @@
 // AGREEMENT: every impostor the far shell derives is a REAL procedural tree the near ring's own
 // resolve_placement_at grows at the same column, same species, same anchor (§3.6: the far shell and near
 // chunks must AGREE at the seam, or trees pop/double). The render half (billboards) is proven on the GPU
-// by bench/impostors_poses.spec.js.
+// by bench/impostors_poses.spec.js [retired, issue #74].
 
 import { test, expect, describe } from 'bun:test'
 

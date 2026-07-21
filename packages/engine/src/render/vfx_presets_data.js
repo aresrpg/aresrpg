@@ -568,7 +568,7 @@ Object.assign(PRESETS, DARK_PRESETS, AIR_PRESETS, ELEM_VARIANT_PRESETS, FLAME_VA
 // puffs. Same ONE lookup surface + one-shot runtime; the app plays it via PRESETS.dust_puff (embed_voxel_player).
 Object.assign(PRESETS, LOCOMOTION_PRESETS)
 
-// _debug — the low-instance-count REGRESSION GUARD the bench (vfx_presets.spec.js) keeps firing: 3 count-1 emitters
+// _debug — the low-instance-count REGRESSION GUARD the bench (vfx_presets.spec.js [retired, issue #74]) keeps firing: 3 count-1 emitters
 // at KNOWN positions (centre/left/right) probing the storage-buffer read path a raw instancedBufferAttribute
 // misbinds at count 1/2. REAL pack looks now (fire / arcane_mote / impact_core — was the generic FBM flame/ring). Not a fight.
 const dbg = (

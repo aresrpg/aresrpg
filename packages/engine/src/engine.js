@@ -147,7 +147,7 @@ const ANALYTIC_GROUND_ID = /** @type {number} */ (get_block_by_name('stone')?.id
  *   → renderer.set_fog_far_ceiling). Never set from real product code.
  * @property {number} [synthetic_chunks] BENCH-ONLY hook (§7/§8): when set, replaces the 7×7 test
  *   island with exactly this many ring/grid-laid-out test chunks (see core/island_loader.js
- *   `load_synthetic_chunks`) — drives bench/synthetic-2000.spec.js's ≥4.6k bundled-draw scenario.
+ *   `load_synthetic_chunks`) — drives bench/synthetic-2000.spec.js [retired, issue #74]'s ≥4.6k bundled-draw scenario.
  *   Never set this from real product code; it exists only for demo/main.js's `?synthetic_chunks=N`
  *   query-param passthrough.
  * @property {number} [zone_size_m] [D183] fixed-mode ONLY: zone size in meters (default 600, D205). The app's
@@ -801,7 +801,7 @@ export function create_engine({
     // unless) the app poked the slider. Now a LOW boot IS a reduced-resolution potato at construction.
     api.set_render_scale(get_tier(tier_name).render_scale_max)
 
-    // BENCH synthetic path: keep the synchronous grid load (bench/synthetic-2000.spec.js measures
+    // BENCH synthetic path: keep the synchronous grid load (bench/synthetic-2000.spec.js [retired, issue #74] measures
     // the render/bundle path at a fixed chunk COUNT — no streaming). Real product path: the M1
     // streaming ring manager over the gen worker pool. engine.start() returns immediately either
     // way; the ring streams the world in around the camera over the following seconds (no boot
@@ -853,7 +853,7 @@ export function create_engine({
         // Horizontal view radius in chunks — the canonical LOAD_RADIUS_CHUNKS from world_config
         // (config-first law; demo `?load_radius=N` overrides it for the D33 A/B sweep only). D33 raised
         // the shipped default 5→6 (loaded edge 160→192 m, fog wall 112→144 m) — the largest radius that
-        // passed every gate in the r5/6/7/8 bench (bench/d33_radius.spec.js). The earlier "5 is the M1
+        // passed every gate in the r5/6/7/8 bench (bench/d33_radius.spec.js [retired, issue #74]). The earlier "5 is the M1
         // sweet spot" verdict predated the NG-MEGA quad pool + one-mesh/frame pacing, which removed the
         // per-chunk InstancedMesh/material churn behind those old GC spikes — the sweep confirms steady
         // frame-time is now flat across r5→r8, so view distance is bounded only by cold-boot drain time.

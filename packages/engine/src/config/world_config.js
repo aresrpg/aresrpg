@@ -150,7 +150,7 @@ export const REGION_SIZE_CHUNKS = 8
  *  metres (r6 → 192 m); fog far = (this−1.5) × CHUNK_SIZE (ring_manager fog_far_ceiling_m → 144 m at r6).
  *
  *  D33 view-distance lever (raise view distance — the previous setting mostly showed fog). Set from the r5/6/7/8
- *  headed-Metal A/B sweep (bench/d33_radius.spec.js, report /tmp/aresrpg-engine-artifacts/d33_report.json).
+ *  headed-Metal A/B sweep (bench/d33_radius.spec.js [retired, issue #74], report /tmp/aresrpg-engine-artifacts/d33_report.json).
  *  KEY FINDING: steady-state frame-time is FLAT across r5→r8 (rotation & fly p99 ≈ 9.3 ms everywhere,
  *  half the 12 ms ceiling) — the NG-MEGA quad pool + one-mesh/frame pacing make view distance free at
  *  runtime. The ONLY cost is cold-boot time-to-drained (mesh is 1 chunk/frame): r5 6.3 s → r6 8.8 s →

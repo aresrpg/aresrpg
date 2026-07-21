@@ -333,7 +333,7 @@ export async function goto_demo(page, { seed, tier, timeout_ms = 15_000 } = {}) 
  * Reads the demo query param `?synthetic_chunks=N`, which `demo/main.js` passes through to
  * `create_engine({ synthetic_chunks: N })` — `core/island_loader.js`'s `load_synthetic_chunks`
  * lays out N chunks in a ring/grid and runs them through the real gen→mesh→upload pipeline
- * instead of the default 7×7 island. See bench/synthetic-2000.spec.js for the assertions.
+ * instead of the default 7×7 island. See bench/synthetic-2000.spec.js [retired, issue #74] for the assertions.
  * @param {import('@playwright/test').Page} page
  * @param {number} chunk_count
  * @param {{ tier?: string, timeout_ms?: number }} [options]

@@ -164,7 +164,7 @@ export function create_post_stack({
 
   // ── HALF-RES POST (MEDIUM tier, perf mandate) ──────────────────────────────────────────────────
   // [wave 1 — BLOOM] The bloom sub-chain was the DOMINANT per-pixel post cost — measured 7.87 ms of the
-  // medium sky+post budget at 22.9 Mpx (bench/_halfres_post.spec.js: baseline 24.85 ms → 16.98 ms with
+  // medium sky+post budget at 22.9 Mpx (bench/_halfres_post.spec.js [retired, issue #74]: baseline 24.85 ms → 16.98 ms with
   // ?bloom=0). BloomNode renders its high-pass + full mip pyramid at `_resolutionScale` × the swapchain
   // (three default 0.5); dropping it to 0.25 on MEDIUM quarters that pyramid's fill. Visually free for
   // THIS bloom: threshold 2.05 (only genuine highlights — sun disc, water glints, sky-through-canopy),
@@ -224,7 +224,7 @@ export function create_post_stack({
   // build_output]: medium's half-res-post recipe OR high. HIGH shares hdr_tex's exact 3-consumer shape
   // (bloom high-pass sub-render + low_freq auto-exposure quad + the main swapchain pass's own direct
   // read) with NONE of medium's half-res SCALING, so it pays the identical shipped 3×/frame full-res hdr
-  // bake. Pure pass-count cut, byte-identical pixels (A/B: bench/_halfres_post.spec.js's high-tier
+  // bake. Pure pass-count cut, byte-identical pixels (A/B: bench/_halfres_post.spec.js [retired, issue #74]'s high-tier
   // describe). Unconditional at high (no escape flag — nothing else on its path is flag-escapable
   // either). LOW untouched — out of scope for this pass.
   const hdr_dedupe_on = half_res_post_on || tier === 'high'
@@ -429,7 +429,7 @@ export function create_post_stack({
       // the main swapchain pass's own direct read) ⇒ the shipped chain baked this FULL-RES HDR 3× per
       // frame on medium (measured: the __cloud_rtt probe read renders_per_frame=3 — the deck rides
       // inside this graph, so its count IS hdr's count) and identically on high (same consumer shape;
-      // A/B'd in bench/_halfres_post.spec.js's high-tier describe via the __hdr_rtt probe below).
+      // A/B'd in bench/_halfres_post.spec.js [retired, issue #74]'s high-tier describe via the __hdr_rtt probe below).
       // autoUpdate=false + a per-frame textureNeedsUpdate re-arm in update() renders it exactly ONCE:
       // the first consumer's traversal bakes it, the rest sample the same-frame texture. Byte-identical
       // content — every uniform is already set in update() before pipeline.render(), so every consumer
@@ -440,7 +440,7 @@ export function create_post_stack({
         hdr_tex.autoUpdate = false
         hdr_rtt = hdr_tex
         // bench probe handle (the __cloud_rtt idiom): direct .autoUpdate toggle for a live, same-page
-        // A/B (bench/_halfres_post.spec.js's high-tier dedupe test flips this without a reload so
+        // A/B (bench/_halfres_post.spec.js [retired, issue #74]'s high-tier dedupe test flips this without a reload so
         // pose/world/time-of-day stay bit-for-bit identical across the off/on capture).
         if (typeof window !== 'undefined') /** @type {any} */ (window).__hdr_rtt = hdr_tex
       }

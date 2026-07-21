@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Worn-cosmetic fit math — the sui_helmet measured-fit unit (legacy-authored assets mount RAW with no math at
 // all — the aresrpg-legacy equip_hat/equip_cape mechanism; the mounting itself is three/GPU-bound and proven
-// by bench/_worn_live_capture.spec.js on real hardware).
+// by bench/_worn_live_capture.spec.js [retired, issue #74] on real hardware).
 
 import { test, expect, describe, spyOn } from 'bun:test'
 import { Bone, BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three'

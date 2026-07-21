@@ -611,7 +611,7 @@ export function create_atmosphere(opts) {
       // the same pattern as the killed near-haze donut (a density term windowed by CAMERA distance = a
       // shell welded to the camera). Likely invisible here (short 4→18 m window inside dense ~20 m-vis
       // enclosure fog), but it has NOT been measured: adjudicate with an UNDER-CANOPY leg of
-      // bench/froxel_static_overlay.spec.js before trusting it; if it reads, constant-floor it with a
+      // bench/froxel_static_overlay.spec.js [retired, issue #74] before trusting it; if it reads, constant-floor it with a
       // taste re-tune (the foreground-crisp intent must survive).
       const encl_rise = smoothstep(float(4), float(18), dist)
       out = out.add(enclosure.mul(config.froxel.enclosure_density).mul(encl_rise).mul(weather_density))
@@ -635,7 +635,7 @@ export function create_atmosphere(opts) {
     // fog_sea_level) this 30→80 m camera-distance ramp is a density shell welded to the camera. The
     // altitude gate (`below`) is world-anchored and legal; the DISTANCE ramp is the suspect. Inert at
     // the arc-gate's desert framings (y150 > sea level 145) so it has NOT been measured: adjudicate with
-    // a VALLEY (<y145) leg of bench/froxel_static_overlay.spec.js; if it reads, make the sea purely
+    // a VALLEY (<y145) leg of bench/froxel_static_overlay.spec.js [retired, issue #74]; if it reads, make the sea purely
     // altitude-anchored (constant past a tiny foreground guard) like the near-haze constant floor.
     const sea_rise = smoothstep(float(config.froxel.near_start_m), float(config.froxel.near_full_m), dist)
     out = out.add(fog_sea.mul(below).mul(sea_gate).mul(sea_rise))

@@ -238,7 +238,7 @@ export function build_board_geometry(params, { defer_surface = false } = {}) {
     thickness: FLOOR_THICKNESS,
   })
   // [fight-start freeze fix] the paving bake is ~10-27ms of synchronous texel work — the
-  // dominant fight-start hitch (bench: fight_start_board_cost.spec.js). defer_surface (the live fight
+  // dominant fight-start hitch (bench: fight_start_board_cost.spec.js [retired, issue #74]). defer_surface (the live fight
   // board) runs it as a generator so board.build() can pump it in ≤8ms slices across frames behind the
   // intro hold; the slab material binds the blank texture NOW and it fills in. The synchronous default
   // path is byte-identical to before (Infinity band ⇒ one step).

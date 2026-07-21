@@ -172,7 +172,7 @@ describe('ambient_tint — cool sky-blue shade interior, neutral in open (design
   test('BOUNDED — cool photographic shade, not a full smurf recolor (every channel within ±50% of neutral)', () => {
     // ENG-12 crank ([0.55,0.72,1.35]) reads clearly blue at a glance (target: "not blue enough") — past
     // the old ±25% envelope, but still a tint MULTIPLIER, not a repaint. The real perceptual smurf guard
-    // is the runtime A/B (bench/shade_verify.spec.js: deep-shade Δ(b−r) < 0.12); this is just a sanity cap.
+    // is the runtime A/B (bench/shade_verify.spec.js [retired, issue #74]: deep-shade Δ(b−r) < 0.12); this is just a sanity cap.
     for (const c of AMBIENT_SHADE_TINT) expect(Math.abs(c - 1)).toBeLessThanOrEqual(0.5)
   })
 
