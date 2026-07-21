@@ -38,6 +38,30 @@ WARN where the census found mass — a cleaned domain gets promoted, never the r
   `no-misused-promises` + `await-thenable`: **ERROR** on the strong-typed clean surfaces
   (validation, gold rig, frontend e2e/dev), WARN on frontend src (45/22/4) — stays ON in tests
   (an unawaited assertion is a false green).
+- **L-P6 — Observe deltas, not arrivals.** A presentation or side effect fires from an OBSERVED
+  STATE CHANGE, never from the arrival of the message that caused it. Authoritative truth reaches a
+  client redundantly — one fact carried by a receipt, a poll, and a relay — so an effect keyed on
+  arrival fires two or three times for one change (a kill re-animated, a toast doubled). The
+  discipline: an observer folds ONE PROJECTED SLICE of the state — a primitive copied BY VALUE (a
+  number, a string, an id), never a reference to a mutable object — and acts only on a real delta:
+
+  ```js
+  const observe = (last_slice, state) => {
+    const slice = project(state) // e.g. a fighter's health — a number, taken by value
+    if (last_slice !== slice) effect() // fire ONLY on a real change
+    return slice // the accumulator holds the FACT, not the thing carrying it
+  }
+  ```
+
+  `dead === dead` changes nothing, so a replayed input can never re-trigger; the by-value copy makes
+  `!==` both cheap and correct even when the underlying object is mutated in place. A COLLECTION
+  churns its container reference on every append, so it diffs by ID SET (added/removed) rather than
+  `!==` — same principle, the operator the shape demands. Events ENRICH a delta (they carry its
+  amount, its id), they never TRIGGER one. _Why:_ at-least-once delivery is the norm, not the
+  exception — an arrival-triggered effect is a latent double-fire. [HOUSE #281] → enforced by the
+  `presenter-beat-boundary` depcruise gate (beat emitters reachable only through the presenter seam)
+  and the replay-idempotence property (`packages/fight/harness/replay_idempotence.js`: any scenario
+  delivered once vs. each authoritative input 2-3× ⇒ byte-identical presentation).
 
 ## Immutability
 

@@ -18,11 +18,16 @@ the counter is that every verdict must cite file:line evidence or name the exact
    shape, a derivation)? The same knowledge reachable by two paths counts.
 3. **Reducer law in spirit:** beyond what the mechanical gates catch — does any new code COMPUTE
    an outcome a reducer already computes (shadow logic)? Does any effect fire outside an edge?
-4. **Seam quality:** are new boundaries honest (data in, data out) or do they smuggle behavior
+4. **Observe deltas, not arrivals (L-P6):** does any new presentation or effect fire from the
+   ARRIVAL of a message rather than an OBSERVED STATE DELTA? Trace each new beat / toast / animation
+   to its trigger — a projected slice compared for change (good), or a handler that acts on receipt
+   (a latent double-fire under the receipt+poll+p2p redundancy). Does beat emission stay behind the
+   presenter seam, or does a consumer build presentation off a raw arrival?
+5. **Seam quality:** are new boundaries honest (data in, data out) or do they smuggle behavior
    (callbacks, shared mutable context, implicit ordering)?
-5. **Deletability:** if this feature were cut next month, is its removal a directory delete or
+6. **Deletability:** if this feature were cut next month, is its removal a directory delete or
    surgery? Name what entangles it.
-6. **The uncomfortable half:** what in this diff would its author least want examined? Examine it.
+7. **The uncomfortable half:** what in this diff would its author least want examined? Examine it.
 
 ## Output contract (GitHub artifacts, nothing else)
 - One issue comment per audit on the standing `loop:conscience`-adjacent audit issue — verdict
