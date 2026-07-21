@@ -2602,7 +2602,6 @@
     "feed_failed": "No se pudo alimentar a la mascota."
   },
   "fights": {
-    "tackled": "PLACADO",
     "see_nearby": "Ver combates en la zona",
     "dungeon_panel_title": "Combates de sala",
     "dungeon_panel_subtitle": "Únete a la sala de un compañero o enfrentad juntos al jefe.",

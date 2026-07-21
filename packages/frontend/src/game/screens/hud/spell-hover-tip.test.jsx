@@ -132,6 +132,20 @@ describe('SpellHoverTip', () => {
     expect(css).toMatch(/\.tt-spell-card__name\s*\{[^}]*color:\s*#c8963c/s)
     expect(css).toMatch(/\.tt-spell-card__label,[^}]*font-size:\s*10px[^}]*letter-spacing:\s*0\.14em/s)
   })
+
+  // #368 RED-FIRST: the greyed cooldown affordance must refuse a cast attempt WITH THE REASON at hover
+  // (silent-refusal law) — same idiom as the equip fix's hover/disabled reason, adapted to this bar's rich
+  // Tooltip (the house's ONE replacement for native title=, Tooltip.jsx header) instead of a native title=.
+  test('cd_left > 0 surfaces the on-cooldown reason, reusing the toast copy — absent when not on cooldown', () => {
+    const on_cd = renderToStaticMarkup(
+      createElement(SpellHoverTip, { t, name: 'Ember Ward', spell: SPELL, cd_left: 2 })
+    )
+    expect(on_cd).toContain('tt-spell-card__reason')
+    expect(visible_text(on_cd)).toContain(t('dungeons.spell_on_cooldown', { n: 2 }))
+
+    const ready = renderToStaticMarkup(createElement(SpellHoverTip, { t, name: 'Ember Ward', spell: SPELL }))
+    expect(ready).not.toContain('tt-spell-card__reason')
+  })
 })
 
 test('selecting a spell without pointer hover does not mount its hover card', () => {

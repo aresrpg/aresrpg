@@ -875,8 +875,10 @@ const FLOAT_BURST_WINDOW = 0.15 // s — a float spawned within this long of the
 const FLOAT_BURST_STAGGER = 0.08 // s — per-float stagger delay inside a burst
 
 // float label rasterization (make_float_sprite): a FIXED-width canvas whose world footprint (FLOAT_BASE_W)
-// maps from it. A damage number fits with room; a long STATUS tag ("TACKLED  -2 MP  -1 AP") does not, so
-// it must SHRINK to fit rather than clip (regression: "oversized+cropped"). ONE home for these three numbers.
+// maps from it. A damage number fits with room; a long composed label (the pre-#239 combined "TACKLED  -2 MP
+// -1 AP" tag was the motivating case — tackle now floats short separate AP/MP numbers, see FLOAT_COLOR.ap
+// above, but any future multi-part label hits the same fixed canvas) does not, so it must SHRINK to fit
+// rather than clip (regression: "oversized+cropped"). ONE home for these three numbers.
 const FLOAT_CANVAS_W = 256 // px — the float sprite's canvas width (the 4:1 aspect + world footprint map from it)
 const FLOAT_FONT_PX = 38 // px — base label font (JetBrains Mono 600, the heaviest LOADED house weight)
 const FLOAT_TEXT_PAD = 12 // px — horizontal breathing room inside the canvas so glyphs never touch the edge
@@ -1056,7 +1058,17 @@ function engine_remove(/** @type {Sprite} */ sprite) {
 // inherit the same toneMapped:false truth (heal pink + crit amber now render at their real combat-log hues,
 // hexes unchanged — the AgX bypass alone un-washes them).
 // `mp` = the house mint MP green (--clog-num-mp / --good) — the move's spent-MP floater.
-const FLOAT_COLOR = { damage: '#ff2f1c', heal: '#ff6bb0', crit: '#ffb454', info: '#c8963c', mp: '#4fd6a0' }
+// `ap` = the house ice-blue AP tone (--clog-num-ap / frosted --accent) — #239: the tackle forfeit's AP leg
+// (mp/ap replace the old combined red "TACKLED -N MP -N AP" label float; the owner ruling bans the label
+// entirely, so each pool now floats on its own, colored like its combat-log number).
+const FLOAT_COLOR = {
+  damage: '#ff2f1c',
+  heal: '#ff6bb0',
+  crit: '#ffb454',
+  info: '#c8963c',
+  mp: '#4fd6a0',
+  ap: '#5db4ff',
+}
 
 /**
  * Renders a FULLY-COMPOSED text string to a canvas texture and wraps it in a camera-facing Sprite, sized
@@ -1083,9 +1095,9 @@ function make_float_sprite(text, kind) {
   // colour truth below, not an unavailable weight. 256-wide canvas still holds a 6-digit signed number (~150px)
   // with room, so no clip.
   ctx.font = `600 ${FLOAT_FONT_PX}px "JetBrains Mono", ui-monospace, monospace`
-  // SHRINK-TO-FIT (regression: "oversized+cropped"): measure the composed label at the base font; a long status
-  // tag ("TACKLED  -2 MP  -1 AP") that would spill past the fixed-width canvas drops to the exact font px that
-  // fits, so the WHOLE label always renders (never cropped). A damage number is under the bound → base size kept.
+  // SHRINK-TO-FIT (regression: "oversized+cropped"): measure the composed label at the base font; a long
+  // composed tag that would spill past the fixed-width canvas drops to the exact font px that fits, so the
+  // WHOLE label always renders (never cropped). A damage number is under the bound → base size kept.
   const fit_px = fit_float_font_px(ctx.measureText(text).width)
   if (fit_px !== FLOAT_FONT_PX) ctx.font = `600 ${fit_px}px "JetBrains Mono", ui-monospace, monospace`
   ctx.textAlign = 'center'

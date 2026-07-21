@@ -1538,19 +1538,25 @@ button.hud-gem-bezel:focus-visible {
   border-radius: 3px;
   padding: 0 3px;
 }
-/* FIX 4 cooldown badge (07-14) — turns-remaining, the socket's one free corner (key top-left, cost
-   bottom-right). House red (--bad) rather than white so a glance tells "on cooldown" from "costs N AP". */
-.hud-socket__cd {
+/* #368 cooldown treatment — promotes the FIX-4 (07-14) small corner badge to a BIG centered turns-left
+   number: the gem's own desaturate+dim (.hud-socket.disabled .hud-socket__gem, unchanged) already reads
+   "off"; this overlay adds WHAT/WHEN at a glance across the whole bar. WHITE (house --fg), not --bad red —
+   red already means "costs N AP"/refused on this bar; a cooldown is a countdown, not an error. Covers the
+   full tile (matches the key/cost corner badges' absolute-overlay siblings) so it centers over the gem
+   regardless of socket size. */
+.hud-socket__cd-overlay {
   position: absolute;
-  right: 3px;
-  top: 3px;
+  inset: 0;
   z-index: 2;
-  font-size: 10px;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  font-size: 20px;
   font-weight: 700;
-  color: var(--bad);
-  background: rgba(0, 0, 0, 0.6);
-  border-radius: 3px;
-  padding: 0 3px;
+  color: var(--fg);
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.9),
+    0 0 10px rgba(0, 0, 0, 0.7);
 }
 .hud-socket.weapon .hud-socket__gem--weapon {
   /* the weapon socket is FULL-HEIGHT (2 rows) since the 07-11 two-row refinement — a %-height gem would

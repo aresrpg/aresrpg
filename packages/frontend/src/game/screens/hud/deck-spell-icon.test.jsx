@@ -12,6 +12,7 @@
 
 import { expect, test } from 'bun:test'
 import React, { Children, isValidElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
 
 import { SpellSocket } from './deck-spell-socket.jsx'
@@ -117,4 +118,25 @@ test('SpellSocket: a transient miss during the switch burst self-heals instead o
   await Bun.sleep(IMAGE_RETRY_DELAYS_MS[0] + 600)
   const retry_img = find_img(runner.render(element))
   expect(retry_img?.props.src).toBe(url_for('warcleave'))
+})
+
+// #368 RED-FIRST: cooldown reads as a BIG centered number (promoted from the FIX-4 07-14 small corner badge)
+// — the icon's grey/desaturate treatment rides the pre-existing `.disabled` class (enabled=false) unchanged.
+test('SpellSocket: cd_left > 0 renders the big centered cooldown overlay, never the old corner badge', () => {
+  configure()
+  const html = renderToStaticMarkup(
+    React.createElement(SpellSocket, { ...socket_props(senshi_card, 'warcleave'), enabled: false, cd_left: 2 })
+  )
+
+  expect(html).toContain('hud-socket__cd-overlay')
+  expect(html).not.toContain('class="hud-socket__cd ') // the superseded small corner badge must never reappear
+  expect(html).toContain('>2<')
+  expect(html).toContain(' disabled') // the desaturate+dim treatment still rides the shared .disabled class
+})
+
+test('SpellSocket: cd_left === 0 renders no cooldown overlay at all', () => {
+  configure()
+  const html = renderToStaticMarkup(React.createElement(SpellSocket, socket_props(senshi_card, 'warcleave')))
+
+  expect(html).not.toContain('hud-socket__cd-overlay')
 })

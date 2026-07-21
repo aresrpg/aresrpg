@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// RED-FIRST (regression: "TACKLED badge oversized+cropped"): the TACKLED status floater — e.g. the composed
-// "TACKLED  -2 MP  -1 AP" tag — is far wider than a damage number, yet the float sprite rasterizes into a
-// FIXED-width canvas. At the base font a long tag overflows and CLIPS. fit_float_font_px is the shrink-to-fit
-// law (the board's toast-width-cap applied to floats): a string that already fits keeps the base size; a wider
-// one scales down by the exact overflow ratio so it NEVER clips (the supersampled canvas keeps it crisp).
+// RED-FIRST (regression: "TACKLED badge oversized+cropped"): the ORIGINAL motivating case was the pre-#239
+// combined tackle floater — a composed "TACKLED  -2 MP  -1 AP" tag far wider than a damage number, rasterized
+// into a FIXED-width canvas. #239's owner ruling later dropped that combined label (tackle now floats short
+// separate AP/MP numbers, voxel_fight_folds.js tackle_float_payloads) but fit_float_font_px stays a general
+// shrink-to-fit guarantee for ANY future long composed float text — kept here with the same string as a
+// representative long-label stress case. At the base font a long tag overflows and CLIPS. fit_float_font_px is
+// the shrink-to-fit law (the board's toast-width-cap applied to floats): a string that already fits keeps the
+// base size; a wider one scales down by the exact overflow ratio so it NEVER clips (the supersampled canvas
+// keeps it crisp).
 import { describe, expect, test } from 'bun:test'
 
 import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'

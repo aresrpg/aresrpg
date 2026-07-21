@@ -2602,7 +2602,6 @@
     "feed_failed": "Das Haustier konnte nicht gefüttert werden."
   },
   "fights": {
-    "tackled": "GEFESSELT",
     "see_nearby": "Kämpfe in der Nähe ansehen",
     "dungeon_panel_title": "Raumkämpfe",
     "dungeon_panel_subtitle": "Tritt dem Raum eines Gruppenmitglieds bei oder besiegt den Boss gemeinsam.",

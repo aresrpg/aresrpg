@@ -2602,7 +2602,6 @@
     "feed_failed": "ペットに給餌できませんでした。"
   },
   "fights": {
-    "tackled": "足止め",
     "see_nearby": "周辺の戦闘を見る",
     "dungeon_panel_title": "部屋の戦闘",
     "dungeon_panel_subtitle": "仲間の部屋に参加するか、ボスを一緒に討伐しよう。",

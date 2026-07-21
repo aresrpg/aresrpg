@@ -2602,7 +2602,6 @@
     "feed_failed": "Pet could not be fed."
   },
   "fights": {
-    "tackled": "TACKLED",
     "see_nearby": "See fights in the area",
     "dungeon_panel_title": "Room fights",
     "dungeon_panel_subtitle": "Join a party member's room, or take the boss together.",

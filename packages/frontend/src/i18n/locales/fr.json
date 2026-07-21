@@ -2602,7 +2602,6 @@
     "feed_failed": "Le familier n’a pas pu être nourri."
   },
   "fights": {
-    "tackled": "TACLÉ",
     "see_nearby": "Voir les combats à proximité",
     "dungeon_panel_title": "Combats de salle",
     "dungeon_panel_subtitle": "Rejoignez la salle d'un membre, ou affrontez le boss ensemble.",
