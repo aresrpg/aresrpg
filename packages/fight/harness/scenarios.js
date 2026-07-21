@@ -53,6 +53,39 @@ const kill_receipt = {
   ],
 }
 
+// M6 (#308): MY optimistic cast (composite predicted, Cast + a non-lethal Hit) survives an intervening UNRELATED
+// receipt — a mob acts (moves, strikes ME) between my cast and its confirming receipt. Under the dead purge verb
+// that mob receipt deleted my pending cast (HP-rollback); under claims it settles NO claim of mine, so my cast
+// lives on and retires silently when its own receipt lands. Redelivered, every authoritative fact here — the mob
+// wave AND my confirm — must present exactly once: the claim retire is delivery-idempotent (a redelivery finds
+// the prediction already retired, a re-merge dedupes).
+const predicted_cast_beats = local_intent_beats(
+  synthetic_cast_events({
+    fight_id: FIGHT,
+    caster_idx: 0,
+    target_cell: 45,
+    victims: [{ is_mob: true, idx: 0, amount: 8, remaining_hp: 12 }],
+  }),
+  { fight_id: FIGHT }
+)
+
+// A pure mob turn (move + cast + a strike on ME) — it carries NONE of my cast's claim keys (Cast:p0 / Hit:m0),
+// and no TurnEnded for my seat, so it is genuinely unrelated to my pending prediction.
+const unrelated_mob_turn = {
+  events: [
+    ev('MobMoved', { idx: 0, to_cell: 41 }),
+    ev('Cast', { caster_is_mob: true, caster_idx: 0, target_cell: 21 }),
+    ev('Hit', { victim_is_mob: false, victim_idx: 0, amount: 6, remaining_hp: 44, caster_is_mob: true, caster_idx: 0 }),
+  ],
+}
+
+const confirm_cast_receipt = {
+  events: [
+    ev('Cast', { caster_is_mob: false, caster_idx: 0, target_cell: 45 }),
+    ev('Hit', { victim_is_mob: true, victim_idx: 0, amount: 8, remaining_hp: 12, caster_is_mob: false, caster_idx: 0 }),
+  ],
+}
+
 // Coop: ALICE (ME, seat 0) is the local player; her peer (PEER, seat 1) is non-local, so his committed turn —
 // learned only as a wholesale object read — REPLAYS as a paced wave (spectator_replay). A re-read of the same
 // object must not double-replay it.
@@ -104,6 +137,38 @@ export const SCENARIOS = [
       },
       { msg: { type: 'receipt', receipt: kill_receipt, version: 3 }, now: T0 + 2_000 },
       { msg: { type: 'presented' }, now: T0 + 6_000 },
+    ],
+  },
+  {
+    // M6 (#308): a predicted cast SURVIVES an unrelated mob receipt and retires on its own — delivery-idempotent.
+    name: 'predicted_cast_survives_unrelated_receipt',
+    log: [
+      { msg: init(), now: T0 },
+      { msg: { type: 'snapshot', fight: fight_object(), version: 1 }, now: T0 + 10 },
+      {
+        msg: {
+          type: 'receipt',
+          receipt: { events: [ev('TurnStarted', { is_mob: false, idx: 0, deadline_ms: T0 + 30_000 })] },
+          version: 2,
+        },
+        now: T0 + 100,
+      },
+      {
+        msg: {
+          type: 'predicted',
+          intent_id: 'cast:m6',
+          basis_version: 3,
+          actions: [
+            { kind: 'Cast', caster_is_mob: false, caster_idx: 0, damaging: true, target_cell: 45, ap_cost: 5 },
+            { kind: 'Hit', victim_is_mob: true, victim_idx: 0, remaining_hp: 12 },
+          ],
+          beats: predicted_cast_beats,
+        },
+        now: T0 + 1_200,
+      },
+      { msg: { type: 'receipt', receipt: unrelated_mob_turn, version: 4 }, now: T0 + 2_000 },
+      { msg: { type: 'presented' }, now: T0 + 6_000 },
+      { msg: { type: 'receipt', receipt: confirm_cast_receipt, version: 5 }, now: T0 + 6_500 },
     ],
   },
   {

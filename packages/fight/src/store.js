@@ -33,7 +33,7 @@ import { apply_action, empty_state, normalize_events, normalize_intent, seat_res
 import * as settle_input from './inputs.js'
 import { board_state_from_fight, fight_geometry_complete } from './board_state.js'
 import { masks_entries } from './present.js'
-import { action_divergence } from './reconcile_action.js'
+import { reconcile_predictions } from './reconcile_action.js'
 import { tap_trace_input } from './trace_tap.js'
 import {
   base_budget,
@@ -231,17 +231,23 @@ const make_input =
               Number(action.idx) === Number(my_actor.idx)
           )
         set((s) => {
-          // An authoritative RECEIPT at version V is the whole statement of V — my optimistic intents at or
-          // below it are predictions of a now-settled version: purge them (match→discard, mismatch→adopt).
+          // PREDICTIONS RETIRE BY CLAIM, NEVER BY PURGE (#308). An authoritative RECEIPT SETTLES exactly the
+          // claim keys (kind + actor) it carries: a pending prediction whose claim it matches retires — a
+          // byte/outcome-match is silent (the prediction was merely early), a differing outcome on the SAME
+          // claim is ONE forward correction (the divergence toast). An UNRELATED receipt (a peer/mob move that
+          // shares no claim) touches NOTHING — the old version purge killed those predictions and reverted the
+          // eye (the HP-rollback + second death re-beat). A receipt that ended my turn expires whatever it never
+          // claimed. poll/p2p stay merge-only: a stale poll must never retire a live prediction (#170's reason).
           const entries = { ...s.entries }
-          const predicted = Object.values(entries).filter(
-            (entry) => entry.source === 'intent' && entry.version <= msg.version
-          )
-          const receipt_divergence =
-            msg.type === 'receipt' ? action_divergence(predicted, actions, { version: msg.version, at: now }) : null
-          if (msg.type === 'receipt')
-            for (const key of Object.keys(entries))
-              if (entries[key].source === 'intent' && entries[key].version <= msg.version) delete entries[key]
+          const reconcile =
+            msg.type === 'receipt'
+              ? reconcile_predictions(
+                  Object.values(entries).filter((entry) => entry.source === 'intent' && entry.version <= msg.version),
+                  actions,
+                  { version: msg.version, at: now, ended_my_turn }
+                )
+              : null
+          if (reconcile) for (const key of reconcile.retire) delete entries[key]
           // #8 — a DUPLICATE receipt (a re-delivery / reconnect catch-up at a version already presented) must not
           // append a SECOND visual wave. Track the versions that produced a wave; a re-delivered version reuses the
           // folded entries (merge_entries dedupes) but paces NO new turns. Only receipts that actually produced
@@ -257,7 +263,7 @@ const make_input =
               commit_due: false,
               receipt_seq: msg.type === 'receipt' ? s.receipt_seq + 1 : s.receipt_seq,
               staged: ended_my_turn ? [] : s.staged,
-              divergence: receipt_divergence ?? s.divergence,
+              divergence: reconcile?.divergence ?? s.divergence,
               entries: merge_entries(entries, actions),
               wave,
               wave_versions,
