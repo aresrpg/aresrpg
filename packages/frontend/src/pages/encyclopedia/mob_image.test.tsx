@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { expect, test } from 'bun:test'
+import { afterAll, expect, test } from 'bun:test'
 import React, { Children, isValidElement, type ReactElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
 
+import { set_catalog_for_test } from '../../game/data/mob_catalog.js'
 import {
   EncyclopediaMobImage,
   MOB_IMAGE_RETRY_DELAYS_MS,
   mob_image_load_state,
   reduce_mob_image_load,
 } from './mob_image'
+
+afterAll(() => set_catalog_for_test())
 
 test('EncyclopediaMobImage uses the shield glyph when no Walrus icon can be resolved', () => {
   const html = renderToStaticMarkup(<EncyclopediaMobImage mob={{ name: 'Definitely Not A Mob' }} />)
@@ -76,6 +79,11 @@ function find_img(root: ReactNode): ReactElement | null {
 }
 
 test('a transient first-load failure retries on its own instead of pinning the glyph until a refresh', async () => {
+  // MISSING-ARTIFACT (#117): get_mob_icon_url resolves the name->glb join through mob_catalog.js's
+  // get_catalog(), a runtime-published census (load_mob_catalog) never fetched in this headless test.
+  // set_catalog_for_test is the sanctioned seam (mirrors set_spell_corpus_for_test) — seed the one row this
+  // test's mob needs so it exercises the REAL resolution path, not a skip (the fact IS testable).
+  set_catalog_for_test({ alley_bunny: { appearance: null, glb: 'hy_bunny' } })
   configure_walrus_assets({ aggregator: AGGREGATOR, classes: { mob_icon: { quilt: QUILT } } })
   const runner = hook_runner()
   const element = <EncyclopediaMobImage mob={{ name: 'Alley Bunny' }} hd />

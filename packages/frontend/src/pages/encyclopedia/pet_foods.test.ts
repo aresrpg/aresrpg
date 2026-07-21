@@ -18,41 +18,51 @@
 //
 // Run with: bun test packages/frontend/src/pages/encyclopedia/pet_foods.test.ts
 
-import { describe, test, expect } from 'bun:test'
+import { existsSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
-import { build_pet_food_slugs } from '../../../../../scripts/lib/item_catalog_transform.mjs'
+import { describe, test, expect } from 'bun:test'
 
 import { pet_food_rows, minted_pet_food_slugs } from './pet_foods'
 
-// One live derivation from seed, shared by every assertion (identical to what virtual:item_catalog embeds).
-const food_slugs = build_pet_food_slugs()
+// MISSING-ARTIFACT (#117): scripts/lib/item_catalog_transform.mjs is content-pipeline tooling, absent by
+// design in this public repo. Guarded dynamic import; pet_food_rows/minted_pet_food_slugs below are pure,
+// fixture-driven joins with no dependency on the live derivation and keep running for real.
+const TRANSFORM_PATH = fileURLToPath(new URL('../../../../../scripts/lib/item_catalog_transform.mjs', import.meta.url))
+const PET_FOOD_TRANSFORM_AVAILABLE = existsSync(TRANSFORM_PATH)
+const food_slugs = PET_FOOD_TRANSFORM_AVAILABLE
+  ? (await import('../../../../../scripts/lib/item_catalog_transform.mjs')).build_pet_food_slugs()
+  : []
 
-describe('build_pet_food_slugs — the global feedable set, derived live from seed', () => {
-  test('is a non-empty, sorted, unique slug list', () => {
-    expect(food_slugs.length).toBeGreaterThan(0)
-    expect(food_slugs).toEqual([...new Set(food_slugs)].sort())
-    for (const slug of food_slugs) expect(typeof slug).toBe('string')
-  })
+describe.skipIf(!PET_FOOD_TRANSFORM_AVAILABLE)(
+  'build_pet_food_slugs — the global feedable set, derived live from seed',
+  () => {
+    test('is a non-empty, sorted, unique slug list', () => {
+      expect(food_slugs.length).toBeGreaterThan(0)
+      expect(food_slugs).toEqual([...new Set(food_slugs)].sort())
+      for (const slug of food_slugs) expect(typeof slug).toBe('string')
+    })
 
-  test('overrides WIN over the legacy production list (the feeding_world_pets v3 fix)', () => {
-    // seed/pets/feeding_world_pets.json pet_modni_lyk: ["barley_flour","orchid_spore_blend"], before: wheat.
-    expect(food_slugs).toContain('barley_flour')
-    expect(food_slugs).toContain('orchid_spore_blend')
-    // "wheat" was the pre-fix RAW gatherable the v3 pass explicitly removed for modni_lyk; it may only be
-    // present if ANOTHER pet's list still carries it — pin the exact current truth: it is not.
-    expect(food_slugs).not.toContain('wheat')
-  })
+    test('overrides WIN over the legacy production list (the feeding_world_pets v3 fix)', () => {
+      // seed/pets/feeding_world_pets.json pet_modni_lyk: ["barley_flour","orchid_spore_blend"], before: wheat.
+      expect(food_slugs).toContain('barley_flour')
+      expect(food_slugs).toContain('orchid_spore_blend')
+      // "wheat" was the pre-fix RAW gatherable the v3 pass explicitly removed for modni_lyk; it may only be
+      // present if ANOTHER pet's list still carries it — pin the exact current truth: it is not.
+      expect(food_slugs).not.toContain('wheat')
+    })
 
-  test('the D757 phantom foods authored 07-17 are resolvable members', () => {
-    expect(food_slugs).toContain('arcane_pastry')
-    expect(food_slugs).toContain('spore_cracker')
-  })
+    test('the D757 phantom foods authored 07-17 are resolvable members', () => {
+      expect(food_slugs).toContain('arcane_pastry')
+      expect(food_slugs).toContain('spore_cracker')
+    })
 
-  test('never contains a pet, only seed RESOURCE rows', () => {
-    expect(food_slugs).not.toContain('pet_modni_lyk')
-    expect(food_slugs.some((slug: string) => slug.startsWith('pet_'))).toBe(false)
-  })
-})
+    test('never contains a pet, only seed RESOURCE rows', () => {
+      expect(food_slugs).not.toContain('pet_modni_lyk')
+      expect(food_slugs.some((slug: string) => slug.startsWith('pet_'))).toBe(false)
+    })
+  }
+)
 
 describe('pet_food_rows — the encyclopedia join (living /v1 rows -> the food rows a pet page lists)', () => {
   const rows = [

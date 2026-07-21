@@ -12,16 +12,23 @@ import en from '../i18n/locales/en.json'
 
 import { shop_item_icon } from './shop_icon'
 import { VitrineCard, type CardItem } from './shop_vitrine'
+import { SHOP_AVAILABLE } from '../test_helpers/shop_fixture.js'
 
 const read_json = (relative_url: string) => JSON.parse(readFileSync(new URL(relative_url, import.meta.url), 'utf8'))
-const shop = read_json('../../../../seed/mainnet/shop.json')
-const pet_boxes = read_json('../../../../seed/mainnet/pet_boxes.json')
+// MISSING-ARTIFACT (#117): seed/mainnet/{shop,pet_boxes}.json is content-pipeline output, absent by design
+// in this public repo — see test_helpers/shop_fixture.js.
+const pet_boxes = SHOP_AVAILABLE ? read_json('../../../../seed/mainnet/pet_boxes.json') : { boxes: [] }
 const asset_manifest = read_json('../../public/asset_manifest.json')
 
-const rows = [
-  ...shop.cosmetics.map((row: Record<string, string>) => ({ ...row, stage: 'mannequin' as const })),
-  ...pet_boxes.boxes.map((row: Record<string, string>) => ({ ...row, stage: 'box' as const })),
-]
+const rows = SHOP_AVAILABLE
+  ? [
+      ...read_json('../../../../seed/mainnet/shop.json').cosmetics.map((row: Record<string, string>) => ({
+        ...row,
+        stage: 'mannequin' as const,
+      })),
+      ...pet_boxes.boxes.map((row: Record<string, string>) => ({ ...row, stage: 'box' as const })),
+    ]
+  : []
 
 const test_i18n = i18next.createInstance()
 test_i18n.use(initReactI18next).init({
@@ -46,7 +53,7 @@ function card_item(row: Record<string, string>): CardItem {
   }
 }
 
-describe('live shop icon resolution', () => {
+describe.skipIf(!SHOP_AVAILABLE)('live shop icon resolution', () => {
   test('all 37 sale templates render their exact published icon URL', () => {
     configure_walrus_assets(asset_manifest)
     expect(rows).toHaveLength(37)

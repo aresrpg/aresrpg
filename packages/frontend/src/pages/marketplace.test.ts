@@ -7,8 +7,12 @@ import { describe, expect, test } from 'bun:test'
 
 const PAGE_PATH = new URL('./marketplace.tsx', import.meta.url)
 const CSS_PATH = new URL('../index.css', import.meta.url)
-const MODE_SWITCH_SHA = 'e93c7e44649df600857476390310c920d722297ba5f7d6e1ec8349d471425d4c'
-const MODE_CSS_SHA = '33ea969eb39a63c45af2dc02e42dd0fcd4df9667a9b8b448628372ab49a2524c'
+// Re-pinned (#117): the public-repo extraction pass (v1.12.36, "AresRPG — fresh public root") shifted bytes
+// in both pinned sections with no functional change — verified against this file's own content assertions
+// (test 3 below, unaffected) plus a manual read of the current source: a complete, correct 4-tab ARIA
+// tablist + its sliding-thumb CSS, no truncation, no leftover private-tree references.
+const MODE_SWITCH_SHA = '288d044e952588fa60f5c83c1bb9104ebb67664a2c14e27ac6dfb5268f89d086'
+const MODE_CSS_SHA = '6e94419f3f069dc49f399dff0e5b7db08e36c254f16da34214fa5f9e6dc87141'
 
 function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex')

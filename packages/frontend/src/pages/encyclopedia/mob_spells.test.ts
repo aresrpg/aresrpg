@@ -8,7 +8,7 @@ import { seed_effect_parts } from '../../game/screens/hud/seed-effect-line.js'
 import en from '../../i18n/locales/en.json'
 
 import { mob_spell_views } from './mob_spells'
-import { mob_corpus_of } from './world_corpus'
+import { mob_corpus_of, authored_content_present } from './world_corpus'
 
 const EN = i18next.createInstance()
 await EN.init({ lng: 'en', resources: { en: { translation: en } }, interpolation: { escapeValue: false } })
@@ -38,16 +38,21 @@ const OP_TO_KIND: Record<string, string> = {
 
 const living_template_ids = Object.values(seed_manifest.mobs).map(({ id }) => id)
 
+// MISSING-ARTIFACT (#117): seed/mainnet/<wid>/{world,mobs,resources}.json is content-pipeline output,
+// absent by design in this public repo — world_corpus's mob_facts_by_id degrades to empty (issue #106).
 describe('mob corpus facts (xp + spell kit)', () => {
-  test('every living mob template resolves authored facts with a real xp and a non-empty kit', () => {
-    expect(living_template_ids.length).toBeGreaterThan(0)
-    for (const id of living_template_ids) {
-      const facts = mob_corpus_of(id)
-      if (!facts) throw new Error(`no authored facts for living template ${id}`)
-      expect(facts.xp).toBeGreaterThan(0)
-      expect(facts.spells.length).toBeGreaterThan(0)
+  test.skipIf(!authored_content_present)(
+    'every living mob template resolves authored facts with a real xp and a non-empty kit',
+    () => {
+      expect(living_template_ids.length).toBeGreaterThan(0)
+      for (const id of living_template_ids) {
+        const facts = mob_corpus_of(id)
+        if (!facts) throw new Error(`no authored facts for living template ${id}`)
+        expect(facts.xp).toBeGreaterThan(0)
+        expect(facts.spells.length).toBeGreaterThan(0)
+      }
     }
-  })
+  )
 
   test('an unknown template id resolves to an honest gap, never fabricated facts', () => {
     expect(mob_corpus_of('0xdead')).toBeUndefined()
@@ -56,33 +61,36 @@ describe('mob corpus facts (xp + spell kit)', () => {
 })
 
 describe('mob spell decode', () => {
-  test('decodes the whole live corpus: kinds match the authored op pairing, wording never leaks a canary or a raw key', () => {
-    let effects_checked = 0
-    for (const id of living_template_ids) {
-      const facts = mob_corpus_of(id)
-      const views = mob_spell_views(facts?.spells)
-      expect(views.length).toBeGreaterThan(0)
-      for (const [spell_index, view] of views.entries()) {
-        expect(view.ap).toBeGreaterThan(0)
-        expect(view.range[0]).toBeLessThanOrEqual(view.range[1])
-        for (const [effect_index, fx] of view.effects.entries()) {
-          effects_checked += 1
-          const authored = facts!.spells[spell_index].effects![effect_index]
-          const expected_kind = OP_TO_KIND[authored.op ?? '']
-          if (!expected_kind) throw new Error(`unmapped authored op '${authored.op}' on template ${id}`)
-          expect(fx.kind).toBe(expected_kind)
-          const parts = seed_effect_parts(t as never, fx)
-          const line = `${parts.pre}${parts.value ?? ''}${parts.post}${parts.meta ?? ''}`
-          expect(parts.pre.startsWith('? ')).toBe(false)
-          expect(line.includes('spells.fx_')).toBe(false)
-          expect(line.includes('stat.')).toBe(false)
-          // seed_effect_value's missing-range placeholder must be unreachable for a decoded mob effect
-          expect(line.includes('—')).toBe(false)
+  test.skipIf(!authored_content_present)(
+    'decodes the whole live corpus: kinds match the authored op pairing, wording never leaks a canary or a raw key',
+    () => {
+      let effects_checked = 0
+      for (const id of living_template_ids) {
+        const facts = mob_corpus_of(id)
+        const views = mob_spell_views(facts?.spells)
+        expect(views.length).toBeGreaterThan(0)
+        for (const [spell_index, view] of views.entries()) {
+          expect(view.ap).toBeGreaterThan(0)
+          expect(view.range[0]).toBeLessThanOrEqual(view.range[1])
+          for (const [effect_index, fx] of view.effects.entries()) {
+            effects_checked += 1
+            const authored = facts!.spells[spell_index].effects![effect_index]
+            const expected_kind = OP_TO_KIND[authored.op ?? '']
+            if (!expected_kind) throw new Error(`unmapped authored op '${authored.op}' on template ${id}`)
+            expect(fx.kind).toBe(expected_kind)
+            const parts = seed_effect_parts(t as never, fx)
+            const line = `${parts.pre}${parts.value ?? ''}${parts.post}${parts.meta ?? ''}`
+            expect(parts.pre.startsWith('? ')).toBe(false)
+            expect(line.includes('spells.fx_')).toBe(false)
+            expect(line.includes('stat.')).toBe(false)
+            // seed_effect_value's missing-range placeholder must be unreachable for a decoded mob effect
+            expect(line.includes('—')).toBe(false)
+          }
         }
       }
+      expect(effects_checked).toBeGreaterThan(400)
     }
-    expect(effects_checked).toBeGreaterThan(400)
-  })
+  )
 
   test('mirrors the mint defaults and merges the same-kind crit effect into crit_base', () => {
     const [view] = mob_spell_views([

@@ -25,6 +25,8 @@ const plan = (over = {}) =>
 // `(template.category || 'CONSUMABLE').toUpperCase()`. Derived, never hardcoded — a new authored category
 // lands in this gate automatically.
 const SEED_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../seed/mainnet')
+// MISSING-ARTIFACT (#117): seed/mainnet is content-pipeline output, absent by design in this public repo.
+const SEED_MAINNET_AVAILABLE = existsSync(SEED_DIR)
 const read_json = (p) => JSON.parse(readFileSync(p, 'utf8'))
 function purchasable_categories() {
   const top = read_json(path.join(SEED_DIR, 'shop.json'))
@@ -42,8 +44,8 @@ function purchasable_categories() {
 // for quantity — previously it only did for lootboxes. The quantity modal is the UNIVERSAL acquire gate: for EVERY
 // purchasable category in the live catalog the plan must be modal intent ({kind:'amount'}) — a direct-PTB
 // straight buy for NONE. The ask is universal: qty-locked rows (supply 1 / one affordable) still ask at max 1.
-describe('plan_purchase — the quantity modal is the universal acquire gate', () => {
-  const categories = purchasable_categories()
+describe.skipIf(!SEED_MAINNET_AVAILABLE)('plan_purchase — the quantity modal is the universal acquire gate', () => {
+  const categories = SEED_MAINNET_AVAILABLE ? purchasable_categories() : []
 
   test('every purchasable category opens the quantity modal — direct-PTB for NONE', () => {
     // Non-degenerate corpus: the box (CONSUMABLE) plus at least one non-stackable (cosmetic/pet/gear) category.

@@ -22,17 +22,23 @@
 //
 // Run with: bun test packages/frontend/src/pages/encyclopedia/item_catalog.test.ts
 
-import { describe, test, expect } from 'bun:test'
+import { existsSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
-import { build_item_catalog } from '../../../../../scripts/lib/item_catalog_transform.mjs'
+import { describe, test, expect } from 'bun:test'
 
 import { make_catalog_lookup } from './item_catalog'
 
-// One live derivation from seed, shared by every assertion (identical to what the Vite virtual module embeds).
-const { catalog, slugs } = build_item_catalog()
+// MISSING-ARTIFACT (#117): scripts/lib/item_catalog_transform.mjs is content-pipeline tooling, absent by
+// design in this public repo — every test below pins real seed content, so the whole file guards together.
+const TRANSFORM_PATH = fileURLToPath(new URL('../../../../../scripts/lib/item_catalog_transform.mjs', import.meta.url))
+const ITEM_CATALOG_TRANSFORM_AVAILABLE = existsSync(TRANSFORM_PATH)
+const { catalog, slugs } = ITEM_CATALOG_TRANSFORM_AVAILABLE
+  ? (await import('../../../../../scripts/lib/item_catalog_transform.mjs')).build_item_catalog()
+  : { catalog: {}, slugs: {} }
 const catalog_for_name = make_catalog_lookup({ catalog, slugs })
 
-describe('catalog_for_name — regression case: Koa Slime Codex', () => {
+describe.skipIf(!ITEM_CATALOG_TRANSFORM_AVAILABLE)('catalog_for_name — regression case: Koa Slime Codex', () => {
   test('resolves EXACTLY its own 3 stats + its own damage line, nothing from another item', () => {
     const tmpl = catalog_for_name('Koa Slime Codex')
     expect(tmpl).toBeDefined()
@@ -51,63 +57,72 @@ describe('catalog_for_name — regression case: Koa Slime Codex', () => {
   })
 })
 
-describe('catalog_for_name — collision guard: the "Koa Slime *" family', () => {
-  // Three distinct items sharing a name prefix, from three different seed worlds/categories. A name- or
-  // index-keyed join is exactly the failure mode that would blur these together; slug-only must not.
-  test("Koa Slime Rod resolves its own earth 10-18 weapon line, not the Codex's", () => {
-    const tmpl = catalog_for_name('Koa Slime Rod')
-    expect(tmpl!.damages).toEqual([{ element: 'EARTH', from: 10, to: 18 }])
-    expect(tmpl!.stats).toEqual({ airResistance: [6, 10], intelligence: [5, 5], agility: [5, 5] })
-  })
-
-  test('Koa Slime Brigandine resolves its own armor stats, no damage line at all', () => {
-    const tmpl = catalog_for_name('Koa Slime Brigandine')
-    expect(tmpl!.damages).toEqual([])
-    expect(tmpl!.stats).toEqual({ intelligence: [5, 5], vitality: [7, 9], waterResistance: [1, 2] })
-  })
-
-  test('all three resolve to distinct catalog rows', () => {
-    const codex = catalog_for_name('Koa Slime Codex')
-    const rod = catalog_for_name('Koa Slime Rod')
-    const brigandine = catalog_for_name('Koa Slime Brigandine')
-    expect(codex!.stats).not.toEqual(rod!.stats)
-    expect(codex!.stats).not.toEqual(brigandine!.stats)
-    expect(rod!.stats).not.toEqual(brigandine!.stats)
-  })
-})
-
-describe('catalog_for_name — a renamed item (L100-200 rename train, 07-13, 336 items)', () => {
-  // packages/move/scripts/out/l100_renames_input.json: slug sundered_vambraces_of_screaming_rift,
-  // old name "The Guards of the Screaming Rift" -> new name "Sundered Vambraces". This item never existed
-  // in the legacy @aresrpg/sdk catalog under EITHER name (it's world 16 content, added long after that
-  // catalog's 2026-06-29 legacy pull) — the old join silently showed it honest-empty; the new one must show
-  // its OWN current stats.
-  test('resolves by its NEW name to its own stats, not honest-empty and not a neighbor', () => {
-    const tmpl = catalog_for_name('Sundered Vambraces')
-    expect(tmpl).toBeDefined()
-    expect(tmpl!.rarity).toBe('epic')
-    expect(tmpl!.item_type).toBe('gauntlets')
-    expect(tmpl).not.toHaveProperty('weapon_class')
-    expect(tmpl!.stats).toEqual({
-      criticalHit: [6, 10],
-      vitality: [51, 100],
-      wisdom: [9, 15],
-      fireResistance: [3, 5],
+describe.skipIf(!ITEM_CATALOG_TRANSFORM_AVAILABLE)(
+  'catalog_for_name — collision guard: the "Koa Slime *" family',
+  () => {
+    // Three distinct items sharing a name prefix, from three different seed worlds/categories. A name- or
+    // index-keyed join is exactly the failure mode that would blur these together; slug-only must not.
+    test("Koa Slime Rod resolves its own earth 10-18 weapon line, not the Codex's", () => {
+      const tmpl = catalog_for_name('Koa Slime Rod')
+      expect(tmpl!.damages).toEqual([{ element: 'EARTH', from: 10, to: 18 }])
+      expect(tmpl!.stats).toEqual({ airResistance: [6, 10], intelligence: [5, 5], agility: [5, 5] })
     })
-  })
 
-  test('the OLD pre-rename name resolves nothing (the name->slug map is keyed by CURRENT live names only)', () => {
-    expect(catalog_for_name('The Guards of the Screaming Rift')).toBeUndefined()
-  })
-})
+    test('Koa Slime Brigandine resolves its own armor stats, no damage line at all', () => {
+      const tmpl = catalog_for_name('Koa Slime Brigandine')
+      expect(tmpl!.damages).toEqual([])
+      expect(tmpl!.stats).toEqual({ intelligence: [5, 5], vitality: [7, 9], waterResistance: [1, 2] })
+    })
 
-describe('catalog_for_name — honest empty (never a fabricated or neighbor value)', () => {
-  test('a name absent from the name->slug map returns undefined', () => {
-    expect(catalog_for_name('Definitely Not A Real Item Name 12345')).toBeUndefined()
-  })
-})
+    test('all three resolve to distinct catalog rows', () => {
+      const codex = catalog_for_name('Koa Slime Codex')
+      const rod = catalog_for_name('Koa Slime Rod')
+      const brigandine = catalog_for_name('Koa Slime Brigandine')
+      expect(codex!.stats).not.toEqual(rod!.stats)
+      expect(codex!.stats).not.toEqual(brigandine!.stats)
+      expect(rod!.stats).not.toEqual(brigandine!.stats)
+    })
+  }
+)
 
-describe('live coverage — the honest number, not the 55% claim', () => {
+describe.skipIf(!ITEM_CATALOG_TRANSFORM_AVAILABLE)(
+  'catalog_for_name — a renamed item (L100-200 rename train, 07-13, 336 items)',
+  () => {
+    // packages/move/scripts/out/l100_renames_input.json: slug sundered_vambraces_of_screaming_rift,
+    // old name "The Guards of the Screaming Rift" -> new name "Sundered Vambraces". This item never existed
+    // in the legacy @aresrpg/sdk catalog under EITHER name (it's world 16 content, added long after that
+    // catalog's 2026-06-29 legacy pull) — the old join silently showed it honest-empty; the new one must show
+    // its OWN current stats.
+    test('resolves by its NEW name to its own stats, not honest-empty and not a neighbor', () => {
+      const tmpl = catalog_for_name('Sundered Vambraces')
+      expect(tmpl).toBeDefined()
+      expect(tmpl!.rarity).toBe('epic')
+      expect(tmpl!.item_type).toBe('gauntlets')
+      expect(tmpl).not.toHaveProperty('weapon_class')
+      expect(tmpl!.stats).toEqual({
+        criticalHit: [6, 10],
+        vitality: [51, 100],
+        wisdom: [9, 15],
+        fireResistance: [3, 5],
+      })
+    })
+
+    test('the OLD pre-rename name resolves nothing (the name->slug map is keyed by CURRENT live names only)', () => {
+      expect(catalog_for_name('The Guards of the Screaming Rift')).toBeUndefined()
+    })
+  }
+)
+
+describe.skipIf(!ITEM_CATALOG_TRANSFORM_AVAILABLE)(
+  'catalog_for_name — honest empty (never a fabricated or neighbor value)',
+  () => {
+    test('a name absent from the name->slug map returns undefined', () => {
+      expect(catalog_for_name('Definitely Not A Real Item Name 12345')).toBeUndefined()
+    })
+  }
+)
+
+describe.skipIf(!ITEM_CATALOG_TRANSFORM_AVAILABLE)('live coverage — the honest number, not the 55% claim', () => {
   test('reports what fraction of live item names now resolve a catalog row', () => {
     const names = Object.keys(slugs as Record<string, string>)
     const resolved = names.filter((n) => {
