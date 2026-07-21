@@ -12,6 +12,7 @@ import {
   humanize_abort,
   humanize_tx_error,
   is_preflight_refusal,
+  is_equip_state_refusal,
   tx_error,
   on_marker_refusal,
   on_maintenance_abort,
@@ -706,6 +707,57 @@ describe('is_preflight_refusal + humanize honesty split (never "failed on-chain"
     expect(humanize_tx_error(sim_err('MoveAbort abort code 105 in actions::abandon'))).toBe(
       i18n.t('errors.abandon_fight_over')
     )
+  })
+})
+
+// ISSUE #15 — "stale-version equipment": the humanized copy for equipment::ETemplateMismatch/item::EPledgeMismatch
+// already existed (TABLE below), but NOTHING classified it as the refresh-fixable local-read-staleness family —
+// lootbox-retry-guard.js's block_equip_retry only latches a digest-proven (gas-burned) failure, so this exact
+// zero-gas refusal reached a dead end (proven by lootbox-retry-guard.test.js's pre-existing
+// "pre-flight refusals without a digest never arm the equip latch" case). is_equip_state_refusal is the new
+// structural classifier the retry-guard's block_equip_state_refresh consumes to arm the SAME refresh affordance
+// honestly (never claims "gas may have spent" for a tx that never signed).
+describe('is_equip_state_refusal (issue #15 — refresh-fixable equip/unequip local-read staleness)', () => {
+  test('recognizes every mapped template/state-mismatch code in the family', () => {
+    expect(is_equip_state_refusal(grpc_abort('equipment', 110))).toBe(true) // ETemplateMismatch
+    expect(is_equip_state_refusal(grpc_abort('item', 101))).toBe(true) // EPledgeMismatch
+    expect(is_equip_state_refusal(grpc_abort('item', 106))).toBe(true) // ETemplateMismatch
+    expect(is_equip_state_refusal(grpc_abort('extract', 101))).toBe(true) // EPledgeMismatch
+  })
+
+  test('does not fire for an unrelated mapped abort, a non-abort error, or nullish input', () => {
+    expect(is_equip_state_refusal(grpc_abort('equipment', 109))).toBe(false) // ELevelTooLow — different family
+    expect(is_equip_state_refusal(new Error('network blip'))).toBe(false)
+    expect(is_equip_state_refusal(null)).toBe(false)
+  })
+
+  test('recognizes the legacy MoveAbort string shape too (both receipt forms, like every TABLE entry)', () => {
+    const legacy = 'MoveAbort(MoveLocation { module: ModuleId { name: Identifier("equipment") } }, 110) ...'
+    expect(is_equip_state_refusal(legacy)).toBe(true)
+  })
+})
+
+// ISSUE #22 sweep finding — world_join.js's sponsored_join() threw `new Error(res.effects.status.error)` where
+// `.error` is the STRUCTURED gRPC/station abort object (the exact shape grpc_abort() mirrors below): the Error
+// constructor coerces a non-string message via ToString → the literal "[object Object]" — and to_message_string's
+// own guard then REFUSES that exact literal, so the mapped abort silently degraded to the generic fallback
+// instead of its specific copy. This proves the mechanical bug the fix (world_join.js now throws
+// `tx_error(res.effects.status.error, { preflight })`) closes — a decoder-level proof, since world_join.js's
+// sponsored path has no existing test seam (auth/execute_sponsored_tx needs a live wallet-standard mock).
+describe('issue #22 — a bare `new Error(structuredAbort)` silently degrades a MAPPED code (world_join.js class)', () => {
+  const structured_abort = grpc_abort('version', 101) // EWrongVersion — a real code a join could hit
+
+  test('RED (the old pattern): new Error(structuredAbort) loses the mapping to the generic line', () => {
+    const old_pattern_error = new Error(structured_abort)
+    expect(old_pattern_error.message).toBe('[object Object]')
+    expect(humanize_tx_error(old_pattern_error)).toBe(i18n.t('errors.tx_failed'))
+    expect(humanize_tx_error(old_pattern_error)).not.toBe(i18n.t('errors.world_version_changed'))
+  })
+
+  test('GREEN (the fix): tx_error(structuredAbort, { preflight }) keeps the specific mapped copy', () => {
+    const fixed = tx_error(structured_abort, { preflight: true })
+    expect(fixed.message).toBe(i18n.t('errors.world_version_changed'))
+    expect(is_preflight_refusal(fixed)).toBe(true) // the honesty split survives the wrap (zero gas, retryable)
   })
 })
 

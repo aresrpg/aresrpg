@@ -434,6 +434,25 @@ export function is_preflight_refusal(error) {
   return /SimulationError/i.test(`${names} ${to_message_string(error, true)}`)
 }
 
+// EQUIP/UNEQUIP LOCAL-READ STALENESS family (issue #15 — "stale-version equipment"): the exact abort codes that
+// mean "the item's ACTUAL on-chain template/state differs from what this client's stale /v1 read believed" —
+// a specific OBJECT drifted under the player (another tab equipped it, a scribe re-rolled it, a stack merged),
+// never a permanently-dead template (that's the CLIENT-SIDE is_living_item gate in equip_version_gate.js, whose
+// build-time seed-manifest pin has no live fix — offering "refresh" there would be a LIE). Every code here is
+// honestly refresh-fixable: a fresh /v1 read (equip_state_refresh.js's reconcile_equip_state) resolves it before
+// the next attempt. STRUCTURAL only (module+code, never message text), mirroring is_preflight_refusal/
+// error_preflight_marked's own "never message text" law.
+/** @param {unknown} error @returns {boolean} */
+export function is_equip_state_refusal(error) {
+  const abort = parse_move_abort(error)
+  if (!abort) return false
+  return (
+    (abort.module === 'equipment' && abort.code === 110) || // ETemplateMismatch — passed template != the item's stamped one
+    (abort.module === 'item' && (abort.code === 101 || abort.code === 106)) || // EPledgeMismatch / ETemplateMismatch
+    (abort.module === 'extract' && abort.code === 101) // EPledgeMismatch — confirm_equip's item id != the pledge's
+  )
+}
+
 // Chain jargon that must NEVER reach a player surface — any string carrying it degrades to the generic line.
 const JARGON_RE =
   /MoveAbort|VMError|InsufficientGas|Identifier\(|MoveLocation|\$kind|CommandArgumentError|0x[0-9a-f]{6,}/i
