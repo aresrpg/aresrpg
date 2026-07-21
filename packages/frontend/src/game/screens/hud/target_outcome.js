@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // PURE projection of a cast prediction onto the hovered target's nameplate — show exactly what will
-// happen: not the range, but damage taken, critical chance, effects, kill. Isolated in its own dependency-free module so
+// happen: not the range, but the exact damage taken, effects, kill. Isolated in its own dependency-free module so
 // the unit test exercises the derivation WITHOUT dragging in the wiring hook's store/auth graph (which needs a
 // browser window). Reads ONLY the prediction's canonical actions (predict_cast → @aresrpg/sim, the ONE damage
-// home) — never a second formula. Both authored branches are folded here: `base` is the guaranteed NON-crit
-// outcome (the head number + the KILLS line), `crit` is the crit branch (the "CRITICAL N% → X" line) when it
-// meaningfully differs — so a crit-capable spell always shows its guaranteed floor AND its crit ceiling.
+// home) — never a second formula. The prediction is the SINGLE resolved outcome (crit or not — a fight is
+// seed-deterministic, so the pending cast's branch is already decided upstream); this folds it into the head
+// number + the KILLS line. Whether it was a crit rides the caller's `is_crit` flag (the head figure's styling),
+// not a second line — the number itself is the crit tell.
 
-const EMPTY_OUTCOME = Object.freeze({ remaining_hp: null, delta: 0, kills: false, displaced_to: null, crit: null })
+const EMPTY_OUTCOME = Object.freeze({ remaining_hp: null, delta: 0, kills: false, displaced_to: null })
 
 export { EMPTY_OUTCOME }
 
@@ -35,27 +36,15 @@ const branch_outcome = (prediction, target_ref, current_hp) => {
 }
 
 /**
- * The hovered target's EXACT predicted outcome, from the non-crit `base` prediction and the optional `crit`
- * prediction (both predict_cast outputs — the SAME sim, one run per branch). The head + KILLS read the base
- * (the guaranteed outcome); `crit` is non-null only when a crit branch exists and its outcome genuinely differs
- * (a bigger hit, or a kill the base doesn't land) — the "CRITICAL … → X / CRIT KILLS" split, never a duplicate
- * line for a spell whose crit changes nothing. Displacement rides the base branch (crit never moves a target
- * differently). @param {{ actions?: any[] } | null} base @param {{ actions?: any[] } | null} crit
- * @param {{ is_mob: boolean, idx: number } | null} target_ref @param {number} current_hp
- * @returns {{ remaining_hp: number|null, delta: number, kills: boolean, displaced_to: number|null,
- *   crit: { delta: number, kills: boolean } | null }}
+ * The hovered target's EXACT predicted outcome from the SINGLE resolved prediction (a predict_cast output — the
+ * ONE sim run on the branch the fight's seed already decided upstream). Folds its Hit into the head number + the
+ * KILLS line and surfaces the Displaced cell. Whether it was a crit is the caller's concern (the head figure's
+ * bold-orange styling), never a second line — one number, deterministic.
+ * @param {{ actions?: any[] } | null} prediction @param {{ is_mob: boolean, idx: number } | null} target_ref
+ * @param {number} current_hp
+ * @returns {{ remaining_hp: number|null, delta: number, kills: boolean, displaced_to: number|null }}
  */
-export const predicted_target_outcome = (base, crit, target_ref, current_hp) => {
+export const predicted_target_outcome = (prediction, target_ref, current_hp) => {
   if (!target_ref) return EMPTY_OUTCOME
-  const b = branch_outcome(base, target_ref, current_hp)
-  const c = crit ? branch_outcome(crit, target_ref, current_hp) : null
-  return {
-    remaining_hp: b.remaining_hp,
-    delta: b.delta,
-    kills: b.kills,
-    displaced_to: b.displaced_to,
-    // the crit line only when a crit outcome actually lands AND it differs from the base (harder hit or a
-    // crit-only kill) — otherwise the crit changes nothing worth its own line.
-    crit: c && c.remaining_hp != null && (c.delta !== b.delta || c.kills !== b.kills) ? { delta: c.delta, kills: c.kills } : null,
-  }
+  return branch_outcome(prediction, target_ref, current_hp)
 }

@@ -11,22 +11,22 @@ import { seed_effect_line } from './seed-effect-line.js'
 
 /**
  * @param {{ team: number, style: any, exiting: boolean, name: string, shown_hp: number,
- *   outcome: any, crit_chance?: number, displacement: any, effects?: any[], t: Function }} props
+ *   outcome: any, is_crit?: boolean, displacement: any, effects?: any[], t: Function }} props
  */
-export function TooltipCard({ team, style, exiting, name, shown_hp, outcome, crit_chance, displacement, effects, t }) {
+export function TooltipCard({ team, style, exiting, name, shown_hp, outcome, is_crit, displacement, effects, t }) {
   const o = outcome ?? EMPTY_OUTCOME
   const dmg = o.delta < 0 ? -o.delta : 0 // life reduction magnitude (red "−N")
   const heal = o.delta > 0 ? o.delta : 0 // heal magnitude (green "+N")
   const push = displacement
-  const crit = o.crit // { delta, kills } | null — the crit branch, only when it differs from the base
-  // the crit swing as a SIGNED string ("−9" a harder hit / "+9" a bigger heal) so a heal-crit never reads "−0".
-  const crit_val = crit ? (crit.delta < 0 ? `−${-crit.delta}` : `+${crit.delta}`) : ''
-  const chance = crit_chance ?? 0
   const fx_lines = effects ?? [] // secondary effects (DoT/states/buffs) — the immediate hit rides the head
-  const has_preview = o.kills || crit || push || fx_lines.length > 0
+  const has_preview = o.kills || push || fx_lines.length > 0
+  // DETERMINISTIC CRIT (#163): a crit is a FACT, not a chance — owner's ruling is to show it IN the (−X), bold +
+  // orange, with NO second line. The resolved life-swing already IS the crit number; the modifier is the whole
+  // tell. (A crit heal takes the same modifier — a crit is a crit whichever way the life swings.)
+  const crit_mod = is_crit ? ' ent-tt__delta--crit' : ''
 
-  // The head line (name + tweened hp + the predicted non-crit life-swing) plus, while aiming, the
-  // kill / crit / effect / displacement lines.
+  // The head line (name + tweened hp + the predicted life-swing; a crit paints the figure orange). While aiming,
+  // the kill / effect / displacement lines follow — the crit no longer earns a line of its own.
   return (
     <div className={`ent-tt ${team === 0 ? 'ally' : 'enemy'}${exiting ? ' ent-tt--out' : ''}`} style={style}>
       <div className="ent-tt__head">
@@ -34,20 +34,13 @@ export function TooltipCard({ team, style, exiting, name, shown_hp, outcome, cri
         <span className="ent-tt__name">{name || t('fight.fighter')}</span>
         <span className="ent-tt__hp-paren">
           ({shown_hp}
-          {dmg > 0 && <span className="ent-tt__delta ent-tt__delta--dmg"> −{dmg}</span>}
-          {heal > 0 && <span className="ent-tt__delta ent-tt__delta--heal"> +{heal}</span>})
+          {dmg > 0 && <span className={`ent-tt__delta ent-tt__delta--dmg${crit_mod}`}> −{dmg}</span>}
+          {heal > 0 && <span className={`ent-tt__delta ent-tt__delta--heal${crit_mod}`}> +{heal}</span>})
         </span>
       </div>
       {has_preview && (
         <div className="ent-tt__preview">
           {o.kills && <div className="ent-tt__kill">{t('fight.predicted_kill')}</div>}
-          {crit && (
-            <div className="ent-tt__crit">
-              {crit.kills
-                ? t('fight.predicted_crit_kill', { chance })
-                : t('fight.predicted_crit', { chance, value: crit_val })}
-            </div>
-          )}
           {fx_lines.map((fx, i) => (
             <div key={i} className="ent-tt__fx">
               {seed_effect_line(t, fx)}

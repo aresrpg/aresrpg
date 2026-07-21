@@ -80,9 +80,7 @@
     "weapon_reach": "Reichweite",
     "on_cooldown": "Abklingzeit — {{n}} Runde(n)",
     "casts_exhausted": "Keine Einsätze mehr in dieser Runde",
-    "predicted_kill": "TÖTET DAS MONSTER",
-    "predicted_crit": "KRITISCH {{chance}} % → {{value}}",
-    "predicted_crit_kill": "KRITISCH {{chance}} % → TÖTET"
+    "predicted_kill": "TÖTET DAS MONSTER"
   },
   "nav": {
     "world": "Welt",

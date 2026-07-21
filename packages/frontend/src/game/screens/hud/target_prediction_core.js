@@ -12,17 +12,15 @@ import { WEAPON_ATTACK_ID } from '@aresrpg/fight/weapon'
 import { encode } from '@aresrpg/fight/los'
 
 import { fight_spell } from './fight-spells.js'
+import { next_slot_crit, socket_glows } from './deck-crit-glow.js'
 
-export const EMPTY_PREDICTION = Object.freeze({ base: null, crit: null, crit_chance: 0, effects: [], target_ref: null })
+export const EMPTY_PREDICTION = Object.freeze({ prediction: null, is_crit: false, effects: [], target_ref: null })
 
 // Effect kinds already shown by the head life-swing (immediate hp) or the push/pull line — excluded from the
 // itemised "effects the cast applies" list so a plain damage spell doesn't repeat its number as a ranged row
 // (the authored range was the original bug). Everything else (DoT, states, stat/point changes, buffs)
 // is the "what else" the cast does and rides the shared effect formatter in the card.
 const HEAD_OR_MOVE_KINDS = new Set(['DAMAGE', 'HEAL', 'PERCENT_LIFE', 'LIFE_STEAL', 'PUSH', 'PULL', 'TELEPORT'])
-
-/** crit RATE (1-in-X, 0 = never) → the shown crit CHANCE percent (mirrors spell_formula::crit_at's bp threshold). */
-export const crit_percent = (crit_rate) => (crit_rate > 0 ? Math.round(10000 / crit_rate) / 100 : 0)
 
 /**
  * The armed id → { sim template, crit rate, secondary effect rows, AP cost }. The WEAPON strike prices off the
@@ -66,22 +64,22 @@ export const resolve_dungeon_ref = (dungeon, fighter_id) => {
 }
 
 /**
- * The live prediction of the armed spell on the hovered target. Runs predict_cast TWICE — critical:false for the
- * guaranteed `base` outcome, critical:true for the `crit` outcome (only when the spell can crit) — so the card
- * shows the non-crit floor AND the crit ceiling. Both bypass the turn-seed clock (a preview is a planning aid,
- * not the live roll): the base is ALWAYS resolvable, never the crit-null blank. Returns EMPTY_PREDICTION whenever
- * nothing is armed / hovered / it is not a live dungeon fight — OR the armed action isn't castable RIGHT NOW
- * (not my turn, mid-presentation, or its AP cost is no longer affordable). CRIT-DISPLAY BUG: armed_spell_id
- * survives turns and spent AP by design (store.js clears it ONLY on an actual Cast — a re-arm-free convenience
- * for next turn), so without this gate a spell armed-but-never-fired keeps forecasting a crit CHANCE against
- * whatever you're hovering — including mid the opponent's turn, or the instant your OWN last action (a different
- * cast, a move) spends the AP this one needed — reading exactly like a probability attached to a hit that
- * already landed. Mirrors the identical two facts @aresrpg/fight/project.turn_input_armed + the adapter's
- * wash_armed_spell already gate the board's OWN targeting-range wash on — never a heuristic, the same pipeline.
- * @param {{ fight: any, hover: any, dungeon: any }} args
- * @returns {{ base: any, crit: any, crit_chance: number, effects: any[], target_ref: { is_mob: boolean, idx: number } | null }}
+ * The live prediction of the armed spell on the hovered target — the SINGLE resolved outcome the chain will
+ * settle. A fight is seed-deterministic, so whether the pending cast crits is a FACT, not a chance: predict_cast
+ * runs ONCE on the resolved branch (`is_crit`), and the card shows exactly that number — no base/crit pair, no
+ * probability line. Returns EMPTY_PREDICTION whenever nothing is armed / hovered / it is not a live dungeon fight
+ * — OR the armed action isn't castable RIGHT NOW (not my turn, mid-presentation, or its AP cost is no longer
+ * affordable). CRIT-DISPLAY GATE: armed_spell_id survives turns and spent AP by design (store.js clears it ONLY
+ * on an actual Cast — a re-arm-free convenience for next turn), so without this gate a spell armed-but-never-fired
+ * keeps forecasting against whatever you're hovering — including mid the opponent's turn, or the instant your OWN
+ * last action (a different cast, a move) spends the AP this one needed. Mirrors the identical two facts
+ * @aresrpg/fight/project.turn_input_armed + the adapter's wash_armed_spell already gate the board's OWN
+ * targeting-range wash on — never a heuristic, the same pipeline.
+ * @param {{ fight: any, hover: any, dungeon: any, draft_len?: number }} args  draft_len = the live AP-queue cast
+ *   count (dungeon-turn cast_path) so the pending cast's crit slot advances with the draft, exactly like the glow.
+ * @returns {{ prediction: any, is_crit: boolean, effects: any[], target_ref: { is_mob: boolean, idx: number } | null }}
  */
-export const compute_target_prediction = ({ fight, hover, dungeon }) => {
+export const compute_target_prediction = ({ fight, hover, dungeon, draft_len = 0 }) => {
   const armed = fight?.armed_spell_id ?? null
   const caster_id = fight?.my_entity_id ?? null
   const hovered_id = hover?.entity_id ?? null
@@ -108,17 +106,30 @@ export const compute_target_prediction = ({ fight, hover, dungeon }) => {
     const stat_row = ref?.is_mob ? dungeon.mobs?.[ref.idx] : dungeon.escrow?.[ref?.idx]
     return { agility: Number(stat_row?.agility ?? 0) }
   }
+  // DETERMINISTIC CRIT (#163): a fight is seed-deterministic, so whether THIS pending cast crits is a FACT
+  // computable pre-cast — never a chance. It lands on the NEXT turn-seed slot (my committed casts_this_turn + the
+  // live AP-queue draft), the EXACT slot the DeckCluster socket glow previews. next_slot_crit / socket_glows
+  // (deck-crit-glow.js → @aresrpg/sim) is the ONE crit-slot home, so the tooltip and the glow can never disagree
+  // and both mirror what the chain settles. Seed-less / off-turn ⇒ the roll is unknown ⇒ the honest non-crit branch.
+  const crit_slot = next_slot_crit({
+    my_turn: true, // past the turn-ownership gate above
+    world_seed: dungeon.world_seed,
+    spawn_id: dungeon.spawn_id,
+    turn_deadline_ms: dungeon.turn_deadline_ms || null, // 0 = unstamped (placement) — never a valid seed input
+    seat: me?.seat ?? null,
+    casts_this_turn: Number(me?.casts_this_turn ?? 0),
+    draft_len,
+  })
+  const is_crit = !!crit_slot && socket_glows(crit_slot.crit_roll, crit_rate)
+
   // engine_view fighter cells are DECODED {x,y}; predict_cast's target_cell is an ENCODED int (it decode()s it),
   // so encode here — passing the raw {x,y} decode()s to NaN → an off-board target → no Hit (the live-silence bug).
   const target_cell = encode(target.cell.x, target.cell.y)
-  const cast = (critical) =>
-    predict_cast({ view: fight, caster_id, spell: template, target_cell, critical, resolve_ref, stats_of })
-
-  const crit_chance = crit_percent(crit_rate)
+  // Run the ONE damage home ONCE, on the RESOLVED branch — the exact number the chain lands, never a base+crit
+  // pair, never a probability. `critical` is an explicit boolean, so predict_cast skips its own turn-seed clock.
   return {
-    base: cast(false),
-    crit: crit_chance > 0 ? cast(true) : null,
-    crit_chance,
+    prediction: predict_cast({ view: fight, caster_id, spell: template, target_cell, critical: is_crit, resolve_ref, stats_of }),
+    is_crit,
     effects: effects.filter((fx) => !HEAD_OR_MOVE_KINDS.has(fx.kind)),
     target_ref,
   }
