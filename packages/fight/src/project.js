@@ -358,7 +358,9 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       mp_max: row.base_mp,
       level: 1,
       is_player: true,
-      dead: !death_hold.has(entity_id) && (f.hp != null ? !f.alive : !row.alive),
+      dead:
+        !death_hold.has(entity_id) &&
+        ((s.busy && s.optimistic_dead?.[seat_key(seat)] != null) || (f.hp != null ? !f.alive : !row.alive)),
       class_id: row.classe || undefined,
       hue: 0, // was color_to_hue(0) ≡ 0 — a constant call; the game/data/color edge died with the promotion
       colors: null,
@@ -387,7 +389,9 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       mp_max: m.base_mp ?? 0,
       level: m.level || 1,
       is_player: false,
-      dead: !death_hold.has(`mob-${i}`) && (f.hp != null ? !f.alive : !m.alive),
+      dead:
+        !death_hold.has(`mob-${i}`) &&
+        ((s.busy && s.optimistic_dead?.[mob_key(i)] != null) || (f.hp != null ? !f.alive : !m.alive)),
       element: m.element,
       invisible: !!f.invisible,
     })

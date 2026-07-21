@@ -133,6 +133,9 @@ const empty_fight = () => ({
   // (fold.apply_retirement), so no later higher-version read carrying a positive hp can resurrect a floor-dead
   // fighter (the resurrection root, symptom ②). Cleared per init (a new fight); never pruned by a snapshot adopt.
   retired: {},
+  optimistic_dead: {}, // #170 intent-death latch (key → { seq }) — tracks a predicted death so a stale poll that
+  // purged the prediction can't resurrect it; released when receipt_seq advances, and only HELD to the eye while
+  // `busy` (commit in-flight — else a fresh kill-less read authoritatively restores the mob, kill_adoption LEG A)
   wave_seq: 0,
   presented_seq: 0, // renderer ack floor — `presenting` = wave_seq > presented_seq (derived, never a latch)
   pending_snapshot: null, // a fresher object read deferred while a remote wave drains (adopts at final ack)

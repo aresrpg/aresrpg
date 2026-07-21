@@ -296,11 +296,30 @@ export const recompute = (draft, now) => {
       ([character, ghost]) => !placed_characters.has(character) && now - ghost.at < GHOST_STALE_MS
     )
   )
+  // #170 OPTIMISTIC-DEATH LATCH — an INTENT-predicted death is (by design) never floored into `retired`: intents
+  // are predictions. But a version-inflated yet semantically STALE poll (it read the Fight OBJECT before my commit
+  // landed, mob still alive) purges the intent and the corpse STANDS BACK UP — then dies a SECOND time when my
+  // commit receipt confirms the kill (the double-death, 3rd recurrence). This TRACKS every optimistic death (key →
+  // the receipt_seq it was predicted under) and CARRIES it across the intent-purging poll; `receipt_seq` advances
+  // ONLY on a receipt (never a poll), so a stale poll cannot clear it, and MY-TURN RECEIPT releases it — a CONFIRMED
+  // kill then rides `retired` (dropped here as redundant), a MISPREDICTED one (a resisted survivor the raw-base
+  // prediction over-killed — apply_resistance shaves chain damage) evaporates. The latch is only APPLIED to the eye
+  // (project engine_view.dead) while a commit is IN-FLIGHT (`busy`): with NO commit pending a fresh chain read that
+  // lacks the kill is AUTHORITATIVE and must restore the mob (a reverted/force-passed tx — kill_adoption LEG A), so
+  // gating the hold on `busy` is what distinguishes "the kill is coming" from "the kill never landed". Presentation
+  // only — committed/targeting read the honest fold, so a held corpse is never castable.
+  const optimistic_dead = {}
+  for (const [key, entry] of Object.entries(draft.optimistic_dead ?? {}))
+    if (entry.seq === draft.receipt_seq && retired[key] == null) optimistic_dead[key] = entry
+  for (const [key, f] of Object.entries(committed.fighters ?? {}))
+    if (f.alive === false && retired[key] == null && optimistic_dead[key] == null)
+      optimistic_dead[key] = { seq: draft.receipt_seq }
   return {
     ...draft,
     ...committed,
     fighters: apply_retirement(committed.fighters, retired),
     retired,
+    optimistic_dead,
     settlement,
     applied_version,
     log,
