@@ -243,6 +243,21 @@ describe('FightReport — the loot D53 letter-tile fallback (an orphaned drop, m
 // `coiffe_fuwa-white.png` → quilt `GFwmQjUVLPrqanmZV1m2qVW7fEqqE_Utn7wvNawNPx0` → HTTP 200). The loot
 // card was never wired to the fix that already ships on every other icon surface.
 describe('FightReport — loot tile icon resolution routes through the SAME shared resolver as the inventory (never a raw item_type bypass)', () => {
+  test('a published RESOURCE renders its exact manifest art, never the generic resource package', () => {
+    const template_id = '0xe13df92cf1acbe2c40280378bbfe0cac06ae599fece8b03edca667f9a7a4557b'
+    const items = [
+      { template_id, item_type: 'resource', name: 'Obsidian Core', item_category: 'resource' },
+    ]
+    const spoils = {
+      xp: 10,
+      tokens: 0,
+      loot: [{ template_id, item_type: 'resource', name: 'Obsidian Core', amount: 2 }],
+    }
+    const html = renderToStaticMarkup(<FightReport {...base} spoils={spoils} items={items} cost={null} />)
+    expect(html).toContain('/assets/items/obsidian_core.png')
+    expect(html).not.toContain('/assets/items/resource.png')
+  })
+
   test('a cosmetic drop resolves its icon via inventory_item_icon\'s cosmetic alias, not the raw on-chain slot word', () => {
     // items[] carries the bag match (template_map is unreachable here — FightReport hydrates it via an
     // internal useEffect that never fires under renderToStaticMarkup) so `resolved` is true and the
@@ -302,15 +317,16 @@ describe('FightReport — party/enemy names resolve through the ONE HOME, never 
   })
 })
 
-describe('FightReport — fight duration (mm:ss, house format via compass_math.format_mmss)', () => {
-  test('duration_ms > 0 renders mm:ss in the header sub-line', () => {
-    const html = renderToStaticMarkup(<FightReport {...base} duration_ms={154000} cost={null} />) // 2:34
-    expect(html).toContain('2:34')
-  })
-
-  test('no duration source (0/absent) renders nothing extra — never a fake 00:00', () => {
-    const html = renderToStaticMarkup(<FightReport {...base} cost={null} />)
-    expect(html).not.toMatch(/\d+:\d{2}/)
+describe('FightReport — fight duration micro-label (timeline span, total mm:ss)', () => {
+  test.each([
+    [0, '0:00', 'zero-second timeline'],
+    [42_000, '0:42', 'sub-minute timeline'],
+    [3_661_000, '61:01', 'over-one-hour timeline'],
+  ])('%s ms renders %s for a %s', (duration_ms, expected) => {
+    const html = renderToStaticMarkup(<FightReport {...base} duration_ms={duration_ms} cost={null} />)
+    expect(html).toContain('fight_end.duration')
+    expect(html).toContain(expected)
+    expect(html).toContain('fe-duration')
   })
 
   // recap-truth lane: a resume/poll-adopt captures fight_started_at_ms AFTER the fight already started, so

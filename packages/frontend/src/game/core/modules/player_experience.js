@@ -32,7 +32,9 @@ const refresh_fight_character = (target) =>
  * declaration (the settlement receipt) by `loot_from_rolled` (world-shell/fight_result_receipt.js, the
  * receipt-parse home), NEVER from an inventory diff (the v30 receipt law).
  * @typedef {object} FightLoot
- * @property {string} item_type   template slug of the dropped item (icon/tooltip key)
+ * @property {string} [template_id] exact ItemTemplate id when the FightResult object read has landed;
+ *   event-floor rows lack one
+ * @property {string} item_type   dropped item's on-chain class/legacy slug (exact identity is template_id)
  * @property {string} name        display name (from the item template row)
  * @property {number} amount      quantity the chain rolled this fight
  */

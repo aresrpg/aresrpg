@@ -69,3 +69,52 @@ describe('resolve_loot_tile — the tooltip never lies about what it knows', () 
     expect(out.detail.description).toBe('A worn blade.')
   })
 })
+
+describe('resolve_loot_tile — exact RESOURCE art + template characteristics', () => {
+  const template_id = '0xe13df92cf1acbe2c40280378bbfe0cac06ae599fece8b03edca667f9a7a4557b'
+  const entry = { template_id, item_type: 'resource', name: 'Obsidian Core', amount: 2 }
+  const items = [
+    {
+      id: '0xitem',
+      template_id,
+      item_type: 'resource',
+      item_category: 'resource',
+      name: 'Obsidian Core',
+    },
+  ]
+  const template_map = new Map([
+    [
+      template_id,
+      {
+        id: template_id,
+        item_type: 'resource',
+        category: 'RESOURCE',
+        name: 'Obsidian Core',
+        statsJson: JSON.stringify({ vitality: [4, 9], wisdom: [1, 3] }),
+      },
+    ],
+  ])
+
+  test('a published RESOURCE uses its exact render slug, never the generic resource box', () => {
+    const out = resolve_loot_tile(entry, items, template_map, undefined, t, {
+      [template_id]: 'obsidian_core',
+    })
+
+    expect(out.icon).toBe('obsidian_core')
+    expect(out.icon).not.toBe('resource')
+  })
+
+  test('the exact chain template supplies the hover CHARACTERISTICS stats', () => {
+    const out = resolve_loot_tile(entry, items, template_map, undefined, t, {
+      [template_id]: 'obsidian_core',
+    })
+
+    expect(out.detail.stats).toEqual({ vitality: [4, 9], wisdom: [1, 3] })
+  })
+
+  test('an unpublished RESOURCE keeps the honest resource glyph fallback', () => {
+    const out = resolve_loot_tile(entry, items, template_map, undefined, t, {})
+    expect(out.icon).toBeNull()
+    expect(out.category).toBe('resource')
+  })
+})

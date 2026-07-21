@@ -197,8 +197,8 @@ describe('loot_from_rolled — the FightResult receipt maps to the card lines, X
         templates
       )
     ).toEqual([
-      { item_type: 'razkin_hide', name: 'Razkin Hide', amount: 2 },
-      { item_type: 'razkin_fang', name: 'Razkin Fang', amount: 1 },
+      { template_id: '0xT_HIDE', item_type: 'razkin_hide', name: 'Razkin Hide', amount: 2 },
+      { template_id: '0xT_FANG', item_type: 'razkin_fang', name: 'Razkin Fang', amount: 1 },
     ])
   })
 
@@ -211,12 +211,31 @@ describe('loot_from_rolled — the FightResult receipt maps to the card lines, X
         ],
         templates
       )
-    ).toEqual([{ item_type: 'razkin_hide', name: 'Razkin Hide', amount: 3 }])
+    ).toEqual([{ template_id: '0xT_HIDE', item_type: 'razkin_hide', name: 'Razkin Hide', amount: 3 }])
+  })
+
+  it('distinct RESOURCE templates stay distinct even when their item_type class is identical', () => {
+    const resources = new Map([
+      ['0xCORE', { item_type: 'resource', name: 'Obsidian Core' }],
+      ['0xFIBER', { item_type: 'resource', name: 'Ancient Fiber' }],
+    ])
+    expect(
+      loot_from_rolled(
+        [
+          { item_template: '0xCORE', qty: 2 },
+          { item_template: '0xFIBER', qty: 1 },
+        ],
+        resources
+      )
+    ).toEqual([
+      { template_id: '0xCORE', item_type: 'resource', name: 'Obsidian Core', amount: 2 },
+      { template_id: '0xFIBER', item_type: 'resource', name: 'Ancient Fiber', amount: 1 },
+    ])
   })
 
   it('a template the map cannot resolve keeps its RAW id as the key (D53 letter tile) — never dropped, never guessed', () => {
     expect(loot_from_rolled([{ item_template: '0xUNKNOWN', qty: 1 }], new Map())).toEqual([
-      { item_type: '0xUNKNOWN', name: '', amount: 1 },
+      { template_id: '0xUNKNOWN', item_type: '0xUNKNOWN', name: '', amount: 1 },
     ])
   })
 
@@ -234,7 +253,9 @@ describe('loot_from_rolled — the FightResult receipt maps to the card lines, X
     slice = fold(slice, 'action/fight_result/loot', {
       loot: loot_from_rolled([{ item_template: '0xT_HIDE', qty: 2 }], templates),
     })
-    expect(slice.loot).toEqual([{ item_type: 'razkin_hide', name: 'Razkin Hide', amount: 2 }]) // X, exactly
+    expect(slice.loot).toEqual([
+      { template_id: '0xT_HIDE', item_type: 'razkin_hide', name: 'Razkin Hide', amount: 2 },
+    ]) // X, exactly
     expect(JSON.stringify(slice)).not.toContain('modny') // the bag pet has NO path into the slice
   })
 })
