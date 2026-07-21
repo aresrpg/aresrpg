@@ -295,16 +295,20 @@ describe('viewport and mobile-style isolation', () => {
   })
 
   // #237: the minimap remains flush, but the app-wide toast layer gets its own small viewport inset. Its
-  // width subtracts both 8px edges so the inset cannot reintroduce narrow-screen overflow.
-  test('the app-wide toast stack remains an inset, bounded minimap overlay on mobile', async () => {
+  // fixed, clipped layer bounds both the width and the entrance transform so neither can grow page overflow.
+  test('the app-wide toast stack remains an inset, contained minimap overlay on mobile', async () => {
     const { TOAST_CONTAINER_CLASS } = await import('../../../toast')
     const app = read_fixture('../../../app.tsx')
     const toasts_fn = app.match(/function Toasts\(\)[\s\S]*?\n\}/)?.[0] ?? ''
 
-    expect(TOAST_CONTAINER_CLASS).toContain('absolute')
+    expect(TOAST_CONTAINER_CLASS).toContain('fixed')
     expect(TOAST_CONTAINER_CLASS).toContain('top-2')
     expect(TOAST_CONTAINER_CLASS).toContain('right-2')
     expect(TOAST_CONTAINER_CLASS).toContain('max-w-[min(24rem,calc(100vw-1rem))]')
+    expect(TOAST_CONTAINER_CLASS).toContain('max-h-[calc(100dvh-1rem)]')
+    expect(TOAST_CONTAINER_CLASS).toContain('items-end')
+    expect(TOAST_CONTAINER_CLASS).toContain('overflow-hidden')
+    expect(TOAST_CONTAINER_CLASS).not.toContain('absolute')
     expect(TOAST_CONTAINER_CLASS).not.toContain('top-0')
     expect(TOAST_CONTAINER_CLASS).not.toContain('right-0')
     expect(TOAST_CONTAINER_CLASS).not.toContain('max-lg:top-')

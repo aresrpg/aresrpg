@@ -329,7 +329,7 @@ html.ares-mobile-hud .mmx-tip {
      viewport formula (same file) so the cap holds even if the parent .gw-toasts width rule ever changes. */
   min-width: 0;
   max-width: calc(100vw - max(6px, var(--safe-left)) - max(6px, var(--safe-right)));
-  border-radius: 0;
+  border-radius: 7px;
   font-size: 9px;
   text-align: center;
   overflow-wrap: break-word;

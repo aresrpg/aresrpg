@@ -101,23 +101,32 @@ describe('version badge', () => {
 // #237: the app toast layer overlays the minimap corner without inheriting the minimap's flush-to-viewport rule.
 // Position and card styling live in toast.ts so the contract stays testable without app.tsx's Vite graph.
 describe('toast minimap overlay', () => {
-  test('is inset from the top-right viewport edge while retaining a bounded width', () => {
+  test('is fixed and inset from the top-right viewport edge while retaining a bounded width', () => {
     expect(TOAST_CONTAINER_CLASS).not.toContain('max-w-none')
     expect(TOAST_CONTAINER_CLASS).toContain('max-w-[min(24rem,calc(100vw-1rem))]')
-    expect(TOAST_CONTAINER_CLASS).toContain('absolute')
+    expect(TOAST_CONTAINER_CLASS).toContain('fixed')
     expect(TOAST_CONTAINER_CLASS).toContain('top-2')
     expect(TOAST_CONTAINER_CLASS).toContain('right-2')
     expect(TOAST_CONTAINER_CLASS).not.toContain('top-0')
     expect(TOAST_CONTAINER_CLASS).not.toContain('right-0')
-    expect(TOAST_CONTAINER_CLASS).not.toContain('fixed')
+    expect(TOAST_CONTAINER_CLASS).not.toContain('absolute')
   })
 
-  test('uses sibling-card padding, translucent near-black glass, a white/10 hairline, blur, and sharp corners', () => {
-    expect(toast_glass_class).toContain('p-3')
+  test('uses comfortable padding, translucent near-black glass, a white/10 hairline, blur, and slight rounding', () => {
+    expect(toast_glass_class).toContain('p-4')
+    expect(toast_glass_class).not.toContain('p-3')
     expect(toast_glass_class).toContain('bg-black/70')
     expect(toast_glass_class).toContain('backdrop-blur-md')
     expect(toast_glass_class).toContain('border-white/10')
-    expect(toast_glass_class).toContain('rounded-none')
+    expect(toast_glass_class).toContain('rounded-[7px]')
+    expect(toast_glass_class).not.toContain('rounded-none')
+  })
+
+  test('contains the transform-based entrance inside the fixed viewport layer', () => {
+    expect(TOAST_CONTAINER_CLASS).toContain('items-end')
+    expect(TOAST_CONTAINER_CLASS).toContain('overflow-hidden')
+    expect(TOAST_CONTAINER_CLASS).toContain('max-h-[calc(100dvh-1rem)]')
+    expect(toast_glass_class).toContain('animate-[slide-in_0.3s_ease-out]')
   })
 
   test('app.tsx consumes the shared position and glass homes', () => {

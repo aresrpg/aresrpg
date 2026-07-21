@@ -7,13 +7,14 @@ import { game_log } from './core/log.js'
 import { report_error } from './core/report.js'
 import { humanize_tx_error } from './game/core/abort_copy.js'
 
-// The app toast layer overlays the top-right minimap without inheriting its flush-corner rule. Its position
-// and glass recipe live here so app.tsx's Vite-only graph never has to be imported by the contract tests.
+// The fixed app-toast layer overlays the top-right minimap without inheriting its flush-corner rule. It clips
+// the transform-based entrance inside a viewport-bounded box, so an entering card can never grow page overflow.
+// Position and glass live here so app.tsx's Vite-only graph never has to be imported by the contract tests.
 export const TOAST_CONTAINER_CLASS =
-  'absolute top-2 right-2 z-50 flex flex-col gap-2 max-w-[min(24rem,calc(100vw-1rem))]'
+  'fixed top-2 right-2 z-50 flex max-h-[calc(100dvh-1rem)] max-w-[min(24rem,calc(100vw-1rem))] flex-col items-end gap-2 overflow-hidden'
 
 export const toast_glass_class =
-  'flex flex-col gap-2 p-3 border border-white/10 bg-black/70 backdrop-blur-md rounded-none animate-[slide-in_0.3s_ease-out]'
+  'flex flex-col gap-2 p-4 border border-white/10 bg-black/70 backdrop-blur-md rounded-[7px] animate-[slide-in_0.3s_ease-out]'
 
 export function resolve_message(code: string): string {
   const key = `toast.${code}`
