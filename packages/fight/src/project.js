@@ -20,7 +20,14 @@ import { rng_next, rng_seed } from '@aresrpg/sim/prng'
 
 import { GRID_W, GRID_H, decode as decode_xy, encode as encode_xy, bfsReachable } from './los.js'
 import { participant_entity_id, participant_character_id } from './fight_control.js'
-import { committed_state, display_state, PLAYER_TURN_FLOOR_MS, presented_state, fight_store } from './store.js'
+import {
+  claimed_budget_state,
+  committed_state,
+  display_state,
+  PLAYER_TURN_FLOOR_MS,
+  presented_state,
+  fight_store,
+} from './store.js'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
 
 export const DUNGEON_BOARD_ORIGIN = { x: 0, y: 0 }
@@ -179,6 +186,26 @@ export const can_end_turn = (state, now = Date.now()) =>
 
 const seat_key = (seat) => `p${seat}`
 const mob_key = (idx) => `m${idx}`
+const positive_delta = (value, base) => {
+  const delta = Number(value) - Number(base)
+  return Number.isFinite(delta) ? Math.max(0, delta) : 0
+}
+
+/** MP from this seat's still-live prediction rows. Unlike a spell-template/cast-path sum this is keyed by the
+ * core's per-cast intent batches, so M2b claim retirement removes exactly the confirmed cast and leaves unrelated
+ * pending grants intact. @param {any[]} log @param {number} seat */
+const drafted_mp_grant = (log, seat) =>
+  (log ?? []).reduce(
+    (sum, e) =>
+      e.source === 'intent' &&
+      e.kind === 'Granted' &&
+      Number(e.point_kind) === 1 &&
+      !e.target_is_mob &&
+      Number(e.target_idx) === seat
+        ? sum + (Number(e.granted) || 0)
+        : sum,
+    0
+  )
 
 /** A mob's authoritative HP: snapshot + peer/receipt tail, with this client's optimistic intents excluded. */
 export const committed_mob_hp = (state, idx) => committed_state(state).fighters?.[mob_key(idx)]?.hp ?? null
@@ -239,15 +266,27 @@ export const board_view = (s) => {
   const p = presented_state(s)
   const d = display_state(s) // DISPLAY cell only — holds an in-flight walk at its pre-move cell (SNAP-THEN-RUN)
   const c = committed_state(s)
+  const budget = claimed_budget_state(s)
   const escrow = (view.escrow ?? []).map((row, seat) => {
     const cf = c.fighters?.[seat_key(seat)]
+    const bf = budget.fighters?.[seat_key(seat)]
+    const canonical_ap = cf?.ap ?? row.ap
+    const canonical_mp = cf?.mp ?? row.mp
+    const budget_ap = bf?.ap ?? canonical_ap
+    const budget_mp = bf?.mp ?? canonical_mp
     // The seat's CHAIN-COMMITTED anchor (my drafted intents excluded): the pool DungeonBoard's draft math
-    // subtracts its OWN cast_path/move_path ledger from, and the cell its whole-path recharge/undo walk-back
-    // measure from. Never the presented values below — those already fold the draft's ap_cost/mp_left intents,
-    // so budgeting against them counts every queued action TWICE (the gate9 one-cast-per-turn P1).
+    // subtracts its OWN cast_path/move_path ledger from. Accepted chain-silent point grants join ONLY the AP/MP
+    // budget: their Cast/sibling claim is authoritative enough for legality, but they remain outside canonical
+    // history. `pending_mp` is the exact per-intent remainder after M2b claim retirement; DungeonBoard uses it
+    // instead of correlating an aggregate claimed delta against spell templates.
+    // Cell/HP remain strictly canonical. Never use the presented values below — those already fold the draft's
+    // ap_cost/mp_left intents, so budgeting against them counts every queued action TWICE (gate9 P1).
     const committed = {
-      ap: cf?.ap ?? row.ap,
-      mp: cf?.mp ?? row.mp,
+      ap: budget_ap,
+      mp: budget_mp,
+      claimed_ap: positive_delta(budget_ap, canonical_ap),
+      claimed_mp: positive_delta(budget_mp, canonical_mp),
+      pending_mp: drafted_mp_grant(s.log, seat),
       cell: cf?.cell ?? row.cell,
       hp: cf?.hp ?? row.hp,
       alive: cf?.hp != null ? cf.alive : row.alive,
@@ -545,7 +584,12 @@ const neighbors_of = (cell) => {
  *  groups on this value: `commit_turn_ptb` executes the staged sequence exactly. */
 export const draft_cast_first = (log) => {
   const first = (kind) =>
-    Math.min(Infinity, ...(log ?? []).filter((e) => e.source === 'intent' && e.kind === kind).map((e) => e.event_idx))
+    Math.min(
+      Infinity,
+      ...(log ?? [])
+        .filter((e) => e.source === 'intent' && (e.kind === kind || (kind === 'Cast' && e.kind === 'CastAnchor')))
+        .map((e) => e.event_idx)
+    )
   return first('Cast') <= first('Moved')
 }
 

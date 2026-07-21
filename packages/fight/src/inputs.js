@@ -160,6 +160,21 @@ const patch_fighter = (state, key, delta) => {
   return { ...base, fighters: { ...base.fighters, [key]: { ...base.fighters[key], ...delta } } }
 }
 
+/** Apply an MP delta without discarding temporary debt below zero. The visible pool stays clamped, but a later
+ * undo/refund composes with the raw balance if an earlier speculative grant disappears during a re-fold. Ordinary
+ * chain deltas only start tracking when a Moved prediction already did (or `track` explicitly requests it). */
+const patch_mp_delta = (state, key, delta, track = false) => {
+  const base = ensure(state, key)
+  const fighter = base.fighters[key]
+  if (fighter.mp == null) return state
+  const tracked = fighter.mp_unclamped != null
+  const value = Number(tracked ? fighter.mp_unclamped : fighter.mp) + (Number(delta) || 0)
+  return patch_fighter(base, key, {
+    mp: Math.max(0, Math.floor(value)),
+    ...(track || tracked ? { mp_unclamped: value } : {}),
+  })
+}
+
 // REVEAL — clear invisibility the SAME way the sim's `statuses::reveal` does: strip every kind-27 status ROW, the
 // ONE source both the effect badge (engine_view.effects) and the derived `invisible` read. Flipping only the
 // boolean left the invisibility BADGE lingering on a revealed fighter (#13 — a second-channel divergence from the
@@ -199,8 +214,8 @@ export const apply_action = (state, action) => {
       // (the v1.12.28 dead opening click). The snapshot reconciles for FREE: a post-refill object read prunes this
       // overlay entry, `f.ap/mp` go null, and project.js falls back to the authoritative row.ap/mp (drained-safe).
       return action.ap == null && action.mp == null
-        ? withturn
-        : patch_fighter(withturn, key, { ap: action.ap, mp: action.mp })
+        ? patch_fighter(withturn, key, { mp_unclamped: null })
+        : patch_fighter(withturn, key, { ap: action.ap, mp: action.mp, mp_unclamped: null })
     }
     case 'TurnEnded': {
       const key = fighter_key({ is_mob: action.is_mob, idx: action.idx, resolve_seat: rs })
@@ -211,9 +226,12 @@ export const apply_action = (state, action) => {
     case 'Moved': {
       const key = fighter_key({ character: action.character, resolve_seat: rs })
       const moved = patch_fighter(state, key, { cell: action.to_cell })
-      // AP-PAINT TRUTH twin (MP): only MY optimistic intent carries mp_left (chain Moved events never do) —
-      // adopt the draft's ABSOLUTE remaining MP so the range/HUD shrink AND an undone step restores honestly.
-      return action.mp_left != null ? patch_fighter(moved, key, { mp: action.mp_left }) : moved
+      // AP-PAINT TRUTH twin (MP): only MY optimistic intent carries budget evidence (chain Moved events never do).
+      // The store derives this row's signed mp_delta from the board's absolute whole-draft mp_left, so an append
+      // spends and an undo refunds, while either still rebases if an earlier speculative grant disappears. Direct
+      // legacy folds without that derivation retain the absolute fallback.
+      if (action.mp_delta != null) return patch_mp_delta(moved, key, action.mp_delta, true)
+      return action.mp_left != null ? patch_fighter(moved, key, { mp: action.mp_left, mp_unclamped: null }) : moved
     }
     case 'Placed':
       // Placement commit (turns.move: participant::set_cell + emit Placed{character, cell}, fight_events.move:22).
@@ -260,10 +278,10 @@ export const apply_action = (state, action) => {
       const key = fighter_key({ is_mob: action.runner_is_mob, idx: Number(action.runner_idx) })
       const f = state.fighters[key]
       if (f?.ap == null || f?.mp == null) return state
-      return patch_fighter(state, key, {
+      const with_ap = patch_fighter(state, key, {
         ap: Math.max(0, Math.floor(f.ap) - (Number(action.ap_lost) || 0)),
-        mp: Math.max(0, Math.floor(f.mp) - (Number(action.mp_lost) || 0)),
       })
+      return patch_mp_delta(with_ap, key, -(Number(action.mp_lost) || 0))
     }
     case 'StanceChanged': {
       // Chain shape: StanceChanged{ fighter_is_mob, fighter_idx, stance, active } — the register #13 fix reads
@@ -294,6 +312,7 @@ export const apply_action = (state, action) => {
       const f = state.fighters[key]
       const pool = Number(action.point_kind) === 0 ? 'ap' : 'mp'
       if (f?.[pool] == null) return state
+      if (pool === 'mp') return patch_mp_delta(state, key, -(Number(action.removed) || 0))
       return patch_fighter(state, key, { [pool]: Math.max(0, Math.floor(f[pool]) - (Number(action.removed) || 0)) })
     }
     case 'Granted': {
@@ -311,6 +330,7 @@ export const apply_action = (state, action) => {
       const f = state.fighters[key]
       const pool = Number(action.point_kind) === 0 ? 'ap' : 'mp'
       if (f?.[pool] == null) return state
+      if (pool === 'mp') return patch_mp_delta(state, key, Number(action.granted) || 0)
       return patch_fighter(state, key, { [pool]: Math.max(0, Math.floor(f[pool]) + (Number(action.granted) || 0)) })
     }
     case 'Abandoned':

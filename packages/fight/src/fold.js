@@ -15,6 +15,7 @@ import * as settle_input from './inputs.js'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_WON } from './board_state.js'
 import { INVISIBILITY_STATUS_KIND } from './fight_status_snapshot.js'
 import { masks_entries, pace_segment } from './present.js'
+import { claim_version, fold_claimed_budget, with_budget_predictions } from './budget_claims.js'
 
 // M2b · ONE INGRESS (#291): with a SINGLE canonical source (the accept machine's deduped, contiguous `apply`
 // stream — receipts and journal pages folded through ONE door keyed `(fight_id, seq)`) there is no longer a merge
@@ -205,9 +206,10 @@ export const GHOST_STALE_MS = 15_000
 export const recompute = (draft, now) => {
   const observed_deadline = Number(draft.turn_deadline_ms ?? 0)
   const base = base_from_view(draft.view, draft.fight_id)
-  const all_log = sorted_log(draft.entries)
+  const all_log = with_budget_predictions(sorted_log(draft.entries), draft.budget_predictions)
   const log = all_log.filter((e) => e.version > draft.view_version)
-  const committed = log.reduce(apply_action, base)
+  const claimed_budget = (draft.claimed_budget ?? []).filter((row) => claim_version(row) > Number(draft.view_version))
+  const committed = fold_claimed_budget(base, log, claimed_budget)
   // V1: append-only death floors, carried forward (base-dead at view_version + authoritative tail deaths at their
   // own version). Intents never retire (predictions). `alive` derives from this — apply_retirement below overrides
   // any later positive-hp read for a floor-dead fighter (the resurrection root).
@@ -344,6 +346,16 @@ export const committed_state = (s) => {
   return { ...committed, fighters: apply_retirement(committed.fighters, s.retired) }
 }
 
+/** Canonical fold plus accepted chain-silent point grants. This is intentionally separate from `committed_state`:
+ * only legality/budget anchors consume it, while targeting, outcomes and canonical-log consumers stay pure. */
+export const claimed_budget_state = (s) => {
+  const base = base_from_view(s.view, s.fight_id)
+  const log = sorted_log(s.entries ?? {}).filter((e) => e.version > s.view_version && e.source !== 'intent')
+  const claimed_budget = (s.claimed_budget ?? []).filter((row) => claim_version(row) > Number(s.view_version))
+  const claimed = fold_claimed_budget(base, log, claimed_budget)
+  return { ...claimed, fighters: apply_retirement(claimed.fighters, s.retired) }
+}
+
 /** Fold keys `p{seat}`/`m{idx}` whose KILLING damage beat still rides an UNACKED wave turn — the same wave fact
  *  project.death_presenting_ids reads for `engine_view.dead`, expressed in fold-key space (fold.js can't import
  *  project.js). #170 (5th recurrence): there is no separate 'death' beat kind anymore (the presenter derives the
@@ -388,7 +400,8 @@ const wave_masked_fold = (s, hold_intents) => {
   // its card HP to 0 seconds before the death floater lands (engine_view.dead already holds the visual death via
   // the same wave fact). It dies exactly when its beat acks — the turn drains, the key leaves this set, the floor
   // binds. Every OTHER retired fighter still floors (the #134 stale-resurrection of an ALREADY-presented death).
-  const folded = log.reduce(apply_action, base)
+  const claimed_budget = (s.claimed_budget ?? []).filter((row) => claim_version(row) > Number(s.view_version))
+  const folded = fold_claimed_budget(base, log, claimed_budget)
   const presenting = death_presenting_keys(s.wave)
   const floor = presenting.size
     ? Object.fromEntries(Object.entries(s.retired ?? {}).filter(([key]) => !presenting.has(key)))

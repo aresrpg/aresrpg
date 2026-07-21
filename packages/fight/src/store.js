@@ -31,12 +31,20 @@ import { createStore } from 'zustand/vanilla'
 import { auto_commit_fire_at } from './draft_budget.js'
 import { auto_commit_decision, turn_commit_key, turn_submit_epoch } from './turn_commit.js'
 import { DISPLACE_TELEPORT } from './fight_render_prims.js'
-import { apply_action, empty_state, normalize_accepted, normalize_intent, seat_resolver } from './inputs.js'
+import {
+  apply_action,
+  empty_state,
+  fighter_key,
+  normalize_accepted,
+  normalize_intent,
+  seat_resolver,
+} from './inputs.js'
 import * as settle_input from './inputs.js'
 import { accept_batch, empty_accept_state, seed_accept_state } from './journal_accept.js'
-import { normalize_journal_page, normalize_receipt } from './journal_normalize.js'
+import { content_key, normalize_journal_page, normalize_receipt } from './journal_normalize.js'
 import { u64 } from './journal_u64.js'
 import { board_state_from_fight, fight_geometry_complete } from './board_state.js'
+import { prediction_identity } from './budget_claims.js'
 import { reconcile_predictions } from './reconcile_action.js'
 import { tap_trace_input } from './trace_tap.js'
 import {
@@ -52,7 +60,7 @@ import {
 
 // The two committed projections consumers read live in fold.js now (the ≤600-LoC split); re-export the public
 // names so project.js and tools keep importing them from the store's door.
-export { committed_state, presented_state, display_state } from './fold.js'
+export { claimed_budget_state, committed_state, presented_state, display_state } from './fold.js'
 
 export const PLAYER_TURN_FLOOR_MS = 3000
 export const MIN_ACTION_MS = 5000
@@ -100,7 +108,164 @@ const accept_and_decode = (s, batch, resolve_seat_override = null) => {
     resolve_seat: resolve_seat_override ?? s.ctx?.resolve_seat ?? seat_resolver(s.view),
     base_of: base_budget(s.view),
   })
-  return { accept_state, actions, apply, gap, fault, base_seq: apply.length ? Number(apply[0].seq) : 0 }
+  // A journal page is the authoritative proof even when an earlier receipt/p2p copy already occupied its seq and
+  // `apply` is empty. Decode every content-matching row the accept machine has admitted so prediction claims retire
+  // identically in journal-first and journal-confirmation order; version eligibility in reconcile_action prevents a
+  // redelivered historical Cast from claiming a newer prediction.
+  const confirmed =
+    batch?.source === 'journal'
+      ? (batch.events ?? []).filter((event) => {
+          const accepted = accept_state.digests?.[event.seq]
+          return accepted != null && accepted === content_key(event)
+        })
+      : []
+  const confirmed_actions = normalize_accepted(confirmed, {
+    resolve_seat: resolve_seat_override ?? s.ctx?.resolve_seat ?? seat_resolver(s.view),
+    base_of: base_budget(s.view),
+  })
+  return {
+    accept_state,
+    actions,
+    confirmed_actions,
+    apply,
+    gap,
+    fault,
+    base_seq: apply.length ? Number(apply[0].seq) : 0,
+  }
+}
+
+const actor_key = (is_mob, idx) => `${is_mob ? 'm' : 'p'}${Number(idx)}`
+
+const budget_target = (action) => {
+  if (action?.kind === 'Granted') return actor_key(action.target_is_mob, action.target_idx)
+  if (action?.kind === 'Moved') return fighter_key({ character: action.character, resolve_seat: action.resolve_seat })
+  return null
+}
+
+/** The board supplies an absolute whole-draft remainder so undo can restore it. Store the mutation this particular
+ * Moved row contributed as well: unlike the absolute, the signed delta composes if an earlier speculative grant or
+ * move later disappears. Legacy/non-resolvable inputs keep the absolute fallback in inputs.js. */
+const with_move_budget_delta = (s, action) => {
+  if (action?.kind !== 'Moved' || action.mp_left == null) return action
+  const target = budget_target(action)
+  const fighter = target == null ? null : presented_state(s).fighters?.[target]
+  const before = fighter?.mp_unclamped ?? fighter?.mp
+  const after = Number(action.mp_left)
+  if (before == null || !Number.isFinite(Number(before)) || !Number.isFinite(after)) return action
+  return { ...action, mp_delta: after - Number(before) }
+}
+
+const boundary_target = (action) => {
+  if (action?.kind === 'TurnEnded') return actor_key(action.is_mob, action.idx)
+  if (action?.kind === 'Hit' && Number(action.remaining_hp) <= 0)
+    return actor_key(action.victim_is_mob, action.victim_idx)
+  if (action?.kind === 'Abandoned') return actor_key(false, action.seat)
+  return null
+}
+
+/** Merge newly proven non-canonical budget facts, then let a target's own turn-end/death boundary win. A boundary
+ * clears only rows no newer than itself, so old journal redelivery cannot erase a later turn's accepted budget. */
+const update_claimed_budget = (current, claimed, boundaries) => {
+  const rows = new Map((current ?? []).map((row) => [row.key, row]))
+  for (const row of claimed ?? []) rows.set(row.key, row)
+  const ends = (boundaries ?? [])
+    .map((action) => ({
+      key: boundary_target(action),
+      version: Number(action.version),
+      event_idx: Number(action.event_idx),
+    }))
+    .filter((row) => row.key && Number.isFinite(row.version))
+  for (const [key, row] of rows) {
+    const target = budget_target(row.action)
+    const version = Number(row.claimed_at?.version ?? row.action.version)
+    const event_idx = Number(row.claimed_at?.event_idx ?? row.action.event_idx)
+    if (
+      ends.some(
+        (end) =>
+          end.key === target && (end.version > version || (end.version === version && end.event_idx >= event_idx))
+      )
+    )
+      rows.delete(key)
+  }
+  return [...rows.values()].sort(
+    (a, b) =>
+      Number(a.claimed_at?.version ?? a.action.version) - Number(b.claimed_at?.version ?? b.action.version) ||
+      Number(a.claimed_at?.event_idx ?? a.action.event_idx) - Number(b.claimed_at?.event_idx ?? b.action.event_idx) ||
+      a.key.localeCompare(b.key)
+  )
+}
+
+const merge_budget_predictions = (current, incoming) => {
+  const rows = new Map((current ?? []).map((row) => [row.key, row]))
+  for (const row of incoming ?? []) rows.set(row.key, row)
+  return [...rows.values()].sort(
+    (a, b) =>
+      Number(a.action.version) - Number(b.action.version) ||
+      Number(a.action.event_idx) - Number(b.action.event_idx) ||
+      a.key.localeCompare(b.key)
+  )
+}
+
+const retain_budget_predictions = (rows, reconcile) => {
+  if (!reconcile) return rows
+  return (rows ?? []).filter(({ action }) => {
+    const retired_key = reconcile.retire.has(`${action.version}:${action.event_idx}`)
+    const retired_intent = action.intent_id != null && reconcile.retired_intents.has(action.intent_id)
+    return !retired_key && !retired_intent
+  })
+}
+
+const preceding_action = (entries, actions) => {
+  const first = actions?.[0]
+  if (first?.event_idx == null) return null
+  return (
+    Object.values(entries ?? {}).find(
+      (entry) => entry.source !== 'intent' && Number(entry.event_idx) === Number(first.event_idx) - 1
+    ) ?? null
+  )
+}
+
+/** Claims are transport-independent once their actions are authoritative. `authoritative` may contain an older
+ * journal prefix, so both actions and pending rows are version-windowed before the FIFO identity matcher runs. */
+const claim_predictions = (s, authoritative, now) => {
+  const pending = Object.values(s.entries).filter((entry) => entry.source === 'intent')
+  const seen = new Set(pending.map(prediction_identity))
+  // A p2p/poll early copy may occupy an intent's `(version,event_idx)` before the journal confirms it. Preserve the
+  // per-cast proof/Grant and Moved.mp_left outside that collision-prone log, then synthesize only whichever rows the
+  // canonical merge displaced. This registry is prediction evidence, never a second canonical ingress.
+  for (const { action } of s.budget_predictions ?? []) {
+    const key = prediction_identity(action)
+    if (!seen.has(key)) {
+      pending.push(action)
+      seen.add(key)
+    }
+  }
+  pending.sort((a, b) => Number(a.version) - Number(b.version) || Number(a.event_idx) - Number(b.event_idx))
+  if (!pending.length || !authoritative?.length) return null
+  const oldest = Math.min(...pending.map((entry) => Number(entry.version)))
+  const actions = authoritative.filter((action) => Number(action.version) >= oldest)
+  if (!actions.length) return null
+  const ceiling = Math.max(...actions.map((action) => Number(action.version)))
+  const eligible = pending.filter((entry) => Number(entry.version) <= ceiling)
+  if (!eligible.length) return null
+  const my_actor = settle_input.actor_from_key(s.my_key)
+  const ended_my_turn =
+    !!my_actor &&
+    actions.some(
+      (action) =>
+        action.kind === 'TurnEnded' &&
+        !!action.is_mob === !!my_actor.is_mob &&
+        Number(action.idx) === Number(my_actor.idx)
+    )
+  return {
+    ended_my_turn,
+    result: reconcile_predictions(eligible, actions, {
+      version: ceiling,
+      at: now,
+      ended_my_turn,
+      preceding: preceding_action(s.entries, actions),
+    }),
+  }
 }
 
 /** Build the rich board view from a snapshot msg + the merged ctx — the ONE snapshot decode (bootstrap adoption
@@ -129,6 +294,17 @@ const empty_fight = () => ({
   accept_state: empty_accept_state(),
   journal_gap: null, // { fight_id, from } — the accept machine (or a snapshot watermark) needs the journal walked from `from`; the edge reads this and paginates
   protocol_fault: null, // { seq, accepted, received, ... } — a re-delivered seq whose content DISAGREED with accepted truth (never overwritten; surfaced as telemetry)
+  // ACCEPTED SILENT BUDGET FACTS — bounded, non-canonical overlays [{key,intent_id,action}]. M2b claim retirement
+  // otherwise loses give_points and the Moved budget delta because neither is carried by its canonical event and
+  // live snapshots are checkpoint-only. Retain them until the TARGET fighter's own TurnEnded (or death). fold.js
+  // applies them to effective/claim-budget projections only: canonical history and committed_state stay untouched.
+  claimed_budget: [],
+  // BUDGET PREDICTION EVIDENCE — prediction metadata only, keyed by prediction identity. Canonical ingress can
+  // overwrite an intent at the same `(version,event_idx)` before journal confirmation (p2p/poll-first), so each
+  // silent Grant, its Cast anchor, and Moved budget delta live here until claim/expiry/rollback. They are
+  // synthesized only for reconciliation and missing optimistic paint; canonical entries still come exclusively
+  // from accept_batch.
+  budget_predictions: [],
   view: null, // the adopted rich board view (board_state_from_fight) — the BOOTSTRAP base (adopted once per fight, then checkpoint-only)
   view_version: -1,
   ctx: {}, // init/context data (mob identity maps, offset, my_entity_id, beat_ctx resolvers) — NEVER hashed
@@ -252,9 +428,9 @@ const make_input =
           version: msg.version,
           digest: msg.receipt?.digest,
         })
-        const my_actor = settle_input.actor_from_key(state.my_key)
         set((s) => {
           const { accept_state, actions, apply, gap, fault, base_seq } = accept_and_decode(s, batch, msg.resolve_seat)
+          const my_actor = settle_input.actor_from_key(s.my_key)
           const ended_my_turn =
             !!my_actor &&
             actions.some(
@@ -268,15 +444,12 @@ const make_input =
           // forward correction); an UNRELATED receipt touches nothing; a turn-ending receipt expires what it never
           // claimed. poll/p2p never retire a live prediction (#170 — a stale early copy is not my turn's proof).
           const entries = { ...s.entries }
-          const reconcile =
-            msg.type === 'receipt'
-              ? reconcile_predictions(
-                  Object.values(entries).filter((entry) => entry.source === 'intent' && entry.version <= msg.version),
-                  actions,
-                  { version: msg.version, at: now, ended_my_turn }
-                )
-              : null
-          if (reconcile) for (const key of reconcile.retire) delete entries[key]
+          const claim = msg.type === 'receipt' ? claim_predictions(s, actions, now) : null
+          const reconcile = claim?.result ?? null
+          if (reconcile) for (const key of reconcile.retire) if (entries[key]?.source === 'intent') delete entries[key]
+          const budget_predictions = retain_budget_predictions(s.budget_predictions, reconcile)
+          const canonical = Object.values(s.entries).filter((entry) => entry.source !== 'intent')
+          const claimed_budget = update_claimed_budget(s.claimed_budget, reconcile?.claimed, [...canonical, ...actions])
           // A RECEIPT paces its NON-LOCAL turns into presentation waves (mine paint optimistically; a peer turn's
           // presentation is the peer lane's). Only genuinely-new accepted events (apply) pace — a redelivery yields
           // an empty apply, so no second visual wave (the accept machine subsumes the old wave_versions dedupe). The
@@ -296,6 +469,8 @@ const make_input =
               staged: ended_my_turn ? [] : s.staged,
               divergence: reconcile?.divergence ?? s.divergence,
               entries: merge_entries(entries, actions),
+              claimed_budget,
+              budget_predictions,
               journal_gap: gap ? { fight_id: gap.fight_id, from: gap.from } : s.journal_gap,
               protocol_fault: fault ?? s.protocol_fault,
               wave,
@@ -315,12 +490,26 @@ const make_input =
         // clears when this page catches the frontier up (no fetch effect), or re-arms if it reveals a further hole.
         const batch = msg.batch ?? normalize_journal_page(msg.page, { fight_id: msg.fight_id ?? state.fight_id })
         set((s) => {
-          const { accept_state, actions, gap, fault } = accept_and_decode(s, batch)
+          const { accept_state, actions, confirmed_actions, gap, fault } = accept_and_decode(s, batch)
+          const claim = claim_predictions(s, confirmed_actions, now)
+          const reconcile = claim?.result ?? null
+          const entries = { ...s.entries }
+          if (reconcile) for (const key of reconcile.retire) if (entries[key]?.source === 'intent') delete entries[key]
+          const budget_predictions = retain_budget_predictions(s.budget_predictions, reconcile)
+          const canonical = Object.values(s.entries).filter((entry) => entry.source !== 'intent')
+          const claimed_budget = update_claimed_budget(s.claimed_budget, reconcile?.claimed, [
+            ...canonical,
+            ...confirmed_actions,
+          ])
           return recompute(
             {
               ...s,
               accept_state,
-              entries: merge_entries(s.entries, actions),
+              entries: merge_entries(entries, actions),
+              claimed_budget,
+              budget_predictions,
+              staged: claim?.ended_my_turn ? [] : s.staged,
+              divergence: reconcile?.divergence ?? s.divergence,
               journal_gap: gap ? { fight_id: gap.fight_id, from: gap.from } : null,
               protocol_fault: fault ?? s.protocol_fault,
             },
@@ -363,6 +552,13 @@ const make_input =
                 view_version: version,
                 accept_state: is_open ? s.accept_state : seed_accept_state(msg.journal_head),
                 entries,
+                // A bootstrap base already contains every silent pool mutation at/below its version. Normally no
+                // claim can predate the first view (the provider gate blocks local prediction), but keep the seam
+                // explicit for resume/race safety so a carried grant can never be folded twice.
+                claimed_budget: (s.claimed_budget ?? []).filter(
+                  (row) => Number(row.claimed_at?.version ?? row.action?.version) > version
+                ),
+                budget_predictions: (s.budget_predictions ?? []).filter((row) => Number(row.action?.version) > version),
                 ctx,
                 my_key: seat != null ? `p${seat}` : s.my_key,
                 commit_due: false,
@@ -404,12 +600,15 @@ const make_input =
             return // held — a human never sees this (they exceed 3s naturally); a bot's instant pass is blocked
           }
         }
-        const action = normalize_intent(msg.intent, {
-          version: msg.version ?? Math.max(1, state.applied_version + 1),
-          event_idx: msg.event_idx ?? state.intent_seq,
-          actor: settle_input.actor_from_key(state.my_key),
-          resolve_seat: msg.resolve_seat ?? state.ctx?.resolve_seat ?? seat_resolver(state.view),
-        })
+        const action = with_move_budget_delta(
+          state,
+          normalize_intent(msg.intent, {
+            version: msg.version ?? Math.max(1, state.applied_version + 1),
+            event_idx: msg.event_idx ?? state.intent_seq,
+            actor: settle_input.actor_from_key(state.my_key),
+            resolve_seat: msg.resolve_seat ?? state.ctx?.resolve_seat ?? seat_resolver(state.view),
+          })
+        )
         set((s) => {
           // A local wave turn (my optimistic beats at natural durations) rides along when the caller built one —
           // the renderer plays it THIS frame (is_local: no 3s pacing) and acks it like any other turn.
@@ -434,10 +633,15 @@ const make_input =
                 },
               ]
             : s.wave
+          const budget_predictions =
+            action.kind === 'Moved' && action.mp_left != null
+              ? merge_budget_predictions(s.budget_predictions, [{ key: prediction_identity(action), action }])
+              : s.budget_predictions
           return recompute(
             {
               ...s,
               entries: merge_entries(s.entries, [action]),
+              budget_predictions,
               intent_seq: s.intent_seq + 1,
               staged: action.kind === 'TurnEnded' ? [] : s.staged,
               pending_end_turn: null,
@@ -461,6 +665,7 @@ const make_input =
         const base_version = Math.max(1, Number(msg.basis_version ?? state.applied_version + 1))
         const actor = settle_input.actor_from_key(state.my_key)
         const resolve_seat = msg.resolve_seat ?? state.ctx?.resolve_seat ?? seat_resolver(state.view)
+        let projected = presented_state(state)
         const actions = (msg.actions ?? []).map((raw, i) => {
           const action = normalize_intent(raw, {
             version: raw.version ?? base_version,
@@ -468,8 +673,28 @@ const make_input =
             actor,
             resolve_seat,
           })
-          return msg.intent_id != null ? { ...action, intent_id: msg.intent_id } : action
+          let tagged = msg.intent_id != null ? { ...action, intent_id: msg.intent_id } : action
+          if (tagged.kind === 'Cast' && tagged.target_cell != null) {
+            const caster = actor_key(tagged.caster_is_mob, tagged.caster_idx)
+            const caster_cell = projected.fighters?.[caster]?.cell
+            // RETURN_SPELL only intercepts a wholly point-shaped cast aimed at a living ENEMY. Pin this dispatch-
+            // time fact so a bare canonical Cast proves a silent grant only for an exact self cast (Vanish).
+            if (caster_cell != null && Number(tagged.target_cell) === Number(caster_cell))
+              tagged = { ...tagged, self_targeted: true }
+          }
+          projected = apply_action(projected, tagged)
+          return tagged
         })
+        const grant_intents = new Set(
+          actions
+            .filter((action) => action.kind === 'Granted' && action.intent_id != null)
+            .map((action) => action.intent_id)
+        )
+        const predicted_budget = actions
+          .filter(
+            (action) => grant_intents.has(action.intent_id) && (action.kind === 'Cast' || action.kind === 'Granted')
+          )
+          .map((action) => ({ key: prediction_identity(action), action }))
         set((s) => {
           const beats = Array.isArray(msg.beats) ? msg.beats : []
           // ③ PREDICTED-DISPLACEMENT WINDOW (ruled 07-19, option a): a predicted `Displaced` is the walk-window
@@ -546,6 +771,7 @@ const make_input =
             {
               ...s,
               entries: merge_entries(s.entries, actions),
+              budget_predictions: merge_budget_predictions(s.budget_predictions, predicted_budget),
               intent_seq: s.intent_seq + actions.length,
               pending_end_turn: null,
               armed_spell_id: actions.some((a) => a.kind === 'Cast') ? null : s.armed_spell_id,
@@ -622,7 +848,8 @@ const make_input =
             return true
           }
           const entries = Object.fromEntries(Object.entries(s.entries).filter(([, e]) => !drop(e)))
-          return recompute({ ...s, entries }, now)
+          const budget_predictions = (s.budget_predictions ?? []).filter((row) => !drop(row.action))
+          return recompute({ ...s, entries, budget_predictions }, now)
         })
         return
       }
