@@ -135,6 +135,17 @@ describe('strike_flush_illegal — the weapon-kill drop that revived the corpse'
     )
     expect(strike_flush_illegal({ in_footprint: false, is_weapon: false })).toBe(true)
   })
+
+  // #321/#323 — a SELF-only buff (invisibility/vanish, rmax 0) targets the caster's OWN tile; it can never move
+  // out of reach of itself. A stale adoption that shifted the caster's committed/eye cell used to make the drafted
+  // self-cell fall OUT of the [0,0] footprint (`in_footprint:false`) → the flush DROPPED the buff, and the turn's
+  // deadline auto-commit then shipped a batch WITHOUT it → the invisibility + its granted MP reverted. A self-cast
+  // must survive the flush unconditionally (the twin of the trap "cells don't move" rule).
+  it('a SELF-cast always survives the flush — never dropped even when in_footprint is false (#321/#323)', () => {
+    expect(strike_flush_illegal({ in_footprint: false, is_weapon: false, self_cast: true })).toBe(false)
+    // and it stays legal in the ordinary in-footprint case too (no regression to the void-cast right):
+    expect(strike_flush_illegal({ in_footprint: true, is_weapon: false, self_cast: true })).toBe(false)
+  })
 })
 
 describe('announce_auto_commit — the phantom victory toast', () => {

@@ -134,9 +134,20 @@ describe('fight turn controls — one phase source for the button and countdown'
     expect(fight_turn_control_phase(fight_state(), false)).toBe('armed')
     expect(fight_turn_control_phase(fight_state({ active_entity_id: 'missing' }), false)).toBe('hidden')
     expect(fight_turn_control_phase(fight_state({ presenting: true }), false)).toBe('hidden')
-    expect(turn_commit_countdown_s('armed', true, deadline_ms, 30_000)).toBe(10)
+    // HONEST DEADLINE (#323): the cue counts to the AUTO-COMMIT FIRE moment (deadline − COMMIT_BUFFER_MS 5s),
+    // the same honest deadline FightTimeline shows — NOT the raw chain deadline (that read 10 while the turn
+    // actually locked in 5). Raw gap 10s → honest window 5s.
+    expect(turn_commit_countdown_s('armed', true, deadline_ms, 30_000)).toBe(5)
     expect(turn_commit_countdown_s('hidden', true, deadline_ms, 30_000)).toBeNull()
     expect(turn_commit_countdown_s('armed', false, deadline_ms, 30_000)).toBeNull()
+  })
+
+  test('the cue reaches 0 exactly when the background commit fires, never at the raw chain deadline (#323)', () => {
+    const deadline_ms = 45_000 // a default 45s turn; the auto-commit fires at 40_000 (deadline − 5s buffer)
+    // at the fire moment the honest cue reads 0 (the turn is locking now) …
+    expect(turn_commit_countdown_s('armed', true, deadline_ms, 40_000)).toBe(0)
+    // … while the raw chain deadline still has 5s to run — the over-promise this fix removes.
+    expect(turn_commit_countdown_s('armed', true, deadline_ms, 40_000)).not.toBe(5)
   })
 
   test('a chain turn-advance event unmounts END TURN and its cue without a click', async () => {

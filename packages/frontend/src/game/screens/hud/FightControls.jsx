@@ -24,6 +24,7 @@ import { use_dungeon_turn } from '../dungeon-turn.js'
 import { fight_store } from '@aresrpg/fight/store'
 import { use_fight, use_fight_view } from '../../store.js'
 import { min_turn_left } from '@aresrpg/fight/project'
+import { auto_commit_fire_at } from '@aresrpg/fight/draft_budget'
 import { ConfirmDialog } from './world/ConfirmDialog.jsx'
 import { use_fight_trace_keybind } from './use_fight_trace_keybind.js'
 
@@ -58,10 +59,15 @@ export function fight_turn_control_phase(fight, busy, entity_id = fight?.my_enti
   return turn_input_armed(chain_my_turn, busy, false) ? 'armed' : 'committing'
 }
 
-/** The END TURN companion cue exists only in the same armed phase as the control itself. Pure. */
-export function turn_commit_countdown_s(turn_phase, has_draft, deadline_ms, now_ms) {
+/** The END TURN companion cue exists only in the same armed phase as the control itself. Pure.
+ *  HONEST DEADLINE (#323): the cue counts to the AUTO-COMMIT FIRE moment (`auto_commit_fire_at` = deadline −
+ *  COMMIT_BUFFER_MS), NOT the raw chain deadline — the SAME honest deadline FightTimeline shows. While a draft
+ *  exists the turn LOCKS when the background commit fires (buffer seconds before the chain deadline), so counting
+ *  to the raw deadline over-promised the drafting window by the buffer and the turn "auto-ended" while the cue
+ *  still read time left. `turn_ms` feeds the short-admin-dial clamp (0 = the default deadline − buffer). */
+export function turn_commit_countdown_s(turn_phase, has_draft, deadline_ms, now_ms, turn_ms = 0) {
   if (turn_phase !== 'armed' || !has_draft || !deadline_ms) return null
-  return Math.ceil((deadline_ms - now_ms) / 1000)
+  return Math.ceil((auto_commit_fire_at(deadline_ms, turn_ms) - now_ms) / 1000)
 }
 
 /** Hook-free action seam: the real button used below and by the click fixture.
@@ -178,7 +184,7 @@ export function FightControls({
   // placement with a real deadline + a label factory (the dungeon path).
   const countdown_s =
     placement && has_placement_deadline ? Math.max(0, Math.ceil((placement_deadline_ms - now_ms) / 1000)) : null
-  const commit_in_s = turn_commit_countdown_s(turn_phase, has_turn_draft, turn_deadline_ms, now_ms)
+  const commit_in_s = turn_commit_countdown_s(turn_phase, has_turn_draft, turn_deadline_ms, now_ms, fight?.turn_ms ?? 0)
   const show_commit_cue = !placement && commit_in_s != null && commit_in_s <= 15 && !!auto_commit_label
 
   const on_forfeit_confirmed = () => {
