@@ -100,15 +100,16 @@ const receipt = (store, now) =>
   )
 
 describe('#159 — a poll cannot leapfrog an in-flight commit whose wave is not built', () => {
-  test('a post-commit poll arriving before the receipt is DEFERRED, not adopted wholesale', () => {
+  test('a post-commit poll is a CHECKPOINT — it never adopts, so it cannot leapfrog the receipt wave (M2b)', () => {
     const store = boot()
     end_turn(store) // busy — my commit is in-flight, no wave built yet
     post_commit_poll(store, 3_000)
 
-    // THE FIX: the fresher read must NOT adopt while my commit is in-flight — it is stashed for after the wave.
-    expect(store.getState().view_version, 'the in-flight poll is deferred, not adopted').toBe(5)
-    expect(store.getState().pending_snapshot?.version, 'the read is held, never dropped').toBe(6)
-    // the mob has NOT teleported to its final cell — the wave will animate the walk
+    // M2b · ONE INGRESS: the object read is DEMOTED to a checkpoint — it NEVER adopts mid-fight, so the #159
+    // leapfrog is structurally impossible (the old deferral is deleted; there is nothing to defer). The fold stays
+    // the bootstrap base until the receipt's canonical events land.
+    expect(store.getState().view_version, 'the checkpoint read never re-adopts — the base is untouched').toBe(5)
+    // the mob has NOT teleported to its final cell — the receipt's wave will animate the walk
     expect(engine_view(store.getState()).fighters.get('mob-0').cell, 'mob still at its pre-turn cell').toEqual({
       x: 6,
       y: 2,
@@ -138,6 +139,6 @@ describe('#159 — a poll cannot leapfrog an in-flight commit whose wave is not 
       y: 2,
     })
     expect(engine_view(store.getState()).fighters.get(CHAR).health, 'my HP reconciled through the wave').toBe(44)
-    expect(store.getState().pending_snapshot, 'the deferred read re-entered the door and was consumed').toBe(null)
+    expect(store.getState().view_version, 'the checkpoint contributed nothing — the receipt drove the whole turn').toBe(5)
   })
 })

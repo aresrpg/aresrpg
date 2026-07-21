@@ -53,8 +53,8 @@ const CASCADE = [
   event('TurnStarted', { is_mob: false, idx: 0, deadline_ms: 99_000 }),
 ]
 
-describe('snapshot adoption while a wave drains', () => {
-  test('a fresher object read defers until the final remote turn ack', () => {
+describe('snapshot demoted to a checkpoint while a wave drains (M2b · ONE INGRESS)', () => {
+  test('a fresher object read is a checkpoint — inert to the fold, never leapfrogging the draining wave', () => {
     const store = create_fight_store()
     store.getState().input({
       type: 'init',
@@ -66,13 +66,13 @@ describe('snapshot adoption while a wave drains', () => {
     store.getState().input({ type: 'receipt', receipt: { events: CASCADE }, version: 6 }, 2_000)
     const post_turn = fight_object({ participants: [player({ hp: 43 })], mobs: [mob(105, 20), mob(107)] })
 
+    // M2b: the object read NEVER adopts mid-fight — the receipt's CASCADE is the canonical truth and its wave
+    // animates undisturbed. The old deferral is deleted: there is nothing to stash, nothing to leapfrog.
     store.getState().input({ type: 'snapshot', fight: post_turn, version: 7 }, 2_500)
-    expect(store.getState().view_version).toBe(5)
-    expect(store.getState().pending_snapshot?.version).toBe(7)
+    expect(store.getState().view_version, 'the checkpoint contributes nothing to the fold').toBe(5)
 
     const mob_turn = store.getState().wave.find((turn) => turn.source_id === 'mob-1')
     store.getState().input({ type: 'presented', seq: mob_turn.seq }, 3_000)
-    expect(store.getState().view_version).toBe(7)
-    expect(store.getState().pending_snapshot).toBeNull()
+    expect(store.getState().view_version, 'the base never re-adopts — canonical catch-up rides the journal').toBe(5)
   })
 })

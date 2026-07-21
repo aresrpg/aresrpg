@@ -77,17 +77,17 @@ describe('WAVE-A V3 — equal-version snapshot is discarded (keystone #3 deleted
     expect(store.getState().divergence).toBeNull() // the compare-adopt is gone — nothing logged
   })
 
-  test('an equal-version re-read at an ALREADY-ADOPTED version is deduped, never a rollback (view_version === version)', () => {
-    const store = create_fight_store()
-    store
-      .getState()
-      .input({ type: 'init', fight_id: FIGHT, ctx: { my_entity_id: ME, beat_ctx: { grid_width: 20 } } }, T0)
-    store.getState().input({ type: 'snapshot', fight: fight_object({ mob_hp: 20 }), version: 5 }, T0)
-    store.getState().input({ type: 'snapshot', fight: fight_object({ mob_hp: 12 }), version: 6 }, T0 + 100) // adopt v6
-    expect(store.getState().view_version).toBe(6)
-    // a torn/stale re-read at v6 shows the OLD mob hp — it must be DEDUPED, not adopted (the SIMDRIVE no-rollback law)
+  test('an equal-version re-read at an already-folded version is INERT — the checkpoint never rolls back (M2b)', () => {
+    const store = boot() // snapshot v5 bootstrap
+    // fold the mob to 12 at v6 through the ONE canonical door (the receipt) — under M2b authoritative state never
+    // comes from a re-adopted object read.
+    store.getState().input({ type: 'receipt', receipt: { events: my_cast() }, version: 6 }, T0 + 100)
+    expect(engine_view(store.getState()).fighters.get('mob-0').health).toBe(12)
+    // a torn/stale OBJECT re-read at v6 shows the OLD mob hp — the checkpoint is INERT (it never adopts), so there
+    // is no rollback: the receipt-proven 12 stands (the SIMDRIVE no-rollback law, now structural).
     store.getState().input({ type: 'snapshot', fight: fight_object({ mob_hp: 20 }), version: 6 }, T0 + 200)
     expect(engine_view(store.getState()).fighters.get('mob-0').health).toBe(12) // held — no rollback
+    expect(store.getState().view_version).toBe(5) // the base is never re-adopted mid-fight
     expect(store.getState().divergence).toBeNull()
   })
 
