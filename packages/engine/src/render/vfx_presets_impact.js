@@ -21,7 +21,7 @@
 // real DarkMagic swirl vocabulary — the same op-for-op ports the soul_death burst composes). air impact reuses
 // `sphere_impact` (impact_sphere.gdshader hot ball) + `zap_burst` (ground_impact.gdshader crackle) + `impact_core`.
 // DIVERGENCE (documented): the pack's dedicated shield_shell/orbit and dark_vortex/area_dark shaders would each need
-// a new dispatch branch in the FROZEN vfx_pack_shaders.js (this lane's fence) — the reused appearances are the
+// a new dispatch branch in the FROZEN vfx_pack_shaders_core.js (this lane's fence) — the reused appearances are the
 // nearest FAITHFUL pack ports, never a generic disc. NO-HALO LAW: the shield LOOP is clamp1'd + emission-capped so a
 // sustained ward never blows a white bloom (preset_peak_luma < the 2.05 engine threshold — mirrors vfx_presets_world).
 

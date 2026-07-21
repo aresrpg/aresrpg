@@ -4,7 +4,7 @@
 // to PERSISTENT light-source fixtures for the dungeon rooms + the overworld: `world_bonfire_<tint>` campfires/
 // braziers and `world_candle_<tint>_0N` wall-torches. Each is a LOOP preset (every particle's age wraps its
 // lifetime → continuous rebirth) reusing the already-ported `fire` appearance (FlameFX fire_particle.gdshader in
-// vfx_pack_shaders.js) — NO new shader (per the VFX_FULL_UTILIZATION_PLAN L7 "reuse fire_particle, no new shader").
+// vfx_pack_shaders_core.js) — NO new shader (per the VFX_FULL_UTILIZATION_PLAN L7 "reuse fire_particle, no new shader").
 //
 // SOURCE OF TRUTH: every row in BONFIRE/CANDLE below is transcribed from its own `.tscn` (parsed with
 // @fernforestgames/godot-resource-parser, census-verified 2026-07-12) — primary/secondary colour, particle

@@ -5,7 +5,7 @@
 // bounce kick — a proper double-jump bounce smoke effect. A quick, subtle, dissipating
 // dusty puff that reads as a bounce pad under the feet — NOT a fight-VFX explosion.
 //
-// REUSE, NO NEW SHADER: both emitters reuse already-ported ExplosionFX pack appearances (vfx_pack_shaders2.js) —
+// REUSE, NO NEW SHADER: both emitters reuse already-ported ExplosionFX pack appearances (vfx_pack_shaders_expansion.js) —
 // `explo_smoke` (the billowing dust cloud) + `explo_rings` (the expanding shock annulus, here a soft ground
 // ripple). Same one-shot RUNTIME every fight burst uses (create_vfx_preset → add_to_scene → drive age → dispose
 // at `duration`). Merged into the master PRESETS by vfx_presets_data.js exactly as SPELL/WORLD/MELEE presets are,

@@ -37,8 +37,8 @@ import {
   vec3,
 } from 'three/tsl'
 
-import { PACK2_BILLBOARD, billboard_pack2 } from './vfx_pack_shaders2.js'
-import { PACK3_BILLBOARD, billboard_pack3 } from './vfx_pack_shaders3.js'
+import { PACK2_BILLBOARD, billboard_pack2 } from './vfx_pack_shaders_expansion.js'
+import { PACK3_BILLBOARD, billboard_pack3 } from './vfx_pack_shaders_gapfill.js'
 
 /** @typedef {import('./vfx_preset_engine.js').VfxEmitter} VfxEmitter */
 
@@ -328,7 +328,7 @@ function overlay(base, blend) {
 }
 
 /** Which appearances use the PACK per-pixel colour model (mix(sec,pri,value)*emission) vs the engine life-mix.
- *  The phase-B pack ports (ElementalMagic/Electric/Battle/Explosion/Status — vfx_pack_shaders2.js) are folded
+ *  The phase-B pack ports (ElementalMagic/Electric/Battle/Explosion/Status — vfx_pack_shaders_expansion.js) are folded
  *  in so the engine routes them here too; each returns its own finished { rgb, alpha } via billboard_pack2. */
 export const PACK_BILLBOARD = new Set([
   'star4',

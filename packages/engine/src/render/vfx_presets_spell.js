@@ -470,7 +470,7 @@ const STATUS = {
   ice: A(rgb(1, 1, 1), rgb(0, 0.776, 0.843), 'ice_flake', 0.3, 'none', 0, 0.4, 0, V),
   flame: A(rgb(1, 0.818, 0.241), rgb(0.914, 0.341, 0), 'noise_mote', 0.5, 'sphere', 0.3, 0.2, 0.5, V),
   poison: A(rgb(0.696, 1, 0.604), rgb(0, 0.6, 0.239), 'bubble', 0.3, 'none', 0.3, 0.3, 0.3, V),
-  nature: A(rgb(0.576, 0.875, 0), rgb(0.173, 0.741, 0), 'leaf', 0.2, 'none', 0.3, 0.2, 0.5, V), // texture_particle → the pack's leaf.png (vfx_pack_shaders2 `leaf`)
+  nature: A(rgb(0.576, 0.875, 0), rgb(0.173, 0.741, 0), 'leaf', 0.2, 'none', 0.3, 0.2, 0.5, V), // texture_particle → the pack's leaf.png (vfx_pack_shaders_expansion `leaf`)
   green: A(rgb(0.714, 1, 0.545), rgb(0, 0.667, 0.235), 'noise_mote', 0.5, 'sphere', 0.3, 0.2, 0, V),
   dark: A(rgb(1, 0.247, 0.498), rgb(0.576, 0.122, 1), 'noise_mote', 0.3, 'sphere', 1.0, 0.5, 0, V),
   void: A(rgb(0.576, 0.122, 1), rgb(0.082, 0, 0.631), 'noise_mote', 0.3, 'streaks', 0.3, -0.5, 0, V),
@@ -488,7 +488,7 @@ const STATUS = {
   sleep: A(rgb(0.72, 0.72, 1), rgb(0.35, 0.32, 0.7), 'sleep_z', 0.2, 'none', 0, 0.2, 0.5, V),
 }
 
-// ── ELEMENT APPEARANCE MAP (phase B): each cast element drives its REAL pack .gdshader look (vfx_pack_shaders2.js),
+// ── ELEMENT APPEARANCE MAP (phase B): each cast element drives its REAL pack .gdshader look (vfx_pack_shaders_expansion.js),
 // retiring the generic FBM `flame` that faked water/air/neutral/heal in phase A. `main` = the primary emitters
 // (gather / head / motes); `soft` = the secondary aura/glow layer (a different pack look per element = variety).
 // fire keeps FlameFX `fire`; water→ElementalMagic wave-orb; air→ElectricFX lightning; neutral→BattleFX arcane

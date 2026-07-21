@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX — PACK APPEARANCE LAYER II (phase B): faithful TSL ports of the REMAINING BinbunVFX_Vol2
-// .gdshader files, extending vfx_pack_shaders.js past its LoC line. Phase A ported Flame / StylizedHit /
+// .gdshader files, extending vfx_pack_shaders_core.js past its LoC line. Phase A ported Flame / StylizedHit /
 // DarkMagic; THIS file ports the rest, per the ruled element↔pack mapping:
 //   • ElementalMagicFX → water/earth/ice/nature — projectile_core (flowing wave orb), projectile_tail
 //     (comet wake), projectile_streaks (spiral), projectile_particles (mote), cast_flare (windup),
@@ -34,7 +34,7 @@ import { atan, float, mix, smoothstep, texture, uv, vec2, vec3 } from 'three/tsl
 
 import LEAF_URL from '../../assets/leaf.png?url' // the pack's StatusFX/icons/leaf.png (the ONE texture-backed symbol)
 
-import { PACK_NOISE } from './vfx_pack_shaders.js'
+import { PACK_NOISE } from './vfx_pack_shaders_core.js'
 
 /** Lazy leaf texture (the nature symbol's texture_particle icon). Created on FIRST USE (browser-only — a
  *  material build), never at module load, so this file stays headless-safe (`?url` resolves to a bare string
@@ -564,11 +564,11 @@ const PACK2 = {
   leaf,
 }
 
-/** The phase-B billboard appearance names — merged into PACK_BILLBOARD by vfx_pack_shaders.js. */
+/** The phase-B billboard appearance names — merged into PACK_BILLBOARD by vfx_pack_shaders_core.js. */
 export const PACK2_BILLBOARD = new Set(Object.keys(PACK2))
 
 /**
- * Phase-B billboard appearance → { rgb, alpha }. The engine (via vfx_pack_shaders.billboard_pack) routes
+ * Phase-B billboard appearance → { rgb, alpha }. The engine (via vfx_pack_shaders_core.billboard_pack) routes
  * any emitter whose appearance is in PACK2_BILLBOARD here. @param {string} kind @param {PackCtx} ctx
  * @returns {{ rgb:*, alpha:* }}
  */

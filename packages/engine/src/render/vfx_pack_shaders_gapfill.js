@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // FLAGSHIP VFX — PACK APPEARANCE LAYER III (phase B2, the FINAL exactness lane): the last REAL BinbunVFX_Vol2
-// .gdshader fragments transcribed op-for-op to TSL, extending vfx_pack_shaders.js/2.js past their LoC line. Owner
+// .gdshader fragments transcribed op-for-op to TSL, extending vfx_pack_shaders_core.js/2.js past their LoC line. Owner
 // mandate 2026-07-12 ("cut EVERY non-Godot effect"): every generic FBM `spark`/cross-pack `star4` borrow the audit
 // flagged is replaced by the scene's OWN shader, verified node→shader off disk (scratchpad layermap parser, not the
 // audit prose — the ground truth CORRECTED the audit: impact Spikes=impact_core, Flashes/Sparks=impact_slash).
@@ -25,7 +25,7 @@
 
 import { atan, float, mix, smoothstep, texture, uv, vec2 } from 'three/tsl'
 
-import { PACK_NOISE } from './vfx_pack_shaders.js'
+import { PACK_NOISE } from './vfx_pack_shaders_core.js'
 
 /** @typedef {{ age:*, seed:*, grow:*, pri:*, sec:*, emission:* }} PackCtx */
 
@@ -186,11 +186,11 @@ const PACK3 = {
   dark_flares,
 }
 
-/** The phase-B2 billboard appearance names — merged into PACK_BILLBOARD by vfx_pack_shaders.js. */
+/** The phase-B2 billboard appearance names — merged into PACK_BILLBOARD by vfx_pack_shaders_core.js. */
 export const PACK3_BILLBOARD = new Set(Object.keys(PACK3))
 
 /**
- * Phase-B2 billboard appearance → { rgb, alpha }. The engine (via vfx_pack_shaders.billboard_pack) routes any
+ * Phase-B2 billboard appearance → { rgb, alpha }. The engine (via vfx_pack_shaders_core.billboard_pack) routes any
  * emitter whose appearance is in PACK3_BILLBOARD here. @param {string} kind @param {PackCtx} ctx
  * @returns {{ rgb:*, alpha:* }}
  */

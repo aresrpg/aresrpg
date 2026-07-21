@@ -19,7 +19,7 @@
 // look is ALREADY ported op-for-op in phase B — elem_flare (cast_flare), elem_orb (projectile_core), elem_tail
 // (projectile_tail), elem_streak (projectile_streaks), elem_mote (projectile_particles), elem_area (area_ground).
 // AREA_GLOW (audit #9, B2): the additive area_glow bloom layer (the water-area Glow_01/Glow_02 rising energy veil,
-// 0 hits before B2) is NOW ported (vfx_pack_shaders3 `area_glow`, node→shader verified) and layered on the zone —
+// 0 hits before B2) is NOW ported (vfx_pack_shaders_gapfill `area_glow`, node→shader verified) and layered on the zone —
 // no longer skipped. The ported area_ground magic-circle + this glow curtain are the full ground read.
 
 /** @typedef {import('./vfx_preset_types.js').VfxPreset} VfxPreset */

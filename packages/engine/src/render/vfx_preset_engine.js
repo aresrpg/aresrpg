@@ -36,7 +36,7 @@ import {
   billboard_pack,
   flame_field,
   sphere_pack,
-} from './vfx_pack_shaders.js'
+} from './vfx_pack_shaders_core.js'
 
 /** The flash-core lifetime ceiling (ms) — a bright brief pop, never a sustained bloom source (no-halo law). */
 export const FLASH_MS = 250

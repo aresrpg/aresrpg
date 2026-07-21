@@ -13,10 +13,10 @@
 // identity, so each element reads as its distinct pack scene (fire gold→red, ice cyan→blue, dark magenta→violet…).
 //
 // SHAPE = REAL PACK PORTS, not generic FBM (not a placeholder). The crescent is `slash_arc` — the
-// op-for-op TSL port of BattleFX slash.gdshader (vfx_pack_shaders2.js). DIVERGENCES (documented, not hidden —
+// op-for-op TSL port of BattleFX slash.gdshader (vfx_pack_shaders_expansion.js). DIVERGENCES (documented, not hidden —
 // same discipline as vfx_presets_world.js):
 //   • swing.gdshader's angular-sweep mask and claw.gdshader's 3-band rake have no dedicated appearance: adding
-//     one needs a new dispatch branch in the FROZEN vfx_pack_shaders.js (Wave-B territory / this lane's fence).
+//     one needs a new dispatch branch in the FROZEN vfx_pack_shaders_core.js (Wave-B territory / this lane's fence).
 //     So swing = a WIDER/heavier `slash_arc` crescent + shock; claw = THREE offset `slash_arc` crescents (the
 //     rake) + an `arcane_mote` spray (BattleFX attack_particles). Both compose the pack's OWN shaders — the
 //     faithful family, never a generic disc/FBM (the fan/bits/trail/spray were `spark` before B2 — now arcane_mote).

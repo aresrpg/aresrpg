@@ -8,15 +8,15 @@
 // (4) curve_eval interpolates + clamps its control points,
 // (5) every ported preset is structurally valid AND stays under the 2.05 bloom threshold (no-halo law),
 // (6) tint_emitter recolours the coloured body but leaves a near-white core white-hot.
-// The GPU draw is proven by bench/vfx_presets.spec.js; here we pin the JS the shader mirrors.
+// The GPU draw is proven by bench/vfx_presets.spec.js [retired, issue #74]; here we pin the JS the shader mirrors.
 
 import { test, expect, describe } from 'bun:test'
 import { Group, Mesh, Object3D, PerspectiveCamera, Vector3 } from 'three'
 
 import { PRESETS, list_presets } from './vfx_presets_data.js'
-import { PACK_BILLBOARD } from './vfx_pack_shaders.js'
-import { PACK2_BILLBOARD } from './vfx_pack_shaders2.js'
-import { PACK3_BILLBOARD } from './vfx_pack_shaders3.js'
+import { PACK_BILLBOARD } from './vfx_pack_shaders_core.js'
+import { PACK2_BILLBOARD } from './vfx_pack_shaders_expansion.js'
+import { PACK3_BILLBOARD } from './vfx_pack_shaders_gapfill.js'
 import { follow_entity } from './vfx_anchor.js'
 import {
   curve_eval,

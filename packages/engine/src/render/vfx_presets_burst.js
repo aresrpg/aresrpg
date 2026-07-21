@@ -7,7 +7,7 @@
 //                       imploding void motes + the portal ground ring)
 //   • slash_preset    — the weapon melee slash (BattleFX slash_arc crescent + a spark fan + gravity sparks)
 // Each is a pure `s → VfxPreset` builder consumed by vfx_presets_spell.js's assembly. The appearance strings
-// resolve in vfx_pack_shaders(2).js (the pack .gdshader ports). Colour law unchanged: brief bursts may run HDR
+// resolve in vfx_pack_shaders_core.js / vfx_pack_shaders_expansion.js (the pack .gdshader ports). Colour law unchanged: brief bursts may run HDR
 // cores (< the 2.05 no-halo threshold, engine unit-tested); sustained loops live in vfx_presets_spell.js.
 
 /** @typedef {import('./vfx_preset_engine.js').VfxPreset} VfxPreset */

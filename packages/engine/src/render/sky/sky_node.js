@@ -130,7 +130,7 @@ let _moon_tex = null
  * have no `document`/`Image`, so `TextureLoader.load()` throws there — probed directly: a bare `Texture`
  * still builds a valid TSL `texture()` node graph with zero GPU/DOM, matching board_vfx.js's
  * `typeof document === 'undefined'` headless-guard idiom). Sampled with `NoColorSpace` (the raw stored byte
- * IS the linear multiplier — same reasoning as vfx_pack_shaders2.js's leaf_texture: an sRGB decode would
+ * IS the linear multiplier — same reasoning as vfx_pack_shaders_expansion.js's leaf_texture: an sRGB decode would
  * crush the gamma-lifted contrast back down). @returns {Texture}
  */
 export function moon_texture() {

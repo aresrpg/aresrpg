@@ -18,7 +18,7 @@
 // void motes), void_aura (the ball scene's coloured corona), area_dark (the shadow-pool ground), trail_blade (the
 // real dark_projectile_trail wake). B2 (audit sec3) ADDS the four accessory shaders that were previously
 // approximated — dark_ring / dark_lift (the void-area Ring + rising Lift columns) and dark_glow / dark_flares (the
-// void-projectile head Glow + Flares wisps) — now ported in vfx_pack_shaders3.js, node→shader verified against
+// void-projectile head Glow + Flares wisps) — now ported in vfx_pack_shaders_gapfill.js, node→shader verified against
 // vfx_void_area_01 / vfx_void_projectile_01. dark_zone uses the real dark_ring + dark_lift; dark_bolt the real
 // dark_glow + dark_flares. No appearance falls back to a generic disc.
 

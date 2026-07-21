@@ -35,7 +35,7 @@ import {
   vec4,
 } from 'three/tsl'
 
-import { PACK_NOISE } from './vfx_pack_shaders.js'
+import { PACK_NOISE } from './vfx_pack_shaders_core.js'
 
 /** Element → { primary (hot core), secondary (cool base), emission } — the on-model overlay colour per element.
  *  Matches the fight element palette; the fight-reaction lane picks by the struck cast's element. */

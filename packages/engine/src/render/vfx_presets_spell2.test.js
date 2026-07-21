@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { PACK_BILLBOARD, PACK_SPHERE } from './vfx_pack_shaders.js'
+import { PACK_BILLBOARD, PACK_SPHERE } from './vfx_pack_shaders_core.js'
 import { preset_peak_luma } from './vfx_preset_engine.js'
 import { DARK_PRESETS } from './vfx_presets_dark.js'
 import { AIR_PRESETS } from './vfx_presets_air.js'
