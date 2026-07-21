@@ -155,6 +155,85 @@ describe('ItemDetailView — level line honesty (no "Lv. 0")', () => {
   })
 })
 
+// #315 — the level chip: a proper single-line micro-chip, never wrapping "Lv." / "40" onto two lines.
+describe('ItemDetailView — level chip (no-wrap contract)', () => {
+  test('the level span carries whitespace-nowrap — the exact reported wrap defect never reproduces', () => {
+    const html = renderToStaticMarkup(
+      <I18nextProvider i18n={test_i18n}>
+        <ItemDetailView item={{ ...BASE_ITEM, level: 4 }} />
+      </I18nextProvider>
+    )
+    // isolate the level chip span specifically (not just "any nowrap somewhere in the tree")
+    const chip_match = html.match(/<span class="[^"]*"[^>]*>Lv\. 4<\/span>/)
+    expect(chip_match).not.toBeNull()
+    expect(chip_match?.[0]).toContain('whitespace-nowrap')
+    expect(chip_match?.[0]).toContain('uppercase')
+  })
+})
+
+// #315 — CHARACTERISTICS never renders as a bare header over an empty body: absent entirely for an item
+// with no damages/stats/particle trail/consumable effect (a legitimately statless item, OR the #219 stat
+// projection gap before the frontend consumes it) — populated rows otherwise.
+describe('ItemDetailView — CHARACTERISTICS section (never a bare empty header)', () => {
+  test('zero damages, zero non-zero stats, no particle trail, no consumable effect → the section is ABSENT', () => {
+    const html = renderToStaticMarkup(
+      <I18nextProvider i18n={test_i18n}>
+        <ItemDetailView item={{ ...BASE_ITEM, damages: [], stats: {} }} />
+      </I18nextProvider>
+    )
+    expect(html).not.toContain('CHARACTERISTICS')
+  })
+
+  test('stats present entirely as zero-valued entries still counts as empty — the section stays absent', () => {
+    const html = renderToStaticMarkup(
+      <I18nextProvider i18n={test_i18n}>
+        <ItemDetailView item={{ ...BASE_ITEM, stats: { vitality: 0, agility: [0, 0] } }} />
+      </I18nextProvider>
+    )
+    expect(html).not.toContain('CHARACTERISTICS')
+  })
+
+  test('a real (non-zero) stat renders the section header WITH its row — never a bare header', () => {
+    const html = renderToStaticMarkup(
+      <I18nextProvider i18n={test_i18n}>
+        <ItemDetailView item={{ ...BASE_ITEM, stats: { vitality: [1, 8] } }} />
+      </I18nextProvider>
+    )
+    expect(html).toContain('CHARACTERISTICS')
+    expect(html).toContain('Vitality')
+  })
+
+  test('a damage line alone still earns the section (damages count as characteristics)', () => {
+    const html = renderToStaticMarkup(
+      <I18nextProvider i18n={test_i18n}>
+        <ItemDetailView item={{ ...BASE_ITEM, damages: [{ element: 'fire', from: 4, to: 8 }] }} />
+      </I18nextProvider>
+    )
+    expect(html).toContain('CHARACTERISTICS')
+  })
+
+  test('an empty item with no caller children renders NO separator either (nothing to divide)', () => {
+    const html = renderToStaticMarkup(
+      <I18nextProvider i18n={test_i18n}>
+        <ItemDetailView item={{ ...BASE_ITEM, damages: [], stats: {} }} />
+      </I18nextProvider>
+    )
+    expect(html).not.toContain('w-full h-px') // SectionDivider's own marker class — no dangling rule over nothing
+  })
+
+  test('an empty item WITH caller children still renders the separator ahead of that content', () => {
+    const html = renderToStaticMarkup(
+      <I18nextProvider i18n={test_i18n}>
+        <ItemDetailView item={{ ...BASE_ITEM, damages: [], stats: {} }}>
+          <div>recipe section</div>
+        </ItemDetailView>
+      </I18nextProvider>
+    )
+    expect(html).not.toContain('CHARACTERISTICS')
+    expect(html).toContain('recipe section')
+  })
+})
+
 describe('ItemDetailView — OBTENTION honesty', () => {
   test('dropped_count > 0 renders the "dropped by N monsters" fragment', () => {
     const html = renderToStaticMarkup(

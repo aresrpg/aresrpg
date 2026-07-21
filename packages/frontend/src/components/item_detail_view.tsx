@@ -272,6 +272,16 @@ export function ItemDetailView({
     if (sold_in_shop) parts.push(t('encyclopedia.obtention_shop'))
     return parts.length > 0 ? parts.join(' · ') : t('encyclopedia.obtention_unknown')
   })()
+  // #315 — CHARACTERISTICS rendered a bare header over an empty body for items whose stat DFs haven't
+  // reached this client yet (issue #219: the /v1 stat projection is code-complete but the deploy +
+  // frontend-consumption leg is still landing) as well as for items that legitimately carry none
+  // (resources/consumables/cosmetics). Computed once and reused so the "is there a body" check and the
+  // stats list itself never filter the same entries twice (one derivation, not two).
+  const filtered_stats = Object.entries(item.stats).filter(([, v]) =>
+    Array.isArray(v) ? v[0] !== 0 || v[1] !== 0 : v !== 0
+  )
+  const has_characteristics =
+    item.damages.length > 0 || filtered_stats.length > 0 || !!item.particle_trail || !!item.consumable_effect
   return (
     <div className="flex flex-col gap-4 max-w-2xl mx-auto w-full">
       {/* Header */}
@@ -316,9 +326,19 @@ export function ItemDetailView({
             <span className="text-[13px] tracking-[0.15em] uppercase font-semibold text-gold">{item.name}</span>
             {is_new_template(item.createdAt) && <NewBadge />}
             {/* No "Lv. 0" — cosmetics (and any level-less item) carry no level, so a level line
-                there is a lie. Render it only for a real level (≥1). */}
+                there is a lie. Render it only for a real level (≥1). A proper micro-chip (#315 —
+                was raw text that WRAPPED "Lv." / "4" onto separate lines in a narrow header): uppercase
+                (CSS transform only — the i18n string itself stays "Lv." for its 8 other call sites),
+                gold-accent border, sharp corner, never wraps. */}
             {item.level > 0 && (
-              <span className="text-[10px] tracking-wide ml-auto" style={{ color: '#6b7280' }}>
+              <span
+                className="ml-auto shrink-0 whitespace-nowrap uppercase tracking-[0.1em] font-mono px-1.5 py-0.5 text-[9px] font-semibold"
+                style={{
+                  color: '#c8963c',
+                  background: 'rgba(200,150,60,0.1)',
+                  border: '1px solid rgba(200,150,60,0.35)',
+                }}
+              >
                 {t('entity.level_short', { level: item.level })}
               </span>
             )}
@@ -342,91 +362,92 @@ export function ItemDetailView({
           {obtention_line}
         </div>
       )}
-      {/* Separator */}
-      <SectionDivider />
-      {/* Characteristics */}
-      <div className="flex flex-col gap-2">
-        <SectionTitle title={t('entity.characteristics')} />
-        {/* Damages */}
-        {item.damages.length > 0 && (
-          <div className="flex flex-col gap-1">
-            {item.damages.map((d, i) => {
-              const el_color = ELEMENT_COLORS[d.element] || '#ffffff'
-              const label = d.damage_type === 'life_steal' ? t('entity.life_steal') : t('entity.damages')
-              return (
-                <div key={i} className="text-[10px] tracking-wide">
-                  <span style={{ color: el_color }}>{d.from}</span>
-                  <span style={{ color: '#AAAAAA' }}> - </span>
-                  <span style={{ color: el_color }}>{d.to}</span>
-                  <span style={{ color: '#AAAAAA' }}> {label} </span>
-                  <span style={{ color: el_color }}>{d.element}</span>
-                </div>
-              )
-            })}
-          </div>
-        )}
-        {/* Stats */}
-        {Object.entries(item.stats).filter(([, v]) => (Array.isArray(v) ? v[0] !== 0 || v[1] !== 0 : v !== 0)).length >
-          0 && (
-          <div className="flex flex-col gap-0.5">
-            {sort_stat_entries(
-              Object.entries(item.stats).filter(([, v]) => (Array.isArray(v) ? v[0] !== 0 || v[1] !== 0 : v !== 0))
-            ).map(([key, val], idx) => {
-              const [min_value, max_value] = Array.isArray(val) ? val : [val, val]
-              const is_range = min_value !== max_value
-              const ck = stat_color_key(key)
-              const stat_color = STAT_COLORS[ck] || '#e8e4dc'
-              const num_color = (n: number) => (n < 0 ? '#FF5555' : stat_color)
-              const num_prefix = (n: number) => (n < 0 ? '' : '+')
-              return (
-                <div
-                  key={key}
-                  className="text-[10px] tracking-wide px-2 py-1"
-                  style={{ background: idx % 2 === 1 ? 'rgba(255,255,255,0.03)' : 'transparent' }}
-                >
-                  {is_range ? (
-                    <>
-                      <span style={{ color: num_color(min_value) }}>
-                        {num_prefix(min_value)}
-                        {min_value}
-                      </span>
-                      <span style={{ color: '#AAAAAA' }}> {t('entity.range_to')} </span>
-                      <span style={{ color: num_color(max_value) }}>{max_value}</span>
-                      <span style={{ color: '#AAAAAA' }}> </span>
-                      <span style={{ color: stat_color }}>{stat_label(t, key)}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span style={{ color: num_color(min_value) }}>
-                        {num_prefix(min_value)}
-                        {min_value}
-                      </span>
-                      <span style={{ color: '#AAAAAA' }}> </span>
-                      <span style={{ color: stat_color }}>{stat_label(t, key)}</span>
-                    </>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
-        {/* Particle Trail Effect */}
-        {item.particle_trail && (
-          <div
-            className="text-[10px] tracking-wide px-2 py-1 flex items-center gap-2"
-            style={{ background: 'rgba(200,150,60,0.05)' }}
-          >
-            <span style={{ color: '#c8963c' }}>✦</span>
-            <span style={{ color: '#c8963c', fontStyle: 'italic' }}>{t('entity.particle_trail_effect')}</span>
-          </div>
-        )}
-        {/* Consumable Effect */}
-        {item.consumable_effect && (
-          <div className="px-2 py-1">
-            <ConsumableEffectLine effect={item.consumable_effect} on_item_click={on_item_click} />
-          </div>
-        )}
-      </div>
+      {/* Separator — only when something follows (real characteristics, or caller content like the
+          encyclopedia's recipe/drop sections and the pet-food row); never a dangling rule over nothing. */}
+      {(has_characteristics || children) && <SectionDivider />}
+      {/* Characteristics — see has_characteristics above; absent entirely rather than a bare header
+          over an empty body (#315). */}
+      {has_characteristics && (
+        <div className="flex flex-col gap-2">
+          <SectionTitle title={t('entity.characteristics')} />
+          {/* Damages */}
+          {item.damages.length > 0 && (
+            <div className="flex flex-col gap-1">
+              {item.damages.map((d, i) => {
+                const el_color = ELEMENT_COLORS[d.element] || '#ffffff'
+                const label = d.damage_type === 'life_steal' ? t('entity.life_steal') : t('entity.damages')
+                return (
+                  <div key={i} className="text-[10px] tracking-wide">
+                    <span style={{ color: el_color }}>{d.from}</span>
+                    <span style={{ color: '#AAAAAA' }}> - </span>
+                    <span style={{ color: el_color }}>{d.to}</span>
+                    <span style={{ color: '#AAAAAA' }}> {label} </span>
+                    <span style={{ color: el_color }}>{d.element}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          {/* Stats */}
+          {filtered_stats.length > 0 && (
+            <div className="flex flex-col gap-0.5">
+              {sort_stat_entries(filtered_stats).map(([key, val], idx) => {
+                const [min_value, max_value] = Array.isArray(val) ? val : [val, val]
+                const is_range = min_value !== max_value
+                const ck = stat_color_key(key)
+                const stat_color = STAT_COLORS[ck] || '#e8e4dc'
+                const num_color = (n: number) => (n < 0 ? '#FF5555' : stat_color)
+                const num_prefix = (n: number) => (n < 0 ? '' : '+')
+                return (
+                  <div
+                    key={key}
+                    className="text-[10px] tracking-wide px-2 py-1"
+                    style={{ background: idx % 2 === 1 ? 'rgba(255,255,255,0.03)' : 'transparent' }}
+                  >
+                    {is_range ? (
+                      <>
+                        <span style={{ color: num_color(min_value) }}>
+                          {num_prefix(min_value)}
+                          {min_value}
+                        </span>
+                        <span style={{ color: '#AAAAAA' }}> {t('entity.range_to')} </span>
+                        <span style={{ color: num_color(max_value) }}>{max_value}</span>
+                        <span style={{ color: '#AAAAAA' }}> </span>
+                        <span style={{ color: stat_color }}>{stat_label(t, key)}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ color: num_color(min_value) }}>
+                          {num_prefix(min_value)}
+                          {min_value}
+                        </span>
+                        <span style={{ color: '#AAAAAA' }}> </span>
+                        <span style={{ color: stat_color }}>{stat_label(t, key)}</span>
+                      </>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          {/* Particle Trail Effect */}
+          {item.particle_trail && (
+            <div
+              className="text-[10px] tracking-wide px-2 py-1 flex items-center gap-2"
+              style={{ background: 'rgba(200,150,60,0.05)' }}
+            >
+              <span style={{ color: '#c8963c' }}>✦</span>
+              <span style={{ color: '#c8963c', fontStyle: 'italic' }}>{t('entity.particle_trail_effect')}</span>
+            </div>
+          )}
+          {/* Consumable Effect */}
+          {item.consumable_effect && (
+            <div className="px-2 py-1">
+              <ConsumableEffectLine effect={item.consumable_effect} on_item_click={on_item_click} />
+            </div>
+          )}
+        </div>
+      )}
       {children}
     </div>
   )
