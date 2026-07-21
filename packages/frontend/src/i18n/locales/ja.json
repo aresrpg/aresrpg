@@ -710,7 +710,6 @@
     "critical_chance": "クリティカル率",
     "critical_outcomes": "クリティカル率",
     "vitality": "体力",
-    "stamina": "スタミナ",
     "wisdom": "知恵",
     "strength": "筋力",
     "intelligence": "知力",
@@ -1454,8 +1453,6 @@
     "reset_spells": "スペルポイントリセット",
     "restore_hp_effect": "HPを{{amount}}回復",
     "health_regen_effect": "+{{amount}}/秒 HP回復 {{duration}}秒間",
-    "stamina_regen_effect": "+{{amount}}/秒 スタミナ回復 {{duration}}秒間",
-    "soul_effect": "+{{amount}} ソウル",
     "random_item": "ランダムアイテム",
     "add_stats_effect": "+{{amount}} {{stat}} {{duration}}秒間",
     "member_game_perks": [

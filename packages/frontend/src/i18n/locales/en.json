@@ -710,7 +710,6 @@
     "critical_chance": "Critical Chance",
     "critical_outcomes": "Critical Chance",
     "vitality": "Vitality",
-    "stamina": "Stamina",
     "wisdom": "Wisdom",
     "strength": "Strength",
     "intelligence": "Intelligence",
@@ -1454,8 +1453,6 @@
     "reset_spells": "Reset spell points",
     "restore_hp_effect": "Restores {{amount}} HP",
     "health_regen_effect": "+{{amount}}/s health regen for {{duration}}s",
-    "stamina_regen_effect": "+{{amount}}/s stamina regen for {{duration}}s",
-    "soul_effect": "+{{amount}} soul",
     "random_item": "Random Item",
     "add_stats_effect": "+{{amount}} {{stat}} for {{duration}}s",
     "member_game_perks": [

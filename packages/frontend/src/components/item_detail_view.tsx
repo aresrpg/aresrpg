@@ -52,34 +52,11 @@ export function ConsumableEffectLine({
         <div className="text-[10px] tracking-wide" style={instant ? { color } : undefined}>
           {instant ? (
             // D240 — explicit "Restores N HP" so a potion answers "how much does it grant?" at a glance
-            // (was a bare "+N HP" stat-style line). One tinted string, mirroring the soul/regen effect lines.
+            // (was a bare "+N HP" stat-style line). One tinted string, matching the other regen effect lines.
             <span>{t('entity.restore_hp_effect', { amount: effect.amount })}</span>
           ) : (
             <span>{t('entity.health_regen_effect', { amount: effect.amount, duration: effect.duration })}</span>
           )}
-        </div>
-      )
-    }
-    case 'STAMINA_REGEN': {
-      const color = '#ffcc00'
-      const instant = !effect.duration || effect.duration <= 0
-      return (
-        <div className="text-[10px] tracking-wide">
-          {instant ? (
-            <>
-              <span style={{ color }}>+{effect.amount}</span>
-              <span style={{ color: '#AAAAAA' }}> Stamina</span>
-            </>
-          ) : (
-            <span>{t('entity.stamina_regen_effect', { amount: effect.amount, duration: effect.duration })}</span>
-          )}
-        </div>
-      )
-    }
-    case 'SOUL_REGEN': {
-      return (
-        <div className="text-[10px] tracking-wide" style={{ color: '#aad4ff' }}>
-          {t('entity.soul_effect', { amount: effect.amount })}
         </div>
       )
     }

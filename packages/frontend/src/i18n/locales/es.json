@@ -710,7 +710,6 @@
     "critical_chance": "Probabilidad Crítica",
     "critical_outcomes": "Probabilidad Crítica",
     "vitality": "Vitalidad",
-    "stamina": "Aguante",
     "wisdom": "Sabiduría",
     "strength": "Fuerza",
     "intelligence": "Inteligencia",
@@ -1454,8 +1453,6 @@
     "reset_spells": "Reiniciar puntos de hechizos",
     "restore_hp_effect": "Restaura {{amount}} PV",
     "health_regen_effect": "+{{amount}}/s regen vida durante {{duration}}s",
-    "stamina_regen_effect": "+{{amount}}/s regen aguante durante {{duration}}s",
-    "soul_effect": "+{{amount}} alma",
     "random_item": "Objeto aleatorio",
     "add_stats_effect": "+{{amount}} {{stat}} durante {{duration}}s",
     "member_game_perks": [

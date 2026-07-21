@@ -710,7 +710,6 @@
     "critical_chance": "Шанс криту",
     "critical_outcomes": "Шанс криту",
     "vitality": "Живучість",
-    "stamina": "Витривалість",
     "wisdom": "Мудрість",
     "strength": "Сила",
     "intelligence": "Інтелект",
@@ -1454,8 +1453,6 @@
     "reset_spells": "Скинути очки заклинань",
     "restore_hp_effect": "Відновлює {{amount}} ОЗ",
     "health_regen_effect": "+{{amount}}/с регенерація здоров'я на {{duration}}с",
-    "stamina_regen_effect": "+{{amount}}/с регенерація витривалості на {{duration}}с",
-    "soul_effect": "+{{amount}} душа",
     "random_item": "Випадковий предмет",
     "add_stats_effect": "+{{amount}} {{stat}} на {{duration}}с",
     "member_game_perks": [

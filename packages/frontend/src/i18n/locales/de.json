@@ -710,7 +710,6 @@
     "critical_chance": "Kritische Chance",
     "critical_outcomes": "Kritische Chance",
     "vitality": "Vitalität",
-    "stamina": "Ausdauer",
     "wisdom": "Weisheit",
     "strength": "Stärke",
     "intelligence": "Intelligenz",
@@ -1454,8 +1453,6 @@
     "reset_spells": "Zauberpunkte zurücksetzen",
     "restore_hp_effect": "Stellt {{amount}} LP wieder her",
     "health_regen_effect": "+{{amount}}/s Lebensregeneration für {{duration}}s",
-    "stamina_regen_effect": "+{{amount}}/s Ausdauerregeneration für {{duration}}s",
-    "soul_effect": "+{{amount}} Seele",
     "random_item": "Zufälliger Gegenstand",
     "add_stats_effect": "+{{amount}} {{stat}} für {{duration}}s",
     "member_game_perks": [

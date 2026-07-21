@@ -710,7 +710,6 @@
     "critical_chance": "Chance Critique",
     "critical_outcomes": "Chance Critique",
     "vitality": "Vitalité",
-    "stamina": "Endurance",
     "wisdom": "Sagesse",
     "strength": "Force",
     "intelligence": "Intelligence",
@@ -1454,8 +1453,6 @@
     "reset_spells": "Réinitialiser les points de sorts",
     "restore_hp_effect": "Restaure {{amount}} PV",
     "health_regen_effect": "+{{amount}}/s régen vie pendant {{duration}}s",
-    "stamina_regen_effect": "+{{amount}}/s régen endurance pendant {{duration}}s",
-    "soul_effect": "+{{amount}} âme",
     "random_item": "Objet aléatoire",
     "add_stats_effect": "+{{amount}} {{stat}} pendant {{duration}}s",
     "member_game_perks": [
