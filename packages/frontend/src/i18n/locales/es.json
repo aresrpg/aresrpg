@@ -1716,7 +1716,8 @@
     "results_opened": "+{{xp}} XP · {{items}} objetos",
     "results_recovered": "{{count}} recompensas atascadas recuperadas",
     "turn_lost_title": "Turno perdido",
-    "turn_lost_latched": "La confirmación falló on-chain y el turno se consumió. No se reintentará."
+    "turn_lost_latched": "La confirmación falló on-chain y el turno se consumió. No se reintentará.",
+    "peer_illegal_move": "Este jugador está intentando enviar movimientos ilegales."
   },
   "party": {
     "title": "Grupo",

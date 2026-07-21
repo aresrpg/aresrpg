@@ -82,6 +82,16 @@ const RTC_CONFIG = {
   ],
 }
 
+/** The shared serverless-room config — the SAME appId + nostr discovery + ICE every AresRPG p2p room joins on.
+ *  The ONE home for it: the lobby, the party room, and the fight-scoped courtesy room (fight-room.js, #334) are
+ *  all siblings on this exact infra — no second config, no new dependency. */
+export const P2P_ROOM_CONFIG = {
+  appId: APP_ID,
+  rtcConfig: RTC_CONFIG,
+  relayUrls: RELAY_URLS,
+  relayRedundancy: RELAY_REDUNDANCY,
+}
+
 let room = null
 let pos_action = null
 let chat_action = null
@@ -175,10 +185,7 @@ let watchdogs_started = false
  *  and peers that truly left expire via the tick. */
 function _build_room() {
   link_grace_until = Date.now() + LINK_GRACE_MS // fresh sockets connect async — grace the death judgment
-  room = joinRoom(
-    { appId: APP_ID, rtcConfig: RTC_CONFIG, relayUrls: RELAY_URLS, relayRedundancy: RELAY_REDUNDANCY },
-    ROOM_ID
-  )
+  room = joinRoom(P2P_ROOM_CONFIG, ROOM_ID)
   pos_action = room.makeAction('pos')
   chat_action = room.makeAction('chat')
   state_action = room.makeAction('state')
@@ -426,10 +433,7 @@ export function sync_party_room(party_id) {
   party_chat_action = null
   party_room_id = party_id ?? null
   if (!party_id) return
-  party_room = joinRoom(
-    { appId: APP_ID, rtcConfig: RTC_CONFIG, relayUrls: RELAY_URLS, relayRedundancy: RELAY_REDUNDANCY },
-    `party-${party_id}`
-  )
+  party_room = joinRoom(P2P_ROOM_CONFIG, `party-${party_id}`)
   party_chat_action = party_room.makeAction('chat')
   party_chat_action.onMessage = (data) => {
     const { id, message, name, channel, target } = /** @type {any} */ (data ?? {})

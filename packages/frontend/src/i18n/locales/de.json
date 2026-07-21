@@ -1716,7 +1716,8 @@
     "results_opened": "+{{xp}} XP · {{items}} Gegenstände",
     "results_recovered": "{{count}} blockierte Belohnungen wiederhergestellt",
     "turn_lost_title": "Zug verloren",
-    "turn_lost_latched": "Die Bestätigung ist on-chain fehlgeschlagen und der Zug wurde verbraucht. Sie wird nicht wiederholt."
+    "turn_lost_latched": "Die Bestätigung ist on-chain fehlgeschlagen und der Zug wurde verbraucht. Sie wird nicht wiederholt.",
+    "peer_illegal_move": "Dieser Spieler versucht, illegale Züge zu senden."
   },
   "party": {
     "title": "Gruppe",

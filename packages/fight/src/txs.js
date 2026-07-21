@@ -148,3 +148,52 @@ export const apply_receipt = (store, receipt, { version, source = 'receipt', fig
 /** A liquidation / overdue-crank receipt is just another authoritative segment — same door, `poll` priority. */
 export const apply_liquidation = (store, receipt, { version, fight_id = null, resolve_seat = null }) =>
   store.getState().input({ type: 'poll', receipt, version, fight_id, resolve_seat })
+
+// ── THE COURTESY CHANNEL (#334) — publish/receive seam ────────────────────────────────────────────────────────
+// PURE projections + one door-dispatch each: the transport (the fight-scoped Trystero room) lives in the frontend
+// p2p layer and only carries these payloads — packages/fight stays promise-free (L-P4), never importing transport.
+
+/** THE BROADCAST PAYLOAD: my drafted turn as normalized actions, read straight off the store's OWN optimistic
+ *  intent entries — the SAME vocabulary the receipt/journal carry (one home, never a parallel format). Fired at
+ *  the commit (the PTB submit) by the fight-room transport; a peer re-enters it via `apply_peer_batch`. The
+ *  transport keys (version/event_idx/source/resolve_seat/peer) are stripped — the receiver re-keys onto its own
+ *  floor. `intent_id` is stable per my turn so a re-delivery dedupes on the receiver (peer_seen). */
+// The receiver assigns these — they never ride the wire (it re-keys onto its own floor, re-sources as a peer intent).
+const TRANSPORT_KEYS = new Set(['version', 'event_idx', 'source', 'resolve_seat', 'peer'])
+const on_wire = (entry) => Object.fromEntries(Object.entries(entry).filter(([key]) => !TRANSPORT_KEYS.has(key)))
+
+export const drafted_batch = (store) => {
+  const s = store.getState()
+  const actions = Object.values(s.entries ?? {})
+    .filter((entry) => entry.source === 'intent')
+    .sort((a, b) => a.version - b.version || a.event_idx - b.event_idx)
+    .map(on_wire)
+  return { intent_id: `${s.fight_id}:${s.my_key}:${s.my_turn_no}`, actions }
+}
+
+/** RECEIVE a peer's courtesy batch through the ONE door as a legality-gated peer prediction. `peer` is the
+ *  broadcaster's on-chain CHARACTER (the door resolves its seat on MY roster — a spoofed actor fails the gate). */
+export const apply_peer_batch = (store, { peer, intent_id, actions, fight_id = null, resolve_seat = null }) =>
+  store.getState().input({
+    type: 'peer_predicted',
+    peer,
+    intent_id,
+    actions,
+    fight_id,
+    resolve_seat,
+    basis_version: store.getState().applied_version + 1,
+  })
+
+/** Surface the ILLEGAL-PEER flag once (reducer-owned consume, remount-safe) — the toast + game-log edge. The
+ *  same shape as subscribe_turn_lost / subscribe_divergence: observe → mark shown through the door → notify. */
+export function subscribe_peer_flag(store, { on_flag }) {
+  const observe = () => {
+    const { flagged } = store.getState()
+    if (!flagged || flagged.shown) return
+    store.getState().input({ type: 'flagged_shown', at: flagged.at })
+    on_flag(flagged)
+  }
+  const stop = store.subscribe(observe)
+  observe()
+  return stop
+}

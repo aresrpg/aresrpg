@@ -69,6 +69,7 @@ import { push_event_toast, trigger_fight_flash } from '../game/core/toast.js'
 import { WORLD_BOARD_UNPLACEABLE } from '../game/world_board_seat.js'
 import { use_dungeon_turn } from '../game/screens/dungeon-turn.js'
 import { init_fight_stream } from '../game/screens/fight-stream.js'
+import { init_fight_room } from '../p2p/fight-room.js'
 import { use_auth } from '../auth'
 import {
   WEAPON_ATTACK_ID,
@@ -242,6 +243,9 @@ export function create_voxel_fight_adapter(
   // adapter is a LEAF the store cluster never imports back, so it is the cycle-safe hook fight-stream.js's own
   // docstring asks for ("the dungeon bridge on the first sync").
   init_fight_stream()
+  // #334 — the courtesy channel's store bridge (fight-scoped p2p room lifecycle + drafted-turn publish). Same
+  // cycle-safe leaf hook as init_fight_stream; its own `installed` latch makes every board (re)build idempotent.
+  init_fight_room()
   /** The fight_id the board is currently built for (null = torn down). Guards same-state rebuilds. */
   let built_for = /** @type {string | null} */ (null)
   /** [p0-fight-init FIX] atomic build: true while a board.build is in flight — a build is uninterruptible

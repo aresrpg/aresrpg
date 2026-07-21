@@ -34,6 +34,7 @@ import * as settle_input from './inputs.js'
 import { board_state_from_fight, fight_geometry_complete } from './board_state.js'
 import { masks_entries } from './present.js'
 import { reconcile_predictions } from './reconcile_action.js'
+import { peer_batch_legality } from './peer_legality.js'
 import { tap_trace_input } from './trace_tap.js'
 import {
   base_budget,
@@ -65,7 +66,10 @@ export const WAVE_ACK_GRACE_MS = 6000
 // non-event: the reducer records it in `state.refused` (the turn_lost idiom — the fight core is hermetic, so it
 // cannot call the frontend fight_state_trace; an edge subscriber surfaces `refused`, as subscribe_turn_lost does).
 const LOCAL_PUSH = new Set(['intent', 'predicted'])
-const IDENTITY_SCOPED = new Set(['receipt', 'poll', 'p2p', 'snapshot', 'presented', 'placement_ghost'])
+// `peer_predicted` (the #334 courtesy channel) is identity-scoped, NOT a local push: a peer's relayed draft
+// arrives while I am NOT the one holding the mic (idle_wait / chain_replay), so it can never be a LOCAL_PUSH —
+// the fight/session gate is its whole provenance armor (a batch for another fight or a superseded session drops).
+const IDENTITY_SCOPED = new Set(['receipt', 'poll', 'p2p', 'peer_predicted', 'snapshot', 'presented', 'placement_ghost'])
 const refuse_reason = (state, msg) => {
   if (LOCAL_PUSH.has(msg.type) && state.provider !== 'local_turn')
     return { type: msg.type, reason: 'provider', provider: state.provider }
@@ -164,6 +168,8 @@ const empty_fight = () => ({
   session_generation: 0, // bumped per init; an async input tagged with a superseded generation drops (A→B crossing guard)
   refused: null, // { type, reason, ... , at } — the last input the provider/identity gate refused (a logged non-event the edge surfaces once)
   divergence: null, // { version, at, deferred? } — the last equal-version object that disagreed with the event fold (keystone #3: the reconcile-divergence log)
+  flagged: null, // #334 COURTESY CHANNEL — { peer, actor, reason, at, shown? } — the last peer batch the legality gate DROPPED; the toast+game-log edge consumes it once (no-silent-failure law, the turn_lost idiom)
+  peer_seen: {}, // #334 — `${peer}:${intent_id}` → true: a courtesy batch is IDEMPOTENT by its own id, so a re-delivered batch paints once and a retired one never re-paints. Cleared per init.
 })
 
 /** THE ONE DOOR: chain inputs (snapshot/receipt/poll/p2p/terminal confirmation/outcome), local prediction,
@@ -252,7 +258,13 @@ const make_input =
           // append a SECOND visual wave. Track the versions that produced a wave; a re-delivered version reuses the
           // folded entries (merge_entries dedupes) but paces NO new turns. Only receipts that actually produced
           // turns are recorded (a bare local turn produces none and stays harmlessly re-runnable).
-          const waved = msg.type === 'receipt' && (s.wave_versions ?? []).includes(msg.version)
+          // #334 NO DOUBLE-PLAY: a receipt that CONFIRMS a courtesy pre-paint (it retired a `peer` prediction by
+          // claim) must not re-animate the beats the peer channel already painted — the painted claim retires
+          // SILENTLY and the authoritative replay SKIPS it. Scoped to receipts that actually retired peer entries,
+          // so a mob wave or any un-pre-painted turn still paces exactly as before (the s.entries lookup reads the
+          // pre-delete draft — reconcile's keys still resolve there).
+          const confirms_peer = !!reconcile && [...reconcile.retire].some((key) => s.entries[key]?.peer)
+          const waved = msg.type === 'receipt' && ((s.wave_versions ?? []).includes(msg.version) || confirms_peer)
           const new_turns =
             msg.type === 'receipt' && !waved ? wave_turns_of(s, raw, msg.version, msg.trap_cells ?? []) : []
           const wave = [...s.wave, ...new_turns]
@@ -272,6 +284,62 @@ const make_input =
             now
           )
         })
+        return
+      }
+      case 'peer_predicted': {
+        // THE COURTESY CHANNEL (#334) — a peer's committed draft, relayed real-time over the fight mesh so their
+        // teammate SEES it now instead of on the multi-second chain poll. It enters as a PREDICTION exactly like
+        // my own composite cast (source 'intent' → EXCLUDED from committed truth, retired by the canonical
+        // receipt's CLAIM, #308): p2p costs LATENCY, never correctness. But a prediction still paints, so the
+        // batch is first REDUCED over MY committed state by the LOCAL SIM's legality gate (peer_legality.js —
+        // the same bfsPathCost the draft/chain use): an ILLEGAL batch (an over-budget move, a spoofed actor)
+        // NEVER folds and raises `flagged` (the toast: "this player is trying to send illegal moves"). Idempotent:
+        // a re-delivered batch (its `peer:intent_id` already seen) is a no-op — it paints once, and a retired one
+        // never re-paints. The actor is resolved from the peer's CHARACTER on MY roster (trustless: a spoofed
+        // mover/caster fails the gate); the receipt is the correctness authority regardless.
+        const seen_key = `${msg.peer ?? ''}:${msg.intent_id ?? ''}`
+        if (msg.intent_id != null && state.peer_seen?.[seen_key]) return
+        const resolve_seat = msg.resolve_seat ?? state.ctx?.resolve_seat ?? seat_resolver(state.view)
+        const actor_seat = msg.peer != null ? resolve_seat?.(msg.peer) : null
+        const actor_key = actor_seat != null ? `p${actor_seat}` : (msg.actor ?? null)
+        const legality = peer_batch_legality({
+          committed: committed_state(state),
+          view: state.view,
+          actor_key,
+          actions: msg.actions ?? [],
+          resolve_seat,
+        })
+        if (!legality.legal)
+          return set((s) => ({
+            ...s,
+            flagged: { peer: msg.peer ?? null, actor: actor_key, reason: legality.reason, at: now },
+          }))
+        // LEGAL — fold the batch as peer PREDICTION entries, re-keyed onto MY floor (basis) and tagged `peer` for
+        // provenance. `intent_id` (the peer's turn id) gives composite atomicity: the whole peer turn retires as a
+        // unit on its receipt, and rolls back as a unit if it never lands (#308 settled_ids / the rollback door).
+        const base_version = Math.max(1, Number(msg.basis_version ?? state.applied_version + 1))
+        const actor = settle_input.actor_from_key(actor_key)
+        const actions = (msg.actions ?? []).map((raw, i) => ({
+          ...normalize_intent(raw, {
+            version: raw.version ?? base_version,
+            event_idx: state.intent_seq + i,
+            actor,
+            resolve_seat,
+          }),
+          peer: msg.peer ?? true,
+          ...(msg.intent_id != null ? { intent_id: msg.intent_id } : {}),
+        }))
+        set((s) =>
+          recompute(
+            {
+              ...s,
+              entries: merge_entries(s.entries, actions),
+              intent_seq: s.intent_seq + actions.length,
+              peer_seen: msg.intent_id != null ? { ...s.peer_seen, [seen_key]: true } : s.peer_seen,
+            },
+            now
+          )
+        )
         return
       }
       case 'snapshot': {
@@ -793,6 +861,9 @@ const make_input =
             ? { ...s, divergence: { ...s.divergence, shown: true } }
             : s
         )
+        return
+      case 'flagged_shown': // #334 — the illegal-peer toast edge consumed this flag (reducer-owned, remount-safe)
+        set((s) => (s.flagged && !s.flagged.shown && s.flagged.at === msg.at ? { ...s, flagged: { ...s.flagged, shown: true } } : s))
         return
       case 'flush': {
         const pending = state.pending_end_turn

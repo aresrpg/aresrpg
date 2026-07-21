@@ -1716,7 +1716,8 @@
     "results_opened": "+{{xp}} XP · {{items}} objets",
     "results_recovered": "{{count}} récompenses bloquées récupérées",
     "turn_lost_title": "Tour perdu",
-    "turn_lost_latched": "La validation a échoué on-chain et le tour a été consommé. Elle ne sera pas retentée."
+    "turn_lost_latched": "La validation a échoué on-chain et le tour a été consommé. Elle ne sera pas retentée.",
+    "peer_illegal_move": "Ce joueur essaie d'envoyer des coups illégaux."
   },
   "party": {
     "title": "Groupe",

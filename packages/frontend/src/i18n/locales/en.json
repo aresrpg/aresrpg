@@ -1716,7 +1716,8 @@
     "results_opened": "+{{xp}} XP · {{items}} items",
     "results_recovered": "{{count}} stranded rewards recovered",
     "turn_lost_title": "Turn lost",
-    "turn_lost_latched": "The turn commit failed on-chain and the turn was consumed. It will not be retried."
+    "turn_lost_latched": "The turn commit failed on-chain and the turn was consumed. It will not be retried.",
+    "peer_illegal_move": "This player is trying to send illegal moves."
   },
   "party": {
     "title": "Party",

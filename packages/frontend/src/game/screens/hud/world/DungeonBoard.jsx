@@ -34,7 +34,13 @@ import { push_event_toast } from '../../../core/toast.js'
 import { WEAPON_ATTACK_ID, WEAPON_ATTACK_RANGE, WEAPON_ATTACK_AP } from '../../../core/modules/fight.js'
 import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
 import { damage_of } from '@aresrpg/fight/predict_cast'
-import { subscribe_commit_due, subscribe_divergence, subscribe_turn_lost, staged_turn_paths } from '@aresrpg/fight/txs'
+import {
+  subscribe_commit_due,
+  subscribe_divergence,
+  subscribe_turn_lost,
+  subscribe_peer_flag,
+  staged_turn_paths,
+} from '@aresrpg/fight/txs'
 import { fight_store } from '@aresrpg/fight/store'
 import { fight_view } from '@aresrpg/fight/project'
 import { committed_mob_hp } from '@aresrpg/fight/project'
@@ -935,6 +941,19 @@ export function DungeonBoard() {
         },
       }),
     []
+  )
+  // #334 — the illegal-peer FLAG: the courtesy channel dropped a peer batch its local-sim legality gate rejected
+  // (an over-budget move, a spoofed actor). No-silent-failure law — one honest toast (the owner's exact ruling)
+  // + a game-log line NAMING the peer. Reducer-owned `shown` consumption makes it remount-safe (turn_lost idiom).
+  useEffect(
+    () =>
+      subscribe_peer_flag(fight_store, {
+        on_flag: ({ peer, reason }) => {
+          game_log('board', `illegal peer batch dropped (${reason}) — ${String(peer).slice(0, 12)}`)
+          push_event_toast({ state: 'error', title: t('dungeons.peer_illegal_move') })
+        },
+      }),
+    [t]
   )
 
   // The pick decision (unchanged rules): a CAST wins over a move on a castable cell. `cast_only` (a spell
