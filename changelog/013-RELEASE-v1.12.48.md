@@ -1,4 +1,4 @@
-# v1.12.48 — the log is the law
+# v1.12.48 — the log is the law (2026-07-22)
 
 - **One ingress** — fight state now folds from the chain's ordered event journal through a
   single accept door: contiguous, idempotent, byte-identical under any message ordering.
