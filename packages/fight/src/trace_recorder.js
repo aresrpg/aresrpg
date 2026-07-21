@@ -84,6 +84,19 @@ const latest_open_fight = (rec) => {
 }
 
 /**
+ * The wall-clock timestamp of ONE fight's own turn-zero — its most recent 'init' entry (a re-init/resume
+ * supersedes an earlier attempt, same scoping as dump_trace). This is the fight's ONE reducer door recording
+ * its own opening, unconditionally, independent of any caller-side bind bookkeeping (issue #241: a caller that
+ * forgets — or was never taught — to stamp its own "fight started" field still has this). null when nothing is
+ * recorded for it (ring eviction past capacity, or never opened) — callers fall back to their own source, never
+ * fabricate a value. @param {TraceRecorder} rec @param {string} fight_id @returns {number | null} */
+export const earliest_input_at = (rec, fight_id) => {
+  const scoped = rec.entries.filter((entry) => entry.fight_id === fight_id)
+  const open_idx = scoped.map((entry) => entry.msg?.type).lastIndexOf('init')
+  return open_idx === -1 ? null : scoped[open_idx].at
+}
+
+/**
  * Fold the buffered entries for ONE fight into an exportable trace: the LAST 'init' for that fight (a re-init
  * supersedes an earlier attempt) plus every input recorded from it onward, in order — replaying `inputs`
  * through a fresh store's `.input(msg, at)`, in order, reproduces the fight's projection. Returns null when

@@ -23,6 +23,7 @@ import { aresrpg_id } from '@aresrpg/sdk/deployment/aresrpg'
 import { fight_store } from '@aresrpg/fight/store'
 import * as project from '@aresrpg/fight/project'
 import { fight_view } from '@aresrpg/fight/project'
+import { fight_opened_at } from '@aresrpg/fight/trace_tap'
 import {
   STATUS_OPEN,
   STATUS_ACTIVE,
@@ -170,7 +171,16 @@ async function verified_team_keys(sdk, key_template, items, required, address) {
  *  committed roster (fight_recap_payload — pure, unit-tested) from the live engine slice, so it MUST run
  *  before teardown. cause stays null: the finishing-blow attribution rides the core presentation wave. */
 function open_fight_recap(get, winner, xp = 0) {
-  const { fight_started_at_ms, fight_start_partial } = get()
+  const { fight_id, fight_started_at_ms, fight_start_partial } = get()
+  // LOCAL WALL-CLOCK ONLY (no chain fight-start timestamp exists anywhere — see fight_started_at_ms above): this
+  // store's own bind bookkeeping is preferred (issue #241 fallback below, not a replacement — every one of its 4
+  // real bind sites already stamps this exactly). When it's missing (a caller bound `fight_id` without going
+  // through this store's own start/join/resume/poll-adopt doors — the dev synth-fight harness is the one known
+  // case today), derive turn-zero from the fight's OWN reducer door instead: trace_tap.js records every input's
+  // wall-clock 'at' unconditionally, including the 'init' that opened this exact fight_id — the ONE fight state
+  // home this store's bind field was always just a local echo of. Still null (never fabricated) if the ring has
+  // nothing for it either (evicted past capacity, or never opened).
+  const started_at = fight_started_at_ms ?? (fight_id ? fight_opened_at(fight_id) : null)
   context.dispatch(
     'action/fight_summary/open',
     fight_recap_payload({
@@ -178,10 +188,9 @@ function open_fight_recap(get, winner, xp = 0) {
       my_addr: use_auth.getState().address,
       winner,
       xp,
-      // LOCAL WALL-CLOCK ONLY (no chain fight-start timestamp exists anywhere — see fight_started_at_ms above):
-      // the delta from this client's own fight-bind moment to now. duration_partial:true on a resume/poll-adopt
-      // means the clock started AFTER the fight did — an honest floor, never the true length.
-      duration_ms: fight_started_at_ms ? Date.now() - fight_started_at_ms : 0,
+      // duration_partial:true on a resume/poll-adopt means the clock started AFTER the fight did — an honest
+      // floor, never the true length.
+      duration_ms: started_at ? Date.now() - started_at : 0,
       duration_partial: fight_start_partial,
     })
   )
