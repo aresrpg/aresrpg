@@ -65,23 +65,28 @@ const PRIMARY = [
 
 const PRIMARY_KEYS = PRIMARY.map(({ key }) => key)
 
-/** Literal-key translation home: static calls keep the six-locale coverage gate authoritative. */
-const primary_label = (t, key) => {
+/** label + sim-truth description (issue #371) per stat row, primary or secondary — literal t() calls keep
+ * the 6-locale coverage gate authoritative; formula citations (file:line) live in the PR body. */
+const stat_text = (t, key) => {
   switch (key) {
     case STATISTICS.VITALITY:
-      return t('stat.vitality')
+      return { label: t('stat.vitality'), description: t('stats.description.vitality') }
     case STATISTICS.WISDOM:
-      return t('stat.wisdom')
+      return { label: t('stat.wisdom'), description: t('stats.description.wisdom') }
     case STATISTICS.STRENGTH:
-      return t('stat.strength')
+      return { label: t('stat.strength'), description: t('stats.description.strength') }
     case STATISTICS.INTELLIGENCE:
-      return t('stat.intelligence')
+      return { label: t('stat.intelligence'), description: t('stats.description.intelligence') }
     case STATISTICS.CHANCE:
-      return t('stat.chance')
+      return { label: t('stat.chance'), description: t('stats.description.chance') }
     case STATISTICS.AGILITY:
-      return t('stat.agility')
+      return { label: t('stat.agility'), description: t('stats.description.agility') }
+    case STATISTICS.CRITICAL:
+      return { label: t('stat.critical_hit'), description: t('stats.description.critical_hit') }
+    case STATISTICS.RAW_DAMAGE:
+      return { label: t('stat.raw_damage'), description: t('stats.description.raw_damage') }
     default:
-      return ''
+      return { label: '', description: '' }
   }
 }
 
@@ -221,17 +226,6 @@ export const equipment_bonus = (character, key) => get_total_stat(character, key
 
 export const visible_secondary_stats = (character) =>
   get_secondary_stats(character).filter(({ key }) => SECONDARY_KEYS.has(key))
-
-const secondary_label = (t, key) => {
-  switch (key) {
-    case STATISTICS.CRITICAL:
-      return t('stat.critical_hit')
-    case STATISTICS.RAW_DAMAGE:
-      return t('stat.raw_damage')
-    default:
-      return ''
-  }
-}
 
 const CLASS_TITLES = {
   senshi: (t) => t('simulator.classes.SENSHI.title'),
@@ -475,7 +469,7 @@ export function Stats() {
         <div className="stats__section">{t('stats.characteristics')}</div>
         <div className="stats__card">
           {PRIMARY.map(({ key, icon, tint }) => {
-            const label = primary_label(t, key)
+            const { label, description } = stat_text(t, key)
             const base = character[key] ?? 0
             const pending = alloc[key] ?? 0
             const bonus = equipment_bonus(character, key)
@@ -493,7 +487,10 @@ export function Stats() {
                     <img src={icon} alt="" />
                   </span>
                 </Tooltip>
-                <span className="stats__prow-label">{label}</span>
+                <span className="stats__prow-labels" title={description}>
+                  <span className="stats__prow-label">{label}</span>
+                  <span className="stats__prow-desc">{description}</span>
+                </span>
                 <span className="stats__prow-value hud-num">
                   {base}
                   {bonus > 0 && <span className="stats__prow-bonus"> (+{bonus})</span>}
@@ -564,7 +561,7 @@ export function Stats() {
         <div className="stats__section">{t('stats.secondary')}</div>
         <div className="stats__card stats__card--secondary">
           {secondary.map(({ key, value, unit }) => {
-            const label = secondary_label(t, key)
+            const { label, description } = stat_text(t, key)
             // critical hit reads as "1 chance in N" per the locked sheet (1/N), not a raw percent.
             const display =
               key === STATISTICS.CRITICAL
@@ -584,7 +581,10 @@ export function Stats() {
                       })
                     }
                   />
-                  <span className="stats__srow-label">{label}</span>
+                  <span className="stats__srow-labels" title={description}>
+                    <span className="stats__srow-label">{label}</span>
+                    <span className="stats__srow-desc">{description}</span>
+                  </span>
                   <span className="stats__srow-value hud-num">{display}</span>
                 </div>
               </Tooltip>

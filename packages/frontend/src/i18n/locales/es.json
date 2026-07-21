@@ -742,6 +742,16 @@
       "earth": "Tierra",
       "air": "Aire"
     },
+    "description": {
+      "vitality": "Aumenta tu salud máxima",
+      "wisdom": "Aumenta tu ganancia de XP y tu regeneración de salud",
+      "strength": "Aumenta tu daño de Tierra y neutro",
+      "intelligence": "Aumenta tu daño de Fuego y tus curaciones",
+      "chance": "Aumenta tu daño de Agua",
+      "agility": "Aumenta tu daño de Aire, golpe crítico, placaje y esquiva de pérdida de PA/PM",
+      "critical_hit": "Mejora tus probabilidades de golpe crítico",
+      "raw_damage": "Añade daño fijo a cada hechizo"
+    },
     "remove_point": "Quitar un punto de {{stat}}",
     "add_point": "Añadir un punto a {{stat}}",
     "tx_pending": "Asignando…",

@@ -742,6 +742,16 @@
       "earth": "Erde",
       "air": "Luft"
     },
+    "description": {
+      "vitality": "Erhöht dein maximales Leben",
+      "wisdom": "Erhöht deinen XP-Gewinn und deine Leben-Regeneration",
+      "strength": "Erhöht deinen Erd- und Neutralschaden",
+      "intelligence": "Erhöht deinen Feuerschaden und deine Heilung",
+      "chance": "Erhöht deinen Wasserschaden",
+      "agility": "Erhöht deinen Luftschaden, kritische Treffer, Fesselung und Ausweichen bei AP/BP-Verlust",
+      "critical_hit": "Verbessert deine Chance auf einen kritischen Treffer",
+      "raw_damage": "Fügt jedem Zauber festen Schaden hinzu"
+    },
     "remove_point": "{{stat}} um einen Punkt verringern",
     "add_point": "{{stat}} um einen Punkt erhöhen",
     "tx_pending": "Verteilen…",

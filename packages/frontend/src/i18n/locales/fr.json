@@ -742,6 +742,16 @@
       "earth": "Terre",
       "air": "Air"
     },
+    "description": {
+      "vitality": "Augmente votre Vie maximum",
+      "wisdom": "Augmente votre gain d’XP et votre régénération de Vie",
+      "strength": "Augmente vos dégâts Terre et neutres",
+      "intelligence": "Augmente vos dégâts Feu et vos soins",
+      "chance": "Augmente vos dégâts Eau",
+      "agility": "Augmente vos dégâts Air, coup critique, tacle et esquive de perte de PA/PM",
+      "critical_hit": "Améliore vos chances de coup critique",
+      "raw_damage": "Ajoute des dégâts fixes à chaque sort"
+    },
     "remove_point": "Retirer un point de {{stat}}",
     "add_point": "Ajouter un point à {{stat}}",
     "tx_pending": "Attribution…",

@@ -742,6 +742,16 @@
       "earth": "Earth",
       "air": "Air"
     },
+    "description": {
+      "vitality": "Increases your max HP",
+      "wisdom": "Increases your XP gain and HP regeneration",
+      "strength": "Increases your earth and neutral damage",
+      "intelligence": "Increases your fire damage and healing",
+      "chance": "Increases your water damage",
+      "agility": "Increases your air damage, critical hit, tackle, and dodge of AP/MP loss",
+      "critical_hit": "Improves your odds of landing a critical hit",
+      "raw_damage": "Adds flat damage to every spell"
+    },
     "remove_point": "Remove a point from {{stat}}",
     "add_point": "Add a point to {{stat}}",
     "tx_pending": "Assigning…",

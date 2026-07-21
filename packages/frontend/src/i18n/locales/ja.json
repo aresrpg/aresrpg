@@ -742,6 +742,16 @@
       "earth": "土",
       "air": "風"
     },
+    "description": {
+      "vitality": "最大HPが増加する",
+      "wisdom": "獲得経験値とHP自然回復が増加する",
+      "strength": "土属性と無属性のダメージが増加する",
+      "intelligence": "火属性ダメージと回復量が増加する",
+      "chance": "水属性ダメージが増加する",
+      "agility": "風属性ダメージ、クリティカルヒット、足止め、AP/MPロスの回避が増加する",
+      "critical_hit": "クリティカルヒットの確率が上昇する",
+      "raw_damage": "全ての呪文に固定ダメージを追加する"
+    },
     "remove_point": "{{stat}}から1ポイント減らす",
     "add_point": "{{stat}}に1ポイント追加",
     "tx_pending": "割り振り中…",

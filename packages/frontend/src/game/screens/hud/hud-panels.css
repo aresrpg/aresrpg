@@ -914,10 +914,30 @@
   object-fit: contain;
 }
 
-.stats__prow-label {
+/* label + sim-truth description stack — flex:1 moves here so the desc line can truncate inside it
+   (min-width:0 is required: flex children default to min-width:auto, which blocks ellipsis). */
+.stats__prow-labels {
+  display: flex;
+  flex-flow: column nowrap;
   flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+
+.stats__prow-label {
   font-size: 0.84rem;
   color: var(--fg);
+}
+
+/* single-line, no wrap at panel width — truncates with an ellipsis; the title attr carries the full text. */
+.stats__prow-desc {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--fg-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stats__prow-value {
@@ -1194,10 +1214,29 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, #000 25%, transparent);
 }
 
-.stats__srow-label {
+/* label + sim-truth description stack — same min-width:0 truncation seam as .stats__prow-labels. */
+.stats__srow-labels {
+  display: flex;
+  flex-flow: column nowrap;
   flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+
+.stats__srow-label {
   font-size: 0.78rem;
   color: var(--fg-muted);
+}
+
+/* single-line, no wrap at panel width — truncates with an ellipsis; the title attr carries the full text. */
+.stats__srow-desc {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--fg-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stats__srow-value {

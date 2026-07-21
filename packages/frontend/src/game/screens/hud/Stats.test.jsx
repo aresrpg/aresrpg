@@ -296,3 +296,23 @@ describe('Stats allocation actions', () => {
     clear_confirmed_character(expected.id, expected)
   })
 })
+
+describe('Stats characteristic descriptions', () => {
+  // Sim-truth one-liners (issue #371): every PRIMARY row renders a muted description line under its label,
+  // sourced from stats.description.<key> — locale coverage is pinned separately in
+  // i18n/locales/stat_description_parity.test.js. This proves the RENDER wiring, not the translation content.
+  test('every PRIMARY row renders a muted description line under its label', async () => {
+    const stats_jsx = await Bun.file(new URL('./Stats.jsx', import.meta.url)).text()
+    expect(stats_jsx).toContain('stats__prow-desc')
+    for (const key of ['vitality', 'wisdom', 'strength', 'intelligence', 'chance', 'agility']) {
+      expect(stats_jsx).toContain(`stats.description.${key}`)
+    }
+  })
+
+  test('the visible SECONDARY rows (Critical Hit, Raw Damage) render the same description line', async () => {
+    const stats_jsx = await Bun.file(new URL('./Stats.jsx', import.meta.url)).text()
+    expect(stats_jsx).toContain('stats__srow-desc')
+    expect(stats_jsx).toContain('stats.description.critical_hit')
+    expect(stats_jsx).toContain('stats.description.raw_damage')
+  })
+})
