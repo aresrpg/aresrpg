@@ -93,3 +93,25 @@ describe('static asset references resolve on disk (#157 regression tooth)', () =
     expect(missing).toEqual([])
   })
 })
+
+// #353 — the local mob-icon sprite set predates the `mob_icon` Walrus quilt going live and was pure
+// migration residue: gitignored, never tracked by git, never shipped past a dev's own disk. Deleted;
+// get_mob_icon_url (mobs.js) is Walrus-only now. This gate is the tripwire against reintroduction —
+// of the directory (force-added back) or of code resolving it again (a template-literal path build,
+// which extract_asset_refs' static-quote regex above can't see since it's interpolated, not a plain
+// literal — exactly how the deleted fallback slipped past that sweep originally).
+describe('mob-icon local sprite directory stays deleted (#353 regression tooth)', () => {
+  // Built via join, not a literal, so this file's own needle never trips the sweep it defines.
+  const BANNED_LOCAL_MOB_ICON_PATH = ['sprites', 'mobs', 'icons'].join('/')
+
+  it('the local mob-icon directory does not exist under public/', () => {
+    expect(existsSync(path.join(PUBLIC_DIR, BANNED_LOCAL_MOB_ICON_PATH))).toBe(false)
+  })
+
+  it('no source file references the local mob-icon path, in any literal or interpolated form', () => {
+    const hits = SOURCE_FILES.filter((file) => readFileSync(file, 'utf8').includes(BANNED_LOCAL_MOB_ICON_PATH)).map(
+      (file) => path.relative(FRONTEND_SRC, file)
+    )
+    expect(hits).toEqual([])
+  })
+})
