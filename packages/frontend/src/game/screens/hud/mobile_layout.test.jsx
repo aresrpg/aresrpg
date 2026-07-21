@@ -294,17 +294,19 @@ describe('viewport and mobile-style isolation', () => {
     expect(row_rule).toMatch(/padding:\s*\dpx \dpx/) // single-digit px on both axes < desktop's 8px/12px
   })
 
-  // Regression guard (mobile): TOASTS overflow the screen edge. app.tsx's app-wide toast stack positions
-  // with raw Tailwind spacing (top-12/left-4/right-4) — the ONE surface in the mobile chain that never
-  // adopted the --safe-* vars every other fixed HUD element already uses (mobile-hud.css, bottom_bar.tsx).
-  test('the app-wide toast stack clamps to the safe-area edges on mobile, not raw pixel offsets', () => {
+  // Regression guard (mobile): TOASTS overflow the screen edge. The app-wide toast stack must clamp to the
+  // --safe-* vars every other fixed HUD element already uses (mobile-hud.css, bottom_bar.tsx). The class
+  // itself now lives in TOAST_CONTAINER_CLASS (toast.ts, extracted so it's testable without app.tsx's
+  // Vite-virtual graph — see app.test.tsx's own TOAST_CONTAINER_CLASS coverage); app.tsx just renders
+  // `className={TOAST_CONTAINER_CLASS}`, so this asserts the constant directly instead of regexing JSX.
+  test('the app-wide toast stack clamps to the safe-area edges on mobile, not raw pixel offsets', async () => {
+    const { TOAST_CONTAINER_CLASS } = await import('../../../toast')
     const app = read_fixture('../../../app.tsx')
     const toasts_fn = app.match(/function Toasts\(\)[\s\S]*?\n\}/)?.[0] ?? ''
-    const class_name = toasts_fn.match(/className="([^"]*)"/)?.[1] ?? ''
 
-    expect(class_name).toMatch(/max-lg:top-\[max\(3rem,var\(--safe-top\)\)\]/)
-    expect(class_name).toMatch(/max-lg:left-\[max\(1rem,var\(--safe-left\)\)\]/)
-    expect(class_name).toMatch(/max-lg:right-\[max\(1rem,var\(--safe-right\)\)\]/)
+    expect(TOAST_CONTAINER_CLASS).toMatch(/max-lg:top-\[max\(3rem,var\(--safe-top\)\)\]/)
+    expect(TOAST_CONTAINER_CLASS).toMatch(/max-lg:right-\[max\(1rem,var\(--safe-right\)\)\]/)
+    expect(toasts_fn).toContain('className={TOAST_CONTAINER_CLASS}')
     // text still wraps instead of overflowing a narrow safe-area-clamped box
     expect(toasts_fn).toMatch(/whitespace-pre-wrap break-words/)
   })

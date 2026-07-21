@@ -14,12 +14,19 @@
 
 import { describe, expect, it, mock } from 'bun:test'
 
-import { select_rig_budget, create_rig_layer, pick_gather_target } from './spawn_rigs.js'
+import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
+
+// MISSING-ARTIFACT (#117): spawn_rigs.js imports @aresrpg/engine3/player, whose character_controller.js
+// unconditionally re-exports create_character_avatar — a static import of the absent-by-design
+// senshi_male.glb — see test_helpers/glb_fixture.js.
+const { select_rig_budget, create_rig_layer, pick_gather_target } = SENSHI_MALE_GLB_AVAILABLE
+  ? await import('./spawn_rigs.js')
+  : {}
 
 // {key, d2} rows — d2 is the SQUARED player distance (the arbiter never square-roots).
 const row = (/** @type {string} */ key, /** @type {number} */ d2) => ({ key, d2 })
 
-describe('select_rig_budget — the concurrent-rig ceiling', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('select_rig_budget — the concurrent-rig ceiling', () => {
   it('under budget: places every candidate NEAREST-FIRST, evicts nothing', () => {
     const { evict, place } = select_rig_budget({
       placed: [],
@@ -71,7 +78,7 @@ describe('select_rig_budget — the concurrent-rig ceiling', () => {
   })
 })
 
-describe('pick_gather_target — hysteresis hold for K adjacent chain cells (~1 block apart)', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('pick_gather_target — hysteresis hold for K adjacent chain cells (~1 block apart)', () => {
   it('nothing armed yet: takes the nearest candidate', () => {
     const key = pick_gather_target({ armed_key: null, armed_d2: null, nearest_key: 'a', nearest_d2: 4, margin_m: 0.75 })
     expect(key).toBe('a')
@@ -128,7 +135,7 @@ describe('pick_gather_target — hysteresis hold for K adjacent chain cells (~1 
   })
 })
 
-describe('dispose_member — teardown FREES the per-clone rig (no leak across cycles)', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('dispose_member — teardown FREES the per-clone rig (no leak across cycles)', () => {
   const make_layer = () => {
     const removed = /** @type {any[]} */ ([])
     const engine = { add_to_scene() {}, remove_from_scene: (/** @type {any} */ o) => removed.push(o) }

@@ -5,7 +5,10 @@ import { describe, expect, test } from 'bun:test'
 
 import { EXPEDITION_INITIAL_STATE, reduce_expedition } from '../roster/store_reducer'
 
-const auth_source = readFileSync(new URL('../auth/index.ts', import.meta.url), 'utf8')
+// P0/D286: the account-change trigger lives in session_reset_subscription.ts, deliberately OUT of
+// auth/index.ts's own module body (avoids an auth → game/wallet_session_reset → … → auth import cycle —
+// see that file's own header comment).
+const auth_source = readFileSync(new URL('../auth/session_reset_subscription.ts', import.meta.url), 'utf8')
 const reset_source = readFileSync(new URL('./wallet_session_reset.js', import.meta.url), 'utf8')
 const expedition_source = readFileSync(new URL('../roster/store.ts', import.meta.url), 'utf8')
 const reducer_source = readFileSync(new URL('../roster/store_reducer.ts', import.meta.url), 'utf8')

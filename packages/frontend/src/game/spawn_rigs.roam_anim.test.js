@@ -9,11 +9,19 @@
 // skip), then drives the REAL exported `roam_member` for two seconds of "walking" and asserts the move clip's
 // mixer TIME actually advances (not just that a weight number moved) — the only way to tell "playing a walk
 // clip" from "frozen bind pose sliding across the ground" from outside three's render loop.
+import { existsSync } from 'node:fs'
+
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
 import { AnimationMixer } from 'three'
-import { create_mob_model } from '@aresrpg/engine3/player'
 
-import { create_rig_layer } from './spawn_rigs.js'
+import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
+
+// MISSING-ARTIFACT (#117): spawn_rigs.js (and @aresrpg/engine3/player directly) unconditionally reach
+// character_avatar.js — a static import of the absent-by-design senshi_male.glb — see
+// test_helpers/glb_fixture.js. hy_bunny.glb (below) is a SEPARATE missing art asset this probe's fixture
+// data needs on top of that.
+const { create_mob_model } = SENSHI_MALE_GLB_AVAILABLE ? await import('@aresrpg/engine3/player') : {}
+const { create_rig_layer } = SENSHI_MALE_GLB_AVAILABLE ? await import('./spawn_rigs.js') : {}
 
 const globals = /** @type {any} */ (globalThis)
 const previous_create_image_bitmap = globals.createImageBitmap
@@ -39,13 +47,18 @@ afterAll(() => {
 
 // packages/frontend/src/game/ → packages/frontend/public/sprites/mobs/models/hy_bunny.glb
 const fixture_path = new URL('../../public/sprites/mobs/models/hy_bunny.glb', import.meta.url)
+// MISSING-ARTIFACT (#117): hy_bunny.glb is authored art shipped by the content pipeline (private repo) —
+// absent by design in this public repo.
+const HY_BUNNY_GLB_AVAILABLE = existsSync(fixture_path)
 
 async function fixture_data_url() {
   const bytes = await Bun.file(fixture_path).arrayBuffer()
   return `data:model/gltf-binary;base64,${Buffer.from(bytes).toString('base64')}`
 }
 
-describe('roam_member — locomotion clip while a world-spawn member walks (regression: reported gliding)', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE || !HY_BUNNY_GLB_AVAILABLE)(
+  'roam_member — locomotion clip while a world-spawn member walks (regression: reported gliding)',
+  () => {
   it('a real reference-corpus rig (hy_bunny: IDLE/WALK/RUN) blends the move clip to full weight AND its mixer time advances while mem.moving — proves it is playing WALK, not holding a frozen pose', async () => {
     const url = await fixture_data_url()
     const { root, clips, measured, dispose } = await create_mob_model(url, { label: 'hy_bunny:roam-anim-probe' })
