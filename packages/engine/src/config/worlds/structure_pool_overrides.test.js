@@ -8,6 +8,7 @@ import { get_biome_by_id } from '../biome_registry.js'
 import { EMBER_STEPPE_WORLD } from './ember_steppe.js'
 import { RAINFOREST_WORLD } from './rainforest.js'
 
+/** @param {{ biomes: Array<{ id: number }>, structure_pool_overrides?: Record<string, unknown> }} world_config */
 const unresolved_override_keys = (world_config) => {
   const placement_names = new Set(
     world_config.biomes.flatMap(({ id }) => {
