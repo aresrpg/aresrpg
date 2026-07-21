@@ -1928,6 +1928,7 @@
     "neutral": "Neutre",
     "fx_trap": "Pose un piège",
     "fx_reduce_damage": "Absorbe {{value}} dégâts",
+    "fx_any_element": "tout élément",
     "fx_alter_resist": "{{value}} résistance",
     "fx_alter_resist_el": "{{value}} résistance {{element}}",
     "fx_place_glyph": "Pose un glyphe",

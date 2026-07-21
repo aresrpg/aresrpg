@@ -462,4 +462,4 @@ function SpellDetailPanel({ t, row, char_level, points, character_id, ready, on_
 }
 
 // The SEED effect → line + element/family label helpers now live in seed-effect-line.js (shared with the
-// in-fight dungeon armed readout — one wording source). Imported at the top as seed_effect_line / seed_el_label.
+// fight hotbar card — one wording source). Imported at the top as seed_effect_line / seed_el_label.

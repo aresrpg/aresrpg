@@ -1928,6 +1928,7 @@
     "neutral": "Neutral",
     "fx_trap": "Platziert eine Falle",
     "fx_reduce_damage": "Absorbiert {{value}} Schaden",
+    "fx_any_element": "jedes Element",
     "fx_alter_resist": "{{value}} Resistenz",
     "fx_alter_resist_el": "{{value}} {{element}}-Resistenz",
     "fx_place_glyph": "Platziert eine Glyphe",

@@ -3,8 +3,8 @@
 // SEED effect → one localized effect LINE (NO JSX). The single home for turning a projected spell effect
 // into the player-facing line every spell surface renders: the grimoire (Spellbook.jsx), the encyclopedia
 // class page (classes_tab.tsx) — both via the structured `seed_effect_parts` + the shared <EffectLine>
-// renderer — and the in-fight dungeon armed readout (DungeonSpellReadout.jsx) via the flat-string
-// `seed_effect_line`, which is DERIVED from the same parts (one grammar, zero drift).
+// renderer — plus compact HUD surfaces via the flat-string `seed_effect_line`, which is DERIVED from the
+// same parts (one grammar, zero drift).
 //
 // OWNER DISPLAY SPEC (07-13, Vanish screenshot; verbatim "it should show +(grey)1(green) MP(grey) with the
 // icon, and then a second line 'become invisible', no cards, just lines"):
@@ -32,7 +32,8 @@
 //     invented element. Still no '%': the corpus resist rows carry no FLAG_PERCENT (the old "% resist all" lie).
 //   · REFLECT_DAMAGE keeps '%': the generator mints it with FLAG.percent (spells_712_engine.mjs:167).
 //   · REDUCE_DAMAGE carries NO element in the live corpus — the old template interpolated one anyway,
-//     rendering a literal "spells.undefined" on screen. Element dropped.
+//     rendering a literal "spells.undefined" on screen. These element-less shields consume incoming damage
+//     from ANY element, so the shared line states that scope explicitly.
 //
 // i18n: every kind routes through `spells.fx_*` (×6 locales). The VALUE emphasis needs a value/text split
 // that survives any word order, so templates carry `{{value}}` and the builder splits the TRANSLATED string
@@ -160,16 +161,18 @@ export const is_area_effect = (shape, size) => shape === 'ALLMAP' || (shape !== 
 
 /** The meta suffix pieces (duration · crit · zone · chance) — only what is genuinely informative. */
 const meta_of = (t, fx) => {
-  const pieces = []
   const turns = fx.turns ?? 0
-  if ((TIMED_KINDS.has(fx.kind) && turns > 0) || (fx.kind === 'GIVE_POINTS' && turns > 1))
-    pieces.push(t('spells.fx_turns', { count: turns }))
-  if (fx.crit_base != null) pieces.push(t('spells.crit_val', { value: fx.crit_base }))
   const shape = fx.area_shape ?? 'POINT'
   const size = fx.area_size ?? 0
-  if (is_area_effect(shape, size))
-    pieces.push(t(`encyclopedia.aoe_shape.${AOE_SHAPE_KEY[shape] ?? 'point'}`, { size }))
-  if (fx.chance != null && fx.chance < 100) pieces.push(t('encyclopedia.proc_chance', { n: fx.chance }))
+  const pieces = [
+    ...(fx.kind === 'REDUCE_DAMAGE' ? [t('spells.fx_any_element')] : []),
+    ...((TIMED_KINDS.has(fx.kind) && turns > 0) || (fx.kind === 'GIVE_POINTS' && turns > 1)
+      ? [t('spells.fx_turns', { count: turns })]
+      : []),
+    ...(fx.crit_base != null ? [t('spells.crit_val', { value: fx.crit_base })] : []),
+    ...(is_area_effect(shape, size) ? [t(`encyclopedia.aoe_shape.${AOE_SHAPE_KEY[shape] ?? 'point'}`, { size })] : []),
+    ...(fx.chance != null && fx.chance < 100 ? [t('encyclopedia.proc_chance', { n: fx.chance })] : []),
+  ]
   return pieces.length ? pieces.join(' · ') : null
 }
 

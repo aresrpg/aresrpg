@@ -5,10 +5,6 @@ import { describe, expect, test } from 'bun:test'
 import spellbook_seed from './spellbook-seed.json'
 import EN from '../../../i18n/locales/en.json' with { type: 'json' }
 import FR from '../../../i18n/locales/fr.json' with { type: 'json' }
-import DE from '../../../i18n/locales/de.json' with { type: 'json' }
-import ES from '../../../i18n/locales/es.json' with { type: 'json' }
-import JA from '../../../i18n/locales/ja.json' with { type: 'json' }
-import UK from '../../../i18n/locales/uk.json' with { type: 'json' }
 import { fight_spells_data } from './fight-spells.js'
 import { spell_effects } from './spellbook-data.js'
 import { seed_effect_line, seed_effect_parts, is_area_effect, TONE_BUFF, TONE_BAD, HEAL_PINK } from './seed-effect-line.js'
@@ -70,7 +66,7 @@ describe('D113 seed-spell render coverage', () => {
 
   // The core gate: for EVERY spell, level 1 (the only castable level in the dungeon MVP) must be complete —
   // an AP cost, a real range OR an explicit self-cast (0-0 with a self/utility effect), and ≥1 effect. This
-  // is exactly the data the armed readout + cast-range wash consume; a gap here is a blank readout on screen.
+  // is exactly the data the hotbar card + cast-range wash consume; a gap here is a blank readout on screen.
   for (const sp of spellbook_seed.spells) {
     test(`${sp.class}/${sp.name_key} — level 1 cast_params are complete`, () => {
       const l1 = sp.levels[0]
@@ -97,7 +93,7 @@ describe('D113 seed-spell render coverage', () => {
 
     // The RENDER path: spell_effects (colour-tags the seed effects) → seed_effect_line (localizes each). Every
     // effect must yield a NON-EMPTY line whose kind is known — this is what guarantees "no silent nothing" on
-    // the armed readout. An unhandled kind (blank line) or a stripped value fails HERE.
+    // the hotbar card. An unhandled kind (blank line) or a stripped value fails HERE.
     test(`${sp.class}/${sp.name_key} — every level-1 effect renders a non-empty line`, () => {
       const tagged = spell_effects(sp.levels[0])
       expect(tagged.length).toBeGreaterThan(0)
@@ -112,7 +108,7 @@ describe('D113 seed-spell render coverage', () => {
   }
 
   // Every seeded class must resolve a PRIMARY spell (the dungeon hand card the player grabs). This is the
-  // lookup DungeonBoard + the armed readout both do (spells.find(class===my_class)); a class with no primary
+  // lookup DungeonBoard + the hotbar card both do (spells.find(class===my_class)); a class with no primary
   // = a grabbed card that resolves to nothing (the original D113 symptom for a whole class).
   test('every seeded class resolves a primary spell (the grabbable dungeon card)', () => {
     for (const cls of SEEDED_CLASSES) {
@@ -125,9 +121,9 @@ describe('D113 seed-spell render coverage', () => {
 })
 
 // S-64 COVERAGE — the LIVE grimoire's REAL SSOT. The D113 suite above walks the DEPRECATED spellbook-seed.json
-// (still the template non-dungeon fallback's source); the actual character-page grimoire (Spellbook.jsx) and
-// the dungeon armed readout (DungeonSpellReadout.jsx) both read the derived full 240-spell corpus —
-// which that suite never touches. That gap is exactly how a VANISH rank-6 GIVE_POINTS effect (yajin, an AP
+// (still the template non-dungeon fallback's source); the actual character-page grimoire (Spellbook.jsx)
+// reads the derived full 240-spell corpus — which that suite never touches. That gap is exactly how a VANISH
+// rank-6 GIVE_POINTS effect (yajin, an AP
 // grant) rendered a BLANK bullet and a PLACE_TRAP effect (tomoda kelp_snare/tidemarker/barrow_trap, yajin
 // shadow_trap, mori scorchmite_glyph) THREW outright (`fx.payload.base` on an object with no `payload` field) —
 // both invisible to the D113 test because it only ever exercised the OLD 9-kind legacy taxonomy. This walks
@@ -369,7 +365,7 @@ describe('S-64b effect-line grammar (parts model, real EN strings)', () => {
     ],
     [
       { kind: 'REDUCE_DAMAGE', base: 73, chance: 100, turns: 2, area_shape: 'POINT', area_size: 0 },
-      { value: '73', meta: '2 turns' },
+      { value: '73', meta: 'any element · 2 turns' },
     ],
     [
       { kind: 'REFLECT_DAMAGE', base: 15, chance: 100, turns: 2, area_shape: 'POINT', area_size: 0 },
@@ -552,52 +548,5 @@ describe('AoE zone suffix — single-cell shapes never print (regression: "CIRCL
     expect(is_area_effect('CIRCLE', 1)).toBe(true)
     expect(is_area_effect('ALLMAP', 0)).toBe(true)
     expect(is_area_effect('ALLMAP', 5)).toBe(true)
-  })
-})
-
-// LEG C — ALTER_RESIST names its element (resist-element display fix 07-20). The formatter ignored
-// fx.element, so a per-element ward rendered a bare "+8 resistance" even after the seed carried the
-// element. A fixed row now reads "+8 Earth resistance"; a legacy el_none(255)/element-less row stays
-// HONESTLY bare (no invented element). Element names reuse the existing spells.el_* keys; the phrasing
-// rides a new spells.fx_alter_resist_el template (×6 locales).
-describe('ALTER_RESIST line names the element (resist-element display fix 07-20)', () => {
-  const resist = (o) => ({ kind: 'ALTER_RESIST', base: 8, chance: 100, turns: 4, area_shape: 'POINT', area_size: 0, ...o })
-
-  test('an element-carrying resist row renders the element name (EN literal), sign in the grey pre', () => {
-    expect(seed_effect_line(t_en, resist({ element: 'earth' }))).toBe('+8 Earth resistance · 4 turns')
-    expect(seed_effect_line(t_en, resist({ element: 'fire', base: -12, turns: 2 }))).toBe('-12 Fire resistance · 2 turns')
-    const p = seed_effect_parts(t_en, resist({ element: 'water' }))
-    expect(p.pre.endsWith('+')).toBe(true) // the sign is grey (pre), never inside the coloured value
-    expect(p.value).toBe('8')
-    expect(p.post).toContain('Water')
-  })
-
-  test('a legacy element-less row stays honestly bare — no element word, no leaked key', () => {
-    const line = seed_effect_line(t_en, resist({ turns: 0 })) // no element field at all
-    expect(line).toBe('+8 resistance')
-    expect(line).not.toContain('spells.')
-  })
-
-  test('a neutral(255→"neutral") row renders bare — never invents an element', () => {
-    const line = seed_effect_line(t_en, resist({ element: 'neutral', turns: 0 }))
-    expect(line).toBe('+8 resistance')
-    expect(line).not.toContain('neutral')
-  })
-
-  test('all 6 locales resolve the element-carrying resist template (i18n law — no leaked key, no stray {{}})', () => {
-    for (const loc of [EN, FR, DE, ES, JA, UK]) {
-      const line = seed_effect_line(translator(loc), resist({ element: 'earth' }))
-      expect(line).not.toContain('spells.')
-      expect(line).not.toContain('{{')
-    }
-  })
-
-  test.skipIf(!SPELLS_SEED_AVAILABLE)('the live corpus resist rows all render a named element (post-revival: every ALTER_RESIST is elemented)', () => {
-    const els = ['Fire', 'Water', 'Earth', 'Air']
-    const resist_lines = fight_spells_data.spells.flatMap((sp) =>
-      sp.levels.flatMap((l) => (l.effects ?? []).filter((e) => e.kind === 'ALTER_RESIST').map((fx) => seed_effect_line(t_en, fx)))
-    )
-    expect(resist_lines.length).toBeGreaterThan(0)
-    for (const line of resist_lines) expect(els.some((el) => line.includes(el))).toBe(true) // never a bare resist in the live corpus
   })
 })

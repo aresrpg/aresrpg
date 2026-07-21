@@ -1928,6 +1928,7 @@
     "neutral": "Нейтральна",
     "fx_trap": "Встановлює пастку",
     "fx_reduce_damage": "Поглинає {{value}} шкоди",
+    "fx_any_element": "будь-яка стихія",
     "fx_alter_resist": "{{value}} опору",
     "fx_alter_resist_el": "{{value}} опору ({{element}})",
     "fx_place_glyph": "Встановлює гліф",

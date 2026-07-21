@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Per-spell SpellDetail view (NO JSX). The shared SpellDetail panel's data home: `spell_detail_view` +
-// `area_label`, rendered by SpellDetail.jsx (FightArmedReadout — template / non-dungeon fights).
+// `area_label`, rendered by SpellDetail.jsx for legacy normalized templates.
 // LEGACY-RESIDUAL: it reads the sim's normalized SpellTemplate map (@aresrpg/sim via fight.js) because that map
 // carries the hand-authored DESCRIPTION and the min/max damage ROLLS the on-chain fight SSOT (fight-spells.json)
 // has no shape for — the chain model is a FIXED `base` + `crit_base` per level. Chain / dungeon spells (keyed by
-// name_key) are absent from that short-id map, so DungeonSpellReadout.jsx already renders them straight off
-// fight-spells.js; this path only serves the legacy template SPELL_TEMPLATES. Element tints: the element-colors SSOT.
+// name_key) are absent from that short-id map; this path only serves the legacy template SPELL_TEMPLATES.
+// Element tints: the element-colors SSOT.
 //
 // The former `class_spell_pool` / `unlock_levels` deck derivations were deleted 2026-07-12: the deck + grimoire
 // pivoted to the fight-spells.json SSOT (spellbook-data.js → class_spells), which left those exports dead. The

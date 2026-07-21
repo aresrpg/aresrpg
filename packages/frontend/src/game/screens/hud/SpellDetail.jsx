@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Shared Spell Detail panel — the per-card readout that visualizes one spell's full schema (header art /
-// name / school·kind / AP pill, a facts grid, and an effects list). The in-fight armed-spell readout
-// (FightArmedReadout, canon/14) renders it over the normalized sim SpellTemplate (spell-deck-data.js).
+// name / school·kind / AP pill, a facts grid, and an effects list). It renders over the normalized sim
+// SpellTemplate (spell-deck-data.js).
 // Data only: pass a short `spell_id`; null renders the empty prompt. CSS is scoped in spell-detail.css (`.sd*`).
 //
 // Faithful to the lineage spell_card.vue field set: AP cost, range, area+shape, line of sight, critical

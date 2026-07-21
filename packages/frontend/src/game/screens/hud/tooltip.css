@@ -73,6 +73,26 @@
   -webkit-backdrop-filter: none;
 }
 
+/* Full fight-spell card: the selected/hovered socket's ONE information home. It is portalled over the live
+   board, so the concrete near-black/gold values deliberately mirror FightReport's dark card instead of
+   relying on an ancestor-scoped HUD token. Sharp shell, restrained edge, no glass. */
+.tt-card.tt-card--spell {
+  width: 280px;
+  max-width: calc(100vw - 16px);
+  box-sizing: border-box;
+  padding: 12px;
+  font-family: var(--font-mono);
+  color: var(--fg, #e8e3da);
+  background: #07080c;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.68),
+    0 0 0 1px rgba(0, 0, 0, 0.55);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 /* ── rich content: shared bits ─────────────────────────────────────────────── */
 .tt-num {
   font-family: var(--font-mono);
@@ -168,22 +188,104 @@
   font-size: 0.68rem;
 }
 
-/* ── spell-socket HOVER card (hover = compact anchored ESSENTIALS above the socket;
-   the full facts stay on the armed readout). Tokens here are :root-level (tokens.css), so they DO
-   reach this body-portalled card — only the .hud-spellbar re-pointed scope doesn't. ─────────────── */
+/* ── full spell-socket card ─────────────────────────────────────────────────────── */
+.tt-spell-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tt-spell-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.tt-spell-card__identity {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+.tt-spell-card__name {
+  overflow: hidden;
+  color: #c8963c;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.tt-spell-card__type {
+  align-self: flex-start;
+  padding: 2px 5px;
+  color: var(--spell-color);
+  border: 1px solid color-mix(in srgb, var(--spell-color) 45%, transparent);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
 .tt-ap-pill {
   margin-left: auto;
   flex: 0 0 auto;
-  padding: 2px 6px;
-  border-radius: var(--r-1);
-  font-size: 0.66rem;
+  display: flex;
+  min-width: 38px;
+  padding: 4px 6px;
+  flex-direction: column;
+  align-items: center;
+  color: #c8963c;
+  background: rgba(200, 150, 60, 0.1);
+  border: 1px solid rgba(200, 150, 60, 0.42);
+  border-radius: 0;
+  white-space: nowrap;
+}
+.tt-ap-pill b {
+  font-size: 14px;
+  line-height: 1;
+}
+.tt-ap-pill span {
+  margin-top: 2px;
+  font-size: 8px;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--accent-ink); /* dark ink on the element-tinted pill (the armed card's .sd__cost recipe) */
+  letter-spacing: 0.12em;
+}
+.tt-spell-card__facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  padding: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.tt-spell-card__fact {
+  display: flex;
+  min-width: 0;
+  padding: 7px 8px;
+  flex-direction: column;
+  gap: 3px;
+  background: #0d0e13;
+}
+.tt-spell-card__label,
+.tt-spell-card__section {
+  color: var(--fg-faint, #6b7280);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.tt-spell-card__value {
+  overflow: hidden;
+  color: var(--fg, #e8e3da);
+  font-size: 11px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .tt-fx {
-  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 .tt-fx-dot {
   flex: 0 0 auto;
@@ -193,8 +295,17 @@
   border-radius: 50%;
 }
 .tt-fx-text {
-  color: var(--fg-muted);
-  font-size: 0.68rem;
+  color: var(--fg-muted, #9aa4b2);
+  font-size: 10px;
+  line-height: 1.35;
+}
+.tt-spell-card__aim {
+  padding-top: 8px;
+  color: var(--fg-muted, #9aa4b2);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
 }
 
 /* FIX 4 (07-14) — the one-line "why this socket is greyed beyond AP" cue (on cooldown / casts_per_turn

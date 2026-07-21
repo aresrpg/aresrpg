@@ -3,10 +3,8 @@
 /*
  * Spell Detail panel (`.sd*`) — the reusable per-spell readout (SpellDetail.jsx). House Frosted-Obsidian
  * tokens (tokens.css): ONE ice-blue accent, element tint only on art/cost/dots via `--el`, hairline
- * dividers, mono tabular-nums. Rendered by the in-fight ARMED-SPELL readout (FightArmedReadout, canon/14),
- * whose "compact mode" is pure CSS scoped under `.fight-readout` (fight-targeting.css) — SpellDetail itself
- * is reused untouched. Self-contained: no `.deck`/`.hud-root`/`.gw-tab` ancestor rules (the deck builder
- * that formerly co-owned this stylesheet was removed in D30 — the grimoire owns the SPELLS tab now).
+ * dividers, mono tabular-nums. Self-contained: no `.deck`/`.hud-root`/`.gw-tab` ancestor rules (the deck
+ * builder that formerly co-owned this stylesheet was removed in D30 — the grimoire owns the SPELLS tab now).
  */
 .sd {
   display: flex;

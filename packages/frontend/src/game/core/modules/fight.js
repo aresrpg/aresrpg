@@ -481,9 +481,8 @@ export function arm_spell(spell_id) {
   fight_store.getState().input({ type: 'arm', spell_id })
 }
 
-// Passively hover a hand card (or clear with null) — the D299a/msg-3254 readout driver: a simple hover on a
-// deck socket shows the tuned spell detail card (DungeonSpellReadout), no grab needed. SAME one-door pattern
-// as arm_spell: the core owns `hovered_spell_id`, projected on the same view.
+// Passively hover a hand card (or clear with null). SAME one-door pattern as arm_spell: the core owns
+// `hovered_spell_id`, projected on the same view for hover-card presentation.
 /** @param {string | null} spell_id */
 export function hover_spell(spell_id) {
   fight_store.getState().input({ type: 'hover_spell', spell_id })
