@@ -387,6 +387,28 @@ export const normalize_events = (
   })
 }
 
+/**
+ * Normalize the accept machine's `apply` stream (M2b, #291) into ordered canonical actions. Each accepted event
+ * is `{ kind, data, seq, version }` — already deduped, contiguous and gap-free by the accept machine, so this is
+ * the ONE canonical source the store folds. `event_idx = Number(seq)`: the per-fight seq is a bounded contiguous
+ * ordinal (never near 2^53 for one fight — the u64 discipline that guards the WIRE lives in journal_u64/the accept
+ * machine, in BigInt), so it is a lossless, globally-unique presentation ordinal that sorts the log by true order.
+ * Same seat-budget injection + damaging-cast marking as `normalize_events`, so a receipt event and its journal twin
+ * fold byte-identically.
+ */
+export const normalize_accepted = (events, { resolve_seat = null, base_of = null } = {}) => {
+  const decoded = (events ?? [])
+    .map((e) => {
+      const d = decode_fight_event({ type: e.kind, json: e.data })
+      return d ? { ...d, version: Number(e.version), event_idx: Number(e.seq) } : null
+    })
+    .filter(Boolean)
+  return mark_damaging_casts(decoded).map((e) => {
+    const budget = base_of && e.kind === 'TurnStarted' && !e.is_mob ? base_of(Number(e.idx)) : null
+    return { ...e, source: 'canonical', resolve_seat, ...(budget ? { ap: budget.ap, mp: budget.mp } : {}) }
+  })
+}
+
 /** My fighter identity from my key: `p0` → { is_mob:false, idx:0 }, `m2` → { is_mob:true, idx:2 }. */
 export const actor_from_key = (key) =>
   key && (key[0] === 'p' || key[0] === 'm') ? { is_mob: key[0] === 'm', idx: Number(key.slice(1)) } : null

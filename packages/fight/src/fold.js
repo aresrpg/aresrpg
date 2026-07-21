@@ -7,9 +7,7 @@
 // · base_from_view — the snapshot half of snapshot+tail: the adopted rich view → the thin fold base.
 // · recompute — snapshot base + sorted authoritative tail → committed state + the derived PROVIDER token.
 // · committed_state / presented_state — the two projections the store and its consumers read.
-// · wave_turns_of — pace a receipt's non-local raw events into presentation wave turns.
-// · foreign_replay_events — chain-shaped raw events for the SPECTATOR REPLAY of a peer's committed turn, derived
-//   from the adoption diff (PRESENTATION ONLY — fed to wave_turns_of, never the committed fold).
+// · wave_turns_of — pace an accepted batch's non-local events into presentation wave turns (window in seq space).
 
 import { participant_entity_id } from './fight_control.js'
 import { apply_action, empty_state, seat_resolver } from './inputs.js'
@@ -18,11 +16,12 @@ import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_WON } from './bo
 import { INVISIBILITY_STATUS_KIND } from './fight_status_snapshot.js'
 import { masks_entries, pace_segment } from './present.js'
 
-// Source priority resolves a key collision: an authoritative source ADOPTS over my optimistic intent at the same
-// (version, event_idx); a re-delivered lower-or-equal source is idempotent (dedupe / stale drop). V9 (register):
-// RECEIPT is the one-way floor (my own tx's proof) — it must never be overridden, so it ranks ABOVE the legacy
-// event-shaped `snapshot` segment (the prior order let a snapshot clobber a receipt-proven fact at the same key).
-const SOURCE_PRIORITY = { intent: 0, poll: 1, p2p: 1, snapshot: 2, receipt: 3 }
+// M2b · ONE INGRESS (#291): with a SINGLE canonical source (the accept machine's deduped, contiguous `apply`
+// stream — receipts and journal pages folded through ONE door keyed `(fight_id, seq)`) there is no longer a merge
+// between competing chain sources to arbitrate. SOURCE_PRIORITY survives for exactly ONE job: layering my optimistic
+// PREDICTION under CANONICAL truth at a key collision — canonical always wins, a prediction never overrides a
+// proven fact. Every non-intent source is canonical (the accept machine already resolved cross-transport identity).
+const source_rank = (source) => (source === 'intent' ? 0 : 1)
 const entry_key = (action) => `${action.version}:${action.event_idx}`
 export const sorted_log = (entries) =>
   Object.values(entries).sort((a, b) => a.version - b.version || a.event_idx - b.event_idx)
@@ -42,13 +41,15 @@ export const last_action_of = (fight, fallback = 0) => {
   return Number.isFinite(value) ? value : fallback
 }
 
-/** Merge new actions into the keyed entry map: keep the higher-priority source per key (adopt / dedupe / stale). */
+/** Layer new actions into the keyed entry map: at a key collision CANONICAL wins over a PREDICTION (intent), and a
+ *  same-class write replaces (the accept machine already deduped canonical, so a canonical-vs-canonical collision is
+ *  a re-fold of the same fact). This is the LAST role of source ranking after one ingress — prediction-vs-canonical. */
 export const merge_entries = (entries, actions) => {
   const next = { ...entries }
   for (const action of actions) {
     const key = entry_key(action)
     const existing = next[key]
-    if (!existing || SOURCE_PRIORITY[action.source] >= SOURCE_PRIORITY[existing.source]) next[key] = action
+    if (!existing || source_rank(action.source) >= source_rank(existing.source)) next[key] = action
   }
   return next
 }
@@ -414,7 +415,7 @@ export const display_state = (s) => wave_masked_fold(s, true)
  *  Locality is decided by SEAT (R1): my segments never enter the paced wave, whatever id string they produced.
  *  Each turn carries its raw-receipt event-index window [from_idx, until_idx] — the presented fold
  *  (presented_state) hides exactly the entries inside a still-unacked window. */
-export const wave_turns_of = (draft, raw_events, version, trap_cells = []) => {
+export const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_seq = 0) => {
   const ctx = draft.ctx ?? {}
   if (!Array.isArray(raw_events) || !raw_events.length || !ctx.beat_ctx) return []
   const my_entity = ctx.my_entity_id ?? null
@@ -478,10 +479,13 @@ export const wave_turns_of = (draft, raw_events, version, trap_cells = []) => {
   // By beat KIND, never post-rescale duration — the all-instant spread inflates a lone bookkeeping beat to the
   // whole slot, so a duration test lied TRUE: every peer paid a phantom 3s wave per handoff (coop red, 07-17).
   const presentable = (t) => t.beats.some((b) => !['turn_start', 'turn_end', 'turn_skip', 'fight_end'].includes(b.kind))
+  // The presentation window rides in SEQ SPACE (M2b): the paced beats carry their POSITION within this accepted
+  // batch (produce_receipt_render_turns' event_index), and canonical entries key `event_idx = Number(seq)`, so the
+  // window is offset by `base_seq` (the seq of the batch's first event) to join the two lanes on the one ordinal.
   const idx_window = (t) => {
     const idxs = t.beats.map((b) => b.payload?.source_event?.event_index).filter((n) => Number.isFinite(n))
     return idxs.length
-      ? { from_idx: Math.min(...idxs), until_idx: Math.max(...idxs) }
+      ? { from_idx: Math.min(...idxs) + base_seq, until_idx: Math.max(...idxs) + base_seq }
       : { from_idx: null, until_idx: null }
   }
   // ③b DEDUPE (ruled 07-19): the prediction already predicted + slid MY OWN turn's displacement (client-
@@ -512,95 +516,4 @@ export const wave_turns_of = (draft, raw_events, version, trap_cells = []) => {
       beats: t.beats,
       ...idx_window(t),
     }))
-}
-
-/** SPECTATOR REPLAY — other players' actions render instantly, using the SAME sequences a local turn uses,
- *  including kills, which must show live during the replay, never delayed. A peer's committed
- *  turn reaches this client ONLY as the poll's wholesale Fight OBJECT (no events) — so DERIVE chain-shaped raw events
- *  for the OTHER fighters' committed changes from the adoption diff (prev committed fighters → the incoming snapshot's
- *  fighters). The result feeds wave_turns_of → the SAME paced beat pipeline the local player + mobs use; the wholesale
- *  view then adopts AFTER the replay drains. PRESENTATION ONLY: the committed fold is NEVER built from this diff — the
- *  deferred wholesale read is the authoritative adopt (inputs.js law: the client never snapshot-diffs STATE).
- *
- *  Moves are emitted per FOREIGN mover (my own move is predicted, never spectator-paced). Damage is emitted for ANY
- *  fighter that lost HP (a mob striking ME is a foreign action worth a floater). A damaging turn is VOICED as its
- *  mover's Cast so the replay carries the SAME walk/cast/damage/death sequence classes the local path emits; with no
- *  identifiable foreign mover the damage rides bare Hits (a paced 'fight' turn — floater + death, no cast animation).
- *  Only cell/hp deltas drive it; ap/mp/status differences adopt wholesale (no spurious replay). @returns raw events. */
-export const foreign_replay_events = (
-  prev,
-  next,
-  { escrow = [], my_key = null, fight_id = null, presented_dead = null } = {}
-) => {
-  const ev = (kind, json) => ({ type: `0x0::fight_events::${kind}`, parsedJson: { fight: fight_id, ...json } })
-  const prev_f = prev?.fighters ?? {}
-  const next_f = next?.fighters ?? {}
-  const move_of = (key) =>
-    key[0] === 'm'
-      ? ev('MobMoved', { idx: Number(key.slice(1)), to_cell: Number(next_f[key].cell) })
-      : ev('Moved', { character: escrow[Number(key.slice(1))]?.character ?? null, to_cell: Number(next_f[key].cell) })
-  const moved = []
-  const hits = []
-  for (const key of Object.keys(next_f).sort()) {
-    const a = prev_f[key]
-    if (!a) continue // a fresh roster row (a mid-fight join) is not a committed move
-    const b = next_f[key]
-    const is_mob = key[0] === 'm'
-    if (key !== my_key && a.cell != null && b.cell != null && Number(a.cell) !== Number(b.cell)) moved.push(key)
-    // V10 · DEATH-BEAT DEDUP (register V10): a target the eye ALREADY saw die (`presented_dead` — my own optimistic
-    // kill, already presented) must not have its death REPLAYED by a foreign snapshot that merely CONFIRMS it
-    // (symptom ② REPLAYED die animation). Skip the HP-loss emit for such a target — its floored death adopts
-    // wholesale after the replay drains (V1), so no state is lost; only the redundant die-beat is suppressed. Death
-    // is terminal within a fight (a revive is a parity incident, rejected on adopt), so the target key IS the
-    // (target, floor-version) identity here — a fighter dies at most once per fight.
-    if (a.hp != null && b.hp != null && Number(b.hp) < Number(a.hp) && !(presented_dead && presented_dead.has(key)))
-      hits.push(
-        ev('Hit', {
-          victim_is_mob: is_mob,
-          victim_idx: Number(key.slice(1)),
-          amount: Number(a.hp) - Number(b.hp),
-          remaining_hp: Number(b.hp),
-        })
-      )
-  }
-  if (!moved.length && !hits.length) return []
-  // The actor a damaging turn's Cast is voiced by: the first foreign PLAYER that moved (a peer's turn is the
-  // headline), else the first mover of any kind (a lone mob strike falls to the mob). Its move opens the turn so
-  // the cast + hits group INTO it (produce_receipt_render_turns); the remaining movers trail as their own turns.
-  const actor_key = moved.find((k) => k[0] === 'p') ?? moved[0] ?? null
-  const cast =
-    actor_key && hits.length
-      ? [ev('Cast', { caster_is_mob: actor_key[0] === 'm', caster_idx: Number(actor_key.slice(1)) })]
-      : []
-  return [
-    ...(actor_key ? [move_of(actor_key)] : []),
-    ...cast,
-    ...hits,
-    ...moved.filter((k) => k !== actor_key).map(move_of),
-  ]
-}
-
-/** The SPECTATOR REPLAY wave turns for adopting `candidate` over `draft` — the diff (foreign_replay_events) paced
- *  through wave_turns_of. COOP ONLY: fires solely when a PEER seat exists; in a SOLO fight the mob wave rides MY OWN
- *  receipt (committed already reflects it), so a snapshot delta is a reconcile, never an unseen foreign turn — []
- *  there means "adopt wholesale, exactly as before" (the keystone / trap-transit / resume reconciles depend on it). */
-export const foreign_replay_turns = (draft, candidate, version, trap_cells = []) => {
-  const my_seat = draft.my_key && draft.my_key[0] === 'p' ? Number(draft.my_key.slice(1)) : -1
-  if (my_seat < 0 || !(candidate.escrow ?? []).some((_, seat) => seat !== my_seat)) return []
-  // V10: the presented-retirement cursor — every target the eye already saw die (my optimistic kills INCLUDED,
-  // since presented_state folds intents). foreign_replay_events skips re-emitting a death for these (no double
-  // die-animation); the candidate still adopts wholesale afterward, so committed truth is unaffected.
-  const presented = presented_state(draft)
-  const presented_dead = new Set(
-    Object.entries(presented.fighters ?? {})
-      .filter(([, f]) => f.alive === false)
-      .map(([key]) => key)
-  )
-  const raw = foreign_replay_events(committed_state(draft), base_from_view(candidate, draft.fight_id), {
-    escrow: candidate.escrow ?? [],
-    my_key: draft.my_key,
-    fight_id: draft.fight_id,
-    presented_dead,
-  })
-  return raw.length ? wave_turns_of(draft, raw, version, trap_cells) : []
 }

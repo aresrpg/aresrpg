@@ -29,17 +29,18 @@ import { createStore } from 'zustand/vanilla'
 import { auto_commit_fire_at } from './draft_budget.js'
 import { auto_commit_decision, turn_commit_key, turn_submit_epoch } from './turn_commit.js'
 import { DISPLACE_TELEPORT } from './fight_render_prims.js'
-import { apply_action, empty_state, normalize_events, normalize_intent, seat_resolver } from './inputs.js'
+import { apply_action, empty_state, normalize_accepted, normalize_intent, seat_resolver } from './inputs.js'
 import * as settle_input from './inputs.js'
+import { accept_batch, empty_accept_state, seed_accept_state } from './journal_accept.js'
+import { normalize_journal_page, normalize_receipt } from './journal_normalize.js'
+import { u64 } from './journal_u64.js'
 import { board_state_from_fight, fight_geometry_complete } from './board_state.js'
-import { masks_entries } from './present.js'
 import { reconcile_predictions } from './reconcile_action.js'
 import { tap_trace_input } from './trace_tap.js'
 import {
   base_budget,
   carry_statuses,
   committed_state,
-  foreign_replay_turns,
   last_action_of,
   merge_entries,
   presented_state,
@@ -83,8 +84,25 @@ const refuse_reason = (state, msg) => {
   return null
 }
 
-/** Build the rich board view from a snapshot msg + the merged ctx — the ONE snapshot decode (the keystone
- *  compare and the adoption both read it, so the object is decoded identically in both). */
+/** THE ONE CANONICAL DECODE (M2b, #291): run a normalized batch (a receipt's optimistic early copy OR an
+ *  authoritative journal page) through the accept machine — contiguous, content-deduped, gap-checked — and decode
+ *  its ordered `apply` output into canonical actions (event_idx = Number(seq)). Returns the new cursor + the actions
+ *  the fold merges + the gap/fault effects the edge/telemetry act on. `base_seq` (the first applied seq) puts a
+ *  receipt's paced wave window into seq space. This is the SOLE door canonical fight events enter through. */
+const accept_and_decode = (s, batch, resolve_seat_override = null) => {
+  const { state: accept_state, effects } = accept_batch(s.accept_state, batch)
+  const apply = effects.find((e) => e.type === 'apply')?.events ?? []
+  const gap = effects.find((e) => e.type === 'fetch_gap') ?? null
+  const fault = effects.find((e) => e.type === 'protocol_fault') ?? null
+  const actions = normalize_accepted(apply, {
+    resolve_seat: resolve_seat_override ?? s.ctx?.resolve_seat ?? seat_resolver(s.view),
+    base_of: base_budget(s.view),
+  })
+  return { accept_state, actions, apply, gap, fault, base_seq: apply.length ? Number(apply[0].seq) : 0 }
+}
+
+/** Build the rich board view from a snapshot msg + the merged ctx — the ONE snapshot decode (bootstrap adoption
+ *  and the checkpoint watermark both read it, so the object is decoded identically in both). */
 const snapshot_view = (ctx, msg, version) =>
   board_state_from_fight({
     fight: msg.fight,
@@ -102,12 +120,18 @@ const empty_fight = () => ({
   ...empty_state(null),
   entries: {},
   applied_version: -1,
-  view: null, // the adopted rich board view (board_state_from_fight) — the snapshot base
+  // M2b · ONE INGRESS (#291). The accept machine's cursor (journal_accept.js) — the ONE canonical ingress: receipts
+  // AND journal pages normalize (journal_normalize.js) into ONE stream keyed `(fight_id, seq)`, deduped by content
+  // and gap-checked here. `entries` holds ONLY its `apply` output (canonical) + my optimistic intents; the 4s
+  // snapshot is DEMOTED to a bootstrap base + a live-fight checkpoint, never a state source that overwrites the fold.
+  accept_state: empty_accept_state(),
+  journal_gap: null, // { fight_id, from } — the accept machine (or a snapshot watermark) needs the journal walked from `from`; the edge reads this and paginates
+  protocol_fault: null, // { seq, accepted, received, ... } — a re-delivered seq whose content DISAGREED with accepted truth (never overwritten; surfaced as telemetry)
+  view: null, // the adopted rich board view (board_state_from_fight) — the BOOTSTRAP base (adopted once per fight, then checkpoint-only)
   view_version: -1,
   ctx: {}, // init/context data (mob identity maps, offset, my_entity_id, beat_ctx resolvers) — NEVER hashed
   sim: null, // @aresrpg/sim FightState — the prediction seam (a shim supplies the roster)
   wave: [], // paced presentation turns [{seq, version, final, source_id, is_local, duration, beats}]
-  wave_versions: [], // receipt versions that already paced a wave — a re-delivery dedupes (no 2nd visual wave, #8)
   // ④+⑦b MY PLACED TRAPS — the ONE fold-state home (ruled 07-19; the keyless read drops Fight.fx, the receipt
   // carries no trap event, so this is a durable accumulator like `wave`, carried through recompute). Records
   // [{ draft_id, cells:number[], gone }]: appended at a trap-cast dispatch, `gone`-marked when a COMMITTED
@@ -140,7 +164,6 @@ const empty_fight = () => ({
   // `busy` (commit in-flight — else a fresh kill-less read authoritatively restores the mob, kill_adoption LEG A)
   wave_seq: 0,
   presented_seq: 0, // renderer ack floor — `presenting` = wave_seq > presented_seq (derived, never a latch)
-  pending_snapshot: null, // a fresher object read deferred while a remote wave drains (adopts at final ack)
   wave_head: null, // { seq, at } — the head wave turn (any locality) + when a tick first saw it (watchdog clock)
   turn_lost: null, // { key, reason:'missed'|'latched'|'burned', shown? } — a drafted turn that expired uncommitted; the toast edge consumes it once (no-silent-failure law)
   staged: [], // intents awaiting a PTB (txs.js)
@@ -213,31 +236,35 @@ const make_input =
       case 'receipt':
       case 'poll':
       case 'p2p': {
-        const raw = msg.receipt?.events ?? msg.events ?? (Array.isArray(msg.receipt) ? msg.receipt : [])
-        const actions = normalize_events(raw, {
-          version: msg.version,
-          source: msg.type,
+        // OPTIMISTIC EARLY COPY (M2b · ONE INGRESS). A receipt (my tx), a liquidation/overdue-crank poll, and a peer
+        // relay all carry the SAME chain events the journal will serve — an early copy, arriving before the indexer.
+        // Once the CONFIRMED log (applied_version) has reached this version, the copy is redundant (the authoritative
+        // journal owns it): a redelivery at or below the floor is inert. Ahead of the floor it folds through the ONE
+        // accept door at the optimistic next seq; the journal later CONFIRMS it (content-key dedupe) or corrects
+        // forward (a gap/fault). Peer relays enter here too — the peer lane shapes its input to this door (#291).
+        if (msg.version != null && Number(msg.version) <= state.applied_version) return
+        const head = u64(state.accept_state.head)
+        const batch = normalize_receipt(msg.receipt ?? msg.events ?? [], {
           fight_id: msg.fight_id ?? state.fight_id,
-          resolve_seat: msg.resolve_seat ?? state.ctx?.resolve_seat ?? seat_resolver(state.view),
-          base_of: base_budget(state.view),
+          from_seq: (head == null ? 0n : head + 1n).toString(),
+          version: msg.version,
+          digest: msg.receipt?.digest,
         })
         const my_actor = settle_input.actor_from_key(state.my_key)
-        const ended_my_turn =
-          !!my_actor &&
-          actions.some(
-            (action) =>
-              action.kind === 'TurnEnded' &&
-              !!action.is_mob === !!my_actor.is_mob &&
-              Number(action.idx) === Number(my_actor.idx)
-          )
         set((s) => {
-          // PREDICTIONS RETIRE BY CLAIM, NEVER BY PURGE (#308). An authoritative RECEIPT SETTLES exactly the
-          // claim keys (kind + actor) it carries: a pending prediction whose claim it matches retires — a
-          // byte/outcome-match is silent (the prediction was merely early), a differing outcome on the SAME
-          // claim is ONE forward correction (the divergence toast). An UNRELATED receipt (a peer/mob move that
-          // shares no claim) touches NOTHING — the old version purge killed those predictions and reverted the
-          // eye (the HP-rollback + second death re-beat). A receipt that ended my turn expires whatever it never
-          // claimed. poll/p2p stay merge-only: a stale poll must never retire a live prediction (#170's reason).
+          const { accept_state, actions, apply, gap, fault, base_seq } = accept_and_decode(s, batch, msg.resolve_seat)
+          const ended_my_turn =
+            !!my_actor &&
+            actions.some(
+              (action) =>
+                action.kind === 'TurnEnded' &&
+                !!action.is_mob === !!my_actor.is_mob &&
+                Number(action.idx) === Number(my_actor.idx)
+            )
+          // PREDICTIONS RETIRE BY CLAIM, NEVER BY PURGE (#308, M6). A RECEIPT settles exactly the claim keys (kind +
+          // actor) its accepted events carry: a matching prediction retires (byte-match ⇒ silent, mismatch ⇒ ONE
+          // forward correction); an UNRELATED receipt touches nothing; a turn-ending receipt expires what it never
+          // claimed. poll/p2p never retire a live prediction (#170 — a stale early copy is not my turn's proof).
           const entries = { ...s.entries }
           const reconcile =
             msg.type === 'receipt'
@@ -248,25 +275,28 @@ const make_input =
                 )
               : null
           if (reconcile) for (const key of reconcile.retire) delete entries[key]
-          // #8 — a DUPLICATE receipt (a re-delivery / reconnect catch-up at a version already presented) must not
-          // append a SECOND visual wave. Track the versions that produced a wave; a re-delivered version reuses the
-          // folded entries (merge_entries dedupes) but paces NO new turns. Only receipts that actually produced
-          // turns are recorded (a bare local turn produces none and stays harmlessly re-runnable).
-          const waved = msg.type === 'receipt' && (s.wave_versions ?? []).includes(msg.version)
+          // A RECEIPT paces its NON-LOCAL turns into presentation waves (mine paint optimistically; a peer turn's
+          // presentation is the peer lane's). Only genuinely-new accepted events (apply) pace — a redelivery yields
+          // an empty apply, so no second visual wave (the accept machine subsumes the old wave_versions dedupe). The
+          // window rides in SEQ space via base_seq (fold.js:idx_window).
+          const raw_pace = apply.map((e) => ({ type: e.kind, parsedJson: e.data }))
           const new_turns =
-            msg.type === 'receipt' && !waved ? wave_turns_of(s, raw, msg.version, msg.trap_cells ?? []) : []
+            msg.type === 'receipt' && apply.length
+              ? wave_turns_of(s, raw_pace, msg.version, msg.trap_cells ?? [], base_seq)
+              : []
           const wave = [...s.wave, ...new_turns]
-          const wave_versions = new_turns.length ? [...(s.wave_versions ?? []), msg.version] : (s.wave_versions ?? [])
           return recompute(
             {
               ...s,
+              accept_state,
               commit_due: false,
               receipt_seq: msg.type === 'receipt' ? s.receipt_seq + 1 : s.receipt_seq,
               staged: ended_my_turn ? [] : s.staged,
               divergence: reconcile?.divergence ?? s.divergence,
               entries: merge_entries(entries, actions),
+              journal_gap: gap ? { fight_id: gap.fight_id, from: gap.from } : s.journal_gap,
+              protocol_fault: fault ?? s.protocol_fault,
               wave,
-              wave_versions,
               wave_seq: wave.length ? wave[wave.length - 1].seq : s.wave_seq,
             },
             now
@@ -274,135 +304,85 @@ const make_input =
         })
         return
       }
-      case 'snapshot': {
-        // Adopt a decoded Fight OBJECT at its version (the base lane). At/below the applied floor → discarded
-        // (below-floor never regresses); newer → adopt wholesale (honest resume), tail entries ≤ it pruned.
-        if (msg.fight === undefined) {
-          // Legacy event-shaped snapshot (S0 contract): a highest-priority event segment.
-          if (msg.version <= state.applied_version) return
-          const actions = normalize_events(msg.receipt ?? msg.events ?? [], {
-            version: msg.version,
-            source: 'snapshot',
-            fight_id: msg.fight_id ?? state.fight_id,
-            resolve_seat: msg.resolve_seat ?? state.ctx?.resolve_seat ?? seat_resolver(state.view),
-            base_of: base_budget(state.view),
-          })
-          set((s) => recompute({ ...s, entries: merge_entries(s.entries, actions) }, now))
-          return
-        }
-        const version = Number(msg.version ?? 0)
-        // HOLD-NOT-DEGRADE (the adoption seam law, 07-18): a read whose BoardGeom is missing (decode_fight maps
-        // an absent `board` to width/height 0) is a TORN record, not a shape. Adopting it presents the 20×19
-        // fallback frame with ZERO start cells (placement clicks aimed at a frame the fight never had), and the
-        // one-shot board build downstream keeps that frame for the fight's whole life even after the +250ms
-        // retry heals. Never presentable: drop whole — the receipt/poll loop re-reads until the record is whole.
-        if (msg.fight && !fight_geometry_complete(msg.fight)) return
-        // CONVERGENCE under the hold: with NOTHING presented yet (every earlier read missed or was torn), a
-        // COMPLETE read at-or-below the entry floor is still the first honest base — seed it (there is no view
-        // to regress; fresher entries keep folding on top). Refusing it wedged the board at null until the next
-        // tx happened to bump the object version.
-        const seeds_null_view = state.view == null && msg.fight != null
-        if (version <= state.applied_version && !seeds_null_view) {
-          // A receipt and its confirming object read share one version. The receipt owns the event fold, while the
-          // equal-version object supplies last_action_ms (not present in events) without reopening snapshot state.
-          if (version === state.applied_version && msg.fight?.last_action_ms != null)
-            set((s) => ({ ...s, last_action_ms: Math.max(s.last_action_ms, last_action_of(msg.fight)) }))
-          // V3 (register): the equal-version wholesale re-adopt (the old "keystone #3" compare-adopt) is DELETED —
-          // the monotonic gate is now ABSOLUTE (A1 inner armor · BLANKPAGE §②): vN ≤ canonical ⇒ DISCARD ENTIRELY,
-          // regardless of content (this return is that discard; the SIMDRIVE no-rollback protection it also served
-          // is preserved by it). The sticky-stale case the keystone patched (a receipt tail that dropped a fact the
-          // equal-version object holds) is now handled at the SOURCE: RECEIPT is the one-way floor (V9), and a fact
-          // a thinner ADOPT omits is HELD by V2's omission-semantics — never recovered by re-adopting a competitor
-          // mid-fight (seat §3: DELETE the competitor, never arbitrate between two boards of truth).
-          return
-        }
-        // R2 DEFERRAL — a fresher object read must not leapfrog a still-draining MASKING wave (remote turns + my
-        // windowed displacement legs): adoption prunes the very entries the presented mask needs, so the fold could
-        // no longer hold the eye. Stash the newest read; it adopts at the final masking ack — or the watchdog first.
-        // #159 GAP: the single-PTB commit executes my-turn → mob-wave on-chain, but the 4s poll can read that
-        // POST-commit object BEFORE my receipt returns — a window where NO wave exists yet, so the guard above
-        // misses it and the read adopts wholesale, teleporting the board to the mobs' final state and leaving the
-        // receipt's wave nothing to animate (mobs "don't play their turn"). While my commit is IN-FLIGHT (`busy` —
-        // set at submit, cleared in the submit promise's finally AFTER apply_receipt builds the wave) defer the read
-        // through the SAME door; it re-enters (never dropped) and adopts once the wave — built by the imminent
-        // receipt — has drained. `view != null` never defers the first seeding read.
-        if ((state.wave ?? []).some(masks_entries) || (state.busy && state.view != null)) {
-          if (version > Number(state.pending_snapshot?.version ?? -1)) set((s) => ({ ...s, pending_snapshot: msg }))
-          return
-        }
-        // SPECTATOR REPLAY — other players' actions render instantly, using the SAME sequences a local turn uses,
-        // and a peer killing a mob must show during the replay, never delayed. A genuinely-
-        // newer object read reveals OTHER fighters' committed moves/casts/kills the client never saw as EVENTS (the
-        // poll reads the OBJECT, not the peer's tx). Rather than jump the board wholesale (peers teleport, their kill
-        // lands a turn late when the next read rewrites state), foreign_replay_turns DERIVES the beats for those
-        // foreign changes from the adoption diff and paces them through the SAME emission home (wave_turns_of) the
-        // mob/peer receipt path uses; the wholesale view adopts AFTER the replay drains (the pending_snapshot deferral
-        // home, flushed by the 'presented' ack below). PRESENTATION ONLY — committed truth is NEVER diff-built
-        // (inputs.js: the client never snapshot-diffs STATE): the deferred wholesale read is the authoritative adopt.
-        // Skipped on the seed (no prior view) and the deferred re-drive (`_replayed`), so a drained replay adopts.
-        if (!msg._replayed && state.view != null) {
-          const replay_ctx = { ...state.ctx, ...(msg.ctx ?? {}) }
-          const candidate = snapshot_view(replay_ctx, msg, version)
-          // LEG H — FOREIGN-REPLAY LIVE GATE: 2-account coop peers see NO replays — not player turns, not
-          // mob waves. A NON-INITIATOR (joiner) resolves my_key LAZILY, and that resolution runs in the WHOLESALE
-          // ADOPT below — AFTER this gate. So on the peer's FIRST foreign snapshot `state.my_key` is still null,
-          // foreign_replay_turns bails (my_seat < 0), and the turn adopts INSTANTLY (gate closed). Resolve my seat
-          // from the INCOMING candidate view HERE so the gate never depends on a prior adopt's timing — the
-          // initiator (seat already a `p…`) is untouched; the joiner now paces the peer/mob replay like the unit path.
-          const seat = state.my_key?.[0] === 'p' ? null : seat_resolver(candidate)(replay_ctx.my_entity_id)
-          const draft = seat != null ? { ...state, my_key: `p${seat}` } : state
-          const new_turns = foreign_replay_turns(draft, candidate, version, msg.trap_cells ?? [])
-          if (new_turns.length) {
-            set((s) => {
-              const wave = [...s.wave, ...new_turns]
-              return recompute(
-                { ...s, wave, wave_seq: wave[wave.length - 1].seq, pending_snapshot: { ...msg, _replayed: true } },
-                now
-              )
-            })
-            return
-          }
-        }
+      case 'journal': {
+        // THE AUTHORITATIVE CATCH-UP / BACKFILL (M2b · ONE INGRESS). A journal PAGE carries the real per-fight seqs,
+        // so it folds straight through the accept door: a redelivered page dedupes by seq, a hole requests its own
+        // fill (the walker re-drives from `from`). Pure canonical fold — no presentation pacing here (backfilled
+        // history is not re-animated; a live peer/mob turn's presentation rides the receipt/peer lane). `journal_gap`
+        // clears when this page catches the frontier up (no fetch effect), or re-arms if it reveals a further hole.
+        const batch = normalize_journal_page(msg.page, { fight_id: msg.fight_id ?? state.fight_id })
         set((s) => {
-          const ctx = { ...s.ctx, ...(msg.ctx ?? {}) }
-          // V2 · A5 OMISSION-HOLD: a genuinely-newer read that does NOT model the status class must not drop a
-          // receipt-floored invisibility/buff — backfill the adopted view's status rows from the prior committed
-          // state so base_from_view re-derives them. A read that DOES model statuses (any array, incl []) passes
-          // through untouched (carry_statuses is a no-op there).
-          const view = carry_statuses(snapshot_view(ctx, msg, version), committed_state(s))
-          // LEG G — FOREIGN-only intent rebase: a bug where a local turn kept getting rolled back by a
-          // third-party player's foreign turn. A wholesale adopt DRIVEN BY A FOREIGN TURN (`msg._replayed`: it arrived through the
-          // foreign_replay defer, so a PEER bumped the object, not me) must NOT purge my un-flushed optimistic
-          // intents — they predict a version I have NOT committed yet. RE-ANCHOR them just above the adopted base so
-          // recompute RE-DERIVES the predicted overlay (base + intents). Idempotent BY CONSTRUCTION: Moved/Hit/
-          // Displaced fold the ABSOLUTE post-state (to_cell / remaining_hp), so re-deriving over a base that already
-          // reflects an own action is a no-op — the flagged own-poll double-apply race dies structurally, not by a
-          // flag. A DIRECT adopt (own-poll / seed / reconcile) still purges: my own COMMITTED action lives in the
-          // adopted base, and (own-receipt path) its receipt already consumed the matching intent.
-          const entries = {}
-          for (const [key, entry] of Object.entries(s.entries)) {
-            if (entry.version > version) entries[key] = entry
-            else if (msg._replayed && entry.source === 'intent') {
-              const rebased = { ...entry, version: version + 1 }
-              entries[`${rebased.version}:${rebased.event_idx}`] = rebased
-            }
-          }
-          // Adoption may be the first moment my seat is resolvable (init before the first read).
-          const seat = seat_resolver(view)(ctx.my_entity_id)
-          const my_key = seat != null ? `p${seat}` : s.my_key
+          const { accept_state, actions, gap, fault } = accept_and_decode(s, batch)
           return recompute(
             {
               ...s,
-              view,
-              view_version: version,
-              entries,
-              ctx,
-              my_key,
-              commit_due: false,
-              last_action_ms: Math.max(s.last_action_ms, last_action_of(msg.fight, s.last_action_ms)),
+              accept_state,
+              entries: merge_entries(s.entries, actions),
+              journal_gap: gap ? { fight_id: gap.fight_id, from: gap.from } : null,
+              protocol_fault: fault ?? s.protocol_fault,
             },
             now
           )
+        })
+        return
+      }
+      case 'snapshot': {
+        // THE 4s OBJECT READ — DEMOTED (M2b · ONE INGRESS, #291). A decoded Fight OBJECT is NOT a state source. It
+        // does exactly two jobs: it BOOTSTRAPS the fold's base ONCE per fight (the first read — adopt the rich view +
+        // seed the accept cursor from journalHead), and thereafter it is a CHECKPOINT: a version/journalHead watermark
+        // and gap detector that pokes the journal walker. It NEVER re-adopts, NEVER merges events, NEVER overwrites
+        // the fold. The snapshot-diff SPECTATOR REPLAY and the mid-fight wholesale RE-ADOPT (with their deferral) are
+        // DELETED — everything that guessed history from an object read dies; canonical truth is the accept stream.
+        const is_open = msg.fight == null // the pre-engage roam (a run with no fight yet) — a lobby view, never journaled
+        // HOLD-NOT-DEGRADE (adoption seam law, 07-18): a read whose BoardGeom is missing (decode maps an absent board
+        // to width/height 0) is a TORN record, not a shape — drop it whole; the poll loop re-reads until it is whole.
+        if (msg.fight != null && !fight_geometry_complete(msg.fight)) return
+        const version = Number(msg.version ?? 0)
+        // BOOTSTRAP — the first base of this fight (view still null), or every roam view (there is no journal to fold
+        // a lobby view on top of). This is the SOLE moment an object read writes the fold: it seeds the base + cursor.
+        if (is_open || state.view == null) {
+          if (!is_open && version <= state.view_version) return // never regress the base below itself
+          set((s) => {
+            const ctx = { ...s.ctx, ...(msg.ctx ?? {}) }
+            // V2 · A5 OMISSION-HOLD: a base that does NOT model the status class must not drop a floored
+            // invisibility/buff — backfill its status rows from the prior committed state (a no-op for a modelled read).
+            const view = carry_statuses(snapshot_view(ctx, msg, version), committed_state(s))
+            // The base subsumes every canonical fact at or below its version; keep only my optimistic intents + any
+            // canonical tail already folded above it (a resume that raced ahead of the read).
+            const entries = {}
+            for (const [key, entry] of Object.entries(s.entries))
+              if (entry.version > version || entry.source === 'intent') entries[key] = entry
+            const seat = seat_resolver(view)(ctx.my_entity_id) // adoption may be the first moment my seat resolves
+            return recompute(
+              {
+                ...s,
+                view,
+                view_version: version,
+                accept_state: is_open ? s.accept_state : seed_accept_state(msg.journal_head),
+                entries,
+                ctx,
+                my_key: seat != null ? `p${seat}` : s.my_key,
+                commit_due: false,
+                last_action_ms: Math.max(s.last_action_ms, last_action_of(msg.fight, s.last_action_ms)),
+              },
+              now
+            )
+          })
+          return
+        }
+        // CHECKPOINT — the base is already set. NEVER re-adopt, NEVER merge. Adopt last_action_ms (the events omit it),
+        // and if the object's journalHead is AHEAD of our accepted frontier, request the missing seq range: the walker
+        // fills it and the fold catches up from the JOURNAL, never from this object read. The object's own fighter
+        // values are ignored — a stale/torn read can no longer teleport the board (the resurrection/rollback class).
+        set((s) => {
+          const journal_head = u64(msg.journal_head)
+          const accepted = u64(s.accept_state.head)
+          const next = accepted == null ? 0n : accepted + 1n
+          const journal_gap =
+            journal_head != null && journal_head > next
+              ? { fight_id: s.fight_id, from: next.toString() }
+              : s.journal_gap
+          return { ...s, last_action_ms: Math.max(s.last_action_ms, last_action_of(msg.fight, s.last_action_ms)), journal_gap }
         })
         return
       }
@@ -652,14 +632,8 @@ const make_input =
             now
           )
         )
-        // the drain emptied the masking wave — the deferred object read (if any) adopts NOW, through the same
-        // door it always used (the 'flush' self-drive precedent at the end of this switch).
-        const after = get()
-        if (after.pending_snapshot && !(after.wave ?? []).some(masks_entries)) {
-          const pending = after.pending_snapshot
-          set((s) => ({ ...s, pending_snapshot: null }))
-          get().input(pending, now)
-        }
+        // M2b: the snapshot deferral is gone — an object read never adopts mid-fight, so a drained wave has nothing
+        // to flush. Canonical catch-up rides the journal (journal_gap → the walker), never a stashed wholesale read.
         return
       }
       case 'arm':
