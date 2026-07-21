@@ -46,7 +46,11 @@
       import { attach_status_overlay, STATUS_OVERLAY } from '/src/render/vfx_model_overlay.js'
 
       const q = new URLSearchParams(location.search)
-      const HEAD = q.has('head') ? q.get('head') : '/sui_helmet.glb' // served from engine/public
+      // [issue #74 triage] '/sui_helmet.glb' (engine/public) was removed — cosmetics serve off the
+      // Walrus CDN at runtime via a manifest fetch this standalone demo doesn't wire (no @aresrpg/sdk
+      // dependency here). No safe default URL to hardcode, so the head slot is opt-in via ?head=<url>
+      // and empty otherwise (HEAD || null below already treats '' as "no head cosmetic requested").
+      const HEAD = q.get('head') || ''
       const BACK = q.get('back') || '' // a cloak GLB (spec routes it from ./models/equipment)
       const FACE = q.has('face') ? Number(q.get('face')) : 0 // 0 ⇒ face the +Z camera (front view)
       const ORBIT = (q.has('orbit') ? Number(q.get('orbit')) : 42) * (Math.PI / 180)

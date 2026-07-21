@@ -47,6 +47,12 @@
       // this defaulted to before that lane landed (checked live: PRESETS.status_water does NOT exist — "water"
       // resolves to the STATUS shelf's "ice" entry, the closest blue/water-toned worn aura).
       const PRESET = q.get('preset') || 'status_ice'
+      // [issue #74 triage] '/sui_helmet.glb' (engine/public) was removed — cosmetics serve off the
+      // Walrus CDN at runtime, resolved via a manifest fetch this standalone demo doesn't wire (no
+      // @aresrpg/sdk dependency here). No safe default URL to hardcode without one, so the helmet
+      // load is now opt-in via ?helmet=<url> (any reachable GLB) and skipped entirely otherwise —
+      // the avatar + aura still render and drive __ready (helmet was always best-effort, see __info).
+      const HELMET_URL = q.get('helmet') || ''
       const ASCALE = q.has('ascale') ? Number(q.get('ascale')) : 1.25
       const HSCALE = q.has('hscale') ? Number(q.get('hscale')) : 1
       const HY = q.has('hy') ? Number(q.get('hy')) : 0 // vertical nudge (m) on the head
@@ -141,47 +147,48 @@
         let helmet_raw_box = null
         let fitted = false
         const HDEBUG = q.get('hdebug') === '1'
-        get_glb_loader().load(
-          '/sui_helmet.glb',
-          (gltf) => {
-            helmet_mesh = gltf.scene
-            apply_avatar_material(helmet_mesh) // kill metalness=1 (renders black without an envmap)
-            helmet_mesh.traverse((o) => {
-              if (!o.isMesh || !o.material) return
-              for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
-                if (m && 'roughness' in m) m.roughness = ROUGH
-                if (m && 'metalness' in m) m.metalness = METAL
-              }
-            })
-            // runtime provenance for the material sweep: read the values BACK off the live mesh
-            // (not the requested constants) so a probe can prove the override actually landed.
-            window.__mat_probe = () => {
-              const out = []
+        if (HELMET_URL)
+          get_glb_loader().load(
+            HELMET_URL,
+            (gltf) => {
+              helmet_mesh = gltf.scene
+              apply_avatar_material(helmet_mesh) // kill metalness=1 (renders black without an envmap)
               helmet_mesh.traverse((o) => {
                 if (!o.isMesh || !o.material) return
                 for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
-                  if (m) out.push({ type: m.type, roughness: m.roughness, metalness: m.metalness })
+                  if (m && 'roughness' in m) m.roughness = ROUGH
+                  if (m && 'metalness' in m) m.metalness = METAL
                 }
               })
-              return out
+              // runtime provenance for the material sweep: read the values BACK off the live mesh
+              // (not the requested constants) so a probe can prove the override actually landed.
+              window.__mat_probe = () => {
+                const out = []
+                helmet_mesh.traverse((o) => {
+                  if (!o.isMesh || !o.material) return
+                  for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+                    if (m) out.push({ type: m.type, roughness: m.roughness, metalness: m.metalness })
+                  }
+                })
+                return out
+              }
+              if (HDEBUG)
+                helmet_mesh.traverse((o) => {
+                  if (o.isMesh) {
+                    o.material = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.55 })
+                    o.frustumCulled = false
+                  }
+                })
+              helmet_raw_box = new THREE.Box3().setFromObject(helmet_mesh) // helmet-local bounds (before scaling)
+              helmet_pivot.add(helmet_mesh)
+              helmet_ready = true // fit happens once the head bone is measurable (track_helmet → fit_helmet)
+            },
+            undefined,
+            (err) => {
+              window.__helmet_err = String(err && err.message ? err.message : err)
+              console.error('[sui-showcase] helmet GLB load failed', err)
             }
-            if (HDEBUG)
-              helmet_mesh.traverse((o) => {
-                if (o.isMesh) {
-                  o.material = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.55 })
-                  o.frustumCulled = false
-                }
-              })
-            helmet_raw_box = new THREE.Box3().setFromObject(helmet_mesh) // helmet-local bounds (before scaling)
-            helmet_pivot.add(helmet_mesh)
-            helmet_ready = true // fit happens once the head bone is measurable (track_helmet → fit_helmet)
-          },
-          undefined,
-          (err) => {
-            window.__helmet_err = String(err && err.message ? err.message : err)
-            console.error('[sui-showcase] helmet GLB load failed', err)
-          }
-        )
+          )
 
         /** Measure the HEAD bbox in world space = bounds of the vertices whose dominant skin weight is the 'Head'
          *  bone (the voxel head block). Returns a Box3 or null. */
