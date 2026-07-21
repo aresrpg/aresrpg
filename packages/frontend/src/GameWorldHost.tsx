@@ -243,9 +243,12 @@ export function GameWorldHost(): ReactElement {
       if (action !== 'spectate') {
         // SESSION / RESIDENT — resolve the player's selected roster character (last-played, else first) from the
         // engine roster. A confirmed-empty roster (brand-new / char escrowed in a run) → null → decorative world.
+        // bound_char_id (#221): a LIVE switch already re-keyed the session-gate binding above (that's WHY this
+        // effect re-ran — scene_key changed) — hand it straight to the resolver so the mount trusts the switch's
+        // own outcome instead of re-deriving a possibly-stale answer from the persisted last-played preference.
         const resolve_character = async () => {
           try {
-            return await game.select_active_character()
+            return await game.select_active_character(bound_char_id)
           } catch (error) {
             game_log('game-world', 'character select failed', error)
             report_error(error, { area: 'game-world', action: 'select_character' })

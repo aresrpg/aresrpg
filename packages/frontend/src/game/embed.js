@@ -58,9 +58,26 @@ function wait_for_character(last_id, timeout_ms = 16000) {
  * confirmed-empty roster. Selection is chain-direct: `action/select_character` is the single source of
  * truth; the on-chain character carries its own position, and the roam scene reads chain/p2p for peers
  * (no server to ask for "authoritative position + nearby groups").
+ *
+ * `bound_character_id` (issue #221): when the session-gate already carries an active character (a LIVE
+ * switch already selected + bound it through character_selection.js's select_character_session, BEFORE
+ * GameWorldHost's mount effect re-runs), that binding IS the active character — trust it directly instead
+ * of re-deriving through the persisted-preference roundtrip below. That roundtrip stays the BOOT-ONLY
+ * resolver (no active binding exists yet); re-running it on every switch made the mount silently reproduce
+ * whatever the LAST-PLAYED preference / roster order already said, ignoring the switch's own outcome — the
+ * world view never left the previously-embodied character. Absent, or unknown to the current roster, falls
+ * through unchanged.
+ * @param {string | null} [bound_character_id]
  * @returns {Promise<any | null>}
  */
-export async function select_active_character() {
+export async function select_active_character(bound_character_id) {
+  if (bound_character_id) {
+    const bound = context.get_state().sui.characters.find((c) => c.id === bound_character_id)
+    if (bound) {
+      context.dispatch('action/select_character', bound.id)
+      return hydrate_appearance(bound)
+    }
+  }
   const last_id = await get_last_character()
   const chosen = await wait_for_character(last_id)
   if (!chosen) return null
