@@ -30,3 +30,13 @@ describe('DungeonBoard — the movement-draft cost anchor evolves through drafte
     expect(src).not.toMatch(/const chain_cell = me\.committed\?\.cell \?\? me\.cell/)
   })
 })
+
+describe('DungeonBoard — an M2b-claimed silent MP grant is spendable exactly once (#332)', () => {
+  test('the click budget adds only the core-correlated pending intent remainder', async () => {
+    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    expect(src).toMatch(/const my_pending_mp = me\?\.committed\?\.pending_mp \?\? 0/)
+    expect(src).toMatch(/const my_mp_eff = my_mp \+ movement_grant\(cast_first, my_pending_mp\)/)
+    expect(src).not.toMatch(/drafted_mp_grant - my_claimed_mp/)
+    expect(src).not.toMatch(/cast_path\.reduce\([^\n]*mp_grant/)
+  })
+})

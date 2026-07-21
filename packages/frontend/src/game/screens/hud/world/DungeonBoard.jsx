@@ -56,14 +56,7 @@ import { character_cast_clock, use_dungeon_turn } from '../../dungeon-turn.js'
 import { GRID_W, GRID_CELLS, encode, decode, lineOfSight, bfsPathCost, bfsPath, bfsReachable } from '@aresrpg/fight/los'
 import { dungeon_grid_of } from '../../dungeon-grid.js'
 import { presentation_blocked_cells } from '../../../../world-shell/fight_board_blockers.js'
-import {
-  spell_mp_grant,
-  movement_grant,
-  on_cooldown,
-  cooldown_left,
-  casts_at_cell,
-  cap_of,
-} from '@aresrpg/fight/draft_budget'
+import { movement_grant, on_cooldown, cooldown_left, casts_at_cell, cap_of } from '@aresrpg/fight/draft_budget'
 import { FightControls } from '../FightControls.jsx'
 import { ConfirmDialog } from './ConfirmDialog.jsx'
 import { use_fight_phase } from './use_fight_phase.js'
@@ -263,6 +256,7 @@ export function DungeonBoard() {
   // (project.board_view) — and the presented values stay what they are: the display truth.
   const my_ap = me?.committed?.ap ?? 0
   const my_mp = me?.committed?.mp ?? 0
+  const my_pending_mp = me?.committed?.pending_mp ?? 0
 
   // FIX 1 (Vanish MP — regression: move range didn't grow after Vanish): a drafted cast's give_points(MP) grant
   // (seed kind:6/stat:1, e.g. Vanish +1 MP) folds into the optimistic movement pool so the reach grows mid-draft —
@@ -271,18 +265,11 @@ export function DungeonBoard() {
   // base pool, so the grant can't help it this turn — mirrors optimistic_vacated's cast_first gate exactly.
   // give_points is UNCAPPED on-chain (participant.move), so +MP over base is real movement MP now, not clamped.
   // COMPLEMENTARY to the fold's Granted arm (predict_cast.changed_actions → inputs.apply_action 'Granted', ⑤a/⑤b):
-  // that arm carries the grant into the PRESENTED pool (engine_view.mp = HUD number, move_wash reach = the blob) so
-  // it renders the instant Vanish is cast, no move drafted. THIS shim is the DRAFTED-MOVE half — the click-gate
-  // budgets against `me.committed` (intents-EXCLUDED, gate9 anti-double-count), which the optimistic grant is
-  // excluded from, and it carries the CAST_FIRST commit-order gate the order-agnostic pool can't express (dropping
-  // it would let a move-first draft reach on a grant the chain won't honor → an aborted PTB burns gas). Both live.
-  const mp_grant_of = (/** @type {string | null} */ spell_key) => {
-    if (spell_key === WEAPON_ATTACK_ID) return 0
-    return spell_mp_grant(my_spells.find((sp) => sp.name_key === spell_key)?.levels?.[0])
-  }
-  // ONE rule (draft_budget.movement_grant, cited by the core's move_wash too): the drafted cast grant funds
-  // movement iff cast_first, so the click gate and the green wash never disagree about post-Vanish reach.
-  const my_mp_eff = my_mp + movement_grant(cast_first, cast_path.reduce((sum, e) => sum + mp_grant_of(e.spell_key), 0))
+  // before confirmation this is the DRAFTED-MOVE half, because the click gate's committed anchor excludes intents.
+  // project.board_view derives `pending_mp` from the core's live Granted intent rows: M2b retires only the claimed
+  // cast batch, so a still-mounted cast path cannot double count it and an unrelated pending grant is never hidden
+  // by aggregate subtraction. ONE movement_grant rule keeps the click gate and green wash aligned on cast order.
+  const my_mp_eff = my_mp + movement_grant(cast_first, my_pending_mp)
 
   // ── CLIENT AP BUDGET (SPEC §17.27; regression: unlimited weapon-strike spam) — the chain lets a
   //    turn repeat weapon strikes / spells ONLY while AP lasts (each costs its own ap_cost; spells add a
