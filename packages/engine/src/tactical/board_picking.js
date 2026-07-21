@@ -22,8 +22,9 @@
 // deselect; v1.1 swallowed it and the spell stayed stuck armed). entity_hover fires with an entity id when
 // the pointer is over a placed entity's CELL. RAW ONLY — the engine reports WHAT the pointer is over, never
 // WHY; the dapp decides meaning (is this a legal move target? a valid cast cell?). Entity hit-testing is
-// delegated to a caller-supplied `pick_entity(ndc)` (the facade resolves the plane cell's occupant — the D1
-// cell-hitbox rule), keeping this file to the plane math + the event plumbing. 2026-07-04, v1.2 2026-07-18.
+// delegated to a caller-supplied `entity_at_cell(cell)` (the facade resolves the already plane-picked cell's
+// occupant — the D1 cell-hitbox rule), keeping entity meshes outside this input path by construction.
+// 2026-07-04, v1.2 2026-07-18.
 
 import { Plane, Raycaster, Vector2, Vector3 } from 'three'
 
@@ -124,7 +125,7 @@ export function cell_at_ndc(ndc, camera, board) {
  *   swaps the engine's camera object can never leave picking raycasting a stale camera). Falls back to `camera`.
  * @param {import('three').Camera} [args.camera] a camera captured at creation (legacy/back-compat; prefer get_camera)
  * @param {() => BoardDescriptor} args.get_board returns the current board descriptor (origin/width/height/cell_size/mask)
- * @param {(ndc: { x: number, y: number }) => (string | null)} [args.pick_entity] hit-test entities → id | null
+ * @param {(cell: { x: number, y: number } | null) => (string | null)} [args.entity_at_cell] resolve the entity occupying the already-picked cell → id | null
  * @param {(cell: { x: number, y: number } | null) => void} [args.on_cell_click] null = a clean click that missed the board (v1.2 — the dapp's off-board deselect needs it)
  * @param {(cell: { x: number, y: number } | null) => void} [args.on_cell_hover]
  * @param {(id: string | null) => void} [args.on_entity_hover]
@@ -135,7 +136,7 @@ export function create_board_picking({
   camera,
   get_camera,
   get_board,
-  pick_entity,
+  entity_at_cell,
   on_cell_click,
   on_cell_hover,
   on_entity_hover,
@@ -176,8 +177,10 @@ export function create_board_picking({
       last_cell_key = key
       on_cell_hover?.(cell)
     }
-    if (pick_entity) {
-      const id = pick_entity(ndc)
+    if (entity_at_cell) {
+      // The entity resolver receives the SAME analytic plane hit as cell_hover. It has no NDC/camera seam
+      // from which to raycast character or mob geometry, so a rendered body can never steal another cell.
+      const id = entity_at_cell(cell)
       if (id !== last_entity) {
         last_entity = id
         on_entity_hover?.(id)

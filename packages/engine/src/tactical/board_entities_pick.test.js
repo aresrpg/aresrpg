@@ -12,20 +12,14 @@
 //
 // The faux-iso camera scaffold is kept from the cylinder-era file to PROVE the class stays dead end-to-end:
 // NDC through the real fight-cam pose over the ground cells around a TALL (boss-height) rig, resolved
-// through the same cell_at_ndc plane pick the facade wires (index.js pick_entity), must hover the body cell
+// through the same cell_at_ndc plane pick the facade wires (index.js entity_at_cell), must hover the body cell
 // and nothing else — in every direction, including the away-from-camera column the cylinder used to steal.
 
 import { test, expect, describe } from 'bun:test'
 import { PerspectiveCamera, Vector3 } from 'three'
 
-import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
-
 import { cell_at_ndc } from './board_picking.js'
-
-// MISSING-ARTIFACT (#117): board_entities.js unconditionally imports create_character_avatar, which
-// static-imports the absent-by-design senshi_male.glb — see test_helpers/glb_fixture.js. Guarded dynamic
-// import; entity_id_at_cell itself has no avatar dependency, but the module can't load without the asset.
-const { entity_id_at_cell } = SENSHI_MALE_GLB_AVAILABLE ? await import('./board_entities.js') : {}
+import { entity_id_at_cell } from './board_entity_picking.js'
 
 const CELL = 1.33 // DEFAULT_CELL_SIZE (D231)
 
@@ -66,11 +60,11 @@ const BOARD = {
   mask: new Uint8Array(12 * 12), // CELL_FLOOR = 0 everywhere (board.js: 0 = walkable floor)
 }
 
-/** The facade's exact pick_entity composition (index.js): NDC → plane cell → the entity ON that cell. */
+/** The facade's exact entity_at_cell composition (index.js): NDC → plane cell → the entity ON that cell. */
 const hover = (entities, cam, cx, cy) =>
   entity_id_at_cell(entities, cell_at_ndc(to_ndc(cam, cell_world(cx, cy)), cam, BOARD))
 
-describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('entity_id_at_cell — the pure cell lookup', () => {
+describe('entity_id_at_cell — the pure cell lookup', () => {
   const entities = new Map([
     ['mob-0', entity_on(6, 6)],
     ['p-0', entity_on(3, 4)],
@@ -87,47 +81,55 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('entity_id_at_cell — the pure cell
   test('an entity record without a cell yet (mid-spawn) never matches', () => {
     expect(entity_id_at_cell(new Map([['x', {}]]), { x: 0, y: 0 })).toBeNull()
   })
+  test('mob render objects are excluded; only the logical cell participates', () => {
+    const mob = {
+      cell: { x: 6, y: 6 },
+      get object3d() {
+        throw new Error('fight picking must never read the mob model')
+      },
+    }
+    const entities = new Map([['mob-0', mob]])
+    expect(entity_id_at_cell(entities, { x: 5, y: 6 })).toBeNull()
+    expect(entity_id_at_cell(entities, { x: 6, y: 6 })).toBe('mob-0')
+  })
 })
 
-describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
-  'D1 cell rule through the REAL fight-cam pick — a TALL mob steals no neighbouring ground',
-  () => {
-    const cam = fight_cam(cell_world(6, 6)) // camera on +X ⇒ "behind" (away from cam) = −X ⇒ cells (5,6), (4,6)
-    const solo = new Map([['mob-0', entity_on(6, 6)]]) // body height is IRRELEVANT now — that is the fix
+describe('D1 cell rule through the REAL fight-cam pick — a TALL mob steals no neighbouring ground', () => {
+  const cam = fight_cam(cell_world(6, 6)) // camera on +X ⇒ "behind" (away from cam) = −X ⇒ cells (5,6), (4,6)
+  const solo = new Map([['mob-0', entity_on(6, 6)]]) // body height is IRRELEVANT now — that is the fix
 
-    test('cursor over the ground cells DIRECTLY BEHIND the mob hovers NO entity (the v30 report, dead)', () => {
-      expect(hover(solo, cam, 5, 6)).toBeNull()
-      expect(hover(solo, cam, 4, 6)).toBeNull()
-    })
+  test('cursor over the ground cells DIRECTLY BEHIND the mob hovers NO entity (the v30 report, dead)', () => {
+    expect(hover(solo, cam, 5, 6)).toBeNull()
+    expect(hover(solo, cam, 4, 6)).toBeNull()
+  })
 
-    test('the mob’s OWN cell hovers it — tooltips and mob aiming keep working', () => {
-      expect(hover(solo, cam, 6, 6)).toBe('mob-0')
-    })
+  test('the mob’s OWN cell hovers it — tooltips and mob aiming keep working', () => {
+    expect(hover(solo, cam, 6, 6)).toBe('mob-0')
+  })
 
-    test('every other direction stays clean too (the 07-11 "3 blocks" class, still dead)', () => {
-      for (const [cx, cy] of [
-        [3, 6],
-        [9, 6],
-        [6, 3],
-        [6, 9],
-        [9, 9],
-        [3, 3],
-        [6, 4],
-        [6, 5],
-        [6, 7],
-        [6, 8],
-        [8, 6],
-      ])
-        expect(hover(solo, cam, cx, cy)).toBeNull()
-    })
+  test('every other direction stays clean too (the 07-11 "3 blocks" class, still dead)', () => {
+    for (const [cx, cy] of [
+      [3, 6],
+      [9, 6],
+      [6, 3],
+      [6, 9],
+      [9, 9],
+      [3, 3],
+      [6, 4],
+      [6, 5],
+      [6, 7],
+      [6, 8],
+      [8, 6],
+    ])
+      expect(hover(solo, cam, cx, cy)).toBeNull()
+  })
 
-    test('two fighters: each answers exactly on its own cell, no nearest-along-ray stealing', () => {
-      const two = new Map([
-        ['mob-0', entity_on(6, 6)],
-        ['mob-1', entity_on(5, 6)], // directly behind mob-0 from the camera — the old cylinder ambiguity
-      ])
-      expect(hover(two, cam, 6, 6)).toBe('mob-0')
-      expect(hover(two, cam, 5, 6)).toBe('mob-1')
-    })
-  }
-)
+  test('two fighters: each answers exactly on its own cell, no nearest-along-ray stealing', () => {
+    const two = new Map([
+      ['mob-0', entity_on(6, 6)],
+      ['mob-1', entity_on(5, 6)], // directly behind mob-0 from the camera — the old cylinder ambiguity
+    ])
+    expect(hover(two, cam, 6, 6)).toBe('mob-0')
+    expect(hover(two, cam, 5, 6)).toBe('mob-1')
+  })
+})

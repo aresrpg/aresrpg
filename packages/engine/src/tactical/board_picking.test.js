@@ -369,6 +369,34 @@ describe('create_board_picking — pointer leaving the canvas clears the latched
     for (const fn of canvas.handlers.pointerleave ?? []) fn({})
   }
 
+  test('cell and entity hover share the exact same cell-only pick', () => {
+    const canvas = make_canvas()
+    const camera = new PerspectiveCamera(60, 800 / 600, 0.1, 500)
+    look_straight_down(camera, 3, 3) // canvas centre rays down onto cell (1,1)
+    let hovered_cell = /** @type {{ x: number, y: number } | null} */ (null)
+    let resolved_cell = /** @type {{ x: number, y: number } | null} */ (null)
+    const entity_events = /** @type {Array<string|null>} */ ([])
+    create_board_picking({
+      canvas: /** @type {any} */ (canvas),
+      get_camera: () => camera,
+      get_board: () => board,
+      entity_at_cell: (cell) => {
+        resolved_cell = cell
+        return cell?.x === 1 && cell.y === 1 ? 'mob-0' : null
+      },
+      on_cell_hover: (cell) => {
+        hovered_cell = cell
+      },
+      on_entity_hover: (id) => entity_events.push(id),
+    })
+
+    move_at(canvas, 400, 300)
+
+    expect(hovered_cell).toEqual({ x: 1, y: 1 })
+    expect(resolved_cell).toBe(hovered_cell) // one analytic plane hit feeds both paths
+    expect(entity_events).toEqual(['mob-0'])
+  })
+
   test('pointerleave clears both cell_hover and entity_hover exactly once', () => {
     const canvas = make_canvas()
     const camera = new PerspectiveCamera(60, 800 / 600, 0.1, 500)
@@ -379,7 +407,7 @@ describe('create_board_picking — pointer leaving the canvas clears the latched
       canvas: /** @type {any} */ (canvas),
       get_camera: () => camera,
       get_board: () => board,
-      pick_entity: () => 'mob-0', // any hover over the canvas centre "hits" a fake entity
+      entity_at_cell: () => 'mob-0', // the plane-picked cell resolves to a fake occupant
       on_cell_hover: (c) => cell_events.push(c),
       on_entity_hover: (id) => entity_events.push(id),
     })
@@ -410,7 +438,7 @@ describe('create_board_picking — pointer leaving the canvas clears the latched
       canvas: /** @type {any} */ (canvas),
       get_camera: () => camera,
       get_board: () => board,
-      pick_entity: () => null,
+      entity_at_cell: () => null,
       on_cell_hover: (c) => cell_events.push(c),
       on_entity_hover: (id) => entity_events.push(id),
     })

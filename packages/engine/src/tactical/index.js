@@ -23,7 +23,7 @@ import { Matrix4, Vector3 } from 'three'
 import { ground_surface_y } from '../player/spawn.js'
 
 import { build_board_geometry, DEFAULT_CELL_SIZE, CELL_OBSTACLE, CELL_HOLE, CELL_VOID } from './board.js'
-import { create_board_picking, cell_from_raycaster, cell_at_ndc } from './board_picking.js'
+import { create_board_picking, cell_from_raycaster } from './board_picking.js'
 import { create_board_highlights } from './board_highlights.js'
 import { create_board_camera } from './board_camera.js'
 import { create_board_entities } from './board_entities.js'
@@ -323,14 +323,9 @@ export function create_tactical_board({
       canvas,
       get_camera: () => /** @type {any} */ (engine.get_camera()),
       get_board: () => descriptor,
-      pick_entity: (ndc) => {
-        // CELL RULE: hovering in fights uses only the cell hitbox, not the mob model —
-        // the hovered entity is the one standing ON the plane-picked cell — a tall body never steals the
-        // hover from the ground cells it merely covers on screen. Same floor-plane pick as cell_hover.
-        const c = engine.get_camera()
-        if (!c || !entities) return null
-        return entities.id_at_cell(cell_at_ndc(ndc, c, descriptor))
-      },
+      // CELL RULE: hover and click share this ONE analytic board-plane pick. Entity hover only maps its
+      // resulting cell to an occupant; character/mob render objects never enter the pointer target set.
+      entity_at_cell: (cell) => entities?.id_at_cell(cell) ?? null,
       on_cell_click: (cell) => emit('cell_click', cell),
       on_cell_hover: (cell) => emit('cell_hover', cell),
       on_entity_hover: (id) => emit('entity_hover', id),

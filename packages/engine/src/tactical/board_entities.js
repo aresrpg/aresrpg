@@ -23,8 +23,11 @@ import { create_worn_cosmetics } from '../player/worn_cosmetics.js'
 import { attach_invisibility_heat_haze } from '../render/invisibility_heat_haze.js'
 
 import { FLOOR_THICKNESS } from './board.js'
+import { entity_id_at_cell } from './board_entity_picking.js'
 import { install_pos_trace } from './pos_trace.js'
 import { weld_smoothed_normals } from './smooth_normals.js'
+
+export { entity_id_at_cell }
 
 // Fight-only player height; mob size is intrinsic and owned by create_mob_model.
 const BOARD_PLAYER_HEIGHT = 1.4
@@ -183,7 +186,7 @@ export function resolve_gait(gait, cells_per_second, clip_duration, time_scale_o
  * @property {(id: string, opts: { anim: string, float?: { text: string, kind?: string }, face?: { x: number, y: number } }) => Promise<void>} beat
  * @property {(id: string, float: { text: string, kind?: string }) => void} float spawn a float over an entity
  * @property {(dt: number, camera: import('three').Camera) => void} tick advance mixers/walks/beats/floats
- * @property {(cell: { x: number, y: number }) => (string | null)} id_at_cell the entity standing on a board cell → id (the D1 cell-hitbox hover rule)
+ * @property {(cell: { x: number, y: number } | null) => (string | null)} id_at_cell the entity standing on a board cell → id (the D1 cell-hitbox hover rule)
  * @property {(id: string) => ({ x: number, z: number } | null)} render_position_of [entity-anchor] an
  *   entity's CURRENT interpolated world XZ — the walk tween's LIVE transform (whatever this frame's
  *   advance_walk has actually reached), never the logical destination cell `move()` snaps `e.cell` to
@@ -1116,26 +1119,6 @@ function make_float_sprite(text, kind) {
   sprite.scale.set(FLOAT_BASE_W * final_scale, FLOAT_BASE_H * final_scale, 1) // world-meters footprint of the label
   sprite.renderOrder = 999 // always on top (occlusion baseline is the locked cam, contract)
   return sprite
-}
-
-// ── entity picking — THE CELL RULE (D1): hovering in fights uses only the cell hitbox,
-//    not the mob model. ─────────────────────────────────────────────────────────────────────────────────
-// The old pick was an analytic full-height cylinder per avatar: radius was clamped sub-cell (the 07-11
-// "3 blocks away" fix), but HEIGHT stayed full-body — so a tall mob's drawn body still stole the hover from
-// every ground cell it covered on screen (away from the camera), and the player could not aim at the cell
-// behind it. The rule of record now: the pointer hovers the entity standing ON the plane-picked board cell,
-// nothing else. One lookup, zero geometry — the board's floor plane (board_picking) is the ONLY pick surface.
-
-/**
- * The id of the entity whose LOGICAL cell is `cell`, or null. `e.cell` is the same logical cell
- * upsert/move snap to (a walking body answers at its destination cell — the truth the fold owns).
- * @param {Map<string, any>} entities @param {{ x: number, y: number } | null | undefined} cell
- * @returns {string | null}
- */
-export function entity_id_at_cell(entities, cell) {
-  if (!cell) return null
-  for (const [id, e] of entities) if (e.cell && e.cell.x === cell.x && e.cell.y === cell.y) return id
-  return null
 }
 
 // [D257] HIT-FLASH envelope — the struck avatar's emissive pulses red-orange (0.15 s in / 0.25 s out),
