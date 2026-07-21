@@ -15,8 +15,10 @@ import { should_snap_to_leader } from '@aresrpg/party/group_loop'
 
 import { get_peer_state } from '../p2p/lobby-room.js'
 import { use_dungeon } from '../world-shell/dungeon_store.js'
+import { use_party } from '../world-shell/party_store.js'
 
 import { feet_of } from './ambient_placement.js'
+import { same_render_instance } from './remote_visibility_scope.js'
 import { plate_occluded, project_plate } from './nameplate_occlusion.js'
 import { open_player_menu } from './screens/hud/world/player_menu_store.js'
 import { create_mount_rig } from './mount_rig.js'
@@ -210,13 +212,19 @@ export function create_remote_players(engine, world_canvas = null) {
     rigs.delete(id)
   }
 
-  // D237 INSTANCE SCOPE: the client only shows players from the dungeon when in a dungeon, and
-  // players in a dungeon don't render for players not in a dungeon — it's like an instance; drop them.
-  // Every dungeon cave uses the SAME deterministic room coords (cave_session seeds visuals off the id but the
-  // playable cells overlap in [0..56]), and presence broadcasts keep flowing in-cave — so WITHOUT this filter a
-  // peer in ANOTHER dungeon (or the overworld) renders as a ghost standing in mine. My scope = the dungeon id
-  // I'm inside (null = overworld); a peer's scope rides its self-declared p2p `state` (get_peer_state.dungeon_id,
-  // null when it hasn't landed yet or the peer is overworld).
+  // D237 INSTANCE SCOPE (#333 CORRECTED — see remote_visibility_scope.js): the client only shows players from
+  // the dungeon when in a dungeon, and players in a dungeon don't render for players not in a dungeon — it's like
+  // an instance; drop them. Every dungeon cave uses the SAME deterministic room coords (cave_session seeds
+  // visuals off world_id — "co-op consistent, same world, same room"), and presence broadcasts keep flowing
+  // in-cave — so WITHOUT this filter a peer in ANOTHER dungeon (or the overworld) renders as a ghost standing in
+  // mine. The match used to compare each side's OWN dungeon_id — each character's PERSONAL run_pass_id
+  // (dungeon_run_store.js "session identity") — never equal between two different players, not even two co-op
+  // partners standing in the exact same room, so co-op players never rendered for each other inside a shared
+  // dungeon (#333 — same disease PR #330 cured in the chat scope, world_chat_scope.js). same_render_instance
+  // compares the genuinely SHARED identity instead: the on-chain party id both sides broadcast in their
+  // low-frequency p2p `state` (lobby-room.js broadcast_state's party_id, party_store.js _publish_state) — while
+  // still refusing a stranger running the identical dungeon TEMPLATE who isn't in my party (D237's original
+  // invariant, preserved on a value that actually distinguishes instances).
   //
   // D237 AMENDMENT (players shouldn't announce themselves to far-away peers — drop players not in range): for
   // TWO OVERWORLD peers (scope null == null) add a receiver-side RANGE bound off the camera (the viewer's eye) —
@@ -231,13 +239,23 @@ export function create_remote_players(engine, world_canvas = null) {
   const OVERWORLD_RANGE_M = 100 // generous ~streaming-ring radius; comfortably past ANIM_CULL_M (50) so a merely
   //                               anim-culled (frozen-pose) rig is never also range-dropped.
   const logged_drops = new Set()
+  /** The instance-scope inputs for one peer, read fresh every call — the ONE place should_show and drop_reason
+   * source them from (never a second, competing read). @param {string} id */
+  const peer_scope = (/** @type {string} */ id) => {
+    const peer = get_peer_state(id)
+    return {
+      mine_dungeon_id: use_dungeon.getState().dungeon_id ?? null,
+      peer_dungeon_id: peer?.dungeon_id ?? null,
+      mine_party_id: use_party.getState().party_id ?? null,
+      peer_party_id: peer?.party_id ?? null,
+    }
+  }
   /** Should this peer have a rig THIS frame? instance scope must match; two overworld peers additionally
    * range-bound off the camera. @param {string} id @param {number} px @param {number} pz @param {any} cam */
   const should_show = (id, px, pz, cam) => {
-    const mine = use_dungeon.getState().dungeon_id ?? null
-    const theirs = get_peer_state(id)?.dungeon_id ?? null
-    if (mine !== theirs) return false // INSTANCE MISMATCH — the core invariant: never render across instances.
-    if (mine !== null) return true // same DUNGEON → always render (co-op, small room, no range gate).
+    const scope = peer_scope(id)
+    if (!same_render_instance(scope)) return false // INSTANCE MISMATCH — never render across instances.
+    if (scope.mine_dungeon_id !== null) return true // same DUNGEON → always render (co-op, small room, no range gate).
     if (!cam) return true // both overworld but camera not booted yet → fail-open (scope already held).
     return (cam.position.x - px) ** 2 + (cam.position.z - pz) ** 2 <= OVERWORLD_RANGE_M * OVERWORLD_RANGE_M
   }
@@ -248,10 +266,13 @@ export function create_remote_players(engine, world_canvas = null) {
     /** @type {number} */ pz,
     /** @type {any} */ cam
   ) => {
-    const mine = use_dungeon.getState().dungeon_id ?? null
-    const theirs = get_peer_state(id)?.dungeon_id ?? null
-    if (mine !== theirs)
-      return `instance ${theirs?.slice(0, 10) ?? 'overworld'} ≠ mine ${mine?.slice(0, 10) ?? 'overworld'}`
+    const scope = peer_scope(id)
+    if (!same_render_instance(scope))
+      return (
+        `instance mismatch — mine dungeon=${scope.mine_dungeon_id?.slice(0, 10) ?? 'overworld'} ` +
+        `party=${scope.mine_party_id?.slice(0, 10) ?? 'none'}, theirs dungeon=` +
+        `${scope.peer_dungeon_id?.slice(0, 10) ?? 'overworld'} party=${scope.peer_party_id?.slice(0, 10) ?? 'none'}`
+      )
     const d = cam ? Math.round(Math.hypot(cam.position.x - px, cam.position.z - pz)) : -1
     return `overworld out of range (${d}m > ${OVERWORLD_RANGE_M}m)`
   }
