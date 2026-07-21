@@ -1,0 +1,46 @@
+{
+  "_provenance": "M1 /v1/fights/{id}/events page BODY, seqs 0-2 of a 5-event journal (a fully-past immutable page). Envelope shape from packages/rpc/api/views.js::handle_fight_events (#216). Event `data` VALUE SHAPES are REAL captured testnet wire, field-for-field from packages/rpc/indexer/src/handlers/ares/journal_tests.rs. Object IDS (fight/character/world) are replaced with house-synthetic ids per the chain-id gate (the real fight was 0x7cdc59f2...ee928); seq/digest(tx digest)/version(post-tx object version, u64 string) are the runtime-threaded envelope fields (journal.rs::journal_writes), synthesized here.",
+  "fight": "0xf1647",
+  "journal_head": "5",
+  "events": [
+    {
+      "seq": 0,
+      "kind": "FightCreated",
+      "data": {
+        "fight": "0xf1647",
+        "world": "0xworld_a",
+        "spawn_id": "12475479364079269131",
+        "anchor_x": 250144,
+        "anchor_z": 250088,
+        "public_fight": true,
+        "aged_bp": "0",
+        "mob_count": "2"
+      },
+      "digest": "9Xr4Qh2kW1vB7tZaCe",
+      "version": "348000010"
+    },
+    {
+      "seq": 1,
+      "kind": "TurnStarted",
+      "data": {
+        "fight": "0xf1647",
+        "is_mob": false,
+        "idx": "0",
+        "deadline_ms": "90000"
+      },
+      "digest": "3Fm8Lp5tYh2nR9sJdU",
+      "version": "348000011"
+    },
+    {
+      "seq": 2,
+      "kind": "Moved",
+      "data": {
+        "fight": "0xf1647",
+        "character": "0xchar_a",
+        "to_cell": "64"
+      },
+      "digest": "7bK9mNs2Rp4hV3wQxL",
+      "version": "348000012"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "_provenance": "M1 /v1/fights/{id}/events page BODY, seqs 3-4 — the HEAD-TOUCHING page of the same 5-event journal as page_0.json (from+limit reaches journal_head, so the M1 server serves it `no-store`). seq 3 (Displaced) + seq 4 (Hit) share one tx digest+version: a single cast tx emitted both — the fixture that proves `digest` is provenance (per-tx), NOT a per-event content key. `data` VALUE SHAPES are REAL captured wire (journal_tests.rs); object ids are house-synthetic (chain-id gate); the seq/digest/version envelope is synthesized.",
+  "fight": "0xf1647",
+  "journal_head": "5",
+  "events": [
+    {
+      "seq": 3,
+      "kind": "Displaced",
+      "data": {
+        "fight": "0xf1647",
+        "target_is_mob": true,
+        "target_idx": "0",
+        "kind": 12,
+        "from_cell": "61",
+        "to_cell": "60",
+        "requested": "2",
+        "blocked": "1"
+      },
+      "digest": "5Hd7Wq3xTb8kM2vNpF",
+      "version": "348000013"
+    },
+    {
+      "seq": 4,
+      "kind": "Hit",
+      "data": {
+        "fight": "0xf1647",
+        "victim_is_mob": true,
+        "victim_idx": "0",
+        "amount": "7",
+        "remaining_hp": "10"
+      },
+      "digest": "5Hd7Wq3xTb8kM2vNpF",
+      "version": "348000013"
+    }
+  ]
+}

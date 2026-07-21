@@ -55,6 +55,15 @@
     },
     "./trace_tap": {
       "import": "./src/trace_tap.js"
+    },
+    "./journal_u64": {
+      "import": "./src/journal_u64.js"
+    },
+    "./journal_normalize": {
+      "import": "./src/journal_normalize.js"
+    },
+    "./journal_accept": {
+      "import": "./src/journal_accept.js"
     }
   },
   "author": "AresRPG's Team",
