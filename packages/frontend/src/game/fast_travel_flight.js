@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // FAST-TRAVEL FLIGHT — the PURE autopilot math (headless, unit-tested): a per-frame integration step that
-// beelines the dragon to the target at RUN speed and shapes altitude (climb → cruise ground+12 → descend
-// ground+3), plus the arrival test. NO effects, NO engine handles — the browserful edge (fast_travel_pilot.js)
-// feeds it position + a ground sample and applies the returned position via ctl.teleport, exactly as the TR-1
-// creative-fly branch hard-places a per-frame position (embed_voxel_player.js:427-435).
+// beelines the dragon to the target at RUN speed and shapes altitude (climb → flat cruise @ CRUISE_ALTITUDE →
+// glide-slope descend → ground+3), plus the arrival test. NO effects, NO engine handles — the browserful edge
+// (fast_travel_pilot.js) feeds it position + a ground sample and applies the returned position via ctl.teleport,
+// exactly as the TR-1 creative-fly branch hard-places a per-frame position (embed_voxel_player.js:427-435).
 //
 // SPEED IS LOAD-BEARING (plan §2-⑦ travel-debt): the dragon flies at RUN_SPEED × 1.0 — the SAME budget a
 // runner covers, so the traveler's next on-chain action at the destination passes the chain speed clock exactly
@@ -16,25 +16,31 @@ import { CONTROLLER_CONSTANTS } from '@aresrpg/engine3/player'
 import { steer_to } from './auto_run.js'
 
 export const FT_SPEED = CONTROLLER_CONSTANTS.RUN_SPEED // m/s — never ×1.5 (plan invariant 1); single home
-// #175 second live report ("it should fly WAY higher", priority bumped on recurrence): 12 read as skimming
-// the treetops. 30 = 2.5× the old cruise (owner range: 2-3×) — terrain-follow, so it clears whatever peak
-// sits under the path by the same margin everywhere. DESCEND_RADIUS is widened to match (see below) so the
-// extra altitude still fully sheds into LAND_CLEARANCE before arrival — a taller cruise with the OLD 30-block
-// descent window would have force-unmounted the rider mid-air (see the paired invariant test).
-export const CRUISE_CLEARANCE = 30 // m above the sampled ground during cruise (terrain-follow — clears any peak)
+// v2 (#370, owner spec verbatim: "static 300 cruise, no heightmap"): the OLD cruise tracked ground+30 the WHOLE
+// way, which reads as ground-walking near trees/hills (the .46 live-report screenshot: the dragon skimming
+// terrain). CRUISE_ALTITUDE is an ABSOLUTE world Y — flat, terrain-INDEPENDENT — so mid-cruise never touches
+// ground_y at all; only the climb-out and the final descent (target_altitude below) still need it.
+export const CRUISE_ALTITUDE = 300 // absolute world Y during cruise (v2, #370)
 export const LAND_CLEARANCE = 3 // m above ground at the drop point — force-unmount from here, gravity settles the rest
-// Widened alongside CRUISE_CLEARANCE (was 30, sized for the old ground+12 cruise): the descent must shed
-// CRUISE_CLEARANCE−LAND_CLEARANCE metres at VERT_RATE before the dragon reaches ARRIVAL_RADIUS, which bounds
-// the MINIMUM viable radius to FT_SPEED·(CRUISE_CLEARANCE−LAND_CLEARANCE)/VERT_RATE ≈ 47; 50 keeps a margin.
-export const DESCEND_RADIUS = 50 // begin the cruise→land descent within this XZ distance of the target…
-export const ARRIVAL_RADIUS = 4 // …and count as arrived (drop) within this XZ distance (the dragon rig is large)
+export const ARRIVAL_RADIUS = 4 // count as arrived (drop) within this XZ distance (the dragon rig is large)
 export const VERT_RATE = 6 // m/s vertical shaping rate (climb + descend) — smooth, never a Y teleport
 
-/** Target vertical clearance above ground for the current XZ distance: cruise far out, descend near. Descent
- *  begins at DESCEND_RADIUS (>> ARRIVAL_RADIUS) so the body is already at LAND_CLEARANCE by arrival.
- *  @param {number} dist @returns {number} */
-export function target_clearance(dist) {
-  return dist <= DESCEND_RADIUS ? LAND_CLEARANCE : CRUISE_CLEARANCE
+/**
+ * Absolute target world-Y for the current XZ distance + ground sample: a GLIDE SLOPE, not a fixed-radius
+ * trigger. The ceiling is flat CRUISE_ALTITUDE; it's capped by a straight ramp down to ground+LAND_CLEARANCE
+ * that reaches EXACTLY that value by dist=ARRIVAL_RADIUS (is_arrived fires there, NOT at dist=0 — the ramp's
+ * touchdown point has to match, else "arrived" fires while still mid-glide), descending at EXACTLY VERT_RATE
+ * per second of remaining travel — so the flight_step clamp below (≤ VERT_RATE·dt per frame) tracks the slope
+ * with ZERO lag once on it, and the crossover point (where cruise ends and the glide begins) auto-scales to
+ * however much altitude actually needs to shed. That auto-scaling is why this replaced a fixed DESCEND_RADIUS
+ * (#175's shed math assumed a CONSTANT ~27m ground-relative shed; a 300-absolute cruise's shed depends
+ * entirely on the destination's terrain height — a mountain-top arrival sheds far less than a sea-level one,
+ * and no single fixed radius covers both without either an unbelievably fast dive or a stalled approach still
+ * hundreds of metres up at arrival).
+ * @param {number} dist @param {number} ground_y @returns {number}
+ */
+export function target_altitude(dist, ground_y) {
+  return Math.min(CRUISE_ALTITUDE, ground_y + LAND_CLEARANCE + (VERT_RATE * Math.max(0, dist - ARRIVAL_RADIUS)) / FT_SPEED)
 }
 
 // #175 root cause (both live reports: "still not animated"): the pilot drives the body via ctl.teleport()
@@ -60,8 +66,10 @@ export function is_arrived(dist, radius = ARRIVAL_RADIUS) {
 
 /**
  * One autopilot frame. Beelines XZ toward the target at ≤ FT_SPEED·dt (never overshoots) and shapes Y toward
- * ground+clearance at ≤ VERT_RATE·dt. A null ground sample (column not streamed yet) HOLDS the current altitude —
- * never descend blind (plan §4-B8).
+ * target_altitude (flat CRUISE_ALTITUDE far out, glide-slope down to ground+LAND_CLEARANCE near the target) at
+ * ≤ VERT_RATE·dt. A null ground sample (column not streamed yet) HOLDS the current altitude — never descend
+ * blind (plan §4-B8). yaw is the raw segment/velocity direction toward the target (steer_to) — the caller
+ * (fast_travel_pilot.js) owns any frame-to-frame easing; this stays pure and stateless.
  * @param {{ pos:[number,number,number], target:{x:number,z:number}, ground_y:number|null, dt:number }} a
  * @returns {{ pos:[number,number,number], yaw:number, dist:number, arrived:boolean, descending:boolean }}
  */
@@ -74,10 +82,13 @@ export function flight_step({ pos, target, ground_y, dt }) {
   const step = Math.min(FT_SPEED * step_dt, dist)
   const nx = dist > 1e-6 ? px + -Math.sin(yaw) * step : px
   const nz = dist > 1e-6 ? pz + -Math.cos(yaw) * step : pz
-  // Y shaping — glide toward ground+clearance, bounded by VERT_RATE·dt (smooth climb/descent, never a Y jump).
+  // Y shaping — glide toward target_altitude, bounded by VERT_RATE·dt (smooth climb/descent, never a Y jump).
   // A null ground sample (column not streamed yet) holds the current altitude — never descend blind (§4-B8).
-  const want_y = ground_y == null ? py : ground_y + target_clearance(dist)
+  const want_y = ground_y == null ? py : target_altitude(dist, ground_y)
   const dy_cap = VERT_RATE * step_dt
   const ny = py + Math.max(-dy_cap, Math.min(dy_cap, want_y - py))
-  return { pos: [nx, ny, nz], yaw, dist, arrived: is_arrived(dist), descending: dist <= DESCEND_RADIUS }
+  // descending = below the flat ceiling (past the glide-slope crossover) — a null ground sample never counts,
+  // matching the hold-altitude rule above (we can't be gliding toward a target we didn't sample).
+  const descending = ground_y != null && want_y < CRUISE_ALTITUDE
+  return { pos: [nx, ny, nz], yaw, dist, arrived: is_arrived(dist), descending }
 }
