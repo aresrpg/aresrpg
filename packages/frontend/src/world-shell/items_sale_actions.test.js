@@ -56,12 +56,16 @@ afterAll(() => {
 })
 
 describe('buy pre-flight kiosk lookup refusal visibility', () => {
-  // LIVE-CANDIDATE (#117): passes in isolation (this file alone, and paired with kiosk_resolve/fight_liveness/
-  // fight_absence); fails ONLY inside the full `bun test src` run with a raw TypeError from kiosk_resolve.js's
-  // owner_of ("sdk.grpc_client.core.getObject" undefined) — the SAME shape of shared-state leak as
-  // kiosk_resolve.test.js's two skipped tests (see that file's comment), surfacing here as the injected sdk
-  // mock apparently not being the one this call path reads. Needs the same dedicated full-suite bisection.
-  test.skip('throwing RPC → honest toast + technical game_log detail, with no raw JSON in player copy', async () => {
+  // #123 ROOT CAUSE (found + fixed, was LIVE-CANDIDATE #117): world-shell/world_checkpoint.test.js registered
+  // its OWN direct `mock.module('../chain/sdk', () => ({ get_sdk: async () => ({ grpc_client: {} }) }))` —
+  // competing with this shared expedition-sdk mock (test_helpers/expedition_sdk_mock.js) for the SAME
+  // process-global registration. bun's mock.module has no unmock API, so whichever file's call runs LAST wins
+  // for the rest of the process — that static `{ grpc_client: {} }` (no `.core`) is the EXACT undefined-read
+  // shape below, permanently overriding this file's own `set_expedition_sdk_mock(throwing_sdk)` for whichever
+  // file ran after world_checkpoint.test.js. Fixed at the source: that file now routes through
+  // set_expedition_sdk_mock/reset_expedition_sdk_mock like every other consumer instead of a second direct
+  // mock.module call.
+  test('throwing RPC → honest toast + technical game_log detail, with no raw JSON in player copy', async () => {
     const buy = buy_items_sale({
       sale_id: '0xsale',
       template_id: '0xtemplate',
