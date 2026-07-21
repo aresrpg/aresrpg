@@ -289,6 +289,12 @@ describe('world_cell', () => {
     }
   })
 
+  // ISSUE #85 (flake fix, sibling row): heaviest sweep in this file — 5 seeds × 3 windows = 15 calls to
+  // biggest_water_blob, each a 241×241 (58,081-cell) BFS window over world_cell — ~871k world_cell calls total.
+  // world_cell is a PROVEN pure-integer function (world.js header — verified by source read + repo-wide grep,
+  // see the arena/navigability fix commits on this branch) so the RESULT never varies; only wall-clock does.
+  // Flipped the identical way under the same QoS-demoted contention probe (bounded-run.sh): timed out at
+  // 7945ms against bun's 5000ms default. 30s timeout gives real headroom; not one assertion below changed.
   test('lakes are coherent WATER regions (a contiguous body, not just speckle ponds)', () => {
     // A lake must form at least one BIG connected WATER component somewhere across the world — the
     // "coherent region, not salt-and-pepper" guarantee. Scan wide windows; require a fat blob.
@@ -342,7 +348,7 @@ describe('world_cell', () => {
       ])
         if (biggest_water_blob(seed, cx, cy) > 120) saw_lake = true
     expect(saw_lake).toBe(true)
-  })
+  }, 30000)
 
   test('new render biomes never violate the gameplay-cell contract', () => {
     // road/beach/meadow are render hints on WALKABLE FLOOR; water is the only water biome. Pin them so
