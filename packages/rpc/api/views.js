@@ -12,7 +12,7 @@
 // truth. Money amounts (MIST) travel as strings to survive JSON's 2^53; counts,
 // coordinates and levels are numbers.
 
-import { get_json, get_str, mget_json, ping, smembers, zrevrange } from './redis.js'
+import { get_json, get_str, mget_json, ping, smembers, zcard, zrange, zrevrange } from './redis.js'
 import { resolve_names } from './suins.js'
 
 // Redis keys / index sets written by the indexer. Kept in sync BY CONTRACT with
@@ -58,6 +58,7 @@ const K = {
   kolizeum: (id) => `rpc:kolizeum:${id}`,
   kolizeums: 'rpc:idx:kolizeums',
   fight: (id) => `rpc:fight:${id}`,
+  fightJournal: (id) => `rpc:fight:${id}:journal`, // per-fight ORDERED event journal (sorted set; score = checkpoint, rank = seq)
   charFight: (c) => `rpc:char_fight:${c}`,
   fights: (world) => `rpc:idx:fights:${world}`,
   groupTemplate: (world, spawn_id) => `rpc:group_template:${world}:${spawn_id}`, // (world,spawn_id) → the fight's mob-group MobTemplate id (zones::MobGroupClaimed) — joined onto a fight to name its mobs
@@ -1005,6 +1006,20 @@ async function with_group_template(fights) {
   return fights.map((f, i) => ({ ...f, group_template: docs[i] ?? null }))
 }
 
+// Attach each shaped fight's `journal_head` — the ZCARD of its per-fight ordered event
+// journal (`rpc:fight:{id}:journal`), i.e. how many events the log extends to. Additive:
+// a fight with nothing journalled yet reports `0`. This is the cursor a client learns
+// from the SNAPSHOT read so it knows the highest seq it can page the journal up to
+// (`/v1/fights/{id}/events`). One ZCARD per fight, issued concurrently (Bun multiplexes).
+async function with_journal_head(fights) {
+  if (fights.length === 0) return fights
+  const heads = await Promise.all(fights.map((f) => zcard(K.fightJournal(f.fight_id))))
+  return fights.map((f, i) => ({ ...f, journal_head: heads[i] }))
+}
+
+// Both read-time joins a fight snapshot carries: the mob-group template name + the journal head.
+const enrich_fights = async (fights) => with_journal_head(await with_group_template(fights))
+
 export async function handle_fights(params) {
   const id = params.get('id')
   const character = params.get('character')
@@ -1012,20 +1027,62 @@ export async function handle_fights(params) {
 
   if (id) {
     const f = await get_json(K.fight(id))
-    return ok({ fights: await with_group_template(f ? [shape_fight(f)] : []) })
+    return ok({ fights: await enrich_fights(f ? [shape_fight(f)] : []) })
   }
   if (character) {
     const fid = await get_json(K.charFight(character))
     const f = fid ? await get_json(K.fight(fid)) : null // dangling pointer → missing doc → empty
-    return ok({ fights: await with_group_template(f ? [shape_fight(f)] : []) })
+    return ok({ fights: await enrich_fights(f ? [shape_fight(f)] : []) })
   }
   if (world) {
     const active = params.get('active') !== 'false' // default: only non-terminal
     let fights = (await read_index(K.fights(world), K.fight)).map(shape_fight)
     if (active) fights = fights.filter((f) => f.status === 'placement' || f.status === 'active')
-    return ok({ fights: await with_group_template(fights) })
+    return ok({ fights: await enrich_fights(fights) })
   }
   return bad('provide ?id=<fight>, ?character=<id>, or ?world=<world id>')
+}
+
+// --- fight event journal (the V2 observer-replay transport, #216) -------------
+// GET /v1/fights/{id}/events?from={seq}&limit={n} — a CONTIGUOUS, ORDERED page of a
+// fight's event journal. `seq` is the per-fight ordinal (0-based RANK in the sorted set
+// the indexer appends every board/turn event to, in (checkpoint, tx, event) order); the
+// page is `[from, from+limit)`. Each entry is `{ seq, kind, data, digest, version }` —
+// `data` is the event's fullnode-`parsedJson`-shaped fields (so a client folds it through
+// the SAME decoder its own receipts use), `digest` the tx digest, `version` the fight
+// object's post-tx Sui version (string | null for a terminal that destroyed the object).
+// `journal_head` (= ZCARD) tells the client how far the log currently extends.
+//
+// IMMUTABILITY: a page whose whole window is already in the past (`from + limit <= head`)
+// can NEVER change — those seqs are permanent — so it is served `immutable`/cache-forever;
+// any page that reaches the live head is `no-store` (more events may still append at/after
+// it, so a cached copy would strand the client on a stale, incomplete tail).
+const JOURNAL_DEFAULT_LIMIT = 200
+const JOURNAL_MAX_LIMIT = 512
+const IS_OBJECT_ID = /^0x[0-9a-fA-F]{64}$/
+const journal_bad = (message) => ({ status: 400, cache: 'no-store', data: { error: 'bad_request', message } })
+
+export async function handle_fight_events(fight_id, params) {
+  if (!IS_OBJECT_ID.test(fight_id ?? '')) return journal_bad('fight id must be a 0x-prefixed 32-byte hex object id')
+  const from = Math.max(0, Math.floor(Number(params.get('from')) || 0))
+  const limit = Math.min(
+    Math.max(Math.floor(Number(params.get('limit')) || JOURNAL_DEFAULT_LIMIT), 1),
+    JOURNAL_MAX_LIMIT
+  )
+
+  const key = K.fightJournal(fight_id)
+  const head = await zcard(key)
+  const members = from < head ? await zrange(key, from, from + limit - 1) : []
+  const events = members.map((m, i) => {
+    // member = `{tx:06}:{event:04}|{payload_json}` — the ordinal prefix is the ZSET's
+    // sort key; the payload after the first '|' is the stored `{kind, data, digest, version}`.
+    const payload = JSON.parse(m.slice(m.indexOf('|') + 1))
+    return { seq: from + i, kind: payload.kind, data: payload.data, digest: payload.digest, version: payload.version }
+  })
+
+  const immutable = from + limit <= head // the whole window is in the past → permanent
+  const cache = immutable ? 'public, max-age=31536000, immutable' : 'no-store'
+  return { status: 200, cache, data: { fight: fight_id, events, journal_head: head } }
 }
 
 // --- protector trigger (§17.22 resource-protector ambush signal) --------------

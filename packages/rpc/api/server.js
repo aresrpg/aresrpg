@@ -30,7 +30,7 @@ import { check_rate_limit } from './rate_limit.js'
 import { init_reporting, report_error } from './report.js'
 import { to_response } from './respond.js'
 import { ROUTES } from './routes.js'
-import { handle_health } from './views.js'
+import { handle_fight_events, handle_health } from './views.js'
 
 init_reporting()
 
@@ -62,8 +62,11 @@ const server = Bun.serve({
     // Liveness — never rate-limited.
     if (pathname === '/health') return to_response(handle_health(), req)
 
+    // Static exact-match routes + the ONE dynamic route: /v1/fights/{id}/events (the
+    // per-fight event journal — a path parameter, so it cannot live in the exact-match map).
     const handler = ROUTES[pathname]
-    if (!handler) {
+    const journal_match = pathname.match(/^\/v1\/fights\/([^/]+)\/events$/)
+    if (!handler && !journal_match) {
       return to_response({ status: 404, data: { error: 'not_found', path: pathname } }, req)
     }
 
@@ -79,6 +82,19 @@ const server = Bun.serve({
         req,
         { ...rl_headers, 'retry-after': String(rl.retry_after) }
       )
+    }
+
+    // The journal picks its OWN cache-control per response (immutable past pages are
+    // cache-forever; any page touching the live head is no-store), so honour `resp.cache`
+    // instead of the static per-route policy — mirroring the edge-cache header block below.
+    if (journal_match) {
+      const resp = await handle_fight_events(decodeURIComponent(journal_match[1]), searchParams)
+      const journal_cache = resp.cache ?? 'no-store'
+      return to_response(resp, req, {
+        ...rl_headers,
+        'cache-control': journal_cache,
+        ...(journal_cache !== 'no-store' && { 'access-control-allow-origin': '*' }),
+      })
     }
 
     const cache_control = cache_control_for(pathname)

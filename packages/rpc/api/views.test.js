@@ -23,6 +23,7 @@ import {
   handle_config,
   handle_dungeon_runs,
   handle_encyclopedia,
+  handle_fight_events,
   handle_fight_results,
   handle_fights,
   handle_kolizeum,
@@ -121,6 +122,15 @@ const BAG_BURNED = '0x0000000000000000000000000000000000000000000000000000000000
 
 // Add a pending-outcome index member exactly as the indexer's ZADD does (score = checkpoint ts).
 const zadd_pending = (owner, ts, id) => redis.send('ZADD', [`rpc:idx:pending_outcomes:${owner}`, String(ts), id])
+// Append one journal entry EXACTLY as the indexer's journal_writes does: score = checkpoint,
+// member = `{tx:06}:{event:04}|{payload}` (journal.rs). The rank in this set is the client seq.
+const zadd_journal = (fight, checkpoint, tx, evt, payload) =>
+  redis.send('ZADD', [
+    `rpc:fight:${fight}:journal`,
+    String(checkpoint),
+    `${String(tx).padStart(6, '0')}:${String(evt).padStart(4, '0')}|${JSON.stringify(payload)}`,
+  ])
+const jentry = (kind, data, digest, version) => ({ kind, data, digest, version })
 
 beforeAll(async () => {
   await flush_test_redis()
@@ -1291,6 +1301,144 @@ describe('fights', () => {
   test('missing params is a 400', async () => {
     const { status } = await handle_fights(P({}))
     expect(status).toBe(400)
+  })
+})
+
+describe('fight event journal (#216)', () => {
+  const JF1 = canonical_id('fa1') // 5 events across checkpoints 100-102
+  const JF2 = canonical_id('fa2') // interleaved in the SAME checkpoints — its own contiguous set
+  const JHEAD = canonical_id('fa3') // a fight snapshot carrying journal_head
+  const JEMPTY = canonical_id('fa4') // never journalled → head 0
+
+  beforeAll(async () => {
+    // Seed JF1 SCRAMBLED (insertion order ≠ the (checkpoint, tx, event) truth) to prove the
+    // ordering rides the ZSET score/member, not insertion. Two entries share checkpoint 101
+    // tx 3 with a gap (evt 0 then evt 2) to prove intra-tx event ordering.
+    await zadd_journal(
+      JF1,
+      102,
+      0,
+      0,
+      jentry(
+        'Hit',
+        { fight: JF1, victim_is_mob: true, victim_idx: '0', amount: '7', remaining_hp: '10' },
+        'DIG_C',
+        '12'
+      )
+    )
+    await zadd_journal(JF1, 100, 0, 1, jentry('Ready', { fight: JF1, character: CH }, 'DIG_A', '10'))
+    await zadd_journal(JF1, 101, 3, 2, jentry('Moved', { fight: JF1, character: CH, to_cell: '64' }, 'DIG_B', '11'))
+    await zadd_journal(JF1, 100, 0, 0, jentry('Placed', { fight: JF1, character: CH, cell: '25' }, 'DIG_A', '10'))
+    await zadd_journal(
+      JF1,
+      101,
+      3,
+      0,
+      jentry('TurnStarted', { fight: JF1, is_mob: false, idx: '0', deadline_ms: '1700000000000' }, 'DIG_B', '11')
+    )
+    // JF2 interleaves JF1's checkpoints/txs but lands in its OWN key → independent contiguity.
+    await zadd_journal(
+      JF2,
+      100,
+      1,
+      0,
+      jentry(
+        'FightCreated',
+        {
+          fight: JF2,
+          world: WORLD,
+          spawn_id: '77',
+          anchor_x: 1,
+          anchor_z: 2,
+          public_fight: true,
+          aged_bp: '0',
+          mob_count: '2',
+        },
+        'DIG_A',
+        '3'
+      )
+    )
+    await zadd_journal(
+      JF2,
+      101,
+      3,
+      1,
+      jentry('Cast', { fight: JF2, caster_is_mob: false, caster_idx: '0', target_cell: '61' }, 'DIG_B', '4')
+    )
+    // A fight doc + a 3-event journal to prove journal_head rides the SNAPSHOT read.
+    await setj(`rpc:fight:${JHEAD}`, { fight: JHEAD, status: 'active' })
+    await zadd_journal(JHEAD, 200, 0, 0, jentry('Placed', { fight: JHEAD, character: CH, cell: '1' }, 'D', '1'))
+    await zadd_journal(JHEAD, 200, 0, 1, jentry('Ready', { fight: JHEAD, character: CH }, 'D', '1'))
+    await zadd_journal(
+      JHEAD,
+      201,
+      0,
+      0,
+      jentry('TurnStarted', { fight: JHEAD, is_mob: false, idx: '0', deadline_ms: '0' }, 'D2', '2')
+    )
+  })
+
+  test('orders events by (checkpoint, tx, event) and stays contiguous across interleaved fights', async () => {
+    const { status, data } = await handle_fight_events(JF1, P({}))
+    expect(status).toBe(200)
+    expect(data.fight).toBe(JF1)
+    expect(data.journal_head).toBe(5)
+    expect(data.events.map((e) => e.seq)).toEqual([0, 1, 2, 3, 4]) // contiguous, 0-based rank
+    // The true (checkpoint, tx, event) order — NOT the scrambled insertion order, and evt 0
+    // before evt 2 within checkpoint 101 tx 3.
+    expect(data.events.map((e) => e.kind)).toEqual(['Placed', 'Ready', 'TurnStarted', 'Moved', 'Hit'])
+    // JF2's entries interleaved JF1's very checkpoints/txs, yet its journal is independently
+    // ordered and contiguous (per-fight key isolation).
+    const jf2 = await handle_fight_events(JF2, P({}))
+    expect(jf2.data.journal_head).toBe(2)
+    expect(jf2.data.events.map((e) => e.kind)).toEqual(['FightCreated', 'Cast'])
+    expect(jf2.data.events.map((e) => e.seq)).toEqual([0, 1])
+  })
+
+  test('paginates by seq with the {seq, kind, data, digest, version} page shape', async () => {
+    const { data } = await handle_fight_events(JF1, P({ from: '1', limit: '2' }))
+    expect(data.journal_head).toBe(5)
+    // Full entry shape — proves data/digest/version round-trip through the member format,
+    // seq = the absolute rank (from + offset), and u64s stay strings (the 2^53 law).
+    expect(data.events).toEqual([
+      { seq: 1, kind: 'Ready', data: { fight: JF1, character: CH }, digest: 'DIG_A', version: '10' },
+      {
+        seq: 2,
+        kind: 'TurnStarted',
+        data: { fight: JF1, is_mob: false, idx: '0', deadline_ms: '1700000000000' },
+        digest: 'DIG_B',
+        version: '11',
+      },
+    ])
+  })
+
+  test('a fully-in-the-past page is immutable/cache-forever; a page reaching the head is no-store', async () => {
+    const IMMUTABLE = 'public, max-age=31536000, immutable'
+    // from+limit (2) <= head (5): the whole window is permanent → cache-forever.
+    expect((await handle_fight_events(JF1, P({ from: '0', limit: '2' }))).cache).toBe(IMMUTABLE)
+    // from+limit == head exactly is still entirely in the past → immutable.
+    expect((await handle_fight_events(JF1, P({ from: '0', limit: '5' }))).cache).toBe(IMMUTABLE)
+    // A page that reaches/exceeds the live head must NOT be cached (more events may append).
+    expect((await handle_fight_events(JF1, P({ from: '3', limit: '10' }))).cache).toBe('no-store')
+  })
+
+  test('journal_head rides the fight snapshot read', async () => {
+    const { data } = await handle_fights(P({ id: JHEAD }))
+    expect(data.fights).toHaveLength(1)
+    expect(data.fights[0].journal_head).toBe(3)
+  })
+
+  test('a malformed fight id is a 400 (no-store)', async () => {
+    const { status, cache } = await handle_fight_events('not-an-object-id', P({}))
+    expect(status).toBe(400)
+    expect(cache).toBe('no-store')
+  })
+
+  test('an unknown fight yields an empty journal (head 0, no-store)', async () => {
+    const { status, data, cache } = await handle_fight_events(JEMPTY, P({}))
+    expect(status).toBe(200)
+    expect(data).toEqual({ fight: JEMPTY, events: [], journal_head: 0 })
+    expect(cache).toBe('no-store')
   })
 })
 

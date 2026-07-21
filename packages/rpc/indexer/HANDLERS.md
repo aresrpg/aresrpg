@@ -37,7 +37,7 @@ levels, seats and rooms are JSON numbers. IDs/addresses are canonical `0x…` he
 | `aresrpg_game::world` / `zones` / `config` | `world`,`zones`,`config` | `/v1/zones`, `/v1/encyclopedia`, `/v1/config` |
 | `aresrpg::dungeon_events` | `dungeon_events` | `/v1/dungeon-runs` |
 | `aresrpg_kolizeum::kolizeum_events` | `kolizeum_events` | `/v1/kolizeum` |
-| `aresrpg_fight::fight_events` | `fight_events` | `/v1/fights`, `/v1/fight-results` (mint) |
+| `aresrpg_fight::fight_events` | `fight_events` | `/v1/fights`, **`/v1/fights/{id}/events`** (ordered journal), `/v1/fight-results` (mint) |
 | `aresrpg::results` | `results` | `/v1/fight-results` (open/burn — the core claim door) |
 | `0x2::kiosk` (native) | `kiosk` | `/v1/listings` (items **and** characters) |
 | `aresrpg::character` **object** | `character` | `/v1/characters` colours/male/level/experience (`ares_snapshot`) |
@@ -590,6 +590,71 @@ Doc `rpc:fight:{fight}`, char→fight pointer `rpc:char_fight:{character}`, worl
 | `Defeat` | fight | `SET $.status "defeat"` |
 | `Settled` / `Swept` | fight | `DEL rpc:fight:{fight}` — the shared object is destroyed |
 
+The served `/v1/fights` shape ALSO carries **`journal_head`** — the `ZCARD` of the fight's
+event journal (below), joined at read time (the cursor a client pages the journal up to).
+
+## Fight event journal — `/v1/fights/{id}/events?from=&limit=` (#216)
+
+The V2 observer-replay transport. Production is a snapshot-adoption system: a non-actor polls
+the mutable `Fight` object every 4 s and GUESSES the turn history by diffing consecutive reads
+(lossy, order-unrecoverable, actor-guessed). The cure is one canonical ORDERED LOG of the
+fight's events, served as immutable cursor pages so EVERY client replays the same sequence the
+actor's own receipt did — the diff-inference organ (`foreign_replay_*`) dies (client work is M2).
+
+The **same `ares` pipeline** that projects the fight doc ALSO appends each fight board/turn event
+to a per-fight sorted set `rpc:fight:{id}:journal` (`journal.rs`, in `process` — where the
+checkpoint/tx/event ordering lives). It is a DISTINCT key from the fight doc, so `Settled`/`Swept`
+deleting the doc leaves the journal intact — the **post-mortem read** a straggler needs for the
+end card after `settle_and_destroy`.
+
+- **seq** — the client-facing ordinal is the **rank** in the set (contiguous `0..journal_head`),
+  derived at read time, never a stored counter (which a crash replay would double-count).
+  `journal_head = ZCARD`.
+- **score** = the checkpoint sequence number (exact — far below f64's 2⁵³; orders across
+  checkpoints). **member** = `"{tx_index:06}:{event_index:04}|{payload_json}"` — the zero-padded
+  `(tx, event)` prefix makes the ZSET's within-checkpoint (equal-score) lexicographic tie-break
+  the exact `(tx, event)` order, so the set is totally ordered by `(checkpoint, tx, event)` with
+  NO score packing/cap to overflow. `payload` = `{ kind, data, digest, version }`.
+- **idempotent** — a distinct event has a distinct member (its prefix or its payload digest
+  differ), so a crash-replay `ZADD` of the byte-identical member is a no-op (like the sales-log).
+  NO rank cap (it would drop early seqs and break contiguous replay); an idle **`EXPIRE` 24 h**
+  (refreshed per append) reclaims a settled fight's journal.
+- **data** mirrors the on-chain event field-for-field in the fullnode's `parsedJson` convention
+  (u64 → string, u8/u16/u32 → number, bool → bool, `ID`/address → `0x…` hex) — byte-shaped
+  IDENTICALLY to a receipt, so a client folds a journal page through the SAME decoder its own
+  receipts use (`sdk/fight_read.js::decode_fight_event`). **version** is the fight object's
+  post-tx Sui version as a STRING (u64; `null` for a terminal that DELETED the object).
+
+**Journalled** (every FLAT `fight_events` struct): `FightCreated`, `FightJoined`, `Placed`,
+`Ready`, `TurnStarted`, `Moved`, `MobMoved`, `Displaced`, `Cast`, `CriticalFailure`,
+`StanceChanged`, `Revealed`, `Hit`, `Drain`, `Tackled`, `TurnEnded`, `Abandoned`, `Victory`,
+`Defeat`, `Settled`, `Swept`. **Deferred from the journal** (return `None`): the action-envelope
+triple `ActionStarted`/`ActionEffect`/`ActionResolved` (`ActionEffect`/`ActionResolved` carry
+nested `Effect`/`SpellLevel`/`WeaponLine` vectors — the modelling liability the object snapshots
+avoid — and no client consumes them today; per the pipeline-v2 amendment they ENRICH beats, never
+trigger them, so they ride a later milestone as one unit), the settlement `Result*`/`LootMinted`
+artifacts (keyed by result → `/v1/fight-results`), and `CreatorCapIssued`.
+
+**Serve.** `GET /v1/fights/{id}/events?from={seq}&limit={n}` (a PATH param — the one dynamic
+route, dispatched in `server.js`) → `{ fight, events:[{ seq, kind, data, digest, version }], journal_head }`,
+`from` default 0, `limit` default 200 / max 512. A page whose whole window is already in the past
+(`from + limit <= head`) is served **`Cache-Control: public, max-age=31536000, immutable`** +
+`Access-Control-Allow-Origin: *` (those seqs are permanent, so the CDN caches them forever); any
+page that reaches the live head is **`no-store`** (more events may still append at/after it, so a
+cached copy would strand the client on a stale tail). A malformed id is a 400; an unjournalled
+fight is `{ events:[], journal_head:0 }`.
+
+**Backfill is OPERATIONAL, not code** (same lever the DF snapshots name): the `ares` watermark is
+already at the tip, so this arm journals only checkpoints from deploy on — NEW fights journal from
+their true seq 0. Historical/in-progress fights are NOT retroactively journalled unless the `ares`
+watermark is reset (re-index from `FIRST_CHECKPOINT`, or the republish FLUSHALL+rebuild ceremony) —
+NOT required for live observer replay (a settled fight has no observer to replay it; an in-progress
+fight straddling the deploy falls back to the snapshot, which M2 keeps as bootstrap/checkpoint).
+
+| Event (flat `fight_events`) | Redis writes |
+| --- | --- |
+| any journalled event above | `ZADD rpc:fight:{fight}:journal {checkpoint} "{tx:06}:{event:04}|{kind,data,digest,version}"`; `EXPIRE … 24h` |
+
 ## FightResult (soulbound) — `/v1/fight-results?owner=`
 
 Doc `rpc:result:{result}`, owner index `rpc:idx:results:{owner}`.
@@ -677,9 +742,13 @@ it lands with **object-snapshot indexing**; the events are named here so the gap
   defines no activity-feed view and no consumer keys one** — per "document the gap, never
   invent," they stay deferred. (A future recent-activity feed, if a consumer materialises, is an
   additive slice keyed by actor address — not a state projection.)
-- **Fight granular board/turn** — `Placed`,`Ready`,`Moved`,`Cast`,`Hit`,`TurnEnded`,`LootMinted`
-  (live board = presence + client sim replay; the client reads `results::rolled_qty` on-chain to
-  build its per-template mint txs).
+- **Fight granular board/turn** — `Placed`/`Ready`/`Moved`/`MobMoved`/`Displaced`/`Cast`/`Hit`/
+  `Drain`/`Tackled`/`Revealed`/`StanceChanged`/`CriticalFailure`/`TurnEnded`/`Abandoned` (+ the
+  `FightCreated`/`FightJoined`/`TurnStarted`/`Victory`/`Defeat`/`Settled`/`Swept` anchors) are NO
+  LONGER deferred — they are the per-fight ORDERED JOURNAL (`/v1/fights/{id}/events`, above). Still
+  deferred: the action-envelope triple `ActionStarted`/`ActionEffect`/`ActionResolved` (nested
+  `Effect`/`SpellLevel`/`WeaponLine` — one unit for a later milestone) and `LootMinted` (the client
+  reads `results::rolled_qty` on-chain to build its per-template mint txs).
 - **Kolizeum** `Joined`/`Exited`/`OutcomeOpened` (the seat `FightOutcome` DELETE rides the
   `ares_snapshot` pipeline → `/v1/pending-outcomes`; the event carries no `outcome_id`/`owner` to
   key that view, and clearing `char_fight` would race a late `open`); **zone** `MobGroupClaimed`;

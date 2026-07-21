@@ -95,7 +95,7 @@ pub(super) fn zrem(key: String, member: String) -> RedisWrite {
 pub(super) fn zrem_rank_keep_newest(key: String, cap: i64) -> RedisWrite {
     RedisWrite::ZRemRangeByRank { key, start: 0, stop: -(cap + 1) }
 }
-fn expire(key: String, seconds: i64) -> RedisWrite {
+pub(super) fn expire(key: String, seconds: i64) -> RedisWrite {
     RedisWrite::Expire { key, seconds }
 }
 
@@ -1042,11 +1042,13 @@ pub(super) fn map_with_context(
         // no consumer keys one, so per "document the gap, never invent" they stay
         // deferred (see HANDLERS.md). Also deferred: WorldUpdated, ItemMerged/Split,
         // *PolicyCreated, catalog, BandSet, Kolizeum Joined/Exited/OutcomeOpened,
-        // and the fight granular board/turn events
-        // (Placed/Ready/Moved/Cast/Hit/TurnEnded) + LootMinted (live board =
-        // presence + client sim replay — see HANDLERS.md), and the version
-        // liveness pair (EnabledSet/VersionBumped): its rpc:package:* projection
-        // had ZERO /v1 consumers, so it was deleted (janitor law, 2026-07-13).
+        // and the version liveness pair (EnabledSet/VersionBumped): its rpc:package:*
+        // projection had ZERO /v1 consumers, so it was deleted (janitor law, 2026-07-13).
+        // NB the fight granular board/turn events (Placed/Ready/Moved/Cast/Hit/TurnEnded/…)
+        // are not projected to the fight DOC here, but they ARE captured — `mod.rs::process`
+        // appends each to its per-fight ordered JOURNAL (`journal.rs`), the observer-replay
+        // transport (#216). `ActionStarted`/`ActionEffect`/`ActionResolved` + `LootMinted`
+        // stay deferred from the journal too (see `journal::decode_journal_event`).
         _ => return None,
     })
 }

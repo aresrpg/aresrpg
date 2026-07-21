@@ -570,6 +570,130 @@ pub struct OneId {
     pub id: ObjectID,
 }
 
+// ── fight board/turn events → the per-fight ORDERED JOURNAL (`journal.rs`, #216) ──
+// The granular timeline the observer replays: Placed/Ready/Moved/MobMoved/Displaced/
+// Cast/Hit/Drain/Tackled/Revealed/StanceChanged/CriticalFailure/TurnEnded/Abandoned,
+// plus the lifecycle anchors (FightCreated/FightJoined/TurnStarted/Victory/Defeat/
+// Settled/Swept — reused from the fight-doc structs above). These were the deferred
+// board/turn family (see the deferred note); the journal now serves them as an ordered
+// event log WITHOUT re-deriving board state. Every struct's FIRST field is `fight: ID`
+// (the journal key) and mirrors `fight_events.move` field-for-field, in order (BCS is
+// positional). The action-envelope triple (`ActionStarted`/`ActionEffect`/
+// `ActionResolved`) is DEFERRED from the journal: `ActionEffect`/`ActionResolved` carry
+// nested `Effect`/`SpellLevel`/`WeaponLine` vectors (the modelling liability `snapshot.rs`
+// avoids), the client consumes none of the triple today (SDK `FIGHT_EVENT_NAMES`), and per
+// the pipeline-v2 amendment they ENRICH beats, never trigger them — so they ride a later
+// milestone as one unit. Only these flat scalar structs are journalled here.
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Placed {
+    pub fight: ObjectID,
+    pub character: ObjectID,
+    pub cell: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Ready {
+    pub fight: ObjectID,
+    pub character: ObjectID,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Moved {
+    pub fight: ObjectID,
+    pub character: ObjectID,
+    pub to_cell: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Cast {
+    pub fight: ObjectID,
+    pub caster_is_mob: bool,
+    pub caster_idx: u64,
+    pub target_cell: u64,
+}
+
+/// A spell/trap PUSH/PULL or caster TELEPORT — `kind` is the mechanics code (push/pull/
+/// teleport), distinct from the event-struct name the journal stores as `kind` alongside.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Displaced {
+    pub fight: ObjectID,
+    pub target_is_mob: bool,
+    pub target_idx: u64,
+    pub kind: u8,
+    pub from_cell: u64,
+    pub to_cell: u64,
+    pub requested: u64,
+    pub blocked: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CriticalFailure {
+    pub fight: ObjectID,
+    pub caster_is_mob: bool,
+    pub caster_idx: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StanceChanged {
+    pub fight: ObjectID,
+    pub fighter_is_mob: bool,
+    pub fighter_idx: u64,
+    pub stance: u64,
+    pub active: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Revealed {
+    pub fight: ObjectID,
+    pub is_mob: bool,
+    pub idx: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Hit {
+    pub fight: ObjectID,
+    pub victim_is_mob: bool,
+    pub victim_idx: u64,
+    pub amount: u64,
+    pub remaining_hp: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Drain {
+    pub fight: ObjectID,
+    pub target_is_mob: bool,
+    pub target_idx: u64,
+    pub point_kind: u8,
+    pub removed: u64,
+    pub requested: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Tackled {
+    pub fight: ObjectID,
+    pub runner_is_mob: bool,
+    pub runner_idx: u64,
+    pub ap_lost: u64,
+    pub mp_lost: u64,
+    pub num: u64,
+    pub den: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TurnEnded {
+    pub fight: ObjectID,
+    pub is_mob: bool,
+    pub idx: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Abandoned {
+    pub fight: ObjectID,
+    pub character: ObjectID,
+    pub seat: u64,
+}
+
 // ── aresrpg::commission (v2 artisan-commission flow) ──────────────────────────
 // commission.move v2 (as of 2026-07-11/12): the CUSTOMER brings the RESOURCES
 // + an OPTIONAL payment; the ARTISAN brings the KNOWLEDGE. `request` opens a shared

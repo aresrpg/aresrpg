@@ -54,6 +54,21 @@ export async function zrevrange(key, start = 0, stop = -1) {
   return members ?? []
 }
 
+// Ascending members of a sorted set by RANK (the fight journal — score = checkpoint,
+// members ordered (checkpoint, tx, event); the rank IS the contiguous per-fight seq).
+// `start`/`stop` are inclusive ranks. Returns [] when the key is absent.
+export async function zrange(key, start, stop) {
+  const members = await redis.send('ZRANGE', [key, String(start), String(stop)])
+  return members ?? []
+}
+
+// Cardinality of a sorted set (the fight journal's head = how far the log extends).
+// Returns 0 when the key is absent.
+export async function zcard(key) {
+  const n = await redis.send('ZCARD', [key])
+  return Number(n ?? 0)
+}
+
 // Liveness probe against the store. Returns false instead of throwing so callers
 // can degrade gracefully.
 export async function ping() {

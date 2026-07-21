@@ -8,8 +8,9 @@
 //! zones, encyclopedia, config, kolizeum). It ingests events from the AresRPG
 //! packages (game / items / dungeon / kolizeum / pools / fight) plus native Sui
 //! kiosk listing events (`0x2::kiosk`) for the marketplace view. The fight slice
-//! projects the Fight object + soulbound FightResults (see HANDLERS.md);
-//! its granular board/turn events stay deferred (live board = presence + sim).
+//! projects the Fight object + soulbound FightResults, AND appends each fight
+//! board/turn event to its per-fight ORDERED JOURNAL (`journal.rs`, keyed for
+//! observer replay — `/v1/fights/{id}/events`; see HANDLERS.md).
 //!
 //! Read-only and idempotent by construction (see `project.rs`): the whole store
 //! is a re-derivable cache of public chain truth.
@@ -20,6 +21,7 @@
 //! logic lives in the pure, unit-tested `project::map` — this file is only the
 //! framework glue and the optional package allowlist.
 
+mod journal;
 mod model;
 mod party;
 mod project;
@@ -29,13 +31,15 @@ mod xp_curve;
 #[cfg(test)]
 mod history_tests;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
 use sui_indexer_alt_framework::pipeline::{sequential::Handler, Processor};
 use sui_indexer_alt_framework::store::Store;
+use sui_indexer_alt_framework::types::base_types::ObjectID;
+use sui_indexer_alt_framework::types::effects::TransactionEffectsAPI;
 use sui_indexer_alt_framework::types::full_checkpoint_content::Checkpoint;
 use sui_indexer_alt_framework::types::transaction::{Command, TransactionData, TransactionKind};
 use tracing::debug;
@@ -96,8 +100,12 @@ impl Processor for AresHandler {
         // The sale "when": no event carries its own timestamp, so the enclosing
         // checkpoint's time stamps every sale row (same for every event in it).
         let ts_ms = checkpoint.summary.timestamp_ms;
-        for tx in &checkpoint.transactions {
+        for (tx_index, tx) in checkpoint.transactions.iter().enumerate() {
             let Some(events) = &tx.events else { continue };
+            // The per-fight journal's tx context (the tx digest + a fight-object-id → post-tx
+            // version map), computed LAZILY on the first journalled event in this tx — most txs
+            // emit no fight event, so this stays `None` and costs nothing there.
+            let mut journal_ctx: Option<(String, HashMap<ObjectID, u64>)> = None;
             // `extract::extract_locked` identifies its non-trade exit as a
             // same-transaction ItemListed(0) → ItemPurchased(0) pair. Key by
             // kiosk+item so another purchase in the same PTB cannot be suppressed.
@@ -134,7 +142,7 @@ impl Processor for AresHandler {
                 })
                 .collect::<HashSet<_>>();
             let royalty_receipt = has_royalty_receipt(&tx.transaction);
-            for event in &events.data {
+            for (event_index, event) in events.data.iter().enumerate() {
                 let module = event.type_.module.as_str();
                 let name = event.type_.name.as_str();
                 let pkg = event.type_.address.to_canonical_string(/* with_prefix */ true);
@@ -166,6 +174,41 @@ impl Processor for AresHandler {
                 };
                 if let Some(mut w) = mapped {
                     writes.append(&mut w);
+                }
+
+                // ── per-fight ordered JOURNAL (#216) ──────────────────────────
+                // A fight board/turn event ALSO appends to its per-fight ordered
+                // journal (`journal.rs`), keyed by `(fight, seq=rank)` for observer
+                // replay — additive to the fight-doc projection above, never replacing
+                // it. The `(checkpoint, tx_index, event_index)` triple is the total
+                // order; the tx digest + the fight object's post-tx version ride each
+                // entry (the client correlates its own receipts / snapshot polls by them).
+                if let Some((fight_oid, kind, data)) =
+                    journal::decode_journal_event(module, name, &event.contents)
+                {
+                    let (digest, version_of) = journal_ctx.get_or_insert_with(|| {
+                        let digest = tx.effects.transaction_digest().base58_encode();
+                        let versions = tx
+                            .output_objects(&checkpoint.object_set)
+                            .map(|obj| (obj.id(), obj.version().value()))
+                            .collect::<HashMap<_, _>>();
+                        (digest, versions)
+                    });
+                    // `None` version = a terminal tx that DELETED the Fight (Settled/Swept):
+                    // the object is not an output, so there is no post-tx version to carry.
+                    let version = version_of.get(&fight_oid).copied();
+                    writes.append(&mut journal::journal_writes(
+                        &fight_oid.to_canonical_string(true),
+                        journal::JournalCursor {
+                            checkpoint: checkpoint.summary.sequence_number,
+                            tx_index,
+                            event_index,
+                        },
+                        kind,
+                        data,
+                        digest,
+                        version,
+                    ));
                 }
             }
         }
