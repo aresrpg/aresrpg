@@ -2,6 +2,7 @@
   "fast_travel": {
     "option": "Fast travel to position",
     "realm_unreachable": "That person is in a realm you can't reach",
+    "friend_offline": "That friend is offline",
     "flying": "Your dragon takes flight",
     "cancelled": "Fast travel cancelled",
     "target_lost": "Target left — landing at their last position",

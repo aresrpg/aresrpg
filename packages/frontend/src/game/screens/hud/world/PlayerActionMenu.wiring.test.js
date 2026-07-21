@@ -18,10 +18,30 @@ import { describe, expect, it } from 'bun:test'
 import { readFileSync } from 'node:fs'
 
 const source = readFileSync(new URL('./PlayerActionMenu.jsx', import.meta.url), 'utf8')
+const friends_source = readFileSync(new URL('./OnlinePlayers.jsx', import.meta.url), 'utf8')
+const roster_source = readFileSync(new URL('../../../../world-shell/friends_reads.js', import.meta.url), 'utf8')
 
 describe('PlayerActionMenu cold-start party (#329)', () => {
   it('the cold-start invite path calls create_bare(), never the owned-alt-sweeping create()', () => {
     expect(source).toContain('await use_party.getState().create_bare()')
     expect(source).not.toContain('await use_party.getState().create()')
+  })
+})
+
+describe('friend-list fast travel (#327)', () => {
+  it('an ordinary friend-row click opens the shared player menu with every roster route', () => {
+    expect(roster_source).toContain('routes: chars.map')
+    expect(roster_source).toContain('character_id: candidate.id')
+    expect(friends_source).toContain('onClick={open_menu}')
+    expect(friends_source).toContain("kind: 'friend'")
+    expect(friends_source).toContain('routes: row.routes')
+    expect(friends_source).toContain('open_player_menu({')
+  })
+
+  it('the menu samples live presence at action time and dispatches through the one fast-travel door', () => {
+    expect(source).toContain('get_peer_states_by_address(address)')
+    expect(source).toContain('dispatch_fast_travel({ ...target, address }, ft_dispatch, friend_peers)')
+    expect(source).not.toContain("from '../../../../world-shell/world_join.js'")
+    expect(source).not.toContain("from '../../../fast_travel_pilot.js'")
   })
 })

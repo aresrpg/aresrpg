@@ -19,29 +19,61 @@ import { createStore } from 'zustand/vanilla'
 const REALM_UNREACHABLE = 'fast_travel.realm_unreachable'
 
 /** @typedef {'idle'|'resolving'|'joining'|'awaiting_boot'|'flying'|'landing'} FtPhase */
-/** @typedef {{ character_id:string, address:string|null, name:string, world_id:string|null, x:number, z:number, live:boolean }} FtTarget */
-/** @typedef {{ phase: FtPhase, target: FtTarget|null, refusal: string|null }} FtState */
+/** @typedef {{ character_id:string|null, address:string|null, name:string, world_id:string|null, x:number, z:number, live:boolean }} FtTarget */
+/** @typedef {{ phase: FtPhase, target: FtTarget|null, refusal: string|null, refusal_seq:number }} FtState */
 
 /** @returns {FtState} */
 export function initial_ft_state() {
-  return { phase: 'idle', target: null, refusal: null }
+  return { phase: 'idle', target: null, refusal: null, refusal_seq: 0 }
 }
 
-const cleared = (state) => ({ ...state, phase: 'idle', target: null, refusal: null })
+const cleared = (state) => ({
+  ...state,
+  phase: 'idle',
+  target: null,
+  refusal: null,
+  refusal_seq: state.refusal_seq ?? 0,
+})
+const with_refusal = (state, reason) => ({
+  ...cleared(state),
+  refusal: reason ?? REALM_UNREACHABLE,
+  refusal_seq: (state.refusal_seq ?? 0) + 1,
+})
+
+const begin_target = (input) => {
+  const x = Number(input.x)
+  const z = Number(input.z)
+  const has_position = Number.isFinite(x) && Number.isFinite(z)
+  return {
+    character_id: input.character_id ?? null,
+    address: input.address ?? null,
+    name: input.name ?? '',
+    world_id: typeof input.world_id === 'string' ? input.world_id : null,
+    x: has_position ? x : 0,
+    z: has_position ? z : 0,
+    live: has_position && !!input.live,
+  }
+}
 
 /** THE ROUTING LAW — the target's /v1 world decides join-or-fly-or-refuse; a live p2p position never routes. */
 function fold_resolved(state, input) {
   if (state.phase !== 'resolving') return state // a late resolve after cancel/reset is ignored
   const { world_id, x, z, live, my_world_id, my_level, required_level, catalog_has_world, character_id } = input
-  const target = { ...(state.target ?? {}), world_id, x: Number(x), z: Number(z), live: !!live }
-  if (character_id) target.character_id = character_id // an address-only begin learns its id from the /v1 resolve
+  const target = {
+    ...(state.target ?? {}),
+    ...(character_id ? { character_id } : {}), // an address-only begin learns its id from the /v1 resolve
+    world_id,
+    x: Number(x),
+    z: Number(z),
+    live: !!live,
+  }
   // Same /v1 world → fly now (no tx). A FOREIGN world never flies here, even with a live p2p coord present.
   if (world_id && my_world_id && world_id === my_world_id) return { ...state, phase: 'flying', target, refusal: null }
   // Foreign world: the realm gates. A non-catalog world (dungeon/unknown, §4-B3) or a level lock (zones.move
   // ELevelTooLow) is the "realm you can't reach" refusal — back to idle so the edge only shows the toast.
-  if (!catalog_has_world) return { ...cleared(state), refusal: REALM_UNREACHABLE }
+  if (!catalog_has_world) return with_refusal(state, REALM_UNREACHABLE)
   if (required_level != null && my_level != null && my_level < required_level)
-    return { ...cleared(state), refusal: REALM_UNREACHABLE }
+    return with_refusal(state, REALM_UNREACHABLE)
   return { ...state, phase: 'joining', target, refusal: null } // gated open — join the world, boot, then fly
 }
 
@@ -52,26 +84,19 @@ export function reduce_fast_travel(state, input) {
   switch (input.type) {
     case 'begin': {
       if (state.phase !== 'idle') return state // re-begin while active is refused — no clobber (plan §4-B4)
+      if (input.refusal) return with_refusal(state, input.refusal) // friend preflight: same guarded request door
       if (!input.character_id && !input.address) return state // need something to resolve (character id OR owner)
       return {
         ...state,
         phase: 'resolving',
         refusal: null,
-        target: {
-          character_id: input.character_id ?? null, // friend rows carry only an address; the resolver fills this
-          address: input.address ?? null,
-          name: input.name ?? '',
-          world_id: null,
-          x: 0,
-          z: 0,
-          live: false,
-        },
+        target: begin_target(input),
       }
     }
     case 'resolved':
       return fold_resolved(state, input)
     case 'refused':
-      return { ...cleared(state), refusal: input.reason ?? REALM_UNREACHABLE }
+      return state.phase === 'resolving' || state.phase === 'joining' ? with_refusal(state, input.reason) : state
     case 'world_joined':
       return state.phase === 'joining' ? { ...state, phase: 'awaiting_boot' } : state
     case 'boot_ready':

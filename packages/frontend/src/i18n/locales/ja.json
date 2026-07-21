@@ -2,6 +2,7 @@
   "fast_travel": {
     "option": "位置へファストトラベル",
     "realm_unreachable": "その人はあなたが到達できない領域にいます",
+    "friend_offline": "そのフレンドはオフラインです",
     "flying": "ドラゴンが飛び立ちます",
     "cancelled": "ファストトラベルをキャンセルしました",
     "target_lost": "対象が離脱 — 最後の位置に着陸します",

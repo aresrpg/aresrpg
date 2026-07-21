@@ -2,6 +2,7 @@
   "fast_travel": {
     "option": "Schnellreise zur Position",
     "realm_unreachable": "Diese Person ist in einem Reich, das du nicht erreichen kannst",
+    "friend_offline": "Dieser Freund ist offline",
     "flying": "Dein Drache hebt ab",
     "cancelled": "Schnellreise abgebrochen",
     "target_lost": "Ziel verschwunden — Landung an der letzten Position",

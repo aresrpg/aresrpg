@@ -2,6 +2,7 @@
   "fast_travel": {
     "option": "Voyage rapide vers la position",
     "realm_unreachable": "Cette personne est dans un royaume que vous ne pouvez pas atteindre",
+    "friend_offline": "Cet ami est hors ligne",
     "flying": "Votre dragon prend son envol",
     "cancelled": "Voyage rapide annulé",
     "target_lost": "Cible partie — atterrissage à sa dernière position",

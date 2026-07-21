@@ -35,16 +35,37 @@ describe('begin — idle → resolving, target seeded', () => {
     const s = reduce_fast_travel(initial_ft_state(), { type: 'begin', name: 'x' })
     expect(s.phase).toBe('idle')
   })
-  test('begin accepts an owner address alone (friend rows carry no character id)', () => {
+  test('begin keeps the address-only fallback for unresolved player targets', () => {
     const s = reduce_fast_travel(initial_ft_state(), { type: 'begin', address: '0xfriend', name: 'Al' })
     expect(s.phase).toBe('resolving')
     expect(s.target).toMatchObject({ character_id: null, address: '0xfriend', name: 'Al' })
+  })
+  test('begin preserves a friend entry live route for the shared resolve edge', () => {
+    const s = reduce_fast_travel(initial_ft_state(), {
+      ...begin,
+      world_id: 'W_FAR',
+      x: 42,
+      z: -7,
+      live: true,
+    })
+    expect(s.phase).toBe('resolving')
+    expect(s.target).toMatchObject({ character_id: 'C_TARGET', world_id: 'W_FAR', x: 42, z: -7, live: true })
   })
   test('re-begin while active is refused (no clobber)', () => {
     const flying = run(initial_ft_state(), begin, resolved())
     expect(flying.phase).toBe('flying')
     const again = reduce_fast_travel(flying, { type: 'begin', character_id: 'C_OTHER', name: 'Eve' })
     expect(again).toBe(flying) // unchanged reference — re-begin is a no-op
+  })
+  test('friend preflight refusal is idle-guarded, repeatable, and never clobbers an active trip', () => {
+    const offline = { type: 'begin', refusal: 'fast_travel.friend_offline' }
+    const first = reduce_fast_travel(initial_ft_state(), offline)
+    const repeated = reduce_fast_travel(first, offline)
+    expect(first).toMatchObject({ phase: 'idle', refusal: 'fast_travel.friend_offline', refusal_seq: 1 })
+    expect(repeated).toMatchObject({ phase: 'idle', refusal: 'fast_travel.friend_offline', refusal_seq: 2 })
+
+    const flying = run(initial_ft_state(), begin, resolved())
+    expect(reduce_fast_travel(flying, offline)).toBe(flying)
   })
 })
 
@@ -84,6 +105,16 @@ describe('resolved — the routing law', () => {
     expect(s.phase).not.toBe('flying')
     expect(s.phase).toBe('joining')
   })
+  test('/v1-FIRST: the resolved document replaces a stale roster world hint', () => {
+    const hinted = { ...begin, world_id: 'W_STALE', x: 42, z: -7, live: true }
+    const s = run(
+      initial_ft_state(),
+      hinted,
+      resolved({ world_id: 'W_FAR', live: true, my_level: 40, required_level: 5 })
+    )
+    expect(s.phase).toBe('joining')
+    expect(s.target?.world_id).toBe('W_FAR')
+  })
   test('an address-only begin learns its character id from the /v1 resolve', () => {
     const s = run(
       initial_ft_state(),
@@ -95,6 +126,10 @@ describe('resolved — the routing law', () => {
   test('a resolve arriving after cancel is ignored (phase no longer resolving)', () => {
     const s = run(initial_ft_state(), begin, { type: 'cancel' }, resolved())
     expect(s.phase).toBe('idle')
+  })
+  test('a late async refusal after cancel is ignored', () => {
+    const cancelled = run(initial_ft_state(), begin, { type: 'cancel' })
+    expect(reduce_fast_travel(cancelled, { type: 'refused', reason: 'late' })).toBe(cancelled)
   })
 })
 

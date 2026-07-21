@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// S-67 — the ONE "target a player" home. Two seams open it (chat name click · in-world nameplate click) and
+// S-67 — the ONE "target a player" home. Friend row, chat name, and in-world nameplate seams open it, and
 // one component renders it (PlayerActionMenu). Kept a bare store (no React) so remote_players.js — a plain rAF
 // module outside the React tree — can open it imperatively via `open_player_menu` with the same contract the
 // chat seam uses. The menu only ever WRITES through the existing friend / party tx flows; it holds no roster.
@@ -9,9 +9,11 @@ import { create } from 'zustand'
 
 /**
  * @typedef {{
+ *   kind?: 'friend',          // friend-list targets carry a resolved live route; omitted for in-world/chat seams
  *   id: string | null,        // the peer's on-chain character id (chat + nameplate both carry it) — resolves the wallet address
  *   address: string | null,   // the peer's wallet, when already known (nameplate reads it live); else resolved from `id`
  *   name: string,             // display name for the menu header
+ *   routes?: Array<{character_id:string,world_id:string|null}>, // friend roster's already-fetched /v1 worlds
  *   x: number, y: number,     // screen anchor (the click point / element rect) — the menu clamps itself on-screen
  * }} PlayerTarget
  */

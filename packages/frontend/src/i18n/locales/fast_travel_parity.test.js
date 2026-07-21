@@ -7,7 +7,7 @@
 import { describe, expect, test } from 'bun:test'
 
 const LOCALES = ['en', 'fr', 'de', 'es', 'ja', 'uk']
-const KEYS = ['option', 'realm_unreachable', 'flying', 'cancelled', 'target_lost', 'arrived']
+const KEYS = ['option', 'realm_unreachable', 'friend_offline', 'flying', 'cancelled', 'target_lost', 'arrived']
 
 describe('i18n · fast_travel.* present + non-empty in ALL 6 locales', () => {
   for (const key of KEYS) {

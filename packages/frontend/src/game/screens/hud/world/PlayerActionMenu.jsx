@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // S-67 — the floating "player actions" menu. Renders ONCE (mounted by GameWorldHud); shows only when a seam
-// (chat name click / in-world nameplate click) has set a target in player_menu_store. Actions: Add Friend
+// (friend row / chat name / in-world nameplate click) has set a target in player_menu_store. Actions: Add Friend
 // + Invite to Party (SPEC §13 "invite by clicking a player" — the party-invite that
 // used to live per-row in the online panel, relocated here so the panel is friends-first and no feature dies).
 // Every write funnels through the SAME tx flows every other surface uses (add_friend_flow · party_store) — no
@@ -14,9 +14,10 @@ import { useTranslation } from 'react-i18next'
 import { use_auth } from '../../../../auth'
 import { use_party } from '../../../../world-shell/party_store.js'
 import { add_friend_flow } from '../../../../world-shell/friends_actions'
-import { get_peer_state } from '../../../../p2p/lobby-room.js'
+import { get_peer_state, get_peer_states_by_address } from '../../../../p2p/lobby-room.js'
 import { use_game_state } from '../../../store.js'
 import { ft_dispatch } from '../../../../world-shell/fast_travel_store.js'
+import { dispatch_fast_travel } from '../../../../world-shell/fast_travel_intent.js'
 import { ft_dragon_glb_url, preload_mount_glb } from '../../../mount_rig.js'
 
 import { use_player_menu } from './player_menu_store.js'
@@ -85,8 +86,10 @@ export function PlayerActionMenu() {
   const on_fast_travel = () => {
     close()
     if (!can_fast_travel) return
-    // Fire the ONE fast-travel intent — the store's reducer + effect edges own the routing/join/flight.
-    ft_dispatch({ type: 'begin', character_id: target.id ?? null, address, name: target.name })
+    // Friend + in-world targets share this shaping seam and the ONE reducer door. Everything after the input —
+    // route gates, cross-world join, dragon flight, and notices — remains owned by the existing travel pipeline.
+    const friend_peers = target.kind === 'friend' ? get_peer_states_by_address(address) : []
+    dispatch_fast_travel({ ...target, address }, ft_dispatch, friend_peers)
   }
 
   // Clamp on-screen (the anchor can sit near the right/bottom edge — a nameplate at the viewport border).

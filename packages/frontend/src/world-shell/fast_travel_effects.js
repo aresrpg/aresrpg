@@ -20,7 +20,7 @@ import { join_world_action } from './world_join.js'
 
 const REALM_UNREACHABLE = 'fast_travel.realm_unreachable'
 
-/** The friend's ACTIVE character — the one currently in a world (else the first). Address-only seams need it. */
+/** Address-only fallback: prefer the owner's character currently in a world, else the first. */
 const primary_of = (chars) => (chars ?? []).find((c) => c && c.world) ?? (chars ?? [])[0] ?? null
 
 /** The target peer's live broadcast position by character id (same-world retarget seed), or null. */
@@ -36,6 +36,8 @@ const dispatch = (input) => fast_travel_store.getState().input(input)
 async function run_resolve(target) {
   try {
     const my_id = context.get_state().selected_character_id ?? null
+    // A friend begin carries the exact live character id, never an owner guess. Its p2p cell refines position only;
+    // world + cross-world anchor still come together from this /v1 document (the routing law).
     const target_doc = target.character_id
       ? ((await get_characters({ id: target.character_id }))[0] ?? null)
       : target.address
@@ -51,7 +53,12 @@ async function run_resolve(target) {
       my_doc,
       required_level_by_world,
       catalog_ids,
-      live_pos: cid ? peer_pos_of(cid) : null,
+      live_pos:
+        target.live && Number.isFinite(target.x) && Number.isFinite(target.z)
+          ? { x: target.x, z: target.z }
+          : cid
+            ? peer_pos_of(cid)
+            : null,
     })
     dispatch(out.ok ? { type: 'resolved', character_id: cid, ...out.facts } : { type: 'refused', reason: out.reason })
   } catch (error) {
@@ -74,10 +81,10 @@ async function run_join(target) {
   }
 }
 
-/** The lifecycle toasts (single home). Derived from the store transition — no state field needed. */
+/** The lifecycle toasts (single home). refusal_seq makes every accepted preflight attempt observable. */
 function fire_notice(state, prev) {
   const toast = (key, kind = 'info') => push_event_toast({ state: kind, title: i18n.t(key) })
-  if (state.refusal && state.refusal !== prev.refusal) toast(state.refusal) // realm-unreachable / other refusal
+  if (state.refusal && state.refusal_seq !== prev.refusal_seq) toast(state.refusal)
   if (state.phase === 'flying' && prev.phase !== 'flying') toast('fast_travel.flying', 'success') // takeoff
   if (state.phase === 'landing' && prev.phase !== 'landing') toast('fast_travel.arrived', 'success') // arrival drop
   if (state.phase === 'flying' && prev.phase === 'flying' && prev.target?.live && state.target && !state.target.live)
@@ -96,7 +103,7 @@ export function wire_fast_travel_effects() {
   wired = true
   fast_travel_store.subscribe((state, prev) => {
     fire_notice(state, prev)
-    if (state.phase === 'resolving' && prev.phase !== 'resolving') run_resolve(state.target)
-    if (state.phase === 'joining' && prev.phase !== 'joining') run_join(state.target)
+    if (state.phase === 'resolving' && prev.phase !== 'resolving') void run_resolve(state.target)
+    if (state.phase === 'joining' && prev.phase !== 'joining') void run_join(state.target)
   })
 }

@@ -14,6 +14,7 @@ import {
   visible_players,
   peer_state_of,
   peer_state_by_address,
+  peer_states_by_address,
   see_fights_count,
   subscribe_identity_requests,
   subscribe_chat,
@@ -64,8 +65,15 @@ describe('the peer table — realtime ticks under the freshness law', () => {
   it('peer_state merges identity/cosmetic; chain resolution (peer_identity) wins over self-declared', () => {
     const { input, state } = boot()
     input({ type: 'peer_state', id: PEER, address: '0xabc', classe: 'senshi', name: 'p2p-name', mounted: true })
+    input({ type: 'peer_pos', id: PEER, x: 12, y: -7 }) // position may arrive after identity; action-time lookup sees it
     expect(peer_state_of(state(), PEER)).toMatchObject({ address: '0xabc', classe: 'senshi', mounted: true })
     expect(peer_state_by_address(state(), '0xabc')?.name).toBe('p2p-name')
+    input({ type: 'peer_pos', id: PEER_B, x: 4, y: 9 }, 2_000)
+    input({ type: 'peer_state', id: PEER_B, address: '0xabc', name: 'second-tab' }, 2_000)
+    expect(peer_states_by_address(state(), '0xabc')).toMatchObject([
+      { id: PEER, name: 'p2p-name', cell: { x: 12, y: -7 }, position: { x: 12, z: -7 } },
+      { id: PEER_B, name: 'second-tab', cell: { x: 4, y: 9 }, position: { x: 4, z: 9 } },
+    ])
     input({ type: 'peer_identity', id: PEER, record: { name: 'chain-name', classe: 'yajin', male: false, color_1: 7 } })
     const row = visible_players(state())[0] ?? peer_state_of(state(), PEER)
     expect(peer_state_of(state(), PEER)?.name).toBe('chain-name')

@@ -85,12 +85,13 @@ export async function read_roster(address, signal) {
   const now = Date.now()
   const rows = await Promise.all(
     friends.map(async (friend) => {
-      let char = null
+      let chars = []
       try {
-        char = primary_character(await get_characters({ owner: friend }, signal))
+        chars = await get_characters({ owner: friend }, signal)
       } catch {
         /* enrichment best-effort — the row still renders from the raw address */
       }
+      const char = primary_character(chars)
       const at_ms = char?.position?.at_ms ?? null
       const world = char?.world ?? null
       return {
@@ -103,6 +104,9 @@ export async function read_roster(address, signal) {
         // known craft levels renders with an empty recipe list, never a crash). OnlinePlayers ignores this.
         jobs: char?.jobs ?? {},
         world,
+        // Preserve every already-fetched id→world join so the action can match the wallet's live p2p character
+        // instead of re-guessing an arbitrary owned alt. The shared resolver still verifies this /v1 route.
+        routes: chars.map((candidate) => ({ character_id: candidate.id, world_id: candidate.world ?? null })),
         zone: zone_label(char?.position),
         online: at_ms != null && now - at_ms < ONLINE_WINDOW_MS,
       }

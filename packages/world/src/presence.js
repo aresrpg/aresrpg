@@ -447,6 +447,14 @@ export function peer_state_of(state, character_id) {
   return { ...rest, name: chain?.name ?? rest.name ?? null }
 }
 
+/** Every live character session + accepted cell for a wallet address (a wallet may have multiple tabs/alts). */
+export function peer_states_by_address(state, address) {
+  if (!address) return []
+  return [...state.peers.values()]
+    .filter((peer) => peer.address === address)
+    .map((peer) => ({ ...peer_state_of(state, peer.id), id: peer.id, cell: peer.cell, position: peer.position }))
+}
+
 /** The same self-declared identity home, looked up by wallet address (friend/presence surfaces). */
 export function peer_state_by_address(state, address) {
   if (!address) return null

@@ -26,6 +26,7 @@ import { joinRoom, getRelaySockets, defaultRelayUrls } from 'trystero'
 import {
   peer_state_of,
   peer_state_by_address,
+  peer_states_by_address,
   subscribe_rejoin,
   subscribe_reannounce,
   PEER_HEARTBEAT_MS,
@@ -475,6 +476,11 @@ export function get_peer_state(character_id) {
 /** The same self-declared identity home, looked up by wallet address for friend/presence surfaces. */
 export function get_peer_state_by_address(address) {
   return peer_state_by_address(presence_store.getState(), address)
+}
+
+/** Every live peer character for an address; friend travel selects the freshest accepted cell at action time. */
+export function get_peer_states_by_address(address) {
+  return peer_states_by_address(presence_store.getState(), address)
 }
 
 /**

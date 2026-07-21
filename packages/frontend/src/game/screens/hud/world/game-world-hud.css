@@ -1018,6 +1018,27 @@
   flex: 1 1 auto;
   min-width: 0;
 }
+.gw-prow--friend {
+  gap: 0;
+}
+.gw-prow__open {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.gw-prow__open:focus-visible {
+  outline: 1px solid rgba(200, 150, 60, 0.7);
+  outline-offset: 2px;
+}
 .gw-prow--friend.off {
   opacity: 0.5;
 }

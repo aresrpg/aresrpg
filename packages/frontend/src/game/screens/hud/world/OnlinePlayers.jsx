@@ -140,18 +140,34 @@ export function OnlinePlayers() {
 
 /** @param {{ row: any, t: (k: string, o?: any) => string, on_remove: (addr: string, name: string) => void }} props */
 function FriendRow({ row, t, on_remove }) {
-  // Right-click a friend row → PlayerActionMenu (add friend / invite / fast travel). Friend rows carry only an
-  // address (no character id) — the fast-travel resolver reads that address's /v1 character to find world+position.
+  // A friend row opens the SAME PlayerActionMenu as an in-world nameplate. The row carries every already-fetched
+  // id→world route; the menu joins it to current presence only when the travel action is actually pressed.
   const open_menu = (/** @type {any} */ e) => {
     e.preventDefault()
     const r = e.currentTarget.getBoundingClientRect()
-    open_player_menu({ id: null, address: row.address, name: row.name, x: r.left, y: r.bottom + 4 })
+    open_player_menu({
+      kind: 'friend',
+      id: null,
+      address: row.address,
+      name: row.name,
+      routes: row.routes,
+      x: r.left,
+      y: r.bottom + 4,
+    })
   }
   return (
-    <div className={`gw-prow gw-prow--friend${row.online ? '' : ' off'}`} onContextMenu={open_menu}>
-      <span className={`gw-prow__dot${row.online ? '' : ' off'}`} />
-      <span className="gw-prow__name">{row.name}</span>
-      {row.level != null && <span className="gw-prow__lvl">Lv {row.level}</span>}
+    <div className={`gw-prow gw-prow--friend${row.online ? '' : ' off'}`}>
+      <button
+        type="button"
+        className="gw-prow__open"
+        aria-label={row.name}
+        onClick={open_menu}
+        onContextMenu={open_menu}
+      >
+        <span className={`gw-prow__dot${row.online ? '' : ' off'}`} />
+        <span className="gw-prow__name">{row.name}</span>
+        {row.level != null && <span className="gw-prow__lvl">Lv {row.level}</span>}
+      </button>
       <button
         type="button"
         className="gw-prow__rm"
