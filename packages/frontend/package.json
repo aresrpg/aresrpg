@@ -30,7 +30,6 @@
     "@mysten/sui": "^2.20.3",
     "@mysten/wallet-standard": "^0.21.5",
     "@sentry/react": "^10.65.0",
-    "@vercel/analytics": "^2.0.1",
     "fast-merge-async-iterators": "^1.1.1",
     "i18next": "^25.10.10",
     "i18next-browser-languagedetector": "^8.2.1",
