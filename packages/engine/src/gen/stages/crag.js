@@ -43,7 +43,7 @@ import { create_fbm_sampler } from '../noise/sampler.js'
  * Builds the relief-ladder context from a world's `crag` recipe + the carvers sub-seed (distinct XOR
  * salts from every other stage). Samplers allocate once per world (never per column). Disabled ⇒
  * enabled:false. base/roll amps default 0 (pre-ladder recipes stay byte-identical).
- * @param {CragConfig} [cfg]
+ * @param {Partial<CragConfig>} [cfg]
  * @param {Record<string, number>} [seeds] output of derive_world_seeds
  * @returns {CragContext}
  */

@@ -91,6 +91,7 @@ export const STAR_TIERS = [
 ]
 /** star temperature palette: cool blue-white → white → warm. */
 export const STAR_COOL_RGB = [0.72, 0.82, 1.0]
+/** @type {import('./sky_node.js').Rgb} */
 export const STAR_WARM_RGB = [1.0, 0.86, 0.7]
 /** rare faint RED GIANT — only the extreme hash tail (cfg.star_red_giant fraction) reaches it. */
 export const STAR_RED_RGB = [1.0, 0.55, 0.42]
@@ -106,6 +107,7 @@ export const STAR_HORIZON_FLOOR = 0.5
 // ── milky way ────────────────────────────────────────────────────────────────────────────────────────
 export const MW_INTENSITY = 0.075
 export const MW_WIDTH = 0.16 // gaussian sigma on the band coordinate (≈9°)
+/** @type {import('./sky_node.js').Rgb} */
 export const MW_CORE_RGB = [1.0, 0.9, 0.78]
 export const MW_DUST_STRENGTH = 0.65
 export const MW_MOON_HUMILITY = 0.6 // ×(1 − this·moonglow): humble near the moon, full on the far side
@@ -129,8 +131,11 @@ export const RING_INTENSITY = 0.9
 // toward the band + a warm galactic-core pocket. CHROMA-dominant on purpose: deep saturated darks survive the
 // AgX shoulder where luminance washes to grey (the whole "no colors" complaint). MEDIUM/HIGH only (reuses the
 // milky-way frame q). intensity 0 ⇒ the node is SKIPPED entirely, so the shipped graph is byte-unchanged.
+/** @type {import('./sky_node.js').Rgb} */
 export const NEBULA_BLUE = [0.06, 0.12, 0.34]
+/** @type {import('./sky_node.js').Rgb} */
 export const NEBULA_PURPLE = [0.18, 0.07, 0.32]
+/** @type {import('./sky_node.js').Rgb} */
 export const NEBULA_ORANGE = [0.6, 0.24, 0.06]
 
 /**
@@ -143,7 +148,7 @@ export const NEBULA_ORANGE = [0.6, 0.24, 0.06]
  * @property {number} star_thresh_shift additive existence-threshold shift (negative = denser stars)
  * @property {number} star_bright_mul brightness multiplier across all tiers
  * @property {number} mw_intensity milky-way band peak intensity
- * @property {number[]} mw_rgb milky-way core colour
+ * @property {Rgb} mw_rgb milky-way core colour
  * @property {number} mw_width gaussian sigma of the band (smaller = thinner/brighter)
  * @property {number} planet_scale multiplies each planet disc's angular radius
  * @property {number} planet_count how many of the 2 planets to draw (1 or 2)
@@ -152,7 +157,7 @@ export const NEBULA_ORANGE = [0.6, 0.24, 0.06]
  *   star/nebula suppression + moon halo unchanged) — lets the deep-space colour read while the moon is up
  * @property {number} [star_cluster] 0 = off; >0 = low-freq CLUSTERING (constellation-like groupings + voids)
  * @property {number} [star_red_giant] 0 = off; >0 = fraction of the hash tail that goes faint RED giant
- * @property {{rgb:number[], amount:number}|null} [arcane_tint] faint global dome tint (the "arcane" wash)
+ * @property {{rgb:Rgb, amount:number}|null} [arcane_tint] faint global dome tint (the "arcane" wash)
  * @property {{start_deg:number, end_deg:number}|null} [horizon_fade] wide horizon-extinction ramp (
  *   2026-07-13: "the sky should not cut straight like this, it should go behind mountains") — milky-way band
  *   + nebula fade to 0 and stars dim to STAR_HORIZON_FLOOR across the elevation window from `start_deg`
@@ -160,11 +165,12 @@ export const NEBULA_ORANGE = [0.6, 0.24, 0.06]
  *   start_deg is untouched. Degrees, ascending (start_deg > end_deg — smoothstep's WGSL edge law). null = OFF:
  *   falls back to the old narrow STAR_HORIZON_FADE cutoff (NEUTRAL's byte-unchanged reference look).
  * @property {{intensity:number, along_band:number, orange_core:number, orange_core_k:number,
- *   blue:number[], purple:number[], orange:number[],
- *   regions?: {rgb:number[], k:number, gain:number}[]}} nebula the colour-cloud layer. `regions` (the VARIANT
+ *   blue:Rgb, purple:Rgb, orange:Rgb,
+ *   regions?: {rgb:Rgb, k:number, gain:number}[]}} nebula the colour-cloud layer. `regions` (the VARIANT
  *   axis) paints N distinct-hue fields at seed-derived directions — each a directional falloff over the SHARED
  *   density fBm, so multiple hues cost ZERO extra noise. Empty ⇒ the single blue→purple hue-walk + orange core.
  * @typedef {import('./sky_node.js').SkyPalette} SkyPalette
+ * @typedef {import('./sky_node.js').Rgb} Rgb
  */
 /** @type {NightSkyCfg} */
 export const NIGHT_SKY_NEUTRAL = {
@@ -458,7 +464,7 @@ export function create_night_sky_node({
   const q = with_milky_way
     ? vec3(view_dir.dot(c3(P.galaxy_a)), view_dir.dot(c3(P.galaxy_b)), view_dir.dot(c3(P.galaxy_n)))
     : null
-  const x = q ? q.z.div(cfg.mw_width) : null
+  const x = /** @type {*} */ (q ? q.z.div(cfg.mw_width) : null)
   const band = q ? exp(x.mul(x).negate()) : float(0)
 
   // ── stars: 3 hashed-cell tiers (Overdraw kernel), tint + twinkle + fades + band densification ─────
@@ -466,11 +472,11 @@ export function create_night_sky_node({
   // constellation CLUSTERING (esoteric axis): ONE low-freq field (not per-tier — zero extra noise per tier)
   // modulates star presence into groupings + voids. Gated OFF at neutral (no eval, graph unchanged).
   const cluster_gate =
-    cfg.star_cluster > 0
+    /** @type {number} */ (cfg.star_cluster) > 0
       ? mix(
           float(1),
           smoothstep(0.34, 0.76, mx_fractal_noise_float(view_dir.mul(1.5), 2, float(2), float(0.5)).mul(0.5).add(0.5)),
-          float(cfg.star_cluster)
+          float(/** @type {number} */ (cfg.star_cluster))
         )
       : null
   /** @type {*} */ let stars = vec3(0, 0, 0)
@@ -501,8 +507,8 @@ export function create_night_sky_node({
       clamp(temp2.sub(1), 0, 1)
     )
     // faint RED GIANTS in the extreme hash tail (variant axis) — gated OFF at neutral.
-    if (cfg.star_red_giant > 0) {
-      const rg = cfg.star_red_giant
+    if (/** @type {number} */ (cfg.star_red_giant) > 0) {
+      const rg = /** @type {number} */ (cfg.star_red_giant)
       tint = mix(tint, c3(STAR_RED_RGB), smoothstep(float(1 - rg), float(1 - rg * 0.4), h_tint))
     }
     const twinkle = tier.twinkle

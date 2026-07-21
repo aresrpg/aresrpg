@@ -59,13 +59,14 @@ export const DECO_DEFAULTS = {
   garrigue_one_in: 14, // mediterranean
 }
 
-/** Memo of the resolved decoration densities per config object (pure fn of it). @type {WeakMap<object, typeof DECO_DEFAULTS>} */
+/** @typedef {typeof DECO_DEFAULTS & {sprites?: Partial<Record<string, boolean>>}} ResolvedDecoration */
+/** Memo of the resolved decoration densities per config object (pure fn of it). @type {WeakMap<object, ResolvedDecoration>} */
 const _deco_cache = new WeakMap()
 /**
  * Resolves a world's `decoration` config into the full density set (config values over DECO_DEFAULTS).
  * Absent/undefined ⇒ DECO_DEFAULTS (the byte-identical DEFAULT path). Memoized per config object.
  * @param {any} [cfg] the world's `decoration` config (DecorationConfig — read for its numeric density keys)
- * @returns {typeof DECO_DEFAULTS}
+ * @returns {ResolvedDecoration}
  */
 export function resolve_deco(cfg) {
   if (!cfg) return DECO_DEFAULTS

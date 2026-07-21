@@ -283,7 +283,7 @@ export function droplet_alpha(t_local, lifetime) {
  * A burst's radius/alpha multipliers around `burst_at` (local time): a brief SWELL (radius 1→swell_scale)
  * then a fast COLLAPSE (radius→0, alpha→0). No burst (`burst_at` non-finite) ⇒ {1, 1} always, so a
  * non-bursting isolated bead is byte-identical to round-6. Pure — the shader packs radius·alpha from here.
- * @param {number} t_local seconds since the bead's birth @param {number} burst_at local burst time (s)
+ * @param {number} t_local seconds since the bead's birth @param {number | undefined} burst_at local burst time (s)
  * @returns {{radius_mul:number, alpha_mul:number}}
  */
 export function burst_shape(t_local, burst_at) {
@@ -430,7 +430,7 @@ export function trail_life_fade(t_local, lifetime) {
  * slots (fewer bursts than slots) are inert (born past the park ⇒ alpha 0 forever). Irregular length &
  * position per trail (target: "never a uniform column lane"); the meandering centreline / varying width /
  * ragged caps are per-pixel geometry — see the round-8 fluid twins at the bottom of this file.
- * @param {ReturnType<typeof build_droplets>} drops the field (its bursting beads feed the trails)
+ * @param {Array<Pick<ReturnType<typeof build_droplets>[number], 'x0' | 'y0' | 'radius' | 'burst_at' | 'slide'>>} drops the field (its bursting beads feed the trails)
  * @param {number} seed @param {number} [trail_count]
  * @returns {Array<{x:number,y_top:number,birth:number,max_len:number,lifetime:number}>}
  */

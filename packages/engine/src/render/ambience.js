@@ -84,7 +84,8 @@ export const AMBIENCE_BUILD = 'ambience-2026-07-21a'
  *  existing post pass (render/lighting/underwater.js warp). @type {AmbienceSpec} */
 export const UNDERWATER_AMBIENCE = Object.freeze({ kind: 'bubble', density: 0.7, opacity: 0.4 })
 
-/** The fallback for any biome without an authored row — a very sparse warm dust mote (barely-there). */
+/** The fallback for any biome without an authored row — a very sparse warm dust mote (barely-there).
+ * @type {AmbienceSpec} */
 export const DEFAULT_AMBIENCE = Object.freeze({ kind: 'mote', density: 0.35 })
 
 /**
@@ -203,6 +204,7 @@ export function submerge_burst_env(t, dur = BURST_SECONDS, peak = BURST_PEAK) {
  *   per-frame: re-sample the camera-column biome + canopy, resolve the emitter, crossfade the pooled
  *   fields, advance the submerge burst + the shared wind gust. Camera-local (the field follows `cam`).
  * @property {() => { kind:string, slots:number }} current live state (bench/observability).
+ * @property {() => any[]} debug_slots per-slot diagnostic state for tests/probes.
  * @property {() => void} dispose two-phase teardown of every pooled field.
  */
 
@@ -237,6 +239,7 @@ export function create_ambience({
   let since_sample = SAMPLE_INTERVAL_SECONDS
   let since_canopy = CANOPY_INTERVAL_SECONDS
   let covered = false
+  /** @type {AmbienceSpec} */
   let spec = DEFAULT_AMBIENCE
   let was_submerged = false
   let burst_t = 0

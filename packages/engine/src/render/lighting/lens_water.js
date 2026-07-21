@@ -314,7 +314,7 @@ export function create_lens_water({ tier = 'high' } = {}) {
         acc_offset.addAssign(
           vec2(
             rx.mul(float(LENS_WATER.refract_eta)).mul(dome).mul(presence),
-            presence.mul(LENS_WATER.trail_drag).mul(w)
+            /** @type {any} */ (presence.mul(LENS_WATER.trail_drag).mul(w))
           )
         )
         // specular crest along the meandering centre, BROKEN into flowing patches (never a solid stroke)

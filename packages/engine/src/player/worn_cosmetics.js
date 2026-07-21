@@ -259,7 +259,7 @@ export function create_worn_cosmetics({ avatar, load_model = load_glb }) {
 
   /** Non-destructive legacy head.clear(): suppress every non-hat child, remembering original visibility once.
    * Re-run during idempotent reconciliation because character_avatar may attach hair after avatar.ready. */
-  function suppress_hair(bone, hat) {
+  function suppress_hair(/** @type {import('three').Object3D} */ bone, /** @type {import('three').Object3D} */ hat) {
     for (const object of bone.children) {
       if (object === hat) continue
       if (!suppressed_hair.has(object)) suppressed_hair.set(object, object.visible)
@@ -360,7 +360,7 @@ export function create_worn_cosmetics({ avatar, load_model = load_glb }) {
           drop(key)
           continue
         }
-        wanted.set(key, next_key)
+        wanted.set(key, /** @type {string} */ (next_key))
         drop(key) // clear the old mesh immediately; the new one mounts on load
         mount(key, spec)
       }

@@ -22,7 +22,8 @@ import { create_region_context, region_profile, IDENTITY_PROFILE } from './regio
 
 afterAll(() => set_gen_config(DEFAULT_WORLD_GEN_CONFIG))
 
-/** Total id diff between two columns (same coords, two recipes). */
+/** Total id diff between two columns (same coords, two recipes).
+ * @param {ReturnType<typeof generate_column>} a @param {ReturnType<typeof generate_column>} b */
 function column_diff(a, b) {
   let d = 0
   for (let cy = 0; cy < a.length; cy += 1)
@@ -30,7 +31,8 @@ function column_diff(a, b) {
   return d
 }
 
-/** sha256 over the ids of a full column (surface-identity fingerprint). */
+/** sha256 over the ids of a full column (surface-identity fingerprint).
+ * @param {ReturnType<typeof generate_column>} col */
 function column_hash(col) {
   const h = createHash('sha256')
   for (const c of col) h.update(new Uint8Array(c.ids.buffer))
@@ -195,7 +197,7 @@ describe('S-25 region layer — integration (massif world)', () => {
   test('SENSITIVITY — enabling regions changes the everest world', () => {
     const on = create_gen_context(EVEREST_WORLD)
     const off_cfg = { ...structuredClone(EVEREST_WORLD), regions: { ...EVEREST_WORLD.regions, enabled: false } }
-    const off = create_gen_context(off_cfg)
+    const off = create_gen_context(/** @type {import('../../config/world_gen_config.js').WorldGenConfig} */ (off_cfg))
     let total = 0
     for (const [cx, cz] of GRID) total += column_diff(generate_column(on, cx, cz), generate_column(off, cx, cz))
     expect(total).toBeGreaterThan(0) // the region layer genuinely moves blocks
@@ -205,7 +207,7 @@ describe('S-25 region layer — integration (massif world)', () => {
     const disabled = { ...structuredClone(EVEREST_WORLD), regions: { ...EVEREST_WORLD.regions, enabled: false } }
     const absent = structuredClone(EVEREST_WORLD)
     delete absent.regions
-    const a = create_gen_context(disabled)
+    const a = create_gen_context(/** @type {import('../../config/world_gen_config.js').WorldGenConfig} */ (disabled))
     const b = create_gen_context(absent)
     for (const [cx, cz] of GRID)
       expect(column_hash(generate_column(a, cx, cz))).toBe(column_hash(generate_column(b, cx, cz)))
@@ -215,7 +217,9 @@ describe('S-25 region layer — integration (massif world)', () => {
     const ctx = create_gen_context(EVEREST_WORLD)
     // Every everest region class pins a biome ⇒ every column's biome ∈ the pinned set.
     const pinned = new Set(
-      EVEREST_WORLD.regions.classes.map((c) => EVEREST_WORLD.biomes.find((b) => b.name === c.biome)?.id)
+      /** @type {NonNullable<typeof EVEREST_WORLD.regions>} */ (EVEREST_WORLD.regions).classes.map(
+        (c) => EVEREST_WORLD.biomes.find((b) => b.name === c.biome)?.id
+      )
     )
     const seen = new Set()
     // biome_at is the region-pinned dominant biome (cheap — no column fill); scan a WIDE span so the
@@ -285,14 +289,20 @@ describe('S-25 region layer — NO DRIFT for the UNTOUCHED recipes', () => {
       expect(w.massif?.enabled ?? false, `${name} massif is off`).toBe(false)
     }
     expect(DEFAULT_WORLD_GEN_CONFIG.regions, 'DEFAULT has no regions block').toBeUndefined()
-    expect(DEFAULT_WORLD_GEN_CONFIG.massif.enabled, 'DEFAULT massif is off').toBe(false)
+    expect(
+      /** @type {NonNullable<typeof DEFAULT_WORLD_GEN_CONFIG.massif>} */ (DEFAULT_WORLD_GEN_CONFIG.massif).enabled,
+      'DEFAULT massif is off'
+    ).toBe(false)
   })
 
   test('every region world carries an enabled regions block with a non-empty class list', () => {
     for (const name of REGION_WORLDS) {
       const w = WORLD_CONFIGS[name]
-      expect(w.regions?.enabled, `${name} regions enabled`).toBe(true)
-      expect(w.regions.classes.length, `${name} has classes`).toBeGreaterThanOrEqual(5)
+      expect(/** @type {NonNullable<typeof w.regions>} */ (w.regions)?.enabled, `${name} regions enabled`).toBe(true)
+      expect(
+        /** @type {NonNullable<typeof w.regions>} */ (w.regions).classes.length,
+        `${name} has classes`
+      ).toBeGreaterThanOrEqual(5)
     }
   })
 })

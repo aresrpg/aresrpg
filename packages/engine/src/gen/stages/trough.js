@@ -23,7 +23,7 @@
 /**
  * Builds the trough stage context from a world's `trough` recipe. Pure params; disabled ⇒ enabled:false.
  * `floor_pv < wall_pv` is enforced by the config validator; a degenerate band collapses to no carve.
- * @param {TroughConfig} [cfg]
+ * @param {Partial<TroughConfig>} [cfg]
  * @returns {TroughContext}
  */
 export function create_trough_context(cfg) {

@@ -164,6 +164,7 @@ describe('mesh_chunk: #296 verification — two angles the coral/top-layer fixtu
     // the MIDDLE of a 3-deep pool: pre-fix, all 6 of its neighbors are water|water internal boundaries
     // (baseline emits ZERO faces there); post-fix every one must open, since none of them differ from
     // touching air except that the far side also happens to be water — the standard rule doesn't care.
+    /** @param {boolean} with_bush */
     const build = (with_bush) => {
       const chunk = create_chunk_record(0, 0, 0)
       for (let z = 1; z <= 3; z += 1) for (let x = 1; x <= 3; x += 1) place_solid(chunk, x, 0, z, SAND)

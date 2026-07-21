@@ -30,7 +30,9 @@ const CELL_FLOOR = 0
 const CELL_OBSTACLE = 1
 const CELL_HOLE = 2
 const CELL_VOID = 3
-function mask_of(spec) {
+function mask_of(
+  /** @type {{grid_w: number, grid_h: number, obstacles: {x:number,y:number}[], holes: {x:number,y:number}[], voids: {x:number,y:number}[]}} */ spec
+) {
   const { grid_w: w, grid_h: h, obstacles, holes, voids } = spec
   const mask = new Uint8Array(w * h).fill(CELL_FLOOR)
   for (const c of obstacles) mask[c.x + c.y * w] = CELL_OBSTACLE

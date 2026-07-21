@@ -142,6 +142,7 @@ describe('ResolvedSchematic contract (loader.js shape — placed by the existing
     }
     expect(typeof t.reach).toBe('number')
     expect(t.water_anchor).toBe(false)
+    /** @type {{dx:number, dy:number, dz:number, block_id:number, solid:boolean, mode:import('../schematics/loader.js').PlacementMode}|null} */
     let first = null
     for_each_voxel(t, (dx, dy, dz, e) => {
       if (first === null) first = { dx, dy, dz, ...e }
@@ -184,6 +185,7 @@ describe('ResolvedSchematic contract (loader.js shape — placed by the existing
     for (const key of SPECIES_KEYS) {
       const t = generate_tree(202, -33, 77, key)
       const seen = new Set()
+      /** @type {{dx:number, dy:number, dz:number}|null} */
       let prev = null
       for_each_voxel(t, (dx, dy, dz) => {
         const k = dx + ',' + dy + ',' + dz

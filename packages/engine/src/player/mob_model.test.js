@@ -132,7 +132,7 @@ describe('prepare_mob_render — the one-mob-sdk render policy', () => {
 
     expect(mat.emissiveMap).toBe(mat.map) // exact same instance — the clone is never wired into the material
     expect(/** @type {any} */ (emissive_clone).__ares_pixel_keyed).toBeUndefined() // discarded clone: NEVER touched/marked dirty
-    expect(mat.map.image.width).toBeGreaterThan(0) // the shared bitmap stays open — nothing closes/detaches it
+    expect(/** @type {{width:number}} */ (/** @type {Texture} */ (mat.map).image).width).toBeGreaterThan(0) // the shared bitmap stays open — nothing closes/detaches it
     expect(emissive_clone.image.width).toBeGreaterThan(0) // same shared bitmap, still valid through the orphan too
   })
 

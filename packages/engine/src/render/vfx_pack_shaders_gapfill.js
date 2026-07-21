@@ -68,7 +68,7 @@ function impact_slash({ grow, seed, pri, sec, emission }) {
   const wave_offset = factor.mul(4).sub(1)
   let value = shape.mul(2).sub(wave_offset).abs().oneMinus() // 1 − |shape·2 − wave_offset|
   const mask = shape.mul(shape).mul(shape).oneMinus().clamp(0, 1).mul(gradient) // clamp(1 − shape³) · gradient
-  value = value.mul(mask).mul(factor.max(0.0001).pow(0.1)).mul(uvp.y.mul(8).min(1))
+  value = /** @type {any} */ (value.mul(mask).mul(factor.max(0.0001).pow(0.1)).mul(uvp.y.mul(8).min(1)))
   value = smoothstep(0.095, 0.6, value) // edge_hardness 0.5: l_edge mix(0,0.19,.5)=.095, r_edge mix(1,0.2,.5)=.6
   return { rgb: mix(sec, pri, value).mul(emission), alpha: value.clamp(0, 1) }
 }

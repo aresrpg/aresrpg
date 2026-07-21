@@ -86,7 +86,7 @@ const snap_scale = (/** @type {number} */ s) => Math.round(s / SCALE_STEP) * SCA
 
 /**
  * @typedef {object} QualityGovernor
- * @property {(frame_ms: number) => void} record_frame feed one RENDERED frame's real wall-duration in
+ * @property {(frame_ms: number, settled?: boolean) => void} record_frame feed one RENDERED frame's real wall-duration in
  *   ms (frame_dt, not a smoothed percentile) once per rAF; drives the EMA + the resolution decision.
  * @property {() => number} get_rolling_p75_ms rolling p75 over the sample window (HUD/telemetry).
  * @property {() => TierName} get_current_tier

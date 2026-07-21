@@ -26,8 +26,9 @@ import {
 /** A scene test double that just records mounted meshes (create_ambience.dispose calls `.remove`, so
  *  that's stubbed too) — no real renderer/GPU needed, mirrors the house fake_renderer idiom (clouds.test.js). */
 const fake_scene = () => {
+  /** @type {any[]} */
   const added = []
-  return { added, add: (m) => added.push(m), remove: () => {} }
+  return /** @type {any} */ ({ added, add: (/** @type {any} */ m) => added.push(m), remove: () => {} })
 }
 /** `.bake()` only ever calls `renderer.computeAsync(kernel)` — resolve it immediately, like clouds.test.js. */
 const fake_renderer = () => ({ computeAsync: async () => {} })
@@ -96,7 +97,7 @@ describe('resolve_emitter — the live kind decision', () => {
 })
 
 describe('canopy_above — upward occupancy probe', () => {
-  const solid_at = (/** @type {number} */ ys) => (/** @type {number} */ _x, /** @type {number} */ y) =>
+  const solid_at = (/** @type {number[]} */ ys) => (/** @type {number} */ _x, /** @type {number} */ y) =>
     ys.includes?.(y) ? 1 : 0
   test('open sky (all air) is NOT covered', () => {
     expect(canopy_above(() => 0, 0, 40, 0)).toBe(false)
@@ -186,7 +187,7 @@ describe('create_ambience — submerged → bubble slot bakes, ramps, and goes v
     expect(bubble.visible, 'ambience.js:285 gate — OPEN').toBe(true)
     expect(steps, 'ramps well within a handful of frames (crossfade_seconds=3, dt=0.1)').toBeLessThan(10)
     expect(
-      scene.added.some((m) => m.count === bubble.count),
+      scene.added.some((/** @type {any} */ m) => m.count === bubble.count),
       'the visible mesh really is scene-mounted'
     ).toBe(true)
   })

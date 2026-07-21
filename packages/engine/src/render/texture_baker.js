@@ -611,7 +611,8 @@ export function fit_layer_plan(recipes, max_layers) {
   const plan = recipes.map((r) => ({ phase: recipe_phase_variants(r), rots: recipe_rotations(r).length }))
   const total = () => plan.reduce((sum, p) => sum + p.phase * p.rots, 0)
   // Pick the reducible recipe with the largest CURRENT layer count matching `predicate` (strict > ⇒ ties keep
-  // the lowest index, so the plan is deterministic). @type {(pred: (p: {phase:number,rots:number}) => boolean) => number}
+  // the lowest index, so the plan is deterministic).
+  /** @type {(pred: (p: {phase:number,rots:number}) => boolean) => number} */
   const largest = (pred) => {
     let bi = -1
     let best = 0

@@ -24,10 +24,12 @@ import { apply_pixel_filter } from './mob_model.js' // [one-mob-sdk 2026-07-13] 
 // disk, even though these tests mock the GLTF factory and never read its bytes. character_controller.js
 // re-exports the same file (D193 "ONE home"), so it is equally poisoned. apply_pixel_filter (below) lives
 // in mob_model.js, which is clean, and keeps running for real.
-const { compose_pixels, create_character_avatar } = SENSHI_MALE_GLB_AVAILABLE
-  ? await import('./character_avatar.js')
-  : {}
-const { create_character_controller } = SENSHI_MALE_GLB_AVAILABLE ? await import('./character_controller.js') : {}
+const { compose_pixels, create_character_avatar } = /** @type {typeof import('./character_avatar.js')} */ (
+  SENSHI_MALE_GLB_AVAILABLE ? await import('./character_avatar.js') : {}
+)
+const { create_character_controller } = /** @type {typeof import('./character_controller.js')} */ (
+  SENSHI_MALE_GLB_AVAILABLE ? await import('./character_controller.js') : {}
+)
 
 const px = (/** @type {number[]} */ ...vals) => new Uint8ClampedArray(vals)
 
@@ -79,7 +81,7 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('character avatar swim clip selectio
     expect(transform.in_water).toBe(true)
     expect(transform.speed).toBeGreaterThan(0.5)
     expect(transform.anim).toBe('SWIM')
-    avatar.update(transform.anim, transform.facing_yaw, 0.3)
+    avatar.update(/** @type {import('./character_avatar.js').AvatarAnim} */ (transform.anim), transform.facing_yaw, 0.3)
     expect(model.position.x).toBe(5)
     controller.dispose()
     avatar.dispose()
@@ -97,7 +99,7 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('character avatar swim clip selectio
     expect(transform.in_water).toBe(true)
     expect(transform.speed).toBe(0)
     expect(transform.anim).toBe('IDLE')
-    avatar.update(transform.anim, transform.facing_yaw, 0.3)
+    avatar.update(/** @type {import('./character_avatar.js').AvatarAnim} */ (transform.anim), transform.facing_yaw, 0.3)
     expect(model.position.x).toBe(0)
     controller.dispose()
     avatar.dispose()

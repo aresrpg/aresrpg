@@ -119,7 +119,8 @@ describe('config adoption: golden parity (DEFAULT ⇒ byte-identical world)', ()
   })
 })
 
-/** Count blocks that differ between two columns (same coords, two recipes). */
+/** Count blocks that differ between two columns (same coords, two recipes).
+ * @param {ReturnType<typeof generate_column>} a @param {ReturnType<typeof generate_column>} b */
 function column_diff(a, b) {
   let diff = 0
   for (let cy = 0; cy < a.length; cy += 1)
@@ -133,10 +134,10 @@ describe('config adoption: sensitivity (a modified recipe changes the world — 
       ...DEFAULT_WORLD_GEN_CONFIG,
       splines: {
         ...DEFAULT_WORLD_GEN_CONFIG.splines,
-        erosion_to_amplitude: [
+        erosion_to_amplitude: /** @type {import('../config/world_gen_config.js').SplineKnot[]} */ ([
           [0, 8],
           [1, 3],
-        ],
+        ]),
       },
     }
     const base = generate_column(create_gen_context(DEFAULT_WORLD_GEN_CONFIG), -49, -49)

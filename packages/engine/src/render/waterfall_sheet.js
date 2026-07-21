@@ -358,8 +358,8 @@ function create_spray_material(sky_dim = uniform(1)) {
   mat.transparent = true
   mat.depthWrite = false
 
-  const origin = reference('userData.spray_origin', 'vec3')
-  const spread = reference('userData.spray_radius.value', 'float')
+  const origin = /** @type {any} */ (reference)('userData.spray_origin', 'vec3')
+  const spread = /** @type {any} */ (reference)('userData.spray_radius.value', 'float')
   const fi = float(instanceIndex)
   const seed = hash(fi.add(float(0.13)))
   const seed2 = hash(fi.add(float(7.7)))
@@ -374,9 +374,9 @@ function create_spray_material(sky_dim = uniform(1)) {
   // mid-air puffs. Impact spray hugs the waterline base — peak rise ~0.55 block, drift pulled in (×0.7).
   const pos = origin.add(
     vec3(
-      dir.x.mul(spread).mul(phase).mul(float(0.7)),
-      arc.mul(float(0.5)).add(phase.mul(float(0.12))),
-      dir.y.mul(spread).mul(phase).mul(float(0.7))
+      /** @type {any} */ (dir.x.mul(spread).mul(phase).mul(float(0.7))),
+      /** @type {any} */ (arc.mul(float(0.5)).add(phase.mul(float(0.12)))),
+      /** @type {any} */ (dir.y.mul(spread).mul(phase).mul(float(0.7)))
     )
   )
 
@@ -465,8 +465,14 @@ export function create_waterfall_system({ scene, tier, get_spans }) {
   const foam_geometry = want_foam ? new CircleGeometry(1, 16) : null
   foam_geometry?.rotateX(-Math.PI / 2)
   const foam_material = want_foam ? create_foam_material(sky_dim) : null
-  const shared_resources = new Set(
-    [sheet_material, spray_geometry, spray_material, foam_geometry, foam_material].filter(Boolean)
+  const shared_resources = /** @type {Set<{ dispose: () => void }>} */ (
+    new Set(
+      /** @type {Array<{ dispose: () => void }>} */ (
+        /** @type {unknown} */ (
+          [sheet_material, spray_geometry, spray_material, foam_geometry, foam_material].filter(Boolean)
+        )
+      )
+    )
   )
   /** @typedef {{ refs: number, group: any | null, sprays: number }} Entry */
   /** @type {Map<string, Entry>} */

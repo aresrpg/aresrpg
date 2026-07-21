@@ -42,7 +42,8 @@ export async function gather_detect_signals() {
   const is_mobile = is_ios || detect_mobile()
   // devicePixelRatio lives on window; guard the non-DOM (test/SSR) path the same way navigator is guarded.
   const device_pixel_ratio = typeof window !== 'undefined' ? (window.devicePixelRatio ?? 1) : 1
-  const has_webgpu = typeof navigator !== 'undefined' && 'gpu' in navigator && navigator.gpu != null
+  const has_webgpu =
+    typeof navigator !== 'undefined' && 'gpu' in navigator && /** @type {any} */ (navigator).gpu != null
 
   if (!has_webgpu) {
     return {
@@ -56,7 +57,7 @@ export async function gather_detect_signals() {
     }
   }
 
-  const adapter = await navigator.gpu.requestAdapter()
+  const adapter = await /** @type {any} */ (navigator).gpu.requestAdapter()
   if (!adapter) {
     return {
       is_fallback_adapter: true,

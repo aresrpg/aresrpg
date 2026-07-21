@@ -125,6 +125,7 @@
  * @property {number} bank water surface this many blocks below the un-carved land (dry banks)
  * @property {number} continentalness_min inland gate (no rivers in open ocean)
  * @property {number} pv_max rivers run through valleys/slopes, not the highest peaks
+ * @property {number} [max_step] maximum river-surface step above the lowest cardinal neighbour (default 1)
  */
 
 /**
@@ -217,7 +218,7 @@
  *   the sun side"); 0 ⇒ no aspect term (parity)
  * @property {number} [sun_dx] @property {number} [sun_dz] precomputed unit sun horizontal (world x/z). Painting
  *   matches the render's tod sun so exposed rock lands on the lit faces. Literals (no trig in gen/, §3.7 gate).
- * @property {number} [slope_window] ± neighbourhood (blocks) the painting slope is measured over (default 1)
+ * @property {number} [slope_window] +/- neighbourhood (blocks) the painting slope is measured over (default 1)
  * @property {string} [snow_block] surface block name for snow (default 'snow')
  * @property {string} [rock_block] surface block name for exposed rock (default 'stone')
  * @property {string} [ice_block] surface block name for high ice (default 'ice')
@@ -607,6 +608,8 @@
  * The ENTIRE world recipe — one serializable object (§2.3). `seed`+`version` gate world identity;
  * any value change re-cuts golden hashes (§4).
  * @typedef {object} WorldGenConfig
+ * @property {string} [name] optional named-world registry identity
+ * @property {{moon_mul?: number, ambient_night_floor?: number, water_night_floor?: number}} [night]
  * @property {string} seed master world seed (LIVE MASTER_SEED)
  * @property {number} version recipe version — bumps gate golden hashes (§4)
  * @property {GeometryConfig} geometry world-box geometry (§3.4)

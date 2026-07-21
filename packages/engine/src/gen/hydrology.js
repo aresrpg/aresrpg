@@ -79,7 +79,7 @@ export const HYDROLOGY_CONFIG = {
 
 /**
  * @typedef {object} HydrologyContext
- * @property {typeof HYDROLOGY_CONFIG} cfg the world's hydrology recipe (world_gen_config `hydrology`) —
+ * @property {Pick<import('../config/world_gen_config.js').HydrologyConfig, 'river'|'lake'|'waterfall'> & {sea_level?: number}} cfg the world's hydrology recipe (world_gen_config `hydrology`) —
  *   every river/lake/waterfall read goes through this so a per-world recipe drives hydrology (§2.3)
  * @property {import('./noise/sampler.js').FbmSampler} lake_basin low-freq basin field for lakes
  * @property {import('./noise/ridged.js').RidgedSampler} river_crease thin river crest network
@@ -125,7 +125,7 @@ export const HYDROLOGY_CONFIG = {
  * `hydrology` recipe. Recipe defaults to the live/default world so context-free callers keep working. The
  * samplers + every downstream read go through `cfg`, so a per-world recipe drives rivers/lakes/waterfalls.
  * @param {Record<string, number>} seeds output of `derive_world_seeds`
- * @param {typeof HYDROLOGY_CONFIG} [cfg] the world's hydrology recipe (world_gen_config `hydrology`)
+ * @param {Pick<import('../config/world_gen_config.js').HydrologyConfig, 'river'|'lake'|'waterfall'> & {sea_level?: number}} [cfg] the world's hydrology recipe (world_gen_config `hydrology`)
  * @returns {HydrologyContext}
  */
 export function create_hydrology_context(seeds, cfg = HYDROLOGY_CONFIG) {

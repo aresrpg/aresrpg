@@ -10,6 +10,7 @@
 
 /** @typedef {import('./vfx_preset_engine.js').VfxPreset} VfxPreset */
 /** @typedef {import('./vfx_preset_engine.js').VfxEmitter} VfxEmitter */
+/** @typedef {NonNullable<VfxEmitter['appearance']>} VfxAppearance */
 
 // The BURST builders (earth eruption / death void / weapon slash) live in vfx_presets_burst.js — split out to
 // keep both files ≤600 LoC. The assembly below composes them alongside the cast-chain + loop builders here.
@@ -55,7 +56,7 @@ const HOT = rgb(1, 1, 1)
 // the gathering-energy read (Godot BattleFX `vfx_*_charge`: emission SPHERE r≈1.5, negative radial_accel = inward,
 // explosiveness 0.5). The RENDERER places the origin (chest for the windup, feet for the caster-cell ground pulse),
 // so the offset is a small lift from there — ONE preset serves both stages, positioned by fight_cast_vfx.
-/** @param {{ name:string, hot:[number,number,number], body:[number,number,number], look?:string, core_look?:string, ember_look?:string, emission?:number }} s @returns {VfxPreset} */
+/** @param {{ name:string, hot:[number,number,number], body:[number,number,number], look?:VfxAppearance, core_look?:VfxAppearance, ember_look?:VfxAppearance, emission?:number }} s @returns {VfxPreset} */
 export function charge_preset(s) {
   const y = 0.3
   const look = s.look ?? 'arcane_mote' // pack body appearance ('fire' = FlameFX faithful); default = BattleFX arcane
@@ -130,7 +131,7 @@ export function charge_preset(s) {
 // ── BOLT (delivery / projectile): a moving comet, run as a LOOP so head+trail+aura shed continuously while the
 // runtime advances `origin` along the arc/skyfall path and sets `travel` (velocity). The TRAIL emitter subtracts
 // travel·age → its particles stay where they were BORN (a real world wake), the head/aura ride the origin.
-/** @param {{ name:string, hot:[number,number,number], body:[number,number,number], deep?:[number,number,number], look?:string, soft?:string, trail_look?:string, emission?:number, head_count?:number, head_size?:[number,number], head_sat?:boolean }} s @returns {VfxPreset} */
+/** @param {{ name:string, hot:[number,number,number], body:[number,number,number], deep?:[number,number,number], look?:VfxAppearance, soft?:VfxAppearance, trail_look?:VfxAppearance, emission?:number, head_count?:number, head_size?:[number,number], head_sat?:boolean }} s @returns {VfxPreset} */
 export function bolt_preset(s) {
   const look = s.look ?? 'arcane_mote'
   const soft = s.soft ?? look // the aura layer's appearance (a softer pack look per element — variety knob)
@@ -208,7 +209,7 @@ export function bolt_preset(s) {
 // ── LOOP (remnant / status / aura): a persistent column of rising, orbiting motes (Godot StatusFX: emission
 // CYLINDER, direction +Y, gravity ~0.3–0.5 up, orbit + radial spin, scale 0.5–1.2, lifetime ~2). Each mote fades
 // in and out over its cycle; the whole thing repeats until the caller disposes it. `rise` sets the updraft.
-/** @param {{ name:string, hot:[number,number,number], body:[number,number,number], rise?:number, radius?:number, look?:string, soft?:string, emission?:number }} s @returns {VfxPreset} */
+/** @param {{ name:string, hot:[number,number,number], body:[number,number,number], rise?:number, radius?:number, look?:VfxAppearance, soft?:VfxAppearance, emission?:number }} s @returns {VfxPreset} */
 export function loop_preset(s) {
   const radius = s.radius ?? 1
   const rise = s.rise ?? 0.9
@@ -278,7 +279,7 @@ export function loop_preset(s) {
 // aura_sphere CAPSULE or streaks billboard, only where the .tscn ships a Mesh node. MOTION = Godot orbit + radial_velocity
 // 0.1 + radial_accel (signed) + vertical, from the SPHERE volume; the entity anchor rides it on the rig. Colours ≤1 +
 // emission ≤1.5 — a persistent aura never blooms (the sustained halo ceiling, tested).
-/** @param {{ name:string, hot:[number,number,number], body:[number,number,number], look?:string, sym?:number,
+/** @param {{ name:string, hot:[number,number,number], body:[number,number,number], look?:VfxAppearance, sym?:number,
  *   backdrop?:'none'|'sphere'|'streaks', motion:{orbit:number,radial:number,grav:number,escale:[number,number,number]},
  *   emission?:number, symbol_life?:number }} s @returns {VfxPreset} */
 export function aura_preset(s) {
@@ -288,17 +289,18 @@ export function aura_preset(s) {
   const y = 1.0 // body-local centre; the SPHERE radius 1 × emission_scale.y spans feet(0)→head(2). Anchor rides the rig.
   const M = s.motion
   // shared emission volume + Godot motion (both layers get it, exactly as the .tscn script sets every GPUParticles child).
-  const vol = /** @type {const} */ ({
-    shape: 'sphere',
-    radius: 1,
-    emission_scale: M.escale, // emission_shape_scale — the vertical body-hugging ellipsoid VOLUME
-    offset: [0, y, 0],
-    orbit: M.orbit, // particles_orbit
-    radial: /** @type {[number,number]} */ ([0.1, 0.1]), // radial_velocity_min/max
-    radial_accel: M.radial, // radial_accel (signed)
-    gravity: /** @type {[number,number,number]} */ ([0, M.grav, 0]), // particles_vertical
-    speed: /** @type {[number,number]} */ ([0, 0]), // no initial_velocity (direction is inert in the .tscn)
-  })
+  const vol =
+    /** @type {Pick<VfxEmitter, 'shape'|'radius'|'emission_scale'|'offset'|'orbit'|'radial'|'radial_accel'|'gravity'|'speed'>} */ ({
+      shape: 'sphere',
+      radius: 1,
+      emission_scale: M.escale, // emission_shape_scale — the vertical body-hugging ellipsoid VOLUME
+      offset: [0, y, 0],
+      orbit: M.orbit, // particles_orbit
+      radial: /** @type {[number,number]} */ ([0.1, 0.1]), // radial_velocity_min/max
+      radial_accel: M.radial, // radial_accel (signed)
+      gravity: /** @type {[number,number,number]} */ ([0, M.grav, 0]), // particles_vertical
+      speed: /** @type {[number,number]} */ ([0, 0]), // no initial_velocity (direction is inert in the .tscn)
+    })
   const emitters = /** @type {import('./vfx_preset_engine.js').VfxEmitter[]} */ ([])
 
   // BACKDROP (behind the motes) — only where the .tscn has a Mesh node.
@@ -383,7 +385,7 @@ export function aura_preset(s) {
 // ── GROUND DECAL (trap / glyph): a persistent, SUBTLE ground-anchored LOOP — a flat radial rune/scorch ring
 // hugging the cell floor + a few slow rising motes. The pack-sourced LAYER 2 that rides under the readable
 // cell-blob (LAYER 1, adapter-painted). LOW emission + clamped colours: a persistent decal must never bloom.
-/** @param {{ name:string, hot:[number,number,number], body:[number,number,number], look:string, rise?:number }} s @returns {VfxPreset} */
+/** @param {{ name:string, hot:[number,number,number], body:[number,number,number], look:VfxAppearance, rise?:number }} s @returns {VfxPreset} */
 export function ground_decal_preset(s) {
   const hot = clamp1(s.hot)
   const body = clamp1(s.body)
@@ -462,7 +464,7 @@ export function ground_decal_preset(s) {
 // grav = Godot particles_orbit / radial_accel / particles_vertical; escale = emission_shape_scale (the volume). ≤1 colours.
 const V = /** @type {[number,number,number]} */ ([0.5, 1, 0.5]) // the common body-hugging ellipsoid emission volume
 const TALL = /** @type {[number,number,number]} */ ([1, 1.5, 1]) // gem/heal/magic taller-wider volume
-/** @param {[number,number,number]} hot @param {[number,number,number]} body @param {string|undefined} look
+/** @param {[number,number,number]} hot @param {[number,number,number]} body @param {VfxAppearance|undefined} look
  *  @param {number} sym @param {'none'|'sphere'|'streaks'} backdrop @param {number} orbit @param {number} radial
  *  @param {number} grav @param {[number,number,number]} escale @param {number} [life] */
 const A = (hot, body, look, sym, backdrop, orbit, radial, grav, escale, life) => ({ hot, body, look, sym, backdrop, motion: { orbit, radial, grav, escale }, symbol_life: life }) // prettier-ignore
@@ -494,7 +496,7 @@ const STATUS = {
 // fire keeps FlameFX `fire`; water→ElementalMagic wave-orb; air→ElectricFX lightning; neutral→BattleFX arcane
 // mote; heal→StatusFX holy cross. The `flame`/`smoke` generic bodies these replaced are now UNREFERENCED (dead).
 const LOOK =
-  /** @type {Record<string, { main: string, soft: string, core?: string, ember?: string, trail?: string }>} */ ({
+  /** @type {Record<string, { main: VfxAppearance, soft: VfxAppearance, core?: VfxAppearance, ember?: VfxAppearance, trail?: VfxAppearance }>} */ ({
     // ember/trail default to a REAL pack look per element (was the generic FBM `spark` — constraint: cut EVERY non-Godot
     // effect): fire → its own FlameFX `fire`; air/heal → the StatusFX aura_mote; neutral → BattleFX arcane_mote.
     fire: { main: 'fire', soft: 'fire', ember: 'fire', trail: 'fire' },

@@ -89,12 +89,9 @@ function band_weight(r, lo, hi, b) {
  */
 
 /**
- * @typedef {object} RegionContext resolved region layer (samplers built once per world).
- * @property {boolean} enabled the layer is on (config enabled + a non-empty class list)
- * @property {import('../noise/sampler.js').FbmSampler|null} field the low-freq region field r
+ * @typedef {object} RegionContextBase resolved region layer fields shared by enabled and disabled contexts.
  * @property {import('../noise/warp.js').WarpSampler|null} warp domain warp for organic band boundaries
  * @property {number} warp_amp warp displacement amplitude, blocks
- * @property {import('../noise/sampler.js').FbmSampler|null} variance the 2nd low-freq jitter channel
  * @property {number} v_relief @property {number} v_rough @property {number} v_bias @property {number} v_ice
  *   intra-region variance amplitudes (relief/rough multiplicative fractions; bias/ice additive blocks)
  * @property {number} blend smoothstep half-width in r units at each class-band boundary
@@ -106,6 +103,22 @@ function band_weight(r, lo, hi, b) {
  *   legacy formula ⇒ byte-identical (no unintended golden fork). Massif worlds ignore it (massif always
  *   modulates); it exists so a spline world can OPT IN to region-driven terrain by adding class knobs.
  */
+
+/**
+ * @typedef {object} EnabledRegionFields
+ * @property {true} enabled
+ * @property {import('../noise/sampler.js').FbmSampler} field the low-freq region field r
+ * @property {import('../noise/sampler.js').FbmSampler} variance the 2nd low-freq jitter channel
+ */
+
+/**
+ * @typedef {object} DisabledRegionFields
+ * @property {false} enabled
+ * @property {null} field
+ * @property {null} variance
+ */
+
+/** @typedef {RegionContextBase & (EnabledRegionFields | DisabledRegionFields)} RegionContext */
 
 /** @type {RegionContext} */
 const DISABLED_CONTEXT = {
@@ -128,8 +141,8 @@ const DISABLED_CONTEXT = {
  * biome NAME pin to its persisted id). Disabled / absent / empty-classes ⇒ enabled:false ⇒ region_profile
  * returns IDENTITY ⇒ byte-identical world. Pure; samplers allocate once. The region seeds are derived from
  * a dedicated `'regions'` sub-seed (fully decorrelated from every climate/massif/carver sampler).
- * @param {RegionsConfig} [cfg]
- * @param {BiomeConfig[]} [biomes] the world biome table (name → id for the pins)
+ * @param {Partial<RegionsConfig>} [cfg]
+ * @param {Pick<BiomeConfig, 'id'|'name'>[]} [biomes] the world biome table (name → id for the pins)
  * @param {string} [seed] the world master seed
  * @returns {RegionContext}
  */
@@ -207,7 +220,7 @@ const WS = [0, 0, 0]
  * terrain/palette params, then jittered by the low-freq variance channel; the DOMINANT (highest-weight)
  * class sets the biome pin. Returns IDENTITY when the layer is off/absent (so the massif stays byte-exact).
  * Pure, region-local, deterministic (arithmetic + seeded fbm + smoothstep only).
- * @param {RegionContext} [rc]
+ * @param {RegionContext | undefined} rc
  * @param {number} world_x @param {number} world_z
  * @returns {RegionProfile}
  */

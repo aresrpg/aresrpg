@@ -22,7 +22,7 @@ function fake_glb(variant = 'black') {
     scene,
     parser: {
       json: { extensions: { KHR_materials_variants: { variants: [{ name: variant }] } } },
-      getDependency: async (kind, index) => {
+      getDependency: async (/** @type {string} */ kind, /** @type {number} */ index) => {
         expect([kind, index]).toEqual(['material', 1])
         return black
       },
@@ -30,7 +30,10 @@ function fake_glb(variant = 'black') {
   }
 }
 
-async function wait_for_mount(worn, slot) {
+async function wait_for_mount(
+  /** @type {ReturnType<typeof create_worn_cosmetics>} */ worn,
+  /** @type {import('./worn_cosmetics.js').WornSlot} */ slot
+) {
   for (let i = 0; i < 100 && !worn.mounted()[slot]; i += 1) await Bun.sleep(1)
   return worn.mounted()[slot]
 }

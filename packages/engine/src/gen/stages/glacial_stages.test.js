@@ -20,7 +20,7 @@ import { create_cirque_context, cirque_carve } from './cirque.js'
 import { create_glacier_context, glacier_surface_block } from './glacier.js'
 import { create_surface_context, surface_by_slope_block, scree_apron_delta } from './surface_by_slope.js'
 
-const clone = () => structuredClone(DEFAULT_WORLD_GEN_CONFIG)
+const clone = () => /** @type {any} */ (structuredClone(DEFAULT_WORLD_GEN_CONFIG))
 const SEEDS = { carvers: 0x1234_5678, decorators: 0x0bad_f00d }
 
 /** Total id diff between two columns (same coords, two recipes). @param {any[]} a @param {any[]} b @returns {number} */
@@ -383,9 +383,15 @@ describe('GLACIAL · all stages ON (test world) generate + differ from DEFAULT; 
   }
 
   test('the DEFAULT relief ladder is ON and load-bearing (disabling crag CHANGES the world)', () => {
-    expect(DEFAULT_WORLD_GEN_CONFIG.crag.enabled).toBe(true)
-    expect(DEFAULT_WORLD_GEN_CONFIG.crag.micro_amp).toBeGreaterThanOrEqual(2) // the anti-flat guarantee
-    expect(DEFAULT_WORLD_GEN_CONFIG.crag.relief_floor).toBe(0)
+    expect(
+      /** @type {NonNullable<typeof DEFAULT_WORLD_GEN_CONFIG.crag>} */ (DEFAULT_WORLD_GEN_CONFIG.crag).enabled
+    ).toBe(true)
+    expect(
+      /** @type {NonNullable<typeof DEFAULT_WORLD_GEN_CONFIG.crag>} */ (DEFAULT_WORLD_GEN_CONFIG.crag).micro_amp
+    ).toBeGreaterThanOrEqual(2) // the anti-flat guarantee
+    expect(
+      /** @type {NonNullable<typeof DEFAULT_WORLD_GEN_CONFIG.crag>} */ (DEFAULT_WORLD_GEN_CONFIG.crag).relief_floor
+    ).toBe(0)
     const off = clone()
     off.crag = { ...off.crag, enabled: false }
     const base = generate_column(create_gen_context(DEFAULT_WORLD_GEN_CONFIG), -49, -49)

@@ -220,7 +220,8 @@ describe('build_droplets — round-7 dense field + bursts + ejecta splinters', (
   test('SIZE-BIASED bursts: heavy beads pop more than dots (mean bursting radius > mean surviving radius)', () => {
     for (const seed of [1, 7, 42, 99]) {
       const primaries = build_droplets(seed).slice(0, LENS_WATER.count)
-      const mean = (a) => a.reduce((s, d) => s + d.radius, 0) / a.length
+      const mean = (/** @type {ReturnType<typeof build_droplets>} */ a) =>
+        a.reduce((s, d) => s + d.radius, 0) / a.length
       const burst = primaries.filter((d) => Number.isFinite(d.burst_at))
       const survive = primaries.filter((d) => !Number.isFinite(d.burst_at))
       expect(mean(burst)).toBeGreaterThan(mean(survive))
@@ -520,7 +521,11 @@ describe('ROUND-10 UNIVERSAL FADE — no element ever pops (every death is a smo
 
   /** Walks alpha_of_t from t0 to t1 at DT and returns the delta of the FIRST step that crosses from visible
    * (>1e-4) to gone (<=1e-4) — the "is this a landing or a cliff" measurement — or null if it never dies. */
-  function death_step(alpha_of_t, t0, t1) {
+  function death_step(
+    /** @type {(t:number) => number} */ alpha_of_t,
+    /** @type {number} */ t0,
+    /** @type {number} */ t1
+  ) {
     let prev = alpha_of_t(t0)
     for (let t = t0 + DT; t <= t1; t += DT) {
       const a = alpha_of_t(t)

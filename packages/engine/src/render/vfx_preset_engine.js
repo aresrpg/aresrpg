@@ -405,9 +405,9 @@ function build_emitter_material(em, age, origin, travel, salt, scale, loop, mul)
     const th = float(em.orbit).mul(la)
     const ct = th.cos()
     const st = th.sin()
-    const rx = local.x.sub(cx)
-    const rz = local.z.sub(cz)
-    local = vec3(rx.mul(ct).sub(rz.mul(st)).add(cx), local.y, rx.mul(st).add(rz.mul(ct)).add(cz))
+    const rx = /** @type {any} */ (local.x).sub(cx)
+    const rz = /** @type {any} */ (local.z).sub(cz)
+    local = vec3(rx.mul(ct).sub(rz.mul(st)).add(cx), /** @type {any} */ (local.y), rx.mul(st).add(rz.mul(ct)).add(cz))
   }
   // trail emitters (moving-emitter primitive): subtract travel·age so the particle stays at its BIRTH world point
   // (origin has advanced ~travel·la since then) — a flying orb sheds a world-static wake instead of dragging its puff.
@@ -446,7 +446,8 @@ function build_emitter_material(em, age, origin, travel, salt, scale, loop, mul)
     // GENERIC fiery billboard (the _debug probe + the spark embers/trails/debris) — noise silhouette + life-mix.
     col = mix(vec3(c0[0], c0[1], c0[2]), vec3(c1[0], c1[1], c1[2]), u.clamp(0, 1))
     const shape = flame_field(kind, { age: clock, seed: mcn.y })
-    if (kind === 'flame') col = mix(col.mul(vec3(0.6, 0.2, 0.1)), col, shape.heat.clamp(0, 1).pow(0.55))
+    if (kind === 'flame')
+      col = mix(col.mul(vec3(0.6, 0.2, 0.1)), col, /** @type {any} */ (shape.heat).clamp(0, 1).pow(0.55))
     shape_alpha = shape.alpha
   } else {
     // GENERIC crisp graphic (ring/glow/star fallback) — life-mix colour.

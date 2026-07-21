@@ -157,7 +157,7 @@ function create_alpine_context(cfg, seed) {
  * Builds the slope/snow surface stage context from a world's `surface` config. Pure; resolves block
  * names once. Disabled config ⇒ active:false (block_at skips the whole stage). `seeds.decorators` (when
  * supplied) seeds the §C snow-score speckle sampler.
- * @param {SurfaceConfig} [cfg]
+ * @param {Partial<SurfaceConfig>} [cfg]
  * @param {number} [world_height] used to default an unset treeline to "off" (no blocking)
  * @param {Record<string, number>} [seeds] world sub-seeds (for the snow-score speckle sampler)
  * @returns {SurfaceContext}

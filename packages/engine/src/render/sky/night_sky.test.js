@@ -97,7 +97,7 @@ describe('horizon extinction — the sky sinks into the terrain instead of cutti
   })
 
   test('ON (the shipped NIGHT_SKY_LIVE window): 0 at/below the horizon, 1 at/above start_deg, zenith untouched', () => {
-    const hf = NIGHT_SKY_LIVE.horizon_fade
+    const hf = /** @type {{start_deg:number, end_deg:number}} */ (NIGHT_SKY_LIVE.horizon_fade)
     expect(hf).toBeTruthy() // the fix must actually be wired into the shipped cfg
     expect(horizon_fade_js(elev_y(hf.end_deg), hf)).toBeCloseTo(0, 9) // the true horizon: fully extinct
     expect(horizon_fade_js(elev_y(hf.start_deg), hf)).toBeCloseTo(1, 9) // fully clear by start_deg
@@ -106,7 +106,7 @@ describe('horizon extinction — the sky sinks into the terrain instead of cutti
   })
 
   test('monotonic non-decreasing from the horizon up to the zenith, strictly partial mid-ramp', () => {
-    const hf = NIGHT_SKY_LIVE.horizon_fade
+    const hf = /** @type {{start_deg:number, end_deg:number}} */ (NIGHT_SKY_LIVE.horizon_fade)
     let prev = -1
     for (let d = hf.end_deg; d <= 90; d += 0.5) {
       const v = horizon_fade_js(elev_y(d), hf)
@@ -121,7 +121,7 @@ describe('horizon extinction — the sky sinks into the terrain instead of cutti
   })
 
   test('band/nebula fade ALL THE WAY to 0 at the horizon; stars only dim to STAR_HORIZON_FLOOR (never vanish)', () => {
-    const hf = NIGHT_SKY_LIVE.horizon_fade
+    const hf = /** @type {{start_deg:number, end_deg:number}} */ (NIGHT_SKY_LIVE.horizon_fade)
     const ext_band_at_horizon = horizon_fade_js(elev_y(hf.end_deg), hf) // milky way / nebula consume this raw
     const ext_star_at_horizon = STAR_HORIZON_FLOOR + (1 - STAR_HORIZON_FLOOR) * ext_band_at_horizon // stars: mix(FLOOR,1,hf)
     expect(ext_band_at_horizon).toBeCloseTo(0, 9)
@@ -197,7 +197,7 @@ describe('stars — luminance discipline (the bloom-knee law)', () => {
         luminance(neb.orange),
         ...(neb.regions ?? []).map((r) => luminance(r.rgb))
       ) * neb.intensity
-    const base = luminance(cfg.base_palette.horizon)
+    const base = luminance(/** @type {import('./sky_node.js').SkyPalette} */ (cfg.base_palette).horizon)
     const total = worst_star + band_glow + nebula_peak + base
     expect(total).toBeLessThan(2.05) // hand-calc H2 (in-engine-tuned mw 0.10 / nebula 0.9) ≈ 1.95
     expect(cfg.star_bright_mul).toBeLessThanOrEqual(1.1) // brightness knob stays knee-safe; density carries "more stars"

@@ -323,7 +323,9 @@ export function create_post_stack({
     // instead of the raw scene texture. The underwater warp is bypassed under TAAU (the resolve owns the
     // sub-pixel history); dry/non-TAAU frames are byte-identical to before. taau_node is reachable from
     // the output graph here so its per-frame resolve (updateBefore) runs inside the pipeline.
-    const taau_node = use_temporal ? taau(scene_color, scene_depth, scene_velocity, camera) : null
+    const taau_node = use_temporal
+      ? taau(scene_color, scene_depth, /** @type {import('three/webgpu').TextureNode} */ (scene_velocity), camera)
+      : null
     if (taau_node) {
       // TAAUNode's private previous-depth RT defaults to a Depth24Plus DepthTexture, but this engine's
       // scene-pass depth is Depth32Float (reversed-Z WebGPU + FloatType water depth grab). Its per-frame
@@ -387,7 +389,11 @@ export function create_post_stack({
     // the coupled Hillaire sun (direction + radiance) refreshed every frame in update() below. Live tuning:
     // window.__godrays.{u_density,u_g,u_falloff_h,u_ground_y,u_strength,u_max_dist}.
     if (godrays_ready_now()) {
-      god_rays = create_god_rays({ light: godrays_light, camera, scene_depth })
+      god_rays = create_god_rays({
+        light: /** @type {import('three').DirectionalLight} */ (godrays_light),
+        camera,
+        scene_depth,
+      })
       col = col.add(god_rays.in_scatter)
       if (typeof window !== 'undefined') /** @type {any} */ (window).__godrays = god_rays
     }
@@ -456,7 +462,7 @@ export function create_post_stack({
     const low_freq = rtt(ldr, LF_W, LF_H)
     meter_rt = low_freq.renderTarget // AUTO-EXPOSURE metering source (readback in renderer.js)
     const graded = atmo.grade.apply(ldr.rgb, luminance(low_freq.rgb))
-    let out = vec4(graded, 1)
+    /** @type {*} */ let out = vec4(graded, 1)
 
     // ── OUTPUT EFFECT HOOK (ENG-8 camera motion blur) ── final additive wrap in display space. The
     // effect samples this graded frame with velocity offsets, so it MUST run last (after grade/AgX) —

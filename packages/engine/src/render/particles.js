@@ -605,7 +605,7 @@ export function create_particles(opts = {}) {
       // this point). Now: loud + recovered — particle_seed()'s deterministic CPU hash (already the
       // TESTED reference mote_position() validates against) reseeds the SAME buffers the position/
       // colour nodes already read via cpu_seed_fallback (no compute dispatch, no material rebuild).
-      const reason = err?.message ?? String(err)
+      const reason = /** @type {{message?: string}|null|undefined} */ (err)?.message ?? String(err)
       console.error(
         `[particles] GPU seed bake failed (kind=${opts.kind ?? 'ambient'}, count=${count}) — ` +
           `falling back to a CPU-seeded bake: ${reason}`

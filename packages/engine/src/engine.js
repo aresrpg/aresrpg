@@ -139,6 +139,7 @@ const ANALYTIC_GROUND_ID = /** @type {number} */ (get_block_by_name('stone')?.id
  * @typedef {object} EngineOptions
  * @property {HTMLCanvasElement} canvas target canvas — engine owns its GPU device/context
  * @property {string} [seed] world seed; defaults to the hardcoded master seed (§10.5)
+ * @property {import('./config/world_gen_config.js').WorldGenConfig} [world_config] complete generation recipe
  * @property {TierName} [tier] initial quality tier; omit to run adapter+benchmark autodetect (§5.2)
  * @property {number} [load_radius] horizontal streaming view radius in chunks. Omit to use the
  *   canonical LOAD_RADIUS_CHUNKS (world_config — the SINGLE SOURCE OF TRUTH for view distance).
@@ -170,7 +171,7 @@ const ANALYTIC_GROUND_ID = /** @type {number} */ (get_block_by_name('stone')?.id
  * @property {number} quad_count total live quads across uploaded chunks
  * @property {TierName} tier current active tier (post-governor)
  * @property {number} render_scale current dynamic render-resolution scale
- * @property {number} time_of_day DAY-NIGHT: the sky's live cycle phase in [0,1) (0 pre-boot/no sky) — the
+ * @property {number} [time_of_day] DAY-NIGHT: the sky's live cycle phase in [0,1) (omitted on the minimal fallback) — the
  *   §7 HUD feed for the day-night dial; also the ENGINE→UI readback a GUI panel polls to resync a local
  *   tod value after a DIRECT set_time_of_day call bypasses it (demo main.js STALE-GUI fix, 2026-07-19).
  * @property {number} chunk_queue_depth pending gen+mesh jobs
@@ -338,7 +339,13 @@ export function create_engine({
     // ?proctrees so main-thread gen and the gen/far workers derive the SAME world. Validated below.
     const baketrees_param = url_params.get('baketrees')
     if (baketrees_param !== null) {
-      world_config = { ...world_config, trees: { ...world_config.trees, baked_variants: Number(baketrees_param) } }
+      world_config = {
+        ...world_config,
+        trees: {
+          .../** @type {import('./config/world_gen_config.js').TreesConfig} */ (world_config.trees),
+          baked_variants: Number(baketrees_param),
+        },
+      }
     }
   }
   // Config-first world selection: validate the recipe up front and REFUSE loudly on an invalid one — a
@@ -377,7 +384,7 @@ export function create_engine({
   const backend =
     synthetic_chunks === undefined
       ? pick_renderer_backend({
-          navigator_gpu: typeof navigator !== 'undefined' ? navigator.gpu : undefined,
+          navigator_gpu: typeof navigator !== 'undefined' ? /** @type {any} */ (navigator).gpu : undefined,
           force_webgl,
         })
       : 'webgpu'
@@ -1612,7 +1619,7 @@ export function create_engine({
       // window.__terrain_renderer hook BEFORE the device teardown below — else the whole stale
       // renderer stays rooted across scene swaps / tier reboots (~299 MB retained).
       dispose_terrain(terrain_renderer, typeof window !== 'undefined' ? /** @type {any} */ (window) : undefined)
-      terrain_renderer = null
+      terrain_renderer = /** @type {any} */ (null)
       renderer_handle?.dispose()
     },
     on(event, callback) {

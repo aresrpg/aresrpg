@@ -137,7 +137,7 @@ function elem_tail({ age, seed, grow, pri, sec, emission }) {
     .sub(uvp.y.oneMinus().mul(1 + (1 - tail_len)))
     .mul(grow)
     .max(0)
-  const value = smoothstep(0.0, 0.5, value0)
+  const value = /** @type {any} */ (smoothstep(0.0, 0.5, value0))
   return { rgb: mix(sec, pri, value).mul(emission), alpha: value.mul(bb_mask(0.62)) } // SphereMesh silhouette (was a hard quad)
 }
 
@@ -214,7 +214,7 @@ function elem_area({ age, grow, pri, sec, emission }) {
     .mul(2)
   const gradient0 = radius.oneMinus().max(0).mul(grow).pow(6).max(0) // gradient_texture ≈ radial falloff^6
   const noise = nz(vec2(radius, angle).sub(vec2(age.mul(0.2), 0)))
-  const gradient = mix(overlay(gradient0, noise), gradient0, 0.5)
+  const gradient = /** @type {any} */ (mix(overlay(gradient0, noise), gradient0, 0.5))
   const color = mix(sec, pri, gradient) // color_curve = 1 (default) ⇒ no pow
   return { rgb: color.mul(emission), alpha: gradient.clamp(0, 1) }
 }
@@ -479,7 +479,7 @@ function bubble({ age, seed, pri, sec, emission }) {
   const shape0 = float(0.2).add(shaped_r.pow(4).div(0.8).mul(0.8)).mul(inside)
   const shine0 = uvp.mul(2).sub(0.7).length().add(0.8).oneMinus().max(0)
   const shine = shine0.pow(0.5).mul(inside)
-  const shape = shape0.add(shine).clamp(0, 1)
+  const shape = /** @type {any} */ (shape0.add(shine).clamp(0, 1))
   const color = mix(sec, pri, shape).mul(seed.mul(0.5).add(0.5))
   return { rgb: color.mul(emission), alpha: shape }
 }

@@ -112,6 +112,7 @@ export function sun_transmittance(mu, p = EARTH_ATMOSPHERE, cam_km = CAM_KM, ste
  * @returns {number[]} [r,g,b] linear
  */
 export function sky_irradiance(sun_dir) {
+  /** @type {import('../sky/sky_node.js').Rgb[]} */
   const dirs = [[0, 1, 0]]
   for (const el of [Math.PI / 3, Math.PI / 8]) {
     const ce = Math.cos(el)
@@ -125,7 +126,7 @@ export function sky_irradiance(sun_dir) {
   let w = 0
   for (const d of dirs) {
     const cw = Math.max(0, d[1]) // cosine-elevation weight (dome-heavy)
-    const c = sample_sky_rgb(d, sun_dir)
+    const c = sample_sky_rgb(d, /** @type {import('../sky/sky_node.js').Rgb} */ (sun_dir))
     acc[0] += c[0] * cw
     acc[1] += c[1] * cw
     acc[2] += c[2] * cw

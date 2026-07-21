@@ -138,18 +138,20 @@ export function create_vfx_overlay({ scene, camera, scene_depth }) {
   // and the pass finally is what its header claims — isolated VFX light on black. Node-based background only
   // (scene.backgroundNode); scene.background is nulled too for a belt-and-braces classic-background guard.
   const orig_update_before = vfx_pass.updateBefore.bind(vfx_pass)
-  vfx_pass.updateBefore = (/** @type {*} */ frame) => {
-    const saved_node = scene.backgroundNode
-    const saved_background = scene.background
-    scene.backgroundNode = null
-    scene.background = null
-    try {
-      orig_update_before(frame)
-    } finally {
-      scene.backgroundNode = saved_node
-      scene.background = saved_background
+  vfx_pass.updateBefore = /** @type {any} */ (
+    (/** @type {*} */ frame) => {
+      const saved_node = scene.backgroundNode
+      const saved_background = scene.background
+      scene.backgroundNode = null
+      scene.background = null
+      try {
+        orig_update_before(frame)
+      } finally {
+        scene.backgroundNode = saved_node
+        scene.background = saved_background
+      }
     }
-  }
+  )
 
   const vfx_color = vfx_pass.getTextureNode() // additive accumulation on black (the isolated VFX light)
   const vfx_depth = vfx_pass.getTextureNode('depth') // representative nearest-particle depth (materials depthWrite ON)

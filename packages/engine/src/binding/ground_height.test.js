@@ -18,8 +18,8 @@ const default_ctx = create_gen_context(DEFAULT_WORLD_GEN_CONFIG)
 // a deterministic lattice of 100 world columns spread around spawn (no RNG in tests).
 const COORDS = Array.from({ length: 100 }, (_, i) => [((i * 613) % 1400) - 700, ((i * 379) % 1400) - 700])
 
-const floor_div = (a, b) => Math.floor(a / b)
-const local = (a) => ((a % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE
+const floor_div = (/** @type {number} */ a, /** @type {number} */ b) => Math.floor(a / b)
+const local = (/** @type {number} */ a) => ((a % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE
 const SOLID_FLUIDS = new Set([5, 24]) // water, lava — never "ground"
 
 describe('binding/ground_height — determinism (§4)', () => {

@@ -76,7 +76,7 @@ const CROSS_TWIN = [
 ]
 
 /** Serialize an on-cell Set to the Move-identical 6×u64 word vector (word = c>>6, bit = c&63) → decimal strings. */
-const mask_words = (set) => {
+const mask_words = (/** @type {Set<number>} */ set) => {
   const w = [0n, 0n, 0n, 0n, 0n, 0n]
   for (const c of set) w[c >> 6] |= 1n << BigInt(c & 63)
   return w.map(String)
@@ -103,7 +103,7 @@ describe('voids_from_shape_mask — chain bitset → voids, bit order per combat
   // Build the mask with the EXACT Move formula (combat_grid.move mask_set:183-189): cell = y*20 + x,
   // word = cell/64, bit = cell%64. The adapter's voids must then be exactly the box cells whose bit is 0.
   const GRID_W = 20
-  const set_bit = (words, c) => {
+  const set_bit = (/** @type {bigint[]} */ words, /** @type {number} */ c) => {
     words[Math.floor(c / 64)] |= 1n << BigInt(c % 64)
   }
 
@@ -171,7 +171,7 @@ describe('binding/board_spec_for_anchor — determinism', () => {
 })
 
 describe('binding/board_spec_for_anchor — well-formed board.build() spec', () => {
-  const key = (c) => `${c.x},${c.y}`
+  const key = (/** @type {{x: number, y: number}} */ c) => `${c.x},${c.y}`
 
   test('dims in range; obstacles/holes within caps; disjoint from each other and voids', () => {
     for (const [x, z] of ANCHORS) {

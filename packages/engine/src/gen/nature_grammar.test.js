@@ -164,7 +164,7 @@ const everest_off = {
 }
 
 /** Map of column "wx,wz" → placement signature (`name@surface_y`, or '' for none) over the valley. */
-function scan_placements(cfg) {
+function scan_placements(/** @type {import('../config/world_gen_config.js').WorldGenConfig} */ cfg) {
   const ctx = create_gen_context(cfg)
   const seed = /** @type {*} */ (ctx).seeds.decorators
   const m = new Map()

@@ -81,7 +81,9 @@ describe('B5 mood — flag-off / neutral parity (frozen-MEDIUM law)', () => {
   test('every preset carries a known B7 particle_kind + positive density', () => {
     const KINDS = new Set(['ambient', ...Object.keys(PARTICLE_KINDS)])
     for (const [name, preset] of Object.entries(MOOD_PRESETS)) {
-      expect(KINDS.has(preset.particle_kind), `${name} kind "${preset.particle_kind}"`).toBe(true)
+      expect(KINDS.has(/** @type {string} */ (preset.particle_kind)), `${name} kind "${preset.particle_kind}"`).toBe(
+        true
+      )
       expect(preset.particle_density, `${name} density`).toBeGreaterThan(0)
     }
     expect(NEUTRAL_MOOD.particle_kind).toBe('ambient')

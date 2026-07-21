@@ -19,7 +19,7 @@ const forest_biome_ids = new Set(
     .map((biome) => biome.id)
 )
 
-function path_crosses(blocked, axis) {
+function path_crosses(/** @type {Uint8Array} */ blocked, /** @type {'west_east'|'north_south'} */ axis) {
   const visited = new Uint8Array(blocked.length)
   const queue = new Int32Array(blocked.length)
   let head = 0

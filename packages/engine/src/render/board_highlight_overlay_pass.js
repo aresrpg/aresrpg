@@ -115,18 +115,20 @@ export function create_highlight_overlay({ scene, camera, scene_depth }) {
   // pipeline recompile). Suppress the background for THIS pass's own render only; restore it synchronously in
   // the same updateBefore so the MAIN pass still draws the sky normally.
   const orig_update_before = hl_pass.updateBefore.bind(hl_pass)
-  hl_pass.updateBefore = (/** @type {*} */ frame) => {
-    const saved_node = scene.backgroundNode
-    const saved_background = scene.background
-    scene.backgroundNode = null
-    scene.background = null
-    try {
-      orig_update_before(frame)
-    } finally {
-      scene.backgroundNode = saved_node
-      scene.background = saved_background
+  hl_pass.updateBefore = /** @type {any} */ (
+    (/** @type {*} */ frame) => {
+      const saved_node = scene.backgroundNode
+      const saved_background = scene.background
+      scene.backgroundNode = null
+      scene.background = null
+      try {
+        orig_update_before(frame)
+      } finally {
+        scene.backgroundNode = saved_node
+        scene.background = saved_background
+      }
     }
-  }
+  )
 
   const hl_color = hl_pass.getTextureNode() // premultiplied wash colour·α on black (NormalBlending over the clear)
   const hl_depth = hl_pass.getTextureNode('depth') // representative floor depth (materials depthWrite ON via route)
@@ -160,10 +162,8 @@ export function create_highlight_overlay({ scene, camera, scene_depth }) {
       // is a vec4. The composite below is an rgb-over that appends its OWN alpha (the trailing `1`); without
       // this swizzle `display.mul(a)` stays vec4 and widens the add to vec4, so `vec4(<vec4>, 1)` overflows
       // to 5 components — THREE.TSL "Length of parameters exceeds maximum length of 'vec4()'" at boot.
-      const display = convertColorSpace(
-        toneMapping(AgXToneMapping, u_exposure, lin),
-        LinearSRGBColorSpace,
-        SRGBColorSpace
+      const display = /** @type {any} */ (
+        convertColorSpace(toneMapping(AgXToneMapping, u_exposure, lin), LinearSRGBColorSpace, SRGBColorSpace)
       ).rgb
       // standard OVER onto the graded sRGB frame: out·(1−a) + display·a.
       return vec4(out.rgb.mul(float(1).sub(a)).add(display.mul(a)), 1)

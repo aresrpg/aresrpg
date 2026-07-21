@@ -558,7 +558,9 @@ describe('aura on-body compositions (StatusFX .tscn structure) + the entity anch
       const p = PRESETS[n]
       expect(p.loop, `${n} loops`).toBe(true)
       for (const e of p.emitters)
-        expect(['capsule', 'streaks', 'aura', 'symbols'], `${n} layer ${e.name}`).toContain(e.name)
+        expect(['capsule', 'streaks', 'aura', 'symbols'], `${n} layer ${e.name}`).toContain(
+          /** @type {string} */ (e.name)
+        )
       expect(layer(n, 'aura'), `${n} has an aura layer`).toBeTruthy()
     }
   })

@@ -165,7 +165,7 @@ describe('TR-1 cinematic camera (trailer mode)', () => {
     const cam = create_shoulder_camera({ yaw: 0 })
     cam.set_cinematic(true)
     cam.dolly(1000) // way out → clamps to CINE_MAX_DIST
-    let pose = FRAME()
+    let pose = /** @type {import('./camera_rig.js').CameraPose} */ (/** @type {unknown} */ (FRAME()))
     for (let i = 0; i < 600; i += 1) pose = cam.update(FRAME()) // open air, let zoom_dist ease out
     expect(pose.distance).toBeGreaterThan(MAX_DIST) // beyond the normal 8 m
     expect(pose.distance).toBeLessThanOrEqual(CINE_MAX_DIST + 1e-6) // but never past the 16 m ceiling
@@ -175,7 +175,7 @@ describe('TR-1 cinematic camera (trailer mode)', () => {
     const cam = create_shoulder_camera({ yaw: 0 })
     cam.set_cinematic(true)
     cam.dolly(-1000) // full zoom-in → clamps to CINE_MIN_DIST
-    let pose = FRAME()
+    let pose = /** @type {import('./camera_rig.js').CameraPose} */ (/** @type {unknown} */ (FRAME()))
     for (let i = 0; i < 600; i += 1) pose = cam.update(FRAME())
     expect(pose.distance).toBeLessThan(MIN_DIST) // below 1.2 m → embed hides the avatar → first person
   })
@@ -186,7 +186,7 @@ describe('TR-1 cinematic camera (trailer mode)', () => {
     cam.dolly(1000) // out to 16
     for (let i = 0; i < 600; i += 1) cam.update(FRAME())
     cam.set_cinematic(false) // must snap target + eased distance back into [MIN,MAX]
-    let pose = FRAME()
+    let pose = /** @type {import('./camera_rig.js').CameraPose} */ (/** @type {unknown} */ (FRAME()))
     for (let i = 0; i < 600; i += 1) pose = cam.update(FRAME())
     expect(pose.distance).toBeLessThanOrEqual(MAX_DIST + 1e-6) // normal mode can never sit past 8 m
   })
@@ -285,7 +285,14 @@ describe('S-75 first-person zoom', () => {
 const { CAM_WALL_MARGIN } = CAMERA_RIG_CONSTANTS
 
 /** Euclidean distance from a point to the block AABB [bx,bx+1]×[by,by+1]×[bz,bz+1]. */
-function dist_to_block(px, py, pz, bx, by, bz) {
+function dist_to_block(
+  /** @type {number} */ px,
+  /** @type {number} */ py,
+  /** @type {number} */ pz,
+  /** @type {number} */ bx,
+  /** @type {number} */ by,
+  /** @type {number} */ bz
+) {
   const dx = Math.max(bx - px, 0, px - (bx + 1))
   const dy = Math.max(by - py, 0, py - (by + 1))
   const dz = Math.max(bz - pz, 0, pz - (bz + 1))

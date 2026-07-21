@@ -175,7 +175,7 @@ describe('OCCUPANCY LESSON: stamped canopy meshes (bald-tree regression guard)',
     const s = load_schematic('GRASSLAND_TREE_G4')
     const c = create_chunk_record(0, 4, 0)
     const written = stamp_into_chunk(c, 0, 4, 0, 16, 16, 130, s, 0)
-    expect(written).toBe(s.voxels.length) // whole tree fits in-bounds
+    expect(written).toBe(/** @type {NonNullable<typeof s.voxels>} */ (s.voxels).length) // whole tree fits in-bounds
     expect(quads_of(c, LEAVES)).toBeGreaterThan(0) // canopy is NOT invisible
     expect(quads_of(c, LOG)).toBeGreaterThan(0) // trunk renders
   })
@@ -261,7 +261,7 @@ describe('HALO: giant tree straddling 4 chunks (TAIGA_CHENE_BIG_G2, 21×73×25)'
     expect(forward.u.size).toBe(reversed.u.size)
     for (const [k, id] of forward.u) expect(reversed.u.get(k)).toBe(id)
     // and the union equals the schematic's full non-air voxel count (nothing lost to clipping)
-    expect(forward.u.size).toBe(s.voxels.length)
+    expect(forward.u.size).toBe(/** @type {NonNullable<typeof s.voxels>} */ (s.voxels).length)
   })
 })
 

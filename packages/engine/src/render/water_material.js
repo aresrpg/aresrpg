@@ -1681,6 +1681,7 @@ export function create_water_material_nodes({
  * @param {*} ctx.face_node float node = decoded quad face id (0..5) — vertical faces get the cascade.
  * @param {*} ctx.brightness float node = the voxel sun/block-light scalar (used only as a broad cave switch).
  * @param {*} ctx.emission_node vec3 node = registry block emission (added through, usually 0 for water).
+ * @param {boolean} [ctx.simple] build the reduced LOW-tier water graph.
  */
 export function apply_water_to_material(material, { face_node, brightness, emission_node, simple = false }) {
   // [MOBILE SHADER DIET D5] LOW builds the FLAT far-shell-style near-water — one body/shallow tint + a

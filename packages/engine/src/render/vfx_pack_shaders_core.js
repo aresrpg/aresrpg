@@ -319,7 +319,7 @@ function trail_blade({ age, seed }) {
 }
 
 /** Godot overlay() blend (used by streaks/flare/impact_core). base,blend are −1..1 sine bands here. */
-function overlay(base, blend) {
+function overlay(/** @type {any} */ base, /** @type {any} */ blend) {
   const b = base.mul(0.5).add(0.5)
   const s = blend.mul(0.5).add(0.5)
   const lo = b.mul(s).mul(2)

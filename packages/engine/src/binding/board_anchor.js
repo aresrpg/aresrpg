@@ -230,13 +230,15 @@ function generate(board_seed, variant = 0) {
 }
 
 // ── shape geometry (byte-identical twin of combat_grid's mask builders) ──────────────────────────────
-/** Fill row `y` cells x∈[lo,hi) into the mask (the convexity primitive). `hi` clamped to GRID_W. */
+/** Fill row `y` cells x∈[lo,hi) into the mask (the convexity primitive). `hi` clamped to GRID_W.
+ * @param {Set<number>} mask @param {number} y @param {number} lo @param {number} hi */
 function fill_row(mask, y, lo, hi) {
   const end = Math.min(hi, GRID_W)
   for (let x = lo; x < end; x += 1) mask.add(encode(x, y))
 }
 
-/** ELLIPSE(w,h): filled axis-aligned ellipse (per-row single run). */
+/** ELLIPSE(w,h): filled axis-aligned ellipse (per-row single run).
+ * @param {number} w @param {number} h @returns {Set<number>} */
 function ellipse_mask(w, h) {
   const m = new Set()
   const cx2 = w - 1
@@ -259,7 +261,8 @@ function ellipse_mask(w, h) {
   return m
 }
 
-/** ROUNDED(w,h,r): RECT with quarter-arc corners of radius r trimmed. r=0 → RECT. */
+/** ROUNDED(w,h,r): RECT with quarter-arc corners of radius r trimmed. r=0 → RECT.
+ * @param {number} w @param {number} h @param {number} r @returns {Set<number>} */
 function rounded_mask(w, h, r) {
   const m = new Set()
   for (let y = 0; y < h; y += 1) {
@@ -270,7 +273,8 @@ function rounded_mask(w, h, r) {
   return m
 }
 
-/** Cells cut from one horizontal end of row `y` by a quarter-arc corner of radius `r`. Integer-only. */
+/** Cells cut from one horizontal end of row `y` by a quarter-arc corner of radius `r`. Integer-only.
+ * @param {number} r @param {number} y @param {number} h @param {boolean} top @returns {number} */
 function corner_cut(r, y, h, top) {
   if (r === 0) return 0
   const in_band = top ? y < r : y >= h - r
@@ -286,7 +290,9 @@ function corner_cut(r, y, h, top) {
   return cut
 }
 
-/** BLOB(w,h,rTl,rTr,rBl,rBr): rounded rect, four independent corner radii (asymmetric/organic). */
+/** BLOB(w,h,rTl,rTr,rBl,rBr): rounded rect, four independent corner radii (asymmetric/organic).
+ * @param {number} w @param {number} h @param {number} r_tl @param {number} r_tr
+ * @param {number} r_bl @param {number} r_br @returns {Set<number>} */
 function blob_mask(w, h, r_tl, r_tr, r_bl, r_br) {
   const m = new Set()
   for (let y = 0; y < h; y += 1) {
@@ -301,7 +307,9 @@ function blob_mask(w, h, r_tl, r_tr, r_bl, r_br) {
   return m
 }
 
-/** CROSS(w,h): horizontal bar rows [ry0,ry1) full-width ∪ vertical bar cols [cx0,cx1) full-height. */
+/** CROSS(w,h): horizontal bar rows [ry0,ry1) full-width ∪ vertical bar cols [cx0,cx1) full-height.
+ * @param {number} w @param {number} h @param {number} ry0 @param {number} ry1
+ * @param {number} cx0 @param {number} cx1 @returns {Set<number>} */
 function cross_mask(w, h, ry0, ry1, cx0, cx1) {
   const m = new Set()
   for (let y = 0; y < h; y += 1) {
@@ -312,7 +320,9 @@ function cross_mask(w, h, ry0, ry1, cx0, cx1) {
 }
 
 /** The playable mask for `shape_code` + params drawn from the rng cursor. Returns { mask, state }.
- *  Byte-identical draw order to dungeon_grid::build_shape. */
+ *  Byte-identical draw order to dungeon_grid::build_shape.
+ * @param {number} s @param {number} shape_code @param {number} w @param {number} h
+ * @returns {{mask: Set<number>, state: number}} */
 function build_shape(s, shape_code, w, h) {
   const draw = (/** @type {any} */ fn, /** @type {number[]} */ ...a) => {
     const r = fn(s, ...a)
@@ -358,7 +368,8 @@ function blocker_placeable(mask, blocked, cand) {
   return true
 }
 
-/** The candidate enumeration the blocker probe walks (row-major on-mask cells whose 8-ring is on-mask). */
+/** The candidate enumeration the blocker probe walks (row-major on-mask cells whose 8-ring is on-mask).
+ * @param {Set<number>} mask @returns {number[]} */
 function placeable_candidates(mask) {
   const out = []
   const empty = new Set()
@@ -366,7 +377,9 @@ function placeable_candidates(mask) {
   return out
 }
 
-/** Place up to `count` king-isolated blockers into `out` (holding priors). Returns the next rng state. */
+/** Place up to `count` king-isolated blockers into `out` (holding priors). Returns the next rng state.
+ * @param {number} s @param {Set<number>} mask @param {number[]} candidates @param {Set<number>} out
+ * @param {number} count @returns {number} */
 function place_blockers(s, mask, candidates, out, count) {
   const len = candidates.length
   if (len === 0) return s
@@ -390,15 +403,19 @@ function place_blockers(s, mask, candidates, out, count) {
   return s
 }
 
-/** The on-mask unblocked cells (row-major) — the start-cell pool. */
+/** The on-mask unblocked cells (row-major) — the start-cell pool.
+ * @param {Set<number>} mask @param {Set<number>} blocked @returns {number[]} */
 function open_cells(mask, blocked) {
   const out = []
   for (let c = 0; c < GRID_CELLS; c += 1) if (mask.has(c) && !blocked.has(c)) out.push(c)
   return out
 }
 
-/** Pick `count` start cells from `pool` at the near (from_top) or far end, disjoint from `used`. */
+/** Pick `count` start cells from `pool` at the near (from_top) or far end, disjoint from `used`.
+ * @param {number[]} pool @param {number} count @param {boolean} from_top @param {number[]} used
+ * @returns {number[]} */
 function pick_starts(pool, count, from_top, used) {
+  /** @type {number[]} */
   const out = []
   const used_set = new Set(used)
   const n = pool.length

@@ -44,7 +44,7 @@ function id_or(name, fallback) {
 /**
  * Builds the glacier stage context from a world's `glacier` recipe + sea level. Ice ids are resolved by name
  * (feature-detected — a bundle without `ice` disables the stage). Disabled ⇒ enabled:false everywhere.
- * @param {GlacierConfig} [cfg]
+ * @param {Partial<GlacierConfig>} [cfg]
  * @param {number} [sea_level]
  * @returns {GlacierContext}
  */

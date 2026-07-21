@@ -629,6 +629,7 @@ describe('leaf_normal_index: bent-normal outward bucket (the shader-decode wire 
   // JS MIRROR of the terrain_material.js TSL decode — MUST match bit-for-bit (gx=idx%3−1, etc.). This is
   // the tested twin that locks the cross-file contract: a silent change here or there would flatten the
   // canopy shading with no other alarm. Also asserts the index fits the free 5-bit AO slice (bits 23-27).
+  /** @param {number} idx */
   const decode = (idx) => [(idx % 3) - 1, (Math.floor(idx / 3) % 3) - 1, (Math.floor(idx / 9) % 3) - 1]
 
   test('round-trips every 3³ open-neighbour combo, and the index stays in 0..26 (5-bit)', () => {

@@ -40,23 +40,25 @@ function to_unit(h) {
  * Builds the cirque stage context from the carvers sub-seed + a world's `cirque` recipe. Disabled ⇒
  * enabled:false. The region cache stores bowls keyed by region (a pure fn of region+seed+the probed
  * terrain, so bounded eviction is world-neutral).
- * @param {CirqueConfig} [cfg]
+ * @param {Partial<CirqueConfig>} [cfg]
  * @param {Record<string, number>} [seeds] output of derive_world_seeds
  * @returns {CirqueContext}
  */
 export function create_cirque_context(cfg, seeds) {
-  const c = cfg ?? {
-    enabled: false,
-    region_size: 256,
-    region_rate: 0.5,
-    per_region: 2,
-    radius_min: 26,
-    radius_max: 60,
-    depth: 34,
-    floor_ratio: 0.35,
-    lip: 3,
-    min_altitude: 180,
-  }
+  const c = /** @type {CirqueConfig} */ (
+    cfg ?? {
+      enabled: false,
+      region_size: 256,
+      region_rate: 0.5,
+      per_region: 2,
+      radius_min: 26,
+      radius_max: 60,
+      depth: 34,
+      floor_ratio: 0.35,
+      lip: 3,
+      min_altitude: 180,
+    }
+  )
   return {
     enabled: c.enabled === true,
     seed: ((seeds?.carvers ?? 0) >>> 0) ^ (0xc19_2e00 >>> 0),

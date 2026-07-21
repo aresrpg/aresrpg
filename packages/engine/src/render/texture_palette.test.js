@@ -15,6 +15,7 @@ import { bake_block_textures } from './texture_baker.js'
 import { RECIPES } from './texture_recipes.js'
 import { apply_texture_config, TEXTURE_FAMILIES } from './texture_palette.js'
 
+/** @param {ReturnType<typeof bake_block_textures>} bake */
 const hash = (bake) => createHash('sha256').update(bake.albedo).digest('hex')
 const recipe_names = new Set(RECIPES.map((r) => r.name))
 

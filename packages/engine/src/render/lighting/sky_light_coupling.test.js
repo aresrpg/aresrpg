@@ -33,7 +33,7 @@ const dir = (tod) => {
   const v = sun_dir_from_tod(tod)
   return [v.x, v.y, v.z]
 }
-const rb = (c) => c[0] - c[2] // linear red − blue (>0 warm, <0 blue)
+const rb = (/** @type {number[]} */ c) => c[0] - c[2] // linear red − blue (>0 warm, <0 blue)
 
 describe('extinction_at — the physical medium (mirror of physics.js sample_medium)', () => {
   test('Rayleigh makes blue extinguish more than red at sea level', () => {
@@ -103,7 +103,7 @@ describe('couple_lighting — NOON is the fixed point (tuned look preserved)', (
 
 describe('couple_lighting — the sun follows the sky story', () => {
   test('the sun reddens monotonically from noon → golden → sunset', () => {
-    const ratio = (tod) => {
+    const ratio = (/** @type {number} */ tod) => {
       const c = couple_lighting(dir(tod), BASE).sun_color
       return c[0] / Math.max(c[2], 1e-4)
     }
@@ -111,7 +111,7 @@ describe('couple_lighting — the sun follows the sky story', () => {
     expect(ratio(0.735)).toBeGreaterThan(ratio(0.7)) // sunset redder than golden
   })
   test('the sun dims from noon → golden → sunset', () => {
-    const i = (tod) => couple_lighting(dir(tod), BASE).sun_intensity
+    const i = (/** @type {number} */ tod) => couple_lighting(dir(tod), BASE).sun_intensity
     expect(i(0.7)).toBeLessThan(i(0.375))
     expect(i(0.735)).toBeLessThan(i(0.7))
   })
@@ -152,7 +152,7 @@ describe('grazing-band robustness — the shadow/lighting math never blows up at
   // reintroduce a NaN/Inf at a grazing sun. (The shadow-BASIS azimuth snap in renderer.js sync_shadow is a
   // closure internal; a full-tod scan showed its worst cross-basis length ≈0.199 occurs at NOON — the sun's
   // most-overhead point — not at dusk, and never reaches 0, so the lookAt basis stays non-degenerate.)
-  const finite = (n) => Number.isFinite(n)
+  const finite = (/** @type {number} */ n) => Number.isFinite(n)
   test('shadow_intensity_for is finite and in [0,1] across the whole sun_y sweep incl. grazing [0,0.2]', () => {
     for (let y = -0.5; y <= 1.0001; y += 0.01) {
       const s = shadow_intensity_for(y)

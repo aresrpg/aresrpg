@@ -35,7 +35,7 @@ describe('MELEE BURSTS (c_melee)', () => {
         `${name} has a slash_arc crescent`
       ).toBe(true)
       for (const em of p.emitters)
-        expect(ALLOWED.has(em.appearance), `${name}/${em.name} = ${em.appearance}`).toBe(true)
+        expect(ALLOWED.has(/** @type {string} */ (em.appearance)), `${name}/${em.name} = ${em.appearance}`).toBe(true)
     }
   })
 
@@ -55,7 +55,8 @@ describe('MELEE BURSTS (c_melee)', () => {
   })
 
   test('the element palette is baked distinctly per element (fire ≠ water ≠ death)', () => {
-    const arc = (n) => MELEE_PRESETS[n].emitters.find((e) => e.name === 'arc')
+    const arc = (/** @type {string} */ n) =>
+      /** @type {any} */ (MELEE_PRESETS[n].emitters.find((e) => e.name === 'arc'))
     expect(arc('melee_swing_fire').color_end).not.toEqual(arc('melee_swing_water').color_end)
     expect(arc('melee_swing_death').color_end).not.toEqual(arc('melee_swing_earth').color_end)
   })

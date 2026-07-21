@@ -101,12 +101,12 @@ describe('pack parse golden fixtures', () => {
     test(`${g.name}: dims + block count + mapped palette`, () => {
       const s = load_schematic(g.name)
       expect(s.size).toEqual(g.size)
-      expect(s.voxels.length).toBe(g.blocks)
-      const distinct = new Set(s.voxels.map((v) => v.block_id))
+      expect(/** @type {NonNullable<typeof s.voxels>} */ (s.voxels).length).toBe(g.blocks)
+      const distinct = new Set(/** @type {NonNullable<typeof s.voxels>} */ (s.voxels).map((v) => v.block_id))
       expect([...distinct].sort((a, b) => a - b)).toEqual([...g.ids].sort((a, b) => a - b))
       // every voxel resolved to a known registry block, and offsets stay within the footprint
       const [w, h, l] = g.size
-      for (const v of s.voxels) {
+      for (const v of /** @type {NonNullable<typeof s.voxels>} */ (s.voxels)) {
         expect(get_block_by_name('air')).toBeDefined()
         expect(Math.abs(v.dx)).toBeLessThan(w)
         expect(v.dy).toBeGreaterThanOrEqual(0)
@@ -118,7 +118,7 @@ describe('pack parse golden fixtures', () => {
 
   test('leaves use replace_foliage, structural blocks overwrite', () => {
     const s = load_schematic('GRASSLAND_TREE_G1')
-    for (const v of s.voxels) {
+    for (const v of /** @type {NonNullable<typeof s.voxels>} */ (s.voxels)) {
       if (v.block_id === LEAVES) expect(v.mode).toBe('replace_foliage')
       else expect(v.mode).toBe('overwrite')
       expect(v.solid).toBe(true) // all mapped targets are occupancy-bearing
@@ -170,7 +170,7 @@ describe('bundle inventory + budget', () => {
 
   test('every resolved schematic has voxels and a sane anchor', () => {
     for (const s of load_all_schematics().values()) {
-      expect(s.voxels.length).toBeGreaterThan(0)
+      expect(/** @type {NonNullable<typeof s.voxels>} */ (s.voxels).length).toBeGreaterThan(0)
       const [ax, ay, az] = s.anchor
       const [w, h, l] = s.size
       expect(ax).toBeGreaterThanOrEqual(0)

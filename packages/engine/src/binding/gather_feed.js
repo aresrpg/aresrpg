@@ -204,7 +204,8 @@ export function create_gather_feed({ engine, world_config, get_player_position, 
     },
     /** Manually advance one frame (browser drives this internally; tests call it). @param {number} dt seconds */
     tick,
-    /** Subscribe to 'gather_affordance' — payload { node: SpawnNode|null, distance }. @returns {() => void} unsubscribe */
+    /** Subscribe to 'gather_affordance' — payload { node: SpawnNode|null, distance }.
+     * @param {string} event @param {(payload: unknown) => void} cb @returns {() => void} unsubscribe */
     on(event, cb) {
       if (!listeners.has(event)) listeners.set(event, new Set())
       listeners.get(event)?.add(cb)

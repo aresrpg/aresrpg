@@ -257,8 +257,8 @@ export async function create_renderer({
   // the resolved backend + reversedDepthBuffer (see the console.info a few lines under `backend` below).
   /** @type {{vendor?: string, architecture?: string, device?: string, description?: string} | null} */
   let adapter_info = null
-  if (requested_webgpu && typeof navigator !== 'undefined' && navigator.gpu) {
-    const probe_adapter = await navigator.gpu.requestAdapter({
+  if (requested_webgpu && typeof navigator !== 'undefined' && /** @type {any} */ (navigator).gpu) {
+    const probe_adapter = await /** @type {any} */ (navigator).gpu.requestAdapter({
       powerPreference: 'high-performance',
       featureLevel: 'compatibility',
     })
@@ -391,7 +391,7 @@ export async function create_renderer({
   // WebGPU but actually renders on WebGL2. Correct the flag to the ACTUAL resolved backend the same way
   // `backend` itself is computed above — before anything downstream (water, the vfx overlay, any future
   // PassNode) reads it.
-  if (backend !== 'webgpu') renderer.reversedDepthBuffer = false
+  if (backend !== 'webgpu') /** @type {any} */ (renderer).reversedDepthBuffer = false
 
   // #158 DIAGNOSTIC UNLOCK (owner: still-zero VFX post-.42, never supplied F12 adapter info — make the
   // answer AUTOMATIC). ONE always-on boot line naming the adapter identity the engine actually got, the
@@ -822,25 +822,27 @@ export async function create_renderer({
     // renders, which is AFTER this boot (terrain streams in later, and the scene is empty here). So
     // godrays mounts LAZILY: post.try_mount_godrays() (called each frame in render_frame) rebuilds the
     // output graph the moment the map exists. No forced pre-render — an empty scene never allocates it.
-    post = create_post_stack({
-      renderer,
-      scene,
-      camera,
-      sun,
-      atmo,
-      underwater,
-      output_effect: motion_blur,
-      taau_scale,
-      taau_temporal,
-      sharpen_amount,
-      godrays_light: godrays_on ? sun : null,
-      // [TASTE 2026-07-11] READ-ONLY fog range for the godray far-haze falloff (post_stack): the SAME
-      // u_fog_near/u_fog_far the frozen scene.fogNode uses, so the additive godray wash yields to the
-      // deep-blue haze in the far field with one source of truth. The fog node itself is NOT touched.
-      fog_range: { near: u_fog_near, far: u_fog_far },
-      // HALF-RES POST gate: the bloom pyramid drops to a lower internal resolution on MEDIUM only.
-      tier,
-    })
+    post = create_post_stack(
+      /** @type {Parameters<typeof create_post_stack>[0] & {fog_range: {near: typeof u_fog_near, far: typeof u_fog_far}}} */ ({
+        renderer,
+        scene,
+        camera,
+        sun,
+        atmo,
+        underwater,
+        output_effect: motion_blur,
+        taau_scale,
+        taau_temporal,
+        sharpen_amount,
+        godrays_light: godrays_on ? sun : null,
+        // [TASTE 2026-07-11] READ-ONLY fog range for the godray far-haze falloff (post_stack): the SAME
+        // u_fog_near/u_fog_far the frozen scene.fogNode uses, so the additive godray wash yields to the
+        // deep-blue haze in the far field with one source of truth. The fog node itself is NOT touched.
+        fog_range: { near: u_fog_near, far: u_fog_far },
+        // HALF-RES POST gate: the bloom pyramid drops to a lower internal resolution on MEDIUM only.
+        tier,
+      })
+    )
     // bake the cloud noise volumes + particle seeds once (compute passes; awaited so the first frame
     // never samples an empty 3D texture).
     await atmo.bake(renderer)
@@ -1188,7 +1190,7 @@ export async function create_renderer({
       // Bench-only invalidation counter (mirrors engine.js's window.__ares_scene__ hook) — lets the
       // TASK-3 spec count actual shadow re-renders during a fly without patching three internals.
       if (typeof window !== 'undefined') {
-        /** @type {any} */ window.__shadow_invalidations = /** @type {any} */ (window.__shadow_invalidations ?? 0) + 1
+        window.__shadow_invalidations = (window.__shadow_invalidations ?? 0) + 1
       }
     }
   }

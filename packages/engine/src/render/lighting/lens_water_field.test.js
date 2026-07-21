@@ -29,7 +29,7 @@ import {
 } from './lens_water_field.js'
 
 /** mean regional wetness over a coarse frame grid at time t — the coverage that's visually checked */
-function region_coverage(t, n = 16) {
+function region_coverage(/** @type {number} */ t, n = 16) {
   let sum = 0
   for (let i = 0; i < n; i += 1) for (let j = 0; j < n; j += 1) sum += region_level((i + 0.5) / n, (j + 0.5) / n, t)
   return sum / (n * n)
@@ -41,7 +41,9 @@ describe('ROUND-8 FLUID LAW — no straight lines, no clean shapes (the geometry
     // the centreline — even the BEST line must miss it by more than the column's own width scale, and the
     // residuals must S-wrap around it (LSQ residuals of a genuine meander flip sign repeatedly).
     for (const x_base of [0.15, 0.4, 0.72, 0.9]) {
+      /** @type {number[]} */
       const ys = []
+      /** @type {number[]} */
       const cs = []
       for (let k = 0; k <= 90; k += 1) {
         const y = 0.2 + (k / 90) * 0.45 // a typical long trail span
@@ -67,7 +69,9 @@ describe('ROUND-8 FLUID LAW — no straight lines, no clean shapes (the geometry
   })
 
   test('two trails at different anchors wander DIFFERENTLY (decorrelated phases — no lane repetition)', () => {
+    /** @type {number[]} */
     const devs_a = []
+    /** @type {number[]} */
     const devs_b = []
     for (let k = 0; k <= 40; k += 1) {
       const y = 0.2 + (k / 40) * 0.4
@@ -92,6 +96,7 @@ describe('ROUND-8 FLUID LAW — no straight lines, no clean shapes (the geometry
   test('trail head/tail caps are RAGGED across the column (never straight horizontal cuts), decorrelated', () => {
     const x_base = 0.5
     const head = []
+    /** @type {number[]} */
     const tail = []
     for (let k = 0; k <= 30; k += 1) {
       const x = x_base - 0.03 + (k / 30) * 0.06 // sweep across the column's width
@@ -105,7 +110,7 @@ describe('ROUND-8 FLUID LAW — no straight lines, no clean shapes (the geometry
   })
 
   test('bead SILHOUETTE is amorphous: r_eff(θ) varies around the ring, never collapses, differs per bead', () => {
-    const ring = (sx, sy) => {
+    const ring = (/** @type {number} */ sx, /** @type {number} */ sy) => {
       const rs = []
       for (let k = 0; k < 64; k += 1) {
         const th = (k / 64) * Math.PI * 2
@@ -256,7 +261,7 @@ describe('ROUND-9 REGION FIELD — coverage fragments into fluid patches (the sh
         t_mid = t
         break
       }
-    const first_crossing = (scan) => {
+    const first_crossing = (/** @type {(u:number) => number} */ scan) => {
       // scan: (k) => level; returns the first 0.5-crossing position in [0,1] or null
       let prev = scan(0)
       for (let k = 1; k <= 300; k += 1) {
@@ -266,7 +271,7 @@ describe('ROUND-9 REGION FIELD — coverage fragments into fluid patches (the sh
       }
       return null
     }
-    const std = (a) => {
+    const std = (/** @type {number[]} */ a) => {
       const m = a.reduce((s, v) => s + v, 0) / a.length
       return Math.sqrt(a.reduce((s, v) => s + (v - m) ** 2, 0) / a.length)
     }

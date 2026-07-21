@@ -15,22 +15,25 @@ import { box_overlaps_solid, eject_from_solid } from './collision.js'
 
 const R = CHARACTER_RADIUS
 const H = CHARACTER_COLLIDER_HEIGHT
-const buried = (solid, [x, y, z]) => box_overlaps_solid(solid, x, y, z, R, H)
+const buried = (
+  /** @type {import('./collision.js').SolidFn} */ solid,
+  /** @type {[number, number, number]} */ [x, y, z]
+) => box_overlaps_solid(solid, x, y, z, R, H)
 
 // A 5-deep solid slab (grass): solid at y < 5, air above. A feet-y < 5 buries the ~1.9-tall capsule.
-const slab = (_x, y, _z) => y < 5
+const slab = (/** @type {number} */ _x, /** @type {number} */ y, /** @type {number} */ _z) => y < 5
 // A full-height wall on x < 1: the same column is solid at every height, so the un-bury must go lateral.
-const wall = (x, _y, _z) => x < 1
+const wall = (/** @type {number} */ x, /** @type {number} */ _y, /** @type {number} */ _z) => x < 1
 
 describe('#12 stuck-in-block auto-eject — eject_from_solid to the nearest air column', () => {
   test('a CLEAR position is returned untouched (the overwhelmingly common non-buried adoption)', () => {
-    const p = [0.5, 8, 0.5]
+    const p = /** @type {[number, number, number]} */ ([0.5, 8, 0.5])
     expect(buried(slab, p)).toBe(false)
     expect(eject_from_solid(slab, p)).toBe(p) // same reference — one overlap test, no work
   })
 
   test('a BURIED capsule ejects UP the same column to the first air (feet on the slab top)', () => {
-    const buried_pos = [0.5, 2, 0.5] // capsule spans y∈[2, 3.9], fully inside the slab
+    const buried_pos = /** @type {[number, number, number]} */ ([0.5, 2, 0.5]) // capsule spans y∈[2, 3.9], fully inside the slab
     expect(buried(slab, buried_pos)).toBe(true)
     const out = eject_from_solid(slab, buried_pos)
     expect(out[1]).toBeCloseTo(5, 5) // lifted to the slab top face (feet y=5, capsule 5..6.9 clear)
@@ -40,7 +43,7 @@ describe('#12 stuck-in-block auto-eject — eject_from_solid to the nearest air 
   })
 
   test('when the whole column is solid, it ejects LATERALLY to a clear column', () => {
-    const buried_pos = [0.5, 8, 0.5] // inside the full-height wall (x < 1)
+    const buried_pos = /** @type {[number, number, number]} */ ([0.5, 8, 0.5]) // inside the full-height wall (x < 1)
     expect(buried(wall, buried_pos)).toBe(true)
     const out = eject_from_solid(wall, buried_pos)
     expect(buried(wall, out)).toBe(false) // landed in air

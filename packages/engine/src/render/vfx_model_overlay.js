@@ -106,7 +106,7 @@ export function create_model_overlay(geometry, opts = {}) {
   mat.toneMapped = false // bright emissive fire survives AgX (board_vfx/title_aura idiom)
 
   // sample_wobble(gradient) = sin(gradient·freq − TIME·scroll·speed) — the surface wobble (Godot fire_overlay).
-  const wob = (g) => g.mul(12).sub(clock.mul(4)).sin()
+  const wob = (/** @type {any} */ g) => g.mul(12).sub(clock.mul(4)).sin()
   // VERTEX: grow the shell along the normal + a small breathing wobble (matches the .gdshader vertex()).
   const gy = positionWorld.y
   mat.positionNode = positionLocal.add(normalLocal.mul(grow)).add(normalLocal.mul(wob(gy).mul(0.5).add(0.5).mul(0.02)))

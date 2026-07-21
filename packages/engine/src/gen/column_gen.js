@@ -402,8 +402,8 @@ function block_at(ctx, profile, ci, world_x, world_y, world_z) {
       let sample1 = 0
       let sample2 = 0
       if (al.enabled) {
-        sample0 = /** @type {import('../noise/sampler.js').FbmSampler} */ (al.rock_mask).sample(world_x, world_z)
-        sample1 = /** @type {import('../noise/sampler.js').FbmSampler} */ (al.ice_mask).sample(world_x, world_z)
+        sample0 = /** @type {import('./noise/sampler.js').FbmSampler} */ (al.rock_mask).sample(world_x, world_z)
+        sample1 = /** @type {import('./noise/sampler.js').FbmSampler} */ (al.ice_mask).sample(world_x, world_z)
         if (al.sun_aspect > 0)
           sample2 = column_sun_dot(ctx, world_x, world_z, ctx.surface.slope_window, al.sun_dx, al.sun_dz)
       } else if (ctx.surface.snow_score.speckle !== null) {

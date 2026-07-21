@@ -14,7 +14,7 @@ const FLOOR = 0.72
 const STEP = 0.04
 
 /** Build a governor whose applied scales are captured, plus a driver that feeds N frames of `ms`. */
-function harness(initial_tier = 'high') {
+function harness(/** @type {import('./tiers.js').TierName} */ initial_tier = 'high') {
   /** @type {number[]} */
   const applied = []
   const gov = create_governor({
@@ -22,7 +22,7 @@ function harness(initial_tier = 'high') {
     set_tier: () => {},
     set_render_scale: (s) => applied.push(s),
   })
-  const feed = (ms, n) => {
+  const feed = (/** @type {number} */ ms, /** @type {number} */ n) => {
     for (let i = 0; i < n; i += 1) gov.record_frame(ms)
   }
   return { gov, applied, feed }

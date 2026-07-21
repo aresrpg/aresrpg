@@ -65,11 +65,11 @@ describe('post_stack wires the board-highlight overlay composite AFTER the tonem
     call_order.length = 0
     construct_opts = null
     const ps = create_post_stack({
-      renderer: {},
+      renderer: /** @type {any} */ ({}),
       scene: new Scene(),
       camera: new PerspectiveCamera(),
-      sun: null,
-      atmo: atmo_double(),
+      sun: /** @type {any} */ (null),
+      atmo: /** @type {any} */ (atmo_double()),
       tier: 'low',
     })
 

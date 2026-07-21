@@ -220,7 +220,7 @@ describe('moon — luminance cap (disc + FULL night-sky stack must never cross t
 
 describe('sun glare — boundary-free (a blinding source of light, not a soccer ball)', () => {
   /** pure-JS mirror of the TSL glare_spike + mie_tail sum (hillaire_sky.js), θ in degrees from the sun. */
-  const glare_shape = (deg) => {
+  const glare_shape = (/** @type {number} */ deg) => {
     const v = Math.max(0, Math.min(1, Math.cos((deg * Math.PI) / 180)))
     const v4 = v * v * v * v
     const spike = SUN_GLARE_VIS / (1 - (1 - SUN_GLARE_VIS) * v4) - SUN_GLARE_VIS

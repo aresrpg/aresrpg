@@ -98,7 +98,10 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('forced WebGL gameplay floor', () =>
     // Mirror the fallback handle's false→true is_column_resident edge: physics holds the provisional
     // position, then the shared gate resolves this collision sampler and teleports before the first tick.
     const provisional = /** @type {[number, number, number]} */ ([x + 0.5, 138, z + 0.5])
-    const controller = create_character_controller({ sample_block, position: provisional })
+    const controller = /** @type {NonNullable<typeof create_character_controller>} */ (create_character_controller)({
+      sample_block,
+      position: provisional,
+    })
     let terrain_ready = false
     const settle_spawn = () => {
       if (!terrain_ready) return false

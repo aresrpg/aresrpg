@@ -46,7 +46,7 @@ function to_u32(v) {
 }
 
 /** Coerce an RPC-widened numeric (number | bigint | string) to a finite Number, or `fallback`. */
-function num(v, fallback) {
+function num(/** @type {unknown} */ v, /** @type {number} */ fallback) {
   if (v == null) return fallback
   const n = typeof v === 'bigint' ? Number(v) : Number(v)
   return Number.isFinite(n) ? n : fallback

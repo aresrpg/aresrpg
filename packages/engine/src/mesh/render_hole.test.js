@@ -31,10 +31,19 @@ import { DEFAULT_WORLD_GEN_CONFIG } from '../config/world_gen_config.js'
 
 import { mesh_chunk } from './mesher.js'
 
+/** @typedef {import('../chunks/format.js').ChunkRecord} ChunkRecord */
+/** @typedef {ReturnType<typeof create_terrain_renderer> & { pool_stats: () => Record<string, unknown> & { pending_retries: number } }} TestTerrainRenderer */
+
 /** Generate a 3×3 column stack around (cx,cz) so neighbor halos resolve real (non-air) neighbors, then
- * return a get_record(cx,cy,cz) over the generated set. Mirrors the live streaming mesh path. */
+ * return a get_record(cx,cy,cz) over the generated set. Mirrors the live streaming mesh path.
+ * @param {number} cx0
+ * @param {number} cz0
+ * @returns {(x: number, y: number, z: number) => ChunkRecord | undefined}
+ */
 function build_neighborhood(cx0, cz0) {
+  /** @type {Map<string, ChunkRecord>} */
   const records = new Map()
+  /** @type {(x: number, y: number, z: number) => string} */
   const key = (x, y, z) => `${x},${y},${z}`
   for (let dx = -1; dx <= 1; dx += 1)
     for (let dz = -1; dz <= 1; dz += 1)
@@ -43,6 +52,7 @@ function build_neighborhood(cx0, cz0) {
   return (x, y, z) => records.get(key(x, y, z))
 }
 
+/** @param {ChunkRecord} chunk */
 function solid_count(chunk) {
   let n = 0
   for (let i = 0; i < chunk.ids.length; i += 1) {
@@ -70,7 +80,7 @@ describe('render-hole regression: water-adjacent solid ground meshes non-empty (
       const surface = world_surface_y(cx * CHUNK_SIZE + 16, cz * CHUNK_SIZE + 16)
       const cy = Math.floor((surface - 1) / CHUNK_SIZE) // chunk holding the topmost solid block
       const get_record = build_neighborhood(cx, cz)
-      const chunk = get_record(cx, cy, cz)
+      const chunk = /** @type {ChunkRecord} */ (get_record(cx, cy, cz))
       expect(solid_count(chunk)).toBeGreaterThan(0) // this IS ground (collision) — the repro stood on it
       const { quad_buffer, quad_count } = mesh_chunk(chunk, build_neighbor_halos(get_record, cx, cy, cz))
       // The bug's ORIGINAL suspect was an empty mesh for a solid chunk. Prove it never happens: the walkable
@@ -105,12 +115,15 @@ test('seam invariant: DEFAULT-world p95 slots/col fits the render pool for ALL F
   const R = 3 // inner 7×7 columns measured; a 1-ring halo margin (9×9) is generated so neighbor culling is real
   const CX = 8
   const CZ = -7
+  /** @type {Map<string, ChunkRecord>} */
   const store = new Map()
+  /** @type {(x: number, y: number, z: number) => string} */
   const rkey = (x, y, z) => `${x},${y},${z}`
   for (let dx = -R - 1; dx <= R + 1; dx += 1)
     for (let dz = -R - 1; dz <= R + 1; dz += 1)
       for (let cy = 0; cy < CHUNKS_PER_COLUMN; cy += 1)
         store.set(rkey(CX + dx, cy, CZ + dz), generate_world_chunk(CX + dx, cy, CZ + dz))
+  /** @type {(x: number, y: number, z: number) => ChunkRecord | undefined} */
   const get_record = (x, y, z) => store.get(rkey(x, y, z))
 
   // [LEAVES-2X Rung 2] `canopy` is the opaque leaf-cube dual-emit shell (its own early-Z pool) — it carries
@@ -123,7 +136,7 @@ test('seam invariant: DEFAULT-world p95 slots/col fits the render pool for ALL F
     for (let dz = -R; dz <= R; dz += 1) {
       const col = { solid: 0, foliage: 0, cutout: 0, canopy: 0, liquid: 0 }
       for (let cy = 0; cy < CHUNKS_PER_COLUMN; cy += 1) {
-        const chunk = get_record(CX + dx, cy, CZ + dz)
+        const chunk = /** @type {ChunkRecord} */ (get_record(CX + dx, cy, CZ + dz))
         const { quad_buffer, quad_count } = mesh_chunk(
           chunk,
           build_neighbor_halos(get_record, CX + dx, cy, CZ + dz),
@@ -187,13 +200,15 @@ describe('drop-path fail-loud: write_chunk→false is retried & recovered, never
   }
   /** @param {(bytes: number) => void} [on_chunk_uploaded] */
   const make = (on_chunk_uploaded) =>
-    create_terrain_renderer({
-      renderer: null,
-      scene: new Scene(),
-      camera: null,
-      pool_config: TINY_POOL,
-      on_chunk_uploaded,
-    })
+    /** @type {TestTerrainRenderer} */ (
+      create_terrain_renderer({
+        renderer: null,
+        scene: new Scene(),
+        camera: null,
+        pool_config: TINY_POOL,
+        on_chunk_uploaded,
+      })
+    )
 
   test('overflow is dropped, re-enqueued (both chunks resident), then RECOVERED on the next frame drain', () => {
     /** @type {number[]} */
@@ -226,14 +241,16 @@ describe('drop-path fail-loud: write_chunk→false is retried & recovered, never
     const pool_config = { ...TINY_POOL, solid: { slot_quads: 2048, max_slots: 3 } }
     /** @type {number[]} */
     const uploaded_bytes = []
-    const terrain = create_terrain_renderer({
-      renderer: null,
-      scene: new Scene(),
-      camera: null,
-      pool_config,
-      retry_time_budget_ms: -1, // deterministically expires after the always-admitted first recovery
-      on_chunk_uploaded: (bytes) => uploaded_bytes.push(bytes),
-    })
+    const terrain = /** @type {TestTerrainRenderer} */ (
+      create_terrain_renderer({
+        renderer: null,
+        scene: new Scene(),
+        camera: null,
+        pool_config,
+        retry_time_budget_ms: -1, // deterministically expires after the always-admitted first recovery
+        on_chunk_uploaded: (bytes) => uploaded_bytes.push(bytes),
+      })
+    )
     for (let cx = 0; cx < 3; cx += 1) terrain.upload_chunk([cx, 0, 0], solid_quad_buffer(), 1)
     for (let cx = 3; cx < 6; cx += 1) terrain.upload_chunk([cx, 0, 0], solid_quad_buffer(), 1)
     expect(terrain.pool_stats?.().pending_retries).toBe(3)

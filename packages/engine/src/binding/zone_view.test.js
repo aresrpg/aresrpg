@@ -55,12 +55,12 @@ describe('binding/zone_state_view — compass pips (current zone only)', () => {
   test('pips carry direction + distance for the current zone spawns only', () => {
     const v = zone_state_view(cfg, [0, 0], ZONES_DATA)
     expect(v.pips.length).toBe(2) // the two spawns in zone (0,0); the (1,0) spawn is excluded
-    const iron = v.pips.find((p) => p.id === 'r1')
+    const iron = /** @type {NonNullable<typeof v.pips[number]>} */ (v.pips.find((p) => p.id === 'r1'))
     expect(iron.distance).toBeCloseTo(100, 5)
     expect(iron.bearing).toBeCloseTo(Math.PI / 2, 5) // due east
     expect(iron.dir[0]).toBeCloseTo(1, 5)
     expect(iron.dir[1]).toBeCloseTo(0, 5)
-    const wolf = v.pips.find((p) => p.id === 'm1')
+    const wolf = /** @type {NonNullable<typeof v.pips[number]>} */ (v.pips.find((p) => p.id === 'm1'))
     expect(wolf.bearing).toBeCloseTo(0, 5) // due north (+z)
     expect(wolf.distance).toBeCloseTo(200, 5)
   })
@@ -78,19 +78,19 @@ describe('binding/zone_state_view — compass pips (current zone only)', () => {
 describe('binding/zone_state_view — map overlay', () => {
   test('every pushed zone becomes an overlay cell with bounds + state + spawn_count', () => {
     const v = zone_state_view(cfg, [0, 0], ZONES_DATA)
-    const z00 = v.zones.find((z) => z.id === '0:0')
+    const z00 = /** @type {NonNullable<typeof v.zones[number]>} */ (v.zones.find((z) => z.id === '0:0'))
     expect(z00.state).toBe('fresh')
     expect(z00.spawn_count).toBe(2)
     expect(z00.current).toBe(true)
     expect(z00.bounds).toEqual({ min_x: 0, min_z: 0, max_x: S, max_z: S })
-    const z10 = v.zones.find((z) => z.id === '1:0')
+    const z10 = /** @type {NonNullable<typeof v.zones[number]>} */ (v.zones.find((z) => z.id === '1:0'))
     expect(z10.state).toBe('looted')
     expect(z10.current).toBe(false)
   })
 
   test('an undiscovered current zone is still present in the overlay', () => {
     const v = zone_state_view(cfg, [50 * S, 50 * S], ZONES_DATA)
-    const cur = v.zones.find((z) => z.current)
+    const cur = /** @type {NonNullable<typeof v.zones[number]>} */ (v.zones.find((z) => z.current))
     expect(cur.id).toBe('50:50')
     expect(cur.state).toBe('undiscovered')
     expect(cur.spawn_count).toBe(0)

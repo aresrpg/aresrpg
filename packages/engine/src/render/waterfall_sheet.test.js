@@ -36,10 +36,10 @@ describe('span_quad — face-resolved vertical quad geometry', () => {
     expect(q.height).toBe(3)
     expect(q.u0).toBe(448) // WIDTH SANITY: u anchors at the ABSOLUTE world z0, not span-local 0
     // corners span y_bot..y_top and z0..z1+1
-    const ys = q.corners.map((c) => c[1])
+    const ys = q.corners.map((/** @type {number[]} */ c) => c[1])
     expect(Math.min(...ys)).toBe(151)
     expect(Math.max(...ys)).toBe(154)
-    const zs = q.corners.map((c) => c[2])
+    const zs = q.corners.map((/** @type {number[]} */ c) => c[2])
     expect(Math.min(...zs)).toBe(448)
     expect(Math.max(...zs)).toBe(450)
   })
@@ -101,7 +101,9 @@ describe('build_sheet_geometry — merged per-column geometry', () => {
     const { geometry, quad_count } = build_sheet_geometry(spans)
     expect(quad_count).toBe(2)
     expect(geometry.getAttribute('position').array.length).toBe(2 * 4 * 3)
-    expect(geometry.getIndex().array.length).toBe(2 * 6)
+    expect(/** @type {NonNullable<ReturnType<typeof geometry.getIndex>>} */ (geometry.getIndex()).array.length).toBe(
+      2 * 6
+    )
     const sheet = geometry.getAttribute('aSheet')
     expect(sheet.itemSize).toBe(3)
     // aSheet.z of every vertex is its span's height (3 for both quads here)
@@ -173,14 +175,18 @@ describe('create_waterfall_system — per-column refcount lifecycle', () => {
   const fake_scene = () => {
     /** @type {any[]} */
     const children = []
-    return { children, add: (o) => children.push(o), remove: (o) => children.splice(children.indexOf(o), 1) }
+    return {
+      children,
+      add: (/** @type {any} */ o) => children.push(o),
+      remove: (/** @type {any} */ o) => children.splice(children.indexOf(o), 1),
+    }
   }
   const RICH = [
     span({ x0: 590, x1: 590, z0: 448, z1: 449, y_top: 154, y_bot: 151, face: 0 }),
     span({ x0: 592, x1: 592, z0: 448, z1: 448, y_top: 160, y_bot: 151, face: 0 }), // tall → basin
   ]
   /** @param {Record<string, any[]>} table */
-  const spans_from = (table) => (cx, cz) => table[`${cx},${cz}`] ?? []
+  const spans_from = (table) => (/** @type {number} */ cx, /** @type {number} */ cz) => table[`${cx},${cz}`] ?? []
 
   test('builds one group per column, refcounts across the 12 cy, disposes on the last', () => {
     const scene = fake_scene()
@@ -245,8 +251,8 @@ describe('create_waterfall_system — per-column refcount lifecycle', () => {
     sys.note_load([2, 0, 3])
     sys.note_load([8, 0, 9])
 
-    const spray_a = scene.children[0].children.find((o) => o.isInstancedMesh)
-    const spray_b = scene.children[1].children.find((o) => o.isInstancedMesh)
+    const spray_a = scene.children[0].children.find((/** @type {any} */ o) => o.isInstancedMesh)
+    const spray_b = scene.children[1].children.find((/** @type {any} */ o) => o.isInstancedMesh)
     expect(spray_a).toBeDefined()
     expect(spray_b).toBeDefined()
     expect(spray_a.material).toBe(spray_b.material)
@@ -271,7 +277,7 @@ describe('create_waterfall_system — per-column refcount lifecycle', () => {
     const release = sys.mount_pipeline_warmers()
     const [warmers] = scene.children
     expect(warmers.children.length).toBe(3)
-    expect(warmers.children.every((o) => o.frustumCulled === false)).toBe(true)
+    expect(warmers.children.every((/** @type {any} */ o) => o.frustumCulled === false)).toBe(true)
     sys.note_load([2, 0, 3])
     const [, live] = scene.children
     expect(warmers.children[0].material).toBe(live.children[0].material)
@@ -290,7 +296,7 @@ describe('create_waterfall_system — per-column refcount lifecycle', () => {
     const shared = [spray.geometry, spray.material, foam.geometry, foam.material]
     const dispose_counts = new Map(shared.map((resource) => [resource, 0]))
     for (const resource of shared)
-      resource.dispose = () => dispose_counts.set(resource, dispose_counts.get(resource) + 1)
+      resource.dispose = () => dispose_counts.set(resource, /** @type {number} */ (dispose_counts.get(resource)) + 1)
 
     sys.note_unload([2, 0, 3])
     expect([...dispose_counts.values()]).toEqual([0, 0, 0, 0])

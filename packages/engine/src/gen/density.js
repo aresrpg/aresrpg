@@ -79,7 +79,7 @@ export const DENSITY_CONFIG = {
 /**
  * @typedef {object} DensityContext the seeded 3D samplers for the density field, built once per
  *   world alongside the climate FieldSet.
- * @property {typeof DENSITY_CONFIG} cfg the world's density recipe (world_gen_config `density`) — every
+ * @property {Pick<import('../config/world_gen_config.js').DensityConfig, 'band_blocks'|'warp'|'detail'|'overhang'>} cfg the world's density recipe (world_gen_config `density`) — every
  *   band/warp/detail/overhang read goes through this so a per-world recipe drives the field (§2.3). The
  *   sky-band ENVELOPE (low_y/high_y/thickness) is read from `sky.cfg` (the SkyIslandsContext's recipe).
  * @property {import('./noise/warp.js').WarpSampler} warp
@@ -93,7 +93,7 @@ export const DENSITY_CONFIG = {
  * the `carvers` sub-seed (already derived) plus fixed decorrelating offsets so no new sub-seed name is
  * needed. Recipes default to the live/default world so context-free callers keep working unchanged.
  * @param {Record<string, number>} seeds output of `derive_world_seeds`
- * @param {typeof DENSITY_CONFIG} [cfg] the world's density recipe (world_gen_config `density`)
+ * @param {Pick<import('../config/world_gen_config.js').DensityConfig, 'band_blocks'|'warp'|'detail'|'overhang'>} [cfg] the world's density recipe (world_gen_config `density`)
  * @param {typeof SKY_ISLANDS_CONFIG} [sky_cfg] the world's sky recipe (world_gen_config `sky`)
  * @returns {DensityContext}
  */
@@ -185,7 +185,7 @@ export function build_density_column(dctx, surface_y, climate, world_x, world_z)
  * lip that the full field would place above surface_y — otherwise the heightfield fast path and the
  * full density would disagree above the band (a real terrain bug). Ungated columns get a tight band
  * ending at the surface (no lift possible). Shared by build + rekey.
- * @param {{surface_y:number, gate:number, has_deep_caves?:boolean, has_sky?:boolean, band_low?:number, band_high?:number}} col
+ * @param {{surface_y:number, gate:number, has_deep_caves?:boolean, has_sky?:boolean, band_low?:number, band_high?:number, cfg?:Pick<import('../config/world_gen_config.js').DensityConfig, 'band_blocks'|'warp'|'detail'|'overhang'>}} col
  * @param {number} surface_y
  * @param {number} gate
  * @returns {DensityColumn}

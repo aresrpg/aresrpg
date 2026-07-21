@@ -188,7 +188,7 @@ describe('bounds safety', () => {
     for (const rotation of /** @type {(0|1|2|3)[]} */ ([0, 1, 2, 3])) {
       const c = create_chunk_record(-3, 4, 2)
       const written = stamp_into_chunk(c, -3, 4, 2, -3 * CHUNK_SIZE, 2 * CHUNK_SIZE + 31, 4 * CHUNK_SIZE, s, rotation)
-      expect(written).toBeLessThanOrEqual(s.voxels.length)
+      expect(written).toBeLessThanOrEqual(/** @type {NonNullable<typeof s.voxels>} */ (s.voxels).length)
       // all writes are in-range by construction of the id array length; assert no corruption
       expect(c.ids.length).toBe(CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE)
     }

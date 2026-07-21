@@ -87,7 +87,7 @@ describe('servo end-to-end — the slow down-tau no longer lets a VFX flash self
   const dt = 1 / 60
   const k = EXPOSURE_TARGET_LUMA / 1.1 // scene gain: at exposure 1.1 the rest full-frame avg == target 0.37
   const BUMP = 0.25 // extra full-frame luma a bright cast adds (harness: measured peaked ~0.58 over a ~0.35 rest)
-  const sim = (tau_fast, flash_ms) => {
+  const sim = (/** @type {number} */ tau_fast, /** @type {number} */ flash_ms) => {
     const cfg = { target: EXPOSURE_TARGET_LUMA, tau_fast, tau_slow: 2.5, min: 0.85, max: 1.4 }
     let e = 1.1
     let min_e = 1.1

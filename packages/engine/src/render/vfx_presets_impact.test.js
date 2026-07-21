@@ -66,7 +66,8 @@ describe('SHIELD WARD (e_status_impact, LOOP)', () => {
   })
 
   test('tier b (big shield) is larger than tier a (small buff)', () => {
-    const dome = (n) => IMPACT_PRESETS[n].emitters.find((e) => e.name === 'dome')
+    const dome = (/** @type {string} */ n) =>
+      /** @type {any} */ (IMPACT_PRESETS[n].emitters.find((e) => e.name === 'dome'))
     expect(dome('shield_ward_fire_b').ellipsoid[0]).toBeGreaterThan(dome('shield_ward_fire_a').ellipsoid[0])
   })
 
@@ -90,7 +91,8 @@ describe('DARK VORTEX + AIR IMPACT (e_status_impact, bursts)', () => {
       const p = IMPACT_PRESETS[n]
       expect(p.loop, `${n} is a burst`).toBeFalsy()
       expect(preset_peak_luma(p), `${n} under halo`).toBeLessThan(NO_HALO)
-      for (const em of p.emitters) expect(ALLOWED.has(em.appearance), `${n}/${em.name} = ${em.appearance}`).toBe(true)
+      for (const em of p.emitters)
+        expect(ALLOWED.has(/** @type {string} */ (em.appearance)), `${n}/${em.name} = ${em.appearance}`).toBe(true)
     }
   })
 
@@ -98,12 +100,12 @@ describe('DARK VORTEX + AIR IMPACT (e_status_impact, bursts)', () => {
     const p = IMPACT_PRESETS.dark_vortex_void
     const kinds = new Set(p.emitters.map((e) => e.appearance))
     expect(kinds.has('void_aura') && kinds.has('streaks') && kinds.has('void_particle'), 'vortex layers').toBe(true)
-    expect(p.emitters.find((e) => e.name === 'motes').inward, 'motes implode inward').toBe(true)
+    expect(/** @type {any} */ (p.emitters.find((e) => e.name === 'motes')).inward, 'motes implode inward').toBe(true)
   })
 
   test('air impacts bake distinct element secondaries (6 different colours)', () => {
     const secs = AIR_IMPACT_PRESETS.map((n) =>
-      JSON.stringify(IMPACT_PRESETS[n].emitters.find((e) => e.name === 'ball').color_end)
+      JSON.stringify(/** @type {any} */ (IMPACT_PRESETS[n].emitters.find((e) => e.name === 'ball')).color_end)
     )
     expect(new Set(secs).size, '6 distinct impact colours').toBe(6)
   })

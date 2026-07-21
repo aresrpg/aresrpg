@@ -16,35 +16,45 @@ const U32 = 0xffffffff
 
 // ── Former per-file impls, copied VERBATIM from the pre-consolidation sources ──────────────────────
 // hash2 — sky_islands.js (salt not |0, no & U32)
-const old_hash2_sky = (a, b, salt) => {
+const old_hash2_sky = (/** @type {number} */ a, /** @type {number} */ b, /** @type {number} */ salt) => {
   let h = (salt ^ Math.imul(a | 0, 0x27d4_eb2d) ^ Math.imul(b | 0, 0x1656_67b1)) >>> 0
   h = Math.imul(h ^ (h >>> 15), 0x2c1b_3c6d) >>> 0
   h = Math.imul(h ^ (h >>> 13), 0x297a_2d39) >>> 0
   return (h ^ (h >>> 16)) >>> 0
 }
 // hash2 — strata.js (operand-first, salt|0, & U32)
-const old_hash2_strata = (x, z, salt) => {
+const old_hash2_strata = (/** @type {number} */ x, /** @type {number} */ z, /** @type {number} */ salt) => {
   let h = (Math.imul(x | 0, 0x27d4_eb2d) ^ Math.imul(z | 0, 0x1656_67b1) ^ (salt | 0)) >>> 0
   h = Math.imul(h ^ (h >>> 15), 0x2c1b_3c6d) >>> 0
   h = Math.imul(h ^ (h >>> 13), 0x297a_2d39) >>> 0
   return ((h ^ (h >>> 16)) & U32) >>> 0
 }
 // hash2 — icebergs.js / cirque.js (salt|0 first, & U32)
-const old_hash2_iceberg = (a, b, salt) => {
+const old_hash2_iceberg = (/** @type {number} */ a, /** @type {number} */ b, /** @type {number} */ salt) => {
   let h = ((salt | 0) ^ Math.imul(a | 0, 0x27d4_eb2d) ^ Math.imul(b | 0, 0x1656_67b1)) >>> 0
   h = Math.imul(h ^ (h >>> 15), 0x2c1b_3c6d) >>> 0
   h = Math.imul(h ^ (h >>> 13), 0x297a_2d39) >>> 0
   return ((h ^ (h >>> 16)) & U32) >>> 0
 }
 // hash3 — caves.js / sky_islands.js (salt not |0, no & U32)
-const old_hash3_caves = (x, y, z, salt) => {
+const old_hash3_caves = (
+  /** @type {number} */ x,
+  /** @type {number} */ y,
+  /** @type {number} */ z,
+  /** @type {number} */ salt
+) => {
   let h = (salt ^ Math.imul(x | 0, 0x1656_67b1) ^ Math.imul(y | 0, 0x2f6d_9f4b) ^ Math.imul(z | 0, 0x5b83_2d19)) >>> 0
   h = Math.imul(h ^ (h >>> 15), 0x2c1b_3c6d) >>> 0
   h = Math.imul(h ^ (h >>> 12), 0x297a_2d39) >>> 0
   return (h ^ (h >>> 15)) >>> 0
 }
 // hash3 — icebergs.js / cirque.js (salt|0 first, & U32)
-const old_hash3_iceberg = (a, b, c, salt) => {
+const old_hash3_iceberg = (
+  /** @type {number} */ a,
+  /** @type {number} */ b,
+  /** @type {number} */ c,
+  /** @type {number} */ salt
+) => {
   let h =
     ((salt | 0) ^ Math.imul(a | 0, 0x1656_67b1) ^ Math.imul(b | 0, 0x2f6d_9f4b) ^ Math.imul(c | 0, 0x5b83_2d19)) >>> 0
   h = Math.imul(h ^ (h >>> 15), 0x2c1b_3c6d) >>> 0

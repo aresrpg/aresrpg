@@ -345,7 +345,9 @@ export function create_clouds(opts = {}) {
   const build_shadow_kernel = () => {
     const S = SHADOW_RES
     const k = Fn(() => {
-      const i = instanceIndex.add(u_tile_base)
+      const i = instanceIndex.add(
+        /** @type {import('three/webgpu').Node<'uint'>} */ (/** @type {unknown} */ (u_tile_base))
+      )
       If(i.greaterThanEqual(S * S), () => {
         Return()
       })

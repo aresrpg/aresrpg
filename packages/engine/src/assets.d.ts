@@ -14,3 +14,14 @@ declare module '*?url' {
   const url: string
   export default url
 }
+
+interface Window {
+  __shadow_invalidations?: number
+}
+
+interface NumberConstructor {
+  isFinite(number: unknown): number is number
+}
+
+// eslint-disable-next-line no-var -- TypeScript only exposes `var` ambient globals as `globalThis` properties.
+declare var __ARES_SKY_COUPLE: number | boolean | undefined
