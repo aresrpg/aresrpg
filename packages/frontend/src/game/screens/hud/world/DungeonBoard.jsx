@@ -777,18 +777,27 @@ export function DungeonBoard() {
         } else {
           // The DRAFTED spell (pinned at pick) judges the cast — a disarm/re-arm can't use the wrong spell's flags.
           const lvl = drafted_spell?.levels?.[0]
+          const range = lvl?.range ?? [cast_params.range_min, cast_params.range_max]
+          // SELF-ONLY BUFF (#321/#323): rmax 0 (invisibility/vanish — the spellbook 'self' marker) targets the
+          // caster's OWN tile. It can never move out of reach of itself, so it NEVER re-validates (the twin of the
+          // trap rule, cells don't move) — commit it on the caster's CURRENT cell (`anchor`), never dropped. A
+          // stale adoption that shifted the eye/committed cell used to false-drop it, reverting the buff AND the
+          // MP it granted — the "turn auto-ends right after a cast, the cast then reverts" report.
+          const self_cast = (range?.[1] ?? 0) === 0
           const footprint = cast_range_set_dungeon(
-            lvl?.range ?? [cast_params.range_min, cast_params.range_max],
+            range,
             { cell: decode(anchor) },
             dungeon_grid_of(dungeon),
             los,
             { los: lvl?.line_of_sight !== false, linear: lvl?.linear === true }
           )
-          const retargeted = retarget_cast({
-            target_cell: entry.cell,
-            committed_cell: target_committed_cell,
-            reaches: (cell) => footprint.has(cell),
-          })
+          const retargeted = self_cast
+            ? { target: anchor }
+            : retarget_cast({
+                target_cell: entry.cell,
+                committed_cell: target_committed_cell,
+                reaches: (cell) => footprint.has(cell),
+              })
           if (retargeted.dropped) {
             drop_entry('target moved out of reach at flush')
             retarget_unreachable += 1
@@ -798,6 +807,7 @@ export function DungeonBoard() {
           illegal = strike_flush_illegal({
             in_footprint: footprint.has(target_cell),
             is_weapon: false,
+            self_cast,
             free_cell: lvl?.free_cell === true,
             occupied_alive: !!occ.get(target_cell)?.alive,
           })
