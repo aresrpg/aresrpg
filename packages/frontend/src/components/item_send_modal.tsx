@@ -110,7 +110,7 @@ function Shell({
   )
 }
 
-function ItemsStrip({ items }: { items: SendItem[] }) {
+function ItemsStrip({ items, selected_amount = null }: { items: SendItem[]; selected_amount?: bigint | null }) {
   const { t } = useTranslation()
   return (
     <div className="flex flex-col gap-1.5">
@@ -132,7 +132,7 @@ function ItemsStrip({ items }: { items: SendItem[] }) {
             />
             <span className="text-[9px] tracking-[0.1em] uppercase text-text/80 truncate max-w-[140px]">
               {it.name}
-              {it.stackable ? ` ×${it.amount}` : ''}
+              {it.stackable ? ` ×${items.length === 1 && selected_amount != null ? selected_amount : it.amount}` : ''}
             </span>
           </div>
         ))}
@@ -322,7 +322,7 @@ function ReviewView({ send, on_back }: { send: ItemSendState; on_back: () => voi
 
       <div className="w-full h-px bg-border" />
 
-      <ItemsStrip items={send.items} />
+      <ItemsStrip items={send.items} selected_amount={send.selected_amount} />
 
       <div
         className="flex flex-col gap-3 px-3 py-3"
@@ -405,7 +405,9 @@ function ReviewView({ send, on_back }: { send: ItemSendState; on_back: () => voi
           className="btn-gold flex-1 py-2.5 px-6 text-[10px] tracking-[0.2em] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
         >
           <Send size={12} />
-          {t('gift.send.send_confirm', { count: send.items.length })}
+          {t('gift.send.send_confirm', {
+            count: Number(send.selected_amount ?? BigInt(send.items.length)),
+          })}
         </button>
         <button
           type="button"
