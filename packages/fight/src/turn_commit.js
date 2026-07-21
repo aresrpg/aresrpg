@@ -10,6 +10,19 @@
 // Its EFFECT half — `commit_with_overdue_retry` (runs commits, speaks the tx error vocabulary) — lives at the
 // frontend tx edge (world-shell/overdue_retry.js): the fight core is promise-free by law.
 
+export const CAST_DROP_TARGET_OUT_OF_REACH = 'target_out_of_reach'
+export const CAST_DROP_STALE_TARGET = 'stale_target'
+
+/**
+ * A cast actually omitted from the controlled player's commit batch. This record is created at the removal
+ * edge, after re-validation has made its domain decision; prediction, peer replay, and mob processing never need
+ * to manufacture one. The frontend may project this explicit local event into feedback after the batch commits.
+ * @param {{ actor_id:string, spell_name:string, reason:string }} drop
+ */
+export function local_commit_cast_drop({ actor_id, spell_name, reason }) {
+  return { kind: 'cast_drop', source: 'local_commit', actor_id, spell_name, reason }
+}
+
 /**
  * Map the store's staged intents (kind 0 move / 2 weapon / 1 cast) to the SDK batch shape.
  * @param {Array<{ kind: number, target: number, spell_template_id?: string, spell_key?: string }>} actions

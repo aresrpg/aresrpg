@@ -120,19 +120,17 @@ export const build_turn_batch = (store, to_cell = null) => {
  * valid"). At flush a drafted cast whose target FIGHTER has moved off the drafted cell is RECOMPOSED against the
  * target's CURRENT committed cell when the spell still legally reaches it — reusing the EXACT legality the draft/
  * click gate painted (`reaches` = the caller's own cast_range_set_dungeon footprint membership: one home, never a
- * re-implementation of range/LoS). When it can't reach, the cast is DROPPED and the ONE decoder is asked for the
- * clear feedback toast (the additive i18n key, surfaced by the flush edge — the fight core is hermetic, so it
- * REQUESTS the toast, never renders it). A void cast or a still-valid target composes the drafted cell unchanged.
+ * re-implementation of range/LoS). When it can't reach, the cast is DROPPED. Re-validation reports only this
+ * domain decision; the local commit flow owns any player-facing cancellation event. A void cast or a still-valid
+ * target composes the drafted cell unchanged.
  * Pure: the caller resolves the drafted cast's target fighter → its committed cell (committed_state, my drafts
  * excluded — the chain base the PTB fires against), and passes the reach predicate it already owns.
  * @param {{ target_cell:number, committed_cell:number|null|undefined, reaches:(cell:number)=>boolean }} params
- * @returns {{ target:number } | { dropped:true, toast_key:string }}
+ * @returns {{ target:number } | { dropped:true }}
  */
 export const retarget_cast = ({ target_cell, committed_cell, reaches }) => {
   if (committed_cell == null || Number(committed_cell) === Number(target_cell)) return { target: Number(target_cell) }
-  return reaches(Number(committed_cell))
-    ? { target: Number(committed_cell) }
-    : { dropped: true, toast_key: 'dungeons.cast_target_unreachable' }
+  return reaches(Number(committed_cell)) ? { target: Number(committed_cell) } : { dropped: true }
 }
 
 /**

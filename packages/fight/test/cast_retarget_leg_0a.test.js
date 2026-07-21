@@ -3,9 +3,8 @@
 // LEG 0a — CAST AUTO-RETARGET ON INVALIDATION (the "cast not committed because target no longer
 // valid"). A drafted cast whose target fighter moved off the drafted cell is RECOMPOSED against the target's CURRENT
 // committed cell when the spell still legally reaches it (reusing the draft's OWN range/LoS footprint — one home);
-// when it can't reach, the cast is cancelled and the ONE decoder is asked for the 'moved out of reach' toast. This
-// locks the pure flush-time decision (txs.retarget_cast); the HUD flush (DungeonBoard.flush_commit) wires it in,
-// resolving each drafted cast's target fighter → its committed cell and passing its own cast_range_set_dungeon set.
+// when it can't reach, the pure re-validation reports a drop without UI metadata. This locks the flush-time
+// decision (txs.retarget_cast); the HUD's local commit-removal edge separately owns any cancellation event.
 
 import { describe, expect, test } from 'bun:test'
 
@@ -20,18 +19,17 @@ const FAR = enc(18, 18)
 // the SAME footprint the draft/click gate painted — a set of legally-reachable cells (range + LoS), membership only.
 const reaches = (cells) => (cell) => cells.has(Number(cell))
 
-describe('LEG 0a — a drafted cast follows its target to the committed cell, or cancels with a toast', () => {
+describe('LEG 0a — a drafted cast follows its target to the committed cell, or reports a drop', () => {
   test('① the target moved to an IN-RANGE cell → compose against the new cell B, never the stale A', () => {
     const footprint = new Set([A, B, enc(7, 8)])
     // red today: the flush composes A → the chain sees no target at A → on-chain target-invalid, the cast is lost.
     expect(retarget_cast({ target_cell: A, committed_cell: B, reaches: reaches(footprint) })).toEqual({ target: B })
   })
 
-  test('② the target moved OUT of range → no compose; the ONE decoder is asked for the named toast', () => {
+  test('② the target moved OUT of range → no compose; re-validation reports only the domain drop', () => {
     const footprint = new Set([A, enc(7, 8)]) // FAR is not reachable
     expect(retarget_cast({ target_cell: A, committed_cell: FAR, reaches: reaches(footprint) })).toEqual({
       dropped: true,
-      toast_key: 'dungeons.cast_target_unreachable',
     })
   })
 
