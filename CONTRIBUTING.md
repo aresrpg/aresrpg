@@ -34,6 +34,10 @@ History is linear by law; nothing ever rewrites what landed.
 5. Feature work reaches `edge` exclusively via a pull request + `/promote` — never a direct
    push. Direct pushes to `edge` are reserved for operator alignment acts (branch recreation,
    post-squash alignment) and are expected to be rare and always signed.
+6. Landed branches are deleted automatically the moment they land (GitHub's
+   `delete_branch_on_merge` setting doesn't cover this flow, since a landing is a fast-forward
+   push, never a merge-button click). Only `master` and `edge` persist — every feature/fix
+   branch is disposable once promoted.
 
 ## Releases & rollback
 

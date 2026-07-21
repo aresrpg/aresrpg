@@ -49,8 +49,11 @@ emit() {
   if [ -n "${GITHUB_OUTPUT:-}" ]; then echo "promote_result=$1" >> "$GITHUB_OUTPUT"; fi
 }
 
-# ── resolve the base (edge | master only) ───────────────────────────────────────────────────
-BASE=$(gh pr view "$PR" --repo "$REPO" --json baseRefName -q .baseRefName)
+# ── resolve the base + head (edge | master base only; HEAD_REF reused later for branch cleanup,
+#    never re-derived) ─────────────────────────────────────────────────────────────────────────
+PR_META=$(gh pr view "$PR" --repo "$REPO" --json baseRefName,headRefName)
+BASE=$(jq -r .baseRefName <<<"$PR_META")
+HEAD_REF=$(jq -r .headRefName <<<"$PR_META")
 case "$BASE" in
   edge | master) ;;
   *) emit wrong-base; echo "PR #$PR targets '$BASE' — the queue serves edge and master only"; exit 1 ;;
@@ -160,6 +163,21 @@ if [ "$BASE" = master ]; then
   else
     echo "an edge→master PR is already open — nothing to do"
   fi
+fi
+
+# ── delete the landed branch (best-effort; NEVER master or edge) ───────────────────────────
+# GitHub's repo-level `delete_branch_on_merge` setting never fires for this flow — landings are
+# fast-forward PUSHES (above), not merge-button events, so no auto-delete is ever triggered and
+# landed branches pile up (34 as of 2026-07-21). Delete the PR's own head branch explicitly.
+# Guarded by NAME, not by BASE: a master landing's head IS `edge` (the release PR) and must
+# survive — only feature branches are ever actually removed. A failed delete is logged and
+# swallowed: the land already happened, cleanup is best-effort and must never fail the promotion.
+if [ "$HEAD_REF" = master ] || [ "$HEAD_REF" = edge ]; then
+  echo "head branch is '$HEAD_REF' — never deleted"
+else
+  gh api -X DELETE "repos/${REPO}/git/refs/heads/${HEAD_REF}" \
+    && echo "deleted branch $HEAD_REF (landed PR #$PR)" \
+    || echo "WARN: failed to delete branch $HEAD_REF (non-fatal; PR #$PR already landed)"
 fi
 
 # ── landed: drop the label (bookkeeping) + report ───────────────────────────────────────────
