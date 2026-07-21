@@ -17,7 +17,7 @@
 // apply_retro_effect / apply_stat_effect resolve it. No parallel taxonomy is invented. A kind the reducer's
 // pattern-match does NOT handle is a CONVICTION (reported, never "fixed" here — reducer source is READ-ONLY).
 
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 import { process_spell_cast } from '../src/fight_spells.js'
@@ -27,10 +27,18 @@ import { normalize_spell_templates } from '../src/spell_templates.js'
 import * as SE from '../src/spell_effect.js'
 
 // ── The corpus: every class spell file (auto-discovered, like validation/spell_kit_laws.test.ts) ─────
+// MISSING-ARTIFACT (#96): seed/mainnet/spells is generated content authored+published by the content
+// pipeline (private repo) and is absent by design in this public repo. Degrade to an empty corpus rather
+// than throw — every OTHER export in this file (fresh_state, single_effect_spell, run_matrix, …) is pure/
+// synthetic and must stay usable with zero real spells loaded; consumers that genuinely need real corpus
+// rows gate themselves on SPELLS_CORPUS_AVAILABLE.
 const SPELLS_DIR = fileURLToPath(new URL('../../../seed/mainnet/spells', import.meta.url))
-export const CORPUS = readdirSync(SPELLS_DIR)
-  .filter(f => f.endsWith('.json'))
-  .flatMap(f => JSON.parse(readFileSync(`${SPELLS_DIR}/${f}`, 'utf8')))
+export const SPELLS_CORPUS_AVAILABLE = existsSync(SPELLS_DIR)
+export const CORPUS = SPELLS_CORPUS_AVAILABLE
+  ? readdirSync(SPELLS_DIR)
+      .filter(f => f.endsWith('.json'))
+      .flatMap(f => JSON.parse(readFileSync(`${SPELLS_DIR}/${f}`, 'utf8')))
+  : []
 
 export const KIND_NAME = kind =>
   Object.keys(SE).find(n => n.startsWith('K_') && SE[n] === kind) ?? `K_${kind}`
