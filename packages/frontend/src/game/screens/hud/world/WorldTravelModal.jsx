@@ -29,8 +29,6 @@ import { EncyclopediaLink } from '../../../../pages/encyclopedia/EncyclopediaLin
  * @returns {import('react').ReactElement | null}
  */
 export function WorldTravelModal({ open, on_close, cards, accessible_only, on_filter, can_travel, on_travel }) {
-  const { t } = useTranslation()
-
   // Esc closes, matching every other companion overlay (bound only while open).
   useEffect(() => {
     if (!open) return
@@ -44,6 +42,29 @@ export function WorldTravelModal({ open, on_close, cards, accessible_only, on_fi
   if (!open) return null
 
   return createPortal(
+    <WorldTravelModalContent
+      on_close={on_close}
+      cards={cards}
+      accessible_only={accessible_only}
+      on_filter={on_filter}
+      can_travel={can_travel}
+      on_travel={on_travel}
+    />,
+    document.body
+  )
+}
+
+/**
+ * The portal-free content — split out (mirrors the PetFeedModal/CrushMenu precedent) so the card grid,
+ * including each card's live level-gate render (disabled GO button + "LV N+" relabel), is directly
+ * render-testable: this repo's convention is renderToStaticMarkup with no jsdom/happy-dom, which cannot
+ * resolve a createPortal target — WorldTravelModal.test.jsx renders THIS export instead.
+ * @param {Omit<Parameters<typeof WorldTravelModal>[0], 'open'>} props
+ */
+export function WorldTravelModalContent({ on_close, cards, accessible_only, on_filter, can_travel, on_travel }) {
+  const { t } = useTranslation()
+
+  return (
     <div className="gw-travel__backdrop" onClick={on_close}>
       <div
         className="gw-travel"
@@ -132,7 +153,6 @@ export function WorldTravelModal({ open, on_close, cards, accessible_only, on_fi
           {cards.length === 0 && <p className="gw-travel__none">{t('world_switcher.filter_empty')}</p>}
         </div>
       </div>
-    </div>,
-    document.body
+    </div>
   )
 }
