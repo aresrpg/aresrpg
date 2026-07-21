@@ -6,12 +6,30 @@
 // embed_voxel_player.js:427-435), live-retargets to a same-world peer, and on arrival FORCE-UNMOUNTS (the drop)
 // so the next ctl.tick's gravity settles the body (TR-1 exit; no fall damage §4-B6). Every effect is injected →
 // headless-drivable; the flight MATH lives in fast_travel_flight.js (unit-tested), the phase machine in the store.
+//
+// v2 (#370) — OWN FACING: ctl.teleport() zeroes the controller's velocity, and the controller's facing_yaw is
+// only ever recomputed inside step_controller() (called from tick(), which flight never calls — see the #175
+// note on MOUNT_MOVE_THRESHOLD in fast_travel_flight.js for the identical frozen-state class of bug). So
+// facing_yaw is frozen at whatever it was the instant before takeoff for the WHOLE flight — the reported "the
+// dragon renders sideways/backwards" defect. The pilot tracks its OWN heading from flight_step's segment
+// direction instead of trusting the frozen controller transform, eased frame-to-frame (smooth turns) via the
+// same shortest-arc idiom character_controller.js's (private) turn_toward uses — vendored here rather than
+// exported across the engine/frontend package boundary for one 3-line generic math helper.
 
 import { ft_flight_target } from '../world-shell/fast_travel_store.js'
 
 import { flight_step } from './fast_travel_flight.js'
 
 const RETARGET_EPS = 0.5 // only dispatch a live retarget once the peer moved this far (m) — no per-frame churn
+const YAW_TURN_RATE = 12 // rad/s-ish ease lambda — matches the ground controller's own turn feel (same constant)
+
+/** Shortest-arc exponential ease toward a target yaw. @param {number} current @param {number} target @param {number} dt */
+function ease_yaw(current, target, dt) {
+  let delta = target - current
+  while (delta > Math.PI) delta -= 2 * Math.PI
+  while (delta < -Math.PI) delta += 2 * Math.PI
+  return current + delta * (1 - Math.exp(-YAW_TURN_RATE * dt))
+}
 
 /**
  * @param {{
@@ -39,10 +57,14 @@ export function create_fast_travel_pilot({
 }) {
   let mounted = false
   const fly_pos = [0, 0, 0]
+  // v2 (#370): the pilot's OWN flight heading — null means "not flying" and snaps (no ease) on the first frame
+  // of a new flight, so a stale heading from a PREVIOUS flight never bleeds into this one.
+  let fly_yaw = null
 
   const drop = () => {
     if (mounted) unmount_dragon()
     mounted = false
+    fly_yaw = null
   }
 
   /** One frame. Self-gated: teleports only while flying/landing, tears the rig down otherwise (cancel/arrival). */
@@ -77,6 +99,7 @@ export function create_fast_travel_pilot({
     fly_pos[0] = stepped.pos[0]
     fly_pos[1] = stepped.pos[1]
     fly_pos[2] = stepped.pos[2]
+    fly_yaw = fly_yaw == null ? stepped.yaw : ease_yaw(fly_yaw, stepped.yaw, dt)
     teleport([fly_pos[0], fly_pos[1], fly_pos[2]])
     if (state.phase === 'flying') {
       if (stepped.arrived) dispatch({ type: 'arrived' }) // → landing; the descent already brought us to ground+3
@@ -91,6 +114,9 @@ export function create_fast_travel_pilot({
   return {
     update,
     active: () => mounted,
+    /** v2 (#370): the pilot's own smoothed flight heading (radians) — the caller poses the mount rig with THIS
+     *  while flying, never the controller's frozen facing_yaw. 0 when no flight has stepped yet. */
+    yaw: () => fly_yaw ?? 0,
     cancel: () => drop(),
     dispose: () => drop(),
   }

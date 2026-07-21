@@ -615,7 +615,11 @@ export function create_player({
           // zeroes the controller's velocity — so t.speed is frozen at whatever it was the instant before
           // takeoff (typically 0) for the WHOLE flight. A raw speed check alone reads the dragon as motionless
           // mid-air; mount_is_moving also counts an active fast-travel flight as motion (fast_travel_flight.js).
-          mount_ctl.update(t.position[0], t.visual_y, t.position[2], t.facing_yaw, mount_is_moving(t.speed, ft_is_flying()), dt)
+          // v2 (#370): teleport() ALSO freezes t.facing_yaw (only step_controller, inside tick(), ever advances
+          // it — never called mid-flight) — the reported sideways/backwards dragon. ft_pilot tracks its own
+          // heading from the flight path itself (fast_travel_pilot.js); use it in place of the frozen transform.
+          const dragon_yaw = ft_is_flying() ? ft_pilot.yaw() : t.facing_yaw
+          mount_ctl.update(t.position[0], t.visual_y, t.position[2], dragon_yaw, mount_is_moving(t.speed, ft_is_flying()), dt)
           seat = mount_ctl.seat_height
         }
         avatar.object3d.position.set(t.position[0], t.visual_y + seat, t.position[2])
