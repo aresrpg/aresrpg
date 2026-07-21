@@ -22,9 +22,13 @@ const living_mob_ids = Object.values(seed_manifest.mobs)
   .filter(is_object_id)
 const living_world_ids = seed_manifest.worlds.map(({ id }) => id).filter(is_object_id)
 
+// DEGRADE LOUDLY (never crash boot) when the seed manifest is absent — the deployment pin is a runtime
+// artifact (issue #106 cascade; full runtime conversion is boarded via the inventory). The living-content
+// fence goes inert (every is_living_* → false, the shop shows nothing as buyable); the app still mounts.
 if (!living_item_ids.length || !living_mob_ids.length || !living_world_ids.length)
-  throw new Error(
-    `seed manifest carries ${living_item_ids.length} item / ${living_mob_ids.length} mob / ${living_world_ids.length} world ids; run the full corpus seed`
+  console.error(
+    `[living_corpus] seed manifest carries ${living_item_ids.length} item / ${living_mob_ids.length} mob / ` +
+      `${living_world_ids.length} world ids — the living-content fence is inert until the seed manifest ships (issue #106).`
   )
 
 const living_item_ids_set = new Set(living_item_ids)

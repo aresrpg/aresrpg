@@ -38,7 +38,15 @@ function label_from_wid(wid: string): string {
 }
 
 const seeded_worlds = [...seed_manifest.worlds].sort((left, right) => left.wid.localeCompare(right.wid))
-if (!seeded_worlds.length) throw new Error('seed manifest has no worlds; run the full corpus seed')
+// DEGRADE LOUDLY (never crash boot) when the seed manifest carries no worlds — it is a runtime artifact
+// (issue #106 cascade; full runtime conversion is boarded via the inventory). World switcher, travel and the
+// world encyclopedia go inert (T62_WORLDS = []); the app still mounts. The per-world integrity guards below
+// stay hard — a MALFORMED seeded world is a real data bug, not the migration-absence case.
+if (!seeded_worlds.length)
+  console.error(
+    '[deployment] seed manifest carries no worlds — world switcher, travel and the world encyclopedia are ' +
+      'inert until the seed manifest ships (issue #106).'
+  )
 
 export const T62_WORLDS = seeded_worlds.map((world) => {
   if (!is_object_id(world.id)) throw new Error(`seed world ${world.wid} has an invalid object id`)

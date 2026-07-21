@@ -157,6 +157,12 @@ const authored_modules: Record<string, unknown> = bun_runtime
       { eager: true, import: 'default' }
     )
 
+// Whether ANY authored world content shipped (the glob matched ≥1 file). Absent = the migration state
+// (world content is runtime, issue #106): the projection loops below skip so the corpus degrades to inert
+// (the ONE loud report is the join guard) instead of the first authored_json call crashing boot. A PARTIAL
+// gap (content present but one file missing) stays authored_json's hard integrity guard — a real seed bug.
+const authored_content_present = Object.values(authored_modules).length > 0
+
 function authored_json<T>(wid: string, name: (typeof authored_names)[number]): T {
   const relative_path = `../../../../../seed/mainnet/${wid}/${name}.json`
   const exact = authored_modules[relative_path]
@@ -169,7 +175,7 @@ function authored_json<T>(wid: string, name: (typeof authored_names)[number]): T
 
 const locales = ['fr', 'de', 'es', 'ja', 'uk'] as const
 const resource_by_slug = new Map<string, { name: string; level: number; i18n_json?: string }>()
-for (const { wid } of seed_manifest.worlds)
+for (const { wid } of authored_content_present ? seed_manifest.worlds : [])
   for (const resource of authored_json<AuthoredResource[]>(wid, 'resources')) {
     if (!resource.slug || resource_by_slug.has(resource.slug)) continue
     const names: Record<string, string> = {}
@@ -188,7 +194,7 @@ const corpus_worlds: CorpusWorld[] = []
 // template id → authored xp/spell facts. A mob authored in several worlds keeps its FIRST row (the
 // seeder mints one template per key; kits are authored identically across placements).
 const mob_facts_by_id = new Map<string, CorpusMobFacts>()
-for (const world of seed_manifest.worlds) {
+for (const world of authored_content_present ? seed_manifest.worlds : []) {
   if (!is_object_id(world.id)) throw new Error(`seed world ${world.wid} has an invalid object id`)
   const authored_world = authored_json<AuthoredWorld>(world.wid, 'world')
   const mobs: CorpusMob[] = []
@@ -247,9 +253,14 @@ for (const world of seed_manifest.worlds) {
 corpus_worlds.sort((left, right) => (left.band?.[0] ?? 0) - (right.band?.[0] ?? 0))
 const roster_count = corpus_worlds.reduce((count, world) => count + world.mobs.length, 0)
 const resource_count = corpus_worlds.reduce((count, world) => count + world.resources.length, 0)
+// DEGRADE LOUDLY (never crash boot) when the authored world content is absent — it is runtime content
+// (issue #106 cascade; full runtime-loader conversion is boarded via the inventory). The world encyclopedia
+// goes inert (WORLD_CORPUS.worlds = []); the app still mounts. The per-world integrity guards above stay
+// hard — a seeded-but-malformed world is a real data bug, not the migration-absence case.
 if (!corpus_worlds.length || !roster_count || !resource_count)
-  throw new Error(
-    `seed world corpus joined ${corpus_worlds.length} worlds / ${roster_count} mobs / ${resource_count} resources`
+  console.error(
+    `[world_corpus] seed world corpus joined ${corpus_worlds.length} worlds / ${roster_count} mobs / ` +
+      `${resource_count} resources — the world encyclopedia is inert until the seed content ships (issue #106).`
   )
 
 export const WORLD_CORPUS = { worlds: corpus_worlds }
