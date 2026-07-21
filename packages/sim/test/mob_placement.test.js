@@ -2,8 +2,13 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, test, expect } from 'bun:test'
 
-import { rng_seed, rng_int } from '../src/prng.js'
-import { grid_cells, mask_get, empty_mask, mask_set } from '../src/combat_grid.js'
+import { rng_seed } from '../src/prng.js'
+import {
+  grid_cells,
+  mask_get,
+  empty_mask,
+  mask_set,
+} from '../src/combat_grid.js'
 import { generate_for_anchor } from '../src/board_gen.js'
 import { place_mob_cells, seeded_spawn_cell } from '../src/mob_placement.js'
 
@@ -11,18 +16,32 @@ import { place_mob_cells, seeded_spawn_cell } from '../src/mob_placement.js'
 const open_pool = (mask, obstacles, holes, starts) => {
   const blocked = new Set([...obstacles, ...holes, ...starts])
   const out = []
-  for (let c = 0; c < grid_cells(); c++) if (mask_get(mask, c) && !blocked.has(c)) out.push(c)
+  for (let c = 0; c < grid_cells(); c++)
+    if (mask_get(mask, c) && !blocked.has(c)) out.push(c)
   return out
 }
 
 // The CURRENT (buggy) chain loop: a FIXED exclusion set (start cells only), never fed the placed mobs —
 // mob_ai.move seeded_spawn_cell called per mob with an unchanging `all_starts` (fight.move:280-289). Used
 // ONLY to prove the fix is load-bearing (this MUST be able to collide where place_mob_cells cannot).
-const naive_place = ({ mask, obstacles = [], holes = [], starts = [], group_seed, count }) => {
+const naive_place = ({
+  mask,
+  obstacles = [],
+  holes = [],
+  starts = [],
+  group_seed,
+  count,
+}) => {
   let state = rng_seed(Number(BigInt(group_seed) & 0xffff_ffffn))
   const cells = []
   for (let i = 0; i < count; i++) {
-    const { cell, state: st } = seeded_spawn_cell(mask, obstacles, holes, starts, state) // starts NEVER grows
+    const { cell, state: st } = seeded_spawn_cell(
+      mask,
+      obstacles,
+      holes,
+      starts,
+      state,
+    ) // starts NEVER grows
     state = st
     cells.push(cell)
   }
@@ -38,7 +57,12 @@ describe('mob placement — collision-free distinct-cell guarantee (the "both mo
         const az = 91 * a + 2 * ws
         const board = generate_for_anchor(ws, ax, az)
         const starts = [...board.start_cells_a, ...board.start_cells_b]
-        const pool = open_pool(board.shape_mask, board.obstacles, board.holes, starts)
+        const pool = open_pool(
+          board.shape_mask,
+          board.obstacles,
+          board.holes,
+          starts,
+        )
         for (let count = 1; count <= 6; count++) {
           const cells = place_mob_cells({
             mask: board.shape_mask,

@@ -2,7 +2,10 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, test } from 'bun:test'
 
-import { get_direction, handle_displacement } from '../src/fight_displacement.js'
+import {
+  get_direction,
+  handle_displacement,
+} from '../src/fight_displacement.js'
 import { find_entity } from '../src/fight_state.js'
 import { create_fight_state } from '../src/reduce.js'
 
@@ -66,7 +69,6 @@ const push = state =>
     1,
     wall,
     undefined,
-    'p0',
   )
 
 const INVERSION = {
@@ -85,7 +87,9 @@ describe('collision damage is raw (Move parity) — a knockback never heals', ()
     expect(find_entity(result.state, 'm0').health).toBe(17)
     // BEAT (effects): a damage effect, no heal effect.
     expect(result.effects.some(effect => effect.heal !== undefined)).toBe(false)
-    expect(result.effects.find(effect => effect.damage !== undefined)).toMatchObject({
+    expect(
+      result.effects.find(effect => effect.damage !== undefined),
+    ).toMatchObject({
       target_id: 'm0',
       damage: 3,
       new_health: 17,
@@ -97,7 +101,9 @@ describe('collision damage is raw (Move parity) — a knockback never heals', ()
     const result = push(state_with([]))
     expect(find_entity(result.state, 'm0').health).toBe(17)
     expect(result.effects.some(effect => effect.heal !== undefined)).toBe(false)
-    expect(result.effects.find(effect => effect.damage !== undefined)).toMatchObject({
+    expect(
+      result.effects.find(effect => effect.damage !== undefined),
+    ).toMatchObject({
       target_id: 'm0',
       damage: 3,
     })

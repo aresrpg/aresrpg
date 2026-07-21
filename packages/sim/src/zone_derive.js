@@ -24,7 +24,8 @@ const SPACING_D2 = MIN_SPAWN_SPACING * MIN_SPAWN_SPACING // squared compare (= 4
 const POS_ATTEMPTS = 64 // rejection cap; on exhaustion accept the last roll (a zone too small to fit the spacing)
 
 /** prng-state twin of `zone_gen::p_roll_u64` — SKIP the draw when `lo >= hi` (point/malformed band). */
-const p_roll_u64 = (state, lo, hi) => (lo >= hi ? { state, value: lo } : rng_range(state, lo, hi))
+const p_roll_u64 = (state, lo, hi) =>
+  lo >= hi ? { state, value: lo } : rng_range(state, lo, hi)
 
 /** prng-state twin of `zone_gen::p_pick_weighted` — ALWAYS draws once; `null` on an empty/all-zero table. */
 const p_pick_weighted = (state, weights) => {
@@ -123,7 +124,7 @@ export function derive_mob_groups({
     const pick = p_pick_weighted(s, weights)
     s = pick.state
     if (pick.idx === null) break
-    const idx = pick.idx
+    const { idx } = pick
     const sz = p_roll_u64(s, min_group[idx], max_group[idx])
     s = sz.state
     const size = clamp_group(sz.value, size_bound)
@@ -134,7 +135,14 @@ export function derive_mob_groups({
     const lo = rng_next(hi.state)
     s = lo.state
     const spawn_id = (BigInt(hi.value) << 32n) | BigInt(lo.value)
-    out.push({ spawn_id, template_idx: idx, x: pos.x, z: pos.z, size, group_seed: gseed.value })
+    out.push({
+      spawn_id,
+      template_idx: idx,
+      x: pos.x,
+      z: pos.z,
+      size,
+      group_seed: gseed.value,
+    })
     xs.push(pos.x)
     zs.push(pos.z)
   }
@@ -153,7 +161,20 @@ export function derive_mob_groups({
  * @param {number} p.ox @param {number} p.oz @param {number} p.zsize @param {number} p.bx @param {number} p.bz
  * @returns {Array<{ spawn_id: bigint, template_idx: number, x: number, z: number }>}
  */
-export function derive_resources({ seed, min_n, max_n, weights, min_qty, max_qty, jobs, ox, oz, zsize, bx, bz }) {
+export function derive_resources({
+  seed,
+  min_n,
+  max_n,
+  weights,
+  min_qty,
+  max_qty,
+  jobs,
+  ox,
+  oz,
+  zsize,
+  bx,
+  bz,
+}) {
   const out = []
   let s = rng_seed(mix(seed, RES_SALT))
   const t = p_roll_u64(s, min_n, max_n)
@@ -166,7 +187,7 @@ export function derive_resources({ seed, min_n, max_n, weights, min_qty, max_qty
     const pick = p_pick_weighted(s, weights)
     s = pick.state
     if (pick.idx === null) break
-    const idx = pick.idx
+    const { idx } = pick
     const q = p_roll_u64(s, min_qty[idx], max_qty[idx])
     s = q.state
     const anchor = p_roll_pos(s, ox, oz, zsize, bx, bz)
@@ -175,13 +196,28 @@ export function derive_resources({ seed, min_n, max_n, weights, min_qty, max_qty
       const hi = rng_next(s)
       const lo = rng_next(hi.state)
       s = lo.state
-      out.push({ spawn_id: (BigInt(hi.value) << 32n) | BigInt(lo.value), template_idx: idx, x, z })
+      out.push({
+        spawn_id: (BigInt(hi.value) << 32n) | BigInt(lo.value),
+        template_idx: idx,
+        x,
+        z,
+      })
     }
     if (jobs[idx] <= MAX_GATHER_JOB) {
       const k = Math.min(q.value, CLUSTER_CAP)
-      const grown = p_grow_cluster(s, anchor.x, anchor.z, k, ox, max_cx, oz, max_cz)
+      const grown = p_grow_cluster(
+        s,
+        anchor.x,
+        anchor.z,
+        k,
+        ox,
+        max_cx,
+        oz,
+        max_cz,
+      )
       s = grown.state
-      for (let c = 0; c < grown.xs.length; c++) push_cell(grown.xs[c], grown.zs[c])
+      for (let c = 0; c < grown.xs.length; c++)
+        push_cell(grown.xs[c], grown.zs[c])
     } else {
       push_cell(anchor.x, anchor.z) // non-gather: ONE cell, one harvest (the one-bit collapse)
     }
@@ -265,8 +301,17 @@ export const distance_progress = (ax, az, bx, bz) => {
   if (d2 >= DIST_EDGE * DIST_EDGE) return PROGRESS_SCALE
   const d = isqrt(d2)
   if (d <= DIST_A1) return Math.floor((d * PROG_A1) / DIST_A1)
-  if (d <= DIST_A2) return PROG_A1 + Math.floor(((d - DIST_A1) * (PROG_A2 - PROG_A1)) / (DIST_A2 - DIST_A1))
-  return PROG_A2 + Math.floor(((d - DIST_A2) * (PROGRESS_SCALE - PROG_A2)) / (DIST_EDGE - DIST_A2))
+  if (d <= DIST_A2)
+    return (
+      PROG_A1 +
+      Math.floor(((d - DIST_A1) * (PROG_A2 - PROG_A1)) / (DIST_A2 - DIST_A1))
+    )
+  return (
+    PROG_A2 +
+    Math.floor(
+      ((d - DIST_A2) * (PROGRESS_SCALE - PROG_A2)) / (DIST_EDGE - DIST_A2),
+    )
+  )
 }
 
 const axis_gap = (a_min, a_max, b_min, b_max) => {
@@ -304,14 +349,19 @@ export const spawn_distance_progress = ({
 export const level_cap = (progress, roster_min, roster_max) => {
   if (roster_max <= roster_min) return roster_min
   const span = roster_max - roster_min
-  return roster_min + Math.floor((span * progress + PROGRESS_SCALE / 2) / PROGRESS_SCALE)
+  return (
+    roster_min +
+    Math.floor((span * progress + PROGRESS_SCALE / 2) / PROGRESS_SCALE)
+  )
 }
 
 /** Twin of `world_math::size_cap`. */
 export const size_cap = (progress, team_bound) => {
   const near = team_bound < NEAR_GROUP_CAP ? team_bound : NEAR_GROUP_CAP
   const span = team_bound - near
-  return near + Math.floor((span * progress + PROGRESS_SCALE / 2) / PROGRESS_SCALE)
+  return (
+    near + Math.floor((span * progress + PROGRESS_SCALE / 2) / PROGRESS_SCALE)
+  )
 }
 
 /** Twin of `world_math::roster_bounds` — (min authored non-zero level, max level) over the parallel levels. */
@@ -361,7 +411,7 @@ export function derive_zone({ zone, zx, zy, world, team_bound = 6 }) {
   const oz = zy * zsize
   const mobs = world.mobs ?? []
   const resources = world.resources ?? []
-  const seed = zone.seed
+  const { seed } = zone
   const spawned_at_ms = Number(zone.discovered_at_ms ?? 0)
 
   // §4 distance-difficulty inputs — the EXACT chain pipeline (zones.move derive internals)
@@ -377,7 +427,9 @@ export function derive_zone({ zone, zx, zy, world, team_bound = 6 }) {
     spawn_z: Number(world.spawn_zone_z ?? 1000),
   })
   const lvl_cap = level_cap(progress, rmin, rmax)
-  const weights = mobs.map((m, i) => (levels[i] <= lvl_cap ? Number(m.rate_bp) : 0))
+  const weights = mobs.map((m, i) =>
+    levels[i] <= lvl_cap ? Number(m.rate_bp) : 0,
+  )
   const size_bound = size_cap(progress, Number(team_bound) || 6)
 
   const groups = derive_mob_groups({
@@ -442,4 +494,4 @@ export function derive_zone({ zone, zx, zy, world, team_bound = 6 }) {
   return rows
 }
 
-export const _spacing = MIN_SPAWN_SPACING
+export const spacing = MIN_SPAWN_SPACING

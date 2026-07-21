@@ -52,35 +52,52 @@ describe('cast limits — §2 rule (bit-for-bit mirror of cast.move:160-192)', (
     let s = S(1)
     expect(check_cast_limits(s, 'p0', 'sp', sl, CELL).valid).toBe(true)
     s = record_cast(s, 'p0', 'sp', sl, CELL)
-    expect(s.cast_history['p0:sp']).toEqual({ last_turn: 1, casts_this_turn: 1 })
+    expect(s.cast_history['p0:sp']).toEqual({
+      last_turn: 1,
+      casts_this_turn: 1,
+    })
     expect(check_cast_limits(s, 'p0', 'sp', sl, CELL).valid).toBe(true) // 1 < 2
     s = record_cast(s, 'p0', 'sp', sl, CELL)
-    expect(s.cast_history['p0:sp']).toEqual({ last_turn: 1, casts_this_turn: 2 })
+    expect(s.cast_history['p0:sp']).toEqual({
+      last_turn: 1,
+      casts_this_turn: 2,
+    })
     expect(check_cast_limits(s, 'p0', 'sp', sl, CELL)).toEqual({
       valid: false,
       error: 'CASTS_PER_TURN',
     }) // 2 < 2 is false
     // lazy per-turn reset (cast.move:169): a fresh turn zeroes the counter
-    expect(check_cast_limits({ ...s, turn_number: 2 }, 'p0', 'sp', sl, CELL).valid).toBe(true)
+    expect(
+      check_cast_limits({ ...s, turn_number: 2 }, 'p0', 'sp', sl, CELL).valid,
+    ).toBe(true)
   })
 
   test('cooldown boundary proven BOTH WAYS — strict `>` (cast.move:170), NOT `>=`', () => {
     const sl = SL({ cooldown_turns: 1 })
     const s = record_cast(S(1), 'p0', 'sp', sl, CELL) // cast on turn T=1
-    expect(s.cast_history['p0:sp']).toEqual({ last_turn: 1, casts_this_turn: 1 })
+    expect(s.cast_history['p0:sp']).toEqual({
+      last_turn: 1,
+      casts_this_turn: 1,
+    })
     // T (same turn): t-last = 0 > 1 ? NO → blocked
-    expect(check_cast_limits({ ...s, turn_number: 1 }, 'p0', 'sp', sl, CELL)).toEqual({
+    expect(
+      check_cast_limits({ ...s, turn_number: 1 }, 'p0', 'sp', sl, CELL),
+    ).toEqual({
       valid: false,
       error: 'SPELL_ON_COOLDOWN',
     })
     // T+1: t-last = 1 > 1 ? NO → blocked. THE off-by-one guard: `>=` would WRONGLY re-enable here and burn a
     // doomed tx (the one-line premortem). Move uses strict `>`, so turn T+1 stays on cooldown.
-    expect(check_cast_limits({ ...s, turn_number: 2 }, 'p0', 'sp', sl, CELL)).toEqual({
+    expect(
+      check_cast_limits({ ...s, turn_number: 2 }, 'p0', 'sp', sl, CELL),
+    ).toEqual({
       valid: false,
       error: 'SPELL_ON_COOLDOWN',
     })
     // T+C+1 = 3: t-last = 2 > 1 ? YES → re-enabled
-    expect(check_cast_limits({ ...s, turn_number: 3 }, 'p0', 'sp', sl, CELL).valid).toBe(true)
+    expect(
+      check_cast_limits({ ...s, turn_number: 3 }, 'p0', 'sp', sl, CELL).valid,
+    ).toBe(true)
   })
 
   test('casts_per_target: same cell blocks, a different cell same turn is free', () => {
@@ -94,29 +111,48 @@ describe('cast limits — §2 rule (bit-for-bit mirror of cast.move:160-192)', (
       error: 'CASTS_PER_TARGET',
     })
     expect(check_cast_limits(s, 'p0', 'sp', sl, B).valid).toBe(true) // distinct TargetKey cell
-    expect(check_cast_limits({ ...s, turn_number: 2 }, 'p0', 'sp', sl, A).valid).toBe(true) // reset
+    expect(
+      check_cast_limits({ ...s, turn_number: 2 }, 'p0', 'sp', sl, A).valid,
+    ).toBe(true) // reset
   })
 
   test('cooldown + casts_per_turn are independent AND-gates; cooldown is checked first', () => {
     // C=1, per_turn unlimited → cooldown alone collapses it to once-per-turn.
     const cd = SL({ cooldown_turns: 1, casts_per_turn: 255 })
     const s1 = record_cast(S(1), 'p0', 'a', cd, CELL)
-    expect(check_cast_limits({ ...s1, turn_number: 1 }, 'p0', 'a', cd, CELL).error).toBe('SPELL_ON_COOLDOWN')
-    expect(check_cast_limits({ ...s1, turn_number: 3 }, 'p0', 'a', cd, CELL).valid).toBe(true)
+    expect(
+      check_cast_limits({ ...s1, turn_number: 1 }, 'p0', 'a', cd, CELL).error,
+    ).toBe('SPELL_ON_COOLDOWN')
+    expect(
+      check_cast_limits({ ...s1, turn_number: 3 }, 'p0', 'a', cd, CELL).valid,
+    ).toBe(true)
     // C=0, per_turn=1 → once per turn but recastable the very NEXT turn (no cooldown skip).
     const pt = SL({ cooldown_turns: 0, casts_per_turn: 1 })
     const s2 = record_cast(S(1), 'p0', 'b', pt, CELL)
-    expect(check_cast_limits({ ...s2, turn_number: 1 }, 'p0', 'b', pt, CELL).error).toBe('CASTS_PER_TURN')
-    expect(check_cast_limits({ ...s2, turn_number: 2 }, 'p0', 'b', pt, CELL).valid).toBe(true)
+    expect(
+      check_cast_limits({ ...s2, turn_number: 1 }, 'p0', 'b', pt, CELL).error,
+    ).toBe('CASTS_PER_TURN')
+    expect(
+      check_cast_limits({ ...s2, turn_number: 2 }, 'p0', 'b', pt, CELL).valid,
+    ).toBe(true)
   })
 
   test('save/resume mid-cooldown — history survives JSON round-trip and still enforces', () => {
     const sl = SL({ cooldown_turns: 2 }) // free only when t - 1 > 2, i.e. t >= 4
     const s = record_cast(S(1), 'p0', 'sp', sl, CELL)
     const resumed = JSON.parse(JSON.stringify(s))
-    expect(check_cast_limits({ ...resumed, turn_number: 2 }, 'p0', 'sp', sl, CELL).valid).toBe(false)
-    expect(check_cast_limits({ ...resumed, turn_number: 3 }, 'p0', 'sp', sl, CELL).valid).toBe(false)
-    expect(check_cast_limits({ ...resumed, turn_number: 4 }, 'p0', 'sp', sl, CELL).valid).toBe(true)
+    expect(
+      check_cast_limits({ ...resumed, turn_number: 2 }, 'p0', 'sp', sl, CELL)
+        .valid,
+    ).toBe(false)
+    expect(
+      check_cast_limits({ ...resumed, turn_number: 3 }, 'p0', 'sp', sl, CELL)
+        .valid,
+    ).toBe(false)
+    expect(
+      check_cast_limits({ ...resumed, turn_number: 4 }, 'p0', 'sp', sl, CELL)
+        .valid,
+    ).toBe(true)
   })
 })
 
@@ -150,7 +186,14 @@ function spell(limits) {
         linear: false,
         free_cell: false,
         base_effects: [
-          { type: 'damage', min: 1, max: 1, element: 'fire', target: 'enemies', chance: 100 },
+          {
+            type: 'damage',
+            min: 1,
+            max: 1,
+            element: 'fire',
+            target: 'enemies',
+            chance: 100,
+          },
         ],
         critical_effects: [],
         ...limits,
@@ -192,7 +235,10 @@ const entity = (id, cell, is_player) => ({
   ap_reserve: 0,
 })
 // A started fight state at a chosen turn_number (process_spell_cast reads state.started + turn_number directly).
-const started = (turn_number = 1, mobs = [entity('m0', { x: 7, y: 4 }, false)]) => ({
+const started = (
+  turn_number = 1,
+  mobs = [entity('m0', { x: 7, y: 4 }, false)],
+) => ({
   ...create_fight_state({
     fight_id: 'f',
     arena_seed: 1,
@@ -209,7 +255,14 @@ const CTX = { blocks_los: () => false, is_occupied: () => false }
 
 describe('cast limits — wiring through process_spell_cast (validate + record)', () => {
   test('unlimited spell casts freely and records NOTHING (history stays empty)', () => {
-    const r = process_spell_cast(started(1), 'p0', spell_templates.get('free'), 1, CELL, CTX)
+    const r = process_spell_cast(
+      started(1),
+      'p0',
+      spell_templates.get('free'),
+      1,
+      CELL,
+      CTX,
+    )
     expect(r.success).toBe(true)
     expect(Object.keys(r.state.cast_history)).toHaveLength(0)
     expect(Object.keys(r.state.target_history)).toHaveLength(0)
@@ -235,10 +288,26 @@ describe('cast limits — wiring through process_spell_cast (validate + record)'
     })
     // caster's next turn (turn_number bumps once per round — proven below): T+1 still blocked
     expect(
-      process_spell_cast({ ...c1.state, turn_number: 2 }, 'p0', sp, 1, CELL, CTX),
+      process_spell_cast(
+        { ...c1.state, turn_number: 2 },
+        'p0',
+        sp,
+        1,
+        CELL,
+        CTX,
+      ),
     ).toMatchObject({ success: false, error: 'SPELL_ON_COOLDOWN' })
     // T+C+1 = 3: re-enabled
-    expect(process_spell_cast({ ...c1.state, turn_number: 3 }, 'p0', sp, 1, CELL, CTX).success).toBe(true)
+    expect(
+      process_spell_cast(
+        { ...c1.state, turn_number: 3 },
+        'p0',
+        sp,
+        1,
+        CELL,
+        CTX,
+      ).success,
+    ).toBe(true)
   })
 
   test('casts_per_target=1 — same cell refused, a different living target is free same turn', () => {
@@ -249,11 +318,15 @@ describe('cast limits — wiring through process_spell_cast (validate + record)'
     ])
     const a1 = process_spell_cast(s, 'p0', sp, 1, { x: 7, y: 4 }, CTX)
     expect(a1.success).toBe(true)
-    expect(process_spell_cast(a1.state, 'p0', sp, 1, { x: 7, y: 4 }, CTX)).toMatchObject({
+    expect(
+      process_spell_cast(a1.state, 'p0', sp, 1, { x: 7, y: 4 }, CTX),
+    ).toMatchObject({
       success: false,
       error: 'CASTS_PER_TARGET',
     })
-    expect(process_spell_cast(a1.state, 'p0', sp, 1, { x: 7, y: 5 }, CTX).success).toBe(true)
+    expect(
+      process_spell_cast(a1.state, 'p0', sp, 1, { x: 7, y: 5 }, CTX).success,
+    ).toBe(true)
   })
 })
 
@@ -265,7 +338,6 @@ describe('cast limits — wiring through process_spell_cast (validate + record)'
 // Sim clock = the mob's per-round turn_number; chain clock = the mob's own action_envelope::mob_turn — both bump
 // once per round, so `t − last_turn > cooldown` is bit-identical on both sides.
 describe('cast limits — TWIN mob cooldown parity (sim ↔ resolve_mob_cast)', () => {
-  const MOB = { x: 7, y: 4 } // the mob's cell — it casts at the player at {1,4}
   const PLAYER = { x: 1, y: 4 }
 
   test('a mob cooldown-2 cast is refused turns 2 & 3, re-enabled turn 4 (chain resolve_mob_cast twin)', () => {
@@ -273,33 +345,76 @@ describe('cast limits — TWIN mob cooldown parity (sim ↔ resolve_mob_cast)', 
     // Turn 1 — the mob 'm0' casts at the player; first-ever cast lands and is recorded under the MOB's key.
     const c1 = process_spell_cast(started(1), 'm0', sp, 1, PLAYER, CTX)
     expect(c1.success).toBe(true)
-    expect(c1.state.cast_history['m0:cd2']).toEqual({ last_turn: 1, casts_this_turn: 1 })
+    expect(c1.state.cast_history['m0:cd2']).toEqual({
+      last_turn: 1,
+      casts_this_turn: 1,
+    })
     // Turn 2 — 2 − 1 = 1, NOT > 2 → still on cooldown (chain: mob_can_cast === false).
-    expect(process_spell_cast({ ...c1.state, turn_number: 2 }, 'm0', sp, 1, PLAYER, CTX)).toMatchObject({
+    expect(
+      process_spell_cast(
+        { ...c1.state, turn_number: 2 },
+        'm0',
+        sp,
+        1,
+        PLAYER,
+        CTX,
+      ),
+    ).toMatchObject({
       success: false,
       error: 'SPELL_ON_COOLDOWN',
     })
     // Turn 3 — 3 − 1 = 2, NOT > 2 → still on cooldown.
-    expect(process_spell_cast({ ...c1.state, turn_number: 3 }, 'm0', sp, 1, PLAYER, CTX)).toMatchObject({
+    expect(
+      process_spell_cast(
+        { ...c1.state, turn_number: 3 },
+        'm0',
+        sp,
+        1,
+        PLAYER,
+        CTX,
+      ),
+    ).toMatchObject({
       success: false,
       error: 'SPELL_ON_COOLDOWN',
     })
     // Turn 4 — 4 − 1 = 3 > 2 → re-enabled (chain: the lawful-cadence cast lands again).
-    expect(process_spell_cast({ ...c1.state, turn_number: 4 }, 'm0', sp, 1, PLAYER, CTX).success).toBe(true)
+    expect(
+      process_spell_cast(
+        { ...c1.state, turn_number: 4 },
+        'm0',
+        sp,
+        1,
+        PLAYER,
+        CTX,
+      ).success,
+    ).toBe(true)
     // sanity: the caster really is a mob (is_player false), so this is the mob path, not a player recast.
-    expect(started(1).team1.find(e => e.id === 'm0')?.is_player ?? false).toBe(false)
+    expect(started(1).team1.find(e => e.id === 'm0')?.is_player ?? false).toBe(
+      false,
+    )
   })
 
   test('a mob per-turn=1 cap refuses the second same-turn cast, resets next turn (chain twin)', () => {
     const sp = spell_templates.get('pt1') // one cast per turn, no cooldown
     const r1 = process_spell_cast(started(1), 'm0', sp, 1, PLAYER, CTX)
     expect(r1.success).toBe(true)
-    expect(process_spell_cast(r1.state, 'm0', sp, 1, PLAYER, CTX)).toMatchObject({
+    expect(
+      process_spell_cast(r1.state, 'm0', sp, 1, PLAYER, CTX),
+    ).toMatchObject({
       success: false,
       error: 'CASTS_PER_TURN',
     })
     // next round resets lazily → castable again
-    expect(process_spell_cast({ ...r1.state, turn_number: 2 }, 'm0', sp, 1, PLAYER, CTX).success).toBe(true)
+    expect(
+      process_spell_cast(
+        { ...r1.state, turn_number: 2 },
+        'm0',
+        sp,
+        1,
+        PLAYER,
+        CTX,
+      ).success,
+    ).toBe(true)
   })
 })
 
@@ -318,9 +433,13 @@ describe('cast limits — the cooldown clock is turn_number', () => {
     const { state } = reduce(base, { type: 'start' }, ctx)
     expect(state.turn_number).toBe(1) // Move: every seat's SeatTurnKey == 1 on its first turn
     // Complete one full round: p0 ends, m0 (mob) takes its AI turn which ends it → wrap to idx 0.
-    const afterP = reduce(state, { type: 'end_turn', entity_id: 'p0' }, ctx)
-    const afterRound = reduce(afterP.state, { type: 'ai_turn', entity_id: 'm0' }, ctx)
-    expect(afterRound.state.turn_number).toBe(2)
-    expect(afterRound.state.current_turn_idx).toBe(0)
+    const after_p = reduce(state, { type: 'end_turn', entity_id: 'p0' }, ctx)
+    const after_round = reduce(
+      after_p.state,
+      { type: 'ai_turn', entity_id: 'm0' },
+      ctx,
+    )
+    expect(after_round.state.turn_number).toBe(2)
+    expect(after_round.state.current_turn_idx).toBe(0)
   })
 })
