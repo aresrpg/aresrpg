@@ -178,10 +178,15 @@ const critical_events = (events, critical) =>
 const critical_beats = (beats, critical) =>
   beats.map((beat) => {
     const source_event = beat.payload?.source_event
+    const cast_effect = source_event?.type === 'fight_cast'
     const payload = {
       ...beat.payload,
       ...(beat.kind === 'cast' ? { is_critical: !!critical } : {}),
-      ...(source_event?.type === 'fight_cast' ? { source_event: { ...source_event, is_critical: !!critical } } : {}),
+      // Drafted damage/heal beats render independently after their Cast beat. The voxel adapter reads this
+      // top-level flag to choose its orange `crit` floater; keeping the verdict only on source_event made a known
+      // critical preview land for the right amount but paint as ordinary red.
+      ...(cast_effect && (beat.kind === 'damage' || beat.kind === 'heal') ? { is_critical: !!critical } : {}),
+      ...(cast_effect ? { source_event: { ...source_event, is_critical: !!critical } } : {}),
     }
     return { ...beat, payload }
   })
