@@ -2,18 +2,30 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // AUTHORED world knowledge (burial-reseed corpus join, 2026-07-13). The encyclopedia is STATIC
 // KNOWLEDGE: a world's display name, level band, mob roster and gatherable resources are authored
-// corpus facts (seed/mainnet/<wid>/{world.json,mobs.json,resources.json}), not live chain state.
+// corpus facts, not live chain state.
+//
+// RUNTIME BLOB, NOT A BUILD-TIME GLOB (#196): the authored trio (world/mobs/resources per wid) is ONE
+// published Walrus blob (world_corpus.json), fetched at boot exactly like game/data/spell_corpus.js and
+// mob_catalog.js — one runtime-content pattern, now three consumers. Gameplay content NEVER ships inside
+// this repo; it reaches the game only as published chain state + CDN blobs. Until the blob publishes (or
+// on a fetch failure) the corpus DEGRADES LOUDLY to inert (zero worlds + ONE console.error) and the app
+// still mounts — never a crash, never a cached absence (a failed load leaves the cache empty AND `loaded`
+// false, so a later load still populates it). The prior build-time `import.meta.glob` over the (repo-absent)
+// seed/mainnet/*.json is what logged `joined 0 worlds` in prod; this loader replaces it.
 //
 // WHY AUTHORED CORPUS AND NOT /v1: the read-API's mob rows carry NO world provenance (views.js projects
 // template_id/name/levels/element/drops — never the world), so the world->roster relation simply does
 // not exist on /v1 and cannot be joined client-side from it. Rather than grow a new indexer projection
 // (packages/rpc image rebuild + repush) for facts that only ever change when we re-seed, the join is
-// computed from authored seed JSON and keyed by the CURRENT lineage's ids from the seed receipt. There is
-// no second checked-in ID projection that can lag a republish.
+// computed from the authored blob and keyed by the CURRENT lineage's ids from the seed receipt. The blob
+// carries NO object ids (deliberately, #196): the app joins authored rows to the live lineage via its own
+// seed_manifest receipt, so a republish never stales the blob. There is no second checked-in ID projection.
 //
 // The chain stays the source of truth for WHICH worlds are live: the worlds tab lists /v1's rows and
 // joins THIS for their display knowledge (a /v1 world absent here still renders, honestly degraded).
-import { bun_runtime, is_object_id, seed_manifest } from '../../content/seed_manifest'
+import { walrus_asset_url } from '@aresrpg/sdk/jobs'
+
+import { is_object_id, seed_manifest } from '../../content/seed_manifest'
 import jobs_data from '../../data/jobs.json'
 
 const { JOB_MASTER_JOBS } = jobs_data
@@ -137,89 +149,74 @@ interface AuthoredWorld {
   dungeonKey?: string
 }
 
-const authored_names = ['world', 'mobs', 'resources'] as const
-// MISSING-ARTIFACT (#117): seed/mainnet/<wid>/{world,mobs,resources}.json is content-pipeline output,
-// absent by design in this public repo. The Vite glob branch below simply finds nothing for a missing
-// file (eager glob, no throw) — degrading the whole corpus to inert via authored_content_present
-// (issue #106's documented behavior, see the comment below). import.meta.require has no such grace: it
-// throws synchronously on a missing module, so the bun:test-only branch must catch per-file and skip,
-// to mirror the Vite branch's behavior instead of crashing this module's very first import.
-const authored_modules: Record<string, unknown> = bun_runtime
-  ? Object.fromEntries(
-      seed_manifest.worlds
-        .flatMap(({ wid }) =>
-          authored_names.map((name) => {
-            const relative_path = `../../../../../seed/mainnet/${wid}/${name}.json`
-            try {
-              const data = (import.meta as ImportMeta & { require(path: string): unknown }).require(relative_path)
-              return [relative_path, data] as const
-            } catch {
-              return null
-            }
-          })
-        )
-        .filter((entry): entry is readonly [string, unknown] => entry !== null)
-    )
-  : import.meta.glob(
-      [
-        '../../../../../seed/mainnet/*/world.json',
-        '../../../../../seed/mainnet/*/mobs.json',
-        '../../../../../seed/mainnet/*/resources.json',
-      ],
-      { eager: true, import: 'default' }
-    )
-
-// Whether ANY authored world content shipped (the glob matched ≥1 file). Absent = the migration state
-// (world content is runtime, issue #106): the projection loops below skip so the corpus degrades to inert
-// (the ONE loud report is the join guard) instead of the first authored_json call crashing boot. A PARTIAL
-// gap (content present but one file missing) stays authored_json's hard integrity guard — a real seed bug.
-// MISSING-ARTIFACT (#117): exported so tests can skip cardinality assertions against zero authored content,
-// naming the real reason instead of a silent 0-vs-N mismatch.
-export const authored_content_present = Object.values(authored_modules).length > 0
-
-function authored_json<T>(wid: string, name: (typeof authored_names)[number]): T {
-  const relative_path = `../../../../../seed/mainnet/${wid}/${name}.json`
-  const exact = authored_modules[relative_path]
-  if (exact !== undefined) return exact as T
-  const suffix = `/seed/mainnet/${wid}/${name}.json`
-  const match = Object.entries(authored_modules).find(([file_path]) => file_path.endsWith(suffix))
-  if (!match) throw new Error(`authored seed file missing: ${wid}/${name}.json`)
-  return match[1] as T
+/** The published world-corpus blob (#196 contract): the authored trio VERBATIM, keyed by wid, sorted.
+ *  `blob[wid][name]` is the exact JSON the old build-time seed/mainnet/<wid>/{world,mobs,resources}.json
+ *  glob served — every downstream derivation below is unchanged; only the SOURCE moved to runtime. */
+export interface WorldCorpusBlob {
+  [wid: string]: { world: AuthoredWorld; mobs: AuthoredMob[]; resources: AuthoredResource[] }
 }
 
-const locales = ['fr', 'de', 'es', 'ja', 'uk'] as const
-const resource_by_slug = new Map<string, { name: string; level: number; i18n_json?: string }>()
-for (const { wid } of authored_content_present ? seed_manifest.worlds : [])
-  for (const resource of authored_json<AuthoredResource[]>(wid, 'resources')) {
-    if (!resource.slug || resource_by_slug.has(resource.slug)) continue
-    const names: Record<string, string> = {}
-    for (const locale of locales) {
-      const name = resource.i18n?.[locale]?.name
-      if (name) names[locale] = name
-    }
-    resource_by_slug.set(resource.slug, {
-      name: resource.name ?? resource.slug,
-      level: resource.level ?? 0,
-      ...(Object.keys(names).length ? { i18n_json: JSON.stringify({ name: names }) } : {}),
-    })
-  }
+export interface GatherRow extends CorpusResource {
+  /** XP per harvest — the authored on-chain formula (@aresrpg/sdk/jobs `gather_xp`), never a literal ladder. */
+  xp: number
+}
 
-const corpus_worlds: CorpusWorld[] = []
-// template id → authored xp/spell facts. A mob authored in several worlds keeps its FIRST row (the
-// seeder mints one template per key; kits are authored identically across placements).
-const mob_facts_by_id = new Map<string, CorpusMobFacts>()
-for (const world of authored_content_present ? seed_manifest.worlds : []) {
-  if (!is_object_id(world.id)) throw new Error(`seed world ${world.wid} has an invalid object id`)
-  const authored_world = authored_json<AuthoredWorld>(world.wid, 'world')
-  const mobs: CorpusMob[] = []
-  for (const mob of authored_json<AuthoredMob[]>(world.wid, 'mobs')) {
+/** The authored on-chain gather-XP curve (packages/sdk/src/jobs.js `gather_xp`). */
+const gather_xp = (required_level: number) => 10 + Math.floor(required_level / 2)
+
+// world.json's numeric `job` is the authoring order of the three gather jobs — the SAME order
+// JOB_MASTER_JOBS declares them in ('Gathering' category), so the mapping is derived, never a literal.
+const GATHER_JOB_IDS: string[] = JOB_MASTER_JOBS.filter((j) => j.category === 'Gathering').map((j) => j.id)
+
+const locales = ['fr', 'de', 'es', 'ja', 'uk'] as const
+
+interface Derived {
+  worlds: CorpusWorld[]
+  by_id: Map<string, CorpusWorld>
+  by_mob_id: Map<string, CorpusWorld[]>
+  by_resource_id: Map<string, CorpusWorld[]>
+  mob_facts: Map<string, CorpusMobFacts>
+  gather_ladders: Record<string, GatherRow[]>
+}
+
+type ResourceMeta = { name: string; level: number; i18n_json?: string }
+
+/** slug → display metadata (localized name + level), FIRST authored row wins. The join both the world
+ *  roster's gatherables and the JOBS ladders read; absent from the blob ⇒ an empty index (inert corpus). */
+function index_resources_by_slug(blob: WorldCorpusBlob): Map<string, ResourceMeta> {
+  const by_slug = new Map<string, ResourceMeta>()
+  for (const { wid } of seed_manifest.worlds) {
+    const entry = blob[wid]
+    if (!entry) continue
+    for (const resource of entry.resources) {
+      if (!resource.slug || by_slug.has(resource.slug)) continue
+      const names: Record<string, string> = {}
+      for (const locale of locales) {
+        const name = resource.i18n?.[locale]?.name
+        if (name) names[locale] = name
+      }
+      by_slug.set(resource.slug, {
+        name: resource.name ?? resource.slug,
+        level: resource.level ?? 0,
+        ...(Object.keys(names).length ? { i18n_json: JSON.stringify({ name: names }) } : {}),
+      })
+    }
+  }
+  return by_slug
+}
+
+/** One world's roster + the xp/spell facts to accumulate. A mob resolves its template id from the seed
+ *  receipt (unresolved keys drop out); PROTECTORS keep a facts row (so the bestiary can exclude them) but
+ *  never join a roster. `facts` is returned for the caller to apply FIRST-row-wins across worlds. */
+function project_roster(authored_mobs: AuthoredMob[]): { roster: CorpusMob[]; facts: Array<[string, CorpusMobFacts]> } {
+  const roster: CorpusMob[] = []
+  const facts: Array<[string, CorpusMobFacts]> = []
+  for (const mob of authored_mobs) {
     const id = mob.key ? seed_manifest.mobs[mob.key]?.id : undefined
     if (!is_object_id(id)) continue
-    if (!mob_facts_by_id.has(id))
-      mob_facts_by_id.set(id, { xp: mob.xp ?? null, spells: mob.spells ?? [], role: mob.role ?? null })
-    // Protectors keep their FACTS row (so the bestiary can recognize + exclude them) but never join a roster.
+    facts.push([id, { xp: mob.xp ?? null, spells: mob.spells ?? [], role: mob.role ?? null }])
     if (!is_listed_mob_role(mob.role)) continue
-    mobs.push({
+    roster.push({
       id,
       name: mob.name ?? mob.key ?? '',
       element: mob.element ?? null,
@@ -228,8 +225,16 @@ for (const world of authored_content_present ? seed_manifest.worlds : []) {
       maxLevel: mob.maxLevel ?? 0,
     })
   }
-  mobs.sort((left, right) => left.minLevel - right.minLevel || left.name.localeCompare(right.name))
+  roster.sort((left, right) => left.minLevel - right.minLevel || left.name.localeCompare(right.name))
+  return { roster, facts }
+}
 
+/** One world's gatherable placements → live item ids + display metadata (unresolved slugs drop out
+ *  honestly). Tier-then-job sorted, the WORLDS-tab order. */
+function project_gatherables(
+  authored_world: AuthoredWorld,
+  resource_by_slug: Map<string, ResourceMeta>
+): CorpusResource[] {
   const resources: CorpusResource[] = []
   for (const resource of authored_world.resources ?? []) {
     const id = resource.slug ? seed_manifest.items[resource.slug] : undefined
@@ -246,109 +251,174 @@ for (const world of authored_content_present ? seed_manifest.worlds : []) {
     })
   }
   resources.sort((left, right) => left.tier - right.tier || left.job - right.job)
-
-  const band =
-    Array.isArray(authored_world.band) && authored_world.band.length === 2
-      ? ([authored_world.band[0], authored_world.band[1]] as [number, number])
-      : null
-  corpus_worlds.push({
-    id: world.id,
-    wid: world.wid,
-    name: authored_world.name ?? world.wid,
-    band,
-    biome: authored_world.biome ?? '',
-    mobs,
-    resources,
-    // Same slug→template resolution the resources use (above): the authored key slug → its minted template id.
-    dungeon_key_template_id: authored_world.dungeonKey ? seed_manifest.items[authored_world.dungeonKey] : undefined,
-  })
+  return resources
 }
 
-corpus_worlds.sort((left, right) => (left.band?.[0] ?? 0) - (right.band?.[0] ?? 0))
-const roster_count = corpus_worlds.reduce((count, world) => count + world.mobs.length, 0)
-const resource_count = corpus_worlds.reduce((count, world) => count + world.resources.length, 0)
-// DEGRADE LOUDLY (never crash boot) when the authored world content is absent — it is runtime content
-// (issue #106 cascade; full runtime-loader conversion is boarded via the inventory). The world encyclopedia
-// goes inert (WORLD_CORPUS.worlds = []); the app still mounts. The per-world integrity guards above stay
-// hard — a seeded-but-malformed world is a real data bug, not the migration-absence case.
-if (!corpus_worlds.length || !roster_count || !resource_count)
-  console.error(
-    `[world_corpus] seed world corpus joined ${corpus_worlds.length} worlds / ${roster_count} mobs / ` +
-      `${resource_count} resources — the world encyclopedia is inert until the seed content ships (issue #106).`
-  )
-
-export const WORLD_CORPUS = { worlds: corpus_worlds }
-const WORLDS = WORLD_CORPUS.worlds
-
-const BY_ID = new Map<string, CorpusWorld>(WORLDS.map((w) => [w.id, w]))
-const BY_MOB_ID = new Map<string, CorpusWorld[]>()
-for (const world of WORLDS)
-  for (const mob of world.mobs) {
-    const locations = BY_MOB_ID.get(mob.id) ?? []
-    locations.push(world)
-    BY_MOB_ID.set(mob.id, locations)
-  }
-// Gatherable inversion — the exact BY_MOB_ID idiom over the same authored placement rows (a re-placed
-// lower-tier node legitimately lists several worlds; each world at most once by construction).
-const BY_RESOURCE_ID = new Map<string, CorpusWorld[]>()
-for (const world of WORLDS)
-  for (const resource of world.resources) {
-    const locations = BY_RESOURCE_ID.get(resource.id) ?? []
-    locations.push(world)
-    BY_RESOURCE_ID.set(resource.id, locations)
-  }
-
-/** Authored knowledge for a live /v1 world row, or undefined (=> the caller renders an honest gap). */
-export const world_corpus_of = (world_id: string | null | undefined): CorpusWorld | undefined =>
-  BY_ID.get(world_id ?? '')
-
-/** Offline-authored spawn provenance for a live mob template id; /v1 mob rows do not project a world field. */
-export const world_corpus_for_mob = (mob_template_id: string | null | undefined): readonly CorpusWorld[] =>
-  BY_MOB_ID.get(mob_template_id ?? '') ?? []
-
-/** Offline-authored placement provenance for a live gatherable item template id — the items-tab
- * "FOUND IN" list (night-batch #8), mirroring the mob idiom above. Empty for non-gatherables. */
-export const world_corpus_for_resource = (item_template_id: string | null | undefined): readonly CorpusWorld[] =>
-  BY_RESOURCE_ID.get(item_template_id ?? '') ?? []
-
-/** Authored xp/spell facts for a live mob template id (minted verbatim from these rows — see
- * CorpusMobFacts), or undefined => the caller renders an honest gap. */
-export const mob_corpus_of = (mob_template_id: string | null | undefined): CorpusMobFacts | undefined =>
-  mob_facts_by_id.get(mob_template_id ?? '')
-
-// ─── gathering ladders (the JOBS tab) ──────────────────────────────────────────────────────────────
-// ONE home for "which resource sits at which tier/level": the same authored rows the worlds tab shows.
-// world.json's numeric `job` is the authoring order of the three gather jobs — the SAME order
-// JOB_MASTER_JOBS declares them in ('Gathering' category), so the mapping is derived, never a literal.
-const GATHER_JOB_IDS: string[] = JOB_MASTER_JOBS.filter((j) => j.category === 'Gathering').map((j) => j.id)
-
-export interface GatherRow extends CorpusResource {
-  /** XP per harvest — the authored on-chain formula (@aresrpg/sdk/jobs `gather_xp`), never a literal ladder. */
-  xp: number
+/** Invert worlds by a template-id selector — id → every world that places it (each world at most once by
+ *  construction). Powers the bestiary/items "FOUND IN" lists (world_corpus_for_mob / _for_resource). */
+function group_worlds_by(worlds: CorpusWorld[], ids_of: (world: CorpusWorld) => string[]): Map<string, CorpusWorld[]> {
+  const map = new Map<string, CorpusWorld[]>()
+  for (const world of worlds)
+    for (const id of ids_of(world)) {
+      const locations = map.get(id) ?? []
+      locations.push(world)
+      map.set(id, locations)
+    }
+  return map
 }
 
-/** The authored on-chain gather-XP curve (packages/sdk/src/jobs.js `gather_xp`). */
-const gather_xp = (required_level: number) => 10 + Math.floor(required_level / 2)
-
-/**
- * job id ('FARMER'|'HERBALIST'|'MINER') -> its full progression, deduped by resource and tier-sorted.
- * Worlds re-place lower-tier nodes (12_static_fields re-uses 09_coral_throne's draconite), so the same
- * resource legitimately appears in several worlds — the ladder lists each exactly once.
- */
-export const GATHER_LADDERS: Record<string, GatherRow[]> = (() => {
-  const out: Record<string, GatherRow[]> = {}
+/** The JOBS-tab gather ladders: job id ('FARMER'|'HERBALIST'|'MINER') → its progression, deduped by resource
+ *  and tier-sorted, each row carrying the on-chain gather-xp. Worlds re-place lower-tier nodes, so a resource
+ *  legitimately spans several worlds — the ladder lists each exactly once. */
+function build_gather_ladders(worlds: CorpusWorld[]): Record<string, GatherRow[]> {
+  const ladders: Record<string, GatherRow[]> = {}
   const seen: Record<string, Set<string>> = {}
   for (const job_id of GATHER_JOB_IDS) {
-    out[job_id] = []
+    ladders[job_id] = []
     seen[job_id] = new Set()
   }
-  for (const world of WORLDS)
+  for (const world of worlds)
     for (const resource of world.resources) {
       const job_id = GATHER_JOB_IDS[resource.job]
       if (!job_id || seen[job_id].has(resource.slug)) continue
       seen[job_id].add(resource.slug)
-      out[job_id].push({ ...resource, xp: gather_xp(resource.level) })
+      ladders[job_id].push({ ...resource, xp: gather_xp(resource.level) })
     }
-  for (const job_id of GATHER_JOB_IDS) out[job_id].sort((a, b) => a.tier - b.tier || a.level - b.level)
-  return out
-})()
+  for (const job_id of GATHER_JOB_IDS) ladders[job_id].sort((a, b) => a.tier - b.tier || a.level - b.level)
+  return ladders
+}
+
+/**
+ * PURE projection: the published blob (+ the current seed receipt for ids) → the derived corpus the UI
+ * reads. Worlds present in the seed manifest but absent from the blob are SKIPPED (the migration / empty
+ * state degrades to inert). The per-world object-id guard stays HARD — a seeded-but-malformed world is a
+ * real data bug, not the absence case. Same math the build-time glob fed; only the source moved.
+ */
+function build_world_corpus(blob: WorldCorpusBlob): Derived {
+  const resource_by_slug = index_resources_by_slug(blob)
+  const worlds: CorpusWorld[] = []
+  // template id → authored xp/spell facts, FIRST row wins (the seeder mints one template per key; kits are
+  // authored identically across placements).
+  const mob_facts = new Map<string, CorpusMobFacts>()
+  for (const world of seed_manifest.worlds) {
+    if (!is_object_id(world.id)) throw new Error(`seed world ${world.wid} has an invalid object id`)
+    const entry = blob[world.wid]
+    if (!entry) continue
+    const { roster, facts } = project_roster(entry.mobs)
+    for (const [id, row] of facts) if (!mob_facts.has(id)) mob_facts.set(id, row)
+    const authored_world = entry.world
+    const band =
+      Array.isArray(authored_world.band) && authored_world.band.length === 2
+        ? ([authored_world.band[0], authored_world.band[1]] as [number, number])
+        : null
+    worlds.push({
+      id: world.id,
+      wid: world.wid,
+      name: authored_world.name ?? world.wid,
+      band,
+      biome: authored_world.biome ?? '',
+      mobs: roster,
+      resources: project_gatherables(authored_world, resource_by_slug),
+      // Same slug→template resolution the gatherables use: the authored key slug → its minted template id.
+      dungeon_key_template_id: authored_world.dungeonKey ? seed_manifest.items[authored_world.dungeonKey] : undefined,
+    })
+  }
+  worlds.sort((left, right) => (left.band?.[0] ?? 0) - (right.band?.[0] ?? 0))
+  return {
+    worlds,
+    by_id: new Map(worlds.map((w) => [w.id, w])),
+    by_mob_id: group_worlds_by(worlds, (w) => w.mobs.map((m) => m.id)),
+    by_resource_id: group_worlds_by(worlds, (w) => w.resources.map((r) => r.id)),
+    mob_facts,
+    gather_ladders: build_gather_ladders(worlds),
+  }
+}
+
+// ─── runtime cache (mirrors spell_corpus.js / mob_catalog.js) ────────────────────────────────────────
+// Empty until load_world_corpus resolves the blob; a failed load leaves it empty AND `loaded` false so a
+// later call still populates it (absence is NEVER cached as truth — house law).
+let derived: Derived = build_world_corpus({})
+let loaded = false
+let warned = false
+
+// ONE deduped content-degrade shout (per session). The boot-smoke check allowlists this exact prefix — the
+// world_corpus blob is a seed-side publish dependency, not a repo artifact (issue #106 / #196).
+const warn_degrade = (why: string): void => {
+  if (warned) return
+  warned = true
+  console.error(
+    `[world_corpus] world knowledge inert (${why}) — the encyclopedia lists no worlds until the seed ` +
+      `ceremony publishes world_corpus.json (issue #106).`
+  )
+}
+
+/**
+ * Fetch the published blob once and cache its derivation. Non-blocking at boot (the app mounts while it
+ * resolves; the encyclopedia fills in on arrival — the worlds tab re-renders when its /v1 list settles).
+ * Loud no-op when the manifest has no `world_corpus` row yet (walrus_asset_url → null), the fetch fails, or
+ * the blob joins to nothing — leaving the cache empty and RETRYABLE (never a frozen absence), never a throw.
+ * Call after the asset manifest is seeded (main.tsx, post load_asset_manifest).
+ */
+export async function load_world_corpus(): Promise<void> {
+  if (loaded) return
+  const url = walrus_asset_url('world_corpus', 'world_corpus.json')
+  if (!url) return warn_degrade('unpublished — not in the asset manifest')
+  try {
+    const response = await fetch(url)
+    if (!response.ok) return warn_degrade(`HTTP ${response.status}`)
+    derived = build_world_corpus((await response.json()) as WorldCorpusBlob)
+    loaded = true
+    const roster = derived.worlds.reduce((count, world) => count + world.mobs.length, 0)
+    const gatherables = derived.worlds.reduce((count, world) => count + world.resources.length, 0)
+    if (!derived.worlds.length || !roster || !gatherables)
+      warn_degrade(`joined ${derived.worlds.length} worlds / ${roster} mobs / ${gatherables} resources`)
+  } catch (error) {
+    // Network / parse failure — stay retryable; the encyclopedia stays inert until a later load lands.
+    warn_degrade(`fetch failed: ${(error as Error)?.message ?? String(error)}`)
+  }
+}
+
+/**
+ * Test seam (mirrors set_spell_corpus_for_test): seed the module-state derivation directly, no fetch. Pass a
+ * blob (the #196 shape) to exercise the real projection (marks the cache loaded), or nothing to reset to
+ * PRISTINE — empty and NOT loaded, so load_world_corpus runs again. Always clears the degrade latch.
+ */
+export function set_world_corpus_for_test(blob?: WorldCorpusBlob): void {
+  derived = build_world_corpus(blob ?? {})
+  loaded = blob !== undefined
+  warned = false
+}
+
+/** The derived corpus worlds (synchronous — read live; empty until load_world_corpus resolves the blob). */
+export const WORLD_CORPUS = {
+  get worlds(): CorpusWorld[] {
+    return derived.worlds
+  },
+}
+
+/** Whether the runtime blob loaded with content (the loader ran and joined ≥1 world). Tests skip the
+ * full-corpus cardinality cases on this — a headless unit test never fetches the blob (issue #106 / #196). */
+export const has_world_corpus = (): boolean => derived.worlds.length > 0
+
+/** Authored knowledge for a live /v1 world row, or undefined (=> the caller renders an honest gap). */
+export const world_corpus_of = (world_id: string | null | undefined): CorpusWorld | undefined =>
+  derived.by_id.get(world_id ?? '')
+
+/** Offline-authored spawn provenance for a live mob template id; /v1 mob rows do not project a world field. */
+export const world_corpus_for_mob = (mob_template_id: string | null | undefined): readonly CorpusWorld[] =>
+  derived.by_mob_id.get(mob_template_id ?? '') ?? []
+
+/** Offline-authored placement provenance for a live gatherable item template id — the items-tab
+ * "FOUND IN" list (night-batch #8), mirroring the mob idiom above. Empty for non-gatherables. */
+export const world_corpus_for_resource = (item_template_id: string | null | undefined): readonly CorpusWorld[] =>
+  derived.by_resource_id.get(item_template_id ?? '') ?? []
+
+/** Authored xp/spell facts for a live mob template id (minted verbatim from these rows — see
+ * CorpusMobFacts), or undefined => the caller renders an honest gap. */
+export const mob_corpus_of = (mob_template_id: string | null | undefined): CorpusMobFacts | undefined =>
+  derived.mob_facts.get(mob_template_id ?? '')
+
+/** The gather progression for a job id ('FARMER'|'HERBALIST'|'MINER'), tier-sorted and deduped; [] until
+ * the blob loads or for an unknown/absent job id. */
+export const gather_ladder_of = (job_id: string | null | undefined): GatherRow[] =>
+  derived.gather_ladders[job_id ?? ''] ?? []

@@ -41,7 +41,7 @@ const CONSOLE_ERROR_ALLOWLIST = [
   // crashing boot before the spell fix mattered; now they degrade loudly + inert. Full runtime-loader
   // conversion is boarded follow-up; degrade-only is the crash-killer.
   '[deployment] seed manifest carries no worlds', // deployment.ts — worlds enumeration
-  '[world_corpus] seed world corpus joined', // world_corpus.ts — world/mob/resource corpus
+  '[world_corpus] world knowledge inert', // world_corpus.ts — runtime blob unpublished/unreachable in CI (#196)
   '[living_corpus] seed manifest carries', // living_corpus.ts — living-content fence
   // Environmental — the headless CI preview has NO backend (RPC / Walrus aggregator / asset host), so boot-time
   // asset & RPC fetches fail. These are BROWSER resource-load failures, not app-code errors; the pageerror

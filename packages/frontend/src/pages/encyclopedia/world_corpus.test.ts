@@ -9,7 +9,7 @@ import {
   world_corpus_for_mob,
   world_corpus_for_resource,
   is_listed_mob_role,
-  authored_content_present,
+  has_world_corpus,
 } from './world_corpus'
 
 // CONFIG-DRIVEN, never hardcoded ids (after two stale-id prod regressions, ids resolve from a single
@@ -20,9 +20,10 @@ const manifest = JSON.parse(
 )
 
 describe('world_corpus_for_mob', () => {
-  // MISSING-ARTIFACT (#117): seed/mainnet/<wid>/{world,mobs,resources}.json is content-pipeline output,
-  // absent by design in this public repo — WORLD_CORPUS degrades to zero worlds (issue #106).
-  test.skipIf(!authored_content_present)(
+  // RUNTIME BLOB (#196): the world corpus loads from a published Walrus blob at boot (load_world_corpus),
+  // never fetched in a headless unit test — WORLD_CORPUS degrades to zero worlds here (issue #106). This
+  // full-corpus case runs only where the blob is seeded (set_world_corpus_for_test / a content-bearing CI).
+  test.skipIf(!has_world_corpus())(
     'EVERY authored roster mob inverts to exactly its own manifest world (all 20 worlds)',
     () => {
       const manifest_ids = new Map<string, string>(manifest.worlds.map((w: any) => [w.wid ?? w.id, w.id]))
@@ -58,9 +59,10 @@ describe('world_corpus_for_mob', () => {
 // FEATURE: the encyclopedia gatherable pages get a clickable "FOUND IN" world list —
 // the exact mob-page idiom, inverted over the SAME authored corpus rows the worlds tab renders.
 describe('world_corpus_for_resource', () => {
-  // MISSING-ARTIFACT (#117): seed/mainnet/<wid>/{world,mobs,resources}.json is content-pipeline output,
-  // absent by design in this public repo — WORLD_CORPUS degrades to zero worlds (issue #106).
-  test.skipIf(!authored_content_present)('EVERY authored gatherable inverts to each world that places it', () => {
+  // RUNTIME BLOB (#196): the world corpus loads from a published Walrus blob at boot (load_world_corpus),
+  // never fetched in a headless unit test — WORLD_CORPUS degrades to zero worlds here (issue #106). This
+  // full-corpus case runs only where the blob is seeded (set_world_corpus_for_test / a content-bearing CI).
+  test.skipIf(!has_world_corpus())('EVERY authored gatherable inverts to each world that places it', () => {
     const { worlds } = WORLD_CORPUS
     let checked = 0
     for (const world of worlds)

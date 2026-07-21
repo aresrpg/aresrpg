@@ -8,7 +8,7 @@ import { seed_effect_parts } from '../../game/screens/hud/seed-effect-line.js'
 import en from '../../i18n/locales/en.json'
 
 import { mob_spell_views } from './mob_spells'
-import { mob_corpus_of, authored_content_present } from './world_corpus'
+import { mob_corpus_of, has_world_corpus } from './world_corpus'
 
 const EN = i18next.createInstance()
 await EN.init({ lng: 'en', resources: { en: { translation: en } }, interpolation: { escapeValue: false } })
@@ -38,10 +38,10 @@ const OP_TO_KIND: Record<string, string> = {
 
 const living_template_ids = Object.values(seed_manifest.mobs).map(({ id }) => id)
 
-// MISSING-ARTIFACT (#117): seed/mainnet/<wid>/{world,mobs,resources}.json is content-pipeline output,
-// absent by design in this public repo — world_corpus's mob_facts_by_id degrades to empty (issue #106).
+// RUNTIME BLOB (#196): the world corpus loads from a published Walrus blob at boot (load_world_corpus),
+// never fetched in a headless unit test — world_corpus's mob facts degrade to empty here (issue #106).
 describe('mob corpus facts (xp + spell kit)', () => {
-  test.skipIf(!authored_content_present)(
+  test.skipIf(!has_world_corpus())(
     'every living mob template resolves authored facts with a real xp and a non-empty kit',
     () => {
       expect(living_template_ids.length).toBeGreaterThan(0)
@@ -61,7 +61,7 @@ describe('mob corpus facts (xp + spell kit)', () => {
 })
 
 describe('mob spell decode', () => {
-  test.skipIf(!authored_content_present)(
+  test.skipIf(!has_world_corpus())(
     'decodes the whole live corpus: kinds match the authored op pairing, wording never leaks a canary or a raw key',
     () => {
       let effects_checked = 0

@@ -6,12 +6,12 @@
 // the field did not exist at HEAD (undefined). This pins that every authored world resolves it to a real id.
 import { describe, expect, test } from 'bun:test'
 
-import { WORLD_CORPUS, authored_content_present } from './world_corpus'
+import { WORLD_CORPUS, has_world_corpus } from './world_corpus'
 
 describe('world_corpus resolves each world dungeon-key template id (no fetch, no chain read)', () => {
-  // MISSING-ARTIFACT (#117): seed/mainnet/<wid>/{world,mobs,resources}.json is content-pipeline output,
-  // absent by design in this public repo — WORLD_CORPUS degrades to zero worlds (issue #106).
-  test.skipIf(!authored_content_present)('there is authored world corpus to resolve', () => {
+  // RUNTIME BLOB (#196): the world corpus loads from a published Walrus blob at boot (load_world_corpus),
+  // never fetched in a headless unit test — WORLD_CORPUS degrades to zero worlds here (issue #106).
+  test.skipIf(!has_world_corpus())('there is authored world corpus to resolve', () => {
     expect(WORLD_CORPUS.worlds.length).toBeGreaterThan(0)
   })
 

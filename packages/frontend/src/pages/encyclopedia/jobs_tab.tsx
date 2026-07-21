@@ -14,7 +14,7 @@ import { normalize_search } from '../../utils/search'
 import { get_encyclopedia } from '../../rpc/client'
 import { use_rpc_view } from '../../rpc/use_view'
 
-import { GATHER_LADDERS } from './world_corpus'
+import { gather_ladder_of } from './world_corpus'
 import { craftable_items_for_job } from './recipes'
 import { encyclopedia_item_asset } from './encyclopedia_assets'
 
@@ -79,7 +79,7 @@ function JobsTab({
   // worlds tab: each resource at its re-tiered tier/level, XP from the on-chain gather_xp curve. Replaces
   // the old join over bundled content.ts items, whose pre-re-tier tiers/levels drifted (diamond showed at
   // T1) — the literal source of truth now lives in the seed, derived, never hardcoded.
-  const gather_ladder = selected_job_id ? (GATHER_LADDERS[selected_job_id] ?? []) : []
+  const gather_ladder = gather_ladder_of(selected_job_id)
 
   const is_gathering = selected_job?.category === 'Gathering'
 

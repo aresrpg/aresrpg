@@ -42,6 +42,15 @@ void load_mob_catalog()
 // blob (open-source / pre-publish tree) degrades loudly to inert spell surfaces, never a crash (issue #106).
 void load_spell_corpus()
 
+// The authored world corpus (world_corpus.json) rides the SAME seam — one pattern, three content blobs (#196).
+// It replaced the build-time seed/mainnet glob that logged `joined 0 worlds` in prod. DYNAMIC import (unlike
+// the two above): world_corpus.ts statically pulls the ~660KB seed_manifest, and it is consumed only by the
+// lazy encyclopedia + in-game dungeons modal — a static import here would hoist that weight into the entry
+// chunk. The split keeps it off first paint; the load still fires at boot so the corpus is warm on arrival.
+// Non-blocking: the encyclopedia's worlds tab re-renders when its /v1 list settles, joining this by-then
+// loaded corpus; an absent blob degrades loudly to an inert (zero-world) encyclopedia, never a crash (#106).
+void import('./pages/encyclopedia/world_corpus').then((module) => module.load_world_corpus())
+
 // ERRORS-ONLY error reporting (core/report.js) — inits ONLY when VITE_SENTRY_DSN is present (a hard no-op
 // otherwise, so a bare dev/local boot never phones home). No tracing, no session replay. It also wires the
 // global window.onerror / unhandledrejection surfaces through the one report_error choke.
