@@ -19,7 +19,7 @@ import { test, expect, type Page } from '@playwright/test'
 //         the D77 divergence), the blue start-cell wash (fight-overlay placement_group) empties the SAME frame
 //         because build_placement is now keyed on the PHASE MACHINE, not the stale slice flag.
 
-const SNAP_DIR = '/tmp/dungeon_placement_findings_snaps'
+const SNAP_DIR = process.env.SNAP_DIR ?? '/tmp/dungeon_placement_findings_snaps'
 mkdirSync(SNAP_DIR, { recursive: true })
 const shoot = async (page: Page, name: string) => {
   try {

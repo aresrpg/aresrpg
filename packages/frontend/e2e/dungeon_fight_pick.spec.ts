@@ -20,7 +20,7 @@ import { test, expect, type Page } from '@playwright/test'
 // action/fight/* + use_dungeon writes the real chain bridge uses — the overlay + chrome render exactly as in a
 // live fight. The clicks are real OS mouse events through the canvas; nothing bypasses click_cell.
 
-const SNAP_DIR = '/tmp/dungeon_fight_pick_snaps'
+const SNAP_DIR = process.env.SNAP_DIR ?? '/tmp/dungeon_fight_pick_snaps'
 mkdirSync(SNAP_DIR, { recursive: true })
 // Resilient screenshot — DIAGNOSTIC only, must NEVER fail the test. Headless WebGL ReadPixels can stall past
 // the default 30s action timeout; a snapshot hiccup is not a product failure, so cap it short and swallow.

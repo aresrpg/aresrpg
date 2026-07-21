@@ -11,7 +11,7 @@ import { test, expect, type Page } from '@playwright/test'
 //   4. JUMP (Space) raises player.position.y then settles back to the floor,
 //   5. FIGHT MODE locks the polar to the classic 2:1 isometric ~30°-above-horizon framing (rotate-around-board), and exit restores it.
 
-const SNAP_DIR = '/tmp/world_camera_snaps'
+const SNAP_DIR = process.env.SNAP_DIR ?? '/tmp/world_camera_snaps'
 mkdirSync(SNAP_DIR, { recursive: true })
 const snap = (name: string, buf: Buffer) => writeFileSync(`${SNAP_DIR}/${name}.png`, buf)
 

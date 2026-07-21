@@ -11,7 +11,7 @@ import { test, expect, type Page } from '@playwright/test'
 //   4. the modal's browse tab shows the honest empty state (no fake rows — WS-C fills it),
 //   5. Escape closes it, and walking away clears the prompt.
 
-const SNAP_DIR = '/tmp/world_npc_snaps'
+const SNAP_DIR = process.env.SNAP_DIR ?? '/tmp/world_npc_snaps'
 mkdirSync(SNAP_DIR, { recursive: true })
 const snap = (name: string, buf: Buffer) => writeFileSync(`${SNAP_DIR}/${name}.png`, buf)
 

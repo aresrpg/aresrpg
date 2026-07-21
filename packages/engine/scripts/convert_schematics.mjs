@@ -31,7 +31,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const ENGINE_ROOT = join(__dirname, '..')
 const SRC_ROOT = process.env.SCHEM_SRC || '<path-to>/aresrpg-legacy/packages/sdk/src/world/schematics'
 const OUT_BUNDLE = join(ENGINE_ROOT, 'assets/schematics/schematics.json')
-const OUT_REPORT = '/tmp/aresrpg-engine-artifacts/veg_a_report.json'
+const OUT_REPORT = process.env.SCHEM_REPORT_OUT ?? '/tmp/aresrpg-engine-artifacts/veg_a_report.json'
 
 /** The two source sub-directories, each mapped to a runtime category. */
 /** @type {{ category: 'tree'|'rock', dir: string }[]} */

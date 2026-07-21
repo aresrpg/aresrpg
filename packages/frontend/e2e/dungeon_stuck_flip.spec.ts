@@ -32,7 +32,7 @@ import { test, expect, type Page } from '@playwright/test'
 //            must derive PLACEMENT (the slice's presence-truth beats a stale-back read) — the READY renders, the
 //            board is NOT stranded on the plane. (The backward-lag sibling the same max() reconcile covers.)
 
-const SNAP_DIR = '/tmp/dungeon_stuck_flip_snaps'
+const SNAP_DIR = process.env.SNAP_DIR ?? '/tmp/dungeon_stuck_flip_snaps'
 mkdirSync(SNAP_DIR, { recursive: true })
 // DIAGNOSTIC-only screenshot — must NEVER fail the test (headless WebGL ReadPixels can stall). Cap short + swallow.
 const shoot = async (page: Page, name: string) => {

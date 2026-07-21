@@ -16,7 +16,7 @@ import { test, expect, type Page } from '@playwright/test'
 // DO render on a WebGPU browser over the real board — that pixel proof runs on live hardware (:5273),
 // per the project's verify-the-pixels-on-a-real-GPU law. Screenshots below are best-effort diagnostics only.
 
-const SNAP_DIR = '/tmp/f1_cast_vfx_snaps'
+const SNAP_DIR = process.env.SNAP_DIR ?? '/tmp/f1_cast_vfx_snaps'
 mkdirSync(SNAP_DIR, { recursive: true })
 const DEV_KEY = process.env.VITE_DEV_KEY ?? ''
 

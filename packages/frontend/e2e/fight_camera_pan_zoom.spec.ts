@@ -18,7 +18,7 @@ import { test, expect, type Page } from '@playwright/test'
 // new wheel-zoom floor reuses the already-shipped, already-proven zoom-punch DECOR_CLIP_FLOOR, see the source
 // comment in embed_voxel_fight_camera.js).
 
-const SNAP_DIR = '/tmp/fight_camera_pan_zoom_snaps'
+const SNAP_DIR = process.env.SNAP_DIR ?? '/tmp/fight_camera_pan_zoom_snaps'
 mkdirSync(SNAP_DIR, { recursive: true })
 const shoot = async (page: Page, name: string) => {
   try {

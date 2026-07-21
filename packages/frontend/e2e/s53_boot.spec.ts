@@ -16,6 +16,7 @@ const DEV_KEY = process.env.VITE_DEV_KEY ?? ''
 const ADDR = DEV_KEY
   ? Ed25519Keypair.fromSecretKey(decodeSuiPrivateKey(DEV_KEY).secretKey).getPublicKey().toSuiAddress()
   : ''
+const SNAP_DIR = process.env.SNAP_DIR ?? '/tmp'
 
 const store = (page: Page) =>
   page.evaluate(async () => {
@@ -89,7 +90,7 @@ test('S-53: fresh address boots to CREATE in one /v1/characters call, no telepor
     timeout: 20_000,
   })
 
-  writeFileSync('/tmp/s53_boot.png', await page.screenshot())
+  writeFileSync(`${SNAP_DIR}/s53_boot.png`, await page.screenshot())
 
   expect(pageErrors, `page errors:\n${pageErrors.join('\n')}`).toEqual([])
 })

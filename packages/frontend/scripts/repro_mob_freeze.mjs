@@ -33,7 +33,10 @@ if (!existsSync(glb_path)) {
   process.exit(1)
 }
 const SECONDS = Number(args.seconds ?? 25)
-const DEMO = 'http://localhost:5267/demo/'
+// :5267 deliberately isn't the engine's default :5199 (packages/engine/package.json `dev`) — avoids colliding
+// with a contributor's own running engine dev server. Override REPRO_DEMO_URL if started on a different port.
+const DEMO = process.env.REPRO_DEMO_URL ?? 'http://localhost:5267/demo/'
+const OUT_DIR = process.env.REPRO_OUT ?? '/tmp'
 
 // tiny CORS server so the in-page GLTFLoader can fetch the mob GLB cross-origin from the demo origin
 const glb_bytes = readFileSync(glb_path)
@@ -240,7 +243,7 @@ for (let s = 0; s < SECONDS; s++) {
   if (st) series.push(st)
 }
 await page.keyboard.up('KeyW')
-await page.screenshot({ path: `/tmp/repro_${model}.png` })
+await page.screenshot({ path: `${OUT_DIR}/repro_${model}.png` })
 await browser.close()
 cors.close()
 
@@ -255,7 +258,7 @@ const fpsvals = series.map((s) => s.fps)
 const minfps = Math.min(...fpsvals),
   moved = series.length > 1 && JSON.stringify(series[0].xyz) !== JSON.stringify(series[series.length - 1].xyz)
 console.log('min fps:', minfps, '| camera moved:', moved, minfps < 5 ? '  ⟵ FROZEN (fps≈0)' : '')
-console.log('screenshot: /tmp/repro_' + model + '.png')
+console.log('screenshot: ' + OUT_DIR + '/repro_' + model + '.png')
 if (real.length) {
   console.log('REAL ERRORS:')
   for (const e of real.slice(0, 12)) console.log(' ✗', e)

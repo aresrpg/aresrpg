@@ -95,7 +95,7 @@ page.on('pageerror', (e) => errs.push(String(e)))
 await page.goto(base + '/render.html', { waitUntil: 'load' })
 await page.waitForFunction(() => window.__done, { timeout: 20000 }).catch(() => {})
 const err = await page.evaluate(() => window.__err || null)
-const out = '/tmp/mob_scale_proof.png'
+const out = process.env.SCALE_PROOF_OUT ?? '/tmp/mob_scale_proof.png'
 await page.screenshot({ path: out })
 await browser.close()
 server.close()
