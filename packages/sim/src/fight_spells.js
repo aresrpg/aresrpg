@@ -341,7 +341,10 @@ export const apply_spell_effect = (
       value: effect.value ?? 0,
       turns_remaining: effect.turns ?? 1,
     })
-    return { state: reflected, effects: [{ target_id, status: 'REFLECT_DAMAGE' }] }
+    return {
+      state: reflected,
+      effects: [{ target_id, status: 'REFLECT_DAMAGE' }],
+    }
   }
   if (effect.type === 'RETURN_SPELL') {
     // SPELL-RETURN (spell_effect.move:61-64) — a TIMED status row on the shielded fighter; it no-ops on tick and
@@ -413,7 +416,6 @@ export const apply_spell_effect = (
       terrain_walkable,
       (next_state, next_cell, displaced_id) =>
         check_traps(next_state, next_cell, displaced_id, terrain_walkable),
-      caster.id,
     )
   }
   if (effect.type === 'TELEPORT') {
@@ -450,7 +452,10 @@ export const apply_spell_effect = (
     // relocation like TELEPORT, NOT a pull: the caster's own body would block a slide into its cell, and the whole
     // point of a carry is that the carried fighter shares the carrier's cell. Standard Displaced event.
     return {
-      state: update_entity(state, target_id, e => ({ ...e, cell: caster.cell })),
+      state: update_entity(state, target_id, e => ({
+        ...e,
+        cell: caster.cell,
+      })),
       effects: [{ target_id, cell: caster.cell, has_cell: true }],
     }
   }
@@ -470,7 +475,6 @@ export const apply_spell_effect = (
       terrain_walkable,
       (next_state, next_cell, displaced_id) =>
         check_traps(next_state, next_cell, displaced_id, terrain_walkable),
-      caster.id,
     )
   }
   if (effect.type === 'INVISIBILITY') {

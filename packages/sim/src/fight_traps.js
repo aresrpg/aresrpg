@@ -200,7 +200,6 @@ const apply_payload = (
           terrain_walkable,
           (next_state, next_cell, target_id) =>
             check_traps(next_state, next_cell, target_id, terrain_walkable),
-          source_id,
         )
         return {
           state: displaced.state,
@@ -315,7 +314,6 @@ export const check_glyphs = (state, entity_id) => {
           element: glyph.element,
           min: glyph.min,
           max: glyph.max,
-          source_id: glyph.source_id,
         },
         here,
       )

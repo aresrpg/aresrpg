@@ -106,7 +106,12 @@ const process_step = (
   )
 }
 
-const apply_collision_damage = (state, target_id, caster_level, blocked_cells) => {
+const apply_collision_damage = (
+  state,
+  target_id,
+  caster_level,
+  blocked_cells,
+) => {
   const target = find_entity(state, target_id)
   if (!target || blocked_cells === 0)
     return { state, effects: [], direct_damage: 0 }
@@ -142,7 +147,6 @@ const apply_collision_damage = (state, target_id, caster_level, blocked_cells) =
  * @param {number} caster_level
  * @param {(cell: import('./cell.js').Cell) => boolean} terrain_walkable
  * @param {OnEnter} [on_enter]
- * @param {string} [source_id]
  * @returns {{ state: import('./fight_state.js').FightState, effects: import('./fight_spells.js').SpellCastEffect[], direct_damage: number }}
  */
 export const handle_displacement = (
@@ -153,7 +157,6 @@ export const handle_displacement = (
   caster_level,
   terrain_walkable,
   on_enter,
-  source_id,
 ) => {
   const entity = find_entity(state, target_id)
   if (!entity || entity.health <= 0)
