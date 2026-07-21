@@ -9,7 +9,7 @@ import { is_developer_item } from '@aresrpg/sdk/jobs'
 
 import { projected_hp, character_max_hp } from '../../../chain/read_character.js'
 import { cosmetic_icon_of } from '../../cosmetic_icons.js'
-import { group_by_stack_identity, is_cosmetic_item, item_type_equip_slot } from '../../item_classification'
+import { chain_icon_slug, group_by_stack_identity, is_cosmetic_item, item_type_equip_slot } from '../../item_classification'
 
 // Combat head armour and cosmetic hats are distinct on-chain slots.
 export const HELMET = 'helmet'
@@ -56,7 +56,17 @@ export const WORN_CATEGORIES = /** @type {readonly string[]} */ (['title', 'hat'
 export function inventory_item_icon(item, slug_by_name = {}) {
   if (!item) return null
   const template_slug = slug_by_name[item.name] ?? item.slug
-  return cosmetic_icon_of({ ...item, slug: template_slug }) ?? template_slug ?? item.icon ?? item.item_type ?? null
+  // `chain_icon_slug` before the generic `item_type` fallback: production ships an empty seed catalog, so
+  // `slug_by_name` is `{}` and the on-chain `item_type` is only the family word ('chestplate' -> 404). Deriving
+  // the pet item_type / slugified name recovers the real icon (the SAME home the encyclopedia paints with).
+  return (
+    cosmetic_icon_of({ ...item, slug: template_slug }) ??
+    template_slug ??
+    item.icon ??
+    chain_icon_slug(item) ??
+    item.item_type ??
+    null
+  )
 }
 
 const with_authored_icon = (item, slug_by_name = {}) => {

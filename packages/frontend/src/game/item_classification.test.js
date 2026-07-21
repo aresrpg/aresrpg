@@ -5,9 +5,11 @@ import { describe, expect, test } from 'bun:test'
 import {
   COSMETICS_CATEGORY,
   COSMETIC_ITEM_TYPES,
+  chain_icon_slug,
   group_by_stack_identity,
   item_display_category,
   item_type_equip_slot,
+  slugify_name,
 } from './item_classification'
 import { SHOP_AVAILABLE, shop } from '../test_helpers/shop_fixture.js'
 
@@ -35,6 +37,49 @@ describe('itemType classification — seed/mainnet cosmetic coverage', () => {
     expect(item_type_equip_slot({ item_type: 'cloak', item_category: 'cloak' })).toBe('cloak')
     expect(item_display_category({ item_type: 'iron_sword', item_category: 'sword' })).toBe('SWORD')
     expect(item_type_equip_slot({ item_type: 'iron_sword', item_category: 'sword' })).toBeNull()
+  })
+})
+
+// chain_icon_slug (issue #160): production ships an EMPTY seed catalog, so the icon must derive from the live
+// /v1 row's own fields. Fixtures curl-verified 200 on the live icon quilts 2026-07-21 (see encyclopedia_assets.test.ts).
+describe('chain_icon_slug — the icon key from a live /v1 row when no seed slug is bundled', () => {
+  test('a pet carries its UNIQUE slug as item_type (Timon -> pet_timon)', () => {
+    expect(chain_icon_slug({ item_type: 'pet_timon', name: 'Timon' })).toBe('pet_timon')
+  })
+
+  test('a pet lootbox keeps its pet_* item_type (item_type is the art slug, not the family word)', () => {
+    expect(chain_icon_slug({ item_type: 'pet_lootbox', name: 'Pet Box' })).toBe('pet_lootbox')
+  })
+
+  test('gear/resource with a generic family item_type keys off the slugified name (Cinder Heart -> cinder_heart)', () => {
+    expect(chain_icon_slug({ item_type: 'resource', name: 'Cinder Heart' })).toBe('cinder_heart')
+    expect(chain_icon_slug({ item_type: 'chestplate', name: 'Cinder Cuirass' })).toBe('cinder_cuirass')
+  })
+
+  test('the bare generic word "pet" (no underscore) is NOT a unique slug -> falls to the slugified name', () => {
+    expect(chain_icon_slug({ item_type: 'pet', name: 'Wild Fennec' })).toBe('wild_fennec')
+  })
+
+  test('returns null when neither a pet item_type nor a name is derivable (caller keeps its glyph fallback)', () => {
+    expect(chain_icon_slug({ item_type: 'chestplate' })).toBeNull()
+    expect(chain_icon_slug(null)).toBeNull()
+  })
+})
+
+describe('slugify_name — lowercase, diacritic-stripped, non-alphanumeric runs -> single underscore', () => {
+  test('collapses spaces and punctuation and trims the ends', () => {
+    expect(slugify_name('Void Eye Talisman')).toBe('void_eye_talisman')
+    expect(slugify_name("Duke's Regalia")).toBe('duke_s_regalia')
+    expect(slugify_name('  Frost — Shard  ')).toBe('frost_shard')
+  })
+
+  test('strips diacritics so accented names still resolve to their ASCII icon key', () => {
+    expect(slugify_name('Élan Café')).toBe('elan_cafe')
+  })
+
+  test('an empty/nullish name is the empty string (the caller treats it as no-slug)', () => {
+    expect(slugify_name('')).toBe('')
+    expect(slugify_name(null)).toBe('')
   })
 })
 
