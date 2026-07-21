@@ -67,6 +67,37 @@ export function icon_asset_class(category: string | null | undefined): 'item' | 
 }
 
 /**
+ * A slug from a display name: lowercase, diacritics stripped, every non-alphanumeric run collapsed to a single
+ * underscore, ends trimmed. The seed authors item icon files this way ('Cinder Heart' -> `cinder_heart.png`,
+ * 'Void Eye Talisman' -> `void_eye_talisman.png` — both curl-verified 200 on the live icon quilts), so it is
+ * the icon key for every class whose on-chain `item_type` is only the generic family word.
+ */
+export const slugify_name = (name: string | null | undefined): string =>
+  String(name ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+
+/**
+ * The icon slug derivable from a live /v1 item row when NO authored seed slug is bundled. Production ships an
+ * EMPTY `virtual:item_catalog` (the seed name->icon map is private — vite.config.ts catalog_fallback_plugin),
+ * so every /v1 encyclopedia/owner-items row arrives WITHOUT a `slug`, and the icon must come from the row's own
+ * fields. Pets carry their UNIQUE slug AS `item_type` ('pet_timon', 'pet_lootbox'); every other class's on-chain
+ * `item_type` is only the generic family word ('chestplate'/'resource'/'senshi' — 51 families over 1840 items),
+ * so the slugified display name ('cinder_heart') is the published icon key. Returns null when neither is
+ * derivable — the caller keeps its generic `item_type`/glyph fallback. ItemImage still owns the 404 ->
+ * category-glyph degrade, so an item whose art is genuinely unpublished (seed#137) is an honest missing
+ * candidate here, never a wrong icon.
+ */
+export function chain_icon_slug(item: { item_type?: string | null; name?: string | null } | null | undefined): string | null {
+  const item_type = item?.item_type
+  if (typeof item_type === 'string' && item_type.startsWith('pet_')) return item_type
+  return slugify_name(item?.name) || null
+}
+
+/**
  * THE one grouping home for stackable items (issue #10 — the HUD bag grid and marketplace SELL grid each grew
  * their own copy of this merge and could disagree; both now call this). Merges same-identity rows into one
  * display row with a summed count. Identity = `template_id` first, `item_type`/`id` only for rows without one
