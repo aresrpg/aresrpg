@@ -84,3 +84,5 @@ and that both sides of the twin moved in the same commit.
 - `git status` is clean beyond the intended diff.
 - The PR description states what changed and why, links the issue it closes, and — for a bug
   fix — carries both the red and the green test run.
+- Touching `changelog/NNN-RELEASE-*.md`? Player-first structure (content/features lead, ONE
+  highlighted fix line max, zero infra/CI/pipeline talk) — see CONTRIBUTING.md's AUDIENCE LAW.

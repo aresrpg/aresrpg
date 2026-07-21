@@ -15,6 +15,10 @@
 # The version/tag is derived from packages/frontend/package.json (never parsed out of the file);
 # the H1 is the human title. The newest file is posted verbatim to BOTH the GitHub release notes
 # and the Discord embed, so it must stay clean markdown — anything in it renders as-is.
+# AUDIENCE LAW (maintainer ruling 2026-07-21): the file IS the player announce — New content /
+# New features lead, at most one highlighted fix players felt, then exactly one closing
+# "Also: N bug fixes and stability improvements — full notes → <URL>" line. No infra/CI/pipeline
+# talk, ever — full structure + skeleton in CONTRIBUTING.md's AUDIENCE LAW.
 #
 # FROZEN rule 8: GITHUB_TOKEN only (plus the optional DISCORD_WEBHOOK for the announce).
 name: release

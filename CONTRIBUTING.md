@@ -53,6 +53,29 @@ accumulate on `edge` until a release promotes them; nothing else ever reaches pr
    Preview deployments (every PR, every branch) are unaffected; the check only activates in
    production.
 
+**AUDIENCE LAW** (maintainer ruling 2026-07-21): `changelog/NNN-RELEASE-vX.Y.Z.md` is not
+internal release notes — GitHub Releases and Discord post it **verbatim**, so it's written for
+players, not for us. Players care about new content and new features; bug fixes get one line;
+infrastructure, CI, and repository internals stay out entirely.
+
+Structure: H1 title, then **New content** and/or **New features** first (skip a section only if
+it's truly empty — if both are empty, say plainly this is a maintenance release), optionally one
+highlighted fix players actually felt (a crash, not a refactor), then exactly one closing line
+pointing at the rest. Nothing else. Target ≤25 lines:
+
+```md
+# vX.Y.Z — short title
+
+## New features
+
+- Whatever players can now do.
+
+Also: 4 bug fixes and stability improvements — full notes → <compare URL>
+```
+
+Technical detail — pipeline changes, refactors, dependency bumps — lives in the compare link the
+closing line points to, never in the announce body.
+
 **Rollback:** every production deployment maps 1:1 to a release tag. Roll back with Vercel's
 instant rollback (dashboard → Deployments, or `vercel rollback`) to alias production onto the
 previous tag's deployment — no revert commit, no re-promotion needed. Diff two releases with
