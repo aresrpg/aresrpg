@@ -95,6 +95,7 @@ import {
   build_args_from_dungeon,
   entity_spec_from_fighter,
   beats_from_packet,
+  tackle_float_payloads,
   split_move_at_traps,
   split_path_at_mp,
   wash_armed_spell,
@@ -979,27 +980,20 @@ export function create_voxel_fight_adapter(
         else if (spec.kind === 'damage' || spec.kind === 'heal') await play_damage_beat(payload)
         else if (spec.kind === 'tackled') {
           // TACKLE BITE: a tackled player plays the hit animation just before moving —
-          // the runner FLINCHES carrying the pool-forfeit floater; the producer already ordered this beat
-          // strictly before any retry move beat, the adapter only renders it. No HP moves here (the fold
-          // adopted the ap/mp strip); the floater voices what the bite cost.
+          // the runner FLINCHES; the producer already ordered this beat strictly before any retry move beat,
+          // the adapter only renders it. No HP moves here (the fold adopted the ap/mp strip).
+          // #239 owner presentation ruling (final spec): NO mechanic label ("TACKLED") — the forfeit voices
+          // itself as numeric AP/MP floats only, each its own house color (tackle_float_payloads,
+          // voxel_fight_folds.js — the ONE home, shared with DungeonBoard's predict_tackle prediction leg).
+          // The float-kind-driven reaction (react_to_impact) has no 'mp'/'ap' entry, so clearing the beat's
+          // own float below drops that flash+recoil — the explicit flash_entity(HIT_FLASH_TINT) right after
+          // is unconditional on float, so the "you got hit" red pulse still fires regardless.
           const id = payload.target_id
           if (id && entity_ids.has(id)) {
-            const cost = [
-              payload.mp_lost > 0 ? `-${payload.mp_lost} MP` : null,
-              payload.ap_lost > 0 ? `-${payload.ap_lost} AP` : null,
-            ]
-              .filter(Boolean)
-              .join('  ')
-            // NAME THE TACKLE (the 3rd repeat of tackle confusion): this beat fires on the
-            // PLAYER'S OWN turn, so a bare "-2 MP" floater reads as enemy damage. The gothic-caps TACKLED tag
-            // prefixes the forfeit so the board says WHAT happened — the move was denied, not "something hit me".
-            const label = i18n.t('fights.tackled')
-            const done = board.entity_beat(id, {
-              anim: 'hit',
-              float: { text: cost ? `${label}  ${cost}` : label, kind: 'damage' },
-            })
+            const done = board.entity_beat(id, { anim: 'hit', float: null })
             if (hitflash_on()) void done.then(() => board.flash_entity?.(id, HIT_FLASH_TINT))
             await done
+            for (const float of tackle_float_payloads(payload.ap_lost, payload.mp_lost)) board.float?.(id, float)
           }
         }
         // #170 (5th recurrence): no 'death' beat kind reaches the wave anymore — producers stopped emitting it

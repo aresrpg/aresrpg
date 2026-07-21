@@ -541,6 +541,25 @@ export { turn_input_armed } from '@aresrpg/fight/project'
 //   'defer_teardown' — a genuine exit arrived while a build is in flight: run the teardown after it settles.
 //   'teardown'       — a genuine exit (no board phase wanted, no transient hold): tear down now.
 /**
+ * #239 owner presentation ruling (final spec, 2026-07-21): the tackle floater NEVER prints a mechanic label
+ * ("TACKLED") — a tackle surfaces ONLY as the numeric AP/MP losses, each its OWN house-colored float (kind
+ * 'mp'/'ap' → FLOAT_COLOR.mp/ap, board_entities.js — the same mint/ice-blue the combat log's --clog-num-mp/ap
+ * already use). Bare `-N` text, no unit suffix: the color IS the "which pool" signal (the established
+ * convention the move beat's spent-MP floater already ships — one visual language, never a second). Either
+ * leg can be independently zero (tackle_losses ceils a POOL's own fraction; a pool already at 0 costs 0 of
+ * itself) — filtered out, never a bare `-0`. Pure so "numeric entries only, never a label" is unit-testable
+ * without the adapter/board machinery.
+ * @param {number} ap_lost @param {number} mp_lost
+ * @returns {Array<{ text: string, kind: 'mp' | 'ap' }>}
+ */
+export function tackle_float_payloads(ap_lost, mp_lost) {
+  return [
+    mp_lost > 0 ? { text: `-${mp_lost}`, kind: 'mp' } : null,
+    ap_lost > 0 ? { text: `-${ap_lost}`, kind: 'ap' } : null,
+  ].filter(Boolean)
+}
+
+/**
  * @param {{ phase: string, desired: string, unmet: string[], has_dungeon: boolean, has_fight: boolean,
  *   built_for: string | null, build_key: string | null, building: boolean }} s
  * @returns {'build' | 'wire' | 'hold' | 'defer_teardown' | 'teardown'}

@@ -86,9 +86,13 @@
 .gw-fight-layer--mobile .hud-gem2--stat span,
 .gw-fight-layer--mobile .hud-xplvl,
 .gw-fight-layer--mobile .hud-socket__key,
-.gw-fight-layer--mobile .hud-socket__cost,
-.gw-fight-layer--mobile .hud-socket__cd {
+.gw-fight-layer--mobile .hud-socket__cost {
   font-size: 9px;
+}
+/* #368 — the big centered cooldown number scales down with the mobile socket (--sock 36px vs desktop 50px)
+   but stays visibly BIGGER than the corner badges above (still reads as "the big number" at any size). */
+.gw-fight-layer--mobile .hud-socket__cd-overlay {
+  font-size: 14px;
 }
 .gw-fight-layer--mobile .hud-socketgrid {
   --sock: 36px;

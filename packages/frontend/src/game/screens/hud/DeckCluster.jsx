@@ -37,7 +37,7 @@ import { use_dungeon } from '../../../world-shell/dungeon_store.js'
 import { character_cast_clock, use_dungeon_turn } from '../dungeon-turn.js'
 import { arm_spell, hover_spell, spell_card, spell_element, WEAPON_ATTACK_ID } from '../../core/modules/fight.js'
 import { fight_spell } from './fight-spells.js'
-import { on_cooldown, cooldown_left, cap_of } from '@aresrpg/fight/draft_budget'
+import { cooldown_display, cap_of } from '@aresrpg/fight/draft_budget'
 import { element_color } from './element-colors.js'
 import { Tooltip } from './Tooltip.jsx'
 import { SpellSeedTip } from './tooltip-content.jsx'
@@ -196,10 +196,11 @@ export function DeckCluster() {
   })
   const weapon_glow = !!crit && socket_glows(crit.crit_roll, my_weapon?.crit_rate ?? 0)
 
-  // FIX 4 COOLDOWN / EXHAUSTION AFFORDANCE (07-14) — the SAME cross-turn cooldown + this-turn casts_per_turn
-  // gate DungeonBoard already enforces for the ARMED spell only (draft-budget.js on_cooldown/cooldown_left/
-  // cap_of, mirroring cast.move:160-192 exactly), extended to EVERY socket so the bar warns BEFORE arming
-  // instead of only refusing a click after. `last_cast_turn` is DungeonBoard-written store state (dungeon-turn.js);
+  // FIX 4 COOLDOWN / EXHAUSTION AFFORDANCE (07-14, display promoted to a big centered number by #368) — the
+  // SAME cross-turn cooldown + this-turn casts_per_turn gate DungeonBoard already enforces for the ARMED spell
+  // only (draft-budget.js cooldown_display/cap_of, mirroring cast.move:160-192 exactly), extended to EVERY
+  // socket so the bar warns BEFORE arming instead of only refusing a click after. `last_cast_turn` is
+  // DungeonBoard-written store state (dungeon-turn.js);
   // `my_turn_no` is the fold-derived seat-turn counter from the fight core (deadline-independent — a starved chain
   // clock no longer freezes it); `cast_path` is this turn's live drafted queue (a spell already queued N times
   // counts against its own casts_per_turn cap, exactly like DungeonBoard's `armed_queued`).
@@ -214,11 +215,10 @@ export function DeckCluster() {
     // is 1 whatever the authored casts_per_turn (the same fold DungeonBoard's cpt_cap_eff applies).
     const cpt_cap = cooldown > 0 ? 1 : cap_of(level?.casts_per_turn)
     const queued = cast_path.reduce((n, e) => (e.spell_key === spell_id ? n + 1 : n), 0)
-    return {
-      on_cd: on_cooldown(last_cast_turn[spell_id], my_turn_no, cooldown),
-      cd_left: cooldown_left(last_cast_turn[spell_id], my_turn_no, cooldown),
-      exhausted: queued >= cpt_cap,
-    }
+    // #368: cooldown_display is the ONE derivation (greyed ⇔ turns_left > 0) — on_cd/cd_left are its socket-gate
+    // names, never a second on_cooldown/cooldown_left recompute of the same fact.
+    const { greyed: on_cd, turns_left: cd_left } = cooldown_display(last_cast_turn[spell_id], my_turn_no, cooldown)
+    return { on_cd, cd_left, exhausted: queued >= cpt_cap }
   }
 
   // KEYBOARD SELECTION (S-25): 1-9 pick the matching hand card, 0/backtick picks the weapon (` before 1 —
@@ -317,6 +317,7 @@ export function DeckCluster() {
                       t={t}
                       name={card.name}
                       spell={spell}
+                      cd_left={gate.on_cd ? gate.cd_left : 0}
                     />
                   ) : null
                 }

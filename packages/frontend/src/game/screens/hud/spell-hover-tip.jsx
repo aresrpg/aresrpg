@@ -40,11 +40,15 @@ export const spell_hover_facts = (t, spell) => {
 
 /**
  * Full spell detail inside the hotbar's anchored Tooltip.
+ * `cd_left` (#368, silent-refusal law) — turns still on cooldown (0 = not on cooldown): the SAME fact
+ * DeckCluster's cast_gate greys the socket with (draft_budget.cooldown_display, one home) — surfaces WHY the
+ * greyed affordance refuses a cast attempt, right here at hover, reusing the toast's own copy
+ * (`dungeons.spell_on_cooldown`) so the reason never drifts from what a cast attempt would already say.
  * @param {{ t: (key: string, params?: object) => string, name: string,
- *   spell: { kind?: string, levels?: Array<object> } }} props
+ *   spell: { kind?: string, levels?: Array<object> }, cd_left?: number }} props
  * @returns {import('react').JSX.Element}
  */
-export function SpellHoverTip({ t, name, spell }) {
+export function SpellHoverTip({ t, name, spell, cd_left = 0 }) {
   const facts = spell_hover_facts(t, spell)
   const rows = [
     [t('spells.ap_cost'), `${facts.ap}`],
@@ -68,6 +72,8 @@ export function SpellHoverTip({ t, name, spell }) {
           <span>{t('fight.ap')}</span>
         </span>
       </div>
+
+      {cd_left > 0 && <div className="tt-spell-card__reason">{t('dungeons.spell_on_cooldown', { n: cd_left })}</div>}
 
       <div className="tt-spell-card__facts">
         {rows.map(([label, value]) => (

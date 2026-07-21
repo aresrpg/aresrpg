@@ -12,6 +12,7 @@ import {
   spell_mp_grant,
   on_cooldown,
   cooldown_left,
+  cooldown_display,
   casts_at_cell,
   cap_of,
   effective_deadline,
@@ -87,6 +88,32 @@ describe('on_cooldown / cooldown_left — cast.move enforce_and_record_cast, acr
     // cast on turn 1, then again on turn 6 (its first legal recast): locked anew 6–10, free 11.
     expect(on_cooldown(6, 10, 4)).toBe(true)
     expect(on_cooldown(6, 11, 4)).toBe(false)
+  })
+})
+
+// ── #368: the hotbar's cooldown DISPLAY projection (spell-state → {greyed, turns_left}) ─────────────────────
+describe('cooldown_display — the icon-grey + big-centered-number projection (#368)', () => {
+  it('RED-FIRST: cast a C=4 spell on turn 1 — greys with the count, ticks down each turn, restores exactly on ready', () => {
+    expect(cooldown_display(1, 2, 4)).toEqual({ greyed: true, turns_left: 4 })
+    expect(cooldown_display(1, 3, 4)).toEqual({ greyed: true, turns_left: 3 })
+    expect(cooldown_display(1, 4, 4)).toEqual({ greyed: true, turns_left: 2 })
+    expect(cooldown_display(1, 5, 4)).toEqual({ greyed: true, turns_left: 1 }) // last locked turn
+    expect(cooldown_display(1, 6, 4)).toEqual({ greyed: false, turns_left: 0 }) // restores EXACTLY on ready
+  })
+
+  it('never on cooldown: C=0, or no prior cast — never greyed, 0 turns', () => {
+    expect(cooldown_display(1, 3, 0)).toEqual({ greyed: false, turns_left: 0 })
+    expect(cooldown_display(null, 7, 4)).toEqual({ greyed: false, turns_left: 0 })
+    expect(cooldown_display(undefined, 7, 4)).toEqual({ greyed: false, turns_left: 0 })
+  })
+
+  it('greyed and turns_left agree at every turn — one derivation, never a second on_cooldown recompute', () => {
+    for (let current = 1; current <= 8; current += 1) {
+      const { greyed, turns_left } = cooldown_display(1, current, 4)
+      expect(greyed).toBe(on_cooldown(1, current, 4))
+      expect(greyed).toBe(turns_left > 0)
+      expect(turns_left).toBe(cooldown_left(1, current, 4))
+    }
   })
 })
 

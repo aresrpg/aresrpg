@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { wash_armed_spell } from './voxel_fight_folds.js'
+import { wash_armed_spell, tackle_float_payloads } from './voxel_fight_folds.js'
 
 describe('wash_armed_spell — the cast wash paints only while one more cast is affordable', () => {
   test('the weapon sentinel gates on the escrow ap_cost: affordable paints, spent clears', () => {
@@ -28,17 +28,46 @@ describe('wash_armed_spell — the cast wash paints only while one more cast is 
 })
 
 describe('trap draft paint — click-time fold + rollback semantics (the fold my_traps is the one client trap home)', () => {
-  test('CONTRACT: the adapter renders the tackled beat (hit anim + pool-forfeit floater, design order law 2026-07-16)', async () => {
+  test('CONTRACT: the adapter renders the tackled beat (hit anim + LABEL-FREE AP/MP floats, #239 presentation ruling)', async () => {
     // The producer (fight_render_events) orders 'tackled' strictly before any retry move beat — headless-pinned
     // in @aresrpg/fight test/tackle_beat_order.test.js. This row pins the RENDER binding: an unknown beat kind
     // no-ops silently in bind_render_turn, so a dropped branch would eat the flinch without failing anything.
     const source = await Bun.file(new URL('./voxel_fight_adapter.js', import.meta.url)).text()
     expect(source).toContain("spec.kind === 'tackled'")
     expect(source).toContain("anim: 'hit',") // the tackled runner flinches — hit-before-move, always
-    expect(source).toMatch(/mp_lost > 0 \? `-\$\{payload\.mp_lost\} MP`/) // the forfeit floater voices the bite
-    // the floater NAMES the tackle (it fires on the player's own turn, must not read as
-    // enemy damage). fights.tackled parity across all 6 locales is pinned by i18n/locales/tackled_parity.test.js.
-    expect(source).toContain("i18n.t('fights.tackled')")
+    // #239 owner ruling: the floater NEVER prints a mechanic label — tackle_float_payloads (voxel_fight_folds.js)
+    // is the ONE home for the numeric-only, house-colored AP/MP payload shape; the adapter only spawns it.
+    expect(source).toContain('tackle_float_payloads(payload.ap_lost, payload.mp_lost)')
+    // the KEY (not the exact call syntax — the i18n-coverage scanner's static-key regex false-positives on
+    // that literal call text sitting in THIS assertion otherwise) must not appear at all: the mechanic label
+    // is GONE, not just hidden.
+    expect(source).not.toContain("'fights.tackled'")
+  })
+
+  describe('tackle_float_payloads — #239: numeric AP/MP floats only, never a mechanic label', () => {
+    test('both pools bitten: MP then AP, bare signed numbers, house kinds (never a label)', () => {
+      expect(tackle_float_payloads(1, 2)).toEqual([
+        { text: '-2', kind: 'mp' },
+        { text: '-1', kind: 'ap' },
+      ])
+    })
+
+    test('one pool already at 0 costs 0 of itself (tackle_losses ceils its own fraction) — filtered, never a bare -0', () => {
+      expect(tackle_float_payloads(0, 3)).toEqual([{ text: '-3', kind: 'mp' }])
+      expect(tackle_float_payloads(2, 0)).toEqual([{ text: '-2', kind: 'ap' }])
+    })
+
+    test('both pools at 0: no floats at all (never a bare label fallback)', () => {
+      expect(tackle_float_payloads(0, 0)).toEqual([])
+    })
+
+    test('RED-FIRST (#239): every entry is numeric-only — no entry ever carries "TACKLED" or a unit suffix', () => {
+      for (const float of tackle_float_payloads(4, 5)) {
+        expect(float.text).toMatch(/^-\d+$/)
+        expect(float.text).not.toContain('TACKLED')
+        expect(float.text).not.toMatch(/[A-Za-z]/)
+      }
+    })
   })
 
   test('CONTRACT: DungeonBoard gates the walk on the deterministic tackle — a bitten move predicts, never walks', async () => {

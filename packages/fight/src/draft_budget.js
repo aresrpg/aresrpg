@@ -64,6 +64,17 @@ export function cooldown_left(last_cast_turn, current_turn, cooldown) {
   return Math.max(0, cooldown - (current_turn - last_cast_turn) + 1)
 }
 
+/** #368 — the hotbar's cooldown DISPLAY projection: same inputs as cooldown_left above (one home, no parallel
+ *  cooldown store), composed into the exact shape the socket's grey+big-centered-number treatment renders.
+ *  `greyed` and `turns_left > 0` always agree (cooldown_left ⇔ on_cooldown, same `d <= cooldown` boundary) —
+ *  this is the ONE derivation, never a second on_cooldown call recomputing the same fact.
+ *  @param {number|undefined|null} last_cast_turn @param {number} current_turn @param {number} cooldown
+ *  @returns {{ greyed: boolean, turns_left: number }} */
+export function cooldown_display(last_cast_turn, current_turn, cooldown) {
+  const turns_left = cooldown_left(last_cast_turn, current_turn, cooldown)
+  return { greyed: turns_left > 0, turns_left }
+}
+
 /** casts_per_target accounting: how many of `spell_key` are already drafted at `cell` this turn (from the
  *  live cast_path). The chain caps this per (spell, cell) per turn; compare against cap_of(casts_per_target). */
 export function casts_at_cell(cast_path, spell_key, cell) {

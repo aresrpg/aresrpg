@@ -21,10 +21,11 @@ import { Tooltip } from './Tooltip.jsx'
  * on a greyed socket.
  * `glow` = the §7 turn-seed crit preview (casting this NEXT crits): gold socket glow — the socket itself
  * carries no badge/number, the detail card carries the crit odds.
- * `cd_left` (FIX 4, 07-14) = turns still on cooldown (0 = not on cooldown) — same disabled treatment as an
- * AP-unaffordable slot, plus a small turns-remaining number in the socket's free top-right corner (the
- * keyCap owns top-left, the AP cost owns bottom-right). `exhausted` = the casts-per-turn cap is already spent
- * this turn (no cross-turn cooldown, so no number — same disabled treatment).
+ * `cd_left` (#368, promoted from the FIX-4 07-14 corner badge) = turns still on cooldown (0 = not on
+ * cooldown) — same disabled treatment as an AP-unaffordable slot (desaturate+dim, `.hud-socket.disabled
+ * .hud-socket__gem`), PLUS a BIG white JetBrains-Mono number centered over the greyed gem so the count reads
+ * at a glance across the whole bar. `exhausted` = the casts-per-turn cap is already spent this turn (no
+ * cross-turn cooldown, so no number — same disabled treatment, no overlay).
  * @param {{ keyCap: string | null, card: any, color: string, spell_id: string, armed: boolean,
  *   enabled: boolean, glow: boolean, cd_left: number, exhausted: boolean, onPick: () => void,
  *   tip?: import('react').ReactNode, hovered?: boolean }} props
@@ -100,7 +101,7 @@ export function SpellSocket({
           )}
         </span>
         {cd_left > 0 && (
-          <span className="hud-socket__cd hud-num" aria-hidden="true">
+          <span className="hud-socket__cd-overlay hud-num" aria-hidden="true">
             {cd_left}
           </span>
         )}
