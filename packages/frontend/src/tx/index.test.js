@@ -583,9 +583,11 @@ describe('execute_tx — sponsor-first route', () => {
     expect(sae).toHaveBeenCalledTimes(1)
   })
 
-  test('unknown cached balance (null) → SPONSORED FIRST (server balance gate is authoritative)', async () => {
+  test('unknown cached balance (null) → the CLIENT resolves it FIRST; a still-low read stays sponsored', async () => {
+    // #263: the sponsor is a fallback, never the balance router. An unknown balance is resolved with one client
+    // read BEFORE any sponsor contact; a genuinely-low wallet (fresh dust from fallback_deps) then goes sponsored.
     const sae = mock(async () => ({ digest: 'SELFPAY' }))
-    const deps = fallback_deps()
+    const deps = fallback_deps() // fetch_balance_mist → 1_000_000n dust (well under 0.2 SUI)
     const res = await execute_tx({
       wallet: make_zk_wallet(sae),
       address: ADDR,
@@ -595,8 +597,52 @@ describe('execute_tx — sponsor-first route', () => {
       sponsor_fallback: deps,
     })
     expect(res.digest).toBe('SPONSORED')
-    expect(deps.run_sponsored).toHaveBeenCalledTimes(1)
+    expect(deps.fetch_balance_mist).toHaveBeenCalledTimes(1) // the client resolved its own balance first…
+    expect(deps.run_sponsored).toHaveBeenCalledTimes(1) // …and only THEN, still low, went sponsored
     expect(sae).toHaveBeenCalledTimes(0)
+  })
+
+  // #263 PRIMARY — the auto-pass wedge fix. A FUNDED wallet whose gauge balance is not yet known (the fight
+  // started before the wallet bar's first read) must NOT reach the sponsor: the client resolves its own balance,
+  // sees it is funded, and self-pays DIRECTLY. RED before the balance-authority pre-route (null → sponsored-first,
+  // earning the self-pay-required 400 that froze the fight); GREEN after (zero sponsor contact).
+  test('unknown balance + fresh read shows FUNDED → self-pay directly, sponsor NEVER contacted (#263)', async () => {
+    sim.current = ok_sim('1000000', '2000000', '500000')
+    const sae = mock(async () => ({ digest: 'SELFPAY' }))
+    const deps = fallback_deps({ fetch_balance_mist: mock(async () => HIGH) }) // the client discovers it is funded
+    const res = await execute_tx({
+      wallet: make_zk_wallet(sae),
+      address: ADDR,
+      transaction: make_tx(),
+      chain: CHAIN,
+      cached_balance_mist: null, // gauge not yet read — the exact wedge window
+      sponsor_fallback: deps,
+    })
+    expect(res.digest).toBe('SELFPAY')
+    expect(deps.fetch_balance_mist).toHaveBeenCalledTimes(1) // one client read…
+    expect(deps.run_sponsored).toHaveBeenCalledTimes(0) // …and THE SPONSOR IS NEVER CONTACTED
+    expect(sae).toHaveBeenCalledTimes(1) // signed directly with the player's own gas
+  })
+
+  // #263 — a STALE-low cache (owner topped up since the last read) is the same class: the client re-reads, sees
+  // funded, self-pays directly. No sponsor contact, so the sponsored-first self-pay-required round-trip is skipped.
+  test('stale-low cache but fresh read FUNDED → self-pay directly, sponsor untouched (#263)', async () => {
+    sim.current = ok_sim('1000000', '2000000', '500000')
+    const sae = mock(async () => ({ digest: 'SELFPAY' }))
+    const deps = fallback_deps({ fetch_balance_mist: mock(async () => HIGH) })
+    const res = await execute_tx({
+      wallet: make_zk_wallet(sae),
+      address: ADDR,
+      transaction: make_tx(),
+      chain: CHAIN,
+      cached_balance_mist: LOW,
+      cached_balance_read_at_ms: Date.now() - 60_000, // stale (> 30s BALANCE_FRESH_MS)
+      sponsor_fallback: deps,
+    })
+    expect(res.digest).toBe('SELFPAY')
+    expect(deps.fetch_balance_mist).toHaveBeenCalledTimes(1)
+    expect(deps.run_sponsored).toHaveBeenCalledTimes(0)
+    expect(sae).toHaveBeenCalledTimes(1)
   })
 
   test('sponsor DAILY-CAP refusal → propagates (honest block), never self-pays past the free promise', async () => {

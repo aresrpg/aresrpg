@@ -155,6 +155,31 @@ async function guard(address: string, transaction: Transaction, pin_budget: bool
   }
 }
 
+/**
+ * BALANCE-AUTHORITY resolution (#263 — the auto-pass wedge). When the route would contact the sponsor on an
+ * UNKNOWN or STALE-low balance, the CLIENT resolves its own balance with ONE read and re-decides: a now-funded
+ * wallet self-pays DIRECTLY and THE SPONSOR IS NEVER CONTACTED (the @server refuses > 0.2 SUI with a
+ * self-pay-required 400 that once froze a live fight). A FRESH-low route is already client-decided — no redundant
+ * read. A read failure keeps the original route (safe: sponsor-first + the self-pay-required backstop). Reuses the
+ * ONE routing home (decide_sponsor_route) and its ONE threshold (SELF_PAY_THRESHOLD_MIST) — no parallel policy.
+ */
+async function client_resolved_route(
+  initial: ReturnType<typeof decide_sponsor_route>,
+  route_input: Parameters<typeof decide_sponsor_route>[0],
+  fetch_balance_mist: () => Promise<bigint | null>
+): Promise<ReturnType<typeof decide_sponsor_route>> {
+  if (initial.route !== 'sponsored-first' || initial.reason === 'fresh-balance<=threshold') return initial
+  const resolved_mist = await fetch_balance_mist().catch(() => null)
+  if (resolved_mist == null) return initial
+  const rerouted = decide_sponsor_route({
+    ...route_input,
+    cached_balance_mist: resolved_mist,
+    cached_balance_read_at_ms: Date.now(),
+  })
+  game_log('tx', sponsor_route_log(rerouted))
+  return rerouted
+}
+
 // ── SELF-PAY DOOR ──────────────────────────────────────────────────────────────
 /** Simulate-guard then sign and execute exactly once. A digest-bearing failure is returned, never retried.
  * @param keep_budget true for a terminal &Random tx (search/gather/crush/open/buy): keep the SDK builder's
@@ -214,8 +239,13 @@ export async function execute_tx({
     cached_balance_mist,
     cached_balance_read_at_ms,
   }
-  const initial_route = decide_sponsor_route(route_input)
+  let initial_route = decide_sponsor_route(route_input)
   game_log('tx', sponsor_route_log(initial_route))
+  // #263 (the auto-pass wedge): the CLIENT — never the @server — decides self-pay vs sponsor. A funded wallet
+  // resolves its OWN balance and self-pays directly rather than earning a self-pay-required 400 that once froze a
+  // live auto-pass at "AUTO PASS IN 0s". See client_resolved_route.
+  initial_route = await client_resolved_route(initial_route, route_input, deps.fetch_balance_mist)
+
   let sponsor_refused = false
   // The honest sponsor refusal to surface if self-pay below ALSO fails on gas selection (a truly-broke wallet the
   // whole game is meant to sponsor). Owner P1 07-19: search/engage bust the station's per-tx ceiling → the station
@@ -224,8 +254,6 @@ export async function execute_tx({
   // FUNDED 0.2–0.4-SUI wallet, so the wallet's own "need ~0.4 SUI" gas copy is the TRUTHFUL message and must stand.
   let sponsor_refusal_error: unknown = null
 
-  // Unknown/stale zkLogin balances deliberately go sponsor-first. Only a <=30s read above the threshold may
-  // skip this round trip; the sponsor's fresh server-side balance check is the authoritative router.
   if (initial_route.route === 'sponsored-first') {
     let sponsored: SponsoredReceipt | null = null
     try {
