@@ -167,8 +167,9 @@ export function Sidebar() {
           )}
           {/* D260 + resolved 2026-07-17 (desktop: version sits bottom-center of the sidebar): build/version
               tag, pinned bottom-CENTER. While this renders, the global fixed badge is suppressed (see
-              data-app-sidebar on the root + version_badge.tsx's :has() rule). */}
-          <div className="px-4 pt-3 text-center text-[8px] tracking-[0.25em] text-muted/50 uppercase select-none">
+              data-app-sidebar on the root + version_badge.tsx's :has() rule). Gold accent (not muted) to
+              mirror version_badge.tsx's own "muted gold" treatment — the two are siblings of the same tag. */}
+          <div className="px-4 pt-3 text-center text-[8px] tracking-[0.25em] text-gold/40 uppercase select-none">
             v{__APP_VERSION__}
           </div>
         </div>

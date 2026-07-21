@@ -81,6 +81,10 @@ describe('version badge', () => {
     const tag_classes = sidebar.match(/className="[^"]*text-center[^"]*"\s*>\s*v\{__APP_VERSION__\}/)?.[0] ?? ''
     expect(tag_classes).toContain('text-center')
     expect(sidebar).toContain('v{__APP_VERSION__}')
+    // Bug fix (v1.12.37 report): the tag renders in the house GOLD accent, mirroring version_badge.tsx's
+    // own "muted gold" treatment — it must never regress back to the plain muted-grey label color.
+    expect(tag_classes).toContain('text-gold')
+    expect(tag_classes).not.toContain('text-muted')
   })
 
   test('mounted exactly once, unconditionally, outside the router/error-boundary — survives every route and crash', () => {
