@@ -5,6 +5,9 @@
     "mob": {
       "quilt": "BxyR4mkAgTQ2s3NBytTar_Skzhec5vTP8gmkEt3aTDk"
     },
+    "mob_catalog": {
+      "quilt": "3KE0b73VyQfo2HfJU0_De-mA-Y4Ckj10-QoAjf8Krg8"
+    },
     "character": {
       "quilt": "HEw9YiusBednaPTJ3QEB8My9JQkdkeyZLfwEVagXRWU"
     },
@@ -19,6 +22,9 @@
     },
     "spell": {
       "quilt": "URoggq0Mi8MDADv4QSZLSAh4RpmsEYdOA6xxLMjG16k"
+    },
+    "spell_corpus": {
+      "quilt": "k0GUl2qXaQiX2B7phB5sgksQOYRhiQjJ7jYWN-4xKgI"
     },
     "mob_icon": {
       "quilt": "OH39H3f7sUFVSLY_FpPExa_6i_gTdP9P2zLYkhLvMqQ"
