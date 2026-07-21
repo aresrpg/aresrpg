@@ -1,0 +1,31 @@
+{
+  "fight": {
+    "world_seed": 123456789,
+    "spawn_id": 42,
+    "turn_deadline_ms": 1752192000000,
+    "seat": 0
+  },
+  "turn_seed": 4190174188,
+  "crit_bound": 10000,
+  "crit_rate": 4,
+  "actions": [
+    {
+      "kind": "spell",
+      "action_ordinal": 0,
+      "crit_roll": 2816,
+      "critical": false
+    },
+    {
+      "kind": "weapon",
+      "action_ordinal": 1,
+      "crit_roll": 4768,
+      "critical": false
+    },
+    {
+      "kind": "spell",
+      "action_ordinal": 2,
+      "crit_roll": 1518,
+      "critical": true
+    }
+  ]
+}
