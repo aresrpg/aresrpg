@@ -23,7 +23,12 @@ describe('turn-seed parity (Move golden vectors)', () => {
 
   test('turn_seed + slot_crit_roll reproduce the Move-extracted goldens', () => {
     // tuple A: realistic values
-    const a = turn_seed({ world_seed: 123456789, spawn_id: 42, turn_deadline_ms: 1752192000000, seat: 0 })
+    const a = turn_seed({
+      world_seed: 123456789,
+      spawn_id: 42,
+      turn_deadline_ms: 1752192000000,
+      seat: 0,
+    })
     expect(a).toBe(4190174188)
     expect(slot_crit_roll(a, 0)).toBe(2816)
     expect(slot_crit_roll(a, 1)).toBe(4768)
@@ -39,11 +44,21 @@ describe('turn-seed parity (Move golden vectors)', () => {
     expect(slot_crit_roll(b, 0)).toBe(8707)
     expect(slot_crit_roll(b, 5)).toBe(1837)
     // tuple C: all zeros
-    const c = turn_seed({ world_seed: 0, spawn_id: 0, turn_deadline_ms: 0, seat: 0 })
+    const c = turn_seed({
+      world_seed: 0,
+      spawn_id: 0,
+      turn_deadline_ms: 0,
+      seat: 0,
+    })
     expect(c).toBe(2245583870)
     expect(slot_crit_roll(c, 0)).toBe(6605)
     // tuple D: same fight, different seat -> a different stream (seat-bound sequences)
-    const d = turn_seed({ world_seed: 123456789, spawn_id: 42, turn_deadline_ms: 1752192000000, seat: 1 })
+    const d = turn_seed({
+      world_seed: 123456789,
+      spawn_id: 42,
+      turn_deadline_ms: 1752192000000,
+      seat: 1,
+    })
     expect(d).toBe(4068998909)
     expect(slot_crit_roll(d, 0)).toBe(4166)
   })
@@ -73,7 +88,8 @@ describe('turn-seed parity (Move golden vectors)', () => {
 
   test('crit frequency over 10k decorrelated seeds ~ 1-in-20 (mirrors t_distribution_rates over scramble seeds)', () => {
     let crits = 0
-    for (let i = 0; i < 10000; i++) if (crit_at(slot_crit_roll(scramble(i), 0), 20, 0)) crits++
+    for (let i = 0; i < 10000; i++)
+      if (crit_at(slot_crit_roll(scramble(i), 0), 20, 0)) crits++
     expect(crits).toBeGreaterThanOrEqual(380) // the Move test's own generous chi band
     expect(crits).toBeLessThanOrEqual(620)
   })

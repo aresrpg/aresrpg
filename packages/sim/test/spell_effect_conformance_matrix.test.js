@@ -34,35 +34,56 @@ describe('spell-effect conformance matrix — real corpus × reducer postconditi
   // repo), absent by design here — CORPUS degrades to [] (spell_effect_conformance_matrix.js), so the two
   // corpus-cardinality assertions below cannot hold. The other 4 tests in this describe are self-contained
   // (harness anti-lying self-tests + the vacuously-true worklist-currency check) and keep running for real.
-  test.skipIf(!SPELLS_CORPUS_AVAILABLE)('corpus is loaded (the on-chain class spell files)', () => {
-    expect(MATRIX.spells).toBeGreaterThanOrEqual(240)
-    expect(MATRIX.drives).toBeGreaterThan(MATRIX.spells) // base + crit effects per spell
-  })
+  test.skipIf(!SPELLS_CORPUS_AVAILABLE)(
+    'corpus is loaded (the on-chain class spell files)',
+    () => {
+      expect(MATRIX.spells).toBeGreaterThanOrEqual(240)
+      expect(MATRIX.drives).toBeGreaterThan(MATRIX.spells) // base + crit effects per spell
+    },
+  )
 
   // ── THE SURVIVAL GATE: no SUPPORTED effect kind may fail its postcondition ──────────────────────────
   // A conviction whose kind is NOT on the known-unsupported worklist == a working spell silently broke.
   test('NO SUPPORTED effect kind regresses (every conviction is a KNOWN-unsupported kind)', () => {
-    const surprises = MATRIX.convictions.filter(c => !KNOWN_UNSUPPORTED.has(c.kind))
+    const surprises = MATRIX.convictions.filter(
+      c => !KNOWN_UNSUPPORTED.has(c.kind),
+    )
     const report = surprises
-      .map(c => `  ${c.spell_id} [${c.slot}] kind ${c.kind} (${c.name}) · ${c.cls} · ${c.detail}`)
+      .map(
+        c =>
+          `  ${c.spell_id} [${c.slot}] kind ${c.kind} (${c.name}) · ${c.cls} · ${c.detail}`,
+      )
       .join('\n')
-    expect(surprises.length, `SUPPORTED spell effects that FAILED their postcondition (regressions):\n${report}`).toBe(0)
+    expect(
+      surprises.length,
+      `SUPPORTED spell effects that FAILED their postcondition (regressions):\n${report}`,
+    ).toBe(0)
   })
 
   // ── COVERAGE: every corpus kind is exercised and classified (no silent unclassified kind) ───────────
-  test.skipIf(!SPELLS_CORPUS_AVAILABLE)('every corpus effect kind is exercised and has a class row', () => {
-    const unclassified = [...MATRIX.kinds_seen].filter(k => CLASS_OF[k] === undefined)
-    expect(unclassified, `corpus kinds with NO matrix class row: ${unclassified.map(KIND_NAME).join(', ')}`).toEqual([])
-    // The corpus must span a broad slice of the vocabulary (guards against loading an empty/partial corpus).
-    expect(MATRIX.kinds_seen.size).toBeGreaterThanOrEqual(25)
-  })
+  test.skipIf(!SPELLS_CORPUS_AVAILABLE)(
+    'every corpus effect kind is exercised and has a class row',
+    () => {
+      const unclassified = [...MATRIX.kinds_seen].filter(
+        k => CLASS_OF[k] === undefined,
+      )
+      expect(
+        unclassified,
+        `corpus kinds with NO matrix class row: ${unclassified.map(KIND_NAME).join(', ')}`,
+      ).toEqual([])
+      // The corpus must span a broad slice of the vocabulary (guards against loading an empty/partial corpus).
+      expect(MATRIX.kinds_seen.size).toBeGreaterThanOrEqual(25)
+    },
+  )
 
   // ── CENSUS: the worklist stays honest — every known-unsupported kind STILL convicts in the corpus ───
   // If a kind here stops convicting, it was implemented (or de-authored): update the worklist
   // (KNOWN_UNSUPPORTED + MATRIX_CONVICTIONS.md). This is the burn-down ratchet.
   test('known-unsupported worklist is current (each listed kind still convicts)', () => {
     const convicted_kinds = new Set(MATRIX.convictions.map(c => c.kind))
-    const stale = [...KNOWN_UNSUPPORTED.keys()].filter(k => MATRIX.kinds_seen.has(k) && !convicted_kinds.has(k))
+    const stale = [...KNOWN_UNSUPPORTED.keys()].filter(
+      k => MATRIX.kinds_seen.has(k) && !convicted_kinds.has(k),
+    )
     expect(
       stale,
       `worklist kinds that NO LONGER convict (implemented or de-authored — remove from KNOWN_UNSUPPORTED + MATRIX_CONVICTIONS.md): ${stale.map(KIND_NAME).join(', ')}`,
@@ -72,17 +93,29 @@ describe('spell-effect conformance matrix — real corpus × reducer postconditi
   // ── ANTI-LYING: the harness drives REAL casts, and its checker catches a deliberately broken effect ──
   test('harness is live: a real damage effect drops enemy HP', () => {
     const clean = drive_effect('__self_test__', 'base0', {
-      kind: SE.K_DAMAGE, value: 12, element: 2, target_filter: SE.TF_NOT_TEAM,
+      kind: SE.K_DAMAGE,
+      value: 12,
+      element: 2,
+      target_filter: SE.TF_NOT_TEAM,
     })
-    expect(clean, 'a value-12 K_DAMAGE effect should PASS (enemy HP must drop) — harness is not driving real casts').toBeNull()
+    expect(
+      clean,
+      'a value-12 K_DAMAGE effect should PASS (enemy HP must drop) — harness is not driving real casts',
+    ).toBeNull()
   })
 
   test('mutation proof: a deliberately zeroed damage effect IS convicted', () => {
     // Same code path, damage neutered to 0 → enemy HP cannot drop → the checker MUST convict it.
     const broken = drive_effect('__mutation__', 'base0', {
-      kind: SE.K_DAMAGE, value: 0, element: 2, target_filter: SE.TF_NOT_TEAM,
+      kind: SE.K_DAMAGE,
+      value: 0,
+      element: 2,
+      target_filter: SE.TF_NOT_TEAM,
     })
-    expect(broken, 'the matrix rubber-stamped a 0-damage effect — the gate is LYING').not.toBeNull()
+    expect(
+      broken,
+      'the matrix rubber-stamped a 0-damage effect — the gate is LYING',
+    ).not.toBeNull()
     expect(broken.cls).toBe('damage')
   })
 
@@ -92,9 +125,17 @@ describe('spell-effect conformance matrix — real corpus × reducer postconditi
     const state = fresh_state([])
     const hidden = apply_invisibility(state, 'p0', 'p0', 3)
     expect(is_invisible(find_entity(hidden, 'p0'))).toBe(true)
-    const spell = single_effect_spell('reveal_parity', {
-      kind: SE.K_DAMAGE, value: 12, element: 2, target_filter: SE.TF_NOT_TEAM,
-    }, 3, false)
+    const spell = single_effect_spell(
+      'reveal_parity',
+      {
+        kind: SE.K_DAMAGE,
+        value: 12,
+        element: 2,
+        target_filter: SE.TF_NOT_TEAM,
+      },
+      3,
+      false,
+    )
     const res = process_spell_cast(hidden, 'p0', spell, 1, ENEMY_CELL, CAST_CTX)
     expect(res.success).toBe(true)
     expect(

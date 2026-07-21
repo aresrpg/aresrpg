@@ -13,7 +13,7 @@ import { normalize_spell_templates } from './spell_templates.js'
  * @param {unknown} corpus
  * @returns {Map<string, import('./spell_templates.js').SpellTemplate>}
  */
-export const normalize_chain_spell_corpus = (corpus) => {
+export const normalize_chain_spell_corpus = corpus => {
   const rows = Array.isArray(corpus) ? corpus : []
   const normalized = normalize_spell_templates(rows)
   /** @type {Array<[string, import('./spell_templates.js').SpellTemplate]>} */

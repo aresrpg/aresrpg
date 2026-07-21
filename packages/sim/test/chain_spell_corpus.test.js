@@ -5,7 +5,10 @@ import { describe, expect, test } from 'bun:test'
 import { normalize_chain_spell_corpus } from '../src/chain_spell_corpus.js'
 import { normalize_spell_templates } from '../src/spell_templates.js'
 
-import { CORPUS, SPELLS_CORPUS_AVAILABLE } from './spell_effect_conformance_matrix.js'
+import {
+  CORPUS,
+  SPELLS_CORPUS_AVAILABLE,
+} from './spell_effect_conformance_matrix.js'
 
 describe('chain spell corpus door', () => {
   // MISSING-ARTIFACT (#96): seed/mainnet/spells is generated content from the content pipeline (private
@@ -22,7 +25,7 @@ describe('chain spell corpus door', () => {
         const expected = normalize_spell_templates([raw]).get(raw.id)
         expect(templates.get(raw.id)).toEqual(expected)
       }
-    }
+    },
   )
 
   test('preserves chain-only targeting and flag fields at the package boundary', () => {
@@ -32,13 +35,17 @@ describe('chain spell corpus door', () => {
         levels: [
           {
             ap_cost: 3,
-            effects: [{ kind: 0, value: 7, target_filter: 17, flags: 5, chance: 100 }],
+            effects: [
+              { kind: 0, value: 7, target_filter: 17, flags: 5, chance: 100 },
+            ],
             crit_effects: [],
           },
         ],
       },
     ])
-    expect(templates.get('boundary_probe')?.levels[0].base_effects[0]).toMatchObject({
+    expect(
+      templates.get('boundary_probe')?.levels[0].base_effects[0],
+    ).toMatchObject({
       kind: 0,
       target_filter: 17,
       flags: 5,

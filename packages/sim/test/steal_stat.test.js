@@ -5,6 +5,7 @@ import { describe, expect, test } from 'bun:test'
 import { effective_stats, find_entity } from '../src/fight_state.js'
 import { process_spell_cast } from '../src/fight_spells.js'
 import { K_STEAL_STAT, TF_NOT_TEAM } from '../src/spell_effect.js'
+
 import {
   CAST_CTX,
   ENEMY_CELL,
@@ -25,7 +26,12 @@ import {
 
 const cast_steal = raw => {
   const state = fresh_state([])
-  const spell = single_effect_spell(`steal_${raw.stat}_${raw.value}`, raw, 3, false)
+  const spell = single_effect_spell(
+    `steal_${raw.stat}_${raw.value}`,
+    raw,
+    3,
+    false,
+  )
   return {
     before: state,
     result: process_spell_cast(state, 'p0', spell, 1, ENEMY_CELL, CAST_CTX),
@@ -48,13 +54,19 @@ describe('K_STEAL_STAT — target debuffed + caster buffed, both timed (matrix k
     // TARGET LOSES the stat — a STAT_DEBUFF timed row lands on the enemy.
     expect(a_enemy.effects.length).toBeGreaterThan(b_enemy.effects.length)
     const debuff = a_enemy.effects.find(e => e.type === 'STAT_DEBUFF')
-    expect(debuff, 'no STAT_DEBUFF row on the target — stat steal did not debit').toBeDefined()
+    expect(
+      debuff,
+      'no STAT_DEBUFF row on the target — stat steal did not debit',
+    ).toBeDefined()
     expect(debuff.stat).toBe('strength')
     expect(debuff.value).toBe(11)
     expect(debuff.turns_remaining).toBe(3)
     // CASTER GAINS the same stat — the mirror STAT_BUFF timed row lands on the caster (both-sides parity).
     const buff = a_caster.effects.find(e => e.type === 'STAT_BUFF')
-    expect(buff, 'no STAT_BUFF row on the caster — steal did not credit the caster').toBeDefined()
+    expect(
+      buff,
+      'no STAT_BUFF row on the caster — steal did not credit the caster',
+    ).toBeDefined()
     expect(buff.stat).toBe('strength')
     expect(buff.value).toBe(11)
     expect(buff.turns_remaining).toBe(3)

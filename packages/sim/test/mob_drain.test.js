@@ -103,7 +103,11 @@ describe('P1 #2 — feed-then-act: the credit survives begin_turn, then expires'
     expect(fighter_point_credit(b, 1000, POINT_MP)).toBe(2)
     // the boss's begin_turn folds the credit — MP at act time is 8 (Move: ally_feed_survives_begin_turn).
     expect(
-      net_refill(6, fighter_point_debt(b, 1000, POINT_MP), fighter_point_credit(b, 1000, POINT_MP)),
+      net_refill(
+        6,
+        fighter_point_debt(b, 1000, POINT_MP),
+        fighter_point_credit(b, 1000, POINT_MP),
+      ),
     ).toBe(8)
     // the boss's turn-end expires the row (turns 1) → the following refill is back to base.
     decrement_fighter_statuses(b, 1000)

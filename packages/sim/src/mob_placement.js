@@ -45,7 +45,11 @@ export function seeded_spawn_cell(mask, obstacles, holes, excluded, state) {
   const idx0 = drawn.value
   for (let j = 0; j < len; j++) {
     const cell = pool[(idx0 + j) % len]
-    if (!obstacles.includes(cell) && !holes.includes(cell) && !excluded.includes(cell))
+    if (
+      !obstacles.includes(cell) &&
+      !holes.includes(cell) &&
+      !excluded.includes(cell)
+    )
       return { cell, state: drawn.state }
   }
   return { cell: null, state: drawn.state } // whole pool excluded — cannot seat (defensive; chain would hang)
@@ -66,13 +70,26 @@ export function seeded_spawn_cell(mask, obstacles, holes, excluded, state) {
  *   group_seed: string|number|bigint, count: number }} p
  * @returns {number[]} up to `count` DISTINCT cells (fewer only if the board has fewer free cells than `count`)
  */
-export function place_mob_cells({ mask, obstacles = [], holes = [], starts = [], group_seed, count }) {
+export function place_mob_cells({
+  mask,
+  obstacles = [],
+  holes = [],
+  starts = [],
+  group_seed,
+  count,
+}) {
   let state = rng_seed(Number(BigInt(group_seed ?? 0) & MASK32))
   const excluded = [...starts] // grows with each placed cell — THE fix (the chain's `all_starts` never grew)
   const cells = []
   const n = Math.max(0, Number(count) || 0)
   for (let i = 0; i < n; i++) {
-    const { cell, state: st } = seeded_spawn_cell(mask, obstacles, holes, excluded, state)
+    const { cell, state: st } = seeded_spawn_cell(
+      mask,
+      obstacles,
+      holes,
+      excluded,
+      state,
+    )
     state = st
     if (cell === null) break // no free cell left (count exceeded the board's open capacity)
     excluded.push(cell)

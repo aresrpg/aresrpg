@@ -5,6 +5,7 @@ import { describe, expect, test } from 'bun:test'
 import { find_entity } from '../src/fight_state.js'
 import { process_spell_cast } from '../src/fight_spells.js'
 import { K_RETURN_SPELL, TF_NOT_ENEMY } from '../src/spell_effect.js'
+
 import {
   CAST_CTX,
   fresh_state,
@@ -44,7 +45,10 @@ describe('K_RETURN_SPELL — a spell-return status row lands on the shielded fig
     const b = find_entity(before, 'p1')
     const a = find_entity(result.state, 'p1')
     const row = a.effects.find(e => e.type === 'RETURN_SPELL')
-    expect(row, 'no status row applied — return-spell did not land').toBeDefined()
+    expect(
+      row,
+      'no status row applied — return-spell did not land',
+    ).toBeDefined()
     expect(a.effects.length).toBeGreaterThan(b.effects.length)
     expect(row.turns_remaining).toBe(1)
   })

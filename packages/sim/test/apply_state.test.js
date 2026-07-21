@@ -4,7 +4,12 @@ import { describe, expect, test } from 'bun:test'
 
 import { find_entity } from '../src/fight_state.js'
 import { process_spell_cast } from '../src/fight_spells.js'
-import { K_APPLY_STATE, TF_NOT_TEAM, TF_ONLY_CASTER } from '../src/spell_effect.js'
+import {
+  K_APPLY_STATE,
+  TF_NOT_TEAM,
+  TF_ONLY_CASTER,
+} from '../src/spell_effect.js'
+
 import {
   CAST_CTX,
   fresh_state,
@@ -25,7 +30,14 @@ const cast_named_state = (raw, caster_id, target_cell) => {
   const spell = single_effect_spell(`apply_state_${raw.value}`, raw, 3, false)
   return {
     before: state,
-    result: process_spell_cast(state, caster_id, spell, 1, target_cell, CAST_CTX),
+    result: process_spell_cast(
+      state,
+      caster_id,
+      spell,
+      1,
+      target_cell,
+      CAST_CTX,
+    ),
   }
 }
 
@@ -33,7 +45,12 @@ describe('K_APPLY_STATE — a named state row lands in FightState (matrix kind 2
   test('self-target (ikari_blood_toll base0: state 788, 5 turns) writes the state row on the caster', () => {
     const caster_cell = find_entity(fresh_state([]), 'p0').cell
     const { before, result } = cast_named_state(
-      { kind: K_APPLY_STATE, value: 788, turns: 5, target_filter: TF_ONLY_CASTER },
+      {
+        kind: K_APPLY_STATE,
+        value: 788,
+        turns: 5,
+        target_filter: TF_ONLY_CASTER,
+      },
       'p0',
       caster_cell,
     )

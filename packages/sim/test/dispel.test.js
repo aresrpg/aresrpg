@@ -5,6 +5,7 @@ import { describe, expect, test } from 'bun:test'
 import { find_entity } from '../src/fight_state.js'
 import { process_spell_cast } from '../src/fight_spells.js'
 import { FLAG_DISPELLABLE, K_DISPEL, TF_NOT_TEAM } from '../src/spell_effect.js'
+
 import {
   CAST_CTX,
   ENEMY_CELL,

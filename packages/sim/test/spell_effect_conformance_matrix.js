@@ -32,7 +32,9 @@ import * as SE from '../src/spell_effect.js'
 // than throw — every OTHER export in this file (fresh_state, single_effect_spell, run_matrix, …) is pure/
 // synthetic and must stay usable with zero real spells loaded; consumers that genuinely need real corpus
 // rows gate themselves on SPELLS_CORPUS_AVAILABLE.
-const SPELLS_DIR = fileURLToPath(new URL('../../../seed/mainnet/spells', import.meta.url))
+const SPELLS_DIR = fileURLToPath(
+  new URL('../../../seed/mainnet/spells', import.meta.url),
+)
 export const SPELLS_CORPUS_AVAILABLE = existsSync(SPELLS_DIR)
 export const CORPUS = SPELLS_CORPUS_AVAILABLE
   ? readdirSync(SPELLS_DIR)
@@ -93,29 +95,69 @@ export const KNOWN_UNSUPPORTED = new Map([])
 // caster p0 WOUNDED (a self-heal must show HP rise), ally p1 WOUNDED (ally-heal shows rise), enemy m0 FULL
 // (damage shows a drop). Zero stats/resist so a value-N effect lands its full N (normalize sets min=max=value).
 export const MATRIX_ARENA = {
-  width: 9, height: 9, radius: 4, center: { x: 4, y: 4 },
-  cells: new Uint8Array(81), spawns_a: [], spawns_b: [],
+  width: 9,
+  height: 9,
+  radius: 4,
+  center: { x: 4, y: 4 },
+  cells: new Uint8Array(81),
+  spawns_a: [],
+  spawns_b: [],
 }
 const CASTER_CELL = { x: 2, y: 4 }
 const ALLY_CELL = { x: 2, y: 5 }
 export const ENEMY_CELL = { x: 4, y: 4 }
 const EMPTY_CELL = { x: 6, y: 6 } // open ground for teleport / trap / glyph destinations
 
-const make_fighter = (id, cell, is_player, health, health_max, effects = []) => ({
-  id, name: id, cell, health, health_max,
-  ap: 99, ap_max: 99, mp: 20, mp_max: 20, ap_used: 0, mp_used: 0,
-  is_player, template_id: 'matrix', level: 50, stats: {},
-  effects, deck: [], hand: [], discard: [], spell_levels: {}, ap_reserve: 0,
+const make_fighter = (
+  id,
+  cell,
+  is_player,
+  health,
+  health_max,
+  effects = [],
+) => ({
+  id,
+  name: id,
+  cell,
+  health,
+  health_max,
+  ap: 99,
+  ap_max: 99,
+  mp: 20,
+  mp_max: 20,
+  ap_used: 0,
+  mp_used: 0,
+  is_player,
+  template_id: 'matrix',
+  level: 50,
+  stats: {},
+  effects,
+  deck: [],
+  hand: [],
+  discard: [],
+  spell_levels: {},
+  ap_reserve: 0,
 })
 
 export const fresh_state = (extra_caster_effects = []) => {
-  const caster = make_fighter('p0', CASTER_CELL, true, 120, 200, extra_caster_effects)
+  const caster = make_fighter(
+    'p0',
+    CASTER_CELL,
+    true,
+    120,
+    200,
+    extra_caster_effects,
+  )
   const ally = make_fighter('p1', ALLY_CELL, true, 30, 100)
   const enemy = make_fighter('m0', ENEMY_CELL, false, 200, 200)
   return {
     ...create_fight_state({
-      fight_id: 'matrix', arena_seed: 1, arena_radius: 4, arena: MATRIX_ARENA,
-      team0: [caster, ally], team1: [enemy],
+      fight_id: 'matrix',
+      arena_seed: 1,
+      arena_radius: 4,
+      arena: MATRIX_ARENA,
+      team0: [caster, ally],
+      team1: [enemy],
     }),
     started: true,
     turn_order: ['p0', 'p1', 'm0'],
@@ -131,14 +173,28 @@ export const single_effect_spell = (
   free_cell,
   normalize_templates = normalize_spell_templates,
 ) =>
-  normalize_templates([{
-    id,
-    levels: [{
-      ap_cost, range_min: 0, range_max: 9, modifiable_range: false, line_launch: false,
-      line_of_sight: false, free_cell: !!free_cell, casts_per_turn: 255, casts_per_target: 255,
-      cooldown_turns: 0, crit_rate: 0, effects: [{ ...raw_effect, chance: 100 }], crit_effects: [],
-    }],
-  }]).get(id)
+  normalize_templates([
+    {
+      id,
+      levels: [
+        {
+          ap_cost,
+          range_min: 0,
+          range_max: 9,
+          modifiable_range: false,
+          line_launch: false,
+          line_of_sight: false,
+          free_cell: !!free_cell,
+          casts_per_turn: 255,
+          casts_per_target: 255,
+          cooldown_turns: 0,
+          crit_rate: 0,
+          effects: [{ ...raw_effect, chance: 100 }],
+          crit_effects: [],
+        },
+      ],
+    },
+  ]).get(id)
 
 export const CAST_CTX = { blocks_los: () => false, is_occupied: () => false }
 
@@ -147,13 +203,25 @@ const victim_of = target_filter => {
   const tf = target_filter ?? 0
   if ((tf & SE.TF_ONLY_CASTER) === SE.TF_ONLY_CASTER) return 'caster'
   if (tf === SE.TF_NONE) return 'zone'
-  if ((tf & SE.TF_NOT_ENEMY) === SE.TF_NOT_ENEMY && (tf & SE.TF_NOT_TEAM) !== SE.TF_NOT_TEAM) return 'ally'
+  if (
+    (tf & SE.TF_NOT_ENEMY) === SE.TF_NOT_ENEMY &&
+    (tf & SE.TF_NOT_TEAM) !== SE.TF_NOT_TEAM
+  )
+    return 'ally'
   return 'enemy'
 }
 
 const row_tags = result =>
-  (result.effects ?? []).map(e =>
-    e.status ?? (e.damage != null ? 'dmg' : e.heal != null ? 'heal' : e.has_cell ? 'moved' : '?'),
+  (result.effects ?? []).map(
+    e =>
+      e.status ??
+      (e.damage != null
+        ? 'dmg'
+        : e.heal != null
+          ? 'heal'
+          : e.has_cell
+            ? 'moved'
+            : '?'),
   )
 
 // ── The driver: cast ONE declared effect in isolation, return a conviction or null ───────────────────
@@ -165,10 +233,18 @@ export const drive_effect = (
   cast_spell = process_spell_cast,
   normalize_templates = normalize_spell_templates,
 ) => {
-  const kind = raw.kind
+  const { kind } = raw
   const cls = CLASS_OF[kind]
-  const conviction = detail => ({ spell_id, slot, kind, name: KIND_NAME(kind), cls, detail })
-  if (cls === undefined) return conviction(`unclassified kind ${kind} — matrix has no class row`)
+  const conviction = detail => ({
+    spell_id,
+    slot,
+    kind,
+    name: KIND_NAME(kind),
+    cls,
+    detail,
+  })
+  if (cls === undefined)
+    return conviction(`unclassified kind ${kind} — matrix has no class row`)
 
   const vk = victim_of(raw.target_filter)
   const placing = cls === 'trap' || cls === 'glyph' || cls === 'teleport'
@@ -176,25 +252,56 @@ export const drive_effect = (
   // dispel needs a live dispellable buff on its victim to observe a strip.
   if (cls === 'dispel') {
     const enemy = find_entity(state, 'm0')
-    enemy.effects = [{ id: 987654, type: 'STAT_BUFF', timing: 'TURN_START', source_id: 'seed', stat: 'strength', value: 5, turns_remaining: 3, flags: SE.FLAG_DISPELLABLE }]
+    enemy.effects = [
+      {
+        id: 987654,
+        type: 'STAT_BUFF',
+        timing: 'TURN_START',
+        source_id: 'seed',
+        stat: 'strength',
+        value: 5,
+        turns_remaining: 3,
+        flags: SE.FLAG_DISPELLABLE,
+      },
+    ]
   }
 
-  const victim_id = cls === 'teleport' || vk === 'caster' ? 'p0' : vk === 'ally' ? 'p1' : vk === 'zone' ? null : 'm0'
+  const victim_id =
+    cls === 'teleport' || vk === 'caster'
+      ? 'p0'
+      : vk === 'ally'
+        ? 'p1'
+        : vk === 'zone'
+          ? null
+          : 'm0'
   const target =
-    cls === 'teleport' ? EMPTY_CELL
-      : placing ? EMPTY_CELL
-        : vk === 'caster' ? CASTER_CELL
-          : vk === 'ally' ? ALLY_CELL
-            : vk === 'zone' ? EMPTY_CELL
+    cls === 'teleport'
+      ? EMPTY_CELL
+      : placing
+        ? EMPTY_CELL
+        : vk === 'caster'
+          ? CASTER_CELL
+          : vk === 'ally'
+            ? ALLY_CELL
+            : vk === 'zone'
+              ? EMPTY_CELL
               : ENEMY_CELL
 
   const before_victim = victim_id ? find_entity(state, victim_id) : null
-  const spell = single_effect_spell(`matrix_${kind}`, raw, 3, placing, normalize_templates)
+  const spell = single_effect_spell(
+    `matrix_${kind}`,
+    raw,
+    3,
+    placing,
+    normalize_templates,
+  )
   let res
   try {
     res = cast_spell(state, 'p0', spell, 1, target, CAST_CTX)
   } catch (err) {
-    return conviction(`process_spell_cast THREW: ${String(err?.message ?? err).slice(0, 80)}`)
+    return conviction(
+      `process_spell_cast THREW: ${String(err?.message ?? err).slice(0, 80)}`,
+    )
   }
   if (!res.success) return conviction(`cast rejected: ${res.error}`)
 
@@ -205,7 +312,8 @@ export const drive_effect = (
   const tags = row_tags(res)
   const value = raw.value ?? 0
 
-  const gained_effect = type_pred => v.effects.some(type_pred) && v.effects.length > b.effects.length
+  const gained_effect = type_pred =>
+    v.effects.some(type_pred) && v.effects.length > b.effects.length
 
   switch (cls) {
     case 'damage':
@@ -213,67 +321,119 @@ export const drive_effect = (
       // MUST drop HP; every corpus damage effect declares value>0 — verified). A shield-absorb board would
       // instead assert the shield row shrank; not exercised here on purpose (keeps the checker un-foolable).
       if (v.health < b.health) return null
-      return conviction(`hp unchanged ${b.health}->${v.health} (expected a decrease; value=${value})`)
+      return conviction(
+        `hp unchanged ${b.health}->${v.health} (expected a decrease; value=${value})`,
+      )
     case 'heal':
       if (v.health > b.health && v.health <= v.health_max) return null
-      return conviction(`hp not healed ${b.health}->${v.health} (max ${v.health_max})`)
+      return conviction(
+        `hp not healed ${b.health}->${v.health} (max ${v.health_max})`,
+      )
     case 'points_gain':
-      if (v.ap + v.mp > b.ap + b.mp || v.effects.some(e => e.type === 'STAT_BUFF' && (e.stat === 'ap' || e.stat === 'mp'))) return null
+      if (
+        v.ap + v.mp > b.ap + b.mp ||
+        v.effects.some(
+          e => e.type === 'STAT_BUFF' && (e.stat === 'ap' || e.stat === 'mp'),
+        )
+      )
+        return null
       return conviction(`ap/mp not gained ${b.ap}/${b.mp}->${v.ap}/${v.mp}`)
     case 'points_loss':
-      if (v.ap + v.mp < b.ap + b.mp || tags.includes('POINT_DODGED') || v.effects.some(e => e.type === 'STAT_DEBUFF')) return null
-      return conviction(`ap/mp not removed ${b.ap}/${b.mp}->${v.ap}/${v.mp} (rows=${tags.join(',') || 'none'})`)
+      if (
+        v.ap + v.mp < b.ap + b.mp ||
+        tags.includes('POINT_DODGED') ||
+        v.effects.some(e => e.type === 'STAT_DEBUFF')
+      )
+        return null
+      return conviction(
+        `ap/mp not removed ${b.ap}/${b.mp}->${v.ap}/${v.mp} (rows=${tags.join(',') || 'none'})`,
+      )
     case 'stat':
-      if (v.effects.some(e => e.type === 'STAT_BUFF' || e.type === 'STAT_DEBUFF')) return null
-      return conviction(`no stat modifier row applied (effects ${b.effects.length}->${v.effects.length})`)
+      if (
+        v.effects.some(e => e.type === 'STAT_BUFF' || e.type === 'STAT_DEBUFF')
+      )
+        return null
+      return conviction(
+        `no stat modifier row applied (effects ${b.effects.length}->${v.effects.length})`,
+      )
     case 'displace':
       if (v.cell.x !== b.cell.x || v.cell.y !== b.cell.y) return null
       return conviction(`victim did not move (stayed ${b.cell.x},${b.cell.y})`)
     case 'teleport':
-      if (caster_after.cell.x === target.x && caster_after.cell.y === target.y) return null
-      return conviction(`caster not teleported (at ${caster_after.cell.x},${caster_after.cell.y}, target ${target.x},${target.y})`)
+      if (caster_after.cell.x === target.x && caster_after.cell.y === target.y)
+        return null
+      return conviction(
+        `caster not teleported (at ${caster_after.cell.x},${caster_after.cell.y}, target ${target.x},${target.y})`,
+      )
     case 'trap':
       if (after.traps.length > state.traps.length) return null
-      return conviction(`no trap placed (traps ${state.traps.length}->${after.traps.length})`)
+      return conviction(
+        `no trap placed (traps ${state.traps.length}->${after.traps.length})`,
+      )
     case 'glyph':
       if (after.glyphs.length > state.glyphs.length) return null
-      return conviction(`no glyph placed (glyphs ${state.glyphs.length}->${after.glyphs.length})`)
+      return conviction(
+        `no glyph placed (glyphs ${state.glyphs.length}->${after.glyphs.length})`,
+      )
     case 'dot':
-      if (gained_effect(e => e.timing === 'TURN_START' && e.type === 'DAMAGE')) return null
+      if (gained_effect(e => e.timing === 'TURN_START' && e.type === 'DAMAGE'))
+        return null
       return conviction(`no DoT row applied (rows=${tags.join(',') || 'none'})`)
     case 'shield':
       if (gained_effect(e => e.type === 'SHIELD')) return null
-      return conviction(`no shield row applied (rows=${tags.join(',') || 'none'})`)
+      return conviction(
+        `no shield row applied (rows=${tags.join(',') || 'none'})`,
+      )
     case 'invis':
       if (gained_effect(e => e.type === 'INVISIBILITY')) return null
-      return conviction(`no invisibility row applied (rows=${tags.join(',') || 'none'})`)
+      return conviction(
+        `no invisibility row applied (rows=${tags.join(',') || 'none'})`,
+      )
     case 'reveal':
       if (tags.includes('REVEAL')) return null
-      return conviction(`reveal did not resolve (rows=${tags.join(',') || 'none'})`)
+      return conviction(
+        `reveal did not resolve (rows=${tags.join(',') || 'none'})`,
+      )
     case 'status':
       if (v.effects.length > b.effects.length) return null
-      return conviction(`no status row applied (effects ${b.effects.length}->${v.effects.length})`)
+      return conviction(
+        `no status row applied (effects ${b.effects.length}->${v.effects.length})`,
+      )
     case 'dispel':
       if (!v.effects.some(e => e.id === 987654)) return null
-      return conviction('dispellable buff still present (dispel did not strip it)')
+      return conviction(
+        'dispellable buff still present (dispel did not strip it)',
+      )
     default:
       return conviction(`unhandled class '${cls}'`)
   }
 }
 
 // ── Run the whole corpus once (pure, deterministic) ──────────────────────────────────────────────────
-export const run_matrix = (cast_spell = process_spell_cast, normalize_templates = normalize_spell_templates) => {
+export const run_matrix = (
+  cast_spell = process_spell_cast,
+  normalize_templates = normalize_spell_templates,
+) => {
   const convictions = []
   const kinds_seen = new Set()
   let drives = 0
   for (const spell of CORPUS) {
     const level = spell.levels?.[0]
     if (!level) continue
-    for (const [tag, list] of [['base', level.effects ?? []], ['crit', level.crit_effects ?? []]]) {
+    for (const [tag, list] of [
+      ['base', level.effects ?? []],
+      ['crit', level.crit_effects ?? []],
+    ]) {
       list.forEach((raw, i) => {
         drives += 1
         kinds_seen.add(raw.kind)
-        const conviction = drive_effect(spell.id, `${tag}${i}`, raw, cast_spell, normalize_templates)
+        const conviction = drive_effect(
+          spell.id,
+          `${tag}${i}`,
+          raw,
+          cast_spell,
+          normalize_templates,
+        )
         if (conviction) convictions.push(conviction)
       })
     }
