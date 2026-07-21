@@ -32,19 +32,22 @@ export function receipt_final_hp(events, character_id, decode) {
  * templates aggregate; zero-qty rolls (nothing owed) surface no line.
  * @param {Array<{ item_template: string, qty: number|string }>} rolled the FightResult's rolled entries
  * @param {Map<string, { item_type?: string, name?: string }>} template_by_id get_template_map()'s shape
- * @returns {Array<{ item_type: string, name: string, amount: number }>} the FightLoot lines the slice folds
+ * @returns {Array<{ template_id: string, item_type: string, name: string, amount: number }>} the FightLoot lines the slice folds
  */
 export const loot_from_rolled = (rolled, template_by_id) => {
-  /** @type {Map<string, { item_type: string, name: string, amount: number }>} */
+  /** @type {Map<string, { template_id: string, item_type: string, name: string, amount: number }>} */
   const by_key = new Map()
   for (const entry of rolled ?? []) {
     const id = String(entry?.item_template ?? '')
     if (!id) continue
     const tmpl = template_by_id?.get(id) ?? null
-    const key = tmpl?.item_type || id
-    const prev = by_key.get(key)
-    by_key.set(key, {
-      item_type: key,
+    // Template identity is exact and already authored by the receipt. `item_type` is only a class for
+    // several stackables (every RESOURCE can literally be "resource"), so aggregating on it merged distinct
+    // drops and made both their icon and stats impossible to recover. Keep the id all the way to LootTile.
+    const prev = by_key.get(id)
+    by_key.set(id, {
+      template_id: id,
+      item_type: tmpl?.item_type || id,
       name: tmpl?.name ?? '',
       amount: (prev?.amount ?? 0) + Number(entry?.qty ?? 0),
     })

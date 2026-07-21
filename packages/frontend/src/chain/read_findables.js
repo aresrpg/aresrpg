@@ -10,6 +10,7 @@
 import { get_encyclopedia } from '../rpc/client'
 
 import { get_sdk } from './sdk'
+import { normalize_item_template } from './read_templates.js'
 
 // normalize_item_template UPPERCASEs item_category, so RESOURCE/CONSUMABLE/RUNE are the stackable categories
 // (mirrors item.move `is_stackable_category` — rune joined 2026-07-11 with the single-tx crush mint; all gear
@@ -111,6 +112,30 @@ export async function get_template_by_item_type_map() {
   const by_type = new Map()
   for (const tmpl of by_id.values()) if (tmpl.item_type) by_type.set(tmpl.item_type, tmpl)
   return by_type
+}
+
+/**
+ * Read only the exact ItemTemplates a surface is about to show, including their chain-owned stat DFs.
+ * This is the targeted companion to the inventory/findables template maps above: identity still comes
+ * from the receipt's template id, while the SDK's canonical ItemTemplate reader + normalize_item_template
+ * remain the single decode path for CHARACTERISTICS. One failed row is omitted; siblings still render.
+ * @param {string[]} template_ids
+ * @returns {Promise<Map<string, any>>}
+ */
+export async function get_template_detail_map(template_ids) {
+  const ids = [...new Set((template_ids ?? []).map(String).filter(Boolean))]
+  if (!ids.length) return new Map()
+  try {
+    const sdk = await get_sdk()
+    const rows = await Promise.all(
+      ids.map(async (id) => [id, await sdk.get_item_template(id).catch(() => null)])
+    )
+    return new Map(
+      rows.filter(([, row]) => !!row).map(([id, row]) => [id, normalize_item_template(row, id, null)])
+    )
+  } catch {
+    return new Map()
+  }
 }
 
 /**

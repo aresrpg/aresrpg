@@ -7,15 +7,13 @@
 // never does). Mirrors the deck-key-arm.js / deck-crit-glow.js split next door: DeckCluster keeps pure
 // decision logic in a co-located helper so it tests independently of the component tree.
 //
-// `resolved` names the ONLY two data sources that back a drop: the player's live bag snapshot (`items`,
-// keyed by item_type — a real chain-owned instance) and the encyclopedia template map (`template_map`,
-// keyed by item_type — the seeded ItemTemplate row). Neither present means the drop is a genuine orphan
-// (an item_type that never landed in the read-model AND never got an encyclopedia row — e.g. a QA test
-// mob's ad hoc loot template) — the caller then renders the D53 bold-letter fallback (DeckCluster's
-// SpellSocket art-fail idiom, ported) instead of <ItemIcon>, never a bare box.
+// `resolved` names the three honest data sources that can back a drop: the player's live bag snapshot,
+// the exact ItemTemplate row, or a published template-id → render-slug receipt. Neither present means the
+// drop is a genuine orphan — the caller then renders the D53 bold-letter fallback instead of <ItemIcon>.
 
 import { to_item_view } from './item-view.js'
 import { quality_color } from './quality.js'
+import { inventory_item_icon } from './inventory-equip.js'
 import { onchain_template_to_detail_props } from '../../../components/items'
 
 /** A raw item_type slug humanized into words — the fallback name below the template/bag name, above the
@@ -26,8 +24,37 @@ import { onchain_template_to_detail_props } from '../../../components/items'
  */
 const item_type_label = (item_type) => String(item_type ?? '').replace(/_/g, ' ').trim()
 
+const template_id_of = (item) => String(item?.template_id ?? item?.template ?? '')
+
+const raw_item_of = (entry, items, template_id) =>
+  (template_id
+    ? items.find((item) => template_id_of(item) === template_id)
+    : items.find((item) => item.item_type === entry.item_type)) ?? null
+
+const template_of = (entry, template_map, template_id) =>
+  (template_id ? template_map.get(template_id) : template_map.get(entry.item_type)) ?? null
+
+const loot_name_of = (entry, raw, template) =>
+  [template?.name, raw?.name, entry.name, item_type_label(entry.item_type)].find(Boolean) ?? '?'
+
+const category_of = (raw, view, template) => (raw ? view?.category : (template?.category ?? view?.category))
+
+const icon_of = ({ entry, raw, template, name, category, published_slug }) => {
+  const candidate = inventory_item_icon({
+    ...(raw ?? {}),
+    ...(template ?? {}),
+    name,
+    item_type: entry.item_type,
+    slug: published_slug ?? template?.slug ?? raw?.slug,
+  })
+  // Generic item classes do not name an asset. With no published slug or authored cosmetic/icon alias,
+  // start on ItemIcon's semantic category glyph instead of requesting a known-bad /items/resource.png.
+  const generic_class = String(entry.item_type ?? '').toLowerCase() === String(category ?? '').toLowerCase()
+  return generic_class && candidate === entry.item_type ? null : candidate
+}
+
 /**
- * @typedef {{ item_type: string, name: string, amount: number }} LootEntry
+ * @typedef {{ template_id?: string, item_type: string, name: string, amount: number }} LootEntry
  */
 
 /**
@@ -35,27 +62,44 @@ const item_type_label = (item_type) => String(item_type ?? '').replace(/_/g, ' '
  * needs to render: whether it's genuinely backed by data, the best available name, the rarity tint, the
  * category (for ItemIcon's own glyph fallback), and the tooltip's detail props.
  * @param {LootEntry} entry
- * @param {any[]} items live bag snapshot (state.sui.items) — the SAME array the drop's item_type was aggregated from
- * @param {Map<string, any>} template_map encyclopedia item_type → template row (empty until the async fetch lands)
+ * @param {any[]} items live bag snapshot (state.sui.items), used for exact instance enrichment
+ * @param {Map<string, any>} template_map exact template id → chain template row, plus legacy item_type keys
  * @param {((tmpl: any, field: 'name' | 'description') => string) | undefined} tt use_template_t() resolver
  * @param {(key: string, opts?: any) => string} t
+ * @param {Record<string, string>} [slug_by_template_id] published ItemTemplate id → render slug
  */
-export function resolve_loot_tile(entry, items, template_map, tt, t) {
-  const raw = items.find((it) => it.item_type === entry.item_type) ?? null
+export function resolve_loot_tile(entry, items, template_map, tt, t, slug_by_template_id = {}) {
+  const template_id = template_id_of(entry)
+  // An item_type such as "resource" is a class, not identity. Once the receipt carries an exact template,
+  // never join it to an arbitrary sibling merely because both rows share that class.
+  const raw = raw_item_of(entry, items, template_id)
   const view = to_item_view(raw ?? { item_type: entry.item_type, name: entry.name, amount: entry.amount })
-  const tmpl = template_map.get(entry.item_type) ?? null
-  const resolved = !!raw || !!tmpl
-  const name = tmpl?.name || entry.name || item_type_label(entry.item_type) || '?'
+  const tmpl = template_of(entry, template_map, template_id)
+  const published_slug = template_id ? slug_by_template_id[template_id] : undefined
+  const resolved = [raw, tmpl, published_slug].some(Boolean)
+  const name = loot_name_of(entry, raw, tmpl)
+  const category = category_of(raw, view, tmpl)
+  const icon = icon_of({
+    entry,
+    raw,
+    template: tmpl,
+    name,
+    category,
+    published_slug,
+  })
   const detail = onchain_template_to_detail_props(
     {
       ...(tmpl ?? {}),
       name,
       item_type: entry.item_type,
+      icon_slug: icon,
       level: tmpl?.level ?? view?.level ?? 0,
       // truly bare (no template row, no bag match, and not even a name rode the wire): say so honestly in
       // the tooltip instead of a blank/garbled description. Any name at all (even without a template) skips
       // the disclaimer — "whatever fields exist" renders as-is, never a false "unavailable" claim.
-      display: resolved ? tmpl?.display : { description: entry.name ? undefined : t('fight_end.loot_metadata_unavailable') },
+      display: resolved
+        ? tmpl?.display
+        : { description: entry.name ? undefined : t('fight_end.loot_metadata_unavailable') },
     },
     tt,
   )
@@ -63,7 +107,8 @@ export function resolve_loot_tile(entry, items, template_map, tt, t) {
     resolved,
     name,
     tint: view?.tint ?? quality_color('common'),
-    category: view?.category ?? tmpl?.category,
+    category,
+    icon,
     detail,
   }
 }
