@@ -217,10 +217,9 @@ describe('silent grant claims rebase when an earlier prediction disappears', () 
   test('a pending move keeps its own spend when the preceding grant is rolled back', () => {
     const store = boot()
     predict(store, 'vanish:before-move', 2_000)
-    store.getState().input(
-      { type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: START + 1, mp_left: 3 } },
-      2_010
-    )
+    store
+      .getState()
+      .input({ type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: START + 1, mp_left: 3 } }, 2_010)
 
     store.getState().input({ type: 'rollback', intent_id: 'vanish:before-move' }, 2_100)
 
@@ -231,15 +230,16 @@ describe('silent grant claims rebase when an earlier prediction disappears', () 
     const store = boot()
     predict(store, 'vanish:funding-fourth-step', 2_000)
     for (const [i, mp_left] of [3, 2, 1, 0].entries())
-      store.getState().input(
-        { type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: START + i + 1, mp_left } },
-        2_010 + i
-      )
+      store
+        .getState()
+        .input(
+          { type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: START + i + 1, mp_left } },
+          2_010 + i
+        )
     // Backtrack one cell while the +1 still exists: the current draft now costs 3, leaving 1 of its four MP.
-    store.getState().input(
-      { type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: START + 3, mp_left: 1 } },
-      2_020
-    )
+    store
+      .getState()
+      .input({ type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: START + 3, mp_left: 1 } }, 2_020)
     expect(presented_state(store.getState()).fighters.p0.mp).toBe(1)
 
     store.getState().input({ type: 'rollback', intent_id: 'vanish:funding-fourth-step' }, 2_100)
@@ -247,5 +247,30 @@ describe('silent grant claims rebase when an earlier prediction disappears', () 
     // The same three-step draft exhausts the base pool. Per-row clamping would lose the fourth step's -1 debt and
     // then expose the undo's +1 refund, incorrectly reporting one MP.
     expect(presented_state(store.getState()).fighters.p0.mp).toBe(0)
+  })
+
+  test('undo actions dispatched after rollback measure from the unclamped movement balance', () => {
+    const store = boot()
+    predict(store, 'vanish:rolled-back-before-undo', 2_000)
+    for (const [i, mp_left] of [3, 2, 1, 0].entries())
+      store.getState().input(
+        { type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: START + i + 1, mp_left } },
+        2_010 + i
+      )
+
+    store.getState().input({ type: 'rollback', intent_id: 'vanish:rolled-back-before-undo' }, 2_100)
+    expect(presented_state(store.getState()).fighters.p0.mp).toBe(0)
+
+    // The first undo repays the hidden -1 debt, so the visible absolute remains zero; the second must then expose
+    // one MP. Deriving either delta from the clamped zero instead of the raw balance loses the first refund.
+    store.getState().input(
+      { type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: START + 3, mp_left: 0 } },
+      2_110
+    )
+    store.getState().input(
+      { type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: START + 2, mp_left: 1 } },
+      2_120
+    )
+    expect(presented_state(store.getState()).fighters.p0.mp).toBe(1)
   })
 })
