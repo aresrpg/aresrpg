@@ -13,12 +13,14 @@ import {
   begin_claim,
   block_box_retry,
   block_equip_retry,
+  block_equip_state_refresh,
   box_retry_digest,
   end_claim,
   hydrate_claim_latches,
   is_box_retry_blocked,
   is_claim_latched,
   is_equip_retry_blocked,
+  is_equip_state_stale,
   is_latch_durable,
   note_open_settled,
   release_settled_box_latches,
@@ -63,6 +65,37 @@ describe('loot-box executed-failure retry guard', () => {
     expect(is_equip_retry_blocked('0xcharacter')).toBe(true)
     allow_equip_retry('0xcharacter')
     expect(is_equip_retry_blocked('0xcharacter')).toBe(false)
+  })
+
+  // ISSUE #15 — the exact refusal the test above proves arms NOTHING (block_equip_retry needs a digest) now
+  // gets its own honest, zero-gas latch: the refresh affordance without the "gas may have spent" lie.
+  test('a preflight template/state-mismatch refusal arms the state-stale latch, never the digest latch', () => {
+    const gate_refusal = tx_error({ $kind: 'MoveAbort', location: { module: 'equipment' }, abortCode: 110 })
+    expect(block_equip_retry('0xcharacter', gate_refusal)).toBe(false) // unchanged law: no digest, no gas-burn latch
+    expect(block_equip_state_refresh('0xcharacter', gate_refusal)).toBe(true)
+    expect(is_equip_state_stale('0xcharacter')).toBe(true)
+    expect(is_equip_state_stale('0xother')).toBe(false)
+  })
+
+  test('a digest always outranks the state-stale latch — proof of execution wins', () => {
+    const executed = tx_error({ $kind: 'MoveAbort', location: { module: 'item' }, abortCode: 101 })
+    Object.assign(executed, { digest: '0xburned' })
+    expect(block_equip_state_refresh('0xcharacter', executed)).toBe(false)
+    expect(is_equip_state_stale('0xcharacter')).toBe(false)
+  })
+
+  test('a refusal outside the template/state-mismatch family never arms the state-stale latch', () => {
+    const unrelated = tx_error({ $kind: 'MoveAbort', location: { module: 'equipment' }, abortCode: 109 }) // ELevelTooLow
+    expect(block_equip_state_refresh('0xcharacter', unrelated)).toBe(false)
+    expect(is_equip_state_stale('0xcharacter')).toBe(false)
+  })
+
+  test('allow_equip_retry self-heals the state-stale latch too (the same refresh action clears either)', () => {
+    const gate_refusal = tx_error({ $kind: 'MoveAbort', location: { module: 'item' }, abortCode: 106 })
+    block_equip_state_refresh('0xcharacter', gate_refusal)
+    expect(is_equip_state_stale('0xcharacter')).toBe(true)
+    allow_equip_retry('0xcharacter')
+    expect(is_equip_state_stale('0xcharacter')).toBe(false)
   })
 
   test('only a positively identified preflight refusal remains retryable', () => {

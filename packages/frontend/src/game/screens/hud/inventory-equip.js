@@ -91,12 +91,16 @@ export function equip_stage_action(item, slot, slug_by_name = {}, template_id_ma
  * Equip-lock reason as DATA: the "Updating equipment…" box must never render inside
  * the equipment panel — the toast already owns the pending tx via use_toast.promise. `inline` says
  * whether the panel shows the persistent EquipmentLockNotice; the transient pending state never does.
- * @param {{ pending?: boolean, retry_blocked?: boolean, in_dungeon?: boolean, exploring?: boolean }} state
+ * `retry_blocked` (digest-proven, gas may have spent) outranks `state_stale` (issue #15 — a zero-gas
+ * local-read-staleness refusal, e.g. equipment::ETemplateMismatch) — reuses item_state_mismatch's existing,
+ * gas-neutral copy so the SAME refresh action never lies about a burn that never happened.
+ * @param {{ pending?: boolean, retry_blocked?: boolean, state_stale?: boolean, in_dungeon?: boolean, exploring?: boolean }} state
  * @returns {{ key: string, inline: boolean } | null}
  */
-export function equip_lock_of({ pending, retry_blocked, in_dungeon, exploring }) {
+export function equip_lock_of({ pending, retry_blocked, state_stale, in_dungeon, exploring }) {
   if (pending) return { key: 'inventory.tx_equip_pending', inline: false }
   if (retry_blocked) return { key: 'errors.tx_retry_blocked', inline: true }
+  if (state_stale) return { key: 'errors.item_state_mismatch', inline: true }
   if (in_dungeon) return { key: 'inventory.locked_in_dungeon', inline: true }
   if (exploring) return { key: 'inventory.locked_exploring', inline: true }
   return null

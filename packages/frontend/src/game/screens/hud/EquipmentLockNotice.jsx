@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/** Equipment refusal with an in-place refresh action only for digest-proven failures. */
+/** Equipment refusal with an in-place refresh action: a digest-proven (gas may have spent) failure, or a
+ *  zero-gas local-read-staleness refusal (issue #15) — either way the SAME refresh_equip_state() resolves it. */
 export function EquipmentLockNotice({ copy, refresh_label, on_refresh }) {
   return (
     <div

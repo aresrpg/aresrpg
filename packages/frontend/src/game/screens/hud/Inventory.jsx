@@ -49,8 +49,10 @@ import { InventoryOverlays } from './InventoryOverlays.jsx'
 import {
   allow_equip_retry,
   block_equip_retry,
+  block_equip_state_refresh,
   is_box_retry_blocked,
   is_equip_retry_blocked,
+  is_equip_state_stale,
 } from './lootbox-retry-guard.js'
 import { use_inventory_menus } from './use_inventory_menus.js'
 import { use_onchain_item_tooltip } from '../../../components/entity_display'
@@ -190,11 +192,13 @@ export function Inventory() {
   }
 
   const equip_retry_blocked = is_equip_retry_blocked(character.id)
+  const equip_state_stale = is_equip_state_stale(character.id)
   // Lock reason as data (equip_lock_of): `inline` gates the panel notice — the transient pending tx is
   // toast-owned (use_toast.promise below), so it must never render the in-panel box (night-batch #2).
   const lock = equip_lock_of({
     pending: committing || !!stage.committed,
     retry_blocked: equip_retry_blocked,
+    state_stale: equip_state_stale,
     in_dungeon: !!character.in_dungeon,
     exploring: !!character.exploring,
   })
@@ -362,7 +366,7 @@ export function Inventory() {
       add_bag_items(equipped_full)
       remove_bag_items(unequipped_full.map((i) => i.id))
       dispatch_stage({ type: 'reset', equipment: real_equipment })
-      if (block_equip_retry(character.id, error)) {
+      if (block_equip_retry(character.id, error) || block_equip_state_refresh(character.id, error)) {
         refresh_retry_guard((version) => version + 1)
         void refresh_equip_state()
       }
@@ -470,7 +474,7 @@ export function Inventory() {
           <EquipmentLockNotice
             copy={equip_lock}
             refresh_label={t('inventory.refresh_equipment_state')}
-            on_refresh={equip_retry_blocked ? refresh_equip_state : null}
+            on_refresh={equip_retry_blocked || equip_state_stale ? refresh_equip_state : null}
           />
         )}
         <div className="inv__doll">

@@ -18,7 +18,7 @@
 
 import { drop_pending_buy } from '@aresrpg/inventory/bought_items_ledger'
 
-import { is_preflight_refusal } from '../../core/abort_copy.js'
+import { is_preflight_refusal, is_equip_state_refusal } from '../../core/abort_copy.js'
 import { error_executed_digest } from '../../../world-shell/tx_digest_error.js'
 
 /** @typedef {{ armed_at: number, settled_at: number | null, settled_failed: boolean, digest: string | null }} BoxLatch */
@@ -27,6 +27,8 @@ import { error_executed_digest } from '../../../world-shell/tx_digest_error.js'
 let blocked_boxes = new Map()
 /** @type {Set<string>} */
 let blocked_equip_character_ids = new Set()
+/** @type {Set<string>} */
+let state_stale_equip_character_ids = new Set()
 /** @type {Set<string>} */
 let claims_in_flight = new Set()
 /** @type {Set<string>} */
@@ -204,11 +206,31 @@ export function is_equip_retry_blocked(character_id) {
   return !!character_id && blocked_equip_character_ids.has(character_id)
 }
 
-/** A successful underlying-state refresh makes a manual retry safe; it never re-submits a transaction. */
+/** Zero-gas STATE-STALE latch (issue #15): a positively identified equip/unequip local-read-staleness refusal
+ *  (is_equip_state_refusal — ETemplateMismatch/EPledgeMismatch family) arms a refresh affordance, distinct from
+ *  block_equip_retry's digest-proven "gas may have spent" latch (that copy would lie for a refusal that never
+ *  signed). A digest ALWAYS outranks this — proof of execution wins (mirrors error_preflight_marked's law), so
+ *  an executed failure never double-latches into the wrong (zero-gas) UI copy.
+ *  @param {string | null | undefined} character_id @param {unknown} error @returns {boolean} */
+export function block_equip_state_refresh(character_id, error) {
+  if (!character_id || error_executed_digest(error) || !is_equip_state_refusal(error)) return false
+  state_stale_equip_character_ids = new Set(state_stale_equip_character_ids).add(character_id)
+  return true
+}
+
+/** @param {string | null | undefined} character_id @returns {boolean} */
+export function is_equip_state_stale(character_id) {
+  return !!character_id && state_stale_equip_character_ids.has(character_id)
+}
+
+/** A successful underlying-state refresh makes a manual retry safe; it never re-submits a transaction. Clears
+ *  BOTH equip latches (digest-proven + state-stale) — the SAME refresh_equip_state() action resolves either. */
 export function allow_equip_retry(character_id) {
   if (!character_id) return
   blocked_equip_character_ids = new Set(blocked_equip_character_ids)
   blocked_equip_character_ids.delete(character_id)
+  state_stale_equip_character_ids = new Set(state_stale_equip_character_ids)
+  state_stale_equip_character_ids.delete(character_id)
 }
 
 /** Positive preflight refusals spent no gas; everything else rounds toward the no-reburn latch. */
@@ -271,6 +293,7 @@ export function sweep_eligible_claims(claim_ids) {
 export function _reset_box_retry_guard_for_test() {
   blocked_boxes = new Map()
   blocked_equip_character_ids = new Set()
+  state_stale_equip_character_ids = new Set()
   claims_in_flight = new Set()
   claims_succeeded = new Set()
   claims_latched = new Set()

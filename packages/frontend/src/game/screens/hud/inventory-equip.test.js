@@ -431,6 +431,20 @@ describe('equip_lock_of (lock reason as data — pending is toast-owned)', () =>
     expect(equip_lock_of({ exploring: true })).toEqual({ key: 'inventory.locked_exploring', inline: true })
   })
 
+  // ISSUE #15 — a zero-gas local-read-staleness refusal (equipment::ETemplateMismatch et al.) gets its own
+  // honest notice: reuses item_state_mismatch's existing copy ("This item changed state. Refresh your
+  // inventory.") — never tx_retry_blocked's "it may have spent gas" line, which would lie for a tx that never signed.
+  test('a stale local read locks with the honest, gas-neutral refresh notice', () => {
+    expect(equip_lock_of({ state_stale: true })).toEqual({ key: 'errors.item_state_mismatch', inline: true })
+  })
+
+  test('retry_blocked (digest-proven, may have spent gas) outranks state_stale (zero gas)', () => {
+    expect(equip_lock_of({ retry_blocked: true, state_stale: true })).toEqual({
+      key: 'errors.tx_retry_blocked',
+      inline: true,
+    })
+  })
+
   test('pending outranks every other reason; no reason → null', () => {
     expect(equip_lock_of({ pending: true, retry_blocked: true, in_dungeon: true }).inline).toBe(false)
     expect(equip_lock_of({})).toBeNull()
