@@ -85,6 +85,7 @@ import { game_log } from '../core/log.js'
 
 import { fight_state_trace } from './fight_state_trace.js'
 import { use_dungeon } from './dungeon_store.js'
+import { damage_floater } from './damage-floater.js'
 import { presentation_blocked_cells } from './fight_board_blockers.js'
 import { create_fight_render_queue } from './fight_render_queue.js'
 // PURE FOLDS live in a sibling module (voxel_fight_folds.js) so they're unit-testable WITHOUT the browser-only
@@ -493,11 +494,11 @@ export function create_voxel_fight_adapter(
     if (!id || !entity_ids.has(id)) return false
     if (event.killed) dying.add(id)
     const source = event.source_id ? read_board_fight()?.fighters?.get(event.source_id) : null
-    const amount = Math.max(0, Number(event.damage ?? event.heal ?? 0))
-    const kind = event.heal != null ? 'heal' : event.is_critical ? 'crit' : 'damage'
+    const floater = damage_floater(event)
+    const { kind } = floater
     const done = board.entity_beat(id, {
       anim: kind === 'heal' ? 'idle' : 'hit',
-      float: { text: `${kind === 'heal' ? '+' : '-'}${amount}`, kind },
+      float: { text: floater.text, kind },
       face: source?.cell,
     })
     if (kind !== 'heal' && hitflash_on()) void done.then(() => board.flash_entity?.(id, HIT_FLASH_TINT))

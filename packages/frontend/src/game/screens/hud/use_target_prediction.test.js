@@ -19,6 +19,7 @@ import { seed_fight_core, reset_fight_core } from '../../../test_helpers/fight_c
 import { compute_target_prediction, EMPTY_PREDICTION } from './target_prediction_core.js'
 import { predicted_target_outcome } from './target_outcome.js'
 import { SPELLS_SEED_AVAILABLE } from '../../../test_helpers/spells_fixture.js'
+import { damage_floater } from '../../../world-shell/damage-floater.js'
 
 // senshi Warcleave (seed corpus): base 7 / crit 9 earth damage, crit_rate 40, range [1,2].
 const WARCLEAVE = 'warcleave'
@@ -157,6 +158,15 @@ describe('compute_target_prediction — the deterministic crit IS the resolved d
     const f = forecast(CRIT_SPAWN)
     expect(f.is_crit).toBe(true)
     expect(f.outcome.delta).toBe(-9) // the chain settles the crit base here — the forecast shows exactly it
+  })
+
+  test('a known-crit seed flags the drafted damage preview so its number uses the house orange crit treatment', () => {
+    const f = forecast(CRIT_SPAWN)
+    const damage = f.prediction.beats.find((beat) => beat.kind === 'damage')
+
+    expect(damage.payload).toMatchObject({ damage: 9, is_critical: true })
+    // The tactical renderer maps `crit` to its existing #ffb454 house amber/orange; no copy or i18n is involved.
+    expect(damage_floater(damage.payload)).toEqual({ amount: 9, kind: 'crit', text: '-9' })
   })
 
   test('the pending slot does NOT crit → is_crit false and the resolved damage is the plain base (−5)', () => {
