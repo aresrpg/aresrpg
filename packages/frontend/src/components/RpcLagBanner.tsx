@@ -63,7 +63,11 @@ export function RpcLagBanner() {
 
   if (!lagging && !fight_deadline_starved) return null
 
-  const projection = project_sync_status(estimator)
+  // The real wall clock, not the estimator's own last-sample time (#293): this component re-renders on
+  // EVERY poll attempt (success or failure — use_rpc_view's set_error also triggers one), so even while the
+  // estimator itself is frozen (no new sample landing, e.g. the poll is starved), Date.now() keeps moving —
+  // exactly what lets the measuring-timeout bound the phase instead of it staying stuck forever.
+  const projection = project_sync_status(estimator, Date.now())
   const stalled = fight_deadline_starved || projection.status === 'stalled'
 
   const status_label = fight_deadline_starved
