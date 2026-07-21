@@ -4,7 +4,7 @@
 // cell (the same terrain SSOT as the HUD minimap, via worldmap-data.js / biome-colors.js), with the
 // live player marker on top. Drag to pan, scroll to zoom around the cursor, Recenter to snap back to
 // the player. A PURE terrain render: no server data, no overlays, no fast-travel — just the colored
-// world and where you are. Base chrome (.map / .map__bar / .map__stage / .map__canvas) lives in admin.css.
+// world and where you are. Base chrome (.map / .map__bar / .map__stage / .map__canvas) lives in map.css.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
@@ -13,7 +13,7 @@ import { WORLD_SEED } from '@aresrpg/sim/world'
 import { CANVAS_H, CANVAS_W, MAP_PX, sample_world, world_to_screen } from './worldmap-data.js'
 import { use_game_state } from '../../store.js'
 import './hud-panels.css'
-import './admin.css'
+import './map.css'
 import './worldmap.css'
 
 /**
