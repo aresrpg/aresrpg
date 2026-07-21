@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// D3b — THE OPTIMISTIC MOVE OBEYS THE TACKLE: tackles are deterministic, so the walk is never allowed at all.
-// The move EXECUTION path — not only the paint (D3a move_wash) — now consults the
-// SAME seed-derived contest the chain enforces. `next_move_tackle` mirrors ONE actions.move roll
-// (spell_formula::tackle_seed(fight::turn_seed, slot, live mp) → prng::rng_next → escape iff draw % den < num),
-// the golden-pinned sim twin. A non-null bite = the next move FAILS the escape, so the client must NOT walk: it
-// predicts the sim's EXACT resolution — apply_move on a failed escape is `cells_moved: 0` with BOTH pools bitten
-// (fight_actions.js:63-86) — a hit-anim + pool-forfeit beat, NO move beat, the forfeit folded THIS frame through
-// the SAME 'Tackled' action the receipt folds. The receipt's own Tackled event then CONFIRMS (version-purge →
-// re-fold), never corrects. One home for the contest: next_move_tackle + move_wash share `tackle_roll`, no copy.
+// D3b — THE OPTIMISTIC MOVE OBEYS THE TACKLE TOLL (ruling #239): a failed escape is a toll, not a wall. The move
+// EXECUTION path — not only the paint (D3a move_wash) — consults the SAME seed-derived contest the chain
+// enforces. `next_move_tackle` mirrors ONE actions.move roll (spell_formula::tackle_seed(fight::turn_seed, slot,
+// live mp) → prng::rng_next → escape iff draw % den < num), the golden-pinned sim twin. A non-null bite = the
+// next move FAILS the escape, so the client predicts the sim's EXACT resolution — apply_move on a failed escape
+// TAXES both pools then WALKS the survivor prefix (fight_actions.js apply_move) — folding a hit-anim/forfeit
+// beat AND a survivor move beat THIS frame through the SAME 'Tackled' + 'Moved' actions the receipt folds. The
+// receipt's own [Tackled, Moved] then CONFIRMS (version-purge → re-fold), never corrects. One home for the
+// contest: next_move_tackle + move_wash share `tackle_roll`, no copy.
 //
 // Vectors reuse tackle_preview's golden mirror at deadline 90 000, seat 0, agility 40 vs 40 (num/den = 6/12),
 // mp 3, ap 6:  ws=1 sid=7 slot=0 → roll 7 → FAIL → tackle_losses(6,3,6,12) = { ap_lost 3, mp_lost 2 };
@@ -17,7 +17,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { next_move_tackle, engine_view } from '../src/project.js'
-import { synthetic_tackled_events, local_intent_beats } from '../src/present.js'
+import { synthetic_tackled_events, local_intent_beats, local_move_beats } from '../src/present.js'
 import { create_fight_store } from '../src/store.js'
 
 const FIGHT = '0xf1'
@@ -89,11 +89,11 @@ describe('next_move_tackle — the deterministic bite the optimistic move must o
   })
 })
 
-describe('the optimistic tackle prediction — forfeit + hit-anim beat, NEVER a walk (the no-walk law)', () => {
+describe('the optimistic tackle prediction — the toll: forfeit + hit-anim beat THEN the survivor walk', () => {
   const resolve_fighter_id = ({ is_mob, idx, character }) =>
     character != null ? String(character) : is_mob ? `mob-${Number(idx)}` : CHAR
 
-  test('folding the predicted bite drops BOTH pools by the exact forfeit and rides a tackled beat — no move beat', () => {
+  test('folding the predicted bite drops BOTH pools by the exact forfeit AND walks the survivor prefix', () => {
     const store = boot({ world_seed: 1, spawn_id: 7 })
     const hud = () => engine_view(store.getState()).fighters.get(CHAR)
     expect(hud().mp, 'turn-start pools paint from the snapshot').toBe(3)
@@ -102,7 +102,9 @@ describe('the optimistic tackle prediction — forfeit + hit-anim beat, NEVER a 
     const bite = next_move_tackle(store.getState())
     expect(bite).toEqual({ ap_lost: 3, mp_lost: 2 })
 
-    // exactly what DungeonBoard.predict_tackle dispatches: the 'Tackled' action folds the forfeit + the beat.
+    // exactly what DungeonBoard.predict_tackle dispatches under the toll: (1) the 'Tackled' action folds the tax +
+    // hit-anim beat; (2) a 'move' walks the survivor prefix — survived = 3 − 2 = 1 MP → one cell west (45→44),
+    // MP 0. The Moved carries the ABSOLUTE post-tax MP (mp_left 0), the exact chain number.
     store.getState().input(
       {
         type: 'intent',
@@ -120,21 +122,27 @@ describe('the optimistic tackle prediction — forfeit + hit-anim beat, NEVER a 
       },
       2000
     )
+    store.getState().input(
+      {
+        type: 'intent',
+        intent: { kind: 'move', character: CHAR, to_cell: ME_CELL - 1, mp_left: 0 },
+        beats: local_move_beats({ fight_id: FIGHT, character: CHAR, to_cell: ME_CELL - 1, path: [{ x: 4, y: 2 }] }),
+      },
+      2000
+    )
 
-    // MP accounting EXACT — matches the chain's to the point: 3 − 2 = 1 MP, 6 − 3 = 3 AP, this tick.
-    expect(hud().mp, 'the forfeit folds THIS frame').toBe(1)
+    // MP/AP EXACT — matches the chain's to the point: 3 − 2 tax = 1 MP, then the 1-cell walk spends it → MP 0;
+    // 6 − 3 = 3 AP.
+    expect(hud().mp, 'the tax then the survivor walk fold THIS frame').toBe(0)
     expect(hud().ap).toBe(3)
 
     const beats = store.getState().wave.flatMap((t) => t.beats)
-    expect(
-      beats.some((b) => b.kind === 'tackled'),
-      'the hit-anim + forfeit beat plays'
-    ).toBe(true)
-    expect(
-      beats.some((b) => b.kind === 'move'),
-      'the walk NEVER starts (the no-walk law)'
-    ).toBe(false)
-    const tackled = beats.find((b) => b.kind === 'tackled')
+    const tackled_i = beats.findIndex((b) => b.kind === 'tackled')
+    const move_i = beats.findIndex((b) => b.kind === 'move')
+    expect(tackled_i, 'the hit-anim + forfeit beat plays').toBeGreaterThanOrEqual(0)
+    expect(move_i, 'and the survivor walk follows (the toll)').toBeGreaterThanOrEqual(0)
+    expect(move_i, 'hit FIRST, then the walk — the beat order the receipt also folds').toBeGreaterThan(tackled_i)
+    const tackled = beats[tackled_i]
     expect(tackled.payload.mp_lost).toBe(2)
     expect(tackled.payload.ap_lost).toBe(3)
     expect(tackled.payload.target_id).toBe(CHAR)

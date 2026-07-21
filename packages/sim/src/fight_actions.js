@@ -29,7 +29,9 @@ import {
 // test/tackle_golden.test.js); this path owns only the roll draw off the sim rng thread + the state writes.
 
 /**
- * Apply a movement path with the exact multi-lock agility contest.
+ * Apply a movement path with the exact multi-lock agility contest. A failed escape is a TOLL, not a wall: it
+ * taxes both pools then walks the requested path truncated to the surviving MP (`cells_moved` reports the
+ * prefix actually walked — 0 only when the tax leaves no MP).
  * @param {import('./fight_state.js').FightState} state
  * @param {string} entity_id
  * @param {import('./cell.js').Cell[]} path   inclusive of the start cell
@@ -63,27 +65,35 @@ export const apply_move = (state, entity_id, path) => {
     const roll = rng_int(state.rng, escape.den)
     const escaped = roll.value < escape.num
     if (!escaped) {
-      // A failed escape loses the failed fraction of both pools and denies movement.
+      // THE TOLL, not a wall (ruling #239, the 1.29 convention): a failed escape TAXES the failed fraction of
+      // both pools, then the move PROCEEDS with whatever MP survives — walking the requested path truncated to
+      // the affordable prefix. A tax that zeroes MP legitimately walks 0 cells (the toll can consume everything);
+      // it is never a hard cells_moved:0 pin. The contest math (num/den, losses) is unchanged — only the failed
+      // branch's movement outcome flips from denial to a partial walk along the SAME path prefix.
       const { ap_lost, mp_lost } = tackle_losses(
         entity.ap,
         entity.mp,
         escape.num,
         escape.den,
       )
+      const survived_mp = Math.max(0, entity.mp - mp_lost)
+      const walked = Math.min(mp_cost, survived_mp)
       const tackled_state = update_entity(
         { ...state, rng: roll.state },
         entity_id,
         e => ({
           ...e,
           ap: Math.max(0, e.ap - ap_lost),
-          mp: Math.max(0, e.mp - mp_lost),
+          cell: path[walked],
+          mp: survived_mp - walked,
+          mp_used: e.mp_used + walked,
         }),
       )
       return {
         state: tackled_state,
         success: false,
         tackled: true,
-        cells_moved: 0,
+        cells_moved: walked,
         error: 'TACKLED',
       }
     }

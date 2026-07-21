@@ -7,20 +7,20 @@
 // So the wash must PREVIEW the outcome, never paint a probability band:
 //   · next roll ESCAPES → NOT tackled, no red band, full MP reach (no more
 //     "red then walked free" lie);
-//   · next roll FAILS   → tackled, and the red band = exactly the MP the folded failure chain WILL eat
-//     (each denied attempt strips ceil(mp·lost/den) ≥ 1 MP and reprices the next roll at the lower MP —
-//     moves never advance the slot), green = what the first ESCAPING attempt still reaches.
+//   · next roll FAILS   → THE TOLL (ruling #239): tackled, and the red band = exactly the MP the tax WILL eat —
+//     one roll strips mp_lost and the move then WALKS the survivor, so green = bfs(mp − mp_lost) and red = the
+//     truncated remainder (no pin-and-retry loop; the toll walks and progresses).
 // The tackle-paint law reads exact under determinism: "the MP we can't spend or WILL loose by
 // trying" — will, not might. A view without world_seed/spawn_id (legacy read) keeps the risk-band fallback
 // (move_wash.test.js pins it — its fixture carries no seeds on purpose).
 //
 // Vectors below were derived with the golden-pinned mirror itself (turn_seed/tackle_seed/rng_next) at
-// deadline 90 000, seat 0, agility 40 vs 40 (num/den = 6/12), mp 3, ap 6:
-//   ws=6  sid=7 slot=0 → roll 0 → ESCAPE
-//   ws=1  sid=7 slot=0 → roll 7 → FAIL (mp_lost 2) → mp 1 → roll ESCAPES → final_mp 1
-//   ws=4  sid=7 slot=0 → roll 9 → FAIL → mp 1 → roll 8 → FAIL (mp_lost 1) → mp 0 (exhausted)
-//   ws=1  sid=7 slot=1 → roll 2 → ESCAPE   (the SAME fight escapes once a cast is drafted — slot input)
-//   ws=6  sid=7 slot=1 → roll 6 → FAIL     (and the escaping fight starts biting — both directions)
+// deadline 90 000, seat 0, mp 3, ap 6 (the draw is agility-independent — agility only sets num/den):
+//   ws=6  sid=7 slot=0 agi 40v40 → roll 0 → ESCAPE
+//   ws=1  sid=7 slot=0 agi 40v40 → roll 7 → FAIL → tax mp_lost 2 → survived 1 walks (final reach = bfs(1))
+//   ws=4  sid=7 slot=0 agi 0v100 → draw%24 → FAIL → tax mp_lost 3 → survived 0 (the toll ate every MP: no green)
+//   ws=1  sid=7 slot=1 agi 40v40 → roll 2 → ESCAPE   (the SAME fight escapes once a cast is drafted — slot input)
+//   ws=6  sid=7 slot=1 agi 40v40 → roll 6 → FAIL     (and the escaping fight starts biting — both directions)
 
 import { describe, expect, test } from 'bun:test'
 
@@ -112,8 +112,10 @@ describe('move_wash — deterministic tackle preview (the exact chain contest, D
     for (const c of red) expect(full.has(c)).toBe(true)
   })
 
-  test('preview exhausts MP (ws=4): tackled, NO green left, the whole reach is the red band', () => {
-    const wash = move_wash(boot({ world_seed: 4, spawn_id: 7 }).getState(), {})
+  test('the toll eats ALL MP (ws=4, agi 0v100): tackled, NO green left, the whole reach is the red band', () => {
+    // num 2 / den 24 → mp_lost = ceil(3·22/24) = 3 = all MP, so the survivor is 0 and the toll walks nowhere:
+    // a single failing roll (ws=4 draw % 24 ≥ 2) leaves no green — the honest 0-cell paint.
+    const wash = move_wash(boot({ world_seed: 4, spawn_id: 7, my_agility: 0, mob_agility: 100 }).getState(), {})
     expect(wash.tackled).toBe(true)
     expect(wash.reach).toEqual([])
     expect(new Set(wash.tackle_lost)).toEqual(full_reach())

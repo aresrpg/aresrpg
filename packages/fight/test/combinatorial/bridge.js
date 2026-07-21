@@ -122,6 +122,9 @@ export const sim_to_chain = (initial, events, ref, trap_cells_seed = []) => {
         const path = e.path ?? []
         const to = path.length ? path[path.length - 1] : shadow.get(e.entity_id)?.cell
         if (e.tackled) {
+          // THE TOLL (ruling #239): a failed escape emits Tackled (the tax) AND — when the survivor walked (a
+          // non-empty path) — a Moved to the prefix cell, exactly as the chain now does. mp_remaining already
+          // folds the tax + the walk spend, so the fabricated mp_lost lands the terminal MP either way.
           const s = shadow.get(e.entity_id)
           raw.push(
             ev('Tackled', {
@@ -134,6 +137,14 @@ export const sim_to_chain = (initial, events, ref, trap_cells_seed = []) => {
               den: 1,
             })
           )
+          if (path.length && to) {
+            raw.push(
+              a.is_mob
+                ? ev('MobMoved', { fight: initial.fight_id, idx: a.idx, to_cell: encode(to) })
+                : ev('Moved', { fight: initial.fight_id, character: a.character, to_cell: encode(to) })
+            )
+            if (shadow.has(e.entity_id)) shadow.get(e.entity_id).cell = { ...to }
+          }
         } else if (to) {
           raw.push(
             a.is_mob

@@ -41,17 +41,18 @@ describe('trap draft paint — click-time fold + rollback semantics (the fold my
     expect(source).toContain("i18n.t('fights.tackled')")
   })
 
-  test('CONTRACT: DungeonBoard gates the walk on the deterministic tackle — a bitten move predicts, never walks', async () => {
-    // CONTRACT (tackle is deterministic, so the walk must never be allowed to proceed speculatively): the optimistic
-    // move EXECUTION consults the SAME seed contest the paint does. Headless-pinned end-to-end in @aresrpg/fight
-    // test/tackle_move_gate.test.js (next_move_tackle → exact forfeit; the fold drops the pools + a tackled beat +
-    // NO move beat). This row pins the React WIRING those pure rows can't reach.
+  test('CONTRACT: DungeonBoard gates the walk on the deterministic tackle — a bitten move taxes then walks (the toll)', async () => {
+    // CONTRACT (tackle is deterministic, ruling #239 the toll): the optimistic move EXECUTION consults the SAME
+    // seed contest the paint does. Headless-pinned end-to-end in @aresrpg/fight test/tackle_move_gate.test.js
+    // (next_move_tackle → exact forfeit; the fold drops the pools + a tackled beat AND walks the survivor prefix).
+    // This row pins the React WIRING those pure rows can't reach.
     const source = await Bun.file(new URL('../game/screens/hud/world/DungeonBoard.jsx', import.meta.url)).text()
     expect(source).toContain('const bite = next_move_tackle(fight_store.getState())')
-    // bitten ⇒ predict_tackle (forfeit + hit-anim, NO walk); escaped ⇒ optimistic_walk — the exclusive branch:
-    expect(source).toMatch(/if \(bite\) predict_tackle\(bite\)\s*\n\s*else optimistic_walk/)
+    // bitten ⇒ predict_tackle(bite, cell) (forfeit + hit-anim + survivor walk); escaped ⇒ optimistic_walk — exclusive:
+    expect(source).toMatch(/if \(bite\) predict_tackle\(bite, cell\)\s*\n\s*else optimistic_walk/)
     expect(source).toContain('synthetic_tackled_events') // predict_tackle rides the hit-anim + forfeit beat
     expect(source).toMatch(/intent: \{ kind: 'Tackled'/) // …folding the SAME action the receipt folds
+    expect(source).toMatch(/intent: \{ kind: 'move', character: entity_id, to_cell: route\[walked\]/) // …then the toll walk
   })
 
   test('CONTRACT: DungeonBoard folds the click-time trap into my_traps and rolls back through drop_traps', async () => {

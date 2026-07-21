@@ -44,29 +44,45 @@ fun apply_move(fight: &mut Fight, seat: u64, cell: u64) {
   assert!(!cast::cell_occupied(fight, cell), EIllegalMove);
   let (mp, cid) = { let p = fight::participants(fight).borrow(seat); (participant::mp(p), participant::character(p)) };
   let wall_mask = cast::move_blocked_cells(fight, false, seat); // 6-word wall BITSET (gas-diet #1)
-  // TACKLE (sim twin fight_actions.js:63-100): leaving a living adjacent enemy's zone contests FIRST. The roll
-  // is `&Random`-free (single-PTB law) — it derives from the public turn-seed stream folded with the action
-  // slot + live MP (spell_formula::tackle_seed; previewable like a crit, repriced by every failed attempt since
-  // a failure always costs ≥1 MP). Path legality is pre-checked so an ILLEGAL move aborts instead of rolling —
-  // sim order: insufficient-MP/invalid-path rejection precedes the contest. A failed escape COMMITS (return,
-  // never abort): the pool loss + Tackled event must survive — an abort would refund the penalty.
+  // TACKLE (sim twin fight_actions.js apply_move): leaving a living adjacent enemy's zone contests FIRST. The
+  // roll is `&Random`-free (single-PTB law) — it derives from the public turn-seed stream folded with the action
+  // slot + live MP (spell_formula::tackle_seed; previewable like a crit, repriced by every taxed move since a
+  // failure always costs ≥1 MP). Path legality is pre-checked so an ILLEGAL move aborts instead of rolling —
+  // sim order: insufficient-MP/invalid-path rejection precedes the contest.
+  // THE TOLL, not a wall (ruling #239, the 1.29 convention): a failed escape COMMITS the pool tax (return-free —
+  // an abort would refund the penalty) and then STILL WALKS — the move proceeds toward `cell` along the
+  // affordable prefix with whatever MP survived the tax (walk_prefix); a tax that zeroes MP walks 0 honestly.
   let lockers = tackle::locker_agilities(fight, false, seat);
-  if (!lockers.is_empty()) {
+  let (cost, entered_trap) = if (!lockers.is_empty()) {
     let start = participant::cell(fight::participants(fight).borrow(seat));
     assert!(combat_grid::bfs_path_cost(start, cell, &wall_mask, mp) != combat_grid::path_unreachable(), EIllegalMove);
     let slot = participant::casts_this_turn(fight::participants(fight).borrow(seat));
     let seed = spell_formula::tackle_seed(fight::turn_seed(fight, seat), slot, mp);
     let (_state, draw) = prng::rng_next(seed);
-    if (!tackle::resolve(fight, false, seat, &lockers, draw)) return // tackled — penalty committed, move denied
+    if (tackle::resolve(fight, false, seat, &lockers, draw)) {
+      // ESCAPED — the full walk within the untaxed MP (validated reachable above).
+      let (legal, c, trap) = movement::walk(fight, false, seat, cell, &wall_mask, mp);
+      assert!(legal, EIllegalMove);
+      (c, trap)
+    } else {
+      // TACKLED — the tax is written; the move walks the affordable prefix with the SURVIVING (post-tax) MP.
+      let survived = participant::mp(fight::participants(fight).borrow(seat));
+      movement::walk_prefix(fight, false, seat, cell, &wall_mask, mp, survived)
+    }
+  } else {
+    let (legal, c, trap) = movement::walk(fight, false, seat, cell, &wall_mask, mp);
+    assert!(legal, EIllegalMove);
+    (c, trap)
   };
-  let (legal, cost, entered_trap) = movement::walk(fight, false, seat, cell, &wall_mask, mp);
-  assert!(legal, EIllegalMove);
   {
     let p = fight::participants_mut(fight).borrow_mut(seat);
     participant::spend_mp(p, cost);
   };
-  let landed = participant::cell(fight::participants(fight).borrow(seat));
-  fight_events::emit_moved(fight::id(fight), cid, landed);
+  // Emit Moved only for an ACTUAL walk (a tax that zeroed MP walks 0 → Tackled alone tells the story, no Moved).
+  if (cost > 0) {
+    let landed = participant::cell(fight::participants(fight).borrow(seat));
+    fight_events::emit_moved(fight::id(fight), cid, landed);
+  };
   if (entered_trap) cast::trigger_on_enter(fight, false, seat);
 }
 

@@ -338,6 +338,150 @@ const scenarios = [
       { type: 'ai_turn', entity_id: 'm0' },
     ],
   },
+  {
+    // TACKLE TOLL — a failed escape TAXES then walks whatever MP survives (ruling #239, github #239), never a
+    // wall. Here the tax leaves 1 MP, so the 4-cell request truncates to a 1-cell PREFIX walk. The sim twin of
+    // the Move engine's actions.move toll; tackle_tests.move asserts the identical fail→tax→partial-walk shape.
+    meta: {
+      id: 'tackle_toll_partial_walk',
+      class: 'tackle',
+      authored: '2026-07-21',
+      source: 'authored',
+      notes:
+        'p0 (agi 0, mp 5) locked west by m0 (agi 30); requests 4 east, fails the escape, taxed to 1 MP, walks a 1-cell prefix to (6,5).',
+    },
+    arena: flat_arena_json(),
+    templates_raw: trap_templates_raw,
+    initial: {
+      fight_id: 'capsule_tackle_toll_partial',
+      arena_seed: 1,
+      team0: [
+        make_entity('p0', { x: 5, y: 5 }, true, {
+          deck: [],
+          hand: [],
+          spell_levels: {},
+          stats: { agility: 0, intelligence: 0, range: 0, strength: 0 },
+        }),
+      ],
+      team1: [
+        make_entity('m0', { x: 4, y: 5 }, false, {
+          deck: [],
+          hand: [],
+          spell_levels: {},
+          stats: { agility: 30, intelligence: 0, range: 0, strength: 0 },
+        }),
+      ],
+    },
+    commands: [
+      { type: 'start' },
+      {
+        type: 'move',
+        entity_id: 'p0',
+        path: [
+          { x: 6, y: 5 },
+          { x: 7, y: 5 },
+          { x: 8, y: 5 },
+          { x: 9, y: 5 },
+        ],
+      },
+      { type: 'end_turn', entity_id: 'p0' },
+    ],
+  },
+  {
+    // TACKLE TOLL — the tax can consume EVERYTHING: an overwhelming lock strips all 5 MP, so the toll walks 0
+    // cells HONESTLY (the mover holds its cell). This is a legitimate 0-cell outcome, NOT the old hard pin — the
+    // difference is that the survivor, not the rule, decided it. Move twin: the tax-eats-all case in tackle_tests.
+    meta: {
+      id: 'tackle_toll_tax_consumes_all_mp',
+      class: 'tackle',
+      authored: '2026-07-21',
+      source: 'authored',
+      notes:
+        'p0 (agi 0, mp 5) locked west by m0 (agi 1000); requests 3 east, fails, the tax zeroes MP → walks 0, holds (5,5).',
+    },
+    arena: flat_arena_json(),
+    templates_raw: trap_templates_raw,
+    initial: {
+      fight_id: 'capsule_tackle_toll_zero',
+      arena_seed: 1,
+      team0: [
+        make_entity('p0', { x: 5, y: 5 }, true, {
+          deck: [],
+          hand: [],
+          spell_levels: {},
+          stats: { agility: 0, intelligence: 0, range: 0, strength: 0 },
+        }),
+      ],
+      team1: [
+        make_entity('m0', { x: 4, y: 5 }, false, {
+          deck: [],
+          hand: [],
+          spell_levels: {},
+          stats: { agility: 1000, intelligence: 0, range: 0, strength: 0 },
+        }),
+      ],
+    },
+    commands: [
+      { type: 'start' },
+      {
+        type: 'move',
+        entity_id: 'p0',
+        path: [
+          { x: 6, y: 5 },
+          { x: 7, y: 5 },
+          { x: 8, y: 5 },
+        ],
+      },
+      { type: 'end_turn', entity_id: 'p0' },
+    ],
+  },
+  {
+    // TACKLE — a WON escape is unchanged: dodge ≥ 2·lock (agi 40 vs 0 → num == den) is a certain escape, so the
+    // full 3-cell walk completes with pools untouched and no Tackled. The toll only rewrites the FAILED branch.
+    meta: {
+      id: 'tackle_escape_full_walk',
+      class: 'tackle',
+      authored: '2026-07-21',
+      source: 'authored',
+      notes:
+        'p0 (agi 40, mp 5) locked west by m0 (agi 0) escapes for certain (num==den); walks the full 3 cells to (8,5), MP 2, no tax.',
+    },
+    arena: flat_arena_json(),
+    templates_raw: trap_templates_raw,
+    initial: {
+      fight_id: 'capsule_tackle_escape',
+      arena_seed: 1,
+      team0: [
+        make_entity('p0', { x: 5, y: 5 }, true, {
+          deck: [],
+          hand: [],
+          spell_levels: {},
+          stats: { agility: 40, intelligence: 0, range: 0, strength: 0 },
+        }),
+      ],
+      team1: [
+        make_entity('m0', { x: 4, y: 5 }, false, {
+          deck: [],
+          hand: [],
+          spell_levels: {},
+          stats: { agility: 0, intelligence: 0, range: 0, strength: 0 },
+        }),
+      ],
+    },
+    commands: [
+      { type: 'start' },
+      {
+        type: 'move',
+        entity_id: 'p0',
+        path: [
+          { x: 6, y: 5 },
+          { x: 7, y: 5 },
+          { x: 8, y: 5 },
+        ],
+      },
+      { type: 'end_turn', entity_id: 'p0' },
+    ],
+  },
 ]
 
 // ── The gate ───────────────────────────────────────────────────────────────────────────────────

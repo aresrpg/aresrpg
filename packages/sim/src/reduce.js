@@ -425,19 +425,35 @@ const handle_move = (state, cmd, ctx) => {
   const path = trap_step === -1 ? cmd.path : cmd.path.slice(0, trap_step + 1)
   const res = apply_move(state, cmd.entity_id, [current.cell, ...path])
   const moved = find_entity(res.state, cmd.entity_id)
+  // A HARD rejection (not started / no MP / invalid path) never walks — surface the no-op move and stop; no
+  // trap sink. A tackle is NOT a rejection anymore: it walks the taxed survivor (the toll), so it flows below.
+  if (res.success === false && !res.tackled)
+    return {
+      state: res.state,
+      events: [
+        {
+          type: 'fight_moved',
+          fight_id: state.fight_id,
+          entity_id: cmd.entity_id,
+          path,
+          tackled: false,
+          mp_remaining: moved?.mp ?? 0,
+        },
+      ],
+    }
+  // A move happened: a clean walk (escape / no lock) OR the TAXED partial walk of a failed escape (ruling #239).
+  // The event carries exactly the cells entered — `cells_moved` truncates the toll's prefix — and the trap sink
+  // runs along that SAME walked prefix (a toll walk can step onto a trap; it is never skipped anymore).
+  const walked = path.slice(0, res.cells_moved)
   const moved_event = {
     type: 'fight_moved',
     fight_id: state.fight_id,
     entity_id: cmd.entity_id,
-    path: res.tackled ? [moved?.cell ?? current.cell] : path,
+    path: walked,
     tackled: res.tackled ?? false,
     mp_remaining: moved?.mp ?? 0,
   }
-  // A tackle interrupts the move (no displacement), so no trap is crossed. On a real move, check the path
-  // for a trap (first one fires, deals damage, may kill -> end). Traps are placed on the AoE of a trap-cast.
-  if (res.tackled || res.success === false)
-    return { state: res.state, events: [moved_event] }
-  const stepped = step_traps(res.state, cmd.entity_id, path, cell =>
+  const stepped = step_traps(res.state, cmd.entity_id, walked, cell =>
     terrain_walkable(ctx.arena, cell),
   )
   const won = with_victory(state.winner, stepped.state, [
