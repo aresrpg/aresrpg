@@ -287,6 +287,12 @@ export function create_voxel_fight_adapter(
    *  removal per corpse across BOTH triggers (a cast-kill's play_cast beat and the fold's trap/DoT detection),
    *  and stops any reconcile from re-standing the corpse. Sticky for the fight; cleared on teardown. */
   const dying = /** @type {Set<string>} */ (new Set())
+  /** #170 (4th recurrence) POOFED-CORPSE guard: mob ids whose corpse has already POOFED this fight. Unlike `dying`
+   *  (cleared on the poof so a genuine divergence-correction revive can die again), this is STICKY across the poof —
+   *  it stops sync_entities re-upserting a fresh (default-orientation) rig + re-firing death when engine_view.dead
+   *  momentarily flickers false (a re-armed death beat). The ONLY exit is the COMMITTED fold showing the fighter
+   *  alive again (handled in sync_entities). Cleared on teardown so the next fight's reused mob-N ids start clean. */
+  const removed_corpses = /** @type {Set<string>} */ (new Set())
   /** [⑤c invisibility veil] ids currently wearing the engine heat-haze veil — so the veil is set/cleared exactly
    *  ONCE per invisibility transition (idempotent, mirrors wire_fight_invisibility's visible-latch), driven by the
    *  fold's f.invisible truth each reconcile. */
@@ -1228,6 +1234,7 @@ export function create_voxel_fight_adapter(
     replay_owned.delete(id)
     placed_cell.delete(id)
     dying.delete(id)
+    removed_corpses.add(id) // #170 sticky poofed guard: stays down through an engine_view.dead flicker (committed door only)
   }
   /** Poof a corpse ONE death-beat-linger after its death beat's impact resolves — timed INSIDE the death clip
    *  (impact < remove < clip-end) so the rig is gone before board_entities' loco hand-back would crossfade DEATH →
@@ -1302,7 +1309,12 @@ export function create_voxel_fight_adapter(
         replay_owned: replay_owned.has(f.id), // item 12: the paced replay owns a buffered/queued mob's cell
         placed: placed_cell.get(f.id) ?? null,
         queued: wave_claimed.has(f.id),
+        poofed: removed_corpses.has(f.id), // #170 sticky poofed guard
+        committed_dead: f.committed_dead, // the AUTHORITATIVE liveness — the only door back, never the flickering f.dead
       })
+      // #170 a poofed rig that the COMMITTED fold now shows ALIVE is a genuine divergence-correction revive → the
+      // action is 'upsert' (guard above) and the sticky mark lifts so it lives again as a normal fighter.
+      if (action.kind === 'upsert' && removed_corpses.has(f.id)) removed_corpses.delete(f.id)
       if (action.kind === 'skip') continue
       if (action.kind === 'despawn') {
         // Live-rig death: play the death beat ONCE (if a cast-kill already fired it this id is `dying` → the
@@ -1574,6 +1586,7 @@ export function create_voxel_fight_adapter(
     walking.clear()
     placed_cell.clear()
     dying.clear() // a torn-down board keeps no corpses — the next fight's fresh mob-N ids start clean
+    removed_corpses.clear() // #170 the sticky poofed guard resets per fight — never leaks across a reused mob-N id
     hazed_ids.clear() // no rigs survive teardown → the veil-latch resets for the next fight
     for (const t of despawn_timers) clearTimeout(t) // never let a stale poof remove a REUSED mob-N id next fight
     despawn_timers.clear()
