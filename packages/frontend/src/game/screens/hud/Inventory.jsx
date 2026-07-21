@@ -28,6 +28,7 @@ import {
   RELIC_SLOTS,
   WORN_CATEGORIES,
   can_consume,
+  can_equip_level,
   equip_lock_of,
   equip_stage_action,
   equipped_totals,
@@ -282,6 +283,13 @@ export function Inventory() {
       use_toast.getState().add(equip_lock, 'info')
       return
     }
+    // #316 — known-data refusal BEFORE any stage/tx: an under-level item can only abort on-chain
+    // (equipment::ELevelTooLow). The bag cell is already disabled at hover (InventoryBag's is_level_blocked);
+    // this is the click-path backstop, same reason copy either way.
+    if (!can_equip_level(item, level, template_id_map, template_map)) {
+      use_toast.getState().add(t('errors.equip_level_too_low'), 'info')
+      return
+    }
     dispatch_stage(equip_stage_action(item, undefined, slugs, template_id_map))
   }
 
@@ -292,6 +300,12 @@ export function Inventory() {
       return
     }
     set_committing(true)
+    // #317 — pending feedback fires ON CLICK, never behind a network leg: this persistent toast IS the
+    // pending state from the instant Accept lands (the dominant cost was get_owner_items stalling silently
+    // behind rpc/client.ts's 429 backoff — up to ~30s of retry_delay_ms with zero UI feedback). Every exit
+    // below resolves or removes it; the tx-composition promise() further down swaps it in seamlessly (same
+    // pending copy, so the handoff from this toast to that one is invisible).
+    const pending_id = use_toast.getState().add_persistent(t('inventory.tx_equip_pending'), 'pending')
     let current_items
     try {
       current_items = address ? await get_owner_items(address) : null
@@ -299,12 +313,14 @@ export function Inventory() {
       current_items = null
     }
     if (!current_items) {
+      use_toast.getState().remove(pending_id)
       use_toast.getState().add(t('errors.tx_refused_preflight'), 'error')
       set_committing(false)
       return
     }
     const invalid_change = invalid_equip_change(equipment, real_equipment, current_items)
     if (invalid_change) {
+      use_toast.getState().remove(pending_id)
       const key = invalid_change.reason === 'listed' ? 'errors.item_listed_for_sale' : 'errors.item_state_mismatch'
       use_toast.getState().add(t(key), 'info')
       dispatch_stage({ type: 'reset', equipment: real_equipment })
@@ -346,6 +362,7 @@ export function Inventory() {
       }
     }
     if (!to_equip.length && !to_unequip.length) {
+      use_toast.getState().remove(pending_id)
       set_committing(false)
       return
     }
@@ -355,6 +372,7 @@ export function Inventory() {
       equipped_ids: to_equip.map((row) => row.item_id),
       unequipped_ids: to_unequip.map((row) => row.item_id),
     }
+    use_toast.getState().remove(pending_id)
     let res
     try {
       res = await use_toast.getState().promise(equip_items({ character_id: character.id, to_equip, to_unequip }), {
@@ -433,6 +451,9 @@ export function Inventory() {
       if (equip_lock) return use_toast.getState().add(equip_lock, 'info') // D29: no drop-to-equip on a busy char
       const item = dragging(e)
       if (is_item_listed(item)) return use_toast.getState().add(t('errors.item_listed_for_sale'), 'info')
+      // #316 — same level gate as the click path (on_grid_activate); drag-to-slot is the other stage entry.
+      if (item && !can_equip_level(item, level, template_id_map, template_map))
+        return use_toast.getState().add(t('errors.equip_level_too_low'), 'info')
       if (item) dispatch_stage(equip_stage_action(item, slot, slugs, template_id_map))
     },
     on_hover_enter: on_item_hover,
@@ -550,6 +571,7 @@ export function Inventory() {
         equip_lock={equip_lock}
         is_removed={(item) => is_template_removed(item, template_map)}
         is_retry_blocked={(item) => is_lootbox(item.item_type) && is_box_retry_blocked(item.id)}
+        is_level_blocked={(item) => !can_equip_level(item, level, template_id_map, template_map)}
         on_select={set_selected_item_id}
         on_activate={on_grid_activate}
         on_context_menu={on_grid_context_menu}

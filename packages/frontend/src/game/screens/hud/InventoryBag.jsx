@@ -29,6 +29,7 @@ export function InventoryBag({
   equip_lock,
   is_removed,
   is_retry_blocked,
+  is_level_blocked,
   on_select,
   on_activate,
   on_context_menu,
@@ -65,6 +66,10 @@ export function InventoryBag({
         {grid_items.map((item) => {
           const removed = is_removed(item)
           const retry_blocked = is_retry_blocked(item)
+          // #316 — an under-level item can only abort on-chain (equipment::ELevelTooLow): disable the
+          // affordance and surface the reason at hover BEFORE any click lands, same idiom as retry_blocked.
+          const level_blocked = is_level_blocked?.(item) ?? false
+          const action_disabled = retry_blocked || level_blocked
           // `/v1/owner-items.item_type` is a generic gameplay type (for example `cloak`), not the icon key.
           // Recover the template slug from the seed name join, then apply the authored cosmetic filename alias.
           const icon_slug = inventory_item_icon(item, slugs)
@@ -73,7 +78,7 @@ export function InventoryBag({
               <button
                 type="button"
                 className={`inv__cell inv__cell--filled${selected_item_id === item.id ? ' is-selected' : ''}${
-                  retry_blocked ? ' is-action-disabled' : ''
+                  action_disabled ? ' is-action-disabled' : ''
                 }`}
                 style={
                   /** @type {import('react').CSSProperties} */ ({
@@ -81,9 +86,15 @@ export function InventoryBag({
                   })
                 }
                 draggable={(category === 'equipment' || category === 'cosmetics') && !equip_lock}
-                disabled={retry_blocked}
-                aria-disabled={retry_blocked}
-                title={retry_blocked ? retry_blocked_title(t, item) : undefined}
+                disabled={action_disabled}
+                aria-disabled={action_disabled}
+                title={
+                  retry_blocked
+                    ? retry_blocked_title(t, item)
+                    : level_blocked
+                      ? t('errors.equip_level_too_low')
+                      : undefined
+                }
                 onClick={() => {
                   on_dismiss_tooltip()
                   on_select(item.id)
