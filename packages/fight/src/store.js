@@ -308,7 +308,14 @@ const make_input =
         // R2 DEFERRAL — a fresher object read must not leapfrog a still-draining MASKING wave (remote turns + my
         // windowed displacement legs): adoption prunes the very entries the presented mask needs, so the fold could
         // no longer hold the eye. Stash the newest read; it adopts at the final masking ack — or the watchdog first.
-        if ((state.wave ?? []).some(masks_entries)) {
+        // #159 GAP: the single-PTB commit executes my-turn → mob-wave on-chain, but the 4s poll can read that
+        // POST-commit object BEFORE my receipt returns — a window where NO wave exists yet, so the guard above
+        // misses it and the read adopts wholesale, teleporting the board to the mobs' final state and leaving the
+        // receipt's wave nothing to animate (mobs "don't play their turn"). While my commit is IN-FLIGHT (`busy` —
+        // set at submit, cleared in the submit promise's finally AFTER apply_receipt builds the wave) defer the read
+        // through the SAME door; it re-enters (never dropped) and adopts once the wave — built by the imminent
+        // receipt — has drained. `view != null` never defers the first seeding read.
+        if ((state.wave ?? []).some(masks_entries) || (state.busy && state.view != null)) {
           if (version > Number(state.pending_snapshot?.version ?? -1)) set((s) => ({ ...s, pending_snapshot: msg }))
           return
         }
