@@ -339,7 +339,14 @@ const wave_masked_fold = (s, hold_intents) => {
     windowed.some((t) => e.version === t.version && e.event_idx >= t.from_idx && e.event_idx <= t.until_idx)
   const base = base_from_view(s.view, s.fight_id)
   const log = (s.log ?? []).filter((e) => (e.source === 'intent' && !hold_intents) || !masked(e))
-  return { ...s, ...log.reduce(apply_action, base) }
+  // V1 · RETIREMENT FLOOR — the re-fold reads the RAW view base, so it must re-apply the append-only death floor
+  // exactly as committed_state does. Without it a floor-dead fighter RESURRECTS in the eye's projection whenever a
+  // masking wave drains over a version-inflated-but-stale view that still carries it alive — the corpse stands up,
+  // then dies a SECOND time when the wave acks (the double-death). The floor holds authoritative deaths only
+  // (intents never retire), so a live prediction is untouched; the death-present HOLD stays owned by
+  // project.death_presenting_ids (engine_view.dead), never by this fold's `alive`.
+  const folded = log.reduce(apply_action, base)
+  return { ...s, ...folded, fighters: apply_retirement(folded.fighters, s.retired) }
 }
 
 /** The EFFECTIVE projection — legality, budget, tackle reach read it. My own INTENTS paint first (prediction
