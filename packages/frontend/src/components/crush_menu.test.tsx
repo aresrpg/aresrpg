@@ -43,11 +43,22 @@ const render_menu = (target: any) =>
   )
 
 describe('CrushMenu action wiring', () => {
-  test('a non-crushable selection is disabled and visibly explains why', () => {
-    const html = render_menu(item(ITEM_CATEGORY.CONSUMABLE))
+  // No item selected is the ONLY remaining disabled case post-#270 (defensive — the menu never opens without a
+  // concrete item in practice). is_crushable is universal now, so a real item never disables the button.
+  test('no item selected is disabled and visibly explains why', () => {
+    const html = render_menu(null)
 
     expect(html).toContain('disabled=""')
     expect(html).toContain('data-crush-disabled-reason="true"')
+  })
+
+  // ISSUE #270 (RED before the fix — a CONSUMABLE was previously excluded by GEAR_CATEGORIES and rendered
+  // disabled): crushing is universal, so a plain non-gear item is now an ENABLED affordance.
+  test('a previously-excluded category (consumable) is now enabled — universal crush', () => {
+    const html = render_menu(item(ITEM_CATEGORY.CONSUMABLE))
+
+    expect(html).not.toContain('disabled=""')
+    expect(html).not.toContain('data-crush-disabled-reason="true"')
   })
 
   test('a crushable item dispatches the crush action exactly once', async () => {
@@ -61,6 +72,21 @@ describe('CrushMenu action wiring', () => {
     })
 
     expect(crush_calls).toEqual([{ item: gear, character_id: '0xcharacter' }])
+  })
+
+  // ISSUE #270 (RED before the fix — this threw "This item cannot be crushed into runes." before ever
+  // reaching crush(), so crush_calls stayed empty): a zero-rune, non-gear item composes the SAME PTB.
+  test('a zero-rune (non-gear) item ALSO dispatches the crush action exactly once', async () => {
+    crush_calls.length = 0
+    const resource = item(ITEM_CATEGORY.RESOURCE)
+
+    await crush_menu.dispatch_crush_action?.({
+      item: resource,
+      character_id: '0xcharacter',
+      toast: async (promise: Promise<any>) => promise,
+    })
+
+    expect(crush_calls).toEqual([{ item: resource, character_id: '0xcharacter' }])
   })
 
   test('preview loading never deadlocks a valid crush button', () => {
@@ -78,5 +104,30 @@ describe('CrushMenu action wiring', () => {
     expect(url).not.toBeNull()
     expect(html).toContain(`href="${url}"`)
     expect(html).toContain('target="_blank"')
+  })
+})
+
+// CONFIRM-COPY REFRAME (issue #270): the confirm dialog's headline + the result toast share ONE zero-yield
+// signal off the preview's deterministic rune SET — pure functions, no DOM needed (crush_menu.tsx wires them
+// into CrushConfirmModal's JSX + do_crush()'s success_key).
+describe('crush confirm-copy reframe (crush_is_zero_yield / crush_line_key / crush_success_key)', () => {
+  test('a definitive zero-yield preview reframes to the honest destroy copy', () => {
+    const zero_preview = { removed: false, rows: [], estimated: false }
+    expect(crush_menu.crush_is_zero_yield?.(zero_preview)).toBe(true)
+    expect(crush_menu.crush_line_key?.(zero_preview)).toBe('crush.destroy_line')
+    expect(crush_menu.crush_success_key?.(zero_preview)).toBe('crush.success_destroyed')
+  })
+
+  test('a non-empty yield set keeps the rune-yield copy', () => {
+    const yield_preview = { removed: false, rows: [{ stat_key: 'vit', min: 1, max: 3 }], estimated: false }
+    expect(crush_menu.crush_is_zero_yield?.(yield_preview)).toBe(false)
+    expect(crush_menu.crush_line_key?.(yield_preview)).toBe('crush.line')
+    expect(crush_menu.crush_success_key?.(yield_preview)).toBe('crush.success')
+  })
+
+  test('loading / failed / removed previews never claim a zero yield (never mislabels an unknown outcome)', () => {
+    expect(crush_menu.crush_line_key?.(null)).toBe('crush.line') // still loading
+    expect(crush_menu.crush_line_key?.({ removed: false, rows: [], estimated: true, failed: true })).toBe('crush.line')
+    expect(crush_menu.crush_line_key?.({ removed: true, rows: [], estimated: false })).toBe('crush.line')
   })
 })

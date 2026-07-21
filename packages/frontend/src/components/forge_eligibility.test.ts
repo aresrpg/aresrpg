@@ -35,11 +35,11 @@ describe('forge_eligibility — what the runeforge can scribe / crush', () => {
     }
   })
 
-  test('a rune is a rune — never gear, never a crush input', () => {
+  test('a rune is a rune — never gear (scribe input), but IS crushable under the universal law (#270)', () => {
     const rune = item(ITEM_CATEGORY.RUNE)
     expect(is_rune(rune)).toBe(true)
     expect(is_forge_gear(rune)).toBe(false)
-    expect(is_crushable(rune)).toBe(false)
+    expect(is_crushable(rune)).toBe(true)
   })
 
   test('pets / consumables / resources are neither gear nor runes', () => {
@@ -70,17 +70,47 @@ describe('is_crushable — loot boxes admitted as a DISPOSAL crush (petbox lane)
     expect(is_forge_gear(box)).toBe(false)
   })
 
-  test('is_crushable now admits a box for disposal (the fix)', () => {
+  test('is_crushable admits a box for disposal (subsumed by the universal law below)', () => {
     expect(is_crushable(box)).toBe(true)
   })
+})
 
-  test('a non-lootbox consumable stays excluded — crush is not a general delete button', () => {
+// UNIVERSAL CRUSH (issue #270 "restated ruling"): crushing is universal — ANY owned item can be crushed; a
+// zero-rune item just destroys (forgemagie::crush already no-ops the yield and destroys unconditionally
+// on-chain — extract::burn was never category-gated, see extract.move:264). The OLD category allowlist here
+// was ALSO a live false negative BEYOND zero-rune items: it compared the on-chain FINE content category (e.g.
+// "battleaxe") against the SDK's COARSE `ITEM_CATEGORY` vocabulary `GEAR_CATEGORIES` checks against — ground
+// truth off testnet: "Trainee Battle axe" (item 0x251c3f9a…deef7e, template category "battleaxe") read as
+// non-crushable while "Koa Slime Rod" (template 0x536927977…6b1d63, category "staff" — a coincidental
+// fine==coarse match) read as crushable. Neither the axe nor the rod is special; the vocabulary mismatch was
+// the whole bug. is_forge_gear (scribe eligibility) is untouched — this is crush-only.
+describe('is_crushable — universal (issue #270)', () => {
+  test('a non-lootbox consumable is now crushable (destroys for zero runes)', () => {
     const potion = { id: '0xpotion', item_type: 'small_potion', item_category: ITEM_CATEGORY.CONSUMABLE }
-    expect(is_crushable(potion)).toBe(false)
+    expect(is_crushable(potion)).toBe(true)
   })
 
-  test('null / missing item_type never throws', () => {
+  test('a fine content category outside the coarse vocabulary is crushable (the axe/rod bug, ground-truthed)', () => {
+    // GEAR_CATEGORIES only ever held the COARSE 'axe', never the fine 'battleaxe' — confirms the old gate's
+    // blind spot is real (is_forge_gear/scribe still keys off it, unaffected by this crush-only fix).
+    expect(GEAR_CATEGORIES.has('battleaxe')).toBe(false)
+    expect(is_crushable({ id: '0xaxe', item_type: 'ikari', item_category: 'battleaxe' })).toBe(true)
+  })
+
+  test('any category — pets, titles, runes, resources, keys — is crushable', () => {
+    for (const c of [
+      ITEM_CATEGORY.PET,
+      ITEM_CATEGORY.TITLE,
+      ITEM_CATEGORY.RUNE,
+      ITEM_CATEGORY.RESOURCE,
+      ITEM_CATEGORY.KEY,
+    ]) {
+      expect(is_crushable(item(c))).toBe(true)
+    }
+  })
+
+  test('null / undefined never throws and is not crushable', () => {
     expect(is_crushable(null)).toBe(false)
-    expect(is_crushable({ item_category: ITEM_CATEGORY.CONSUMABLE })).toBe(false)
+    expect(is_crushable(undefined)).toBe(false)
   })
 })
