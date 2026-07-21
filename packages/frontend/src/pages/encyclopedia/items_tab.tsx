@@ -240,7 +240,8 @@ export function ItemsTab({
         label: t(`encyclopedia.group_${group.toLowerCase()}`),
         clear: () => update_param('group', ''),
       })
-    if (sub) chips.push({ key: 'sub', label: t(marketplace_item_type_key(sub), sub), clear: () => update_param('sub', '') })
+    if (sub)
+      chips.push({ key: 'sub', label: t(marketplace_item_type_key(sub), sub), clear: () => update_param('sub', '') })
     if (level_min) chips.push({ key: 'lmin', label: `LV ${level_min}+`, clear: () => update_param('lmin', '') })
     if (level_max) chips.push({ key: 'lmax', label: `LV -${level_max}`, clear: () => update_param('lmax', '') })
     if (sort !== 'level_asc')

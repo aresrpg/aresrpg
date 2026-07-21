@@ -47,7 +47,9 @@ export function ItemTypeRail({
             aria-pressed={is_active}
             onClick={() => on_pick(is_active ? '' : type)}
           >
-            <span className={`text-[9px] tracking-[0.1em] uppercase truncate ${is_active ? 'text-gold' : 'text-muted'}`}>
+            <span
+              className={`text-[9px] tracking-[0.1em] uppercase truncate ${is_active ? 'text-gold' : 'text-muted'}`}
+            >
               {t(marketplace_item_type_key(type), type)}
             </span>
             <span className="text-[8px] text-muted/50 tabular-nums shrink-0">{count}</span>
