@@ -62,7 +62,8 @@ export const DEFAULT_CAPACITY = 512
  * @returns {Recorder}
  */
 export const create_recorder = (capacity = DEFAULT_CAPACITY) => ({
-  capacity: Number.isInteger(capacity) && capacity > 0 ? capacity : DEFAULT_CAPACITY,
+  capacity:
+    Number.isInteger(capacity) && capacity > 0 ? capacity : DEFAULT_CAPACITY,
   seq: 0,
   entries: [],
 })
@@ -85,9 +86,10 @@ const version_of = state => (state == null ? '00000000' : digest(state))
 const append = (rec, entry) => ({
   capacity: rec.capacity,
   seq: rec.seq + 1,
-  entries: [...rec.entries, /** @type {Entry} */ ({ ...entry, seq: rec.seq })].slice(
-    -rec.capacity,
-  ),
+  entries: [
+    ...rec.entries,
+    /** @type {Entry} */ ({ ...entry, seq: rec.seq }),
+  ].slice(-rec.capacity),
 })
 
 /**
@@ -100,7 +102,16 @@ const append = (rec, entry) => ({
 export const open_recording = (
   rec,
   { fight_id, arena, templates_raw, initial, at = 0, meta = {} },
-) => append(rec, { kind: 'open', fight_id, at, arena, templates_raw, initial, meta })
+) =>
+  append(rec, {
+    kind: 'open',
+    fight_id,
+    at,
+    arena,
+    templates_raw,
+    initial,
+    meta,
+  })
 
 /**
  * THE TAP: observe one reduce() call at the edge. Records the command, the events it produced, the
