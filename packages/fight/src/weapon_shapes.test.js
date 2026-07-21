@@ -1,16 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, test } from 'bun:test'
-
 import { get_aoe_cells } from '@aresrpg/sim/spell_targeting'
 import { SHAPE_POINT } from '@aresrpg/sim/spell_effect'
 
 import { weapon_spell_template } from './predict_cast.js'
-import {
-  WEAPON_SHAPE_DEFAULT,
-  WEAPON_SHAPES,
-  weapon_shape_of,
-} from './weapon.js'
+import { WEAPON_SHAPE_DEFAULT, WEAPON_SHAPES, weapon_shape_of } from './weapon.js'
 
 // §387 — the ONE-HOME shape TABLE + the preview wiring. `weapon_spell_template` stamps the category's cell-set shape
 // onto the synthetic weapon spell, so the SAME `get_aoe_cells` the board paints for spell AoEs paints the weapon's
@@ -57,10 +52,10 @@ describe('§387 weapon shape table (weapon_shape_of)', () => {
 describe('§387 preview wiring — weapon_spell_template paints the shape through get_aoe_cells', () => {
   const caster = { x: 5, y: 5 }
   const target = { x: 6, y: 5 } // strike east
-  const aoe = weapon => {
+  const aoe = (weapon) => {
     const tmpl = weapon_spell_template(weapon)
     return get_aoe_cells(tmpl.levels[0].base_effects[0], target, caster)
-      .map(c => `${c.x},${c.y}`)
+      .map((c) => `${c.x},${c.y}`)
       .sort()
   }
 

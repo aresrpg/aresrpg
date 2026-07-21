@@ -30,12 +30,7 @@ export const WEAPON_ATTACK_AP = 0
 // existing spell `area_shape` machinery (`get_aoe_cells` / `combat_grid::zone_cells`), so the hover preview, the
 // sim twin, and the chain all derive the SAME cells from one descriptor. Shapes key on the FINE category the
 // equipped weapon carries; ranged classes additionally carry range attributes (see below).
-import {
-  SHAPE_LINE,
-  SHAPE_PODIUM,
-  SHAPE_POINT,
-  SHAPE_TBAR,
-} from '@aresrpg/sim/spell_effect'
+import { SHAPE_LINE, SHAPE_PODIUM, SHAPE_POINT, SHAPE_TBAR } from '@aresrpg/sim/spell_effect'
 
 /**
  * @typedef {Object} WeaponShape
@@ -79,5 +74,4 @@ export const WEAPON_SHAPES = /** @type {Record<string, WeaponShape>} */ ({
 })
 
 /** The shape descriptor for a weapon's FINE category (nullish / unknown / tool / bare hands ⇒ the 1-cell default). */
-export const weapon_shape_of = category =>
-  (category != null && WEAPON_SHAPES[category]) || WEAPON_SHAPE_DEFAULT
+export const weapon_shape_of = (category) => (category != null && WEAPON_SHAPES[category]) || WEAPON_SHAPE_DEFAULT

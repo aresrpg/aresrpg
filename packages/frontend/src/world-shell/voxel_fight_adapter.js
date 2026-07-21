@@ -1682,9 +1682,7 @@ export function create_voxel_fight_adapter(
         const castable2 = cast_range_set_dungeon(hover_range, active, grid2, los2, flags2)
         // §387: the weapon sentinel has no seed row → spell_footprint reads the caster's escrow-row weapon so its
         // FINE category paints the real shape (arc / podium / inline / line), not the single melee cell.
-        const my_weapon = dungeon.escrow?.find(
-          (p) => (p.character ?? p.character_id) === active.id,
-        )?.weapon
+        const my_weapon = dungeon.escrow?.find((p) => (p.character ?? p.character_id) === active.id)?.weapon
         if (castable2.has(to_enc)) foot_cells = spell_footprint(fight.armed_spell_id, cell, active.cell, my_weapon)
       }
       const foot_plan = hover_footprint_plan(fight.armed_spell_id, foot_cells)

@@ -399,7 +399,7 @@ export const chain_critical = (clock, critical_chance, critical_bonus = 0) => {
  */
 export const weapon_spell_template = (weapon = {}) => {
   const shape = weapon_shape_of(weapon.category)
-  const damage_effect = value => ({
+  const damage_effect = (value) => ({
     kind: 0,
     value: Number(value),
     element: Number(weapon.element ?? 255),
