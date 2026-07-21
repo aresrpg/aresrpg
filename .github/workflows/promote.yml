@@ -1,156 +1,80 @@
 # SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 # © 2026 Sceat — All rights reserved. See LICENSE.
-# promote.yml — the fast-forward promotion bot (owner-triggered, signature-preserving).
+# promote.yml — the `/promote` REQUEST handler (owner-triggered, signature-preserving).
 #
-# Master never takes a merge COMMIT: promotion is a fast-forward push of the exact approved
-# head SHA, so master's commits stay BYTE-IDENTICAL to edge's (signatures survive perfectly)
-# and the pusher is the Actions bot — "reviewer ≠ pusher" holds by construction. Trigger = the
-# owner commenting `/promote` on a PR targeting edge OR master (explicit
-# command, never an approval side-effect). The job refuses unless: commenter is the owner · the
-# approval story holds (owner-authored PRs: the /promote comment IS the owner's approval act —
-# GitHub forbids self-review, so a review assert would be unsatisfiable by construction;
-# foreign-authored PRs: the owner's APPROVED review is required ON TOP of his /promote) · every
-# check on the head is green · the push is a true fast-forward (the base is an ancestor of the
-# head). GOVERNANCE LINE: the master hop is deploy-class and fires only on the repository
-# owner's explicit word; the edge hop is routine integration. RULESET STORY (audit-corrected):
-# master/edge carry NO pull_request rule and an EMPTY bypass list (current_user_can_bypass:
-# never) — this bot has zero bypass privilege; it clears the exact same required status checks,
-# signatures, linear-history and fast-forward rules as any other pusher. "Who may land code" is
-# enforced entirely by THIS job's asserts above, never by a ruleset review rule or a bypass
-# grant — which is exactly why any collaborator's own signed, green-on-`gate`, ff direct push to
-# master was previously indistinguishable from a real promotion (audit finding F1a). The
-# `promoted` status stamped below closes that: only this job can mint it, and only after its
-# asserts pass, so once master's ruleset requires `promoted` alongside `gate` (a follow-up
-# ruleset edit, sequenced AFTER this workflow itself reaches master) a direct push's SHA can
-# never carry it and master becomes bot-exclusive by construction. THAT FAST-FORWARD ASSERT
-# ALSO ENFORCES
-# ALWAYS-REBASE BY CONSTRUCTION: an unrebased branch cannot fast-forward — the linear law is
-# mechanical, not convention. After a MASTER promotion the job also aligns edge to the same
-# SHA (skip-warn when edge has already moved ahead), so the branches never drift at release
-# points.
+# `/promote` is a one-time land REQUEST, not a babysat rebase→wait→re-comment loop (issue #105).
+# Trigger = the owner commenting `/promote` on a PR targeting edge OR master (explicit command,
+# never an approval side-effect). This job asserts the commenter is the owner, applies the
+# `promote-requested` label, then invokes the SHARED landing engine (.github/scripts/promote-land.sh):
+#   • green + fast-forward → it lands NOW (byte-identical ff-push; signatures survive; label removed).
+#   • behind its base       → it reports `stale`; this job posts the ONE-TIME author rebase command.
+#                             The author rebases locally (commits stay signed — the API rebase is
+#                             OFF the table, it returns unsigned copies edge's required_signatures
+#                             would reject) and force-pushes; the queue (promote-queue.yml) lands it
+#                             on the next green cycle with zero further `/promote`.
+#   • not yet green         → it reports `not-green`; the queue lands it when the checks pass.
 #
-# NOTE (GitHub semantics): pushes made with GITHUB_TOKEN don't trigger push-workflows, so this
-# job explicitly dispatches release.yml after the ff-push (Vercel deploys regardless — app
-# webhooks are not suppressed).
+# GOVERNANCE: the master hop is deploy-class and fires only on the owner's explicit word; the edge
+# hop is routine integration. "Who may land code" is enforced by the engine's asserts (owner
+# /promote comment + approval story + green + fast-forward + the `promoted` stamp), NEVER by a
+# ruleset review rule or a bypass grant — the bot holds zero bypass privilege and clears the exact
+# same required checks, signatures, linear-history and ff rules as any other pusher.
 name: promote
 on:
   issue_comment:
     types: [created]
+# Serialize every landing run (this handler + the queue) so concurrent ff-pushes can't race.
+concurrency:
+  group: promotion-landing
+  cancel-in-progress: false
 permissions:
   contents: write
-  actions: write
-  pull-requests: write # read the PR + open the next standing draft after a master promotion
+  actions: write # dispatch release.yml after a master ff-push (GITHUB_TOKEN pushes don't self-trigger)
+  pull-requests: write # label, comment, read reviews, open the next standing draft
   statuses: write # stamp the `promoted` commit status (F1a — closes the direct-push-to-master hole)
 jobs:
-  fast-forward:
+  request:
     if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/promote')
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ github.event.issue.number }}
     steps:
       - name: assert commenter is the owner (numeric id is immortal; login is a readable second factor)
         run: |
           # Numeric user IDs never change and freed logins are re-registerable — pin the id and
-          # keep the login as a human-readable second factor. BOTH must hold.
+          # keep the login as a human-readable second factor. BOTH must hold. This gates who may
+          # APPLY the label; the engine re-checks the owner's /promote word before it ever lands.
           test "${{ github.event.comment.user.id }}" = "11330271" || { echo "commenter is not the owner (id mismatch) — refusing"; exit 1; }
           test "${{ github.event.comment.user.login }}" = "Sceat" || { echo "commenter is not the owner (login mismatch) — refusing"; exit 1; }
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: resolve + assert the PR (approved by owner, checks green, base ∈ {edge, master})
-        id: pr
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: ensure the promote-requested label exists, then apply it
         run: |
-          PR=${{ github.event.issue.number }}
-          BASE=$(gh pr view "$PR" --json baseRefName -q .baseRefName)
-          case "$BASE" in edge|master) ;; *) echo "PR targets $BASE — /promote serves edge and master only"; exit 1;; esac
-          echo "base=$BASE" >> "$GITHUB_OUTPUT" 
-          HEAD_SHA=$(gh pr view "$PR" --json headRefOid -q .headRefOid)
-          # Pin the PR author by numeric id (immortal), login as a readable second factor — BOTH
-          # must hold. gh pr view's author.id is a GraphQL node id, so read the REST numeric id.
-          AUTHOR_ID=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR}" --jq '.user.id')
-          AUTHOR_LOGIN=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR}" --jq '.user.login')
-          if [ "$AUTHOR_ID" = "11330271" ] && [ "$AUTHOR_LOGIN" = "Sceat" ]; then
-            echo "owner-authored PR — the /promote comment is the owner's approval act (self-review is impossible on GitHub)"
-          else
-            APPROVED=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR}/reviews" \
-              --jq '[.[] | select(.user.login=="Sceat")] | last | .state')
-            test "$APPROVED" = "APPROVED" || { echo "foreign-authored PR without a standing owner review — refusing"; exit 1; }
-          fi
-          NOT_GREEN=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/check-runs" \
-            --jq '[.check_runs[] | select(.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral")] | length')
-          test "$NOT_GREEN" = "0" || { echo "$NOT_GREEN check(s) not green on $HEAD_SHA — refusing"; exit 1; }
-          echo "sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
-      - name: assert master promotions carry a release-prep tip (release-only-production law)
-        # RULING (maintainer): master only deploys to Vercel production on a release-tipped
-        # promotion. This is the mechanical half of that law — refusing here means a non-release
-        # commit never reaches master at all. packages/frontend/vercel.json's ignoreCommand is the
-        # other half: an independent, defense-in-depth check that skips the Vercel production
-        # build itself for any commit whose subject isn't release-shaped (covers the rare operator
-        # direct-push-to-master path CONTRIBUTING.md carves out, which this job never sees).
-        if: steps.pr.outputs.base == 'master'
+          gh label create promote-requested --repo "$GITHUB_REPOSITORY" --color BFD4F2 \
+            --description "queued for land-on-green (issue #105)" --force >/dev/null
+          gh pr edit "$PR" --repo "$GITHUB_REPOSITORY" --add-label promote-requested >/dev/null
+      - name: attempt landing (shared engine)
+        id: land
         run: |
-          SHA=${{ steps.pr.outputs.sha }}
-          SUBJECT=$(git log -1 --pretty=%s "$SHA")
-          case "$SUBJECT" in
-            "release: v"*) echo "release-tipped ($SUBJECT) — proceeding" ;;
-            *) echo "master promotions carry a release-prep tip; land the version bump + changelog on edge first"; exit 1 ;;
+          set +e
+          bash .github/scripts/promote-land.sh "$PR"
+          echo "rc=$?" >> "$GITHUB_OUTPUT"
+      - name: interpret the result — land silently, or post one-time guidance
+        # Guidance bodies live as markdown templates under .github/promote-comments/ (readable, and
+        # no backticks-in-shell) — the stale one has its base substituted for __BASE__.
+        run: |
+          RESULT='${{ steps.land.outputs.promote_result }}'
+          case "$RESULT" in
+            landed)
+              echo "landed — nothing to comment" ;;
+            stale)
+              BASE=$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json baseRefName -q .baseRefName)
+              sed "s/__BASE__/${BASE}/g" .github/promote-comments/stale.md > "${RUNNER_TEMP}/body.md"
+              gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file "${RUNNER_TEMP}/body.md" ;;
+            not-green)
+              gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file .github/promote-comments/not-green.md ;;
+            *)
+              echo "refused: ${RESULT:-<none>} (rc=${{ steps.land.outputs.rc }}) — see the landing step log"; exit 1 ;;
           esac
-      - name: stamp the promoted status on $SHA (master only — BEFORE the push, never after)
-        if: steps.pr.outputs.base == 'master'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # ORDER IS LOAD-BEARING — do not "simplify" by moving this after the push. GitHub's
-          # required-status-checks ruleset rule evaluates the SHA being written to a protected
-          # ref AT PUSH TIME, against whatever statuses already exist on that SHA (statuses
-          # attach to the commit object, not to a ref). Once master's ruleset requires
-          # `promoted` (a follow-up ruleset edit, sequenced after this workflow itself reaches
-          # master), a ff-push writes $SHA onto master VERBATIM — no new merge commit — so
-          # `promoted` must already be posted on $SHA before that push happens, or the push is
-          # rejected before any post-push step could ever run. Stamping here is safe: $SHA
-          # already exists as a commit object in the repo (the full-history checkout above has
-          # it, as the PR's approved head) even though it isn't on master yet — a
-          # stamped-but-never-pushed SHA is harmless, a commit status carries no permission of
-          # its own.
-          SHA=${{ steps.pr.outputs.sha }}
-          gh api "repos/${GITHUB_REPOSITORY}/statuses/${SHA}" -f state=success -f context=promoted \
-            -f description="fast-forwarded to master by the promote workflow"
-      - name: fast-forward the base (refuses non-ff by construction — the always-rebase tooth)
-        run: |
-          SHA=${{ steps.pr.outputs.sha }}
-          BASE=${{ steps.pr.outputs.base }}
-          git merge-base --is-ancestor "origin/$BASE" "$SHA" || { echo "not a fast-forward of $BASE — rebase the branch first"; exit 1; }
-          git push origin "$SHA:$BASE"   # plain push: git itself rejects anything non-ff
-      - name: align edge to master (master promotions only; skip-warn when edge is ahead)
-        if: steps.pr.outputs.base == 'master'
-        run: |
-          SHA=${{ steps.pr.outputs.sha }}
-          if git merge-base --is-ancestor origin/edge "$SHA"; then
-            git push origin "$SHA:edge" && echo "edge aligned to master ($SHA)"
-          else
-            echo "edge has moved ahead of the promoted head — no align needed"
-          fi
-      - name: dispatch the release workflow (master promotions only)
-        if: steps.pr.outputs.base == 'master'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run release.yml --ref master
-      - name: open the next standing draft PR (master promotions only; idempotent)
-        if: steps.pr.outputs.base == 'master'
-        continue-on-error: true # bookkeeping — never red an already-completed promotion
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # Keep exactly one edge→master "preparing" draft open so the next release always has a
-          # PR to /promote. Idempotent (gh pr list guard) and non-blocking: right after the align
-          # edge==master has no diff, so gh pr create is a quiet no-op until edge advances.
-          OPEN=$(gh pr list --base master --head edge --state open --json number --jq 'length')
-          if [ "$OPEN" != "0" ]; then echo "an edge→master PR is already open — nothing to do"; exit 0; fi
-          SHA=${{ steps.pr.outputs.sha }}
-          # Next version = patch-bump of the just-released frontend version (single source of truth).
-          git show "${SHA}:packages/frontend/package.json" > "${RUNNER_TEMP}/pkg.json"
-          NEXT=$(node -e "const v=require('${RUNNER_TEMP}/pkg.json').version.split('.'); console.log(v[0]+'.'+v[1]+'.'+(+v[2]+1))")
-          gh pr create --base master --head edge --draft \
-            --title "release: v${NEXT} (preparing)" \
-            --body "Standing release draft, opened automatically after the previous promotion. Bump packages/frontend/package.json to v${NEXT} and add changelog/NNN-RELEASE-v${NEXT}.md before /promote." \
-            || echo "no diff between edge and master yet (or a draft already exists) — non-blocking"

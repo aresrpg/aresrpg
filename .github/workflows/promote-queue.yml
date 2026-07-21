@@ -1,0 +1,67 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
+# promote-queue.yml — the land-on-green half of the promotion queue (issue #105).
+#
+# A `check_suite: completed` fires whenever a commit's checks finish (a PR sync, an author's
+# rebase-push, a re-run). This job evaluates EVERY open `promote-requested` PR oldest-first and
+# lands each that is a green fast-forward ancestor of its base, via the SHARED engine
+# (.github/scripts/promote-land.sh) — the exact same asserts + `promoted` stamp + ff-push as the
+# `/promote` handler, never duplicated.
+#
+# Queue semantics: a landing moves the base, so at most the oldest eligible PR lands per event;
+# the rest go stale and land on their authors' next rebase-push (which re-fires this event). No
+# polling, no babysitting — the owner's one `/promote` already blessed each PR; this just waits
+# for green + fast-forward. Silent by design: guidance is posted once by promote.yml, never here.
+#
+# SECURITY: `check_suite`'s `github.sha` is the suite's head — for a fork PR that is UNTRUSTED
+# code. The checkout is therefore PINNED to the default branch so the engine script is always the
+# trusted version; PR heads enter only as DATA (`refs/pull/<n>/head`, fetched inside the script),
+# never as executed code. Landing is further gated by the engine's owner-/promote + approval
+# asserts, and edge's required_signatures rejects any unsigned (e.g. API-rebased) commit.
+#
+# BOOTSTRAP: `check_suite` (like `issue_comment`) only triggers from the workflow file on the
+# DEFAULT branch (master). This file activates the queue the moment it reaches master via a
+# release promotion; until then the live `/promote` handler on master is unchanged.
+name: promote-queue
+on:
+  check_suite:
+    types: [completed]
+# Share the landing lock with promote.yml so a queue land and a /promote land never race a push.
+concurrency:
+  group: promotion-landing
+  cancel-in-progress: false
+permissions:
+  contents: write
+  actions: write # dispatch release.yml after a master ff-push (GITHUB_TOKEN pushes don't self-trigger)
+  pull-requests: write # read/label PRs, open the next standing draft
+  statuses: write # stamp the `promoted` commit status on master landings
+jobs:
+  land:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: any promote-requested PRs? (cheap gate — skip the checkout when idle)
+        id: gate
+        run: |
+          COUNT=$(gh pr list --repo "$GITHUB_REPOSITORY" --label promote-requested --state open --json number --jq 'length')
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          [ "$COUNT" = "0" ] && echo "no promote-requested PRs — nothing to do" || echo "$COUNT promote-requested PR(s) to evaluate"
+      - name: checkout the TRUSTED engine (default branch, never the check_suite head)
+        if: steps.gate.outputs.count != '0'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+      - name: land eligible promote-requested PRs (oldest-first)
+        if: steps.gate.outputs.count != '0'
+        run: |
+          PRS=$(gh pr list --repo "$GITHUB_REPOSITORY" --label promote-requested --state open \
+            --json number,createdAt --jq 'sort_by(.createdAt) | .[].number')
+          while IFS= read -r PR; do
+            [ -z "$PR" ] && continue
+            set +e
+            bash .github/scripts/promote-land.sh "$PR"
+            echo "PR #$PR → rc=$?"
+            set -e
+          done <<< "$PRS"
