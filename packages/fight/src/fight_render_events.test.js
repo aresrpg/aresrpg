@@ -11,10 +11,10 @@ import {
   DEATH_BEAT_MS,
   DISPLACEMENT_CELL_MS,
   TRAP_BEAT_MS,
-  fight_cast_beat_effects,
   produce_predicted_render_events,
   produce_receipt_render_turns,
 } from './fight_render_events.js'
+import { fight_cast_beat_effects } from './present.js'
 
 const arena = {
   width: 20,

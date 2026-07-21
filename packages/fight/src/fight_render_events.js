@@ -29,9 +29,6 @@ export { DISPLACEMENT_CELL_MS, REFERENCE_GAITS } from './fight_render_prims.js'
 export { CAST_BEAT_MS, DAMAGE_BEAT_MS, DEATH_BEAT_MS, FIGHT_RENDER_TIMINGS, TELEPORT_ARRIVAL_MS, TRAP_BEAT_MS }
 export { produce_predicted_render_events } from './fight_predicted_render.js'
 
-export const fight_cast_beat_effects = (source_event) =>
-  (source_event?.effects ?? []).filter((effect) => effect?.status)
-
 const decode_receipt_events = (raw_events, fight_id) =>
   raw_events.flatMap((raw_event, event_index) => {
     const decoded = decode_fight_event(raw_event)

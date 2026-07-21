@@ -78,6 +78,24 @@ module.exports = {
       to: { path: 'node_modules/@aresrpg/engine3(/|$)|^packages/engine/' },
     },
     {
+      name: 'presenter-beat-boundary',
+      comment:
+        'issue #281: a presentation beat must track an OBSERVED STATE DELTA, never an EVENT ARRIVAL. ' +
+        'The receipt/foreign-object -> wave beat EMITTERS (fight_render_events = produce_receipt_render_turns, ' +
+        'fight_predicted_render = produce_predicted_render_events) are reachable ONLY through the presenter ' +
+        'seam: present.js (the pacing the store fold funnels every receipt/object-diff through) and ' +
+        'predict_cast.js (my own local-cast prediction). An arbitrary consumer — a store, page, component, ' +
+        'hook, adapter, or context — importing an emitter would build a wave straight off an arrival, ' +
+        'bypassing the delta-observing dedupe (wave_versions / foreign-replay diff) that keeps a kill from ' +
+        'dying twice. Read the paced beats off the store wave, or the curated builders in present.js, instead.',
+      severity: 'error',
+      from: {
+        path: '^packages/(frontend|fight|party|inventory|world)/src/',
+        pathNot: '^packages/fight/src/(present|predict_cast|fight_render_events)\\.js$',
+      },
+      to: { path: '^packages/fight/src/(fight_render_events|fight_predicted_render)\\.js$' },
+    },
+    {
       name: 'no-circular',
       comment:
         'L-C1 (composition is associative only on a DAG): no module-level import cycles inside ' +

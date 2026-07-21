@@ -28,7 +28,7 @@ import * as project from '@aresrpg/fight/project'
 import { fight_store } from '@aresrpg/fight/store'
 import { fight_view } from '@aresrpg/fight/project'
 import { GRID_CELLS } from '@aresrpg/fight/los'
-import { fight_cast_beat_effects } from '@aresrpg/fight/fight_render_events'
+import { fight_cast_beat_effects } from '@aresrpg/fight/present'
 
 import {
   move_reachable_set,

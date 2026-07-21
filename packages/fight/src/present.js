@@ -184,3 +184,9 @@ export const local_intent_beats = (raw_events, ctx = {}) => {
  *  call site can't re-break the resolver contract. */
 export const local_move_beats = ({ fight_id, character, to_cell, path = [] }) =>
   local_intent_beats(synthetic_move_events({ fight_id, character, to_cell }), { fight_id, move_path: () => path })
+
+/** The status effects a rendered 'cast' beat carries — a pure read of the beat's source event, for the render
+ *  adapter's badge/vfx binding. Lives on the presentation surface (not the receipt→wave producer) so the beat
+ *  emitters stay import-confined to the presenter seam (the presenter-beat-boundary arch gate, #281). */
+export const fight_cast_beat_effects = (source_event) =>
+  (source_event?.effects ?? []).filter((effect) => effect?.status)
