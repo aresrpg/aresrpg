@@ -6,7 +6,7 @@
 // emitter selector (underwater override + canopy gate), the upward canopy occupancy probe, the no-pop
 // crossfade ramp, and the submerge burst envelope.
 
-import { test, expect, describe } from 'bun:test'
+import { test, expect, describe, spyOn } from 'bun:test'
 
 import { PARTICLE_KINDS } from './particles.js'
 import {
@@ -224,5 +224,58 @@ describe('create_ambience — submerged → bubble slot bakes, ramps, and goes v
     })
     director.tick(0.1, { x: 0, y: 0, z: 0 }, { submerged: false })
     expect(director.debug_slots().some((s) => s.kind === 'bubble')).toBe(false)
+  })
+})
+
+// ── #225: the bake-failure catch used to be EMPTY — a broken backend left every ambient field
+// permanently invisible with zero console evidence. This is the acceptance test for the fix: a GPU
+// bake failure must (a) log loud, (b) still reach the ambience.js:285 visibility gate via particles.js's
+// CPU fallback, and (c) leave the real failure reason on the existing debug surface
+// (window.__ambience.debug_slots()) so a probe never has to guess again.
+describe('bake failure recovery — the diagnostic unlock (#225)', () => {
+  test('a rejecting computeAsync still reaches VISIBLE (CPU fallback) and records bake_error, loudly', async () => {
+    const scene = fake_scene()
+    const boom = new Error('compute pipeline validation failed')
+    const boom_renderer = { computeAsync: async () => Promise.reject(boom) }
+    const err_spy = spyOn(console, 'error').mockImplementation(() => {})
+    const director = create_ambience({
+      scene,
+      renderer: boom_renderer,
+      weather_particle_count: RICH_TIER,
+      sample_biome: () => 0,
+      block_at: () => 0,
+    })
+
+    director.tick(0.1, { x: 0, y: 0, z: 0 }, { submerged: true })
+    await flush_async()
+
+    let bubble = director.debug_slots().find((s) => s.kind === 'bubble')
+    let steps = 0
+    for (; steps < 10 && !bubble.visible; steps += 1) {
+      director.tick(0.1, { x: 0, y: 0, z: 0 }, { submerged: true })
+      bubble = director.debug_slots().find((s) => s.kind === 'bubble')
+    }
+
+    expect(bubble.baked, 'the CPU fallback still flips baked true on a GPU-failed slot').toBe(true)
+    expect(bubble.visible, 'the ambience.js:285 gate OPENS even though the GPU bake failed').toBe(true)
+    expect(bubble.bake_error, 'the real failure reason survives on debug_slots()').toContain(boom.message)
+    expect(err_spy.mock.calls.length, 'never a silent empty catch again').toBeGreaterThan(0)
+    err_spy.mockRestore()
+  })
+
+  test('a clean bake leaves bake_error null on the debug surface', async () => {
+    const scene = fake_scene()
+    const director = create_ambience({
+      scene,
+      renderer: fake_renderer(),
+      weather_particle_count: RICH_TIER,
+      sample_biome: () => 0,
+      block_at: () => 0,
+    })
+    director.tick(0.1, { x: 0, y: 0, z: 0 }, { submerged: true })
+    await flush_async()
+    const bubble = director.debug_slots().find((s) => s.kind === 'bubble')
+    expect(bubble.baked).toBe(true)
+    expect(bubble.bake_error).toBe(null)
   })
 })

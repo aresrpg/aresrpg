@@ -68,7 +68,7 @@ export const BURST_PEAK = 2.2
  *  look for them); density carries the rest. Per-spec `opacity` overrides (emissive kinds run lower still). */
 export const BASE_OPACITY = 0.2
 /** Build tag — answers "is my ambience code loaded" in one console line (VFX_BUILD idiom). */
-export const AMBIENCE_BUILD = 'ambience-2026-07-12c'
+export const AMBIENCE_BUILD = 'ambience-2026-07-21a'
 
 /**
  * @typedef {object} AmbienceSpec one environment class' emitter recipe.
@@ -230,7 +230,7 @@ export function create_ambience({
   if (typeof console !== 'undefined') console.info('[AresRPG Ambience] build ' + AMBIENCE_BUILD)
   const base_count = particle_count_for(weather_particle_count)
 
-  /** @typedef {{ kind:string, handle:ReturnType<typeof create_particles>, mesh:InstancedMesh|null, cur:number, baked:boolean }} Slot */
+  /** @typedef {{ kind:string, handle:ReturnType<typeof create_particles>, mesh:InstancedMesh|null, cur:number, baked:boolean, bake_error:string|null }} Slot */
   /** @type {Map<string, Slot>} */
   const slots = new Map()
   let current_kind = ''
@@ -247,7 +247,7 @@ export function create_ambience({
     if (slot) return slot
     const count = Math.round(base_count * density)
     if (count <= 0 || base_count <= 0) {
-      slot = { kind, handle: /** @type {*} */ (null), mesh: null, cur: 0, baked: false }
+      slot = { kind, handle: /** @type {*} */ (null), mesh: null, cur: 0, baked: false, bake_error: null }
       slots.set(kind, slot)
       return slot
     }
@@ -258,15 +258,26 @@ export function create_ambience({
     mesh.renderOrder = 990 // under the fight VFX (994+) — ambient is background
     mesh.visible = false
     scene.add(mesh)
-    slot = { kind, handle, mesh, cur: 0, baked: false }
+    slot = { kind, handle, mesh, cur: 0, baked: false, bake_error: null }
     slots.set(kind, slot)
     // Fire-and-forget the seed compute; reveal the field only once baked (unseeded zeros never flash).
+    // #225: the bake failure used to vanish into an empty catch — a broken backend left this field
+    // permanently invisible with ZERO console evidence. Now: the real reason is LOUD (particles.js's
+    // own bake() already console.error's + falls back to a CPU-seeded bake), and `bake_error` rides
+    // the existing debug surface (window.__ambience.debug_slots()) so a probe can read WHY without
+    // guessing from an unlabeled scene dump (the same guesswork that misdiagnosed the 2026-07-12 note above).
     handle
       .bake(renderer)
-      .then(() => {
+      .then((result) => {
         slot.baked = true
+        slot.bake_error = result?.error ?? null
       })
-      .catch(() => {})
+      .catch((err) => {
+        // Should never fire — particles.js's bake() catches internally and always resolves — but stay
+        // loud instead of re-swallowing if some future bake() variant still rejects (#225's whole point).
+        slot.bake_error = err?.message ?? String(err)
+        console.error(`[ambience] "${kind}" slot bake rejected unexpectedly: ${slot.bake_error}`)
+      })
     return slot
   }
 
@@ -322,6 +333,7 @@ export function create_ambience({
       [...slots.values()].map((s) => ({
         kind: s.kind,
         baked: s.baked,
+        bake_error: s.bake_error,
         cur: s.cur,
         mesh: !!s.mesh,
         visible: s.mesh?.visible ?? null,

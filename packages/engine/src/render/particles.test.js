@@ -8,7 +8,7 @@
 // (5) leaves fall (net downward drift) while motes hang (near-zero vertical drift).
 // GPU seeding/draw is the wiring wave's concern; the JS `particle_seed` mirrors the kernel's statistics.
 
-import { test, expect, describe } from 'bun:test'
+import { test, expect, describe, spyOn } from 'bun:test'
 
 import { QUALITY_TIERS, TIER_ORDER } from '../core/quality/tiers.js'
 
@@ -22,6 +22,8 @@ import {
   PARTICLE_MAX,
   SPRITE_ALPHA_EPS,
   advance_gust,
+  cpu_seed_fallback,
+  create_particles,
   gust_at,
   mote_position,
   particle_bounds,
@@ -397,5 +399,86 @@ describe('sprite_falloff — round soft-sprite alpha (kills the square read)', (
       expect(a).toBeLessThanOrEqual(prev + 1e-9)
       prev = a
     }
+  })
+})
+
+// ── #225: CPU-seeded bake fallback (the ambient VFX diagnostic-unlock fix) ─────────────────────────
+// When the GPU compute bake fails (a broken backend that can't run/validate the seed kernel), bake()
+// must not vanish into a silent forever-invisible field. cpu_seed_fallback reseeds the SAME storage
+// buffers the position/colour nodes already read, straight from the CPU, using the exact packing
+// seed_kernel writes (seeds=[off.x,off.y,off.z,kind], params=[phase,speed,size,0]).
+describe('cpu_seed_fallback — CPU-seeded bake recovery (#225)', () => {
+  /** A fake StorageBufferNode-shaped double: only `.value.array` / `.value.needsUpdate` are read. */
+  const fake_storage_node = (/** @type {number} */ count) => ({
+    value: { array: new Float32Array(count * 4), needsUpdate: false },
+  })
+
+  test('writes particle_seed()-derived values in the exact seed_kernel packing layout', () => {
+    const count = 8
+    const salt = 3
+    const seeds_node = fake_storage_node(count)
+    const params_node = fake_storage_node(count)
+    cpu_seed_fallback(seeds_node, params_node, count, salt)
+    for (let i = 0; i < count; i += 1) {
+      const s = particle_seed(i, salt)
+      const o = i * 4
+      expect(seeds_node.value.array[o], `off.x[${i}]`).toBeCloseTo(s.off[0], 6)
+      expect(seeds_node.value.array[o + 1], `off.y[${i}]`).toBeCloseTo(s.off[1], 6)
+      expect(seeds_node.value.array[o + 2], `off.z[${i}]`).toBeCloseTo(s.off[2], 6)
+      expect(seeds_node.value.array[o + 3], `kind[${i}]`).toBeCloseTo(s.kind, 6)
+      expect(params_node.value.array[o], `phase[${i}]`).toBeCloseTo(s.phase, 6)
+      expect(params_node.value.array[o + 1], `speed[${i}]`).toBeCloseTo(s.speed, 6)
+      expect(params_node.value.array[o + 2], `size[${i}]`).toBeCloseTo(particle_size(s.kind), 6)
+      expect(params_node.value.array[o + 3], `pad[${i}]`).toBe(0)
+    }
+  })
+
+  test('flags both buffers for GPU upload (the standard BufferAttribute.needsUpdate path)', () => {
+    const seeds_node = fake_storage_node(4)
+    const params_node = fake_storage_node(4)
+    cpu_seed_fallback(seeds_node, params_node, 4, 0)
+    expect(seeds_node.value.needsUpdate).toBe(true)
+    expect(params_node.value.needsUpdate).toBe(true)
+  })
+
+  test('deterministic — same (count, salt) reproduces byte-identical buffers', () => {
+    const make = () => {
+      const seeds_node = fake_storage_node(4)
+      const params_node = fake_storage_node(4)
+      cpu_seed_fallback(seeds_node, params_node, 4, 11)
+      return { seeds: [...seeds_node.value.array], params: [...params_node.value.array] }
+    }
+    expect(make()).toEqual(make())
+  })
+})
+
+describe('create_particles().bake — GPU failure recovers via the CPU fallback, loudly (#225)', () => {
+  test('a rejecting computeAsync never rejects bake(): logs loud, returns {ok:false,error}', async () => {
+    const handle = create_particles({ kind: 'mote', count: 5, salt: 2 })
+    const boom = new Error('depth32float depth24plus validation failed')
+    const bad_renderer = { computeAsync: async () => Promise.reject(boom) }
+    const err_spy = spyOn(console, 'error').mockImplementation(() => {})
+    const result = await handle.bake(bad_renderer) // must resolve, never reject
+    expect(result.ok).toBe(false)
+    expect(result.error).toBe(boom.message)
+    expect(err_spy).toHaveBeenCalledTimes(1)
+    expect(String(err_spy.mock.calls[0][0])).toContain(boom.message)
+    expect(String(err_spy.mock.calls[0][0])).toContain('mote') // names the kind — no guessing which field died
+    err_spy.mockRestore()
+  })
+
+  test('a clean computeAsync resolves {ok:true,error:null} with zero console noise', async () => {
+    const handle = create_particles({ kind: 'snow', count: 5 })
+    const good_renderer = { computeAsync: async () => {} }
+    const err_spy = spyOn(console, 'error').mockImplementation(() => {})
+    const result = await handle.bake(good_renderer)
+    expect(result).toEqual({ ok: true, error: null })
+    expect(err_spy).not.toHaveBeenCalled()
+    err_spy.mockRestore()
+  })
+
+  test('the count<=0 stub resolves the SAME {ok,error} shape (one bake() contract, no dead branch)', async () => {
+    const handle = create_particles({ kind: 'mote', count: 0 })
+    expect(await handle.bake({})).toEqual({ ok: true, error: null })
   })
 })
