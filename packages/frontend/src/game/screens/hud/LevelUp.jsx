@@ -3,8 +3,9 @@
 // Level-up congrats card (T-U9 "Level Burst", owner-locked) — a transient center celebration that fires
 // ON the active character crossing a level. Mock-to-match the locked design (/tmp/ares-mock/levelup-LOCKED
 // .html): the big glowing level number in a ring + sparks, the class line, the two points-gained tiles, an
-// optional NEW SPELL UNLOCKED row, and the Allocate/Later CTA. Glass over the LIVE world (backdrop-filter),
-// not a flat bg. Gated off the discrete `level_up` store slice owned by core/modules/player_experience.js.
+// optional NEW SPELL UNLOCKED row, and the Allocate/Later CTA. Opaque .result--fe ground (issue #369) — no
+// live-world/nameplate bleed-through, not translucent glass. Gated off the discrete `level_up` store slice
+// owned by core/modules/player_experience.js.
 //
 // Data is pulled, never hardcoded: the new level + points gained come from the level-up EVENT (the slice);
 // the class line + the unlocked spell are resolved from @aresrpg/sdk (classes.json level->spell map cross-
@@ -25,6 +26,7 @@ import { newly_unlocked } from './spell-unlock-select.js'
 import { worlds_unlocked_between } from './level_unlocks.js'
 import { load_world_gates } from './world_levels.js'
 import './result.css'
+import './levelup-radiant.css'
 
 /** @typedef {{ id: string, name: string, title: string }} ClassDef */
 
@@ -128,42 +130,74 @@ export function LevelUp({ on_allocate }) {
   return (
     <div className="hud-middle lvlup-stage">
       <div
-        className="result result--tall result--fe"
+        className="result result--tall result--fe radiant"
         role="dialog"
         aria-modal="true"
         aria-label={t('level_up.aria_label', { level })}
       >
+        {/* RADIANT ceremony (owner pick, round3-radiant): fine gold corner filigree — one <symbol>,
+            reused 4× via <use> + CSS mirroring (scaleX/scaleY/scale(-1,-1) per corner). */}
+        <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
+          <defs>
+            <symbol id="lvlup-filigree" viewBox="0 0 64 64">
+              <path
+                d="M6 48 L6 16 Q6 6 16 6 L48 6"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.15"
+                strokeLinecap="round"
+              />
+              <path d="M6 30 Q19 30 19 17 Q19 6 6 6" fill="none" stroke="currentColor" strokeWidth="0.9" opacity="0.7" />
+              <path d="M6 1 L11 6 L6 11 L1 6 Z" fill="currentColor" stroke="none" />
+              <circle cx="48" cy="6" r="1.7" fill="currentColor" stroke="none" />
+              <circle cx="6" cy="48" r="1.7" fill="currentColor" stroke="none" />
+            </symbol>
+          </defs>
+        </svg>
+        <svg className="rad-crn rad-crn--tl" viewBox="0 0 64 64" aria-hidden="true">
+          <use href="#lvlup-filigree" />
+        </svg>
+        <svg className="rad-crn rad-crn--tr" viewBox="0 0 64 64" aria-hidden="true">
+          <use href="#lvlup-filigree" />
+        </svg>
+        <svg className="rad-crn rad-crn--bl" viewBox="0 0 64 64" aria-hidden="true">
+          <use href="#lvlup-filigree" />
+        </svg>
+        <svg className="rad-crn rad-crn--br" viewBox="0 0 64 64" aria-hidden="true">
+          <use href="#lvlup-filigree" />
+        </svg>
+
         <div className="lvllabel">{t('level_up.title')}</div>
 
         <div className="lvlhero">
-          <div className="lvlring" />
+          <div className="rad-rays" aria-hidden="true" />
+          <div className="rad-glow" aria-hidden="true" />
+          <span className="rad-spark" style={{ '--x': '-168px', '--y': '-108px', '--d': '420ms' }} aria-hidden="true" />
           <span
-            className="spark"
-            style={{ left: '24%', top: '14px', width: '5px', height: '5px' }}
+            className="rad-spark rad-spark--em"
+            style={{ '--x': '172px', '--y': '-96px', '--d': '460ms' }}
+            aria-hidden="true"
           />
+          <span className="rad-spark" style={{ '--x': '198px', '--y': '-4px', '--d': '500ms' }} aria-hidden="true" />
           <span
-            className="spark"
-            style={{
-              left: '74%',
-              top: '30px',
-              width: '4px',
-              height: '4px',
-              animationDelay: '90ms',
-            }}
+            className="rad-spark rad-spark--em"
+            style={{ '--x': '-196px', '--y': '20px', '--d': '540ms' }}
+            aria-hidden="true"
           />
+          <span className="rad-spark" style={{ '--x': '-120px', '--y': '138px', '--d': '460ms' }} aria-hidden="true" />
           <span
-            className="spark"
-            style={{
-              left: '60%',
-              top: '8px',
-              width: '3px',
-              height: '3px',
-              animationDelay: '170ms',
-            }}
+            className="rad-spark rad-spark--em"
+            style={{ '--x': '130px', '--y': '148px', '--d': '500ms' }}
+            aria-hidden="true"
           />
-          <div className="lvlnum">
-            <span className="pre">{t('level_up.reached')}</span>
-            {level}
+          <span className="rad-spark" style={{ '--x': '4px', '--y': '-172px', '--d': '580ms' }} aria-hidden="true" />
+          <div className="rad-numwrap">
+            <span className="rad-pre">{t('level_up.reached')}</span>
+            {/* data-level feeds the ::after foil-sheen pseudo-element (content: attr(data-level)) so the
+                one-shot sheen sweep never drifts from the real number. */}
+            <div className="rad-num" data-level={level}>
+              {level}
+            </div>
           </div>
         </div>
 

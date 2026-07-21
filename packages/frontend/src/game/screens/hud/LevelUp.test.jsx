@@ -12,6 +12,10 @@
 //
 // (b) OPAQUE GROUND — the card root carries `.result--fe`, the SAME opaque #07080c + vignette plate
 // FightReport's fight-end card already uses (result.css), replacing the translucent `.result` base alone.
+//
+// (c) RADIANT CEREMONY (owner pick, round3-radiant — follow-up the same day) — the card root ALSO carries
+// `radiant` (levelup-radiant.css), the ember/gold ceremony skin layered on top of the opaque floor. Plain
+// class-presence pin, same rationale as (b): SSR proves markup shape, not animation/visual fidelity.
 import { readFileSync } from 'node:fs'
 
 import { afterAll, describe, expect, spyOn, test } from 'bun:test'
@@ -47,7 +51,14 @@ const render = () => renderToStaticMarkup(createElement(I18nextProvider, { i18n 
 describe('LevelUp — issue #369: opaque ground + no auto-dismiss', () => {
   test('the card root carries the opaque .result--fe canon, not the translucent glass alone', () => {
     const html = render()
-    expect(html).toContain('class="result result--tall result--fe"')
+    const root_class = html.match(/<div class="(result[^"]*)"/)?.[1]
+    expect(root_class?.split(' ')).toContain('result--fe')
+  })
+
+  test('the card root also carries the radiant ceremony skin (owner pick, round3-radiant)', () => {
+    const html = render()
+    const root_class = html.match(/<div class="(result[^"]*)"/)?.[1]
+    expect(root_class?.split(' ')).toContain('radiant')
   })
 
   test('the mount effect never arms a dismiss timer (source contract — see file header for why SSR cannot prove this by execution)', () => {
