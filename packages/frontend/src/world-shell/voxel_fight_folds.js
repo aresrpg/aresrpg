@@ -303,16 +303,33 @@ export function cast_face_target(caster_cell, target_cell) {
  * rig gets one death beat + removal; an already-dying or absent rig stays skipped. This single branch prevents
  * both lingering dead players and a snapshot reconcile recreating a dead mob.
  *
+ * #170 POOFED-CORPSE GUARD (4th recurrence — the LIFECYCLE half, distinct from the retirement HP projection):
+ * once a rig has POOFED this fight it stays down while COMMITTED-dead, even through an engine_view.dead flicker
+ * (`fighter.dead` reading false while a re-armed death beat animates); the ONLY door back is `committed_dead`
+ * false (a genuine divergence-correction revive). And a committed-dead fighter never SPAWNS a fresh model.
+ *
  * @param {{ id: string, dead?: boolean, is_player?: boolean, cell: {x:number,y:number} }} fighter a fight.fighters value
  * @param {{ winner: number, has_entity: boolean, is_dying: boolean, walking: boolean, replay_owned: boolean,
- *   placed: {x:number,y:number} | null, queued?: boolean }} ctx the adapter's live per-id state (mirrors + the fight winner)
+ *   placed: {x:number,y:number} | null, queued?: boolean, poofed?: boolean, committed_dead?: boolean }} ctx the
+ *   adapter's live per-id state (mirrors + the AUTHORITATIVE committed liveness — never the flickering engine_view.dead)
  * @returns {{ kind: 'despawn' | 'skip' | 'walk' | 'upsert', to?: {x:number,y:number} }}
  */
-export function entity_fold_action(fighter, { has_entity, is_dying, walking, replay_owned, placed, queued = false }) {
+export function entity_fold_action(
+  fighter,
+  { has_entity, is_dying, walking, replay_owned, placed, queued = false, poofed = false, committed_dead = false }
+) {
   const is_mob = !fighter.is_player
+  // #170 POOFED-CORPSE GUARD: a rig already poofed this fight stays DOWN — never re-upsert a fresh (default
+  // -orientation) model, never re-fire death — while AUTHORITATIVELY (committed) still dead, EVEN when
+  // engine_view.dead momentarily flickers FALSE (a re-armed death beat flips death_presenting_ids "animating").
+  // The ONE door back is the COMMITTED fold showing it genuinely ALIVE (the divergence-correction revive).
+  if (poofed) return committed_dead ? { kind: 'skip' } : { kind: 'upsert' }
   // ONE DEAD RULE, amended: a chain-dead fighter whose beats are STILL in the unacked wave keeps its rig —
   // its own sequenced hit → number → death owns the despawn (the out-of-band fold death raced it before).
   if (fighter.dead) return has_entity && !is_dying && !queued ? { kind: 'despawn' } : { kind: 'skip' }
+  // BELT-AND-BRACES: a COMMITTED-dead fighter with NO live rig never SPAWNS a fresh model (which would re-play its
+  // death from an idle pose) — even on an engine_view.dead flicker that precedes its poof. A live rig refreshes in place.
+  if (committed_dead && !has_entity) return { kind: 'skip' }
   // living: an in-flight walk / paced replay owns the position this frame → leave it (the mid-lerp teleport guard).
   if (has_entity && (walking || replay_owned)) return { kind: 'skip' }
   // living MOB drifted from its placed cell with no beat owning it → smooth-walk (the fold's position safety net).
