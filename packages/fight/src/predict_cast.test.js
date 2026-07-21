@@ -34,6 +34,7 @@ import {
   evolve_caster_cell,
   evolve_flush_casts,
   predict_sim_cast,
+  weapon_spell_template,
 } from './predict_cast.js'
 import { bfsPathCost, encode } from './los.js'
 import { create_fight_store, display_state, presented_state } from './store.js'
@@ -251,6 +252,32 @@ describe('sim-backed own-cast prediction', () => {
     }
     expect(chain_critical({ ...clock, slot: 0 }, 4, 0)).toBe(false)
     expect(chain_critical({ ...clock, slot: 2 }, 4, 0)).toBe(true)
+  })
+
+  test('a known-critical turn-seed slot marks the drafted damage beat as critical', () => {
+    const critical = chain_critical(
+      {
+        world_seed: 123456789,
+        spawn_id: 42,
+        turn_deadline_ms: 1752192000000,
+        seat: 0,
+        slot: 2,
+      },
+      4,
+      0
+    )
+    const prediction = predict_sim_cast({
+      state: fresh_state(),
+      caster_id: 'p0',
+      spell: weapon_spell_template({ ap_cost: 3, damage: 5, crit_damage: 9, crit_rate: 4, reach: 3 }),
+      target: ENEMY_CELL,
+      arena: MATRIX_ARENA,
+      critical,
+    })
+    const damage = prediction.beats.find((beat) => beat.kind === 'damage')
+
+    expect(critical).toBe(true) // fixture slot 2 roll 1518 is below the rate-4 threshold 2500
+    expect(damage.payload).toMatchObject({ damage: 9, is_critical: true })
   })
 })
 
