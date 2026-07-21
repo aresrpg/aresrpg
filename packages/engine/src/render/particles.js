@@ -361,6 +361,40 @@ export function particle_size(kind) {
   return kind < LEAF_FRACTION ? LEAF_SIZE : MOTE_SIZE
 }
 
+/**
+ * CPU-seeded fallback for the per-particle storage buffers, used when the GPU compute bake fails (some
+ * backend can't run/validate the seed kernel — a compute/format error, an unsupported feature, etc. —
+ * see bake()'s catch below, #225). Writes `particle_seed()`'s deterministic pseudo-random seed directly
+ * into the SAME buffers `positionNode`/`colorNode` already read (a `StorageInstancedBufferAttribute`'s
+ * backing array), packed in the EXACT layout `seed_kernel` writes (seeds=[off.x,off.y,off.z,kind],
+ * params=[phase,speed,size,0]), then flags them for GPU upload via the standard
+ * `BufferAttribute.needsUpdate` path — no compute dispatch, no material rebuild. Statistically
+ * equivalent to the GPU hash, not bit-identical (see particle_seed's own contract) — the fallback field
+ * reads as the same ambient scatter, just seeded on the CPU. Effect confined to its two buffer args.
+ * @param {*} seeds_node the `seeds` instancedArray storage node (vec4: off.xyz, kind)
+ * @param {*} params_node the `params` instancedArray storage node (vec4: phase, speed, size, 0)
+ * @param {number} count @param {number} salt
+ */
+export function cpu_seed_fallback(seeds_node, params_node, count, salt) {
+  const seeds_arr = seeds_node.value.array
+  const params_arr = params_node.value.array
+  for (let i = 0; i < count; i += 1) {
+    const { off, phase, speed, kind } = particle_seed(i, salt)
+    const [ox, oy, oz] = off
+    const o = i * 4
+    seeds_arr[o] = ox
+    seeds_arr[o + 1] = oy
+    seeds_arr[o + 2] = oz
+    seeds_arr[o + 3] = kind
+    params_arr[o] = phase
+    params_arr[o + 1] = speed
+    params_arr[o + 2] = particle_size(kind)
+    params_arr[o + 3] = 0
+  }
+  seeds_node.value.needsUpdate = true
+  params_node.value.needsUpdate = true
+}
+
 /** Radial alpha below this (a quad corner) is DISCARDED — the round-sprite crop threshold. */
 export const SPRITE_ALPHA_EPS = 0.01
 
@@ -401,11 +435,19 @@ void lerp
  */
 
 /**
+ * @typedef {object} BakeResult
+ * @property {boolean} ok true ⇒ the GPU compute kernel ran cleanly; false ⇒ it failed and
+ *   `cpu_seed_fallback` reseeded the buffers instead (#225 — the field is drawable either way).
+ * @property {string|null} error the GPU failure reason (null on a clean bake).
+ */
+
+/**
  * @typedef {object} ParticlesHandle
  * @property {*} object the `Sprite`/instanced draw node object to `scene.add` (null when count 0).
  * @property {number} count live particle count.
  * @property {*} opacity `uniform(float)` — global fade (day/weather driven; wiring sets it).
- * @property {(renderer:*)=>Promise<void>} bake run the seed compute kernel once (await at setup).
+ * @property {(renderer:*)=>Promise<BakeResult>} bake run the seed compute kernel once (await at setup);
+ *   never rejects — a GPU failure recovers via cpu_seed_fallback and reports it in the result instead.
  * @property {()=>void} dispose release GPU buffers.
  */
 
@@ -431,7 +473,7 @@ export function create_particles(opts = {}) {
       object: null,
       count: 0,
       opacity,
-      bake: async () => {},
+      bake: async () => ({ ok: true, error: null }),
       dispose: () => {},
     }
   }
@@ -551,9 +593,26 @@ export function create_particles(opts = {}) {
   // Sprite/Mesh and scene.add's it. We expose the material as `object` for the wiring to mount.
   const object = material
 
-  /** @param {*} renderer */
+  /** @param {*} renderer @returns {Promise<BakeResult>} */
   const bake = async (renderer) => {
-    await renderer.computeAsync(seed_kernel)
+    try {
+      await renderer.computeAsync(seed_kernel)
+      return { ok: true, error: null }
+    } catch (err) {
+      // #225: this used to be an empty catch (ambience.js's `.catch(() => {})`) — a broken backend left
+      // EVERY ambient field permanently invisible with zero console evidence (the compute kernel never
+      // populates seeds/params, so mote_position reads all-zero offsets forever; nothing THROWS past
+      // this point). Now: loud + recovered — particle_seed()'s deterministic CPU hash (already the
+      // TESTED reference mote_position() validates against) reseeds the SAME buffers the position/
+      // colour nodes already read via cpu_seed_fallback (no compute dispatch, no material rebuild).
+      const reason = err?.message ?? String(err)
+      console.error(
+        `[particles] GPU seed bake failed (kind=${opts.kind ?? 'ambient'}, count=${count}) — ` +
+          `falling back to a CPU-seeded bake: ${reason}`
+      )
+      cpu_seed_fallback(seeds, params, count, salt)
+      return { ok: false, error: reason }
+    }
   }
   const dispose = () => {
     material.dispose()
