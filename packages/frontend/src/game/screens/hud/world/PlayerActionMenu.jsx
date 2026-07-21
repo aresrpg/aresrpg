@@ -61,8 +61,11 @@ export function PlayerActionMenu() {
   const on_invite = async () => {
     close()
     if (!can_invite || party_busy) return
-    // Cold start: no party yet → create one first, then invite, so a single click works (mirrors the old panel).
-    if (!use_party.getState().party_id) await use_party.getState().create()
+    // Cold start: no party yet → create a BARE one first, then invite, so a single click works (mirrors the old
+    // panel). #329: create() (not create_bare()) used to sit here and unconditionally swept every one of MY
+    // OWN owned alt characters into the party as real, accepted on-chain members — inviting one specific other
+    // player never means "also enroll my siblings"; that stays the explicit picker's job (invite_owned).
+    if (!use_party.getState().party_id) await use_party.getState().create_bare()
     await use_party.getState().invite(target.id, address)
   }
   const on_fast_travel = () => {

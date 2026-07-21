@@ -421,7 +421,7 @@ test('system-initiated ensure_owned_party creates QUIETLY — one create tx, mar
   use_party.getState()._stop_polling()
 })
 
-test('a human create() (PlayerActionMenu) stays VISIBLE — one create tx, marked not-silent', async () => {
+test('a human create() stays VISIBLE — one create tx, marked not-silent', async () => {
   roster = [selected]
   party_actions.create_party.mockImplementation(async (...args) => {
     action_calls.push(['create', ...args])
@@ -433,6 +433,27 @@ test('a human create() (PlayerActionMenu) stays VISIBLE — one create tx, marke
   const creates = action_calls.filter((call) => call[0] === 'create')
   expect(creates).toHaveLength(1)
   expect(creates[0][2]).toEqual({ silent: false }) // explicit-user entry → the visible toast is preserved
+  use_party.getState()._stop_polling()
+})
+
+// ── #329: the phantom-follower / phantom-fight-seat bug — inviting ONE other player cold-started through
+//    create() above, which unconditionally swept every owned alt into the party as REAL, accepted, on-chain
+//    members (join_owned_alts_to_party signs+executes one party_invite_accept_own_ptb per alt — a live owner
+//    repro confirmed the phantoms held real fight turn slots, not just a rendering glitch). PlayerActionMenu.jsx
+//    now cold-starts through create_bare() instead — same tx door, zero alt sweep. ──
+
+test('create_bare() never sweeps owned alts, even when eligible alts exist — the #329 repro shape', async () => {
+  roster = [selected, owned_alt] // a same-world alt WOULD be swept if this reached create()'s owned-join branch
+  party_actions.create_party.mockImplementation(async (...args) => {
+    action_calls.push(['create', ...args])
+    return { party_id: '0xnew', receipt: {} }
+  })
+
+  const created = await use_party.getState().create_bare()
+
+  expect(created).toEqual({ party_id: '0xnew', character_id: selected.id, address: '0xwallet' })
+  expect(action_calls).toEqual([['create', selected.id, { silent: false }]])
+  expect(action_calls.some((call) => call[0] === 'join-owned')).toBe(false) // the #329 assertion: no alt sweep
   use_party.getState()._stop_polling()
 })
 

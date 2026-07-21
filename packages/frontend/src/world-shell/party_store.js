@@ -140,8 +140,13 @@ party_store.setState({
     party_store.setState(patch)
   },
 
-  /** Sign one bare party create for the selected character and bind its receipt (no owned auto-join). */
-  async _create_bare({ silent = false } = {}) {
+  /** Sign one bare party create for the selected character and bind its receipt (NO owned auto-join). Public —
+   *  the cold-start "invite one other player" seam (PlayerActionMenu.jsx) calls this directly: #329, that flow
+   *  used to cold-start through create() below, which unconditionally sweeps every owned alt into the party as
+   *  real, accepted, on-chain members. A deliberate multichar squad stays the explicit picker's job
+   *  (invite_owned, PartyFrame.jsx) or the system's own silent ensure_owned_party() — never a side effect of
+   *  inviting a stranger. */
+  async create_bare({ silent = false } = {}) {
     const character_id = selected_character_id()
     if (!character_id) return null
     const { party_id } = await tx_create_party(character_id, { silent })
@@ -161,7 +166,7 @@ party_store.setState({
     get()._clear_character_mismatch(character_id)
     get()._tx_phase({ busy: true, error: null })
     try {
-      const created = await get()._create_bare({ silent })
+      const created = await get().create_bare({ silent })
       if (!created) throw new Error('create_party did not return a party id')
       const { party_id, address } = created
       const invited_character_ids = owned_join_ids(get().party, address, get()._owned_join_blocked_ids)
@@ -196,7 +201,7 @@ party_store.setState({
     get()._tx_phase({ busy: true, error: null })
     try {
       if (!get().party_id) {
-        const created = await get()._create_bare()
+        const created = await get().create_bare()
         if (!created) throw new Error('create_party did not return a party id')
       }
       await join_owned_alts_to_party({
