@@ -22,9 +22,7 @@ describe('read API client IP resolution', () => {
   })
 
   test('falls back to X-Forwarded-For when no Cloudflare header is present (local/self-hosted)', () => {
-    expect(client_ip(req({ 'x-forwarded-for': '198.51.100.9, 10.0.0.1' }), server('10.244.1.1'))).toBe(
-      '198.51.100.9'
-    )
+    expect(client_ip(req({ 'x-forwarded-for': '198.51.100.9, 10.0.0.1' }), server('10.244.1.1'))).toBe('198.51.100.9')
   })
 
   test('falls back to the socket address when neither header is present', () => {

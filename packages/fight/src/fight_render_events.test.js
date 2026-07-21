@@ -351,9 +351,9 @@ describe('receipt fight render events', () => {
     expect(receipt.turns.map((turn) => turn.source_id)).toEqual(['p0'])
     // the kill rides p0's OWN turn (cast, then both damage beats in emit order) — never a foreign turn to re-pace.
     expect(receipt.turns[0].events.map((event) => event.kind)).toEqual(['cast', 'damage', 'damage'])
-    expect(receipt.turns[0].events.filter((event) => event.kind === 'damage').map((event) => event.payload.killed)).toEqual(
-      [true, false]
-    )
+    expect(
+      receipt.turns[0].events.filter((event) => event.kind === 'damage').map((event) => event.payload.killed)
+    ).toEqual([true, false])
   })
 })
 
