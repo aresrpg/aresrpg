@@ -140,11 +140,13 @@ export const draining = (state) => (state.wave ?? []).length > 0
 export const cast_presenting = (state) =>
   (state.wave ?? []).some((t) => t.is_local && (t.beats ?? []).some((b) => b.kind === 'cast'))
 
-/** Fighters whose DEATH beat still rides an UNACKED wave turn — presentation owns their liveness (the pacing
- *  law: the attack, its vfx, the hit, and the floating number all play out before a kill can disappear). The
- *  core folds hp→0 the instant a kill is known (chain parity — never delayed); these ids
- *  keep `engine_view.dead` FALSE so the adapter's rig reconcile + HUD hold the fighter through its
- *  sequenced attack → vfx → hit → floater → death, despawning exactly when the killing turn acks
+/** Fighters whose KILLING damage beat still rides an UNACKED wave turn — presentation owns their liveness (the
+ *  pacing law: the attack, its vfx, the hit, and the floating number all play out before a kill can disappear).
+ *  #170 (5th recurrence): there is no separate 'death'-kind beat anymore — held on the 'damage' beat's `killed`
+ *  flag instead (the presenter derives the actual death visual from the presented-state edge this hold produces,
+ *  never from an event-shaped beat). The core folds hp→0 the instant a kill is known (chain parity — never
+ *  delayed); these ids keep `engine_view.dead` FALSE so the adapter's rig reconcile + HUD hold the fighter through
+ *  its sequenced attack → vfx → hit → floater → death, despawning exactly when the killing turn acks
  *  ('presented' = the drain, capped by the store's tick watchdog — never a timer). LOCAL kills are the live
  *  case (intents paint instantly, so the presented_state entry mask can't hold them); non-local kills are
  *  already entry-masked, so this is one uniform rule, not a second lane. Targeting stays truthful:
@@ -153,7 +155,8 @@ export const cast_presenting = (state) =>
 const death_presenting_ids = (s) => {
   const ids = new Set()
   for (const t of s.wave ?? [])
-    for (const b of t.beats ?? []) if (b.kind === 'death' && b.payload?.target_id) ids.add(b.payload.target_id)
+    for (const b of t.beats ?? [])
+      if (b.kind === 'damage' && b.payload?.killed && b.payload?.target_id) ids.add(b.payload.target_id)
   return ids
 }
 

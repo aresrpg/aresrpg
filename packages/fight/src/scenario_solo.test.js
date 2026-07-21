@@ -285,7 +285,9 @@ describe('§7b death law + victory + settlement', () => {
       }),
       { fight_id: FIGHT }
     )
-    expect(beats.some((b) => b.kind === 'death')).toBe(true)
+    // #170 (5th recurrence): no 'death'-kind beat anymore — the killing 'damage' beat carries `killed` (the
+    // presenter derives the death visual from the presented-state edge, see voxel_fight_adapter.observe_death).
+    expect(beats.some((b) => b.kind === 'damage' && b.payload?.killed)).toBe(true)
     store
       .getState()
       .input(

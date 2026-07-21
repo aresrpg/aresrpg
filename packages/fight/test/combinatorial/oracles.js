@@ -78,11 +78,7 @@ export const beat_grammar_violations = (wave, { trap_cells = [], grid_width = 20
     //     trap_place) in the same turn is an effect rendered ahead of its cause (the mis-ordered flush class).
     const first_opener = beats.findIndex((b) => b.kind === 'cast' || b.kind === 'move' || b.kind === 'trap_place')
     beats.forEach((b, bi) => {
-      if (
-        (b.kind === 'damage' || b.kind === 'displacement' || b.kind === 'death') &&
-        first_opener !== -1 &&
-        bi < first_opener
-      )
+      if ((b.kind === 'damage' || b.kind === 'displacement') && first_opener !== -1 && bi < first_opener)
         out.push(
           `grammar.cast_before_effects: turn ${ti} beat ${bi} '${b.kind}' precedes first opener at ${first_opener}`
         )
@@ -123,13 +119,13 @@ export const beat_grammar_violations = (wave, { trap_cells = [], grid_width = 20
         out.push(`grammar.trap_landing: turn ${ti} trap at ${cell_key(cell)} != victim landing ${cell_key(at)}`)
     })
 
-    // (d) DEATH BEAT for every lethal damage — the rig-exclusion (death-hold) beat must follow the kill.
+    // (d) LETHAL DAMAGE IS FLAGGED — #170 (5th recurrence): there is no separate 'death' beat anymore (the
+    //     presenter derives the death visual from the presented-state alive→dead edge, never the wave grammar);
+    //     the invariant narrows to "a lethal hit's damage beat is flagged `killed`" so new_health/killed can
+    //     never desync — the presenter's whole edge-detection trusts `killed` as the honest cause signal.
     for (const b of beats)
-      if (b.kind === 'damage' && (b.payload.killed || b.payload.new_health === 0)) {
-        const has_death = beats.some((d) => d.kind === 'death' && d.payload.target_id === b.payload.target_id)
-        if (!has_death)
-          out.push(`grammar.death_beat: turn ${ti} lethal hit on ${b.payload.target_id} has no death beat`)
-      }
+      if (b.kind === 'damage' && b.payload.new_health === 0 && !b.payload.killed)
+        out.push(`grammar.death_beat: turn ${ti} lethal hit on ${b.payload.target_id} (new_health 0) missing killed flag`)
 
     // (e) MOVE path integrity — the arrival beat's cell equals the walked path's end, and the path is a
     //     contiguous 4-dir cardinal sequence (a gap/diagonal is a malformed render path).

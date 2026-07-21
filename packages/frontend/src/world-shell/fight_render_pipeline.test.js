@@ -87,18 +87,19 @@ test('a receipt wave produces its trap-push beats in order through one non-overl
   )
 
   // The two mob turns play SERIALLY (never overlapping), each beat in its resolved order: p0's cast → push → trap
-  // → damage → death, then m1's move → arrival → cast → damage.
+  // → damage (the 2nd damage beat carries killed:true — #170 5th recurrence: no separate 'death' beat anymore,
+  // the presenter derives the death visual from the presented-state edge), then m1's move → arrival → cast → damage.
   expect(trace).toEqual([
     'receipt-p0:cast',
     'receipt-p0:displacement',
     'receipt-p0:trap_trigger',
     'receipt-p0:damage',
     'receipt-p0:damage',
-    'receipt-p0:death',
     'receipt-m1:move',
     'receipt-m1:arrival',
     'receipt-m1:cast',
     'receipt-m1:damage',
   ])
+  expect(receipt.turns[0].events.at(-1)).toMatchObject({ kind: 'damage', payload: { killed: true } })
   expect(queue.size()).toBe(0)
 })

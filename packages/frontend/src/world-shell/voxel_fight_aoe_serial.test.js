@@ -12,6 +12,8 @@
 
 import { describe, expect, it } from 'bun:test'
 
+import { is_death_edge } from './voxel_fight_folds.js'
+
 const tick = () => new Promise((r) => setTimeout(r, 1)) // a real async gap so a lost await interleaves
 
 // mock board: entity_beat logs start/end around the async gap and resolves when the "animation" completes.
@@ -24,28 +26,42 @@ const make_board = (/** @type {string[]} */ log) => ({
 })
 
 // CHARACTER-FOR-CHARACTER mirror of voxel_fight_adapter.play_victim_reaction (the serial loop under proof).
-const play_victim_reaction = async (board, victim_beats, { entity_ids, is_mob, dying, my_kills, hitflash_on }) => {
+// #170 (5th recurrence): `then_death` is enrichment, never itself the trigger — observe_death (the presented-
+// state transition fold, mirrored here too) gates the actual death beat, once per genuine alive→dead edge.
+const play_victim_reaction = async (
+  board,
+  victim_beats,
+  { entity_ids, is_mob, dying, my_kills, hitflash_on, observe_death }
+) => {
   for (const beat of victim_beats) {
     if (!entity_ids.has(beat.id)) continue
     if (is_mob(beat.id) && dying.has(beat.id) && !my_kills.has(beat.id)) continue
     const done = board.entity_beat(beat.id, { anim: beat.anim, float: beat.float })
     if (beat.float && hitflash_on()) void done.then(() => board.flash_entity?.(beat.id))
     await done // SERIAL: block until THIS victim's hit + number resolves before its death / the next victim
-    if (beat.then_death) {
+    if (beat.then_death && observe_death(beat.id, true)) {
       const death_done = board.entity_beat(beat.id, { anim: 'death' })
       await death_done // the next victim only starts once this corpse's death beat has fully played
     }
   }
 }
 
-const ctx = (over = {}) => ({
-  entity_ids: new Set(['mob-0', 'mob-1', 'mob-2']),
-  is_mob: (/** @type {string} */ id) => String(id).startsWith('mob-'),
-  dying: new Set(),
-  my_kills: new Set(),
-  hitflash_on: () => false,
-  ...over,
-})
+const ctx = (over = {}) => {
+  const last_dead = /** @type {Map<string, boolean>} */ (new Map())
+  return {
+    entity_ids: new Set(['mob-0', 'mob-1', 'mob-2']),
+    is_mob: (/** @type {string} */ id) => String(id).startsWith('mob-'),
+    dying: new Set(),
+    my_kills: new Set(),
+    hitflash_on: () => false,
+    observe_death: (/** @type {string} */ id, /** @type {boolean} */ dead) => {
+      const edge = is_death_edge(last_dead.get(id) ?? false, dead)
+      last_dead.set(id, dead)
+      return edge
+    },
+    ...over,
+  }
+}
 
 describe('AoE victim beats are ONE serial queue (each victim animates one after another, never parallel)', () => {
   it('three struck victims: each victim beat fully completes before the next STARTS (never overlapping)', async () => {
@@ -99,5 +115,46 @@ describe('AoE victim beats are ONE serial queue (each victim animates one after 
     // a parallel Promise.all would log start,start,end,end (interleaved). Serial never does.
     const starts = log.map((e, i) => (e.endsWith(':start') ? i : -1)).filter((i) => i >= 0)
     expect(log[starts[0] + 1].endsWith(':end')).toBe(true) // the first start is immediately followed by ITS end
+  })
+
+  // #170 (5th recurrence, the RE-BEAT flavor): a redundant `then_death` re-assertion of an ALREADY-presented
+  // corpse (a second cast/replay turn re-claiming "I killed this target too") must not replay the death beat —
+  // observe_death fires the visual once per genuine alive→dead edge, whichever caller gets there first.
+  it('a SECOND then_death for an already-dead target is a no-op (RED before the presented-state edge fix)', async () => {
+    const log = []
+    const shared_ctx = ctx()
+    await play_victim_reaction(
+      make_board(log),
+      [{ id: 'mob-0', anim: 'hit', float: { text: '-30' }, then_death: true }],
+      shared_ctx
+    )
+    // a DIFFERENT source (a duplicate wave turn) re-asserts the SAME kill for mob-0.
+    await play_victim_reaction(
+      make_board(log),
+      [{ id: 'mob-0', anim: 'hit', float: { text: '-30' }, then_death: true }],
+      shared_ctx
+    )
+    expect(log.filter((e) => e === 'mob-0:death:start')).toHaveLength(1)
+  })
+
+  // The ONLY clearing door (mirrors the #260 poofed-guard's own clearing site, sync_entities): a committed-fold
+  // GENUINE revival is the dead→alive edge, fed through the SAME fold backwards. It presents nothing itself
+  // (wrong direction) but resets the accumulator — a LATER real kill is then a fresh alive→dead edge, correct.
+  it('a genuine revival (dead→alive edge) clears the latch — a later real re-death presents again', async () => {
+    const log = []
+    const shared_ctx = ctx()
+    await play_victim_reaction(
+      make_board(log),
+      [{ id: 'mob-0', anim: 'hit', float: { text: '-30' }, then_death: true }],
+      shared_ctx
+    )
+    expect(log.filter((e) => e === 'mob-0:death:start')).toHaveLength(1)
+    shared_ctx.observe_death('mob-0', false) // the committed-fold genuine-revival door (sync_entities' revival site)
+    await play_victim_reaction(
+      make_board(log),
+      [{ id: 'mob-0', anim: 'hit', float: { text: '-30' }, then_death: true }],
+      shared_ctx
+    )
+    expect(log.filter((e) => e === 'mob-0:death:start')).toHaveLength(2)
   })
 })

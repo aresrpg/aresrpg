@@ -107,6 +107,7 @@ import {
   element_of_spell,
   board_lifecycle_decision,
   entity_fold_action,
+  is_death_edge,
   turn_input_armed,
 } from './voxel_fight_folds.js'
 
@@ -293,6 +294,17 @@ export function create_voxel_fight_adapter(
    *  momentarily flickers false (a re-armed death beat). The ONLY exit is the COMMITTED fold showing the fighter
    *  alive again (handled in sync_entities). Cleared on teardown so the next fight's reused mob-N ids start clean. */
   const removed_corpses = /** @type {Set<string>} */ (new Set())
+  /** #170 (5th recurrence, the RE-BEAT flavor): `last_dead` holds the last-OBSERVED `dead` boolean per fighter id
+   *  (a primitive copy, never an object reference — see is_death_edge's doc for the full reduce/observe
+   *  rationale). `observe_death` is the imperative wrapper: project the fresh value through is_death_edge, THEN
+   *  record it (the write is this closure's job — is_death_edge itself stays a pure verdict, mirroring
+   *  entity_fold_action). Cleared on teardown so a reused mob-N id starts clean next fight. */
+  const last_dead = /** @type {Map<string, boolean>} */ (new Map())
+  const observe_death = (/** @type {string} */ id, /** @type {boolean} */ dead) => {
+    const edge = is_death_edge(last_dead.get(id) ?? false, dead)
+    last_dead.set(id, dead)
+    return edge
+  }
   /** [⑤c invisibility veil] ids currently wearing the engine heat-haze veil — so the veil is set/cleared exactly
    *  ONCE per invisibility transition (idempotent, mirrors wire_fight_invisibility's visible-latch), driven by the
    *  fold's f.invisible truth each reconcile. */
@@ -444,12 +456,7 @@ export function create_voxel_fight_adapter(
       if (hitflash_on()) board.flash_entity?.(id, HIT_FLASH_TINT)
     })
     await wait_cast_anim_done(done) // hold through the natural flinch/floater end — THEN resume the walk
-    if (hit.killed && entity_ids.has(id)) {
-      const death_done = board.entity_beat(id, { anim: 'death', face: cell })
-      emit_death_line(read_board_fight_state, context.dispatch, { target_id: id })
-      schedule_corpse_removal(id, death_done)
-      await death_done
-    }
+    if (hit.killed) await play_death_beat({ target_id: id, face: cell })
     game_log('fight-trap', 'RESUME move', { id, t: performance.now() })
   }
 
@@ -478,7 +485,8 @@ export function create_voxel_fight_adapter(
     if (id) emit_trap_line(read_board_fight_state, context.dispatch, { target_id: id, damage: event.damage ?? 0 })
   }
 
-  /** One queued number/reaction beat. It deliberately does not kill the rig; `play_death_beat` is the next event. */
+  /** One queued number/reaction beat. It deliberately does not kill the rig; `play_death_beat` is the next event
+   *  (guarded there — a duplicate `killed` re-assertion of an already-presented death is a no-op). */
   const play_damage_beat = async (/** @type {any} */ event) => {
     const id = event.target_id
     if (!id || !entity_ids.has(id)) return false
@@ -505,15 +513,20 @@ export function create_voxel_fight_adapter(
         is_critical: event.is_critical,
       })
     await done
+    if (event.killed) await play_death_beat({ target_id: id })
     return true
   }
 
-  /** One queued death beat, always after its damage number. */
-  const play_death_beat = async (/** @type {any} */ event) => {
-    const id = event.target_id
-    if (!id || !entity_ids.has(id)) return
+  /** The corpse-collapse visual — the ONE call site every kill trigger (damage beat, trap pause, cast victim
+   *  reaction) now funnels through. #170 (5th recurrence, the RE-BEAT flavor): `observe_death` is the presented-
+   *  state transition fold (see its doc above `last_dead`) — it fires true ONLY on this fighter's genuine
+   *  alive→dead edge, so whichever of the N redundant sources (receipt wave, poll adoption, a second poll…) gets
+   *  here FIRST plays the death; every later re-assertion of the same still-dead fighter is a no-op by
+   *  construction, no per-call dedup bookkeeping needed at the call sites. */
+  const play_death_beat = async ({ target_id: id, face } = {}) => {
+    if (!id || !entity_ids.has(id) || !observe_death(id, true)) return
     dying.add(id)
-    const done = board.entity_beat(id, { anim: 'death' })
+    const done = board.entity_beat(id, { anim: 'death', face })
     emit_death_line(read_board_fight_state, context.dispatch, { target_id: id })
     if (is_mob(id)) schedule_corpse_removal(id, done)
     await done
@@ -692,29 +705,13 @@ export function create_voxel_fight_adapter(
         // the mob-cast HP hold releases on the hit's impact resolve (unchanged fight-intents holds; the adapter
         // only picks the release POINT). A non-finishing multi-mob hit carries no release_target (held for later).
         await done // SERIAL: block until THIS victim's hit + number resolves before its death / the next victim
-        // ORDER LAW: hit → number → THEN death → depop. The death beat chains AFTER this hit's impact
-        // resolves (board_entities' entity_beat OVERWRITES the live beat, so firing hit+death together clobbers
-        // the flinch). A MOB's death also schedules its one poof; a player's death just plays (board_entities owns it).
-        if (beat.then_death) {
-          const death_done = board.entity_beat(beat.id, { anim: 'death', face })
-          // COMBAT LOG (realtime): the "<name> died" line streams AT the death beat. emit_death_line is
-          // UNCONDITIONAL (the fold already flipped the slice dead by now — emit_deaths' pre-fold dedup would
-          // wrongly swallow it here). ONE per corpse: a mob dying from another trigger was `continue`d above; a
-          // trap/DoT kill (no victim beat) logs at the fold's despawn death beat instead. No double-log.
-          emit_death_line(read_board_fight_state, context.dispatch, { target_id: beat.id })
-          if (is_mob(beat.id)) schedule_corpse_removal(beat.id, death_done)
-          await death_done // the next victim only starts once this corpse's death beat has fully played
-          // [terminal-hold 2026-07-13] a PLAYER death (the defeat case) holds the chain to the death clip's
-          // NATURAL END (entity_beat resolves at IMPACT — mid-clip), so the fight-end surface waits for the whole
-          // death animation, not half of it (hit anim → number → death animation, and only then end the
-          // fight"). Event-first (.done) with the computed ×1.1 ceiling; MOB corpses keep today's exact timing —
-          // their poof choreography (schedule_corpse_removal ≈ impact + DEATH_BEAT_S) REMOVES the rig before its
-          // clip end, so .done would never fire and every mob kill would eat the fallback wait for nothing.
-          if (!is_mob(beat.id)) {
-            await wait_cast_anim_done(death_done)
-            remove_corpse(beat.id)
-          }
-        }
+        // ORDER LAW: hit → number → THEN death → depop. The death beat chains AFTER this hit's impact resolves
+        // (board_entities' entity_beat OVERWRITES the live beat, so firing hit+death together clobbers the
+        // flinch). play_death_beat (the ONE corpse-collapse call site, #170 5th recurrence) owns the MOB-poof-
+        // vs-player-remove split and the once-per-life guard: this cast's own kill claim (my_kills, above) can
+        // race an EARLIER-processed duplicate turn's kill of the same target — `then_death` is enrichment
+        // ("this hit was lethal"), never itself the trigger.
+        if (beat.then_death) await play_death_beat({ target_id: beat.id, face })
       }
     }
     const play_displacements = async () => {
@@ -1004,7 +1001,10 @@ export function create_voxel_fight_adapter(
             if (hitflash_on()) void done.then(() => board.flash_entity?.(id, HIT_FLASH_TINT))
             await done
           }
-        } else if (spec.kind === 'death') await play_death_beat(payload)
+        }
+        // #170 (5th recurrence): no 'death' beat kind reaches the wave anymore — producers stopped emitting it
+        // (fight_render_events.js / fight_predicted_render.js); play_death_beat is called directly from whichever
+        // reaction (damage/trap/cast victim) beat carries `killed`, guarded by the presented-state edge fold.
       }
       return { kind: spec.kind, at: spec.at, duration: spec.duration, render, index }
     })
@@ -1313,18 +1313,27 @@ export function create_voxel_fight_adapter(
         committed_dead: f.committed_dead, // the AUTHORITATIVE liveness — the only door back, never the flickering f.dead
       })
       // #170 a poofed rig that the COMMITTED fold now shows ALIVE is a genuine divergence-correction revive → the
-      // action is 'upsert' (guard above) and the sticky mark lifts so it lives again as a normal fighter.
-      if (action.kind === 'upsert' && removed_corpses.has(f.id)) removed_corpses.delete(f.id)
+      // action is 'upsert' (guard above), the sticky mark lifts so it lives again as a normal fighter, and the
+      // death-transition fold's accumulator resets (the dead→alive edge) so a LATER genuine re-death is a fresh
+      // false→true edge, not a no-op (the ONLY door back — mirrors the #260 poofed-guard clearing site exactly).
+      if (action.kind === 'upsert' && removed_corpses.has(f.id)) {
+        removed_corpses.delete(f.id)
+        observe_death(f.id, false)
+      }
       if (action.kind === 'skip') continue
       if (action.kind === 'despawn') {
         // Live-rig death: play the death beat ONCE (if a cast-kill already fired it this id is `dying` → the
         // fold returned 'skip', not here) then poof after the linger — never re-stand the corpse (after
         // the death animation it should depop, not loop back to idle). The removal lands before the loco crossfade.
+        // observe_death is belt-and-braces here (entity_fold_action's has_entity/is_dying gate already makes this
+        // branch fire at most once per corpse-life) and keeps last_dead accurate for the shared accumulator.
         // COMBAT LOG (realtime): this is the death beat for a NON-cast kill (trap / DoT) — the ONLY place those
         // deaths are announced (cast kills log in play_victim_reaction; the `dying`→'skip' split guarantees no
         // double). Streams AT the beat, matching the flinch/floater trap line play_trap_trigger already emitted.
-        emit_death_line(read_board_fight_state, context.dispatch, { target_id: f.id })
-        schedule_corpse_removal(f.id, board.entity_beat(f.id, { anim: 'death' }))
+        if (observe_death(f.id, true)) {
+          emit_death_line(read_board_fight_state, context.dispatch, { target_id: f.id })
+          schedule_corpse_removal(f.id, board.entity_beat(f.id, { anim: 'death' }))
+        }
         continue
       }
       if (action.kind === 'walk') {
@@ -1590,6 +1599,7 @@ export function create_voxel_fight_adapter(
     placed_cell.clear()
     dying.clear() // a torn-down board keeps no corpses — the next fight's fresh mob-N ids start clean
     removed_corpses.clear() // #170 the sticky poofed guard resets per fight — never leaks across a reused mob-N id
+    last_dead.clear() // #170 (5th recurrence) the death-transition fold resets per fight — trivially, same as above
     hazed_ids.clear() // no rigs survive teardown → the veil-latch resets for the next fight
     for (const t of despawn_timers) clearTimeout(t) // never let a stale poof remove a REUSED mob-N id next fight
     despawn_timers.clear()

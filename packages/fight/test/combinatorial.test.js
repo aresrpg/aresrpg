@@ -217,14 +217,18 @@ describe.skipIf(!COMBINATORIAL_ARTIFACTS_AVAILABLE)(
       expect(beat_grammar_violations(wave, {}).some((v) => v.startsWith('grammar.displacement_stop'))).toBe(true)
     })
 
-    test('grammar catches a lethal hit with no death beat (the rig-exclusion flag would never arm)', () => {
+    // #170 (5th recurrence): no separate 'death' beat exists anymore — the presenter derives the death visual
+    // from the presented-state alive→dead edge (voxel_fight_adapter.observe_death), never from an event-shaped
+    // beat. The grammar invariant narrows to "a lethal hit's damage beat is flagged `killed`" (new_health===0
+    // desyncing from `killed` is the producer bug this oracle still catches).
+    test('grammar catches a lethal hit whose damage beat is missing the killed flag', () => {
       const wave = [
         {
           is_local: false,
           duration: 3000,
           beats: [
             { kind: 'cast', at: 0, duration: 300, payload: { entity_id: 'mob-0' } },
-            { kind: 'damage', at: 300, duration: 450, payload: { target_id: 'p0', new_health: 0, killed: true } },
+            { kind: 'damage', at: 300, duration: 450, payload: { target_id: 'p0', new_health: 0 } },
           ],
         },
       ]

@@ -8,7 +8,6 @@ import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
 import {
   CAST_BEAT_MS,
   DAMAGE_BEAT_MS,
-  DEATH_BEAT_MS,
   DISPLACEMENT_CELL_MS,
   TRAP_BEAT_MS,
   produce_predicted_render_events,
@@ -118,7 +117,7 @@ const timing_shape = (events) => events.map(({ kind, at, duration }) => ({ kind,
 const encoded = (x, y) => y * 20 + x
 
 describe('predicted fight render events', () => {
-  test('trap behind mob + lethal push expands raw sim effects into cast → slide → trap → damage → death', () => {
+  test('trap behind mob + lethal push expands raw sim effects into cast → slide → trap → damage (killed)', () => {
     const { state, ctx } = started_fight()
     const placed = produce_predicted_render_events(
       state,
@@ -159,11 +158,6 @@ describe('predicted fight render events', () => {
         kind: 'damage',
         at: CAST_BEAT_MS + 2 * DISPLACEMENT_CELL_MS + TRAP_BEAT_MS,
         duration: DAMAGE_BEAT_MS,
-      },
-      {
-        kind: 'death',
-        at: CAST_BEAT_MS + 2 * DISPLACEMENT_CELL_MS + TRAP_BEAT_MS + DAMAGE_BEAT_MS,
-        duration: DEATH_BEAT_MS,
       },
     ])
     expect(pushed.events[1].payload).toMatchObject({
@@ -292,13 +286,14 @@ describe('receipt fight render events', () => {
       { source_id: 'p0', source_turn: 'p0:0' },
       { source_id: 'm1', source_turn: 'm1:0' },
     ])
+    // #170 (5th recurrence): no separate 'death' beat — the killing 'damage' beat carries `killed: true`.
     expect(receipt.turns[0].events.map((event) => event.kind)).toEqual([
       'cast',
       'displacement',
       'trap_trigger',
       'damage',
-      'death',
     ])
+    expect(receipt.turns[0].events.at(-1).payload.killed).toBe(true)
     expect(timing_shape(receipt.turns[0].events)).toEqual([
       { kind: 'cast', at: 0, duration: CAST_BEAT_MS },
       { kind: 'displacement', at: CAST_BEAT_MS, duration: 2 * DISPLACEMENT_CELL_MS },
@@ -311,11 +306,6 @@ describe('receipt fight render events', () => {
         kind: 'damage',
         at: CAST_BEAT_MS + 2 * DISPLACEMENT_CELL_MS + TRAP_BEAT_MS,
         duration: DAMAGE_BEAT_MS,
-      },
-      {
-        kind: 'death',
-        at: CAST_BEAT_MS + 2 * DISPLACEMENT_CELL_MS + TRAP_BEAT_MS + DAMAGE_BEAT_MS,
-        duration: DEATH_BEAT_MS,
       },
     ])
     expect(receipt.turns[1].events.map((event) => event.kind)).toEqual(['move', 'arrival', 'cast', 'damage'])

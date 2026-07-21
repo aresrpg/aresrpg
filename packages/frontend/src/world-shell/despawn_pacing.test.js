@@ -115,9 +115,11 @@ describe('kill-despawn pacing (P1: the mob must not vanish before its death pres
     const store = local_kill(boot())
     const turn = store.getState().wave.find((t) => t.is_local)
     expect(turn, 'the killing click must append a local wave turn').toBeTruthy()
+    // #170 (5th recurrence): no separate 'death' beat anymore — the killing 'damage' beat carries `killed: true`
+    // (the presenter derives the death visual from the presented-state edge, see voxel_fight_adapter.observe_death).
     expect(
-      turn.beats.some((b) => b.kind === 'death'),
-      'a lethal local cast carries its own death beat'
+      turn.beats.some((b) => b.kind === 'damage' && b.payload?.killed),
+      'a lethal local cast carries a killing damage beat'
     ).toBe(true)
     // CORE TRUTH IS NEVER DELAYED: the fold killed the mob the instant the intent landed (chain parity).
     expect(store.getState().fighters.m0.alive).toBe(false)

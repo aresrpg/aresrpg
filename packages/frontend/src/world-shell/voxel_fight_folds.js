@@ -285,6 +285,22 @@ export function cast_face_target(caster_cell, target_cell) {
 }
 
 /**
+ * #170 (5th recurrence, the RE-BEAT flavor): the death VISUAL is no longer triggered by an event-shaped 'death'
+ * beat kind (up to 4 producers each built their own redundant one for the same kill — receipt wave, poll
+ * adoption, a second poll…). It is derived from the PRESENTED-STATE TRANSITION instead — the studio's own
+ * reduce/observe idiom (aresrpg-legacy player_health.js's health-fold is the precedent: `last_health !==
+ * character.health` guards the emit — death===death is a no-op by construction). `was_dead` is the last-OBSERVED
+ * `dead` boolean for this fighter (a primitive, never an object reference); this reports true ONLY on the
+ * genuine false→true edge. Whichever of the N redundant kill sources gets here FIRST wins — every later
+ * re-assertion of the same still-dead fighter is a no-op, no per-source dedup bookkeeping needed. The reverse
+ * edge (a committed-fold genuine revival — the SAME door #260's poofed guard uses) reports false here (never
+ * itself a trigger) but the caller still records the fresh value, so a LATER real re-death is a genuine new
+ * false→true edge — correct, not suppressed. PURE: the caller owns writing `dead` into its own accumulator
+ * (mirrors entity_fold_action below — a verdict function, never a mutation).
+ * @param {boolean} was_dead @param {boolean} dead @returns {boolean} */
+export const is_death_edge = (was_dead, dead) => dead && !was_dead
+
+/**
  * The per-fighter VERDICT the fold's entity reconcile executes — the mob death-despawn + position-reconcile rules
  * as a PURE decision so they're unit-testable without the browser adapter (the imperative half drives board.* off
  * this). Four kinds:

@@ -184,6 +184,16 @@ export function produce_receipt_render_turns(
         source_event: event,
       })
 
+    // #170 (5th recurrence, the RE-BEAT flavor): a 'death' beat used to be appended here for every zero-HP Hit —
+    // one per PRODUCER call, so a receipt wave + a poll's spectator replay + a second poll each built their OWN
+    // redundant death beat for the SAME kill (no canonical identity, no dedup). Death is no longer an event-
+    // triggered beat kind at all: the 'damage' beat's `killed` flag stays as CAUSE enrichment (who died, from
+    // what), but the PRESENTER (voxel_fight_adapter.js) is the sole trigger — it fires the death visual off the
+    // PRESENTED-STATE alive→dead EDGE (a fold over `dead: boolean` per fighter, `!==` comparison — the reduce/
+    // observe idiom this studio has used since aresrpg-legacy's player_health.js health-fold). A replayed "he's
+    // dead" signal changes nothing (state is already dead ⇒ no edge ⇒ no beat) — once-only by construction,
+    // whichever of the N sources re-asserts it. See project.death_presenting_ids / fold.death_presenting_keys —
+    // both now hold on `damage`+`killed` instead of a `death` beat kind.
     for (const event of effects.filter((candidate) => candidate.kind === 'Hit')) {
       const target_id = fighter_id_from(event, 'victim', resolve_fighter_id)
       append_to(turn, 'damage', DAMAGE_BEAT_MS, {
@@ -193,12 +203,6 @@ export function produce_receipt_render_turns(
         killed: event.remaining_hp === 0,
         source_event: event,
       })
-      if (event.remaining_hp === 0)
-        append_to(turn, 'death', DEATH_BEAT_MS, {
-          target_id,
-          new_health: 0,
-          source_event: event,
-        })
     }
 
     for (const event of effects.filter((candidate) => candidate.kind === 'Drain'))

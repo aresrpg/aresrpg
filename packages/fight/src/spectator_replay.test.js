@@ -145,10 +145,11 @@ describe('spectator replay — a peer’s committed turn paces through the SAME 
     })
     alice.getState().input({ type: 'snapshot', fight: after_kill, version: 2 }, T0 + 3_000)
 
-    // GREEN: the kill rides a DEATH beat inside bob's paced replay turn.
+    // GREEN: the kill rides a killing DAMAGE beat inside bob's paced replay turn (#170 5th recurrence: no
+    // 'death'-kind beat anymore — the presenter derives the death visual from the presented-state edge).
     const bob_turn = wave_of(alice).find((t) => !t.is_local && String(t.source_id) === BOB)
     expect(bob_turn, 'the killing turn must replay as a paced non-local turn').toBeTruthy()
-    const death = bob_turn.beats.find((b) => b.kind === 'death')
+    const death = bob_turn.beats.find((b) => b.kind === 'damage' && b.payload?.killed)
     expect(death, 'the mob’s death must present DURING the replay, not a turn late').toBeTruthy()
     expect(String(death.payload.target_id)).toBe('mob-0')
 

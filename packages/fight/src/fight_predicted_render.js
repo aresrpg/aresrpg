@@ -13,7 +13,6 @@ import {
   CAST_BEAT_MS,
   create_writer,
   DAMAGE_BEAT_MS,
-  DEATH_BEAT_MS,
   DISPLACE_TELEPORT,
   displacement_duration,
   entity_cell,
@@ -31,6 +30,9 @@ import {
 
 const write_damage = (append, effect, source_turn, source_event) => {
   if (effect.damage !== undefined) {
+    // #170 (5th recurrence, RE-BEAT flavor): no separate 'death' beat here either — see fight_render_events.js's
+    // write_receipt_effects for the full rationale. `killed` stays as enrichment on the damage beat; the presenter
+    // fires the death visual off the presented-state alive→dead edge, once, whichever source re-asserts the kill.
     append(
       'damage',
       DAMAGE_BEAT_MS,
@@ -43,17 +45,6 @@ const write_damage = (append, effect, source_turn, source_event) => {
       },
       source_turn
     )
-    if (effect.killed)
-      append(
-        'death',
-        DEATH_BEAT_MS,
-        {
-          target_id: effect.target_id,
-          new_health: effect.new_health ?? 0,
-          source_event,
-        },
-        source_turn
-      )
   } else if (effect.heal !== undefined) {
     append(
       'heal',

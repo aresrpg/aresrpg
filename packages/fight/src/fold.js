@@ -343,16 +343,18 @@ export const committed_state = (s) => {
   return { ...committed, fighters: apply_retirement(committed.fighters, s.retired) }
 }
 
-/** Fold keys `p{seat}`/`m{idx}` whose DEATH beat still rides an UNACKED wave turn — the same wave fact
+/** Fold keys `p{seat}`/`m{idx}` whose KILLING damage beat still rides an UNACKED wave turn — the same wave fact
  *  project.death_presenting_ids reads for `engine_view.dead`, expressed in fold-key space (fold.js can't import
- *  project.js). Read straight off the death beat's source Hit (`victim_is_mob`/`victim_idx` → the key), so no
- *  entity resolver is needed. A masked killing Hit means the fighter is still ALIVE at pre-death HP in the re-fold;
- *  these keys mark "its death is presenting RIGHT NOW", distinct from an already-presented death. */
+ *  project.js). #170 (5th recurrence): there is no separate 'death' beat kind anymore (the presenter derives the
+ *  death visual from the presented-state edge, not an event-shaped beat) — hold on the 'damage' beat that carries
+ *  `killed`, read straight off its source Hit (`victim_is_mob`/`victim_idx` → the key), so no entity resolver is
+ *  needed. A masked killing Hit means the fighter is still ALIVE at pre-death HP in the re-fold; these keys mark
+ *  "its death is presenting RIGHT NOW", distinct from an already-presented death. */
 export const death_presenting_keys = (wave) => {
   const keys = new Set()
   for (const t of wave ?? [])
     for (const b of t.beats ?? []) {
-      const e = b.kind === 'death' ? b.payload?.source_event : null
+      const e = b.kind === 'damage' && b.payload?.killed ? b.payload?.source_event : null
       if (e && e.victim_idx != null) keys.add(`${e.victim_is_mob ? 'm' : 'p'}${Number(e.victim_idx)}`)
     }
   return keys

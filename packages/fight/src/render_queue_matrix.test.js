@@ -77,15 +77,22 @@ const matrix = [
     check: (beats) => expect(first(beats, 'damage').payload.damage).toBe(7),
   },
   {
-    id: 'Cast + lethal Hit → cast + damage + death',
+    // #170 (5th recurrence): no separate 'death' beat anymore — a lethal Hit is still ONE 'damage' beat, now
+    // carrying `killed: true` as cause enrichment. The presenter (voxel_fight_adapter.observe_death) derives the
+    // actual death visual from the presented-state alive→dead edge, never from an event-shaped beat.
+    id: 'Cast + lethal Hit → cast + damage (killed)',
     queue: [
       ev('TurnStarted', { is_mob: true, idx: 0, deadline_ms: 9 }),
       ev('Cast', { caster_is_mob: true, caster_idx: 0, target_cell: 3 }),
       ev('Hit', { victim_is_mob: false, victim_idx: 0, amount: 40, remaining_hp: 0 }),
     ],
-    expect: ['turn_start', 'cast', 'damage', 'death'],
-    timings: { cast: T.cast, damage: T.damage, death: T.death },
-    check: (beats) => expect(first(beats, 'death').payload.target_id).toBe('player-0'),
+    expect: ['turn_start', 'cast', 'damage'],
+    timings: { cast: T.cast, damage: T.damage },
+    check: (beats) => {
+      const damage = first(beats, 'damage')
+      expect(damage.payload.killed).toBe(true)
+      expect(damage.payload.target_id).toBe('player-0')
+    },
   },
   {
     id: 'Cast + Displaced → cast + displacement',
@@ -179,6 +186,8 @@ const matrix = [
 ]
 
 // The render beat KINDS the producer can emit (the render vocabulary) — the coverage universe for the gate below.
+// #170 (5th recurrence): 'death' is no longer a beat kind the producer emits — the presenter derives the death
+// visual from the presented-state edge (a 'damage' beat carrying `killed: true`), never an event-shaped beat.
 const ALL_BEAT_KINDS = [
   'turn_start',
   'turn_end',
@@ -186,7 +195,6 @@ const ALL_BEAT_KINDS = [
   'arrival',
   'cast',
   'damage',
-  'death',
   'displacement',
   'trap_trigger',
   'status',
