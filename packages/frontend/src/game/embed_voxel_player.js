@@ -18,7 +18,6 @@ import {
   create_worn_cosmetics,
   ground_surface_y,
 } from '@aresrpg/engine3/player'
-import { walrus_asset_url } from '@aresrpg/sdk/jobs'
 import { attach_status_overlay, STATUS_OVERLAY, create_vfx_preset, PRESETS } from '@aresrpg/engine3/vfx'
 
 import { resolve_movement_key } from './embed_voxel_movement_keys.js'
@@ -34,9 +33,10 @@ import { set_local_beat } from './core/local_beat.js'
 import { walk_fov_pulse } from './core/camera_juice.js'
 import { MOUNT_SPEED_MULTIPLIER } from './mount_speed.js'
 import { read_worn_templates, resolve_mount, resolve_worn_cosmetics, resolve_avatar_override } from './cosmetic_glb.js'
-import { create_mount_rig } from './mount_rig.js'
+import { create_mount_rig, ft_dragon_glb_url } from './mount_rig.js'
 import { create_pet_companion_rig, resolve_pet_companion } from './pet_companion.js'
 import { create_fast_travel_pilot } from './fast_travel_pilot.js'
+import { mount_is_moving } from './fast_travel_flight.js'
 import { fast_travel_store, ft_flight_target } from '../world-shell/fast_travel_store.js'
 import { context } from './store.js'
 import i18n from '../i18n'
@@ -284,16 +284,12 @@ export function create_player({
   }
   // FAST-TRAVEL DRAGON — a rideable dragon flown by the autopilot at RUN speed, seen by peers like any mount
   // (§5). Reuses the SAME riding/mount_ctl rig + pose + p2p broadcast as the equipped mount, MINUS the
-  // equipped-slot gate (the pilot spawns it programmatically). Skin = fire by default (tunable, §6-1);
-  // `?ftdragon=frost|void` previews the others in DEV. Its own unmount (no 'mount_off' toast — the pilot's
-  // arrival/cancel toasts own that surface).
-  const ft_dragon_glb = () => {
-    const pick = (import.meta.env.DEV && new URLSearchParams(location.search).get('ftdragon')) || 'dragon-fire'
-    const file = ['dragon-fire', 'dragon-frost', 'dragon-void'].includes(pick) ? `${pick}.glb` : 'dragon-fire.glb'
-    return walrus_asset_url('mob', file) ?? `/sprites/mobs/models/${file}`
-  }
+  // equipped-slot gate (the pilot spawns it programmatically). Skin resolution (fire by default; `?ftdragon=`
+  // DEV preview) lives in mount_rig.js's ft_dragon_glb_url — ONE home shared with the #175 preload
+  // (PlayerActionMenu.jsx warms the same URL the moment the travel menu opens). Its own unmount (no
+  // 'mount_off' toast — the pilot's arrival/cancel toasts own that surface).
   const mount_dragon = () => {
-    const glb_url = ft_dragon_glb()
+    const glb_url = ft_dragon_glb_url()
     mount_ctl?.dispose()
     mount_ctl = create_mount_rig({ engine, glb_url })
     riding = true
@@ -615,7 +611,11 @@ export function create_player({
         let seat = 0
         if (riding && mount_ctl) {
           mount_ctl.set_visible(!own_hidden)
-          mount_ctl.update(t.position[0], t.visual_y, t.position[2], t.facing_yaw, t.speed > 0.2, dt)
+          // #175 root cause: fast-travel drives the body via ctl.teleport() (never ctl.tick()), and teleport()
+          // zeroes the controller's velocity — so t.speed is frozen at whatever it was the instant before
+          // takeoff (typically 0) for the WHOLE flight. A raw speed check alone reads the dragon as motionless
+          // mid-air; mount_is_moving also counts an active fast-travel flight as motion (fast_travel_flight.js).
+          mount_ctl.update(t.position[0], t.visual_y, t.position[2], t.facing_yaw, mount_is_moving(t.speed, ft_is_flying()), dt)
           seat = mount_ctl.seat_height
         }
         avatar.object3d.position.set(t.position[0], t.visual_y + seat, t.position[2])

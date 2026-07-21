@@ -47,11 +47,12 @@ export const MOUNT_TABLE = {
   suifren_bullshark: 1.8,
   pet_beru: 1.6,
   oeuftermath: 1.9,
-  // fast-travel dragons (skin is user-selectable; fire = default) — the biggest sane rideable size, tunable
-  // (plan §1/⑤; capped at the table's 2.2 rideable ceiling — the cosmetic_glb range invariant)
-  'dragon-fire': 2.2,
-  'dragon-frost': 2.2,
-  'dragon-void': 2.2,
+  // fast-travel dragons (skin is user-selectable; fire = default) — a DELIBERATE exception to the 2.2
+  // rideable ceiling below (#175 second live report: "reads a bit bigger than current" — bumped from the
+  // old 2.2 ceiling to ~1.36×, cinematic-tier, still bounded by cosmetic_glb.test.js's dedicated dragon check)
+  'dragon-fire': 3,
+  'dragon-frost': 3,
+  'dragon-void': 3,
 }
 export const MOUNT_FALLBACK_H = 1.6 // unknown ids ride at a sane mid-quadruped height
 

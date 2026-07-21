@@ -17,6 +17,7 @@ import { add_friend_flow } from '../../../../world-shell/friends_actions'
 import { get_peer_state } from '../../../../p2p/lobby-room.js'
 import { use_game_state } from '../../../store.js'
 import { ft_dispatch } from '../../../../world-shell/fast_travel_store.js'
+import { ft_dragon_glb_url, preload_mount_glb } from '../../../mount_rig.js'
 
 import { use_player_menu } from './player_menu_store.js'
 
@@ -41,18 +42,29 @@ export function PlayerActionMenu() {
     return () => window.removeEventListener('keydown', on_key)
   }, [target, close])
 
-  if (!target) return null
-
   // Chat carries only the character id; the nameplate carries the address directly. Resolve the wallet live
   // from the peer's self-declared p2p state (the SAME D222 identity home every surface reads) when absent.
-  const address = target.address || get_peer_state(target.id ?? '')?.address || null
-  const can_act = !!address && !!my_address
-  const can_invite =
-    can_act && !!target.id && (!party || (!!selected_character_id && party.leader_character === selected_character_id))
+  // Hoisted above the early return (below) so BOTH the render and the preload effect share one derivation.
+  const address = target?.address || get_peer_state(target?.id ?? '')?.address || null
   // Fast travel (the third menu option): needs MY selected character to ride, a resolvable target (character id
   // OR owner address), and never my OWN character on another seat (address === my_address hides it — B10).
   const is_self = !!address && !!my_address && address === my_address
-  const can_fast_travel = !!selected_character_id && !is_self && (!!target.id || !!address)
+  const can_fast_travel = !!target && !!selected_character_id && !is_self && (!!target.id || !!address)
+
+  // PRELOAD-ON-INTENT (#175 — "more than 20s before the dragon even spawns"): the moment this menu shows the
+  // Fast Travel option, warm the dragon GLB cache — NOT on confirm. A cold Walrus fetch (multi-MB, first
+  // request this session) otherwise sits entirely on the travel critical path (mount_rig.js only asks for it
+  // once resolve/join finish); kicking it here runs it in PARALLEL with that wait instead. Idempotent
+  // (module-cached by URL in mount_rig.js) — reopening the menu on other targets just no-ops after the first.
+  useEffect(() => {
+    if (can_fast_travel) preload_mount_glb(ft_dragon_glb_url())
+  }, [can_fast_travel])
+
+  if (!target) return null
+
+  const can_act = !!address && !!my_address
+  const can_invite =
+    can_act && !!target.id && (!party || (!!selected_character_id && party.leader_character === selected_character_id))
 
   const on_add = () => {
     close()
