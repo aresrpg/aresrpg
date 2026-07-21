@@ -314,6 +314,47 @@ describe('receipt fight render events', () => {
       true
     )
   })
+
+  // #290 (death-loop trace 0xd8307732…, v1.12.45, receipt seq 112) RED-FIRST. The REAL chain emits a cast's effects
+  // BEFORE its Cast, with the ACTION ENVELOPE interleaved: ActionStarted, ActionEffect, Hit, Hit, ActionEffect, Cast,
+  // ActionResolved — and the Hits carry NO caster. The mid-action ActionEffect (between the buffered kill Hits and
+  // the Cast) used to fall to the else-branch and trip flush_pending() with NO turn open yet → the kill Hits
+  // orphaned into a bare non-local 'fight' turn. A non-local turn RE-PACES: its killing 'damage' beat re-entered
+  // death_presenting_ids and re-animated a kill the eye had ALREADY presented optimistically (my own cast), so
+  // engine_view.dead flipped back to alive while committed_dead was true — the owner's "death played forever,
+  // rolled back while the turn card showed the mob as dead". The action envelope now joins the pending window, so
+  // the kill Hits group into their CASTER's turn (p0 — local, filtered out of the wave by wave_turns_of), never a
+  // foreign re-pace. (The synthetic short ids mirror the trace's real structure without committing its chain ids —
+  // the diagnosis rode the raw capture; this locks the mechanism the house-convention way.)
+  test('#290 the action envelope never orphans a pre-Cast kill into a foreign fight turn (was: the death re-beat)', () => {
+    const frame = (kind, extra = {}) => ({
+      type: `0xENGINE::fight_events::${kind}`,
+      parsedJson: { fight: 'fight-1', caster_is_mob: false, caster_idx: '0', ...extra },
+    })
+    const hit = (idx, remaining_hp) => ({
+      type: '0xENGINE::fight_events::Hit',
+      parsedJson: { fight: 'fight-1', victim_is_mob: true, victim_idx: String(idx), amount: '8', remaining_hp },
+    })
+    const raw_events = [
+      frame('ActionStarted', { target_cell: String(encoded(7, 1)) }),
+      frame('ActionEffect', { effect_ordinal: '0' }),
+      hit(0, '0'), // mob-0 dies — the kill
+      hit(1, '4'), // mob-1 survives
+      frame('ActionEffect', { effect_ordinal: '1' }), // the mid-action envelope event that used to trip the flush
+      frame('Cast', { target_cell: String(encoded(7, 1)) }),
+      frame('ActionResolved'),
+    ]
+    const resolve_fighter_id = ({ is_mob, idx, character }) => character ?? `${is_mob ? 'm' : 'p'}${idx}`
+    const receipt = produce_receipt_render_turns(raw_events, { fight_id: 'fight-1', resolve_fighter_id })
+
+    // EXACTLY ONE turn, the CASTER's own (p0) — the pre-fix bug produced a leading non-local 'fight' turn.
+    expect(receipt.turns.map((turn) => turn.source_id)).toEqual(['p0'])
+    // the kill rides p0's OWN turn (cast, then both damage beats in emit order) — never a foreign turn to re-pace.
+    expect(receipt.turns[0].events.map((event) => event.kind)).toEqual(['cast', 'damage', 'damage'])
+    expect(receipt.turns[0].events.filter((event) => event.kind === 'damage').map((event) => event.payload.killed)).toEqual(
+      [true, false]
+    )
+  })
 })
 
 // LIVE BUG: a fight-board mob walked THROUGH an obstacle. The chain's MobMoved/Moved
