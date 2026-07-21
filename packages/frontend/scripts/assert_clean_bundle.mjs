@@ -25,6 +25,10 @@ const FORBIDDEN = [
     re: /assets\.aresrpg\.world/,
     why: 'the RETIRED asset CDN host is baked in — it must never be referenced again; a stale .env.production VITE_ASSETS_URL override poisoned the build',
   },
+  {
+    re: /localhost:3000/,
+    why: 'the local-dev read-API host is baked into a BUILT bundle — env.ts derive_rpc_url() must resolve to the live testnet read-API on any non-dev build; a preview/production deploy that ships this spams ERR_CONNECTION_REFUSED in the console (2026-07-21)',
+  },
 ]
 
 function walk(dir) {
