@@ -5,6 +5,9 @@
 // fold, and spell_formula.move's DOMAIN_CRIT/CRIT_SCALE fold. The mixed spell/weapon sequence mirrors
 // action_envelope_tests.move::spell_and_weapon_actions_are_lossless_and_ordinal_grouped: both action families
 // consume the same pre-action ordinal and expose crit_roll of CRIT_BOUND in ActionResolved.
+// Fixture provenance: the pinned values derive from this file's independent reconstruction (dual derivation —
+// sim === reconstruction === fixture), not a chain capture; pin a captured ActionResolved crit_roll from a live
+// fight trace when the next crit-bearing export lands.
 
 import { describe, expect, test } from 'bun:test'
 
