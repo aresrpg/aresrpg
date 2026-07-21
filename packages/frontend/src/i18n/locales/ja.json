@@ -1706,7 +1706,6 @@
     "prediction_reconciled": "チェーン上で戦闘が変化したため、ボードを修正しました。",
     "commit_busy": "ターンを確定できませんでした — 別のアクションが進行中です。",
     "waiting": "待機中…",
-    "spell_aim_hint": "{{name}}を狙う — 射程内のマスを選択",
     "auto_pass_in": "{{n}}秒後に自動パス",
     "no_key": "このダンジョンの鍵がキオスクに必要です",
     "potion_unavailable": "ポーションはまだ探索中に使用できません",

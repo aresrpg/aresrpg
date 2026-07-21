@@ -1706,7 +1706,6 @@
     "prediction_reconciled": "El combate cambió en la cadena — el tablero se corrigió.",
     "commit_busy": "No se pudo confirmar el turno — ya hay una acción en curso.",
     "waiting": "Esperando…",
-    "spell_aim_hint": "Apuntando {{name}}: elige una casilla a distancia",
     "auto_pass_in": "Pase auto en {{n}} s",
     "no_key": "Necesitas la llave de esta mazmorra en tu quiosco",
     "potion_unavailable": "Las pociones aún no se pueden usar dentro de una incursión",

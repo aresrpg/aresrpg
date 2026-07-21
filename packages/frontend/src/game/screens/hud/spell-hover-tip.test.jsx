@@ -1,15 +1,32 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { describe, expect, test } from 'bun:test'
+import { afterEach, describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import i18next from 'i18next'
+import { I18nextProvider } from 'react-i18next'
 
 import en from '../../../i18n/locales/en.json'
 
 import { SpellHoverTip, spell_hover_facts } from './spell-hover-tip.jsx'
-import { Tooltip } from './Tooltip.jsx'
+
+// DeckCluster imports the browser-flavoured dungeon store. Keep the same narrow host surface alive as the
+// colocated FightControls.turn-phase test so this regression can mount the REAL bar against the REAL fight core.
+const w = /** @type {any} */ (globalThis.window ??= /** @type {any} */ ({}))
+w.addEventListener ??= () => {}
+w.removeEventListener ??= () => {}
+w.matchMedia ??= () => ({ matches: false, addEventListener() {}, removeEventListener() {} })
+w.location ??= { origin: 'http://localhost:5173', href: 'http://localhost:5173/' }
+w.location.href ??= 'http://localhost:5173/'
+w.dispatchEvent ??= () => true
+globalThis.localStorage ??= /** @type {any} */ ({ getItem: () => null, setItem() {}, removeItem() {} })
+globalThis.requestAnimationFrame ??= () => 0
+globalThis.cancelAnimationFrame ??= () => {}
+
+const { DeckCluster } = await import('./DeckCluster.jsx')
+const { seed_fight_core, reset_fight_core } = await import('../../../test_helpers/fight_core_harness.js')
+const { set_spell_corpus_for_test } = await import('../../data/spell_corpus.js')
 
 const EN_I18N = i18next.createInstance()
 EN_I18N.init({ lng: 'en', resources: { en: { translation: en } }, interpolation: { escapeValue: false } })
@@ -31,6 +48,32 @@ const SPELL = {
     },
   ],
 }
+
+const BAR_SPELL = {
+  id: 'test_ember_ward',
+  classType: 'senshi',
+  unlock: 1,
+  name: 'Ember Ward',
+  role: 'damage',
+  element: 'fire',
+  object_id: '0xabc',
+  levels: [],
+}
+
+const seed_spell_bar = () => {
+  set_spell_corpus_for_test([BAR_SPELL])
+  const store = seed_fight_core({ fight_id: 'hover-card-test', my: '0xme', active: '0xme' })
+  store.getState().input({ type: 'hand_update', hand: ['ember_ward'] })
+  return store
+}
+
+const render_spell_bar = () =>
+  renderToStaticMarkup(createElement(I18nextProvider, { i18n: EN_I18N }, createElement(DeckCluster)))
+
+afterEach(() => {
+  reset_fight_core()
+  set_spell_corpus_for_test()
+})
 
 describe('spell_hover_facts', () => {
   test('derives the deleted readout data from the seeded spell SSOT', () => {
@@ -80,15 +123,6 @@ describe('SpellHoverTip', () => {
     expect(html).not.toContain('tt-spell-card__aim')
   })
 
-  test('renders the localized aiming hint inside the same card only while aimed', () => {
-    const html = renderToStaticMarkup(
-      createElement(SpellHoverTip, { t, name: 'Ember Ward', spell: SPELL, aiming: true })
-    )
-
-    expect(html).toContain('tt-spell-card__aim')
-    expect(visible_text(html)).toContain('Aiming Ember Ward — pick a cell in range')
-  })
-
   test('uses the sharp near-black FightReport shell, gold name, and tracked 10px micro-labels', () => {
     const css = readFileSync(new URL('./tooltip.css', import.meta.url), 'utf8')
 
@@ -100,15 +134,33 @@ describe('SpellHoverTip', () => {
   })
 })
 
-test('Tooltip pins the selected spell card at the same anchored home without a second presenter', () => {
-  const html = renderToStaticMarkup(
-    createElement(
-      Tooltip,
-      { pinned: true, content: createElement('span', null, 'Pinned spell') },
-      createElement('button', { type: 'button' }, 'Spell')
-    )
-  )
+test('selecting a spell without pointer hover does not mount its hover card', () => {
+  const store = seed_spell_bar()
+  store.getState().input({ type: 'arm', spell_id: 'ember_ward' })
+  expect(store.getState().armed_spell_id).toBe('ember_ward')
+  const html = render_spell_bar()
 
-  expect(html).toContain('role="tooltip"')
-  expect(html).toContain('Pinned spell')
+  expect(html).not.toContain('role="tooltip"')
+  expect(html).not.toContain('tt-spell-card')
+})
+
+test('pointer hover alone mounts the card until leave, including while the spell is selected', () => {
+  const store = seed_spell_bar()
+
+  // These are the exact reducer inputs emitted by SpellSocket's existing onPointerEnter/onPointerLeave handlers.
+  store.getState().input({ type: 'hover_spell', spell_id: 'ember_ward' })
+  const hovered = render_spell_bar()
+  expect(hovered).toContain('role="tooltip"')
+  expect(hovered).toContain('tt-spell-card')
+
+  store.getState().input({ type: 'arm', spell_id: 'ember_ward' })
+  expect(store.getState().armed_spell_id).toBe('ember_ward')
+  const selected_while_hovered = render_spell_bar()
+  expect(selected_while_hovered).toContain('role="tooltip"')
+  expect(selected_while_hovered).not.toContain('tt-spell-card__aim')
+
+  store.getState().input({ type: 'hover_spell', spell_id: null })
+  const left_while_selected = render_spell_bar()
+  expect(left_while_selected).not.toContain('role="tooltip"')
+  expect(left_while_selected).not.toContain('tt-spell-card')
 })

@@ -55,7 +55,7 @@ const chain =
  *   content?: import('react').ReactNode,
  *   placement?: 'top' | 'bottom',
  *   className?: string,
- *   pinned?: boolean,
+ *   visible?: boolean,
  * }} props
  * @returns {import('react').ReactNode}
  */
@@ -65,7 +65,7 @@ export function Tooltip({
   content,
   placement = 'top',
   className,
-  pinned = false,
+  visible,
 }) {
   const trigger_ref = useRef(/** @type {HTMLElement | null} */ (null))
   const card_ref = useRef(/** @type {HTMLDivElement | null} */ (null))
@@ -77,7 +77,9 @@ export function Tooltip({
   const id = useId()
   // empty-string text (a conditional "" label) means no tooltip, so collapse it to null
   const body = content ?? (text ? text : null)
-  const visible = open || pinned
+  // A supplied value is controlled: the caller owns the exact enter/leave lifecycle. Omitted keeps the shared
+  // delayed hover/focus behavior used by ordinary tooltips.
+  const shown = visible ?? open
 
   const close = useCallback(() => {
     clearTimeout(timer.current)
@@ -93,10 +95,9 @@ export function Tooltip({
   // drop any pending timer on unmount
   useEffect(() => () => clearTimeout(timer.current), [])
 
-  // while visible: dismiss transient hover state on Escape/scroll. A pinned card remains until its caller
-  // clears the selection; DeckCluster's Escape handler does that through the fight reducer.
+  // while shown: dismiss transient hover state on Escape/scroll. Controlled visibility remains with its caller.
   useEffect(() => {
-    if (!visible) return undefined
+    if (!shown) return undefined
     const on_key = (/** @type {KeyboardEvent} */ e) => {
       if (e.key === 'Escape') close()
     }
@@ -106,12 +107,12 @@ export function Tooltip({
       window.removeEventListener('keydown', on_key)
       window.removeEventListener('scroll', close, true)
     }
-  }, [visible, close])
+  }, [shown, close])
 
   // position AFTER the card mounts (pre-paint): measure both boxes, then place via the ONE positioning home
   // (tooltip_anchor) — place per placement, edge-flip vertically + clamp both axes fully on-screen.
   useLayoutEffect(() => {
-    if (!visible) return
+    if (!shown) return
     const trig = trigger_ref.current
     const card = card_ref.current
     if (!trig || !card) return
@@ -123,7 +124,7 @@ export function Tooltip({
         placement,
       })
     )
-  }, [visible, placement, body])
+  }, [shown, placement, body])
 
   const child = Children.only(children)
   if (!isValidElement(child) || body == null) return children
@@ -137,11 +138,11 @@ export function Tooltip({
       onMouseLeave: chain(props.onMouseLeave, close),
       onFocus: chain(props.onFocus, schedule),
       onBlur: chain(props.onBlur, close),
-      'aria-describedby': visible ? id : props['aria-describedby'],
+      'aria-describedby': shown ? id : props['aria-describedby'],
     }),
   )
 
-  const tooltip = visible ? (
+  const tooltip = shown ? (
     <div
       ref={card_ref}
       id={id}
