@@ -35,7 +35,7 @@
     "collision": "max(12*collision_level/50,1)*blocked_cells_target_only",
     "pull_collision": "same_as_push",
     "preupgrade_trap_collision_level": 1,
-    "ordinary_movement": "validate_full_path_then_enter_trigger_stop_spend_traversed_prefix_owner_blind",
+    "ordinary_movement": "validate_full_path_then_interleave_enter_trigger_resume_spend_full_path_owner_blind_stop_only_on_death_or_displace",
     "geometric_push": "all_fighters_away_from_target_cell_until_effect_zone_edge"
   },
   "cases": [

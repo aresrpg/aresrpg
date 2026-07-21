@@ -170,17 +170,18 @@ const make_entity = (id, cell, is_player, overrides = {}) => ({
 
 const scenarios = [
   {
-    // Trap semantics pinned as they ARE today (chain-by-design first-trap truncation —
-    // DECISIONS 2026-07-20 00:31): a multi-cell walk crossing an own-trap cell. When the
-    // continue-through-traps ruling lands as a Move car, this golden reds and is regolded
-    // deliberately with that citation — the gate documenting a rules change, as designed.
+    // Continue-through-traps ruling LANDED (#320/#325): a covered trap fires the instant the mover ENTERS
+    // its cell and the walk RESUMES — it no longer truncates the route (the earlier chain-by-design first-trap
+    // truncation, DECISIONS 2026-07-20 00:31, is repealed here; the twin Move `movement::walk` matches, shipping
+    // in this PR for the upgrade train). p0 places a trap on the first cell of its own path then walks THROUGH it:
+    // the trap fires (owner-blind), p0 takes the hit, and finishes at the far cell.
     meta: {
-      id: 'trap_path_truncation',
+      id: 'trap_path_resumes',
       class: 'trap',
-      authored: '2026-07-20',
+      authored: '2026-07-22',
       source: 'authored',
       notes:
-        'p0 places a trap on its own path then walks a 2-cell path across it; survives (100hp).',
+        'p0 places a trap on the first cell of its own 2-cell path then walks THROUGH it; the trap fires (owner entry) and p0 resumes to the far cell, surviving.',
     },
     arena: flat_arena_json(),
     templates_raw: trap_templates_raw,

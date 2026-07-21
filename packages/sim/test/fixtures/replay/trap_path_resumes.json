@@ -1,10 +1,10 @@
 {
   "meta": {
-    "id": "trap_path_truncation",
+    "id": "trap_path_resumes",
     "class": "trap",
-    "authored": "2026-07-20",
+    "authored": "2026-07-22",
     "source": "authored",
-    "notes": "p0 places a trap on its own path then walks a 2-cell path across it; survives (100hp)."
+    "notes": "p0 places a trap on the first cell of its own 2-cell path then walks THROUGH it; the trap fires (owner entry) and p0 resumes to the far cell, surviving."
   },
   "arena": {
     "width": 21,
@@ -244,10 +244,14 @@
           {
             "x": 6,
             "y": 5
+          },
+          {
+            "x": 6,
+            "y": 6
           }
         ],
         "tackled": false,
-        "mp_remaining": 4
+        "mp_remaining": 3
       },
       {
         "type": "fight_trap_triggered",
@@ -287,7 +291,7 @@
         "mp": 5
       }
     ],
-    "terminal_digest": "52f228e1",
+    "terminal_digest": "a1b47c46",
     "terminal_summary": {
       "winner": -1,
       "turn_number": 1,
@@ -297,7 +301,7 @@
           "health": 93,
           "cell": {
             "x": 6,
-            "y": 5
+            "y": 6
           }
         },
         {

@@ -295,15 +295,15 @@ fun resolve_mob_turn(fight: &mut Fight, midx: u64, rng: &mut u64, off_shape: &ve
     }
   };
   if (escaped) {
-    let (legal_move, moved_steps, entered_trap) = movement::walk(fight, true, midx, new_cell, &move_blocked, move_budget);
+    let (legal_move, moved_steps) = movement::walk(fight, true, midx, new_cell, &move_blocked, move_budget);
     assert!(legal_move);
     if (moved_steps > 0) {
       // Reposition observability (chain-forensics 2026-07-11): a mob whose turn draws reposition-only emitted NOTHING,
       // so no client/indexer could ever render the move. Fire MobMoved on any cell change (a move-SPELL turn ALSO
       // rides the Cast event's target_cell, so this is the sole home for the no-cast reposition case).
+      // `movement::walk` already fired any crossed trap inline (entrant-blind) and resumed the mob's route.
       let landed = mob::cell(fight::mobs(fight).borrow(midx));
       fight_events::emit_mob_moved(fight::id(fight), midx, landed);
-      if (entered_trap) cast::trigger_on_enter(fight, true, midx);
     };
   };
   if (mob::is_alive(fight::mobs(fight).borrow(midx))) {

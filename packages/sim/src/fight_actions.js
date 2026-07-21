@@ -29,6 +29,48 @@ import {
 // test/tackle_golden.test.js); this path owns only the roll draw off the sim rng thread + the state writes.
 
 /**
+ * Contest the start-cell tackle ONCE: every living enemy adjacent to `entity_id`'s current cell locks the exit
+ * as one exact product fraction (fight_tackle.js — the Move-parity math home). Returns the rng-advanced state
+ * plus whether the mover ESCAPED; a failed escape applies the AP/MP penalty and denies the move. No adjacent
+ * enemy ⇒ a free escape with NO roll (rng untouched). The single home shared by apply_move and the ordinary-move
+ * trap walk (reduce.js) — both contest exactly once, before any cell is entered.
+ * @param {import('./fight_state.js').FightState} state
+ * @param {string} entity_id
+ * @returns {{ state: import('./fight_state.js').FightState, escaped: boolean }}
+ */
+export const contest_tackle = (state, entity_id) => {
+  const entity = find_entity(state, entity_id)
+  if (!entity) return { state, escaped: true }
+  const adjacent_enemies = find_adjacent_enemies(state, entity.cell, entity_id)
+  if (adjacent_enemies.length === 0) return { state, escaped: true }
+  // Combine every adjacent lock contest as one exact product fraction (fight_tackle.js — Move-parity math).
+  const escape = tackle_contest(
+    effective_stats(entity).agility ?? 0,
+    adjacent_enemies.map(e => effective_stats(e).agility ?? 0),
+  )
+  const roll = rng_int(state.rng, escape.den)
+  if (roll.value < escape.num)
+    return { state: { ...state, rng: roll.state }, escaped: true }
+  // A failed escape loses the failed fraction of both pools and denies movement.
+  const { ap_lost, mp_lost } = tackle_losses(
+    entity.ap,
+    entity.mp,
+    escape.num,
+    escape.den,
+  )
+  const tackled_state = update_entity(
+    { ...state, rng: roll.state },
+    entity_id,
+    e => ({
+      ...e,
+      ap: Math.max(0, e.ap - ap_lost),
+      mp: Math.max(0, e.mp - mp_lost),
+    }),
+  )
+  return { state: tackled_state, escaped: false }
+}
+
+/**
  * Apply a movement path with the exact multi-lock agility contest.
  * @param {import('./fight_state.js').FightState} state
  * @param {string} entity_id
@@ -53,46 +95,19 @@ export const apply_move = (state, entity_id, path) => {
   if (entity.mp < mp_cost)
     return { state, success: false, error: 'INSUFFICIENT_MP', cells_moved: 0 }
 
-  const adjacent_enemies = find_adjacent_enemies(state, entity.cell, entity_id)
-  if (adjacent_enemies.length > 0) {
-    // Combine every adjacent lock contest as one exact product fraction (fight_tackle.js — Move-parity math).
-    const escape = tackle_contest(
-      effective_stats(entity).agility ?? 0,
-      adjacent_enemies.map(e => effective_stats(e).agility ?? 0),
-    )
-    const roll = rng_int(state.rng, escape.den)
-    const escaped = roll.value < escape.num
-    if (!escaped) {
-      // A failed escape loses the failed fraction of both pools and denies movement.
-      const { ap_lost, mp_lost } = tackle_losses(
-        entity.ap,
-        entity.mp,
-        escape.num,
-        escape.den,
-      )
-      const tackled_state = update_entity(
-        { ...state, rng: roll.state },
-        entity_id,
-        e => ({
-          ...e,
-          ap: Math.max(0, e.ap - ap_lost),
-          mp: Math.max(0, e.mp - mp_lost),
-        }),
-      )
-      return {
-        state: tackled_state,
-        success: false,
-        tackled: true,
-        cells_moved: 0,
-        error: 'TACKLED',
-      }
+  const contest = contest_tackle(state, entity_id)
+  if (!contest.escaped)
+    return {
+      state: contest.state,
+      success: false,
+      tackled: true,
+      cells_moved: 0,
+      error: 'TACKLED',
     }
-    state = { ...state, rng: roll.state }
-  }
 
   // Relocate along the path (skip the start cell), then deduct MP for the distance traveled.
   const destination = path[path.length - 1]
-  const moved = update_entity(state, entity_id, e => ({
+  const moved = update_entity(contest.state, entity_id, e => ({
     ...e,
     cell: destination,
     mp: Math.max(0, e.mp - mp_cost),

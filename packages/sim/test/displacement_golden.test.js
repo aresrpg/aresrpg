@@ -427,7 +427,7 @@ describe('Move displacement golden vectors', () => {
       pull_collision: 'same_as_push',
       preupgrade_trap_collision_level: 1,
       ordinary_movement:
-        'validate_full_path_then_enter_trigger_stop_spend_traversed_prefix_owner_blind',
+        'validate_full_path_then_interleave_enter_trigger_resume_spend_full_path_owner_blind_stop_only_on_death_or_displace',
       geometric_push:
         'all_fighters_away_from_target_cell_until_effect_zone_edge',
     })
@@ -591,5 +591,135 @@ describe('Move displacement golden vectors', () => {
       cell: cell_of(167),
       has_cell: true,
     })
+  })
+
+  test('an ALLY walking over the trap owner’s trap triggers it and resumes the walk (#320 owner/ally-blind, #325)', () => {
+    // p0 OWNS the trap at cell 166; p1 (same team) walks 164→165→166→167 across it. check_traps has no team gate,
+    // so the trap fires on the ally, and the ordinary walk RESUMES to 167 with its full MP spent.
+    const [vector] = golden.movement_cases
+    const initial = state_of(vector)
+    const owner = { ...find_entity(initial, 'p0'), cell: cell_of(100) } // stand the owner clear of the route
+    const ally = {
+      ...owner,
+      id: 'p1',
+      name: 'p1',
+      cell: cell_of(164),
+      health: 100,
+      mp: 3,
+    }
+    const state = {
+      ...initial,
+      team0: [owner, ally],
+      turn_order: ['p1'],
+      current_turn_idx: 0,
+    }
+    const result = reduce(
+      state,
+      { type: 'move', entity_id: 'p1', path: [165, 166, 167].map(cell_of) },
+      { arena: arena_of(initial.board), spell_templates: new Map() },
+    )
+    expect(find_entity(result.state, 'p1')).toMatchObject({
+      cell: cell_of(167),
+      health: 93,
+    })
+    expect(result.state.traps).toHaveLength(0)
+    const triggered = result.events.find(
+      event => event.type === 'fight_trap_triggered',
+    )
+    expect(triggered.cell).toEqual(cell_of(166))
+    const moved = result.events.find(event => event.type === 'fight_moved')
+    expect(moved.path.map(encode)).toEqual([165, 166, 167])
+    expect(moved.mp_remaining).toBe(0)
+  })
+
+  test('a walk crossing TWO traps fires each in path order and still resumes (#325 multi-trap)', () => {
+    const initial = state_of(golden.movement_cases[0])
+    const mover = {
+      ...find_entity(initial, 'p0'),
+      cell: cell_of(164),
+      health: 100,
+      mp: 4,
+    }
+    const payload = normalized_effects([{ kind: 0, element: 2, value: 7 }])
+    const state = {
+      ...initial,
+      team0: [mover], // team1 keeps the bystander mob (m0 @200) so no premature victory
+      turn_order: ['p0'],
+      current_turn_idx: 0,
+      traps: [
+        {
+          id: 1,
+          source_id: 'p0',
+          anchor: cell_of(166),
+          cells: [cell_of(166)],
+          payload,
+        },
+        {
+          id: 2,
+          source_id: 'p0',
+          anchor: cell_of(168),
+          cells: [cell_of(168)],
+          payload,
+        },
+      ],
+    }
+    const result = reduce(
+      state,
+      {
+        type: 'move',
+        entity_id: 'p0',
+        path: [165, 166, 167, 168].map(cell_of),
+      },
+      { arena: arena_of(initial.board), spell_templates: new Map() },
+    )
+    // Both 7-damage traps land (100 → 93 → 86); the mover finishes the full 4-cell path.
+    expect(find_entity(result.state, 'p0')).toMatchObject({
+      cell: cell_of(168),
+      health: 86,
+    })
+    expect(result.state.traps).toHaveLength(0)
+    const triggers = result.events.filter(
+      event => event.type === 'fight_trap_triggered',
+    )
+    expect(triggers.map(event => encode(event.cell))).toEqual([166, 168])
+    const moved = result.events.find(event => event.type === 'fight_moved')
+    expect(moved.path.map(encode)).toEqual([165, 166, 167, 168])
+    expect(moved.mp_remaining).toBe(0)
+  })
+
+  test('a trap that KILLS mid-walk stops the mover on the trap cell (ends by death, not by trigger)', () => {
+    const initial = state_of(golden.movement_cases[0])
+    const mover = {
+      ...find_entity(initial, 'p0'),
+      cell: cell_of(164),
+      health: 5,
+      mp: 3,
+    }
+    const payload = normalized_effects([{ kind: 0, element: 2, value: 50 }]) // lethal
+    const state = {
+      ...initial,
+      team0: [mover],
+      turn_order: ['p0'],
+      current_turn_idx: 0,
+      traps: [
+        {
+          id: 1,
+          source_id: 'm0',
+          anchor: cell_of(166),
+          cells: [cell_of(166)],
+          payload,
+        },
+      ],
+    }
+    const result = reduce(
+      state,
+      { type: 'move', entity_id: 'p0', path: [165, 166, 167].map(cell_of) },
+      { arena: arena_of(initial.board), spell_templates: new Map() },
+    )
+    const dead = find_entity(result.state, 'p0')
+    expect(dead.health).toBe(0)
+    expect(dead.cell).toEqual(cell_of(166)) // stopped AT the trap — never continued to 167
+    const moved = result.events.find(event => event.type === 'fight_moved')
+    expect(moved.path.map(encode)).toEqual([165, 166])
   })
 })
