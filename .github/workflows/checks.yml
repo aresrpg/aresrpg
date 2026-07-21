@@ -98,7 +98,14 @@ jobs:
     # stub that throws at module load: invisible to lint + unit tests, fatal in the browser). Builds the
     # frontend, serves dist, drives the logged-out landing headless, and FAILS on any uncaught page error or
     # any non-allowlisted console.error at boot (scripts/boot_smoke.mjs owns the allowlist + its rationale).
-    # Fork-safe: no secrets, no backend. Budget < 3 min.
+    #
+    # ENCYCLOPEDIA LEG (issue #165) — a second, independent class killer: the prod encyclopedia once
+    # rendered with ~zero item icons and empty obtention data and no gate caught it. Drives the real
+    # encyclopedia items tab (a DEV-mode Vite server + the sanctioned dev_wallet Playwright login — see
+    # scripts/encyclopedia_smoke.mjs's header for why boot_smoke's prod build/preview can't reach this
+    # auth-gated route) against live testnet data and asserts icon-render truth + item-detail truth.
+    #
+    # Fork-safe: no secrets, no backend. Budget < 4 min.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -112,6 +119,9 @@ jobs:
         run: |
           bunx vite build
           node scripts/boot_smoke.mjs
+        working-directory: packages/frontend
+      - name: encyclopedia smoke — icon truth + detail truth (issue #165)
+        run: node scripts/encyclopedia_smoke.mjs
         working-directory: packages/frontend
 
   fp-codeql:
