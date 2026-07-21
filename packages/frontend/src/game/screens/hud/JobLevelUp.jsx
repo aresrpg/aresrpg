@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // JOB level-up congrats card — the sibling of LevelUp.jsx (character), for a GATHER/CRAFT job crossing a
-// level. Same locked house language as the character card (glass over the live world, the glowing level
+// level. Same locked house language as the character card (opaque .result--fe ground, the glowing level
 // number in a ring, the ice-blue accent, mono nums) reusing result.css atoms, so the two celebrations read
 // as one family. Gated off the discrete `job_level_up` slice owned by core/modules/job_progression.js.
 //
 // The card names the CONCRETE gains, never a bare "you leveled" — resolved from the @aresrpg/sdk/jobs SSOT
 // (the SAME content the JobsDrawer renders) via level_unlocks.js: a gathering job shows the resources now
 // gatherable + whether the per-node yield stepped up (chain gather-yield formula); a craft job shows the
-// recipes now craftable. Sections with nothing to show are omitted (no empty card). Auto-dismisses like the
-// character card; hides while the character level-up / fight-result cards are up (never card-over-card).
+// recipes now craftable. Sections with nothing to show are omitted (no empty card). Persists until the
+// player dismisses it (issue #369 pair — no auto-dismiss timer); hides while the character level-up /
+// fight-result cards are up (never card-over-card).
 
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -21,9 +22,6 @@ import { play_fight_sfx } from '../../core/audio/sfx.js'
 import { job_unlocks } from './level_unlocks.js'
 import './result.css'
 import './joblevelup.css'
-
-// Same envelope as the character card — armed off the card's first paint (see the `visible` effect).
-const AUTO_DISMISS_MS = 6000
 
 /**
  * One unlocked resource/recipe chip — the real assets-CDN art with a tasteful glyph fallback (the JobsDrawer
@@ -72,11 +70,12 @@ export function JobLevelUp() {
   const blocked = use_game_state(s => !!s.level_up || !!s.fight_result)
   const visible = !!job_level_up && !blocked
 
+  // First paint of the card: play the win-family SFX. Issue #369 pair: the card used to auto-dismiss on a
+  // timer — deleted. It now persists until the player explicitly presses the CTA below; nothing else may
+  // unmount it.
   useEffect(() => {
-    if (!visible) return undefined
+    if (!visible) return
     play_fight_sfx('win')
-    const timer = setTimeout(() => context.dispatch('action/job_level_up/close'), AUTO_DISMISS_MS)
-    return () => clearTimeout(timer)
   }, [visible])
 
   if (!visible) return null
@@ -89,7 +88,7 @@ export function JobLevelUp() {
   return (
     <div className="hud-middle lvlup-stage jlu-stage">
       <div
-        className="result result--tall"
+        className="result result--tall result--fe"
         role="dialog"
         aria-modal="true"
         aria-label={t('job_level_up.aria_label', { job: job?.label ?? job_id, level })}
