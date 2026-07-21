@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 
 import i18n from './i18n'
 import { use_auth, type AuthState } from './auth'
-import { use_toast, TOAST_CONTAINER_CLASS } from './toast'
+import { use_toast, TOAST_CONTAINER_CLASS, toast_glass_class } from './toast'
 import { Sidebar, LanguageCard, DiscordCard } from './components/sidebar'
 import { MobileSwitcher } from './components/mobile_switcher'
 import { MobileOrientationGate } from './game/screens/hud/MobileOrientationGate.jsx'
@@ -121,16 +121,14 @@ function AmbientBackground() {
 function Toasts() {
   const { toasts, remove } = use_toast()
   if (toasts.length === 0) return null
-  // Top-right is a clean toast-only zone (the wallet moved into the sidebar).
-  // Mobile clamps to the SAFE-AREA edges, not raw pixel offsets (regression: toasts overflowed the screen
-  // edge — this is the one fixed HUD surface in the mobile chain that never adopted --safe-* like every
-  // other one, e.g. mobile-hud.css / mobile_switcher.tsx).
+  // The absolute layer shares the minimap's flush top-right anchor and paints above it. Cards use the one
+  // sharp near-black glass recipe exported beside the position contract.
   return (
     <div className={TOAST_CONTAINER_CLASS}>
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`flex flex-col gap-2 p-3 border backdrop-blur-sm animate-[slide-in_0.3s_ease-out] bg-[#0d0d14]/95 ${toast.type === 'error' ? 'border-red-400/40 text-red-400' : toast.type === 'pending' ? 'border-gold/40 text-gold-light' : toast.type === 'success' ? 'border-emerald-400/40 text-emerald-400' : 'border-cyan/40 text-cyan'}`}
+          className={`${toast_glass_class} ${toast.type === 'error' ? 'text-red-400' : toast.type === 'pending' ? 'text-gold-light' : toast.type === 'success' ? 'text-emerald-400' : 'text-cyan'}`}
         >
           <div className="flex min-w-0 items-start gap-3">
             {toast.type === 'pending' && (

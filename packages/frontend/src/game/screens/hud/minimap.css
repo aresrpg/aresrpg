@@ -19,13 +19,15 @@
 /* ── small minimap (top-right) ───────────────────────────────────────────────────────────────────────── */
 .mm {
   position: fixed;
-  top: 14px;
-  right: 14px;
+  top: 0;
+  right: 0;
   z-index: 6; /* above the hud-root, below toasts/modals */
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 7px;
+  margin: 0;
+  padding: 0;
   pointer-events: auto;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
 }

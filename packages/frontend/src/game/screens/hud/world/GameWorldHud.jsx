@@ -25,6 +25,7 @@ import { xp_progress } from '@aresrpg/sdk/experience'
 import { projected_hp, character_max_hp } from '../../../../chain/read_character.js'
 
 import './game-world-hud.css'
+import './world_toast_overlay.css'
 // The proven in-game COMBAT chrome (turn-order cards, deck hand, ready/end-turn/abandon controls, the
 // "position your team" / placement countdown, spell hover tooltip, board-hover tooltip, end-of-fight
 // result + level-up). hud.css carries every `.hud-*` style these components use; it was previously only

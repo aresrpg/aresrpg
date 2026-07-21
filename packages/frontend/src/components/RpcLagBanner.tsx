@@ -4,16 +4,15 @@
 // cannot learn the real chain tip from the lagging projection it is measuring. Fight deadline starvation rides
 // the existing fight projection, so it adds no poller/store. A failed sample never falsely declares recovery.
 //
-// Owner redesign (was a full-width red alarm bar): a compact, non-invasive corner chip with a progress bar
-// and a LOCALLY predicted ETA. Top-right — the in-world HUD's minimap lives bottom-right and the chat panel
-// owns bottom-left, so top-right is the one corner nothing else claims across every route.
+// Owner redesign (#208): the syncing state is a one-line, full-width red header at the viewport top. It
+// keeps the current numeric checkpoint count and locally predicted status while leaving the minimap corner
+// to the overlaid toast stack.
 //
 // The ETA is a pure fold over the SAME polled samples this component already reads (see ./sync_eta) — no
 // new poller, no store: one local `useState` derived by one `useEffect` edge that feeds the pure reducer.
 // A fresh lag episode (not-lagging → lagging) resets the fold so an old, larger incident's peak never makes
 // a small new one look falsely "almost done".
 
-import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -23,6 +22,8 @@ import { get_status } from '../rpc/client'
 import { resolve_checkpoint_lag, type CheckpointLag } from '../rpc/checkpoint_lag'
 import { fold_sync_sample, format_eta_duration, project_sync_status, type SyncEstimatorState } from '../rpc/sync_eta'
 import { use_rpc_view } from '../rpc/use_view'
+
+import { rpc_sync_header } from './rpc_sync_header'
 
 const POLL_MS = 15_000
 
@@ -49,7 +50,7 @@ export function RpcLagBanner() {
   const remaining = data?.remaining_checkpoints
 
   // The one edge that feeds the pure fold: a new polled count in, next estimator state out. Resets the
-  // fold when a lag episode freshly starts so the progress bar's peak always tracks THIS episode.
+  // fold when a lag episode freshly starts so the peak checkpoint count always tracks THIS episode.
   useEffect(() => {
     if (!lagging || remaining == null) {
       was_lagging_ref.current = false
@@ -64,8 +65,6 @@ export function RpcLagBanner() {
 
   const projection = project_sync_status(estimator)
   const stalled = fight_deadline_starved || projection.status === 'stalled'
-  const accent = stalled ? '#ef4444' : '#f59e0b'
-  const pct = lagging ? Math.round(projection.progress * 100) : 0
 
   const status_label = fight_deadline_starved
     ? t('rpc.reconnecting')
@@ -78,43 +77,11 @@ export function RpcLagBanner() {
             format_eta_duration(projection.eta_ms)
           )
 
-  return (
-    <div
-      className="fixed top-14 right-3 z-40 w-56 pointer-events-none"
-      role="status"
-      aria-live="polite"
-      aria-atomic="true"
-    >
-      <div
-        className={`border bg-surface/90 backdrop-blur-xl p-2.5 flex flex-col gap-1.5 ${stalled ? 'border-red-500/50' : 'border-gold/30'}`}
-      >
-        <div className="flex items-center gap-1.5">
-          {stalled ? (
-            <AlertTriangle size={11} className="text-red-400 shrink-0" />
-          ) : (
-            <RefreshCw size={11} className="text-amber-400 shrink-0" />
-          )}
-          <span className="min-w-0 flex-1 text-[9px] tracking-[0.15em] uppercase font-mono text-muted">
-            {t('rpc.sync_label')}
-          </span>
-          {lagging && remaining != null && (
-            <span className="text-[9px] font-mono tabular-nums text-text/80 whitespace-nowrap">
-              {remaining.toLocaleString()}
-            </span>
-          )}
-        </div>
-        <div className="h-1 w-full bg-border/60 overflow-hidden">
-          <div
-            className="h-full transition-all duration-500"
-            style={{ width: `${pct}%`, background: accent, boxShadow: `0 0 6px ${accent}80` }}
-          />
-        </div>
-        <span
-          className={`text-[9px] font-mono tracking-[0.08em] uppercase whitespace-nowrap ${stalled ? 'text-red-400 animate-pulse' : 'text-muted'}`}
-        >
-          {status_label}
-        </span>
-      </div>
-    </div>
-  )
+  return rpc_sync_header({
+    syncing: lagging || fight_deadline_starved,
+    stalled,
+    sync_label: t('rpc.sync_label'),
+    status_label,
+    remaining: lagging ? remaining : undefined,
+  })
 }
