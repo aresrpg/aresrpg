@@ -55,6 +55,7 @@ const chain =
  *   content?: import('react').ReactNode,
  *   placement?: 'top' | 'bottom',
  *   className?: string,
+ *   pinned?: boolean,
  * }} props
  * @returns {import('react').ReactNode}
  */
@@ -64,6 +65,7 @@ export function Tooltip({
   content,
   placement = 'top',
   className,
+  pinned = false,
 }) {
   const trigger_ref = useRef(/** @type {HTMLElement | null} */ (null))
   const card_ref = useRef(/** @type {HTMLDivElement | null} */ (null))
@@ -75,6 +77,7 @@ export function Tooltip({
   const id = useId()
   // empty-string text (a conditional "" label) means no tooltip, so collapse it to null
   const body = content ?? (text ? text : null)
+  const visible = open || pinned
 
   const close = useCallback(() => {
     clearTimeout(timer.current)
@@ -90,9 +93,10 @@ export function Tooltip({
   // drop any pending timer on unmount
   useEffect(() => () => clearTimeout(timer.current), [])
 
-  // while open: dismiss on Escape, and close on any scroll (a moved trigger would orphan the card)
+  // while visible: dismiss transient hover state on Escape/scroll. A pinned card remains until its caller
+  // clears the selection; DeckCluster's Escape handler does that through the fight reducer.
   useEffect(() => {
-    if (!open) return undefined
+    if (!visible) return undefined
     const on_key = (/** @type {KeyboardEvent} */ e) => {
       if (e.key === 'Escape') close()
     }
@@ -102,12 +106,12 @@ export function Tooltip({
       window.removeEventListener('keydown', on_key)
       window.removeEventListener('scroll', close, true)
     }
-  }, [open, close])
+  }, [visible, close])
 
   // position AFTER the card mounts (pre-paint): measure both boxes, then place via the ONE positioning home
   // (tooltip_anchor) — place per placement, edge-flip vertically + clamp both axes fully on-screen.
   useLayoutEffect(() => {
-    if (!open) return
+    if (!visible) return
     const trig = trigger_ref.current
     const card = card_ref.current
     if (!trig || !card) return
@@ -119,7 +123,7 @@ export function Tooltip({
         placement,
       })
     )
-  }, [open, placement, body])
+  }, [visible, placement, body])
 
   const child = Children.only(children)
   if (!isValidElement(child) || body == null) return children
@@ -133,30 +137,27 @@ export function Tooltip({
       onMouseLeave: chain(props.onMouseLeave, close),
       onFocus: chain(props.onFocus, schedule),
       onBlur: chain(props.onBlur, close),
-      'aria-describedby': open ? id : props['aria-describedby'],
+      'aria-describedby': visible ? id : props['aria-describedby'],
     }),
   )
+
+  const tooltip = visible ? (
+    <div
+      ref={card_ref}
+      id={id}
+      role="tooltip"
+      className={`tt-card${className ? ` ${className}` : ''}`}
+      style={{ left: pos.left, top: pos.top }}
+    >
+      {typeof body === 'string' ? <span className="tt-text">{body}</span> : body}
+    </div>
+  ) : null
+  const can_portal = typeof document !== 'undefined' && !!document.body
 
   return (
     <>
       {trigger}
-      {open &&
-        createPortal(
-          <div
-            ref={card_ref}
-            id={id}
-            role="tooltip"
-            className={`tt-card${className ? ` ${className}` : ''}`}
-            style={{ left: pos.left, top: pos.top }}
-          >
-            {typeof body === 'string' ? (
-              <span className="tt-text">{body}</span>
-            ) : (
-              body
-            )}
-          </div>,
-          document.body,
-        )}
+      {tooltip && (can_portal ? createPortal(tooltip, document.body) : tooltip)}
     </>
   )
 }

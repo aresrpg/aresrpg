@@ -1928,6 +1928,7 @@
     "neutral": "Neutral",
     "fx_trap": "Coloca una trampa",
     "fx_reduce_damage": "Absorbe {{value}} de daño",
+    "fx_any_element": "cualquier elemento",
     "fx_alter_resist": "{{value}} resistencia",
     "fx_alter_resist_el": "{{value}} resistencia de {{element}}",
     "fx_place_glyph": "Coloca un glifo",

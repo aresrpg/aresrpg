@@ -11,13 +11,12 @@ import { spell_icon_url } from '@aresrpg/sdk/jobs'
 
 import { hover_spell } from '../../core/modules/fight.js'
 import { use_image_retry } from './image_retry.js'
+import { Tooltip } from './Tooltip.jsx'
 
 /**
  * One populated spell socket — a carved tile holding an element-tinted icon-gem (the spell's initial). Picks
  * (arms) its spell on click; the picked socket holds a gold ring while you aim at a target cell. HOVERING the
- * socket drives THE ONE big spell tooltip (there should only be the big tooltip) via the
- * `hover_spell` store write — the DungeonSpellReadout previews the hovered spell on every platform; the
- * compact SpellHoverTip that once anchored above the socket is DELETED (supersedes the 07-17 hover split).
+ * socket drives the single hover card via the `hover_spell` store write.
  * `enabled:false` only dims + gates the click (see DeckCluster's file header) — the hover preview stays live
  * on a greyed socket.
  * `glow` = the §7 turn-seed crit preview (casting this NEXT crits): gold socket glow — the socket itself
@@ -27,9 +26,23 @@ import { use_image_retry } from './image_retry.js'
  * keyCap owns top-left, the AP cost owns bottom-right). `exhausted` = the casts-per-turn cap is already spent
  * this turn (no cross-turn cooldown, so no number — same disabled treatment).
  * @param {{ keyCap: string | null, card: any, color: string, spell_id: string, armed: boolean,
- *   enabled: boolean, glow: boolean, cd_left: number, exhausted: boolean, onPick: () => void }} props
+ *   enabled: boolean, glow: boolean, cd_left: number, exhausted: boolean, onPick: () => void,
+ *   tip?: import('react').ReactNode, pinned?: boolean }} props
  */
-export function SpellSocket({ keyCap, card, color, spell_id, armed, enabled, glow, cd_left, exhausted, onPick }) {
+export function SpellSocket({
+  keyCap,
+  card,
+  color,
+  spell_id,
+  armed,
+  enabled,
+  glow,
+  cd_left,
+  exhausted,
+  onPick,
+  tip = null,
+  pinned = false,
+}) {
   // REAL spell art (wire the real spell icons — no stub bubbles): the canonical asset is
   // spell_icon_url(icon) → the Walrus `spell` quilt /spells/<icon>.png (curl-verified 200; the SAME
   // resolver SpellDetail ships). Load lifecycle rides the shared retry ladder (image_retry.js, design ruling
@@ -43,60 +56,60 @@ export function SpellSocket({ keyCap, card, color, spell_id, armed, enabled, glo
   const resolved = spell_icon_url(card.icon ?? spell_id)
   const { url: art_url, attempt, on_failed_attempt } = use_image_retry(resolved ? [resolved] : [])
   return (
-    // HOVER drives the big DungeonSpellReadout (hover_spell store write below); on desktop that readout now
-    // anchors ABOVE this socket (a tooltip of the spell itself, not on the right) — `data-spell-id`
-    // is the handle it locates the hovered slot's rect by (mobile keeps the bottom-anchored --mobile card).
-    <button
-      type="button"
-      data-spell-id={spell_id}
-      className={`hud-socket${armed ? ' armed' : ''}${enabled ? '' : ' disabled'}${glow ? ' crit-glow' : ''}`}
-      style={/** @type {import('react').CSSProperties} */ ({ '--el': color })}
-      aria-disabled={!enabled}
-      aria-label={card.name}
-      onClick={onPick}
-      // pointer (not mouse) enter/leave: fires for mouse AND pen/touch, and — with the socket never natively
-      // `disabled` (file header) — stays live on greyed sockets, so off-turn spells are still readable (D299a).
-      onPointerEnter={() => hover_spell(spell_id)}
-      onPointerLeave={() => hover_spell(null)}
-      // never hold DOM focus — see WeaponSocket in DeckCluster.jsx (the numkey blue-ring fix).
-      tabIndex={-1}
-      onMouseDown={(e) => e.preventDefault()}
-    >
-      {keyCap && (
-        <span className="hud-socket__key hud-num" aria-hidden="true">
-          {keyCap}
-        </span>
-      )}
-      <span className="hud-socket__gem" aria-hidden="true">
-        <span className="hud-socket__gem-shine" />
-        {art_url ? (
-          <img
-            key={`${art_url}#${attempt}`}
-            className="hud-socket__gem-art"
-            src={art_url}
-            alt=""
-            draggable={false}
-            onError={on_failed_attempt}
-            // An HTTP-ok response with an undecodable body fires onLoad with naturalWidth 0, never onError —
-            // treat a zero-dimension load as a failure too (same guard as SpellArt / ItemIcon / mob_image).
-            onLoad={(e) => {
-              if (!e.currentTarget.naturalWidth) on_failed_attempt()
-            }}
-          />
-        ) : (
-          (card.name || spell_id || '?').slice(0, 1).toUpperCase()
+    <Tooltip placement="top" content={tip} className="tt-card--spell" pinned={pinned}>
+      {/* HOVER is projected through the fight core's one input door for the socket-anchored card. */}
+      <button
+        type="button"
+        data-spell-id={spell_id}
+        className={`hud-socket${armed ? ' armed' : ''}${enabled ? '' : ' disabled'}${glow ? ' crit-glow' : ''}`}
+        style={/** @type {import('react').CSSProperties} */ ({ '--el': color })}
+        aria-disabled={!enabled}
+        aria-label={card.name}
+        onClick={onPick}
+        // pointer (not mouse) enter/leave: fires for mouse AND pen/touch, and — with the socket never natively
+        // `disabled` (file header) — stays live on greyed sockets, so off-turn spells are still readable (D299a).
+        onPointerEnter={() => hover_spell(spell_id)}
+        onPointerLeave={() => hover_spell(null)}
+        // never hold DOM focus — see WeaponSocket in DeckCluster.jsx (the numkey blue-ring fix).
+        tabIndex={-1}
+        onMouseDown={(e) => e.preventDefault()}
+      >
+        {keyCap && (
+          <span className="hud-socket__key hud-num" aria-hidden="true">
+            {keyCap}
+          </span>
         )}
-      </span>
-      {cd_left > 0 && (
-        <span className="hud-socket__cd hud-num" aria-hidden="true">
-          {cd_left}
+        <span className="hud-socket__gem" aria-hidden="true">
+          <span className="hud-socket__gem-shine" />
+          {art_url ? (
+            <img
+              key={`${art_url}#${attempt}`}
+              className="hud-socket__gem-art"
+              src={art_url}
+              alt=""
+              draggable={false}
+              onError={on_failed_attempt}
+              // An HTTP-ok response with an undecodable body fires onLoad with naturalWidth 0, never onError —
+              // treat a zero-dimension load as a failure too (same guard as SpellArt / ItemIcon / mob_image).
+              onLoad={(e) => {
+                if (!e.currentTarget.naturalWidth) on_failed_attempt()
+              }}
+            />
+          ) : (
+            (card.name || spell_id || '?').slice(0, 1).toUpperCase()
+          )}
         </span>
-      )}
-      {card.cost > 0 && (
-        <span className="hud-socket__cost hud-num" aria-hidden="true">
-          {card.cost}
-        </span>
-      )}
-    </button>
+        {cd_left > 0 && (
+          <span className="hud-socket__cd hud-num" aria-hidden="true">
+            {cd_left}
+          </span>
+        )}
+        {card.cost > 0 && (
+          <span className="hud-socket__cost hud-num" aria-hidden="true">
+            {card.cost}
+          </span>
+        )}
+      </button>
+    </Tooltip>
   )
 }

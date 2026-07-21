@@ -26,7 +26,7 @@ import { projected_hp, character_max_hp } from '../../../../chain/read_character
 
 import './game-world-hud.css'
 // The proven in-game COMBAT chrome (turn-order cards, deck hand, ready/end-turn/abandon controls, the
-// "position your team" / placement countdown, armed-spell readout, board-hover tooltip, end-of-fight
+// "position your team" / placement countdown, spell hover tooltip, board-hover tooltip, end-of-fight
 // result + level-up). hud.css carries every `.hud-*` style these components use; it was previously only
 // imported by the now-orphaned Hud.jsx (so the live companion HUD shipped NO fight chrome — #54). All
 // `.hud-*` rules are namespaced (no `.gw-*` / global bleed), so importing it here is safe.
@@ -64,7 +64,6 @@ import { FightTimeline } from '../FightTimeline.jsx'
 import { FightPlacementBanner } from '../FightPlacementBanner.jsx'
 import { TurnBanner } from '../TurnBanner.jsx'
 import { DeckCluster } from '../DeckCluster.jsx'
-import { FightArmedReadout } from '../FightArmedReadout.jsx'
 import { EntityTooltip } from '../EntityTooltip.jsx'
 import { FightResult } from '../FightResult.jsx'
 import { FightSummary } from '../FightSummary.jsx'
@@ -83,13 +82,12 @@ import { use_expedition, STATUS_ACTIVE } from '../../../../roster/store'
 // board #13 (WS-C wave C2): the on-chain SOLO dungeon board + its move/cast turn input. `fight_mode` is now
 // ALSO raised by dungeon_store.js's engine bridge (no WS packets survive it — the backend is gone), so this
 // discriminates the two: a dungeon fight has no spellbook/placement/end-turn-packet semantics, so
-// DeckCluster/FightArmedReadout/FightPlacementBanner/FightControls (all WS-packet-driven — see
+// DeckCluster/FightPlacementBanner/FightControls (all WS-packet-driven — see
 // core/modules/fight.js's send_fight_* senders, dead without a backend) are swapped for DungeonBoard, which
 // owns its own commit/pass-turn buttons wired to dungeon_store's real txs. FightTimeline + Vitals (below) ARE
 // genuinely reusable as-is — pure fight-view readers (use_fight_view) with no wrong-sender problem.
 import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
 import { DungeonBoard } from './DungeonBoard.jsx'
-import { DungeonSpellReadout } from '../DungeonSpellReadout.jsx'
 import { DungeonLeaveButton } from './DungeonLeaveButton.jsx'
 import { RewardRecap } from './RewardRecap.jsx'
 import { FightSyncIndicator } from './FightSyncIndicator.jsx'
@@ -112,7 +110,7 @@ export function GameWorldHud() {
   // Tactical fight flag (engine store, set by core/modules/fight.js): combat replaces the world VIEW (the
   // board renders INTO the roam scene), so the combat chrome below mounts off this flag, not a panel set.
   const fight_mode = use_game_state((s) => s.fight_mode)
-  // VIEW-ONLY spectate: a spectator sends no commands, so the deck hand + armed readout are hidden (the
+  // VIEW-ONLY spectate: a spectator sends no commands, so the deck hand is hidden (the
   // turn controls become a "Leave spectate" — FightControls handles that itself).
   const spectating = !!use_fight_view()?.spectator // synchronous core view (S2 mirror kill)
   // is the CURRENT fight_mode a dungeon (chain-direct) or a WS fight? Only ever the former now (no backend),
@@ -285,7 +283,7 @@ export function GameWorldHud() {
 
       {/* COMBAT chrome (#54 restore) — the proven fight HUD, ported VERBATIM from Hud.jsx (the orphaned
           fight-HUD host): turn cards, deck hand, ready/end-turn/abandon controls, the "position your team"
-          placement countdown, armed-spell readout, board-hover tooltip, end-of-fight result + level-up. It
+          placement countdown, spell hover tooltip, board-hover tooltip, end-of-fight result + level-up. It
           is a SIBLING of `.gw-hud` (not a child) so `.hud-root`'s own pointer-events:none survives `.gw-hud
           > * { pointer-events:auto }` and the 3D board cells (meshes, raycast) stay clickable. `.hud-root`'s
           transform makes it the containing block for the fixed fight children (game-world-hud.css re-bases
@@ -311,11 +309,6 @@ export function GameWorldHud() {
                 PICK (arm), then left-click a target cell to CAST (or press 1-9 / 0-for-weapon). DungeonBoard
                 seeds fight.hand from the character's class spells. */}
             <SpellBar />
-            {/* D113 armed-spell readout — the SEED-data twin of FightArmedReadout (which is SPELL_TEMPLATES-
-                bound and renders BLANK for a seed spell). Reads fight.armed_spell_id (set by DeckCluster's
-                arm_spell — a pure store slice, NOT a WS packet) so grabbing a dungeon spell shows its
-                range/AP/element/effects instead of nothing. Self-gates to a genuine seeded spell on my turn. */}
-            <DungeonSpellReadout />
             {/* turn-draft input + END TURN/ABANDON (bottom-right FightControls) + room/terminal state machine */}
             <DungeonBoard />
           </>
@@ -326,14 +319,9 @@ export function GameWorldHud() {
             <FightTimeline />
             {/* board-hover tooltip — the fighter (mob OR player) under the cursor: name + team + HP */}
             <EntityTooltip />
-            {/* spells UI — the deck hand + armed-spell readout (a spectator casts nothing, so hidden) */}
-            {!spectating && (
-              <>
-                {/* S-25 spell bar (same optE unit as the dungeon branch): gem Vitals left, socket grid + pager right */}
-                <SpellBar />
-                <FightArmedReadout />
-              </>
-            )}
+            {/* spells UI — the deck hand (a spectator casts nothing, so hidden) */}
+            {/* S-25 spell bar (same optE unit as the dungeon branch): gem Vitals left, socket grid + pager right */}
+            {!spectating && <SpellBar />}
             {/* turn controls (End turn / Ready / Abandon) — bottom-right, clear of the bottom-center vitals
                 + the deck hand (the companion freed the bottom-right dock). See .gw-fight-layer .hud-bottom. */}
             <div className="hud-bottom">

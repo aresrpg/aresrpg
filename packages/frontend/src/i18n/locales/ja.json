@@ -1928,6 +1928,7 @@
     "neutral": "無属性",
     "fx_trap": "罠を設置",
     "fx_reduce_damage": "ダメージを{{value}}軽減",
+    "fx_any_element": "全属性",
     "fx_alter_resist": "耐性{{value}}",
     "fx_alter_resist_el": "{{element}}耐性{{value}}",
     "fx_place_glyph": "紋章を設置",

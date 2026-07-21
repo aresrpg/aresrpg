@@ -1928,6 +1928,7 @@
     "neutral": "Neutral",
     "fx_trap": "Places a trap",
     "fx_reduce_damage": "Absorbs {{value}} damage",
+    "fx_any_element": "any element",
     "fx_alter_resist": "{{value}} resistance",
     "fx_alter_resist_el": "{{value}} {{element}} resistance",
     "fx_place_glyph": "Places a glyph",

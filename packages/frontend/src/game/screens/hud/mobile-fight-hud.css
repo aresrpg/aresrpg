@@ -178,19 +178,3 @@
 .gw-fight-layer--mobile .hud-turnbanner__title {
   font-size: 12px;
 }
-.gw-fight-layer--mobile .fight-readout {
-  right: calc(max(8px, var(--safe-right)) + 124px);
-  bottom: calc(max(8px, var(--safe-bottom)) + 112px);
-  left: auto;
-  width: min(240px, calc(100% - max(8px, var(--safe-left)) - max(8px, var(--safe-right)) - 124px));
-  max-height: 120px;
-  padding: 6px;
-  overflow: hidden;
-  border-radius: var(--mobile-radius-small);
-  background: rgba(10, 10, 15, 0.84);
-  backdrop-filter: blur(4px);
-}
-.gw-fight-layer--mobile .fight-readout :is(.sd__head-name, .sd__fact-label, .sd__fact-val, .sd__effect-text),
-.gw-fight-layer--mobile .fight-readout__hint {
-  font-size: 12px;
-}

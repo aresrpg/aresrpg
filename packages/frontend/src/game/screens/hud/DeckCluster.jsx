@@ -11,11 +11,9 @@
 // renders as a hollow empty-socket frame, so the bar's total width never changes as `fight.hand` (the REAL
 // on-chain spells, resolved from the seeded SpellTemplates by DungeonBoard) grows from 0 toward
 // SPELL_SLOTS. A FILLED socket is a rounded CARVED tile holding a glossy element-tinted icon-gem, a
-// select-key cap (top-left, first nine only) and an AP-cost pip (bottom-right); HOVERING it drives THE ONE
-// big spell tooltip (there should only be the big tooltip — supersedes the 07-17
-// socket-anchored SpellHoverTip, now DELETED): the socket's `hover_spell` store write feeds the
-// DungeonSpellReadout, which previews the hovered spell on every platform (the weapon socket keeps its own
-// facts tooltip). An EMPTY socket is the same hollow carved tile with just its dimmed keybind number —
+// select-key cap (top-left, first nine only) and an AP-cost pip (bottom-right); HOVERING it drives the single
+// socket-anchored spell card (the weapon socket keeps its own facts tooltip). An EMPTY socket is the same
+// hollow carved tile with just its dimmed keybind number —
 // nothing to hover, nothing to click. The Vitals box + XP strip are mounted beside this grid by GameWorldHud
 // inside `.hud-spellbar--optE`.
 //
@@ -23,8 +21,8 @@
 // store toggle, no packet), then LEFT-CLICK a target cell on the board to CAST (the board's on_cell_click
 // already casts an armed spell on a castable-cell click, and treats a non-castable click as a no-op while
 // armed — DungeonBoard D301). Number keys mirror the clicks: 1-9 pick the matching hand card (only the first
-// nine are hotkeyed), 0 picks the weapon; inert while a text input has focus. Escape disarms. HOVER previews
-// the hovered spell in the big DungeonSpellReadout (never a grab). The armed_spell_id is the shared SSOT the board reads.
+// nine are hotkeyed), 0 picks the weapon; inert while a text input has focus. Escape disarms. The
+// armed_spell_id is the shared SSOT the board reads.
 //
 // React 19 note: a NATIVE `disabled` button suppresses mouseenter, which would kill the hover preview on a
 // greyed (off-turn / unaffordable) socket — so an unavailable socket is styled+aria-disabled and its CLICK is
@@ -48,6 +46,7 @@ import { next_slot_crit, socket_glows, next_hit } from './deck-crit-glow.js'
 import { use_fight_phase } from './world/use_fight_phase.js'
 import { use_mobile_input_mode } from '../../touch/mobile_input_mode.js'
 import { SpellSocket } from './deck-spell-socket.jsx'
+import { SpellHoverTip } from './spell-hover-tip.jsx'
 
 // §17.27 weapon element id → localized element name (participant.move WL_ELEMENT: 0 fire · 1 water · 2 earth · 3 air).
 const WEAPON_ELEMENT_KEYS = ['fire', 'water', 'earth', 'air']
@@ -154,6 +153,7 @@ export function DeckCluster() {
   const fight = use_fight_view() // synchronous core view (S2 mirror kill) — AP/hand/armed never lag a dispatch
   const hand = fight?.hand ?? []
   const armed = fight?.armed_spell_id ?? null
+  const hovered = fight?.hovered_spell_id ?? null
 
   // The RECONCILED fight phase (fight-engine/phase.js) — read only for the "arm refused" debug line below (which
   // phase a no-op keypress happened in). The bar itself no longer branches on phase to decide whether to MOUNT
@@ -256,8 +256,8 @@ export function DeckCluster() {
     return () => window.removeEventListener('keydown', on_key)
   }, [armed, my_turn, weapon_affordable, hand, ap, phase.phase, cast_path, last_cast_turn, my_turn_no])
 
-  // A bar that unmounts mid-hover (fight teardown) must not strand `hovered_spell_id` — the readout card
-  // would ghost into the next fight. pointerleave never fires on unmount; this cleanup is the honest close.
+  // A bar that unmounts mid-hover (fight teardown) must not strand `hovered_spell_id`. pointerleave never
+  // fires on unmount; this cleanup is the honest close.
   useEffect(() => () => hover_spell(null), [])
 
   // ALWAYS mount once a fight slice exists — placement no longer hides the deck (the spell
@@ -295,6 +295,7 @@ export function DeckCluster() {
             if (!spell_id) return <EmptySocket key={`empty-${i}`} keyCap={key_cap} />
             const card = spell_card(spell_id)
             const color = card_color(spell_id)
+            const spell = fight_spell(spell_id)
             const gate = cast_gate(spell_id)
             const affordable = my_turn && card.cost <= ap && !gate.on_cd && !gate.exhausted
             return (
@@ -310,6 +311,17 @@ export function DeckCluster() {
                 cd_left={gate.on_cd ? gate.cd_left : 0}
                 exhausted={!gate.on_cd && gate.exhausted}
                 onPick={() => affordable && arm_spell(spell_id)}
+                tip={
+                  spell ? (
+                    <SpellHoverTip
+                      t={t}
+                      name={card.name}
+                      spell={spell}
+                      aiming={my_turn && armed === spell_id}
+                    />
+                  ) : null
+                }
+                pinned={my_turn && armed === spell_id && hovered == null}
               />
             )
           })}
