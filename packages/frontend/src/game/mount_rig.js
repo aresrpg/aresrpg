@@ -14,7 +14,7 @@ import { AnimationMixer, Box3 } from 'three'
 import { clone as clone_skinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
 import { apply_avatar_material, get_glb_loader } from '@aresrpg/engine3/player'
-import { canonical_walrus_asset_url } from '@aresrpg/sdk/jobs'
+import { canonical_walrus_asset_url, walrus_asset_url } from '@aresrpg/sdk/jobs'
 
 import { mount_target_height } from './cosmetic_glb.js'
 import { game_log } from '../core/log.js'
@@ -33,6 +33,45 @@ const load_glb = (/** @type {string} */ url) => {
   return p
 }
 
+/** The mount GLB refusal rule (non-CDN URLs rejected) — ONE home, shared by create_mount_rig and the
+ *  #175 preload below so a preload always warms the EXACT cache key the real mount will ask for.
+ *  @param {string} glb_url @returns {string | null} */
+const resolve_source_url = (glb_url) =>
+  canonical_walrus_asset_url(glb_url) ?? (glb_url.startsWith('/') && !glb_url.startsWith('//') ? glb_url : null)
+
+/** Which dragon skin the fast-travel dragon rides — fire by default; `?ftdragon=frost|void` previews the
+ *  others in DEV. ONE home so the mount AND the #175 preload below always resolve the identical URL. */
+export function ft_dragon_glb_url() {
+  const pick = (import.meta.env.DEV && new URLSearchParams(location.search).get('ftdragon')) || 'dragon-fire'
+  const file = ['dragon-fire', 'dragon-frost', 'dragon-void'].includes(pick) ? `${pick}.glb` : 'dragon-fire.glb'
+  return walrus_asset_url('mob', file) ?? `/sprites/mobs/models/${file}`
+}
+
+/** PRELOAD-ON-INTENT (#175 — "more than 20s before the dragon even spawns"): a cold Walrus dragon GLB fetch
+ *  (multi-MB, first request this session) currently sits entirely on the travel critical path — create_mount_rig
+ *  only ever asks for it once the resolve/join phases finish. Kick the SAME cache entry the moment the travel
+ *  UI shows the option (PlayerActionMenu), not on confirm, so the fetch runs IN PARALLEL with resolve/join
+ *  instead of serialized after it. Fire-and-forget: a failure here is silent — create_mount_rig's own load
+ *  still retries the URL and surfaces its own error normally. @param {string} glb_url */
+export function preload_mount_glb(glb_url) {
+  const source_url = resolve_source_url(glb_url)
+  if (source_url) load_glb(source_url).catch(() => {})
+}
+
+/** Pick the idle/move clip PAIR by name convention. Ground rigs: run/walk/move/hop/gallop. Flight rigs:
+ *  fly/flap/wing (the sky_dragon.js ambient dragon's own proven vocabulary — #175: mount_rig's old
+ *  fly-only fallback missed a plain "Flap"/"Wing" clip name, silently falling through to the fragile
+ *  clips[1] positional guess). Pure — no mixer, no GLB — so the convention is unit-testable without a rig.
+ *  @param {{name:string}[]} clips @returns {{ idle: {name:string}|null, move: {name:string}|null }} */
+export function pick_mount_clips(clips) {
+  const idle = clips.find((/** @type {any} */ c) => /idle/i.test(c.name)) ?? clips[0] ?? null
+  const move =
+    clips.find((/** @type {any} */ c) => /run|walk|move|hop|gallop/i.test(c.name)) ??
+    clips.find((/** @type {any} */ c) => /fly|flap|wing/i.test(c.name)) ??
+    (clips.length > 1 ? clips[1] : null)
+  return { idle, move: move && move !== idle ? move : null }
+}
+
 /**
  * Create a mount rig for `glb_url`. Fills in ASYNC — `update()`/`seat_height` no-op / read 0 until the GLB
  * resolves, so the caller can create it and pose every frame immediately. The returned handle owns the scene
@@ -48,8 +87,7 @@ export function create_mount_rig({ engine, glb_url }) {
   let rig = null
   let disposed = false
   let want_visible = true
-  const source_url =
-    canonical_walrus_asset_url(glb_url) ?? (glb_url.startsWith('/') && !glb_url.startsWith('//') ? glb_url : null)
+  const source_url = resolve_source_url(glb_url)
 
   const load = source_url ? load_glb(source_url) : Promise.reject(new Error('refused non-CDN mount asset URL'))
   load
@@ -81,16 +119,12 @@ export function create_mount_rig({ engine, glb_url }) {
       root.visible = want_visible
       const mixer = new AnimationMixer(root)
       const clips = gltf.animations ?? []
-      const idle_clip = clips.find((/** @type {any} */ c) => /idle/i.test(c.name)) ?? clips[0]
       // GROUND clips before FLY: a bird mount's fly loop carries baked altitude — never pick it while a
       // walk/run exists. (corbac ships idle+walk only, but its "walk" IS a hover — the root-Y pin below is
-      // the guarantee either way.)
-      const move_clip =
-        clips.find((/** @type {any} */ c) => /run|walk|move|hop|gallop/i.test(c.name)) ??
-        clips.find((/** @type {any} */ c) => /fly/i.test(c.name)) ??
-        (clips.length > 1 ? clips[1] : null)
+      // the guarantee either way.) pick_mount_clips is the pure, unit-tested naming convention (#175).
+      const { idle: idle_clip, move: move_clip } = pick_mount_clips(clips)
       const idle = idle_clip ? mixer.clipAction(idle_clip) : null
-      const move = move_clip && move_clip !== idle_clip ? mixer.clipAction(move_clip) : null
+      const move = move_clip ? mixer.clipAction(move_clip) : null
       idle?.play()
       if (move) {
         move.play()

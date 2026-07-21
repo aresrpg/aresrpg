@@ -16,9 +16,17 @@ import { CONTROLLER_CONSTANTS } from '@aresrpg/engine3/player'
 import { steer_to } from './auto_run.js'
 
 export const FT_SPEED = CONTROLLER_CONSTANTS.RUN_SPEED // m/s — never ×1.5 (plan invariant 1); single home
-export const CRUISE_CLEARANCE = 12 // m above the sampled ground during cruise (terrain-follow clears ~195 m peaks)
+// #175 second live report ("it should fly WAY higher", priority bumped on recurrence): 12 read as skimming
+// the treetops. 30 = 2.5× the old cruise (owner range: 2-3×) — terrain-follow, so it clears whatever peak
+// sits under the path by the same margin everywhere. DESCEND_RADIUS is widened to match (see below) so the
+// extra altitude still fully sheds into LAND_CLEARANCE before arrival — a taller cruise with the OLD 30-block
+// descent window would have force-unmounted the rider mid-air (see the paired invariant test).
+export const CRUISE_CLEARANCE = 30 // m above the sampled ground during cruise (terrain-follow — clears any peak)
 export const LAND_CLEARANCE = 3 // m above ground at the drop point — force-unmount from here, gravity settles the rest
-export const DESCEND_RADIUS = 30 // begin the cruise→land descent within this XZ distance of the target…
+// Widened alongside CRUISE_CLEARANCE (was 30, sized for the old ground+12 cruise): the descent must shed
+// CRUISE_CLEARANCE−LAND_CLEARANCE metres at VERT_RATE before the dragon reaches ARRIVAL_RADIUS, which bounds
+// the MINIMUM viable radius to FT_SPEED·(CRUISE_CLEARANCE−LAND_CLEARANCE)/VERT_RATE ≈ 47; 50 keeps a margin.
+export const DESCEND_RADIUS = 50 // begin the cruise→land descent within this XZ distance of the target…
 export const ARRIVAL_RADIUS = 4 // …and count as arrived (drop) within this XZ distance (the dragon rig is large)
 export const VERT_RATE = 6 // m/s vertical shaping rate (climb + descend) — smooth, never a Y teleport
 
@@ -27,6 +35,22 @@ export const VERT_RATE = 6 // m/s vertical shaping rate (climb + descend) — sm
  *  @param {number} dist @returns {number} */
 export function target_clearance(dist) {
   return dist <= DESCEND_RADIUS ? LAND_CLEARANCE : CRUISE_CLEARANCE
+}
+
+// #175 root cause (both live reports: "still not animated"): the pilot drives the body via ctl.teleport()
+// every frame, never ctl.tick() — and teleport() ZEROES the controller's velocity (character_controller.js),
+// so state.speed is never recomputed while flying (step_controller, the only writer, only runs inside tick).
+// A raw `speed > threshold` moving-check therefore reads the dragon as motionless for the WHOLE flight, so
+// mount_rig.js's idle↔move blend decays to idle (weight→1) and the flap/fly clip never gets weight — the
+// mixer IS running, the WRONG clip just wins. The fix is this one gate: fast-travel flight is unconditional
+// motion for animation purposes, independent of the controller's (frozen) own speed reading.
+export const MOUNT_MOVE_THRESHOLD = 0.2 // m/s — the mount_rig.js idle↔move blend gate for ordinary riding
+
+/** Is the ridden mount considered "moving" for the idle↔move animation blend (mount_rig.js)? Real ground
+ *  speed OR an active fast-travel flight — see the note above for why speed alone lies mid-flight.
+ *  @param {number} speed @param {boolean} flying @returns {boolean} */
+export function mount_is_moving(speed, flying) {
+  return speed > MOUNT_MOVE_THRESHOLD || flying
 }
 
 /** Arrived once within ARRIVAL_RADIUS blocks of the target (XZ). @param {number} dist @param {number} [radius] */

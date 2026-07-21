@@ -239,11 +239,25 @@ describe('mount_target_height — per-mount world-size normalisation table', () 
     expect(mount_target_height('')).toBe(MOUNT_FALLBACK_H)
     expect(mount_target_height(null)).toBe(MOUNT_FALLBACK_H)
   })
-  test('every table height is a sane rideable size (0.8–2.2 blocks)', async () => {
+  test('every non-dragon table height is a sane rideable size (0.8–2.2 blocks)', async () => {
     const { MOUNT_TABLE } = await import('./cosmetic_glb.js')
-    for (const h of Object.values(MOUNT_TABLE)) {
+    for (const [key, h] of Object.entries(MOUNT_TABLE)) {
+      if (key.startsWith('dragon-')) continue // the fast-travel dragons are the deliberate exception below
       expect(h).toBeGreaterThanOrEqual(0.8)
       expect(h).toBeLessThanOrEqual(2.2)
+    }
+  })
+  // #175 second live report: "the dragon should read a bit bigger than current" — RED before the fix
+  // (dragons sat at the same 2.2 ceiling as every other mount); GREEN once they're a deliberate ~1.3-1.5×
+  // exception, still bounded so a future tune can't drift it into "comical" territory unnoticed.
+  test('the fast-travel dragons read bigger than the old 2.2 ceiling — ~1.3-1.5× (#175)', async () => {
+    const { MOUNT_TABLE } = await import('./cosmetic_glb.js')
+    const OLD_DRAGON_H = 2.2 // the pre-#175 height every dragon variant shared with the rest of the table
+    for (const key of ['dragon-fire', 'dragon-frost', 'dragon-void']) {
+      const h = MOUNT_TABLE[key]
+      const ratio = h / OLD_DRAGON_H
+      expect(ratio).toBeGreaterThanOrEqual(1.3)
+      expect(ratio).toBeLessThanOrEqual(1.5)
     }
   })
 })
