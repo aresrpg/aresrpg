@@ -106,7 +106,7 @@ describe('committed mob HP — cumulative optimistic casts', () => {
 })
 
 describe('intent-free authoritative floor', () => {
-  test('an intent does not block the next honest Fight-object snapshot', () => {
+  test('an intent does not block the next authoritative floor — the receipt raises it (M2b)', () => {
     const store = store_from_snapshot()
     store
       .getState()
@@ -114,10 +114,16 @@ describe('intent-free authoritative floor', () => {
 
     expect(store.getState().applied_version, 'an optimistic intent is not an authoritative version').toBe(5)
 
+    // M2b · ONE INGRESS: authoritative state enters through the receipt/journal door, never a re-adopted object read.
+    // The receipt raises the floor to v6 and retires the matching prediction by claim (M6); the trailing object read
+    // is only a checkpoint (a last_action_ms watermark), never a competing state source.
+    store.getState().input({ type: 'receipt', receipt: { events: [peer_hit(10)] }, version: 6 }, 12_050)
+    expect(store.getState().applied_version, 'the authoritative receipt raises the floor').toBe(6)
+    expect(committed_mob_hp(store.getState(), 0), 'committed adopts the authoritative hit; the intent retired').toBe(10)
+
     const confirmed = { ...FIGHT_OBJECT, last_action_ms: 12_000, mobs: [{ ...FIGHT_OBJECT.mobs[0], hp: 10 }] }
     store.getState().input({ type: 'snapshot', fight: confirmed, version: 6 }, 12_100)
-    expect(store.getState().view_version, 'the honest object read adopts instead of hitting the intent floor').toBe(6)
-    expect(store.getState().last_action_ms).toBe(12_000)
+    expect(store.getState().last_action_ms, 'the checkpoint still adopts last_action_ms (events omit it)').toBe(12_000)
   })
 })
 
