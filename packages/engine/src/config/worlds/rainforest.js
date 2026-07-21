@@ -354,11 +354,11 @@ function build_rainforest() {
     ],
   }
 
-  // --- STRUCTURE POOL OVERRIDES (per-pin decoration; the dominant jungle keeps registry decoration) -----
+  // --- STRUCTURE POOL OVERRIDES (REGISTRY-name keys; dominant jungle keeps registry decoration) ---------
   base.structure_pool_overrides = {
-    karst_scarp: ['pool_rocks_tropical'], // mossy tropical boulders on the bare limestone
-    swamp_margin: ['pool_mangrove', 'pool_swamp_trees'], // mangroves root in the wet margin
-    cloud_forest: ['pool_jungle_giants', 'pool_tropical_undergrowth'],
+    alpine: ['pool_rocks_tropical'], // karst_scarp: mossy tropical boulders on the bare limestone
+    swamp: ['pool_mangrove', 'pool_swamp_trees'], // swamp_margin: mangroves root in the wet margin
+    dense_forest: ['pool_jungle_giants', 'pool_tropical_undergrowth'], // cloud_forest
   }
 
   // --- TREE SPECIES (per-pin rosters; recoloured jade by the palette) ---------------------------

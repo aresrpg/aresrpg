@@ -217,16 +217,16 @@ function build_ember_steppe() {
     ],
   }
 
-  // --- STRUCTURE POOL OVERRIDES (scorched decoration per sub-biome) -----------------------------
-  // Config-driven decorator hook (biome NAME → bundle pool ids merged onto the biome's rock/tree sets).
+  // --- STRUCTURE POOL OVERRIDES (REGISTRY-name keys; scorched decoration per sub-biome) ---------
+  // Config-driven decorator hook (registry biome NAME → bundle pools merged onto rock/tree sets).
   // Rocks are schematic (never shadowed); proc trees ride tree_species below. Volcanic + sandstone rocks
   // scatter the badlands/columns; dead-tree schematics back the cinder woods.
   base.structure_pool_overrides = {
-    ash_steppe: ['pool_rocks_sandstone'],
-    cinder_woods: ['pool_dead_trees', 'pool_rocks_volcanic'],
-    lava_badlands: ['pool_rocks_volcanic'],
-    obsidian_fields: ['pool_rocks_volcanic'],
-    basalt_columns: ['pool_rocks_volcanic'],
+    desert: ['pool_rocks_sandstone'],
+    taiga: ['pool_dead_trees', 'pool_rocks_volcanic'],
+    scorched_badlands: ['pool_rocks_volcanic'],
+    obsidian_spires: ['pool_rocks_volcanic'],
+    alpine: ['pool_rocks_volcanic'],
   }
 
   // --- DECORATION (sparse, burnt — no lush sprite clutter) -------------------------------------
@@ -262,8 +262,8 @@ function build_ember_steppe() {
   // --- BIOME TABLE: the six ember sub-biomes (registry ids REUSED — decoration resolves by id) ---
   // Each pin uses an EXISTING registry id (surface_decorator.get_biome_by_id + BIOME_SCHEMATICS are keyed
   // on the persisted id/name) so the schematic pools + density gates resolve; the per-world `name` is the
-  // region pin + tree_species/structure_pool_overrides key. Land blocks are the ember-recoloured
-  // stone/sand/dirt/grass. weirdness_gate:false (pins bypass climate placement; kept clean). NO OCEAN
+  // region pin + tree_species key, while structure_pool_overrides uses the registry name. Land blocks are
+  // ember-recoloured stone/sand/dirt/grass. weirdness_gate:false (pins bypass climate placement; kept clean). NO OCEAN
   // member — the landlocked base + dropped sea leave no sub-sea columns.
   //   ash_steppe→desert(10)  cinder_woods→taiga(7)  lava_badlands→scorched_badlands(11)
   //   obsidian_fields→obsidian_spires(15)  ember_oasis→grassland(3)  basalt_columns→alpine(13)
