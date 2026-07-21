@@ -7,7 +7,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { state_hash } from './inputs.js'
-import { merge_entries, foreign_replay_events } from './fold.js'
+import { merge_entries } from './fold.js'
 import { create_fight_store } from './store.js'
 import { engine_view } from './project.js'
 import { encode } from './los.js'
@@ -140,47 +140,15 @@ describe('WAVE A red-first — V1/V2/V3/V9', () => {
     ).toBe(before)
   })
 
-  // V9 — FLOOR PRIORITY. A snapshot-sourced entry must never override a receipt-proven entry at the same key.
-  test('V9: a snapshot-sourced entry does NOT override a receipt-proven entry at the same key', () => {
-    const receipt_entry = {
-      version: 2,
-      event_idx: 0,
-      source: 'receipt',
-      kind: 'Hit',
-      victim_is_mob: true,
-      victim_idx: 0,
-      remaining_hp: 10,
-    }
-    const snapshot_entry = {
-      version: 2,
-      event_idx: 0,
-      source: 'snapshot',
-      kind: 'Hit',
-      victim_is_mob: true,
-      victim_idx: 0,
-      remaining_hp: 99,
-    }
-    const merged = merge_entries({ '2:0': receipt_entry }, [snapshot_entry])
-    expect(merged['2:0'].remaining_hp, 'receipt is the one-way floor; a snapshot must not override it').toBe(10)
-  })
-
-  // V10 — DEATH-BEAT DEDUP on the foreign_replay emit path. A death the eye already saw (my optimistic kill,
-  // presented) must not be REPLAYED by a foreign snapshot that merely confirms it (symptom ② replayed die anim).
-  test('V10: foreign_replay does NOT re-emit a death for an already-presented-dead target', () => {
-    const escrow = [{ character: '0xc0' }, { character: '0xc1' }]
-    const prev = {
-      fighters: { m0: { key: 'm0', cell: 20, hp: 10, alive: true }, p1: { key: 'p1', cell: 5, hp: 50, alive: true } },
-    }
-    const next = {
-      fighters: { m0: { key: 'm0', cell: 20, hp: 0, alive: false }, p1: { key: 'p1', cell: 6, hp: 50, alive: true } },
-    }
-    const hits = (opts) =>
-      foreign_replay_events(prev, next, { escrow, my_key: 'p0', ...opts }).filter((e) => String(e.type).endsWith('Hit'))
-        .length
-    // the eye already saw m0 die (my optimistic kill) — the confirming foreign snapshot must NOT replay its death
-    expect(hits({ presented_dead: new Set(['m0']) }), 'an already-presented death must not be re-emitted').toBe(0)
-    // control: WITHOUT the cursor the death IS emitted — proving the dedup is what suppresses it (not a fluke)
-    expect(hits({}), 'a genuinely-unseen foreign death is still emitted').toBe(1)
+  // V9 → M2b · ONE INGRESS. With a SINGLE canonical source (the accept machine's deduped stream), there is no
+  // snapshot-vs-receipt merge left to arbitrate — cross-transport identity is resolved upstream by content-key. The
+  // surviving role of merge_entries is layering: CANONICAL always wins over an optimistic PREDICTION at a key
+  // collision, whichever order they arrive — a prediction never overrides proven truth (the one-way floor, reframed).
+  test('M2b: a canonical entry is the floor over an optimistic intent at the same key (either arrival order)', () => {
+    const intent_entry = { version: 2, event_idx: 0, source: 'intent', kind: 'Hit', victim_is_mob: true, victim_idx: 0, remaining_hp: 99 }
+    const canonical_entry = { version: 2, event_idx: 0, source: 'canonical', kind: 'Hit', victim_is_mob: true, victim_idx: 0, remaining_hp: 10 }
+    expect(merge_entries({ '2:0': intent_entry }, [canonical_entry])['2:0'].remaining_hp, 'canonical adopts over a prediction').toBe(10)
+    expect(merge_entries({ '2:0': canonical_entry }, [intent_entry])['2:0'].remaining_hp, 'a prediction never overrides canonical').toBe(10)
   })
 
   // B — drop_traps is a VERSION-GATED input (composite §1). A COMMITTED trap (basis_version at/below the applied

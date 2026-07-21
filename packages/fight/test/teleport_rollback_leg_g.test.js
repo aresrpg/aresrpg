@@ -206,7 +206,10 @@ const peer_moved = {
   participants: [FIGHT_COOP.participants[0], { ...FIGHT_COOP.participants[1], cell: P_MOVED }],
 }
 
-describe('LEG G-FIX — a foreign adoption must not roll back my un-flushed optimistic turn', () => {
+// M2b · ONE INGRESS (#291): LEG G-FIX guarded a FOREIGN snapshot ADOPTION (foreign_replay + the intent-rebase)
+// rolling back my optimistic turn — that adoption path is DELETED (a mid-fight object read is an inert checkpoint,
+// so it can never roll back my prediction). The peer-turn arrival is the peer lane's, via the journal door.
+describe.skip('LEG G-FIX — a foreign adoption must not roll back my un-flushed optimistic turn', () => {
   test('① a peer turn adopted mid-my-draft keeps my optimistic teleport (red today: purged → snapped HOME)', () => {
     const store = boot_coop()
     teleport(store) // I optimistically teleport HOME → DEST (un-flushed; no receipt yet)

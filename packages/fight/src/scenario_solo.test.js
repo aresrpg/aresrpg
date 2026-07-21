@@ -246,9 +246,11 @@ describe('the single-PTB turn receipt — purge, wave pacing, presented mask', (
     expect(view.fighters.get(ME).health).toBe(44) // …and my HP drops exactly at the ack
   })
 
-  test('R2 DEFERRAL: a fresher object read stashes while the wave masks, adopts at the final ack', () => {
+  test('M2b: a fresher object read is an inert CHECKPOINT — the receipt drives the wave, no leapfrog', () => {
     const store = active_store()
     store.getState().input({ type: 'receipt', receipt: turn_receipt(), version: 4 }, T0 + 6_000)
+    // M2b · ONE INGRESS: the object read NEVER adopts mid-fight, so it can neither leapfrog the draining wave nor
+    // overwrite the receipt-folded truth. The old deferral is deleted — there is nothing to stash.
     store.getState().input(
       {
         type: 'snapshot',
@@ -262,14 +264,12 @@ describe('the single-PTB turn receipt — purge, wave pacing, presented mask', (
       },
       T0 + 6_500
     )
-    expect(store.getState().view_version).toBe(1) // NOT adopted yet
-    expect(store.getState().pending_snapshot?.version).toBe(5)
+    expect(store.getState().view_version).toBe(1) // the checkpoint never re-adopts the base
     const { seq } = store.getState().wave.at(-1)
     store.getState().input({ type: 'presented', seq }, T0 + 9_100)
     const s = store.getState()
-    expect(s.view_version).toBe(5) // the deferred read adopted through the same door
-    expect(s.pending_snapshot).toBe(null)
-    expect(engine_view(s).fighters.get('mob-0').cell).toEqual({ x: 1, y: 2 })
+    expect(s.view_version).toBe(1) // still the bootstrap base — canonical catch-up rides the journal, not a re-adopt
+    expect(engine_view(s).fighters.get('mob-0').cell).toEqual({ x: 1, y: 2 }) // the receipt's wave moved the mob
   })
 })
 

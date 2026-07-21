@@ -157,10 +157,26 @@ describe('sim-backed own-cast prediction', () => {
     const leg = store.getState().wave.find((t) => t.is_local)
     expect(leg.from_idx == null).toBe(true)
 
-    // RECONCILE: the authoritative read lands the caster at the SAME cell → idempotent match, intents purge, the
-    // presented cell never regresses (the reconcile law: same-position discard).
+    // RECONCILE (M2b · ONE INGRESS): the authoritative confirmation lands through the RECEIPT door — its Cast + the
+    // teleport Displaced retire the prediction BY CLAIM (M6, same landing cell), so the presented cell never regresses
+    // and the optimistic intents leave the log. A trailing object read would be an inert checkpoint, never the source.
     store.getState().input({ type: 'presented', seq: leg.seq }, NOW + 100)
-    store.getState().input({ type: 'snapshot', fight: fight_object(DEST), version: 7 }, NOW + 500)
+    store.getState().input(
+      {
+        type: 'receipt',
+        version: 7,
+        receipt: {
+          events: [
+            { type: '0x0::fight_events::Cast', parsedJson: { fight: FIGHT, caster_is_mob: false, caster_idx: 0, target_cell: DEST } },
+            {
+              type: '0x0::fight_events::Displaced',
+              parsedJson: { fight: FIGHT, target_is_mob: false, target_idx: 0, to_cell: DEST, kind: SE.K_TELEPORT },
+            },
+          ],
+        },
+      },
+      NOW + 500
+    )
     expect(store.getState().fighters.p0.cell).toBe(DEST)
     expect(display_state(store.getState()).fighters.p0.cell).toBe(DEST)
     expect(Object.values(store.getState().entries).some((entry) => entry.source === 'intent')).toBe(false)

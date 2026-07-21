@@ -32,7 +32,11 @@ const RED_PENDING = new Map([
   // e.g. ['some_scenario', '#274: a re-read replays the death a second time'] — none at this HEAD.
 ])
 
-describe('replay-idempotence — duplicate authoritative delivery never changes the presentation (#281)', () => {
+// M2b · ONE INGRESS (#291): the COOP peer-turn presentation these scenarios exercise rides the deleted
+// snapshot-diff replay; peer-turn pacing via the journal is the peer lane's. Fold-level delivery idempotence (the
+// #290 property extended to the full ingress) is proven in one_ingress.test.js. Re-enable per scenario when the
+// peer lane lands. (Solo scenarios' receipt pacing is unchanged and covered by the scenario_solo suite.)
+describe.skip('replay-idempotence — duplicate authoritative delivery never changes the presentation (#281)', () => {
   for (const scenario of SCENARIOS) {
     const red = RED_PENDING.get(scenario.name)
     test(`${scenario.name} — ${red ? `RED-PENDING (${red})` : 'presentation is delivery-idempotent'}`, () => {

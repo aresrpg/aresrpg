@@ -86,7 +86,10 @@ const alice_store = () => {
 const wave_of = (store) => store.getState().wave
 const beat_kinds = (turn) => turn.beats.map((b) => b.kind)
 
-describe('spectator replay — a peer’s committed turn paces through the SAME beat pipeline', () => {
+// M2b · ONE INGRESS (#291): snapshot-diff spectator replay (foreign_replay_*) is DELETED. A peer's committed
+// turn now arrives as JOURNAL events (fold correctness proven in one_ingress.test.js); its PACED presentation is
+// the peer lane's, entering through the same accept door. Re-enable when the peer lane lands its journal pacing.
+describe.skip('spectator replay — a peer’s committed turn paces through the SAME beat pipeline', () => {
   // ① VECTOR A — a peer's committed CAST arrives only as a wholesale object read; it must REPLAY as paced beats
   // (walk + cast + damage floater), never an instant state jump.
   test('a peer move+cast revealed by a snapshot paces as a non-local replay wave (not instant)', () => {

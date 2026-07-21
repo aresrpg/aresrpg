@@ -103,18 +103,21 @@ describe('adoption hold-not-degrade (the exact-read torn-record window)', () => 
     expect(view.start_cells_a).toEqual([5, 6, 7])
   })
 
-  test('a torn re-read mid-fight holds AT THE LAST GOOD frame, then adopts the healed same-version read', () => {
+  test('a torn re-read mid-fight holds AT THE LAST GOOD frame; the healed read is an inert checkpoint (M2b)', () => {
     const store = boot()
-    store.getState().input({ type: 'snapshot', fight: real_fight(), version: 5 })
+    store.getState().input({ type: 'snapshot', fight: real_fight(), version: 5 }) // bootstrap: the good geometry base
 
     store.getState().input({ type: 'snapshot', fight: degraded_fight(), version: 6 })
     const held = project.board_view(store.getState())
-    expect(held).toMatchObject({ grid_width: 13, grid_height: 12 }) // never the fallback frame
+    expect(held).toMatchObject({ grid_width: 13, grid_height: 12 }) // never the fallback frame — the torn read is dropped
     expect(store.getState().view_version).toBe(5) // the torn read raised no floor
 
+    // M2b · ONE INGRESS: the geometry is fixed at bootstrap; a healed mid-fight object read is an inert CHECKPOINT
+    // (it never re-adopts). The good frame HOLDS from the base, and dynamic state (a fighter's cell) rides the
+    // journal, not a re-adopted read — so the board never regresses to the fallback frame.
     store.getState().input({ type: 'snapshot', fight: real_fight({ cell: 6 }), version: 6 })
-    expect(store.getState().view_version).toBe(6)
-    expect(project.board_view(store.getState()).escrow[0].cell).toBe(6)
+    expect(store.getState().view_version).toBe(5) // checkpoint: no re-adopt
+    expect(project.board_view(store.getState())).toMatchObject({ grid_width: 13, grid_height: 12 }) // frame held, never fallback
   })
 
   test('the hold CONVERGES: a complete read at the entry floor still seeds a null view', () => {
