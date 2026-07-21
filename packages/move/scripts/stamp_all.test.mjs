@@ -25,8 +25,13 @@ const repo = path.resolve(here, '../../..')
 const release_path = path.join(repo, 'packages/sdk/src/deployment/release.json')
 const deployment_path = path.join(repo, 'packages/sdk/src/deployment/aresrpg.js')
 const ceremony_path = path.join(here, 'out/ceremony_manifest.json')
+// MISSING-ARTIFACT (#96): out/ceremony_manifest.json is stamped by the content pipeline's engine-upgrade
+// ceremony (private repo) and is absent by design in this public repo. The 3 tests below read a REAL
+// stamped manifest; 'release validation rejects malformed preserved deployment ids' uses synthetic data
+// and has no ceremony dependency, so it keeps running for real.
+const CEREMONY_MANIFEST_AVAILABLE = existsSync(ceremony_path)
 
-test('release.json owns every SDK pin and stamp_all replaces it atomically', async () => {
+test.skipIf(!CEREMONY_MANIFEST_AVAILABLE)('release.json owns every SDK pin and stamp_all replaces it atomically', async () => {
   expect(existsSync(release_path)).toBe(true)
 
   const ceremony = JSON.parse(readFileSync(ceremony_path, 'utf8'))
@@ -195,7 +200,7 @@ test('release validation rejects malformed preserved deployment ids', async () =
   }
 })
 
-test('Gold localnet ceremony creates and stamps a real CrushBoard', async () => {
+test.skipIf(!CEREMONY_MANIFEST_AVAILABLE)('Gold localnet ceremony creates and stamps a real CrushBoard', async () => {
   const manifest = JSON.parse(readFileSync(ceremony_path, 'utf8'))
   const previous = JSON.parse(readFileSync(release_path, 'utf8')).networks.testnet
   delete manifest.forgemagie.shared.CrushBoard
@@ -242,7 +247,7 @@ test('Gold localnet ceremony creates and stamps a real CrushBoard', async () => 
   })
 })
 
-test('Gold keeps strict release stamping inside its isolated Move copy', () => {
+test.skipIf(!CEREMONY_MANIFEST_AVAILABLE)('Gold keeps strict release stamping inside its isolated Move copy', () => {
   const scratch = realpathSync(mkdtempSync(path.join(tmpdir(), 'ares-gold-stamp-')))
   const actors = JSON.parse(readFileSync(release_path, 'utf8')).networks.testnet.actors
   const copied_scripts = path.join(scratch, 'test/gold/.build/move/scripts')
