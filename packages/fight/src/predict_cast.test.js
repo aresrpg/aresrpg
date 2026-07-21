@@ -31,10 +31,11 @@ import {
   CHAIN_PENDING,
   CHAIN_PENDING_ENGINE_VERSION,
   chain_critical,
+  evolve_caster_cell,
   evolve_flush_casts,
   predict_sim_cast,
 } from './predict_cast.js'
-import { encode } from './los.js'
+import { bfsPathCost, encode } from './los.js'
 import { create_fight_store, display_state, presented_state } from './store.js'
 import { apply_action, empty_state } from './inputs.js'
 import { base_from_view } from './fold.js'
@@ -304,6 +305,88 @@ describe('⑭ evolve_flush_casts — each cast validated against the chain-evolv
     // cast 1 sees the push ALREADY applied: the mob vacated 7,5 and now sits at its full-slide landing 12,5.
     expect(evolved[1].occupied.get(enc(7, 5))).toBeUndefined()
     expect(evolved[1].occupied.get(enc(12, 5))).toMatchObject({ kind: 'mob', idx: 0, alive: true })
+  })
+})
+
+describe('#300 evolve_caster_cell — the movement-draft anchor after a drafted caster-relocating cast', () => {
+  const W = 20
+  const enc = (x, y) => y * W + x
+  const dec = (c) => ({ x: c % W, y: Math.floor(c / W) })
+  const tp_spell = single_effect_spell(
+    'tp',
+    { kind: SE.K_TELEPORT, value: 3, target_filter: SE.TF_ONLY_CASTER },
+    3,
+    true
+  )
+  const dmg_spell = single_effect_spell(
+    'dmg',
+    { kind: SE.K_DAMAGE, value: 10, element: 2, target_filter: SE.TF_NOT_TEAM },
+    3,
+    false
+  )
+  const view = () => ({
+    fight_id: '0xanchor',
+    arena: { width: W, height: 19, cells: new Uint8Array(W * 19) },
+    fighters: new Map([
+      [
+        'p0',
+        {
+          id: 'p0',
+          cell: dec(enc(2, 4)),
+          team: 0,
+          health: 120,
+          health_max: 200,
+          ap: 99,
+          ap_max: 99,
+          mp: 20,
+          mp_max: 20,
+          is_player: true,
+        },
+      ],
+      [
+        'mob-0',
+        {
+          id: 'mob-0',
+          cell: dec(enc(9, 9)),
+          team: 1,
+          health: 200,
+          health_max: 200,
+          ap: 99,
+          ap_max: 99,
+          mp: 20,
+          mp_max: 20,
+          is_player: false,
+        },
+      ],
+    ]),
+    turn_order: ['p0', 'mob-0'],
+    turn_number: 1,
+  })
+  // committed = the CHAIN base: the caster still sits at its PRE-teleport cell (2,4), my drafted teleport EXCLUDED —
+  // exactly what the movement draft reads as `me.committed.cell`, and exactly why it was stale.
+  const committed = {
+    fighters: { p0: { cell: enc(2, 4), hp: 120, alive: true }, m0: { cell: enc(9, 9), hp: 200, alive: true } },
+  }
+
+  test('a drafted TELEPORT relocates the anchor to the landing cell (never the pre-teleport committed cell)', () => {
+    const anchor = evolve_caster_cell({
+      view: view(),
+      committed,
+      caster_id: 'p0',
+      casts: [{ spell: tp_spell, target: enc(4, 4) }],
+    })
+    expect(anchor).toBe(enc(4, 4)) // the caster ADOPTS the landing cell — the cell the chain charges the next move from (cast_first)
+    // THE REPORTED BUG, pinned as a cost delta: a 1-cell move to (4,5) costs 1 MP from the evolved anchor…
+    expect(bfsPathCost(anchor, enc(4, 5), new Set(), 20)).toBe(1)
+    // …but 3 MP from the raw committed cell — the exact overcount #300 reported (walking 1 cell charged 3).
+    expect(bfsPathCost(committed.fighters.p0.cell, enc(4, 5), new Set(), 20)).toBe(3)
+  })
+
+  test('a non-relocating cast (or no drafted cast) keeps the anchor at the committed cell', () => {
+    expect(
+      evolve_caster_cell({ view: view(), committed, caster_id: 'p0', casts: [{ spell: dmg_spell, target: enc(9, 9) }] })
+    ).toBe(enc(2, 4))
+    expect(evolve_caster_cell({ view: view(), committed, caster_id: 'p0', casts: [] })).toBe(enc(2, 4))
   })
 })
 
