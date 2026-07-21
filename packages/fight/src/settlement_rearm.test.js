@@ -85,10 +85,12 @@ describe('signal-driven settlement re-arm', () => {
       signal: requests.at(-1).signal,
       verdict: 'transient',
     })
-    store.getState().input({ type: 'snapshot', fight: fight_at(2), version: 3 }, 2_000)
+    // M2b · ONE INGRESS: a newer TERMINAL confirmation arrives as a Victory event through the canonical door (a
+    // fresh version), never a re-adopted object read — the settlement machine re-arms on the newer signal.
+    store.getState().input({ type: 'receipt', version: 3, fight_id, receipt: { events: [victory_event] } })
     take_request(store, requests, fired)
     take_request(store, requests, fired)
-    expect(requests, 'one newer snapshot must produce exactly one re-armed request').toHaveLength(2)
+    expect(requests, 'one newer terminal confirmation produces exactly one re-armed request').toHaveLength(2)
 
     store.getState().input({
       type: 'settlement_outcome',

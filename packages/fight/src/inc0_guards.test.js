@@ -162,8 +162,11 @@ describe('INC-0 · session identity (B-F02/F06 — A→B crossings drop, id-less
       },
       T0 + 2_000
     )
-    expect(store.getState().view_version).toBe(7) // adopted — held for identity, never dropped
-    expect(store.getState().refused).toBeNull()
+    // M2b · ONE INGRESS: the identity gate HOLDS an id-less read (never refuses it — the current session claims it);
+    // mid-fight it is then an inert CHECKPOINT (it does not re-adopt). "Held, not dropped" is proven by `refused`
+    // staying null — the read reached the handler and was accepted, never rejected at the gate.
+    expect(store.getState().refused, 'the id-less read passed the identity gate — held, never dropped').toBeNull()
+    expect(store.getState().view_version, 'a mid-fight checkpoint never re-adopts the base').toBe(1)
   })
 })
 

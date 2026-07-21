@@ -120,7 +120,9 @@ describe('receipt-anchored settlement terminal', () => {
       'the coordinator handoff cannot retry a refused signal'
     ).toBe(null)
 
-    store.getState().input({ type: 'snapshot', fight: terminal_fight, version: 3 }, 2_000)
+    // M2b · ONE INGRESS: a newer terminal confirmation rides a Victory event through the canonical door (fresh
+    // version), never a re-adopted object read — the settlement machine re-arms on the newer signal.
+    store.getState().input({ type: 'receipt', version: 3, fight_id, receipt: { events: [victory_event] } })
     const rearmed = project.settlement_request(store.getState())
     expect(rearmed?.signal).not.toBe(fired.signal)
     store.getState().input({ type: 'settlement_request_consumed', signal: rearmed.signal })

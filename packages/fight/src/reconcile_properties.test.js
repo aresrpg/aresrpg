@@ -263,16 +263,28 @@ describe('§⑤.6 fold-catch-up', () => {
     )
     for (const t of [...replay.getState().wave]) replay.getState().input({ type: 'presented', seq: t.seq }, 1_400)
 
-    // Path B — TOP version only: a single crank read at v8 with the terminal board (mob dead at its final cell).
+    // Path B — CATCH-UP through the ONE door (M2b): a client that bootstrapped at v5 catches the terminal up from
+    // the journal/receipt (the mob's move + killing hit), never a re-adopted top-version object read.
     const folded = create_fight_store()
     folded
       .getState()
       .input({ type: 'init', fight_id: FIGHT, my_key: 'p0', ctx: { my_entity_id: CHAR, beat_ctx: { grid_width: 20 } } })
     folded.getState().input({ type: 'snapshot', fight: fight_object(), version: 5 }, 1_000)
-    folded
-      .getState()
-      .input({ type: 'snapshot', fight: fight_object({ mob_hp: 0, mob_cell: encode(6, 4) }), version: 8 }, 1_100)
-    // an out-of-order INTERMEDIATE stale read (mob alive, v7 < the v8 floor) must NOT resurrect it (no flicker).
+    folded.getState().input(
+      {
+        type: 'receipt',
+        version: 8,
+        receipt: {
+          events: [
+            ev('MobMoved', { idx: 0, to_cell: encode(6, 4) }),
+            ev('Hit', { victim_is_mob: true, victim_idx: 0, amount: 20, remaining_hp: 0 }),
+          ],
+        },
+      },
+      1_100
+    )
+    // an out-of-order INTERMEDIATE stale OBJECT read (mob alive, v7) is now an inert checkpoint — it must NOT
+    // resurrect the dead mob (no flicker); canonical death is the receipt-folded floor, structurally.
     folded
       .getState()
       .input({ type: 'snapshot', fight: fight_object({ mob_hp: 5, mob_cell: encode(6, 4) }), version: 7 }, 1_150)

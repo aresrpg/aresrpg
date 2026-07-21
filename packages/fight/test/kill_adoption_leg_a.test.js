@@ -92,17 +92,14 @@ describe('LEG A — a predicted kill the chain never saw adopts back, escape hat
     expect(is_my_turn(store.getState())).toBe(true)
   })
 
-  test('a NEW chain read WITHOUT the kill restores the mob — no lingering zombie 0-hp mob', () => {
+  test('a reverted commit ROLLS BACK the predicted kill — no lingering zombie 0-hp mob (M2b escape hatch)', () => {
     const store = boot()
     predict_lethal(store)
-    // the chain force-passed the turn (the reverted commit never landed the kill): a fresh Fight object at the
-    // NEXT version shows the mob ALIVE, my turn again.
-    const next = {
-      ...FIGHT_OBJECT,
-      mobs: [{ ...FIGHT_OBJECT.mobs[0], hp: 8 }],
-      turn_deadline_ms: 120_000,
-    }
-    store.getState().input({ type: 'snapshot', fight: next, version: 6 }, 5_000)
+    // M2b · ONE INGRESS: the chain force-passed the turn (the reverted commit never landed the kill). A reverted tx
+    // is a ROLLBACK input (dungeon_run_store's tx .catch), not a re-adopted object read: it clears the optimistic
+    // prediction and the fold falls back to committed truth (the mob at its base 8, alive) — the escape hatch stays
+    // open without any snapshot re-adopt. (A stale object read at v6 would be an inert checkpoint, never a source.)
+    store.getState().input({ type: 'rollback', intent_id: 'lethal1' }, 5_000)
 
     expect(mob0(store).committed_health, 'chain truth: the mob is alive').toBe(8)
     expect(mob0(store).health, 'no zombie — the presented mob is restored, not stuck at 0').toBe(8)
