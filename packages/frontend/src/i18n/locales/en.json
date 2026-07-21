@@ -1821,6 +1821,8 @@
     "cost": "Cost: {{sui}} SUI",
     "cost_refund": "Refunded: {{sui}} SUI",
     "slain_by": "Slain by {{killer}} for {{damage}} damage",
+    "export_replay": "Export replay",
+    "export_replay_hint": "Download this fight's trace to attach to a bug report (or press R during a fight)",
     "continue": "Continue",
     "you": "You"
   },

@@ -25,6 +25,7 @@ import { fight_store } from '@aresrpg/fight/store'
 import { use_fight, use_fight_view } from '../../store.js'
 import { min_turn_left } from '@aresrpg/fight/project'
 import { ConfirmDialog } from './world/ConfirmDialog.jsx'
+import { use_fight_trace_keybind } from './use_fight_trace_keybind.js'
 
 // DEFAULT handlers = the live on-chain path (the ONLY fight backend now the WS server is gone). The dungeon
 // board INJECTS a richer End Turn (draft-flush) + Ready (place_at the picked cell) as props that ALWAYS win
@@ -136,6 +137,10 @@ export function FightControls({
   // `turn_started_at` — a field the projected view (`fight`, above) doesn't carry — so this subscribes to
   // the raw core state via the React binding (game/store.js use_fight; the core store itself is vanilla).
   const fight_state = use_fight()
+
+  // EXPORT REPLAY keybind (issue #209) — MUST precede the early return (Rules of Hooks), same as every other
+  // hook here; this component only mounts during a fight, so that's this chord's whole live window.
+  use_fight_trace_keybind()
 
   // S-80 FORFEIT confirm — in-app modal (never a native dialog, standing rule), owned HERE so every mount
   // gets it for free. Confirming runs `on_abandon` (default: the store's `abandon_fight`).

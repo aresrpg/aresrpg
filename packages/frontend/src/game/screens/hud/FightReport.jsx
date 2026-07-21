@@ -40,6 +40,7 @@ import { use_template_t } from '../../../i18n/template_t'
 import { get_template_by_item_type_map, get_template_detail_map } from '../../../chain/read_findables.js'
 import { resolve_character_docs } from '../../../world-shell/character_name_resolve.js'
 import { seed_manifest } from '../../../content/seed_manifest'
+import { export_fight_trace, has_dumpable_trace } from './fight_trace_export.js'
 import './result.css'
 
 // the single-realm MVP world label (mirrors Minimap.jsx / MapDrawer.jsx — one named realm for now).
@@ -246,6 +247,10 @@ export function FightReport({
   on_close,
 }) {
   const won = verdict !== 'Defeat'
+  // EXPORT REPLAY (issue #209) — is the fight that just ended still in the in-memory trace ring buffer? Fixed
+  // at mount (this card mounts once per concluded fight; dumpability doesn't change while it's up). Hidden
+  // entirely rather than a disabled/dead button when nothing was captured.
+  const trace_available = useMemo(() => has_dumpable_trace(), [])
   // Loot tooltips reuse the inventory/findables map for legacy slug-only rows, then overlay exact receipt IDs
   // with the canonical chain ItemTemplate reader (including decoded stat DFs). A defeat has no tiles to read.
   const tt = use_template_t()
@@ -384,6 +389,16 @@ export function FightReport({
         )}
 
         <div className="cta">
+          {trace_available && (
+            <button
+              type="button"
+              className="btn btn--secondary"
+              onClick={() => export_fight_trace()}
+              title={t('fight_end.export_replay_hint')}
+            >
+              {t('fight_end.export_replay')}
+            </button>
+          )}
           <button
             type="button"
             className={`btn ${won ? 'btn--primary' : 'btn--muted'}`}

@@ -1821,6 +1821,8 @@
     "cost": "Coût : {{sui}} SUI",
     "cost_refund": "Remboursé : {{sui}} SUI",
     "slain_by": "Tué par {{killer}} pour {{damage}} dégâts",
+    "export_replay": "Exporter la relecture",
+    "export_replay_hint": "Téléchargez la trace de ce combat à joindre à un rapport de bug (ou appuyez sur R pendant un combat)",
     "continue": "Continuer",
     "you": "Vous"
   },
