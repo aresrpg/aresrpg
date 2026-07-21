@@ -190,6 +190,13 @@ describe('world_cell', () => {
         }
   })
 
+  // ISSUE #85 (flake fix): heavy fuzz-sweep — 6 seeds × 4 centers = 24 calls to largest_floor_component, each a
+  // 161×161 (25,921-cell) BFS window over world_cell. world_cell is a PROVEN pure-integer function (world.js
+  // header: "no floats, no Math.random, no Math.sin, no Date.now" — verified by source read + repo-wide grep)
+  // so the RESULT never varies; only wall-clock does. Under bun's 5000ms default per-test timeout, this sweep
+  // flipped pass/fail run-to-run on an unchanged tree: baseline ~1.2s on an idle core, but 8s-12.8s measured
+  // under real CPU contention (QoS-demoted probe, mirrors a busy shared dev machine) — past the 5000ms cliff.
+  // The fix is wall-clock headroom only; not one assertion below changed.
   test('navigability: a dominant walkable component (>=60% of FLOOR) holds EVERYWHERE, not just spawn', () => {
     // TEST-ONLY BFS over finite windows — never in shipped sim code (the world is infinite). The
     // origin is trivially open (spawn clearing), so the real guard is the FAR-FROM-ORIGIN windows:
@@ -206,7 +213,7 @@ describe('world_cell', () => {
         const { largest_frac } = largest_floor_component(seed, cx, cy)
         expect(largest_frac).toBeGreaterThan(0.6)
       }
-  })
+  }, 30000)
 
   test('far-field distribution stays playable (floor majority-ish, water bounded) away from spawn', () => {
     for (const seed of [42, 7, 9001, 2024])
