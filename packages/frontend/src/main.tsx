@@ -17,6 +17,7 @@ import './game-tab.css'
 import './mobile_app_shell.css'
 import { init_reporting, report_error, set_report_user } from './core/report.js'
 import { use_auth } from './auth'
+import { install_wallet_session_reset } from './auth/session_reset_subscription'
 
 // Full Walrus asset manifest (ALL classes — item/spell/vanilla/mob/cosmetic/music) as the legacy asset host sunsets.
 // scripts/walrus/census.mjs projects the upload registry → asset_manifest.json, served at the web root
@@ -42,6 +43,12 @@ init_reporting()
 // Seed the pseudonymous Sentry user with any wallet already reconnected at boot; auth's own subscription
 // (auth/index.ts) keeps it in sync across wallet switches. On-chain address only — never email/Google.
 set_report_user(use_auth.getState().address)
+
+// WALLET-SWITCH SESSION RESET (P0/D286) — install the route-independent account-change trigger here at the
+// composition root (above the router), so a switch tears the prior wallet's session down on EVERY route. It
+// lives outside auth's module body to keep the eager login bundle off the lazy game chunk it dynamic-imports
+// (see auth/session_reset_subscription.ts). Boot-once; the app root never unmounts, so the handle is dropped.
+install_wallet_session_reset()
 
 const root = createRoot(document.getElementById('root')!, {
   // React 19 render-error hooks route through the ONE choke so component-tree crashes get the same

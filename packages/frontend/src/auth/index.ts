@@ -10,7 +10,7 @@ import type { Wallet as WalletStandard, WalletAccount } from '@mysten/wallet-sta
 import { SPONSOR_URL } from '../env'
 import i18n from '../i18n'
 import { execute_tx, execute_sponsored_tx, type GasPin } from '../tx'
-import { set_report_user, report_error } from '../core/report.js'
+import { set_report_user } from '../core/report.js'
 import { game_log } from '../core/log.js'
 
 import { derive_zklogin_seed } from './zklogin_seed'
@@ -375,21 +375,11 @@ export const use_auth = create<AuthState>((set, get) => ({
   },
 }))
 
-// WALLET-SWITCH SESSION RESET (P0/D286) — the ONE, route-independent trigger. auth is the single home for the
-// wallet identity, so it OWNS detecting an account change: on ANY change AWAY from a previous NON-NULL address
-// (disconnect A→null, or a direct A→B switch) it tears the whole wallet session down (game/wallet_session_reset)
-// so the prior account's character / kiosk / roster can never leak into the new one. A first connect (null→A) and
-// an idempotent re-set (A→A) never fire. ROUTE-INDEPENDENT by design: it fires even on the standalone /mint page
-// (which does NOT mount GameWorldHost, where the trigger used to live) — closing the gap where a switch there left
-// stale session state. The reset is DYNAMIC-imported so the game/engine stores it touches stay OUT of the eager
-// login bundle — pulled only when an actual switch happens (never at boot / on the login screen).
-use_auth.subscribe((state, prev) => {
-  if (prev.address && prev.address !== state.address) {
-    void import('../game/wallet_session_reset')
-      .then(({ reset_wallet_session }) => reset_wallet_session({ type: 'wallet_session/reset' }))
-      .catch((err) => report_error(err, { area: 'auth', action: 'wallet_session_reset' }))
-  }
-})
+// WALLET-SWITCH SESSION RESET (P0/D286): the account-change trigger is installed at the composition root,
+// NOT here — see auth/session_reset_subscription.ts. It stays out of auth's module body on purpose: naming
+// the lazy game chunk from the eager login bundle made auth the head of an import cycle
+// (auth → game/wallet_session_reset → … → auth). The subscription semantics are unchanged and still
+// route-independent (installed above the router in main.tsx).
 
 // Sentry pseudonymous user = the connected wallet address (on-chain data ONLY — never email/Google). This is
 // the single home that OWNS the identity, so it owns telling the reporter who's playing. No-op until Sentry inits.
