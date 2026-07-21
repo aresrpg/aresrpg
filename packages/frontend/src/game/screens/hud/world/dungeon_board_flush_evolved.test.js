@@ -13,6 +13,33 @@
 import { describe, expect, test } from 'bun:test'
 
 describe('DungeonBoard flush — each cast validated against the evolved sequence, not the optimistic occupancy', () => {
+  test('RED-FIRST #398: flush composes and evolves the one ordered staged stream, including moves', async () => {
+    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const start = src.indexOf('const flush_commit = async')
+    const end = src.indexOf('auto_submit_ref.current =', start)
+    expect(start).toBeGreaterThan(-1)
+    expect(end).toBeGreaterThan(start)
+    const body = src.slice(start, end)
+
+    // One composition seam owns the draft order. The same full action stream (move/cast interleaved) drives
+    // validation, so a cast snapshot naturally observes every preceding move before that exact stream ships.
+    expect(body).toMatch(/compose_staged_turn\(/)
+    const evolve_start = body.indexOf('evolve_flush_casts({')
+    const evolve_end = body.indexOf('\n    })', evolve_start)
+    expect(evolve_start).toBeGreaterThan(-1)
+    expect(evolve_end).toBeGreaterThan(evolve_start)
+    const evolve_call = body.slice(evolve_start, evolve_end)
+    expect(evolve_call).toMatch(/\bactions\s*[:,]/)
+    expect(evolve_call).not.toMatch(/\bcasts\s*:/)
+    expect(src).toMatch(/kind:\s*0,\s*target:\s*cell,\s*landed:\s*!bite/)
+    expect(src).toMatch(/landed:\s*entry\.landed/)
+
+    // The old binary approximation destroyed interleaving by rebuilding two blocks. It must not remain as a
+    // fallback after ordered composition lands.
+    expect(body).not.toMatch(/cast_first\s*\?\s*\[\.\.\.cast_actions,\s*\.\.\.move_actions\]/)
+    expect(body).not.toMatch(/\[\.\.\.move_actions,\s*\.\.\.cast_actions\]/)
+  })
+
   test('flush_commit sources per-cast occupancy from evolve_flush_casts (committed base + prior displacements)', async () => {
     const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
     const start = src.indexOf('const flush_commit = async')
@@ -31,6 +58,18 @@ describe('DungeonBoard flush — each cast validated against the evolved sequenc
     expect(body).toMatch(/occupied_alive: !!occ\.get\(target_cell\)\?\.alive/)
     expect(body).not.toMatch(/target_is_mob:\s*occupied\.get/)
     expect(body).not.toMatch(/occupied_alive:\s*!!occupied\.get/)
+  })
+
+  test('#398: a cast after a trap-killed move is dropped before it can revert the PTB', async () => {
+    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const start = src.indexOf('const flush_commit = async')
+    const end = src.indexOf('auto_submit_ref.current =', start)
+    const body = src.slice(start, end)
+
+    // evolve_flush_casts marks the caster row dead at this cast's exact slot. The flush must consume that snapshot
+    // before geometry/composition; shipping act_cast after act_move killed the actor aborts EActorDead on-chain.
+    expect(body).toMatch(/const caster_alive = \[\.\.\.occ\.values\(\)\]/)
+    expect(body).toMatch(/if \(caster_alive === false\) \{[\s\S]{0,180}drop_entry\([\s\S]{0,180}continue/)
   })
 })
 
@@ -83,12 +122,13 @@ describe('DungeonBoard flush — the footprint anchor evolves PER CAST, and grou
     const start = src.indexOf('const flush_commit = async')
     const end = src.indexOf('auto_submit_ref.current =', start)
     const body = src.slice(start, end)
-    // evolve_flush_casts is seeded at the sequence's own starting anchor (cast_first's committed cell, or the
-    // post-move cell) — the SAME `anchor` the pre-#321 code reused as its one static footprint origin.
-    expect(body).toMatch(/caster_seed_cell:\s*anchor,/)
+    // evolve_flush_casts receives the whole ordered action sequence. It starts from committed truth internally,
+    // then each drafted move/cast evolves the caster before the next cast snapshot.
+    expect(body).toMatch(/actions:\s*evolution_actions,/)
+    expect(body).not.toMatch(/caster_seed_cell:/)
     // every cast reads ITS OWN evolved cell — never falls back to silently re-reading the raw pre-loop anchor
     // while some other cast in the SAME queue relocates the caster.
-    expect(body).toMatch(/const cast_anchor = evolved\[cast_i\]\?\.caster_cell \?\? anchor/)
+    expect(body).toMatch(/const cast_anchor = evolved\[cast_i\]\?\.caster_cell \?\? committed_caster_cell/)
     // BOTH footprint constructions (weapon + spell) anchor on the per-cast cell — the bare pre-loop `anchor` is
     // never decoded as a footprint origin any more (that was the drop-valid-stationary-targets bug).
     expect((body.match(/\{ cell: decode\(cast_anchor\) \}/g) ?? []).length).toBe(2)

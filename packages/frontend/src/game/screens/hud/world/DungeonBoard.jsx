@@ -34,7 +34,13 @@ import { push_event_toast } from '../../../core/toast.js'
 import { WEAPON_ATTACK_ID, WEAPON_ATTACK_RANGE, WEAPON_ATTACK_AP } from '../../../core/modules/fight.js'
 import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
 import { damage_of } from '@aresrpg/fight/predict_cast'
-import { subscribe_commit_due, subscribe_divergence, subscribe_turn_lost, staged_turn_paths } from '@aresrpg/fight/txs'
+import {
+  compose_staged_turn,
+  subscribe_commit_due,
+  subscribe_divergence,
+  subscribe_turn_lost,
+  staged_turn_paths,
+} from '@aresrpg/fight/txs'
 import { fight_store } from '@aresrpg/fight/store'
 import { fight_view } from '@aresrpg/fight/project'
 import { committed_mob_hp } from '@aresrpg/fight/project'
@@ -56,7 +62,12 @@ import { character_cast_clock, use_dungeon_turn } from '../../dungeon-turn.js'
 import { GRID_W, GRID_CELLS, encode, decode, lineOfSight, bfsPathCost, bfsPath, bfsReachable } from '@aresrpg/fight/los'
 import { dungeon_grid_of } from '../../dungeon-grid.js'
 import { presentation_blocked_cells } from '../../../../world-shell/fight_board_blockers.js'
-import { movement_grant, on_cooldown, cooldown_left, casts_at_cell, cap_of } from '@aresrpg/fight/draft_budget'
+import {
+  on_cooldown,
+  cooldown_left,
+  casts_at_cell,
+  cap_of,
+} from '@aresrpg/fight/draft_budget'
 import { FightControls } from '../FightControls.jsx'
 import { ConfirmDialog } from './ConfirmDialog.jsx'
 import { use_fight_phase } from './use_fight_phase.js'
@@ -95,23 +106,21 @@ const manhattan = (a, b) => {
   return Math.abs(ax - bx) + Math.abs(ay - by)
 }
 
-// D254 (1.29 cumulative move): the TOTAL MP a drafted move PATH costs = the sum of each segment's bfs_path_cost
-// computed from the RUNNING cell with the RUNNING MP — the EXACT sequence commit_turn_core's apply_move loop
-// charges (each {kind:0} step spends bfs_path_cost(current → step), then advances the cell). `blocked` is the
-// move-blocked set (obstacles ∪ holes ∪ OOB ∪ other living bodies), constant across a turn since only I move on
-// my turn. Every drafted step is within the re-anchored reach, so no segment ever overruns the remaining MP.
-const draft_move_cost = (path, start, blocked, mp) => {
-  let cell = start
-  let remaining = mp
-  let cost = 0
-  for (const step of path) {
-    const c = bfsPathCost(cell, step, blocked, remaining)
-    cost += c
-    remaining = Math.max(0, remaining - c)
-    cell = step
-  }
-  return cost
-}
+const evolution_actions_of = (draft_actions, spells, weapon) =>
+  (draft_actions ?? []).map((entry) => {
+    if (entry.kind === 0) return { kind: 0, target: entry.target, landed: entry.landed }
+    const is_weapon = entry.kind === 2 || entry.spell_key === WEAPON_ATTACK_ID
+    const drafted = is_weapon ? null : (spells.find((spell) => spell.name_key === entry.spell_key) ?? null)
+    return {
+      kind: entry.kind,
+      spell: is_weapon
+        ? weapon_spell_template(weapon)
+        : drafted?.object_id
+          ? fight_spell_template(entry.spell_key)
+          : null,
+      target: entry.target,
+    }
+  })
 
 /** @returns {import('react').ReactElement | null} */
 export function DungeonBoard() {
@@ -160,7 +169,6 @@ export function DungeonBoard() {
   // Turn-draft (a cumulative move PATH + a STACKED cast/weapon QUEUE, §17.27), shared with the 3D click router.
   const move_path = use_dungeon_turn((s) => s.move_path)
   const cast_path = use_dungeon_turn((s) => s.cast_path)
-  const cast_first = use_dungeon_turn((s) => s.cast_first) // D99: casts commit before moves → their kills vacate cells NOW
   const cast_target = use_dungeon_turn((s) => s.cast_target)
   const append_move_step = use_dungeon_turn((s) => s.append_move_step)
   const append_cast_step = use_dungeon_turn((s) => s.append_cast_step)
@@ -247,29 +255,18 @@ export function DungeonBoard() {
   // The ENGINE refills AP/MP to base at begin_turn ON-CHAIN (turns.move) and persists it, so the escrow ap/mp
   // read every poll IS the live turn budget the instant it's my turn — no stale pre-refill leftover, no hardcoded
   // 6/3 mirror that mis-gated a char whose base_ap/base_mp differ (an over-budget draft the chain then rejected
-  // with abort 104). A local draft doesn't spend on-chain until End Turn, so the whole turn draws against this
-  // pool; `reachable`/`castable` subtract the drafted move/cast costs from it.
-  // THE POOL IS THE COMMITTED ANCHOR (gate9 P1 — one cast per turn): `me.ap/mp` are the PRESENTED values, and
-  // every drafted click also folds its ap_cost/mp_left intent (AP-paint truth), so budgeting against them counts
-  // the draft TWICE (12 − 5 folded, − 5 ledger = 2 → the 2nd Ghost Talon the chain accepts was refused). The
-  // draft ledger (cast_path/move_path) subtracts from `me.committed` — the chain pool with my intents excluded
-  // (project.board_view) — and the presented values stay what they are: the display truth.
+  // with abort 104). `me.ap/mp` are the PRESENTED ordered-prefix values: every draft cost/grant/forfeit has already
+  // folded exactly once. The committed values below are only the reconnect fallback when that projection is absent;
+  // subtracting the legacy move/cast ledgers again would double-charge the same draft.
   const my_ap = me?.committed?.ap ?? 0
   const my_mp = me?.committed?.mp ?? 0
   const my_pending_mp = me?.committed?.pending_mp ?? 0
 
-  // FIX 1 (Vanish MP — regression: move range didn't grow after Vanish): a drafted cast's give_points(MP) grant
-  // (seed kind:6/stat:1, e.g. Vanish +1 MP) folds into the optimistic movement pool so the reach grows mid-draft —
-  // but ONLY when the cast commits BEFORE the moves (cast_first: the chain's [casts, moves] batch grants the MP,
-  // then apply_move spends against the raised pool). A move-FIRST draft ([moves, casts]) charges movement at the
-  // base pool, so the grant can't help it this turn — mirrors optimistic_vacated's cast_first gate exactly.
-  // give_points is UNCAPPED on-chain (participant.move), so +MP over base is real movement MP now, not clamped.
-  // COMPLEMENTARY to the fold's Granted arm (predict_cast.changed_actions → inputs.apply_action 'Granted', ⑤a/⑤b):
-  // before confirmation this is the DRAFTED-MOVE half, because the click gate's committed anchor excludes intents.
-  // project.board_view derives `pending_mp` from the core's live Granted intent rows: M2b retires only the claimed
-  // cast batch, so a still-mounted cast path cannot double count it and an unrelated pending grant is never hidden
-  // by aggregate subtraction. ONE movement_grant rule keeps the click gate and green wash aligned on cast order.
-  const my_mp_eff = my_mp + movement_grant(cast_first, my_pending_mp)
+  // The presented MP is the exact ordered draft prefix: earlier moves/tackle forfeits are spent and any cast grant
+  // already drafted before the NEXT move is live (the claimed mid-turn grants ride the presented pool via
+  // budget_claims — the ordered fold and the claims machinery converge here). The committed pool remains the
+  // reconnect fallback.
+  const my_mp_eff = Math.max(0, me?.mp ?? my_mp)
 
   // ── CLIENT AP BUDGET (SPEC §17.27; regression: unlimited weapon-strike spam) — the chain lets a
   //    turn repeat weapon strikes / spells ONLY while AP lasts (each costs its own ap_cost; spells add a
@@ -279,12 +276,6 @@ export function DungeonBoard() {
   //    beat can NEVER play for an unaffordable action, and the excess phantom beats that read as "mobs regaining
   //    health" (uncommitted casts folding back) are gone: every beat is now 1:1 with a committable action. ──
   const CASTS_UNLIMITED = 255 // spell_bands::CASTS_UNLIMITED — a 255/0 cap means no per-turn limit
-  // The AP a single queued action costs, by its pinned spell_key: the weapon → the seat's on-chain Weapon.ap_cost;
-  // a spell → its seeded level-1 ap. Mirrors the chain's per-action charge (act_weapon / act_cast) exactly.
-  const cost_of = (/** @type {string | null} */ spell_key) => {
-    if (spell_key === WEAPON_ATTACK_ID) return me?.weapon?.ap_cost ?? WEAPON_ATTACK_AP
-    return my_spells.find((sp) => sp.name_key === spell_key)?.levels?.[0]?.ap ?? cast_params.ap_cost
-  }
   // The deterministic optimistic damage a single queued action deals (crit reconciles at commit): weapon → the
   // seat's fixed Weapon.damage; spell → its seeded level-1 DAMAGE base. Fed the CUMULATIVE per-target HP drop.
   const dmg_of = (/** @type {string | null} */ spell_key) => {
@@ -292,8 +283,8 @@ export function DungeonBoard() {
     const lvl = my_spells.find((sp) => sp.name_key === spell_key)?.levels?.[0]
     return damage_of(lvl?.effects)
   }
-  const drafted_ap = cast_path.reduce((sum, e) => sum + cost_of(e.spell_key), 0)
-  const remaining_ap = Math.max(0, my_ap - drafted_ap) // the AP left after the already-queued strikes/casts
+  // Like MP, presented AP has already folded every earlier cast and deterministic tackle forfeit in draft order.
+  const remaining_ap = Math.max(0, me?.ap ?? my_ap)
   // casts_per_turn gate for the ARMED spell (the weapon has none). Count how many of it are already queued; at the
   // cap no more are castable. cpt_cap === Infinity for a weapon or any unlimited (255/0) spell — AP alone limits.
   const armed_id = fight?.armed_spell_id ?? null
@@ -343,16 +334,12 @@ export function DungeonBoard() {
   // click-gate, and the committed MP agree cell-for-cell (dungeon_turn.move apply_move → bfs_path_cost over
   // dungeon::move_blocked_cells). The grid (obstacles/holes/dims) is recomputed from the dungeon id + room index
   // (dungeon_blocked_cells → generateGrid), the identical seed regenerate_room_grid uses on-chain.
-  // OPTIMISTIC VACATED CELL (regression: couldn't walk on a cell where a mob had just died): a mob the drafted
-  // casts kill vacates its cell for THIS turn's moves ONLY when the casts commit BEFORE the moves (cast_first —
-  // flush_commit ships [...casts, ...moves], and the chain remasks over LIVING mobs per apply_move: cast.move
-  // move_blocked_cells:632, mob::is_alive = hp>0). So when cast_first, drop every drafted-killed mob cell from the
-  // movement blocked set NOW — the chain has already freed it by the time my move applies, but the `dungeon` view
-  // still reads it alive until the poll, so the gate would otherwise refuse a step the commit accepts. A move-FIRST
-  // draft (cast_first=false) keeps the mob blocking: its move applies while the mob still stands (else EIllegalMove).
+  // OPTIMISTIC VACATED CELL: every cast already in the current draft prefix resolves before the NEXT move, so a mob
+  // those casts kill is guaranteed absent when that move remasks living blockers. This is prefix-local: it never
+  // reaches forward to a cast that has not been drafted yet.
   const optimistic_vacated = useMemo(() => {
     const vacated = new Set()
-    if (!cast_first || !dungeon) return vacated
+    if (!dungeon) return vacated
     for (const [idx, m] of dungeon.mobs.entries()) {
       const committed_hp = committed_mob_hp(fight_store.getState(), idx)
       if (!(committed_hp > 0)) continue
@@ -360,7 +347,7 @@ export function DungeonBoard() {
       if (drop >= committed_hp) vacated.add(m.cell) // this turn's casts already kill it → its cell opens for the move
     }
     return vacated
-  }, [cast_first, cast_path, dungeon])
+  }, [cast_path, dungeon])
 
   // ONE home for entity_id → { is_mob, idx } (dungeon escrow is the source): the move-cost anchor evolution, the
   // optimistic cast, AND the flush's ⑭ evolved-sequence validation all resolve fighter refs the same way — a
@@ -372,33 +359,21 @@ export function DungeonBoard() {
     return idx < 0 ? null : { is_mob: false, idx }
   }
 
-  // #300 THE MOVE-COST ANCHOR — the cell the chain's apply_move charges the FIRST drafted move segment from.
-  // Normally the committed chain cell (the pool's drafts-EXCLUDED anchor — never the presented cell, which already
-  // folds the drafted Moved intent and would zero the early segments). BUT when the casts commit BEFORE the moves
-  // (cast_first) a caster-relocating cast among them (a TELEPORT self-jump, a SWAP) has already moved the caster by
-  // the time apply_move runs — so the anchor is that EVOLVED cell, evolved off the committed base through the
-  // drafted casts via the deterministic sim twin (evolve_caster_cell — the SAME door evolve_flush_casts uses). The
-  // bug it kills (#300): `me.committed.cell` (pre-teleport) measured a 1-cell walk after a teleport as 3 MP, so the
-  // reach shrank and the MP read wrong. No relocating cast → the committed cell unchanged (evolve_caster_cell identity).
-  const move_anchor_cell = useMemo(() => {
+  // #300/#398 NEXT-ACTION ANCHOR — evolve committed truth through the canonical staged prefix. Ordinary moves,
+  // denied tackles (`landed:false`), and caster-relocating casts all participate, so both the next move and next
+  // cast read the exact cell the ordered PTB will expose at that slot.
+  const draft_caster_cell = useMemo(() => {
     const committed_cell = me?.committed?.cell ?? me?.cell ?? null
-    if (!cast_first || !cast_path.length || committed_cell == null || !entity_id) return committed_cell
+    if (committed_cell == null || !entity_id || !fight?.draft_count) return committed_cell
     const evolved = evolve_caster_cell({
       view: fight_view(),
       committed: committed_state(fight_store.getState()),
       caster_id: entity_id,
-      casts: cast_path.map((entry) => {
-        const weapon = entry.spell_key === WEAPON_ATTACK_ID
-        const drafted = weapon ? null : (my_spells.find((sp) => sp.name_key === entry.spell_key) ?? null)
-        return {
-          spell: weapon ? weapon_spell_template(me?.weapon) : drafted?.object_id ? fight_spell_template(entry.spell_key) : null,
-          target: entry.cell,
-        }
-      }),
+      actions: evolution_actions_of(staged_turn_paths(fight_store).draft_actions, my_spells, me?.weapon),
       resolve_ref,
     })
     return evolved ?? committed_cell
-  }, [me?.committed?.cell, me?.cell, cast_first, cast_path, entity_id, my_spells, me?.weapon, dungeon])
+  }, [me?.committed?.cell, me?.cell, fight?.draft_count, entity_id, my_spells, me?.weapon, dungeon])
 
   const reachable = useMemo(() => {
     // MP-ZONE MISCLICK GUARD: when the vfx/sequence of a spell is played, the MP zone stays hidden
@@ -406,17 +381,10 @@ export function DungeonBoard() {
     // affordance, the SAME fact (engine_view's cast_presenting, project.js) the paint's move_wash wash suppresses
     // on; never a second UI-side flag. Narrower than `fight.presenting` (nonlocal-only — a mob/peer replay; my
     // own WALK beats never trip this, so the D254 cumulative-move chaining stays fluid while a walk animates).
-    if (!me || !my_turn || !dungeon || fight?.cast_presenting) return new Set()
+    if (!me || !my_turn || !dungeon || fight?.cast_presenting || draft_caster_cell == null) return new Set()
     const blocked = presentation_blocked_cells(dungeon, fight?.fighters, entity_id, optimistic_vacated)
-    // D254: re-anchor at the LAST drafted step (or the chain cell) with the REMAINING mp (my_mp − Σ segment
-    // costs). The reach shrinks as the path grows and empties at 0 MP — so a turn can no longer "walk forever".
-    const anchor = move_path.length ? move_path[move_path.length - 1] : me.cell
-    // the whole-path recharge measures from move_anchor_cell — the committed CHAIN cell EVOLVED through the drafted
-    // casts (a teleport/swap relocates it; #300), never the presented cell (the drafted Moved intent already folded
-    // there, which would zero the early segments). No relocating cast → it is the plain committed cell.
-    const remaining = Math.max(0, my_mp_eff - draft_move_cost(move_path, move_anchor_cell, blocked, my_mp_eff))
-    return new Set(bfsReachable(anchor, remaining, blocked))
-  }, [me, my_turn, my_mp_eff, dungeon, entity_id, move_path, move_anchor_cell, optimistic_vacated, fight?.fighters, fight?.cast_presenting])
+    return new Set(bfsReachable(draft_caster_cell, my_mp_eff, blocked))
+  }, [me, my_turn, my_mp_eff, dungeon, entity_id, draft_caster_cell, optimistic_vacated, fight?.fighters, fight?.cast_presenting])
 
   // OPTIMISTIC CASTER CELL (FIGHT-WAVE-2 root cause): a cast AFTER a move did NOTHING. `castable` computed
   // range/LOS from `me.cell` — the CHAIN baseline (pre-move) — so a mob only reachable from the drafted post-move
@@ -424,7 +392,7 @@ export function DungeonBoard() {
   // `reachable` → a SILENT no-op (no error, no float). Anchor the cast at the drafted post-move cell instead: it
   // is the EXACT cell the contract validates the cast from, since commit_turn applies MOVE→CAST in array order
   // (dungeon_turn.move commit_turn_core). No move drafted → the chain cell.
-  const caster_cell = move_path.length ? move_path[move_path.length - 1] : me?.cell
+  const caster_cell = draft_caster_cell
   const castable = useMemo(() => {
     // AP-BUDGET GATE (§17.27): empty the set once the REMAINING AP (after queued strikes) can't afford another, or
     // the armed spell's casts_per_turn cap is reached — greyed sockets + no beat for an unaffordable action.
@@ -516,28 +484,16 @@ export function DungeonBoard() {
   // fight-intents.js mask + packet/fightMoved dispatch. The on-chain 1.29 rule (each move charges its own
   // segment) is mirrored — every drafted step is one commit action.
   const optimistic_walk = (draft) => {
-    if (!fight.fighters.has(entity_id)) return
-    // same optimistic-vacated blocked set as `reachable` — a cast-first drafted kill frees its cell for this walk too,
-    // so the committed BFS cost (draft_move_cost) matches the chain's apply_move (which sees the mob already dead).
+    if (!fight.fighters.has(entity_id) || draft_caster_cell == null) return
+    // Same prefix-vacated blocked set as `reachable`: any earlier drafted kill has already freed its cell.
     const blocked = presentation_blocked_cells(dungeon, fight?.fighters, entity_id, optimistic_vacated)
-    // move_anchor_cell anchors both the full-undo walk-back destination and the whole-draft recharge: the committed
-    // CHAIN cell EVOLVED through the drafted casts (#300 — a teleport/swap already moved the caster there before the
-    // moves apply). me.cell is the PRESENTED (already-drafted) cell, which made an emptied draft walk back to itself
-    // and never restore the spent MP; the raw committed cell would walk back THROUGH a teleport and overcount MP.
-    const chain_cell = move_anchor_cell
-    const dest = draft.length ? draft[draft.length - 1] : chain_cell // encoded; empty draft → back to the chain start
-    // ANCHOR THE FROM ON THE DRAFTED PATH, never the PRESENTED fighter cell: since the snap-then-run display hold
-    // (d4f9e748) the presented cell (fight.fighters — engine_view) lags at the pre-move origin until each walk beat
-    // acks, so a fast multi-step draft (step N+1 clicked before step N presents) read the stale origin → a beat
-    // replaying from origin (a re-walk). move_path here is the PRE-action draft (both call sites derive `draft` from
-    // it), so its last cell is exactly where this segment begins; chain_cell (the committed anchor, read for `dest`
-    // too) covers the first step.
-    const from_enc = move_path.length ? move_path[move_path.length - 1] : chain_cell
+    const dest = draft.length ? draft[draft.length - 1] : draft_caster_cell
+    // The displayed fighter may still be presenting the previous walk. The ordered evolver is action truth, so a
+    // rapid next step starts at the prior action's real destination (or at a teleport/tackle-adjusted cell).
+    const from_enc = draft_caster_cell
     const path = from_enc === dest ? [] : bfsPath(from_enc, dest, blocked, GRID_CELLS).map(decode)
-    // MP-PAINT TRUTH (the AP flagship's movement twin): the intent carries the ABSOLUTE remaining MP after the
-    // WHOLE draft (this board's own draft math — the gate/commit home), so the projected budget and the wash
-    // shrink/restore with every append AND undo. Absolute (not a delta): an undone step re-raises it honestly.
-    const mp_left = Math.max(0, my_mp_eff - draft_move_cost(draft, chain_cell, blocked, my_mp_eff))
+    const segment_cost = bfsPathCost(from_enc, dest, blocked, my_mp_eff)
+    const mp_left = Math.max(0, my_mp_eff - segment_cost)
     fight_store.getState().input({
       type: 'intent',
       intent: { kind: 'move', character: entity_id, to_cell: dest, mp_left },
@@ -621,7 +577,7 @@ export function DungeonBoard() {
 
   // ── AUTO-COMMIT (D36 deadline + D37a kill) — the reducer derives one due edge; this function remains the
   //    shared manual/background batch builder and revalidates the live fire conditions before submit. ──
-  const flush_commit = async (mp, cast_queue, background = false) => {
+  const flush_commit = async (draft_actions, background = false) => {
     // LOUD-PIPELINE (qa D89 flag: a sequential commit dropped SILENTLY): the last mute guard on the END TURN
     // path now NAMES itself instead of vanishing.
     // Read `busy` LIVE at the derived edge; a render closure is never transaction authority.
@@ -650,57 +606,37 @@ export function DungeonBoard() {
       })
       return
     }
-    const actions = []
     // D254 (1.29 cumulative move): EACH drafted step ships as its OWN {kind:0} move — commit_turn_core's loop
     // charges bfs_path_cost PER segment from the running cell (a single direct move under-charges a bent path).
-    const move_actions = (mp ?? []).map((step) => ({ kind: 0, target: step }))
-    // D99 (regression: moving after a spell failed to commit): the contract applies the batch IN ARRAY ORDER —
-    // casts drafted BEFORE any move ship as [casts, …moves] (validated from the PRE-move cell), else [moves, casts].
-    const { cast_first } = staged_turn_paths(fight_store)
+    const move_actions = (draft_actions ?? [])
+      .filter((action) => action.kind === 0)
+      .map((action) => ({ kind: 0, target: action.target }))
+    const cast_queue = (draft_actions ?? [])
+      .filter((action) => action.kind === 1 || action.kind === 2)
+      .map((action) => ({ cell: action.target, spell_key: action.spell_key ?? null }))
     // S-12 §17.27 STACKED CASTS: ship EVERY queued cast/weapon (the chain accepts N/turn, AP-limited on-chain). Each
     // entry PINNED its own spell_key at draft time, so a disarm/re-arm between pick and flush can't swap what
     // commits. Revalidate each against CURRENT state with the SAME twin the click gate paints (a co-op mob shift /
-    // the drafted moves can invalidate a target between pick and flush) — anchored at the cell the contract
-    // validates from: the PRE-move chain cell when casts ship first, else the POST-move final cell. A dropped entry
-    // rolls its optimistic AP/HP back; the survivors still commit.
-    // cast_first anchors at the PRE-move CHAIN cell — me.cell is the PRESENTED cell, already sitting at the
-    // drafted post-move destination once the Moved intent folds (the same committed-anchor family as the pool).
-    const anchor = cast_first ? (me?.committed?.cell ?? me?.cell) : mp?.length ? mp[mp.length - 1] : me?.cell
+    // an earlier action can invalidate a target between pick and flush). The reducer-owned staged array is the ONE
+    // order source for both this validation and the submitted PTB; rejected casts keep an empty slot during
+    // composition, so later survivors never slide ahead of an intervening move.
+    const committed_caster_cell = me?.committed?.cell ?? me?.cell ?? null
     const caster_seat = resolve_ref(entity_id)?.idx ?? -1
     // ⑭ EVOLVED-SEQUENCE VALIDATION (regression: placing a trap behind a mob then pushing it on — the turn
-    // committed without the spell, though everything was valid): the chain commits ONE PTB in D99 order, each action reading LIVE evolved
-    // state, so a drafted cast is judged against the board the CHAIN sees WHEN IT FIRES — the committed base
-    // folded through the PRIOR casts' displacements/kills via the sim door — NEVER the optimistic end-state,
-    // where THIS cast's own push already moved its target and made its own valid cast look stale. Drafted MOVES
-    // never displace a mob, so the mob-occupancy fold only ever needs to walk the drafted CASTS; `occupied` is
-    // the pre-fight fallback.
-    // #321 PER-CAST CASTER ANCHOR: `anchor` above is only the sequence's STARTING cell — a caster-relocating cast
-    // (teleport, dash) drafted earlier in the SAME queue has already moved the caster by the time a LATER cast
-    // fires, so evolve_flush_casts is seeded at `anchor` (caster_seed_cell) and returns the caster's own evolved
-    // cell per index too (`evolved[cast_i].caster_cell`) — the exact footprint origin each cast is judged from
-    // below, never one static pre-loop cell (the caster's cell no longer just "stays `anchor`"). This was the
-    // drop-valid-stationary-targets class: an in-range target fell out of a footprint drawn from the caster's
-    // STALE pre-teleport corner of the board.
+    // committed without the spell, though everything was valid): every action reads LIVE evolved state, so a cast
+    // is judged against the committed base folded through every PRIOR drafted action. Casts evolve displacement /
+    // kills through the sim door; moves immediately relocate the caster before a following cast takes its snapshot.
+    // This is also the #321 per-cast caster anchor: an earlier teleport, ordinary move, or both determine the exact
+    // footprint origin the contract reads when this cast fires.
+    const evolution_actions = evolution_actions_of(draft_actions, my_spells, me?.weapon)
     const evolved = evolve_flush_casts({
       view: fight_view(),
       committed: committed_state(fight_store.getState()),
       caster_id: entity_id,
-      caster_seed_cell: anchor,
-      casts: (cast_queue ?? []).map((entry) => {
-        const weapon = entry.spell_key === WEAPON_ATTACK_ID
-        const drafted = weapon ? null : (my_spells.find((sp) => sp.name_key === entry.spell_key) ?? null)
-        return {
-          spell: weapon
-            ? weapon_spell_template(me?.weapon)
-            : drafted?.object_id
-              ? fight_spell_template(entry.spell_key)
-              : null,
-          target: entry.cell,
-        }
-      }),
+      actions: evolution_actions,
       resolve_ref,
     })
-    const cast_actions = []
+    const cast_actions = Array(cast_queue.length).fill(null)
     // Trap cells committed THIS flush (survivors → chain truth) vs DROPPED trap drafts (their optimistic
     // click-time marker — trap paint at cast, design ruling 2026-07-17 — must roll back). The keyless read layer drops
     // Fight.fx, so the client mirrors its own placed traps; markers live until sprung / fight end.
@@ -711,7 +647,7 @@ export function DungeonBoard() {
     // ingress, claim retirement, peers, and mobs return domain/state results but cannot request UI; the successful
     // commit consumes these records below.
     const cast_drops = []
-    if (me && dungeon && anchor != null)
+    if (me && dungeon && committed_caster_cell != null)
       for (const [cast_i, entry] of (cast_queue ?? []).entries()) {
         const is_weapon = entry.spell_key === WEAPON_ATTACK_ID
         const drafted_spell = is_weapon ? null : (my_spells.find((sp) => sp.name_key === entry.spell_key) ?? null)
@@ -721,14 +657,17 @@ export function DungeonBoard() {
         const ground_targeted = !is_weapon && drafted_spell?.levels?.[0]?.free_cell === true
         // #321 PER-CAST ANCHOR: this cast's own footprint origin — the caster's cell evolved through casts
         // 1..cast_i-1's OWN displacement effects (a drafted teleport/dash among them), never the sequence's
-        // static starting anchor. That staleness was the drop-valid-stationary-targets class: an in-range target
+        // static starting cell. That staleness was the drop-valid-stationary-targets class: an in-range target
         // fell out of a footprint drawn from the caster's pre-relocation corner of the board.
-        const cast_anchor = evolved[cast_i]?.caster_cell ?? anchor
+        const cast_anchor = evolved[cast_i]?.caster_cell ?? committed_caster_cell
         const spell_display_name = is_weapon
           ? t('fight.weapon_attack')
           : t(`spells.spell_${entry.spell_key}`, { defaultValue: drafted_spell?.name ?? entry.spell_key })
         // ⑭ the board the chain evolves to JUST BEFORE this cast fires; the eye-state occupancy is the fallback.
         const occ = evolved[cast_i]?.occupied ?? occupied
+        const caster_alive = [...occ.values()].find(
+          (fighter) => fighter.kind === 'player' && fighter.idx === caster_seat
+        )?.alive
         const los = [...obstacles]
         for (const [c, o] of occ) if (o.alive && !(o.kind === 'player' && o.idx === caster_seat)) los.push(c)
         // Resolve the drafted cast's target FIGHTER through the EYE-STATE occupancy (`occupied` — the last-rendered
@@ -755,6 +694,12 @@ export function DungeonBoard() {
           // a dropped trap draft never reaches the chain — its click-time optimistic marker rolls back below.
           if ((drafted_spell?.levels?.[0]?.effects ?? []).some((e) => e.kind === 'PLACE_TRAP'))
             trap_dropped.push(entry.cell)
+        }
+        // A prior ordered move may have crossed a lethal known trap. The contract commits that death, but any
+        // following act_cast would fail begin_living_action and revert the PTB, so omit the now-impossible suffix cast.
+        if (caster_alive === false) {
+          drop_entry(CAST_DROP_STALE_TARGET)
+          continue
         }
         let illegal
         let target_cell = entry.cell
@@ -838,14 +783,14 @@ export function DungeonBoard() {
         // VOID CASTS ARE LEGAL (a cast at any legal-geometry cell is the player's right). Weapon → {kind:2}
         // act_weapon; spell → {kind:1} act_cast staging the on-chain SpellTemplate id (a spell with no resolved id
         // is skipped LOUDLY, never downgraded to a swing).
-        if (is_weapon) cast_actions.push({ kind: 2, target: target_cell, spell_key: WEAPON_ATTACK_ID })
+        if (is_weapon) cast_actions[cast_i] = { kind: 2, target: target_cell, spell_key: WEAPON_ATTACK_ID }
         else if (drafted_spell?.object_id) {
-          cast_actions.push({
+          cast_actions[cast_i] = {
             kind: 1,
             target: target_cell,
             spell_template_id: drafted_spell.object_id,
             spell_key: drafted_spell.name_key, // VFX handoff — the bridge's confirm replay routes element VFX by it
-          })
+          }
           // A PLACE_TRAP effect ⇒ this cast lays a trap on `target_cell` — remember it to mark once committed.
           if ((drafted_spell.levels?.[0]?.effects ?? []).some((e) => e.kind === 'PLACE_TRAP'))
             trap_placed.push(target_cell)
@@ -857,12 +802,13 @@ export function DungeonBoard() {
     // ROLLBACK LAW (regression: "mobs regain health"): predictions now retire through the ONE receipt ingress by
     // claim identity; the receipt's TurnEnded expires any local cast prediction the committed batch omitted. An
     // unrelated receipt never purges it, and object snapshots never re-adopt over the fold (M6 + M2b).
-    // ARRAY ORDER (D99): casts-first vs moves-first, the whole batch in one commit_turn.
-    actions.push(...(cast_first ? [...cast_actions, ...move_actions] : [...move_actions, ...cast_actions]))
+    // ARRAY ORDER (#398): validated casts return to their original staged slots; moves stay exactly where drafted.
+    const actions = compose_staged_turn(draft_actions, cast_actions)
+    const resolved_casts = cast_actions.filter(Boolean)
     fight_state_trace('flush_started', {
       background,
       move_count: move_actions.length,
-      cast_count: cast_actions.length,
+      cast_count: resolved_casts.length,
       dropped,
     })
     // TX TRANSPARENCY: every transaction surfaces its toast, INCLUDING the deadline
@@ -891,7 +837,7 @@ export function DungeonBoard() {
     // mirrors enforce_and_record_cast recording only casts that LANDED (a dropped/weapon action records nothing).
     if (ok) {
       const cast_turns = /** @type {Record<string, number>} */ ({})
-      for (const a of cast_actions) if (a.kind === 1 && a.spell_key) cast_turns[a.spell_key] = my_turn_no
+      for (const a of resolved_casts) if (a.kind === 1 && a.spell_key) cast_turns[a.spell_key] = my_turn_no
       if (entity_id && Object.keys(cast_turns).length) record_cast_turns(entity_id, cast_turns)
     }
     clear_picks()
@@ -921,15 +867,15 @@ export function DungeonBoard() {
   // The reducer owns deadline/kill/busy/latch decisions. This is the ONE remaining effect: claim the derived
   // false→true edge once for the playable turn, read the draft live, and submit the existing background commit.
   auto_submit_ref.current = () => {
-    const { move_path: mp, cast_path: cq } = staged_turn_paths(fight_store)
+    const { draft_actions, move_path: mp, cast_path: cq } = staged_turn_paths(fight_store)
     fight_state_trace('auto_flush_fired', { move_count: mp.length, cast_count: cq.length })
-    if (mp.length === 0 && cq.length === 0) {
+    if (draft_actions.length === 0) {
       game_log('board', 'auto-flush no-op — reducer draft queue is empty')
       clear_picks()
       fight_state_trace('flush_finished', { background: true, ok: true, noop: true })
       return true
     }
-    return flush_commit(mp, cq, true)
+    return flush_commit(draft_actions, true)
   }
   useEffect(
     () =>
@@ -1061,7 +1007,7 @@ export function DungeonBoard() {
       // roll walks as before; a bitten one predicts the forfeit + hit-anim THIS frame and the walk NEVER starts.
       const bite = next_move_tackle(fight_store.getState())
       append_move_step(cell)
-      fight_store.getState().input({ type: 'stage', intent: { kind: 0, target: cell } })
+      fight_store.getState().input({ type: 'stage', intent: { kind: 0, target: cell, landed: !bite } })
       if (bite) predict_tackle(bite)
       else optimistic_walk([...move_path, cell])
     }
@@ -1171,8 +1117,8 @@ export function DungeonBoard() {
   // END TURN = flush the current draft (move + cast); an EMPTY commit is a legal "end turn" on-chain (commit_turn
   // applies the batch AND advances the turn — dungeon_turn.move allows zero actions). Reads the LIVE draft.
   const on_end_turn = () => {
-    const { move_path: mp, cast_path: cq } = staged_turn_paths(fight_store)
-    flush_commit(mp, cq)
+    const { draft_actions } = staged_turn_paths(fight_store)
+    flush_commit(draft_actions)
   }
 
   // LEAVE DUNGEON (the RUN door, dungeon::abandon): open the in-app confirm modal (never a native dialog). The

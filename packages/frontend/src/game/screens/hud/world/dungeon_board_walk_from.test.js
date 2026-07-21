@@ -5,8 +5,8 @@
 // mover's cell until its walk presents") the PRESENTED cell (`fight.fighters.get(me).cell`, = engine_view) lags at
 // the pre-move origin until each walk beat acks. A fast multi-step draft dispatches step N+1 BEFORE step N's walk
 // presents, so reading that held cell for `from_enc` yielded the ORIGIN → the beat replays from origin (a re-walk).
-// The drafted `move_path` is the SYNCHRONOUS truth (append/pop update it this frame), so the previous drafted step
-// is where the new segment truly begins.
+// The ordered draft anchor `draft_caster_cell` (committed truth evolved through the staged prefix via the sim twin)
+// is the SYNCHRONOUS truth (it re-derives from the staged actions this frame), so it is where the new segment begins.
 //
 // optimistic_walk is a closure inside a browser-only component (DungeonBoard.jsx imports the 3D engine → not
 // headless-importable, and the repo has no jsdom — .test.jsx renders only leaf components via renderToStaticMarkup).
@@ -97,9 +97,9 @@ describe('DungeonBoard optimistic_walk — the walk from is the drafted step, ne
     expect(engine_view(store.getState()).fighters.get(CHAR).cell).not.toEqual(dec(STEP1_DEST))
   })
 
-  // (B) THE FIX, source-contract (red at HEAD): optimistic_walk's `from_enc` anchors on the drafted `move_path`
-  //     (previous step) with the committed `chain_cell` fallback, and NEVER on the held `me_slice.cell`.
-  test('(B) optimistic_walk anchors from_enc on the drafted move_path, not the held me_slice.cell', async () => {
+  // (B) THE FIX, source-contract (red at HEAD): optimistic_walk's `from_enc` anchors on the ordered draft anchor
+  //     `draft_caster_cell` (the staged prefix evolved through the sim twin), and NEVER on the held `me_slice.cell`.
+  test('(B) optimistic_walk anchors from_enc on the ordered draft anchor, not the held me_slice.cell', async () => {
     const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
     const start = src.indexOf('const optimistic_walk = (draft) =>')
     const end = src.indexOf('const optimistic_cast =', start)
@@ -108,9 +108,8 @@ describe('DungeonBoard optimistic_walk — the walk from is the drafted step, ne
     const body = src.slice(start, end)
     const from_line = body.split('\n').find((l) => l.includes('from_enc ='))
     expect(from_line).toBeTruthy()
-    // the from is the drafted path (previous step), NOT the display-held fighter cell.
-    expect(from_line).toMatch(/move_path/)
-    expect(from_line).toMatch(/chain_cell/)
+    // the from is the ordered draft anchor (staged prefix evolved through the sim twin), NOT the display-held cell.
+    expect(from_line).toMatch(/draft_caster_cell/)
     expect(from_line).not.toMatch(/me_slice/)
   })
 })
