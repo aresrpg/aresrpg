@@ -11,3 +11,13 @@
 - **Universal crush** — any item crushes; zero-rune crushes say honestly that they destroy.
 - **The dragon flies properly** — flat cruise at altitude 300, true travel-direction facing,
   and the animation pinned to the model's real clips.
+- **Send items to anyone** — escrow-recoverable gifting from the inventory: pick items or a
+  partial stack amount, preview the exact transfer, confirm, and the receiver claims for free
+  (the sender can recall an unclaimed gift). Every send simulates before it signs.
+- **Friend fast travel** — the friends menu travel action now works end-to-end.
+- **Zones stop flickering** — zone refreshes merge instead of despawning live mob groups, and
+  engaging a mob targets where it actually stands.
+- **Critical hits show their color** — predicted crits paint the orange floater the moment they
+  land, and the sim's crit math is pinned test-for-test to the chain's.
+- **Seamless upgrades** — the transaction sponsor now keeps a history window of package
+  versions, so an already-open client keeps playing through a release instead of stalling.
