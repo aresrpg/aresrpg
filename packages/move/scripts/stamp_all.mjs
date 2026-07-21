@@ -66,11 +66,20 @@ const require_coin_type = (value, label) => {
   require_id(match[1], label)
 }
 
-function package_row(entry, name) {
+// An upgrade repoints `latest`; the retired id must stay sponsorable while clients still mid-session
+// on it drain out (see api/sponsor.mjs release_package_ids). `previous` accumulates every prior latest
+// across ceremonies — origin is always allowlisted, so it never needs a slot — and only appears when
+// non-empty, so un-upgraded packages stay byte-identical to the pre-roll shape.
+export function package_row(entry, name, prior = {}) {
   if (!entry || typeof entry !== 'object') throw new Error(`ceremony manifest has no ${name} package`)
+  const origin = require_id(entry.pkg, `${name}.pkg`)
+  const latest = require_id(entry.latest ?? entry.pkg, `${name}.latest`)
+  const retired = prior.latest && prior.latest !== latest ? [...(prior.previous ?? []), prior.latest] : prior.previous
+  const previous = [...new Set(retired ?? [])].filter((id) => id !== latest && id !== origin)
   return {
-    origin: require_id(entry.pkg, `${name}.pkg`),
-    latest: require_id(entry.latest ?? entry.pkg, `${name}.latest`),
+    origin,
+    latest,
+    ...(previous.length ? { previous } : {}),
     upgrade_cap: require_id(entry.upgradeCap, `${name}.upgradeCap`),
     admin: optional_id(entry.admin, `${name}.admin`),
     caps: json_clone(entry.caps),
@@ -180,7 +189,7 @@ function policy_row(policy, label) {
 /** Convert a ceremony receipt into one network row while preserving non-ceremony external metadata. */
 export function release_network_from_manifest(manifest, previous = {}) {
   const packages = Object.fromEntries(
-    package_names.map((name) => [name, package_row(manifest[name], name)])
+    package_names.map((name) => [name, package_row(manifest[name], name, previous.packages?.[name])])
   )
   return {
     chain_id: manifest._chain_id ?? previous.chain_id ?? '',
@@ -361,9 +370,12 @@ export function k8s_values_expectations(row, network) {
     list
       .filter((name) => packages[name].latest !== packages[name].origin)
       .map((name) => packages[name].latest)
+  // Retired-but-sponsorable versions live ONLY in the sponsor scope (drain window), never the
+  // indexer's event set — an upgraded-away package emits no new events.
+  const previouses = (list) => list.flatMap((name) => packages[name].previous ?? [])
   const ares_packages = unique([...origins(emitters), ...latests(emitters)])
   const sponsor_packages = unique(
-    [...origins(names), ...latests(names), row.rules_package].filter(Boolean)
+    [...origins(names), ...latests(names), ...previouses(names), row.rules_package].filter(Boolean)
   )
   return [
     '──── k8s values expectations — diff-check ~/dev/kubernetes by hand (print-only, never written) ────',
@@ -375,7 +387,7 @@ export function k8s_values_expectations(row, network) {
     '',
     '# domains/aresrpg/releases/sponsor/values.yaml',
     `network: ${network}`,
-    '# every package origin, then upgrade latests, then the kiosk rules package',
+    '# every package origin, upgrade latests, retired drain-window versions, then the kiosk rules package',
     '# (mirrors api/sponsor.mjs release_package_ids — SPONSOR_ARESRPG_PACKAGES on deployed images)',
     'sponsor:',
     `  aresrpgPackages: "${sponsor_packages.join(',')}"`,

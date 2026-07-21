@@ -181,6 +181,29 @@ test.skipIf(!CEREMONY_MANIFEST_AVAILABLE)('release.json owns every SDK pin and s
   }
 })
 
+test('package_row rolls the retired latest into `previous` on repoint (sponsor drain window)', async () => {
+  const stamp_all_url = pathToFileURL(path.join(here, 'stamp_all.mjs'))
+  stamp_all_url.searchParams.set('roll-test', String(Date.now()))
+  const { package_row } = await import(stamp_all_url.href)
+  const id = (h) => '0x' + h.padEnd(64, '0')
+  const cap = { upgradeCap: id('ca9') }
+  const rolled = (entry, prior) => package_row(entry, 'engine', prior).previous
+  // fresh publish (no prior, latest == origin): no `previous` key at all
+  expect(rolled({ pkg: id('e0'), latest: id('e0'), ...cap }, undefined)).toBeUndefined()
+  // v3 → v4 repoint: the retired v3 latest joins `previous`
+  expect(rolled({ pkg: id('e0'), latest: id('e4'), ...cap }, { origin: id('e0'), latest: id('e3') })).toEqual([id('e3')])
+  // v4 → v5 repoint accumulates history in order (dedup keeps it a set)
+  expect(
+    rolled({ pkg: id('e0'), latest: id('e5'), ...cap }, { origin: id('e0'), latest: id('e4'), previous: [id('e3')] })
+  ).toEqual([id('e3'), id('e4')])
+  // no repoint (latest unchanged): history preserved, never grows or dupes
+  expect(
+    rolled({ pkg: id('e0'), latest: id('e5'), ...cap }, { origin: id('e0'), latest: id('e5'), previous: [id('e3'), id('e4')] })
+  ).toEqual([id('e3'), id('e4')])
+  // a latest that returns to origin never lands in `previous` — origin is always allowlisted
+  expect(rolled({ pkg: id('e0'), latest: id('e0'), ...cap }, { origin: id('e0'), latest: id('e0') })).toBeUndefined()
+})
+
 test('release validation rejects malformed preserved deployment ids', async () => {
   const release = JSON.parse(readFileSync(release_path, 'utf8'))
   const stamp_all_url = pathToFileURL(path.join(here, 'stamp_all.mjs'))

@@ -15,7 +15,7 @@ const fixture_row = {
     spells: { origin: '0x51', latest: '0x51' },
     social: { origin: '0x52', latest: '0x52' },
     engine: { origin: '0xe1', latest: '0xe1' },
-    aresrpg: { origin: '0xa1', latest: '0xa2' },
+    aresrpg: { origin: '0xa1', latest: '0xa2', previous: ['0xa0'] },
     kolizeum: { origin: '0x41', latest: '0x41' },
     forgemagie: { origin: '0x42', latest: '0x42' },
     gifting: { origin: '0x43', latest: '0x43' },
@@ -32,17 +32,18 @@ test('k8s values expectations derive both operator env blocks from the release r
   expect(block).toContain('network: testnet')
 
   // Indexer allowlist: the 8 event-emitter origins then upgrade latests — foundation emits none,
-  // and un-upgraded packages appear exactly once (latest == origin dedupes).
+  // and un-upgraded packages appear exactly once (latest == origin dedupes). Retired `previous`
+  // versions NEVER enter the indexer set (0xa0 is absent) — old packages emit no new events.
   expect(block).toContain(
     'aresPackages: "0x51,0x52,0xe1,0xa1,0x41,0x42,0x43,0xd1,0xa2"'
   )
   expect(block).not.toContain('aresPackages: "0xf1')
   expect(block.match(/0x51/g)?.length).toBeGreaterThan(0)
 
-  // Sponsor PTB-scope allowlist mirrors api/sponsor.mjs's release derivation:
-  // every package origin, then upgrade latests, then the kiosk rules package.
+  // Sponsor PTB-scope allowlist mirrors api/sponsor.mjs's release derivation: every package origin,
+  // then upgrade latests, then retired drain-window `previous` versions (0xa0), then the kiosk rules.
   expect(block).toContain(
-    '  aresrpgPackages: "0xf1,0x51,0x52,0xe1,0xa1,0x41,0x42,0x43,0xd1,0xf2,0xa2,0x77"'
+    '  aresrpgPackages: "0xf1,0x51,0x52,0xe1,0xa1,0x41,0x42,0x43,0xd1,0xf2,0xa2,0xa0,0x77"'
   )
 
   // firstCheckpoint is chain-derived (publish-tx checkpoint − margin), never manifest-derived —

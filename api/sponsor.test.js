@@ -156,6 +156,19 @@ describe('F3 — PTB scope allowlist (aresrpg + composed framework only)', () =>
     )
     expect(() => S.assert_ptb_scope(k)).not.toThrow()
   })
+  test('(a4) DRAIN WINDOW: origin, latest (v4) AND the retired v3 (engine.previous) all pass scope', async () => {
+    const { engine } = release.networks.testnet.packages
+    // schema: the retired latest (v3, from the v4 repoint) is retained under engine.previous so clients
+    // still mid-session on it survive the upgrade — ids come from the release artifact, never a literal
+    expect(engine.previous?.length ?? 0).toBeGreaterThan(0)
+    // behaviour: the sponsor allowlist unions origin + latest + previous — every engine version passes scope
+    for (const id of [engine.origin, engine.latest, ...(engine.previous ?? [])]) {
+      const k = await kind((tx) =>
+        tx.moveCall({ target: `${id}::actions::act_pass`, arguments: [tx.objectRef(OBJ())] })
+      )
+      expect(() => S.assert_ptb_scope(k)).not.toThrow()
+    }
+  })
   test('(a2) a create-shaped PTB mixing framework (0x2 kiosk/transfer) + an aresrpg call passes', async () => {
     const k = await kind((tx) => {
       tx.moveCall({ target: `0x2::kiosk::new` })

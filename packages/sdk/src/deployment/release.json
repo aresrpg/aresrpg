@@ -36,6 +36,9 @@
         "engine": {
           "origin": "0x599bda2208863411b5753d1fee3af86095a26b625ee4136ba7469f7d5e23dafb",
           "latest": "0xcc072a0dfd2084bb56af81e6d7142bd1e79389a7373488b2d7bbe48769372c7b",
+          "previous": [
+            "0x6145a3ecffe1f32f56d1ff973904aa342248feb3d9364639dba746cb492a0070"
+          ],
           "upgrade_cap": "0x99998b458da902e95e89a1954ab28b13d6e02c1025172a3146c099f45f76a4fb",
           "admin": "0xd7468c4625f6a27cb3d863931db1267b8978811ac1677862e27fb97f5de02d84",
           "caps": {},

@@ -71,7 +71,13 @@ const normalize_set = (csv) =>
 
 const network_release = release.networks[NETWORK]
 const release_package_ids = [
-  ...Object.values(network_release?.packages ?? {}).flatMap(({ origin, latest }) => [origin, latest]),
+  // `previous` retains ids retired by an upgrade so clients still mid-session on the old package
+  // keep a sponsorable target through the drain window (release.json rolls latest→previous on repoint).
+  ...Object.values(network_release?.packages ?? {}).flatMap(({ origin, latest, previous }) => [
+    origin,
+    latest,
+    ...(previous ?? []),
+  ]),
   network_release?.rules_package,
 ].filter(Boolean)
 
