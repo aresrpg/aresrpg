@@ -29,9 +29,10 @@ const render = () =>
   )
 
 test('the world roster mob icon uses the encyclopedia walrus home — never the forbidden /sprites fallback', () => {
-  // Encyclopedia law (encyclopedia_assets.ts): the `mob_icon` quilt is the ONLY permitted origin; the
-  // generic components/mob_image `/sprites/…` fallback must never reach the browser. With the quilt
-  // unconfigured the ency home degrades to a shield — the generic component leaked a /sprites <img> (HEAD).
+  // Encyclopedia law (encyclopedia_assets.ts): the `mob_icon` quilt is the ONLY permitted origin.
+  // Historical leak (#117): the old generic mob-image component (deleted, #353) fell back to a local
+  // /sprites/… path when the quilt was unconfigured. Kept as the regression tooth — with the quilt
+  // unconfigured the ency home degrades to a shield, never a /sprites <img> (HEAD).
   configure_walrus_assets({ aggregator: 'https://agg.example', classes: {} })
   expect(render()).not.toContain('/sprites/')
 })
