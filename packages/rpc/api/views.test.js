@@ -380,7 +380,9 @@ beforeAll(async () => {
   await sadd(`rpc:idx:rare_links:${WORLD}`, TPL_ORE)
   await sadd('rpc:idx:worlds', WORLD_B)
 
-  // item template: event arm sets item_type+live, object snapshot adds name/level/category
+  // item template: event arm sets item_type+live, object snapshot adds name/level/category,
+  // the StatsMinKey/StatsMaxKey DF snapshot adds stats_min/stats_max (issue #219) — independent
+  // per-DF sub-paths on the SAME doc, reshaped into `stats: {field: [min,max]}` at read time.
   await setj('rpc:template:0xtplsword', {
     template: '0xtplsword',
     item_type: 'weapon',
@@ -388,8 +390,25 @@ beforeAll(async () => {
     level: 12,
     category: 'sword',
     live: true,
+    stats_min: { vitality: 10, raw_damage: 5 },
+    stats_max: { vitality: 20, raw_damage: 15 },
   })
   await sadd('rpc:idx:templates', '0xtplsword')
+  // A SECOND template carrying only the MIN half (never observed live — both DFs land in the
+  // SAME `attach_ranges` PTB — but the read-time combine must render the missing MAX side as
+  // null rather than drop/fabricate the field). Deliberately NOT SADD'd into `rpc:idx:templates`
+  // — the `?ids=` batch form (below) reads docs directly via JSON.MGET, exactly like
+  // `/v1/taux?ids=`, bypassing the liveness-index enumeration entirely, so this proves that path
+  // independently of the default full-index listing.
+  await setj('rpc:template:0xtplminonly', {
+    template: '0xtplminonly',
+    item_type: 'ring',
+    name: 'Half-Forged Band',
+    level: 5,
+    category: 'ring',
+    live: true,
+    stats_min: { chance: 3 },
+  })
   // supply arm: the event-derived mint/burn counter (indexer HANDLERS.md "Item supply") —
   // a SEPARATE doc from the template above, joined at read time by handle_encyclopedia.
   await setj('rpc:supply:0xtplsword', { template: '0xtplsword', amount: 7 })
@@ -1044,6 +1063,7 @@ describe('encyclopedia', () => {
         category: 'sword',
         supply: 7,
         last_sale_mist: '2000000000', // lastsale doc joined (string MIST); null when never sold
+        stats: { vitality: [10, 20], raw_damage: [5, 15] }, // stats_min/stats_max DF snapshot (issue #219)
       },
     ])
     // mob prefix + display-ready drops: the first row joins the Bronze Sword item doc
@@ -1103,6 +1123,30 @@ describe('encyclopedia', () => {
     expect(data.items).toEqual([])
     expect(data.mobs).toEqual([])
     expect(data.worlds).toEqual([])
+  })
+
+  // Per-id batch access (issue #219) — mirrors /v1/taux?ids=: reads the template docs directly
+  // (JSON.MGET), bypassing rpc:idx:templates entirely, so it serves a doc even when — like
+  // 0xtplminonly here — the doc was never SADD'd into the liveness index. A missing id is
+  // silently dropped (mget_json + filter(Boolean), the same "gap, never fabricate" idiom
+  // read_index already uses for the default full-listing form).
+  test('?ids= batch-resolves specific templates, unindexed docs included, missing ids dropped', async () => {
+    const { data } = await handle_encyclopedia(P({ ids: '0xtplsword,0xtplminonly,0xtplghost' }))
+    expect(data.items.map((i) => i.template_id)).toEqual(['0xtplsword', '0xtplminonly'])
+    const min_only = data.items.find((i) => i.template_id === '0xtplminonly')
+    expect(min_only).toMatchObject({
+      name: 'Half-Forged Band',
+      category: 'ring',
+      // Only stats_min is seeded — the missing MAX half renders null, never dropped/fabricated.
+      stats: { chance: [3, null] },
+    })
+    // mobs/worlds/recipes stay governed by `kind` alone — `ids` scopes ONLY the items list.
+    expect(data.mobs.length).toBeGreaterThan(0)
+  })
+
+  test('a template with no authored ranges serves an empty stats object', async () => {
+    const { data } = await handle_encyclopedia(P({ ids: TPL_HAT }))
+    expect(data.items).toEqual([expect.objectContaining({ template_id: TPL_HAT, stats: {} })])
   })
 })
 

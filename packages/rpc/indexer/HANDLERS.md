@@ -160,9 +160,10 @@ mob's level-range/hp/element live ONLY in the object contents, exactly like the 
 So both are OBJECT-snapshotted here:
 - **`aresrpg::item::ItemTemplate`** → its encyclopedia doc `rpc:template:{id}` (the SAME doc/index
   the `TemplateCreated` event arm writes; they converge idempotently). Full `bcs::from_bytes` decode
-  of `{id, name, item_type, category, level}` (all scalars — no trailing bytes). Per-item STAT lines
-  are `item_stats` **dynamic fields**, NOT the template's own contents, so they are not snapshotted
-  (no DF-indexing) — the encyclopedia serves identity + level only.
+  of `{id, name, item_type, category, level}` (all scalars — no trailing bytes). Per-item STAT
+  RANGES are `item_stats` **dynamic fields** (`StatsMinKey`/`StatsMaxKey`), NOT the template's own
+  contents — projected via the SAME Phase-1 DF loop as the Character/Zone DFs below, onto
+  `$.stats_min`/`$.stats_max` on this SAME doc. See "Item stat ranges" below.
 - **`aresrpg::mob_template::MobTemplate`** → `rpc:mob_template:{id}` (+ `idx:mob_templates`). The
   SCALAR PREFIX (`name, min_level, max_level, base_hp, element`) is HAND-PARSED (not
   `bcs::from_bytes`), then the walk SKIPS the trailing `stats` (22-u64 Stats) + `spells`
@@ -312,6 +313,53 @@ Doc `rpc:lastsale:{template}` = `{ template, price_mist: "<string>", ts }` — a
 | `shop::SaleBought` | price (per-unit) | `SET rpc:lastsale:{template} {template,price_mist,ts}` |
 | `pool::PoolBuy` / `PoolSell` | sui_in ∕ quantity, gross ∕ quantity | same latest-wins `SET` |
 | `kiosk::ItemPurchased` (0x2, price>0) | price ∕ amount via same-tx Item output | same latest-wins `SET` |
+
+---
+
+## Item stat ranges — `/v1/encyclopedia` items[].stats (issue #219)
+
+The authored `[min,max]` roll ranges each equippable ItemTemplate's stat lines mint into
+(`shop::buy` rolls each field uniformly in this range at purchase — see
+`aresrpg::item_stats`). These live ONLY as two dynamic fields on the ItemTemplate's UID
+(`StatsMinKey`/`StatsMaxKey`, attached by `item_stats::attach_ranges`/`set_ranges`) — no event
+carries them — so, exactly like the Character DFs, they are projected from the **`ares_snapshot`**
+Phase-1 `dynamic_field::Field` loop, discriminated by the Field's KEY TYPE parameter
+(`is_stats_min_key`/`is_stats_max_key` — PLAIN struct keys, NOT `NsKey`-wrapped, same shape as
+`zones::ZoneKey`). The Field's checkpoint `ObjectOwner` IS the ItemTemplate.
+
+Each half decodes independently (`ItemStatsField` — `id: UID(32) | dummy_field: bool(1) | 17×u16`
+= 67 bytes; `StatsMinKey {}`/`StatsMaxKey {}` are empty Move structs, so BCS gives them the SAME
+hidden `dummy_field: bool` byte as `ProgressionKey {}` — pinned against a live testnet capture,
+see `snapshot_tests.rs`) and writes the WHOLE 17-field block, name-keyed, onto its OWN sub-path of
+the SAME `rpc:template:{id}` doc the object snapshot / `TemplateCreated` event arm write —
+`$.stats_min` / `$.stats_max` — latest-wins, no cross-DF read-modify-write (mirrors the
+`map_zone_field`/`map_group_root_field` converging-doc pattern). Self-sufficient (NX skeleton +
+`SADD idx:templates`) so a template surfaces even if a stats snapshot lands first. A template with
+no authored ranges (resources/consumables/cosmetics — `item_stats::attach_ranges` is never called
+for them) simply never gets these sub-paths.
+
+`/v1/encyclopedia`'s `handle_encyclopedia` reshapes the two halves into the served
+`stats: {field: [min, max]}` object at read time (a field present on only one half — never
+observed live, both DFs land in the same `attach_ranges` PTB — renders the other side `null`,
+never fabricated); `{}` when neither half exists. `?ids=<a,b,c>` (items only) batch-resolves
+specific templates via `JSON.MGET` directly, bypassing `idx:templates` — mirrors `/v1/taux?ids=`.
+
+| Event/DF | Fields | Redis writes |
+| --- | --- | --- |
+| `Field<item_stats::StatsMinKey, ItemStatistics>` (DF, ItemTemplate UID) | 17 × u16 | NX `rpc:template:{id} {template,live:true}`; `SET $.stats_min {…17 fields…}`; `SADD idx:templates` |
+| `Field<item_stats::StatsMaxKey, ItemStatistics>` (DF, ItemTemplate UID) | 17 × u16 | same shape at `$.stats_max` |
+
+**Backfill is OPERATIONAL, not code** — `ares_snapshot` is a LIVE pipeline (its watermark is
+already at/near the tip from the Character/ItemTemplate/MobTemplate/etc. snapshots already
+running), and the framework only applies `FIRST_CHECKPOINT` to a pipeline with **no** watermark
+yet (`main.rs` `start_checkpoint` doc: "Ignored once a watermark exists"). Adding this arm to the
+SAME running `AresSnapshotHandler` therefore does NOT retroactively scan history — it only
+observes stat-range DFs attached in checkpoints from here on. Existing templates' already-attached
+ranges need a **full `ares_snapshot` re-index** (reset/delete `rpc:watermark:ares_snapshot` and
+restart with `FIRST_CHECKPOINT` at or before the first `attach_ranges` call, or stand up a fresh
+Redis) — the SAME documented lever this file already names for the job-xp/progression/equipment
+DFs above. Every write here is an idempotent `JSON.SET`, so a re-index safely reprocesses already-
+correct fields alongside the newly-added stats.
 
 ---
 
