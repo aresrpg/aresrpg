@@ -76,7 +76,17 @@ describe('sim contract: senshi teleport + push displacement', () => {
     const enemy = fighter('m0', { x: 8, y: 8 }, false)
     const state = { ...state_of([caster], [enemy]), current_turn_idx: 0 }
     const templates = new Map([
-      ['tp', spell_of('tp', [{ kind: K_TELEPORT, value: 3, target_filter: TF_ONLY_CASTER, chance: 100 }])],
+      [
+        'tp',
+        spell_of('tp', [
+          {
+            kind: K_TELEPORT,
+            value: 3,
+            target_filter: TF_ONLY_CASTER,
+            chance: 100,
+          },
+        ]),
+      ],
     ])
     state.team0[0].hand = ['tp']
     state.team0[0].spell_levels = { tp: 1 }
@@ -91,7 +101,11 @@ describe('sim contract: senshi teleport + push displacement', () => {
 
     const mp_before = find_entity(teleported.state, 'p0').mp
     const step = { x: 4, y: 5 } // ONE cell from the LANDING cell (3 cells from the pre-teleport origin)
-    const walked = reduce(teleported.state, { type: 'move', entity_id: 'p0', path: [step] }, { arena })
+    const walked = reduce(
+      teleported.state,
+      { type: 'move', entity_id: 'p0', path: [step] },
+      { arena },
+    )
     const after = find_entity(walked.state, 'p0')
     expect(after.cell).toEqual(step) // the move lands adjacent — the path was contiguous from the post-teleport cell
     expect(mp_before - after.mp).toBe(1) // exactly 1 MP — measured from the landing cell, never the pre-teleport 3
