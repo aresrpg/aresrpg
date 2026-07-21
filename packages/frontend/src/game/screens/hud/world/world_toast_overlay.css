@@ -1,0 +1,23 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+/* #208: the event-toast layer shares the minimap's flush top-right anchor and paints above its z-index. */
+.gw-toasts {
+  top: 0;
+  right: 0;
+}
+
+/* House glass: translucent near-black, a white/10 hairline, blur, and deliberately sharp corners. */
+.gw-toast {
+  background: rgba(10, 10, 15, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* The progress variant previously replaced glass with an opaque slab; keep only its internal layout. */
+.gw-toast--progress {
+  background: rgba(10, 10, 15, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}

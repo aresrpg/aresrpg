@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 
 import { COARSE, NARROW, PHONE_SHORT, mobile_signals_are_active } from './game/core/mobile_mode.js'
 import { VERSION_BADGE_RULES, VERSION_BADGE_SIDEBAR_RULE, VERSION_BADGE_STYLE, VersionBadge } from './version_badge'
-import { TOAST_CONTAINER_CLASS } from './toast'
+import { TOAST_CONTAINER_CLASS, toast_glass_class } from './toast'
 
 const read_fixture = (relative_path: string) => readFileSync(new URL(relative_path, import.meta.url), 'utf8')
 
@@ -98,22 +98,29 @@ describe('version badge', () => {
   })
 })
 
-// OWNER (repeat-scold, "i'm repeating myself again"): toasts rendered FULL-WIDTH. The stack must stay width-
-// capped on EVERY breakpoint (desktop AND mobile) — never `max-w-none`, always a bounded max-width — per the
-// gothic-terminal glass-panel width idiom. The contract lives in TOAST_CONTAINER_CLASS (toast.ts) so it is
-// asserted without importing app.tsx's Vite-virtual graph, and app.tsx must consume that one home.
-describe('toast stack width cap', () => {
-  test('caps width on every breakpoint — no full-bleed max-w-none, desktop or mobile', () => {
-    // Never the full-bleed escape hatch, at any breakpoint (incl. the max-lg mobile clamp).
+// #208: the app toast layer shares the minimap's flush corner, overlaid with the house sharp glass recipe.
+// Position and card styling live in toast.ts so the contract stays testable without app.tsx's Vite graph.
+describe('toast minimap overlay', () => {
+  test('is absolutely pinned to the top-right while retaining a bounded width', () => {
     expect(TOAST_CONTAINER_CLASS).not.toContain('max-w-none')
-    // A bounded max-width is present (the cap), and the stack stays right-anchored like desktop.
     expect(TOAST_CONTAINER_CLASS).toMatch(/\bmax-w-(sm|\[)/)
-    expect(TOAST_CONTAINER_CLASS).toContain('right-4')
+    expect(TOAST_CONTAINER_CLASS).toContain('absolute')
+    expect(TOAST_CONTAINER_CLASS).toContain('top-0')
+    expect(TOAST_CONTAINER_CLASS).toContain('right-0')
+    expect(TOAST_CONTAINER_CLASS).not.toContain('fixed')
   })
 
-  test('app.tsx renders the toast stack through the single TOAST_CONTAINER_CLASS home', () => {
+  test('uses translucent near-black glass, a white/10 hairline, blur, and sharp corners', () => {
+    expect(toast_glass_class).toContain('bg-black/70')
+    expect(toast_glass_class).toContain('backdrop-blur-md')
+    expect(toast_glass_class).toContain('border-white/10')
+    expect(toast_glass_class).toContain('rounded-none')
+  })
+
+  test('app.tsx consumes the shared position and glass homes', () => {
     const app = read_fixture('./app.tsx')
-    expect(app).toContain("import { use_toast, TOAST_CONTAINER_CLASS } from './toast'")
+    expect(app).toContain("import { use_toast, TOAST_CONTAINER_CLASS, toast_glass_class } from './toast'")
     expect(app).toContain('<div className={TOAST_CONTAINER_CLASS}>')
+    expect(app).toContain('className={`${toast_glass_class}')
   })
 })

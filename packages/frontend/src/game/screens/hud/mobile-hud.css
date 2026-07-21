@@ -262,8 +262,8 @@ html.ares-mobile-drawer-open .touch-controls {
 
 /* Tiny relief map stays visible: navigation context is worth one quiet corner cue. */
 .gw-hud--mobile .mm {
-  top: max(6px, var(--safe-top));
-  right: max(6px, var(--safe-right));
+  top: 0;
+  right: 0;
   opacity: 0.78;
 }
 .gw-hud--mobile .mm-lens {
@@ -318,8 +318,8 @@ html.ares-mobile-hud .mmx-tip {
   white-space: nowrap;
 }
 .gw-hud--mobile .gw-toasts {
-  top: calc(max(6px, var(--safe-top)) + 76px);
-  right: max(6px, var(--safe-right));
+  top: 0;
+  right: 0;
   max-width: min(36vw, 240px);
 }
 .gw-hud--mobile .gw-toast {
@@ -329,7 +329,7 @@ html.ares-mobile-hud .mmx-tip {
      viewport formula (same file) so the cap holds even if the parent .gw-toasts width rule ever changes. */
   min-width: 0;
   max-width: calc(100vw - max(6px, var(--safe-left)) - max(6px, var(--safe-right)));
-  border-radius: var(--mobile-radius-small);
+  border-radius: 0;
   font-size: 9px;
   text-align: center;
   overflow-wrap: break-word;

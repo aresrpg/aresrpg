@@ -294,20 +294,21 @@ describe('viewport and mobile-style isolation', () => {
     expect(row_rule).toMatch(/padding:\s*\dpx \dpx/) // single-digit px on both axes < desktop's 8px/12px
   })
 
-  // Regression guard (mobile): TOASTS overflow the screen edge. The app-wide toast stack must clamp to the
-  // --safe-* vars every other fixed HUD element already uses (mobile-hud.css, bottom_bar.tsx). The class
-  // itself now lives in TOAST_CONTAINER_CLASS (toast.ts, extracted so it's testable without app.tsx's
-  // Vite-virtual graph — see app.test.tsx's own TOAST_CONTAINER_CLASS coverage); app.tsx just renders
-  // `className={TOAST_CONTAINER_CLASS}`, so this asserts the constant directly instead of regexing JSX.
-  test('the app-wide toast stack clamps to the safe-area edges on mobile, not raw pixel offsets', async () => {
+  // #208: the app-wide toast layer intentionally shares the minimap's exact flush corner on every viewport.
+  // Its bounded width still prevents overflow, while the old mobile safe-area offsets must not move it away
+  // from top:0/right:0.
+  test('the app-wide toast stack remains an absolute flush minimap overlay on mobile', async () => {
     const { TOAST_CONTAINER_CLASS } = await import('../../../toast')
     const app = read_fixture('../../../app.tsx')
     const toasts_fn = app.match(/function Toasts\(\)[\s\S]*?\n\}/)?.[0] ?? ''
 
-    expect(TOAST_CONTAINER_CLASS).toMatch(/max-lg:top-\[max\(3rem,var\(--safe-top\)\)\]/)
-    expect(TOAST_CONTAINER_CLASS).toMatch(/max-lg:right-\[max\(1rem,var\(--safe-right\)\)\]/)
+    expect(TOAST_CONTAINER_CLASS).toContain('absolute')
+    expect(TOAST_CONTAINER_CLASS).toContain('top-0')
+    expect(TOAST_CONTAINER_CLASS).toContain('right-0')
+    expect(TOAST_CONTAINER_CLASS).not.toContain('max-lg:top-')
+    expect(TOAST_CONTAINER_CLASS).not.toContain('max-lg:right-')
     expect(toasts_fn).toContain('className={TOAST_CONTAINER_CLASS}')
-    // text still wraps instead of overflowing a narrow safe-area-clamped box
+    // text still wraps instead of overflowing the bounded overlay
     expect(toasts_fn).toMatch(/whitespace-pre-wrap break-words/)
   })
 
