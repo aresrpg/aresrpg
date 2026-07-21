@@ -110,6 +110,26 @@ function decoded_tuple(min_fields, max_fields, chain_key) {
 }
 
 /**
+ * The SHARED item-stat decode: two BIASED on-chain stat blocks (`min`, `max`, each `{ chain_key: u16 }`)
+ * → the real-valued `{ uiKey: [min, max] }` characteristics object every item surface renders (camelCase
+ * UI keys via ITEM_STAT_KEY_MAP, neutral [0,0] stats dropped). This is the ONE decode home reused by both
+ * the SDK read path (normalize_item_template) and the /v1 stat projection (read_findables.get_template_map,
+ * issue #219) — so the +32768 un-bias, the snake→camel rename, and the neutral-drop live exactly once.
+ * @param {Record<string, number>} min biased min-half block, keyed by on-chain (snake_case) stat name
+ * @param {Record<string, number>} max biased max-half block
+ * @returns {Record<string, [number, number]>}
+ */
+export function decode_item_stat_ranges(min, max) {
+  const stats_json = {}
+  const put = (key, tuple) => {
+    if (tuple) stats_json[key] = tuple
+  }
+  for (const [ui_key, chain_key] of Object.entries(ITEM_STAT_KEY_MAP)) put(ui_key, decoded_tuple(min, max, chain_key))
+  for (const chain_key of ITEM_STAT_EXTRA_KEYS) put(chain_key, decoded_tuple(min, max, chain_key))
+  return stats_json
+}
+
+/**
  * Normalize a MobTemplate's decoded `fields` into the flat shape mob_editor.tsx / templates_tab.tsx expect.
  * @param {Record<string, any>} f  the MobTemplate struct's decoded `fields`
  * @param {string} id  the MobTemplate object id
@@ -174,12 +194,7 @@ export function normalize_item_template(f, id, display) {
   // #23 gRPC json:true flattens the nested ItemStatistics structs (no `.fields` wrapper) — keep `.fields` for jsonRpc.
   const min = f.stats_min?.fields ?? f.stats_min ?? {}
   const max = f.stats_max?.fields ?? f.stats_max ?? {}
-  const stats_json = {}
-  const put = (key, tuple) => {
-    if (tuple) stats_json[key] = tuple
-  }
-  for (const [ui_key, chain_key] of Object.entries(ITEM_STAT_KEY_MAP)) put(ui_key, decoded_tuple(min, max, chain_key))
-  for (const chain_key of ITEM_STAT_EXTRA_KEYS) put(chain_key, decoded_tuple(min, max, chain_key))
+  const stats_json = decode_item_stat_ranges(min, max)
   return {
     id,
     name: String(f.name ?? ''),

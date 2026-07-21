@@ -21,6 +21,24 @@ const get_encyclopedia = spyOn(rpc_client, 'get_encyclopedia').mockImplementatio
         supply: 3,
         last_sale_mist: '1000000000',
       },
+      {
+        template_id: '0xgear',
+        item_type: 'windbreak_chestplate',
+        name: 'Windbreak',
+        level: 40,
+        category: 'chestplate',
+        supply: 12,
+        last_sale_mist: null,
+        // Issue #219: /v1 serves the authored StatsMin/MaxKey ranges BIASED (+32768). 32768 == neutral (0),
+        // 32800 == +32, 33000 == +232, 32778 == +10, 32788 == +20. The neutral `strength` half must DROP;
+        // `range` present on only one half exercises the null-half path.
+        stats: {
+          vitality: [32800, 33000],
+          strength: [32768, 32768],
+          raw_damage: [32778, 32788],
+          range: [32773, null],
+        },
+      },
     ],
     mobs: [],
     worlds: [],
@@ -54,4 +72,21 @@ test('template maps resolve exact lootbox identity from the /v1 encyclopedia pro
     display: null,
   })
   expect(by_type.get('pet_lootbox')?.id).toBe('0xbox')
+})
+
+test('get_template_map decodes the /v1 stat projection into real-valued characteristics (issue #219)', async () => {
+  const by_id = await get_template_map()
+  const gear = by_id.get('0xgear')
+
+  // RED before the projection was consumed: statsJson was hardcoded '{}', so every card was characteristic-empty.
+  const stats = JSON.parse(gear.statsJson)
+  expect(stats).toEqual({
+    vitality: [32, 232], // 32800/33000 un-biased
+    rawDamage: [10, 20], // 32778/32788 un-biased + snake→camel rename
+    range: [5, 0], // one-half-present: min 32773 → +5, absent max half defaults to neutral 0 (never fabricated)
+  })
+  // strength [32768,32768] is the neutral sentinel → DROPPED, never a +0 row
+  expect(stats.strength).toBeUndefined()
+  // A statless template (the consumable lootbox) stays honest-empty → the card hides its characteristics block
+  expect(by_id.get('0xbox').statsJson).toBe('{}')
 })
