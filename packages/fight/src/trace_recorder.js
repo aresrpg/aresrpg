@@ -104,3 +104,30 @@ export const dump_trace = (rec, app_version, captured_at, fight_id) => {
   const inputs = scoped.slice(open_idx).map(({ seq, at, msg, anchors }) => ({ seq, at, msg, anchors }))
   return { trace_format: TRACE_FORMAT, fight_id: target, app_version, captured_at, inputs }
 }
+
+// ── BigInt-safe (de)serialization ──────────────────────────────────────────────────────────────
+// A captured `msg` is VERBATIM wire data — and decode_fight() (packages/sdk/src/fight_read.js:53-108) types
+// several chain u64 fields as native BigInt (Number would silently lose precision above 2^53): spawn_id,
+// world_seed, turn_ms, placement_ms, turn_deadline_ms, last_action_ms, placement_deadline_ms, group_xp, plus
+// shape_mask (a BigInt[] — one u64 bitset word per element). This object reaches the store as a 'snapshot'
+// input's `msg.fight` (packages/frontend/src/world-shell/dungeon_fight_sync.js `sync_dungeon_fight`,
+// dungeon_run_store.js:869 — both call `decode_fight` directly before dispatch). JSON has no BigInt type, so a
+// bare JSON.stringify throws `TypeError: Do not know how to serialize a BigInt` the instant the walk reaches
+// one of those fields — the live P1 this fixes. Tag/untag round-trips losslessly: a decimal STRING carries
+// full 64-bit precision (Number() would not); the reviver is the exact symmetric inverse of the replacer.
+const BIGINT_TAG = '$bigint'
+
+/** JSON.stringify replacer — tags a BigInt as `{"$bigint":"<decimal>"}`. Pass as JSON.stringify's 2nd arg. */
+export const trace_replacer = (_key, value) => (typeof value === 'bigint' ? { [BIGINT_TAG]: value.toString() } : value)
+
+/** JSON.parse reviver — the symmetric read side of `trace_replacer`. Pass as JSON.parse's 2nd arg. */
+export const trace_reviver = (_key, value) =>
+  value != null && typeof value === 'object' && typeof value[BIGINT_TAG] === 'string'
+    ? BigInt(value[BIGINT_TAG])
+    : value
+
+/** JSON.stringify a trace, safe over BigInt fields. @param {FightTrace} trace @param {number} [indent] @returns {string} */
+export const stringify_trace = (trace, indent = 0) => JSON.stringify(trace, trace_replacer, indent)
+
+/** JSON.parse text produced by `stringify_trace` — round-trips BigInt fields exactly. @param {string} text @returns {FightTrace} */
+export const parse_trace = (text) => JSON.parse(text, trace_reviver)

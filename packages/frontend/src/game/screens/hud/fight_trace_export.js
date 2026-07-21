@@ -13,7 +13,7 @@
 // packages/fight/src/trace_store_replay.test.js). Effect edge only: dump_current_trace does the real work
 // (headless, testable without a DOM); this file owns the Blob/anchor download dance.
 
-import { dump_current_trace } from '@aresrpg/fight/trace_tap'
+import { dump_current_trace, stringify_trace } from '@aresrpg/fight/trace_tap'
 
 // Vite injects this build-wide (vite.config.ts __APP_VERSION__); `typeof` guards the non-Vite context (bun
 // test) — the same pattern core/report.js's RELEASE constant uses for __GIT_SHA__.
@@ -30,7 +30,9 @@ export const has_dumpable_trace = () => dump_current_trace(app_version(), Date.n
 export function export_fight_trace() {
   const trace = dump_current_trace(app_version(), Date.now())
   if (!trace) return false
-  const blob = new Blob([JSON.stringify(trace, null, 2)], { type: 'application/json' })
+  // BigInt-safe: decode_fight()'s chain u64 fields (world_seed, shape_mask, …) ride a 'snapshot' input's
+  // msg.fight verbatim — a bare JSON.stringify throws the instant the walk reaches one (trace_recorder.js).
+  const blob = new Blob([stringify_trace(trace, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url

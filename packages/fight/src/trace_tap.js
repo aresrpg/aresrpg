@@ -8,6 +8,10 @@
 
 import { create_trace_recorder, record_input, dump_trace } from './trace_recorder.js'
 
+// Re-exported so the frontend's ONE fight-package import path (this module) also carries the format's
+// BigInt-safe serializer — no second package export entry for a single function (issue #209 P1 follow-up).
+export { stringify_trace } from './trace_recorder.js'
+
 let rec = create_trace_recorder()
 
 /**
