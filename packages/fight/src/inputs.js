@@ -160,6 +160,17 @@ const patch_fighter = (state, key, delta) => {
   return { ...base, fighters: { ...base.fighters, [key]: { ...base.fighters[key], ...delta } } }
 }
 
+// REVEAL — clear invisibility the SAME way the sim's `statuses::reveal` does: strip every kind-27 status ROW, the
+// ONE source both the effect badge (engine_view.effects) and the derived `invisible` read. Flipping only the
+// boolean left the invisibility BADGE lingering on a revealed fighter (#13 — a second-channel divergence from the
+// one-home law). A fighter carrying no rows just clears the flag (empty_fighter, pre-status folds) — no regression.
+const reveal_fighter = (state, key) => {
+  const f = ensure(state, key).fighters[key]
+  const rows = f.statuses ?? []
+  const kept = rows.filter((row) => row.kind !== INVISIBILITY_STATUS_KIND)
+  return patch_fighter(state, key, { invisible: false, ...(kept.length !== rows.length ? { statuses: kept } : {}) })
+}
+
 /**
  * Fold ONE action into the committed state. Pure: `apply_action(state, action)` is byte-deterministic. Every
  * arm mirrors a `fight_events.move` struct; `Displaced`/`Hit`/`Moved` set the AUTHORITATIVE post-event value
@@ -228,8 +239,9 @@ export const apply_action = (state, action) => {
       const ap = next.fighters[key]?.ap
       const spent =
         action.ap_cost != null && ap != null ? patch_fighter(next, key, { ap: Math.max(0, ap - action.ap_cost) }) : next
-      // Reveal on a damaging cast — mirror of statuses::reveal (no chain event exists to carry it).
-      return action.damaging ? patch_fighter(spent, key, { invisible: false }) : spent
+      // Reveal on a damaging cast — mirror of statuses::reveal (no chain event exists to carry it): strip the
+      // invisibility ROW, not just the flag, so the effect badge clears WITH the reveal (#13).
+      return action.damaging ? reveal_fighter(spent, key) : spent
     }
     case 'Hit': {
       const key = fighter_key({ is_mob: action.victim_is_mob, idx: action.victim_idx, resolve_seat: rs })
@@ -271,8 +283,8 @@ export const apply_action = (state, action) => {
     }
     case 'Revealed':
       // A fighter is un-hidden (fight_events Revealed{ is_mob, idx } — statuses::reveal's explicit event, distinct
-      // from the damaging-cast mirror). Idx-keyed like TurnStarted; clears invisibility on peer turns.
-      return patch_fighter(state, fighter_key({ is_mob: action.is_mob, idx: action.idx }), { invisible: false })
+      // from the damaging-cast mirror). Idx-keyed like TurnStarted; strips the invisibility row (badge + flag, #13).
+      return reveal_fighter(state, fighter_key({ is_mob: action.is_mob, idx: action.idx }))
     case 'Drain': {
       // A resource drain (fight_events Drain{ target_is_mob, target_idx, point_kind, removed }). point_kind 0 = AP,
       // else MP (mob.move give/drain_points). Adopt onto the OVERLAY pool only when it exists — a delta on a null
