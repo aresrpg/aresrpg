@@ -9,6 +9,8 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
+import { resolve_app_version } from './src/resolve_app_version.mjs'
+
 // CONTENT AUTHORING lives with the private authoring tree — its vite middlewares (local
 // content, cosmetic GLB linking, move-hash, the seed-derived catalog) never ship here. The
 // virtual catalog resolves to a LOUD empty fallback: the encyclopedia's slug/stat maps degrade
@@ -43,20 +45,15 @@ const catalog_fallback_plugin = {
 
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))
 
-// D260: deployed version string for the sidebar tag. APP_VERSION (set by publish:testnet via --build-env) wins;
-// else the current git tag (local builds); else pkg.version. try/catch so a git-less build (Vercel remote) never breaks.
-const APP_VERSION =
-  process.env.APP_VERSION ||
-  (() => {
-    try {
-      return execFileSync('git', ['describe', '--tags', '--always'], { encoding: 'utf-8' }).trim()
-    } catch {
-      return pkg.version
-    }
-  })()
+// D260 fix (v1.12.37 prod incident): deployed version string for the sidebar/badge tag is ALWAYS
+// package.json's version — see src/resolve_app_version.mjs for the incident writeup. The old
+// `git describe --tags --always` fallback (removed here) silently returned a raw commit SHA on
+// Vercel's tag-less remote build, which shipped as `VE771893` instead of a semver.
+const APP_VERSION = resolve_app_version(pkg.version)
 
 // The exact git sha, injected as the Sentry release (core/report.js) so every reported error pins the
-// commit it fired from. Falls back to pkg.version on a git-less build (Vercel remote), mirroring APP_VERSION.
+// commit it fired from. Falls back to pkg.version on a git-less build. Support/debugging concern only —
+// unlike APP_VERSION above, GIT_SHA is never shown to players, so a raw commit hash here is correct, not a bug.
 const GIT_SHA =
   process.env.APP_VERSION ||
   (() => {
@@ -184,9 +181,9 @@ export default defineConfig({
       },
     }),
   ],
-  // D260: version shown in the sidebar = the git TAG (e.g. testnet-0.1.0), not pkg.version. publish:testnet
-  // passes it via --build-env APP_VERSION (Vercel's remote build has no .git); local/dev falls back to git
-  // describe, then pkg.version. So the sidebar always reflects the deployed tag.
+  // D260 fix: version shown in the sidebar/badge = package.json's `version`, always — the release
+  // ritual bumps it, so it's static and present in every build (local/CI/Vercel), never derived
+  // from git state. See src/resolve_app_version.mjs for the v1.12.37 SHA-leak incident this replaced.
   define: {
     __APP_VERSION__: JSON.stringify(APP_VERSION),
     __GIT_SHA__: JSON.stringify(GIT_SHA),
