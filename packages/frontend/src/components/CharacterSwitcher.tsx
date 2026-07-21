@@ -11,12 +11,20 @@
 // backend call. Reuses the ALREADY-DISPATCHED roster — no new fetch.
 
 import { useTranslation } from 'react-i18next'
+import { useStore } from 'zustand'
 import { Compass } from 'lucide-react'
 import { experience_to_level } from '@aresrpg/sdk/experience'
-import { handle_character_click } from '@aresrpg/world/character_selection'
+import {
+  CHARACTER_SWITCH_IN_PROGRESS,
+  CHARACTER_SWITCH_SESSION_CHANGED,
+  character_switch_store,
+  run_character_switch,
+  select_character_session,
+} from '@aresrpg/world/character_selection'
 
 import { use_game_state, context, use_fight_view } from '../game/store.js'
 import { use_follow } from '../follow'
+import { use_auth } from '../auth'
 import { use_dungeon } from '../world-shell/dungeon_store.js'
 import { rebind_world_character } from '../world-shell/session_gate.js'
 import { rebind_fight_session } from '../world-shell/character_fight_rebind.js'
@@ -44,6 +52,9 @@ export function CharacterSwitcher() {
   const selected_id = use_game_state((s) => s.selected_character_id)
   const active_dungeon_id = use_dungeon((s) => s.dungeon_id)
   const fight = use_fight_view() // synchronous core view (S2 mirror kill)
+  const switching_id = useStore(character_switch_store, (state) =>
+    state.phase === 'switching' ? state.target_id : null
+  )
 
   if (!loaded) return <SkeletonRows />
   if (!characters?.length) return <div className="chsw-empty">{t('characters.switcher_none')}</div>
@@ -52,41 +63,59 @@ export function CharacterSwitcher() {
   const lobby_group = characters.filter((c: any) => group_of(c) === 'lobby')
 
   const on_select = (character: any) => {
-    const is_active = character.id === selected_id
-    if (is_active) return // clicking the already-active char is a no-op
+    const switch_address = use_auth.getState().address
     const on_failure = (error: unknown) => {
       game_log('character-switch', 'active character rebind failed', error)
       report_error(error, { area: 'character-switch', action: 'select_character' })
       use_toast.getState().add(t('errors.character_switch_failed'), 'error')
     }
-    if (character.in_dungeon && character.dungeon_id) {
-      void use_dungeon.getState().resume_dungeon(character.dungeon_id, character.id).catch(on_failure)
-      return
-    }
-    // Lobby: this is an ACTIVE-character switch, not a follow-mode target update. Selection alone only repaints
-    // store consumers; GameWorldHost keys the live roam session from session_gate's character/world binding.
-    // Re-publish that binding from rpc_to_card's indexed `world_id` so the host tears down A and mounts B.
-    void handle_character_click(
-      character,
-      {
+    const perform_switch = async (target: any, request: { is_current: () => boolean }) => {
+      if (target.in_dungeon && target.dungeon_id) {
+        const outcome = await use_dungeon
+          .getState()
+          .resume_dungeon(target.dungeon_id, target.id, { is_current: request.is_current })
+        if (outcome.status === 'refused') return { status: 'refused', reason: CHARACTER_SWITCH_IN_PROGRESS }
+        if (outcome.status === 'failed') return outcome
+        if (!request.is_current()) return { status: 'refused', reason: CHARACTER_SWITCH_SESSION_CHANGED }
+        await set_last_character(target.id)
+        if (!request.is_current()) return { status: 'refused', reason: CHARACTER_SWITCH_SESSION_CHANGED }
+        if (use_follow.getState().active) use_follow.getState().unfollow()
+        context.dispatch('action/select_character', target.id)
+        return { status: 'done' }
+      }
+      await select_character_session(target, {
         select_character: (id) => context.dispatch('action/select_character', id),
         persist_character: set_last_character,
         stop_follow: () => {
           if (use_follow.getState().active) use_follow.getState().unfollow()
         },
         rebind_session: rebind_world_character,
+        is_current: request.is_current,
         // FIGHT half: drop the OUTGOING character's local board (no chain tx — its Fight persists,
-        // re-enterable on switch-back) and resume the INCOMING character's own live fight, so the board tracks
-        // the ACTIVE character instead of whoever started it (the "forced to remain on the first char fight").
-        rebind_fight: (id) =>
+        // re-enterable on switch-back) and resume the INCOMING character's own live fight.
+        rebind_fight: (id, switch_request) =>
           rebind_fight_session(id, {
             dungeon: use_dungeon.getState(),
             reset_local: () => use_dungeon.getState().reset_local(),
-            resume: resume_world_fight,
+            resume: (character_id) => resume_world_fight(character_id, { is_current: switch_request.is_current }),
           }),
-      },
-      on_failure
-    )
+      })
+      return { status: 'done' }
+    }
+    void run_character_switch(character_switch_store, {
+      character,
+      is_session_current: () => use_auth.getState().address === switch_address,
+      perform_switch,
+    }).then((outcome) => {
+      if (outcome.status === 'failed') on_failure(outcome.error)
+      if (outcome.status === 'refused') {
+        const key =
+          outcome.reason === CHARACTER_SWITCH_IN_PROGRESS
+            ? 'errors.character_switch_in_progress'
+            : 'errors.character_switch_failed'
+        use_toast.getState().add(t(key), 'info')
+      }
+    })
   }
 
   // board #47 (d) — THE TRAP ESCAPE: an address's active dungeon locks its escrowed character out of its kiosk,
@@ -113,6 +142,7 @@ export function CharacterSwitcher() {
             label={t('characters.switcher_in_dungeon')}
             characters={dungeon_group}
             active_character_id={selected_id}
+            switching_character_id={switching_id}
             is_their_turn={is_their_turn}
             on_select={on_select}
           />
@@ -122,6 +152,7 @@ export function CharacterSwitcher() {
             label={t('characters.switcher_in_lobby')}
             characters={lobby_group}
             active_character_id={selected_id}
+            switching_character_id={switching_id}
             is_their_turn={is_their_turn}
             on_select={on_select}
           />
@@ -135,12 +166,14 @@ function CharacterGroup({
   label,
   characters,
   active_character_id,
+  switching_character_id,
   is_their_turn,
   on_select,
 }: {
   label: string
   characters: any[]
   active_character_id: string | null
+  switching_character_id: string | null
   is_their_turn: (character: any) => boolean
   on_select: (character: any) => void
 }) {
@@ -153,6 +186,7 @@ function CharacterGroup({
           key={character.id}
           character={character}
           active={character.id === active_character_id}
+          switching={character.id === switching_character_id}
           dot={is_their_turn(character)}
           exploring={!!character.exploring}
           status_label={
@@ -168,6 +202,7 @@ function CharacterGroup({
 function CharacterRow({
   character,
   active,
+  switching,
   dot,
   exploring,
   status_label,
@@ -175,6 +210,7 @@ function CharacterRow({
 }: {
   character: any
   active: boolean
+  switching: boolean
   dot: boolean
   exploring: boolean
   status_label?: string | null
@@ -189,8 +225,9 @@ function CharacterRow({
   const row = (
     <button
       type="button"
-      className={`chsw-row${active ? ' is-active' : ''}${exploring ? ' is-exploring' : ''}`}
+      className={`chsw-row${active ? ' is-active' : ''}${switching ? ' is-switching' : ''}${exploring ? ' is-exploring' : ''}`}
       onClick={on_click}
+      aria-busy={switching}
       title={character.name}
     >
       <span className="chsw-row__glyph" style={{ '--hue': hue } as React.CSSProperties}>

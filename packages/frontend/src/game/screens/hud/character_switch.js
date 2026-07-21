@@ -16,6 +16,7 @@
 import { handle_character_click } from '@aresrpg/world/character_selection'
 
 import { context } from '../../store.js'
+import { use_auth } from '../../../auth'
 import { use_follow } from '../../../follow'
 import { use_dungeon } from '../../../world-shell/dungeon_store.js'
 import { rebind_world_character } from '../../../world-shell/session_gate.js'
@@ -29,11 +30,13 @@ import { set_last_character } from '../../core/draft.js'
  * @returns {Promise<boolean>}
  */
 export function switch_active_character(character, on_failure) {
+  const switch_address = use_auth.getState().address
   return handle_character_click(
     character,
     {
       select_character: (id) => context.dispatch('action/select_character', id),
       persist_character: set_last_character,
+      is_session_current: () => use_auth.getState().address === switch_address,
       stop_follow: () => {
         if (use_follow.getState().active) use_follow.getState().unfollow()
       },
@@ -41,11 +44,11 @@ export function switch_active_character(character, on_failure) {
       // FIGHT half: drop the OUTGOING character's local board (no chain tx — its Fight persists,
       // re-enterable on switch-back) and resume the INCOMING character's own live fight, so the board tracks
       // the ACTIVE character instead of whoever started it (the "forced to remain on the first char fight").
-      rebind_fight: (id) =>
+      rebind_fight: (id, request) =>
         rebind_fight_session(id, {
           dungeon: use_dungeon.getState(),
           reset_local: () => use_dungeon.getState().reset_local(),
-          resume: resume_world_fight,
+          resume: (character_id) => resume_world_fight(character_id, { is_current: request.is_current }),
         }),
     },
     on_failure

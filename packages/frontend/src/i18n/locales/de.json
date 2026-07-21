@@ -2374,6 +2374,7 @@
     "travel_resync_action": "Zum letzten bestätigten Ort zurückkehren",
     "world_load_failed": "Das Spiel konnte nicht geladen werden — aktualisiere die Seite, um es erneut zu versuchen.",
     "character_switch_failed": "Der Charakterwechsel ist fehlgeschlagen — versuch es erneut.",
+    "character_switch_in_progress": "Eine andere Charakteraktion läuft noch — warte einen Moment.",
     "tx_refused_preflight": "Die Transaktion wurde vor dem Senden abgelehnt — es wurde kein Gas ausgegeben. Versuch es erneut.",
     "kiosk_lookup_failed": "Die Kiosk-Suche ist fehlgeschlagen — Netzwerkproblem, nichts wurde signiert oder ausgegeben; ein erneuter Versuch ist sicher.",
     "tx_lock_race_retry": "Eine andere Transaktion nutzt gerade dieselben Ressourcen — es wurde nichts berechnet. Versuch es gleich noch einmal.",

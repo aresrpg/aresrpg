@@ -2374,6 +2374,7 @@
     "travel_resync_action": "Revenir au dernier endroit vérifié",
     "world_load_failed": "Le jeu n'a pas pu se charger — actualisez pour réessayer.",
     "character_switch_failed": "Impossible de changer de personnage — réessaie.",
+    "character_switch_in_progress": "Une autre action de personnage est toujours en cours — attends un instant.",
     "tx_refused_preflight": "La transaction a été refusée avant l'envoi — aucun gas n'a été dépensé. Réessaie.",
     "kiosk_lookup_failed": "La recherche du kiosque a échoué — incident réseau, rien n’a été signé ni dépensé ; vous pouvez réessayer sans risque.",
     "tx_lock_race_retry": "Une autre transaction utilise les mêmes ressources en ce moment — rien n'a été débité. Réessaie dans un instant.",

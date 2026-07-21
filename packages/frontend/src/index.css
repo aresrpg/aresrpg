@@ -394,6 +394,12 @@ body::after {
   background: rgba(200, 150, 60, 0.08);
 }
 
+.chsw-row.is-switching {
+  color: var(--color-cyan);
+  border-left-color: var(--color-cyan);
+  background: rgba(74, 158, 255, 0.08);
+}
+
 /* EXPLORING (staked/idle-farming) — a cyan tint so it never reads as a plain, free-to-embody lobby row. */
 .chsw-row.is-exploring:not(.is-active) {
   border-left-color: rgba(74, 158, 255, 0.4);

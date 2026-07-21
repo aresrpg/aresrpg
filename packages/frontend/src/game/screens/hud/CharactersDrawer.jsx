@@ -468,10 +468,11 @@ export function CharactersDrawer({ on_switch, variant = 'drawer' }) {
       game_log('characters', 'active character switch failed', error)
       report_error(error, { area: 'characters-drawer', action: 'select_character' })
       use_toast.getState().add(t('errors.character_switch_failed'), 'error')
-    }).then((switched) => {
-      if (switched) on_switch(character)
-      set_pending_id(null)
     })
+      .then((switched) => {
+        if (switched) on_switch(character)
+      })
+      .finally(() => set_pending_id(null))
   }
 
   // BACKLOG 18 — the REAL chain-direct delete (replaces the S-50 disabled stub): one toast lifecycle

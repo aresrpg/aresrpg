@@ -16,6 +16,7 @@ const reducer_source = readFileSync(new URL('../roster/store_reducer.ts', import
 describe('wallet session reset one-pipeline door', () => {
   test('the async auth edge dispatches a typed input that the expedition reducer folds', () => {
     expect(auth_source).toContain("reset_wallet_session({ type: 'wallet_session/reset' })")
+    expect(reset_source).toContain("character_switch_store.getState().input({ type: 'reset' })")
     expect(reset_source).toContain("use_expedition.getState().input({ type: 'wallet_session/reset' })")
     expect(reset_source).not.toContain('use_expedition.setState(')
     expect(reducer_source).toContain('export type ExpeditionInput')

@@ -2374,6 +2374,7 @@
     "travel_resync_action": "Return to your last verified spot",
     "world_load_failed": "The game failed to load — refresh to try again.",
     "character_switch_failed": "Couldn't switch characters — try again.",
+    "character_switch_in_progress": "Another character action is still in progress — wait a moment.",
     "tx_refused_preflight": "The transaction was refused before sending — no gas was spent. Try again.",
     "kiosk_lookup_failed": "Kiosk lookup failed — network hiccup, nothing was signed or spent; retry is safe.",
     "tx_lock_race_retry": "Another transaction is using the same resources right now — nothing was charged. Try again in a moment.",

@@ -77,15 +77,17 @@ export function enter_world_fight({ fight_id, world_id = null, character_id, res
  *  stays in-world; a transient read holds for a later boot pass). A PLACEMENT candidate must ALSO pass the
  *  chain-truth presentability gate (fight-liquidation.js — the REJOIN-SPAWN root: an expired window liquidates
  *  via force_start BEFORE adoption, never entered as-is; 'active' passes untouched, the P0 refresh law).
- *  @param {string} character_id @param {{ force_start_door?: Function }} [deps] unit seam only */
+ *  @param {string} character_id @param {{ force_start_door?: Function, is_current?: () => boolean }} [deps] unit seam only */
 export async function resume_world_fight(character_id, deps = {}) {
-  if (!character_id || session_busy()) return
+  const is_current = deps.is_current ?? (() => true)
+  if (!character_id || !is_current() || session_busy()) return
   let fights
   try {
     fights = await get_fights({ character: character_id })
   } catch (error) {
     return game_log('world-fight', 'resume read failed — no reconnect this pass', error)
   }
+  if (!is_current()) return
   const live = (fights ?? []).find(is_live)
   const fight_id = live?.fight_id ?? live?.fight
   if (!fight_id) return // nothing resumable — stay in the world
@@ -95,6 +97,7 @@ export async function resume_world_fight(character_id, deps = {}) {
   } catch (error) {
     return game_log('world-fight', 'resume liveness read failed — staying in the world', error)
   }
+  if (!is_current()) return
   if (!current) {
     if (session_busy())
       return fight_state_trace('fight_resume_validation_superseded', {
@@ -103,8 +106,10 @@ export async function resume_world_fight(character_id, deps = {}) {
       })
     return getState()._recover_dead_fight_reference({ character_id, state: 'absent' })
   }
-  if (current.status === 'placement' && (await ensure_resumable_placement(fight_id, deps.force_start_door)) !== 'enter')
-    return
-  if (session_busy()) return // a session opened while the read was in flight — never stomp it
+  if (current.status === 'placement') {
+    const decision = await ensure_resumable_placement(fight_id, deps.force_start_door)
+    if (!is_current() || decision !== 'enter') return
+  }
+  if (!is_current() || session_busy()) return // a session opened or the request changed while reading — never stomp it
   enter_world_fight({ fight_id, world_id: current.world ?? live.world ?? null, character_id, resumed: true })
 }

@@ -9,7 +9,7 @@
 //   ENTER   dungeon::activate — burn ONE locked key unit → a bound RunPass at room 1 (the plane mounts).
 //   ENGAGE  dungeon::next_fight — the mob-cluster click mints the room Fight + opens it in the core.
 //   FIGHT   place, then ONE PTB per turn (act_move/act_weapon/act_cast + the terminal act_pass); the receipt folds
-//           through the core's input door — the core paces the mob wave, projects the turn, purges predictions.
+//           through the core's one ingress door — the core paces the mob wave and retires predictions by claim.
 //   SETTLE  settlement::settle_and_destroy → my FightOutcome → results::open → FightResult → mint/burn. Victory
 //           advances the pass; defeat / last-room consumes it. (Composition REUSED verbatim from dungeon_settlement.)
 //
@@ -93,6 +93,33 @@ import {
 } from './dungeon_fight_shim.js'
 
 const POLL_MS = 4000
+
+/**
+ * Walk one M2b journal gap only while the character request and fight session that requested it still own the
+ * adapter. The core's journal input is intentionally one-ingress data, but unlike snapshot it is not independently
+ * session-gated; this edge therefore checks currency after the awaited walk and before every accepted batch.
+ * @param {{ fight_id:string, from:string|number, is_current?:()=>boolean, current_fight_id:()=>string|null,
+ *   paginate?:typeof paginate_fight_journal, input?:(message:any)=>void }} options
+ * @returns {Promise<'applied'|'unavailable'|'stale'>}
+ */
+export async function walk_current_fight_journal({
+  fight_id,
+  from,
+  is_current = () => true,
+  current_fight_id,
+  paginate = paginate_fight_journal,
+  input = (message) => fight_store.getState().input(message),
+}) {
+  const owns_fight = () => is_current() && String(current_fight_id() ?? '') === String(fight_id)
+  const walked = await paginate(fight_id, { from }).catch(() => null)
+  if (!owns_fight()) return 'stale'
+  if (!walked?.ok) return 'unavailable'
+  for (const batch of walked.batches) {
+    if (!owns_fight()) return 'stale'
+    input({ type: 'journal', fight_id, batch })
+  }
+  return 'applied'
+}
 
 const key_units = (items) => items.reduce((total, item) => total + Math.max(1, Math.floor(Number(item.amount ?? 1))), 0)
 
@@ -599,35 +626,55 @@ export const use_dungeon = create((set, get) => ({
 
   /**
    * RESUME an existing run (boot/tab-reload): validate the RunPass with ONE read, adopt its latched fight (if
-   * any), then publish the session exactly once — live+mine runs only (no optimistic flip on resume).
+   * any), then publish the session exactly once — live+mine runs only (no optimistic flip on resume). The typed
+   * result is consumed by CharacterSwitcher; promise settlement alone cannot distinguish success from a busy or
+   * recovered refusal.
    * @param {string} run_pass_id @param {string} character_id
+   * @param {{user?:boolean,is_current?:()=>boolean}} [options]
+   * @returns {Promise<{status:'done'}|{status:'refused',reason:'busy'|'cancelled'}|{status:'failed',error:unknown}>}
    */
-  async resume_dungeon(run_pass_id, character_id, { user = false } = {}) {
+  async resume_dungeon(run_pass_id, character_id, { user = false, is_current = () => true } = {}) {
+    const cancelled = () => !is_current()
+    const cancelled_outcome = () => ({ status: 'refused', reason: 'cancelled' })
+    if (cancelled()) return cancelled_outcome()
     if (get().busy) {
       game_log('dungeon', 'resume ignored — store busy')
-      return
+      return { status: 'refused', reason: 'busy' }
     }
     set({ busy: true, error: null, phase: 'entering', character_id, session_address: use_auth.getState().address })
     try {
       const sdk = await get_sdk()
+      if (cancelled()) return cancelled_outcome()
       let pass
       try {
         pass = decode_pass(await read_object(sdk, run_pass_id))
       } catch (error) {
-        if (is_gone_error(error)) return get()._recover_stale_membership({ user })
+        if (cancelled()) return cancelled_outcome()
+        if (is_gone_error(error)) {
+          get()._recover_stale_membership({ user })
+          return { status: 'failed', error }
+        }
         throw error
       }
+      if (cancelled()) return cancelled_outcome()
       const me = use_auth.getState().address
-      if (!pass || pass.owner !== me) return get()._recover_stale_membership({ user })
+      if (!pass || pass.owner !== me) {
+        get()._recover_stale_membership({ user })
+        return { status: 'failed', error: new Error('Dungeon run is no longer owned by this account') }
+      }
       // Validate the latched Fight itself before any session field flips (a durable-but-dead reference remounts a
       // ghost board otherwise). A transport failure throws to the retryable resume path; only absent/terminal
       // truth clears locally and starts the pending-outcome recovery.
       if (pass.fight) {
         const liveness = await read_fight_liveness(sdk, pass.fight)
-        if (liveness.state !== 'live')
-          return get()._recover_dead_fight_reference({ character_id, state: liveness.state })
+        if (cancelled()) return cancelled_outcome()
+        if (liveness.state !== 'live') {
+          get()._recover_dead_fight_reference({ character_id, state: liveness.state })
+          return { status: 'failed', error: new Error(`Dungeon fight is ${liveness.state}`) }
+        }
       }
       const { rooms, mob_names, mob_levels, mob_elements } = await load_world_meta(sdk, pass.world)
+      if (cancelled()) return cancelled_outcome()
       const expected_owned_ids = (context.get_state().sui?.characters ?? [])
         .filter((character) => character?.id && character.world_id === pass.world)
         .map((character) => character.id)
@@ -643,8 +690,10 @@ export const use_dungeon = create((set, get) => ({
         })
         if (rebuilt[character_id] === run_pass_id) owned_run_pass_ids = rebuilt
       } catch (error) {
+        if (cancelled()) return cancelled_outcome()
         game_log('dungeon', 'owned RunPass resume map unavailable — retaining the selected pass only', error)
       }
+      if (cancelled()) return cancelled_outcome()
       set({
         run_pass_id,
         owned_run_pass_ids,
@@ -667,6 +716,7 @@ export const use_dungeon = create((set, get) => ({
         phase: pass.fight ? 'playing' : 'waiting_for_party',
         in_session: true,
       })
+      if (cancelled()) return cancelled_outcome()
       if (pass.fight)
         init_dungeon_fight({
           fight_id: pass.fight,
@@ -678,15 +728,21 @@ export const use_dungeon = create((set, get) => ({
           mob_levels,
           mob_elements,
         })
-      await get().refresh()
-      if (!get().run_pass_id) return // refresh() can reset a dead session — never restart the poll on one
+      await get().refresh({ is_current })
+      if (cancelled()) return cancelled_outcome()
+      // refresh() can reset a dead session — never restart the poll on one, and report that recovery to a
+      // user-initiated character switch instead of resolving with an indistinguishable `undefined`.
+      if (!get().run_pass_id)
+        return { status: 'failed', error: new Error('Dungeon run became unavailable while resuming') }
       get()._start_polling()
     } catch (error) {
+      if (cancelled()) return cancelled_outcome()
       game_log('dungeon', 'resume_dungeon failed', error)
       set({ error: humanize_abort(error?.message ?? String(error)), phase: 'idle', busy: false, in_session: false })
-      return
+      return { status: 'failed', error }
     }
     set({ busy: false })
+    return { status: 'done' }
   },
 
   /** Stale-membership recovery (gone pass / not mine): local teardown + roster heal + one humanized toast. */
@@ -745,7 +801,7 @@ export const use_dungeon = create((set, get) => ({
    * on-chain, so a resolved id (hit OR miss) is cached for the tab; only a cold reconnect / 2nd player pays the read.
    * @param {any} sdk @param {any} fight a decoded Fight
    */
-  _resolve_mob_identities(sdk, fight) {
+  _resolve_mob_identities(sdk, fight, { is_current = () => true } = {}) {
     const id = fight?.group_template
     if (!id || !fight?.mobs?.length) return // no group template / no mobs (PvP) — nothing to resolve
     const known = get().mob_names
@@ -761,6 +817,7 @@ export const use_dungeon = create((set, get) => ({
       .catch(() => _mob_tmpl_cache.set(id, null))
       .finally(() => {
         _mob_tmpl_pending.delete(id)
+        if (!is_current()) return
         const resolved = _mob_tmpl_cache.get(id)
         if (resolved) {
           set({
@@ -800,11 +857,13 @@ export const use_dungeon = create((set, get) => ({
    * dedupe/floor/turn projection — this method only reads chain truth, resolves identity/offset ctx, and routes
    * the terminal/room-cleared status to settlement + the deadline liquidator.
    */
-  async refresh() {
+  async refresh({ is_current = () => true } = {}) {
+    if (!is_current()) return
     const { fight_id, run_pass_id } = get()
     if (!fight_id && !run_pass_id) return
     try {
       const sdk = await get_sdk()
+      if (!is_current()) return
       const me = use_auth.getState().address
       // the pass first (cheap; reveals a mid-poll advance/latch) — tolerate gone (consumed on terminal).
       let { run } = get()
@@ -812,9 +871,11 @@ export const use_dungeon = create((set, get) => ({
         try {
           run = decode_pass(await read_object(sdk, run_pass_id))
         } catch (error) {
+          if (!is_current()) return
           if (!is_gone_error(error)) throw error
           run = null
         }
+        if (!is_current()) return
         if (!run) {
           // pass CONSUMED on-chain (defeat / last-room settle / abandon elsewhere). Keep the session only while a
           // terminal card flow is in flight; otherwise clean exit.
@@ -852,9 +913,11 @@ export const use_dungeon = create((set, get) => ({
         try {
           read = await read_object(sdk, live_fight_id)
         } catch (error) {
+          if (!is_current()) return
           if (!is_gone_error(error)) throw error
           definitively_gone = true
         }
+        if (!is_current()) return
         if (!read) {
           const receipt_owned = should_hold_receipt_fight(get(), live_fight_id)
           const fresh_receipt = receipt_owned && get().fight_fresh
@@ -890,9 +953,10 @@ export const use_dungeon = create((set, get) => ({
           })
           return
         }
-        await get()._resolve_mob_identities(sdk, fight)
-        if (get().fight_id !== live_fight_id) return
+        await get()._resolve_mob_identities(sdk, fight, { is_current })
+        if (!is_current() || get().fight_id !== live_fight_id) return
         const offset = await resolve_world_offset(sdk, get().world_id ?? fight.world)
+        if (!is_current() || get().fight_id !== live_fight_id) return
         sync_dungeon_fight({
           read,
           run,
@@ -916,15 +980,19 @@ export const use_dungeon = create((set, get) => ({
         // door. The accept machine dedupes re-delivery (a re-walk is idempotent); a pre-deploy 404 degrades to a no-op.
         const { journal_gap } = fight_store.getState()
         if (journal_gap && String(journal_gap.fight_id ?? live_fight_id) === String(live_fight_id)) {
-          const walked = await paginate_fight_journal(live_fight_id, { from: journal_gap.from }).catch(() => null)
-          if (walked?.ok)
-            for (const batch of walked.batches)
-              fight_store.getState().input({ type: 'journal', fight_id: live_fight_id, batch })
+          const result = await walk_current_fight_journal({
+            fight_id: live_fight_id,
+            from: journal_gap.from,
+            is_current,
+            current_fight_id: () => get().fight_id,
+          })
+          if (result === 'stale') return
         }
       } else if (run) {
         // roam: a live run with no room fight — feed the OPEN view (versioned by the pass so a room advance
         // re-adopts) so the mirror keeps showing the plane and the next cluster stays clickable.
         const offset = await resolve_world_offset(sdk, get().world_id ?? run.world)
+        if (!is_current()) return
         sync_dungeon_fight({
           read: null,
           run,
@@ -944,6 +1012,7 @@ export const use_dungeon = create((set, get) => ({
           },
         })
       }
+      if (!is_current()) return
       const view = project.board_view(fight_store.getState())
       if (!view) return
       if (live_fight_id && get().fight_id !== live_fight_id) return
@@ -984,6 +1053,7 @@ export const use_dungeon = create((set, get) => ({
       // LIQUIDATION: every watching client auto-cranks a stalled deadline (jitter + single-flight + latch inside).
       maybe_liquidate(view, get)
     } catch (error) {
+      if (!is_current()) return
       if (is_gone_error(error)) return get()._recover_stale_membership({})
       game_log('dungeon', 'refresh failed', error)
       set({ error: humanize_abort(error?.message ?? String(error)) })

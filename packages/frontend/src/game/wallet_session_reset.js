@@ -21,6 +21,8 @@
 // stores, which must stay in the lazily-booted game chunk. GameWorldHost dynamic-import()s this, so it only
 // loads once the player has already booted the game (i.e. was logged in) — never on the login screen.
 
+import { character_switch_store } from '@aresrpg/world/character_selection'
+
 import { context } from './core/game.js'
 import { use_dungeon } from '../world-shell/dungeon_store.js'
 import { use_party } from '../world-shell/party_store.js'
@@ -37,6 +39,10 @@ import { invalidate as invalidate_kiosk_cap_cache } from '../chain/kiosk_cap_cac
  */
 export function reset_wallet_session(input = { type: 'wallet_session/reset' }) {
   if (input.type !== 'wallet_session/reset') return
+
+  // 0. CHARACTER SWITCH — release the shared in-flight door and invalidate its correlated request id before any
+  //    outgoing async continuation can commit selection into the next wallet session.
+  character_switch_store.getState().input({ type: 'reset' })
 
   // 1. ENGINE session — clear the selected character + the roster (+ reset loaded/load_error), so B's
   //    select_active_character waits for B's roster instead of re-resolving A's. Reuses the sui_logout reducer
