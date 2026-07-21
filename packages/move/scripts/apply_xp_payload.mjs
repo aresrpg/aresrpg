@@ -34,6 +34,13 @@ import { Transaction } from '@mysten/sui/transactions'
 import release from '../../sdk/src/deployment/release.json' with { type: 'json' }
 
 import { getClient as get_client } from './ceremony_lib.mjs'
+import {
+  MOB_RESISTANCE_FIELDS as RESISTANCE_FIELDS,
+  MOB_STAT_FIELDS as STAT_FIELDS,
+  normalize_seed_mob_stats,
+} from './seed_mob_stats.mjs'
+
+export { RESISTANCE_FIELDS, STAT_FIELDS }
 
 const script_dir = dirname(file_url_to_path(import.meta.url))
 const repo_dir = resolve(script_dir, '..', '..', '..')
@@ -49,11 +56,6 @@ export const GAS_BUDGET_MIST = 50_000_000 // fixed 0.05 SUI/PTB: the post-upgrad
 // simulatable pre-ceremony, and Sui charges ACTUAL — a high fixed budget is safe, only a LOW one burns (D747 shape).
 export const READ_PAGE = 50
 
-// The 11 new_stats fields, IN CONSTRUCTOR ORDER (foundation spell::new_stats). Resistances (last 4) are centered.
-export const STAT_FIELDS = [
-  'strength', 'intelligence', 'chance', 'agility', 'raw_damage', 'critical_hit', 'range',
-  'fire_resistance', 'water_resistance', 'earth_resistance', 'air_resistance',
-]
 // The 11 fields new_stats zeroes (§5h/D149/D172 appends). A template only ever carries these = 0 (mint uses
 // new_stats; nothing buffs a template), so set_stats via new_stats preserves them. A NON-ZERO one on chain would
 // be silently lost → we refuse (read_failed) rather than zero it.
@@ -61,9 +63,6 @@ export const STAT_APPENDED = [
   'percent_damage', 'physical_damage', 'wisdom', 'flat_resist', 'neutral_resistance',
   'ap_dodge', 'mp_dodge', 'heal', 'ap_bonus', 'mp_bonus', 'vitality',
 ]
-
-// The 4 elemental resistances (the centered tail of STAT_FIELDS) — the fields the 50% cap governs.
-export const RESISTANCE_FIELDS = ['fire_resistance', 'water_resistance', 'earth_resistance', 'air_resistance']
 
 const is_id = (value) => /^0x[0-9a-f]{64}$/i.test(value ?? '')
 
@@ -78,38 +77,12 @@ export function to_u64(value) {
   return number
 }
 
-/** A seed `stats` object → the 11 canonical centered `Stats` fields. Reads BOTH resistance schemas (camelCase
- * majority, snake_case minority) — the correction over the seeder's snake_case-only read. Attributes pass
- * through; the 4 elemental resistances are centered at RES_SHIFT (a negative seed value = a weakness < shift).
- * Throws if a resistance is more negative than the shift (would underflow u64). */
-export function seed_stats_to_centered(stats) {
-  const s = stats ?? {}
-  const pick = (...keys) => {
-    for (const key of keys) if (s[key] != null) return Number(s[key])
-    return 0
-  }
-  const attr = {
-    strength: pick('str', 'strength'),
-    intelligence: pick('int', 'intelligence'),
-    chance: pick('chance'),
-    agility: pick('agility'),
-    raw_damage: pick('raw', 'raw_damage'),
-    critical_hit: pick('crit', 'critical_hit'),
-    range: pick('range'),
-  }
-  const centered = {}
-  for (const [seed_key, field] of [
-    ['fireRes', 'fire_resistance'], ['waterRes', 'water_resistance'],
-    ['earthRes', 'earth_resistance'], ['airRes', 'air_resistance'],
-  ]) {
-    const raw = pick(seed_key, field)
-    const value = RES_SHIFT + raw
-    if (value < 0) throw new Error(`${field} seed ${raw} underflows the ${RES_SHIFT} centering`)
-    centered[field] = value
-  }
-  const out = { ...attr, ...centered }
-  for (const field of STAT_FIELDS) out[field] = to_u64(out[field]) // reject NaN/negative attributes
-  return out
+/** A seed `stats` object → the 11 canonical centered `Stats` fields. The shared full-seed boundary collapses
+ * historical aliases into the chain's single snake_case vocabulary; this correction plan consumes that same
+ * payload. Throws if a field cannot be represented as u64. */
+export const seed_stats_to_centered = (stats) => {
+  const normalized = normalize_seed_mob_stats(stats, RES_SHIFT)
+  return Object.fromEntries(STAT_FIELDS.map((field) => [field, to_u64(normalized[field])]))
 }
 
 /** seed mob rows → key → desired 5-tuple {base_hp, ap, mp, stats(11 centered), xp_reward}. First-wins on dup keys

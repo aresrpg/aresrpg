@@ -42,6 +42,7 @@ import {
   damage_lines,
   pack_qty_for_job,
 } from './seed_economy.mjs'
+import { seed_mob_stat_values } from './seed_mob_stats.mjs'
 
 const __dir = path.dirname(fileURLToPath(import.meta.url))
 
@@ -423,23 +424,13 @@ const spellLevel = (tx, o, fx, crit) =>
   })
 const levelVec = (tx, levels) =>
   tx.makeMoveVec({ type: T.level, elements: levels })
-// spell::new_stats(str,int,chance,agility,raw,crit,range,fireRes,waterRes,earthRes,airRes) — resistances centered.
+// foundation spell::new_stats fields in canonical order; resistances are centered.
 const mobStats = (tx, s) =>
   tx.moveCall({
     target: `${CFND}::spell::new_stats`,
-    arguments: [
-      s.str || s.strength || 0,
-      s.int || s.intelligence || 0,
-      s.chance || 0,
-      s.agility || 0,
-      s.raw || s.raw_damage || 0,
-      s.crit || s.critical_hit || 0,
-      s.range || 0,
-      SHIFT + (s.fire_resistance || 0),
-      SHIFT + (s.water_resistance || 0),
-      SHIFT + (s.earth_resistance || 0),
-      SHIFT + (s.air_resistance || 0),
-    ].map((v) => tx.pure.u64(v)),
+    arguments: seed_mob_stat_values(s, SHIFT).map((value) =>
+      tx.pure.u64(value)
+    ),
   })
 const lootEntry = (tx, itemId, chance, min, max) =>
   tx.moveCall({
