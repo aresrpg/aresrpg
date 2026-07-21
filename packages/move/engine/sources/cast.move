@@ -652,9 +652,11 @@ fun weapon_effect_value(
   total
 }
 
-/// Resolve `seat`'s equipped-weapon strike at `target_cell`: gate AP + reach + LOS + a living mob on the cell,
-/// roll the crit boolean, deal `final_damage`, spend AP. Repeatable while AP lasts (no per-turn cap — the AP
-/// economy IS the limit, §17.27). Does NOT advance the turn (an action, like a cast).
+/// Resolve `seat`'s equipped-weapon strike aimed at `target_cell`: gate AP + range + LOS + a living mob on the aimed
+/// cell, roll ONE crit boolean, and deal the strike to EVERY living mob on the weapon's §387 SHAPE cell set — each
+/// resisting against its OWN block, exactly as a multi-target spell resolves. Repeatable while AP lasts (no per-turn
+/// cap — the AP economy IS the limit, §17.27). Does NOT advance the turn (an action, like a cast). PvM: mobs are the
+/// enemy side, so the shape hits mobs only (friendly players share team 0 — mirrors a damage effect's TF_NOT_TEAM).
 public(package) fun weapon_strike(fight: &mut Fight, seat: u64, target_cell: u64) {
   let caster_cell; let caster_stats; let ap; let element; let dmg_base; let crit_base; let crit_rate; let ap_cost; let reach; let slot;
   {
@@ -670,15 +672,21 @@ public(package) fun weapon_strike(fight: &mut Fight, seat: u64, target_cell: u64
     reach = participant::weapon_reach(p);
     slot = participant::casts_this_turn(p); // §7 turn-seed slot index (pre-action)
   };
+  // §387 — the equipped weapon's FINE category → its cell-set shape + ranged range profile (POINT default when absent).
+  let (area_shape, area_size, range_modifiable, line_only) =
+    participant::weapon_shape_of(&fight::weapon_category_at(fight, seat));
   assert!(ap >= ap_cost, EInsufficientAP);
+  // RANGE: a MODIFIABLE ranged weapon (bow) reaches further with the caster's range stat; every other weapon is fixed.
+  let reach_eff = if (range_modifiable) reach + spell::stat_range(&caster_stats) else reach;
   let d = combat_grid::manhattan(caster_cell, target_cell);
-  assert!(d >= 1 && d <= reach, EIllegalCast);
+  assert!(d >= 1 && d <= reach_eff, EIllegalCast);
+  if (line_only) assert!(combat_grid::same_axis(caster_cell, target_cell), EIllegalCast); // spellbook aims cardinally
   let los = los_obstacles(fight);
   assert!(combat_grid::line_of_sight(caster_cell, target_cell, &los), EIllegalCast);
+  // AIM GATE: the aimed cell must hold a living, visible mob (you strike AT an enemy; the shape adds collateral cells).
   let midx_opt = find_living_mob_at(fight, target_cell);
   assert!(midx_opt.is_some(), EIllegalCast);
-  let midx = midx_opt.destroy_some();
-  assert!(!statuses::is_invisible(fight, true, midx), EIllegalCast);
+  assert!(!statuses::is_invisible(fight, true, midx_opt.destroy_some()), EIllegalCast);
 
   let fight_id = fight::id(fight);
   let action_turn = seat_turn(fight, seat);
@@ -686,10 +694,8 @@ public(package) fun weapon_strike(fight: &mut Fight, seat: u64, target_cell: u64
   let crit_roll = spell_formula::slot_crit_roll(turn_seed, slot);
   let is_crit = spell_formula::crit_at(crit_roll, crit_rate, spell::stat_critical_hit(&caster_stats));
   let lines = fight::weapon_lines_at(fight, seat); // §17.27 wave-2a — authored item lines (empty ⇒ single-line fallback)
-  let target_stats = *mob::stats(fight::mobs(fight).borrow(midx)); // the struck mob's per-fight block (resist shred applies)
-  let damage = weapon_damage_total(&lines, element, dmg_base, crit_base, is_crit, &caster_stats, &target_stats);
-  let effect = spell_effect::damage(
-    spell::el_none(), weapon_effect_value(&lines, dmg_base, crit_base, is_crit),
+  let effect = spell_effect::damage_shaped(
+    spell::el_none(), weapon_effect_value(&lines, dmg_base, crit_base, is_crit), area_shape, area_size,
   );
   action_envelope::emit_started(
     fight_id, false, seat, action_turn, slot, fight_events::action_kind_weapon(), target_cell,
@@ -701,11 +707,26 @@ public(package) fun weapon_strike(fight: &mut Fight, seat: u64, target_cell: u64
   let mut random_rolls = vector[];
   let mut random_bounds = vector[];
   let mut reaction_rng = spell_formula::dodge_seed(turn_seed, slot);
-  hit_mob_from(
-    fight, midx, PLAYER_SIDE, seat, damage, 0, &mut reaction_rng, &mut random_domains,
-    &mut random_effect_ordinals, &mut random_rolls, &mut random_bounds,
-  );
-  if (damage > 0) statuses::reveal(fight, false, seat);
+  // §387 MULTI-TARGET: hit every living mob standing on a shape cell (the cell set the emitted effect carries, so the
+  // sim/client re-derive it identically). Per-mob damage resists the mob's own block; ONE crit boolean swings all.
+  let zone = combat_grid::zone_cells(area_shape, area_size, target_cell, caster_cell);
+  let mut any_damage = false;
+  let nm = fight::mobs(fight).length();
+  let mut mi = 0;
+  while (mi < nm) {
+    let (m_alive, m_cell) = { let m = fight::mobs(fight).borrow(mi); (mob::is_alive(m), mob::cell(m)) };
+    if (m_alive && zone.contains(&m_cell)) {
+      let target_stats = *mob::stats(fight::mobs(fight).borrow(mi));
+      let damage = weapon_damage_total(&lines, element, dmg_base, crit_base, is_crit, &caster_stats, &target_stats);
+      hit_mob_from(
+        fight, mi, PLAYER_SIDE, seat, damage, 0, &mut reaction_rng, &mut random_domains,
+        &mut random_effect_ordinals, &mut random_rolls, &mut random_bounds,
+      );
+      if (damage > 0) any_damage = true;
+    };
+    mi = mi + 1;
+  };
+  if (any_damage) statuses::reveal(fight, false, seat);
   let pm = fight::participants_mut(fight).borrow_mut(seat);
   participant::spend_ap(pm, ap_cost);
   participant::count_action(pm); // advance the slot index (weapon strikes share the sequence with casts)
@@ -717,8 +738,10 @@ public(package) fun weapon_strike(fight: &mut Fight, seat: u64, target_cell: u64
   );
 }
 
-/// PvP weapon strike (F-08 — kolizeum has no mobs): same gates, target = a living OTHER-TEAM player on the cell.
-/// Kept as a SEPARATE resolution path so the PvM strike above stays byte-identical for world fights.
+/// PvP weapon strike (F-08 — kolizeum has no mobs): same gates + §387 shape, target = a living OTHER-TEAM player on
+/// the aimed cell; the shape's collateral cells hit every OTHER-TEAM player standing on them (allies/self spared —
+/// TF_NOT_TEAM). Kept a SEPARATE path so the PvM strike stays byte-identical. (PvP seats currently carry no shape
+/// category ⇒ the POINT default ⇒ the single aimed enemy, exactly as today, until the arena adopts the seat path.)
 public(package) fun weapon_strike_player(fight: &mut Fight, seat: u64, target_cell: u64) {
   let caster_cell; let caster_stats; let caster_team; let ap; let element; let dmg_base; let crit_base; let crit_rate; let ap_cost; let reach; let slot;
   {
@@ -735,15 +758,19 @@ public(package) fun weapon_strike_player(fight: &mut Fight, seat: u64, target_ce
     reach = participant::weapon_reach(p);
     slot = participant::casts_this_turn(p); // §7 turn-seed slot index (pre-action)
   };
+  let (area_shape, area_size, range_modifiable, line_only) =
+    participant::weapon_shape_of(&fight::weapon_category_at(fight, seat));
   assert!(ap >= ap_cost, EInsufficientAP);
+  let reach_eff = if (range_modifiable) reach + spell::stat_range(&caster_stats) else reach;
   let d = combat_grid::manhattan(caster_cell, target_cell);
-  assert!(d >= 1 && d <= reach, EIllegalCast);
+  assert!(d >= 1 && d <= reach_eff, EIllegalCast);
+  if (line_only) assert!(combat_grid::same_axis(caster_cell, target_cell), EIllegalCast);
   let los = los_obstacles(fight);
   assert!(combat_grid::line_of_sight(caster_cell, target_cell, &los), EIllegalCast);
+  // AIM GATE: the aimed cell must hold a living, visible OTHER-TEAM player.
   let victim = find_living_enemy_player_at(fight, target_cell, caster_team);
   assert!(victim.is_some(), EIllegalCast);
-  let pc = victim.destroy_some();
-  assert!(!statuses::is_invisible(fight, false, pc), EIllegalCast);
+  assert!(!statuses::is_invisible(fight, false, victim.destroy_some()), EIllegalCast);
 
   let fight_id = fight::id(fight);
   let action_turn = seat_turn(fight, seat);
@@ -751,10 +778,8 @@ public(package) fun weapon_strike_player(fight: &mut Fight, seat: u64, target_ce
   let crit_roll = spell_formula::slot_crit_roll(turn_seed, slot);
   let is_crit = spell_formula::crit_at(crit_roll, crit_rate, spell::stat_critical_hit(&caster_stats));
   let lines = fight::weapon_lines_at(fight, seat); // §17.27 wave-2a — authored item lines (empty ⇒ single-line fallback)
-  let target_stats = *participant::stats(fight::participants(fight).borrow(pc));
-  let damage = weapon_damage_total(&lines, element, dmg_base, crit_base, is_crit, &caster_stats, &target_stats);
-  let effect = spell_effect::damage(
-    spell::el_none(), weapon_effect_value(&lines, dmg_base, crit_base, is_crit),
+  let effect = spell_effect::damage_shaped(
+    spell::el_none(), weapon_effect_value(&lines, dmg_base, crit_base, is_crit), area_shape, area_size,
   );
   action_envelope::emit_started(
     fight_id, false, seat, action_turn, slot, fight_events::action_kind_weapon(), target_cell,
@@ -766,11 +791,28 @@ public(package) fun weapon_strike_player(fight: &mut Fight, seat: u64, target_ce
   let mut random_rolls = vector[];
   let mut random_bounds = vector[];
   let mut reaction_rng = spell_formula::dodge_seed(turn_seed, slot);
-  hit_player_from(
-    fight, pc, PLAYER_SIDE, seat, damage, 0, &mut reaction_rng, &mut random_domains,
-    &mut random_effect_ordinals, &mut random_rolls, &mut random_bounds,
-  );
-  if (damage > 0) statuses::reveal(fight, false, seat);
+  // §387 MULTI-TARGET: every living OTHER-TEAM player on a shape cell takes the hit (allies/self spared).
+  let zone = combat_grid::zone_cells(area_shape, area_size, target_cell, caster_cell);
+  let mut any_damage = false;
+  let np = fight::participants(fight).length();
+  let mut pi = 0;
+  while (pi < np) {
+    let (p_alive, p_cell, p_team) = {
+      let p = fight::participants(fight).borrow(pi);
+      (participant::is_alive(p), participant::cell(p), participant::team(p))
+    };
+    if (p_alive && p_team != caster_team && zone.contains(&p_cell)) {
+      let target_stats = *participant::stats(fight::participants(fight).borrow(pi));
+      let damage = weapon_damage_total(&lines, element, dmg_base, crit_base, is_crit, &caster_stats, &target_stats);
+      hit_player_from(
+        fight, pi, PLAYER_SIDE, seat, damage, 0, &mut reaction_rng, &mut random_domains,
+        &mut random_effect_ordinals, &mut random_rolls, &mut random_bounds,
+      );
+      if (damage > 0) any_damage = true;
+    };
+    pi = pi + 1;
+  };
+  if (any_damage) statuses::reveal(fight, false, seat);
   let pm = fight::participants_mut(fight).borrow_mut(seat);
   participant::spend_ap(pm, ap_cost);
   participant::count_action(pm); // advance the slot index

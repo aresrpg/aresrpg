@@ -293,7 +293,9 @@ public fun seat(
   let side = member_side(kolizeum, sender(ctx), character_id);
   assert!(side.is_some(), ENotParticipant); // a non-member (or wrong character) cannot seat
   let joiner = core_fight::combat_snapshot(kiosk, pkcap, character_id, raised_spell_ids, config, clock);
-  engine::join(KolizeumBrand {}, fight, fight_registry, joiner, vector[], option::none(), *side.borrow(), true, fight_version, ctx);
+  // §387: no weapon lines + no shape category for PvP seats (the arena keeps the family fallback + the 1-cell strike
+  // until it adopts the weapon-line seat path) — joiner_category = none.
+  engine::join(KolizeumBrand {}, fight, fight_registry, joiner, vector[], option::none(), option::none(), *side.borrow(), true, fight_version, ctx);
 }
 
 public(package) fun mark_started(kolizeum: &mut Kolizeum) {

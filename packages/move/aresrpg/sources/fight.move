@@ -12,7 +12,7 @@ use aresrpg::{character_link, config::{Self, GameConfig}, equipment, fight_marke
 use aresrpg::{character::Character, version::Version};
 use aresrpg_fight::{fight::{Self as engine, Dials, Fight}, fight_registry, participant::{Self, Combatant, WeaponLine}, version::Version as EngineVersion};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
-use std::type_name::{Self, TypeName};
+use std::{string::String, type_name::{Self, TypeName}};
 use sui::{clock::Clock, kiosk::Kiosk, vec_map};
 
 // ╔════════════════ [ Errors ] ═══════════════════════════════════════════════ ]
@@ -76,12 +76,12 @@ public fun create(
     zones::consume_group_ticket(ticket);
   assert!(object::id(world) == t_world, EWrongWorld);
   assert!(mob_template::template_id(mob_tmpl) == t_template, EWrongTemplate);
-  let (creator, creator_lines) = combatant_of(kiosk, pkcap, t_character, raised_spell_ids, config, clock.timestamp_ms());
+  let (creator, creator_lines, creator_category) = combatant_of(kiosk, pkcap, t_character, raised_spell_ids, config, clock.timestamp_ms());
   mark_seated(kiosk, pkcap, t_character, version);
   engine::create(
     FightBrand {}, registry, t_world, spawn_id, game_world::seed(world), anchor_x, anchor_z, spawned_at_ms,
     is_public, party_id, false, &mob_template::to_spec(mob_tmpl), group_size, group_seed,
-    t_template, creator, creator_lines, dial_snapshot(config), engine_version, clock, ctx,
+    t_template, creator, creator_lines, creator_category, dial_snapshot(config), engine_version, clock, ctx,
   );
 }
 
@@ -106,9 +106,9 @@ public fun join(
   config.assert_enabled();
   config.assert_domain(config::domain_fight()); // S-46 kill-switch bit
   version.assert_enabled();
-  let (joiner, joiner_lines) = combatant_of(kiosk, pkcap, character_id, raised_spell_ids, config, clock.timestamp_ms());
+  let (joiner, joiner_lines, joiner_category) = combatant_of(kiosk, pkcap, character_id, raised_spell_ids, config, clock.timestamp_ms());
   mark_seated(kiosk, pkcap, character_id, version); // PvM — unfinished business
-  engine::join(FightBrand {}, fight, registry, joiner, joiner_lines, joiner_party, 0, false, engine_version, ctx);
+  engine::join(FightBrand {}, fight, registry, joiner, joiner_lines, joiner_category, joiner_party, 0, false, engine_version, ctx);
 }
 
 // ╔════════════════ [ Dungeon / protector doors (package-internal — dungeon.move / gathering.move) ] ═ ]
@@ -135,7 +135,7 @@ public(package) fun create_dungeon_fight(
   clock: &Clock,
   ctx: &TxContext,
 ) {
-  let (creator, creator_lines) = combatant_of(kiosk, pkcap, character_id, raised_spell_ids, config, clock.timestamp_ms());
+  let (creator, creator_lines, creator_category) = combatant_of(kiosk, pkcap, character_id, raised_spell_ids, config, clock.timestamp_ms());
   mark_seated(kiosk, pkcap, character_id, version); // dungeon fights are PvM — the mark applies
   // Dungeon composition seed: derived from (scope, nonce) — deterministic AND public (rooms are authored
   // content; re-rolling means re-running, which costs KEYS — the gate is the key burn).
@@ -143,7 +143,7 @@ public(package) fun create_dungeon_fight(
   engine::create(
     FightBrand {}, registry, scope, nonce, world_seed, anchor_x, anchor_z, clock.timestamp_ms(),
     false, option::none(), true, &mob_template::to_spec(mob_tmpl), group_size, group_seed,
-    mob_template::template_id(mob_tmpl), creator, creator_lines, dial_snapshot(config), engine_version, clock, ctx,
+    mob_template::template_id(mob_tmpl), creator, creator_lines, creator_category, dial_snapshot(config), engine_version, clock, ctx,
   );
 }
 
@@ -173,12 +173,12 @@ public(package) fun create_protector_fight(
   clock: &Clock,
   ctx: &TxContext,
 ) {
-  let (creator, creator_lines) = combatant_of(kiosk, pkcap, character_id, vector[], config, clock.timestamp_ms());
+  let (creator, creator_lines, creator_category) = combatant_of(kiosk, pkcap, character_id, vector[], config, clock.timestamp_ms());
   mark_seated(kiosk, pkcap, character_id, version); // PvM ambush — the unfinished-business mark applies
   engine::create(
     FightBrand {}, registry, world_id, spawn_id, world_seed, anchor_x, anchor_z, clock.timestamp_ms(),
     false, option::none(), false, &mob_template::to_spec(protector_tmpl), group_size, group_seed,
-    mob_template::template_id(protector_tmpl), creator, creator_lines, dial_snapshot(config), engine_version, clock, ctx,
+    mob_template::template_id(protector_tmpl), creator, creator_lines, creator_category, dial_snapshot(config), engine_version, clock, ctx,
   );
 }
 
@@ -202,8 +202,8 @@ public(package) fun join_vouched(
   config.assert_enabled();
   version.assert_enabled();
   mark_seated(kiosk, pkcap, character_id, version); // dungeon fights are PvM — the unfinished-business mark applies
-  let (joiner, joiner_lines) = combatant_of(kiosk, pkcap, character_id, raised_spell_ids, config, clock.timestamp_ms());
-  engine::join(FightBrand {}, fight, registry, joiner, joiner_lines, option::none(), 0, true, engine_version, ctx);
+  let (joiner, joiner_lines, joiner_category) = combatant_of(kiosk, pkcap, character_id, raised_spell_ids, config, clock.timestamp_ms());
+  engine::join(FightBrand {}, fight, registry, joiner, joiner_lines, joiner_category, option::none(), 0, true, engine_version, ctx);
 }
 
 // ╔════════════════ [ Dungeon brand doors (2026-07-13 split — the aresrpg_dungeon witness gate) ] ═ ]
@@ -279,9 +279,10 @@ public fun combat_snapshot(
   config: &GameConfig,
   clock: &Clock,
 ): Combatant {
-  // The PvP/kolizeum snapshot factory needs only the Combatant; weapon lines ride the PvM `create`/`join` doors
-  // (PvP weapon strikes keep the family fallback until the arena package adopts the weapon-line seat path).
-  let (c, _lines) = combatant_of(kiosk, pkcap, character_id, raised_spell_ids, config, clock.timestamp_ms());
+  // The PvP/kolizeum snapshot factory needs only the Combatant; weapon lines + the §387 shape category ride the PvM
+  // `create`/`join` doors (PvP weapon strikes keep the family fallback + the 1-cell default until the arena package
+  // adopts the weapon-line seat path).
+  let (c, _lines, _category) = combatant_of(kiosk, pkcap, character_id, raised_spell_ids, config, clock.timestamp_ms());
   c
 }
 
@@ -290,7 +291,7 @@ public fun combat_snapshot(
 /// regen-SETTLED at `now_ms` (S-69 — the raw read bricked defeated characters at the §17.23 0-HP gate forever),
 /// key the §17.27 attack line off the equipped weapon family, snapshot the LEARNED spell levels (F-07). The ONE
 /// Combatant factory on the live paths — a seat can never carry fabricated numbers.
-fun combatant_of(kiosk: &Kiosk, pkcap: &PersonalKioskCap, character_id: ID, raised_spell_ids: vector<ID>, config: &GameConfig, now_ms: u64): (Combatant, vector<WeaponLine>) {
+fun combatant_of(kiosk: &Kiosk, pkcap: &PersonalKioskCap, character_id: ID, raised_spell_ids: vector<ID>, config: &GameConfig, now_ms: u64): (Combatant, vector<WeaponLine>, Option<String>) {
   let character: &Character = kiosk.borrow(personal_kiosk::borrow(pkcap), character_id);
   let (class, level, hp, max_hp, base_ap, base_mp, stats) = equipment::geared_combat_stats_settled(character, config, now_ms);
   // §17.27 weapon line + the DECISIONS 07-12 own-class affinity: any class wields any weapon, and the equipped
@@ -298,9 +299,13 @@ fun combatant_of(kiosk: &Kiosk, pkcap: &PersonalKioskCap, character_id: ID, rais
   // class and the equipped family — off the single home `equipped_weapon_family` (none ⇒ no affinity: bare/tool).
   let weapon_family = equipment::equipped_weapon_family(character);
   let affinity = weapon_family.is_some() && weapon_family == equipment::family_for_class(class);
-  // The `Weapon` still carries the FAMILY MECHANICS (ap_cost / reach / crit_rate — never item-authored) + the
-  // single-line FALLBACK the engine uses when a seat has no authored lines (bare hands, pre-upgrade weapons).
-  let weapon = participant::weapon_line_of(weapon_family, affinity);
+  // The `Weapon` still carries the FAMILY MECHANICS (reach / crit_rate — never item-authored) + the single-line
+  // FALLBACK the engine uses when a seat has no authored lines (bare hands, pre-upgrade weapons). §387 authorable AP:
+  // `weapon_line_of_authored` takes an Option AP override with the WL_AP_COST family constant as the fallback — the
+  // seam is wired now; the seed re-tune authors the per-template AP (an item AP field) and threads it in place of
+  // `none` (the §387 damage-per-AP ladder, step ②). `weapon_family` (the FINE category) is ALSO returned: the engine
+  // keys the strike SHAPE off it (a per-seat DF; the family already fed reach/element/AP).
+  let weapon = participant::weapon_line_of_authored(weapon_family, affinity, option::none());
   // §17.27 wave-2a — the equipped weapon's AUTHORED damage lines become the real strike damage: deterministic
   // midpoint base (spells' flat-base analogue; wave-2b seed-rolls in [from,to]), the same +10% own-class affinity
   // the family line takes, and crit = base × 3/2 (the WL_DAMAGE→WL_CRIT_DAMAGE ≈1.5× ratio). Empty ⇒ the engine
@@ -325,7 +330,7 @@ fun combatant_of(kiosk: &Kiosk, pkcap: &PersonalKioskCap, character_id: ID, rais
     };
     i = i + 1;
   };
-  (participant::new_combatant(character_id, class, level, stats, hp, max_hp, base_ap, base_mp, weapon, levels), weapon_lines)
+  (participant::new_combatant(character_id, class, level, stats, hp, max_hp, base_ap, base_mp, weapon, levels), weapon_lines, weapon_family)
 }
 
 /// Fold an ID's 32 bytes into a u64 (the dungeon composition-seed derivation).

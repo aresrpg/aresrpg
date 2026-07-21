@@ -508,6 +508,12 @@ public fun manhattan(a: u64, b: u64): u64 {
   abs_diff(cell_x(a), cell_x(b)) + abs_diff(cell_y(a), cell_y(b))
 }
 
+/// §387 — are `a` and `b` on the SAME straight cardinal line (a shared row OR column)? The spellbook LINE class may
+/// only aim along a cardinal line from the attacker.
+public fun same_axis(a: u64, b: u64): bool {
+  cell_x(a) == cell_x(b) || cell_y(a) == cell_y(b)
+}
+
 /// Greedy 4-DIRECTIONAL (N/S/E/W only, no diagonals) approach toward `to_cell`, up to `budget` steps, STOPPING as
 /// soon as Manhattan distance <= 1 (adjacent — never land on the target's own cell). Mirrors `approach`'s
 /// structure exactly but reduces Manhattan distance instead of Chebyshev: each step moves exactly ONE cell along

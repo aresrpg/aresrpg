@@ -300,6 +300,11 @@ const NONE_ELEMENT: u8 = 255; //  spell::el_none() — neutral/elementless
 public fun damage(element: u8, base: u64): Effect {
   new_effect(K_DAMAGE, element, base, SHAPE_POINT, 0, TF_NOT_TEAM, 100, 0, 0, 0, PHASE_ON_ENTER)
 }
+// §387 — enemy damage over an explicit AoE (`area_shape`/`area_size`), enemies only (TF_NOT_TEAM), fixed base. The
+// weapon strike builds its shaped damage marker off this so the emitted effect carries the strike's cell-set shape.
+public fun damage_shaped(element: u8, base: u64, area_shape: u8, area_size: u64): Effect {
+  new_effect(K_DAMAGE, element, base, area_shape, area_size, TF_NOT_TEAM, 100, 0, 0, 0, PHASE_ON_ENTER)
+}
 public fun heal(base: u64): Effect {
   new_effect(K_HEAL, 255, base, SHAPE_POINT, 0, TF_NOT_ENEMY, 100, 0, 0, 0, PHASE_ON_ENTER)
 }

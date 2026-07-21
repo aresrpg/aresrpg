@@ -134,6 +134,46 @@ fun unarmed_line(): Weapon {
   Weapon { element: 2, damage: 4, crit_damage: 6, crit_rate: 30, ap_cost: 3, reach: 1 }
 }
 
+/// §387 — `weapon_line_of` with an AUTHORABLE per-template AP cost. `ap_override` some(ap) ⇒ that authored AP; none
+/// ⇒ the family constant `WL_AP_COST` (the fallback when a template authors none). Element / damage / reach / crit
+/// stay the family line — only the AP becomes template-authorable (the §387 damage-per-AP ladder tunes it). Bare
+/// hands / a tool (no family) with no override are the plain unarmed line. The game reads the item's authored AP
+/// (equipment seam) and threads it here at fight entry; the chain never trusts a PTB-supplied AP (the Weapon is
+/// built fight-side, F-02).
+public fun weapon_line_of_authored(family: Option<String>, affinity: bool, ap_override: Option<u64>): Weapon {
+  let mut w = weapon_line_of(family, affinity);
+  if (ap_override.is_some()) w.ap_cost = *ap_override.borrow();
+  w
+}
+
+// ── §387 THE WEAPON SHAPE TABLE (on-chain twin of `@aresrpg/fight/weapon` `WEAPON_SHAPES`) ──
+// A weapon strike resolves a CATEGORY-SHAPED CELL SET, not a single cell. This table maps the equipped weapon's
+// FINE category → the shape descriptor the resolver + the client preview both key on; the geometry itself is the
+// shared spell-AoE machinery (`combat_grid::zone_cells` / the sim's `get_aoe_cells`), so one descriptor drives
+// three readers (chain, sim, hover). NON-default categories only — every unlisted slug (sword / dagger(s) / axe /
+// shovel / pickaxe / any tool / bare hands / a not-yet-shaped family) resolves the 1-cell POINT default, the exact
+// pre-§387 strike, so an un-authored weapon can never resolve larger than it does today.
+
+/// (area_shape, area_size, range_modifiable, line_only) for a weapon's FINE `category`. area_shape/size feed
+/// `combat_grid::zone_cells(shape, size, target, caster)`; range_modifiable = the ranged range grows with the
+/// caster's `range` stat (bow only); line_only = the aim must lie on a straight cardinal line (spellbook only).
+public(package) fun weapon_shape_of(category: &Option<String>): (u8, u64, bool, bool) {
+  if (category.is_none()) return (spell_effect::shape_point(), 0, false, false);
+  let b = category.borrow().as_bytes();
+  // 2-INLINE — the aimed cell + the next cell along the strike direction.
+  if (b == &b"club" || b == &b"longsword") return (spell_effect::shape_line(), 1, false, false);
+  // 3-FRONT-ARC — the aimed cell + its two perpendicular neighbours (TBAR half-length 1).
+  if (b == &b"scythe" || b == &b"staff" || b == &b"spear") return (spell_effect::shape_tbar(), 1, false, false);
+  // PODIUM-4 — the front arc + one cell beyond the aimed cell along the axis.
+  if (b == &b"battleaxe" || b == &b"mace" || b == &b"hammer") return (spell_effect::shape_podium(), 1, false, false);
+  // RANGED 1-6 — single aimed cell at range; bow's range is MODIFIABLE, wand's is FIXED.
+  if (b == &b"bow") return (spell_effect::shape_point(), 0, true, false);
+  if (b == &b"wand") return (spell_effect::shape_point(), 0, false, false);
+  // LINE 1-5 FIXED — single aimed cell, fixed range, the aim must lie on a straight cardinal line.
+  if (b == &b"spellbook") return (spell_effect::shape_point(), 0, false, true);
+  (spell_effect::shape_point(), 0, false, false)
+}
+
 // ╔════════════════ [ Combatant — the character combat SNAPSHOT (the game-read seam shape) ] ═ ]
 
 /// The plain-value combat snapshot a fight seat is built from. Assembled FIGHT-SIDE ONLY (`fight::combatant_of`
@@ -180,6 +220,12 @@ public(package) fun new(c: Combatant, owner: address, team: u8, cell: u64): Part
 }
 
 // ── weapon accessors (§17.27 attack resolution) ──
+#[test_only]
+/// §387 — read a raw `Weapon` snapshot's mechanics (for the authorable-AP unit test; the ship path reads them off
+/// the seated `Participant` via the accessors below).
+public fun weapon_snapshot_ap_cost(w: &Weapon): u64 { w.ap_cost }
+#[test_only]
+public fun weapon_snapshot_reach(w: &Weapon): u64 { w.reach }
 public(package) fun weapon_element(self: &Participant): u8 { self.weapon.element }
 public(package) fun weapon_damage(self: &Participant): u64 { self.weapon.damage }
 public(package) fun weapon_crit_damage(self: &Participant): u64 { self.weapon.crit_damage }
