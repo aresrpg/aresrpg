@@ -47,16 +47,14 @@ const predict_cast_hit = (store, { intent_id, remaining_hp, victim_idx = 0 }) =>
 // An UNRELATED receipt: a bare MobMoved on the OTHER mob (m1), no cast/hit on m0, no TurnEnded for my seat — it
 // says NOTHING about my pending cast. version is above the cast basis (the purge condition the bug tripped on).
 const unrelated_receipt = (store, at = T0 + 2_000) =>
-  store
-    .getState()
-    .input(
-      {
-        type: 'receipt',
-        version: store.getState().applied_version + 2,
-        receipt: { events: [ev('MobMoved', { idx: 1, to_cell: 61 })] },
-      },
-      at
-    )
+  store.getState().input(
+    {
+      type: 'receipt',
+      version: store.getState().applied_version + 2,
+      receipt: { events: [ev('MobMoved', { idx: 1, to_cell: 61 })] },
+    },
+    at
+  )
 
 // MY cast's OWN confirming receipt (Cast + the authoritative Hit). Lands at a fresh version above everything.
 const confirm_cast_hit = (store, { remaining_hp, victim_idx = 0, at = T0 + 3_000 }) =>
