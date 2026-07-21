@@ -242,7 +242,7 @@ export function create_board_highlights(board) {
     return g
   }
 
-  /** @type {Map<string, { group: Object3D, mat: import('three').Material, u_fade: * | null, fade: { cur: number, target: number, clearing: boolean }, build: (cx: number, cy: number, cz: number, order: number) => Object3D, cells: Map<string, Object3D> }>} */
+  /** @type {Map<string, { group: Object3D, mat: { dispose(): void }, u_fade: * | null, fade: { cur: number, target: number, clearing: boolean, fade_in_s: number, fade_out_s: number }, build: (cx: number, cy: number, cz: number, order: number, mask?: number) => Object3D, cells: Map<string, Object3D> }>} */
   const channels = new Map()
   for (const key of CHANNEL_KEYS) {
     const spec = CHANNELS[key]
@@ -250,13 +250,15 @@ export function create_board_highlights(board) {
     cg.name = `highlight_${key}`
     cg.renderOrder = spec.order
     const built =
-      key === 'trap'
-        ? { mat: trap_spike_mat, u_fade: null } // [trap marker] dark blob + spike — no wash fade
-        : spec.outline
-          ? { mat: make_outline_material(spec, diamond_tex), u_fade: null } // selection frame — no fade
-          : spec.merge
-            ? make_merge_aware_channel(spec) // [#164] lazy ≤16 neighbor-mask material variants, one shared fade
-            : make_gradient_tile_material(spec) // D150 gradient + rounded-corner tile (+ [D253-2] fade uniform)
+      /** @type {{ mat: { dispose(): void }, u_fade: * | null, mat_of?: (mask: number) => import('three').Material }} */ (
+        key === 'trap'
+          ? { mat: trap_spike_mat, u_fade: null } // [trap marker] dark blob + spike — no wash fade
+          : spec.outline
+            ? { mat: make_outline_material(spec, diamond_tex), u_fade: null } // selection frame — no fade
+            : spec.merge
+              ? make_merge_aware_channel(spec) // [#164] lazy ≤16 neighbor-mask material variants, one shared fade
+              : make_gradient_tile_material(spec) // D150 gradient + rounded-corner tile (+ [D253-2] fade uniform)
+      )
     // `build(cx,cy,cz,order[,mask])` returns the ONE Object3D add_tile adds per cell — a flat Mesh for
     // every wash/outline channel (merge-aware channels' Mesh picks its material by neighbor mask instead
     // of a fixed material); for 'trap' the compound blob+sprite Group (build_trap_marker) instead. The
@@ -265,8 +267,8 @@ export function create_board_highlights(board) {
       key === 'trap'
         ? build_trap_marker
         : spec.merge
-          ? make_merged_flat_build(tile_geo, /** @type {{ mat_of: (mask: number) => * }} */ (built).mat_of)
-          : make_flat_build(spec.outline ? diamond_geo : tile_geo, built.mat)
+          ? make_merged_flat_build(tile_geo, /** @type {(mask: number) => import('three').Material} */ (built.mat_of))
+          : make_flat_build(spec.outline ? diamond_geo : tile_geo, /** @type {import('three').Material} */ (built.mat))
     channels.set(key, {
       group: cg,
       mat: built.mat,

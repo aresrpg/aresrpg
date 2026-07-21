@@ -16,7 +16,9 @@ import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
 // MISSING-ARTIFACT (#117): board_entities.js unconditionally imports create_character_avatar, which
 // static-imports the absent-by-design senshi_male.glb — see test_helpers/glb_fixture.js. Guarded dynamic
 // import; fit_float_font_px itself has no avatar dependency, but the module can't load without the asset.
-const { fit_float_font_px } = SENSHI_MALE_GLB_AVAILABLE ? await import('./board_entities.js') : {}
+const { fit_float_font_px } = /** @type {typeof import('./board_entities.js')} */ (
+  SENSHI_MALE_GLB_AVAILABLE ? await import('./board_entities.js') : {}
+)
 
 // JetBrains Mono advance ≈ 0.6em, so at the 38px base a glyph is ~22.8px wide (canvas-free approximation).
 const BASE_PX = 38

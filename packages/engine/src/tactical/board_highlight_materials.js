@@ -76,7 +76,7 @@ export function make_gradient_tile_material(spec, edges = {}, shared_u_fade = nu
       const rgb = is_border ? rim_rgb : rim_rgb.mul(mix(float(center_dim), float(1), grad))
       const alpha_profile = is_border ? grad : mix(float(center_alpha), float(1), grad)
       const alpha = float(spec.opacity).mul(alpha_profile).mul(coverage).mul(u_fade)
-      return vec4(rgb, alpha)
+      return vec4(/** @type {any} */ (rgb), alpha)
     })()
   )
   return { mat, u_fade }

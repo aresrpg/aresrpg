@@ -11,12 +11,12 @@ import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
 // MISSING-ARTIFACT (#117): `@aresrpg/engine3/player` resolves to character_controller.js, which
 // unconditionally re-exports create_character_avatar (D193 "ONE home"); board_entities.js imports it
 // directly too. Both static-import the absent-by-design senshi_male.glb — see test_helpers/glb_fixture.js.
-const { create_mob_model: world_mob_visual_factory } = SENSHI_MALE_GLB_AVAILABLE
-  ? await import('@aresrpg/engine3/player')
-  : {}
-const { create_board_entities, entity_outline_color } = SENSHI_MALE_GLB_AVAILABLE
-  ? await import('./board_entities.js')
-  : {}
+const { create_mob_model: world_mob_visual_factory } = /** @type {typeof import('@aresrpg/engine3/player')} */ (
+  SENSHI_MALE_GLB_AVAILABLE ? await import('@aresrpg/engine3/player') : {}
+)
+const { create_board_entities, entity_outline_color } = /** @type {typeof import('./board_entities.js')} */ (
+  SENSHI_MALE_GLB_AVAILABLE ? await import('./board_entities.js') : {}
+)
 
 const globals = /** @type {any} */ (globalThis)
 const previous_create_image_bitmap = globals.createImageBitmap

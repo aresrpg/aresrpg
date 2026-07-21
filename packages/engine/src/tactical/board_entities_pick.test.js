@@ -21,13 +21,15 @@ import { PerspectiveCamera, Vector3 } from 'three'
 import { cell_at_ndc } from './board_picking.js'
 import { entity_id_at_cell } from './board_entity_picking.js'
 
+/** @typedef {{ cell?: { x: number, y: number } }} PickEntity */
+
 const CELL = 1.33 // DEFAULT_CELL_SIZE (D231)
 
 // ── the LIVE fight camera (board_camera.js faux-iso: polar FROZEN 50° from vertical, FOV 42°) ──────────────
 const POLAR = (50 * Math.PI) / 180
 const FOV = 42
 /** A faux-iso camera framing `target`, `dolly` metres out along azimuth 0 (camera to +X, looking down ~40°). */
-function fight_cam(target, dolly = 18) {
+function fight_cam(/** @type {[number, number, number]} */ target, dolly = 18) {
   const cam = new PerspectiveCamera(FOV, 16 / 9, 0.1, 1000)
   const horizontal = Math.sin(POLAR) * dolly
   const vertical = Math.cos(POLAR) * dolly
@@ -40,16 +42,17 @@ function fight_cam(target, dolly = 18) {
 }
 
 /** Cell (cx,cy) → world floor centre, matching board.js cell_center_world at origin 0. */
-const cell_world = (cx, cy) => [cx * CELL + CELL / 2, 0, cy * CELL + CELL / 2]
+const cell_world = (/** @type {number} */ cx, /** @type {number} */ cy) =>
+  /** @type {[number, number, number]} */ ([cx * CELL + CELL / 2, 0, cy * CELL + CELL / 2])
 
 /** Project a WORLD point to NDC through the camera (the inverse of the plane pick's unproject). */
-function to_ndc(cam, [x, y, z]) {
+function to_ndc(/** @type {PerspectiveCamera} */ cam, /** @type {[number, number, number]} */ [x, y, z]) {
   const v = new Vector3(x, y, z).project(cam)
   return { x: v.x, y: v.y }
 }
 
 /** One placed entity stub: logical cell only — the pick needs NO avatar geometry any more (the point). */
-const entity_on = (cx, cy) => ({ cell: { x: cx, y: cy } })
+const entity_on = (/** @type {number} */ cx, /** @type {number} */ cy) => ({ cell: { x: cx, y: cy } })
 
 /** A 12×12 full-floor board descriptor at origin 0 (the plane the facade pick projects onto). */
 const BOARD = {
@@ -61,8 +64,12 @@ const BOARD = {
 }
 
 /** The facade's exact entity_at_cell composition (index.js): NDC → plane cell → the entity ON that cell. */
-const hover = (entities, cam, cx, cy) =>
-  entity_id_at_cell(entities, cell_at_ndc(to_ndc(cam, cell_world(cx, cy)), cam, BOARD))
+const hover = (
+  /** @type {Map<string, PickEntity>} */ entities,
+  /** @type {PerspectiveCamera} */ cam,
+  /** @type {number} */ cx,
+  /** @type {number} */ cy
+) => entity_id_at_cell(entities, cell_at_ndc(to_ndc(cam, cell_world(cx, cy)), cam, BOARD))
 
 describe('entity_id_at_cell — the pure cell lookup', () => {
   const entities = new Map([

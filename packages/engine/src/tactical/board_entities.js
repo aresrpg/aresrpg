@@ -179,7 +179,7 @@ export function resolve_gait(gait, cells_per_second, clip_duration, time_scale_o
 
 /**
  * @typedef {object} EntitiesController
- * @property {(spec: { id: string, kind?: string, glb_variant?: string, hair_url?: string, colors?: unknown, scale?: number, cell: { x: number, y: number }, facing?: string, facing_yaw?: number, outline?: number, worn?: { head: unknown, back: unknown } | null, visual_effect?: { kind:string, active?:boolean } }) => void} upsert
+ * @property {(spec: { id: string, kind?: string, glb_variant?: string, hair_url?: string, colors?: unknown, scale?: number, cell: { x: number, y: number }, facing?: string, facing_yaw?: number, outline?: number, worn?: WornSlots | null, visual_effect?: { kind:string, active?:boolean } }) => void} upsert
  * @property {(id: string, opts?: { r?: number, g?: number, b?: number, peak?: number }) => void} flash [D257] hit-flash the struck entity
  * @property {(id: string) => void} remove
  * @property {(id: string, waypoints: { x: number, y: number }[], opts?: { cells_per_second?: number, gait?: 'walk' | 'run', loco_time_scale?: number, knockback?: boolean }) => Promise<void>} move
@@ -199,6 +199,8 @@ export function resolve_gait(gait, cells_per_second, clip_duration, time_scale_o
  *   tag rides the REAL body under intrinsic per-creature sizing, never a constant.
  * @property {() => void} dispose
  */
+
+/** @typedef {Parameters<ReturnType<typeof create_worn_cosmetics>['set_slots']>[0]} WornSlots */
 
 /** Facing string → yaw (radians). +y north (+Z), +x east (+X); model +Z is forward. */
 const FACING_YAW = { north: 0, south: Math.PI, east: Math.PI / 2, west: -Math.PI / 2 }
@@ -242,7 +244,7 @@ export function create_board_entities(
    * @property {ReturnType<typeof create_worn_cosmetics> | null} worn_rig [cosmetics-in-fights] equipped
    *   hat/cloak GLB mounts on THIS player's rig (null for mobs) — the roam create_worn_cosmetics mechanism,
    *   fed the desired slots once the async avatar is ready (the same gate embed_voxel_player uses).
-   * @property {{ head: unknown, back: unknown } | null} desired_worn the last resolved worn slots to reconcile.
+   * @property {WornSlots | null} desired_worn the last resolved worn slots to reconcile.
    */
   /** @type {Map<string, Entity>} */
   const entities = new Map()

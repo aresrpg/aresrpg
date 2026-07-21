@@ -55,10 +55,24 @@ const GLYPH_TINT = {
 }
 
 /**
+ * @typedef {object} HighlightChannelSpec
+ * @property {number} color
+ * @property {number} opacity
+ * @property {number} order
+ * @property {boolean} [outline]
+ * @property {boolean} [border]
+ * @property {boolean} [merge]
+ * @property {number} [unlit_gain]
+ * @property {number} [center_dim]
+ * @property {number} [center_alpha]
+ * @property {number} [fade_in_s]
+ * @property {number} [fade_out_s]
+ */
+
+/**
  * Every paintable tactical channel. `unlit_gain` and the center dials are material-output values, not
  * scene-light inputs: they establish the light/medium/dark ladder before the shared whole-scene post grade.
- * @type {Record<string, { color: number, opacity: number, order: number, outline?: boolean,
- *   border?: boolean, unlit_gain?: number, center_dim?: number, center_alpha?: number }>}
+ * @type {Record<string, HighlightChannelSpec>}
  */
 export const CHANNELS = {
   // §7 CellState vocabulary

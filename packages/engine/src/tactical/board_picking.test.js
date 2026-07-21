@@ -219,7 +219,7 @@ describe('create_board_picking — pointerdown→pointerup click gesture', () =>
     const canvas = make_canvas()
     const camera = new PerspectiveCamera(60, 800 / 600, 0.1, 500)
     const get_camera = mock(() => camera)
-    const clicks = /** @type {{ x: number, y: number }[]} */ ([])
+    const clicks = /** @type {({ x: number, y: number } | null)[]} */ ([])
     create_board_picking({
       canvas: /** @type {any} */ (canvas),
       get_camera,
@@ -244,7 +244,7 @@ describe('create_board_picking — pointerdown→pointerup click gesture', () =>
     const canvas = make_canvas()
     const camera = new PerspectiveCamera(60, 800 / 600, 0.1, 500)
     look_straight_down(camera, 3, 3)
-    const clicks = /** @type {{ x: number, y: number }[]} */ ([])
+    const clicks = /** @type {({ x: number, y: number } | null)[]} */ ([])
     create_board_picking({
       canvas: /** @type {any} */ (canvas),
       get_camera: () => camera,
@@ -261,7 +261,7 @@ describe('create_board_picking — pointerdown→pointerup click gesture', () =>
     const canvas = make_canvas()
     const camera = new PerspectiveCamera(60, 800 / 600, 0.1, 500)
     look_straight_down(camera, 3, 3)
-    const clicks = /** @type {{ x: number, y: number }[]} */ ([])
+    const clicks = /** @type {({ x: number, y: number } | null)[]} */ ([])
     create_board_picking({
       canvas: /** @type {any} */ (canvas),
       get_camera: () => camera,
@@ -296,7 +296,7 @@ describe('create_board_picking — pointerdown→pointerup click gesture', () =>
     const canvas = make_canvas()
     const camera = new PerspectiveCamera(60, 800 / 600, 0.1, 500)
     look_straight_down(camera, 3, 3)
-    const clicks = /** @type {{ x: number, y: number }[]} */ ([])
+    const clicks = /** @type {({ x: number, y: number } | null)[]} */ ([])
     create_board_picking({
       canvas: /** @type {any} */ (canvas),
       get_camera: () => camera,

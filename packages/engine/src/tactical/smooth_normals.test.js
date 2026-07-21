@@ -22,7 +22,7 @@ describe('weld_smoothed_normals — position-welded angle-weighted normals', () 
     const g = new BoxGeometry(1, 1, 1) // 24 verts, per-face normals, 12 tris (36 index)
     const pos = g.attributes.position.array
     const nor = g.attributes.normal.array
-    const idx = g.index.array
+    const idx = /** @type {NonNullable<typeof g.index>} */ (g.index).array
     expect(pos.length / 3).toBe(24) // 4 verts × 6 faces — the "24 hard normals" of the brief
 
     const out = weld_smoothed_normals(pos, nor, idx)
@@ -44,7 +44,11 @@ describe('weld_smoothed_normals — position-welded angle-weighted normals', () 
   test("each vertex's smoothed normal points OUT of the cube (sign matches its corner octant)", () => {
     const g = new BoxGeometry(2, 2, 2) // centered at origin → position sign IS the octant
     const pos = g.attributes.position.array
-    const out = weld_smoothed_normals(pos, g.attributes.normal.array, g.index.array)
+    const out = weld_smoothed_normals(
+      pos,
+      g.attributes.normal.array,
+      /** @type {NonNullable<typeof g.index>} */ (g.index).array
+    )
     for (let i = 0; i < pos.length / 3; i += 1) {
       expect(Math.sign(out[i * 3])).toBe(Math.sign(pos[i * 3]))
       expect(Math.sign(out[i * 3 + 1])).toBe(Math.sign(pos[i * 3 + 1]))

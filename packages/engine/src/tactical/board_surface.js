@@ -108,7 +108,7 @@ export const SURFACE_BAND_ROWS = 96
  *   lightens/darkens alternating (cx+cy) parity cells — the classic isometric checkerboard, opt-in (shipped
  *   default 0.07, set by board.js).
  * @param {number} [band_rows] texel rows per yielded slice (Infinity ⇒ bake in one synchronous step)
- * @returns {Generator<DataTexture, void, void>}
+ * @returns {Generator<DataTexture | undefined, void, void>}
  */
 export function* bake_board_surface_gen(
   { mask, width, height, seed = board_seed(mask, width, height), checker_strength = 0 },
