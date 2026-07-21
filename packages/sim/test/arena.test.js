@@ -244,6 +244,14 @@ describe('carve_world_arena — fight board from real terrain (NON-SQUARE, #30)'
       }
   })
 
+  // ISSUE #85 (flake fix): this is a heavy fuzz-sweep — 24 seeds × 82 carve_world_arena calls (1 open + 9×9
+  // anchors) = ~1968 calls + BFS flood-fills. carve_world_arena is a PROVEN pure-integer function (arena.js
+  // header: "same inputs -> byte-identical arena on every machine", zero Math.random/Date.now in its call
+  // graph — verified by source read + repo-wide grep) so the RESULT never varies; only wall-clock does. Under
+  // bun's 5000ms default per-test timeout, this sweep flipped pass/fail run-to-run on an unchanged tree: baseline
+  // ~1.1s on an idle core, but 7.5s-13.5s measured under real CPU contention (QoS-demoted probe, mirrors a
+  // busy shared dev machine) — past the 5000ms cliff. The fix is wall-clock headroom only; not one assertion
+  // below changed.
   test('6+6 placement cells fit the rolled board (open board + every fair-sized carve)', () => {
     // SPAWNS_PER_TEAM=6 both teams must still fit on the smaller board. (1) the fully-open window seats a full
     // 6+6 at EVERY rolled size; (2) across a fuzz of seeds × anchors, any fair-sized board (≥40 connected cells)
@@ -267,7 +275,7 @@ describe('carve_world_arena — fight board from real terrain (NON-SQUARE, #30)'
           expect(arena.spawns_b.length).toBe(6)
         }
     }
-  })
+  }, 30000)
 
   test('CONNECTIVITY: both team spawns share ONE walkable component — a real bridge always links them (lake-split guard)', () => {
     // The lake case (design flag): a water body can split a window into shores, which would strand red on one
