@@ -154,14 +154,12 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
     })
 
     test('a floor-dead mob-0 is NOT revived by a corrected alive snapshot — it despawns once and stays gone (V1)', async () => {
-      fight_store
-        .getState()
-        .input({
-          type: 'init',
-          fight_id: FIGHT,
-          my_key: 'p0',
-          ctx: { my_entity_id: CHAR, beat_ctx: { grid_width: 20 } },
-        })
+      fight_store.getState().input({
+        type: 'init',
+        fight_id: FIGHT,
+        my_key: 'p0',
+        ctx: { my_entity_id: CHAR, beat_ctx: { grid_width: 20 } },
+      })
       fight_store.getState().input({ type: 'snapshot', fight: fight_object(30), version: 5 })
       expect(use_dungeon.getState().dungeon?.id, 'the run store must project the live board record').toBe(FIGHT)
 

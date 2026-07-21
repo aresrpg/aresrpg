@@ -7,8 +7,8 @@ import { I18nextProvider, initReactI18next } from 'react-i18next'
 import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
 
 import en from '../../i18n/locales/en.json'
-
 import { set_catalog_for_test } from '../../game/data/mob_catalog.js'
+
 import { RosterChip } from './world_tab'
 
 afterAll(() => set_catalog_for_test())

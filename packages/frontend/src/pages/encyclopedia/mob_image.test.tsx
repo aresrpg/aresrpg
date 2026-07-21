@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
 
 import { set_catalog_for_test } from '../../game/data/mob_catalog.js'
+
 import {
   EncyclopediaMobImage,
   MOB_IMAGE_RETRY_DELAYS_MS,

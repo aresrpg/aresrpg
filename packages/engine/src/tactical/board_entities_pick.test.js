@@ -18,8 +18,9 @@
 import { test, expect, describe } from 'bun:test'
 import { PerspectiveCamera, Vector3 } from 'three'
 
-import { cell_at_ndc } from './board_picking.js'
 import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
+
+import { cell_at_ndc } from './board_picking.js'
 
 // MISSING-ARTIFACT (#117): board_entities.js unconditionally imports create_character_avatar, which
 // static-imports the absent-by-design senshi_male.glb — see test_helpers/glb_fixture.js. Guarded dynamic

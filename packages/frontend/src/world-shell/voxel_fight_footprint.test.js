@@ -7,8 +7,9 @@
 // so here we only assert the fold never re-implements a shape and never lies about the zone). Pure — no scene/GPU.
 import { describe, expect, it } from 'bun:test'
 
-import { footprint_of_effects, is_glyph_spell } from './voxel_fight_folds.js'
 import { SPELLS_SEED_AVAILABLE } from '../test_helpers/spells_fixture.js'
+
+import { footprint_of_effects, is_glyph_spell } from './voxel_fight_folds.js'
 
 // SHAPE_* enum (packages/sim/src/spell_effect.js) — the on-chain shape ids a normalized effect carries. Inlined
 // because @aresrpg/sim only re-exports the shape MATH (get_aoe_cells), not the raw shape constants.

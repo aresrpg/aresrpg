@@ -15,8 +15,9 @@ import {
   Texture,
 } from 'three'
 
-import { apply_pixel_filter } from './mob_model.js' // [one-mob-sdk 2026-07-13] moved to the single mob-render home
 import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
+
+import { apply_pixel_filter } from './mob_model.js' // [one-mob-sdk 2026-07-13] moved to the single mob-render home
 
 // MISSING-ARTIFACT (#117): character_avatar.js resolves the absent-by-design senshi_male.glb via a static
 // Vite `?url` import (test_helpers/glb_fixture.js) — the module cannot load without the file PRESENT on

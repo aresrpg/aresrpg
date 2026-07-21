@@ -9,10 +9,10 @@ import { I18nextProvider, initReactI18next } from 'react-i18next'
 import { configure_walrus_assets, item_icon_url } from '@aresrpg/sdk/jobs'
 
 import en from '../i18n/locales/en.json'
+import { SHOP_AVAILABLE } from '../test_helpers/shop_fixture.js'
 
 import { shop_item_icon } from './shop_icon'
 import { VitrineCard, type CardItem } from './shop_vitrine'
-import { SHOP_AVAILABLE } from '../test_helpers/shop_fixture.js'
 
 const read_json = (relative_url: string) => JSON.parse(readFileSync(new URL(relative_url, import.meta.url), 'utf8'))
 // MISSING-ARTIFACT (#117): seed/mainnet/{shop,pet_boxes}.json is content-pipeline output, absent by design

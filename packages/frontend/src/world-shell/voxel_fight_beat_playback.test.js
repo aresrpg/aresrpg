@@ -175,14 +175,12 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
 
     test('a receipt damage beat mounts the floater and the cast beat mounts the swing on the board handle', async () => {
       // ── boot the live fight through the ONE door (the projection tail fills use_dungeon.dungeon itself) ──
-      fight_store
-        .getState()
-        .input({
-          type: 'init',
-          fight_id: FIGHT,
-          my_key: 'p0',
-          ctx: { my_entity_id: CHAR, beat_ctx: { grid_width: 20 } },
-        })
+      fight_store.getState().input({
+        type: 'init',
+        fight_id: FIGHT,
+        my_key: 'p0',
+        ctx: { my_entity_id: CHAR, beat_ctx: { grid_width: 20 } },
+      })
       fight_store.getState().input({ type: 'snapshot', fight: FIGHT_OBJECT, version: 5 })
       expect(use_dungeon.getState().dungeon?.id, 'the run store must project the live board record').toBe(FIGHT)
 

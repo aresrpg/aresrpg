@@ -13,8 +13,9 @@
 import { test, expect, describe, spyOn } from 'bun:test'
 import { BackSide, Group } from 'three'
 
-import { TEAM_COLORS } from './board_highlights.js'
 import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
+
+import { TEAM_COLORS } from './board_highlights.js'
 
 // MISSING-ARTIFACT (#117): board_entities.js unconditionally imports create_character_avatar, which
 // static-imports the absent-by-design senshi_male.glb — see test_helpers/glb_fixture.js. Guarded dynamic
