@@ -80,9 +80,7 @@
     "weapon_reach": "Reach",
     "on_cooldown": "On cooldown — {{n}} turn(s)",
     "casts_exhausted": "No casts left this turn",
-    "predicted_kill": "KILLS THE MOB",
-    "predicted_crit": "CRITICAL {{chance}}% → {{value}}",
-    "predicted_crit_kill": "CRITICAL {{chance}}% → KILLS"
+    "predicted_kill": "KILLS THE MOB"
   },
   "nav": {
     "world": "World",

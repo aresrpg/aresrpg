@@ -80,9 +80,7 @@
     "weapon_reach": "Portée",
     "on_cooldown": "En recharge — {{n}} tour(s)",
     "casts_exhausted": "Plus de lancers ce tour",
-    "predicted_kill": "TUE LE MONSTRE",
-    "predicted_crit": "CRITIQUE {{chance}} % → {{value}}",
-    "predicted_crit_kill": "CRITIQUE {{chance}} % → TUE"
+    "predicted_kill": "TUE LE MONSTRE"
   },
   "nav": {
     "world": "Monde",

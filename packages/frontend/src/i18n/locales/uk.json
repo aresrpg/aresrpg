@@ -80,9 +80,7 @@
     "weapon_reach": "Дальність",
     "on_cooldown": "Перезарядка — ще {{n}} хід(ів)",
     "casts_exhausted": "Більше немає використань цього ходу",
-    "predicted_kill": "ВБИВАЄ МОНСТРА",
-    "predicted_crit": "КРИТ. {{chance}}% → {{value}}",
-    "predicted_crit_kill": "КРИТ. {{chance}}% → ВБИВАЄ"
+    "predicted_kill": "ВБИВАЄ МОНСТРА"
   },
   "nav": {
     "world": "Світ",

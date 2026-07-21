@@ -80,9 +80,7 @@
     "weapon_reach": "リーチ",
     "on_cooldown": "クールダウン中 — あと{{n}}ターン",
     "casts_exhausted": "このターンの使用回数は上限です",
-    "predicted_kill": "モンスターを倒す",
-    "predicted_crit": "クリティカル {{chance}}% → {{value}}",
-    "predicted_crit_kill": "クリティカル {{chance}}% → 撃破"
+    "predicted_kill": "モンスターを倒す"
   },
   "nav": {
     "world": "ワールド",

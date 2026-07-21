@@ -2,13 +2,14 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Board-hover fight tooltip — the fighter under the cursor on the tactical board, shown with its name + a
 // TWEENED HP (hp eases at the house pace, never snaps — use_tweened_hp) and, while a spell is armed,
-// the EXACT PREDICTED OUTCOME of that cast on the target: show exactly what will happen — damage
-// taken, critical ?, effects, kill — e.g. life (6 −4) with the −4 in red, "kills the mob". The prediction runs
-// through the client cast-prediction path (predict_cast → @aresrpg/sim, the ONE damage home) via
-// use_target_prediction; this component only PROJECTS its canonical actions into: the head non-crit life-swing
-// (−N red / +N green), a KILLS / CRIT-KILLS line, a "CRITICAL n% → −X" crit-branch line, the spell's secondary
-// effect rows (shared seed_effect_line formatter), and a push/pull line. It never re-simulates and never reads
-// authored damage RANGES for the head (ranges were the bug — the number is the sim's exact outcome).
+// the EXACT PREDICTED OUTCOME of that cast on the target: show exactly what will happen — the damage
+// taken, effects, kill — e.g. life (6 −4) with the −4 in red, "kills the mob". A fight is seed-deterministic, so
+// whether the cast crits is a FACT (#163): the head figure shows the resolved life-swing and, when it is a crit,
+// paints that number bold + orange — there is NO separate "CRITICAL n%" line. The prediction runs through the
+// client cast-prediction path (predict_cast → @aresrpg/sim, the ONE damage home) via use_target_prediction; this
+// component (via TooltipCard) only PROJECTS its canonical actions into: the head life-swing (−N red / +N green,
+// orange on a crit), a KILLS line, the spell's secondary effect rows (shared seed_effect_line formatter), and a
+// push/pull line. It never re-simulates and never reads authored damage RANGES (ranges were the bug).
 // Reads the hovered id + cursor from `state.fight_hover` (published by the imperative roam layer on pointermove)
 // and the fighter off the AUTHORITATIVE `state.fight` slice. Hidden when not hovering a fighter / not in a fight /
 // the fighter is dead. Works for mobs AND players.
@@ -107,9 +108,9 @@ export function EntityTooltip() {
   const { t } = useTranslation()
   const fight = use_fight_view() // synchronous core view (S2 mirror kill); hover stays a game-core slice
   const hover = use_game_state((s) => s.fight_hover)
-  // live predict_cast for the armed spell on this target — BOTH authored branches + the crit chance + the
-  // spell's secondary effect rows (damage taken, critical ?, effects, kill).
-  const { base, crit: predicted_crit, crit_chance: predicted_crit_chance, effects, target_ref } = use_target_prediction()
+  // live predict_cast for the armed spell on this target — the SINGLE resolved outcome (crit or not is a
+  // seed-deterministic fact, decided upstream), its is_crit flag, and the spell's secondary effect rows.
+  const { prediction, is_crit, effects, target_ref } = use_target_prediction()
 
   const fighter = fight && hover ? fight.fighters.get(hover.entity_id) : null
   const active = !!fighter && !fighter.dead
@@ -120,18 +121,18 @@ export function EntityTooltip() {
   const [exiting, set_exiting] = useState(false)
   const last_vm = useRef(/** @type {any} */ (null))
 
-  // TARGET PREVIEW: while a spell is armed, the head hp gains the EXACT non-crit life-swing the
-  // cast lands (−N red / +N green), plus a KILLS / CRIT-KILLS line, a "CRITICAL n% → −X" crit line, the spell's
+  // TARGET PREVIEW: while a spell is armed, the head hp gains the EXACT resolved life-swing the cast lands
+  // (−N red / +N green; a deterministic crit paints that figure bold-orange), plus a KILLS line, the spell's
   // effect rows, and a push/pull line — all from the prediction's actions (the ONE damage home) + the spell row,
-  // never an authored range. Frozen with the last snapshot through the fade-out.
+  // never an authored range, never a probability. Frozen with the last snapshot through the fade-out.
   const outcome = active
-    ? predicted_target_outcome(base, predicted_crit, target_ref, fighter.health)
+    ? predicted_target_outcome(prediction, target_ref, fighter.health)
     : (last_vm.current?.outcome ?? EMPTY_OUTCOME)
   const displacement = active
     ? displacement_of(fighter.cell, outcome.displaced_to, fight?.fighters?.get(fight?.my_entity_id)?.cell)
     : (last_vm.current?.displacement ?? null)
   const vm = active
-    ? { ...build_vm(hover, fighter), outcome, displacement, crit_chance: predicted_crit_chance, effects, key: hover.entity_id }
+    ? { ...build_vm(hover, fighter), outcome, displacement, is_crit, effects, key: hover.entity_id }
     : null
   if (vm) last_vm.current = vm
 
@@ -166,7 +167,7 @@ export function EntityTooltip() {
       name={view.name}
       shown_hp={shown_hp}
       outcome={view.outcome}
-      crit_chance={view.crit_chance}
+      is_crit={view.is_crit}
       displacement={view.displacement}
       effects={view.effects}
       t={t}

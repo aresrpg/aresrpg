@@ -109,6 +109,13 @@
 .ent-tt__delta--heal {
   color: var(--good);
 }
+/* DETERMINISTIC CRIT (#163): a crit paints its (−X) figure bold + house-orange, right INSIDE the head number —
+   the owner's ruling: no second line, the figure itself is the crit tell. Placed AFTER --dmg/--heal so it wins
+   the colour cascade (same specificity, later rule) for a crit hit and the rare crit heal alike. */
+.ent-tt__delta--crit {
+  color: #ff9d3c;
+  font-weight: 800;
+}
 
 /* PREDICTED second line(s): the lethal KILLS verdict and/or the push/pull the armed cast lands —
    hairline-separated from the head, only while aiming. Derived from the prediction's actions (the ONE damage
@@ -139,15 +146,4 @@
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--bad);
-}
-/* the crit branch ("critical ?"): the "CRITICAL n% → −X / CRIT KILLS" planning line — gold, the
-   house crit accent, uppercase caps so it reads as the ceiling beside the guaranteed head number. */
-.ent-tt__crit {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--gold, #c8963c);
 }
