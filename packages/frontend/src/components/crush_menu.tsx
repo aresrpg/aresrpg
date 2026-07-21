@@ -64,6 +64,21 @@ export function crush_confirm_disabled({
   return busy || !!preview?.removed || !!crush_disabled_reason(item)
 }
 
+/** True only for a DEFINITIVE zero yield — the preview's deterministic rune set is empty. Never inferred while
+ * still loading/failed/removed, so a slow or broken read can never mislabel a real yield as a destroy (issue
+ * #270 — the confirm copy and the result toast share this ONE signal). */
+export const crush_is_zero_yield = (preview: CrushPreview | null): boolean =>
+  !!preview && !preview.removed && !preview.failed && preview.rows.length === 0
+
+/** The confirm dialog's headline copy key: the honest DESTROY framing for a definitive zero yield, the rune
+ * framing otherwise (including while loading — the preview never blocks or relabels the button). */
+export const crush_line_key = (preview: CrushPreview | null): string =>
+  crush_is_zero_yield(preview) ? 'crush.destroy_line' : 'crush.line'
+
+/** The result toast's success key — same zero-yield signal as the confirm copy, so the two can never disagree. */
+export const crush_success_key = (preview: CrushPreview | null): string =>
+  crush_is_zero_yield(preview) ? 'crush.success_destroyed' : 'crush.success'
+
 /**
  * Testable click seam for the confirm button. The eligibility refusal is created inside the toast-owned promise,
  * so even an impossible programmatic press is humanized instead of becoming a silent rejected handler.
@@ -71,11 +86,13 @@ export function crush_confirm_disabled({
 export function dispatch_crush_action({
   item,
   character_id,
+  success_key = 'crush.success',
   crush = crush_item,
   toast = (promise, messages) => use_toast.getState().promise(promise, messages),
 }: {
   item: any
   character_id: string | null
+  success_key?: string
   crush?: (args: { item: any; character_id: string }) => Promise<any>
   toast?: (promise: Promise<any>, messages: { pending: string; success: string }) => Promise<any>
 }): Promise<any> {
@@ -87,7 +104,7 @@ export function dispatch_crush_action({
   })
   return toast(submitted, {
     pending: i18n.t('crush.pending'),
-    success: i18n.t('crush.success'),
+    success: i18n.t(success_key),
   })
 }
 
@@ -214,7 +231,7 @@ function CrushConfirmModal({ item, onClose }: { item: any; onClose: () => void }
     if (busy) return
     set_busy(true)
     try {
-      await dispatch_crush_action({ item, character_id })
+      await dispatch_crush_action({ item, character_id, success_key: crush_success_key(preview) })
       onClose()
     } catch {
       /* already surfaced by the humanizing toast (pre-flight refusals arrive translated) */
@@ -302,7 +319,9 @@ function CrushConfirmModal({ item, onClose }: { item: any; onClose: () => void }
             {!preview?.removed && (
               <>
                 <span style={{ fontSize: 11, color: T.muted, lineHeight: 1.5 }}>
-                  {t('crush.line', { item: item.name })}
+                  {/* honest reframe (issue #270): a definitive zero-yield item destroys, it doesn't "break
+                      down into runes" — crush_line_key is the SAME signal the result toast picks off */}
+                  {t(crush_line_key(preview), { item: item.name })}
                 </span>
                 <span style={{ fontSize: 10.5, color: T.gold, letterSpacing: '0.04em', lineHeight: 1.5 }}>
                   {t('crush.warning')}
