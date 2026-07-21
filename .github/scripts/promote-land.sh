@@ -7,7 +7,7 @@
 # ONE home for "land a promote-requested PR onto its base by fast-forward, signatures intact".
 # Called by BOTH triggers so the asserts + stamp + ff-push are never duplicated:
 #   • .github/workflows/promote.yml       — the owner's `/promote` command (one PR, interactive)
-#   • .github/workflows/promote-queue.yml — check_suite:completed (labeled PRs, land-on-green)
+#   • .github/workflows/promote-queue.yml — gate/checks workflow_run:completed (land-on-green)
 #
 # Master never takes a merge COMMIT: landing is a fast-forward push of the exact approved head
 # SHA, so master's commits stay BYTE-IDENTICAL to edge's (signatures survive perfectly) and the
@@ -59,7 +59,7 @@ esac
 # ── owner authorization — the LABEL IS NOT A CAPABILITY ──────────────────────────────────────
 # `promote-requested` is add-able by any write collaborator via the UI, so it can never be the
 # authorization token. The owner's WORD is: an owner-authored `/promote` comment must exist on
-# this PR. This re-establishes "the owner asked for it" in the check_suite path (which has no
+# this PR. This re-establishes "the owner asked for it" in the workflow_run path (which has no
 # commenter) and makes a manually-labeled PR un-landable. Numeric id is immortal, login the
 # readable second factor — BOTH hold.
 OWNER_PROMOTE=$(gh api "repos/${REPO}/issues/${PR}/comments" --paginate \
