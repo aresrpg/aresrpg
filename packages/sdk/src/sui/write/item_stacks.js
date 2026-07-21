@@ -16,6 +16,8 @@ import { as_object_arg } from '../object_arg.js'
  * @property {bigint | number | string} amount
  * @property {Transaction} [tx]
  *
+ * @typedef {Omit<SplitStackArgs, 'tx'> & {tx: Transaction}} SplitStackCommandArgs
+ *
  * @typedef {Object} MergeStackArgs
  * @property {string} kiosk_id
  * @property {string} personal_kiosk_cap_id
@@ -33,22 +35,17 @@ function positive_amount(amount) {
 }
 
 /**
- * Split `amount` units from a kiosk-locked stack. The Move door extracts the source, applies the package-private
- * Item arithmetic, and re-locks both survivors into this same personal kiosk before returning the new stack ID.
+ * Compose the canonical locked-stack split and return its new stack ID so another command can consume it in the
+ * same PTB. Keeping this command here prevents callers such as gift send from duplicating the Move target or its
+ * policy/version arguments.
  * @param {import("../../../types.js").Context} context
- * @returns {(args: SplitStackArgs) => Transaction}
+ * @returns {(args: SplitStackCommandArgs) => import('@mysten/sui/transactions').TransactionResult}
  */
-export function split_stack_ptb(context) {
+export function split_locked_stack_id(context) {
   const { network } = context
-  return ({
-    kiosk_id,
-    personal_kiosk_cap_id,
-    item_id,
-    amount,
-    tx = new Transaction(),
-  }) => {
+  return ({ kiosk_id, personal_kiosk_cap_id, item_id, amount, tx }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
-    tx.moveCall({
+    return tx.moveCall({
       target: `${a.LATEST_PACKAGE_ID}::extract::split_locked_stack`,
       arguments: [
         as_object_arg(tx, kiosk_id),
@@ -65,6 +62,31 @@ export function split_stack_ptb(context) {
         shared_object_arg(tx, network, 'ITEM_POLICY', false, a.ITEM_POLICY),
         shared_object_arg(tx, network, 'VERSION', false, a.VERSION),
       ],
+    })
+  }
+}
+
+/**
+ * Split `amount` units from a kiosk-locked stack. The Move door extracts the source, applies the package-private
+ * Item arithmetic, and re-locks both survivors into this same personal kiosk before returning the new stack ID.
+ * @param {import("../../../types.js").Context} context
+ * @returns {(args: SplitStackArgs) => Transaction}
+ */
+export function split_stack_ptb(context) {
+  const split_locked_stack = split_locked_stack_id(context)
+  return ({
+    kiosk_id,
+    personal_kiosk_cap_id,
+    item_id,
+    amount,
+    tx = new Transaction(),
+  }) => {
+    split_locked_stack({
+      kiosk_id,
+      personal_kiosk_cap_id,
+      item_id,
+      amount,
+      tx,
     })
     return tx
   }

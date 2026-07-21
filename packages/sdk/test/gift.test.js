@@ -72,6 +72,129 @@ describe('gift_send_ptb — gift::send builder (funds off the STAMPED royalty fl
     expect(typeof tx.serialize()).toBe('string')
   })
 
+  test('mixed full + partial stack transfers split only the partial source and gift both resulting ids atomically', () => {
+    const tx = gift_send_ptb(deployed_context)({
+      kiosk_id: SEND.kiosk_id,
+      personal_kiosk_cap_id: SEND.personal_kiosk_cap_id,
+      recipient: SEND.recipient,
+      item_transfers: [
+        { item_id: id('item1'), amount: 3, available_amount: 10 },
+        { item_id: id('item2'), amount: 4, available_amount: 4 },
+      ],
+    })
+
+    expect(targets(tx)).toEqual([
+      'extract::split_locked_stack',
+      'vector::singleton',
+      'vector::push_back',
+      'gift::send',
+    ])
+    expect(pure_u64s(tx)).toEqual(
+      expect.arrayContaining([2n * ROYALTY_MIN, 3n]),
+    )
+
+    const { commands } = tx.getData()
+    const split_index = commands.findIndex(
+      command =>
+        command.$kind === 'MoveCall' &&
+        command.MoveCall.module === 'extract' &&
+        command.MoveCall.function === 'split_locked_stack',
+    )
+    const vector_index = commands.findIndex(
+      command =>
+        command.$kind === 'MoveCall' &&
+        command.MoveCall.module === 'vector' &&
+        command.MoveCall.function === 'singleton',
+    )
+    const { MoveCall: vector } = commands[vector_index]
+    const push = commands.find(
+      command =>
+        command.$kind === 'MoveCall' &&
+        command.MoveCall.module === 'vector' &&
+        command.MoveCall.function === 'push_back',
+    ).MoveCall
+    const send = commands.find(
+      command =>
+        command.$kind === 'MoveCall' &&
+        command.MoveCall.module === 'gift' &&
+        command.MoveCall.function === 'send',
+    )
+
+    expect(vector.typeArguments).toEqual(['0x2::object::ID'])
+    expect(vector.arguments[0]).toEqual({
+      $kind: 'NestedResult',
+      NestedResult: [split_index, 0],
+    })
+    expect(push.typeArguments).toEqual(['0x2::object::ID'])
+    expect(push.arguments[0]).toEqual({
+      $kind: 'NestedResult',
+      NestedResult: [vector_index, 0],
+    })
+    expect(push.arguments[1].$kind).toBe('Input')
+    expect(send.MoveCall.arguments[2]).toEqual({
+      $kind: 'NestedResult',
+      NestedResult: [vector_index, 0],
+    })
+    expect(typeof tx.serialize()).toBe('string')
+  })
+
+  test('full stack transfers preserve the direct gift shape without a split command', () => {
+    const tx = gift_send_ptb(deployed_context)({
+      kiosk_id: SEND.kiosk_id,
+      personal_kiosk_cap_id: SEND.personal_kiosk_cap_id,
+      recipient: SEND.recipient,
+      item_transfers: [
+        { item_id: id('item1'), amount: 10, available_amount: 10 },
+      ],
+    })
+    expect(targets(tx)).toEqual(['gift::send'])
+    expect(
+      tx.getData().commands.some(command => command.$kind === 'MakeMoveVec'),
+    ).toBe(false)
+  })
+
+  test('refuses ambiguous or invalid stack transfer descriptions before composing', () => {
+    const base = {
+      kiosk_id: SEND.kiosk_id,
+      personal_kiosk_cap_id: SEND.personal_kiosk_cap_id,
+      recipient: SEND.recipient,
+    }
+    const transfer = {
+      item_id: id('item1'),
+      amount: 3,
+      available_amount: 10,
+    }
+
+    expect(() =>
+      gift_send_ptb(deployed_context)({
+        ...base,
+        item_ids: [id('legacy')],
+        item_transfers: [transfer],
+      }),
+    ).toThrow(/item_ids or item_transfers/)
+    expect(() =>
+      gift_send_ptb(deployed_context)({ ...base, item_transfers: [] }),
+    ).toThrow(/item_transfers must be a non-empty array/)
+    expect(() =>
+      gift_send_ptb(deployed_context)({
+        ...base,
+        item_transfers: [{ ...transfer, amount: 0 }],
+      }),
+    ).toThrow(/amount must be >= 1/)
+    expect(() =>
+      gift_send_ptb(deployed_context)({
+        ...base,
+        item_transfers: [{ ...transfer, amount: 11 }],
+      }),
+    ).toThrow(/exceeds available_amount/)
+    expect(() =>
+      gift_send_ptb(deployed_context)({
+        ...base,
+        item_transfers: [transfer, transfer],
+      }),
+    ).toThrow(/duplicate item_id/)
+  })
+
   test('omitted royalty_mist → funds EXACTLY the stamped floor (N × ITEM_ROYALTY_MIN_MIST)', () => {
     const { royalty_mist, ...no_royalty } = SEND
     void royalty_mist

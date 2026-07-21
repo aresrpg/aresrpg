@@ -8,6 +8,8 @@ import {
 } from '../../deployment/aresrpg.js'
 import { as_object_arg } from '../object_arg.js'
 
+import { split_locked_stack_id } from './item_stacks.js'
+
 // GIFT PTB BUILDERS for the merged `aresrpg` package's `gift` module — escrow-recoverable player-to-player item
 // send (design `docs/ITEM_SEND_PLAN.md` §A4). Three signer-split doors:
 //   • send(SENDER)    — funds the royalty escrow off the STAMPED floor (ITEM_ROYALTY_MIN_MIST, deployment/
@@ -37,7 +39,9 @@ import { as_object_arg } from '../object_arg.js'
 
 /**
  * SEND `item_ids` (all kiosk-locked in the sender's kiosk) to `recipient`, pre-funding the royalty escrow that
- * makes the gift free to receive. Funds off the STAMPED floor `item_ids.length × a.ITEM_ROYALTY_MIN_MIST` —
+ * makes the gift free to receive. Alternatively, pass `item_transfers` with an amount and available_amount for
+ * each item; partial stacks are split and the returned locked-stack IDs are gifted atomically. Funds off the
+ * STAMPED floor `number of resulting items × a.ITEM_ROYALTY_MIN_MIST` —
  * REFUSES loudly if that stamp is missing/zero (never build a gift off a blank floor) or an explicit
  * `royalty_mist` is below it — an under-funded gift would be silently UNCLAIMABLE (the claim's escrow split
  * aborts). Omit `royalty_mist` to fund exactly the stamped floor; pass a higher value to over-fund (surplus
@@ -47,10 +51,12 @@ import { as_object_arg } from '../object_arg.js'
  */
 export function gift_send_ptb(context) {
   const { network } = context
+  const split_locked_stack = split_locked_stack_id(context)
   return ({
     kiosk_id,
     personal_kiosk_cap_id,
     item_ids,
+    item_transfers,
     recipient,
     royalty_mist,
     tx = new Transaction(),
@@ -60,10 +66,69 @@ export function gift_send_ptb(context) {
       throw new Error(
         '[gift_send_ptb] kiosk_id, personal_kiosk_cap_id and recipient are required.',
       )
-    if (!Array.isArray(item_ids) || item_ids.length === 0)
+
+    const has_item_transfers = item_transfers !== undefined
+    if (has_item_transfers && item_ids !== undefined)
+      throw new Error(
+        '[gift_send_ptb] provide either item_ids or item_transfers, not both.',
+      )
+
+    let transfers
+    if (has_item_transfers) {
+      if (!Array.isArray(item_transfers) || item_transfers.length === 0)
+        throw new Error(
+          '[gift_send_ptb] item_transfers must be a non-empty array.',
+        )
+
+      const seen = new Set()
+      transfers = item_transfers.map((transfer, index) => {
+        if (!transfer || typeof transfer !== 'object' || !transfer.item_id)
+          throw new Error(
+            `[gift_send_ptb] item_transfers[${index}].item_id is required.`,
+          )
+        if (seen.has(transfer.item_id))
+          throw new Error(
+            `[gift_send_ptb] duplicate item_id ${transfer.item_id} in item_transfers.`,
+          )
+        seen.add(transfer.item_id)
+
+        let amount
+        let available_amount
+        try {
+          amount = BigInt(transfer.amount)
+          available_amount = BigInt(transfer.available_amount)
+        } catch {
+          throw new Error(
+            `[gift_send_ptb] item_transfers[${index}] amount and available_amount must be integers.`,
+          )
+        }
+        if (amount < 1n)
+          throw new Error(
+            `[gift_send_ptb] item_transfers[${index}].amount must be >= 1.`,
+          )
+        if (available_amount < 1n)
+          throw new Error(
+            `[gift_send_ptb] item_transfers[${index}].available_amount must be >= 1.`,
+          )
+        if (amount > available_amount)
+          throw new Error(
+            `[gift_send_ptb] item_transfers[${index}].amount exceeds available_amount.`,
+          )
+        return {
+          item_id: transfer.item_id,
+          amount,
+          available_amount,
+        }
+      })
+    } else if (!Array.isArray(item_ids) || item_ids.length === 0) {
       throw new Error(
         '[gift_send_ptb] item_ids must be a non-empty array of kiosk-locked item ids.',
       )
+    }
+
+    const send_item_ids = transfers
+      ? transfers.map(transfer => transfer.item_id)
+      : item_ids
 
     // The STAMPED royalty floor (never a chain read here — see the DRIFT POSTURE header note). Missing/zero
     // means an un-stamped network: refuse rather than build a gift that could be free (or unclaimable at 0).
@@ -72,20 +137,57 @@ export function gift_send_ptb(context) {
         '[gift_send_ptb] ITEM_ROYALTY_MIN_MIST is not stamped in release.json for this network — run the publish/upgrade ceremony before composing a gift.',
       )
     const min_mist = BigInt(a.ITEM_ROYALTY_MIN_MIST)
-    const floor = min_mist * BigInt(item_ids.length)
+    const floor = min_mist * BigInt(send_item_ids.length)
     const funded = royalty_mist == null ? floor : BigInt(royalty_mist)
     if (funded < floor)
       throw new Error(
-        `[gift_send_ptb] royalty_mist ${funded} is below the stamped floor ${floor} (${item_ids.length} items × ${min_mist} ITEM_ROYALTY_MIN_MIST) — an under-funded gift is unclaimable.`,
+        `[gift_send_ptb] royalty_mist ${funded} is below the stamped floor ${floor} (${send_item_ids.length} items × ${min_mist} ITEM_ROYALTY_MIN_MIST) — an under-funded gift is unclaimable.`,
       )
 
     const [royalty] = tx.splitCoins(tx.gas, [tx.pure.u64(funded)])
+    const has_partial_stack = transfers?.some(
+      ({ amount, available_amount }) => amount < available_amount,
+    )
+    /** @type {import('@mysten/sui/transactions').TransactionArgument} */
+    let composed_item_ids
+    if (has_partial_stack) {
+      const transfer_ids = transfers.map(
+        ({ item_id, amount, available_amount }) => {
+          if (amount === available_amount) return tx.pure.id(item_id)
+          const [split_item_id] = split_locked_stack({
+            kiosk_id,
+            personal_kiosk_cap_id,
+            item_id,
+            amount,
+            tx,
+          })
+          return split_item_id
+        },
+      )
+
+      // MakeMoveVec is object-only in Sui, whereas split_locked_stack returns the value type object::ID. Build
+      // the mixed pure/result ID vector with the framework's generic vector functions instead.
+      const [first_id, ...remaining_ids] = transfer_ids
+      const [dynamic_item_ids] = tx.moveCall({
+        target: '0x1::vector::singleton',
+        typeArguments: ['0x2::object::ID'],
+        arguments: [first_id],
+      })
+      for (const item_id of remaining_ids)
+        tx.moveCall({
+          target: '0x1::vector::push_back',
+          typeArguments: ['0x2::object::ID'],
+          arguments: [dynamic_item_ids, item_id],
+        })
+      composed_item_ids = dynamic_item_ids
+    } else composed_item_ids = tx.pure.vector('id', send_item_ids)
+
     tx.moveCall({
       target: `${a.GIFTING_PACKAGE_ID}::gift::send`,
       arguments: [
         as_object_arg(tx, kiosk_id), // kiosk: &mut Kiosk (the sender's)
         as_object_arg(tx, personal_kiosk_cap_id), // pkcap: &PersonalKioskCap (the sender's)
-        tx.pure.vector('id', item_ids), // item_ids: vector<ID>
+        composed_item_ids, // item_ids: vector<ID>
         tx.pure.address(recipient), // recipient: address
         royalty, // royalty: Coin<SUI> (pre-funded escrow — ~0.01 SUI × N)
         shared_object_arg(tx, network, 'GAME_CONFIG', false, a.GAME_CONFIG), // config: &GameConfig
