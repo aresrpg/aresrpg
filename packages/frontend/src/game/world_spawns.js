@@ -43,7 +43,8 @@ import { group_engage_blocked } from '@aresrpg/world/nearby_fights'
 
 import i18n from '../i18n'
 import { game_log } from '../core/log.js'
-import { get_zones, get_config } from '../rpc/client'
+import { get_config } from '../rpc/client'
+import { subscribe_zones } from '../rpc/zones_poll'
 import { zone_rows_v1, zone_rows_chain, zone_world_doc } from './zone_rows.js'
 import { get_sdk } from '../chain/sdk'
 import { use_world_binding } from '../world-shell/session_gate.js'
@@ -116,6 +117,26 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
   let disposed = false
   let dims_world = /** @type {string | null} */ (null) // world whose doc facts were fed into the spawns core
   let poll_seq = 0 // versioned-snapshot stamp (the core discards out-of-order polls)
+  // Discovered-zone list — the ONE shared /v1/zones poll (rpc/zones_poll.js — #242), also read by CompassStrip
+  // and DiscoveryPrompts, instead of this loop fetching it independently on its own 6s tick.
+  let zones_view = /** @type {{ data: any, error: unknown, loading: boolean, stale: boolean }} */ ({
+    data: null,
+    error: null,
+    loading: false,
+    stale: false,
+  })
+  let zones_world_id = /** @type {string | null} */ (null)
+  let unsubscribe_zones = () => {}
+  const ensure_zones_subscription = (/** @type {string | null} */ world_id) => {
+    if (zones_world_id === world_id) return
+    unsubscribe_zones()
+    zones_world_id = world_id
+    unsubscribe_zones = world_id
+      ? subscribe_zones(world_id, (v) => {
+          zones_view = v
+        })
+      : () => {}
+  }
   let polling = false
   let engaging = false
   let resumed = false // one-shot guard: fire the world-fight reconnect read once the world binds (see poll)
@@ -315,6 +336,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
   const poll = async () => {
     if (disposed || polling || document.hidden) return
     const world_id = current_world_id()
+    ensure_zones_subscription(world_id)
     if (!world_id) {
       if (entries.size) {
         spawns_input({ type: 'world_bound', world_id: null }) // left the world → the core resets
@@ -339,7 +361,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       // Player pos is SIGNED WORLD space → the chain zone KEY (data/claim/gather) translates world→chain then floors.
       const cell = zone_of_world(Number(p[0]), Number(p[2]), zone_size, offset_x, offset_z)
       if (!cell) return
-      const zdata = await get_zones(world_id).catch(() => null)
+      const zdata = zones_view.data // the shared poll's latest snapshot — stale-on-error, never a hard null flip
       const discovered = (zdata?.zones ?? []).filter((z) => z.discovered !== false)
       const discovered_keys = new Set(discovered.map((z) => `${z.zx}:${z.zy}`))
       /** @type {Array<{zx:number,zy:number}>} */
@@ -1028,6 +1050,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       disposed = true
       cancelAnimationFrame(raf)
       clearInterval(timer)
+      unsubscribe_zones()
       context.events.off('discovery/zone_searched', on_zone_searched)
       ;(canvas ?? window).removeEventListener('pointerdown', /** @type {any} */ (on_down))
       window.removeEventListener('pointerup', /** @type {any} */ (on_up))

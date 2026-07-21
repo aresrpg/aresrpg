@@ -44,7 +44,8 @@ import { use_game_state, context } from '../../../store.js'
 import { play_sfx } from '../../../core/audio/sfx.js'
 import { InteractionChip } from '../../../touch/InteractionChip.jsx'
 import { use_rpc_view } from '../../../../rpc/use_view'
-import { get_zones, get_zone } from '../../../../rpc/client'
+import { get_zone } from '../../../../rpc/client'
+import { use_zones_view, refetch_zones } from '../../../../rpc/zones_poll'
 import { zone_rows_v1 } from '../../../zone_rows.js'
 import { use_world_binding } from '../../../../world-shell/session_gate.js'
 import { use_spawns } from '../../../../world-shell/spawns_adapter.js'
@@ -177,12 +178,9 @@ export function CompassStrip({ mobile = false } = {}) {
   const cell = pose ? zone_of_world(pose.x, pose.z, zone_size, off.x, off.z) : null
   const origin_zone = zone_of(off.x, off.z, zone_size)
 
-  // Discovered-zone set — the same RPC view/cadence DiscoveryPrompts polls (UI-DATA LAW short-poll).
-  const zones_view = use_rpc_view((signal) => (world_id ? get_zones(world_id, signal) : Promise.resolve(null)), {
-    interval_ms: 6000,
-    enabled: !!world_id && !synth_on,
-    deps: [world_id],
-  })
+  // Discovered-zone set — the ONE shared /v1/zones poll (rpc/zones_poll.js — #242): CompassStrip,
+  // DiscoveryPrompts, and world_spawns.js all derive from this SAME timer instead of each running their own.
+  const zones_view = use_zones_view(!synth_on ? world_id : null)
   const rpc_zone_row = cell ? (zones_view.data?.zones?.find((z) => z.zx === cell.zx && z.zy === cell.zy) ?? null) : null
   // RECEIPT vs POLL (UX-latency fix — the compass used to stay on UNSEARCHED far too long after the search
   // was revealed): the search tx's OWN receipt already flipped this cell inside the shared spawns/zones core

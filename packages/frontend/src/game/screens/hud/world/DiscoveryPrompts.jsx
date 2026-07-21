@@ -28,6 +28,7 @@ import { use_game_state, context } from '../../../store.js'
 import { use_prompt_stack } from '../../../../world-shell/prompt_stack.js'
 import { use_rpc_view } from '../../../../rpc/use_view'
 import { get_characters, get_zones } from '../../../../rpc/client'
+import { use_zones_view } from '../../../../rpc/zones_poll'
 import {
   push_event_toast,
   push_progress_toast,
@@ -100,12 +101,9 @@ export function DiscoveryPrompts() {
   )
   const world_id = char_view.data?.[0]?.world ?? null
 
-  // Discovered-zone set for the current world (short-poll; a search's own confirm refetches next tick).
-  const zones_view = use_rpc_view((signal) => (world_id ? get_zones(world_id, signal) : Promise.resolve(null)), {
-    interval_ms: 6000,
-    enabled: !!world_id,
-    deps: [world_id],
-  })
+  // Discovered-zone set for the current world — the ONE shared /v1/zones poll (rpc/zones_poll.js — #242),
+  // also read by CompassStrip and world_spawns.js; a search's own confirm refetches it for every consumer.
+  const zones_view = use_zones_view(world_id)
 
   // The world doc (config-grade, one cached read): the zone TTL for the re-search gate (§17.1), plus the
   // zone grid the codec needs — zone_size and the world↔chain offset (bounds/2). [F] arms on a fresh zone
