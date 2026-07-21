@@ -127,12 +127,8 @@ export async function get_template_detail_map(template_ids) {
   if (!ids.length) return new Map()
   try {
     const sdk = await get_sdk()
-    const rows = await Promise.all(
-      ids.map(async (id) => [id, await sdk.get_item_template(id).catch(() => null)])
-    )
-    return new Map(
-      rows.filter(([, row]) => !!row).map(([id, row]) => [id, normalize_item_template(row, id, null)])
-    )
+    const rows = await Promise.all(ids.map(async (id) => [id, await sdk.get_item_template(id).catch(() => null)]))
+    return new Map(rows.filter(([, row]) => !!row).map(([id, row]) => [id, normalize_item_template(row, id, null)]))
   } catch {
     return new Map()
   }
