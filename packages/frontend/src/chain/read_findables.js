@@ -10,7 +10,7 @@
 import { get_encyclopedia } from '../rpc/client'
 
 import { get_sdk } from './sdk'
-import { normalize_item_template } from './read_templates.js'
+import { normalize_item_template, decode_item_stat_ranges } from './read_templates.js'
 
 // normalize_item_template UPPERCASEs item_category, so RESOURCE/CONSUMABLE/RUNE are the stackable categories
 // (mirrors item.move `is_stackable_category` — rune joined 2026-07-11 with the single-tx crush mint; all gear
@@ -24,9 +24,28 @@ let _templates_promise =
   )
 
 /**
+ * The `/v1/encyclopedia` item projection serves the authored StatsMin/MaxKey ranges as BIASED
+ * `{ chain_field: [min, max] }` (issue #219; a chain-neutral half is null, both present in practice).
+ * Split the pairs back into the min/max half-blocks `decode_item_stat_ranges` consumes — the ONE stat
+ * decode home (un-bias + snake→camel rename + neutral-drop), shared with the SDK read path. `{}` (a
+ * template with no ranges, or one the snapshot has not reached pre-backfill) decodes to `{}` → the card
+ * renders honest-empty, never fabricated zeros.
+ */
+function stats_json_from_v1(v1_stats) {
+  const min = {}
+  const max = {}
+  for (const [field, pair] of Object.entries(v1_stats ?? {})) {
+    const [lo, hi] = Array.isArray(pair) ? pair : [pair, pair]
+    if (lo != null) min[field] = lo
+    if (hi != null) max[field] = hi
+  }
+  return JSON.stringify(decode_item_stat_ranges(min, max))
+}
+
+/**
  * id → the legacy template-row shape, adapted from the `/v1/encyclopedia` item projection. The projection
- * carries exact identity/name/category/level; fields it does not index keep explicit empty defaults below.
- * Memoized; empty map on error.
+ * carries exact identity/name/category/level plus the authored stat ranges (issue #219, decoded below);
+ * fields it still does not index (Display image data) keep explicit empty defaults. Memoized; empty map on error.
  */
 export function get_template_map() {
   if (!_templates_promise)
@@ -43,8 +62,9 @@ export function get_template_map() {
             name: String(t.name ?? ''),
             category: String(t.category ?? '').toUpperCase(),
             level: Number(t.level ?? 0),
-            // The current indexer projection deliberately has no template-stat DF or Display image data.
-            statsJson: '{}',
+            // Authored [min,max] characteristics from the /v1 stat projection (issue #219), decoded through
+            // the single stat_bias home. The indexer projection still has no Display image data.
+            statsJson: stats_json_from_v1(t.stats),
             display: null,
           })
         }
