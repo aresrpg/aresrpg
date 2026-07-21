@@ -52,6 +52,9 @@
     },
     "./predict_cast": {
       "import": "./src/predict_cast.js"
+    },
+    "./trace_tap": {
+      "import": "./src/trace_tap.js"
     }
   },
   "author": "AresRPG's Team",

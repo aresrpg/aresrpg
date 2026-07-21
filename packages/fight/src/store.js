@@ -34,6 +34,7 @@ import * as settle_input from './inputs.js'
 import { board_state_from_fight, fight_geometry_complete } from './board_state.js'
 import { masks_entries } from './present.js'
 import { action_divergence } from './reconcile_action.js'
+import { tap_trace_input } from './trace_tap.js'
 import {
   base_budget,
   carry_statuses,
@@ -174,6 +175,9 @@ const make_input =
   (set, get) =>
   (msg, now = Date.now()) => {
     const state = get()
+    // TRACE TAP (issue #209): every message crossing this door, VERBATIM, before any gate/set — pure data
+    // capture, zero behavior change (@aresrpg/fight/trace_tap). The bridge to a player-reachable fight report.
+    tap_trace_input(state, msg, now)
     // THE PROVIDER/SESSION GATE (INC-0, NORTH_STAR C2/C3): a mismatched-provenance local push, or a chain/ack
     // input for another fight or a superseded session, is REFUSED — recorded in `state.refused` (a logged
     // non-event) and never applied. Missing id is HELD (the current session claims it). Control signals
