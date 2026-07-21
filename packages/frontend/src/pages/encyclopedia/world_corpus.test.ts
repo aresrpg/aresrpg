@@ -4,7 +4,13 @@ import { readFileSync } from 'node:fs'
 
 import { describe, expect, test } from 'bun:test'
 
-import { WORLD_CORPUS, world_corpus_for_mob, world_corpus_for_resource, is_listed_mob_role } from './world_corpus'
+import {
+  WORLD_CORPUS,
+  world_corpus_for_mob,
+  world_corpus_for_resource,
+  is_listed_mob_role,
+  authored_content_present,
+} from './world_corpus'
 
 // CONFIG-DRIVEN, never hardcoded ids (after two stale-id prod regressions, ids resolve from a single
 // config file, never inline literals). The expectations come from the SEED MANIFEST — the config
@@ -14,20 +20,25 @@ const manifest = JSON.parse(
 )
 
 describe('world_corpus_for_mob', () => {
-  test('EVERY authored roster mob inverts to exactly its own manifest world (all 20 worlds)', () => {
-    const manifest_ids = new Map<string, string>(manifest.worlds.map((w: any) => [w.wid ?? w.id, w.id]))
-    const { worlds } = WORLD_CORPUS
-    expect(worlds.length).toBe(manifest.worlds.length)
-    for (const world of worlds) {
-      expect(manifest_ids.get(world.wid)).toBe(world.id)
-      for (const mob of world.mobs ?? []) {
-        const hits = world_corpus_for_mob(mob.id)
-        const here = hits.find((h) => h.id === world.id)
-        expect(here?.wid).toBe(world.wid)
-        expect(here?.name).toBe(world.name)
+  // MISSING-ARTIFACT (#117): seed/mainnet/<wid>/{world,mobs,resources}.json is content-pipeline output,
+  // absent by design in this public repo — WORLD_CORPUS degrades to zero worlds (issue #106).
+  test.skipIf(!authored_content_present)(
+    'EVERY authored roster mob inverts to exactly its own manifest world (all 20 worlds)',
+    () => {
+      const manifest_ids = new Map<string, string>(manifest.worlds.map((w: any) => [w.wid ?? w.id, w.id]))
+      const { worlds } = WORLD_CORPUS
+      expect(worlds.length).toBe(manifest.worlds.length)
+      for (const world of worlds) {
+        expect(manifest_ids.get(world.wid)).toBe(world.id)
+        for (const mob of world.mobs ?? []) {
+          const hits = world_corpus_for_mob(mob.id)
+          const here = hits.find((h) => h.id === world.id)
+          expect(here?.wid).toBe(world.wid)
+          expect(here?.name).toBe(world.name)
+        }
       }
     }
-  })
+  )
 
   test('returns an honest empty list for an unknown/non-living template id', () => {
     expect(world_corpus_for_mob('0xnot-a-current-mob')).toEqual([])
@@ -47,7 +58,9 @@ describe('world_corpus_for_mob', () => {
 // FEATURE: the encyclopedia gatherable pages get a clickable "FOUND IN" world list —
 // the exact mob-page idiom, inverted over the SAME authored corpus rows the worlds tab renders.
 describe('world_corpus_for_resource', () => {
-  test('EVERY authored gatherable inverts to each world that places it', () => {
+  // MISSING-ARTIFACT (#117): seed/mainnet/<wid>/{world,mobs,resources}.json is content-pipeline output,
+  // absent by design in this public repo — WORLD_CORPUS degrades to zero worlds (issue #106).
+  test.skipIf(!authored_content_present)('EVERY authored gatherable inverts to each world that places it', () => {
     const { worlds } = WORLD_CORPUS
     let checked = 0
     for (const world of worlds)

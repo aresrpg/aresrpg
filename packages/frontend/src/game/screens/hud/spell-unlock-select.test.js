@@ -8,11 +8,20 @@
 // is proven against a synthetic fixture in the exact corpus shape; the real seed proves the filter drives the
 // list end to end.
 
+import { existsSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
 import { describe, it, expect } from 'bun:test'
 
 import { resolve_class_spells, class_spells } from './fight-spells.js'
 import { newly_unlocked, roster_from_rows } from './spell-unlock-select.js'
-import SENSHI_CORPUS from '../../../../../../seed/mainnet/spells/senshi.json' with { type: 'json' }
+
+// MISSING-ARTIFACT (#117): seed/mainnet/spells/senshi.json is content-pipeline output, absent by design in
+// this public repo. Guarded dynamic import; the first describe below uses only a hardcoded fixture and
+// keeps running for real.
+const SENSHI_PATH = fileURLToPath(new URL('../../../../../../seed/mainnet/spells/senshi.json', import.meta.url))
+const SENSHI_CORPUS_AVAILABLE = existsSync(SENSHI_PATH)
+const SENSHI_CORPUS = SENSHI_CORPUS_AVAILABLE ? (await import('../../../../../../seed/mainnet/spells/senshi.json')).default : []
 
 const to_name_key = (name) =>
   String(name).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
@@ -37,14 +46,14 @@ describe('three starters at unlock_level 1 render as three L1 spells (no per-lev
 })
 
 describe('the real testnet seed drives the list through the SSOT filter', () => {
-  it('senshi deck: L1 → the 3 seeded starters; the class book is every seeded senshi spell, unlock-ascending', () => {
+  it.skipIf(!SENSHI_CORPUS_AVAILABLE)('senshi deck: L1 → the 3 seeded starters; the class book is every seeded senshi spell, unlock-ascending', () => {
     const starters_at_1 = SENSHI_CORPUS.filter(s => s.unlock === 1).map(s => to_name_key(s.name))
     expect(resolve_class_spells('senshi', 1).map(s => s.name_key)).toEqual(starters_at_1)
     const all_unlocks = SENSHI_CORPUS.map(s => s.unlock).sort((a, b) => a - b)
     expect(class_spells('senshi').map(s => s.unlock_level)).toEqual(all_unlocks)
   })
 
-  it('level-up unlock: crossing into L3 surfaces war_bellow; nothing crosses into L2; freshest slot wins', () => {
+  it.skipIf(!SENSHI_CORPUS_AVAILABLE)('level-up unlock: crossing into L3 surfaces war_bellow; nothing crosses into L2; freshest slot wins', () => {
     // real ladder (kits_data.mjs LADDER): 3 starters @1, next tier @3 — L5 no longer lands on a tier.
     expect(newly_unlocked(resolve_class_spells('senshi', 3), 2)?.name_key).toBe('war_bellow')
     expect(newly_unlocked(resolve_class_spells('senshi', 2), 1)).toBeNull()

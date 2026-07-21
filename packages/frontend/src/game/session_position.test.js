@@ -26,7 +26,7 @@ const real_storage = globalThis.localStorage
 // session_position's defense-in-depth gate reads the real dungeon store. Its browser-flavoured dependency
 // graph needs the same minimal pre-import surface used by fight_entry.test.js.
 
-const { resolve_boot_spawn } = await import('@aresrpg/world')
+const { resolve_boot_spawn } = await import('@aresrpg/world/checkpoint')
 const {
   _reset_for_test,
   can_cache_live_position,

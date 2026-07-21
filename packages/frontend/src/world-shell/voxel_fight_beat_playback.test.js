@@ -37,9 +37,13 @@ const had_audio = 'Audio' in globalThis
 // @ts-expect-error test shim
 if (!had_audio) globalThis.Audio = AudioStub
 
-const { fight_store } = await import('@aresrpg/fight')
+const { fight_store } = await import('@aresrpg/fight/store')
 const { use_dungeon } = await import('./dungeon_store.js')
-const { create_voxel_fight_adapter } = await import('./voxel_fight_adapter.js')
+const { SENSHI_MALE_GLB_AVAILABLE } = await import('../test_helpers/glb_fixture.js')
+// MISSING-ARTIFACT (#117): voxel_fight_adapter.js imports @aresrpg/engine3/tactical, whose board_entities.js
+// unconditionally imports character_avatar.js — a static import of the absent-by-design senshi_male.glb
+// (test_helpers/glb_fixture.js; full chain documented in packages/engine/src/test_helpers/glb_fixture.js).
+const { create_voxel_fight_adapter } = SENSHI_MALE_GLB_AVAILABLE ? await import('./voxel_fight_adapter.js') : {}
 
 const FIGHT = '0xbeat-fight'
 const CHAR = '0xc1'
@@ -154,59 +158,67 @@ const poll = async (predicate, { timeout = 8_000, step = 50 } = {}) => {
   return predicate()
 }
 
-describe('voxel fight adapter — wave beats become VISUAL MOUNTS (the floater/VFX playback leg)', () => {
-  const board = make_board()
-  const adapter_handle = { current: null }
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
+  'voxel fight adapter — wave beats become VISUAL MOUNTS (the floater/VFX playback leg)',
+  () => {
+    const board = make_board()
+    const adapter_handle = { current: null }
 
-  afterAll(() => {
-    adapter_handle.current?.destroy()
-    fight_store.getState().input({ type: 'init', fight_id: null }) // reset the singleton for the rest of the suite
-    use_dungeon.setState({ fight_id: null, fight_fresh: false })
-    // @ts-expect-error test shim
-    if (!had_audio) delete globalThis.Audio
-    restore_browser_globals()
-  })
+    afterAll(() => {
+      adapter_handle.current?.destroy()
+      fight_store.getState().input({ type: 'init', fight_id: null }) // reset the singleton for the rest of the suite
+      use_dungeon.setState({ fight_id: null, fight_fresh: false })
+      // @ts-expect-error test shim
+      if (!had_audio) delete globalThis.Audio
+      restore_browser_globals()
+    })
 
-  test('a receipt damage beat mounts the floater and the cast beat mounts the swing on the board handle', async () => {
-    // ── boot the live fight through the ONE door (the projection tail fills use_dungeon.dungeon itself) ──
-    fight_store
-      .getState()
-      .input({ type: 'init', fight_id: FIGHT, my_key: 'p0', ctx: { my_entity_id: CHAR, beat_ctx: { grid_width: 20 } } })
-    fight_store.getState().input({ type: 'snapshot', fight: FIGHT_OBJECT, version: 5 })
-    expect(use_dungeon.getState().dungeon?.id, 'the run store must project the live board record').toBe(FIGHT)
+    test('a receipt damage beat mounts the floater and the cast beat mounts the swing on the board handle', async () => {
+      // ── boot the live fight through the ONE door (the projection tail fills use_dungeon.dungeon itself) ──
+      fight_store
+        .getState()
+        .input({
+          type: 'init',
+          fight_id: FIGHT,
+          my_key: 'p0',
+          ctx: { my_entity_id: CHAR, beat_ctx: { grid_width: 20 } },
+        })
+      fight_store.getState().input({ type: 'snapshot', fight: FIGHT_OBJECT, version: 5 })
+      expect(use_dungeon.getState().dungeon?.id, 'the run store must project the live board record').toBe(FIGHT)
 
-    adapter_handle.current = create_voxel_fight_adapter(board)
-    // the board build is async — the rigs must exist before the receipt (entity_ids gates every mount).
-    const wired = await poll(
-      () => board.calls.upserts.some((u) => u.id === CHAR) && board.calls.upserts.some((u) => u.id === 'mob-0')
-    )
-    expect(wired, 'the adapter never built/wired the board (no fighter rigs upserted)').toBe(true)
+      adapter_handle.current = create_voxel_fight_adapter(board)
+      // the board build is async — the rigs must exist before the receipt (entity_ids gates every mount).
+      const wired = await poll(
+        () => board.calls.upserts.some((u) => u.id === CHAR) && board.calls.upserts.some((u) => u.id === 'mob-0')
+      )
+      expect(wired, 'the adapter never built/wired the board (no fighter rigs upserted)').toBe(true)
 
-    // ── the receipt: the mob's whole paced turn (move → cast → hit me for 7) enters the wave ──
-    fight_store.getState().input({ type: 'receipt', receipt: { events: CASCADE }, version: 6 })
-    expect(
-      fight_store.getState().wave.some((t) => t.source_id === 'mob-0'),
-      'the core must pace a non-local mob turn (the stream half is NOT under test here)'
-    ).toBe(true)
+      // ── the receipt: the mob's whole paced turn (move → cast → hit me for 7) enters the wave ──
+      fight_store.getState().input({ type: 'receipt', receipt: { events: CASCADE }, version: 6 })
+      expect(
+        fight_store.getState().wave.some((t) => t.source_id === 'mob-0'),
+        'the core must pace a non-local mob turn (the stream half is NOT under test here)'
+      ).toBe(true)
 
-    // ── THE MOUNT ASSERTS — the reported bug class: pacing plays, mounts never fire ──
-    await poll(() => board.calls.beats.some((b) => b.float) && board.calls.beats.some((b) => b.anim === 'attack'))
+      // ── THE MOUNT ASSERTS — the reported bug class: pacing plays, mounts never fire ──
+      await poll(() => board.calls.beats.some((b) => b.float) && board.calls.beats.some((b) => b.anim === 'attack'))
 
-    const swing = board.calls.beats.find((b) => b.id === 'mob-0' && b.anim === 'attack')
-    expect(swing, "the cast beat never mounted the caster's attack swing on the board").toBeTruthy()
+      const swing = board.calls.beats.find((b) => b.id === 'mob-0' && b.anim === 'attack')
+      expect(swing, "the cast beat never mounted the caster's attack swing on the board").toBeTruthy()
 
-    const floater = board.calls.beats.find(
-      (b) => b.id === CHAR && b.anim === 'hit' && b.float?.kind === 'damage' && b.float?.text === `-${MOB_HIT_ON_ME}`
-    )
-    expect(
-      floater,
-      `the damage beat never mounted the '-${MOB_HIT_ON_ME}' floater on the struck fighter (regression: "no more floating numbers in fights")`
-    ).toBeTruthy()
+      const floater = board.calls.beats.find(
+        (b) => b.id === CHAR && b.anim === 'hit' && b.float?.kind === 'damage' && b.float?.text === `-${MOB_HIT_ON_ME}`
+      )
+      expect(
+        floater,
+        `the damage beat never mounted the '-${MOB_HIT_ON_ME}' floater on the struck fighter (regression: "no more floating numbers in fights")`
+      ).toBeTruthy()
 
-    // the mob's paced walk also drives the rig (playback, not pacing — same dead-mount class).
-    expect(
-      board.calls.moves.some((m) => m.id === 'mob-0' && m.path?.length),
-      "the move beat never drove the mob's walk on the board"
-    ).toBe(true)
-  }, 20_000)
-})
+      // the mob's paced walk also drives the rig (playback, not pacing — same dead-mount class).
+      expect(
+        board.calls.moves.some((m) => m.id === 'mob-0' && m.path?.length),
+        "the move beat never drove the mob's walk on the board"
+      ).toBe(true)
+    }, 20_000)
+  }
+)

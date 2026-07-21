@@ -24,10 +24,15 @@ const had_audio = 'Audio' in globalThis
 // @ts-expect-error test shim
 if (!had_audio) globalThis.Audio = AudioStub
 
-const { fight_store, fight_view } = await import('@aresrpg/fight')
+const { fight_store } = await import('@aresrpg/fight/store')
+const { fight_view } = await import('@aresrpg/fight/project')
 const { use_dungeon } = await import('./dungeon_store.js')
 const { use_dungeon_turn } = await import('../game/screens/dungeon-turn.js')
-const { create_voxel_fight_adapter } = await import('./voxel_fight_adapter.js')
+const { SENSHI_MALE_GLB_AVAILABLE } = await import('../test_helpers/glb_fixture.js')
+// MISSING-ARTIFACT (#117): voxel_fight_adapter.js imports @aresrpg/engine3/tactical, whose board_entities.js
+// unconditionally imports character_avatar.js — a static import of the absent-by-design senshi_male.glb
+// (test_helpers/glb_fixture.js; full chain documented in packages/engine/src/test_helpers/glb_fixture.js).
+const { create_voxel_fight_adapter } = SENSHI_MALE_GLB_AVAILABLE ? await import('./voxel_fight_adapter.js') : {}
 
 const FIGHT = '0xworn-fight'
 const CHAR = '0xc1'
@@ -134,7 +139,7 @@ const poll = async (predicate, timeout = 2_000) => {
   return predicate()
 }
 
-describe('voxel fight adapter — worn cosmetics on the fight rig', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('voxel fight adapter — worn cosmetics on the fight rig', () => {
   const board = make_board()
   const adapter_handle = { current: null }
 

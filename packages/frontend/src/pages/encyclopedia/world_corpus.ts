@@ -138,15 +138,27 @@ interface AuthoredWorld {
 }
 
 const authored_names = ['world', 'mobs', 'resources'] as const
+// MISSING-ARTIFACT (#117): seed/mainnet/<wid>/{world,mobs,resources}.json is content-pipeline output,
+// absent by design in this public repo. The Vite glob branch below simply finds nothing for a missing
+// file (eager glob, no throw) — degrading the whole corpus to inert via authored_content_present
+// (issue #106's documented behavior, see the comment below). import.meta.require has no such grace: it
+// throws synchronously on a missing module, so the bun:test-only branch must catch per-file and skip,
+// to mirror the Vite branch's behavior instead of crashing this module's very first import.
 const authored_modules: Record<string, unknown> = bun_runtime
   ? Object.fromEntries(
-      seed_manifest.worlds.flatMap(({ wid }) =>
-        authored_names.map((name) => {
-          const relative_path = `../../../../../seed/mainnet/${wid}/${name}.json`
-          const data = (import.meta as ImportMeta & { require(path: string): unknown }).require(relative_path)
-          return [relative_path, data]
-        })
-      )
+      seed_manifest.worlds
+        .flatMap(({ wid }) =>
+          authored_names.map((name) => {
+            const relative_path = `../../../../../seed/mainnet/${wid}/${name}.json`
+            try {
+              const data = (import.meta as ImportMeta & { require(path: string): unknown }).require(relative_path)
+              return [relative_path, data] as const
+            } catch {
+              return null
+            }
+          })
+        )
+        .filter((entry): entry is readonly [string, unknown] => entry !== null)
     )
   : import.meta.glob(
       [
@@ -161,7 +173,9 @@ const authored_modules: Record<string, unknown> = bun_runtime
 // (world content is runtime, issue #106): the projection loops below skip so the corpus degrades to inert
 // (the ONE loud report is the join guard) instead of the first authored_json call crashing boot. A PARTIAL
 // gap (content present but one file missing) stays authored_json's hard integrity guard — a real seed bug.
-const authored_content_present = Object.values(authored_modules).length > 0
+// MISSING-ARTIFACT (#117): exported so tests can skip cardinality assertions against zero authored content,
+// naming the real reason instead of a silent 0-vs-N mismatch.
+export const authored_content_present = Object.values(authored_modules).length > 0
 
 function authored_json<T>(wid: string, name: (typeof authored_names)[number]): T {
   const relative_path = `../../../../../seed/mainnet/${wid}/${name}.json`

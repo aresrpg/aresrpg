@@ -5,10 +5,15 @@
 // name from the real b_spell preset set (never a typo), and — driven over the whole 240-spell corpus — spreads
 // same-element spells across DIFFERENT variants (the "Gale Slash ≠ Storm Arc" mandate) with zero throws.
 import { describe, expect, it } from 'bun:test'
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { variant_for, spell_hash } from './vfx_variants.js'
+
+// MISSING-ARTIFACT (#117): seed/mainnet/spells is content-pipeline output, absent by design in this public
+// repo. Only the whole-corpus spread test below needs it — every other test here is pure/synthetic.
+const SPELLS_DIR = join(import.meta.dir, '../../../../seed/mainnet/spells')
+const SPELLS_CORPUS_AVAILABLE = existsSync(SPELLS_DIR)
 
 // The 35 b_spell preset names the engine modules export (vfx_presets_{dark,air,elemental,flame}.js) — the ONLY
 // names the selector may return. Kept inline so this frontend test is hermetic (no engine-merge dependency).
@@ -83,14 +88,13 @@ describe('variant_for — deterministic per-spell VFX variant', () => {
     expect(variant_for(spell({ element: 'neutral', role: 'buff_stat' }))).toBe('flame_variant_purple')
   })
 
-  it('over the WHOLE 240-spell corpus: never throws, every non-null is a REAL b_spell preset, and same-element spells SPREAD across variants', () => {
-    const dir = join(import.meta.dir, '../../../../seed/mainnet/spells')
+  it.skipIf(!SPELLS_CORPUS_AVAILABLE)('over the WHOLE 240-spell corpus: never throws, every non-null is a REAL b_spell preset, and same-element spells SPREAD across variants', () => {
     /** @type {Record<string, Set<string>>} */
     const per_element = {}
     let total = 0
     let mapped = 0
-    for (const f of readdirSync(dir).filter((n) => n.endsWith('.json'))) {
-      const arr = JSON.parse(readFileSync(join(dir, f), 'utf8'))
+    for (const f of readdirSync(SPELLS_DIR).filter((n) => n.endsWith('.json'))) {
+      const arr = JSON.parse(readFileSync(join(SPELLS_DIR, f), 'utf8'))
       for (const s of Array.isArray(arr) ? arr : Object.values(arr)) {
         total += 1
         const v = variant_for(s)

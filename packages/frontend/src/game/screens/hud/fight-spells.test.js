@@ -3,13 +3,15 @@
 // Resolver unit tests — offline, against the authored spell corpus joined to the current seed receipt. Proves
 // the bar renders EXCLUSIVELY the on-chain spells a character can reach and every cast has an object id.
 
+import { existsSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
 import { describe, it, expect } from 'bun:test'
 
 import { act_cast_ptb } from '@aresrpg/sdk/fight'
 
 import { resolve_class_spells, fight_spell, project_spell_level, spell_object_id } from './fight-spells.js'
 import SEED_MANIFEST from '../../../../../move/scripts/out/seed_manifest.json' with { type: 'json' }
-import SENSHI_CORPUS from '../../../../../../seed/mainnet/spells/senshi.json' with { type: 'json' }
 
 const OBJ_ID = /^0x[0-9a-f]{64}$/
 
@@ -20,13 +22,25 @@ const to_name_key = (name) =>
 const input_object_id = (inp) =>
   inp?.UnresolvedObject?.objectId ?? inp?.Object?.SharedObject?.objectId ?? inp?.Object?.ImmOrOwnedObject?.objectId ?? null
 
+// MISSING-ARTIFACT (#117): seed/mainnet/spells is content-pipeline output, absent by design in this public
+// repo — TWO consequences. (1) senshi.json itself (guarded dynamic import below) feeds the raw-corpus
+// expectation helpers (senshi_upto/senshi_sorted). (2) resolve_class_spells/fight_spell/spell_object_id
+// (the module under test) resolve through fight-spells.js's get_spell_corpus(), a runtime-fetched Walrus
+// blob (data/spell_corpus.js) that only a boot sequence or the set_spell_corpus_for_test() seam populates —
+// neither runs here, so it stays permanently [] and every real-content assertion below is gated the same way.
+const SPELLS_DIR = fileURLToPath(new URL('../../../../../../seed/mainnet/spells', import.meta.url))
+const SPELLS_SEED_AVAILABLE = existsSync(SPELLS_DIR)
+const SENSHI_PATH = fileURLToPath(new URL('../../../../../../seed/mainnet/spells/senshi.json', import.meta.url))
+const SENSHI_CORPUS_AVAILABLE = existsSync(SENSHI_PATH)
+const SENSHI_CORPUS = SENSHI_CORPUS_AVAILABLE ? (await import('../../../../../../seed/mainnet/spells/senshi.json')).default : []
+
 // Expected name_keys read straight off the corpus (full-corpus reseed: senshi ships 6 spells ≤ L10, not the
 // old 3-spell QA set) — derived, not hardcoded, so the NEXT reseed can't silently re-stale this file.
 const senshi_sorted = (lvl) => SENSHI_CORPUS.filter((s) => s.unlock <= lvl).sort((a, b) => a.unlock - b.unlock)
 const senshi_upto = (lvl) => senshi_sorted(lvl).map((s) => to_name_key(s.name))
 
 describe('resolve_class_spells', () => {
-  it('senshi at level 10 → every seeded spell ≤ L10, sorted by unlock, each with a real object id', () => {
+  it.skipIf(!SENSHI_CORPUS_AVAILABLE)('senshi at level 10 → every seeded spell ≤ L10, sorted by unlock, each with a real object id', () => {
     const spells = resolve_class_spells('senshi', 10)
     expect(spells.map((s) => s.name_key)).toEqual(senshi_upto(10))
     expect(spells.map((s) => s.unlock_level)).toEqual(senshi_sorted(10).map((s) => s.unlock))
@@ -36,17 +50,17 @@ describe('resolve_class_spells', () => {
     }
   })
 
-  it('gates by unlock_level ≤ char level (UX hint — chain is the referee)', () => {
+  it.skipIf(!SENSHI_CORPUS_AVAILABLE)('gates by unlock_level ≤ char level (UX hint — chain is the referee)', () => {
     expect(resolve_class_spells('senshi', 4).map((s) => s.name_key)).toEqual(senshi_upto(4))
     expect(resolve_class_spells('senshi', 5).map((s) => s.name_key)).toEqual(senshi_upto(5))
     expect(resolve_class_spells('senshi', 1).map((s) => s.name_key)).toEqual(senshi_upto(1))
   })
 
-  it('is case-insensitive on class id', () => {
+  it.skipIf(!SENSHI_CORPUS_AVAILABLE)('is case-insensitive on class id', () => {
     expect(resolve_class_spells('SENSHI', 10)).toHaveLength(senshi_upto(10).length)
   })
 
-  it('every seeded class resolves ≥1 spell; unknown/nullish/below-first-unlock still resolves to [] — no stub', () => {
+  it.skipIf(!SPELLS_SEED_AVAILABLE)('every seeded class resolves ≥1 spell; unknown/nullish/below-first-unlock still resolves to [] — no stub', () => {
     // the spell-kit seed now mints a starter kit for ALL classes (yajin included) — a class-WITH-spells is the
     // norm; only an UNKNOWN class id, a nullish id, or a level below the first unlock yields the empty bar (the
     // resolver's genuine empty branch, still exercised here — the weapon slot is what keeps that deck usable).
@@ -58,7 +72,7 @@ describe('resolve_class_spells', () => {
 })
 
 describe('fight_spell / spell_object_id', () => {
-  it('resolves a name_key to its row + on-chain cast target', () => {
+  it.skipIf(!SPELLS_SEED_AVAILABLE)('resolves a name_key to its row + on-chain cast target', () => {
     const s = fight_spell('oathblade')
     expect(s?.name).toBe('Oathblade')
     expect(s?.element).toBe('air') // faithful Épée Divine (retro129:145) is air — 1:1 copy law, not the old hand-pin
@@ -117,7 +131,7 @@ describe('lossless chain spell projection', () => {
 // unwinnable). The OBJ_ID regex above passes a stale-but-well-formed id; only equality to the seed_manifest
 // SSOT catches the drift. The resolver now performs this receipt/corpus join directly at module load.
 describe('lineage parity — every cast target equals the seed_manifest SSOT', () => {
-  it('EVERY live-corpus spell object_id equals its seed_manifest.json entry (240 kit spells)', () => {
+  it.skipIf(!SPELLS_SEED_AVAILABLE)('EVERY live-corpus spell object_id equals its seed_manifest.json entry (240 kit spells)', () => {
     // The manifest is a lineage LEDGER: it also keeps the ORPHANED pre-kit rows (harmless — the app only
     // reads the live corpus), so parity binds every entry the resolver actually serves, and the served
     // set must be the full 240-spell kit.
@@ -139,7 +153,7 @@ describe('lineage parity — every cast target equals the seed_manifest SSOT', (
 })
 
 describe('act_cast composes with the RESOLVED id in arg 2 (the exact arg that TypeMismatched)', () => {
-  it('senshi Warcleave → actions::act_cast, 6 args, arg[2] = the live-lineage SpellTemplate id', () => {
+  it.skipIf(!SPELLS_SEED_AVAILABLE)('senshi Warcleave → actions::act_cast, 6 args, arg[2] = the live-lineage SpellTemplate id', () => {
     const spell_id = spell_object_id('warcleave')
     expect(spell_id).toBe(SEED_MANIFEST.spells['senshi:1:senshi_warcleave'].id) // the witness's cast, seed-manifest truth
 

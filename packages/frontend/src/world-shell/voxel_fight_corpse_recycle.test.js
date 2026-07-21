@@ -33,9 +33,14 @@ if (!had_audio)
     this.removeEventListener = () => {}
   }
 
-const { fight_store, engine_view } = await import('@aresrpg/fight')
+const { fight_store } = await import('@aresrpg/fight/store')
+const { engine_view } = await import('@aresrpg/fight/project')
 const { use_dungeon } = await import('./dungeon_store.js')
-const { create_voxel_fight_adapter } = await import('./voxel_fight_adapter.js')
+const { SENSHI_MALE_GLB_AVAILABLE } = await import('../test_helpers/glb_fixture.js')
+// MISSING-ARTIFACT (#117): voxel_fight_adapter.js imports @aresrpg/engine3/tactical, whose board_entities.js
+// unconditionally imports character_avatar.js — a static import of the absent-by-design senshi_male.glb
+// (test_helpers/glb_fixture.js; full chain documented in packages/engine/src/test_helpers/glb_fixture.js).
+const { create_voxel_fight_adapter } = SENSHI_MALE_GLB_AVAILABLE ? await import('./voxel_fight_adapter.js') : {}
 
 const FIGHT = '0xcorpse-recycle-fight'
 const CHAR = '0xc1'
@@ -133,53 +138,62 @@ const poll = async (predicate, { timeout = 8_000, step = 50 } = {}) => {
   return predicate()
 }
 
-describe('voxel fight adapter — a corpse despawns even after its id already died once earlier THIS fight', () => {
-  const board = make_board()
-  const adapter_handle = { current: null }
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
+  'voxel fight adapter — a corpse despawns even after its id already died once earlier THIS fight',
+  () => {
+    const board = make_board()
+    const adapter_handle = { current: null }
 
-  afterAll(() => {
-    adapter_handle.current?.destroy()
-    fight_store.getState().input({ type: 'init', fight_id: null }) // reset the singleton for the rest of the suite
-    use_dungeon.setState({ fight_id: null, fight_fresh: false })
-    // @ts-expect-error test shim
-    if (!had_audio) delete globalThis.Audio
-    restore_browser_globals()
-  })
+    afterAll(() => {
+      adapter_handle.current?.destroy()
+      fight_store.getState().input({ type: 'init', fight_id: null }) // reset the singleton for the rest of the suite
+      use_dungeon.setState({ fight_id: null, fight_fresh: false })
+      // @ts-expect-error test shim
+      if (!had_audio) delete globalThis.Audio
+      restore_browser_globals()
+    })
 
-  test('a floor-dead mob-0 is NOT revived by a corrected alive snapshot — it despawns once and stays gone (V1)', async () => {
-    fight_store
-      .getState()
-      .input({ type: 'init', fight_id: FIGHT, my_key: 'p0', ctx: { my_entity_id: CHAR, beat_ctx: { grid_width: 20 } } })
-    fight_store.getState().input({ type: 'snapshot', fight: fight_object(30), version: 5 })
-    expect(use_dungeon.getState().dungeon?.id, 'the run store must project the live board record').toBe(FIGHT)
+    test('a floor-dead mob-0 is NOT revived by a corrected alive snapshot — it despawns once and stays gone (V1)', async () => {
+      fight_store
+        .getState()
+        .input({
+          type: 'init',
+          fight_id: FIGHT,
+          my_key: 'p0',
+          ctx: { my_entity_id: CHAR, beat_ctx: { grid_width: 20 } },
+        })
+      fight_store.getState().input({ type: 'snapshot', fight: fight_object(30), version: 5 })
+      expect(use_dungeon.getState().dungeon?.id, 'the run store must project the live board record').toBe(FIGHT)
 
-    adapter_handle.current = create_voxel_fight_adapter(board)
-    const wired = await poll(() => board.calls.upserts.some((u) => u.id === 'mob-0'))
-    expect(wired, 'the adapter never mounted mob-0').toBe(true)
+      adapter_handle.current = create_voxel_fight_adapter(board)
+      const wired = await poll(() => board.calls.upserts.some((u) => u.id === 'mob-0'))
+      expect(wired, 'the adapter never mounted mob-0').toBe(true)
 
-    // ── DEATH — poll-only (no receipt/wave beat behind it): sync_entities' fold discovers it, and V1 FLOORS it. ──
-    fight_store.getState().input({ type: 'snapshot', fight: fight_object(0), version: 6 })
-    const died = await poll(() => board.calls.beats.some((b) => b.id === 'mob-0' && b.anim === 'death'))
-    expect(died, 'the poll-only death was never folded into a death beat').toBe(true)
-    const removed = await poll(() => board.calls.removes.includes('mob-0'))
-    expect(removed, 'the corpse never despawned (entity_remove never called)').toBe(true)
-    expect(engine_view(fight_store.getState()).fighters.get('mob-0').committed_dead, 'mob-0 is floor-dead at v6').toBe(
-      true
-    )
+      // ── DEATH — poll-only (no receipt/wave beat behind it): sync_entities' fold discovers it, and V1 FLOORS it. ──
+      fight_store.getState().input({ type: 'snapshot', fight: fight_object(0), version: 6 })
+      const died = await poll(() => board.calls.beats.some((b) => b.id === 'mob-0' && b.anim === 'death'))
+      expect(died, 'the poll-only death was never folded into a death beat').toBe(true)
+      const removed = await poll(() => board.calls.removes.includes('mob-0'))
+      expect(removed, 'the corpse never despawned (entity_remove never called)').toBe(true)
+      expect(
+        engine_view(fight_store.getState()).fighters.get('mob-0').committed_dead,
+        'mob-0 is floor-dead at v6'
+      ).toBe(true)
 
-    // ── NO REVIVE (V1 · symptom ②) — a later, higher-version read carrying mob-0 ALIVE again is a parity incident,
-    // held DEAD by the retirement floor. The old keystone re-adopt that would have resurrected it is DELETED (V3).
-    // The rig must NOT re-mount, and the core must keep mob-0 dead. ──
-    board.calls.upserts.length = 0
-    fight_store.getState().input({ type: 'snapshot', fight: fight_object(30), version: 7 })
-    await sleep(400) // the adapter reconciles synchronously on the store change + its tick; a re-mount would be here
-    expect(
-      board.calls.upserts.some((u) => u.id === 'mob-0'),
-      'a floor-dead mob must NOT be revived by a corrected alive snapshot (no resurrection — V1)'
-    ).toBe(false)
-    expect(
-      engine_view(fight_store.getState()).fighters.get('mob-0').committed_dead,
-      'retirement is permanent within the fight — the alive snapshot is discarded as a parity incident'
-    ).toBe(true)
-  }, 20_000)
-})
+      // ── NO REVIVE (V1 · symptom ②) — a later, higher-version read carrying mob-0 ALIVE again is a parity incident,
+      // held DEAD by the retirement floor. The old keystone re-adopt that would have resurrected it is DELETED (V3).
+      // The rig must NOT re-mount, and the core must keep mob-0 dead. ──
+      board.calls.upserts.length = 0
+      fight_store.getState().input({ type: 'snapshot', fight: fight_object(30), version: 7 })
+      await sleep(400) // the adapter reconciles synchronously on the store change + its tick; a re-mount would be here
+      expect(
+        board.calls.upserts.some((u) => u.id === 'mob-0'),
+        'a floor-dead mob must NOT be revived by a corrected alive snapshot (no resurrection — V1)'
+      ).toBe(false)
+      expect(
+        engine_view(fight_store.getState()).fighters.get('mob-0').committed_dead,
+        'retirement is permanent within the fight — the alive snapshot is discarded as a parity incident'
+      ).toBe(true)
+    }, 20_000)
+  }
+)

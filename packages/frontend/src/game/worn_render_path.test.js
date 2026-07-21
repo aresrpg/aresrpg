@@ -4,23 +4,29 @@
 // `worn.<slot>.template_id`; the cosmetic quilt is keyed by the seed appearance slug. Prove the complete
 // consumer seam as state in -> rig.set_slots out, including the clearing call on unequip.
 
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 import { describe, expect, test } from 'bun:test'
 import { legacy_cosmetic_variants } from '@aresrpg/sdk/deployment/aresrpg'
 import { reduce_sui_data } from '@aresrpg/inventory/reduce'
 
 import '../test_helpers/env_mock.js'
+import { SHOP_AVAILABLE, shop } from '../test_helpers/shop_fixture.js'
 
 const { resolve_worn_cosmetics, worn_model_of } = await import('./cosmetic_glb.js')
 
-const shop = JSON.parse(readFileSync(new URL('../../../../seed/mainnet/shop.json', import.meta.url), 'utf8'))
 const seed_manifest = JSON.parse(
   readFileSync(new URL('../../../move/scripts/out/seed_manifest.json', import.meta.url), 'utf8')
 )
-const quilt = JSON.parse(
-  readFileSync(new URL('../../../../scripts/walrus/out/quilt_receipt_cosmetic_glb_quilt.json', import.meta.url), 'utf8')
+// MISSING-ARTIFACT (#117): scripts/walrus/out/quilt_receipt_cosmetic_glb_quilt.json is a Walrus-publish
+// receipt (content-pipeline output), absent by design in this public repo — mirrors shop_fixture.js's
+// SHOP_AVAILABLE guard so only the quilt-dependent assertions below skip.
+const QUILT_PATH = fileURLToPath(
+  new URL('../../../../scripts/walrus/out/quilt_receipt_cosmetic_glb_quilt.json', import.meta.url)
 )
+const QUILT_AVAILABLE = existsSync(QUILT_PATH)
+const quilt = QUILT_AVAILABLE ? JSON.parse(readFileSync(QUILT_PATH, 'utf8')) : { storedQuiltBlobs: [] }
 const quilt_files = new Set(quilt.storedQuiltBlobs.map((row) => row.identifier))
 const live_sale_templates = new Set(seed_manifest.shop.map((row) => row.template))
 
@@ -58,7 +64,9 @@ describe('world worn-cosmetic state -> rig slots', () => {
     ])
   })
 
-  test('every seeded wearable maps to a shipped base GLB and a world rig slot; title stays display-only', () => {
+  test.skipIf(!SHOP_AVAILABLE || !QUILT_AVAILABLE)(
+    'every seeded wearable maps to a shipped base GLB and a world rig slot; title stays display-only',
+    () => {
     const counts = shop.cosmetics.reduce((out, row) => {
       out[row.itemType] = (out[row.itemType] ?? 0) + 1
       return out
@@ -98,7 +106,9 @@ describe('world worn-cosmetic state -> rig slots', () => {
     expect(appearances.size).toBe(20)
   })
 
-  test('corbac is ONE instance: corbac_head owns the art; the helmet duplicate resolves nothing', () => {
+  test.skipIf(!SHOP_AVAILABLE || !QUILT_AVAILABLE)(
+    'corbac is ONE instance: corbac_head owns the art; the helmet duplicate resolves nothing',
+    () => {
     // Owner reconciliation 2026-07-17: corbac_helmet was a duplicate of corbac_head — same crow hat under a
     // second name with no GLB of its own (live quilt: corbac_head.glb 200, corbac_helmet.glb 404). Its sale
     // is delisted (0 ever minted); purging the minted duplicate template is a ceremony rider
@@ -127,7 +137,9 @@ describe('world worn-cosmetic state -> rig slots', () => {
     ).toBe(null)
   })
 
-  test('the equip RECEIPT re-dresses the rig: a lorito cape swap flips the dress spec before any /v1 confirm', () => {
+  test.skipIf(!SHOP_AVAILABLE)(
+    'the equip RECEIPT re-dresses the rig: a lorito cape swap flips the dress spec before any /v1 confirm',
+    () => {
     // Owner bug 2026-07-17: "I equipped a blue lorito cape, but I'm still wearing the previous green one in
     // the world." The rig projects state.sui.characters[i].worn per frame (embed_voxel_player feed →
     // resolve_worn_cosmetics → worn.set_slots), but the ONLY worn writer was reconcile_equip_state's 4×800ms
@@ -189,7 +201,7 @@ describe('world worn-cosmetic state -> rig slots', () => {
     expect(resolve_worn_cosmetics(bare.characters[0], templates)).toEqual({ head: null, back: null })
   })
 
-  test('all ten Lorito template ids resolve distinct KHR variants after the gem-name renames', () => {
+  test.skipIf(!SHOP_AVAILABLE)('all ten Lorito template ids resolve distinct KHR variants after the gem-name renames', () => {
     const current = shop.cosmetics
       .filter((row) => row.appearance === 'cape_lorito')
       .map((row) => [seed_manifest.items[row.slug], row.name, row.skin])

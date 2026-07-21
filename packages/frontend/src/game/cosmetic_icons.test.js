@@ -2,17 +2,17 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // COSMETIC_ICON map: drift-proof coverage of the generator SSOT (seed/mainnet/shop.json) + the resolver
 // that fixes "cosmetics don't show in the wiki" (broken item_type-as-slot-word icon urls).
-import { readFileSync } from 'node:fs'
-
 import { describe, expect, test } from 'bun:test'
 
 import { COSMETIC_ICON, cosmetic_icon_of } from './cosmetic_icons.js'
+import { SHOP_AVAILABLE, shop } from '../test_helpers/shop_fixture.js'
 
-const shop = JSON.parse(readFileSync(new URL('../../../../seed/mainnet/shop.json', import.meta.url), 'utf8'))
 const rows = [...(shop.cosmetics ?? []), ...(shop.pets ?? [])]
 
+// MISSING-ARTIFACT (#117): seed/mainnet/shop.json is content-pipeline output, absent by design in this
+// public repo — see test_helpers/shop_fixture.js.
 describe('COSMETIC_ICON — the slug|name → real icon slug map', () => {
-  test('every shop cosmetic/pet row is covered, by BOTH its slug and its name', () => {
+  test.skipIf(!SHOP_AVAILABLE)('every shop cosmetic/pet row is covered, by BOTH its slug and its name', () => {
     expect(rows.length).toBeGreaterThan(0)
     for (const r of rows) {
       expect(COSMETIC_ICON[r.slug], `slug '${r.slug}' unmapped`).toBe(r.icon)
@@ -20,7 +20,7 @@ describe('COSMETIC_ICON — the slug|name → real icon slug map', () => {
     }
   })
 
-  test('no generic slot word (itemType) ever appears as a map key', () => {
+  test.skipIf(!SHOP_AVAILABLE)('no generic slot word (itemType) ever appears as a map key', () => {
     const slot_words = new Set(rows.map((r) => r.itemType))
     for (const word of slot_words)
       expect(COSMETIC_ICON[word], `slot word '${word}' must never be a key`).toBeUndefined()

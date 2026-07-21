@@ -2,15 +2,12 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // COSMETIC → AURA map: owner-pinned crowns, faithful STATUS_OVERLAY keys, and drift-proof coverage of the
 // generator SSOT (seed/mainnet/shop.json). Plus the equipped-slug resolver the roam avatar drives.
-import { readFileSync } from 'node:fs'
-
 import { describe, expect, it, test } from 'bun:test'
 
 import { STATUS_OVERLAY } from '@aresrpg/engine3/vfx'
 
 import { COSMETIC_AURA, aura_of_item, resolve_cosmetic_aura } from './cosmetic_aura.js'
-
-const shop = JSON.parse(readFileSync(new URL('../../../../seed/mainnet/shop.json', import.meta.url), 'utf8'))
+import { SHOP_AVAILABLE, shop } from '../test_helpers/shop_fixture.js'
 
 describe('COSMETIC_AURA — the slug → status-overlay map', () => {
   test('the pinned reserved crowns carry their declared colours', () => {
@@ -24,13 +21,15 @@ describe('COSMETIC_AURA — the slug → status-overlay map', () => {
       expect(STATUS_OVERLAY[key], `${slug} → ${key} must be a STATUS_OVERLAY key`).toBeDefined()
   })
 
-  test('every shop cosmetic that carries an `aura` in the seed SSOT is covered by the map', () => {
+  // MISSING-ARTIFACT (#117): seed/mainnet/shop.json is content-pipeline output, absent by design in this
+  // public repo — see test_helpers/shop_fixture.js.
+  test.skipIf(!SHOP_AVAILABLE)('every shop cosmetic that carries an `aura` in the seed SSOT is covered by the map', () => {
     const seeded = shop.cosmetics.filter((c) => c.aura)
     expect(seeded.length).toBeGreaterThanOrEqual(15) // the 15 sellable prestige rows
     for (const c of seeded) expect(COSMETIC_AURA[c.slug], `shop slug '${c.slug}' (aura ${c.aura}) unmapped`).toBeDefined()
   })
 
-  test('the seed aura equals the mapped key 1:1, except the documented gem→shard borrow', () => {
+  test.skipIf(!SHOP_AVAILABLE)('the seed aura equals the mapped key 1:1, except the documented gem→shard borrow', () => {
     for (const c of shop.cosmetics.filter((x) => x.aura)) {
       const expected = c.aura === 'gem' ? 'shard' : c.aura // no gem_overlay.tres in the pack
       expect(COSMETIC_AURA[c.slug], `${c.slug}`).toBe(expected)

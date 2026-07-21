@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test'
 
 import { _reset_log_for_test, get_log_buffer } from '../core/log.js'
+import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
 
 const world_spawns_source = readFileSync(new URL('./world_spawns.js', import.meta.url), 'utf8')
 
@@ -66,7 +67,12 @@ beforeAll(async () => {
   globalThis.document = {}
   globalThis.navigator = {}
   try {
-    ;({ create_world_spawns } = await import('./world_spawns.js'))
+    // MISSING-ARTIFACT (#117): world_spawns.js imports spawn_rigs.js, which imports create_mob_model from
+    // @aresrpg/engine3/player (character_controller.js) — unconditionally re-exporting create_character_avatar,
+    // which static-imports the absent-by-design senshi_male.glb (test_helpers/glb_fixture.js; full chain in
+    // packages/engine/src/test_helpers/glb_fixture.js). Caught here (not left to crash beforeAll) so the two
+    // source-shape tests below — which only grep world_spawns_source, no import needed — keep running for real.
+    if (SENSHI_MALE_GLB_AVAILABLE) ({ create_world_spawns } = await import('./world_spawns.js'))
   } finally {
     for (const key of ['window', 'location', 'document', 'navigator']) restore(key)
   }
@@ -162,7 +168,7 @@ describe('world spawn mob-card layer route gate', () => {
     expect(guard_at).toBeLessThan(prepare_at) // …and precedes (wraps) the ensure_owned_party call
   })
 
-  test('a non-world screen hides the body layer until a fresh world frame', () => {
+  test.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('a non-world screen hides the body layer until a fresh world frame', () => {
     const canvas = { ...fake_target(), getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 720 }) }
     const controls = create_world_spawns({
       engine: { sample_block: () => 0, get_camera: () => null },
@@ -188,7 +194,9 @@ describe('world spawn mob-card layer route gate', () => {
     controls.dispose()
   })
 
-  test('the once-a-minute telemetry line goes through the house debug gate, never a raw console line', () => {
+  test.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
+    'the once-a-minute telemetry line goes through the house debug gate, never a raw console line',
+    () => {
     // Regression ("annoying logs"): the [world-spawns] telemetry line used to be a bare console.info,
     // printing on EVERY player's console for the whole session regardless of debug state. game_log (core/log.js)
     // is the ONE house gate — console output only under DEV/`?debug=1`/localStorage.ares_debug — while still
@@ -217,7 +225,9 @@ describe('world spawn mob-card layer route gate', () => {
     expect(entry?.message).toMatch(/^telemetry: groups=\d+\/32 rigs=\d+ nodes=\d+\/48 heap=\S+ entries=\d+$/)
   })
 
-  test('leg ① — a group a live fight already claimed is refused LOCALLY before any claim_intent/compose/submit', () => {
+  test.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
+    'leg ① — a group a live fight already claimed is refused LOCALLY before any claim_intent/compose/submit',
+    () => {
     // Regression (2026-07-19): a second account was able to attack a group the first account had already
     // attacked — the attack failed on-chain, but it should have been refused locally before submit. The engage-group gate reads CHAIN/RPC truth
     // (visible_fights → group_engage_blocked), NEVER local session state — so the alt account (which knew nothing

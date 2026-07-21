@@ -12,6 +12,12 @@ import UK from '../../../i18n/locales/uk.json' with { type: 'json' }
 import { fight_spells_data } from './fight-spells.js'
 import { spell_effects } from './spellbook-data.js'
 import { seed_effect_line, seed_effect_parts, is_area_effect, TONE_BUFF, TONE_BAD, HEAL_PINK } from './seed-effect-line.js'
+import { SPELLS_SEED_AVAILABLE } from '../../../test_helpers/spells_fixture.js'
+
+// MISSING-ARTIFACT (#117): fight_spells_data resolves through fight-spells.js's runtime spell corpus, empty
+// in this environment (seed/mainnet/spells is content-pipeline output) — see test_helpers/spells_fixture.js.
+// Only the tests below reading fight_spells_data.spells need the guard; spellbook_seed/spell_effects (local
+// checked-in fixtures) keep every other test in this file running for real.
 
 // D113 COVERAGE TEST — the class-killer. When a player grabs ANY class's spell in a dungeon, the armed
 // readout must show COMPLETE info (range / AP / an effect line) and the board must be able to paint a
@@ -137,7 +143,7 @@ describe('S-64 live derived spell corpus — full effect-render coverage', () =>
     return rows
   }
 
-  test('the corpus is non-empty and carries every effect kind the KIT corpus seeds', () => {
+  test.skipIf(!SPELLS_SEED_AVAILABLE)('the corpus is non-empty and carries every effect kind the KIT corpus seeds', () => {
     // The SPELL_KITS corpus (docs/SPELL_KITS.md) deliberately routes around the INERT kinds
     // (Appendix A: swap/state/dispel/reflect/reduce/return) — 17 functional kinds, all rendered.
     const kinds = new Set(all_effects().map((r) => r.fx.kind))
@@ -157,7 +163,7 @@ describe('S-64 live derived spell corpus — full effect-render coverage', () =>
       expect(kinds.has(k)).toBe(true)
   })
 
-  test('every generated DAMAGE effect carries authored bounds, including both range and equal-bound fixtures', () => {
+  test.skipIf(!SPELLS_SEED_AVAILABLE)('every generated DAMAGE effect carries authored bounds, including both range and equal-bound fixtures', () => {
     const damage = all_effects()
       .filter(({ fx }) => fx.kind === 'DAMAGE')
       .map(({ fx }) => fx)
@@ -179,7 +185,7 @@ describe('S-64 live derived spell corpus — full effect-render coverage', () =>
     }
   })
 
-  test('yajin Vanish rank 6 — 1.29-exact: INVISIBILITY + the +2 MP grant, not a blank bullet', () => {
+  test.skipIf(!SPELLS_SEED_AVAILABLE)('yajin Vanish rank 6 — 1.29-exact: INVISIBILITY + the +2 MP grant, not a blank bullet', () => {
     const vanish = fight_spells_data.spells.find((spell) => spell.class === 'yajin' && spell.name_key === 'vanish')
     expect(vanish).toBeTruthy()
     const rank6 = vanish.levels[5]
@@ -198,7 +204,7 @@ describe('S-64 live derived spell corpus — full effect-render coverage', () =>
     expect(lines.some((l) => l.includes('stat.action'))).toBe(false) // never the wrong resource (AP)
   })
 
-  test('a live PLACE_TRAP spell (yajin fanged_snare) renders without crashing (the old fx.payload.base throw)', () => {
+  test.skipIf(!SPELLS_SEED_AVAILABLE)('a live PLACE_TRAP spell (yajin fanged_snare) renders without crashing (the old fx.payload.base throw)', () => {
     const kelp = fight_spells_data.spells.find((spell) => spell.class === 'yajin' && spell.name_key === 'fanged_snare')
     expect(kelp).toBeTruthy()
     const trap_fx = kelp.levels[0].effects.find((e) => e.kind === 'PLACE_TRAP')
@@ -206,7 +212,7 @@ describe('S-64 live derived spell corpus — full effect-render coverage', () =>
     expect(() => seed_effect_line(t_stub, trap_fx)).not.toThrow()
   })
 
-  test('ALTER_STAT / ALTER_RESIST carry their TRUE signed value through (no undefined field, no forced "+")', () => {
+  test.skipIf(!SPELLS_SEED_AVAILABLE)('ALTER_STAT / ALTER_RESIST carry their TRUE signed value through (no undefined field, no forced "+")', () => {
     const signed = all_effects().filter((r) => r.fx.kind === 'ALTER_STAT' || r.fx.kind === 'ALTER_RESIST')
     expect(signed.length).toBeGreaterThan(0)
     expect(signed.some((r) => r.fx.base < 0)).toBe(true) // the real corpus seeds debuffs (negative base)
@@ -427,7 +433,7 @@ describe('S-64b effect-line grammar (parts model, real EN strings)', () => {
     })
   }
 
-  test('the Vanish grammar, LITERALLY: "+2 MP · 3 turns" (grey sign in pre, green 2) + "Become invisible · 3 turns"', () => {
+  test.skipIf(!SPELLS_SEED_AVAILABLE)('the Vanish grammar, LITERALLY: "+2 MP · 3 turns" (grey sign in pre, green 2) + "Become invisible · 3 turns"', () => {
     const vanish = fight_spells_data.spells.find((spell) => spell.class === 'yajin' && spell.name_key === 'vanish')
     const rank6 = vanish.levels[5]
     const invis = rank6.effects.find((e) => e.kind === 'INVISIBILITY')
@@ -456,7 +462,7 @@ describe('S-64b effect-line grammar (parts model, real EN strings)', () => {
         }
   })
 
-  test('ALTER_STAT names the REAL stat (Move STAT_* enum) — the blanket "raw damage" lie is dead', () => {
+  test.skipIf(!SPELLS_SEED_AVAILABLE)('ALTER_STAT names the REAL stat (Move STAT_* enum) — the blanket "raw damage" lie is dead', () => {
     const stats = fight_spells_data.spells.flatMap((sp) =>
       sp.levels.flatMap((l) => (l.effects ?? []).filter((e) => e.kind === 'ALTER_STAT'))
     )
@@ -484,7 +490,7 @@ describe('S-64b effect-line grammar (parts model, real EN strings)', () => {
   // The DOM proof (FightReport.test.jsx's renderToStaticMarkup pattern — pure props, no store/i18n context):
   // the display grammar reaches the MARKUP — grey pre-sign, the value in its OWN coloured span, the stat icon
   // img, and ZERO per-effect card chrome.
-  test('<EffectLine> markup: icon + grey sign + coloured value span — and no card box', async () => {
+  test.skipIf(!SPELLS_SEED_AVAILABLE)('<EffectLine> markup: icon + grey sign + coloured value span — and no card box', async () => {
     const { renderToStaticMarkup } = await import('react-dom/server')
     const { createElement } = await import('react')
     const { EffectLine } = await import('./EffectLine.jsx')
@@ -586,7 +592,7 @@ describe('ALTER_RESIST line names the element (resist-element display fix 07-20)
     }
   })
 
-  test('the live corpus resist rows all render a named element (post-revival: every ALTER_RESIST is elemented)', () => {
+  test.skipIf(!SPELLS_SEED_AVAILABLE)('the live corpus resist rows all render a named element (post-revival: every ALTER_RESIST is elemented)', () => {
     const els = ['Fire', 'Water', 'Earth', 'Air']
     const resist_lines = fight_spells_data.spells.flatMap((sp) =>
       sp.levels.flatMap((l) => (l.effects ?? []).filter((e) => e.kind === 'ALTER_RESIST').map((fx) => seed_effect_line(t_en, fx)))

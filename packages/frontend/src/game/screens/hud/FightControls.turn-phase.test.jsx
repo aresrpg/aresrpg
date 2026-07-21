@@ -33,7 +33,9 @@ globalThis.Audio ??= /** @type {any} */ (
 
 const { FightControls, FightEndTurnButton, fight_turn_control_phase, turn_commit_countdown_s } =
   await import('./FightControls.jsx')
-const { engine_view, PLAYER_TURN_FLOOR_MS, subscribe_commit_due } = await import('@aresrpg/fight')
+const { engine_view } = await import('@aresrpg/fight/project')
+const { PLAYER_TURN_FLOOR_MS } = await import('@aresrpg/fight/store')
+const { subscribe_commit_due } = await import('@aresrpg/fight/txs')
 const { seed_fight_core, reset_fight_core } = await import('../../../test_helpers/fight_core_harness.js')
 
 const ME = '0xme'

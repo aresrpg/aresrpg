@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { readFileSync } from 'node:fs'
-
 import { describe, expect, test } from 'bun:test'
 
 import {
@@ -10,18 +8,20 @@ import {
   item_display_category,
   item_type_equip_slot,
 } from './item_classification'
+import { SHOP_AVAILABLE, shop } from '../test_helpers/shop_fixture.js'
 
-const shop = JSON.parse(readFileSync(new URL('../../../../seed/mainnet/shop.json', import.meta.url), 'utf8'))
 const vanity_rows = shop.cosmetics ?? []
 
+// MISSING-ARTIFACT (#117): seed/mainnet/shop.json is content-pipeline output, absent by design in this
+// public repo — see test_helpers/shop_fixture.js.
 describe('itemType classification — seed/mainnet cosmetic coverage', () => {
-  test('the mapping keys exactly match every vanity itemType present in seed/mainnet', () => {
+  test.skipIf(!SHOP_AVAILABLE)('the mapping keys exactly match every vanity itemType present in seed/mainnet', () => {
     const seeded_types = [...new Set(vanity_rows.map((row) => row.itemType))].sort()
     expect(seeded_types).toEqual(['cloak', 'hat', 'title'])
     expect(Object.keys(COSMETIC_ITEM_TYPES).sort()).toEqual(seeded_types)
   })
 
-  test('every vanity row resolves to Cosmetics and its same-named real Move slot', () => {
+  test.skipIf(!SHOP_AVAILABLE)('every vanity row resolves to Cosmetics and its same-named real Move slot', () => {
     expect(vanity_rows).toHaveLength(shop._meta.populations.total)
     for (const row of vanity_rows) {
       expect(item_display_category(row), row.slug).toBe(COSMETICS_CATEGORY)

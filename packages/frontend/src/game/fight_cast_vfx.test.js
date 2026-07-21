@@ -9,7 +9,7 @@
 //   • the moving-emitter primitive: the projectile's world position rides its `origin` uniform along the arc/skyfall.
 //   • the sheet-scale floor re-pinned to the 3D magnitude: a sub-1 hit never shrinks the preset below its authored scale.
 import { describe, expect, it } from 'bun:test'
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { TextureLoader, Vector3 } from 'three'
 import { PRESETS } from '@aresrpg/engine3/vfx'
@@ -569,7 +569,11 @@ describe('b_spell variant selector ↔ engine PRESETS (merge-drift regression gu
     expect(REACHABLE.length).toBe(32)
   })
 
-  it('over the whole 240-spell corpus, every produced variant resolves in PRESETS (no typos, no merge gaps)', () => {
+  // MISSING-ARTIFACT (#117): seed/mainnet/spells is content-pipeline output, absent by design in this
+  // public repo.
+  it.skipIf(!existsSync(join(import.meta.dir, '../../../../seed/mainnet/spells')))(
+    'over the whole 240-spell corpus, every produced variant resolves in PRESETS (no typos, no merge gaps)',
+    () => {
     const dir = join(import.meta.dir, '../../../../seed/mainnet/spells')
     let total = 0
     let mapped = 0

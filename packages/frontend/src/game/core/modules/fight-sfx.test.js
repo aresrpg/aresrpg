@@ -19,7 +19,7 @@ const play = spyOn(sfx, 'play_element_sfx').mockImplementation(() => {})
 const play_one = spyOn(sfx, 'play_sfx').mockImplementation(() => {})
 
 const { default: fight_sfx } = await import('./fight-sfx.js')
-const { fight_store } = await import('@aresrpg/fight')
+const { fight_store } = await import('@aresrpg/fight/store')
 
 /** Boot the REAL fight core to the given identity facts (S2 mirror kill: the module reads fight_view(), the
  *  synchronous core projection — there is no injectable `state.fight` copy anymore). `null` ⇒ no live fight. */

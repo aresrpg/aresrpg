@@ -102,7 +102,7 @@ const [
   import('./dungeon_store.js'),
   import('./world_fight.js'),
   import('./world_fight_receipt.js'),
-  import('@aresrpg/fight'),
+  import('@aresrpg/fight/store'),
   import('../game/store.js'),
   import('../auth'),
   import('../rpc/client'),
