@@ -29,6 +29,7 @@
 // number or renders a second silent empty box.
 
 import { useEffect, useMemo, useState } from 'react'
+import { EyeOff } from 'lucide-react'
 
 import { ItemIcon } from './ItemIcon.jsx'
 import { Tooltip } from './Tooltip.jsx'
@@ -123,11 +124,16 @@ function LootSkelTile() {
 }
 
 /**
- * One fighter row — the SHARED format for party AND enemies. Alive → emerald ALIVE + remaining HP bar; a
+ * One fighter row — the SHARED format for party AND enemies, HALF the height of the old two-line card
+ * (#342 — a 6v6 roster must fit at 1080p without scrolling): a SINGLE line (avatar chip · name + class·level
+ * inline · hp bar · status glyph), plus a trailing loot cluster. Alive → emerald + remaining HP bar; a
  * fallen ally → red DEAD ✝ (bar emptied, row dimmed); a beaten enemy → red DEFEATED (bar emptied, dimmed).
- * The self row carries the [YOU] chip + a subtle accent frame. `spoils_slot`, when given, renders as a full-
- * width strip UNDER the name/hp/state line (grid-column 1/-1 — see .fe-row__spoils in result.css), so the
- * row stays the single direct child of .fe-rows (the entrance stagger keys off `.fe-rows .fe-row:nth-child`).
+ * The self row carries the [YOU] chip + a subtle accent frame. Status is a GLYPH only (●/✕/✝) — the full
+ * word rides `aria-label` for screen-reader access, freeing the width the 2-column roster grid needs.
+ * `spoils_slot`, when given, is the row's 5th grid cell — a compact dim icon for a teammate's honest
+ * "not visible to you" (never its own line anymore), or the local player's real xp/loot receipt, which alone
+ * still earns a tight second line (see .fe-row__spoils in result.css). The row stays the single direct child
+ * of .fe-rows (the entrance stagger keys off `.fe-rows .fe-row:nth-child`).
  * @param {{ f: { id: string, name: string, level: number, is_me?: boolean, is_player?: boolean, alive: boolean, hp_pct: number, class_name?: string | null }, is_enemy: boolean, settled_dead?: boolean, spoils_slot?: import('react').ReactNode | null, t: (k: string) => string }} props
  */
 function Row({ f, is_enemy, settled_dead = false, spoils_slot = null, t }) {
@@ -143,25 +149,20 @@ function Row({ f, is_enemy, settled_dead = false, spoils_slot = null, t }) {
       <div className="fe-row__glyph" aria-hidden="true">
         {initial(f.name)}
       </div>
-      <div className="fe-row__id">
-        <div className="fe-row__name">
-          {f.name || 'Fighter'}
-          {f.is_me && <span className="fe-you">{t('fight_end.you')}</span>}
-        </div>
-        <div className="fe-row__sub">
+      <div className="fe-row__name">
+        <span className="fe-row__nametext">{f.name || 'Fighter'}</span>
+        {f.is_me && <span className="fe-you">{t('fight_end.you')}</span>}
+        <span className="fe-row__meta">
           {f.class_name ? `${f.class_name} · ` : ''}Lv {f.level}
-        </div>
+        </span>
       </div>
       <div className="fe-hp" aria-hidden="true">
         <span className="fe-hp__fill" style={{ width: `${alive ? f.hp_pct : 0}%` }} />
       </div>
-      <div className={`fe-state fe-state--${state}`}>
-        {!alive && (
-          <span className="fe-state__glyph" aria-hidden="true">
-            {is_enemy ? '✕' : '✝'}
-          </span>
-        )}
-        {label}
+      <div className={`fe-state fe-state--${state}`} aria-label={label}>
+        <span className="fe-state__glyph" aria-hidden="true">
+          {alive ? '●' : is_enemy ? '✕' : '✝'}
+        </span>
       </div>
       {spoils_slot}
     </div>
@@ -172,11 +173,19 @@ function Row({ f, is_enemy, settled_dead = false, spoils_slot = null, t }) {
  * ONE party member's spoils strip (xp and items PER PLAYER ROW). `mine` is the only row this client
  * can back with a real receipt (the local wallet's own settle/open — see FightReport.jsx header note); every
  * other row states honestly that the chain doesn't split rewards per player, instead of faking a number or
- * silently rendering nothing (the exact "empty grey square" complaint this ticket also fixes).
+ * silently rendering nothing (the exact "empty grey square" complaint this ticket also fixes). #342: a
+ * teammate's honest "not visible to you" used to be its own italic text LINE (roughly doubling that row's
+ * height across a whole roster) — it is now a single dim glyph living in the row's own trailing cell, with
+ * the full sentence carried on `aria-label` instead of always-visible text.
  * @param {{ mine: boolean, spoils: { xp: number, tokens: number, loot: Array<{ template_id?: string, item_type: string, name: string, amount: number }> }, items: any[], template_map: Map<string, any>, tt: ReturnType<typeof use_template_t>, pending: boolean, loot_units: number | null, t: (key: string, opts?: any) => string }} props
  */
 function RowSpoils({ mine, spoils, items, template_map, tt, pending, loot_units, t }) {
-  if (!mine) return <div className="fe-row__spoils fe-row__spoils--hidden">{t('fight_end.spoils_hidden')}</div>
+  if (!mine)
+    return (
+      <div className="fe-row__spoils fe-row__spoils--hidden" aria-label={t('fight_end.spoils_hidden')}>
+        <EyeOff size={12} aria-hidden="true" />
+      </div>
+    )
   return (
     <div className="fe-row__spoils">
       <span className="fe-gain hud-num">
@@ -336,7 +345,9 @@ export function FightReport({
             <span>{t('fight_end.your_party')}</span>
             <span className="hud-num">{named_party.length}</span>
           </div>
-          <div className="fe-rows">
+          {/* #342: a roster over ~4 flows into a two-column grid so a 6v6 (12 rows total) fits the card
+              without scrolling at 1080p; a 1v1/duo stays single-column so it never reads over-compressed. */}
+          <div className={`fe-rows${named_party.length > 4 ? ' fe-rows--grid' : ''}`}>
             {named_party.map((f) => (
               <Row
                 key={f.id}
@@ -368,7 +379,7 @@ export function FightReport({
               <span>{t('fight_end.enemies')}</span>
               <span className="hud-num">{named_enemies.length}</span>
             </div>
-            <div className="fe-rows">
+            <div className={`fe-rows${named_enemies.length > 4 ? ' fe-rows--grid' : ''}`}>
               {named_enemies.map((f) => (
                 <Row key={f.id} f={f} is_enemy={true} settled_dead={won} t={t} />
               ))}

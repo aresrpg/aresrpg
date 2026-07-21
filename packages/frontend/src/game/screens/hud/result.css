@@ -500,14 +500,21 @@
 .fe-rows {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
+}
+/* #342: a roster over ~4 flows two-up (row-major — each section's own rows fill left-to-right, top-to-
+   bottom) so a 6v6 (12 rows total across both sections) fits the card without scrolling at 1080p. */
+.fe-rows--grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px 14px;
 }
 .fe-row {
   display: grid;
-  grid-template-columns: 22px 1fr 88px auto;
-  gap: 12px;
+  grid-template-columns: 18px minmax(0, 1fr) 56px 16px minmax(0, auto);
+  gap: 8px;
   align-items: center;
-  padding: 8px 12px;
+  padding: 5px 10px;
   background: rgba(255, 255, 255, 0.022);
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -522,13 +529,13 @@
   filter: saturate(0.4);
 }
 .fe-row__glyph {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   display: grid;
   place-items: center;
   font-family: var(--font-ui);
   font-weight: 700;
-  font-size: 11px;
+  font-size: 10px;
   color: color-mix(in srgb, var(--fe-accent) 80%, white);
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -538,13 +545,21 @@
   background: var(--fe-accent);
   border-color: var(--fe-accent);
 }
-.fe-row__id {
-  min-width: 0;
-}
+/* single-line name + inline class·level meta (#342 — was a 2-line stacked block, the primary height cost
+   the ticket fixes: name on one line, "class · Lv N" on a second). */
 .fe-row__name {
   display: flex;
-  align-items: center;
-  gap: 7px;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden; /* hard safety net — nothing from this row ever bleeds into the next grid column */
+}
+/* NAME keeps priority (a min-width floor so it never gets crushed to nothing); META (class·level, the
+   secondary fact) shrinks/ellipsizes FIRST under pressure and is capped so it can never itself hog the
+   row — the 2-column grid (#342) makes this row genuinely narrow, unlike the old single-column shell. */
+.fe-row__nametext {
+  flex: 1 1 auto;
+  min-width: 3em;
   font-size: 12px;
   font-weight: 600;
   color: var(--fg, #e8e4dc);
@@ -564,13 +579,18 @@
   padding: 1px 5px;
   flex: none;
 }
-.fe-row__sub {
+.fe-row__meta {
+  flex: 0 1 auto;
+  max-width: 45%;
+  min-width: 0;
   font-family: var(--font-mono);
   font-size: 9px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--fg-faint, #6b7280);
-  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .fe-hp {
   height: 6px;
@@ -589,15 +609,13 @@
   background: #f87171;
   box-shadow: none;
 }
+/* status is a GLYPH only now (#342 — freed the width the 2-column roster grid needs); the word rides
+   title/aria-label on the wrapping .fe-state (set in FightReport.jsx) for hover/screen-reader access. */
 .fe-state {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
   justify-self: end;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
   color: #34d399;
 }
 .fe-state--dead,
@@ -605,51 +623,50 @@
   color: #f87171;
 }
 .fe-state__glyph {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1;
 }
 
 /* ── PER-ROW spoils receipt — xp and items PER PLAYER ROW, so everyone can see what everyone rolled.
-   Rides INSIDE each party .fe-row as a 5th grid child spanning the full width (grid-column: 1/-1 auto-flows
-   it onto a new implicit grid row) — the row stays the single direct .fe-rows child the entrance stagger
-   keys off (.fe-rows .fe-row:nth-child), and the strip inherits the row's own res-rise entrance for free. ── */
+   #342: a teammate's honest "not visible to you" is now a compact dim glyph living in the row's own
+   trailing grid cell (never its own line — the exact "italic filler line" complaint this ticket fixes); the
+   local player's row alone carries real content (xp + loot) and alone still earns a tight second line
+   below, same as before just tightened (see the :not() override right after). ── */
 .fe-row__spoils {
-  grid-column: 1 / -1;
+  grid-column: 5;
   display: flex;
   align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-}
-/* the honest "the chain doesn't split this to you" state — a teammate's row, never a fabricated number and
-   never a silent blank (the exact empty-grey-square complaint this ticket also fixes, just for names/xp). */
-.fe-row__spoils--hidden {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  justify-self: end;
   color: var(--fg-faint, #6b7280);
-  font-style: italic;
+  opacity: 0.55;
+}
+.fe-row__spoils:not(.fe-row__spoils--hidden) {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  opacity: 1;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 .fe-gain {
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--fe-accent);
 }
 .fe-tiles {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   margin-left: auto;
   flex-wrap: wrap;
 }
 .fe-tile {
   position: relative;
-  width: 34px;
-  height: 34px;
+  width: 26px;
+  height: 26px;
   display: grid;
   place-items: center;
   --rq: #a9b4c4; /* the ONE neutral item tone (quality.js NEUTRAL) — quality tiers are dead */
@@ -659,8 +676,8 @@
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 .fe-tile .item-icon {
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   color: color-mix(in srgb, var(--rq) 78%, white);
 }
 /* D53 letter-tile idiom (ported from DeckCluster's SpellSocket art-fail fallback): an orphaned drop — no
@@ -669,19 +686,19 @@
 .fe-tile__letter {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   font-weight: 800;
-  font-size: 13px;
+  font-size: 11px;
   color: #fff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 .fe-tile__qty {
   position: absolute;
-  bottom: -5px;
-  right: -5px;
+  bottom: -4px;
+  right: -4px;
   font-family: var(--font-mono);
-  font-size: 8.5px;
+  font-size: 8px;
   line-height: 1;
   color: var(--fg, #e8e4dc);
   background: rgba(4, 6, 10, 0.95);
@@ -969,34 +986,35 @@ html.ares-mobile-hud .result--fe .cta {
   padding: 12px 32px calc(12px + var(--safe-bottom));
   background: linear-gradient(180deg, transparent, #07080c 22%);
 }
-/* compact fighter rows — the desktop grid (22px 1fr 88px auto) + 8px/12px padding is too tall to fit a full
-   roster + spoils above the fold on a phone. */
+/* compact fighter rows — even tighter than the (already compact, #342) desktop row, and always
+   single-column regardless of roster size: a narrow phone has no room for 2 columns side by side (the
+   capped-height card already scrolls — see .result--fe above), so the 2-col grid collapses back to 1. */
+html.ares-mobile-hud .fe-rows--grid {
+  grid-template-columns: 1fr;
+}
 html.ares-mobile-hud .fe-row {
-  grid-template-columns: 18px 1fr 56px auto;
-  gap: 8px;
-  padding: 6px 8px;
+  grid-template-columns: 16px minmax(0, 1fr) 44px 14px minmax(0, auto);
+  gap: 6px;
+  padding: 5px 8px;
 }
 html.ares-mobile-hud .fe-row__glyph {
-  width: 18px;
-  height: 18px;
-  font-size: 10px;
+  width: 16px;
+  height: 16px;
+  font-size: 9px;
 }
-html.ares-mobile-hud .fe-row__name {
+html.ares-mobile-hud .fe-row__nametext {
   font-size: 11px;
 }
-html.ares-mobile-hud .fe-row__sub {
+html.ares-mobile-hud .fe-row__meta {
   font-size: 8px;
 }
 html.ares-mobile-hud .fe-hp {
   height: 5px;
 }
-/* the per-row spoils strip adds height to every party row — keep it tight so a full roster still fits the
-   capped mobile card height above (rows already overflowed the viewport once at this width). */
-html.ares-mobile-hud .fe-row__spoils {
-  gap: 10px;
-  margin-top: 6px;
-  padding-top: 6px;
-}
-html.ares-mobile-hud .fe-row__spoils--hidden {
-  font-size: 8px;
+/* the local player's real receipt strip adds height to their one row — keep it tight so a full roster still
+   fits the capped mobile card height above (rows already overflowed the viewport once at this width). */
+html.ares-mobile-hud .fe-row__spoils:not(.fe-row__spoils--hidden) {
+  gap: 8px;
+  margin-top: 5px;
+  padding-top: 5px;
 }

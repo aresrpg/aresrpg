@@ -430,3 +430,90 @@ describe('FightReport — the EXPORT REPLAY row (never a dead button)', () => {
     expect(html).toContain('fight_end.export_replay')
   })
 })
+
+// ── #342 — VICTORY-CARD DENSITY: participant rows go HALF the height (single-line: avatar chip · name +
+// class·level inline · hp bar · status glyph · trailing loot cluster); a teammate's "not visible to you"
+// becomes a dim icon (never its own text line); a roster over ~4 flows into a two-column grid so a 6v6
+// (12 rows) fits at 1080p without scrolling, while a 1v1/duo stays single-column (never over-compressed). ──
+
+describe('FightReport — participant-row model (#342: compact single-line rows)', () => {
+  test('name + class·level meta share ONE line — no stacked 2-line block ever reintroduces', () => {
+    const party = [
+      { id: 'me', name: 'Hero', level: 12, class_name: 'Templar', is_me: true, is_player: true, alive: true, hp_pct: 100 },
+    ]
+    const html = renderToStaticMarkup(<FightReport {...base} party={party} cost={null} />)
+    expect(html).toContain('fe-row__nametext')
+    expect(html).toContain('fe-row__meta')
+    expect(html).toContain('Templar')
+    expect(html).not.toContain('fe-row__sub') // the old stacked-second-line class
+    expect(html).not.toContain('fe-row__id') // the old 2-line wrapper
+  })
+
+  test('status renders as a GLYPH for every state, including ALIVE (previously text-only, no glyph)', () => {
+    const party = [{ id: 'me', name: 'Hero', level: 12, is_me: true, is_player: true, alive: true, hp_pct: 100 }]
+    const html = renderToStaticMarkup(<FightReport {...base} party={party} cost={null} />)
+    expect(html).toContain('fe-state__glyph')
+    expect(html).toContain('●') // the alive glyph
+    expect(html).toContain('aria-label="fight_end.alive"') // the word survives for hover/screen-reader access
+  })
+
+  test('a teammate\'s "not visible to you" is a dim ICON (aria-label) — never its own visible text line', () => {
+    const party = [
+      { id: 'me', name: 'Hero', level: 12, is_me: true, is_player: true, alive: true, hp_pct: 100 },
+      { id: 'ally', name: 'Ally', level: 9, is_me: false, is_player: true, alive: true, hp_pct: 100 },
+    ]
+    const html = renderToStaticMarkup(
+      <FightReport {...base} party={party} spoils={{ xp: 10, tokens: 0, loot: [] }} cost={null} />
+    )
+    expect(html).toContain('aria-label="fight_end.spoils_hidden"') // the accessible name — never visible text
+    expect(html).not.toContain('>fight_end.spoils_hidden<') // the old italic filler TEXT line is gone
+    expect(html).toContain('fe-row__spoils--hidden')
+  })
+
+  test('a roster of 4 or fewer stays single-column (1v1/duo never over-compressed into a grid)', () => {
+    const party = [{ id: 'me', name: 'Hero', level: 12, is_me: true, alive: true, hp_pct: 100 }]
+    const enemies = [{ id: 'mob-0', name: 'Razkin', level: 8, alive: true, hp_pct: 100 }]
+    const html = renderToStaticMarkup(<FightReport {...base} party={party} enemies={enemies} cost={null} />)
+    expect(html).not.toContain('fe-rows--grid')
+  })
+
+  test('a roster over 4 flows into the two-column grid', () => {
+    const party = Array.from({ length: 5 }, (_, i) => ({
+      id: `p${i}`,
+      name: `P${i}`,
+      level: 10,
+      is_me: i === 0,
+      alive: true,
+      hp_pct: 100,
+    }))
+    const html = renderToStaticMarkup(<FightReport {...base} party={party} cost={null} />)
+    expect(html).toContain('fe-rows--grid')
+  })
+
+  test('a 6v6 (12 total rows) — both rosters independently grid, all 12 rows render, none silently dropped', () => {
+    // is_player omitted (matching the enemies fixture below) — this test targets the row/grid model, not
+    // fight_report_names.js's async name resolution (covered separately), so the given names pass through as-is.
+    const party = Array.from({ length: 6 }, (_, i) => ({
+      id: `p${i}`,
+      name: `Ally${i}`,
+      level: 10,
+      is_me: i === 0,
+      alive: true,
+      hp_pct: 100,
+    }))
+    const enemies = Array.from({ length: 6 }, (_, i) => ({
+      id: `e${i}`,
+      name: `Foe${i}`,
+      level: 12,
+      alive: true,
+      hp_pct: 100,
+    }))
+    const html = renderToStaticMarkup(<FightReport {...base} party={party} enemies={enemies} cost={null} />)
+    expect(html.split('fe-rows--grid').length - 1).toBe(2) // party's AND enemies' .fe-rows both switched
+    expect((html.match(/fe-row fe-row--/g) || []).length).toBe(12) // every row rendered
+    for (let i = 0; i < 6; i++) {
+      expect(html).toContain(`Ally${i}`)
+      expect(html).toContain(`Foe${i}`)
+    }
+  })
+})
