@@ -103,10 +103,29 @@ export function apply_pixel_filter(object3d) {
     const mat = mesh.material
     for (const m of Array.isArray(mat) ? mat : [mat]) {
       if (!m) continue
+      // [tex-extract-fix 2026-07-21, #158] Albedo-emissive floor FIRST — order matters. GLTFLoader's
+      // loadImageSource caches by sourceIndex and hands back a `.clone()` on a cache hit (three@0.185.1
+      // GLTFParser.js): a material whose glTF-native emissiveTexture already points at the SAME image as
+      // its baseColorTexture (a different texture/sampler entry, same source index) arrives with TWO
+      // DISTINCT Texture instances sharing ONE Source/ImageBitmap. The renderer's upload dedupe keys on the
+      // TEXTURE OBJECT (WebGPU backend DataMap), never the shared Source, so processing both independently
+      // below would queue two copyExternalImageToTexture calls against the same bitmap — the second is
+      // what Chrome logs as "fails extracting valid resource from external image". Forcing
+      // `emissiveMap = map` (the SAME instance, never a clone) BEFORE the pixel-filter loop means that loop
+      // only ever sees ONE texture object per material — the discarded clone is dropped before anything can
+      // reference or upload it. Idempotent on the SkeletonUtils-shared material via __mob_shade_floor.
+      if (m.map && !m.__mob_shade_floor) {
+        m.emissiveMap = m.map // per-texel colour floor (the face's own paint), NOT a flat wash — exact same instance
+        m.emissive = new Color(0xffffff) // white × emissiveMap × intensity ⇒ intensity·albedo
+        m.emissiveIntensity = MOB_EMISSIVE_FLOOR
+        m.__mob_shade_floor = true
+        m.needsUpdate = true
+      }
       for (const map of [m.map, m.emissiveMap]) {
         // idempotency: a private key flag, NOT `magFilter === NearestFilter` — the converter now emits a
         // NEAREST sampler (the GLB converter [mob-crisp 2026-07-13]), so sampler-carrying GLBs arrive
-        // already-Nearest and the old guard would have skipped the min/aniso policy below entirely.
+        // already-Nearest and the old guard would have skipped the min/aniso policy below entirely. After
+        // the reassignment above, m.map and m.emissiveMap are always the SAME object — one real iteration.
         if (!map || map.__ares_pixel_keyed) continue // guard: key the shared texture once (clones SHARE it)
         map.__ares_pixel_keyed = true
         map.magFilter = NearestFilter // crisp pixel-art texels up close (kills the blur)
@@ -114,14 +133,6 @@ export function apply_pixel_filter(object3d) {
         map.generateMipmaps = true
         map.anisotropy = 8 // matches board_surface.js's grazing-angle constant — kills angle smear, cheap
         map.needsUpdate = true
-      }
-      // Albedo-emissive floor (see the doc note): idempotent on the SkeletonUtils-shared material via __mob_shade_floor.
-      if (m.map && !m.__mob_shade_floor) {
-        m.emissiveMap = m.map // per-texel colour floor (the face's own paint), NOT a flat wash
-        m.emissive = new Color(0xffffff) // white × emissiveMap × intensity ⇒ intensity·albedo
-        m.emissiveIntensity = MOB_EMISSIVE_FLOOR
-        m.__mob_shade_floor = true
-        m.needsUpdate = true
       }
     }
   })
