@@ -18,6 +18,7 @@ import { ITEM_CATEGORY } from '@aresrpg/sdk/items'
 import { use_game_state } from '../../store.js'
 import { use_consumable_batched } from '../../../world-shell/consumable_actions.js'
 import { use_toast } from '../../../toast'
+import { ExplorerMenuRow } from '../../../components/explorer_link'
 import { ItemSendModal } from '../../../components/item_send_modal'
 import { project_inventory_send_item } from '../../../stores/item_send_model'
 import { can_consume } from './inventory-equip.js'
@@ -53,7 +54,7 @@ export function FastSlots() {
   )
 
   const owned = Array.isArray(items) ? items : []
-  const menu_actions = project_inventory_context_actions(['use', 'clear'])
+  const menu_actions = project_inventory_context_actions(['use', 'clear', 'explorer'])
 
   // Resolve each slot's live item record (null if the stack is gone / unassigned).
   const slot_item = (/** @type {number} */ slot) => {
@@ -174,6 +175,9 @@ export function FastSlots() {
                 >
                   {t('gift.send.send_items')}
                 </button>
+              )}
+              {menu_actions.includes('explorer') && (
+                <ExplorerMenuRow object_id={item.id} on_navigate={() => set_menu(null)} />
               )}
             </div>
           )
