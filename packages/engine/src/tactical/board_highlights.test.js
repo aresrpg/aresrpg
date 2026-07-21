@@ -24,7 +24,10 @@ import {
   TRAP_BLOB_COLOR,
   TRAP_BLOB_OPACITY,
   create_board_highlights,
+  edges_of_mask,
   entity_anchor_cell_alpha,
+  merged_rect_gradient,
+  neighbor_mask,
   rounded_rect_gradient,
   resolve_highlight_style,
   trap_blob_alpha,
@@ -224,6 +227,175 @@ describe('D256 punchy channel palette — deliberate saturation override', () =>
     // a hollow RING, not a fill — a gold fill camouflages into the warm-tan board (clip-probed 2026-07-13);
     // the border profile's full-saturation rim is what actually reads from the fight camera.
     expect(CHANNELS.trap.border).toBe(true)
+  })
+})
+
+// ── [#164] GLYPH ZONE MERGE — owner restated 2026-07-21: "AoE glyph renders one blob per cell — must
+// be a single merged shape, more visible." merged_rect_gradient (board_highlight_shapes.js) is the
+// per-fragment union math; board_highlights.js maps grid adjacency onto it (neighbor_mask/edges_of_mask)
+// and wires a lazy per-mask material cache for any CHANNELS.<x>.merge:true channel (today: glyph only). ──
+
+describe('[#164] merged_rect_gradient — a merged side drops its corner-cut AND rim brightness', () => {
+  test('every-flag-false reproduces rounded_rect_gradient EXACTLY (every non-merging channel unaffected)', () => {
+    for (const [u, v] of [
+      [0.5, 0.5],
+      [0.95, 0.95],
+      [0.9, 0.5],
+      [1, 0.5],
+      [0.12, 0.63],
+    ]) {
+      expect(merged_rect_gradient(u, v)).toEqual(rounded_rect_gradient(u, v))
+      expect(merged_rect_gradient(u, v, {})).toEqual(rounded_rect_gradient(u, v))
+    }
+  })
+
+  test('a merged corner drops the rounding CUT — full coverage where the lone-tile shape cuts it away', () => {
+    const lone = rounded_rect_gradient(0.95, 0.95)
+    expect(lone.coverage).toBeLessThan(0.2) // deep in the lone tile's rounded-corner shadow
+    expect(merged_rect_gradient(0.95, 0.95, { u1: true }).coverage).toBe(1) // u1 merged ⇒ no cut on that side
+    expect(merged_rect_gradient(0.95, 0.95, { u1: true, v1: true }).coverage).toBe(1) // both merged ⇒ still full
+  })
+
+  test('EXACTLY at a shared seam: the lone tile vanishes at its brightest rim; the merged tile is full + flat', () => {
+    // the money pixel — literally the boundary two adjacent same-channel tiles share.
+    const lone = rounded_rect_gradient(1.0, 0.5)
+    expect(lone).toEqual({ coverage: 0, grad: 1 }) // isolated cell's edge: vanishes, peak rim right there
+    const merged = merged_rect_gradient(1.0, 0.5, { u1: true })
+    expect(merged).toEqual({ coverage: 1, grad: 0 }) // union: opaque straight through, no rim (interior now)
+  })
+
+  test('a merged side stays dim through its own interior, but an UNMERGED side keeps its own rim bright', () => {
+    // u1 merged, v1 not: near the (still-real) v1 edge the rim must stay bright — merging only quiets
+    // the SIDE that actually merged, never a side that is still a true outer boundary.
+    const near_v1_edge = merged_rect_gradient(0.95, 0.95, { u1: true })
+    expect(near_v1_edge.grad).toBeGreaterThan(0.9) // v1's own proximity still drives the rim
+    const seam_only = merged_rect_gradient(0.9, 0.5, { u1: true }) // near u1, v-centered (no v-edge nearby)
+    expect(seam_only.grad).toBe(0) // nothing nearby is a real edge — flat, as a merged interior must read
+  })
+})
+
+describe('[#164] neighbor_mask / edges_of_mask — grid adjacency onto the merge mask (4-dir, no diagonals)', () => {
+  test('N adjacent cells (a 3-in-a-row): the middle cell merges BOTH its horizontal neighbors', () => {
+    const set = new Set(['0,0', '1,0', '2,0'])
+    expect(edges_of_mask(neighbor_mask(set, 1, 0))).toEqual({ u0: true, u1: true, v0: false, v1: false })
+    expect(edges_of_mask(neighbor_mask(set, 0, 0))).toEqual({ u0: false, u1: true, v0: false, v1: false })
+    expect(edges_of_mask(neighbor_mask(set, 2, 0))).toEqual({ u0: true, u1: false, v0: false, v1: false })
+  })
+
+  test('an L-shaped triomino merges each cell only on its OWN present orthogonal neighbors', () => {
+    const set = new Set(['0,0', '1,0', '0,1']) // (1,1) absent — the L's concave corner
+    expect(edges_of_mask(neighbor_mask(set, 0, 0))).toEqual({ u0: false, u1: true, v0: true, v1: false })
+    expect(edges_of_mask(neighbor_mask(set, 1, 0))).toEqual({ u0: true, u1: false, v0: false, v1: false })
+    expect(edges_of_mask(neighbor_mask(set, 0, 1))).toEqual({ u0: false, u1: false, v0: false, v1: true })
+  })
+
+  test('DIAGONAL-ONLY touch never merges — a RING-shaped zone (get_aoe_cells SHAPE_RING) stays hollow', () => {
+    // fight adjacency is 4-directional (sim/src/cell.js neighbors_4dir, "fight movement is 4-directional")
+    // — a diamond ring's consecutive cells (manhattan-distance-2: (2,0),(1,1),(0,2)…) touch only at a corner.
+    const ring = new Set(['2,0', '1,1', '0,2', '-1,1', '-2,0', '-1,-1', '0,-2', '1,-1'])
+    for (const key of ring) {
+      const [x, y] = key.split(',').map(Number)
+      expect(neighbor_mask(ring, x, y)).toBe(0) // no orthogonal neighbor anywhere on the ring
+    }
+  })
+
+  test('isolated cell (no same-channel neighbors anywhere) merges nothing — mask 0, identical to today', () => {
+    expect(neighbor_mask(new Set(['5,5']), 5, 5)).toBe(0)
+  })
+
+  test('a same-channel cell OUTSIDE this paint call never counts (masks are per set_channel call, not global)', () => {
+    const set = new Set(['0,0']) // (1,0) intentionally excluded from THIS set
+    expect(neighbor_mask(set, 0, 0)).toBe(0)
+  })
+})
+
+describe('[#164] glyph channel is MERGE-AWARE + MORE VISIBLE (owner 2026-07-21 restatement)', () => {
+  test('CHANNELS.glyph opts into merge, and its visibility dials sit above the old "too faint" floor', () => {
+    expect(CHANNELS.glyph.merge).toBe(true)
+    expect(CHANNELS.glyph.opacity).toBeGreaterThan(0.5) // was AT the punchy floor — genuinely raised now
+    expect(CHANNELS.glyph.center_alpha).toBeGreaterThan(0.42)
+    expect(CHANNELS.glyph.center_dim).toBeGreaterThan(0.55)
+    // still inside the established token range — never exceeds any existing channel's ceiling.
+    const max_opacity = Math.max(...Object.values(CHANNELS).map((c) => c.opacity))
+    expect(CHANNELS.glyph.opacity).toBeLessThanOrEqual(max_opacity)
+  })
+
+  test('a contiguous glyph zone paints one tile per cell (unchanged count) — merge is a shader read, not fewer meshes', () => {
+    const ctrl = create_board_highlights(stub_board())
+    ctrl.set_channel(
+      [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 0, y: 1 },
+        { x: 1, y: 1 },
+      ],
+      'glyph'
+    )
+    expect(tiles_in(ctrl, 'glyph')).toBe(4)
+    ctrl.dispose()
+  })
+
+  test('a non-contiguous SECOND glyph zone in the same paint call merges independently (no cross-talk)', () => {
+    const ctrl = create_board_highlights(stub_board())
+    ctrl.set_channel(
+      [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 }, // zone A: 2 contiguous cells
+        { x: 8, y: 8 }, // zone B: isolated, far away — paints regardless (stub board is unbounded)
+      ],
+      'glyph'
+    )
+    expect(tiles_in(ctrl, 'glyph')).toBe(3)
+    ctrl.dispose()
+  })
+
+  test('painted tiles PROVE the wiring: different masks get different materials, same mask shares one (cache dedup)', () => {
+    const ctrl = create_board_highlights(stub_board())
+    ctrl.set_channel(
+      [
+        { x: 0, y: 0 }, // adjacent to (1,0) only → mask = u1-only
+        { x: 5, y: 5 }, // isolated → mask 0
+        { x: 1, y: 0 }, // adjacent to (0,0) only → mask = u0-only (mirror of the first — a DIFFERENT mask)
+        { x: 6, y: 6 }, // isolated → mask 0, same as (5,5)
+      ],
+      'glyph'
+    )
+    const g = ctrl.group.children.find((/** @type {any} */ c) => c.name === 'highlight_glyph')
+    const [tile_00, tile_55, tile_10, tile_66] = g.children
+    expect(tile_00.material).not.toBe(tile_55.material) // u1-only vs mask-0 ⇒ distinct variants
+    expect(tile_00.material).not.toBe(tile_10.material) // u1-only vs u0-only ⇒ distinct variants
+    expect(tile_55.material).toBe(tile_66.material) // both mask-0 ⇒ SAME cached variant, not a fresh one each
+    ctrl.dispose()
+  })
+
+  test('repainting a glyph zone (shrink/grow) never throws and settles on the new cell count', () => {
+    const ctrl = create_board_highlights(stub_board())
+    ctrl.set_channel(
+      [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 2, y: 0 },
+      ],
+      'glyph'
+    )
+    expect(tiles_in(ctrl, 'glyph')).toBe(3)
+    ctrl.set_channel([{ x: 0, y: 0 }], 'glyph') // shrink to a lone cell — exercises the mask-0 lazy variant
+    expect(tiles_in(ctrl, 'glyph')).toBe(1)
+    ctrl.dispose()
+  })
+
+  test('dispose() frees every cached mask-variant material with no throw (a 2×2 block exercises 4 distinct masks)', () => {
+    const ctrl = create_board_highlights(stub_board())
+    ctrl.set_channel(
+      [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 0, y: 1 },
+        { x: 1, y: 1 },
+      ],
+      'glyph'
+    )
+    expect(() => ctrl.dispose()).not.toThrow()
   })
 })
 

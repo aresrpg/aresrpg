@@ -48,12 +48,13 @@ import {
   make_diamond_texture,
   make_entity_anchor_material,
   make_gradient_tile_material,
+  make_merge_aware_channel,
   make_outline_material,
   make_trap_blob_material,
   make_trap_spike_geometry,
   make_trap_spike_material,
 } from './board_highlight_materials.js'
-import { CORNER_RADIUS, EDGE_SOFTNESS, ENTITY_ANCHOR_RENDER_ORDER } from './board_highlight_shapes.js'
+import { CORNER_RADIUS, EDGE_SOFTNESS, ENTITY_ANCHOR_RENDER_ORDER, neighbor_mask } from './board_highlight_shapes.js'
 import { CHANNEL_KEYS, CHANNELS, TEAM_COLORS, resolve_fade } from './board_highlight_style.js'
 
 export { TRAP_BLOB_COLOR, TRAP_BLOB_OPACITY, trap_blob_alpha } from './board_highlight_materials.js'
@@ -63,7 +64,10 @@ export {
   ENTITY_ANCHOR_EDGE_WIDTH,
   ENTITY_ANCHOR_FILL_OPACITY,
   ENTITY_ANCHOR_RENDER_ORDER,
+  edges_of_mask,
   entity_anchor_cell_alpha,
+  merged_rect_gradient,
+  neighbor_mask,
   rounded_rect_gradient,
 } from './board_highlight_shapes.js'
 export {
@@ -100,6 +104,28 @@ const TILE_FRACTION = 1.0
 function make_flat_build(geo, mat) {
   return (cx, cy, cz, order) => {
     const tile = new Mesh(geo, mat)
+    tile.position.set(cx, cy, cz)
+    tile.renderOrder = order
+    tile.frustumCulled = false
+    return tile
+  }
+}
+
+/** Stable string key for a cell, for Map/Set membership. MUST match board_highlight_shapes.js's
+ *  neighbor_mask contract ("a Set of 'x,y' keys") — the two modules don't share a binding (shapes.js
+ *  stays a pure leaf with zero deps on this controller), just this trivial, stable string format. */
+const cell_key = (/** @type {number} */ x, /** @type {number} */ y) => `${x},${y}`
+
+/** [#164] Per-cell tile factory for a MERGE-AWARE channel (currently 'glyph' only, CHANNELS.glyph.merge):
+ *  picks the pre-built material variant matching this tile's neighbor mask (`mat_of` — a lazy ≤16-entry
+ *  cache, see board_highlight_materials.js's make_merge_aware_channel) instead of one fixed material.
+ *  Otherwise identical to make_flat_build. The grid→mask computation itself (neighbor_mask) is pure
+ *  shape-adjacency math and lives in board_highlight_shapes.js, next to merged_rect_gradient.
+ * @param {import('three').BufferGeometry} geo @param {(mask: number) => import('three').Material} mat_of
+ * @returns {(cx: number, cy: number, cz: number, order: number, mask?: number) => Mesh} */
+function make_merged_flat_build(geo, mat_of) {
+  return (cx, cy, cz, order, mask = 0) => {
+    const tile = new Mesh(geo, mat_of(mask))
     tile.position.set(cx, cy, cz)
     tile.renderOrder = order
     tile.frustumCulled = false
@@ -227,11 +253,19 @@ export function create_board_highlights(board) {
         ? { mat: trap_spike_mat, u_fade: null } // [trap marker] dark blob + spike — no wash fade
         : spec.outline
           ? { mat: make_outline_material(spec, diamond_tex), u_fade: null } // selection frame — no fade
-          : make_gradient_tile_material(spec) // D150 gradient + rounded-corner tile (+ [D253-2] fade uniform)
-    // `build(cx,cy,cz,order)` returns the ONE Object3D add_tile adds per cell — a flat Mesh for every
-    // wash/outline channel; for 'trap' the compound blob+sprite Group (build_trap_marker) instead. The
+          : spec.merge
+            ? make_merge_aware_channel(spec) // [#164] lazy ≤16 neighbor-mask material variants, one shared fade
+            : make_gradient_tile_material(spec) // D150 gradient + rounded-corner tile (+ [D253-2] fade uniform)
+    // `build(cx,cy,cz,order[,mask])` returns the ONE Object3D add_tile adds per cell — a flat Mesh for
+    // every wash/outline channel (merge-aware channels' Mesh picks its material by neighbor mask instead
+    // of a fixed material); for 'trap' the compound blob+sprite Group (build_trap_marker) instead. The
     // special case lives HERE (one factory pick), not sprinkled through add_tile/remove_tile/clear_channel.
-    const build = key === 'trap' ? build_trap_marker : make_flat_build(spec.outline ? diamond_geo : tile_geo, built.mat)
+    const build =
+      key === 'trap'
+        ? build_trap_marker
+        : spec.merge
+          ? make_merged_flat_build(tile_geo, /** @type {{ mat_of: (mask: number) => * }} */ (built).mat_of)
+          : make_flat_build(spec.outline ? diamond_geo : tile_geo, built.mat)
     channels.set(key, {
       group: cg,
       mat: built.mat,
@@ -244,8 +278,6 @@ export function create_board_highlights(board) {
     })
     group.add(cg)
   }
-
-  const cell_key = (/** @type {number} */ x, /** @type {number} */ y) => `${x},${y}`
 
   /** True if a cell is in-bounds and NOT void (paintable). cell_byte already maps out-of-bounds → void. */
   const paintable = (/** @type {number} */ x, /** @type {number} */ y) => cell_byte(x, y) !== CELL_HOLE
@@ -262,15 +294,17 @@ export function create_board_highlights(board) {
     /** @type {any} */ ch,
     /** @type {number} */ x,
     /** @type {number} */ y,
-    /** @type {number} */ order
+    /** @type {number} */ order,
+    /** @type {number} */ mask = 0 // [#164] neighbor mask — only consumed by a merge-aware channel's build
   ) => {
     const k = cell_key(x, y)
     if (ch.cells.has(k)) return
     if (!paintable(x, y)) return // silently ignore out-of-mask cells (contract)
     const [cx, , cz] = cell_center_world(x, y)
     // [D241] base clearance + per-order stack; `build` is the channel's tile factory (flat Mesh for every
-    // wash/outline channel, the compound blob+sprite Group for 'trap' — make_flat_build/build_trap_marker).
-    const tile = ch.build(cx, origin.y + FLOOR_CLEAR + WASH_LIFT * order, cz, order)
+    // wash/outline channel, the compound blob+sprite Group for 'trap' — make_flat_build/build_trap_marker;
+    // [#164] a merge-aware channel's make_merged_flat_build reads `mask` to pick its material variant).
+    const tile = ch.build(cx, origin.y + FLOOR_CLEAR + WASH_LIFT * order, cz, order, mask)
     route_board_highlight_overlay(tile) // POST-AgX overlay: layer 11 + depth flags (night-wash fix; traverses trap groups)
     ch.group.add(tile)
     ch.cells.set(k, tile)
@@ -476,8 +510,11 @@ export function create_board_highlights(board) {
       } // [D253-2] empty write = fade out
       const was_empty = ch.cells.size === 0 // capture BEFORE the swap (drives fade-in vs instant repaint)
       clear_channel(ch) // instant REPLACE — kills cumulation (no stale cells survive a repaint)
-      const { order } = CHANNELS[channel]
-      for (const c of cells) add_tile(ch, c.x, c.y, order)
+      const { order, merge } = CHANNELS[channel]
+      // [#164] merge-aware channel: compute each cell's neighbor mask against THIS paint's own cell set
+      // (never cross-channel — a glyph zone merges with other glyph cells only) before adding any tile.
+      const cell_set = merge ? new Set(cells.map((c) => cell_key(c.x, c.y))) : null
+      for (const c of cells) add_tile(ch, c.x, c.y, order, cell_set ? neighbor_mask(cell_set, c.x, c.y) : 0)
       fade_in(ch, was_empty) // [D253-2] first paint fades in; repaint swaps under the steady envelope
     },
     toggle(channel, cells, on) {

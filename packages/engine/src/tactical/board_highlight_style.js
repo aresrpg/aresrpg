@@ -87,18 +87,26 @@ export const CHANNELS = {
   // stays the loudest red on the board by a wide margin. TUNABLE: color/opacity/center dials await live A/B.
   path_blocked: { color: 0xcf9a8c, opacity: 0.34, order: 4, center_alpha: 0.32, center_dim: 0.5 },
 
-  // GLYPH ZONE (an orange blob on the ground, persistent, like the traps but covering the zone) — the
-  // caster's OWN placed glyph, a PERSISTENT orange ground wash covering its whole AoE. Atmospheric, not flashy:
-  // a warm pumpkin orange at moderate opacity + a SLOW fade (house feel), sitting at order 2 so it reads as the
-  // floor zone while transient hovers (aoe/path=3-4), targets (5) and trap markers (6) all layer above it.
+  // GLYPH ZONE (a warm pumpkin-orange ground wash, persistent, covering the whole placed AoE) — the
+  // caster's OWN glyph. [#164, owner restated 2026-07-21] "one blob per cell, reads too faint" — TWO
+  // fixes: `merge: true` (board_highlights.js/board_highlight_shapes.js) makes a contiguous run of
+  // glyph cells render as ONE union-outlined shape — rounded + rim-bright only at the zone's true outer
+  // perimeter, flat through every interior seam — instead of N separately-rimmed cell blobs; the
+  // opacity/center dials below are raised off the old "atmospheric, not flashy" floor to the
+  // `mp_range`-grade punch (still inside the established token range — nothing here exceeds any
+  // existing channel's ceiling) so the zone reads as clearly present at fight-camera distance, not
+  // just distinctly-shaped. Sits at order 2 so transient hovers (aoe/path=3-4), targets (5) and trap
+  // markers (6) still layer above it.
   glyph: {
     color: 0xe0791e,
-    opacity: 0.5,
+    opacity: 0.78,
     order: 2,
-    center_alpha: 0.42,
-    center_dim: 0.55,
+    center_alpha: 0.66,
+    center_dim: 0.72,
+    unlit_gain: 1.2,
     fade_in_s: 0.45,
     fade_out_s: 0.55,
+    merge: true,
   },
   // The live trap renderer is the compound black blob + gold sprite; these values retain its channel contract.
   trap: { color: 0xc8963c, opacity: 0.95, order: 6, border: true },

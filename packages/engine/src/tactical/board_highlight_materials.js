@@ -15,15 +15,28 @@ import {
   ENTITY_ANCHOR_FILL_OPACITY,
   GRADIENT_REACH,
   RIM_BRIGHT,
+  edges_of_mask,
   rounded_rect_gradient,
 } from './board_highlight_shapes.js'
 import { resolve_highlight_style } from './board_highlight_style.js'
 
-/** Build one unlit gradient/rounded material for a semantic channel. */
-export function make_gradient_tile_material(
-  /** @type {{ color: number, opacity: number, border?: boolean, unlit_gain?: number,
-   * center_dim?: number, center_alpha?: number }} */ spec
-) {
+/**
+ * Build one unlit gradient/rounded material for a semantic channel. [#164] `edges` is the TSL mirror of
+ * merged_rect_gradient (board_highlight_shapes.js): four STATIC per-material booleans (baked as
+ * constants at graph-build time, not a runtime uniform — a merge-aware channel pre-builds up to 16
+ * variants, one per neighbor-mask combination, see board_highlights.js's mat_of) marking which UV-space
+ * sides of THIS tile touch a same-channel neighbor. `select()` still has to pick per-FRAGMENT which of
+ * a side's two static flags (u0 vs u1, v0 vs v1) applies, since that depends on which half of the tile
+ * (u/v ≷ 0.5) the fragment is in — omitted (default `{}`) reproduces the original single-tile shader
+ * exactly (every flag folds to 0), so every non-merging channel is byte-identical to before this change.
+ * `shared_u_fade` lets a merge-aware channel's 16 material variants ramp ONE fade envelope together
+ * instead of each owning its own (the channel fade tick only ever drives one uniform per channel).
+ * @param {{ color: number, opacity: number, border?: boolean, unlit_gain?: number,
+ *   center_dim?: number, center_alpha?: number }} spec
+ * @param {{ u0?: boolean, u1?: boolean, v0?: boolean, v1?: boolean }} [edges]
+ * @param {*} [shared_u_fade]
+ */
+export function make_gradient_tile_material(spec, edges = {}, shared_u_fade = null) {
   const mat = new MeshBasicNodeMaterial()
   mat.transparent = true
   mat.depthWrite = false
@@ -33,17 +46,22 @@ export function make_gradient_tile_material(
   // the color), and tone-map-exempt. The engine's shared whole-scene AgX post still applies.
   mat.toneMapped = false
   mat.fog = false
-  const u_fade = uniform(1)
+  const u_fade = shared_u_fade ?? uniform(1)
   const { unlit_gain, center_dim, center_alpha } = resolve_highlight_style(spec)
   const base = new Color(spec.color)
   const base_rgb = vec3(base.r, base.g, base.b)
   const rim_rgb = unlit_gain === 1 ? base_rgb : base_rgb.mul(float(unlit_gain))
+  const { u0 = false, u1 = false, v0 = false, v1 = false } = edges
 
   mat.colorNode = /** @type {any} */ (
     Fn(() => {
       const p = uv()
-      const px = p.x.sub(0.5).abs()
-      const py = p.y.sub(0.5).abs()
+      const su = p.x.sub(0.5) // signed — sign picks which static edge flag applies per-fragment
+      const sv = p.y.sub(0.5)
+      const u_merged = su.greaterThanEqual(float(0)).select(float(u1 ? 1 : 0), float(u0 ? 1 : 0))
+      const v_merged = sv.greaterThanEqual(float(0)).select(float(v1 ? 1 : 0), float(v0 ? 1 : 0))
+      const px = float(1).sub(u_merged).mul(su.abs()) // merged side ⇒ 0 (no edge/corner contribution)
+      const py = float(1).sub(v_merged).mul(sv.abs())
       const half = float(0.5)
       const qx = px.sub(half.sub(CORNER_RADIUS))
       const qy = py.sub(half.sub(CORNER_RADIUS))
@@ -62,6 +80,37 @@ export function make_gradient_tile_material(
     })()
   )
   return { mat, u_fade }
+}
+
+/**
+ * [#164] Build a MERGE-AWARE channel's material system: ONE shared fade uniform (the channel fade tick
+ * drives exactly one envelope, never per-variant) + a lazy cache of ≤16 material variants (one per
+ * neighbor mask 0..15), built on first use via make_gradient_tile_material(spec, edges, shared u_fade).
+ * `mat` is a disposal-only duck-typed stand-in (board_highlights.js's channel dispose just calls
+ * `ch.mat.dispose()`) — there is no single "the" material for a merge-aware channel, only the cache.
+ * @param {*} spec
+ * @returns {{ mat_of: (mask: number) => import('three/webgpu').MeshBasicNodeMaterial, u_fade: *, mat: { dispose(): void } }}
+ */
+export function make_merge_aware_channel(spec) {
+  const u_fade = uniform(1)
+  const cache = new Map()
+  const mat_of = (/** @type {number} */ mask) => {
+    let entry = cache.get(mask)
+    if (!entry) {
+      entry = make_gradient_tile_material(spec, edges_of_mask(mask), u_fade)
+      cache.set(mask, entry)
+    }
+    return entry.mat
+  }
+  return {
+    mat_of,
+    u_fade,
+    mat: {
+      dispose() {
+        for (const { mat } of cache.values()) mat.dispose()
+      },
+    },
+  }
 }
 
 /** Build one team-colored, unlit entity-anchor material. */
