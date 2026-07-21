@@ -122,7 +122,14 @@ describe('#170 — an optimistic kill latches through a stale poll (the mob dies
           events: [
             ev('TurnStarted', { is_mob: false, idx: 0 }),
             ev('Cast', { caster_is_mob: false, caster_idx: 0, target_cell: MOB_CELL }),
-            ev('Hit', { victim_is_mob: true, victim_idx: 0, amount: 8, remaining_hp: 0, caster_is_mob: false, caster_idx: 0 }),
+            ev('Hit', {
+              victim_is_mob: true,
+              victim_idx: 0,
+              amount: 8,
+              remaining_hp: 0,
+              caster_is_mob: false,
+              caster_idx: 0,
+            }),
             ev('TurnEnded', { is_mob: false, idx: 0 }),
           ],
         },
@@ -149,7 +156,14 @@ describe('#170 — an optimistic kill latches through a stale poll (the mob dies
           events: [
             ev('TurnStarted', { is_mob: false, idx: 0 }),
             ev('Cast', { caster_is_mob: false, caster_idx: 0, target_cell: MOB_CELL }),
-            ev('Hit', { victim_is_mob: true, victim_idx: 0, amount: 4, remaining_hp: 4, caster_is_mob: false, caster_idx: 0 }),
+            ev('Hit', {
+              victim_is_mob: true,
+              victim_idx: 0,
+              amount: 4,
+              remaining_hp: 4,
+              caster_is_mob: false,
+              caster_idx: 0,
+            }),
             ev('TurnEnded', { is_mob: false, idx: 0 }),
           ],
         },
