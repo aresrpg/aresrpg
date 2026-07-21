@@ -9,7 +9,7 @@ import { describe, expect, it } from 'bun:test'
 
 import { SPELLS_SEED_AVAILABLE } from '../test_helpers/spells_fixture.js'
 
-import { footprint_of_effects, is_glyph_spell } from './voxel_fight_folds.js'
+import { footprint_of_effects, hover_footprint_plan, is_glyph_spell } from './voxel_fight_folds.js'
 
 // SHAPE_* enum (packages/sim/src/spell_effect.js) — the on-chain shape ids a normalized effect carries. Inlined
 // because @aresrpg/sim only re-exports the shape MATH (get_aoe_cells), not the raw shape constants.
@@ -91,4 +91,43 @@ describe('is_glyph_spell — glyph placements take the orange tint on hover, eve
     // 'Rooting Glyph' (mori) — a seeded role:'glyph' spell; its name_key is the armed id the hover reads.
     expect(is_glyph_spell('rooting_glyph')).toBe(true)
   })
+})
+
+// [#238 regression, v1.12.41] "AoE glyph zone disappeared mid-turn during normal play" — root cause: the hover
+// footprint preview and the caster's OWN persistent placed-zone paint (paint()'s lit.glyph, straight from
+// fight.my_glyphs) shared the SAME 'glyph' channel key. ANY board-state-driven highlight refresh during a turn
+// that reaches an empty-footprint hover (idle mouse move — no spell armed; a non-castable hovered cell) called
+// clear_states('glyph') — fading out and removing the persistent zone right along with the (nonexistent)
+// preview. hover_footprint_plan is the extracted routing decision voxel_fight_adapter.js's cell_hover handler
+// calls; these prove it can never again name the persistent 'glyph' channel — the collision is now structurally
+// unreachable, not merely avoided by caller discipline.
+describe('[#238] hover_footprint_plan — the hover preview must NEVER touch the persistent "glyph" channel', () => {
+  it('REGRESSION: no footprint (idle hover / non-castable cell) clears the transient channels, never "glyph"', () => {
+    // this is the exact "board-state update during the owner's turn" from the report — a movement-path hover
+    // refresh, or any hover that resolves no armed-spell footprint — with the caster's zone already painted.
+    const plan = hover_footprint_plan('some_armed_spell', [])
+    expect(plan.paint).toBeNull()
+    expect(plan.clear).not.toContain('glyph') // THE regression assertion — the persistent zone must survive
+    expect(plan.clear.sort()).toEqual(['aoe', 'glyph_hover'])
+  })
+
+  it('a NON-glyph spell footprint (e.g. a strike AoE) paints "aoe" and clears the glyph preview, never "glyph"', () => {
+    const foot = [{ x: 3, y: 3 }]
+    // is_glyph_spell resolves through the runtime spell corpus (unavailable here) — an id it can't resolve
+    // reads as non-glyph, exactly like the weapon sentinel / any strike spell.
+    const plan = hover_footprint_plan('__not_a_glyph_role_id__', foot)
+    expect(plan.paint).toEqual({ channel: 'aoe', cells: foot })
+    expect(plan.clear).toEqual(['glyph_hover']) // never 'glyph' — the persistent zone is untouched either way
+  })
+
+  it.skipIf(!SPELLS_SEED_AVAILABLE)(
+    'a glyph-spell footprint paints its OWN "glyph_hover" channel, never the persistent "glyph"',
+    () => {
+      const foot = [{ x: 3, y: 3 }]
+      const plan = hover_footprint_plan('rooting_glyph', foot)
+      expect(plan.paint).toEqual({ channel: 'glyph_hover', cells: foot })
+      expect(plan.paint.channel).not.toBe('glyph')
+      expect(plan.clear).toEqual(['aoe'])
+    }
+  )
 })

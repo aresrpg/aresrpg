@@ -417,12 +417,36 @@ export function spell_footprint(armed_spell_id, target, caster) {
 
 /**
  * True when the armed spell PLACES A GLYPH (its on-chain row's role is 'glyph') — the hover footprint then
- * paints the persistent orange glyph tint instead of the red AoE strike wash. Pure.
+ * paints the orange glyph tint (via 'glyph_hover', hover_footprint_plan below) instead of the red AoE strike
+ * wash. Pure.
  * @param {string | null | undefined} armed_spell_id
  * @returns {boolean}
  */
 export function is_glyph_spell(armed_spell_id) {
   return fight_spell(armed_spell_id)?.role === 'glyph'
+}
+
+/**
+ * [#238 regression, v1.12.41] Hover-footprint paint plan: which TRANSIENT channel to paint the current hover
+ * preview into (if any) and which transient channel(s) to clear. `foot_cells` is already the resolved zone
+ * shape (spell_footprint — the sim's own get_aoe_cells, one shape home); this only ROUTES it.
+ *
+ * A glyph-placing spell's preview renders through 'glyph_hover' — its OWN transient channel — NEVER the
+ * persistent 'glyph' channel paint() owns authoritatively from fight.my_glyphs (board_highlight_style.js:
+ * CHANNELS.glyph vs CHANNELS.glyph_hover, same tint, split channels). Before this split, an idle hover (no
+ * footprint — no spell armed, or the cursor over a non-castable cell) called clear_states('glyph') directly,
+ * which faded out and removed the caster's OWN already-placed zone mid-turn the instant the mouse moved
+ * without a glyph spell armed — the reported "AoE glyph zone disappeared" regression. Routing through a
+ * channel 'aoe'/'glyph_hover' never shares with the persistent paint makes that collision structurally
+ * impossible, not just avoided by caller discipline. Pure.
+ * @param {string | null | undefined} armed_spell_id
+ * @param {{x:number,y:number}[]} foot_cells
+ * @returns {{ paint: { channel: 'aoe' | 'glyph_hover', cells: {x:number,y:number}[] } | null, clear: ('aoe' | 'glyph_hover')[] }}
+ */
+export function hover_footprint_plan(armed_spell_id, foot_cells) {
+  if (!foot_cells.length) return { paint: null, clear: ['aoe', 'glyph_hover'] }
+  const channel = is_glyph_spell(armed_spell_id) ? 'glyph_hover' : 'aoe'
+  return { paint: { channel, cells: foot_cells }, clear: [channel === 'aoe' ? 'glyph_hover' : 'aoe'] }
 }
 
 /**

@@ -116,7 +116,8 @@ function make_flat_build(geo, mat) {
  *  stays a pure leaf with zero deps on this controller), just this trivial, stable string format. */
 const cell_key = (/** @type {number} */ x, /** @type {number} */ y) => `${x},${y}`
 
-/** [#164] Per-cell tile factory for a MERGE-AWARE channel (currently 'glyph' only, CHANNELS.glyph.merge):
+/** [#164] Per-cell tile factory for a MERGE-AWARE channel (currently 'glyph' + 'glyph_hover', [#238] its
+ *  hover-preview sibling — any CHANNELS.<x>.merge:true row):
  *  picks the pre-built material variant matching this tile's neighbor mask (`mat_of` — a lazy ≤16-entry
  *  cache, see board_highlight_materials.js's make_merge_aware_channel) instead of one fixed material.
  *  Otherwise identical to make_flat_build. The grid→mask computation itself (neighbor_mask) is pure
