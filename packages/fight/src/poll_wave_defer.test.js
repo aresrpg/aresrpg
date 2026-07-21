@@ -139,6 +139,8 @@ describe('#159 — a poll cannot leapfrog an in-flight commit whose wave is not 
       y: 2,
     })
     expect(engine_view(store.getState()).fighters.get(CHAR).health, 'my HP reconciled through the wave').toBe(44)
-    expect(store.getState().view_version, 'the checkpoint contributed nothing — the receipt drove the whole turn').toBe(5)
+    expect(store.getState().view_version, 'the checkpoint contributed nothing — the receipt drove the whole turn').toBe(
+      5
+    )
   })
 })

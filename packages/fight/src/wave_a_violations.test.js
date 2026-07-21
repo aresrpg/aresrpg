@@ -145,10 +145,32 @@ describe('WAVE A red-first — V1/V2/V3/V9', () => {
   // surviving role of merge_entries is layering: CANONICAL always wins over an optimistic PREDICTION at a key
   // collision, whichever order they arrive — a prediction never overrides proven truth (the one-way floor, reframed).
   test('M2b: a canonical entry is the floor over an optimistic intent at the same key (either arrival order)', () => {
-    const intent_entry = { version: 2, event_idx: 0, source: 'intent', kind: 'Hit', victim_is_mob: true, victim_idx: 0, remaining_hp: 99 }
-    const canonical_entry = { version: 2, event_idx: 0, source: 'canonical', kind: 'Hit', victim_is_mob: true, victim_idx: 0, remaining_hp: 10 }
-    expect(merge_entries({ '2:0': intent_entry }, [canonical_entry])['2:0'].remaining_hp, 'canonical adopts over a prediction').toBe(10)
-    expect(merge_entries({ '2:0': canonical_entry }, [intent_entry])['2:0'].remaining_hp, 'a prediction never overrides canonical').toBe(10)
+    const intent_entry = {
+      version: 2,
+      event_idx: 0,
+      source: 'intent',
+      kind: 'Hit',
+      victim_is_mob: true,
+      victim_idx: 0,
+      remaining_hp: 99,
+    }
+    const canonical_entry = {
+      version: 2,
+      event_idx: 0,
+      source: 'canonical',
+      kind: 'Hit',
+      victim_is_mob: true,
+      victim_idx: 0,
+      remaining_hp: 10,
+    }
+    expect(
+      merge_entries({ '2:0': intent_entry }, [canonical_entry])['2:0'].remaining_hp,
+      'canonical adopts over a prediction'
+    ).toBe(10)
+    expect(
+      merge_entries({ '2:0': canonical_entry }, [intent_entry])['2:0'].remaining_hp,
+      'a prediction never overrides canonical'
+    ).toBe(10)
   })
 
   // B — drop_traps is a VERSION-GATED input (composite §1). A COMMITTED trap (basis_version at/below the applied

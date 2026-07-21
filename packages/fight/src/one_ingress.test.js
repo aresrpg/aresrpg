@@ -75,7 +75,15 @@ const STREAM = [
     seq: '3',
     version: '3',
     kind: 'Hit',
-    data: { fight: FIGHT, victim_is_mob: false, victim_idx: 0, amount: 6, remaining_hp: 44, caster_is_mob: true, caster_idx: 0 },
+    data: {
+      fight: FIGHT,
+      victim_is_mob: false,
+      victim_idx: 0,
+      amount: 6,
+      remaining_hp: 44,
+      caster_is_mob: true,
+      caster_idx: 0,
+    },
   },
   { seq: '4', version: '3', kind: 'TurnEnded', data: { fight: FIGHT, is_mob: true, idx: 0 } },
 ]
@@ -113,10 +121,12 @@ const stale_snapshot = (version) => ({
 /** A store bootstrapped from the opening snapshot (v1, an empty journal) — the base every arrival order shares. */
 const booted = () => {
   const store = create_fight_store()
-  store.getState().input(
-    { type: 'init', fight_id: FIGHT, ctx: { my_entity_id: ME, address: '0xa11ce', beat_ctx: { grid_width: 20 } } },
-    T0
-  )
+  store
+    .getState()
+    .input(
+      { type: 'init', fight_id: FIGHT, ctx: { my_entity_id: ME, address: '0xa11ce', beat_ctx: { grid_width: 20 } } },
+      T0
+    )
   store.getState().input({ type: 'snapshot', fight: fight_object(), version: 1, journal_head: '0' }, T0 + 10)
   return store
 }
@@ -166,7 +176,9 @@ describe('M2b — one ingress: the fold is invariant to arrival order (idempoten
 
   test('a stale SNAPSHOT interleaved anywhere is inert to the fold', () => {
     expect(
-      committed_hash(drive([stale_snapshot(9), receipt(STREAM.slice(0, 2), '2'), stale_snapshot(10), journal_page(STREAM)]))
+      committed_hash(
+        drive([stale_snapshot(9), receipt(STREAM.slice(0, 2), '2'), stale_snapshot(10), journal_page(STREAM)])
+      )
     ).toBe(reference)
   })
 
@@ -174,10 +186,12 @@ describe('M2b — one ingress: the fold is invariant to arrival order (idempoten
     // Bootstrap a client that JOINS after tx1 already happened: its opening snapshot reflects tx1 (journal_head 2),
     // then it backfills the journal TAIL (tx2, seq 2..4). It must converge to the from-zero fold.
     const store = create_fight_store()
-    store.getState().input(
-      { type: 'init', fight_id: FIGHT, ctx: { my_entity_id: ME, address: '0xa11ce', beat_ctx: { grid_width: 20 } } },
-      T0
-    )
+    store
+      .getState()
+      .input(
+        { type: 'init', fight_id: FIGHT, ctx: { my_entity_id: ME, address: '0xa11ce', beat_ctx: { grid_width: 20 } } },
+        T0
+      )
     // The join snapshot already reflects tx1's result — the mob has moved to 44 and is MID-TURN (its TurnStarted is
     // seq 0, below the seeded head), so the authoritative object shows the mob active; the log extends to seq 2.
     store.getState().input(

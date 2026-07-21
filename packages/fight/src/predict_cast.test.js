@@ -167,7 +167,10 @@ describe('sim-backed own-cast prediction', () => {
         version: 7,
         receipt: {
           events: [
-            { type: '0x0::fight_events::Cast', parsedJson: { fight: FIGHT, caster_is_mob: false, caster_idx: 0, target_cell: DEST } },
+            {
+              type: '0x0::fight_events::Cast',
+              parsedJson: { fight: FIGHT, caster_is_mob: false, caster_idx: 0, target_cell: DEST },
+            },
             {
               type: '0x0::fight_events::Displaced',
               parsedJson: { fight: FIGHT, target_is_mob: false, target_idx: 0, to_cell: DEST, kind: SE.K_TELEPORT },

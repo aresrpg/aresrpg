@@ -3,16 +3,18 @@
 // fight/store.js — the ONE zustand store and the ONE write door for ALL fight state.
 //
 // THE ONE-REDUCER LAW (enforced by ares test fightcore gate b): `input(msg, now)` is the ONLY
-// function repo-wide that writes fight state. Async results (receipt / poll / p2p / snapshot) NEVER `set()` a
-// store — they dispatch an input, prediction paints first, and the versioned snapshot reconciles through the
-// reducer's merge rule. Every entry is keyed `(version, event_idx)`; the log is order-independent (a re-fold of
-// the sorted, deduped entries), so any interleave of {receipt, stale poll, dup poll, adopt} converges to the
-// same committed state.
+// function repo-wide that writes fight state. Async results (receipt / journal / p2p / snapshot) NEVER `set()` a
+// store — they dispatch an input, prediction paints first, and canonical truth folds through the ONE accept door.
+// Every canonical entry is keyed `(version, event_idx = seq)`; the log is order-independent (a re-fold of the
+// sorted, deduped entries), so any interleave of {receipt, journal page, dup delivery, stale object read}
+// converges to the same committed state.
 //
-// SNAPSHOT + TAIL (the S2 base lane): a decoded Fight OBJECT read adopts wholesale as the rich `view` at its
-// object `version` (at-or-below the applied floor → dropped, never regresses); ordered EVENT entries with
-// version > view_version fold ON TOP as the thin overlay. One fold (`apply_action`), one merge rule, zero
-// hand-rolled watermarks — this lane replaces chain_frame's floor/leapfrog machinery outright.
+// ONE INGRESS (M2b, #291 — the base lane): receipts (my tx's optimistic early copy) and journal pages (the
+// authoritative read-layer log) BOTH normalize into ONE `accept_batch` stream keyed `(fight_id, seq)` —
+// contiguous, content-deduped, gap-checked — and its `apply` events fold as the SOLE canonical source. The 4s
+// Fight OBJECT read is DEMOTED to a bootstrap base (adopted ONCE, seeding the accept cursor from journalHead) + a
+// live-fight CHECKPOINT (a version/journalHead watermark that pokes the journal walker); it never re-adopts,
+// never merges, never overwrites the fold. Everything that guessed history from an object read is deleted.
 //
 // PRESENTATION (the S2 wave lane): non-local receipt segments are paced (present.js — ~3s PER mob turn) into
 // `wave` turns the renderer drains; it acks each with input({type:'presented'}). `presenting` is DERIVED
@@ -383,7 +385,11 @@ const make_input =
             journal_head != null && journal_head > next
               ? { fight_id: s.fight_id, from: next.toString() }
               : s.journal_gap
-          return { ...s, last_action_ms: Math.max(s.last_action_ms, last_action_of(msg.fight, s.last_action_ms)), journal_gap }
+          return {
+            ...s,
+            last_action_ms: Math.max(s.last_action_ms, last_action_of(msg.fight, s.last_action_ms)),
+            journal_gap,
+          }
         })
         return
       }

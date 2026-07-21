@@ -914,7 +914,7 @@ export const use_dungeon = create((set, get) => ({
         // from the JOURNAL. When the checkpoint saw the object's journalHead run ahead of our accepted frontier it
         // flagged a gap; walk the read-layer journal from there and feed each normalized page through the ONE journal
         // door. The accept machine dedupes re-delivery (a re-walk is idempotent); a pre-deploy 404 degrades to a no-op.
-        const journal_gap = fight_store.getState().journal_gap
+        const { journal_gap } = fight_store.getState()
         if (journal_gap && String(journal_gap.fight_id ?? live_fight_id) === String(live_fight_id)) {
           const walked = await paginate_fight_journal(live_fight_id, { from: journal_gap.from }).catch(() => null)
           if (walked?.ok)
