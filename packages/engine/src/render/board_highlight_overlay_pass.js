@@ -156,11 +156,15 @@ export function create_highlight_overlay({ scene, camera, scene_depth }) {
       // α→0 is multiplied by ~0), re-tonemap it with AgX at the FIXED baseline exposure, encode to sRGB —
       // reproducing the scene's daytime transform (renderOutput AgX→sRGB) FROZEN against the night swing.
       const lin = hl_color.rgb.div(hl_color.a.max(1e-4))
+      // .rgb: three's toneMapping() emits vec4(rgb, colorNode.a) (ToneMappingNode.setup), so this chain
+      // is a vec4. The composite below is an rgb-over that appends its OWN alpha (the trailing `1`); without
+      // this swizzle `display.mul(a)` stays vec4 and widens the add to vec4, so `vec4(<vec4>, 1)` overflows
+      // to 5 components — THREE.TSL "Length of parameters exceeds maximum length of 'vec4()'" at boot.
       const display = convertColorSpace(
         toneMapping(AgXToneMapping, u_exposure, lin),
         LinearSRGBColorSpace,
         SRGBColorSpace
-      )
+      ).rgb
       // standard OVER onto the graded sRGB frame: out·(1−a) + display·a.
       return vec4(out.rgb.mul(float(1).sub(a)).add(display.mul(a)), 1)
     },
