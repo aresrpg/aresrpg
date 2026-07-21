@@ -3,6 +3,7 @@
 // Forward SuiNS read view. This stays separate from the Redis-backed projection views because its
 // upstream is the API's existing keyless Mysten GraphQL lane (suins.js), not an indexer document.
 
+import { report_error } from './report.js'
 import { fetch_address_from_chain } from './suins.js'
 
 const bad = (message) => ({ status: 400, data: { error: 'bad_request', message } })
@@ -20,6 +21,7 @@ export async function handle_suins(params, resolve_address = fetch_address_from_
     return { status: 200, data: { name, address } }
   } catch (error) {
     console.error(`[suins] forward resolution failed for ${name}:`, error.message)
+    report_error(error, { area: 'suins', action: 'forward_resolve', name })
     return { status: 502, data: { error: 'upstream_unavailable' } }
   }
 }

@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@mysten/sui": "2.20.3"
+    "@mysten/sui": "2.20.3",
+    "@sentry/node": "^10.67.0"
   }
 }

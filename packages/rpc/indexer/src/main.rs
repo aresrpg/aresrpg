@@ -13,6 +13,31 @@
 //!
 //! Configuration is entirely env-driven (see the [`Args`] fields); a `.env` file
 //! is loaded if present.
+//!
+//! ## Error reporting — BLOCKED this pass (design note, issue #29)
+//!
+//! Not wired: the org's Sentry "indexer" project has a DSN reserved, but a correct
+//! integration needs a new `sentry` crate dependency (features `["anyhow"]` for
+//! [`anyhow::Error`] capture via `sentry_anyhow::capture_anyhow`, plus the default
+//! panic-hook integration `sentry::integrations::panic` to catch a panic in ANY
+//! tokio task the framework spawns, not just an `Err` bubbling out of `main`) —
+//! and this crate has no cached `target/` or registry in a fresh checkout, so
+//! resolving + compiling that dependency (on top of the already-heavy
+//! `sui-indexer-alt-framework` git dependency) is a from-scratch build too slow to
+//! verify inside this lane's budget. Recommended shape for the follow-up:
+//! ```ignore
+//! let _guard = std::env::var("SENTRY_DSN").ok().filter(|d| !d.is_empty()).map(|dsn| {
+//!     sentry::init((dsn, sentry::ClientOptions {
+//!         release: sentry::release_name!(),
+//!         environment: Some(args.network.clone().into()),
+//!         traces_sample_rate: 0.0, // errors-only, matches docs/ERRORS.md
+//!         ..Default::default()
+//!     }))
+//! }); // guard dropped at end of main ⇒ flushes on exit; None (no DSN) ⇒ zero-cost no-op
+//! ```
+//! wrapping the `main()` body's `?`-propagated `Result` so a top-level `Err` reports via
+//! `sentry_anyhow::capture_anyhow(&err)` before returning it (main's own `Result` error
+//! path already prints + exits non-zero — reporting is additive, not a behavior change).
 
 mod handlers;
 mod store;

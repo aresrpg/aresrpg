@@ -10,9 +10,9 @@
 // request text regardless of batch size, since addresses travel as a `keys` variable, not aliased
 // fields) via `Address.defaultNameRecord.domain` — the schema's reverse-resolution field (the older
 // `Address.defaultSuinsName` was removed from the live schema; NameRecord.domain is its replacement,
-// confirmed by introspecting https://graphql.testnet.sui.io/graphql on 2026-07-10). No new dependency:
-// this api package has zero npm deps today (Bun's global fetch + built-in RedisClient only), and a
-// raw GraphQL POST needs nothing more.
+// confirmed by introspecting https://graphql.testnet.sui.io/graphql on 2026-07-10). No dependency
+// needed for the resolution itself: Bun's global fetch + built-in RedisClient are enough for a raw
+// GraphQL POST (this package's ONLY dependency is @sentry/node, error reporting — see report.js).
 //
 // Redis is a TTL cache in front of the network call — SuiNS names change rarely, so a cache MISS is
 // the rare path; a HIT never touches the network or the chain. Cache values are plain strings (not
@@ -28,6 +28,7 @@
 // broken row.
 
 import { redis } from './redis.js'
+import { report_error } from './report.js'
 
 const NETWORK = process.env.NETWORK ?? 'testnet'
 // Mirrors packages/sdk/src/sui.js's graphql_client URL branch exactly (the proven-live testnet/
@@ -119,6 +120,7 @@ export async function resolve_names(addresses) {
     } catch (err) {
       // Ops-visible, never user-visible: the decorative name silently falls back (see file header).
       console.error(`[suins] resolution failed for ${misses.length} address(es):`, err.message)
+      report_error(err, { area: 'suins', action: 'resolve_names', batch_size: misses.length })
       misses.forEach((addr) => {
         result[addr] = null
       })

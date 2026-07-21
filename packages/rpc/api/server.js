@@ -23,13 +23,16 @@
 //                       shared money-counter api/sponsor.mjs INCRBYs — NOT an indexer view)
 //
 // Config (env): PORT, REDIS_URL, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_SEC, NETWORK,
-//               NAMES_CACHE_TTL_SEC.
+//               NAMES_CACHE_TTL_SEC, SENTRY_DSN (error reporting, report.js — absent = no-op).
 
 import { cache_control_for } from './cache_policy.js'
 import { check_rate_limit } from './rate_limit.js'
+import { init_reporting, report_error } from './report.js'
 import { to_response } from './respond.js'
 import { ROUTES } from './routes.js'
 import { handle_health } from './views.js'
+
+init_reporting()
 
 const PORT = Number(process.env.PORT ?? 3000)
 
@@ -85,6 +88,13 @@ const server = Bun.serve({
       // shared-cacheable routes serve ONE variant to everyone — see respond.js's CORS note
       ...(cache_control !== 'no-store' && { 'access-control-allow-origin': '*' }),
     })
+  },
+  // The one surface fetch()'s own try/catches don't cover: anything thrown OUT of a
+  // route handler (a view bug, not a modeled refusal) lands here instead of Bun's
+  // default error page. report_error no-ops without SENTRY_DSN — same response either way.
+  error(error) {
+    report_error(error, { area: 'fetch' })
+    return Response.json({ error: 'internal_error' }, { status: 500 })
   },
 })
 

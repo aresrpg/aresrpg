@@ -30,3 +30,15 @@ Already-covered chokes (do NOT re-report at call sites — the rethrown error is
 
 Sentry scope is **errors-only**: no tracing, no session replay. `beforeSend` drops user-rejected wallet
 signatures, benign `AbortError`s and extension noise; MoveAborts group by `package::module::abort_code`.
+
+## Server-side (packages/rpc/api, api/sponsor.mjs)
+
+Same convention, ported: each service carries its own small `report.js` (`@sentry/node`, not shared
+across services — they're separate deploy units, see CLAUDE.md's "Copy > abstract"), no-op without
+`SENTRY_DSN`, one `report_error(err, context)` choke called at each service's TERMINAL catch (the ones
+that turn an error into an HTTP response, never the inner rethrow-to-a-caller ones) plus each Bun.serve's
+`error()` hook for anything escaping uncaught. No breadcrumbs, no user identity, no MoveAbort
+fingerprinting — those are frontend-specific; `@sentry/node`'s own default uncaught-exception /
+unhandled-rejection integrations are kept as-is instead of hand-rolled (nothing to add on top,
+server-side). The Rust indexer (`packages/rpc/indexer`) is NOT wired yet — see its `main.rs` doc
+comment for the crate recommendation.

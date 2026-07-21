@@ -11,6 +11,7 @@ import { verifyPersonalMessageSignature } from '@mysten/sui/verify'
 
 import checked_in_release from '../packages/sdk/src/deployment/release.json' with { type: 'json' }
 
+import { init_reporting, report_error } from './report.js'
 import {
   ADDR_DAILY_CAP_MIST,
   ADDR_RL_MAX,
@@ -37,6 +38,8 @@ export {
   rate_limited,
   stash_reservation,
 } from './sponsor_state.mjs'
+
+init_reporting() // error reporting (report.js) — hard no-op without SENTRY_DSN
 
 const NETWORK = process.env.VITE_NETWORK || 'testnet'
 const release = process.env.SPONSOR_RELEASE_PATH
@@ -391,6 +394,7 @@ export default async function handler(request, response) {
   try {
     require_station_config()
   } catch (error) {
+    report_error(error, { area: 'sponsor', action: 'station_config' })
     return response.status(503).json({ error: String(error?.message ?? error) })
   }
   const ip =
@@ -406,6 +410,7 @@ export default async function handler(request, response) {
     const result = await handle_sponsor_post(pathname, body)
     response.status(result.status).json(result.json)
   } catch (error) {
+    report_error(error, { area: 'sponsor', action: 'handle_post' })
     response.status(400).json({ error: String(error?.message ?? error) })
   }
 }
@@ -432,10 +437,17 @@ if (typeof Bun !== 'undefined' && import.meta.main) {
           const result = await handle_sponsor_post(url.pathname, await request.json())
           return Response.json(result.json, { status: result.status, headers: CORS })
         } catch (error) {
+          report_error(error, { area: 'sponsor', action: 'handle_post' })
           return Response.json({ error: String(error?.message ?? error) }, { status: 400, headers: CORS })
         }
       }
       return Response.json({ error: 'not found' }, { status: 404, headers: CORS })
+    },
+    // The one surface fetch()'s own try/catch doesn't cover (e.g. `new URL()` on a malformed
+    // request line): report_error no-ops without SENTRY_DSN — same response either way.
+    error(error) {
+      report_error(error, { area: 'fetch' })
+      return Response.json({ error: 'internal_error' }, { status: 500, headers: CORS })
     },
   })
 }
