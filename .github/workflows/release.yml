@@ -86,10 +86,14 @@ jobs:
           URL="https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
           NOTES_FILE=$(ls changelog/*-RELEASE-*.md 2>/dev/null | sort | tail -1 || true)
           if [ -n "$NOTES_FILE" ]; then BODY=$(cat "$NOTES_FILE"); else BODY="AresRPG ${TAG} is live."; fi
-          # Strip the changelog's own leading H1, then open every message with a BOLD
-          # version header (owner rule: the version leads, bold, above the content).
+          # Strip the changelog's own leading H1, then open every message with the version
+          # tag in an ASCII box (owner rule: the version leads, boxed, above the content).
+          # A code fence renders it monospace so the frame lines up in Discord.
           BODY=$(printf '%s\n' "$BODY" | awk 'NR==1 && /^# /{s=1;next} s{s=0;if($0=="")next} {print}')
-          BODY="**${TAG}**"$'\n\n'"$BODY"
+          INNER="  ${TAG}  "
+          BAR=$(printf '═%.0s' $(seq 1 ${#INNER}))
+          BOX='```'$'\n'"╔${BAR}╗"$'\n'"║${INNER}║"$'\n'"╚${BAR}╝"$'\n''```'
+          BODY="${BOX}"$'\n'"$BODY"
           # A NORMAL full-width message (not an embed): Discord renders ## headers, bold and
           # bullets natively. flags:4 (SUPPRESS_EMBEDS) kills the link-preview cards that bare
           # URLs in normal content otherwise spawn. The banner rides as a file attachment and
