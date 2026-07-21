@@ -226,4 +226,26 @@ describe('silent grant claims rebase when an earlier prediction disappears', () 
 
     expect(presented_state(store.getState()).fighters.p0.mp).toBe(2)
   })
+
+  test('a rolled-back grant does not erase overspend debt before a later undo refund', () => {
+    const store = boot()
+    predict(store, 'vanish:funding-fourth-step', 2_000)
+    for (const [i, mp_left] of [3, 2, 1, 0].entries())
+      store.getState().input(
+        { type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: START + i + 1, mp_left } },
+        2_010 + i
+      )
+    // Backtrack one cell while the +1 still exists: the current draft now costs 3, leaving 1 of its four MP.
+    store.getState().input(
+      { type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: START + 3, mp_left: 1 } },
+      2_020
+    )
+    expect(presented_state(store.getState()).fighters.p0.mp).toBe(1)
+
+    store.getState().input({ type: 'rollback', intent_id: 'vanish:funding-fourth-step' }, 2_100)
+
+    // The same three-step draft exhausts the base pool. Per-row clamping would lose the fourth step's -1 debt and
+    // then expose the undo's +1 refund, incorrectly reporting one MP.
+    expect(presented_state(store.getState()).fighters.p0.mp).toBe(0)
+  })
 })
