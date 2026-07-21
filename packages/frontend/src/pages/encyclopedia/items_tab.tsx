@@ -19,19 +19,22 @@ import { ItemImage } from '../../components/items'
 import { FoundInWorldsSection } from '../../components/mob_detail_view'
 import { PetFullFedNote } from '../../components/pet_power_card'
 import { use_deferred_search } from '../../hooks/use_deferred_search'
-import { ITEM_CATEGORIES, CATEGORY_GROUPS, type CategoryGroupKey } from '../../constants/encyclopedia'
+import { CATEGORY_GROUPS, type CategoryGroupKey } from '../../constants/encyclopedia'
 import { item_display_category } from '../../game/item_classification'
 import { normalize_search } from '../../utils/search'
 import { use_template_t } from '../../i18n/template_t'
 import { get_encyclopedia, get_rare_links } from '../../rpc/client'
 import { use_rpc_view } from '../../rpc/use_view'
 import { use_items_shop_chain } from '../../stores/items_shop_chain'
+import { marketplace_item_type_key } from '../../components/marketplace/marketplace_model'
 
 import { DetailLoading } from './shared'
 import { DroppedBySection } from './dropped_by_section'
 import { PetFoodSection } from './pet_food_section'
 import { RecipeSections } from './recipe_sections'
 import { encyclopedia_item_asset } from './encyclopedia_assets'
+import { item_type_of, item_type_label_key, item_type_buckets } from './item_type_rail'
+import { ItemTypeRail } from './ItemTypeRail'
 // Both maps are derived at build time by virtual:item_catalog; no checked-in seed projection can go stale.
 import { make_catalog_lookup, selected_item_for_route } from './item_catalog'
 import { is_living_item, is_living_mob } from './living_corpus'
@@ -167,7 +170,7 @@ export function ItemsTab({
       .filter((item: any) => {
         if (search && !normalize_search(tt(item, 'name')).includes(normalize_search(search))) return false
         if (sub) {
-          if (item.category !== sub) return false
+          if (item_type_of(item) !== sub) return false
         } else if (group_set) {
           if (!group_set.has(item.category)) return false
         }
@@ -237,7 +240,7 @@ export function ItemsTab({
         label: t(`encyclopedia.group_${group.toLowerCase()}`),
         clear: () => update_param('group', ''),
       })
-    if (sub) chips.push({ key: 'sub', label: sub, clear: () => update_param('sub', '') })
+    if (sub) chips.push({ key: 'sub', label: t(marketplace_item_type_key(sub), sub), clear: () => update_param('sub', '') })
     if (level_min) chips.push({ key: 'lmin', label: `LV ${level_min}+`, clear: () => update_param('lmin', '') })
     if (level_max) chips.push({ key: 'lmax', label: `LV -${level_max}`, clear: () => update_param('lmax', '') })
     if (sort !== 'level_asc')
@@ -245,12 +248,17 @@ export function ItemsTab({
     return chips
   }, [group, sub, level_min, level_max, sort, t])
 
-  const sub_categories = useMemo(() => {
-    if (group === 'ALL') return ITEM_CATEGORIES.filter((c) => c !== 'ALL')
-    const set = CATEGORY_GROUPS[group]
-    if (!set || set.size <= 1) return []
-    return [...set]
-  }, [group])
+  // THE THIRD COLUMN'S data (issue #31 ①): real per-type buckets over the items actually IN this group,
+  // never the static category enum — a collapsed cosmetic category (item_display_category) previously left
+  // NOTHING to divide COSMETICS by, so its rail silently never appeared and every cosmetic card's type
+  // label read the same generic string (②). item_type_buckets resolves each item's SPECIFIC type
+  // (item_type_rail.ts — reuses the marketplace's own cosmetic-aware projection, one home) and naturally
+  // reduces to one bucket wherever a group genuinely has only one type, hiding the rail (redundant rule).
+  const group_items = useMemo(() => {
+    const group_set = CATEGORY_GROUPS[group] || null
+    return group_set ? items.filter((item: any) => group_set.has(item.category)) : items
+  }, [group, items])
+  const sub_categories = useMemo(() => item_type_buckets(group_items), [group_items])
 
   if (loading) {
     return (
@@ -322,22 +330,6 @@ export function ItemsTab({
           </button>
         ))}
       </div>
-
-      {sub_categories.length > 0 && (
-        <div className="app-mobile-chip-row flex flex-wrap gap-1">
-          {sub_categories.map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              className={`category-pill ${sub === cat ? 'active' : ''}`}
-              style={{ fontSize: 8, padding: '2px 8px' }}
-              onClick={() => update_param('sub', sub === cat ? '' : cat)}
-            >
-              {t(`entity.category.${cat.toLowerCase()}`, cat)}
-            </button>
-          ))}
-        </div>
-      )}
 
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-1.5">
@@ -438,12 +430,17 @@ export function ItemsTab({
                         {tt(item, 'name')}
                       </span>
                       {is_new_template(item.createdAt) && <NewBadge />}
-                      <span className="text-[9px] shrink-0 text-muted">
-                        {t('entity.level_short', { level: item.level || 0 })}
-                      </span>
+                      {/* No "Lv. 0" — cosmetics (and any level-less item) carry no level; a level line there
+                          is a lie (mirrors ItemDetailView's same rule — one home, not two). */}
+                      {item.level > 0 && (
+                        <span className="text-[9px] shrink-0 text-muted">
+                          {t('entity.level_short', { level: item.level })}
+                        </span>
+                      )}
                     </div>
                     <span className="text-[8px] tracking-[0.1em] uppercase text-muted/50">
-                      {t(`entity.category.${item.category.toLowerCase()}`, item.category) as string}
+                      {/* The SPECIFIC type (hat/cloak/title), never the collapsed COSMETICS bucket. */}
+                      {t(item_type_label_key(item), item_type_of(item)) as string}
                     </span>
                   </div>
                 </div>
@@ -516,6 +513,18 @@ export function ItemsTab({
     </div>
   )
 
+  // THE THIRD COLUMN (issue #31 ①) — a rail beside the grid, never a top tab. Redundant-hidden: a group
+  // whose items resolve to one type (item_type_buckets) has nothing to divide by, so the rail vanishes
+  // (mirrors the marketplace's own subcategory-column rule, one law in two features).
+  const type_rail = sub_categories.length > 0 && (
+    <ItemTypeRail
+      buckets={sub_categories}
+      active={sub}
+      mobile={is_mobile}
+      on_pick={(type) => update_param('sub', sub === type ? '' : type)}
+    />
+  )
+
   if (is_mobile) {
     return (
       <div className="flex flex-col flex-1 min-h-0">
@@ -533,6 +542,7 @@ export function ItemsTab({
         ) : (
           <div className="flex flex-col flex-1 min-h-0">
             {filter_bar}
+            {type_rail}
             {items_grid}
           </div>
         )}
@@ -542,15 +552,19 @@ export function ItemsTab({
 
   if (!selected_item_id) {
     return (
-      <div className="flex flex-col flex-1 min-h-0">
-        {filter_bar}
-        {items_grid}
+      <div className="flex flex-1 min-h-0">
+        {type_rail}
+        <div className="flex flex-col flex-1 min-w-0 min-h-0">
+          {filter_bar}
+          {items_grid}
+        </div>
       </div>
     )
   }
 
   return (
     <div className="flex flex-1 min-h-0">
+      {type_rail}
       <div className="flex flex-col flex-[7] min-w-0 min-h-0">
         {filter_bar}
         {items_grid}

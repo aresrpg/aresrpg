@@ -859,6 +859,7 @@
     "group_resources": "RESOURCES",
     "boss_only": "BOSS ONLY",
     "view_all": "ALL",
+    "item_type": "TYPE",
     "view_by_zone": "BY ZONE",
     "view_by_level": "BY LEVEL",
     "view_by_family": "BY FAMILY",
