@@ -120,12 +120,23 @@ export const get_active_world_config = () => active_world_config
 export const should_reuse_pending_session = (pending_world_id, incoming_world_id) =>
   pending_world_id === incoming_world_id
 
+/** This session's OWN exclusive ownership of the ambient_music.js zone-music channel (D226 one-home law,
+ *  issue #17 — "two audio tracks can overlap"): spectate is display-only and never arms it (the documented
+ *  OFF-BY-DEFAULT silence), and FOLLOW hands the channel to follow.ts's OWN arm (the followed character's
+ *  world — which can differ from this session's own bound_world) — so a follow session must never
+ *  independently arm/re-arm it, or the two owners fight over the SAME 2-element roam/battle singleton. A
+ *  normal resident session (neither spectate nor follow) with a bound world is the sole remaining owner.
+ *  Pure — unit-tested without the engine.
+ *  @param {boolean} spectate @param {boolean} follow @param {string | null} bound_world @returns {boolean} */
+export const owns_ambient_music = (spectate, follow, bound_world) => !spectate && !follow && !!bound_world
+
 /** Build the full session: engine (fixed world) + blur-boot + avatar/controller + board + adapter. */
 function create_session(
   /** @type {string | undefined} */ tier, // undefined ⇒ engine device-detection (detect_starting_tier, engine.js:507)
   /** @type {any} */ character,
   /** @type {HTMLElement} */ host,
-  /** @type {boolean} */ spectate = false
+  /** @type {boolean} */ spectate = false,
+  /** @type {boolean} */ follow = false
 ) {
   // [TIME-TO-PLAY instrumentation] the north star — "a time to play the fastest as possible". Marks
   // world-mount (t_boot) → focus_ready (world visible, below) → physics live (standing + controllable, in the
@@ -175,16 +186,22 @@ function create_session(
   const world_config = world_config_for_biome(recipe_name)
   active_world_config = world_config // DEV/proof accessor — get_active_world_config()
   // Resident bound-world music refines this session's base biome to `${world}:${region}` while the player roams.
-  // Spectate/unbound sessions never arm (the documented OFF-BY-DEFAULT world-view silence). The base biome mirrors
+  // Spectate/unbound sessions never arm (the documented OFF-BY-DEFAULT world-view silence). FOLLOW sessions
+  // never arm it either (D226 one-home fix, issue #17 "double music playback"): the follow store
+  // (src/follow.ts) is this channel's EXCLUSIVE owner while following — it arms the FOLLOWED character's
+  // world, which can differ from this session's own bound_world, so a follow session's boot-arm/region-
+  // follower must stand down entirely rather than fight follow.ts for the SAME 2-element ambient_music.js
+  // singleton. owns_ambient_music is the one pure gate for both call sites below. The base biome mirrors
   // follow.ts world_to_biome exactly (chain biome, 'arctic' fallback) so a non-region world's key equals
   // what this session armed — the follower then never fires a switch there.
-  const region_follower =
-    !spectate && bound_world ? create_region_follower({ arm: (key) => set_zone_music(key) }) : null
+  const region_follower = owns_ambient_music(spectate, follow, bound_world)
+    ? create_region_follower({ arm: (key) => set_zone_music(key) })
+    : null
   const region_base_biome = (bound_world ? read_world_biome(bound_world) : null) ?? 'arctic'
   const engine = spectate
     ? create_engine({ canvas, tier, zone_origin: [0, 0], load_radius: 4, world_config })
     : create_engine({ canvas, tier, zone_origin: [0, 0], world_config })
-  if (!spectate && bound_world) set_zone_music(region_base_biome)
+  if (owns_ambient_music(spectate, follow, bound_world)) set_zone_music(region_base_biome)
   // BOUNDLESS WORLD + COORD CODEC: world space is SIGNED and centred on the origin,
   // so the finite fence is symmetric — ±(bounds/2) on each axis. That half-extent is exactly the world↔chain
   // offset (DEFAULT_WORLD_OFFSET = the default world's bounds/2 = 250 000), so the fence and the coord codec
@@ -942,6 +959,7 @@ function create_session(
     mode: 'session',
     character,
     world_id: bound_world,
+    follow, // reboot_voxel_session_tier's own zone-music ownership on re-create (owns_ambient_music)
   }
 }
 
@@ -1050,13 +1068,15 @@ export function reboot_voxel_session_tier(tier) {
   if (!session || session.mode !== 'session' || !session.host) return { ok: false, reason: 'no_session' }
   const dungeon = use_dungeon.getState()
   if (dungeon.dungeon || dungeon.dungeon_id) return { ok: false, reason: 'fight' }
-  const { host, character } = session
+  const { host, character, follow } = session
   // Commit the freshest pose NOW (the ~2s throttle + no in-place pagehide would else rewind the player), then
   // tear down (synchronous GPU release) and rebuild at the new tier on the SAME host — create_session
   // re-attaches the container in-DOM, re-reads the pose, and raises its own boot veil over the re-stream.
+  // `follow` rides along from the dying session so a live tier-reboot mid-follow never resurrects this
+  // session's OWN zone-music ownership (owns_ambient_music) — follow.ts stays the exclusive owner throughout.
   session.flush_position?.()
   dispose_session()
-  session = create_session(tier, character, host, false)
+  session = create_session(tier, character, host, false, follow)
   session.host = host
   ensure_dom_watchdog()
   return { ok: true }
@@ -1071,7 +1091,9 @@ export function reboot_voxel_session_tier(tier) {
  * @returns {{ set_paused: (paused: boolean) => void, destroy: () => void }}
  */
 export function mount_voxel_scene(host, character = null, { tier, spectate = false, follow = false } = {}) {
-  void follow // follow-cam variants stay engine-side concerns; spectate now selects the D183 lite backdrop
+  // follow-cam avatar/camera variants stay engine-side concerns (create_session drives them via `character`
+  // already); `follow` ALSO threads into create_session below to gate this session's OWN zone-music
+  // ownership (owns_ambient_music, issue #17) — no longer a dropped no-op.
   // S1 boot-tier precedence: display-only spectate is always low; gameplay uses explicit then saved tier.
   // No gameplay pref stays undefined so create_engine detects the device tier (mobile floors to low).
   const boot_tier = spectate ? 'low' : (tier ?? (get_saved_quality() || undefined))
@@ -1086,7 +1108,7 @@ export function mount_voxel_scene(host, character = null, { tier, spectate = fal
   const mode = spectate ? 'spectate' : 'session'
   if (session && session.mode !== mode) dispose_session()
   if (!session)
-    session = create_session(boot_tier, character, host, spectate) // D176: attaches INSIDE create (in-DOM before engine)
+    session = create_session(boot_tier, character, host, spectate, follow) // D176: attaches INSIDE create (in-DOM before engine)
   else host.appendChild(session.container) // later mounts reparent the live session
   session.host = host // witness-r4 — the watchdog's self-heal re-attach target (below): the last host a REAL
   // mount call actually used, never a guess. Refreshed on every mount, so a later legitimate re-host still wins.
