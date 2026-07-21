@@ -9,6 +9,7 @@ import { createRoot } from 'react-dom/client'
 import { App } from './app'
 import { load_asset_manifest, subscribe } from './asset_manifest'
 import { load_mob_catalog } from './game/data/mob_catalog.js'
+import { load_spell_corpus } from './game/data/spell_corpus.js'
 import { register_service_worker } from './sw'
 import './i18n'
 import './index.css'
@@ -35,6 +36,11 @@ await load_asset_manifest()
 // off the just-seeded manifest. Non-blocking: the world mounts while it resolves, mobs pop from debug-cube to
 // model on arrival (progressive migration; the manifest carries `mob_catalog` only after the seed leg publishes).
 void load_mob_catalog()
+
+// The authored spell corpus (spell_corpus.json) rides the SAME runtime-asset seam — one pattern, two content
+// blobs. Non-blocking: the scene mounts while it resolves, the spell surfaces fill in on arrival. An absent
+// blob (open-source / pre-publish tree) degrades loudly to inert spell surfaces, never a crash (issue #106).
+void load_spell_corpus()
 
 // ERRORS-ONLY error reporting (core/report.js) — inits ONLY when VITE_SENTRY_DSN is present (a hard no-op
 // otherwise, so a bare dev/local boot never phones home). No tracing, no session replay. It also wires the

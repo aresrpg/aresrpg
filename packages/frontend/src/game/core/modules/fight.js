@@ -22,16 +22,21 @@ import { resolve_character_docs, missing_roster_character_ids } from '../../../w
 import { fight_store } from '@aresrpg/fight/store'
 import { fight_view } from '@aresrpg/fight/project'
 
-// The live chain corpus, already normalized through @aresrpg/sim by fight-spells' package door. The map is
-// keyed by the armed name_key; no SDK gameplay feed or copied seed fallback participates in fight truth.
-export const SPELL_TEMPLATES = new Map(
-  fight_spells_data.spells
-    .filter((spell) => spell.template)
-    .flatMap((spell) => [
-      [spell.name_key, spell.template],
-      [spell.template_id, spell.template],
-    ])
-)
+// The live chain corpus, normalized through @aresrpg/sim by fight-spells' door — keyed by armed name_key AND
+// template_id. LIVE (a function, not a module-load const): the corpus loads async as a runtime blob
+// (game/data/spell_corpus.js), so a captured snapshot would freeze empty before it arrives. Memoized on the
+// projected-rows reference (changes only on (re)load) so reads stay O(1).
+let templates_for = null
+let templates_map = new Map()
+export function spell_templates() {
+  const spells = fight_spells_data.spells
+  if (spells === templates_for) return templates_map
+  templates_for = spells
+  templates_map = new Map(
+    spells.filter((spell) => spell.template).flatMap((spell) => [[spell.name_key, spell.template], [spell.template_id, spell.template]])
+  )
+  return templates_map
+}
 
 /**
  * Resolve a hand card's display + targeting info. MVP: every player spell is level 1, so we read
@@ -112,7 +117,7 @@ export function spell_card(spell_id) {
     }
   }
   // Raw-id callers can still resolve the same normalized chain map; an unknown id gets the neutral card below.
-  const template = SPELL_TEMPLATES.get(spell_id)
+  const template = spell_templates().get(spell_id)
   const level = template?.levels[0] ?? null
   return {
     id: spell_id,
@@ -141,7 +146,7 @@ export function spell_element(spell_id) {
     const dmg = (chain.levels?.[0]?.effects ?? []).find((e) => e.kind === 'DAMAGE')
     return /** @type {any} */ (dmg?.element ? String(dmg.element).toUpperCase() : null)
   }
-  const level = SPELL_TEMPLATES.get(spell_id)?.levels[0]
+  const level = spell_templates().get(spell_id)?.levels[0]
   const dmg = level?.base_effects.find((e) => e.type === 'DAMAGE')
   return /** @type {any} */ (dmg?.element ?? null)
 }
@@ -156,7 +161,7 @@ const COSMETIC_SPELL_NAMES = /** @type {const} */ ({
 
 /** A spell's PLAYER-FACING display name — never a raw slug. @param {string} spell_id @returns {string} */
 function spell_display_name(spell_id) {
-  const template = SPELL_TEMPLATES.get(spell_id)
+  const template = spell_templates().get(spell_id)
   if (template?.name) return template.name
   const cosmetic = COSMETIC_SPELL_NAMES[/** @type {keyof typeof COSMETIC_SPELL_NAMES} */ (spell_id)]
   if (cosmetic) return i18n.t(cosmetic.key, { defaultValue: cosmetic.en })

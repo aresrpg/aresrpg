@@ -13,7 +13,7 @@
 // legacy classes.json `{ level -> ONE id }` map they inverted could never hold three starters at one unlock; the
 // SSOT filter can — see spell-unlock-select.js.
 
-import { SPELL_TEMPLATES, spell_card } from '../../core/modules/fight.js'
+import { spell_templates, spell_card } from '../../core/modules/fight.js'
 
 import { element_color } from './element-colors.js'
 
@@ -39,7 +39,7 @@ const titleize = s =>
  * @returns {{ school: 'fire' | 'water' | 'earth' | 'air' | null, bucket: SpellBucket, kind: string, color: string }}
  */
 const categorize = spell_id => {
-  const effects = SPELL_TEMPLATES.get(spell_id)?.levels[0]?.base_effects ?? []
+  const effects = spell_templates().get(spell_id)?.levels[0]?.base_effects ?? []
   const dmg = effects.find(e => DAMAGE_TYPES.has(e.type) && e.element != null)
   if (dmg?.element) {
     const school = /** @type {'fire' | 'water' | 'earth' | 'air'} */ (
@@ -148,7 +148,7 @@ const effect_view = e => ({
  * @param {string} spell_id  short spell id @returns {SpellDetailView | null}
  */
 export const spell_detail_view = spell_id => {
-  const template = SPELL_TEMPLATES.get(spell_id)
+  const template = spell_templates().get(spell_id)
   if (!template) return null
   const level = template.levels[0] ?? null
   const card = spell_card(spell_id)
