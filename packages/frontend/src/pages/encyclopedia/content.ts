@@ -40,7 +40,6 @@ interface RawClass {
   name: string
   title: string
   health: number
-  stamina: number
   weapon_category: string
   starter_weapon: string
   spells: Record<string, string>
@@ -156,7 +155,6 @@ const classes_t = CLASS_LIST_RAW.map((cls) => ({
   displayName: cls.name,
   title: cls.title,
   health: cls.health,
-  stamina: cls.stamina,
   starterWeapon: cls.starter_weapon,
   draft: false,
 }))
