@@ -12,14 +12,37 @@
 //
 // Run: `bun ares test combo` (the selector) — or `bun test packages/fight/test/combinatorial.test.js`.
 
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 import { describe, test, expect, beforeAll } from 'bun:test'
 
-import { MATRIX } from './combinatorial/matrix.js'
-import { drive_combo } from './combinatorial/driver.js'
-import { beat_grammar_violations, parity_violations, pacing_order_violations } from './combinatorial/oracles.js'
+// MISSING-ARTIFACT (#96): this integration suite needs THREE artifacts the content pipeline (private repo)
+// produces — all absent by design in this public repo:
+//   - test/gold/specs_anchor/trajectory_eval.ts   (gold anchor, via combinatorial/oracles.js)
+//   - test/gold/specs_anchor/pacing_envelopes.ts  (gold anchor, via combinatorial/oracles.js)
+//   - seed/mainnet/spells/                        (real spell corpus, via combinatorial/entities.js)
+// Guarded via dynamic import so combinatorial/{matrix,driver,oracles,entities}.js are never touched when
+// any is missing — none of those support files are used anywhere else in this repo.
+const COMBINATORIAL_ARTIFACTS_AVAILABLE =
+  existsSync(fileURLToPath(new URL('../../../test/gold/specs_anchor/trajectory_eval.ts', import.meta.url))) &&
+  existsSync(fileURLToPath(new URL('../../../test/gold/specs_anchor/pacing_envelopes.ts', import.meta.url))) &&
+  existsSync(fileURLToPath(new URL('../../../seed/mainnet/spells', import.meta.url)))
+
+const { MATRIX, drive_combo, beat_grammar_violations, parity_violations, pacing_order_violations } =
+  COMBINATORIAL_ARTIFACTS_AVAILABLE
+    ? {
+        ...(await import('./combinatorial/matrix.js')),
+        ...(await import('./combinatorial/driver.js')),
+        ...(await import('./combinatorial/oracles.js')),
+      }
+    : {
+        MATRIX: [],
+        drive_combo: undefined,
+        beat_grammar_violations: undefined,
+        parity_violations: undefined,
+        pacing_order_violations: undefined,
+      }
 
 // ── THE BURN-DOWN WORKLIST — combos that HARD-fail against HEAD today. Empty = the fold/beat layer is correct
 //    for every combination (the pixel layer is a later lane). An entry here is a KNOWN finding mapped below; a
@@ -82,6 +105,7 @@ const write_catalog = () => {
 }
 
 beforeAll(() => {
+  if (!COMBINATORIAL_ARTIFACTS_AVAILABLE) return
   for (const combo of MATRIX) {
     try {
       results.push(drive_combo(combo))
@@ -99,134 +123,140 @@ beforeAll(() => {
   write_catalog()
 })
 
-describe('combinatorial fight matrix — sim-driven, chain-free, the real fold/beat pipeline', () => {
-  test('every combination runs without throwing and the breadth spans the effect families', () => {
-    expect(results.length).toBe(MATRIX.length)
-    expect(results.length).toBeGreaterThanOrEqual(24)
-    const names = results.map((r) => r.name).join(' ')
-    for (const family of [
-      'aoe.circle',
-      'aoe.cross',
-      'aoe.line',
-      'aoe.cone',
-      'aoe.ring',
-      'glyph',
-      'trap.walk',
-      'trap.push_onto',
-      'push.into_wall',
-      'push.into_mob',
-      'pull',
-      'teleport',
-      'swap',
-      'carry',
-      'throw',
-      'invis',
-      'multimob',
-      'kill.last_by_spell',
-      'kill.last_by_weapon',
-    ])
-      expect(names, `matrix must exercise ${family}`).toContain(family)
-    // no combo may throw (a throw carries the 'threw:' hard row)
-    const threw = results.filter((r) => r.hard?.some((h) => h.startsWith('threw:')))
-    expect(threw.map((r) => `${r.name}: ${r.hard[0]}`)).toEqual([])
-  })
+describe.skipIf(!COMBINATORIAL_ARTIFACTS_AVAILABLE)(
+  'combinatorial fight matrix — sim-driven, chain-free, the real fold/beat pipeline',
+  () => {
+    test('every combination runs without throwing and the breadth spans the effect families', () => {
+      expect(results.length).toBe(MATRIX.length)
+      expect(results.length).toBeGreaterThanOrEqual(24)
+      const names = results.map((r) => r.name).join(' ')
+      for (const family of [
+        'aoe.circle',
+        'aoe.cross',
+        'aoe.line',
+        'aoe.cone',
+        'aoe.ring',
+        'glyph',
+        'trap.walk',
+        'trap.push_onto',
+        'push.into_wall',
+        'push.into_mob',
+        'pull',
+        'teleport',
+        'swap',
+        'carry',
+        'throw',
+        'invis',
+        'multimob',
+        'kill.last_by_spell',
+        'kill.last_by_weapon',
+      ])
+        expect(names, `matrix must exercise ${family}`).toContain(family)
+      // no combo may throw (a throw carries the 'threw:' hard row)
+      const threw = results.filter((r) => r.hard?.some((h) => h.startsWith('threw:')))
+      expect(threw.map((r) => `${r.name}: ${r.hard[0]}`)).toEqual([])
+    })
 
-  test('THE RATCHET — no combination HARD-fails (grammar/trajectory/parity/order) outside the worklist', () => {
-    const surprises = results.filter((r) => !r.pass && !KNOWN_HARD_FAIL.has(r.name))
-    const report = surprises
-      .map((r) => `  ${r.name} (seed ${r.seed}):\n${r.hard.map((h) => `    · ${h}`).join('\n')}`)
-      .join('\n')
-    expect(surprises.length, `HARD-failing combinations NOT on the worklist (regressions):\n${report}`).toBe(0)
-  })
+    test('THE RATCHET — no combination HARD-fails (grammar/trajectory/parity/order) outside the worklist', () => {
+      const surprises = results.filter((r) => !r.pass && !KNOWN_HARD_FAIL.has(r.name))
+      const report = surprises
+        .map((r) => `  ${r.name} (seed ${r.seed}):\n${r.hard.map((h) => `    · ${h}`).join('\n')}`)
+        .join('\n')
+      expect(surprises.length, `HARD-failing combinations NOT on the worklist (regressions):\n${report}`).toBe(0)
+    })
 
-  test('the known-hard-fail worklist is current (each listed combo STILL hard-fails)', () => {
-    const stale = [...KNOWN_HARD_FAIL.keys()].filter((name) => results.find((r) => r.name === name)?.pass)
-    expect(stale, `worklist combos that NOW pass — remove from KNOWN_HARD_FAIL: ${stale.join(', ')}`).toEqual([])
-  })
+    test('the known-hard-fail worklist is current (each listed combo STILL hard-fails)', () => {
+      const stale = [...KNOWN_HARD_FAIL.keys()].filter((name) => results.find((r) => r.name === name)?.pass)
+      expect(stale, `worklist combos that NOW pass — remove from KNOWN_HARD_FAIL: ${stale.join(', ')}`).toEqual([])
+    })
 
-  test('the §7b pacing catalog fired (soft findings exist — the pacing oracle is live, not inert)', () => {
-    const soft_total = results.reduce((n, r) => n + (r.soft?.length ?? 0), 0)
-    expect(
-      soft_total,
-      'zero soft §7b findings across the whole matrix — the pacing evaluator ran on nothing'
-    ).toBeGreaterThan(0)
-  })
+    test('the §7b pacing catalog fired (soft findings exist — the pacing oracle is live, not inert)', () => {
+      const soft_total = results.reduce((n, r) => n + (r.soft?.length ?? 0), 0)
+      expect(
+        soft_total,
+        'zero soft §7b findings across the whole matrix — the pacing evaluator ran on nothing'
+      ).toBeGreaterThan(0)
+    })
 
-  test('the catalog artifact is written', () => {
-    expect(`${OUT_DIR}/catalog.md`).toContain('combinatorial/out/catalog.md')
-  })
-})
+    test('the catalog artifact is written', () => {
+      expect(`${OUT_DIR}/catalog.md`).toContain('combinatorial/out/catalog.md')
+    })
+  }
+)
 
 // ── ANTI-LYING SELF-TESTS — the oracles CATCH a deliberately broken fold (mutation proof, the matrix idiom). ─
-describe('oracle liveness — a broken beat stream / divergent fold is CAUGHT (the gate is not lying-green)', () => {
-  test('grammar catches a displacement whose slide path does not end at to_cell', () => {
-    const wave = [
-      {
-        is_local: false,
-        duration: 3000,
-        beats: [
-          { kind: 'cast', at: 0, duration: 300, payload: { entity_id: 'mob-0' } },
-          {
-            kind: 'displacement',
-            at: 300,
-            duration: 200,
-            payload: {
-              target_id: 'p0',
-              from: { x: 1, y: 1 },
-              to: { x: 3, y: 1 },
-              path: [
-                { x: 1, y: 1 },
-                { x: 2, y: 1 },
-              ],
-              requested: 2,
-              effect_kind: 12,
+describe.skipIf(!COMBINATORIAL_ARTIFACTS_AVAILABLE)(
+  'oracle liveness — a broken beat stream / divergent fold is CAUGHT (the gate is not lying-green)',
+  () => {
+    test('grammar catches a displacement whose slide path does not end at to_cell', () => {
+      const wave = [
+        {
+          is_local: false,
+          duration: 3000,
+          beats: [
+            { kind: 'cast', at: 0, duration: 300, payload: { entity_id: 'mob-0' } },
+            {
+              kind: 'displacement',
+              at: 300,
+              duration: 200,
+              payload: {
+                target_id: 'p0',
+                from: { x: 1, y: 1 },
+                to: { x: 3, y: 1 },
+                path: [
+                  { x: 1, y: 1 },
+                  { x: 2, y: 1 },
+                ],
+                requested: 2,
+                effect_kind: 12,
+              },
             },
-          },
-        ],
-      },
-    ]
-    expect(beat_grammar_violations(wave, {}).some((v) => v.startsWith('grammar.displacement_stop'))).toBe(true)
-  })
+          ],
+        },
+      ]
+      expect(beat_grammar_violations(wave, {}).some((v) => v.startsWith('grammar.displacement_stop'))).toBe(true)
+    })
 
-  test('grammar catches a lethal hit with no death beat (the rig-exclusion flag would never arm)', () => {
-    const wave = [
-      {
-        is_local: false,
-        duration: 3000,
-        beats: [
-          { kind: 'cast', at: 0, duration: 300, payload: { entity_id: 'mob-0' } },
-          { kind: 'damage', at: 300, duration: 450, payload: { target_id: 'p0', new_health: 0, killed: true } },
-        ],
-      },
-    ]
-    expect(beat_grammar_violations(wave, {}).some((v) => v.startsWith('grammar.death_beat'))).toBe(true)
-  })
+    test('grammar catches a lethal hit with no death beat (the rig-exclusion flag would never arm)', () => {
+      const wave = [
+        {
+          is_local: false,
+          duration: 3000,
+          beats: [
+            { kind: 'cast', at: 0, duration: 300, payload: { entity_id: 'mob-0' } },
+            { kind: 'damage', at: 300, duration: 450, payload: { target_id: 'p0', new_health: 0, killed: true } },
+          ],
+        },
+      ]
+      expect(beat_grammar_violations(wave, {}).some((v) => v.startsWith('grammar.death_beat'))).toBe(true)
+    })
 
-  test('parity catches an HP + cell divergence between the fold and the sim', () => {
-    const bad = parity_violations([
-      {
-        label: 'm0',
-        sim: { health: 5, cell: { x: 1, y: 1 }, alive: true },
-        folded: { health: 9, cell: { x: 2, y: 1 }, alive: true },
-      },
-    ])
-    expect(bad.some((v) => v.startsWith('parity.hp'))).toBe(true)
-    expect(bad.some((v) => v.startsWith('parity.cell'))).toBe(true)
-  })
+    test('parity catches an HP + cell divergence between the fold and the sim', () => {
+      const bad = parity_violations([
+        {
+          label: 'm0',
+          sim: { health: 5, cell: { x: 1, y: 1 }, alive: true },
+          folded: { health: 9, cell: { x: 2, y: 1 }, alive: true },
+        },
+      ])
+      expect(bad.some((v) => v.startsWith('parity.hp'))).toBe(true)
+      expect(bad.some((v) => v.startsWith('parity.cell'))).toBe(true)
+    })
 
-  test('§7b ordering catches a death beat rendered BEFORE its own damage floater', () => {
-    const wave = [
-      {
-        is_local: false,
-        duration: 3000,
-        beats: [
-          { kind: 'turn_start', at: 0, duration: 0, payload: {} },
-          { kind: 'cast', at: 0, duration: 300, payload: { entity_id: 'mob-0' } },
-          { kind: 'death', at: 300, duration: 1500, payload: { target_id: 'p0' } },
-          { kind: 'damage', at: 1800, duration: 450, payload: { target_id: 'p0', new_health: 0 } },
-        ],
-      },
-    ]
-    expect(pacing_order_violations(wave).some((v) => v.startsWith('order.death_before_floater'))).toBe(true)
-  })
-})
+    test('§7b ordering catches a death beat rendered BEFORE its own damage floater', () => {
+      const wave = [
+        {
+          is_local: false,
+          duration: 3000,
+          beats: [
+            { kind: 'turn_start', at: 0, duration: 0, payload: {} },
+            { kind: 'cast', at: 0, duration: 300, payload: { entity_id: 'mob-0' } },
+            { kind: 'death', at: 300, duration: 1500, payload: { target_id: 'p0' } },
+            { kind: 'damage', at: 1800, duration: 450, payload: { target_id: 'p0', new_health: 0 } },
+          ],
+        },
+      ]
+      expect(pacing_order_violations(wave).some((v) => v.startsWith('order.death_before_floater'))).toBe(true)
+    })
+  }
+)
