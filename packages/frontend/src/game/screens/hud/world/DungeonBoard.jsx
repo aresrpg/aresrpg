@@ -41,7 +41,7 @@ import { committed_mob_hp } from '@aresrpg/fight/project'
 import { strike_flush_illegal, announce_auto_commit, announce_turn_lost } from '@aresrpg/fight/turn_commit'
 import { retarget_cast } from '@aresrpg/fight/txs'
 import { synthetic_tackled_events, local_intent_beats, local_move_beats } from '@aresrpg/fight/present'
-import { predict_cast, weapon_spell_template, evolve_flush_casts } from '@aresrpg/fight/predict_cast'
+import { predict_cast, weapon_spell_template, evolve_flush_casts, evolve_caster_cell } from '@aresrpg/fight/predict_cast'
 import { committed_state } from '@aresrpg/fight/store'
 import { next_move_tackle } from '@aresrpg/fight/project'
 import { cast_range_set_dungeon } from '../../../../fight-engine/overlay_intents.js' // D139: cast_range_set_dungeon = THE cast-legality home (P1 self-cast)
@@ -367,6 +367,44 @@ export function DungeonBoard() {
     return vacated
   }, [cast_first, cast_path, dungeon])
 
+  // ONE home for entity_id → { is_mob, idx } (dungeon escrow is the source): the move-cost anchor evolution, the
+  // optimistic cast, AND the flush's ⑭ evolved-sequence validation all resolve fighter refs the same way — a
+  // player rides its character id, a mob rides 'mob-N'. Guards a null dungeon (pre-fight) so callers never throw.
+  const resolve_ref = (fighter_id) => {
+    const mob_match = /^mob-(\d+)$/.exec(String(fighter_id))
+    if (mob_match) return { is_mob: true, idx: Number(mob_match[1]) }
+    const idx = dungeon?.escrow?.findIndex((row) => String(row.character ?? row.character_id) === String(fighter_id)) ?? -1
+    return idx < 0 ? null : { is_mob: false, idx }
+  }
+
+  // #300 THE MOVE-COST ANCHOR — the cell the chain's apply_move charges the FIRST drafted move segment from.
+  // Normally the committed chain cell (the pool's drafts-EXCLUDED anchor — never the presented cell, which already
+  // folds the drafted Moved intent and would zero the early segments). BUT when the casts commit BEFORE the moves
+  // (cast_first) a caster-relocating cast among them (a TELEPORT self-jump, a SWAP) has already moved the caster by
+  // the time apply_move runs — so the anchor is that EVOLVED cell, evolved off the committed base through the
+  // drafted casts via the deterministic sim twin (evolve_caster_cell — the SAME door evolve_flush_casts uses). The
+  // bug it kills (#300): `me.committed.cell` (pre-teleport) measured a 1-cell walk after a teleport as 3 MP, so the
+  // reach shrank and the MP read wrong. No relocating cast → the committed cell unchanged (evolve_caster_cell identity).
+  const move_anchor_cell = useMemo(() => {
+    const committed_cell = me?.committed?.cell ?? me?.cell ?? null
+    if (!cast_first || !cast_path.length || committed_cell == null || !entity_id) return committed_cell
+    const evolved = evolve_caster_cell({
+      view: fight_view(),
+      committed: committed_state(fight_store.getState()),
+      caster_id: entity_id,
+      casts: cast_path.map((entry) => {
+        const weapon = entry.spell_key === WEAPON_ATTACK_ID
+        const drafted = weapon ? null : (my_spells.find((sp) => sp.name_key === entry.spell_key) ?? null)
+        return {
+          spell: weapon ? weapon_spell_template(me?.weapon) : drafted?.object_id ? fight_spell_template(entry.spell_key) : null,
+          target: entry.cell,
+        }
+      }),
+      resolve_ref,
+    })
+    return evolved ?? committed_cell
+  }, [me?.committed?.cell, me?.cell, cast_first, cast_path, entity_id, my_spells, me?.weapon, dungeon])
+
   const reachable = useMemo(() => {
     // MP-ZONE MISCLICK GUARD: when the vfx/sequence of a spell is played, the MP zone stays hidden
     // so a misclick can't move the character — MY OWN cast/weapon VFX still presenting empties the move-click
@@ -378,12 +416,12 @@ export function DungeonBoard() {
     // D254: re-anchor at the LAST drafted step (or the chain cell) with the REMAINING mp (my_mp − Σ segment
     // costs). The reach shrinks as the path grows and empties at 0 MP — so a turn can no longer "walk forever".
     const anchor = move_path.length ? move_path[move_path.length - 1] : me.cell
-    // the whole-path recharge measures from the CHAIN cell (the pool's committed anchor) — me.cell is the
-    // PRESENTED cell (the drafted Moved intent already folded there), which would zero the early segments.
-    const start = me.committed?.cell ?? me.cell
-    const remaining = Math.max(0, my_mp_eff - draft_move_cost(move_path, start, blocked, my_mp_eff))
+    // the whole-path recharge measures from move_anchor_cell — the committed CHAIN cell EVOLVED through the drafted
+    // casts (a teleport/swap relocates it; #300), never the presented cell (the drafted Moved intent already folded
+    // there, which would zero the early segments). No relocating cast → it is the plain committed cell.
+    const remaining = Math.max(0, my_mp_eff - draft_move_cost(move_path, move_anchor_cell, blocked, my_mp_eff))
     return new Set(bfsReachable(anchor, remaining, blocked))
-  }, [me, my_turn, my_mp_eff, dungeon, entity_id, move_path, optimistic_vacated, fight?.fighters, fight?.cast_presenting])
+  }, [me, my_turn, my_mp_eff, dungeon, entity_id, move_path, move_anchor_cell, optimistic_vacated, fight?.fighters, fight?.cast_presenting])
 
   // OPTIMISTIC CASTER CELL (FIGHT-WAVE-2 root cause): a cast AFTER a move did NOTHING. `castable` computed
   // range/LOS from `me.cell` — the CHAIN baseline (pre-move) — so a mob only reachable from the drafted post-move
@@ -487,10 +525,11 @@ export function DungeonBoard() {
     // same optimistic-vacated blocked set as `reachable` — a cast-first drafted kill frees its cell for this walk too,
     // so the committed BFS cost (draft_move_cost) matches the chain's apply_move (which sees the mob already dead).
     const blocked = presentation_blocked_cells(dungeon, fight?.fighters, entity_id, optimistic_vacated)
-    // the committed CHAIN cell anchors both the full-undo walk-back destination and the whole-draft recharge —
-    // me.cell is the PRESENTED (already-drafted) cell, which made an emptied draft walk back to itself and
-    // never restore the spent MP.
-    const chain_cell = me.committed?.cell ?? me.cell
+    // move_anchor_cell anchors both the full-undo walk-back destination and the whole-draft recharge: the committed
+    // CHAIN cell EVOLVED through the drafted casts (#300 — a teleport/swap already moved the caster there before the
+    // moves apply). me.cell is the PRESENTED (already-drafted) cell, which made an emptied draft walk back to itself
+    // and never restore the spent MP; the raw committed cell would walk back THROUGH a teleport and overcount MP.
+    const chain_cell = move_anchor_cell
     const dest = draft.length ? draft[draft.length - 1] : chain_cell // encoded; empty draft → back to the chain start
     // ANCHOR THE FROM ON THE DRAFTED PATH, never the PRESENTED fighter cell: since the snap-then-run display hold
     // (d4f9e748) the presented cell (fight.fighters — engine_view) lags at the pre-move origin until each walk beat
@@ -511,16 +550,6 @@ export function DungeonBoard() {
       // contract (a raw array here is invoked as a function → the S2 "instance of Array" crash — regression-locked).
       beats: local_move_beats({ fight_id: fight.fight_id, character: entity_id, to_cell: dest, path }),
     })
-  }
-
-  // ONE home for entity_id → { is_mob, idx } (dungeon escrow is the source): the optimistic cast AND the flush's
-  // ⑭ evolved-sequence validation both resolve fighter refs the same way — a player rides its character id, a mob
-  // rides 'mob-N'. Guards a null dungeon (pre-fight) so callers never throw.
-  const resolve_ref = (fighter_id) => {
-    const mob_match = /^mob-(\d+)$/.exec(String(fighter_id))
-    if (mob_match) return { is_mob: true, idx: Number(mob_match[1]) }
-    const idx = dungeon?.escrow?.findIndex((row) => String(row.character ?? row.character_id) === String(fighter_id)) ?? -1
-    return idx < 0 ? null : { is_mob: false, idx }
   }
 
   // OPTIMISTIC CAST (P1): the chain-corpus template runs through @aresrpg/sim once. Its deterministic state delta

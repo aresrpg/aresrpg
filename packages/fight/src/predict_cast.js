@@ -461,6 +461,61 @@ export const predict_cast = ({
 }
 
 /**
+ * The COMMITTED sim base a turn's drafted casts/moves evolve from: the live view's fighters with their CELLS/HP
+ * swapped to chain truth (my optimistic drafts EXCLUDED) — the exact state the chain evolves from. A fighter
+ * absent from `committed` keeps its view row. Shared by evolve_flush_casts (per-cast occupancy) and
+ * evolve_caster_cell (the post-cast move anchor) so both read the SAME chain base — one home for the evolution.
+ * @param {{ view:object, committed:{fighters?:Record<string,{cell:number,hp:number,alive:boolean}>}, caster_id:string, resolve_ref:(id:string)=>{is_mob:boolean,idx:number}|null }} params
+ */
+const committed_sim_base = ({ view, committed, caster_id, resolve_ref }) => {
+  const base_fighters = new Map()
+  for (const [id, fighter] of view.fighters ?? new Map()) {
+    const ref = resolve_ref(id)
+    const row = ref ? committed?.fighters?.[`${ref.is_mob ? 'm' : 'p'}${ref.idx}`] : null
+    base_fighters.set(id, row ? { ...fighter, cell: decode(row.cell), health: row.hp } : fighter)
+  }
+  return state_from_view({ ...view, fighters: base_fighters }, caster_id, null)
+}
+
+/**
+ * The caster's ENCODED cell after the drafted casts (D99 order) evolve the committed base — the cell the chain's
+ * apply_move charges the FIRST move segment from when the casts commit BEFORE the moves (cast_first). A
+ * caster-relocating cast among them (a TELEPORT self-jump, a SWAP) moves the caster, so the movement draft's cost
+ * anchor MUST be this evolved cell, never the raw committed cell (#300: walking one cell after a teleport charged
+ * MP measured from the PRE-teleport cell — the reach shrank and the MP read wrong). No relocating cast — or none
+ * drafted — returns the committed caster cell unchanged. Reuses the SAME sim door + committed base as
+ * evolve_flush_casts (the deterministic twin), so the anchor never drifts from what the chain evolves.
+ *
+ * @param {object} params
+ * @param {object} params.view                    live engine_view (arena/metadata; fighter cells swapped to committed truth)
+ * @param {{ fighters?: Record<string, { cell:number, hp:number, alive:boolean }> }} params.committed  chain base, thin p{seat}/m{idx} keys
+ * @param {string} params.caster_id
+ * @param {Array<{ spell: object|null, target: number, spell_level?: number }>} params.casts  drafted casts, D99 order
+ * @param {(id:string)=>{is_mob:boolean,idx:number}|null} [params.resolve_ref]  entity id → seat/mob ref (dungeon escrow home)
+ * @returns {number|null} the caster's ENCODED post-cast cell, or null when the caster can't be resolved
+ */
+export const evolve_caster_cell = ({ view, committed, caster_id, casts, resolve_ref = entity_ref }) => {
+  if (!view || !caster_id) return null
+  const { state, arena } = committed_sim_base({ view, committed, caster_id, resolve_ref })
+  let sim = state
+  for (const cast of casts ?? []) {
+    if (!cast?.spell) continue
+    const pred = predict_sim_cast({
+      state: sim,
+      caster_id,
+      spell: cast.spell,
+      spell_level: cast.spell_level ?? 1,
+      target: decode(cast.target),
+      arena,
+      resolve_ref,
+    })
+    if (pred?.result?.success) sim = pred.result.state
+  }
+  const caster = find_entity(sim, caster_id)
+  return caster?.cell ? encode(caster.cell.x, caster.cell.y) : null
+}
+
+/**
  * ⑭ FLUSH VALIDATES THE EVOLVED SEQUENCE. The chain commits ONE PTB in D99 order, each action reading LIVE
  * evolved state (dungeon-turn / actions.move). At flush a drafted cast MUST be validated against the board the
  * CHAIN sees when it fires — the COMMITTED base evolved through the PRIOR casts' displacements/kills — NEVER the
@@ -483,15 +538,7 @@ export const predict_cast = ({
  */
 export const evolve_flush_casts = ({ view, committed, caster_id, casts, resolve_ref = entity_ref }) => {
   if (!view || !caster_id || !casts?.length) return []
-  // The COMMITTED sim base: the live view's fighters with their CELLS/HP swapped to chain truth (my optimistic
-  // drafts excluded) — the exact state the chain evolves from. A fighter absent from `committed` keeps its view row.
-  const base_fighters = new Map()
-  for (const [id, fighter] of view.fighters ?? new Map()) {
-    const ref = resolve_ref(id)
-    const row = ref ? committed?.fighters?.[`${ref.is_mob ? 'm' : 'p'}${ref.idx}`] : null
-    base_fighters.set(id, row ? { ...fighter, cell: decode(row.cell), health: row.hp } : fighter)
-  }
-  const { state, arena } = state_from_view({ ...view, fighters: base_fighters }, caster_id, null)
+  const { state, arena } = committed_sim_base({ view, committed, caster_id, resolve_ref })
   let sim = state
   const occupancy = () => {
     const occ = new Map()
