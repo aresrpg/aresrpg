@@ -5,7 +5,7 @@
 // injection — every function takes `sdk` as a param, so a plain mock drives it; ZERO mock.module (process-global
 // collision law). Models a real live wallet: cap[0] is NOT the character's kiosk.
 
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { afterAll, beforeEach, describe, expect, it } from 'bun:test'
 
 import { get_log_buffer, _reset_log_for_test } from '../core/log.js'
 import { invalidate as invalidate_kiosk_cap_cache } from '../chain/kiosk_cap_cache.js'
@@ -61,17 +61,27 @@ beforeEach(() => {
   // cases so each test's injected sdk is authoritative (the module-global cache would otherwise bleed one
   // case's CAPS into the next — the exact thing wallet-switch invalidation guards against in production).
   invalidate_kiosk_cap_cache()
+  // #123 (test ceremony / shared-fixture class): kiosk_resolve.js's record_probe only fires
+  // game_log('kiosk_probe', ...) when `typeof window !== 'undefined'` — a browser-context gate. globalThis is
+  // process-wide, and several OTHER world-shell/game test files deliberately LEAVE `window` defined forever
+  // once first set (documented non-cleanup — "deleting window in an afterAll races other files' module
+  // initialization when the scoped game suite runs concurrently"). Every test below this line assumes a
+  // headless (no window) environment to keep the probe silent; reset-before-use rather than trust whatever an
+  // earlier file left behind. The 'kiosk_for_character branch identity' describe block re-arms its own window
+  // per test (it wants the probe active) — this delete always runs first (outer beforeEach).
+  delete globalThis.window
 })
 
 describe('buy_destination_kiosk (purchase lock-target resolution)', () => {
-  // LIVE-CANDIDATE (#117): passes in isolation and in every smaller batch tried (this file alone, this file +
-  // fight_liveness + fight_absence + items_sale_actions); fails ONLY inside the full `bun test src` run
-  // (info_calls.length off by exactly +1 in both cases below — one extra log.info line lands in this test's
-  // window despite _reset_log_for_test() clearing the ring buffer in beforeEach). Root cause not yet isolated:
-  // ruled out invalidate_kiosk_cap_cache() (chain/kiosk_cap_cache.js has zero game_log call sites) — needs a
-  // dedicated bisection of the full 337-file run to find the leaking source (candidate: an unawaited async
-  // logger call from an earlier-running file's test, landing after this file's beforeEach clear).
-  it.skip('active character → the CHARACTER’s kiosk (never first-cap), silently', async () => {
+  // #123 ROOT CAUSE (found + fixed, was LIVE-CANDIDATE #117): the extra log.info line was kiosk_resolve.js's
+  // OWN record_probe firing — it only calls game_log('kiosk_probe', ...) when `typeof window !== 'undefined'`,
+  // and several OTHER world-shell/game test files deliberately leave globalThis.window defined forever once
+  // first set (a documented non-cleanup — deleting it in afterAll would race concurrent module init). This
+  // file's own 'kiosk_for_character branch identity' describe block below is the only one meant to see the
+  // probe fire; these tests never expected window to exist at all. Fixed at the source: the file-level
+  // beforeEach above now deletes globalThis.window before every test regardless of what an earlier file left
+  // behind (reset-before-use), and that describe block re-arms its own window per test.
+  it('active character → the CHARACTER’s kiosk (never first-cap), silently', async () => {
     // The character is one-hop owned by KIOSK_CHAR (the sibling, not cap[0]).
     const sdk = make_sdk({ [CHAR_ID]: KIOSK_CHAR })
     const handle = await buy_destination_kiosk(sdk, ADDR, CHAR_ID)
@@ -92,9 +102,9 @@ describe('buy_destination_kiosk (purchase lock-target resolution)', () => {
     expect(info_calls[0]).toContain(KIOSK_FIRST)
   })
 
-  // LIVE-CANDIDATE (#117): same full-suite-only log-count leak as the test above (info_calls.length off by
-  // exactly +1) — see that test's comment for the diagnostic evidence gathered so far.
-  it.skip('active character but its kiosk unresolvable (escrowed) → fallback + LOGGED', async () => {
+  // #123 ROOT CAUSE (found + fixed, was LIVE-CANDIDATE #117): same globalThis.window leak as the test above,
+  // fixed at the source — see that test's comment.
+  it('active character but its kiosk unresolvable (escrowed) → fallback + LOGGED', async () => {
     // getObject returns null for the character → kiosk_for_character yields null → fallback, never silent.
     const sdk = make_sdk({})
     const handle = await buy_destination_kiosk(sdk, ADDR, CHAR_ID)
@@ -237,7 +247,10 @@ function branch_sdk({ owners = {}, caps = CAPS } = {}) {
 }
 
 describe('kiosk_for_character branch identity (the four null paths + resolved, each named by the probe)', () => {
-  beforeAll(() => {
+  // Re-arms per test: the file-level beforeEach above (outer, runs first) unconditionally deletes
+  // globalThis.window, so this describe-scoped beforeEach (inner, runs second) sets it back for every one
+  // of ITS OWN tests — the probe this block exercises needs `window` defined to fire.
+  beforeEach(() => {
     globalThis.window = /** @type {any} */ ({})
   })
   afterAll(() => {

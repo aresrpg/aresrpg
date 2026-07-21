@@ -220,14 +220,15 @@ afterAll(() => {
 })
 
 describe('authoritative fight absence', () => {
-  // LIVE-CANDIDATE (#117): passes in isolation (this file alone, 6/6 green); fails ONLY inside the full
-  // `bun test src` run (fight_id stays FIGHT_ID instead of clearing to null after the 'deleted' refresh) —
-  // the same class of full-suite-only shared-state leak as kiosk_resolve.test.js's two skipped tests (see that
-  // file's comment) and items_sale_actions.test.js's one. use_dungeon is a true process-wide Zustand singleton
-  // (one ES module instance for the whole bun test run), so this is consistent with an unawaited async write
-  // from an earlier-running file's test landing inside this test's window despite beforeEach's full-replace
-  // reset_store(). Needs the same dedicated full-suite bisection as the other three.
-  test.skip('a deleted read mid-fight tears down exactly once while a transient failure holds the board', async () => {
+  // #123 ROOT CAUSE (found + fixed, was LIVE-CANDIDATE #117): fixed alongside the sibling settle_fight mocks
+  // below — claim()'s `void route_settlement(...)` is genuinely fire-and-forget in production and its chain
+  // (run_signal_settlement → settle_chain → finish_result) writes the GLOBAL fight_store singleton, which a
+  // permanent module-scope subscriber (dungeon_run_store.js) always mirrors into the ALSO-global use_dungeon.
+  // A real 50ms macrotask settle_fight mock resolved AFTER this file's own afterEach/flush_engine() drain
+  // window, so the write landed on whichever test/file the shared process happened to be running 50ms later.
+  // Fixed at the source (queueMicrotask, see the two settle_fight reassignments below) — a microtask-only
+  // resolution can never outlive a macrotask-based drain, so it is always caught by ITS OWN test's teardown.
+  test('a deleted read mid-fight tears down exactly once while a transient failure holds the board', async () => {
     const collapse = mock(() => use_dungeon.setState({ fight_id: null }))
     use_dungeon.setState({
       fight_id: FIGHT_ID,
@@ -445,10 +446,16 @@ describe('boot fight liveness gate', () => {
 
 describe('confirmed forfeit receipt', () => {
   test('tears down in the receipt tick and never waits for the fight poll', async () => {
-    // Resolves LATE (never during this test's own awaited assertions — route_settlement is fire-and-
-    // forget) rather than never: a permanently-pending promise from claim()'s background settle would leak
-    // across the whole bun test process (one process for the full suite) and hang it at exit (#117).
-    settle_fight = () => new Promise((resolve) => setTimeout(resolve, 50))
+    // Resolves on a LATER MICROTASK tick (never during this test's own awaited assertions — route_settlement is
+    // fire-and-forget) rather than never: a permanently-pending promise from claim()'s background settle would
+    // leak across the whole bun test process (one process for the full suite) and hang it at exit (#117). A real
+    // 50ms macrotask timer fixed the hang but still leaked (#123): it settled AFTER this test's own
+    // afterEach/flush_engine() drain window (a setTimeout(0) + 12-round microtask flush) had already released
+    // the shared get_sdk/game_log/fight_store→use_dungeon singletons to whichever test runs next — landing there
+    // instead. A microtask-only resolution can never outlive a macrotask-based drain (microtasks always finish
+    // before the next timer/macrotask fires), so it stays provably "late" yet is always caught by this test's own
+    // teardown, never a later file's.
+    settle_fight = () => new Promise((resolve) => queueMicrotask(resolve))
     const poll = mock(() => {
       throw new Error('forfeit waited for the poll')
     })
@@ -511,8 +518,11 @@ describe('natural terminal defeat (mob kill — no forfeit)', () => {
   // while the roster's on-chain current_hp stays the STALE pre-fight value until the async settle lands — the
   // world HUD reads projected_hp off that stale value and shows full HP right after a loss.
   test('claim() predict-patches HP to 0 the instant a defeat is observed — never waits on the async settle', async () => {
-    // Resolves LATE, not never (a permanently-pending promise would leak across the whole bun test process — #117).
-    settle_fight = () => new Promise((resolve) => setTimeout(resolve, 50)) // isolates predict from the settle
+    // Resolves on a LATER MICROTASK tick, not never (a permanently-pending promise would leak across the whole bun
+    // test process — #117); not a real macrotask timer either — that settles after this test's OWN
+    // afterEach/flush_engine() drain window and leaks into whichever file runs next instead (#123). See the
+    // sibling test above for the full mechanism.
+    settle_fight = () => new Promise((resolve) => queueMicrotask(resolve)) // isolates predict from the settle
     const dispatch = mock((type, payload) => real_dispatch(type, payload))
     context.dispatch = dispatch
     real_dispatch('action/sui_data', {
