@@ -38,6 +38,25 @@ const decode_receipt_events = (raw_events, fight_id) =>
 
 const default_fighter_id = ({ is_mob, idx, character }) => character ?? `${is_mob ? 'mob' : 'player'}-${idx}`
 
+// The PENDING WINDOW (register #27 · #290): event kinds that BUFFER into `pending` until their Cast/Move opens a
+// turn, instead of tripping the else-branch's `flush_pending()`. Two classes: effects that render off their Cast
+// (Displaced/Hit/Drain/StanceChanged), and no-beat bookkeeping that must merely NOT trip a premature flush
+// (Revealed/CriticalFailure + the ACTION ENVELOPE ActionStarted/ActionEffect/ActionResolved). A real receipt emits
+// effects BEFORE the Cast with a mid-action ActionEffect between them (Hit,Hit,ActionEffect,Cast); membership here
+// keeps the kill Hits buffered so they group into their Cast's turn — never orphaned into a bare non-local 'fight'
+// turn that re-paces an already-presented kill (#290: the death that "played forever, rolled back under committed-dead").
+const PENDING_WINDOW_KINDS = new Set([
+  'Displaced',
+  'Hit',
+  'Drain',
+  'StanceChanged',
+  'Revealed',
+  'CriticalFailure',
+  'ActionStarted',
+  'ActionEffect',
+  'ActionResolved',
+])
+
 const fighter_id_from = (event, role, resolve_fighter_id) => {
   const prefix = role === 'caster' ? 'caster' : role === 'victim' ? 'victim' : role === 'target' ? 'target' : null
   const is_mob = role === 'mob' ? true : prefix ? !!event[`${prefix}_is_mob`] : !!event.is_mob
@@ -227,17 +246,10 @@ export function produce_receipt_render_turns(
   }
 
   for (const event of decoded_events) {
-    if (
-      event.kind === 'Displaced' ||
-      event.kind === 'Hit' ||
-      event.kind === 'Drain' ||
-      event.kind === 'StanceChanged' ||
-      event.kind === 'Revealed' ||
-      event.kind === 'CriticalFailure'
-    ) {
-      // Revealed / CriticalFailure JOIN the pending window (register #27): an unrecognised event fell to the
-      // else-branch below and `flush_pending()` fired, flushing pre-Cast effects BEFORE their Cast (mis-ordered
-      // playback). They carry no render beat of their own — they only must not trip the premature flush.
+    if (PENDING_WINDOW_KINDS.has(event.kind)) {
+      // These BUFFER into `pending` (below) rather than trip the else-branch's premature `flush_pending()` — the
+      // #290 fix. write_receipt_effects renders only Displaced/Hit/Drain/StanceChanged; the action envelope +
+      // Revealed/CriticalFailure carry no beat and are inert once flushed. See PENDING_WINDOW_KINDS for the why.
       if (event.kind === 'Hit' && active_move?.trap) {
         const target_id = fighter_id_from(event, 'victim', resolve_fighter_id)
         if (target_id === active_move.source_id) {
