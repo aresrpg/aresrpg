@@ -16,10 +16,18 @@ import { pick_renderer_backend } from '../core/quality/backend.js'
 import { create_gen_context } from '../gen/column_gen.js'
 import { surface_column } from '../gen/heightmap.js'
 import { id_is_solid } from '../player/block_solidity.js'
-import { create_character_controller } from '../player/character_controller.js'
 import { ground_surface_y } from '../player/spawn.js'
+import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
 
 import * as fallback from './webgl_fallback.js'
+
+// MISSING-ARTIFACT (#117): character_controller.js unconditionally re-exports create_character_avatar
+// from character_avatar.js (D193 "ONE home"), which static-imports the absent-by-design senshi_male.glb —
+// see test_helpers/glb_fixture.js. Guarded dynamic import so this file's OTHER describe block (no
+// character_controller dependency) keeps running for real.
+const { create_character_controller } = SENSHI_MALE_GLB_AVAILABLE
+  ? await import('../player/character_controller.js')
+  : {}
 
 const { park_node_material_objects } = fallback
 const WATER = /** @type {number} */ (get_block_by_name('water')?.id)
@@ -72,7 +80,7 @@ describe('park_node_material_objects — the classic-renderer NodeMaterial guard
   })
 })
 
-describe('forced WebGL gameplay floor', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('forced WebGL gameplay floor', () => {
   test('a submerged fallback column resolves a solid on-ground spawn after terrain readiness', () => {
     expect(pick_renderer_backend({ navigator_gpu: {}, force_webgl: true })).toBe('webgl')
 

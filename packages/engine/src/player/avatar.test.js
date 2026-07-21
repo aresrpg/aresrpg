@@ -15,9 +15,18 @@ import {
   Texture,
 } from 'three'
 
-import { compose_pixels, create_character_avatar } from './character_avatar.js'
-import { create_character_controller } from './character_controller.js'
 import { apply_pixel_filter } from './mob_model.js' // [one-mob-sdk 2026-07-13] moved to the single mob-render home
+import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
+
+// MISSING-ARTIFACT (#117): character_avatar.js resolves the absent-by-design senshi_male.glb via a static
+// Vite `?url` import (test_helpers/glb_fixture.js) — the module cannot load without the file PRESENT on
+// disk, even though these tests mock the GLTF factory and never read its bytes. character_controller.js
+// re-exports the same file (D193 "ONE home"), so it is equally poisoned. apply_pixel_filter (below) lives
+// in mob_model.js, which is clean, and keeps running for real.
+const { compose_pixels, create_character_avatar } = SENSHI_MALE_GLB_AVAILABLE
+  ? await import('./character_avatar.js')
+  : {}
+const { create_character_controller } = SENSHI_MALE_GLB_AVAILABLE ? await import('./character_controller.js') : {}
 
 const px = (/** @type {number[]} */ ...vals) => new Uint8ClampedArray(vals)
 
@@ -44,7 +53,7 @@ async function load_fake_avatar(specs) {
   return { avatar, model }
 }
 
-describe('character avatar swim clip selection', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('character avatar swim clip selection', () => {
   test('prefers a dedicated SWIM clip when the rig has one', async () => {
     const { avatar, model } = await load_fake_avatar([
       ['IDLE', 0],
@@ -105,7 +114,7 @@ describe('character avatar swim clip selection', () => {
   })
 })
 
-describe('compose_pixels (legacy shader port)', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('compose_pixels (legacy shader port)', () => {
   test('mask alpha < 0.5 discards (base untouched)', () => {
     const out = px(10, 20, 30, 255)
     compose_pixels(out, px(200, 200, 200, 127), [1, 1, 1])

@@ -7,12 +7,20 @@
 
 import { test, expect, describe } from 'bun:test'
 
-import { create_character_controller, find_open_spawn, ground_surface_y } from './character_controller.js'
+import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
+
+// MISSING-ARTIFACT (#117): character_controller.js unconditionally re-exports create_character_avatar
+// from character_avatar.js (D193 "ONE home"), which static-imports the absent-by-design senshi_male.glb —
+// see test_helpers/glb_fixture.js. Guarded dynamic import; none of this file's functions touch avatars,
+// but the module can't load without the asset.
+const { create_character_controller, find_open_spawn, ground_surface_y } = SENSHI_MALE_GLB_AVAILABLE
+  ? await import('./character_controller.js')
+  : {}
 
 /** Flat world: solid grass (id 3) at y ≤ 100, air above. */
 const flat = (/** @type {number} */ _x, /** @type {number} */ y, /** @type {number} */ _z) => (y <= 100 ? 3 : 0)
 
-describe('create_character_controller — the D160 embed contract', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('create_character_controller — the D160 embed contract', () => {
   test('spawns standing, idle, on the given position', () => {
     const c = create_character_controller({ sample_block: flat, position: [0.5, 101, 0.5] })
     for (let i = 0; i < 30; i += 1) c.tick(1 / 60)
@@ -96,7 +104,7 @@ describe('create_character_controller — the D160 embed contract', () => {
   })
 })
 
-describe('double jump (2026-07-13) — the mid-air second bounce', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('double jump (2026-07-13) — the mid-air second bounce', () => {
   const step = (/** @type {any} */ c, /** @type {number} */ n) => {
     for (let i = 0; i < n; i += 1) c.tick(1 / 60)
   }
@@ -205,48 +213,51 @@ describe('double jump (2026-07-13) — the mid-air second bounce', () => {
   })
 })
 
-describe('stuck-in-block auto-eject (BACKLOG STUCK-IN-BLOCK — never leave the camera inside geometry)', () => {
-  // A 5-deep solid slab: grass (id 3) at y < 5, air above. Feet-y < 5 buries the 1.9-tall capsule.
-  const slab = (/** @type {number} */ _x, /** @type {number} */ y, /** @type {number} */ _z) => (y < 5 ? 3 : 0)
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
+  'stuck-in-block auto-eject (BACKLOG STUCK-IN-BLOCK — never leave the camera inside geometry)',
+  () => {
+    // A 5-deep solid slab: grass (id 3) at y < 5, air above. Feet-y < 5 buries the 1.9-tall capsule.
+    const slab = (/** @type {number} */ _x, /** @type {number} */ y, /** @type {number} */ _z) => (y < 5 ? 3 : 0)
 
-  test('SPAWN inside a solid voxel ejects UP to the nearest air cell (not left buried)', () => {
-    // feet at y=2 → capsule spans y∈[2, 3.9], fully inside the slab (buried, camera in geometry).
-    const c = create_character_controller({ sample_block: slab, position: [0.5, 2, 0.5] })
-    const t = c.get_transform() // prev == the ejected spawn at construction (acc=0) — read directly
-    expect(t.position[1]).toBeCloseTo(5, 5) // ejected onto the slab top face (feet y=5, capsule 5..6.9 clear)
-    expect(t.position[0]).toBeCloseTo(0.5, 5) // same column (searched up first)
-    expect(t.position[2]).toBeCloseTo(0.5, 5)
-  })
+    test('SPAWN inside a solid voxel ejects UP to the nearest air cell (not left buried)', () => {
+      // feet at y=2 → capsule spans y∈[2, 3.9], fully inside the slab (buried, camera in geometry).
+      const c = create_character_controller({ sample_block: slab, position: [0.5, 2, 0.5] })
+      const t = c.get_transform() // prev == the ejected spawn at construction (acc=0) — read directly
+      expect(t.position[1]).toBeCloseTo(5, 5) // ejected onto the slab top face (feet y=5, capsule 5..6.9 clear)
+      expect(t.position[0]).toBeCloseTo(0.5, 5) // same column (searched up first)
+      expect(t.position[2]).toBeCloseTo(0.5, 5)
+    })
 
-  test('TELEPORT into a solid voxel ejects up to air (the adoption path — join/rollback/snapshot)', () => {
-    const c = create_character_controller({ sample_block: slab, position: [0.5, 8, 0.5] }) // spawn clear
-    c.teleport([0.5, 1, 0.5]) // adopt a buried position
-    c.tick(1 / 60) // one fixed step syncs prev to the ejected pose (a=0 read returns it, gravity-free)
-    const t = c.get_transform()
-    expect(t.position[1]).toBeCloseTo(5, 5) // ejected up, not left at the buried y=1
-    expect(t.position[0]).toBeCloseTo(0.5, 5)
-  })
+    test('TELEPORT into a solid voxel ejects up to air (the adoption path — join/rollback/snapshot)', () => {
+      const c = create_character_controller({ sample_block: slab, position: [0.5, 8, 0.5] }) // spawn clear
+      c.teleport([0.5, 1, 0.5]) // adopt a buried position
+      c.tick(1 / 60) // one fixed step syncs prev to the ejected pose (a=0 read returns it, gravity-free)
+      const t = c.get_transform()
+      expect(t.position[1]).toBeCloseTo(5, 5) // ejected up, not left at the buried y=1
+      expect(t.position[0]).toBeCloseTo(0.5, 5)
+    })
 
-  test('a CLEAR teleport is untouched — no spurious eject when the capsule is already in air', () => {
-    const c = create_character_controller({ sample_block: slab, position: [0.5, 8, 0.5] })
-    c.teleport([10.5, 8, 10.5]) // open air
-    c.tick(1 / 60)
-    const t = c.get_transform()
-    expect(t.position[0]).toBeCloseTo(10.5, 5) // exactly where placed (no lateral nudge)
-    expect(t.position[1]).toBeCloseTo(8, 5)
-    expect(t.position[2]).toBeCloseTo(10.5, 5)
-  })
+    test('a CLEAR teleport is untouched — no spurious eject when the capsule is already in air', () => {
+      const c = create_character_controller({ sample_block: slab, position: [0.5, 8, 0.5] })
+      c.teleport([10.5, 8, 10.5]) // open air
+      c.tick(1 / 60)
+      const t = c.get_transform()
+      expect(t.position[0]).toBeCloseTo(10.5, 5) // exactly where placed (no lateral nudge)
+      expect(t.position[1]).toBeCloseTo(8, 5)
+      expect(t.position[2]).toBeCloseTo(10.5, 5)
+    })
 
-  test('teleport({ eject: false }) keeps the raw buried position — creative-fly moves through solids', () => {
-    const c = create_character_controller({ sample_block: slab, position: [0.5, 8, 0.5] })
-    c.teleport([0.5, 1, 0.5], { eject: false }) // fly bypass: the per-frame teleport must NOT eject
-    c.tick(1 / 60)
-    const t = c.get_transform()
-    expect(t.position[1]).toBeLessThan(2) // stayed at the raw buried y≈1 (NOT ejected to the slab top)
-  })
-})
+    test('teleport({ eject: false }) keeps the raw buried position — creative-fly moves through solids', () => {
+      const c = create_character_controller({ sample_block: slab, position: [0.5, 8, 0.5] })
+      c.teleport([0.5, 1, 0.5], { eject: false }) // fly bypass: the per-frame teleport must NOT eject
+      c.tick(1 / 60)
+      const t = c.get_transform()
+      expect(t.position[1]).toBeLessThan(2) // stayed at the raw buried y≈1 (NOT ejected to the slab top)
+    })
+  }
+)
 
-describe('spawn scan promotion (the one-home surface)', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('spawn scan promotion (the one-home surface)', () => {
   test('ground_surface_y skips canopy and lands on ground', () => {
     // grass at y ≤ 80, a tree: log column at y 81..84, leaves 85..87 — the scan must return 80, not 87.
     const world = (/** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ z) => {

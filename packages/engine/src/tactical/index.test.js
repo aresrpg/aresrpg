@@ -12,7 +12,11 @@
 import { test, expect, describe } from 'bun:test'
 import { PerspectiveCamera, Group } from 'three'
 
-import { create_tactical_board } from './index.js'
+import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
+
+// MISSING-ARTIFACT (#117): index.js imports board_entities.js, which unconditionally imports
+// create_character_avatar — a static import of the absent-by-design senshi_male.glb (test_helpers/glb_fixture.js).
+const { create_tactical_board } = SENSHI_MALE_GLB_AVAILABLE ? await import('./index.js') : {}
 
 // rAF shim — the facade's build/tick paths poll on requestAnimationFrame (absent under bun test).
 globalThis.requestAnimationFrame ??= (/** @type {FrameRequestCallback} */ cb) =>
@@ -57,7 +61,7 @@ function make_canvas() {
   }
 }
 
-describe('tactical facade — listener bus + picking across teardown→rebuild', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('tactical facade — listener bus + picking across teardown→rebuild', () => {
   test('a pre-teardown cell_click subscription still fires after teardown + rebuild', async () => {
     const engine = make_engine()
     const canvas = make_canvas()

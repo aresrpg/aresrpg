@@ -3,12 +3,20 @@
 // [D204] the fence is PHYSICAL for the controller body — jump arcs blocked, escapees rescued.
 import { describe, expect, test, test as d215_test, expect as d215_expect } from 'bun:test'
 
-import { create_character_controller, create_character_controller as d215_create } from './character_controller.js'
+import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
+
+// MISSING-ARTIFACT (#117): character_controller.js unconditionally re-exports create_character_avatar
+// from character_avatar.js (D193 "ONE home"), which static-imports the absent-by-design senshi_male.glb —
+// see test_helpers/glb_fixture.js. Guarded dynamic import; this file's physics tests have no avatar
+// dependency, but the module can't load without the asset.
+const { create_character_controller, create_character_controller: d215_create } = SENSHI_MALE_GLB_AVAILABLE
+  ? await import('./character_controller.js')
+  : {}
 
 const flat_world = (/** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ z) => (y <= 100 ? 1 : 0)
 const bounds = { min_x: -160, min_z: -160, max_x: 192, max_z: 192 }
 
-describe('D204 border clamp + OOB net', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('D204 border clamp + OOB net', () => {
   test('a jump arc toward the fence stops AT the fence (slides, never crosses)', () => {
     const ctl = create_character_controller({
       sample_block: flat_world,
@@ -47,18 +55,21 @@ describe('D204 border clamp + OOB net', () => {
 // [D215] fixed-step render interpolation — the pose between physics steps is smooth, never a snap.
 // (d215_test/d215_expect/d215_create aliases are imported with the top-of-file bun:test +
 // character_controller.js imports — kept as a single import/order group.)
-d215_test('get_transform interpolates between fixed steps (D215 anti-jitter)', () => {
-  const flat = (/** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ z) => (y <= 100 ? 1 : 0)
-  const ctl = d215_create({ sample_block: flat, position: [0.5, 101, 0.5], yaw: 0 })
-  ctl.set_input({ forward: 1, yaw: 0 }) // run -z
-  for (let i = 0; i < 120; i++) ctl.tick(1 / 60) // reach full run speed on whole steps
-  const [, , at_step] = ctl.get_transform().position
-  ctl.tick(1 / 120) // HALF a fixed step — accumulator holds 0.5
-  const [, , mid] = ctl.get_transform().position
-  ctl.tick(1 / 120) // completes the step
-  const [, , next] = ctl.get_transform().position
-  // mid must sit strictly BETWEEN the two step poses (the old code returned at_step for mid = snap)
-  d215_expect(mid).toBeLessThan(at_step)
-  d215_expect(mid).toBeGreaterThan(next)
-  d215_expect(Math.abs(mid - (at_step + next) / 2)).toBeLessThan(0.02) // ~midpoint
-})
+d215_test.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
+  'get_transform interpolates between fixed steps (D215 anti-jitter)',
+  () => {
+    const flat = (/** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ z) => (y <= 100 ? 1 : 0)
+    const ctl = d215_create({ sample_block: flat, position: [0.5, 101, 0.5], yaw: 0 })
+    ctl.set_input({ forward: 1, yaw: 0 }) // run -z
+    for (let i = 0; i < 120; i++) ctl.tick(1 / 60) // reach full run speed on whole steps
+    const [, , at_step] = ctl.get_transform().position
+    ctl.tick(1 / 120) // HALF a fixed step — accumulator holds 0.5
+    const [, , mid] = ctl.get_transform().position
+    ctl.tick(1 / 120) // completes the step
+    const [, , next] = ctl.get_transform().position
+    // mid must sit strictly BETWEEN the two step poses (the old code returned at_step for mid = snap)
+    d215_expect(mid).toBeLessThan(at_step)
+    d215_expect(mid).toBeGreaterThan(next)
+    d215_expect(Math.abs(mid - (at_step + next) / 2)).toBeLessThan(0.02) // ~midpoint
+  }
+)
