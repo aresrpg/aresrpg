@@ -1,13 +1,14 @@
 /* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
 /* © 2026 Sceat — All rights reserved. See LICENSE. */
-/* #208: the event-toast layer shares the minimap's flush top-right anchor and paints above its z-index. */
+/* #237: the event-toast layer paints above the minimap but keeps breathing room from the viewport edge. */
 .gw-toasts {
-  top: 0;
-  right: 0;
+  top: 8px;
+  right: 8px;
 }
 
 /* House glass: translucent near-black, a white/10 hairline, blur, and deliberately sharp corners. */
 .gw-toast {
+  padding: 9px 13px;
   background: rgba(10, 10, 15, 0.72);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 0;

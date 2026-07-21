@@ -7,9 +7,10 @@ import { game_log } from './core/log.js'
 import { report_error } from './core/report.js'
 import { humanize_tx_error } from './game/core/abort_copy.js'
 
-// The app toast layer overlays the flush top-right minimap corner. Its position and glass recipe live in this
-// testable module so app.tsx's Vite-only graph never has to be imported by the component contract tests.
-export const TOAST_CONTAINER_CLASS = 'absolute top-0 right-0 z-50 flex flex-col gap-2 max-w-[min(24rem,100vw)]'
+// The app toast layer overlays the top-right minimap without inheriting its flush-corner rule. Its position
+// and glass recipe live here so app.tsx's Vite-only graph never has to be imported by the contract tests.
+export const TOAST_CONTAINER_CLASS =
+  'absolute top-2 right-2 z-50 flex flex-col gap-2 max-w-[min(24rem,calc(100vw-1rem))]'
 
 export const toast_glass_class =
   'flex flex-col gap-2 p-3 border border-white/10 bg-black/70 backdrop-blur-md rounded-none animate-[slide-in_0.3s_ease-out]'

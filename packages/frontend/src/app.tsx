@@ -121,8 +121,8 @@ function AmbientBackground() {
 function Toasts() {
   const { toasts, remove } = use_toast()
   if (toasts.length === 0) return null
-  // The absolute layer shares the minimap's flush top-right anchor and paints above it. Cards use the one
-  // sharp near-black glass recipe exported beside the position contract.
+  // The absolute layer paints above the minimap with its own small viewport inset. Cards use the one sharp
+  // near-black glass recipe exported beside the position contract.
   return (
     <div className={TOAST_CONTAINER_CLASS}>
       {toasts.map((toast) => (
