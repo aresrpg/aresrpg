@@ -21,6 +21,7 @@ import { is_sponsor_self_pay_refusal } from '../tx'
 import { FINALITY_POLL_SCHEDULE } from '../tx/latency.js'
 import { game_log } from '../core/log.js'
 import { read_world_joined } from '../game/core/world_joined.js'
+import { tx_error } from '../game/core/abort_copy.js'
 
 import { run_tx } from './tx.js'
 import { join_kiosk_for_character } from './kiosk_resolve.js'
@@ -150,8 +151,13 @@ export async function auto_join_world({ character_id, world_id = T62_WORLDS[0].i
   const sponsored_join = async () => {
     try {
       const res = await sponsor_and_execute_transaction(wallet_name, address, await build_join(character_id, world_id))
+      // ISSUE #22 sweep: a bare `new Error(res.effects.status.error)` here coerced the STRUCTURED gRPC/station
+      // abort object to the literal string "[object Object]" — to_message_string's own guard then discards it,
+      // so a MAPPED abort (zones/version/config…) silently degraded to the generic fallback instead of its
+      // specific copy. Route through the ONE decoder home so a mapped code keeps its exact player copy; digest
+      // presence (station contract: '' ⇒ pre-flight refusal, zero gas) drives the honesty split.
       if (res?.effects?.status?.status !== 'success')
-        throw new Error(res?.effects?.status?.error ?? 'join_world failed on-chain')
+        throw tx_error(res?.effects?.status?.error ?? 'join_world failed on-chain', { preflight: !res?.digest })
       // The station's receipt carries no events (SponsoredReceipt) — fetch them by the now-known digest and
       // seed the checkpoint cache (pipeline law: predict/carry the receipt-proven position, never leave the
       // engine boot to race the separate DF read). Silent-safe: a fetch/decode miss keeps the old behavior.

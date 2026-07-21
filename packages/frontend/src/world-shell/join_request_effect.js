@@ -15,7 +15,9 @@ import { subscribe_join_request } from '@aresrpg/world/session_gate'
 
 import { push_event_toast } from '../game/core/toast.js'
 import { game_log } from '../core/log.js'
+import { report_error } from '../core/report.js'
 import i18n from '../i18n'
+import { humanize_tx_error } from '../game/core/abort_copy.js'
 
 import { use_world_binding, session_gate_input } from './session_gate.js'
 import { auto_join_world } from './world_join.js'
@@ -34,9 +36,13 @@ export function wire_join_request_effect() {
     void auto_join_world({ character_id }).catch((error) => {
       // No-silent-failure: release the loading hold to honest spectate + one humanized toast; the manual world
       // switcher is the retry (never auto-refired — tx-retry law). auto_join_world's latch stays set on failure.
+      // ISSUE #22 sweep: this edge's own sponsored path throws OUTSIDE the run_tx choke (world_join.js), so
+      // nothing had reported it here before — report_error is this failure's ONLY "loud to us" choke; the
+      // static title alone couldn't distinguish causes, so message now carries the decoder's specific copy.
       game_log('session-gate', 'create→play auto-join failed — releasing the hold to spectate', error)
+      report_error(error, { area: 'session-gate', action: 'auto_join_world' })
       session_gate_input({ type: 'join_failed', character_id })
-      push_event_toast({ state: 'error', title: i18n.t('discovery.join_failed') })
+      push_event_toast({ state: 'error', title: i18n.t('discovery.join_failed'), message: humanize_tx_error(error) })
     })
   })
 }

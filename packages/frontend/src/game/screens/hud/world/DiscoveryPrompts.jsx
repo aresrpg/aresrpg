@@ -47,6 +47,7 @@ import { publish_world_binding, session_gate_input } from '../../../../world-she
 import { get_sdk } from '../../../../chain/sdk'
 import { game_log } from '../../../../core/log.js'
 import { report_error } from '../../../../core/report.js'
+import { humanize_tx_error } from '../../../core/abort_copy.js'
 
 // The LIVE staking-world roster (deployment.ts) as an id Set — the stale-world heal below tests membership so a
 // character stranded on a retired GHOST world (bound before the republish re-point) migrates to a live world.
@@ -178,8 +179,11 @@ export function DiscoveryPrompts() {
         // ONE-BOOT create→play: release the loading hold so the binding's own truth surfaces —
         // a still-unbound character falls to the honest D183 spectate backdrop (never a stuck veil), with the
         // toast + the manual world switcher as the retry.
+        // ISSUE #22 sweep: the title alone used to be the ONLY thing shown — a MAPPED abort (insufficient
+        // balance, world paused, …) was indistinguishable from any other cause. message carries the decoder's
+        // specific copy (GameWorldHud renders EventToast.message); title stays the honest "what" banner.
         session_gate_input({ type: 'join_failed', character_id })
-        push_event_toast({ state: 'error', title: t('discovery.join_failed') })
+        push_event_toast({ state: 'error', title: t('discovery.join_failed'), message: humanize_tx_error(error) })
         game_log('discovery', 'auto join_world failed', error)
         report_error(error, { area: 'discovery', action: 'auto_join_world' })
       })
