@@ -32,7 +32,6 @@ import { use_game_state, use_fight_view } from '../../../store.js'
 import { select_online_count } from '../../../core/presence_count.js'
 import { send_chat_message, CHANNEL } from '../../../core/modules/chat.js'
 import { get_peer_state } from '../../../../p2p/lobby-room.js'
-import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
 import { use_address_names } from '../../../../rpc/use_address_names'
 import { AddressName } from '../../../../components/address_name'
 import { open_player_menu } from './player_menu_store.js'
@@ -108,16 +107,10 @@ export function WorldChat({ readonly = false } = {}) {
   const input_ref = useRef(/** @type {HTMLInputElement | null} */ (null))
   const root_ref = useRef(/** @type {HTMLDivElement | null} */ (null))
 
-  // D237 INSTANCE SCOPE outside combat — a message from a peer in a DIFFERENT dungeon instance is filtered out.
-  // During a fight the SAME existing log stays mounted/readable; combat lines are synthetic local events with no
-  // peer state, so both cases bypass peer-instance matching in chat_line_in_scope.
-  // Subscribing to my live dungeon_id re-filters the log the instant I cross the boundary. A peer's scope rides
-  // its self-declared p2p `state` (get_peer_state.dungeon_id, null = overworld/not-yet-landed).
-  const my_dungeon_id = use_dungeon((s) => s.dungeon_id ?? null)
-  const lines = history.filter((line) => {
-    if (!enabled.has(line.channel ?? CHANNEL.general)) return false
-    return chat_line_in_scope(line, CHANNEL, my_dungeon_id, get_peer_state(line.id)?.dungeon_id ?? null, !!fighters)
-  })
+  // Chat rides the shared zone channel — zero fight/dungeon awareness (#306): a fighter stays a member of the
+  // exact same log a roamer reads. chat_line_in_scope is always true (world_chat_scope.js); kept as an explicit
+  // seam rather than inlined so the invariant stays headless-testable and greppable before anyone re-adds scoping.
+  const lines = history.filter((line) => enabled.has(line.channel ?? CHANNEL.general) && chat_line_in_scope(line))
   // D52 — one batched /v1/names round trip for the visible log; only feeds authors with no known
   // character name (line.name), so an active chatter's chosen name never changes.
   const author_names = use_address_names(lines.map((l) => l.address))

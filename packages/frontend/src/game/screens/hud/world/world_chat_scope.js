@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /**
- * Whether a chat line belongs in the current world/fight log after its channel checkbox passed. Combat is a
- * client-local presentation stream and has no p2p peer scope; treating its synthetic id like a peer hid the whole
- * log as soon as the player entered a dungeon. Party and own lines retain their cross-instance behavior.
- * @param {{from_me?:boolean,channel?:string}} line
- * @param {{group:string,combat:string}} channels
- * @param {string|null} my_dungeon_id
- * @param {string|null} peer_dungeon_id
- * @param {boolean} [fight_active]
+ * Whether a chat line belongs in the current world/fight log — ALWAYS true (#306). Chat rides the shared zone
+ * channel and has ZERO fight/dungeon awareness: a fighter (or anyone inside a dungeon) stays a member of the
+ * exact same log a roamer reads. This used to also gate general/commerce lines behind a peer-vs-mine
+ * `dungeon_id` match, but that id is each character's PERSONAL run_pass_id — the "session identity" alias in
+ * dungeon_run_store.js, never a shared instance id — so the match never held between two different players,
+ * not even two co-fighters standing side by side in the exact same fight. A fighter's general-channel lines
+ * silently vanished for every roamer, and for any ally whose own client wasn't independently mid-fight at that
+ * instant. Kept as its own seam (not inlined) so the invariant stays headless-testable — see the test file.
+ * remote_players.js still compares dungeon_id for 3D avatar visibility; that's a separate, unrelated concern.
+ * @param {{from_me?:boolean,channel?:string}} [line]
+ * @returns {true}
  */
-export function chat_line_in_scope(line, channels, my_dungeon_id, peer_dungeon_id, fight_active = false) {
-  // Entering a fight must not replace the existing log with an empty instance-scoped view. The same compact chat
-  // stays readable for the entire presentation; combat's synthetic lines are likewise peerless and always local.
-  if (fight_active || line.from_me || line.channel === channels.group || line.channel === channels.combat) return true
-  return peer_dungeon_id === my_dungeon_id
+export function chat_line_in_scope(line) {
+  return true
 }
