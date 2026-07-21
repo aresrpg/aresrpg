@@ -1704,7 +1704,6 @@
     "prediction_reconciled": "Der Kampf hat sich auf der Chain geändert — das Spielfeld wurde korrigiert.",
     "commit_busy": "Zug konnte nicht bestätigt werden — eine Aktion läuft bereits.",
     "waiting": "Warten…",
-    "spell_aim_hint": "{{name}} anvisiert — wähle ein Feld in Reichweite",
     "auto_pass_in": "Auto-Passen in {{n}} s",
     "no_key": "Du brauchst den Schlüssel dieses Dungeons in deinem Kiosk",
     "potion_unavailable": "Tränke können in einem Lauf noch nicht benutzt werden",

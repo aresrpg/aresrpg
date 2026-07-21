@@ -1704,7 +1704,6 @@
     "prediction_reconciled": "The fight changed on-chain — the board was corrected.",
     "commit_busy": "Turn couldn’t be committed — an action is already in progress.",
     "waiting": "Waiting…",
-    "spell_aim_hint": "Aiming {{name}} — pick a cell in range",
     "auto_pass_in": "Auto pass in {{n}}s",
     "no_key": "You need this dungeon’s key in your kiosk",
     "potion_unavailable": "Potions cannot be used inside a run yet",

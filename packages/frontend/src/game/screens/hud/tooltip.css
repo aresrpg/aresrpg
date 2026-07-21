@@ -73,7 +73,7 @@
   -webkit-backdrop-filter: none;
 }
 
-/* Full fight-spell card: the selected/hovered socket's ONE information home. It is portalled over the live
+/* Full fight-spell card: the hovered socket's ONE information home. It is portalled over the live
    board, so the concrete near-black/gold values deliberately mirror FightReport's dark card instead of
    relying on an ancestor-scoped HUD token. Sharp shell, restrained edge, no glass. */
 .tt-card.tt-card--spell {
@@ -299,15 +299,6 @@
   font-size: 10px;
   line-height: 1.35;
 }
-.tt-spell-card__aim {
-  padding-top: 8px;
-  color: var(--fg-muted, #9aa4b2);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  line-height: 1.35;
-}
-
 /* FIX 4 (07-14) — the one-line "why this socket is greyed beyond AP" cue (on cooldown / casts_per_turn
    exhausted). Hardcoded house red (not var(--bad)): this card is body-portalled outside `.hud-spellbar`'s
    scope (see the tt-card--solid note above), so the HUD-scoped token never reaches it. */

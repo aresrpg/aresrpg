@@ -27,7 +27,7 @@ import { Tooltip } from './Tooltip.jsx'
  * this turn (no cross-turn cooldown, so no number — same disabled treatment).
  * @param {{ keyCap: string | null, card: any, color: string, spell_id: string, armed: boolean,
  *   enabled: boolean, glow: boolean, cd_left: number, exhausted: boolean, onPick: () => void,
- *   tip?: import('react').ReactNode, pinned?: boolean }} props
+ *   tip?: import('react').ReactNode, hovered?: boolean }} props
  */
 export function SpellSocket({
   keyCap,
@@ -41,7 +41,7 @@ export function SpellSocket({
   exhausted,
   onPick,
   tip = null,
-  pinned = false,
+  hovered = false,
 }) {
   // REAL spell art (wire the real spell icons — no stub bubbles): the canonical asset is
   // spell_icon_url(icon) → the Walrus `spell` quilt /spells/<icon>.png (curl-verified 200; the SAME
@@ -56,7 +56,7 @@ export function SpellSocket({
   const resolved = spell_icon_url(card.icon ?? spell_id)
   const { url: art_url, attempt, on_failed_attempt } = use_image_retry(resolved ? [resolved] : [])
   return (
-    <Tooltip placement="top" content={tip} className="tt-card--spell" pinned={pinned}>
+    <Tooltip placement="top" content={tip} className="tt-card--spell" visible={hovered}>
       {/* HOVER is projected through the fight core's one input door for the socket-anchored card. */}
       <button
         type="button"

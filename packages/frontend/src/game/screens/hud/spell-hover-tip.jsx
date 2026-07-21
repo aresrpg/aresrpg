@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The single seeded-spell detail card for the fight hotbar. Hover previews it above a socket; selecting the
-// socket pins the same card there while the player aims. Its facts and effects come from the same chain
-// projection + shared effect grammar as the grimoire, so there is no second spell-info source to drift.
+// The single seeded-spell detail card for the fight hotbar. Pointer hover previews it above a socket. Its facts
+// and effects come from the same chain projection + shared effect grammar as the grimoire, so there is no
+// second spell-info source to drift.
 
 import { element_color } from './element-colors.js'
 import { seed_effect_line, seed_el_label } from './seed-effect-line.js'
@@ -41,10 +41,10 @@ export const spell_hover_facts = (t, spell) => {
 /**
  * Full spell detail inside the hotbar's anchored Tooltip.
  * @param {{ t: (key: string, params?: object) => string, name: string,
- *   spell: { kind?: string, levels?: Array<object> }, aiming?: boolean }} props
+ *   spell: { kind?: string, levels?: Array<object> } }} props
  * @returns {import('react').JSX.Element}
  */
-export function SpellHoverTip({ t, name, spell, aiming = false }) {
+export function SpellHoverTip({ t, name, spell }) {
   const facts = spell_hover_facts(t, spell)
   const rows = [
     [t('spells.ap_cost'), `${facts.ap}`],
@@ -89,8 +89,6 @@ export function SpellHoverTip({ t, name, spell, aiming = false }) {
           ))}
         </div>
       )}
-
-      {aiming && <div className="tt-spell-card__aim">{t('dungeons.spell_aim_hint', { name })}</div>}
     </div>
   )
 }

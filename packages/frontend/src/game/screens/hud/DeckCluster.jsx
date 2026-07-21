@@ -317,11 +317,10 @@ export function DeckCluster() {
                       t={t}
                       name={card.name}
                       spell={spell}
-                      aiming={my_turn && armed === spell_id}
                     />
                   ) : null
                 }
-                pinned={my_turn && armed === spell_id && hovered == null}
+                hovered={hovered === spell_id}
               />
             )
           })}

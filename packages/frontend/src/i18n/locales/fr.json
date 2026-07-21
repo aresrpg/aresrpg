@@ -1704,7 +1704,6 @@
     "prediction_reconciled": "Le combat a changé sur la chaîne — le plateau a été corrigé.",
     "commit_busy": "Le tour n’a pas pu être validé — une action est déjà en cours.",
     "waiting": "En attente…",
-    "spell_aim_hint": "Visée de {{name}} — choisissez une case à portée",
     "auto_pass_in": "Passe auto dans {{n}} s",
     "no_key": "Il vous faut la clé de ce donjon dans votre kiosque",
     "potion_unavailable": "Les potions ne sont pas encore utilisables pendant une expédition",
