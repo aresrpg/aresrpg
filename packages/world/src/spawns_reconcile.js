@@ -272,18 +272,21 @@ export const retarget = (state) => {
 
 // ── the reconcile folds ──────────────────────────────────────────────────────────────────────────────────────
 
-/** One fetched cell's next row set: fresh rows minus live tombstones, with receipt-proven values holding
- *  against a lagging poll (omitted → carried · disagreeing → proven wins · agreeing → shield dropped). */
+/** Merge one fetched cell into its live row set: a read can add/update facts, never erase an omitted entity.
+ *  Live tombstones still win, while receipt-proven values hold against a lagging disagreement. */
 const reconcile_cell = (state, prev, fresh, zk, tombstones, now) => {
   /** @type {Map<string, SpawnRow>} */
-  const rows = new Map()
+  const rows = new Map(prev?.rows ?? [])
   /** @type {Map<string, number>} */
   const row_proven = new Map()
   for (const [rk, row] of fresh) {
     const flat = `${zk}:${rk}`
     const removed_at = tombstones.get(flat)
     // a receipt removed this row; a lagging snapshot re-listing it within grace must NOT resurrect it.
-    if (removed_at != null && now < removed_at + RECEIPT_GRACE_MS) continue
+    if (removed_at != null && now < removed_at + RECEIPT_GRACE_MS) {
+      rows.delete(rk)
+      continue
+    }
     if (removed_at != null) tombstones.delete(flat)
     rows.set(rk, row)
   }
@@ -353,7 +356,7 @@ export const fold_zone_rows = (state, input, now) => {
   for (const [rk, row] of fresh) {
     const flat = `${zk}:${rk}`
     if (state.tombstones.has(flat) && now < (state.tombstones.get(flat) ?? 0) + RECEIPT_GRACE_MS) continue
-    if (input.proven && !rows.has(rk)) row_proven.set(rk, now)
+    if (input.proven) row_proven.set(rk, now)
     rows.set(rk, row)
   }
   const zones = new Map(state.zones)

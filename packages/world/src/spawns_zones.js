@@ -111,17 +111,28 @@ const fold_zone_searched = (state, input, now) => {
   if (!Number.isFinite(zx) || !Number.isFinite(zy)) return state
   const zk = zone_key(zx, zy)
   const prev = state.zones.get(zk)
+  // A known zone can only pass search_internal after its TTL, and that on-chain path writes a fresh seed +
+  // resets both consumption bitmaps. Make that one-zone generation swap explicit on the RECEIPT beat; ordinary
+  // reads remain merge-only and can never silently infer deletion from an omitted row.
+  const rerolled = prev?.discovered_at_ms != null
   const zones = new Map(state.zones)
   zones.set(zk, {
     discovered_at_ms: now, // provisional stamp; the snapshot adopts the indexer's real stamp on catch-up
     proven_at: now,
-    rows: prev?.rows ?? new Map(),
-    row_proven: prev?.row_proven ?? new Map(),
+    rows: rerolled ? new Map() : (prev?.rows ?? new Map()),
+    row_proven: rerolled ? new Map() : (prev?.row_proven ?? new Map()),
   })
+  const tombstones = rerolled ? new Map(state.tombstones) : state.tombstones
+  const members = rerolled ? new Map(state.members) : state.members
+  if (rerolled) {
+    for (const key of tombstones.keys()) if (key.startsWith(`${zk}:`)) tombstones.delete(key)
+    for (const key of members.keys()) if (key.startsWith(`${zk}:`)) members.delete(key)
+  }
   const x = Number(input.x)
   const z = Number(input.z)
   const checkpoint = Number.isFinite(x) && Number.isFinite(z) ? { x, z } : state.checkpoint
-  const next = clear_pending({ ...state, zones, checkpoint, hunt_zone: { zx, zy } }, `search:${zx}:${zy}`)
+  const reconciled = { ...state, zones, tombstones, members, checkpoint, hunt_zone: { zx, zy } }
+  const next = clear_pending(rerolled ? retarget(reconciled) : reconciled, `search:${zx}:${zy}`)
   return with_beats(next, now, [
     { kind: 'reveal_chime' },
     { kind: 'reveal_banner', payload: input.found ?? null },

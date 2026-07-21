@@ -147,6 +147,25 @@ describe('the versioned snapshot — chain rows in, world space out, stale polls
     input(snap(2))
     expect(spawn_rows(state())).toEqual(before)
   })
+  it('a fresh cell read MERGES rows instead of replacing already-visible spawns', () => {
+    const { input, state } = boot()
+    input({
+      type: 'zones_rows_snapshot',
+      version: 1,
+      zones: [{ zx: 5, zy: 5, discovered_at_ms: 9 }],
+      cells: [{ zx: 5, zy: 5, rows: [mob('visible', 520, 540)] }],
+    })
+    input({
+      type: 'zones_rows_snapshot',
+      version: 2,
+      zones: [{ zx: 5, zy: 5, discovered_at_ms: 10 }],
+      cells: [{ zx: 5, zy: 5, rows: [mob('searched', 522, 542)] }],
+    })
+    expect(spawn_rows(state()).map((row) => row.key).sort()).toEqual([
+      '5:5:mob:searched',
+      '5:5:mob:visible',
+    ])
+  })
 })
 
 // ─── THE W2 GATE ROWS (red-first): receipt atomicity · order independence · claim handoff ───
@@ -183,6 +202,28 @@ describe('zone_searched RECEIPT — checkpoint + zone + hunt_zone advance ATOMIC
       expect(zone_row_of(state().zones, 5, 5)).toEqual({ discovered: true, discovered_at_ms: 42_000 })
     }
   )
+  it('an explicit TTL re-search replaces only that zone under the visible reveal transition', () => {
+    const { input, state } = boot()
+    input({
+      type: 'zones_rows_snapshot',
+      version: 1,
+      zones: [
+        { zx: 5, zy: 5, discovered_at_ms: 1 },
+        { zx: 6, zy: 5, discovered_at_ms: 1 },
+      ],
+      cells: [
+        { zx: 5, zy: 5, rows: [mob('old-generation', 520, 540)] },
+        { zx: 6, zy: 5, rows: [mob('neighbour', 620, 540)] },
+      ],
+    })
+    input({ type: 'zone_searched', zx: 5, zy: 5, x: 30, z: 45, found: { mob_groups: 1, resource_nodes: 0 } })
+    expect(spawn_rows(state()).map((row) => row.key)).toEqual(['6:5:mob:neighbour'])
+    expect(state().beats.slice(-3).map((beat) => beat.kind)).toEqual([
+      'reveal_chime',
+      'reveal_banner',
+      'fov_pulse',
+    ])
+  })
 })
 
 describe('order independence — a poll NEVER regresses a receipt-proven fact, and agreement converges no-op', () => {
