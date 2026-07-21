@@ -105,6 +105,37 @@ describe('prepare_mob_render — the one-mob-sdk render policy', () => {
     expect(mat.emissiveIntensity).toBeCloseTo(0.3, 5)
   })
 
+  // [tex-extract-fix 2026-07-21, #158] GLTFParser.loadImageSource caches by sourceIndex and hands back a
+  // `.clone()` on a cache hit (three@0.185.1) — a distinct Texture instance sharing the ORIGINAL's `.source`
+  // (same backing bitmap, per Texture.copy()). Simulated here directly: emissive_clone !== map but
+  // emissive_clone.image === map.image. Before the 2026-07-21 fix, the pixel-filter loop ran BEFORE the
+  // emissive-floor identity assignment and would key/dirty this clone before discarding it — a second,
+  // orphaned Texture object marked needsUpdate, which is what queued the renderer's duplicate
+  // copyExternalImageToTexture call on the shared bitmap (Chrome: "fails extracting valid resource").
+  test("#158 a pre-existing emissiveMap that CLONES map's Source is discarded before the pixel-filter loop ever keys it", () => {
+    const bitmap = {
+      close() {
+        this.width = 0
+        this.height = 0
+      },
+      height: 64,
+      width: 64,
+    }
+    const map = new Texture(bitmap)
+    const emissive_clone = map.clone() // distinct instance, same .source/.image — mirrors the GLTFLoader hazard
+    const mat = new MeshStandardMaterial({ emissiveMap: emissive_clone, map, metalness: 1 })
+    const mesh = new Mesh(new BoxGeometry(1, 2, 1), mat)
+    const root = new Group()
+    root.add(mesh)
+
+    prepare_mob_render(root, { pixel_filter: true, target_height: 1.4 })
+
+    expect(mat.emissiveMap).toBe(mat.map) // exact same instance — the clone is never wired into the material
+    expect(/** @type {any} */ (emissive_clone).__ares_pixel_keyed).toBeUndefined() // discarded clone: NEVER touched/marked dirty
+    expect(mat.map.image.width).toBeGreaterThan(0) // the shared bitmap stays open — nothing closes/detaches it
+    expect(emissive_clone.image.width).toBeGreaterThan(0) // same shared bitmap, still valid through the orphan too
+  })
+
   test('pixel_filter:false (player) ⇒ smooth Linear kept, NO emissive floor (players never route through the mob look)', () => {
     const { root, map, mat } = make_rig(2)
     prepare_mob_render(root, { target_height: 2, pixel_filter: false })
