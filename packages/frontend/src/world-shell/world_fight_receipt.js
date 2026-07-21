@@ -7,6 +7,12 @@
 
 const sync_min_delay_ms = 250
 const sync_max_delay_ms = 8000
+// #242 read-layer census — "the fight-engage receipt poll retrying uncapped": bounds how long the TIGHT
+// backoff loop below may keep re-reading on its own before giving up. This is not an abandonment: the
+// SEPARATE 4s dungeon_run_store heartbeat (world_fight.js's _start_polling, already running the moment this
+// loop starts) keeps calling the exact same refresh() forever regardless of this ceiling — so a fight that
+// is still just slow to hydrate keeps converging on the slower cadence; this loop only stops DUPLICATING it.
+const sync_max_wait_ms = 20_000
 
 /** Capped exponential delay for a zero-based retry attempt. */
 export function fight_sync_delay_ms(attempt) {
@@ -39,16 +45,27 @@ function receipt_sync_state(state, fight_id) {
 const sleep_ms = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /**
- * Poll the full-board reader until the receipt-owned Fight hydrates or its session is explicitly replaced. There
- * is no attempt ceiling: a lagging projection stays visibly syncing instead of becoming a refresh-only dead end.
- * Reader errors are another lag sample, not a reason to discard an executed receipt.
+ * Poll the full-board reader until the receipt-owned Fight hydrates or its session is explicitly replaced. This
+ * loop's OWN attempts are bounded (sync_max_wait_ms): past that, it stops re-reading rather than retrying this
+ * tight backoff forever — the slower 4s store heartbeat (already running alongside it) is the honest fallback
+ * that keeps converging, so giving up here is never a refresh-only dead end. Reader errors are another lag
+ * sample, not a reason to discard an executed receipt.
  *
- * @param {{ fight_id:string, get_state:()=>any, refresh:()=>Promise<any>, sleep?:(ms:number)=>Promise<any> }} args
- * @returns {Promise<'hydrated'|'cancelled'>}
+ * @param {{ fight_id:string, get_state:()=>any, refresh:()=>Promise<any>, sleep?:(ms:number)=>Promise<any>, now?:()=>number, max_wait_ms?:number }} args
+ * @returns {Promise<'hydrated'|'cancelled'|'timed_out'>}
  */
-export async function poll_receipt_fight({ fight_id, get_state, refresh, sleep = sleep_ms }) {
+export async function poll_receipt_fight({
+  fight_id,
+  get_state,
+  refresh,
+  sleep = sleep_ms,
+  now = Date.now,
+  max_wait_ms = sync_max_wait_ms,
+}) {
   let attempt = 0
+  const deadline = now() + max_wait_ms
   while (receipt_sync_state(get_state(), fight_id) === 'pending') {
+    if (now() >= deadline) return 'timed_out'
     try {
       await refresh()
     } catch {

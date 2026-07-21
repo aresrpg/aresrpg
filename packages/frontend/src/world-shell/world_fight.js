@@ -65,7 +65,12 @@ export function enter_world_fight({ fight_id, world_id = null, character_id, res
       .getState()
       .ensure_owned_party()
       .catch((error) => game_log('world-fight', 'owned party auto-form stopped', error))
-  void poll_receipt_fight({ fight_id, get_state: getState, refresh: () => getState().refresh() })
+  void poll_receipt_fight({ fight_id, get_state: getState, refresh: () => getState().refresh() }).then((outcome) => {
+    // The tight backoff loop gave up at its wait ceiling — never a silent stop: the slower 4s heartbeat
+    // (_start_polling, already running) is the one still converging it, traced here for visibility.
+    if (outcome === 'timed_out')
+      game_log('world-fight', 'receipt poll hit its wait ceiling — the 4s heartbeat keeps trying', { fight_id })
+  })
 }
 
 /** RESUME after a reload: discover the candidate, then validate it is still live BEFORE entry (absent/terminal

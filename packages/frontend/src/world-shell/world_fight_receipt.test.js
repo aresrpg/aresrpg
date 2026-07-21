@@ -63,6 +63,38 @@ describe('receipt-first world fight convergence', () => {
     expect(delays).toEqual([250, 500, 1000, 2000, 4000, 8000, 8000, 8000, 8000])
   })
 
+  // RED-FIRST (#242 read-layer census): "the fight-engage receipt poll retrying uncapped" — the docstring
+  // itself used to say "no attempt ceiling ... forever." A fight whose full-board read never becomes readable
+  // (indexer stuck, genuinely dead) drove chain-direct reads every 8s forever, on top of the SEPARATE 4s
+  // dungeon_run_store heartbeat (world_fight.js's _start_polling) already running in parallel. The ceiling
+  // stops the tight duplicate loop; the honest "still syncing" state is never silently cleared, and the
+  // slower 4s heartbeat (unaffected by this poll's own outcome) is the one thing left converging it.
+  test('gives up after a total-wait ceiling instead of retrying forever, without silently un-syncing', async () => {
+    const state = { fight_id: 'fight-1', fight_syncing: true, dungeon: null }
+    let clock = 0
+    let reads = 0
+    const result = await poll_receipt_fight({
+      fight_id: 'fight-1',
+      get_state: () => state,
+      refresh: async () => {
+        reads += 1
+        // Safety terminator FAR past any reasonable ceiling — proves the loop is bounded by TIME, not by
+        // eventually being handed a hydration side effect. Never reached once the ceiling is respected.
+        if (reads > 50) {
+          state.dungeon = { id: 'fight-1' }
+          state.fight_syncing = false
+        }
+      },
+      sleep: async (ms) => {
+        clock += ms
+      },
+      now: () => clock,
+    })
+    expect(result).toBe('timed_out')
+    expect(reads).toBeLessThan(10)
+    expect(state.fight_syncing).toBe(true) // never a lie that it resolved — FightSyncIndicator keeps showing
+  })
+
   test('an executed join enters from its receipt, while a rejected join never enters', async () => {
     const entered = []
     const receipt = { effects: { status: { status: 'success' } } }
