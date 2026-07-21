@@ -13,8 +13,15 @@
 // station is server-side-only). Keep this object's keys in lockstep with env.ts's exports.)
 
 import { describe, expect, test, spyOn } from 'bun:test'
+import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
 
 import '../test_helpers/env_mock.js'
+
+// configure_walrus_assets has no test-reset seam (packages/sdk/src/jobs.js overwrites the aggregator with no
+// way to clear it back) — an earlier-run file (asset_manifest.test.ts) leaves a test aggregator configured
+// for the rest of the process (bun test runs every file in ONE process). The "re-homed onto the CDN" test
+// below expects the real default aggregator, so force it back before this file's tests run.
+configure_walrus_assets({ aggregator: 'https://cdn.aresrpg.world/walrus' })
 
 const {
   is_mount_item,

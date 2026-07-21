@@ -10,11 +10,22 @@ import { describe, test, expect } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import i18next from 'i18next'
 import { I18nextProvider, initReactI18next } from 'react-i18next'
+import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
 
 import en from '../i18n/locales/en.json'
 import type { ItemInfo } from '../types/chain'
 
 import { ItemImage, ItemTooltipContent, onchain_template_to_detail_props } from './items'
+
+// configure_walrus_assets has no test-reset seam (it MERGES classes and overwrites the aggregator, with no
+// way to clear either — packages/sdk/src/jobs.js) — an earlier-run file (asset_manifest.test.ts) leaves the
+// item class + aggregator configured for the rest of the process (bun test runs every file in ONE process).
+// This suite's whole point is the host-FREE / unconfigured-fallback path, so force it back to that state
+// (item/cosmetic undefined ⇒ walrus_asset_url returns null, falling through to the /assets local slug).
+configure_walrus_assets({
+  aggregator: 'https://cdn.aresrpg.world/walrus',
+  classes: { item: undefined, cosmetic: undefined },
+})
 
 const src_of = (el: React.ReactElement): string =>
   (renderToStaticMarkup(el).match(/<img[^>]*\bsrc="([^"]*)"/) ?? [])[1] ?? ''

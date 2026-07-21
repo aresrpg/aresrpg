@@ -438,7 +438,10 @@ describe('boot fight liveness gate', () => {
 
 describe('confirmed forfeit receipt', () => {
   test('tears down in the receipt tick and never waits for the fight poll', async () => {
-    settle_fight = () => new Promise(() => {})
+    // Resolves LATE (never during this test's own awaited assertions — route_settlement is fire-and-
+    // forget) rather than never: a permanently-pending promise from claim()'s background settle would leak
+    // across the whole bun test process (one process for the full suite) and hang it at exit (#117).
+    settle_fight = () => new Promise((resolve) => setTimeout(resolve, 50))
     const poll = mock(() => {
       throw new Error('forfeit waited for the poll')
     })
@@ -501,7 +504,8 @@ describe('natural terminal defeat (mob kill — no forfeit)', () => {
   // while the roster's on-chain current_hp stays the STALE pre-fight value until the async settle lands — the
   // world HUD reads projected_hp off that stale value and shows full HP right after a loss.
   test('claim() predict-patches HP to 0 the instant a defeat is observed — never waits on the async settle', async () => {
-    settle_fight = () => new Promise(() => {}) // the chain settle NEVER lands during this test (isolates predict)
+    // Resolves LATE, not never (a permanently-pending promise would leak across the whole bun test process — #117).
+    settle_fight = () => new Promise((resolve) => setTimeout(resolve, 50)) // isolates predict from the settle
     const dispatch = mock((type, payload) => real_dispatch(type, payload))
     context.dispatch = dispatch
     real_dispatch('action/sui_data', {

@@ -75,8 +75,10 @@ describe('version badge', () => {
     expect(VERSION_BADGE_RULES.endsWith(VERSION_BADGE_SIDEBAR_RULE)).toBe(true)
     const sidebar = read_fixture('./components/sidebar.tsx')
     expect(sidebar).toContain('data-app-sidebar=""')
-    // The sidebar's own tag: bottom-pinned (mt-auto) AND horizontally centered, rendering the version.
-    const tag_classes = sidebar.match(/className="mt-auto[^"]*"/)?.[0] ?? ''
+    // D260 (2026-07-17): the version tag's own element (nested inside the mt-auto bottom-of-navbar group,
+    // which also holds the world-camera hints) is bottom-pinned AND horizontally centered.
+    expect(sidebar).toContain('<div className="mt-auto">')
+    const tag_classes = sidebar.match(/className="[^"]*text-center[^"]*"\s*>\s*v\{__APP_VERSION__\}/)?.[0] ?? ''
     expect(tag_classes).toContain('text-center')
     expect(sidebar).toContain('v{__APP_VERSION__}')
   })
