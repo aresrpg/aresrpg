@@ -16,8 +16,8 @@
 // GLB fetch+SkeletonUtils-clone, apply_avatar_material, the idle mixer, world-size normalisation, and the
 // feet_of(ground_surface_y) grounding law — but driven by CHAIN rows. Each group member independently ambles a
 // few blocks around its OWN spawn anchor (ambient_placement.js WANDER core, seeded off spawn_id
-// so refreshes never teleport it) or holds idle, cross-blending an idle↔walk clip; the group ANCHOR + the
-// claim logic never move. Resource nodes render ONE instance per chain row (client rider, UPGRADE_NOTES2.md
+// so refreshes never teleport it) or holds idle, cross-blending an idle↔walk clip; the terrain-resolved group
+// HOME + claim logic never move. Resource nodes render ONE instance per chain row (client rider, UPGRADE_NOTES2.md
 // §CLIENT RIDER — a "wheat field" is now K adjacent ResourceSpawn rows the CHAIN itself grows via
 // foundation/world_math.move::grow_cluster, each remaining:1 at its own authored (x,z); the client no longer
 // grows a blob off one anchor — see spawn_rigs.js create_gather_layer), textured with the gatherable's own
@@ -92,8 +92,8 @@ const SWAP_MARGIN_M = 12 // a resident rig is only displaced by an unplaced one 
 const SWAP_MARGIN_SQ = SWAP_MARGIN_M * SWAP_MARGIN_M
 const TELEMETRY_MS = 60000 // house telemetry: one rig/node/heap line per minute so a live session self-reports
 const HEAPTRACE_MS = 10000 // [heaptrace] dev leak-hunt cadence (gated on ?heaptrace=1) — dense enough for a 10-min sweep
-// PROXIMITY / GATHER HYSTERESIS moved INTO the spawns core (D770a W2 — the render-contract fix): the fold
-// arms the [G]/[R] targets off `player_pos` + row anchors; this renderer only routes them (frame loop below).
+// PROXIMITY / GATHER HYSTERESIS moved INTO the spawns core (D770a W2 — the render-contract fix): this renderer
+// reports `player_pos` plus placed group geometry; the fold owns [G]/[R] targets (frame loop below).
 const NAMETAG_CULL_M = 40 // hide a plate past this many blocks
 const NAMETAG_FADE_M = 34 // …fade it in over the last few blocks instead of a hard pop
 const OCCLUDED_OPACITY = 0.2 // plate faded when terrain sits between it and the eye
@@ -417,13 +417,14 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     )
   }
 
-  // Feed the spawns core a mob group's member positions (world space, the STABLE spawn anchors mem.ax/az) as the
-  // typed `member_positions` input backing the [R] visibility ring's nearest-member basis. An empty
-  // e.members (a torn-down group) clears the core entry — reverting that group to its anchor basis.
-  const feed_members = (/** @type {any} */ e) =>
+  // Feed the spawns core the exact terrain-resolved group HOME used by the renderer plus its stable member
+  // anchors. The home backs ENGAGE legality; members back the wider [R] visibility ring. An empty e.members
+  // (teardown) clears both, reverting an unplaced group to its row-anchor fallback.
+  const feed_group_geometry = (/** @type {any} */ e) =>
     spawns_input({
       type: 'member_positions',
       key: e.key,
+      home: { x: e.cx, z: e.cz },
       members: e.members.map((/** @type {any} */ m) => ({ x: m.ax, z: m.az })),
     })
 
@@ -457,10 +458,9 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       )
     if (e.kind === 'mob') {
       rigs.place_members(e)
-      // Feed the placed group's member spawn anchors (world space) to the spawns core as a TYPED INPUT — the
-      // nearest-member basis of the [R] visibility ring. Stable leash centres (mem.ax/az), not the
-      // live roam, so the widened prompt never flickers as members amble. Cleared on teardown.
-      feed_members(e)
+      // Feed the placed home + member spawn anchors to the core as one TYPED INPUT. Stable leash centres
+      // (mem.ax/az), not live roam, keep the widened prompt from flickering. Cleared on teardown.
+      feed_group_geometry(e)
     } else gather.build(e) // resource → the crossed-card sprite cluster (spawn_rigs.js)
     e.placed = true
     spawn_chip(e)
@@ -528,8 +528,8 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     e.chip.style.boxShadow = mode === 'claimable' ? '0 0 20px rgba(200,150,60,.55)' : 'none'
   }
 
-  // GLOBAL-SEARCH claim: the proximity gate lives in the CORE now (claim_intent refuses a
-  // far press off the ROW anchor — the exact chain position `zones::claim_mob_group_in_zone` travel-verifies).
+  // GLOBAL-SEARCH claim: the proximity gate lives in the CORE now (claim_intent reads the same stable HOME
+  // this renderer placed, falling back to the row only before placement).
   // A refused intent on the CLICK path (on_up raycasts placed rigs to the despawn radius) teaches "get
   // closer" instead of firing a doomed claim.
   const hint_too_far = () => push_event_toast({ state: 'info', title: i18n.t('discovery.engage_too_far') })
@@ -574,7 +574,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
   const teardown = (/** @type {any} */ e) => {
     for (const mem of e.members) rigs.dispose_member(mem) // stop mixer + dispose per-clone skeleton, REMOVE-ONLY
     e.members = []
-    if (e.kind === 'mob') feed_members(e) // empty now → clear this group's member_positions in the core
+    if (e.kind === 'mob') feed_group_geometry(e) // empty now → clear this group's rendered geometry in the core
     if (e.mesh) gather.teardown(e) // resource cluster: remove the group (shared geo/tex kept) + free its material
     e.chip?.remove()
     e.chip = null
@@ -631,7 +631,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       push_event_toast({ state: 'info', title: i18n.t('errors.fight_group_claimed') })
       return
     }
-    // THE DOOR DECIDES (D770a W2): claim_intent re-checks proximity off the ROW anchor + pending state in the
+    // THE DOOR DECIDES (D770a W2): claim_intent re-checks proximity off the rendered group home + pending state in the
     // fold. A refused intent (far click — on_up raycasts placed rigs to the despawn radius) teaches "get
     // closer" instead of firing a doomed claim; an accepted one marks the row pending (the optimistic hide as
     // data) and emits the claim_tx request THIS adapter executes.
@@ -869,7 +869,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     gather.tick(t) // one global pulse of the shared apex-node glow
 
     // RENDER CONTRACT (D770a W2): the renderer only REPORTS where the body is — the core's fold owns the
-    // [G] hysteresis + [R] proximity arming off the row anchors (a standing-still frame is a no-op commit).
+    // [G] hysteresis + [R] proximity arming off the reported group homes (a standing-still frame is a no-op commit).
     spawns_input({ type: 'player_pos', x: px, z: pz })
 
     // IN-FIGHT VISUAL VEIL: mobs should stay invisible mid-fight, but the rigs themselves STAY resident/roaming

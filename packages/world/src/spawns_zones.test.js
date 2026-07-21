@@ -161,10 +161,11 @@ describe('the versioned snapshot — chain rows in, world space out, stale polls
       zones: [{ zx: 5, zy: 5, discovered_at_ms: 10 }],
       cells: [{ zx: 5, zy: 5, rows: [mob('searched', 522, 542)] }],
     })
-    expect(spawn_rows(state()).map((row) => row.key).sort()).toEqual([
-      '5:5:mob:searched',
-      '5:5:mob:visible',
-    ])
+    expect(
+      spawn_rows(state())
+        .map((row) => row.key)
+        .sort()
+    ).toEqual(['5:5:mob:searched', '5:5:mob:visible'])
   })
 })
 
@@ -218,11 +219,11 @@ describe('zone_searched RECEIPT — checkpoint + zone + hunt_zone advance ATOMIC
     })
     input({ type: 'zone_searched', zx: 5, zy: 5, x: 30, z: 45, found: { mob_groups: 1, resource_nodes: 0 } })
     expect(spawn_rows(state()).map((row) => row.key)).toEqual(['6:5:mob:neighbour'])
-    expect(state().beats.slice(-3).map((beat) => beat.kind)).toEqual([
-      'reveal_chime',
-      'reveal_banner',
-      'fov_pulse',
-    ])
+    expect(
+      state()
+        .beats.slice(-3)
+        .map((beat) => beat.kind)
+    ).toEqual(['reveal_chime', 'reveal_banner', 'fov_pulse'])
   })
 })
 
@@ -351,10 +352,11 @@ describe('claim — pending hides, receipt removes + tombstones + hands off to t
 
 // ─── ATTACK-PROMPT VISIBILITY vs ENGAGE LEGALITY — the attack button shows at 3-4 blocks from the
 // group, for convenience — the [R] prompt ARMS on a WIDER ring (ATTACK_VISIBLE_M, measured from the NEAREST fed
-// member, not the invisible centroid), while the claim door's LEGALITY stays the 6-block ANCHOR ring. The renderer
-// feeds each placed group's member positions as a TYPED INPUT (never a reach-out read); with none fed the anchor
-// is the sole basis (an unplaced group is always far, where anchor ≈ group). Reducer outputs BOTH flags.
-describe('attack visibility widens to the nearest member; engage legality stays the anchor ring', () => {
+// member, not the invisible centroid), while the claim door's LEGALITY uses the 6-block ring around the stable
+// renderer-resolved group HOME. The renderer feeds both facts as a TYPED INPUT (never a reach-out read); with
+// none fed the row anchor is the fallback (an unplaced group is always far, where anchor ≈ group). Reducer outputs
+// BOTH flags.
+describe('attack visibility widens to the nearest member; engage legality uses the rendered group home', () => {
   const placed = (now = 1_000) => {
     const ctx = boot(now)
     ctx.input({
@@ -367,6 +369,7 @@ describe('attack visibility widens to the nearest member; engage legality stays 
     ctx.input({
       type: 'member_positions',
       key: '5:5:mob:7',
+      home: { x: 20, z: 40 },
       members: [
         { x: 22, z: 40 },
         { x: 18, z: 40 },
@@ -418,11 +421,35 @@ describe('attack visibility widens to the nearest member; engage legality stays 
       zones: [{ zx: 5, zy: 5, discovered_at_ms: 9 }],
       cells: [{ zx: 5, zy: 5, rows: [mob('7', 520, 540)] }], // anchor world (20, 40)
     })
-    ctx.input({ type: 'member_positions', key: '5:5:mob:7', members: [{ x: 24, z: 40 }] }) // member 4 blocks toward +x
+    ctx.input({
+      type: 'member_positions',
+      key: '5:5:mob:7',
+      home: { x: 20, z: 40 },
+      members: [{ x: 24, z: 40 }],
+    }) // member 4 blocks toward +x
     ctx.input({ type: 'player_pos', x: 32, z: 40 }) // anchor_dist 12 (> 10) but nearest member 8 away (≤ 10)
     expect(ctx.state().attack_target_key).toBe('5:5:mob:7') // VISIBLE off the nearest member
     ctx.input({ type: 'member_positions', key: '5:5:mob:7', members: [] }) // renderer tore the group down
     expect(ctx.state().attack_target_key).toBe(null) // anchor 12 > 10 → no longer visible off the anchor
+  })
+  it('accepts engage when the player is co-located with the renderer-placed group home', () => {
+    const ctx = boot()
+    ctx.input({
+      type: 'zones_rows_snapshot',
+      version: 1,
+      zones: [{ zx: 5, zy: 5, discovered_at_ms: 9 }],
+      cells: [{ zx: 5, zy: 5, rows: [mob('7', 520, 540)] }], // stale row anchor world (20,40)
+    })
+    ctx.input({
+      type: 'member_positions',
+      key: '5:5:mob:7',
+      home: { x: 26.5, z: 40 }, // terrain-resolved renderer seat, 6.5m from the stale row
+      members: [{ x: 26.5, z: 40 }],
+    })
+    ctx.input({ type: 'player_pos', x: 26.5, z: 40 })
+    expect(ctx.state().attack_engageable).toBe(true)
+    ctx.input({ type: 'claim_intent', key: '5:5:mob:7' })
+    expect(ctx.state().tx_request).toMatchObject({ kind: 'claim', payload: { spawn_id: '7' } })
   })
 })
 

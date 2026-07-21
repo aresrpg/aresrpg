@@ -202,7 +202,7 @@ export function create_rig_layer({ engine, sample, resolve_template, is_disposed
   }
 
   // Advance ONE member's cosmetic roam: pure wander step (ambient_placement.js) → re-ground on a cell cross →
-  // glue the rig to it → ease the facing yaw → blend idle↔walk. The group ANCHOR + the claim logic never move;
+  // glue the rig to it → ease the facing yaw → blend idle↔walk. The resolved group HOME + claim logic never move;
   // the click/[R] hit-test rays the rig ROOT, so a roamed member stays claimable at its new spot.
   const roam_member = (/** @type {any} */ mem, /** @type {number} */ dt) => {
     const { dx, dz } = advance_member_wander(mem, dt, ROAM_SPEED, ARRIVE_EPS)

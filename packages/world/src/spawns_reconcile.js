@@ -10,14 +10,14 @@
 import { chain_to_world, DEFAULT_ZONE_SIZE } from '@aresrpg/sdk/coords'
 
 // SPEC §6 "close enough shows press G" — the ONE ENGAGE distance: arms the [G] gather prompt on a resource AND
-// gates the [R] claim LEGALITY on a mob group. Measured from the GROUP ANCHOR —
-// the exact chain position `zones::claim_mob_group_in_zone` travel-verifies against.
+// gates the [R] claim LEGALITY on a mob group. Mobs measure from the stable terrain-resolved GROUP HOME the
+// renderer reports; an unplaced group falls back to its row anchor.
 export const PROXIMITY_M = 6
 // [R] ATTACK-PROMPT VISIBILITY — the attack button should show at 3-4 blocks from the group, for
 // convenience — the prompt ARMS on this WIDER ring, measured from the NEAREST group member (the mobs you
 // actually see) rather than the invisible centroid. 10 blocks from the nearest member is ~3-4 blocks beyond the
 // 6-block engage ring, so the prompt appears before you're in claim range; engaging still requires closing to
-// PROXIMITY_M of the anchor (a press in the visible-but-far band gets the honest "get closer"). Splitting the
+// PROXIMITY_M of the group home (a press in the visible-but-far band gets the honest "get closer"). Splitting the
 // two rings is the whole feature: VISIBILITY widened, LEGALITY unchanged.
 export const ATTACK_VISIBLE_M = 10
 // GATHER HYSTERESIS (client rider): K adjacent chain cells sit ~1 block apart — hold the armed target unless
@@ -77,9 +77,7 @@ export function zone_row_of(zones, zx, zy) {
 
 // ── the claimability + hysteresis rules (moved from hunt_zone.js / spawn_rigs.js — renderer decides nothing) ──
 
-/** True when the player stands within engage range of the group anchor — the ONE claimability gate (the
- *  deployed `zones::claim_mob_group_in_zone` door travel-verifies to the GROUP, so proximity is the honest
- *  client mirror; the row anchor IS the chain position the door verifies against). */
+/** True when the player stands within engage range of the group's stable rendered home. */
 export function is_group_claimable(player_x, player_z, group_x, group_z, range) {
   const dx = Number(player_x) - Number(group_x)
   const dz = Number(player_z) - Number(group_z)
@@ -153,6 +151,9 @@ export const blank_world = () => ({
    * renderer feeds for its PLACED groups; the nearest-member basis of the [R] visibility ring. A group with none
    * fed falls back to its anchor (an unplaced group is always far, where anchor ≈ group — never mis-armed). */
   members: new Map(),
+  /** @type {Map<string, {x:number,z:number}>} stable terrain-resolved mob-group homes reported by the renderer;
+   * claimability uses this same placement fact and falls back to the row anchor until a group is placed. */
+  group_homes: new Map(),
 })
 
 // ── shared fold helpers (every fold clones what it changes; inputs are never mutated) ────────────────────────
@@ -207,10 +208,10 @@ const nearest_member_d2 = (members, row, p) => {
 }
 
 /** One pass over the rows: nearest in-range resource + mob, and whether the armed [G] target is still live.
- *  The mob VISIBILITY ring is the wider ATTACK_VISIBLE_M measured from the nearest MEMBER; its ANCHOR distance
- *  rides along so retarget can flag whether that armed target is also within the ENGAGE ring (claimable). */
+ *  The mob VISIBILITY ring is the wider ATTACK_VISIBLE_M measured from the nearest MEMBER; its rendered-HOME
+ *  distance rides along so retarget can flag whether that armed target is also within the ENGAGE ring. */
 const scan_targets = (state, p) => {
-  const range2 = PROXIMITY_M * PROXIMITY_M // resource gather ring + the mob ENGAGE (claimability) ring, from anchors
+  const range2 = PROXIMITY_M * PROXIMITY_M // resource gather ring from its anchor; mob ENGAGE from its rendered home
   const visible2 = ATTACK_VISIBLE_M * ATTACK_VISIBLE_M // the wider mob PROMPT ring, from the nearest member
   const hit = {
     nearest_res: null,
@@ -218,7 +219,7 @@ const scan_targets = (state, p) => {
     armed_d2: null,
     nearest_mob: null,
     nearest_mob_d2: visible2,
-    nearest_mob_anchor_d2: 0,
+    nearest_mob_home_d2: 0,
   }
   for (const [zk, zone] of state.zones)
     for (const [rk, row] of zone.rows) {
@@ -233,9 +234,10 @@ const scan_targets = (state, p) => {
       } else if (!state.pending.has(`claim:${key}`)) {
         const member_d2 = nearest_member_d2(state.members.get(key), row, p)
         if (member_d2 < hit.nearest_mob_d2) {
+          const home = state.group_homes.get(key) ?? row
           hit.nearest_mob_d2 = member_d2
           hit.nearest_mob = key
-          hit.nearest_mob_anchor_d2 = (row.x - p.x) ** 2 + (row.z - p.z) ** 2 // legality is still anchor-based
+          hit.nearest_mob_home_d2 = (home.x - p.x) ** 2 + (home.z - p.z) ** 2
         }
       }
     }
@@ -244,7 +246,8 @@ const scan_targets = (state, p) => {
 
 /** Recompute the [G]/[R] targets off the player position + row/member positions (the fold half of the render
  *  contract). Emits BOTH [R] flags: `attack_target_key` (VISIBLE — arms the prompt) and `attack_engageable`
- *  (that target is within the ENGAGE ring → gold; else it shows un-gold and a press gets "get closer"). */
+ *  (that target's rendered home is within the ENGAGE ring → gold; else it shows un-gold and a press gets
+ *  "get closer"). */
 export const retarget = (state) => {
   const p = state.player
   if (!p)
@@ -260,7 +263,7 @@ export const retarget = (state) => {
     margin_m: GATHER_HYSTERESIS_M,
   })
   const attack_target_key = hit.nearest_mob
-  const attack_engageable = attack_target_key != null && hit.nearest_mob_anchor_d2 <= PROXIMITY_M * PROXIMITY_M
+  const attack_engageable = attack_target_key != null && hit.nearest_mob_home_d2 <= PROXIMITY_M * PROXIMITY_M
   if (
     gather_target_key === state.gather_target_key &&
     attack_target_key === state.attack_target_key &&

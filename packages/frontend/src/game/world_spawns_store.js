@@ -5,8 +5,8 @@
 // the discovered 3×3 zone neighbourhood's mob GROUPS + resource NODES (event-fresh: the search fast-path tops
 // it up chain-direct on cert); this store just PUBLISHES that reconciled set as flat rows the minimap can plot,
 // so there is no second poll (the "reused, never a second loop" law). Written on every reconcile / search
-// merge / template-name resolve; read by Minimap + MinimapModal. Anchors are the CHAIN row (x,z) world-space
-// — stable (mobs roam a few blocks around it; the compass/claim use the same anchor).
+// merge / template-name resolve; read by Minimap + MinimapModal. Markers use the CHAIN row (x,z) world-space;
+// mob engagement uses the renderer's terrain-resolved group home instead.
 //
 // One home per fact: positions/ids come from world_spawns.js's `entries`; nothing here fetches or decodes.
 

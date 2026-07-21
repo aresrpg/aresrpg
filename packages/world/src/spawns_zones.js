@@ -124,14 +124,16 @@ const fold_zone_searched = (state, input, now) => {
   })
   const tombstones = rerolled ? new Map(state.tombstones) : state.tombstones
   const members = rerolled ? new Map(state.members) : state.members
+  const group_homes = rerolled ? new Map(state.group_homes) : state.group_homes
   if (rerolled) {
     for (const key of tombstones.keys()) if (key.startsWith(`${zk}:`)) tombstones.delete(key)
     for (const key of members.keys()) if (key.startsWith(`${zk}:`)) members.delete(key)
+    for (const key of group_homes.keys()) if (key.startsWith(`${zk}:`)) group_homes.delete(key)
   }
   const x = Number(input.x)
   const z = Number(input.z)
   const checkpoint = Number.isFinite(x) && Number.isFinite(z) ? { x, z } : state.checkpoint
-  const reconciled = { ...state, zones, tombstones, members, checkpoint, hunt_zone: { zx, zy } }
+  const reconciled = { ...state, zones, tombstones, members, group_homes, checkpoint, hunt_zone: { zx, zy } }
   const next = clear_pending(rerolled ? retarget(reconciled) : reconciled, `search:${zx}:${zy}`)
   return with_beats(next, now, [
     { kind: 'reveal_chime' },
@@ -145,7 +147,8 @@ const fold_claim_intent = (state, input, now) => {
   const k = parse_key(key)
   const row = state.zones.get(k.zone)?.rows.get(k.rk)
   if (!row || row.kind !== 'mob' || state.pending.has(`claim:${key}`)) return state
-  if (!state.player || !is_group_claimable(state.player.x, state.player.z, row.x, row.z, PROXIMITY_M)) return state
+  const home = state.group_homes.get(key) ?? row
+  if (!state.player || !is_group_claimable(state.player.x, state.player.z, home.x, home.z, PROXIMITY_M)) return state
   const pending = new Map(state.pending)
   pending.set(`claim:${key}`, { kind: 'claim', at: now })
   return retarget(
@@ -227,25 +230,32 @@ const fold_player_pos = (state, input) => {
   return retarget({ ...state, player: { x, z } })
 }
 
-// A PLACED mob group's member positions (world space) — the typed input feeding the [R] visibility ring's
-// nearest-member basis. The renderer feeds its rig positions on placement and clears them (empty
-// list) on teardown; the core never reaches out for them. Re-arms the [R] target off the new geometry.
+// A PLACED mob group's stable geometry (world space): `home` is the exact terrain-resolved seat used for engage
+// legality; member positions feed the wider [R] visibility ring. The renderer clears both with an empty list on
+// teardown; the core never reaches out for either fact. Re-arms the [R] target off the new geometry.
 const fold_member_positions = (state, input) => {
   const { key } = input
   if (!key) return state
   const list = Array.isArray(input.members) ? input.members : []
   if (list.length === 0) {
-    if (!state.members.has(key)) return state
+    if (!state.members.has(key) && !state.group_homes.has(key)) return state
     const members = new Map(state.members)
+    const group_homes = new Map(state.group_homes)
     members.delete(key)
-    return retarget({ ...state, members })
+    group_homes.delete(key)
+    return retarget({ ...state, members, group_homes })
   }
   const members = new Map(state.members)
   members.set(
     key,
     list.map((m) => ({ x: Number(m.x), z: Number(m.z) }))
   )
-  return retarget({ ...state, members })
+  const home_x = Number(input.home?.x)
+  const home_z = Number(input.home?.z)
+  if (!Number.isFinite(home_x) || !Number.isFinite(home_z)) return retarget({ ...state, members })
+  const group_homes = new Map(state.group_homes)
+  group_homes.set(key, { x: home_x, z: home_z })
+  return retarget({ ...state, members, group_homes })
 }
 
 // ── the door ─────────────────────────────────────────────────────────────────────────────────────────────────
