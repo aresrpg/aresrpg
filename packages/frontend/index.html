@@ -36,11 +36,16 @@
     <link rel="icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-    <!-- Fonts -->
+    <!-- Fonts. #19 refresh artifact: JetBrains Mono is the ONLY typeface (design law, every label down to
+         9px) — `display=swap` painted first paint in the fallback font then visibly re-flowed to JetBrains
+         Mono the instant the woff2 landed, reading as a flash on every load. `optional` still shows the
+         correct font immediately whenever the browser already cached it (i.e. every refresh, the reported
+         trigger — Google serves a long-lived cache lifetime), and skips the swap entirely on a cold visit
+         (a same-load flash never happens; the very first paint may sit briefly on the fallback instead). -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=optional"
       rel="stylesheet"
     />
 
