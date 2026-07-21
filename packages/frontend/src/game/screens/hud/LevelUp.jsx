@@ -63,11 +63,6 @@ function resolve_unlock(class_id, level, levels_gained) {
   }
 }
 
-// The card auto-dismisses after this long if the player takes no action (Later/Allocate dismiss sooner).
-// Armed off the card's FIRST PAINT (see the `visible` effect), never while it is still queued behind the
-// end-fight result panel.
-const AUTO_DISMISS_MS = 6000
-
 /**
  * The level-up congrats card. Renders null when no level-up is pending.
  * @param {{ on_allocate?: () => void }} props on_allocate -> deep-link to the Character (Stats) panel
@@ -89,17 +84,13 @@ export function LevelUp({ on_allocate }) {
   // open, so it still pops immediately. The result row already FLAGS the level via the inline badge.
   const visible = !!level_up && !result_open
 
-  // First paint of the card: play the win-family SFX (the celebration cue that was previously missing)
-  // + arm the auto-dismiss. Both gated on `visible` so neither fires while the card is queued behind the
-  // result panel; cleanup clears the timer if the player (or the slice) dismisses first.
+  // First paint of the card: play the win-family SFX (the celebration cue). Gated on `visible` so it never
+  // refires while the card is queued behind the result panel. Issue #369: the card used to auto-dismiss on
+  // a timer — deleted. It now persists until the player explicitly presses Allocate or Later (`dismiss`/
+  // `allocate` below); nothing else may unmount it.
   useEffect(() => {
     if (!visible) return
     play_fight_sfx('win')
-    const timer = setTimeout(
-      () => context.dispatch('action/level_up/close'),
-      AUTO_DISMISS_MS,
-    )
-    return () => clearTimeout(timer)
   }, [visible])
 
   // Load the world join-gates on first paint so the "you now have access to X and Y worlds" row can compute
@@ -137,7 +128,7 @@ export function LevelUp({ on_allocate }) {
   return (
     <div className="hud-middle lvlup-stage">
       <div
-        className="result result--tall"
+        className="result result--tall result--fe"
         role="dialog"
         aria-modal="true"
         aria-label={t('level_up.aria_label', { level })}

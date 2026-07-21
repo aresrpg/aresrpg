@@ -256,6 +256,14 @@
 .lvlup-stage {
   z-index: 45; /* fires AFTER the result panel's Continue (sequence, never card-over-card); above HUD */
 }
+/* OPAQUE GROUND (issue #369): the card rides the SAME opaque .result--fe plate FightReport uses (near-
+   #07080c + vignette + grain — no world/nameplate bleed-through; see the className in LevelUp.jsx). Only
+   the ground is shared — the fe-row/fe-title ceremony layout stays FightReport's own. Pin the seam back to
+   this card's own ice-blue accent (--accent, the SAME token the ring/number/label already use) instead of
+   --fe-accent's victory-gold default, which is FightReport's win/loss verdict color and means nothing here. */
+.lvlup-stage .result--fe {
+  --fe-accent: var(--accent);
+}
 .lvlup-stage .result {
   pointer-events: auto; /* .hud-middle is pointer-events:none; the card re-enables interaction */
   animation: lvl-card-in var(--dur-3) var(--ease) both;
@@ -350,11 +358,12 @@
 }
 
 /* ── FIGHT-END cards (canon: spec_fightend_cards.md, FightReport.jsx) — a DARK dramatic modal that reads
-   AGAINST the bright tactical stage. Overrides the shared .result glass base (kept for LevelUp) with a
-   near-black card + vignette + grain; restrained verdict accent (gold win / desaturated red loss). Shares
-   ONE row format for party AND enemies; the local player is always present (empty-party bug fixed in the
-   data producers). Auto-settle receipt inline — NO claim buttons. Scoped so the base/LevelUp atoms stay
-   inert. ── */
+   AGAINST the bright tactical stage. Overrides the shared .result glass base with a near-black card +
+   vignette + grain; restrained verdict accent (gold win / desaturated red loss). Shares ONE row format for
+   party AND enemies; the local player is always present (empty-party bug fixed in the data producers).
+   Auto-settle receipt inline — NO claim buttons. Scoped so the fe-* row/title atoms stay inert for LevelUp,
+   which (issue #369) now reuses only this block's base PLATE for its own opaque ground — see the
+   `.lvlup-stage .result--fe` accent pin below; the fe-row/fe-title ceremony markup is not adopted. ── */
 
 /* heavily-dimmed scrim over the bright stage — the stage brightness stays OUTSIDE the card. */
 .fe-stage {
