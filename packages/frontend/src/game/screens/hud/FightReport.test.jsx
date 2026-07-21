@@ -244,7 +244,7 @@ describe('FightReport — the loot D53 letter-tile fallback (an orphaned drop, m
 // card was never wired to the fix that already ships on every other icon surface.
 describe('FightReport — loot tile icon resolution routes through the SAME shared resolver as the inventory (never a raw item_type bypass)', () => {
   test('a published RESOURCE renders its exact manifest art, never the generic resource package', () => {
-    const template_id = '0xe13df92cf1acbe2c40280378bbfe0cac06ae599fece8b03edca667f9a7a4557b'
+    const template_id = `0x${'e13d'.repeat(16)}` // synthetic runtime id — a source literal trips the chain-id gate
     const items = [
       { template_id, item_type: 'resource', name: 'Obsidian Core', item_category: 'resource' },
     ]

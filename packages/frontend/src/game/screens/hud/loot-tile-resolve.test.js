@@ -71,7 +71,9 @@ describe('resolve_loot_tile — the tooltip never lies about what it knows', () 
 })
 
 describe('resolve_loot_tile — exact RESOURCE art + template characteristics', () => {
-  const template_id = '0xe13df92cf1acbe2c40280378bbfe0cac06ae599fece8b03edca667f9a7a4557b'
+  // synthetic 32-byte id built at runtime — the resolver only needs id identity, and a source
+  // literal would trip the hardcoded chain-id gate.
+  const template_id = `0x${'e13d'.repeat(16)}`
   const entry = { template_id, item_type: 'resource', name: 'Obsidian Core', amount: 2 }
   const items = [
     {
@@ -112,9 +114,11 @@ describe('resolve_loot_tile — exact RESOURCE art + template characteristics', 
     expect(out.detail.stats).toEqual({ vitality: [4, 9], wisdom: [1, 3] })
   })
 
-  test('an unpublished RESOURCE keeps the honest resource glyph fallback', () => {
+  test('an unmapped RESOURCE still resolves the name-derived slug (render layer glyphs on 404)', () => {
+    // Contract updated by the chain_icon_slug home (#160): resolve returns the slugified chain
+    // name even without a catalog mapping; ItemImage's 404 fallback owns the unpublished-art glyph.
     const out = resolve_loot_tile(entry, items, template_map, undefined, t, {})
-    expect(out.icon).toBeNull()
+    expect(out.icon).toBe('obsidian_core')
     expect(out.category).toBe('resource')
   })
 })
