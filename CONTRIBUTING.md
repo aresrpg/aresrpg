@@ -15,15 +15,20 @@ History is linear by law; nothing ever rewrites what landed.
 
 1. Branch off `edge`, one branch per feature/fix.
 2. **Always rebase** — keep your branch rebased on the latest `edge`; a merge commit never
-   enters a branch. **This is enforced by construction:** landings happen via the `/promote`
-   fast-forward bot, and an unrebased branch cannot fast-forward — the bot refuses it.
+   enters a branch. **This is enforced by construction:** landings are fast-forward pushes, and
+   an unrebased branch cannot fast-forward. `/promote` is a one-time REQUEST — it labels the PR
+   `promote-requested`, and a land-on-green queue fast-forwards it the moment it is a green
+   ancestor of its base. If your branch is behind, the bot posts the exact one-line rebase
+   command; rebase locally (your commits stay signed) and force-push, and it lands automatically
+   on the next green run — you never `/promote` twice.
 3. Landings on BOTH hops are `/promote` — the repository owner's explicit word (on his own
    PRs the comment itself is the approval, since GitHub forbids self-review; on contributor
    PRs his approving review is required first). The **master hop is deploy-class**; the edge
    hop is routine integration. The bot pushes the
    exact approved SHA — your commits land byte-identical, so your signatures survive
    untouched (the merge buttons are ceremonial; UI rebase-merge would re-create commits
-   unsigned, which is exactly why the bot exists).
+   unsigned — and so would a server-side API rebase, which is exactly why the queue never
+   rebases for you: your local rebase is the one that keeps them signed).
 4. `edge` → `master` is the same mechanic — the rebase discipline's terminal form — and each
    master promotion re-aligns `edge` so the branches never drift at release points.
 5. Feature work reaches `edge` exclusively via a pull request + `/promote` — never a direct
