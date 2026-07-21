@@ -28,7 +28,7 @@ import { use_game_state, use_fight_view } from '../../store.js'
 import { use_tweened_hp } from './use_tweened_hp.js'
 import { use_target_prediction } from './use_target_prediction.js'
 import { EMPTY_OUTCOME, predicted_target_outcome } from './target_outcome.js'
-import { seed_effect_line } from './seed-effect-line.js'
+import { TooltipCard } from './tooltip_card.jsx'
 
 // re-export so existing importers (and the unit test) keep resolving the derivation from here too.
 export { predicted_target_outcome }
@@ -158,50 +158,18 @@ export function EntityTooltip() {
   if (!mounted) return null
   if (!view) return null
 
-  const o = view.outcome ?? EMPTY_OUTCOME
-  const dmg = o.delta < 0 ? -o.delta : 0 // life reduction magnitude (red "−N")
-  const heal = o.delta > 0 ? o.delta : 0 // heal magnitude (green "+N")
-  const push = view.displacement
-  const crit = o.crit // { delta, kills } | null — the crit branch, only when it differs from the base
-  // the crit swing as a SIGNED string ("−9" a harder hit / "+9" a bigger heal) so a heal-crit never reads "−0".
-  const crit_val = crit ? (crit.delta < 0 ? `−${-crit.delta}` : `+${crit.delta}`) : ''
-  const crit_chance = view.crit_chance ?? 0
-  const fx_lines = view.effects ?? [] // secondary effects (DoT/states/buffs) — the immediate hit rides the head
-  const has_preview = o.kills || crit || push || fx_lines.length > 0
-
-  // The head line (name + tweened hp + the predicted non-crit life-swing) plus, while aiming, the
-  // kill / crit / effect / displacement lines.
   return (
-    <div className={`ent-tt ${view.team === 0 ? 'ally' : 'enemy'}${exiting ? ' ent-tt--out' : ''}`} style={view.style}>
-      <div className="ent-tt__head">
-        <span className="ent-tt__dot" aria-hidden="true" />
-        <span className="ent-tt__name">{view.name || t('fight.fighter')}</span>
-        <span className="ent-tt__hp-paren">
-          ({shown_hp}
-          {dmg > 0 && <span className="ent-tt__delta ent-tt__delta--dmg"> −{dmg}</span>}
-          {heal > 0 && <span className="ent-tt__delta ent-tt__delta--heal"> +{heal}</span>})
-        </span>
-      </div>
-      {has_preview && (
-        <div className="ent-tt__preview">
-          {o.kills && <div className="ent-tt__kill">{t('fight.predicted_kill')}</div>}
-          {crit && (
-            <div className="ent-tt__crit">
-              {crit.kills
-                ? t('fight.predicted_crit_kill', { chance: crit_chance })
-                : t('fight.predicted_crit', { chance: crit_chance, value: crit_val })}
-            </div>
-          )}
-          {fx_lines.map((fx, i) => (
-            <div key={i} className="ent-tt__fx">
-              {seed_effect_line(t, fx)}
-            </div>
-          ))}
-          {push && (
-            <div className="ent-tt__fx">{t(push.pull ? 'spells.fx_pull' : 'spells.fx_push', { value: push.cells })}</div>
-          )}
-        </div>
-      )}
-    </div>
+    <TooltipCard
+      team={view.team}
+      style={view.style}
+      exiting={exiting}
+      name={view.name}
+      shown_hp={shown_hp}
+      outcome={view.outcome}
+      crit_chance={view.crit_chance}
+      displacement={view.displacement}
+      effects={view.effects}
+      t={t}
+    />
   )
 }
