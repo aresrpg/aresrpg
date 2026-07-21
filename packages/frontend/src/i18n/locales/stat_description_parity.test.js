@@ -11,16 +11,7 @@ import { describe, expect, test } from 'bun:test'
 const LOCALES = ['en', 'fr', 'de', 'es', 'ja', 'uk']
 
 // Exactly the keys Stats.jsx's PRIMARY array + SECONDARY_KEYS allow-list render a row for.
-const KEYS = [
-  'vitality',
-  'wisdom',
-  'strength',
-  'intelligence',
-  'chance',
-  'agility',
-  'critical_hit',
-  'raw_damage',
-]
+const KEYS = ['vitality', 'wisdom', 'strength', 'intelligence', 'chance', 'agility', 'critical_hit', 'raw_damage']
 
 describe('i18n · stats.description.* present + non-empty in ALL 6 locales', () => {
   for (const key of KEYS) {
