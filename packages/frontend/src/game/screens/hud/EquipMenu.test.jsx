@@ -26,6 +26,9 @@ describe('EquipMenu (right-click on an EQUIPPED slot)', () => {
     expect(html).toContain(`href="${url}"`)
     expect(html).toContain('target="_blank"')
     expect(html).toContain('role="menu"')
+    expect(html).toContain(i18n.t('gift.send.send_items'))
+    expect(html).toContain(`title="${i18n.t('gift.send.unequip_first')}"`)
+    expect(html).toContain('disabled=""')
   })
 
   test('no menu target renders nothing (native menu still must not fire — that guard is preventDefault upstream)', () => {

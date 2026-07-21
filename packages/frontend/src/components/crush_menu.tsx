@@ -22,10 +22,12 @@ import i18n from '../i18n'
 import { crush_preview, crush_item } from '../world-shell/crush_actions.js'
 import { humanize_tx_error } from '../game/core/abort_copy.js'
 import { ItemIcon } from '../game/screens/hud/ItemIcon.jsx'
+import { project_inventory_context_actions } from '../game/screens/hud/inventory_context_actions'
 
 import { is_crushable } from './forge_eligibility'
 import { RemovedItemNotice } from './item_detail_view'
 import { ExplorerMenuRow } from './explorer_link'
+import { ItemSendMenuRow } from './item_send_menu_row'
 
 // House tokens with hard fallbacks — menu + modal portal outside .game-tab, so a fallback guarantees the
 // gothic-terminal gold look even when a scoped var doesn't resolve on the body node (mirrors PetFeedModal).
@@ -117,6 +119,7 @@ export function CrushMenu({
   on_close,
   confirm,
   set_confirm,
+  on_send,
 }: {
   menu: CrushTarget
   on_close: () => void
@@ -124,9 +127,11 @@ export function CrushMenu({
   // mounted while the modal is open. null = no modal.
   confirm: any
   set_confirm: (item: any) => void
+  on_send?: (item: any) => void
 }) {
   const { t } = useTranslation()
   const disabled_reason = menu ? crush_disabled_reason(menu.item) : null
+  const actions = project_inventory_context_actions(['crush', 'explorer'])
 
   // Outside-click / Escape dismiss the popover — same idiom as the pet-feed menu in Inventory.jsx.
   useEffect(() => {
@@ -164,21 +169,23 @@ export function CrushMenu({
             boxShadow: '0 12px 32px rgba(0,0,0,0.55)',
           }}
         >
-          <button
-            type="button"
-            className="hud-btn"
-            disabled={!!disabled_reason}
-            aria-describedby={disabled_reason ? 'crush-menu-disabled-reason' : undefined}
-            title={disabled_reason ? t(disabled_reason) : undefined}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-start' }}
-            onClick={() => {
-              set_confirm(menu.item)
-              on_close()
-            }}
-          >
-            <Hammer size={12} style={{ color: T.gold }} />
-            {t('crush.action')}
-          </button>
+          {actions.includes('crush') && (
+            <button
+              type="button"
+              className="hud-btn"
+              disabled={!!disabled_reason}
+              aria-describedby={disabled_reason ? 'crush-menu-disabled-reason' : undefined}
+              title={disabled_reason ? t(disabled_reason) : undefined}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-start' }}
+              onClick={() => {
+                set_confirm(menu.item)
+                on_close()
+              }}
+            >
+              <Hammer size={12} style={{ color: T.gold }} />
+              {t('crush.action')}
+            </button>
+          )}
           {disabled_reason && (
             <span
               id="crush-menu-disabled-reason"
@@ -188,7 +195,15 @@ export function CrushMenu({
               {t(disabled_reason)}
             </span>
           )}
-          <ExplorerMenuRow object_id={menu.item?.id} on_navigate={on_close} />
+          {actions.includes('send') && on_send && (
+            <ItemSendMenuRow
+              on_send={() => {
+                on_send(menu.item)
+                on_close()
+              }}
+            />
+          )}
+          {actions.includes('explorer') && <ExplorerMenuRow object_id={menu.item?.id} on_navigate={on_close} />}
         </div>
       )}
       {confirm && <CrushConfirmModal item={confirm} onClose={() => set_confirm(null)} />}

@@ -38,6 +38,7 @@ const render_menu = (target: any) =>
         on_close={() => {}}
         confirm={null}
         set_confirm={() => {}}
+        on_send={() => {}}
       />
     </I18nextProvider>
   )
@@ -104,6 +105,11 @@ describe('CrushMenu action wiring', () => {
     expect(url).not.toBeNull()
     expect(html).toContain(`href="${url}"`)
     expect(html).toContain('target="_blank"')
+  })
+
+  test('the popover carries the localized SEND action for every item shape', () => {
+    expect(render_menu(item(ITEM_CATEGORY.CONSUMABLE))).toContain(i18n.t('gift.send.send_items'))
+    expect(render_menu(item(ITEM_CATEGORY.HAT))).toContain(i18n.t('gift.send.send_items'))
   })
 })
 

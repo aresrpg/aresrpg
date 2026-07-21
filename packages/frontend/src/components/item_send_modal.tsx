@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// item_send_modal.tsx — escrow-recoverable ITEM GIFT-send modal (gift.move · resolved DECISIONS 2026-07-13).
-// Recipient modes: raw 0x address, SuiNS, or exact player-name lookup through /v1/names.
+// item_send_modal.tsx — kiosk-aware, escrow-recoverable item SEND. A review exists only after the exact SDK PTB
+// has dry-run successfully; the form accepts the issue's two target modes: raw Sui address or SuiNS.
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -23,51 +23,12 @@ import {
 import { format_mist_to_sui } from '../utils/sui_mist'
 import { truncate_address } from '../utils/address'
 import { is_suins_name } from '../utils/suins'
-import { rpc_get } from '../rpc/client'
 import { use_item_send, type SendItem, type ItemSendState } from '../stores/item_send'
 
 import { ItemImage } from './items'
+import { validate_item_send_dialog } from './item_send_validation'
 
-const ADDRESS_PARTIAL_RE = /^0x[a-f0-9]{0,64}$/i
-const ADDRESS_FULL_RE = /^0x[a-f0-9]{64}$/i
-
-type ExactPlayerName = { name: string; character_id: string; owner: string }
-type ResolvedPlayer = { query: string; name: string; address: string }
-type PlayerNameLookup = (name: string) => Promise<ExactPlayerName | { found: false }>
-type ItemPlayerRecipientResolution =
-  | { kind: 'blocked' | 'not_found' | 'failed' }
-  | { kind: 'passthrough'; address: string }
-  | { kind: 'resolved'; name: string; address: string }
-
-function exact_player_name_query(value: string): string | null {
-  const query = value.trim()
-  if (query.length < 4 || /^0x/i.test(query) || is_suins_name(query)) return null
-  return query
-}
-
-export async function resolve_item_player_recipient(
-  value: string,
-  lookup: PlayerNameLookup
-): Promise<ItemPlayerRecipientResolution> {
-  if (ADDRESS_FULL_RE.test(value)) return { kind: 'passthrough', address: value }
-  const query = exact_player_name_query(value)
-  if (!query) return { kind: 'blocked' }
-  try {
-    const player = await lookup(query)
-    if ('found' in player) return { kind: 'not_found' }
-    if (!player.name || !player.character_id || !player.owner) return { kind: 'failed' }
-    return { kind: 'resolved', name: player.name, address: player.owner }
-  } catch (error) {
-    const not_found = typeof error === 'object' && error !== null && 'status' in error && error.status === 404
-    return { kind: not_found ? 'not_found' : 'failed' }
-  }
-}
-
-const lookup_exact_player_name: PlayerNameLookup = (name) =>
-  rpc_get<ExactPlayerName | { found: false }>('/v1/names', { name })
-
-const is_address_mode = (v: string) => ADDRESS_PARTIAL_RE.test(v)
-const is_full_address = (v: string) => ADDRESS_FULL_RE.test(v)
+const address_full_re = /^0x[a-f0-9]{64}$/i
 
 function truncate_digest(digest: string): string {
   return digest.length <= 16 ? digest : `${digest.slice(0, 10)}...${digest.slice(-6)}`
@@ -169,7 +130,10 @@ function ItemsStrip({ items }: { items: SendItem[] }) {
               category={it.category ?? undefined}
               className="w-6 h-6 shrink-0"
             />
-            <span className="text-[9px] tracking-[0.1em] uppercase text-text/80 truncate max-w-[120px]">{it.name}</span>
+            <span className="text-[9px] tracking-[0.1em] uppercase text-text/80 truncate max-w-[140px]">
+              {it.name}
+              {it.stackable ? ` ×${it.amount}` : ''}
+            </span>
           </div>
         ))}
       </div>
@@ -217,52 +181,26 @@ function DigestLink({ digest }: { digest: string }) {
 function RecipientForm({ items, on_close }: { items: SendItem[]; on_close: () => void }) {
   const { t } = useTranslation()
   const [raw, set_raw] = useState('')
-  const [resolved_player, set_resolved_player] = useState<ResolvedPlayer | null>(null)
-  const [player_resolving, set_player_resolving] = useState(false)
-  const [player_error, set_player_error] = useState<'not_found' | 'failed' | null>(null)
-  const debounce_ref = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const address_mode = is_address_mode(raw)
-  const full_valid = address_mode && is_full_address(raw)
-  const suins_mode = !address_mode && is_suins_name(raw)
-  const player_ready = !!resolved_player && resolved_player.query === raw.trim()
-  const can_continue = full_valid || suins_mode || player_ready
-
-  useEffect(() => {
-    if (debounce_ref.current) clearTimeout(debounce_ref.current)
-    set_player_error(null)
-    const query = exact_player_name_query(raw)
-    if (!query) {
-      set_player_resolving(false)
-      return
-    }
-
-    let cancelled = false
-    debounce_ref.current = setTimeout(async () => {
-      set_player_resolving(true)
-      const resolution = await resolve_item_player_recipient(query, lookup_exact_player_name)
-      if (cancelled) return
-      set_player_resolving(false)
-      if (resolution.kind === 'resolved')
-        set_resolved_player({ query, name: resolution.name, address: resolution.address })
-      else if (resolution.kind === 'not_found') set_player_error('not_found')
-      else if (resolution.kind === 'failed') set_player_error('failed')
-    }, 400)
-
-    return () => {
-      cancelled = true
-      if (debounce_ref.current) clearTimeout(debounce_ref.current)
-    }
-  }, [raw])
-
-  const on_recipient_change = (value: string) => {
-    set_raw(value)
-    set_resolved_player(null)
-    set_player_error(null)
-  }
+  const single_stack = items.length === 1 && items[0].stackable
+  const available_amount = single_stack ? items[0].amount : 1
+  const [amount, set_amount] = useState(String(available_amount))
+  const validation = validate_item_send_dialog({
+    recipient: raw,
+    amount: single_stack ? amount : '1',
+    available_amount,
+    stackable: single_stack,
+  })
+  const address_mode = /^0x/i.test(raw.trim())
+  const full_address = address_full_re.test(raw.trim())
+  const suins_mode = is_suins_name(raw)
 
   const on_continue = () => {
-    if (!can_continue) return
-    void use_item_send.getState().prepare({ items, recipient_input: player_ready ? resolved_player.address : raw })
+    if (!validation.valid || validation.amount == null) return
+    void use_item_send.getState().prepare({
+      items,
+      recipient_input: raw,
+      amount: single_stack ? validation.amount : undefined,
+    })
   }
 
   return (
@@ -277,9 +215,9 @@ function RecipientForm({ items, on_close }: { items: SendItem[]; on_close: () =>
           className="flex items-center gap-2 px-3 py-2.5 transition-colors"
           style={{
             border: `1px solid ${
-              player_error || (address_mode && raw.length > 2 && !full_valid)
+              raw && validation.recipient_error
                 ? 'rgba(239,68,68,0.5)'
-                : full_valid || suins_mode || player_ready
+                : validation.recipient_error == null
                   ? 'rgba(52,211,153,0.5)'
                   : 'rgba(200,150,60,0.3)'
             }`,
@@ -294,54 +232,55 @@ function RecipientForm({ items, on_close }: { items: SendItem[]; on_close: () =>
           <input
             type="text"
             value={raw}
-            onChange={(e) => on_recipient_change(e.target.value)}
+            onChange={(e) => set_raw(e.target.value)}
             placeholder={t('gift.send.recipient_placeholder')}
             autoComplete="off"
             spellCheck={false}
-            maxLength={66}
+            maxLength={255}
             className="bg-transparent flex-1 text-[11px] tracking-wide font-mono text-text outline-none placeholder:text-muted/50"
           />
-          {player_resolving && <Loader2 size={12} className="text-muted animate-spin" />}
-          {full_valid && <Check size={14} className="text-emerald-400" />}
-          {player_ready && <Check size={14} className="text-emerald-400" />}
+          {validation.recipient_error == null && <Check size={14} className="text-emerald-400" />}
         </div>
         <div className="text-[9px] tracking-wide text-muted">
-          {address_mode ? (
-            full_valid ? (
-              <span className="text-emerald-400/80">{t('gift.send.address_valid')}</span>
-            ) : raw.length > 2 ? (
-              <span className="text-red-400/80">{t('gift.send.address_invalid')}</span>
-            ) : (
-              <span>{t('gift.send.recipient_hint')}</span>
-            )
-          ) : player_ready ? (
-            <span className="text-emerald-400/80 flex items-center gap-1">
-              {t('gift.send.player_resolved_address', {
-                name: resolved_player.name,
-                address: truncate_address(resolved_player.address),
-              })}
-            </span>
-          ) : player_resolving ? (
-            <span className="flex items-center gap-1">
-              <Loader2 size={10} className="animate-spin" />
-              {t('gift.send.resolving')}
-            </span>
-          ) : player_error ? (
-            <span className="text-red-400/80">
-              {t(player_error === 'not_found' ? 'gift.send.player_not_found' : 'gift.send.player_lookup_failed')}
-            </span>
+          {full_address ? (
+            <span className="text-emerald-400/80">{t('gift.send.address_valid')}</span>
           ) : suins_mode ? (
             <span className="text-emerald-400/80">{t('gift.send.suins_detected')}</span>
+          ) : raw ? (
+            <span className="text-red-400/80">{t('gift.send.address_invalid')}</span>
           ) : (
             <span>{t('gift.send.recipient_hint')}</span>
           )}
         </div>
       </div>
 
+      {single_stack && (
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[9px] tracking-[0.2em] uppercase text-gold font-medium">
+            {t('gift.send.amount_label')}
+          </label>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={available_amount}
+            step={1}
+            value={amount}
+            onChange={(event) => set_amount(event.target.value)}
+            className="bg-transparent border border-gold/30 px-3 py-2.5 text-[11px] font-mono text-text outline-none focus:border-gold"
+          />
+          <span className={`text-[9px] tracking-wide ${validation.amount_error ? 'text-red-400/80' : 'text-muted'}`}>
+            {validation.amount_error
+              ? t(`gift.send.err.${validation.amount_error}`)
+              : t('gift.send.amount_available', { amount: available_amount })}
+          </span>
+        </div>
+      )}
+
       <div className="flex gap-3 mt-2">
         <button
           type="button"
-          disabled={!can_continue}
+          disabled={!validation.valid}
           onClick={on_continue}
           className="btn-gold flex-1 py-2.5 px-6 text-[10px] tracking-[0.2em] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
         >
@@ -384,6 +323,32 @@ function ReviewView({ send, on_back }: { send: ItemSendState; on_back: () => voi
       <div className="w-full h-px bg-border" />
 
       <ItemsStrip items={send.items} />
+
+      <div
+        className="flex flex-col gap-3 px-3 py-3"
+        style={{ border: '1px solid rgba(34,211,238,0.28)', background: 'rgba(34,211,238,0.04)' }}
+      >
+        <span className="text-cyan text-[9px] tracking-[0.22em] uppercase font-semibold">
+          {t('gift.send.preview_title')}
+        </span>
+        <div className="flex items-center justify-between gap-3 text-[10px]">
+          <span className="text-muted uppercase tracking-[0.16em]">{t('gift.send.gas_label')}</span>
+          <span className="font-mono text-text">
+            {send.gas_estimate_mist == null ? '—' : `${format_sui_exact(send.gas_estimate_mist)} SUI`}
+          </span>
+        </div>
+        <div className="flex items-start justify-between gap-3 text-[10px]">
+          <span className="text-muted uppercase tracking-[0.16em]">{t('gift.send.receiver_gets')}</span>
+          <span className="flex flex-col items-end gap-1 text-text">
+            {send.receiver_items.map((item, index) => (
+              <span key={`${item.name}-${index}`}>
+                {item.name} ×{item.amount.toString()}
+              </span>
+            ))}
+          </span>
+        </div>
+        <span className="text-muted/70 text-[8px] tracking-wide">{t('gift.send.receiver_claim_note')}</span>
+      </div>
 
       {/* Royalty (prepaid escrow) */}
       <div className="flex items-center justify-between gap-3 text-[10px] tracking-wide">
@@ -462,6 +427,11 @@ function FailedView({ send, on_close, on_retry }: { send: ItemSendState; on_clos
     SELF_SEND: t('gift.send.err.self_send'),
     RECIPIENT_INVALID: t('gift.send.err.recipient_invalid'),
     NO_ITEMS: t('gift.send.err.no_items'),
+    NO_KIOSK: t('gift.send.err.no_kiosk'),
+    AMOUNT_INVALID: t('gift.send.err.amount_invalid'),
+    AMOUNT_EXCEEDS_AVAILABLE: t('gift.send.err.amount_exceeds_available'),
+    AMOUNT_NON_STACKABLE: t('gift.send.err.amount_non_stackable'),
+    PREVIEW_EXPIRED: t('gift.send.err.preview_expired'),
   }
   const body = known[code] ?? code
 
@@ -565,7 +535,6 @@ export function ItemSendModal({ items, on_close }: { items: SendItem[]; on_close
           </div>
           <div className="text-muted text-[10px] tracking-wide text-center leading-relaxed">
             {t('gift.send.success_body', {
-              count: send.items.length,
               recipient: send.resolved_name || truncate_address(send.resolved_address),
             })}
           </div>

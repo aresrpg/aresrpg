@@ -17,6 +17,8 @@ import { use_template_t } from '../i18n/template_t'
 import { ItemIcon } from '../game/screens/hud/ItemIcon.jsx'
 import { is_forge_gear, is_rune } from '../components/forge_eligibility'
 import { CrushMenu, type CrushTarget } from '../components/crush_menu'
+import { ItemSendModal } from '../components/item_send_modal'
+import { project_inventory_send_item, type send_item } from '../stores/item_send_model'
 import { scribe_rune } from '../world-shell/scribe_actions'
 
 import { scribe_detail_props, type Item } from './scribe_detail'
@@ -55,6 +57,7 @@ export function ScribePage({ character_id = null }: { character_id?: string | nu
   // `crush_confirm` = the gear pending the confirm modal (lifted so CrushMenu stays mounted while it's open).
   const [crush_menu, set_crush_menu] = useState<CrushTarget>(null)
   const [crush_confirm, set_crush_confirm] = useState<any>(null)
+  const [send_item, set_send_item] = useState<send_item | null>(null)
 
   useEffect(() => {
     let alive = true
@@ -315,15 +318,12 @@ export function ScribePage({ character_id = null }: { character_id?: string | nu
                   draggable
                   onClick={() => (tab === 'gear' ? set_gear_id(it.id) : set_rune_id(it.id))}
                   onDragStart={(e) => e.dataTransfer.setData('text/plain', it.id)}
-                  onContextMenu={
-                    tab === 'gear'
-                      ? (e) => {
-                          // CRUSH moved off the page into a right-click action — only gear gets it.
-                          e.preventDefault()
-                          set_crush_menu({ x: e.clientX, y: e.clientY, item: it })
-                        }
-                      : undefined
-                  }
+                  onContextMenu={(e) => {
+                    // Every inventory row gets the shared action menu. Rune rows keep CRUSH disabled but gain
+                    // SEND + Explorer; gear rows retain the active CRUSH action.
+                    e.preventDefault()
+                    set_crush_menu({ x: e.clientX, y: e.clientY, item: it })
+                  }}
                   title={it.name}
                   className={`relative flex aspect-square items-center justify-center border transition-all ${
                     selected ? 'border-gold bg-gold/[0.09]' : 'border-border hover:border-gold/40'
@@ -359,7 +359,9 @@ export function ScribePage({ character_id = null }: { character_id?: string | nu
         on_close={() => set_crush_menu(null)}
         confirm={crush_confirm}
         set_confirm={set_crush_confirm}
+        on_send={(item) => set_send_item(project_inventory_send_item(item, items))}
       />
+      {send_item && <ItemSendModal items={[send_item]} on_close={() => set_send_item(null)} />}
     </div>
   )
 }

@@ -1,152 +1,245 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// item_send.ts — client-side ITEM GIFT-send state machine (no backend). Sibling of stores/sui_send.ts, but for
-// the escrow-recoverable player-to-player item send (gift.move · resolved DECISIONS 2026-07-13). The modal
-// collects the recipient (the items are picked on the inventory grid and passed in); this store owns the async
-// machine:
-//   RESOLVING → REVIEW (the irrecoverability DOUBLE-CONFIRM gate) → EXECUTING → (SUCCESS | FAILED)
-//
-// RESOLVING resolves the recipient (raw 0x address OR SuiNS — player-name send is DEAD, no WS registry), guards
-// self-send, fires the FRESH-ADDRESS probe (zero on-chain history ⇒ a soft typo warning, never a hard block —
-// a brand-new valid zkLogin address also reads empty), and derives the royalty DISPLAY (N × the Item policy's
-// per-item min, read off-chain). The authoritative dry-run PRE-FLIGHT is the tx choke's own S-54 simulate-refuse
-// (send_gift → run_tx_random → execute_tx): a would-fail send refuses BEFORE signing, zero gas, humanized cause —
-// so this store never composes a second, drift-prone dry-run.
+// Item SEND state machine: resolve address/SuiNS, compose the kiosk-aware SDK PTB, dry-run that exact transfer,
+// present the preview, then execute only the prepared transaction after explicit confirmation.
 
 import { create } from 'zustand'
 import { normalizeSuiAddress } from '@mysten/sui/utils'
+import type { Transaction } from '@mysten/sui/transactions'
 
 import { use_auth } from '../auth'
 import { read_sui_balance_mist } from '../auth/sui_balance'
 import { is_suins_name, resolve_suins_address } from '../utils/suins'
-import { send_gift, item_royalty_min_mist } from '../chain/write/write_gift'
+import { execute_gift_send, item_royalty_min_mist, preview_gift_send } from '../chain/write/write_gift'
 import { humanize_tx_error } from '../game/core/abort_copy.js'
 import { game_log } from '../core/log.js'
 
-const ADDRESS_FULL_RE = /^0x[a-f0-9]{64}$/i
+import { build_item_send_transfer_groups, type item_send_receiver_item, type send_item } from './item_send_model'
 
-export interface SendItem {
-  id: string
-  kiosk_id: string
-  slug: string
-  name: string
-  appearance?: string
-  category?: string
-  level?: number
-}
+export type SendItem = send_item
+
+const address_full_re = /^0x[a-f0-9]{64}$/i
 
 export interface ItemSendState {
   phase: 'RESOLVING' | 'REVIEW' | 'EXECUTING' | 'SUCCESS' | 'FAILED'
   items: SendItem[]
   recipient_input: string
   resolved_address: string
-  resolved_name: string | null // the SuiNS name, when resolved via one
-  is_suins: boolean
-  fresh_address: boolean // zero on-chain history — the typo warning
-  royalty_mist: bigint | null // N × the per-item royalty floor (display; null when unreadable pre-publish)
+  resolved_name: string | null
+  fresh_address: boolean
+  royalty_mist: bigint | null
+  gas_estimate_mist: bigint | null
+  receiver_items: item_send_receiver_item[]
+  selected_amount: bigint | null
   tx_digest: string | null
-  error: string | null // a humanized message OR a machine code (SELF_SEND / RECIPIENT_INVALID / NO_ITEMS)
+  error: string | null
 }
 
 interface ItemSendStore {
   send: ItemSendState | null
-  /** Resolve the recipient + derive royalty + fresh-address probe → REVIEW (or FAILED). Items are the grid picks. */
-  prepare: (payload: { items: SendItem[]; recipient_input: string }) => Promise<void>
-  /** Fire the send from REVIEW (after the double-confirm) → EXECUTING → SUCCESS | FAILED. */
+  prepared_transaction: Transaction | null
+  generation: number
+  prepare: (payload: { items: SendItem[]; recipient_input: string; amount?: bigint }) => Promise<void>
   confirm: () => Promise<void>
-  /** Null the machine → the modal drops back to its (still-mounted) recipient form; also the full-close path. */
   clear: () => void
 }
 
-async function resolve_recipient(
-  raw: string
-): Promise<{ address: string; name: string | null; is_suins: boolean } | null> {
-  const value = raw.trim()
-  if (ADDRESS_FULL_RE.test(value)) return { address: normalizeSuiAddress(value), name: null, is_suins: false }
-  if (is_suins_name(value)) {
-    const address = await resolve_suins_address(value)
-    return address ? { address: normalizeSuiAddress(address), name: value, is_suins: true } : null
+type item_send_machine = Pick<ItemSendStore, 'send' | 'prepared_transaction' | 'generation'>
+type item_send_event =
+  | { kind: 'prepare_started'; generation: number; send: ItemSendState }
+  | {
+      kind: 'state_replaced'
+      generation: number
+      send: ItemSendState
+      prepared_transaction: Transaction | null
+    }
+  | { kind: 'cleared'; generation: number }
+
+const initial_machine: item_send_machine = { send: null, prepared_transaction: null, generation: 0 }
+
+export function reduce_item_send_machine(state: item_send_machine, event: item_send_event): item_send_machine {
+  if (event.kind === 'cleared') return { send: null, prepared_transaction: null, generation: event.generation }
+  if (event.kind === 'prepare_started')
+    return { send: event.send, prepared_transaction: null, generation: event.generation }
+  if (event.generation !== state.generation) return state
+  return {
+    send: event.send,
+    prepared_transaction: event.prepared_transaction,
+    generation: state.generation,
   }
-  return null // player-name send is dead (no WS) — a bare word can't resolve
 }
 
-export const use_item_send = create<ItemSendStore>((set, get) => ({
-  send: null,
+async function resolve_recipient(raw: string): Promise<{ address: string; name: string | null } | null> {
+  const value = raw.trim()
+  if (address_full_re.test(value)) return { address: normalizeSuiAddress(value), name: null }
+  if (!is_suins_name(value)) return null
+  const address = await resolve_suins_address(value)
+  return address ? { address: normalizeSuiAddress(address), name: value } : null
+}
 
-  prepare: async ({ items, recipient_input }) => {
-    const { address: sender } = use_auth.getState()
-    const base: ItemSendState = {
-      phase: 'RESOLVING',
-      items,
-      recipient_input,
-      resolved_address: '',
-      resolved_name: null,
-      is_suins: false,
-      fresh_address: false,
-      royalty_mist: null,
-      tx_digest: null,
-      error: null,
-    }
-    if (!items.length) {
-      set({ send: { ...base, phase: 'FAILED', error: 'NO_ITEMS' } })
-      return
-    }
-    set({ send: base })
+const base_state = ({
+  items,
+  recipient_input,
+  selected_amount,
+}: {
+  items: SendItem[]
+  recipient_input: string
+  selected_amount: bigint | null
+}): ItemSendState => ({
+  phase: 'RESOLVING',
+  items,
+  recipient_input,
+  resolved_address: '',
+  resolved_name: null,
+  fresh_address: false,
+  royalty_mist: null,
+  gas_estimate_mist: null,
+  receiver_items: [],
+  selected_amount,
+  tx_digest: null,
+  error: null,
+})
 
-    const resolved = await resolve_recipient(recipient_input).catch(() => null)
-    if (!resolved) {
-      set({ send: { ...base, phase: 'FAILED', error: 'RECIPIENT_INVALID' } })
-      return
-    }
-    if (sender && resolved.address.toLowerCase() === sender.toLowerCase()) {
-      set({ send: { ...base, phase: 'FAILED', resolved_address: resolved.address, error: 'SELF_SEND' } })
-      return
-    }
+export const use_item_send = create<ItemSendStore>((set, get) => {
+  const input = (event: item_send_event) => set((state) => reduce_item_send_machine(state, event))
+  return {
+    ...initial_machine,
 
-    // FRESH-ADDRESS probe (soft) + royalty DISPLAY derive — both best-effort, never block the review. A zero
-    // balance is the cheapest typo signal; a valid brand-new zkLogin address also reads zero, hence a WARNING +
-    // the double-confirm, never a hard stop (docs/ITEM_SEND_PLAN.md §A1.6).
-    const [balance, min_mist] = await Promise.all([
-      read_sui_balance_mist(resolved.address).catch(() => null),
-      item_royalty_min_mist().catch(() => null),
-    ])
+    prepare: async ({ items, recipient_input, amount }) => {
+      const generation = get().generation + 1
+      const base = base_state({ items, recipient_input, selected_amount: amount ?? null })
+      input({ kind: 'prepare_started', generation, send: base })
+      if (items.length === 0) {
+        input({
+          kind: 'state_replaced',
+          generation,
+          send: { ...base, phase: 'FAILED', error: 'NO_ITEMS' },
+          prepared_transaction: null,
+        })
+        return
+      }
 
-    set({
-      send: {
-        ...base,
-        phase: 'REVIEW',
-        resolved_address: resolved.address,
-        resolved_name: resolved.name,
-        is_suins: resolved.is_suins,
-        fresh_address: balance === 0n,
-        royalty_mist: min_mist == null ? null : min_mist * BigInt(items.length),
-      },
-    })
-  },
+      const plan_result = (() => {
+        try {
+          return { ok: true as const, plan: build_item_send_transfer_groups(items, amount) }
+        } catch (error) {
+          return { ok: false as const, error }
+        }
+      })()
+      if (!plan_result.ok) {
+        input({
+          kind: 'state_replaced',
+          generation,
+          send: {
+            ...base,
+            phase: 'FAILED',
+            error: String((plan_result.error as Error)?.message ?? plan_result.error),
+          },
+          prepared_transaction: null,
+        })
+        return
+      }
+      const { plan } = plan_result
 
-  confirm: async () => {
-    const { send } = get()
-    if (!send || send.phase !== 'REVIEW') return
-    set({ send: { ...send, phase: 'EXECUTING', error: null } })
-    try {
-      // All picks share the sender's ONE personal kiosk (kiosk-lock constitution). The choke dry-runs +
-      // refuses a would-fail send BEFORE signing (S-54), so an under-funded/absent-module send never burns gas.
-      const { digest } = await send_gift({
-        item_ids: send.items.map((i) => i.id),
-        kiosk_id: send.items[0].kiosk_id,
-        recipient: send.resolved_address,
+      const resolved = await resolve_recipient(recipient_input).catch(() => null)
+      if (generation !== get().generation) return
+      if (!resolved) {
+        input({
+          kind: 'state_replaced',
+          generation,
+          send: { ...base, phase: 'FAILED', error: 'RECIPIENT_INVALID' },
+          prepared_transaction: null,
+        })
+        return
+      }
+      const sender = use_auth.getState().address
+      if (sender && resolved.address.toLowerCase() === sender.toLowerCase()) {
+        input({
+          kind: 'state_replaced',
+          generation,
+          send: { ...base, phase: 'FAILED', resolved_address: resolved.address, error: 'SELF_SEND' },
+          prepared_transaction: null,
+        })
+        return
+      }
+
+      try {
+        const [balance, min_mist, preview] = await Promise.all([
+          read_sui_balance_mist(resolved.address).catch(() => null),
+          item_royalty_min_mist().catch(() => null),
+          preview_gift_send({ groups: plan.groups, recipient: resolved.address }),
+        ])
+        input({
+          kind: 'state_replaced',
+          generation,
+          send: {
+            ...base,
+            phase: 'REVIEW',
+            resolved_address: resolved.address,
+            resolved_name: resolved.name,
+            fresh_address: balance === 0n,
+            royalty_mist: min_mist == null ? null : min_mist * BigInt(plan.transfer_count),
+            gas_estimate_mist: preview.gas_estimate_mist,
+            receiver_items: [...plan.receiver_items],
+          },
+          prepared_transaction: preview.transaction,
+        })
+      } catch (error) {
+        game_log('item-send', 'preview failed', error)
+        input({
+          kind: 'state_replaced',
+          generation,
+          send: {
+            ...base,
+            phase: 'FAILED',
+            resolved_address: resolved.address,
+            error: humanize_tx_error(error),
+          },
+          prepared_transaction: null,
+        })
+      }
+    },
+
+    confirm: async () => {
+      const { send, prepared_transaction, generation } = get()
+      if (!send || send.phase !== 'REVIEW') return
+      if (!prepared_transaction) {
+        input({
+          kind: 'state_replaced',
+          generation,
+          send: { ...send, phase: 'FAILED', error: 'PREVIEW_EXPIRED' },
+          prepared_transaction: null,
+        })
+        return
+      }
+      input({
+        kind: 'state_replaced',
+        generation,
+        send: { ...send, phase: 'EXECUTING', error: null },
+        prepared_transaction,
       })
-      set({ send: { ...get().send!, phase: 'SUCCESS', tx_digest: digest } })
-    } catch (err) {
-      game_log('item-send', 'send failed', err)
-      set({ send: { ...get().send!, phase: 'FAILED', error: humanize_tx_error(err) } })
-    }
-  },
+      try {
+        const { digest } = await execute_gift_send(prepared_transaction)
+        input({
+          kind: 'state_replaced',
+          generation,
+          send: { ...send, phase: 'SUCCESS', tx_digest: digest },
+          prepared_transaction: null,
+        })
+      } catch (error) {
+        game_log('item-send', 'send failed', error)
+        input({
+          kind: 'state_replaced',
+          generation,
+          send: { ...send, phase: 'FAILED', error: humanize_tx_error(error) },
+          prepared_transaction: null,
+        })
+      }
+    },
 
-  clear: () => set({ send: null }),
-}))
+    clear: () => input({ kind: 'cleared', generation: get().generation + 1 }),
+  }
+})
 
-// DEV-only QA/screenshot seam — exposes the send machine so a harness can drive it (the gift module lands with
-// the pending publish, so a real send dry-run-refuses until then). Statically stripped from the prod build.
 if (import.meta.env.DEV && typeof window !== 'undefined')
   (window as unknown as { __item_send?: typeof use_item_send }).__item_send = use_item_send

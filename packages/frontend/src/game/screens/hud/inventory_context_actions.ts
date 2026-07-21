@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-export type inventory_context_action = 'equip' | 'use' | 'feed' | 'open' | 'crush' | 'send' | 'explorer'
+export type inventory_context_action = 'equip' | 'use' | 'clear' | 'feed' | 'open' | 'crush' | 'send' | 'explorer'
 
 /**
  * Add the common SEND action to an inventory menu without disturbing that surface's existing actions. SEND is

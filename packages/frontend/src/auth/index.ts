@@ -195,13 +195,13 @@ export async function sign_and_execute_self_pay_transaction(
 }
 
 // TERMINAL `&Random` SUBMIT (S-19a) — sign + execute a tx whose LAST command consumes `&Random` (shop
-// `buy`/`buy_many`, gather/search, forgemagie crush, loot-box open, gift send). S-54: the tx SHAPE dry-runs like
+// `buy`/`buy_many`, gather/search, forgemagie crush, loot-box open). S-54: the tx SHAPE dry-runs like
 // any other (ratified 07-09: Sui dryRun CAN simulate &Random txs; only a randomness-VALUE-dependent abort is
 // unknowable, and a well-formed one never aborts on the value) — so it routes through the SAME simulate-refuse
 // gate. The SDK builder PINS the gas budget from a MEASURED constant × 1.5; `keep_budget` keeps that pinned
 // budget as the MAX bound (the gate refuses a would-fail tx but leaves the budget untouched).
 // SPONSOR ROUTING: `sponsor_excluded` (default false) is the SOLE self-pay gate — set it ONLY for a MONEY-split
-// PTB (`buy`/`gift` split the PRICE/royalty off `tx.gas`; a sponsored gas coin would pay it — a drain). A
+// PTB (`buy` splits the PRICE off `tx.gas`; a sponsored gas coin would pay it — a drain). A
 // NON-money &Random tx (search/gather/crush/open) leaves it false and is sponsor-first for a ≤0.2 SUI zkLogin
 // wallet (the whole game is playable at zero SUI; the ≤0.4-SUI-pinned search stops demanding free balance).
 // TX-RETRY law: the caller NEVER auto-retries an executed failure. PERF (2026-07-14, fixes slow buy-transaction latency):

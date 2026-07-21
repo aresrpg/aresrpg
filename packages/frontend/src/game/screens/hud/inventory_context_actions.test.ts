@@ -34,4 +34,8 @@ describe('inventory context-menu action projection', () => {
       'explorer',
     ])
   })
+
+  test('a fast-slot item menu receives SEND without losing use or clear', () => {
+    expect(project_inventory_context_actions(['use', 'clear'])).toEqual(['use', 'clear', 'send'])
+  })
 })

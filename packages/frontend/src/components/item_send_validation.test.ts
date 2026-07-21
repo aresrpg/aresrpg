@@ -18,17 +18,20 @@ describe('item SEND dialog validation', () => {
     ).toEqual({ valid: true, amount: 1n, recipient_error: null, amount_error: null })
   })
 
-  test.each(['', 'alice', '0x1234', `0x${'z'.repeat(64)}`])('rejects a target outside address/SuiNS forms: %s', (recipient) => {
-    const result = validate_item_send_dialog({
-      recipient,
-      amount: '1',
-      available_amount: 1,
-      stackable: false,
-    })
+  test.each(['', 'alice', '0x1234', `0x${'z'.repeat(64)}`])(
+    'rejects a target outside address/SuiNS forms: %s',
+    (recipient) => {
+      const result = validate_item_send_dialog({
+        recipient,
+        amount: '1',
+        available_amount: 1,
+        stackable: false,
+      })
 
-    expect(result.valid).toBe(false)
-    expect(result.recipient_error).toBe('recipient_invalid')
-  })
+      expect(result.valid).toBe(false)
+      expect(result.recipient_error).toBe('recipient_invalid')
+    }
+  )
 
   test.each(['', '0', '-1', '1.5', '1e2', 'abc'])('rejects a non-positive-integer stack amount: %s', (amount) => {
     const result = validate_item_send_dialog({

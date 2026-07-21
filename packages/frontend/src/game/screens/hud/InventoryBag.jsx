@@ -13,7 +13,9 @@ import './inventory-guard.css'
 function retry_blocked_title(t, item) {
   const digest = box_retry_digest(item.id)
   const cause = t('lootbox.retry_blocked')
-  return digest ? `${cause} ${t('lootbox.retry_blocked_digest', { digest: `${digest.slice(0, 6)}…${digest.slice(-4)}` })}` : cause
+  return digest
+    ? `${cause} ${t('lootbox.retry_blocked_digest', { digest: `${digest.slice(0, 6)}…${digest.slice(-4)}` })}`
+    : cause
 }
 
 /** Right-side inventory bag. Listed marketplace rows are filtered at their owner-items data source. */
@@ -85,8 +87,7 @@ export function InventoryBag({
                     '--q-tint': rarity_tint(item.quality ?? item.rarity),
                   })
                 }
-                draggable={(category === 'equipment' || category === 'cosmetics') && !equip_lock}
-                disabled={action_disabled}
+                draggable={(category === 'equipment' || category === 'cosmetics') && !equip_lock && !action_disabled}
                 aria-disabled={action_disabled}
                 title={
                   retry_blocked
@@ -99,7 +100,7 @@ export function InventoryBag({
                   on_dismiss_tooltip()
                   on_select(item.id)
                 }}
-                onDoubleClick={() => on_activate(item)}
+                onDoubleClick={() => !action_disabled && on_activate(item)}
                 onContextMenu={(event) => {
                   on_dismiss_tooltip()
                   on_context_menu(event, item)

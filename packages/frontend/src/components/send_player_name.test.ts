@@ -4,21 +4,18 @@ import { describe, expect, mock, test } from 'bun:test'
 
 import { reset_auth_mock } from '../test_helpers/auth_mock.js'
 
-// Both modal module graphs reach browser-only Enoki registration through auth. Keep this DOM-less unit surface
-// isolated with the same complete auth mock shape used by the other component-adjacent tests.
+// The SUI modal graph reaches browser-only Enoki registration through auth. Keep this DOM-less unit surface
+// isolated with the same complete auth mock shape used by the other component-adjacent tests. Item SEND now
+// intentionally accepts only address/SuiNS, covered by item_send_validation.test.ts.
 reset_auth_mock()
 
 const { resolve_sui_player_recipient } = await import('./send_sui_modal')
-const { resolve_item_player_recipient } = await import('./item_send_modal')
 
 const OWNER = `0x${'3'.repeat(64)}`
 const RAW_ADDRESS = `0x${'a'.repeat(64)}`
 const PLAYER = { name: 'alice', character_id: '0xcharacter', owner: OWNER }
 
-const resolvers = [
-  ['SUI', resolve_sui_player_recipient],
-  ['item', resolve_item_player_recipient],
-] as const
+const resolvers = [['SUI', resolve_sui_player_recipient]] as const
 
 for (const [label, resolve_recipient] of resolvers) {
   describe(`${label} send player-name resolution`, () => {

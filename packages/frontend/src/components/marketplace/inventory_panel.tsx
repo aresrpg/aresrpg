@@ -106,10 +106,14 @@ const to_send_item = (it: ListableItem): SendItem => {
   return {
     id: it.id,
     kiosk_id: it.kiosk_id,
+    template_id: it.template_id,
     slug: cosmetic_icon_of({ slug: template_slug, name: it.name }) ?? template_slug ?? '',
     name: it.name,
     category: it.category,
     level: it.level,
+    amount: it.quantity,
+    stackable: it.stackable,
+    sources: [{ id: it.id, kiosk_id: it.kiosk_id, amount: it.quantity }],
   }
 }
 

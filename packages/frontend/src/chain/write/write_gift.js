@@ -6,8 +6,8 @@
 // this lane) to the kiosk-cap resolution and the tx choke. Mirrors write_listings.js idioms (get_sdk +
 // kiosk_cap_cache.get_personal_cap + the run_tx pipeline).
 //
-// MONEY ROUTING (anti-drain law — the SAME split-off-gas class as the &Random shop buys):
-//   • SEND  → run_tx_random (keep_budget = SELF-PAY, sponsor EXCLUDED). gift_send_ptb splits the pre-funded
+// MONEY ROUTING (anti-drain law — the SAME split-off-gas class as marketplace buys):
+//   • SEND  → run_tx_self_pay (ordinary derived-budget guard, sponsor EXCLUDED). gift_send_ptb splits the pre-funded
 //             royalty coin off tx.gas exactly like buy_ptb splits the item price — a sponsored gas coin would
 //             pay the royalty (a drain). The sender pre-funds the royalty from their OWN coin, always.
 //   • CLAIM / RECALL / AIRDROP → run_tx (sponsor-first eligible). These are PURE-GAS: claim pays the royalty
@@ -21,12 +21,17 @@
 // home + the choke's simulate-refuse gate carry the whole pre/post-publish seam).
 
 import { aresrpg_id } from '@aresrpg/sdk/deployment/aresrpg'
+import { Transaction } from '@mysten/sui/transactions'
 
 import { use_auth } from '../../auth'
-import { run_tx, run_tx_random } from '../../world-shell/tx'
+import { run_tx, run_tx_self_pay } from '../../world-shell/tx'
+import { tx_error } from '../../game/core/abort_copy.js'
+import i18n from '../../i18n'
 import { get_sdk } from '../sdk'
 import { DEMO_NETWORK } from '../deployment'
 import { get_personal_cap } from '../kiosk_cap_cache'
+
+import { dry_run_item_send } from './item_send_preview'
 
 /**
  * The Item TransferPolicy's royalty_rule `min_amount` (MIST) for the DISPLAY of the pre-funded escrow (N ×
@@ -43,28 +48,62 @@ export async function item_royalty_min_mist() {
 }
 
 /**
+ * Compose every kiosk group into one transaction. Each group becomes one recoverable Gift because the on-chain
+ * primitive mutates one sender kiosk per call; all calls share the same recipient and signature.
+ * @param {{ groups: Array<{ kiosk_id: string, item_transfers: Array<{item_id:string, amount:bigint, available_amount:bigint}> }>, recipient: string }} args
+ */
+export async function compose_gift_send({ groups, recipient }) {
+  const sdk = await get_sdk()
+  const { address } = use_auth.getState()
+  if (!address) throw new Error('Not signed in')
+  if (!groups.length) throw new Error('NO_ITEMS')
+
+  const caps = await Promise.all(groups.map((group) => get_personal_cap(sdk, address, group.kiosk_id)))
+  const transaction = new Transaction()
+  transaction.setSender(address)
+  groups.forEach((group, index) => {
+    const cap = caps[index]
+    if (!cap) throw new Error('NO_KIOSK')
+    sdk.gift_send_ptb({
+      kiosk_id: cap.kioskId,
+      personal_kiosk_cap_id: cap.objectId,
+      item_transfers: group.item_transfers,
+      recipient,
+      tx: transaction,
+    })
+  })
+  return { sdk, transaction }
+}
+
+/** Compose and dry-run the exact kiosk-aware transfer PTB used by confirm. A failed simulation is a hard stop. */
+export async function preview_gift_send(args) {
+  const { sdk, transaction } = await compose_gift_send(args)
+  const preview = await dry_run_item_send(transaction, (input) => sdk.grpc_client.core.simulateTransaction(input))
+  if (!preview.ok) {
+    if (preview.kind === 'request') throw new Error(i18n.t('errors.tx_simulation_failed'), { cause: preview.error })
+    throw tx_error(preview.error, { preflight: true })
+  }
+  return { transaction, gas_estimate_mist: preview.gas_estimate_mist }
+}
+
+/** Execute a successfully previewed transaction through the established self-pay, simulate-before-sign choke. */
+export async function execute_gift_send(transaction, execute = run_tx_self_pay) {
+  const { timing } = await execute('gift_send', transaction)
+  return { digest: timing.digest }
+}
+
+/**
  * SEND `item_ids` (all kiosk-locked in the sender's `kiosk_id`) to `recipient`, pre-funding the royalty escrow.
- * SELF-PAY (run_tx_random / keep_budget) — see the money-routing header. gift_send_ptb funds off the STAMPED
+ * SELF-PAY (run_tx_self_pay / derived-budget guard) — see the money-routing header. gift_send_ptb funds off the STAMPED
  * royalty floor and REFUSES loudly if it's unstamped/zero, so an under-funded (unclaimable) gift can never be
  * composed. Throws a humanized error the caller surfaces (never auto-retried — tx-retry law).
  * @param {{ item_ids: string[], kiosk_id: string, recipient: string }} args
  * @returns {Promise<{ digest: string }>}
  */
 export async function send_gift({ item_ids, kiosk_id, recipient }) {
-  const sdk = await get_sdk()
-  const { address } = use_auth.getState()
-  if (!address) throw new Error('Not signed in')
-  const cap = await get_personal_cap(sdk, address, kiosk_id)
-  if (!cap) throw new Error('No kiosk holds these items')
-
-  const tx = await sdk.gift_send_ptb({
-    kiosk_id: cap.kioskId,
-    personal_kiosk_cap_id: cap.objectId,
-    item_ids,
-    recipient,
-  })
-  const { result } = await run_tx_random('gift_send', tx, undefined, { sponsor_excluded: true }) // splits the royalty off tx.gas → self-pay only
-  return { digest: result?.digest ?? '' }
+  const item_transfers = item_ids.map((item_id) => ({ item_id, amount: 1n, available_amount: 1n }))
+  const { transaction } = await compose_gift_send({ groups: [{ kiosk_id, item_transfers }], recipient })
+  return execute_gift_send(transaction)
 }
 
 /**

@@ -18,15 +18,17 @@ import { ITEM_CATEGORY } from '@aresrpg/sdk/items'
 import { use_game_state } from '../../store.js'
 import { use_consumable_batched } from '../../../world-shell/consumable_actions.js'
 import { use_toast } from '../../../toast'
+import { ItemSendModal } from '../../../components/item_send_modal'
+import { project_inventory_send_item } from '../../../stores/item_send_model'
 import { can_consume } from './inventory-equip.js'
+import { project_inventory_context_actions } from './inventory_context_actions'
 import { ItemIcon } from './ItemIcon.jsx'
 import { Tooltip } from './Tooltip.jsx'
 import './fast-slots.css'
 
 const SLOT_COUNT = 6
 
-const is_consumable = (/** @type {any} */ item) =>
-  item?.item_category === ITEM_CATEGORY.CONSUMABLE
+const is_consumable = (/** @type {any} */ item) => item?.item_category === ITEM_CATEGORY.CONSUMABLE
 
 /**
  * Fast-slots bar. Reads the wallet's consumable items + the selected character from engine state;
@@ -35,31 +37,29 @@ const is_consumable = (/** @type {any} */ item) =>
  */
 export function FastSlots() {
   const { t } = useTranslation()
-  const items = use_game_state(s => s.sui.items)
-  const characters = use_game_state(s => s.sui.characters)
-  const selected_character_id = use_game_state(s => s.selected_character_id)
+  const items = use_game_state((s) => s.sui.items)
+  const characters = use_game_state((s) => s.sui.characters)
+  const selected_character_id = use_game_state((s) => s.selected_character_id)
 
   // slot index -> item id (the assignment); item DATA is always resolved live from the store.
-  const [assigned, set_assigned] = useState(
-    /** @type {(string | null)[]} */ (Array(SLOT_COUNT).fill(null)),
-  )
+  const [assigned, set_assigned] = useState(/** @type {(string | null)[]} */ (Array(SLOT_COUNT).fill(null)))
   // open context menu: { slot, x, y } or null
-  const [menu, set_menu] = useState(
-    /** @type {{ slot: number, x: number, y: number } | null} */ (null),
-  )
+  const [menu, set_menu] = useState(/** @type {{ slot: number, x: number, y: number } | null} */ (null))
+  const [send_items, set_send_items] = useState(null)
 
   const character = useMemo(
-    () => characters?.find(c => c.id === selected_character_id) ?? null,
-    [characters, selected_character_id],
+    () => characters?.find((c) => c.id === selected_character_id) ?? null,
+    [characters, selected_character_id]
   )
 
   const owned = Array.isArray(items) ? items : []
+  const menu_actions = project_inventory_context_actions(['use', 'clear'])
 
   // Resolve each slot's live item record (null if the stack is gone / unassigned).
   const slot_item = (/** @type {number} */ slot) => {
     const id = assigned[slot]
     if (!id) return null
-    return owned.find(it => it.id === id && is_consumable(it)) ?? null
+    return owned.find((it) => it.id === id && is_consumable(it)) ?? null
   }
 
   // Close the menu on any outside click / escape.
@@ -94,39 +94,28 @@ export function FastSlots() {
     use_consumable_batched({ character_id: character.id, potion_id: item.id, item_type: item.item_type })
   }
 
-  const drop_on_slot = (
-    /** @type {number} */ slot,
-    /** @type {DragEvent | any} */ e,
-  ) => {
+  const drop_on_slot = (/** @type {number} */ slot, /** @type {DragEvent | any} */ e) => {
     e.preventDefault()
     const id = e.dataTransfer.getData('text/plain')
-    const item = owned.find(it => it.id === id)
+    const item = owned.find((it) => it.id === id)
     if (!is_consumable(item)) return // only consumables go in fast-slots
-    set_assigned(prev => prev.map((cur, i) => (i === slot ? id : cur)))
+    set_assigned((prev) => prev.map((cur, i) => (i === slot ? id : cur)))
   }
 
   return (
-    <div
-      className="fastslots"
-      role="toolbar"
-      aria-label="Consumable fast slots"
-    >
+    <div className="fastslots" role="toolbar" aria-label="Consumable fast slots">
       {Array.from({ length: SLOT_COUNT }, (_, slot) => {
         const item = slot_item(slot)
         return (
           <Tooltip
             key={slot}
-            text={
-              item
-                ? `${item.name}: left-click to use, right-click to clear`
-                : 'Drag a consumable here'
-            }
+            text={item ? `${item.name}: left-click to use, right-click to clear` : 'Drag a consumable here'}
           >
             <div
               className={`fastslots__slot${item ? ' is-filled' : ''}`}
-              onDragOver={e => e.preventDefault()}
-              onDrop={e => drop_on_slot(slot, e)}
-              onContextMenu={e => {
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => drop_on_slot(slot, e)}
+              onContextMenu={(e) => {
                 e.preventDefault()
                 if (item) set_menu({ slot, x: e.clientX, y: e.clientY })
               }}
@@ -134,16 +123,8 @@ export function FastSlots() {
             >
               {item ? (
                 <>
-                  <ItemIcon
-                    item={{ icon: item.icon ?? item.item_type }}
-                    alt={item.name}
-                    className="fastslots__img"
-                  />
-                  {(item.amount ?? 1) > 1 && (
-                    <span className="fastslots__amount hud-num">
-                      {item.amount}
-                    </span>
-                  )}
+                  <ItemIcon item={{ icon: item.icon ?? item.item_type }} alt={item.name} className="fastslots__img" />
+                  {(item.amount ?? 1) > 1 && <span className="fastslots__amount hud-num">{item.amount}</span>}
                 </>
               ) : (
                 <span className="fastslots__key hud-num">{slot + 1}</span>
@@ -161,32 +142,43 @@ export function FastSlots() {
             <div
               className="fastslots__menu"
               style={{ left: menu.x, top: menu.y }}
-              onClick={e => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
               role="menu"
             >
               <div className="fastslots__menu-head">{item.name}</div>
-              <button
-                type="button"
-                className="fastslots__menu-item"
-                onClick={() => use_slot(menu.slot)}
-              >
-                Use
-              </button>
-              <button
-                type="button"
-                className="fastslots__menu-item fastslots__menu-item--muted"
-                onClick={() => {
-                  set_assigned(prev =>
-                    prev.map((cur, i) => (i === menu.slot ? null : cur)),
-                  )
-                  set_menu(null)
-                }}
-              >
-                Clear slot
-              </button>
+              {menu_actions.includes('use') && (
+                <button type="button" className="fastslots__menu-item" onClick={() => use_slot(menu.slot)}>
+                  Use
+                </button>
+              )}
+              {menu_actions.includes('clear') && (
+                <button
+                  type="button"
+                  className="fastslots__menu-item fastslots__menu-item--muted"
+                  onClick={() => {
+                    set_assigned((prev) => prev.map((cur, i) => (i === menu.slot ? null : cur)))
+                    set_menu(null)
+                  }}
+                >
+                  Clear slot
+                </button>
+              )}
+              {menu_actions.includes('send') && (
+                <button
+                  type="button"
+                  className="fastslots__menu-item fastslots__menu-item--accent"
+                  onClick={() => {
+                    set_send_items([project_inventory_send_item(item, owned)])
+                    set_menu(null)
+                  }}
+                >
+                  {t('gift.send.send_items')}
+                </button>
+              )}
             </div>
           )
         })()}
+      {send_items && <ItemSendModal items={send_items} on_close={() => set_send_items(null)} />}
     </div>
   )
 }

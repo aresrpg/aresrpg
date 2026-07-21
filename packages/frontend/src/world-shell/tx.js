@@ -7,7 +7,12 @@
 //   2) RECONCILE FUEL — returns the full block response (objectChanges/effects/events) so callers patch
 //      their store DIRECTLY from the tx result (predict+reconcile) instead of a blocking chain refetch.
 
-import { use_auth, sign_and_execute_transaction, submit_terminal_random_tx } from '../auth'
+import {
+  use_auth,
+  sign_and_execute_transaction,
+  sign_and_execute_self_pay_transaction,
+  submit_terminal_random_tx,
+} from '../auth'
 import { get_sdk } from '../chain/sdk'
 import { normalize_receipt } from '../chain/receipt'
 import { tx_error } from '../game/core/abort_copy.js'
@@ -53,11 +58,19 @@ export async function run_tx(klass, tx, include = DEFAULT_INCLUDE, signer) {
 }
 
 /**
+ * Instrumented ordinary transaction runner for money PTBs that split value from `tx.gas`. It keeps the normal
+ * simulate-refuse + derived-budget pin and excludes sponsor funds, then uses the same receipt/error pipeline.
+ */
+export async function run_tx_self_pay(klass, tx, include = DEFAULT_INCLUDE) {
+  return run(klass, tx, include, undefined, sign_and_execute_self_pay_transaction)
+}
+
+/**
  * `run_tx` for a KEEP-BUDGET terminal-`&Random` tx whose builder PINNED the budget from a MEASURED constant
- * (search/gather, forgemagie crush, loot-box open, shop buy, gift): routes through `submit_terminal_random_tx`
+ * (search/gather, forgemagie crush, loot-box open, shop buy): routes through `submit_terminal_random_tx`
  * so the choke's simulate-refuse gate runs but the pinned budget survives as the MAX bound (a value-dependent
- * &Random cost is not sim-stable). `sponsor_excluded` (default false) self-pays a MONEY-split PTB (buy/gift split
- * the price/royalty off `tx.gas`); a non-money &Random tx leaves it false and is sponsor-first for a low zkLogin
+ * &Random cost is not sim-stable). `sponsor_excluded` (default false) self-pays a MONEY-split PTB (a Random buy
+ * splits the price off `tx.gas`); a non-money &Random tx leaves it false and is sponsor-first for a low zkLogin
  * wallet. Same receipt/timing/throw contract as `run_tx`.
  * @param {string} klass @param {any} tx @param {any} [include]
  * @param {{ sponsor_excluded?: boolean }} [opts]
