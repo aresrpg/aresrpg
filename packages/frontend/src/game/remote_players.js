@@ -20,6 +20,7 @@ import { use_party } from '../world-shell/party_store.js'
 import { feet_of } from './ambient_placement.js'
 import { same_render_instance } from './remote_visibility_scope.js'
 import { plate_occluded, project_plate } from './nameplate_occlusion.js'
+import { peer_display_name } from './remote_player_name.js'
 import { open_player_menu } from './screens/hud/world/player_menu_store.js'
 import { create_mount_rig } from './mount_rig.js'
 import { CHARACTER_MODELS, character_glb_url, has_character_model } from './screens/character-glb.js'
@@ -142,7 +143,7 @@ export function create_remote_players(engine, world_canvas = null) {
       'color:#f5d0a9;background:rgba(10,10,15,.85);border:1.5px solid #c8963c;' +
       'text-shadow:0 0 8px rgba(200,150,60,.8),0 1px 2px rgba(0,0,0,.9);box-shadow:0 0 16px rgba(200,150,60,.35);' +
       'display:none;transition:opacity .18s ease' // + occlusion/range fade
-    chip.textContent = get_peer_state(id)?.name || entry.name || id.slice(0, 6)
+    chip.textContent = peer_display_name({ resolved_name: entry.name, peer_name: st?.name, address: id })
     // S-67 — the nameplate IS the in-world "click a player" seam (additive; the render/grounding loop is
     // untouched). Only THIS chip becomes interactive (chip_layer itself stays pointer-events:none); a click
     // opens the shared PlayerActionMenu with the peer's live self-declared identity (add friend / invite).
@@ -155,7 +156,7 @@ export function create_remote_players(engine, world_canvas = null) {
       open_player_menu({
         id,
         address: st?.address ?? null,
-        name: st?.name || entry.name || id.slice(0, 6),
+        name: peer_display_name({ resolved_name: entry.name, peer_name: st?.name, address: id }),
         x: event.clientX,
         y: event.clientY,
       })
@@ -483,7 +484,7 @@ export function create_remote_players(engine, world_canvas = null) {
           }
         }
         // presence name resolves async (read-model) — keep the chip label fresh
-        const live_name = pst?.name || entry.name
+        const live_name = peer_display_name({ resolved_name: entry.name, peer_name: pst?.name, address: id })
         if (live_name && r.chip.textContent !== live_name) r.chip.textContent = live_name
       } catch (error) {
         // a rotten remote rig never poisons the layer — drop it, presence will respawn it clean.
