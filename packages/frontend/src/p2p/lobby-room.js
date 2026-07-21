@@ -360,7 +360,14 @@ function _start_watchdogs() {
   }
   if (typeof document !== 'undefined') {
     visibility_handler = () => {
-      if (document.hidden) return
+      if (document.hidden) {
+        // #305 — BACKGROUNDING: our own heartbeat setInterval is about to be throttled by the browser, but
+        // visibilitychange is an EVENT, not a timer, so it fires un-throttled right now. One last re-announce
+        // gives every peer a fresh last_seen at the exact transition instant — real margin on top of the
+        // PEER_EXPIRY_MS floor for whatever gap the throttle imposes next.
+        _reannounce()
+        return
+      }
       presence_input({ type: 'network_recover' })
       _health_check() // a link that died while backgrounded is caught the instant we return, even if attempt was 0
     }

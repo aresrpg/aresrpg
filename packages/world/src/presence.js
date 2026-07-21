@@ -43,10 +43,17 @@ export const MAX_PLAUSIBLE_WORLD_COORD = 2_000_000
 //    honest count over a frozen one.
 //  · a dead room (0 relays / online / visibility-return) is a `room_lost` / `network_recover` input; recovery is
 //    an EFFECT REQUEST (rejoin / re-announce) the edge executes with bounded, jittered backoff.
-// INVARIANT: PEER_EXPIRY_MS stays a comfortable multiple of PEER_HEARTBEAT_MS (miss ~3 heartbeats before a drop)
-// — they live together HERE so that relationship is one read, never two scattered magic numbers.
-export const PEER_HEARTBEAT_MS = 7_000 // I re-broadcast my last cell this often (liveness ping; reuses `pos`)
-export const PEER_EXPIRY_MS = 22_000 // silent this long ⇒ the peer folds out on the next tick (~3 missed beats)
+// INVARIANT (#305 fix): PEER_EXPIRY_MS must clear the BROWSER'S BACKGROUND-TAB TIMER THROTTLE floor, not just
+// be "a comfortable multiple" of PEER_HEARTBEAT_MS — a backgrounded tab's heartbeat TIMER is clamped by
+// the browser regardless of its requested period (Chrome intensively throttles a hidden tab's timers to ~1/min),
+// so a peer whose OWN tab is backgrounded still sends, just at a >60s cadence, while a still-focused peer's local
+// tick runs on schedule and must not mistake that slow-but-alive cadence for a dead link (the old 22s TTL did:
+// two live tabs decayed from 2 online to 1, restored only by a refresh's fresh join handshake). 90s clears that
+// ~60s worst-case floor with real margin while still bounding how long a TRULY dead peer (frozen channel, no
+// clean onPeerLeave) lingers as a ghost. They live together HERE so the relationship is one read, never two
+// scattered magic numbers.
+export const PEER_HEARTBEAT_MS = 7_000 // I re-broadcast my last cell this often (liveness ping; reuses `pos`) — the FOREGROUND cadence; a backgrounded tab's actual send gap is bounded by the browser's throttle floor, not this number
+export const PEER_EXPIRY_MS = 90_000 // silent this long ⇒ the peer folds out on the next tick — sized above the background-throttle floor (#305), not the heartbeat cadence
 export const LINK_HEALTH_POLL_MS = 5_000 // the edge samples relay-socket health this often
 export const LINK_GRACE_MS = 12_000 // after each (re)join, suppress death judgment this long (sockets connect async)
 export const REJOIN_JITTER_MS = 600 // the edge adds up to this much random jitter per retry (thundering-herd guard)

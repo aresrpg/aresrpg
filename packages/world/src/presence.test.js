@@ -271,6 +271,22 @@ describe('SELF-HEAL ① liveness — silence expires a peer; a heartbeat keeps a
     input({ type: 'tick' }, 1_000 + PEER_EXPIRY_MS - 1)
     expect(state().roster_seq).toBe(seq)
   })
+  // #305 (red-first): a BACKGROUNDED tab's heartbeat setInterval is browser-throttled (Chrome clamps a
+  // hidden tab's timers to ~1/min once intensively throttled) — its renewals land at a >60s cadence even
+  // though the WebRTC link is fully alive. The FOCUSED tab's own tick keeps running on schedule (it is not
+  // the one throttled) and must NOT mistake the other side's slow send cadence for a dead peer.
+  it('a peer renewing at a 65s throttled cadence (>60s gap) stays online — red @22s TTL, green @90s', () => {
+    const { input, state } = boot()
+    input({ type: 'peer_pos', id: PEER, x: 1, y: 1 }, 1_000)
+    // the focused tab's tick lands mid-gap, well past the old 22s TTL but inside the fixed one
+    input({ type: 'tick' }, 1_000 + 65_000)
+    expect(visible_players(state())).toHaveLength(1)
+    // the throttled heartbeat finally lands, and the same cadence repeats — presence survives indefinitely,
+    // not just one lucky gap
+    input({ type: 'peer_pos', id: PEER, x: 1, y: 1 }, 1_000 + 65_000 + 1)
+    input({ type: 'tick' }, 1_000 + 65_000 + 1 + 65_000)
+    expect(visible_players(state())).toHaveLength(1)
+  })
 })
 
 // ─── SELF-HEAL LEG ②③④ (red-first): CONNECTION DEATH → BOUNDED REJOIN → RE-ANNOUNCE ───
