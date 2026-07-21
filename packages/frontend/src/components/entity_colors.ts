@@ -24,7 +24,6 @@ export const STAT_COLORS: Record<string, string> = {
   criticalOutcomes: '#ffaa00',
   range: '#7dd3fc',
   rawDamage: '#ffffff',
-  stamina: '#ffcc00',
   earthResistance: '#8b6914',
   fireResistance: '#ff4500',
   waterResistance: '#1e90ff',
@@ -83,7 +82,6 @@ export const CATEGORY_COLORS: Record<string, string> = {
 
 export const STAT_LABEL_KEYS: Record<string, string> = {
   vitality: 'stat.vitality',
-  stamina: 'stat.stamina',
   wisdom: 'stat.wisdom',
   strength: 'stat.strength',
   intelligence: 'stat.intelligence',
@@ -144,7 +142,6 @@ export function stat_label(t: (key: string, options?: Record<string, unknown>) =
 
 const STAT_DISPLAY_ORDER: Record<string, number> = {
   vitality: 0,
-  stamina: 0,
   wisdom: 0,
   strength: 1,
   intelligence: 1,

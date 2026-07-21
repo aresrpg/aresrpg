@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { COSMETICS_CATEGORY } from '../game/item_classification'
+import { ITEM_STAT_KEY_MAP } from '../chain/read_templates.js'
 
 export const ITEM_CATEGORIES = [
   'ALL',
@@ -34,22 +35,23 @@ export const ITEM_CATEGORIES = [
   'RUNE',
 ] as const
 
-export const FILTERABLE_STATS = [
-  'strength',
-  'intelligence',
-  'agility',
-  'chance',
-  'wisdom',
-  'vitality',
-  'rawDamage',
-  'criticalHit',
-  'heal',
-  'stamina',
-  'earthResistance',
-  'fireResistance',
-  'waterResistance',
-  'airResistance',
-] as const
+// Derived from ITEM_STAT_KEY_MAP (chain/read_templates.js) — the canonical UI<->chain mirror of the
+// on-chain `item_stats::ItemStatistics` block — so a stat retired from the chain schema can never
+// linger here as a dead filter again (issue #76: `stamina`/`heal` were hand-listed here with no
+// on-chain analog). NON_FILTER_STATS is a deliberate curation on top of that mirror, not a ghost list:
+// `range`/`movement`/`action` are positional/utility stats rather than a damage-profile filter, and
+// `criticalChance`/`criticalOutcomes` are the crit sub-components folded into the single `criticalHit` filter.
+const NON_FILTER_STATS = new Set<keyof typeof ITEM_STAT_KEY_MAP>([
+  'range',
+  'movement',
+  'action',
+  'criticalChance',
+  'criticalOutcomes',
+])
+
+export const FILTERABLE_STATS = (Object.keys(ITEM_STAT_KEY_MAP) as (keyof typeof ITEM_STAT_KEY_MAP)[]).filter(
+  (key) => !NON_FILTER_STATS.has(key)
+)
 
 export const CATEGORY_GROUPS = {
   ALL: null,
