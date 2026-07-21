@@ -76,7 +76,7 @@ function err_message(e: unknown): string {
 // ONE home for the create-mint failure → player copy, shared by BOTH create paths and BOTH money doors: a
 // taken name is inline-actionable; every other abort flows through the humanizing decoder (abort_copy.js).
 // (The taken-name literal is pre-existing English — a known i18n gap, out of this fix's scope.)
-function mint_error(error?: string): Error {
+function mint_error(error?: string | null): Error {
   const e = error ?? 'Character mint failed'
   return new Error(ENAME_TAKEN.test(e) ? 'That name is already taken, choose another.' : humanize_abort(e))
 }

@@ -86,7 +86,7 @@ function optimistic_listing(item: ListableItem, price_mist: bigint, seller: stri
       pet_power: 0,
       pet_stats_json: '{}',
     },
-  } as unknown as MarketplaceListing
+  }
 }
 
 // FAILURE LATCH (no auto-refire storm) — a failed `/v1` load must not re-burst on the next trigger
@@ -291,7 +291,7 @@ export const use_marketplace_chain = create<MarketplaceChainStore>((set, get) =>
         for (const [item_type, rows] of candidates) if (rows.length === 1) tmpl_by_slug.set(item_type, rows[0])
         const listings = page.listings
           .filter((l) => l.category !== 'character') // items only — characters render from the view in CharactersPanel
-          .map((l) => build_listing_from_view(l, tmpl_by_slug) as unknown as MarketplaceListing)
+          .map((l) => build_listing_from_view(l, tmpl_by_slug))
         buy_on_ok() // reads landed — clear the backoff latch
         const { state, divergence } = reduce(get(), { type: 'snapshot', listings })
         if (divergence)
@@ -383,7 +383,7 @@ export const use_marketplace_chain = create<MarketplaceChainStore>((set, get) =>
       set((s) => ({ busy: true, ...reduce(s, { type: 'receipt', kind: 'delist', listing_id: listing.id }).state }))
       use_toast
         .getState()
-        .promise(delist_item({ item_id: listing.id, kiosk_id: (listing as any).kiosk_id }), {
+        .promise(delist_item({ item_id: listing.id, kiosk_id: listing.kiosk_id }), {
           pending: i18n.t('marketplace.chain.pending_delist'),
           success: i18n.t('marketplace.chain.toast_delisted'),
         })
@@ -399,7 +399,7 @@ export const use_marketplace_chain = create<MarketplaceChainStore>((set, get) =>
       set((s) => ({ busy: true, ...reduce(s, { type: 'receipt', kind: 'buy', listing_id: listing.id }).state }))
       const args = {
         item_id: listing.id,
-        seller_kiosk_id: (listing as any).kiosk_id,
+        seller_kiosk_id: listing.kiosk_id,
         price_mist: BigInt(listing.price_mist),
       }
       use_toast
