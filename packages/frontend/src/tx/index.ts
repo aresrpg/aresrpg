@@ -27,6 +27,7 @@ import { apply_pinned_gas, invalidate_gas_coin } from './gas_coin_cache.js'
 import { record_self_paid_receipt } from './gas_spend_ledger'
 import { now, stamp_preflight } from './latency.js'
 import { decide_sponsor_route, sponsor_route_log } from './sponsor_route'
+import type { SponsoredReceipt, TxReceipt } from './receipts'
 
 /** Turn-commit gas directive (<1s lane): the caller marks a chained commit so execute_tx pins its gas
  * coin. `skip_sim` = SOLO fight → skip the per-commit dry-run (ESomeoneOverdue is impossible with one player seat);
@@ -56,15 +57,10 @@ type SignTransactionFeature = {
   }) => Promise<{ signature: string; bytes: string }>
 }
 
-// `effects_result` — the RAW gRPC Core result ({ Transaction | FailedTransaction }, the parseTransaction union) when
-// the tx executed through the EXECUTE-CERT fast path (`want_effects`, the fight commit choke). Its presence lets the
-// caller read the CERTIFIED effects directly and SKIP the separate waitForTransaction read (a ~570ms testnet
-// ledger-availability lag). Absent on the wallet-execute path and on a sponsor fallback ⇒ the caller waits as before.
-export type TxReceipt = { digest: string; effects?: string; bytes?: string; effects_result?: any }
-export type SponsoredReceipt = {
-  digest: string
-  effects: { status: { status: 'success' | 'failure'; error?: string } }
-}
+// Receipt shapes (TxReceipt / SponsoredReceipt) live in the ./receipts leaf so the gas-selection fallback can
+// import them without closing an import cycle back through this module (see receipts.ts). Re-exported here so
+// tx/index's public surface is unchanged for every existing consumer.
+export type { SponsoredReceipt, TxReceipt }
 
 // ── THE GATE ─────────────────────────────────────────────────────────────────
 // Gas-burn emergency 07-06: a too-low wallet gas budget let commit_turn EXECUTE and fail

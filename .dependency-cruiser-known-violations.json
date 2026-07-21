@@ -316,27 +316,6 @@
   },
   {
     "type": "cycle",
-    "from": "packages/frontend/src/tx/gas_fallback.ts",
-    "to": "packages/frontend/src/tx/index.ts",
-    "unresolvedTo": "./index",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "packages/frontend/src/tx/index.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "packages/frontend/src/tx/gas_fallback.ts",
-        "dependencyTypes": ["local", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
     "from": "packages/frontend/src/world-shell/dungeon_fight_shim.js",
     "to": "packages/frontend/src/world-shell/dungeon_settlement.js",
     "unresolvedTo": "./dungeon_settlement.js",

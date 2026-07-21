@@ -36,7 +36,7 @@ import { use_settings } from '../stores/settings'
 import { game_log } from '../core/log.js'
 import { attach_executed_digest } from '../world-shell/tx_digest_error.js'
 
-import type { SponsoredReceipt, TxReceipt } from './index'
+import type { SponsoredReceipt, TxReceipt } from './receipts'
 
 // DUPLICATED from abort_copy.js `GAS_BALANCE_RE` (module-private there; abort_copy is the fenced
 // shared decoder — consumed read-only, never edited). KEEP IN LOCKSTEP: both must recognize the
