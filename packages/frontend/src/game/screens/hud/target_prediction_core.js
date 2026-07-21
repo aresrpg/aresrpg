@@ -25,21 +25,29 @@ const HEAD_OR_MOVE_KINDS = new Set(['DAMAGE', 'HEAL', 'PERCENT_LIFE', 'LIFE_STEA
 export const crit_percent = (crit_rate) => (crit_rate > 0 ? Math.round(10000 / crit_rate) / 100 : 0)
 
 /**
- * The armed id → { sim template, crit rate, secondary effect rows }. The WEAPON strike prices off the seat's
- * on-chain Weapon (no seed row, no itemised effects); a spell rides its FightSpell corpus row. Extracted so the
- * assembly below reads as one flow. @param {string} armed @param {any} me the caster's escrow row (weapon source)
- * @returns {{ template: any, crit_rate: number, effects: any[] }}
+ * The armed id → { sim template, crit rate, secondary effect rows, AP cost }. The WEAPON strike prices off the
+ * seat's on-chain Weapon (no seed row, no itemised effects); a spell rides its FightSpell corpus row. `ap_cost`
+ * feeds the castable-now gate below (mirrors wash_armed_spell's own cost derivation — one formula, two call
+ * sites, never a second one invented here). Extracted so the assembly below reads as one flow.
+ * @param {string} armed @param {any} me the caster's escrow row (weapon source)
+ * @returns {{ template: any, crit_rate: number, effects: any[], ap_cost: number }}
  */
 const resolve_armed_spell = (armed, me) => {
   if (armed === WEAPON_ATTACK_ID) {
     const weapon = me?.weapon
-    return { template: weapon_spell_template(weapon), crit_rate: Number(weapon?.crit_rate ?? 0), effects: [] }
+    return {
+      template: weapon_spell_template(weapon),
+      crit_rate: Number(weapon?.crit_rate ?? 0),
+      effects: [],
+      ap_cost: Number(weapon?.ap_cost ?? 0),
+    }
   }
   const level = fight_spell(armed)?.levels?.[0]
   return {
     template: fight_spell(armed)?.template ?? null,
     crit_rate: Number(level?.crit_rate ?? 0),
     effects: level?.effects ?? [],
+    ap_cost: Number(level?.ap ?? 0),
   }
 }
 
@@ -62,7 +70,14 @@ export const resolve_dungeon_ref = (dungeon, fighter_id) => {
  * guaranteed `base` outcome, critical:true for the `crit` outcome (only when the spell can crit) — so the card
  * shows the non-crit floor AND the crit ceiling. Both bypass the turn-seed clock (a preview is a planning aid,
  * not the live roll): the base is ALWAYS resolvable, never the crit-null blank. Returns EMPTY_PREDICTION whenever
- * nothing is armed / hovered / it is not a live dungeon fight.
+ * nothing is armed / hovered / it is not a live dungeon fight — OR the armed action isn't castable RIGHT NOW
+ * (not my turn, mid-presentation, or its AP cost is no longer affordable). CRIT-DISPLAY BUG: armed_spell_id
+ * survives turns and spent AP by design (store.js clears it ONLY on an actual Cast — a re-arm-free convenience
+ * for next turn), so without this gate a spell armed-but-never-fired keeps forecasting a crit CHANCE against
+ * whatever you're hovering — including mid the opponent's turn, or the instant your OWN last action (a different
+ * cast, a move) spends the AP this one needed — reading exactly like a probability attached to a hit that
+ * already landed. Mirrors the identical two facts @aresrpg/fight/project.turn_input_armed + the adapter's
+ * wash_armed_spell already gate the board's OWN targeting-range wash on — never a heuristic, the same pipeline.
  * @param {{ fight: any, hover: any, dungeon: any }} args
  * @returns {{ base: any, crit: any, crit_chance: number, effects: any[], target_ref: { is_mob: boolean, idx: number } | null }}
  */
@@ -74,9 +89,16 @@ export const compute_target_prediction = ({ fight, hover, dungeon }) => {
   const target_ref = resolve_dungeon_ref(dungeon, hovered_id)
   if (!armed || !caster_id || !dungeon || !target?.cell || !target_ref) return EMPTY_PREDICTION
 
+  // CASTABLE-NOW GATE, part 1 (turn ownership): a forecast is only legitimate while it's actually your move.
+  const my_turn = fight.active_entity_id === caster_id && (fight.winner ?? -1) === -1 && !fight.presenting
+  if (!my_turn) return EMPTY_PREDICTION
+
   const me = dungeon.escrow?.find((p) => (p.character ?? p.character_id) === caster_id) ?? null
-  const { template, crit_rate, effects } = resolve_armed_spell(armed, me)
+  const { template, crit_rate, effects, ap_cost } = resolve_armed_spell(armed, me)
   if (!template) return EMPTY_PREDICTION
+  // CASTABLE-NOW GATE, part 2 (affordability): the same AP check wash_armed_spell applies to the range highlight
+  // — spent budget ⇒ no forecast, exactly like the board's blue ranges already clear.
+  if ((fight.fighters.get(caster_id)?.ap ?? 0) < ap_cost) return EMPTY_PREDICTION
 
   // resolve_ref / stats_of mirror DungeonBoard.optimistic_cast (the board's live cast home): the tooltip preview
   // and the real cast resolve refs + stats IDENTICALLY, so the previewed number is exactly what the cast lands.

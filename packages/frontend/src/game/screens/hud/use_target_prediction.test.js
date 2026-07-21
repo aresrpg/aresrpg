@@ -12,9 +12,10 @@ import { afterEach, describe, expect, test } from 'bun:test'
 
 import { board_view, engine_view } from '@aresrpg/fight/project'
 import { fight_store } from '@aresrpg/fight/store'
+import { WEAPON_ATTACK_ID } from '@aresrpg/fight/weapon'
 
 import { seed_fight_core, reset_fight_core } from '../../../test_helpers/fight_core_harness.js'
-import { compute_target_prediction, crit_percent } from './target_prediction_core.js'
+import { compute_target_prediction, crit_percent, EMPTY_PREDICTION } from './target_prediction_core.js'
 import { predicted_target_outcome } from './target_outcome.js'
 import { SPELLS_SEED_AVAILABLE } from '../../../test_helpers/spells_fixture.js'
 
@@ -84,5 +85,44 @@ describe('compute_target_prediction — the live hover card', () => {
     const nothing = compute_target_prediction({ fight: engine_view(state), hover: null, dungeon: board_view(state) })
     expect(nothing.base).toBeNull()
     expect(nothing.target_ref).toBeNull()
+  })
+})
+
+// CRIT-DISPLAY BUG (live prod v1.12.37: "Razkin (8 −4)" / "CRITICAL 3.33% → −6" shown against a target the
+// maintainer had already just hit that turn) — armed_spell_id survives turns AND spent AP by design (store.js
+// clears it ONLY on an actual Cast, a re-arm-free convenience for your next turn), so the hover card kept
+// forecasting a crit CHANCE for an action that was no longer actually castable: mid the opponent's turn, or the
+// instant your own last action spent the AP this one needed. A crit-chance line is legitimate ONLY as a genuine
+// pre-cast preview — never a stand-in for what a landed hit's own (already-resolved, fact-based) combat-log /
+// floating-damage-number rendering already states honestly. Weapon-armed (not a seed spell) so these run
+// unconditionally — no SPELLS_SEED_AVAILABLE gate; the #117 missing-artifact class doesn't touch the weapon path.
+describe('compute_target_prediction — the CASTABLE-NOW gate (crit-display bug)', () => {
+  const WEAPON = { ap_cost: 2, damage: 5, crit_rate: 10, reach: 2 } // affordable at ap:6, NOT at ap:1
+  const armed_weapon_hover = ({ active, ap }) => {
+    seed_fight_core({
+      seats: [{ character: '0xme', cell: CASTER_CELL, ap, mp: 3, weapon: WEAPON }],
+      mobs: [{ template: '0xabc', hp: 30, max_hp: 30, cell: MOB_CELL, ap: 4, mp: 3, level: 1 }],
+      active,
+    })
+    fight_store.getState().input({ type: 'arm', spell_id: WEAPON_ATTACK_ID })
+    const state = fight_store.getState()
+    return compute_target_prediction({ fight: engine_view(state), hover: { entity_id: 'mob-0' }, dungeon: board_view(state) })
+  }
+
+  test('sanity: armed + affordable + my turn → a live forecast, crit chance included', () => {
+    const out = armed_weapon_hover({ active: '0xme', ap: 6 })
+    expect(out).not.toBe(EMPTY_PREDICTION)
+    expect(out.target_ref).toEqual({ is_mob: true, idx: 0 })
+    expect(out.crit_chance).toBe(crit_percent(WEAPON.crit_rate)) // 10% — never a guessed number
+  })
+
+  test('RED: armed weapon during the MOB turn must NOT forecast a crit chance (not my turn)', () => {
+    const out = armed_weapon_hover({ active: 'mob-0', ap: 6 }) // fully affordable — ONLY the turn is wrong
+    expect(out).toBe(EMPTY_PREDICTION) // pre-fix: no turn-ownership check → returns a live prediction instead
+  })
+
+  test('RED: armed weapon with insufficient AP must NOT forecast a crit chance (spent on something else)', () => {
+    const out = armed_weapon_hover({ active: '0xme', ap: 1 }) // my turn — ONLY the AP (weapon costs 2) is short
+    expect(out).toBe(EMPTY_PREDICTION) // pre-fix: no affordability check on this path → returns a live prediction
   })
 })
