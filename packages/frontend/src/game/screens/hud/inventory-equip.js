@@ -9,7 +9,7 @@ import { is_developer_item } from '@aresrpg/sdk/jobs'
 
 import { projected_hp, character_max_hp } from '../../../chain/read_character.js'
 import { cosmetic_icon_of } from '../../cosmetic_icons.js'
-import { is_cosmetic_item, item_type_equip_slot } from '../../item_classification'
+import { group_by_stack_identity, is_cosmetic_item, item_type_equip_slot } from '../../item_classification'
 
 // Combat head armour and cosmetic hats are distinct on-chain slots.
 export const HELMET = 'helmet'
@@ -178,33 +178,13 @@ export const is_character = (item) => item?.is_aresrpg_character || item?.item_c
 export const is_item_listed = (item) => item?.listed === true
 
 /** Group same-TEMPLATE usable stackable bag rows for display; equipment callers never pass through this helper.
- *  Stack identity = `template_id` (the on-chain blueprint ref), NEVER `item_type` alone. `item_type` is a
- *  DISPLAY slug that item.move SNAPSHOTS onto every Item at mint and never re-derives — but that slug can be
- *  shared by TWO DIFFERENT templates (a re-authored lineage: the old template retired, a new one published
- *  under the same art key). Keying the merge on the slug silently absorbed a stale/unregistered-template item
- *  into the SAME row as a valid one, exposing only the first-seen item's id/template_id to every downstream
- *  action (loot_box::open_box's box_template_id, forgemagie::crush's gear_template_id) — the second unit was
- *  never independently addressable, so opening the merged "×2" cell aborted for the valid unit too whenever the
- *  stale one sorted first (a reported petbox bug). `item_type` is immutable per template_id once a template is
- *  created (item.move's `set_name_description` patches only name/description — item_type/category/level are
- *  frozen at template creation and snapshotted verbatim onto every mint), so it adds no discriminating power as
- *  a secondary key and is used only as the fallback for rows the chain never emits without a template (bare
- *  test fixtures) — real `/v1/owner-items` rows always carry `template_id` (views.js: `d.template ?? null`). */
+ *  THE mechanism (stack identity, floor-to-1, first-wins spread) lives in group_by_stack_identity
+ *  (item_classification.ts) — the marketplace SELL inventory grid consumes the exact same function (issue #10:
+ *  the two homes used to be able to disagree). See that function's doc for the petbox-bug rationale behind
+ *  keying on `template_id` first, never `item_type` alone.
+ * @param {any[]} rows @returns {any[]} */
 export function group_stackable(rows) {
-  const grouped = new Map()
-  const out = []
-  for (const item of rows) {
-    const key = item.template_id || item.item_type || item.id
-    const existing = grouped.get(key)
-    if (existing) {
-      existing.amount += item.amount > 1 ? item.amount : 1
-      continue
-    }
-    const row = { ...item, amount: item.amount > 1 ? item.amount : 1 }
-    grouped.set(key, row)
-    out.push(row)
-  }
-  return out
+  return group_by_stack_identity(rows, 'amount')
 }
 
 /** The bag grid's fixed cell count (empty cells pad to it). */
@@ -214,7 +194,7 @@ export const BAG_CAPACITY = 48
  * Partition the `/v1/owner-items` feed into the four bag tabs + the active grid (pure — extracted
  * verbatim from Inventory.jsx). `excluded_ids` = wallet_equipped_ids (cross-character exclusion,
  * night-batch #4); `equipped_ids` = the SELECTED character's doll (staged) ids. Consumables/resources
- * GROUP by item_type into one ×N cell (group_stackable); equipment never groups.
+ * GROUP by stack identity into one ×N cell (group_stackable); equipment never groups.
  * @param {any[] | null | undefined} items
  * @param {{ equipped_ids: Set<string>, excluded_ids?: Set<string>, category: string }} options
  * @returns {{ owned: any[], counts: Record<string, number>, total_count: number, grid_items: any[], empty_count: number }}

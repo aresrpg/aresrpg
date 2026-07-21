@@ -59,7 +59,7 @@ mock.module('../../game/store.js', () => ({
 }))
 mock.module('../item_send_modal', () => ({ ItemSendModal: () => null }))
 
-const { InventoryPanel } = await import('./inventory_panel')
+const { InventoryPanel, aggregate_listable } = await import('./inventory_panel')
 
 const test_i18n = i18next.createInstance()
 test_i18n.use(initReactI18next).init({
@@ -89,5 +89,62 @@ describe('marketplace SELL inventory equipped filter', () => {
 
     expect(equipped.filter((id) => html.includes(`asset-${id}`))).toEqual([])
     expect(loose.filter((id) => html.includes(`asset-${id}`))).toEqual(loose)
+  })
+})
+
+// THE ONE GROUPING HOME (issue #10): aggregate_listable now delegates its stackable merge to the SAME
+// group_by_stack_identity the HUD bag grid consumes (item_classification.ts) — pins the marketplace SELL
+// grid's own canonical cases (previously uncovered) so the shared mechanism can't silently drift either side.
+describe('aggregate_listable — the marketplace SELL grouping home', () => {
+  const stack_item = (id: string, template_id: string, quantity: number, level = 1): any => ({
+    id,
+    kiosk_id: `kiosk-${id}`,
+    template_id,
+    slug: id,
+    name: 'Wool',
+    category: 'RESOURCE',
+    level,
+    quantity,
+    stackable: true,
+  })
+  const single_item = (id: string, level = 1): any => ({
+    id,
+    kiosk_id: `kiosk-${id}`,
+    template_id: `tpl-${id}`,
+    slug: id,
+    name: id,
+    category: 'HELMET',
+    level,
+    quantity: 1,
+    stackable: false,
+  })
+
+  test('sums same-template stackables into one synthetic stack: row and leaves non-stackables per-object', () => {
+    const rows = [stack_item('0xa', '0xtpl-wool', 50), stack_item('0xb', '0xtpl-wool', 137), single_item('0xgear')]
+    const out = aggregate_listable(rows)
+
+    expect(out).toHaveLength(2)
+    const wool = out.find((it: any) => it.template_id === '0xtpl-wool')
+    expect(wool).toMatchObject({ id: 'stack:0xtpl-wool', quantity: 187 })
+    expect(out.find((it: any) => it.id === '0xgear')).toMatchObject({ quantity: 1, stackable: false })
+  })
+
+  test('two different templates never merge, even at the same category', () => {
+    const rows = [stack_item('0xa', '0xtpl-wool', 10), stack_item('0xb', '0xtpl-linen', 5)]
+    const out = aggregate_listable(rows)
+
+    expect(out.map((it: any) => it.quantity).sort((a: number, b: number) => a - b)).toEqual([5, 10])
+  })
+
+  test('grouped stacks sort before singles, both level-ascending', () => {
+    const rows = [
+      single_item('0xhigh', 9),
+      stack_item('0xb', '0xtpl-wool', 5, 3),
+      single_item('0xlow', 1),
+      stack_item('0xc', '0xtpl-linen', 2, 7),
+    ]
+    const out = aggregate_listable(rows)
+
+    expect(out.map((it: any) => it.id)).toEqual(['stack:0xtpl-wool', 'stack:0xtpl-linen', '0xlow', '0xhigh'])
   })
 })

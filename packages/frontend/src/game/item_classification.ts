@@ -65,3 +65,23 @@ const WEARABLE_ICON_CATEGORIES = new Set([ITEM_CATEGORY.HAT.toUpperCase(), ITEM_
 export function icon_asset_class(category: string | null | undefined): 'item' | 'cosmetic_icon' {
   return WEARABLE_ICON_CATEGORIES.has(String(category ?? '').toUpperCase()) ? 'cosmetic_icon' : 'item'
 }
+
+/**
+ * THE one grouping home for stackable items (issue #10 — the HUD bag grid and marketplace SELL grid each grew
+ * their own copy of this merge and could disagree; both now call this). Merges same-identity rows into one
+ * display row with a summed count. Identity = `template_id` first, `item_type`/`id` only for rows without one
+ * (bare test fixtures) — NEVER `item_type` alone: two different templates can share a display slug, and
+ * merging on the slug hides a stale template's item behind a valid one (the petbox bug, fixed 07-20).
+ * `amount_field` names the row's own count property (`amount`/`quantity`); every merge floors it to at least 1.
+ */
+export function group_by_stack_identity(rows: readonly any[], amount_field: string): any[] {
+  const grouped = new Map<string, any>()
+  for (const item of rows) {
+    const key = item.template_id || item.item_type || item.id
+    const count = item[amount_field] > 1 ? item[amount_field] : 1
+    const existing = grouped.get(key)
+    if (existing) existing[amount_field] += count
+    else grouped.set(key, { ...item, [amount_field]: count })
+  }
+  return [...grouped.values()] // Map preserves insertion (first-seen) order
+}

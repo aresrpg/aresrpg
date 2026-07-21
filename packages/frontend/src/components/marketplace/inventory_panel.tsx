@@ -14,9 +14,10 @@ import { ItemSlot } from '../items'
 import { ItemSendModal } from '../item_send_modal'
 import { type SendItem } from '../../stores/item_send'
 import { cosmetic_icon_of } from '../../game/cosmetic_icons.js'
+import { group_by_stack_identity } from '../../game/item_classification'
 
 // SELL — RIGHT column. The player's sellable inventory as a grid of cells. STACKABLES are AGGREGATED to ONE cell
-// per item_type (the SUMMED balance, e.g. WOOL ×187) — NEVER one cell per unit (hard law: the old grid drew
+// per template (the SUMMED balance, e.g. WOOL ×187) — NEVER one cell per unit (hard law: the old grid drew
 // ~50 individual wool cells). Non-stackable gear stays per-object (each is a distinct item, individually listable).
 // CHARACTERS are a SUB-CATEGORY inside this same view (DECISIONS 07-09 — "visible among your things, never a
 // separate view"): a labelled section of class-swatch cells ABOVE the items, selectable exactly like a cell.
@@ -84,23 +85,19 @@ function to_slot_item(it: ListableItem): ItemInfo {
   } as unknown as ItemInfo
 }
 
-// Group stackables by canonical template (sum amounts) → ONE synthetic ListableItem per template; keep every
-// non-stackable per-object. Stackables first (tokens), then gear — both by level for a stable read order.
-function aggregate_listable(listable: ListableItem[]): ListableItem[] {
-  const stacks: Record<string, ListableItem> = {}
-  const singles: ListableItem[] = []
-  for (const it of listable) {
-    if (!it.stackable) {
-      singles.push(it)
-      continue
-    }
-    const identity = it.template_id ?? it.id
-    const g = stacks[identity]
-    if (g) g.quantity += it.quantity
-    else stacks[identity] = { ...it, id: `stack:${identity}`, quantity: it.quantity }
-  }
-  const grouped = Object.values(stacks).sort((a, b) => a.level - b.level)
-  singles.sort((a, b) => a.level - b.level)
+// Group stackables by canonical template (sum quantities) → ONE synthetic ListableItem per template; keep
+// every non-stackable per-object. Stackables first (tokens), then gear — both by level for a stable read
+// order. THE grouping mechanism is group_by_stack_identity (item_classification.ts) — the HUD bag grid
+// consumes the exact same function (issue #10: the two homes used to be able to disagree). The synthetic
+// `stack:` id (never a real object id) keeps an aggregated cell from being mistaken for one sendable object.
+export function aggregate_listable(listable: ListableItem[]): ListableItem[] {
+  const singles = listable.filter((it) => !it.stackable).sort((a, b) => a.level - b.level)
+  const grouped = group_by_stack_identity(
+    listable.filter((it) => it.stackable),
+    'quantity'
+  )
+    .map((it: ListableItem) => ({ ...it, id: `stack:${it.template_id ?? it.id}` }))
+    .sort((a, b) => a.level - b.level)
   return [...grouped, ...singles]
 }
 
