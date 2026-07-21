@@ -4,24 +4,27 @@ import { describe, expect, it } from 'bun:test'
 
 import { chat_line_in_scope } from './world_chat_scope.js'
 
-const channels = { group: 'group', combat: 'combat' }
-
-describe('fight chat scope', () => {
-  it('keeps client-local combat lines visible inside a dungeon despite having no peer state', () => {
-    expect(chat_line_in_scope({ channel: 'combat' }, channels, 'fight-dungeon', null)).toBe(true)
+// #306: chat rides the shared zone channel and has ZERO fight/dungeon awareness. dungeon_id is each character's
+// PERSONAL run_pass_id (dungeon_run_store.js "session identity"), never a shared instance id — two different
+// players' ids never match, not even two co-fighters standing side by side in the exact same fight. Gating
+// general/commerce lines on that comparison silently dropped a fighter's chat for every roamer AND for any ally
+// whose own client wasn't independently mid-fight at that instant. A fighter now stays a member of the same log
+// a roamer reads, unconditionally.
+describe('chat has zero fight/dungeon awareness (#306)', () => {
+  it('never hides a general line, dungeon_id match or not', () => {
+    expect(chat_line_in_scope({ channel: 'general' })).toBe(true)
   })
 
-  it('keeps the same existing general log while a fight is active', () => {
-    expect(chat_line_in_scope({ channel: 'general' }, channels, 'fight-dungeon', null, true)).toBe(true)
+  it('never hides a commerce line', () => {
+    expect(chat_line_in_scope({ channel: 'commerce' })).toBe(true)
   })
 
-  it('retains peer instance scoping for ordinary world lines', () => {
-    expect(chat_line_in_scope({ channel: 'general' }, channels, 'mine', 'mine')).toBe(true)
-    expect(chat_line_in_scope({ channel: 'general' }, channels, 'mine', 'theirs')).toBe(false)
+  it('keeps client-local combat lines visible (no peer state at all)', () => {
+    expect(chat_line_in_scope({ channel: 'combat' })).toBe(true)
   })
 
-  it('keeps own and party lines across instance boundaries', () => {
-    expect(chat_line_in_scope({ channel: 'general', from_me: true }, channels, 'mine', 'theirs')).toBe(true)
-    expect(chat_line_in_scope({ channel: 'group' }, channels, 'mine', 'theirs')).toBe(true)
+  it('keeps own and party lines visible too', () => {
+    expect(chat_line_in_scope({ channel: 'general', from_me: true })).toBe(true)
+    expect(chat_line_in_scope({ channel: 'group' })).toBe(true)
   })
 })
