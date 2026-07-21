@@ -4,9 +4,8 @@ import { useState, useEffect } from 'react'
 import { aresrpg_id } from '@aresrpg/sdk/deployment/aresrpg'
 
 import { get_sdk } from '../../chain/sdk'
-import { DEMO_NETWORK, T62_WORLDS } from '../../chain/deployment'
+import { DEMO_NETWORK } from '../../chain/deployment'
 import { get_mob_templates, get_item_templates } from '../../chain/read_templates'
-import { get_worlds } from '../../chain/read_worlds'
 import { game_log } from '../../core/log.js'
 
 // ─── On-chain templates (mob/item) ────────────────────────────────────────
@@ -71,49 +70,8 @@ export function use_onchain_templates(
 }
 
 // ─── On-chain worlds ───────────────────────────────────────────────────────
-// Chain-direct replacement for the dead backend WS 'world' template type — reads every world in the
-// T62_WORLDS constant straight from chain (see chain/read_worlds.js). Same module-level cache +
-// listener pattern as use_onchain_templates above, kept separate since worlds are a distinct kind with no
-// event-replay discovery step (the constant already enumerates every seeded world id).
-let worlds_cache: any[] | undefined
-let worlds_inflight: Promise<any[]> | null = null
-const worlds_listeners = new Set<() => void>()
-
-function load_onchain_worlds(force = false): Promise<any[]> {
-  if (!force && worlds_inflight) return worlds_inflight
-  if (!force && worlds_cache) return Promise.resolve(worlds_cache)
-  const promise = get_worlds(T62_WORLDS)
-    .then((rows) => {
-      worlds_cache = rows
-      worlds_inflight = null
-      worlds_listeners.forEach((cb) => cb())
-      return rows
-    })
-    .catch((err) => {
-      worlds_inflight = null
-      game_log('worlds', 'on-chain world read failed:', err)
-      return worlds_cache ?? []
-    })
-  worlds_inflight = promise
-  return promise
-}
-
-/** Live World list (T62_WORLDS), chain-direct. `refresh()` forces a re-fetch (call after an admin world
- * write — e.g. set_enabled — so the tab reflects the new on-chain state). */
-export function use_onchain_worlds(): { data: any[] | undefined; refresh: () => void } {
-  const [, force_render] = useState(0)
-  useEffect(() => {
-    const cb = () => force_render((n) => n + 1)
-    worlds_listeners.add(cb)
-    load_onchain_worlds()
-    return () => {
-      worlds_listeners.delete(cb)
-    }
-  }, [])
-  return {
-    data: worlds_cache,
-    refresh: () => {
-      load_onchain_worlds(true).then(() => force_render((n) => n + 1))
-    },
-  }
-}
+// #304: `use_onchain_worlds` (a chain-direct `read_worlds.js` `get_worlds` batch reader) was DELETED —
+// zero live callers (confirmed via built-bundle tree-shaking; its only sibling consumer here, the
+// items/mobs hooks above, are themselves unreached by any mounted route today). A future world-editing
+// admin surface should read `/v1/encyclopedia?kind=worlds` (rpc/client.ts get_encyclopedia) instead of
+// reintroducing the fullnode fan-out — see world_levels.js's load_world_gates for the pattern.
