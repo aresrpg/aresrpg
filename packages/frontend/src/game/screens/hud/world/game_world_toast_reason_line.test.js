@@ -37,8 +37,42 @@ describe('world toast minimap overlay', () => {
     expect(overlay_layer_rule).toMatch(/top:\s*8px/)
     expect(overlay_layer_rule).toMatch(/right:\s*8px/)
     expect(overlay_layer_rule).toMatch(/overflow:\s*(?:clip|hidden)/)
+    // #242 owner report (v1.12.43 "still jumping when a toast appears"): a stack with no height cap could
+    // grow past its bounds as toasts pile up. max-height (world_toast_overlay.css) is the ONE thing standing
+    // between an absolutely-positioned-but-unbounded box and a real page-scrollbar reflow — assert it stays.
+    expect(overlay_layer_rule).toMatch(/max-height:\s*calc\(100% - 16px\)/)
     expect(mobile_layer_rule).toMatch(/top:\s*8px/)
     expect(mobile_layer_rule).toMatch(/right:\s*8px/)
+  })
+
+  // #242 owner report (v1.12.43): "a toast appearing still reflows the page layout" while roaming. A live
+  // Playwright reconstruction of the real GameWorldHost → GameWorldHud → .gw-hud → .gw-toasts ancestor chain
+  // (exact inline styles copied from GameWorldHost.tsx) found ZERO measurable reflow from mounting 1 or 16
+  // toasts — canvas/HUD/sibling-layout rects and document.scrollHeight were byte-identical before/after, in
+  // both the desktop card frame and the mobile frame. That result rests entirely on TWO invariants staying
+  // true; this locks them in so a future edit can't silently reintroduce the reported jump:
+  //   1. the toast stack renders NOTHING (not even an empty flex box) while there are no toasts — an
+  //      always-mounted container would still be out-of-flow here, but "never mount when empty" is the
+  //      cheapest possible guarantee and costs nothing to keep.
+  //   2. EVERY GameWorldHost frame variant (mobile / desktop card / spectate full-bleed) that hosts the toast
+  //      stack's positioned ancestor stays position:fixed — the moment one of these becomes `relative` (or
+  //      loses an edge), `.gw-hud`'s inset:0 box stops being content-independent and the whole HUD (toasts
+  //      included) re-enters the page's flow/scroll calculation.
+  test('the toast layer never re-enters the page flow: null when empty, fixed-framed ancestor always', () => {
+    const hud_source = read_fixture('./GameWorldHud.jsx')
+    const host_source = read_fixture('../../../../GameWorldHost.tsx')
+
+    expect(hud_source).toContain('if (toasts.length === 0) return null')
+
+    // mobile_frame + the card/spectate ternary's two branches — three frame literals, three position:fixed.
+    const frame_block = host_source.slice(
+      host_source.indexOf('const mobile_frame'),
+      host_source.indexOf('return (', host_source.indexOf('const mobile_frame'))
+    )
+    expect(frame_block.match(/position:\s*'fixed'/g)?.length ?? 0).toBe(3)
+    // The HUD wrapper (line hosting <GameWorldHud/>) spreads that SAME frame — never a bespoke position.
+    expect(host_source).toContain('<GameWorldHud />')
+    expect(host_source).toMatch(/style=\{\{\s*\.\.\.frame,\s*zIndex:\s*12,\s*pointerEvents:\s*'none'\s*\}\}/)
   })
 
   test('all toast variants use comfortable translucent glass panels with slight rounding', () => {
