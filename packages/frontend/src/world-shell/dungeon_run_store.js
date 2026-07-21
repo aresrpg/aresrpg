@@ -1175,7 +1175,10 @@ export const use_dungeon = create((set, get) => ({
         receipt,
         version,
         fight_id,
-        trap_cells: project.engine_view(fight_store.getState()).my_traps,
+        // engine_view() is null when the local core never mirrored this fight (a forfeit receipt can land on a
+        // fight the client only knows through resume/poll, never fully armed locally) — no local traps to roll
+        // back is the correct, harmless default, never a crash on the receipt-teardown path (#117).
+        trap_cells: project.engine_view(fight_store.getState())?.my_traps ?? [],
       })
     const { characters } = context.get_state().sui
     const defeated = apply_fight_receipt_to_roster(characters, { character_id, final_hp: 0 })

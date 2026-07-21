@@ -63,7 +63,10 @@ describe('trap draft paint — click-time fold + rollback semantics (the fold my
     expect(source).toContain('trap_dropped.push(entry.cell)')
     // … a failed commit rolls every drafted cell back through the fold …
     expect(source).toContain("input({ type: 'drop_traps', cells: store_dropped })")
-    // … and a turn boundary rolls back whatever never committed, through the same fold home.
-    expect(source).toContain("input({ type: 'drop_traps', cells: [...pending_trap_cells.current] })")
+    // … and a turn boundary rolls back whatever never committed, through the same fold home — filtered to
+    // cells NO LONGER live (register hygiene: a cell the flush already committed must not be re-dropped by
+    // the boundary net; the version-gated drop_traps input is the structural backstop regardless).
+    expect(source).toContain('const drop = [...pending_trap_cells.current].filter((cell) => !live.has(cell))')
+    expect(source).toContain("input({ type: 'drop_traps', cells: drop })")
   })
 })
