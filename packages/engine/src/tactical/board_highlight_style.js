@@ -41,6 +41,19 @@ export function resolve_fade(spec) {
   }
 }
 
+/** [#238] The glyph orange tint, shared verbatim by the persistent 'glyph' channel and its 'glyph_hover'
+ *  placement-preview sibling below (one home for the color/shape dials both channels must read identically —
+ *  only `order`/fade timing differ per-channel). `merge: true` on both — a hover-preview footprint reads as
+ *  one union-outlined shape exactly like the real thing (see [#164] merged_rect_gradient). */
+const GLYPH_TINT = {
+  color: 0xe0791e,
+  opacity: 0.78,
+  center_alpha: 0.66,
+  center_dim: 0.72,
+  unlit_gain: 1.2,
+  merge: true,
+}
+
 /**
  * Every paintable tactical channel. `unlit_gain` and the center dials are material-output values, not
  * scene-light inputs: they establish the light/medium/dark ladder before the shared whole-scene post grade.
@@ -97,16 +110,29 @@ export const CHANNELS = {
   // existing channel's ceiling) so the zone reads as clearly present at fight-camera distance, not
   // just distinctly-shaped. Sits at order 2 so transient hovers (aoe/path=3-4), targets (5) and trap
   // markers (6) still layer above it.
+  // [#238 regression fix] `glyph` is the AUTHORITATIVE, PERSISTENT channel — the adapter's paint() pass
+  // owns it exclusively from fight.my_glyphs (mirrors mp_range/target/trap: one state-driven writer).
+  // GLYPH_TINT is factored out so the placement-preview sibling below shares the exact same look without
+  // copying the tint literals (one home per fact — a future recolor moves both together).
   glyph: {
-    color: 0xe0791e,
-    opacity: 0.78,
+    ...GLYPH_TINT,
     order: 2,
-    center_alpha: 0.66,
-    center_dim: 0.72,
-    unlit_gain: 1.2,
     fade_in_s: 0.45,
     fade_out_s: 0.55,
-    merge: true,
+  },
+  // GLYPH HOVER PREVIEW — [#238, regression on v1.12.41] the placement telegraph for an ARMED glyph-type
+  // spell (voxel_fight_adapter's cell_hover, hover_footprint_plan in voxel_fight_folds.js) used to share
+  // the persistent 'glyph' channel above. That let a hover with no footprint (idle mouse move, a
+  // non-castable cell, ANY other spell/no spell armed) call clear_states('glyph') and wipe the caster's
+  // OWN already-placed zone mid-turn — the exact "AoE glyph zone disappeared" report. This channel is
+  // hover-OWNED only (like 'aoe' is for every non-glyph spell, never written by the authoritative paint
+  // pass) so the preview can never again reach into the persistent paint. Same tint, own order (3, the
+  // transient-hover tier next to 'aoe' — NOT order 2, so a preview overlapping an existing zone never
+  // z-fights it) and the FAST default fade (hover feedback must feel immediate, not the zone's slow
+  // atmospheric settle).
+  glyph_hover: {
+    ...GLYPH_TINT,
+    order: 3,
   },
   // The live trap renderer is the compound black blob + gold sprite; these values retain its channel contract.
   trap: { color: 0xc8963c, opacity: 0.95, order: 6, border: true },

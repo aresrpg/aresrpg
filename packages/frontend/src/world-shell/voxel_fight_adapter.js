@@ -102,7 +102,7 @@ import {
   seed_range_of,
   seed_cast_flags_of,
   spell_footprint,
-  is_glyph_spell,
+  hover_footprint_plan,
   my_seat_of,
   element_of_spell,
   board_lifecycle_decision,
@@ -1537,8 +1537,11 @@ export function create_voxel_fight_adapter(
     // see board_highlights.js's entity-anchor design note above CHANNELS). tick_entity_anchors (below, ridden
     // on the same per-frame tick_hover seam) now owns "cell under a fighter" entirely, fed by
     // board.render_position_of's continuous LIVE render XZ instead of a once-per-reconcile snapshot.
-    // ONE authoritative pass: replace lit channels (delta-fade in/swap), fade-out the rest. (path/aoe are hover-owned
-    // but still fade-out here on a state change, matching the prior clear-all — the hover repaints them on the next move.)
+    // ONE authoritative pass: replace lit channels (delta-fade in/swap), fade-out the rest. (path/aoe/glyph_hover
+    // are hover-owned but still fade-out here on a state change, matching the prior clear-all — the hover repaints
+    // them on the next move. [#238] glyph_hover — never `lit`-populated here — is the hover-preview SIBLING of the
+    // authoritative `glyph` row above; keeping it in this pass only clears a stale preview on a state change, it
+    // can never touch the persistent zone.)
     for (const ch of PAINT_CHANNELS) {
       const cells = lit[ch]
       if (cells && cells.length) board.set_cell_state(cells, ch)
@@ -1651,9 +1654,12 @@ export function create_voxel_fight_adapter(
       // AoE/GLYPH-on-hover: while a spell is armed and the hover is a CASTABLE cell, paint the spell's FULL zone
       // footprint (cross/circle/line/glyph — spell_footprint reuses the sim's own get_aoe_cells, anchored at the
       // cursor cell, oriented caster→target for LINE/CONE/TBAR) so a "cross 1" reads as its whole plus, not one
-      // cell. A GLYPH-placing spell paints the persistent orange 'glyph' tint; every other spell the red 'aoe'
-      // strike (both outrank target/los_blocked so the zone reads as the actual hit). Cleared with 'path' on leave.
+      // cell. A GLYPH-placing spell paints the orange 'glyph_hover' tint; every other spell the red 'aoe' strike
+      // (both outrank target/los_blocked so the zone reads as the actual hit). Cleared with 'path' on leave.
       // D253: set_cell_state REPLACE when lit / clear_states fade-out when not (never clear-then-add the same channel).
+      // [#238] the CHANNEL PICK (paint vs clear) routes through hover_footprint_plan (voxel_fight_folds.js) —
+      // 'glyph_hover' is its OWN transient channel, never the persistent 'glyph' paint() owns from
+      // fight.my_glyphs (see hover_footprint_plan's docstring for the regression this split fixes).
       let foot_cells = /** @type {{x:number,y:number}[]} */ ([])
       if (active && fight.armed_spell_id) {
         const grid2 = dungeon_grid_of(dungeon)
@@ -1672,14 +1678,9 @@ export function create_voxel_fight_adapter(
         // The weapon sentinel has no seed row → spell_footprint falls back to the single [cell] (a melee strike).
         if (castable2.has(to_enc)) foot_cells = spell_footprint(fight.armed_spell_id, cell, active.cell)
       }
-      if (foot_cells.length) {
-        const foot_channel = is_glyph_spell(fight.armed_spell_id) ? 'glyph' : 'aoe'
-        board.set_cell_state(foot_cells, foot_channel)
-        board.clear_states(foot_channel === 'aoe' ? 'glyph' : 'aoe') // keep the sibling hover-zone channel clear
-      } else {
-        board.clear_states('aoe')
-        board.clear_states('glyph')
-      }
+      const foot_plan = hover_footprint_plan(fight.armed_spell_id, foot_cells)
+      if (foot_plan.paint) board.set_cell_state(foot_plan.paint.cells, foot_plan.paint.channel)
+      for (const ch of foot_plan.clear) board.clear_states(ch)
     }
   )
 
@@ -1861,6 +1862,8 @@ export function create_voxel_fight_adapter(
 // [entity-anchor] 'ally_seat'/'enemy_seat' REMOVED 2026-07-11 — that cell-state wash is retired (see the
 // TEAM SEAT GLOW comment in paint()); the "cell under a fighter" marker is now tick_entity_anchors'
 // continuous board.set_entity_anchor, not a set_cell_state/clear_states channel this list would clear.
+// [#238] 'glyph_hover' joins 'aoe'/'path' as hover-owned (never lit[] here, see the loop comment above) — its
+// only job in THIS pass is clearing a stale preview on a state change; 'glyph' stays the sole persistent writer.
 const PAINT_CHANNELS = /** @type {const} */ ([
   'placement',
   'ghost',
@@ -1871,6 +1874,7 @@ const PAINT_CHANNELS = /** @type {const} */ ([
   'path',
   'path_blocked',
   'aoe',
+  'glyph_hover',
   'trap',
   'glyph',
 ])

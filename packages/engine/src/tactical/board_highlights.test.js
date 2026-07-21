@@ -621,6 +621,46 @@ describe('channel routing — los_blocked layer + unknown-layer no-op', () => {
     ctrl.dispose()
   })
 
+  // [#238 regression, v1.12.41] "AoE glyph zone disappeared mid-turn during normal play." Root cause lived in
+  // the ADAPTER (voxel_fight_adapter.js's cell_hover), not here: it painted its transient hover-preview footprint
+  // onto the SAME 'glyph' key the authoritative paint() pass uses for the caster's persistent placed zone, so an
+  // idle hover mid-turn cleared 'glyph' and erased the real zone (see hover_footprint_plan / #238 in
+  // voxel_fight_folds.js for the adapter-side fix + proof). This engine-level companion proves the OTHER half of
+  // the guarantee: board_highlights.js's own channel model genuinely ISOLATES 'glyph' from every other channel a
+  // board-state-driven refresh during a turn touches (mp_range/path/aoe repaints — the "movement highlights
+  // refresh, path hover changes" from the report) — as long as a caller never NAMES 'glyph', nothing else can
+  // reach it, mid-turn or not.
+  test('[#238] a persistent glyph zone survives every OTHER channel repainting mid-turn (movement/path/aoe hover refresh)', () => {
+    const ctrl = create_board_highlights(stub_board())
+    const zone = [
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+      { x: 0, y: 1 },
+    ]
+    ctrl.set_channel(zone, 'glyph') // the caster's own already-placed AoE zone (paint()'s authoritative write)
+    expect(tiles_in(ctrl, 'glyph')).toBe(3)
+
+    // a board-state update DURING the owner's turn: the movement-range wash repaints (a new fighter selected),
+    // the steered hover path repaints on every mouse move, and an unrelated hover AoE preview repaints too —
+    // none of these ever name 'glyph', so the zone must be completely unaffected by any of them.
+    ctrl.set_channel([{ x: 5, y: 5 }], 'mp_range')
+    ctrl.set_channel(
+      [
+        { x: 2, y: 2 },
+        { x: 2, y: 3 },
+      ],
+      'path'
+    )
+    ctrl.set_channel([{ x: 6, y: 6 }], 'aoe')
+    ctrl.clear('path') // leaving the hover (D253-2 fade-out path) — still never touches 'glyph'
+    ctrl.clear('aoe')
+    ctrl.tick(1) // run every fade envelope to completion (glyph's own 0.55s fade_out_s included)
+
+    expect(tiles_in(ctrl, 'glyph')).toBe(3) // THE regression assertion — the zone rendered its full duration
+    expect(ctrl._fade_of('glyph')).toBe(1) // and stayed fully visible throughout — never dipped into a fade-out
+    ctrl.dispose()
+  })
+
   test('toggle adds/removes los_blocked cells idempotently', () => {
     const ctrl = create_board_highlights(stub_board())
     ctrl.toggle('los_blocked', [{ x: 0, y: 0 }], true)
