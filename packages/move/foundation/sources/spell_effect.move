@@ -133,6 +133,7 @@ const SHAPE_TBAR: u8 = 4; //  perpendicular bar of half-length = size
 const SHAPE_RING: u8 = 5; //  hollow lozenge perimeter at radius = size
 const SHAPE_ALLMAP: u8 = 6; //  every cell on the board (1.29 "C_")
 const SHAPE_CONE: u8 = 7; //  #55-E9 triangle fanning from the caster toward the target — tip 1-wide, widening to 3, `size` deep
+const SHAPE_PODIUM: u8 = 8; //  #387 weapon PODIUM — the TBAR front-arc PLUS one cell beyond the target along the strike axis
 
 public fun shape_point(): u8 { SHAPE_POINT }
 public fun shape_circle(): u8 { SHAPE_CIRCLE }
@@ -142,6 +143,7 @@ public fun shape_tbar(): u8 { SHAPE_TBAR }
 public fun shape_ring(): u8 { SHAPE_RING }
 public fun shape_allmap(): u8 { SHAPE_ALLMAP }
 public fun shape_cone(): u8 { SHAPE_CONE }
+public fun shape_podium(): u8 { SHAPE_PODIUM }
 
 // ╔════════════════ [ Per-effect target filter bitmask (taxonomy §2b) ] ══════════ ]
 // Values match the reference SpellEffectTarget bits. ONLY_INVOC/NOT_INVOC omitted (summons EXCLUDED).
@@ -282,7 +284,7 @@ const FLAG_ALL_MASK: u8 = 31; //  all five FLAG_* bits (1|2|4|8|16) — bit 32 (
 
 public fun is_legal(e: &Effect): bool {
   e.kind <= K_DAMAGE_REDIRECT
-    && e.area_shape <= SHAPE_CONE
+    && e.area_shape <= SHAPE_PODIUM
     && (e.target_filter | TF_ALL_MASK) == TF_ALL_MASK
     && e.chance <= 100
     && (e.flags | FLAG_ALL_MASK) == FLAG_ALL_MASK

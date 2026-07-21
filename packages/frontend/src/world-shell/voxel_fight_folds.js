@@ -10,7 +10,9 @@
 // CONTRACT: every export is a pure `(inputs) -> value`. No store reads, no IO, no three.js scene work.
 
 import { decode as decode_cell, encode as encode_cell } from '@aresrpg/fight/los'
+import { weapon_spell_template } from '@aresrpg/fight/predict_cast'
 import { engine_view } from '@aresrpg/fight/project'
+import { WEAPON_ATTACK_ID } from '@aresrpg/fight/weapon'
 // get_aoe_cells is the ONE shape home the sim + chain use to enumerate a spell's affected cells (spell_targeting.js:
 // CIRCLE/CROSS/RING/LINE/TBAR/CONE). The hover footprint below REUSES it verbatim so the telegraph can never
 // diverge from what the reducer actually hits — never a second shape implementation.
@@ -436,15 +438,21 @@ export function footprint_of_effects(effects, target, caster) {
 
 /**
  * The hover-telegraph footprint for an ARMED spell around the hovered `target`, resolved off the SAME on-chain
- * spell row seed_range_of reads (its normalized level's base_effects). Unresolved (the weapon sentinel has no
- * seed row) ⇒ `[target]` — the melee single cell. Pure.
+ * spell row seed_range_of reads (its normalized level's base_effects). §387: the WEAPON sentinel has no seed row,
+ * so its effects come from `weapon_spell_template(weapon)` — the ONE-home shape table stamps the FINE category's
+ * cell-set onto the damage effect, so the melee/ranged shape (arc / podium / inline / line) paints through the exact
+ * same `get_aoe_cells` every spell AoE uses. No weapon (pre-read) ⇒ `[target]`, the single melee cell. Pure.
  * @param {string | null | undefined} armed_spell_id
  * @param {{ x: number, y: number }} target
  * @param {{ x: number, y: number }} caster
+ * @param {any} [weapon] the caster's escrow-row weapon (its FINE `category` drives the §387 shape) — weapon strikes only
  * @returns {{ x: number, y: number }[]}
  */
-export function spell_footprint(armed_spell_id, target, caster) {
-  const effects = fight_spell(armed_spell_id)?.template?.levels?.[0]?.base_effects ?? []
+export function spell_footprint(armed_spell_id, target, caster, weapon) {
+  const effects =
+    armed_spell_id === WEAPON_ATTACK_ID
+      ? (weapon_spell_template(weapon ?? {})?.levels?.[0]?.base_effects ?? [])
+      : (fight_spell(armed_spell_id)?.template?.levels?.[0]?.base_effects ?? [])
   return footprint_of_effects(effects, target, caster)
 }
 

@@ -62,6 +62,7 @@ export const SHAPE_TBAR = 4
 export const SHAPE_RING = 5
 export const SHAPE_ALLMAP = 6
 export const SHAPE_CONE = 7
+export const SHAPE_PODIUM = 8 // #387 weapon PODIUM — the TBAR front-arc PLUS one cell beyond the target along the strike axis
 
 export const shape_point = () => SHAPE_POINT
 export const shape_circle = () => SHAPE_CIRCLE
@@ -71,6 +72,7 @@ export const shape_tbar = () => SHAPE_TBAR
 export const shape_ring = () => SHAPE_RING
 export const shape_allmap = () => SHAPE_ALLMAP
 export const shape_cone = () => SHAPE_CONE
+export const shape_podium = () => SHAPE_PODIUM
 
 // ╔════════════════ [ Target filter bitmask (taxonomy §2b) ] ═══════════════════════ ]
 export const TF_NONE = 0
