@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The in-fight EXPORT REPLAY keybind (issue #209) — bare "R", no modifiers. Mounted from FightControls.jsx,
-// which only exists while a fight is live (`if (!fight) return null` — the component unmounts with the fight
-// on both the world and dungeon paths), so the chord is live for exactly "during a fight". Same is_typing()
-// guard DeckCluster/embed_voxel/NpcPrompt each already own (house convention: this check is small enough that
-// every scoped keydown listener carries its own copy rather than a shared import).
+// The EXPORT REPLAY keybind (issue #209) — bare "R", no modifiers. TWO mount points, each covering the window
+// the OTHER can't: FightControls.jsx (only exists while a fight is live — `if (!fight) return null`, unmounts
+// with the fight on both the world and dungeon paths) covers "during a fight"; FightReport.jsx (issue #256)
+// covers the post-fight beat the result card owns, so the SAME chord a player reached for mid-fight keeps
+// working while the card is still up. Each mount is its own independent listener — idempotent-safe, no shared
+// state. Same is_typing() guard DeckCluster/embed_voxel/NpcPrompt each already own (house convention: this
+// check is small enough that every scoped keydown listener carries its own copy rather than a shared import).
 
 import { useEffect } from 'react'
 

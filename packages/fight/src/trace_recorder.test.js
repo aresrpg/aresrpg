@@ -11,6 +11,7 @@ import {
   create_trace_recorder,
   record_input,
   dump_trace,
+  earliest_input_at,
   DEFAULT_TRACE_CAPACITY,
   TRACE_FORMAT,
 } from './trace_recorder.js'
@@ -34,6 +35,75 @@ describe('trace recorder ring buffer', () => {
     expect(create_trace_recorder(3.5).capacity).toBe(DEFAULT_TRACE_CAPACITY)
     expect(create_trace_recorder(7).capacity).toBe(7)
     expect(create_trace_recorder().capacity).toBe(DEFAULT_TRACE_CAPACITY)
+  })
+})
+
+// issue #241: dungeon_run_store.js's own "fight started" bind bookkeeping can come up empty (the dev synth-fight
+// harness mounts a fight_id without it — confirmed by reading dev_synth_fight.js's use_dungeon.setState call,
+// which never stamps fight_started_at_ms). earliest_input_at is the fallback source: the fight's OWN 'init'
+// entry, recorded unconditionally at the ONE reducer door, independent of any caller's bind bookkeeping.
+describe('earliest_input_at — the fallback fight-start source (issue #241)', () => {
+  test('no entries at all → null (never a fabricated timestamp)', () => {
+    expect(earliest_input_at(create_trace_recorder(), 'f')).toBe(null)
+  })
+
+  test('an unopened fight_id (never got an init) → null even with other traffic recorded', () => {
+    const rec = record_input(create_trace_recorder(), { fight_id: 'other', msg: { type: 'tick' }, at: 5, anchors })
+    expect(earliest_input_at(rec, 'f')).toBe(null)
+  })
+
+  test('an opened fight_id → the recorded wall-clock "at" of its init (RED-FIRST: this is the exact value a bind-less caller like the dev synth-fight harness needs)', () => {
+    const rec = record_input(create_trace_recorder(), {
+      fight_id: 'f',
+      msg: { type: 'init', fight_id: 'f' },
+      at: 1_000_000,
+      anchors,
+    })
+    expect(earliest_input_at(rec, 'f')).toBe(1_000_000)
+  })
+
+  test('later traffic on the SAME fight never moves the anchor — always the init, not the latest entry', () => {
+    let rec = record_input(create_trace_recorder(), {
+      fight_id: 'f',
+      msg: { type: 'init', fight_id: 'f' },
+      at: 10,
+      anchors,
+    })
+    rec = record_input(rec, { fight_id: 'f', msg: { type: 'tick' }, at: 20, anchors })
+    rec = record_input(rec, { fight_id: 'f', msg: { type: 'tick' }, at: 30, anchors })
+    expect(earliest_input_at(rec, 'f')).toBe(10)
+  })
+
+  test('a re-init (resume) on the SAME fight_id supersedes the earlier attempt — mirrors dump_trace scoping exactly', () => {
+    let rec = record_input(create_trace_recorder(), {
+      fight_id: 'f',
+      msg: { type: 'init', fight_id: 'f' },
+      at: 10,
+      anchors,
+    })
+    rec = record_input(rec, { fight_id: 'f', msg: { type: 'tick' }, at: 20, anchors })
+    rec = record_input(rec, { fight_id: 'f', msg: { type: 'init', fight_id: 'f' }, at: 50, anchors }) // resume/re-init
+    expect(earliest_input_at(rec, 'f')).toBe(50)
+  })
+
+  test('scopes strictly to the requested fight_id — a second fight in the ring never leaks its anchor', () => {
+    let rec = record_input(create_trace_recorder(), {
+      fight_id: 'a',
+      msg: { type: 'init', fight_id: 'a' },
+      at: 1,
+      anchors,
+    })
+    rec = record_input(rec, { fight_id: 'b', msg: { type: 'init', fight_id: 'b' }, at: 99, anchors })
+    expect(earliest_input_at(rec, 'a')).toBe(1)
+    expect(earliest_input_at(rec, 'b')).toBe(99)
+  })
+
+  test('an evicted init (past ring capacity) → null, same honesty as dump_trace', () => {
+    const evicted = [1, 2].reduce(
+      (rec, i) => record_input(rec, { fight_id: 'g', msg: { type: 'tick', i }, at: i, anchors }),
+      record_input(create_trace_recorder(2), { fight_id: 'g', msg: { type: 'init', fight_id: 'g' }, at: 0, anchors })
+    )
+    expect(earliest_input_at(evicted, 'g')).toBe(null)
   })
 })
 

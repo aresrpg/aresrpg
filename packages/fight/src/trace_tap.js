@@ -6,7 +6,7 @@
 // forensics, never sim/store truth). `dump_current_trace` is the only other consumer (the frontend export
 // action reads it directly — no prop threading, same pattern as `arm_spell`/`hover_spell` reading the store).
 
-import { create_trace_recorder, record_input, dump_trace } from './trace_recorder.js'
+import { create_trace_recorder, record_input, dump_trace, earliest_input_at } from './trace_recorder.js'
 
 // Re-exported so the frontend's ONE fight-package import path (this module) also carries the format's
 // BigInt-safe serializer — no second package export entry for a single function (issue #209 P1 follow-up).
@@ -41,6 +41,11 @@ export const tap_trace_input = (state, msg, now) => {
  *  ring buffer for that fight yet). @param {string} app_version @param {number} captured_at @param {string} [fight_id] */
 export const dump_current_trace = (app_version, captured_at, fight_id) =>
   dump_trace(rec, app_version, captured_at, fight_id)
+
+/** The wall-clock moment `fight_id` was last opened at the ONE reducer door (its recorded 'init') — issue #241's
+ *  fallback duration source for a caller whose own bind bookkeeping came up empty. null when nothing is
+ *  recorded for it (ring eviction, or never opened) — never a fabricated value. @param {string} fight_id */
+export const fight_opened_at = (fight_id) => earliest_input_at(rec, fight_id)
 
 /** TEST-ONLY: the tap is a module-level singleton (every store instance in the process shares it, exactly like
  *  fight.js's combat_log_seq), so a test that asserts on IT (not just on a store's own projected state) must
