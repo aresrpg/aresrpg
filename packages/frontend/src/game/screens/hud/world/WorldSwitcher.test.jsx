@@ -4,8 +4,9 @@
 // identity-guarded row — globe + the bare world label (the localized "you are in <world>" sentence rides
 // the title, same i18n key) + a small inline travel text-button (short `join` label; `travel_cta` as
 // title/aria) — the picker rows moved into WorldTravelModal (closed at rest; its lock/filter logic is
-// unit-proven on the pure derivations in world_travel_state.test.js, and rendered gates are asserted e2e by
-// test/gold/specs_anchor/world_gate.spec.ts).
+// unit-proven on the pure derivations in world_travel_state.test.js, and rendered gates — the disabled GO
+// button + "LV N+" relabel a locked card must show — are proven at the render layer by
+// WorldTravelModal.test.jsx).
 
 import { afterAll, expect, spyOn, test } from 'bun:test'
 import * as React from 'react'
