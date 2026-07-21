@@ -41,6 +41,7 @@ concurrency:
 permissions:
   contents: write
   actions: write # dispatch release.yml after a master ff-push (GITHUB_TOKEN pushes don't self-trigger)
+  issues: write # CLOSE LEG: comment on + close issues named by promoted source PRs
   pull-requests: write # read/label PRs, open the next standing draft
   statuses: write # stamp the `promoted` commit status on master landings
 jobs:
@@ -62,6 +63,7 @@ jobs:
           ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
       - name: land eligible promote-requested PRs (oldest-first)
+        id: land
         if: steps.gate.outputs.count != '0'
         run: |
           PRS=$(gh pr list --repo "$GITHUB_REPOSITORY" --label promote-requested --state open \
@@ -73,3 +75,9 @@ jobs:
             echo "PR #$PR → rc=$?"
             set -e
           done <<< "$PRS"
+      - name: CLOSE LEG — close issues referenced by promoted PRs
+        if: ${{ steps.land.outputs.promoted_sha != '' }}
+        env:
+          PROMOTED_BEFORE_SHA: ${{ steps.land.outputs.promoted_before_sha }}
+          PROMOTED_SHA: ${{ steps.land.outputs.promoted_sha }}
+        run: node scripts/close_promoted_issues.mjs

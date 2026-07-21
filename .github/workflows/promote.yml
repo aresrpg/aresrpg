@@ -37,6 +37,7 @@ concurrency:
 permissions:
   contents: write
   actions: write # dispatch release.yml after a master ff-push (GITHUB_TOKEN pushes don't self-trigger)
+  issues: write # CLOSE LEG: comment on + close issues named by promoted source PRs
   pull-requests: write # label, comment, read reviews, open the next standing draft
   statuses: write # stamp the `promoted` commit status (F1a — closes the direct-push-to-master hole)
 jobs:
@@ -68,6 +69,12 @@ jobs:
           set +e
           bash .github/scripts/promote-land.sh "$PR"
           echo "rc=$?" >> "$GITHUB_OUTPUT"
+      - name: CLOSE LEG — close issues referenced by promoted PRs
+        if: ${{ steps.land.outputs.promoted_sha != '' }}
+        env:
+          PROMOTED_BEFORE_SHA: ${{ steps.land.outputs.promoted_before_sha }}
+          PROMOTED_SHA: ${{ steps.land.outputs.promoted_sha }}
+        run: node scripts/close_promoted_issues.mjs
       - name: interpret the result — land silently, or post one-time guidance
         # Guidance bodies live as markdown templates under .github/promote-comments/ (readable, and
         # no backticks-in-shell) — the stale one has its base substituted for __BASE__.

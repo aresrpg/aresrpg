@@ -29,6 +29,8 @@
 #   Writes `promote_result=<result>` to stdout and, when set, to $GITHUB_OUTPUT (the caller reads
 #   it via the step output). Result ∈
 #     landed · stale · not-green · wrong-base · unauthorized · not-release-tipped
+#   After a successful master push, also writes `promoted_before_sha` + `promoted_sha`, the exact
+#   commit range consumed by the caller's CLOSE LEG. Non-master/refused pushes write neither.
 #   Exit code: 0 landed · 3 transient (stale | not-green — leave the label, the queue retries) ·
 #              1 hard refusal (wrong-base | unauthorized | not-release-tipped) or infra error.
 #   MUST run in a repo checked out with `fetch-depth: 0` (needs origin/<base> history for the
@@ -42,11 +44,18 @@ LABEL=promote-requested
 PR="${1:?PR number required}"
 REPO="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY required}"
 
-# emit <result> — record the outcome for the caller (never let the $GITHUB_OUTPUT write trip
+# emit_output <name> <value> — record caller metadata (never let the $GITHUB_OUTPUT write trip
 # `set -e`: a plain `&&` returns non-zero when the guard is false and would abort the script).
+emit_output() {
+  echo "$1=$2"
+  if [ -n "${GITHUB_OUTPUT:-}" ]; then echo "$1=$2" >> "$GITHUB_OUTPUT"; fi
+}
+emit_output_once() {
+  echo "$1=$2"
+  if [ -n "${GITHUB_OUTPUT:-}" ] && ! grep -q "^$1=" "$GITHUB_OUTPUT"; then echo "$1=$2" >> "$GITHUB_OUTPUT"; fi
+}
 emit() {
-  echo "promote_result=$1"
-  if [ -n "${GITHUB_OUTPUT:-}" ]; then echo "promote_result=$1" >> "$GITHUB_OUTPUT"; fi
+  emit_output promote_result "$1"
 }
 
 # ── resolve the base + head (edge | master base only; HEAD_REF reused later for branch cleanup,
@@ -95,6 +104,7 @@ FETCH_REFS=("refs/pull/${PR}/head:refs/promote/land-${PR}" "+refs/heads/${BASE}:
 if [ "$BASE" != edge ]; then FETCH_REFS+=("+refs/heads/edge:refs/remotes/origin/edge"); fi
 git fetch --quiet origin "${FETCH_REFS[@]}"
 HEAD_SHA=$(git rev-parse "refs/promote/land-${PR}")
+BASE_SHA=$(git rev-parse "refs/remotes/origin/${BASE}")
 
 # ── master-hop: the tip must be release-shaped (release-only-production law) ─────────────────
 if [ "$BASE" = master ]; then
@@ -137,6 +147,16 @@ fi
 # ── the landing: a plain fast-forward push (git itself rejects anything non-ff) ─────────────
 git push origin "$HEAD_SHA:$BASE"
 echo "landed PR #$PR onto $BASE ($HEAD_SHA)"
+
+# Expose the exact old-master..promoted range only AFTER the definitive fast-forward succeeds.
+# Both workflow callers use this proof to run the CLOSE LEG; edge lands and failed pushes emit
+# nothing, so non-production activity cannot close an issue.
+if [ "$BASE" = master ]; then
+  # A queue run normally has one master PR. If stacked master PRs ever land in the same loop,
+  # preserve the first range start while promoted_sha advances to the final successful head.
+  emit_output_once promoted_before_sha "$BASE_SHA"
+  emit_output promoted_sha "$HEAD_SHA"
+fi
 
 # ── master-only post-landing tail (best-effort; the promotion already HAPPENED at the push) ──
 if [ "$BASE" = master ]; then
