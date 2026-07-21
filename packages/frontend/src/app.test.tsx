@@ -98,19 +98,22 @@ describe('version badge', () => {
   })
 })
 
-// #208: the app toast layer shares the minimap's flush corner, overlaid with the house sharp glass recipe.
+// #237: the app toast layer overlays the minimap corner without inheriting the minimap's flush-to-viewport rule.
 // Position and card styling live in toast.ts so the contract stays testable without app.tsx's Vite graph.
 describe('toast minimap overlay', () => {
-  test('is absolutely pinned to the top-right while retaining a bounded width', () => {
+  test('is inset from the top-right viewport edge while retaining a bounded width', () => {
     expect(TOAST_CONTAINER_CLASS).not.toContain('max-w-none')
-    expect(TOAST_CONTAINER_CLASS).toMatch(/\bmax-w-(sm|\[)/)
+    expect(TOAST_CONTAINER_CLASS).toContain('max-w-[min(24rem,calc(100vw-1rem))]')
     expect(TOAST_CONTAINER_CLASS).toContain('absolute')
-    expect(TOAST_CONTAINER_CLASS).toContain('top-0')
-    expect(TOAST_CONTAINER_CLASS).toContain('right-0')
+    expect(TOAST_CONTAINER_CLASS).toContain('top-2')
+    expect(TOAST_CONTAINER_CLASS).toContain('right-2')
+    expect(TOAST_CONTAINER_CLASS).not.toContain('top-0')
+    expect(TOAST_CONTAINER_CLASS).not.toContain('right-0')
     expect(TOAST_CONTAINER_CLASS).not.toContain('fixed')
   })
 
-  test('uses translucent near-black glass, a white/10 hairline, blur, and sharp corners', () => {
+  test('uses sibling-card padding, translucent near-black glass, a white/10 hairline, blur, and sharp corners', () => {
+    expect(toast_glass_class).toContain('p-3')
     expect(toast_glass_class).toContain('bg-black/70')
     expect(toast_glass_class).toContain('backdrop-blur-md')
     expect(toast_glass_class).toContain('border-white/10')

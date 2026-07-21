@@ -294,17 +294,19 @@ describe('viewport and mobile-style isolation', () => {
     expect(row_rule).toMatch(/padding:\s*\dpx \dpx/) // single-digit px on both axes < desktop's 8px/12px
   })
 
-  // #208: the app-wide toast layer intentionally shares the minimap's exact flush corner on every viewport.
-  // Its bounded width still prevents overflow, while the old mobile safe-area offsets must not move it away
-  // from top:0/right:0.
-  test('the app-wide toast stack remains an absolute flush minimap overlay on mobile', async () => {
+  // #237: the minimap remains flush, but the app-wide toast layer gets its own small viewport inset. Its
+  // width subtracts both 8px edges so the inset cannot reintroduce narrow-screen overflow.
+  test('the app-wide toast stack remains an inset, bounded minimap overlay on mobile', async () => {
     const { TOAST_CONTAINER_CLASS } = await import('../../../toast')
     const app = read_fixture('../../../app.tsx')
     const toasts_fn = app.match(/function Toasts\(\)[\s\S]*?\n\}/)?.[0] ?? ''
 
     expect(TOAST_CONTAINER_CLASS).toContain('absolute')
-    expect(TOAST_CONTAINER_CLASS).toContain('top-0')
-    expect(TOAST_CONTAINER_CLASS).toContain('right-0')
+    expect(TOAST_CONTAINER_CLASS).toContain('top-2')
+    expect(TOAST_CONTAINER_CLASS).toContain('right-2')
+    expect(TOAST_CONTAINER_CLASS).toContain('max-w-[min(24rem,calc(100vw-1rem))]')
+    expect(TOAST_CONTAINER_CLASS).not.toContain('top-0')
+    expect(TOAST_CONTAINER_CLASS).not.toContain('right-0')
     expect(TOAST_CONTAINER_CLASS).not.toContain('max-lg:top-')
     expect(TOAST_CONTAINER_CLASS).not.toContain('max-lg:right-')
     expect(toasts_fn).toContain('className={TOAST_CONTAINER_CLASS}')

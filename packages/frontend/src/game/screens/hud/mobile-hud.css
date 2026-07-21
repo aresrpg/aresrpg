@@ -318,8 +318,8 @@ html.ares-mobile-hud .mmx-tip {
   white-space: nowrap;
 }
 .gw-hud--mobile .gw-toasts {
-  top: 0;
-  right: 0;
+  top: 8px;
+  right: 8px;
   max-width: min(36vw, 240px);
 }
 .gw-hud--mobile .gw-toast {
