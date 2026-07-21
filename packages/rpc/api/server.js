@@ -26,6 +26,7 @@
 //               NAMES_CACHE_TTL_SEC, SENTRY_DSN (error reporting, report.js — absent = no-op).
 
 import { cache_control_for } from './cache_policy.js'
+import { client_ip } from './client_ip.js'
 import { check_rate_limit } from './rate_limit.js'
 import { init_reporting, report_error } from './report.js'
 import { to_response } from './respond.js'
@@ -42,13 +43,6 @@ const PORT = Number(process.env.PORT ?? 3000)
 // endpoints are seed-derived and change only on reseed/admin writes, so short TTLs + SWR are honest.
 // PERSONAL/LIVE endpoints (player rosters, fights, post-tx reconcile reads) are explicitly `no-store` —
 // a cached read there would lie to the predict+reconcile loop.
-// Best-effort client IP: a trusted proxy/CDN sets X-Forwarded-For; fall back to
-// the socket address.
-function client_ip(req, server) {
-  const xff = req.headers.get('x-forwarded-for')
-  if (xff) return xff.split(',')[0].trim()
-  return server.requestIP(req)?.address ?? 'unknown'
-}
 
 const server = Bun.serve({
   port: PORT,
