@@ -88,6 +88,30 @@ const with_authored_icon = (item, slug_by_name = {}) => {
 export const item_display_level = (item, template) =>
   Number(item?.level) > 0 ? Number(item.level) : Number(template?.level ?? 0)
 
+/** The level `item` requires to equip — item_display_level resolved against its OWN template (by id,
+ *  falling back to the by-type map), mirroring equip_stage_action's + on_item_hover's template lookup.
+ *  @param {any} item @param {Map<string, any>} [template_id_map] @param {Map<string, any>} [template_map]
+ *  @returns {number} */
+export function item_required_level(item, template_id_map, template_map) {
+  const template =
+    template_id_map?.get?.(item?.template_id ?? item?.template) ?? template_map?.get?.(item?.item_type) ?? {}
+  return item_display_level(item, template)
+}
+
+/**
+ * #316 — THE client prediction of equipment.move's unconditional level assert (ELevelTooLow: character
+ * level must be ≥ the item template's required level). Applies to every equippable category — Move's
+ * assert fires regardless of slot kind, and DECISIONS 07-12 makes weapons class-UNIVERSAL, so level is
+ * the only remaining known-data equip refusal. A character's level only rises within a session, never
+ * falls, so — unlike listed-state — no re-check is needed between staging and Accept.
+ * @param {any} item @param {number} character_level
+ * @param {Map<string, any>} [template_id_map] @param {Map<string, any>} [template_map]
+ * @returns {boolean}
+ */
+export function can_equip_level(item, character_level, template_id_map, template_map) {
+  return item_required_level(item, template_id_map, template_map) <= Number(character_level ?? 0)
+}
+
 /** One action creator for click-equip and targeted drop-equip. Level rides the one display-level home;
  * the row keeps its identity unless the display level genuinely differs (reducer referential contract). */
 export function equip_stage_action(item, slot, slug_by_name = {}, template_id_map) {
