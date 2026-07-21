@@ -33,6 +33,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { ItemIcon } from './ItemIcon.jsx'
 import { Tooltip } from './Tooltip.jsx'
+import { inventory_item_icon } from './inventory-equip.js'
 import { resolve_loot_tile } from './loot-tile-resolve.js'
 import { resolvable_row_ids, apply_resolved_names } from './fight_report_names.js'
 import { format_mmss } from './world/compass_math.js'
@@ -61,19 +62,27 @@ function Skel({ w = '3.5em' }) {
 
 /**
  * One looted item as a catalog-icon tile with a ×N count badge + the SHARED inventory item tooltip on hover
- * (the victory card loot needs the SAME ItemDetailView inventory/findables show, not a bare name). The
- * dropped item_type is the template SLUG, so we (a) render its icon off that slug — item_icon_url keys CDN art
- * by the slug, NEVER the on-chain object id, which is why keying off the resolved item's `id` 404'd every loot
- * icon — and (b) resolve it against the chain-direct `template_map` into onchain_template_to_detail_props → the
- * ItemDetailView the bag renders. The house <Tooltip> body-portals it (escapes the animated card's transform)
- * with the solid near-black `tt-card--solid` recipe (FIGHT-HUD OPACITY LAW — the card floats over the bright
- * stage). resolve_loot_tile.js owns the enrichment decision; an orphaned drop (missing from BOTH the bag
- * snapshot and the encyclopedia — e.g. a QA test mob's ad hoc loot template) renders the D53 bold-letter
- * fallback instead of <ItemIcon> — a loot slot must never read as an empty un-hoverable box.
+ * (the victory card loot needs the SAME ItemDetailView inventory/findables show, not a bare name). The icon
+ * KEY routes through `inventory_item_icon` — the SAME shared resolver InventoryBag/Inventory/EquipmentSlot
+ * use — never the raw `entry.item_type` alone: item_icon_url keys CDN art by that resolved slug, NEVER the
+ * on-chain object id (keying off the resolved item's `id` 404'd every loot icon), and NEVER the raw item_type
+ * for the class of items where that field is a coarse category word instead of a unique art slug (a shop
+ * cosmetic's on-chain item_type is the generic slot word "hat"/"cloak" — cosmetic_icons.js's `cosmetic_icon_of`
+ * is the ONE fix for that divergence; bypassing it here reproduced the exact "cosmetics don't show" bug class
+ * on the victory card after it was already fixed everywhere else — the reported placeholder-box regression).
+ * `inventory_item_icon` degrades to `item.item_type` when no cosmetic alias/catalog slug exists, so an
+ * ordinary drop's icon is unchanged. Separately, the tooltip resolves against the chain-direct `template_map`
+ * into onchain_template_to_detail_props → the ItemDetailView the bag renders. The house <Tooltip> body-portals it
+ * (escapes the animated card's transform) with the solid near-black `tt-card--solid` recipe (FIGHT-HUD
+ * OPACITY LAW — the card floats over the bright stage). resolve_loot_tile.js owns the enrichment decision; an
+ * orphaned drop (missing from BOTH the bag snapshot and the encyclopedia — e.g. a QA test mob's ad hoc loot
+ * template) renders the D53 bold-letter fallback instead of <ItemIcon> — a loot slot must never read as an
+ * empty un-hoverable box.
  * @param {{ entry: { item_type: string, name: string, amount: number }, items: any[], template_map: Map<string, any>, tt: ReturnType<typeof use_template_t>, t: (key: string, opts?: any) => string }} props
  */
 function LootTile({ entry, items, template_map, tt, t }) {
   const { resolved, name, tint, category, detail } = resolve_loot_tile(entry, items, template_map, tt, t)
+  const icon = inventory_item_icon({ name, item_type: entry.item_type })
   return (
     <Tooltip content={<ItemDetailView item={detail} />} className="tt-card--solid">
       <div
@@ -82,7 +91,7 @@ function LootTile({ entry, items, template_map, tt, t }) {
         aria-label={name}
       >
         {resolved ? (
-          <ItemIcon item={{ icon: entry.item_type, id: entry.item_type, category }} alt={name} />
+          <ItemIcon item={{ icon, id: entry.item_type, category }} alt={name} />
         ) : (
           <span className="fe-tile__letter" aria-hidden="true">
             {initial(name)}

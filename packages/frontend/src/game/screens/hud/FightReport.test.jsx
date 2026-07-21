@@ -231,6 +231,43 @@ describe('FightReport — the loot D53 letter-tile fallback (an orphaned drop, m
   })
 })
 
+// Bug (maintainer report, prod v1.12.37): the victory loot tile rendered the generic placeholder box
+// glyph instead of the item's real icon. ROOT CAUSE: LootTile builds its <ItemIcon> key straight off
+// `entry.item_type` (the raw on-chain template field), bypassing `inventory_item_icon` — the ONE shared
+// icon resolver every other surface (InventoryBag/Inventory/EquipmentSlot) routes through, which ALSO
+// consults `cosmetic_icon_of` (packages/frontend/src/game/cosmetic_icons.js). That map exists precisely
+// because on-chain `item_type` for a shop cosmetic is the generic EQUIP SLOT WORD ("hat"/"cloak"), never
+// the unique art slug — item_icon_url then builds the SAME non-existent `items/hat.png` for every
+// hat-slot cosmetic (curl-verified live: /assets/items/hat.png resolves to the Walrus quilt shard
+// `-TEi2iUTk50pyc3zpfNukt-K8xNRDEZeI0n2NTokKfg/hat.png` → HTTP 404; the correct alias
+// `coiffe_fuwa-white.png` → quilt `GFwmQjUVLPrqanmZV1m2qVW7fEqqE_Utn7wvNawNPx0` → HTTP 200). The loot
+// card was never wired to the fix that already ships on every other icon surface.
+describe('FightReport — loot tile icon resolution routes through the SAME shared resolver as the inventory (never a raw item_type bypass)', () => {
+  test('a cosmetic drop resolves its icon via inventory_item_icon\'s cosmetic alias, not the raw on-chain slot word', () => {
+    // items[] carries the bag match (template_map is unreachable here — FightReport hydrates it via an
+    // internal useEffect that never fires under renderToStaticMarkup) so `resolved` is true and the
+    // <ItemIcon> branch mounts; the icon KEY under test is entry.item_type/name either way.
+    const items = [{ item_type: 'hat', name: 'Fuwa Hood (White)', item_category: 'cosmetic_helmet' }]
+    const spoils = {
+      xp: 10,
+      tokens: 0,
+      loot: [{ item_type: 'hat', name: 'Fuwa Hood (White)', amount: 3 }],
+    }
+    const html = renderToStaticMarkup(<FightReport {...base} spoils={spoils} items={items} cost={null} />)
+    // the shared resolver's alias (proven live: HTTP 200)
+    expect(html).toContain('/assets/items/coiffe_fuwa-white.png')
+    // the raw item_type bypass this bug shipped (proven live: HTTP 404 — the placeholder-box trigger)
+    expect(html).not.toContain('/assets/items/hat.png')
+  })
+
+  test('an ordinary (non-cosmetic) drop is UNCHANGED — item_type still wins when no alias/slug exists', () => {
+    const items = [{ item_type: 'rusty_blade', name: 'Rusty Blade', item_category: 'sword' }]
+    const spoils = { xp: 10, tokens: 0, loot: [{ item_type: 'rusty_blade', name: 'Rusty Blade', amount: 1 }] }
+    const html = renderToStaticMarkup(<FightReport {...base} spoils={spoils} items={items} cost={null} />)
+    expect(html).toContain('/assets/items/rusty_blade.png')
+  })
+})
+
 // ── VICTORY-CARD OVERHAUL: show the duration time of the fight and player names, not address; a party
 //    row must never show a raw address slice; and xp and items render PER PLAYER ROW, so everyone can see
 //    what everyone rolled. Three RED-FIRST classes below: raw-address names, missing duration, aggregate-only spoils. ──
