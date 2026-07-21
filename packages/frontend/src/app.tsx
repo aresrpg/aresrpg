@@ -3,7 +3,6 @@
 import * as Sentry from '@sentry/react'
 import { Component, Suspense, lazy, type ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { Analytics } from '@vercel/analytics/react'
 
 import i18n from './i18n'
 import { use_auth, type AuthState } from './auth'
@@ -274,7 +273,6 @@ function AppBody() {
       <>
         <Toasts />
         <InboxExternalPage />
-        {import.meta.env.PROD && <Analytics />}
       </>
     )
   }
@@ -320,7 +318,6 @@ function AppBody() {
           <SpectateLanding />
         </div>
       )}
-      {import.meta.env.PROD && <Analytics />} {/* prod-only: dev/localhost sessions polluted the Vercel insights */}
     </>
   )
 }
