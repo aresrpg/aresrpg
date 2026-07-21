@@ -8,6 +8,7 @@ import { createRoot } from 'react-dom/client'
 
 import { App } from './app'
 import { load_asset_manifest, subscribe } from './asset_manifest'
+import { load_icon_slug_map } from './game/data/icon_slug_map.js'
 import { load_mob_catalog } from './game/data/mob_catalog.js'
 import { load_spell_corpus } from './game/data/spell_corpus.js'
 import { register_service_worker } from './sw'
@@ -41,6 +42,12 @@ void load_mob_catalog()
 // blobs. Non-blocking: the scene mounts while it resolves, the spell surfaces fill in on arrival. An absent
 // blob (open-source / pre-publish tree) degrades loudly to inert spell surfaces, never a crash (issue #106).
 void load_spell_corpus()
+
+// The icon slug recovery map (icon_slug_map.json) rides the SAME seam — chain_icon_slug (the one shared home
+// for encyclopedia/inventory/victory-card icon resolution) reads it map-first, falling back to its existing
+// slugify_name derivation while this resolves or if it never publishes (issue #160). Non-blocking; absence
+// degrades loudly, never a crash.
+void load_icon_slug_map()
 
 // The authored world corpus (world_corpus.json) rides the SAME seam — one pattern, three content blobs (#196).
 // It replaced the build-time seed/mainnet glob that logged `joined 0 worlds` in prod. DYNAMIC import (unlike

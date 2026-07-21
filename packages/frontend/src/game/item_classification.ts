@@ -2,6 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { ITEM_CATEGORY } from '@aresrpg/sdk/items'
 
+import { get_icon_slug_map } from './data/icon_slug_map.js'
+
 export const COSMETICS_CATEGORY = 'COSMETICS' as const
 
 export interface ItemClassificationInput {
@@ -84,17 +86,27 @@ export const slugify_name = (name: string | null | undefined): string =>
  * The icon slug derivable from a live /v1 item row when NO authored seed slug is bundled. Production ships an
  * EMPTY `virtual:item_catalog` (the seed name->icon map is private — vite.config.ts catalog_fallback_plugin),
  * so every /v1 encyclopedia/owner-items row arrives WITHOUT a `slug`, and the icon must come from the row's own
- * fields. Pets carry their UNIQUE slug AS `item_type` ('pet_timon', 'pet_lootbox'); every other class's on-chain
- * `item_type` is only the generic family word ('chestplate'/'resource'/'senshi' — 51 families over 1840 items),
- * so the slugified display name ('cinder_heart') is the published icon key. Returns null when neither is
- * derivable — the caller keeps its generic `item_type`/glyph fallback. ItemImage still owns the 404 ->
- * category-glyph degrade, so an item whose art is genuinely unpublished (seed#137) is an honest missing
- * candidate here, never a wrong icon.
+ * fields. Pets carry their UNIQUE slug AS `item_type` ('pet_timon', 'pet_lootbox') and resolve through that
+ * alone — the map is never consulted for pets, matching the content-side count reconciliation on issue #160
+ * (42 would-be pet name/map mismatches are false positives, item_type already resolves them correctly).
+ *
+ * Every other class's on-chain `item_type` is only the generic family word ('chestplate'/'resource'/'senshi'
+ * — 51 families over 1840 items), so the icon key comes from the display name — MAP-FIRST: the published
+ * `icon_slug_map` runtime blob (issue #160) joins ~1,781 display names to their AUTHORED icon slug, recovering
+ * the ~900 items whose art lives under a slug the name-derivation misses (renames, `bag_of_*` phrasing,
+ * apostrophes — e.g. 'Bag of Nightcaps' -> `bag_nightcap`, not the slugified `bag_of_nightcaps`). A name absent
+ * from the map (or the map not yet loaded — icon_slug_map.js degrades loudly, never throws) falls through to
+ * the slugified display name ('cinder_heart'), the same derivation this function always used. Returns null
+ * when neither is derivable — the caller keeps its generic `item_type`/glyph fallback. ItemImage still owns
+ * the 404 -> category-glyph degrade, so an item whose art is genuinely unpublished (seed#137) is an honest
+ * missing candidate here, never a wrong icon.
  */
 export function chain_icon_slug(item: { item_type?: string | null; name?: string | null } | null | undefined): string | null {
   const item_type = item?.item_type
   if (typeof item_type === 'string' && item_type.startsWith('pet_')) return item_type
-  return slugify_name(item?.name) || null
+  const name = item?.name
+  const authored_slug = typeof name === 'string' ? get_icon_slug_map()[name] : undefined
+  return authored_slug || slugify_name(name) || null
 }
 
 /**
