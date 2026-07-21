@@ -5,9 +5,13 @@
 // ground sample, and the arrival test. No engine, no effects — the same headless discipline as auto_run.test.js.
 import { describe, expect, test } from 'bun:test'
 
-import { CONTROLLER_CONSTANTS } from '@aresrpg/engine3/player'
+import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
 
-import {
+// MISSING-ARTIFACT (#117): fast_travel_flight.js itself imports CONTROLLER_CONSTANTS from
+// @aresrpg/engine3/player (character_controller.js), which unconditionally re-exports create_character_avatar
+// — a static import of the absent-by-design senshi_male.glb — see test_helpers/glb_fixture.js. The whole
+// module (every export below) is unreachable without the asset, so the whole file guards together.
+const {
   ARRIVAL_RADIUS,
   CRUISE_CLEARANCE,
   DESCEND_RADIUS,
@@ -16,16 +20,17 @@ import {
   flight_step,
   is_arrived,
   target_clearance,
-} from './fast_travel_flight.js'
+} = SENSHI_MALE_GLB_AVAILABLE ? await import('./fast_travel_flight.js') : {}
+const { CONTROLLER_CONSTANTS } = SENSHI_MALE_GLB_AVAILABLE ? await import('@aresrpg/engine3/player') : {}
 
-describe('FT_SPEED — run speed, never pet speed', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('FT_SPEED — run speed, never pet speed', () => {
   test('is exactly the controller RUN_SPEED (single home, no ×1.5)', () => {
     expect(FT_SPEED).toBe(CONTROLLER_CONSTANTS.RUN_SPEED)
     expect(FT_SPEED).not.toBe(CONTROLLER_CONSTANTS.RUN_SPEED * 1.5) // the mount-roam multiplier is forbidden here
   })
 })
 
-describe('flight_step — horizontal beeline at ≤ RUN speed', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('flight_step — horizontal beeline at ≤ RUN speed', () => {
   const dt = 1 / 60
   test('a far target moves exactly FT_SPEED·dt and never faster', () => {
     const pos = [0, 20, 0]
@@ -57,7 +62,7 @@ describe('flight_step — horizontal beeline at ≤ RUN speed', () => {
   })
 })
 
-describe('flight_step — altitude shaping', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('flight_step — altitude shaping', () => {
   const dt = 1 / 60
   test('climbs toward ground+CRUISE far out, bounded (never a teleport in Y)', () => {
     const pos = [0, 8, 0] // on the ground
@@ -83,7 +88,7 @@ describe('flight_step — altitude shaping', () => {
   })
 })
 
-describe('is_arrived', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('is_arrived', () => {
   test('true within ARRIVAL_RADIUS, false beyond', () => {
     expect(is_arrived(ARRIVAL_RADIUS - 0.1)).toBe(true)
     expect(is_arrived(ARRIVAL_RADIUS)).toBe(true)

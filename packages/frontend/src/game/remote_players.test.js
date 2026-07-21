@@ -22,14 +22,17 @@ import { describe, expect, it } from 'bun:test'
 import { readFileSync } from 'node:fs'
 
 import { install_browser_globals } from '../test_helpers/browser_globals.js'
+import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
 
 const restore_browser_globals = install_browser_globals()
-const { remote_rig_visible } = await import('./remote_players.js')
+// MISSING-ARTIFACT (#117): remote_players.js's engine3 avatar/mount/aura graph unconditionally imports
+// character_avatar.js — a static import of the absent-by-design senshi_male.glb — see test_helpers/glb_fixture.js.
+const { remote_rig_visible } = SENSHI_MALE_GLB_AVAILABLE ? await import('./remote_players.js') : {}
 restore_browser_globals()
 
 const source = readFileSync(new URL('./remote_players.js', import.meta.url), 'utf8')
 
-describe('remote_rig_visible — fight view owns the board, never a bespoke flag', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('remote_rig_visible — fight view owns the board, never a bespoke flag', () => {
   it('fight-view-active input → remote rig hidden (the board-leak repro)', () => {
     expect(remote_rig_visible(true)).toBe(false)
   })

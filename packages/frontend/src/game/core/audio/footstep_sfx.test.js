@@ -2,11 +2,17 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, it } from 'bun:test'
 
+import { SENSHI_MALE_GLB_AVAILABLE } from '../../../test_helpers/glb_fixture.js'
+
 // Pure-math coverage only (mirrors sfx.test.js's convention: the Audio/DOM-touching side — play_footstep,
 // tick_footsteps — is a thin, best-effort application of these, untested here, same as play_element_sfx).
-import { accumulate_step, jitter } from './footstep_sfx.js'
+// MISSING-ARTIFACT (#117): footstep_sfx.js imports ground_material.js, which imports @aresrpg/engine3/player
+// (character_controller.js, unconditionally re-exporting create_character_avatar) — a static import of the
+// absent-by-design senshi_male.glb — see test_helpers/glb_fixture.js. jitter/accumulate_step are pure math
+// with no engine dependency of their own, but the module can't load without the asset.
+const { accumulate_step, jitter } = SENSHI_MALE_GLB_AVAILABLE ? await import('./footstep_sfx.js') : {}
 
-describe('jitter — ± fractional randomization, injectable rng', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('jitter — ± fractional randomization, injectable rng', () => {
   it('rng=0 -> the low bound (1-frac); rng near 1 -> the high bound (1+frac)', () => {
     expect(jitter(100, 0.1, () => 0)).toBeCloseTo(90, 5)
     expect(jitter(100, 0.1, () => 0.999999)).toBeCloseTo(110, 4)
@@ -17,7 +23,9 @@ describe('jitter — ± fractional randomization, injectable rng', () => {
   })
 })
 
-describe('accumulate_step — distance-accumulator step trigger (fixed rng for determinism)', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
+  'accumulate_step — distance-accumulator step trigger (fixed rng for determinism)',
+  () => {
   const no_jitter = () => 0.5 // rng=0.5 -> jitter(...) returns the base stride unchanged
 
   it('below the stride threshold: no fire, the distance is carried', () => {

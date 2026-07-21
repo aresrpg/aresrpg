@@ -9,10 +9,14 @@
 import { describe, expect, test } from 'bun:test'
 
 import '../test_helpers/env_mock.js'
+import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
 
-const { resolve_pet_companion } = await import('./pet_companion.js')
+// MISSING-ARTIFACT (#117): pet_companion.js imports @aresrpg/engine3, whose board_entities.js/
+// character_controller.js unconditionally import character_avatar.js — a static import of the
+// absent-by-design senshi_male.glb — see test_helpers/glb_fixture.js.
+const { resolve_pet_companion } = SENSHI_MALE_GLB_AVAILABLE ? await import('./pet_companion.js') : {}
 
-describe('resolve_pet_companion — spawn/despawn + appearance verdict', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('resolve_pet_companion — spawn/despawn + appearance verdict', () => {
   test('pet_equipped + a slug sibling -> spawn, glb by the SAME cosmetic_glb_url convention worn cosmetics use', () => {
     const r = resolve_pet_companion(
       { id: 'c1', pet_equipped: true, pet: { item_id: '0xa004', template_id: '0x7a05', slug: 'pet_bouloute' } },
@@ -59,7 +63,9 @@ describe('resolve_pet_companion — spawn/despawn + appearance verdict', () => {
   })
 })
 
-describe("resolve_pet_companion — ?pet dev override (QA path, mirrors resolve_mount's ?mount=)", () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
+  "resolve_pet_companion — ?pet dev override (QA path, mirrors resolve_mount's ?mount=)",
+  () => {
   const with_dev = (fn) => {
     process.env.DEV = '1'
     try {

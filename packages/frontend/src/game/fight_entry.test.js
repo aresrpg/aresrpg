@@ -21,15 +21,20 @@ import { install_browser_globals } from '../test_helpers/browser_globals.js'
 // blanket object: bun runs the whole suite in ONE process, so another file may have created a partial window
 // already (the camera test does) — auth/index.ts reads window.location.origin at import the moment ANY window
 // exists, so the pieces must be guaranteed individually, whatever the file order.
+import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
+
 const restore_browser_globals = install_browser_globals()
 
-const { entry_transition, create_fight_entry } = await import('./fight_entry.js')
-const { use_dungeon } = await import('../world-shell/dungeon_store.js')
-const { context } = await import('./store.js')
+// MISSING-ARTIFACT (#117): this module graph reaches @aresrpg/engine3, whose board_entities.js/
+// character_controller.js unconditionally import character_avatar.js — a static import of the
+// absent-by-design senshi_male.glb — see test_helpers/glb_fixture.js.
+const { entry_transition, create_fight_entry } = SENSHI_MALE_GLB_AVAILABLE ? await import('./fight_entry.js') : {}
+const { use_dungeon } = SENSHI_MALE_GLB_AVAILABLE ? await import('../world-shell/dungeon_store.js') : {}
+const { context } = SENSHI_MALE_GLB_AVAILABLE ? await import('./store.js') : {}
 
 afterAll(restore_browser_globals)
 
-describe('entry_transition — the fresh-creates-only verdict fold', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('entry_transition — the fresh-creates-only verdict fold', () => {
   it("'begin' ONLY on a fresh null→set flip (fight_fresh stamped true by the door)", () => {
     expect(entry_transition(null, { fight_id: '0xf', fight_fresh: true })).toBe('begin')
   })
@@ -51,7 +56,7 @@ describe('entry_transition — the fresh-creates-only verdict fold', () => {
   })
 })
 
-describe('create_fight_entry — the gate over the real store (integration)', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('create_fight_entry — the gate over the real store (integration)', () => {
   it('fresh create fires the cinematic; resume does not; fight-end releases', () => {
     const calls = /** @type {any[][]} */ ([])
     let active = false

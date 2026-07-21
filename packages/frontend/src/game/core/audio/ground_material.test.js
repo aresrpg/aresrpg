@@ -2,12 +2,21 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, it } from 'bun:test'
 
+import { SENSHI_MALE_GLB_AVAILABLE } from '../../../test_helpers/glb_fixture.js'
+
 // No mocking needed — get_block_by_id (@aresrpg/engine3/player) is a pure, real lookup (the same pattern
 // world_board_seat.test.js uses for ground_surface_y/seat_surface_y): exercise it against REAL registry
 // ids so a future registry edit that silently breaks a step tag fails a test, not just an ear.
-import { resolve_footstep_class, is_water_block } from './ground_material.js'
+// MISSING-ARTIFACT (#117): ground_material.js imports @aresrpg/engine3/player, whose character_controller.js
+// unconditionally re-exports create_character_avatar — a static import of the absent-by-design
+// senshi_male.glb — see test_helpers/glb_fixture.js.
+const { resolve_footstep_class, is_water_block } = SENSHI_MALE_GLB_AVAILABLE
+  ? await import('./ground_material.js')
+  : {}
 
-describe('resolve_footstep_class — block id -> footstep timbre (reuses block_registry sounds.step)', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
+  'resolve_footstep_class — block id -> footstep timbre (reuses block_registry sounds.step)',
+  () => {
   it('grass (3) and leaves (7) resolve to soft', () => {
     expect(resolve_footstep_class(3)).toBe('soft')
     expect(resolve_footstep_class(7)).toBe('soft')
@@ -47,7 +56,9 @@ describe('resolve_footstep_class — block id -> footstep timbre (reuses block_r
   })
 })
 
-describe('is_water_block — the shared liquid check (footstep wading override + water-ambience proximity)', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
+  'is_water_block — the shared liquid check (footstep wading override + water-ambience proximity)',
+  () => {
   it('water (5) is true', () => {
     expect(is_water_block(5)).toBe(true)
   })

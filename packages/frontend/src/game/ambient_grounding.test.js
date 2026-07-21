@@ -11,15 +11,19 @@
 
 import { describe, expect, it } from 'bun:test'
 
-import { find_open_spawn, ground_surface_y } from '@aresrpg/engine3/player'
-
 import { feet_of } from './ambient_placement.js'
+import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
+
+// MISSING-ARTIFACT (#117): @aresrpg/engine3/player (character_controller.js) unconditionally re-exports
+// create_character_avatar, which static-imports the absent-by-design senshi_male.glb — see
+// test_helpers/glb_fixture.js.
+const { find_open_spawn, ground_surface_y } = SENSHI_MALE_GLB_AVAILABLE ? await import('@aresrpg/engine3/player') : {}
 
 // Synthetic flat world: grass (id 1) up to y=63, air above — ground block 63, TOP FACE (feet) 64.
 const GROUND_Y = 63
 const flat = (x, y, z) => (y <= GROUND_Y ? 1 : 0)
 
-describe('mob grounding — the feet-y convention', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('mob grounding — the feet-y convention', () => {
   it('mounted feet y == find_open_spawn feet y == ground top face (never inside the ground)', () => {
     const spot = find_open_spawn(flat, 10, 10, 4)
     expect(spot).not.toBeNull()

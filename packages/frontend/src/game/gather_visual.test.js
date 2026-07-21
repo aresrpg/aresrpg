@@ -5,17 +5,25 @@
 // single home the in-world procedural prop (spawn_rigs.js create_gather_layer → synth_gather_buffer) reads. The
 // ART itself (the procedural wheat/herb/ore sprite per id) is proven separately in the engine's gather_synth.test.js.
 
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { describe, expect, it } from 'bun:test'
 import { GATHER_RESOURCES } from '@aresrpg/sdk/jobs'
 
-import { resource_visual } from './spawn_rigs.js'
+import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
+
+// MISSING-ARTIFACT (#117): seed/gathering is content-pipeline output, absent by design in this public repo.
+const GATHER_SEED_AVAILABLE = existsSync(join(import.meta.dir, '../../../../seed/gathering'))
+
+// MISSING-ARTIFACT (#117): spawn_rigs.js imports @aresrpg/engine3/player, whose character_controller.js
+// unconditionally re-exports create_character_avatar — a static import of the absent-by-design
+// senshi_male.glb — see test_helpers/glb_fixture.js.
+const { resource_visual } = SENSHI_MALE_GLB_AVAILABLE ? await import('./spawn_rigs.js') : {}
 
 const JOBS = /** @type {const} */ (['farmer', 'herbalist', 'miner'])
 
-describe('resource_visual — (job, tier) → gatherable identity + family', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('resource_visual — (job, tier) → gatherable identity + family', () => {
   it('every job (0-2) × tier (1-11) resolves to the roster id at that tier (the procedural sprite key)', () => {
     JOBS.forEach((job_key, job) => {
       for (let tier = 1; tier <= 11; tier += 1) {
@@ -73,7 +81,7 @@ describe('resource_visual — (job, tier) → gatherable identity + family', () 
 // constitution per SPEC §12). A non-node id (e.g. cursed_amalgam — a rare DROP + craft
 // reagent) must NEVER appear as a node identity. The fixture is read from the seed at test time, so it catches
 // drift in either direction (a wrong tier id OR an id the seed doesn't back). ──────────────────────────────
-describe('GATHER_RESOURCES id map ⇔ seed base_resources.json (the fixed node identities)', () => {
+describe.skipIf(!GATHER_SEED_AVAILABLE)('GATHER_RESOURCES id map ⇔ seed base_resources.json (the fixed node identities)', () => {
   const seed_dir = join(import.meta.dir, '../../../../seed/gathering')
   const seed_rows = (job) => JSON.parse(readFileSync(join(seed_dir, job, 'base_resources.json'), 'utf8'))
   // (job) → Map(tier → id), derived from each row's gatheringJson jobType+tier — the seed's own truth.

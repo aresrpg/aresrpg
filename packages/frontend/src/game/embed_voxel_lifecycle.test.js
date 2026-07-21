@@ -7,13 +7,18 @@ import { install_browser_globals } from '../test_helpers/browser_globals.js'
 
 // embed_voxel owns a browser-flavoured dependency graph. Patch only the import-time surface; this test drives
 // the pure lifecycle verdict and deliberately avoids process-global mock.module stubs.
+import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
+
 const restore_browser_globals = install_browser_globals()
 
-const { should_reuse_pending_session } = await import('./embed_voxel.js')
+// MISSING-ARTIFACT (#117): embed_voxel.js imports @aresrpg/engine3, whose board_entities.js/
+// character_controller.js unconditionally import character_avatar.js — a static import of the
+// absent-by-design senshi_male.glb — see test_helpers/glb_fixture.js.
+const { should_reuse_pending_session } = SENSHI_MALE_GLB_AVAILABLE ? await import('./embed_voxel.js') : {}
 
 afterAll(restore_browser_globals)
 
-describe('pending voxel session identity', () => {
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('pending voxel session identity', () => {
   test('world A cannot be reused by an immediate world B mount', () => {
     expect(should_reuse_pending_session('0xWORLD_A', '0xWORLD_B')).toBe(false)
   })
