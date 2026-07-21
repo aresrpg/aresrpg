@@ -106,10 +106,11 @@ let rate_limit_wave: RateLimitWave | null = null
 let rate_limit_blocked_until = 0
 const endpoint_backoff_attempts = new Map<string, number>()
 
-// #242 read-layer census: /v1/status (RpcLagBanner) and /v1/sponsor/remaining (use_sponsor_allowance) used to
-// fire on raw use_rpc_view timers OUTSIDE this scheduler — meaning they kept attempting fetches even while a
-// rate-limit wave was already active elsewhere, piling onto the exact congestion they should have backed off
-// from. Both now stagger-start and pause with every other world-poll endpoint.
+// #242 read-layer census: /v1/status (RpcLagBanner), /v1/sponsor/remaining (use_sponsor_allowance), and
+// /v1/config (ContractsPausedModalHost's 30s maintenance poll) used to fire on raw timers OUTSIDE this
+// scheduler — meaning they kept attempting fetches even while a rate-limit wave was already active elsewhere,
+// piling onto the exact congestion they should have backed off from. All three now stagger-start and pause
+// with every other world-poll endpoint.
 const WORLD_POLL_PATHS = new Set([
   '/v1/characters',
   '/v1/parties',
@@ -118,6 +119,7 @@ const WORLD_POLL_PATHS = new Set([
   '/v1/dungeon-runs',
   '/v1/status',
   '/v1/sponsor/remaining',
+  '/v1/config',
 ])
 const poll_scheduler = create_world_poll_scheduler({
   is_paused: () =>
