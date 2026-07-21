@@ -16,7 +16,7 @@
 // malformed observation costs at most one entry, never a frame. Consumers read `rec.entries` for
 // forensics; `dump_capsule` is the clean, replayable export.
 
-import { digest } from './timeline.js'
+import { digest, check_tripwires } from './timeline.js'
 
 /** ~3 fights of commands (issue #62) — the in-memory hot-buffer bound; durable retention is R4/R8. */
 export const DEFAULT_CAPACITY = 512
@@ -134,6 +134,27 @@ export const observe_reduce = (
     pre: version_of(pre_state),
     post: version_of(post_state),
   })
+
+/**
+ * THE CHECKED TAP (issue #63 · R2): observe one reduce() call AND run the physics tripwires over the
+ * SAME transition at the SAME edge. Returns the updated recorder plus the violation records for this
+ * step — the sensor-net signal R3/R4 consume to snip the surrounding window (`dump_capsule`) into a
+ * travelling capsule. Pure and TOTAL: records and reports, never mutates the observed states and is
+ * structurally unable to throw into the game (a live invariant breach is DATA, not a crash). Composes
+ * R1's `observe_reduce` with timeline.js `check_tripwires` — zero duplication.
+ * @param {Recorder} rec
+ * @param {{ fight_id: string, command: object, pre_state: object, post_state: object, events?: object[], at?: number }} params
+ * @returns {{ rec: Recorder, violations: { rule: string, entities: string[], message: string, evidence: string }[] }}
+ */
+export const observe_reduce_checked = (rec, params) => ({
+  rec: observe_reduce(rec, params),
+  violations: check_tripwires(
+    params.pre_state,
+    params.post_state,
+    params.command,
+    params.events ?? [],
+  ),
+})
 
 /** The fight_id of the most recently opened recording still in the buffer (or null). */
 const latest_open_fight = rec => {

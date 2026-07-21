@@ -69,14 +69,31 @@ export const digest = value => {
   return (hash >>> 0).toString(16).padStart(8, '0')
 }
 
-// ── Physics invariants v1 ────────────────────────────────────────────────────────
-// Universal laws of any fight, independent of content. Each check looks at one transition
-// (prev → next, with the command + events that caused it) and returns a violation line or null.
+// ── Physics invariants v1 · R2 tripwires ─────────────────────────────────────────
+// Universal laws of any fight, independent of content — THEOREMS of the pure reducer, so a hit is a
+// bug or a deliberate rules change, never noise. Each check looks at one transition (prev → next,
+// with the command + events that caused it) and returns a { message, entities } violation or null.
+// `check_tripwires` (below) runs the whole set and wraps each hit into a violation RECORD; the same
+// set feeds the replay gate (`replay_capsule`) and the live client tap (recorder.js
+// `observe_reduce_checked`) — one home for the laws, zero duplication (issue #63 · R2).
+//   • dead_stays_dead   — damage floors health at 0 (fight_actions.js:116); no path revives hp<=0.
+//   • hp_bounds         — damage clamps to 0, healing to health_max (fight_actions.js:116,167).
+//   • occupancy_exclusive — make_is_walkable forbids a cell held by another living actor (reduce.js:126).
+//   • winner_terminal   — with_victory latches the winner; a concluded fight is never re-decided (reduce.js:152).
+//   • change_has_cause  — THE MASTER RULE: reduce returns `events: []` ONLY on guard/no-op paths that
+//                         return the UNCHANGED input state (reduce.js:229,235,410,415,478…), so any
+//                         state change is named by ≥1 event (0 causeless steps across the corpus).
 
 /** @param {object} state @returns {object[]} */
 const all_entities = state => [...state.team0, ...state.team1]
 
-/** @type {{ id: string, check: (prev: object, next: object, command: object, events: object[]) => string | null }[]} */
+/**
+ * @typedef {object} Violation
+ * @property {string} message  human-readable breach description
+ * @property {string[]} entities  ids of the entities implicated (may be empty)
+ */
+
+/** @type {{ id: string, check: (prev: object, next: object, command: object, events: object[]) => Violation | null }[]} */
 export const PHYSICS_INVARIANTS = [
   {
     id: 'dead_stays_dead',
@@ -88,7 +105,10 @@ export const PHYSICS_INVARIANTS = [
           return after !== undefined && after.health > 0
         })
       return risen
-        ? `entity ${risen.id} was dead (hp<=0) and re-entered alive`
+        ? {
+            message: `entity ${risen.id} was dead (hp<=0) and re-entered alive`,
+            entities: [risen.id],
+          }
         : null
     },
   },
@@ -99,7 +119,10 @@ export const PHYSICS_INVARIANTS = [
         entity => entity.health < 0 || entity.health > entity.health_max,
       )
       return out
-        ? `entity ${out.id} health ${out.health} outside [0, ${out.health_max}]`
+        ? {
+            message: `entity ${out.id} health ${out.health} outside [0, ${out.health_max}]`,
+            entities: [out.id],
+          }
         : null
     },
   },
@@ -110,17 +133,21 @@ export const PHYSICS_INVARIANTS = [
       const seen = living.reduce(
         (acc, entity) => {
           const key = `${entity.cell.x},${entity.cell.y}`
+          const held = acc.cells[key]
           return {
             clash:
               acc.clash ??
-              (acc.cells[key]
-                ? `cell ${key} holds ${acc.cells[key]} AND ${entity.id}`
+              (held
+                ? {
+                    message: `cell ${key} holds ${held} AND ${entity.id}`,
+                    entities: [held, entity.id],
+                  }
                 : null),
             cells: { ...acc.cells, [key]: entity.id },
           }
         },
         {
-          clash: /** @type {string|null} */ (null),
+          clash: /** @type {Violation|null} */ (null),
           cells: /** @type {Record<string,string>} */ ({}),
         },
       )
@@ -131,10 +158,53 @@ export const PHYSICS_INVARIANTS = [
     id: 'winner_terminal',
     check: (prev, next) =>
       prev.winner !== -1 && next.winner !== prev.winner
-        ? `winner changed ${prev.winner} -> ${next.winner} after conclusion`
+        ? {
+            message: `winner changed ${prev.winner} -> ${next.winner} after conclusion`,
+            entities: [],
+          }
+        : null,
+  },
+  {
+    id: 'change_has_cause',
+    check: (prev, next, command, events) =>
+      digest(prev) !== digest(next) && events.length === 0
+        ? {
+            message: `state changed with no event naming the cause (command ${command?.type ?? '?'})`,
+            entities: [],
+          }
         : null,
   },
 ]
+
+/**
+ * Run every physics invariant over ONE transition and return a VIOLATION RECORD per breach: the rule
+ * id, the implicated entity ids, the human message, and an EVIDENCE digest of the causing transition
+ * (command + events) — the fingerprint R3/R4 use to snip the surrounding window into a travelling
+ * capsule. Pure and TOTAL: a violation is DATA recorded for later reporting, never an exception
+ * thrown into a game path. Shared by `replay_capsule` (the gate) and the live tap — the one place the
+ * laws run.
+ * @param {object} prev  state BEFORE the command
+ * @param {object} next  state AFTER the command
+ * @param {object} command  the reducer command that caused the transition
+ * @param {object[]} [events]  the events reduce() emitted for it
+ * @returns {{ rule: string, entities: string[], message: string, evidence: string }[]}
+ */
+export const check_tripwires = (prev, next, command, events = []) => {
+  const evidence = digest({ command, events })
+  return PHYSICS_INVARIANTS.flatMap(invariant => {
+    const hit = invariant.check(prev, next, command, events)
+    return hit === null
+      ? []
+      : [
+          {
+            rule: invariant.id,
+            entities: hit.entities,
+            message: hit.message,
+            evidence,
+          },
+        ]
+  })
+}
 
 // ── Capsule replay ───────────────────────────────────────────────────────────────
 
@@ -190,12 +260,10 @@ export const replay_capsule = capsule => {
   const folded = capsule.commands.reduce(
     (acc, command, index) => {
       const { state, events } = reduce(acc.state, command, ctx)
-      const violations = PHYSICS_INVARIANTS.map(invariant => {
-        const violation = invariant.check(acc.state, state, command, events)
-        return violation === null
-          ? null
-          : `[${invariant.id}] step ${index} (${command.type}): ${violation}`
-      }).filter(violation => violation !== null)
+      const violations = check_tripwires(acc.state, state, command, events).map(
+        violation =>
+          `[${violation.rule}] step ${index} (${command.type}): ${violation.message}`,
+      )
       return {
         state,
         steps: [...acc.steps, { index, command, events, state }],
