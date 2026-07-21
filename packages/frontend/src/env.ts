@@ -17,9 +17,27 @@ export const ASSETS_URL = '/assets'
 // keyless, read-only view API — the UI-DATA LAW: reactive short-poll req/res (see src/rpc/use_view.ts),
 // NEVER streaming, NEVER silently stale. Chain-direct SDK calls stay for tx pre-flight only. No package id
 // is ever hardcoded app-side: the api resolves ids from the indexer, so pointing VITE_RPC_URL at the
-// testnet deploy survives a republish untouched. Dev default = the local api's default PORT (3000); devops
-// sets VITE_RPC_URL to the deployed indexer host for the demo build.
-export const RPC_URL = (env.VITE_RPC_URL || 'http://localhost:3000').replace(/\/+$/, '')
+// testnet deploy survives a republish untouched. An explicit VITE_RPC_URL always wins. Unset: the local
+// dev server (`import.meta.env.DEV`, vite serve) falls back to the local api's default PORT (3000); any
+// BUILT bundle (preview or production — `vite build` always has DEV=false) falls back to the live testnet
+// read-API host instead of an unreachable localhost (a preview deploy that forgot to set VITE_RPC_URL was
+// spamming ERR_CONNECTION_REFUSED at localhost:3000 in the console — 2026-07-21). The prod host is the
+// repo's own recorded truth, not a guess: packages/move/scripts/shop_live_rows.mjs queries it directly and
+// src/rpc/contract.test.ts's fixture provenance header names it as "VITE_RPC_URL of the deployed testnet build".
+//
+// derive_rpc_url is deliberately just "override-or-fallback + normalize" — the dev/prod SELECTION stays a
+// literal `import.meta.env.DEV` ternary at the call site below (not a function parameter): Vite statically
+// replaces that exact literal and dead-code-eliminates the losing branch, so a BUILT bundle never carries the
+// 'http://localhost:3000' string at all. Routing is_dev through a function argument instead defeats that —
+// esbuild cannot specialize an exported function per call site, so both branches would ship as inert text
+// (caught by this file's own scripts/assert_clean_bundle.mjs gate when tried).
+export function derive_rpc_url(vite_rpc_url: string | undefined, fallback: string): string {
+  return (vite_rpc_url || fallback).replace(/\/+$/, '')
+}
+export const RPC_URL = derive_rpc_url(
+  env.VITE_RPC_URL,
+  import.meta.env.DEV ? 'http://localhost:3000' : 'https://rpc.aresrpg.world'
+)
 
 // Stateless @server sponsor endpoint — the client's ONE sponsorship door (the
 // Mysten sui-gas-pool is identity-blind BY DESIGN, an internal primitive only server-side services may call;
