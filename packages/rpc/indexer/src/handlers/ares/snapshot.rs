@@ -29,7 +29,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 use serde::Serialize;
-use serde_json::json;
+use serde_json::{json, Value};
 use sui_indexer_alt_framework::pipeline::{sequential::Handler, Processor};
 use sui_indexer_alt_framework::store::Store;
 use sui_indexer_alt_framework::types::base_types::{ObjectID, SuiAddress};
@@ -40,9 +40,9 @@ use sui_indexer_alt_framework::types::object::Owner;
 use tracing::debug;
 
 use super::model::{
-    BoardCreated, CharacterObject, Crushed, EquippedItemField, FightOutcomeObject, ItemObject, ItemTemplateObject,
-    JobXpField, KioskItemListed, PersonalKioskCapObject, PetBoxClaimObject, PoolBuy, PoolSell, ProgressionField,
-    RecipeObject, RecipelessSet, SaleBought, ZoneField, ZoneGroupRootField,
+    BoardCreated, CharacterObject, Crushed, EquippedItemField, FightOutcomeObject, ItemObject, ItemStatsField,
+    ItemTemplateObject, JobXpField, KioskItemListed, PersonalKioskCapObject, PetBoxClaimObject, PoolBuy, PoolSell,
+    ProgressionField, RecipeObject, RecipelessSet, SaleBought, ZoneField, ZoneGroupRootField,
 };
 use super::project::{
     self, char_init, del, k_character, k_item, k_lastsale, k_template, k_world, k_zone, k_zones, mpath, sadd,
@@ -62,6 +62,13 @@ const FORGEMAGIE_MODULE: &str = "forgemagie";
 const ITEM_MODULE: &str = "item";
 const ITEM_TYPE: &str = "Item";
 const ITEM_TEMPLATE_TYPE: &str = "ItemTemplate";
+/// `aresrpg::item_stats` — owns the [min,max] stat-range dynamic-field KEYS attached to an
+/// ItemTemplate's UID (`attach_ranges`/`set_ranges`, issue #219). Like `zones::ZoneKey` below,
+/// these are PLAIN struct keys (NOT wrapped in `extension::NsKey<K>`), so they are matched
+/// directly by (module, name) — the ItemTemplate is the Field's checkpoint `ObjectOwner`.
+const ITEM_STATS_MODULE: &str = "item_stats";
+const STATS_MIN_KEY_TYPE: &str = "StatsMinKey";
+const STATS_MAX_KEY_TYPE: &str = "StatsMaxKey";
 /// `kiosk::personal_kiosk::PersonalKioskCap` — the mysten non-transferable kiosk-owner cap.
 /// Like `0x2::dynamic_field::Field` below, it is framework-adjacent (NOT an AresRPG package),
 /// so it is matched by `(module, name)` and EXEMPTED from the AresRPG package allowlist — it
@@ -314,6 +321,21 @@ fn is_group_root_key(key_tag: &TypeTag) -> bool {
     s.module.as_str() == ZONES_MODULE && s.name.as_str() == ZONE_GROUP_ROOT_KEY_TYPE
 }
 
+/// Is a `0x2::dynamic_field::Field`'s KEY type parameter the authored MIN stat-range key —
+/// `aresrpg::item_stats::StatsMinKey`? A PLAIN struct key (NOT `NsKey`-wrapped), attached
+/// directly to an ItemTemplate's UID — mirrors [`is_zone_key`]'s match-by-(module,name) shape.
+fn is_stats_min_key(key_tag: &TypeTag) -> bool {
+    let TypeTag::Struct(s) = key_tag else { return false };
+    s.module.as_str() == ITEM_STATS_MODULE && s.name.as_str() == STATS_MIN_KEY_TYPE
+}
+
+/// The sibling MAX stat-range key — `aresrpg::item_stats::StatsMaxKey`. Mirrors [`is_stats_min_key`];
+/// only the inner NAME differs, same as `StatsMinKey`'s own byte-identical `ItemStatistics` value.
+fn is_stats_max_key(key_tag: &TypeTag) -> bool {
+    let TypeTag::Struct(s) = key_tag else { return false };
+    s.module.as_str() == ITEM_STATS_MODULE && s.name.as_str() == STATS_MAX_KEY_TYPE
+}
+
 /// Project one per-job XP dynamic field onto its owner character's doc: `$.jobs["<job u8>"] =
 /// <absolute total xp>`. The DF `value` IS the running total (`character_link::add_job_xp` banks
 /// gather/craft/forgemagie xp), so this is an idempotent ABSOLUTE upsert — replay-safe with no
@@ -550,6 +572,54 @@ pub fn map_item_template_object(id: &str, contents: &[u8]) -> Option<Vec<RedisWr
         set(key.clone(), "$.category", json!(t.category)),
         set(key, "$.level", json!(t.level)),
         sadd(K_TEMPLATES.into(), id.to_string()),
+    ])
+}
+
+/// The 17-field stat block as a name-keyed JSON object (catalog id order), shared by both
+/// halves below — one home for the field enumeration on the Redis-write side (mirrors
+/// `item_stats::ItemStatistics`'s own field order, the single Move-side home).
+fn stats_json(f: &ItemStatsField) -> Value {
+    json!({
+        "vitality": f.vitality, "wisdom": f.wisdom, "strength": f.strength, "intelligence": f.intelligence,
+        "chance": f.chance, "agility": f.agility, "range": f.range, "movement": f.movement, "action": f.action,
+        "critical": f.critical, "raw_damage": f.raw_damage, "critical_chance": f.critical_chance,
+        "critical_outcomes": f.critical_outcomes, "earth_resistance": f.earth_resistance,
+        "fire_resistance": f.fire_resistance, "water_resistance": f.water_resistance,
+        "air_resistance": f.air_resistance,
+    })
+}
+
+/// Project an ItemTemplate's authored MIN stat-range DF (issue #219) onto its encyclopedia doc
+/// `rpc:template:{id}` — the SAME doc `map_item_template_object` / the `TemplateCreated` event
+/// arm project (`project.rs`) — as `$.stats_min`, the WHOLE decoded 17-field block in ONE write
+/// (mirrors the zone-DF pair `map_zone_field`/`map_group_root_field`: two independent DFs
+/// converging on one doc, no cross-DF read-modify-write — the sibling `StatsMaxKey` lands at
+/// the independent `$.stats_max` path below). Self-sufficient (NX skeleton + SADD) so a
+/// template surfaces even if this snapshot lands before the `TemplateCreated` event or the
+/// ItemTemplate object snapshot. Latest-wins: `item_stats::set_ranges` can update a LIVE
+/// template's authored ranges (already-minted items keep their own fixed `StatsKey` roll,
+/// untouched — only future mints see the change). `None` = the bytes did not decode as an
+/// `ItemStatsField` (defensive — never fails the batch, mirrors `map_zone_field`). The API view
+/// (`handle_encyclopedia`) joins `$.stats_min`/`$.stats_max` into the served
+/// `stats: {field: [min,max]}` shape.
+pub fn map_item_stats_min_field(template_id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
+    let f: ItemStatsField = bcs::from_bytes(contents).ok()?;
+    let key = k_template(template_id);
+    Some(vec![
+        set_nx(key.clone(), "$", json!({ "template": template_id, "live": true })),
+        set(key, "$.stats_min", stats_json(&f)),
+        sadd(K_TEMPLATES.into(), template_id.to_string()),
+    ])
+}
+
+/// The sibling MAX half — mirrors [`map_item_stats_min_field`] at `$.stats_max`.
+pub fn map_item_stats_max_field(template_id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
+    let f: ItemStatsField = bcs::from_bytes(contents).ok()?;
+    let key = k_template(template_id);
+    Some(vec![
+        set_nx(key.clone(), "$", json!({ "template": template_id, "live": true })),
+        set(key, "$.stats_max", stats_json(&f)),
+        sadd(K_TEMPLATES.into(), template_id.to_string()),
     ])
 }
 
@@ -1072,7 +1142,7 @@ impl Processor for AresSnapshotHandler {
                     // `ObjectOwner` IS that parent (a Character or the World). Discriminated by the key
                     // TYPE PARAMETER (never the byte-identical bodies), latest-wins per parent. Independent
                     // of the kiosk map above (a first-party-DF id is never looked up AS a wrapper, so the
-                    // shared insert stays inert for it). Six arms:
+                    // shared insert stays inert for it). Eight arms:
                     //   • job-xp   (`Field<NsKey<JobXpKey>, u64>`, parent=character)  — ABSOLUTE running total.
                     //   • progression (`…<ProgressionKey>, Progression>`, character)  — fight xp/level + RAW hp/stamp.
                     //   • equipment  (`…<EquipmentKey>, EquipmentMap>`, character)     — NET GEAR vitality cache.
@@ -1080,6 +1150,8 @@ impl Processor for AresSnapshotHandler {
                     //   • zone     (`Field<zones::ZoneKey, Zone>`, parent=WORLD)       — seed + consumed bitmaps.
                     //   • group root (`Field<zones::ZoneGroupRootKey, ZoneGroupCommitment>`, WORLD) — the
                     //     fight-create diet's committed Blake2b mob-group root + count (witness ingredient).
+                    //   • stats min/max (`Field<item_stats::StatsMinKey|StatsMaxKey, ItemStatistics>`,
+                    //     parent=ITEM TEMPLATE) — the authored [min,max] roll ranges (issue #219).
                     if let Owner::ObjectOwner(parent) = obj.owner() {
                         let params = ty.type_params();
                         let key = params.first().map(|k| &**k);
@@ -1130,6 +1202,20 @@ impl Processor for AresSnapshotHandler {
                             // Same WORLD parent as the Zone DF — the diet's group-root commitment.
                             if let Some(mv) = obj.data.try_as_move() {
                                 if let Some(w) = map_group_root_field(&id(), mv.contents()) {
+                                    writes.extend(w);
+                                }
+                            }
+                        } else if key.is_some_and(is_stats_min_key) {
+                            // The StatsMinKey DF's parent (`id()`) is the ITEM TEMPLATE id (issue #219).
+                            if let Some(mv) = obj.data.try_as_move() {
+                                if let Some(w) = map_item_stats_min_field(&id(), mv.contents()) {
+                                    writes.extend(w);
+                                }
+                            }
+                        } else if key.is_some_and(is_stats_max_key) {
+                            // Same ITEM TEMPLATE parent as StatsMinKey — the sibling upper bound.
+                            if let Some(mv) = obj.data.try_as_move() {
+                                if let Some(w) = map_item_stats_max_field(&id(), mv.contents()) {
                                     writes.extend(w);
                                 }
                             }

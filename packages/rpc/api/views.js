@@ -720,12 +720,28 @@ export async function handle_rare_links(params) {
 // reached are null/absent — the UI renders the gap, never fabricates it. `spells` is
 // intentionally NOT served here: the client resolves minted SpellTemplates directly
 // (fight-spells.json from the seed manifest), so no spell liveness view is keyed.
+//
+// `?ids=<a,b,c>` (items only, issue #219) is the per-id BATCH form — mirrors `/v1/taux?ids=`
+// — for a caller that already knows which templates it needs (a shop listing, an inventory
+// characteristics tooltip) instead of pulling the full ~1840-row liveness index. Absent →
+// the existing full-index behavior, unchanged (additive).
 export async function handle_encyclopedia(params) {
   const kind = params.get('kind')
   const want = (k) => !kind || kind === k
+  const ids_param = params.get('ids')
+  const item_ids = ids_param
+    ? ids_param
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : null
 
   const [items, mobs, worlds, recipes] = await Promise.all([
-    want('items') ? read_index(K.templates, K.template) : [],
+    want('items')
+      ? item_ids
+        ? (await mget_json(item_ids.map(K.template))).filter(Boolean)
+        : read_index(K.templates, K.template)
+      : [],
     want('mobs') ? read_index(K.mobTemplates, K.mobTemplate) : [],
     want('worlds') ? read_index(K.worlds, K.world) : [],
     want('recipes') ? read_index(K.recipes, K.recipe) : [],
@@ -755,6 +771,19 @@ export async function handle_encyclopedia(params) {
   // distinct from supply's honest 0.
   const lastsale_docs = items.length ? await mget_json(items.map((t) => K.lastsale(t.template))) : []
   const lastsale_by_template = new Map(items.map((t, i) => [t.template, lastsale_docs[i]?.price_mist ?? null]))
+  // Authored [min,max] roll ranges (issue #219, indexer HANDLERS.md "Item stat ranges"): the
+  // StatsMinKey/StatsMaxKey dynamic fields snapshot INDEPENDENTLY onto the SAME template doc as
+  // `$.stats_min`/`$.stats_max` (each its own DF, no cross-DF read-modify-write on the indexer
+  // side), so this view reshapes them into the served `{field: [min, max]}` object at read time.
+  // A field present on only one half renders the other side null (never fabricated) — in
+  // practice both land together (`item_stats::attach_ranges` writes both DFs in the SAME PTB).
+  // `{}` for a template with no ranges at all (resources/consumables/cosmetics carry none) or
+  // whose snapshot has not reached it yet — same "gap, never fabricate" stance as name/level.
+  const combine_stat_ranges = (min, max) => {
+    if (!min && !max) return {}
+    const fields = new Set([...Object.keys(min ?? {}), ...Object.keys(max ?? {})])
+    return Object.fromEntries([...fields].map((f) => [f, [min?.[f] ?? null, max?.[f] ?? null]]))
+  }
   const join_drops = (rows) =>
     rows == null
       ? null // snapshot did not decode the loot table — honest unknown (not "no drops")
@@ -780,6 +809,7 @@ export async function handle_encyclopedia(params) {
       category: t.category ?? null, // object snapshot
       supply: supply_by_template.get(t.template) ?? 0, // event-derived mint/burn counter (never null — see join above)
       last_sale_mist: lastsale_by_template.get(t.template) ?? null, // last realised per-unit price (string MIST) — null until the first sale ever
+      stats: combine_stat_ranges(t.stats_min, t.stats_max), // {field: [min,max]} authored roll ranges (issue #219, item_stats DF snapshot); {} for templates with none (resources/consumables/cosmetics) or not yet snapshotted
     })),
     mobs: mobs.map((m) => ({
       template_id: m.template,

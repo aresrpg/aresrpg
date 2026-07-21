@@ -816,6 +816,42 @@ pub struct ItemTemplateObject {
     pub level: u16,
 }
 
+/// The contents of ONE half (min or max) of an ItemTemplate's authored stat-range dynamic
+/// field — `0x2::dynamic_field::Field<item_stats::StatsMinKey, item_stats::ItemStatistics>`
+/// (or the sibling `StatsMaxKey`; only the KEY TYPE distinguishes which bound it is — see
+/// `snapshot::is_stats_min_key`/`is_stats_max_key`). Attached DIRECTLY to the ItemTemplate's
+/// UID by `item_stats::attach_ranges`/`set_ranges` (issue #219), so the Field's checkpoint
+/// `ObjectOwner` IS the template — the same first-party-DF shape as the zone DFs on a World's
+/// UID. `StatsMinKey {}`/`StatsMaxKey {}` are declared zero-field, and BCS gives every empty
+/// Move struct a hidden `dummy_field: bool` (the SAME P1 xp-reset-on-refresh lesson as
+/// [`ProgressionField`]) — PROVEN here against a LIVE testnet capture
+/// (`snapshot_tests.rs::item_stats_min_field_bcs_decodes_the_real_onchain_wire`), not just a
+/// self-encoded round trip. Wire: `id: UID(32) | dummy_field: bool(1) | 17 × u16` = 67 bytes;
+/// the 17 fields mirror `item_stats::ItemStatistics` byte-for-byte (catalog id order — BCS is
+/// positional, so this order is load-bearing).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ItemStatsField {
+    pub id: ObjectID,
+    pub dummy_field: bool, // StatsMinKey {} / StatsMaxKey {} — empty Move structs are one bool on the wire
+    pub vitality: u16,
+    pub wisdom: u16,
+    pub strength: u16,
+    pub intelligence: u16,
+    pub chance: u16,
+    pub agility: u16,
+    pub range: u16,
+    pub movement: u16,
+    pub action: u16,
+    pub critical: u16,
+    pub raw_damage: u16,
+    pub critical_chance: u16,
+    pub critical_outcomes: u16,
+    pub earth_resistance: u16,
+    pub fire_resistance: u16,
+    pub water_resistance: u16,
+    pub air_resistance: u16,
+}
+
 /// `aresrpg::item::Item` object contents (the loose-bag `/v1/owner-items` view). `name`,
 /// `category` and `amount` live ONLY in the object — the `ItemMinted` event carries just
 /// `{ item, template, item_type, amount }` and NO name/category — so the bag's display

@@ -745,6 +745,170 @@ fn item_template_decodes_current_onchain_field_order() {
     assert_eq!(set_json(&writes, "$.level"), Some("12"));
 }
 
+// ── Item-template stat-range dynamic fields (issue #219 — encyclopedia characteristics) ──────
+
+#[test]
+fn item_stats_min_field_projects_the_named_block_onto_the_template_doc() {
+    let id = "0x00000000000000000000000000000000000000000000000000000000000000ab";
+    let f = ItemStatsField {
+        id: ObjectID::from_hex_literal("0xdf1").unwrap(),
+        dummy_field: false,
+        vitality: 32_800,
+        wisdom: 32_768,
+        strength: 32_768,
+        intelligence: 32_768,
+        chance: 32_768,
+        agility: 32_768,
+        range: 32_768,
+        movement: 32_768,
+        action: 32_768,
+        critical: 32_768,
+        raw_damage: 32_768,
+        critical_chance: 32_768,
+        critical_outcomes: 32_768,
+        earth_resistance: 32_768,
+        fire_resistance: 32_768,
+        water_resistance: 32_768,
+        air_resistance: 32_768,
+    };
+    let writes =
+        map_item_stats_min_field(id, &bcs::to_bytes(&f).unwrap()).expect("item stats min DF must decode");
+
+    // Self-sufficient: NX skeleton first (a stats DF can land before TemplateCreated/the object snapshot).
+    assert!(matches!(&writes[0], RedisWrite::Set { key, nx: true, .. } if key == &k_template(id)));
+    // Structural comparison (never a hand-guessed key order — this crate's `serde_json` resolves
+    // with `preserve_order`/`indexmap`, so `Value::eq` is the only order-independent check).
+    let stats_min: Value = serde_json::from_str(set_json(&writes, "$.stats_min").unwrap()).unwrap();
+    assert_eq!(
+        stats_min,
+        json!({
+            "vitality": 32800, "wisdom": 32768, "strength": 32768, "intelligence": 32768, "chance": 32768,
+            "agility": 32768, "range": 32768, "movement": 32768, "action": 32768, "critical": 32768,
+            "raw_damage": 32768, "critical_chance": 32768, "critical_outcomes": 32768, "earth_resistance": 32768,
+            "fire_resistance": 32768, "water_resistance": 32768, "air_resistance": 32768,
+        })
+    );
+    assert!(has_sadd(&writes, "rpc:idx:templates", id));
+}
+
+#[test]
+fn item_stats_max_field_projects_onto_the_sibling_stats_max_path() {
+    let id = "0x00000000000000000000000000000000000000000000000000000000000000ab";
+    let f = ItemStatsField {
+        id: ObjectID::from_hex_literal("0xdf2").unwrap(),
+        dummy_field: false,
+        vitality: 33_000,
+        wisdom: 32_768,
+        strength: 32_768,
+        intelligence: 32_768,
+        chance: 32_768,
+        agility: 32_768,
+        range: 32_768,
+        movement: 32_768,
+        action: 32_768,
+        critical: 32_768,
+        raw_damage: 32_768,
+        critical_chance: 32_768,
+        critical_outcomes: 32_768,
+        earth_resistance: 32_768,
+        fire_resistance: 32_768,
+        water_resistance: 32_768,
+        air_resistance: 32_768,
+    };
+    let writes =
+        map_item_stats_max_field(id, &bcs::to_bytes(&f).unwrap()).expect("item stats max DF must decode");
+    assert!(matches!(&writes[0], RedisWrite::Set { key, nx: true, .. } if key == &k_template(id)));
+    // Independent sub-path from the min half — no cross-DF read-modify-write.
+    assert!(set_json(&writes, "$.stats_min").is_none());
+    assert!(set_json(&writes, "$.stats_max").unwrap().contains(r#""vitality":33000"#));
+    assert!(has_sadd(&writes, "rpc:idx:templates", id));
+}
+
+/// RUNTIME PROVENANCE (issue #219): the exact 67 bytes of the LIVE testnet `StatsMinKey` dynamic
+/// field `0x0c426977…8a870` on ItemTemplate `0xec8b1444…30225` ("Windbreak", a level-113
+/// chestplate; the min/max ranges are attached ATOMICALLY by `item_stats::attach_ranges` in the
+/// SAME transaction `EQJvWvJKEfFi4vZ1jta8Azw2pGx2PNdewphdqeZ58RLn`, version 940290060, digest
+/// `CADV49BpTWzaB2Fc7taehG6F4N3cme2VsWZZPfmKQm1s`) — fetched via `sui client dynamic-field
+/// <template> --json` (the CLI's own gRPC config; testnet JSON-RPC is dead — see
+/// reference_sui_testnet_rpc_endpoint), reading the `fieldObject.contents.value` BCS bytes (the
+/// Move object's own contents, exactly what `MoveObject::contents()` hands `process()`). Proves
+/// the `StatsMinKey {}` empty-struct wire (`id:UID(32) | dummy_field:bool(1) | 17×u16`) matches
+/// the live chain byte-for-byte, not just a self-encoded round trip (the SAME class of bug the
+/// Progression DF's `dummy_field` omission shipped — P1 xp-reset-on-refresh, 2026-07-17).
+const REAL_STATS_MIN_FIELD_BCS_HEX: &str = "0c42697752fcbc484f0de9bcfe8d7627e6d4769052806f55589650bad9e8a8700014800080118000800080008000800080008000800080008000800080008000800280";
+
+#[test]
+fn item_stats_min_field_bcs_decodes_the_real_onchain_wire() {
+    let bytes = hex::decode(REAL_STATS_MIN_FIELD_BCS_HEX).unwrap();
+    assert_eq!(bytes.len(), 32 + 1 + 17 * 2); // 67 — id | dummy_field | 17 × u16
+    let decoded: ItemStatsField = bcs::from_bytes(&bytes).expect("real StatsMinKey DF bytes must decode");
+    // Live values (SHIFT_U16 = 32768 centre): vitality/strength/air_resistance carry the authored
+    // MIN bonus, every other field sits at the neutral centre.
+    assert_eq!(
+        (decoded.vitality, decoded.strength, decoded.air_resistance, decoded.wisdom),
+        (32_788, 32_785, 32_770, 32_768)
+    );
+
+    let id = "0xec8b1444018aa34a552289698500fb0e5d6cf62eec29c0d80ce7ca7bdab30225";
+    let writes = map_item_stats_min_field(id, &bytes).expect("must project");
+    let stats_min = set_json(&writes, "$.stats_min").unwrap();
+    assert!(stats_min.contains(r#""vitality":32788"#));
+    assert!(stats_min.contains(r#""strength":32785"#));
+    assert!(stats_min.contains(r#""air_resistance":32770"#));
+    assert!(stats_min.contains(r#""wisdom":32768"#));
+}
+
+/// RUNTIME PROVENANCE (issue #219): the sibling `StatsMaxKey` field `0xf84bfef9…5143c0` on the
+/// SAME ItemTemplate/transaction as the MIN fixture above (version 940290060, digest
+/// `CriMK2o4FrefRA4jvtgBbofJFKnj9ndNvWciog7uzSTw`) — captured + fetched identically.
+const REAL_STATS_MAX_FIELD_BCS_HEX: &str = "f84bfef99eeb94c3c3aed833890ac5db6fb711549d3008f8ccd8a8ccbd5143c00064800080558000800080008000800080008004800080008000800080008000800a80";
+
+#[test]
+fn item_stats_max_field_bcs_decodes_the_real_onchain_wire() {
+    let bytes = hex::decode(REAL_STATS_MAX_FIELD_BCS_HEX).unwrap();
+    assert_eq!(bytes.len(), 32 + 1 + 17 * 2);
+    let decoded: ItemStatsField = bcs::from_bytes(&bytes).expect("real StatsMaxKey DF bytes must decode");
+    assert_eq!(
+        (decoded.vitality, decoded.strength, decoded.critical, decoded.air_resistance),
+        (32_868, 32_853, 32_772, 32_778)
+    );
+
+    let id = "0xec8b1444018aa34a552289698500fb0e5d6cf62eec29c0d80ce7ca7bdab30225";
+    let writes = map_item_stats_max_field(id, &bytes).expect("must project");
+    let stats_max = set_json(&writes, "$.stats_max").unwrap();
+    assert!(stats_max.contains(r#""vitality":32868"#));
+    assert!(stats_max.contains(r#""strength":32853"#));
+    assert!(stats_max.contains(r#""critical":32772"#));
+    assert!(stats_max.contains(r#""air_resistance":32778"#));
+}
+
+#[test]
+fn is_stats_min_max_key_discriminate_from_each_other_and_the_zone_key() {
+    use std::str::FromStr;
+    // Plain struct keys (NOT `NsKey`-wrapped) — mirrors the zone-key discrimination shape.
+    let min = TypeTag::from_str("0xa11ce::item_stats::StatsMinKey").unwrap();
+    let max = TypeTag::from_str("0xa11ce::item_stats::StatsMaxKey").unwrap();
+    let zone = TypeTag::from_str("0xa11ce::zones::ZoneKey").unwrap();
+    assert!(is_stats_min_key(&min));
+    assert!(!is_stats_min_key(&max));
+    assert!(!is_stats_min_key(&zone));
+    assert!(is_stats_max_key(&max));
+    assert!(!is_stats_max_key(&min));
+    assert!(!is_stats_max_key(&zone));
+    // Cross-guard: neither sibling arm claims the other's key, and the address is IGNORED
+    // (match-by-(module,name), the same trust the sibling arms run under while unset).
+    assert!(!is_zone_key(&min));
+    assert!(!is_zone_key(&max));
+    assert!(!is_stats_min_key(&TypeTag::U64));
+    assert!(!is_stats_max_key(&TypeTag::U64));
+}
+
+#[test]
+fn item_stats_field_garbage_bytes_are_a_safe_none() {
+    assert!(map_item_stats_min_field("0xab", &[0x00, 0x01, 0x02]).is_none());
+    assert!(map_item_stats_max_field("0xab", &[0x00, 0x01, 0x02]).is_none());
+}
+
 // ── Item object snapshot (the /v1/owner-items loose bag) ──────────────────────
 
 #[test]
