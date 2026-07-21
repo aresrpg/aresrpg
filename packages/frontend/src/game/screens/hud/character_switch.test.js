@@ -92,7 +92,7 @@ describe('CharactersDrawer switch_to -> character_switch.js -> the CharacterSwit
     expect(use_dungeon.getState().dungeon_id).toBe(FIGHT_A)
   })
 
-  test('a failed session rebind invokes the visible-failure boundary once, selection still moves', async () => {
+  test('a failed session rebind invokes the visible-failure boundary and keeps the prior selection', async () => {
     await select_in_real_store(CHAR_A)
     const failures = []
 
@@ -103,7 +103,7 @@ describe('CharactersDrawer switch_to -> character_switch.js -> the CharacterSwit
     expect(failures).toHaveLength(1)
     expect(failures[0]).toBeInstanceOf(Error)
     expect(failures[0].message).toContain('has no indexed world binding')
-    await wait_for_selected_character(CHAR_B) // selection still moves first, per the seam's documented order
-    expect(context.get_state().selected_character_id).toBe(CHAR_B)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(context.get_state().selected_character_id).toBe(CHAR_A)
   })
 })

@@ -38,7 +38,7 @@ afterEach(async () => {
 })
 
 describe('CharacterSwitcher click -> selection store -> resident session', () => {
-  test('changes the active character id before invoking the real session binding re-key', async () => {
+  test('commits the active character only after the real session binding re-key succeeds', async () => {
     await select_in_real_store(TOMODO)
     const persisted = []
     const trace = []
@@ -57,8 +57,7 @@ describe('CharacterSwitcher click -> selection store -> resident session', () =>
         },
         stop_follow: () => trace.push('follow:stopped'),
         rebind_session: async (id, world_id) => {
-          await wait_for_selected_character(id)
-          expect(context.get_state().selected_character_id).toBe(id)
+          expect(context.get_state().selected_character_id).toBe(TOMODO)
           trace.push(`rebound:${id}`)
           rebind_world_character(id, world_id)
         },
@@ -67,6 +66,7 @@ describe('CharacterSwitcher click -> selection store -> resident session', () =>
     )
 
     expect(switched).toBe(true)
+    await wait_for_selected_character(PLAYER)
     expect(context.get_state().selected_character_id).toBe(PLAYER)
     expect(persisted).toEqual([PLAYER])
     const { character_id, world, joining } = use_world_binding.getState()
@@ -75,7 +75,7 @@ describe('CharacterSwitcher click -> selection store -> resident session', () =>
       world: PLAYER_WORLD,
       joining: false,
     })
-    expect(trace).toEqual([`selected:${PLAYER}`, `persisted:${PLAYER}`, 'follow:stopped', `rebound:${PLAYER}`])
+    expect(trace).toEqual([`persisted:${PLAYER}`, 'follow:stopped', `rebound:${PLAYER}`, `selected:${PLAYER}`])
     expect(failures).toEqual([])
   })
 
@@ -102,15 +102,19 @@ describe('CharacterSwitcher click -> selection store -> resident session', () =>
     expect(resumed).toEqual([CHAR_B])
   })
 
-  test('the switch SEAM rebinds the fight after selection (red today: char A fight persists over B)', async () => {
+  test('the switch seam rebinds the fight before committing selection', async () => {
     await select_in_real_store(CHAR_A)
     const dungeon = { dungeon_id: FIGHT_A, character_id: CHAR_A }
     let torn_down = false
     const resumed = []
+    const trace = []
     const switched = await select_character_session(
       { id: CHAR_B, world_id: B_WORLD },
       {
-        select_character: (id) => context.dispatch('action/select_character', id),
+        select_character: (id) => {
+          trace.push(`selected:${id}`)
+          context.dispatch('action/select_character', id)
+        },
         persist_character: async () => {},
         stop_follow: () => {},
         rebind_session: rebind_world_character,
@@ -118,38 +122,52 @@ describe('CharacterSwitcher click -> selection store -> resident session', () =>
           rebind_fight_session(id, {
             dungeon,
             reset_local: () => (torn_down = true),
-            resume: (cid) => resumed.push(cid),
+            resume: (cid) => {
+              trace.push(`resumed:${cid}`)
+              resumed.push(cid)
+            },
           }),
       }
     )
     expect(switched).toBe(CHAR_B)
     expect(torn_down).toBe(true) // char A's board torn down on the switch (not just the world)
     expect(resumed).toEqual([CHAR_B]) // char B's own live fight resumed — only the active char's fight mounts
+    expect(trace).toEqual([`resumed:${CHAR_B}`, `selected:${CHAR_B}`])
     await wait_for_selected_character(CHAR_B) // the store commit settles async — then the active id is B
     expect(context.get_state().selected_character_id).toBe(CHAR_B)
   })
 
-  test('a failed session rebind invokes the visible-failure boundary once', async () => {
+  test('a failed session rebind keeps the prior selection so the same target can retry', async () => {
     await select_in_real_store(TOMODO)
     const toast_failure = mock(() => {})
+    let rebind_attempts = 0
 
-    const switched = await handle_character_click(
-      { id: PLAYER },
-      {
-        select_character: (id) => context.dispatch('action/select_character', id),
-        persist_character: async () => {},
-        stop_follow: () => {},
-        rebind_session: rebind_world_character,
+    const deps = {
+      select_character: (id) => context.dispatch('action/select_character', id),
+      persist_character: async () => {},
+      stop_follow: () => {},
+      rebind_session: (id, world_id) => {
+        rebind_attempts += 1
+        if (rebind_attempts === 1) throw new Error('first rebind failed')
+        rebind_world_character(id, world_id)
       },
-      toast_failure
-    )
+    }
 
-    expect(switched).toBe(false)
-    await wait_for_selected_character(PLAYER)
-    expect(context.get_state().selected_character_id).toBe(PLAYER)
+    const first = await handle_character_click({ id: PLAYER, world_id: PLAYER_WORLD }, deps, toast_failure)
+
+    expect(first).toBe(false)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(context.get_state().selected_character_id).toBe(TOMODO)
     expect(toast_failure).toHaveBeenCalledTimes(1)
     const failure = toast_failure.mock.calls[0]?.[0]
     expect(failure).toBeInstanceOf(Error)
-    expect(failure.message).toContain('has no indexed world binding')
+    expect(failure.message).toContain('first rebind failed')
+
+    const second = await handle_character_click({ id: PLAYER, world_id: PLAYER_WORLD }, deps, toast_failure)
+
+    expect(second).toBe(true)
+    expect(rebind_attempts).toBe(2)
+    await wait_for_selected_character(PLAYER)
+    expect(context.get_state().selected_character_id).toBe(PLAYER)
   })
 })
