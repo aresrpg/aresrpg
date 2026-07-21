@@ -1,20 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// DRAFTED-SEQUENCE TACKLE PARITY (#24, bug reports ⑥ + ⑭) — the client's move legality MUST obey the D99
-// COMMIT order, not the draft-fold order. THE CHAIN IS THE ORACLE:
+// DRAFTED-SEQUENCE TACKLE PARITY (#24/#398, bug reports ⑥ + ⑭) — the client's move legality MUST obey the
+// ordered draft prefix. THE CHAIN IS THE ORACLE:
 //
-//  · A turn is ONE PTB shipped in cast_first COMMIT order (sdk/fight.js commit_turn_ptb:628-654; the flag
-//    dungeon-turn.js:53 — TRUE iff the FIRST cast was drafted BEFORE the first move):
-//        cast_first=TRUE  ⇒ [...casts, ...moves]   cast_first=FALSE ⇒ [...moves, ...casts]
+//  · A turn is ONE PTB shipped in exact staged order (sdk/fight.js commit_turn_ptb:630-655).
 //  · Each act_ entry reads LIVE state. act_move prices its tackle at the runner's CURRENT cell against the
 //    enemies adjacent RIGHT THEN, with slot = participant::casts_this_turn AT execution (actions.move:40-59;
 //    tackle.move:17-49 scans the runner's live neighbours; seed = spell_formula::tackle_seed(turn_seed, slot, mp)).
-//  · Therefore under cast_first=FALSE a move executes BEFORE any drafted cast: it sees (a) casts_this_turn = 0
-//    (no cast ran yet — SLOT 0), and (b) every enemy at its PRE-cast cell (no drafted push has displaced it yet).
-//
-// HEAD BUG: project.js next_move_tackle reads presented_state (draft-order fold of ALL intents) and
-// my_next_move_slot counts EVERY drafted Cast — so a move drafted BEFORE a cast is still priced with that cast's
-// slot bump AND its displacement. Result: the client shows the move FREE while the chain tackles it.
+//  · Therefore the NEXT move sees every action already drafted before it, even when an earlier move opened the
+//    sequence: move→cast→move prices move2 after the cast's slot bump/displacement.
 
 import { describe, expect, test } from 'bun:test'
 import { tackle_contest, tackle_losses } from '@aresrpg/sim/fight_tackle'
@@ -96,37 +90,31 @@ const chain_tackle = ({ world_seed, spawn_id, seat = 0, mp, ap, agility = 40, lo
   return draw % den < num ? null : tackle_losses(ap, mp, num, den)
 }
 
-describe('#24 drafted-sequence tackle parity — legality obeys the D99 commit order', () => {
-  // ── cast_first = FALSE (move drafted before cast): the chain commits [...moves, ...casts] ─────────────────
-  // ws=2 at mp=2: the chain's slot-0 roll FAILS (a tackle); the drafted cast's slot-1 roll ESCAPES. HEAD prices
-  // the move at slot 1 → shows it FREE → "frontend legal, chain fails".
-  test('SLOT — move→cast→move: move2 is priced at chain slot 0, NOT the drafted cast’s slot 1', () => {
+describe('#24/#398 drafted-sequence tackle parity — legality obeys exact staged order', () => {
+  // ws=2 at mp=2: slot 0 FAILS while slot 1 ESCAPES, making an accidental casts-after-moves regrouping visible.
+  test('SLOT — move→cast→move: move2 is priced at chain slot 1 after the drafted cast', () => {
     const s = boot({ world_seed: 2, spawn_id: 7 })
     draft_move(s, { to_cell: 25, mp_left: 2 }, 1500) // me 45→25 (1 MP); mob1@26 still locks me
-    draft_cast(s, {}, 1600) // a plain cast — commits AFTER move2 under cast_first=FALSE, so it must NOT bump the slot
-    const oracle = chain_tackle({ world_seed: 2, spawn_id: 7, mp: 2, ap: 6, slot: 0 })
-    expect(oracle).not.toBeNull() // guard: this vector really is a chain tackle
+    draft_cast(s, {}, 1600)
+    const oracle = chain_tackle({ world_seed: 2, spawn_id: 7, mp: 2, ap: 6, slot: 1 })
+    expect(oracle).toBeNull() // guard: slot 1 really escapes (slot 0 would tackle)
     expect(next_move_tackle(s.getState())).toEqual(oracle)
   })
 
-  // A drafted PUSH commits AFTER the move (cast_first=FALSE), so move2 sees the mob at its PRE-push cell.
-  test('DISPLACEMENT — move→push→move: move2 sees the mob at its PRE-push cell (push commits after the move)', () => {
+  test('DISPLACEMENT — move→push→move: move2 sees the mob at its post-push cell', () => {
     const s = boot({ world_seed: 2, spawn_id: 7 })
     draft_move(s, { to_cell: 25, mp_left: 2 }, 1500)
-    draft_cast(s, { displace: { idx: 1, to_cell: 210 } }, 1600) // push mob1 26→210 (far) — but it commits AFTER move2
-    const oracle = chain_tackle({ world_seed: 2, spawn_id: 7, mp: 2, ap: 6, slot: 0 }) // mob1 STILL at 26 for move2
-    expect(oracle).not.toBeNull()
-    expect(next_move_tackle(s.getState())).toEqual(oracle)
+    draft_cast(s, { displace: { idx: 1, to_cell: 210 } }, 1600) // push mob1 26→210 before move2
+    expect(next_move_tackle(s.getState())).toBeNull()
   })
 
-  // ── cast_first = TRUE (cast drafted before move): the chain commits [...casts, ...moves] — UNCHANGED ──────
-  test('REGRESSION cast-first push→move: the move sees the pushed mob gone — no tackle', () => {
+  test('REGRESSION push→move: the move sees the pushed mob gone — no tackle', () => {
     const s = boot({ world_seed: 1, spawn_id: 7 })
     draft_cast(s, { displace: { idx: 0, to_cell: 209 } }, 1500) // push mob0 46→209 BEFORE any move → cast_first=TRUE
     expect(next_move_tackle(s.getState())).toBeNull() // mob0 gone, mob1@26 not adjacent to me@45 → free
   })
 
-  test('REGRESSION cast-first cast→move (mob stays adjacent): move is priced at slot 1 (the cast committed first)', () => {
+  test('REGRESSION cast→move (mob stays adjacent): move is priced at slot 1', () => {
     const s = boot({ world_seed: 1, spawn_id: 7 }) // ws=1 @ mp3: slot0 tackles, slot1 escapes
     draft_cast(s, {}, 1500) // a slot-bumping cast BEFORE any move → cast_first=TRUE → the move sees casts_this_turn=1
     const oracle = chain_tackle({ world_seed: 1, spawn_id: 7, mp: 3, ap: 6, slot: 1 })

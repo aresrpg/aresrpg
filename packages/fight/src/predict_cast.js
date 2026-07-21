@@ -6,13 +6,14 @@
 
 import { create_fight_state } from '@aresrpg/sim/reduce'
 import { crit_at, slot_crit_roll, turn_seed } from '@aresrpg/sim/turn_seed'
-import { find_entity } from '@aresrpg/sim/fight_state'
+import { find_entity, update_entity } from '@aresrpg/sim/fight_state'
 import { is_invisible } from '@aresrpg/sim/fight_statuses'
+import { check_traps } from '@aresrpg/sim/fight_traps'
 import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
 
 import { produce_predicted_render_events } from './fight_predicted_render.js'
 import { DISPLACE_TELEPORT } from './fight_render_prims.js'
-import { decode, encode } from './los.js'
+import { bfsPath, decode, encode } from './los.js'
 import { WEAPON_ATTACK_ID } from './weapon.js'
 
 // B7 ENGINE FOSSIL — the deployed engine lineage the CHAIN_PENDING exclusion set below was ruled against. UPDATE
@@ -454,27 +455,14 @@ export const predict_cast = ({
     spell_level,
     target: decode(target_cell),
     arena: converted.arena,
-    // BRANCH SELECTION: the live cast derives its crit from the public turn-seed clock (chain parity — every
-    // existing caller passes a `critical_clock` and NO `critical`, so their behaviour is byte-unchanged). The
-    // hover-preview getter passes an EXPLICIT `critical` (false = the guaranteed
-    // non-crit branch, true = the crit branch) to project BOTH authored outcomes without a clock — a pure
-    // pass-through to predict_sim_cast (which already takes `critical`), touching no damage/crit math.
+    // Live casts use the public turn-seed branch; hover previews pass an explicit false/true branch.
     critical:
       critical === undefined ? chain_critical(critical_clock, level?.critical_chance ?? 0, critical_bonus) : critical,
     resolve_ref,
   })
 }
 
-/**
- * The COMMITTED sim base a turn's drafted casts/moves evolve from: the live view's fighters with their CELLS/HP
- * swapped to chain truth (my optimistic drafts EXCLUDED) — the exact state the chain evolves from. A fighter
- * absent from `committed` keeps its view row. Shared by evolve_flush_casts (per-cast occupancy) and
- * evolve_caster_cell (the post-cast move anchor) so both read the SAME chain base — one home for the evolution.
- * `caster_seed_cell` (#321) overrides the CASTER's own seeded cell — the committed-fighters row alone can only
- * express chain-confirmed truth, never "already moved by a drafted-but-uncommitted action" (a moves-first turn's
- * post-move cell — the cell the chain's evolved cast sequence must actually start from).
- * @param {{ view:object, committed:{fighters?:Record<string,{cell:number,hp:number,alive:boolean}>}, caster_id:string, resolve_ref:(id:string)=>{is_mob:boolean,idx:number}|null, caster_seed_cell?:number|null }} params
- */
+/** Committed sim base for both ordered evolvers; `caster_seed_cell` is a compatibility override. */
 const committed_sim_base = ({ view, committed, caster_id, resolve_ref, caster_seed_cell = null }) => {
   const base_fighters = new Map()
   for (const [id, fighter] of view.fighters ?? new Map()) {
@@ -484,40 +472,74 @@ const committed_sim_base = ({ view, committed, caster_id, resolve_ref, caster_se
     }
     const ref = resolve_ref(id)
     const row = ref ? committed?.fighters?.[`${ref.is_mob ? 'm' : 'p'}${ref.idx}`] : null
-    base_fighters.set(id, row ? { ...fighter, cell: decode(row.cell), health: row.hp } : fighter)
+    const chain_fighter = row
+      ? { ...fighter, cell: decode(row.cell), health: row.hp, ap: row.ap ?? fighter.ap, mp: row.mp ?? fighter.mp }
+      : fighter
+    base_fighters.set(id, chain_fighter)
   }
   return state_from_view({ ...view, fighters: base_fighters }, caster_id, null)
 }
 
-/**
- * The caster's ENCODED cell after the drafted casts (D99 order) evolve the committed base — the cell the chain's
- * apply_move charges the FIRST move segment from when the casts commit BEFORE the moves (cast_first). A
- * caster-relocating cast among them (a TELEPORT self-jump, a SWAP) moves the caster, so the movement draft's cost
- * anchor MUST be this evolved cell, never the raw committed cell (#300: walking one cell after a teleport charged
- * MP measured from the PRE-teleport cell — the reach shrank and the MP read wrong). No relocating cast — or none
- * drafted — returns the committed caster cell unchanged. Reuses the SAME sim door + committed base as
- * evolve_flush_casts (the deterministic twin), so the anchor never drifts from what the chain evolves.
- *
- * @param {object} params
- * @param {object} params.view                    live engine_view (arena/metadata; fighter cells swapped to committed truth)
- * @param {{ fighters?: Record<string, { cell:number, hp:number, alive:boolean }> }} params.committed  chain base, thin p{seat}/m{idx} keys
- * @param {string} params.caster_id
- * @param {Array<{ spell: object|null, target: number, spell_level?: number }>} params.casts  drafted casts, D99 order
- * @param {(id:string)=>{is_mob:boolean,idx:number}|null} [params.resolve_ref]  entity id → seat/mob ref (dungeon escrow home)
- * @returns {number|null} the caster's ENCODED post-cast cell, or null when the caster can't be resolved
- */
-export const evolve_caster_cell = ({ view, committed, caster_id, casts, resolve_ref = entity_ref }) => {
+const is_move_action = (action) => action?.kind === 0 || action?.kind === 'move'
+
+const evolve_move = (state, caster_id, action, arena) => {
+  if (action?.landed === false) return state
+  const target = action?.target ?? action?.cell ?? action?.to_cell
+  if (target == null) return state
+  const caster = find_entity(state, caster_id)
+  if (!caster?.cell || caster.health <= 0) return state
+  const blocked = new Set()
+  for (let i = 0; i < (arena.cells?.length ?? 0); i++) if (arena.cells[i]) blocked.add(i)
+  for (const fighter of [...(state.team0 ?? []), ...(state.team1 ?? [])])
+    if (fighter.id !== caster_id && fighter.health > 0 && fighter.cell)
+      blocked.add(encode(fighter.cell.x, fighter.cell.y))
+  const terrain_walkable = (cell) =>
+    cell.x >= 0 &&
+    cell.y >= 0 &&
+    cell.x < arena.width &&
+    cell.y < arena.height &&
+    arena.cells[cell.y * arena.width + cell.x] === 0
+  let sim = state
+  const path = bfsPath(encode(caster.cell.x, caster.cell.y), Number(target), blocked, caster.mp)
+  for (const encoded of path) {
+    const entered = decode(encoded)
+    sim = update_entity(sim, caster_id, (entity) => ({
+      ...entity,
+      cell: entered,
+      mp: Math.max(0, entity.mp - 1),
+      mp_used: entity.mp_used + 1,
+    }))
+    sim = check_traps(sim, entered, caster_id, terrain_walkable).state
+    const after = find_entity(sim, caster_id)
+    if (!after || after.health <= 0 || encode(after.cell.x, after.cell.y) !== encoded) break
+  }
+  return sim
+}
+
+/** Caster's encoded cell after exact draft-order evolution; `casts` is the compatibility input. */
+export const evolve_caster_cell = ({
+  view,
+  committed,
+  caster_id,
+  actions = null,
+  casts = null,
+  resolve_ref = entity_ref,
+}) => {
   if (!view || !caster_id) return null
   const { state, arena } = committed_sim_base({ view, committed, caster_id, resolve_ref })
   let sim = state
-  for (const cast of casts ?? []) {
-    if (!cast?.spell) continue
+  for (const action of actions ?? casts ?? []) {
+    if (is_move_action(action)) {
+      sim = evolve_move(sim, caster_id, action, arena)
+      continue
+    }
+    if (!action?.spell) continue
     const pred = predict_sim_cast({
       state: sim,
       caster_id,
-      spell: cast.spell,
-      spell_level: cast.spell_level ?? 1,
-      target: decode(cast.target),
+      spell: action.spell,
+      spell_level: action.spell_level ?? 1,
+      target: decode(action.target),
       arena,
       resolve_ref,
     })
@@ -527,42 +549,18 @@ export const evolve_caster_cell = ({ view, committed, caster_id, casts, resolve_
   return caster?.cell ? encode(caster.cell.x, caster.cell.y) : null
 }
 
-/**
- * ⑭ FLUSH VALIDATES THE EVOLVED SEQUENCE. The chain commits ONE PTB in D99 order, each action reading LIVE
- * evolved state (dungeon-turn / actions.move). At flush a drafted cast MUST be validated against the board the
- * CHAIN sees when it fires — the COMMITTED base evolved through the PRIOR casts' displacements/kills — NEVER the
- * optimistic end-state, where this cast's own push has already moved its target — the exact failure class where a
- * trap sits behind the mob, gets pushed onto it, and the turn commits without the spell. Moves never displace a mob, so the cast-occupancy
- * fold is move-independent; the caster's own anchor stays the flush's existing cast_first/last-move choice.
- *
- * Returns, per cast IN DRAFT ORDER, the occupancy the chain sees JUST BEFORE that cast fires — the SAME
- * `Map<encoded_cell, { kind:'player'|'mob', idx, alive }>` shape the board's own `occupied` uses, so the flush
- * gate swaps it in and reuses its OWN geometry (cast_range_set_dungeon) against THAT: client legality never
- * drifts from the chain. ALSO returns the CASTER's own encoded cell just before that cast fires (#321) — a
- * caster-relocating cast earlier in the SAME draft (teleport, dash) moves the caster, so the footprint ORIGIN for
- * every later cast must be this evolved cell too, never one static pre-loop anchor. That was the drop-valid-
- * targets class: the caster's own geometry origin went stale, not the target's, and a plainly in-range stationary
- * target fell out of a footprint drawn from the wrong corner of the board.
- *
- * @param {object} params
- * @param {object} params.view                    live engine_view (arena/metadata; its fighter CELLS are replaced by committed truth)
- * @param {{ fighters?: Record<string, { cell:number, hp:number, alive:boolean }> }} params.committed  chain base, thin p{seat}/m{idx} keys
- * @param {string} params.caster_id
- * @param {Array<{ spell: object|null, target: number, spell_level?: number }>} params.casts  drafted casts, D99 order
- * @param {(id:string)=>{is_mob:boolean,idx:number}|null} [params.resolve_ref]  entity id → seat/mob ref (dungeon escrow home)
- * @param {number|null} [params.caster_seed_cell]  the caster's cell at the START of the sequence — the committed
- *   cell (cast_first) or the post-move cell (moves-first); see committed_sim_base.
- * @returns {Array<{ occupied: Map<number, { kind:'player'|'mob', idx:number, alive:boolean }>, caster_cell: number|null }>}
- */
+/** Exact draft-order evolution, returning one pre-fire occupancy/caster snapshot per cast. */
 export const evolve_flush_casts = ({
   view,
   committed,
   caster_id,
-  casts,
+  actions = null,
+  casts = null,
   resolve_ref = entity_ref,
   caster_seed_cell = null,
 }) => {
-  if (!view || !caster_id || !casts?.length) return []
+  const sequence = actions ?? casts ?? []
+  if (!view || !caster_id || !sequence.length) return []
   const { state, arena } = committed_sim_base({ view, committed, caster_id, resolve_ref, caster_seed_cell })
   let sim = state
   const occupancy = () => {
@@ -583,16 +581,20 @@ export const evolve_flush_casts = ({
     return caster?.cell ? encode(caster.cell.x, caster.cell.y) : null
   }
   const out = []
-  for (const cast of casts) {
+  for (const action of sequence) {
+    if (is_move_action(action)) {
+      sim = evolve_move(sim, caster_id, action, arena)
+      continue
+    }
     // the board AND the caster's own footprint origin the chain sees BEFORE this cast — snapshot, THEN evolve both.
     out.push({ occupied: occupancy(), caster_cell: caster_cell_of() })
-    if (!cast?.spell) continue
+    if (!action?.spell) continue
     const pred = predict_sim_cast({
       state: sim,
       caster_id,
-      spell: cast.spell,
-      spell_level: cast.spell_level ?? 1,
-      target: decode(cast.target),
+      spell: action.spell,
+      spell_level: action.spell_level ?? 1,
+      target: decode(action.target),
       arena,
       resolve_ref,
     })

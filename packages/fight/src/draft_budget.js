@@ -38,14 +38,11 @@ export function spell_mp_grant(level) {
     .reduce((sum, e) => sum + (e.base ?? 0), 0)
 }
 
-/** THE ONE RULE: how much of a drafted cast's give_points(MP) `grant` actually FUNDS THIS TURN'S MOVEMENT — the full
- *  grant when the casts commit BEFORE the moves (cast_first: the chain ships [casts, moves], apply_move spends the
- *  raised pool), else 0 (a move-FIRST draft ships [moves, casts]; on-chain give_points lands AFTER the moves, so
- *  the grant can't fund them — cast.move:1099). BOTH movement-budget homes cite this so the green move wash
- *  (project.move_wash) and the DungeonBoard click gate (my_mp_eff) can never disagree about post-Vanish reach.
- *  @param {boolean} cast_first @param {number} grant @returns {number} */
-export function movement_grant(cast_first, grant) {
-  return cast_first ? (grant ?? 0) : 0
+/** Compatibility helper for a specific move: a grant funds it exactly when that cast precedes that move in the
+ * ordered draft. Current prefix projections fold this directly into presented MP.
+ * @param {boolean} cast_before_move @param {number} grant @returns {number} */
+export function movement_grant(cast_before_move, grant) {
+  return cast_before_move ? (grant ?? 0) : 0
 }
 
 /** Cross-turn cooldown lock — the exact cast.move rule: recastable only when `current − last > cooldown`

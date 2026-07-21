@@ -53,6 +53,28 @@ export function stage_to_batch(actions, to_cell) {
   return { batch, vfx_keys, dropped }
 }
 
+/**
+ * Recompose flush-validated casts into the canonical staged order. Moves need no replacement, so they are copied
+ * directly from `staged`; each cast/weapon consumes exactly one slot from `resolved_casts`. A rejected cast keeps a
+ * `null` slot so a later survivor can never slide into the rejected action's earlier position.
+ * @param {Array<{ kind:number, target:number }>} staged
+ * @param {Array<{ kind:1|2, target:number, spell_template_id?:string, spell_key?:string }|null>} resolved_casts
+ * @returns {Array<{ kind:number, target:number, spell_template_id?:string, spell_key?:string }>}
+ */
+export function compose_turn_actions(staged, resolved_casts = []) {
+  const actions = []
+  let cast_i = 0
+  for (const action of staged ?? []) {
+    if (action.kind === 0) actions.push({ kind: 0, target: action.target })
+    else if (action.kind === 1 || action.kind === 2) {
+      const resolved = resolved_casts[cast_i]
+      cast_i += 1
+      if (resolved) actions.push(resolved)
+    }
+  }
+  return actions
+}
+
 /** Exact chain turn identity. A same-player solo turn is still distinct because its deadline changes. */
 export function turn_commit_key({ fight_id, entity_id, deadline_ms }) {
   if (!fight_id || !entity_id || !(Number(deadline_ms) > 0)) return null

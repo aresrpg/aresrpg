@@ -10,6 +10,7 @@ import {
   announce_turn_lost,
   auto_commit_blocked,
   auto_commit_decision,
+  compose_turn_actions,
   executed_turn_failure,
   stage_to_batch,
   strike_flush_illegal,
@@ -37,6 +38,24 @@ describe('stage_to_batch — staged intents → the ONE-PTB action shape', () =>
     expect(dropped).toEqual([])
   })
 
+  it('preserves a move + cast + move interleaving exactly', () => {
+    const { batch, vfx_keys, dropped } = stage_to_batch(
+      [
+        { kind: 0, target: 5 },
+        { kind: 1, target: 7, spell_template_id: '0xabc', spell_key: 'fire_bolt' },
+        { kind: 0, target: 9 },
+      ],
+      to_cell
+    )
+    expect(batch).toEqual([
+      { kind: 'move', cell: 1005 },
+      { kind: 'cast', spell_template_id: '0xabc', target_cell: 1007 },
+      { kind: 'move', cell: 1009 },
+    ])
+    expect(vfx_keys).toEqual(['fire_bolt'])
+    expect(dropped).toEqual([])
+  })
+
   it('empty staging = the skip: an empty batch (the SDK then ships one bare act_pass)', () => {
     expect(stage_to_batch([], to_cell)).toEqual({ batch: [], vfx_keys: [], dropped: [] })
     expect(stage_to_batch(undefined, to_cell)).toEqual({ batch: [], vfx_keys: [], dropped: [] })
@@ -48,6 +67,41 @@ describe('stage_to_batch — staged intents → the ONE-PTB action shape', () =>
     expect(batch).toEqual([{ kind: 'move', cell: 1001 }])
     expect(vfx_keys).toEqual([]) // a dropped cast latches NO vfx
     expect(dropped).toEqual([bad])
+  })
+})
+
+describe('compose_turn_actions — validated casts return to the reducer-owned draft order', () => {
+  it('keeps move → cast → move interleaved after cast validation', () => {
+    expect(
+      compose_turn_actions(
+        [
+          { kind: 0, target: 5 },
+          { kind: 1, target: 7 },
+          { kind: 0, target: 9 },
+        ],
+        [{ kind: 1, target: 8, spell_template_id: '0xabc', spell_key: 'fire_bolt' }]
+      )
+    ).toEqual([
+      { kind: 0, target: 5 },
+      { kind: 1, target: 8, spell_template_id: '0xabc', spell_key: 'fire_bolt' },
+      { kind: 0, target: 9 },
+    ])
+  })
+
+  it('keeps rejected casts as empty slots so later survivors cannot shift earlier', () => {
+    expect(
+      compose_turn_actions(
+        [
+          { kind: 1, target: 3 },
+          { kind: 0, target: 4 },
+          { kind: 2, target: 5 },
+        ],
+        [null, { kind: 2, target: 6, spell_key: 'weapon' }]
+      )
+    ).toEqual([
+      { kind: 0, target: 4 },
+      { kind: 2, target: 6, spell_key: 'weapon' },
+    ])
   })
 })
 

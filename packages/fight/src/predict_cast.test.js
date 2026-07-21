@@ -336,6 +336,71 @@ describe('⑭ evolve_flush_casts — each cast validated against the chain-evolv
     fighters: { p0: { cell: enc(5, 5), hp: 120, alive: true }, m0: { cell: enc(7, 5), hp: 200, alive: true } },
   }
 
+  test('RED-FIRST #398: a move then cast validates from the post-move caster cell', () => {
+    const move_destination = enc(6, 5)
+    const evolved = evolve_flush_casts({
+      view: view(),
+      committed,
+      caster_id: 'p0',
+      actions: [
+        { kind: 0, target: move_destination },
+        { kind: 1, spell: dmg_spell, target: enc(7, 5) },
+      ],
+    })
+
+    // The contract executes this exact interleaving. The cast snapshot is therefore rooted at the cell written by
+    // the preceding move, not the committed turn-start cell and not a casts-before-moves regrouping.
+    expect(evolved).toHaveLength(1)
+    expect(evolved[0]?.caster_cell).toBe(move_destination)
+  })
+
+  test('#398: a deterministically tackled move then cast validates from the cell where the move was denied', () => {
+    const evolved = evolve_flush_casts({
+      view: view(),
+      committed,
+      caster_id: 'p0',
+      actions: [
+        { kind: 0, target: enc(6, 5), landed: false },
+        { kind: 1, spell: dmg_spell, target: enc(7, 5) },
+      ],
+    })
+
+    // act_move still ships to commit the tackle forfeit, but it writes no destination cell. A following cast reads
+    // the unchanged live caster cell, never the denied target.
+    expect(evolved).toHaveLength(1)
+    expect(evolved[0]?.caster_cell).toBe(committed.fighters.p0.cell)
+  })
+
+  test('#398: a move crossing a known lethal trap anchors the later cast at the trap stop', () => {
+    const trap_cell = enc(6, 5)
+    const mob_cell = enc(9, 5)
+    const base_view = view()
+    const trapped_view = {
+      ...base_view,
+      fighters: new Map(base_view.fighters).set('mob-0', { ...base_view.fighters.get('mob-0'), cell: dec(mob_cell) }),
+      my_traps: [trap_cell],
+      my_trap_payloads: {
+        [trap_cell]: [{ type: 'DAMAGE', element: 'FIRE', min: 999, max: 999 }],
+      },
+    }
+    const trapped_committed = {
+      fighters: { ...committed.fighters, m0: { ...committed.fighters.m0, cell: mob_cell } },
+    }
+    const evolved = evolve_flush_casts({
+      view: trapped_view,
+      committed: trapped_committed,
+      caster_id: 'p0',
+      actions: [
+        { kind: 0, target: enc(7, 5), landed: true },
+        { kind: 1, spell: dmg_spell, target: mob_cell },
+      ],
+    })
+
+    expect(evolved).toHaveLength(1)
+    expect(evolved[0]?.caster_cell).toBe(trap_cell)
+    expect(evolved[0]?.occupied.get(trap_cell)).toMatchObject({ kind: 'player', idx: 0, alive: false })
+  })
+
   test('a push then a cast at the landing cell: the 2nd cast sees the mob at its EVOLVED (displaced) cell', () => {
     const evolved = evolve_flush_casts({
       view: view(),

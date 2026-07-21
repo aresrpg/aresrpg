@@ -10,7 +10,7 @@
 // shim calls it with the fight/kiosk ids it owns, then feeds the returned receipt to `apply_receipt` — the core
 // never imports the context submit itself (keeps the fight/ import graph hermetic; ares test fightcore gate a).
 
-import { stage_to_batch, turn_submit_epoch } from './turn_commit.js'
+import { compose_turn_actions, stage_to_batch, turn_submit_epoch } from './turn_commit.js'
 import * as project from './project.js'
 
 /** Stage a local intent (a click) as a pre-commit draft on the store. Optimistic prediction paints immediately
@@ -101,6 +101,7 @@ export const staged_turn_paths = (store) => {
   const first_move = staged.findIndex((action) => action.kind === 0)
   const first_cast = staged.findIndex((action) => action.kind === 1 || action.kind === 2)
   return {
+    draft_actions: staged.map((action) => ({ ...action })),
     move_path: staged.filter((action) => action.kind === 0).map((action) => action.target),
     cast_path: staged
       .filter((action) => action.kind === 1 || action.kind === 2)
@@ -108,6 +109,10 @@ export const staged_turn_paths = (store) => {
     cast_first: first_cast >= 0 && (first_move < 0 || first_cast < first_move),
   }
 }
+
+/** Reinsert flush-validated cast/weapon slots into one reducer-owned ordered draft snapshot. */
+export const compose_staged_turn = (draft_actions, resolved_casts) =>
+  compose_turn_actions(draft_actions, resolved_casts)
 
 /** Turn the store's staged intents into the chain turn batch a PTB submits (reuses turn_commit's builder). */
 export const build_turn_batch = (store, to_cell = null) => {

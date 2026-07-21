@@ -19,7 +19,6 @@ import { tackle_seed, turn_seed } from '@aresrpg/sim/turn_seed'
 import { rng_next, rng_seed } from '@aresrpg/sim/prng'
 
 import { GRID_W, GRID_H, decode as decode_xy, encode as encode_xy, bfsReachable } from './los.js'
-import { movement_grant } from './draft_budget.js'
 import { participant_entity_id, participant_character_id } from './fight_control.js'
 import { committed_state, display_state, PLAYER_TURN_FLOOR_MS, presented_state, fight_store } from './store.js'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
@@ -542,41 +541,22 @@ const neighbors_of = (cell) => {
   return out
 }
 
-/** THE D99 COMMIT ORDER (dungeon-turn.js:53) from MY draft log: the SDK ships [...casts, ...moves] IFF the first
- *  drafted cast precedes the first drafted move, else [...moves, ...casts] (commit_turn_ptb). A move's tackle
- *  feels ONLY casts that COMMIT before it (actions.move:55-56) — #24: else a move-then-push reads a fold the
- *  chain hasn't applied, FREE where the chain tackles. */
+/** Legacy first-kind classification retained for compatibility diagnostics. The #398 commit path no longer
+ *  groups on this value: `commit_turn_ptb` executes the staged sequence exactly. */
 export const draft_cast_first = (log) => {
   const first = (kind) =>
     Math.min(Infinity, ...(log ?? []).filter((e) => e.source === 'intent' && e.kind === kind).map((e) => e.event_idx))
   return first('Cast') <= first('Moved')
 }
 
-/** The optimistic give_points(MP) grant MY drafted casts folded into the PRESENTED pool (Granted, source 'intent',
- *  point_kind 1, my seat). The presented me.mp carries it ALWAYS (so the HUD number + MP blob are honest the instant
- *  Vanish is cast), but it funds MOVEMENT only cast_first — so move_wash strips the non-movement remainder via
- *  draft_budget.movement_grant (the ONE rule the DungeonBoard gate cites too). @param {any[]} log @param {number} seat */
-const drafted_mp_grant = (log, seat) =>
-  (log ?? []).reduce(
-    (sum, e) =>
-      e.source === 'intent' &&
-      e.kind === 'Granted' &&
-      Number(e.point_kind) === 1 &&
-      !e.target_is_mob &&
-      Number(e.target_idx) === seat
-        ? sum + (Number(e.granted) || 0)
-        : sum,
-    0
-  )
-
 /** THE TACKLE ZONE SCAN (chain twin — tackle.move locker_agilities): the agilities of every living enemy
  *  orthogonally adjacent to ME at the eye's fold. Enemies of a seat = every living mob ∪ every living
  *  OTHER-team seat (PvP). Death exempts a tackler; invisibility does NOT (bodies stay physical — the chain
  *  rule, verbatim). Agility rides the view rows (board_state escrow/mob `agility`, the raw chain stats).
- *  #24: my cell rides `p` (my moves commit first), but enemy CELLS ride `committed` under cast_first=FALSE — a
- *  push I drafted after this move commits AFTER it, so it has not displaced the tackler yet. */
-const tackle_lockers = (s, p, me, my_team) => {
-  const enemies = draft_cast_first(s.log) ? p : committed_state(s)
+ *  #398: the NEXT move is appended after the entire current draft prefix, so both the runner and its enemies read
+ *  the presented prefix. A preceding push/death has already resolved; a later action does not exist yet. */
+const tackle_lockers = (s, me, my_team) => {
+  const enemies = presented_state(s)
   const adjacent = new Set(neighbors_of(me.cell))
   const lockers = []
   for (const f of Object.values(enemies.fighters ?? {})) {
@@ -591,21 +571,16 @@ const tackle_lockers = (s, p, me, my_team) => {
 
 /** The chain slot my NEXT move's tackle roll folds with (actions.move: `participant::casts_this_turn` at the
  *  move's execution). casts_this_turn resets every turn on-chain, so the base is the snapshot row UNLESS my
- *  own TurnStarted rides the post-view tail (fresh turn ⇒ 0); every Cast in the tail for my seat counts on
- *  top — receipt casts the object read hasn't re-counted yet, plus my DRAFTED casts ONLY under cast_first
- *  (weapon strikes are Casts too, the chain increments for both). `s.log` is the recompute-sorted post-view tail.
- *  #24: cast_first=FALSE ⇒ my drafts commit AFTER the move — count only COMMITTED casts. */
+ *  own TurnStarted rides the post-view tail (fresh turn ⇒ 0); every Cast in the ordered tail for my seat counts on
+ *  top. Receipt and intent casts both precede the NEXT appended move; weapon strikes are Casts in this log too. */
 const my_next_move_slot = (s, seat, row) => {
-  const cast_first = draft_cast_first(s.log)
   let base = Number(row.casts_this_turn ?? 0)
   let count = 0
   for (const e of s.log ?? []) {
     if (e.kind === 'TurnStarted' && !e.is_mob && Number(e.idx) === seat) {
       base = 0
       count = 0
-    } else if (e.kind === 'Cast' && !e.caster_is_mob && Number(e.caster_idx) === seat) {
-      if (cast_first || e.source !== 'intent') count++
-    }
+    } else if (e.kind === 'Cast' && !e.caster_is_mob && Number(e.caster_idx) === seat) count++
   }
   return base + count
 }
@@ -666,13 +641,11 @@ export const move_wash = (s, { busy = false, targeting = false } = {}) => {
   const row = s.view.escrow?.[seat]
   if (!me || me.cell == null || !row) return { armed, tackled: false, reach: [], tackle_lost: [] }
   const blocked = wash_blocked(s.view, p, s.my_key)
-  // ① RULING 2026-07-19: the presented pool folds Vanish's +MP grant ALWAYS (honest HUD), but it funds THIS TURN'S
-  // movement only cast_first — strip the non-movement remainder so the green wash never paints a cell the gate
-  // (and the chain) refuse. ONE rule: draft_budget.movement_grant, cited here and by DungeonBoard's my_mp_eff.
-  const grant = drafted_mp_grant(s.log, seat)
-  const mp = Math.max(0, Math.floor(me.mp ?? 0) - grant + movement_grant(draft_cast_first(s.log), grant))
+  // The presented pool is the exact ordered prefix. Any drafted grant it contains ran before the NEXT move; any
+  // earlier move cost/tackle forfeit is already subtracted. No first-kind regrouping is legal here.
+  const mp = Math.max(0, Math.floor(me.mp ?? 0))
   const reach_full = bfsReachable(me.cell, mp, blocked)
-  const lockers = tackle_lockers(s, p, me, Number(row.team ?? 0))
+  const lockers = tackle_lockers(s, me, Number(row.team ?? 0))
   if (!lockers.length) return { armed, tackled: false, reach: reach_full, tackle_lost: [] }
   // THE EXACT CONTEST (sim fight_tackle == spell_formula.move, golden-pinned): num/den prices the escape;
   // num == den (dodge ≥ 2·lock) escapes every roll — the certain-escape case falls out of the uniform rule.
@@ -735,7 +708,7 @@ export const next_move_tackle = (s) => {
   if (!me || me.cell == null || !row) return null
   const mp = Math.max(0, Math.floor(me.mp ?? 0))
   if (mp <= 0) return null // no MP ⇒ no move ⇒ no contest
-  const lockers = tackle_lockers(s, p, me, Number(row.team ?? 0))
+  const lockers = tackle_lockers(s, me, Number(row.team ?? 0))
   if (!lockers.length) return null // not tackled ⇒ the move walks free
   const { world_seed, spawn_id } = s.view
   const deadline = s.turn_deadline_ms ?? s.view.turn_deadline_ms
