@@ -31,6 +31,43 @@ jobs:
       - name: enforcement ladder — bun run lint
         run: bun run lint
 
+  tests:
+    # Per-package suites (issue #119): the ladder above is lint-only and gate.yml runs a single
+    # deterministic file, so neither surfaces the artifact-skip debt #96/#117 catalogued. This job
+    # runs each package's own `test` script as an independent matrix leg (fail-fast: false — one
+    # red package must never hide another) and appends its pass/skip/fail triplet to the run
+    # summary. Extraction failures are swallowed (`|| true`); the test's own exit code still fails
+    # the leg — a parse miss must never mask a real red.
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [fight, sim, world, inventory, party, sdk, engine, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: install deps
+        run: bun install --frozen-lockfile
+      - name: test — packages/${{ matrix.package }}
+        working-directory: packages/${{ matrix.package }}
+        run: |
+          set -o pipefail
+          bun run test 2>&1 | tee /tmp/test-${{ matrix.package }}.log
+      - name: pass/skip/fail → step summary
+        if: always()
+        run: |
+          (
+            log=/tmp/test-${{ matrix.package }}.log
+            pass=$(grep -oE '^ *[0-9]+ pass' "$log" | grep -oE '[0-9]+' || echo 0)
+            skip=$(grep -oE '^ *[0-9]+ skip' "$log" | grep -oE '[0-9]+' || echo 0)
+            fail=$(grep -oE '^ *[0-9]+ fail' "$log" | grep -oE '[0-9]+' || echo 0)
+            {
+              echo "| package | pass | skip | fail |"
+              echo "|---|---|---|---|"
+              echo "| ${{ matrix.package }} | $pass | $skip | $fail |"
+            } >> "$GITHUB_STEP_SUMMARY"
+          ) || true
+
   smoke:
     # BOOT SMOKE — the class killer for the migration-stub throw family (a shape-correct-but-empty content
     # stub that throws at module load: invisible to lint + unit tests, fatal in the browser). Builds the
