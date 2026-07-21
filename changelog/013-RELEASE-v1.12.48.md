@@ -21,3 +21,12 @@
   land, and the sim's crit math is pinned test-for-test to the chain's.
 - **Seamless upgrades** — the transaction sponsor now keeps a history window of package
   versions, so an already-open client keeps playing through a release instead of stalling.
+- **Character switching is reliable** — switches route through one lifecycle and retry
+  cleanly instead of intermittently doing nothing.
+- **The sync header unsticks** — connection phases advance even on flat speed samples.
+- **Reach toasts tell the truth** — the "out of reach" toast fires only for your own
+  dropped casts, never someone else's.
+- **World structures place correctly** — two worlds had structure overrides keyed on names
+  placement never looked up; they resolve now.
+- **Peer names everywhere** — placement UI prefers character names over raw addresses, and
+  items gain a see-on-explorer action.
