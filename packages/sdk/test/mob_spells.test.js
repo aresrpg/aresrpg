@@ -11,6 +11,11 @@ import { test, expect } from 'bun:test'
 import { mob_attack_spell_id, mob_attack_spells } from '../src/mob_spells.js'
 import MOBS from '../src/mobs.json' with { type: 'json' }
 
+// MISSING-ARTIFACT (#96): packages/sdk/src/mobs.json ships as an empty `{}` placeholder in this public
+// repo — the real mob catalog is authored+transformed by the content pipeline (private repo,
+// item_catalog_transform). Tests asserting real seeded mob attack data cannot hold against an empty catalog.
+const MOBS_CATALOG_AVAILABLE = Object.keys(MOBS).length > 0
+
 const SPELLS = mob_attack_spells()
 const damage_effect = id =>
   SPELLS[id]?.levels?.[0]?.base_effects?.find(e => e.type === 'damage')
@@ -27,7 +32,7 @@ test('every mob with an id gets exactly one attack template', () => {
   for (const id of ids) expect(SPELLS[mob_attack_spell_id(id)]).toBeDefined()
 })
 
-test('a mob attack carries its authored melee_damage as the base_effect (alley_bunny = 1-1 earth)', () => {
+test.skipIf(!MOBS_CATALOG_AVAILABLE)('a mob attack carries its authored melee_damage as the base_effect (alley_bunny = 1-1 earth)', () => {
   const spell = SPELLS[mob_attack_spell_id('alley_bunny')]
   expect(spell.levels.length).toBe(1)
   const [lvl] = spell.levels
@@ -42,14 +47,14 @@ test('a mob attack carries its authored melee_damage as the base_effect (alley_b
   expect(dmg.chance).toBe(100)
 })
 
-test('a ranged-value melee mob keeps its real spread (green_walker = 3-7 earth)', () => {
+test.skipIf(!MOBS_CATALOG_AVAILABLE)('a ranged-value melee mob keeps its real spread (green_walker = 3-7 earth)', () => {
   const dmg = damage_effect(mob_attack_spell_id('green_walker'))
   expect(dmg.element).toBe('earth')
   expect(dmg.min).toBe(3)
   expect(dmg.max).toBe(7)
 })
 
-test('mobs missing melee_damage still get a castable fallback attack (1-2, element-matched)', () => {
+test.skipIf(!MOBS_CATALOG_AVAILABLE)('mobs missing melee_damage still get a castable fallback attack (1-2, element-matched)', () => {
   // wooling has no melee_damage in the snapshot but element=earth -> a token 1-2 earth hit so it still acts.
   const dmg = damage_effect(mob_attack_spell_id('wooling'))
   expect(dmg).toBeDefined()
