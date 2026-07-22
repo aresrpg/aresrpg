@@ -2631,6 +2631,8 @@
     "fights_nearby_one": "{{count}} бій поблизу",
     "fights_nearby_other": "{{count}} боїв поблизу",
     "nearby_label": "Бої поблизу",
+    "nearby_label_one": "Бій поблизу",
+    "nearby_label_other": "Бої поблизу",
     "panel_title": "Бої поблизу",
     "panel_subtitle": "Спостерігай за битвою або приєднайся до тієї, що формується.",
     "filter_friends": "Лише друзі",

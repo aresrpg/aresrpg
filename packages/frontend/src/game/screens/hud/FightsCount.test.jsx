@@ -46,6 +46,27 @@ test('accessibility keeps the real count in aria-label (not visually duplicated,
   expect(html).toMatch(/aria-label="1 fights? nearby"/)
 })
 
+// #499: the label used a flat count-less string ("Fights nearby") regardless of the digit beside it, so a
+// single fight read as the ungrammatical "1Fights nearby". The label now pluralizes independently of the
+// digit it never repeats (still ONE count home — the digit itself never re-appears in the label span).
+test('the visible label pluralizes off the same count as the digit, singular at exactly 1', () => {
+  const html = render()
+  const label_match = html.match(/hud-fights-count__label[^>]*>([^<]*)</)
+  expect(label_match?.[1]).toBe('Fight nearby')
+})
+
+test('the visible label pluralizes to the plural form above 1', () => {
+  const plural_state = { visible_fights: { size: 3 }, fight_mode: false }
+  const spy = spyOn(game_store, 'use_game_state').mockImplementation((selector) => selector(plural_state))
+  try {
+    const html = render()
+    const label_match = html.match(/hud-fights-count__label[^>]*>([^<]*)</)
+    expect(label_match?.[1]).toBe('Fights nearby')
+  } finally {
+    spy.mockRestore()
+  }
+})
+
 afterAll(() => {
   for (const spy of spies) spy.mockRestore()
 })

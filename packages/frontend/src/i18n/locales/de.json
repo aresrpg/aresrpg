@@ -2629,6 +2629,8 @@
     "fights_nearby_one": "{{count}} Kampf in der Nähe",
     "fights_nearby_other": "{{count}} Kämpfe in der Nähe",
     "nearby_label": "Kämpfe in der Nähe",
+    "nearby_label_one": "Kampf in der Nähe",
+    "nearby_label_other": "Kämpfe in der Nähe",
     "panel_title": "Kämpfe in Reichweite",
     "panel_subtitle": "Sieh einer Schlacht zu oder tritt einer bei, die sich formiert.",
     "filter_friends": "Nur Freunde",

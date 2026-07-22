@@ -2629,6 +2629,8 @@
     "fights_nearby_one": "{{count}} fight nearby",
     "fights_nearby_other": "{{count}} fights nearby",
     "nearby_label": "Fights nearby",
+    "nearby_label_one": "Fight nearby",
+    "nearby_label_other": "Fights nearby",
     "panel_title": "Fights in range",
     "panel_subtitle": "Watch a battle, or join one still forming.",
     "filter_friends": "Friends only",
