@@ -251,12 +251,7 @@ export const recompute = (draft, now) => {
   // V1: append-only death floors, carried forward (base-dead at view_version + authoritative tail deaths at their
   // own version). Intents never retire (predictions). `alive` derives from this — apply_retirement below overrides
   // any later positive-hp read for a floor-dead fighter (the resurrection root).
-  const retired = derive_retired(
-    draft.retired,
-    base,
-    authoritative_tail,
-    draft.view_version
-  )
+  const retired = derive_retired(draft.retired, base, authoritative_tail, draft.view_version)
   const authoritative_log = all_log.filter((e) => e.version >= draft.view_version && e.source !== 'intent')
   const last_version = authoritative_log.length ? authoritative_log[authoritative_log.length - 1].version : -1
   const applied_version = Math.max(draft.view_version, last_version)

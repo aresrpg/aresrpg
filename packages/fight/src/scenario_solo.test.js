@@ -273,10 +273,9 @@ describe('the single-PTB turn receipt — purge, wave pacing, presented mask', (
     ]
 
     rounds.forEach((round, index) => {
-      store.getState().input(
-        { type: 'journal', fight_id: FIGHT, page: world_round_page(round) },
-        T0 + 6_000 + index * 4_000
-      )
+      store
+        .getState()
+        .input({ type: 'journal', fight_id: FIGHT, page: world_round_page(round) }, T0 + 6_000 + index * 4_000)
       const state = store.getState()
       const view = engine_view(state)
       folded_rounds.push(committed_state(state).fighters.p0.turn_number)

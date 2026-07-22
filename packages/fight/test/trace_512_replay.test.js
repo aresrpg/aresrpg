@@ -72,8 +72,6 @@ describe('issue #512 — the live fold never starves behind trap presentation', 
       'the fresh fold must reach the final captured reducer anchors'
     ).toEqual(final_anchor)
     expect(jam, 'canonical trap consumption must not wait for, or be undone by, presentation').toBeNull()
-    expect(engine_view(final).my_traps, 'neither consumed trap cell may repaint at the end of the capsule').toEqual(
-      []
-    )
+    expect(engine_view(final).my_traps, 'neither consumed trap cell may repaint at the end of the capsule').toEqual([])
   })
 })
