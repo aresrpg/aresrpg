@@ -53,7 +53,11 @@ const arena_of = scenario => {
 
 const state_of = (scenario, arena) => {
   const mover = entity_of({ ...scenario.mover, cell: scenario.mover.start })
-  const entities = [mover, entity_of(scenario.opponent), ...scenario.bodies.map(entity_of)]
+  const entities = [
+    mover,
+    entity_of(scenario.opponent),
+    ...scenario.bodies.map(entity_of),
+  ]
   const state = create_fight_state({
     fight_id: scenario.meta.id,
     arena_seed: 474,
@@ -111,9 +115,12 @@ describe('Move/sim canonical walk parity (#474 interim)', () => {
       expect(moved?.path).toEqual(walked_cells)
 
       const crossed_trap = walked_cells.some(
-        cell => cell.x === scenario.trap.cell.x && cell.y === scenario.trap.cell.y,
+        cell =>
+          cell.x === scenario.trap.cell.x && cell.y === scenario.trap.cell.y,
       )
-      const trap_events = result.events.filter(event => event.type === 'fight_trap_triggered')
+      const trap_events = result.events.filter(
+        event => event.type === 'fight_trap_triggered',
+      )
       expect(crossed_trap).toBe(scenario.expected_trigger)
       expect(trap_events.map(event => event.cell)).toEqual(
         crossed_trap ? [scenario.trap.cell] : [],

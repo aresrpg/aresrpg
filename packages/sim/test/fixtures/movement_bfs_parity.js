@@ -59,13 +59,15 @@ export const chain_walk_path = (start, target, max_steps, is_walkable) => {
       const candidate = step(current, direction)
       if (
         is_walkable(candidate) &&
-        chain_bfs_cost(candidate, target, remaining - 1, is_walkable) === remaining - 1
+        chain_bfs_cost(candidate, target, remaining - 1, is_walkable) ===
+          remaining - 1
       ) {
         selected = candidate
         break
       }
     }
-    if (!selected) throw new Error('Move oracle could not reconstruct its shortest path')
+    if (!selected)
+      throw new Error('Move oracle could not reconstruct its shortest path')
     path.push(selected)
     current = selected
     remaining -= 1
@@ -77,7 +79,8 @@ export const walk_parity_scenarios = [
   {
     meta: {
       id: 'mob_skirts_chain_trap',
-      symptom: 'mob rendered above the blocker while the chain walked left through the trap',
+      symptom:
+        'mob rendered above the blocker while the chain walked left through the trap',
     },
     board: { width: 7, height: 7, obstacles: [{ x: 3, y: 3 }] },
     mover: { id: 'm0', is_player: false, start: { x: 4, y: 4 } },
@@ -98,7 +101,8 @@ export const walk_parity_scenarios = [
   {
     meta: {
       id: 'player_crosses_own_trap_visual_only',
-      symptom: 'player rendered across its own trap although the chain chose right before up',
+      symptom:
+        'player rendered across its own trap although the chain chose right before up',
     },
     board: { width: 7, height: 7, obstacles: [] },
     mover: { id: 'p0', is_player: true, start: { x: 2, y: 3 } },
@@ -117,7 +121,8 @@ export const walk_parity_scenarios = [
   {
     meta: {
       id: 'trap_kit_board_correction',
-      symptom: 'prediction skipped the owner trap around a living body and reconciled every turn',
+      symptom:
+        'prediction skipped the owner trap around a living body and reconciled every turn',
     },
     board: { width: 7, height: 7, obstacles: [] },
     mover: { id: 'p0', is_player: true, start: { x: 4, y: 3 } },
@@ -139,8 +144,8 @@ export const walk_parity_scenarios = [
 
 export const scenario_walkable = scenario => {
   const blocked = new Set(
-    [...scenario.board.obstacles, ...scenario.bodies, scenario.opponent].map(item =>
-      cell_key(item.cell ?? item),
+    [...scenario.board.obstacles, ...scenario.bodies, scenario.opponent].map(
+      item => cell_key(item.cell ?? item),
     ),
   )
   return cell =>
