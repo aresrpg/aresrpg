@@ -4,10 +4,15 @@
 // reference-corpus id) resolved through the EXISTING published `mob` quilt (mobs.js's resolve_mob_visual_url
 // convention). These tests pin the published shape and the structural no-request miss path.
 
-import { afterEach, describe, expect, mock, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
+import { reset_walrus_assets_for_test } from '@aresrpg/sdk/jobs'
 
 import { get_pet_catalog, get_pet_model_url, load_pet_catalog, set_pet_catalog_for_test } from './pet_catalog.js'
 
+// Every test here injects its own resolve_asset mock, so the shared Walrus resolver (packages/sdk/src/jobs.js)
+// is currently inert to this file — reset it anyway (SAME isolation as icon_slug_map.test.js / spell_corpus.test.js)
+// so a future test that falls back to the real walrus_asset_url default stays honest regardless of file order.
+beforeEach(() => reset_walrus_assets_for_test())
 afterEach(() => set_pet_catalog_for_test())
 
 describe('pet catalog runtime loader', () => {

@@ -326,6 +326,22 @@ export function configure_walrus_assets({ aggregator, classes } = {}) {
 }
 
 /**
+ * Test isolation seam for the resolver `configure_walrus_assets` seeds: it only ever MERGES
+ * (Object.assign onto `classes`) and can never clear a class or the aggregator once set. bun test runs
+ * every file in ONE process sharing this module, sorted by path, not by directory-argument order — a
+ * test file that configures a real class (or the whole published manifest, e.g. item_hover_tooltip.test.tsx)
+ * otherwise leaks it forward to every file that happens to load later in the run. Test-only: production
+ * boots once and never resets mid-session.
+ * @returns {void}
+ */
+export function reset_walrus_assets_for_test() {
+  walrus_assets.aggregator = WALRUS_AGGREGATOR_DEFAULT
+  walrus_assets.classes = {}
+  walrus_icons.aggregator = WALRUS_AGGREGATOR_DEFAULT
+  walrus_icons.item_quilt = null
+}
+
+/**
  * Resolve the Walrus aggregator URL for (url_class, filename) from the configured manifest, or null
  * if the class isn't published yet (caller falls back to the CDN/local copy — progressive migration).
  * Quilt classes → `{agg}/v1/blobs/by-quilt-id/{quilt}/{filename}`; sharded classes resolve the file's

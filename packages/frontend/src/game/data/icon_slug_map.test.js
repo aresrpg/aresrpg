@@ -3,10 +3,16 @@
 // Issue #160: the icon slug recovery map is a RUNTIME blob (never a repo artifact — the content pipeline
 // authors it privately). An unpublished / absent blob must DEGRADE LOUDLY — one console.error naming the
 // missing asset, the cache left empty AND retryable — never a throw. Mirrors game/data/spell_corpus.test.js.
-import { afterEach, describe, expect, spyOn, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
+import { reset_walrus_assets_for_test } from '@aresrpg/sdk/jobs'
 
 import { get_icon_slug_map, load_icon_slug_map, set_icon_slug_map_for_test } from './icon_slug_map.js'
 
+// The shared Walrus resolver (packages/sdk/src/jobs.js) has no per-file isolation of its own — bun test
+// shares that module process-wide, sorted by path. Reset it before every test so an earlier-sorted file
+// that configured the real manifest (e.g. components/item_hover_tooltip.test.tsx) can never make
+// 'icon_slug_map' look published here.
+beforeEach(() => reset_walrus_assets_for_test())
 afterEach(() => set_icon_slug_map_for_test()) // reset module state between tests
 
 describe('icon slug map runtime loader (issue #160)', () => {
