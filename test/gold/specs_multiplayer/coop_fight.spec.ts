@@ -16,6 +16,8 @@
 // LOOT NOTE: the multi_turn fixture authors an EMPTY loot table (fight_fixtures.mjs mints no MobLootEntry), so
 // the per-seat loot leg is proven VACUOUSLY (group checklist length 0 asserted on-chain + on the deserter's
 // outcome object). A loot-carrying coop fixture is a named rider in the lane report.
+import fs from 'node:fs'
+
 import { expect, test, type BrowserContext, type Page } from '@playwright/test'
 
 import { get_fields, make_client, owned_by_type, submit } from '../../localnet/bots/framework/sui.js'
@@ -34,6 +36,7 @@ import {
   assert_victory_and_continue,
   boot_roster_lite,
   boot_world_lite,
+  chain_truth_export,
   discover_fights,
   fighters_snapshot,
   join_fight_by_door,
@@ -42,6 +45,7 @@ import {
   place_and_ready,
   play_turn,
   probe_beats,
+  watch_fight_by_door,
   type GoldWallet,
 } from './coop_helpers'
 import {
@@ -248,6 +252,30 @@ test.describe('gold localnet — coop public fight (two joiners, one deserter, o
         )
         .toEqual({ agreed: true, dropped: true })
 
+      // ── 7c · THE EXPORT ORACLE (ruled 07-22): WATCH binds C's idle context as a seatless observer, then
+      //    every participant and spectator exports the same COMMITTED board. The poll absorbs only journal /
+      //    presentation skew; a stable difference is a client desync.
+      await watch_fight_by_door(page_c, fight_id, fixture.world_id)
+      const observer_pages = () => [...live().map((seat) => seat.page), page_c]
+      await expect
+        .poll(
+          async () => {
+            const exports = await Promise.all(observer_pages().map(chain_truth_export))
+            const [first, ...rest] = exports.map((board) => JSON.stringify(board))
+            return {
+              seats: live().length,
+              spectators: 1,
+              ready: exports.every((board) => board !== null),
+              diverged: rest.filter((board) => board !== first).length,
+            }
+          },
+          {
+            timeout: 60_000,
+            message: 'the three seats and spectator never converged on one committed board after round 1',
+          }
+        )
+        .toEqual({ seats: 3, spectators: 1, ready: true, diverged: 0 })
+
       // ── 8 · acceptance (b): D deserts mid-fight — the crank must carry the fight past the dead seat ──────
       const [, , context_d] = contexts
       await context_d.close()
@@ -275,6 +303,32 @@ test.describe('gold localnet — coop public fight (two joiners, one deserter, o
           }
         )
         .toBe(true)
+
+      // ── 8b · EXPORT ORACLE, post-desertion: both survivors and the spectator re-converge, and all three
+      //    exports land on disk so a human can diff exactly what every remaining observer believed.
+      await expect
+        .poll(
+          async () => {
+            const [board_a, board_b, board_spectator] = await Promise.all(observer_pages().map(chain_truth_export))
+            const serialized_a = JSON.stringify(board_a)
+            return {
+              ready: [board_a, board_b, board_spectator].every((board) => board !== null),
+              identical: JSON.stringify(board_b) === serialized_a && JSON.stringify(board_spectator) === serialized_a,
+            }
+          },
+          { timeout: 60_000, message: 'survivor and spectator boards never re-converged after the desertion' }
+        )
+        .toEqual({ ready: true, identical: true })
+      {
+        const [board_a, board_b, board_spectator] = await Promise.all(observer_pages().map(chain_truth_export))
+        const out_dir = new URL('../out/', import.meta.url)
+        fs.mkdirSync(out_dir, { recursive: true })
+        fs.writeFileSync(new URL('coop_export_a.json', out_dir), JSON.stringify(board_a, null, 2))
+        fs.writeFileSync(new URL('coop_export_b.json', out_dir), JSON.stringify(board_b, null, 2))
+        fs.writeFileSync(new URL('coop_export_spectator.json', out_dir), JSON.stringify(board_spectator, null, 2))
+        expect(board_b, 'survivor B exported a different committed board').toEqual(board_a)
+        expect(board_spectator, 'the spectator exported a different committed board').toEqual(board_a)
+      }
 
       // ── 9 · finish: stacked casts to victory on the surviving seats ──────────────────────────────────────
       const victory = page_a.locator('[role="dialog"][aria-label^="Victory:"]')
