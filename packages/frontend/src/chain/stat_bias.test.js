@@ -94,6 +94,29 @@ describe('normalize_item_template decode', () => {
   })
 })
 
+describe('decoded_tuple orders a degenerate/half-known pair (issue #437: "+3 to 0 Vitality")', () => {
+  test('a real min paired with a neutral (absent) max collapses to a FIXED value, never an inverted range', () => {
+    // The live-reported shape exactly: 32771 → +3 on the min half, the max half absent/neutral (32768 → 0).
+    // item_stats.move's roll_field treats hi <= lo as DEGENERATE (always rolls the fixed lo) — the decoded
+    // pair must mirror that ordering, or the card renders the nonsensical "+3 to 0 Vitality".
+    const fields = make_fields({ vitality: [STAT_BIAS + 3, STAT_BIAS] })
+    const stats = JSON.parse(normalize_item_template(fields, '0xabc', null).statsJson)
+    expect(stats.vitality).toEqual([3, 3])
+  })
+
+  test('a genuine well-ordered range (min < max) decodes both ends untouched', () => {
+    const fields = make_fields({ vitality: [STAT_BIAS - 2, STAT_BIAS + 9] })
+    const stats = JSON.parse(normalize_item_template(fields, '0xabc', null).statsJson)
+    expect(stats.vitality).toEqual([-2, 9])
+  })
+
+  test('a fully neutral pair (both absent/neutral) still drops entirely — never a fabricated [0,0] row', () => {
+    const fields = make_fields({ vitality: [STAT_BIAS, STAT_BIAS] })
+    const stats = JSON.parse(normalize_item_template(fields, '0xabc', null).statsJson)
+    expect(stats.vitality).toBeUndefined()
+  })
+})
+
 describe('read → edit-nothing → write is byte-identical', () => {
   test('re-encoding a decoded template reproduces the exact on-chain u16 fields', () => {
     const fields = make_fields({

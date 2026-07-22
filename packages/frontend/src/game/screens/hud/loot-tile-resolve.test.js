@@ -106,12 +106,36 @@ describe('resolve_loot_tile — exact RESOURCE art + template characteristics', 
     expect(out.icon).not.toBe('resource')
   })
 
-  test('the exact chain template supplies the hover CHARACTERISTICS stats', () => {
+  // #437: a victory-card loot tile is a FRESHLY ROLLED OWNED instance (the drop the player just got),
+  // never a template preview — the same contract as the inventory hover (Inventory.jsx) and the same
+  // onchain_template_to_detail_props seam. A genuine template RANGE describes what the drop COULD have
+  // rolled, not what it did, so it must never render on this surface.
+  test('a genuine template range is suppressed on the victory tile — a fresh drop is an owned instance (#437)', () => {
     const out = resolve_loot_tile(entry, items, template_map, undefined, t, {
       [template_id]: 'obsidian_core',
     })
 
-    expect(out.detail.stats).toEqual({ vitality: [4, 9], wisdom: [1, 3] })
+    expect(out.detail.stats).toEqual({})
+  })
+
+  test('a degenerate (fixed) template value still renders — it IS the drop\'s real stat', () => {
+    const fixed_template_map = new Map([
+      [
+        template_id,
+        {
+          id: template_id,
+          item_type: 'resource',
+          category: 'RESOURCE',
+          name: 'Obsidian Core',
+          statsJson: JSON.stringify({ vitality: [4, 4] }),
+        },
+      ],
+    ])
+    const out = resolve_loot_tile(entry, items, fixed_template_map, undefined, t, {
+      [template_id]: 'obsidian_core',
+    })
+
+    expect(out.detail.stats).toEqual({ vitality: [4, 4] })
   })
 
   test('an unmapped RESOURCE still resolves the name-derived slug (render layer glyphs on 404)', () => {

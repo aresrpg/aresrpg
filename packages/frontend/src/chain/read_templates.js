@@ -103,8 +103,13 @@ export const ITEM_STAT_EXTRA_KEYS = []
 // readonly) renders real values only — no per-surface decode, no zero-stat clutter. write_templates.js
 // re-encodes (real → +32768), defaulting dropped keys back to neutral, so the round trip is lossless.
 function decoded_tuple(min_fields, max_fields, chain_key) {
-  const min = decode_stat(min_fields[chain_key] ?? STAT_BIAS)
-  const max = decode_stat(max_fields[chain_key] ?? STAT_BIAS)
+  const lo = decode_stat(min_fields[chain_key] ?? STAT_BIAS)
+  const hi = decode_stat(max_fields[chain_key] ?? STAT_BIAS)
+  // item_stats.move's roll_field treats hi <= lo as DEGENERATE — the roll is FIXED at lo, never a real
+  // spread. Mirror that collapse here, or a half-absent field (the /v1 projection's null-half-is-neutral
+  // convention) or a misauthored template decodes into an inverted line ("+3 to 0 Vitality", live-reported
+  // issue #437: min 32771 → +3, the absent max half defaulted to neutral 0 independently of it).
+  const [min, max] = hi <= lo ? [lo, lo] : [lo, hi]
   if (min === 0 && max === 0) return null
   return [min, max]
 }

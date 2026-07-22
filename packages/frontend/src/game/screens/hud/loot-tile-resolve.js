@@ -100,6 +100,11 @@ export function resolve_loot_tile(entry, items, template_map, tt, t, slug_by_tem
       display: resolved
         ? tmpl?.display
         : { description: entry.name ? undefined : t('fight_end.loot_metadata_unavailable') },
+      // OWNED instance, never a template preview — a victory-card loot tile is the drop the player just
+      // got (freshly rolled, real), so a variable-roll template RANGE is not this drop's own stat
+      // (issue #437, same contract as Inventory's hover). A degenerate/fixed template value still renders
+      // since that IS the drop's real stat regardless of instance.
+      owned: true,
     },
     tt,
   )

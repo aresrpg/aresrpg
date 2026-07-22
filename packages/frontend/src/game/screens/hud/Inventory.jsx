@@ -128,6 +128,11 @@ export function Inventory() {
       // the ONE display-level home (night-batch #1) — never a second `?? level` chain
       level: item_display_level(item, tmpl),
       removed,
+      // OWNED instance, never a template preview — a variable-roll template RANGE (tmpl.statsJson) is not
+      // this item's own stat, so onchain_template_to_detail_props drops it rather than showing a lie
+      // ("+3 to 8 Vitality" on ONE specific sword, issue #437); a degenerate/fixed template value still
+      // renders since that IS the item's real rolled stat regardless of instance.
+      owned: true,
     })
   }
   const [hovered_bag_id, set_hovered_bag_id] = useState(/** @type {string | null} */ (null))

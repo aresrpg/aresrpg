@@ -83,7 +83,10 @@ test('get_template_map decodes the /v1 stat projection into real-valued characte
   expect(stats).toEqual({
     vitality: [32, 232], // 32800/33000 un-biased
     rawDamage: [10, 20], // 32778/32788 un-biased + snake→camel rename
-    range: [5, 0], // one-half-present: min 32773 → +5, absent max half defaults to neutral 0 (never fabricated)
+    // one-half-present: min 32773 → +5, absent max half defaults to neutral 0 — item_stats.move's
+    // roll_field treats hi <= lo as DEGENERATE (always rolls the fixed lo), so the decoded pair mirrors
+    // that same collapse: [5, 5], NEVER the inverted [5, 0] (live-reported "+3 to 0 Vitality" bug, #437).
+    range: [5, 5],
   })
   // strength [32768,32768] is the neutral sentinel → DROPPED, never a +0 row
   expect(stats.strength).toBeUndefined()

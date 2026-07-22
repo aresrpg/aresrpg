@@ -405,6 +405,14 @@ export function onchain_template_to_detail_props(
     category?: string
     level?: number
     statsJson?: string
+    /** CONTRACT (issue #437): true when `tmpl` describes an OWNED instance (Inventory bag/equipment) rather
+     * than a template-only preview (findables/WorldCard, encyclopedia, shop). A template's [min,max] roll
+     * RANGE is honest to show on an owned item only when it is DEGENERATE (min === max — item_stats.move's
+     * roll_field always rolls a FIXED value whenever hi <= lo, so the pair IS this instance's real stat); a
+     * genuine spread describes what the template COULD roll, not what THIS item got, so it is dropped
+     * rather than shown as someone else's possible roll ("+3 to 8 Vitality" on a specific sword prod
+     * regression). Template surfaces (owned unset) are unaffected — the full range keeps rendering there. */
+    owned?: boolean
     // D240: normalize_item_template's decoded heal effect ({ type:'LIFE_REGEN', amount } | null) — carried
     // through so the shared ItemDetailView shows "Restores N HP" on consumables (bag/findables/recall tooltips).
     consumable_effect?: { type: string; [key: string]: any } | null
@@ -412,7 +420,10 @@ export function onchain_template_to_detail_props(
   },
   tt?: ReturnType<typeof use_template_t>
 ) {
-  const raw_stats = safe_json_parse(tmpl.statsJson, {})
+  const parsed_stats = safe_json_parse<Record<string, number | [number, number]>>(tmpl.statsJson, {})
+  const raw_stats = tmpl.owned
+    ? Object.fromEntries(Object.entries(parsed_stats).filter(([, v]) => !Array.isArray(v) || v[0] === v[1]))
+    : parsed_stats
   const en_description = tmpl.display?.description || undefined
   return {
     id: tmpl.icon_slug || tmpl.item_type || tmpl.id,

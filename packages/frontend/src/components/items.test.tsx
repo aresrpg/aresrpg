@@ -15,6 +15,7 @@ import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
 import en from '../i18n/locales/en.json'
 import type { ItemInfo } from '../types/chain'
 
+import { ItemDetailView } from './item_detail_view'
 import { ItemImage, ItemTooltipContent, onchain_template_to_detail_props } from './items'
 
 // configure_walrus_assets has no test-reset seam (it MERGES classes and overwrites the aggregator, with no
@@ -120,6 +121,63 @@ describe('onchain_template_to_detail_props — icon_slug wins for the detail ima
     const detail = onchain_template_to_detail_props({ item_type: 'ableton_scythe', category: 'scythe', level: 10 })
 
     expect(detail.id).toBe('ableton_scythe')
+  })
+})
+
+// CONTRACT (issue #437): template stat RANGES (stats_min/stats_max, the 32768-biased encoding — one
+// possible roll) render only on TEMPLATE surfaces (findables/encyclopedia/shop). An OWNED instance
+// (Inventory bag/equipment) has its OWN fixed rolled stat — showing the template's full spread there is a
+// lie ("+3 to 0 Vitality" prod regression). `owned: true` marks the payload as an instance surface: a
+// genuine range (min !== max — we don't know which value THIS item rolled) is dropped; a degenerate pair
+// (min === max) is safe to keep because item_stats.move's roll_field always rolls that fixed value.
+describe('onchain_template_to_detail_props — owned instances never show a template RANGE (#437)', () => {
+  test('a genuine template range is suppressed on an owned surface', () => {
+    const detail = onchain_template_to_detail_props({
+      item_type: 'iron_sword',
+      category: 'sword',
+      level: 10,
+      statsJson: JSON.stringify({ vitality: [3, 8] }),
+      owned: true,
+    } as any)
+    expect(detail.stats).toEqual({})
+  })
+
+  test('a degenerate (fixed) template value still renders — it IS the instance real stat', () => {
+    const detail = onchain_template_to_detail_props({
+      item_type: 'iron_sword',
+      category: 'sword',
+      level: 10,
+      statsJson: JSON.stringify({ vitality: [3, 3], rawDamage: [5, 8] }),
+      owned: true,
+    } as any)
+    expect(detail.stats).toEqual({ vitality: [3, 3] })
+  })
+
+  test('a template surface (owned unset) keeps the full range — findables/encyclopedia/shop unaffected', () => {
+    const detail = onchain_template_to_detail_props({
+      item_type: 'iron_sword',
+      category: 'sword',
+      level: 10,
+      statsJson: JSON.stringify({ vitality: [3, 8] }),
+    } as any)
+    expect(detail.stats).toEqual({ vitality: [3, 8] })
+  })
+
+  test('end-to-end: a variable-roll stat never renders as "N to M" on an owned item hover card', () => {
+    const detail = onchain_template_to_detail_props({
+      item_type: 'iron_sword',
+      category: 'sword',
+      level: 10,
+      statsJson: JSON.stringify({ vitality: [3, 8] }),
+      owned: true,
+    } as any)
+    const html = renderToStaticMarkup(
+      <I18nextProvider i18n={test_i18n}>
+        <ItemDetailView item={detail as any} />
+      </I18nextProvider>
+    )
+    expect(html).not.toContain('CHARACTERISTICS')
+    expect(html).not.toContain('Vitality')
   })
 })
 
