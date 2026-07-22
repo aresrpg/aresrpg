@@ -109,7 +109,8 @@ const FACE_MASK = 0x7
 const BLOCK_ID_MASK = 0xfff
 
 /** Per-class GPU-frustum padding. Solid/cutout/canopy/liquid vertices stay within the generic 1 m
- *  greedy-face allowance; foliage's shader-displaced billboards need their larger owned envelope. */
+ *  greedy-face allowance; foliage's shader-displaced billboards need their larger owned envelope.
+ *  @param {RenderClass} cls render-class key (solid|cutout|canopy|liquid|foliage) */
 export function render_class_aabb_margin(cls) {
   return cls === 'foliage' ? foliage_cull_margin : 1
 }
