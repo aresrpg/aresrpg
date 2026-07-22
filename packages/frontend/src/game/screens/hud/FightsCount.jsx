@@ -29,10 +29,12 @@ export function FightsCount() {
         aria-label={t('fights.fights_nearby', { count })}
       >
         <span className="hud-fights-count__icon" dangerouslySetInnerHTML={{ __html: icon_fight }} />
-        {/* ONE count home (the badge digit was glued against a label that repeated the same
-            number) — the digit lives ONLY here; the label stays count-less and just names what it counts. */}
+        {/* ONE count home (the badge digit was glued against a label that repeated the same number) — the
+            digit lives ONLY here; the label never re-shows it, but it still PLURALIZES off it (#499): "Fight
+            nearby" at 1, "Fights nearby" at N — a flat count-less label read as the ungrammatical "1Fights
+            nearby". */}
         <span className="hud-fights-count__num hud-num">{count}</span>
-        <span className="hud-fights-count__label">{t('fights.nearby_label')}</span>
+        <span className="hud-fights-count__label">{t('fights.nearby_label', { count })}</span>
       </button>
     </Tooltip>
   )

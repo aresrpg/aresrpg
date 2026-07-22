@@ -2627,6 +2627,8 @@
     "fights_nearby_one": "近くの戦闘 {{count}} 件",
     "fights_nearby_other": "近くの戦闘 {{count}} 件",
     "nearby_label": "近くの戦闘",
+    "nearby_label_one": "近くの戦闘",
+    "nearby_label_other": "近くの戦闘",
     "panel_title": "範囲内の戦闘",
     "panel_subtitle": "戦いを観戦するか、編成中の戦闘に参加しよう。",
     "filter_friends": "フレンドのみ",

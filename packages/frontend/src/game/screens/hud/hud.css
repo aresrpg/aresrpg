@@ -2511,8 +2511,13 @@ button.hud-socket:focus-visible {
   font-weight: 700;
   color: var(--accent);
 }
+/* #499: house uppercase micro-label (was plain-case body text — the one chip in this file skipping it). */
 .hud-fights-count__label {
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--fg-muted);
 }
 

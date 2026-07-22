@@ -2627,6 +2627,8 @@
     "fights_nearby_one": "{{count}} combat à proximité",
     "fights_nearby_other": "{{count}} combats à proximité",
     "nearby_label": "Combats à proximité",
+    "nearby_label_one": "Combat à proximité",
+    "nearby_label_other": "Combats à proximité",
     "panel_title": "Combats à portée",
     "panel_subtitle": "Observez une bataille, ou rejoignez-en une en formation.",
     "filter_friends": "Amis uniquement",
