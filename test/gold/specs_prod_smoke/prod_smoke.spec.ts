@@ -7,7 +7,7 @@ import { Transaction } from '@mysten/sui/transactions'
 import { toBase64 } from '@mysten/sui/utils'
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
 
-const PROD_ORIGIN = 'https://testnet.aresrpg.world'
+const PROD_ORIGIN = process.env.PROD_SMOKE_ORIGIN ?? 'https://testnet.aresrpg.world'
 const DEV_KEY = process.env.VITE_DEV_KEY ?? ''
 const WALLET_NAME = 'AresRPG Prod Smoke Wallet'
 const SUI_CHAIN = 'sui:testnet'

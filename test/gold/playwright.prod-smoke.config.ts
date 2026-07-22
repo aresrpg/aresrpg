@@ -6,9 +6,9 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig, devices } from '@playwright/test'
 
 // POST-DEPLOY PROD SMOKE — the deployed bundle + real testnet timing. There is deliberately no
-// webServer: every row drives https://testnet.aresrpg.world after Vercel has returned success.
+// webServer: every row drives PROD_SMOKE_ORIGIN (testnet by default) after Vercel has returned success.
 const GOLD = path.dirname(fileURLToPath(import.meta.url))
-const PROD_ORIGIN = 'https://testnet.aresrpg.world'
+const PROD_ORIGIN = process.env.PROD_SMOKE_ORIGIN ?? 'https://testnet.aresrpg.world'
 
 export default defineConfig({
   testDir: path.join(GOLD, 'specs_prod_smoke'),
