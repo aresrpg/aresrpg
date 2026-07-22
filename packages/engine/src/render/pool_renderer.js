@@ -539,6 +539,25 @@ export function create_terrain_renderer({
     mesh.userData.render_class = cls // bench A/B hook (set_class_visible) — see the perf gate
     scene.add(mesh) // NO BundleGroup — the pool mesh is a plain scene child (survey F1)
     meshes.push(mesh)
+    if (cls === 'foliage') {
+      // Water samples viewport depth during its transparent renderOrder=1 draw, so the visible foliage pass
+      // above must not seed that solid-bed depth. Restore the same alpha-tested silhouette AFTER water so
+      // final scene depth still protects grass from depth-composited clouds/fog. The clone shares the pool,
+      // atlas and TSL nodes; it is colorless and allocated once at boot (no per-frame objects or uploads).
+      const scene_depth_material = material.clone()
+      scene_depth_material.transparent = true
+      scene_depth_material.alphaTest = material.alphaTest
+      scene_depth_material.colorWrite = false
+      scene_depth_material.depthWrite = true
+      const scene_depth_mesh = new Mesh(pool.geometry, scene_depth_material)
+      scene_depth_mesh.frustumCulled = false
+      scene_depth_mesh.matrixAutoUpdate = false
+      scene_depth_mesh.renderOrder = 2
+      scene_depth_mesh.userData.render_class = 'foliage_depth'
+      scene_depth_mesh.userData.scene_depth_restore = true
+      scene.add(scene_depth_mesh)
+      meshes.push(scene_depth_mesh)
+    }
   }
 
   // ── SHADOW-SCOPE EPOCHS — a chunk change bumps the general upload_epoch
@@ -737,7 +756,9 @@ export function create_terrain_renderer({
      * marginal frame cost = the DIVERGENCE-WAVE +1 ms gate). No gameplay path calls this.
      * @param {RenderClass} cls @param {boolean} visible */
     set_class_visible(cls, visible) {
-      for (const mesh of meshes) if (mesh.userData.render_class === cls) mesh.visible = visible
+      for (const mesh of meshes)
+        if (mesh.userData.render_class === cls || (cls === 'foliage' && mesh.userData.render_class === 'foliage_depth'))
+          mesh.visible = visible
     },
 
     /** Pool-health snapshot for the perf report (utilization + fragmentation + soft misses + drop recovery). */

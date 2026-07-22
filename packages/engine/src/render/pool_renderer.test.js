@@ -225,7 +225,7 @@ describe('pool terrain renderer — upload / stats / dispose', () => {
       if (/** @type {{isMesh?: boolean}} */ (o).isMesh) meshes += 1
       if (/** @type {{isBundleGroup?: boolean}} */ (o).isBundleGroup) bundles += 1
     })
-    expect(meshes).toBe(5) // solid + foliage + cutout (leaf sprites) + canopy (Rung-2 leaf cubes) + liquid
+    expect(meshes).toBe(6) // five class meshes + the post-water foliage scene-depth restore
     expect(bundles).toBe(0) // NO BundleGroup (survey F1) — the legacy sector path is gone
   })
 
@@ -360,7 +360,7 @@ describe('dispose — full GPU teardown empties the resident set and clears the 
         mesh.material.addEventListener('dispose', () => disposed.add(/** @type {any} */ (mesh.material)))
       }
     })
-    expect(materials.length).toBe(5) // solid/foliage/cutout/canopy/liquid — one material per class
+    expect(materials.length).toBe(6) // five class materials + the post-water foliage scene-depth restore
 
     expect(() => terrain.dispose()).not.toThrow()
 
@@ -372,43 +372,46 @@ describe('dispose — full GPU teardown empties the resident set and clears the 
     scene.traverse((o) => {
       if (/** @type {{isMesh?: boolean}} */ (o).isMesh) meshes_left += 1
     })
-    expect(meshes_left).toBe(0) // all five pool meshes detached
-    expect(disposed.size).toBe(5) // every class material .dispose()'d (Rung-2: + canopy)
+    expect(meshes_left).toBe(0) // every pool + auxiliary mesh detached
+    expect(disposed.size).toBe(6) // every class material + the foliage depth-restore clone is disposed
   })
 })
 
-// ── FOLIAGE SCENE-DEPTH CONTRACT (#454 grass-clip regression) ────────────────────────────────────
-// Foliage (grass/flowers/cross-flora) MUST write depth so it lands in the scene-pass depth MRT the post
-// chain reconstructs per-pixel distance from (post_stack.js `getViewPosition(uv, scene_depth.r)` →
-// frag_dist). The default-ON flat cloud deck composites over every pixel whose reconstructed distance
-// reaches the deck (the "sky" pixels), so a grass sprite silhouetted against sky that wrote NO depth
-// reconstructs at the FAR plane and the deck paints straight over it — the #454 "all grass clips at
-// certain camera angles" full clip (angle-dependent: whether grass has solid terrain behind it or open
-// sky). All pool meshes are frustumCulled=false, so this is a depth-participation bug, not culling.
-//   HISTORY: #303 set depthWrite=false here to keep submerged coral/algae out of the opaque bed the
-//   liquid pass samples (viewportDepthTexture) — but grass and the water bed read the SAME shared scene
-//   depth, so excluding foliage to protect the water bed also excluded grass from the post depth and
-//   armed this regression. Keeping submerged vegetation out of the water bed WITHOUT dropping land grass
-//   from the scene depth needs a dedicated submerged-foliage depth path (a distinct pool or a solid-only
-//   water-bed depth) — tracked separately; the universal land-grass clip is the shipped-severity bug.
-describe('foliage / scene-depth contract (#454)', () => {
-  test('foliage writes depth so it occludes the depth-composited cloud deck (never clips against sky)', () => {
+// ── WATER-BED / FINAL SCENE-DEPTH CONTRACT (#303 + #454) ──────────────────────────────────────────
+// Water samples viewport depth while its transparent pass draws. Non-solid cross flora must stay out of
+// that bed, but the completed scene depth still needs the same alpha-tested silhouettes for post effects.
+describe('foliage depth ordering', () => {
+  test('water sees only solid terrain, then a colorless pass restores foliage to final scene depth', () => {
     const scene = new Scene()
     const terrain = make_renderer(scene)
     try {
-      const foliage_mesh = /** @type {any} */ (scene.children.find((mesh) => mesh.userData?.render_class === 'foliage'))
+      const foliage_mesh = /** @type {any} */ (
+        scene.children.find((mesh) => mesh.userData?.render_class === 'foliage' && !mesh.userData?.scene_depth_restore)
+      )
+      const foliage_depth_mesh = /** @type {any} */ (
+        scene.children.find((mesh) => mesh.userData?.scene_depth_restore === true)
+      )
       const liquid_mesh = /** @type {any} */ (scene.children.find((mesh) => mesh.userData?.render_class === 'liquid'))
 
       expect(foliage_mesh.material.transparent).toBe(false)
       expect(foliage_mesh.material.alphaTest).toBe(0.5)
       expect(foliage_mesh.material.depthTest).toBe(true)
-      // #454: foliage must be IN the scene depth MRT so the post cloud-deck composite (post_stack.js)
-      // never reconstructs a grass-against-sky pixel at the far plane and paints the deck over it.
-      expect(foliage_mesh.material.depthWrite).toBe(true)
+      expect(foliage_mesh.material.depthWrite).toBe(false)
       expect(liquid_mesh.material.transparent).toBe(true)
       expect(liquid_mesh.material.depthTest).toBe(true)
       expect(liquid_mesh.material.depthWrite).toBe(false)
       expect(foliage_mesh.renderOrder).toBeLessThan(liquid_mesh.renderOrder)
+
+      expect(foliage_depth_mesh.material.transparent).toBe(true)
+      expect(foliage_depth_mesh.material.alphaTest).toBe(0.5)
+      expect(foliage_depth_mesh.material.colorWrite).toBe(false)
+      expect(foliage_depth_mesh.material.depthTest).toBe(true)
+      expect(foliage_depth_mesh.material.depthWrite).toBe(true)
+      expect(foliage_depth_mesh.renderOrder).toBeGreaterThan(liquid_mesh.renderOrder)
+
+      terrain.set_class_visible('foliage', false)
+      expect(foliage_mesh.visible).toBe(false)
+      expect(foliage_depth_mesh.visible).toBe(false)
     } finally {
       terrain.dispose()
     }
