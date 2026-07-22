@@ -15,6 +15,7 @@ import {
   EQUIPMENT_SLOTS,
   equip_lock_of,
   equip_stage_action,
+  equipped_totals,
   group_stackable,
   is_item_listed,
   is_slot_valid,
@@ -25,6 +26,37 @@ import {
   stage_reducer,
   wallet_equipped_ids,
 } from './inventory-equip.js'
+
+describe('equipped_totals (owned rolls only)', () => {
+  const equipment = {
+    weapon: {
+      id: '0xsword',
+      vitality: 99,
+      statsJson: JSON.stringify({ vitality: [3, 8], action: [1, 2] }),
+    },
+    left_ring: {
+      id: '0xring',
+      vitality: 88,
+      statsJson: JSON.stringify({ vitality: [2, 6] }),
+    },
+  }
+
+  test('decodes centered owned rolls and sums their fixed values', () => {
+    const rolled_stats_by_id = {
+      '0xsword': { vitality: 32775, action: 32769 },
+      '0xring': { vitality: 32765 },
+    }
+
+    expect(equipped_totals(equipment, rolled_stats_by_id)).toEqual([
+      { key: 'vitality', label: 'vitality', value: 4 },
+      { key: 'action', label: 'AP', value: 1 },
+    ])
+  })
+
+  test('never falls back to template ranges or flat projected fields while rolls are unresolved', () => {
+    expect(equipped_totals(equipment)).toEqual([])
+  })
+})
 
 // A minimal typed character (only the fields projected_hp / character_max_hp read). No experience → level 1,
 // classe senshi + vitality 0 → max_hp 70 (config default base). `hp_updated_ms` is the regen anchor; can_consume

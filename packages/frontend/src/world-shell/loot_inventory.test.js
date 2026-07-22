@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'bun:test'
 import { reduce_sui_data } from '@aresrpg/inventory/reduce'
 
-import { settled_loot_input } from './loot_inventory.js'
+import { settled_loot_input, settled_loot_rows } from './loot_inventory.js'
 
 const start = () => ({ characters: [], items: [{ id: '0xold' }], settled_item_floor: {} })
 
@@ -28,6 +28,12 @@ const templates = new Map([
 ])
 
 describe('settle → inventory reducer seam', () => {
+  it('exposes the exact receipt-created rows for the victory-card instance join', () => {
+    expect(settled_loot_rows(settlement, templates)).toEqual([
+      expect.objectContaining({ id: '0xloot', template_id: '0xtemplate', item_type: 'razkin_hide', amount: 2 }),
+    ])
+  })
+
   it('folds ItemMinted receipt truth into the bag without a refresh', () => {
     const input = settled_loot_input(settlement, templates)
     const after = reduce_sui_data(start(), input)

@@ -117,7 +117,9 @@ export function build_listing_from_view(row, tmpl_by_slug) {
       // collapse into one false ladder while an older API is rolling forward.
       template_id,
       quantity,
-      stats_json: tmpl?.statsJson ?? '{}',
+      // This is an OWNED listed instance. Its hover resolves the roll by item id; a template range here would
+      // be a dishonest fallback while that instance read is pending or unavailable.
+      stats_json: '{}',
       slot: '',
       name: String(tmpl?.name ?? slug),
       description: '',

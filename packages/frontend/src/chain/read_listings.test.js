@@ -192,7 +192,7 @@ describe('build_listing_from_view — /v1 row → MarketplaceListing', () => {
     ],
   ])
 
-  test('an item row resolves canonical template, amount, UI category, name, and stats', () => {
+  test('an item row resolves canonical template, amount, UI category, and name without template-range stats', () => {
     const row = {
       item_id: '0xitem',
       kiosk_id: '0xkiosk',
@@ -214,6 +214,7 @@ describe('build_listing_from_view — /v1 row → MarketplaceListing', () => {
     expect(l.item.name).toBe('Iron Sword')
     expect(l.item.level).toBe(12) // row.level null → template level
     expect(l.item.quantity).toBe(1)
+    expect(l.item.stats_json).toBe('{}') // owned listing hover resolves this instance's roll by item id
   })
 
   test('a template miss still renders — name/category degrade to the slug, never fabricated', () => {

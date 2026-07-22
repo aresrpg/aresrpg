@@ -26,10 +26,14 @@ const item_type_label = (item_type) => String(item_type ?? '').replace(/_/g, ' '
 
 const template_id_of = (item) => String(item?.template_id ?? item?.template ?? '')
 
-const raw_item_of = (entry, items, template_id) =>
-  (template_id
-    ? items.find((item) => template_id_of(item) === template_id)
-    : items.find((item) => item.item_type === entry.item_type)) ?? null
+const raw_item_of = (entry, items, template_id) => {
+  if (entry.item_id) return items.find((item) => item.id === entry.item_id) ?? null
+  const matching_items = template_id
+    ? items.filter((item) => template_id_of(item) === template_id)
+    : items.filter((item) => item.item_type === entry.item_type)
+  // Aggregate/legacy rows may still borrow same-template presentation metadata, but never its object id/stats.
+  return matching_items[matching_items.length - 1] ?? null
+}
 
 const template_of = (entry, template_map, template_id) =>
   (template_id ? template_map.get(template_id) : template_map.get(entry.item_type)) ?? null
@@ -54,7 +58,7 @@ const icon_of = ({ entry, raw, template, name, category, published_slug }) => {
 }
 
 /**
- * @typedef {{ template_id?: string, item_type: string, name: string, amount: number }} LootEntry
+ * @typedef {{ item_id?: string, template_id?: string, item_type: string, name: string, amount: number }} LootEntry
  */
 
 /**
@@ -67,8 +71,9 @@ const icon_of = ({ entry, raw, template, name, category, published_slug }) => {
  * @param {((tmpl: any, field: 'name' | 'description') => string) | undefined} tt use_template_t() resolver
  * @param {(key: string, opts?: any) => string} t
  * @param {Record<string, string>} [slug_by_template_id] published ItemTemplate id → render slug
+ * @param {Record<string, number> | null} [rolled_stats] exact owned instance's centered-u16 StatsKey block
  */
-export function resolve_loot_tile(entry, items, template_map, tt, t, slug_by_template_id = {}) {
+export function resolve_loot_tile(entry, items, template_map, tt, t, slug_by_template_id = {}, rolled_stats = null) {
   const template_id = template_id_of(entry)
   // An item_type such as "resource" is a class, not identity. Once the receipt carries an exact template,
   // never join it to an arbitrary sibling merely because both rows share that class.
@@ -101,10 +106,9 @@ export function resolve_loot_tile(entry, items, template_map, tt, t, slug_by_tem
         ? tmpl?.display
         : { description: entry.name ? undefined : t('fight_end.loot_metadata_unavailable') },
       // OWNED instance, never a template preview — a victory-card loot tile is the drop the player just
-      // got (freshly rolled, real), so a variable-roll template RANGE is not this drop's own stat
-      // (issue #437, same contract as Inventory's hover). A degenerate/fixed template value still renders
-      // since that IS the drop's real stat regardless of instance.
+      // got (freshly rolled, real), so every stat comes from this exact object's rolled StatsKey block.
       owned: true,
+      rolled_stats,
     },
     tt,
   )
@@ -114,6 +118,7 @@ export function resolve_loot_tile(entry, items, template_map, tt, t, slug_by_tem
     tint: view?.tint ?? quality_color('common'),
     category,
     icon,
+    item_id: entry.item_id ?? null,
     detail,
   }
 }

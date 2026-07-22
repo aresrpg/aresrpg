@@ -127,10 +127,28 @@ describe('onchain_template_to_detail_props — icon_slug wins for the detail ima
 // CONTRACT (issue #437): template stat RANGES (stats_min/stats_max, the 32768-biased encoding — one
 // possible roll) render only on TEMPLATE surfaces (findables/encyclopedia/shop). An OWNED instance
 // (Inventory bag/equipment) has its OWN fixed rolled stat — showing the template's full spread there is a
-// lie ("+3 to 0 Vitality" prod regression). `owned: true` marks the payload as an instance surface: a
-// genuine range (min !== max — we don't know which value THIS item rolled) is dropped; a degenerate pair
-// (min === max) is safe to keep because item_stats.move's roll_field always rolls that fixed value.
+// lie ("+3 to 0 Vitality" prod regression). `owned: true` marks the payload as an instance surface: its
+// resolved `rolled_stats` block is the only valid stat read; while that read is absent, the card stays empty.
 describe('onchain_template_to_detail_props — owned instances never show a template RANGE (#437)', () => {
+  test('an owned rolled instance renders its roll, never the template range', () => {
+    const detail = onchain_template_to_detail_props({
+      item_type: 'iron_sword',
+      category: 'sword',
+      level: 10,
+      statsJson: JSON.stringify({ vitality: [3, 8] }),
+      rolled_stats: { vitality: 32775 },
+      owned: true,
+    } as any)
+    const text = renderToStaticMarkup(
+      <I18nextProvider i18n={test_i18n}>
+        <ItemDetailView item={detail as any} />
+      </I18nextProvider>
+    ).replace(/<[^>]+>/g, '')
+
+    expect(text).toContain('+7 Vitality')
+    expect(text).not.toContain('+3 to 8 Vitality')
+  })
+
   test('a genuine template range is suppressed on an owned surface', () => {
     const detail = onchain_template_to_detail_props({
       item_type: 'iron_sword',
@@ -142,7 +160,7 @@ describe('onchain_template_to_detail_props — owned instances never show a temp
     expect(detail.stats).toEqual({})
   })
 
-  test('a degenerate (fixed) template value still renders — it IS the instance real stat', () => {
+  test('a degenerate template value is still not accepted as the owned instance read', () => {
     const detail = onchain_template_to_detail_props({
       item_type: 'iron_sword',
       category: 'sword',
@@ -150,7 +168,7 @@ describe('onchain_template_to_detail_props — owned instances never show a temp
       statsJson: JSON.stringify({ vitality: [3, 3], rawDamage: [5, 8] }),
       owned: true,
     } as any)
-    expect(detail.stats).toEqual({ vitality: [3, 3] })
+    expect(detail.stats).toEqual({})
   })
 
   test('a template surface (owned unset) keeps the full range — findables/encyclopedia/shop unaffected', () => {

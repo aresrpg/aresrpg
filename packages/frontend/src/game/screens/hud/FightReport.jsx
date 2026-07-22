@@ -39,6 +39,7 @@ import { format_mmss } from './world/compass_math.js'
 import { ItemDetailView } from '../../../components/item_detail_view'
 import { use_template_t } from '../../../i18n/template_t'
 import { get_template_by_item_type_map, get_template_detail_map } from '../../../chain/read_findables.js'
+import { resolve_rolled_stats } from '../../../chain/rolled_stats.js'
 import { resolve_character_docs } from '../../../world-shell/character_name_resolve.js'
 import { seed_manifest } from '../../../content/seed_manifest'
 import { export_fight_trace, has_dumpable_trace } from './fight_trace_export.js'
@@ -86,10 +87,10 @@ function Skel({ w = '3.5em' }) {
  * orphaned drop (missing from BOTH the bag snapshot and the encyclopedia — e.g. a QA test mob's ad hoc loot
  * template) renders the D53 bold-letter fallback instead of <ItemIcon> — a loot slot must never read as an
  * empty un-hoverable box.
- * @param {{ entry: { template_id?: string, item_type: string, name: string, amount: number }, items: any[], template_map: Map<string, any>, tt: ReturnType<typeof use_template_t>, t: (key: string, opts?: any) => string }} props
+ * @param {{ entry: { item_id?: string, template_id?: string, item_type: string, name: string, amount: number }, items: any[], template_map: Map<string, any>, tt: ReturnType<typeof use_template_t>, t: (key: string, opts?: any) => string }} props
  */
 function LootTile({ entry, items, template_map, tt, t }) {
-  const { resolved, name, tint, category, icon, detail } = resolve_loot_tile(
+  const base_tile = resolve_loot_tile(
     entry,
     items,
     template_map,
@@ -97,6 +98,28 @@ function LootTile({ entry, items, template_map, tt, t }) {
     t,
     icon_slug_by_template_id,
   )
+  const item_id = base_tile.item_id
+  const [rolled_state, set_rolled_state] = useState({ item_id: null, rolled_stats: null })
+  useEffect(() => {
+    if (!item_id) return
+    let alive = true
+    void resolve_rolled_stats(item_id).then(
+      (rolled_stats) => {
+        if (alive) set_rolled_state({ item_id, rolled_stats })
+      },
+      () => {
+        if (alive) set_rolled_state({ item_id, rolled_stats: null })
+      },
+    )
+    return () => {
+      alive = false
+    }
+  }, [item_id])
+  const rolled_stats = rolled_state.item_id === item_id ? rolled_state.rolled_stats : null
+  const resolved_tile = rolled_stats
+    ? resolve_loot_tile(entry, items, template_map, tt, t, icon_slug_by_template_id, rolled_stats)
+    : base_tile
+  const { resolved, name, tint, category, icon, detail } = resolved_tile
   return (
     <Tooltip content={<ItemDetailView item={detail} />} className="tt-card--solid">
       <div
@@ -177,7 +200,7 @@ function Row({ f, is_enemy, settled_dead = false, spoils_slot = null, t }) {
  * teammate's honest "not visible to you" used to be its own italic text LINE (roughly doubling that row's
  * height across a whole roster) — it is now a single dim glyph living in the row's own trailing cell, with
  * the full sentence carried on `aria-label` instead of always-visible text.
- * @param {{ mine: boolean, spoils: { xp: number, tokens: number, loot: Array<{ template_id?: string, item_type: string, name: string, amount: number }> }, items: any[], template_map: Map<string, any>, tt: ReturnType<typeof use_template_t>, pending: boolean, loot_units: number | null, t: (key: string, opts?: any) => string }} props
+ * @param {{ mine: boolean, spoils: { xp: number, tokens: number, loot: Array<{ item_id?: string, template_id?: string, item_type: string, name: string, amount: number }> }, items: any[], template_map: Map<string, any>, tt: ReturnType<typeof use_template_t>, pending: boolean, loot_units: number | null, t: (key: string, opts?: any) => string }} props
  */
 function RowSpoils({ mine, spoils, items, template_map, tt, pending, loot_units, t }) {
   if (!mine)
@@ -202,7 +225,7 @@ function RowSpoils({ mine, spoils, items, template_map, tt, pending, loot_units,
         <div className="fe-tiles">
           {spoils.loot.slice(0, MAX_TILES).map((e, i) => (
             <LootTile
-              key={e.template_id ?? e.item_type ?? i}
+              key={e.item_id ?? e.template_id ?? e.item_type ?? i}
               entry={e}
               items={items}
               template_map={template_map}
@@ -228,7 +251,7 @@ function RowSpoils({ mine, spoils, items, template_map, tt, pending, loot_units,
  *   verdict: 'Victory' | 'Defeat',
  *   party: Array<{ id: string, name: string, level: number, is_me?: boolean, is_player?: boolean, alive: boolean, hp_pct: number, class_name?: string | null }>,
  *   enemies: Array<{ id: string, name: string, level: number, is_player?: boolean, alive: boolean, hp_pct: number }>,
- *   spoils: { xp: number, tokens: number, loot: Array<{ template_id?: string, item_type: string, name: string, amount: number }> } | null,
+ *   spoils: { xp: number, tokens: number, loot: Array<{ item_id?: string, template_id?: string, item_type: string, name: string, amount: number }> } | null,
  *   items: any[],
  *   cost: { sui: string, is_refund: boolean } | null,
  *   pending?: boolean,      // true while the xp/level is still resolving on-chain → render a skeleton, not a 0

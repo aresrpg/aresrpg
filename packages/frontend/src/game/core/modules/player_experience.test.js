@@ -14,7 +14,7 @@ import {
   merge_character_enrichment,
   reconcile_character_projection,
 } from '../../../chain/fight_character_reconcile.js'
-import { loot_from_rolled } from '../../../world-shell/fight_result_receipt.js'
+import { loot_from_minted_rows, loot_from_rolled } from '../../../world-shell/fight_result_receipt.js'
 import player_experience from './player_experience.js'
 
 const make_module = (characters = [], options = {}) => {
@@ -277,10 +277,9 @@ describe('loot_from_rolled — the FightResult receipt maps to the card lines, X
 })
 
 // ── SPOILS FLOOR RECONCILIATION (recap-truth lane leg②, CLIENT-INDEPENDENCE LAW §3 "reconcile INSIDE the
-// reducer"): dungeon_settlement.js's finish_result may dispatch action/fight_result/loot TWICE per fight — an
-// event-floor placeholder first (resolved:false, the instant the ResultOpened event's loot_units is known),
-// the FightResult object read's real `rolled` declaration second (resolved:true) if/when that (already
-// internally-retried) read lands. dungeon_settlement.test.js pins the DISPATCH SEQUENCE half of this contract;
+// reducer"): dungeon_settlement.js's finish_result may dispatch action/fight_result/loot three times per fight —
+// event-floor placeholder, aggregate FightResult declaration, then exact ItemMinted instance rows.
+// dungeon_settlement.test.js pins the first two dispatches; the exact receipt tests below pin the third;
 // this pins the REDUCER half — the fold must never let a stale/duplicate floor regress already-resolved loot.
 describe('action/fight_result/loot reconciliation — the event floor never regresses an already-resolved receipt (leg②)', () => {
   const mod = player_experience()
@@ -325,5 +324,40 @@ describe('action/fight_result/loot reconciliation — the event floor never regr
     slice = fold(slice, 'action/fight_result/loot', { loot: [{ item_type: 'a', name: 'A', amount: 1 }], resolved: true })
     slice = fold(slice, 'action/fight_result/loot', { loot: [{ item_type: 'b', name: 'B', amount: 1 }], resolved: true })
     expect(slice.loot).toEqual([{ item_type: 'b', name: 'B', amount: 1 }])
+  })
+
+  it('receipt-created instances stay distinct and permanently beat aggregate/template-only rows', () => {
+    let slice = fold(null, 'action/fight_result/open', { level: 4 })
+    slice = fold(slice, 'action/fight_result/bind', { result_id: '0xresult' })
+    const exact_loot = loot_from_minted_rows([
+      { id: '0xgear-a', template_id: '0xT_HIDE', item_type: 'razkin_hide', name: 'Razkin Hide', amount: 1 },
+      { id: '0xgear-b', template_id: '0xT_HIDE', item_type: 'razkin_hide', name: 'Razkin Hide', amount: 1 },
+    ])
+    slice = fold(slice, 'action/fight_result/loot', {
+      result_id: '0xresult',
+      loot: exact_loot,
+      resolved: true,
+      instances: true,
+    })
+    slice = fold(slice, 'action/fight_result/loot', {
+      result_id: '0xresult',
+      loot: [{ template_id: '0xT_HIDE', item_type: 'razkin_hide', name: 'Razkin Hide', amount: 2 }],
+      resolved: true,
+    })
+
+    expect(slice.loot.map((entry) => entry.item_id)).toEqual(['0xgear-a', '0xgear-b'])
+  })
+
+  it('a late exact-instance dispatch from another result cannot overwrite this card', () => {
+    let slice = fold(null, 'action/fight_result/open', { level: 4 })
+    slice = fold(slice, 'action/fight_result/bind', { result_id: '0xcurrent' })
+    slice = fold(slice, 'action/fight_result/loot', {
+      result_id: '0xold',
+      loot: [{ item_id: '0xwrong', template_id: '0xT_HIDE', item_type: 'razkin_hide', name: '', amount: 1 }],
+      resolved: true,
+      instances: true,
+    })
+
+    expect(slice.loot).toEqual([])
   })
 })

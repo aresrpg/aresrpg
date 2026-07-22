@@ -8,6 +8,7 @@ import { ITEM_CATEGORY, WEAPONS, MISC, to_chain_category } from '@aresrpg/sdk/it
 import { is_developer_item } from '@aresrpg/sdk/jobs'
 
 import { projected_hp, character_max_hp } from '../../../chain/read_character.js'
+import { display_rolled_stats } from '../../../chain/rolled_stats.js'
 import { cosmetic_icon_of } from '../../cosmetic_icons.js'
 import { chain_icon_slug, group_by_stack_identity, is_cosmetic_item, item_type_equip_slot } from '../../item_classification'
 import { equip_slot_accepts, equip_slot_kind_of } from './inventory_context_actions'
@@ -364,7 +365,7 @@ export function invalid_equip_change(equipment, real_equipment, current_items) {
   return null
 }
 
-/** Primary stats summed for the equipped-totals strip: [stat field on the item, display caption].
+/** Primary stats summed for the equipped-totals strip: [decoded rolled-stat key, display caption].
  *  `action` is the AP field (mirrors the item-detail DESC_STATS field set). */
 export const TOTALS_STATS = /** @type {const} */ ([
   ['vitality', 'vitality'],
@@ -377,18 +378,20 @@ export const TOTALS_STATS = /** @type {const} */ ([
 ])
 
 /**
- * Sum the rolled primary stats across every equipped item (the "equipped totals" strip). Pure: reads
- * the flat stat fields off each equipped item; drops the zero-sum rows.
+ * Sum the rolled primary stats across every equipped item (the "equipped totals" strip). Pure: every raw
+ * centered-u16 block flows through the shared owned-item display decoder; template/flat item fields are ignored.
  * @param {Record<string, any>} equipment
+ * @param {Record<string, Record<string, number>|null|undefined>} rolled_stats_by_id
  * @returns {{ key: string, label: string, value: number }[]}
  */
-export function equipped_totals(equipment) {
+export function equipped_totals(equipment, rolled_stats_by_id = {}) {
   /** @type {Record<string, number>} */
   const sum = {}
   for (const slot of EQUIPMENT_SLOTS) {
     const item = equipment[slot]
     if (!item) continue
-    for (const [key] of TOTALS_STATS) sum[key] = (sum[key] ?? 0) + (item[key] ?? 0)
+    const rolled_stats = display_rolled_stats(rolled_stats_by_id[item.id])
+    for (const [key] of TOTALS_STATS) sum[key] = (sum[key] ?? 0) + Number(rolled_stats[key]?.[0] ?? 0)
   }
   return TOTALS_STATS.map(([key, label]) => ({
     key,

@@ -16,10 +16,10 @@ const chain_category = (category) => {
  * keeps the real item id/type and honest empty metadata until an authoritative snapshot replaces the floor row.
  * @param {{ receipt?: { events?: any[] }, kiosk_id?: string|null, kiosk_cap_id?: string|null } | null} settlement
  * @param {Map<string, any>} template_by_id
- * @returns {{ kind: 'receipt_patch', op: 'settled_loot', rows: any[] }}
+ * @returns {any[]} exact receipt-created inventory rows
  */
-export function settled_loot_input(settlement, template_by_id = new Map()) {
-  const rows = (settlement?.receipt?.events ?? []).flatMap((event) => {
+export function settled_loot_rows(settlement, template_by_id = new Map()) {
+  return (settlement?.receipt?.events ?? []).flatMap((event) => {
     if (!String(event?.type ?? '').endsWith('::item::ItemMinted')) return []
     const minted = event?.parsedJson ?? {}
     const id = String(minted.item ?? '')
@@ -45,5 +45,14 @@ export function settled_loot_input(settlement, template_by_id = new Map()) {
       },
     ]
   })
-  return { kind: 'receipt_patch', op: 'settled_loot', rows }
+}
+
+/**
+ * Wrap exact ItemMinted rows as the inventory reducer input.
+ * @param {any} settlement
+ * @param {Map<string, any>} template_by_id
+ * @returns {{ kind: 'receipt_patch', op: 'settled_loot', rows: any[] }}
+ */
+export function settled_loot_input(settlement, template_by_id = new Map()) {
+  return { kind: 'receipt_patch', op: 'settled_loot', rows: settled_loot_rows(settlement, template_by_id) }
 }

@@ -7,13 +7,19 @@ import { safe_json_parse } from '../safe_json_parse'
 import { use_template_t } from '../i18n/template_t'
 import { use_content } from '../pages/encyclopedia/content'
 import { type ItemInfo } from '../types/chain'
+import { display_rolled_stats, resolve_rolled_stats } from '../chain/rolled_stats.js'
 
 import { ItemDetailView } from './entity_display'
 import { marketplace_item_icon } from './marketplace/marketplace_icon'
 
 // Builds the shape ItemDetailView expects from an ItemInfo + its template.
-export function to_detail_item(item: ItemInfo, tmpl: any, tt: ReturnType<typeof use_template_t>) {
-  const stats = safe_json_parse(item.stats_json, {}) || {}
+export function to_detail_item(
+  item: ItemInfo,
+  tmpl: any,
+  tt: ReturnType<typeof use_template_t>,
+  rolled_stats: Record<string, number> | null = null
+) {
+  const stats = display_rolled_stats(rolled_stats)
   const damages = safe_json_parse(item.damages_json, []) || []
   const consumable = safe_json_parse(item.consumable_json, null)
   const particle = safe_json_parse(item.particle_trail_json, null)
@@ -39,7 +45,7 @@ export function to_detail_item(item: ItemInfo, tmpl: any, tt: ReturnType<typeof 
   }
 }
 
-type TooltipState = { item: ItemInfo; rect: DOMRect } | null
+type TooltipState = { item: ItemInfo; rect: DOMRect; rolled_stats: Record<string, number> | null } | null
 
 type WrapperProps = {
   item: ItemInfo
@@ -59,23 +65,34 @@ type WrapperProps = {
 export function ItemHoverTooltip({ item, children, delay_ms = 300 }: WrapperProps) {
   const [state, set_state] = useState<TooltipState>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hover_request = useRef(0)
 
   useEffect(() => {
     return () => {
       if (timer.current) clearTimeout(timer.current)
+      hover_request.current += 1
     }
-  }, [])
+  }, [item.id])
 
   const handlers = {
     onMouseEnter: (e: React.MouseEvent<HTMLElement>) => {
       const rect = e.currentTarget.getBoundingClientRect()
+      const request_id = ++hover_request.current
+      const rolled_stats_read = resolve_rolled_stats(item.id).catch(() => null)
       if (timer.current) clearTimeout(timer.current)
       timer.current = setTimeout(() => {
-        set_state({ item, rect })
+        timer.current = null
+        if (hover_request.current !== request_id) return
+        set_state({ item, rect, rolled_stats: null })
+        void rolled_stats_read.then((rolled_stats) => {
+          if (hover_request.current === request_id) set_state({ item, rect, rolled_stats })
+        })
       }, delay_ms)
     },
     onMouseLeave: () => {
       if (timer.current) clearTimeout(timer.current)
+      timer.current = null
+      hover_request.current += 1
       set_state(null)
     },
   }
@@ -83,18 +100,26 @@ export function ItemHoverTooltip({ item, children, delay_ms = 300 }: WrapperProp
   return (
     <>
       {children(handlers)}
-      {state && <TooltipPortal item={state.item} anchor_rect={state.rect} />}
+      {state && <TooltipPortal item={state.item} anchor_rect={state.rect} rolled_stats={state.rolled_stats} />}
     </>
   )
 }
 
 // Renders the ItemDetailView in a portal, positioned near the anchor.
 // Flips side if near the right edge; clamps vertically to viewport.
-function TooltipPortal({ item, anchor_rect }: { item: ItemInfo; anchor_rect: DOMRect }) {
+function TooltipPortal({
+  item,
+  anchor_rect,
+  rolled_stats,
+}: {
+  item: ItemInfo
+  anchor_rect: DOMRect
+  rolled_stats: Record<string, number> | null
+}) {
   const tt = use_template_t()
   const { templates } = use_content()
   const tmpl = (templates.item || []).find((tp: any) => tp.id === item.template_id)
-  const detail = to_detail_item(item, tmpl, tt)
+  const detail = to_detail_item(item, tmpl, tt, rolled_stats)
 
   const viewport_w = typeof window !== 'undefined' ? window.innerWidth : 1200
   const viewport_h = typeof window !== 'undefined' ? window.innerHeight : 800

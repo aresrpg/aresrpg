@@ -12,10 +12,13 @@ const t = (key) => key // stub — returns the i18n key itself, deterministic fo
 describe('resolve_loot_tile — the enrichment signal', () => {
   test('a bag match (items[]) alone resolves it, even with an empty template map', () => {
     const entry = { item_type: 'rusty_blade', name: 'Rusty Blade', amount: 1 }
-    const items = [{ item_type: 'rusty_blade', name: 'Rusty Blade', category: 'sword', quality: 'common' }]
+    const items = [
+      { id: '0xblade', item_type: 'rusty_blade', name: 'Rusty Blade', category: 'sword', quality: 'common' },
+    ]
     const out = resolve_loot_tile(entry, items, new Map(), undefined, t)
     expect(out.resolved).toBe(true)
     expect(out.name).toBe('Rusty Blade')
+    expect(out.item_id).toBeNull()
   })
 
   test('a template-map match alone resolves it, even with an empty bag', () => {
@@ -118,7 +121,7 @@ describe('resolve_loot_tile — exact RESOURCE art + template characteristics', 
     expect(out.detail.stats).toEqual({})
   })
 
-  test('a degenerate (fixed) template value still renders — it IS the drop\'s real stat', () => {
+  test('a template value never substitutes for an unresolved owned roll, even when degenerate', () => {
     const fixed_template_map = new Map([
       [
         template_id,
@@ -135,7 +138,33 @@ describe('resolve_loot_tile — exact RESOURCE art + template characteristics', 
       [template_id]: 'obsidian_core',
     })
 
-    expect(out.detail.stats).toEqual({ vitality: [4, 4] })
+    expect(out.detail.stats).toEqual({})
+  })
+
+  test('the receipt item id selects the exact owned instance regardless of bag order', () => {
+    const duplicate_items = [
+      { ...items[0], id: '0xreceipt-created' },
+      { ...items[0], id: '0xolder' },
+    ]
+    const out = resolve_loot_tile(
+      { ...entry, item_id: '0xreceipt-created' },
+      duplicate_items,
+      template_map,
+      undefined,
+      t,
+      { [template_id]: 'obsidian_core' },
+      { vitality: 32775 },
+    )
+
+    expect(out.item_id).toBe('0xreceipt-created')
+    expect(out.detail.stats).toEqual({ vitality: [7, 7] })
+    expect(out.detail.stats).not.toEqual({ vitality: [4, 9], wisdom: [1, 3] })
+  })
+
+  test('an aggregate receipt row without a concrete item id never guesses a sibling roll', () => {
+    const out = resolve_loot_tile(entry, items, template_map, undefined, t, { [template_id]: 'obsidian_core' })
+
+    expect(out.item_id).toBeNull()
   })
 
   test('an unmapped RESOURCE still resolves the name-derived slug (render layer glyphs on 404)', () => {

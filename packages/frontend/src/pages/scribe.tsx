@@ -9,6 +9,7 @@ import { use_toast } from '../toast'
 import i18n from '../i18n'
 import { use_game_state } from '../game/store.js'
 import { get_sdk } from '../chain/sdk'
+import { resolve_rolled_stats } from '../chain/rolled_stats.js'
 import { kiosk_for_character } from '../world-shell/kiosk_resolve.js'
 import { load_roster } from '../roster/load_roster.js'
 import { get_template_by_item_type_map } from '../chain/read_findables.js'
@@ -82,16 +83,14 @@ export function ScribePage({ character_id = null }: { character_id?: string | nu
 
   // The selected gear's REAL rolled stats (prod regression: the card rendered an empty CHARACTERISTICS
   // block — the template catalog's statsJson is a deliberate '{}', read_findables.js:43-44). One chain-direct
-  // DF read per selection change via the SAME sdk.get_rolled_stats(item.id) crush already uses for this exact
-  // gear (world-shell/crush_actions.js) — see scribe_detail.ts for the full diagnosis. Resets to null the
+  // DF read per selection change via the shared owned-item resolver over sdk.get_rolled_stats(item.id). Resets to null the
   // instant the selection changes, so a slow read never paints a stale item's stats onto a freshly-picked one.
   const [gear_stats, set_gear_stats] = useState<Record<string, number> | null>(null)
   useEffect(() => {
     let alive = true
     set_gear_stats(null)
     if (!sel_gear) return
-    get_sdk()
-      .then((sdk) => sdk.get_rolled_stats(sel_gear.id))
+    resolve_rolled_stats(sel_gear.id)
       .then((stats: any) => alive && set_gear_stats(stats ?? null))
       .catch(() => alive && set_gear_stats(null))
     return () => {

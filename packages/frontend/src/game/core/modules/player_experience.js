@@ -32,6 +32,7 @@ const refresh_fight_character = (target) =>
  * declaration (the settlement receipt) by `loot_from_rolled` (world-shell/fight_result_receipt.js, the
  * receipt-parse home), NEVER from an inventory diff (the v30 receipt law).
  * @typedef {object} FightLoot
+ * @property {string} [item_id] exact owned Item id once the ItemMinted receipt has landed
  * @property {string} [template_id] exact ItemTemplate id when the FightResult object read has landed;
  *   event-floor rows lack one
  * @property {string} item_type   dropped item's on-chain class/legacy slug (exact identity is template_id)
@@ -55,6 +56,9 @@ const refresh_fight_character = (target) =>
  *                                       false/absent while it is still the event-floor placeholder
  *                                       (dungeon_settlement.js's floor_loot). Gates the fold below so a stale/
  *                                       duplicate floor dispatch can never regress an already-resolved list.
+ * @property {string} [result_id] exact FightResult object currently bound to this card
+ * @property {boolean} [loot_instances_resolved] true once ItemMinted rows replaced the aggregate declaration;
+ *   later template-only/object-read rows can never regress those exact owned ids
  */
 
 /**
@@ -115,6 +119,10 @@ const fold = (result, type, payload) => {
         loot: [],
         loot_units: null,
       }
+    case 'action/fight_result/bind':
+      if (!result || !payload.result_id || (result.result_id && result.result_id !== payload.result_id)) return result
+      if (result.result_id === payload.result_id) return result
+      return { ...result, result_id: payload.result_id, loot_instances_resolved: false }
     case 'action/fight_result/resolve':
       // the settlement receipt landed (finish_result's ResultOpened dispatch — the ONE resolver, 07-18 law) —
       // fill in xp / level-up. Tolerate a resolve with no open modal (e.g. a receipt landing outside the
@@ -123,8 +131,10 @@ const fold = (result, type, payload) => {
       // the object-read FALLBACK resolve (a receipt-parse miss) may omit it, so `?? result.loot_units`
       // preserves whichever resolve carried the real count (order-independent).
       if (!result) return result
+      if (payload.result_id && payload.result_id !== result.result_id) return result
       return {
         ...result,
+        result_id: payload.result_id ?? result.result_id,
         status: 'resolved',
         xp: payload.xp,
         level: payload.level,
@@ -137,14 +147,20 @@ const fold = (result, type, payload) => {
       // producer, per the receipt-first law). Independent of resolve (xp), so it may arrive before or after it;
       // merge onto whatever the slice currently holds. Ignore if closed.
       // RECONCILE INSIDE THE REDUCE (recap-truth lane leg②, CLIENT-INDEPENDENCE LAW §3): dungeon_settlement.js
-      // may dispatch this TWICE per fight — an event-floor placeholder first (resolved:false, the instant
-      // loot_units is known), the object read's real list second (resolved:true), or only the first if the
-      // read never lands. SAME-VERSION DISCARD: once `loot_resolved` is true, a later resolved:false dispatch
+      // may dispatch three versions per fight — an event-floor placeholder, the aggregate object read, then
+      // exact ItemMinted instance rows. SAME-VERSION DISCARD: once `loot_resolved` is true, a later resolved:false dispatch
       // (a stale/duplicate floor) is a no-op — richer data never regresses. RICHER ADOPT: anything else
       // (first-ever arrival, or a resolved:true dispatch) always adopts.
       if (!result) return result
+      if (payload.result_id && payload.result_id !== result.result_id) return result
+      if (result.loot_instances_resolved && !payload.instances) return result
       if (result.loot_resolved && !payload.resolved) return result
-      return { ...result, loot: payload.loot, loot_resolved: !!payload.resolved }
+      return {
+        ...result,
+        loot: payload.loot,
+        loot_resolved: !!payload.resolved,
+        loot_instances_resolved: result.loot_instances_resolved || !!payload.instances,
+      }
     case 'action/fight_result/close':
       return null
     default:

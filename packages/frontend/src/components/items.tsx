@@ -23,6 +23,7 @@ import { use_content } from '../pages/encyclopedia/content'
 import { type ItemInfo } from '../types/chain'
 import { safe_json_parse } from '../safe_json_parse'
 import { use_template_t } from '../i18n/template_t'
+import { display_rolled_stats } from '../chain/rolled_stats.js'
 // Rarity SSOT: QUALITY_COLOR-derived tint + hue (quality.js) so an item's rarity reads the SAME here as
 // on every HUD surface. Replaces the old whitish RARITY_COLORS border with a per-tier inset radial tint.
 import { quality_color, rarity_tint } from '../game/screens/hud/quality'
@@ -405,14 +406,11 @@ export function onchain_template_to_detail_props(
     category?: string
     level?: number
     statsJson?: string
-    /** CONTRACT (issue #437): true when `tmpl` describes an OWNED instance (Inventory bag/equipment) rather
-     * than a template-only preview (findables/WorldCard, encyclopedia, shop). A template's [min,max] roll
-     * RANGE is honest to show on an owned item only when it is DEGENERATE (min === max — item_stats.move's
-     * roll_field always rolls a FIXED value whenever hi <= lo, so the pair IS this instance's real stat); a
-     * genuine spread describes what the template COULD roll, not what THIS item got, so it is dropped
-     * rather than shown as someone else's possible roll ("+3 to 8 Vitality" on a specific sword prod
-     * regression). Template surfaces (owned unset) are unaffected — the full range keeps rendering there. */
+    /** True only for a concrete owned instance. Owned surfaces never consume `statsJson` (the template range). */
     owned?: boolean
+    /** The instance's centered-u16 StatsKey block from sdk.get_rolled_stats(item_id). It is decoded through the
+     * one rolled-stat display home; null while unresolved/absent keeps the owned card honestly stat-empty. */
+    rolled_stats?: Record<string, number> | null
     // D240: normalize_item_template's decoded heal effect ({ type:'LIFE_REGEN', amount } | null) — carried
     // through so the shared ItemDetailView shows "Restores N HP" on consumables (bag/findables/recall tooltips).
     consumable_effect?: { type: string; [key: string]: any } | null
@@ -421,9 +419,7 @@ export function onchain_template_to_detail_props(
   tt?: ReturnType<typeof use_template_t>
 ) {
   const parsed_stats = safe_json_parse<Record<string, number | [number, number]>>(tmpl.statsJson, {})
-  const raw_stats = tmpl.owned
-    ? Object.fromEntries(Object.entries(parsed_stats).filter(([, v]) => !Array.isArray(v) || v[0] === v[1]))
-    : parsed_stats
+  const raw_stats = tmpl.owned ? display_rolled_stats(tmpl.rolled_stats) : parsed_stats
   const en_description = tmpl.display?.description || undefined
   return {
     id: tmpl.icon_slug || tmpl.item_type || tmpl.id,

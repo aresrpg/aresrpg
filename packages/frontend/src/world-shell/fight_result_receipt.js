@@ -56,6 +56,30 @@ export const loot_from_rolled = (rolled, template_by_id) => {
 }
 
 /**
+ * Exact ItemMinted receipt rows -> victory-card lines. Unlike FightResult.rolled's aggregate declaration,
+ * these rows carry the concrete object id whose StatsKey must drive an owned tooltip. Keep separate gear
+ * objects separate; one stackable mint remains one line with its on-chain amount.
+ * @param {Array<{ id: string, template_id?: string|null, item_type?: string, name?: string, amount?: number }>} rows
+ * @returns {Array<{ item_id: string, template_id?: string, item_type: string, name: string, amount: number }>}
+ */
+export const loot_from_minted_rows = (rows) =>
+  (rows ?? []).flatMap((row) => {
+    const item_id = String(row?.id ?? '')
+    if (!item_id) return []
+    const template_id = String(row?.template_id ?? '')
+    const amount = Number(row?.amount ?? 1)
+    return [
+      {
+        item_id,
+        ...(template_id ? { template_id } : {}),
+        item_type: String(row?.item_type ?? template_id),
+        name: String(row?.name ?? ''),
+        amount: Number.isFinite(amount) && amount > 0 ? amount : 1,
+      },
+    ]
+  })
+
+/**
  * Every seat's exact soulbound FightOutcome id from a successful settle receipt, keyed by character. The active
  * seat may be consumed later in the same PTB; its ResultMinted event still remains authoritative receipt truth.
  * @param {any[]} events

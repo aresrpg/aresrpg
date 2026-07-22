@@ -45,3 +45,13 @@ describe('to_detail_item — cosmetic icon resolution', () => {
     expect(detail.image_url).toContain('cape_lorito-chance')
   })
 })
+
+describe('to_detail_item — owned listing stats', () => {
+  test('a listed instance displays its decoded roll, never the joined template range', () => {
+    const listed_item = { ...cloak, stats_json: '{"vitality":[3,8]}' }
+    const detail = to_detail_item(listed_item, null, tt, { vitality: 32775 })
+
+    expect(detail.stats).toEqual({ vitality: [7, 7] })
+    expect(detail.stats).not.toEqual({ vitality: [3, 8] })
+  })
+})

@@ -3,7 +3,7 @@
 // Inventory HUD: staged loadout + usable-item bag. Sale-listed rows are hidden at their owner-items source and
 // remain rejected by the UI, reducer, and fresh Accept preflight if stale state ever reaches an equip path.
 
-import { useEffect, useMemo, useReducer, useState } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { slugs, pet_food_slugs, catalog } from 'virtual:item_catalog'
 
@@ -22,6 +22,7 @@ import { use_toast } from '../../../toast'
 import { get_class } from '../../data/classes.js'
 import { color_to_hue } from '../../data/color.js'
 import { get_template_by_item_type_map, get_template_map } from '../../../chain/read_findables.js'
+import { resolve_rolled_stats } from '../../../chain/rolled_stats.js'
 import { CharacterPortrait } from './CharacterPortrait.jsx'
 import { is_lootbox } from '../../../world-shell/lootbox_actions.js'
 import {
@@ -115,28 +116,48 @@ export function Inventory() {
   const { on_mouse_enter, on_mouse_move, on_mouse_leave, tooltip_element } = use_onchain_item_tooltip({
     pet_food_row: <PetFoodHoverRow food_slugs={MINTED_FOOD_SLUGS} />,
   })
-  const on_item_hover = (e, item) => {
+  const [rolled_stats_by_id, set_rolled_stats_by_id] = useState(
+    /** @type {Record<string, Record<string, number>|null>} */ ({})
+  )
+  const active_hover_id_ref = useRef(/** @type {string | null} */ (null))
+  const hover_point_ref = useRef({ clientX: 0, clientY: 0 })
+  const paint_item_tooltip = (event, item, rolled_stats) => {
     // template_id first (bag rows carry it — two cosmetics can share the generic `cloak` item_type,
     // and the by-type map would join an arbitrary sibling), the by-type join as the fallback.
-    const tmpl = template_id_map.get(item.template_id) ?? template_map.get(item.item_type) ?? {}
+    const item_template = template_id_map.get(item.template_id) ?? template_map.get(item.item_type) ?? {}
     const removed = is_template_removed(item, template_map)
-    on_mouse_enter(e, {
-      ...tmpl,
+    on_mouse_enter(event, {
+      ...item_template,
       item_type: item.item_type,
       // the SAME resolve the bag cell paints with — the hover card's image id (night-batch #3)
       icon_slug: inventory_item_icon(item, slugs),
       // the ONE display-level home (night-batch #1) — never a second `?? level` chain
-      level: item_display_level(item, tmpl),
+      level: item_display_level(item, item_template),
       removed,
-      // OWNED instance, never a template preview — a variable-roll template RANGE (tmpl.statsJson) is not
-      // this item's own stat, so onchain_template_to_detail_props drops it rather than showing a lie
-      // ("+3 to 8 Vitality" on ONE specific sword, issue #437); a degenerate/fixed template value still
-      // renders since that IS the item's real rolled stat regardless of instance.
       owned: true,
+      rolled_stats,
     })
+  }
+  const on_item_hover = (event, item) => {
+    active_hover_id_ref.current = item.id
+    hover_point_ref.current = { clientX: event.clientX, clientY: event.clientY }
+    paint_item_tooltip(event, item, rolled_stats_by_id[item.id] ?? null)
+    if (!item.id) return
+    void resolve_rolled_stats(item.id)
+      .catch(() => null)
+      .then((rolled_stats) => {
+        set_rolled_stats_by_id((current_stats) => ({ ...current_stats, [item.id]: rolled_stats }))
+        if (active_hover_id_ref.current === item.id)
+          paint_item_tooltip(hover_point_ref.current, item, rolled_stats)
+      })
+  }
+  const on_item_hover_move = (event) => {
+    hover_point_ref.current = { clientX: event.clientX, clientY: event.clientY }
+    on_mouse_move(event)
   }
   const [hovered_bag_id, set_hovered_bag_id] = useState(/** @type {string | null} */ (null))
   const dismiss_item_tooltip = () => {
+    active_hover_id_ref.current = null
     set_hovered_bag_id(null)
     on_mouse_leave()
   }
@@ -144,6 +165,7 @@ export function Inventory() {
     if (!hovered_bag_id) return
     const bag_rows = Array.isArray(items) ? items : []
     if (!bag_rows.some((i) => i.id === hovered_bag_id)) {
+      active_hover_id_ref.current = null
       set_hovered_bag_id(null)
       on_mouse_leave()
     }
@@ -194,6 +216,25 @@ export function Inventory() {
 
   const equipment = stage.dirty || stage.committed ? stage.equipment : real_equipment
 
+  useEffect(() => {
+    let alive = true
+    const equipped_item_ids = [
+      ...new Set(EQUIPMENT_SLOTS.map((slot) => equipment[slot]?.id).filter((item_id) => item_id)),
+    ]
+    const rolled_stat_reads = equipped_item_ids.map((item_id) =>
+      resolve_rolled_stats(item_id)
+        .catch(() => null)
+        .then((rolled_stats) => [item_id, rolled_stats])
+    )
+    void Promise.all(rolled_stat_reads).then((rolled_stat_entries) => {
+      if (!alive) return
+      set_rolled_stats_by_id((current_stats) => ({ ...current_stats, ...Object.fromEntries(rolled_stat_entries) }))
+    })
+    return () => {
+      alive = false
+    }
+  }, [equipment])
+
   if (!character) {
     return <div className="hud-panel__empty">No character selected</div>
   }
@@ -239,7 +280,7 @@ export function Inventory() {
     category,
   })
 
-  const totals = equipped_totals(equipment)
+  const totals = equipped_totals(equipment, rolled_stats_by_id)
 
   const dragging = (/** @type {DragEvent | any} */ e) =>
     owned.find((item) => item.id === e.dataTransfer.getData('text/plain')) ?? null
@@ -489,8 +530,8 @@ export function Inventory() {
       }
     },
     on_hover_enter: on_item_hover,
-    on_hover_move: on_mouse_move,
-    on_hover_leave: on_mouse_leave,
+    on_hover_move: on_item_hover_move,
+    on_hover_leave: dismiss_item_tooltip,
     on_context_menu: (/** @type {any} */ e) => {
       // preventDefault unconditionally — this handler only ever fires from the FILLED slot art (EquipmentSlot
       // gates it), so the native menu must never show, guard or no guard.
@@ -622,7 +663,7 @@ export function Inventory() {
           set_hovered_bag_id(item.id)
           on_item_hover(event, item)
         }}
-        on_hover_move={on_mouse_move}
+        on_hover_move={on_item_hover_move}
         on_hover_leave={dismiss_item_tooltip}
         on_dismiss_tooltip={dismiss_item_tooltip}
       />

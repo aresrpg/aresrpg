@@ -28,8 +28,9 @@ import i18n from '../i18n'
 import { game_log } from '../core/log.js'
 
 import { settle_and_open, settle_run_and_open, open_outcome, mint_all_and_burn } from './dungeon_actions'
-import { loot_from_rolled } from './fight_result_receipt.js'
+import { loot_from_minted_rows, loot_from_rolled } from './fight_result_receipt.js'
 import { mint_and_reduce_inventory as reduce_minted_inventory } from './loot_inventory_effect.js'
+import { settled_loot_rows } from './loot_inventory.js'
 import {
   pending_outcomes_for,
   invalidate_pending_outcomes,
@@ -254,6 +255,7 @@ async function finish_result(
   const { getState, setState } = store
   setState({ result_id })
   note_claimed()
+  if (result_id) context.dispatch('action/fight_result/bind', { result_id })
   // mint EVERY rolled template the result owes AND burn for the rebate — ATOMICALLY, in ONE PTB (below).
   let item_qty = 0
   // LOOT-SKELETON COUNT (07-11): loot_units sizes the pulsing-placeholder count until items hydrate.
@@ -285,6 +287,7 @@ async function finish_result(
       // engine-bus reconcile metadata: the Character read waits until /v1 reaches this receipt-derived total.
       character_id: character_value,
       expected_experience: before + xp_value,
+      result_id,
     })
   }
   resolve_reward(xp, rolled_units, character)
@@ -292,7 +295,11 @@ async function finish_result(
   // Render loot IMMEDIATELY off loot_units (leg②); resolved:false so the reducer never lets this regress an
   // already-landed richer dispatch (the object read below reconciles BEHIND it, unwiped on a read failure).
   if (rolled_units > 0)
-    context.dispatch('action/fight_result/loot', { loot: floor_loot(rolled_units), resolved: false })
+    context.dispatch('action/fight_result/loot', {
+      result_id,
+      loot: floor_loot(rolled_units),
+      resolved: false,
+    })
 
   // FIX 3 (07-13 — NO refetch): the correlated ResultMinted event carries `final_hp` — apply it straight
   // into the roster's HP block, zero extra RPC. Event-sourced fast path; the object-read below is the fallback
@@ -303,7 +310,21 @@ async function finish_result(
     // MINT DECOUPLED (stranded-loot fix, pending_mints.js): the mint rides the receipt-driven queue now, NOT the
     // bounded display read — the old `if (result)` gate SKIPPED mint_all_and_burn on a null ~5s read, stranding the
     // opened FightResult soulbound (a 41-deep stranded backlog observed live). Null result_id: the queue is the SINGLE owner (no double-fire).
-    void enqueue_mint(result_id)
+    const mint_outcome = enqueue_mint(result_id)
+    if (mint_outcome)
+      void mint_outcome
+        .then(async (outcome) => {
+          if (outcome.verdict !== 'minted') return
+          const minted_rows = settled_loot_rows(outcome.settlement, await get_template_map())
+          if (!minted_rows.length) return
+          context.dispatch('action/fight_result/loot', {
+            result_id,
+            loot: loot_from_minted_rows(minted_rows),
+            resolved: true,
+            instances: true,
+          })
+        })
+        .catch(() => {})
     void drain_pending_mints(mint_deps()).catch(() => {})
     setState({ result_id: null })
     // DISPLAY tail (best-effort, off the mint path now): rich loot lines + XP/HP/character read-fallbacks.
@@ -320,6 +341,7 @@ async function finish_result(
     // Fires on the OBJECT READ; a degraded read dispatches nothing — the FLOOR above stands unwiped (leg②).
     if (result)
       context.dispatch('action/fight_result/loot', {
+        result_id,
         loot: loot_from_rolled(rolled, await get_template_map()),
         resolved: true,
       })
