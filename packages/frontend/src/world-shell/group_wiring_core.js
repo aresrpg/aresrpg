@@ -145,7 +145,9 @@ export function create_group_wiring(deps) {
     },
     /** Dungeon presentation is orthogonal; only the reducer's background modifier changes. */
     dungeon_snapshot(active) {
-      return feed({ kind: 'follow_background', active })
+      const outputs = feed({ kind: 'follow_background', active })
+      if (active) deps.apply_follow([])
+      return outputs
     },
     /** Fold one fight view change: arm/join/focus per the reducer's latches. `join_open` = the chain's join
      *  window is provably open AND this session's joins ride the world-fight seam (never the RunPass path). */

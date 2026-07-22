@@ -125,6 +125,12 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
     await wiring.settled()
     expect(calls.write_checkpoint).toEqual([[ALT_1, WORLD, { x: 101.5, z: 100.5 }]])
     expect(calls.follow.at(-1).map((row) => row.character_id)).toEqual([ALT_1])
+
+    wiring.dungeon_snapshot(true)
+    expect(wiring.store.getState().follow.dungeon_background).toBe(true)
+    expect(calls.follow.at(-1)).toEqual([])
+    wiring.transit_tick(now + 20_000)
+    expect(wiring.store.getState().follow.followers[ALT_1].status).toBe('arrived')
   })
 
   test('an emptied party projection (manual character switch) leaves explicit follow state untouched', async () => {
