@@ -1661,7 +1661,8 @@ button.hud-socket:focus-visible {
   cursor: not-allowed;
 }
 .hud-socket.disabled .hud-socket__gem {
-  filter: saturate(0.4) brightness(0.7);
+  opacity: 0.35;
+  filter: grayscale(1);
 }
 .hud-socket.disabled .hud-socket__cost {
   color: var(--bad);
