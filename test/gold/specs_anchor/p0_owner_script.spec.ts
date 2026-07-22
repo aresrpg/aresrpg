@@ -381,6 +381,12 @@ test.describe('P0 RECORDED REPRO — v35 fight-sync regression, reported verbati
     const [, wallet] = manifest.wallets as GoldWallet[] // wallet[1] = yajin (CLASSES[1] in up_gold.mjs)
     expect(fixture, 'gold bootstrap did not publish fight_fixtures.multi_turn (Strawman)').toBeTruthy()
     expect(wallet, 'gold bootstrap did not publish wallet 1 (yajin)').toBeTruthy()
+    // wallet[1]'s ROSTER order is not slot order — join_fixture_world defaults to rows[0] = the slot-1
+    // TOMODA (spells Beast Ward/Ghost Talon/Lashline), NOT the yajin. Read the slot-0 YAJIN's character id off
+    // THIS run's own gold bootstrap (fight_lifecycle.spec.ts resolves the identical wallet_index/slot →
+    // character_id way) — never a hand-copied chain id, which drifts the moment the fixture reseeds.
+    const yajin_row = (manifest.characters as any[]).find((c: any) => c.wallet_index === 1 && c.slot === 0)
+    expect(yajin_row, 'gold bootstrap did not mint wallet-1 slot-0 (yajin)').toBeTruthy()
 
     let mob_id = ''
     let formation: Formation | null = null
@@ -443,15 +449,7 @@ test.describe('P0 RECORDED REPRO — v35 fight-sync regression, reported verbati
       // BOOT — the proven resilient path (join → checkpoint-settle → zone search → STALE-FIGHT recovery). Wrapped
       // so a search lock (the attempt-1 killer) records a boot row + is classified, then re-thrown — never dark.
       try {
-        // wallet[1]'s ROSTER order is not slot order — join_fixture_world defaults to rows[0] = the slot-1
-        // TOMODA (0x9014…, spells Beast Ward/Ghost Talon/Lashline), NOT the yajin. Pass the slot-0 YAJIN
-        // character id (manifest.characters wallet_index:1 slot:0) so the trap/push script has its spells.
-        await boot_fixture_world(
-          page,
-          wallet,
-          fixture!,
-          '0xa7d35ac9bade1f8953de4896215666d7dc4ab7247ee3cdda1a0e035223ed0c4f'
-        )
+        await boot_fixture_world(page, wallet, fixture!, yajin_row!.character_id)
       } catch (error: any) {
         const msg = String(error?.message ?? error)
         const status: TxStatus = LOCK_RE.test(msg)
