@@ -56,7 +56,7 @@ import {
   is_ending,
   fight_end_state,
 } from '../fight-engine/fight_end_machine.js'
-import { humanize_abort, on_marker_refusal, parse_move_abort, tx_error } from '../game/core/abort_copy.js'
+import { humanize_abort, parse_move_abort, tx_error } from '../game/core/abort_copy.js'
 import { had_active_seat, mark_active_seat, session_reset } from '../fight-engine/phase.js'
 import { set_zone_music, stop_zone_music } from '../game/core/audio/ambient_music.js'
 import { game_log } from '../core/log.js'
@@ -1602,15 +1602,15 @@ use_dungeon.subscribe((state) => {
   else stop_zone_music()
 })
 
-// ── UNOPENED-RESULTS WIRES: detection must not depend on a UI surface (a restore straight into the WORLD never
-// mounts the roster/badge). BOOT — post-auth once per wallet. REFUSAL — every abort-111 throw. ────────────────
-const _kick_pending_open = (/** @type {boolean} */ announce) => {
+// ── UNOPENED-RESULTS BOOT WIRE: detection must not depend on a UI surface (a restore straight into the WORLD
+// never mounts the roster/badge). Refusal-time recovery belongs to the awaited engage/join reducer door; no
+// abort callback may race it or let the original entry die before the open receipt lands. ─────────────────────
+const _kick_pending_open = () => {
   const { address } = use_auth.getState()
   if (!address) return
-  void auto_open_pending_outcomes(use_dungeon, address, { announce }).catch(() => {})
+  void auto_open_pending_outcomes(use_dungeon, address).catch(() => {})
 }
-if (should_boot_open(use_auth.getState().address)) _kick_pending_open(false) // module loads post-auth (restore)
+if (should_boot_open(use_auth.getState().address)) _kick_pending_open() // module loads post-auth (restore)
 use_auth.subscribe((s) => {
-  if (should_boot_open(s.address)) _kick_pending_open(false) // sign-in lands after module load (fresh boot)
+  if (should_boot_open(s.address)) _kick_pending_open() // sign-in lands after module load (fresh boot)
 })
-on_marker_refusal(() => _kick_pending_open(true))

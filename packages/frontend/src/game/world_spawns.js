@@ -53,6 +53,7 @@ import { get_sdk } from '../chain/sdk'
 import { use_world_binding } from '../world-shell/session_gate.js'
 import { spawns_store, spawns_input } from '../world-shell/spawns_adapter.js'
 import { create_world_fight } from '../world-shell/dungeon_engage_actions.js'
+import { recover_fight_entry_refusal } from '../world-shell/dungeon_settlement.js'
 import { instrument_cpu_callback } from './cpu_span.js'
 import { use_dungeon } from '../world-shell/dungeon_store.js'
 import { as_one_toast } from '../world-shell/dungeon_actions.js'
@@ -719,6 +720,9 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
               party_id,
             })
           },
+          // `fight::111` is a zero-gas preflight input, not a terminal chore: open the exact pending result through
+          // its shared tx flight, feed that receipt back through start_fight_engage, then submit this claim once.
+          recover_refusal: (error) => recover_fight_entry_refusal(use_dungeon, character_id, error),
           present: () => {
             sync_from_core()
             context.events.emit('fight_entry/engage', { anchor })

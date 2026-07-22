@@ -24,8 +24,17 @@ import {
 } from '../core/engage_timing.js'
 import i18n from '../i18n'
 import { use_toast } from '../toast'
+import {
+  attempt_error,
+  attempt_state,
+  recover_marked_fight_entry,
+  reset_attempts_for_test,
+  run_result_auto_open,
+} from '../world-shell/pending_outcomes.js'
 import { tx_error } from './core/abort_copy.js'
-import { start_fight_engage } from './fight_engage.js'
+import { run_fight_entry, start_fight_engage } from './fight_engage.js'
+
+afterEach(() => reset_attempts_for_test())
 
 afterEach(() => {
   cancel_engage_timing()
@@ -174,4 +183,78 @@ test('intent feedback paints before engage preflight and a refusal replaces it w
     { message: i18n.t('errors.fight_group_claimed') },
   ])
   use_toast.setState({ toasts: [] })
+})
+
+test('an unfinished result is detected, opened through the shared action, then the original engage proceeds', async () => {
+  const marker_refusal = tx_error(
+    { MoveAbort: { abortCode: 111, location: { module: 'fight' } } },
+    { preflight: true }
+  )
+  const row = { outcome_id: '0xresult', character_id: '0xcharacter' }
+  const order = []
+  let engages = 0
+  let opens = 0
+
+  const receipt = await start_fight_engage({
+    submit: async () => {
+      engages += 1
+      order.push('engage')
+      if (engages === 1) throw marker_refusal
+      return { fight_id: '0xnext-fight' }
+    },
+    recover_refusal: (error) =>
+      recover_marked_fight_entry(error, {
+        find_result: async () => row,
+        open_result: (found) =>
+          run_result_auto_open(found.outcome_id, async () => {
+            opens += 1
+            order.push(`open:${found.outcome_id}`)
+            return { status: 'opened', receipt: { digest: '0xopen-receipt' } }
+          }),
+      }),
+    present: () => order.push('swing:start'),
+    on_present_error: () => {},
+  })
+
+  expect(receipt).toEqual({ fight_id: '0xnext-fight' })
+  expect(order.filter((step) => step !== 'swing:start')).toEqual(['engage', 'open:0xresult', 'engage'])
+  expect(opens).toBe(1)
+  expect(attempt_state(row.outcome_id)).toBe('opened')
+})
+
+test('an executed failed open surfaces identically across two engages and never auto-refires', async () => {
+  const marker_refusal = tx_error(
+    { MoveAbort: { abortCode: 111, location: { module: 'fight' } } },
+    { preflight: true }
+  )
+  const row = { outcome_id: '0xresult', character_id: '0xcharacter' }
+  const executed_open = Object.assign(new Error('result open failed on-chain'), { digest: '0xburned' })
+  let engages = 0
+  let opens = 0
+
+  const recover_refusal = (error) =>
+    recover_marked_fight_entry(error, {
+      find_result: async () => row,
+      open_result: (found) =>
+        run_result_auto_open(found.outcome_id, async () => {
+          opens += 1
+          return { status: 'failed', error: executed_open }
+        }),
+    })
+
+  for (let signal = 0; signal < 2; signal += 1)
+    await expect(
+      run_fight_entry({
+        submit: async () => {
+          engages += 1
+          throw marker_refusal
+        },
+        recover_refusal,
+      })
+    ).rejects.toBe(executed_open)
+
+  expect(engages).toBe(2)
+  expect(opens).toBe(1)
+  expect(attempt_state(row.outcome_id)).toBe('latched')
+  expect(attempt_error(row.outcome_id)).toBe(executed_open)
 })

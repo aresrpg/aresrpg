@@ -18,6 +18,7 @@ import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
 import { join_world_fight, as_one_toast } from '../../../../world-shell/dungeon_actions.js'
 import { enter_world_fight, spectate_world_fight } from '../../../../world-shell/world_fight.js'
 import { enter_after_world_join_receipt } from '../../../../world-shell/world_fight_receipt.js'
+import { recover_fight_entry_refusal } from '../../../../world-shell/dungeon_settlement.js'
 import { read_friend_list } from '../../../../world-shell/friends_reads.js'
 import { get_characters } from '../../../../rpc/client'
 import { get_mob_template } from '@aresrpg/sdk/game'
@@ -25,6 +26,7 @@ import { get_sdk } from '../../../../chain/sdk'
 import { resolve_character_docs } from '../../../../world-shell/character_name_resolve.js'
 import { fight_hover_teams, viewer_has_fighter } from '../../../../world-shell/fight_area_panel.js'
 import { Tooltip } from '../Tooltip.jsx'
+import { run_fight_entry } from '../../../fight_engage.js'
 import {
   cap_and_filter,
   is_join_legal,
@@ -190,10 +192,14 @@ export function FightsModal() {
       // stayed in the world until refresh. Full-board hydration uses the same receipt-backed sync as the creator.
       return enter_after_world_join_receipt({
         execute: () =>
-          join_world_fight({
-            fight_id: marker.id,
-            character_id: selected_character_id,
-            party_id: marker.public ? null : my_party_id,
+          run_fight_entry({
+            submit: () =>
+              join_world_fight({
+                fight_id: marker.id,
+                character_id: selected_character_id,
+                party_id: marker.public ? null : my_party_id,
+              }),
+            recover_refusal: (error) => recover_fight_entry_refusal(use_dungeon, selected_character_id, error),
           }),
         enter: enter_world_fight,
         fight_id: marker.id,

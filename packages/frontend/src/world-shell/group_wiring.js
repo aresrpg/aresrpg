@@ -11,15 +11,19 @@ import { fight_view } from '@aresrpg/fight/project'
 
 import { context } from '../game/store.js'
 import { use_auth } from '../auth'
+import { run_fight_entry } from '../game/fight_engage.js'
 import { game_log } from '../core/log.js'
+import i18n from '../i18n'
 
 import { use_party } from './party_store.js'
 import { use_dungeon } from './dungeon_store.js'
 import { join_world_action } from './world_join.js'
 import { join_owned_world_fight } from './owned_team_actions.js'
+import { as_one_toast } from './dungeon_actions.js'
 import { error_executed_digest } from './tx_digest_error.js'
 import { read_checkpoint_spawn, resolve_checkpoint_spawn, write_follow_checkpoint } from './world_checkpoint.js'
 import { ft_dispatch } from './fast_travel_store.js'
+import { recover_fight_entry_refusal } from './dungeon_settlement.js'
 import { create_group_wiring, build_follow_entries, fight_facts_of } from './group_wiring_core.js'
 
 /** A dragon catch-up flight — fixed, run-pace-ish, non-blocking (the leader keeps roaming while it flies). */
@@ -159,12 +163,21 @@ export function wire_group_loop() {
       read_checkpoint_spawn(character_id, world_id) ?? resolve_checkpoint_spawn(character_id, world_id),
     write_checkpoint: write_follow_checkpoint,
     join_fight: (character_id, fight_id, { queued = false } = {}) =>
-      join_owned_world_fight({
-        fight_id,
-        party_id: use_party.getState().party_id,
-        members: [{ character_id }],
-        queued,
-      }),
+      as_one_toast(i18n.t('fights.action_join_fight'), () =>
+        run_fight_entry({
+          submit: () =>
+            join_owned_world_fight({
+              fight_id,
+              party_id: use_party.getState().party_id,
+              members: [{ character_id }],
+              queued,
+            }),
+          // The leader's world fight is already mounted while owned followers join it. Permit that world-only
+          // store state, but keep busy transactions and dungeon RunPass sessions behind the normal guard.
+          recover_refusal: (error) =>
+            recover_fight_entry_refusal(use_dungeon, character_id, error, { live_world_fight_id: fight_id }),
+        })
+      ),
     dragon_fly: dragon_catch_up,
     // The EXISTING ctx door: my_entity_id re-resolves my_key against the adopted view (fight store), so the
     // HUD deck, prediction locality, and transaction_character_id all follow the acting owned seat.

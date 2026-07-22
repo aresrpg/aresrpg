@@ -11,7 +11,10 @@ import {
   invalidate_pending_outcomes,
   begin_attempt,
   end_attempt,
+  attempt_error,
   attempt_state,
+  acquire_settlement_flight,
+  run_result_auto_open,
   subscribe_attempts,
   should_boot_open,
   reset_attempts_for_test,
@@ -140,27 +143,111 @@ describe('attempt registry (auto-open burn-law rails)', () => {
     expect(attempt_state('0xo')).toBe('inflight')
   })
 
-  it('an EXECUTED failure LATCHES: auto never re-fires, the manual press still may (one attempt per press)', () => {
+  it('shares the inflight promise so engage detection awaits the open already started at boot', async () => {
+    const gate = Promise.withResolvers()
+    let opens = 0
+    const effect = async () => {
+      opens += 1
+      await gate.promise
+      return { status: 'opened', receipt: { digest: '0xopen' } }
+    }
+    const boot = run_result_auto_open('0xo', effect)
+    const engage = run_result_auto_open('0xo', effect)
+    expect(engage).toBe(boot)
+    expect(opens).toBe(1)
+    expect(attempt_state('0xo')).toBe('inflight')
+    gate.resolve()
+    await expect(Promise.all([boot, engage])).resolves.toEqual([
+      { status: 'opened', receipt: { digest: '0xopen' } },
+      { status: 'opened', receipt: { digest: '0xopen' } },
+    ])
+    expect(opens).toBe(1)
+    expect(attempt_state('0xo')).toBe('opened')
+  })
+
+  it('serializes different result ids through the store-wide settlement flight', async () => {
+    let state = { _settling: false }
+    const listeners = new Set()
+    const store = {
+      getState: () => state,
+      setState: (patch) => {
+        state = { ...state, ...patch }
+        for (const listener of listeners) listener(state)
+      },
+      subscribe: (listener) => {
+        listeners.add(listener)
+        return () => listeners.delete(listener)
+      },
+    }
+    const first = acquire_settlement_flight(store)
+    let second_acquired = false
+    const second = acquire_settlement_flight(store).then(() => {
+      second_acquired = true
+    })
+
+    await first
+    await Promise.resolve()
+    expect(state._settling).toBe(true)
+    expect(second_acquired).toBe(false)
+    store.setState({ _settling: false })
+    await second
+    expect(second_acquired).toBe(true)
+    expect(state._settling).toBe(true)
+    store.setState({ _settling: false })
+  })
+
+  it('an EXECUTED failure LATCHES with its honest error: auto never re-fires, manual still may', async () => {
+    const executed = Object.assign(new Error('open failed after execution'), { digest: '0xburned' })
     expect(begin_attempt('0xo')).toBe(true)
-    end_attempt('0xo', 'executed_failure')
+    end_attempt('0xo', 'executed_failure', executed)
     expect(attempt_state('0xo')).toBe('latched')
     expect(begin_attempt('0xo')).toBe(false) // AUTO refused forever this session
+    expect(attempt_error('0xo')).toBe(executed) // the engage door can surface the real failure
     expect(begin_attempt('0xo', { manual: true })).toBe(true) // user-initiated retry allowed
     end_attempt('0xo', 'executed_failure')
     expect(attempt_state('0xo')).toBe('latched') // and it re-latches after the manual attempt
   })
 
-  it('a TRANSIENT (pre-flight/network) failure re-arms the next detection', () => {
+  it('a REFUSED auto-open latches one actual effect and falls back to the manual press', async () => {
+    const refusal = new Error('wallet refused the open before submission')
+    let opens = 0
+    const first = await run_result_auto_open('0xo', async () => {
+      opens += 1
+      throw refusal
+    })
+    const second = await run_result_auto_open('0xo', async () => {
+      opens += 1
+      return { status: 'opened', receipt: null }
+    })
+    expect(first).toEqual({ status: 'failed', error: refusal })
+    expect(second).toEqual({ status: 'blocked', error: refusal })
+    expect(opens).toBe(1)
+    expect(attempt_state('0xo')).toBe('latched')
+    expect(begin_attempt('0xo', { manual: true })).toBe(true)
+  })
+
+  it('a local deferral re-arms an untouched result instead of spending its auto attempt', async () => {
+    const busy = new Error('another result transaction owns the store')
+    await expect(run_result_auto_open('0xo', async () => ({ status: 'deferred', error: busy }))).resolves.toEqual({
+      status: 'blocked',
+      error: busy,
+    })
+    expect(attempt_state('0xo')).toBe(null)
+    expect(begin_attempt('0xo')).toBe(true)
+  })
+
+  it('the separate settlement retry engine may explicitly clear a TRANSIENT fight-id attempt', () => {
     expect(begin_attempt('0xo')).toBe(true)
     end_attempt('0xo', 'transient')
     expect(attempt_state('0xo')).toBe(null)
     expect(begin_attempt('0xo')).toBe(true)
   })
 
-  it('an OPENED outcome clears its slot (the /v1 refetch is the remaining truth)', () => {
+  it('an OPENED outcome keeps a session tombstone so a lagging /v1 row cannot auto-compose it twice', () => {
     expect(begin_attempt('0xo')).toBe(true)
     end_attempt('0xo', 'opened')
-    expect(attempt_state('0xo')).toBe(null)
+    expect(attempt_state('0xo')).toBe('opened')
+    expect(begin_attempt('0xo')).toBe(false)
   })
 
   it('refuses a blank outcome id', () => {

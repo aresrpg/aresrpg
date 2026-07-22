@@ -66,7 +66,7 @@ async function auto_settle_terminal_fights_mirror({
       continue
     }
     const ok = await settle_chain({ terminal: true, fight_id, world_id: terminal.world ?? null, character_id })
-    end_attempt(fight_id, ok ? 'opened' : 'executed_failure')
+    end_attempt(fight_id, ok ? 'settled' : 'executed_failure')
   }
 }
 
@@ -92,7 +92,7 @@ describe('auto_settle_terminal_fights mirror — LEAF-2 stranded-fight auto-reco
       get_settling_state: idle_state,
     })
     expect(settle_calls).toEqual([{ terminal: true, fight_id: 'fight-1', world_id: 'world-1', character_id: 'char-1' }])
-    expect(attempt_state('fight-1')).toBe(null) // 'opened' clears the slot — no lingering latch
+    expect(attempt_state('fight-1')).toBe(null) // a settled fight clears the slot — result-id tombstones are separate
   })
 
   it('(b) a DUNGEON-bound terminal fight (its fight_id is in get_dungeon_runs) → left to the manual press, never settled', async () => {

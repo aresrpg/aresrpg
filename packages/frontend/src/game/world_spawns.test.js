@@ -13,6 +13,8 @@ import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
 
 const world_spawns_source = readFileSync(new URL('./world_spawns.js', import.meta.url), 'utf8')
 const dungeon_actions_source = readFileSync(new URL('../world-shell/dungeon_actions.js', import.meta.url), 'utf8')
+const fights_modal_source = readFileSync(new URL('./screens/hud/world/FightsModal.jsx', import.meta.url), 'utf8')
+const group_wiring_source = readFileSync(new URL('../world-shell/group_wiring.js', import.meta.url), 'utf8')
 
 const saved_globals = new Map()
 const remember = (key) => saved_globals.set(key, globalThis[key])
@@ -176,7 +178,8 @@ describe('world spawn mob-card layer route gate', () => {
     const seam_at = world_spawns_source.indexOf('start_fight_engage({', feedback_at)
     const submit_at = world_spawns_source.indexOf('submit: async () => {', seam_at)
     const create_at = world_spawns_source.indexOf('return create_world_fight', submit_at)
-    const present_at = world_spawns_source.indexOf('present: () => {', create_at)
+    const recover_at = world_spawns_source.indexOf('recover_refusal: (error) =>', create_at)
+    const present_at = world_spawns_source.indexOf('present: () => {', recover_at)
     const swing_at = world_spawns_source.indexOf("context.events.emit('fight_entry/engage'", present_at)
     const receipt_at = world_spawns_source.indexOf('const { fight_id } = await submitted', swing_at)
 
@@ -184,9 +187,40 @@ describe('world spawn mob-card layer route gate', () => {
     expect(seam_at).toBeGreaterThan(feedback_at)
     expect(submit_at).toBeGreaterThan(seam_at)
     expect(create_at).toBeGreaterThan(submit_at)
-    expect(present_at).toBeGreaterThan(create_at)
+    expect(recover_at).toBeGreaterThan(create_at)
+    expect(present_at).toBeGreaterThan(recover_at)
     expect(swing_at).toBeGreaterThan(present_at)
     expect(receipt_at).toBeGreaterThan(swing_at)
+  })
+
+  test('the world-fight join routes the same refusal through the receipt-gated entry seam', () => {
+    const receipt_gate_at = fights_modal_source.indexOf('return enter_after_world_join_receipt({')
+    const seam_at = fights_modal_source.indexOf('run_fight_entry({', receipt_gate_at)
+    const submit_at = fights_modal_source.indexOf('submit: () =>', seam_at)
+    const join_at = fights_modal_source.indexOf('join_world_fight({', submit_at)
+    const recover_at = fights_modal_source.indexOf('recover_refusal: (error) =>', join_at)
+    const enter_at = fights_modal_source.indexOf('enter: enter_world_fight', recover_at)
+
+    expect(receipt_gate_at).toBeGreaterThan(-1)
+    expect(seam_at).toBeGreaterThan(receipt_gate_at)
+    expect(submit_at).toBeGreaterThan(seam_at)
+    expect(join_at).toBeGreaterThan(submit_at)
+    expect(recover_at).toBeGreaterThan(join_at)
+    expect(enter_at).toBeGreaterThan(recover_at)
+  })
+
+  test('owned-character world joins use the same reducer and keep the leader world fight mounted', () => {
+    const aggregate_at = group_wiring_source.indexOf("as_one_toast(i18n.t('fights.action_join_fight')")
+    const seam_at = group_wiring_source.indexOf('run_fight_entry({', aggregate_at)
+    const join_at = group_wiring_source.indexOf('join_owned_world_fight({', seam_at)
+    const recover_at = group_wiring_source.indexOf('recover_fight_entry_refusal(', join_at)
+    const world_guard_at = group_wiring_source.indexOf('live_world_fight_id: fight_id', recover_at)
+
+    expect(aggregate_at).toBeGreaterThan(-1)
+    expect(seam_at).toBeGreaterThan(aggregate_at)
+    expect(join_at).toBeGreaterThan(seam_at)
+    expect(recover_at).toBeGreaterThan(join_at)
+    expect(world_guard_at).toBeGreaterThan(recover_at)
   })
 
   test('the aggregate engage toast paints before it invokes the preflight task', () => {

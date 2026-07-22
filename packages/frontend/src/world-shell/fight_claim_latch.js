@@ -15,7 +15,7 @@ import { attempt_state } from './pending_outcomes.js'
 /**
  * @param {{ attempt_id:string, manual?:boolean,
  *   begin:(id:string, opts:{manual:boolean})=>boolean,
- *   end:(id:string, verdict:'opened'|'transient'|'executed_failure')=>void,
+ *   end:(id:string, verdict:'settled'|'transient'|'executed_failure')=>void,
  *   run:(note_failure:(verdict:'transient'|'executed_failure')=>void)=>Promise<boolean> }} args
  */
 export async function run_latched_claim({ attempt_id, manual = false, begin, end, run }) {
@@ -29,7 +29,7 @@ export async function run_latched_claim({ attempt_id, manual = false, begin, end
     landed = Boolean(await run(note_failure))
     return landed
   } finally {
-    end(attempt_id, landed ? 'opened' : failure)
+    end(attempt_id, landed ? 'settled' : failure)
   }
 }
 

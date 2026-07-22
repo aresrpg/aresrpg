@@ -13,6 +13,8 @@
 // LEAF ON PURPOSE: the fetcher arrives as an argument (callers pass rpc/client's `get_pending_outcomes`), so
 // the mapper + memo are unit-testable with a plain fake — zero `mock.module` (process-global collision law).
 
+import { parse_move_abort } from '../game/core/abort_copy.js'
+
 import { error_executed_digest, error_preflight_marked } from './tx_digest_error.js'
 
 /**
@@ -69,18 +71,19 @@ export function invalidate_pending_outcomes() {
 }
 
 // ── AUTO-OPEN attempt registry (unopened stuff always auto-opens whenever detected,
-// with the burn-law rails) — session-scoped, per outcome_id:
-//   'inflight'  → blocks EVERYTHING (single-flight per outcome);
-//   'latched'   → an EXECUTED failure happened (digest exists = gas burned): blocks AUTO forever this session,
-//                 the amber pill stays as the MANUAL fallback press (user-initiated ≠ auto-retry);
-//   (absent)    → attemptable; a transient (pre-flight/network) failure clears back to absent so the NEXT
-//                 detection may re-arm.
+// with the burn-law rails) — the ONE session-scoped home, keyed per outcome_id:
+//   'inflight'  → owns the shared Promise (every detector awaits the SAME open; never double-compose);
+//   'latched'   → an EXECUTED failure OR a refused AUTO attempt: auto never re-fires this session, while the
+//                 preserved error gives the engage door its honest surface and the manual press stays available;
+//   'opened'    → receipt landed; a lagging /v1 row cannot auto-compose the consumed outcome a second time;
+//   (absent)    → attemptable. Only callers that explicitly classify their operation as transient (the separate
+//                 terminal-settlement retry engine) clear back to absent.
 
-/** @type {Map<string, 'inflight' | 'latched'>} */
+/** @type {Map<string, { state:'inflight'|'latched'|'opened', promise:Promise<any>|null, error:unknown|null }>} */
 const attempts = new Map()
 
-// The pill renders attempt state REACTIVELY (detection no longer lives in its mount — the boot/refusal wires
-// own the trigger, dungeon_store.js tail): a plain listener set notified on every begin/end, so a mounted
+// The pill renders attempt state REACTIVELY (detection no longer lives in its mount — boot plus the awaited
+// engage/join door own the trigger): a plain listener set notified on every begin/end, so a mounted
 // badge re-derives its beat ('opening' ⇄ latched fallback ⇄ gone) without polling.
 /** @type {Set<() => void>} */
 const attempt_listeners = new Set()
@@ -107,29 +110,146 @@ export function subscribe_attempts(/** @type {() => void} */ cb) {
  */
 export function begin_attempt(outcome_id, { manual = false } = {}) {
   if (!outcome_id) return false
-  const state = attempts.get(outcome_id)
+  const state = attempts.get(outcome_id)?.state
   if (state === 'inflight') return false
+  if (state === 'opened') return false
   if (state === 'latched' && !manual) return false
-  attempts.set(outcome_id, 'inflight')
+  attempts.set(outcome_id, { state: 'inflight', promise: null, error: null })
   notify_attempts()
   return true
 }
 
 /**
- * Release the slot with the attempt's verdict: 'opened' / 'transient' clear (re-armable — the /v1 refetch is
- * the truth of what remains), 'executed_failure' LATCHES (burn law: a digest exists, auto never re-fires it).
- * @param {string} outcome_id @param {'opened' | 'transient' | 'executed_failure'} verdict
+ * Release the slot with the attempt's verdict. Opened keeps a result receipt tombstone; executed failure and
+ * refused AUTO attempts latch with their honest error; transient/settled fight attempts clear normally.
+ * @param {string} outcome_id @param {'opened' | 'settled' | 'transient' | 'refused' | 'executed_failure'} verdict
+ * @param {unknown} [error]
  */
-export function end_attempt(outcome_id, verdict) {
+export function end_attempt(outcome_id, verdict, error = null) {
   if (!outcome_id) return
-  if (verdict === 'executed_failure') attempts.set(outcome_id, 'latched')
+  if (verdict === 'opened') attempts.set(outcome_id, { state: 'opened', promise: null, error: null })
+  else if (verdict === 'executed_failure' || verdict === 'refused')
+    attempts.set(outcome_id, { state: 'latched', promise: null, error })
   else attempts.delete(outcome_id)
   notify_attempts()
 }
 
-/** @param {string} outcome_id @returns {'inflight' | 'latched' | null} */
+/** Bind the Promise owned by an already-claimed inflight slot. */
+export function bind_attempt_flight(/** @type {string} */ outcome_id, /** @type {Promise<any>} */ promise) {
+  const attempt = attempts.get(outcome_id)
+  if (attempt?.state === 'inflight') attempts.set(outcome_id, { ...attempt, promise })
+}
+
+/** The shared open flight, when one detector already owns it. */
+export function attempt_flight(/** @type {string} */ outcome_id) {
+  const attempt = attempts.get(outcome_id)
+  return attempt?.state === 'inflight' ? attempt.promise : null
+}
+
+/** The exact failed-open error retained for the honest engage/manual fallback surface. */
+export function attempt_error(/** @type {string} */ outcome_id) {
+  return attempts.get(outcome_id)?.error ?? null
+}
+
+/** Acquire the store-wide settlement flight; concurrent result ids queue without spending their attempt. */
+export function acquire_settlement_flight(store) {
+  const acquire = () => {
+    if (store.getState()._settling) return false
+    store.setState({ _settling: true })
+    return true
+  }
+  if (acquire()) return Promise.resolve()
+  return new Promise((resolve) => {
+    const unsubscribe = store.subscribe(() => {
+      // Re-read live state: another waiter may have acquired it from an earlier callback in this notification.
+      if (!acquire()) return
+      unsubscribe()
+      resolve()
+    })
+  })
+}
+
+/**
+ * Own one result-open flight from detection through its receipt. The slot is claimed and its Promise is bound
+ * synchronously, before `open` can perform an awaited run lookup or compose a transaction, so boot/engage/manual
+ * detectors for the same result always await one effect. An attempted open that fails latches its exact error;
+ * a local deferral did not attempt the open and therefore re-arms an untouched result.
+ * @param {string} outcome_id
+ * @param {() => Promise<{status:'opened'|'failed'|'deferred',receipt?:any,error?:unknown}>} open
+ * @param {{manual?:boolean}} [opts]
+ * @returns {Promise<{status:'opened',receipt:any}|{status:'blocked'|'failed',error:unknown|null}>}
+ */
+export function run_result_auto_open(outcome_id, open, { manual = false } = {}) {
+  if (!outcome_id || typeof open !== 'function') return Promise.resolve({ status: 'blocked', error: null })
+  const shared = attempt_flight(outcome_id)
+  if (shared) return shared
+  const prior = attempts.get(outcome_id) ?? null
+  if (prior?.state === 'opened') return Promise.resolve({ status: 'opened', receipt: null })
+  if (prior?.state === 'latched' && !manual) return Promise.resolve({ status: 'blocked', error: prior.error })
+  if (!begin_attempt(outcome_id, { manual })) {
+    const raced = attempt_flight(outcome_id)
+    if (raced) return raced
+    const current = attempts.get(outcome_id)
+    return Promise.resolve(
+      current?.state === 'opened'
+        ? { status: 'opened', receipt: null }
+        : { status: 'blocked', error: current?.error ?? null }
+    )
+  }
+  const flight = (async () => {
+    try {
+      const result = await open()
+      if (result?.status === 'opened') {
+        end_attempt(outcome_id, 'opened')
+        return { status: 'opened', receipt: result.receipt ?? null }
+      }
+      if (result?.status === 'deferred') {
+        // A manual press may temporarily borrow an executed-failure latch. If no tx was attempted, restore it;
+        // otherwise a local busy guard could accidentally re-arm AUTO after gas had already been burned.
+        if (manual && prior?.state === 'latched') {
+          attempts.set(outcome_id, prior)
+          notify_attempts()
+        } else end_attempt(outcome_id, 'transient')
+        return { status: 'blocked', error: result.error ?? null }
+      }
+      const error = result?.error ?? null
+      end_attempt(outcome_id, error_executed_digest(error) ? 'executed_failure' : 'refused', error)
+      return { status: 'failed', error }
+    } catch (error) {
+      end_attempt(outcome_id, error_executed_digest(error) ? 'executed_failure' : 'refused', error)
+      return { status: 'failed', error }
+    }
+  })()
+  bind_attempt_flight(outcome_id, flight)
+  return flight
+}
+
+/**
+ * Production fight-entry recovery coordinator. Only a proven preflight `fight::111` may detect/open; the exact
+ * row and result-open action are injected by dungeon_settlement so this reducer-facing core stays directly
+ * drivable. The open action owns the result-id single-flight above and returns its receipt as reducer input.
+ * @param {unknown} refusal
+ * @param {{find_result:()=>Promise<any>,open_result:(row:any)=>Promise<any>}} effects
+ */
+export async function recover_marked_fight_entry(refusal, { find_result, open_result }) {
+  const abort = parse_move_abort(refusal)
+  if (
+    error_executed_digest(refusal) ||
+    !error_preflight_marked(refusal) ||
+    abort?.module !== 'fight' ||
+    abort.code !== 111
+  )
+    throw refusal
+  const row = await find_result()
+  if (!row?.outcome_id) throw refusal
+  const opened = await open_result(row)
+  if (opened?.status === 'opened') return opened.receipt ?? null
+  throw opened?.error ?? refusal
+}
+
+/** @param {string} outcome_id @returns {'inflight' | 'latched' | 'opened' | null} */
 export function attempt_state(outcome_id) {
-  return attempts.get(outcome_id) ?? null
+  return attempts.get(outcome_id)?.state ?? null
 }
 
 // ── BOOT gate — detection must not depend on a UI surface (a session-restore straight

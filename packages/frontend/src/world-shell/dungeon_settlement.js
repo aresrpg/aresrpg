@@ -37,6 +37,9 @@ import {
   begin_attempt,
   end_attempt,
   attempt_state,
+  acquire_settlement_flight,
+  recover_marked_fight_entry,
+  run_result_auto_open,
   is_preflight_failure,
 } from './pending_outcomes.js'
 import { run_latched_claim } from './fight_claim_latch.js'
@@ -177,20 +180,30 @@ export async function settle_chain_latched(store, args, { manual = false } = {})
  * `_settling` single-flight. `summary_toast` fires the auto-open success beat (07-10).
  * @param {any} store
  * @param {{ outcome_id: string, run_pass_id?: string|null, world_id?: string|null, character_id: string|null,
- *           terminal: boolean, room?: number, summary_toast?: boolean }} args
- * @returns {Promise<{ landed: boolean, preflight?: boolean }>} landed=true once `results::open` landed (the
- *   character's fight_marker is CLEARED); on failure `preflight` classifies it (burn law: false = executed).
+ *           terminal: boolean, room?: number, summary_toast?: boolean, surface_failure?: boolean }} args
+ * @returns {Promise<{ landed: boolean, preflight?: boolean, receipt?:any, error?:unknown }>} landed=true once
+ *   `results::open` landed (the character's fight_marker is CLEARED); on failure `preflight` classifies it.
  */
 async function land_outcome(
   store,
-  { outcome_id, run_pass_id = null, world_id = null, character_id, terminal, room = 0, summary_toast = false }
+  {
+    outcome_id,
+    run_pass_id = null,
+    world_id = null,
+    character_id,
+    terminal,
+    room = 0,
+    summary_toast = false,
+    surface_failure = true,
+  }
 ) {
+  let receipt = null
   let result_id = null
   let xp_share = null
   let loot_units = null
   let final_hp = null
   try {
-    ;({ result_id, xp_share, loot_units, final_hp } = run_pass_id
+    ;({ receipt, result_id, xp_share, loot_units, final_hp } = run_pass_id
       ? await settle_run_and_open({ run_pass_id, outcome_id, world_id, character_id })
       : await open_outcome(outcome_id, character_id))
   } catch (error) {
@@ -200,14 +213,25 @@ async function land_outcome(
     game_log(
       'dungeon',
       'results::open failed — character still MARKED (the roster pill is the manual fallback):',
-      humanize_abort(error?.message ?? String(error))
+      humanize_abort(error)
     )
-    push_event_toast({ state: 'error', title: i18n.t('errors.fight_unclaimed_result') })
+    if (surface_failure) push_event_toast({ state: 'error', title: humanize_abort(error) })
     invalidate_pending_outcomes() // an unopened outcome now (still) exists — the pill re-fetches truth
-    return { landed: false, preflight: is_preflight_failure(error) }
+    return { landed: false, preflight: is_preflight_failure(error), error }
   }
-  await finish_result(store, { result_id, xp_share, loot_units, final_hp, character_id, terminal, room, summary_toast })
-  return { landed: true } // open landed → the marker is CLEARED (the pill surface reads this)
+  // The receipt already proves the marker clear. Finish the old result's display tail before a new fight mounts
+  // (its delayed loot reads are not result-keyed), but never let non-authoritative hydration reject that receipt.
+  await finish_result(store, {
+    result_id,
+    xp_share,
+    loot_units,
+    final_hp,
+    character_id,
+    terminal,
+    room,
+    summary_toast,
+  }).catch((error) => game_log('dungeon', 'post-open result hydration failed after receipt:', humanize_abort(error)))
+  return { landed: true, receipt } // open landed → the marker is CLEARED (the pill surface reads this)
 }
 
 /**
@@ -379,71 +403,126 @@ export async function find_pending_outcome(address, character_id) {
 }
 
 /**
+ * The awaited fight-entry correction for a PRE-FLIGHT `fight::ECharacterMarked` refusal. A fresh projection read
+ * resolves this character's exact outcome id, then the SAME single-flight/manual action above opens it. Only the
+ * open receipt returns to the entry reducer; an executed entry/open failure is never retried and its original
+ * error surfaces untouched. This replaces the old abort-hook callback, which could open after entry had died.
+ * @param {any} store @param {string} character_id @param {unknown} refusal
+ * @param {{live_world_fight_id?:string|null}} [opts]
+ * @returns {Promise<any>} the shared open receipt (null only for an already-opened stale projection row)
+ */
+export async function recover_fight_entry_refusal(store, character_id, refusal, { live_world_fight_id = null } = {}) {
+  return recover_marked_fight_entry(refusal, {
+    find_result: async () => {
+      const { address } = use_auth.getState()
+      if (!address || !character_id) return null
+      // The boot memo may predate a result minted by another seat's settlement. The refusal is a new detection
+      // signal, so force one fresh /v1 read; the result-id registry still coalesces an open already in flight.
+      invalidate_pending_outcomes()
+      return find_pending_outcome(address, character_id)
+    },
+    open_result: (row) => {
+      const { address } = use_auth.getState()
+      if (!address) return Promise.resolve({ status: 'blocked', error: refusal })
+      return open_pending_row(store, address, character_id, row, {
+        allow_run_bound: true,
+        live_world_fight_id,
+        surface_failure: false,
+      })
+    },
+  })
+}
+
+/**
  * Open ONE unopened result row (`results::open` — XP/HP write-backs + fight_marker::clear + loot mint/burn).
  * AUTO mode (07-10: "unopened stuff should always auto open whenever detected") fires from the pill's
- * detection with the burn-law rails: single-flight per outcome_id, ONE auto attempt per session (an EXECUTED
- * failure LATCHES — the amber pill stays as the MANUAL fallback; pre-flight/network failures re-arm on the next
- * detection), and a DUNGEON-RUN-BOUND row is never auto-improvised — it stays on the manual press, which runs
- * the proven composed `settle_run + open` PTB. MANUAL mode (the press) may retry a latched outcome (one attempt
- * per press) and takes the settle_run leg when a RunPass matches.
+ * detection with the burn-law rails: one synchronous single-flight claim per outcome_id and ONE attempted auto
+ * open per session (executed OR refused failures latch with their honest error; a local deferral attempts no tx
+ * and re-arms). Boot leaves a run-bound row on the manual press; entry recovery explicitly runs that same
+ * composed `settle_run + open` action. MANUAL may retry a latch, one attempt per press.
  * @param {any} store the use_dungeon zustand store
  * @param {string} address @param {string} character_id
  * @param {{ outcome_id: string, fight_id?: string|null, world_id?: string|null }} row
- * @param {{ manual?: boolean }} [opts]
- * @returns {Promise<'opened' | 'blocked' | 'failed'>} blocked = no tx attempted (guard/latch/dungeon-bound);
- *   failed = an attempt ran and did not land (latched if executed — the pill shows the manual fallback).
+ * @param {{ manual?: boolean, allow_run_bound?: boolean, live_world_fight_id?: string|null,
+ *           surface_failure?: boolean }} [opts]
+ * @returns {Promise<{status:'opened',receipt:any}|{status:'blocked'|'failed',error:unknown|null}>} `opened`
+ *   carries the receipt that re-enters the fight-entry reducer; blocked/failed retain the honest cause.
  */
-export async function open_pending_row(store, address, character_id, row, { manual = false } = {}) {
+export function open_pending_row(
+  store,
+  address,
+  character_id,
+  row,
+  { manual = false, allow_run_bound = false, live_world_fight_id = null, surface_failure = true } = {}
+) {
   const { getState, setState } = store
-  if (!row?.outcome_id) return 'blocked'
-  // Dungeon-run-bound? (a RunPass still latched to the outcome's fight) — resolve BEFORE claiming the slot.
-  let run_pass_id = null
-  let runs_read_failed = false
-  try {
-    const runs = await get_dungeon_runs({ owner: address })
-    run_pass_id = character_run_pass_id(runs, row.fight_id ?? null, character_id)
-  } catch (error) {
-    runs_read_failed = true
-    game_log('dungeon', 'pending-open: run read failed', error)
-  }
-  if (!manual && (run_pass_id || runs_read_failed)) {
-    // AUTO never improvises on a run-bound (or unprovable) shape — the manual press owns the settle_run leg.
-    game_log('dungeon', 'pending-open: run-bound/unproven row — left to the manual press (stop-rule)', {
-      outcome: row.outcome_id,
-      run_pass_id,
-    })
-    return 'blocked'
-  }
-  if (!begin_attempt(row.outcome_id, { manual })) return 'blocked' // single-flight / auto-latch (burn law)
-  // NEVER stomp a live session (a fight in progress on ANY character of this tab owns the settlement chain).
-  if (getState()._settling || getState().busy || getState().fight_id || getState().run_pass_id) {
-    end_attempt(row.outcome_id, 'transient')
-    return 'blocked'
-  }
-  setState({ _settling: true })
-  try {
-    const { landed, preflight } = await land_outcome(store, {
-      outcome_id: row.outcome_id,
-      run_pass_id: manual ? run_pass_id : null,
-      world_id: row.world_id ?? null,
-      character_id,
-      terminal: true,
-      summary_toast: true,
-    })
-    end_attempt(row.outcome_id, landed ? 'opened' : preflight ? 'transient' : 'executed_failure')
-    // (memo invalidation lives in land_outcome — EVERY settle/open resolution re-arms the pill's fetch)
-    return landed ? 'opened' : 'failed'
-  } finally {
-    setState({ _settling: false })
-  }
+  if (!row?.outcome_id) return Promise.resolve({ status: 'blocked', error: null })
+  return run_result_auto_open(
+    row.outcome_id,
+    async () => {
+      // The registry slot above is already bound: any boot/engage detector arriving during this awaited lookup
+      // receives this exact Promise instead of racing into the store's busy guard.
+      let run_pass_id = null
+      try {
+        const runs = await get_dungeon_runs({ owner: address })
+        run_pass_id = character_run_pass_id(runs, row.fight_id ?? null, character_id)
+      } catch (error) {
+        game_log('dungeon', 'pending-open: run read failed', error)
+        if (manual && surface_failure) push_event_toast({ state: 'error', title: humanize_abort(error) })
+        return { status: 'deferred', error }
+      }
+      if (!manual && !allow_run_bound && run_pass_id) {
+        // Boot detection leaves a run-bound row to the panel. Entry recovery opts in to this SAME composed
+        // settle_run+open action, without bypassing the automatic result-id latch.
+        game_log('dungeon', 'pending-open: run-bound row — left to the manual press (stop-rule)', {
+          outcome: row.outcome_id,
+          run_pass_id,
+        })
+        return { status: 'deferred', error: new Error(i18n.t('errors.fight_result_latched')) }
+      }
+      // A live fight/run owns the shared store. This is a local deferral, not a refused open transaction, so the
+      // untouched result re-arms instead of being falsely latched for the rest of the session.
+      const session_is_live = () => {
+        const live = getState()
+        return live.busy || live.run_pass_id || (live.fight_id && live.fight_id !== live_world_fight_id)
+      }
+      if (session_is_live()) {
+        const error = new Error(i18n.t('errors.fight_result_latched'))
+        if (manual && surface_failure) push_event_toast({ state: 'error', title: humanize_abort(error) })
+        return { status: 'deferred', error }
+      }
+      await acquire_settlement_flight(store)
+      try {
+        // State may have changed while queued behind a different result's transaction.
+        if (session_is_live()) {
+          const error = new Error(i18n.t('errors.fight_result_latched'))
+          if (manual && surface_failure) push_event_toast({ state: 'error', title: humanize_abort(error) })
+          return { status: 'deferred', error }
+        }
+        const { landed, receipt, error } = await land_outcome(store, {
+          outcome_id: row.outcome_id,
+          run_pass_id: manual || allow_run_bound ? run_pass_id : null,
+          world_id: row.world_id ?? null,
+          character_id,
+          terminal: true,
+          summary_toast: true,
+          surface_failure,
+        })
+        return landed ? { status: 'opened', receipt } : { status: 'failed', error: error ?? null }
+      } finally {
+        setState({ _settling: false })
+      }
+    },
+    { manual }
+  )
 }
 
 /**
  * THE SHARED DETECT+AUTO-OPEN ENTRY (live-gap 07-10: "unopened stuff should always auto open whenever
  * DETECTED" — detection must NOT depend on a UI surface; a session once restored straight into the world,
- * the badge never mounted, and the next mob engage hit abort 111). TWO wires call this (dungeon_store.js tail):
- * the post-auth BOOT wire (once per wallet — should_boot_open gates it) and the abort-111 REFUSAL wire
- * (`announce: true` — the honest toast beat). One wallet-level pass: the memoized /v1 fetch, then every row
+ * the badge never mounted, and the next mob engage hit abort 111). The post-auth BOOT wire calls this once per
+ * wallet; the awaited engage/join reducer door owns refusal-time detection separately. One wallet-level pass:
+ * the memoized /v1 fetch, then every row
  * through open_pending_row's unchanged rails (single-flight, auto-latch, dungeon-bound = manual only).
  * `announce` copy per row: latched → the manual-badge pointer; fresh/inflight → "opening it now…", and a row
  * that then turns out non-auto-openable (dungeon-bound / session-live) corrects to the manual pointer. The
@@ -462,6 +541,7 @@ export async function auto_open_pending_outcomes(store, address, { announce = fa
   }
   for (const [character_id, row] of map) {
     const state = attempt_state(row.outcome_id)
+    if (state === 'opened') continue // receipt tombstone outranks a lagging projection row
     if (announce)
       push_event_toast(
         state === 'latched'
@@ -471,7 +551,7 @@ export async function auto_open_pending_outcomes(store, address, { announce = fa
     if (state) continue // inflight (already opening) or latched (manual-only) — never double-fire
     const res = await open_pending_row(store, address, character_id, row)
     // honest correction: we announced an auto-open but the row is NOT auto-openable (dungeon-bound/session-live)
-    if (announce && res === 'blocked')
+    if (announce && res.status === 'blocked')
       push_event_toast({ state: 'error', title: i18n.t('errors.fight_result_latched') })
   }
   // LEAF-2 — the terminal-but-UNSETTLED fight the pending-outcomes read above CANNOT see: the settle never ran,
@@ -586,7 +666,7 @@ export async function recover_character(store, character_id) {
     }
     if (!row) return 'clean'
     const res = await open_pending_row(store, address, character_id, row, { manual: true })
-    return res === 'opened' ? 'recovered' : 'failed'
+    return res.status === 'opened' ? 'recovered' : 'failed'
   }
   const fight_id = pending.fight_id ?? pending.fight
   const world_id = pending.world ?? null

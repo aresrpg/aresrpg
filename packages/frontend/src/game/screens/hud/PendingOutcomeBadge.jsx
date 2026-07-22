@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // UNOPENED FIGHT RESULTS — the roster pill, a pure RENDERER (detection/firing moved to
-// the boot + abort-111 refusal wires in dungeon_store.js — "auto open whenever DETECTED" must not depend on a
+// the boot wire + awaited engage/join reducer door — "auto open whenever DETECTED" must not depend on a
 // UI surface mounting, since a session can restore straight into the world without this badge ever mounting). A
 // character with an unopened outcome cannot enter another fight (fight_marker → abort 111); `results::open` is
 // the only discharge. TWO shapes, one pill:
@@ -53,7 +53,7 @@ export function PendingOutcomeBadge({ character_id }) {
       if (!live) return
       if (fights.some((f) => f && (f.status === 'placement' || f.status === 'active'))) return set_state('idle')
       if (fights.some((f) => f && (f.status === 'victory' || f.status === 'defeat'))) return set_state('pending')
-      // leaf 3 — RENDER the shared unopened-results state (the boot/refusal wires own the trigger).
+      // leaf 3 — RENDER the shared unopened-results state (boot/entry doors own the trigger).
       let row = null
       try {
         row = await find_pending_outcome(address, character_id)
@@ -63,7 +63,9 @@ export function PendingOutcomeBadge({ character_id }) {
       if (!live) return
       // Row gone: resolved (or none) — but never stomp a manual press mid-flight (its own flow sets the state).
       if (!row) return set_state((cur) => (cur === 'recovering' || cur === 'error' ? cur : 'idle'))
-      set_state(attempt_state(row.outcome_id) === 'inflight' ? 'opening' : 'pending')
+      const attempt = attempt_state(row.outcome_id)
+      // A receipt tombstone outranks a lagging /v1 row; never offer a manual press for an already-consumed result.
+      set_state(attempt === 'opened' ? 'idle' : attempt === 'inflight' ? 'opening' : 'pending')
     })()
     return () => {
       live = false
