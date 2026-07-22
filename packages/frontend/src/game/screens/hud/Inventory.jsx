@@ -28,7 +28,6 @@ import {
   RELIC_SLOTS,
   WORN_CATEGORIES,
   can_consume,
-  can_equip_level,
   equip_lock_of,
   equip_stage_action,
   equipped_totals,
@@ -43,6 +42,7 @@ import {
   stage_reducer,
   wallet_equipped_ids,
 } from './inventory-equip.js'
+import { equip_preflight } from './inventory_context_actions'
 import { EquipmentSlot } from './EquipmentSlot.jsx'
 import { EquipmentLockNotice } from './EquipmentLockNotice.jsx'
 import { InventoryBag } from './InventoryBag.jsx'
@@ -283,11 +283,16 @@ export function Inventory() {
       use_toast.getState().add(equip_lock, 'info')
       return
     }
-    // #316 — known-data refusal BEFORE any stage/tx: an under-level item can only abort on-chain
-    // (equipment::ELevelTooLow). The bag cell is already disabled at hover (InventoryBag's is_level_blocked);
-    // this is the click-path backstop, same reason copy either way.
-    if (!can_equip_level(item, level, template_id_map, template_map)) {
-      use_toast.getState().add(t('errors.equip_level_too_low'), 'info')
+    const equip_result = equip_preflight({
+      item,
+      character_level: level,
+      character_class: character.classe ?? character.class_id,
+      equipment,
+      template_id_map,
+      template_map,
+    })
+    if (!equip_result.allowed) {
+      use_toast.getState().add(t(equip_result.reason), 'info')
       return
     }
     dispatch_stage(equip_stage_action(item, undefined, slugs, template_id_map))
@@ -451,10 +456,19 @@ export function Inventory() {
       if (equip_lock) return use_toast.getState().add(equip_lock, 'info') // D29: no drop-to-equip on a busy char
       const item = dragging(e)
       if (is_item_listed(item)) return use_toast.getState().add(t('errors.item_listed_for_sale'), 'info')
-      // #316 — same level gate as the click path (on_grid_activate); drag-to-slot is the other stage entry.
-      if (item && !can_equip_level(item, level, template_id_map, template_map))
-        return use_toast.getState().add(t('errors.equip_level_too_low'), 'info')
-      if (item) dispatch_stage(equip_stage_action(item, slot, slugs, template_id_map))
+      if (item) {
+        const equip_result = equip_preflight({
+          item,
+          slot,
+          character_level: level,
+          character_class: character.classe ?? character.class_id,
+          equipment,
+          template_id_map,
+          template_map,
+        })
+        if (!equip_result.allowed) return use_toast.getState().add(t(equip_result.reason), 'info')
+        dispatch_stage(equip_stage_action(item, slot, slugs, template_id_map))
+      }
     },
     on_hover_enter: on_item_hover,
     on_hover_move: on_mouse_move,
@@ -571,7 +585,16 @@ export function Inventory() {
         equip_lock={equip_lock}
         is_removed={(item) => is_template_removed(item, template_map)}
         is_retry_blocked={(item) => is_lootbox(item.item_type) && is_box_retry_blocked(item.id)}
-        is_level_blocked={(item) => !can_equip_level(item, level, template_id_map, template_map)}
+        equip_refusal={(item) =>
+          equip_preflight({
+            item,
+            character_level: level,
+            character_class: character.classe ?? character.class_id,
+            equipment,
+            template_id_map,
+            template_map,
+          }).reason
+        }
         on_select={set_selected_item_id}
         on_activate={on_grid_activate}
         on_context_menu={on_grid_context_menu}

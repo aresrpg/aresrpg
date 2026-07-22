@@ -14,6 +14,7 @@ const KEYS = [
   ['errors', 'tx_refusal_reason'], // the "{{headline}}\nReason: {{reason}}" template
   ['errors', 'tx_refusal_reason_unmapped'], // an unmapped-but-parsed abort names its module + code
   ['errors', 'tx_stale_reference'], // a non-MoveAbort structural gRPC failure (CommandArgumentError etc.)
+  ['errors', 'equip_wrong_slot'], // client-selected slot disagrees with Move's category-derived slot
 ]
 
 describe('i18n · pre-flight "must say why" strings present in ALL 6 locales', () => {

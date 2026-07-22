@@ -2270,6 +2270,7 @@
     "first_char_undeletable": "Dein erster Charakter kann nicht gelöscht werden.",
     "tx_failed": "Die Transaktion wurde ausgeführt, ist aber on-chain fehlgeschlagen. Gas wurde verbraucht. Versuche es nicht erneut, solange die Ursache nicht behoben ist.",
     "equip_not_equippable": "Dieser Gegenstand kann nicht ausgerüstet werden.",
+    "equip_wrong_slot": "Dieser Gegenstand passt nicht in diesen Ausrüstungsplatz.",
     "equip_slot_occupied": "Dieser Ausrüstungsplatz ist bereits belegt.",
     "equip_relic_duplicate": "Du kannst nicht zwei Exemplare desselben Relikts ausrüsten.",
     "equip_relic_slots_full": "Alle Reliktplätze sind belegt.",

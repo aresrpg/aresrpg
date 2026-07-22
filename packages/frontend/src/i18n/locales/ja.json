@@ -2270,6 +2270,7 @@
     "first_char_undeletable": "最初のキャラクターは削除できません。",
     "tx_failed": "トランザクションは実行されましたが、オンチェーンで失敗しました。ガス代は消費されています。原因が解決するまで再試行しないでください。",
     "equip_not_equippable": "このアイテムは装備できません。",
+    "equip_wrong_slot": "このアイテムはその装備スロットには装備できません。",
     "equip_slot_occupied": "その装備スロットはすでに使用されています。",
     "equip_relic_duplicate": "同じレリックを2つ装備することはできません。",
     "equip_relic_slots_full": "レリックスロットはすべて使用されています。",

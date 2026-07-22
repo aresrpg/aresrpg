@@ -2270,6 +2270,7 @@
     "first_char_undeletable": "Your first character can't be deleted.",
     "tx_failed": "The transaction executed but failed on-chain. Gas was spent. Don’t retry until the cause is resolved.",
     "equip_not_equippable": "This item can’t be equipped.",
+    "equip_wrong_slot": "This item doesn’t fit that equipment slot.",
     "equip_slot_occupied": "That equipment slot is already occupied.",
     "equip_relic_duplicate": "You can’t equip two copies of the same relic.",
     "equip_relic_slots_full": "All relic slots are occupied.",

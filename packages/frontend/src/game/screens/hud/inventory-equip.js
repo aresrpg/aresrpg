@@ -10,14 +10,10 @@ import { is_developer_item } from '@aresrpg/sdk/jobs'
 import { projected_hp, character_max_hp } from '../../../chain/read_character.js'
 import { cosmetic_icon_of } from '../../cosmetic_icons.js'
 import { chain_icon_slug, group_by_stack_identity, is_cosmetic_item, item_type_equip_slot } from '../../item_classification'
+import { equip_slot_accepts, equip_slot_kind_of } from './inventory_context_actions'
 
 // Combat head armour and cosmetic hats are distinct on-chain slots.
 export const HELMET = 'helmet'
-
-// Body-armour categories are distinct Move slots. The SDK's older coarse aliases are not slot truth here.
-const CHESTPLATE = 'chestplate'
-const GAUNTLETS = 'gauntlets'
-const PANTS = 'pants'
 
 /** The canonical equipment slot set, in paper-doll order. Load-bearing: these are the on-chain
  *  `equip_item` slot Strings enforced by the Move `verify_slot` — head on top, ring on both sides. */
@@ -87,30 +83,6 @@ const with_authored_icon = (item, slug_by_name = {}) => {
  */
 export const item_display_level = (item, template) =>
   Number(item?.level) > 0 ? Number(item.level) : Number(template?.level ?? 0)
-
-/** The level `item` requires to equip — item_display_level resolved against its OWN template (by id,
- *  falling back to the by-type map), mirroring equip_stage_action's + on_item_hover's template lookup.
- *  @param {any} item @param {Map<string, any>} [template_id_map] @param {Map<string, any>} [template_map]
- *  @returns {number} */
-export function item_required_level(item, template_id_map, template_map) {
-  const template =
-    template_id_map?.get?.(item?.template_id ?? item?.template) ?? template_map?.get?.(item?.item_type) ?? {}
-  return item_display_level(item, template)
-}
-
-/**
- * #316 — THE client prediction of equipment.move's unconditional level assert (ELevelTooLow: character
- * level must be ≥ the item template's required level). Applies to every equippable category — Move's
- * assert fires regardless of slot kind, and DECISIONS 07-12 makes weapons class-UNIVERSAL, so level is
- * the only remaining known-data equip refusal. A character's level only rises within a session, never
- * falls, so — unlike listed-state — no re-check is needed between staging and Accept.
- * @param {any} item @param {number} character_level
- * @param {Map<string, any>} [template_id_map] @param {Map<string, any>} [template_map]
- * @returns {boolean}
- */
-export function can_equip_level(item, character_level, template_id_map, template_map) {
-  return item_required_level(item, template_id_map, template_map) <= Number(character_level ?? 0)
-}
 
 /** One action creator for click-equip and targeted drop-equip. Level rides the one display-level home;
  * the row keeps its identity unless the display level genuinely differs (reducer referential contract). */
@@ -204,7 +176,7 @@ export const can_consume = (character) => {
 }
 
 /** @param {any} item @returns {boolean} */
-export const is_weapon = (item) => WEAPONS.includes(item?.item_category)
+export const is_weapon = (item) => equip_slot_kind_of(item) === 'weapon'
 /** @param {any} item @returns {boolean} */
 export const is_consumable = (item) => item?.item_category === ITEM_CATEGORY.CONSUMABLE
 /** @param {any} item @returns {boolean} */
@@ -281,34 +253,10 @@ export function partition_bag(items, { equipped_ids, excluded_ids, category }) {
  */
 export function is_slot_valid(slot, item) {
   if (!item || is_item_listed(item)) return false
+  // Old/collapsed cosmetic projections carry the lossless fine slot in item_type. Preserve that display seam;
+  // normal current rows fall through to the exact Item.category mirror below.
   const cosmetic_slot = item_type_equip_slot(item)
-  if (cosmetic_slot) return slot === cosmetic_slot
-  if (slot.includes('relic')) return item.item_category === ITEM_CATEGORY.RELIC
-  switch (slot) {
-    case 'helmet':
-      return item.item_category === HELMET
-    case 'amulet':
-      return item.item_category === ITEM_CATEGORY.AMULET
-    case 'chestplate':
-      return item.item_category === CHESTPLATE
-    case 'gauntlets':
-      return item.item_category === GAUNTLETS
-    case 'pants':
-      return item.item_category === PANTS
-    case 'weapon':
-      return is_weapon(item)
-    case 'left_ring':
-    case 'right_ring':
-      return item.item_category === ITEM_CATEGORY.RING
-    case 'belt':
-      return item.item_category === ITEM_CATEGORY.BELT
-    case 'boots':
-      return item.item_category === ITEM_CATEGORY.BOOTS
-    case 'pet':
-      return item.item_category === ITEM_CATEGORY.PET
-    default:
-      return false
-  }
+  return cosmetic_slot ? slot === cosmetic_slot : equip_slot_accepts(slot, item)
 }
 
 /** Normalize one `/v1/characters` equipment/worn row into the owned-item identity the paper doll uses.
@@ -493,9 +441,9 @@ export function stage_reducer(state, action) {
     case 'equip': {
       const item = with_authored_icon(action.item)
       if (is_item_listed(item)) return state
-      const { item_category } = item
       const equipment = { ...state.equipment }
       const cosmetic_slot = item_type_equip_slot(item)
+      const slot_kind = equip_slot_kind_of(item)
 
       // pull the item out of any slot it already sits in (re-stage from doll)
       for (const slot of EQUIPMENT_SLOTS) if (equipment[slot]?.id === item.id) equipment[slot] = null
@@ -513,17 +461,9 @@ export function stage_reducer(state, action) {
       }
 
       if (cosmetic_slot) equipment[cosmetic_slot] = item
-      else if (item_category === ITEM_CATEGORY.RELIC) place(RELIC_SLOTS)
-      else if (item_category === ITEM_CATEGORY.RING) place(RING_SLOTS)
-      else if (item_category === ITEM_CATEGORY.AMULET) equipment.amulet = item
-      else if (item_category === ITEM_CATEGORY.BELT) equipment.belt = item
-      else if (item_category === ITEM_CATEGORY.BOOTS) equipment.boots = item
-      else if (item_category === HELMET) equipment.helmet = item
-      else if (item_category === CHESTPLATE) equipment.chestplate = item
-      else if (item_category === GAUNTLETS) equipment.gauntlets = item
-      else if (item_category === PANTS) equipment.pants = item
-      else if (item_category === ITEM_CATEGORY.PET) equipment.pet = item
-      else if (is_weapon(item)) equipment.weapon = item
+      else if (slot_kind === 'relic') place(RELIC_SLOTS)
+      else if (slot_kind === 'ring') place(RING_SLOTS)
+      else if (slot_kind) equipment[slot_kind] = item
       else return state // not equippable
 
       return { equipment, dirty: true, committed: false }

@@ -2270,6 +2270,7 @@
     "first_char_undeletable": "Tu primer personaje no se puede eliminar.",
     "tx_failed": "La transacción se ejecutó, pero falló on-chain. Se gastó gas. No vuelvas a intentarlo hasta que se resuelva la causa.",
     "equip_not_equippable": "Este objeto no se puede equipar.",
+    "equip_wrong_slot": "Este objeto no corresponde a ese espacio de equipo.",
     "equip_slot_occupied": "Ese espacio de equipo ya está ocupado.",
     "equip_relic_duplicate": "No puedes equipar dos copias de la misma reliquia.",
     "equip_relic_slots_full": "Todos los espacios de reliquia están ocupados.",

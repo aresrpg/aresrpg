@@ -2270,6 +2270,7 @@
     "first_char_undeletable": "Ton premier personnage ne peut pas être supprimé.",
     "tx_failed": "La transaction a été exécutée mais a échoué on-chain. Du gas a été consommé. Ne réessayez pas tant que la cause n’est pas résolue.",
     "equip_not_equippable": "Cet objet ne peut pas être équipé.",
+    "equip_wrong_slot": "Cet objet ne correspond pas à cet emplacement d’équipement.",
     "equip_slot_occupied": "Cet emplacement d’équipement est déjà occupé.",
     "equip_relic_duplicate": "Vous ne pouvez pas équiper deux exemplaires de la même relique.",
     "equip_relic_slots_full": "Tous les emplacements de relique sont occupés.",

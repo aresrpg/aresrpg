@@ -12,7 +12,6 @@ import { describe, expect, test } from 'bun:test'
 import {
   BAG_CAPACITY,
   can_consume,
-  can_equip_level,
   EQUIPMENT_SLOTS,
   equip_lock_of,
   equip_stage_action,
@@ -21,7 +20,6 @@ import {
   is_slot_valid,
   invalid_equip_change,
   item_display_level,
-  item_required_level,
   partition_bag,
   real_equipment_of,
   stage_reducer,
@@ -71,44 +69,6 @@ describe('can_consume (D203/T76 projected-HP pre-check)', () => {
 
   test('unknown shape (no _type) → fail-open, the chain stays the judge', () => {
     expect(can_consume({ current_hp: 999999 })).toBe(true)
-  })
-})
-
-describe('#316 — can_equip_level / item_required_level (the level pre-flight seam)', () => {
-  test('item level above character level → refused (would only abort on-chain, ELevelTooLow)', () => {
-    const sword = { id: '0xsword', item_type: 'longsword', item_category: 'longsword', level: 4 }
-    expect(can_equip_level(sword, 2)).toBe(false)
-  })
-
-  test('item level at or below character level → allowed', () => {
-    const sword = { id: '0xsword', item_type: 'longsword', item_category: 'longsword', level: 4 }
-    expect(can_equip_level(sword, 4)).toBe(true)
-    expect(can_equip_level(sword, 9)).toBe(true)
-  })
-
-  test('resolves the required level off the OWN template when the item carries no instance level', () => {
-    const item = { id: '0xsword', item_type: 'longsword', template_id: '0xtpl' }
-    const template_id_map = new Map([['0xtpl', { level: 6 }]])
-    expect(item_required_level(item, template_id_map)).toBe(6)
-    expect(can_equip_level(item, 5, template_id_map)).toBe(false)
-    expect(can_equip_level(item, 6, template_id_map)).toBe(true)
-  })
-
-  test('falls back to the by-item_type template map when template_id is absent', () => {
-    const item = { id: '0xsword', item_type: 'longsword' }
-    const template_map = new Map([['longsword', { level: 3 }]])
-    expect(item_required_level(item, undefined, template_map)).toBe(3)
-    expect(can_equip_level(item, 2, undefined, template_map)).toBe(false)
-  })
-
-  test('applies to every equippable category, not weapon-only (#316 ruling: weapons are class-universal — level is the only remaining gate)', () => {
-    const cloak = { id: '0xcloak', item_type: 'night_cloak', item_category: 'cloak', level: 8 }
-    expect(can_equip_level(cloak, 2)).toBe(false)
-    expect(can_equip_level(cloak, 8)).toBe(true)
-  })
-
-  test('missing/zero required level never refuses (no known-data reason to invent one)', () => {
-    expect(can_equip_level({ id: '0xthing' }, 1)).toBe(true)
   })
 })
 

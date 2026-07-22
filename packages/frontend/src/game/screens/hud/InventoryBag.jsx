@@ -31,7 +31,7 @@ export function InventoryBag({
   equip_lock,
   is_removed,
   is_retry_blocked,
-  is_level_blocked,
+  equip_refusal,
   on_select,
   on_activate,
   on_context_menu,
@@ -68,10 +68,12 @@ export function InventoryBag({
         {grid_items.map((item) => {
           const removed = is_removed(item)
           const retry_blocked = is_retry_blocked(item)
-          // #316 — an under-level item can only abort on-chain (equipment::ELevelTooLow): disable the
-          // affordance and surface the reason at hover BEFORE any click lands, same idiom as retry_blocked.
-          const level_blocked = is_level_blocked?.(item) ?? false
-          const action_disabled = retry_blocked || level_blocked
+          // One pure pre-flight reason drives styling, interaction, accessible state and hover copy. Keep the
+          // button itself present so right-click alternatives (crush/send/explorer) remain reachable. Consumable
+          // and resource tabs keep their own activation semantics; inability to equip is irrelevant there.
+          const is_equip_tab = category === 'equipment' || category === 'cosmetics'
+          const equip_refusal_reason = is_equip_tab ? (equip_refusal?.(item) ?? null) : null
+          const action_disabled = retry_blocked || !!equip_refusal_reason
           // `/v1/owner-items.item_type` is a generic gameplay type (for example `cloak`), not the icon key.
           // Recover the template slug from the seed name join, then apply the authored cosmetic filename alias.
           const icon_slug = inventory_item_icon(item, slugs)
@@ -89,11 +91,12 @@ export function InventoryBag({
                 }
                 draggable={(category === 'equipment' || category === 'cosmetics') && !equip_lock && !action_disabled}
                 aria-disabled={action_disabled}
+                data-equip-refusal={equip_refusal_reason ?? undefined}
                 title={
                   retry_blocked
                     ? retry_blocked_title(t, item)
-                    : level_blocked
-                      ? t('errors.equip_level_too_low')
+                    : equip_refusal_reason
+                      ? t(equip_refusal_reason)
                       : undefined
                 }
                 onClick={() => {

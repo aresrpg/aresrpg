@@ -30,11 +30,11 @@ test('on_accept shows pending feedback before the preflight fetch (#317)', () =>
   expect(pending_at).toBeLessThan(fetch_at)
 })
 
-// #316 — a known-data refusal (under-level item) must never reach the stage/tx path. Since to_equip is
+// A known-data equip refusal must never reach the stage/tx path. Since to_equip is
 // built ONLY from staged `equipment` slots and equip_items() is the sole tx-composing call, refusing to
 // EVER call dispatch_stage(equip_stage_action(...)) for a blocked item is itself the "no tx composition"
 // proof — checked in both stage entry points (click + drag-drop).
-test('on_grid_activate and on_drop refuse an under-level item before it ever stages (#316)', () => {
+test('on_grid_activate and on_drop run the shared equip pre-flight before an item ever stages', () => {
   const activate_start = inventory_source.indexOf('const on_grid_activate = ')
   const activate_end = inventory_source.indexOf('const on_accept = async ()')
   const drop_start = inventory_source.indexOf('on_drop: (')
@@ -47,7 +47,7 @@ test('on_grid_activate and on_drop refuse an under-level item before it ever sta
     [drop_start, drop_end],
   ]) {
     const body = inventory_source.slice(start, end)
-    const gate_at = body.indexOf('can_equip_level(')
+    const gate_at = body.indexOf('equip_preflight({')
     const stage_at = body.indexOf('dispatch_stage(equip_stage_action(')
     expect(gate_at).toBeGreaterThan(-1)
     expect(stage_at).toBeGreaterThan(-1)
