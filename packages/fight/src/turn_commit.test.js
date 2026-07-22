@@ -6,7 +6,6 @@
 import { describe, it, expect } from 'bun:test'
 
 import {
-  announce_auto_commit,
   auto_commit_blocked,
   auto_commit_decision,
   compose_turn_actions,
@@ -198,22 +197,5 @@ describe('strike_flush_illegal — the weapon-kill drop that revived the corpse'
     expect(strike_flush_illegal({ in_footprint: false, is_weapon: false, self_cast: true })).toBe(false)
     // and it stays legal in the ordinary in-footprint case too (no regression to the void-cast right):
     expect(strike_flush_illegal({ in_footprint: true, is_weapon: false, self_cast: true })).toBe(false)
-  })
-})
-
-describe('announce_auto_commit — the phantom victory toast', () => {
-  // RED-FIRST: killing the last mob fires the auto-commit while winner is still -1, so the deadline-flavoured
-  // "ending turn — committing your drafted actions" toast announced a WIN. It must stay silent on a victory commit.
-  it('stays SILENT when every enemy is already down (the kill-triggered victory commit)', () => {
-    expect(announce_auto_commit({ background: true, enemies_all_down: true })).toBe(false)
-  })
-
-  it('still announces a real background (deadline) commit while enemies live', () => {
-    expect(announce_auto_commit({ background: true, enemies_all_down: false })).toBe(true)
-  })
-
-  it('a manual (non-background) commit never announces', () => {
-    expect(announce_auto_commit({ background: false, enemies_all_down: false })).toBe(false)
-    expect(announce_auto_commit({ background: false, enemies_all_down: true })).toBe(false)
   })
 })

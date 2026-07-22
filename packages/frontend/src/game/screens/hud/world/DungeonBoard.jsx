@@ -47,7 +47,6 @@ import { committed_mob_hp } from '@aresrpg/fight/project'
 import {
   CAST_DROP_STALE_TARGET,
   CAST_DROP_TARGET_OUT_OF_REACH,
-  announce_auto_commit,
   local_commit_cast_drop,
   strike_flush_illegal,
 } from '@aresrpg/fight/turn_commit'
@@ -75,7 +74,6 @@ import { is_active as phase_is_active, is_placement as phase_is_placement } from
 import './dungeon-board.css'
 import { game_log } from '../../../../core/log.js'
 import { fight_state_trace } from '../../../../world-shell/fight_state_trace.js'
-import { humanize_abort } from '../../../core/abort_copy.js'
 import { emit_local_cast_drop_toast } from './cast_drop_toast.js'
 
 // FALLBACK cast economics (senshi fire_strike L1) — used only when the class/seed can't be resolved. The LIVE
@@ -827,21 +825,6 @@ export function DungeonBoard() {
       cast_count: resolved_casts.length,
       dropped,
     })
-    // TX TRANSPARENCY: every transaction surfaces its toast, INCLUDING the deadline
-    // auto-pass/auto-commit (M3 wiring row: the auto-pass toast was missing on "ending turn"): the
-    // BACKGROUND auto-commit announces itself through the one toast home the instant it submits — EMPTY batch
-    // included (the auto-PASS is still one real signed tx: a bare act_pass). A manual END TURN is the player's
-    // own gesture and stays quiet on success. SILENT ON VICTORY (regression ⑧a): killing the last mob
-    // fires this auto-commit while `winner` is still -1 (the fold never sets it optimistically), so the
-    // deadline-flavoured "ending turn — committing your drafted actions" toast announced a WIN — "it should not
-    // show that toast ever". The commit still ships the killing draft to chain; only the toast stays quiet.
-    const enemy_mobs = [...(live_fight?.fighters?.values() ?? [])].filter((f) => !f.is_player)
-    const enemies_all_down = enemy_mobs.length > 0 && enemy_mobs.every((f) => (f.health ?? 0) <= 0)
-    if (announce_auto_commit({ background, enemies_all_down }))
-      push_event_toast({
-        state: 'info',
-        title: t(actions.length ? 'dungeons.auto_commit_fired' : 'dungeons.auto_pass_fired'),
-      })
     const ok = await commit_turn(actions, { background }) // reconciles to committed chain (crit lands here)
     // ④+⑦b: the store's durable my_traps is the ONE trap home — a trap whose cast never reached the chain (dropped,
     // or a failed commit) is taken back by cell through drop_traps; render + cast-legality read the same fold.
@@ -909,13 +892,9 @@ export function DungeonBoard() {
       subscribe_divergence(fight_store, {
         on_divergence: (divergence) => {
           game_log('board', 'fight prediction diverged; authoritative action adopted', divergence)
-          push_event_toast({
-            state: 'info',
-            title: humanize_abort(t('dungeons.prediction_reconciled')),
-          })
         },
       }),
-    [t]
+    []
   )
   // The reducer surfaces a drafted turn that expired uncommitted as `turn_lost`; consume and trace that edge
   // exactly once per turn (reducer-owned `shown` consumption — remount-safe), without announcing an auto-pass.

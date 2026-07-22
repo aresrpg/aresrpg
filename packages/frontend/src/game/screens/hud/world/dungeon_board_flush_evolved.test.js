@@ -181,3 +181,19 @@ describe('DungeonBoard flush — the footprint anchor evolves PER CAST, and grou
     )
   })
 })
+
+describe('DungeonBoard fight toast policy', () => {
+  test('turn completion stays silent and prediction reconciliation logs without a toast', async () => {
+    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const flush_start = src.indexOf('const flush_commit = async')
+    const flush_end = src.indexOf('auto_submit_ref.current =', flush_start)
+    const flush_body = src.slice(flush_start, flush_end)
+    const divergence_start = src.indexOf('subscribe_divergence(fight_store')
+    const divergence_end = src.indexOf('subscribe_turn_lost(fight_store', divergence_start)
+    const divergence_body = src.slice(divergence_start, divergence_end)
+
+    expect(flush_body).not.toMatch(/dungeons\.(auto_commit_fired|auto_pass_fired)/)
+    expect(divergence_body).toContain("game_log('board', 'fight prediction diverged; authoritative action adopted'")
+    expect(divergence_body).not.toMatch(/push_event_toast|dungeons\.prediction_reconciled/)
+  })
+})

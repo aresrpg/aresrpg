@@ -141,14 +141,3 @@ export function strike_flush_illegal({
   if (is_weapon) return !(target_is_mob && committed_target_alive)
   return free_cell === true && !!occupied_alive
 }
-
-/**
- * Should a BACKGROUND (auto) turn commit ANNOUNCE itself with the "ending turn — committing…" toast? A manual END
- * TURN is the player's own gesture and stays quiet on success (never reaches here). A background commit announces
- * — EXCEPT the kill-triggered VICTORY commit: killing the last mob fires the auto-commit while `winner` is still
- * -1 (the fold never sets it optimistically), so the deadline-flavoured toast fired on a win, which reads as odd
- * (the fix: never show that toast on a win). The victory card is the feedback; stay silent when
- * every enemy is already down. @param {{ background: boolean, enemies_all_down: boolean }} x @returns {boolean} */
-export function announce_auto_commit({ background, enemies_all_down }) {
-  return !!background && !enemies_all_down
-}
