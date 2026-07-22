@@ -92,13 +92,9 @@ export function create_group_wiring(deps) {
   /** Execute one outputs frame at the edges. Every branch is idempotent per the reducer's latches. */
   const execute = (outputs) => {
     for (const row of outputs.join_world)
-      track('world_join', row.character_id, () =>
-        deps.join_world(row.character_id, row.world_id, { queued: true })
-      )
+      track('world_join', row.character_id, () => deps.join_world(row.character_id, row.world_id, { queued: true }))
     for (const row of outputs.join_fight)
-      track('fight_join', row.character_id, () =>
-        deps.join_fight(row.character_id, row.fight_id, { queued: true })
-      )
+      track('fight_join', row.character_id, () => deps.join_fight(row.character_id, row.fight_id, { queued: true }))
     if (outputs.hud_focus) deps.focus_seat(outputs.hud_focus)
     return outputs
   }

@@ -157,9 +157,11 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
       if (!queued && pending) return Promise.reject(new Error('character action in progress'))
       pending += 1
       const scheduled = tail.then(task)
-      tail = scheduled.catch(() => undefined).then(() => {
-        pending -= 1
-      })
+      tail = scheduled
+        .catch(() => undefined)
+        .then(() => {
+          pending -= 1
+        })
       return scheduled
     }
     const { wiring, calls } = make_harness({
