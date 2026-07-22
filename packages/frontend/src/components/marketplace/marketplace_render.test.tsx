@@ -245,7 +245,7 @@ describe('StackableLotRows', () => {
     expect(html).not.toContain('0.01 SUI')
   })
 
-  test('the armed confirmation shows ask, royalty, and exact purchase total before signing', () => {
+  test('the armed confirmation shows ask and exact purchase total at 2-decimal precision, never royalty', () => {
     const html = render(
       <LotPurchaseConfirmation
         listing={lot_listing('four-sui', 10, '4000000000')}
@@ -258,9 +258,9 @@ describe('StackableLotRows', () => {
     )
 
     expect(html).toContain('data-marketplace-buy-confirm')
-    expect(html).toContain('Ask 4.000000000 SUI')
-    expect(html).toContain('Royalty 0.400000000 SUI')
-    expect(html).toContain('Purchase total 4.400000000 SUI')
+    expect(html).toContain('Ask 4.00 SUI')
+    expect(html).toContain('Purchase total 4.40 SUI')
+    expect(html).not.toContain('Royalty')
   })
 })
 

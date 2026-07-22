@@ -658,11 +658,8 @@
     "lots": {
       "cheapest_price": "Moins cher · {{price}} SUI",
       "none_listed": "Aucune offre",
-      "no_ask": "Aucun prix",
-      "average_unit": "Moy. {{price}} SUI l’unité",
       "confirm_lot": "Confirmer le lot ×{{count}}",
       "ask_total": "Prix {{price}} SUI",
-      "royalty_total": "Redevance {{price}} SUI",
       "wallet_total": "Total d’achat {{price}} SUI",
       "confirm_buy": "Confirmer l’achat",
       "ask_ladder": "Échelle des offres",

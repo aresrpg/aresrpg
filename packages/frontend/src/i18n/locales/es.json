@@ -658,11 +658,8 @@
     "lots": {
       "cheapest_price": "Más barato · {{price}} SUI",
       "none_listed": "Sin ofertas",
-      "no_ask": "Sin precio",
-      "average_unit": "Prom. {{price}} SUI por unidad",
       "confirm_lot": "Confirmar lote ×{{count}}",
       "ask_total": "Precio {{price}} SUI",
-      "royalty_total": "Regalía {{price}} SUI",
       "wallet_total": "Total de compra {{price}} SUI",
       "confirm_buy": "Confirmar compra",
       "ask_ladder": "Escalera de ofertas",

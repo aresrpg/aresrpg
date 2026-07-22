@@ -43,16 +43,11 @@ export function LotPurchaseConfirmation({
         {t('marketplace.lots.confirm_lot', { count: size })}
       </span>
       <span className="text-[8px] tracking-[0.1em] uppercase text-muted/70 tabular-nums">
-        {t('marketplace.lots.ask_total', { price: format_mist_to_sui(ask_mist, 9) })}
-      </span>
-      <span className="text-[8px] tracking-[0.1em] uppercase text-muted/70 tabular-nums">
-        {t('marketplace.lots.royalty_total', {
-          price: format_mist_to_sui(payment.royalty_mist, 9),
-        })}
+        {t('marketplace.lots.ask_total', { price: format_mist_to_sui(ask_mist, 2) })}
       </span>
       <span className="text-[10px] tracking-[0.1em] uppercase text-cyan tabular-nums">
         {t('marketplace.lots.wallet_total', {
-          price: format_mist_to_sui(payment.total_mist, 9),
+          price: format_mist_to_sui(payment.total_mist, 2),
         })}
       </span>
       <span className="flex-1 min-w-2" />
@@ -125,13 +120,6 @@ export function StackableLotRows({
                     : t('marketplace.lots.none_listed')}
                 </span>
               </button>
-              <span className="text-[7px] tracking-[0.12em] uppercase text-muted text-center tabular-nums">
-                {offer.average_unit_mist == null
-                  ? t('marketplace.lots.no_ask')
-                  : t('marketplace.lots.average_unit', {
-                      price: format_mist_to_sui(offer.average_unit_mist, 9),
-                    })}
-              </span>
             </div>
           )
         })}

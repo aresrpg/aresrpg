@@ -658,11 +658,8 @@
     "lots": {
       "cheapest_price": "最安 · {{price}} SUI",
       "none_listed": "出品なし",
-      "no_ask": "価格なし",
-      "average_unit": "平均1個 {{price}} SUI",
       "confirm_lot": "×{{count}}ロットを確認",
       "ask_total": "出品価格 {{price}} SUI",
-      "royalty_total": "ロイヤリティ {{price}} SUI",
       "wallet_total": "購入合計 {{price}} SUI",
       "confirm_buy": "購入を確定",
       "ask_ladder": "出品価格表",

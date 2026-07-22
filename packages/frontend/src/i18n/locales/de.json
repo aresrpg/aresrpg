@@ -658,11 +658,8 @@
     "lots": {
       "cheapest_price": "Günstigster · {{price}} SUI",
       "none_listed": "Keine Angebote",
-      "no_ask": "Kein Preis",
-      "average_unit": "Ø {{price}} SUI je Stück",
       "confirm_lot": "×{{count}}-Los bestätigen",
       "ask_total": "Preis {{price}} SUI",
-      "royalty_total": "Lizenzgebühr {{price}} SUI",
       "wallet_total": "Kaufsumme {{price}} SUI",
       "confirm_buy": "Kauf bestätigen",
       "ask_ladder": "Angebotsleiter",

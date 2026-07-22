@@ -36,7 +36,6 @@ export type MarketplaceLotOffer = {
   size: MarketplaceLotSize
   asks: MarketplaceListing[]
   cheapest: MarketplaceListing | null
-  average_unit_mist: bigint | null
 }
 
 export function marketplace_lot_offers(listings: MarketplaceListing[]): MarketplaceLotOffer[] {
@@ -49,12 +48,10 @@ export function marketplace_lot_offers(listings: MarketplaceListing[]): Marketpl
         const price_right = BigInt(right.price_mist)
         return price_left < price_right ? -1 : price_left > price_right ? 1 : left.id.localeCompare(right.id)
       })
-    const total_mist = asks.reduce((sum, listing) => sum + BigInt(listing.price_mist), 0n)
     return {
       size,
       asks,
       cheapest: asks[0] ?? null,
-      average_unit_mist: asks.length > 0 ? total_mist / BigInt(asks.length * size) : null,
     }
   })
 }

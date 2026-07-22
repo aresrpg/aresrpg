@@ -33,11 +33,8 @@ const LOCALES = [en, fr, de, es, ja, uk] as Record<string, any>[]
 const LOT_KEYS = [
   'cheapest_price',
   'none_listed',
-  'no_ask',
-  'average_unit',
   'confirm_lot',
   'ask_total',
-  'royalty_total',
   'wallet_total',
   'confirm_buy',
   'ask_ladder',

@@ -658,11 +658,8 @@
     "lots": {
       "cheapest_price": "Найдешевше · {{price}} SUI",
       "none_listed": "Немає пропозицій",
-      "no_ask": "Немає ціни",
-      "average_unit": "Сер. {{price}} SUI за одиницю",
       "confirm_lot": "Підтвердити лот ×{{count}}",
       "ask_total": "Ціна {{price}} SUI",
-      "royalty_total": "Роялті {{price}} SUI",
       "wallet_total": "Разом до сплати {{price}} SUI",
       "confirm_buy": "Підтвердити купівлю",
       "ask_ladder": "Сходи пропозицій",
