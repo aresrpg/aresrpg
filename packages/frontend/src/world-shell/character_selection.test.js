@@ -27,6 +27,15 @@ async function select_in_real_store(character_id) {
   await wait_for_selected_character(character_id)
 }
 
+async function wait_for_roster(expected_ids, attempts = 100) {
+  for (let i = 0; i < attempts; i++) {
+    const ids = context.get_state().sui.characters.map((character) => character.id)
+    if (ids.length === expected_ids.length && ids.every((id, index) => id === expected_ids[index])) return
+    await new Promise((resolve) => setTimeout(resolve, 0))
+  }
+  throw new Error(`roster store did not settle on ${expected_ids.join(', ')}`)
+}
+
 beforeEach(() => {
   prior_selected_character_id = context.get_state().selected_character_id
   reset_world_binding()
@@ -82,7 +91,32 @@ describe('CharacterSwitcher click -> selection store -> resident session', () =>
   const CHAR_A = `0x${'a'.repeat(64)}`
   const CHAR_B = `0x${'b'.repeat(64)}`
   const FIGHT_A = `0x${'f'.repeat(64)}`
+  const A_WORLD = `0x${'d'.repeat(64)}`
   const B_WORLD = `0x${'e'.repeat(64)}`
+
+  test('a raw roster selection re-enters the resident world binding', async () => {
+    const prior_roster = context.get_state().sui.characters
+    const roster = [
+      { id: CHAR_A, world_id: A_WORLD },
+      { id: CHAR_B, world_id: B_WORLD },
+    ]
+
+    try {
+      context.dispatch('action/sui_data', { characters: roster })
+      await wait_for_roster([CHAR_A, CHAR_B])
+      await select_in_real_store(CHAR_A)
+      rebind_world_character(CHAR_A, A_WORLD)
+
+      context.dispatch('action/select_character', CHAR_B)
+      await wait_for_selected_character(CHAR_B)
+
+      expect(context.get_state().selected_character_id).toBe(CHAR_B)
+      expect(use_world_binding.getState()).toMatchObject({ character_id: CHAR_B, world: B_WORLD })
+    } finally {
+      context.dispatch('action/sui_data', { characters: prior_roster })
+      await wait_for_roster(prior_roster.map((character) => character.id))
+    }
+  })
 
   test('rebind_fight_session tears down the OUTGOING char board and resumes the INCOMING char', () => {
     const dungeon = { dungeon_id: FIGHT_A, character_id: CHAR_A } // char A mid-fight

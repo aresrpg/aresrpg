@@ -38,6 +38,7 @@ import {
   read_live_position,
   flush_live_position,
 } from './session_position.js'
+import { should_reuse_pending_session } from './voxel_session_identity.js'
 import { resume_zone_music, set_zone_music, stop_zone_music, suspend_zone_music } from './core/audio/ambient_music.js'
 import { create_region_follower, region_zone_key } from './core/audio/region_music.js'
 import { resolve_boot_spawn } from '@aresrpg/world/checkpoint'
@@ -116,9 +117,7 @@ export const get_voxel_engine = () => session?.engine ?? null
 let active_world_config = null
 export const get_active_world_config = () => active_world_config
 
-/** Reuse the D158 pending session only while its bound world identity is unchanged. */
-export const should_reuse_pending_session = (pending_world_id, incoming_world_id) =>
-  pending_world_id === incoming_world_id
+export { should_reuse_pending_session }
 
 /** This session's OWN exclusive ownership of the ambient_music.js zone-music channel (D226 one-home law,
  *  issue #17 — "two audio tracks can overlap"): spectate is display-only and never arms it (the documented
@@ -1098,16 +1097,40 @@ export function mount_voxel_scene(host, character = null, { tier, spectate = fal
   // S1 boot-tier precedence: display-only spectate is always low; gameplay uses explicit then saved tier.
   // No gameplay pref stays undefined so create_engine detects the device tier (mobile floors to low).
   const boot_tier = spectate ? 'low' : (tier ?? (get_saved_quality() || undefined))
-  const incoming_world_id = use_world_binding.getState().world ?? null
-  if (session?.dispose_timer) {
-    clearTimeout(session.dispose_timer) // settle the grace before identity-keyed reuse or immediate disposal
-    session.dispose_timer = null
-    if (!should_reuse_pending_session(session.world_id, incoming_world_id)) dispose_session()
-  }
-  // D183 MODE KEY: the lite spectate backdrop and the full fixed world are DIFFERENT sessions — an auth
-  // transition (spectate→session or logout) hard-disposes the old one NOW (deliberate switch, no grace).
   const mode = spectate ? 'spectate' : 'session'
-  if (session && session.mode !== mode) dispose_session()
+  const incoming_world_id = use_world_binding.getState().world ?? null
+  const incoming_character_id = character?.id ?? null
+  const incoming_identity = {
+    mode,
+    world_id: incoming_world_id,
+    character_id: incoming_character_id,
+    follow: !!follow,
+  }
+  if (session?.dispose_timer) {
+    clearTimeout(session.dispose_timer)
+    session.dispose_timer = null
+  }
+  // The singleton closes over every identity field below. A same-world A→B switch therefore flushes A's
+  // eligible pose, disposes A's GLB/controller/broadcast closures, and creates B; only an exact React remount
+  // reuses the pending session. Mode/follow changes are equally real session changes.
+  if (
+    session &&
+    !should_reuse_pending_session(
+      {
+        mode: session.mode,
+        world_id: session.world_id ?? null,
+        character_id: session.character?.id ?? null,
+        follow: !!session.follow,
+      },
+      incoming_identity
+    )
+  ) {
+    session.flush_position?.()
+    dispose_session()
+  }
+  // Re-key presence only AFTER A's cleanup, but BEFORE create_session publishes B's colors/state. A follow
+  // scene observes another character without replacing the resident player's lobby identity.
+  if (mode === 'session' && !follow && incoming_character_id) join_lobby(incoming_character_id)
   if (!session)
     session = create_session(boot_tier, character, host, spectate, follow) // D176: attaches INSIDE create (in-DOM before engine)
   else host.appendChild(session.container) // later mounts reparent the live session

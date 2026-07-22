@@ -8,25 +8,51 @@ import { install_browser_globals } from '../test_helpers/browser_globals.js'
 // embed_voxel owns a browser-flavoured dependency graph. Patch only the import-time surface; this test drives
 // the pure lifecycle verdict and deliberately avoids process-global mock.module stubs.
 import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
+import { should_reuse_pending_session } from './voxel_session_identity.js'
 
 const restore_browser_globals = install_browser_globals()
 
 // MISSING-ARTIFACT (#117): embed_voxel.js imports @aresrpg/engine3, whose board_entities.js/
 // character_controller.js unconditionally import character_avatar.js — a static import of the
 // absent-by-design senshi_male.glb — see test_helpers/glb_fixture.js.
-const { should_reuse_pending_session, owns_ambient_music } = SENSHI_MALE_GLB_AVAILABLE ? await import('./embed_voxel.js') : {}
+const { owns_ambient_music } = SENSHI_MALE_GLB_AVAILABLE ? await import('./embed_voxel.js') : {}
 
 afterAll(restore_browser_globals)
 
-describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('pending voxel session identity', () => {
+const identity = (mode, world_id, character_id, follow = false) => ({ mode, world_id, character_id, follow })
+
+describe('pending voxel session identity', () => {
   test('world A cannot be reused by an immediate world B mount', () => {
-    expect(should_reuse_pending_session('0xWORLD_A', '0xWORLD_B')).toBe(false)
+    expect(
+      should_reuse_pending_session(
+        identity('session', '0xWORLD_A', '0xCHAR_A'),
+        identity('session', '0xWORLD_B', '0xCHAR_A')
+      )
+    ).toBe(false)
   })
 
   test('an immediate same-world remount preserves the reuse fast path', () => {
-    expect(should_reuse_pending_session('0xWORLD_A', '0xWORLD_A')).toBe(true)
+    const resident = identity('session', '0xWORLD_A', '0xCHAR_A')
+    expect(should_reuse_pending_session(resident, { ...resident })).toBe(true)
   })
 
+  test('a same-world character switch cannot reuse the outgoing avatar/controller session', () => {
+    expect(
+      should_reuse_pending_session(
+        identity('session', '0xWORLD_A', '0xCHAR_A'),
+        identity('session', '0xWORLD_A', '0xCHAR_B')
+      )
+    ).toBe(false)
+  })
+
+  test('mode and follow changes cannot reuse a resident session', () => {
+    const resident = identity('session', '0xWORLD_A', '0xCHAR_A')
+    expect(should_reuse_pending_session(resident, identity('spectate', '0xWORLD_A', null))).toBe(false)
+    expect(should_reuse_pending_session(resident, identity('session', '0xWORLD_A', '0xCHAR_A', true))).toBe(false)
+  })
+})
+
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('voxel lifecycle with the engine fixture', () => {
   // ISSUE #17 "double music playback": a follow session must never independently arm ambient_music.js's
   // zone-music channel — follow.ts (src/follow.ts) is its EXCLUSIVE owner while following (it arms the
   // FOLLOWED character's world, which can differ from this session's own bound_world). Before this fix

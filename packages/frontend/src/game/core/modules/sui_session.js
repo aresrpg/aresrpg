@@ -10,9 +10,27 @@
 
 import { reduce_sui_data } from '@aresrpg/inventory/reduce'
 
+import { session_gate_input } from '../../../world-shell/session_gate.js'
+
 /** @type {import('../game.js').Module} */
 export default function sui_session() {
   return {
+    /** @param {import('../game.js').Context} context */
+    observe({ events, get_state }) {
+      events.on('action/select_character', (character_id) => {
+        const character = get_state().sui.characters.find((row) => row.id === character_id)
+        // An indexed roster row carries explicit membership (`string | null`). Ferry that selection through
+        // the world shell's ONE typed-input door so its character-keyed scene remounts with the HUD. An
+        // optimistic create row deliberately has `world_id === undefined`; begin_join owns that receipt path,
+        // so never invent a confirmed-unbound binding (or release its joining hold) here.
+        if (character?.world_id !== undefined)
+          session_gate_input({
+            type: 'character_selected',
+            character_id: character.id,
+            world_id: character.world_id,
+          })
+      })
+    },
     /** @param {import('../game.js').State} state @param {import('../game.js').Action} action */
     reduce(state, { type, payload }) {
       switch (type) {

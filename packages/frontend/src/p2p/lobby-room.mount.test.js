@@ -20,12 +20,33 @@ import {
   trystero_sent as sent,
 } from '../test_helpers/trystero_mock.js'
 
-const { join_lobby, leave_lobby, nudge_party_invite } = await import('./lobby-room.js')
+const { broadcast_state, join_lobby, leave_lobby, nudge_party_invite, set_local_cosmetic } =
+  await import('./lobby-room.js')
 
 const fire_state = (/** @type {any} */ p) => actions.get('state').onMessage(p, { peerId: `peer-${p.id}` })
 const fire_pos = (/** @type {any} */ p) => actions.get('pos').onMessage(p, { peerId: `peer-${p.id}` })
 /** The peer's last ACCEPTED cell in the presence atom — a dropped position never advances it. */
 const peer_cell = (/** @type {string} */ id) => presence_store.getState().peers.get(id)?.cell
+
+test('#494: a live character switch re-keys the lobby identity', () => {
+  leave_lobby()
+  reset_trystero_mock()
+  join_lobby('0xCHAR_A', { x: 1, y: 2 })
+  broadcast_state({ address: '0xOWNER', color_1: 1, color_2: 2, color_3: 3 })
+  set_local_cosmetic({ mounted: true, mount_glb: '/a.glb', veteran: true })
+
+  join_lobby('0xCHAR_B', { x: 3, y: 4 })
+
+  expect(presence_store.getState()).toMatchObject({
+    character_id: '0xCHAR_B',
+    my_cell: { x: 3, y: 4 },
+    my_state: null,
+    my_cosmetic: { mounted: false, mount_glb: null, veteran: false },
+  })
+  broadcast_state({ address: '0xOWNER', color_1: 4, color_2: 5, color_3: 6 })
+  expect(sent.filter((row) => row.name === 'state').at(-1)?.payload.id).toBe('0xCHAR_B')
+  leave_lobby()
+})
 
 // A jump of 1 tile between two back-to-back packets ⇒ dt floors to 0.05 s ⇒ ~20 tiles/s: OVER the base cap (15)
 // but UNDER the mounted cap (15 × 1.8 = 27). So the second packet is dropped iff the peer is NOT mounted.

@@ -124,6 +124,11 @@ function _send_state(target) {
  *   connection activates before we ever MOVE (P1-B) still gets a position the instant onPeerJoin fires.
  */
 export function join_lobby(character_id, initial_cell) {
+  // A resident A→B swap (or A→null spectate) is a NEW network identity. Leave/rejoin the shared room so peers
+  // receive A's transport-level departure before the replacement announces; mutating the atom in place would
+  // leave A as a ghost until the freshness timeout. The null→character upgrade below keeps its fast path.
+  const active_character_id = my_character_id()
+  if (room && active_character_id && character_id !== active_character_id) leave_lobby()
   if (room) {
     // D206 — the #19→session UPGRADE: a silent spectator's room (joined with null id on the logged-out
     // backdrop) RE-IDENTIFIES on login instead of tearing down — same room, no reconnect churn; the

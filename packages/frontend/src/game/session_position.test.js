@@ -197,6 +197,6 @@ describe('embed position-cache integration', () => {
     expect(embed_source).toContain('resolve_boot_spawn({ checkpoint, session, fallback: WORLD_SPAWN')
     expect(embed_source).toContain('if (can_persist_position())\n      note_live_position({')
     expect(embed_source).toContain('session.flush_position?.() // no-op unless the unload occurs while free-walking')
-    expect(embed_source.match(/session\.flush_position\?\.\(\)/g)).toHaveLength(2)
+    expect(embed_source.match(/session\.flush_position\?\.\(\)/g)).toHaveLength(3)
   })
 })
