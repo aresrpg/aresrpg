@@ -42,3 +42,15 @@ export function fight_hover_teams(marker, characters = new Map(), mob_names = {}
   }))
   return { players, opponents }
 }
+
+/**
+ * True when at least one of the VIEWER's own characters is seated on the player side of this fight — the
+ * gate for the hover card's team-title copy (#498): a fight browsed in the world list is someone else's
+ * "party" until proven otherwise, so the label must be viewer-relative, never a blanket "Your party".
+ * @param {{ id: string }[]} players fight_hover_teams(...).players
+ * @param {Set<string> | Iterable<string> | null | undefined} my_character_ids the viewer's own character ids
+ */
+export function viewer_has_fighter(players, my_character_ids) {
+  const mine = my_character_ids instanceof Set ? my_character_ids : new Set(my_character_ids ?? [])
+  return (players ?? []).some((player) => mine.has(player.id))
+}

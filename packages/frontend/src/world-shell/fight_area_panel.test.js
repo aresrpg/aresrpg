@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, it } from 'bun:test'
 
-import { fight_hover_teams, section_fight_rows, short_fighter_id } from './fight_area_panel.js'
+import { fight_hover_teams, section_fight_rows, short_fighter_id, viewer_has_fighter } from './fight_area_panel.js'
 
 describe('fight-area Option A model', () => {
   it('keeps PUBLIC and GROUP as simultaneous sections in the original relevance order', () => {
@@ -48,5 +48,25 @@ describe('fight-area Option A model', () => {
 
   it('shortens unresolved long ids without losing both ends', () => {
     expect(short_fighter_id('0x1234567890abcdef1234567890')).toBe('0x12345…67890')
+  })
+})
+
+// #498: spectated public fights labeled the player-side column "Your party" unconditionally. The hover
+// card's title now gates on this — true only when a viewer character is genuinely seated.
+describe('viewer_has_fighter (#498 — the hover card party-label gate)', () => {
+  it("is true when one of the viewer's own characters is seated on the player side", () => {
+    const players = [{ id: 'character-a' }, { id: 'character-b' }]
+    expect(viewer_has_fighter(players, new Set(['character-b']))).toBe(true)
+  })
+
+  it("is false for a fully spectated fight — none of the viewer's characters are seated", () => {
+    const players = [{ id: 'character-a' }, { id: 'character-b' }]
+    expect(viewer_has_fighter(players, new Set(['character-z']))).toBe(false)
+  })
+
+  it('accepts a plain array/iterable, not just a Set, and never throws on an empty roster', () => {
+    expect(viewer_has_fighter([{ id: 'character-a' }], ['character-a'])).toBe(true)
+    expect(viewer_has_fighter([], new Set())).toBe(false)
+    expect(viewer_has_fighter(undefined, undefined)).toBe(false)
   })
 })

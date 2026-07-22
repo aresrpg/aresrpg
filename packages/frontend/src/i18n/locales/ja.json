@@ -2637,6 +2637,7 @@
     "fighters_n": "戦闘者 {{count}} 人",
     "fighters_n_one": "戦闘者 {{count}} 人",
     "fighters_n_other": "戦闘者 {{count}} 人",
+    "fighters_label": "戦闘者",
     "phase_placement": "編成中",
     "phase_active": "戦闘中",
     "phase_victory": "勝利",

@@ -2637,6 +2637,7 @@
     "fighters_n": "{{count}} combatientes",
     "fighters_n_one": "{{count}} combatiente",
     "fighters_n_other": "{{count}} combatientes",
+    "fighters_label": "Combatientes",
     "phase_placement": "Formándose",
     "phase_active": "En combate",
     "phase_victory": "Ganado",
