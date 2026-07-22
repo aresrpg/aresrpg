@@ -33,6 +33,8 @@ const GRID_JITTER: u64 = MIN_SPAWN_SPACING; // inclusive 0..20 jitter after the 
 const EBadGroupCommitmentInput: u64 = 1;
 const GROUP_HASH_BYTES: u64 = 32;
 const MAX_GROUPS: u64 = 64;
+const GROUP_FORMAT_TREE: u8 = 1;
+const GROUP_FORMAT_FLAT: u8 = 2;
 
 /// Canonical BCS leaf for a searched-zone commitment. The pure foundation can calculate hashes, but only the
 /// owning `zones` module can attach a root to World state.
@@ -49,6 +51,26 @@ public struct MobGroupLeaf has copy, drop {
   z: u32,
   group_size: u16,
   group_seed: u64,
+}
+
+/// One ordered row inside the flat all-groups BCS commitment.
+public struct MobGroup has copy, drop {
+  spawn_id: u64,
+  template: ID,
+  x: u32,
+  z: u32,
+  group_size: u16,
+  group_seed: u64,
+}
+
+/// Domain payload for one searched zone. Vector order is the consumed-bitmap / claim index.
+public struct MobGroupSet has copy, drop {
+  world: ID,
+  zx: u32,
+  zy: u32,
+  zone_seed: u64,
+  discovered_at_ms: u64,
+  groups: vector<MobGroup>,
 }
 
 // ╔════════════════ [ prng-threaded roll primitives (replayable twins of the retired &Random helpers) ] ═ ]
@@ -340,6 +362,54 @@ public fun mob_group_root(
   if (nodes.is_empty()) return hash::blake2b256(&b"aresrpg.zone-group.empty");
   while (nodes.length() > 1) nodes = next_mob_group_level(&nodes);
   nodes.pop_back()
+}
+
+/// Commitment encoding discriminator without changing the owning package's stored struct layout. Historical
+/// Merkle roots are exactly 32 bytes; the flat format is byte `2` followed by its 32-byte digest.
+public fun mob_group_commitment_format(commitment: &vector<u8>): u8 {
+  if (commitment.length() == GROUP_HASH_BYTES) GROUP_FORMAT_TREE
+  else if (commitment.length() == GROUP_HASH_BYTES + 1 && commitment[0] == GROUP_FORMAT_FLAT) GROUP_FORMAT_FLAT
+  else 0
+}
+
+/// ONE Blake2b-256 over `domain || format-byte || BCS<MobGroupSet>`, returned as `format-byte || digest`.
+/// The ordered BCS vector commits every group fact and its implicit index in one pass; no leaf/node forest.
+public fun mob_group_commitment(
+  world: ID, zx: u32, zy: u32, zone_seed: u64, discovered_at_ms: u64,
+  spawn_ids: &vector<u64>, templates: &vector<ID>, xs: &vector<u32>, zs: &vector<u32>,
+  sizes: &vector<u16>, group_seeds: &vector<u64>,
+): vector<u8> {
+  let count = spawn_ids.length();
+  assert!(count <= MAX_GROUPS && templates.length() == count && xs.length() == count &&
+    zs.length() == count && sizes.length() == count && group_seeds.length() == count, EBadGroupCommitmentInput);
+  let mut groups = vector[];
+  let mut i = 0;
+  while (i < count) {
+    groups.push_back(MobGroup {
+      spawn_id: spawn_ids[i], template: templates[i], x: xs[i], z: zs[i],
+      group_size: sizes[i], group_seed: group_seeds[i],
+    });
+    i = i + 1;
+  };
+  let set = MobGroupSet { world, zx, zy, zone_seed, discovered_at_ms, groups };
+  let mut bytes = b"aresrpg.zone-group.commitment";
+  bytes.push_back(GROUP_FORMAT_FLAT);
+  bytes.append(bcs::to_bytes(&set));
+  let mut out = vector[GROUP_FORMAT_FLAT];
+  out.append(hash::blake2b256(&bytes));
+  out
+}
+
+/// Flat re-hash check over a caller-supplied complete group stream.
+public fun mob_group_commitment_matches(
+  commitment: &vector<u8>, world: ID, zx: u32, zy: u32, zone_seed: u64, discovered_at_ms: u64,
+  spawn_ids: &vector<u64>, templates: &vector<ID>, xs: &vector<u32>, zs: &vector<u32>,
+  sizes: &vector<u16>, group_seeds: &vector<u64>,
+): bool {
+  if (mob_group_commitment_format(commitment) != GROUP_FORMAT_FLAT) return false;
+  *commitment == mob_group_commitment(
+    world, zx, zy, zone_seed, discovered_at_ms, spawn_ids, templates, xs, zs, sizes, group_seeds,
+  )
 }
 
 fun mob_group_proof_depth(mut count: u64): u64 {

@@ -30,6 +30,22 @@ fun gas_profile_groups(): (ID, vector<u64>, vector<ID>, vector<u32>, vector<u32>
   (world, spawn_ids, templates, xs, zs, sizes, group_seeds)
 }
 
+fun gas_profile_grid_groups(): (ID, vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u16>, vector<u64>) {
+  let world = object::id_from_address(@0x1);
+  let (spawn_ids, template_idxs, xs, zs, sizes, group_seeds) = zone_gen::derive_mob_groups_grid(
+    123456789, 53, 53, &vector[100, 50], &vector[1, 2], &vector[6, 6], 6,
+    0, 0, 512, 500000, 500000,
+  );
+  let mut templates = vector[];
+  let mut i = 0;
+  while (i < template_idxs.length()) {
+    templates.push_back(if (template_idxs[i] == 0) object::id_from_address(@0x1f)
+      else object::id_from_address(@0x20));
+    i = i + 1;
+  };
+  (world, spawn_ids, templates, xs, zs, sizes, group_seeds)
+}
+
 #[test]
 fun gas_profile_zone_groups_control() {
   assert!(vector[0u8].length() == 1, 0);
@@ -49,6 +65,87 @@ fun gas_profile_zone_groups_with_commitment() {
     world, 7, 9, 123456789, 13, &spawn_ids, &templates, &xs, &zs, &sizes, &group_seeds,
   );
   assert!(root.length() == 32, 0);
+}
+
+#[test]
+fun gas_profile_zone_groups_with_flat_commitment() {
+  let (world, spawn_ids, templates, xs, zs, sizes, group_seeds) = gas_profile_groups();
+  let commitment = zone_gen::mob_group_commitment(
+    world, 7, 9, 123456789, 13, &spawn_ids, &templates, &xs, &zs, &sizes, &group_seeds,
+  );
+  assert!(commitment.length() == 33, 0);
+}
+
+#[test]
+fun gas_profile_grid_groups_without_commitment() {
+  let (_world, spawn_ids, templates, xs, zs, sizes, group_seeds) = gas_profile_grid_groups();
+  assert!(spawn_ids.length() == 53 && templates.length() == 53 && xs.length() == 53 &&
+    zs.length() == 53 && sizes.length() == 53 && group_seeds.length() == 53, 0);
+}
+
+#[test]
+fun gas_profile_grid_groups_with_flat_commitment() {
+  let (world, spawn_ids, templates, xs, zs, sizes, group_seeds) = gas_profile_grid_groups();
+  let commitment = zone_gen::mob_group_commitment(
+    world, 7, 9, 123456789, 13, &spawn_ids, &templates, &xs, &zs, &sizes, &group_seeds,
+  );
+  assert!(commitment.length() == 33, 0);
+}
+
+// ╔════════════════ [ Commitment formats ] ════════════════════════════════════ ]
+
+#[test]
+/// Historical 32-byte roots and membership proofs remain pinned for already-committed zones.
+fun t_tree_commitment_verification_remains_live() {
+  let world = object::id_from_address(@0x1);
+  let spawn_ids = vector[21, 22, 23];
+  let templates = vector[
+    object::id_from_address(@0x1f), object::id_from_address(@0x20), object::id_from_address(@0x21),
+  ];
+  let xs = vector[41, 42, 43];
+  let zs = vector[51, 52, 53];
+  let sizes = vector[2, 3, 4];
+  let seeds = vector[61, 62, 63];
+  let root = zone_gen::mob_group_root(
+    world, 7, 9, 11, 13, &spawn_ids, &templates, &xs, &zs, &sizes, &seeds,
+  );
+  assert!(zone_gen::mob_group_commitment_format(&root) == 1, 0);
+  let proof = zone_gen::mob_group_proof_for_testing(
+    world, 7, 9, 11, 13, &spawn_ids, &templates, &xs, &zs, &sizes, &seeds, 2,
+  );
+  assert!(zone_gen::mob_group_root_matches(
+    &root, 3, world, 7, 9, 11, 13, 2, 23, templates[2], 43, 53, 4, 63, &proof,
+  ), 1);
+}
+
+#[test]
+/// Flat all-groups BCS vector captured from the JS twin; one format byte plus one Blake2b-256 digest.
+fun t_flat_commitment_matches_js_mirror() {
+  let world = object::id_from_address(@0x1);
+  let spawn_ids = vector[21, 22, 23];
+  let templates = vector[
+    object::id_from_address(@0x1f), object::id_from_address(@0x20), object::id_from_address(@0x21),
+  ];
+  let mut xs = vector[41, 42, 43];
+  let zs = vector[51, 52, 53];
+  let sizes = vector[2, 3, 4];
+  let seeds = vector[61, 62, 63];
+  let commitment = zone_gen::mob_group_commitment(
+    world, 7, 9, 11, 13, &spawn_ids, &templates, &xs, &zs, &sizes, &seeds,
+  );
+  assert!(commitment == vector[
+    2,196,251,68,160,163,9,36,219,179,174,232,97,183,84,101,138,
+    122,153,41,53,251,118,215,126,29,56,242,26,113,69,100,111,
+  ], 0);
+  assert!(zone_gen::mob_group_commitment_format(&commitment) == 2, 1);
+  assert!(zone_gen::mob_group_commitment_matches(
+    &commitment, world, 7, 9, 11, 13, &spawn_ids, &templates, &xs, &zs, &sizes, &seeds,
+  ), 2);
+  let x = &mut xs[2];
+  *x = 44;
+  assert!(!zone_gen::mob_group_commitment_matches(
+    &commitment, world, 7, 9, 11, 13, &spawn_ids, &templates, &xs, &zs, &sizes, &seeds,
+  ), 3);
 }
 
 // ╔════════════════ [ Mob-group derivation ] ═══════════════════════════════════ ]

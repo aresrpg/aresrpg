@@ -6,8 +6,12 @@ import { fromHex } from '@mysten/sui/utils'
 
 const LEAF_DOMAIN = new TextEncoder().encode('aresrpg.zone-group.leaf')
 const NODE_DOMAIN = new TextEncoder().encode('aresrpg.zone-group.node')
+const COMMITMENT_DOMAIN = new TextEncoder().encode(
+  'aresrpg.zone-group.commitment',
+)
 const MAX_GROUPS = 64
 const HASH_BYTES = 32
+const FLAT_FORMAT = 2
 
 // ID is a one-address-field Move struct, so its BCS bytes are exactly the address bytes.
 const mob_group_leaf_bcs = bcs.struct('MobGroupLeaf', {
@@ -23,6 +27,24 @@ const mob_group_leaf_bcs = bcs.struct('MobGroupLeaf', {
   z: bcs.u32(),
   group_size: bcs.u16(),
   group_seed: bcs.u64(),
+})
+
+const mob_group_bcs = bcs.struct('MobGroup', {
+  spawn_id: bcs.u64(),
+  template: bcs.Address,
+  x: bcs.u32(),
+  z: bcs.u32(),
+  group_size: bcs.u16(),
+  group_seed: bcs.u64(),
+})
+
+const mob_group_set_bcs = bcs.struct('MobGroupSet', {
+  world: bcs.Address,
+  zx: bcs.u32(),
+  zy: bcs.u32(),
+  zone_seed: bcs.u64(),
+  discovered_at_ms: bcs.u64(),
+  groups: bcs.vector(mob_group_bcs),
 })
 
 const concat_bytes = (...parts) => {
@@ -68,17 +90,18 @@ const normalized_id = (value, label) => {
   return value
 }
 
-const normalized_hash = value => {
+const normalized_commitment = value => {
   if (!Array.isArray(value) && !(value instanceof Uint8Array))
-    throw new Error('[fight-proof] group_root must be 32 bytes')
+    throw new Error('[fight-proof] group_root must be a supported commitment')
   const out = Uint8Array.from(value)
   if (
-    out.length !== HASH_BYTES ||
+    (out.length !== HASH_BYTES &&
+      !(out.length === HASH_BYTES + 1 && out[0] === FLAT_FORMAT)) ||
     Array.from(value).some(
       byte => !Number.isInteger(byte) || byte < 0 || byte > 255,
     )
   )
-    throw new Error('[fight-proof] group_root must be 32 bytes')
+    throw new Error('[fight-proof] group_root must be a supported commitment')
   return out
 }
 
@@ -160,6 +183,76 @@ const root_of = leaves => {
   return nodes[0]
 }
 
+const normalized_groups = groups =>
+  groups.map((group, position) => {
+    if (
+      normalized_number(group?.index, 64, `groups[${position}].index`) !==
+      position
+    )
+      throw new Error(
+        '[fight-proof] groups must be the complete derivation stream',
+      )
+    return {
+      index: position,
+      spawn_id: normalized_unsigned(
+        group.spawn_id,
+        64,
+        `groups[${position}].spawn_id`,
+      ).toString(),
+      template_id: normalized_id(
+        group.template_id,
+        `groups[${position}].template_id`,
+      ),
+      x: normalized_number(group.x, 32, `groups[${position}].x`),
+      z: normalized_number(group.z, 32, `groups[${position}].z`),
+      size: normalized_number(group.size, 16, `groups[${position}].size`),
+      group_seed: normalized_unsigned(
+        group.group_seed,
+        64,
+        `groups[${position}].group_seed`,
+      ).toString(),
+    }
+  })
+
+const flat_commitment = (context, groups) => {
+  const payload = mob_group_set_bcs
+    .serialize({
+      world: normalized_id(context.world_id, 'world_id'),
+      zx: normalized_number(context.zx, 32, 'zx'),
+      zy: normalized_number(context.zy, 32, 'zy'),
+      zone_seed: normalized_unsigned(context.zone_seed, 64, 'zone_seed'),
+      discovered_at_ms: normalized_unsigned(
+        context.discovered_at_ms,
+        64,
+        'discovered_at_ms',
+      ),
+      groups: groups.map(group => ({
+        spawn_id: group.spawn_id,
+        template: group.template_id,
+        x: group.x,
+        z: group.z,
+        group_size: group.size,
+        group_seed: group.group_seed,
+      })),
+    })
+    .toBytes()
+  return concat_bytes(
+    Uint8Array.of(FLAT_FORMAT),
+    blake2b_256(
+      concat_bytes(COMMITMENT_DOMAIN, Uint8Array.of(FLAT_FORMAT), payload),
+    ),
+  )
+}
+
+/** Serialize and hash the flat all-groups commitment exactly as `zone_gen::mob_group_commitment`. */
+export function mob_group_commitment_bytes({ groups, ...context }) {
+  if (!Array.isArray(groups) || groups.length > MAX_GROUPS)
+    throw new Error(
+      '[fight-proof] groups must be the complete derivation stream',
+    )
+  return flat_commitment(context, normalized_groups(groups))
+}
+
 const proof_of = (leaves, target_index) => {
   const proof = []
   let index = target_index
@@ -196,9 +289,9 @@ const proof_root = (leaf, proof, target_index) => {
  */
 
 /**
- * Compose a duplicate-last Merkle witness from the FULL `@aresrpg/sim` derived mob-row stream. This fails shut:
- * malformed facts, a filtered/reordered row set, or any count/root mismatch returns `null`, so callers retain the
- * original derivation door. A returned witness has also been replay-verified locally against the chain commitment.
+ * Compose a commitment witness from the FULL `@aresrpg/sim` derived mob-row stream. Flat commitments re-hash the
+ * ordered BCS set once and carry an empty proof; historical roots retain their duplicate-last Merkle witness.
+ * Malformed facts, a filtered/reordered row set, or any count/root mismatch returns `null`.
  * @param {{ world_id:string, zx:number, zy:number, zone_seed:string|number|bigint,
  *   discovered_at_ms:string|number|bigint, group_root:number[]|Uint8Array, group_count:number,
  *   groups:Array<{ index:number, spawn_id:string|number|bigint, template_id:string, x:number, z:number,
@@ -228,37 +321,29 @@ export function compose_mob_group_proof(input) {
     const target_index = normalized_number(index, 64, 'index')
     if (count !== groups.length || target_index >= count) return null
     const context = { world_id, zx, zy, zone_seed, discovered_at_ms }
-    const normalized_groups = groups.map((group, position) => {
-      if (
-        normalized_number(group?.index, 64, `groups[${position}].index`) !==
-        position
+    const normalized_group_set = normalized_groups(groups)
+    const committed_root = normalized_commitment(group_root)
+    const group = normalized_group_set[target_index]
+    if (
+      bytes_equal(
+        flat_commitment(context, normalized_group_set),
+        committed_root,
       )
-        throw new Error(
-          '[fight-proof] groups must be the complete derivation stream',
-        )
+    )
       return {
-        index: position,
-        spawn_id: normalized_unsigned(
-          group.spawn_id,
-          64,
-          `groups[${position}].spawn_id`,
-        ).toString(),
-        template_id: normalized_id(
-          group.template_id,
-          `groups[${position}].template_id`,
-        ),
-        x: normalized_number(group.x, 32, `groups[${position}].x`),
-        z: normalized_number(group.z, 32, `groups[${position}].z`),
-        size: normalized_number(group.size, 16, `groups[${position}].size`),
-        group_seed: normalized_unsigned(
-          group.group_seed,
-          64,
-          `groups[${position}].group_seed`,
-        ).toString(),
+        index: target_index,
+        facts: {
+          spawn_id: group.spawn_id,
+          template_id: group.template_id,
+          x: group.x,
+          z: group.z,
+          group_size: group.size,
+          group_seed: group.group_seed,
+        },
+        proof: [],
       }
-    })
-    const leaves = normalized_groups.map(group => leaf_hash(context, group))
-    const committed_root = normalized_hash(group_root)
+    if (committed_root.length !== HASH_BYTES) return null
+    const leaves = normalized_group_set.map(group => leaf_hash(context, group))
     if (!bytes_equal(root_of(leaves), committed_root)) return null
     const proof = proof_of(leaves, target_index)
     if (
@@ -268,7 +353,6 @@ export function compose_mob_group_proof(input) {
       )
     )
       return null
-    const group = normalized_groups[target_index]
     return {
       index: target_index,
       facts: {

@@ -29,6 +29,7 @@ import {
   fight_event_type,
   fight_status_label,
   compose_mob_group_proof,
+  mob_group_commitment_bytes,
   mob_group_leaf_bytes,
 } from '../src/fight.js'
 
@@ -187,6 +188,33 @@ describe('mob-group proof producer — Move BCS/duplicate-last parity', () => {
         }),
       ),
     ).toEqual(['zones::claim_mob_group_in_zone', 'fight::create'])
+  })
+
+  test('flat all-groups commitment matches Move and emits an empty proof', () => {
+    const group_root = Array.from(mob_group_commitment_bytes(MOVE_GROUP_VECTOR))
+    expect(group_root).toEqual(
+      hex_bytes(
+        '02c4fb44a0a30924dbb3aee861b754658a7a992935fb76d77e1d38f21a7145646f',
+      ),
+    )
+    expect(
+      compose_mob_group_proof({
+        ...MOVE_GROUP_VECTOR,
+        group_root,
+        index: 2,
+      }),
+    ).toEqual({
+      index: 2,
+      facts: {
+        spawn_id: '23',
+        template_id: '0x21',
+        x: 43,
+        z: 53,
+        group_size: 4,
+        group_seed: '63',
+      },
+      proof: [],
+    })
   })
 })
 
