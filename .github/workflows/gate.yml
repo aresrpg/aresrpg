@@ -28,3 +28,38 @@ jobs:
         run: bun test test/replay_gate.test.js
       - name: order-independence gate (module-global test-flake class)
         run: bun run test:order-independence
+  api_image_smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: api image boot smoke
+        run: |
+          set -euo pipefail
+          cp packages/sdk/src/deployment/release.json api/release.json
+          image_name=aresrpg-api-smoke
+          container_name=aresrpg-api-smoke
+          listen_line='[sponsor] station-only net=testnet :9528'
+          docker build --tag "$image_name" api
+          trap 'docker rm --force "$container_name" >/dev/null 2>&1 || true' EXIT
+          docker run --detach --name "$container_name" \
+            --env GAS_STATION_URL=http://127.0.0.1:1 \
+            --env GAS_STATION_AUTH=ci-smoke \
+            "$image_name"
+          for attempt_number in {1..30}; do
+            container_logs=$(docker logs "$container_name" 2>&1)
+            container_running=$(docker inspect --format '{{.State.Running}}' "$container_name")
+            if grep -Fq "$listen_line" <<<"$container_logs"; then
+              printf '%s\n' "$container_logs"
+              test "$container_running" = true
+              exit 0
+            fi
+            if test "$container_running" != true; then
+              printf '%s\n' "$container_logs" >&2
+              exit 1
+            fi
+            sleep 1
+          done
+          printf 'api image did not reach its listen line after %s attempts\n' "$attempt_number" >&2
+          docker logs "$container_name" >&2
+          exit 1
