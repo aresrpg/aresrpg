@@ -24,6 +24,7 @@ import { GameWorldHost } from './GameWorldHost'
 import { WalletBar } from './components/wallet_bar'
 import { SponsorRunoutModalHost } from './components/sponsor_runout_modal'
 import { ContractsPausedModalHost } from './components/contracts_paused_modal'
+import { SponsorUpgradeModalHost } from './components/sponsor_upgrade_modal'
 import { RpcLagBanner } from './components/RpcLagBanner'
 import { VersionBadge } from './version_badge'
 
@@ -300,6 +301,9 @@ function AppBody() {
           address, same tier as the run-out modal); never shows over the spectate landing below nor the
           standalone /inbox page (that branch returns before this point). */}
       <ContractsPausedModalHost />
+      {/* STRICT SPONSOR UPGRADE — a retired-package refusal latches this non-dismissible reducer-driven modal;
+          refresh is the only continuation. Kept above every other modal by its own z-layer. */}
+      <SponsorUpgradeModalHost />
       {/* PORTRAIT ROTATE GATE — app-wide: mobile is landscape-only, so the gate fires on
           EVERY route (world, meta pages, and the logged-out spectate landing), not just the game canvas.
           Self-noops out of portrait; mounted only on mobile so a narrow desktop window never sees it. */}

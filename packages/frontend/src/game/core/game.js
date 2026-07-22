@@ -18,6 +18,7 @@ import { aiter } from 'iterator-helper'
 import { combine } from './iterator.js'
 import { MODULES } from './modules/index.js'
 import { dismiss_toast } from './toast.js'
+import { actions, dispatch_action } from './action_input.js'
 import { game_log } from '../../core/log.js'
 import { report_error } from '../../core/report.js'
 
@@ -39,6 +40,14 @@ export const INITIAL_STATE = {
    * @type {boolean}
    */
   fight_mode: false,
+
+  /**
+   * Blocking upgrade modal latch. A sponsor refusal tagged `outdated-package` enters through run_tx (or the
+   * direct sponsored onboarding wrapper) as `action/sponsor_upgrade_required`; player.js folds it true. There
+   * is deliberately no dismiss action: refreshing onto the latest package is the only safe continuation.
+   * @type {boolean}
+   */
+  sponsor_upgrade_required: false,
 
   /**
    * The player avatar's current world cell, published by the imperative roam scene ONLY when the
@@ -327,7 +336,6 @@ function last_event_value(emitter, event, default_value = null) {
 
 const events = new EventEmitter()
 events.setMaxListeners(0) // many modules + React subscribers observe STATE_UPDATED
-const actions = new PassThrough({ objectMode: true })
 const packets = new PassThrough({ objectMode: true })
 const get_state = last_event_value(events, 'STATE_UPDATED', INITIAL_STATE)
 
@@ -343,7 +351,7 @@ export const context = {
   get_state,
   /** @param {string} type @param {any} [payload] */
   dispatch(type, payload) {
-    actions.write({ type, payload })
+    dispatch_action(type, payload)
   },
   /** @param {string} type @param {any} payload — type is the full 'packet/xxx' name */
   send_packet(type, payload) {

@@ -23,6 +23,7 @@ process.env.GAS_STATION_AUTH ||= 'test-bearer'
 const S = await import('./sponsor.mjs')
 
 const ARES = release.networks.testnet.packages.aresrpg.latest
+const ENGINE_PREVIOUS = release.networks.testnet.packages.engine.previous ?? []
 const DIGEST = 'ES6c9UyVEbXAZWQXUtzvyxvcCQ2FZ9BVgKPnjLXFto1p'
 const OBJ = (n = '11') => ({ objectId: '0x' + n.repeat(32), version: 5n, digest: DIGEST })
 const coin = (n, ver = '7') => ({ objectId: '0x' + n.repeat(32), version: ver, digest: DIGEST })
@@ -32,6 +33,14 @@ const build_kind = async (target = `${ARES}::zones::join_world`) => {
   const tx = new Transaction()
   tx.moveCall({ target, arguments: [tx.objectRef(OBJ())] })
   return toBase64(await tx.build({ onlyTransactionKind: true }))
+}
+const scope_refusal = (tx_kind) => {
+  try {
+    S.assert_ptb_scope(tx_kind)
+  } catch (error) {
+    return error
+  }
+  return null
 }
 // The full tx the client builds from a reservation (kind + reserved gas data), what it posts to /execute.
 const build_full_tx = async ({ kind, sender, sponsor_address, gas_coins, budget, price = 1000 }) => {
@@ -113,6 +122,21 @@ describe('require_station_config — fail CLOSED at boot when the station is not
     delete process.env.GAS_STATION_AUTH
     expect(() => S.require_station_config()).toThrow(/sponsor-misconfig/)
     process.env.GAS_STATION_AUTH = auth
+  })
+})
+
+// ════════════════════════════════════════════════════════════════════════════════════════════════════
+describe('strict package upgrade refusal response', () => {
+  test('a retired package is refused with the machine-readable outdated-package reason', async () => {
+    expect(ENGINE_PREVIOUS.length).toBeGreaterThan(0)
+    const [retired] = ENGINE_PREVIOUS
+    const refusal = scope_refusal(await build_kind(`${retired}::actions::act_pass`))
+
+    expect(refusal?.message).toMatch(/sponsor-scope.*outdated-package/)
+    expect(S.sponsor_error_response(refusal)).toEqual({
+      error: refusal.message,
+      reason: 'outdated-package',
+    })
   })
 })
 

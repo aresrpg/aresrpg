@@ -28,6 +28,9 @@ import { record_self_paid_receipt } from './gas_spend_ledger'
 import { now, stamp_preflight } from './latency.js'
 import { decide_sponsor_route, sponsor_route_log } from './sponsor_route'
 import type { SponsoredReceipt, TxReceipt } from './receipts'
+import { SPONSOR_REFUSAL_OUTDATED_PACKAGE, is_sponsor_outdated_package_refusal } from './sponsor_refusal'
+
+export { SPONSOR_REFUSAL_OUTDATED_PACKAGE, is_sponsor_outdated_package_refusal } from './sponsor_refusal'
 
 /** Turn-commit gas directive (<1s lane): the caller marks a chained commit so execute_tx pins its gas
  * coin. `skip_sim` = SOLO fight → skip the per-commit dry-run (ESomeoneOverdue is impossible with one player seat);
@@ -259,10 +262,11 @@ export async function execute_tx({
     try {
       sponsored = await deps.run_sponsored(transaction)
     } catch (sponsor_error) {
-      // PRE-flight sponsor refusal (nothing executed, zero gas). Daily free-tier cap → NEVER self-pay past the
-      // free promise (never silently spend past it): surface it honestly (the run-out modal opens off the polled allowance). Every
-      // OTHER refusal (funded self-pay-required / drained pool / generic 400 / network) → SILENT self-pay below.
-      if (is_sponsor_daily_cap_refusal(sponsor_error)) throw sponsor_error
+      // PRE-flight sponsor refusal (nothing executed, zero gas). Daily-cap and outdated-package are blocking:
+      // never spend past the free promise, and never execute a retired PTB. Every other refusal (funded
+      // self-pay-required / drained pool / generic 400 / network) may use the existing self-pay route below.
+      if (is_sponsor_daily_cap_refusal(sponsor_error) || is_sponsor_outdated_package_refusal(sponsor_error))
+        throw sponsor_error
       game_log('tx', 'sponsored-first refused (non-cap) — self-paying:', sponsor_error)
       sponsor_refused = true
       sponsored = null
@@ -375,18 +379,17 @@ export async function execute_tx({
 // @server's > 0.2-SUI BALANCE RULE (api/sponsor.mjs SELF_PAY_MIST) is tagged for a SILENT self-pay re-route: a
 // funded wallet ALREADY holds its own gas and was ALWAYS meant to pay it (the money policy — not a spend past
 // any "free" promise). PRE-execution (no digest, zero gas) ⇒ safe; auto_join_world detects the tag and self-pays
-// the SAME tx. NOT tagged (NEVER auto-spend past the free promise): the daily free-tier cap, the
-// global cap, the rate-limit, a drained pool, auth — all surface HONESTLY (the daily cap gets its own player
-// copy below; opt-in pay-per-use is a separate ticket). The tag lets a caller detect the balance class WITHOUT
-// string-parsing localized copy.
+// the SAME tx. Other tagged refusals are explicit blockers: DAILY_CAP never auto-spends past the free promise;
+// OUTDATED_PACKAGE never executes a retired PTB and opens the upgrade modal. Untagged global caps, rate limits,
+// a drained pool, and auth all surface honestly. Markers let callers branch WITHOUT parsing localized copy.
 export const SPONSOR_REFUSAL_SELF_PAY = 'self-pay-required'
 export function is_sponsor_self_pay_refusal(error: unknown): boolean {
   return (error as { sponsor_refusal?: string } | null | undefined)?.sponsor_refusal === SPONSOR_REFUSAL_SELF_PAY
 }
 
-// DAILY FREE-TIER CAP tag — the ONE sponsor refusal that must NOT silently self-pay (never auto-spend
+// DAILY FREE-TIER CAP tag — one sponsor refusal that must NOT silently self-pay (never auto-spend
 // past the free promise). Tagged on the SAME `sponsor_refusal` field (NOT string-matched — the copy is localized)
-// so the sponsor-FIRST route blocks on it (honest cap error) while every other refusal falls through to self-pay.
+// so the sponsor-FIRST route blocks on it (honest cap error).
 export const SPONSOR_REFUSAL_DAILY_CAP = 'daily-cap'
 export function is_sponsor_daily_cap_refusal(error: unknown): boolean {
   return (error as { sponsor_refusal?: string } | null | undefined)?.sponsor_refusal === SPONSOR_REFUSAL_DAILY_CAP
@@ -430,14 +433,19 @@ export async function build_sponsored_kind(transaction: Transaction, sender: str
 // THE single sponsor error humanizer (docs/SPONSOR_TWO_CALL_CONTRACT.md §"Error decoder keys") — maps the
 // station sponsor's `error` string prefix / HTTP status to ONE decoder key via the shared choke. Every throw
 // path here is PRE-execution (reserve refuses before any gas; an execute 400 is a station pre-exec rejection /
-// released reservation), so NOTHING is ever charged when this fires — safe to surface, never auto-retried. Two
+// released reservation), so NOTHING is ever charged when this fires — safe to surface, never auto-retried. Three
 // markers ride on `sponsor_refusal` so a caller can branch WITHOUT string-parsing localized copy: SELF_PAY
-// (funded > 0.2 SUI — the ONLY silent self-pay re-route) and DAILY_CAP (never auto-spend past the free promise).
-function map_sponsor_error(detail: string, status: number): Error {
-  // 410 — a stale single-call client hit the retired /api/sponsor route. Never fires against the two-call pod
-  // (the client only POSTs /reserve + /execute now), but mapped honestly: the app is out of date → refresh.
-  if (status === 410 || /sponsor-two-call-upgrade/i.test(detail))
-    return new Error(i18n.t('errors.sponsor_stale_client'))
+// (funded > 0.2 SUI — the ONLY silent self-pay re-route), DAILY_CAP (never auto-spend past the free promise),
+// and OUTDATED_PACKAGE (block and refresh onto the latest release).
+function map_sponsor_error(detail: string, status: number, reason: string | null): Error {
+  // STRICT PACKAGE UPGRADE: the @server structurally identifies a retired aresrpg package. Keep the marker on
+  // the humanized error so routing refuses immediately and the transaction edge can open the blocking modal.
+  // A generic sponsor-scope refusal is intentionally NOT treated as outdated (it may be a malformed PTB).
+  if (reason === SPONSOR_REFUSAL_OUTDATED_PACKAGE || status === 410 || /sponsor-two-call-upgrade/i.test(detail)) {
+    const outdated = new Error(i18n.t('errors.sponsor_stale_client')) as Error & { sponsor_refusal?: string }
+    outdated.sponsor_refusal = SPONSOR_REFUSAL_OUTDATED_PACKAGE
+    return outdated
+  }
   // BALANCE RULE (funded > 0.2 SUI): the player ALREADY holds their own gas, so self-pay is the INTENDED route
   // (money policy, not a spend past any "free" promise). TAG it so the caller SILENTLY self-pays the SAME tx.
   if (/self-pay-required|balance exceeds/i.test(detail)) {
@@ -479,9 +487,22 @@ function map_sponsor_error(detail: string, status: number): Error {
   return new Error(`Sponsor request failed (${status})${detail ? `: ${detail}` : ''}`)
 }
 
+function decode_sponsor_error(body: string): { detail: string; reason: string | null } {
+  try {
+    const decoded = JSON.parse(body) as { error?: unknown; reason?: unknown }
+    return {
+      detail: typeof decoded.error === 'string' ? decoded.error : body,
+      reason: typeof decoded.reason === 'string' ? decoded.reason : null,
+    }
+  } catch {
+    // Compatibility with station/test doubles that return a plain-text diagnostic.
+    return { detail: body, reason: null }
+  }
+}
+
 /** POST a JSON body to a sponsor endpoint and return the parsed JSON, or throw a HUMANIZED (decoder-mapped,
- * self-pay/daily-cap-tagged) error on any non-2xx. An UNREACHABLE door (fetch rejects before an HTTP status) is a
- * network fault — honest, retry-able, zero gas — never a drained pool. Every failure here is PRE-execution. */
+ * machine-tagged where policy needs branching) error on any non-2xx. An UNREACHABLE door (fetch rejects before
+ * an HTTP status) is a network fault — honest, retry-able, zero gas — never a drained pool. */
 async function sponsor_fetch(url: string, body: unknown): Promise<any> {
   let response: Response
   try {
@@ -494,8 +515,9 @@ async function sponsor_fetch(url: string, body: unknown): Promise<any> {
     throw new Error(i18n.t('errors.sponsor_unreachable'))
   }
   if (response.ok) return response.json()
-  const detail = await response.text().catch(() => '')
-  throw map_sponsor_error(detail, response.status)
+  const response_body = await response.text().catch(() => '')
+  const { detail, reason } = decode_sponsor_error(response_body)
+  throw map_sponsor_error(detail, response.status, reason)
 }
 
 /**

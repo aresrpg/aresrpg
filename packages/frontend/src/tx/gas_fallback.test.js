@@ -10,6 +10,7 @@ import { use_settings } from '../stores/settings'
 import { error_executed_digest } from '../world-shell/tx_digest_error.js'
 
 import { attempt_sponsor_fallback, is_gas_selection_error } from './gas_fallback'
+import { SPONSOR_REFUSAL_OUTDATED_PACKAGE } from './sponsor_refusal'
 
 // A LIVE failure (2026-07-10, fight claim at 0.083 SUI) — the exact class this law exists for.
 const OWNER_ERROR =
@@ -124,6 +125,20 @@ describe('attempt_sponsor_fallback — the routing matrix', () => {
     })
     await expect(attempt_sponsor_fallback(a)).rejects.toBe(a.error)
     expect(a.run_sponsored).toHaveBeenCalledTimes(1) // exactly one attempt — no sponsor retry either
+  })
+
+  test('outdated-package refusal → preserves the upgrade marker instead of hiding it behind the gas error', async () => {
+    const outdated = Object.assign(new Error('AresRPG was upgraded'), {
+      sponsor_refusal: SPONSOR_REFUSAL_OUTDATED_PACKAGE,
+    })
+    const a = args({
+      run_sponsored: mock(async () => {
+        throw outdated
+      }),
+    })
+
+    await expect(attempt_sponsor_fallback(a)).rejects.toBe(outdated)
+    expect(a.run_sponsored).toHaveBeenCalledTimes(1)
   })
 
   test('sponsored tx EXECUTED and failed (digest exists) → throws the on-chain cause, NEVER retried', async () => {

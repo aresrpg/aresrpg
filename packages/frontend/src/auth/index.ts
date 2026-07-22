@@ -10,8 +10,10 @@ import type { Wallet as WalletStandard, WalletAccount } from '@mysten/wallet-sta
 import { SPONSOR_URL } from '../env'
 import i18n from '../i18n'
 import { execute_tx, execute_sponsored_tx, type GasPin } from '../tx'
+import { dispatch_action } from '../game/core/action_input.js'
 import { set_report_user } from '../core/report.js'
 import { game_log } from '../core/log.js'
+import { tx_refusal_input } from '../world-shell/tx_refusal.js'
 
 import { derive_zklogin_seed } from './zklogin_seed'
 import { read_sui_balance_mist, with_post_tx_refresh, settle_balance_after_tx } from './sui_balance'
@@ -247,10 +249,18 @@ export async function sponsor_and_execute_transaction(
 ): Promise<{ digest: string; effects: { status: { status: 'success' | 'failure'; error?: string } } }> {
   const wallet = find_wallet(wallet_name)
   if (!wallet) throw new Error('No wallet connected')
-  return with_post_tx_refresh(
-    () => execute_sponsored_tx({ wallet, address, transaction: tx, chain: SUI_CHAIN, sponsor_url: SPONSOR_URL }),
-    refresh_balance_after_tx
-  )
+  try {
+    return await with_post_tx_refresh(
+      () => execute_sponsored_tx({ wallet, address, transaction: tx, chain: SUI_CHAIN, sponsor_url: SPONSOR_URL }),
+      refresh_balance_after_tx
+    )
+  } catch (error) {
+    // Create-character + auto-join use this direct sponsored door and therefore bypass world-shell/run_tx.
+    // They re-enter through the exact same reducer input before their existing toast/report edges see the throw.
+    const refusal_input = tx_refusal_input(error)
+    if (refusal_input) dispatch_action(refusal_input.type, refusal_input.payload)
+    throw error
+  }
 }
 
 // The zkLogin `address_seed` (u256 as a decimal string) required by the FREE first-character mint gate

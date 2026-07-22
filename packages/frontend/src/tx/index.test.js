@@ -28,6 +28,7 @@ const {
   execute_sponsored_tx,
   build_sponsored_kind,
   SPONSOR_REFUSAL_DAILY_CAP,
+  SPONSOR_REFUSAL_OUTDATED_PACKAGE,
   is_sponsor_self_pay_refusal,
   is_sponsor_daily_cap_refusal,
 } = await import('./index')
@@ -664,6 +665,31 @@ describe('execute_tx — sponsor-first route', () => {
       })
     ).rejects.toThrow('daily free gameplay used up')
     expect(sae).toHaveBeenCalledTimes(0) // the crux: the ≤0.2 wallet's dust is NOT self-paid at the cap
+  })
+
+  test('sponsor OUTDATED-PACKAGE refusal → propagates, never silently self-pays a retired PTB', async () => {
+    const sae = mock(async () => ({ digest: 'SELFPAY' }))
+    const deps = fallback_deps({
+      run_sponsored: mock(async () => {
+        throw Object.assign(new Error('AresRPG was upgraded'), {
+          sponsor_refusal: SPONSOR_REFUSAL_OUTDATED_PACKAGE,
+        })
+      }),
+    })
+
+    await expect(
+      execute_tx({
+        wallet: make_zk_wallet(sae),
+        address: ADDR,
+        transaction: make_tx(),
+        chain: CHAIN,
+        cached_balance_mist: LOW,
+        cached_balance_read_at_ms: Date.now(),
+        sponsor_fallback: deps,
+      })
+    ).rejects.toThrow('AresRPG was upgraded')
+    expect(deps.run_sponsored).toHaveBeenCalledTimes(1)
+    expect(sae).toHaveBeenCalledTimes(0)
   })
 
   test('NON-cap sponsor refusal (self-pay-required / drained pool / 400) → SILENT self-pay fallback', async () => {

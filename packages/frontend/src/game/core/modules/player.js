@@ -21,6 +21,10 @@ export default function player() {
           return { ...state, player_pose: payload }
         case 'action/fight_mode':
           return { ...state, fight_mode: !!payload }
+        case 'action/sponsor_upgrade_required':
+          // Strict sponsor policy: a client composing a retired package cannot continue safely. This is a
+          // one-way session latch; the blocking modal's refresh button obtains a fresh app/package bundle.
+          return { ...state, sponsor_upgrade_required: true }
         case 'action/fights_modal':
           // payload: { focus_id } to open (optionally focused on a clicked sword) | null to close
           return { ...state, fights_modal: payload ?? null }

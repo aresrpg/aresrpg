@@ -143,6 +143,14 @@ const kind = async (build) => {
   build(tx)
   return toBase64(await tx.build({ onlyTransactionKind: true }))
 }
+const scope_refusal = (tx_kind) => {
+  try {
+    S.assert_ptb_scope(tx_kind)
+  } catch (error) {
+    return error
+  }
+  return null
+}
 describe('F3 — PTB scope allowlist (aresrpg + composed framework only)', () => {
   test('(a) a low-balance GAMEPLAY PTB (zones::join_world) passes — the 07-11 sponsored-gameplay ruling', async () => {
     const k = await kind((tx) =>
@@ -156,17 +164,24 @@ describe('F3 — PTB scope allowlist (aresrpg + composed framework only)', () =>
     )
     expect(() => S.assert_ptb_scope(k)).not.toThrow()
   })
-  test('(a4) DRAIN WINDOW: origin, latest (v4) AND the retired v3 (engine.previous) all pass scope', async () => {
+  test('(a4) STRICT UPGRADE: origin + latest pass, while retired engine.previous ids are refused by scope', async () => {
     const { engine } = release.networks.testnet.packages
-    // schema: the retired latest (v3, from the v4 repoint) is retained under engine.previous so clients
-    // still mid-session on it survive the upgrade — ids come from the release artifact, never a literal
+    // Historical schema remains intact: the stamper keeps retired ids under previous even though the sponsor
+    // no longer honors them. IDs come from the release artifact, never a literal.
     expect(engine.previous?.length ?? 0).toBeGreaterThan(0)
-    // behaviour: the sponsor allowlist unions origin + latest + previous — every engine version passes scope
-    for (const id of [engine.origin, engine.latest, ...(engine.previous ?? [])]) {
+    for (const id of [engine.origin, engine.latest]) {
       const k = await kind((tx) =>
         tx.moveCall({ target: `${id}::actions::act_pass`, arguments: [tx.objectRef(OBJ())] })
       )
       expect(() => S.assert_ptb_scope(k)).not.toThrow()
+    }
+    for (const id of engine.previous ?? []) {
+      const k = await kind((tx) =>
+        tx.moveCall({ target: `${id}::actions::act_pass`, arguments: [tx.objectRef(OBJ())] })
+      )
+      const refusal = scope_refusal(k)
+      expect(refusal?.message).toMatch(/sponsor-scope.*outdated-package/)
+      expect(S.sponsor_error_response(refusal)).toEqual({ error: refusal.message, reason: 'outdated-package' })
     }
   })
   test('(a2) a create-shaped PTB mixing framework (0x2 kiosk/transfer) + an aresrpg call passes', async () => {
@@ -186,7 +201,9 @@ describe('F3 — PTB scope allowlist (aresrpg + composed framework only)', () =>
       tx.moveCall({ target: `${ARES}::zones::join_world`, arguments: [tx.objectRef(OBJ())] })
       tx.moveCall({ target: `${FOREIGN}::bomb::inflate` }) // the storage-bomb / extraction contract
     })
-    expect(() => S.assert_ptb_scope(k)).toThrow(/sponsor-scope.*non-allowlisted/)
+    const refusal = scope_refusal(k)
+    expect(refusal?.message).toMatch(/sponsor-scope.*non-allowlisted/)
+    expect(S.sponsor_error_response(refusal)).toEqual({ error: refusal.message })
   })
   test('(c) a framework-only PTB (0x2 kiosk/transfer, NO aresrpg call) is refused', async () => {
     const k = await kind((tx) => {

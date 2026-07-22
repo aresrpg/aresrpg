@@ -70,19 +70,25 @@ const normalize_set = (csv) =>
   )
 
 const network_release = release.networks[NETWORK]
+const package_releases = Object.values(network_release?.packages ?? {})
 const release_package_ids = [
-  // `previous` retains ids retired by an upgrade so clients still mid-session on the old package
-  // keep a sponsorable target through the drain window (release.json rolls latest→previous on repoint).
-  ...Object.values(network_release?.packages ?? {}).flatMap(({ origin, latest, previous }) => [
-    origin,
-    latest,
-    ...(previous ?? []),
-  ]),
+  ...package_releases.flatMap(({ origin, latest }) => [origin, latest]),
   network_release?.rules_package,
 ].filter(Boolean)
+const outdated_package_ids = package_releases.flatMap(({ previous }) => previous ?? [])
 
 const ARESRPG_PACKAGES = normalize_set(release_package_ids.join(','))
+const OUTDATED_PACKAGES = normalize_set(outdated_package_ids.join(','))
 const FRAMEWORK_PACKAGES = normalize_set((network_release?.system.sponsor_framework_packages ?? []).join(','))
+const OUTDATED_PACKAGE_REASON = 'outdated-package'
+const OUTDATED_PACKAGE_ERROR_PREFIX = `sponsor-scope: ${OUTDATED_PACKAGE_REASON}`
+
+export function sponsor_error_response(error) {
+  const error_message = String(error?.message ?? error)
+  return error_message.startsWith(OUTDATED_PACKAGE_ERROR_PREFIX)
+    ? { error: error_message, reason: OUTDATED_PACKAGE_REASON }
+    : { error: error_message }
+}
 
 export function require_station_config() {
   if (!process.env.GAS_STATION_URL?.trim() || !process.env.GAS_STATION_AUTH?.trim())
@@ -103,6 +109,10 @@ export function assert_ptb_scope(txKindBytes) {
     if (command.$kind !== 'MoveCall') continue
     const package_id = normalizeSuiAddress(command.MoveCall.package)
     const is_aresrpg = ARESRPG_PACKAGES.has(package_id)
+    if (!is_aresrpg && OUTDATED_PACKAGES.has(package_id))
+      throw new Error(
+        `${OUTDATED_PACKAGE_ERROR_PREFIX}: MoveCall targets retired package ${package_id}::${command.MoveCall.module} — refresh to upgrade`
+      )
     if (!is_aresrpg && !FRAMEWORK_PACKAGES.has(package_id))
       throw new Error(
         `sponsor-scope: MoveCall targets non-allowlisted package ${package_id}::${command.MoveCall.module} — only aresrpg + composed framework packages are sponsored`
@@ -417,7 +427,7 @@ export default async function handler(request, response) {
     response.status(result.status).json(result.json)
   } catch (error) {
     report_error(error, { area: 'sponsor', action: 'handle_post' })
-    response.status(400).json({ error: String(error?.message ?? error) })
+    response.status(400).json(sponsor_error_response(error))
   }
 }
 
@@ -444,7 +454,7 @@ if (typeof Bun !== 'undefined' && import.meta.main) {
           return Response.json(result.json, { status: result.status, headers: CORS })
         } catch (error) {
           report_error(error, { area: 'sponsor', action: 'handle_post' })
-          return Response.json({ error: String(error?.message ?? error) }, { status: 400, headers: CORS })
+          return Response.json(sponsor_error_response(error), { status: 400, headers: CORS })
         }
       }
       return Response.json({ error: 'not found' }, { status: 404, headers: CORS })

@@ -10,7 +10,13 @@ import { describe, expect, mock, test } from 'bun:test'
 
 import i18n from '../i18n'
 
-import { execute_sponsored_tx, is_sponsor_self_pay_refusal, SPONSOR_REFUSAL_SELF_PAY } from './index'
+import {
+  execute_sponsored_tx,
+  is_sponsor_outdated_package_refusal,
+  is_sponsor_self_pay_refusal,
+  SPONSOR_REFUSAL_OUTDATED_PACKAGE,
+  SPONSOR_REFUSAL_SELF_PAY,
+} from './index'
 
 // Minimal doors execute_sponsored_tx touches BEFORE the 400 throw: an offline kind-only build + the zkLogin
 // personal-message challenge sign. get_sdk is NOT reached on the refusal path (build resolves offline), so it
@@ -58,6 +64,30 @@ describe('execute_sponsored_tx — a 410 sponsor-two-call-upgrade maps to the st
     expect(error).not.toBeNull()
     expect(error.message).toBe(i18n.t('errors.sponsor_stale_client'))
     expect(is_sponsor_self_pay_refusal(error)).toBe(false)
+    expect(is_sponsor_outdated_package_refusal(error)).toBe(true)
+  })
+})
+
+describe('execute_sponsored_tx — strict retired-package refusal reason', () => {
+  test('400 JSON reason=outdated-package → tagged upgrade copy for the reducer seam', async () => {
+    const error = await drive_refusal(
+      JSON.stringify({
+        error: 'sponsor-scope: outdated-package: retired package is no longer sponsored',
+        reason: SPONSOR_REFUSAL_OUTDATED_PACKAGE,
+      })
+    )
+
+    expect(error).not.toBeNull()
+    expect(error.message).toBe(i18n.t('errors.sponsor_stale_client'))
+    expect(is_sponsor_outdated_package_refusal(error)).toBe(true)
+    expect(is_sponsor_self_pay_refusal(error)).toBe(false)
+  })
+
+  test('generic sponsor-scope JSON without the reason stays an ordinary scope refusal', async () => {
+    const error = await drive_refusal(JSON.stringify({ error: 'sponsor-scope: no aresrpg MoveCall' }))
+
+    expect(error.message).toBe(i18n.t('errors.sponsor_scope'))
+    expect(is_sponsor_outdated_package_refusal(error)).toBe(false)
   })
 })
 

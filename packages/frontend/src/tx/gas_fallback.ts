@@ -37,6 +37,7 @@ import { game_log } from '../core/log.js'
 import { attach_executed_digest } from '../world-shell/tx_digest_error.js'
 
 import type { SponsoredReceipt, TxReceipt } from './receipts'
+import { is_sponsor_outdated_package_refusal } from './sponsor_refusal'
 
 // DUPLICATED from abort_copy.js `GAS_BALANCE_RE` (module-private there; abort_copy is the fenced
 // shared decoder — consumed read-only, never edited). KEEP IN LOCKSTEP: both must recognize the
@@ -105,6 +106,9 @@ export async function attempt_sponsor_fallback({
   try {
     receipt = await run_sponsored(transaction)
   } catch (sponsor_error) {
+    // Strict upgrade refusals are not an ordinary unavailable-sponsor fallback: the composed PTB targets a
+    // retired package, so preserve the tagged refusal for run_tx's reducer-input seam and never self-pay it.
+    if (is_sponsor_outdated_package_refusal(sponsor_error)) throw sponsor_error
     // Sponsor refusal/unreachable = PRE-flight (nothing executed, zero gas). Keep the mechanical cause in
     // the console and surface the ORIGINAL gas-selection error — the existing humanized copy.
     game_log('gas-fallback', 'sponsor refused/unreachable — surfacing the original gas error:', sponsor_error)

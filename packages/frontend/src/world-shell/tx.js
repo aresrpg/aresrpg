@@ -16,12 +16,14 @@ import {
 import { get_sdk } from '../chain/sdk'
 import { normalize_receipt } from '../chain/receipt'
 import { tx_error } from '../game/core/abort_copy.js'
+import { dispatch_action } from '../game/core/action_input.js'
 import { game_log } from '../core/log.js'
 import { report_error } from '../core/report.js'
 import { FINALITY_POLL_SCHEDULE } from '../tx/latency.js'
 
 import { offer_travel_resync } from './travel_recovery.js'
 import { attach_executed_digest } from './tx_digest_error.js'
+import { tx_refusal_input } from './tx_refusal.js'
 
 // #23 gRPC: `run_tx` waits on the gRPC Core `waitForTransaction` (jsonRpc is gone) and normalizes the
 // { Transaction | FailedTransaction } receipt back into the jsonRpc-ish { effects, objectChanges, events }
@@ -154,6 +156,11 @@ async function run(klass, tx, include, signer, submit) {
   } catch (error) {
     const elapsed_ms = Math.round(now() - started_at)
     const raw_error = error?.cause ?? error
+    // Async sponsor results re-enter presentation as a reducer INPUT. A retired-package refusal is latched
+    // before the humanized error rethrows, so every run_tx caller gets the same blocking upgrade prompt without
+    // a callback/store write or copy parsing.
+    const refusal_input = tx_refusal_input(error)
+    if (refusal_input) dispatch_action(refusal_input.type, refusal_input.payload)
     // checkpoint::102 is actionable without a reload: offer a body-only return to the proven checkpoint.
     // This NEVER re-submits `tx` (a digest may exist and gas may already be burned); the player decides when
     // to try the original action again after the in-place resync.
