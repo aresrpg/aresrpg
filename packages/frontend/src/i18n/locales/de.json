@@ -2284,7 +2284,7 @@
     "item_zero_quantity": "Die Menge muss größer als null sein.",
     "item_template_mismatch": "Dieser Gegenstand stammt aus einer früheren Weltversion und kann nicht mehr verwendet werden.",
     "item_split_too_large": "Du kannst nicht mehr abteilen, als dieser Stapel enthält.",
-    "item_scale_failed": "Die Werte dieses Gegenstands konnten nicht aktualisiert werden. Aktualisiere und versuche es erneut.",
+    "item_scale_failed": "Die Kraftdaten dieses Begleiters stammen aus einem früheren Update und er kann noch nicht ausgerüstet werden. Versuche vorerst einen anderen Begleiter.",
     "pet_not_food": "Dein Begleiter kann diesen Gegenstand nicht fressen.",
     "pet_already_fed": "Dein Begleiter hat heute bereits gefressen. Komm morgen wieder.",
     "pet_fully_fed": "Dein Begleiter ist ausgewachsen und kann nicht mehr fressen.",

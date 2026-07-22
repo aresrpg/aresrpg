@@ -324,11 +324,13 @@ const TABLE = {
     106: 'errors.item_template_mismatch', // ETemplateMismatch — stack templates differ
     107: 'errors.item_split_too_large', // ESplitTooLarge — split would leave no source remainder
   },
-  // ITEM-STAT SCALING leaf (`aresrpg::item_stats` — THE pet-equip suspect): EInvalidScale/101 aborts INSIDE the
-  // scaling math, a leaf called from an equip/scale path, so its MoveLocation module is "item_stats", never the
-  // entrypoint — a player equipping/scaling an item that tripped it saw the raw generic tx_failed. Honest copy now.
+  // ITEM-STAT SCALING leaf (`aresrpg::item_stats` — THE pet-equip suspect, #88). Its only reachable production
+  // cause is `equipment::equip` normalizing a pet's stats off a LEGACY (pre-cadence, unbounded) PetPowerKey —
+  // the live `feed_pet` cadence can never itself produce an out-of-range value (EFullyFed gates feed 61; see
+  // pet_tests.move's legacy_overscaled_pet_power_aborts_equip_* regressions). So it is PERMANENT, never a
+  // transient race, until the chain-side migration ships — the copy never says "refresh and retry".
   item_stats: {
-    101: 'errors.item_scale_failed', // EInvalidScale — the item's stat scaling failed (stale read / bad range) — refresh & retry
+    101: 'errors.item_scale_failed', // EInvalidScale — legacy-encoded pet power exceeds the live 0-60 bound; equip refuses until the migration lands
   },
   // PET feed (`aresrpg::pet` — the feed_pet player door). Only the actionable feed refusals map; the structural/
   // defensive codes (ENotPet/EUseFeedPet/ETemplateMismatch/ETemplateHasNoStats/EInvalidFoodPower/ESameItem/

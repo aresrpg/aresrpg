@@ -2284,7 +2284,7 @@
     "item_zero_quantity": "Quantity must be greater than zero.",
     "item_template_mismatch": "This item is from a previous world version and can no longer be used.",
     "item_split_too_large": "You can’t split more than this stack contains.",
-    "item_scale_failed": "This item’s stats couldn’t be updated. Refresh and try again.",
+    "item_scale_failed": "This pet’s power data is from a previous update and can’t be equipped yet. Try a different pet for now.",
     "pet_not_food": "Your pet can’t eat this item.",
     "pet_already_fed": "Your pet has already eaten today. Come back tomorrow.",
     "pet_fully_fed": "Your pet is fully grown and can’t eat any more.",

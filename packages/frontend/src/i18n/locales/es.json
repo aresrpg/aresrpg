@@ -2284,7 +2284,7 @@
     "item_zero_quantity": "La cantidad debe ser mayor que cero.",
     "item_template_mismatch": "Este objeto pertenece a una versión anterior del mundo y ya no se puede usar.",
     "item_split_too_large": "No puedes separar más de lo que contiene esta pila.",
-    "item_scale_failed": "No se han podido actualizar las estadísticas de este objeto. Actualiza e inténtalo de nuevo.",
+    "item_scale_failed": "Los datos de poder de esta mascota son de una actualización anterior y todavía no se puede equipar. Prueba con otra mascota por ahora.",
     "pet_not_food": "Tu mascota no puede comer este objeto.",
     "pet_already_fed": "Tu mascota ya ha comido hoy. Vuelve mañana.",
     "pet_fully_fed": "Tu mascota ya es adulta y no puede comer más.",

@@ -2284,7 +2284,7 @@
     "item_zero_quantity": "La quantité doit être supérieure à zéro.",
     "item_template_mismatch": "Cet objet provient d’une ancienne version du monde et ne peut plus être utilisé.",
     "item_split_too_large": "Vous ne pouvez pas séparer plus d’objets que cette pile n’en contient.",
-    "item_scale_failed": "Les statistiques de cet objet n’ont pas pu être mises à jour. Actualisez, puis réessayez.",
+    "item_scale_failed": "Les données de puissance de ce familier proviennent d’une ancienne mise à jour et il ne peut pas encore être équipé. Essayez un autre familier pour l’instant.",
     "pet_not_food": "Votre familier ne peut pas manger cet objet.",
     "pet_already_fed": "Votre familier a déjà mangé aujourd’hui. Revenez demain.",
     "pet_fully_fed": "Votre familier est adulte et ne peut plus manger.",

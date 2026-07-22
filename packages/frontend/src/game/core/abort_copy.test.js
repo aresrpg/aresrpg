@@ -737,6 +737,24 @@ describe('is_equip_state_refusal (issue #15 — refresh-fixable equip/unequip lo
   })
 })
 
+// ISSUE #88 — item_stats/101 (EInvalidScale) is reachable in production ONLY through a pet-equip's power
+// normalization (equipment.move:160 calls item_stats::pet_stats_at_count off the stored, possibly LEGACY,
+// PetPowerKey; the roll-time caller can never trip it — numerator 0 always <= any denominator). It is
+// therefore NEVER a transient stale-read race: a legacy-fed pet's power stays past the 60-feed bound until
+// the chain-side migration ships, so the copy must not invite a "refresh and retry" that can only fail again.
+describe('humanize_abort — item_stats/101 pet-equip legacy-power scale (issue #88, PERMANENT — never "refresh and retry")', () => {
+  test('maps to the honest pet-specific copy, both receipt shapes', () => {
+    expect(humanize_abort(grpc_abort('item_stats', 101))).toBe(i18n.t('errors.item_scale_failed'))
+    const legacy = 'MoveAbort(MoveLocation { module: ModuleId { name: Identifier("item_stats") } }, 101) ...'
+    expect(humanize_abort(legacy)).toBe(i18n.t('errors.item_scale_failed'))
+  })
+
+  test('the copy never tells the player to retry — that would be a lie for a legacy-encoded pet', () => {
+    const copy = i18n.t('errors.item_scale_failed')
+    expect(copy.toLowerCase()).not.toMatch(/refresh|retry|try again/)
+  })
+})
+
 // ISSUE #22 sweep finding — world_join.js's sponsored_join() threw `new Error(res.effects.status.error)` where
 // `.error` is the STRUCTURED gRPC/station abort object (the exact shape grpc_abort() mirrors below): the Error
 // constructor coerces a non-string message via ToString → the literal "[object Object]" — and to_message_string's
