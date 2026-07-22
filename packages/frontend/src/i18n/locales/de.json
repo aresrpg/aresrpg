@@ -1729,9 +1729,7 @@
     "key_name": "Schlüssel von {{world}}",
     "need_key": "Du brauchst einen <link>{{key}}</link>, um einzutreten.",
     "results_opened": "+{{xp}} XP · {{items}} Gegenstände",
-    "results_recovered": "{{count}} blockierte Belohnungen wiederhergestellt",
-    "turn_lost_title": "Zug verloren",
-    "turn_lost_latched": "Die Bestätigung ist on-chain fehlgeschlagen und der Zug wurde verbraucht. Sie wird nicht wiederholt."
+    "results_recovered": "{{count}} blockierte Belohnungen wiederhergestellt"
   },
   "party": {
     "title": "Gruppe",

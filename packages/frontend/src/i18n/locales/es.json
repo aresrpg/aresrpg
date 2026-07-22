@@ -1729,9 +1729,7 @@
     "key_name": "Llave de {{world}}",
     "need_key": "Necesitas una <link>{{key}}</link> para entrar.",
     "results_opened": "+{{xp}} XP · {{items}} objetos",
-    "results_recovered": "{{count}} recompensas atascadas recuperadas",
-    "turn_lost_title": "Turno perdido",
-    "turn_lost_latched": "La confirmación falló on-chain y el turno se consumió. No se reintentará."
+    "results_recovered": "{{count}} recompensas atascadas recuperadas"
   },
   "party": {
     "title": "Grupo",

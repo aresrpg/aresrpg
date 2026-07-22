@@ -1729,9 +1729,7 @@
     "key_name": "Ключ від {{world}}",
     "need_key": "Щоб увійти, потрібен <link>{{key}}</link>.",
     "results_opened": "+{{xp}} XP · {{items}} предметів",
-    "results_recovered": "{{count}} застряглих нагород відновлено",
-    "turn_lost_title": "Хід втрачено",
-    "turn_lost_latched": "Підтвердження завершилося помилкою в мережі, і хід було витрачено. Повторної спроби не буде."
+    "results_recovered": "{{count}} застряглих нагород відновлено"
   },
   "party": {
     "title": "Група",

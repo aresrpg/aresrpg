@@ -152,17 +152,3 @@ export function strike_flush_illegal({
 export function announce_auto_commit({ background, enemies_all_down }) {
   return !!background && !enemies_all_down
 }
-
-/** Should the LOST-TURN toast show? A "turn deadline passed" toast is unwanted noise — the timeline already
- *  communicates it silently: 'missed' (busy past the deadline) and 'burned' (the
- *  deadline auto-pass consumed a submitted epoch with no receipt) are both DEADLINE-gated — auto_commit_decision
- *  above only reaches them once the clock has run out, and the turn timeline already communicates a turn
- *  advancing, so a toast on top is redundant noise. 'latched' (an executed on-chain commit FAILURE — gas spent,
- *  never retried) fires the moment the latch lands, deadline irrelevant (see auto_commit_decision), and is news
- *  the player has no other way to see, so it keeps announcing. The reducer's `turn_lost` OUTPUT itself is
- *  unaffected either way (state truth stays, no-silent-failure law) — this gates ONLY the toast presentation.
- *  @param {string} reason @returns {boolean} */
-const SILENT_TURN_LOST_REASONS = new Set(['missed', 'burned'])
-export function announce_turn_lost(reason) {
-  return !SILENT_TURN_LOST_REASONS.has(reason)
-}

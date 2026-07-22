@@ -7,7 +7,6 @@ import { describe, it, expect } from 'bun:test'
 
 import {
   announce_auto_commit,
-  announce_turn_lost,
   auto_commit_blocked,
   auto_commit_decision,
   compose_turn_actions,
@@ -216,16 +215,5 @@ describe('announce_auto_commit — the phantom victory toast', () => {
   it('a manual (non-background) commit never announces', () => {
     expect(announce_auto_commit({ background: false, enemies_all_down: false })).toBe(false)
     expect(announce_auto_commit({ background: false, enemies_all_down: true })).toBe(false)
-  })
-})
-
-describe('announce_turn_lost — the deadline-passed toast dies', () => {
-  it('stays SILENT for the two deadline-gated reasons', () => {
-    expect(announce_turn_lost('missed')).toBe(false)
-    expect(announce_turn_lost('burned')).toBe(false)
-  })
-
-  it('still announces an executed on-chain failure (latched) — new info, not a deadline echo', () => {
-    expect(announce_turn_lost('latched')).toBe(true)
   })
 })

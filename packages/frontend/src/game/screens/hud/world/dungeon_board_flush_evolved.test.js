@@ -73,6 +73,18 @@ describe('DungeonBoard flush — each cast validated against the evolved sequenc
   })
 })
 
+describe('DungeonBoard auto-pass toast policy', () => {
+  test('the lost-turn edge keeps its trace but emits no toast', async () => {
+    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const start = src.indexOf('subscribe_turn_lost(fight_store')
+    const end = src.indexOf('// The pick decision', start)
+    const body = src.slice(start, end)
+
+    expect(body).toContain("fight_state_trace('turn_lost_toast', { reason })")
+    expect(body).not.toMatch(/push_event_toast|dungeons\.turn_lost/)
+  })
+})
+
 // LEG 0a — CAST AUTO-RETARGET (a mob shifting one cell silently invalidated a drafted cast).
 // The pure decision (follow a moved target to its committed cell when the draft's own footprint still reaches it,
 // else report a domain drop) is unit-locked in @aresrpg/fight/test/cast_retarget_leg_0a.test.js. This locks the WIRING —

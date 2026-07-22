@@ -1729,9 +1729,7 @@
     "key_name": "Clé de {{world}}",
     "need_key": "Il te faut une <link>{{key}}</link> pour entrer.",
     "results_opened": "+{{xp}} XP · {{items}} objets",
-    "results_recovered": "{{count}} récompenses bloquées récupérées",
-    "turn_lost_title": "Tour perdu",
-    "turn_lost_latched": "La validation a échoué on-chain et le tour a été consommé. Elle ne sera pas retentée."
+    "results_recovered": "{{count}} récompenses bloquées récupérées"
   },
   "party": {
     "title": "Groupe",

@@ -48,7 +48,6 @@ import {
   CAST_DROP_STALE_TARGET,
   CAST_DROP_TARGET_OUT_OF_REACH,
   announce_auto_commit,
-  announce_turn_lost,
   local_commit_cast_drop,
   strike_flush_illegal,
 } from '@aresrpg/fight/turn_commit'
@@ -901,24 +900,13 @@ export function DungeonBoard() {
       }),
     [t]
   )
-  // The LOST-TURN toast (no-silent-failure law — "the auto pass just rolled back my movement" was a
-  // named regression): the reducer surfaces a drafted turn that expired uncommitted as `turn_lost`; this edge consumes
-  // it exactly once per turn (reducer-owned `shown` consumption — remount-safe) regardless of reason — the
-  // `shown` idempotency and the state-truth output are unconditional. PRESENTATION is gated: 'missed'/'burned'
-  // are deadline-passed — the turn timeline already shows a turn advancing, so the toast stays silent
-  // (announce_turn_lost); 'latched' (an executed on-chain FAILURE, gas spent) is genuinely
-  // new information and still announces.
+  // The reducer surfaces a drafted turn that expired uncommitted as `turn_lost`; consume and trace that edge
+  // exactly once per turn (reducer-owned `shown` consumption — remount-safe), without announcing an auto-pass.
   useEffect(
     () =>
       subscribe_turn_lost(fight_store, {
         on_lost: ({ reason }) => {
           fight_state_trace('turn_lost_toast', { reason })
-          if (!announce_turn_lost(reason)) return
-          push_event_toast({
-            state: 'error',
-            title: t('dungeons.turn_lost_title'),
-            message: t('dungeons.turn_lost_latched'),
-          })
         },
       }),
     []

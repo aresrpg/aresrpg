@@ -1729,9 +1729,7 @@
     "key_name": "{{world}}の鍵",
     "need_key": "入るには<link>{{key}}</link>が必要です。",
     "results_opened": "+{{xp}} XP · {{items}}個のアイテム",
-    "results_recovered": "{{count}}件の未受取報酬を回収しました",
-    "turn_lost_title": "ターン喪失",
-    "turn_lost_latched": "確定処理がオンチェーンで失敗し、ターンが消費されました。再試行はされません。"
+    "results_recovered": "{{count}}件の未受取報酬を回収しました"
   },
   "party": {
     "title": "パーティ",

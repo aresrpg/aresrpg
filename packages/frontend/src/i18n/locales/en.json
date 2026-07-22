@@ -1729,9 +1729,7 @@
     "key_name": "Key of the {{world}}",
     "need_key": "You need a <link>{{key}}</link> to enter.",
     "results_opened": "+{{xp}} XP · {{items}} items",
-    "results_recovered": "{{count}} stranded rewards recovered",
-    "turn_lost_title": "Turn lost",
-    "turn_lost_latched": "The turn commit failed on-chain and the turn was consumed. It will not be retried."
+    "results_recovered": "{{count}} stranded rewards recovered"
   },
   "party": {
     "title": "Party",
