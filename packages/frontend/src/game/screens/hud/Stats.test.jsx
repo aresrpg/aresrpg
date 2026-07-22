@@ -17,6 +17,7 @@ const {
   allocation_session_snapshot,
   allocation_total,
   apply_confirmed_allocation,
+  characteristic_value,
   clear_confirmed_character,
   compose_stat_allocation,
   empty_allocation,
@@ -197,27 +198,40 @@ describe('Stats live vocabulary', () => {
 })
 
 describe('Stats equipment bonus derivation', () => {
-  // LEG 2 — the fixture-stats-to-split seam: `character[key]` is the on-chain base, `equipment_bonus`
-  // derives the equipped-gear contribution alone. One home (never inline `get_total_stat - base` per row).
   test('zero when no equipped item contributes to the stat', () => {
-    expect(equipment_bonus({ vitality: 10 }, STATISTICS.VITALITY)).toBe(0)
+    expect(equipment_bonus({ vitality: 10, equipment_stats: {} }, STATISTICS.VITALITY)).toBe(0)
   })
 
-  test('sums every equipped item slot for that stat, ignoring a different stat on another slot', () => {
+  test('reads the exact signed aggregate without losing a malus to the effective-stat floor', () => {
     const character = {
-      vitality: 10,
-      hat: { vitality: 3 },
-      weapon: { vitality: 2 },
-      boots: { strength: 99 }, // a different stat's item bonus must never leak into vitality
+      vitality: 2,
+      equipment_stats: { vitality: -3, strength: 99 },
     }
-    expect(equipment_bonus(character, STATISTICS.VITALITY)).toBe(5)
+    expect(equipment_bonus(character, STATISTICS.VITALITY)).toBe(-3)
   })
 
   test('reads only chain-confirmed fields — pending (`alloc`) never reaches `character`, so it never leaks in', () => {
-    const character = { vitality: 10, hat: { vitality: 4 } }
+    const character = { vitality: 10, equipment_stats: { vitality: 4 } }
     expect(equipment_bonus(character, STATISTICS.VITALITY)).toBe(4)
     // simulating a staged allocation would mutate a *separate* `alloc` object, never `character` itself —
     // there is no code path by which equipment_bonus's result could move without a real chain write.
+  })
+})
+
+describe('Stats characteristic value format', () => {
+  test('renders base and a positive equipment contribution as `0 (+3)`', () => {
+    const html = renderToStaticMarkup(characteristic_value({ base: 0, bonus: 3, pending: 0 }))
+    expect(html).toContain('0<span class="stats__prow-bonus"> (+3)</span>')
+  })
+
+  test('omits the equipment annotation entirely when its contribution is zero', () => {
+    const html = renderToStaticMarkup(characteristic_value({ base: 0, bonus: 0, pending: 0 }))
+    expect(html).not.toContain('stats__prow-bonus')
+  })
+
+  test('keeps a signed malus visible beside the base value', () => {
+    const html = renderToStaticMarkup(characteristic_value({ base: 2, bonus: -3, pending: 0 }))
+    expect(html).toContain('2<span class="stats__prow-bonus"> (-3)</span>')
   })
 })
 

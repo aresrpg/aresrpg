@@ -949,10 +949,9 @@
   margin-right: var(--s-1);
 }
 
-/* equipment contribution — muted gold-light: distinct from the orange live allocation below,
-   still inside the one-accent gold family rather than an off-palette status colour. */
+/* equipment contribution — the house accent softened into secondary ink. */
 .stats__prow-bonus {
-  color: var(--accent-strong);
+  color: color-mix(in srgb, var(--accent) 42%, var(--fg-muted));
   font-size: 0.74rem;
 }
 

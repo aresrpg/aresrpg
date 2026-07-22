@@ -38,7 +38,7 @@ function get_base_stat(character, stat) {
 
 /** Fight-authoritative equipment contribution, with legacy flat-slot fallbacks for simulator fixtures. */
 /** @type {(character: import("./../types.js").SuiCharacter, stat: string) => number} */
-function get_equipment_stat(character, stat) {
+export function get_equipment_stat(character, stat) {
   if (character?.equipment_stats != null)
     return get_item_stat(character.equipment_stats, stat)
   if (stat === STATISTICS.VITALITY && character?.gear_vitality != null)

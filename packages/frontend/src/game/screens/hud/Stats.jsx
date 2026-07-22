@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import { useTranslation } from 'react-i18next'
 
 import { raise_stat_ptb } from '@aresrpg/sdk/game'
-import { get_secondary_stats, get_total_stat, STATISTICS } from '@aresrpg/sdk/stats'
+import { get_equipment_stat, get_secondary_stats, get_total_stat, STATISTICS } from '@aresrpg/sdk/stats'
 import { xp_progress } from '@aresrpg/sdk/experience'
 
 import { use_auth } from '../../../auth'
@@ -224,10 +224,20 @@ export function stat_doc_caught_up(doc, expected) {
   return PRIMARY_KEYS.every((key) => Number(doc[key] ?? 0) >= Number(expected[key] ?? 0))
 }
 
-/** Equipment-only contribution to a primary stat. `character[key]` is the on-chain confirmed base and
- * `get_total_stat` is base + every equipped item's stat — pending allocation never reaches `character`
- * (it lives only in local `alloc` state), so no third term is needed. One home: never inline this per row. */
-export const equipment_bonus = (character, key) => get_total_stat(character, key) - Number(character?.[key] ?? 0)
+/** Exact signed equipment-only contribution. Pending allocation lives outside `character`. */
+export const equipment_bonus = (character, key) => get_equipment_stat(character, key)
+
+/** Render the ruled `base (+equipment)` split; zero equipment contributes no visual noise. */
+export function characteristic_value({ base, bonus, pending }) {
+  const signed_bonus = bonus > 0 ? `+${bonus}` : String(bonus)
+  return (
+    <span className="stats__prow-value hud-num">
+      {base}
+      {bonus !== 0 && <span className="stats__prow-bonus"> ({signed_bonus})</span>}
+      {pending > 0 && <span className="stats__prow-pending"> +{pending}</span>}
+    </span>
+  )
+}
 
 export const visible_secondary_stats = (character) =>
   get_secondary_stats(character).filter(({ key }) => SECONDARY_KEYS.has(key))
@@ -496,11 +506,7 @@ export function Stats() {
                   <span className="stats__prow-label">{label}</span>
                   <span className="stats__prow-desc">{description}</span>
                 </span>
-                <span className="stats__prow-value hud-num">
-                  {base}
-                  {bonus > 0 && <span className="stats__prow-bonus"> (+{bonus})</span>}
-                  {pending > 0 && <span className="stats__prow-pending"> +{pending}</span>}
-                </span>
+                {characteristic_value({ base, bonus, pending })}
                 <button
                   type="button"
                   className="stats__step"
