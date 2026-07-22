@@ -16,15 +16,17 @@ import { MOB_TURN_MS, local_intent_beats, synthetic_cast_events } from './presen
 import { turn_submit_epoch } from './turn_commit.js'
 
 const FIGHT = '0xf1647'
+const WORLD = '0xworld'
 const ME = '0xchar_a'
 const OWNER = '0xa11ce'
 const T0 = 1_000_000
 
 const ev = (kind, json) => ({ type: `0xpkg::fight_events::${kind}`, parsedJson: { fight: FIGHT, ...json } })
 
-/** A decoded-Fight-shaped PLAIN object (the board_state_from_fight input contract). */
+/** A decoded open-world Fight-shaped PLAIN object (the board_state_from_fight input contract). */
 const fight_object = ({ status = 0, my = {}, mob = {}, deadline = 0 } = {}) => ({
   id: FIGHT,
+  world: WORLD,
   status, // 0 = engine PLACEMENT, 1 = ACTIVE
   width: 20,
   height: 19,
@@ -67,12 +69,14 @@ const fight_object = ({ status = 0, my = {}, mob = {}, deadline = 0 } = {}) => (
 
 const boot = () => {
   const store = create_fight_store()
-  store
-    .getState()
-    .input(
-      { type: 'init', fight_id: FIGHT, ctx: { my_entity_id: ME, address: OWNER, beat_ctx: { grid_width: 20 } } },
-      T0
-    )
+  store.getState().input(
+    {
+      type: 'init',
+      fight_id: FIGHT,
+      ctx: { world_id: WORLD, my_entity_id: ME, address: OWNER, beat_ctx: { grid_width: 20 } },
+    },
+    T0
+  )
   return store
 }
 
@@ -207,6 +211,52 @@ describe('the single-PTB turn receipt — purge, wave pacing, presented mask', (
       ev('TurnEnded', { is_mob: true, idx: 0 }),
       ev('TurnStarted', { is_mob: false, idx: 0, deadline_ms: T0 + 90_000 }),
     ],
+  })
+
+  const world_round_receipt = ({ mob_cell, remaining_hp, deadline_ms }) => ({
+    events: [
+      ev('TurnEnded', { is_mob: false, idx: 0 }),
+      ev('TurnStarted', { is_mob: true, idx: 0 }),
+      ev('MobMoved', { idx: 0, to_cell: mob_cell }),
+      ev('Cast', { caster_is_mob: true, caster_idx: 0, target_cell: 21 }),
+      ev('Hit', {
+        victim_is_mob: false,
+        victim_idx: 0,
+        amount: 6,
+        remaining_hp,
+        caster_is_mob: true,
+        caster_idx: 0,
+      }),
+      ev('TurnEnded', { is_mob: true, idx: 0 }),
+      ev('TurnStarted', { is_mob: false, idx: 0, deadline_ms }),
+    ],
+  })
+
+  test('an open-world fight surfaces its real round across multi-round state progress', () => {
+    const store = active_store()
+    const surfaced_rounds = [engine_view(store.getState()).turn_number]
+    const folded_rounds = [store.getState().my_turn_no]
+    const rounds = [
+      { mob_cell: 41, remaining_hp: 44, deadline_ms: T0 + 90_000 },
+      { mob_cell: 42, remaining_hp: 38, deadline_ms: T0 + 120_000 },
+    ]
+
+    rounds.forEach((round, index) => {
+      store
+        .getState()
+        .input({ type: 'receipt', receipt: world_round_receipt(round), version: 4 + index }, T0 + 6_000 + index * 4_000)
+      const { seq } = store.getState().wave.at(-1)
+      store.getState().input({ type: 'presented', seq }, T0 + 9_100 + index * 4_000)
+      const state = store.getState()
+      const view = engine_view(state)
+      folded_rounds.push(state.my_turn_no)
+      surfaced_rounds.push(view.turn_number)
+      expect(view.fighters.get('mob-0').cell).toEqual({ x: round.mob_cell % 20, y: 2 })
+      expect(view.fighters.get(ME).health).toBe(round.remaining_hp)
+    })
+
+    expect(folded_rounds).toEqual([1, 2, 3])
+    expect(surfaced_rounds).toEqual(folded_rounds)
   })
 
   test('receipt purges my intents, folds committed truth, and paces EXACTLY the mob turn at ~3s', () => {
