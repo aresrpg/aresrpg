@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// ISSUE #512 — REAL LIVE CAPSULE, captured from fight
-// 0x3f6103fb3fb842bac763a3d275f607d33e49fcde787f004229c18e900e95c33a on app v1.12.50 at
+// ISSUE #512 — REAL LIVE CAPSULE, captured from fight FIGHT_ID (below) on app v1.12.50 at
 // 1784752468344. This is the exported fight/store wire payload, not a model-generated twin: replay every raw
 // `{msg, at}` through a fresh store exactly as trace_recorder.js specifies.
 //
