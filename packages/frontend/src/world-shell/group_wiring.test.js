@@ -18,10 +18,19 @@ const worlds = (rows) => rows.map(([character_id, world_id]) => ({ character_id,
 
 function make_harness({ join_world_impl, join_fight_impl } = {}) {
   const calls = { join_world: [], write_checkpoint: [], join_fight: [], focus: [], follow: [] }
+  // Mirrors tx.js's run_character_action: `{ queued: true }` (every group-wiring join) waits behind
+  // whatever this fake is already running, the SAME guarantee the real ONE cross-character lane gives —
+  // a faithful double, not a bare pass-through, or this harness could never catch a lost serialization.
+  let join_world_tail = Promise.resolve()
   const wiring = create_group_wiring({
-    join_world: (character_id, world_id) => {
-      calls.join_world.push([character_id, world_id])
-      return join_world_impl ? join_world_impl(character_id, world_id) : Promise.resolve()
+    join_world: (character_id, world_id, { queued = false } = {}) => {
+      const task = () => {
+        calls.join_world.push([character_id, world_id])
+        return join_world_impl ? join_world_impl(character_id, world_id) : Promise.resolve()
+      }
+      const run = queued ? join_world_tail.then(task) : Promise.resolve().then(task)
+      join_world_tail = run.catch(() => undefined)
+      return run
     },
     read_checkpoint: () => ({ x: 105, z: 100 }),
     write_checkpoint: async (character_id, world_id, position) => {
