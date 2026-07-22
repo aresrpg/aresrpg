@@ -92,21 +92,22 @@ Read-only `GET` JSON. Every view reads the indexer's Redis cache; game views tak
 query params (below). They return real data once the `ares` pipeline has ingested
 the matching events (empty results until then — never a stub).
 
-| Route               | Serves                                                                                                                                                                                       |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/health`           | process liveness (never rate-limited)                                                                                                                                                        |
-| `/v1/status`        | indexer tip, committer watermark, lag behind the chain                                                                                                                                       |
-| `/v1/characters`    | bulk character profiles — `?ids=` (csv) or `?owner=` (name, class, position, equipment)                                                                                                      |
-| `/v1/listings`      | kiosk marketplace listings — `?category= &min_level= &max_level= &sort= &cursor= &limit=`                                                                                                    |
-| `/v1/pools`         | liquidity-pool reserves + spot price — `?template=` for one                                                                                                                                  |
-| `/v1/shop`          | first-party shop sales, supply remaining — `?active=true`                                                                                                                                    |
-| `/v1/zones`         | per-world discovery / zone state — `?world=` (required), `?discovered=`                                                                                                                      |
-| `/v1/encyclopedia`  | on-chain liveness of minted item templates + worlds — `?kind=items\|worlds`                                                                                                                  |
-| `/v1/config`        | global game dials, class base stats, character-creation config                                                                                                                               |
-| `/v1/kolizeum`      | kolizeum lobby state — `?id=` for one, `?status=` to filter                                                                                                                                  |
-| `/v1/fights`        | the Fight object — `?id=` (resync), `?character=` (active fight), `?world=` (browse)                                                                                                         |
-| `/v1/fight-results` | a wallet's pending soulbound FightResults — `?owner=` (required)                                                                                                                             |
-| `/v1/names`         | D52 SuiNS reverse resolution — `?addresses=` (csv, ≤100) → `{address: name\|null}`. Chain-direct GraphQL + Redis TTL cache (`NAMES_CACHE_TTL_SEC`), NOT an indexer view — see `api/suins.js` |
+| Route                 | Serves                                                                                                                                                                                       |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/health`             | process liveness (never rate-limited)                                                                                                                                                        |
+| `/v1/status`          | indexer tip, committer watermark, lag behind the chain                                                                                                                                       |
+| `/v1/characters`      | bulk character profiles — `?ids=` (csv) or `?owner=` (name, class, position, equipment)                                                                                                      |
+| `/v1/listings`        | kiosk marketplace listings — `?category= &min_level= &max_level= &sort= &cursor= &limit=`                                                                                                    |
+| `/v1/sales-over-time` | zero-filled UTC daily primary-shop units + exact MIST volume — `?days=` (default 30, max 365)                                                                                                |
+| `/v1/pools`           | liquidity-pool reserves + spot price — `?template=` for one                                                                                                                                  |
+| `/v1/shop`            | first-party shop sales, supply remaining — `?active=true`                                                                                                                                    |
+| `/v1/zones`           | per-world discovery / zone state — `?world=` (required), `?discovered=`                                                                                                                      |
+| `/v1/encyclopedia`    | on-chain liveness of minted item templates + worlds — `?kind=items\|worlds`                                                                                                                  |
+| `/v1/config`          | global game dials, class base stats, character-creation config                                                                                                                               |
+| `/v1/kolizeum`        | kolizeum lobby state — `?id=` for one, `?status=` to filter                                                                                                                                  |
+| `/v1/fights`          | the Fight object — `?id=` (resync), `?character=` (active fight), `?world=` (browse)                                                                                                         |
+| `/v1/fight-results`   | a wallet's pending soulbound FightResults — `?owner=` (required)                                                                                                                             |
+| `/v1/names`           | D52 SuiNS reverse resolution — `?addresses=` (csv, ≤100) → `{address: name\|null}`. Chain-direct GraphQL + Redis TTL cache (`NAMES_CACHE_TTL_SEC`), NOT an indexer view — see `api/suins.js` |
 
 Responses are CDN-friendly: they carry `Cache-Control` + an ETag and honour
 `If-None-Match` (→ `304`).

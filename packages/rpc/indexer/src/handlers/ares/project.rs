@@ -52,6 +52,9 @@ pub enum RedisWrite {
     /// `ZREMRANGEBYRANK key start stop` — cap a sorted set (idempotent; drops the
     /// out-of-cap tail, a no-op once already trimmed).
     ZRemRangeByRank { key: String, start: i64, stop: i64 },
+    /// `ZREMRANGEBYSCORE key min max` — trim time-series rows outside their
+    /// retention window (idempotent; old rows stay gone on replay).
+    ZRemRangeByScore { key: String, min: i64, max: i64 },
     /// `EXPIRE key seconds` — refresh a key's idle TTL (idempotent; re-setting the
     /// same TTL is a no-op). Lets an inactive per-kiosk sales log self-evict.
     Expire { key: String, seconds: i64 },
@@ -94,6 +97,9 @@ pub(super) fn zrem(key: String, member: String) -> RedisWrite {
 /// ascending by score, so the oldest live at ranks `0..len-cap`.
 pub(super) fn zrem_rank_keep_newest(key: String, cap: i64) -> RedisWrite {
     RedisWrite::ZRemRangeByRank { key, start: 0, stop: -(cap + 1) }
+}
+fn zrem_score_through(key: String, max: i64) -> RedisWrite {
+    RedisWrite::ZRemRangeByScore { key, min: 0, max }
 }
 pub(super) fn expire(key: String, seconds: i64) -> RedisWrite {
     RedisWrite::Expire { key, seconds }
@@ -139,6 +145,13 @@ fn k_pool_by_template(t: &str) -> String { format!("rpc:pool_by_template:{t}") }
 const K_POOLS: &str = "rpc:idx:pools";
 fn k_sale(id: &str) -> String { format!("rpc:sale:{id}") }
 const K_SALES: &str = "rpc:idx:sales";
+// Exact first-party shop receipts for `/v1/sales-over-time`. `SaleBought.item`
+// is unique per purchase, so each JSON member is stable under checkpoint replay;
+// daily count/volume are derived at read time instead of using drift-prone
+// NUMINCRBY money counters. Keep a one-day cushion beyond the API's 365-day cap
+// so the oldest UTC calendar day remains complete regardless of event time.
+const K_SALES_OVER_TIME: &str = "rpc:sales_over_time";
+const SALES_OVER_TIME_RETENTION_MS: u64 = 366 * 24 * 60 * 60 * 1_000;
 pub(super) fn k_world(id: &str) -> String { format!("rpc:world:{id}") }
 pub(super) const K_WORLDS: &str = "rpc:idx:worlds";
 // `pub(super)` so the sibling `snapshot` module's Zone-DF object snapshot writes to the SAME
@@ -331,8 +344,21 @@ pub(super) fn map_with_context(
         }
         ("shop", "SaleBought") => {
             let e: SaleBought = decode(contents)?;
+            let receipt = json!({
+                "sale": e.sale.to_canonical_string(true),
+                "item": e.item.to_canonical_string(true),
+                "price_mist": e.price.to_string(),
+                "amount": e.amount,
+                "ts": ts_ms,
+            })
+            .to_string();
+            let retention_cutoff = ts_ms.saturating_sub(SALES_OVER_TIME_RETENTION_MS) as i64;
             // RELATIVE: exact under object-snapshot of `Sale.minted`.
-            vec![incr(k_sale(&e.sale.to_canonical_string(true)), "$.minted", e.amount as i64)]
+            vec![
+                incr(k_sale(&e.sale.to_canonical_string(true)), "$.minted", e.amount as i64),
+                zadd(K_SALES_OVER_TIME.into(), ts_ms as i64, receipt),
+                zrem_score_through(K_SALES_OVER_TIME.into(), retention_cutoff),
+            ]
         }
         ("shop", "PriceChanged") => {
             let e: ShopPriceChanged = decode(contents)?;
@@ -1097,6 +1123,9 @@ pub async fn execute(writes: &[RedisWrite], conn: &mut MultiplexedConnection) ->
             RedisWrite::ZRemRangeByRank { key, start, stop } => {
                 pipe.cmd("ZREMRANGEBYRANK").arg(key).arg(*start).arg(*stop);
             }
+            RedisWrite::ZRemRangeByScore { key, min, max } => {
+                pipe.cmd("ZREMRANGEBYSCORE").arg(key).arg(*min).arg(*max);
+            }
             RedisWrite::Expire { key, seconds } => {
                 pipe.cmd("EXPIRE").arg(key).arg(*seconds);
             }
@@ -1184,6 +1213,9 @@ pub async fn execute(writes: &[RedisWrite], conn: &mut MultiplexedConnection) ->
             }
             RedisWrite::ZRemRangeByRank { key, .. } => {
                 return Err(err).with_context(|| format!("ZREMRANGEBYRANK {key}"));
+            }
+            RedisWrite::ZRemRangeByScore { key, .. } => {
+                return Err(err).with_context(|| format!("ZREMRANGEBYSCORE {key}"));
             }
             RedisWrite::Expire { key, .. } => {
                 return Err(err).with_context(|| format!("EXPIRE {key}"));

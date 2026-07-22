@@ -54,6 +54,14 @@ export async function zrevrange(key, start = 0, stop = -1) {
   return members ?? []
 }
 
+// Ascending members of a sorted set inside an inclusive SCORE range. The
+// sales-over-time receipt log is scored by checkpoint timestamp, so this reads
+// only the requested dashboard window instead of scanning retained history.
+export async function zrangebyscore(key, min, max) {
+  const members = await redis.send('ZRANGEBYSCORE', [key, String(min), String(max)])
+  return members ?? []
+}
+
 // Ascending members of a sorted set by RANK (the fight journal — score = checkpoint,
 // members ordered (checkpoint, tx, event); the rank IS the contiguous per-fight seq).
 // `start`/`stop` are inclusive ranks. Returns [] when the key is absent.

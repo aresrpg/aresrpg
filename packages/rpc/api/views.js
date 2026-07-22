@@ -12,7 +12,7 @@
 // truth. Money amounts (MIST) travel as strings to survive JSON's 2^53; counts,
 // coordinates and levels are numbers.
 
-import { get_json, get_str, mget_json, ping, smembers, zcard, zrange, zrevrange } from './redis.js'
+import { get_json, get_str, mget_json, ping, smembers, zcard, zrange, zrangebyscore, zrevrange } from './redis.js'
 import { resolve_names } from './suins.js'
 
 // Redis keys / index sets written by the indexer. Kept in sync BY CONTRACT with
@@ -34,6 +34,7 @@ const K = {
   listings: 'rpc:idx:listings',
   salesLog: (kiosk) => `rpc:sales_log:${kiosk}`, // per-kiosk marketplace sales log (sorted set, score = sale ts)
   sellerKiosks: (seller) => `rpc:idx:seller_kiosks:${seller}`, // seller → their kiosk(s)
+  salesOverTime: 'rpc:sales_over_time', // first-party shop receipts (sorted set, score = purchase ts)
   pool: (id) => `rpc:pool:${id}`,
   poolByTemplate: (t) => `rpc:pool_by_template:${t}`,
   pools: 'rpc:idx:pools',
@@ -585,6 +586,58 @@ export async function handle_sales_history(params) {
 
   const next_cursor = cursor + limit < total ? String(cursor + limit) : null
   return ok({ seller, sales, revenue_30d_mist: revenue.toString(), total, next_cursor })
+}
+
+// --- first-party sales over time ---------------------------------------------
+// Exact primary-shop revenue history from `shop::SaleBought` receipts. Each
+// retained ZSET member is `{sale,item,price_mist,amount,ts}`; the unique minted
+// item makes the indexer write replay-safe. `count` is units sold (Σ amount),
+// `volume` is exact MIST received (Σ price × amount) and remains a string. The
+// UTC calendar-day series is oldest-first and zero-filled for chart consumers.
+const DAY_MS = 24 * 60 * 60 * 1000
+
+export function sales_over_time_days(value) {
+  const parsed = Math.trunc(Number(value) || 30)
+  return Math.min(Math.max(parsed, 1), 365)
+}
+
+export function bucket_sales_over_time(members, days, now = Date.now()) {
+  const today = Math.floor(now / DAY_MS) * DAY_MS
+  const start = today - (days - 1) * DAY_MS
+  const buckets = Array.from({ length: days }, (_, i) => ({
+    day: new Date(start + i * DAY_MS).toISOString().slice(0, 10),
+    count: 0,
+    volume: 0n,
+  }))
+  const by_day = new Map(buckets.map((bucket) => [bucket.day, bucket]))
+
+  for (const member of members) {
+    try {
+      const receipt = JSON.parse(member)
+      const ts = Number(receipt.ts)
+      const amount = Number(receipt.amount)
+      if (!Number.isSafeInteger(ts) || !Number.isSafeInteger(amount) || amount < 0) continue
+      const receipt_volume = BigInt(receipt.price_mist) * BigInt(amount)
+      if (receipt_volume < 0n) continue
+      const bucket = by_day.get(new Date(ts).toISOString().slice(0, 10))
+      if (!bucket) continue
+      bucket.count += amount
+      bucket.volume += receipt_volume
+    } catch {
+      // A malformed cache row is skipped rather than taking down the whole view.
+    }
+  }
+
+  return buckets.map(({ day, count, volume }) => ({ day, count, volume: volume.toString() }))
+}
+
+export async function handle_sales_over_time(params) {
+  const days = sales_over_time_days(params.get('days'))
+  const now = Date.now()
+  const today = Math.floor(now / DAY_MS) * DAY_MS
+  const window_start = today - (days - 1) * DAY_MS
+  const receipts = await zrangebyscore(K.salesOverTime, window_start, now)
+  return ok(bucket_sales_over_time(receipts, days, now))
 }
 
 // --- pools -------------------------------------------------------------------

@@ -10,10 +10,11 @@
 // Routes:
 //   GET /health       — process liveness (never rate-limited)
 //   GET /v1/status    — indexer watermark + lag from Redis
-//   GET /v1/characters | /v1/owner-items | /v1/listings | /v1/sales-history | /v1/pools | /v1/shop |
-//       /v1/zones | /v1/encyclopedia | /v1/config | /v1/kolizeum | /v1/dungeon-runs | /v1/commissions |
-//       /v1/fights | /v1/protector-trigger | /v1/fight-results | /v1/pending-outcomes |
-//       /v1/pet-claims | /v1/taux | /v1/rare-links
+//   GET /v1/characters | /v1/owner-items | /v1/listings | /v1/sales-history |
+//       /v1/sales-over-time | /v1/pools | /v1/shop | /v1/zones | /v1/encyclopedia |
+//       /v1/config | /v1/kolizeum | /v1/dungeon-runs | /v1/commissions | /v1/fights |
+//       /v1/protector-trigger | /v1/fight-results | /v1/pending-outcomes | /v1/pet-claims |
+//       /v1/taux | /v1/rare-links
 //                     — preprocessed §14 views over the indexer's Redis cache
 //   GET /v1/parties?character=<id> — the character's party membership
 //   GET /v1/names     — D52 SuiNS reverse resolution (chain-direct GraphQL + Redis TTL

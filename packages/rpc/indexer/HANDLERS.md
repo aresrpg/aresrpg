@@ -452,8 +452,12 @@ level, price_mist, buyer, sold_at_ms }`, newest-first, `?limit=`/`?cursor=` pagi
 
 **First-party SHOP sales** (`shop::SaleBought`, seller = `@treasury`) are a SEPARATE concept —
 protocol primary-market revenue, not a player's marketplace sales — and are not folded into this
-seller-keyed view (the shop's own `/v1/shop` serves it). They could feed a protocol-revenue view if
-ever wanted.
+seller-keyed view. Each receipt now also lands in the global, time-scored
+`rpc:sales_over_time` set as `{sale,item,price_mist,amount,ts}`. The minted `item` is unique, so
+replay repeats the same `ZADD` member rather than double-counting money. The indexer trims rows
+older than 366 days; `/v1/sales-over-time?days=N` (default 30, capped at 365) range-reads this log
+and returns a zero-filled oldest-first UTC series `[{day,count,volume}]`, where `count` is units
+(`Σ amount`) and string-MIST `volume` is exact revenue (`Σ price × amount`).
 
 ---
 
@@ -466,7 +470,8 @@ Unchanged from the base slice — see the arms in `project.rs`:
   computes `sui_reserve` and the marginal `spot_price`.
 - **`shop::{SaleCreated,SaleBought,PriceChanged,WindowChanged,SalePaused}`** → `rpc:sale:{id}`
   (+ `idx:sales`). `SaleBought.amount` is the one **RELATIVE** `NUMINCRBY $.minted` (a delta),
-  exact under object-snapshot of `Sale.minted`.
+  exact under object-snapshot of `Sale.minted`; it also appends the replay-safe receipt described
+  above for `/v1/sales-over-time`.
 - **`item::{TemplateCreated,TemplateRenamed,TemplateBurned}`** → `rpc:template:{id}` (+
   `idx:templates`) for encyclopedia liveness. Create carries `template` + `item_type`; rename
   updates `$.name` in place on that same canonical document/index member. **description / category /

@@ -152,16 +152,50 @@ fn sale_created_then_burned_removes_document_and_shop_index() {
 #[test]
 fn sale_bought_increments_minted_by_amount() {
     let sale = oid(0x44);
+    let item = oid(0x77);
     let body = enc(&SaleBought {
         sale,
+        template: oid(0x55),
+        buyer: saddr(0x66),
+        item,
+        price: 250,
+        amount: 3,
+    });
+    let w = map("shop", "SaleBought", PKG, SENDER, TS, &body).unwrap();
+    let receipt = json!({
+        "sale": sale.to_canonical_string(true),
+        "item": item.to_canonical_string(true),
+        "price_mist": "250",
+        "amount": 3,
+        "ts": TS,
+    })
+    .to_string();
+    assert_eq!(
+        w,
+        vec![
+            incr(k_sale(&sale.to_canonical_string(true)), "$.minted", 3),
+            zadd(K_SALES_OVER_TIME.into(), TS as i64, receipt),
+            zrem_score_through(
+                K_SALES_OVER_TIME.into(),
+                TS.saturating_sub(SALES_OVER_TIME_RETENTION_MS) as i64,
+            ),
+        ]
+    );
+}
+
+#[test]
+fn sale_bought_history_receipt_is_idempotent_on_replay() {
+    let event = enc(&SaleBought {
+        sale: oid(0x44),
         template: oid(0x55),
         buyer: saddr(0x66),
         item: oid(0x77),
         price: 250,
         amount: 3,
     });
-    let w = map("shop", "SaleBought", PKG, SENDER, TS, &body).unwrap();
-    assert_eq!(w, vec![incr(k_sale(&sale.to_canonical_string(true)), "$.minted", 3)]);
+    let first = map("shop", "SaleBought", PKG, SENDER, TS, &event).unwrap();
+    let replay = map("shop", "SaleBought", PKG, SENDER, TS, &event).unwrap();
+    assert_eq!(first, replay);
 }
 
 #[test]

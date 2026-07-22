@@ -36,6 +36,7 @@ import {
   handle_protector_trigger,
   handle_rare_links,
   handle_sales_history,
+  handle_sales_over_time,
   handle_shop,
   handle_taux,
   handle_zones,
@@ -47,7 +48,12 @@ const sadd = (key, ...members) => redis.send('SADD', [key, ...members])
 // Append a sale row exactly as the indexer's ItemPurchased arm ZADDs it (score = ts).
 const zadd_sale = (kiosk, ts, member) =>
   redis.send('ZADD', [`rpc:sales_log:${kiosk}`, String(ts), JSON.stringify(member)])
+const zadd_shop_receipt = (ts, member) =>
+  redis.send('ZADD', ['rpc:sales_over_time', String(ts), JSON.stringify(member)])
 const canonical_id = (suffix) => `0x${suffix.padStart(64, '0')}`
+const SALES_DAY_MS = 24 * 60 * 60 * 1000
+const SHOP_TIMELINE_NOW = Date.now()
+const SHOP_TIMELINE_TODAY = Math.floor(SHOP_TIMELINE_NOW / SALES_DAY_MS) * SALES_DAY_MS
 
 // Padded-hex ids mirroring the indexer's to_canonical_string(true).
 const CH = '0x00000000000000000000000000000000000000000000000000000000000000c1'
@@ -304,6 +310,23 @@ beforeAll(async () => {
     price_mist: '9999',
     buyer: BUYER_1,
     ts: sales_now - 40 * DAY,
+  })
+
+  // First-party shop receipt history: exact daily units + price×amount volume.
+  const today_start = SHOP_TIMELINE_TODAY
+  await zadd_shop_receipt(today_start - DAY + 1_000, {
+    sale: '0xshop-a',
+    item: '0xshop-item-a',
+    price_mist: '250',
+    amount: 3,
+    ts: today_start - DAY + 1_000,
+  })
+  await zadd_shop_receipt(SHOP_TIMELINE_NOW, {
+    sale: '0xshop-a',
+    item: '0xshop-item-b',
+    price_mist: '9007199254740993',
+    amount: 2,
+    ts: SHOP_TIMELINE_NOW,
   })
 
   // pools
@@ -1631,5 +1654,18 @@ describe('sales-history', () => {
     expect(p2.next_cursor).toBeNull()
     // revenue is stable across pages (a window sum, not a page sum)
     expect(p2.revenue_30d_mist).toBe('2300')
+  })
+})
+
+describe('sales-over-time', () => {
+  test('returns zero-filled UTC days with exact primary-shop volume', async () => {
+    const { status, data } = await handle_sales_over_time(P({ days: '3' }))
+    expect(status).toBe(200)
+    expect(data).toHaveLength(3)
+    const by_day = new Map(data.map((row) => [row.day, row]))
+    const prior_day = new Date(SHOP_TIMELINE_TODAY - SALES_DAY_MS).toISOString().slice(0, 10)
+    const seeded_today = new Date(SHOP_TIMELINE_TODAY).toISOString().slice(0, 10)
+    expect(by_day.get(prior_day)).toMatchObject({ count: 3, volume: '750' })
+    expect(by_day.get(seeded_today)).toMatchObject({ count: 2, volume: '18014398509481986' })
   })
 })

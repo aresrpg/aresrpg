@@ -7,6 +7,7 @@ export const EDGE_CACHE = Object.freeze({
   '/v1/encyclopedia': 'public, max-age=0, s-maxage=30, must-revalidate',
   '/v1/config': 'public, s-maxage=60, stale-while-revalidate=300',
   '/v1/shop': 'public, max-age=0, s-maxage=15, must-revalidate',
+  '/v1/sales-over-time': 'public, max-age=0, s-maxage=15, must-revalidate',
   '/v1/taux': 'public, s-maxage=60, stale-while-revalidate=300',
   '/v1/listings': 'public, s-maxage=5, stale-while-revalidate=15',
   '/v1/pools': 'public, s-maxage=10, stale-while-revalidate=30',
