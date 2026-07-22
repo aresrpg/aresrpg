@@ -12,7 +12,7 @@ import { describe, expect, test } from 'bun:test'
 import { active_store, ev, fight_object, mob, participant, ME, PEER, T0 } from '../harness/fixtures.js'
 
 import { committed_state, presented_state } from './fold.js'
-import { apply_peer_batch, drafted_batches } from './txs.js'
+import { apply_peer_batch, drafted_batches, subscribe_flagged } from './txs.js'
 
 // encode(x,y)=y*20+x: 21=(1,1) 22=(2,1) 24=(4,1) 28=(8,1) 45=(5,2). A coop board: ME at seat 0 (cell 21), a PEER
 // at seat 1 (cell 22, turn-start MP 3), one mob at cell 45. The peer authors ITS OWN turn; the store opens MY
@@ -138,6 +138,20 @@ describe('#334 (c) — idempotence: a re-delivered peer batch paints once', () =
     send_peer_cast(store, { remaining_hp: 8, intent_id: 'peer:turn-7' }) // exact re-delivery
     expect(store.getState().intent_seq, 'the intent cursor never advances on a duplicate').toBe(seq_after_first)
     expect(mob_hp(store), 'the mob is painted once, not double-struck').toBe(8)
+  })
+})
+
+describe('#334 — one neutral toast per illegal batch (the flag edge, remount-safe)', () => {
+  test('subscribe_flagged surfaces an illegal batch ONCE, never again on later store churn', () => {
+    const store = coop_store()
+    let toasts = 0
+    const stop = subscribe_flagged(store, { on_flagged: () => (toasts += 1) })
+    send_peer_move(store, { to_cell: CELL.far, intent_id: 'peer:bad' }) // over-budget → illegal → flagged
+    expect(toasts, 'the illegal batch raises exactly one toast').toBe(1)
+
+    store.getState().input({ type: 'hand_update', hand: ['x'] }, T0 + 100) // unrelated churn
+    expect(toasts, 'the shown flag never re-toasts — reducer-owned idempotency').toBe(1)
+    stop()
   })
 })
 
