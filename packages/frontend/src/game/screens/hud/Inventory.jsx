@@ -13,6 +13,7 @@ import { use_auth } from '../../../auth'
 import { get_owner_items } from '../../../rpc/client'
 import { use_game_state } from '../../store.js'
 import { equip_items } from '../../../world-shell/equip_actions.js'
+import { legacy_pet_equip_guard } from '../../../world-shell/pet_equip_guard.js'
 import { use_consumable_batched } from '../../../world-shell/consumable_actions.js'
 import { mark_ui_updated } from '../../../world-shell/tx.js'
 import { reconcile_equip_state } from '../../../world-shell/equip_state_refresh.js'
@@ -368,6 +369,18 @@ export function Inventory() {
     }
     if (!to_equip.length && !to_unequip.length) {
       use_toast.getState().remove(pending_id)
+      set_committing(false)
+      return
+    }
+    // #88 — legacy pet power can exceed the upgraded 60-feed stat curve. Read the item-side field directly
+    // BEFORE bag optimism and BEFORE equip_items can compose a PTB; owner-items' event projection cannot prove
+    // this because pre-upgrade feeds emitted no absolute feed-count event. Fail-open reads leave simulation as
+    // the judge, while a proven >60 counter refuses honestly until the contract migration lands.
+    const legacy_pet = await legacy_pet_equip_guard(to_equip)
+    if (legacy_pet) {
+      use_toast.getState().remove(pending_id)
+      use_toast.getState().add(t('errors.pet_growth_migration_required'), 'info')
+      dispatch_stage({ type: 'reset', equipment: real_equipment })
       set_committing(false)
       return
     }

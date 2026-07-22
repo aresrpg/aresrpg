@@ -54,3 +54,22 @@ test('on_grid_activate and on_drop run the shared equip pre-flight before an ite
     expect(gate_at).toBeLessThan(stage_at)
   }
 })
+
+// #88 — old PetPowerKey values can exceed item_stats' new 60-feed denominator. The direct-chain guard must
+// run after the staged rows exist but before either the bag mutation or the sole PTB composer; its refusal
+// branch returns before both, leaving the pet visibly and on-chain in its kiosk.
+test('Accept refuses legacy pet power before optimistic mutation or equip PTB composition (#88)', () => {
+  const accept_start = inventory_source.indexOf('const on_accept = async ()')
+  const accept_end = inventory_source.indexOf('const on_cancel = ()')
+  const body = inventory_source.slice(accept_start, accept_end)
+
+  const guard_at = body.indexOf('await legacy_pet_equip_guard(to_equip)')
+  const bag_remove_at = body.indexOf('remove_bag_items(')
+  const bag_add_at = body.indexOf('add_bag_items(')
+  const composer_at = body.indexOf('equip_items({')
+  expect(guard_at).toBeGreaterThan(-1)
+  expect(bag_remove_at).toBeGreaterThan(guard_at)
+  expect(bag_add_at).toBeGreaterThan(guard_at)
+  expect(composer_at).toBeGreaterThan(guard_at)
+  expect(body.slice(guard_at, Math.min(bag_remove_at, bag_add_at))).toMatch(/if \(legacy_pet\)[\s\S]*?return/)
+})

@@ -2292,6 +2292,7 @@
     "pet_not_food": "Your pet can’t eat this item.",
     "pet_already_fed": "Your pet has already eaten today. Come back tomorrow.",
     "pet_fully_fed": "Your pet is fully grown and can’t eat any more.",
+    "pet_growth_migration_required": "This pet uses an older growth record and can’t be equipped until it is migrated on-chain.",
     "stat_no_points": "You don’t have enough characteristic points.",
     "lootbox_no_table": "This box has no reward table.",
     "lootbox_zero_weight": "This box has no available rewards.",

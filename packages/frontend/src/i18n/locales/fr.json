@@ -2292,6 +2292,7 @@
     "pet_not_food": "Votre familier ne peut pas manger cet objet.",
     "pet_already_fed": "Votre familier a déjà mangé aujourd’hui. Revenez demain.",
     "pet_fully_fed": "Votre familier est adulte et ne peut plus manger.",
+    "pet_growth_migration_required": "Ce familier utilise un ancien registre de croissance et ne peut pas être équipé avant sa migration on-chain.",
     "stat_no_points": "Vous n’avez pas assez de points de caractéristique.",
     "lootbox_no_table": "Cette boîte n’a pas de table de récompenses.",
     "lootbox_zero_weight": "Cette boîte ne contient aucune récompense disponible.",

@@ -2292,6 +2292,7 @@
     "pet_not_food": "Tu mascota no puede comer este objeto.",
     "pet_already_fed": "Tu mascota ya ha comido hoy. Vuelve mañana.",
     "pet_fully_fed": "Tu mascota ya es adulta y no puede comer más.",
+    "pet_growth_migration_required": "Esta mascota usa un registro de crecimiento antiguo y no puede equiparse hasta que se migre en la cadena.",
     "stat_no_points": "No tienes suficientes puntos de característica.",
     "lootbox_no_table": "Esta caja no tiene tabla de recompensas.",
     "lootbox_zero_weight": "Esta caja no tiene recompensas disponibles.",

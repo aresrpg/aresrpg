@@ -2292,6 +2292,7 @@
     "pet_not_food": "Dein Begleiter kann diesen Gegenstand nicht fressen.",
     "pet_already_fed": "Dein Begleiter hat heute bereits gefressen. Komm morgen wieder.",
     "pet_fully_fed": "Dein Begleiter ist ausgewachsen und kann nicht mehr fressen.",
+    "pet_growth_migration_required": "Dieser Begleiter nutzt einen älteren Wachstumsstand und kann erst nach der On-Chain-Migration ausgerüstet werden.",
     "stat_no_points": "Du hast nicht genügend Eigenschaftspunkte.",
     "lootbox_no_table": "Diese Box hat keine Belohnungstabelle.",
     "lootbox_zero_weight": "Diese Box enthält keine verfügbaren Belohnungen.",
