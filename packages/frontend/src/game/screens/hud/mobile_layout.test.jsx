@@ -302,18 +302,22 @@ describe('viewport and mobile-style isolation', () => {
     expect(row_rule).toMatch(/padding:\s*\dpx \dpx/) // single-digit px on both axes
   })
 
-  // #237: the minimap remains flush, but the app-wide toast layer gets its own small viewport inset. Its
-  // fixed, clipped layer bounds both the width and the entrance transform so neither can grow page overflow.
+  // #237/#448: the minimap remains flush, but the app-wide toast layer gets its own comfortable safe-area
+  // viewport inset. Its fixed, clipped layer bounds both axes and the entrance transform so neither overflows.
   test('the app-wide toast stack remains an inset, contained minimap overlay on mobile', async () => {
     const { TOAST_CONTAINER_CLASS } = await import('../../../toast')
     const app = read_fixture('../../../app.tsx')
     const toasts_fn = app.match(/function Toasts\(\)[\s\S]*?\n\}/)?.[0] ?? ''
 
     expect(TOAST_CONTAINER_CLASS).toContain('fixed')
-    expect(TOAST_CONTAINER_CLASS).toContain('top-2')
-    expect(TOAST_CONTAINER_CLASS).toContain('right-2')
-    expect(TOAST_CONTAINER_CLASS).toContain('max-w-[min(24rem,calc(100vw-1rem))]')
-    expect(TOAST_CONTAINER_CLASS).toContain('max-h-[calc(100dvh-1rem)]')
+    expect(TOAST_CONTAINER_CLASS).toContain('top-[max(1rem,var(--safe-top))]')
+    expect(TOAST_CONTAINER_CLASS).toContain('right-[max(1rem,var(--safe-right))]')
+    expect(TOAST_CONTAINER_CLASS).toContain(
+      'max-w-[min(24rem,calc(100vw-max(1rem,var(--safe-left))-max(1rem,var(--safe-right))))]'
+    )
+    expect(TOAST_CONTAINER_CLASS).toContain(
+      'max-h-[calc(100dvh-max(1rem,var(--safe-top))-max(1rem,var(--safe-bottom)))]'
+    )
     expect(TOAST_CONTAINER_CLASS).toContain('items-end')
     expect(TOAST_CONTAINER_CLASS).toContain('overflow-hidden')
     expect(TOAST_CONTAINER_CLASS).not.toContain('absolute')

@@ -101,12 +101,16 @@ describe('version badge', () => {
 // #237: the app toast layer overlays the minimap corner without inheriting the minimap's flush-to-viewport rule.
 // Position and card styling live in toast.ts so the contract stays testable without app.tsx's Vite graph.
 describe('toast minimap overlay', () => {
-  test('is fixed and inset from the top-right viewport edge while retaining a bounded width', () => {
+  test('is fixed and comfortably inset from the safe top-right viewport edge while retaining a bounded width', () => {
     expect(TOAST_CONTAINER_CLASS).not.toContain('max-w-none')
-    expect(TOAST_CONTAINER_CLASS).toContain('max-w-[min(24rem,calc(100vw-1rem))]')
+    expect(TOAST_CONTAINER_CLASS).toContain(
+      'max-w-[min(24rem,calc(100vw-max(1rem,var(--safe-left))-max(1rem,var(--safe-right))))]'
+    )
     expect(TOAST_CONTAINER_CLASS).toContain('fixed')
-    expect(TOAST_CONTAINER_CLASS).toContain('top-2')
-    expect(TOAST_CONTAINER_CLASS).toContain('right-2')
+    expect(TOAST_CONTAINER_CLASS).toContain('top-[max(1rem,var(--safe-top))]')
+    expect(TOAST_CONTAINER_CLASS).toContain('right-[max(1rem,var(--safe-right))]')
+    expect(TOAST_CONTAINER_CLASS).not.toContain('top-2')
+    expect(TOAST_CONTAINER_CLASS).not.toContain('right-2')
     expect(TOAST_CONTAINER_CLASS).not.toContain('top-0')
     expect(TOAST_CONTAINER_CLASS).not.toContain('right-0')
     expect(TOAST_CONTAINER_CLASS).not.toContain('absolute')
@@ -125,7 +129,9 @@ describe('toast minimap overlay', () => {
   test('contains the transform-based entrance inside the fixed viewport layer', () => {
     expect(TOAST_CONTAINER_CLASS).toContain('items-end')
     expect(TOAST_CONTAINER_CLASS).toContain('overflow-hidden')
-    expect(TOAST_CONTAINER_CLASS).toContain('max-h-[calc(100dvh-1rem)]')
+    expect(TOAST_CONTAINER_CLASS).toContain(
+      'max-h-[calc(100dvh-max(1rem,var(--safe-top))-max(1rem,var(--safe-bottom)))]'
+    )
     expect(toast_glass_class).toContain('animate-[slide-in_0.3s_ease-out]')
   })
 
