@@ -42,8 +42,18 @@ const SPELL = {
       crit_rate: 4,
       cooldown: 2,
       effects: [
-        { kind: 'DAMAGE', element: 'fire', damageMin: 5, damageMax: 14, chance: 100, turns: 0 },
+        {
+          kind: 'DAMAGE',
+          element: 'fire',
+          damageMin: 5,
+          damageMax: 14,
+          crit_base: 19,
+          crit_effect: { kind: 'DAMAGE', element: 'fire', damageMin: 15, damageMax: 24 },
+          chance: 100,
+          turns: 2,
+        },
         { kind: 'REDUCE_DAMAGE', base: 8, chance: 100, turns: 2 },
+        { kind: 'GIVE_POINTS', stat: 1, base: 1, chance: 100, turns: 1 },
       ],
     },
   ],
@@ -85,8 +95,9 @@ describe('spell_hover_facts', () => {
     expect(facts.cooldown_txt).toBe('2 turns')
     expect(facts.subline).toBe('Fire · Damage')
     expect(facts.effects.map((effect) => effect.text)).toEqual([
-      '5 to 14 Fire damage',
+      '5 to 14 Fire damage · 2 turns · crit 15 to 24',
       'Absorbs 8 damage · any element · 2 turns',
+      '+1 MP · 1 turn',
     ])
   })
 
@@ -119,7 +130,9 @@ describe('SpellHoverTip', () => {
     expect(text).toContain(en.spells.crit_chance)
     expect(text).toContain(en.spells.cooldown)
     expect(text).toContain(en.spells.effects)
+    expect(text).toContain('5 to 14 Fire damage · 2 turns · crit 15 to 24')
     expect(text).toContain('Absorbs 8 damage · any element · 2 turns')
+    expect(text).toContain('+1 MP · 1 turn')
     expect(html).not.toContain('tt-spell-card__aim')
   })
 

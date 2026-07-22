@@ -96,11 +96,11 @@ describe('lossless chain spell projection', () => {
       range_min: 1,
       range_max: 3,
       effects: [
-        { kind: 0, value: 5, target_filter: 1, flags: 4, chance: 100 },
+        { kind: 0, value: 5, damageMin: 5, damageMax: 14, turns: 2, target_filter: 1, flags: 4, chance: 100 },
         { kind: 0, value: 7, target_filter: 2, flags: 8, chance: 100 },
       ],
       crit_effects: [
-        { kind: 0, value: 11, target_filter: 16, flags: 1, chance: 100 },
+        { kind: 0, value: 11, damageMin: 15, damageMax: 24, target_filter: 16, flags: 1, chance: 100 },
         { kind: 0, value: 13, target_filter: 32, flags: 2, chance: 100 },
       ],
     })
@@ -110,8 +110,19 @@ describe('lossless chain spell projection', () => {
       kind_id: 0,
       target_filter: 1,
       flags: 4,
+      damageMin: 5,
+      damageMax: 14,
+      turns: 2,
       crit_base: 11,
-      crit_effect: { kind: 'DAMAGE', kind_id: 0, target_filter: 16, flags: 1, base: 11 },
+      crit_effect: {
+        kind: 'DAMAGE',
+        kind_id: 0,
+        target_filter: 16,
+        flags: 1,
+        base: 11,
+        damageMin: 15,
+        damageMax: 24,
+      },
     })
     expect(projected.effects[1]).toMatchObject({
       kind: 'DAMAGE',

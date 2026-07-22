@@ -71,26 +71,29 @@ describe('SpellDetail damage magnitudes', () => {
         base: 991,
         damageMin: 5,
         damageMax: 14,
-        crit_base: 991,
+        crit_base: 19,
+        crit_effect: { kind: 'DAMAGE', element: 'air', damageMin: 15, damageMax: 24 },
         chance: 100,
-        turns: 0,
+        turns: 2,
       },
     ],
-    crit_effects: [{ kind: 'DAMAGE', damageMin: 15, damageMax: 15 }],
   })
 
-  test('renders authoritative min/max and equal critical bounds, never the legacy midpoint', () => {
+  test('renders authoritative normal and critical ranges plus duration, never legacy midpoints', () => {
     const html = render_spell(ranged_damage)
     const text = visible_text(html)
 
     expect(text).toContain('5 to 14 Air damage')
-    expect(text).toContain('crit 15')
-    expect(text).not.toContain('15 to 15')
+    expect(text).toContain('2 turns')
+    expect(text).toContain('crit 15 to 24')
+    expect(text).not.toContain('crit 19')
     expect(text).not.toContain('991')
   })
 
   test('localizes an unequal range connector', () => {
-    expect(visible_text(render_spell(ranged_damage, 'fr'))).toContain('5 à 14 dégâts Air')
+    const text = visible_text(render_spell(ranged_damage, 'fr'))
+    expect(text).toContain('5 à 14 dégâts Air')
+    expect(text).toContain('crit 15 à 24')
   })
 
   test('renders equal normal bounds as one number', () => {

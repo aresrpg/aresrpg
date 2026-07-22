@@ -250,16 +250,17 @@ describe('S-64b effect-line grammar (parts model, real EN strings)', () => {
       {
         kind: 'DAMAGE',
         element: 'earth',
-        base: 7,
-        damageMin: 7,
-        damageMax: 7,
-        crit_base: 9,
+        base: 9,
+        damageMin: 5,
+        damageMax: 14,
+        crit_base: 19,
+        crit_effect: { kind: 'DAMAGE', element: 'earth', damageMin: 15, damageMax: 24 },
         chance: 100,
-        turns: 0,
+        turns: 2,
         area_shape: 'POINT',
         area_size: 0,
       },
-      { value: '7', meta: 'crit 9' },
+      { value: '5 to 14', meta: '2 turns · crit 15 to 24' },
     ],
     [
       { kind: 'PERCENT_LIFE', element: 'earth', base: 3, chance: 100, turns: 0, area_shape: 'POINT', area_size: 0 },
@@ -337,8 +338,8 @@ describe('S-64b effect-line grammar (parts model, real EN strings)', () => {
     ],
     [
       { kind: 'GIVE_POINTS', stat: 1, base: 1, chance: 100, turns: 1, area_shape: 'POINT', area_size: 0 },
-      { value: '1', tone: TONE_BUFF, icon: 'movement', meta: null },
-    ], // 1-turn grant = the implied default, NO meta
+      { value: '1', tone: TONE_BUFF, icon: 'movement', meta: '1 turn' },
+    ],
     [
       { kind: 'REMOVE_POINTS', stat: 0, base: 2, chance: 100, turns: 0, area_shape: 'POINT', area_size: 0 },
       { value: '2', tone: TONE_BAD, icon: 'action' },
@@ -394,7 +395,10 @@ describe('S-64b effect-line grammar (parts model, real EN strings)', () => {
       { kind: 'APPLY_STATE', base: 1, chance: 100, turns: 2, area_shape: 'POINT', area_size: 0 },
       { value: null, meta: '2 turns' },
     ],
-    [{ kind: 'DISPEL', base: 1, chance: 100, turns: 1, area_shape: 'POINT', area_size: 0 }, { value: null }],
+    [
+      { kind: 'DISPEL', base: 1, chance: 100, turns: 1, area_shape: 'POINT', area_size: 0 },
+      { value: null, meta: '1 turn' },
+    ],
     [
       { kind: 'REVEAL', base: 0, chance: 100, turns: 0, area_shape: 'CIRCLE', area_size: 3 },
       { value: null, meta: 'CIRCLE 3' },
@@ -413,6 +417,14 @@ describe('S-64b effect-line grammar (parts model, real EN strings)', () => {
     const equal = { ...ranged, damageMin: 8, damageMax: 8 }
     expect(seed_effect_parts(t_en, equal).value).toBe('8')
     expect(seed_effect_parts(t_en, equal).value).not.toBe('8 to 8')
+
+    const critical = {
+      ...ranged,
+      crit_base: 19,
+      crit_effect: { kind: 'DAMAGE', element: 'air', damageMin: 15, damageMax: 24 },
+    }
+    expect(seed_effect_parts(t_en, critical).meta).toBe('crit 15 to 24')
+    expect(seed_effect_parts(t_fr, critical).meta).toBe('crit 15 à 24')
   })
 
   for (const [fx, want] of MATRIX) {

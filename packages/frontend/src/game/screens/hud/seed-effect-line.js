@@ -13,13 +13,13 @@
 //   · state lines       → plain verb sentences: `Become invisible · 2 turns` — NO magnitude noise for
 //     magnitude-less kinds (the screenshot's floating "1" under INVISIBILITY is exactly the garbage killed
 //     here: INVISIBILITY/TELEPORT/SWAP/DISPEL/… carry base=1 as a flag, never a shown number)
-//   · meta suffix       → dim, only when informative: duration (turns — always for timed states, only >1 for
-//     point grants whose 1-turn default is implied), crit value, AoE zone (non-POINT only), proc chance (<100)
+//   · meta suffix       → dim, only when informative: duration (every positive `turns` carried by the effect),
+//     crit range/value, AoE zone (non-POINT only), proc chance (<100)
 //
 // GROUND TRUTH (all decoded from the chain-mint path, never guessed):
 //   · effect shape = fight-spells.js `decode_effect`: { kind, element?, base, damageMin?, damageMax?,
-//     chance, turns, area_shape, area_size, zone?, crit_base?, stat? } — FLAT chain value plus the authored
-//     display range carried by the final seed corpus
+//     chance, turns, area_shape, area_size, zone?, crit_base?, crit_effect?, stat? } — FLAT chain value plus
+//     the authored display ranges carried by the final seed corpus
 //   · GIVE/REMOVE_POINTS `stat`: POINT_AP=0 / POINT_MP=1 (spell_effect.move:130)
 //   · ALTER_STAT `stat`: the Move STAT_* enum (spell_effect.move:135-149) — 0 strength · 1 intelligence ·
 //     2 chance · 3 agility · 4 wisdom · 5 vitality · 6 range · 7 crit · 8 percent damage · 9 raw damage ·
@@ -91,22 +91,6 @@ const AOE_SHAPE_KEY = {
   CONE: 'cone',
 }
 
-// Kinds whose duration is the payload itself — `· N turn(s)` shows whenever turns > 0 (a 1-turn buff expiring
-// is real info). Point grants (GIVE_POINTS) show turns only when > 1: the 1-turn grant is the implied default
-// so the `+1 MP` example renders bare. Instant kinds (turns 0 in the corpus) never show a duration.
-const TIMED_KINDS = new Set([
-  'INVISIBILITY',
-  'ALTER_STAT',
-  'ALTER_RESIST',
-  'REDUCE_DAMAGE',
-  'REFLECT_DAMAGE',
-  'APPLY_DOT',
-  'APPLY_STATE',
-  'RETURN_SPELL',
-  'PLACE_GLYPH',
-  'STEAL_STAT',
-])
-
 // Sentinel-split: translate the kind template with {{value}} = \u0000, then split around it so the VALUE can
 // render as its own coloured span in ANY locale word order. A template without {{value}} yields value: null.
 const SENTINEL = '\u0000'
@@ -161,15 +145,22 @@ export const is_area_effect = (shape, size) => shape === 'ALLMAP' || (shape !== 
 
 /** The meta suffix pieces (duration · crit · zone · chance) — only what is genuinely informative. */
 const meta_of = (t, fx) => {
-  const turns = fx.turns ?? 0
+  const turns = finite_number(fx.turns)
+  const critical_effect = fx.crit_effect
+  const critical_min = finite_number(critical_effect?.damageMin)
+  const critical_max = finite_number(critical_effect?.damageMax)
+  const critical_value =
+    critical_min != null && critical_max != null
+      ? seed_effect_value(t, critical_effect)
+      : fx.crit_base != null
+        ? String(fx.crit_base)
+        : null
   const shape = fx.area_shape ?? 'POINT'
   const size = fx.area_size ?? 0
   const pieces = [
     ...(fx.kind === 'REDUCE_DAMAGE' ? [t('spells.fx_any_element')] : []),
-    ...((TIMED_KINDS.has(fx.kind) && turns > 0) || (fx.kind === 'GIVE_POINTS' && turns > 1)
-      ? [t('spells.fx_turns', { count: turns })]
-      : []),
-    ...(fx.crit_base != null ? [t('spells.crit_val', { value: fx.crit_base })] : []),
+    ...(turns != null && turns > 0 ? [t('spells.fx_turns', { count: turns })] : []),
+    ...(critical_value != null ? [t('spells.crit_val', { value: critical_value })] : []),
     ...(is_area_effect(shape, size) ? [t(`encyclopedia.aoe_shape.${AOE_SHAPE_KEY[shape] ?? 'point'}`, { size })] : []),
     ...(fx.chance != null && fx.chance < 100 ? [t('encyclopedia.proc_chance', { n: fx.chance })] : []),
   ]
@@ -207,7 +198,8 @@ const sentence_parts = (t, key, params = {}) => ({
  * One structured effect line for a fight-spells.json effect — the ONE grammar every spell surface renders.
  * @param {(key: string, params?: object) => string} t
  * @param {{ kind: string, base?: number, damageMin?: number, damageMax?: number, crit_base?: number,
- *   element?: string, turns?: number, chance?: number, stat?: number, area_shape?: string, area_size?: number }} fx
+ *   crit_effect?: { damageMin?: number, damageMax?: number }, element?: string, turns?: number, chance?: number,
+ *   stat?: number, area_shape?: string, area_size?: number }} fx
  * @returns {EffectLineView}
  */
 export const seed_effect_parts = (t, fx) => ({ ...core_parts(t, fx), meta: meta_of(t, fx) })
