@@ -361,8 +361,10 @@ export async function create_webgl_fallback({ canvas, seed, zone_origin, on_fram
  *  the warn-once logic. Typed as the exact EngineApi members it supplies so the spread contributes
  *  typed members (no cast needed at the call site). `get_world_mode` is overridden by engine.js with
  *  the real world_mode; it lives here so the bag is a complete facade standalone.
+ *  @param {import('../tactical/board_occlusion.js').BoardOcclusionUniforms} board_occlusion the canonical,
+ *    GPU-free handle; WebGL terrain ignores its uniforms while the tactical facade keeps one exact interface.
  *  @returns {Pick<import('../engine.js').EngineApi, 'set_time_of_day' | 'day_factor' | 'configure_night_lighting' | 'set_atmosphere_params' | 'set_tier' | 'set_render_scale' | 'get_terrain_renderer' | 'get_atmosphere' | 'get_board_occlusion' | 'get_world_mode'>} */
-export function webgpu_only_stubs() {
+export function webgpu_only_stubs(board_occlusion) {
   return {
     set_time_of_day() {
       warn_once('time-of-day / day-night')
@@ -393,16 +395,7 @@ export function webgpu_only_stubs() {
       return null
     },
     get_board_occlusion() {
-      // D167-B: the WebGL fallback has no TSL terrain, so board occlusion is a no-op here. Return an
-      // inert handle with the same shape so the tactical facade can arm/disarm it harmlessly (the
-      // fallback still renders the board geometry itself — it just never dissolves occluders).
-      return /** @type {*} */ ({
-        active: { value: 0 },
-        center: { value: null },
-        radius: { value: 1 },
-        set_active() {},
-        set_bounds() {},
-      })
+      return board_occlusion
     },
     get_world_mode() {
       // Not really WebGPU-only — engine.js overrides this with the real world_mode; kept here so the

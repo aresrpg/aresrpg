@@ -1703,7 +1703,7 @@ function create_webgl_engine({ canvas, seed, zone_origin, search = '' }) {
   // set_tier/set_render_scale/get_terrain_renderer/get_atmosphere come from `stubs` (typed via
   // webgpu_only_stubs' Pick<EngineApi,…> return), everything else is defined here. get_world_mode is
   // redefined below to return the real mode (overriding the stub's placeholder).
-  const stubs = webgpu_only_stubs()
+  const stubs = webgpu_only_stubs(create_board_occlusion())
 
   return {
     ...stubs,
