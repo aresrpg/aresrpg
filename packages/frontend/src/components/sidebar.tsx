@@ -8,6 +8,7 @@ import { NAV_ITEMS } from '../constants/navigation'
 import { DISCORD_URL } from '../constants/links'
 import { LANGUAGES } from '../i18n'
 import { use_navigate_page, use_active_page } from '../hooks/use_navigate_page'
+import { resolve_build_cinematic_active } from '../game/cinematic_mode_gate.js'
 
 import { WalletBar } from './wallet_bar'
 import { SponsorAllowanceBar } from './sponsor_allowance_bar'
@@ -162,7 +163,7 @@ export function Sidebar() {
           {active_page === 'game-world' && (
             <div className="px-4 pt-3 flex flex-col gap-1 text-[8px] tracking-[0.2em] text-muted/60 uppercase select-none">
               <span>{t('sidebar.hint_lock_cursor')}</span>
-              <span>{t('sidebar.hint_cinematic')}</span>
+              {resolve_build_cinematic_active(true) && <span>{t('sidebar.hint_cinematic')}</span>}
             </div>
           )}
           {/* D260 + resolved 2026-07-17 (desktop: version sits bottom-center of the sidebar): build/version

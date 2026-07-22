@@ -22,6 +22,7 @@ import { walrus_asset_url } from '@aresrpg/sdk/jobs'
 import { attach_status_overlay, STATUS_OVERLAY, create_vfx_preset, PRESETS } from '@aresrpg/engine3/vfx'
 
 import { resolve_movement_key } from './embed_voxel_movement_keys.js'
+import { resolve_build_cinematic_active } from './cinematic_mode_gate.js'
 import { create_auto_run } from './auto_run.js'
 import { create_cursor_lock_toggle } from './embed_voxel_cursor_lock.js'
 import { resolve_cosmetic_aura } from './cosmetic_aura.js'
@@ -230,8 +231,10 @@ export function create_player({
       fly_pos[2] = p[2]
     }
   }
-  const toggle_cinematic = () => {
-    cinematic = !cinematic
+  const set_cinematic = (on) => {
+    const next = resolve_build_cinematic_active(on)
+    if (next === cinematic) return
+    cinematic = next
     cam.set_cinematic(cinematic)
     if (!cinematic) set_fly(false) // fly ends with cinematic → next tick's gravity settles the body to ground
     // CLEAN FOOTAGE: hide EVERY nameplate while recording — self, remote players, and chain world
@@ -240,6 +243,7 @@ export function create_player({
     on_cinematic_change?.(cinematic) // host hides the OTHER DOM plate layers (remote players / world spawns)
     push_event_toast({ state: 'info', title: i18n.t(cinematic ? 'world.cinematic_on' : 'world.cinematic_off') })
   }
+  const toggle_cinematic = () => set_cinematic(!cinematic)
   // TR-97 MOUNT (pressing '1' spawns the mount and makes the character ride it, with the 50%
   // speed boost… visible in multiplayer"): press 1 to TOGGLE riding. On mount-on we resolve the character's
   // mount (dev `?mount=<glb>` trailer override, else the equipped `.mount` slot post-republish), spawn the
