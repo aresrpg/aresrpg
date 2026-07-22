@@ -350,4 +350,17 @@ describe('Stats characteristic descriptions', () => {
     expect(stats_jsx).toContain('stats.description.critical_hit')
     expect(stats_jsx).toContain('stats.description.raw_damage')
   })
+
+  // #489: the description line (Raw Damage observed) ellipsis-clipped mid-sentence — block-scoped so a
+  // legitimate name/label truncation elsewhere in this file (there are many) can never false-pass this.
+  test('the PRIMARY and SECONDARY description lines wrap to full copy, never ellipsis-clip', () => {
+    const prow_block = hud_panels_css.match(/\.stats__prow-desc\s*\{[^}]*\}/)?.[0] ?? ''
+    const srow_block = hud_panels_css.match(/\.stats__srow-desc\s*\{[^}]*\}/)?.[0] ?? ''
+    expect(prow_block).not.toBe('')
+    expect(srow_block).not.toBe('')
+    for (const block of [prow_block, srow_block]) {
+      expect(block).not.toContain('text-overflow: ellipsis')
+      expect(block).not.toContain('white-space: nowrap')
+    }
+  })
 })

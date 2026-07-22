@@ -513,7 +513,7 @@ export function Stats() {
                     <img src={icon} alt="" />
                   </span>
                 </Tooltip>
-                <span className="stats__prow-labels" title={description}>
+                <span className="stats__prow-labels">
                   <span className="stats__prow-label">{label}</span>
                   <span className="stats__prow-desc">{description}</span>
                 </span>
@@ -591,7 +591,7 @@ export function Stats() {
                       })
                     }
                   />
-                  <span className="stats__srow-labels" title={description}>
+                  <span className="stats__srow-labels">
                     <span className="stats__srow-label">{label}</span>
                     <span className="stats__srow-desc">{description}</span>
                   </span>
