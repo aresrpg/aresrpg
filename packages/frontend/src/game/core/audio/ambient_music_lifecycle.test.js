@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { afterAll, describe, expect, test } from 'bun:test'
+import { afterAll, beforeEach, describe, expect, test } from 'bun:test'
 
 import { install_browser_globals } from '../../../test_helpers/browser_globals.js'
 
@@ -43,6 +43,11 @@ const flush = async () => {
   await Promise.resolve()
   await Promise.resolve()
 }
+
+// bun shares ambient_music.js across every test file in the run — a prior file that armed a zone, entered
+// combat or muted leaks that state here, so set_zone_music's "one active stream" assumption breaks (a muted
+// module stays silent, an already-started one builds no new element). Reset to pristine before each test.
+beforeEach(() => music.reset_ambient_music_for_test())
 
 afterAll(() => {
   music.set_combat(false)

@@ -600,3 +600,36 @@ export function set_combat(active) {
   music_heal.play()
   kick()
 }
+
+/**
+ * TEST-ONLY: restore the module to its pristine boot state — no zone, no combat, nothing started, music
+ * unmuted. Every export above mutates process-wide module state that bun keeps for the whole run (one run =
+ * one process, all files share this module), and `started` cannot be cleared synchronously through the
+ * public API (engine_stop releases the pair on a FADE-length setTimeout the tests never advance). So a suite
+ * that armed a zone / entered combat / muted leaks that into every later file's fixture — the ambient-lifecycle
+ * suite's "one active stream after set_zone_music" assumption breaks when a prior file left user_muted true or a
+ * stream already started. This is the ONE home consumer suites call in beforeEach for cold state. Never shipped-
+ * code — production boots this module exactly once.
+ * @returns {void}
+ */
+export function reset_ambient_music_for_test() {
+  teardown_gen++ // invalidate any pending engine_stop release so it never resurrects a bed after this reset
+  retune_gen++ // invalidate any pending engine_retune swap for the same reason
+  roam = null
+  battle = null
+  duck_cur = 0
+  duck_target = 0
+  roam_cur = 1
+  roam_target = 1
+  battle_cur = 0
+  battle_target = 0
+  raf = null
+  last_tick = 0
+  started = false
+  user_muted = false
+  fight_music_muted = false
+  volume = DEFAULT_VOLUME
+  combat = false
+  self_armed = false
+  current_biome = null
+}
