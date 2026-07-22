@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { readFileSync } from 'node:fs'
+
 import { describe, expect, mock, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider } from 'react-i18next'
@@ -11,6 +13,8 @@ import { explorer_object_url } from './explorer_link'
 
 const crush_calls: any[] = []
 
+mock.module('virtual:item_catalog', () => ({ slugs: {} }))
+
 mock.module('../world-shell/crush_actions.js', () => ({
   crush_preview: async () => ({ removed: false, rows: [], coeff_milli: 100_000, estimated: false }),
   crush_item: async (args: any) => {
@@ -20,6 +24,7 @@ mock.module('../world-shell/crush_actions.js', () => ({
 }))
 
 const crush_menu = await import('./crush_menu')
+const crush_menu_source = readFileSync(new URL('./crush_menu.tsx', import.meta.url), 'utf8')
 
 const item = (item_category: string) => ({
   id: '0xitem',
@@ -173,5 +178,23 @@ describe('crush confirm-copy reframe (crush_is_zero_yield / crush_line_key / cru
     expect(crush_menu.crush_line_key?.(null)).toBe('crush.line') // still loading
     expect(crush_menu.crush_line_key?.({ removed: false, rows: [], estimated: true, failed: true })).toBe('crush.line')
     expect(crush_menu.crush_line_key?.({ removed: true, rows: [], estimated: false })).toBe('crush.line')
+  })
+})
+
+describe('crush dialog art and house controls (#486)', () => {
+  test('the dialog resolves authored art through the inventory grid icon home', () => {
+    const gear = item(ITEM_CATEGORY.HAT)
+    const authored_slugs = { [gear.name]: 'authored_hat_art' }
+
+    expect(crush_menu.crush_dialog_item_icon?.(gear, authored_slugs)).toBe('authored_hat_art')
+    expect(crush_menu_source).toContain('slug: crush_dialog_item_icon(item)')
+  })
+
+  test('cancel wears the gold outline and crush wears the destructive outline', () => {
+    expect(crush_menu.crush_cancel_button_class).toContain('btn-outline')
+    expect(crush_menu.crush_cancel_button_class).not.toContain('btn-outline--danger')
+    expect(crush_menu.crush_confirm_button_class).toContain('btn-outline--danger')
+    expect(crush_menu_source).toContain('className={crush_cancel_button_class}')
+    expect(crush_menu_source).toContain('className={crush_confirm_button_class}')
   })
 })

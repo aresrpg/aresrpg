@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Hammer, Loader2 } from 'lucide-react'
+import { slugs } from 'virtual:item_catalog'
 
 import { use_game_state } from '../game/store.js'
 import { use_toast } from '../toast'
@@ -22,6 +23,7 @@ import i18n from '../i18n'
 import { crush_preview, crush_item } from '../world-shell/crush_actions.js'
 import { humanize_tx_error } from '../game/core/abort_copy.js'
 import { ItemIcon } from '../game/screens/hud/ItemIcon.jsx'
+import { inventory_item_icon } from '../game/screens/hud/inventory-equip.js'
 import { project_inventory_context_actions } from '../game/screens/hud/inventory_context_actions'
 
 import { is_crushable } from './forge_eligibility'
@@ -49,6 +51,18 @@ type CrushPreview = {
   rows: { stat_key: string; min: number; max: number }[]
   estimated: boolean
 }
+
+/** The confirm card uses the exact authored-art resolver as the inventory grid. */
+export const crush_dialog_item_icon = (
+  item: any,
+  slug_by_name: Readonly<Record<string, string>> = slugs
+): string | null => inventory_item_icon(item, slug_by_name)
+
+// Always-loaded house button chrome: the modal is portalled outside inventory's lazy HUD stylesheet.
+export const crush_cancel_button_class =
+  'btn-outline px-4 py-2 text-[10px] tracking-[0.2em] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed'
+export const crush_confirm_button_class =
+  'btn-outline--danger px-4 py-2 text-[10px] tracking-[0.2em] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5'
 
 // One atomic action latch across every inventory surface. React state paints `busy`, but several confirm events
 // can enter before that state commits; keying the actual promise here makes those entries share ONE tx attempt
@@ -341,7 +355,7 @@ function CrushConfirmModal({ item, onClose }: { item: any; onClose: () => void }
             }}
           >
             <ItemIcon
-              item={{ icon: item.icon ?? item.item_type, id: item.id, category: item.item_category }}
+              item={{ slug: crush_dialog_item_icon(item), category: item.item_category }}
               alt={item.name}
               hd
               className="item-card__icon"
@@ -428,12 +442,12 @@ function CrushConfirmModal({ item, onClose }: { item: any; onClose: () => void }
             borderTop: `1px solid ${T.hair}`,
           }}
         >
-          <button type="button" className="hud-btn" onClick={onClose} disabled={busy}>
+          <button type="button" className={crush_cancel_button_class} onClick={onClose} disabled={busy}>
             {t('crush.cancel')}
           </button>
           <button
             type="button"
-            className="hud-btn hud-btn--accent"
+            className={crush_confirm_button_class}
             // Prominently KEPT but disabled for a removed item: the on-chain orphan-crush door is not live yet
             // (staged Move patch, next ceremony) — the RemovedItemNotice above says why.
             disabled={crush_confirm_disabled({ item, busy, preview })}
