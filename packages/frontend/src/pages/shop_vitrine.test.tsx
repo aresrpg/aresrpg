@@ -78,6 +78,39 @@ describe('shop render aliases and published media', () => {
     expect(shop_asset_url(pet?.entry.video)).toBe(`${CDN}/v1/blobs/by-quilt-id/${QUILT}/pet_bouloute_pet.webm`)
   })
 
+  test('Bara Hood recolor: the old vitality/wisdom keys still resolve, now through to the renamed obsidian/moonstone media', () => {
+    // seed-side shipped the recolor as NEW render files (unlike Lorito's label-only gem rename); the old
+    // canonical keys become compat aliases so a legacy Display name or a saved selection never dead-ends.
+    const legacy_vitality = resolve_shop_render('capuche_bara_vitality')
+    const legacy_wisdom = resolve_shop_render('capuche_bara_wisdom')
+    const legacy_bara_hood_vitality = resolve_shop_render('bara_hood_vitality')
+    const legacy_bara_hood_wisdom = resolve_shop_render('bara_hood_wisdom')
+
+    expect(legacy_vitality).toMatchObject({
+      identifier: 'capuche_bara_obsidian',
+      entry: { video: 'capuche_bara_obsidian_worn.webm' },
+    })
+    expect(legacy_wisdom).toMatchObject({
+      identifier: 'capuche_bara_moonstone',
+      entry: { video: 'capuche_bara_moonstone_worn.webm' },
+    })
+    expect(legacy_bara_hood_vitality?.identifier).toBe('capuche_bara_obsidian')
+    expect(legacy_bara_hood_wisdom?.identifier).toBe('capuche_bara_moonstone')
+
+    // The renamed identifiers resolve directly too (new inputs, not just old ones translating forward).
+    expect(resolve_shop_render('capuche_bara_obsidian')?.identifier).toBe('capuche_bara_obsidian')
+    expect(resolve_shop_render('capuche_bara_moonstone')?.identifier).toBe('capuche_bara_moonstone')
+    expect(resolve_shop_render('bara_hood_obsidian')?.identifier).toBe('capuche_bara_obsidian')
+    expect(resolve_shop_render('bara_hood_moonstone')?.identifier).toBe('capuche_bara_moonstone')
+
+    expect(shop_asset_url(legacy_vitality?.entry.video)).toBe(
+      `${CDN}/v1/blobs/by-quilt-id/${QUILT}/capuche_bara_obsidian_worn.webm`
+    )
+    expect(shop_asset_url(legacy_wisdom?.entry.video)).toBe(
+      `${CDN}/v1/blobs/by-quilt-id/${QUILT}/capuche_bara_moonstone_worn.webm`
+    )
+  })
+
   test('resolves corrected cloak names and canonical Lorito gemstone names', () => {
     expect(resolve_shop_render('Momaku Cloak')?.identifier).toBe('momaku')
     expect(resolve_shop_render('Enka Muru Cloak')?.identifier).toBe('enka_muru')

@@ -127,6 +127,27 @@ const WORN_SLOTS = /** @type {const} */ ({
 
 /** @typedef {{ appearance:string, variant:string|null }} WornModel */
 
+/** RECOLORED KHR material variants — the seed's stable slug/Display-name vocabulary (mirrored in
+ *  cosmetic_icons.js, never hand-edited here — it's a generator SSOT with its own coverage test) keeps
+ *  saying "vitality"/"wisdom" forever; only the material variant id baked into the SHIPPED .glb changes
+ *  when an item gets recolored. ONE mapping home for that translation, keyed by appearance so a renamed
+ *  word never leaks onto an unrelated cosmetic that still ships the old literal variant (e.g. cape_lorito's
+ *  own "vitality"/"wisdom" KHR variants are untouched by the Bara recolor — only their shop BADGE label
+ *  changed, see shop_gems.ts's LORITO_LEGACY_GEM_KEY). Old variant words are permanent valid INPUTS — a
+ *  legacy Display name or a saved selection is never a dead end, it just resolves through this map.
+ * @type {Record<string, Record<string, string>>} */
+const RECOLORED_VARIANTS = {
+  capuche_bara: { vitality: 'obsidian', wisdom: 'moonstone' },
+}
+
+/** Apply a recolor rename to a resolved model's variant, when this appearance/variant pair has one.
+ * Identity otherwise (including null/no-variant models). @param {WornModel|null} model @returns {WornModel|null} */
+function with_recolor(model) {
+  if (!model?.variant) return model
+  const renamed = RECOLORED_VARIANTS[model.appearance]?.[model.variant]
+  return renamed ? { ...model, variant: renamed } : model
+}
+
 /** Index `/v1/encyclopedia` item rows by their canonical ItemTemplate object id. Pure/testable; the map is the
  *  missing join between `Character.worn.*.template_id` (0x id) and the template Display name.
  * @param {any[]} items @returns {Map<string, any>} */
@@ -160,20 +181,16 @@ export function worn_model_of(item, templates = new Map()) {
   // Future/read-authoring shape: an explicit appearance is already the quilt key and needs no catalog join.
   const appearance = item.appearance ?? template?.appearance
   if (typeof appearance === 'string' && appearance)
-    return {
+    return with_recolor({
       appearance,
       variant: String(item.variant ?? item.skin ?? template?.variant ?? template?.skin ?? '') || null,
-    }
+    })
 
   // Stable legacy template identities resolve before mutable encyclopedia Display names.
   const legacy_model = Object.hasOwn(legacy_cosmetic_variants, template_id)
     ? legacy_cosmetic_variants[template_id]
     : null
-  if (legacy_model)
-    return {
-      appearance: legacy_model.appearance,
-      variant: legacy_model.variant,
-    }
+  if (legacy_model) return with_recolor({ appearance: legacy_model.appearance, variant: legacy_model.variant })
 
   // Back-compat test/admin shapes sometimes carry the seed slug in template_id. Feed it as `slug` for the
   // authored map.
@@ -184,9 +201,11 @@ export function worn_model_of(item, templates = new Map()) {
   const icon = direct ?? cosmetic_icon_of(template)
   if (!icon) return null
   const split = icon.lastIndexOf('-')
-  return split > 0
-    ? { appearance: icon.slice(0, split), variant: icon.slice(split + 1) || null }
-    : { appearance: icon, variant: null }
+  return with_recolor(
+    split > 0
+      ? { appearance: icon.slice(0, split), variant: icon.slice(split + 1) || null }
+      : { appearance: icon, variant: null }
+  )
 }
 
 /**

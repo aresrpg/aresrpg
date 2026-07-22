@@ -9,10 +9,12 @@
     "bara_hood": "capuche_bara",
     "bara_hood_amber": "capuche_bara_earth",
     "bara_hood_emerald": "capuche_bara_air",
+    "bara_hood_moonstone": "capuche_bara_moonstone",
+    "bara_hood_obsidian": "capuche_bara_obsidian",
     "bara_hood_ruby": "capuche_bara_fire",
     "bara_hood_sapphire": "capuche_bara_water",
-    "bara_hood_vitality": "capuche_bara_vitality",
-    "bara_hood_wisdom": "capuche_bara_wisdom",
+    "bara_hood_vitality": "capuche_bara_obsidian",
+    "bara_hood_wisdom": "capuche_bara_moonstone",
     "berserk": "berserk",
     "berserker_helm": "berserk",
     "bouloute": "pet_bouloute",
@@ -29,9 +31,11 @@
     "capuche_bara_air": "capuche_bara_air",
     "capuche_bara_earth": "capuche_bara_earth",
     "capuche_bara_fire": "capuche_bara_fire",
-    "capuche_bara_vitality": "capuche_bara_vitality",
+    "capuche_bara_moonstone": "capuche_bara_moonstone",
+    "capuche_bara_obsidian": "capuche_bara_obsidian",
+    "capuche_bara_vitality": "capuche_bara_obsidian",
     "capuche_bara_water": "capuche_bara_water",
-    "capuche_bara_wisdom": "capuche_bara_wisdom",
+    "capuche_bara_wisdom": "capuche_bara_moonstone",
     "capuche_mo": "capuche_mo",
     "casque_hayate": "casque_hayate",
     "chomperion": "pet_chomperion",
@@ -193,23 +197,23 @@
       "png_hd": "capuche_bara_fire_hd.png",
       "video": "capuche_bara_fire_worn.webm"
     },
-    "capuche_bara_vitality": {
+    "capuche_bara_moonstone": {
       "kind": "worn",
-      "png": "capuche_bara_vitality.png",
-      "png_hd": "capuche_bara_vitality_hd.png",
-      "video": "capuche_bara_vitality_worn.webm"
+      "png": "capuche_bara_moonstone.png",
+      "png_hd": "capuche_bara_moonstone_hd.png",
+      "video": "capuche_bara_moonstone_worn.webm"
+    },
+    "capuche_bara_obsidian": {
+      "kind": "worn",
+      "png": "capuche_bara_obsidian.png",
+      "png_hd": "capuche_bara_obsidian_hd.png",
+      "video": "capuche_bara_obsidian_worn.webm"
     },
     "capuche_bara_water": {
       "kind": "worn",
       "png": "capuche_bara_water.png",
       "png_hd": "capuche_bara_water_hd.png",
       "video": "capuche_bara_water_worn.webm"
-    },
-    "capuche_bara_wisdom": {
-      "kind": "worn",
-      "png": "capuche_bara_wisdom.png",
-      "png_hd": "capuche_bara_wisdom_hd.png",
-      "video": "capuche_bara_wisdom_worn.webm"
     },
     "capuche_mo": {
       "kind": "worn",

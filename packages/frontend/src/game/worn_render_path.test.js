@@ -225,4 +225,42 @@ describe('world worn-cosmetic state -> rig slots', () => {
     expect(resolved_icons).toHaveLength(10)
     expect(new Set(resolved_icons).size).toBe(10)
   })
+
+  test('Bara Hood recolor: legacy vitality/wisdom Display names resolve the RENAMED obsidian/moonstone KHR variant', () => {
+    // seed-side landed the recolored capuche_bara.glb (new obsidian/moonstone material variants); the seed
+    // slug and on-chain Display name never changed (no republish) — only the shipped GLB's variant id did.
+    // Already-minted "Bara Hood (Vitality)"/"(Wisdom)" items must keep resolving through cosmetic_icons.js's
+    // UNCHANGED annex, then translate through cosmetic_glb.js's RECOLORED_VARIANTS — the one mapping home.
+    const vitality_id = seed_manifest.items.capuche_bara_vitality
+    const wisdom_id = seed_manifest.items.capuche_bara_wisdom
+    const templates = new Map([
+      [vitality_id, { template_id: vitality_id, name: 'Bara Hood (Vitality)', item_type: 'hat' }],
+      [wisdom_id, { template_id: wisdom_id, name: 'Bara Hood (Wisdom)', item_type: 'hat' }],
+    ])
+    expect(worn_model_of({ template_id: vitality_id }, templates)).toEqual({
+      appearance: 'capuche_bara',
+      variant: 'obsidian',
+    })
+    expect(worn_model_of({ template_id: wisdom_id }, templates)).toEqual({
+      appearance: 'capuche_bara',
+      variant: 'moonstone',
+    })
+    // The end-to-end worn-slot path resolves the same recolored variant, not the raw seed word.
+    expect(resolve_worn_cosmetics({ worn: { hat: { template_id: vitality_id } } }, templates).head).toEqual({
+      url: 'https://cdn.test/cosmetics/capuche_bara.glb',
+      variant: 'obsidian',
+    })
+
+    // Scoping proof: cape_lorito's OWN "vitality"/"wisdom" KHR variants are a different appearance and stay
+    // literal — the recolor rename never leaks onto a cosmetic that merely shares a variant WORD.
+    const lorito_vitality_id = seed_manifest.items.cape_lorito_vitality
+    expect(
+      worn_model_of(
+        { template_id: lorito_vitality_id },
+        new Map([
+          [lorito_vitality_id, { template_id: lorito_vitality_id, name: 'Lorito Cloak (Vitality)', item_type: 'cloak' }],
+        ])
+      )
+    ).toEqual({ appearance: 'cape_lorito', variant: 'vitality' })
+  })
 })
