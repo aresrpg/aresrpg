@@ -113,7 +113,7 @@ describe('twin coherence — reduce(state,cmd) ≡ fold of its own events via ap
     // an empty state) is honest and load-bearing: the sim's placement events carry only a CELL, never a fighter's
     // health, so initial vitals come from the roster snapshot — exactly the V2 "boot IS catch-up" base+tail model.
     const capsule = JSON.parse(
-      readFileSync(join(FIXTURES_DIR, 'trap_path_truncation.json'), 'utf8'),
+      readFileSync(join(FIXTURES_DIR, 'trap_path_resumes.json'), 'utf8'),
     )
     const { ctx, state: initial } = boot(capsule)
 
