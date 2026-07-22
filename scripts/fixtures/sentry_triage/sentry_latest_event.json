@@ -1,0 +1,7 @@
+{
+  "eventID": "0123456789abcdef0123456789abcdef",
+  "groupID": "991234",
+  "dateCreated": "2026-07-22T03:04:05.000Z",
+  "fingerprints": ["rpc-indexer", "checkpoint-consume"],
+  "title": "RedisError: connection refused"
+}

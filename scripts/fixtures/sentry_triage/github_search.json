@@ -1,0 +1,18 @@
+{
+  "total_count": 1,
+  "incomplete_results": false,
+  "items": [
+    {
+      "number": 29,
+      "state": "closed",
+      "title": "RedisError: checkpoint::consume",
+      "body": "## Sentry issue\n\n- Event count: 100\n\n<!-- sentry_issue_id=991234 -->\n<!-- sentry_reported_count=100 -->",
+      "user": {
+        "login": "github-actions[bot]",
+        "type": "Bot"
+      },
+      "comments_url": "https://api.github.com/repos/sceat/aresrpg/issues/29/comments",
+      "html_url": "https://github.com/sceat/aresrpg/issues/29"
+    }
+  ]
+}
