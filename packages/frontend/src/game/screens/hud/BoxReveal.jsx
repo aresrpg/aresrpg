@@ -230,7 +230,9 @@ export function BoxReveal({ box, on_close, on_retry_blocked, on_retry_allowed })
     try {
       await claim_pet({ claim_id, rolled_template })
       end_claim(claim_id, {})
-      load_roster().catch(() => {}) // the minted pet flows back through the roster refetch
+      // #265: claim_pet already painted the pet through the inventory reducer door — this is the eventual-
+      // consistency reconcile (mirrors #39's predict+reconcile), never the only path the pet arrives by.
+      load_roster().catch(() => {})
       use_toast.getState().add(i18n.t('lootbox.collected', { name }), 'info')
       if (alive.current) set_collect_status('collected')
     } catch (e) {

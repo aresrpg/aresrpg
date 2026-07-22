@@ -47,6 +47,9 @@ import { run_tx, run_tx_random } from './tx.js'
 // kiosk — the SAME kiosk equip/dungeon/buy resolve — falling back (logged) to any personal kiosk.
 import { buy_destination_kiosk } from './kiosk_resolve.js'
 import { collect_one_claim, parse_open_box_receipt, resolve_box_template } from './lootbox_util.js'
+// #265 (second mint path): claim_pet IS a mint receipt — fold it through the SAME inventory reducer door the
+// fight-settle path uses, so the pet lands in the bag without a page refresh.
+import { reduce_minted_receipt } from './loot_inventory_effect.js'
 
 // The box detector lives in the import-free leaf (bun:test can't import THIS module — `../auth` touches `window`
 // at load); re-export so Inventory + shop keep one import home.
@@ -171,12 +174,22 @@ export async function claim_pet({ claim_id, rolled_template }) {
   }
   // Deterministic self-pay: run_tx throws the humanized abort on an executed failure; a pre-flight/gas throw is
   // re-routed through the SAME decoder. No auto-retry — the claim survives a failure, so the user may retry COLLECT.
+  // Identity captured BEFORE the tx (the fight-settle door's same race guard): a wallet switch mid-flight must
+  // never paint the new owner's bag with the pet THIS signer minted.
+  const owner_address = context.get_state().sui.selected_address
   let result, timing
   try {
     ;({ result, timing } = await run_tx('claim_pet', tx))
   } catch (e) {
     throw tx_error(e)
   }
+  // #265: the claim's own receipt already proves the minted pet (item::ItemMinted) — fold it into the bag NOW,
+  // through the ONE reducer door (loot_inventory_effect.js), instead of waiting on a caller's load_roster refetch.
+  await reduce_minted_receipt(
+    { receipt: result, kiosk_id: handle.kiosk_id, kiosk_cap_id: handle.personal_kiosk_cap_id },
+    owner_address,
+    { load_templates: get_template_map, reducer_door: context }
+  )
   return { digest: timing?.digest, created_pet_id: created_ids(result, '::item::Item')[0] ?? null }
 }
 
