@@ -10,11 +10,11 @@
 // spawned/despawned off the live equipped-pet read. Fixes a gap where an equipped pet did not appear
 // in the world — companion only, never a ridden mount.
 //
-// Appearance resolves catalog-first through data/pet_catalog.js: the live slug must name a published row whose
-// exact `glb` resolves through the mob quilt (the SAME published bytes mob rendering uses — mobs.js's
-// resolve_mob_visual_url convention). There is deliberately no cosmetic-path fallback. A missing row or null
-// GLB becomes a no-spawn verdict before this rig exists, so unavailable pets issue no model request at all
-// instead of blind-fetching a guaranteed 404 (#266).
+// The spawn/despawn DECISION (resolve_pet_companion) lives in pet_companion_resolver.js — split out so it
+// carries no @aresrpg/engine3 import and stays unit-testable without the private character GLB (issue #117).
+// Appearance resolves catalog-first (see that module's header for the #526 finding): a pool pet whose GLB
+// isn't published yet stays unspawned with a game_log line naming the slug, never a placeholder — the
+// no-silent-substitute law.
 //
 // The rig factory is a DELIBERATE parallel of mount_rig.js's GLB-cache/clone/scale/ground/dispose
 // lifecycle, not a shared import: mount_rig.js is also remote_players.js's rig (this lane's local-only,

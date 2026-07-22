@@ -1,55 +1,59 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Pet companion models are a runtime join: slug -> pet_catalog row -> the row's `glb` (a bare hy_<appearance>
-// reference-corpus id) resolved through the EXISTING published `mob` quilt (mobs.js's resolve_mob_visual_url
-// convention). These tests pin the published shape and the structural no-request miss path.
+// The pet catalog runtime loader — mirrors mob_catalog.js's own (untested-but-established) contract via its
+// sibling spell_corpus.test.js pattern: absence stays retryable, a load caches the published rows, the test
+// seam resets cleanly between cases.
+import { afterEach, describe, expect, test } from 'bun:test'
+import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
 
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
-import { reset_walrus_assets_for_test } from '@aresrpg/sdk/jobs'
+import { get_pet_catalog, load_pet_catalog, set_pet_catalog_for_test } from './pet_catalog.js'
 
-import { get_pet_catalog, get_pet_model_url, load_pet_catalog, set_pet_catalog_for_test } from './pet_catalog.js'
-
-// Every test here injects its own resolve_asset mock, so the shared Walrus resolver (packages/sdk/src/jobs.js)
-// is currently inert to this file — reset it anyway (SAME isolation as icon_slug_map.test.js / spell_corpus.test.js)
-// so a future test that falls back to the real walrus_asset_url default stays honest regardless of file order.
-beforeEach(() => reset_walrus_assets_for_test())
-afterEach(() => set_pet_catalog_for_test())
+afterEach(() => {
+  set_pet_catalog_for_test() // reset module state between tests
+  configure_walrus_assets({ classes: { pet_catalog: {} } }) // clear so the next test's manifest state is honest
+})
 
 describe('pet catalog runtime loader', () => {
-  test('fetches pet_catalog.json once and preserves the published rows', async () => {
-    const rows = { pet_bouloute: { appearance: 'bouloute', glb: 'hy_bouloute' } }
-    const resolve_asset = mock((url_class, filename) => `https://assets.test/${url_class}/${filename}`)
-    const fetch_impl = mock(async () => new Response(JSON.stringify(rows)))
-
-    await load_pet_catalog(resolve_asset, fetch_impl)
-    await load_pet_catalog(resolve_asset, fetch_impl)
-
-    expect(resolve_asset).toHaveBeenCalledTimes(1)
-    expect(resolve_asset).toHaveBeenCalledWith('pet_catalog', 'pet_catalog.json')
-    expect(fetch_impl).toHaveBeenCalledTimes(1)
-    expect(fetch_impl).toHaveBeenCalledWith('https://assets.test/pet_catalog/pet_catalog.json')
-    expect(get_pet_catalog()).toEqual(rows)
+  test('unpublished (no pet_catalog manifest row) -> no fetch, cache stays {}', async () => {
+    await expect(load_pet_catalog()).resolves.toBeUndefined()
+    expect(get_pet_catalog()).toEqual({})
   })
 
-  test('resolves a catalog row glb through the mob quilt, appending .glb like mob rendering does', () => {
-    const resolve_asset = mock(
-      (_url_class, filename) => `https://assets.test/v1/blobs/by-quilt-id/mob-test/${filename}`
-    )
-    set_pet_catalog_for_test({ pet_bouloute: { appearance: 'bouloute', glb: 'hy_bouloute' } })
-
-    expect(get_pet_model_url('pet_bouloute', resolve_asset)).toBe(
-      'https://assets.test/v1/blobs/by-quilt-id/mob-test/hy_bouloute.glb'
-    )
-    expect(resolve_asset).toHaveBeenCalledWith('mob', 'hy_bouloute.glb')
+  test('fetches pet_catalog.json once and caches the published rows', async () => {
+    configure_walrus_assets({ classes: { pet_catalog: { quilt: 'pet-test' } } })
+    const rows = { pet_aloe_gaia: { appearance: 'Armadillo_Aloe', glb: 'hy_armadillo_aloe' } }
+    const original_fetch = globalThis.fetch
+    let calls = 0
+    globalThis.fetch = (/** @type {any} */ url) => {
+      calls += 1
+      expect(url).toContain('/pet-test/pet_catalog.json')
+      return Promise.resolve(new Response(JSON.stringify(rows)))
+    }
+    try {
+      await load_pet_catalog()
+      await load_pet_catalog() // second call is a no-op (loaded latch)
+      expect(calls).toBe(1)
+      expect(get_pet_catalog()).toEqual(rows)
+    } finally {
+      globalThis.fetch = original_fetch
+    }
   })
 
-  test('absent rows and null glbs never consult the model URL resolver (pure defensiveness)', () => {
-    const resolve_asset = mock(() => 'must-not-resolve')
+  test('a failed fetch leaves the cache empty and retryable (never cached as truth)', async () => {
+    configure_walrus_assets({ classes: { pet_catalog: { quilt: 'pet-test' } } })
+    const original_fetch = globalThis.fetch
+    globalThis.fetch = () => Promise.resolve(new Response('', { status: 500 }))
+    try {
+      await load_pet_catalog()
+      expect(get_pet_catalog()).toEqual({})
+    } finally {
+      globalThis.fetch = original_fetch
+    }
+  })
 
-    set_pet_catalog_for_test({})
-    expect(get_pet_model_url('pet_bouloute', resolve_asset)).toBeNull()
-    set_pet_catalog_for_test({ pet_bouloute: { appearance: 'bouloute', glb: null } })
-    expect(get_pet_model_url('pet_bouloute', resolve_asset)).toBeNull()
-    expect(resolve_asset).not.toHaveBeenCalled()
+  test('set_pet_catalog_for_test seeds the cache; get_pet_catalog reads it synchronously', () => {
+    const rows = { pet_gaia: { appearance: 'Armadilla_Gaia', glb: 'hy_armadilla_gaia' } }
+    set_pet_catalog_for_test(rows)
+    expect(get_pet_catalog()).toBe(rows)
   })
 })

@@ -8,7 +8,6 @@ import { createRoot } from 'react-dom/client'
 
 import { App } from './app'
 import { load_asset_manifest, subscribe } from './asset_manifest'
-import { load_icon_slug_map } from './game/data/icon_slug_map.js'
 import { load_mob_catalog } from './game/data/mob_catalog.js'
 import { load_pet_catalog } from './game/data/pet_catalog.js'
 import { load_spell_corpus } from './game/data/spell_corpus.js'
@@ -39,30 +38,15 @@ await load_asset_manifest()
 // model on arrival (progressive migration; the manifest carries `mob_catalog` only after the seed leg publishes).
 void load_mob_catalog()
 
-// Pet companions resolve slug -> exact model filename through the published pet catalog, never by probing a
-// guessed cosmetic path. Non-blocking like the mob catalog: until it lands, equipped pets honestly stay absent;
-// missing rows/null GLBs remain no-spawn and therefore cannot generate model 404s (#266).
+// Equipped pets resolve their world-companion model through the published pet catalog first, falling back to
+// the mob catalog above for the pre-Hytale-33 pet generation (#526) — never the old cosmetic-quilt guess.
+// Non-blocking, same contract as load_mob_catalog: an equipped pet stays honestly unspawned until this lands.
 void load_pet_catalog()
 
 // The authored spell corpus (spell_corpus.json) rides the SAME runtime-asset seam — one pattern, two content
 // blobs. Non-blocking: the scene mounts while it resolves, the spell surfaces fill in on arrival. An absent
 // blob (open-source / pre-publish tree) degrades loudly to inert spell surfaces, never a crash (issue #106).
 void load_spell_corpus()
-
-// The icon slug recovery map (icon_slug_map.json) rides the SAME seam — chain_icon_slug (the one shared home
-// for encyclopedia/inventory/victory-card icon resolution) reads it map-first, falling back to its existing
-// slugify_name derivation while this resolves or if it never publishes (issue #160). Non-blocking; absence
-// degrades loudly, never a crash.
-void load_icon_slug_map()
-
-// The authored world corpus (world_corpus.json) rides the SAME seam — one pattern, three content blobs (#196).
-// It replaced the build-time seed/mainnet glob that logged `joined 0 worlds` in prod. DYNAMIC import (unlike
-// the two above): world_corpus.ts statically pulls the ~660KB seed_manifest, and it is consumed only by the
-// lazy encyclopedia + in-game dungeons modal — a static import here would hoist that weight into the entry
-// chunk. The split keeps it off first paint; the load still fires at boot so the corpus is warm on arrival.
-// Non-blocking: the encyclopedia's worlds tab re-renders when its /v1 list settles, joining this by-then
-// loaded corpus; an absent blob degrades loudly to an inert (zero-world) encyclopedia, never a crash (#106).
-void import('./pages/encyclopedia/world_corpus').then((module) => module.load_world_corpus())
 
 // ERRORS-ONLY error reporting (core/report.js) — inits ONLY when VITE_SENTRY_DSN is present (a hard no-op
 // otherwise, so a bare dev/local boot never phones home). No tracing, no session replay. It also wires the
