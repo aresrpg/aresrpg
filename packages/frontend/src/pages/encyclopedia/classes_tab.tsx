@@ -11,6 +11,8 @@ import { class_spells } from '../../game/screens/hud/fight-spells.js'
 import { seed_effect_parts, seed_effect_value, is_area_effect } from '../../game/screens/hud/seed-effect-line.js'
 import { EffectLine } from '../../game/screens/hud/EffectLine.jsx'
 
+import { AoeMiniGrid, aoe_grid_view } from './effect_aoe_grid'
+
 const DAMAGE_KINDS = new Set(['DAMAGE', 'APPLY_DOT', 'LIFE_STEAL', 'PUNISHMENT', 'CASTER_DAMAGE'])
 const ZONE_SHAPE_KEYS: Record<string, string> = {
   point: 'encyclopedia.aoe_shape.point',
@@ -31,6 +33,11 @@ const finite_number = (value: unknown) => {
   return Number.isFinite(number) ? number : null
 }
 
+const area_shape_label = (t: Translate, shape: unknown, size: number) => {
+  const key = ZONE_SHAPE_KEYS[String(shape).toLowerCase()]
+  return key ? String(t(key, { size })) : null
+}
+
 const crit_effect_for = (level: any, effect: any, index: number) => {
   const crit_effects = Array.isArray(level?.crit_effects) ? level.crit_effects : []
   const indexed = crit_effects[index]
@@ -38,10 +45,11 @@ const crit_effect_for = (level: any, effect: any, index: number) => {
   return crit_effects.find((candidate: any) => String(candidate.kind) === String(effect.kind)) ?? null
 }
 
-const encyclopedia_effect_parts = (t: Translate, effect: any, crit_effect: any) => {
-  if (!DAMAGE_KINDS.has(effect.kind)) return seed_effect_parts(t as any, effect)
+const encyclopedia_effect_parts = (t: Translate, effect: any, crit_effect: any, area_visualized: boolean) => {
+  const line_effect = area_visualized ? { ...effect, area_shape: 'POINT', area_size: 0 } : effect
+  if (!DAMAGE_KINDS.has(effect.kind)) return seed_effect_parts(t as any, line_effect)
   const critical_damage = crit_effect ? seed_effect_value(t as any, { ...effect, ...crit_effect }) : undefined
-  return seed_effect_parts(t as any, { ...effect, crit_base: critical_damage })
+  return seed_effect_parts(t as any, { ...line_effect, crit_base: critical_damage })
 }
 
 const spell_zone_labels = (t: Translate, level: any) => {
@@ -55,8 +63,8 @@ const spell_zone_labels = (t: Translate, level: any) => {
     if (shape == null || size == null) return []
     // A single-cell zone (size 0 — see is_area_effect) is never a real AoE, never shown.
     if (!is_area_effect(String(shape).toUpperCase(), size)) return []
-    const key = ZONE_SHAPE_KEYS[String(shape).toLowerCase()]
-    return key ? [String(t(key, { size }))] : []
+    const label = area_shape_label(t, shape, size)
+    return label ? [label] : []
   })
   return [...new Set(labels)]
 }
@@ -275,9 +283,27 @@ function SpellDetail({ spell }: { spell: any }) {
         <div className="flex flex-col gap-1">
           <span className="text-[8px] tracking-[0.2em] uppercase text-muted">{t('encyclopedia.effects')}</span>
           <div className="flex flex-col gap-1.5 py-1.5 pl-2.5" style={{ borderLeft: '2px solid var(--color-border)' }}>
-            {lvl.effects.map((eff: any, i: number) => (
-              <EffectLine key={i} view={encyclopedia_effect_parts(t as Translate, eff, crit_effect_for(lvl, eff, i))} />
-            ))}
+            {lvl.effects.map((eff: any, i: number) => {
+              const area_grid = aoe_grid_view(eff)
+              return (
+                <div key={i} className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <EffectLine
+                      view={encyclopedia_effect_parts(
+                        t as Translate,
+                        eff,
+                        crit_effect_for(lvl, eff, i),
+                        area_grid != null
+                      )}
+                    />
+                  </div>
+                  <AoeMiniGrid
+                    view={area_grid}
+                    label={area_shape_label(t as Translate, eff.area_shape, Number(eff.area_size ?? 0))}
+                  />
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

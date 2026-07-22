@@ -7,6 +7,7 @@ import { I18nextProvider, initReactI18next } from 'react-i18next'
 
 import en from '../../i18n/locales/en.json'
 import fr from '../../i18n/locales/fr.json'
+import { project_spell_effect } from '../../game/screens/hud/fight-spells-core.js'
 
 import { SpellDetail } from './classes_tab'
 
@@ -177,6 +178,8 @@ describe('SpellDetail effect zones', () => {
 
     expect(html).not.toContain('data-stat-chip="effect-zone"')
     expect(html).not.toContain('AREA OF EFFECT')
+    expect(html).not.toContain('data-aoe-grid')
+    expect(visible_text(html)).toContain('CIRCLE 2')
   })
 
   // RED-FIRST: a zone of size 0 is exactly the one target cell (never real AoE), so the
@@ -220,5 +223,43 @@ describe('SpellDetail effect zones', () => {
 
     expect(html).toContain('data-stat-chip="effect-zone"')
     expect(html).toContain('ENTIRE BOARD')
+  })
+})
+
+describe('SpellDetail AoE cell patterns', () => {
+  test('a CROSS 1 effect renders the exact canonical five-cell pattern, relative to the caster', () => {
+    const html = render_spell(
+      level_fixture({
+        effects: [project_spell_effect({ kind: 5, value: 7, chance: 100, area_shape: 2, area_size: 1 })],
+      })
+    )
+    const rendered_cells = new Set([...html.matchAll(/data-aoe-cell="([^"]+)"/g)].map((match) => match[1]))
+
+    expect(rendered_cells).toEqual(new Set(['0,-1', '-1,0', '0,0', '1,0', '0,1']))
+    expect(html).toContain('data-aoe-grid="true"')
+    expect(html).toContain('data-aoe-caster="-1,0"')
+    expect(visible_text(html)).not.toContain('CROSS 1')
+  })
+
+  test('an effect without an AoE renders no mini-grid', () => {
+    const html = render_spell(
+      level_fixture({
+        effects: [project_spell_effect({ kind: 5, value: 7, chance: 100, area_shape: 0, area_size: 0 })],
+      })
+    )
+
+    expect(html).not.toContain('data-aoe-grid')
+    expect(html).not.toContain('data-aoe-cell')
+  })
+
+  test('a shape whose canonical footprint is only one cell is not promoted to an AoE grid', () => {
+    const html = render_spell(
+      level_fixture({
+        effects: [project_spell_effect({ kind: 5, value: 7, chance: 100, area_shape: 7, area_size: 1 })],
+      })
+    )
+
+    expect(html).not.toContain('data-aoe-grid')
+    expect(visible_text(html)).toContain('CONE 1')
   })
 })
