@@ -50,7 +50,7 @@ function make_deps({ read_result, mint_impl = async () => {}, now } = {}) {
 describe('process_mint — the mint DECISION is the chain object alone (never a read-layer answer)', () => {
   it('null read (lag/burned/race) ⇒ RETRY, NEVER a mint against a blind read', async () => {
     const { minted, deps } = make_deps({ read_result: async () => null })
-    expect(await process_mint('0xR', deps)).toBe('retry')
+    expect(await process_mint('0xR', deps)).toEqual({ verdict: 'retry', result_id: '0xR' })
     expect(minted).toEqual([]) // the root fix: a flaky read composes NOTHING (the old code strand-skipped here)
   })
 
@@ -58,13 +58,13 @@ describe('process_mint — the mint DECISION is the chain object alone (never a 
     const { minted, deps } = make_deps({
       read_result: async () => opened([{ item_template: '0xA' }, { item_template: '0xB' }]),
     })
-    expect(await process_mint('0xR', deps)).toBe('minted')
+    expect(await process_mint('0xR', deps)).toEqual({ verdict: 'minted', result_id: '0xR', settlement: undefined })
     expect(minted).toEqual([{ id: '0xR', templates: ['0xA', '0xB'] }]) // ONE atomic mint_all_and_burn call
   })
 
   it('opened EMPTY husk (defeat / no-drop) ⇒ a BARE burn (templates []), verdict minted', async () => {
     const { minted, deps } = make_deps({ read_result: async () => opened([]) })
-    expect(await process_mint('0xR', deps)).toBe('minted')
+    expect(await process_mint('0xR', deps)).toEqual({ verdict: 'minted', result_id: '0xR', settlement: undefined })
     expect(minted).toEqual([{ id: '0xR', templates: [] }]) // burn_result alone — the 30 husks die in-sweep (seat ⑤)
   })
 
@@ -75,7 +75,7 @@ describe('process_mint — the mint DECISION is the chain object alone (never a 
         throw executed_error()
       },
     })
-    expect(await process_mint('0xR', deps)).toBe('latched')
+    expect(await process_mint('0xR', deps)).toEqual({ verdict: 'latched', result_id: '0xR' })
   })
 
   it('PRE-FLIGHT/network mint failure (no digest) ⇒ RETRY (re-armable)', async () => {
@@ -85,19 +85,48 @@ describe('process_mint — the mint DECISION is the chain object alone (never a 
         throw network_error()
       },
     })
-    expect(await process_mint('0xR', deps)).toBe('retry')
+    expect(await process_mint('0xR', deps)).toEqual({ verdict: 'retry', result_id: '0xR' })
   })
 })
 
 describe('enqueue + drain — IDEMPOTENT by construction (seat ⑴: mints once, a re-run composes ZERO)', () => {
+  it('RED #265: a successful mint yields its settlement outcome for the inventory reducer door', async () => {
+    const settlement = {
+      receipt: {
+        events: [
+          {
+            type: '0xares::item::ItemMinted',
+            parsedJson: { item: '0xloot', template: '0xtemplate', item_type: 'razkin_hide', amount: '1' },
+          },
+        ],
+      },
+      kiosk_id: '0xkiosk',
+      kiosk_cap_id: '0xcap',
+    }
+    const { deps } = make_deps({
+      read_result: async () => opened([{ item_template: '0xtemplate' }]),
+      mint_impl: async () => settlement,
+    })
+
+    const settled = enqueue_mint('0xR')
+    await drain_pending_mints(deps)
+
+    expect(await settled).toEqual({
+      verdict: 'minted',
+      result_id: '0xR',
+      settlement,
+    })
+  })
+
   it('a stranded result mints+burns exactly once; a re-enqueue (later sweep) is a NO-OP → ZERO recompose', async () => {
     const { minted, deps } = make_deps({ read_result: async () => opened([{ item_template: '0xA' }]) })
-    enqueue_mint('0xR')
+    const settled = enqueue_mint('0xR')
     await drain_pending_mints(deps)
     expect(minted.length).toBe(1)
     expect(pending_mint_status('0xR')).toBe('done') // burned tombstone
+    expect(await settled).toEqual({ verdict: 'minted', result_id: '0xR', settlement: undefined })
 
-    enqueue_mint('0xR') // a later boot sweep re-encounters the same id
+    void enqueue_mint('0xR') // a later boot sweep re-encounters the same id
     await drain_pending_mints(deps)
     expect(minted.length).toBe(1) // STILL one — the burned result never recomposes (idempotency)
   })
@@ -109,12 +138,13 @@ describe('enqueue + drain — IDEMPOTENT by construction (seat ⑴: mints once, 
         throw executed_error()
       },
     })
-    enqueue_mint('0xR')
+    const settled = enqueue_mint('0xR')
     await drain_pending_mints(deps)
     expect(minted.length).toBe(1) // one attempt, executed + failed
     expect(pending_mint_status('0xR')).toBe('latched')
+    expect(await settled).toEqual({ verdict: 'latched', result_id: '0xR' })
 
-    enqueue_mint('0xR')
+    void enqueue_mint('0xR')
     await drain_pending_mints(deps)
     expect(minted.length).toBe(1) // burn law: latched stays latched — ZERO recompose
   })
@@ -129,7 +159,7 @@ describe('THE DECOUPLED GATE (leg①): a null display read no longer strands the
       read_result: async () => (readable ? opened([{ item_template: '0xA' }]) : null),
       now,
     })
-    enqueue_mint('0xR')
+    const settled = enqueue_mint('0xR')
 
     await drain_pending_mints(deps) // the ~5s window: the object is not visible yet
     expect(minted).toEqual([]) // OLD behavior SKIPPED the mint here — the strand
@@ -140,6 +170,7 @@ describe('THE DECOUPLED GATE (leg①): a null display read no longer strands the
     await drain_pending_mints(deps)
     expect(minted).toEqual([{ id: '0xR', templates: ['0xA'] }]) // the decoupled retry mints once the read settles
     expect(pending_mint_status('0xR')).toBe('done')
+    expect(await settled).toEqual({ verdict: 'minted', result_id: '0xR', settlement: undefined })
   })
 })
 

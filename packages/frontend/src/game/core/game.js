@@ -92,6 +92,8 @@ export const INITIAL_STATE = {
     character_price_sui: null,
     /** @type {any[]} */
     items: [],
+    /** @type {Record<string, any>} receipt-proven loot rows held until a snapshot includes each exact id */
+    settled_item_floor: {},
     /** @type {any[]} */
     items_for_sale: [],
     /** @type {bigint | null} */

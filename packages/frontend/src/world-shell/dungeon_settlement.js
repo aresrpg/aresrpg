@@ -29,6 +29,7 @@ import { game_log } from '../core/log.js'
 
 import { settle_and_open, settle_run_and_open, open_outcome, mint_all_and_burn } from './dungeon_actions'
 import { loot_from_rolled } from './fight_result_receipt.js'
+import { mint_and_reduce_inventory as reduce_minted_inventory } from './loot_inventory_effect.js'
 import {
   pending_outcomes_for,
   invalidate_pending_outcomes,
@@ -58,10 +59,18 @@ async function read_result_with_retry(read_once, sleep = (ms) => new Promise((r)
  *  event lands. Mirrors loot_from_rolled's D53 degrade shape — resolve_loot_tile.js already renders the letter fallback. */
 const floor_loot = (units) => (units > 0 ? [{ item_type: '', name: '', amount: units }] : [])
 
-/** The pending-mints queue's deps: the chain-direct FightResult read (mint eligibility = chain truth, never a /v1 answer) + the atomic mint+burn composer, rebuilt per call for the memoized SDK's gRPC client. */
+/** Atomic mint+burn effect edge: async chain/template DATA returns as one typed inventory reducer INPUT. */
+const mint_and_reduce_inventory = (result_id, templates) =>
+  reduce_minted_inventory(result_id, templates, {
+    mint_and_burn: mint_all_and_burn,
+    load_templates: get_template_map,
+    reducer_door: context,
+  })
+
+/** The pending-mints queue's deps: the chain-direct FightResult read (mint eligibility = chain truth, never a /v1 answer) + the atomic mint+burn edge, rebuilt per call for the memoized SDK's gRPC client. */
 const mint_deps = () => ({
   read_result: async (/** @type {string} */ id) => get_fight_result({ grpc_client: (await get_sdk()).grpc_client })(id),
-  mint_and_burn: mint_all_and_burn,
+  mint_and_burn: mint_and_reduce_inventory,
 })
 
 /**
@@ -294,7 +303,7 @@ async function finish_result(
     // MINT DECOUPLED (stranded-loot fix, pending_mints.js): the mint rides the receipt-driven queue now, NOT the
     // bounded display read — the old `if (result)` gate SKIPPED mint_all_and_burn on a null ~5s read, stranding the
     // opened FightResult soulbound (a 41-deep stranded backlog observed live). Null result_id: the queue is the SINGLE owner (no double-fire).
-    enqueue_mint(result_id)
+    void enqueue_mint(result_id)
     void drain_pending_mints(mint_deps()).catch(() => {})
     setState({ result_id: null })
     // DISPLAY tail (best-effort, off the mint path now): rich loot lines + XP/HP/character read-fallbacks.
@@ -591,7 +600,7 @@ export async function mint_owed(store) {
   const result = await get_fight_result({ grpc_client: sdk.grpc_client })(result_id).catch(() => null)
   if (!result) return // read failed — leave result_id for the next press (never burn on a blind read)
   try {
-    await mint_all_and_burn(
+    await mint_and_reduce_inventory(
       result_id,
       (result.rolled ?? []).map((/** @type {any} */ e) => e.item_template)
     )

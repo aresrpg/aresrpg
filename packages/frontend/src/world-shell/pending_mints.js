@@ -34,12 +34,16 @@ import { is_preflight_failure } from './pending_outcomes.js'
 /**
  * @typedef {{ read_result: (id: string) => Promise<any>, mint_and_burn: (id: string, templates: string[]) =>
  *   Promise<any>, now?: () => number, schedule?: (fn: () => void, ms: number) => any }} MintDeps
+ * @typedef {{ verdict: 'minted', result_id: string, settlement: any } |
+ *   { verdict: 'latched', result_id: string }} MintOutcome
  */
 
-// result_id → { status, attempts, next_due, on_terminal }. status: 'pending' (queued/retrying) | 'done' (minted+
-// burned — terminal tombstone) | 'latched' (executed failure — terminal, burn-law). A terminal entry is a NO-OP
-// on re-enqueue (idempotency + the latch).
-/** @type {Map<string, { status: 'pending'|'done'|'latched', attempts: number, next_due: number, on_terminal: ((v: 'minted'|'latched') => void) | null }>} */
+// result_id → retry state + ONE settlement promise. The promise exposes the async mint outcome as DATA to the
+// enqueuing edge; no terminal callback ever writes a store. status: 'pending' (queued/retrying) | 'done'
+// (minted+burned terminal tombstone) |
+// 'latched' (executed failure — terminal, burn-law). A terminal entry is a NO-OP on re-enqueue.
+/** @type {Map<string, { status: 'pending'|'done'|'latched', attempts: number, next_due: number,
+ *   settled: Promise<MintOutcome>, settle: (outcome: MintOutcome) => void }>} */
 const queue = new Map()
 
 // The first retry is quick (read-after-write lag usually clears in ~1-2s), then backs off, capping at 30s. Past
@@ -61,29 +65,21 @@ let retry_timer = /** @type {any} */ (null)
 /**
  * Enqueue a result_id for its atomic mint+burn. IDEMPOTENT: an already-terminal id (`done`/`latched`) is a NO-OP
  * (the minted tombstone + the burn-law latch) — a later sweep re-enqueuing the same id NEVER recomposes. A still-
- * pending id keeps its retry state (an updated `on_terminal` is adopted). `on_terminal(verdict)` fires exactly
- * once when the id settles ('minted') or latches ('latched').
- * @param {string} result_id
- * @param {((verdict: 'minted'|'latched') => void) | null} [on_terminal]
+ * pending id keeps its retry state and returns the SAME promise. The promise resolves exactly once with the
+ * successful settlement receipt/handle or a latch verdict, including when a later backoff timer does the work.
+ * @param {string} result_id @returns {Promise<MintOutcome> | null}
  */
-export function enqueue_mint(result_id, on_terminal = null) {
-  if (!result_id) return
+export function enqueue_mint(result_id) {
+  if (!result_id) return null
   const entry = queue.get(result_id)
-  if (entry) {
-    if (entry.status === 'pending' && on_terminal) queue.set(result_id, { ...entry, on_terminal }) // adopt a fresher cb
-    return // pending keeps its attempts/next_due; terminal is a NO-OP (idempotency + latch)
-  }
-  queue.set(result_id, { status: 'pending', attempts: 0, next_due: 0, on_terminal })
-}
-
-/** Run a terminal callback (a side-notice — it must never break the queue). @param {any} cb @param {'minted'|'latched'} verdict */
-function run_callback(cb, verdict) {
-  if (cb)
-    try {
-      cb(verdict)
-    } catch {
-      /* swallowed — a terminal callback is a side-notice, never load-bearing for the queue */
-    }
+  if (entry) return entry.settled // pending keeps its retry state; terminal returns its already-settled outcome
+  /** @type {(outcome: MintOutcome) => void} */
+  let settle = () => {}
+  const settled = new Promise((resolve_settled) => {
+    settle = resolve_settled
+  })
+  queue.set(result_id, { status: 'pending', attempts: 0, next_due: 0, settled, settle })
+  return settled
 }
 
 /**
@@ -91,21 +87,22 @@ function run_callback(cb, verdict) {
  * ALONE (exists + opened), never a /v1 answer. A null/non-opened read RETRIES (never a mint composed against a
  * blind read); a landed read mints every rolled template + burns (an empty `rolled` composes a BARE burn — the
  * husk dies same-sweep). A mint failure classifies by the burn law: a digest/ambiguous LATCHES, pre-flight re-arms.
- * @param {string} result_id @param {MintDeps} deps @returns {Promise<'minted'|'latched'|'retry'>}
+ * @param {string} result_id @param {MintDeps} deps
+ * @returns {Promise<MintOutcome | { verdict: 'retry', result_id: string }>}
  */
 export async function process_mint(result_id, { read_result, mint_and_burn }) {
   const result = await read_result(result_id).catch(() => null)
   // null = read-after-write lag on an object we KNOW exists (or a burned-elsewhere race); non-opened = a misread
   // that must never compose a burn against the wrong object type. Either way RETRY — the chain gates every mint.
-  if (!result || !result.is_opened) return 'retry'
+  if (!result || !result.is_opened) return { verdict: 'retry', result_id }
   const templates = (result.rolled ?? []).map((/** @type {any} */ e) => e.item_template)
   try {
-    await mint_and_burn(result_id, templates) // atomic mint×N + burn; [] ⇒ a bare burn (empty/defeat husk)
-    return 'minted'
+    const settlement = await mint_and_burn(result_id, templates) // atomic mint×N + burn; [] ⇒ bare burn
+    return { verdict: 'minted', result_id, settlement }
   } catch (error) {
     // BURN LAW: a digest (executed) or anything ambiguous ⇒ LATCH (never re-fire spent gas); only a positively
     // pre-flight/network failure re-arms for a retry. is_preflight_failure rounds toward latching on doubt.
-    return is_preflight_failure(error) ? 'retry' : 'latched'
+    return is_preflight_failure(error) ? { verdict: 'retry', result_id } : { verdict: 'latched', result_id }
   }
 }
 
@@ -126,15 +123,15 @@ export function drain_pending_mints(deps) {
         progressed = false
         for (const [result_id, entry] of [...queue]) {
           if (entry.status !== 'pending' || entry.next_due > now()) continue
-          const verdict = await process_mint(result_id, deps)
-          if (verdict === 'minted') {
-            queue.set(result_id, { ...entry, status: 'done', on_terminal: null }) // burned tombstone (idempotency)
-            run_callback(entry.on_terminal, 'minted')
+          const outcome = await process_mint(result_id, deps)
+          if (outcome.verdict === 'minted') {
+            queue.set(result_id, { ...entry, status: 'done' }) // burned tombstone (idempotency)
+            entry.settle(outcome) // resolve DATA only — never a terminal store-writing callback
             progressed = true
-          } else if (verdict === 'latched') {
-            queue.set(result_id, { ...entry, status: 'latched', on_terminal: null }) // burn law: never recomposed
+          } else if (outcome.verdict === 'latched') {
+            queue.set(result_id, { ...entry, status: 'latched' }) // burn law: never recomposed
             game_log('dungeon', 'pending-mint LATCHED (executed failure — never auto-recomposed):', result_id)
-            run_callback(entry.on_terminal, 'latched')
+            entry.settle(outcome)
             progressed = true
           } else {
             const attempts = entry.attempts + 1 // read-after-write lag → retry with backoff, never a silent give-up
@@ -196,7 +193,7 @@ export async function sweep_stranded_results(address, deps) {
     const entry = queue.get(id)
     return !entry || entry.status === 'pending'
   })
-  for (const id of fresh) enqueue_mint(id)
+  for (const id of fresh) void enqueue_mint(id)
   await drain_pending_mints(deps)
   const recovered = fresh.filter((/** @type {string} */ id) => queue.get(id)?.status === 'done').length
   if (recovered > 0) deps.notify(recovered) // ONE quiet summary — never per-result spam

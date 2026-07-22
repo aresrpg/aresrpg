@@ -120,6 +120,32 @@ describe('op coverage', () => {
     expect(gone.items).toHaveLength(0)
   })
 
+  test('an explicit remove also clears a settled-loot floor so no later snapshot resurrects it', () => {
+    const loot = { id: '0xloot', amount: 1 }
+    const settled = reduce_sui_data(base(), { kind: 'receipt_patch', op: 'settled_loot', rows: [loot] })
+    const removed = reduce_sui_data(settled, { kind: 'receipt_patch', op: 'remove_items', ids: ['0xloot'] })
+    const lagged = reduce_sui_data(removed, { kind: 'snapshot', items: [] })
+    expect(lagged.items).toEqual([])
+    expect(lagged.settled_item_floor).toEqual({})
+  })
+
+  test('a settled stack decrement updates its floor and clears it at zero', () => {
+    const loot = { id: '0xloot', amount: 2 }
+    const settled = reduce_sui_data(base(), { kind: 'receipt_patch', op: 'settled_loot', rows: [loot] })
+    const one = reduce_sui_data(settled, { kind: 'receipt_patch', op: 'decrement_item', id: '0xloot', units: 1 })
+    const lagged = reduce_sui_data(one, { kind: 'snapshot', items: [] })
+    expect(lagged.items).toEqual([{ id: '0xloot', amount: 1 }])
+
+    const gone = reduce_sui_data(lagged, {
+      kind: 'receipt_patch',
+      op: 'decrement_item',
+      id: '0xloot',
+      units: 1,
+    })
+    expect(gone.items).toEqual([])
+    expect(gone.settled_item_floor).toEqual({})
+  })
+
   test('set_ghost / clear_ghosts manage a single ghost row without touching real characters', () => {
     const start = base({ characters: [{ id: '0xreal', experience: 10 }] })
     const g1 = reduce_sui_data(start, { kind: 'receipt_patch', op: 'set_ghost', ghost: { id: 'ghost:Alice' } })

@@ -13,7 +13,8 @@
 //                     just-bought/owned item must never vanish it (merge_pending_buys re-adds the pending
 //                     row until the id appears) — ONLY an explicit receipt delta removes an item.
 //   'receipt_patch' — a delta PROVEN by the client's own signed tx: a fight settlement (HP/XP → RAISES the
-//                     per-character XP floor), an equip/consume/buy bag delta, or the create ghost row.
+//                     per-character XP floor; ItemMinted rows → a bag floor), an equip/consume/buy bag delta,
+//                     or the create ghost row.
 //                     Authoritative — folds against the latest state, never a stale captured array.
 //   'enrichment'    — a chain-direct cosmetics/stats read (colors, vitality) that must NEVER clobber a
 //                     newer receipt-proven fact (XP / level / current HP); it carries the immutable base.
@@ -67,12 +68,34 @@ function drop_deleted(characters, deleted_ids) {
   return characters.some((c) => deleted_ids[c?.id]) ? characters.filter((c) => !deleted_ids[c?.id]) : characters
 }
 
-/** Snapshot: floor characters, run items through the pending ledgers, spread flags. */
+/**
+ * Hold receipt-proven settled loot until a snapshot contains the same object id. This floor is reducer state,
+ * not a callback-owned side store: an omitted row proves only indexer lag, while presence hands authority back
+ * to the snapshot and drains the floor entry.
+ * @param {any[]} items @param {Record<string, any>} [settled_item_floor]
+ */
+function floor_settled_items(items, settled_item_floor) {
+  const floor = settled_item_floor ?? {}
+  const entries = Object.entries(floor)
+  if (!entries.length) return { items, settled_item_floor: floor }
+  const have = new Set((items ?? []).map((/** @type {any} */ item) => item?.id))
+  const pending = entries.filter(([id]) => !have.has(id))
+  return {
+    items: pending.length ? [...(items ?? []), ...pending.map(([, row]) => row)] : items,
+    settled_item_floor: Object.fromEntries(pending),
+  }
+}
+
+/** Snapshot: floor characters/items, run items through the pending ledgers, spread flags. */
 function merge_snapshot(sui, { kind, characters, items, ...flags }) {
   const next = { ...sui, ...flags }
   if (characters) next.characters = floor_characters(drop_deleted(characters, sui.deleted_ids), sui.xp_floor)
   // KEEP-on-omit: mask consumed units, then re-add any pending-buy the feed hasn't projected yet.
-  if (items) next.items = merge_pending_buys(mask_pending_items(items))
+  if (items) {
+    const floored = floor_settled_items(merge_pending_buys(mask_pending_items(items)), sui.settled_item_floor)
+    next.items = floored.items
+    next.settled_item_floor = floored.settled_item_floor
+  }
   return next
 }
 
@@ -81,6 +104,11 @@ function merge_default(sui, payload) {
   const next = { ...sui, ...payload }
   if (payload.characters)
     next.characters = floor_characters(drop_deleted(payload.characters, sui.deleted_ids), sui.xp_floor)
+  if (payload.items) {
+    const floored = floor_settled_items(payload.items, sui.settled_item_floor)
+    next.items = floored.items
+    next.settled_item_floor = floored.settled_item_floor
+  }
   return next
 }
 
@@ -119,6 +147,55 @@ function apply_equip_worn(sui, { character_id, set = {}, clear = [] }) {
   return { ...sui, characters }
 }
 
+/** Paint receipt-created loot and hold its exact ids until an authoritative snapshot contains them.
+ * @param {any} sui @param {any[]} rows */
+function apply_settled_loot(sui, rows) {
+  const valid = (rows ?? []).filter((/** @type {any} */ row) => row?.id)
+  if (!valid.length) return sui
+  const have = new Set(sui.items.map((/** @type {any} */ item) => item?.id))
+  const add = valid.filter((/** @type {any} */ row) => !have.has(row.id))
+  const settled_item_floor = valid.reduce(
+    (floor, /** @type {any} */ row) => ({ ...floor, [row.id]: row }),
+    sui.settled_item_floor ?? {}
+  )
+  return { ...sui, items: add.length ? [...sui.items, ...add] : sui.items, settled_item_floor }
+}
+
+/** Remove receipt-proven ids from both the rendered bag and the settled-loot floor.
+ * @param {any} sui @param {string[]} ids */
+function remove_receipt_items(sui, ids) {
+  const drop = new Set(ids ?? [])
+  if (!drop.size) return sui
+  const items = sui.items.filter((/** @type {any} */ item) => !drop.has(item?.id))
+  const settled_item_floor = Object.fromEntries(
+    Object.entries(sui.settled_item_floor ?? {}).filter(([id]) => !drop.has(id))
+  )
+  const floor_changed = Object.keys(settled_item_floor).length !== Object.keys(sui.settled_item_floor ?? {}).length
+  return items.length === sui.items.length && !floor_changed ? sui : { ...sui, items, settled_item_floor }
+}
+
+/** Decrement the latest bag row and mirror the same fact into its settled-loot floor entry, when present.
+ * @param {any} sui @param {{ id: string, units?: number }} payload */
+function decrement_receipt_item(sui, { id, units = 1 }) {
+  const target = sui.items.find((/** @type {any} */ item) => item?.id === id)
+  if (!target) return sui
+  const amount = (Number(target.amount) || 1) - units
+  const items =
+    amount > 0
+      ? sui.items.map((/** @type {any} */ item) => (item?.id === id ? { ...item, amount } : item))
+      : sui.items.filter((/** @type {any} */ item) => item?.id !== id)
+  const floor_row = sui.settled_item_floor?.[id]
+  const settled_item_floor = floor_row
+    ? Object.fromEntries(
+        Object.entries(sui.settled_item_floor).flatMap(([floor_id, row]) => {
+          if (floor_id !== id) return [[floor_id, row]]
+          return amount > 0 ? [[floor_id, { ...row, amount }]] : []
+        })
+      )
+    : sui.settled_item_floor
+  return { ...sui, items, settled_item_floor }
+}
+
 /** A receipt-proven delta from the client's OWN tx — folds against the latest state, raises the XP floor. */
 function apply_receipt_patch(sui, payload) {
   switch (payload.op) {
@@ -143,24 +220,18 @@ function apply_receipt_patch(sui, payload) {
       const add = rows.filter((/** @type {any} */ i) => i?.id && !have.has(i.id))
       return add.length ? { ...sui, items: [...sui.items, ...add] } : sui
     }
+    case 'settled_loot': {
+      // The mint receipt proves these exact object ids exist in this bag. Paint against the LATEST items slice
+      // and record a pure reducer-owned floor so an indexer-lagged full snapshot cannot erase them afterward.
+      return apply_settled_loot(sui, payload.rows)
+    }
     case 'remove_items': {
       // Equip / consume-to-zero: drop the ids from the LATEST bag (never a stale captured array — that WAS
       // the lost-update race). KEEP-on-omit does not apply here: a receipt is explicit proof the item left.
-      const drop = new Set(payload.ids ?? [])
-      if (!drop.size) return sui
-      const items = sui.items.filter((/** @type {any} */ i) => !drop.has(i?.id))
-      return items.length === sui.items.length ? sui : { ...sui, items }
+      return remove_receipt_items(sui, payload.ids)
     }
     case 'decrement_item': {
-      const { id, units = 1 } = payload
-      const target = sui.items.find((/** @type {any} */ i) => i?.id === id)
-      if (!target) return sui
-      const amount = (Number(target.amount) || 1) - units
-      const items =
-        amount > 0
-          ? sui.items.map((/** @type {any} */ i) => (i?.id === id ? { ...i, amount } : i))
-          : sui.items.filter((/** @type {any} */ i) => i?.id !== id)
-      return { ...sui, items }
+      return decrement_receipt_item(sui, payload)
     }
     case 'equip_worn':
       return apply_equip_worn(sui, payload)

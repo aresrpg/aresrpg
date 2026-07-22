@@ -43,6 +43,7 @@ export default function sui_session() {
               selected_address: null,
               characters: [],
               items: [],
+              settled_item_floor: {},
               loaded: false,
               load_error: null,
               // Drop the receipt-proven XP floors — the next account's roster starts unbound.

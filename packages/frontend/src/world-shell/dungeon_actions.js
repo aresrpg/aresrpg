@@ -599,6 +599,8 @@ export async function open_outcome(/** @type {string} */ outcome_id, /** @type {
  * degraded `get_fight_result` read could leave `all_minted` vacuously true and fire the burn against a full
  * result. Empty `templates` composes a bare burn (a defeat, or a result already emptied by a prior attempt).
  * @param {string} result_id @param {string[]} templates the DISTINCT rolled item_template ids to mint
+ * @returns {Promise<{ receipt: any, kiosk_id: string, kiosk_cap_id: string }>} the authoritative mint receipt
+ *   plus the exact destination handle needed to hydrate its created Item rows
  */
 export async function mint_all_and_burn(/** @type {string} */ result_id, /** @type {string[]} */ templates) {
   const { address } = use_auth.getState()
@@ -620,5 +622,12 @@ export async function mint_all_and_burn(/** @type {string} */ result_id, /** @ty
       tx,
     })
   tx = burn_result_ptb(ctx)({ result_id, tx })
-  return sign(tx, i18n.t('dungeons.action_burn'), true) // background — the card is the surface, never its own toast
+  const receipt = await sign(tx, i18n.t('dungeons.action_burn'), true)
+  // The caller feeds this async outcome back through the inventory reducer door. Threading the resolved kiosk
+  // handle avoids a second read and makes each receipt-created row immediately usable, not merely visible.
+  return {
+    receipt,
+    kiosk_id: handle.kiosk_id,
+    kiosk_cap_id: handle.personal_kiosk_cap_id,
+  }
 }
