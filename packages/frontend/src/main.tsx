@@ -10,6 +10,7 @@ import { App } from './app'
 import { load_asset_manifest, subscribe } from './asset_manifest'
 import { load_icon_slug_map } from './game/data/icon_slug_map.js'
 import { load_mob_catalog } from './game/data/mob_catalog.js'
+import { load_pet_catalog } from './game/data/pet_catalog.js'
 import { load_spell_corpus } from './game/data/spell_corpus.js'
 import { register_service_worker } from './sw'
 import './i18n'
@@ -37,6 +38,11 @@ await load_asset_manifest()
 // off the just-seeded manifest. Non-blocking: the world mounts while it resolves, mobs pop from debug-cube to
 // model on arrival (progressive migration; the manifest carries `mob_catalog` only after the seed leg publishes).
 void load_mob_catalog()
+
+// Pet companions resolve slug -> exact model filename through the published pet catalog, never by probing a
+// guessed cosmetic path. Non-blocking like the mob catalog: until it lands, equipped pets honestly stay absent;
+// missing rows/null GLBs remain no-spawn and therefore cannot generate model 404s (#266).
+void load_pet_catalog()
 
 // The authored spell corpus (spell_corpus.json) rides the SAME runtime-asset seam — one pattern, two content
 // blobs. Non-blocking: the scene mounts while it resolves, the spell surfaces fill in on arrival. An absent

@@ -10,10 +10,11 @@
 // spawned/despawned off the live equipped-pet read. Fixes a gap where an equipped pet did not appear
 // in the world — companion only, never a ridden mount.
 //
-// Appearance resolves through cosmetic_glb.js's cosmetic_glb_url — the SAME one resolution home worn
-// cosmetics + mounts use ("the one resolution home for both conventions", cosmetic_glb.js's own header).
-// A pool pet whose GLB isn't uploaded yet 404s at load exactly like any other missing worn/mount asset
-// (game_log below, never a placeholder — the no-silent-substitute law).
+// Appearance resolves catalog-first through data/pet_catalog.js: the live slug must name a published row whose
+// exact `glb` resolves through the mob quilt (the SAME published bytes mob rendering uses — mobs.js's
+// resolve_mob_visual_url convention). There is deliberately no cosmetic-path fallback. A missing row or null
+// GLB becomes a no-spawn verdict before this rig exists, so unavailable pets issue no model request at all
+// instead of blind-fetching a guaranteed 404 (#266).
 //
 // The rig factory is a DELIBERATE parallel of mount_rig.js's GLB-cache/clone/scale/ground/dispose
 // lifecycle, not a shared import: mount_rig.js is also remote_players.js's rig (this lane's local-only,
@@ -29,41 +30,15 @@ import { clone as clone_skinned } from 'three/examples/jsm/utils/SkeletonUtils.j
 import { apply_avatar_material, get_glb_loader } from '@aresrpg/engine3/player'
 import { canonical_walrus_asset_url } from '@aresrpg/sdk/jobs'
 
-import { cosmetic_glb_url } from './cosmetic_glb.js'
 import { game_log } from '../core/log.js'
 
-// Call-time read on purpose (cosmetic_glb.js's law): vite statically inlines `import.meta.env.DEV`; bun
-// tests flip `process.env.DEV` per-call instead of racing the process-global module registry.
-const is_dev = () => Boolean(import.meta.env.DEV)
+export { resolve_pet_companion } from './pet_companion_resolver.js'
 
 const COMPANION_HEIGHT = 0.7 // world blocks — a small trailing critter (player avatar ruler = 1.5 blocks)
 const FOLLOW_BEHIND = 1.4 // blocks behind the player along facing
 const FOLLOW_SIDE = 0.6 // blocks to the player's right — keeps it out of the dead-behind camera blind spot
 const EASE_LAMBDA = 8 // position/yaw ease — matches remote_players.js LERP_LAMBDA / mount_rig.js BLEND_RATE
 const SPEED_EPS = 0.15 // m/s under which the companion keeps its last facing (no idle jitter)
-
-/**
- * Pure decision helper — equipped-pet state -> spawn/despawn + appearance verdict. DEV `?pet=<slug>` /
- * `window.__force_pet` forces a slug (QA path, mirrors resolve_mount's `?mount=`), else the live
- * `pet_equipped` + sibling `pet.slug` (character_pet_projection's honest identity-snapshot-gap contract:
- * `pet_equipped: true` with a null `pet` must never spawn a placeholder). Pure over the supplied
- * character; safe on null/partial input.
- * @param {any} character the live selected character (carries pet/pet_equipped from the /v1 read-model)
- * @param {string} [search] the URL query string (defaults to the live location — injectable for tests)
- * @returns {{ spawn: boolean, glb_url: string | null, key: string | null }}
- */
-export function resolve_pet_companion(character, search) {
-  if (is_dev()) {
-    const query = search ?? (typeof location !== 'undefined' ? location.search : '')
-    const forced = typeof window !== 'undefined' ? /** @type {any} */ (window).__force_pet : null
-    const slug = (forced && String(forced)) || new URLSearchParams(query).get('pet')
-    if (slug) return { spawn: true, glb_url: cosmetic_glb_url(slug), key: slug }
-  }
-  const equipped = character?.pet_equipped === true
-  const slug = equipped && typeof character?.pet?.slug === 'string' ? character.pet.slug : ''
-  if (!slug) return { spawn: false, glb_url: null, key: null }
-  return { spawn: true, glb_url: cosmetic_glb_url(slug), key: slug }
-}
 
 /** @type {Map<string, Promise<any>>} fetch+parse each unique pet GLB ONCE; clone per rig. */
 const _cache = new Map()
