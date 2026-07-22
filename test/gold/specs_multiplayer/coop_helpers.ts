@@ -6,7 +6,6 @@
 // the four private idioms this file twins (drafted_cell · placement pick+ready · stacked casts · end turn) are
 // deliberate thin copies — the SMALLEST HONEST BRIDGE is a one-word `export` on each in fight_mouse_helpers.ts,
 // owned by the test-infra lane (named in the lane report), after which these twins collapse to imports.
-import { expect, type Page } from '@playwright/test'
 
 import { CLICK_POLICY } from '../specs_anchor/click_verify'
 import {
@@ -17,6 +16,8 @@ import {
   snapshot,
   type Cell,
 } from '../specs_anchor/fight_mouse_helpers'
+
+import { expect, type Page } from '@playwright/test'
 
 export type GoldWallet = { address: string; privkey: string }
 export type FighterRow = {
@@ -431,4 +432,35 @@ export async function assert_victory_and_continue(page: Page): Promise<bigint> {
   await expect(page.locator('.hud-fightctl')).toHaveCount(0, { timeout: 45_000 })
   await expect(page.locator('.gw-selfplate')).toBeVisible()
   return BigInt(parsed![1])
+}
+
+/** CHAIN-TRUTH EXPORT (the coop desync oracle, ruled 2026-07-22): one client's settled COMMITTED board,
+ *  serialized comparable. Two clients that folded the same journal MUST export deep-equal values here.
+ *  Per-client channels stay out by design: my_entity_id, prediction ap/mp, presented paces, trap overlays. */
+export async function chain_truth_export(page: Page): Promise<unknown> {
+  return page.evaluate(async () => {
+    const { fight_store, engine_view_of } = await import('/@id/@aresrpg/fight')
+    const view = engine_view_of(fight_store.getState())
+    if (!view?.fighters) return null
+    return [...view.fighters.values()]
+      .map((row: any) => ({
+        id: String(row.id),
+        owner: row.owner == null ? null : String(row.owner),
+        variant: row.variant == null ? null : String(row.variant),
+        team: Number(row.team),
+        cell: row.cell == null ? null : { x: Number(row.cell.x), y: Number(row.cell.y) },
+        hp: Number(row.committed_health),
+        alive: !!row.committed_alive,
+        hp_max: Number(row.health_max),
+        effects: (row.effects ?? []).map((effect: any) => ({
+          kind: effect.kind == null ? null : Number(effect.kind),
+          remaining_turns: effect.remaining_turns == null ? null : Number(effect.remaining_turns),
+          element: effect.element == null ? null : Number(effect.element),
+          value: effect.value == null ? null : Number(effect.value),
+          stat: effect.stat == null ? null : Number(effect.stat),
+          chance: effect.chance == null ? null : Number(effect.chance),
+        })),
+      }))
+      .sort((left: any, right: any) => left.id.localeCompare(right.id))
+  })
 }

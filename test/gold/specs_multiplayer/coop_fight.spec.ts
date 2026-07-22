@@ -16,7 +16,7 @@
 // LOOT NOTE: the multi_turn fixture authors an EMPTY loot table (fight_fixtures.mjs mints no MobLootEntry), so
 // the per-seat loot leg is proven VACUOUSLY (group checklist length 0 asserted on-chain + on the deserter's
 // outcome object). A loot-carrying coop fixture is a named rider in the lane report.
-import { expect, test, type BrowserContext, type Page } from '@playwright/test'
+import fs from 'node:fs'
 
 import { get_fields, make_client, owned_by_type, submit } from '../../localnet/bots/framework/sui.js'
 import { signerOf } from '../lib_gold.mjs'
@@ -34,6 +34,7 @@ import {
   assert_victory_and_continue,
   boot_roster_lite,
   boot_world_lite,
+  chain_truth_export,
   discover_fights,
   fighters_snapshot,
   join_fight_by_door,
@@ -52,6 +53,8 @@ import {
   visibility_fold,
   xp_share_kernel,
 } from './coop_kernel.mjs'
+
+import { expect, test, type BrowserContext, type Page } from '@playwright/test'
 
 // ── manifest plumbing (tolerant unwrap of the chain JSON view — the marketplace idiom) ──────────────────────
 
@@ -248,6 +251,20 @@ test.describe('gold localnet — coop public fight (two joiners, one deserter, o
         )
         .toEqual({ agreed: true, dropped: true })
 
+      // ── 7c · THE EXPORT ORACLE (ruled 07-22): every client's COMMITTED board, exported and diffed —
+      //    clients that folded the same journal MUST serialize identically. Divergence here is the
+      //    cleanest desync proof the product can emit; the poll only absorbs presentation skew.
+      await expect
+        .poll(
+          async () => {
+            const exports = await Promise.all(live().map((seat) => chain_truth_export(seat.page)))
+            const [first, ...rest] = exports.map((board) => JSON.stringify(board))
+            return { seats: exports.length, diverged: rest.filter((board) => board !== first).length }
+          },
+          { timeout: 60_000, message: 'the three clients never converged on one committed board after round 1' }
+        )
+        .toEqual({ seats: 3, diverged: 0 })
+
       // ── 8 · acceptance (b): D deserts mid-fight — the crank must carry the fight past the dead seat ──────
       const [, , context_d] = contexts
       await context_d.close()
@@ -275,6 +292,29 @@ test.describe('gold localnet — coop public fight (two joiners, one deserter, o
           }
         )
         .toBe(true)
+
+      // ── 8b · EXPORT ORACLE, post-desertion: the two survivors re-converge, and BOTH exports land on disk
+      //    (test/gold/out/coop_export_{a,b}.json) so a human can diff exactly what each client believed.
+      await expect
+        .poll(
+          async () => {
+            const [board_a, board_b] = await Promise.all(live().map((seat) => chain_truth_export(seat.page)))
+            return JSON.stringify(board_a) === JSON.stringify(board_b)
+          },
+          { timeout: 60_000, message: 'survivor boards never re-converged after the desertion' }
+        )
+        .toBe(true)
+      {
+        const [board_a, board_b] = await Promise.all(live().map((seat) => chain_truth_export(seat.page)))
+        const out_dir = new URL('../out/', import.meta.url)
+        fs.mkdirSync(out_dir, { recursive: true })
+        fs.writeFileSync(new URL('coop_export_a.json', out_dir), JSON.stringify(board_a, null, 2))
+        fs.writeFileSync(new URL('coop_export_b.json', out_dir), JSON.stringify(board_b, null, 2))
+        expect(
+          board_b,
+          'the survivors exported DIFFERENT committed boards — desync proof written to test/gold/out/'
+        ).toEqual(board_a)
+      }
 
       // ── 9 · finish: stacked casts to victory on the surviving seats ──────────────────────────────────────
       const victory = page_a.locator('[role="dialog"][aria-label^="Victory:"]')
