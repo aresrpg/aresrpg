@@ -20,6 +20,7 @@ import {
   DEFAULT_CENTER_STYLE,
   ENTITY_ANCHOR_EDGE_OPACITY,
   ENTITY_ANCHOR_FILL_OPACITY,
+  ENTITY_ANCHOR_RENDER_ORDER,
   GLYPH_TICK_FLARE,
   TEAM_COLORS,
   TRAP_BLOB_COLOR,
@@ -475,25 +476,34 @@ describe('trap ACCENT — a SPIKE cone rising from the cell center ("and a spike
   })
 })
 
-// ── ⑬ trap Z-ORDER (v1.12.31 regression: "I should see the traps above my MP blob") — the placed-trap marker
-// (dark blob + spike) must draw ABOVE the local-player MP-range blob wash. Every wash is depthWrite:false, so
-// three's transparent sort is by renderOrder: higher = drawn later = on top. The blob wash sits BELOW, the trap
-// marker ABOVE — asserted on BOTH the painted meshes and the CHANNELS order SSOT that drives them. ──────────────
+// ── ⑬ trap Z-ORDER — Three reverses its already-sorted transparent list under reversed-Z (the live WebGPU
+// renderer), so raw positive renderOrder values invert the semantic stack. The controller mirrors every order in
+// that mode: both backends must finally draw MP wash → trap blob → trap spike, below the fighter anchor. ──────────
 describe('⑬ trap marker renders ABOVE the MP-range blob wash', () => {
-  test('the trap blob + spike meshes carry a HIGHER renderOrder than an mp_range wash tile on the SAME cell', () => {
-    const ctrl = create_board_highlights(stub_board())
-    ctrl.set_channel([{ x: 1, y: 1 }], 'mp_range') // the light-green local-player movement reach — THE MP blob
-    ctrl.set_channel([{ x: 1, y: 1 }], 'trap') // the dark-blob + spike placed-trap marker, same cell
-    const mp_group = ctrl.group.children.find((/** @type {any} */ c) => c.name === 'highlight_mp_range')
-    const trap_group = ctrl.group.children.find((/** @type {any} */ c) => c.name === 'highlight_trap')
-    const [mp_tile] = mp_group.children
-    const [marker] = trap_group.children
-    const [blob, spike] = marker.children
-    expect(blob.renderOrder).toBeGreaterThan(mp_tile.renderOrder) // dark blob ON TOP of the wash
-    expect(spike.renderOrder).toBeGreaterThan(mp_tile.renderOrder) // and the rising spike above it
-    // the CHANNELS order SSOT that produced those renderOrders: trap strictly above mp_range (blob BELOW, trap ABOVE)
+  test('normal and reversed-depth transparent lists both finish MP wash → trap blob → trap spike', () => {
+    for (const reversed_depth of [false, true]) {
+      const ctrl = create_board_highlights(stub_board(), { reversed_depth })
+      ctrl.set_channel([{ x: 1, y: 1 }], 'mp_range')
+      ctrl.set_channel([{ x: 1, y: 1 }], 'trap')
+      ctrl.set_entity_anchor('fighter-0', { x: 1, z: 1 }, 0)
+      const mp_group = ctrl.group.children.find((/** @type {any} */ c) => c.name === 'highlight_mp_range')
+      const trap_group = ctrl.group.children.find((/** @type {any} */ c) => c.name === 'highlight_trap')
+      const [mp_tile] = mp_group.children
+      const [marker] = trap_group.children
+      const [blob, spike] = marker.children
+      const anchor = ctrl.group.children.find((/** @type {any} */ c) => c.isMesh)
+      const sorted = [mp_tile, blob, spike, anchor].sort((a, b) => a.renderOrder - b.renderOrder)
+      const draw_order = reversed_depth ? sorted.reverse() : sorted
+      expect(draw_order).toEqual([mp_tile, blob, spike, anchor])
+      ctrl.dispose()
+    }
     expect(CHANNELS.trap.order).toBeGreaterThan(CHANNELS.mp_range.order)
-    ctrl.dispose()
+    expect(CHANNELS.trap.order).toBeLessThan(ENTITY_ANCHOR_RENDER_ORDER)
+  })
+
+  test('the tactical facade supplies the live camera reversed-depth flag', async () => {
+    const src = await Bun.file(new URL('./index.js', import.meta.url)).text()
+    expect(src).toContain('reversed_depth: !!(/** @type {any} */ (engine.get_camera()))?.reversedDepth')
   })
 })
 

@@ -100,13 +100,14 @@ const TILE_FRACTION = 1.0
  * position (add_tile positions/orders it). The 'trap' channel overrides this with build_trap_marker (a
  * compound blob+sprite Group) — see the channel-construction loop in create_board_highlights.
  * @param {import('three').BufferGeometry} geo @param {import('three').Material} mat
+ * @param {(order: number) => number} render_order_of
  * @returns {(cx: number, cy: number, cz: number, order: number) => Mesh}
  */
-function make_flat_build(geo, mat) {
+function make_flat_build(geo, mat, render_order_of) {
   return (cx, cy, cz, order) => {
     const tile = new Mesh(geo, mat)
     tile.position.set(cx, cy, cz)
-    tile.renderOrder = order
+    tile.renderOrder = render_order_of(order)
     tile.frustumCulled = false
     return tile
   }
@@ -124,12 +125,13 @@ const cell_key = (/** @type {number} */ x, /** @type {number} */ y) => `${x},${y
  *  Otherwise identical to make_flat_build. The grid→mask computation itself (neighbor_mask) is pure
  *  shape-adjacency math and lives in board_highlight_shapes.js, next to merged_rect_gradient.
  * @param {import('three').BufferGeometry} geo @param {(mask: number) => import('three').Material} mat_of
+ * @param {(order: number) => number} render_order_of
  * @returns {(cx: number, cy: number, cz: number, order: number, mask?: number) => Mesh} */
-function make_merged_flat_build(geo, mat_of) {
+function make_merged_flat_build(geo, mat_of, render_order_of) {
   return (cx, cy, cz, order, mask = 0) => {
     const tile = new Mesh(geo, mat_of(mask))
     tile.position.set(cx, cy, cz)
-    tile.renderOrder = order
+    tile.renderOrder = render_order_of(order)
     tile.frustumCulled = false
     return tile
   }
@@ -174,10 +176,14 @@ function make_merged_flat_build(geo, mat_of) {
  * @param {number} [board.width] board cell width (for flash() default). @param {number} [board.height] board cell height.
  * @param {{ x: number, y: number, z: number }} board.origin floor plane = origin.y
  * @param {number} board.cell_size
+ * @param {{ reversed_depth?: boolean }} [options] renderer depth mode; Three reverses transparent lists in reversed-Z
  * @returns {HighlightController}
  */
-export function create_board_highlights(board) {
+export function create_board_highlights(board, { reversed_depth = false } = {}) {
   const { cell_center_world, cell_byte, origin, cell_size } = board
+  // Three reverses the whole transparent render list for reversed-Z cameras. Mirror semantic orders before that
+  // reversal so both renderer modes draw low washes first, then traps, then fighter anchors.
+  const render_order_of = (/** @type {number} */ order) => (reversed_depth ? -order : order)
   const group = new Object3D()
   group.name = 'board_highlights'
 
@@ -233,10 +239,10 @@ export function create_board_highlights(board) {
   ) => {
     const g = new Object3D()
     const blob = new Mesh(tile_geo, trap_blob_mat)
-    blob.renderOrder = order
+    blob.renderOrder = render_order_of(order)
     blob.frustumCulled = false
     const spike = new Mesh(trap_spike_geo, trap_spike_mat)
-    spike.renderOrder = order + 0.1
+    spike.renderOrder = render_order_of(order + 0.1)
     spike.frustumCulled = false
     g.add(blob, spike)
     g.position.set(cx, cy, cz)
@@ -249,7 +255,7 @@ export function create_board_highlights(board) {
     const spec = CHANNELS[key]
     const cg = new Object3D()
     cg.name = `highlight_${key}`
-    cg.renderOrder = spec.order
+    cg.renderOrder = render_order_of(spec.order)
     const built =
       /** @type {{ mat: { dispose(): void }, u_fade: * | null, mat_of?: (mask: number) => import('three').Material }} */ (
         key === 'trap'
@@ -268,8 +274,16 @@ export function create_board_highlights(board) {
       key === 'trap'
         ? build_trap_marker
         : spec.merge
-          ? make_merged_flat_build(tile_geo, /** @type {(mask: number) => import('three').Material} */ (built.mat_of))
-          : make_flat_build(spec.outline ? diamond_geo : tile_geo, /** @type {import('three').Material} */ (built.mat))
+          ? make_merged_flat_build(
+              tile_geo,
+              /** @type {(mask: number) => import('three').Material} */ (built.mat_of),
+              render_order_of
+            )
+          : make_flat_build(
+              spec.outline ? diamond_geo : tile_geo,
+              /** @type {import('three').Material} */ (built.mat),
+              render_order_of
+            )
     channels.set(key, {
       group: cg,
       mat: built.mat,
@@ -422,7 +436,7 @@ export function create_board_highlights(board) {
       const [cx, , cz] = cell_center_world(c.x, c.y)
       const m = new Mesh(tile_geo, em)
       m.position.set(cx, origin.y + EMPH_LIFT, cz)
-      m.renderOrder = 30
+      m.renderOrder = render_order_of(30)
       m.frustumCulled = false
       m.scale.setScalar(0.001) // [D257] hidden until its delayed beat begins (ripple stagger)
       route_board_highlight_overlay(m) // POST-AgX overlay layer (feel-cue emphasis rides the same night-wash fix)
@@ -560,7 +574,7 @@ export function create_board_highlights(board) {
         // fighter never changes team"); 0 = ally (the adapter's f.team===0 convention), else enemy.
         const mat = team === 0 ? anchor_mat_ally : anchor_mat_enemy
         const mesh = new Mesh(tile_geo, mat)
-        mesh.renderOrder = ENTITY_ANCHOR_RENDER_ORDER
+        mesh.renderOrder = render_order_of(ENTITY_ANCHOR_RENDER_ORDER)
         mesh.frustumCulled = false
         route_board_highlight_overlay(mesh) // POST-AgX overlay layer (entity anchor rides the same night-wash fix)
         group.add(mesh)

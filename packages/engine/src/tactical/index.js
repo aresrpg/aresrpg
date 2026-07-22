@@ -253,7 +253,9 @@ export function create_tactical_board({
     await next_frame()
 
     descriptor = { origin, width, height, cell_size, mask }
-    highlights = create_board_highlights(geometry)
+    highlights = create_board_highlights(geometry, {
+      reversed_depth: !!(/** @type {any} */ (engine.get_camera()))?.reversedDepth,
+    })
     engine.add_to_scene(highlights.group)
     entities = create_board_entities(geometry, engine)
 

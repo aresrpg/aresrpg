@@ -124,10 +124,13 @@ describe('trap home collapse — the fold (engine_view.my_traps) is the ONE clie
     expect(beats.some((e) => e.kind === 'trap_trigger')).toBe(true)
   })
 
-  test('CONTRACT: the RENDER seam reads engine_view.my_traps, never trap_overlay', async () => {
+  test('CONTRACT: the RENDER seam paints engine_view.my_traps directly, never a parallel presentation list', async () => {
     const src = await Bun.file(new URL('./voxel_fight_adapter.js', import.meta.url)).text()
     expect(src).not.toContain('trap_overlay')
-    expect(src).toContain('fight.my_traps')
+    expect(src).not.toContain('trap_presentation')
+    expect(src).not.toContain('presented_traps')
+    expect(src).toContain('const traps = fight.my_traps ?? []')
+    expect(src).toContain("sig += `|tr:${(fight.my_traps ?? []).join(',')}`")
   })
 
   test('CONTRACT: the CAST-LEGALITY seam reads the fold, never trap_overlay', async () => {
@@ -144,6 +147,11 @@ describe('trap home collapse — the fold (engine_view.my_traps) is the ONE clie
 
   test('trap_overlay.js is DELETED — the parallel home is gone', async () => {
     const exists = await Bun.file(new URL('./trap_overlay.js', import.meta.url)).exists()
+    expect(exists).toBe(false)
+  })
+
+  test('trap_presentation.js is DELETED — render has no stale live-cell mirror', async () => {
+    const exists = await Bun.file(new URL('./trap_presentation.js', import.meta.url)).exists()
     expect(exists).toBe(false)
   })
 })
