@@ -374,7 +374,7 @@ export function fight_module(spells, raw_corpus, generated_dir) {
   // the whole point of the fixture is substituting the DATA they close over. The old copy-pasted-logic twin
   // silently drifted behind cd383d92 (added project_spell_effect/level to the real module, r12d's boot-crash);
   // runtime_catalog_export_parity.test.mjs now guards every aliased pair generically against this class.
-  return `import { normalize_chain_spell_corpus } from '@aresrpg/sim'
+  return `import { normalize_chain_spell_corpus } from '@aresrpg/sim/chain_spell_corpus'
 export * from ${JSON.stringify(gold_base_specifier(generated_dir, FIGHT_SPELLS_SOURCE))}
 const raw_corpus = ${JSON.stringify(raw_corpus)}
 export const fight_spell_templates = normalize_chain_spell_corpus(raw_corpus)
