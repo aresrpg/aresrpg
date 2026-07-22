@@ -2373,6 +2373,7 @@
     "checkpoint_clock_desync": "Wir konnten deine Bewegung noch nicht bestätigen — warte ein paar Sekunden und versuche es erneut.",
     "fight_result_latched": "Ein Kampfergebnis wartet — öffne es über dein Charakterpanel.",
     "fight_result_opening": "Dein letztes Kampfergebnis wird geöffnet…",
+    "fight_not_active": "Der Kampf ist nicht mehr aktiv.",
     "fight_stale_board": "Dein Spielfeld ist nicht synchron — aktualisiere und versuch es erneut.",
     "turn_too_fast": "Warte — ein Zug dauert mindestens 3 Sekunden.",
     "gas_insufficient_balance": "Nicht genug SUI für Gas — du brauchst etwa {{amount}} SUI frei.",

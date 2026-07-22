@@ -161,11 +161,17 @@ const TABLE = {
   // 104 EIllegalMove IS player-reachable — a mid-fight-refresh 104: a board-geometry mismap in fight_view
   // painted an off-shape cell reachable, so the committed act_move had bfs cost > mp (actions.move:39). The ROOT is
   // fixed in fight_bridge (the client now reads the chain-stored shape_mask, not a fragile seed-twin); this arm is
-  // the honest fallback if any stale-client move ever reaches it. 101/102/103 stay generic (ENotActive /
-  // ENotParticipant / ENotYourCharacter — no live door reaches them). 108 ETurnTooFast (the
+  // the honest fallback if any stale-client move ever reaches it. 102/103 stay generic (ENotParticipant /
+  // ENotYourCharacter — no live door reaches them). 108 ETurnTooFast (the
   // instant-pass bot guard: act_pass asserts the turn lasted >= MIN_TURN_MS/3s) also maps now — honest, non-
   // punitive "wait it out" copy. 107 EActorDead stays generic (no live door surfaces a mid-turn self-kill race).
+  // #515 — 101 ENotActive IS player-reachable despite the client's own terminal-race guard (dungeon-turn.js's
+  // flush_commit only fires begin_action when its LOCAL status read is still ACTIVE): the killing blow can land
+  // on-chain a moment before the deadline auto-commit's begin_action gets simulated/executed, so the guard's
+  // local read is stale for exactly that race window. Previously that residual race fell through to the generic
+  // "tx failed" scare copy; now it reads honestly as "the fight is no longer active."
   actions: {
+    101: 'errors.fight_not_active', // ENotActive — begin_action into a fight that already went terminal (deadline-flush terminal race)
     104: 'errors.fight_stale_board', // EIllegalMove — act_move onto an off-board/occupied/unreachable cell (stale board)
     105: 'errors.abandon_fight_over', // EFightOver — abandon: the fight is already terminal, nothing left to forfeit
     106: 'errors.abandon_already_dead', // EAlreadyDead — abandon: this seat is already dead (idempotence guard)

@@ -2373,6 +2373,7 @@
     "checkpoint_clock_desync": "We couldn't verify your movement yet — wait a few seconds and retry.",
     "fight_result_latched": "A fight result is waiting — open it from your character panel.",
     "fight_result_opening": "Opening your last fight result…",
+    "fight_not_active": "The fight is no longer active.",
     "fight_stale_board": "Your board is out of sync — refresh and try again.",
     "turn_too_fast": "Hold on — turns take at least 3 seconds.",
     "gas_insufficient_balance": "Not enough SUI for gas — you need about {{amount}} SUI free.",

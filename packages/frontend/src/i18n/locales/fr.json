@@ -2373,6 +2373,7 @@
     "checkpoint_clock_desync": "Nous n’avons pas encore pu vérifier ton déplacement — attends quelques secondes avant de réessayer.",
     "fight_result_latched": "Un résultat de combat t'attend — ouvre-le depuis ton panneau de personnage.",
     "fight_result_opening": "Ouverture de ton dernier résultat de combat…",
+    "fight_not_active": "Le combat n'est plus actif.",
     "fight_stale_board": "Ton plateau est désynchronisé — actualise et réessaie.",
     "turn_too_fast": "Attends — un tour dure au moins 3 secondes.",
     "gas_insufficient_balance": "Pas assez de SUI pour le gas — il t'en faut environ {{amount}} SUI de libres.",

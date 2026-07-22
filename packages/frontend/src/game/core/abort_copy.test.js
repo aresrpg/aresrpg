@@ -182,8 +182,10 @@ describe('humanize_abort — fight create/join refusals (F4/F5)', () => {
 
 // S-80 — the fight-forfeit door (`aresrpg_fight::actions::abandon`, ENGINE). Module "actions" is shared with
 // act_move/act_weapon/act_cast/act_pass. 104 EIllegalMove IS mapped now — the mid-fight-refresh 104
-// (actions.move:39 `cost <= mp`, root-fixed in fight_bridge); 101/102/103 stay generic (no live door reaches
-// them). Plus the abandon-specific pair (105/106).
+// (actions.move:39 `cost <= mp`, root-fixed in fight_bridge); 102/103 stay generic (no live door reaches
+// them). Plus the abandon-specific pair (105/106). #515 — 101 ENotActive is mapped too: the deadline
+// auto-commit's own terminal-race guard is stale-read-only, so a killing blow landing a moment early still
+// lets begin_action fire into an already-ended fight; the honest copy replaces the old generic scare line.
 describe('humanize_abort — fight-forfeit door (S-80, aresrpg_fight::actions)', () => {
   test('104 EIllegalMove — the mid-fight-refresh 104: honest stale-board copy, no longer generic', () => {
     const out = humanize_abort(grpc_abort('actions', 104))
@@ -201,8 +203,10 @@ describe('humanize_abort — fight-forfeit door (S-80, aresrpg_fight::actions)',
     expect(humanize_abort(grpc_abort('actions', 106))).toBe(i18n.t('errors.abandon_already_dead'))
   })
 
-  test('an unmapped "actions" code (101 ENotActive, unreachable through a live door) degrades generic', () => {
-    expect(humanize_abort(grpc_abort('actions', 101))).toBe(i18n.t('errors.tx_failed'))
+  test('101 ENotActive — the deadline auto-commit terminal race: honest "fight no longer active" copy, no longer generic', () => {
+    const out = humanize_abort(grpc_abort('actions', 101))
+    expect(out).toBe(i18n.t('errors.fight_not_active'))
+    expect(out).not.toBe(i18n.t('errors.tx_failed'))
   })
 
   test('108 ETurnTooFast — instant-pass bot guard: the turn ended before MIN_TURN_MS (3s)', () => {

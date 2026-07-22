@@ -2373,6 +2373,7 @@
     "checkpoint_clock_desync": "まだ移動を確認できませんでした。数秒待ってからもう一度お試しください。",
     "fight_result_latched": "戦闘結果が保留中です — キャラクターパネルから開いてください。",
     "fight_result_opening": "最新の戦闘結果を開いています…",
+    "fight_not_active": "この戦闘はすでに無効です。",
     "fight_stale_board": "盤面が同期していません — 更新してもう一度お試しください。",
     "turn_too_fast": "少々お待ちください — 1ターンは最低3秒かかります。",
     "gas_insufficient_balance": "ガス代のSUIが不足しています — 約{{amount}} SUIの空きが必要です。",
