@@ -129,6 +129,10 @@
     "./reduce": {
       "types": "./types/reduce.d.ts",
       "import": "./src/reduce.js"
+    },
+    "./evolve": {
+      "types": "./types/evolve.d.ts",
+      "import": "./src/evolve.js"
     }
   },
   "author": "AresRPG's Team",
