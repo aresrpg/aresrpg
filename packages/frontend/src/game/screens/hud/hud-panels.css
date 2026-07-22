@@ -961,14 +961,7 @@
   font-size: 0.74rem;
 }
 
-/* +/- assign buttons (the + button needed a better design — the old per-stat rainbow
-   fill read as a plain flat glyph in a box, off the house language). House idiom now, same recipe as this
-   panel's own Reset/Confirm pair (Stats.css .btn-outline/.btn-gold): − mirrors Reset (gold hairline,
-   transparent), + mirrors Confirm (gold gradient, glow) — the button that spends a point carries the same
-   weight as the panel's own primary CTA. Sharp corners (var(--r-2) resolves to 0 in this scope), consistent
-   32px hit area on both. `.hud-root` prefix beats the global `.hud-root button { background:none;
-   border:none }` reset (0,1,1) so the fill + border actually paint (the recurring HUD-button specificity
-   bug, owner hit 2x). */
+/* Compact bridge for the shared btn-outline / btn-gold roles. `.hud-root` beats the HUD button reset. */
 .hud-root .stats__step {
   width: 32px;
   height: 32px;
@@ -979,9 +972,6 @@
   font-family: var(--font-mono);
   display: grid;
   place-items: center;
-  color: var(--color-gold);
-  background: transparent;
-  border: 1px solid rgba(200, 150, 60, 0.3);
   border-radius: var(--r-2);
   cursor: pointer;
   padding: 0;
@@ -992,13 +982,19 @@
     box-shadow var(--dur-1) var(--ease);
 }
 
-.stats__step:hover:not(:disabled) {
+.hud-root .stats__step.btn-outline {
+  color: var(--color-gold);
+  background: transparent;
+  border: 1px solid rgba(200, 150, 60, 0.3);
+}
+
+.stats__step.btn-outline:hover:not(:disabled) {
   background: rgba(200, 150, 60, 0.08);
   border-color: rgba(200, 150, 60, 0.6);
   box-shadow: 0 0 20px rgba(200, 150, 60, 0.1);
 }
 
-.hud-root .stats__step--add {
+.hud-root .stats__step--add.btn-gold {
   color: #0a0a0f;
   background: linear-gradient(135deg, var(--color-gold-dark), var(--color-gold), var(--color-gold-dark));
   border: none;
@@ -1007,17 +1003,23 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
-.stats__step--add:hover:not(:disabled) {
+.stats__step--add.btn-gold:hover:not(:disabled) {
   box-shadow:
     0 0 30px rgba(200, 150, 60, 0.4),
     0 0 60px rgba(200, 150, 60, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-.stats__step:disabled {
+.stats__step.btn-outline:disabled,
+.stats__step--add.btn-gold:disabled {
   opacity: 0.32;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+.stats__step.btn-outline:disabled {
+  background: transparent;
+  border-color: rgba(200, 150, 60, 0.3);
 }
 
 /* capital card — the "points to assign" (c198: obvious + prominent). Ice-blue when there is capital. */

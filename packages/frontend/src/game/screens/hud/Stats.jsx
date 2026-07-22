@@ -239,6 +239,17 @@ export function characteristic_value({ base, bonus, pending }) {
   )
 }
 
+/** Compact characteristic stepper wearing the shared outline/gold button roles. */
+export function allocation_stepper({ kind, disabled, on_click, label }) {
+  const is_add = kind === 'add'
+  const class_name = is_add ? 'stats__step stats__step--add btn-gold' : 'stats__step btn-outline'
+  return (
+    <button type="button" className={class_name} disabled={disabled} onClick={on_click} aria-label={label}>
+      {is_add ? '+' : '\u2212'}
+    </button>
+  )
+}
+
 export const visible_secondary_stats = (character) =>
   get_secondary_stats(character).filter(({ key }) => SECONDARY_KEYS.has(key))
 
@@ -507,24 +518,18 @@ export function Stats() {
                   <span className="stats__prow-desc">{description}</span>
                 </span>
                 {characteristic_value({ base, bonus, pending })}
-                <button
-                  type="button"
-                  className="stats__step"
-                  disabled={pending <= 0 || tx_pending}
-                  onClick={() => remove_point(key)}
-                  aria-label={t('stats.remove_point', { stat: label })}
-                >
-                  &minus;
-                </button>
-                <button
-                  type="button"
-                  className="stats__step stats__step--add"
-                  disabled={!can_upgrade}
-                  onClick={() => add_point(key)}
-                  aria-label={t('stats.add_point', { stat: label })}
-                >
-                  +
-                </button>
+                {allocation_stepper({
+                  kind: 'remove',
+                  disabled: pending <= 0 || tx_pending,
+                  on_click: () => remove_point(key),
+                  label: t('stats.remove_point', { stat: label }),
+                })}
+                {allocation_stepper({
+                  kind: 'add',
+                  disabled: !can_upgrade,
+                  on_click: () => add_point(key),
+                  label: t('stats.add_point', { stat: label }),
+                })}
               </div>
             )
           })}

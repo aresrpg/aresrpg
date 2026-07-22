@@ -15,6 +15,7 @@ const {
   AllocationActions,
   STAT_INDEX,
   allocation_session_snapshot,
+  allocation_stepper,
   allocation_total,
   apply_confirmed_allocation,
   characteristic_value,
@@ -268,12 +269,13 @@ describe('Stats allocation actions', () => {
     expect(stats_css).toContain('border-radius: 0')
   })
 
-  // LEG 1 — the per-stat +/- steppers now share the
-  // exact Reset/Confirm recipe (gold hairline / gold gradient + glow) instead of a flat per-stat fill, and
-  // still resolve to sharp corners + a specificity bridge (same HUD-button-reset bug class as above).
+  // The per-stat +/- steppers share Reset/Confirm's canonical outline/gold roles while keeping compact geometry.
   test('the +/- steppers carry the house gold idiom, not a per-stat flat fill', () => {
     expect(hud_panels_css).toContain('.hud-root .stats__step {')
-    expect(hud_panels_css).toContain('.hud-root .stats__step--add {')
+    expect(hud_panels_css).toContain('.hud-root .stats__step.btn-outline {')
+    expect(hud_panels_css).toContain('.hud-root .stats__step--add.btn-gold {')
+    expect(hud_panels_css).toContain('.stats__step.btn-outline:disabled,')
+    expect(hud_panels_css).toContain('cursor: not-allowed;')
     expect(hud_panels_css).not.toContain('background: var(--tint, var(--accent));') // the old rainbow fill
     expect(hud_panels_css).not.toContain('background: #1b2330;') // the old flat neutral box
   })
@@ -291,6 +293,19 @@ describe('Stats allocation actions', () => {
     const stats_jsx = await Bun.file(new URL('./Stats.jsx', import.meta.url)).text()
     const add_button = stats_jsx.slice(stats_jsx.indexOf('stats__step--add'))
     expect(add_button.slice(0, add_button.indexOf('</button>'))).not.toContain("'--tint'")
+  })
+
+  test('steppers render the canonical house roles and an honest disabled state', () => {
+    const remove = renderToStaticMarkup(
+      allocation_stepper({ kind: 'remove', disabled: true, on_click: noop, label: 'Remove' })
+    )
+    const add = renderToStaticMarkup(
+      allocation_stepper({ kind: 'add', disabled: false, on_click: noop, label: 'Add' })
+    )
+    expect(remove).toContain('class="stats__step btn-outline"')
+    expect(remove).toContain('disabled=""')
+    expect(add).toContain('class="stats__step stats__step--add btn-gold"')
+    expect(add).not.toContain('disabled')
   })
 
   test('Confirm and Reset stay disabled while a transaction is in flight', () => {
