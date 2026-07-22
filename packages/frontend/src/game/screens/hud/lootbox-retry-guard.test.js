@@ -28,6 +28,22 @@ import {
   sweep_eligible_claims,
 } from './lootbox-retry-guard.js'
 
+// A functional Map-backed localStorage — setItem persists and getItem round-trips, so persist_claim_latches'
+// read-back verify CONFIRMS durability. The durability-sensitive describes pin this because bun shares
+// globalThis across every test file in one process: an earlier file that leaks an INERT stub (setItem no-op,
+// getItem → null — e.g. test_helpers/browser_globals.js's storage_stub) makes the read-back mismatch and
+// silently downgrades latch_durability to 'unconfirmed', which turns sweep_eligible_claims into a constant [].
+// One home for the stub; each consumer describe captures + restores the real global so it never leaks onward.
+const functional_local_storage = () => {
+  const store = new Map()
+  return {
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => store.set(k, String(v)),
+    removeItem: (k) => store.delete(k),
+    clear: () => store.clear(),
+  }
+}
+
 afterEach(_reset_box_retry_guard_for_test)
 
 describe('loot-box executed-failure retry guard', () => {
@@ -172,13 +188,7 @@ describe('executed-failed CLAIM latch is DURABLE across a reboot (P1 — no auto
   let original_local_storage
   beforeEach(() => {
     original_local_storage = globalThis.localStorage
-    const store = new Map()
-    globalThis.localStorage = {
-      getItem: (k) => (store.has(k) ? store.get(k) : null),
-      setItem: (k, v) => store.set(k, String(v)),
-      removeItem: (k) => store.delete(k),
-      clear: () => store.clear(),
-    }
+    globalThis.localStorage = functional_local_storage()
   })
   afterEach(() => {
     globalThis.localStorage = original_local_storage
@@ -223,6 +233,18 @@ describe('executed-failed CLAIM latch is DURABLE across a reboot (P1 — no auto
 })
 
 describe('claim auto-fire guard (D3 — auto at opening, sweep at boot, never an auto REFIRE)', () => {
+  // These assert the auto-fire LOGIC, not storage durability — but end_claim persists, and the durability
+  // read-back gates sweep_eligible_claims. Pin a functional localStorage so a prior file's leaked inert stub
+  // can never downgrade latch_durability under us (the order-dependent flake that emptied the sweep).
+  let original_local_storage
+  beforeEach(() => {
+    original_local_storage = globalThis.localStorage
+    globalThis.localStorage = functional_local_storage()
+  })
+  afterEach(() => {
+    globalThis.localStorage = original_local_storage
+  })
+
   test('begin_claim admits exactly one flight per claim across surfaces', () => {
     expect(begin_claim('0xclaim')).toBe(true)
     expect(begin_claim('0xclaim')).toBe(false) // reveal + sweep + shop can never double-fire
