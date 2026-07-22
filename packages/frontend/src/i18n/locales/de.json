@@ -749,13 +749,13 @@
     },
     "description": {
       "vitality": "Erhöht dein maximales Leben",
-      "wisdom": "Erhöht deinen XP-Gewinn und deine Leben-Regeneration",
-      "strength": "Erhöht deinen Erd- und Neutralschaden",
+      "wisdom": "Erhöht deinen XP-Gewinn",
+      "strength": "Erhöht deinen Erdschaden",
       "intelligence": "Erhöht deinen Feuerschaden und deine Heilung",
-      "chance": "Erhöht deinen Wasserschaden",
-      "agility": "Erhöht deinen Luftschaden, kritische Treffer, Fesselung und Ausweichen bei AP/BP-Verlust",
+      "chance": "Erhöht deinen Wasserschaden und deine Beutechance",
+      "agility": "Erhöht deinen Luftschaden, deine Fesselung und dein Ausweichen bei AP/BP-Verlust",
       "critical_hit": "Verbessert deine Chance auf einen kritischen Treffer",
-      "raw_damage": "Fügt jedem Zauber festen Schaden hinzu"
+      "raw_damage": "Fügt Schadens- und Lebensraub-Effekten einen festen Wert hinzu"
     },
     "remove_point": "{{stat}} um einen Punkt verringern",
     "add_point": "{{stat}} um einen Punkt erhöhen",
@@ -868,7 +868,7 @@
       "stat_chance": "Glück",
       "stat_agility": "Agilität",
       "critical_hits": "KRITISCHE TREFFER",
-      "crit_desc": "Jeder Zauber oder jede Waffe hat ihre eigene Basis-Kritrate, angegeben als Chance von 1 zu N, die nie unter 1 zu 2 (50%) fallen kann. Der Krit-Stat wird auf deinem Charakterbogen angezeigt, ist aber noch nicht in die On-Chain-Kritwürfe eingebunden — heute ist die Rate pro Zauber oder Waffe fest.",
+      "crit_desc": "Jeder Zauber und jede Waffe hat eine eigene Basis-Kritrate, angegeben als Chance von 1 zu N. Der Krit-Wert senkt N, aber die endgültige Chance kann 1 zu 2 (50 %) nie überschreiten.",
       "crit_bonus_desc": "Bei einem kritischen Treffer wendet der Zauber seine eigenen kritischen Effekte an (stärkerer Schaden oder zusätzliche Effekte) anstelle seiner normalen.",
       "blocking": "SCHILDE",
       "blocking_desc": "Manche Zauber gewähren einen Schild, der eingehenden Schaden eines passenden Elements absorbiert, bis er aufgebraucht ist. Es gibt keine Ausdauer und keine Verteidigungshaltung, Schilde sind die einzige Schadensabsorption.",

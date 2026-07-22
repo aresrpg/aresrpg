@@ -121,9 +121,9 @@ export function compute_speed(total_agility: number, equipment_speed: number = 0
   return +(base_speed * (1 + bonus / 100)).toFixed(2)
 }
 
-/** healthRegen = max(1.0, (level * 2/5 + wisdom/15) / 5)  (per second) */
-export function compute_health_regen(level: number, total_wisdom: number): number {
-  return +Math.max(1, ((level * 2) / 5 + total_wisdom / 15) / 5).toFixed(2)
+/** Live natural HP regen with the chain's Wisdom input fixed at 0: (150 + level * 6) / 75 HP per second. */
+export function compute_health_regen(level: number): number {
+  return +((150 + level * 6) / 75).toFixed(2)
 }
 
 /** staminaRegen = level * 3 / 20  (per second) */

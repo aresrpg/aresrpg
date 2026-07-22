@@ -125,6 +125,7 @@ describe('Stats live vocabulary', () => {
       agility: 0,
     })
     expect(rows.map(({ key }) => key)).toEqual([STATISTICS.CRITICAL, STATISTICS.RAW_DAMAGE])
+    expect(rows[0]).toMatchObject({ value: 0, unit: 'unit' })
     expect(JSON.stringify(rows).toLowerCase()).not.toContain('pods')
   })
 

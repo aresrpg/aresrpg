@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, test, expect } from 'bun:test'
 
-import { get_max_health } from '../src/stats.js'
+import { get_max_health, get_secondary_stats } from '../src/stats.js'
 import { apply_wisdom_xp } from '../src/experience.js'
 
 // Stat effects: wisdom multiplies XP (Wisdom XP Bonus l.970 — kept; the proposed health-regen was DROPPED,
@@ -40,5 +40,22 @@ describe('wisdom -> XP bonus (xp * (1 + wisdom/600))', () => {
 
   test('negative wisdom never reduces XP (clamped to 0)', () => {
     expect(apply_wisdom_xp(100, -50)).toBe(100)
+  })
+})
+
+describe('critical hit -> equipment-only combat bonus', () => {
+  const critical_row = value => get_secondary_stats(value).find(({ key }) => key === 'critical')
+
+  test('agility never invents a critical-hit bonus', () => {
+    expect(critical_row(character({ agility: 80 }))).toEqual({
+      key: 'critical',
+      label: 'Critical hit',
+      value: 0,
+      unit: 'unit',
+    })
+  })
+
+  test('equipment Critical is the displayed bonus consumed by combat', () => {
+    expect(critical_row(character({ agility: 80, hat: { critical: 7 } }))?.value).toBe(7)
   })
 })

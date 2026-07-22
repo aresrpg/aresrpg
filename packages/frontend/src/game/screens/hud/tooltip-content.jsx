@@ -10,10 +10,9 @@
 
 import { seed_effect_value } from './seed-effect-line.js'
 
-// stat key -> { label, blurb }. Effects are grounded in @aresrpg/sdk/stats where the formula is real
-// (vitality->health, strength->pods, agility->critical) and follow the standard tactical-RPG element
-// mapping otherwise. FLAG (content): the wisdom/intelligence/chance element lines are conventional,
-// not yet wired in @aresrpg/sim; the content owner should confirm the final element mapping.
+// stat key -> { label, blurb }. Keep these legacy rich tips aligned with the live sim/chain formulas used by
+// the localized character-sheet descriptions: four elemental characteristics, XP-only Wisdom, Chance loot,
+// Agility tackle/dodge, and equipment-only Critical.
 const STAT_INFO = /** @type {Record<string, { label: string, blurb: string }>} */ ({
   vitality: {
     label: 'Vitality',
@@ -21,7 +20,7 @@ const STAT_INFO = /** @type {Record<string, { label: string, blurb: string }>} *
   },
   wisdom: {
     label: 'Wisdom',
-    blurb: 'Raises experience gained and your resistance to AP and MP loss.',
+    blurb: 'Raises experience gained.',
   },
   strength: {
     label: 'Strength',
@@ -33,11 +32,11 @@ const STAT_INFO = /** @type {Record<string, { label: string, blurb: string }>} *
   },
   chance: {
     label: 'Chance',
-    blurb: 'Boosts water-element power and the loot you find.',
+    blurb: 'Boosts water-element power and loot drop rates.',
   },
   agility: {
     label: 'Agility',
-    blurb: 'Boosts air-element power and dodge. About +1% critical per 40.',
+    blurb: 'Boosts air-element power, tackle, and dodge against AP and MP loss.',
   },
   ap: {
     label: 'Action points',
@@ -61,11 +60,11 @@ const STAT_INFO = /** @type {Record<string, { label: string, blurb: string }>} *
   },
   critical: {
     label: 'Critical hit',
-    blurb: 'Chance for a hit to land for extra damage.',
+    blurb: "Improves the odds of triggering a spell's critical effects.",
   },
   raw_damage: {
     label: 'Raw damage',
-    blurb: 'Flat damage added to every hit, before resistances.',
+    blurb: 'A flat increase to damage and life-steal effects, before resistances.',
   },
   earth_resistance: {
     label: 'Earth resist',

@@ -486,7 +486,7 @@ export function SimulatorPage() {
   const max_stamina = useMemo(() => compute_max_stamina(cls.stamina, total_stats.stamina || 0), [cls, total_stats])
   const damage_output = useMemo(() => compute_damage(all_damages, total_stats), [all_damages, total_stats])
   const speed = useMemo(() => compute_speed(total_stats.agility || 0, total_stats.speed || 0), [total_stats])
-  const health_regen = useMemo(() => compute_health_regen(level, total_stats.wisdom || 0), [level, total_stats])
+  const health_regen = useMemo(() => compute_health_regen(level), [level])
   const stamina_regen = useMemo(() => compute_stamina_regen(level), [level])
   const crit_denom = useMemo(() => compute_crit_denom(total_stats.criticalHit || 0), [total_stats])
 

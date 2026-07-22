@@ -749,13 +749,13 @@
     },
     "description": {
       "vitality": "Aumenta tu salud máxima",
-      "wisdom": "Aumenta tu ganancia de XP y tu regeneración de salud",
-      "strength": "Aumenta tu daño de Tierra y neutro",
+      "wisdom": "Aumenta tu ganancia de XP",
+      "strength": "Aumenta tu daño de Tierra",
       "intelligence": "Aumenta tu daño de Fuego y tus curaciones",
-      "chance": "Aumenta tu daño de Agua",
-      "agility": "Aumenta tu daño de Aire, golpe crítico, placaje y esquiva de pérdida de PA/PM",
+      "chance": "Aumenta tu daño de Agua y la probabilidad de obtener botín",
+      "agility": "Aumenta tu daño de Aire, placaje y esquiva de pérdida de PA/PM",
       "critical_hit": "Mejora tus probabilidades de golpe crítico",
-      "raw_damage": "Añade daño fijo a cada hechizo"
+      "raw_damage": "Añade una cantidad fija a los efectos de daño y robo de vida"
     },
     "remove_point": "Quitar un punto de {{stat}}",
     "add_point": "Añadir un punto a {{stat}}",
@@ -868,7 +868,7 @@
       "stat_chance": "Suerte",
       "stat_agility": "Agilidad",
       "critical_hits": "GOLPES CRÍTICOS",
-      "crit_desc": "Cada hechizo o arma tiene su propia probabilidad de crítico base, expresada como una posibilidad de 1 entre N, que nunca puede bajar de 1 entre 2 (50%). La estadística de Crítico se muestra en tu hoja de personaje pero todavía no está conectada a las tiradas de crítico on-chain — hoy la tasa es fija por hechizo o arma.",
+      "crit_desc": "Cada hechizo o arma tiene su propia probabilidad de crítico base, expresada como una posibilidad de 1 entre N. La estadística de Crítico reduce N, pero la probabilidad final nunca puede superar 1 entre 2 (50 %).",
       "crit_bonus_desc": "En un golpe crítico, el hechizo aplica sus efectos críticos dedicados (más daño o efectos adicionales) en lugar de los normales.",
       "blocking": "ESCUDOS",
       "blocking_desc": "Algunos hechizos otorgan un escudo que absorbe el daño entrante de un elemento correspondiente hasta agotarse. No hay aguante ni postura de guardia, los escudos son la única absorción de daño.",

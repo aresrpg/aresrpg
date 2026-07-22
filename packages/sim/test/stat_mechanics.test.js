@@ -11,7 +11,8 @@ import { rng_seed } from '../src/prng.js'
 
 // Tactical-RPG stat mechanics:
 //   - TURN ORDER  -> §17.28 stat-free GLOBAL INTERLEAVE (generate_turn_order; mirrors interleave.move)
-//   - AGILITY     -> CRIT (the crit-bonus stat lowers the 1-in-X rate) + TACKLE/lock (apply_move escape roll)
+//   - CRITICAL    -> CRIT (the independent crit-bonus stat lowers the 1-in-X rate)
+//   - AGILITY     -> TACKLE/lock (apply_move escape roll)
 //   - NO-TRAP     -> tackle restricts MOVEMENT only; abandon is ALWAYS available (#62 invariant)
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
@@ -273,8 +274,8 @@ describe('no-trap: tackle never gates abandon', () => {
   })
 })
 
-// ── AGILITY -> CRIT (the crit-bonus stat lowers the 1-in-X rate) ────────────────
-describe('crit (agility-derived crit-bonus raises the crit rate)', () => {
+// ── CRITICAL HIT (the independent crit-bonus stat lowers the 1-in-X rate) ──────
+describe('crit (critical-hit bonus raises the crit rate)', () => {
   const crit_count = crit_bonus => {
     let crits = 0
     for (let seed = 1; seed <= 600; seed++) {

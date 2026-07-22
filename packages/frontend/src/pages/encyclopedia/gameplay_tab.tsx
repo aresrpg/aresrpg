@@ -398,7 +398,7 @@ function GameplayTab({ is_mobile }: { is_mobile: boolean }) {
               <span className="text-[9px] tracking-[0.15em] uppercase text-muted">
                 {t('encyclopedia.gameplay.critical_stat')}
               </span>
-              <FormulaBox>round(agility / 40) + equipment</FormulaBox>
+              <FormulaBox>criticalHit = equipment.critical</FormulaBox>
             </div>
           </div>
         </WikiSection>

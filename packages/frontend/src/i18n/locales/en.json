@@ -749,13 +749,13 @@
     },
     "description": {
       "vitality": "Increases your max HP",
-      "wisdom": "Increases your XP gain and HP regeneration",
-      "strength": "Increases your earth and neutral damage",
+      "wisdom": "Increases your XP gain",
+      "strength": "Increases your earth damage",
       "intelligence": "Increases your fire damage and healing",
-      "chance": "Increases your water damage",
-      "agility": "Increases your air damage, critical hit, tackle, and dodge of AP/MP loss",
+      "chance": "Increases your water damage and loot drop chance",
+      "agility": "Increases your air damage, tackle, and dodge of AP/MP loss",
       "critical_hit": "Improves your odds of landing a critical hit",
-      "raw_damage": "Adds flat damage to every spell"
+      "raw_damage": "Adds a flat amount to damage and life-steal effects"
     },
     "remove_point": "Remove a point from {{stat}}",
     "add_point": "Add a point to {{stat}}",
@@ -901,7 +901,7 @@
       "stat_chance": "Chance",
       "stat_agility": "Agility",
       "critical_hits": "CRITICAL HITS",
-      "crit_desc": "Each spell or weapon has its own base crit rate, written as a 1 in N chance, and it can never drop below 1 in 2 (50%). The Critical stat is shown on your character sheet but is not yet wired into crit rolls on-chain — today the rate is fixed per spell/weapon.",
+      "crit_desc": "Each spell or weapon has its own base crit rate, written as a 1 in N chance. Critical reduces N, but the final rate can never exceed 1 in 2 (50%).",
       "crit_bonus_desc": "On a critical hit the spell applies its dedicated critical effects (stronger damage or extra effects) in place of its normal ones.",
       "blocking": "SHIELDS",
       "blocking_desc": "Some spells grant a shield that soaks incoming damage of a matching element until it is used up. There is no stamina or guard stance, shields are the only damage absorption.",

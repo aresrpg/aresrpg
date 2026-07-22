@@ -562,13 +562,7 @@ export function Stats() {
         <div className="stats__card stats__card--secondary">
           {secondary.map(({ key, value, unit }) => {
             const { label, description } = stat_text(t, key)
-            // critical hit reads as "1 chance in N" per the locked sheet (1/N), not a raw percent.
-            const display =
-              key === STATISTICS.CRITICAL
-                ? value > 0
-                  ? `1 / ${Math.round(100 / value)}`
-                  : '0'
-                : `${value.toLocaleString()}${unit === 'percent' ? '%' : ''}`
+            const display = `${value.toLocaleString()}${unit === 'percent' ? '%' : ''}`
             return (
               <Tooltip key={key} text={label}>
                 <div className="stats__srow">

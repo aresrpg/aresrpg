@@ -21,10 +21,10 @@ function get_base_stat(character, stat) {
       return 6
     case STATISTICS.MOVEMENT:
       return 3
-    case STATISTICS.CRITICAL:
-      return Math.round(get_total_stat(character, STATISTICS.AGILITY) / 40)
-    // range, raw damage + the 4 resistances have no on-character base (equipment only) — pure equipment sums.
+    // range, critical hit, raw damage + the 4 resistances have no on-character base (equipment only) — pure
+    // equipment sums. In particular, live combat never derives critical hit from agility.
     case STATISTICS.RANGE:
+    case STATISTICS.CRITICAL:
     case STATISTICS.RAW_DAMAGE:
     case STATISTICS.EARTH_RESISTANCE:
     case STATISTICS.FIRE_RESISTANCE:
@@ -103,8 +103,7 @@ export function get_max_health(character) {
 /**
  * Derived secondary stats — READ ONLY. SSOT for the stats menu's "Secondary" section.
  * Faithful to the reference corpus ("Derived stats ... come from equipment at runtime"):
- * raw damage + heal + the 4 elemental resistances are pure equipment sums (`get_total_stat`),
- * critical hit follows the existing SDK base formula (agility / 40 + equipment).
+ * critical hit + raw damage + the 4 elemental resistances are pure equipment sums (`get_total_stat`).
  * NO pods row — inventory is unlimited, carry weight is retired (SPEC §, design ruling 2026-07-15).
  *
  * NO initiative row — §17.28 turn order is a stat-free GLOBAL INTERLEAVE (join/placement order breaks ties),
@@ -117,7 +116,7 @@ export function get_secondary_stats(character) {
       key: STATISTICS.CRITICAL,
       label: 'Critical hit',
       value: get_total_stat(character, STATISTICS.CRITICAL),
-      unit: 'percent',
+      unit: 'unit',
     },
     {
       key: STATISTICS.RAW_DAMAGE,

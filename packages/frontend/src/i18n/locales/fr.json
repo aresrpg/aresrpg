@@ -749,13 +749,13 @@
     },
     "description": {
       "vitality": "Augmente votre Vie maximum",
-      "wisdom": "Augmente votre gain d’XP et votre régénération de Vie",
-      "strength": "Augmente vos dégâts Terre et neutres",
+      "wisdom": "Augmente votre gain d’XP",
+      "strength": "Augmente vos dégâts Terre",
       "intelligence": "Augmente vos dégâts Feu et vos soins",
-      "chance": "Augmente vos dégâts Eau",
-      "agility": "Augmente vos dégâts Air, coup critique, tacle et esquive de perte de PA/PM",
+      "chance": "Augmente vos dégâts Eau et vos chances d’obtenir du butin",
+      "agility": "Augmente vos dégâts Air, votre tacle et votre esquive de perte de PA/PM",
       "critical_hit": "Améliore vos chances de coup critique",
-      "raw_damage": "Ajoute des dégâts fixes à chaque sort"
+      "raw_damage": "Ajoute un montant fixe aux effets de dégâts et de vol de vie"
     },
     "remove_point": "Retirer un point de {{stat}}",
     "add_point": "Ajouter un point à {{stat}}",
@@ -868,7 +868,7 @@
       "stat_chance": "Chance",
       "stat_agility": "Agilité",
       "critical_hits": "COUPS CRITIQUES",
-      "crit_desc": "Chaque sort ou arme a son propre taux de critique de base, exprimé comme une chance sur N, qui ne peut jamais descendre sous 1 sur 2 (50%). La stat de Critique est affichée sur votre fiche de personnage mais n'est pas encore reliée aux jets de critique on-chain — aujourd'hui le taux est fixe par sort ou arme.",
+      "crit_desc": "Chaque sort ou arme a son propre taux de critique de base, exprimé comme une chance sur N. La stat de Critique réduit N, mais le taux final ne peut jamais dépasser 1 sur 2 (50 %).",
       "crit_bonus_desc": "Lors d'un coup critique, le sort applique ses effets critiques dédiés (dégâts renforcés ou effets supplémentaires) à la place de ses effets normaux.",
       "blocking": "BOUCLIERS",
       "blocking_desc": "Certains sorts accordent un bouclier qui absorbe les dégâts entrants d'un élément correspondant jusqu'à épuisement. Il n'y a ni endurance ni posture de garde, les boucliers sont la seule absorption de dégâts.",
