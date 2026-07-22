@@ -8,6 +8,7 @@ use aresrpg_foundation::spell;
 use aresrpg::{
   admin::{Self, AdminCap},
   catalog::Catalog,
+  character_link,
   config::GameConfig,
   equipment,
   extension,
@@ -97,6 +98,24 @@ fun mint_lock_shop_pet(sc: &mut Scenario, pet_template: ID): ID {
   ts::return_shared(kiosk);
   sc.return_to_sender(pkcap);
   pet_id
+}
+
+/// #88 — force a pet's stored power PAST the 60-feed bound: the exact shape the pre-cadence `feed()` door
+/// (now sealed, EUseFeedPet) could leave behind by writing arbitrary power×amount under the SAME PetPowerKey
+/// the current 0-60 feed-count cadence reinterprets. `feed_pet`'s own EFullyFed gate makes 61+ physically
+/// unreachable through the LIVE feed door (see `sixty_first_feed_aborts` above) — this reaches the identical
+/// DF the legacy door wrote, via the package-private write `character_link` owns, so a pre-seal wallet's
+/// state is reproducible without a real chain history.
+fun force_legacy_power(sc: &mut Scenario, pet_id: ID, amount: u64) {
+  sc.next_tx(OWNER);
+  let mut k = sc.take_shared<Kiosk>();
+  let pkcap = sc.take_from_sender<PersonalKioskCap>();
+  let ver = sc.take_shared<Version>();
+  let pet = k.borrow_mut(personal_kiosk::borrow(&pkcap), pet_id);
+  character_link::grow_pet_power(pet, amount, &ver);
+  ts::return_shared(k);
+  sc.return_to_sender(pkcap);
+  ts::return_shared(ver);
 }
 
 /// Exercise the production extract → equipment::equip path rather than the raw testing attachment bypass.
@@ -317,5 +336,37 @@ fun non_pet_target_aborts() {
   let food_id = test_world::mint_lock_stack(&mut sc, OWNER, food_t, 1);
   set_food(&mut sc, food_t, 1);
   do_feed(&mut sc, cid, sword_id, pet_t, food_id, DAY_MS);
+  abort
+}
+
+// ╔════════════════ [ #88 — legacy-encoded PetPowerKey vs the equip-time scale (RED-FIRST) ] ═ ]
+// Root cause (issue #88): the pre-cadence `feed()` door stored arbitrary power×amount in the unversioned
+// PetPowerKey; the current cadence reinterprets that SAME key as a bounded 0-60 feed count.
+// `equipment::equip` normalizes a pet's stats off the stored count BEFORE slot placement
+// (item_stats::pet_stats_at_count → scale_from_center asserts numerator <= denominator) — a legacy value past
+// 60 aborts item_stats::EInvalidScale(101) inside that normalization, and because the PTB
+// (extract_for_equip + equipment::equip) is one atomic transaction, the abort reverts the whole thing: the
+// item is never detached, so it lands right back where the player found it — loose, unequipped, in the
+// kiosk. This is the "on-chain abort" half of the stalled fork; the "silent non-submission" half is RULED
+// OUT by equip_ptb (packages/sdk/src/sui/write/items_extract.js) composing the identical two-call sequence
+// for every equippable category, pets included — there is no category branch that skips a pet leg.
+#[test, expected_failure(abort_code = 101, location = item_stats)]
+fun legacy_overscaled_pet_power_aborts_equip_one_past_the_bound() {
+  let mut sc = ts::begin(OWNER);
+  let (cid, pet_t, _food_t) = stage(&mut sc);
+  let pet_id = mint_lock_shop_pet(&mut sc, pet_t);
+  force_legacy_power(&mut sc, pet_id, 61); // one past PET_FULL_FEEDS(60) — the exact boundary #88 crosses
+  equip_locked_pet(&mut sc, cid, pet_id, pet_t);
+  abort
+}
+
+#[test, expected_failure(abort_code = 101, location = item_stats)]
+fun legacy_overscaled_pet_power_aborts_equip_realistic_magnitude() {
+  let mut sc = ts::begin(OWNER);
+  let (cid, pet_t, _food_t) = stage(&mut sc);
+  let pet_id = mint_lock_shop_pet(&mut sc, pet_t);
+  // A realistic OLD arbitrary-power magnitude (not just the tightest boundary) — same abort, same module.
+  force_legacy_power(&mut sc, pet_id, 70);
+  equip_locked_pet(&mut sc, cid, pet_id, pet_t);
   abort
 }
