@@ -48,7 +48,20 @@ async function dev_move(cell) {
   if (!me) return { ok: false, error: 'my_entity_id null' }
   if (fight.active_entity_id !== me) return { ok: false, error: `not my turn (active=${fight.active_entity_id})` }
   if (!Number.isInteger(cell?.x) || !Number.isInteger(cell?.y)) return { ok: false, error: 'cell must be {x:int,y:int}' }
-  await store.commit_turn([{ kind: MOVE_KIND, target: encode(cell.x, cell.y) }])
+  // commit_turn returns false on a swallowed simulation refusal. Capture its short-lived store reason while the
+  // commit reconciles: refresh may clear `error` before this awaited call returns.
+  let refusal_reason = null
+  const unsubscribe = use_dungeon.subscribe((state) => {
+    if (state.error) refusal_reason = String(state.error)
+  })
+  let committed = false
+  try {
+    committed = await store.commit_turn([{ kind: MOVE_KIND, target: encode(cell.x, cell.y) }])
+  } finally {
+    unsubscribe()
+  }
+  if (!committed)
+    return { ok: false, error: refusal_reason ?? String(use_dungeon.getState().error ?? 'turn commit refused') }
   const err = use_dungeon.getState().error
   if (err) return { ok: false, error: String(err) }
   const after = fight_view()?.fighters?.get(me)
