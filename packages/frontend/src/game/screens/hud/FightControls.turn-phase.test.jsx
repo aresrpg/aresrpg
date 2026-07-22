@@ -194,6 +194,20 @@ describe('fight turn controls — one phase source for the button and countdown'
     expect(switched).not.toContain(`data-controlled-character="${ME}"`)
   })
 
+  test('a spectator gets one local leave door and no fight inputs', () => {
+    const store = seed()
+    store.getState().input({ type: 'ctx', ctx: { spectator: true, my_entity_id: null, address: null } })
+    const html = renderToStaticMarkup(
+      <FightControls abandon_label="FORFEIT" leave_spectate_label="LEAVE" on_leave_spectate={() => {}} />
+    )
+
+    expect(html).toContain('hud-fightctl__watching')
+    expect(html).toContain('>LEAVE<')
+    expect(html).not.toContain('>FORFEIT<')
+    expect(html).not.toContain('hud-fightctl__end')
+    expect(html).not.toContain('hud-fightctl__ready')
+  })
+
   test('the `state.fight` mirror never returns — a seeded LIVE core leaves game-core state fight-free (S2 kill lock)', async () => {
     // The AP-desync root was a second home for fight truth: `state.fight`, recomputed on
     // core change but delivered a full async dispatch cycle late. The mirror is deleted; this row keeps it dead.

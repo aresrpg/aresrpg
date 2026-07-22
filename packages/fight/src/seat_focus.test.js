@@ -111,4 +111,36 @@ describe('seat focus — the ctx door re-resolves my_key when my_entity_id switc
     store.getState().input({ type: 'snapshot', fight: fight_object(), version: 1 }, T0 + 10)
     expect(store.getState().my_key).toBe('p1')
   })
+
+  test('a spectator projects the board without inheriting an owned seat', () => {
+    const store = create_fight_store()
+    store.getState().input(
+      {
+        type: 'init',
+        fight_id: FIGHT,
+        ctx: { spectator: true, my_entity_id: null, address: OWNER, beat_ctx: { grid_width: 20 } },
+      },
+      T0
+    )
+    store.getState().input({ type: 'snapshot', fight: fight_object(), version: 1 }, T0 + 10)
+
+    const view = engine_view(store.getState())
+    expect(view.spectator).toBe(true)
+    expect(view.my_entity_id).toBeNull()
+    expect(view.controlled_entity_ids).toEqual([])
+
+    // The global owned-party focus feed remains live while WATCH is mounted. A late focus update must not turn
+    // the observer into that owned participant in the raw core (provider/locality read my_key, not the projection).
+    store.getState().input({ type: 'ctx', ctx: { my_entity_id: LEADER } }, T0 + 20)
+    expect(store.getState()).toMatchObject({
+      my_key: null,
+      provider: 'idle_wait',
+      ctx: { spectator: true, my_entity_id: null, address: null },
+    })
+    expect(engine_view(store.getState()).my_entity_id).toBeNull()
+    const entry_count = Object.keys(store.getState().entries).length
+    store.getState().input({ type: 'intent', intent: { kind: 'end_turn' } }, T0 + 30)
+    expect(store.getState().refused).toMatchObject({ type: 'intent', reason: 'provider' })
+    expect(Object.keys(store.getState().entries)).toHaveLength(entry_count)
+  })
 })

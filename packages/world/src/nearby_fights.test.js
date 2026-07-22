@@ -137,8 +137,9 @@ describe('join / spectate legality', () => {
     expect(is_dungeon_join_legal(to_fight_marker(served({ public: false, status: 'active' })))).toBe(false)
     expect(is_dungeon_join_legal(null)).toBe(false)
   })
-  test('SPECTATE legal once started (active), never placement or terminal', () => {
-    expect(is_spectatable(to_fight_marker(served({ status: 'active' })))).toBe(true)
+  test('SPECTATE is legal for a public active fight, never private, placement, or terminal', () => {
+    expect(is_spectatable(to_fight_marker(served({ public: true, status: 'active' })))).toBe(true)
+    expect(is_spectatable(to_fight_marker(served({ public: false, status: 'active' })))).toBe(false)
     expect(is_spectatable(to_fight_marker(served({ status: 'placement' })))).toBe(false)
     expect(is_spectatable(to_fight_marker(served({ status: 'victory' })))).toBe(false)
     expect(is_spectatable(to_fight_marker(served({ status: 'defeat' })))).toBe(false)

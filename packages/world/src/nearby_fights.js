@@ -153,15 +153,10 @@ export function is_dungeon_join_legal(row) {
   return !!row && row.status === 'placement'
 }
 
-/** SPECTATE legality: a fight can be spectated once it has started. A started fight (status !== placement, and not terminal)
- *  mounts a read-only board. Terminal fights (victory/defeat) are mid-teardown — nothing to watch. */
+/** SPECTATE legality: only a public fight currently in battle mounts a read-only board. Placement is the JOIN
+ * window; private and terminal fights are not observer doors. */
 export function is_spectatable(marker) {
-  return (
-    !!marker &&
-    (marker.status === 'active' || marker.started) &&
-    marker.status !== 'victory' &&
-    marker.status !== 'defeat'
-  )
+  return !!marker && marker.public === true && marker.status === 'active'
 }
 
 /**

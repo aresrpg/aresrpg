@@ -467,11 +467,16 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
   const status = projected_status(s)
   const placement = status === STATUS_PLACEMENT
   const address = ctx.address ?? null
-  const controlled_entity_ids = (view.escrow ?? [])
-    .filter((row) => address && String(row.addr) === String(address))
-    .map(participant_entity_id)
-    .filter(Boolean)
-  const my_entity_id = entity_id_of_key(view, s.my_key) ?? ctx.my_entity_id ?? controlled_entity_ids[0] ?? null
+  const spectator = ctx.spectator === true
+  const controlled_entity_ids = spectator
+    ? []
+    : (view.escrow ?? [])
+        .filter((row) => address && String(row.addr) === String(address))
+        .map(participant_entity_id)
+        .filter(Boolean)
+  const my_entity_id = spectator
+    ? null
+    : (entity_id_of_key(view, s.my_key) ?? ctx.my_entity_id ?? controlled_entity_ids[0] ?? null)
   const active_entity_id = entity_id_of_key(view, p.active)
   // ④+⑦b THE LIVE trap projection (ruled 07-19) — the sim door reads THIS (state_from_view/evolve_flush_casts),
   // never trap_overlay. A durable `my_traps` cell is LIVE unless it's `gone` (a committed fighter detonated it —
@@ -531,7 +536,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
     controlled_entity_ids,
     active_controlled_character_id:
       active_entity_id && controlled_entity_ids.includes(active_entity_id) ? active_entity_id : null,
-    spectator: false,
+    spectator,
     hand: s.hand ?? [],
     draft_count: s.staged?.length ?? 0,
     deck_size: 0,

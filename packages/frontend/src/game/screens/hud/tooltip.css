@@ -44,6 +44,8 @@
 
 .tt-text {
   display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 /* naked card — the content brings its OWN surface (e.g. the nametag chip), so the tooltip card drops

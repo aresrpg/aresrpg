@@ -489,8 +489,7 @@ export function hover_spell(spell_id) {
 }
 
 // Whether the CURRENT live fight is a view-only spectate (hides all controls) — the core's projected
-// `spectator` flag. Spectate isn't wired through the S2 core yet (engine_view hardcodes false), so this
-// honestly reports false until that lands.
+// `spectator` flag. The observer entry stamps it without a participant key, so no local input provider can arm.
 export function is_spectator() {
   return !!fight_view()?.spectator
 }

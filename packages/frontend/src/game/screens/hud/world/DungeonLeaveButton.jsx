@@ -33,8 +33,10 @@ export function DungeonLeaveButton() {
   const run_pass_id = use_dungeon(s => s.run_pass_id)
   const status = use_dungeon(s => s.dungeon?.status)
   const busy = use_dungeon(s => s.busy)
+  const spectating = use_dungeon(s => s.spectating)
   const abandon = use_dungeon(s => s.abandon)
   const abandon_fight = use_dungeon(s => s.abandon_fight)
+  const reset_local = use_dungeon(s => s.reset_local)
   // W4: the single-exit coordination is now a MACHINE READ, not the DungeonBoard-written `hud_mounted` flag.
   // The board's own ABANDON is THE exit exactly when the board is mounted (PLACEMENT/ACTIVE); the result card
   // owns the close in TERMINAL. So this fallback shows on every OTHER escrowed state (plane OPEN/ROOM_CLEARED,
@@ -66,6 +68,19 @@ export function DungeonLeaveButton() {
   // so it can never disagree with what actually mounted (the old `hud_mounted` flag could lag a frame).
   const show = latched && !should_mount_board(phase) && !should_show_result(phase)
   if (!show) return null
+
+  // A WATCH session owns no participant and must never expose either chain abandon door. During initial sync (or
+  // an honest half-init hold) this is the reachable local-only escape; ACTIVE uses FightControls' identical door.
+  if (spectating)
+    return (
+      <div className="hud-leave-persistent">
+        <div className="hud-fightctl">
+          <button type="button" className="hud-fightctl__btn hud-fightctl__abandon" onClick={reset_local}>
+            {t('fights.leave_spectate')}
+          </button>
+        </div>
+      </div>
+    )
 
   const open_leave = status === STATUS_OPEN
   const on_confirmed = async () => {

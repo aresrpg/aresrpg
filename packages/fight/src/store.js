@@ -290,6 +290,11 @@ const snapshot_view = (ctx, msg, version) =>
     offset: ctx.offset ?? undefined,
   })
 
+// Observer identity is stripped at every context ingress, not merely hidden by engine_view. Global owned-party
+// focus updates remain live while WATCH is open; retaining one here would make its journal turns look local.
+const observer_ctx = (ctx = {}) =>
+  ctx.spectator === true ? { ...ctx, address: null, creator: null, my_entity_id: null } : ctx
+
 const empty_fight = () => ({
   ...empty_state(null),
   entries: {},
@@ -403,24 +408,29 @@ const make_input =
       return set((s) => ({ ...s, settlement: settle_input.reduce_settlement(s.settlement, msg) }))
     switch (msg.type) {
       case 'init':
-        set(() => ({
-          ...empty_fight(),
-          // A new session generation per init — an in-flight async result tagged with the prior generation
-          // (a fight-A response landing after fight B opened) drops at the gate above instead of corrupting B.
-          session_generation: (state.session_generation ?? 0) + 1,
-          fight_id: msg.fight_id ?? null,
-          my_key: msg.my_key ?? null,
-          ctx: msg.ctx ?? {},
-          settlement:
-            msg.fight_id == null ? settle_input.pending_settlement(state.settlement) : settle_input.empty_settlement(),
-        }))
+        set(() => {
+          const ctx = observer_ctx(msg.ctx ?? {})
+          return {
+            ...empty_fight(),
+            // A new session generation per init — an in-flight async result tagged with the prior generation
+            // (a fight-A response landing after fight B opened) drops at the gate above instead of corrupting B.
+            session_generation: (state.session_generation ?? 0) + 1,
+            fight_id: msg.fight_id ?? null,
+            my_key: ctx.spectator === true ? null : (msg.my_key ?? null),
+            ctx,
+            settlement:
+              msg.fight_id == null
+                ? settle_input.pending_settlement(state.settlement)
+                : settle_input.empty_settlement(),
+          }
+        })
         return
       case 'ctx':
         // MULTICHAR seat focus: a my_entity_id switch re-resolves my_key against the adopted view — a stale
         // stamped seat keeps the projection + transaction_character_id on the WRONG character (burned gas).
         // Unresolvable (no view yet / unknown entity) keeps the current key; adoption re-stamps as before.
         set((s) => {
-          const ctx = { ...s.ctx, ...msg.ctx }
+          const ctx = observer_ctx({ ...s.ctx, ...msg.ctx })
           const seat = 'my_entity_id' in (msg.ctx ?? {}) ? seat_resolver(s.view)(ctx.my_entity_id) : null
           return recompute({ ...s, ctx, my_key: seat != null ? `p${seat}` : s.my_key }, now)
         })
@@ -549,7 +559,7 @@ const make_input =
         if (is_open || state.view == null) {
           if (!is_open && version <= state.view_version) return // never regress the base below itself
           set((s) => {
-            const ctx = { ...s.ctx, ...(msg.ctx ?? {}) }
+            const ctx = observer_ctx({ ...s.ctx, ...(msg.ctx ?? {}) })
             // V2 · A5 OMISSION-HOLD: a base that does NOT model the status class must not drop a floored
             // invisibility/buff — backfill its status rows from the prior committed state (a no-op for a modelled read).
             const view = carry_statuses(snapshot_view(ctx, msg, version), committed_state(s))

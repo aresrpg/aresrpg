@@ -50,6 +50,7 @@ export function enter_world_fight({ fight_id, world_id = null, character_id, res
     phase: 'playing',
     error: null,
     fight_syncing: !resumed, // create/join receipt truth outranks a temporarily-missing serving-node read
+    spectating: false,
     session_address: address,
   })
   init_dungeon_fight({ fight_id, character_id, address }) // OPEN it in the core (refresh feeds the snapshot)
@@ -71,6 +72,41 @@ export function enter_world_fight({ fight_id, world_id = null, character_id, res
     if (outcome === 'timed_out')
       game_log('world-fight', 'receipt poll hit its wait ceiling — the 4s heartbeat keeps trying', { fight_id })
   })
+}
+
+/**
+ * WATCH a public active world fight without taking a seat. This is the same read/poll/journal session as a
+ * participant resume, but its core context has no wallet/character identity and is explicitly spectator-only.
+ * Returns false when the request is not public/live-shaped or another fight/run already owns the shared store.
+ * @param {{ fight_id:string, world_id?:string|null, public_fight?:boolean, status?:string|null }} args
+ */
+export function spectate_world_fight({ fight_id, world_id = null, public_fight = false, status = null }) {
+  if (!fight_id || !public_fight || status !== 'active' || session_busy()) return false
+  const { address } = use_auth.getState()
+  use_dungeon.setState({
+    fight_id,
+    fight_fresh: false,
+    dungeon_id: fight_id,
+    world_id,
+    template_id: world_id,
+    character_id: null,
+    run_pass_id: null,
+    run: null,
+    rooms: [],
+    result_id: null,
+    phase: 'playing',
+    error: null,
+    fight_syncing: true,
+    spectating: true,
+    session_address: address,
+  })
+  // Null address is intentional: engine_view otherwise adopts the first seat owned by this wallet even when the
+  // requested character is null. The spectator marker drives read-only projection while the null seat keeps the
+  // core provider idle.
+  init_dungeon_fight({ fight_id, character_id: null, address: null, spectator: true })
+  getState()._start_polling()
+  void getState().refresh()
+  return true
 }
 
 /** RESUME after a reload: discover the candidate, then validate it is still live BEFORE entry (absent/terminal

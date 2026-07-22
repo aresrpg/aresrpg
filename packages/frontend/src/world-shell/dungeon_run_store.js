@@ -255,6 +255,7 @@ const cleared_session = (/** @type {string} */ phase) => ({
   room_recap: null,
   _claiming: false,
   fight_syncing: false,
+  spectating: false,
   _turn_commit_failure: null,
 })
 
@@ -265,6 +266,8 @@ export const use_dungeon = create((set, get) => ({
   fight_syncing: false,
   /** Executed-failure proof for one exact fight@actor@deadline. Automatic fire may never cross it. */
   _turn_commit_failure: null,
+  /** True for a seatless, read-only world-fight observer. Null identity keeps the core provider idle. */
+  spectating: false,
   /** True when the live `fight_id` was set by THIS client's explicit start/join gesture (a FRESH create). The
    *  fight-entry cinematic gates on it; resume/poll-adopt snap straight to the settled board. */
   fight_fresh: false,
@@ -776,6 +779,16 @@ export const use_dungeon = create((set, get) => ({
    */
   _collapse_terminal_ghost(fight_id = get().fight_id) {
     if (!fight_id || get().fight_id !== fight_id) return // an older read may never collapse a replacement fight
+    if (get().spectating) {
+      // A gone observed fight has no per-seat outcome to recover. Keep its exact id latched while any final replay
+      // drains so a replacement session cannot enter underneath this callback, then leave locally.
+      get()._stop_polling()
+      hold_until_presented(() => {
+        const state = get()
+        if (state.spectating && state.fight_id === fight_id) state.reset_local()
+      })
+      return
+    }
     if (get()._claiming || get()._settling || get().phase === 'done') {
       set({ fight_id: null })
       return
@@ -963,9 +976,10 @@ export const use_dungeon = create((set, get) => ({
           run,
           rooms_total: get().rooms.length,
           ctx: {
-            address: me,
-            creator: me,
-            my_entity_id: get().character_id,
+            address: get().spectating ? null : me,
+            creator: get().spectating ? null : me,
+            my_entity_id: get().spectating ? null : get().character_id,
+            spectator: get().spectating,
             run,
             rooms_total: get().rooms.length,
             mob_names: get().mob_names,
@@ -1009,9 +1023,10 @@ export const use_dungeon = create((set, get) => ({
           rooms_total: get().rooms.length,
           open_version: Number(run.version) || 0,
           ctx: {
-            address: me,
-            creator: me,
-            my_entity_id: get().character_id,
+            address: get().spectating ? null : me,
+            creator: get().spectating ? null : me,
+            my_entity_id: get().spectating ? null : get().character_id,
+            spectator: get().spectating,
             run,
             rooms_total: get().rooms.length,
             mob_names: get().mob_names,
@@ -1027,7 +1042,11 @@ export const use_dungeon = create((set, get) => ({
       if (!view) return
       if (live_fight_id && get().fight_id !== live_fight_id) return
       set({ error: null, fight_syncing: false })
-      if (view.status === STATUS_ACTIVE) mark_active_seat(view.id) // the abandon→defeat decision reads this latch
+      const { spectating } = get()
+      if (view.status === STATUS_ACTIVE && !spectating) {
+        // The abandon→defeat decision reads this latch; an observer never earns it.
+        mark_active_seat(view.id)
+      }
 
       if (view.status === STATUS_OPEN) {
         const { phase } = get()
@@ -1040,6 +1059,12 @@ export const use_dungeon = create((set, get) => ({
       // Room CLEARED (non-terminal victory): only chain terminal may close the board + advance the pass. The
       // optimistic killing fold can paint status/HP, but it never owns outcome teardown or settlement.
       if (view.chain_terminal === STATUS_ROOM_CLEARED) {
+        if (spectating) {
+          // Defensive invariant: a world observer owns no RunPass and must never enter room settlement even if a
+          // malformed/read-raced projection reports the dungeon-only status.
+          get().reset_local()
+          return
+        }
         note_victory(view.id, view.room_index, 'non_terminal')
         teardown()
         void route_settlement(
@@ -1058,10 +1083,23 @@ export const use_dungeon = create((set, get) => ({
       }
       // TERMINAL (WON/FAILED): the board publishes the terminal view; DungeonBoard's terminal effect owns claim()
       // (card + death-beat-gated teardown + settle). The killing wave rides the core's receipt wave.
-      if (view.status === STATUS_WON || view.status === STATUS_FAILED) return
+      if (view.status === STATUS_WON || view.status === STATUS_FAILED) {
+        if (spectating) {
+          // Observers neither settle nor claim. Let the accepted replay drain, then leave through the local-only
+          // reset door. Keep the exact fight id latched until then: it blocks replacement entry and preserves the
+          // world-fight veil while the killing wave plays.
+          const terminal_fight_id = live_fight_id
+          get()._stop_polling()
+          hold_until_presented(() => {
+            const state = get()
+            if (state.spectating && state.fight_id === terminal_fight_id) state.reset_local()
+          })
+        }
+        return
+      }
 
       // LIQUIDATION: every watching client auto-cranks a stalled deadline (jitter + single-flight + latch inside).
-      maybe_liquidate(view, get)
+      if (!spectating) maybe_liquidate(view, get)
     } catch (error) {
       if (!is_current()) return
       if (is_gone_error(error)) return get()._recover_stale_membership({})
@@ -1515,6 +1553,7 @@ export const use_dungeon = create((set, get) => ({
       room_recap: null,
       _claiming: false,
       fight_syncing: false,
+      spectating: false,
       _turn_commit_failure: null,
     })
   },

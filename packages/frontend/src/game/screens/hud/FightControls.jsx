@@ -7,7 +7,8 @@
 //   - PLACEMENT: the big READY button (force-start on all-ready or the 60s timer) + Forfeit.
 //   - YOUR TURN: the big END TURN button + Forfeit.
 //   - COMMITTING: END TURN stays visible but disabled; its countdown is gone.
-//   - OTHERS' TURN / presenting / spectating: just Forfeit (End turn unmounts with its countdown).
+//   - OTHERS' TURN / presenting: just Forfeit (End turn unmounts with its countdown).
+//   - SPECTATING: local Leave spectate only; no participant or chain-write controls.
 // FORFEIT (S-80): `actions::abandon` on the ENGINE package — you can abandon
 // any fight; it's considered a death. Universal now (every fight type has this door — a WORLD fight used to
 // have none, so it was hidden there); always present, always behind an in-app CONFIRM (never a native
@@ -41,6 +42,7 @@ import {
 // on fight_id/character_id, so it safely no-ops with no live session.
 const default_end_turn = () => use_dungeon.getState().commit_turn([]) // empty batch = pass the turn (act_pass)
 const default_abandon = () => use_dungeon.getState().abandon_fight()
+const default_leave_spectate = () => use_dungeon.getState().reset_local() // local-only: no seat and no chain write
 const default_ready = () => {
   const pick = use_dungeon_turn.getState().placement_pick
   if (pick != null) use_dungeon.getState().place_at_cell(pick)
@@ -101,8 +103,9 @@ export function FightEndTurnButton({ phase, disabled = false, on_end_turn, end_l
  * them. FORFEIT owns its OWN in-app confirm (below) so every mount — including a bare one with no injected
  * props — gets the death warning before it ever signs; no caller needs to build its own modal for this door.
  * @param {{
- *   on_end_turn?: () => void, on_abandon?: () => void, on_ready?: () => void,
+ *   on_end_turn?: () => void, on_abandon?: () => void, on_ready?: () => void, on_leave_spectate?: () => void,
  *   end_label?: string, abandon_label?: string, ready_label?: string, waiting_label?: string,
+ *   leave_spectate_label?: string,
  *   end_disabled?: boolean, abandon_disabled?: boolean, ready_disabled?: boolean,
  *   placement_deadline_ms?: number, placement_label?: (n: number) => string,
  *   turn_deadline_ms?: number, has_turn_draft?: boolean, auto_commit_label?: (n: number) => string,
@@ -111,9 +114,11 @@ export function FightEndTurnButton({ phase, disabled = false, on_end_turn, end_l
 export function FightControls({
   on_end_turn = default_end_turn,
   on_abandon = default_abandon,
+  on_leave_spectate = default_leave_spectate,
   on_ready, // dungeon injects the ONE place_at path; default (below) = place_at the explicit placement pick
   end_label = 'End turn',
   abandon_label,
+  leave_spectate_label,
   ready_label,
   waiting_label,
   end_disabled,
@@ -214,6 +219,19 @@ export function FightControls({
       () => push_event_toast({ state: 'error', title: t('fight.bug_report_copy_failed') })
     )
   }
+
+  if (fight.spectator)
+    return (
+      <div className="hud-fightctl">
+        <span className="hud-fightctl__watching">{t('fights.spectating')}</span>
+        <button type="button" className="hud-fightctl__btn hud-fightctl__abandon" onClick={on_leave_spectate}>
+          {leave_spectate_label ?? t('fights.leave_spectate')}
+        </button>
+        <button type="button" className="hud-fightctl__btn hud-fightctl__report" onClick={on_bug_report}>
+          {t('fight.bug_report')}
+        </button>
+      </div>
+    )
 
   return (
     <>

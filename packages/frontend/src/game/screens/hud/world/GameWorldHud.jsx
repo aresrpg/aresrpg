@@ -309,9 +309,16 @@ export function GameWorldHud() {
                 the fixed 2×10 socket grid + pager on the RIGHT, an XP strip under both. Left-click a socket to
                 PICK (arm), then left-click a target cell to CAST (or press 1-9 / 0-for-weapon). DungeonBoard
                 seeds fight.hand from the character's class spells. */}
-            <SpellBar />
-            {/* turn-draft input + END TURN/ABANDON (bottom-right FightControls) + room/terminal state machine */}
-            <DungeonBoard />
+            {!spectating && <SpellBar />}
+            {/* A seatless observer never mounts DungeonBoard, the tactical input/settlement owner. It gets only
+                FightControls' local Leave-spectate branch while the shared adapter renders the journal/courtesy view. */}
+            {spectating ? (
+              <div className="hud-bottom">
+                <FightControls />
+              </div>
+            ) : (
+              <DungeonBoard />
+            )}
           </>
         )}
         {fight_mode && !in_dungeon && (

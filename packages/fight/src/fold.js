@@ -199,8 +199,12 @@ export const carry_statuses = (view, prior) => {
  *   · else it is MY window to push (playable turn OR placement) → `local_turn` (my clicks → the local sim)
  *   · else → `idle_wait` (a peer's turn — nothing until their commit lands, then it becomes chain_replay)
  *  The store's door refuses any input whose provenance doesn't match this token (a logged non-event). */
-export const provider_of = ({ presenting, playable, view }) =>
-  presenting ? 'chain_replay' : playable || view?.status === STATUS_PLACEMENT ? 'local_turn' : 'idle_wait'
+export const provider_of = ({ presenting, playable, view, spectator = false }) =>
+  presenting
+    ? 'chain_replay'
+    : !spectator && (playable || view?.status === STATUS_PLACEMENT)
+      ? 'local_turn'
+      : 'idle_wait'
 
 /** PLACEMENT GHOSTS — a peer's uncommitted pick is a cosmetic hint, never a source of truth, so it dies fast:
  *  15s covers a re-pick cadence with headroom while a stale/dead broadcast never lingers into the fight proper. */
@@ -230,8 +234,13 @@ export const recompute = (draft, now) => {
   const last_version = authoritative_log.length ? authoritative_log[authoritative_log.length - 1].version : -1
   const applied_version = Math.max(draft.view_version, last_version)
   const settlement = settle_input.reconcile_settlement(draft.settlement, base, authoritative_log, draft)
+  // A spectator is permanently seatless inside the core, not merely masked in the UI projection. Global party
+  // focus updates still cross the ctx door while WATCH is open; discarding their resolved key here keeps locality,
+  // provider ownership, turn clocks, and every local-push gate read-only from the same fold truth.
+  const spectator = draft.ctx?.spectator === true
+  const my_key = spectator ? null : draft.my_key
   let { turn_started_at, my_turn_no = 0 } = draft
-  const my_turn = committed.active != null && committed.active === draft.my_key
+  const my_turn = committed.active != null && committed.active === my_key
   // PLAYABLE-turn anchor + TURN-END DISARM share ONE boundary. The SINGLE-PTB fold resolves my-end→mob-wave→my-next
   // -turn in ONE receipt, so `committed active` never leaves me (my_turn stays true ALL fight) — a
   // `my_turn && !was_my_turn` edge fires only ONCE (turn 1). Key off the PLAYABLE rising edge instead — my turn AND
@@ -255,7 +264,7 @@ export const recompute = (draft, now) => {
   // Chain timestamps are monotonic within one Fight. A version-inflated but semantically stale object may prune a
   // fresher TurnStarted tail; preserve the greatest observed chain deadline without synthesising a client deadline.
   const turn_deadline_ms = Math.max(observed_deadline, Number(committed.turn_deadline_ms ?? 0)) || null
-  const provider = provider_of({ presenting, playable, view: draft.view })
+  const provider = provider_of({ presenting, playable, view: draft.view, spectator })
   // ④+⑦b TRAP SPRING (durable, receipt-proven): a `my_traps` cell detonates → mark `gone` FOREVER (never regress a
   // receipt-proven fact; the optimistic spring is engine_view's reversible presented-occupied exclusion). Already-
   // gone rows keep identity. A trap fires ON-CHAIN only when a fighter ENTERS its cell (spell_board::on_enter), and
@@ -333,6 +342,7 @@ export const recompute = (draft, now) => {
     settlement,
     applied_version,
     log,
+    my_key,
     turn_started_at,
     my_turn_no,
     armed_spell_id,

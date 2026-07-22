@@ -2147,6 +2147,15 @@
 .gw-ft__act--join:hover:not(:disabled) {
   box-shadow: 0 0 16px rgba(200, 150, 60, 0.45);
 }
+.gw-ft__act--watch {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+  cursor: pointer;
+}
+.gw-ft__act--watch:hover:not(:disabled) {
+  background: rgba(74, 158, 255, 0.1);
+  box-shadow: 0 0 12px rgba(74, 158, 255, 0.25);
+}
 .gw-ft__act:disabled {
   opacity: 0.5;
   cursor: not-allowed;

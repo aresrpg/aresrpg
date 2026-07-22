@@ -16,8 +16,8 @@
 //   ROAM       in a dungeon session but not on a live tactical board (waiting room / cleared room / no fight).
 //   PLACEMENT  chain status PLACEMENT + a board grid + MY seat + a spawned fight slice keyed to me.
 //   ACTIVE     chain status ACTIVE + my entity ∈ fighters + turn data (turn_order + an active entity).
-//   TERMINAL   chain status WON/FAILED — but ONLY if I was ACTIVE-seated THIS session (D81 generalised: an
-//              out-of-fight leave, a never-joined browse, a spectate-from-the-plane NEVER reaches a result card).
+//   TERMINAL   chain status WON/FAILED — a participant needs an ACTIVE seat to earn its result card; a read-only
+//              observer reaches a card-less TERMINAL only to keep the board mounted until replay drains.
 //   EXIT       the declared teardown edge → lobby: TERMINAL.continue, an abandon, a claim, a burn. EXIT owns the
 //              teardown contract (drop the fight slice + fight_mode + the dungeon), so no board can survive it.
 //
@@ -56,9 +56,10 @@ export const PHASE = /** @type {const} */ ({
  * @property {string[]} unmet        the named preconditions of the DESIRED phase that were NOT satisfied (empty
  *                                   when the phase is fully met). A non-empty `unmet` means the machine HELD at a
  *                                   lower phase rather than mount a half-init screen — the names say why.
- * @property {Outcome|null} outcome  'victory' | 'defeat' when phase === TERMINAL, else null.
+ * @property {Outcome|null} outcome  participant result when TERMINAL; null for observer holds and other phases.
  * @property {Phase} desired         the phase the chain status ALONE would put us in (ignoring preconditions) —
  *                                   so callers/logs can see "wanted ACTIVE, held at PLACEMENT, unmet=[…]".
+ * @property {boolean} [observing]    true only for a card-less observer terminal hold.
  */
 
 // ── SESSION LATCH (D81 generalisation) ────────────────────────────────────────────────────────────────────
@@ -152,13 +153,13 @@ function placement_unmet(dungeon, fight, my_seat) {
   return unmet
 }
 
-/** ACTIVE preconditions — my entity ∈ fighters + real turn data (an order and a resolved active entity). */
+/** ACTIVE preconditions — participants need their entity; observers need only a coherent turn stream. */
 function active_unmet(dungeon, fight, my_seat) {
   const unmet = []
   if (!dungeon) unmet.push('no_dungeon')
   if (!fight) unmet.push('no_fight_slice')
   const id = my_entity_id(fight, my_seat)
-  if (fight && (!id || !fight.fighters?.has(id))) unmet.push('my_entity_missing_from_fighters')
+  if (fight && !fight.spectator && (!id || !fight.fighters?.has(id))) unmet.push('my_entity_missing_from_fighters')
   if (fight && (fight.turn_order?.length ?? 0) === 0) unmet.push('no_turn_order')
   if (fight && !fight.active_entity_id) unmet.push('no_active_entity')
   return unmet
@@ -167,8 +168,8 @@ function active_unmet(dungeon, fight, my_seat) {
 /**
  * TERMINAL preconditions — the D81 generalisation. A WON/FAILED chain status is a result card ONLY when this
  * client actually fought it: it must have reached an ACTIVE, seated turn THIS session (the latch), AND still be
- * a seat in the escrow (a card is my receipt — a never-joined observer of someone else's win gets nothing).
- * Unmet ⇒ the machine routes to EXIT (leave clean, no card), never holds a board.
+ * a seat in the escrow (a card is my receipt — a never-joined observer of someone else's win gets no card).
+ * For participant-shaped clients, unmet ⇒ EXIT. Explicit observers bypass this card gate only for replay drain.
  */
 function terminal_unmet(dungeon, fight, my_seat) {
   const unmet = []
@@ -241,8 +242,12 @@ export function derive_phase(dungeon, fight, my_seat) {
       fight
     )
 
-  // TERMINAL — the run ended (either surface). Only a fighter who FOUGHT sees a card (D81 latch); else EXIT.
+  // TERMINAL — participants need the D81 fought-it latch for a card; observers get only a replay-drain hold.
   if (rank === RANK.TERMINAL) {
+    // WATCH owns no result/claim, but EXIT would tear the adapter and its killing replay down immediately. Hold
+    // the frozen board in a distinct card-less terminal until the observer store drains the wave and resets.
+    if (fight?.spectator)
+      return { phase: PHASE.TERMINAL, unmet: [], outcome: null, desired: PHASE.TERMINAL, observing: true }
     const outcome = status === STATUS_WON || fight?.winner === 0 ? 'victory' : 'defeat'
     const unmet = terminal_unmet(dungeon, fight, my_seat)
     if (unmet.length === 0) return { phase: PHASE.TERMINAL, unmet: [], outcome, desired: PHASE.TERMINAL }
@@ -310,10 +315,10 @@ function label_of_rank(rank) {
 // branch on `dungeon.status === X` / `hud_mounted` / `fight_mode` now asks the machine.
 
 /**
- * Mount the tactical board chrome host (DungeonBoard + timeline + tooltip + deck)? PLACEMENT, ACTIVE, or an
- * EARNED TERMINAL. TERMINAL keeps the FROZEN board behind the result card (the card is a sibling that stands on
- * its own slice) AND hosts DungeonBoard's terminal auto-claim effect — the interactive chrome (END TURN /
- * placement READY) is separately gated on is_active / is_placement, so nothing clickable renders in TERMINAL.
+ * Mount the tactical board chrome host (DungeonBoard + timeline + tooltip + deck)? PLACEMENT, ACTIVE, an earned
+ * participant TERMINAL, or a card-less observer TERMINAL. Participant TERMINAL keeps the FROZEN board behind the
+ * result card and hosts DungeonBoard's auto-claim; observer TERMINAL keeps only replay + local leave mounted.
+ * Interactive chrome (END TURN / placement READY) is separately gated, so neither terminal exposes fight input.
  * EXIT and ROAM mount NO board — THIS is what makes the ghost board unrepresentable: an out-of-fight leave / an
  * unearned terminal / a post-continue teardown all resolve to EXIT|ROAM here, never to a mounted board.
  */
@@ -333,12 +338,12 @@ export function is_active(result) {
 
 /** Show a result card (Victory / Defeat)? TERMINAL only — and derive_phase already gated on "fought it". */
 export function should_show_result(result) {
-  return result.phase === PHASE.TERMINAL
+  return result.phase === PHASE.TERMINAL && result.observing !== true
 }
 
 /** The result-card outcome, or null. */
 export function result_outcome(result) {
-  return result.phase === PHASE.TERMINAL ? result.outcome : null
+  return should_show_result(result) ? result.outcome : null
 }
 
 /** True during EXIT — the teardown edge. The caller runs its declared teardown; NO board/card mounts here. */

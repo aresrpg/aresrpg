@@ -237,6 +237,12 @@ describe('ACTIVE', () => {
     expect(r.phase).toBe(PHASE.ROAM)
     expect(r.unmet).toContain('no_active_entity')
   })
+  it('a read-only spectator needs a coherent turn stream but no participant seat', () => {
+    const observer = fight({ spectator: true, my_entity_id: null })
+    const r = derive_phase(dungeon(STATUS_ACTIVE), observer, null)
+    expect(r.phase).toBe(PHASE.ACTIVE)
+    expect(r.unmet).toEqual([])
+  })
 })
 
 describe('TERMINAL (the D81 rule as a machine invariant)', () => {
@@ -256,7 +262,7 @@ describe('TERMINAL (the D81 rule as a machine invariant)', () => {
     expect(r.phase).toBe(PHASE.TERMINAL)
     expect(r.outcome).toBe('defeat')
   })
-  it('WON but NEVER ACTIVE-seated this session → EXIT, NO card (the out-of-fight leave / observer)', () => {
+  it('WON but NEVER ACTIVE-seated this session → EXIT, NO card (an ordinary out-of-fight leave)', () => {
     const d = dungeon(STATUS_WON) // latch NOT set → never fought it
     const r = derive_phase(d, fight({ winner: 0 }), seat())
     expect(r.phase).toBe(PHASE.EXIT)
@@ -272,6 +278,16 @@ describe('TERMINAL (the D81 rule as a machine invariant)', () => {
     const r = derive_phase(d, fight({ winner: 1 }), null)
     expect(r.phase).toBe(PHASE.EXIT)
     expect(r.unmet).toContain('not_escrowed')
+  })
+  it('a read-only observer holds the terminal board for replay drain but earns no result card', () => {
+    const observer = fight({ winner: 0, spectator: true, my_entity_id: null })
+    const r = derive_phase(dungeon(STATUS_WON), observer, null)
+    expect(r.phase).toBe(PHASE.TERMINAL)
+    expect(r.observing).toBe(true)
+    expect(r.outcome).toBeNull()
+    expect(should_mount_board(r)).toBe(true)
+    expect(should_show_result(r)).toBe(false)
+    expect(is_exit(r)).toBe(false)
   })
   it("a DIFFERENT dungeon's latch does not unlock this terminal", () => {
     mark_active_seat('0xSOMEOTHERDUNGEON')

@@ -16,7 +16,7 @@ import { use_auth } from '../../../../auth'
 import { use_party } from '../../../../world-shell/party_store.js'
 import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
 import { join_world_fight, as_one_toast } from '../../../../world-shell/dungeon_actions.js'
-import { enter_world_fight } from '../../../../world-shell/world_fight.js'
+import { enter_world_fight, spectate_world_fight } from '../../../../world-shell/world_fight.js'
 import { enter_after_world_join_receipt } from '../../../../world-shell/world_fight_receipt.js'
 import { read_friend_list } from '../../../../world-shell/friends_reads.js'
 import { get_characters } from '../../../../rpc/client'
@@ -24,6 +24,7 @@ import { get_mob_template } from '@aresrpg/sdk/game'
 import { get_sdk } from '../../../../chain/sdk'
 import { resolve_character_docs } from '../../../../world-shell/character_name_resolve.js'
 import { fight_hover_teams } from '../../../../world-shell/fight_area_panel.js'
+import { Tooltip } from '../Tooltip.jsx'
 import {
   cap_and_filter,
   is_join_legal,
@@ -200,6 +201,12 @@ export function FightsModal() {
       .finally(() => set_busy_id(null))
   }
 
+  const on_watch = (marker) => {
+    if (busy_id) return
+    const entered = spectate_world_fight({ fight_id: marker.id, public_fight: marker.public, status: marker.status })
+    if (entered) close()
+  }
+
   // PORTAL TO <body> (a world nameplate was bleeding through this modal) — mirrors PlayerActionMenu's own
   // body-portal. Inline, this backdrop's position:absolute sizes off the buried game-frame ancestor's box,
   // whose OWN z-12 stacking context sits at whatever the LOCAL React tree gives it; the body-appended nameplate
@@ -262,6 +269,7 @@ export function FightsModal() {
                           busy={busy_id === m.id}
                           on_hover={() => set_hovered_id(m.id)}
                           on_join={() => on_join(m)}
+                          on_watch={() => on_watch(m)}
                           t={t}
                         />
                       ))}
@@ -281,7 +289,7 @@ export function FightsModal() {
 
 /** A single-line fight row (design law #6: strict one line): dot + fighters/phase + openness badge + distance +
  *  the ONE action (Join when public+placement, Spectate when started, else a muted phase label). */
-function FightRow({ marker, dungeon, is_friend, group_member, selected, busy, on_hover, on_join, t }) {
+export function FightRow({ marker, dungeon, is_friend, group_member, selected, busy, on_hover, on_join, on_watch, t }) {
   const joinable = dungeon ? is_dungeon_join_legal(marker) : is_join_legal(marker, group_member)
   const watchable = is_spectatable(marker)
   const phase_label = t(`fights.phase_${marker.status}`, { defaultValue: marker.status })
@@ -311,11 +319,11 @@ function FightRow({ marker, dungeon, is_friend, group_member, selected, busy, on
           {busy ? t('fights.joining') : t('fights.join')}
         </button>
       ) : watchable ? (
-        // SPECTATE is a wave-2 read-only board mount (a seatless viewer must bypass the settlement path — declared
-        // in the return). The affordance is present + honest so the panel reads complete; enabled next update.
-        <button type="button" className="gw-ft__act" disabled title={t('fights.spectate_soon')}>
-          {t('fights.spectate')}
-        </button>
+        <Tooltip text={t('fights.spectate_help')}>
+          <button type="button" className="gw-ft__act gw-ft__act--watch" disabled={busy} onClick={on_watch}>
+            {t('fights.spectate')}
+          </button>
+        </Tooltip>
       ) : (
         <span className="gw-ft__act gw-ft__act--muted">{phase_label}</span>
       )}

@@ -94,6 +94,7 @@ set_expedition_sdk_mock(get_sdk)
 // log; the page serves the tail from `from` and reports `journal_head` = the event COUNT (the ZCARD semantics
 // seed_accept_state reads). Everything else is unmocked → RpcError → the walker degrades to a no-op.
 let journal = /** @type {{ seq: string, kind: string, version: string, digest: string, data: any }[]} */ ([])
+let journal_reads = 0
 const json_response = (body) =>
   new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
 
@@ -102,6 +103,7 @@ const { _reset_rpc_client_for_test } = await import('../rpc/client')
 const { use_dungeon } = await import('./dungeon_store.js')
 const { fight_store } = await import('@aresrpg/fight/store')
 const project = await import('@aresrpg/fight/project')
+const { spectate_world_fight } = await import('./world_fight.js')
 const { derive_phase, PHASE, STATUS_ACTIVE, STATUS_PLACEMENT } = await import('../fight-engine/phase.js')
 const { reset_liquidation } = await import('./fight-liquidation.js')
 
@@ -148,6 +150,15 @@ const poll = async () => {
   await use_dungeon.getState().refresh()
 }
 
+const until = async (predicate, timeout_ms = 1000) => {
+  const deadline = Date.now() + timeout_ms
+  while (Date.now() < deadline) {
+    if (predicate()) return true
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  }
+  return predicate()
+}
+
 beforeEach(() => {
   reset_auth_mock({ address: OWNER })
   set_expedition_sdk_mock(get_sdk)
@@ -157,9 +168,11 @@ beforeEach(() => {
   fight_store.getState().input({ type: 'init', fight_id: null })
   use_auth.setState({ address: OWNER })
   get_object.mockClear()
+  journal_reads = 0
   globalThis.fetch = mock(async (input) => {
     const url = new URL(String(input), 'http://rpc.test')
     if (url.pathname.endsWith(`/v1/fights/${FIGHT_ID}/events`)) {
+      journal_reads += 1
       const from = Number(url.searchParams.get('from') ?? 0)
       const events = journal.filter((e) => Number(e.seq) >= from)
       return json_response({ fight: FIGHT_ID, events, journal_head: journal.length })
@@ -183,6 +196,53 @@ afterEach(() => {
 afterAll(restore_browser_globals)
 
 describe('the LIVE fight-state transition observer follows the chain edge on the poll (not only on bootstrap)', () => {
+  test('a seatless WATCH entry bootstraps the active board and follows the same journal frontier', async () => {
+    object_read = raw_fight({ status: ENGINE_ACTIVE })
+    journal = []
+    use_dungeon.setState({
+      mob_names: { [GROUP]: 'Mob' },
+      mob_levels: { [GROUP]: 1 },
+      mob_elements: { [GROUP]: 255 },
+    })
+
+    expect(spectate_world_fight({ fight_id: FIGHT_ID, public_fight: true, status: 'active' })).toBe(true)
+    expect(await until(() => project.fight_view()?.fight_id === FIGHT_ID)).toBe(true)
+
+    const observer = project.fight_view()
+    expect(use_dungeon.getState()).toMatchObject({ fight_id: FIGHT_ID, character_id: null, spectating: true })
+    expect(observer.spectator).toBe(true)
+    expect(observer.my_entity_id).toBeNull()
+    expect(observer.controlled_entity_ids).toEqual([])
+    expect(fight_store.getState()).toMatchObject({ my_key: null, provider: 'idle_wait' })
+    const entry_count = Object.keys(fight_store.getState().entries).length
+    fight_store.getState().input({ type: 'intent', intent: { kind: 'end_turn' } })
+    expect(fight_store.getState().refused).toMatchObject({ type: 'intent', reason: 'provider' })
+    expect(Object.keys(fight_store.getState().entries)).toHaveLength(entry_count)
+    expect(live_phase().phase).toBe(PHASE.ACTIVE)
+    expect(journal_reads).toBeGreaterThan(0)
+
+    journal = [
+      {
+        seq: '0',
+        kind: 'TurnEnded',
+        version: '2',
+        digest: '0xwatch',
+        data: { fight: FIGHT_ID, is_mob: false, idx: 0 },
+      },
+      {
+        seq: '1',
+        kind: 'TurnStarted',
+        version: '2',
+        digest: '0xwatch',
+        data: { fight: FIGHT_ID, is_mob: true, idx: 0, deadline_ms: FUTURE() },
+      },
+    ]
+    await poll()
+
+    expect(project.fight_view().active_entity_id).toBe('mob-0')
+    expect(project.fight_view().spectator).toBe(true)
+  })
+
   test('symptom ①: a force_start (placement→ACTIVE) folded from the journal flips the phase on the next poll', async () => {
     seat_a_fight_in(ENGINE_PLACEMENT)
 

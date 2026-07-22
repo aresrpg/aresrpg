@@ -21,7 +21,8 @@ export { resolve_world_offset, sync_dungeon_fight } from './dungeon_fight_sync.j
 /**
  * (a) OPEN a fight in the core — the ENGAGE/resume handoff. Idempotent for a live same-id fight (never re-wipes
  * the core mid-play). `my_key` stays null: the core resolves my seat from `my_entity_id` at first adoption.
- * @param {{ fight_id: string, character_id: string|null, address: string|null, run?: any, rooms_total?: number,
+ * @param {{ fight_id: string, character_id: string|null, address: string|null, spectator?: boolean,
+ *   run?: any, rooms_total?: number,
  *   mob_names?: Record<string,string>, mob_levels?: Record<string,number>, mob_elements?: Record<string,number>,
  *   offset?: { x:number, z:number } }} args
  */
@@ -29,6 +30,7 @@ export function init_dungeon_fight({
   fight_id,
   character_id,
   address,
+  spectator = false,
   run = null,
   rooms_total = 0,
   mob_names = {},
@@ -45,6 +47,7 @@ export function init_dungeon_fight({
       address,
       my_entity_id: character_id,
       creator: address,
+      spectator,
       run,
       rooms_total,
       mob_names,
