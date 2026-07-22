@@ -11,6 +11,8 @@ packages/sim/
 packages/sdk/
 # Generated data assets (schematics, etc. — machine-emitted, never hand-formatted).
 packages/engine/assets/
+# V2 fight-replay corpus (commit d4ebe84c) — captured chain wire bytes with provenance, never hand-formatted (same rationale as the chain-id gate exemption).
+packages/fight/test/fixtures/capsules/
 # Generated type surfaces (tsc emit — never hand-formatted).
 packages/party/types/
 packages/inventory/types/
