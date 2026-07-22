@@ -7,11 +7,10 @@ import { describe, expect, test } from 'bun:test'
 
 const PAGE_PATH = new URL('./marketplace.tsx', import.meta.url)
 const CSS_PATH = new URL('../index.css', import.meta.url)
-// Re-pinned (#117): the public-repo extraction pass (v1.12.36, "AresRPG — fresh public root") shifted bytes
-// in both pinned sections with no functional change — verified against this file's own content assertions
-// (test 3 below, unaffected) plus a manual read of the current source: a complete, correct 4-tab ARIA
-// tablist + its sliding-thumb CSS, no truncation, no leftover private-tree references.
-const MODE_SWITCH_SHA = '288d044e952588fa60f5c83c1bb9104ebb67664a2c14e27ac6dfb5268f89d086'
+// Re-pinned (BUILD #180): the HISTORY tab grew a red proceeds-dot (kiosk_profits_mist > 0, house danger-red
+// #f87171, decorative aria-hidden) — a deliberate, reviewed change to ModeSwitch itself, not drift. The CSS
+// pin (.mkt-switch*) is UNCHANGED — the dot is styled inline, no new rule — so only MODE_SWITCH_SHA moves.
+const MODE_SWITCH_SHA = '4cfde591feba53a1ac33c60d3c5a2db3def5ac775d6f66a0b27a93aca4852453'
 const MODE_CSS_SHA = '6e94419f3f069dc49f399dff0e5b7db08e36c254f16da34214fa5f9e6dc87141'
 
 function sha256(value: string): string {

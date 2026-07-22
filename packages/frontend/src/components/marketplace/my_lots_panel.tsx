@@ -16,7 +16,6 @@ export function MyLotsPanel({
   address,
   busy,
   on_delist,
-  on_withdraw_proceeds,
   name_of,
   asset_slug_of,
 }: {
@@ -24,7 +23,6 @@ export function MyLotsPanel({
   address: string | null
   busy: boolean
   on_delist: (listing: MarketplaceListing) => void
-  on_withdraw_proceeds: () => void
   name_of: (template_id: string, fallback: string) => string
   asset_slug_of: (template_id: string) => string
 }) {
@@ -45,18 +43,6 @@ export function MyLotsPanel({
           {t('marketplace.tab_your_listings')}
         </span>
         {my_listings.length > 0 && <span className="text-gold/60 text-[9px] tabular-nums">({my_listings.length})</span>}
-        <span className="flex-1 min-w-2" />
-        <button
-          type="button"
-          disabled={busy || !address}
-          onClick={on_withdraw_proceeds}
-          className="btn-outline px-2 py-1 text-[8px] tracking-[0.12em] uppercase disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {t('marketplace.lots.withdraw_proceeds')}
-        </button>
-        <span className="basis-full text-[7px] tracking-[0.1em] uppercase text-muted/60">
-          {t('marketplace.lots.proceeds_hint')}
-        </span>
       </div>
 
       {my_listings.length === 0 ? (

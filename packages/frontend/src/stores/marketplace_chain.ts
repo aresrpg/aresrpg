@@ -9,6 +9,9 @@ import i18n from '../i18n'
 import { game_log } from '../core/log.js'
 import { with_timeout } from '../utils/with_timeout'
 import { build_listing_from_view, get_listable_items, get_listable_characters } from '../chain/read_listings'
+import { get_kiosk_profits } from '../chain/read_kiosk_profits'
+import { get_sdk } from '../chain/sdk'
+import { format_mist_to_sui } from '../utils/sui_mist'
 import { get_encyclopedia, get_listings } from '../rpc/client'
 import {
   list_item,
@@ -17,7 +20,7 @@ import {
   buy_item,
   split_stack,
   merge_stacks,
-  withdraw_kiosk_proceeds,
+  collect_kiosk_profits,
   list_character,
   buy_character,
 } from '../chain/write/write_listings'
@@ -212,15 +215,24 @@ interface MarketplaceChainStore extends MarketState {
   listable_characters: ListableCharacter[]
   listable_loaded_for: string | null // the address the SELL sweep last loaded — the per-session cache key (S-86)
 
+  // BUILD #180 — HISTORY tab COLLECT box: the wallet's summed kiosk PROFITS (SUI sale proceeds already
+  // sitting in its personal kiosks, unwithdrawn) + which kiosks carry them. Never optimistic — a collect
+  // always re-reads chain truth afterward (the reducer door), never a synthesized local zero.
+  kiosk_profits_mist: bigint
+  kiosk_profits_ids: string[] // kiosk ids currently holding a non-zero balance — the collect target set
+
   load: () => Promise<void>
   /** `force` re-sweeps even when cached for the current address (post-delist reconcile). */
   load_listable: (force?: boolean) => Promise<void>
+  /** Chain-direct: sums every personal kiosk's `profits` field (no /v1 view — a private per-owner balance). */
+  load_kiosk_profits: () => Promise<void>
   submit_listing: (item: ListableItem, price_mist: bigint) => void
   submit_delist: (listing: MarketplaceListing) => void
   submit_buy: (listing: MarketplaceListing) => void
   submit_split_stack: (item: ListableItem, amount: number) => void
   submit_merge_stacks: (target: ListableItem, source: ListableItem) => void
-  submit_withdraw_proceeds: () => void
+  /** Collect every kiosk's proceeds in ONE signed PTB — never auto-fired, always the player's own click. */
+  submit_collect_profits: () => void
   /** List an owned character for sale (§17.30 — the level-30 gate enforces at purchase time). */
   submit_list_character: (character: { id: string; kiosk_id?: string }, price_mist: bigint) => void
   /** Character purchase — honest seam stub until the S-46 merged-package SDK lands. */
@@ -248,6 +260,8 @@ export const use_marketplace_chain = create<MarketplaceChainStore>((set, get) =>
     listable_loading: false,
     listable_characters: [],
     listable_loaded_for: null,
+    kiosk_profits_mist: 0n,
+    kiosk_profits_ids: [],
 
     // BUY listings (S-86): ONE keyless `/v1/listings` call (all categories) + the item-template DISPLAY catalog
     // from the keyless `/v1/encyclopedia` items view, then partition + map client-side — "load everything in one
@@ -330,6 +344,23 @@ export const use_marketplace_chain = create<MarketplaceChainStore>((set, get) =>
       } catch (e) {
         set({ listable_loading: false, listable_loaded_for: null })
         use_toast.getState().add(i18n.t('marketplace.chain.error_load'), 'error')
+      }
+    },
+
+    // BUILD #180 — HISTORY tab's COLLECT box source of truth. Chain-direct (no /v1 view exists for a
+    // private per-owner kiosk balance) — see read_kiosk_profits.js. A read failure is logged and otherwise
+    // silent: this is a passive balance peek, not a user-initiated action, so it keeps the last-known-good
+    // amount rather than flashing the box to "nothing here" on a transient RPC hiccup (never under-report
+    // real money). A real failed WITHDRAW still surfaces honestly via the toast in submit_collect_profits.
+    load_kiosk_profits: async () => {
+      const { address } = use_auth.getState()
+      if (!address) return
+      try {
+        const sdk = await get_sdk()
+        const { total_mist, kiosk_ids } = await get_kiosk_profits(sdk, address)
+        set({ kiosk_profits_mist: total_mist, kiosk_profits_ids: kiosk_ids })
+      } catch (e) {
+        game_log('marketplace', 'kiosk profits read failed', e)
       }
     },
 
@@ -447,15 +478,27 @@ export const use_marketplace_chain = create<MarketplaceChainStore>((set, get) =>
         .finally(() => set({ busy: false }))
     },
 
-    submit_withdraw_proceeds: () => {
+    // BUILD #180 — collect every kiosk's proceeds in ONE signed PTB. NEVER auto-fired: this is reachable
+    // only from the HISTORY tab's COLLECT box, which itself only renders when kiosk_profits_ids is
+    // non-empty — the click is always the player's own. Settle: honest toast with the collected amount
+    // (computed from the last read, before the tx — the ktx.withdraw call takes the FULL on-chain balance
+    // at execution time, so a sale landing mid-flight only ever means "at least this much", never less/lost),
+    // then the balance re-reads through the reducer door (load_kiosk_profits) — never a synthesized local
+    // zero. A refused/failed collect surfaces honestly via toast.promise's own humanized-error fallback
+    // (no static `error:` override here — TOAST-OVERRIDE SWEEP 07-10, same law submit_listing follows).
+    submit_collect_profits: () => {
       if (get().busy) return
+      const { kiosk_profits_ids, kiosk_profits_mist } = get()
+      if (kiosk_profits_ids.length === 0) return
+      const amount = format_mist_to_sui(kiosk_profits_mist, 2)
       set({ busy: true })
       use_toast
         .getState()
-        .promise(withdraw_kiosk_proceeds(), {
-          pending: i18n.t('marketplace.lots.pending_proceeds'),
-          success: i18n.t('marketplace.lots.toast_proceeds'),
+        .promise(collect_kiosk_profits(kiosk_profits_ids), {
+          pending: i18n.t('marketplace.history_collect_pending', { amount }),
+          success: i18n.t('marketplace.history_collect_success', { amount }),
         })
+        .then(() => void get().load_kiosk_profits())
         .catch(() => {})
         .finally(() => set({ busy: false }))
     },

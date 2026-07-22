@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Store, Loader2 } from 'lucide-react'
+import { Store, Loader2, Coins } from 'lucide-react'
 import { slugs } from 'virtual:item_catalog'
 
 import { get_sales_history } from '../../rpc/client'
@@ -11,6 +11,7 @@ import { use_address_names } from '../../rpc/use_address_names'
 import { RpcStale } from '../../rpc/RpcStale'
 import { use_auth } from '../../auth'
 import { use_marketplace_chain } from '../../stores/marketplace_chain'
+import { has_collectible_profits } from '../../chain/read_kiosk_profits'
 import { use_template_t } from '../../i18n/template_t'
 import { format_mist_to_sui } from '../../utils/sui_mist'
 import { truncate_address } from '../../utils/address'
@@ -28,6 +29,12 @@ import { AddressName } from '../address_name'
 // localized-relative (Intl.RelativeTimeFormat — i18n for all 6 locales for free). Pagination is a GROWING
 // WINDOW: `limit` bumps by PAGE and the short-poll refetches; realised sales are immutable so a wider
 // window can never disagree with itself (no cursor-accumulation dedup). `next_cursor` != null ⇒ more exist.
+//
+// COLLECT box (BUILD #180): a SEPARATE, chain-direct fact from the sales ledger above — the wallet's
+// summed kiosk PROFITS field (unwithdrawn SUI sale proceeds sitting in its personal kiosk(s), truth read +
+// collect action both live in marketplace_chain.ts / chain/read_kiosk_profits.js / chain/write/write_listings.js).
+// Renders only when has_collectible_profits — the same predicate that gates the tab's red dot — so there is
+// never an empty-state box to dismiss.
 
 const PAGE = 30
 const DAY = 86_400_000
@@ -47,6 +54,9 @@ export function HistoryPanel() {
   const tt = use_template_t()
   const address = use_auth((s) => s.address)
   const templates_item = use_marketplace_chain((s) => s.templates_item)
+  const kiosk_profits_mist = use_marketplace_chain((s) => s.kiosk_profits_mist)
+  const collect_busy = use_marketplace_chain((s) => s.busy)
+  const submit_collect_profits = use_marketplace_chain((s) => s.submit_collect_profits)
   const [limit, set_limit] = useState(PAGE)
 
   // Short-poll the live view (UI-DATA LAW), gated until the wallet address resolves. `limit` in deps so
@@ -71,6 +81,10 @@ export function HistoryPanel() {
     }
   }, [data?.revenue_30d_mist])
 
+  // BUILD #180 — a SEPARATE fact from the ledger above: real unwithdrawn SUI sitting in the kiosk right now.
+  const has_profits = has_collectible_profits(kiosk_profits_mist)
+  const collectible = format_mist_to_sui(kiosk_profits_mist, 2)
+
   // Resolve an item's display name + rarity color from the shared template catalog (browse's `name_of`),
   // keyed by the item_type slug the sales row carries as `category`. No template (or a character/burned
   // sale) → the humanized slug, else the shortened item id — the gap is rendered, never faked.
@@ -93,33 +107,70 @@ export function HistoryPanel() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-y-auto w-full max-w-[1200px] mx-auto">
-      {/* Trailing-30d revenue tile — the big number leads (house law) */}
-      <div className="flex items-center justify-between gap-4 px-4 pt-4 pb-3 shrink-0">
-        <div
-          className="flex flex-col gap-1 px-5 py-4 border"
-          style={{
-            borderColor: 'rgba(255,255,255,0.09)',
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))',
-            minWidth: 260,
-          }}
-        >
-          <span className="text-[8px] tracking-[0.22em] uppercase text-muted">
-            {t('marketplace.history_revenue_30d')}
-          </span>
-          <span
-            className="text-[30px] font-semibold leading-none tabular-nums"
+      {/* Trailing-30d revenue tile — the big number leads (house law) — + the COLLECT box (BUILD #180) */}
+      <div className="flex items-center justify-between gap-4 px-4 pt-4 pb-3 shrink-0 flex-wrap">
+        <div className="flex items-center gap-4 flex-wrap">
+          <div
+            className="flex flex-col gap-1 px-5 py-4 border"
             style={{
-              background: 'linear-gradient(100deg, var(--color-gold-light), var(--color-gold) 45%, var(--color-cyan))',
-              WebkitBackgroundClip: 'text',
-              backgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              borderColor: 'rgba(255,255,255,0.09)',
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))',
+              minWidth: 260,
             }}
           >
-            {revenue} <span className="text-[14px]">SUI</span>
-          </span>
-          <span className="text-[9px] tracking-[0.12em] uppercase text-muted">
-            {t('marketplace.history_sales', { count: data?.total ?? 0 })}
-          </span>
+            <span className="text-[8px] tracking-[0.22em] uppercase text-muted">
+              {t('marketplace.history_revenue_30d')}
+            </span>
+            <span
+              className="text-[30px] font-semibold leading-none tabular-nums"
+              style={{
+                background:
+                  'linear-gradient(100deg, var(--color-gold-light), var(--color-gold) 45%, var(--color-cyan))',
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              {revenue} <span className="text-[14px]">SUI</span>
+            </span>
+            <span className="text-[9px] tracking-[0.12em] uppercase text-muted">
+              {t('marketplace.history_sales', { count: data?.total ?? 0 })}
+            </span>
+          </div>
+
+          {/* COLLECT box (BUILD #180) — money sitting in the kiosk, unclaimed. Renders ONLY when there is
+              something to collect (has_collectible_profits — the same predicate that gates the tab dot), so
+              there is never an empty affordance taking up space or begging a click that does nothing. */}
+          {has_profits && (
+            <div
+              data-marketplace-collect-profits
+              className="flex flex-col gap-2 px-5 py-4 border"
+              style={{
+                borderColor: 'rgba(200,150,60,0.35)',
+                background: 'linear-gradient(135deg, rgba(200,150,60,0.10), rgba(200,150,60,0.02))',
+                minWidth: 260,
+              }}
+            >
+              <span className="flex items-center gap-1.5 text-[8px] tracking-[0.22em] uppercase text-muted">
+                <Coins size={10} className="text-gold" />
+                {t('marketplace.history_collect_label')}
+              </span>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-[22px] font-semibold leading-none tabular-nums text-gold">
+                  {collectible} <span className="text-[12px]">SUI</span>
+                </span>
+                <button
+                  type="button"
+                  disabled={collect_busy}
+                  onClick={submit_collect_profits}
+                  className="btn-gold px-4 py-2 text-[10px] tracking-[0.2em] uppercase flex items-center gap-2 shrink-0 disabled:cursor-not-allowed"
+                >
+                  {collect_busy ? <Loader2 size={11} className="animate-spin" /> : null}
+                  {t('marketplace.history_collect_button')}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         <RpcStale stale={view.stale} offline={view.error != null && view.data == null} />
       </div>

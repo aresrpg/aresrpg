@@ -13,9 +13,10 @@ import { use_auth, sign_and_execute_self_pay_transaction } from '../../auth'
 import i18n from '../../i18n'
 import { get_sdk } from '../sdk'
 import { DEMO_NETWORK } from '../deployment'
-import { get_personal_cap, invalidate as invalidate_kiosk_cap_cache } from '../kiosk_cap_cache'
+import { get_personal_cap, get_personal_caps, invalidate as invalidate_kiosk_cap_cache } from '../kiosk_cap_cache'
 
 import { get_marketplace_policy, marketplace_buy_tx } from './marketplace_buy_sdk'
+import { build_collect_profits_tx } from './collect_profits_tx'
 
 // S-61: every id below resolves from the SDK's ONE deployment home (aresrpg_id) — the retired T62 bridge is
 // gone. Kiosk operates on the CONCRETE type; the Item struct identity is the ORIGINAL (type-origin) package
@@ -216,17 +217,27 @@ export async function buy_item({ item_id, seller_kiosk_id, price_mist }) {
   return res
 }
 
-/** Withdraw all native kiosk sale proceeds to the connected wallet. Sale payment is credited automatically. */
-export async function withdraw_kiosk_proceeds() {
+/**
+ * Collect ALL native kiosk sale proceeds across EVERY personal kiosk the wallet currently holds a balance
+ * in — ONE signed PTB, ONE wallet prompt (BUILD #180 multi-kiosk truth: a player can own more than one
+ * personal kiosk across lineages, the crush bug proved it — a first-cap-only withdraw stranded money in
+ * kiosk #2+). `kiosk_ids` is the caller's last-read set of kiosks with profits > 0
+ * (read_kiosk_profits.get_kiosk_profits) — each id is re-resolved to its OWN cap HERE (never trusts a
+ * caller-supplied cap object, mirrors every other builder in this file) via the same warm
+ * kiosk_cap_cache every other write reads.
+ * @param {string[]} kiosk_ids
+ */
+export async function collect_kiosk_profits(kiosk_ids) {
   const sdk = await get_sdk()
   const { address } = use_auth.getState()
   if (!address) throw new Error(i18n.t('marketplace.lots.not_signed_in'))
-  const cap = await get_personal_cap(sdk, address)
-  if (!cap) throw new Error(i18n.t('marketplace.lots.kiosk_not_found'))
+  const all_caps = await get_personal_caps(sdk, address)
+  const caps = all_caps.filter((cap) => kiosk_ids.includes(cap.kioskId))
+  if (caps.length === 0) throw new Error(i18n.t('marketplace.lots.kiosk_not_found'))
+
   const tx = new Transaction()
   header(tx)
-  const ktx = new KioskTransaction({ transaction: tx, kioskClient: personal_call_client(sdk), cap })
-  ktx.withdraw(address).finalize()
+  build_collect_profits_tx({ tx, kiosk_client: personal_call_client(sdk), caps, address })
   return sign(tx)
 }
 

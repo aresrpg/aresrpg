@@ -39,8 +39,7 @@ export function SellPanel() {
   const { t } = useTranslation()
   const tt = use_template_t()
   const address = use_auth((s) => s.address)
-  const { listings, listable, templates_item, submit_listing, submit_delist, submit_withdraw_proceeds, busy } =
-    use_marketplace_chain()
+  const { listings, listable, templates_item, submit_listing, submit_delist, busy } = use_marketplace_chain()
   const submit_list_character = use_marketplace_chain((s) => s.submit_list_character)
   const load_listable = use_marketplace_chain((s) => s.load_listable)
 
@@ -162,7 +161,6 @@ export function SellPanel() {
         address={address}
         busy={busy}
         on_delist={submit_delist}
-        on_withdraw_proceeds={submit_withdraw_proceeds}
         name_of={name_of}
         asset_slug_of={asset_slug_of}
       />

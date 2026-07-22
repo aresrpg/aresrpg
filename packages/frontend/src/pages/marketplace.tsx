@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Loader2 } from 'lucide-react'
 
 import { use_marketplace_chain } from '../stores/marketplace_chain'
+import { has_collectible_profits } from '../chain/read_kiosk_profits'
 import { use_auth } from '../auth'
 import { BrowsePanel } from '../components/marketplace/browse_panel'
 import { SellPanel } from '../components/marketplace/sell_panel'
@@ -39,6 +40,10 @@ const TAB_META: Record<Tab, { i: number; color: string; key: string }> = {
 function ModeSwitch({ tab, on_change }: { tab: Tab; on_change: (t: Tab) => void }) {
   const { t } = useTranslation()
   const active = TAB_META[tab]
+  // BUILD #180 — HISTORY tab red dot: unclaimed kiosk proceeds are worth surfacing before the player ever
+  // opens the tab. House danger-red (index.css .btn-outline--danger's #f87171), decorative only (the
+  // COLLECT box inside HISTORY carries the same fact as real text once opened).
+  const has_kiosk_profits = use_marketplace_chain((s) => has_collectible_profits(s.kiosk_profits_mist))
 
   function on_key(e: React.KeyboardEvent) {
     const i = TAB_ORDER.indexOf(tab)
@@ -80,6 +85,13 @@ function ModeSwitch({ tab, on_change }: { tab: Tab; on_change: (t: Tab) => void 
             className="mkt-switch-btn"
           >
             {t(TAB_META[tb].key)}
+            {tb === 'HISTORY' && has_kiosk_profits && (
+              <span
+                aria-hidden="true"
+                className="absolute w-1.5 h-1.5 rounded-full"
+                style={{ top: 6, right: 12, background: '#f87171', boxShadow: '0 0 6px rgba(248,113,113,0.75)' }}
+              />
+            )}
           </button>
         )
       })}
@@ -91,16 +103,19 @@ export function MarketplacePage() {
   const { t } = useTranslation()
   const mobile = use_mobile_mode()
   const classes = app_mobile_classes(mobile)
-  const { loading, loaded_once, load } = use_marketplace_chain()
+  const { loading, loaded_once, load, load_kiosk_profits } = use_marketplace_chain()
   const address = use_auth((s) => s.address)
   const [tab, set_tab] = useState<Tab>('BUY')
 
   // Re-run on address resolve: zkLogin sets the wallet address ASYNC after mount. Depending on `address` re-loads
   // the BUY listings the moment auth is ready. The SELL sweep (own-kiosk read) is NOT fired here — it's lazy,
   // triggered by SellPanel on first SELL-tab view (S-86), so the BUY-path load stays a pure keyless `/v1` read.
+  // load_kiosk_profits (BUILD #180) rides the SAME effect — the HISTORY tab's red dot must be visible from
+  // ANY tab, so it can't wait for that tab to mount.
   useEffect(() => {
     load()
-  }, [address, load])
+    load_kiosk_profits()
+  }, [address, load, load_kiosk_profits])
 
   // D121: gate the full-screen spinner on the FIRST load ever (loaded_once), NOT on emptiness. See the store
   // note — with loaded_once the shell paints instantly on revisit and the background load() reconciles (SWR).

@@ -276,13 +276,11 @@ describe('MyLotsPanel marketplace visibility', () => {
         address={seller}
         busy={false}
         on_delist={() => {}}
-        on_withdraw_proceeds={() => {}}
         name_of={(_template_id, fallback) => fallback}
         asset_slug_of={(template_id) => template_id}
       />
     )
     expect(html).toContain('VALID TEN')
-    expect(html).toContain('Withdraw proceeds')
     expect(html).not.toContain('LEGACY SEVEN')
   })
 })
