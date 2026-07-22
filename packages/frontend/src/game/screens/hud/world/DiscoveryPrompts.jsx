@@ -3,11 +3,10 @@
 // DISCOVERY prompt sources (S-18, DECISIONS 07-09 pick + addendum) — renderless registrars feeding the
 // PromptStack (keys: F search · G gather · R ride; E dungeon lives in NpcPrompt.jsx):
 //
-//   AUTO-JOIN (no [J] button — auto-join reads as more intuitive): while the selected character's
-//       RPC doc has NO `world` (a fresh post-create character, or a legacy unjoined one), this registrar fires
-//       the SPONSORED `zones::join_world` ONCE per character per session (world_join.js — a fresh zkLogin
-//       wallet owns zero SUI; the S-54 choke dry-runs it, zero sponsor gas on a would-fail). The manual world
-//       SWITCHER (S-67 mounts it next to the online-players panel) calls `join_world_action` — self-pay.
+//   AUTO-JOIN (no [J] button): only the selected character's identity-matched RPC doc can arm this registrar.
+//       An explicit `world: null` fires the SPONSORED `zones::join_world` once per session; it stays silent only
+//       for the create-receipt session that already raised the joining hold. Missing/ambiguous reads never spend.
+//       The manual world SWITCHER calls `join_world_action` — self-pay.
 //   [F] SEARCH ZONE — shown ONLY while the zone under the avatar is unsearched ("option 3A" pick). Truth via
 //       the RPC zones view (UI-DATA LAW short-poll): only discovered zones exist as data (§17.18), so
 //       "current (zx,zy) absent from the set" = unsearched. The current world/character resolve off the
@@ -44,11 +43,12 @@ import { gather } from '../../../../world-shell/gather_actions.js'
 import { auto_join_world } from '../../../../world-shell/world_join.js'
 import { T62_WORLDS } from '../../../../chain/deployment'
 import { kiosk_for_character } from '../../../../world-shell/kiosk_resolve.js'
-import { publish_world_binding, session_gate_input } from '../../../../world-shell/session_gate.js'
+import { publish_world_binding, session_gate_input, use_world_binding } from '../../../../world-shell/session_gate.js'
 import { get_sdk } from '../../../../chain/sdk'
 import { game_log } from '../../../../core/log.js'
 import { report_error } from '../../../../core/report.js'
 import { humanize_tx_error } from '../../../core/abort_copy.js'
+import { derive_discovery_join } from './world_travel_state.js'
 
 // The LIVE staking-world roster (deployment.ts) as an id Set — the stale-world heal below tests membership so a
 // character stranded on a retired GHOST world (bound before the republish re-point) migrates to a live world.
@@ -93,13 +93,22 @@ export function DiscoveryPrompts() {
   const player_cell = use_game_state((s) => s.player_cell)
   const gather_target = use_game_state((s) => s.gather_target ?? null)
   const characters = use_game_state((s) => s.sui.characters)
+  const created_this_session = use_world_binding(
+    (state) => state.joining && state.character_id === character_id
+  )
 
   // Selected character's world (RPC doc) — the zones view is keyed by world id.
   const char_view = use_rpc_view(
     (signal) => (character_id ? get_characters({ ids: [character_id] }, signal) : Promise.resolve([])),
     { interval_ms: 10000, enabled: !!character_id, deps: [character_id] }
   )
-  const world_id = char_view.data?.[0]?.world ?? null
+  const join_decision = derive_discovery_join({
+    character_id,
+    documents: char_view.data,
+    live_world_ids: LIVE_WORLD_IDS,
+    created_this_session,
+  })
+  const { world_id, document: character_doc } = join_decision
 
   // Discovered-zone set for the current world — the ONE shared /v1/zones poll (rpc/zones_poll.js — #242),
   // also read by CompassStrip and world_spawns.js; a search's own confirm refetches it for every consumer.
@@ -136,41 +145,42 @@ export function DiscoveryPrompts() {
   // a discovered-but-fresh zone stays un-armed since search would abort EZoneFresh). Re-derives every zones
   // poll, so a TTL that elapses between polls re-arms [F] within the cadence.
   const searchable = !!world_id && !!cell && !!zones && zone_searchable(zone_row_here, zone_ttl_ms, Date.now())
-  // Unjoined = the doc LOADED and carries no world (never on a still-loading doc — no false trigger).
-  const unjoined = !!character_id && !char_view.loading && !!char_view.data && !world_id
   // STALE-WORLD RESIDENCY (ghost-spawn regression 2026-07-13): a character bound to a world that is NOT in the
   // live T62 roster is stranded on a pre-republish GHOST world (undeletable — World has no burn door) whose spawn
   // table still rolls RETIRED mobs (e.g. Sand Hopper). `world_field` is set ONLY by zones::join_world today (the
   // dungeon flip_world seam is declared-but-unwired, and this roam-scene HUD never mounts in a dungeon), so a
-  // loaded bound world ∉ T62 means EXACTLY "stranded on a ghost" — migrate to the live default. Never on a
-  // still-loading or unbound doc (world_id null → `unjoined` owns that path).
-  const stale_world = !char_view.loading && !!world_id && !LIVE_WORLD_IDS.has(world_id)
-
+  // loaded bound world ∉ T62 means EXACTLY "stranded on a ghost" — migrate to the live default. The pure gate
+  // below requires this selected character's exact row and a non-empty live roster before that can arm.
   // S-57 spectate-until-joined: this 10s doc poll is the binding's long-term healer — publish every CONFIRMED
   // read into the ONE binding home (session_gate.js) so the scene gate tracks external changes too. Tagged
   // source 'poll' (world-travel binding-clobber fix): during the indexer catch-up window right after a manual
   // travel or auto-join, this poll can still return the PRE-travel world — session_gate.js's stale-poll guard
   // discards that read instead of tearing the fresh write back down, and self-heals the instant a poll agrees.
   useEffect(() => {
-    if (!character_id || char_view.loading || !char_view.data) return
+    if (!character_id || char_view.loading || !join_decision.confirmed) return
     publish_world_binding(character_id, world_id, 'poll')
-  }, [character_id, char_view.loading, char_view.data, world_id])
+  }, [character_id, char_view.loading, join_decision.confirmed, world_id])
 
-  // AUTO-JOIN + STALE-WORLD MIGRATION (no manual step): a world-less character joins the default
-  // world, and a character stranded on a retired ghost world (`stale_world`) is MIGRATED to it — both through the
-  // same SPONSORED/self-pay door, once per character per session (world_join.js owns the latch + the no-retry
-  // law; auto_join_world defaults to T62_WORLDS[0] = First Shore). The refetch binds `char.world`, which arms the
-  // zones poll and [F]. A migration is a FIRST join to First Shore → a fresh spawn roll: the position RESETS to
-  // that world's centre and the ghost-world checkpoint is abandoned, so the honest toast fires (never a silent
-  // teleport). A level-1 stranded character loses nothing but the ghost's own (retired) zone discoveries.
+  // AUTO-JOIN + STALE-WORLD MIGRATION: the pure decision requires the selected character's exact doc and an
+  // explicit nullable world field. Create→play is silent only while this session's create hold proves the origin;
+  // legacy-unjoined joins and retired-world migrations both toast + log. world_join.js owns the once-per-session
+  // latch/no-retry law and on-chain rejoin restores the destination world's checkpoint when one already exists.
   useEffect(() => {
-    if (!unjoined && !stale_world) return
-    const migrating = stale_world // distinguish the ghost heal from the silent post-create create→play join
+    if (!join_decision.reason) return
+    const visible_join = join_decision.reason !== 'created'
     void auto_join_world({ character_id })
       .then((fired) => {
         if (!fired) return
         char_view.refetch() // bind char.world NOW (UI-DATA LAW self-heal)
-        if (migrating) push_event_toast({ state: 'info', title: t('discovery.world_migrated') })
+        if (!visible_join) return
+        if (join_decision.reason === 'migration') {
+          push_event_toast({ state: 'info', title: t('discovery.world_migrated') })
+          game_log('discovery', `migrated ${character_id} from retired world ${world_id}`)
+          return
+        }
+        const world = T62_WORLDS[0]?.label ?? T62_WORLDS[0]?.id ?? ''
+        push_event_toast({ state: 'info', title: t('world_switcher.joined', { world }) })
+        game_log('discovery', `joined explicitly unbound character ${character_id} to ${world}`)
       })
       .catch((error) => {
         // one honest toast; the S-67 switcher is the manual retry (never auto-refired — tx-retry law).
@@ -185,7 +195,7 @@ export function DiscoveryPrompts() {
         game_log('discovery', 'auto join_world failed', error)
         report_error(error, { area: 'discovery', action: 'auto_join_world' })
       })
-  }, [unjoined, stale_world, character_id, t])
+  }, [join_decision.reason, character_id, world_id, t])
 
   // COLD-BOOT hunt-zone seed (now a CORE input — D770a W2): the atom's hunt zone resets on
   // refresh, so seed it from the INDEXER-served character position (/v1/characters — keyless, already polled
@@ -195,11 +205,11 @@ export function DiscoveryPrompts() {
   const hunt_zone_known = use_spawns((s) => s.hunt_zone !== null)
   useEffect(() => {
     if (!world_id || !character_id || hunt_zone_known) return
-    const pos = char_view.data?.[0]?.position
+    const pos = character_doc?.position
     if (!pos) return
     // char.position is the INDEXER-served CHAIN checkpoint (already chain-space) — the fold zones it itself.
     spawns_input({ type: 'checkpoint_resolved', world_id, x: Number(pos.x), z: Number(pos.z), source: 'indexed' })
-  }, [world_id, character_id, char_view.data, hunt_zone_known])
+  }, [world_id, character_id, character_doc, hunt_zone_known])
 
   // [F] SEARCH ZONE
   useEffect(() => {

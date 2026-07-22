@@ -4,9 +4,68 @@
 // REGRESSION seam for the "HERE bound to the wrong character" bug: a doc from another character (the exact
 // state use_rpc_view's keep-last-good serves across a selection switch) must never bind the location line.
 
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, mock, test } from 'bun:test'
 
-import { derive_world_panel, derive_world_cards, filter_world_cards } from './world_travel_state.js'
+import characters_fx from '../../../../rpc/fixtures/characters.json'
+import { T62_WORLDS } from '../../../../chain/deployment'
+import {
+  derive_discovery_join,
+  derive_world_panel,
+  derive_world_cards,
+  filter_world_cards,
+} from './world_travel_state.js'
+
+describe('derive_discovery_join (refresh auto-join door)', () => {
+  test('a joined /v1 character followed by an ambiguous empty read never fires join_world', () => {
+    const joined = characters_fx.characters[0]
+    const join_world = mock(() => {})
+    const live_world_ids = new Set(T62_WORLDS.map((world) => world.id))
+
+    for (const documents of [characters_fx.characters, []]) {
+      const decision = derive_discovery_join({
+        character_id: joined.id,
+        documents,
+        live_world_ids,
+        created_this_session: false,
+      })
+      if (decision.reason) join_world(decision)
+    }
+
+    expect(join_world).toHaveBeenCalledTimes(0)
+  })
+
+  test('only the selected row with an explicit null world proves unjoined; only this-session creation is silent', () => {
+    const character_id = characters_fx.characters[0].id
+    const live_world_ids = new Set(T62_WORLDS.map((world) => world.id))
+    const decide = (documents, created_this_session = false) =>
+      derive_discovery_join({ character_id, documents, live_world_ids, created_this_session })
+
+    expect(decide([]).reason).toBeNull()
+    expect(decide([{ id: '0xother', world: null }]).reason).toBeNull()
+    expect(decide([{ id: character_id }]).reason).toBeNull()
+    expect(decide([{ id: character_id, world: null }]).reason).toBe('unjoined')
+    expect(decide([{ id: character_id, world: null }], true).reason).toBe('created')
+  })
+
+  test('migration requires a proven bound world and a non-empty authoritative live roster', () => {
+    const joined = characters_fx.characters[0]
+    const stale = derive_discovery_join({
+      character_id: joined.id,
+      documents: characters_fx.characters,
+      live_world_ids: new Set(['0xother_live_world']),
+      created_this_session: false,
+    })
+    const missing_roster = derive_discovery_join({
+      character_id: joined.id,
+      documents: characters_fx.characters,
+      live_world_ids: new Set(),
+      created_this_session: false,
+    })
+
+    expect(stale.reason).toBe('migration')
+    expect(missing_roster.reason).toBeNull()
+  })
+})
 
 describe('derive_world_panel (selected-character binding)', () => {
   test('no selected character → no_character', () => {
