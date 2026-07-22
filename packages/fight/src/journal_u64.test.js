@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// U64 DISCIPLINE (M2a, #291) — a property test proving seq/version handling stays lossless ABOVE
+// U64 DISCIPLINE (M2a, #291) — property tests proving seq/version handling stays lossless ABOVE
 // Number.MAX_SAFE_INTEGER (2^53), the exact regime where Number() collapses distinct ordinals into
-// one. The proof spans the helpers AND the accept machine's contiguity arithmetic — no ordinal is
-// ever Number-coerced anywhere in the ingress.
+// one. The proof spans the helpers AND the accept machine's lane refusal — no ordinal is ever
+// Number-coerced anywhere in the ingress.
 
 import { describe, expect, test } from 'bun:test'
 
@@ -58,22 +58,18 @@ describe('u64 — helpers', () => {
   })
 })
 
-describe('u64 — the accept machine never Number-coerces (property over huge bases)', () => {
-  test('contiguity + gap detection hold exactly at every base beyond 2^53', () => {
+describe('u64 — the accept machine refuses the courtesy lane without Number coercion', () => {
+  test('protocol faults preserve the exact seq at every base beyond 2^53', () => {
     for (const base of BIG_BASES) {
-      // seed the cursor so `base` is the next expected seq (journalHead = base → head = base-1).
       const seeded = seed_accept_state(base.toString())
       expect(seeded.head).toBe((base - 1n).toString())
 
-      const accepted = accept_batch(seeded, normalize_journal_page(big_page(base, 3)))
-      // head advanced to base+2 EXACTLY (a Number fold would have stalled/aliased at 2^53).
-      expect(accepted.state.head).toBe((base + 2n).toString())
-      const apply = accepted.effects.find((e) => e.type === 'apply')
-      expect(apply.events.map((e) => e.seq)).toEqual([base, base + 1n, base + 2n].map(String))
-
-      // a batch that skips ahead requests EXACTLY base+3 — proof the frontier math is BigInt.
-      const gapped = accept_batch(accepted.state, normalize_journal_page(big_page(base + 5n, 1)))
-      expect(gapped.effects).toContainEqual({ type: 'fetch_gap', fight_id: FIGHT, from: (base + 3n).toString() })
+      const refused = accept_batch(seeded, normalize_journal_page(big_page(base, 3)))
+      const fault = refused.effects.find((e) => e.type === 'protocol_fault')
+      expect(fault).toMatchObject({ type: 'protocol_fault', fight_id: FIGHT, seq: base.toString(), accepted: null })
+      expect(fault.received).toEqual(expect.any(String))
+      expect(refused.state).toEqual(seeded)
+      expect(refused.effects.some((e) => e.type === 'apply')).toBe(false)
     }
   })
 

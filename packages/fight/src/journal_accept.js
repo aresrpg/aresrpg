@@ -56,6 +56,17 @@ export const accept_batch = (state, batch) => {
   for (const event of batch?.events ?? []) {
     const seq = u64(event.seq)
     if (seq == null) continue // a malformed ordinal is not orderable — drop it (never crash)
+    if (seq >= 1_000_000n) {
+      effects.push({
+        type: 'protocol_fault',
+        fight_id,
+        seq: event.seq,
+        accepted: null,
+        received: content_key(event),
+        source: event.source,
+      })
+      break
+    }
     const expected = head == null ? 0n : head + 1n
     if (seq === expected) {
       // NEW and contiguous — accept, record its content identity, advance the frontier.

@@ -11,6 +11,7 @@ import { accept_batch, empty_accept_state, seed_accept_state } from './journal_a
 
 const FIGHT = '0xf1647' // house-synthetic ids (chain-id gate) — never a live 0x…64 object id
 const CHAR = '0xchar_a'
+const COURTESY_EVENT_BASE = 1_000_000
 
 // Captured-wire VALUE shapes (packages/rpc/indexer/src/handlers/ares/journal_tests.rs); ids synthetic above.
 const hit = (remaining_hp = '10') => ({
@@ -95,6 +96,24 @@ describe('accept machine — idempotence', () => {
 })
 
 describe('accept machine — protocol fault', () => {
+  test('a canonical event at the courtesy lane base is refused and recorded as a fault', () => {
+    const before = seed_accept_state(COURTESY_EVENT_BASE)
+    const result = accept_batch(before, batch(COURTESY_EVENT_BASE, [moved()]))
+    const faults = effects_of('protocol_fault')(result)
+
+    expect(faults).toHaveLength(1)
+    expect(faults[0]).toMatchObject({
+      type: 'protocol_fault',
+      fight_id: FIGHT,
+      seq: String(COURTESY_EVENT_BASE),
+      accepted: null,
+      source: 'journal',
+    })
+    expect(faults[0].received).toEqual(expect.any(String))
+    expect(result.state).toEqual(before)
+    expect(effects_of('apply')(result)).toEqual([])
+  })
+
   test('same seq, DIFFERENT content emits a fault as data and never overwrites accepted truth', () => {
     const accepted = accept_batch(empty_accept_state(), batch(0, [moved(), hit('10')])) // seq 1 = Hit remaining_hp 10
     const before = accepted.state
