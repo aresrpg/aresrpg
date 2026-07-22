@@ -20,6 +20,7 @@ import {
   DEFAULT_CENTER_STYLE,
   ENTITY_ANCHOR_EDGE_OPACITY,
   ENTITY_ANCHOR_FILL_OPACITY,
+  GLYPH_TICK_FLARE,
   TEAM_COLORS,
   TRAP_BLOB_COLOR,
   TRAP_BLOB_OPACITY,
@@ -310,6 +311,12 @@ describe('[#164] neighbor_mask / edges_of_mask — grid adjacency onto the merge
 })
 
 describe('[#164] glyph channel is MERGE-AWARE + MORE VISIBLE (owner 2026-07-21 restatement)', () => {
+  test('glyph tick flare reuses the zone orange at a frozen, deliberately subtle peak', () => {
+    expect(GLYPH_TICK_FLARE).toEqual({ color: CHANNELS.glyph.color, peak: 0.32 })
+    expect(Object.isFrozen(GLYPH_TICK_FLARE)).toBe(true)
+    expect(GLYPH_TICK_FLARE.peak).toBeLessThan(0.5)
+  })
+
   test('CHANNELS.glyph opts into merge, and its visibility dials sit above the old "too faint" floor', () => {
     expect(CHANNELS.glyph.merge).toBe(true)
     expect(CHANNELS.glyph.opacity).toBeGreaterThan(0.5) // was AT the punchy floor — genuinely raised now

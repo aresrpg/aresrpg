@@ -483,6 +483,39 @@ export function hover_footprint_plan(armed_spell_id, foot_cells) {
 }
 
 /**
+ * The actor whose turn the player can SEE now. During paced replay the presentation clock deliberately trails
+ * the chain clock; once replay drains, the authoritative active actor takes over. Terminal state has no live
+ * turn. This mirrors FightTimeline's active-card projection and never reads wave/fold internals.
+ * @param {any} fight projected engine view
+ * @returns {string | null}
+ */
+export function visible_turn_actor_id(fight) {
+  if (!fight || fight.winner !== -1) return null
+  return fight.presenting ? (fight.presenting_entity_id ?? null) : (fight.active_entity_id ?? null)
+}
+
+/**
+ * Pure observed-delta plan for the glyph turn-tick flare. `previous_visible_actor_id === undefined` means the
+ * presentation just mounted and establishes a baseline without inventing a tick; `null → actor` is a genuine
+ * placement-to-active transition. A poll echo (`actor → same actor`) is inert by construction. The emitted cell
+ * array is copied so the presentation layer never aliases the projection it reads.
+ * @param {string | null | undefined} previous_visible_actor_id primitive actor observed on the prior paint
+ * @param {any} fight projected engine view carrying only presentation facts
+ * @returns {{ visible_actor_id: string | null, glyph_cells: number[] }}
+ */
+export function glyph_tick_flare_plan(previous_visible_actor_id, fight) {
+  const visible_actor_id = visible_turn_actor_id(fight)
+  const turn_changed =
+    previous_visible_actor_id !== undefined &&
+    visible_actor_id !== null &&
+    previous_visible_actor_id !== visible_actor_id
+  return {
+    visible_actor_id,
+    glyph_cells: turn_changed ? [...(fight?.my_glyphs ?? [])] : [],
+  }
+}
+
+/**
  * The ELEMENT of a cast, for its VFX/SFX flavour (F1). Resolved off the SAME on-chain spell row the range reads:
  * a heal-kind spell (guardian_mend) is the 'heal' beat; everything else reads the row's OWN top-level
  * `element` field — the seed projection carries it 1:1 from the corpus's `s.element` (the same on-chain

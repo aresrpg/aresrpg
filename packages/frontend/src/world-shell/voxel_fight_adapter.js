@@ -23,7 +23,7 @@
 //   ROAM/EXIT        → teardown + camera_release.
 
 import { Vector3 } from 'three'
-import { TEAM_COLORS } from '@aresrpg/engine3/tactical'
+import { GLYPH_TICK_FLARE, TEAM_COLORS } from '@aresrpg/engine3/tactical'
 import * as project from '@aresrpg/fight/project'
 import { fight_store } from '@aresrpg/fight/store'
 import { fight_view } from '@aresrpg/fight/project'
@@ -112,6 +112,7 @@ import {
   seed_cast_flags_of,
   spell_footprint,
   hover_footprint_plan,
+  glyph_tick_flare_plan,
   my_seat_of,
   element_of_spell,
   board_lifecycle_decision,
@@ -283,6 +284,10 @@ export function create_voxel_fight_adapter(
   /** The last-painted highlight signature — skip a repaint when nothing that affects a wash changed. */
   let last_paint_key = ''
   let prev_my_turn = false // D242 rider: rising-edge tracker for the your-turn ground flash (board.flash_cell)
+  // GLYPH TICK FLARE — two primitives copied by value (CODE_LAW L-P6), never a wave/event reference. A fight-id
+  // change seeds a new baseline; within one fight the visible actor delta drives exactly one zone pulse per turn.
+  let observed_turn_fight_id = /** @type {string | null | undefined} */ (undefined)
+  let observed_turn_actor_id = /** @type {string | null | undefined} */ (undefined)
   /** The ids currently upserted, so a despawn (a killed/removed fighter) removes its avatar. */
   const entity_ids = new Set()
   /** Ids with a walk animation IN FLIGHT (handed to entity_move, not yet arrived). While an id is here,
@@ -1428,6 +1433,17 @@ export function create_voxel_fight_adapter(
    * reconcile storm doesn't repaint an unchanged wash. TERMINAL paints nothing (frozen board).
    */
   const paint = (result, fight, dungeon) => {
+    // Observe BEFORE the paint memo: two paced turns can change only the presentation actor while every wash input
+    // stays identical. The visible actor is the HUD's own presentation clock (presenting actor while replay drains,
+    // otherwise active actor), never fold my_turn_no/glyph lifetime. pulse_cells owns the existing self-removing
+    // 0.15s-in/0.25s-out board emphasis; the config keeps this flare orange and deliberately subtle.
+    const turn_fight_id = fight.fight_id ?? null
+    const previous_actor_id = observed_turn_fight_id === turn_fight_id ? observed_turn_actor_id : undefined
+    const glyph_flare = glyph_tick_flare_plan(previous_actor_id, fight)
+    observed_turn_fight_id = turn_fight_id
+    observed_turn_actor_id = glyph_flare.visible_actor_id
+    if (glyph_flare.glyph_cells.length) board.pulse_cells(glyph_flare.glyph_cells.map(decode_cell), GLYPH_TICK_FLARE)
+
     // D300: the VISUAL turn signal is the presentation gate, not the slice. In a solo fight the chain resolves the
     // whole mob cascade inside my commit and hands active_entity_id back to ME, so the slice reads "my turn" the
     // instant the mobs' paced replay starts — the my-turn washes would paint over the mob beats. `presenting`
@@ -1649,6 +1665,9 @@ export function create_voxel_fight_adapter(
     unplaceable_attempts_key = null
     last_paint_key = ''
     trap_presentation_state = empty_trap_presentation() // a fresh fight observes its own trap-cell history
+    observed_turn_fight_id = undefined
+    observed_turn_actor_id = undefined
+    // the torn-down fight's trap markers live in the fold (my_traps); the store re-inits per fight, so nothing leaks.
   }
 
   // subscribe: engine state (poll → fight slice) + picks (a fresh draft repaints its ranges). Run once now so a

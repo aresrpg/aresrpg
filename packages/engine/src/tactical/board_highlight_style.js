@@ -54,6 +54,10 @@ const GLYPH_TINT = {
   merge: true,
 }
 
+/** Presentation-only turn-tick emphasis for a live glyph zone. Reuses the zone's exact orange and the board's
+ * self-cleaning pulse envelope; the low peak keeps it below action/turn flashes while still reading as alive. */
+export const GLYPH_TICK_FLARE = Object.freeze({ color: GLYPH_TINT.color, peak: 0.32 })
+
 /**
  * @typedef {object} HighlightChannelSpec
  * @property {number} color

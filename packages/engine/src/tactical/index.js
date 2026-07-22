@@ -31,7 +31,7 @@ import { project_board_screen } from './board_occlusion.js'
 
 // TEAM PALETTE (ally/enemy) — re-exported at the tactical facade so the dapp adapter reads the SAME ally/
 // enemy hexes the seat-glow channels + entity outline use (single source; see board_highlights TEAM_COLORS).
-export { TEAM_COLORS } from './board_highlights.js'
+export { GLYPH_TICK_FLARE, TEAM_COLORS } from './board_highlights.js'
 
 /**
  * @typedef {object} BoardHandle

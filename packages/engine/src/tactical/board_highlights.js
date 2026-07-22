@@ -75,6 +75,7 @@ export {
   CHANNELS,
   DEFAULT_CENTER_STYLE,
   FADE_DEFAULTS,
+  GLYPH_TICK_FLARE,
   TEAM_COLORS,
   resolve_fade,
   resolve_highlight_style,
