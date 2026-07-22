@@ -1,0 +1,97 @@
+{
+  "_doc": "GOLD SUITE budgets (docs/GOLD_STANDARD_SUITE.md §5/§8). Versioned — every change is a reviewed diff, never a vibe. calibration: 'absolute' = wall-clock UX ceiling, never machine-scaled; 'relative' = multiplied by the calibrate.spec machine_factor. Lanes TIGHTEN rows from their first green run's p95 (recorded raw in test/gold/out/).",
+  "flows": [
+    { "flow": "api_rtt", "budget_ms": 3000, "calibration": "absolute", "note": "one warm /v1 view read round-trip" },
+    {
+      "flow": "v1_lag",
+      "budget_ms": 3000,
+      "calibration": "absolute",
+      "note": "tx digest → visible in /v1 (warm indexer)"
+    },
+    {
+      "flow": "roster_load",
+      "budget_ms": 5000,
+      "calibration": "absolute",
+      "note": "the /v1/characters read the app fires (golden-path SLO parity; dev-compile wall time excluded)"
+    },
+    {
+      "flow": "time_to_play",
+      "budget_ms": 15000,
+      "calibration": "absolute",
+      "note": "nav → world canvas interactive (L3)"
+    },
+    {
+      "flow": "dungeon_enter",
+      "budget_ms": 4000,
+      "calibration": "absolute",
+      "note": "Start click → board mounted — the 7s regression watch (L4)"
+    },
+    { "flow": "fight_enter", "budget_ms": 4000, "calibration": "absolute", "note": "engage → board mounted (L4)" },
+    {
+      "flow": "commit_turn",
+      "budget_ms": 5000,
+      "calibration": "absolute",
+      "note": "END TURN → settled → UI folded (L4)"
+    },
+    { "flow": "buy", "budget_ms": 5000, "calibration": "absolute", "note": "shop buy click → success modal (L7)" },
+    {
+      "flow": "equip",
+      "budget_ms": 3000,
+      "calibration": "absolute",
+      "note": "equip click → stats delta rendered (L7)"
+    },
+    {
+      "flow": "mint_open",
+      "budget_ms": 5000,
+      "calibration": "absolute",
+      "note": "open result → item in inventory (L7)"
+    },
+    { "flow": "create_character", "budget_ms": 8000, "calibration": "absolute", "note": "submit → roster row (L2)" },
+    {
+      "flow": "dungeon_teleport",
+      "budget_ms": 1500,
+      "calibration": "absolute",
+      "note": "REGRESSION (R-DUN-3, reported 2026-07-11): Start click → player teleported into the cave, BEFORE the activate tx resolves. Pre-fix = 7000 (waited the full tx). Distinct from dungeon_enter (board mount) — this fences the teleport-first optimistic flip (dungeon_store.js). ui-mode/L1."
+    },
+    {
+      "flow": "commit_turn_tx",
+      "budget_ms": 1000,
+      "calibration": "absolute",
+      "note": "REGRESSION — hard ceiling >1s: the single-PTB commit_turn tx build+submit+finality alone (NOT the animated fold — that is commit_turn=5000). Sui finality ~0.8s. Pre-fix measured 1944ms (structural double-wait: app re-waitForTransaction on the same digest). ui-mode/L1."
+    },
+    {
+      "flow": "craft",
+      "budget_ms": 5000,
+      "calibration": "absolute",
+      "note": "craft submit → crafted item in inventory (L7). New fence (no pre-fix number); pairs with the craft_wired static check. ui-mode/L1."
+    },
+    {
+      "flow": "placement_ready",
+      "budget_ms": 2000,
+      "calibration": "absolute",
+      "note": "REGRESSION (F20): board mounted → placement-phase input (cell click) actually accepts a move, NOT just rendered. Distinct from fight_enter (board mount) — this fences the placement-input-lag class reported separately ('placing takes 10s after fight entrance'). No pre-fix measured number recorded (rough estimate only: ~10s). ui-mode/L1."
+    },
+    {
+      "flow": "ready_receipt_active",
+      "budget_ms": 2000,
+      "calibration": "absolute",
+      "note": "REGRESSION: confirmed place+READY receipt → placement READY/countdown gone from the signing actor, before the chain-read/poll reconciliation. Pre-fix waited about 5s. ui-mode/L1."
+    },
+    {
+      "flow": "forfeit_receipt_teardown",
+      "budget_ms": 2000,
+      "calibration": "absolute",
+      "note": "REGRESSION: confirmed forfeit receipt → board unmounted + defeat/results surface before any fight read or poll reconciliation. Pre-fix waited about 7s. ui-mode/L1."
+    }
+  ],
+  "perf": [
+    { "scenario": "perf.idle", "metric": "fps_p50", "budget": 55, "unit": "fps", "calibration": "relative" },
+    { "scenario": "perf.idle", "metric": "frame_p95", "budget": 22, "unit": "ms", "calibration": "relative" },
+    { "scenario": "perf.walk", "metric": "frame_p95", "budget": 28, "unit": "ms", "calibration": "relative" },
+    { "scenario": "perf.walk", "metric": "longtasks_per_min", "budget": 6, "unit": "count", "calibration": "relative" },
+    { "scenario": "perf.fight", "metric": "frame_p95", "budget": 33, "unit": "ms", "calibration": "relative" },
+    { "scenario": "perf.vfx_burst", "metric": "worst_frame", "budget": 80, "unit": "ms", "calibration": "relative" },
+    { "scenario": "perf.soak", "metric": "jsheap_growth", "budget": 2, "unit": "MB/min", "calibration": "absolute" },
+    { "scenario": "perf.warp_stream", "metric": "settle_time", "budget": 6000, "unit": "ms", "calibration": "relative" }
+  ]
+}

@@ -111,7 +111,7 @@ describe.skipIf(!PACING_ENVELOPES_AVAILABLE)(
       expect(lines.some((l) => l.includes(`${ME} casts strike`))).toBe(true) // my prediction painted
       expect(lines.some((l) => l.includes('mob-0 casts mob_attack_dungeon'))).toBe(true) // the mob wave replayed
       expect(lines.some((l) => l.includes('mob-0 takes 12 dmg → 0 hp'))).toBe(true) // the kill floater
-      expect(lines.some((l) => l.includes('mob-0 dies'))).toBe(true) // §7b death beat printed
+      expect(lines.some((l) => l.includes('mob-0 dies'))).toBe(true) // from the damage beat's `killed` — no 'death' beat since #170 (5th)
       expect(lines.at(-1)).toBe('★ FightResult OPENED — session closed')
       // §7b conformance over everything this session PACED (the mob wave) — the CLI saw a legal stream:
       const verdict = evaluate_trace(result.trace)

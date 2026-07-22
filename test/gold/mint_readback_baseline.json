@@ -1,0 +1,20 @@
+{
+  "_purpose": "MINT-FIDELITY READBACK — named baseline for the KNOWN-CLASS elementless-resist rows. After the gold rig mints the full mainnet spell corpus, mint_readback.mjs reads every SpellTemplate's on-chain effect rows back and scans for the legacy defect: an ALTER_RESIST (kind 11) effect minted with element=255 (spell::el_none), which mitigates zero damage (no live corpus damage source deals element=NONE). This file is the shrink-only ledger of the rows still shipping that shape.",
+  "_ratchet": "SHRINK-ONLY. Per spell id: found_count > baseline_count OR a spell id absent from this ledger with any elementless-resist row = RED (a NEW regression, or the mint dropped a present element). found_count < baseline_count = PASS with a loud 'tighten me' nudge (the completion lane shrank it — update this ledger deliberately). found_count == baseline_count = PASS (known-class). transform-drift (any value/kind/turns/stat mismatch vs the authored seed) is NEVER baselined — it is always RED.",
+  "_sources": [
+    "seed/generators/resist_element_seed_corpus.test.mjs KNOWN_ELEMENTLESS (the SEED-side twin of this CHAIN-side ledger; the faithful mint turns seed element==null into chain element==255, so the counts must agree exactly)",
+    "seed/generators/retro129_port_report.json `exceptions` (ENGINE_GAP_HOLD / SUMMON_REPLACEMENT / OWNER_RETUNE — the four regen-unreachable classes)",
+    "board row: the elementless legacy 8 are baselined until their completion lane lands"
+  ],
+  "_total": 156,
+  "elementless_resist": {
+    "ikari_pain_pact": 24,
+    "mori_briarwall": 6,
+    "shugo_tideward": 12,
+    "shugo_galeward": 12,
+    "shusen_deep_draught": 48,
+    "tomoda_beast_ward": 24,
+    "tomoda_golem_aspect": 6,
+    "tomoda_quill_aspect": 24
+  }
+}

@@ -1,0 +1,7 @@
+# any lane-suffixed .build copy (.build, .build-soak, .build-<lane>…) + deployment manifests
+.build*/
+out/
+node_modules
+.gold-deployment.json
+.gold-*-deployment.json
+.gold-sponsor-release.json

@@ -124,6 +124,10 @@ packages/sdk/test/items.test.js	15bLdZq0-9Kdvno1LjjHbR=1 3HBIa6Y-URHz5AH2yDgUB0=
 packages/sdk/test/random_pin_remaining.test.js	xmnoLwzYYeN5pZPyMiBhuf=1
 packages/sdk/test/social_onchain.test.js	rYvntAU7EjfU85mWIs7EvS=1
 scripts/check-constraints.sh	A_78KFzXWSZOE2PgWSLTY2=1 WF8K2AgphFGEB8b75jH392=1 ZT18OOD8Jb47K9XVlJQFUx=1 iG6muWKjphwqvpsv-a_oin=1 tKzCXdn5giyE5JtjatNIeb=1
+test/gold/fixtures/receipts/chain_event_shapes.json	4v5vdd9y5XXQKpRFfwUPy3=22 ggM0qrJM8rAxMXbIpKqSut=4 mf0SQMhENIvRIcECu79rst=18 vLyaqotN5JRtlrVQrL_v2X=3
+test/gold/fixtures/receipts/real_receipt_events.json	4v5vdd9y5XXQKpRFfwUPy3=5 mf0SQMhENIvRIcECu79rst=5
+test/gold/investigations/p0_owner_script/p0_tx_outcomes.json	Tx5yPbdocKkD2Pl3i5lGNY=34 XLWsbRIlbz3d8l7mzm7LRK=30
+test/gold/specs_anchor/p0_owner_script.spec.ts	Tx5yPbdocKkD2Pl3i5lGNY=1
 `
 )
 

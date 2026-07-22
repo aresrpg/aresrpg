@@ -25,9 +25,10 @@ export const beat_line = (head_ms, b) => {
     case 'cast':
       return `${t} ${p.entity_id} casts ${p.spell_id ?? 'strike'} → (${p.target?.x},${p.target?.y})`
     case 'damage':
-      return `${t} ${p.target_id} takes ${p.damage} dmg → ${p.new_health} hp`
-    case 'death':
-      return `${t} ${p.target_id} dies`
+      // #170 (5th recurrence): 'death' is no longer a beat kind — the killing 'damage' beat carries `killed` and
+      // the presenter derives the death visual from the presented-state alive→dead edge, so the transcript narrates
+      // the kill from this one beat (fight_render_events.js: killed = remaining_hp === 0).
+      return `${t} ${p.target_id} takes ${p.damage} dmg → ${p.new_health} hp${p.killed ? ` — ${p.target_id} dies` : ''}`
     case 'fight_end':
       return `${t} ★ fight over — ${p.outcome}`
     case 'arrival':

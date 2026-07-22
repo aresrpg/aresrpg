@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, test, expect } from 'bun:test'
 
 import { canonical_state, fold_log, normalize_events, state_hash } from './inputs.js'
-import { create_fight_store } from './store.js'
+import { committed_state, create_fight_store } from './store.js'
 
 // PARITY PROOF — S0's definition of done (FIGHT_REWRITE_DESIGN §1/§5). The FIGHTREAL-captured REAL testnet receipt
 // (digest 5wdRBuZzjp: TurnEnded→MobMoved→Hit→Cast→TurnStarted) folded through the dark core must (1) byte-match a
@@ -62,26 +62,34 @@ describe.skipIf(!RECEIPT_AVAILABLE)('fight-core parity — real receipt → sim-
     store.getState().input({ type: 'poll', receipt: { events: receipt.events.slice(0, 2) }, version: 1 }, 1_000) // stale subset
     expect(state_hash(store.getState())).toBe(canonical)
 
-    // out-of-order VERSION delivery converges — the store re-folds by (version, event_idx), never arrival order.
-    const started = { events: [ev('TurnStarted', { is_mob: false, idx: 0, deadline_ms: 5 })] }
-    const hit = { events: [ev('Hit', { victim_is_mob: false, victim_idx: 0, amount: 9, remaining_hp: 30 })] }
-    const drive = (order) => {
+    // out-of-order canonical delivery converges — M2b (156b27ad, the one-ingress rewrite) keys the accept log by
+    // per-fight SEQ and re-folds by (version, event_idx); arrival order never decides. A receipt's own seqs are
+    // optimistic (assigned from the accept head) and a receipt at/below the applied floor is a redundant early copy
+    // the journal owns (store.js door), so the ordinal that REORDERS is the JOURNAL's real seq: the accept machine
+    // holds a tail page behind its gap until the head fills, then re-walks the tail contiguously. The same property
+    // the pre-M2b receipt path asserted here, proven through the channel that now carries it (cf. one_ingress.test.js).
+    const jrow = (seq, version, kind, data) => ({
+      seq: String(seq),
+      version: String(version),
+      kind,
+      digest: `0x${seq}`,
+      data: { fight: FIGHT_ID, ...data },
+    })
+    const started = jrow(0, 1, 'TurnStarted', { is_mob: false, idx: 0, deadline_ms: 5 })
+    const hit = jrow(1, 2, 'Hit', { victim_is_mob: false, victim_idx: 0, amount: 9, remaining_hp: 30 })
+    const page = (rows) => ({
+      type: 'journal',
+      fight_id: FIGHT_ID,
+      page: { fight: FIGHT_ID, events: rows, journal_head: '2' },
+    })
+    const drive = (pages) => {
       const s = create_fight_store()
       s.getState().input({ type: 'init', fight_id: FIGHT_ID, my_key: 'p0' })
-      for (const [receipt_batch, version] of order)
-        s.getState().input({ type: 'receipt', receipt: receipt_batch, version }, 0)
-      return state_hash(s.getState())
+      for (const p of pages) s.getState().input(p, 0)
+      return state_hash(committed_state(s.getState()))
     }
-    expect(
-      drive([
-        [hit, 2],
-        [started, 1],
-      ])
-    ).toBe(
-      drive([
-        [started, 1],
-        [hit, 2],
-      ])
-    )
+    // in-order (head + tail in one page) vs out-of-order (the tail page waits on the gap, the head page fills it):
+    // both fold to active=p0, deadline=5, p0.hp=30 — the same committed state.
+    expect(drive([page([hit]), page([started, hit])])).toBe(drive([page([started, hit])]))
   })
 })
