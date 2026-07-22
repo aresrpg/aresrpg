@@ -9,13 +9,25 @@
 // OPEN (full visibility), never closed (a silent, consoleless "no fight VFX ever again").
 
 import { describe, expect, test } from 'bun:test'
+import { PerspectiveCamera, Scene } from 'three'
+import { float } from 'three/tsl'
 
-import { depth_fade_mask } from './vfx_overlay_pass.js'
+import { create_vfx_overlay, depth_fade_mask } from './vfx_overlay_pass.js'
 
 // The #158 FIX floor (OVERLAY_SOFT_FLOOR) — hard-coded here to pin the shipped default; the mask never
 // drops below it, so a ground-anchored cast (gap≈0) can never vanish. The `soft_floor=0` arg restores the
 // pre-fix hard fade for the occlusion tests that assert the raw smoothstep shape.
 const FLOOR = 0.5
+
+test('the post overlay multiplier is neutral because routed materials own the output gain', () => {
+  const overlay = create_vfx_overlay({
+    scene: new Scene(),
+    camera: new PerspectiveCamera(),
+    scene_depth: float(1),
+  })
+  expect(overlay.gain.value).toBe(1)
+  overlay.dispose()
+})
 
 describe('depth_fade_mask — soft-particle depth fade (#158)', () => {
   test('#158 FIX: gap ≤ 0 floors to OVERLAY_SOFT_FLOOR (soft occlusion) instead of a hard 0 — never invisible', () => {

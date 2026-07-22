@@ -29,6 +29,8 @@ import {
   vec4,
 } from 'three/tsl'
 
+import { FIGHT_VFX_OUTPUT_GAIN } from '../config/vfx_config.js'
+
 import {
   PACK_BILLBOARD,
   PACK_SPHERE,
@@ -66,8 +68,11 @@ export const FIGHT_VFX_LAYER = 10
  * scene pass skips it) and its material switches to DISPLAY-SPACE ADDITIVE — additive blend (the pack's blend_add /
  * additive-glow luminosity, which reads as pure light once it's out from under AgX), depthWrite ON so the overlay
  * pass records a representative particle depth for the composite's scene-occlusion mask, depthTest OFF so overlapping
- * particles still ACCUMULATE (the glow stacks). PURE (mirrors the park_node_material_objects idiom — traverse, touch
- * only objects with a material) so it's unit-testable without a GPU. Idempotent; returns how many meshes were routed.
+ * particles still ACCUMULATE (the glow stacks). The ONE display gain is assigned through material opacity here,
+ * before the post-stack switch: AdditiveBlending applies source alpha to RGB, so this is the same linear transform
+ * the overlay previously applied after accumulation, while the bare-render path can no longer expose raw emission.
+ * PURE (mirrors the park_node_material_objects idiom — traverse, touch only objects with a material) so it's
+ * unit-testable without a GPU. Idempotent; returns how many meshes were routed.
  * @param {import('three').Object3D} root the preset handle's object3d
  * @returns {number} meshes routed
  */
@@ -81,6 +86,7 @@ export function route_overlay_group(root) {
       m.blending = ADDITIVE_BLENDING
       m.depthWrite = true
       m.depthTest = false
+      m.opacity = FIGHT_VFX_OUTPUT_GAIN
     }
     routed += 1
   })
@@ -96,8 +102,9 @@ export function route_overlay_group(root) {
  * on mobile"). That degraded path has NO overlay pass (post is null), so a plain camera's DEFAULT mask (layer 0
  * only) is all it ever renders — every fight-cast VFX (already routed to FIGHT_VFX_LAYER by route_overlay_group)
  * goes permanently dark while the rest of the game stays fully playable. Calling this once, the moment the
- * fallback engages, restores visibility — pre-overlay colour (no AgX-bypass composite: see vfx_overlay_pass.js),
- * but SEEN beats invisible ("no flags default ON" law). Idempotent (Layers.enable ORs the bit).
+ * fallback engages, restores visibility — output-gain-compensated pre-overlay colour (no depth-fade composite:
+ * see vfx_overlay_pass.js), but SEEN beats invisible ("no flags default ON" law). Idempotent
+ * (Layers.enable ORs the bit).
  * @param {import('three').Camera} camera
  */
 export function enable_fight_vfx_layer(camera) {

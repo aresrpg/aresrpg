@@ -13,6 +13,8 @@
 import { test, expect, describe } from 'bun:test'
 import { Group, Mesh, Object3D, PerspectiveCamera, Vector3 } from 'three'
 
+import { FIGHT_VFX_OUTPUT_GAIN } from '../config/vfx_config.js'
+
 import { PRESETS, list_presets } from './vfx_presets_data.js'
 import { PACK_BILLBOARD } from './vfx_pack_shaders_core.js'
 import { PACK2_BILLBOARD } from './vfx_pack_shaders_expansion.js'
@@ -638,7 +640,11 @@ describe('aura on-body compositions (StatusFX .tscn structure) + the entity anch
 // fake-material meshes, the park_node_material_objects idiom (no GPU). ──────────────────────────────────────────
 describe('route_overlay_group — POST-AgX fight-VFX overlay routing', () => {
   /** a stand-in for a SpriteNodeMaterial / MeshBasicNodeMaterial — route_overlay_group only reads/writes these fields. */
-  const fake_mat = () => /** @type {any} */ ({ blending: 1, depthWrite: false, depthTest: true })
+  const fake_mat = () => /** @type {any} */ ({ blending: 1, depthWrite: false, depthTest: true, opacity: 1 })
+
+  test('the ungraded output transform stays at the fight-board-authored 0.3 gain', () => {
+    expect(FIGHT_VFX_OUTPUT_GAIN).toBe(0.3)
+  })
 
   test('FIGHT_VFX_LAYER is a dedicated layer — not 0 (default) / not 31 (webgl_fallback park)', () => {
     expect(FIGHT_VFX_LAYER).toBeGreaterThan(0)
@@ -659,7 +665,18 @@ describe('route_overlay_group — POST-AgX fight-VFX overlay routing', () => {
       expect(mesh.material.blending).toBe(2) // AdditiveBlending — the pack's blend_add, now read as display-space light
       expect(mesh.material.depthWrite).toBe(true) // records a representative particle depth for the occlusion mask
       expect(mesh.material.depthTest).toBe(false) // overlapping particles still ACCUMULATE (the glow stacks)
+      expect(mesh.material.opacity).toBe(FIGHT_VFX_OUTPUT_GAIN) // transform travels with the ungraded material path
     }
+  })
+
+  test('re-routing assigns the output gain exactly once (never raw, never squared)', () => {
+    const material = fake_mat()
+    const mesh = new Mesh(undefined, material)
+
+    route_overlay_group(mesh)
+    route_overlay_group(mesh) // idempotent: a repeated route must assign, not multiply
+
+    expect(material.opacity).toBe(FIGHT_VFX_OUTPUT_GAIN)
   })
 
   test('a routed mesh is invisible to a default (layer-0) camera and seen only by the overlay camera', () => {
@@ -680,10 +697,11 @@ describe('route_overlay_group — POST-AgX fight-VFX overlay routing', () => {
   // all it ever renders — every fight-cast VFX (already routed to FIGHT_VFX_LAYER by route_overlay_group) goes
   // permanently dark while the rest of the game (terrain/mobs/UI) stays fully playable. enable_fight_vfx_layer
   // is the one-line graceful fallback renderer.js calls the moment the resilience guard degrades: WIDEN (never
-  // replace) that camera's mask so fight VFX are still SEEN — pre-overlay colour (no AgX-bypass composite), but
-  // seen beats invisible ("no flags default ON" / juice-ships-live law).
+  // replace) that camera's mask so fight VFX are still SEEN — output-gain-compensated pre-overlay colour (no
+  // depth-fade composite), but seen beats invisible ("no flags default ON" / juice-ships-live law).
   test('enable_fight_vfx_layer: the bare-render fallback camera sees fight VFX once widened (never loses layer 0)', () => {
-    const mesh = new Mesh(undefined, fake_mat())
+    const material = fake_mat()
+    const mesh = new Mesh(undefined, material)
     route_overlay_group(mesh)
     const fallback_cam = new PerspectiveCamera() // exactly what the degraded render_frame() branch renders with
     expect(mesh.layers.test(fallback_cam.layers)).toBe(false) // today: invisible on the bare fallback path
@@ -691,6 +709,7 @@ describe('route_overlay_group — POST-AgX fight-VFX overlay routing', () => {
     enable_fight_vfx_layer(fallback_cam)
 
     expect(mesh.layers.test(fallback_cam.layers)).toBe(true) // fixed: the fallback camera now sees fight VFX
+    expect(material.opacity).toBe(FIGHT_VFX_OUTPUT_GAIN) // same transform as the healthy overlay, carried upstream
     expect(fallback_cam.layers.test(new Object3D().layers)).toBe(true) // layer 0 (ordinary scene content) untouched
   })
 })

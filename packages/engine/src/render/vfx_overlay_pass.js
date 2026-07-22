@@ -88,20 +88,17 @@ export function depth_fade_mask(gap, fade_dist = SOFT_FADE_DIST, no_fade = 0, so
   return Math.max(m, soft_floor)
 }
 
-/** Display-space additive GAIN. The pack's emission (authored 1.6–2.2 for the AAA
- *  main-pass accumulation) ACCUMULATES across overlapping additive particles far past 1.0; added at full strength
- *  over the pale board it saturates every channel → the washed-out WHITE defect (now in display space
- *  instead of via AgX). Damping the ADD lands the coloured body under 1.0 so hue reads (fire orange, water blue,
- *  air cyan) while the concentrated core still clips to a white-hot centre — the pack's coloured-body + hot-core
- *  read. ONE global knob (live: window.__vfx_overlay.gain.value), NOT a per-preset re-tune. Measured on the fight
- *  board (bolt_air/fire/water sweep): 0.3 keeps fire's orange body + white-hot core without blowout, water/air read. */
-const OVERLAY_GAIN = 0.3
+/** Residual display-space multiplier. The shipped output gain now lives on every routed material
+ *  (vfx_preset_engine.route_overlay_group), before the post-stack/bare-render split, so this starts at the
+ *  multiplicative identity. It remains a live diagnostic trim (`window.__vfx_overlay.gain.value`) without
+ *  applying the authored gain twice on the healthy post path. */
+const OVERLAY_GAIN = 1
 
 /**
  * @typedef {object} VfxOverlay
  * @property {(out: *) => *} composite wraps the graded display-space vec4 — adds the depth-masked, sRGB-encoded
  *   fight-VFX light. Call it inside build_output (safe to re-call on a graph rebuild — it only wires nodes).
- * @property {*} gain the display-space additive-gain uniform (live knob — window.__vfx_overlay.gain).
+ * @property {*} gain residual display-space multiplier (live knob — window.__vfx_overlay.gain).
  * @property {*} no_fade diagnostic bypass uniform — set .value=1 to force the soft depth fade fully open (#158).
  * @property {*} soft_floor the #158 soft-fade FLOOR uniform (live: window.__vfx_overlay.soft_floor) — the mask
  *   is clamped up to this so a ground-anchored cast never vanishes; 0 restores the pre-fix hard fade.
@@ -191,9 +188,9 @@ export function create_vfx_overlay({ scene, camera, scene_depth }) {
         .select(float(1), smoothstep(0, SOFT_FADE_DIST, gap))
         .max(u_no_fade)
         .max(u_soft_floor)
-      // ADD the isolated VFX as display-space light: the authored linear colour, damped by the gain (so the coloured
-      // body reads instead of blowing to white), added straight onto the graded sRGB frame. Adding LINEAR values (no
-      // sRGB lift) keeps the faint billboard fringe near-zero ⇒ no grey-quad halo; only real energy brightens.
+      // ADD the isolated VFX as display-space light: routed materials already carry the shared output gain, so this
+      // residual multiplier is neutral by default. Adding LINEAR values (no sRGB lift) keeps the faint billboard
+      // fringe near-zero ⇒ no grey-quad halo; only real energy brightens.
       const light = vfx_color.rgb.mul(u_gain).mul(soft)
       return vec4(out.rgb.add(light), 1)
     },
