@@ -12,6 +12,7 @@ import { _reset_log_for_test, get_log_buffer } from '../core/log.js'
 import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
 
 const world_spawns_source = readFileSync(new URL('./world_spawns.js', import.meta.url), 'utf8')
+const dungeon_actions_source = readFileSync(new URL('../world-shell/dungeon_actions.js', import.meta.url), 'utf8')
 
 const saved_globals = new Map()
 const remember = (key) => saved_globals.set(key, globalThis[key])
@@ -169,19 +170,33 @@ describe('world spawn mob-card layer route gate', () => {
   })
 
   test('the world lane routes submission and presentation through the ordering seam', () => {
-    const seam_at = world_spawns_source.indexOf('const submitted = start_fight_engage({')
+    const feedback_at = world_spawns_source.indexOf(
+      "const submitted = as_one_toast(i18n.t('fights.action_engage'), () =>"
+    )
+    const seam_at = world_spawns_source.indexOf('start_fight_engage({', feedback_at)
     const submit_at = world_spawns_source.indexOf('submit: async () => {', seam_at)
     const create_at = world_spawns_source.indexOf('return create_world_fight', submit_at)
     const present_at = world_spawns_source.indexOf('present: () => {', create_at)
     const swing_at = world_spawns_source.indexOf("context.events.emit('fight_entry/engage'", present_at)
     const receipt_at = world_spawns_source.indexOf('const { fight_id } = await submitted', swing_at)
 
-    expect(seam_at).toBeGreaterThan(-1)
+    expect(feedback_at, 'intent feedback wraps the full preflight/compose/submit task').toBeGreaterThan(-1)
+    expect(seam_at).toBeGreaterThan(feedback_at)
     expect(submit_at).toBeGreaterThan(seam_at)
     expect(create_at).toBeGreaterThan(submit_at)
     expect(present_at).toBeGreaterThan(create_at)
     expect(swing_at).toBeGreaterThan(present_at)
     expect(receipt_at).toBeGreaterThan(swing_at)
+  })
+
+  test('the aggregate engage toast paints before it invokes the preflight task', () => {
+    const aggregate_at = dungeon_actions_source.indexOf('export async function as_one_toast')
+    const aggregate_end = dungeon_actions_source.indexOf('// TOAST COPY LAW', aggregate_at)
+    const aggregate_body = dungeon_actions_source.slice(aggregate_at, aggregate_end)
+
+    expect(aggregate_at).toBeGreaterThan(-1)
+    expect(aggregate_body).toContain('.promise(fn, {')
+    expect(aggregate_body).not.toContain('.promise(fn(), {')
   })
 
   test.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('a non-world screen hides the body layer until a fresh world frame', () => {

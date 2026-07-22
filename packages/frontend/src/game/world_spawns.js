@@ -53,6 +53,7 @@ import { spawns_store, spawns_input } from '../world-shell/spawns_adapter.js'
 import { create_world_fight } from '../world-shell/dungeon_engage_actions.js'
 import { instrument_cpu_callback } from './cpu_span.js'
 import { use_dungeon } from '../world-shell/dungeon_store.js'
+import { as_one_toast } from '../world-shell/dungeon_actions.js'
 import { use_party } from '../world-shell/party_store.js'
 import { enter_world_fight, resume_world_fight } from '../world-shell/world_fight.js'
 import { use_prompt_stack } from '../world-shell/prompt_stack.js'
@@ -642,51 +643,52 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     const request = spawns_store.getState().tx_request
     engaging = true
     set_attack_target(null) // drop the [R] pill immediately; the receipt removes the claimed group
-    // OPTIMISTIC — start the authoritative claim+create task FIRST, then launch the sword/camera/mob-disappearance
-    // presentation in the same turn. The animation runs UNDER the tx and is absent from the returned task, so its
-    // completion can never delay the receipt handoff or board mount. Success keeps the group hidden; failure
-    // restores it + aborts the beat (honest rollback, one toast).
+    // OPTIMISTIC — paint the aggregate engage toast at INTENT, start the authoritative claim+create task, then
+    // launch the sword/camera/mob-disappearance presentation in the same turn. The animation runs UNDER the tx
+    // and is absent from the returned task, so its completion can never delay the receipt handoff or board mount.
+    // Success keeps the group hidden; failure restores it + aborts the beat while the engage toast names why.
     const anchor = e.placed ? [e.cx, e.cy, e.cz] : [e.row.x, Number(get_player_pos()[1]), e.row.z]
     try {
-      const submitted = start_fight_engage({
-        submit: async () => {
-          // OPENNESS (HUD toggle): a PUBLIC fight anyone in placement may join; a GROUP fight only my current
-          // party (fight.move public_fight + party_id). GROUP with no party → a truly private solo fight (the
-          // on-chain join gate refuses everyone), a valid choice. One home: the spawns core atom (the claim_tx
-          // request carries is_public). Land same-wallet Party membership first so a private fight carries the
-          // real Party id and each owned alt's later character-specific join PTB can pass ENotParty.
-          // A PUBLIC fight discards the party id (party_id stays null below), so pre-forming an owned party is a
-          // wasted on-chain create tx — skip it entirely. Only a GROUP (private) fight seats the party FIRST.
-          if (!request.payload.is_public) {
-            const owned_party_ready = await use_party.getState().ensure_owned_party()
-            if (!owned_party_ready) {
-              const reason = use_party.getState().error ?? i18n.t('errors.tx_failed')
-              push_event_toast({ state: 'error', title: reason })
-              throw new Error(reason)
+      const submitted = as_one_toast(i18n.t('fights.action_engage'), () =>
+        start_fight_engage({
+          submit: async () => {
+            // OPENNESS (HUD toggle): a PUBLIC fight anyone in placement may join; a GROUP fight only my current
+            // party (fight.move public_fight + party_id). GROUP with no party → a truly private solo fight (the
+            // on-chain join gate refuses everyone), a valid choice. One home: the spawns core atom (the claim_tx
+            // request carries is_public). Land same-wallet Party membership first so a private fight carries the
+            // real Party id and each owned alt's later character-specific join PTB can pass ENotParty.
+            // A PUBLIC fight discards the party id (party_id stays null below), so pre-forming an owned party is a
+            // wasted on-chain create tx — skip it entirely. Only a GROUP (private) fight seats the party FIRST.
+            if (!request.payload.is_public) {
+              const owned_party_ready = await use_party.getState().ensure_owned_party()
+              if (!owned_party_ready) {
+                const reason = use_party.getState().error ?? i18n.t('errors.tx_failed')
+                throw new Error(reason)
+              }
             }
-          }
-          const { world_id, spawn_id, zx, zy, template_id, is_public } = request.payload
-          const party_id = is_public ? null : use_party.getState().party_id
-          // the request carries spawn_id + template + the GROUP's zone (zx,zy) → the global-search claim door;
-          // claim any discovered zone's group you can reach (create_world_fight toasts itself).
-          return create_world_fight({
-            world_id,
-            spawn_id,
-            zx,
-            zy,
-            mob_template_id: template_id,
-            character_id,
-            is_public,
-            party_id,
-          })
-        },
-        present: () => {
-          sync_from_core()
-          context.events.emit('fight_entry/engage', { anchor })
-        },
-        on_present_error: (error) =>
-          report_error(error, { area: 'fight-entry', action: 'world_engage_presentation' }),
-      })
+            const { world_id, spawn_id, zx, zy, template_id, is_public } = request.payload
+            const party_id = is_public ? null : use_party.getState().party_id
+            // The request carries spawn_id + template + the GROUP's zone (zx,zy) → the global-search claim door;
+            // claim any discovered zone's group you can reach. The aggregate intent toast owns this whole task.
+            return create_world_fight({
+              world_id,
+              spawn_id,
+              zx,
+              zy,
+              mob_template_id: template_id,
+              character_id,
+              is_public,
+              party_id,
+            })
+          },
+          present: () => {
+            sync_from_core()
+            context.events.emit('fight_entry/engage', { anchor })
+          },
+          on_present_error: (error) =>
+            report_error(error, { area: 'fight-entry', action: 'world_engage_presentation' }),
+        })
+      )
       const { fight_id } = await submitted
       const { world_id, is_public } = request.payload
       // MOUNT the tactical board on the minted fight — the create receipt carries its id. Same run-pass-less
@@ -708,7 +710,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       sync_from_core()
       void poll()
     } catch (error) {
-      /* already surfaced by create_world_fight's sign() humaniser */
+      /* already surfaced by the intent-time engage toast's humaniser */
       // GRACEFUL 108 (zones::ESpawnNotFound — the rendered group no longer exists in that zone: claimed by
       // another player, or a stale gRPC read served a ghost row): the honest reaction is claim_failed with
       // ghost=true — the fold DROPS the row NOW — plus ONE re-poll; never a retry of an EXECUTED failure

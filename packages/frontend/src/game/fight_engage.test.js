@@ -6,6 +6,9 @@
 
 import { expect, test } from 'bun:test'
 
+import i18n from '../i18n'
+import { use_toast } from '../toast'
+import { tx_error } from './core/abort_copy.js'
 import { start_fight_engage } from './fight_engage.js'
 
 test('submit starts before the swing and the receipt can mount the board while presentation is still running', async () => {
@@ -70,4 +73,37 @@ test('a presentation failure is reported without blocking receipt consumption', 
   order.push(`board:${receipt.fight_id}`)
 
   expect(order).toEqual(['submit', 'swing:start', 'board:0xfight'])
+})
+
+test('intent feedback paints before engage preflight and a refusal replaces it with the reason', async () => {
+  use_toast.setState({ toasts: [] })
+  const order = []
+  const pending = i18n.t('dungeons.tx_pending', { label: i18n.t('fights.action_engage') })
+  const refusal = tx_error(
+    { MoveAbort: { abortCode: 108, location: { module: 'zones' } } },
+    { preflight: true }
+  )
+
+  const submitted = start_fight_engage({
+    submit: () =>
+      use_toast.getState().promise(
+        () => {
+          const toast = use_toast.getState().toasts.at(-1)
+          order.push(toast?.type === 'pending' && toast.message === pending ? 'feedback' : 'feedback:missing')
+          order.push('preflight')
+          return Promise.reject(refusal)
+        },
+        { pending }
+      ),
+    present: () => order.push('swing:start'),
+    on_present_error: () => {},
+  })
+
+  expect(order).toEqual(['feedback', 'preflight', 'swing:start'])
+  await expect(submitted).rejects.toBe(refusal)
+  expect(use_toast.getState().toasts.filter((toast) => toast.type === 'pending')).toEqual([])
+  expect(use_toast.getState().toasts.filter((toast) => toast.type === 'error')).toMatchObject([
+    { message: i18n.t('errors.fight_group_claimed') },
+  ])
+  use_toast.setState({ toasts: [] })
 })

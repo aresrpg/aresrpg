@@ -106,8 +106,9 @@ let batching = false
 export async function as_one_toast(/** @type {string} */ label, /** @type {() => Promise<any>} */ fn) {
   batching = true
   try {
+    // Pass the task LAZILY: the pending state paints at intent before any preflight/compose work starts.
     // D57a: NO success toast — the visible transition IS the confirmation. Errors still toast.
-    return await use_toast.getState().promise(fn(), {
+    return await use_toast.getState().promise(fn, {
       pending: i18n.t('dungeons.tx_pending', { label }),
     })
   } finally {

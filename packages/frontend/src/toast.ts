@@ -39,8 +39,11 @@ interface ToastState {
     type: 'error' | 'info' | 'pending',
     action?: { label: string; onClick: () => void }
   ) => number
-  /** Drive a tx through a loading toast: pending(spinner) → success / error. Returns the awaited promise. */
-  promise: <T>(p: Promise<T>, messages: { pending: string; success?: string; error?: string }) => Promise<T>
+  /** Drive a task through a loading toast. A lazy task starts only after the pending state is painted. */
+  promise: <T>(
+    task: Promise<T> | (() => Promise<T>),
+    messages: { pending: string; success?: string; error?: string }
+  ) => Promise<T>
   remove: (id: number) => void
 }
 
@@ -59,11 +62,13 @@ export const use_toast = create<ToastState>((set, get) => ({
     set((s) => ({ toasts: [...s.toasts, { id, message, type, action, persistent: true }] }))
     return id
   },
-  promise: async (p, messages) => {
+  promise: async (task, messages) => {
     const id = next_id++
     set((s) => ({ toasts: [...s.toasts, { id, message: messages.pending, type: 'pending', persistent: true }] }))
     try {
-      const result = await p
+      // A user-intent caller passes a thunk when preflight/compose work must not outrun its visible feedback.
+      // Invoke it synchronously after the state write: submit still starts before same-turn presentation.
+      const result = await (typeof task === 'function' ? task() : task)
       // ONE toast per action, gamer lifecycle — "Doing thing…" → the SAME toast morphs to a
       // brief CHECKMARK beat → auto-dismiss. Never a second stacked toast, never "confirmed" dev-speak.
       // D57a still holds: success ABSENT = the UI transition is the feedback; the pending toast just resolves away.
