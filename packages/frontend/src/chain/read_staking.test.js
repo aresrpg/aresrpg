@@ -256,6 +256,7 @@ const V1_SNAPSHOTTED = {
   current_hp: 30,
   hp_updated_ms: 1_000_000,
   gear_vitality: 5,
+  equipment_stats: { vitality: 3 },
   jobs: {},
   equipment: [],
   worn: {},
@@ -268,6 +269,7 @@ const V1_PRE_SNAPSHOT = {
   current_hp: null,
   hp_updated_ms: null,
   gear_vitality: null,
+  equipment_stats: null,
 }
 
 describe('v1_character_to_party_row — /v1 row → PartyFrame HP-math subset', () => {
@@ -279,6 +281,7 @@ describe('v1_character_to_party_row — /v1 row → PartyFrame HP-math subset', 
       experience: 0,
       vitality: 10,
       gear_vitality: 5,
+      equipment_stats: { vitality: 3 },
       current_hp: 30,
       hp_updated_ms: 1_000_000,
       hp_known: true,
@@ -287,8 +290,8 @@ describe('v1_character_to_party_row — /v1 row → PartyFrame HP-math subset', 
 
   it('composes with the client §5.4 math (the T76 bar inputs PartyFrame derives)', () => {
     const row = v1_character_to_party_row(V1_SNAPSHOTTED)
-    // character_max_hp (read_character.js): senshi base 70 + 5×(level−1) + (vitality + gear_vitality) = 70 + 0 + 15.
-    expect(character_max_hp(row)).toBe(85)
+    // Fight-equivalent aggregate wins over the positive-only cache: 70 + allocated 10 + signed gear 3.
+    expect(character_max_hp(row)).toBe(83)
     // projected_hp: kernel regen (senshi L1, num 156 ≈ 2 HP/s) — 10s after the stamp → +floor(10_000·156/75_000)=20 → 50.
     expect(projected_hp(row, 1_000_000 + 10_000)).toBe(50)
     // Clock-skew guard: a `now` BEFORE the stamp adds nothing (never underflows).
@@ -308,7 +311,7 @@ describe('v1_character_to_party_row — /v1 row → PartyFrame HP-math subset', 
   })
 
   it('any SINGLE missing arm is enough to withhold hp_known', () => {
-    expect(v1_character_to_party_row({ ...V1_SNAPSHOTTED, gear_vitality: null }).hp_known).toBe(false)
+    expect(v1_character_to_party_row({ ...V1_SNAPSHOTTED, equipment_stats: null }).hp_known).toBe(false)
     expect(v1_character_to_party_row({ ...V1_SNAPSHOTTED, hp_updated_ms: null }).hp_known).toBe(false)
     expect(v1_character_to_party_row({ ...V1_SNAPSHOTTED, experience: null }).hp_known).toBe(false)
   })

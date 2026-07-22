@@ -28,14 +28,15 @@ const with_stackable = (/** @type {any} */ row) => ({ ...row, stackable: STACKAB
 
 /**
  * @typedef {{ id: string, name: string, classe: string, experience: number, vitality: number,
- *   gear_vitality: number, current_hp: number, hp_updated_ms: number, hp_known: boolean }} PartyCharacter
+ *   gear_vitality: number, equipment_stats: Record<string, number> | null,
+ *   current_hp: number, hp_updated_ms: number, hp_known: boolean }} PartyCharacter
  * The CharacterFields SUBSET the party plate's HP math reads (projected_hp / character_max_hp —
  * read_character.js) plus the `hp_known` honesty flag.
  */
 
 /**
- * Map ONE `/v1/characters` row → the PartyCharacter shape PartyFrame consumes. The three live-HP fields
- * (`current_hp`/`hp_updated_ms`/`gear_vitality`) and `experience` ride the indexer's object-snapshot pipeline
+ * Map ONE `/v1/characters` row → the PartyCharacter shape PartyFrame consumes. The raw HP pair,
+ * fight-authoritative `equipment_stats`, and `experience` ride the indexer's object-snapshot pipeline
  * and are NULL until it reaches this character (existing rows pre-re-index) — `hp_known` is true only when ALL
  * FOUR are present. A consumer must never feed an `hp_known: false` row to projected_hp/character_max_hp:
  * their defensive `?? 0` would fabricate a level-1 zero-HP character instead of an honest gap. `0` is VALID
@@ -46,7 +47,7 @@ const with_stackable = (/** @type {any} */ row) => ({ ...row, stackable: STACKAB
  */
 export function v1_character_to_party_row(row) {
   const hp_known =
-    row?.current_hp != null && row?.hp_updated_ms != null && row?.gear_vitality != null && row?.experience != null
+    row?.current_hp != null && row?.hp_updated_ms != null && row?.equipment_stats != null && row?.experience != null
   return {
     id: String(row?.id ?? ''),
     name: String(row?.name ?? ''),
@@ -55,9 +56,12 @@ export function v1_character_to_party_row(row) {
     classe: String(row?.class ?? ''),
     experience: Number(row?.experience ?? 0),
     vitality: Number(row?.vitality ?? 0),
-    // Clamped ≥0 exactly like normalize_character's twin-cache fold (character_max_hp expects the NET,
-    // non-negative gear-vitality term).
+    // Compatibility-only positive half; character_max_hp prefers the signed aggregate below.
     gear_vitality: Math.max(0, Number(row?.gear_vitality ?? 0)),
+    equipment_stats:
+      row?.equipment_stats == null
+        ? null
+        : Object.fromEntries(Object.entries(row.equipment_stats).map(([key, value]) => [key, Number(value)])),
     current_hp: Number(row?.current_hp ?? 0),
     hp_updated_ms: Number(row?.hp_updated_ms ?? 0),
     hp_known,

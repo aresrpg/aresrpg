@@ -36,6 +36,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use serde_json::json;
 use sui_indexer_alt_framework::pipeline::{sequential::Handler, Processor};
 use sui_indexer_alt_framework::store::Store;
 use sui_indexer_alt_framework::types::base_types::ObjectID;
@@ -63,6 +64,27 @@ fn has_royalty_receipt(transaction: &TransactionData) -> bool {
     pt.commands.iter().any(|command| {
         matches!(command, Command::MoveCall(call) if call.module == "royalty_rule" && call.function == "pay")
     })
+}
+
+/// The event and snapshot pipelines advance independently. Stamp the equipment identity mutation's
+/// checkpoint/transaction cursor so `/v1` can withhold a mixed row until EquipmentMap reaches the same fact.
+fn equipment_cursor_write(
+    module: &str,
+    name: &str,
+    contents: &[u8],
+    checkpoint: u64,
+    tx_index: usize,
+) -> Option<RedisWrite> {
+    if module != "extract" || !matches!(name, "ItemEquipped" | "ItemUnequipped") {
+        return None;
+    }
+    let event = bcs::from_bytes::<model::ItemEquip>(contents).ok()?;
+    let character = event.character.to_canonical_string(true);
+    Some(project::set(
+        project::k_character(&character),
+        "$.equipment_cursor",
+        json!({ "checkpoint": checkpoint, "tx_index": tx_index }),
+    ))
 }
 
 /// Projects AresRPG (and native kiosk) events into the Redis read-model.
@@ -174,6 +196,15 @@ impl Processor for AresHandler {
                 };
                 if let Some(mut w) = mapped {
                     writes.append(&mut w);
+                }
+                if let Some(w) = equipment_cursor_write(
+                    module,
+                    name,
+                    &event.contents,
+                    checkpoint.summary.sequence_number,
+                    tx_index,
+                ) {
+                    writes.push(w);
                 }
 
                 // ── per-fight ordered JOURNAL (#216) ──────────────────────────

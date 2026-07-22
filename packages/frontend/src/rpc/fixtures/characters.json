@@ -30,6 +30,7 @@
       "current_hp": null,
       "hp_updated_ms": null,
       "gear_vitality": null,
+      "equipment_stats": null,
       "pet": null,
       "pet_equipped": false,
       "jobs": {},

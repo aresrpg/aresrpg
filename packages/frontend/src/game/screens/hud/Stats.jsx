@@ -203,6 +203,11 @@ export function merge_character_doc(character, doc) {
   for (const key of ['current_hp', 'hp_updated_ms', 'gear_vitality']) {
     if (doc[key] != null) next[key] = Number(doc[key])
   }
+  if (doc.equipment_stats != null)
+    next.equipment_stats = Object.fromEntries(
+      Object.entries(doc.equipment_stats).map(([key, value]) => [key, Number(value)])
+    )
+  if (Array.isArray(doc.equipment)) next.equipment = doc.equipment
   return next
 }
 
@@ -334,7 +339,7 @@ export function Stats() {
   const xp_percent = Math.round(pct)
 
   // Never fall back to vestigial `health`; only canonical /v1 HP fields render.
-  const hp_ready = character.current_hp != null && character.gear_vitality != null
+  const hp_ready = character.current_hp != null && character.equipment_stats != null
   const max_health = hp_ready ? character_max_hp(character) : null
   const health = hp_ready ? projected_hp(character, Date.now()) : null
 

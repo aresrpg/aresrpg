@@ -72,10 +72,26 @@ describe('post-settle Character freshness', () => {
   it('chain-direct base enrichment cannot overwrite live /v1 progression XP', () => {
     expect(
       merge_character_enrichment(
-        { id: '0xchar', experience: 12_345, level: 9, jobs: { miner: 10 } },
-        { id: '0xchar', experience: 0, vitality: 7 }
+        {
+          id: '0xchar',
+          experience: 12_345,
+          level: 9,
+          vitality: 11,
+          gear_vitality: 7,
+          equipment_stats: { vitality: 3 },
+          jobs: { miner: 10 },
+        },
+        { id: '0xchar', experience: 0, vitality: 7, gear_vitality: 0, equipment_stats: null }
       )
-    ).toEqual({ id: '0xchar', experience: 12_345, level: 9, jobs: { miner: 10 }, vitality: 7 })
+    ).toEqual({
+      id: '0xchar',
+      experience: 12_345,
+      level: 9,
+      gear_vitality: 7,
+      equipment_stats: { vitality: 3 },
+      jobs: { miner: 10 },
+      vitality: 11,
+    })
   })
 
   it('resolve bus event performs a fresh bounded refetch and replaces the shared roster row', async () => {

@@ -10,7 +10,7 @@ const BASE_LIFE = 30
 // bonuses silently vanish from every non-fight stat surface.
 const ITEM_STAT_ALIASES = { ap: 'action', mp: 'movement' }
 
-/** @type {(item: import("./../types.js").SuiItem, stat: string) => number} */
+/** @type {(item: import("./../types.js").SuiItem | import("./../types.js").ItemStatistics | null | undefined, stat: string) => number} */
 function get_item_stat(item, stat) {
   return item?.[stat] ?? item?.[ITEM_STAT_ALIASES[stat]] ?? 0
 }
@@ -32,12 +32,18 @@ function get_base_stat(character, stat) {
     case STATISTICS.AIR_RESISTANCE:
       return 0
     default:
-      return character[stat]
+      return Number(character?.[stat] ?? 0)
   }
 }
 
+/** Fight-authoritative equipment contribution, with legacy flat-slot fallbacks for simulator fixtures. */
 /** @type {(character: import("./../types.js").SuiCharacter, stat: string) => number} */
-export function get_total_stat(character, stat) {
+function get_equipment_stat(character, stat) {
+  if (character?.equipment_stats != null)
+    return get_item_stat(character.equipment_stats, stat)
+  if (stat === STATISTICS.VITALITY && character?.gear_vitality != null)
+    return Number(character.gear_vitality)
+
   const {
     hat,
     amulet,
@@ -75,11 +81,13 @@ export function get_total_stat(character, stat) {
     relic_6,
     title,
   ]
-  const item_stats = items.map(item => get_item_stat(item, stat))
-  return (
-    get_base_stat(character, stat) +
-    item_stats.reduce((acc, val) => acc + val, 0)
-  )
+  return items.reduce((sum, item) => sum + get_item_stat(item, stat), 0)
+}
+
+/** Allocated/base value plus the exact equipment aggregate, floored like `spell::stats_sub`. */
+/** @type {(character: import("./../types.js").SuiCharacter, stat: string) => number} */
+export function get_total_stat(character, stat) {
+  return Math.max(0, get_base_stat(character, stat) + get_equipment_stat(character, stat))
 }
 
 /** @type {(character: import("./../types.js").SuiCharacter) => number} */

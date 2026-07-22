@@ -162,6 +162,48 @@ const JOB_IDS = [
   'handyman', // consumable / utility (12-14)
 ]
 
+// The fields equipment::equipment_stats::deltas can populate in the fight's `spell::Stats` block.
+// `critical_chance`/`critical_outcomes` are item-authoring fields but deliberately do not enter combat.
+const EQUIPMENT_STAT_KEYS = [
+  'vitality',
+  'wisdom',
+  'strength',
+  'intelligence',
+  'chance',
+  'agility',
+  'range',
+  'movement',
+  'action',
+  'critical',
+  'raw_damage',
+  'earth_resistance',
+  'fire_resistance',
+  'water_resistance',
+  'air_resistance',
+]
+
+/** Fight-authoritative equipment contribution: positive cache minus active malus cache. */
+export function fold_equipment_stats(positive, malus) {
+  if (positive == null) return null
+  return Object.fromEntries(
+    EQUIPMENT_STAT_KEYS.map((key) => [key, Number(positive[key] ?? 0) - Number(malus?.[key] ?? 0)])
+  )
+}
+
+/** Withhold cross-pipeline mixtures until the EquipmentMap snapshot reaches the identity event checkpoint. */
+export function derive_equipment_stats(character, equipment_count) {
+  if (character.gear_positive == null) return equipment_count === 0 ? {} : null
+  if (character.equipment_cursor != null) {
+    const identity_checkpoint = Number(character.equipment_cursor.checkpoint ?? 0)
+    const identity_tx = Number(character.equipment_cursor.tx_index ?? 0)
+    const gear_checkpoint = Number(character.gear_cursor?.checkpoint ?? 0)
+    const gear_tx = Number(character.gear_cursor?.tx_index ?? 0)
+    if (gear_checkpoint < identity_checkpoint || (gear_checkpoint === identity_checkpoint && gear_tx < identity_tx))
+      return null
+  }
+  return fold_equipment_stats(character.gear_positive, character.gear_malus)
+}
+
 // The equipped-item categories that render as a WORN GLB on the avatar (SPEC §7.11 — a cosmetic hat
 // renders instead of headgear; a cloak on the back). Keyed by the on-chain item `category`
 // (equipment.move slot vocab). These are surfaced under the character's `worn` map so the frontend's
@@ -292,6 +334,9 @@ export async function handle_characters(params) {
         ...pet_projection_fields(category, pet_feed_by_id.get(item_id), v.template),
       }
     })
+    // The SAME aggregate fight folds: allocated base + EquipmentMap.gear − active malus cache. A character
+    // with no equipment map and no rows is exactly empty; equipped pre-backfill rows stay honestly null.
+    const equipment_stats = derive_equipment_stats(c, equipment.length)
     // WORN COSMETIC SLOTS (hat/cloak) keyed by category — the shape resolve_worn_cosmetics reads once
     // rpc_to_card spreads `worn` onto the render character. `template_id` is the GLB key
     // (cosmetics/<template_id>.glb). Single-slot categories, so a straight category → item map.
@@ -323,16 +368,16 @@ export async function handle_characters(params) {
       available_points: Math.max(0, earned - spent),
       // LIVE HP — the RAW stored current hp + the lazy-regen last-touch stamp, object-snapshotted from
       // the character_link::Progression DF. The CLIENT runs the §5.4 natural-regen projection; the
-      // indexer NEVER pre-computes regen. `gear_vitality` is the NET GEAR cache
-      // (equipment::EquipmentMap.gear.vitality) — the allocated `vitality` above is allocated-only, so the
-      // client SUMS them for total vitality and derives max HP via the chain's frozen formula
+      // indexer NEVER pre-computes regen. `equipment_stats` is the signed equipment aggregate; the allocated
+      // `vitality` above stays separate, so the client folds both and derives max HP via the chain's formula
       // progression_math::max_hp_from_base = base_hp(class ClassRow) + (level−1)×HP_PER_LEVEL +
-      // (vitality + gear_vitality): vitality is added 1:1 (the ×5 is the per-LEVEL slope, HP_PER_LEVEL),
+      // effective vitality: vitality is added 1:1 (the ×5 is the per-LEVEL slope, HP_PER_LEVEL),
       // and the base is the per-class ClassRow base, not a flat 100. `0` hp (a defeated character)
-      // survives `?? null`; all three are null until the snapshot pipeline reaches the DF.
+      // survives `?? null`; derived equipment stays null until the snapshot catches the identity event.
       current_hp: c.current_hp ?? null,
       hp_updated_ms: c.hp_updated_ms ?? null,
       gear_vitality: c.gear_vitality ?? null,
+      equipment_stats,
       pet,
       pet_equipped,
       jobs, // { [job_slug]: total_xp } — the JobsDrawer + job-progression detector read this map

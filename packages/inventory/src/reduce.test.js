@@ -76,7 +76,16 @@ describe('RED#3 — enrichment must not clobber a newer receipt fact', () => {
   test('a chain-direct cosmetics read keeps receipt XP/HP, merges only cosmetics/stats', () => {
     const start = base({
       characters: [
-        { id: 'c1', experience: 1000, level: experience_to_level(1000), current_hp: 34, hp_updated_ms: 111 },
+        {
+          id: 'c1',
+          experience: 1000,
+          level: experience_to_level(1000),
+          current_hp: 34,
+          hp_updated_ms: 111,
+          gear_vitality: 3,
+          vitality: 12,
+          equipment_stats: { vitality: -2 },
+        },
       ],
       xp_floor: { c1: 1000 },
     })
@@ -84,14 +93,23 @@ describe('RED#3 — enrichment must not clobber a newer receipt fact', () => {
     const after = reduce_sui_data(start, {
       kind: 'enrichment',
       character_id: 'c1',
-      enrichment: { experience: 0, current_hp: 100, color_1: 5, vitality: 50 },
+      enrichment: {
+        experience: 0,
+        current_hp: 100,
+        color_1: 5,
+        vitality: 50,
+        gear_vitality: 0,
+        equipment_stats: null,
+      },
     })
     const [c] = after.characters
     expect(c.experience).toBe(1000) // receipt XP preserved
     expect(c.current_hp).toBe(34) // receipt HP preserved
     expect(c.hp_updated_ms).toBe(111)
+    expect(c.gear_vitality).toBe(3) // /v1 equipment fallback preserved over the legacy base-object zero
+    expect(c.equipment_stats).toEqual({ vitality: -2 })
     expect(c.color_1).toBe(5) // cosmetics merged in
-    expect(c.vitality).toBe(50) // stats merged in
+    expect(c.vitality).toBe(12) // /v1 allocated stat preserved over the immutable base-object zero
   })
 
   test('a never-fought character takes the chain HP (no receipt to protect)', () => {

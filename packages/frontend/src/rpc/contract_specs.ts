@@ -150,6 +150,7 @@ export const character_spec: Spec<RpcCharacter> = {
     current_hp: nullable(num),
     hp_updated_ms: nullable(num),
     gear_vitality: nullable(num),
+    equipment_stats: nullable(record_of(num)),
     pet: nullable(pet_spec),
     pet_equipped: bool,
     equipment: arr(equip_spec),

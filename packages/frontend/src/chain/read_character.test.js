@@ -33,6 +33,13 @@ describe('character_max_hp — exact on-chain max_hp (per-class base_hp + 5·(le
   test('net gear vitality folds in 1:1 (senshi level 1, vit 10 + gear 6 → 86)', () => {
     expect(character_max_hp(char({ vitality: 10, gear_vitality: 6 }))).toBe(86)
   })
+  test('an equipped +3 vitality roll raises the derived max HP by 3', () => {
+    const equipped = char({
+      equipment: [{ item_id: '0xhat' }],
+      equipment_stats: { vitality: 3 },
+    })
+    expect(character_max_hp(equipped)).toBe(73)
+  })
   test('per-class base differs — ikari level 1, vitality 0 → 120 (config default_classes)', () => {
     expect(character_max_hp(char({ classe: 'ikari' }))).toBe(120)
   })

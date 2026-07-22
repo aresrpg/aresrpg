@@ -14,6 +14,7 @@ import { context } from './core/game.js'
 import { get_last_character } from './core/draft.js'
 import { game_log } from '../core/log.js'
 import { report_error } from '../core/report.js'
+import { merge_character_enrichment } from '../chain/fight_character_reconcile.js'
 
 export { context }
 
@@ -111,7 +112,7 @@ async function hydrate_appearance(chosen) {
     // M5: appearance/stats are an ENRICHMENT input — the reducer merges cosmetics/stats but PRESERVES any
     // newer receipt-proven fact (XP/level/HP), which the immutable chain base would otherwise clobber (RED#3).
     context.dispatch('action/sui_data', { kind: 'enrichment', character_id: chosen.id, enrichment: full })
-    return { ...chosen, ...full, experience: chosen.experience, level: chosen.level }
+    return merge_character_enrichment(chosen, full)
   } catch (error) {
     game_log('game-world', 'appearance hydrate failed — class-default avatar', error)
     return chosen

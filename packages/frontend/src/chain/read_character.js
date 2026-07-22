@@ -14,6 +14,7 @@
 // `male` is the bool the mint/creator PTB packs (sex === "male").
 
 import { experience_to_level } from '@aresrpg/sdk/experience'
+import { get_total_stat } from '@aresrpg/sdk/stats'
 
 import { base_hp_for_class, max_hp_from_base, regen_hp } from './hp_math.js'
 
@@ -137,8 +138,10 @@ export function normalize_character(f, id, type) {
 /**
  * A Character's max HP — the EXACT live on-chain formula (aresrpg_foundation::progression_math::max_hp_from_base,
  * ANNEX §4c): per-class `base_hp` + 5 per level GAINED + 1 per TOTAL vitality point, where total vitality =
- * allocated vitality + net gear vitality (gear_pos.vit − gear_neg.vit, clamped ≥0), folded 1:1 — i.e. the GEARED
- * pool `equipment::fold_gear` seats a character with. `base_hp` is the per-class GameConfig row (`aresrpg::config`
+ * effective vitality (allocated base + `equipment_stats.vitality`), folded 1:1 — i.e. the GEARED pool
+ * `equipment::fold_gear` seats a character with. That aggregate is the same positive-cache minus active-malus-cache
+ * pair fights read; the positive-only `gear_vitality` remains a pre-backfill fallback in `get_total_stat`.
+ * `base_hp` is the per-class GameConfig row (`aresrpg::config`
  * default_classes; see hp_math.DEFAULT_CLASS_BASE_HP for provenance + the /v1-override follow-up). Level is
  * derived from `experience` via the shared 1.29 XP curve (`experience_to_level`, floored ≥1 so `level−1` never
  * underflows), exactly as the chain's `level_from_xp`. DELIBERATELY NOT the client stat-sheet `get_max_health`
@@ -149,7 +152,7 @@ export function normalize_character(f, id, type) {
 export function character_max_hp(character) {
   const level = experience_to_level(Number(character.experience ?? 0))
   const base_hp = base_hp_for_class(character.classe ?? character.class)
-  const total_vit = Number(character.vitality ?? 0) + Number(character.gear_vitality ?? 0)
+  const total_vit = get_total_stat(character, 'vitality')
   return max_hp_from_base(base_hp, level, total_vit)
 }
 

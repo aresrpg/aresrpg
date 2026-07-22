@@ -223,6 +223,27 @@ fn item_equipped_writes_bracket_keyed_equipment_entry() {
 }
 
 #[test]
+fn equipment_cursor_tracks_both_identity_mutations() {
+    let character = oid(0x88);
+    let body = enc(&ItemEquip { character, item: oid(0x99), template: oid(0xaa), amount: 1 });
+    let key = k_character(&character.to_canonical_string(true));
+    for name in ["ItemEquipped", "ItemUnequipped"] {
+        assert_eq!(
+            super::super::equipment_cursor_write("extract", name, &body, 488, 7),
+            Some(set(
+                key.clone(),
+                "$.equipment_cursor",
+                json!({ "checkpoint": 488, "tx_index": 7 })
+            ))
+        );
+    }
+    assert_eq!(
+        super::super::equipment_cursor_write("item", "ItemMinted", &body, 488, 7),
+        None
+    );
+}
+
+#[test]
 fn item_unequipped_deletes_the_entry() {
     let (ch, item) = (oid(0x88), oid(0x99));
     let body = enc(&ItemEquip { character: ch, item, template: oid(0xaa), amount: 1 });

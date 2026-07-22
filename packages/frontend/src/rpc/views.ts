@@ -79,12 +79,12 @@ export interface RpcCharacter {
   available_points: number
   // LIVE HP — object-snapshotted from the character_link::Progression DF (RAW stored hp + the lazy-regen
   // last-touch stamp; the client owns the §5.4 natural-regen projection — the indexer never pre-computes it).
-  // `gear_vitality` is the NET GEAR cache (equipment::EquipmentMap.gear.vitality): the client sums it with
-  // the allocated vitality and derives max HP via progression_math::max_hp_from_base. All three are `null`
-  // until the ares_snapshot pipeline reaches the character's DF (a defeated character's `0` hp is NOT null).
+  // `gear_vitality` is the positive-only compatibility cache. `equipment_stats` is the exact signed aggregate
+  // (`EquipmentMap.gear` − active malus cache) shared with fights; null until the snapshot backfill lands.
   current_hp: number | null
   hp_updated_ms: number | null
   gear_vitality: number | null
+  equipment_stats: Record<string, number> | null
   // Current pet truth comes from EquipmentMap.pet; identity comes from its sibling Item field.
   // `pet_equipped: true` with `pet: null` is an honest identity-snapshot gap, not a riding toggle.
   pet: CharacterPet | null

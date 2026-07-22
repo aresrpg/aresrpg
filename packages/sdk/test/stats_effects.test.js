@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, test, expect } from 'bun:test'
 
-import { get_max_health, get_secondary_stats } from '../src/stats.js'
+import { get_max_health, get_secondary_stats, get_total_stat } from '../src/stats.js'
 import { apply_wisdom_xp } from '../src/experience.js'
 
 // Stat effects: wisdom multiplies XP (Wisdom XP Bonus l.970 — kept; the proposed health-regen was DROPPED,
@@ -21,6 +21,20 @@ describe('max health (base + level*5 + vitality)', () => {
 
   test('vitality adds 1:1 to the pool', () => {
     expect(get_max_health(character({ vitality: 65 }))).toBe(100) // 30 + 5 + 65
+  })
+
+  test('the fight-authoritative equipment aggregate feeds max health and every effective stat', () => {
+    const equipped = character({
+      strength: 2,
+      equipment_stats: { vitality: 3, strength: -3, action: 1 },
+    })
+    expect(get_max_health(equipped)).toBe(38)
+    expect(get_total_stat(equipped, 'strength')).toBe(0)
+    expect(get_total_stat(equipped, 'ap')).toBe(7)
+  })
+
+  test('positive-only vitality remains a compatibility fallback before the aggregate backfill', () => {
+    expect(get_max_health(character({ gear_vitality: 9 }))).toBe(44)
   })
 })
 

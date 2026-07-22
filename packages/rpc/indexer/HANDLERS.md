@@ -70,7 +70,8 @@ event NX-inits the skeleton `{ id, equipment:{} }` so merges are order-independe
   "colors": { "color_1":16777215, "color_2":13935180, "color_3":9136404 }, // OBJECT SNAPSHOT (Customization)
   "experience":0, "level":1,        // OBJECT SNAPSHOT (base experience → level via the frozen curve)
   "current_hp":137, "hp_updated_ms":0, // DF SNAPSHOT (character_link::Progression — RAW hp + lazy-regen stamp; client owns §5.4)
-  "gear_vitality":0,                // DF SNAPSHOT (equipment::EquipmentMap.gear.vitality — NET GEAR cache; alloc `vitality` is separate)
+  "gear_vitality":0,                // positive-only compatibility scalar
+  "gear_positive": { "vitality":3 }, "gear_malus": { "vitality":0 }, // fight-authoritative twin caches
   "kiosk_id":"0x…",                 // OBJECT SNAPSHOT — the kiosk holding this (kiosk-locked §11) character
   "world":"0x…",                    // zones::WorldJoined
   "position": { "x":10, "z":20, "zone":"spawn", "at_ms":0 }, // character::PositionAnchored / WorldJoined
@@ -123,7 +124,7 @@ before the mint event still has a doc. `owner`/`world`/`position`/`equipment` st
 (not in the object, or richer via events).
 
 **Character DYNAMIC-FIELD snapshots** (Phase-1 `dynamic_field::Field` loop, `map_job_xp_field` /
-`map_progression_field` / `map_gear_vitality`). Some live character state lives ONLY in first-party
+`map_progression_field` / `map_equipment_state` / `map_equipment_malus_field`). Some live character state lives ONLY in first-party
 DFs attached DIRECTLY to the Character UID (via `extension::add_character_field` → `df::add`), so each
 Field's checkpoint owner IS the character. `process()` reads them off the SAME per-checkpoint
 `dynamic_field::Field` output objects it builds the kiosk map from, discriminated by the Field's KEY
@@ -136,14 +137,28 @@ TYPE parameter (never the byte-identical bodies) and merged latest-wins onto `rp
   last-touch stamp are served VERBATIM — the client owns the §5.4 natural-regen projection; the indexer
   NEVER recomputes regen (`xp`/`level` are decoded but not projected — they ride the base-object
   `experience` snapshot).
-- **equipment vitality** (`Field<NsKey<equipment::EquipmentKey>, EquipmentMap>`, `is_equipment_key`) →
-  `$.gear_vitality`, the NET GEAR cache. CURSOR-parsed past the variable `singles`/`relic_templates`
-  prefix to the 22nd (last) `spell::Stats` u64 (`equipment_gear_vitality`), robust to the LIVE
-  `Stats`/`EquipmentMap` growing. This is the equipped-gear vitality sum the client ADDS to the
-  ALLOCATED `vitality` to derive `character_max_hp` via `progression_math::max_hp_from_base` (base_hp[class]
-  + (level−1)×HP_PER_LEVEL + (alloc + gear) vitality — added 1:1); it is NOT the sibling equipped-ITEM DFs
-  (same namespace, keyed by item id). All three are `null` until the snapshot pipeline reaches the character's
-  DF (a full `ares_snapshot` re-index backfills from `FIRST_CHECKPOINT`).
+- **equipment positive cache** (`Field<NsKey<equipment::EquipmentKey>, EquipmentMap>`, `is_equipment_key`) →
+  `$.gear_positive`, the fifteen fields `equipment_stats::deltas` can populate, plus the old positive-only
+  `$.gear_vitality` scalar. The cursor walks the variable slot prefix, the complete 22-u64 `spell::Stats`, and
+  the variable option tail before the pet boolean.
+- **active equipment malus cache** (`Field<NsKey<u64>, spell::Stats>`, namespace 1 + private key
+  `0x415245535f4d414c`) → `$.gear_malus`. The type pair narrows the DF family; runtime namespace/key checks
+  prevent unrelated u64 fields from projecting. EquipmentMap NX-seeds a zero block, so legacy/no-malus
+  characters are exact and same-checkpoint object order cannot overwrite a real malus snapshot.
+
+`/v1/characters` subtracts these blocks into one signed `equipment_stats` object. This is byte-for-byte the
+same source `equipment::folded_stats` gives fights (`allocated + positive - active malus`, floored per final
+field), including the upgrade marker rule that intentionally ignores legacy maluses until first re-equip.
+`gear_vitality` remains compatibility-only and is not the exact derived-stat source after backfill.
+Because `ares` equipment events and `ares_snapshot` objects have independent watermarks, the event projection
+stamps `equipment_cursor` and EquipmentMap stamps `gear_cursor` (checkpoint + transaction index) last, after its
+sibling malus write. The API returns `equipment_stats:null` while gear is behind identity; the post-equip client
+therefore keeps polling instead of freezing a mixed item-row/new-cache document into the world store.
+
+**#488 deployment requirement:** these new subpaths are not retroactive under the existing
+`rpc:watermark:ares_snapshot`. Reset/delete that watermark and restart from `FIRST_CHECKPOINT` at or before the
+equipment deployment (or rebuild fresh Redis). Without that full `ares_snapshot` re-index, already-equipped
+characters remain `equipment_stats:null`; future mutations alone are not a complete backfill.
 
 The SAME Phase-1 loop also snapshots the **zone spawn roster** (`map_zone_field`) — a first-party DF whose
 parent is the **WORLD**, not a character (`Field<zones::ZoneKey, Zone>`, `is_zone_key` — a PLAIN struct key,
@@ -359,7 +374,8 @@ ranges need a **full `ares_snapshot` re-index** (reset/delete `rpc:watermark:are
 restart with `FIRST_CHECKPOINT` at or before the first `attach_ranges` call, or stand up a fresh
 Redis) — the SAME documented lever this file already names for the job-xp/progression/equipment
 DFs above. Every write here is an idempotent `JSON.SET`, so a re-index safely reprocesses already-
-correct fields alongside the newly-added stats.
+correct fields alongside the newly-added stats. The #488 `gear_positive`/`gear_malus` projection above requires
+this same watermark reset; one rebuild covers both additions.
 
 ---
 

@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, test } from 'bun:test'
 
-import { normalize_equip_items, reconcile_equip_state } from './equip_state_refresh.js'
+import { equip_projection_confirms, normalize_equip_items, reconcile_equip_state } from './equip_state_refresh.js'
 
 const character_view = (equipment) => ({ characters: [{ id: '0xcharacter', equipment }] })
 const item_view = (template_id) => ({
@@ -17,6 +17,21 @@ const item_view = (template_id) => ({
 })
 
 describe('reconcile_equip_state', () => {
+  test('waits for the signed stat snapshot after equipment identity has caught up', () => {
+    const expected_change = { equipped_ids: ['0xitem'], unequipped_ids: [] }
+    const items = []
+    expect(
+      equip_projection_confirms({ equipment: [{ item_id: '0xitem' }], equipment_stats: null }, items, expected_change)
+    ).toBe(false)
+    expect(
+      equip_projection_confirms(
+        { equipment: [{ item_id: '0xitem' }], equipment_stats: { vitality: 3 } },
+        items,
+        expected_change
+      )
+    ).toBe(true)
+  })
+
   test('drains older reads, applies the second cache-bypassed projection, then reports success', async () => {
     const calls = []
     const responses = [character_view(['old']), item_view('0xold'), character_view(['fresh']), item_view('0xfresh')]
@@ -99,7 +114,7 @@ describe('reconcile_equip_state', () => {
     const projected = { item_id: cloak.id, template: cloak.template_id, category: 'cloak' }
     const characters = (equipment, other_name) => ({
       characters: [
-        { id: '0xcharacter', equipment },
+        { id: '0xcharacter', equipment, equipment_stats: {} },
         { id: '0xother', equipment: [], name: other_name },
       ],
     })
@@ -140,7 +155,10 @@ describe('reconcile_equip_state', () => {
     expect(calls).toHaveLength(6)
     expect(calls.every(([, , , fresh]) => fresh === true)).toBe(true)
     expect(writes).toHaveLength(1)
-    expect(writes[0].characters).toEqual([{ id: '0xcharacter', equipment: [projected], vitality: 9 }, current_other])
+    expect(writes[0].characters).toEqual([
+      { id: '0xcharacter', equipment: [projected], equipment_stats: {}, vitality: 9 },
+      current_other,
+    ])
     expect(writes[0].items).toEqual([])
   })
 })

@@ -31,6 +31,9 @@ const equipped_ids_of = (character) => {
 /** A post-tx projection is confirmed only when character equipment and the loose bag agree on the delta. */
 export function equip_projection_confirms(character, item_rows, expected_change) {
   if (!expected_change) return true
+  // Equipment identity is event-projected while the signed cache is object-snapshotted. `/v1` deliberately
+  // returns null until both checkpoint stamps converge; accepting that mixed row would freeze stale max HP.
+  if (character?.equipment_stats == null) return false
   const equipped = new Set(expected_change.equipped_ids ?? [])
   const unequipped = new Set((expected_change.unequipped_ids ?? []).filter((id) => !equipped.has(id)))
   const projected_equipment = equipped_ids_of(character)

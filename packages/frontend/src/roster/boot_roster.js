@@ -9,10 +9,11 @@
 //     character `in_dungeon`; select_active_character then auto-resumed it → a teleport into an old
 //     fight. The RPC roster cannot produce that tag, so the boot path can no longer teleport.
 //
-// The RPC record CARRIES per-character colors/sex since S-15c — the roster CARD still maps only
-// name/class/level (all it renders); the AVATAR of the character actually entered is hydrated with
-// ONE targeted chain-direct read in game/embed.js (never a scan of all kiosks). A background, non-blocking
-// load_roster() runs AFTER the fast dispatch to hydrate the loose-item bag + full stats + live stakes and to
+// The RPC record carries the effective world-read inputs too: allocated stats, HP state, and the exact signed
+// equipment aggregate. The mapper normalizes that projection so the fast card already feeds the world HUD;
+// the AVATAR of the character actually entered is hydrated with ONE targeted chain-direct read in game/embed.js
+// (never a scan of all kiosks). A background, non-blocking load_roster() runs AFTER the fast dispatch to hydrate
+// the loose-item bag + remaining chain-only fields/live stakes and to
 // self-heal any indexer lag — it can no longer teleport (find_dungeon_characters is gone). The
 // <1s roster load is the RPC call alone.
 
@@ -29,9 +30,9 @@ import { DEMO_NETWORK } from '../chain/deployment'
  * Map an indexer RpcCharacter → the flat roster-card shape the engine store + CharactersDrawer render.
  * `class`→`classe`; `experience` is the REAL on-chain field and `level` derives from it via the SDK curve
  * (one home, floors to 1) so the card's xp_progress bar + level read the same truth (a null experience falls
- * back to the level's min-XP + warns). `_type` is stamped from the SSOT type-origin id so the card's max-HP gate treats it as a typed
- * character (on-chain formula). Colors/sex ride the RPC row (S-15c) but the card doesn't render them — the
- * avatar hydrate fills the entered character's appearance chain-direct.
+ * back to the level's min-XP + warns). `_type` is stamped from the SSOT type-origin id so the card's max-HP gate
+ * treats it as a typed character (on-chain formula). The signed equipment aggregate is already fight-equivalent
+ * on the `/v1` wire. Colors/sex ride the RPC row (S-15c), while the avatar hydrate fills appearance chain-direct.
  *
  * EXPORTED (roster /v1 cutover): load_roster.js reuses this SAME mapper as its base identity shape — one
  * home for the RpcCharacter → card mapping, never two drifting copies.
@@ -57,6 +58,20 @@ export function rpc_to_card(c) {
     classe: String(c.class ?? ''),
     level,
     experience,
+    vitality: Number(c.vitality ?? 0),
+    wisdom: Number(c.wisdom ?? 0),
+    strength: Number(c.strength ?? 0),
+    intelligence: Number(c.intelligence ?? 0),
+    agility: Number(c.agility ?? 0),
+    chance: Number(c.chance ?? 0),
+    available_points: Number(c.available_points ?? 0),
+    current_hp: c.current_hp == null ? null : Number(c.current_hp),
+    hp_updated_ms: c.hp_updated_ms == null ? null : Number(c.hp_updated_ms),
+    gear_vitality: c.gear_vitality == null ? null : Number(c.gear_vitality),
+    equipment_stats:
+      c.equipment_stats == null
+        ? null
+        : Object.fromEntries(Object.entries(c.equipment_stats).map(([key, value]) => [key, Number(value)])),
     world_id: c.world ?? null,
     jobs: c.jobs ?? {},
     // Keep the read-model's equipped-item projection intact for the Equipment tab. These rows are NOT

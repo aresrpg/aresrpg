@@ -148,6 +148,11 @@ export type SuiCharacter = {
   cloak?: SuiItem
   pet?: SuiItem
 
+  // Exact signed equipment aggregate from the same positive/malus caches fights fold. Null until re-indexed;
+  // gear_vitality is the positive-only compatibility fallback for max HP during that projection gap.
+  equipment_stats?: ItemStatistics | null
+  gear_vitality?: number | null
+
   // On-chain per-job total XP, keyed by job id (jobs.js id: "farmer", "miner", "sword_smith", ...).
   // Stored as a Character VecMap dynamic field, projected by the indexer; absent until the character
   // has crafted/gathered. The server resolves job level from it (the craft lerp + gating consume it).

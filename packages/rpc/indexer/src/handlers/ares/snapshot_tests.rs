@@ -249,7 +249,27 @@ fn is_progression_key_discriminates_from_the_other_character_dfs() {
     assert!(!is_equipment_key(&prog));
 }
 
-// ── Equipment-map dynamic field (NET GEAR vitality cache → character_max_hp) ─
+// ── Equipment-map + malus dynamic fields (the exact fight-authoritative signed fold) ─
+
+fn test_equipment_stats(vitality: u64) -> EquipmentStats {
+    EquipmentStats {
+        vitality,
+        wisdom: 0,
+        strength: 0,
+        intelligence: 0,
+        chance: 0,
+        agility: 0,
+        range: 0,
+        movement: 0,
+        action: 0,
+        critical: 0,
+        raw_damage: 0,
+        earth_resistance: 0,
+        fire_resistance: 0,
+        water_resistance: 0,
+        air_resistance: 0,
+    }
+}
 
 #[test]
 fn equipment_state_projects_pet_truth_and_clears_identity() {
@@ -258,13 +278,23 @@ fn equipment_state_projects_pet_truth_and_clears_identity() {
     // authoritatively clears any older sibling identity; true must not clear it because an unrelated
     // equipment-map mutation need not re-emit the already-equipped pet Item sibling.
     let character = "0x00000000000000000000000000000000000000000000000000000000000000c1";
-    let absent = map_equipment_state(character, 55, false);
+    let mut absent_stats = test_equipment_stats(55);
+    absent_stats.strength = 7;
+    let absent = map_equipment_state(character, absent_stats, false, 488, 7);
     assert!(matches!(&absent[0], RedisWrite::Set { key, nx: true, .. } if key == &k_character(character)));
     assert_eq!(set_json(&absent, "$.gear_vitality"), Some("55"));
+    assert!(set_json(&absent, "$.gear_positive").unwrap().contains(r#""strength":7"#));
+    assert!(absent.iter().any(
+        |w| matches!(w, RedisWrite::Set { path, nx: true, .. } if path == "$.gear_malus")
+    ));
     assert_eq!(set_json(&absent, "$.pet_equipped"), Some("false"));
+    assert_eq!(
+        set_json(&absent, "$.gear_cursor"),
+        Some(r#"{"checkpoint":488,"tx_index":7}"#)
+    );
     assert_eq!(set_json(&absent, "$.pet"), Some("null"));
 
-    let present = map_equipment_state(character, 89, true);
+    let present = map_equipment_state(character, test_equipment_stats(89), true, 489, 8);
     assert_eq!(set_json(&present, "$.gear_vitality"), Some("89"));
     assert_eq!(set_json(&present, "$.pet_equipped"), Some("true"));
     assert_eq!(set_json(&present, "$.pet"), None);
@@ -301,7 +331,7 @@ fn equipment_state_reads_constructed_pet_true_after_the_complete_variable_tail()
     b.extend_from_slice(&[1, 7]); // tool_job: Some(7)
     b.push(1); // pet: true
     let decoded = equipment_state(&b).expect("complete Move-derived EquipmentMap wire must decode");
-    assert_eq!((decoded.gear_vitality, decoded.pet_equipped), (42, true));
+    assert_eq!((decoded.gear.strength, decoded.gear.vitality, decoded.pet_equipped), (7, 42, true));
     // A body truncated before the final pet bool yields None — never a guessed false.
     assert!(equipment_state(&b[..b.len() - 1]).is_none());
     let mut malformed_option = b.clone();
@@ -326,7 +356,44 @@ fn equipment_gear_vitality_decodes_the_real_onchain_wire() {
     let bytes = hex::decode(REAL_EQUIPMENT_FIELD_BCS_HEX).unwrap();
     assert_eq!(bytes.len(), 218);
     let decoded = equipment_state(&bytes).expect("real equipment DF bytes including the tail must decode");
-    assert_eq!((decoded.gear_vitality, decoded.pet_equipped), (0, false));
+    assert_eq!((decoded.gear.vitality, decoded.pet_equipped), (0, false));
+}
+
+#[test]
+fn equipment_malus_field_projects_only_the_private_namespaced_key() {
+    let character = "0x00000000000000000000000000000000000000000000000000000000000000c1";
+    let mut bytes = vec![0u8; 32]; // Field UID
+    bytes.push(NS_CHARACTER_EQUIPMENT);
+    bytes.extend_from_slice(&EQUIPMENT_MALUS_CACHE_KEY.to_le_bytes());
+    for value in [
+        3u64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    ]
+    .into_iter()
+    {
+        bytes.extend_from_slice(&value.to_le_bytes());
+    }
+    let writes = map_equipment_malus_field(character, &bytes).expect("private malus field must decode");
+    let stats = set_json(&writes, "$.gear_malus").unwrap();
+    assert!(stats.contains(r#""strength":3"#));
+    assert!(stats.contains(r#""vitality":2"#));
+
+    let mut wrong_key = bytes.clone();
+    wrong_key[33..41].copy_from_slice(&0u64.to_le_bytes());
+    assert!(map_equipment_malus_field(character, &wrong_key).is_none());
+    assert!(map_equipment_malus_field(character, &bytes[..bytes.len() - 1]).is_none());
+}
+
+#[test]
+fn equipment_malus_type_guard_requires_namespaced_u64_to_spell_stats() {
+    use std::str::FromStr;
+    let key = TypeTag::from_str("0xa11ce::extension::NsKey<u64>").unwrap();
+    let wrong_key = TypeTag::from_str("0xa11ce::extension::NsKey<u8>").unwrap();
+    let value = TypeTag::from_str("0xf00::spell::Stats").unwrap();
+    let wrong_value = TypeTag::from_str("0xf00::spell::Effect").unwrap();
+    assert!(is_namespaced_u64_key(&key));
+    assert!(!is_namespaced_u64_key(&wrong_key));
+    assert!(is_spell_stats_value(&value));
+    assert!(!is_spell_stats_value(&wrong_value));
 }
 
 #[test]

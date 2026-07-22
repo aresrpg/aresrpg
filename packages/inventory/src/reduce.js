@@ -255,14 +255,14 @@ function apply_receipt_patch(sui, payload) {
   }
 }
 
-/** Chain-direct cosmetics/stats that must not clobber a newer receipt-proven fact (XP/level/HP). */
+/** Chain-direct cosmetics that must not clobber projected allocation/equipment or receipt-proven XP/HP. */
 function apply_enrichment(sui, { character_id, enrichment }) {
   if (!character_id || !enrichment) return sui
   const index = sui.characters.findIndex((c) => c?.id === character_id)
   if (index === -1) return sui
   const current = sui.characters[index]
   const characters = sui.characters.slice()
-  characters[index] = {
+  const merged = {
     ...current,
     ...enrichment,
     // receipt-proven fields WIN over the immutable base the enrichment read carries (RED#3): XP/level are
@@ -272,7 +272,21 @@ function apply_enrichment(sui, { character_id, enrichment }) {
     current_hp: current.current_hp ?? enrichment.current_hp,
     hp_updated_ms: current.hp_updated_ms ?? enrichment.hp_updated_ms,
     available_points: current.available_points ?? enrichment.available_points,
+    gear_vitality: current.gear_vitality ?? enrichment.gear_vitality,
   }
+  for (const key of [
+    'vitality',
+    'wisdom',
+    'strength',
+    'intelligence',
+    'chance',
+    'agility',
+    'equipment_stats',
+    'equipment',
+    'jobs',
+  ])
+    if (current[key] != null) merged[key] = current[key]
+  characters[index] = merged
   return { ...sui, characters }
 }
 

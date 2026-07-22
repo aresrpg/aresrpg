@@ -8,6 +8,24 @@
 export const CHARACTER_RECONCILE_TRIES = 4
 export const CHARACTER_RECONCILE_INTERVAL_MS = 800
 
+const read_model_fields = [
+  'experience',
+  'level',
+  'vitality',
+  'wisdom',
+  'strength',
+  'intelligence',
+  'chance',
+  'agility',
+  'available_points',
+  'current_hp',
+  'hp_updated_ms',
+  'gear_vitality',
+  'equipment_stats',
+  'equipment',
+  'jobs',
+]
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /**
@@ -21,19 +39,16 @@ export function character_experience_reconciled(row, expected_experience) {
 
 /**
  * Enrich a `/v1` roster card with the targeted chain-direct Character read without letting the immutable base
- * `Character.experience` replace live `Progression.xp`. XP/level are read-model-owned; the enrichment supplies
- * the remaining stats/cosmetics only.
+ * base-object defaults replace live projected stats. Progression, allocation, jobs and equipment are read-model
+ * owned; the enrichment supplies cosmetics and fields that the card does not already know.
  * @param {any} character
  * @param {any} enrichment
  */
 export function merge_character_enrichment(character, enrichment) {
   if (!enrichment) return character
-  return {
-    ...character,
-    ...enrichment,
-    experience: character.experience,
-    level: character.level,
-  }
+  const merged = { ...character, ...enrichment }
+  for (const key of read_model_fields) if (character[key] != null) merged[key] = character[key]
+  return merged
 }
 
 /**

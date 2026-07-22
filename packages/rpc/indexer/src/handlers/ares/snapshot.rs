@@ -104,10 +104,14 @@ const JOB_XP_KEY_TYPE: &str = "JobXpKey";
 /// The live-progression DF key (`aresrpg::character_link::ProgressionKey`) — the block that carries
 /// the RAW current HP + regen stamp T76 party-frame HP bars project (`is_progression_key`).
 const PROGRESSION_KEY_TYPE: &str = "ProgressionKey";
-/// The equipment-map DF key (`aresrpg::equipment::EquipmentKey`) — the single map whose `gear` fold
-/// caches the NET GEAR vitality `character_max_hp` needs (`is_equipment_key`).
+/// The equipment-map DF key (`aresrpg::equipment::EquipmentKey`) — the single map whose positive
+/// gear cache is one half of the exact fight/world signed fold (`is_equipment_key`).
 const EQUIPMENT_MODULE: &str = "equipment";
 const EQUIPMENT_KEY_TYPE: &str = "EquipmentKey";
+const SPELL_MODULE: &str = "spell";
+const SPELL_STATS_TYPE: &str = "Stats";
+/// Private `equipment.move` key for the sibling Character DF carrying active malus magnitudes.
+const EQUIPMENT_MALUS_CACHE_KEY: u64 = 0x4152_4553_5f4d_414c;
 const OBJECT_MODULE: &str = "object";
 const OBJECT_ID_TYPE: &str = "ID";
 const NS_CHARACTER_EQUIPMENT: u8 = 1;
@@ -298,6 +302,21 @@ fn is_item_value(value_tag: &TypeTag) -> bool {
         if value.module.as_str() == ITEM_MODULE && value.name.as_str() == ITEM_TYPE)
 }
 
+/// The private malus cache uses `Field<extension::NsKey<u64>, spell::Stats>`. The numeric key is
+/// checked from the BCS body before projection; this type guard only narrows the dynamic-field family.
+fn is_namespaced_u64_key(key_tag: &TypeTag) -> bool {
+    let TypeTag::Struct(ns) = key_tag else { return false };
+    ns.module.as_str() == EXTENSION_MODULE
+        && ns.name.as_str() == NS_KEY_TYPE
+        && ns.type_params.len() == 1
+        && matches!(ns.type_params.first(), Some(TypeTag::U64))
+}
+
+fn is_spell_stats_value(value_tag: &TypeTag) -> bool {
+    matches!(value_tag, TypeTag::Struct(value)
+        if value.module.as_str() == SPELL_MODULE && value.name.as_str() == SPELL_STATS_TYPE)
+}
+
 /// Is a `0x2::dynamic_field::Field`'s KEY type parameter the zone-state key — `aresrpg::zones::ZoneKey`?
 /// UNLIKE the character DFs above, the zone key is a PLAIN struct (NOT wrapped in `NsKey`), so this matches
 /// `zones::ZoneKey` directly (no envelope). Matched by (module, name) — stable across upgrades, the SAME
@@ -378,22 +397,105 @@ pub fn map_progression_field(
     ]
 }
 
-/// Project the two served truths from a character's EquipmentMap: its NET GEAR vitality cache and
-/// current equipped-pet boolean. Both are latest-wins absolute values from the same DF. A false pet
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct EquipmentStats {
+    vitality: u64,
+    wisdom: u64,
+    strength: u64,
+    intelligence: u64,
+    chance: u64,
+    agility: u64,
+    range: u64,
+    movement: u64,
+    action: u64,
+    critical: u64,
+    raw_damage: u64,
+    earth_resistance: u64,
+    fire_resistance: u64,
+    water_resistance: u64,
+    air_resistance: u64,
+}
+
+fn equipment_stats_json(stats: &EquipmentStats) -> Value {
+    json!({
+        "vitality": stats.vitality, "wisdom": stats.wisdom, "strength": stats.strength,
+        "intelligence": stats.intelligence, "chance": stats.chance, "agility": stats.agility,
+        "range": stats.range, "movement": stats.movement, "action": stats.action,
+        "critical": stats.critical, "raw_damage": stats.raw_damage,
+        "earth_resistance": stats.earth_resistance, "fire_resistance": stats.fire_resistance,
+        "water_resistance": stats.water_resistance, "air_resistance": stats.air_resistance,
+    })
+}
+
+fn equipment_stats_zero() -> EquipmentStats {
+    EquipmentStats {
+        vitality: 0,
+        wisdom: 0,
+        strength: 0,
+        intelligence: 0,
+        chance: 0,
+        agility: 0,
+        range: 0,
+        movement: 0,
+        action: 0,
+        critical: 0,
+        raw_damage: 0,
+        earth_resistance: 0,
+        fire_resistance: 0,
+        water_resistance: 0,
+        air_resistance: 0,
+    }
+}
+
+/// Project the fight-authoritative positive half from a character's EquipmentMap plus its current
+/// equipped-pet boolean. The sibling malus DF converges independently at `$.gear_malus`; `/v1` subtracts
+/// the two blocks before exposing one signed equipment contribution. A false pet
 /// boolean also clears `$.pet`, because the sibling Item field is deleted on unequip and therefore has
 /// no output snapshot of its own. True deliberately leaves `$.pet` untouched: a later unrelated gear
 /// mutation re-emits EquipmentMap but need not re-emit the already-equipped pet sibling.
-pub fn map_equipment_state(character_id: &str, gear_vitality: u64, pet_equipped: bool) -> Vec<RedisWrite> {
+fn map_equipment_state(
+    character_id: &str,
+    gear: EquipmentStats,
+    pet_equipped: bool,
+    checkpoint: u64,
+    tx_index: usize,
+) -> Vec<RedisWrite> {
     let key = k_character(character_id);
     let mut writes = vec![
         char_init(&key, character_id),
-        set(key.clone(), "$.gear_vitality", json!(gear_vitality)),
+        // Compatibility scalar for clients deployed before the full aggregate. Positive-only by construction.
+        set(key.clone(), "$.gear_vitality", json!(gear.vitality)),
+        set(key.clone(), "$.gear_positive", equipment_stats_json(&gear)),
+        // No malus DF means an exact zero block. NX makes the independent sibling SET order-safe.
+        set_nx(key.clone(), "$.gear_malus", equipment_stats_json(&equipment_stats_zero())),
         set(key.clone(), "$.pet_equipped", json!(pet_equipped)),
+        // Written after every other checkpoint mutation; opening this gate makes the aggregate readable.
+        set(
+            key.clone(),
+            "$.gear_cursor",
+            json!({ "checkpoint": checkpoint, "tx_index": tx_index }),
+        ),
     ];
     if !pet_equipped {
         writes.push(set(key, "$.pet", json!(null)));
     }
     writes
+}
+
+/// Project the active malus-magnitude block. Runtime namespace/key checks are load-bearing: other
+/// `NsKey<u64> -> Stats` fields must never be mistaken for equipment.
+fn map_equipment_malus_field(character_id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
+    let mut r = ByteReader::new(contents);
+    r.skip(32)?; // Field UID
+    if r.u8()? != NS_CHARACTER_EQUIPMENT || r.u64()? != EQUIPMENT_MALUS_CACHE_KEY {
+        return None;
+    }
+    let malus = r.equipment_stats()?;
+    let key = k_character(character_id);
+    Some(vec![
+        char_init(&key, character_id),
+        set(key, "$.gear_malus", equipment_stats_json(&malus)),
+    ])
 }
 
 /// Decode and project an equipped pet's sibling Item field. Identity is sourced only from the
@@ -864,6 +966,44 @@ impl<'a> ByteReader<'a> {
     fn u64(&mut self) -> Option<u64> {
         Some(u64::from_le_bytes(self.take(8)?.try_into().ok()?))
     }
+    /// Decode the fixed 22-u64 `aresrpg_foundation::spell::Stats` wire, retaining the fifteen
+    /// fields equipment can populate. The seven buff-only fields are consumed but not projected.
+    fn equipment_stats(&mut self) -> Option<EquipmentStats> {
+        let strength = self.u64()?;
+        let intelligence = self.u64()?;
+        let chance = self.u64()?;
+        let agility = self.u64()?;
+        let raw_damage = self.u64()?;
+        let critical = self.u64()?;
+        let range = self.u64()?;
+        let fire_resistance = self.u64()?;
+        let water_resistance = self.u64()?;
+        let earth_resistance = self.u64()?;
+        let air_resistance = self.u64()?;
+        self.skip(2 * 8)?; // percent_damage, physical_damage
+        let wisdom = self.u64()?;
+        self.skip(5 * 8)?; // flat/neutral resist, AP/MP dodge, heal
+        let action = self.u64()?;
+        let movement = self.u64()?;
+        let vitality = self.u64()?;
+        Some(EquipmentStats {
+            vitality,
+            wisdom,
+            strength,
+            intelligence,
+            chance,
+            agility,
+            range,
+            movement,
+            action,
+            critical,
+            raw_damage,
+            earth_resistance,
+            fire_resistance,
+            water_resistance,
+            air_resistance,
+        })
+    }
     /// ULEB128 (BCS's length prefix for strings/vectors).
     fn uleb(&mut self) -> Option<usize> {
         let mut result: u64 = 0;
@@ -990,11 +1130,11 @@ impl<'a> ByteReader<'a> {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct EquipmentState {
-    gear_vitality: u64,
+    gear: EquipmentStats,
     pet_equipped: bool,
 }
 
-/// Read `EquipmentMap.gear.vitality` and its current `pet` boolean out of the character's equipment
+/// Read `EquipmentMap.gear` and its current `pet` boolean out of the character's equipment
 /// dynamic field (`Field<NsKey<equipment::EquipmentKey>, EquipmentMap>`). The full Move-derived wire is
 /// `Field UID | namespace | EquipmentKey dummy bool | singles | ring_count | relic_templates |
 /// Stats(22×u64) | weapon_item Option<ID> | weapon_family Option<String> | tool_job Option<u8> | pet bool`.
@@ -1010,13 +1150,12 @@ fn equipment_state(contents: &[u8]) -> Option<EquipmentState> {
     r.skip_u8_vec()?; // singles: vector<u8>
     r.skip(1)?; // ring_count: u8
     r.skip_id_vec()?; // relic_templates: vector<ID>
-    r.skip(21 * 8)?; // gear: Stats — the first 21 u64 fields (vitality is the 22nd/last)
-    let gear_vitality = r.u64()?;
+    let gear = r.equipment_stats()?;
     r.skip_option_id()?; // weapon_item: Option<ID>
     r.skip_option_string()?; // weapon_family: Option<String>
     r.skip_option_u8()?; // tool_job: Option<u8>
     let pet_equipped = r.bool()?;
-    Some(EquipmentState { gear_vitality, pet_equipped })
+    Some(EquipmentState { gear, pet_equipped })
 }
 
 /// Project one `aresrpg_forgemagie::forgemagie` event into the taux read-model. `None` = a
@@ -1131,7 +1270,10 @@ impl Processor for AresSnapshotHandler {
         // (like the event pipeline admits native kiosk). Only OUR objects' owners consume
         // the map (Phase 2), so unrelated dynamic fields here never produce a write.
         let mut kiosk_of_wrapper: HashMap<SuiAddress, SuiAddress> = HashMap::new();
-        for tx in &checkpoint.transactions {
+        for (tx_index, tx) in checkpoint.transactions.iter().enumerate() {
+            // Preserve transaction order while making each EquipmentMap gate follow its sibling malus write.
+            let mut equipment_malus_writes = Vec::new();
+            let mut equipment_map_writes = Vec::new();
             for obj in tx.output_objects(&checkpoint.object_set) {
                 let Some(ty) = obj.type_() else { continue };
                 if ty.module().as_str() == DYNAMIC_FIELD_MODULE && ty.name().as_str() == DYNAMIC_FIELD_TYPE {
@@ -1142,10 +1284,11 @@ impl Processor for AresSnapshotHandler {
                     // `ObjectOwner` IS that parent (a Character or the World). Discriminated by the key
                     // TYPE PARAMETER (never the byte-identical bodies), latest-wins per parent. Independent
                     // of the kiosk map above (a first-party-DF id is never looked up AS a wrapper, so the
-                    // shared insert stays inert for it). Eight arms:
+                    // shared insert stays inert for it). Nine arms:
                     //   • job-xp   (`Field<NsKey<JobXpKey>, u64>`, parent=character)  — ABSOLUTE running total.
                     //   • progression (`…<ProgressionKey>, Progression>`, character)  — fight xp/level + RAW hp/stamp.
-                    //   • equipment  (`…<EquipmentKey>, EquipmentMap>`, character)     — NET GEAR vitality cache.
+                    //   • equipment  (`…<EquipmentKey>, EquipmentMap>`, character)     — positive gear block.
+                    //   • gear malus (`Field<NsKey<u64>, spell::Stats>`, character)    — active malus block.
                     //   • equipped item (`…<object::ID>, item::Item>`, character)      — pet identity sibling.
                     //   • zone     (`Field<zones::ZoneKey, Zone>`, parent=WORLD)       — seed + consumed bitmaps.
                     //   • group root (`Field<zones::ZoneGroupRootKey, ZoneGroupCommitment>`, WORLD) — the
@@ -1178,11 +1321,21 @@ impl Processor for AresSnapshotHandler {
                         } else if key.is_some_and(is_equipment_key) {
                             if let Some(mv) = obj.data.try_as_move() {
                                 if let Some(state) = equipment_state(mv.contents()) {
-                                    writes.extend(map_equipment_state(
+                                    equipment_map_writes.extend(map_equipment_state(
                                         &id(),
-                                        state.gear_vitality,
+                                        state.gear,
                                         state.pet_equipped,
+                                        checkpoint.summary.sequence_number,
+                                        tx_index,
                                     ));
+                                }
+                            }
+                        } else if key.is_some_and(is_namespaced_u64_key)
+                            && value.is_some_and(is_spell_stats_value)
+                        {
+                            if let Some(mv) = obj.data.try_as_move() {
+                                if let Some(w) = map_equipment_malus_field(&id(), mv.contents()) {
+                                    equipment_malus_writes.extend(w);
                                 }
                             }
                         } else if key.is_some_and(is_equipped_item_key) && value.is_some_and(is_item_value) {
@@ -1223,6 +1376,8 @@ impl Processor for AresSnapshotHandler {
                     }
                 }
             }
+            writes.append(&mut equipment_malus_writes);
+            writes.append(&mut equipment_map_writes);
         }
 
         // ── Phase 2: taux + sale events + object snapshots + fight-outcome create/delete ──

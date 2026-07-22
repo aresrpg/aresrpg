@@ -144,6 +144,8 @@ describe('Stats live vocabulary', () => {
         current_hp: 42,
         hp_updated_ms: 100,
         gear_vitality: 7,
+        equipment_stats: { vitality: 3, strength: -2 },
+        equipment: [{ item_id: '0xhat', template: '0xtpl', category: 'hat', amount: 1 }],
       }
     )
     expect(merged).toMatchObject({
@@ -152,7 +154,10 @@ describe('Stats live vocabulary', () => {
       available_points: 2,
       current_hp: 42,
       gear_vitality: 7,
+      equipment_stats: { vitality: 3, strength: -2 },
+      equipment: [{ item_id: '0xhat', template: '0xtpl', category: 'hat', amount: 1 }],
     })
+    expect(equipment_bonus(merged, STATISTICS.VITALITY)).toBe(3)
   })
 
   test('confirmed overlay carries only deterministic allocation fields', () => {
