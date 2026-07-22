@@ -52,7 +52,12 @@ import {
 } from '@aresrpg/fight/turn_commit'
 import { retarget_cast } from '@aresrpg/fight/txs'
 import { synthetic_tackled_events, local_intent_beats, local_move_beats } from '@aresrpg/fight/present'
-import { predict_cast, weapon_spell_template, evolve_flush_casts, evolve_caster_cell } from '@aresrpg/fight/predict_cast'
+import {
+  predict_cast,
+  weapon_spell_template,
+  evolve_flush_casts,
+  evolve_caster_cell,
+} from '@aresrpg/fight/predict_cast'
 import { committed_state } from '@aresrpg/fight/store'
 import { next_move_tackle } from '@aresrpg/fight/project'
 import { range_bonus_of } from '@aresrpg/fight/statuses'
@@ -61,12 +66,7 @@ import { character_cast_clock, use_dungeon_turn } from '../../dungeon-turn.js'
 import { GRID_W, GRID_CELLS, encode, decode, lineOfSight, bfsPathCost, bfsPath, bfsReachable } from '@aresrpg/fight/los'
 import { dungeon_grid_of } from '../../dungeon-grid.js'
 import { presentation_blocked_cells } from '../../../../world-shell/fight_board_blockers.js'
-import {
-  on_cooldown,
-  cooldown_left,
-  casts_at_cell,
-  cap_of,
-} from '@aresrpg/fight/draft_budget'
+import { on_cooldown, cooldown_left, casts_at_cell, cap_of } from '@aresrpg/fight/draft_budget'
 import { FightControls } from '../FightControls.jsx'
 import { ConfirmDialog } from './ConfirmDialog.jsx'
 import { use_fight_phase } from './use_fight_phase.js'
@@ -318,12 +318,8 @@ export function DungeonBoard() {
     /** @type {Map<number, { kind: 'player' | 'mob', alive: boolean, idx: number }>} */
     const map = new Map()
     if (!dungeon) return map
-    dungeon.escrow.forEach((p, i) =>
-      map.set(p.cell, { kind: 'player', alive: p.committed?.alive ?? p.alive, idx: i })
-    )
-    dungeon.mobs.forEach((m, i) =>
-      map.set(m.cell, { kind: 'mob', alive: m.committed?.alive ?? m.alive, idx: i })
-    )
+    dungeon.escrow.forEach((p, i) => map.set(p.cell, { kind: 'player', alive: p.committed?.alive ?? p.alive, idx: i }))
+    dungeon.mobs.forEach((m, i) => map.set(m.cell, { kind: 'mob', alive: m.committed?.alive ?? m.alive, idx: i }))
     return map
   }, [dungeon])
 
@@ -354,7 +350,8 @@ export function DungeonBoard() {
   const resolve_ref = (fighter_id) => {
     const mob_match = /^mob-(\d+)$/.exec(String(fighter_id))
     if (mob_match) return { is_mob: true, idx: Number(mob_match[1]) }
-    const idx = dungeon?.escrow?.findIndex((row) => String(row.character ?? row.character_id) === String(fighter_id)) ?? -1
+    const idx =
+      dungeon?.escrow?.findIndex((row) => String(row.character ?? row.character_id) === String(fighter_id)) ?? -1
     return idx < 0 ? null : { is_mob: false, idx }
   }
 
@@ -383,7 +380,17 @@ export function DungeonBoard() {
     if (!me || !my_turn || !dungeon || fight?.cast_presenting || draft_caster_cell == null) return new Set()
     const blocked = presentation_blocked_cells(dungeon, fight?.fighters, entity_id, optimistic_vacated)
     return new Set(bfsReachable(draft_caster_cell, my_mp_eff, blocked))
-  }, [me, my_turn, my_mp_eff, dungeon, entity_id, draft_caster_cell, optimistic_vacated, fight?.fighters, fight?.cast_presenting])
+  }, [
+    me,
+    my_turn,
+    my_mp_eff,
+    dungeon,
+    entity_id,
+    draft_caster_cell,
+    optimistic_vacated,
+    fight?.fighters,
+    fight?.cast_presenting,
+  ])
 
   // OPTIMISTIC CASTER CELL (FIGHT-WAVE-2 root cause): a cast AFTER a move did NOTHING. `castable` computed
   // range/LOS from `me.cell` — the CHAIN baseline (pre-move) — so a mob only reachable from the drafted post-move
@@ -430,9 +437,7 @@ export function DungeonBoard() {
       // engine_view.my_traps (the ONE client trap home — the sim door reads the SAME projection, so legality and
       // prediction never diverge; an ENEMY's invisible trap stays unknowable and surfaces as the honest abort toast).
       const my_trap_cells =
-        (lvl?.effects ?? []).some((e) => e.kind === 'PLACE_TRAP') && fight?.fight_id
-          ? fight.my_traps
-          : undefined
+        (lvl?.effects ?? []).some((e) => e.kind === 'PLACE_TRAP') && fight?.fight_id ? fight.my_traps : undefined
       const footprint = cast_range_set_dungeon(
         [cast_params.range_min, cast_params.range_max],
         { ...active_fighter, cell: decode(caster_cell) },
@@ -522,9 +527,7 @@ export function DungeonBoard() {
     const spell_key = queue.at(-1)?.spell_key ?? armed_key ?? null
     const caster_idx = dungeon.escrow.findIndex((p) => (p.character ?? p.character_id) === entity_id)
     const template =
-      spell_key === WEAPON_ATTACK_ID
-        ? weapon_spell_template(me?.weapon)
-        : fight_spell_template(spell_key)
+      spell_key === WEAPON_ATTACK_ID ? weapon_spell_template(me?.weapon) : fight_spell_template(spell_key)
     const stats_of = (fighter_id) => {
       const ref = resolve_ref(fighter_id)
       const row = ref?.is_mob ? dungeon.mobs[ref.idx] : dungeon.escrow[ref?.idx]
@@ -689,8 +692,9 @@ export function DungeonBoard() {
         // exported; `occupied`'s idx already matches that indexing.
         const eye_target = ground_targeted ? null : occupied.get(entry.cell)
         const target_committed_cell = eye_target
-          ? (committed_state(fight_store.getState()).fighters?.[`${eye_target.kind === 'mob' ? 'm' : 'p'}${eye_target.idx}`]
-              ?.cell ?? null)
+          ? (committed_state(fight_store.getState()).fighters?.[
+              `${eye_target.kind === 'mob' ? 'm' : 'p'}${eye_target.idx}`
+            ]?.cell ?? null)
           : null
         const drop_entry = (reason) => {
           game_log('board', `flush_commit: staged strike dropped — ${reason}`, {
@@ -829,7 +833,8 @@ export function DungeonBoard() {
     // ④+⑦b: the store's durable my_traps is the ONE trap home — a trap whose cast never reached the chain (dropped,
     // or a failed commit) is taken back by cell through drop_traps; render + cast-legality read the same fold.
     const store_dropped = ok ? trap_dropped : [...trap_placed, ...trap_dropped]
-    if (fight?.fight_id && store_dropped.length) fight_store.getState().input({ type: 'drop_traps', cells: store_dropped })
+    if (fight?.fight_id && store_dropped.length)
+      fight_store.getState().input({ type: 'drop_traps', cells: store_dropped })
     if (fight?.fight_id) for (const cell of [...trap_placed, ...trap_dropped]) pending_trap_cells.current.delete(cell)
     fight_state_trace('flush_finished', { background, ok })
     // FIX 4: stamp each committed SPELL cast (kind:1) onto the cooldown clock at the turn it cast (my_turn_no) —
