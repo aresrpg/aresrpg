@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { configure_walrus_assets, walrus_asset_url } from '@aresrpg/sdk/jobs'
+import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
+
+import { MUSIC_MANIFEST_PROBE_KEY, is_music_asset_resolved, play_audio } from './audio_registry.js'
 
 export const MUSIC_RETRY_DELAYS_MS = [750, 2_000, 5_000, 10_000, 30_000]
 
@@ -15,7 +17,7 @@ export function is_autoplay_block(error) {
 }
 
 export function is_music_manifest_ready() {
-  return walrus_asset_url('music', 'arctic.mp3') != null
+  return is_music_asset_resolved(MUSIC_MANIFEST_PROBE_KEY)
 }
 
 /** Re-fetch the boot manifest without a cached failure and configure the shared SDK resolver. */
@@ -125,7 +127,7 @@ export function create_music_self_heal(options) {
     const attempts = players.map((player) => {
       try {
         if (player.paused === false) return Promise.resolve()
-        return Promise.resolve(player.play())
+        return play_audio(player)
       } catch (error) {
         return Promise.reject(error)
       }

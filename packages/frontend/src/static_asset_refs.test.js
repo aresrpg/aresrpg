@@ -7,14 +7,11 @@
 // that drops a still-referenced asset fails CI instead of shipping a 404.
 //
 // Comments are stripped first: this codebase wraps illustrative paths in backtick prose inside //
-// comments (e.g. sfx.js's own doc comments spell out `/sfx/...`), which a naive scan would misread
+// comments (e.g. audio_registry.js's own doc comments can spell out illustrative paths), which a naive scan would misread
 // as a template literal. The match is also restricted to a path-safe character class, so a
-// `${var}`-interpolated template literal (the actual dynamic path builders — sfx.js
-// element_sfx_src/element_sfx_variant_src, mobs.js mob_visual_url/mob_icon_url) never matches: it
-// builds its filename at runtime and can't be statically resolved here. Those generators carry
-// their own coverage in sfx.js's colocated test and were hand-verified against the #157 restore
-// (every (element, layer) × variant-count combination in ELEMENT_SFX_COVERAGE / SFX_VARIANTS maps
-// to a real file under public/sfx/).
+// `${var}`-interpolated template literal (the actual dynamic path builders — audio_registry.js's elemental
+// variants, mobs.js mob_visual_url/mob_icon_url) never matches: it builds its filename at runtime and can't be
+// statically resolved here. The audio registry's colocated test compares its complete SFX map to public/sfx/.
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'

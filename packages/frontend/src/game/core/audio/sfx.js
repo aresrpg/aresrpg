@@ -16,6 +16,14 @@
 // FUTURE calls; nothing to tear down.
 // ---------------------------------------------------------------------------------------------
 
+import {
+  ELEMENT_AUDIO_VARIANTS,
+  audio_asset_src,
+  element_audio_key,
+  element_audio_src,
+  play_audio,
+} from './audio_registry.js'
+
 const SFX_STORAGE_KEY = 'ares_sfx'
 
 /** @returns {boolean} true if the user previously disabled sound effects */
@@ -51,47 +59,6 @@ export function set_sfx_enabled(enabled) {
   write_sfx_pref(!enabled)
 }
 
-/** @type {Record<'button' | 'carousel' | 'sword_plant' | 'turn_start' | 'crit' | 'death' | 'knockback' | 'player_death' | 'fight_hit_medium' | 'fight_hit_heavy' | 'fight_cast_charge_air' | 'fight_cast_charge_earth' | 'fight_cast_charge_fire' | 'fight_cast_charge_water' | 'fight_cast_resolve' | 'fight_absorb_1' | 'fight_absorb_2' | 'fight_absorb_3', string>} */
-const SOURCES = {
-  button: '/sfx/menu_button.aac',
-  carousel: '/sfx/menu_carousel.aac',
-  // extracted placeholder — replace-before-release: the reference extraction's heavy earth-slam impact
-  // (the D280 fight-start sword planting into the cave floor — fight_sword.js)
-  sword_plant: '/sfx/sword_plant_impact.ogg',
-  // your-turn cue — fired once on the my-turn rising edge by TurnBanner.jsx. [fight-polish 2026-07-12] replaces
-  // a poor-fitting start-turn sound. Swapped OFF the old bright icy-impact ding (turn_start.ogg,
-  // kept in /sfx as an instant revert) to a soft magical CLOCK chime — the single most turn-appropriate semantic
-  // in the whole extraction corpus (a turn = a tick of the clock; the corpus has no purpose-built UI/turn cue,
-  // only combat VFX SFX, and every SHORT one collides with a live fight-impact sound). UNHEARD pick, pending an
-  // ear-check: alternates to A/B are the neutral power-up chime (empowering, 4s) and the bounce pop (short/punchy,
-  // 0.97s) — both in the extraction corpus's audio/ dir (docs/EXTRACTION_PIPELINE.md points at it). No dedicated
-  // map doc exists — this SOURCES block is the live map.
-  turn_start: '/sfx/turn_clock.ogg',
-  // [2026-07-11, addresses a fight-action/sound mismatch and too few sounds] three ACCENT one-shots that
-  // layer ON TOP of the existing element cast/impact pair (never replacing it — mirrors the house fight-feel
-  // reference's layering grammar of several short one-shots stacked per beat, FEEL_NOTES.md "Layering grammar").
-  // Corpus-extracted placeholders (the extraction corpus, docs/EXTRACTION_PIPELINE.md), unverified by ear;
-  // a manual pass is the final gate.
-  crit: '/sfx/crit_spell.ogg', // fires alongside the impact when packet.is_critical (was: silent, identical to a normal hit)
-  death: '/sfx/death_sting.ogg', // fires alongside the impact on a killing blow (was: silent, no distinct "kill" beat)
-  knockback: '/sfx/knockback_impact.ogg', // fires with the existing collision shake (was: shake-only, silent thud)
-  // [2026-07-12, adds a missing death sound for players] the LOCAL player's own KO — a corpus SuddenDeath
-  // sting (the extraction corpus). Distinct from `death` (the generic kill sting the adapter fires for ANY victim
-  // on the blow); this is the player's OWN death moment, voiced once per fight by fight-sfx on the death beat.
-  player_death: '/sfx/player_death.ogg',
-  // temporary third-party corpus — replacement + centralization tracked on the board
-  fight_hit_medium: '/sfx/fight/being-hit-medium.ogg',
-  fight_hit_heavy: '/sfx/fight/being-hit-heavy.ogg',
-  fight_cast_charge_air: '/sfx/fight/cast-charge-air.ogg',
-  fight_cast_charge_earth: '/sfx/fight/cast-charge-earth.ogg',
-  fight_cast_charge_fire: '/sfx/fight/cast-charge-fire.ogg',
-  fight_cast_charge_water: '/sfx/fight/cast-charge-water.ogg',
-  fight_cast_resolve: '/sfx/fight/cast-resolve.ogg',
-  fight_absorb_1: '/sfx/fight/absorb-1.ogg',
-  fight_absorb_2: '/sfx/fight/absorb-2.ogg',
-  fight_absorb_3: '/sfx/fight/absorb-3.ogg',
-}
-
 /** Per-name volume override for `play_sfx` (falls back to 0.4 below). The three accents stay quieter than a
  *  primary impact (0.5, sfx.js element_sfx_volume) so they read as a LAYER, not a competing duplicate. The
  *  player's OWN death is a headline beat (you lost) — the loudest one-shot here. */
@@ -99,89 +66,42 @@ const SOURCE_VOLUME = { crit: 0.45, death: 0.4, knockback: 0.32, player_death: 0
 
 /**
  * Play a one-shot UI sound (file-backed).
- * @param {keyof typeof SOURCES} name
+ * @param {string} name registered audio key
  * @returns {void}
  */
 export function play_sfx(name) {
   if (!is_sfx_enabled()) return
-  const src = SOURCES[name]
-  if (!src) return
-  const audio = new Audio(src)
-  audio.volume = SOURCE_VOLUME[name] ?? 0.4
-  audio.play().catch(() => {})
+  void play_audio(name, { volume: SOURCE_VOLUME[name] ?? 0.4 }).catch(() => {})
 }
 
 // ── F1: 2-LAYER ELEMENT SFX (file-backed OGG) ─────────────────────────────────────────────────────────
 // The reference's two-part spell sound: a `cast` cue on the wind-up + an `impact` cue on the land, keyed
-// per (element, layer) pair (extracted placeholders — replace-before-release, neutral-named under public/sfx).
-// [2026-07-11, addresses too few sound effects] fire/water/earth/air/weapon now ship real one-shots (see
-// the coverage set below — water/earth/air impact + water/earth cast + a dedicated weapon clang, copied from
-// the reference corpus); any (element, layer) pair NOT listed falls back to the neutral one-shot for that
+// per (element, layer) pair (extracted placeholders — replace-before-release). The registry's variant table is
+// also the coverage truth; any (element, layer) pair NOT registered falls back to the neutral one-shot for that
 // layer — never silence, same policy as fight_cast_vfx's art. Louder than the synth UI cues (the impact is a
 // loud fight moment) but capped so it never clips.
-const ELEMENT_SFX_COVERAGE = new Set([
-  'fire:cast',
-  'fire:impact',
-  'water:cast',
-  'water:impact',
-  'earth:cast',
-  'earth:impact',
-  // [2026-07-12, fixes enemy casts all collapsing onto one shared sound] air now has its OWN windup charge (cast_air.ogg =
-  // the corpus ChargeAir), so an air-element enemy cast no longer collapses onto the neutral whoosh. fire/water/
-  // earth casts were ALREADY the corpus element charges (cast_earth == ChargeEarth byte-for-byte); air was the
-  // one hole — every projectile element (fire/water/earth/air) + neutral + heal now maps to a distinct charge.
-  'air:cast',
-  'air:impact',
-  'weapon:impact', // melee has no windup layer (BURST_VFX, vfx_map.js) — impact only
-  'neutral:cast',
-  'neutral:impact',
-  // [2026-07-11] heal windup — a warm corpus "power up" swell instead of falling back to the generic magic-swish
-  // neutral cast (the mismatch: a heal's windup used to sound identical to a damage spell's).
-  'heal:cast',
-  // [2026-07-11] the AoE WASH layer — a per-element bed under the impact when ≥3 cells are struck (the SAME
-  // threshold voxel_fight_adapter's element-wash screen grade already uses), so a splash spell finally SOUNDS
-  // bigger, not just looks bigger.
-  'fire:aoe',
-  'water:aoe',
-  'earth:aoe',
-  'air:aoe',
-  'neutral:aoe',
-])
 const element_sfx_volume = { cast: 0.35, impact: 0.5, aoe: 0.32 }
 
 /** The family a beat resolves to: the covered element, else 'neutral' (the fallback that keeps a beat from ever
  *  going silent). @param {string} element @param {string} layer */
-const sfx_family = (element, layer) => (ELEMENT_SFX_COVERAGE.has(`${element}:${layer}`) ? element : 'neutral')
+const sfx_family = (element, layer) =>
+  Object.hasOwn(ELEMENT_AUDIO_VARIANTS, `${element}:${layer}`) ? element : 'neutral'
 
-/** The BASE (variant-1) `/sfx/...` src for one layer of an element's sound — the deterministic file, never
+/** The BASE (variant-1) src for one layer of an element's sound — the deterministic file, never
  *  silent (falls back to neutral). Pure — unit-tested without touching Audio/DOM. @param {string} element
  *  @param {'cast' | 'impact' | 'aoe'} layer */
-export const element_sfx_src = (element, layer) => `/sfx/${layer}_${sfx_family(element, layer)}.ogg`
+export const element_sfx_src = (element, layer) => element_audio_src(sfx_family(element, layer), layer) ?? ''
 
 // ── VARIANT ROTATION (sounds were too repetitive) ──────────────────────────────────────────
 // The cast whoosh + the impact thwack fire on EVERY spell / EVERY hit, so ONE file per family = the same sound on
-// loop (too repetitive). Each high-frequency family now cycles 2–3 CORPUS variants (the extraction corpus): the
-// base = `${layer}_${family}.ogg` (variant 1) + extras `_2.ogg`.._N.ogg. A seeded, NON-REPEATING pick per play
+// loop (too repetitive). Each high-frequency family now cycles 2–3 registered CORPUS variants. A seeded, NON-REPEATING pick per play
 // (never the same file twice in a row) breaks the monotony. Corpus files ONLY — a family on a rotation layer with
 // <2 variants plays its base and loud-warns ONCE (an honest coverage gap, never a faked/duplicated file). The
 // copied variants (all from the extraction corpus, same extracted-placeholder footing as the bases): cast = Charge/
 // PowerUp/Whoosh/Swish per element; impact = element explosion + Impact_{Ice,Earth,Human,Metal} shorts.
-const SFX_VARIANTS = /** @type {Record<string, number>} */ ({
-  'fire:cast': 3, // ChargeFire · PowerUpFire · Whoosh_Fire
-  'water:cast': 3, // ChargeWater · PowerUpWater · Dive_Ice
-  'earth:cast': 2, // ChargeEarth · PowerUpEarth
-  'air:cast': 3, // ChargeAir · PowerUpAir · Whirlwind_Swish
-  'neutral:cast': 2, // base · Whirlwind_SwishLow
-  'fire:impact': 2, // base · GenericExplosion_Fire
-  'water:impact': 2, // base · Impact_Ice
-  'earth:impact': 2, // base · Impact_Earth
-  'air:impact': 2, // base · Lightning
-  'neutral:impact': 3, // base · Impact_Human_Medium · Impact_Human_Large
-  'weapon:impact': 2, // base · Impact_Metal
-})
 /** How many files exist for a family:layer (base + extras). Absent ⇒ 1 (the base only, no rotation). */
 const variant_count = (/** @type {string} */ family, /** @type {string} */ layer) =>
-  SFX_VARIANTS[`${family}:${layer}`] ?? 1
+  ELEMENT_AUDIO_VARIANTS[`${family}:${layer}`] ?? 1
 /** The layers that SHOULD rotate (every-beat sounds) — a <2-variant family on these loud-warns as a coverage gap. */
 const ROTATION_LAYERS = new Set(['cast', 'impact'])
 
@@ -203,26 +123,29 @@ export const pick_variant_index = (count, last, rng = Math.random) => {
 const _last_variant = /** @type {Map<string, number>} */ (new Map())
 const _warned_variants = /** @type {Set<string>} */ (new Set())
 /**
- * The ROTATED src for a beat: resolve the family, pick a non-repeating variant, return `/sfx/{layer}_{family}[_N].ogg`
- * (no suffix for variant 1 = the base). A family on a rotation layer (cast/impact) with <2 corpus variants
+ * The ROTATED src for a beat: resolve the family and pick a non-repeating registered variant. A family on a rotation layer (cast/impact) with <2 corpus variants
  * loud-warns ONCE and plays its base. Stateful (the no-repeat memory); the rng is injectable for tests.
  * @param {string} element @param {'cast'|'impact'|'aoe'} layer @param {() => number} [rng] @returns {string}
  */
-export const element_sfx_variant_src = (element, layer, rng = Math.random) => {
+const element_sfx_variant_key = (element, layer, rng = Math.random) => {
   const family = sfx_family(element, layer)
   const key = `${family}:${layer}`
   const count = variant_count(family, layer)
   if (ROTATION_LAYERS.has(layer) && count < 2 && !_warned_variants.has(key)) {
     _warned_variants.add(key)
+    const missing_src = element_audio_src(family, layer, 2)
     console.warn(
       `[fight-sfx] "${key}" plays ONE file every time (<2 corpus variants) — repetitive. Add ` +
-        `/sfx/${layer}_${family}_2.ogg from the extraction corpus (never duplicate the base to fake a variant).`
+        `${missing_src ?? element_audio_key(family, layer, 2)} from the extraction corpus (never duplicate the base to fake a variant).`
     )
   }
   const idx = pick_variant_index(count, _last_variant.get(key), rng)
   _last_variant.set(key, idx)
-  return `/sfx/${layer}_${family}${idx > 1 ? `_${idx}` : ''}.ogg`
+  return element_audio_key(family, layer, idx)
 }
+
+export const element_sfx_variant_src = (element, layer, rng = Math.random) =>
+  audio_asset_src(element_sfx_variant_key(element, layer, rng)) ?? ''
 
 // LOUD-NOT-SILENT fallback telemetry (enemy casts were all collapsing onto one shared sound): the moment an (element,
 // layer) beat has no dedicated file and rides the neutral one-shot, name the family ONCE (deduped — a fight
@@ -231,11 +154,12 @@ export const element_sfx_variant_src = (element, layer, rng = Math.random) => {
 const _warned_fallbacks = new Set()
 const warn_sfx_fallback = (/** @type {string} */ element, /** @type {string} */ layer) => {
   const key = `${element}:${layer}`
-  if (ELEMENT_SFX_COVERAGE.has(key) || _warned_fallbacks.has(key)) return
+  if (Object.hasOwn(ELEMENT_AUDIO_VARIANTS, key) || _warned_fallbacks.has(key)) return
   _warned_fallbacks.add(key)
+  const wanted = element_audio_src(element, layer) ?? element_audio_key(element, layer)
   console.warn(
     `[fight-sfx] no dedicated "${layer}" sound for element "${element}" — using neutral. ` +
-      `Add "${key}" to ELEMENT_SFX_COVERAGE + drop /sfx/${layer}_${element}.ogg (the extraction corpus) to give it its own voice.`
+      `Register "${key}" (${wanted}) from the extraction corpus to give it its own voice.`
   )
 }
 
@@ -252,9 +176,8 @@ export function play_element_sfx(element, layer) {
   warn_sfx_fallback(element, layer) // loud once if this (element, layer) has no dedicated file (rides neutral)
   // ROTATE among the family's corpus variants (sounds were too repetitive) — never the same file twice in
   // a row; falls back to the base for a single-variant family. Transparent to callers (adapter/fight-sfx unchanged).
-  const audio = new Audio(element_sfx_variant_src(element, layer))
-  audio.volume = element_sfx_volume[layer] ?? 0.4
-  audio.play().catch(() => {})
+  const key = element_sfx_variant_key(element, layer)
+  void play_audio(key, { volume: element_sfx_volume[layer] ?? 0.4 }).catch(() => {})
 }
 
 // ── synthesized combat SFX (Web Audio) ────────────────────────────────────────────────

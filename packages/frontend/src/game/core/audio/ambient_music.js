@@ -12,12 +12,10 @@
 // tropical) — TRACK_NAMES is the single list. MUSIC LAW: every biome — the 9 exact
 // matches, the 17-entry terrain registry, any on-chain per-world biome, all of them — hash-assigns onto
 // one pair (track_for_biome); there is no curated per-biome row to maintain and no silence fallback. Widen
-// the pool later by uploading a new `<name>.mp3` + `<name>_battle.mp3` pair and adding the name below.
+// the pool later by registering a new roam/battle pair and adding its name to the registry.
 
-import { walrus_asset_url } from '@aresrpg/sdk/jobs'
-
-import { ASSETS_URL } from '../../../env'
 import { game_log } from '../../../core/log.js'
+import { MUSIC_TRACK_NAMES, create_audio, music_audio_src } from './audio_registry.js'
 import { create_music_self_heal } from './music_self_heal.js'
 
 // ---------------------------------------------------------------------------------------------
@@ -29,23 +27,11 @@ const FADE = 1.4 // seconds for visibility ducking and one-stream track handoff 
 
 /**
  * The owned non-battle track names — the ONLY music we ship (the prior YouTube-ripped
- * lobby placeholder is deleted outright, never replaced). Each name has a `<name>.mp3` (world/biome roam
- * loop) + `<name>_battle.mp3` (fight loop) pair on the Walrus `music` quilt. ASSETS_URL is the host-free
- * /assets base, so a value is `/assets/music/<name>.mp3` — walrus_music_url resolves it to the aggregator
- * (curl-verified 200). NOT local imports — these are 2MB+ binaries and the music/ source dir is gitignored.
+ * lobby placeholder is deleted outright, never replaced). Each name has a roam/fight pair on the Walrus
+ * `music` quilt. Paths and lazy manifest resolution live in audio_registry; these are not local imports.
  * @type {readonly string[]}
  */
-export const TRACK_NAMES = [
-  'arctic',
-  'desert',
-  'glacier',
-  'grassland',
-  'scorched',
-  'swamp',
-  'taiga',
-  'temperate',
-  'tropical',
-]
+export const TRACK_NAMES = MUSIC_TRACK_NAMES
 
 /**
  * Deterministic string hash (FNV-1a) → non-negative int32. Pure, stable across runs/platforms — no
@@ -72,22 +58,15 @@ export function track_for_biome(biome, pool = TRACK_NAMES) {
   return pool[hash_string(biome) % pool.length]
 }
 
-// Walrus (boot manifest) first — the decentralized home — else the CDN (progressive migration). Resolved
-// lazily per call (not at module init) so a manifest fetched after boot still wins. The `music` quilt is
-// keyed by filename, so `${ASSETS_URL}/music/arctic.mp3` maps to identifier `arctic.mp3`. The quilt-patch
-// URL carries the `.mp3` extension, so <audio> streams it even though the aggregator sets no content-type.
-/** @param {string} cdn_url @returns {string} */
-const walrus_music_url = (cdn_url) => walrus_asset_url('music', cdn_url.split('/').pop() ?? '') ?? cdn_url
-
-/** The armed zone's bed PAIR — roam `${name}.mp3` + its battle TWIN `${name}_battle.mp3`, both off the SAME
+/** The armed zone's bed PAIR — roam + its battle twin, both off the SAME
  * hash-assigned track name (so a fight in an arctic zone plays arctic_battle, never a foreign battle track).
  * Exported for the twin-invariant unit test. @param {string} biome @returns {{ roam: string, battle: string } | null} the pair, or null for a falsy biome */
 export function resolve_tracks(biome) {
   if (!biome) return null
   const name = track_for_biome(biome)
   return {
-    roam: walrus_music_url(`${ASSETS_URL}/music/${name}.mp3`),
-    battle: walrus_music_url(`${ASSETS_URL}/music/${name}_battle.mp3`),
+    roam: music_audio_src(name, 'roam') ?? '',
+    battle: music_audio_src(name, 'battle') ?? '',
   }
 }
 
@@ -266,11 +245,9 @@ function on_visibility() {
 
 /** @param {string} url @returns {HTMLAudioElement} a looping, preloaded bed */
 function make_audio(url) {
-  const a = new Audio(url)
-  a.loop = true
-  a.preload = 'auto'
-  a.addEventListener('error', music_heal.on_load_error)
-  return a
+  return /** @type {HTMLAudioElement} */ (
+    create_audio(url, { loop: true, preload: 'auto', on_error: music_heal.on_load_error })
+  )
 }
 
 // SOFT ZONE CROSSFADE (per-region music): multiple region beds ship now, so a zone
@@ -521,7 +498,7 @@ export function set_volume(v) {
 // ---------------------------------------------------------------------------------------------
 // FIGHT MUSIC = THE ARMED ZONE'S `_battle` TWIN: the battle bed is the zone's own twin — if the roam
 // bed picked arctic for a biome, a battle in this biome plays arctic_battle. engine_start builds
-// BOTH beds from resolve_tracks(current_biome) — roam `${name}.mp3` + battle `${name}_battle.mp3` — so the
+// BOTH beds from resolve_tracks(current_biome) — roam + battle twin — so the
 // battle bed is ALREADY the current zone's twin; set_combat hands off to it (NO independent random
 // pick — the old global FIGHT_TRACKS roll could play a DIFFERENT biome's battle than the zone playing, which
 // broke this spec). A context-less world fight self-arms a random BIOME (pick_random_biome) whose OWN twin
@@ -556,7 +533,7 @@ export function pick_random_biome(rand = Math.random) {
  * exactly like a dungeon exit.
  *
  * Once a zone exists (self-armed or real), the RISING edge switches to the battle bed that
- * engine_start already pointed at the current zone's `${biome}_battle.mp3` twin (e.g. arctic→arctic_battle)
+ * engine_start already pointed at the current zone's battle twin (e.g. arctic→arctic_battle)
  * — NO random repoint. The falling edge switches back to the already-preloaded roam twin.
  *
  * FIGHT-MUSIC PREFERENCE gate (is_fight_music_enabled): disabled fight music must never CONJURE new music —
