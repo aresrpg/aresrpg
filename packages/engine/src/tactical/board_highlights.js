@@ -350,8 +350,9 @@ export function create_board_highlights(board, { reversed_depth = false } = {}) 
   const fade_in = (/** @type {any} */ ch, /** @type {boolean} */ fresh) => {
     if (!ch.u_fade) return // outline (selection) never fades
     if (fresh) {
-      ch.fade.cur = 0
-      ch.u_fade.value = 0
+      const start = ch.fade.fade_in_s === 0 ? 1 : 0
+      ch.fade.cur = start
+      ch.u_fade.value = start
     }
     ch.fade.clearing = false
     ch.fade.target = 1

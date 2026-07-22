@@ -31,6 +31,7 @@ import {
   merged_rect_gradient,
   neighbor_mask,
   rounded_rect_gradient,
+  resolve_fade,
   resolve_highlight_style,
   trap_blob_alpha,
 } from './board_highlights.js'
@@ -123,6 +124,18 @@ describe('D256 punchy channel palette — deliberate saturation override', () =>
     expect(g).toBeGreaterThan(b)
     expect(g).toBeLessThan((CHANNELS.mp_range.color >> 8) & 0xff) // darker than the reach green
   })
+  test('[#440] hovered path is one opaque dark-green paint from its first frame, never a blend with mp_range', () => {
+    const style = resolve_highlight_style(CHANNELS.path)
+    expect(CHANNELS.path.order).toBeGreaterThan(CHANNELS.mp_range.order)
+    expect(CHANNELS.path.opacity * style.center_alpha).toBe(1)
+    expect(resolve_fade(CHANNELS.path).fade_in_s).toBe(0)
+
+    const ctrl = create_board_highlights(stub_board())
+    ctrl.set_channel([{ x: 1, y: 1 }], 'mp_range')
+    ctrl.set_channel([{ x: 1, y: 1 }], 'path')
+    expect(ctrl._fade_of('path')).toBe(1)
+    ctrl.dispose()
+  })
   test('[D256] target is PUNCHY DEEP BLUE — blue-dominant', () => {
     const tgt = chan(CHANNELS.target.color)
     expect(tgt.b).toBeGreaterThan(tgt.r)
@@ -168,7 +181,7 @@ describe('D256 punchy channel palette — deliberate saturation override', () =>
     expect(path).toBeLessThan(range)
     expect(range).toBeLessThan(mp_range)
     expect(mp_range / range).toBeGreaterThanOrEqual(3)
-    expect(resolve_highlight_style(CHANNELS.path)).toEqual(DEFAULT_CENTER_STYLE)
+    expect(resolve_highlight_style(CHANNELS.path)).toEqual({ ...DEFAULT_CENTER_STYLE, center_alpha: 1 })
     expect(resolve_highlight_style(CHANNELS.mp_range)).toEqual({
       unlit_gain: 1.35,
       center_dim: 0.72,
@@ -794,9 +807,11 @@ describe('entity anchor — SQUARED cell shape: subtle fill + crisp edge outline
 })
 
 describe('entity anchor — TEAM color is CLEARLY VISIBLE (fixes "barely-visible round blob")', () => {
-  test('the edge opacity matches or beats the punchiest CHANNELS entry — never wishy-washy', () => {
-    const max_channel_opacity = Math.max(...Object.values(CHANNELS).map((c) => c.opacity))
-    expect(ENTITY_ANCHOR_EDGE_OPACITY).toBeGreaterThanOrEqual(max_channel_opacity)
+  test('the edge opacity matches or beats every translucent channel — never wishy-washy', () => {
+    const translucent = Object.entries(CHANNELS)
+      .filter(([key]) => key !== 'path') // #440 path is intentionally the sole opaque replacement paint
+      .map(([, channel]) => channel.opacity)
+    expect(ENTITY_ANCHOR_EDGE_OPACITY).toBeGreaterThanOrEqual(Math.max(...translucent))
   })
   test('the fill stays subtle (below every CHANNELS opacity) — the team read comes from the edge, not the fill', () => {
     for (const spec of Object.values(CHANNELS)) expect(ENTITY_ANCHOR_FILL_OPACITY).toBeLessThan(spec.opacity)

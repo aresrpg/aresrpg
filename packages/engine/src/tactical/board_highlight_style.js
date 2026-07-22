@@ -81,7 +81,9 @@ export const GLYPH_TICK_FLARE = Object.freeze({ color: GLYPH_TINT.color, peak: 0
 export const CHANNELS = {
   // §7 CellState vocabulary
   highlight: { color: 0x2f7bf5, opacity: 0.8, order: 1 },
-  path: { color: 0x0b4712, opacity: 0.94, order: 4 }, // [#212] DARK movement path — darkened again, see mp_range
+  // [#440] The hover path sits over mp_range, so its full tile must be opaque from frame one: the dark green
+  // replaces the light-green wash visually instead of alpha-blending into a pale double blob.
+  path: { color: 0x0b4712, opacity: 1, order: 4, center_alpha: 1, fade_in_s: 0 },
   aoe: { color: 0xa01414, opacity: 0.86, order: 3 },
   start_a: { color: 0x2f6bd8, opacity: 0.8, order: 2 },
   start_b: { color: 0xff7a2c, opacity: 0.8, order: 2 },
