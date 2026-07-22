@@ -223,13 +223,15 @@ export const recompute = (draft, now) => {
   const log = all_log.filter((e) => e.version > draft.view_version)
   const claimed_budget = (draft.claimed_budget ?? []).filter((row) => claim_version(row) > Number(draft.view_version))
   const committed = fold_claimed_budget(base, log, claimed_budget)
+  const authoritative_tail = log.filter((entry) => entry.source !== 'intent')
+  const chain_committed = authoritative_tail.reduce(apply_action, base)
   // V1: append-only death floors, carried forward (base-dead at view_version + authoritative tail deaths at their
   // own version). Intents never retire (predictions). `alive` derives from this — apply_retirement below overrides
   // any later positive-hp read for a floor-dead fighter (the resurrection root).
   const retired = derive_retired(
     draft.retired,
     base,
-    log.filter((e) => e.source !== 'intent'),
+    authoritative_tail,
     draft.view_version
   )
   const authoritative_log = all_log.filter((e) => e.version >= draft.view_version && e.source !== 'intent')
@@ -269,30 +271,37 @@ export const recompute = (draft, now) => {
   const provider = provider_of({ presenting, playable, view: draft.view, spectator })
   // ④+⑦b TRAP SPRING (durable, receipt-proven): a `my_traps` cell detonates → mark `gone` FOREVER (never regress a
   // receipt-proven fact; the optimistic spring is engine_view's reversible presented-occupied exclusion). Already-
-  // gone rows keep identity. A trap fires ON-CHAIN only when a fighter ENTERS its cell (spell_board::on_enter), and
-  // movement/displacement TRUNCATE on the first trap (movement.move:32-39 · reduce.js:415-423) — so a fired trap
-  // ALWAYS leaves its trigger STANDING (or dead) on the cell. The ONE proof "this trap fired": a COMMITTED
-  // (intents-EXCLUDED) fighter now OCCUPIES the cell — the force-stop LANDING, the same matches_trap(to_cell) signal
-  // pace_segment fires the trap_trigger render beat on (fight_render_events). LEG E — the chain corrects
-  // the fight and shows the trap as already triggered: the landing counts DEAD too — a push that
-  // KILLS the mob ON the trap leaves a receipt-proven corpse on the cell, a detonation exactly like a live stop;
-  // filtering `f.alive` here excluded that corpse and resurrected a lethal trap. Traps land ONLY on EMPTY cells
-  // (free_cell — spell_target.move:46 · spell_targeting.js:95), so an occupant can only have ENTERED: zero standing
-  // false-positives for the point-trap corpus.
+  // gone rows keep identity. A trap fires ON-CHAIN only when a fighter ENTERS its cell (spell_board::on_enter), so
+  // consume it from the COMMITTED transition log, not from the batch's final fighter positions. A pushed fighter
+  // may land on the trap and then take its mob turn away in the SAME receipt (#512); final-position sampling loses
+  // that entry and lets the marker resurrect when presentation drains. The canonical fold is unconditional while
+  // presentation owns only pacing. The standing-position proof remains for bootstrap/legacy rows, including a dead
+  // trigger: a trap can only be placed on an empty cell, so a committed occupant proves entry.
   // NO version-bump proxy (RESIDUAL FIX, v1.12.34: trap reconciliation between sim and
   // chain still drifted): a routine poll re-reads the Fight OBJECT and bumps view_version — that is NOT a firing. The removed
   // `superseded` predicate retired EVERY placed trap on the next snapshot, so the sim door stopped predicting its
   // force-stop/damage while the chain kept it armed (and, dual-home, a re-cast then aborted ECellAlreadyTrapped and
-  // nuked the whole batch). Truncation-stops makes it redundant: a real crossing leaves an occupant `detonated`
-  // already catches, from any path (receipt tail OR a wholesale snapshot's standing base). Fight.fx is dropped from
-  // reads, so my_traps only RETIRES on this proof — it errs toward "it stays".
-  const detonated = new Set(
-    Object.values(committed_state(draft).fighters ?? {})
-      .filter((f) => f.cell != null)
-      .map((f) => f.cell)
+  // nuked the whole batch). Fight.fx is dropped from reads, so my_traps only RETIRES on committed entry/occupancy
+  // proof — it errs toward "it stays".
+  const occupied_cells = new Set(
+    Object.values(chain_committed.fighters ?? {})
+      .filter((fighter) => fighter.cell != null)
+      .map((fighter) => fighter.cell)
   )
+  const committed_entries = authoritative_tail
+    .filter((entry) => ['Moved', 'MobMoved', 'Displaced'].includes(entry.kind) && entry.to_cell != null)
+    .map((entry) => ({ cell: Number(entry.to_cell), version: Number(entry.version) }))
   const my_traps = (draft.my_traps ?? []).map((t) =>
-    t.gone ? t : t.cells.some((c) => detonated.has(c)) ? { ...t, gone: true } : t
+    t.gone ||
+    !t.cells.some(
+      (cell) =>
+        occupied_cells.has(cell) ||
+        committed_entries.some(
+          (entry) => entry.cell === Number(cell) && entry.version >= Number(t.basis_version ?? entry.version)
+        )
+    )
+      ? t
+      : { ...t, gone: true }
   )
   // GLYPH EXPIRY (persistent, NOT detonated): unlike a trap, a glyph is never sprung by a fighter standing on it
   // (check_glyphs ticks + persists). It dies only by decay_glyphs — so decrement turns_remaining on each of MY
