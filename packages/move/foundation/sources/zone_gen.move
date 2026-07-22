@@ -27,6 +27,9 @@ const CLUSTER_CAP: u64 = 20;
 const MIN_SPAWN_SPACING: u64 = 20; // mob group spawns pairwise ≥ 20 blocks apart
 const SPACING_D2: u64 = MIN_SPAWN_SPACING * MIN_SPAWN_SPACING; // squared compare (no sqrt) = 400
 const POS_ATTEMPTS: u64 = 64; // rejection-sampling cap; on exhaustion accept the last roll (a zone too small to fit)
+const GRID_PITCH: u64 = MIN_SPAWN_SPACING * 2; // 40-block cells; adjacent centred jitter bands stay 20 apart
+const GRID_MARGIN: u64 = MIN_SPAWN_SPACING / 2; // 10-block fixed inset on every cell edge
+const GRID_JITTER: u64 = MIN_SPAWN_SPACING; // inclusive 0..20 jitter after the fixed inset
 const EBadGroupCommitmentInput: u64 = 1;
 const GROUP_HASH_BYTES: u64 = 32;
 const MAX_GROUPS: u64 = 64;
@@ -123,6 +126,42 @@ fun p_roll_pos_spaced(state: u64, xs: &vector<u32>, zs: &vector<u32>, ox: u32, o
   (s, fx, fz)
 }
 
+/// Row-major indices for every COMPLETE 40-block cell inside `zone ∩ world`. The narrow remainder strips are
+/// intentionally unused: keeping every chosen position inside the centred 20-block jitter band means positions
+/// in horizontally/vertically adjacent cells retain an axis gap of at least 20, whose square is `SPACING_D2`.
+fun grid_cell_pool(ox: u32, oz: u32, zsize: u32, bx: u32, bz: u32): (u64, vector<u64>) {
+  let zone_max_x = (ox as u64) + (zsize as u64);
+  let zone_max_z = (oz as u64) + (zsize as u64);
+  let max_x = if (zone_max_x < (bx as u64)) zone_max_x else (bx as u64);
+  let max_z = if (zone_max_z < (bz as u64)) zone_max_z else (bz as u64);
+  let width = if (max_x > (ox as u64)) max_x - (ox as u64) else 0;
+  let depth = if (max_z > (oz as u64)) max_z - (oz as u64) else 0;
+  let cols = width / GRID_PITCH;
+  let count = cols * (depth / GRID_PITCH);
+  let mut cells = vector[];
+  let mut i = 0;
+  while (i < count) { cells.push_back(i); i = i + 1; };
+  (cols, cells)
+}
+
+/// One partial Fisher-Yates step over the remaining cell suffix, then two draws (x jitter, z jitter). `used`
+/// advances exactly once per successful placement; when only one cell remains the range helper's point-band
+/// rule skips the choice draw, while both jitter draws remain accounted exactly as in the JS twin.
+fun p_pick_grid_pos(
+  state: u64, cells: &mut vector<u64>, used: u64, cols: u64, ox: u32, oz: u32,
+): (u64, u32, u32) {
+  let (s1, picked) = p_roll_u64(state, used, cells.length() - 1);
+  cells.swap(used, picked);
+  let cell = cells[used];
+  let (s2, jx) = p_roll_u64(s1, 0, GRID_JITTER);
+  let (s3, jz) = p_roll_u64(s2, 0, GRID_JITTER);
+  let cell_x = cell % cols;
+  let cell_z = cell / cols;
+  let x = (ox as u64) + cell_x * GRID_PITCH + GRID_MARGIN + jx;
+  let z = (oz as u64) + cell_z * GRID_PITCH + GRID_MARGIN + jz;
+  (s3, x as u32, z as u32)
+}
+
 // ╔════════════════ [ Mob-group derivation ] ═══════════════════════════════════ ]
 
 /// Derive a discovered zone's FULL mob-group list from its composition `seed` — the on-chain twin of
@@ -170,6 +209,58 @@ public fun derive_mob_groups(
     let (s3, x, z) = p_roll_pos_spaced(s, &xs, &zs, ox, oz, zsize, bx, bz);
     s = s3;
     let (s4, gseed) = prng::rng_next(s);
+    let (s5, sid_hi) = prng::rng_next(s4);
+    let (s6, sid_lo) = prng::rng_next(s5);
+    s = s6;
+    spawn_ids.push_back((sid_hi << 32) | sid_lo);
+    tmpl_idxs.push_back(idx);
+    xs.push_back(x);
+    zs.push_back(z);
+    sizes.push_back(gsize);
+    seeds.push_back(gseed);
+    i = i + 1;
+  };
+  (spawn_ids, tmpl_idxs, xs, zs, sizes, seeds)
+}
+
+/// Grid-cell placement for newly discovered zones. This is deliberately NEW alongside `derive_mob_groups`:
+/// already-committed zones retain the rejection-sampled stream forever. Each group takes a distinct cell via a
+/// partial Fisher-Yates step, so the 20-block law holds without scanning earlier positions. Draw order PER GROUP:
+/// weighted template · size · remaining-cell choice · x jitter · z jitter · group seed · spawn-id hi · lo.
+public fun derive_mob_groups_grid(
+  seed: u64,
+  min_g: u64,
+  max_g: u64,
+  weights: &vector<u64>,
+  min_group: &vector<u64>,
+  max_group: &vector<u64>,
+  size_bound: u64,
+  ox: u32,
+  oz: u32,
+  zsize: u32,
+  bx: u32,
+  bz: u32,
+): (vector<u64>, vector<u64>, vector<u32>, vector<u32>, vector<u16>, vector<u64>) {
+  let mut spawn_ids = vector<u64>[];
+  let mut tmpl_idxs = vector<u64>[];
+  let mut xs = vector<u32>[];
+  let mut zs = vector<u32>[];
+  let mut sizes = vector<u16>[];
+  let mut seeds = vector<u64>[];
+  let mut s = prng::rng_seed(prng::mix(seed, MOB_SALT));
+  let (s0, g) = p_roll_u64(s, min_g, max_g);
+  s = s0;
+  let (cols, mut cells) = grid_cell_pool(ox, oz, zsize, bx, bz);
+  let mut i = 0;
+  while (i < g && i < cells.length()) {
+    let (s1, opt) = p_pick_weighted(s, weights);
+    s = s1;
+    if (opt.is_none()) break;
+    let idx = opt.destroy_some();
+    let (s2, raw) = p_roll_u64(s, min_group[idx], max_group[idx]);
+    let (s3, x, z) = p_pick_grid_pos(s2, &mut cells, i, cols, ox, oz);
+    let gsize = world_math::clamp_group_u16(raw, size_bound);
+    let (s4, gseed) = prng::rng_next(s3);
     let (s5, sid_hi) = prng::rng_next(s4);
     let (s6, sid_lo) = prng::rng_next(s5);
     s = s6;
@@ -372,6 +463,73 @@ public fun derive_resources(
       };
     } else {
       // non-gather resource: ONE cell, one harvest (the one-bit collapse — no multi-charge nodes)
+      let (s5, sid_hi) = prng::rng_next(s);
+      let (s6, sid_lo) = prng::rng_next(s5);
+      s = s6;
+      spawn_ids.push_back((sid_hi << 32) | sid_lo);
+      tmpl_idxs.push_back(idx);
+      xs.push_back(ax);
+      zs.push_back(az);
+    };
+  };
+  (spawn_ids, tmpl_idxs, xs, zs)
+}
+
+/// Grid-cell placement for newly discovered resource anchors, NEW alongside the pinned legacy function above.
+/// Draw order PER PICK: weighted template · qty · remaining-cell choice · x jitter · z jitter · [gather field
+/// growth] · per-cell spawn-id hi · lo. One distinct cell is consumed per pick; a gather field still grows from
+/// its jittered anchor with the unchanged hashed-Prim stream.
+public fun derive_resources_grid(
+  seed: u64,
+  min_n: u64,
+  max_n: u64,
+  weights: &vector<u64>,
+  min_qty: &vector<u64>,
+  max_qty: &vector<u64>,
+  jobs: &vector<u8>,
+  ox: u32,
+  oz: u32,
+  zsize: u32,
+  bx: u32,
+  bz: u32,
+): (vector<u64>, vector<u64>, vector<u32>, vector<u32>) {
+  let mut spawn_ids = vector<u64>[];
+  let mut tmpl_idxs = vector<u64>[];
+  let mut xs = vector<u32>[];
+  let mut zs = vector<u32>[];
+  let mut s = prng::rng_seed(prng::mix(seed, RES_SALT));
+  let (s0, target_n) = p_roll_u64(s, min_n, max_n);
+  s = s0;
+  let (cols, mut cells) = grid_cell_pool(ox, oz, zsize, bx, bz);
+  let mut used = 0;
+  let max_cx = { let m = ox + zsize - 1; if (m > bx - 1) bx - 1 else m };
+  let max_cz = { let m = oz + zsize - 1; if (m > bz - 1) bz - 1 else m };
+  while (xs.length() < target_n && used < cells.length()) {
+    let (s1, opt) = p_pick_weighted(s, weights);
+    s = s1;
+    if (opt.is_none()) break;
+    let idx = opt.destroy_some();
+    let (s2, qty) = p_roll_u64(s, min_qty[idx], max_qty[idx]);
+    let (s3, ax, az) = p_pick_grid_pos(s2, &mut cells, used, cols, ox, oz);
+    s = s3;
+    used = used + 1;
+    if (jobs[idx] <= MAX_GATHER_JOB) {
+      let k = if (qty > CLUSTER_CAP) CLUSTER_CAP else qty;
+      let (s4, cxs, czs) = p_grow_cluster(s, ax, az, k, ox, max_cx, oz, max_cz);
+      s = s4;
+      let cells_n = cxs.length();
+      let mut c = 0;
+      while (c < cells_n) {
+        let (s5, sid_hi) = prng::rng_next(s);
+        let (s6, sid_lo) = prng::rng_next(s5);
+        s = s6;
+        spawn_ids.push_back((sid_hi << 32) | sid_lo);
+        tmpl_idxs.push_back(idx);
+        xs.push_back(cxs[c]);
+        zs.push_back(czs[c]);
+        c = c + 1;
+      };
+    } else {
       let (s5, sid_hi) = prng::rng_next(s);
       let (s6, sid_lo) = prng::rng_next(s5);
       s = s6;

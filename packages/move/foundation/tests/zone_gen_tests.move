@@ -120,6 +120,48 @@ fun t_derive_mob_groups_starved_table_is_empty() {
   assert!(sids.length() == 0 && xs.length() == 0, 0);
 }
 
+#[test]
+/// NEW-DISCOVERY PARITY CONTRACT — partial Fisher-Yates cell picks and centred jitter match the JS twin.
+fun t_grid_mob_groups_match_js_mirror() {
+  let (sids, idxs, xs, zs, sizes, seeds) = zone_gen::derive_mob_groups_grid(
+    123456789, 8, 8, &vector[100, 50], &vector[1, 2], &vector[6, 6], 6,
+    0, 0, 512, 500000, 500000,
+  );
+  assert!(xs.length() == 8, 0);
+  assert!(idxs[0] == 0 && xs[0] == 93 && zs[0] == 69 && sizes[0] == 2 &&
+    seeds[0] == 1061825901 && sids[0] == 17335301868684203457, 1);
+  assert!(idxs[1] == 1 && xs[1] == 29 && zs[1] == 299 && sizes[1] == 6 &&
+    seeds[1] == 1337586162 && sids[1] == 11222636116455882630, 2);
+  assert!(idxs[4] == 0 && xs[4] == 214 && zs[4] == 263 && sizes[4] == 6 &&
+    seeds[4] == 1128920888 && sids[4] == 5785876176118380760, 3);
+  assert!(idxs[7] == 0 && xs[7] == 183 && zs[7] == 414 && sizes[7] == 4 &&
+    seeds[7] == 1767650018 && sids[7] == 7940677434439223471, 4);
+}
+
+#[test]
+/// Grid placement enforces the same `SPACING_D2 = 400` law without scanning prior positions.
+fun t_grid_mob_groups_spacing_law_holds() {
+  let mut seed = 1u64;
+  while (seed <= 60) {
+    let (_s, _i, xs, zs, _sz, _gs) = zone_gen::derive_mob_groups_grid(
+      seed, 53, 53, &vector[100, 50], &vector[1, 2], &vector[6, 6], 6,
+      0, 0, 512, 500000, 500000,
+    );
+    let mut a = 0;
+    while (a < xs.length()) {
+      let mut b = a + 1;
+      while (b < xs.length()) {
+        let dx = if (xs[a] >= xs[b]) (xs[a] - xs[b]) as u64 else (xs[b] - xs[a]) as u64;
+        let dz = if (zs[a] >= zs[b]) (zs[a] - zs[b]) as u64 else (zs[b] - zs[a]) as u64;
+        assert!(dx * dx + dz * dz >= 400, seed);
+        b = b + 1;
+      };
+      a = a + 1;
+    };
+    seed = seed + 1;
+  };
+}
+
 // ╔════════════════ [ Resource-cell derivation (one-harvest / one-bit) ] ═══════ ]
 
 #[test]
@@ -171,6 +213,20 @@ fun t_derive_resources_deterministic() {
   let (a2, b2, c2, d2) = zone_gen::derive_resources(
     77, 5, 5, &vector[100], &vector[3, 3], &vector[3, 3], &vector[1], 0, 0, 256, 400000, 400000);
   assert!(a1 == a2 && b1 == b2 && c1 == c2 && d1 == d2, 0);
+}
+
+#[test]
+/// NEW-DISCOVERY resource parity: shuffled anchor cells, unchanged field walk, and unchanged per-cell id order.
+fun t_grid_resources_match_js_mirror() {
+  let (sids, idxs, xs, zs) = zone_gen::derive_resources_grid(
+    424242, 8, 8, &vector[100, 100], &vector[6, 6], &vector[6, 6], &vector[0, 5],
+    0, 0, 512, 500000, 500000,
+  );
+  assert!(xs.length() == 12, 0);
+  assert!(idxs[0] == 0 && xs[0] == 469 && zs[0] == 19 && sids[0] == 6634652389384369540, 1);
+  assert!(idxs[5] == 0 && xs[5] == 469 && zs[5] == 16 && sids[5] == 10314631233044501749, 2);
+  assert!(idxs[6] == 0 && xs[6] == 250 && zs[6] == 58 && sids[6] == 3358247984041777083, 3);
+  assert!(idxs[11] == 0 && xs[11] == 247 && zs[11] == 58 && sids[11] == 11429233443734658865, 4);
 }
 
 /// Every cell in `[from, to)` (after the first) edge-adjacent to an EARLIER cell of the range — one connected blob.
