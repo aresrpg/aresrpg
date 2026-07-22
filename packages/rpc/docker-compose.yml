@@ -109,6 +109,11 @@ services:
       # error. Must be genuinely absent to parse as the empty Vec that means None.
       ARES_PACKAGES:
       RUST_LOG: ${RUST_LOG:-info}
+      # ERROR-only JSONL. The adjacent log-ship service forwards only the
+      # indexer's marked terminal/panic records, not framework precursor errors.
+      INDEXER_ERROR_LOG: /var/log/aresrpg/indexer-errors.jsonl
+    volumes:
+      - indexer-error-log:/var/log/aresrpg
     # No healthcheck: the binary exposes no HTTP/TCP surface (pure Redis writer)
     # and the debian:bookworm-slim runtime has no curl/wget/bun to add one
     # without a new dependency. Liveness = `docker compose ps` + /v1/status lag.
@@ -134,6 +139,8 @@ services:
       # protector MobTemplate id, JSON. Fed from the ceremony seed manifest — the chain carries
       # no protector marker, so this deploy config is the only honest key→id source. Empty = {}.
       PROTECTOR_TEMPLATES: ${PROTECTOR_TEMPLATES:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      RELEASE_SHA: ${RELEASE_SHA:-dev}
     ports:
       - '${API_PORT:-3000}:3000'
     healthcheck:
@@ -149,6 +156,23 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
+
+  sentry-log-ship:
+    # Reuse the read API's @sentry/node image; no second JS dependency tree.
+    build: ./api
+    entrypoint: ['bun', 'run', 'indexer_log_ship.mjs']
+    depends_on:
+      indexer:
+        condition: service_started
+    environment:
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      NETWORK: ${NETWORK:-testnet}
+      RELEASE_SHA: ${RELEASE_SHA:-dev}
+      INDEXER_ERROR_LOG: /var/log/aresrpg/indexer-errors.jsonl
+      INDEXER_ERROR_CURSOR: /var/log/aresrpg/indexer-errors.cursor
+    volumes:
+      - indexer-error-log:/var/log/aresrpg
     restart: unless-stopped
 
   # Opt-in sponsor (Mysten sui-gas-pool). No public image exists and the source
@@ -198,3 +222,4 @@ services:
 
 volumes:
   redis-data:
+  indexer-error-log:

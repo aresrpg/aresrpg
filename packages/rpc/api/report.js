@@ -60,17 +60,18 @@ export function init_reporting(config = {}) {
  * THE single place an explicit server-side catch becomes a Sentry event. No-op until
  * Sentry is live.
  * @param {unknown} err the raw machine error
- * @param {{ area?: string, action?: string, [k: string]: unknown }} [context] structured
- *   tags/context — `area` + `action` are promoted to Sentry tags (filterable); the rest
- *   rides as the `service` context blob.
+ * @param {{ area?: string, action?: string, fingerprint?: string[], [k: string]: unknown }} [context]
+ *   structured tags/context — `area` + `action` are promoted to Sentry tags;
+ *   `fingerprint` controls grouping; the rest rides as the `service` context blob.
  */
 export function report_error(err, context = {}) {
   if (!live) return
-  const { area, action, ...rest } = context
+  const { area, action, fingerprint, ...rest } = context
   Sentry.withScope((scope) => {
     scope.setContext('service', { ...(area ? { area } : {}), ...(action ? { action } : {}), ...rest })
     if (area) scope.setTag('area', area)
     if (action) scope.setTag('action', action)
+    if (fingerprint) scope.setFingerprint(fingerprint)
     Sentry.captureException(err)
   })
 }

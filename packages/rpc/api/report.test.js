@@ -43,7 +43,12 @@ describe('init + the headless envelope proof (fake DSN, captured transport — n
     expect(is_reporting_live()).toBe(true)
 
     const boom = new Error('forced test error')
-    report_error(boom, { area: 'suins', action: 'forward_resolve', name: 'alice.sui' })
+    report_error(boom, {
+      area: 'suins',
+      action: 'forward_resolve',
+      fingerprint: ['rpc-api', 'suins-forward'],
+      name: 'alice.sui',
+    })
 
     const Sentry = await import('@sentry/node')
     await Sentry.flush(2000)
@@ -56,6 +61,7 @@ describe('init + the headless envelope proof (fake DSN, captured transport — n
     expect(event.release).toBe('test-sha')
     expect(event.tags.area).toBe('suins')
     expect(event.tags.action).toBe('forward_resolve')
+    expect(event.fingerprint).toEqual(['rpc-api', 'suins-forward'])
     expect(event.contexts.service.name).toBe('alice.sui')
   })
 

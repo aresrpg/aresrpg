@@ -38,7 +38,7 @@ prometheus = "0.14"
 clap = { version = "4", features = ["derive", "env"] }
 dotenvy = "0.15"
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
 # --- Serialization + misc ----------------------------------------------------
 serde = { version = "1", features = ["derive"] }

@@ -155,6 +155,7 @@ export const unit_test_files = [
   'scripts/deploy-frontend.test.mjs', // the below-gate owner-word door: default-closed, no-env-equiv, citation-mandatory, flag-parsed
   'scripts/eslint-rules/one_pipeline.test.mjs', // the ONE-REDUCER lint tripwire's own RuleTester suite
   'scripts/eslint-rules/fp_law.test.mjs', // the FP-LAW tripwires' RuleTester suite (docs/CODE_LAW.md)
+  'packages/rpc/api/indexer_log_ship.test.mjs', // Rust indexer JSON-error -> Sentry sidecar decoder/fingerprint
   'test/gold/specs_anchor/click_verify_test.ts', // the harness click-decision pure unit (*_test.ts on purpose: the anchor playwright config's testMatch must never collect it)
   'test/gold/specs_anchor/fight_recovery_test.ts', // the stale-fight recovery classifier + tx-door invocation count (same *_test.ts law)
   'test/gold/specs_anchor/search_retry_test.ts', // the fixture-search retry classifier + bounded settle loop (same *_test.ts law)

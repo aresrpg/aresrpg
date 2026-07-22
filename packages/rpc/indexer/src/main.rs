@@ -14,46 +14,33 @@
 //! Configuration is entirely env-driven (see the [`Args`] fields); a `.env` file
 //! is loaded if present.
 //!
-//! ## Error reporting — BLOCKED this pass (design note, issue #29)
+//! ## Error reporting
 //!
-//! Not wired: the org's Sentry "indexer" project has a DSN reserved, but a correct
-//! integration needs a new `sentry` crate dependency (features `["anyhow"]` for
-//! [`anyhow::Error`] capture via `sentry_anyhow::capture_anyhow`, plus the default
-//! panic-hook integration `sentry::integrations::panic` to catch a panic in ANY
-//! tokio task the framework spawns, not just an `Err` bubbling out of `main`) —
-//! and this crate has no cached `target/` or registry in a fresh checkout, so
-//! resolving + compiling that dependency (on top of the already-heavy
-//! `sui-indexer-alt-framework` git dependency) is a from-scratch build too slow to
-//! verify inside this lane's budget. Recommended shape for the follow-up:
-//! ```ignore
-//! let _guard = std::env::var("SENTRY_DSN").ok().filter(|d| !d.is_empty()).map(|dsn| {
-//!     sentry::init((dsn, sentry::ClientOptions {
-//!         release: sentry::release_name!(),
-//!         environment: Some(args.network.clone().into()),
-//!         traces_sample_rate: 0.0, // errors-only, matches docs/ERRORS.md
-//!         ..Default::default()
-//!     }))
-//! }); // guard dropped at end of main ⇒ flushes on exit; None (no DSN) ⇒ zero-cost no-op
-//! ```
-//! wrapping the `main()` body's `?`-propagated `Result` so a top-level `Err` reports via
-//! `sentry_anyhow::capture_anyhow(&err)` before returning it (main's own `Result` error
-//! path already prints + exits non-zero — reporting is additive, not a behavior change).
+//! `INDEXER_ERROR_LOG` enables an ERROR-only JSONL tracing layer. Terminal errors and
+//! panics carry `sentry_event=true`, a stable culprit, and an explicit fingerprint;
+//! the adjacent Bun log-ship sidecar forwards only those marked records to Sentry.
+//! The ordinary human log remains unchanged, and an absent log path is a hard no-op.
 
 mod handlers;
 mod store;
 
-use anyhow::Result;
-use clap::Parser;
+use anyhow::{Context, Result};
+use clap::{error::ErrorKind, Parser};
 use sui_indexer_alt_framework::ingestion::{
     ingestion_client::IngestionClientArgs, streaming_client::StreamingClientArgs, ClientArgs,
     IngestConcurrencyConfig, IngestionConfig,
 };
 use sui_indexer_alt_framework::pipeline::sequential::SequentialConfig;
 use sui_indexer_alt_framework::{Indexer, IndexerArgs};
-use tracing::info;
+use tracing::{error, info};
+use tracing_subscriber::filter::LevelFilter;
+use tracing_subscriber::prelude::*;
 use url::Url;
 
 use std::collections::HashSet;
+use std::fs::OpenOptions;
+use std::path::Path;
+use std::sync::Mutex;
 
 use crate::handlers::{AresHandler, AresSnapshotHandler, CheckpointHandler};
 use crate::store::RedisStore;
@@ -61,6 +48,7 @@ use crate::store::RedisStore;
 #[derive(Parser, Debug)]
 #[command(
     name = "aresrpg-rpc-indexer",
+    version,
     about = "Read-only Sui checkpoint indexer for the AresRPG RPC"
 )]
 struct Args {
@@ -130,15 +118,126 @@ async fn main() -> Result<()> {
     // Load a .env if present (env still wins for anything already set).
     dotenvy::dotenv().ok();
 
-    tracing_subscriber::fmt()
-        .with_env_filter(
+    let error_log_path = std::env::var_os("INDEXER_ERROR_LOG")
+        .filter(|value| !value.is_empty())
+        .map(std::path::PathBuf::from);
+    init_tracing(error_log_path.as_deref())?;
+    install_panic_reporting();
+
+    let result = run_indexer().await;
+    if let Err(failure) = &result {
+        report_terminal_error(failure);
+    }
+    result
+}
+
+fn init_tracing(error_log_path: Option<&Path>) -> Result<()> {
+    let human_layer = tracing_subscriber::fmt::layer()
+        .with_target(false)
+        .with_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
-        )
-        .with_target(false)
-        .init();
+        );
 
-    let mut args = Args::parse();
+    if let Some(path) = error_log_path {
+        let error_log = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .with_context(|| format!("opening structured error log {}", path.display()))?;
+        let json_error_layer = tracing_subscriber::fmt::layer()
+            .json()
+            .with_ansi(false)
+            .with_writer(Mutex::new(error_log))
+            .with_filter(LevelFilter::ERROR);
+        tracing_subscriber::registry()
+            .with(human_layer)
+            .with(json_error_layer)
+            .try_init()
+            .context("initializing tracing subscriber")?;
+    } else {
+        tracing_subscriber::registry()
+            .with(human_layer)
+            .try_init()
+            .context("initializing tracing subscriber")?;
+    }
+    Ok(())
+}
+
+fn install_panic_reporting() {
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic_info| {
+        let message = panic_info
+            .payload()
+            .downcast_ref::<&str>()
+            .map(|message| (*message).to_owned())
+            .or_else(|| panic_info.payload().downcast_ref::<String>().cloned())
+            .unwrap_or_else(|| "non-string panic payload".to_owned());
+        let culprit = panic_info
+            .location()
+            .map(|location| format!("{}:{}", location.file(), location.line()))
+            .unwrap_or_else(|| "unknown panic location".to_owned());
+        let fingerprint = format!("indexer:panic:{}", fingerprint_component(&culprit));
+        error!(
+            sentry_event = true,
+            error_type = "panic",
+            culprit = %culprit,
+            error_chain = %message,
+            sentry_fingerprint = %fingerprint,
+            "indexer panicked"
+        );
+        default_hook(panic_info);
+    }));
+}
+
+fn report_terminal_error(failure: &anyhow::Error) {
+    let culprit = failure
+        .chain()
+        .next()
+        .map(ToString::to_string)
+        .unwrap_or_else(|| "unknown indexer error".to_owned());
+    let error_chain = format!("{failure:#}");
+    let fingerprint = format!("indexer:{}", fingerprint_component(&culprit));
+    error!(
+        sentry_event = true,
+        error_type = "indexer_error",
+        culprit = %culprit,
+        error_chain = %error_chain,
+        sentry_fingerprint = %fingerprint,
+        "indexer stopped with error"
+    );
+}
+
+fn fingerprint_component(value: &str) -> String {
+    value
+        .chars()
+        .map(|character| {
+            if character.is_ascii_alphanumeric() {
+                character.to_ascii_lowercase()
+            } else {
+                '_'
+            }
+        })
+        .collect()
+}
+
+async fn run_indexer() -> Result<()> {
+    // `parse()` exits the process on invalid CLI/env input, bypassing the marked
+    // terminal-error seam above. Keep configuration failures inside `Result` so
+    // the log shipper can report them like every other startup failure.
+    let mut args = match Args::try_parse() {
+        Ok(args) => args,
+        Err(help)
+            if matches!(
+                help.kind(),
+                ErrorKind::DisplayHelp | ErrorKind::DisplayVersion
+            ) =>
+        {
+            help.print().context("printing indexer help")?;
+            return Ok(());
+        }
+        Err(failure) => return Err(failure).context("parsing indexer configuration"),
+    };
 
     // A bare `--first-checkpoint` flag wins; otherwise the env-backed start feeds
     // the flattened framework arg.
@@ -162,7 +261,9 @@ async fn main() -> Result<()> {
     );
 
     // Fail fast on a bad REDIS_URL before we spin up the ingestion machinery.
-    let store = RedisStore::new(&args.redis_url).await?;
+    let store = RedisStore::new(&args.redis_url)
+        .await
+        .context("connecting indexer store")?;
 
     let client_args = ClientArgs {
         ingestion: IngestionClientArgs {
@@ -195,7 +296,8 @@ async fn main() -> Result<()> {
         args.metrics_prefix.as_deref(),
         &registry,
     )
-    .await?;
+    .await
+    .context("creating indexer")?;
 
     // Checkpoint-liveness spine.
     indexer
@@ -205,7 +307,8 @@ async fn main() -> Result<()> {
             },
             SequentialConfig::default(),
         )
-        .await?;
+        .await
+        .context("registering checkpoint pipeline")?;
 
     // Game read-model (SPEC §14 views). Sequential so per-object edits (e.g. a
     // price change after a sale creation) apply in checkpoint order.
@@ -215,8 +318,12 @@ async fn main() -> Result<()> {
         Some(args.ares_packages.into_iter().collect::<HashSet<_>>())
     };
     indexer
-        .sequential_pipeline(AresHandler::new(ares_packages.clone()), SequentialConfig::default())
-        .await?;
+        .sequential_pipeline(
+            AresHandler::new(ares_packages.clone()),
+            SequentialConfig::default(),
+        )
+        .await
+        .context("registering Ares event pipeline")?;
 
     // Object snapshots (character cosmetics/level) + taux (forgemagie) events —
     // its own watermark, so it backfills from FIRST_CHECKPOINT independently of the
@@ -224,12 +331,16 @@ async fn main() -> Result<()> {
     // the allowlist must carry every emitting package address: `forgemagie` now lives in its OWN sibling
     // `aresrpg_forgemagie` package (package-split 2026-07-12), NOT the aresrpg/character address.
     indexer
-        .sequential_pipeline(AresSnapshotHandler::new(ares_packages), SequentialConfig::default())
-        .await?;
+        .sequential_pipeline(
+            AresSnapshotHandler::new(ares_packages),
+            SequentialConfig::default(),
+        )
+        .await
+        .context("registering Ares snapshot pipeline")?;
 
     info!("pipelines registered; running");
-    let mut service = indexer.run().await?;
-    service.join().await?;
+    let mut service = indexer.run().await.context("starting indexer service")?;
+    service.join().await.context("joining indexer service")?;
     info!("indexer stopped");
     Ok(())
 }

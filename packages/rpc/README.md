@@ -23,7 +23,11 @@ decentralized.
         │  sui-indexer-   │   JSON docs + query   │  (JSON + │
         │  alt-framework  │   engine indexes      │  search) │
         └─────────────────┘                       └────┬─────┘
-                                                       │ reads
+                 │ ERROR JSONL                          │ reads
+                 ▼                                      │
+        ┌─────────────────┐                             │
+        │ Sentry log ship │                             │
+        └─────────────────┘                             │
                                         ┌──────────────▼──────────────┐
                                         │        read-api (Bun)       │
                                         │  /health /v1/status /v1/…   │
@@ -38,7 +42,7 @@ decentralized.
 
 ```bash
 cp .env.example .env        # optional — every value has a safe default
-docker compose up           # redis + indexer + read-api, indexing Sui testnet
+docker compose up           # redis + indexer + read-api + error shipper (no-op without SENTRY_DSN)
 ```
 
 Then:
@@ -72,6 +76,11 @@ TIP=$(grpcurl -max-time 8 fullnode.testnet.sui.io:443 sui.rpc.v2.LedgerService/G
   | python3 -c 'import sys,json;print(json.load(sys.stdin)["checkpointHeight"])')
 REDIS_URL=redis://127.0.0.1:6379 NETWORK=testnet FIRST_CHECKPOINT=$((TIP-30)) \
   cargo run                              # add STREAMING_URL=… for gRPC-primary
+
+# Optional errors-only Sentry forwarding (run from packages/rpc/api in another shell):
+# INDEXER_ERROR_LOG=/tmp/aresrpg-indexer-errors.jsonl must also be set on cargo run.
+SENTRY_DSN=… INDEXER_ERROR_LOG=/tmp/aresrpg-indexer-errors.jsonl \
+  bun run indexer_log_ship.mjs
 
 # Read-API (from packages/rpc/api):
 REDIS_URL=redis://127.0.0.1:6379 bun run server.js

@@ -40,5 +40,7 @@ that turn an error into an HTTP response, never the inner rethrow-to-a-caller on
 `error()` hook for anything escaping uncaught. No breadcrumbs, no user identity, no MoveAbort
 fingerprinting — those are frontend-specific; `@sentry/node`'s own default uncaught-exception /
 unhandled-rejection integrations are kept as-is instead of hand-rolled (nothing to add on top,
-server-side). The Rust indexer (`packages/rpc/indexer`) is NOT wired yet — see its `main.rs` doc
-comment for the crate recommendation.
+server-side). The Rust indexer (`packages/rpc/indexer`) emits marked terminal errors and panics to
+an ERROR-only JSONL file; `packages/rpc/api/indexer_log_ship.mjs` tails it, ignores unmarked
+framework precursor errors, and forwards each marked record with an explicit fingerprint. Both the
+file layer and `@sentry/node` remain hard no-ops unless their deploy-time env is configured.

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
 # =============================================================================
 # AresRPG RPC indexer — Rust read-model builder.
 # Streams Sui checkpoints -> Redis (JSON docs + query-engine indexes).
@@ -60,8 +62,11 @@ RUN apt-get update \
         libstdc++6 \
     && rm -rf /var/lib/apt/lists/*
 
-# Run unprivileged.
-RUN useradd --system --uid 10001 --no-create-home aresrpg
+# Run unprivileged. The sticky log directory is the shared-volume target used by
+# the optional Sentry log-ship process; only ERROR records are written there.
+RUN useradd --system --uid 10001 --no-create-home aresrpg \
+    && mkdir -p /var/log/aresrpg \
+    && chmod 1777 /var/log/aresrpg
 USER aresrpg
 
 COPY --from=builder /usr/local/bin/aresrpg-rpc-indexer /usr/local/bin/aresrpg-rpc-indexer
@@ -73,6 +78,7 @@ COPY --from=builder /usr/local/bin/aresrpg-rpc-indexer /usr/local/bin/aresrpg-rp
 #   NETWORK           (default testnet) — label stamped onto records
 #   FIRST_CHECKPOINT  (optional) — start checkpoint for a fresh pipeline (else genesis)
 #   METRICS_PREFIX    (optional) — prometheus metrics prefix
+#   INDEXER_ERROR_LOG (optional) — ERROR-only structured JSONL for the Sentry sidecar
 #   RUST_LOG          (default info)
 ENV RUST_LOG=info
 
