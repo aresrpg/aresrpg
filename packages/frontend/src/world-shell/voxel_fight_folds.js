@@ -319,10 +319,15 @@ export const is_death_edge = (was_dead, dead) => dead && !was_dead
  * rig gets one death beat + removal; an already-dying or absent rig stays skipped. This single branch prevents
  * both lingering dead players and a snapshot reconcile recreating a dead mob.
  *
- * #170 POOFED-CORPSE GUARD (4th recurrence — the LIFECYCLE half, distinct from the retirement HP projection):
- * once a rig has POOFED this fight it stays down while COMMITTED-dead, even through an engine_view.dead flicker
- * (`fighter.dead` reading false while a re-armed death beat animates); the ONLY door back is `committed_dead`
- * false (a genuine divergence-correction revive). And a committed-dead fighter never SPAWNS a fresh model.
+ * #170 + #450 POOFED-CORPSE GUARD (the LIFECYCLE half, distinct from the retirement HP projection): once a rig
+ * has POOFED this fight it stays down while it is dead in ANY projection — committed (`committed_dead`, which
+ * holds it down through a re-armed death beat's engine_view.dead flicker, #170), presented (`fighter.dead`, the
+ * post-ack fold), or a still-QUEUED kill claim in the wave (`queued`, the pre-ack window death_hold masks off
+ * engine_view.dead). The ONLY door back is a genuine revive — alive in ALL THREE at once (a prediction rolled
+ * back, or a committed dead→alive divergence correction). This closes #450: a local predicted kill has
+ * committed_dead=false for its whole life (the receipt folds the death only at end-turn), so keying the door back
+ * on committed_dead ALONE re-read every predicted corpse as a revive and re-armed the death beat until end-turn.
+ * And a committed-dead fighter never SPAWNS a fresh model.
  *
  * @param {{ id: string, dead?: boolean, is_player?: boolean, cell: {x:number,y:number} }} fighter a fight.fighters value
  * @param {{ winner: number, has_entity: boolean, is_dying: boolean, walking: boolean, replay_owned: boolean,
@@ -335,11 +340,18 @@ export function entity_fold_action(
   { has_entity, is_dying, walking, replay_owned, placed, queued = false, poofed = false, committed_dead = false }
 ) {
   const is_mob = !fighter.is_player
-  // #170 POOFED-CORPSE GUARD: a rig already poofed this fight stays DOWN — never re-upsert a fresh (default
-  // -orientation) model, never re-fire death — while AUTHORITATIVELY (committed) still dead, EVEN when
-  // engine_view.dead momentarily flickers FALSE (a re-armed death beat flips death_presenting_ids "animating").
-  // The ONE door back is the COMMITTED fold showing it genuinely ALIVE (the divergence-correction revive).
-  if (poofed) return committed_dead ? { kind: 'skip' } : { kind: 'upsert' }
+  // #170 + #450 POOFED-CORPSE GUARD: a rig already poofed this fight stays DOWN — never re-upsert a fresh
+  // (default-orientation) model, never re-fire death — while it is dead in ANY projection. The door back is a
+  // GENUINE revive: alive in EVERY sense. #170 covered the committed flicker (committed_dead holds it down even
+  // when engine_view.dead momentarily reads false). #450 adds the PREDICTED-KILL CLAIM WINDOW: a local predicted
+  // kill (my own cast) has committed_dead=FALSE for its whole life (the committed fold only folds the death at the
+  // end-turn receipt), so `committed_dead` alone read every predicted corpse as a "revive" and re-armed the death
+  // beat each reconcile — looping until end-turn. A predicted corpse is still dead: fighter.dead=true once the
+  // fold shows it (post-ack), OR its kill claim is still QUEUED in the wave (pre-ack — death_hold holds
+  // engine_view.dead false, but `queued` sees the unretired claim). Hold down unless ALL three say alive; the ONLY
+  // upsert is the genuine divergence-correction revive (prediction rolled back / committed dead→alive), which
+  // clears every flag at once.
+  if (poofed) return committed_dead || fighter.dead || queued ? { kind: 'skip' } : { kind: 'upsert' }
   // ONE DEAD RULE, amended: a chain-dead fighter whose beats are STILL in the unacked wave keeps its rig —
   // its own sequenced hit → number → death owns the despawn (the out-of-band fold death raced it before).
   if (fighter.dead) return has_entity && !is_dying && !queued ? { kind: 'despawn' } : { kind: 'skip' }
