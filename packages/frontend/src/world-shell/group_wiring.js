@@ -82,12 +82,14 @@ export function wire_group_loop() {
     return
   }
   wiring = create_group_wiring({
-    join_world: (character_id, world_id) => join_world_action({ character_id, world_id }),
-    join_fight: (character_id, fight_id) =>
+    join_world: (character_id, world_id, { queued = false } = {}) =>
+      join_world_action({ character_id, world_id, queued }),
+    join_fight: (character_id, fight_id, { queued = false } = {}) =>
       join_owned_world_fight({
         fight_id,
         party_id: use_party.getState().party_id,
         members: [{ character_id }],
+        queued,
       }),
     // The EXISTING ctx door: my_entity_id re-resolves my_key against the adopted view (fight store), so the
     // HUD deck, prediction locality, and transaction_character_id all follow the acting owned seat.

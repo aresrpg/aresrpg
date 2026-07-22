@@ -95,17 +95,17 @@ const manual_travel = new Set()
 /**
  * MANUAL world join — the switcher's tx (S-67 mounts the UI; this is the callable). Self-pay through the ONE
  * run_tx choke (simulate-first; an executed failure is the caller's to surface, never re-fired).
- * @param {{ character_id: string, world_id?: string }} args
+ * @param {{ character_id: string, world_id?: string, queued?: boolean }} args
  * @returns {Promise<{ result:any, timing:any }>}
  */
-export async function join_world_action({ character_id, world_id = T62_WORLDS[0].id }) {
+export async function join_world_action({ character_id, world_id = T62_WORLDS[0].id, queued = false }) {
   // The player EXPLICITLY chose a world — the ghost-healer must defer. Record the choice (blocks a fire AND a
   // clobber below) and spend the auto-join latch so a not-yet-fired heal becomes a no-op. The switcher lists
   // only LIVING worlds, so a manual travel always lands the character on a live world (the healer's purpose).
   manual_travel.add(character_id)
   auto_attempted.add(character_id)
   const tx = await build_join(character_id, world_id)
-  const out = await run_tx('join_world', tx)
+  const out = await run_tx('join_world', tx, undefined, undefined, { queued })
   // PIPELINE LAW fast path: the tx's OWN receipt already proves the position (first-join roll, or the
   // untouched rejoin checkpoint — zones.move emits WorldJoined either way) — seed it before publishing so a
   // travel/rejoin never races the separate chain-direct DF read (world_checkpoint.js).

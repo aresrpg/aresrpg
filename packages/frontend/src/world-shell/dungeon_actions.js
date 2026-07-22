@@ -91,6 +91,7 @@ import { use_fight_cost } from './fight_gas_ledger.js'
 import { offer_travel_resync } from './travel_recovery.js'
 import { receipt_final_hp } from './fight_result_receipt.js'
 import { attach_executed_digest } from './tx_digest_error.js'
+import { run_character_action } from './tx.js'
 
 // ONE-TOAST SEQUENCES: a fight turn (N act_* txs + act_pass) or a settlement chain (settle →
 // open → mint×N → burn) is a SEQUENCE of standalone txs (each &Random door is its own PTB). `batching`
@@ -122,7 +123,8 @@ export async function sign(
   /** @type {any} */ tx,
   /** @type {string} */ label,
   /** @type {boolean} */ silent = false,
-  /** @type {import('../tx').GasPin | null} */ gas_pin = null
+  /** @type {import('../tx').GasPin | null} */ gas_pin = null,
+  /** @type {{ queued?: boolean }} */ { queued = false } = {}
 ) {
   const { address, wallet_name } = use_auth.getState()
   if (!address || !wallet_name) throw new Error('Not signed in')
@@ -175,7 +177,7 @@ export async function sign(
       throw attach_executed_digest(error, digest)
     }
   }
-  const submitted = execute().catch((error) => {
+  const submitted = run_character_action(execute, { queued }).catch((error) => {
     // create_world_fight has its own fast receipt choke instead of world-shell/tx.js. Give checkpoint::102
     // the same one-click body resync here; this helper never re-submits an executed transaction.
     offer_travel_resync(error)
@@ -239,7 +241,13 @@ function opened_result_of(/** @type {any} */ receipt) {
 // ╔════════════════ [ WORLD FIGHT — join (create_world_fight moved to dungeon_engage_actions.js) ] ═ ]
 
 /** JOIN an existing world fight during placement — `fight::join` (public/party gate is on-chain). */
-export async function join_world_fight({ fight_id, character_id, party_id = null, raised_spell_ids = [] }) {
+export async function join_world_fight({
+  fight_id,
+  character_id,
+  party_id = null,
+  raised_spell_ids = [],
+  queued = false,
+}) {
   const { address } = use_auth.getState()
   if (!address) throw new Error('Not connected')
   const sdk = await get_sdk()
@@ -253,7 +261,7 @@ export async function join_world_fight({ fight_id, character_id, party_id = null
     party_id,
     raised_spell_ids,
   })
-  return sign(tx, i18n.t('dungeons.action_join', { dungeon: i18n.t('fights.a_fight') }))
+  return sign(tx, i18n.t('dungeons.action_join', { dungeon: i18n.t('fights.a_fight') }), false, null, { queued })
 }
 
 // ╔════════════════ [ DUNGEON RUN — activate / room fights / abandon ] ══════════ ]

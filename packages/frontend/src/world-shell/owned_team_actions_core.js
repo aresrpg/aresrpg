@@ -29,7 +29,7 @@ function distinct_members(members) {
 
 /** Dependency-injected sequential orchestration; production supplies the existing self-pay character actions. */
 export function create_owned_team_actions({ join_world_fight, activate_run, join_room_fight, settle_run_and_open }) {
-  async function join_owned_world_fight({ fight_id, party_id = null, members = [] }) {
+  async function join_owned_world_fight({ fight_id, party_id = null, members = [], queued = false }) {
     const receipts_by_character = new Map()
     for (const member of distinct_members(members)) {
       const receipt = await join_world_fight({
@@ -37,6 +37,7 @@ export function create_owned_team_actions({ join_world_fight, activate_run, join
         character_id: member.character_id,
         party_id,
         raised_spell_ids: member.raised_spell_ids ?? [],
+        ...(queued ? { queued: true } : {}),
       })
       receipts_by_character.set(member.character_id, receipt)
     }

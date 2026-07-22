@@ -16,17 +16,17 @@ const OTHER_WORLD = '0xworld_b'
 const members = (...ids) => ids.map((character, order) => ({ character, owner: ME, order }))
 const worlds = (rows) => rows.map(([character_id, world_id]) => ({ character_id, world_id }))
 
-function make_harness({ join_world_impl } = {}) {
+function make_harness({ join_world_impl, join_fight_impl } = {}) {
   const calls = { join_world: [], join_fight: [], focus: [], follow: [] }
   const wiring = create_group_wiring({
     join_world: (character_id, world_id) => {
       calls.join_world.push([character_id, world_id])
       return join_world_impl ? join_world_impl(character_id, world_id) : Promise.resolve()
     },
-    join_fight: (character_id, fight_id) => {
-      calls.join_fight.push([character_id, fight_id])
-      return Promise.resolve()
-    },
+    join_fight: (character_id, fight_id, options) =>
+      join_fight_impl
+        ? join_fight_impl(character_id, fight_id, options)
+        : Promise.resolve(calls.join_fight.push([character_id, fight_id])),
     focus_seat: (character_id) => calls.focus.push(character_id),
     apply_follow: (rows) => calls.follow.push(rows),
     is_executed_failure: (error) => !!error?.executed,
@@ -146,6 +146,58 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
     // victory clears the armed fight; the next fight re-arms cleanly
     wiring.fight_snapshot({ ...facts, over: true, seated: [LEADER, ALT_1, ALT_2] })
     expect(wiring.store.getState().fight).toBe(null)
+  })
+
+  test('party fight joins queue behind the creator and complete one member at a time', async () => {
+    const creator_gate = Promise.withResolvers()
+    const order = ['creator:start']
+    let tail = creator_gate.promise.then(() => order.push('creator:end'))
+    let pending = 1
+    const schedule_tx = (task, { queued = false } = {}) => {
+      if (!queued && pending) return Promise.reject(new Error('character action in progress'))
+      pending += 1
+      const scheduled = tail.then(task)
+      tail = scheduled.catch(() => undefined).then(() => {
+        pending -= 1
+      })
+      return scheduled
+    }
+    const { wiring, calls } = make_harness({
+      join_fight_impl: (character_id, fight_id, options) =>
+        schedule_tx(async () => {
+          order.push(`${character_id}:start`)
+          calls.join_fight.push([character_id, fight_id])
+          await Promise.resolve()
+          order.push(`${character_id}:end`)
+        }, options),
+    })
+    sync_full_group(wiring, [
+      [LEADER, WORLD],
+      [ALT_1, WORLD],
+      [ALT_2, WORLD],
+    ])
+
+    wiring.fight_snapshot(
+      { fight_id: '0xf', placement: true, over: false, active_entity_id: null, seated: [LEADER] },
+      { join_open: true }
+    )
+    await Promise.resolve()
+    expect(calls.join_fight).toEqual([])
+
+    creator_gate.resolve()
+    await wiring.settled()
+    expect(calls.join_fight).toEqual([
+      [ALT_1, '0xf'],
+      [ALT_2, '0xf'],
+    ])
+    expect(order).toEqual([
+      'creator:start',
+      'creator:end',
+      `${ALT_1}:start`,
+      `${ALT_1}:end`,
+      `${ALT_2}:start`,
+      `${ALT_2}:end`,
+    ])
   })
 
   test('a mid-active resume (join window closed) arms focus WITHOUT firing any join transaction', async () => {

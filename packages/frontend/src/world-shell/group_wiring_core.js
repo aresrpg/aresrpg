@@ -3,9 +3,9 @@
 // GROUP WIRING CORE (MULTICHAR lane) — dependency-injected orchestration between the pure group loop
 // (@aresrpg/party group_loop) and the production edges. The reducer DECIDES; this seam FEEDS it (membership,
 // worlds, pose ticks, fight facts) and EXECUTES its effect requests through injected single-character seams
-// (join_world_action / join_owned_world_fight / the fight store's ctx door). Transactions run on ONE
-// sequential queue; an EXECUTED failure (digest exists) latches the member out via `member_blocked` and is
-// never re-fired (tx-retry burn law). Production supplies the deps in group_wiring.js; tests drive fakes.
+// (join_world_action / join_owned_world_fight / the fight store's ctx door). Transactions opt into the ONE
+// shared character-action queue in tx.js; an EXECUTED failure (digest exists) latches the member out via
+// `member_blocked` and is never re-fired (tx-retry burn law). Production supplies the deps; tests drive fakes.
 
 import { create_group_store } from '@aresrpg/party/store'
 
@@ -60,8 +60,8 @@ export function build_follow_entries(rows, cards_by_id, leader_world_id) {
 
 /**
  * @param {{
- *   join_world: (character_id: string, world_id: string) => Promise<any>,
- *   join_fight: (character_id: string, fight_id: string) => Promise<any>,
+ *   join_world: (character_id: string, world_id: string, options: { queued: boolean }) => Promise<any>,
+ *   join_fight: (character_id: string, fight_id: string, options: { queued: boolean }) => Promise<any>,
  *   focus_seat: (character_id: string) => void,
  *   apply_follow: (rows: readonly any[]) => void,
  *   is_executed_failure: (error: any) => boolean,
@@ -71,12 +71,12 @@ export function build_follow_entries(rows, cards_by_id, leader_world_id) {
  */
 export function create_group_wiring(deps) {
   const { store, dispatch } = create_group_store(deps.config ?? {})
-  let queue = Promise.resolve()
+  const pending = new Set()
   let last_turn_entity = /** @type {string | null} */ (null)
 
-  /** Sequential tx lane: one owned-member transaction at a time; a failure latches, never re-fires. */
-  const enqueue = (scope, character_id, task) => {
-    queue = queue
+  /** Track work queued at tx.js without becoming a second lock; an executed failure latches, never re-fires. */
+  const track = (scope, character_id, task) => {
+    const running = Promise.resolve()
       .then(task)
       .catch((error) => {
         if (deps.is_executed_failure(error)) {
@@ -85,14 +85,20 @@ export function create_group_wiring(deps) {
         } else deps.log(`${scope} failed pre-execution for ${character_id.slice(0, 10)} (no latch)`, error)
       })
       .then(() => undefined)
+    pending.add(running)
+    void running.then(() => pending.delete(running))
   }
 
   /** Execute one outputs frame at the edges. Every branch is idempotent per the reducer's latches. */
   const execute = (outputs) => {
     for (const row of outputs.join_world)
-      enqueue('world_join', row.character_id, () => deps.join_world(row.character_id, row.world_id))
+      track('world_join', row.character_id, () =>
+        deps.join_world(row.character_id, row.world_id, { queued: true })
+      )
     for (const row of outputs.join_fight)
-      enqueue('fight_join', row.character_id, () => deps.join_fight(row.character_id, row.fight_id))
+      track('fight_join', row.character_id, () =>
+        deps.join_fight(row.character_id, row.fight_id, { queued: true })
+      )
     if (outputs.hud_focus) deps.focus_seat(outputs.hud_focus)
     return outputs
   }
@@ -102,8 +108,10 @@ export function create_group_wiring(deps) {
   return {
     store,
     feed,
-    /** Resolves when every enqueued transaction settled — the test/QA drain door. */
-    settled: () => queue,
+    /** Resolves when every transaction handed to the shared queue settled — the test/QA drain door. */
+    async settled() {
+      while (pending.size) await Promise.all(pending)
+    },
     /** Membership + world truth arrive together (both derive from the same party/roster resync). */
     sync_group({ my_address, leader_character_id, members, worlds }) {
       feed({ kind: 'group', my_address, leader_character_id, members })

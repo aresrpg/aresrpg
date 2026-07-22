@@ -19,6 +19,7 @@ import { tx_error } from '../game/core/abort_copy.js'
 import { dispatch_action } from '../game/core/action_input.js'
 import { game_log } from '../core/log.js'
 import { report_error } from '../core/report.js'
+import i18n from '../i18n'
 import { FINALITY_POLL_SCHEDULE } from '../tx/latency.js'
 
 import { offer_travel_resync } from './travel_recovery.js'
@@ -43,6 +44,30 @@ export function tx_timings() {
 }
 if (typeof window !== 'undefined') /** @type {any} */ (window).__TX_TIMINGS = timings
 
+// ONE cross-character transaction lane. Human-triggered collisions refuse immediately with the existing
+// switch/action copy; system-owned party work opts into the same lane and waits behind the current action.
+// Counting queued work (not just the executing callback) keeps a later user press from cutting between members.
+let character_action_tail = Promise.resolve() // eslint-disable-line functional/no-let -- module-owned queue tail
+let pending_character_actions = 0 // eslint-disable-line functional/no-let -- module-owned queued/running count
+
+/**
+ * @template T
+ * @param {() => Promise<T> | T} task
+ * @param {{ queued?: boolean }} [options]
+ * @returns {Promise<T>}
+ */
+export function run_character_action(task, { queued = false } = {}) {
+  if (!queued && pending_character_actions)
+    return Promise.reject(new Error(i18n.t('errors.character_switch_in_progress')))
+  pending_character_actions += 1
+  const scheduled = character_action_tail.then(task)
+  const completed = scheduled.finally(() => {
+    pending_character_actions -= 1
+  })
+  character_action_tail = completed.catch(() => undefined)
+  return completed
+}
+
 /**
  * Sign + execute `tx` via the connected wallet, then wait for the fullnode to index it. Returns
  * `{ result, timing }` — `result` is the waitForTransaction block (objectChanges/effects/events per
@@ -53,10 +78,11 @@ if (typeof window !== 'undefined') /** @type {any} */ (window).__TX_TIMINGS = ti
  * @param {any} [include]  gRPC Core waitForTransaction `include` (defaults to effects+objectTypes+events)
  * @param {{address:string, wallet_name:string}} [signer]  OVERRIDE signer (the admin PUBLISH tab's dedicated
  *   deployer wallet). Defaults to the global player session (use_auth) so every gameplay tx is unchanged.
+ * @param {{ queued?: boolean }} [options] system-owned work may wait behind the current character action
  * @returns {Promise<{ result: any, timing: TxTiming }>}
  */
-export async function run_tx(klass, tx, include = DEFAULT_INCLUDE, signer) {
-  return run(klass, tx, include, signer, sign_and_execute_transaction)
+export async function run_tx(klass, tx, include = DEFAULT_INCLUDE, signer, options) {
+  return run_character_action(() => run(klass, tx, include, signer, sign_and_execute_transaction), options)
 }
 
 /**
@@ -64,7 +90,7 @@ export async function run_tx(klass, tx, include = DEFAULT_INCLUDE, signer) {
  * simulate-refuse + derived-budget pin and excludes sponsor funds, then uses the same receipt/error pipeline.
  */
 export async function run_tx_self_pay(klass, tx, include = DEFAULT_INCLUDE) {
-  return run(klass, tx, include, undefined, sign_and_execute_self_pay_transaction)
+  return run_character_action(() => run(klass, tx, include, undefined, sign_and_execute_self_pay_transaction))
 }
 
 /**
@@ -83,7 +109,7 @@ export async function run_tx_random(klass, tx, include = DEFAULT_INCLUDE, { spon
   // terminal-&Random door (gas_pin is unused here; the door hardcodes want_effects for the fast path).
   const submit = (wallet_name, address, transaction) =>
     submit_terminal_random_tx(wallet_name, address, transaction, { sponsor_excluded })
-  return run(klass, tx, include, undefined, submit)
+  return run_character_action(() => run(klass, tx, include, undefined, submit))
 }
 
 /** The shared pipeline behind both doors — sign+execute via `submit`, wait, normalize, throw on failure. */
