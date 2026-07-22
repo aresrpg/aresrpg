@@ -1746,7 +1746,11 @@
     "action_disband": "Gruppe wird aufgelöst",
     "member_joined_toast": "{{name}} ist der Gruppe beigetreten",
     "owned_picker_title": "Bring deine Charaktere mit",
-    "invite_owned_cta": "Auto-Folgen"
+    "invite_owned_cta": "Auto-Folgen",
+    "follow_joining": "Weltbeitritt",
+    "follow_in_transit": "Unterwegs",
+    "follow_arrived": "Angekommen",
+    "follow_background": "Im Hintergrund"
   },
   "inventory": {
     "craft_success": "Hergestellt: {{name}}",

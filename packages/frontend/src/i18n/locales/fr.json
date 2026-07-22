@@ -1746,7 +1746,11 @@
     "action_disband": "Dissolution du groupe",
     "member_joined_toast": "{{name}} a rejoint le groupe",
     "owned_picker_title": "Emmenez vos personnages",
-    "invite_owned_cta": "Suivi auto"
+    "invite_owned_cta": "Suivi auto",
+    "follow_joining": "Connexion au monde",
+    "follow_in_transit": "En transit",
+    "follow_arrived": "Arrivé",
+    "follow_background": "En arrière-plan"
   },
   "inventory": {
     "craft_success": "Fabriqué : {{name}}",

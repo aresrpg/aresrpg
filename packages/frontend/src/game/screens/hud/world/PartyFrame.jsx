@@ -4,7 +4,7 @@
 // `member.character` directly through `/v1/characters?ids=`, so a wallet's sibling characters can never stand in
 // for the character that actually joined. P2P identity uses that same exact Character ID.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useShallow } from 'zustand/react/shallow'
 import { projected_hp, character_max_hp } from '../../../../chain/read_character.js'
@@ -20,6 +20,11 @@ import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
 import { get_characters } from '../../../../rpc/client'
 import { game_log } from '../../../../core/log.js'
 import { open_player_menu } from './player_menu_store.js'
+import {
+  enable_group_follow,
+  get_group_follow_snapshot,
+  subscribe_group_follow,
+} from '../../../../world-shell/group_wiring.js'
 
 const MAX_ROWS = 6
 
@@ -31,6 +36,23 @@ const member_cache = new Map()
 const hp_pct = (health, max_health) => {
   if (typeof health !== 'number' || typeof max_health !== 'number' || max_health <= 0) return 100
   return Math.max(0, Math.min(100, (health / max_health) * 100))
+}
+
+const transit_time = (remaining_ms) => {
+  const seconds = Math.max(0, Math.ceil(Number(remaining_ms ?? 0) / 1000))
+  return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
+}
+
+const transit_progress = (row) => {
+  if (row?.status === 'arrived') return 100
+  if (row?.status !== 'in_transit') return 0
+  return Math.max(0, Math.min(100, Number(row.progress ?? 0) * 100))
+}
+
+const transit_status = (t, status) => {
+  if (status === 'joining') return t('party.follow_joining')
+  if (status === 'in_transit') return t('party.follow_in_transit')
+  return t('party.follow_arrived')
 }
 
 /** Resolve one exact party character; never query every character owned by its wallet. */
@@ -93,6 +115,17 @@ export function PartyFrame() {
   const party_busy = use_party((state) => state.busy)
   const invite_owned = use_party((state) => state.invite_owned)
   const roster = use_game_state((state) => state.sui?.characters)
+  const follow = useSyncExternalStore(
+    subscribe_group_follow,
+    get_group_follow_snapshot,
+    get_group_follow_snapshot
+  )
+
+  const invite_and_follow = async (character_id) => {
+    const leader_character_id = follow.leader_character_id || selected_character_id
+    if (!leader_character_id || !(await invite_owned([character_id]))) return
+    enable_group_follow({ leader_character_id, follower_character_ids: [character_id] })
+  }
 
   // MULTICHAR picker: the wallet's OTHER characters, invitable one exact pick at a time —
   // the group loop then auto-aligns worlds, follows, and seats them. Capacity honors the six-slot chain cap.
@@ -113,7 +146,7 @@ export function PartyFrame() {
                 type="button"
                 className="gw-party__lvl"
                 style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0 }}
-                onClick={() => invite_owned([character.id])}
+                onClick={() => void invite_and_follow(character.id)}
                 disabled={party_busy}
               >
                 {t('party.invite_owned_cta')}
@@ -171,6 +204,8 @@ export function PartyFrame() {
           const character_id = member.character
           const row = member_cache.get(character_id)
           const is_leader = character_id === leader_character
+          const owned = (roster ?? []).some((character) => character.id === character_id)
+          const transit = follow.followers[character_id] ?? null
           const self_name = character_id === selected_character_id ? my_char_name : null
           const name = self_name || get_peer_state(character_id)?.name || row?.name || t('party.adventurer')
           const open_member_menu = (/** @type {any} */ e) => {
@@ -196,10 +231,42 @@ export function PartyFrame() {
                 {row?.level != null && (
                   <span className="gw-party__lvl">{t('party.level_chip', { level: row.level })}</span>
                 )}
+                {owned && !is_leader && !transit && (
+                  <button
+                    type="button"
+                    className="gw-party__lvl"
+                    style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0 }}
+                    disabled={party_busy}
+                    onClick={() =>
+                      enable_group_follow({
+                        leader_character_id: follow.leader_character_id || selected_character_id,
+                        follower_character_ids: [character_id],
+                      })
+                    }
+                  >
+                    {t('party.invite_owned_cta')}
+                  </button>
+                )}
               </div>
               {row?.health != null && row?.max_health != null && (
                 <div className="gw-party__bar">
                   <span className="gw-party__bar-fill" style={{ width: `${hp_pct(row.health, row.max_health)}%` }} />
+                </div>
+              )}
+              {transit && (
+                <div className="gw-party__transit">
+                  <div className="gw-party__transit-copy">
+                    <span>
+                      {transit_status(t, transit.status)}
+                      {follow.dungeon_background && transit.status === 'in_transit'
+                        ? ` · ${t('party.follow_background')}`
+                        : ''}
+                    </span>
+                    <span>{transit.status === 'joining' ? '--:--' : transit_time(transit.remaining_ms)}</span>
+                  </div>
+                  <div className="gw-party__transit-bar">
+                    <span style={{ width: `${transit_progress(transit)}%` }} />
+                  </div>
                 </div>
               )}
             </div>

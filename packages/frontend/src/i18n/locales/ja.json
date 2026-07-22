@@ -1746,7 +1746,11 @@
     "action_disband": "パーティを解散中",
     "member_joined_toast": "{{name}} がパーティに参加しました",
     "owned_picker_title": "自分のキャラクターを連れて行く",
-    "invite_owned_cta": "オートフォロー"
+    "invite_owned_cta": "オートフォロー",
+    "follow_joining": "ワールドに参加中",
+    "follow_in_transit": "移動中",
+    "follow_arrived": "到着",
+    "follow_background": "バックグラウンド"
   },
   "inventory": {
     "craft_success": "{{name}} を作成しました",

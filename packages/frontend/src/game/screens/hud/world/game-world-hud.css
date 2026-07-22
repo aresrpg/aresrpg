@@ -451,6 +451,32 @@
   background: #4ade80;
   transition: width 0.25s ease;
 }
+.gw-party__transit {
+  margin-top: 5px;
+}
+.gw-party__transit-copy {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 3px;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.gw-party__transit-bar {
+  height: 3px;
+  overflow: hidden;
+  background: var(--color-border);
+}
+.gw-party__transit-bar > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-gold-dark), var(--color-gold));
+  transition: width 0.25s ease;
+}
 
 /* ── self plate → bottom-CENTER (Option B "Minimal Float") ───────────────────────────────────────
    Always-on exploration HP plate (lobby only — combat keeps `Vitals` for AP/MP pips). Compact: level
