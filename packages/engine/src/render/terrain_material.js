@@ -277,11 +277,14 @@ function build_terrain_material({
     // canopy cubes deliberately skip this (they fill the leaf-texture holes with the flat leaf tone below).
     material.alphaTest = 0.5
   }
-  if (variant === 'foliage') {
-    // Water samples the opaque depth buffer as its bed. Keep submerged cross-flora out of that buffer so
-    // coral/algae silhouettes cannot make the later water pass resolve a false shallow patch above them.
-    material.depthWrite = false
-  }
+  // FOLIAGE keeps the material default depthWrite=true: grass/flora MUST land in the scene-pass depth MRT
+  // so the post chain (post_stack.js getViewPosition → frag_dist) reconstructs a real distance under each
+  // grass pixel. With depthWrite off, a grass sprite silhouetted against sky reconstructs at the FAR plane
+  // and the default-ON cloud deck composites straight over it — the #454 angle-dependent full clip of ALL
+  // grass. (This reverts #303's foliage depthWrite=false: it aimed to keep SUBMERGED coral out of the bed
+  // the liquid pass samples, but grass and the water bed read the SAME shared depth, so it clipped land
+  // grass everywhere. Keeping submerged flora out of the water bed needs a dedicated path, not a global
+  // depthWrite=false — tracked separately; the universal land-grass clip is the shipped-severity bug.)
   if (variant === 'liquid') {
     material.transparent = true
     // opacity=1: the water shader's `alpha_node` is the SOLE opacity source (shore see-through 0.42 →

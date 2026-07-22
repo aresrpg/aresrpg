@@ -377,13 +377,22 @@ describe('dispose — full GPU teardown empties the resident set and clears the 
   })
 })
 
-// ── SPRITE / WATER DEPTH CONTRACT (#303) ───────────────────────────────────────────────────────
-// Water samples the opaque scene depth to measure the bed beneath its surface. Cross-quad flora is
-// drawn before that transparent water pass, so it must depth-test against terrain without becoming
-// scene depth itself: otherwise submerged coral/algae is mistaken for the bed and punches its
-// alpha-tested silhouette into the water sheet above it.
-describe('sprite / water material interaction', () => {
-  test('foliage cannot write depth before the later transparent water pass', () => {
+// ── FOLIAGE SCENE-DEPTH CONTRACT (#454 grass-clip regression) ────────────────────────────────────
+// Foliage (grass/flowers/cross-flora) MUST write depth so it lands in the scene-pass depth MRT the post
+// chain reconstructs per-pixel distance from (post_stack.js `getViewPosition(uv, scene_depth.r)` →
+// frag_dist). The default-ON flat cloud deck composites over every pixel whose reconstructed distance
+// reaches the deck (the "sky" pixels), so a grass sprite silhouetted against sky that wrote NO depth
+// reconstructs at the FAR plane and the deck paints straight over it — the #454 "all grass clips at
+// certain camera angles" full clip (angle-dependent: whether grass has solid terrain behind it or open
+// sky). All pool meshes are frustumCulled=false, so this is a depth-participation bug, not culling.
+//   HISTORY: #303 set depthWrite=false here to keep submerged coral/algae out of the opaque bed the
+//   liquid pass samples (viewportDepthTexture) — but grass and the water bed read the SAME shared scene
+//   depth, so excluding foliage to protect the water bed also excluded grass from the post depth and
+//   armed this regression. Keeping submerged vegetation out of the water bed WITHOUT dropping land grass
+//   from the scene depth needs a dedicated submerged-foliage depth path (a distinct pool or a solid-only
+//   water-bed depth) — tracked separately; the universal land-grass clip is the shipped-severity bug.
+describe('foliage / scene-depth contract (#454)', () => {
+  test('foliage writes depth so it occludes the depth-composited cloud deck (never clips against sky)', () => {
     const scene = new Scene()
     const terrain = make_renderer(scene)
     try {
@@ -393,7 +402,9 @@ describe('sprite / water material interaction', () => {
       expect(foliage_mesh.material.transparent).toBe(false)
       expect(foliage_mesh.material.alphaTest).toBe(0.5)
       expect(foliage_mesh.material.depthTest).toBe(true)
-      expect(foliage_mesh.material.depthWrite).toBe(false)
+      // #454: foliage must be IN the scene depth MRT so the post cloud-deck composite (post_stack.js)
+      // never reconstructs a grass-against-sky pixel at the far plane and paints the deck over it.
+      expect(foliage_mesh.material.depthWrite).toBe(true)
       expect(liquid_mesh.material.transparent).toBe(true)
       expect(liquid_mesh.material.depthTest).toBe(true)
       expect(liquid_mesh.material.depthWrite).toBe(false)
