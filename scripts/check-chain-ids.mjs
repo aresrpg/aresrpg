@@ -22,6 +22,15 @@ const default_root = path.resolve(path.dirname(script_path), '..')
 const id_re = /0x[0-9a-f]{64}/g
 const ignored_segments = new Set(['.git', '.agents', '.codex', 'build', 'dist', 'node_modules', 'target'])
 
+// The V2 fight-replay corpus (commit d4ebe84c) — real historical chain traces converted by
+// scripts/convert_fight_traces.mjs into provenance-tagged capsules; every id inside is a
+// historical testnet object recorded by the live recorder tee, not hand-typed live wiring.
+// Captured wire bytes with provenance are exactly what the decode-tests law wants pinned
+// (docs/CODE_LAW.md), so this gate — which exists to stop hardcoded ids in CODE — exempts it.
+// The corpus is append-only (new captures add new files), so it is excluded by path prefix, the
+// same way docs/ is excluded below, instead of registering every future capsule individually.
+const captured_replay_prefix = 'packages/fight/test/fixtures/capsules/'
+
 // Exact CLI-owned files only. A new generated output must be deliberately registered here; there is no broad
 // out/** escape hatch. release.json is stamp_all's sole config output; seed files remain run receipts.
 const generated_files = new Set(
@@ -146,6 +155,7 @@ const slash_path = (value) => value.split(path.sep).join('/')
 const id_fingerprint = (id) => create_hash('sha256').update(id).digest('base64url').slice(0, 22)
 const is_scannable_file = (relative_path) =>
   !relative_path.startsWith('docs/') &&
+  !relative_path.startsWith(captured_replay_prefix) &&
   path.extname(relative_path) !== '.md' &&
   !sanctioned_fixture_prefixes.some((prefix) => relative_path.startsWith(prefix)) &&
   !relative_path.split('/').some((segment) => ignored_segments.has(segment))
