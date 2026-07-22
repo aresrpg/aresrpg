@@ -238,10 +238,12 @@ function _build_room() {
   // sim-verifies + renders in fight-stream.js; the chain still authors via commit_turn. Filtered by dungeon_id on
   // the receiving side.
   fight_stream_action.onMessage = (data) => {
-    const { dungeon_id, address, kind, target } =
-      /** @type {{ dungeon_id: string, address: string, kind: string, target: number }} */ (data ?? {})
+    const { dungeon_id, address, kind, target, intent_id, actions } =
+      /** @type {{ dungeon_id: string, address: string, kind: string, target?: number, intent_id?: string, actions?: any[] }} */ (
+        data ?? {}
+      )
     if (!dungeon_id || !address || !kind) return
-    context.events.emit('packet/fightStream', { dungeon_id, address, kind, target })
+    context.events.emit('packet/fightStream', { dungeon_id, address, kind, target, intent_id, actions })
   }
 
   // COMMISSION REQUEST nudge — a customer sent an artisan-commission request; the presence core carries the
@@ -511,10 +513,12 @@ export function nudge_commission_request(to_address, payload = {}) {
   commission_request_action?.send({ to_address, ...payload }).catch(() => {})
 }
 
-/** Broadcast the active player's drafted fight action as a PREVIEW (board #49) — coordination only, no tx.
- * @param {{ dungeon_id: string, address: string, kind: 'move' | 'cast', target: number }} action */
-export function broadcast_fight_stream({ dungeon_id, address, kind, target }) {
-  fight_stream_action?.send({ dungeon_id, address, kind, target }).catch(() => {})
+/** Broadcast one drafted fight signal to peers — coordination only, no tx (board #49 / courtesy channel #334).
+ *  `placement` carries a `target` cell; a courtesy `batch` carries `{ intent_id, actions }` (the drafted turn in
+ *  the receipt vocabulary). The receiver (fight-stream.js) sim-verifies through the fight core before painting.
+ * @param {{ dungeon_id: string, address: string, kind: string, target?: number, intent_id?: string, actions?: any[] }} signal */
+export function broadcast_fight_stream({ dungeon_id, address, kind, target = null, intent_id = null, actions = null }) {
+  fight_stream_action?.send({ dungeon_id, address, kind, target, intent_id, actions }).catch(() => {})
 }
 
 /** Leave the lobby room (scene teardown) — safe to call even if never joined. The atom resets (freshness

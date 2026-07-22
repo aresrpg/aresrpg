@@ -81,7 +81,8 @@
     "weapon_reach": "Portée",
     "on_cooldown": "En recharge — {{n}} tour(s)",
     "casts_exhausted": "Plus de lancers ce tour",
-    "predicted_kill": "TUE LE MONSTRE"
+    "predicted_kill": "TUE LE MONSTRE",
+    "courtesy_dropped": "Impossible d'afficher l'aperçu en direct d'un équipier"
   },
   "nav": {
     "world": "Monde",

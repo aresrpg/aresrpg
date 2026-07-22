@@ -81,7 +81,8 @@
     "weapon_reach": "Alcance",
     "on_cooldown": "En recarga — {{n}} turno(s)",
     "casts_exhausted": "Sin lanzamientos restantes este turno",
-    "predicted_kill": "MATA AL MONSTRUO"
+    "predicted_kill": "MATA AL MONSTRUO",
+    "courtesy_dropped": "No se pudo mostrar la vista previa de un compañero"
   },
   "nav": {
     "world": "Mundo",

@@ -17,9 +17,8 @@
 
 import { afterAll, afterEach, describe, expect, spyOn, test } from 'bun:test'
 
-import { fight_store } from '@aresrpg/fight/store'
+import { fight_store, presented_state } from '@aresrpg/fight/store'
 import { board_view, fight_view } from '@aresrpg/fight/project'
-import * as log_module from '../../core/log.js'
 import { install_browser_globals } from '../../test_helpers/browser_globals.js'
 import { seed_fight_core, reset_fight_core } from '../../test_helpers/fight_core_harness.js'
 import { use_dungeon_turn } from './dungeon-turn.js'
@@ -50,17 +49,8 @@ const CELL_C = 42
 init_fight_stream()
 
 const broadcast_spy = spyOn(lobby_room, 'broadcast_fight_stream').mockImplementation(() => {})
-// game_log is a real, side-effect-free ring buffer (silent unless debug is on — core/log.js) — spying it is safe
-// and gives an observable proxy for "did on_peer_stream's move/cast branch reach verify_and_render_*", which has
-// NO store write to assert on directly (see the S2-FLIP comment in fight-stream.js: render returns at S4).
-// FOUND VIA MUTATION-TESTING: game_log is a SHARED cross-cutting logger — seeding a real fight_store snapshot
-// also wakes an unrelated combat-music edge subscriber that logs under its OWN 'music'/'fight' tags. Filter to
-// the exact 'fight-stream' namespace verify_and_render_move/cast use, or this spy false-positives on noise that
-// has nothing to do with the glue under test.
-const log_spy = spyOn(log_module, 'game_log')
 const fire = (payload) => context.events.emit('packet/fightStream', payload)
-const sent_to = (kind) => broadcast_spy.mock.calls.map(([p]) => p).filter((p) => p.kind === kind)
-const fight_stream_logs = () => log_spy.mock.calls.filter(([ns]) => ns === 'fight-stream')
+const sent_to = (kind) => broadcast_spy.mock.calls.map(([p]) => p).filter(p => p.kind === kind)
 
 /** Seed BOTH halves fight-stream.js reads: the fight core (the house test door) + its board_view mirror into
  *  use_dungeon.dungeon (dungeon_run_store's real projection — production wiring a poll loop performs; this
@@ -73,7 +63,6 @@ function seed(opts) {
 
 afterEach(() => {
   broadcast_spy.mockClear()
-  log_spy.mockClear()
   use_dungeon_turn.getState().clear_picks()
   use_dungeon.setState({ dungeon: null })
   reset_fight_core()
@@ -81,7 +70,6 @@ afterEach(() => {
 
 afterAll(() => {
   broadcast_spy.mockRestore()
-  log_spy.mockRestore()
   restore_browser_globals()
 })
 
@@ -107,31 +95,30 @@ describe('#37 send-on-pick — SENDER gating (stream_pick, driven through the RE
     expect(sent_to('placement')).toEqual([])
   })
 
-  test('a drafted move while it is genuinely my ACTIVE turn broadcasts kind:move', () => {
-    seed({ active: ME })
-    use_dungeon_turn.getState().set_move_target(CELL_A)
-    expect(sent_to('move')).toEqual([{ dungeon_id: FIGHT_ID, address: ME, kind: 'move', target: CELL_A }])
+  test('a drafted move on MY active turn streams a courtesy BATCH (the drafted turn in receipt vocabulary)', () => {
+    const store = seed({ active: ME })
+    // Draft a move — the fight core records my Moved intent; the store-driven sender streams it to peers as a batch.
+    store.getState().input({ type: 'intent', intent: { kind: 'move', character: ME, to_cell: CELL_A } })
+    const batches = sent_to('batch')
+    expect(batches.length).toBe(1)
+    expect(batches[0]).toMatchObject({ dungeon_id: FIGHT_ID, address: ME, kind: 'batch' })
+    expect(batches[0].actions.some(a => a.kind === 'Moved' && a.to_cell === CELL_A)).toBe(true)
   })
 
-  test('a drafted cast on a PEER turn (not mine) never broadcasts — only the active seat streams its own turn', () => {
+  test('the same drafted batch streams ONCE — later unrelated store churn never re-broadcasts it', () => {
+    const store = seed({ active: ME })
+    store.getState().input({ type: 'intent', intent: { kind: 'move', character: ME, to_cell: CELL_A } })
+    const first = sent_to('batch').length
+    store.getState().input({ type: 'hand_update', hand: ['a'] }) // unrelated churn — no new draft
+    expect(sent_to('batch').length).toBe(first)
+  })
+
+  test('a PEER turn (not mine) never streams a courtesy batch — the sender fires only for MY own turn', () => {
     seed({ seats: [{ character: ME }, { character: PEER }], active: PEER })
-    use_dungeon_turn.getState().set_cast_target(CELL_A)
-    expect(sent_to('cast')).toEqual([])
-  })
-
-  test('clearing a pick (null) never broadcasts — the drafted-off no-op, not a stream event', () => {
-    seed({ active: ME })
-    use_dungeon_turn.getState().set_move_target(CELL_A)
-    broadcast_spy.mockClear()
-    use_dungeon_turn.getState().set_move_target(null)
-    expect(broadcast_spy).not.toHaveBeenCalled()
-  })
-
-  test('a pick never broadcasts once my own escrow seat desyncs locally (the escrow.some guard)', () => {
-    seed({ active: ME })
-    use_dungeon.setState((s) => ({ dungeon: { ...s.dungeon, escrow: [] } })) // my_entity_id resolves, but I'm not seated locally
-    use_dungeon_turn.getState().set_move_target(CELL_A)
-    expect(broadcast_spy).not.toHaveBeenCalled()
+    // A local draft is refused on a peer turn (provider gate); its refusal still churns the store, yet the
+    // provider guard in the sender keeps anything off the wire.
+    fight_store.getState().input({ type: 'intent', intent: { kind: 'move', character: ME, to_cell: CELL_A } })
+    expect(sent_to('batch')).toEqual([])
   })
 })
 
@@ -152,16 +139,29 @@ describe('#37 fold-on-receive — RECEIVER gating + the placement_ghost fold (on
     expect(fight_view().placement_ghosts).toEqual([])
   })
 
-  test('a legit PEER move (active seat, in range, unobstructed) reaches sim-verify (game_log fires) — proves the filtered log spy below actually detects a real invocation, not a false negative', () => {
-    seed({ seats: [{ character: ME }, { character: PEER }], active: PEER }) // PEER seat 1 @ cell 101 = (1,5)
-    fire({ dungeon_id: FIGHT_ID, address: PEER, kind: 'move', target: 102 }) // (2,5) — one step, unobstructed
-    expect(fight_stream_logs().length).toBe(1)
+  test('a legal PEER batch pre-paints through the core (legality lives in the fight core now, not this glue)', () => {
+    const store = seed({ seats: [{ character: ME }, { character: PEER }], active: PEER }) // PEER seat 1 @ cell 101
+    fire({
+      dungeon_id: FIGHT_ID,
+      address: PEER,
+      kind: 'batch',
+      intent_id: 'peer:mv',
+      actions: [{ kind: 'Moved', character: PEER, to_cell: 102 }], // one step from 101 — within the peer's MP
+    })
+    expect(presented_state(store.getState()).fighters?.p1?.cell, 'the peer batch pre-painted the move').toBe(102)
   })
 
-  test('my OWN echo (move) never reaches verify — the ONLY guard for move/cast, no store backstop exists', () => {
-    seed({ active: ME })
-    fire({ dungeon_id: FIGHT_ID, address: ME, kind: 'move', target: CELL_A })
-    expect(fight_stream_logs()).toEqual([])
+  test('my OWN echo (batch) never pre-paints — the own-echo guard drops it before the core door', () => {
+    const store = seed({ active: ME })
+    const before = presented_state(store.getState()).fighters?.p0?.cell
+    fire({
+      dungeon_id: FIGHT_ID,
+      address: ME,
+      kind: 'batch',
+      intent_id: 'echo',
+      actions: [{ kind: 'Moved', character: ME, to_cell: CELL_A }],
+    })
+    expect(presented_state(store.getState()).fighters?.p0?.cell, 'my own relay never paints itself').toBe(before)
   })
 
   test('a wrong dungeon_id (stale/foreign broadcast) is dropped', () => {
@@ -213,28 +213,31 @@ describe('#37 fan-out — multiple distinct peers project independently, in stab
   })
 })
 
-// FINDING (pinned, not fixed — brief scope is unit coverage only): on_peer_stream has NO try/catch.
-// active_character_id(dungeon) indexes dungeon.turn_queue[dungeon.turn_ptr] and the placement branch calls
-// dungeon.escrow.some(...) with no presence guard on either field. A torn/mid-transition local dungeon record
-// (missing turn_queue/escrow — a class this codebase already treats as real: board_state.js's own
-// fight_geometry_complete / HOLD-NOT-DEGRADE handling) makes an arriving peer packet throw SYNCHRONOUSLY out of
-// context.events.emit. This is NOT a silent swallow — Node's EventEmitter propagates a listener's throw to the
-// emit() caller (lobby-room.js's fight_stream_action.onMessage, invoked directly by Trystero's WebRTC message
-// dispatch, which has no try/catch of its own either), so in production this surfaces as an uncaught exception
-// on that one inbound message. The listener registration itself survives (EventEmitter does not unsubscribe a
-// throwing listener), so the next valid packet still folds correctly.
-// TODO(#37 follow-up): guard on_peer_stream's two unguarded reads so a torn local record degrades to a dropped
-// packet instead of an uncaught throw — matches the no-silent-failure law without going silent either way.
+// FINDING (partially resolved by #334): on_peer_stream still has NO try/catch, and the PLACEMENT branch calls
+// dungeon.escrow.some(...) with no presence guard — a torn/mid-transition local record (missing escrow — a class
+// board_state.js's own fight_geometry_complete / HOLD-NOT-DEGRADE handling treats as real) makes an arriving
+// placement packet throw SYNCHRONOUSLY out of context.events.emit (Node's EventEmitter propagates a listener's
+// throw to the emit() caller — lobby-room.js's onMessage, invoked directly by Trystero's WebRTC dispatch, which
+// has no try/catch either). The listener registration survives, so the next valid packet still folds. #334 REMOVED
+// the old turn_queue read (active_character_id): the COURTESY batch path reads only dungeon.id/status, so that
+// torn-record class no longer throws — proven below.
+// TODO(#37 follow-up): guard the placement escrow read too, so a torn record degrades to a dropped packet.
 describe('#37 error path — a throwing consumer (FINDING, see comment above)', () => {
-  test('TODO(#37 follow-up): a move/cast stream over a torn dungeon record (missing turn_queue) throws — pinned', () => {
-    seed({ seats: [{ character: ME }, { character: PEER }], active: ME })
+  test('a courtesy batch over a torn record (missing turn_queue) no longer throws — the batch path reads no turn_queue', () => {
+    seed({ seats: [{ character: ME }, { character: PEER }], active: PEER })
     use_dungeon.setState((s) => {
       const { turn_queue, ...torn } = s.dungeon
       return { dungeon: torn }
     })
-    // address must be a genuine PEER, not ME — an own-echo (address === my_entity_id) returns before this
-    // throwing read is ever reached, and a self-test here would pass for the wrong reason.
-    expect(() => fire({ dungeon_id: FIGHT_ID, address: PEER, kind: 'move', target: CELL_A })).toThrow()
+    expect(() =>
+      fire({
+        dungeon_id: FIGHT_ID,
+        address: PEER,
+        kind: 'batch',
+        intent_id: 'peer:mv',
+        actions: [{ kind: 'Moved', character: PEER, to_cell: 102 }],
+      })
+    ).not.toThrow()
   })
 
   test('TODO(#37 follow-up): a placement stream over a torn dungeon record (missing escrow) throws — pinned', () => {
