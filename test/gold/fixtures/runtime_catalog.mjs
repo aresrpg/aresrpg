@@ -447,6 +447,10 @@ export const GATHER_LADDERS = (() => {
   for (const id of gather_job_ids) out[id].sort((left, right) => left.tier - right.tier || left.level - right.level)
   return out
 })()
+export const gather_ladder_of = (job_id) => GATHER_LADDERS[job_id ?? ''] ?? []
+export const has_world_corpus = () => WORLD_CORPUS.worlds.length > 0
+export const load_world_corpus = async () => {}
+export const set_world_corpus_for_test = () => {}
 `
 }
 
