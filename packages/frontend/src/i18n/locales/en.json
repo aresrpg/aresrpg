@@ -82,7 +82,10 @@
     "on_cooldown": "On cooldown — {{n}} turn(s)",
     "casts_exhausted": "No casts left this turn",
     "predicted_kill": "KILLS THE MOB",
-    "courtesy_dropped": "Couldn't show a teammate's live preview"
+    "courtesy_dropped": "Couldn't show a teammate's live preview",
+    "bug_report": "Copy bug report",
+    "bug_report_copied": "Fight data copied. Paste it into a new issue at {{url}}.",
+    "bug_report_copy_failed": "Couldn't copy the fight data."
   },
   "nav": {
     "world": "World",

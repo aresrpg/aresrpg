@@ -218,5 +218,6 @@ describe('fight turn controls — one phase source for the button and countdown'
     expect(html).toContain('>READY<')
     expect(html).toContain('hud-fightctl__abandon')
     expect(html).toContain('>FORFEIT<')
+    expect(html).toContain('hud-fightctl__report')
   })
 })

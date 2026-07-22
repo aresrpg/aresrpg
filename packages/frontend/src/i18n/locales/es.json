@@ -82,7 +82,10 @@
     "on_cooldown": "En recarga — {{n}} turno(s)",
     "casts_exhausted": "Sin lanzamientos restantes este turno",
     "predicted_kill": "MATA AL MONSTRUO",
-    "courtesy_dropped": "No se pudo mostrar la vista previa de un compañero"
+    "courtesy_dropped": "No se pudo mostrar la vista previa de un compañero",
+    "bug_report": "Copiar informe de error",
+    "bug_report_copied": "Datos del combate copiados. Pégalos en una nueva incidencia en {{url}}.",
+    "bug_report_copy_failed": "No se pudieron copiar los datos del combate."
   },
   "nav": {
     "world": "Mundo",

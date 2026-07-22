@@ -82,7 +82,10 @@
     "on_cooldown": "クールダウン中 — あと{{n}}ターン",
     "casts_exhausted": "このターンの使用回数は上限です",
     "predicted_kill": "モンスターを倒す",
-    "courtesy_dropped": "仲間のライブプレビューを表示できませんでした"
+    "courtesy_dropped": "仲間のライブプレビューを表示できませんでした",
+    "bug_report": "バグ報告をコピー",
+    "bug_report_copied": "戦闘データをコピーしました。{{url}} の新しい Issue に貼り付けてください。",
+    "bug_report_copy_failed": "戦闘データをコピーできませんでした。"
   },
   "nav": {
     "world": "ワールド",

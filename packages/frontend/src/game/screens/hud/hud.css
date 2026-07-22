@@ -714,6 +714,24 @@
   /* stays SOLID on hover too — a translucent red wash would reopen the see-through gap on hover */
   background: linear-gradient(165deg, #1a1212, #0a0a0f);
 }
+.hud-fightctl .hud-fightctl__report {
+  /* Tertiary diagnostic token — the same opaque obsidian surface and gold edge as fight chrome, quieter and
+   * smaller than both the primary turn action and destructive forfeit. */
+  min-width: 104px;
+  padding: 5px 12px;
+  background: linear-gradient(165deg, #12121a, #0a0a0f);
+  color: var(--fg-muted);
+  border-color: rgba(200, 150, 60, 0.3);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.32);
+}
+.hud-fightctl .hud-fightctl__report:hover {
+  color: var(--fg);
+  border-color: var(--accent-strong);
+  background: linear-gradient(165deg, #17151a, #0a0a0f);
+}
 
 /* ===== combat: PLACEMENT banner — prominent top-center prep prompt + the 60s countdown.
  * Sits high-center over the board so the timer is unmissable; the READY / ABANDON actions stay in the

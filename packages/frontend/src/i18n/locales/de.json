@@ -82,7 +82,10 @@
     "on_cooldown": "Abklingzeit — {{n}} Runde(n)",
     "casts_exhausted": "Keine Einsätze mehr in dieser Runde",
     "predicted_kill": "TÖTET DAS MONSTER",
-    "courtesy_dropped": "Live-Vorschau eines Teamkameraden nicht möglich"
+    "courtesy_dropped": "Live-Vorschau eines Teamkameraden nicht möglich",
+    "bug_report": "Fehlerbericht kopieren",
+    "bug_report_copied": "Kampfdaten kopiert. Füge sie unter {{url}} in ein neues Issue ein.",
+    "bug_report_copy_failed": "Die Kampfdaten konnten nicht kopiert werden."
   },
   "nav": {
     "world": "Welt",

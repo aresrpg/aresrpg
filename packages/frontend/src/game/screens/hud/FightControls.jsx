@@ -23,10 +23,15 @@ import { turn_input_armed } from '../../../world-shell/voxel_fight_folds.js'
 import { use_dungeon_turn } from '../dungeon-turn.js'
 import { fight_store } from '@aresrpg/fight/store'
 import { use_fight, use_fight_view } from '../../store.js'
+import { push_event_toast } from '../../core/toast.js'
 import { min_turn_left } from '@aresrpg/fight/project'
 import { auto_commit_fire_at } from '@aresrpg/fight/draft_budget'
 import { ConfirmDialog } from './world/ConfirmDialog.jsx'
 import { use_fight_trace_keybind } from './use_fight_trace_keybind.js'
+import {
+  copy_fight_bug_report,
+  FIGHT_BUG_REPORT_ISSUES_URL,
+} from './fight_bug_report.js'
 
 // DEFAULT handlers = the live on-chain path (the ONLY fight backend now the WS server is gone). The dungeon
 // board INJECTS a richer End Turn (draft-flush) + Ready (place_at the picked cell) as props that ALWAYS win
@@ -192,6 +197,24 @@ export function FightControls({
     on_abandon()
   }
 
+  // Issue #166 — the only effect edge for the compact report: snapshot the fight core at PRESS, copy locally,
+  // then name the repository issue destination. No upload/fetch/open occurs; clipboard rejection is surfaced.
+  const on_bug_report = () => {
+    const clipboard = typeof navigator !== 'undefined' ? navigator.clipboard : null
+    if (!clipboard?.writeText) {
+      push_event_toast({ state: 'error', title: t('fight.bug_report_copy_failed') })
+      return
+    }
+    void copy_fight_bug_report(fight_store.getState(), (blob) => clipboard.writeText(blob)).then(
+      () =>
+        push_event_toast({
+          state: 'success',
+          title: t('fight.bug_report_copied', { url: FIGHT_BUG_REPORT_ISSUES_URL }),
+        }),
+      () => push_event_toast({ state: 'error', title: t('fight.bug_report_copy_failed') })
+    )
+  }
+
   return (
     <>
       {show_commit_cue && (
@@ -234,6 +257,13 @@ export function FightControls({
             {abandon_button_label}
           </button>
         )}
+        <button
+          type="button"
+          className="hud-fightctl__btn hud-fightctl__report"
+          onClick={on_bug_report}
+        >
+          {t('fight.bug_report')}
+        </button>
       </div>
       <ConfirmDialog
         open={confirm_open}

@@ -82,7 +82,10 @@
     "on_cooldown": "En recharge — {{n}} tour(s)",
     "casts_exhausted": "Plus de lancers ce tour",
     "predicted_kill": "TUE LE MONSTRE",
-    "courtesy_dropped": "Impossible d'afficher l'aperçu en direct d'un équipier"
+    "courtesy_dropped": "Impossible d'afficher l'aperçu en direct d'un équipier",
+    "bug_report": "Copier le rapport de bug",
+    "bug_report_copied": "Données du combat copiées. Collez-les dans un nouveau ticket sur {{url}}.",
+    "bug_report_copy_failed": "Impossible de copier les données du combat."
   },
   "nav": {
     "world": "Monde",
