@@ -114,9 +114,8 @@ export const terrain_walkable_at = ({ obstacles, holes, shape_mask, board_width,
 
 /** The rendered walk for a Moved/MobMoved beat when the producer supplied no real path: an obstacle/hole/shape
  *  -aware shortest route — REUSES the sim's own `find_path_4dir` (ONE pathfinding home; the chain event carries
- *  only the landed cell, so this is a legal-route RECONSTRUCTION, not a claim of bit-identical parity with
- *  whichever equally-short route the sim/chain actually walked — combat_grid.js §header deliberately does not
- *  mirror BFS tie-break order either). Falls back to the old cardinal straight line when board facts are absent
+ *  only the landed cell, so this reconstructs the canonical Move route with the sim's pinned left/right/up/down
+ *  tie-break). Falls back to the old cardinal straight line when board facts are absent
  *  (from/to unknown, or a legacy caller with no board data) — every existing caller renders exactly as before.
  *  `find_path_4dir` returns start..goal INCLUSIVE; sliced to origin-EXCLUSIVE to match path_between's contract. */
 export const reconstructed_path = (from, to, board = {}) => {

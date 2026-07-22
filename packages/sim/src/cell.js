@@ -35,14 +35,16 @@ export const chebyshev_distance = (a, b) =>
   Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y))
 
 /**
- * The four cardinal neighbors (N, W, E, S) — fight movement is 4-directional.
+ * The four cardinal neighbors in Move's canonical fight-walk order: left, right, up, down.
+ * `combat_grid::bfs_path_cost` enqueues in this order and `movement::next_shortest_step` uses the same order to
+ * break ties between equal shortest routes. Keep every 4-dir sim consumer on this one ordering primitive.
  * @param {Cell} cell
  * @returns {Cell[]}
  */
 export const neighbors_4dir = ({ x, y }) => [
-  { x, y: y - 1 },
   { x: x - 1, y },
   { x: x + 1, y },
+  { x, y: y - 1 },
   { x, y: y + 1 },
 ]
 

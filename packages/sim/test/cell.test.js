@@ -29,9 +29,9 @@ describe('cell', () => {
 
   test('neighbors_4dir returns the four cardinals', () => {
     expect(neighbors_4dir({ x: 0, y: 0 })).toEqual([
-      { x: 0, y: -1 },
       { x: -1, y: 0 },
       { x: 1, y: 0 },
+      { x: 0, y: -1 },
       { x: 0, y: 1 },
     ])
   })

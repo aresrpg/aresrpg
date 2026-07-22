@@ -2,10 +2,11 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // 4-directional movement over the tactical grid: shortest path + reachable cells.
 //
-// Unit step cost → BFS is optimal and simpler than A* (no priority heap, no float heuristic), and fully
-// deterministic given the fixed neighbor order. Walkability is an injected predicate, so this layer is
-// world-agnostic — the reducer ANDs terrain walkability with a fresh occupancy check (occupancy is NOT
-// baked into the predicate).
+// Unit step cost → BFS is optimal and simpler than A* (no priority heap, no float heuristic). Fight walks mirror
+// Move's `combat_grid::bfs_path_cost` queue discipline: complete layer-FIFO frontiers, visited on enqueue, and the
+// shared left/right/up/down neighbor order. Parent reconstruction therefore selects the same lexicographically
+// first shortest route as `movement::next_shortest_step`. Walkability is injected, so this layer is world-agnostic
+// — the reducer ANDs terrain walkability with a fresh occupancy check (occupancy is NOT baked into the predicate).
 
 import { cell_key, neighbors_4dir, neighbors_8dir } from './cell.js'
 

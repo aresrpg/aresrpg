@@ -5,6 +5,7 @@ import { describe, expect, test } from 'bun:test'
 import { find_entity } from '../src/fight_state.js'
 import { find_path_4dir } from '../src/pathfind.js'
 import { create_fight_state, reduce } from '../src/reduce.js'
+
 import {
   chain_walk_path,
   scenario_walkable,
