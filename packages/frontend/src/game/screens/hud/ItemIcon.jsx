@@ -118,13 +118,13 @@ export function item_fallback_glyph(/** @type {string | null | undefined} */ cat
 }
 
 /**
- * An item's icon with a graceful fallback. Pass the whole item (it resolves `icon ?? id` for the CDN URL
- * and reads `category ?? item_category` for the fallback glyph) OR a raw icon/id string. On load error
- * (404 / blocked) an hd request first retries the BASE icon, then the shared retry ladder re-runs the
- * pass for transient failures; only when it exhausts does the item's CATEGORY glyph pin (a ring, a
+ * An item's icon with a graceful fallback. Pass the whole item (it resolves `slug ?? icon ?? id` for the
+ * CDN URL and reads `category ?? item_category` for the fallback glyph) OR a raw icon/id string. On load
+ * error (404 / blocked) an hd request first retries the BASE icon, then the shared retry ladder re-runs
+ * the pass for transient failures; only when it exhausts does the item's CATEGORY glyph pin (a ring, a
  * sword…) — never a broken image or a bare box.
  * @param {{
- *   item: { icon?: string | null, id?: string | null, category?: string | null, item_category?: string | null } | string | null | undefined,
+ *   item: { slug?: string | null, icon?: string | null, id?: string | null, category?: string | null, item_category?: string | null } | string | null | undefined,
  *   alt?: string,
  *   hd?: boolean,
  *   className?: string,
