@@ -178,6 +178,9 @@ export function board_state_from_fight({
     // move-wash projection (project.move_wash) prices the escape fraction from. Rides the raw gRPC passthrough
     // (decode_fight keeps participants raw; nested structs stay nested), 0 when a legacy read omits stats.
     agility: Number(p.stats?.agility ?? 0),
+    // Immutable join/equipment range. Timed rows stay in Fight.fx.statuses and are folded exactly once by
+    // statuses.range_bonus_of; reading live stats here would double-count an already-active row.
+    base_range: Number(p.base_stats?.range ?? 0),
   }))
   // IDENTITY JOIN KEY — the Fight's `group_template` (every FightMob is minted `template: @0x0`; provenance
   // rides the Fight). base_ap/base_mp are the group's shared kit budget, fanned out per row for the HUD.
@@ -201,6 +204,7 @@ export function board_state_from_fight({
       // LIVE agility (mob.move `FightMob.stats` — the per-fight mutable combat block): the locker side of the
       // tackle contest (project.move_wash). 0 when a legacy read omits stats (contest then prices bucket 2).
       agility: Number(m.stats?.agility ?? 0),
+      base_range: Number(m.base_stats?.range ?? 0),
     }
   })
   const room_index = Math.max(0, (run?.room ?? 1) - 1)

@@ -113,6 +113,16 @@ describe('cast_range_set_dungeon — D113 range + integer LOS (mirrors DungeonBo
     expect(got.has(encode(7, 5))).toBe(true) // distance 2 east
   })
 
+  it('a folded +range status extends only a modifiable spell into the extra cell', () => {
+    const caster = {
+      cell: c(5, 5),
+      effects: [{ kind: 9, stat: 6, value: 1, flags: 0, remaining_turns: 2 }],
+    }
+    const extra = encode(8, 5) // distance 3: one beyond the authored [1,2] maximum
+    expect(cast_range_set_dungeon([1, 2], caster, grid, [], { modifiable_range: true }).has(extra)).toBe(true)
+    expect(cast_range_set_dungeon([1, 2], caster, grid, [], { modifiable_range: false }).has(extra)).toBe(false)
+  })
+
   it('rmax 0 (a self-buff) lights ONLY the caster cell', () => {
     const got = cast_range_set_dungeon([0, 0], { cell: c(4, 4) }, grid, [])
     expect([...got]).toEqual([encode(4, 4)])

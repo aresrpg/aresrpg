@@ -291,6 +291,19 @@ export const apply_action = (state, action) => {
         invisible: statuses.some((row) => row.kind === INVISIBILITY_STATUS_KIND),
       })
     }
+    case 'StatusAdded': {
+      // Prediction-only twin of the authoritative ActionEffect arm. predict_cast has already run deterministic
+      // resolution and supplies the exact recipient; the matching Cast receipt retires this whole optimistic batch
+      // before its authoritative ActionEffect is re-folded, so the row never double-applies.
+      if (!action.status || Number(action.status.remaining_turns) <= 0) return state
+      const key = fighter_key({ is_mob: action.target_is_mob, idx: action.target_idx, resolve_seat: rs })
+      const base = ensure(state, key)
+      const statuses = [...(base.fighters[key].statuses ?? []), action.status]
+      return patch_fighter(base, key, {
+        statuses,
+        invisible: statuses.some((row) => row.kind === INVISIBILITY_STATUS_KIND),
+      })
+    }
     case 'ActionResolved': {
       const key = action_context_key(action)
       if (!state.action_contexts?.[key]) return state

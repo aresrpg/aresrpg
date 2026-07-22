@@ -414,6 +414,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       committed_dead: !(cf.hp != null ? cf.alive : row.alive),
       health_max: row.max_hp,
       effects: effects_of(f),
+      base_range: row.base_range ?? 0,
       // TURN-START BUDGET: the fold predicts the begin_turn refill so the budget paints the instant it's my turn
       // (the TurnStarted event omits ap/mp); the snapshot row.ap/mp reconciles the moment a post-refill read adopts.
       ap: f.ap ?? row.ap,
@@ -452,6 +453,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       committed_dead: !(cf.hp != null ? cf.alive : m.alive),
       health_max: m.max_hp,
       effects: effects_of(f),
+      base_range: m.base_range ?? 0,
       ap: m.ap ?? 0,
       ap_max: m.base_ap ?? 0,
       mp: m.mp ?? 0,

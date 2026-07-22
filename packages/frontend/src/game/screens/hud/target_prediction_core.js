@@ -104,7 +104,7 @@ export const compute_target_prediction = ({ fight, hover, dungeon, draft_len = 0
   const stats_of = (id) => {
     const ref = resolve_ref(id)
     const stat_row = ref?.is_mob ? dungeon.mobs?.[ref.idx] : dungeon.escrow?.[ref?.idx]
-    return { agility: Number(stat_row?.agility ?? 0) }
+    return { agility: Number(stat_row?.agility ?? 0), range: Number(stat_row?.base_range ?? 0) }
   }
   // DETERMINISTIC CRIT (#163): a fight is seed-deterministic, so whether THIS pending cast crits is a FACT
   // computable pre-cast — never a chance. It lands on the NEXT turn-seed slot (my committed casts_this_turn + the

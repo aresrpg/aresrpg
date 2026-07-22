@@ -22,6 +22,7 @@ import { get_reachable_cells } from '@aresrpg/sim/pathfind'
 import { get_targetable_cells } from '@aresrpg/sim/spell_targeting'
 import { cell_key } from '@aresrpg/sim/cell'
 import { encode, decode, GRID_W, GRID_H, bfsReachable, bfsPath, lineOfSight } from '@aresrpg/fight/los'
+import { range_bonus_of } from '@aresrpg/fight/statuses'
 
 // ── DEATH / TRAP BEAT TIMING (resolution pacing, owner L/N) — the constants that time the SEEN death + the
 //    trap→blast→damage cadence. Renderer-neutral (seconds), so both boards linger a killed body the same beat. ──
@@ -117,7 +118,8 @@ export function on_board(cell) {
  * @param {{ width: number, height: number, shape_mask?: Set<number> | number[] }} grid  the room shape (dungeon_grid_of)
  * @param {number[]} obstacles                           LOS-blocking cells — the los_obstacles twin set: static
  *   obstacles ∪ living-body cells (players + mobs). Endpoints self-excluded by losBlocks (caster/target inert).
- * @param {{ los?: boolean, linear?: boolean, free_cell?: boolean, trap_cells?: Iterable<number> }} [flags]  the
+ * @param {{ los?: boolean, linear?: boolean, free_cell?: boolean, modifiable_range?: boolean,
+ *   trap_cells?: Iterable<number> }} [flags]  the
  *   seed row's legality flags (spell_target twin, P1 self-cast root): `los:false` = the spell ignores
  *   line-of-sight (sl_line_of_sight off — every in-range cell is aimable); `linear:true` = line-launch, caster &
  *   target must share a row or column (sl_line_launch); `free_cell:true` = traps/glyphs/teleport must land on a
@@ -132,14 +134,15 @@ export function on_board(cell) {
  * @returns {CellSet}
  */
 export function cast_range_set_dungeon(range, caster, grid, obstacles, flags = {}) {
-  const { los = true, linear = false, free_cell = false, trap_cells = null } = flags
+  const { los = true, linear = false, free_cell = false, modifiable_range = false, trap_cells = null } = flags
   // free_cell: the blocker set the target may NOT be (obstacles ∪ bodies — the caller passes exactly that).
   const blocked = free_cell ? new Set(obstacles ?? []) : null
   // 1.29 no-stack: cells anchoring MY live traps are not legal trap targets (chain parity — see JSDoc above).
   const trapped = trap_cells ? (trap_cells instanceof Set ? trap_cells : new Set(trap_cells)) : null
   const out = new Set()
   if (!caster || !grid) return out
-  const [rmin, rmax] = range ?? [0, 0]
+  const [rmin, authored_rmax] = range ?? [0, 0]
+  const rmax = authored_rmax + (modifiable_range ? range_bonus_of(caster) : 0)
   const from = encode(caster.cell.x, caster.cell.y)
   // D75-stride: the wash paints ONLY the room's real floor — the stored shape mask when the grid carries one
   // (dungeon_grid_of always emits one: stored on train-4, a rect twin on legacy), never the enclosing rect, so
@@ -176,12 +179,14 @@ export function cast_range_set_dungeon(range, caster, grid, obstacles, flags = {
  * @param {[number, number] | null | undefined} range the seed [rmin, rmax]
  * @param {{ cell: Cell }} caster
  * @param {{ width: number, height: number, shape_mask?: Set<number> | number[] }} grid
+ * @param {{ modifiable_range?: boolean }} [flags]
  * @returns {CellSet}
  */
-export function manhattan_range_cells(range, caster, grid) {
+export function manhattan_range_cells(range, caster, grid, flags = {}) {
   const out = new Set()
   if (!caster || !grid) return out
-  const [rmin, rmax] = range ?? [0, 0]
+  const [rmin, authored_rmax] = range ?? [0, 0]
+  const rmax = authored_rmax + (flags.modifiable_range ? range_bonus_of(caster) : 0)
   const mask =
     grid.shape_mask instanceof Set ? grid.shape_mask : grid.shape_mask?.length ? new Set(grid.shape_mask) : null
   for (let y = 0; y < grid.height; y++) {
@@ -207,7 +212,7 @@ export function manhattan_range_cells(range, caster, grid) {
 export function cast_range_set_world(level, caster, ctx) {
   const out = new Set()
   if (!level || !caster) return out
-  for (const c of get_targetable_cells(level, caster.cell, ctx)) out.add(encode(c.x, c.y))
+  for (const c of get_targetable_cells(level, caster.cell, ctx, range_bonus_of(caster))) out.add(encode(c.x, c.y))
   return out
 }
 

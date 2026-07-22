@@ -14,6 +14,7 @@ import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
 import { produce_predicted_render_events } from './fight_predicted_render.js'
 import { DISPLACE_TELEPORT } from './fight_render_prims.js'
 import { bfsPath, decode, encode } from './los.js'
+import { sim_effects_of } from './statuses.js'
 import { WEAPON_ATTACK_ID } from './weapon.js'
 
 // B7 ENGINE FOSSIL — the deployed engine lineage the CHAIN_PENDING exclusion set below was ruled against. UPDATE
@@ -23,6 +24,14 @@ export const CHAIN_PENDING_ENGINE_VERSION = '0x6145a3ecffe1f32f56d1ff973904aa342
 
 // BRIDGE B7 — expires when the <next-train> ships the 8 chain arms; deletion criterion: on-chain kind handling verified.
 export const CHAIN_PENDING = new Set([10, 15, 16, 17, 22, 25, 26, 29])
+
+const K_GIVE_POINTS = 6
+const K_ALTER_STAT = 9
+const K_INVISIBILITY = 27
+const STAT_RANGE = 6
+const POINT_AP = 0
+const POINT_MP = 1
+const FLAG_NEGATIVE = 8
 
 /** The UI projection's first direct-damage base. Pricing only; prediction itself never reads this projection. */
 export const damage_of = (effects) => (effects ?? []).find((effect) => effect.kind === 'DAMAGE')?.base ?? 0
@@ -98,6 +107,67 @@ const with_spell_in_hand = (state, caster_id, spell_id, spell_level) => {
   return { ...state, team0: state.team0.map(update), team1: state.team1.map(update) }
 }
 
+const effect_signature = (effect) =>
+  JSON.stringify([
+    effect?.id,
+    effect?.type,
+    effect?.stat,
+    effect?.value,
+    effect?.turns_remaining,
+    effect?.source_id,
+    effect?.timing,
+  ])
+
+const added_effects = (before, after) => {
+  const prior = before ?? []
+  const current = after ?? []
+  return current.filter((effect, index) => {
+    const signature = effect_signature(effect)
+    const prior_count = prior.filter((row) => effect_signature(row) === signature).length
+    const current_count = current.slice(0, index + 1).filter((row) => effect_signature(row) === signature).length
+    return current_count > prior_count
+  })
+}
+
+/** Prediction-only projection back into the raw chain status vocabulary the fight fold exposes. Keep the bridge
+ * narrow to the three self-buff rows whose client consumers are implemented; authoritative ActionEffect remains
+ * the durable source once the receipt lands. */
+const status_from_sim_effect = (effect) => {
+  const remaining_turns = Number(effect?.turns_remaining) || 0
+  if (remaining_turns <= 0) return null
+  if (effect.type === 'INVISIBILITY')
+    return {
+      kind: K_INVISIBILITY,
+      remaining_turns,
+      element: null,
+      value: 0,
+      stat: null,
+      chance: 100,
+      flags: 0,
+    }
+  if ((effect.type === 'STAT_BUFF' || effect.type === 'STAT_DEBUFF') && effect.stat === 'range')
+    return {
+      kind: K_ALTER_STAT,
+      remaining_turns,
+      element: null,
+      value: Number(effect.value) || 0,
+      stat: STAT_RANGE,
+      chance: 100,
+      flags: effect.type === 'STAT_DEBUFF' ? FLAG_NEGATIVE : 0,
+    }
+  if (effect.type === 'STAT_BUFF' && (effect.stat === 'ap' || effect.stat === 'mp'))
+    return {
+      kind: K_GIVE_POINTS,
+      remaining_turns,
+      element: null,
+      value: Number(effect.value) || 0,
+      stat: effect.stat === 'ap' ? POINT_AP : POINT_MP,
+      chance: 100,
+      flags: 0,
+    }
+  return null
+}
+
 const changed_actions = ({ before, after, caster_id, target_cell, ap_cost, resolve_ref, teleport_ids }) => {
   const actions = []
   let damaging = false
@@ -169,6 +239,16 @@ const changed_actions = ({ before, after, caster_id, target_cell, ap_cost, resol
         stance: 27,
         active: is_invisible(current),
       })
+    for (const effect of added_effects(previous.effects, current.effects)) {
+      const status = status_from_sim_effect(effect)
+      if (status)
+        actions.push({
+          kind: 'StatusAdded',
+          target_is_mob: ref.is_mob,
+          target_idx: ref.idx,
+          status,
+        })
+    }
   }
   return [{ kind: 'cast', target_cell, damaging, ap_cost }, ...actions]
 }
@@ -307,10 +387,10 @@ const sim_entity = (fighter, stats) => ({
   is_player: !!fighter.is_player,
   template_id: String(fighter.variant ?? fighter.class_id ?? fighter.id),
   level: Number(fighter.level ?? 1),
-  stats: stats ?? {},
-  effects: fighter.invisible
-    ? [{ id: 0, type: 'INVISIBILITY', timing: 'TURN_START', source_id: fighter.id, value: 0, turns_remaining: 1 }]
-    : [],
+  // `base_range` is immutable fight-start/gear truth. Every prediction caller gets it even when its stats adapter
+  // only supplies another mechanic (for example hover agility); explicit adapter keys remain intentional overrides.
+  stats: { range: Number(fighter.base_range ?? fighter.stats?.range ?? 0) || 0, ...(stats ?? {}) },
+  effects: sim_effects_of(fighter),
   deck: [],
   hand: [],
   discard: [],

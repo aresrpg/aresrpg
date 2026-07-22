@@ -56,6 +56,7 @@ import { synthetic_tackled_events, local_intent_beats, local_move_beats } from '
 import { predict_cast, weapon_spell_template, evolve_flush_casts, evolve_caster_cell } from '@aresrpg/fight/predict_cast'
 import { committed_state } from '@aresrpg/fight/store'
 import { next_move_tackle } from '@aresrpg/fight/project'
+import { range_bonus_of } from '@aresrpg/fight/statuses'
 import { cast_range_set_dungeon } from '../../../../fight-engine/overlay_intents.js' // D139: cast_range_set_dungeon = THE cast-legality home (P1 self-cast)
 import { character_cast_clock, use_dungeon_turn } from '../../dungeon-turn.js'
 import { GRID_W, GRID_CELLS, encode, decode, lineOfSight, bfsPathCost, bfsPath, bfsReachable } from '@aresrpg/fight/los'
@@ -224,6 +225,7 @@ export function DungeonBoard() {
   // controlled character id; owner address remains authorization metadata.
   const entity_id = fight?.my_entity_id ?? null
   const me = dungeon?.escrow.find((p) => (p.character ?? p.character_id) === entity_id) ?? null
+  const active_fighter = fight?.fighters.get(entity_id) ?? null
   // PRESENTATION GATE (regression: a player could act while mobs were still animating their turns): the
   // mob-wave crank hands active_entity_id back to me the instant the paced replay STARTS, so a chain-only
   // my_turn read would re-arm End Turn + the hotbar mid-cascade. `fight.presenting` (set by voxel_fight_adapter
@@ -435,10 +437,15 @@ export function DungeonBoard() {
           : undefined
       const footprint = cast_range_set_dungeon(
         [cast_params.range_min, cast_params.range_max],
-        { cell: decode(caster_cell) },
+        { ...active_fighter, cell: decode(caster_cell) },
         dungeon_grid_of(dungeon),
         los_blockers,
-        { los: lvl?.line_of_sight !== false, linear: lvl?.linear === true, trap_cells: my_trap_cells }
+        {
+          los: lvl?.line_of_sight !== false,
+          linear: lvl?.linear === true,
+          modifiable_range: lvl?.modifiable_range === true,
+          trap_cells: my_trap_cells,
+        }
       )
       if (lvl?.free_cell === true) for (const c of [...footprint]) if (occupied.get(c)?.alive) footprint.delete(c)
       // FIX 4 casts_per_target: a cell already at its per-target cap this turn drops out (chain aborts ECastsPerTarget).
@@ -448,10 +455,15 @@ export function DungeonBoard() {
       return footprint
     }
     const out = new Set()
+    const effective_range_max =
+      cast_params.range_max +
+      (fight?.armed_spell_id !== WEAPON_ATTACK_ID && active_spell?.levels?.[0]?.modifiable_range
+        ? range_bonus_of(active_fighter)
+        : 0)
     for (const [cell, o] of occupied) {
       if (o.kind !== 'mob' || !o.alive) continue
       const d = manhattan(caster_cell, cell)
-      if (d < cast_params.range_min || d > cast_params.range_max) continue
+      if (d < cast_params.range_min || d > effective_range_max) continue
       if (!lineOfSight(caster_cell, cell, los_blockers)) continue
       if (casts_at_cell(cast_path, armed_key, cell) >= cpt_target_cap) continue // FIX 4 casts_per_target (per cell/turn)
       out.add(cell)
@@ -473,6 +485,7 @@ export function DungeonBoard() {
     cast_params,
     fight?.armed_spell_id,
     active_spell,
+    active_fighter,
     dungeon,
   ])
 
@@ -517,7 +530,7 @@ export function DungeonBoard() {
     const stats_of = (fighter_id) => {
       const ref = resolve_ref(fighter_id)
       const row = ref?.is_mob ? dungeon.mobs[ref.idx] : dungeon.escrow[ref?.idx]
-      return { agility: Number(row?.agility ?? 0) }
+      return { agility: Number(row?.agility ?? 0), range: Number(row?.base_range ?? 0) }
     }
     const prediction = predict_cast({
       view: fight_view(),
@@ -747,10 +760,14 @@ export function DungeonBoard() {
           const self_cast = (range?.[1] ?? 0) === 0
           const footprint = cast_range_set_dungeon(
             range,
-            { cell: decode(cast_anchor) },
+            { ...active_fighter, cell: decode(cast_anchor) },
             dungeon_grid_of(dungeon),
             los,
-            { los: lvl?.line_of_sight !== false, linear: lvl?.linear === true }
+            {
+              los: lvl?.line_of_sight !== false,
+              linear: lvl?.linear === true,
+              modifiable_range: lvl?.modifiable_range === true,
+            }
           )
           // #321 + #323: "the caster's own cell" for a self-cast drafted after a teleport/dash earlier in the SAME
           // sequence is that cast's per-cast EVOLVED cell, never the sequence's static starting anchor (the same

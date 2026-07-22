@@ -29,6 +29,7 @@ import { fight_store } from '@aresrpg/fight/store'
 import { fight_view } from '@aresrpg/fight/project'
 import { GRID_CELLS } from '@aresrpg/fight/los'
 import { fight_cast_beat_effects } from '@aresrpg/fight/present'
+import { range_bonus_of } from '@aresrpg/fight/statuses'
 
 import {
   move_reachable_set,
@@ -1564,7 +1565,7 @@ export function create_voxel_fight_adapter(
           // 1.29 no-stack: a trap-PLACING spell greys MY live trap cells (the chain aborts cast/107 there).
           if (flags.places_trap) flags.trap_cells = fight.my_traps ?? []
           const castable = cast_range_set_dungeon(range, active, grid, los, flags)
-          const in_range = manhattan_range_cells(range, active, grid) // every cell within the spell's reach
+          const in_range = manhattan_range_cells(range, active, grid, flags) // every cell within the spell's reach
           // free_cell (traps/glyphs): a mob/obstacle cell is NOT a valid target — and shouldn't read as merely
           // "LOS-blocked" light-blue either. Drop the whole blocker set (obstacles ∪ bodies = `los`) from the
           // light-blue wash so a trap ONLY ever lights FREE cells (not targetable on a mob).
@@ -1955,7 +1956,9 @@ export function cell_cast_world(origin, cell) {
 function paint_key(result, fight, dungeon, replaying, busy, presented_traps) {
   let sig = `${result.phase}|${fight.fight_id}|${dungeon.room_index}|${fight.active_entity_id ?? ''}|${fight.armed_spell_id ?? ''}|${fight.winner}|rp:${replaying ? 1 : 0}|busy:${busy ? 1 : 0}|`
   // f.ap rides the sig (07-17): the folded AP spend gates the cast wash (wash_armed_spell) — a debit must repaint.
-  for (const [id, f] of fight.fighters) sig += `${id}:${f.dead ? 'x' : `${f.cell.x},${f.cell.y},${f.mp},${f.ap}`}|`
+  // Effective range rides it too: a status-only +range adoption/expiry changes the wash without moving or spending.
+  for (const [id, f] of fight.fighters)
+    sig += `${id}:${f.dead ? 'x' : `${f.cell.x},${f.cell.y},${f.mp},${f.ap},r${range_bonus_of(f)}`}|`
   // the local placement pick moves the stand-here highlight; track it.
   sig += `pp:${use_dungeon_turn.getState().placement_pick ?? ''}`
   // Presented trap markers ride the memo: outcome truth retired the cell earlier, so the trigger-time transition

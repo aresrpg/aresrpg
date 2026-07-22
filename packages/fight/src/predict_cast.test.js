@@ -33,6 +33,7 @@ import {
   chain_critical,
   evolve_caster_cell,
   evolve_flush_casts,
+  predict_cast,
   predict_sim_cast,
   weapon_spell_template,
 } from './predict_cast.js'
@@ -200,6 +201,138 @@ describe('sim-backed own-cast prediction', () => {
       { kind: 'Hit', victim_is_mob: true, victim_idx: 0, remaining_hp: 193 },
     ])
     expect(prediction.beats.some((beat) => beat.kind === 'damage' && beat.payload.damage === 7)).toBe(true)
+  })
+
+  test('raw folded +range status makes a max+1 cast legal in prediction, but never extends fixed range', () => {
+    const store = started_store()
+    const view = engine_view(store.getState())
+    const fighters = new Map(view.fighters)
+    fighters.set(CHAR, {
+      ...fighters.get(CHAR),
+      effects: [
+        {
+          kind: SE.K_ALTER_STAT,
+          stat: SE.STAT_RANGE,
+          value: 1,
+          flags: 0,
+          remaining_turns: 2,
+        },
+      ],
+    })
+    const raw = single_effect_spell(
+      'range_probe',
+      { kind: SE.K_DAMAGE, value: 7, element: 2, target_filter: SE.TF_NOT_TEAM },
+      1,
+      false
+    )
+    const spell = (modifiable_range) => ({
+      ...raw,
+      levels: raw.levels.map((level) => ({ ...level, range: [1, 1], modifiable_range })),
+    })
+    const predict = (modifiable_range) =>
+      predict_cast({
+        view: { ...view, fighters },
+        caster_id: CHAR,
+        spell: spell(modifiable_range),
+        target_cell: encode(4, 4), // distance 2: exactly max+1
+        critical: false,
+        stats_of: () => ({ range: 0 }),
+        resolve_ref: (id) =>
+          id === CHAR ? { is_mob: false, idx: 0 } : id === 'mob-0' ? { is_mob: true, idx: 0 } : null,
+      })
+    expect(predict(true).result.success).toBe(true)
+    expect(predict(false).result.success).toBe(false)
+  })
+
+  test('a predicted self +range row enters the status home and legalizes the next same-turn cast', () => {
+    const store = started_store()
+    const resolve_ref = (id) =>
+      id === CHAR ? { is_mob: false, idx: 0 } : id === 'mob-0' ? { is_mob: true, idx: 0 } : null
+    const buff = single_effect_spell(
+      'range_self',
+      {
+        kind: SE.K_ALTER_STAT,
+        value: 1,
+        stat: SE.STAT_RANGE,
+        flags: 0,
+        turns: 3,
+        chance: 100,
+        target_filter: SE.TF_ONLY_CASTER,
+      },
+      1,
+      false
+    )
+    const predicted_buff = predict_cast({
+      view: engine_view(store.getState()),
+      caster_id: CHAR,
+      spell: buff,
+      target_cell: START,
+      critical: false,
+      resolve_ref,
+    })
+    store.getState().input({
+      type: 'predicted',
+      intent_id: 'range-buff:0',
+      basis_version: 6,
+      actions: predicted_buff.actions,
+      beats: predicted_buff.beats,
+    })
+    expect(engine_view(store.getState()).fighters.get(CHAR).effects).toContainEqual(
+      expect.objectContaining({
+        kind: SE.K_ALTER_STAT,
+        stat: SE.STAT_RANGE,
+        value: 1,
+        remaining_turns: 3,
+      })
+    )
+
+    const raw = single_effect_spell(
+      'range_followup',
+      { kind: SE.K_DAMAGE, value: 7, element: 2, target_filter: SE.TF_NOT_TEAM },
+      1,
+      false
+    )
+    const followup = {
+      ...raw,
+      levels: raw.levels.map((level) => ({ ...level, range: [1, 1], modifiable_range: true })),
+    }
+    expect(
+      predict_cast({
+        view: engine_view(store.getState()),
+        caster_id: CHAR,
+        spell: followup,
+        target_cell: encode(4, 4), // distance 2: authored max plus the just-predicted +1 row
+        critical: false,
+        resolve_ref,
+      }).result.success
+    ).toBe(true)
+  })
+
+  test('prediction seeds immutable gear range from the fighter when a caller supplies no stats adapter', () => {
+    const view = engine_view(started_store().getState())
+    const fighters = new Map(view.fighters)
+    fighters.set(CHAR, { ...fighters.get(CHAR), base_range: 1 })
+    const raw = single_effect_spell(
+      'gear_range_probe',
+      { kind: SE.K_DAMAGE, value: 7, element: 2, target_filter: SE.TF_NOT_TEAM },
+      1,
+      false
+    )
+    const spell = {
+      ...raw,
+      levels: raw.levels.map((level) => ({ ...level, range: [1, 1], modifiable_range: true })),
+    }
+    expect(
+      predict_cast({
+        view: { ...view, fighters },
+        caster_id: CHAR,
+        spell,
+        target_cell: encode(4, 4),
+        critical: false,
+        resolve_ref: (id) =>
+          id === CHAR ? { is_mob: false, idx: 0 } : id === 'mob-0' ? { is_mob: true, idx: 0 } : null,
+      }).result.success
+    ).toBe(true)
   })
 
   test('an unresolved chance branch paints only Cast and waits for the receipt', () => {

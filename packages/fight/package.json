@@ -44,6 +44,9 @@
     "./fight_status_snapshot": {
       "import": "./src/fight_status_snapshot.js"
     },
+    "./statuses": {
+      "import": "./src/statuses.js"
+    },
     "./los": {
       "import": "./src/los.js"
     },

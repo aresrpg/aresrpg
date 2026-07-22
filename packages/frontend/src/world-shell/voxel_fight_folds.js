@@ -418,7 +418,8 @@ export function seed_range_of(armed_spell_id) {
  * caster's own live trap cells to cast_range_set_dungeon's `trap_cells` drop, the 1.29 no-stack wash/gate).
  * Unresolved spell → the safe defaults (LOS on, no line, any occupancy, no placement). Pure.
  * @param {string} armed_spell_id
- * @returns {{ los: boolean, linear: boolean, free_cell: boolean, places_trap: boolean }}
+ * @returns {{ los: boolean, linear: boolean, free_cell: boolean, modifiable_range: boolean,
+ *   places_trap: boolean }}
  */
 export function seed_cast_flags_of(armed_spell_id) {
   const lvl = fight_spell(armed_spell_id)?.levels?.[0]
@@ -426,6 +427,7 @@ export function seed_cast_flags_of(armed_spell_id) {
     los: lvl?.line_of_sight !== false,
     linear: lvl?.linear === true,
     free_cell: lvl?.free_cell === true,
+    modifiable_range: lvl?.modifiable_range === true,
     places_trap: (lvl?.effects ?? []).some((e) => e?.kind === 'PLACE_TRAP'),
   }
 }
