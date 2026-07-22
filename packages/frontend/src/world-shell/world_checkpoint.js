@@ -97,6 +97,24 @@ export function read_checkpoint_spawn(character_id, world_id) {
   return _cache.get(_key(character_id, world_id)) ?? null
 }
 
+/**
+ * Commit an arrived owned follower's SESSION position into the existing checkpoint/spawn cache. Transit is a
+ * session presentation protocol, so this deliberately creates no new PTB shape and never publishes into the
+ * active character's spawns atom. The returned receipt is the edge acknowledgement that re-enters the group
+ * reducer as `follow_checkpoint_written`; only that receipt makes the follower render beside its leader.
+ * @param {string} character_id @param {string} world_id @param {{x:number,z:number}} world_pos
+ * @returns {Promise<{character_id:string,world_id:string,position:{x:number,z:number}}>}
+ */
+export async function write_follow_checkpoint(character_id, world_id, world_pos) {
+  const x = Number(world_pos?.x)
+  const z = Number(world_pos?.z)
+  if (!character_id || !world_id || !Number.isFinite(x) || !Number.isFinite(z))
+    throw new Error('Invalid follow checkpoint')
+  const position = { x, z }
+  _cache.set(_key(character_id, world_id), position)
+  return { character_id, world_id, position }
+}
+
 /** Test-only reset of the module cache. */
 export function _reset_for_test() {
   _cache.clear()

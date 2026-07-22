@@ -17,11 +17,16 @@ const members = (...ids) => ids.map((character, order) => ({ character, owner: M
 const worlds = (rows) => rows.map(([character_id, world_id]) => ({ character_id, world_id }))
 
 function make_harness({ join_world_impl, join_fight_impl } = {}) {
-  const calls = { join_world: [], join_fight: [], focus: [], follow: [] }
+  const calls = { join_world: [], write_checkpoint: [], join_fight: [], focus: [], follow: [] }
   const wiring = create_group_wiring({
     join_world: (character_id, world_id) => {
       calls.join_world.push([character_id, world_id])
       return join_world_impl ? join_world_impl(character_id, world_id) : Promise.resolve()
+    },
+    read_checkpoint: () => ({ x: 105, z: 100 }),
+    write_checkpoint: async (character_id, world_id, position) => {
+      calls.write_checkpoint.push([character_id, world_id, position])
+      return { character_id, world_id, position }
     },
     join_fight: (character_id, fight_id, options) =>
       join_fight_impl
@@ -44,31 +49,43 @@ const sync_full_group = (wiring, world_rows) =>
   })
 
 describe('group wiring — feeds the reducer, executes its requests once', () => {
-  test('a world divergence fires exactly one join_world; confirmation stays silent', async () => {
-    const { wiring, calls } = make_harness()
+  test('explicit enable runs owned joins sequentially through the one transaction queue', async () => {
+    let release_first
+    let mark_started
+    const first_started = new Promise((resolve) => {
+      mark_started = resolve
+    })
+    const first_gate = new Promise((resolve) => {
+      release_first = resolve
+    })
+    const { wiring, calls } = make_harness({
+      join_world_impl: async (character_id) => {
+        if (character_id === ALT_1) {
+          mark_started()
+          await first_gate
+        }
+      },
+    })
     sync_full_group(wiring, [
       [LEADER, WORLD],
       [ALT_1, WORLD],
       [ALT_2, OTHER_WORLD],
     ])
+    wiring.pose_tick({ x: 100, z: 100, yaw: 0 }, { character_id: LEADER })
+    wiring.enable_follow({ leader_character_id: LEADER, follower_character_ids: [ALT_1, ALT_2] })
+    await first_started
+    expect(calls.join_world).toEqual([[ALT_1, WORLD]])
+    release_first()
     await wiring.settled()
-    expect(calls.join_world).toEqual([[ALT_2, WORLD]])
-    // the identical resync (poll echo) re-fires nothing; the chain confirmation drains the latch silently
-    sync_full_group(wiring, [
-      [LEADER, WORLD],
-      [ALT_1, WORLD],
-      [ALT_2, OTHER_WORLD],
-    ])
-    sync_full_group(wiring, [
-      [LEADER, WORLD],
+    expect(calls.join_world).toEqual([
       [ALT_1, WORLD],
       [ALT_2, WORLD],
     ])
-    await wiring.settled()
-    expect(calls.join_world).toHaveLength(1)
+    expect(wiring.store.getState().follow.followers[ALT_1].status).toBe('in_transit')
+    expect(wiring.store.getState().follow.followers[ALT_2].status).toBe('in_transit')
   })
 
-  test('an EXECUTED join_world failure latches the member — a later re-divergence never re-fires it', async () => {
+  test('an EXECUTED follow join failure latches the member and a leader world change never re-fires it', async () => {
     const { wiring, calls } = make_harness({
       join_world_impl: () => Promise.reject(Object.assign(new Error('abort'), { executed: true })),
     })
@@ -77,10 +94,10 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
       [ALT_1, WORLD],
       [ALT_2, OTHER_WORLD],
     ])
+    wiring.pose_tick({ x: 100, z: 100, yaw: 0 }, { character_id: LEADER })
+    wiring.enable_follow({ leader_character_id: LEADER, follower_character_ids: [ALT_2] })
     await wiring.settled()
     expect(calls.join_world).toEqual([[ALT_2, WORLD]])
-    // the leader travels to a THIRD world — the re-arm moment: the healthy alt re-fires toward it,
-    // the latched member must NOT (its executed failure is never auto-retried)
     wiring.sync_group({
       my_address: ME,
       leader_character_id: LEADER,
@@ -88,38 +105,42 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
       worlds: worlds([[LEADER, '0xworld_c']]),
     })
     await wiring.settled()
-    expect(calls.join_world).toEqual([
-      [ALT_2, WORLD],
-      [ALT_1, '0xworld_c'],
-    ])
+    expect(calls.join_world).toEqual([[ALT_2, WORLD]])
     expect(calls.join_fight).toHaveLength(0)
   })
 
-  test('pose ticks apply formation rows; a blocked session (fight/dungeon) clears the layer instead', () => {
+  test('transit stays invisible; expiry writes a checkpoint and its receipt renders beside the leader', async () => {
     const { wiring, calls } = make_harness()
     sync_full_group(wiring, [
       [LEADER, WORLD],
       [ALT_1, WORLD],
       [ALT_2, WORLD],
     ])
-    wiring.pose_tick({ x: 10, z: 10, yaw: 0 }, {}, 1_000)
-    const applied = calls.follow.at(-1)
-    expect(applied.map((row) => row.character_id)).toEqual([ALT_1, ALT_2])
-    wiring.pose_tick({ x: 11, z: 10, yaw: 0 }, { blocked: true }, 1_200)
-    expect(calls.follow.at(-1)).toEqual([])
+    const now = Date.now()
+    wiring.pose_tick({ x: 100, z: 100, yaw: 0 }, { character_id: LEADER }, now)
+    wiring.enable_follow({ leader_character_id: LEADER, follower_character_ids: [ALT_1] }, now)
+    await wiring.settled()
+    expect(calls.follow).toEqual([])
+    wiring.transit_tick(now + 10_000)
+    await wiring.settled()
+    expect(calls.write_checkpoint).toEqual([[ALT_1, WORLD, { x: 101.5, z: 100.5 }]])
+    expect(calls.follow.at(-1).map((row) => row.character_id)).toEqual([ALT_1])
   })
 
-  test('an emptied group (character switch / party leave) clears rendered followers immediately', () => {
+  test('an emptied party projection (manual character switch) leaves explicit follow state untouched', async () => {
     const { wiring, calls } = make_harness()
     sync_full_group(wiring, [
       [LEADER, WORLD],
       [ALT_1, WORLD],
       [ALT_2, WORLD],
     ])
-    wiring.pose_tick({ x: 10, z: 10, yaw: 0 }, {}, 1_000)
-    expect(calls.follow.at(-1)).toHaveLength(2)
+    wiring.pose_tick({ x: 10, z: 10, yaw: 0 }, { character_id: LEADER }, 1_000)
+    wiring.enable_follow({ leader_character_id: LEADER, follower_character_ids: [ALT_1] }, 1_000)
+    await wiring.settled()
+    const before = wiring.store.getState().follow
     wiring.sync_group({ my_address: ME, leader_character_id: LEADER, members: [], worlds: [] })
-    expect(calls.follow.at(-1)).toEqual([])
+    expect(wiring.store.getState().follow).toBe(before)
+    expect(calls.follow).toEqual([])
   })
 
   test('a placement fight joins the aligned alts ONCE across polls; focus follows each owned turn', async () => {

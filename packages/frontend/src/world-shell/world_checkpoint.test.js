@@ -38,8 +38,13 @@ mock.module('@aresrpg/sdk/game', () => ({
 
 set_expedition_sdk_mock(world_checkpoint_sdk) // armed before the module-under-test import below
 
-const { resolve_checkpoint_spawn, read_checkpoint_spawn, seed_checkpoint_spawn, _reset_for_test } =
-  await import('./world_checkpoint.js')
+const {
+  resolve_checkpoint_spawn,
+  read_checkpoint_spawn,
+  seed_checkpoint_spawn,
+  write_follow_checkpoint,
+  _reset_for_test,
+} = await import('./world_checkpoint.js')
 
 const CHAR = 'char-fresh-1'
 const WORLD = 'world-1'
@@ -60,6 +65,16 @@ test('a receipt-seeded position is readable synchronously before any chain re-re
   expect(read_checkpoint_spawn(CHAR, WORLD)).toBeNull() // nothing seeded yet
   await seed_checkpoint_spawn(CHAR, WORLD, CHAIN_POS)
   expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual(EXPECTED_WORLD_POS)
+})
+
+test('a follow arrival writes only the session checkpoint cache and returns the reducer receipt', async () => {
+  const position = { x: 12.5, z: -8.5 }
+  await expect(write_follow_checkpoint(CHAR, WORLD, position)).resolves.toEqual({
+    character_id: CHAR,
+    world_id: WORLD,
+    position,
+  })
+  expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual(position)
 })
 
 test('a lagging chain-direct read (still "no checkpoint") must NOT erase an already-seeded receipt-proven position', async () => {

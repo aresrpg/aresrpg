@@ -288,6 +288,7 @@ const rendered_followers = (state, pose) =>
   })
 
 // ── follow transit: explicit session ids + reducer-clocked ETA, never active-character selection ──────────
+// eslint-disable-next-line complexity -- one exhaustive event switch is the reducer's single write door.
 function reduce_follow(state, input) {
   switch (input.kind) {
     case 'follow_enable': {
@@ -394,27 +395,26 @@ function reduce_follow(state, input) {
       const row = state.follow.followers[input.character_id]
       if (!row || row.status !== 'arrived' || row.receipt_confirmed) return still(state)
       const confirmed = { ...row, receipt_confirmed: true }
-      const render = follow_formation_target(
-        state.leader_pose,
-        state.leader_pose?.yaw,
-        state.follow.follower_character_ids.indexOf(input.character_id)
-      )
-      return {
-        state: {
-          ...state,
-          follow: {
-            ...state.follow,
-            followers: { ...state.follow.followers, [input.character_id]: confirmed },
-          },
+      const next = {
+        ...state,
+        follow: {
+          ...state.follow,
+          followers: { ...state.follow.followers, [input.character_id]: confirmed },
         },
+      }
+      return {
+        state: next,
         outputs: {
           ...no_outputs(),
-          follow_render: render
-            ? [{ character_id: input.character_id, ...render, yaw: state.leader_pose.yaw }]
-            : EMPTY_ROWS,
+          follow_render: state.leader_pose ? rendered_followers(next, state.leader_pose) : EMPTY_ROWS,
         },
       }
     }
+    case 'follow_background':
+      return still({
+        ...state,
+        follow: { ...state.follow, dungeon_background: state.follow.enabled && !!input.active },
+      })
     case 'leader_position': {
       const { x, z, yaw, now } = input
       if (!Number.isFinite(x) || !Number.isFinite(z) || !Number.isFinite(yaw)) return still(state)
@@ -524,6 +524,7 @@ const FOLLOW_KINDS = new Set([
   'follow_world_joined',
   'transit_tick',
   'follow_checkpoint_written',
+  'follow_background',
   'leader_position',
 ])
 const FIGHT_KINDS = new Set(['fight_started', 'fight_seat_update', 'turn_started', 'fight_ended'])

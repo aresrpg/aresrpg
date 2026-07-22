@@ -61,6 +61,8 @@ export function build_follow_entries(rows, cards_by_id, leader_world_id) {
 /**
  * @param {{
  *   join_world: (character_id: string, world_id: string, options: { queued: boolean }) => Promise<any>,
+ *   read_checkpoint: (character_id: string, world_id: string) => Promise<{x:number,z:number}|null>|{x:number,z:number}|null,
+ *   write_checkpoint: (character_id: string, world_id: string, position: {x:number,z:number}) => Promise<any>,
  *   join_fight: (character_id: string, fight_id: string, options: { queued: boolean }) => Promise<any>,
  *   focus_seat: (character_id: string) => void,
  *   apply_follow: (rows: readonly any[]) => void,
@@ -92,10 +94,25 @@ export function create_group_wiring(deps) {
   /** Execute one outputs frame at the edges. Every branch is idempotent per the reducer's latches. */
   const execute = (outputs) => {
     for (const row of outputs.join_world)
-      track('world_join', row.character_id, () => deps.join_world(row.character_id, row.world_id, { queued: true }))
+      track('world_join', row.character_id, async () => {
+        await deps.join_world(row.character_id, row.world_id, { queued: true })
+        feed({
+          kind: 'follow_world_joined',
+          character_id: row.character_id,
+          world_id: row.world_id,
+          checkpoint: await deps.read_checkpoint(row.character_id, row.world_id),
+          now: Date.now(),
+        })
+      })
+    for (const row of outputs.write_checkpoint)
+      track('follow_checkpoint', row.character_id, async () => {
+        await deps.write_checkpoint(row.character_id, row.world_id, row.position)
+        feed({ kind: 'follow_checkpoint_written', character_id: row.character_id })
+      })
     for (const row of outputs.join_fight)
       track('fight_join', row.character_id, () => deps.join_fight(row.character_id, row.fight_id, { queued: true }))
     if (outputs.hud_focus) deps.focus_seat(outputs.hud_focus)
+    if (outputs.follow_render.length) deps.apply_follow(outputs.follow_render)
     return outputs
   }
 
@@ -111,16 +128,24 @@ export function create_group_wiring(deps) {
     /** Membership + world truth arrive together (both derive from the same party/roster resync). */
     sync_group({ my_address, leader_character_id, members, worlds }) {
       feed({ kind: 'group', my_address, leader_character_id, members })
-      for (const row of worlds ?? []) feed({ kind: 'member_world_state', ...row })
-      // no members (party cleared / character switched) → drop any still-rendered followers NOW
-      if (!members?.length) deps.apply_follow([])
+      const now = Date.now()
+      for (const row of worlds ?? []) feed({ kind: 'member_world_state', ...row, now })
     },
-    /** One throttled leader pose tick → formation rows applied to the presence layer. `blocked` (fight or
-     *  dungeon session live) suppresses roaming followers without disturbing the core's other domains. */
-    pose_tick(pose, { blocked = false } = {}, now = Date.now()) {
-      if (blocked) return deps.apply_follow([])
-      const outputs = feed({ kind: 'leader_position', x: pose.x, z: pose.z, yaw: pose.yaw, now })
-      deps.apply_follow(outputs.follow_move)
+    /** Explicit session enable; this is the only input that can create follow state or world joins. */
+    enable_follow({ leader_character_id, follower_character_ids }, now = Date.now()) {
+      return feed({ kind: 'follow_enable', leader_character_id, follower_character_ids, now })
+    },
+    /** One throttled avatar pose tick. A non-leader active avatar is ignored by the reducer. */
+    pose_tick(pose, { character_id = null } = {}, now = Date.now()) {
+      return feed({ kind: 'leader_position', character_id, x: pose.x, z: pose.z, yaw: pose.yaw, now })
+    },
+    /** The timer owns no state: every cadence re-enters through the reducer input door. */
+    transit_tick(now = Date.now()) {
+      return feed({ kind: 'transit_tick', now })
+    },
+    /** Dungeon presentation is orthogonal; only the reducer's background modifier changes. */
+    dungeon_snapshot(active) {
+      return feed({ kind: 'follow_background', active })
     },
     /** Fold one fight view change: arm/join/focus per the reducer's latches. `join_open` = the chain's join
      *  window is provably open AND this session's joins ride the world-fight seam (never the RunPass path). */
