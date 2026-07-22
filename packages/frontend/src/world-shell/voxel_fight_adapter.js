@@ -89,6 +89,12 @@ import { use_dungeon } from './dungeon_store.js'
 import { damage_floater } from './damage-floater.js'
 import { presentation_blocked_cells } from './fight_board_blockers.js'
 import { create_fight_render_queue } from './fight_render_queue.js'
+import {
+  empty_trap_presentation,
+  trap_beat_id,
+  trap_presentation_reduce,
+  trap_trigger_beats,
+} from './trap_presentation.js'
 // PURE FOLDS live in a sibling module (voxel_fight_folds.js) so they're unit-testable WITHOUT the browser-only
 // runtime (context/auth/three) this adapter drags — the same split overlay_intents.js follows. Re-exported here
 // so consumers depend on the adapter surface alone.
@@ -323,6 +329,10 @@ export function create_voxel_fight_adapter(
    *  diff base (mirrors the entity_ids/walking Set-diff pattern above): any id that drops out between two
    *  ticks (dead/despawned/torn down) gets its marker cleared exactly once. */
   const anchored_ids = /** @type {Set<string>} */ (new Set())
+  /** Trap markers have their own PRESENTED projection: outcome truth may retire a trap at receipt arrival while
+   *  its mob turn is still queued. This observed-delta fold holds only that removed cell until its matching serial
+   *  trigger beat presents; rollback removals with no trigger remain immediate. */
+  let trap_presentation_state = empty_trap_presentation()
 
   /** [cosmetics-in-fights] The `/v1/encyclopedia` template catalog (template_id → Display), loaded ONCE so the
    *  worn-cosmetic join can map a character's equipped hat/cloak to its quilt appearance. Mirrors the roam
@@ -341,6 +351,8 @@ export function create_voxel_fight_adapter(
    *  change (roster rides the core's own ctx now), reference-stable for the 60–120 calls/s tooltip path. */
   const read_board_fight = fight_view
   const read_board_fight_state = () => ({ fight: read_board_fight() })
+  const encode_trap_cell = (/** @type {{x:number,y:number}} */ cell) => encode_cell(cell.x, cell.y)
+  const read_trap_trigger_beats = () => trap_trigger_beats(encode_trap_cell, fight_store.getState().wave ?? [])
 
   // ── the raw board input → the SAME store relay fight-overlay.js uses (the adapter decides MEANING; the engine
   //    only reports WHICH cell was clicked). No tx here — DungeonBoard.jsx owns the draft + commit; the placement
@@ -433,8 +445,8 @@ export function create_voxel_fight_adapter(
     const { cell } = hit
     if (hit.killed) dying.add(id) // claim the death before HP remask can make the snapshot fold race this sequence
     game_log('fight-trap', 'PAUSE at trap cell', { id, cell, damage: hit.damage, t: performance.now() })
-    // the fold already retired this trap (a committed detonation flips my_traps `gone` at receipt-arrival, and the
-    // store subscription repainted the 'trap' channel from engine_view.my_traps) — no client-side spring here.
+    // Outcome truth has already retired this trap. The generic queue's trigger closure advances the PRESENTED
+    // marker immediately beside its boom; this helper owns only the inline pause/VFX/reaction package.
     const mag = magnitude_scale(hit.damage)
     if (engine && board_frame) {
       const at = cell_cast_world(board_frame.origin, cell)
@@ -464,8 +476,9 @@ export function create_voxel_fight_adapter(
     game_log('fight-trap', 'RESUME move', { id, t: performance.now() })
   }
 
-  /** A generic queue's trap beat owns only the detonation. Damage and death are distinct later events, so a
-   * pushed target visibly finishes its slide before the boom, number, and corpse beats consume the same queue. */
+  /** A generic queue's trap beat owns the marker spring + detonation (the binding advances the presentation fold
+   * immediately before calling here). Damage and death are distinct later events, so a pushed target visibly
+   * finishes its slide before the boom, number, and corpse beats consume the same queue. */
   const play_trap_boom = async (/** @type {any} */ event) => {
     const id = event.entity_id ?? event.target_id
     const { cell } = event
@@ -906,7 +919,7 @@ export function create_voxel_fight_adapter(
 
   /** Bind renderer-neutral producer specs to this board NOW, before atomically enqueueing the whole source turn.
    * Every closure closes over an immutable payload; no render decision is rebuilt while playback is in flight. */
-  const bind_render_turn = (specs, fight_audio_scope) => {
+  const bind_render_turn = (specs, fight_audio_scope, turn_seq) => {
     let active_cast = null
     const bindings = specs.map((spec, index) => {
       if (spec.kind === 'cast') active_cast = spec.payload
@@ -988,8 +1001,17 @@ export function create_voxel_fight_adapter(
           }
         } else if (spec.kind === 'trap_place')
           reconcile() // the fold's place_traps (at cast) owns the durable my_traps marker; repaint to reflect it
-        else if (spec.kind === 'trap_trigger') await play_trap_boom(payload)
-        else if (spec.kind === 'damage' || spec.kind === 'heal') await play_damage_beat(payload)
+        else if (spec.kind === 'trap_trigger') {
+          // The marker retirement is a PRESENTED transition, immediately adjacent to the boom in this serial
+          // closure. The reducer removes only a previously-observed live→gone cell matched to THIS stable beat id;
+          // a duplicate/replayed event cannot remove a live marker or resurrect a spent one.
+          trap_presentation_state = trap_presentation_reduce(trap_presentation_state, {
+            type: 'trigger_presented',
+            beat_id: trap_beat_id(turn_seq, index),
+          })
+          reconcile()
+          await play_trap_boom(payload)
+        } else if (spec.kind === 'damage' || spec.kind === 'heal') await play_damage_beat(payload)
         else if (spec.kind === 'tackled') {
           // TACKLE BITE: a tackled player plays the hit animation just before moving —
           // the runner FLINCHES; the producer already ordered this beat strictly before any retry move beat,
@@ -1046,7 +1068,7 @@ export function create_voxel_fight_adapter(
       if (turn.seq <= last_enqueued_seq) continue
       last_enqueued_seq = turn.seq
       const { beats, claimed } = prepare_wave_beats(turn)
-      const events = bind_render_turn(beats, `${session_generation}:${fight_id}:${turn.seq}`)
+      const events = bind_render_turn(beats, `${session_generation}:${fight_id}:${turn.seq}`, turn.seq)
       const played = render_queue
         ?.enqueue_turn({ source_turn: `wave:${turn.seq}`, events })
         .catch((error) => game_log('fight-render', 'render turn failed', { seq: turn.seq, error }))
@@ -1417,11 +1439,17 @@ export function create_voxel_fight_adapter(
     // hidden at cast dispatch, hidden → armed again at the wave's drain-ack) or the wash goes stale mid-turn.
     const cast_presenting = project.cast_presenting(fight_store.getState())
     const replaying = presenting || cast_presenting
+    trap_presentation_state = trap_presentation_reduce(trap_presentation_state, {
+      type: 'observe',
+      live_cells: fight.my_traps ?? [],
+      trigger_beats: read_trap_trigger_beats(),
+    })
+    const presented_traps = trap_presentation_state.visible_cells
     // busy rides the memo signature too — END-TURN PRESS LAW: a busy-only flip (nothing else changed yet, e.g.
     // the instant commit_turn sets busy:true) must still force a repaint, else the memo would skip the very
     // frame that's supposed to clear the wash (paint_key's other inputs are all still pre-commit at that instant).
     const { busy } = use_dungeon.getState()
-    const key = paint_key(result, fight, dungeon, replaying, busy)
+    const key = paint_key(result, fight, dungeon, replaying, busy, presented_traps)
     if (key === last_paint_key) return
     last_paint_key = key
     // D242 RIDER — your-turn ground flash (engine cue): on the RISING edge of MY active turn, flash my cell so the
@@ -1531,14 +1559,12 @@ export function create_voxel_fight_adapter(
         }
       }
     }
-    // TRAP MARKERS (so a placed trap is visible on the board) — the caster's OWN placed traps, painted
-    // persistently and independent of turn/armed state (the keyless read layer drops Fight.fx, so the client
-    // mirrors its own committed trap casts). Read straight from engine_view.my_traps (the fold projection — the ONE
-    // home, exactly like my_glyphs below): the fold carries the durable record through turns/waves, retires it on
-    // the committed detonation (a fighter, dead or alive, on the cell) and excludes presented-occupied cells, so
-    // this paint needs no client-side spring/mirror. A won/lost board stops painting them (they clear on teardown).
+    // TRAP MARKERS — outcome truth still comes from engine_view.my_traps, but the observed presentation fold above
+    // holds a receipt-retired cell through the mob turn until its matching serial trap_trigger closure presents.
+    // Additions and non-trigger removals paint immediately; only a real live→gone delta enriched by a queued trigger
+    // waits. This is presentation timing, never a second mechanics home. A won/lost board stops painting markers.
     if (fight.winner === -1) {
-      const traps = fight.my_traps ?? []
+      const traps = presented_traps
       if (traps.length) lit.trap = traps.map(decode_cell)
       // GLYPH ZONES (an orange blob on the ground that stays, like the traps but covering the zone) —
       // the caster's OWN placed glyphs, a persistent orange ground wash over each glyph's full AoE. Read straight
@@ -1622,7 +1648,7 @@ export function create_voxel_fight_adapter(
     unplaceable_attempts = 0 // [bug-B] a fresh fight re-earns its full retry budget
     unplaceable_attempts_key = null
     last_paint_key = ''
-    // the torn-down fight's trap markers live in the fold (my_traps); the store re-inits per fight, so nothing leaks.
+    trap_presentation_state = empty_trap_presentation() // a fresh fight observes its own trap-cell history
   }
 
   // subscribe: engine state (poll → fight slice) + picks (a fresh draft repaints its ranges). Run once now so a
@@ -1907,14 +1933,15 @@ export function cell_cast_world(origin, cell) {
 }
 
 /** A memo signature for the highlight paint — every input that changes a wash. */
-function paint_key(result, fight, dungeon, replaying, busy) {
+function paint_key(result, fight, dungeon, replaying, busy, presented_traps) {
   let sig = `${result.phase}|${fight.fight_id}|${dungeon.room_index}|${fight.active_entity_id ?? ''}|${fight.armed_spell_id ?? ''}|${fight.winner}|rp:${replaying ? 1 : 0}|busy:${busy ? 1 : 0}|`
   // f.ap rides the sig (07-17): the folded AP spend gates the cast wash (wash_armed_spell) — a debit must repaint.
   for (const [id, f] of fight.fighters) sig += `${id}:${f.dead ? 'x' : `${f.cell.x},${f.cell.y},${f.mp},${f.ap}`}|`
   // the local placement pick moves the stand-here highlight; track it.
   sig += `pp:${use_dungeon_turn.getState().placement_pick ?? ''}`
-  // the caster's own trap markers — a just-placed (or just-retired) trap must bust the memo so it repaints.
-  sig += `|tr:${(fight.my_traps ?? []).join(',')}`
+  // Presented trap markers ride the memo: outcome truth retired the cell earlier, so the trigger-time transition
+  // must bust this key independently and repaint the removal in the serial beat where the trap actually fires.
+  sig += `|tr:${presented_traps.join(',')}`
   // the caster's own glyph zones — a just-placed or expired glyph must bust the memo so the orange wash repaints.
   sig += `|gl:${(fight.my_glyphs ?? []).join(',')}`
   // peers' placement ghosts — a pick/supersede/expiry must bust the memo so the cyan hint repaints.
