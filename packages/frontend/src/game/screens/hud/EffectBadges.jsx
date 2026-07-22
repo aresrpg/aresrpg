@@ -1,122 +1,78 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// EFFECT BADGES — compact persistent-effect chips for every fight nameplate: a cast persistent effect
-// must show in its target's nametag, naming the effect and how many turns remain — every
-// persistent effect renders in the nametag, compact but intuitive. Own + enemy + peer fighters
-// all render the same chips — chain truth is public, nothing here reads whose turn it is.
+// ACTIVE EFFECT ROWS — the shared visible reading of every fighter's presented persistent effects. The board
+// hover and turn card both render these same compact rows: localized effect name/value + remaining turns. Own +
+// enemy + peer fighters use the same projection — chain truth is public, nothing here reads whose turn it is.
 //
 // DATA SOURCE (#301 — the coordinate is MERGED): packages/fight's engine_view fighters projection exposes the
 // full per-fighter status list (project.js `effects_of`, LEG Q) — the chain's Fight.fx.statuses /
 // spell_board::FighterStatus{fighter,kind,effect,remaining_turns,source} decoded generically end to end
 // (fight_status_snapshot.js → board_state.js → fold.js `statuses` → project.js `f.effects`). `effects` is an
 // array of raw per-fighter status rows `{ id, kind, remaining_turns, element?, value?, stat?, chance? }` —
-// undecoded chain ints, same convention project.js already uses for `element` on mobs — wired live via the
-// one-line `f.effects` prop pass in FightTimeline.jsx.
+// undecoded chain ints, same convention project.js already uses for `element` on mobs.
 //
 // DECODE REUSE (one grammar, zero drift): `project_spell_effect` (fight-spells.js) turns the raw ints into the
-// SAME display shape the grimoire/armed-readout already use; `seed_effect_line` (seed-effect-line.js) turns
-// that + a turns count into the exact localized sentence spell-coverage.test.js already locks. The board
-// nameplate (EntityTooltip.jsx → tooltip_card.js `status_dot_view`) reuses the SAME two functions for its
-// compact colored-dot form — one grammar, two renderings, never a second copy of the fx_* decode.
+// SAME display shape the grimoire/armed-readout already use; `seed_effect_parts` + `EffectLine` are the existing
+// localized row grammar. Remaining duration is appended from `remaining_turns` for every live status, whatever
+// its kind — an active projection row must always say how long it remains.
 
 import { useTranslation } from 'react-i18next'
 
 import './effect-badges.css'
-import { Tooltip } from './Tooltip.jsx'
+import { EffectLine } from './EffectLine.jsx'
 import { project_spell_effect } from './fight-spells.js'
-import { seed_effect_line } from './seed-effect-line.js'
-
-// Chips beyond this collapse into one "+N" tile — a compact row never grows unbounded (a stacked-debuff mob
-// could otherwise carry a dozen rows).
-const MAX_VISIBLE = 4
-
-// kind (decoded string, project_spell_effect) → a 2-3 letter mono glyph — NO invented art, text only, matching
-// the tiny uppercase mono-chip house language. Curated for the full spell_effect.move taxonomy so no two kinds
-// that could plausibly coexist on one fighter (e.g. REDUCE_DAMAGE vs REFLECT_DAMAGE — two different ward
-// shapes) collide on the same 3 letters; an unmapped FUTURE kind (a reseed) falls back to its own first 3
-// characters so a new kind never renders blank.
-const GLYPH = {
-  DAMAGE: 'DMG',
-  PERCENT_LIFE: 'PCT',
-  LIFE_STEAL: 'LFS',
-  CASTER_DAMAGE: 'REC',
-  PUNISHMENT: 'PUN',
-  HEAL: 'HEA',
-  GIVE_POINTS: 'GIV',
-  REMOVE_POINTS: 'RMV',
-  STEAL_POINTS: 'STP',
-  ALTER_STAT: 'ALT',
-  STEAL_STAT: 'STL',
-  ALTER_RESIST: 'RES',
-  PUSH: 'PSH',
-  PULL: 'PLL',
-  TELEPORT: 'TLP',
-  SWAP: 'SWP',
-  CARRY: 'CRY',
-  THROW: 'THR',
-  PLACE_TRAP: 'TRP',
-  PLACE_GLYPH: 'GLY',
-  APPLY_DOT: 'DOT',
-  APPLY_STATE: 'STA',
-  REMOVE_STATE: 'CLR',
-  REDUCE_DAMAGE: 'ABS',
-  REFLECT_DAMAGE: 'RFL',
-  DISPEL: 'DSP',
-  INVISIBILITY: 'INV',
-  REVEAL: 'REV',
-  RETURN_SPELL: 'RTN',
-}
-const glyph_of = (kind) => GLYPH[kind] ?? String(kind).slice(0, 3).toUpperCase()
+import { seed_effect_line, seed_effect_parts } from './seed-effect-line.js'
 
 /**
- * One raw per-fighter status row → its chip view model. Pure — no JSX, so it's directly unit-testable and
- * reusable if a second surface ever needs the same chip (grimoire-style detail popover, etc.).
+ * One raw per-fighter status row → its visible row model. Pure — no JSX, so projection-to-render tests can pin
+ * the exact localized reading. Active damage-over-time rows carry a resolved value rather than an authored range;
+ * mapping that value to equal bounds lets the shared damage grammar print the real magnitude instead of an em dash.
  * @param {(key: string, params?: object) => string} t
  * @param {{ id?: string | number, kind: number, remaining_turns: number, element?: number, value?: number,
  *   stat?: number, chance?: number, source?: number }} raw
  */
 export const effect_badge_view = (t, raw) => {
-  const fx = project_spell_effect(raw)
   const turns = Math.max(0, Number(raw.remaining_turns) || 0)
+  const resolved_value = raw.value == null ? null : Number(raw.value)
+  const fx = project_spell_effect({
+    ...raw,
+    turns: 0,
+    ...(Number.isFinite(resolved_value) ? { damageMin: resolved_value, damageMax: resolved_value } : {}),
+  })
+  const duration = t('spells.fx_turns', { count: turns })
+  const base_view = seed_effect_parts(t, fx)
+  const view = { ...base_view, meta: [base_view.meta, duration].filter(Boolean).join(' · ') }
   return {
     id: raw.id ?? `${raw.kind}-${raw.source ?? 0}`,
-    glyph: glyph_of(fx.kind),
     turns,
-    label: seed_effect_line(t, { ...fx, turns }),
+    label: `${seed_effect_line(t, fx)} · ${duration}`,
+    view,
   }
 }
 
 /**
- * The compact chip row for one fighter's active persistent effects. Renders nothing (no empty container) when
- * there are none — including the common today-at-HEAD case where `effects` is absent entirely.
- * @param {{ effects?: Array<{ id?: string | number, kind: number, remaining_turns: number }> }} props
+ * Shared compact effect rows for a fighter. `t` is injected so TooltipCard stays a pure-props renderer; the turn
+ * card's EffectBadges wrapper supplies the hook-owned translator below. Expired rows never reach the DOM.
+ * @param {{ effects?: Array<{ id?: string | number, kind: number, remaining_turns: number }>,
+ *   t: (key:string, params?:object) => string }} props
  */
-export function EffectBadges({ effects }) {
-  const { t } = useTranslation()
-  const active = (effects ?? []).filter((row) => (Number(row?.remaining_turns) || 0) > 0)
-  if (active.length === 0) return null
-
-  const shown = active.slice(0, MAX_VISIBLE)
-  const overflow = active.length - shown.length
+export function ActiveEffectRows({ effects, t }) {
+  const rows = (effects ?? [])
+    .filter((row) => (Number(row?.remaining_turns) || 0) > 0)
+    .map((row) => effect_badge_view(t, row))
+  if (rows.length === 0) return null
 
   return (
-    <div className="hud-effects">
-      {shown.map((raw) => {
-        const view = effect_badge_view(t, raw)
-        return (
-          <Tooltip key={view.id} text={view.label}>
-            <span className="hud-effect">
-              <span className="hud-effect__glyph">{view.glyph}</span>
-              <span className="hud-effect__turns hud-num">{view.turns}</span>
-            </span>
-          </Tooltip>
-        )
-      })}
-      {overflow > 0 && (
-        <span className="hud-effect hud-effect--more" aria-hidden="true">
-          +{overflow}
-        </span>
-      )}
+    <div className="hud-effects" aria-label={t('spells.effects')}>
+      {rows.map((row) => (
+        <EffectLine key={row.id} view={row.view} />
+      ))}
     </div>
   )
+}
+
+/** Turn-card adapter: hook at the component edge, pure shared rows beneath it. */
+export function EffectBadges({ effects }) {
+  const { t } = useTranslation()
+  return <ActiveEffectRows effects={effects} t={t} />
 }

@@ -186,10 +186,9 @@ export function FightTimeline() {
                   <span className="hud-turn__hp-num hud-num">{hp}</span>
                 </div>
               </Tooltip>
-              {/* PERSISTENT EFFECTS (#301 — a fighter's active effects must show with their remaining turns):
-                  f.effects is engine_view's live per-fighter status projection (project.js `effects_of`,
-                  LEG Q) — own + enemy + peer all get it, chain truth is public. The board nameplate
-                  (EntityTooltip.jsx) renders the SAME truth as compact colored dots. */}
+              {/* PRESENTED ACTIVE EFFECTS — f.effects is engine_view's per-fighter status projection
+                  (project.js `effects_of`, LEG Q). Own + enemy + peer all get the same localized rows, shared
+                  verbatim with the board-hover card; no store write or client-side duration clock. */}
               <EffectBadges effects={f.effects} />
               {active && !fight.presenting && remaining_s != null && (
                 <div className="hud-turn__timer">

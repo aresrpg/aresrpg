@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// (#301) EFFECT BADGES — the turn card's persistent-effect chips: a cast effect (e.g. a shield spell) is
-// visible on the fighter's turn card, with its remaining turn count, compact but intuitive.
+// (#451) ACTIVE EFFECT ROWS — the turn card renders the same visible localized rows as the board hover:
+// effect name/value + remaining turns, directly in the card rather than hidden inside a nested tooltip.
 //
 // engine_view.fighters[].effects (packages/fight/src/project.js `effects_of`, LEG Q) is the live per-fighter
 // effect+duration list this component renders — wired via the one-line prop-pass in FightTimeline.jsx
@@ -30,6 +30,7 @@ const render = (effects) =>
       <EffectBadges effects={effects} />
     </I18nextProvider>
   )
+const text_of = (html) => html.replace(/<[^>]*>/g, '')
 
 // fixture rows shaped exactly like the proposed engine_view getter: the raw chain FighterStatus + its nested
 // Effect fields (spell_board.move FighterStatus{fighter,kind,effect,remaining_turns,source} flattened) — kind
@@ -37,14 +38,13 @@ const render = (effects) =>
 const invisibility_2t = { id: 'st-1', kind: 27, remaining_turns: 2 }
 const vitality_ward_3t = { id: 'st-2', kind: 9, stat: 5, value: 10, remaining_turns: 3 }
 
-describe('EffectBadges — compact persistent-effect chips on the fight nameplate', () => {
-  test('a fighter with 2 active effects (invisibility 2t, +vitality 3t) renders exactly 2 chips with the right counts', () => {
+describe('EffectBadges — compact persistent-effect rows on the turn card', () => {
+  test('2 active effects render 2 visible localized rows with their values and remaining turns', () => {
     const html = render([invisibility_2t, vitality_ward_3t])
-    const chips = [...html.matchAll(/class="hud-effect"/g)]
-    expect(chips.length).toBe(2)
-    expect(html).toContain('hud-effect__turns')
-    expect(html).toMatch(/hud-effect__turns[^>]*>2</) // invisibility remaining turns
-    expect(html).toMatch(/hud-effect__turns[^>]*>3</) // ward remaining turns
+    const text = text_of(html)
+    expect([...html.matchAll(/class="fxl"/g)]).toHaveLength(2)
+    expect(text).toContain('Become invisible · 2 turns')
+    expect(text).toContain('+10 Vitality · 3 turns')
   })
 
   test('0 active effects renders NOTHING — no empty container element', () => {
@@ -59,12 +59,11 @@ describe('EffectBadges — compact persistent-effect chips on the fight nameplat
     expect(render([{ id: 'gone', kind: 27, remaining_turns: 0 }])).toBe('')
   })
 
-  test('more than the visible cap collapses to "+N" overflow, never an unbounded row', () => {
+  test('every active projection row stays readable rather than collapsing behind an overflow count', () => {
     const many = Array.from({ length: 6 }, (_, i) => ({ id: `s${i}`, kind: 27, remaining_turns: i + 1 }))
     const html = render(many)
-    const chips = [...html.matchAll(/class="hud-effect"/g)]
-    expect(chips.length).toBe(4) // MAX_VISIBLE cap
-    expect(html).toContain('+2')
+    expect([...html.matchAll(/class="fxl"/g)]).toHaveLength(6)
+    expect(text_of(html)).toContain('Become invisible · 6 turns')
   })
 
   test('effect_badge_view reuses the EXISTING spells.fx_invisibility house grammar — no invented copy', () => {
@@ -73,8 +72,8 @@ describe('EffectBadges — compact persistent-effect chips on the fight nameplat
     expect(view.label).toBe(t('spells.fx_invisibility') + ' · ' + t('spells.fx_turns', { count: 2 }))
   })
 
-  test('effect_badge_view derives a compact mono glyph per kind — no invented art, just text', () => {
-    expect(effect_badge_view(t, invisibility_2t).glyph).toBe('INV')
-    expect(effect_badge_view(t, vitality_ward_3t).glyph).toBe('ALT')
+  test('effect_badge_view exposes the shared structured line view for the renderer', () => {
+    const view = effect_badge_view(t, vitality_ward_3t)
+    expect(view.view).toMatchObject({ pre: '+', value: '10', post: ' Vitality', meta: '3 turns' })
   })
 })

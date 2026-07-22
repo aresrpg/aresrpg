@@ -138,8 +138,8 @@ export function EntityTooltip() {
         displacement,
         is_crit,
         effects,
-        // (#301) fighter.effects = engine_view's persistent-status projection (same source EffectBadges.jsx
-        // reads for the turn card) — distinct from `effects` above, the armed-spell PREVIEW lines.
+        // fighter.effects = engine_view's PRESENTED persistent-status projection (the same source the shared
+        // ActiveEffectRows renderer reads on the turn card) — distinct from `effects` above, the armed-spell preview.
         status_effects: fighter.effects,
         key: hover.entity_id,
       }

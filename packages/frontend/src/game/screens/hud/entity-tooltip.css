@@ -117,19 +117,13 @@
   font-weight: 800;
 }
 
-/* (#301) PERSISTENT STATUS DOTS — the fighter's currently active buffs/debuffs (distinct from the armed-spell
-   PREVIEW below): one small `.hud-dot` per live effect, coloured inline per tooltip_card.js's status_dot_view,
-   plus a "+N" overflow past the cap. Subtle — no border/glow, just the dot; the row sits right under the head. */
-.ent-tt__statuses {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 4px;
-}
-.ent-tt__status-more {
-  font-size: 0.66rem;
-  font-weight: 700;
-  color: var(--fg-muted);
+/* Presented ACTIVE EFFECTS — the same compact EffectLine rows as the turn card, separated from the head with the
+   fight-chrome hairline. The shared row CSS carries explicit token fallbacks because this hover is not nested under
+   `.hud-turns`; nothing here depends on the armed-spell preview below. */
+.ent-tt > .hud-effects {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid #1e1e2e;
 }
 
 /* PREDICTED second line(s): the lethal KILLS verdict and/or the push/pull the armed cast lands —
