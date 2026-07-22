@@ -277,6 +277,11 @@ function build_terrain_material({
     // canopy cubes deliberately skip this (they fill the leaf-texture holes with the flat leaf tone below).
     material.alphaTest = 0.5
   }
+  if (variant === 'foliage') {
+    // Water samples the opaque depth buffer as its bed. Keep submerged cross-flora out of that buffer so
+    // coral/algae silhouettes cannot make the later water pass resolve a false shallow patch above them.
+    material.depthWrite = false
+  }
   if (variant === 'liquid') {
     material.transparent = true
     // opacity=1: the water shader's `alpha_node` is the SOLE opacity source (shore see-through 0.42 →

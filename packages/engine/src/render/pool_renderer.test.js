@@ -377,6 +377,33 @@ describe('dispose — full GPU teardown empties the resident set and clears the 
   })
 })
 
+// ── SPRITE / WATER DEPTH CONTRACT (#303) ───────────────────────────────────────────────────────
+// Water samples the opaque scene depth to measure the bed beneath its surface. Cross-quad flora is
+// drawn before that transparent water pass, so it must depth-test against terrain without becoming
+// scene depth itself: otherwise submerged coral/algae is mistaken for the bed and punches its
+// alpha-tested silhouette into the water sheet above it.
+describe('sprite / water material interaction', () => {
+  test('foliage cannot write depth before the later transparent water pass', () => {
+    const scene = new Scene()
+    const terrain = make_renderer(scene)
+    try {
+      const foliage_mesh = /** @type {any} */ (scene.children.find((mesh) => mesh.userData?.render_class === 'foliage'))
+      const liquid_mesh = /** @type {any} */ (scene.children.find((mesh) => mesh.userData?.render_class === 'liquid'))
+
+      expect(foliage_mesh.material.transparent).toBe(false)
+      expect(foliage_mesh.material.alphaTest).toBe(0.5)
+      expect(foliage_mesh.material.depthTest).toBe(true)
+      expect(foliage_mesh.material.depthWrite).toBe(false)
+      expect(liquid_mesh.material.transparent).toBe(true)
+      expect(liquid_mesh.material.depthTest).toBe(true)
+      expect(liquid_mesh.material.depthWrite).toBe(false)
+      expect(foliage_mesh.renderOrder).toBeLessThan(liquid_mesh.renderOrder)
+    } finally {
+      terrain.dispose()
+    }
+  })
+})
+
 // ── DEVICE STORAGE-BINDING SIZING (the HIGH-tier tab-crash guard, QA F2/B2) ───────────────────────
 // core/renderer.js sizes the WebGPU maxStorageBufferBindingSize device limit from max_pool_storage_bytes()
 // so the mega quad pool BINDS. The DEFAULT (128 MiB) is under the HIGH r8 solid pool → GPUValidationError
