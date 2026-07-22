@@ -12,7 +12,7 @@ import { describe, expect, test } from 'bun:test'
 import { active_store, ev, fight_object, mob, participant, ME, PEER, T0 } from '../harness/fixtures.js'
 
 import { committed_state, presented_state } from './fold.js'
-import { apply_peer_batch } from './txs.js'
+import { apply_peer_batch, drafted_batches } from './txs.js'
 
 // encode(x,y)=y*20+x: 21=(1,1) 22=(2,1) 24=(4,1) 28=(8,1) 45=(5,2). A coop board: ME at seat 0 (cell 21), a PEER
 // at seat 1 (cell 22, turn-start MP 3), one mob at cell 45. The peer authors ITS OWN turn; the store opens MY
@@ -30,6 +30,10 @@ const peer_cell = (store, key = 'p1') => presented_state(store.getState()).fight
 const committed_peer_cell = (store, key = 'p1') => committed_state(store.getState()).fighters?.[key]?.cell
 const mob_hp = store => presented_state(store.getState()).fighters?.m0?.hp
 const committed_mob_hp = store => committed_state(store.getState()).fighters?.m0?.hp
+
+// A receipt paces its NON-LOCAL (peer) turn into a presentation wave; presented_state holds at the pre-wave floor
+// until the renderer acks it. Drain the wave so a post-receipt presented read reflects the fully-played state.
+const drain = store => store.getState().input({ type: 'presented', seq: store.getState().wave_seq }, T0 + 9_000)
 
 // `peer` is the BROADCASTER (whose seat the door resolves + gates); `character` is who the Moved is authored as
 // (defaults to the broadcaster). The spoof case broadcasts as PEER but authors ME's move — a cross-seat forgery.
@@ -103,9 +107,10 @@ describe('#334 (b) — claim retirement: a peer prediction retires on its canoni
     expect(committed_mob_hp(store), 'committed truth is untouched until the receipt').toBe(20)
 
     confirm_peer_cast(store, { remaining_hp: 5 })
-    expect(mob_hp(store), 'the confirmed value holds — presented once, no rollback').toBe(5)
     expect(committed_mob_hp(store), 'the receipt raises committed truth to the authoritative hit').toBe(5)
     expect(store.getState().divergence, 'a byte-equal claim retires SILENTLY — zero divergence toast').toBeNull()
+    drain(store)
+    expect(mob_hp(store), 'the confirmed value holds — presented once, no rollback').toBe(5)
   })
 
   test('a DIVERGENT canonical hit corrects forward: committed adopts the authoritative value', () => {
@@ -115,10 +120,11 @@ describe('#334 (b) — claim retirement: a peer prediction retires on its canoni
 
     confirm_peer_cast(store, { remaining_hp: 8 }) // the chain resolved it at 8 — a same-claim mismatch
     expect(committed_mob_hp(store), 'committed truth is the AUTHORITATIVE hit, not the peer preview').toBe(8)
-    expect(mob_hp(store), 'presentation corrects forward to the authoritative value').toBe(8)
     expect(store.getState().divergence?.action, 'the same-claim mismatch surfaces ONE forward correction').toBe(
       'Hit:m0'
     )
+    drain(store)
+    expect(mob_hp(store), 'presentation corrects forward to the authoritative value').toBe(8)
   })
 })
 
@@ -158,6 +164,41 @@ describe('#334 (d) — a peer disconnect mid-turn leaves canonical truth intact'
   })
 })
 
+describe('#334 — the sender read: drafted_batches carries MY drafts, never a peer relay', () => {
+  test('my move + my cast are broadcast-ready (stripped, grouped by intent_id); peer courtesy is excluded', () => {
+    const store = coop_store()
+    // MY optimistic move (the intent door) + MY optimistic cast (the composite door) — what the eye drafts.
+    store.getState().input({ type: 'intent', intent: { kind: 'move', character: ME, to_cell: CELL.near } }, T0 + 1_000)
+    store.getState().input(
+      {
+        type: 'predicted',
+        intent_id: 'mine:cast',
+        basis_version: store.getState().applied_version + 1,
+        actions: [
+          { kind: 'Cast', caster_is_mob: false, caster_idx: 0, target_cell: CELL.mob, damaging: true },
+          { kind: 'Hit', victim_is_mob: true, victim_idx: 0, remaining_hp: 12 },
+        ],
+      },
+      T0 + 1_100
+    )
+    // A peer's courtesy overlay lands in the SAME entries map — it must NEVER be re-broadcast as my own draft.
+    send_peer_move(store, { to_cell: CELL.near })
+
+    const batches = drafted_batches(store)
+    expect(batches.find(b => b.intent_id === 'mine:cast')?.actions.map(a => a.kind)).toEqual(['Cast', 'Hit'])
+    // transport keys are the receiver's to assign — never on the wire.
+    for (const batch of batches)
+      for (const action of batch.actions) {
+        expect(action).not.toHaveProperty('version')
+        expect(action).not.toHaveProperty('source')
+        expect(action).not.toHaveProperty('event_idx')
+        expect(action).not.toHaveProperty('courtesy')
+      }
+    expect(batches.some(b => b.actions.some(a => a.kind === 'Moved' && a.character === ME))).toBe(true)
+    expect(batches.some(b => b.actions.some(a => a.character === PEER)), 'a peer relay is never my draft').toBe(false)
+  })
+})
+
 describe('#334 (e) — never a purge: MY turn-end never expires a peer courtesy prediction', () => {
   test('a peer courtesy cast survives my own turn-ending receipt — it retires ONLY by its own claim', () => {
     const store = coop_store()
@@ -174,6 +215,7 @@ describe('#334 (e) — never a purge: MY turn-end never expires a peer courtesy 
       },
       T0 + 4_000
     )
+    drain(store)
     expect(mob_hp(store), 'the peer courtesy prediction is NOT purged by my turn-end').toBe(5)
   })
 })

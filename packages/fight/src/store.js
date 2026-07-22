@@ -45,6 +45,7 @@ import { content_key, normalize_journal_page, normalize_receipt } from './journa
 import { u64 } from './journal_u64.js'
 import { board_state_from_fight, fight_geometry_complete } from './board_state.js'
 import { prediction_identity } from './budget_claims.js'
+import { peer_batch_legality } from './peer_legality.js'
 import { reconcile_predictions } from './reconcile_action.js'
 import { tap_trace_input } from './trace_tap.js'
 import {
@@ -64,6 +65,12 @@ export { claimed_budget_state, committed_state, presented_state, display_state }
 
 export const PLAYER_TURN_FLOOR_MS = 3000
 export const MIN_ACTION_MS = 5000
+// COURTESY event_idx lane (#334): a peer's relayed prediction retires by CLAIM, never by key, so it may sit
+// pending across UNRELATED canonical events (my turn-end, a mob move). Those events key `(version, seq)` with seq
+// contiguous from 0 and bounded far below this base — so seating courtesy at `BASE + intent_cursor` keeps it in a
+// disjoint key lane that a colliding canonical seq can never clobber in merge_entries. Reconcile ignores event_idx
+// (it matches kind + actor), so the offset is invisible to retirement.
+const COURTESY_EVENT_BASE = 1_000_000
 // grace past a wave turn's OWN duration before the tick watchdog force-acks it — derived headroom, never a
 // guessed absolute (the turn's duration is the base; this only pads renderer jitter).
 export const WAVE_ACK_GRACE_MS = 6000
@@ -76,7 +83,7 @@ export const WAVE_ACK_GRACE_MS = 6000
 // non-event: the reducer records it in `state.refused` (the turn_lost idiom — the fight core is hermetic, so it
 // cannot call the frontend fight_state_trace; an edge subscriber surfaces `refused`, as subscribe_turn_lost does).
 const LOCAL_PUSH = new Set(['intent', 'predicted'])
-const IDENTITY_SCOPED = new Set(['receipt', 'poll', 'p2p', 'snapshot', 'presented', 'placement_ghost'])
+const IDENTITY_SCOPED = new Set(['receipt', 'poll', 'p2p', 'snapshot', 'presented', 'placement_ghost', 'courtesy'])
 const refuse_reason = (state, msg) => {
   if (LOCAL_PUSH.has(msg.type) && state.provider !== 'local_turn')
     return { type: msg.type, reason: 'provider', provider: state.provider }
@@ -332,6 +339,13 @@ const empty_fight = () => ({
   // character supersedes it forever, a stale one (GHOST_STALE_MS) expires. Cosmetic ONLY — never read by
   // legality/commit paths, excluded from canonical_state/state_hash (a lying ghost can't do anything).
   placement_ghosts: {},
+  // COURTESY CHANNEL (#334) — the SECOND channel (docs/FIGHT_PIPELINE.md). `courtesy_seen` dedupes a peer's
+  // relayed draft batches by intent_id (a re-delivered batch folds ONCE); `flagged` is the ONE neutral toast fact
+  // an illegal injected batch raises ({ peer, reason, at, shown? } — the turn_lost idiom, an edge surfaces it
+  // once). Both are presentation-only, cleared per init; a peer's legal draft paints as a `courtesy: true`
+  // prediction in `entries` and retires through the ordinary claim engine, never a second canonical ingress.
+  courtesy_seen: {},
+  flagged: null,
   // V1 — APPEND-ONLY DEATH FLOORS { fighter_key → floor_version } (durable accumulator, same class as my_traps).
   // A fighter proven dead by an authoritative action floors here forever within the fight; `alive` DERIVES from it
   // (fold.apply_retirement), so no later higher-version read carrying a positive hp can resurrect a floor-dead
@@ -834,6 +848,62 @@ const make_input =
         )
         return
       }
+      case 'courtesy': {
+        // THE COURTESY CHANNEL (#334) — channel two (docs/FIGHT_PIPELINE.md). A peer's committed draft, relayed
+        // real-time over the party transport, enters the ONE door as a legality-gated PREDICTION: it PAINTS
+        // (source 'intent' → the overlay, NEVER committed truth) and the canonical receipt/journal retires it by
+        // CLAIM — the SAME engine my own predictions ride, never a purge. An ILLEGAL injected batch never paints
+        // and raises ONE neutral flag. Identity-scoped above (a cross-fight/session relay is refused), but NOT a
+        // local push: it is a peer's turn, so it needs no mic — it enters during my chain_replay/idle_wait.
+        const intent_id = msg.intent_id ?? null
+        if (intent_id != null && state.courtesy_seen[intent_id]) return // a re-delivered batch folds ONCE (dedupe)
+        const resolve_seat = msg.resolve_seat ?? state.ctx?.resolve_seat ?? seat_resolver(state.view)
+        const seat = msg.peer != null ? resolve_seat(msg.peer) : null
+        const peer_key = seat == null ? null : `p${seat}`
+        // LEGALITY IS THE EYE'S FIRST LINE: reduce the batch over MY committed positions + the turn-start refill.
+        const verdict = peer_batch_legality({
+          committed: committed_state(state),
+          view: state.view,
+          actor_key: peer_key,
+          actions: msg.actions ?? [],
+          resolve_seat,
+        })
+        const courtesy_seen = intent_id != null ? { ...state.courtesy_seen, [intent_id]: true } : state.courtesy_seen
+        if (!verdict.legal)
+          // NO paint, NO cursor advance — the illegal action never reaches the eye. ONE neutral flag (edge-consumed
+          // once, the turn_lost idiom); the batch is marked seen so a re-delivery never re-flags.
+          return set((s) => ({ ...s, flagged: { peer: msg.peer ?? null, reason: verdict.reason, at: now }, courtesy_seen }))
+        const actor = settle_input.actor_from_key(peer_key)
+        const base_version = Math.max(1, state.applied_version + 1)
+        // The peer's actions are the receipt/journal vocabulary (Cast/Hit/Moved), stripped of transport keys — so
+        // normalize_intent's passthrough stamps them as intents keyed to the PEER's actor. `courtesy: true` marks
+        // the overlay so it retires by claim only (reconcile_action skips it in MY end-of-turn blanket).
+        const actions = (msg.actions ?? []).map((raw, i) => ({
+          ...normalize_intent(raw, {
+            version: raw.version ?? base_version,
+            event_idx: raw.event_idx ?? COURTESY_EVENT_BASE + state.intent_seq + i,
+            actor,
+            resolve_seat,
+          }),
+          courtesy: true,
+          ...(intent_id != null ? { intent_id } : {}),
+        }))
+        set((s) =>
+          recompute(
+            {
+              ...s,
+              entries: merge_entries(s.entries, actions),
+              intent_seq: s.intent_seq + actions.length,
+              courtesy_seen,
+            },
+            now
+          )
+        )
+        return
+      }
+      case 'flagged_shown': // the toast edge consumed the courtesy flag — reducer-owned idempotency (remount-safe)
+        set((s) => ({ ...s, flagged: s.flagged ? { ...s.flagged, shown: true } : null }))
+        return
       case 'rollback': {
         // A reverted/failed tx (txs .catch — B-F03) removes the predicted entries and recomputes to committed
         // truth. Prediction is not transport truth: this is the ONLY way a bad prediction leaves — no fabricated

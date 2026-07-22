@@ -151,3 +151,52 @@ export const apply_receipt = (store, receipt, { version, source = 'receipt', fig
 /** A liquidation / overdue-crank receipt is just another authoritative segment — same door, `poll` priority. */
 export const apply_liquidation = (store, receipt, { version, fight_id = null, resolve_seat = null }) =>
   store.getState().input({ type: 'poll', receipt, version, fight_id, resolve_seat })
+
+// ── THE COURTESY CHANNEL (#334) — channel two: a peer's live draft as a legality-gated prediction ──────────────
+/**
+ * Feed a peer's relayed draft batch into the ONE door as a courtesy prediction. The reducer resolves the peer's
+ * seat, gates the batch through the local sim (peer_legality), and either pre-paints it (source 'intent', retired
+ * by the canonical claim) or drops+flags it. NO fight state is written here — the reducer owns it all.
+ * @param {import('zustand').StoreApi<any>} store
+ * @param {{ peer:string, intent_id?:string|null, actions:Array<object>, resolve_seat?:Function|null, fight_id?:string|null }} batch
+ */
+export const apply_peer_batch = (store, { peer, intent_id = null, actions = [], resolve_seat = null, fight_id = null }) =>
+  store.getState().input({ type: 'courtesy', peer, intent_id, actions, resolve_seat, fight_id })
+
+/** Surface each illegal peer draft as ONE neutral toast; consumption is reducer-owned and remount-safe (the
+ *  turn_lost/divergence idiom). The edge decides the copy — the core only names the neutral reason class. */
+export function subscribe_flagged(store, { on_flagged }) {
+  const observe = () => {
+    const { flagged } = store.getState()
+    if (!flagged || flagged.shown) return
+    store.getState().input({ type: 'flagged_shown' })
+    on_flagged(flagged)
+  }
+  const stop = store.subscribe(observe)
+  observe()
+  return stop
+}
+
+/**
+ * The SENDER read: my own drafted turn as the batches the courtesy channel streams to peers — grouped by the
+ * batch's intent_id (a cast + its effects = one batch; a bare move = one batch), stripped of the transport keys
+ * the receiver reassigns. Peer courtesy overlays (`courtesy: true`) are EXCLUDED — I never re-broadcast a relay.
+ * Only move/cast batches stream; a lone end-turn/placement intent is not a courtesy pre-paint.
+ * @param {import('zustand').StoreApi<any>} store
+ * @returns {Array<{ intent_id:string, actions:Array<object> }>}
+ */
+export const drafted_batches = store => {
+  const state = store.getState()
+  const mine = Object.values(state.entries ?? {})
+    .filter(entry => entry.source === 'intent' && !entry.courtesy)
+    .sort((a, b) => a.version - b.version || a.event_idx - b.event_idx)
+  const groups = new Map()
+  for (const entry of mine) {
+    const id = entry.intent_id ?? `${state.fight_id ?? ''}:${state.my_key ?? ''}:mv:${entry.version}:${entry.event_idx}`
+    const { version, source, event_idx, resolve_seat, courtesy, intent_id, mp_left, mp_delta, ...wire } = entry
+    groups.set(id, [...(groups.get(id) ?? []), wire])
+  }
+  return [...groups.entries()]
+    .filter(([, actions]) => actions.some(action => action.kind === 'Moved' || action.kind === 'Cast'))
+    .map(([intent_id, actions]) => ({ intent_id, actions }))
+}

@@ -188,8 +188,12 @@ export function reconcile_predictions(
     const intent_id = entry.intent_id ?? null
     const settled = intent_id != null && settled_ids.has(intent_id)
     const success = successful_ids.get(intent_id)
-    if (settled || ended_my_turn) retire.add(entry_key(entry))
-    if (intent_id != null && (settled || ended_my_turn)) retired_intents.add(intent_id)
+    // COURTESY (channel two, #334): a peer's relayed prediction retires ONLY by its own claim (byte-match ⇒ silent,
+    // mismatch ⇒ one forward correction). MY end-of-turn blanket is MY boundary; applying it to a peer's overlay
+    // would be the forbidden purge-on-unrelated-receipt, so the blanket expiry skips `courtesy` entries entirely.
+    const expired = ended_my_turn && !entry.courtesy
+    if (settled || expired) retire.add(entry_key(entry))
+    if (intent_id != null && (settled || expired)) retired_intents.add(intent_id)
     if (
       settled &&
       entry.kind === 'Granted' &&
