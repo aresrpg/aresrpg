@@ -286,12 +286,20 @@ describe('viewport and mobile-style isolation', () => {
     expect(card_rule).toMatch(/overflow-y:\s*auto/)
     expect(cta_rule).toMatch(/position:\s*sticky/)
     expect(cta_rule).toMatch(/bottom:\s*0/)
-    // compact: the mobile row grid/padding/glyph must all shrink below the desktop `.fe-row` rule
-    // (grid-template-columns: 22px 1fr 88px auto; padding: 8px 12px; .fe-row__glyph: 22x22).
-    expect(row_rule).toMatch(/grid-template-columns:\s*\d+px 1fr \d+px auto/)
-    const [, glyph_col] = row_rule.match(/grid-template-columns:\s*(\d+)px/) ?? []
-    expect(Number(glyph_col)).toBeLessThan(22)
-    expect(row_rule).toMatch(/padding:\s*\dpx \dpx/) // single-digit px on both axes < desktop's 8px/12px
+    // compact: the mobile fight-end row shrinks every fixed column below the desktop `.fe-row` rule. Both
+    // share the 5-track `<glyph>px minmax(0,1fr) <value>px <delta>px minmax(0,auto)` shape (result.css) —
+    // the mobile override only tightens the three fixed px columns + the gap + horizontal padding. Compared
+    // numerically against the live desktop rule so this proves real compaction instead of a frozen literal.
+    const desktop_row = css.match(/(?:^|\n)\.fe-row\s*\{([^}]*)\}/)?.[1] ?? ''
+    const fixed_cols = (rule) =>
+      [...(rule.match(/grid-template-columns:\s*([^;]+);/)?.[1].matchAll(/(\d+)px/g) ?? [])].map((m) => Number(m[1]))
+    const mobile_cols = fixed_cols(row_rule)
+    const desktop_cols = fixed_cols(desktop_row)
+    expect(mobile_cols).toHaveLength(3) // glyph + value + delta (the two minmax tracks are fluid, no px)
+    expect(desktop_cols).toHaveLength(3)
+    mobile_cols.forEach((px, i) => expect(px).toBeLessThanOrEqual(desktop_cols[i])) // never wider than desktop
+    expect(mobile_cols[0]).toBeLessThan(desktop_cols[0]) // the glyph column strictly shrinks on mobile
+    expect(row_rule).toMatch(/padding:\s*\dpx \dpx/) // single-digit px on both axes
   })
 
   // #237: the minimap remains flush, but the app-wide toast layer gets its own small viewport inset. Its
