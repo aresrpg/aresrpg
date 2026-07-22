@@ -9,6 +9,48 @@ module aresrpg_foundation::zone_gen_tests;
 
 use aresrpg_foundation::zone_gen;
 
+// ╔════════════════ [ Gas profile fixtures ] ══════════════════════════════════ ]
+
+/// Representative pre-upgrade search payload: 53 groups in a 512-block zone. Both profile tests call this
+/// exact helper, including construction of the parallel template vector, so their statistics delta isolates
+/// only the authenticated commitment calculation.
+fun gas_profile_groups(): (ID, vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u16>, vector<u64>) {
+  let world = object::id_from_address(@0x1);
+  let (spawn_ids, template_idxs, xs, zs, sizes, group_seeds) = zone_gen::derive_mob_groups(
+    123456789, 53, 53, &vector[100, 50], &vector[1, 2], &vector[6, 6], 6,
+    0, 0, 512, 500000, 500000,
+  );
+  let mut templates = vector[];
+  let mut i = 0;
+  while (i < template_idxs.length()) {
+    templates.push_back(if (template_idxs[i] == 0) object::id_from_address(@0x1f)
+      else object::id_from_address(@0x20));
+    i = i + 1;
+  };
+  (world, spawn_ids, templates, xs, zs, sizes, group_seeds)
+}
+
+#[test]
+fun gas_profile_zone_groups_control() {
+  assert!(vector[0u8].length() == 1, 0);
+}
+
+#[test]
+fun gas_profile_zone_groups_without_commitment() {
+  let (_world, spawn_ids, templates, xs, zs, sizes, group_seeds) = gas_profile_groups();
+  assert!(spawn_ids.length() == 53 && templates.length() == 53 && xs.length() == 53 &&
+    zs.length() == 53 && sizes.length() == 53 && group_seeds.length() == 53, 0);
+}
+
+#[test]
+fun gas_profile_zone_groups_with_commitment() {
+  let (world, spawn_ids, templates, xs, zs, sizes, group_seeds) = gas_profile_groups();
+  let root = zone_gen::mob_group_root(
+    world, 7, 9, 123456789, 13, &spawn_ids, &templates, &xs, &zs, &sizes, &group_seeds,
+  );
+  assert!(root.length() == 32, 0);
+}
+
 // ╔════════════════ [ Mob-group derivation ] ═══════════════════════════════════ ]
 
 #[test]
