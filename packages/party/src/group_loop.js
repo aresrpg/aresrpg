@@ -5,11 +5,12 @@
 // reduce.js (chain-reconciled); THIS reducer owns the leader-session orchestration facts and emits
 // EFFECT REQUESTS exactly once per need:
 //
-//   INPUTS   { group | invite_accepted | member_world_state | leader_position | member_position |
-//              member_blocked | fight_started | fight_seat_update | turn_started | fight_ended |
-//              dungeon_entered | dungeon_ended | reset }
-//   OUTPUTS  { join_world[] · follow_move[] (formation target + teleport-if-stuck) · join_fight[] ·
-//              hud_focus · enter_dungeon[] }
+//   INPUTS   { group | invite_accepted | member_world_state | follow_enable | follow_world_joined |
+//              transit_tick | follow_checkpoint_written | leader_position | member_blocked |
+//              fight_started | fight_seat_update | turn_started | fight_ended | dungeon_entered |
+//              dungeon_ended | reset }
+//   OUTPUTS  { join_world[] · write_checkpoint[] · follow_render[] · join_fight[] · hud_focus ·
+//              enter_dungeon[] }
 //
 // Every request latches (idempotent re-folds emit nothing); executed tx failures re-enter as
 // `member_blocked` and hold the latch open forever (tx-retry burn law — the edge never re-fires a
@@ -25,6 +26,12 @@ export const FOLLOW_ARRIVE_EPS = 2
 /** Minimum per-sample displacement (blocks) that counts as progress toward the slot. */
 export const FOLLOW_PROGRESS_EPS = 0.25
 
+// Ruled follow transit: roughly the avatar's run pace, with humane lower/upper bounds regardless of distance.
+// Kept in this headless core instead of importing the engine package: @aresrpg/party stays dependency-free.
+export const TRANSIT_SPEED = 10.5
+export const TRANSIT_MIN_MS = 10_000
+export const TRANSIT_MAX_MS = 5 * 60_000
+
 // Controller yaw convention: forward is (-sin(yaw), -cos(yaw)). `behind` therefore points along
 // (sin(yaw), cos(yaw)), while positive `beside` points to the controller's right.
 const FORMATION_SLOTS = Object.freeze([
@@ -39,6 +46,8 @@ const EMPTY_ROWS = Object.freeze([])
 const no_outputs = () => ({
   join_world: EMPTY_ROWS,
   follow_move: EMPTY_ROWS,
+  write_checkpoint: EMPTY_ROWS,
+  follow_render: EMPTY_ROWS,
   join_fight: EMPTY_ROWS,
   hud_focus: null,
   enter_dungeon: EMPTY_ROWS,
@@ -103,6 +112,16 @@ export const empty_group_state = (config = {}) => ({
   fight: /** @type {{ fight_id: string, seated: string[], requested: string[] } | null} */ (null),
   focus_character_id: /** @type {string | null} */ (null),
   dungeon: /** @type {{ world_id: string, requested: string[] } | null} */ (null),
+  follow: {
+    enabled: false,
+    /** @type {string | null} */
+    leader_character_id: null,
+    /** @type {string[]} */
+    follower_character_ids: [],
+    /** @type {Record<string, any>} */
+    followers: {},
+    dungeon_background: false,
+  },
   config: {
     snap_distance: config.snap_distance ?? FOLLOW_SNAP_DISTANCE,
     stuck_ms: config.stuck_ms ?? FOLLOW_STUCK_MS,
@@ -111,6 +130,7 @@ export const empty_group_state = (config = {}) => ({
 })
 
 const leader_world = (state) => state.world_by_character[state.leader_character_id] ?? null
+const follow_leader_world = (state) => state.world_by_character[state.follow.leader_character_id] ?? null
 
 /** Owned members EXCLUDING the leader, in chain group order — the follow/join candidate set. */
 const owned_alts = (state) =>
@@ -127,33 +147,6 @@ const aligned_alts = (state) => {
   return owned_alts(state).filter((member) => state.world_by_character[member.character] === world)
 }
 
-// ── world alignment: the ONE derivation both membership and world folds share ─────────────────────────────
-/** Emit join_world for every owned alt whose known world diverges from the leader's, latching each request. */
-const with_world_requests = (state) => {
-  const world = leader_world(state)
-  if (!world) return still(state)
-  const pending = owned_alts(state).filter((member) => {
-    const character_id = member.character
-    const bound = state.world_by_character[character_id]
-    return (
-      bound != null &&
-      bound !== world &&
-      state.requested_world_joins[character_id] !== world &&
-      !is_blocked(state, character_id, 'world_join')
-    )
-  })
-  if (!pending.length) return still(state)
-  const requested = { ...state.requested_world_joins }
-  for (const member of pending) requested[member.character] = world
-  return {
-    state: { ...state, requested_world_joins: requested },
-    outputs: {
-      ...no_outputs(),
-      join_world: pending.map((member) => ({ character_id: member.character, world_id: world })),
-    },
-  }
-}
-
 const prune_keys = (record, keep) => {
   const next = {}
   for (const key of Object.keys(record)) if (keep.has(key)) next[key] = record[key]
@@ -166,22 +159,27 @@ function reduce_membership(state, input) {
     case 'group': {
       const { my_address, leader_character_id, members } = input
       const rows = Array.isArray(members) ? members.filter((member) => member?.character) : []
-      const keep = new Set(rows.map((member) => member.character))
-      return with_world_requests({
+      const keep = new Set(
+        [
+          ...rows.map((member) => member.character),
+          state.follow.leader_character_id,
+          ...state.follow.follower_character_ids,
+        ].filter(Boolean)
+      )
+      return still({
         ...state,
         my_address: my_address ?? state.my_address,
         leader_character_id: leader_character_id ?? state.leader_character_id,
         members: rows,
         world_by_character: prune_keys(state.world_by_character, keep),
         requested_world_joins: prune_keys(state.requested_world_joins, keep),
-        follower_track: prune_keys(state.follower_track, keep),
         focus_character_id: keep.has(state.focus_character_id) ? state.focus_character_id : null,
       })
     }
     case 'invite_accepted': {
       const { character_id, owner } = input
       if (!character_id || state.members.some((member) => member.character === character_id)) return still(state)
-      return with_world_requests({
+      return still({
         ...state,
         members: [...state.members, { character: character_id, owner: owner ?? '', order: state.members.length }],
       })
@@ -189,13 +187,40 @@ function reduce_membership(state, input) {
     case 'member_world_state': {
       const { character_id, world_id } = input
       if (!character_id) return still(state)
-      const requested = { ...state.requested_world_joins }
-      if (requested[character_id] === world_id) delete requested[character_id] // confirmation drains the latch
-      return with_world_requests({
-        ...state,
-        world_by_character: { ...state.world_by_character, [character_id]: world_id ?? null },
-        requested_world_joins: requested,
-      })
+      const previous_world = state.world_by_character[character_id] ?? null
+      const next = { ...state, world_by_character: { ...state.world_by_character, [character_id]: world_id ?? null } }
+      if (
+        !state.follow.enabled ||
+        character_id !== state.follow.leader_character_id ||
+        !previous_world ||
+        !world_id ||
+        previous_world === world_id
+      )
+        return still(next)
+
+      const now = Number.isFinite(input.now) ? input.now : 0
+      const followers = { ...state.follow.followers }
+      const join_world = []
+      for (const follower_character_id of state.follow.follower_character_ids) {
+        const row = followers[follower_character_id]
+        if (!row || is_blocked(state, follower_character_id, 'world_join')) continue
+        const remaining_ms =
+          row.status === 'in_transit' ? Math.max(0, row.deadline_ms - now) : Number(row.remaining_ms ?? 0)
+        const carry_ratio =
+          row.status === 'in_transit' && row.total_ms > 0 ? Math.max(0, Math.min(1, remaining_ms / row.total_ms)) : 1
+        followers[follower_character_id] = {
+          ...row,
+          status: 'joining',
+          world_id,
+          carry_ratio,
+          receipt_confirmed: false,
+        }
+        join_world.push({ character_id: follower_character_id, world_id })
+      }
+      return {
+        state: { ...next, follow: { ...state.follow, followers } },
+        outputs: { ...no_outputs(), join_world },
+      }
     }
     case 'member_blocked': {
       const { character_id, scope } = input
@@ -210,53 +235,196 @@ function reduce_membership(state, input) {
   }
 }
 
-// ── follow: formation targets + the teleport-if-stuck pure rule ───────────────────────────────────────────
+const clamp_eta = (eta_ms) => Math.max(TRANSIT_MIN_MS, Math.min(TRANSIT_MAX_MS, Math.round(eta_ms)))
+
+export function transit_eta_ms(from, to) {
+  if (![from?.x, from?.z, to?.x, to?.z].every(Number.isFinite)) return TRANSIT_MAX_MS
+  return clamp_eta((Math.sqrt(horizontal_distance_squared(from, to)) / TRANSIT_SPEED) * 1000)
+}
+
+const ARRIVAL_OFFSETS = Object.freeze([
+  Object.freeze({ x: 1, z: 0 }),
+  Object.freeze({ x: -1, z: 0 }),
+  Object.freeze({ x: 0, z: 1 }),
+  Object.freeze({ x: 0, z: -1 }),
+  Object.freeze({ x: 1, z: 1 }),
+])
+
+/** Pick a distinct cell beside the leader; occupied party cells are skipped deterministically. */
+export function follow_arrival_cell(leader_position, occupied = new Set()) {
+  if (![leader_position?.x, leader_position?.z].every(Number.isFinite)) return null
+  const base_x = Math.floor(leader_position.x) + 0.5
+  const base_z = Math.floor(leader_position.z) + 0.5
+  for (const offset of ARRIVAL_OFFSETS) {
+    const cell = { x: base_x + offset.x, z: base_z + offset.z }
+    if (!occupied.has(`${cell.x}:${cell.z}`)) return cell
+  }
+  return { x: base_x + 2, z: base_z }
+}
+
+const begin_transit = (row, checkpoint, leader_pose, now) => {
+  const ratio = Number.isFinite(row.carry_ratio) ? row.carry_ratio : 1
+  const total_ms = clamp_eta(transit_eta_ms(checkpoint, leader_pose) * Math.max(0, Math.min(1, ratio)))
+  return {
+    ...row,
+    status: 'in_transit',
+    checkpoint: { x: checkpoint.x, z: checkpoint.z },
+    started_at_ms: now,
+    deadline_ms: now + total_ms,
+    total_ms,
+    remaining_ms: total_ms,
+    progress: 0,
+    carry_ratio: 1,
+    receipt_confirmed: false,
+  }
+}
+
+const rendered_followers = (state, pose) =>
+  state.follow.follower_character_ids.flatMap((character_id, slot_index) => {
+    const row = state.follow.followers[character_id]
+    if (row?.status !== 'arrived' || !row.receipt_confirmed) return []
+    const target = follow_formation_target(pose, pose.yaw, slot_index)
+    return target ? [{ character_id, ...target, yaw: pose.yaw }] : []
+  })
+
+// ── follow transit: explicit session ids + reducer-clocked ETA, never active-character selection ──────────
 function reduce_follow(state, input) {
   switch (input.kind) {
+    case 'follow_enable': {
+      const { leader_character_id } = input
+      const world_id = state.world_by_character[leader_character_id] ?? null
+      if (!leader_character_id || !world_id) return still(state)
+      const allowed = new Set(
+        state.members
+          .filter((member) => member.character !== leader_character_id && member.owner === state.my_address)
+          .map((member) => member.character)
+      )
+      const room = Math.max(0, MAX_OWNED_FOLLOWERS - state.follow.follower_character_ids.length)
+      const added = [...new Set(input.follower_character_ids ?? [])]
+        .filter((character_id) => allowed.has(character_id) && !is_blocked(state, character_id, 'world_join'))
+        .slice(0, room)
+      if (!added.length) return still(state)
+      const follower_character_ids = [
+        ...state.follow.follower_character_ids.filter((character_id) => character_id !== leader_character_id),
+        ...added.filter((character_id) => !state.follow.follower_character_ids.includes(character_id)),
+      ]
+      const followers = { ...state.follow.followers }
+      for (const character_id of added)
+        followers[character_id] = {
+          status: 'joining',
+          world_id,
+          carry_ratio: 1,
+          receipt_confirmed: false,
+        }
+      return {
+        state: {
+          ...state,
+          follow: { ...state.follow, enabled: true, leader_character_id, follower_character_ids, followers },
+        },
+        outputs: {
+          ...no_outputs(),
+          join_world: added.map((character_id) => ({ character_id, world_id })),
+        },
+      }
+    }
+    case 'follow_world_joined': {
+      const row = state.follow.followers[input.character_id]
+      const { checkpoint } = input
+      if (
+        !state.follow.enabled ||
+        !row ||
+        row.status !== 'joining' ||
+        input.world_id !== follow_leader_world(state) ||
+        ![checkpoint?.x, checkpoint?.z].every(Number.isFinite) ||
+        !state.leader_pose
+      )
+        return still(state)
+      const now = Number.isFinite(input.now) ? input.now : 0
+      return still({
+        ...state,
+        follow: {
+          ...state.follow,
+          followers: {
+            ...state.follow.followers,
+            [input.character_id]: begin_transit(row, checkpoint, state.leader_pose, now),
+          },
+        },
+      })
+    }
+    case 'transit_tick': {
+      if (!state.follow.enabled || !Number.isFinite(input.now)) return still(state)
+      const followers = { ...state.follow.followers }
+      const occupied = new Set(
+        Object.values(followers)
+          .filter((row) => row?.arrival_position)
+          .map((row) => `${row.arrival_position.x}:${row.arrival_position.z}`)
+      )
+      const write_checkpoint = []
+      for (const character_id of state.follow.follower_character_ids) {
+        const row = followers[character_id]
+        if (row?.status !== 'in_transit') continue
+        const remaining_ms = Math.max(0, row.deadline_ms - input.now)
+        if (remaining_ms > 0) {
+          followers[character_id] = {
+            ...row,
+            remaining_ms,
+            progress: Math.max(0, Math.min(1, 1 - remaining_ms / row.total_ms)),
+          }
+          continue
+        }
+        const position = follow_arrival_cell(state.leader_pose, occupied)
+        if (!position) continue
+        occupied.add(`${position.x}:${position.z}`)
+        followers[character_id] = {
+          ...row,
+          status: 'arrived',
+          remaining_ms: 0,
+          progress: 1,
+          arrival_position: position,
+          receipt_confirmed: false,
+        }
+        write_checkpoint.push({ character_id, world_id: row.world_id, position })
+      }
+      return {
+        state: { ...state, follow: { ...state.follow, followers } },
+        outputs: { ...no_outputs(), write_checkpoint },
+      }
+    }
+    case 'follow_checkpoint_written': {
+      const row = state.follow.followers[input.character_id]
+      if (!row || row.status !== 'arrived' || row.receipt_confirmed) return still(state)
+      const confirmed = { ...row, receipt_confirmed: true }
+      const render = follow_formation_target(
+        state.leader_pose,
+        state.leader_pose?.yaw,
+        state.follow.follower_character_ids.indexOf(input.character_id)
+      )
+      return {
+        state: {
+          ...state,
+          follow: {
+            ...state.follow,
+            followers: { ...state.follow.followers, [input.character_id]: confirmed },
+          },
+        },
+        outputs: {
+          ...no_outputs(),
+          follow_render: render
+            ? [{ character_id: input.character_id, ...render, yaw: state.leader_pose.yaw }]
+            : EMPTY_ROWS,
+        },
+      }
+    }
     case 'leader_position': {
       const { x, z, yaw, now } = input
       if (!Number.isFinite(x) || !Number.isFinite(z) || !Number.isFinite(yaw)) return still(state)
       const pose = { x, z, yaw }
-      const followers = aligned_alts(state).slice(0, MAX_OWNED_FOLLOWERS)
-      if (!followers.length) return still({ ...state, leader_pose: pose })
-      const track = { ...state.follower_track }
-      const rows = followers.flatMap((member, slot_index) => {
-        const target = follow_formation_target(pose, yaw, slot_index)
-        if (!target) return []
-        const seen = track[member.character]
-        const teleport =
-          !!seen &&
-          (should_snap_to_leader(seen, pose, state.config.snap_distance) ||
-            (horizontal_distance_squared(seen, target) > state.config.arrive_eps ** 2 &&
-              stuck_too_long(seen.progress_at, now, state.config.stuck_ms)))
-        // a snap relocates the follower — reset its track so the next tick measures from the slot
-        if (teleport) track[member.character] = { x: target.x, z: target.z, progress_at: now }
-        return [{ character_id: member.character, x: target.x, z: target.z, yaw, teleport }]
-      })
+      if (input.character_id && state.follow.enabled && input.character_id !== state.follow.leader_character_id)
+        return still(state)
       return {
-        state: { ...state, leader_pose: pose, follower_track: track },
-        outputs: { ...no_outputs(), follow_move: rows },
+        state: { ...state, leader_pose: pose },
+        outputs: { ...no_outputs(), follow_render: rendered_followers(state, pose) },
       }
-    }
-    case 'member_position': {
-      const { positions, now } = input
-      if (!Array.isArray(positions) || !positions.length) return still(state)
-      const followers = aligned_alts(state).slice(0, MAX_OWNED_FOLLOWERS)
-      const slot_of = new Map(followers.map((member, index) => [member.character, index]))
-      const track = { ...state.follower_track }
-      for (const row of positions) {
-        const slot_index = slot_of.get(row?.character_id)
-        if (slot_index == null || !Number.isFinite(row.x) || !Number.isFinite(row.z)) continue
-        const previous = track[row.character_id]
-        const target = state.leader_pose
-          ? follow_formation_target(state.leader_pose, state.leader_pose.yaw, slot_index)
-          : null
-        const arrived = target && horizontal_distance_squared(row, target) <= state.config.arrive_eps ** 2
-        const moved = previous && horizontal_distance_squared(previous, row) > FOLLOW_PROGRESS_EPS ** 2
-        const progress_at = !previous || !target || moved || arrived ? now : previous.progress_at
-        track[row.character_id] = { x: row.x, z: row.z, progress_at }
-      }
-      return still({ ...state, follower_track: track })
     }
     default:
       return still(state)
@@ -338,17 +506,26 @@ function reduce_dungeon(state, input) {
           !is_blocked(state, assignment.character_id, 'dungeon')
       )
       const dungeon = { world_id, requested: [...requested_before, ...rows.map((row) => row.character_id)] }
-      return { state: { ...state, dungeon }, outputs: { ...no_outputs(), enter_dungeon: rows } }
+      return {
+        state: { ...state, dungeon, follow: { ...state.follow, dungeon_background: state.follow.enabled } },
+        outputs: { ...no_outputs(), enter_dungeon: rows },
+      }
     }
     case 'dungeon_ended':
-      return still({ ...state, dungeon: null })
+      return still({ ...state, dungeon: null, follow: { ...state.follow, dungeon_background: false } })
     default:
       return still(state)
   }
 }
 
 const MEMBERSHIP_KINDS = new Set(['group', 'invite_accepted', 'member_world_state', 'member_blocked'])
-const FOLLOW_KINDS = new Set(['leader_position', 'member_position'])
+const FOLLOW_KINDS = new Set([
+  'follow_enable',
+  'follow_world_joined',
+  'transit_tick',
+  'follow_checkpoint_written',
+  'leader_position',
+])
 const FIGHT_KINDS = new Set(['fight_started', 'fight_seat_update', 'turn_started', 'fight_ended'])
 const DUNGEON_KINDS = new Set(['dungeon_entered', 'dungeon_ended'])
 

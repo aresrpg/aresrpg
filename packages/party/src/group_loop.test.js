@@ -53,25 +53,30 @@ test('group fold mirrors membership; nothing is requested while worlds are unkno
   expect(outputs.follow_move).toEqual([])
 })
 
-test('a member in another world gets ONE join_world request toward the leader world, latched until confirmed', () => {
+test('world divergence alone never enables follow or emits a join', () => {
   const base = fold([
     { kind: 'group', my_address: ME, leader_character_id: LEADER, members: members(LEADER, ALT_1) },
     { kind: 'member_world_state', character_id: LEADER, world_id: WORLD },
   ])
   const first = reduce_group(base.state, { kind: 'member_world_state', character_id: ALT_1, world_id: OTHER_WORLD })
-  expect(first.outputs.join_world).toEqual([{ character_id: ALT_1, world_id: WORLD }])
-  // the same divergence folded again re-emits NOTHING (request latch)
-  const again = reduce_group(first.state, { kind: 'member_world_state', character_id: ALT_1, world_id: OTHER_WORLD })
-  expect(again.outputs.join_world).toEqual([])
-  // confirmation drains the latch
-  const confirmed = reduce_group(again.state, { kind: 'member_world_state', character_id: ALT_1, world_id: WORLD })
-  expect(confirmed.outputs.join_world).toEqual([])
-  expect(confirmed.state.requested_world_joins[ALT_1]).toBeUndefined()
+  expect(first.outputs.join_world).toEqual([])
+  expect(first.state.follow.enabled).toBe(false)
 })
 
-test('a LEADER world change re-arms join_world for every aligned member — the group follows a travel', () => {
-  const state = grouped()
-  const { outputs } = reduce_group(state, { kind: 'member_world_state', character_id: LEADER, world_id: OTHER_WORLD })
+test('an explicitly followed leader world change re-arms join_world for included followers only', () => {
+  const positioned = reduce_group(grouped(), { kind: 'leader_position', x: 0, z: 0, yaw: 0, now: NOW }).state
+  const { state } = reduce_group(positioned, {
+    kind: 'follow_enable',
+    leader_character_id: LEADER,
+    follower_character_ids: [ALT_1, ALT_2],
+    now: NOW,
+  })
+  const { outputs } = reduce_group(state, {
+    kind: 'member_world_state',
+    character_id: LEADER,
+    world_id: OTHER_WORLD,
+    now: NOW,
+  })
   expect(outputs.join_world.map((r) => r.character_id).sort()).toEqual([ALT_1, ALT_2].sort())
   expect(outputs.join_world.every((r) => r.world_id === OTHER_WORLD)).toBe(true)
 })
@@ -106,7 +111,7 @@ test('member_blocked(world_join) latches a member out of world requests (execute
   expect(outputs.join_world).toEqual([])
 })
 
-test('invite_accepted appends a distinct member and immediately checks world alignment', () => {
+test('invite_accepted appends a distinct member but never activates follow implicitly', () => {
   const base = fold([
     { kind: 'group', my_address: ME, leader_character_id: LEADER, members: members(LEADER) },
     { kind: 'member_world_state', character_id: LEADER, world_id: WORLD },
@@ -114,112 +119,30 @@ test('invite_accepted appends a distinct member and immediately checks world ali
   ])
   const { state, outputs } = reduce_group(base.state, { kind: 'invite_accepted', character_id: ALT_1, owner: ME })
   expect(state.members.map((m) => m.character)).toEqual([LEADER, ALT_1])
-  expect(outputs.join_world).toEqual([{ character_id: ALT_1, world_id: WORLD }])
-  // idempotent — accepting twice neither duplicates nor re-requests
+  expect(outputs.join_world).toEqual([])
+  expect(state.follow.enabled).toBe(false)
+  // idempotent — accepting twice neither duplicates nor requests
   const again = reduce_group(state, { kind: 'invite_accepted', character_id: ALT_1, owner: ME })
   expect(again.state.members.length).toBe(2)
   expect(again.outputs.join_world).toEqual([])
 })
 
-// ── follow (formation + teleport-if-stuck) ────────────────────────────────────────────────────────────────────────
-test('leader_position emits one follow_move per aligned owned follower on its stable formation slot', () => {
-  const state = grouped()
-  const pose = { kind: 'leader_position', x: 100, z: 50, yaw: 0, now: NOW }
-  const { outputs } = reduce_group(state, pose)
-  expect(outputs.follow_move.map((r) => r.character_id)).toEqual([ALT_1, ALT_2])
-  const expected_0 = follow_formation_target({ x: 100, z: 50 }, 0, 0)
-  expect(outputs.follow_move[0].x).toBeCloseTo(expected_0.x)
-  expect(outputs.follow_move[0].z).toBeCloseTo(expected_0.z)
-  expect(outputs.follow_move[0].yaw).toBe(0)
-  expect(outputs.follow_move.every((r) => r.teleport === false)).toBe(true)
-})
-
-test('an out-of-world member is excluded from follow until its world aligns', () => {
-  const state = grouped([
-    [LEADER, WORLD],
-    [ALT_1, WORLD],
-    [ALT_2, OTHER_WORLD],
-  ])
-  const { outputs } = reduce_group(state, { kind: 'leader_position', x: 0, z: 0, yaw: 0, now: NOW })
-  expect(outputs.follow_move.map((r) => r.character_id)).toEqual([ALT_1])
-})
-
-test('teleport fires when the tracked rendered position falls beyond the snap distance from the leader', () => {
-  const state = grouped()
-  const far = FOLLOW_SNAP_DISTANCE + 5
-  const tracked = reduce_group(state, {
-    kind: 'member_position',
-    positions: [{ character_id: ALT_1, x: far, z: 0 }],
-    now: NOW,
-  })
-  const { state: next, outputs } = reduce_group(tracked.state, {
-    kind: 'leader_position',
-    x: 0,
-    z: 0,
-    yaw: 0,
-    now: NOW + 100,
-  })
-  const row = outputs.follow_move.find((r) => r.character_id === ALT_1)
-  expect(row.teleport).toBe(true)
-  // the snap resets the track — the NEXT tick must not teleport again
-  const after = reduce_group(next, { kind: 'leader_position', x: 0, z: 0, yaw: 0, now: NOW + 200 })
-  expect(after.outputs.follow_move.find((r) => r.character_id === ALT_1).teleport).toBe(false)
-})
-
-test('teleport fires when a follower makes no progress toward its slot past the staleness threshold', () => {
-  const state = grouped()
-  const stuck_at = { character_id: ALT_1, x: 10, z: 10 } // off-slot but inside the snap radius
-  const t0 = fold(
-    [
-      { kind: 'leader_position', x: 0, z: 0, yaw: 0, now: NOW },
-      { kind: 'member_position', positions: [stuck_at], now: NOW },
-      { kind: 'member_position', positions: [stuck_at], now: NOW + FOLLOW_STUCK_MS + 1 },
-    ],
-    state
-  )
-  const { outputs } = reduce_group(t0.state, {
-    kind: 'leader_position',
-    x: 0,
-    z: 0,
-    yaw: 0,
-    now: NOW + FOLLOW_STUCK_MS + 50,
-  })
-  expect(outputs.follow_move.find((r) => r.character_id === ALT_1).teleport).toBe(true)
-})
-
-test('a follower actually moving keeps its progress fresh — no stuck teleport', () => {
-  const state = grouped()
-  const t0 = fold(
-    [
-      { kind: 'leader_position', x: 0, z: 0, yaw: 0, now: NOW },
-      { kind: 'member_position', positions: [{ character_id: ALT_1, x: 10, z: 10 }], now: NOW },
-      {
-        kind: 'member_position',
-        positions: [{ character_id: ALT_1, x: 8, z: 8 }],
-        now: NOW + FOLLOW_STUCK_MS + 1,
-      },
-    ],
-    state
-  )
-  const { outputs } = reduce_group(t0.state, {
-    kind: 'leader_position',
-    x: 0,
-    z: 0,
-    yaw: 0,
-    now: NOW + FOLLOW_STUCK_MS + 50,
-  })
-  expect(outputs.follow_move.find((r) => r.character_id === ALT_1).teleport).toBe(false)
-})
-
-test('follower slots cap at MAX_OWNED_FOLLOWERS in chain group order', () => {
+// ── explicit follow bounds ───────────────────────────────────────────────────────────────────────────────────────
+test('explicit follower inclusion caps at the five formation slots in chain order', () => {
   const ids = ['0xa', '0xb', '0xc', '0xd', '0xe', '0xf']
-  const { state } = fold([
+  const { state: grouped_many } = fold([
     { kind: 'group', my_address: ME, leader_character_id: LEADER, members: members(LEADER, ...ids) },
     { kind: 'member_world_state', character_id: LEADER, world_id: WORLD },
     ...ids.map((character_id) => ({ kind: 'member_world_state', character_id, world_id: WORLD })),
   ])
-  const { outputs } = reduce_group(state, { kind: 'leader_position', x: 0, z: 0, yaw: 0, now: NOW })
-  expect(outputs.follow_move.length).toBe(MAX_OWNED_FOLLOWERS)
+  const { state, outputs } = reduce_group(grouped_many, {
+    kind: 'follow_enable',
+    leader_character_id: LEADER,
+    follower_character_ids: ids.slice(0, MAX_OWNED_FOLLOWERS),
+    now: NOW,
+  })
+  expect(outputs.join_world).toHaveLength(MAX_OWNED_FOLLOWERS)
+  expect(state.follow.follower_character_ids).toEqual(ids.slice(0, MAX_OWNED_FOLLOWERS))
 })
 
 // ── fight join + HUD focus ────────────────────────────────────────────────────────────────────────────────────────

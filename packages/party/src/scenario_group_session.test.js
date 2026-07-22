@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // GROUP SESSION SCENARIO (MULTICHAR lane, the brief's headless story): ONE human drives a leader + 2 owned
-// alts through the whole loop — invite → world alignment → follow ticks → the leader engages → members
+// alts through the whole loop — invite → explicit transit → arrival → the leader engages → members
 // auto-join → turn-order HUD focus → victory — as one input sequence against the group store, asserting the
 // EFFECT-REQUEST stream (the coop-scenario idiom: plain objects, explicit clocks, zero browser).
 import { expect, test } from 'bun:test'
 
 import { create_group_store } from './store.js'
-import { FOLLOW_SNAP_DISTANCE } from './group_loop.js'
+import { TRANSIT_SPEED } from './group_loop.js'
 
 const ME = '0xwallet'
 const LEADER = '0xleader'
@@ -18,14 +18,14 @@ const OTHER_WORLD = '0xglacial'
 const FIGHT = '0xfight'
 const T0 = 9_000_000
 
-test('GROUP SESSION: invite → world join → follow → engage → auto-join → HUD focus per turn → victory', () => {
+test('GROUP SESSION: invite → transit → arrive → engage → auto-join → HUD focus per turn → victory', () => {
   const { store, dispatch } = create_group_store()
   /** @type {string[]} transcript of every effect request, in order */
   const transcript = []
   const record = (outputs) => {
     for (const row of outputs.join_world) transcript.push(`join_world ${row.character_id} -> ${row.world_id}`)
-    for (const row of outputs.follow_move)
-      transcript.push(`follow ${row.character_id}${row.teleport ? ' TELEPORT' : ''}`)
+    for (const row of outputs.write_checkpoint) transcript.push(`checkpoint ${row.character_id}`)
+    for (const row of outputs.follow_render) transcript.push(`follow ${row.character_id}`)
     for (const row of outputs.join_fight) transcript.push(`join_fight ${row.character_id} -> ${row.fight_id}`)
     if (outputs.hud_focus) transcript.push(`hud_focus ${outputs.hud_focus}`)
     for (const row of outputs.enter_dungeon) transcript.push(`enter_dungeon ${row.character_id}`)
@@ -44,30 +44,51 @@ test('GROUP SESSION: invite → world join → follow → engage → auto-join �
   feed({ kind: 'invite_accepted', character_id: ALT_1, owner: ME })
   feed({ kind: 'invite_accepted', character_id: ALT_2, owner: ME })
 
-  // ── 2. alt1 already shares the world; alt2 sits in ANOTHER world → exactly one join_world request ──────
+  // ── 2. world facts alone are inert; the explicit enable joins BOTH included alts through one effect lane ─
   feed({ kind: 'member_world_state', character_id: ALT_1, world_id: WORLD })
   feed({ kind: 'member_world_state', character_id: ALT_2, world_id: OTHER_WORLD })
-  expect(transcript).toContain(`join_world ${ALT_2} -> ${WORLD}`)
-  // the edge executes the join; chain truth confirms — the latch drains silently
-  feed({ kind: 'member_world_state', character_id: ALT_2, world_id: WORLD })
-  expect(transcript.filter((line) => line.startsWith('join_world'))).toHaveLength(1)
-
-  // ── 3. follow ticks: both alts get formation targets; a leader checkpoint-teleport snaps them ──────────
+  expect(transcript).toEqual([])
   feed({ kind: 'leader_position', x: 100, z: 100, yaw: 0, now: T0 })
   feed({
-    kind: 'member_position',
-    positions: [
-      { character_id: ALT_1, x: 100, z: 103 },
-      { character_id: ALT_2, x: 100, z: 103 },
-    ],
-    now: T0 + 200,
+    kind: 'follow_enable',
+    leader_character_id: LEADER,
+    follower_character_ids: [ALT_1, ALT_2],
+    now: T0,
   })
-  feed({ kind: 'leader_position', x: 101, z: 100, yaw: 0, now: T0 + 400 })
-  expect(transcript.filter((line) => line === `follow ${ALT_1}`).length).toBeGreaterThanOrEqual(2)
-  // the leader teleports across the map — both tracked alts exceed the snap radius → TELEPORT rows
-  feed({ kind: 'leader_position', x: 100 + FOLLOW_SNAP_DISTANCE * 3, z: 100, yaw: 0, now: T0 + 600 })
-  expect(transcript).toContain(`follow ${ALT_1} TELEPORT`)
-  expect(transcript).toContain(`follow ${ALT_2} TELEPORT`)
+  expect(transcript.filter((line) => line.startsWith('join_world'))).toEqual([
+    `join_world ${ALT_1} -> ${WORLD}`,
+    `join_world ${ALT_2} -> ${WORLD}`,
+  ])
+
+  // ── 3. each sequential join receipt begins its own ETA; no follower renders while in transit ───────────
+  feed({ kind: 'member_world_state', character_id: ALT_2, world_id: WORLD })
+  feed({
+    kind: 'follow_world_joined',
+    character_id: ALT_1,
+    world_id: WORLD,
+    checkpoint: { x: 100 + TRANSIT_SPEED * 10, z: 100 },
+    now: T0,
+  })
+  feed({
+    kind: 'follow_world_joined',
+    character_id: ALT_2,
+    world_id: WORLD,
+    checkpoint: { x: 100 - TRANSIT_SPEED * 10, z: 100 },
+    now: T0,
+  })
+  expect(transcript.filter((line) => line.startsWith('follow'))).toEqual([])
+
+  // expiry targets two distinct cells beside the leader; only write receipts make the followers visible
+  feed({ kind: 'leader_position', x: 101, z: 100, yaw: 0, now: T0 + 9_000 })
+  feed({ kind: 'transit_tick', now: T0 + 10_000 })
+  expect(transcript.filter((line) => line.startsWith('checkpoint'))).toEqual([
+    `checkpoint ${ALT_1}`,
+    `checkpoint ${ALT_2}`,
+  ])
+  feed({ kind: 'follow_checkpoint_written', character_id: ALT_1 })
+  feed({ kind: 'follow_checkpoint_written', character_id: ALT_2 })
+  expect(transcript).toContain(`follow ${ALT_1}`)
+  expect(transcript).toContain(`follow ${ALT_2}`)
 
   // ── 4. the leader engages a mob group: both alts auto-join exactly once ────────────────────────────────
   feed({ kind: 'fight_started', fight_id: FIGHT, seated: [LEADER] })
@@ -91,12 +112,12 @@ test('GROUP SESSION: invite → world join → follow → engage → auto-join �
     `hud_focus ${LEADER}`,
   ])
 
-  // ── 6. victory: the fight clears; follow resumes on the very next pose tick ────────────────────────────
+  // ── 6. victory: the fight clears; arrived positions resume on the very next leader pose tick ───────────
   feed({ kind: 'fight_ended' })
   expect(store.getState().fight).toBe(null)
   expect(store.getState().focus_character_id).toBe(null)
-  const resumed = record(dispatch({ kind: 'leader_position', x: 200, z: 200, yaw: 1, now: T0 + 2_000 }))
-  expect(resumed.follow_move.map((row) => row.character_id)).toEqual([ALT_1, ALT_2])
+  const resumed = record(dispatch({ kind: 'leader_position', x: 200, z: 200, yaw: 1, now: T0 + 12_000 }))
+  expect(resumed.follow_render.map((row) => row.character_id)).toEqual([ALT_1, ALT_2])
 
   // the full transcript is the replayable proof — keep it deterministic
   expect(transcript.length).toBeGreaterThan(10)
