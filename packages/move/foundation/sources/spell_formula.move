@@ -55,9 +55,9 @@ public fun heal_amount(base: u64, caster: &Stats): u64 {
 // ╔════════════════ [ §5h/§D — deterministic crit boolean (the ONLY damage RNG) ] ═ ]
 
 /// Roll the crit boolean — the single random input to the damage path. `crit_rate` is the base 1-in-X chance;
-/// `crit_bonus` lowers X (agility feeds crit, project law; exact agi→bonus coefficient is NOT in the taxonomy
-/// → passed in by the caller, flagged). On `true` the resolver swaps to the spell's `crit_effects` (a higher
-/// FIXED base — no multiplier). Thin wrapper over `spell::is_critical` so the crit rule has one home.
+/// `crit_bonus` lowers X; live resolvers supply the caster's dedicated `critical_hit` stat. On `true` the resolver
+/// swaps to the spell's `crit_effects` (a higher FIXED base — no multiplier). Thin wrapper over
+/// `spell::is_critical` so the crit rule has one home.
 public fun roll_crit(rng: u64, crit_rate: u64, crit_bonus: u64): (u64, bool) {
   spell::is_critical(rng, crit_rate, crit_bonus)
 }
