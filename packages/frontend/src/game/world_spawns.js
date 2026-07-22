@@ -43,6 +43,7 @@ import { group_engage_blocked } from '@aresrpg/world/nearby_fights'
 
 import i18n from '../i18n'
 import { game_log } from '../core/log.js'
+import { report_error } from '../core/report.js'
 import { get_config } from '../rpc/client'
 import { subscribe_zones } from '../rpc/zones_poll'
 import { zone_rows_v1, zone_rows_chain, zone_world_doc } from './zone_rows.js'
@@ -57,6 +58,7 @@ import { enter_world_fight, resume_world_fight } from '../world-shell/world_figh
 import { use_prompt_stack } from '../world-shell/prompt_stack.js'
 
 import { use_world_spawns } from './world_spawns_store.js'
+import { start_fight_engage } from './fight_engage.js'
 import { push_event_toast } from './core/toast.js'
 import { context } from './core/game.js'
 import { fight_view } from '@aresrpg/fight/project'
@@ -534,8 +536,8 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
   // closer" instead of firing a doomed claim.
   const hint_too_far = () => push_event_toast({ state: 'info', title: i18n.t('discovery.engage_too_far') })
 
-  // FIGHT-ENTRY OPTIMISTIC BEAT (press → spectacle BEFORE the tx) — the engaged group hides the
-  // instant the claim is pressed (mob disappearance is part of the beat) and returns on a failed/refused tx.
+  // FIGHT-ENTRY OPTIMISTIC BEAT (press → authoritative task + spectacle in one turn) — the engaged group hides
+  // immediately (mob disappearance is part of the beat) and returns on a failed/refused tx.
   // `e.engaged` parks the frame loop for this entry (roam/draw_chip/nearest-targeting all skip it — draw_chip
   // re-writes chip display every frame, so a bare style write would be stomped); the visibility one-shots here.
   // The cinematic itself (camera/sword/sting) is fight_entry.js's, driven over the shared bus (events below).
@@ -640,43 +642,53 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     const request = spawns_store.getState().tx_request
     engaging = true
     set_attack_target(null) // drop the [R] pill immediately; the receipt removes the claimed group
-    // OPTIMISTIC — the sword/camera/mob-disappearance beat plays BEFORE the tx, not after: the pending row hides
-    // THIS group NOW (sync below) + hands the battlefield
-    // anchor to the fight-entry cinematic — the claim+create runs UNDER it. Success keeps the group hidden
-    // (the receipt removes the row); failure restores it + aborts the beat (honest rollback, one toast).
+    // OPTIMISTIC — start the authoritative claim+create task FIRST, then launch the sword/camera/mob-disappearance
+    // presentation in the same turn. The animation runs UNDER the tx and is absent from the returned task, so its
+    // completion can never delay the receipt handoff or board mount. Success keeps the group hidden; failure
+    // restores it + aborts the beat (honest rollback, one toast).
     const anchor = e.placed ? [e.cx, e.cy, e.cz] : [e.row.x, Number(get_player_pos()[1]), e.row.z]
-    sync_from_core()
-    context.events.emit('fight_entry/engage', { anchor })
     try {
-      // OPENNESS (HUD toggle): a PUBLIC fight anyone in placement may join; a GROUP fight only my current
-      // party (fight.move public_fight + party_id). GROUP with no party → a truly private solo fight (the
-      // on-chain join gate refuses everyone), a valid choice. One home: the spawns core atom (the claim_tx
-      // request carries is_public). Land same-wallet Party membership first so a private fight carries the
-      // real Party id and each owned alt's later character-specific join PTB can pass ENotParty.
-      // A PUBLIC fight discards the party id (party_id stays null below), so pre-forming an owned party is a
-      // wasted on-chain create tx — skip it entirely. Only a GROUP (private) fight seats the party FIRST.
-      if (!request.payload.is_public) {
-        const owned_party_ready = await use_party.getState().ensure_owned_party()
-        if (!owned_party_ready) {
-          const reason = use_party.getState().error ?? i18n.t('errors.tx_failed')
-          push_event_toast({ state: 'error', title: reason })
-          throw new Error(reason)
-        }
-      }
-      const { world_id, spawn_id, zx, zy, template_id, is_public } = request.payload
-      const party_id = is_public ? null : use_party.getState().party_id
-      // the request carries spawn_id + template + the GROUP's zone (zx,zy) → the global-search claim door;
-      // claim any discovered zone's group you can reach (create_world_fight toasts itself).
-      const { fight_id } = await create_world_fight({
-        world_id,
-        spawn_id,
-        zx,
-        zy,
-        mob_template_id: template_id,
-        character_id,
-        is_public,
-        party_id,
+      const submitted = start_fight_engage({
+        submit: async () => {
+          // OPENNESS (HUD toggle): a PUBLIC fight anyone in placement may join; a GROUP fight only my current
+          // party (fight.move public_fight + party_id). GROUP with no party → a truly private solo fight (the
+          // on-chain join gate refuses everyone), a valid choice. One home: the spawns core atom (the claim_tx
+          // request carries is_public). Land same-wallet Party membership first so a private fight carries the
+          // real Party id and each owned alt's later character-specific join PTB can pass ENotParty.
+          // A PUBLIC fight discards the party id (party_id stays null below), so pre-forming an owned party is a
+          // wasted on-chain create tx — skip it entirely. Only a GROUP (private) fight seats the party FIRST.
+          if (!request.payload.is_public) {
+            const owned_party_ready = await use_party.getState().ensure_owned_party()
+            if (!owned_party_ready) {
+              const reason = use_party.getState().error ?? i18n.t('errors.tx_failed')
+              push_event_toast({ state: 'error', title: reason })
+              throw new Error(reason)
+            }
+          }
+          const { world_id, spawn_id, zx, zy, template_id, is_public } = request.payload
+          const party_id = is_public ? null : use_party.getState().party_id
+          // the request carries spawn_id + template + the GROUP's zone (zx,zy) → the global-search claim door;
+          // claim any discovered zone's group you can reach (create_world_fight toasts itself).
+          return create_world_fight({
+            world_id,
+            spawn_id,
+            zx,
+            zy,
+            mob_template_id: template_id,
+            character_id,
+            is_public,
+            party_id,
+          })
+        },
+        present: () => {
+          sync_from_core()
+          context.events.emit('fight_entry/engage', { anchor })
+        },
+        on_present_error: (error) =>
+          report_error(error, { area: 'fight-entry', action: 'world_engage_presentation' }),
       })
+      const { fight_id } = await submitted
+      const { world_id, is_public } = request.payload
       // MOUNT the tactical board on the minted fight — the create receipt carries its id. Same run-pass-less
       // session the reconnect leg enters; the shared dungeon store's refresh/sync_engine paints the board+HUD.
       if (fight_id) {

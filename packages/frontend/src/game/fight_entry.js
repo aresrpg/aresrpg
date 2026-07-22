@@ -6,10 +6,10 @@
 //
 // TWO TRIGGERS, one beat:
 //   • OPTIMISTIC (pressing R must show the sword and camera change and mob
-//     disappearance right away, instead of waiting on the TX first): the world lane's engage INPUT emits
-//     'fight_entry/engage' {anchor} on the shared bus BEFORE the claim+create tx (world_spawns hides the
-//     targeted group in the same breath) — the beat starts ON THE PRESS, the tx runs UNDER it. Success = the
-//     store flip below confirms (belt cleared, beat continues to the board boom); failure = the lane emits
+//     disappearance right away, instead of waiting on the receipt): the engage lane starts its authoritative
+//     task, then emits 'fight_entry/engage' {anchor} on the shared bus in the SAME turn (world_spawns hides the
+//     targeted group in that presentation edge). The animation runs under the task and is never awaited. Success
+//     = the store flip below confirms (belt cleared, beat continues to the board boom); failure = the lane emits
 //     'fight_entry/abort' (or the belt timeout fires) → honest rollback: sword despawns, camera releases —
 //     never a stuck iso view (the lane re-shows the group + the humanized toast is the tx's own).
 //   • STORE FLIP (the fallback/confirmation): `use_dungeon.fight_id` going null→set — the earliest post-tx
@@ -109,7 +109,7 @@ export function create_fight_entry({
     optimistic_timer = null
   }
 
-  // ── OPTIMISTIC trigger (the press): iso snap + orbit + sting + sword at the battlefield, tx still in flight ──
+  // ── OPTIMISTIC trigger: iso snap + orbit + sting + sword while the authoritative task is in flight ──
   const on_engage = (/** @type {any} */ payload) => {
     // never stack a beat on a live fight/cinematic (spam-press, or a press racing a mounted board)
     if (optimistic_timer || fight_camera.is_active() || use_dungeon.getState().fight_id) return

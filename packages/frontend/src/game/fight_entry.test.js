@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // FIGHT-ENTRY — deterministic proof of the trigger contract:
-//   • OPTIMISTIC (the engage must be visible IN PARALLEL of the tx, not gated behind it): the engage PRESS
-//     ('fight_entry/engage' on the shared bus, emitted by world_spawns BEFORE the claim+create tx) starts the
-//     beat instantly — camera prepare framed on the GROUP anchor + herald sword; 'fight_entry/abort' (tx
-//     failed/refused) rolls it back cleanly; a SUCCESS store flip under a running beat never double-starts;
+//   • OPTIMISTIC (the engage must be visible IN PARALLEL of the authoritative task, not gated behind its
+//     receipt): 'fight_entry/engage' starts the beat instantly — camera prepare framed on the GROUP anchor +
+//     herald sword; 'fight_entry/abort' (tx failed/refused) rolls it back cleanly; a SUCCESS store flip under a
+//     running beat never double-starts;
 //     an abort AFTER confirmation is inert.
 //   • FRESH-CREATES-ONLY gate: the store flip fires the cinematic ONLY with
 //     `fight_fresh: true`; reload-resume/poll-adopt get NO prepare — the camera direct-engages at the settled
@@ -101,7 +101,7 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('create_fight_entry — the gate ove
     }
   })
 
-  it('D3 DUNGEON optimistic press: rotating camera fires on the pre-tx beat, framed on the cave board, with NO sword (the D280 ceremony owns it)', () => {
+  it('D3 DUNGEON optimistic press: rotating camera fires before the receipt, framed on the cave board, with NO sword (the D280 ceremony owns it)', () => {
     const begins = /** @type {any[]} */ ([])
     const planted = /** @type {any[]} */ ([])
     let active = false
@@ -130,13 +130,13 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('create_fight_entry — the gate ove
     })
     try {
       // (1) the DUNGEON PRESS (dungeon_dimension.engage emits with NO anchor) — the camera rotates INSTANTLY,
-      // framed on the coming board (get_cave_anchor), and the tx has not run yet (fight_id still null).
+      // framed on the coming board (get_cave_anchor), while no authoritative receipt has landed (fight_id null).
       context.events.emit('fight_entry/engage', {})
       expect(begins.length).toBe(1)
       expect(begins[0].frame.origin).toEqual(cave) // orbit centred on the cave board's own min-corner
       expect(planted.length, 'NO fight_entry sword in a cave — the D280 ceremony plants the only one').toBe(0)
       // (2) the start tx lands UNDER the running beat (fight_fresh stamped by the dungeon door) — NO double-start,
-      // still NO sword. Proves ordering: engage-beat → camera → THEN the confirmed fight_id (tx).
+      // still NO sword. This entry observer reacts immediately and dedupes the later confirmed fight_id.
       use_dungeon.setState({ fight_id: '0xroomfight', fight_fresh: true })
       expect(begins.length).toBe(1)
       expect(planted.length).toBe(0)
@@ -150,7 +150,7 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('create_fight_entry — the gate ove
     }
   })
 
-  it('OPTIMISTIC press: beat starts pre-tx at the group anchor; abort rolls back; success never double-starts', () => {
+  it('OPTIMISTIC press: beat starts pre-receipt at the group anchor; abort rolls back; success never double-starts', () => {
     const begins = /** @type {any[]} */ ([])
     const planted = /** @type {{ anchor: number[], disposed: boolean, dispose: () => void }[]} */ ([])
     let active = false

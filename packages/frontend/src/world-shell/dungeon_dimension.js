@@ -30,10 +30,12 @@
 
 import { create } from 'zustand'
 
+import { start_fight_engage } from '../game/fight_engage.js'
 import { context } from '../game/store.js'
 import { use_auth } from '../auth'
 import i18n from '../i18n'
 import { game_log } from '../core/log.js'
+import { report_error } from '../core/report.js'
 
 import { use_dungeon } from './dungeon_store.js'
 import { as_one_toast } from './dungeon_actions.js'
@@ -143,23 +145,28 @@ export const use_dungeon_dimension = create((set, get) => ({
     if (!dungeon || !me || dungeon.creator !== me) return // only the leader fires the start (party isn't surprised)
     if (get()._engaging) return
     set({ _engaging: true })
-    // D3 FIGHT-START PARITY (dungeon fights start EXACTLY like open-world fights — press → rotating camera
-    // FIRST, tx in the background): fire the SAME pre-tx beat world_spawns fires, so ONE flow (fight_entry) drives
-    // both entries. fight_entry.on_engage resolves the cave board frame itself (get_cave_anchor) and skips the
-    // sword — the D280 ceremony below plants the cave's own beacon (never a second sword). No anchor is passed:
-    // the world path needs one, the cave resolves its frame from the mounted board.
-    context.events.emit('fight_entry/engage', {})
-    // D280 — plant the beacon sword + optimistically clear the pack the instant the click lands, BEFORE the txs
-    // run (the sword is the tx-wait marker). It self-resolves on the ACTIVE flip (board mounts) or a timeout.
-    start_fight_ceremony(get().spawned_for)
+    // D107 tx-provenance: this engage IS the mob-cluster CLICK (the listener already asserted payload.user),
+    // so thread the user gesture through to the store's start action — the ONLY legal room-start trigger.
+    const start = () =>
+      status === STATUS_OPEN
+        ? use_dungeon.getState().start_when_ready({ user: true })
+        : use_dungeon.getState().start_next_room({ user: true })
     try {
-      // D107 tx-provenance: this engage IS the mob-cluster CLICK (the listener already asserted payload.user),
-      // so thread the user gesture through to the store's start action — the ONLY legal room-start trigger.
-      const start = () =>
-        status === STATUS_OPEN
-          ? use_dungeon.getState().start_when_ready({ user: true })
-          : use_dungeon.getState().start_next_room({ user: true })
-      await as_one_toast(i18n.t('dungeons.action_start_room_all'), start)
+      const submitted = start_fight_engage({
+        // D3 FIGHT-START PARITY: begin the authoritative room-start task FIRST, then fire the SAME presentation
+        // beat as the world lane in this turn. The camera/sword animation is presentation only and never part of
+        // the awaited task.
+        submit: () => as_one_toast(i18n.t('dungeons.action_start_room_all'), start),
+        present: () => {
+          // fight_entry resolves the cave board frame itself and skips its world sword; the D280 ceremony plants
+          // the cave's only beacon, optimistically clears the pack, and yields on ACTIVE or abort timeout.
+          context.events.emit('fight_entry/engage', {})
+          start_fight_ceremony(get().spawned_for)
+        },
+        on_present_error: (error) =>
+          report_error(error, { area: 'fight-entry', action: 'dungeon_engage_presentation' }),
+      })
+      await submitted
       // SUCCESS: leave the beacon planted — it yields to the board when the status flips ACTIVE (the ceremony's
       // own status watch), so there is no gap between the sword lifting and the board painting.
       // start_when_ready / start_next_room SWALLOW their own tx errors (set store.error, never throw), so a FAILED

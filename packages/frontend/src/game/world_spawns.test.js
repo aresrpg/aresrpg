@@ -148,7 +148,7 @@ describe('world spawn mob-card layer route gate', () => {
       'const party_id = is_public ? null : use_party.getState().party_id',
       refuse_at
     )
-    const create_at = world_spawns_source.indexOf('const { fight_id } = await create_world_fight', party_at)
+    const create_at = world_spawns_source.indexOf('return create_world_fight', party_at)
 
     expect(prepare_at).toBeGreaterThan(-1)
     expect(refuse_at).toBeGreaterThan(prepare_at)
@@ -166,6 +166,22 @@ describe('world spawn mob-card layer route gate', () => {
     )
     expect(guard_at).toBeGreaterThan(-1) // the guard exists
     expect(guard_at).toBeLessThan(prepare_at) // …and precedes (wraps) the ensure_owned_party call
+  })
+
+  test('the world lane routes submission and presentation through the ordering seam', () => {
+    const seam_at = world_spawns_source.indexOf('const submitted = start_fight_engage({')
+    const submit_at = world_spawns_source.indexOf('submit: async () => {', seam_at)
+    const create_at = world_spawns_source.indexOf('return create_world_fight', submit_at)
+    const present_at = world_spawns_source.indexOf('present: () => {', create_at)
+    const swing_at = world_spawns_source.indexOf("context.events.emit('fight_entry/engage'", present_at)
+    const receipt_at = world_spawns_source.indexOf('const { fight_id } = await submitted', swing_at)
+
+    expect(seam_at).toBeGreaterThan(-1)
+    expect(submit_at).toBeGreaterThan(seam_at)
+    expect(create_at).toBeGreaterThan(submit_at)
+    expect(present_at).toBeGreaterThan(create_at)
+    expect(swing_at).toBeGreaterThan(present_at)
+    expect(receipt_at).toBeGreaterThan(swing_at)
   })
 
   test.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('a non-world screen hides the body layer until a fresh world frame', () => {
@@ -237,7 +253,7 @@ describe('world spawn mob-card layer route gate', () => {
     const helper_at = world_spawns_source.indexOf('group_engage_blocked(context.get_state().visible_fights')
     const gate_at = world_spawns_source.indexOf('if (group_has_live_fight(e)) {')
     const claim_intent_at = world_spawns_source.indexOf("spawns_input({ type: 'claim_intent'", gate_at)
-    const create_at = world_spawns_source.indexOf('await create_world_fight', gate_at)
+    const create_at = world_spawns_source.indexOf('return create_world_fight', gate_at)
     expect(helper_at, 'the decision reads rpc truth (visible_fights), not session state').toBeGreaterThan(-1)
     expect(gate_at, 'engage() carries the local refuse gate').toBeGreaterThan(-1)
     expect(claim_intent_at, 'the refuse precedes the optimistic claim_intent').toBeGreaterThan(gate_at)
