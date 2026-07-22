@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { use_content } from '../pages/encyclopedia/content'
 import { use_template_t } from '../i18n/template_t'
 
-import { ItemImage } from './items'
+import { ItemImage } from './item_image'
 import {
   STAT_COLORS,
   ELEMENT_COLORS,
