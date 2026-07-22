@@ -61,6 +61,7 @@ import { had_active_seat, mark_active_seat, session_reset } from '../fight-engin
 import { set_zone_music, stop_zone_music } from '../game/core/audio/ambient_music.js'
 import { game_log } from '../core/log.js'
 
+import { install_fight_trace_tee } from './fight_trace_tee.js'
 import {
   as_one_toast,
   next_room_fight,
@@ -1570,6 +1571,11 @@ export const use_dungeon = create((set, get) => ({
 // dungeon_session is a derived leaf that cannot mutate this lifecycle state back.
 publish_dungeon_session(use_dungeon.getState())
 use_dungeon.subscribe(publish_dungeon_session)
+
+// ── THE RECORDER TEE: a transparent tap on the fight-store door captures every ingress as an input
+// envelope (V2 build step 1). Gated OFF in ordinary play; zero behavior change (the original input still
+// runs). Installed here — the ONE place the app wires the fight-store singleton — before any dispatch.
+install_fight_trace_tee(fight_store)
 
 // ── THE ONE PROJECTION MIRROR: the core's board view → the legacy `dungeon` field every consumer reads. This is
 // the ONE sanctioned set() of fight-derived data — adopt-whole, zero logic. No dedupe/floor/turn decision lives
