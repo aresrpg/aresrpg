@@ -1320,7 +1320,12 @@ export async function clean_return(page: Page, spawn_id: string) {
 export async function play_fixture_fight(
   page: Page,
   fixture: FightFixture,
-  options: { expected: 'win' | 'loss'; on_result?: (dialog: Locator) => Promise<void> }
+  options: {
+    expected: 'win' | 'loss'
+    on_active?: (fight_id: string) => Promise<void>
+    on_turn_settled?: (fight_id: string) => Promise<void>
+    on_result?: (dialog: Locator) => Promise<void>
+  }
 ) {
   // Lifecycle boundary: after this call starts, evaluation below only reads state or projects a pixel.
   const spawn_id = await engage_by_mouse(page, fixture)
@@ -1341,15 +1346,22 @@ export async function play_fixture_fight(
   await place_pick_by_mouse(page, place!)
   await human_click_locator(page, page.locator('.hud-fightctl__ready'))
   await expect.poll(() => snapshot(page).then((state) => !state.placement), { timeout: 45_000 }).toBe(true)
+  const { fight_id } = await snapshot(page)
+  expect(fight_id, 'fixture placement closed without a fight id').toBeTruthy()
   // POST-READY crash-surface assert: place_at committed, so me.cell now reflects the PLACED cell (the receipt fold)
   // — the placement analog of the post-move assert. me.cell predicts nothing pre-commit; it MUST hold post-commit.
   await expect.poll(() => snapshot(page).then((s) => cell_key(s.me!.cell))).toBe(cell_key(place!))
+  await options.on_active?.(fight_id!)
 
   // A harmless, human-paced opening turn proves cell + spell + END TURN interaction before either fixture settles.
   await wait_player_turn(page)
   await draft_move(page, true)
   await click_spell(page)
   await end_turn_by_mouse(page)
+  if (options.on_turn_settled) {
+    await wait_player_turn(page)
+    await options.on_turn_settled(fight_id!)
+  }
 
   if (options.expected === 'win') {
     for (let turn = 0; turn < 12; turn += 1) {

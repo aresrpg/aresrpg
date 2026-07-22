@@ -170,6 +170,44 @@ export async function join_fight_by_door(page: Page, fight_id: string, character
     .not.toBeNull()
 }
 
+/** The product WATCH door — the exact call FightsModal makes for a public ACTIVE fight. The return only
+ *  acknowledges the binding; hydration is async, so prove the seatless core view before returning. */
+export async function watch_fight_by_door(page: Page, fight_id: string, world_id: string | null = null) {
+  const entered = await page.evaluate(
+    async ({ requested_fight_id, requested_world_id }) => {
+      const { spectate_world_fight } = await import('/src/world-shell/world_fight.js')
+      return spectate_world_fight({
+        fight_id: requested_fight_id,
+        world_id: requested_world_id,
+        public_fight: true,
+        status: 'active',
+      })
+    },
+    { requested_fight_id: fight_id, requested_world_id: world_id }
+  )
+  expect(entered, `WATCH refused the public active fight ${fight_id}`).toBe(true)
+  await expect
+    .poll(
+      () =>
+        page.evaluate(async (expected_fight_id) => {
+          const [{ use_dungeon }, { fight_view }] = await Promise.all([
+            import('/src/world-shell/dungeon_store.js'),
+            import('/@id/@aresrpg/fight'),
+          ])
+          const dungeon = use_dungeon.getState()
+          const fight = fight_view()
+          return {
+            fight_id: dungeon.fight_id,
+            spectating: dungeon.spectating,
+            spectator: fight?.spectator === true,
+            view_fight_id: fight?.fight_id ?? null,
+          }
+        }, fight_id),
+      { timeout: 60_000, message: `WATCH never hydrated the spectator board for ${fight_id}` }
+    )
+    .toEqual({ fight_id, spectating: true, spectator: true, view_fight_id: fight_id })
+}
+
 /** A join attempt expected to be REFUSED: returns the surfaced (humanized) error message, or null when the
  *  join wrongly succeeded. The caller owns the assert. */
 export async function join_refusal_message(page: Page, fight_id: string, character_id: string) {
@@ -431,4 +469,35 @@ export async function assert_victory_and_continue(page: Page): Promise<bigint> {
   await expect(page.locator('.hud-fightctl')).toHaveCount(0, { timeout: 45_000 })
   await expect(page.locator('.gw-selfplate')).toBeVisible()
   return BigInt(parsed![1])
+}
+
+/** CHAIN-TRUTH EXPORT (the coop desync oracle, ruled 2026-07-22): one client's settled COMMITTED board,
+ *  serialized comparable. Two clients that folded the same journal MUST export deep-equal values here.
+ *  Per-client channels stay out by design: my_entity_id, prediction ap/mp, presented paces, trap overlays. */
+export async function chain_truth_export(page: Page): Promise<unknown> {
+  return page.evaluate(async () => {
+    const { fight_store, engine_view_of } = await import('/@id/@aresrpg/fight')
+    const view = engine_view_of(fight_store.getState())
+    if (!view?.fighters) return null
+    return [...view.fighters.values()]
+      .map((row: any) => ({
+        id: String(row.id),
+        owner: row.owner == null ? null : String(row.owner),
+        variant: row.variant == null ? null : String(row.variant),
+        team: Number(row.team),
+        cell: row.cell == null ? null : { x: Number(row.cell.x), y: Number(row.cell.y) },
+        hp: Number(row.committed_health),
+        alive: !!row.committed_alive,
+        hp_max: Number(row.health_max),
+        effects: (row.effects ?? []).map((effect: any) => ({
+          kind: effect.kind == null ? null : Number(effect.kind),
+          remaining_turns: effect.remaining_turns == null ? null : Number(effect.remaining_turns),
+          element: effect.element == null ? null : Number(effect.element),
+          value: effect.value == null ? null : Number(effect.value),
+          stat: effect.stat == null ? null : Number(effect.stat),
+          chance: effect.chance == null ? null : Number(effect.chance),
+        })),
+      }))
+      .sort((left: any, right: any) => left.id.localeCompare(right.id))
+  })
 }
