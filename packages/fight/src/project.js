@@ -186,6 +186,26 @@ export const can_end_turn = (state, now = Date.now()) =>
 
 const seat_key = (seat) => `p${seat}`
 const mob_key = (idx) => `m${idx}`
+
+const character_male = (character) => {
+  if (typeof character?.male === 'boolean') return character.male
+  if (character?.sex === 'male') return true
+  if (character?.sex === 'female') return false
+  return undefined
+}
+
+const character_colors = (character) => {
+  if (!character) return null
+  const nested = Array.isArray(character.colors) ? null : character.colors
+  const colors = Array.isArray(character.colors)
+    ? character.colors
+    : [
+        character.color_1 ?? nested?.color_1 ?? 0,
+        character.color_2 ?? nested?.color_2 ?? 0,
+        character.color_3 ?? nested?.color_3 ?? 0,
+      ]
+  return colors.some(Boolean) ? colors : null
+}
 const positive_delta = (value, base) => {
   const delta = Number(value) - Number(base)
   return Number.isFinite(delta) ? Math.max(0, delta) : 0
@@ -373,7 +393,9 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
     const f = p.fighters?.[seat_key(seat)] ?? {}
     const cf = c.fighters?.[seat_key(seat)] ?? {}
     const character_id = participant_character_id(row)
-    const roster_name = roster.find((c) => c.id === character_id)?.name
+    const roster_character = roster.find((c) => c.id === character_id)
+    const roster_name = roster_character?.name
+    const male = character_male(roster_character) ?? character_male(row)
     if (f.ready ?? row.ready) ready.add(entity_id)
     map.set(entity_id, {
       id: entity_id,
@@ -402,9 +424,14 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       dead:
         !death_hold.has(entity_id) &&
         ((s.busy && s.optimistic_dead?.[seat_key(seat)] != null) || (f.hp != null ? !f.alive : !row.alive)),
-      class_id: row.classe || undefined,
+      class_id: row.classe || roster_character?.classe || roster_character?.class || undefined,
+      sex: male == null ? undefined : male ? 'male' : 'female',
+      male,
       hue: 0, // was color_to_hue(0) ≡ 0 — a constant call; the game/data/color edge died with the promotion
-      colors: null,
+      // The roster edge is deliberately shape-tolerant: owned/enriched cards carry flat color_N fields while
+      // raw /v1 teammate docs carry them under `colors`. All-zero means "use the authored base texture", exactly
+      // like the roam avatar; `hue` stays the legacy 2D-sprite value above.
+      colors: character_colors(roster_character) ?? character_colors(row),
       invisible: !!f.invisible,
     })
   }

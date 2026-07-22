@@ -107,17 +107,17 @@ export function world_seat_from_surfaces(surfaces, quantile = 0.9) {
 /**
  * The GLB url for a fighter — the template-id law, resolved through the SAME frontend model maps the roam
  * world + fight-overlay use, so a voxel avatar matches the plane. Player: the escrowed character's CLASS body GLB
- * (CHARACTER_MODELS[class][gender]); when the class has no rig, undefined ⇒ the engine avatar's shipped default.
+ * (CHARACTER_MODELS[class][gender]); a class with no rig uses the same gender-matched Senshi placeholder as the
+ * roam avatar, never the engine avatar's implicit male default.
  * Mob: get_mob_model keyed on fighter.variant (= the chain mob template id). Pure.
- * @param {{ is_player?: boolean, class_id?: string, variant?: string, male?: boolean, name?: string }} fighter
- * @returns {string | undefined} a public GLB url, or undefined to let the engine use its default rig
+ * @param {{ is_player?: boolean, class_id?: string, variant?: string, sex?: string, male?: boolean, name?: string }} fighter
+ * @returns {string | undefined} a public GLB url
  */
 export function glb_variant_of(fighter) {
   if (fighter.is_player) {
-    const cls = fighter.class_id
-    if (!cls || !has_character_model(cls)) return undefined
-    const gender = fighter.male === false ? 'female' : 'male'
-    return character_glb_url(CHARACTER_MODELS[cls]?.[gender]?.body)
+    const rig_class = fighter.class_id && has_character_model(fighter.class_id) ? fighter.class_id : 'senshi'
+    const gender = fighter.male === false || fighter.sex === 'female' ? 'female' : 'male'
+    return character_glb_url(CHARACTER_MODELS[rig_class]?.[gender]?.body)
   }
   return get_mob_model({ variant: fighter.variant, name: fighter.name }).url
 }
@@ -125,17 +125,17 @@ export function glb_variant_of(fighter) {
 /**
  * [D242] The HAIR GLB url for a fighter, or undefined. A PLAYER gets their class/gender `_hair` mesh from the
  * SAME CHARACTER_MODELS map the roam avatar (embed_voxel) mounts — so a fight avatar is NOT bald (D242
- * rejects a hairless fight avatar). Mobs, hairless class/gender rows, and rig-less classes resolve undefined (the
- * engine avatar home simply skips hair — bald, not broken). Pure — mirrors glb_variant_of.
- * @param {{ is_player?: boolean, class_id?: string, male?: boolean }} fighter
+ * rejects a hairless fight avatar). Mobs and hairless class/gender rows resolve undefined (the engine avatar home
+ * simply skips hair — bald, not broken); rig-less classes use the roam avatar's Senshi placeholder. Pure — mirrors
+ * glb_variant_of.
+ * @param {{ is_player?: boolean, class_id?: string, sex?: string, male?: boolean }} fighter
  * @returns {string | undefined}
  */
 export function hair_variant_of(fighter) {
   if (!fighter.is_player) return undefined
-  const cls = fighter.class_id
-  if (!cls || !has_character_model(cls)) return undefined
-  const gender = fighter.male === false ? 'female' : 'male'
-  return character_glb_url(CHARACTER_MODELS[cls]?.[gender]?.hair)
+  const rig_class = fighter.class_id && has_character_model(fighter.class_id) ? fighter.class_id : 'senshi'
+  const gender = fighter.male === false || fighter.sex === 'female' ? 'female' : 'male'
+  return character_glb_url(CHARACTER_MODELS[rig_class]?.[gender]?.hair)
 }
 
 /**

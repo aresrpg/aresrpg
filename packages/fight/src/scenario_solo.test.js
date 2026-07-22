@@ -119,6 +119,26 @@ describe('solo lifecycle — create → placement → activation', () => {
     ])
   })
 
+  test('engine view carries raw /v1 and enriched roster appearance onto its seat', () => {
+    const colors = { color_1: 0xc58b6a, color_2: 0x375a7f, color_3: 0xd6b36a }
+    const store = boot()
+    store.getState().input({ type: 'ctx', ctx: { roster: [{ id: ME, male: false, colors }] } }, T0 + 50)
+    store.getState().input({ type: 'snapshot', fight: fight_object({ status: 0 }), version: 1 }, T0 + 100)
+
+    const appearance = {
+      sex: 'female',
+      male: false,
+      colors: [colors.color_1, colors.color_2, colors.color_3],
+    }
+    expect(engine_view(store.getState()).fighters.get(ME)).toMatchObject(appearance)
+
+    store.getState().input({
+      type: 'ctx',
+      ctx: { roster: [{ id: ME, sex: 'female', male: false, ...colors }] },
+    })
+    expect(engine_view(store.getState()).fighters.get(ME)).toMatchObject(appearance)
+  })
+
   test('Placed + Ready fold onto my seat (the v1.12.28 dropped-Placed class, now a scenario row)', () => {
     const store = boot()
     store.getState().input({ type: 'snapshot', fight: fight_object({ status: 0 }), version: 1 }, T0 + 100)
