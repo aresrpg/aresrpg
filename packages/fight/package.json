@@ -11,6 +11,9 @@
     "node": ">=21.0.0"
   },
   "exports": {
+    "./envelope": {
+      "import": "./src/envelope.js"
+    },
     "./inputs": {
       "import": "./src/inputs.js"
     },
