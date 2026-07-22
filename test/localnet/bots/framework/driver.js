@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // PTB DRIVERS — the wrappers over the @aresrpg/sdk write builders. Each: build the tx via the SDK builder
 // (NEVER a hand-rolled PTB), record every entry-fn it calls (coverage), submit it signed by the bot key with
 // the money-law retry policy, and return the wrapped effects + the created object ids the next step needs.

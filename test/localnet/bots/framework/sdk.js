@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SDK BUILDER BARREL — the single home for the cross-package relative imports of the @aresrpg/sdk PTB
 // builder factories the bots drive. Relative import of the SDK *source* works from test/ (proven): the SDK
 // files resolve their own @mysten deps from packages/sdk/node_modules, so no root wiring is needed. If track 1

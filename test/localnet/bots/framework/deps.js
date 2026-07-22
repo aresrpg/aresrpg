@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // DEPS SHIM — the zero-wiring bridge to @mysten/* for bots that live under test/ (outside any workspace).
 //
 // WHY THIS EXISTS: bun's isolated install hoists @mysten/* into each workspace's own node_modules (+ the

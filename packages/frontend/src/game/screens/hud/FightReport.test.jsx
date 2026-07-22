@@ -3,7 +3,8 @@
 // FIGHT COST card-render proof: FightReport is a pure-props shell (no stores, no
 // react-i18next context — `t` rides in as a prop), so renderToStaticMarkup (react-dom/server, already a
 // dependency — no new dep) is enough to assert the formatted cost line actually reaches the DOM markup.
-import { describe, expect, test } from 'bun:test'
+import { beforeEach, describe, expect, test } from 'bun:test'
+import { reset_walrus_assets_for_test } from '@aresrpg/sdk/jobs'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import player_experience from '../../core/modules/player_experience.js'
@@ -11,6 +12,10 @@ import { FightReport } from './FightReport.jsx'
 import { tap_trace_input, _reset_trace_for_test } from '@aresrpg/fight/trace_tap'
 
 const t = (key, opts) => (opts?.sui != null ? `${key}:${opts.sui}` : key) // stub — no i18n init needed
+
+// Cold-state pin: these suites assert the resolver's manifest-less fallbacks; a sibling file's real-manifest
+// configure (the process-wide walrus singleton) would reroute icons to walrus URLs and fail them in combined runs.
+beforeEach(() => reset_walrus_assets_for_test())
 
 const base = {
   verdict: 'Victory',

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SUI JSON-RPC LAYER — construct the localnet client, submit built PTBs, read chain state for assertions.
 //
 // Mirrors the repo's headless convention EXACTLY (packages/move/scripts/client.js + ceremony_lib.mjs +

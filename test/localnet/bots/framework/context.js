@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // SDK CONTEXT — build the `context` every @aresrpg/sdk builder factory binds to, from the manifest.
 //
 // The builders need { network, ids?.aresrpg (injection seam), kiosk_client }. We keep OUR OWN localnet

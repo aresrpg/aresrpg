@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
 // WORLD FLOW — the RUNTIME-COORD layer every live bot shares (gameplay + balance). The shipped world model is
 // PROCEDURAL: a zone's contents (mob groups + resource nodes, their spawn_ids and positions) are ROLLED FRESH
 // by each `search_zone` from `&Random` — they are NOT static seed data, so no manifest coord can name them. A
