@@ -15,7 +15,12 @@ import * as settle_input from './inputs.js'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_WON } from './board_state.js'
 import { INVISIBILITY_STATUS_KIND } from './fight_status_snapshot.js'
 import { masks_entries, pace_segment } from './present.js'
-import { claim_version, fold_claimed_budget, with_budget_predictions } from './budget_claims.js'
+import {
+  claim_version,
+  fold_claimed_budget,
+  with_budget_predictions,
+  without_expired_budget_predictions,
+} from './budget_claims.js'
 
 // M2b · ONE INGRESS (#291): with a SINGLE canonical source (the accept machine's deduped, contiguous `apply`
 // stream — receipts and journal pages folded through ONE door keyed `(fight_id, seq)`) there is no longer a merge
@@ -206,7 +211,9 @@ export const GHOST_STALE_MS = 15_000
 export const recompute = (draft, now) => {
   const observed_deadline = Number(draft.turn_deadline_ms ?? 0)
   const base = base_from_view(draft.view, draft.fight_id)
-  const all_log = with_budget_predictions(sorted_log(draft.entries), draft.budget_predictions)
+  const all_log = without_expired_budget_predictions(
+    with_budget_predictions(sorted_log(draft.entries), draft.budget_predictions)
+  )
   const log = all_log.filter((e) => e.version > draft.view_version)
   const claimed_budget = (draft.claimed_budget ?? []).filter((row) => claim_version(row) > Number(draft.view_version))
   const committed = fold_claimed_budget(base, log, claimed_budget)

@@ -253,24 +253,24 @@ describe('silent grant claims rebase when an earlier prediction disappears', () 
     const store = boot()
     predict(store, 'vanish:rolled-back-before-undo', 2_000)
     for (const [i, mp_left] of [3, 2, 1, 0].entries())
-      store.getState().input(
-        { type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: START + i + 1, mp_left } },
-        2_010 + i
-      )
+      store
+        .getState()
+        .input(
+          { type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: START + i + 1, mp_left } },
+          2_010 + i
+        )
 
     store.getState().input({ type: 'rollback', intent_id: 'vanish:rolled-back-before-undo' }, 2_100)
     expect(presented_state(store.getState()).fighters.p0.mp).toBe(0)
 
     // The first undo repays the hidden -1 debt, so the visible absolute remains zero; the second must then expose
     // one MP. Deriving either delta from the clamped zero instead of the raw balance loses the first refund.
-    store.getState().input(
-      { type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: START + 3, mp_left: 0 } },
-      2_110
-    )
-    store.getState().input(
-      { type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: START + 2, mp_left: 1 } },
-      2_120
-    )
+    store
+      .getState()
+      .input({ type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: START + 3, mp_left: 0 } }, 2_110)
+    store
+      .getState()
+      .input({ type: 'intent', intent: { kind: 'move', character: CHAR, to_cell: START + 2, mp_left: 1 } }, 2_120)
     expect(presented_state(store.getState()).fighters.p0.mp).toBe(1)
   })
 
@@ -305,5 +305,30 @@ describe('silent grant claims rebase when an earlier prediction disappears', () 
       expect(store.getState().log.some((action) => action.kind === 'Granted')).toBe(false)
       expect(presented_state(store.getState()).fighters.p0.mp).toBe(3)
       expect(project.board_view(store.getState()).escrow[0].committed.pending_mp).toBe(0)
+
+      store.getState().input(
+        {
+          type: 'journal',
+          fight_id: FIGHT,
+          page: {
+            fight: FIGHT,
+            journal_head: '2',
+            events: [
+              { seq: '0', version: '6', kind: 'Cast', data: { fight: FIGHT, ...vanish[0] } },
+              {
+                seq: '1',
+                version: '6',
+                kind: 'TurnEnded',
+                data: { fight: FIGHT, is_mob: false, idx: 0 },
+              },
+            ],
+          },
+        },
+        2_200
+      )
+      expect(store.getState().budget_predictions).toEqual([])
+      expect(store.getState().claimed_budget).toEqual([])
+      expect(Object.values(store.getState().entries).some((action) => action.source === 'intent')).toBe(false)
+      expect(presented_state(store.getState()).fighters.p0.mp).toBe(3)
     })
 })

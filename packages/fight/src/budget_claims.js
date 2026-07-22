@@ -27,12 +27,60 @@ export const with_budget_predictions = (log, budget_predictions) => {
   return out.sort((a, b) => a.version - b.version || a.event_idx - b.event_idx)
 }
 
-const grant_target = (action) =>
-  fighter_key({
-    is_mob: action.target_is_mob,
-    idx: action.target_idx,
-    resolve_seat: action.resolve_seat,
+const budget_target = (action) => {
+  if (action?.kind === 'Granted')
+    return fighter_key({
+      is_mob: action.target_is_mob,
+      idx: action.target_idx,
+      resolve_seat: action.resolve_seat,
+    })
+  if (action?.kind === 'Moved') return fighter_key({ character: action.character, resolve_seat: action.resolve_seat })
+  if (action?.kind === 'Cast' || action?.kind === 'CastAnchor')
+    return fighter_key({
+      is_mob: action.caster_is_mob,
+      idx: action.caster_idx,
+      resolve_seat: action.resolve_seat,
+    })
+  return null
+}
+
+const boundary_target = (action) => {
+  if (action?.kind === 'TurnEnded')
+    return fighter_key({ is_mob: action.is_mob, idx: action.idx, resolve_seat: action.resolve_seat })
+  if (action?.kind === 'Hit' && Number(action.remaining_hp) <= 0)
+    return fighter_key({
+      is_mob: action.victim_is_mob,
+      idx: action.victim_idx,
+      resolve_seat: action.resolve_seat,
+    })
+  if (action?.kind === 'Abandoned') return fighter_key({ is_mob: false, idx: action.seat })
+  return null
+}
+
+/** A p2p/poll early copy deliberately does not retire predictions before journal proof, but its accepted target
+ * TurnEnded/death is already a hard budget boundary. Keep the metadata for later claim reconciliation while making
+ * only current-turn Cast ordering/AP, Granted, and Moved budget evidence inert in the effective log. */
+export const without_expired_budget_predictions = (log) => {
+  const boundaries = new Map()
+  for (const action of log ?? []) {
+    if (action.source === 'intent') continue
+    const target = boundary_target(action)
+    const version = Number(action.version)
+    if (target && Number.isFinite(version))
+      boundaries.set(target, Math.max(boundaries.get(target) ?? -Infinity, version))
+  }
+  if (!boundaries.size) return log
+  const expired = (action) => {
+    const target = budget_target(action)
+    const boundary = target == null ? null : boundaries.get(target)
+    return boundary != null && boundary >= Number(action.version)
+  }
+  return (log ?? []).filter((action) => {
+    if (action.source !== 'intent') return true
+    if (['Cast', 'CastAnchor', 'Granted', 'Moved'].includes(action.kind)) return !expired(action)
+    return true
   })
+}
 
 export const claim_version = (row) => Number(row.claimed_at?.version ?? row.action?.version)
 
@@ -79,7 +127,7 @@ export const fold_claimed_budget = (base, log, claimed_budget) => {
     if (row.action.kind !== 'TurnStarted') continue
     const started = fighter_key({ is_mob: row.action.is_mob, idx: row.action.idx })
     for (const grant of active_grants)
-      if (grant_target(grant) === started)
+      if (budget_target(grant) === started)
         // A later refill starts a fresh pool and the still-live credit row adds its ordinary delta again.
         state = apply_action(state, grant)
   }
