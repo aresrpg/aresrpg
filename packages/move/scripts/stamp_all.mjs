@@ -209,7 +209,6 @@ export function release_network_from_manifest(manifest, previous = {}) {
               : json_clone(previous.policies.character_extract),
           }
         : {}),
-      legacy: json_clone(previous.policies?.legacy),
     },
     type_origins: {
       zone_group_root: optional_id(
@@ -284,8 +283,6 @@ function validate_network(row, network, required) {
     version(policy?.initial_shared_version, `${network}.policies.${name}.initial_shared_version`)
     optional_id(policy?.cap, `${network}.policies.${name}.cap`)
   }
-  for (const [name, value] of Object.entries(row.policies?.legacy ?? {}))
-    optional_id(value, `${network}.policies.legacy.${name}`)
   optional_id(row.type_origins?.zone_group_root, `${network}.type_origins.zone_group_root`)
   ;(required ? require_id : optional_id)(row.rules_package, `${network}.rules_package`)
   for (const [symbol, token] of Object.entries(row.external_coin_types ?? {})) {

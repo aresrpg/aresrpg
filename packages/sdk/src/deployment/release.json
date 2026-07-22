@@ -175,11 +175,6 @@
           "id": "0xfe3516264c94d8b1ea1ecc59104cf49b7a79111baedab17bafad1bfbc9545088",
           "initial_shared_version": "3",
           "cap": ""
-        },
-        "legacy": {
-          "package_id": "0x7fb388c7d46eedc2ae55c0e78b6571eb1d9df1e3524fd204f2bde2ddef08f5e2",
-          "character_policy": "0xd8302dc7a57ea406493c5fc59c213c9e8574aff017f77623819573ee3242efb1",
-          "item_policy": "0x21d04bbdf3d357c7a23dd1eb72ce68a3904b3324de00f6abf718db90cf921aa0"
         }
       },
       "type_origins": {
@@ -406,11 +401,6 @@
           "id": "",
           "initial_shared_version": "",
           "cap": ""
-        },
-        "legacy": {
-          "package_id": "0x7fb388c7d46eedc2ae55c0e78b6571eb1d9df1e3524fd204f2bde2ddef08f5e2",
-          "character_policy": "0xd8302dc7a57ea406493c5fc59c213c9e8574aff017f77623819573ee3242efb1",
-          "item_policy": "0x21d04bbdf3d357c7a23dd1eb72ce68a3904b3324de00f6abf718db90cf921aa0"
         }
       },
       "rules_package": "",

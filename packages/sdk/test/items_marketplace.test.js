@@ -163,6 +163,17 @@ describe('marketplace exact wallet debit', () => {
     expect(typeof sdk.merge_stack_ptb).toBe('function')
     expect(sdk.marketplace_purchase_total_mist(50_000_000n)).toBe(60_000_000n)
   })
+
+  // #422 — the pre-merge monolith's assets belong to an abandoned universe; nothing resolves their
+  // TransferPolicy through the SDK anymore. Guards the deletion: a reintroduction would resurface here.
+  test('SDK factory no longer exposes the dead legacy-monolith TransferPolicy surface', async () => {
+    const sdk = await SDK({ network: 'testnet' })
+    expect(sdk.TRANSFER_POLICIES).toBeUndefined()
+    expect(sdk.get_policies_profit).toBeUndefined()
+    expect(sdk.LEGACY_PACKAGE_ID).toBeUndefined()
+    expect(sdk.LEGACY_ITEM_POLICY).toBeUndefined()
+    expect(sdk.LEGACY_CHARACTER_POLICY).toBeUndefined()
+  })
 })
 
 describe('kiosk-rule-linkage — list/delist never mix personal_kiosk::* with an aresrpg call (plain 0x2::kiosk only), but still resolve ONE consistent id', () => {

@@ -1,23 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-export type LegacyTypes = {
-  LEGACY_PACKAGE_ID: string
-  LEGACY_CHARACTER_POLICY: string
-  LEGACY_ITEM_POLICY: string
-}
-
 export type Context = {
   // #23/D79 — the gRPC Core API client is the SSOT for chain reads (the legacy JSON-RPC `sui_client` was removed
   // from the runtime context during the migration; every read runs on `grpc_client.core.*`).
   grpc_client: import('@mysten/sui/grpc').SuiGrpcClient
   kiosk_client: import('@mysten/kiosk').KioskClient
-  // The LEGACY monolith TransferPolicy identities (deployment/release.json policies.legacy — the only ids still
-  // read off `context.types`, by get_policies_profit). Live merged-package ids resolve via deployment/aresrpg.js.
-  types: Partial<LegacyTypes>
   network: 'mainnet' | 'testnet' | 'devnet' | 'localnet'
   // The merged-package deployment override seam (S-46): a full/partial `aresrpg` id set merged OVER the
   // network map by every builder/read that targets THE merged package (offline tests / per-deployment
-  // overrides — same philosophy as `types` above for the legacy monolith). Omit in production.
+  // overrides). Omit in production.
   ids?: { aresrpg?: Record<string, string> }
 }
 

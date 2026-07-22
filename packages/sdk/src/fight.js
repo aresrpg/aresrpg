@@ -126,7 +126,7 @@ function validated_group_proof(group_proof, spawn_id) {
 // every fight entry takes the player's `&Kiosk` + soulbound `&PersonalKioskCap` DIRECTLY and unwraps the inner
 // owner cap ON-CHAIN. Ids resolve LAZILY through THE single deployment home (`deployment/aresrpg.js`) — a builder
 // for an un-stamped network REFUSES loudly, never invents an id. `context.ids.aresrpg` is the offline/test
-// injection seam (same philosophy as the SDK's `types_override`).
+// injection seam.
 //
 // FROZEN Move signatures — read firsthand 2026-07-11 from packages/move/aresrpg/sources/{fight,results,zones}.move
 // + packages/move/engine/sources/{turns,actions,settlement}.move (trust the code, not any doc). Engine entries

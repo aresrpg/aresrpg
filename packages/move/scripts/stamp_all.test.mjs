@@ -212,7 +212,7 @@ test('release validation rejects malformed preserved deployment ids', async () =
   for (const [label, mutate] of [
     ['system.random.id', (row) => (row.system.random.id = 'not-an-id')],
     ['external_coin_types.HSUI.type', (row) => (row.external_coin_types.HSUI.type = 'not-a-type')],
-    ['policies.legacy.package_id', (row) => (row.policies.legacy.package_id = 'not-an-id')],
+    ['policies.item.id', (row) => (row.policies.item.id = 'not-an-id')],
     ['packages.aresrpg.publishers.item', (row) => (row.packages.aresrpg.publishers.item = 'not-an-id')],
     ['actors.owner', (row) => (row.actors.owner = 'not-an-id')],
     ['actors.treasury', (row) => (row.actors.treasury = 'not-an-id')],
@@ -221,6 +221,21 @@ test('release validation rejects malformed preserved deployment ids', async () =
     mutate(malformed.networks.testnet)
     expect(() => validate_release(malformed, 'testnet')).toThrow(label)
   }
+})
+
+// #422 — the pre-merge monolith package minted a set of assets under `policies.legacy`; publishing creates
+// a new universe (only upgrades carry state forward), so those assets belong to an abandoned universe and
+// the mapping keeping them tradable was dead weight. stamp_all used to preserve that block FOREVER via
+// `json_clone(previous.policies?.legacy)` on every ceremony — a stale fossil neither the manifest nor any
+// SDK reader ever repopulated. Both the preservation and the shipped config must stay gone.
+test('stamp_all no longer preserves or validates a legacy policy block, and release.json ships none', () => {
+  const stamp_all_source = readFileSync(path.join(here, 'stamp_all.mjs'), 'utf8')
+  expect(stamp_all_source).not.toContain('policies?.legacy')
+  expect(stamp_all_source).not.toContain('policies.legacy')
+
+  const release = JSON.parse(readFileSync(release_path, 'utf8'))
+  for (const network of Object.keys(release.networks))
+    expect(release.networks[network].policies).not.toHaveProperty('legacy')
 })
 
 test.skipIf(!CEREMONY_MANIFEST_AVAILABLE)('Gold localnet ceremony creates and stamps a real CrushBoard', async () => {

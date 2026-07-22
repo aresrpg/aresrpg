@@ -1,41 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import release from '../deployment/release.json' with { type: 'json' }
-
-/**
- * The legacy monolith identities remain network-scoped deployment data. The
- * uppercase shape preserves the SDK's public `types_override` contract.
- * @param {'testnet' | 'mainnet'} [network]
- */
-export function legacy_types(network = 'testnet') {
-  const legacy = release.networks[network]?.policies.legacy
-  if (
-    !legacy?.package_id ||
-    !legacy.item_policy ||
-    !legacy.character_policy
-  )
-    throw new Error(
-      `[transfer_policies] legacy policies are not configured for ${network}`,
-    )
-  return {
-    LEGACY_PACKAGE_ID: legacy.package_id,
-    LEGACY_CHARACTER_POLICY: legacy.character_policy,
-    LEGACY_ITEM_POLICY: legacy.item_policy,
-  }
-}
-
-// AresRPG recognizes ONLY its own kiosk-locked assets. External NFTs (SuiFren/Capy/
-// Bullshark, Vaporeon, AfEgg, Prime Machin, Anima) are not supported — their policies
-// and feed integrations were removed. Maps the LEGACY monolith asset types (minted under
-// the pre-merge `aresrpg` package — release.json policies.legacy) to their shared
-// TransferPolicy, so marketplace buys of still-locked legacy assets resolve their royalty
-// rule. Live merged-package assets resolve their policies via deployment/aresrpg.js.
-export const TRANSFER_POLICIES = (types = legacy_types()) => ({
-  [`${types.LEGACY_PACKAGE_ID}::item::Item`]: types.LEGACY_ITEM_POLICY,
-  [`${types.LEGACY_PACKAGE_ID}::character::Character`]:
-    types.LEGACY_CHARACTER_POLICY,
-})
-
 // TransferPolicy stores TypeName values with DEFINING package ids. Those tags are the source of truth for WHICH
 // rules a purchase must satisfy, but an upgraded package's defining id is not necessarily a legal Move-call target:
 // Sui binds one upgraded version per package lineage and aborts InvalidLinkage when a PTB calls another version.

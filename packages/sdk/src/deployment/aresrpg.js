@@ -10,9 +10,9 @@
 // at SDK construction, so an unconfigured network never breaks the SDK — only an actual call against it
 // refuses.
 //
-// `overrides` is the injection seam (same philosophy as the SDK's `types_override`): a caller — or an
-// offline test — passes a full id set (`context.ids.aresrpg`) to build a PTB without a live publish.
-// Omitted in production, so real callers always get the stamp-or-throw behaviour.
+// `overrides` is the injection seam: a caller — or an offline test — passes a full id set
+// (`context.ids.aresrpg`) to build a PTB without a live publish. Omitted in production, so real
+// callers always get the stamp-or-throw behaviour.
 
 import RELEASE from './release.json' with { type: 'json' }
 

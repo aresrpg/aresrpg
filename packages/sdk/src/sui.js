@@ -71,7 +71,6 @@ import {
   gather_ptb,
 } from './game.js'
 import { get_user_kiosks } from './sui/read/get_user_kiosks.js'
-import { get_policies_profit } from './sui/read/get_policies_profit.js'
 import { get_royalty_fee } from './sui/read/get_royalty_fee.js'
 import { get_supported_tokens } from './sui/read/get_supported_tokens.js'
 import { get_expedition } from './sui/read/get_expedition.js'
@@ -148,7 +147,6 @@ import {
   get_rolled_stats,
   read_namespaced_field,
 } from './sui/read/items.js'
-import { legacy_types, TRANSFER_POLICIES } from './sui/transfer_policies.js'
 
 // The first-party DF namespace ids (mirrors extension.move) — re-exported so read_namespaced_field callers
 // name the slot they inspect instead of hardcoding the u8.
@@ -161,15 +159,8 @@ const balances_cache = new LRUCache({ max: 100, ttl: 3000 })
 /**
  * @param {Object} [options]
  * @param {'mainnet' | 'testnet' | 'devnet' | 'localnet'} [options.network]
- * @param {Partial<ReturnType<typeof legacy_types>>} [options.types_override] - override for the LEGACY monolith TransferPolicy identities (deployment/release.json policies.legacy — read by get_policies_profit / TRANSFER_POLICIES for still-locked pre-merge assets); shallow-merged over the current network defaults. Live merged-package ids resolve via deployment/aresrpg.js, never here.
  */
-export async function SDK({ network = 'testnet', types_override = {} } = {}) {
-  const release_network = network === 'mainnet' ? 'mainnet' : 'testnet'
-  const effective_types = {
-    ...legacy_types(release_network),
-    ...types_override,
-  }
-
+export async function SDK({ network = 'testnet' } = {}) {
   // #23/D79 — the gRPC Core API client is the SSOT for chain reads (testnet JSON-RPC endpoints die wk of Jul 6):
   // every heavy read (roster/stakes/kiosks/worlds/dungeons/objects/balances) runs on `grpc_client.core.*`
   // (transport-agnostic). The default GrpcWebFetchTransport works in the browser; the public testnet fullnode
@@ -251,7 +242,6 @@ export async function SDK({ network = 'testnet', types_override = {} } = {}) {
   // every id/endpoint above stays localnet.
   const token_network = network === 'localnet' ? 'testnet' : network
   const supported_tokens = SUPPORTED_TOKENS(token_network)
-  const transfer_policies = TRANSFER_POLICIES(effective_types)
 
   Object.values(supported_tokens).forEach(async token => {
     Object.assign(token, {
@@ -267,7 +257,6 @@ export async function SDK({ network = 'testnet', types_override = {} } = {}) {
     grpc_client,
     graphql_client,
     kiosk_client,
-    types: effective_types,
     network,
     supported_tokens,
     HSUI: HSUI[token_network].address,
@@ -277,12 +266,9 @@ export async function SDK({ network = 'testnet', types_override = {} } = {}) {
     grpc_client,
     graphql_client,
     kiosk_client,
-    ...effective_types,
     SUPPORTED_TOKENS: supported_tokens,
-    TRANSFER_POLICIES: transfer_policies,
     HSUI: HSUI[token_network],
 
-    get_policies_profit: get_policies_profit(context),
     get_royalty_fee: get_royalty_fee(context),
     get_supported_tokens: get_supported_tokens(context),
 

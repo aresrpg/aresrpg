@@ -3,9 +3,8 @@
 import { SDK } from '@aresrpg/sdk/sui'
 
 // S-61 — ids live in the SDK's ONE deployment home (deployment/aresrpg.js): the S-57 per-domain builders
-// resolve every package/object id lazily from it, so no id map is passed here (the legacy `types_override`
-// bridge died with the S-61 T62-bridge retirement; its only SDK reader, get_policies_profit, has no frontend
-// consumer). No package id belongs in this file.
+// resolve every package/object id lazily from it, so no id map is passed here. No package id belongs in
+// this file.
 import { game_log } from '../core/log.js'
 
 import { DEMO_NETWORK } from './deployment'
