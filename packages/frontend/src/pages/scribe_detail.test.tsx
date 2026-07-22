@@ -65,13 +65,16 @@ describe("scribe_detail_props — the runeforge card shows the gear's REAL rolle
   })
 
   test("BUG->FIX: the item's real rolled stats (sdk.get_rolled_stats) render as non-empty CHARACTERISTICS rows", () => {
-    const rolled_stats = { vitality: 15, agility: 8 } // a real forgemagie roll (item_stats::StatsKey)
+    const rolled_stats = { vitality: 32783, agility: 32776 } // centered u16 values from item_stats::StatsKey
     const props = scribe_detail_props(SEL_GEAR, TEMPLATE_MAP, rolled_stats, tt)
     const html = render_card(props)
+    expect(props?.stats).toEqual({ vitality: [15, 15], agility: [8, 8] })
     expect(html).toContain('CHARACTERISTICS')
     expect(html).toContain('+15')
     expect(html).toContain('Vitality')
     expect(html).toContain('+8')
     expect(html).toContain('Agility')
+    expect(html).not.toContain('32783')
+    expect(html).not.toContain('32776')
   })
 })

@@ -21,6 +21,7 @@
 // none (never fabricated).
 
 import { onchain_template_to_detail_props } from '../components/items'
+import { decode_item_stat_ranges } from '../chain/read_templates.js'
 import { item_display_level } from '../game/screens/hud/inventory-equip.js'
 import type { use_template_t } from '../i18n/template_t'
 
@@ -41,8 +42,8 @@ export type Item = {
  * the template map is still loading (honest empty, never fabricated).
  * @param sel_gear the selected bag/equipment row (Item shape above), or null when nothing is picked
  * @param template_map item_type slug -> template row (get_template_by_item_type_map, read_findables.js)
- * @param gear_stats the item's real rolled stats (sdk.get_rolled_stats(sel_gear.id)), or null while that
- *   read is in flight / unavailable — the template's own (always-empty) statsJson is the honest fallback
+ * @param gear_stats the item's centered-u16 rolled stats (sdk.get_rolled_stats(sel_gear.id)), or null while
+ *   that read is in flight / unavailable — the template's own (always-empty) statsJson is the honest fallback
  * @param tt use_template_t() — localizes the template's name/description
  */
 export function scribe_detail_props(
@@ -60,9 +61,9 @@ export function scribe_detail_props(
       item_type: sel_gear.item_type,
       // the ONE display-level home (inventory-equip.js): a scribed instance level wins, else the template's
       level: item_display_level(sel_gear, tmpl),
-      // the template's own statsJson is always '{}' (see file header) — the rolled per-item read wins the
-      // instant it lands; falls back to the template's honest empty otherwise.
-      statsJson: gear_stats ? JSON.stringify(gear_stats) : tmpl.statsJson,
+      // the template's own statsJson is always '{}' (see file header) — decode the centered per-item roll
+      // through the shared item-stat home once it lands; fall back to the template's honest empty otherwise.
+      statsJson: gear_stats ? JSON.stringify(decode_item_stat_ranges(gear_stats, gear_stats)) : tmpl.statsJson,
     },
     tt
   )
