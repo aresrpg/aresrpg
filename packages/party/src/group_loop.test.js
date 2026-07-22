@@ -43,6 +43,11 @@ const grouped = (
     ...world_rows.map(([character_id, world_id]) => ({ kind: 'member_world_state', character_id, world_id })),
   ]).state
 
+/** #540 — fight_started/dungeon_entered only steer aligned alts once the player has explicitly consented
+ *  (follow.enabled); arm it the same way the future auto-follow UI will (enable_group_follow → follow_enable). */
+const armed = (state = grouped(), follower_character_ids = [ALT_1, ALT_2]) =>
+  reduce_group(state, { kind: 'follow_enable', leader_character_id: LEADER, follower_character_ids, now: NOW }).state
+
 // ── membership + world alignment ──────────────────────────────────────────────────────────────────────────────────
 test('group fold mirrors membership; nothing is requested while worlds are unknown', () => {
   const { state, outputs } = fold([
@@ -146,8 +151,25 @@ test('explicit follower inclusion caps at the five formation slots in chain orde
 })
 
 // ── fight join + HUD focus ────────────────────────────────────────────────────────────────────────────────────────
-test('fight_started emits join_fight ONCE per aligned unseated owned member; seats/latches dedupe', () => {
+// #540 — MEMBERSHIP IS NOT CONSENT: an aligned alt used to auto-attempt every fight the active character
+// engaged (never completes its join, the fight never starts, refresh doesn't re-adopt — a full multi-char
+// block). RED (pre-fix): this fired join_fight for ALT_1/ALT_2 with follow never explicitly enabled.
+test('fight_started emits NOTHING for aligned alts while follow is not enabled (#540)', () => {
   const state = grouped()
+  expect(state.follow.enabled).toBe(false)
+  const { outputs } = reduce_group(state, { kind: 'fight_started', fight_id: '0xfight', seated: [LEADER] })
+  expect(outputs.join_fight).toEqual([])
+})
+
+test('dungeon_entered emits NOTHING for owned alts while follow is not enabled (#540)', () => {
+  const state = grouped()
+  const assignments = [{ character_id: ALT_1, key_item_id: '0xk1', key_kiosk_id: '0xkk1', key_kiosk_cap_id: '0xkc1' }]
+  const { outputs } = reduce_group(state, { kind: 'dungeon_entered', world_id: WORLD, assignments })
+  expect(outputs.enter_dungeon).toEqual([])
+})
+
+test('fight_started emits join_fight ONCE per aligned unseated owned member once follow is armed; seats/latches dedupe', () => {
+  const state = armed()
   const first = reduce_group(state, { kind: 'fight_started', fight_id: '0xfight', seated: [LEADER] })
   expect(first.outputs.join_fight.map((r) => r.character_id).sort()).toEqual([ALT_1, ALT_2].sort())
   expect(first.outputs.join_fight.every((r) => r.fight_id === '0xfight')).toBe(true)
@@ -162,7 +184,7 @@ test('fight_started emits join_fight ONCE per aligned unseated owned member; sea
 })
 
 test('fight_started with join_open:false arms focus/seats but emits NO join (closed chain window)', () => {
-  const state = grouped()
+  const state = armed()
   const { state: next, outputs } = reduce_group(state, {
     kind: 'fight_started',
     fight_id: '0xfight',
@@ -179,14 +201,14 @@ test('fight_started with join_open:false arms focus/seats but emits NO join (clo
 })
 
 test('an out-of-world or blocked member never receives join_fight', () => {
-  const { state } = fold(
-    [{ kind: 'member_blocked', character_id: ALT_1, scope: 'fight_join' }],
+  const base = armed(
     grouped([
       [LEADER, WORLD],
       [ALT_1, WORLD],
       [ALT_2, OTHER_WORLD],
     ])
   )
+  const { state } = reduce_group(base, { kind: 'member_blocked', character_id: ALT_1, scope: 'fight_join' })
   const { outputs } = reduce_group(state, { kind: 'fight_started', fight_id: '0xfight', seated: [LEADER] })
   expect(outputs.join_fight).toEqual([])
 })
@@ -213,7 +235,7 @@ test('turn_started focuses OWNED seats only, once per change, and only while a f
 
 // ── dungeon sequencing ────────────────────────────────────────────────────────────────────────────────────────────
 test('dungeon_entered sequences enter_dungeon once per owned member with an assignment (leader excluded)', () => {
-  const state = grouped()
+  const state = armed()
   const assignments = [
     { character_id: LEADER, key_item_id: '0xk0', key_kiosk_id: '0xkk0', key_kiosk_cap_id: '0xkc0' },
     { character_id: ALT_1, key_item_id: '0xk1', key_kiosk_id: '0xkk1', key_kiosk_cap_id: '0xkc1' },

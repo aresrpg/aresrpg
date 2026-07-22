@@ -165,6 +165,8 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
       [ALT_1, WORLD],
       [ALT_2, WORLD],
     ])
+    // #540 — membership is not consent: fight_started only steers aligned alts once follow is armed.
+    wiring.enable_follow({ leader_character_id: LEADER, follower_character_ids: [ALT_1, ALT_2] })
     const facts = { fight_id: '0xf', placement: true, over: false, active_entity_id: null, seated: [LEADER] }
     wiring.fight_snapshot(facts, { join_open: true })
     wiring.fight_snapshot(facts, { join_open: true }) // poll echo
@@ -214,6 +216,8 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
       [ALT_1, WORLD],
       [ALT_2, WORLD],
     ])
+    // #540 — membership is not consent: fight_started only steers aligned alts once follow is armed.
+    wiring.enable_follow({ leader_character_id: LEADER, follower_character_ids: [ALT_1, ALT_2] })
 
     wiring.fight_snapshot(
       { fight_id: '0xf', placement: true, over: false, active_entity_id: null, seated: [LEADER] },

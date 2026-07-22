@@ -443,14 +443,20 @@ function reduce_fight(state, input) {
       const same = state.fight?.fight_id === fight_id
       const seated_now = [...new Set([...(same ? state.fight.seated : []), ...(seated ?? [])])]
       const requested_before = same ? state.fight.requested : []
-      const joiners = !join_open
-        ? []
-        : aligned_alts(state).filter(
-            (member) =>
-              !seated_now.includes(member.character) &&
-              !requested_before.includes(member.character) &&
-              !is_blocked(state, member.character, 'fight_join')
-          )
+      // #540 — MEMBERSHIP IS NOT CONSENT: an aligned alt used to auto-join every fight the active character
+      // engaged (never completes, the fight never starts, refresh doesn't re-adopt — a full multi-char block).
+      // Gate behind the SAME explicit follow.enabled this reducer already requires for follow_world_joined /
+      // transit — no separate flag: the future auto-follow UI (enable_group_follow, unwired today) is exactly
+      // "consent to steer my alts," and that single switch should arm joins/dungeons alongside positioning.
+      const joiners =
+        !join_open || !state.follow.enabled
+          ? []
+          : aligned_alts(state).filter(
+              (member) =>
+                !seated_now.includes(member.character) &&
+                !requested_before.includes(member.character) &&
+                !is_blocked(state, member.character, 'fight_join')
+            )
       const fight = {
         fight_id,
         seated: seated_now,
@@ -498,7 +504,9 @@ function reduce_dungeon(state, input) {
       const { world_id, assignments } = input
       if (!world_id) return still(state)
       const requested_before = state.dungeon?.world_id === world_id ? state.dungeon.requested : []
-      const owned = new Set(owned_alts(state).map((member) => member.character))
+      // #540 — same membership-is-not-consent hole as fight_started: an owned alt used to auto-enter every
+      // dungeon assignment regardless of follow.enabled. Same gate, same reasoning.
+      const owned = state.follow.enabled ? new Set(owned_alts(state).map((member) => member.character)) : new Set()
       const rows = (Array.isArray(assignments) ? assignments : []).filter(
         (assignment) =>
           owned.has(assignment?.character_id) &&
