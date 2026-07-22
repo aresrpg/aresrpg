@@ -15,7 +15,8 @@
     "typecheck": "bun run --cwd packages/engine typecheck && bun run --cwd packages/sdk typecheck && bun run --cwd packages/sim typecheck && bun run --cwd packages/frontend typecheck",
     "format": "prettier . --write && eslint . --fix",
     "release:prepare": "bun run --cwd packages/move release:prepare",
-    "test": "bun run --filter '*' test"
+    "test": "bun run --filter '*' test",
+    "test:order-independence": "bash scripts/order-independence-gate.sh"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

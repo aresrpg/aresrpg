@@ -26,3 +26,5 @@ jobs:
       - name: fight-replay gate (deterministic capsules)
         working-directory: packages/sim
         run: bun test test/replay_gate.test.js
+      - name: order-independence gate (module-global test-flake class)
+        run: bun run test:order-independence
