@@ -31,7 +31,7 @@ let _templates_promise =
  * template with no ranges, or one the snapshot has not reached pre-backfill) decodes to `{}` → the card
  * renders honest-empty, never fabricated zeros.
  */
-function stats_json_from_v1(v1_stats) {
+export function item_stats_from_v1(v1_stats) {
   const min = {}
   const max = {}
   for (const [field, pair] of Object.entries(v1_stats ?? {})) {
@@ -39,8 +39,10 @@ function stats_json_from_v1(v1_stats) {
     if (lo != null) min[field] = lo
     if (hi != null) max[field] = hi
   }
-  return JSON.stringify(decode_item_stat_ranges(min, max))
+  return decode_item_stat_ranges(min, max)
 }
+
+const stats_json_from_v1 = (v1_stats) => JSON.stringify(item_stats_from_v1(v1_stats))
 
 /**
  * id → the legacy template-row shape, adapted from the `/v1/encyclopedia` item projection. The projection

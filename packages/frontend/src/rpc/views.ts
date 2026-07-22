@@ -243,6 +243,9 @@ export interface RpcEncyclopediaItem {
   description: string | null // §14 EN description (create_template Display); locale overlaid client-side via template_t
   level: number | null
   category: string | null
+  // Biased on-chain StatsMinKey/StatsMaxKey ranges. The frontend decodes these through
+  // chain/read_templates.js's shared item-stat decoder before rendering them.
+  stats?: Record<string, [number | null, number | null]>
   // Live on-chain supply (indexer HANDLERS.md "Item supply"): SUM of still-alive `amount` units
   // across every minted Item of this template. Fully event-derived (mint +amount / burn -amount),
   // so — unlike level/category — never null; a template with zero mints/burns ever seen is an

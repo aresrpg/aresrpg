@@ -27,6 +27,7 @@ import { get_encyclopedia, get_rare_links } from '../../rpc/client'
 import { use_rpc_view } from '../../rpc/use_view'
 import { use_items_shop_chain } from '../../stores/items_shop_chain'
 import { marketplace_item_type_key } from '../../components/marketplace/marketplace_model'
+import { item_stats_from_v1 } from '../../chain/read_findables'
 
 import { DetailLoading } from './shared'
 import { DroppedBySection } from './dropped_by_section'
@@ -127,7 +128,7 @@ export function ItemsTab({
           category: item_display_category({ item_type, category: it.category }),
           level: it.level ?? 0,
           rarity: tmpl?.rarity ?? '',
-          stats: (tmpl?.stats ?? {}) as Record<string, number | [number, number]>,
+          stats: item_stats_from_v1(it.stats) as Record<string, number | [number, number]>,
           damages: (tmpl?.damages ?? []) as { element: string; from: number; to: number; damage_type?: string }[],
           display: null as { image_url?: string } | null,
           createdAt: undefined as number | undefined,

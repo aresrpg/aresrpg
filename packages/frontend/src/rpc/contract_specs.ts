@@ -284,7 +284,9 @@ export const encyclopedia_item_spec: Spec<RpcEncyclopediaItem> = {
     supply: num,
     last_sale_mist: nullable(mist),
   },
-  optional: {},
+  optional: {
+    stats: record_of((value) => Array.isArray(value) && value.length === 2 && value.every(nullable(num))),
+  },
 }
 
 const mob_drop_spec: Checker = shape({
