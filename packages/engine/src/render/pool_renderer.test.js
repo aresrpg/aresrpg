@@ -22,10 +22,12 @@ import {
   create_terrain_renderer,
   max_pool_storage_bytes,
   partition_quads,
+  render_class_aabb_margin,
   resolve_pool_config,
   SLOT_QUADS,
 } from './pool_renderer.js'
 import { create_quad_pool } from './quad_pool.js'
+import { foliage_cull_margin } from './terrain_flora.js'
 
 /**
  * Packs one quad in the frozen 8-byte wire format (mirrors quad_buffer.js).
@@ -44,6 +46,13 @@ function quad(x, y, z, w, h, face, block) {
 function make_renderer(scene) {
   return create_terrain_renderer({ renderer: null, scene, camera: null })
 }
+
+describe('per-class GPU frustum bounds', () => {
+  test('only shader-displaced foliage uses the expanded chunk AABB', () => {
+    expect(render_class_aabb_margin('foliage')).toBe(foliage_cull_margin)
+    for (const cls of ['solid', 'cutout', 'canopy', 'liquid']) expect(render_class_aabb_margin(cls)).toBe(1)
+  })
+})
 
 // ── PARTITION WORD-ALIGNMENT (the "sky-blue holes clustered along contours" defect) ──────────────
 // upload_chunk splits the mesher's ONE combined quad buffer 3-ways (solid / foliage face>=6 / liquid

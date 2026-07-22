@@ -30,6 +30,11 @@ const JITTER = 0.5
 const CROSS_BASE_WIDTH = 1.6
 /** Top-vertex wind deflection per block of height (tuft h2 → 0.14, reed h3 → 0.21 m); the base stays planted. */
 const SWAY_AMP_PER_BLOCK = 0.07
+/** Foliage-only padding for the per-slot GPU frustum AABB. The tallest reed can reach just over 4 m
+ *  beyond its occupied chunk after the 1.6 height scale and ±0.14 rad lean are applied, so the generic
+ *  solid margin of 1 m can cull a whole visible grass slot at grazing camera angles. Integer 5 is the
+ *  smallest conservative margin for the shipped flora vertex envelope (pinned in foliage_variety.test). */
+export const foliage_cull_margin = 5
 /** FLORA-CHAOS per-plane hash SALT for the Y yaw — the fragment stage RECOMPUTES this same hash off the
  *  (ordinal-folded) plane cell to derive the plane's facing for the sun-dispersion term, so it MUST match
  *  the vertex yaw exactly. Single source of the salt. (Round-3 dispersion; see terrain_material.js.) */

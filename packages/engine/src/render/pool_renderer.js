@@ -31,6 +31,7 @@ import { get_tier } from '../core/quality/tiers.js'
 
 import { create_gpu_cull } from './gpu_cull.js'
 import { create_quad_pool } from './quad_pool.js'
+import { foliage_cull_margin } from './terrain_flora.js'
 import {
   atlas_layer_count,
   bake_block_textures,
@@ -106,6 +107,12 @@ const LEAF_BLOCK_IDS = new Set(BLOCK_REGISTRY.filter(is_leaf_sprite_block).map((
 const FACE_SHIFT = 28
 const FACE_MASK = 0x7
 const BLOCK_ID_MASK = 0xfff
+
+/** Per-class GPU-frustum padding. Solid/cutout/canopy/liquid vertices stay within the generic 1 m
+ *  greedy-face allowance; foliage's shader-displaced billboards need their larger owned envelope. */
+export function render_class_aabb_margin(cls) {
+  return cls === 'foliage' ? foliage_cull_margin : 1
+}
 
 /**
  * @typedef {object} QuadPartition
@@ -483,6 +490,7 @@ export function create_terrain_renderer({
       slot_quads,
       max_slots,
       chunk_size: CHUNK_SIZE,
+      aabb_margin: render_class_aabb_margin(cls),
     })
     const material = create_terrain_material({
       pool_attr: pool.pool_attr,

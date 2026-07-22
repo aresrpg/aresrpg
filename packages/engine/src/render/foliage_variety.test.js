@@ -12,8 +12,34 @@
 
 import { test, expect, describe } from 'bun:test'
 
-import { leaf_tilt_angle, LEAF_TILT_MAX, pair_cross_angle, LEAF_CROSS_JITTER } from './terrain_flora.js'
+import { BLOCK_REGISTRY } from '../config/block_registry.js'
+
+import {
+  foliage_cull_margin,
+  leaf_tilt_angle,
+  LEAF_TILT_MAX,
+  pair_cross_angle,
+  LEAF_CROSS_JITTER,
+} from './terrain_flora.js'
 import { canopy_variety_offsets, CANOPY_VARIETY } from './terrain_leaf.js'
+
+describe('foliage_cull_margin (shader-displaced grass envelope)', () => {
+  test('covers every foliage block and is the smallest integer margin that does', () => {
+    // Pure-JS mirror of the shipped MEDIUM/HIGH grass vertex maxima in terrain_flora.js and its caller:
+    // width 1.6, scale spread 1.75, height scale 1.6, lean ±0.14, sway 0.07/block, base dy ≤ 0.08.
+    const half_width = (1.6 * (1 + 0.3 * 1.75)) / 2
+    let max_overreach = 0
+    for (const block of BLOCK_REGISTRY.filter((entry) => entry.class === 'foliage')) {
+      const cross_height = block.cross_height ?? 1
+      const vertical_overreach = 0.08 + cross_height * 1.6 * Math.cos(0.14) + half_width * Math.sin(0.14) - 1
+      const horizontal_overreach = half_width + cross_height * 1.6 * Math.sin(0.14) + cross_height * 0.07
+      max_overreach = Math.max(max_overreach, vertical_overreach, horizontal_overreach)
+      expect(vertical_overreach).toBeLessThanOrEqual(foliage_cull_margin)
+      expect(horizontal_overreach).toBeLessThanOrEqual(foliage_cull_margin)
+    }
+    expect(Math.ceil(max_overreach)).toBe(foliage_cull_margin)
+  })
+})
 
 describe('leaf_tilt_angle (per-plane pitch; grass gate)', () => {
   test('GRASS GATE: max=0 ⇒ angle is exactly 0 for every hash (vertical, byte-identical)', () => {
