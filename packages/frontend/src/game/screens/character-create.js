@@ -14,7 +14,7 @@ import classes_json from '@aresrpg/sdk/classes' with { type: 'json' }
 import i18n from '../../i18n'
 import { fund_store } from '../core/fund-modal.js'
 import { character_pedestal, render_character_thumbnail } from './character-pedestal.js'
-import { has_character_model } from './character-glb.js'
+import { has_character_model, preload_character_model } from './character-glb.js'
 import { latching_single_flight } from '../../utils/single_flight.js'
 import { get_sdk } from '../../chain/sdk'
 
@@ -536,6 +536,8 @@ export function character_create(opts) {
 
   // initial paint (select_class(initial) sets meta + swatches + pedestal for the first allowed class)
   void select_class(initial)
+  // The initial rig + thumbnails warm male; start the non-selected sex now so its first toggle joins this cache load.
+  preload_character_model(CLASSES[initial].id, { male: !male })
   validate()
 
   return {

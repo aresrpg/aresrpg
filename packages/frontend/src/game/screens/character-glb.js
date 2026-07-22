@@ -97,6 +97,16 @@ const load_glb = (url) => {
   return p
 }
 
+/** Warm one character variant's body + optional hair through the same cache load_character_model reads.
+ *  @param {string} class_id @param {{ male?: boolean }} [opts] */
+export function preload_character_model(class_id, { male = true } = {}) {
+  const models = CHARACTER_MODELS[class_id]
+  if (!models) return
+  const urls = male ? models.male : models.female
+  for (const local_url of [urls.body, urls.hair])
+    if (local_url) load_glb(character_glb_url(local_url)).catch(() => {})
+}
+
 // find_bone — port of models.js: the first bone whose name CONTAINS `name` (case-insensitive), so
 // 'Head' resolves 'mixamorig:Head'. Returns null instead of asserting (the caller decides).
 /** @param {import('three').Object3D} origin @param {string} name @returns {import('three').Object3D | null} */
