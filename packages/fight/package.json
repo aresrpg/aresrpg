@@ -20,6 +20,9 @@
     "./capsule": {
       "import": "./src/capsule.js"
     },
+    "./v2": {
+      "import": "./src/v2/index.js"
+    },
     "./inputs": {
       "import": "./src/inputs.js"
     },
