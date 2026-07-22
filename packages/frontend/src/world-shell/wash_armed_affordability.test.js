@@ -44,6 +44,16 @@ describe('trap draft paint — click-time fold + rollback semantics (the fold my
     expect(source).not.toContain("'fights.tackled'")
   })
 
+  test('a tackled receipt beat routes through the same hit-beat player as ordinary damage', async () => {
+    const source = await Bun.file(new URL('./voxel_fight_adapter.js', import.meta.url)).text()
+    expect(source).toContain("else if (spec.kind === 'damage' || spec.kind === 'heal') await play_damage_beat(payload)")
+    const tackled_start = source.indexOf("else if (spec.kind === 'tackled'")
+    const tackled_end = source.indexOf('// #170', tackled_start)
+    const tackled_branch = source.slice(tackled_start, tackled_end)
+    expect(tackled_branch).toContain('await play_damage_beat(payload, { floater: null })')
+    expect(tackled_branch).not.toContain('board.entity_beat')
+  })
+
   describe('tackle_float_payloads — #239: numeric AP/MP floats only, never a mechanic label', () => {
     test('both pools bitten: MP then AP, bare signed numbers, house kinds (never a label)', () => {
       expect(tackle_float_payloads(1, 2)).toEqual([

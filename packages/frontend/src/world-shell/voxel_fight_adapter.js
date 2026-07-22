@@ -510,23 +510,22 @@ export function create_voxel_fight_adapter(
 
   /** One queued number/reaction beat. It deliberately does not kill the rig; `play_death_beat` is the next event
    *  (guarded there — a duplicate `killed` re-assertion of an already-presented death is a no-op). */
-  const play_damage_beat = async (/** @type {any} */ event) => {
+  const play_damage_beat = async (/** @type {any} */ event, { floater = damage_floater(event) } = {}) => {
     const id = event.target_id
     if (!id || !entity_ids.has(id)) return false
     if (event.killed) dying.add(id)
     const target = read_board_fight()?.fighters?.get(id)
     const fight_audio_beat = fight_damage_audio_beat(event, target?.health_max)
     if (fight_audio_beat) observe_fight_audio(fight_audio_beat)
-    const source = event.source_id ? read_board_fight()?.fighters?.get(event.source_id) : null
-    const floater = damage_floater(event)
-    const { kind } = floater
+    const source = floater && event.source_id ? read_board_fight()?.fighters?.get(event.source_id) : null
+    const kind = floater?.kind ?? 'damage'
     const done = board.entity_beat(id, {
       anim: kind === 'heal' ? 'idle' : 'hit',
-      float: { text: floater.text, kind },
+      float: floater ? { text: floater.text, kind } : null,
       face: source?.cell,
     })
     if (kind !== 'heal' && hitflash_on()) void done.then(() => board.flash_entity?.(id, HIT_FLASH_TINT))
-    if (event.source_id)
+    if (event.source_id && floater)
       emit_effect_line(read_board_fight_state, context.dispatch, {
         entity_id: event.source_id,
         effect: {
@@ -1021,20 +1020,15 @@ export function create_voxel_fight_adapter(
         else if (spec.kind === 'tackled') {
           // TACKLE BITE: a tackled player plays the hit animation just before moving —
           // the runner FLINCHES; the producer already ordered this beat strictly before any retry move beat,
-          // the adapter only renders it. No HP moves here (the fold adopted the ap/mp strip).
+          // the adapter routes it through the SAME presented hit beat as ordinary damage. No HP moves here
+          // (the fold adopted the ap/mp strip), so that shared hit suppresses only its damage floater/log.
           // #239 owner presentation ruling (final spec): NO mechanic label ("TACKLED") — the forfeit voices
           // itself as numeric AP/MP floats only, each its own house color (tackle_float_payloads,
           // voxel_fight_folds.js — the ONE home, shared with DungeonBoard's predict_tackle prediction leg).
-          // The float-kind-driven reaction (react_to_impact) has no 'mp'/'ap' entry, so clearing the beat's
-          // own float below drops that flash+recoil — the explicit flash_entity(HIT_FLASH_TINT) right after
-          // is unconditional on float, so the "you got hit" red pulse still fires regardless.
-          const id = payload.target_id
-          if (id && entity_ids.has(id)) {
-            const done = board.entity_beat(id, { anim: 'hit', float: null })
-            if (hitflash_on()) void done.then(() => board.flash_entity?.(id, HIT_FLASH_TINT))
-            await done
-            for (const float of tackle_float_payloads(payload.ap_lost, payload.mp_lost)) board.float?.(id, float)
-          }
+          const played = await play_damage_beat(payload, { floater: null })
+          if (played)
+            for (const float of tackle_float_payloads(payload.ap_lost, payload.mp_lost))
+              board.float?.(payload.target_id, float)
         }
         // #170 (5th recurrence): no 'death' beat kind reaches the wave anymore — producers stopped emitting it
         // (fight_render_events.js / fight_predicted_render.js); play_death_beat is called directly from whichever

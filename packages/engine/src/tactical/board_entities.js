@@ -1194,8 +1194,9 @@ export function advance_flash(/** @type {any} */ e, /** @type {number} */ dt) {
 // colorize at peak < 1, NOT a bloom halo, derived from the SAME FLOAT_COLOR table
 // the damage number reads so the tint always matches what the player sees printed). Heals get a soft GREEN
 // pulse and NO recoil; crits get their own gold-toned tint. Fired from the ONE place the hit lands — a
-// beat's impact frame, when that beat carries a damage/heal float; the attacker's own 'attack' beat carries
-// float:null (beats_from_packet), so an attacker never self-reacts. The recoil (only) is skipped under
+// beat's impact frame, when that beat carries a damage/heal float or is an explicit no-float hit; the
+// attacker's own 'attack' beat carries float:null (beats_from_packet), so an attacker never self-reacts. The
+// recoil (only) is skipped under
 // reduced-motion and mid-walk; a DEATH beat flashes but never flinches (its own procedural collapse, below,
 // owns the body instead). Because the reaction is position/scale/rotation/emissive — never a clip — it
 // works even on the zero-clip mobs a clip-based reaction could never touch.
@@ -1250,7 +1251,8 @@ const DEATH_FORCE_REMOVE_S = 1.5
  * The reaction DESIGN for a beat that just landed on an entity — pure, so the mapping is unit-testable. A
  * DEATH beat flashes (marks the fatal hit) but NEVER recoils ("a victim mid-death never flinches" — its own
  * collapse owns the body); a heal float is a soft green pulse with no recoil; damage/crit is a red flash +
- * recoil. Anything else (info floats, or no float at all — the attacker's own swing) reacts not at all.
+ * recoil. An explicit no-float hit uses the same damage reaction (the tackle toll); info floats and no-float
+ * attacker swings react not at all.
  * @param {string} anim the beat's anim (attack/hit/death/…)
  * @param {string | undefined} kind the float kind (damage/crit/heal/info)
  * @returns {{ flash: { r: number, g: number, b: number, peak: number }, recoil: boolean } | null}
@@ -1259,7 +1261,7 @@ export function reaction_for(anim, kind) {
   if (anim === 'death') return { flash: REACTION_FLASH.damage, recoil: false } // fatal hit: flash, no flinch
   if (kind === 'heal') return { flash: REACTION_FLASH.heal, recoil: false }
   if (kind === 'crit') return { flash: REACTION_FLASH.crit, recoil: true } // its own gold-toned tint (was lumped with damage)
-  if (kind === 'damage') return { flash: REACTION_FLASH.damage, recoil: true }
+  if (kind === 'damage' || (anim === 'hit' && kind == null)) return { flash: REACTION_FLASH.damage, recoil: true }
   return null
 }
 
@@ -1365,14 +1367,14 @@ export function flash_envelope(t, flash_in, life) {
  * Arm the struck entity's reaction at the impact instant: set the emissive tint (the reused advance_flash
  * slot) and, for a real flinch (damage/crit, not death, not reduced-motion, not mid-walk), arm the recoil
  * away from the attacker — magnitude-scaled by the SAME float_magnitude_scale curve the damage number's
- * size reads (a nuke shakes harder than a chip hit). A no-float beat (the attacker's own swing) reacts not
- * at all. A re-hit while a recoil is still live re-uses the EXISTING true rest/base-scale (never the
- * mid-recoil offset) so staggered multi-hits can't drift the body off its cell; its magnitude re-reads
- * fresh each hit (a harder second hit shakes harder, not capped to the first). @param {any} e @param {any} beat
+ * size reads (a nuke shakes harder than a chip hit). A no-float explicit hit uses the curve's floor; a
+ * no-float attacker swing reacts not at all. A re-hit while a recoil is still live re-uses the EXISTING true
+ * rest/base-scale (never the mid-recoil offset) so staggered multi-hits can't drift the body off its cell; its
+ * magnitude re-reads fresh each hit (a harder second hit shakes harder, not capped to the first). @param {any} e
+ * @param {any} beat
  */
 export function react_to_impact(e, beat) {
-  if (!beat.float) return
-  const design = reaction_for(beat.anim, beat.float.kind)
+  const design = reaction_for(beat.anim, beat.float?.kind)
   if (!design) return
   const { r, g, b, peak } = design.flash
   arm_flash(e, { r, g, b, peak })
@@ -1380,7 +1382,7 @@ export function react_to_impact(e, beat) {
     const { dx, dz } = recoil_away_dir(e.facing_yaw)
     const obj = e.avatar.object3d
     const live = e.recoil // a re-hit mid-flinch keeps the true rest, not the offset position
-    const mag = float_magnitude_scale(float_text_magnitude(beat.float.text))
+    const mag = float_magnitude_scale(float_text_magnitude(beat.float?.text))
     e.recoil = {
       t: 0,
       dx,

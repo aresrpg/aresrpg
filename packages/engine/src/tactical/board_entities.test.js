@@ -313,8 +313,10 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
       expect(r?.recoil).toBe(false)
       expect(r?.flash.g).toBeGreaterThan(r?.flash.r ?? 1) // green-dominant tint
     })
-    test('a no-kind / info float (or the attacker with no damage) reacts not at all', () => {
-      expect(reaction_for('hit', undefined)).toBeNull()
+    test('an explicit no-float hit reuses the ordinary damage reaction (the tackle toll)', () => {
+      expect(reaction_for('hit', undefined)?.recoil).toBe(true)
+    })
+    test('an info float (or the attacker with no damage) reacts not at all', () => {
       expect(reaction_for('hit', 'info')).toBeNull()
       expect(reaction_for('attack', undefined)).toBeNull() // the attacker's own swing (float:null upstream)
     })
@@ -704,6 +706,13 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)(
     test('a clipless hit beat (clip:null — every current rig) still arms a real recoil + tint', () => {
       const e = make_fake_avatar_entity()
       react_to_impact(e, { anim: 'hit', clip: null, float: { text: '-12', kind: 'damage' } })
+      expect(e.recoil).not.toBeNull()
+      expect(e.flash).not.toBeNull()
+    })
+
+    test('a no-float tackle hit arms the same recoil + tint', () => {
+      const e = make_fake_avatar_entity()
+      react_to_impact(e, { anim: 'hit', clip: null, float: null })
       expect(e.recoil).not.toBeNull()
       expect(e.flash).not.toBeNull()
     })
