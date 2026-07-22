@@ -86,6 +86,16 @@ const mob_walks_onto_trap = (store) =>
   )
 
 describe('LEG B — a mob that walks onto a trap dies THERE, never rolled back to its start', () => {
+  test('the paced walk-on-trap damage carries the local trap owner, not the mob turn actor', () => {
+    const store = boot()
+    mob_walks_onto_trap(store)
+    const beats = store.getState().wave.flatMap((turn) => turn.beats)
+    const trigger = beats.find((beat) => beat.kind === 'trap_trigger')
+    const damage = beats.find((beat) => beat.kind === 'damage')
+    expect(trigger?.payload.trap_owner_id).toBe(CHAR)
+    expect(damage?.payload).toMatchObject({ trap_damage: true, trap_owner_id: CHAR, target_id: 'mob-0' })
+  })
+
   test('committed truth folds the mob dead at the trap cell (parity: stops + dies on the trap)', () => {
     const store = boot()
     mob_walks_onto_trap(store)

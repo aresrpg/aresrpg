@@ -454,6 +454,16 @@ export const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_
   const escrow = draft.view?.escrow ?? []
   const my_seat = settle_input.actor_from_key(draft.my_key)?.idx ?? seat_resolver(draft.view)(my_entity)
   const grid_w = Number(ctx.beat_ctx.grid_width) || 20
+  // Receipt trap cells come from engine_view.my_traps — the local-only durable trap ledger. That makes their
+  // owner the local entity even though Hit carries no source. Any trap detected outside this set stays unknown
+  // and therefore renders through the neutral fallback instead of borrowing the semantic turn actor.
+  const owned_trap_cells = new Set(
+    (trap_cells ? [...trap_cells] : []).map((cell) =>
+      typeof cell === 'number' || typeof cell === 'bigint' ? Number(cell) : Number(cell?.y) * grid_w + Number(cell?.x)
+    )
+  )
+  const resolve_trap_owner = (_cell, encoded) =>
+    my_entity != null && owned_trap_cells.has(Number(encoded)) ? String(my_entity) : null
   const resolve_fighter_id = ({ is_mob, idx, character }) =>
     character != null
       ? String(character)
@@ -492,6 +502,7 @@ export const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_
       fight_id: draft.fight_id,
       ...ctx.beat_ctx,
       trap_cells,
+      resolve_trap_owner,
       resolve_fighter_id,
       fighter_cells,
       fighter_health,

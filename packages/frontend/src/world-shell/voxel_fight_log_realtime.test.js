@@ -111,7 +111,11 @@ const play_move_mirror = async (rig, packet) => {
     }
     if (step.trap) {
       const done = board_beat(packet.entity_id, 'hit') // the trap flinch beat starts…
-      emit_trap_line(get_state, dispatch, { target_id: packet.entity_id, damage: step.trap.damage }) // …its line rides it
+      emit_trap_line(get_state, dispatch, {
+        owner_id: packet.trap_owner_id,
+        target_id: packet.entity_id,
+        damage: step.trap.damage,
+      }) // …its line rides it
       // A trap is an on-enter beat in the move fold: the resume leg cannot start at IMPACT (when the number only
       // mounts); it waits for the flinch/floater presentation's natural end, exactly like the production adapter.
       await (done.done ?? done)
@@ -123,6 +127,12 @@ const logs = (timeline) => timeline.filter((e) => e.kind === 'log')
 const idx = (timeline, pred) => timeline.findIndex(pred)
 
 describe('combat log streams AT the beats, not as a post-cascade flush', () => {
+  it('trap-attributed receipt damage never falls through the generic actor hit log', async () => {
+    const source = await Bun.file(new URL('./voxel_fight_adapter.js', import.meta.url)).text()
+    expect(source).toContain('source_id: spec.payload?.trap_damage ? null')
+    expect(source).toContain('event.source_id && floater && !event.trap_damage')
+  })
+
   it('a lethal single-target cast: cast → (swing) → hit → (death beat) → death, each line ON its beat', async () => {
     const fighters = new Map([
       ['p1', { name: 'Aldric' }],
@@ -211,13 +221,17 @@ describe('combat log streams AT the beats, not as a post-cascade flush', () => {
   )
 
   it(
-    'a trap crossing: the "<mob> triggered a trap for N" line lands AT the pause beat, between the walk and the\n' +
+    'a trap crossing: the "<owner>\'s trap hit <mob> for N" line lands AT the pause beat, between the walk and the\n' +
       'resume (trap fires → its line)',
     async () => {
-      const fighters = new Map([['mob-0', { name: 'Cave Crab' }]])
+      const fighters = new Map([
+        ['p1', { name: 'Aldric' }],
+        ['mob-0', { name: 'Cave Crab' }],
+      ])
       const rig = make_rig(fighters)
       await play_move_mirror(rig, {
         entity_id: 'mob-0',
+        trap_owner_id: 'p1',
         path: [
           { x: 8, y: 6 },
           { x: 7, y: 6 }, // the trap cell (index 1) — a RESUME leg follows
@@ -228,7 +242,7 @@ describe('combat log streams AT the beats, not as a post-cascade flush', () => {
       const tl = rig.timeline
       // exactly one trap line, and it reads the real chain damage.
       const trap = logs(tl).find((l) => l.prefix === 'trap')
-      expect(trap.message).toBe('Cave Crab triggered a trap for 15')
+      expect(trap.message).toBe("Aldric's trap hit Cave Crab for 15")
       // it lands AT the pause beat: after the walk ONTO the trap cell, before the RESUME walk leg.
       const trap_i = idx(tl, (e) => e.kind === 'log' && e.prefix === 'trap')
       const walk_is = tl.map((e, i) => (e.kind === 'walk' ? i : -1)).filter((i) => i >= 0)

@@ -381,23 +381,29 @@ export const emit_effect_line = (get_state, dispatch, { entity_id, effect, is_cr
 }
 
 /**
- * Emit ONE "<target> triggered a trap for N" line — a player's placed trap detonating on a mob that walked onto
- * it (contract: trap fires → its line). Fired by the adapter's play_trap_trigger AT the pause
- * beat, so it streams with the flinch+floater. No caster (the trap is placement, not a live cast); the number is
- * damage-red, the mob-name segment carries `ref` for late-identity healing.
+ * Emit ONE "<owner>'s trap hit <target> for N" line, or the explicit neutral fallback when this client has no
+ * owner data. Fired by the adapter at the trap beat so it streams with the flinch+floater. Owner and target name
+ * segments carry refs for late-identity healing; the number stays damage-red.
  * @param {() => any} get_state @param {(type: string, payload: any) => void} dispatch
- * @param {{ target_id: string, damage: number }} arg
+ * @param {{ owner_id?: string | null, target_id: string, damage: number }} arg
  */
-export const emit_trap_line = (get_state, dispatch, { target_id, damage }) => {
+export const emit_trap_line = (get_state, dispatch, { owner_id = null, target_id, damage }) => {
   const fighters = get_state().fight?.fighters
   if (!fighters) return
+  const owner = owner_id == null ? null : fighters.get(owner_id)?.name || i18n.t('world_chat.log_unknown_fighter')
   const target = fighters.get(target_id)?.name || i18n.t('world_chat.log_unknown_fighter')
   const amount = `${damage}`
+  const message =
+    owner == null
+      ? i18n.t('world_chat.log_trap_neutral', { target, amount })
+      : i18n.t('world_chat.log_trap', { owner, target, amount })
+  const owner_segments = owner == null ? [] : [{ value: owner, cls: 'clog-name', ref: owner_id }]
   dispatch(
     'action/chat_message',
     combat_log_line(
       'trap',
-      segment_template(i18n.t('world_chat.log_trap', { target, amount }), [
+      segment_template(message, [
+        ...owner_segments,
         { value: target, cls: 'clog-target', ref: target_id },
         { value: amount, cls: 'clog-num' },
       ])

@@ -29,7 +29,7 @@ const inst = (lng) => {
   return i
 }
 
-const SAMPLE = { caster: 'Aldric', target: 'Sewer Rat', spell: 'Fireball', amount: '9' }
+const SAMPLE = { caster: 'Aldric', owner: 'Elena', target: 'Sewer Rat', spell: 'Fireball', amount: '9' }
 
 test.each(Object.keys(LOCALES))(
   '%s: every world_chat.log_* template resolves AND every substituted value survives verbatim',
@@ -58,10 +58,16 @@ test.each(Object.keys(LOCALES))(
     const death = i.t('world_chat.log_death', SAMPLE)
     expect(death).toContain(SAMPLE.target)
 
-    // log_trap (2026-07-13): a placed trap detonating on a mob — target + amount, NO caster (it is placement).
+    // Owner-known trap line: owner + target + amount all survive for coloured/ref-backed segments.
     const trap = i.t('world_chat.log_trap', SAMPLE)
+    expect(trap).toContain(SAMPLE.owner)
     expect(trap).toContain(SAMPLE.target)
     expect(trap).toContain(SAMPLE.amount)
+
+    // Other players' trap ownership is absent from client receipts: the explicit neutral fallback has no owner.
+    const neutral_trap = i.t('world_chat.log_trap_neutral', SAMPLE)
+    expect(neutral_trap).toContain(SAMPLE.target)
+    expect(neutral_trap).toContain(SAMPLE.amount)
 
     // standalone, non-interpolated strings — just prove they resolve to real copy, never the raw key back.
     expect(i.t('world_chat.log_crit_prefix')).not.toBe('world_chat.log_crit_prefix')
@@ -77,6 +83,8 @@ test('en: exact copy pin (catches accidental rewording of the "cast" golden-path
   expect(i.t('world_chat.log_hit', SAMPLE)).toBe('Aldric hit Sewer Rat for 9')
   expect(i.t('world_chat.log_heal', { ...SAMPLE, amount: '+9' })).toBe('Aldric healed Sewer Rat for +9')
   expect(i.t('world_chat.log_death', SAMPLE)).toBe('Sewer Rat died')
+  expect(i.t('world_chat.log_trap', SAMPLE)).toBe("Elena's trap hit Sewer Rat for 9")
+  expect(i.t('world_chat.log_trap_neutral', SAMPLE)).toBe('A trap hit Sewer Rat for 9')
 })
 
 test(

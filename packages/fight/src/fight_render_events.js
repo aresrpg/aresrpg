@@ -84,8 +84,8 @@ const receipt_path = (event, width) => {
 
 /**
  * Decode a real receipt and normalize its effects-before-Cast emitter order into semantic source-turn timelines.
- * `trap_cells` accepts encoded cells or `{x,y}` cells. Callers may inject identity/path/cast resolvers from the
- * authoritative fight snapshot without coupling this pure producer to the store.
+ * `trap_cells` accepts encoded cells or `{x,y}` cells. Callers may inject identity/path/cast/trap-owner resolvers
+ * from the authoritative fight snapshot without coupling this pure producer to the store.
  */
 export function produce_receipt_render_turns(
   raw_events,
@@ -94,6 +94,7 @@ export function produce_receipt_render_turns(
     grid_width = 20,
     trap_cells = [],
     is_trap_cell = null,
+    resolve_trap_owner = null,
     resolve_fighter_id = default_fighter_id,
     fighter_cells = null,
     fighter_health = null,
@@ -158,10 +159,9 @@ export function produce_receipt_render_turns(
     return event
   }
 
-  const write_receipt_effects = (turn, effects) => {
+  const write_receipt_effects = (turn, effects, attributed_trap_hits = []) => {
     const displaced = effects.filter((event) => event.kind === 'Displaced')
-    const trap_displacements = []
-    for (const event of displaced) {
+    const trap_displacements = displaced.flatMap((event) => {
       const target_id = fighter_id_from(event, 'target', resolve_fighter_id)
       // TELEPORT (effect_kind 14, the mechanics code — DISPLACE_TELEPORT) is an INSTANT relocation, never a
       // cardinal slide (register #26): from→to with an EMPTY path and ZERO duration, so the entity blinks to the
@@ -185,21 +185,38 @@ export function produce_receipt_render_turns(
       // render once both have. Anchored at the landing cell; push/pull never get one (they slide, they don't blink).
       if (teleport)
         append_to(turn, 'teleport_arrival', TELEPORT_ARRIVAL_MS, { target_id, cell: movement.to, source_event: event })
-      if (matches_trap(movement.to, event.to_cell, event)) trap_displacements.push({ event, target_id, movement })
-    }
-    for (const { event, target_id, movement } of trap_displacements)
+      return matches_trap(movement.to, event.to_cell, event)
+        ? [
+            {
+              event,
+              target_id,
+              movement,
+              trap_owner_id: resolve_trap_owner?.(movement.to, event.to_cell, event) ?? null,
+            },
+          ]
+        : []
+    })
+    const hits_after_trap = ({ event, target_id }) =>
+      effects.filter(
+        (candidate) =>
+          candidate.kind === 'Hit' &&
+          candidate.event_index > event.event_index &&
+          fighter_id_from(candidate, 'victim', resolve_fighter_id) === target_id
+      )
+    const detected_trap_hits = trap_displacements.flatMap((trap) =>
+      hits_after_trap(trap).map((event) => ({
+        event_index: event.event_index,
+        trap_owner_id: trap.trap_owner_id,
+      }))
+    )
+    const trap_hits = [...attributed_trap_hits, ...detected_trap_hits]
+    for (const { event, target_id, movement, trap_owner_id } of trap_displacements)
       append_to(turn, 'trap_trigger', TRAP_BEAT_MS, {
         entity_id: target_id,
         target_id,
         cell: movement.to,
-        damage: effects
-          .filter(
-            (candidate) =>
-              candidate.kind === 'Hit' &&
-              candidate.event_index > event.event_index &&
-              fighter_id_from(candidate, 'victim', resolve_fighter_id) === target_id
-          )
-          .reduce((sum, candidate) => sum + damage_of_hit(candidate), 0),
+        damage: hits_after_trap({ event, target_id }).reduce((sum, candidate) => sum + damage_of_hit(candidate), 0),
+        trap_owner_id,
         source_event: event,
       })
 
@@ -215,11 +232,13 @@ export function produce_receipt_render_turns(
     // both now hold on `damage`+`killed` instead of a `death` beat kind.
     for (const event of effects.filter((candidate) => candidate.kind === 'Hit')) {
       const target_id = fighter_id_from(event, 'victim', resolve_fighter_id)
+      const trap_hit = trap_hits.find((candidate) => candidate.event_index === event.event_index)
       append_to(turn, 'damage', DAMAGE_BEAT_MS, {
         target_id,
         damage: damage_of_hit(event),
         new_health: event.remaining_hp,
         killed: event.remaining_hp === 0,
+        ...(trap_hit ? { trap_damage: true, trap_owner_id: trap_hit.trap_owner_id ?? null } : {}),
         source_event: event,
       })
     }
@@ -259,11 +278,16 @@ export function produce_receipt_render_turns(
               target_id,
               cell: active_move.cell,
               damage: damage_of_hit(event),
+              trap_owner_id: active_move.trap_owner_id,
               source_event: event,
             })
             active_move.triggered = true
           }
-          write_receipt_effects(active_move.turn, [event])
+          write_receipt_effects(
+            active_move.turn,
+            [event],
+            [{ event_index: event.event_index, trap_owner_id: active_move.trap_owner_id }]
+          )
           continue
         }
       }
@@ -349,11 +373,13 @@ export function produce_receipt_render_turns(
         cell: to,
         source_event: event,
       })
+      const trap = matches_trap(to, event.to_cell, event)
       active_move = {
         source_id,
         turn,
         cell: to,
-        trap: matches_trap(to, event.to_cell, event),
+        trap,
+        trap_owner_id: trap ? (resolve_trap_owner?.(to, event.to_cell, event) ?? null) : null,
         triggered: false,
       }
       continue

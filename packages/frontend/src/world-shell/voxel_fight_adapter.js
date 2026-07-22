@@ -472,8 +472,13 @@ export function create_voxel_fight_adapter(
     game_log('fight-trap', 'trap VFX + floater', { id, cell, damage: hit.damage, t: performance.now() })
     // the mob flinches AT the trap cell, carrying the damage floater (mirrors beats_from_packet's float shape).
     const done = board.entity_beat(id, { anim: 'hit', float: { text: `-${hit.damage}`, kind: 'damage' }, face: cell })
-    // COMBAT LOG (realtime): "<mob> triggered a trap for N", streamed WITH the floater at this pause beat.
-    emit_trap_line(read_board_fight_state, context.dispatch, { target_id: id, damage: hit.damage })
+    // COMBAT LOG (realtime): the locally owned trap is known through engine_view.my_entity_id; a legacy/foreign
+    // hit without that owner uses the neutral fallback, never the victim as attacker.
+    emit_trap_line(read_board_fight_state, context.dispatch, {
+      owner_id: hit.trap_owner_id ?? read_board_fight()?.my_entity_id ?? null,
+      target_id: id,
+      damage: hit.damage,
+    })
     void done.then(() => {
       if (hitflash_on()) board.flash_entity?.(id, HIT_FLASH_TINT)
     })
@@ -505,7 +510,12 @@ export function create_voxel_fight_adapter(
     play_element_sfx('earth', 'impact')
     cue_shake(feel.shake * mag)
     trigger_fight_flash({ color: feel.flash, intensity: 0.3 * mag, grade: feel.grade })
-    if (id) emit_trap_line(read_board_fight_state, context.dispatch, { target_id: id, damage: event.damage ?? 0 })
+    if (id)
+      emit_trap_line(read_board_fight_state, context.dispatch, {
+        owner_id: event.trap_owner_id ?? null,
+        target_id: id,
+        damage: event.damage ?? 0,
+      })
   }
 
   /** One queued number/reaction beat. It deliberately does not kill the rig; `play_death_beat` is the next event
@@ -525,7 +535,7 @@ export function create_voxel_fight_adapter(
       face: source?.cell,
     })
     if (kind !== 'heal' && hitflash_on()) void done.then(() => board.flash_entity?.(id, HIT_FLASH_TINT))
-    if (event.source_id && floater)
+    if (event.source_id && floater && !event.trap_damage)
       emit_effect_line(read_board_fight_state, context.dispatch, {
         entity_id: event.source_id,
         effect: {
@@ -934,7 +944,7 @@ export function create_voxel_fight_adapter(
       const payload = {
         ...spec.payload,
         fight_audio_id: `${fight_audio_scope}:${index}`,
-        source_id: spec.payload?.source_id ?? cast?.entity_id ?? null,
+        source_id: spec.payload?.trap_damage ? null : (spec.payload?.source_id ?? cast?.entity_id ?? null),
         spell_id: spec.payload?.spell_id ?? cast?.spell_id,
       }
       if (spec.kind === 'cast') payload.effects = fight_cast_beat_effects(payload.source_event)

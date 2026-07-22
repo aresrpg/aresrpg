@@ -276,21 +276,50 @@ describe('emit_death_line — UNCONDITIONAL (the per-beat emitter the adapter ca
   })
 })
 
-describe('emit_trap_line — a placed trap detonating on a mob (trap fires → its line)', () => {
-  it('composes "<mob> triggered a trap for N": target is clog-target+ref, the number is damage-red clog-num', () => {
-    const fighters = new Map([['mob-0', { name: 'Sewer Rat' }]])
+describe('emit_trap_line — trap damage names its owner or uses the neutral fallback', () => {
+  it("composes \"<owner>'s trap hit <victim> for N\" with live owner/target refs", () => {
+    const fighters = new Map([
+      ['p1', { name: 'Aldric' }],
+      ['mob-0', { name: 'Sewer Rat' }],
+    ])
     const { actions, dispatch } = recorder()
-    emit_trap_line(() => ({ fight: { fighters } }), dispatch, { target_id: 'mob-0', damage: 15 })
+    emit_trap_line(() => ({ fight: { fighters } }), dispatch, {
+      owner_id: 'p1',
+      target_id: 'mob-0',
+      damage: 15,
+    })
     const trap = find_by_prefix(actions, 'trap')
-    expect(trap.message).toBe('Sewer Rat triggered a trap for 15')
+    expect(trap.message).toBe("Aldric's trap hit Sewer Rat for 15")
+    expect(trap.segments).toContainEqual({ text: 'Aldric', cls: 'clog-name', ref: 'p1' })
     expect(trap.segments).toContainEqual({ text: 'Sewer Rat', cls: 'clog-target', ref: 'mob-0' })
     expect(trap.segments).toContainEqual({ text: '15', cls: 'clog-num' })
   })
 
-  it('an unresolved mob name emits the "Mob" placeholder but the ref heals it once the identity lands', () => {
-    const fighters = new Map([['mob-0', { name: 'Mob' }]])
+  it('an unknown owner is neutral: the victim is never rendered as the attacker', () => {
+    const fighters = new Map([['mob-0', { name: 'Sewer Rat' }]])
     const { actions, dispatch } = recorder()
-    emit_trap_line(() => ({ fight: { fighters } }), dispatch, { target_id: 'mob-0', damage: 9 })
+    emit_trap_line(() => ({ fight: { fighters } }), dispatch, {
+      owner_id: null,
+      target_id: 'mob-0',
+      damage: 9,
+    })
+    const trap = find_by_prefix(actions, 'trap')
+    expect(trap.message).toBe('A trap hit Sewer Rat for 9')
+    expect(trap.segments.some((segment) => segment.cls === 'clog-name')).toBe(false)
+    expect(trap.segments).toContainEqual({ text: 'Sewer Rat', cls: 'clog-target', ref: 'mob-0' })
+  })
+
+  it('an unresolved mob name emits the "Mob" placeholder but the ref heals it once the identity lands', () => {
+    const fighters = new Map([
+      ['p1', { name: 'Aldric' }],
+      ['mob-0', { name: 'Mob' }],
+    ])
+    const { actions, dispatch } = recorder()
+    emit_trap_line(() => ({ fight: { fighters } }), dispatch, {
+      owner_id: 'p1',
+      target_id: 'mob-0',
+      damage: 9,
+    })
     const trap = find_by_prefix(actions, 'trap')
     const target_seg = trap.segments.find((s) => s.cls === 'clog-target')
     expect(target_seg).toEqual({ text: 'Mob', cls: 'clog-target', ref: 'mob-0' })

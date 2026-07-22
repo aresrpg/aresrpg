@@ -315,6 +315,65 @@ describe('receipt fight render events', () => {
     )
   })
 
+  test('trap damage carries the trap owner, never the semantic turn actor or victim', () => {
+    const raw_events = [
+      {
+        type: '0xENGINE::fight_events::Displaced',
+        parsedJson: {
+          fight: 'fight-1',
+          target_is_mob: true,
+          target_idx: '0',
+          kind: '12',
+          from_cell: String(encoded(5, 8)),
+          to_cell: String(encoded(7, 8)),
+          requested: '2',
+          blocked: '0',
+        },
+      },
+      {
+        type: '0xENGINE::fight_events::Hit',
+        parsedJson: {
+          fight: 'fight-1',
+          victim_is_mob: true,
+          victim_idx: '0',
+          amount: '7',
+          remaining_hp: '3',
+        },
+      },
+      {
+        type: '0xENGINE::fight_events::Cast',
+        parsedJson: {
+          fight: 'fight-1',
+          caster_is_mob: false,
+          caster_idx: '0',
+          target_cell: String(encoded(5, 8)),
+        },
+      },
+    ]
+    const resolve_fighter_id = ({ is_mob, idx, character }) => character ?? `${is_mob ? 'm' : 'p'}${idx}`
+    const receipt = produce_receipt_render_turns(raw_events, {
+      fight_id: 'fight-1',
+      trap_cells: new Set([encoded(7, 8)]),
+      resolve_fighter_id,
+      resolve_trap_owner: () => 'p1',
+    })
+    const trap_trigger = receipt.events.find((event) => event.kind === 'trap_trigger')
+    const trap_damage = receipt.events.find((event) => event.kind === 'damage')
+
+    expect(receipt.turns[0].source_id).toBe('p0')
+    expect(trap_trigger?.payload.trap_owner_id).toBe('p1')
+    expect(trap_damage?.payload).toMatchObject({ trap_damage: true, trap_owner_id: 'p1', target_id: 'm0' })
+    expect(trap_damage?.payload.trap_owner_id).not.toBe(receipt.turns[0].source_id)
+    expect(trap_damage?.payload.trap_owner_id).not.toBe(trap_damage?.payload.target_id)
+
+    const neutral = produce_receipt_render_turns(raw_events, {
+      fight_id: 'fight-1',
+      trap_cells: new Set([encoded(7, 8)]),
+      resolve_fighter_id,
+    }).events.find((event) => event.kind === 'damage')
+    expect(neutral?.payload).toMatchObject({ trap_damage: true, trap_owner_id: null })
+  })
+
   // #290 (death-loop trace 0xd8307732…, v1.12.45, receipt seq 112) RED-FIRST. The REAL chain emits a cast's effects
   // BEFORE its Cast, with the ACTION ENVELOPE interleaved: ActionStarted, ActionEffect, Hit, Hit, ActionEffect, Cast,
   // ActionResolved — and the Hits carry NO caster. The mid-action ActionEffect (between the buffered kill Hits and
