@@ -6,9 +6,9 @@
 // remains executable in the public checkout where the private character GLB is unavailable (the rig factory
 // stays integration-proven, like mount_rig.js — no bun:test file exercises a GLTFLoader).
 
-import { afterAll, afterEach, describe, expect, test } from 'bun:test'
+import { afterAll, afterEach, beforeEach, describe, expect, test } from 'bun:test'
 
-import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
+import { configure_walrus_assets, reset_walrus_assets_for_test } from '@aresrpg/sdk/jobs'
 
 import { set_pet_catalog_for_test } from './data/pet_catalog.js'
 import { resolve_pet_companion } from './pet_companion_resolver.js'
@@ -20,9 +20,17 @@ const catalog_lookup = (catalog) => (slug) => {
   return glb ? `${MOB_BASE}/${glb}.glb` : null
 }
 
-configure_walrus_assets({ classes: { mob: { quilt: MOB_QUILT } } })
+// Reset the shared Walrus resolver (one home — packages/sdk/src/jobs.js), THEN configure only the mob
+// quilt this suite's default resolver (get_pet_model_url) reads. configure_walrus_assets only ever
+// MERGES, so the old `afterAll({ mob: {} })` could never truly clear the class — it left an empty mob
+// entry warmed for later files and never reset the aggregator. reset-then-configure isolates this file
+// from earlier ones and leaves no trace for later ones (bun shares the module process-wide).
+beforeEach(() => {
+  reset_walrus_assets_for_test()
+  configure_walrus_assets({ classes: { mob: { quilt: MOB_QUILT } } })
+})
 afterEach(() => set_pet_catalog_for_test())
-afterAll(() => configure_walrus_assets({ classes: { mob: {} } }))
+afterAll(() => reset_walrus_assets_for_test())
 
 describe('resolve_pet_companion — spawn/despawn + appearance verdict', () => {
   test('catalog-first: a published glb resolves through the mob quilt', () => {
