@@ -8,15 +8,20 @@
 // locale strings assert through standalone i18next instances (the reveal_strings idiom — no detector).
 import { describe, expect, test } from 'bun:test'
 import { createInstance } from 'i18next'
+import { readFileSync } from 'node:fs'
 
 import app_i18n from '../../i18n'
 import en from '../../i18n/locales/en.json'
 import fr from '../../i18n/locales/fr.json'
+import de from '../../i18n/locales/de.json'
+import es from '../../i18n/locales/es.json'
 import ja from '../../i18n/locales/ja.json'
+import uk from '../../i18n/locales/uk.json'
 
 import {
   is_paid_create,
   insufficient_funds_copy,
+  create_badge_copy,
   ADDITIONAL_CHARACTER_PRICE_SUI,
 } from './character-create.js'
 
@@ -28,6 +33,8 @@ const inst = (lng, resources) => {
 const EN = inst('en', { en: { translation: en } })
 const FR = inst('fr', { fr: { translation: fr } })
 const JA = inst('ja', { ja: { translation: ja } })
+
+const read_fixture = (relative_path) => readFileSync(new URL(relative_path, import.meta.url), 'utf8')
 
 describe('is_paid_create — the ONE free-vs-paid route (button copy AND submitted PTB read it)', () => {
   test('FIRST character (roster 0, free slot unclaimed) → FREE route', () => {
@@ -83,4 +90,67 @@ describe('insufficient_funds_copy — the honest broke line (price + live balanc
 
 test('the client price mirror stays 10 (display fallback only — the gate price is authoritative)', () => {
   expect(ADDITIONAL_CHARACTER_PRICE_SUI).toBe(10)
+})
+
+describe('#443 — a WALLET (non-zkLogin) session pays for its FIRST character too', () => {
+  test('is_paid_create: a wallet session is PAID even at roster 0 / free slot unclaimed', () => {
+    expect(is_paid_create({ character_count: 0, claimed_free: false, zklogin_session: false })).toBe(true)
+  })
+
+  test('is_paid_create: a zkLogin session keeps the free first character — untouched (explicit + default)', () => {
+    expect(is_paid_create({ character_count: 0, claimed_free: false, zklogin_session: true })).toBe(false)
+    // omitting the param at all (every pre-#443 call site) must reproduce the exact old behavior
+    expect(is_paid_create({ character_count: 0, claimed_free: false })).toBe(false)
+  })
+
+  test('create_badge_copy: a wallet session NEVER renders the free banner — the maintainer-sighted regression', async () => {
+    await app_i18n.changeLanguage('en')
+    const copy = create_badge_copy({ paid: true, character_count: 0, claimed_free: false, price_sui: 10 })
+    expect(copy).not.toBe('★ First character free')
+    expect(copy).not.toContain('First')
+    // and it must not claim to be an ADDITIONAL character — it is honestly this wallet's first
+    expect(copy).not.toContain('Additional')
+    expect(copy).toBe('Character · 10 SUI')
+  })
+
+  test('create_badge_copy: the zkLogin free first character keeps the exact banner — untouched', () => {
+    expect(create_badge_copy({ paid: false, character_count: 0, claimed_free: false, price_sui: 10 })).toBe(
+      '★ First character free'
+    )
+  })
+
+  test('create_badge_copy: a genuinely ADDITIONAL character (roster ≥1) keeps its existing copy — unchanged', async () => {
+    await app_i18n.changeLanguage('en')
+    expect(create_badge_copy({ paid: true, character_count: 1, claimed_free: false, price_sui: 10 })).toBe(
+      'Additional character · 10 SUI'
+    )
+  })
+
+  test('characters.create.wallet_price ships in all six locales and interpolates the live price', () => {
+    for (const locale of [en, fr, de, es, ja, uk]) expect(locale.characters.create.wallet_price).toBeTruthy()
+    expect(EN.t('characters.create.wallet_price', { price: 10 })).toBe('Character · 10 SUI')
+    expect(FR.t('characters.create.wallet_price', { price: 10 })).toBe('Personnage · 10 SUI')
+    expect(JA.t('characters.create.wallet_price', { price: 10 })).toBe('キャラクター · 10 SUI')
+  })
+
+  test('the world-slot onboarding host routes on_created by session kind, never unconditionally free', () => {
+    const src = read_fixture('./hud/world/WorldCharacterCreate.jsx')
+    // auth is dynamic-imported here (its module body eagerly registers the Enoki wallet — a static import
+    // would break in a DOM-less test/bundle context), never a static top-level import in this file.
+    expect(src).not.toMatch(/^import .*from '\.\.\/\.\.\/\.\.\/\.\.\/auth'/m)
+    expect(src).toContain("import('../../../../auth')")
+    expect(src).toContain('const zklogin_session = is_zklogin_session()')
+    expect(src).toContain('const paid = is_paid_create({ character_count: 0, claimed_free: false, zklogin_session })')
+    expect(src).toContain('create_character_paid')
+    expect(src).toContain('await (paid ? create_character_paid(draft) : create_character(draft))')
+  })
+
+  test('the characters-drawer create host and its price-badge gates account for a wallet session too', () => {
+    const src = read_fixture('./hud/CharactersDrawer.jsx')
+    expect(src).toContain('const zklogin_session = is_zklogin_session()')
+    expect(src).toContain('const paid = is_paid_create({ character_count, claimed_free, zklogin_session })')
+    expect(src).toContain(
+      'const paid_create = is_paid_create({ character_count: roster.length, claimed_free, zklogin_session: is_zklogin_session() })'
+    )
+  })
 })

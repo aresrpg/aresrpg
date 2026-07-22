@@ -312,6 +312,7 @@
       "female_unavailable": "このクラスの女性モデルは一時的にご利用いただけません",
       "create_paid": "作成 · {{price}} SUI →",
       "additional_price": "追加キャラクター · {{price}} SUI",
+      "wallet_price": "キャラクター · {{price}} SUI",
       "new_era_tag": "新時代",
       "new_era_notice": "新たな時代が始まった——ここは新しい世界。かつてのキャラクターはそれぞれの時代に生き続ける。ここで旅立つには新しいキャラクターを作ろう。",
       "insufficient_funds": "SUIが足りません — このキャラクターは{{price}} SUI、所持額は{{balance}}です。"

@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next'
 
 import { xp_progress } from '@aresrpg/sdk/experience'
 
-import { use_auth } from '../../../auth'
+import { use_auth, is_zklogin_session } from '../../../auth'
 import { use_game_state, context } from '../../store.js'
 import { get_class } from '../../data/classes.js'
 import { color_to_hue } from '../../data/color.js'
@@ -98,7 +98,10 @@ function CreateHost({ character_count, claimed_free, price_sui, on_close, varian
     if (!mount) return undefined
     // The shared PAID discriminator (single home in character-create.js) — drives the fund prompt amount
     // AND the free-vs-paid PTB route below, the same rule the creator's price button renders from.
-    const paid = is_paid_create({ character_count, claimed_free })
+    // #443: folds in the wallet-session case (money law #73 — a connected wallet never rides the
+    // sponsor), so a wallet's FIRST character here correctly routes to create_character_paid too.
+    const zklogin_session = is_zklogin_session()
+    const paid = is_paid_create({ character_count, claimed_free, zklogin_session })
     /** @type {ReturnType<typeof character_create> | undefined} */ let handle
     let destroyed = false
     // S-84: gate the class grid on the LIVE on-chain Creation whitelist (un-whitelisted → disabled "coming soon";
@@ -108,6 +111,7 @@ function CreateHost({ character_count, claimed_free, price_sui, on_close, varian
       handle = character_create({
         character_count,
         claimed_free,
+        zklogin_session,
         price_sui,
         allowed_classes,
         placement: variant === 'page' ? 'inline' : 'overlay',
@@ -392,7 +396,9 @@ export function CharactersDrawer({ on_switch, variant = 'drawer' }) {
   // D50 — CREATE balance pre-validation. The FIRST character is free/sponsored; only a SELF-PAID create
   // (the shared is_paid_create predicate — the same rule that routes the mint PTB) must clear the wallet
   // check. Gate on price + 0.2 SUI gas headroom; short of it → the broke card, never a doomed mint.
-  const paid_create = is_paid_create({ character_count: roster.length, claimed_free })
+  // #443: a connected WALLET session is always self-pay (money law #73), even for its first character —
+  // folded into the same predicate so the broke-gate and every price label below agree with it.
+  const paid_create = is_paid_create({ character_count: roster.length, claimed_free, zklogin_session: is_zklogin_session() })
   const BROKE_THRESHOLD_MIST = BigInt(Math.ceil((price_sui + 0.2) * 1e9))
   const request_create = () => {
     if (paid_create && (balance_mist ?? 0n) < BROKE_THRESHOLD_MIST) {
@@ -597,7 +603,9 @@ export function CharactersDrawer({ on_switch, variant = 'drawer' }) {
                     </span>
                     <span className="chr-md__create-label">Create character</span>
                     <span className="chr-md__create-note">
-                      {claimed_free ? `${price_sui} SUI` : `First free · then ${price_sui} SUI`}
+                      {/* #443: paid_create already folds in the wallet-session case (money law #73) — a
+                          fresh wallet's first character must never read "First free". */}
+                      {paid_create ? `${price_sui} SUI` : `First free · then ${price_sui} SUI`}
                     </span>
                   </button>
                 )}
@@ -670,7 +678,9 @@ export function CharactersDrawer({ on_switch, variant = 'drawer' }) {
             >
               <path d="M12 5v14M5 12h14" />
             </svg>
-            {roster.length === 0 && !claimed_free ? 'Create character' : `New character (${price_sui} SUI)`}
+            {/* #443: paid_create already folds in the wallet-session case (money law #73) — a fresh
+                wallet's first character must show its price, never the free-mint copy. */}
+            {paid_create ? `New character (${price_sui} SUI)` : 'Create character'}
           </button>
         )}
         <button type="button" className="chr-logout" onClick={() => void do_logout()}>

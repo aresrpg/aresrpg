@@ -312,6 +312,7 @@
       "female_unavailable": "Weibliches Modell für diese Klasse vorübergehend nicht verfügbar",
       "create_paid": "Erstellen · {{price}} SUI →",
       "additional_price": "Zusätzlicher Charakter · {{price}} SUI",
+      "wallet_price": "Charakter · {{price}} SUI",
       "new_era_tag": "NEUE ÄRA",
       "new_era_notice": "Eine neue Ära beginnt — eine frische Welt. Deine früheren Charaktere leben in ihren eigenen Epochen weiter; erstelle einen neuen, um hier aufzubrechen.",
       "insufficient_funds": "Nicht genug SUI — dieser Charakter kostet {{price}} SUI, du hast {{balance}}."

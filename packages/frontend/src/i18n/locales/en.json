@@ -312,6 +312,7 @@
       "female_unavailable": "Female model temporarily unavailable for this class",
       "create_paid": "Create · {{price}} SUI →",
       "additional_price": "Additional character · {{price}} SUI",
+      "wallet_price": "Character · {{price}} SUI",
       "new_era_tag": "NEW ERA",
       "new_era_notice": "A new era has begun — this is a fresh world. Your earlier characters live on in their own seasons; create a new one to set out here.",
       "insufficient_funds": "Not enough SUI — this character costs {{price}} SUI, you have {{balance}}."

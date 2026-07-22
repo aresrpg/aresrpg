@@ -36,15 +36,18 @@ export const is_valid_name = (name) => name.length >= NAME_MIN && name.length <=
 /**
  * PAID-vs-FREE create discriminator — THE single home (the second zkLogin character costs 10 SUI —
  * swap free for paid and label the button accordingly). Paid when the account holds a
- * character OR has ALREADY claimed its one free character on-chain (the C2 law: a claimed-then-emptied
- * account at count 0 must be PAID — count alone would promise FREE then abort at the gate). The creator's
- * price button AND the hosts' PTB routing (free `create_character` vs paid `create_character_paid`) both
- * read THIS predicate, so the label and the submitted tx can never disagree — the promised-free-then-charged
- * trap is unrepresentable in both directions.
- * @param {{ character_count?: number, claimed_free?: boolean }} args @returns {boolean}
+ * character, has ALREADY claimed its one free character on-chain (the C2 law: a claimed-then-emptied
+ * account at count 0 must be PAID — count alone would promise FREE then abort at the gate), OR the
+ * connected session is NOT zkLogin (#443: the free sponsored mint is zkLogin-ONLY by design — money law
+ * #73 / auth's `is_zklogin_session` idiom — a connected wallet self-pays every tx and never rides the
+ * sponsor door, so its first character routes through the same paid self-pay mint an additional
+ * character already uses). The creator's price button AND the hosts' PTB routing (free `create_character`
+ * vs paid `create_character_paid`) both read THIS predicate, so the label and the submitted tx can never
+ * disagree — the promised-free-then-charged trap is unrepresentable in both directions.
+ * @param {{ character_count?: number, claimed_free?: boolean, zklogin_session?: boolean }} args @returns {boolean}
  */
-export const is_paid_create = ({ character_count = 0, claimed_free = false }) =>
-  character_count >= 1 || !!claimed_free
+export const is_paid_create = ({ character_count = 0, claimed_free = false, zklogin_session = true }) =>
+  character_count >= 1 || !!claimed_free || !zklogin_session
 
 /**
  * The in-creator insufficient-funds line (paid mode, valid name, balance short of the price) — the honest
@@ -56,6 +59,27 @@ export const insufficient_funds_copy = ({ price_sui, balance_sui }) =>
     price: price_sui,
     balance: (balance_sui ?? 0).toLocaleString('en-US', { maximumFractionDigits: 3 }),
   })
+
+/**
+ * The header PRICE/FREE badge copy (#443) — ONE home for the exact string rendered in the `cc__free`
+ * span, so a wallet session can never be shown the free banner while a paid tx is what actually gets
+ * submitted (the label-vs-tx invariant `is_paid_create` already protects, extended to this literal).
+ * FREE only when `paid` is false. Paid splits two honest reasons that read DIFFERENTLY: a genuinely
+ * ADDITIONAL character (roster ≥1 or the free slot already claimed) vs a WALLET session's own FIRST
+ * character (count 0, unclaimed, paid only because the session isn't zkLogin) — labelling the latter
+ * "Additional character" would lie (there is no earlier one). Exported as the unit-tested copy seam.
+ * @param {{ paid: boolean, character_count: number, claimed_free: boolean, price_sui: number }} args
+ * @returns {string}
+ */
+export const create_badge_copy = ({ paid, character_count, claimed_free, price_sui }) =>
+  !paid
+    ? '★ First character free'
+    : i18n.t(
+        character_count === 0 && !claimed_free
+          ? 'characters.create.wallet_price'
+          : 'characters.create.additional_price',
+        { price: price_sui }
+      )
 
 // S-84 — the create modal's `allowed_classes` now comes from the LIVE on-chain Creation whitelist (was a hardcoded
 // 4-class stand-in; T51's "on-chain allowlist enforcement is a separate republish" has landed). Un-whitelisted
@@ -145,6 +169,9 @@ export const transition_colors = ({ kind, class_id, current }) =>
  *   promise FREE then have the server charge/block — the trap this closes. Defaults false (never claimed).
  * @param {number} [opts.price_sui]  the LIVE additional-character price in SUI (from the server); the
  *   default mirror is a fallback only, never the source of truth for the displayed price.
+ * @param {boolean} [opts.zklogin_session]  is the connected session zkLogin (Enoki)? Defaults true
+ *   (existing hosts keep the free-first-character assumption). false — a connected wallet — forces
+ *   `is_paid_create` PAID even at roster 0 / unclaimed (#443: the free sponsored mint is zkLogin-only).
  * @param {() => Promise<number | null>} [opts.get_balance_sui]
  * @param {(balance_sui: number | null) => void} [opts.on_fund]
  * @param {'overlay' | 'inline'} [opts.placement]  Overlay for secondary-character modals; inline when the
@@ -161,6 +188,7 @@ export function character_create(opts) {
   on_cancel,
   character_count = 0,
   claimed_free = false,
+  zklogin_session = true,
   price_sui = ADDITIONAL_CHARACTER_PRICE_SUI,
   get_balance_sui,
   on_fund,
@@ -194,7 +222,7 @@ export function character_create(opts) {
   const flight = latching_single_flight()
   // Paid ⇔ the shared is_paid_create predicate (single home, see its export) — the SAME rule the hosts
   // route the mint PTB on, so this screen's price labels can never disagree with the submitted tx.
-  const paid = is_paid_create({ character_count, claimed_free })
+  const paid = is_paid_create({ character_count, claimed_free, zklogin_session })
   const can_afford = () => !paid || balance_sui == null || balance_sui >= price_sui
 
   const root = document.createElement('div')
@@ -204,9 +232,12 @@ export function character_create(opts) {
     <div class="cc__panel">
       <div class="cc__head">
         <h1>Create your character</h1>
-        <span class="cc__free${paid ? ' is-paid' : ''}" data-free>${
-          paid ? i18n.t('characters.create.additional_price', { price: price_sui }) : '★ First character free'
-        }</span>
+        <span class="cc__free${paid ? ' is-paid' : ''}" data-free>${create_badge_copy({
+          paid,
+          character_count,
+          claimed_free,
+          price_sui,
+        })}</span>
       </div>
       <p class="cc__lead">Pick a class, set your colors, name it. The world is already live behind you.</p>
       <div class="cc__era" data-era hidden>
