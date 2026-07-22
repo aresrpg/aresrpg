@@ -9,8 +9,8 @@
 // PRE-FLIGHT GUARDS (zero-gas honest refusals, thrown as translated Errors the modal's toast surfaces):
 //   • template resolution (item_type slug → the template OBJECT id off the /v1 template map — the slug is an
 //     art key, never an object id);
-//   • the ONE-KIOSK law: the Move door borrows the character AND extracts the gear off the SAME kiosk, so the
-//     item's holding kiosk (threaded on the bag row — read_staking) must be the character's kiosk;
+//   • item-location resolution: the holding kiosk threaded on the bag row (read_staking / `/v1/owner-items`)
+//     selects the exact PersonalKioskCap through the shared kiosk resolver — never a character-default kiosk;
 //   • the REGISTRY guard: every rune this item's stat lines can yield (deterministic set —
 //     `reachable_rune_keys`) must be registered on the CrushBoard, else the chain would abort
 //     `EMissingTemplate` mid-tx — refused here for free instead.
@@ -38,7 +38,7 @@ import { get_template_by_item_type_map, get_template_map } from '../chain/read_f
 import { load_roster } from '../roster/load_roster.js'
 import { get_taux_rows } from '../rpc/client'
 
-import { kiosk_for_character } from './kiosk_resolve.js'
+import { cap_for_kiosk } from './kiosk_resolve.js'
 import { resolve_crush_template } from './crush_resolve.js'
 import { run_tx_random } from './tx.js'
 
@@ -104,7 +104,7 @@ export async function crush_preview(item) {
 
 /**
  * CRUSH one bag item — the WHOLE ceremony in ONE tx: destroy the gear, roll the yield, mint + kiosk-lock the
- * rune stacks. Resolves the character's kiosk (the door's one-kiosk law), guards the rune registry, fills the
+ * rune stacks. Resolves the item's actual holding kiosk + cap, guards the rune registry, fills the
  * 35 distinct template slots (every registered rune + template-map fillers), and executes through the
  * keep-budget &Random door. Throws translated Errors for the modal's toast; refreshes the shared roster/bag
  * store on success (the equip post-tx pattern).
@@ -122,10 +122,14 @@ export async function crush_item({ item, character_id }) {
   // next ceremony). Refuse honestly and loudly — never compose a knowably-doomed tx against a ghost template.
   if (removed) throw new Error(i18n.t('removed_item.crush_pending'))
 
-  // ── the ONE-KIOSK law: character + gear must share the kiosk the door borrows from ──
-  const handle = await kiosk_for_character(sdk, address, character_id)
-  if (!handle) throw new Error(i18n.t('crush.no_kiosk'))
-  if (item.kiosk_id && String(item.kiosk_id) !== String(handle.kiosk_id)) throw new Error(i18n.t('crush.wrong_kiosk'))
+  // ── ITEM LOCATION: `/v1/owner-items.kiosk_id` is the truth of where this loose item sits ──
+  // Multi-lineage wallets own sibling personal kiosks, so deriving from the active character can target a
+  // different kiosk and falsely refuse an owned item. Resolve the matching cap FROM the item's source kiosk in
+  // the one kiosk-resolution home; never pick a character-default or first cap here.
+  const kiosk_id = item?.kiosk_id
+  const personal_kiosk_cap_id = kiosk_id ? await cap_for_kiosk(sdk, address, kiosk_id) : null
+  if (!kiosk_id || !personal_kiosk_cap_id) throw new Error(i18n.t('crush.no_kiosk'))
+  const handle = { kiosk_id, personal_kiosk_cap_id }
 
   // ── the REGISTRY guard: every reachable rune needs its registered template (else on-chain EMissingTemplate) ──
   const [stats, registry] = await Promise.all([
