@@ -50,6 +50,15 @@ type CrushPreview = {
   estimated: boolean
 }
 
+// One atomic action latch across every inventory surface. React state paints `busy`, but several confirm events
+// can enter before that state commits; keying the actual promise here makes those entries share ONE tx attempt
+// and therefore ONE toast. The latch drains on either settlement so an honest pre-flight refusal remains retryable.
+const crush_flights = new Map<string, Promise<any>>()
+const crush_flight_key = (
+  item: Readonly<{ id?: string | null }> | null | undefined,
+  character_id: string | null
+): string => JSON.stringify([character_id ?? null, item?.id ?? null])
+
 /** The one item-shape gate shared by the menu, confirm button, and press handler. */
 export const crush_disabled_reason = (item: any): string | null => (is_crushable(item) ? null : 'crush.not_crushable')
 
@@ -98,16 +107,27 @@ export function dispatch_crush_action({
   crush?: (args: { item: any; character_id: string }) => Promise<any>
   toast?: (promise: Promise<any>, messages: { pending: string; success: string }) => Promise<any>
 }): Promise<any> {
+  const flight_key = crush_flight_key(item, character_id)
+  const in_flight = crush_flights.get(flight_key)
+  if (in_flight) return in_flight
+
   const submitted = Promise.resolve().then(() => {
     const reason = crush_disabled_reason(item)
     if (reason) throw new Error(i18n.t(reason))
     if (!character_id) throw new Error(i18n.t('crush.no_kiosk'))
     return crush({ item, character_id })
   })
-  return toast(submitted, {
+  const flight = toast(submitted, {
     pending: i18n.t('crush.pending'),
     success: i18n.t(success_key),
   })
+  crush_flights.set(flight_key, flight)
+  const clear_flight = () => {
+    if (crush_flights.get(flight_key) === flight) crush_flights.delete(flight_key)
+  }
+  // Handle both arms explicitly instead of ignoring `finally()`'s rejected child promise.
+  flight.then(clear_flight, clear_flight)
+  return flight
 }
 
 /**

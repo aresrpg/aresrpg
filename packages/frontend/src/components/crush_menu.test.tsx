@@ -75,6 +75,44 @@ describe('CrushMenu action wiring', () => {
     expect(crush_calls).toEqual([{ item: gear, character_id: '0xcharacter' }])
   })
 
+  test('four concurrent confirms share one refused crush attempt and one toast, then re-arm', async () => {
+    const refusal = new Error('refused before signing')
+    let reject_refusal: (error: Error) => void = () => {}
+    const refused = new Promise((_resolve, reject) => {
+      reject_refusal = reject
+    })
+    let crush_attempts = 0
+    let toast_attempts = 0
+    const gear = item(ITEM_CATEGORY.HAT)
+    const dispatch = () =>
+      crush_menu.dispatch_crush_action?.({
+        item: gear,
+        character_id: '0xcharacter',
+        crush: async () => {
+          crush_attempts += 1
+          return refused
+        },
+        toast: (promise: Promise<any>) => {
+          toast_attempts += 1
+          return promise
+        },
+      }) as Promise<any>
+
+    const concurrent = [dispatch(), dispatch(), dispatch(), dispatch()]
+    await Promise.resolve()
+    reject_refusal(refusal)
+    const outcomes = await Promise.allSettled(concurrent)
+
+    expect(concurrent.every((attempt) => attempt === concurrent[0])).toBe(true)
+    expect(crush_attempts).toBe(1)
+    expect(toast_attempts).toBe(1)
+    expect(outcomes.every((outcome) => outcome.status === 'rejected' && outcome.reason === refusal)).toBe(true)
+
+    await dispatch().catch(() => {})
+    expect(crush_attempts).toBe(2)
+    expect(toast_attempts).toBe(2)
+  })
+
   // ISSUE #270 (RED before the fix — this threw "This item cannot be crushed into runes." before ever
   // reaching crush(), so crush_calls stayed empty): a zero-rune, non-gear item composes the SAME PTB.
   test('a zero-rune (non-gear) item ALSO dispatches the crush action exactly once', async () => {
