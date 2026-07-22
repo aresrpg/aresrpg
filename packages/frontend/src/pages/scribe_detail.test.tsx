@@ -52,10 +52,15 @@ const render_card = (props: any) =>
   )
 
 describe("scribe_detail_props — the runeforge card shows the gear's REAL rolled stats", () => {
-  test('honest empty: before the rolled-stats read lands, CHARACTERISTICS renders with zero stat rows (never fabricated)', () => {
+  test('honest empty: before the rolled-stats read lands, the CHARACTERISTICS section is ABSENT (never fabricated, never a bare empty header — #315)', () => {
     const props = scribe_detail_props(SEL_GEAR, TEMPLATE_MAP, null, tt)
     const html = render_card(props)
-    expect(html).toContain('CHARACTERISTICS')
+    // gear_stats null → the template's honest '{}' → no non-zero stats → ItemDetailView drops the whole
+    // CHARACTERISTICS section (issue #315: never a bare header over an empty body — see
+    // components/item_detail_view.tsx has_characteristics + item_detail_view.test.tsx line 184). The prior
+    // assertion expected an empty-rows header, which #315 deleted; the honest-empty CONTRACT (no fabricated
+    // stat) is unchanged and still asserted below.
+    expect(html).not.toContain('CHARACTERISTICS')
     expect(html).not.toContain('Vitality')
   })
 
