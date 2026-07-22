@@ -20,6 +20,7 @@ import { FoundInWorldsSection } from '../../components/mob_detail_view'
 import { PetFullFedNote } from '../../components/pet_power_card'
 import { use_deferred_search } from '../../hooks/use_deferred_search'
 import { CATEGORY_GROUPS, type CategoryGroupKey } from '../../constants/encyclopedia'
+import { display_mob_name } from '../../content/mob_name_overrides'
 import { item_display_category } from '../../game/item_classification'
 import { normalize_search } from '../../utils/search'
 import { use_template_t } from '../../i18n/template_t'
@@ -97,7 +98,7 @@ export function ItemsTab({
         const rows = idx.get(drop.template_id) ?? []
         rows.push({
           id: mob.template_id,
-          name: mob.name ?? '',
+          name: display_mob_name(mob.name) || '',
           minLevel: mob.min_level ?? 0,
           maxLevel: mob.max_level ?? 0,
           chance_percent: drop.chance_percent,

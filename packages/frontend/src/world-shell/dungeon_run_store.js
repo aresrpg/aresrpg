@@ -45,6 +45,7 @@ import { get_owned_items } from '../chain/read_staking'
 import { get_dungeon_runs } from '../rpc/client'
 import { paginate_fight_journal } from '../rpc/fight_journal.js'
 import { T62_WORLDS, DEMO_NETWORK } from '../chain/deployment'
+import { display_mob_name } from '../content/mob_name_overrides'
 import { push_event_toast } from '../game/core/toast.js'
 import i18n from '../i18n'
 import { load_roster } from '../roster/load_roster'
@@ -835,7 +836,9 @@ export const use_dungeon = create((set, get) => ({
         const resolved = _mob_tmpl_cache.get(id)
         if (resolved) {
           set({
-            mob_names: { ...get().mob_names, [id]: resolved.name },
+            // display_mob_name: interim swap for a shipped-but-unacceptable chain name (#521) — the
+            // model resolver (game/data/mobs.js) undoes it before its own catalog lookup.
+            mob_names: { ...get().mob_names, [id]: display_mob_name(resolved.name) },
             mob_levels: { ...get().mob_levels, [id]: resolved.min_level },
             mob_elements: { ...get().mob_elements, [id]: resolved.element },
           })
@@ -856,7 +859,10 @@ export const use_dungeon = create((set, get) => ({
   note_group_identity(template_id, name, level, element) {
     if (!template_id || !name || template_id in get().mob_names) return
     set({
-      mob_names: { ...get().mob_names, [template_id]: name },
+      // display_mob_name: interim swap for a shipped-but-unacceptable chain name (#521) — the model
+      // resolver (game/data/mobs.js) undoes it before its own catalog lookup. Idempotent: a caller that
+      // already resolved through world_spawns' own override still round-trips correctly.
+      mob_names: { ...get().mob_names, [template_id]: display_mob_name(name) },
       mob_levels: { ...get().mob_levels, [template_id]: Number(level) || 1 },
       mob_elements: { ...get().mob_elements, [template_id]: Number(element ?? 255) },
     })

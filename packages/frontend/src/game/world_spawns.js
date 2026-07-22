@@ -43,6 +43,7 @@ import { group_engage_blocked } from '@aresrpg/world/nearby_fights'
 
 import i18n from '../i18n'
 import { game_log } from '../core/log.js'
+import { display_mob_name } from '../content/mob_name_overrides'
 import { report_error } from '../core/report.js'
 import { get_config } from '../rpc/client'
 import { subscribe_zones } from '../rpc/zones_poll'
@@ -194,7 +195,10 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
             id,
             tpl
               ? {
-                  name: tpl.name || short_id(id),
+                  // display_mob_name: interim swap for a shipped-but-unacceptable chain name (#521) — the
+                  // model resolver (game/data/mobs.js get_mob_model) undoes it before its catalog lookup,
+                  // so the group card AND the roaming rig both stay correct off this one cached value.
+                  name: display_mob_name(tpl.name) || short_id(id),
                   min_level: tpl.min_level,
                   max_level: tpl.max_level ?? tpl.min_level,
                   element: tpl.element ?? 255, // carried into note_group_identity so the fight board resolves the mob's cast element

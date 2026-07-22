@@ -17,6 +17,7 @@
 
 import { walrus_asset_url } from '@aresrpg/sdk/jobs'
 
+import { catalog_name_of } from '../../content/mob_name_overrides'
 import { get_catalog } from './mob_catalog.js'
 
 // GLBs serve from unhashed /sprites URLs (browsers cache across re-extractions). Pin each model to its first
@@ -42,10 +43,13 @@ const missing_url = () => mob_visual_url('hy__missing')
 /** Normalize a mob display NAME into a mob_catalog key: lowercase, every run of non-alnum chars
  * collapsed to one underscore, edges trimmed. Matches the legacy dataset's own id convention (verified against
  * seed/.prod-snapshot/mobs/all.json: "Aberrant Hulk" -> "aberrant_hulk", "Test Brute" -> "test_brute").
- * Single-homed: the ONLY place a name becomes a key. @param {string | undefined | null} name @returns {string | null} */
+ * Single-homed: the ONLY place a name becomes a key. `catalog_name_of` undoes an interim display override
+ * FIRST (mob_name_overrides.ts) — the reference-corpus catalog is keyed by the raw chain/seed name, so a
+ * caller holding the overridden display string must still resolve the real model/icon.
+ * @param {string | undefined | null} name @returns {string | null} */
 const catalog_key_of = (name) => {
-  const key = name
-    ?.toLowerCase()
+  const key = catalog_name_of(name)
+    .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')

@@ -22,6 +22,7 @@ import { normalize_search } from '../../utils/search'
 import { ELEMENT_COLORS, MobDetailView, is_new_template, NewBadge } from '../../components/entity_display'
 import { use_deferred_search } from '../../hooks/use_deferred_search'
 import { ELEMENTS, MOB_LEVEL_BRACKETS } from '../../constants/encyclopedia'
+import { display_mob_name } from '../../content/mob_name_overrides'
 import { use_template_t } from '../../i18n/template_t'
 import { get_encyclopedia } from '../../rpc/client'
 import { use_rpc_view } from '../../rpc/use_view'
@@ -79,7 +80,9 @@ function BestiaryTab({
         .filter((m) => is_listed_mob_role(mob_corpus_of(m.template_id)?.role))
         .map((m) => ({
           id: m.template_id,
-          name: m.name ?? '',
+          name: display_mob_name(m.name) || '',
+          // icon lookup stays the RAW chain/seed name (the asset catalog is keyed by it) — only the
+          // display string above goes through the override.
           icon_name: m.name ?? '',
           minLevel: m.min_level ?? 0,
           maxLevel: m.max_level ?? 0,

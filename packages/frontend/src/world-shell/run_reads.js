@@ -4,6 +4,8 @@
 // gRPC Core only (json + object version — the W1 monotonic guard consumes the version); every read degrades to
 // null/empty on error at the CALLER (honest-empty law) — nothing here fabricates.
 
+import { display_mob_name } from '../content/mob_name_overrides'
+
 /** Read one object's flattened json + version (null when unreadable/gone). */
 export async function read_object(/** @type {any} */ sdk, /** @type {string} */ id) {
   const { object } = await sdk.grpc_client.core.getObject({ objectId: id, include: { json: true } })
@@ -58,7 +60,10 @@ export async function load_world_meta(/** @type {any} */ sdk, /** @type {string}
     distinct.map(async (id) => {
       const t = await read_object(sdk, id).catch(() => null)
       if (!t) return
-      mob_names[id] = t.json.name ?? 'Mob'
+      // display_mob_name: the interim swap for a shipped-but-unacceptable chain name (#521); the model/icon
+      // resolver (game/data/mobs.js) undoes it before doing its OWN catalog lookup, so this stays safe for
+      // every downstream reader of mob_names — text and 3D alike.
+      mob_names[id] = display_mob_name(t.json.name) || 'Mob'
       mob_levels[id] = Number(t.json.min_level ?? 1)
       mob_elements[id] = Number(t.json.element ?? 255)
     })

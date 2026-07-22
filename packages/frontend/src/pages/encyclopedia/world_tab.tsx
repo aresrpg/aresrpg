@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next'
 import { normalize_search } from '../../utils/search'
 import { ELEMENT_COLORS, SectionDivider, SectionTitle } from '../../components/entity_display'
 import { ItemImage } from '../../components/items'
+import { display_mob_name } from '../../content/mob_name_overrides'
 import { use_template_t } from '../../i18n/template_t'
 import { use_deferred_search } from '../../hooks/use_deferred_search'
 
@@ -145,9 +146,13 @@ export function RosterChip({ mob, on_click }: { mob: WorldMobRosterRow; on_click
         on_click ? (e) => ((e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.02)') : undefined
       }
     >
+      {/* icon lookup stays the RAW chain/seed name (the asset catalog is keyed by it) — only the
+          display span below goes through the override. */}
       <EncyclopediaMobImage mob={{ name: mob.name }} className="w-5 h-5 object-contain shrink-0" />
       <span className="w-1.5 h-1.5 shrink-0" style={{ background: el_color }} />
-      <span className="text-[9px] tracking-[0.1em] uppercase flex-1 truncate text-text">{mob.name}</span>
+      <span className="text-[9px] tracking-[0.1em] uppercase flex-1 truncate text-text">
+        {display_mob_name(mob.name)}
+      </span>
       {role_color && (
         <span
           className="text-[7px] tracking-[0.15em] uppercase shrink-0 px-1 py-px border"
