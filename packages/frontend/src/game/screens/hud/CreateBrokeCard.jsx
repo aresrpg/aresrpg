@@ -2,10 +2,10 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // D50 — the "you're broke" pre-validation card. Shown INSTEAD of the paid character-create flow when
 // the connected wallet can't cover the price + gas headroom. It never attempts a doomed mint tx and
-// never toasts an error — it just explains the shortfall and offers ADD FUNDS. The gate that decides to
+// never toasts an error — it explains the shortfall and can offer ADD FUNDS when the caller owns a live
+// funding route. The gate that decides to
 // mount this (CharactersDrawer) only fires for a SELF-PAID create: the FIRST character is free/sponsored,
-// so a fresh low-SUI zkLogin user forging their first one never sees this. ADD FUNDS opens the EXISTING
-// fund-wallet UI (open_fund_wallet) — the same modal the create flow's own on_fund route uses.
+// so a fresh low-SUI zkLogin user forging their first one never sees this.
 //
 // Portalled to <body> so a single mount overlays BOTH CharactersDrawer variants (in-world drawer +
 // companion page). Because <body> is outside the HUD token scopes, colors are the house palette hex
@@ -15,18 +15,16 @@ import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 
-import { open_fund_wallet } from '../../core/fund-modal.js'
 import './create-broke-card.css'
 
 /**
  * The shared "you're broke" pre-validation card. Character-create is the default caller; the shop reuses the
  * SAME card (the shared "you're broke" modal) via two optional overrides: `message_key` swaps the
- * create-flavored line for a purchase one, and `on_add_funds` routes ADD FUNDS to the caller's own fund UI
- * (the shop's AddFundsModal) instead of the global `open_fund_wallet` store.
+ * create-flavored line for a purchase one, and `on_add_funds` exposes ADD FUNDS when the caller owns a
+ * working fund UI (the shop's AddFundsModal).
  * @param {{
  *   price_sui: number,
  *   balance_mist: bigint | null,
- *   address: string | null,
  *   on_close: () => void,
  *   message_key?: string,
  *   on_add_funds?: () => void,
@@ -35,7 +33,6 @@ import './create-broke-card.css'
 export function CreateBrokeCard({
   price_sui,
   balance_mist,
-  address,
   on_close,
   message_key = 'characters.broke.message',
   on_add_funds,
@@ -57,10 +54,7 @@ export function CreateBrokeCard({
   const fmt = (/** @type {number} */ n) => n.toLocaleString('en-US', { maximumFractionDigits: 3 })
 
   const add_funds = () => {
-    // Caller-supplied fund UI takes precedence (the shop hands its own AddFundsModal); otherwise reuse the
-    // global fund-wallet modal (same as wallet_bar / the create flow's on_fund route).
-    if (on_add_funds) on_add_funds()
-    else open_fund_wallet({ address: address ?? '', required_sui: price_sui, balance_sui })
+    on_add_funds?.()
     on_close()
   }
 
@@ -100,9 +94,11 @@ export function CreateBrokeCard({
           <button type="button" className="chr-broke__cancel" onClick={on_close}>
             {t('common.cancel')}
           </button>
-          <button type="button" className="chr-broke__fund" onClick={add_funds}>
-            {t('wallet.add_funds')}
-          </button>
+          {on_add_funds && (
+            <button type="button" className="chr-broke__fund" onClick={add_funds}>
+              {t('wallet.add_funds')}
+            </button>
+          )}
         </div>
       </div>
     </div>,

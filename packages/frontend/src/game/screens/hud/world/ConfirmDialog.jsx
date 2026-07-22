@@ -48,7 +48,7 @@ export function ConfirmDialog({
 
   if (!open) return null
 
-  // Portal to <body> (mirrors PetFeedModal/PlayerActionMenu/FundWalletModal): several callers (WorldSwitcher's
+  // Portal to <body> (mirrors PetFeedModal/PlayerActionMenu/AddFundsModal): several callers (WorldSwitcher's
   // travel confirm, OnlinePlayers' friend-remove) mount this from inside a `.gw-panel`, and EVERY `.gw-panel`
   // sets `backdrop-filter` — which per spec establishes a new containing block for `position: fixed`
   // descendants. Rendered inline, the scrim's `fixed inset-0` was fixed to that blurred panel instead of the

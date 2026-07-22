@@ -12,7 +12,6 @@
 import './character-create.css'
 import classes_json from '@aresrpg/sdk/classes' with { type: 'json' }
 import i18n from '../../i18n'
-import { fund_store } from '../core/fund-modal.js'
 import { character_pedestal, render_character_thumbnail } from './character-pedestal.js'
 import { has_character_model, preload_character_model } from './character-glb.js'
 import { latching_single_flight } from '../../utils/single_flight.js'
@@ -173,7 +172,6 @@ export const transition_colors = ({ kind, class_id, current }) =>
  *   (existing hosts keep the free-first-character assumption). false — a connected wallet — forces
  *   `is_paid_create` PAID even at roster 0 / unclaimed (#443: the free sponsored mint is zkLogin-only).
  * @param {() => Promise<number | null>} [opts.get_balance_sui]
- * @param {(balance_sui: number | null) => void} [opts.on_fund]
  * @param {'overlay' | 'inline'} [opts.placement]  Overlay for secondary-character modals; inline when the
  *   first-character flow replaces the world slot without covering the surrounding app chrome.
  * @param {string[]} [opts.allowed_classes]  Optional class-id allowlist (ids from @aresrpg/sdk classes.json).
@@ -191,7 +189,6 @@ export function character_create(opts) {
   zklogin_session = true,
   price_sui = ADDITIONAL_CHARACTER_PRICE_SUI,
   get_balance_sui,
-  on_fund,
   placement = 'overlay',
   allowed_classes,
   // The cancel button text — defaults to "Cancel". The forced FIRST create (confirmed-empty roster) has
@@ -447,19 +444,12 @@ export function character_create(opts) {
     count.textContent = `${t.length}/${NAME_MAX}`
     name_input.classList.toggle('is-invalid', msg !== '')
     if (!flight.busy) {
-      if (paid && !afford) {
-        create_btn.dataset.mode = 'fund'
-        create_btn.disabled = false
-        create_btn.textContent = 'Fund your wallet'
-      } else {
-        create_btn.dataset.mode = 'create'
-        create_btn.disabled = !name_ok
-        // Paid mode surfaces the LIVE price ON the confirm button (price prominent pre-confirm); the free
-        // path keeps its exact label byte-for-byte. i18n so the paid price line localizes ×6.
-        create_btn.innerHTML = paid
-          ? i18n.t('characters.create.create_paid', { price: price_sui })
-          : 'Create &amp; Play →'
-      }
+      create_btn.disabled = !name_ok || !afford
+      // Paid mode surfaces the LIVE price ON the confirm button (price prominent pre-confirm); the free
+      // path keeps its exact label byte-for-byte. i18n so the paid price line localizes ×6.
+      create_btn.innerHTML = paid
+        ? i18n.t('characters.create.create_paid', { price: price_sui })
+        : 'Create &amp; Play →'
     }
     return name_ok && afford
   }
@@ -507,8 +497,7 @@ export function character_create(opts) {
   }
 
   const primary_action = () => {
-    if (create_btn.dataset.mode === 'fund') on_fund?.(balance_sui)
-    else void submit()
+    void submit()
   }
 
   name_input.addEventListener('input', () => {
@@ -522,7 +511,6 @@ export function character_create(opts) {
 
   const on_key = (e) => {
     if (flight.busy) return
-    if (fund_store.get()) return // the fund modal owns the keyboard while open
     if (e.key === 'Escape') on_cancel()
     else if (e.key === 'Enter' && document.activeElement === name_input) primary_action()
   }

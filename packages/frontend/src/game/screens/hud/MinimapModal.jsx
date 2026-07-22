@@ -5,7 +5,7 @@
 // The ring/border chrome (.mmx-ring) is GONE outright — the map's own edge is the only boundary now (the same
 // no-frame convention the small map's lens already had since round 5); the close button (✕) keeps floating
 // frameless. TRUE MODAL: this now portals straight to document.body (createPortal — the same idiom as
-// FundWalletModal/PetFeedModal/ConfirmDialog) at a z-index above every HUD panel/toast/tooltip (see
+// AddFundsModal/PetFeedModal/ConfirmDialog) at a z-index above every HUD panel/toast/tooltip (see
 // minimap.css .mmx-backdrop), fixed + CENTERED OVER THE FULL BROWSER VIEWPORT rather than the game sub-area
 // beside the sidebar (see use_viewport_size, replacing round 5's game-area rect measurement — there's no
 // "game area" left to measure once the map floats above the sidebar too). Sizing stays 70% (now of the

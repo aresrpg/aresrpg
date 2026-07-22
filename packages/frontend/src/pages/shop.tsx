@@ -576,12 +576,11 @@ export function ShopPage() {
         />
       )}
 
-      {/* The shop owns this funding modal because the global wallet gate is not mounted here. */}
+      {/* The shop owns this funding modal and routes the shared broke card into it. */}
       {broke != null && (
         <CreateBrokeCard
           price_sui={broke}
           balance_mist={balance_mist}
-          address={address ?? null}
           message_key="shop.broke_message"
           on_add_funds={() => set_show_add_funds(true)}
           on_close={() => set_broke(null)}

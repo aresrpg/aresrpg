@@ -27,8 +27,7 @@ import {
   is_paid_create,
   ADDITIONAL_CHARACTER_PRICE_SUI,
 } from '../character-create.js'
-import { current_address, get_sui_balance } from '../../core/wallet.js'
-import { open_fund_wallet } from '../../core/fund-modal.js'
+import { get_sui_balance } from '../../core/wallet.js'
 import { logout } from '../../core/wallet.js'
 import { set_pref_zklogin } from '../../core/draft.js'
 import { ExplorerLink } from '../../../components/explorer_link.jsx'
@@ -81,7 +80,7 @@ import { game_log } from '../../../core/log.js'
 
 /**
  * The inline create flow — mounts the proven vanilla character_create() inside a React host so the
- * drawer reuses it verbatim (same paid-mint hint, fund-wallet route, on-chain mint PTB). On a
+ * drawer reuses it verbatim (same paid-mint hint and on-chain mint PTB). On a
  * successful mint the suiEvent → sui_data refetch repaints the roster; we close back to the list.
  * The three picked colors (Skin/Armor/Trim = on-chain color_1/2/3) flow straight to the mint PTB.
  * `variant` decides the shared creator's FRAME — the create-character page from the characters
@@ -96,8 +95,8 @@ function CreateHost({ character_count, claimed_free, price_sui, on_close, varian
   useEffect(() => {
     const mount = host.current
     if (!mount) return undefined
-    // The shared PAID discriminator (single home in character-create.js) — drives the fund prompt amount
-    // AND the free-vs-paid PTB route below, the same rule the creator's price button renders from.
+    // The shared PAID discriminator (single home in character-create.js) drives the balance hint and the
+    // free-vs-paid PTB route below, the same rule the creator's price button renders from.
     // #443: folds in the wallet-session case (money law #73 — a connected wallet never rides the
     // sponsor), so a wallet's FIRST character here correctly routes to create_character_paid too.
     const zklogin_session = is_zklogin_session()
@@ -116,12 +115,6 @@ function CreateHost({ character_count, claimed_free, price_sui, on_close, varian
         allowed_classes,
         placement: variant === 'page' ? 'inline' : 'overlay',
         get_balance_sui: get_sui_balance,
-        on_fund: (balance_sui) =>
-          open_fund_wallet({
-            address: current_address() ?? '',
-            required_sui: paid ? price_sui : 1,
-            balance_sui,
-          }),
         // D9 LAW — the CLICK-INSTANT prediction: ghost the new character into the engine roster the moment
         // the mint is submitted (the drawer row + downstream consumers see it immediately); the confirmed
         // mint's load_roster REPLACES the roster wholesale (ghost self-heals away), a failure rolls it back.
@@ -412,7 +405,6 @@ export function CharactersDrawer({ on_switch, variant = 'drawer' }) {
     <CreateBrokeCard
       price_sui={price_sui}
       balance_mist={balance_mist}
-      address={current_address()}
       on_close={() => set_broke(false)}
     />
   ) : null
