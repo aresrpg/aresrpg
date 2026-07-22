@@ -2635,6 +2635,7 @@
     "fighters_n": "{{count}} fighters",
     "fighters_n_one": "{{count}} fighter",
     "fighters_n_other": "{{count}} fighters",
+    "fighters_label": "Fighters",
     "phase_placement": "Forming",
     "phase_active": "In battle",
     "phase_victory": "Won",

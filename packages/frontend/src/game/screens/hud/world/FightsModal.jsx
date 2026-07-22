@@ -23,7 +23,7 @@ import { get_characters } from '../../../../rpc/client'
 import { get_mob_template } from '@aresrpg/sdk/game'
 import { get_sdk } from '../../../../chain/sdk'
 import { resolve_character_docs } from '../../../../world-shell/character_name_resolve.js'
-import { fight_hover_teams } from '../../../../world-shell/fight_area_panel.js'
+import { fight_hover_teams, viewer_has_fighter } from '../../../../world-shell/fight_area_panel.js'
 import { Tooltip } from '../Tooltip.jsx'
 import {
   cap_and_filter,
@@ -63,6 +63,10 @@ export function FightsModal() {
   const in_dungeon = use_dungeon((s) => !!s.dungeon_id)
   const address = use_auth((s) => s.address)
   const party_members = use_party((s) => s.party?.members ?? null)
+  // #498: the viewer's own character ids — gates whether a hovered fight's player-side column is genuinely
+  // "Your party" (spectate-relative; a public fight in the world list is usually someone else's).
+  const characters = use_game_state((s) => s.sui.characters)
+  const my_character_ids = useMemo(() => new Set((characters ?? []).map((c) => c.id)), [characters])
   // The client's ONE mob-name catalog (group_template id → name), fed by world_spawns' nearby group cards +
   // the fight board's own resolver + the miss-resolver below. The hover card reads it to name each opponent.
   const mob_names = use_dungeon((s) => s.mob_names)
@@ -277,7 +281,13 @@ export function FightsModal() {
                   </section>
                 ))}
               </div>
-              <FightHoverCard marker={hovered_marker} teams={hover_teams} dungeon={in_dungeon} t={t} />
+              <FightHoverCard
+                marker={hovered_marker}
+                teams={hover_teams}
+                dungeon={in_dungeon}
+                my_character_ids={my_character_ids}
+                t={t}
+              />
             </div>
           )}
         </div>
@@ -332,9 +342,14 @@ export function FightRow({ marker, dungeon, is_friend, group_member, selected, b
 }
 
 /** Large two-column hover detail: all player Character docs on the left and every discovered opponent slot right. */
-function FightHoverCard({ marker, teams, dungeon, t }) {
+function FightHoverCard({ marker, teams, dungeon, my_character_ids, t }) {
   if (!marker || !teams) return null
   const phase_label = t(`fights.phase_${marker.status}`, { defaultValue: marker.status })
+  // #498: "Your party" only when a viewer character is actually seated — otherwise this is a spectated
+  // fight belonging to someone else, and the neutral "Fighters" label is the honest one.
+  const player_title = viewer_has_fighter(teams.players, my_character_ids)
+    ? t('fight_end.your_party')
+    : t('fights.fighters_label')
   return (
     <aside className="gw-ft__hover-card">
       <div className="gw-ft__hover-head">
@@ -347,7 +362,7 @@ function FightHoverCard({ marker, teams, dungeon, t }) {
         <span className="gw-ft__phase">{phase_label}</span>
       </div>
       <div className="gw-ft__teams">
-        <FightTeam title={t('fight_end.your_party')} members={teams.players} t={t} />
+        <FightTeam title={player_title} members={teams.players} t={t} />
         <FightTeam title={t('fight_end.enemies')} members={teams.opponents} enemy t={t} />
       </div>
     </aside>

@@ -2637,6 +2637,7 @@
     "fighters_n": "{{count}} бійців",
     "fighters_n_one": "{{count}} боєць",
     "fighters_n_other": "{{count}} бійців",
+    "fighters_label": "Бійці",
     "phase_placement": "Формується",
     "phase_active": "У бою",
     "phase_victory": "Перемога",
