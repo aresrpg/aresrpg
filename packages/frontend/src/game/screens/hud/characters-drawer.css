@@ -412,7 +412,8 @@
   line-height: 1.5;
   color: var(--fg-muted);
 }
-/* BACKLOG 18 — the name-typed arming block (deletion is irreversible + the name stays reserved forever). */
+/* ISSUE 176 — send-review-style irrecoverability acknowledgement; opening the card is confirmation one,
+   ticking this gothic-terminal danger row is confirmation two. */
 .chr-confirm__note {
   margin: 0;
   font-size: 0.72rem;
@@ -420,40 +421,32 @@
   color: var(--danger, #ff6b6b);
   opacity: 0.85;
 }
-.chr-confirm__arm {
+.chr-confirm__ack {
   display: flex;
-  flex-direction: column;
-  gap: var(--s-1);
-}
-.chr-confirm__arm-label {
+  align-items: flex-start;
+  gap: var(--s-2);
+  padding: var(--s-3);
   font-family: var(--font-mono);
-  font-size: 0.58rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 0.66rem;
+  line-height: 1.5;
+  letter-spacing: 0.025em;
   color: var(--fg-muted);
+  background: color-mix(in srgb, var(--danger, #ff6b6b) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger, #ff6b6b) 40%, transparent);
+  cursor: pointer;
 }
-.chr-confirm__input {
-  width: 100%;
-  padding: var(--s-2) var(--s-3);
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  color: var(--fg);
-  background: var(--bg);
-  border: 1px solid var(--edge);
-  border-radius: var(--r-1);
-  outline: none;
-  transition: border-color var(--dur-1) var(--ease);
+.chr-confirm__ack input {
+  flex: none;
+  margin-top: 2px;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
-.chr-confirm__input::placeholder {
-  color: var(--fg-faint);
-  opacity: 0.5;
-}
-.chr-confirm__input:focus {
+.chr-confirm__ack:focus-within {
   border-color: var(--danger, #ff6b6b);
 }
-.chr-confirm__input:disabled {
+.chr-confirm__ack:has(input:disabled) {
   opacity: 0.4;
+  cursor: default;
 }
 .chr-confirm__actions {
   display: flex;
@@ -636,6 +629,14 @@
   gap: var(--s-2);
   justify-content: flex-end;
 }
+.chrx-row__del-trigger {
+  display: inline-grid;
+  place-items: center;
+}
+.chrx-row__del-trigger:focus-visible {
+  outline: 1px solid var(--danger, #ff6b6b);
+  outline-offset: 2px;
+}
 .chrx-row__art {
   width: 32px;
   height: 32px;
@@ -707,6 +708,7 @@
 .chrx-row__del:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+  pointer-events: none;
 }
 /* the per-char action row: PLAY (gold) + SEND TO WORLD (cyan), each with a "?" hover-tooltip (v910) */
 .chrx-row__btns {

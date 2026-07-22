@@ -11,10 +11,10 @@ import { EQUIPMENTS, WEAPONS } from '@aresrpg/sdk/items'
 
 import i18n from '../../i18n'
 
-// The read-model (read_user.get_characters) spreads each EQUIPPED item onto the character object keyed by
-// the item's category (hat/amulet/belt/boots/pet/title/relic/ring + a weapon category like sword/bow/...),
-// AND the inventory paper-doll keys it by slot (weapon/left_ring/right_ring/relic_1..6). To detect "has any
-// equipped item" robustly across both shapes, we scan a superset of keys for a present item-like value.
+// Current roster rows carry the authoritative equipment projection as `equipment[]`, `worn{}` and
+// `pet_equipped`. Older/chain-direct rows instead spread each equipped item onto the character by category
+// or paper-doll slot. The current projection wins even when empty: inspecting stale flat remnants after an
+// authoritative `equipment: []` would keep a fully unequipped character falsely blocked.
 const EQUIPPED_KEYS = [
   ...EQUIPMENTS,
   ...WEAPONS,
@@ -31,15 +31,21 @@ const EQUIPPED_KEYS = [
 
 /**
  * Does an on-chain character currently have ANY equipped item? A deletion would orphan the kiosk-locked
- * item, so the delete is blocked until the player unequips. A value counts only when it is an
- * item-like object (carries an id) — a scalar field of the same name (e.g. a numeric stat) never trips it.
+ * item, so the delete is blocked until the player unequips. The roster projection is authoritative when
+ * present; only legacy rows fall back to flat item-like slot values.
  * @param {any} character @returns {boolean}
  */
-const has_equipped_items = (character) =>
-  EQUIPPED_KEYS.some((key) => {
+const has_equipped_items = (character) => {
+  const projected = Array.isArray(character?.equipment) ? character.equipment : null
+  const worn = character?.worn != null && typeof character.worn === 'object' ? Object.values(character.worn) : null
+  if (character?.pet_equipped === true) return true
+  if (projected != null || worn != null) return (projected?.length ?? 0) > 0 || (worn?.length ?? 0) > 0
+
+  return EQUIPPED_KEYS.some((key) => {
     const value = character?.[key]
-    return value != null && typeof value === 'object' && value.id != null
+    return value != null && typeof value === 'object' && (value.id != null || value.item_id != null)
   })
+}
 
 /**
  * THE UNPUBLISHED-DOOR GATE + the delete guard matrix. FIRST guard: the on-chain door itself

@@ -379,7 +379,7 @@
       "title": "Eliminar personaje",
       "warning": "Esto destruye permanentemente a {{name}} y todo lo que ha aprendido. No hay vuelta atrás.",
       "name_reserved": "El nombre queda reservado para siempre. Ni siquiera tú podrás reutilizarlo.",
-      "type_to_confirm": "Escribe {{name}} para confirmar",
+      "confirm_checkbox": "Entiendo que {{name}} se eliminará para siempre y no se podrá recuperar.",
       "confirm": "Eliminar para siempre",
       "deleting": "Eliminando…",
       "pending": "Eliminando a {{name}}…",

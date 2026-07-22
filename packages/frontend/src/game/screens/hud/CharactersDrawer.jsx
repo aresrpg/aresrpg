@@ -51,9 +51,10 @@ import { CreateBrokeCard } from './CreateBrokeCard.jsx'
 import { use_expedition } from '../../../roster/store'
 // BACKLOG 18 — chain-direct character DELETE: allowed once everything is unequipped, even the
 // free starter. The action composes the SDK's one-call in-kiosk burn door; the guards live ON-CHAIN and the
-// receipt folds through the sui_reduce pipeline (tombstoned). The confirm card is NAME-TYPED (irreversible +
-// the name stays reserved forever) and shared by both variants.
+// receipt folds through the sui_reduce pipeline (tombstoned). The confirm card names the character and uses
+// the same explicit irrecoverability acknowledgement as the item-send review.
 import { CharacterDeleteConfirm } from './CharacterDeleteConfirm.jsx'
+import { CharacterDeleteAction } from './CharacterDeleteAction.jsx'
 import { delete_character_onchain } from '../character-delete.js'
 import { delete_block_reason } from '../character-delete.gate.js'
 import { use_toast } from '../../../toast'
@@ -284,7 +285,6 @@ const DETAIL_TABS = /** @type {const} */ ([
  * @param {{ character: any, active: boolean, busy: boolean, delete_block: string | null, on_preview: () => void, on_delete: () => void }} props
  */
 function RosterEntry({ character, active, busy, delete_block, on_preview, on_delete }) {
-  const { t } = useTranslation()
   const cls = get_class(character.classe ?? character.class_id)
   const { level } = xp_progress(character.experience)
   const hue = color_to_hue(character.color_1 ?? 0)
@@ -339,30 +339,7 @@ function RosterEntry({ character, active, busy, delete_block, on_preview, on_del
             ))}
           {/* BACKLOG 18 — delete lives on the active row; stopPropagation so its click never previews. */}
           {active && (
-            <Tooltip text={delete_block ?? t('characters.delete.title', 'Delete character')}>
-              <button
-                type="button"
-                className="chrx-row__del"
-                aria-label={delete_block ?? t('characters.delete.title', 'Delete character')}
-                disabled={busy || delete_block != null}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  on_delete()
-                }}
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-                </svg>
-              </button>
-            </Tooltip>
+            <CharacterDeleteAction block_reason={delete_block} busy={busy} on_delete={on_delete} />
           )}
         </div>
       </div>

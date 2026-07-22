@@ -379,7 +379,7 @@
       "title": "Supprimer le personnage",
       "warning": "Cette action détruit définitivement {{name}} et tout ce qu'il a appris. Il n'y a pas de retour en arrière.",
       "name_reserved": "Le nom reste réservé pour toujours. Même vous ne pourrez pas le réutiliser.",
-      "type_to_confirm": "Tapez {{name}} pour confirmer",
+      "confirm_checkbox": "Je comprends que {{name}} sera supprimé définitivement et ne pourra pas être récupéré.",
       "confirm": "Supprimer pour toujours",
       "deleting": "Suppression…",
       "pending": "Suppression de {{name}}…",

@@ -81,6 +81,48 @@ describe('delete_block_reason — the unpublished-door gate (pin absent → hone
       EN.t('characters.delete.block_equipped')
     )
   })
+
+  test('pin PRESENT: canonical equipment projection blocks deletion', () => {
+    set_localnet_ids(STAMPED)
+    const equipped = {
+      ...CLEAN,
+      equipment: [{ item_id: '0xitem', template: '0xtemplate', category: 'helmet', amount: 1 }],
+    }
+    expect(delete_block_reason(equipped, { network: 'localnet', selected_id: null })).toBe(
+      EN.t('characters.delete.block_equipped')
+    )
+  })
+
+  test('pin PRESENT: worn and unresolved equipped-pet projections fail closed', () => {
+    set_localnet_ids(STAMPED)
+    const worn = {
+      ...CLEAN,
+      equipment: [],
+      worn: { cloak: { item_id: '0xcloak', template_id: '0xtemplate', category: 'cloak' } },
+    }
+    expect(delete_block_reason(worn, { network: 'localnet', selected_id: null })).toBe(
+      EN.t('characters.delete.block_equipped')
+    )
+
+    const pet_identity_lag = { ...CLEAN, equipment: [], pet: null, pet_equipped: true }
+    expect(delete_block_reason(pet_identity_lag, { network: 'localnet', selected_id: null })).toBe(
+      EN.t('characters.delete.block_equipped')
+    )
+  })
+
+  test('pin PRESENT: an explicitly empty equipment projection stays deletable', () => {
+    set_localnet_ids(STAMPED)
+    const unequipped = {
+      ...CLEAN,
+      equipment: [],
+      worn: {},
+      pet: null,
+      pet_equipped: false,
+      // The canonical projection supersedes stale flat-slot remnants from an older snapshot.
+      hat: { id: '0xstale' },
+    }
+    expect(delete_block_reason(unequipped, { network: 'localnet', selected_id: null })).toBe(null)
+  })
 })
 
 describe('characters.delete.block_unpublished — landed in ALL 6 locales (i18n law)', () => {
@@ -96,5 +138,22 @@ describe('characters.delete.block_unpublished — landed in ALL 6 locales (i18n 
     expect(typeof value).toBe('string')
     expect(value.length).toBeGreaterThan(10)
     expect(value).not.toBe('characters.delete.block_unpublished')
+  })
+})
+
+describe('characters.delete.confirm_checkbox — landed in ALL 6 locales (i18n law)', () => {
+  test.each([
+    ['en', en],
+    ['fr', fr],
+    ['de', de],
+    ['es', es],
+    ['ja', ja],
+    ['uk', uk],
+  ])('%s carries a real acknowledgement that names the character', (lng, translation) => {
+    const value = inst(lng, translation).t('characters.delete.confirm_checkbox', { name: 'Testa' })
+    expect(typeof value).toBe('string')
+    expect(value.length).toBeGreaterThan(10)
+    expect(value).toContain('Testa')
+    expect(value).not.toBe('characters.delete.confirm_checkbox')
   })
 })

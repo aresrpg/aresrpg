@@ -18,6 +18,8 @@ import { context } from '../core/game.js'
 import { kiosk_for_character } from '../../world-shell/kiosk_resolve.js'
 import { run_tx } from '../../world-shell/tx'
 
+import { execute_character_delete_once } from './character-delete-execution.js'
+
 /**
  * Burn one character the wallet owns, in-kiosk, and fold the receipt into the roster pipeline. Throws the
  * decoded-or-human error for the caller's toast; returns the run_tx outcome on success.
@@ -41,7 +43,7 @@ export async function delete_character_onchain(character_id) {
     personal_kiosk_cap_id: handle.personal_kiosk_cap_id,
     character_id,
   })
-  const outcome = await run_tx('character_delete', tx)
+  const outcome = await execute_character_delete_once(tx, run_tx)
 
   // Receipt-proven removal — the ONE-PIPELINE law: the reducer drops the character NOW (this frame) and
   // tombstones the id so no stale snapshot regresses the burn. Never a direct store write from out here.

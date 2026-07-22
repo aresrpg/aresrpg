@@ -379,7 +379,7 @@
       "title": "Delete character",
       "warning": "This permanently destroys {{name}} and everything it has learned. There is no undo.",
       "name_reserved": "The name stays reserved forever. Even you cannot reuse it.",
-      "type_to_confirm": "Type {{name}} to confirm",
+      "confirm_checkbox": "I understand that {{name}} will be permanently deleted and cannot be recovered.",
       "confirm": "Delete forever",
       "deleting": "Deleting…",
       "pending": "Deleting {{name}}…",

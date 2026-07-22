@@ -379,7 +379,7 @@
       "title": "Charakter löschen",
       "warning": "Das zerstört {{name}} und alles Gelernte unwiderruflich. Es gibt kein Zurück.",
       "name_reserved": "Der Name bleibt für immer reserviert. Selbst du kannst ihn nicht wiederverwenden.",
-      "type_to_confirm": "Tippe {{name}} zur Bestätigung",
+      "confirm_checkbox": "Ich verstehe, dass {{name}} endgültig gelöscht wird und nicht wiederhergestellt werden kann.",
       "confirm": "Für immer löschen",
       "deleting": "Wird gelöscht…",
       "pending": "{{name}} wird gelöscht…",
