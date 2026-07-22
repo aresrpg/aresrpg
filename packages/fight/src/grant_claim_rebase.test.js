@@ -273,4 +273,37 @@ describe('silent grant claims rebase when an earlier prediction disappears', () 
     )
     expect(presented_state(store.getState()).fighters.p0.mp).toBe(1)
   })
+
+  for (const source of ['p2p', 'poll'])
+    test(`${source} TurnEnded bounds restored budget evidence before journal confirmation`, () => {
+      const store = boot()
+      predict(store, `vanish:${source}-turn-boundary`, 2_000)
+
+      store.getState().input(
+        {
+          type: source,
+          version: 6,
+          receipt: {
+            events: [
+              {
+                type: '0xpkg::fight_events::Cast',
+                parsedJson: { fight: FIGHT, caster_is_mob: false, caster_idx: 0, target_cell: START },
+              },
+              {
+                type: '0xpkg::fight_events::TurnEnded',
+                parsedJson: { fight: FIGHT, is_mob: false, idx: 0 },
+              },
+            ],
+          },
+        },
+        2_100
+      )
+
+      // M2b intentionally waits for receipt/journal proof before retiring the prediction metadata, but the target's
+      // accepted turn boundary must already make its current-turn budget evidence inert.
+      expect(store.getState().budget_predictions).not.toEqual([])
+      expect(store.getState().log.some((action) => action.kind === 'Granted')).toBe(false)
+      expect(presented_state(store.getState()).fighters.p0.mp).toBe(3)
+      expect(project.board_view(store.getState()).escrow[0].committed.pending_mp).toBe(0)
+    })
 })
