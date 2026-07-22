@@ -142,9 +142,11 @@ describe('DungeonBoard flush — the footprint anchor evolves PER CAST, and grou
     // while some other cast in the SAME queue relocates the caster.
     expect(body).toMatch(/const cast_anchor = evolved\[cast_i\]\?\.caster_cell \?\? committed_caster_cell/)
     // BOTH footprint constructions (weapon + spell) anchor on the per-cast cell — the bare pre-loop `anchor` is
-    // never decoded as a footprint origin any more (that was the drop-valid-stationary-targets bug).
-    expect((body.match(/\{ cell: decode\(cast_anchor\) \}/g) ?? []).length).toBe(2)
-    expect(body).not.toMatch(/\{ cell: decode\(anchor\) \}/)
+    // never decoded as a footprint origin any more (that was the drop-valid-stationary-targets bug). The spell
+    // footprint also spreads `active_fighter` ahead of `cell` (#481 folded range buffs), so assert the `cell:`
+    // binding itself rather than the object's exact literal shape.
+    expect((body.match(/cell:\s*decode\(cast_anchor\)/g) ?? []).length).toBe(2)
+    expect(body).not.toMatch(/cell:\s*decode\(anchor\)/)
   })
 
   test('a free_cell (ground-targeted) cast never resolves eye_target — cells do not retarget or drop on account of who now stands there', async () => {
