@@ -260,17 +260,16 @@ describe('M3 · tx transparency toasts on the background janitors', () => {
     expect(fresh.some((t) => t.title === i18n.t('dungeons.auto_force_start_fired'))).toBe(true)
   })
 
-  it('a fired liquidation crank pushes the auto_crank_fired event toast', async () => {
+  it('a fired liquidation crank fires SILENTLY — no player-facing toast (owner ruling: the crank is machinery)', async () => {
     const { maybe_liquidate } = await import('./fight-liquidation.js')
     const { event_toast_store } = await import('../game/core/toast.js')
-    const { default: i18n } = await import('../i18n')
     const before_calls = dungeon_actions.crank.mock?.calls?.length ?? 0
     const floor = Math.max(0, ...event_toast_store.get().map((t) => t.id))
     const d = { id: '0xDGN', status: STATUS_ACTIVE, turn_deadline_ms: Date.now() - 1000 }
     maybe_liquidate(d, () => ({ dungeon: d, busy: false, refresh: () => Promise.resolve() }))
     await until(() => (dungeon_actions.crank.mock?.calls?.length ?? 0) > before_calls)
-    const fresh = event_toast_store.get().filter((t) => t.id > floor)
-    expect(fresh.some((t) => t.title === i18n.t('dungeons.auto_crank_fired'))).toBe(true)
+    // the crank STILL fires (machinery intact) but pushes ZERO toasts — the "advancing the fight" news is gone.
+    expect(event_toast_store.get().filter((t) => t.id > floor)).toEqual([])
   })
 
   it('a NON-fire probe (deadline not passed) pushes NO toast', async () => {

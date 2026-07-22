@@ -23,6 +23,7 @@ import { aresrpg_id } from '@aresrpg/sdk/deployment/aresrpg'
 import { fight_store } from '@aresrpg/fight/store'
 import * as project from '@aresrpg/fight/project'
 import { fight_view } from '@aresrpg/fight/project'
+import { u64 } from '@aresrpg/fight/journal_u64'
 import { fight_opened_at } from '@aresrpg/fight/trace_tap'
 import {
   STATUS_OPEN,
@@ -975,19 +976,28 @@ export const use_dungeon = create((set, get) => ({
           },
         })
         // M2b · ONE INGRESS (#291): the object read above is a bootstrap/checkpoint only — canonical events fold
-        // from the JOURNAL. When the checkpoint saw the object's journalHead run ahead of our accepted frontier it
-        // flagged a gap; walk the read-layer journal from there and feed each normalized page through the ONE journal
-        // door. The accept machine dedupes re-delivery (a re-walk is idempotent); a pre-deploy 404 degrades to a no-op.
-        const { journal_gap } = fight_store.getState()
-        if (journal_gap && String(journal_gap.fight_id ?? live_fight_id) === String(live_fight_id)) {
-          const result = await walk_current_fight_journal({
-            fight_id: live_fight_id,
-            from: journal_gap.from,
-            is_current,
-            current_fight_id: () => get().fight_id,
-          })
-          if (result === 'stale') return
-        }
+        // from the JOURNAL. Walk the read-layer journal from our ACCEPTED FRONTIER on EVERY live poll — this is the
+        // passive-observer LIVE FEED: a force_start (the placement→ACTIVE flip), a peer's turn, or the mob turn
+        // advances the journal with NO receipt of OURS to fold it, so the POLL (not a receipt) is what catches us
+        // up. The chain object read carries no journalHead (that is a /v1-derived ZCARD, not an on-chain field), so
+        // the checkpoint can never flag the gap — the frontier walk is the trigger. The accept machine dedupes
+        // re-delivery (idempotent) and the fold version-excludes whatever the bootstrap base already covers; a
+        // still-open contiguity gap only LOWERS the cursor; a pre-deploy 404 degrades to a no-op.
+        const { accept_state, journal_gap } = fight_store.getState()
+        const accepted = u64(accept_state?.head)
+        const frontier = accepted == null ? 0n : accepted + 1n
+        const gap_from =
+          journal_gap && String(journal_gap.fight_id ?? live_fight_id) === String(live_fight_id)
+            ? u64(journal_gap.from)
+            : null
+        const from = gap_from != null && gap_from < frontier ? gap_from : frontier
+        const result = await walk_current_fight_journal({
+          fight_id: live_fight_id,
+          from: from.toString(),
+          is_current,
+          current_fight_id: () => get().fight_id,
+        })
+        if (result === 'stale') return
       } else if (run) {
         // roam: a live run with no room fight — feed the OPEN view (versioned by the pass so a room advance
         // re-adopts) so the mirror keeps showing the plane and the next cluster stays clickable.
@@ -1167,12 +1177,9 @@ export const use_dungeon = create((set, get) => ({
     const play = async () => {
       const receipt = await commit_with_overdue_retry({
         commit: () => commit_turn_batch(fight_id, character_id, batch, true, solo),
-        // TX TRANSPARENCY ("every transaction should be visible as it happens"): the inner overdue crank is
-        // its own signed tx — announce it through the one toast home the instant it fires.
-        crank: () => {
-          push_event_toast({ state: 'info', title: i18n.t('dungeons.auto_crank_fired') })
-          return tx_crank(fight_id, true)
-        },
+        // The inner overdue crank is silent machinery (owner ruling 2026-07-22): it forfeits a stalled player's
+        // expired turn so this commit can land — never player-facing news, so it fires WITHOUT a toast.
+        crank: () => tx_crank(fight_id, true),
         is_overdue: is_someone_overdue_abort,
       })
       fight_state_trace('commit_receipt', {

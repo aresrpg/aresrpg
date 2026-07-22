@@ -171,6 +171,16 @@ const TABLE = {
     106: 'errors.abandon_already_dead', // EAlreadyDead — abandon: this seat is already dead (idempotence guard)
     108: 'errors.turn_too_fast', // ETurnTooFast — pass: the turn ended before MIN_TURN_MS (3s) elapsed (instant-pass bot guard)
   },
+  // The engine TURN MACHINE (`aresrpg_fight::turns` — place / force_start / crank / act). One door surfaces to a
+  // player: 101 ENotPlacement fires when `turns::place` (the placement READY) is pressed AFTER the fight already
+  // left placement — the exact STALE-SCREEN race a passive client hits when a force_start advances the fight under a
+  // still-open "position your team" screen (the poll now follows that edge live, so this is the honest fallback for
+  // the residual race). The rest stay generic: 102/103/104 (ENotYourCharacter / ENotParticipant / EBadStartCell) are
+  // client pre-checked placement races; 105/106/107 (ENotActive / ENotYourTurn / ENotYetExpired) are crank/turn
+  // machinery the client auto-fires; 108 ESomeoneOverdue is consumed by the overdue-crank retry, never surfaced.
+  turns: {
+    101: 'errors.placement_over', // ENotPlacement — place/READY after the fight already started (stale placement screen)
+  },
   // F5 (P2) — gather refusals via the [G] prompt (gather_actions.js → gathering::gather, terminal &Random).
   // 102 ENoCheckpoint is Move-commented "defensive — a joined character always has one" (never fires once 101's
   // gate passed) — folded into 101's copy rather than skipped: zero new key, no downside if it ever does fire.

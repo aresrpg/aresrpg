@@ -61,7 +61,6 @@ const GENERIC_BY_DESIGN = new Map([
   ['mob_ai', 'engine AI leaf — internal'],
   ['movement', 'engine movement leaf (the `actions` arm surfaces the player move abort)'],
   ['displacement', 'engine displacement-math leaf — internal'],
-  ['turns', 'engine turn-machine leaf (the `actions` arm surfaces player turn aborts)'],
   ['fight_marker', 'internal marker type (the `fight` 111 arm surfaces the marked-character case)'],
   ['friends', 'social friends-list refusals not yet surfaced in a client tx path — map when wired'],
   ['forgemagie', 'rune scribe/crush — client wiring unconfirmed this pass; map when a live door is proven to render generic'],

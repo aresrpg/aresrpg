@@ -350,18 +350,7 @@ export function is_exit(result) {
 // One warn per (desired,unmet-signature) burst is enough — the ~4s poll re-derives, so without de-dup a genuine
 // multi-tick hold would spam. Keyed on the exact signature so a NEW unmet reason always logs.
 let _last_warn = ''
-// [p0-fight-init] one-shot probe: the machine HELD at ROAM while the chain/slice says a fight is live
-// (desired ACTIVE or PLACEMENT). On the live-transition path this hold is what tells the adapter to tear a
-// just-built board down (churn-hold branch of the first-fight input-dead bug). Fires once per page; remove with the fix.
-let _p0_hold_logged = false
 function warn_unmet(desired, held, unmet, dungeon) {
-  if (!_p0_hold_logged && held === PHASE.ROAM && (desired === PHASE.ACTIVE || desired === PHASE.PLACEMENT)) {
-    _p0_hold_logged = true
-    game_log(
-      'p0-fight-init',
-      `phase HELD at ROAM while a fight is live (wanted ${desired}; unmet: ${unmet.join(', ')}) — churn-hold probe`
-    )
-  }
   const sig = `${dungeon?.id ?? '?'}|${desired}->${held}|${unmet.join(',')}`
   if (sig === _last_warn) return
   _last_warn = sig

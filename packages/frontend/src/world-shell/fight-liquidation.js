@@ -80,8 +80,8 @@ export function maybe_liquidate(view, get) {
           if (s.dungeon?.turn_deadline_ms === deadline) fired_for_deadline = null
           return
         }
-        // TX TRANSPARENCY: the liquidation crank is a real signed tx — one honest info toast.
-        push_event_toast({ state: 'info', title: i18n.t('dungeons.auto_crank_fired') })
+        // The overdue-turn crank is silent machinery (owner ruling 2026-07-22): it forfeits an away player's
+        // expired turn and resolves the fight forward — never player-facing news, so it fires WITHOUT a toast.
         await tx_crank(fight_id, true)
         await get().refresh()
       } catch (error) {
