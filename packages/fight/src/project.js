@@ -545,10 +545,10 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
     deck_size: 0,
     discard_size: 0,
     ap_reserve: 0,
-    // MY seat-turn counter (fold-derived, deadline-independent) — the cooldown gate's `t`: DungeonBoard/DeckCluster
-    // read on_cooldown(last_cast_turn[spell], my_turn_no, cd) off this, and stamp last_cast_turn = my_turn_no at commit.
-    // The sim-compatible state surface calls this same per-round clock `turn_number`.
-    turn_number: s.my_turn_no ?? 0,
+    // The committed SeatTurnKey twin: each accepted player TurnStarted advances this in the canonical fold, so a
+    // WORLD journal page that commits a whole round cannot hide the edge by beginning and ending playable.
+    turn_number: c.fighters?.[s.my_key]?.turn_number ?? 0,
+    // The presentation/playable edge clock stays separate for cooldown UI and local-turn gating.
     my_turn_no: s.my_turn_no ?? 0,
     winner: s.winner ?? -1,
     placement,

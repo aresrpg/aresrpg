@@ -64,14 +64,37 @@ export const merge_entries = (entries, actions) => {
 export const base_from_view = (view, fight_id) => {
   const base = empty_state(fight_id ?? view?.id ?? null)
   if (!view) return base
+  // SeatTurnKey is a dynamic field and is absent from the Fight object. An ACTIVE bootstrap is at least round one;
+  // every later accepted TurnStarted advances the exact canonical counter in apply_action.
+  const base_turn_number = view.status === STATUS_ACTIVE ? 1 : 0
   const fighters = {}
   for (const p of view.escrow ?? []) {
     const key = `p${p.seat}`
-    fighters[key] = { key, is_mob: false, cell: p.cell, hp: p.hp, alive: p.alive, invisible: false, ap: p.ap, mp: p.mp }
+    fighters[key] = {
+      key,
+      is_mob: false,
+      cell: p.cell,
+      hp: p.hp,
+      alive: p.alive,
+      invisible: false,
+      ap: p.ap,
+      mp: p.mp,
+      turn_number: base_turn_number,
+    }
   }
   ;(view.mobs ?? []).forEach((m, idx) => {
     const key = `m${idx}`
-    fighters[key] = { key, is_mob: true, cell: m.cell, hp: m.hp, alive: m.alive, invisible: false, ap: m.ap, mp: m.mp }
+    fighters[key] = {
+      key,
+      is_mob: true,
+      cell: m.cell,
+      hp: m.hp,
+      alive: m.alive,
+      invisible: false,
+      ap: m.ap,
+      mp: m.mp,
+      turn_number: base_turn_number,
+    }
   })
   // Snapshot status rows are entity-mapped OBJECTS { entity_id, kind, remaining_turns, element, value, stat, chance }
   // (fight_status_snapshot.status_snapshot_entities) — was invisibility-only, now every kind. Register #53: map by

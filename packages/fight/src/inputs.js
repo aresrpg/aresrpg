@@ -44,6 +44,7 @@ const empty_fighter = (key) => ({
   hp: null,
   ap: null, // turn-start budget: null until a TurnStarted predicts the begin_turn refill; project.js falls back to the snapshot
   mp: null,
+  turn_number: 0,
   alive: true,
   invisible: false,
 })
@@ -314,6 +315,7 @@ export const apply_action = (state, action) => {
     case 'TurnStarted': {
       const key = fighter_key({ is_mob: action.is_mob, idx: action.idx, resolve_seat: rs })
       const next = ensure(state, key)
+      const turn_number = Number(next.fighters[key].turn_number ?? 0) + 1
       const observed_deadline = positive_deadline(action.deadline_ms)
       const withturn = {
         ...next,
@@ -327,8 +329,8 @@ export const apply_action = (state, action) => {
       // (the v1.12.28 dead opening click). The snapshot reconciles for FREE: a post-refill object read prunes this
       // overlay entry, `f.ap/mp` go null, and project.js falls back to the authoritative row.ap/mp (drained-safe).
       return action.ap == null && action.mp == null
-        ? patch_fighter(withturn, key, { mp_unclamped: null })
-        : patch_fighter(withturn, key, { ap: action.ap, mp: action.mp, mp_unclamped: null })
+        ? patch_fighter(withturn, key, { turn_number, mp_unclamped: null })
+        : patch_fighter(withturn, key, { turn_number, ap: action.ap, mp: action.mp, mp_unclamped: null })
     }
     case 'TurnEnded': {
       const key = fighter_key({ is_mob: action.is_mob, idx: action.idx, resolve_seat: rs })

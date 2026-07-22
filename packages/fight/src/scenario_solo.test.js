@@ -9,7 +9,7 @@
 // commit_due edge → the 3s player min-turn floor.
 import { describe, test, expect } from 'bun:test'
 
-import { create_fight_store } from './store.js'
+import { committed_state, create_fight_store } from './store.js'
 import { engine_view, board_view, presenting, commit_due, min_turn_left } from './project.js'
 import { STATUS_PLACEMENT, STATUS_WON } from './board_state.js'
 import { MOB_TURN_MS, local_intent_beats, synthetic_cast_events } from './present.js'
@@ -233,8 +233,8 @@ describe('the single-PTB turn receipt — purge, wave pacing, presented mask', (
     ],
   })
 
-  const world_round_receipt = ({ mob_cell, remaining_hp, deadline_ms }) => ({
-    events: [
+  const world_round_page = ({ from_seq, version, mob_cell, remaining_hp, deadline_ms }) => {
+    const events = [
       ev('TurnEnded', { is_mob: false, idx: 0 }),
       ev('TurnStarted', { is_mob: true, idx: 0 }),
       ev('MobMoved', { idx: 0, to_cell: mob_cell }),
@@ -249,34 +249,45 @@ describe('the single-PTB turn receipt — purge, wave pacing, presented mask', (
       }),
       ev('TurnEnded', { is_mob: true, idx: 0 }),
       ev('TurnStarted', { is_mob: false, idx: 0, deadline_ms }),
-    ],
-  })
+    ]
+    return {
+      fight: FIGHT,
+      journal_head: String(from_seq + events.length),
+      events: events.map((event, index) => ({
+        seq: String(from_seq + index),
+        kind: event.type.split('::').at(-1),
+        data: event.parsedJson,
+        digest: `round-${version}`,
+        version: String(version),
+      })),
+    }
+  }
 
-  test('an open-world fight surfaces its real round across multi-round state progress', () => {
+  test('an open-world journal advances its committed round across multi-round state progress', () => {
     const store = active_store()
     const surfaced_rounds = [engine_view(store.getState()).turn_number]
-    const folded_rounds = [store.getState().my_turn_no]
+    const folded_rounds = [committed_state(store.getState()).fighters.p0.turn_number]
     const rounds = [
-      { mob_cell: 41, remaining_hp: 44, deadline_ms: T0 + 90_000 },
-      { mob_cell: 42, remaining_hp: 38, deadline_ms: T0 + 120_000 },
+      { from_seq: 3, version: 4, mob_cell: 41, remaining_hp: 44, deadline_ms: T0 + 90_000 },
+      { from_seq: 10, version: 5, mob_cell: 42, remaining_hp: 38, deadline_ms: T0 + 120_000 },
     ]
 
     rounds.forEach((round, index) => {
-      store
-        .getState()
-        .input({ type: 'receipt', receipt: world_round_receipt(round), version: 4 + index }, T0 + 6_000 + index * 4_000)
-      const { seq } = store.getState().wave.at(-1)
-      store.getState().input({ type: 'presented', seq }, T0 + 9_100 + index * 4_000)
+      store.getState().input(
+        { type: 'journal', fight_id: FIGHT, page: world_round_page(round) },
+        T0 + 6_000 + index * 4_000
+      )
       const state = store.getState()
       const view = engine_view(state)
-      folded_rounds.push(state.my_turn_no)
+      folded_rounds.push(committed_state(state).fighters.p0.turn_number)
       surfaced_rounds.push(view.turn_number)
       expect(view.fighters.get('mob-0').cell).toEqual({ x: round.mob_cell % 20, y: 2 })
       expect(view.fighters.get(ME).health).toBe(round.remaining_hp)
+      expect(state.wave, 'journal backfill commits without creating presentation waves').toEqual([])
     })
 
     expect(folded_rounds).toEqual([1, 2, 3])
-    expect(surfaced_rounds).toEqual(folded_rounds)
+    expect(surfaced_rounds).toEqual([1, 2, 3])
   })
 
   test('receipt purges my intents, folds committed truth, and paces EXACTLY the mob turn at ~3s', () => {
