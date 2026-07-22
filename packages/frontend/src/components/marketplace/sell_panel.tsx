@@ -78,7 +78,11 @@ export function SellPanel() {
     const tmpl = template_of(identity)
     const name = String(tmpl?.name ?? '')
     const template_slug = name ? slugs[name] : undefined
-    return cosmetic_icon_of({ slug: template_slug, name }) ?? template_slug ?? ''
+    // #491: template_of()/slugs[name] misses most non-cosmetic owned items (no matching templates_item
+    // row), which used to dead-end every SELL-side icon at '' — fall back to the identity itself
+    // (template_id/item_type), the same raw-slug leg shop_item_icon.ts uses for the buy side. Cosmetics
+    // still win first via the name match above.
+    return cosmetic_icon_of({ slug: template_slug, name }) ?? template_slug ?? identity
   }
 
   // Toggle-select from the inventory grid → populate the middle card (reset the form on every change).

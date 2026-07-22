@@ -3,6 +3,8 @@
 
 import { ITEM_CATEGORY } from '@aresrpg/sdk/items'
 
+import { cosmetic_icon_of } from '../game/cosmetic_icons.js'
+
 const stackable_categories = new Set([ITEM_CATEGORY.CONSUMABLE, ITEM_CATEGORY.RESOURCE, ITEM_CATEGORY.RUNE])
 
 export interface send_item_source {
@@ -76,7 +78,12 @@ export function project_inventory_send_item(display_item: any, owned_items: read
     id: String(display_item?.id ?? ''),
     kiosk_id: usable_sources[0].kiosk_id,
     template_id: display_item?.template_id ?? null,
-    slug: String(display_item?.icon_slug ?? display_item?.slug ?? display_item?.item_type ?? ''),
+    // #491: cosmetic_icon_of() FIRST — item_type alone is the generic slot word for a cosmetic (e.g. "cloak"),
+    // shared by ~20 rows; the gift strip rendered blank/wrong icons for exactly the same reason the sell/history/
+    // crush surfaces did (the resolver never checked the cosmetic map before falling back to the raw slug).
+    slug: String(
+      cosmetic_icon_of(display_item) ?? display_item?.icon_slug ?? display_item?.slug ?? display_item?.item_type ?? ''
+    ),
     name: String(display_item?.name ?? display_item?.item_type ?? ''),
     appearance: display_item?.appearance,
     category,

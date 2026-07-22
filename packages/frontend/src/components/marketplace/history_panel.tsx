@@ -94,7 +94,9 @@ export function HistoryPanel() {
     const tmpl = exact ?? (candidates.length === 1 ? candidates[0] : null)
     const authored_name = String(tmpl?.name ?? '')
     const template_slug = authored_name ? slugs[authored_name] : undefined
-    const icon = cosmetic_icon_of({ slug: template_slug, name: authored_name }) ?? template_slug ?? ''
+    // #491: same missing leg as sell_panel's asset_slug_of — fall back to item_type (already documented
+    // above as "the ItemImage id ... convention") instead of dead-ending every non-cosmetic sale row.
+    const icon = cosmetic_icon_of({ slug: template_slug, name: authored_name }) ?? template_slug ?? item_type ?? ''
     const name =
       (tmpl ? tt(tmpl, 'name') : '') || (item_type ? item_type.replace(/_/g, ' ') : truncate_address(item_id))
     return {
