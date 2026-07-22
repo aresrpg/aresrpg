@@ -872,7 +872,11 @@ const make_input =
         if (!verdict.legal)
           // NO paint, NO cursor advance — the illegal action never reaches the eye. ONE neutral flag (edge-consumed
           // once, the turn_lost idiom); the batch is marked seen so a re-delivery never re-flags.
-          return set((s) => ({ ...s, flagged: { peer: msg.peer ?? null, reason: verdict.reason, at: now }, courtesy_seen }))
+          return set((s) => ({
+            ...s,
+            flagged: { peer: msg.peer ?? null, reason: verdict.reason, at: now },
+            courtesy_seen,
+          }))
         const actor = settle_input.actor_from_key(peer_key)
         const base_version = Math.max(1, state.applied_version + 1)
         // The peer's actions are the receipt/journal vocabulary (Cast/Hit/Moved), stripped of transport keys — so

@@ -21,7 +21,7 @@ const committed = () => ({
   active: 'p0',
 })
 const view = () => ({ escrow: [{ base_mp: 3 }, { base_mp: 3 }], obstacles: [], holes: [] })
-const resolve_seat = character => ({ '0xchar_a': 0, '0xchar_b': 1 }[character] ?? null)
+const resolve_seat = (character) => ({ '0xchar_a': 0, '0xchar_b': 1 })[character] ?? null
 
 const gate = (actor_key, actions, over = {}) =>
   peer_batch_legality({ committed: committed(), view: view(), actor_key, actions, resolve_seat, ...over })
@@ -50,9 +50,10 @@ describe('#334 peer_batch_legality — the courtesy legality gate', () => {
 
   test('a dead or absent actor can never act', () => {
     const dead = { fighters: { p1: { cell: 22, alive: false } }, active: 'p1' }
-    expect(
-      peer_batch_legality({ committed: dead, view: view(), actor_key: 'p1', actions: [], resolve_seat })
-    ).toEqual({ legal: false, reason: 'dead_or_absent_actor' })
+    expect(peer_batch_legality({ committed: dead, view: view(), actor_key: 'p1', actions: [], resolve_seat })).toEqual({
+      legal: false,
+      reason: 'dead_or_absent_actor',
+    })
     expect(
       peer_batch_legality({ committed: committed(), view: view(), actor_key: 'p9', actions: [], resolve_seat })
     ).toEqual({ legal: false, reason: 'dead_or_absent_actor' })
@@ -66,9 +67,9 @@ describe('#334 peer_batch_legality — the courtesy legality gate', () => {
   })
 
   test('a Cast by the actor itself is structurally legal (range/damage is the receipt’s truth, not the gate’s)', () => {
-    expect(gate('p1', [{ kind: 'Cast', caster_is_mob: false, caster_idx: 1, target_cell: 45, damaging: true }])).toEqual(
-      { legal: true }
-    )
+    expect(
+      gate('p1', [{ kind: 'Cast', caster_is_mob: false, caster_idx: 1, target_cell: 45, damaging: true }])
+    ).toEqual({ legal: true })
   })
 
   test('a Cast authored as ANOTHER fighter is a spoofed_caster', () => {

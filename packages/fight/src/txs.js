@@ -160,8 +160,10 @@ export const apply_liquidation = (store, receipt, { version, fight_id = null, re
  * @param {import('zustand').StoreApi<any>} store
  * @param {{ peer:string, intent_id?:string|null, actions:Array<object>, resolve_seat?:Function|null, fight_id?:string|null }} batch
  */
-export const apply_peer_batch = (store, { peer, intent_id = null, actions = [], resolve_seat = null, fight_id = null }) =>
-  store.getState().input({ type: 'courtesy', peer, intent_id, actions, resolve_seat, fight_id })
+export const apply_peer_batch = (
+  store,
+  { peer, intent_id = null, actions = [], resolve_seat = null, fight_id = null }
+) => store.getState().input({ type: 'courtesy', peer, intent_id, actions, resolve_seat, fight_id })
 
 /** Surface each illegal peer draft as ONE neutral toast; consumption is reducer-owned and remount-safe (the
  *  turn_lost/divergence idiom). The edge decides the copy — the core only names the neutral reason class. */
@@ -185,10 +187,10 @@ export function subscribe_flagged(store, { on_flagged }) {
  * @param {import('zustand').StoreApi<any>} store
  * @returns {Array<{ intent_id:string, actions:Array<object> }>}
  */
-export const drafted_batches = store => {
+export const drafted_batches = (store) => {
   const state = store.getState()
   const mine = Object.values(state.entries ?? {})
-    .filter(entry => entry.source === 'intent' && !entry.courtesy)
+    .filter((entry) => entry.source === 'intent' && !entry.courtesy)
     .sort((a, b) => a.version - b.version || a.event_idx - b.event_idx)
   const groups = new Map()
   for (const entry of mine) {
@@ -197,6 +199,6 @@ export const drafted_batches = store => {
     groups.set(id, [...(groups.get(id) ?? []), wire])
   }
   return [...groups.entries()]
-    .filter(([, actions]) => actions.some(action => action.kind === 'Moved' || action.kind === 'Cast'))
+    .filter(([, actions]) => actions.some((action) => action.kind === 'Moved' || action.kind === 'Cast'))
     .map(([intent_id, actions]) => ({ intent_id, actions }))
 }

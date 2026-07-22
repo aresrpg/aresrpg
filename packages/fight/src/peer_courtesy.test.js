@@ -28,12 +28,12 @@ const coop_store = () =>
 
 const peer_cell = (store, key = 'p1') => presented_state(store.getState()).fighters?.[key]?.cell
 const committed_peer_cell = (store, key = 'p1') => committed_state(store.getState()).fighters?.[key]?.cell
-const mob_hp = store => presented_state(store.getState()).fighters?.m0?.hp
-const committed_mob_hp = store => committed_state(store.getState()).fighters?.m0?.hp
+const mob_hp = (store) => presented_state(store.getState()).fighters?.m0?.hp
+const committed_mob_hp = (store) => committed_state(store.getState()).fighters?.m0?.hp
 
 // A receipt paces its NON-LOCAL (peer) turn into a presentation wave; presented_state holds at the pre-wave floor
 // until the renderer acks it. Drain the wave so a post-receipt presented read reflects the fully-played state.
-const drain = store => store.getState().input({ type: 'presented', seq: store.getState().wave_seq }, T0 + 9_000)
+const drain = (store) => store.getState().input({ type: 'presented', seq: store.getState().wave_seq }, T0 + 9_000)
 
 // `peer` is the BROADCASTER (whose seat the door resolves + gates); `character` is who the Moved is authored as
 // (defaults to the broadcaster). The spoof case broadcasts as PEER but authors ME's move — a cross-seat forgery.
@@ -185,7 +185,7 @@ describe('#334 — the sender read: drafted_batches carries MY drafts, never a p
     send_peer_move(store, { to_cell: CELL.near })
 
     const batches = drafted_batches(store)
-    expect(batches.find(b => b.intent_id === 'mine:cast')?.actions.map(a => a.kind)).toEqual(['Cast', 'Hit'])
+    expect(batches.find((b) => b.intent_id === 'mine:cast')?.actions.map((a) => a.kind)).toEqual(['Cast', 'Hit'])
     // transport keys are the receiver's to assign — never on the wire.
     for (const batch of batches)
       for (const action of batch.actions) {
@@ -194,8 +194,11 @@ describe('#334 — the sender read: drafted_batches carries MY drafts, never a p
         expect(action).not.toHaveProperty('event_idx')
         expect(action).not.toHaveProperty('courtesy')
       }
-    expect(batches.some(b => b.actions.some(a => a.kind === 'Moved' && a.character === ME))).toBe(true)
-    expect(batches.some(b => b.actions.some(a => a.character === PEER)), 'a peer relay is never my draft').toBe(false)
+    expect(batches.some((b) => b.actions.some((a) => a.kind === 'Moved' && a.character === ME))).toBe(true)
+    expect(
+      batches.some((b) => b.actions.some((a) => a.character === PEER)),
+      'a peer relay is never my draft'
+    ).toBe(false)
   })
 })
 
