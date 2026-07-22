@@ -14,7 +14,7 @@ import { get_fields, sui_balance } from '../../localnet/bots/framework/sui.js'
 const gold = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const manifest_path = path.join(gold, '.gold-deployment.json')
 const manifest = fs.existsSync(manifest_path) ? JSON.parse(fs.readFileSync(manifest_path, 'utf8')) : null
-const api = manifest?.api ?? 'http://127.0.0.1:3100'
+const api = manifest?.api
 
 const fetch_json = async (pathname: string) => (await fetch(`${api}${pathname}`)).json()
 

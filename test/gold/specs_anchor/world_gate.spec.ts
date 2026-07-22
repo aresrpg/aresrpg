@@ -9,7 +9,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
 const gold = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const manifest_path = path.join(gold, '.gold-deployment.json')
 const manifest = fs.existsSync(manifest_path) ? JSON.parse(fs.readFileSync(manifest_path, 'utf8')) : null
-const api: string = manifest?.api ?? 'http://127.0.0.1:3100'
+const api: string = manifest?.api
 
 type GoldWallet = { address: string; privkey: string }
 type RuntimeWorld = { id: string; label: string; required_level: number }

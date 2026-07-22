@@ -9,7 +9,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
 const GOLD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const MANIFEST_PATH = path.join(GOLD, '.gold-deployment.json')
 const manifest = fs.existsSync(MANIFEST_PATH) ? JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8')) : null
-const API: string = manifest?.api ?? 'http://127.0.0.1:3100'
+const API: string = manifest?.api
 const missing_icons = new Set<string>(
   JSON.parse(
     fs.readFileSync(path.resolve(GOLD, '..', '..', 'packages', 'sdk', 'src', 'missing_item_icons.json'), 'utf8')

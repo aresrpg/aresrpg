@@ -25,7 +25,7 @@ const manifest = fs.existsSync(MANIFEST) ? JSON.parse(fs.readFileSync(MANIFEST, 
 
 const PORT = Number(process.env.MULTIPLAYER_PORT ?? 5493)
 const BASE = `http://localhost:${PORT}`
-const API = manifest?.api ?? 'http://127.0.0.1:3100'
+const API = manifest?.api
 const GRPC = manifest?.rpc ?? 'http://127.0.0.1:9100'
 
 export default defineConfig({

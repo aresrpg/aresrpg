@@ -11,7 +11,7 @@ import { click_cell } from './fight_mouse_helpers'
 const gold = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const manifest_path = path.join(gold, '.gold-deployment.json')
 const manifest = fs.existsSync(manifest_path) ? JSON.parse(fs.readFileSync(manifest_path, 'utf8')) : null
-const api: string = manifest?.api ?? 'http://127.0.0.1:3100'
+const api: string = manifest?.api
 
 type GoldWallet = { address: string; privkey: string }
 type Cell = { x: number; y: number }

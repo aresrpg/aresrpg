@@ -8,7 +8,7 @@ import { test, expect, type Page } from '@playwright/test'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // L1 ANCHOR PROOF (docs/GOLD_STANDARD_SUITE.md §11) — the real frontend running FULLY on the gold localnet.
-// Runs under playwright.anchor.config.ts (VITE_NETWORK=localnet · VITE_SUI_GRPC_URL=:9100 · VITE_RPC_URL=:3100).
+// Runs under playwright.anchor.config.ts (VITE_NETWORK=localnet · VITE_SUI_GRPC_URL=:9100 · VITE_RPC_URL=manifest.api).
 //
 //   1) READ triple-compare (the desync detector's seam): boot the app on localnet, and for the wallet's
 //      seeded character assert UI-store == /v1 == chain-direct read_character AGREE field-for-field. This is
@@ -25,7 +25,7 @@ const GOLD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const MANIFEST_PATH = path.join(GOLD, '.gold-deployment.json')
 const OUT = path.join(GOLD, 'out')
 const manifest = fs.existsSync(MANIFEST_PATH) ? JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8')) : null
-const API: string = manifest?.api ?? 'http://127.0.0.1:3100'
+const API: string = manifest?.api
 
 fs.mkdirSync(OUT, { recursive: true })
 
@@ -94,7 +94,7 @@ test.describe('L1 anchor — real frontend on localnet', () => {
 
     // The roster read must hit the GOLD localnet /v1 (VITE_RPC_URL wiring proof).
     expect(
-      roster_urls.some((u) => u.includes('3100')),
+      roster_urls.some((u) => new URL(u).origin === new URL(API).origin),
       `roster read must hit gold /v1 (saw: ${roster_urls[0]})`
     ).toBe(true)
     expect(ui.length, 'wallet 0 has a seeded character → UI roster must render ≥1').toBeGreaterThan(0)

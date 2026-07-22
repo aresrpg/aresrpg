@@ -48,7 +48,7 @@ type FightSnapshot = {
   arena: { width: number; height: number; cells: number[] } | null
 }
 
-const api = () => String(gold_manifest?.api ?? 'http://127.0.0.1:3100')
+const api = () => String(gold_manifest?.api)
 export const cell_key = (cell: Cell) => `${cell.x}:${cell.y}`
 
 async function press_release(page: Page) {
