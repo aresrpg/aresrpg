@@ -17,6 +17,15 @@ import { decode_fight_event } from '@aresrpg/sdk/fight'
 
 import { INVISIBILITY_STATUS_KIND } from './fight_status_snapshot.js'
 
+// ActionEffect is the only receipt row carrying the exact timed self-buff descriptor. Keep this deliberately
+// narrow: these three kinds produce byte-identical fighter rows for a guaranteed point effect on the caster.
+// Targeted/AoE/chance effects need outcome/recipient evidence the envelope does not carry and remain snapshot truth.
+const SELF_STATUS_KINDS = new Set([6, 9, INVISIBILITY_STATUS_KIND]) // GIVE_POINTS · ALTER_STAT · INVISIBILITY
+const SHAPE_POINT = 0
+const TF_NOT_TEAM = 1
+const TF_NOT_SELF = 2
+const TF_ONLY_CASTER = 32
+
 /** Canonical fighter key. idx-keyed events (turn/cast/hit/move/displace) all resolve here; `character`-keyed
  *  `Moved` uses the injected seat resolver (roster, S2) or falls back to a `c:<addr>` key until the alias lands. */
 export const fighter_key = ({ is_mob, idx, character, resolve_seat }) => {
@@ -50,6 +59,7 @@ export const empty_state = (fight_id = null) => ({
   // a torn read, but only a positive deadline observed on THIS folded TurnStarted/snapshot may drive an action.
   turn_deadline_fresh: false,
   winner: -1,
+  action_contexts: {},
 })
 
 const terminal_source_priority = { receipt: 1, poll: 1, p2p: 1, snapshot: 2, settlement_snapshot: 3 }
@@ -155,9 +165,72 @@ const positive_deadline = (value) => {
   return deadline > 0 ? deadline : null
 }
 
+const action_context_key = (action) =>
+  `${action.caster_is_mob ? 'm' : 'p'}${Number(action.caster_idx)}:${String(action.turn_ordinal)}:${String(
+    action.action_ordinal
+  )}`
+
+const fields_of = (value) => value?.fields ?? value ?? {}
+
+/** A guaranteed point effect aimed at the caster is the one action-envelope shape that proves its exact recipient
+ * and status row without replaying spell resolution. ActionStarted supplies the missing target cell; both rows use
+ * the stable caster/turn/action key, so a page boundary is harmless when the retained log re-folds. */
+const self_status_from_effect = (state, action) => {
+  const context = state.action_contexts?.[action_context_key(action)]
+  const key = fighter_key({ is_mob: action.caster_is_mob, idx: action.caster_idx })
+  const caster = state.fighters[key]
+  const effect = fields_of(action.effect)
+  const kind = Number(effect.kind)
+  const target_filter = Number(effect.target_filter) || 0
+  const hits_caster =
+    (target_filter & TF_ONLY_CASTER) === TF_ONLY_CASTER ||
+    ((target_filter & TF_NOT_SELF) === 0 && (target_filter & TF_NOT_TEAM) === 0)
+  const remaining_turns = Number(effect.turns) || 0
+  if (
+    !context ||
+    caster?.cell == null ||
+    Number(context.target_cell) !== Number(caster.cell) ||
+    Number(effect.area_shape) !== SHAPE_POINT ||
+    Number(effect.area_size) !== 0 ||
+    Number(effect.chance) < 100 ||
+    remaining_turns <= 0 ||
+    !hits_caster ||
+    !SELF_STATUS_KINDS.has(kind)
+  )
+    return null
+  return {
+    key,
+    status: {
+      kind,
+      remaining_turns,
+      element: effect.element == null ? null : Number(effect.element),
+      value: effect.value == null ? null : Number(effect.value),
+      stat: effect.stat == null ? null : Number(effect.stat),
+      chance: effect.chance == null ? null : Number(effect.chance),
+      flags: effect.flags == null ? null : Number(effect.flags),
+    },
+  }
+}
+
 const patch_fighter = (state, key, delta) => {
   const base = ensure(state, key)
   return { ...base, fighters: { ...base.fighters, [key]: { ...base.fighters[key], ...delta } } }
+}
+
+/** Move decrements every fighter row at that fighter's turn end. Rows survive with one fewer turn or disappear at
+ * one; invisibility is always re-derived from the surviving rows. A legacy boolean-only fold has no duration proof,
+ * so leave it untouched until its explicit StanceChanged/Revealed event. */
+const decrement_statuses = (state, key) => {
+  const rows = state.fighters[key]?.statuses
+  if (!rows) return state
+  const statuses = rows.flatMap((row) => {
+    const remaining_turns = Number(row.remaining_turns) || 0
+    return remaining_turns > 1 ? [{ ...row, remaining_turns: remaining_turns - 1 }] : []
+  })
+  return patch_fighter(state, key, {
+    statuses,
+    invisible: statuses.some((row) => row.kind === INVISIBILITY_STATUS_KIND),
+  })
 }
 
 /** Apply an MP delta without discarding temporary debt below zero. The visible pool stays clamped, but a later
@@ -198,6 +271,33 @@ const reveal_fighter = (state, key) => {
 export const apply_action = (state, action) => {
   const rs = action.resolve_seat
   switch (action.kind) {
+    case 'ActionStarted': {
+      const key = action_context_key(action)
+      return {
+        ...state,
+        action_contexts: {
+          ...state.action_contexts,
+          [key]: { target_cell: action.target_cell },
+        },
+      }
+    }
+    case 'ActionEffect': {
+      const applied = self_status_from_effect(state, action)
+      if (!applied) return state
+      const base = ensure(state, applied.key)
+      const statuses = [...(base.fighters[applied.key].statuses ?? []), applied.status]
+      return patch_fighter(base, applied.key, {
+        statuses,
+        invisible: statuses.some((row) => row.kind === INVISIBILITY_STATUS_KIND),
+      })
+    }
+    case 'ActionResolved': {
+      const key = action_context_key(action)
+      if (!state.action_contexts?.[key]) return state
+      const action_contexts = { ...state.action_contexts }
+      delete action_contexts[key]
+      return { ...state, action_contexts }
+    }
     case 'TurnStarted': {
       const key = fighter_key({ is_mob: action.is_mob, idx: action.idx, resolve_seat: rs })
       const next = ensure(state, key)
@@ -219,7 +319,8 @@ export const apply_action = (state, action) => {
     }
     case 'TurnEnded': {
       const key = fighter_key({ is_mob: action.is_mob, idx: action.idx, resolve_seat: rs })
-      return state.active === key ? { ...state, active: null, turn_deadline_fresh: false } : state
+      const ended = state.active === key ? { ...state, active: null, turn_deadline_fresh: false } : state
+      return decrement_statuses(ended, key)
     }
     case 'MobMoved':
       return patch_fighter(state, fighter_key({ is_mob: true, idx: action.idx }), { cell: action.to_cell })

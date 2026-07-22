@@ -38,6 +38,7 @@ export function read_fighter_statuses(json) {
         value: num(effect.value),
         stat: num(effect.stat),
         chance: num(effect.chance),
+        ...(num(effect.flags) != null ? { flags: num(effect.flags) } : {}),
       })
   }
   return out
@@ -73,6 +74,7 @@ export function status_snapshot_entities(rows, participant_ids, mob_count) {
       value: row.value ?? null,
       stat: row.stat ?? null,
       chance: row.chance ?? null,
+      ...(row.flags != null ? { flags: row.flags } : {}),
     })
   }
   return out
