@@ -477,6 +477,38 @@ fun zone_comp_pipeline_matches_js_derive_zone() {
   sc.end();
 }
 
+#[test]
+/// New-discovery input-pipeline parity: same fixture as above, routed through shuffled grid placement.
+fun zone_comp_grid_pipeline_matches_js_derive_zone() {
+  let mut sc = ts::begin(test_world::owner());
+  test_world::boot(&mut sc);
+  let tid = test_world::make_resource_template(&mut sc);
+  let _wid = test_world::make_world_tuned(&mut sc, tid, 0, 1, 1, 2, 3);
+  sc.next_tx(test_world::owner());
+  let w = sc.take_shared<World>();
+
+  let (msids, mtpls, mxs, mzs, msizes, mgseeds) =
+    zone_comp::derive_mobs_grid(&w, 488, 488, 9876543210, 6);
+  assert_eq!(msids.length(), 3);
+  assert!(msids[0] == 15762170440549013951 && mxs[0] == 250036 && mzs[0] == 250308 &&
+    msizes[0] == 2 && mgseeds[0] == 2612523531);
+  assert!(msids[1] == 16326306039438772607 && mxs[1] == 250106 && mzs[1] == 250121 &&
+    msizes[1] == 2 && mgseeds[1] == 89174157);
+  assert!(msids[2] == 1405262335024366198 && mxs[2] == 249884 && mzs[2] == 250004 &&
+    msizes[2] == 2 && mgseeds[2] == 2946783652);
+  assert_eq!(mtpls[0], object::id_from_address(@0xB0B));
+
+  let (rsids, rtpls, rxs, rzs, rjobs, _rtiers) =
+    zone_comp::derive_res_grid(&w, 488, 488, 9876543210);
+  assert_eq!(rsids.length(), 2);
+  assert!(rsids[0] == 2030442199321838059 && rxs[0] == 250325 && rzs[0] == 250146 && rjobs[0] == 0);
+  assert!(rsids[1] == 11817208362644989319 && rxs[1] == 250310 && rzs[1] == 250045);
+  assert_eq!(rtpls[0], tid);
+
+  ts::return_shared(w);
+  sc.end();
+}
+
 // ╔════════════════ [ Gather clusters (FIELD spawn — §6) ] ══════════════════ ]
 
 /// Read every live resource cell's (x, z) in a zone into parallel vectors (RPC/commit order).

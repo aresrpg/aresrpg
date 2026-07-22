@@ -357,6 +357,53 @@ describe('zone_derive — the full derive_zone pipeline (chain twin: zone_comp.m
     })
   })
 
+  test('flat commitment marker selects the Move grid pipeline', () => {
+    const rows = derive_zone({
+      zone: { ...zone, group_root: [2, ...Array(32).fill(0)] },
+      zx: 488,
+      zy: 488,
+      world,
+      team_bound: 6,
+    })
+    expect(rows.filter(row => row.kind === 'mob')).toEqual([
+      expect.objectContaining({
+        index: 0,
+        spawn_id: '15762170440549013951',
+        x: 250036,
+        z: 250308,
+        group_seed: '2612523531',
+      }),
+      expect.objectContaining({
+        index: 1,
+        spawn_id: '16326306039438772607',
+        x: 250106,
+        z: 250121,
+        group_seed: '89174157',
+      }),
+      expect.objectContaining({
+        index: 2,
+        spawn_id: '1405262335024366198',
+        x: 249884,
+        z: 250004,
+        group_seed: '2946783652',
+      }),
+    ])
+    expect(rows.filter(row => row.kind === 'resource')).toEqual([
+      expect.objectContaining({
+        index: 0,
+        spawn_id: '2030442199321838059',
+        x: 250325,
+        z: 250146,
+      }),
+      expect.objectContaining({
+        index: 1,
+        spawn_id: '11817208362644989319',
+        x: 250310,
+        z: 250045,
+      }),
+    ])
+  })
+
   test('consumed bits filter rows out but surviving rows KEEP their derivation index', () => {
     // bit 0 (mob) + bit 1 (resource) set — zones.move bit layout: byte i>>3, bit i&7
     const rows = derive_zone({

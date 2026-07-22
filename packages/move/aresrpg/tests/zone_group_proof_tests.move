@@ -110,10 +110,12 @@ fun witness(sc: &mut Scenario, zx: u32, zy: u32, index: u64): Witness {
   let seed = zones::zone_seed(&w, zx, zy);
   let at = zones::zone_discovered_at(&w, zx, zy);
   let (sids, tpls, xs, zs, sizes, gseeds) =
-    zone_comp::derive_mobs(&w, zx, zy, seed, cfg.team_size_bound());
-  let proof = zone_gen::mob_group_proof_for_testing(
-    object::id(&w), zx, zy, seed, at, &sids, &tpls, &xs, &zs, &sizes, &gseeds, index,
-  );
+    zones::derive_mobs(&w, zx, zy, seed, cfg.team_size_bound());
+  let proof = if (zones::group_commitment_format_for_testing(&w, zx, zy) == 1) {
+    zone_gen::mob_group_proof_for_testing(
+      object::id(&w), zx, zy, seed, at, &sids, &tpls, &xs, &zs, &sizes, &gseeds, index,
+    )
+  } else vector[];
   let out = Witness {
     index,
     spawn_id: sids[index],
@@ -206,6 +208,33 @@ fun occupied_proof_ticket_matches_original_door() {
 }
 
 #[test]
+fun prior_package_tree_commitment_still_verifies() {
+  let mut sc = ts::begin(test_world::owner());
+  let (_wid, cid, zx, zy, _bx, _bz) = discovered(&mut sc);
+  sc.next_tx(test_world::owner());
+  let mut world = sc.take_shared<World>();
+  let cfg = sc.take_shared<GameConfig>();
+  zones::replace_group_commitment_for_testing(&mut world, zx, zy, cfg.team_size_bound());
+  assert_eq!(zones::group_commitment_format_for_testing(&world, zx, zy), 1);
+  ts::return_shared(world); ts::return_shared(cfg);
+  let witness = witness(&mut sc, zx, zy, 0);
+  assert_eq!(witness.proof.length() > 0, true);
+  let _ticket = claim_occupied(&mut sc, cid, witness);
+  sc.end();
+}
+
+#[test]
+fun new_discovery_uses_flat_commitment() {
+  let mut sc = ts::begin(test_world::owner());
+  let (_wid, _cid, zx, zy, _bx, _bz) = discovered(&mut sc);
+  sc.next_tx(test_world::owner());
+  let world = sc.take_shared<World>();
+  assert_eq!(zones::group_commitment_format_for_testing(&world, zx, zy), 2);
+  ts::return_shared(world);
+  sc.end();
+}
+
+#[test]
 fun searched_zone_proof_claims_from_another_zone() {
   let mut sc = ts::begin(test_world::owner());
   let (wid, cid, zx, zy, bx, bz) = discovered(&mut sc);
@@ -223,8 +252,7 @@ fun forged_proof_aborts() {
   let mut sc = ts::begin(test_world::owner());
   let (_wid, cid, zx, zy, _bx, _bz) = discovered(&mut sc);
   let mut w = witness(&mut sc, zx, zy, 0);
-  let byte = &mut w.proof[0];
-  *byte = *byte ^ 1;
+  w.proof = vector[0];
   let _ticket = claim_occupied(&mut sc, cid, w);
   abort
 }
@@ -263,6 +291,11 @@ fun proof_from_prior_search_aborts_after_reroll() {
 fun rootless_zone_uses_original_derivation() {
   let mut sc = ts::begin(test_world::owner());
   let (wid, cid, zx, zy, _bx, _bz) = discovered(&mut sc);
+  sc.next_tx(test_world::owner());
+  let mut prior_world = sc.take_shared<World>();
+  let prior_cfg = sc.take_shared<GameConfig>();
+  zones::replace_group_commitment_for_testing(&mut prior_world, zx, zy, prior_cfg.team_size_bound());
+  ts::return_shared(prior_world); ts::return_shared(prior_cfg);
   let mut w = witness(&mut sc, zx, zy, 0);
   let (expected_spawn, expected_template, expected_x, expected_z, expected_size, expected_seed) =
     (w.spawn_id, w.template, w.x, w.z, w.group_size, w.group_seed);

@@ -411,7 +411,7 @@ const bit_consumed = (bitmap, index) =>
  *     group_root?:number[]|Uint8Array|null, group_count?:number|null }|null|undefined,
  *   world:object|null|undefined, team_bound?:number,
  *   derive_zone:(input:{ zone:{ seed:string|number|bigint, discovered_at_ms:number, mob_bitmap:number[],
- *     res_bitmap:number[] }, zx:number, zy:number, world:object, team_bound:number }) =>
+ *     res_bitmap:number[], group_root:number[]|Uint8Array }, zx:number, zy:number, world:object, team_bound:number }) =>
  *     Array<{ kind:string, index:number, spawn_id:string, template_id:string, x:number, z:number,
  *       size:number, group_seed:string }>,
  *   index?:number|string|bigint|null, spawn_id?:number|string|bigint|null,
@@ -453,6 +453,7 @@ export function mob_group_witness({
         discovered_at_ms: Number(zone.discovered_at_ms ?? 0),
         mob_bitmap: [],
         res_bitmap: [],
+        group_root: zone.group_root,
       },
       zx,
       zy,

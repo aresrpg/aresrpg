@@ -25,6 +25,7 @@ const POS_ATTEMPTS = 64 // rejection cap; on exhaustion accept the last roll (a 
 const GRID_PITCH = MIN_SPAWN_SPACING * 2 // 40-block cells; centred jitter bands stay 20 apart
 const GRID_MARGIN = MIN_SPAWN_SPACING / 2 // 10-block fixed inset on every cell edge
 const GRID_JITTER = MIN_SPAWN_SPACING // inclusive 0..20 jitter after the fixed inset
+const FLAT_COMMITMENT_FORMAT = 2
 
 /** prng-state twin of `zone_gen::p_roll_u64` — SKIP the draw when `lo >= hi` (point/malformed band). */
 const p_roll_u64 = (state, lo, hi) =>
@@ -535,7 +536,8 @@ export const bit_get = (bitmap, i) => {
  * the chain doors key on (`node_index` for gathers; stable across consumption, unlike the retired swap-remove
  * positional index). `spawn_id`/`group_seed` are DECIMAL STRINGS (64-bit — Number would corrupt them).
  * @param {object} p
- * @param {object} p.zone  `{ seed, discovered_at_ms, mob_bitmap: number[], res_bitmap: number[] }` — the Zone DF
+ * @param {object} p.zone  `{ seed, discovered_at_ms, mob_bitmap: number[], res_bitmap: number[],
+ *   group_root?: number[] }` — the Zone DF plus adjacent commitment marker
  * @param {number} p.zx @param {number} p.zy  the zone key
  * @param {object} p.world  the World doc: `{ zone_size, bounds_x, bounds_z, min_groups, max_groups, min_nodes,
  *   max_nodes, mobs: Array<{template_id, rate_bp, min_group, max_group, level?}>,
@@ -555,6 +557,9 @@ export function derive_zone({ zone, zx, zy, world, team_bound = 6 }) {
   const resources = world.resources ?? []
   const { seed } = zone
   const spawned_at_ms = Number(zone.discovered_at_ms ?? 0)
+  const uses_grid =
+    zone.group_root?.length === 33 &&
+    Number(zone.group_root[0]) === FLAT_COMMITMENT_FORMAT
 
   // §4 distance-difficulty inputs — the EXACT chain pipeline (zones.move derive internals)
   const levels = mobs.map(m => Number(m.level ?? 0))
@@ -574,7 +579,7 @@ export function derive_zone({ zone, zx, zy, world, team_bound = 6 }) {
   )
   const size_bound = size_cap(progress, Number(team_bound) || 6)
 
-  const groups = derive_mob_groups({
+  const groups = (uses_grid ? derive_mob_groups_grid : derive_mob_groups)({
     seed,
     min_g: Number(world.min_groups),
     max_g: Number(world.max_groups),
@@ -588,7 +593,7 @@ export function derive_zone({ zone, zx, zy, world, team_bound = 6 }) {
     bx,
     bz,
   })
-  const cells = derive_resources({
+  const cells = (uses_grid ? derive_resources_grid : derive_resources)({
     seed,
     min_n: Number(world.min_nodes),
     max_n: Number(world.max_nodes),

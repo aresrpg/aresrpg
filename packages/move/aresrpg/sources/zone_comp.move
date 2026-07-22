@@ -16,6 +16,17 @@ use aresrpg_foundation::{world_math, zone_gen};
 /// `team_size_bound` dial) feeds ONLY the §4 size cap: the kernel's size clamp never draws, so ids/positions/
 /// templates are identical for any bound (callers that never read sizes pass 1).
 public(package) fun derive_mobs(world: &World, zx: u32, zy: u32, seed: u64, team_bound: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u16>, vector<u64>) {
+  derive_mobs_inner(world, zx, zy, seed, team_bound, false)
+}
+
+/// New-discovery twin: identical table/difficulty pipeline with shuffled grid placement in the foundation kernel.
+public(package) fun derive_mobs_grid(world: &World, zx: u32, zy: u32, seed: u64, team_bound: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u16>, vector<u64>) {
+  derive_mobs_inner(world, zx, zy, seed, team_bound, true)
+}
+
+fun derive_mobs_inner(
+  world: &World, zx: u32, zy: u32, seed: u64, team_bound: u64, grid: bool,
+): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u16>, vector<u64>) {
   let zsize = world::zone_size(world);
   let bx = world::bounds_x(world);
   let bz = world::bounds_z(world);
@@ -43,10 +54,17 @@ public(package) fun derive_mobs(world: &World, zx: u32, zy: u32, seed: u64, team
     max_gs.push_back(world::me_max_group(e) as u64);
     i = i + 1;
   };
-  let (sids, idxs, xs, zs, sizes, gseeds) = zone_gen::derive_mob_groups(
-    seed, world::min_groups(world) as u64, world::max_groups(world) as u64,
-    &elig_w, &min_gs, &max_gs, size_bound, ox, oz, zsize, bx, bz,
-  );
+  let (sids, idxs, xs, zs, sizes, gseeds) = if (grid) {
+    zone_gen::derive_mob_groups_grid(
+      seed, world::min_groups(world) as u64, world::max_groups(world) as u64,
+      &elig_w, &min_gs, &max_gs, size_bound, ox, oz, zsize, bx, bz,
+    )
+  } else {
+    zone_gen::derive_mob_groups(
+      seed, world::min_groups(world) as u64, world::max_groups(world) as u64,
+      &elig_w, &min_gs, &max_gs, size_bound, ox, oz, zsize, bx, bz,
+    )
+  };
   let mut tpls = vector<ID>[];
   let m = idxs.length();
   let mut j = 0;
@@ -61,6 +79,17 @@ public(package) fun derive_mobs(world: &World, zx: u32, zy: u32, seed: u64, team
 /// entries grow contiguous FIELDS; every cell is one-harvest/one-bit). Returns PARALLEL `(spawn_ids,
 /// template_ids, xs, zs, jobs, tiers)` in stream order — the index IS the zone res-bitmap's bit index.
 public(package) fun derive_res(world: &World, zx: u32, zy: u32, seed: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u8>, vector<u8>) {
+  derive_res_inner(world, zx, zy, seed, false)
+}
+
+/// New-discovery twin: identical resource table pipeline with shuffled grid anchors in the foundation kernel.
+public(package) fun derive_res_grid(world: &World, zx: u32, zy: u32, seed: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u8>, vector<u8>) {
+  derive_res_inner(world, zx, zy, seed, true)
+}
+
+fun derive_res_inner(
+  world: &World, zx: u32, zy: u32, seed: u64, grid: bool,
+): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u8>, vector<u8>) {
   let zsize = world::zone_size(world);
   let bx = world::bounds_x(world);
   let bz = world::bounds_z(world);
@@ -80,10 +109,17 @@ public(package) fun derive_res(world: &World, zx: u32, zy: u32, seed: u64): (vec
     jobs_in.push_back(world::re_job(e));
     i = i + 1;
   };
-  let (sids, idxs, xs, zs) = zone_gen::derive_resources(
-    seed, world::min_nodes(world) as u64, world::max_nodes(world) as u64,
-    &weights, &min_q, &max_q, &jobs_in, ox, oz, zsize, bx, bz,
-  );
+  let (sids, idxs, xs, zs) = if (grid) {
+    zone_gen::derive_resources_grid(
+      seed, world::min_nodes(world) as u64, world::max_nodes(world) as u64,
+      &weights, &min_q, &max_q, &jobs_in, ox, oz, zsize, bx, bz,
+    )
+  } else {
+    zone_gen::derive_resources(
+      seed, world::min_nodes(world) as u64, world::max_nodes(world) as u64,
+      &weights, &min_q, &max_q, &jobs_in, ox, oz, zsize, bx, bz,
+    )
+  };
   let mut tpls = vector<ID>[];
   let mut jobs = vector<u8>[];
   let mut tiers = vector<u8>[];
