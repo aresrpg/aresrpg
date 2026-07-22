@@ -97,7 +97,7 @@ WARN where the census found mass — a cleaned domain gets promoted, never the r
   outputs feed inputs; composition is associative, so refactors are regroupings. [MAG ch05
   `compose`; CS Introduction: "the essence of software development is composition"] → judgment;
   ceilings below keep units composable; the import graph stays a DAG — depcruise `no-circular`
-  (42 census cycle edges baselined, any NEW cycle red).
+  (hard-zero after issue #95 burned down the 2026-07-17 census; any cycle is red).
 - **L-C2 — Functions are values.** First-class, lambda-shaped; no `function` callback machinery, no
   needless wrappers (`x => f(x)` is `f`). [MAG ch02; CS Higher Order Functions] →
   `prefer-arrow-callback` **ERROR** (clean) + existing `prefer-rest-params`/`prefer-spread`;
@@ -185,8 +185,9 @@ scripts/codeql/aresrpg-fp-tests --additional-packs=scripts/codeql`. Run it at th
   there first) and ratchet the tree against `scripts/arch/semgrep_baseline.json`; import law lives
   in `.dependency-cruiser.cjs` — `fight-core-hermetic` (resolved ALLOWLIST generalizing
   `ares test fightcore` gate a), `engine-quarantine` (engine3 only under game/ + world-shell/,
-  both clean = hard-zero), `no-circular` — ratcheted by `.dependency-cruiser-known-violations.json`
-  (42 census cycle edges). The baselines ARE the burn-down worklist; `--write-baseline` tightens
+  both clean = hard-zero), `no-circular` — ratcheted by the now-empty
+  `.dependency-cruiser-known-violations.json` (issue #95 burned down the 2026-07-17 census). Non-empty
+  baselines ARE burn-down worklists; `--write-baseline` tightens
   after a fix, never absorbs new debt unreviewed. semgrep binary absent → that half SKIPs green
   (`uv tool install semgrep` | `brew install semgrep`); depcruise runs under bun (node 25 is
   outside its support matrix).

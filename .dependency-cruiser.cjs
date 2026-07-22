@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // .dependency-cruiser.cjs — the IMPORT-GRAPH constitution (docs/CODE_LAW.md "Arch gates").
-// Run via scripts/depcruise-gate.sh (ratchet: .dependency-cruiser-known-violations.json holds the
-// census-day debt via --ignore-known; anything NEW is red). Scope: packages/frontend/src.
+// Run via scripts/depcruise-gate.sh (ratchet: .dependency-cruiser-known-violations.json is empty after
+// issue #95's burn-down; --ignore-known therefore allows ZERO cycles and anything new is red).
 //
 // Rule 1 generalizes `ares test fightcore` gate a (scripts/fight-core-gates.mjs): the hand-rolled
 // gate is a DENYLIST over regex-extracted import specifiers; this is the same law as a resolved
@@ -99,8 +99,8 @@ module.exports = {
       name: 'no-circular',
       comment:
         'L-C1 (composition is associative only on a DAG): no module-level import cycles inside ' +
-        'packages/frontend/src or the promoted domain cores (fight, party, inventory, world). Census-day ' +
-        'cycles live in .dependency-cruiser-known-violations.json (burn-down debt); any NEW cycle is red.',
+        'packages/frontend/src or the promoted domain cores (fight, party, inventory, world). ' +
+        '.dependency-cruiser-known-violations.json is empty after issue #95; any cycle is red.',
       severity: 'error',
       from: { path: '^packages/(frontend|fight|party|inventory|world)/src/' },
       to: { circular: true },

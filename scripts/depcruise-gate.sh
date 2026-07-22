@@ -4,12 +4,11 @@
 # depcruise-gate.sh — the IMPORT-GRAPH half of the arch gate (docs/CODE_LAW.md "Arch gates").
 # Rules live in .dependency-cruiser.cjs: fight-core-hermetic (generalizes `ares test fightcore`
 # gate a to a resolved allowlist) · engine-quarantine (engine3 only under game/ + world-shell/) ·
-# no-circular (census-day cycles are baselined debt; any NEW cycle is red).
+# no-circular (hard-zero after issue #95 burned the census debt down; any cycle is red).
 #
-# Ratchet: .dependency-cruiser-known-violations.json holds the 2026-07-17 census (42 cycle edges;
-# both boundary rules were CLEAN — they are hard-zero ratchets). `--ignore-known` greens exactly
-# that set; regenerate with `bash scripts/depcruise-gate.sh --write-baseline` AFTER burning debt
-# down — never to absorb a new violation without review.
+# Ratchet: .dependency-cruiser-known-violations.json is [] after issue #95's burn-down; both boundary
+# rules were already clean. `--ignore-known` therefore accepts ZERO violations. The write-baseline mode
+# exists for deliberate ratchet maintenance, never to absorb a new violation without review.
 #
 # Runs under bun (node 25 is outside dependency-cruiser's support matrix; bun's node-compat
 # version passes). dependency-cruiser is a root devDep — absent = SKIP green so the composite
@@ -37,7 +36,7 @@ if [ "${1:-}" = "--write-baseline" ]; then
 fi
 
 # --ignore-known requires the baseline file; without one (fresh clone pre-census) run bare so the
-# gate still guards — it will list ALL violations including the baselined debt.
+# gate still guards — it will list every violation.
 IGNORE_KNOWN=()
 [ -f .dependency-cruiser-known-violations.json ] && IGNORE_KNOWN=(--ignore-known)
 bun node_modules/.bin/depcruise --config .dependency-cruiser.cjs "${IGNORE_KNOWN[@]}" \
