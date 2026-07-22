@@ -38,6 +38,11 @@ History is linear by law; nothing ever rewrites what landed.
    `delete_branch_on_merge` setting doesn't cover this flow, since a landing is a fast-forward
    push, never a merge-button click). Only `master` and `edge` persist — every feature/fix
    branch is disposable once promoted.
+7. **Issue closing is commit-native.** A commit that resolves an issue says so in its message
+   body — `Closes #N` — and GitHub closes the issue the moment that commit reaches `master`
+   at promotion (PR-body keywords never fire here: PRs merge into `edge`, which is not the
+   default branch). A bare `#N` mention links but never closes; use the keyword. One issue
+   per closing line; the keyword rides the commit that actually contains the fix.
 
 ## Releases & rollback
 
