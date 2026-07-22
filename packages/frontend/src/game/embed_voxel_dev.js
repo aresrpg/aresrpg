@@ -10,6 +10,7 @@ import { context } from './store.js'
 import { fight_view } from '@aresrpg/fight/project'
 import { HIT_FLASH_TINT } from '../world-shell/voxel_fight_adapter.js'
 import { game_log } from '../core/log.js'
+import { first_uniform_refusal, uniform_refusal_sample_size } from './dev/uniform_refusal.js'
 
 /**
  * @param {{ engine: any, board: any, ctl: any, cam: any, canvas: HTMLCanvasElement, get_avatar: () => any,
@@ -84,8 +85,9 @@ export function install_dev_rig({
   // and MOUNT it, using the EXACT production path (create_world_fight → enter_world_fight — the same two calls
   // world_spawns' [R]/click engage fires). It iterates the discovered zones' mob spawns and lets the tx choke's
   // dry-run REFUSE any spawn not in the character's checkpoint zone for FREE (zero-gas over_ceiling/sim_failed),
-  // so the first claimable group in reach is the one that actually executes. DEV-only; retires with the world
-  // click being reliably drivable headless.
+  // so the first claimable group in reach is the one that actually executes. Five byte-identical initial
+  // refusals stop the scan as an account-wide failure instead of dry-running hundreds more. DEV-only; retires
+  // with the world click being reliably drivable headless.
   w.__dev_start_world_fight = async () => {
     const store = await import('./store.js')
     const character_id = store.context.get_state().selected_character_id
@@ -120,7 +122,8 @@ export function install_dev_rig({
       'dev',
       `start_world_fight: ${mobs.length} discovered mob groups; trying each (dry-run refuses wrong-zone free)`
     )
-    for (const m of mobs) {
+    const refusal_reasons = []
+    for (const [mob_index, m] of mobs.entries()) {
       try {
         const { fight_id } = await create_world_fight({
           world_id,
@@ -145,10 +148,21 @@ export function install_dev_rig({
           return fight_id
         }
       } catch (error) {
+        const refusal_reason = String(error?.message ?? error)
+        if (refusal_reasons.length < uniform_refusal_sample_size) refusal_reasons.push(refusal_reason)
+        const uniform_reason = first_uniform_refusal(refusal_reasons)
+        if (uniform_reason !== null) {
+          const remaining_spawns = mobs.length - mob_index - 1
+          game_log(
+            'dev',
+            `start_world_fight: ${uniform_refusal_sample_size} identical refusals; stopping before ${remaining_spawns} more spawns — ${uniform_reason.slice(0, 80)}`
+          )
+          return null
+        }
         game_log(
           'dev',
           `start_world_fight: spawn ${m.spawn_id} refused (wrong zone / travel) — next`,
-          String(error?.message ?? error).slice(0, 80)
+          refusal_reason.slice(0, 80)
         )
       }
     }
