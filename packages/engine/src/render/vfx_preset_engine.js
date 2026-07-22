@@ -14,7 +14,7 @@
 // SINGLE SOURCE OF TRUTH: pure-JS seed_emitter / particle_state / curve_eval are unit-tested; the TSL nodes in
 // build_emitter_material mirror particle_state op-for-op; the GPU draw is proven by the bench probe.
 
-import { Group, InstancedMesh, Mesh, PlaneGeometry, SphereGeometry, Vector3 } from 'three'
+import { Group, InstancedMesh, Mesh, NormalBlending, PlaneGeometry, SphereGeometry, Vector3 } from 'three'
 import { MeshBasicNodeMaterial, SpriteNodeMaterial } from 'three/webgpu'
 import {
   float,
@@ -109,6 +109,56 @@ export function route_overlay_group(root) {
  */
 export function enable_fight_vfx_layer(camera) {
   camera.layers.enable(FIGHT_VFX_LAYER)
+}
+
+/**
+ * Cheap, chroma-preserving highlight shoulder for the ungraded resilience path. The healthy post stack owns
+ * AgX + the display grade and never calls this; when that stack failed to construct, the bare renderer used to
+ * receive the pack's HDR emission and additive particle accumulation raw. Scaling every channel by the same
+ * `1 / (1 + peak)` keeps hue ratios intact while bounding the brightest channel below 1.
+ * @param {[number, number, number]} rgb linear fight-VFX colour
+ * @returns {[number, number, number]} display-bounded colour
+ */
+export function fallback_vfx_tonemap_rgb(rgb) {
+  const safe = /** @type {[number, number, number]} */ ([Math.max(0, rgb[0]), Math.max(0, rgb[1]), Math.max(0, rgb[2])])
+  const scale = 1 / (1 + Math.max(safe[0], safe[1], safe[2]))
+  return [safe[0] * scale, safe[1] * scale, safe[2] * scale]
+}
+
+/** TSL twin of fallback_vfx_tonemap_rgb. @param {*} rgb vec3 node @returns {*} bounded vec3 node */
+function fallback_vfx_tonemap_node(rgb) {
+  const safe = rgb.max(0)
+  const peak = safe.x.max(safe.y.max(safe.z))
+  return safe.div(peak.add(1))
+}
+
+/**
+ * Prepare routed fight VFX for the bare, ungraded renderer used when the post stack is unavailable. This is the
+ * fallback counterpart of route_overlay_group: traverse one mounted subtree, touch only layer-10 materials, and
+ * apply ONE shared output transform rather than retuning presets. The soft shoulder bounds each source colour;
+ * NormalBlending then keeps overlapping particles inside that bound instead of additive stacking them back to
+ * white. Idempotent because add_to_scene may retry a pre-boot mount.
+ * @param {import('three').Object3D} root object entering the engine scene
+ * @returns {number} materials prepared
+ */
+export function prepare_fight_vfx_fallback(root) {
+  let prepared = 0
+  root.traverse((/** @type {*} */ o) => {
+    if (!o.layers?.isEnabled(FIGHT_VFX_LAYER)) return
+    const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : []
+    for (const m of mats) {
+      m.userData ??= {}
+      if (m.userData.__fight_vfx_fallback_grade || !m.colorNode) continue
+      const source = m.colorNode
+      m.colorNode = vec4(fallback_vfx_tonemap_node(source.rgb), source.a)
+      m.blending = NormalBlending
+      m.depthWrite = false
+      m.needsUpdate = true
+      m.userData.__fight_vfx_fallback_grade = true
+      prepared += 1
+    }
+  })
+  return prepared
 }
 
 // ── PURE CORE (unit-tested; the TSL mirrors this) ─────────────────────────────────────────────────────────

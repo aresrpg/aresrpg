@@ -12,6 +12,7 @@
 
 import { test, expect, describe } from 'bun:test'
 import { Group, Mesh, Object3D, PerspectiveCamera, Vector3 } from 'three'
+import { vec4 } from 'three/tsl'
 
 import { FIGHT_VFX_OUTPUT_GAIN } from '../config/vfx_config.js'
 
@@ -30,6 +31,8 @@ import {
   FIGHT_VFX_LAYER,
   route_overlay_group,
   enable_fight_vfx_layer,
+  fallback_vfx_tonemap_rgb,
+  prepare_fight_vfx_fallback,
 } from './vfx_preset_engine.js'
 
 const dot = (/** @type {number[]} */ a, /** @type {number[]} */ b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
@@ -711,5 +714,35 @@ describe('route_overlay_group — POST-AgX fight-VFX overlay routing', () => {
     expect(mesh.layers.test(fallback_cam.layers)).toBe(true) // fixed: the fallback camera now sees fight VFX
     expect(material.opacity).toBe(FIGHT_VFX_OUTPUT_GAIN) // same transform as the healthy overlay, carried upstream
     expect(fallback_cam.layers.test(new Object3D().layers)).toBe(true) // layer 0 (ordinary scene content) untouched
+  })
+
+  test('fallback shoulder bounds HDR emission while preserving chroma ratios', () => {
+    const mapped = fallback_vfx_tonemap_rgb([8, 4, 2])
+    expect(Math.max(...mapped)).toBeLessThan(1)
+    expect(mapped[0] / mapped[1]).toBeCloseTo(2, 8)
+    expect(mapped[1] / mapped[2]).toBeCloseTo(2, 8)
+    expect(fallback_vfx_tonemap_rgb([-2, 0, 0])).toEqual([0, 0, 0])
+  })
+
+  test('ungraded fallback prepares routed materials once and leaves ordinary scene materials alone', () => {
+    const root = new Group()
+    const fight = new Mesh(undefined, fake_mat())
+    fight.material.colorNode = vec4(8, 4, 2, 0.5)
+    const world = new Mesh(undefined, fake_mat())
+    world.material.colorNode = vec4(8, 4, 2, 0.5)
+    const original_world_node = world.material.colorNode
+    root.add(fight, world)
+    route_overlay_group(fight)
+
+    expect(prepare_fight_vfx_fallback(root)).toBe(1)
+    const prepared_node = fight.material.colorNode
+    expect(prepared_node).not.toBe(original_world_node)
+    expect(fight.material.blending).toBe(1) // NormalBlending: overlapping particles cannot add back to white
+    expect(fight.material.depthWrite).toBe(false)
+    expect(fight.material.opacity).toBe(FIGHT_VFX_OUTPUT_GAIN)
+    expect(world.material.colorNode).toBe(original_world_node) // layer-0 world material stays untouched
+
+    expect(prepare_fight_vfx_fallback(root)).toBe(0) // idempotent pre-boot retry: no nested shoulder
+    expect(fight.material.colorNode).toBe(prepared_node)
   })
 })

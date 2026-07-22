@@ -59,6 +59,7 @@ import { configure_night_lighting } from './render/lighting/sky_light_coupling.j
 import { create_mood_driver } from './render/biome_mood.js'
 import { create_ambience } from './render/ambience.js'
 import { create_waterfall_system } from './render/waterfall_sheet.js'
+import { prepare_fight_vfx_fallback } from './render/vfx_preset_engine.js'
 import { set_far_textures } from './lod/colors.js'
 import { find_open_spawn } from './player/spawn.js'
 import { world_surface_y, world_biome_at, world_fall_spans, set_gen_config } from './gen/world_gen.js'
@@ -1413,13 +1414,20 @@ export function create_engine({
     },
     add_to_scene(object3d) {
       // [D196] pre-boot calls QUEUE (this method silently ate a consumer's mesh tonight)
+      const mount = () => {
+        if (!renderer_handle) return
+        // #226: LOW/mobile resilience can lose the post graph entirely. Grade only routed fight VFX at this
+        // instance-owned scene boundary; healthy post-overlay materials remain byte-identical.
+        if (!renderer_handle.post) prepare_fight_vfx_fallback(object3d)
+        renderer_handle.scene.add(object3d)
+      }
       if (
         defer_until_boot(() => {
-          renderer_handle?.scene.add(object3d)
+          mount()
         })
       )
         return
-      renderer_handle?.scene.add(object3d)
+      mount()
     },
     remove_from_scene(object3d) {
       if (defer_until_boot(() => renderer_handle?.scene.remove(object3d))) return
