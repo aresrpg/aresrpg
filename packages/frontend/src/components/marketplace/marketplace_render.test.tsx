@@ -301,6 +301,14 @@ describe('MarketplaceListingRow', () => {
     expect(html).toContain('BUY')
   })
 
+  // A purchase already in flight (the store's single busy flag — use_marketplace_chain) must disarm the
+  // BUY button so a second click can't fire a second buy while the first settles. Re-enables the moment
+  // the store's .finally(() => set({ busy: false })) fires, on either settle or refusal.
+  test('disarms the BUY button while a purchase is in flight', () => {
+    const html = render(row({ busy: true }))
+    expect(html).toMatch(/<button[^>]*data-marketplace-buy-button[^>]*disabled/)
+  })
+
   // Design ruling 2026-07-18: clicking BUY opens the shared confirm MODAL ("are you sure you want to buy X for X SUI"),
   // never the old inline pay strip. The modal portals to <body> (ConfirmDialog) so it is proven by the
   // source-contract test (marketplace_listing_row.test.ts) — the repo has no jsdom to mount a portal. Here we

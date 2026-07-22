@@ -15,6 +15,7 @@ export function MarketplaceListingRow({
   visual,
   own,
   armed,
+  busy = false,
   alternate = false,
   on_arm,
   on_confirm,
@@ -77,7 +78,7 @@ export function MarketplaceListingRow({
         <button
           data-marketplace-buy-button
           type="button"
-          disabled={own}
+          disabled={own || busy}
           aria-expanded={armed}
           title={own ? (t('marketplace_sui.purchase.own_listing') as string) : undefined}
           onClick={(event) => {
