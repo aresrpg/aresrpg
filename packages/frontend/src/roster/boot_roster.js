@@ -17,81 +17,14 @@
 // self-heal any indexer lag — it can no longer teleport (find_dungeon_characters is gone). The
 // <1s roster load is the RPC call alone.
 
-import { level_to_experience, experience_to_level } from '@aresrpg/sdk/experience'
-import { aresrpg_id } from '@aresrpg/sdk/deployment/aresrpg'
-
 import { context } from '../game/core/game.js'
 import { use_auth } from '../auth'
 import { get_characters } from '../rpc/client'
 import { game_log } from '../core/log.js'
-import { DEMO_NETWORK } from '../chain/deployment'
 
-/**
- * Map an indexer RpcCharacter → the flat roster-card shape the engine store + CharactersDrawer render.
- * `class`→`classe`; `experience` is the REAL on-chain field and `level` derives from it via the SDK curve
- * (one home, floors to 1) so the card's xp_progress bar + level read the same truth (a null experience falls
- * back to the level's min-XP + warns). `_type` is stamped from the SSOT type-origin id so the card's max-HP gate
- * treats it as a typed character (on-chain formula). The signed equipment aggregate is already fight-equivalent
- * on the `/v1` wire. Colors/sex ride the RPC row (S-15c), while the avatar hydrate fills appearance chain-direct.
- *
- * EXPORTED (roster /v1 cutover): load_roster.js reuses this SAME mapper as its base identity shape — one
- * home for the RpcCharacter → card mapping, never two drifting copies.
- * @param {import('../rpc/views').RpcCharacter} c
- */
-export function rpc_to_card(c) {
-  // RpcCharacter carries the REAL on-chain `experience` (S-57) — use it, and DERIVE level from it through the
-  // SDK curve (experience_to_level FLOORS to 1: a 0-XP character is level 1, never 0). One derivation home, so
-  // the roster card + every HUD level read can never drift. A null `experience` (indexer projection lag — the
-  // field is "pending object-snapshot indexing") falls back to the level's min-XP and warns ONCE, never a
-  // silent lvl-0. (Was: `experience: level_to_experience(level)` — synthesised from level, discarding the field.)
-  let experience = Number(c.experience ?? NaN)
-  if (!Number.isFinite(experience)) {
-    game_log('roster', 'RpcCharacter missing `experience` — deriving from level (indexer projection lag)', c.id)
-    experience = level_to_experience(Math.max(1, Number(c.level ?? 1) || 1))
-  }
-  const level = experience_to_level(experience)
-  const pet_equipped = c.pet_equipped === true
-  return {
-    id: c.id,
-    _type: `${aresrpg_id(DEMO_NETWORK, 'PACKAGE_ID')}::character::Character`,
-    name: String(c.name ?? ''),
-    classe: String(c.class ?? ''),
-    level,
-    experience,
-    vitality: Number(c.vitality ?? 0),
-    wisdom: Number(c.wisdom ?? 0),
-    strength: Number(c.strength ?? 0),
-    intelligence: Number(c.intelligence ?? 0),
-    agility: Number(c.agility ?? 0),
-    chance: Number(c.chance ?? 0),
-    available_points: Number(c.available_points ?? 0),
-    current_hp: c.current_hp == null ? null : Number(c.current_hp),
-    hp_updated_ms: c.hp_updated_ms == null ? null : Number(c.hp_updated_ms),
-    gear_vitality: c.gear_vitality == null ? null : Number(c.gear_vitality),
-    equipment_stats:
-      c.equipment_stats == null
-        ? null
-        : Object.fromEntries(Object.entries(c.equipment_stats).map(([key, value]) => [key, Number(value)])),
-    world_id: c.world ?? null,
-    jobs: c.jobs ?? {},
-    // Keep the read-model's equipped-item projection intact for the Equipment tab. These rows are NOT
-    // owner-items: equipped objects have left the loose kiosk-item bag, so dropping this field makes the
-    // paper doll look empty whenever the chain-direct enrichment cannot read the kiosk-wrapped character.
-    equipment: c.equipment ?? [],
-    worn: c.worn ?? {},
-    // Carry projection truth only. EquipmentMap owns the boolean and the sibling Item owns identity;
-    // the later world lane decides how that pet becomes a companion or mount prompt. False suppresses
-    // stale identity, while true + null preserves the honest sibling-snapshot gap.
-    pet: pet_equipped ? (c.pet ?? null) : null,
-    pet_equipped,
-    // WORN COSMETICS (hat/cloak) — the /v1 read-model resolves each equipped cosmetic's category and
-    // serves it under `worn` keyed by category; spread it here as the top-level slot fields
-    // (character.hat / character.cloak) the render path's resolve_worn_cosmetics reads. Absent → nothing
-    // spread (inert + back-compat). load_roster's `{...card, ...chain_read}` merge keeps these (the
-    // chain-direct read carries no cosmetic-slot keys, so they survive the enrichment spread).
-    ...(c.worn ?? {}),
-  }
-}
+import { rpc_to_card } from './roster_projection.js'
+
+export { rpc_to_card } from './roster_projection.js'
 
 // Single-flight guard (mirrors load_roster): a re-trigger while a fetch is in flight is dropped — the
 // in-flight fetch dispatches the up-to-date roster when it lands.

@@ -42,7 +42,7 @@ import { aresrpg_id } from '@aresrpg/sdk/deployment/aresrpg'
 
 import { context } from '../game/core/game.js'
 import { use_auth } from '../auth'
-import { use_dungeon } from '../world-shell/dungeon_store.js' // D245 — lazy getState() only (cycle-safe: dungeon_store imports this back)
+import { read_dungeon_session } from '../world-shell/dungeon_session.js'
 import { get_characters } from '../rpc/client'
 import { with_timeout } from '../utils/with_timeout'
 import { game_log } from '../core/log.js'
@@ -51,13 +51,13 @@ import { get_sdk } from '../chain/sdk'
 import { DEMO_NETWORK } from '../chain/deployment'
 import { read_character } from '../chain/read_character.js'
 import { get_owned_items } from '../chain/read_staking.js'
-import { merge_character_enrichment, reconcile_character_projection } from '../chain/fight_character_reconcile.js'
+import { merge_character_enrichment } from '../chain/fight_character_reconcile.js'
 // Loot-box open-latch self-clear (D1): this loader's kiosk-union item read IS the "fresh read" data input —
 // a box still present in a read that STARTED after its open promise settled is proven unconsumed, so the
 // session latch releases (pure predicate in the guard; no timer, no poll). One-way import (guard is a leaf).
 import { release_settled_box_latches } from '../game/screens/hud/lootbox-retry-guard.js'
 
-import { rpc_to_card } from './boot_roster.js'
+import { rpc_to_card } from './roster_projection.js'
 
 // The items package scope for the loose-bag read. get_owned_items unions the Items locked across the wallet's
 // personal kiosks (every item is kiosk-locked — see read_staking.js); this is a DIFFERENT walk from the
@@ -81,25 +81,6 @@ const bounded = (promise, label, fallback, ms = 10000) =>
 // Concurrency guard: a re-trigger (navigation re-fires the GameWorldHost effect, or a rapid tx sequence)
 // while a load is in flight is dropped — the in-flight load dispatches the up-to-date roster when it lands.
 let loading = false
-
-/**
- * Post-settle targeted reconcile, driven by the existing `action/fight_result/resolve` engine event. Unlike the
- * full loader below, this is not dropped behind `loading`: it cache-bypasses one Character `/v1` read at a time
- * until the indexer carries the receipt's XP floor, then replaces only that shared-store row.
- * @param {{ character_id:string, expected_experience:number }} target
- * @returns {Promise<boolean>}
- */
-export async function reconcile_fight_character(target) {
-  const reconciled = await reconcile_character_projection(target, {
-    read_projection: async (character_id) => (await get_characters({ id: character_id }, undefined, true))[0] ?? null,
-    read_roster: () => context.get_state().sui?.characters ?? [],
-    write_roster: (characters) => context.dispatch('action/sui_data', { characters }),
-    map_projection: rpc_to_card,
-  })
-  if (!reconciled)
-    game_log('load_roster', 'post-fight Character projection did not reconcile within the bounded window', target)
-  return reconciled
-}
 
 /**
  * Fetch the roster's IDENTITY from `/v1/characters?owner=` (never a chain walk), then enrich it (full
@@ -181,7 +162,7 @@ export async function load_roster() {
     // no longer applies (identity can't go missing the way a kiosk-scan miss could), but is kept as a
     // defensive fallback for the one remaining edge (indexer lag before the create event is processed).
     try {
-      const { in_session, character_id, session_address } = use_dungeon.getState()
+      const { in_session, character_id, session_address } = read_dungeon_session()
       if (in_session && character_id && session_address === address) {
         const idx = characters.findIndex((/** @type {any} */ c) => c.id === character_id)
         if (idx !== -1) characters[idx] = { ...characters[idx], in_dungeon: true }

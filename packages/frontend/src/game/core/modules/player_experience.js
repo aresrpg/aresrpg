@@ -20,12 +20,8 @@
 import { experience_to_level } from '@aresrpg/sdk/experience'
 
 import { game_log } from '../../../core/log.js'
+import { reconcile_fight_character } from '../../../roster/fight_character_refresh.js'
 import { push_event_toast } from '../toast.js'
-
-const refresh_fight_character = (target) =>
-  import('../../../roster/load_roster.js').then(({ reconcile_fight_character }) =>
-    reconcile_fight_character(target)
-  )
 
 /**
  * One looted item line surfaced in the result modal — mapped from the minted FightResult's own `rolled`
@@ -169,7 +165,7 @@ const fold = (result, type, payload) => {
 }
 
 /** @type {import('../game.js').Module} */
-export default function player_experience({ refresh_character = refresh_fight_character } = {}) {
+export default function player_experience({ refresh_character = reconcile_fight_character } = {}) {
   return {
     /** @param {import('../game.js').State} state @param {import('../game.js').Action} action */
     reduce(state, { type, payload }) {
@@ -222,10 +218,13 @@ export default function player_experience({ refresh_character = refresh_fight_ch
       events.on('action/fight_result/resolve', (payload) => {
         const expected_experience = Number(payload?.expected_experience ?? NaN)
         if (!payload?.character_id || !Number.isFinite(expected_experience)) return
-        void refresh_character({
-          character_id: payload.character_id,
-          expected_experience,
-        }).catch((error) => game_log('load_roster', 'post-fight Character reconcile failed', error))
+        void refresh_character(
+          {
+            character_id: payload.character_id,
+            expected_experience,
+          },
+          { get_state, dispatch }
+        ).catch((error) => game_log('load_roster', 'post-fight Character reconcile failed', error))
       })
 
       // Track every character's experience/available_points and surface deltas as PROJECTIONS ONLY —

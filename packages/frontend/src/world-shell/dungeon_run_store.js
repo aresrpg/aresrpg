@@ -86,6 +86,7 @@ import { maybe_liquidate, reset_liquidation } from './fight-liquidation.js'
 import { should_hold_receipt_fight } from './world_fight_receipt.js'
 import { error_executed_digest } from './tx_digest_error.js'
 import { fight_state_trace } from './fight_state_trace.js'
+import { publish_dungeon_session } from './dungeon_session.js'
 import {
   init_dungeon_fight,
   sync_dungeon_fight,
@@ -1564,6 +1565,11 @@ export const use_dungeon = create((set, get) => ({
     })
   },
 }))
+
+// Publish only the session identity fields cross-domain readers need. The run store stays authoritative;
+// dungeon_session is a derived leaf that cannot mutate this lifecycle state back.
+publish_dungeon_session(use_dungeon.getState())
+use_dungeon.subscribe(publish_dungeon_session)
 
 // ── THE ONE PROJECTION MIRROR: the core's board view → the legacy `dungeon` field every consumer reads. This is
 // the ONE sanctioned set() of fight-derived data — adopt-whole, zero logic. No dedupe/floor/turn decision lives

@@ -22,7 +22,7 @@ import { push_event_toast } from '../game/core/toast.js'
 import { humanize_abort } from '../game/core/abort_copy.js'
 import { game_log } from '../core/log.js'
 
-import { use_dungeon } from './dungeon_store.js'
+import { read_dungeon_session, subscribe_dungeon_session } from './dungeon_session.js'
 import {
   create_party as tx_create_party,
   join_owned_alts_to_party,
@@ -544,7 +544,7 @@ party_store.setState({
       color_2: character?.color_2 ?? 0,
       color_3: character?.color_3 ?? 0,
       party_id: published_party_id,
-      dungeon_id: use_dungeon.getState().dungeon_id ?? null,
+      dungeon_id: read_dungeon_session().dungeon_id,
       classe: character?.classe ?? null,
       male: character?.male ?? true,
       name: character?.name ?? null,
@@ -593,9 +593,9 @@ export function wire_party_p2p() {
   use_party.getState()._start_polling()
   void use_party.getState().refresh()
 
-  let last_scope = use_dungeon.getState().dungeon_id ?? null
-  use_dungeon.subscribe((state) => {
-    const scope = state.dungeon_id ?? null
+  let last_scope = read_dungeon_session().dungeon_id
+  subscribe_dungeon_session((state) => {
+    const scope = state.dungeon_id
     if (scope === last_scope) return
     last_scope = scope
     use_party.getState()._publish_state()
