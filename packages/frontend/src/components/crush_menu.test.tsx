@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { readFileSync } from 'node:fs'
+
 import { describe, expect, mock, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider } from 'react-i18next'
@@ -8,6 +10,8 @@ import { ITEM_CATEGORY } from '@aresrpg/sdk/items'
 import i18n from '../i18n'
 
 import { explorer_object_url } from './explorer_link'
+
+const crush_menu_source = readFileSync(new URL('./crush_menu.tsx', import.meta.url), 'utf8')
 
 const crush_calls: any[] = []
 
@@ -18,6 +22,9 @@ mock.module('../world-shell/crush_actions.js', () => ({
     return { result: {} }
   },
 }))
+// #491: crush_menu.tsx now resolves icons via inventory_item_icon(item, slugs) — bun test has no Vite, so
+// the virtual module needs the same stub InventoryBag.test.jsx already established for this import.
+mock.module('virtual:item_catalog', () => ({ slugs: {} }))
 
 const crush_menu = await import('./crush_menu')
 
@@ -135,5 +142,16 @@ describe('crush confirm-copy reframe (crush_is_zero_yield / crush_line_key / cru
     expect(crush_menu.crush_line_key?.(null)).toBe('crush.line') // still loading
     expect(crush_menu.crush_line_key?.({ removed: false, rows: [], estimated: true, failed: true })).toBe('crush.line')
     expect(crush_menu.crush_line_key?.({ removed: true, rows: [], estimated: false })).toBe('crush.line')
+  })
+})
+
+// #491: the confirm dialog is a createPortal target (no jsdom in this repo to mount it — see
+// marketplace_render.test.tsx's own note on the same constraint), so the icon fix is pinned at the source
+// level: item.icon ?? item.item_type skipped cosmetic_icon_of() entirely, showing the generic slot-word icon
+// ("cloak") for a cosmetic instead of routing through the same resolver InventoryBag rows use.
+describe('CrushConfirmModal icon resolution', () => {
+  test('resolves the icon through inventory_item_icon, never the raw item.icon ?? item.item_type pair', () => {
+    expect(crush_menu_source).toContain('inventory_item_icon(item, slugs)')
+    expect(crush_menu_source).not.toContain('icon: item.icon ?? item.item_type')
   })
 })

@@ -64,3 +64,22 @@ describe('item SEND source planning', () => {
     expect(() => build_item_send_transfer_groups([item], 6n)).toThrow('AMOUNT_EXCEEDS_AVAILABLE')
   })
 })
+
+describe('item SEND icon slug (#491 — the gift strip missed the same template-icon leg the other marketplace surfaces did)', () => {
+  test('a cosmetic resolves through the name map, never the generic slot-word item_type', () => {
+    const item = project_inventory_send_item({
+      id: '0xcloak',
+      kiosk_id: '0xkiosk',
+      item_type: 'cloak', // the generic slot word shared by every cloak-slot cosmetic (never a map key)
+      item_category: 'cosmetic',
+      name: 'Lorito Cloak (Sapphire)',
+      amount: 1,
+    })
+    expect(item.slug).toBe('cape_lorito-chance')
+  })
+
+  test('an ordinary (non-cosmetic) item still falls back to its own item_type', () => {
+    const item = project_inventory_send_item(source('0xa', 1))
+    expect(item.slug).toBe('wood')
+  })
+})

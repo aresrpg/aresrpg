@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Hammer, Loader2 } from 'lucide-react'
+import { slugs } from 'virtual:item_catalog'
 
 import { use_game_state } from '../game/store.js'
 import { use_toast } from '../toast'
@@ -22,6 +23,7 @@ import i18n from '../i18n'
 import { crush_preview, crush_item } from '../world-shell/crush_actions.js'
 import { humanize_tx_error } from '../game/core/abort_copy.js'
 import { ItemIcon } from '../game/screens/hud/ItemIcon.jsx'
+import { inventory_item_icon } from '../game/screens/hud/inventory-equip.js'
 import { project_inventory_context_actions } from '../game/screens/hud/inventory_context_actions'
 
 import { is_crushable } from './forge_eligibility'
@@ -321,7 +323,10 @@ function CrushConfirmModal({ item, onClose }: { item: any; onClose: () => void }
             }}
           >
             <ItemIcon
-              item={{ icon: item.icon ?? item.item_type, id: item.id, category: item.item_category }}
+              // #491: route through the same slug-first resolver inventory rows use — item.icon ?? item.item_type
+              // alone dropped the template-icon leg for most non-cosmetic gear (cosmetics only "worked" via a
+              // pre-set item.icon).
+              item={{ icon: inventory_item_icon(item, slugs), id: item.id, category: item.item_category }}
               alt={item.name}
               hd
               className="item-card__icon"

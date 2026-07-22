@@ -23,4 +23,11 @@ describe('marketplace sell panel', () => {
       expect(sell_panel_source).not.toContain(forbidden)
     }
   })
+
+  // #491: asset_slug_of used to dead-end at '' whenever template_of()/slugs[name] missed (every non-cosmetic
+  // owned item, since templates_item rarely carries a matching row) — no icon rendered except cosmetics.
+  test('asset_slug_of falls back to the raw identity instead of dead-ending at an empty icon slug', () => {
+    expect(sell_panel_source).toContain('cosmetic_icon_of({ slug: template_slug, name }) ?? template_slug ?? identity')
+    expect(sell_panel_source).not.toContain("cosmetic_icon_of({ slug: template_slug, name }) ?? template_slug ?? ''")
+  })
 })
