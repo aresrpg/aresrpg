@@ -139,8 +139,29 @@ describe('cross-world sequencing', () => {
     expect(reduce_fast_travel(joining, { type: 'boot_ready' })).toBe(joining) // premature boot ignored
     const awaiting = reduce_fast_travel(joining, { type: 'world_joined' })
     expect(awaiting.phase).toBe('awaiting_boot')
-    const flying = reduce_fast_travel(awaiting, { type: 'boot_ready' })
+    const flying = reduce_fast_travel(awaiting, {
+      type: 'boot_ready',
+      world_id: 'W_FAR',
+    })
     expect(flying.phase).toBe('flying')
+  })
+
+  test('a stale physics-live frame from world A cannot ready world B', () => {
+    const joining = run(initial_ft_state(), begin, resolved({ world_id: 'W_FAR', my_level: 40, required_level: 20 }))
+    const awaiting = reduce_fast_travel(joining, { type: 'world_joined' })
+
+    expect(
+      reduce_fast_travel(awaiting, {
+        type: 'boot_ready',
+        world_id: 'W_MINE',
+      })
+    ).toBe(awaiting)
+    expect(
+      reduce_fast_travel(awaiting, {
+        type: 'boot_ready',
+        world_id: 'W_FAR',
+      }).phase
+    ).toBe('flying')
   })
 })
 

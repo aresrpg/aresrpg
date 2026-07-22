@@ -100,7 +100,9 @@ export function reduce_fast_travel(state, input) {
     case 'world_joined':
       return state.phase === 'joining' ? { ...state, phase: 'awaiting_boot' } : state
     case 'boot_ready':
-      return state.phase === 'awaiting_boot' ? { ...state, phase: 'flying' } : state
+      return state.phase === 'awaiting_boot' && input.world_id === state.target?.world_id
+        ? { ...state, phase: 'flying' }
+        : state
     case 'retarget': {
       if (state.phase !== 'flying' || !state.target) return state // no pre-flight p2p drive (routing law)
       return { ...state, target: { ...state.target, x: Number(input.x), z: Number(input.z), live: true } }

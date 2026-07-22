@@ -624,6 +624,7 @@ function create_session(
     character,
     ctl,
     env,
+    world_id: bound_world,
     initial_yaw: boot_yaw, // session-position restore (or 0 for the WORLD_SPAWN default) — the shoulder cam seeds the same look direction
     is_fight: () => fight_camera.is_active(),
     // Keys/sticks may arm while loading, but feed() stays inert until the exact same `physics_live` bit that

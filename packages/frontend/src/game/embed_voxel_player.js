@@ -69,6 +69,7 @@ const text_focused = () => {
  * @param {{
  *   engine: any, canvas: HTMLCanvasElement, character: any, ctl: any,
  *   env: { solid_at: (x:number,y:number,z:number)=>boolean, block_id_at: (x:number,y:number,z:number)=>number },
+ *   world_id: string|null,
  *   initial_yaw?: number, is_fight: () => boolean, is_ready: () => boolean, on_cinematic_change: (on: boolean) => void
  * }} deps
  */
@@ -78,6 +79,7 @@ export function create_player({
   character,
   ctl,
   env,
+  world_id,
   initial_yaw = 0, // session-position restore seeds the shoulder cam's look direction too (embed_voxel.js boot_yaw)
   is_fight,
   is_ready,
@@ -485,7 +487,7 @@ export function create_player({
     // cross-world session swap; the moment physics is live in the new world we release it into flight (leg F,
     // the a0070b64 receipt-seeded boot). Movement/jump cancels mid-flight (the player always wins, like auto-run).
     if (physics_live && fast_travel_store.getState().phase === 'awaiting_boot')
-      fast_travel_store.getState().input({ type: 'boot_ready' })
+      fast_travel_store.getState().input({ type: 'boot_ready', world_id })
     if (ft_is_flying() && !is_fight() && !inert && (keys.forward || keys.strafe || keys.jump))
       fast_travel_store.getState().input({ type: 'cancel' })
     ft_pilot.update(dt)
