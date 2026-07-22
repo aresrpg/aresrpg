@@ -83,6 +83,7 @@ import {
 } from '../game/core/modules/fight.js'
 import { game_log } from '../core/log.js'
 
+import { create_fight_audio_observer, fight_audio_sfx_key, fight_damage_audio_beat } from './fight_audio.js'
 import { fight_state_trace } from './fight_state_trace.js'
 import { use_dungeon } from './dungeon_store.js'
 import { damage_floater } from './damage-floater.js'
@@ -244,6 +245,7 @@ export function create_voxel_fight_adapter(
   // adapter is a LEAF the store cluster never imports back, so it is the cycle-safe hook fight-stream.js's own
   // docstring asks for ("the dungeon bridge on the first sync").
   init_fight_stream()
+  const observe_fight_audio = create_fight_audio_observer()
   /** The fight_id the board is currently built for (null = torn down). Guards same-state rebuilds. */
   let built_for = /** @type {string | null} */ (null)
   /** [p0-fight-init FIX] atomic build: true while a board.build is in flight — a build is uninterruptible
@@ -493,6 +495,9 @@ export function create_voxel_fight_adapter(
     const id = event.target_id
     if (!id || !entity_ids.has(id)) return false
     if (event.killed) dying.add(id)
+    const target = read_board_fight()?.fighters?.get(id)
+    const fight_audio_beat = fight_damage_audio_beat(event, target?.health_max)
+    if (fight_audio_beat) observe_fight_audio(fight_audio_beat)
     const source = event.source_id ? read_board_fight()?.fighters?.get(event.source_id) : null
     const floater = damage_floater(event)
     const { kind } = floater
@@ -621,11 +626,11 @@ export function create_voxel_fight_adapter(
     // (no row) still yields {id, element} ⇒ a fire/water/earth/air mob cast gets its element's variant orb too.
     const cast_row = fight_spell(packet.spell_id)
     const cast_spell = { id: packet.spell_id, classType: cast_row?.class, element, role: cast_row?.role }
-    // P0 item 8, MOB half: a mob's CASTER-layer SFX fires HERE — the whoosh lands WITH the attack anim
-    // (fight-sfx.js owns the raw/player caster layer and skips mobs; two paths, one voice each).
-    // [2026-07-11] a physical weapon swing has no magic windup — mirrors fight-sfx.js's player-side guard +
-    // sfx.js's 'weapon:impact'-only coverage comment (melee never voices a caster-layer sound, impact only).
-    if (is_mob(packet.entity_id) && element !== 'weapon') play_element_sfx(element, 'cast')
+    const charge_beat = { id: packet.fight_audio_id, kind: 'cast_charge', element }
+    const charge_sfx_key = fight_audio_sfx_key(charge_beat)
+    if (packet.fight_audio_id) observe_fight_audio(charge_beat)
+    if (is_mob(packet.entity_id) && element !== 'weapon' && (!packet.fight_audio_id || !charge_sfx_key))
+      play_element_sfx(element, 'cast')
 
     const render_delivery = !!(engine && board_frame && caster?.cell && packet.target)
     // beats_from_packet always leads with the caster's ATTACK swing; the rest are the struck targets' HIT beats.
@@ -753,6 +758,9 @@ export function create_voxel_fight_adapter(
       element,
       delivered: render_delivery,
     })
+    const observe_cast_resolve = () => {
+      if (packet.fight_audio_id) observe_fight_audio({ id: packet.fight_audio_id, kind: 'cast_resolve' })
+    }
     return new Promise((resolve) => {
       // SAFETY: the paced slot AWAITS this promise, and the SERIAL pace queue WEDGES on a task that never settles
       // (its tail never links the next slot). So a delivery VFX that never lands (an engine stall, a dispose
@@ -771,6 +779,7 @@ export function create_voxel_fight_adapter(
       if (!render_delivery) {
         delivery_started = true
         return void Promise.resolve().then(() => {
+          observe_cast_resolve()
           void play_delivery_reactions().then(finish)
         })
       }
@@ -788,6 +797,7 @@ export function create_voxel_fight_adapter(
       const mag = magnitude_scale(beat_amount, mag_ref)
       const to_world = cell_cast_world(board_frame.origin, packet.target)
       const impact_package = () => {
+        observe_cast_resolve()
         // Heal-beat fix: 'heal' has no row in sfx.js's ELEMENT_SFX_COVERAGE (it is not a damage
         // element), so a heal beat (element === 'heal') would silently fall back to the neutral IMPACT thwack —
         // the wrong voice for "someone got healed". Route heals to the dedicated synthesized sfx.js 'heal' cue instead.
@@ -896,7 +906,7 @@ export function create_voxel_fight_adapter(
 
   /** Bind renderer-neutral producer specs to this board NOW, before atomically enqueueing the whole source turn.
    * Every closure closes over an immutable payload; no render decision is rebuilt while playback is in flight. */
-  const bind_render_turn = (specs) => {
+  const bind_render_turn = (specs, fight_audio_scope) => {
     let active_cast = null
     const bindings = specs.map((spec, index) => {
       if (spec.kind === 'cast') active_cast = spec.payload
@@ -905,6 +915,7 @@ export function create_voxel_fight_adapter(
     return bindings.map(({ spec, index, cast }) => {
       const payload = {
         ...spec.payload,
+        fight_audio_id: `${fight_audio_scope}:${index}`,
         source_id: spec.payload?.source_id ?? cast?.entity_id ?? null,
         spell_id: spec.payload?.spell_id ?? cast?.spell_id,
       }
@@ -1030,12 +1041,12 @@ export function create_voxel_fight_adapter(
     return { beats: turn.beats, claimed }
   }
   const drain_wave = () => {
-    const { wave } = fight_store.getState()
+    const { wave, fight_id, session_generation } = fight_store.getState()
     for (const turn of wave) {
       if (turn.seq <= last_enqueued_seq) continue
       last_enqueued_seq = turn.seq
       const { beats, claimed } = prepare_wave_beats(turn)
-      const events = bind_render_turn(beats)
+      const events = bind_render_turn(beats, `${session_generation}:${fight_id}:${turn.seq}`)
       const played = render_queue
         ?.enqueue_turn({ source_turn: `wave:${turn.seq}`, events })
         .catch((error) => game_log('fight-render', 'render turn failed', { seq: turn.seq, error }))

@@ -51,7 +51,7 @@ export function set_sfx_enabled(enabled) {
   write_sfx_pref(!enabled)
 }
 
-/** @type {Record<'button' | 'carousel' | 'sword_plant' | 'turn_start' | 'crit' | 'death' | 'knockback' | 'player_death', string>} */
+/** @type {Record<'button' | 'carousel' | 'sword_plant' | 'turn_start' | 'crit' | 'death' | 'knockback' | 'player_death' | 'fight_hit_medium' | 'fight_hit_heavy' | 'fight_cast_charge_air' | 'fight_cast_charge_earth' | 'fight_cast_charge_fire' | 'fight_cast_charge_water' | 'fight_cast_resolve' | 'fight_absorb_1' | 'fight_absorb_2' | 'fight_absorb_3', string>} */
 const SOURCES = {
   button: '/sfx/menu_button.aac',
   carousel: '/sfx/menu_carousel.aac',
@@ -79,6 +79,17 @@ const SOURCES = {
   // sting (the extraction corpus). Distinct from `death` (the generic kill sting the adapter fires for ANY victim
   // on the blow); this is the player's OWN death moment, voiced once per fight by fight-sfx on the death beat.
   player_death: '/sfx/player_death.ogg',
+  // temporary third-party corpus — replacement + centralization tracked on the board
+  fight_hit_medium: '/sfx/fight/being-hit-medium.ogg',
+  fight_hit_heavy: '/sfx/fight/being-hit-heavy.ogg',
+  fight_cast_charge_air: '/sfx/fight/cast-charge-air.ogg',
+  fight_cast_charge_earth: '/sfx/fight/cast-charge-earth.ogg',
+  fight_cast_charge_fire: '/sfx/fight/cast-charge-fire.ogg',
+  fight_cast_charge_water: '/sfx/fight/cast-charge-water.ogg',
+  fight_cast_resolve: '/sfx/fight/cast-resolve.ogg',
+  fight_absorb_1: '/sfx/fight/absorb-1.ogg',
+  fight_absorb_2: '/sfx/fight/absorb-2.ogg',
+  fight_absorb_3: '/sfx/fight/absorb-3.ogg',
 }
 
 /** Per-name volume override for `play_sfx` (falls back to 0.4 below). The three accents stay quieter than a
