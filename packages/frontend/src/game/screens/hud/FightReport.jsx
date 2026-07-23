@@ -43,6 +43,7 @@ import { resolve_rolled_stats } from '../../../chain/rolled_stats.js'
 import { resolve_character_docs } from '../../../world-shell/character_name_resolve.js'
 import { seed_manifest } from '../../../content/seed_manifest'
 import { export_fight_trace, has_dumpable_trace } from './fight_trace_export.js'
+import { get_shadow_status, shadow_is_armed } from '../../../world-shell/fight_trace_tee.js'
 import './result.css'
 
 // the single-realm MVP world label (mirrors Minimap.jsx / MapDrawer.jsx — one named realm for now).
@@ -263,6 +264,28 @@ function RowSpoils({ mine, spoils, items, template_map, tt, pending, loot_units,
  * }} props
  * @returns {import('react').JSX.Element}
  */
+
+/** Hook-free action seam: the real button used below and by the click fixture (mirrors FightControls.jsx's
+ *  FightEndTurnButton — same testability reason: call this directly and read .props.onClick/.props.disabled,
+ *  no DOM needed). ALWAYS rendered — has_dumpable_trace() gates its ENABLED state, never its existence (owner
+ *  ruling 2026-07-24: a hidden-until-available button read as "no visible change" when nothing had been
+ *  captured yet, the same beat the dead R keybind silently failed on).
+ * @param {{ trace_available: boolean, on_export: () => void, label: string, hint: string }} props
+ */
+export function FightExportReplayButton({ trace_available, on_export, label, hint }) {
+  return (
+    <button
+      type="button"
+      className="btn btn--secondary"
+      onClick={on_export}
+      disabled={!trace_available}
+      title={hint}
+    >
+      {label}
+    </button>
+  )
+}
+
 export function FightReport({
   verdict,
   party,
@@ -279,10 +302,16 @@ export function FightReport({
   on_close,
 }) {
   const won = verdict !== 'Defeat'
-  // EXPORT REPLAY (issue #209) — is the fight that just ended still in the in-memory trace ring buffer? Fixed
-  // at mount (this card mounts once per concluded fight; dumpability doesn't change while it's up). Hidden
-  // entirely rather than a disabled/dead button when nothing was captured.
+  // EXPORT REPLAY (issue #209; owner ruling 2026-07-24 retired the R-keybind alternate — a button that only
+  // ever appeared once a trace existed read as "no visible change" the rest of the time). ALWAYS rendered now
+  // (FightExportReplayButton above) — has_dumpable_trace() gates its ENABLED state, never its existence. Fixed
+  // at mount (this card mounts once per concluded fight; dumpability doesn't change while it's up).
   const trace_available = useMemo(() => has_dumpable_trace(), [])
+  // V2 SHADOW status chip (issue #522 follow-up, owner ruling 2026-07-24) — armed state + status are
+  // window-derived FACTS the tee owns (fight_trace_tee.js); this card never reads `window` itself, only the
+  // tee's own getters (architecture law: one window owner). Fixed at mount, same rationale as trace_available.
+  const shadow_armed = useMemo(() => shadow_is_armed(), [])
+  const shadow_status = useMemo(() => (shadow_armed ? get_shadow_status() : null), [shadow_armed])
   // Loot tooltips reuse the inventory/findables map for legacy slug-only rows, then overlay exact receipt IDs
   // with the canonical chain ItemTemplate reader (including decoded stat DFs). A defeat has no tiles to read.
   const tt = use_template_t()
@@ -422,17 +451,22 @@ export function FightReport({
           </div>
         )}
 
+        {shadow_armed && (
+          <div className={`fe-shadow-chip${(shadow_status?.divergences ?? 0) > 0 ? ' fe-shadow-chip--warn' : ''}`}>
+            {t('fight_end.shadow_status', {
+              folded: shadow_status?.fights_shadowed ?? 0,
+              diverged: shadow_status?.divergences ?? 0,
+            })}
+          </div>
+        )}
+
         <div className="cta">
-          {trace_available && (
-            <button
-              type="button"
-              className="btn btn--secondary"
-              onClick={() => export_fight_trace()}
-              title={t('fight_end.export_replay_hint')}
-            >
-              {t('fight_end.export_replay')}
-            </button>
-          )}
+          <FightExportReplayButton
+            trace_available={trace_available}
+            on_export={() => export_fight_trace()}
+            label={t('fight_end.export_replay')}
+            hint={t('fight_end.export_replay_hint')}
+          />
           <button
             type="button"
             className={`btn ${won ? 'btn--primary' : 'btn--muted'}`}

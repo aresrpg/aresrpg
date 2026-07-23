@@ -119,8 +119,16 @@
   background: var(--surface-3);
   border: 1px solid var(--hair-strong);
 }
-.result .btn--secondary:hover {
+.result .btn--secondary:hover:not(:disabled) {
   background: var(--slate);
+}
+/* EXPORT REPLAY is now ALWAYS rendered (owner ruling 2026-07-24) — has_dumpable_trace() gates this state
+   instead of the button's existence, so a fight with nothing captured still shows a real (dimmed, inert)
+   button rather than no affordance at all. House disabled recipe (hud-panels.css .hud-btn:disabled /
+   characters-drawer.css .chrx-btn:disabled): reduced opacity + not-allowed, never a fake-live control. */
+.result .btn--secondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* ── LEVEL-UP card atoms (T-U9) ── */
@@ -769,6 +777,25 @@
   color: #34d399;
 }
 
+/* V2 SHADOW status chip (issue #522 follow-up, owner ruling 2026-07-24) — dev/QA-only readout, shown only
+   while ?v2shadow=1/localStorage armed the shadow fan-out (fight_v2_shadow.js): same muted-footnote treatment
+   as .fe-cost above. --good/--warn carry a literal fallback (same defensive convention already used by
+   characters-drawer.css's var(--danger, #ff6b6b) in this same directory) since this card's actual token
+   cascade root is unverified — never a silently-blank chip if the custom property doesn't resolve. */
+.fe-shadow-chip {
+  margin-top: 10px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--good, #4ade80);
+}
+.fe-shadow-chip--warn {
+  color: var(--warn, #fbbf24);
+}
+
 /* DEFEAT: a dashed "no spoils" plate (no receipt). */
 .fe-nospoils {
   margin-top: 16px;
@@ -886,10 +913,10 @@
     background var(--dur-2) var(--ease),
     border-color var(--dur-2) var(--ease);
 }
-.result--fe .cta .btn:hover {
+.result--fe .cta .btn:hover:not(:disabled) {
   transform: translateY(-2px);
 }
-.result--fe .cta .btn:active {
+.result--fe .cta .btn:active:not(:disabled) {
   transform: translateY(0);
 }
 .result--fe .cta .btn--primary:hover {

@@ -3,7 +3,7 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test'
 import { create_fight_store } from '@aresrpg/fight/store'
 
-import { install_fight_trace_tee } from './fight_trace_tee.js'
+import { get_shadow_capsule, get_shadow_status, install_fight_trace_tee, shadow_is_armed } from './fight_trace_tee.js'
 
 // A fresh window per test: enablement rides ONLY the global flag (search is '' so the memoized url parse
 // is a stable false), and a fresh window resets the one-time install latch.
@@ -257,5 +257,53 @@ describe('v2 shadow fan-out — the second consumer riding the one tap', () => {
     expect(shadow_status()).toBeUndefined() // the faulted envelope never reached a status publish
     store.getState().input({ type: 'arm', spell_id: 'x' })
     expect(store.getState().armed_spell_id).toBe('x') // the store still works after
+  })
+
+  // ── React-facing getters (owner ruling 2026-07-24, FightReport.jsx's shadow-status chip + the ② export
+  // button's capsule bundling) — "the tee's own test seams": these read the EXACT same window keys the tests
+  // above already prove the tee writes, never a separate/parallel contract. ──
+  describe('shadow_is_armed / get_shadow_status / get_shadow_capsule', () => {
+    test('shadow_is_armed reflects the same switch the tee itself checks — disarmed by default', () => {
+      expect(shadow_is_armed()).toBe(false)
+    })
+
+    test('shadow_is_armed — the debug override arms it, with no store/install involved at all', () => {
+      arm_shadow()
+      expect(shadow_is_armed()).toBe(true)
+    })
+
+    test('shadow_is_armed — the query-param switch arms it too (fight_v2_shadow.js SHADOW_QUERY_PARAM)', () => {
+      fresh_window('?v2shadow=1')
+      expect(shadow_is_armed()).toBe(true)
+    })
+
+    test('get_shadow_status mirrors window.__ARES_FIGHT_SHADOW after a real converging fight flow', () => {
+      const store = create_fight_store()
+      arm_shadow()
+      install_fight_trace_tee(store)
+      store.getState().input(
+        {
+          type: 'init',
+          fight_id: FIGHT,
+          ctx: { my_entity_id: ME, address: '0xa11ce', beat_ctx: { grid_width: 20 } },
+        },
+        1000
+      )
+      store.getState().input({ type: 'snapshot', fight: fight_object(), version: 1 }, 1010)
+
+      expect(get_shadow_status()).toEqual(shadow_status())
+      expect(get_shadow_status()).toMatchObject({ fights_shadowed: 1, divergences: 0 })
+    })
+
+    test('get_shadow_status is null when the shadow has never fed anything this page load', () => {
+      expect(get_shadow_status()).toBeNull()
+    })
+
+    test('get_shadow_capsule reads back exactly what the tee wrote to __ARES_FIGHT_SHADOW_CAPSULE', () => {
+      expect(get_shadow_capsule()).toBeNull() // nothing captured yet — never a fabricated value
+      const capsule = { trace_format: 2, session_id: FIGHT, capsules: [] }
+      globalThis.window.__ARES_FIGHT_SHADOW_CAPSULE = capsule
+      expect(get_shadow_capsule()).toBe(capsule)
+    })
   })
 })

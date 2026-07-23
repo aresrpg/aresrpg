@@ -37,12 +37,33 @@ import { create_shadow_driver, shadow_enabled_from } from './fight_v2_shadow.js'
 
 const CAPSULE_RING = '__ARES_FIGHT_CAPSULE' // window home of the bounded envelope ring
 const CAPSULE_DUMP = '__ARES_FIGHT_CAPSULE_DUMP' // the copy-trace affordance, upgraded to format-2
-const SHADOW_STATUS = '__ARES_FIGHT_SHADOW' // { fights_shadowed, divergences, last } — debug-read, no UI
-const SHADOW_CAPSULE = '__ARES_FIGHT_SHADOW_CAPSULE' // the last divergence's downloadable capsule, if any
+// { fights_shadowed, divergences, last } — read by the FightReport end-card chip via get_shadow_status below
+// (owner ruling 2026-07-24), never by a component reaching into `window` directly.
+const SHADOW_STATUS = '__ARES_FIGHT_SHADOW'
+// the last divergence's downloadable capsule, if any — bundled into the export button's download
+// (fight_trace_export.js's get_shadow_capsule import) when present.
+const SHADOW_CAPSULE = '__ARES_FIGHT_SHADOW_CAPSULE'
 const TEE_WRAPPED = Symbol('ares-fight-trace-tee') // per-store idempotency latch (#568) — see install below
 
 // Vite injects __APP_VERSION__ at build; the typeof guard keeps this module import-safe under node/tests.
 const app_version = () => (typeof __APP_VERSION__ === 'undefined' ? null : __APP_VERSION__)
+
+/** The shadow arm check itself — a pure read of `target`'s debug override / query / storage switch. Module
+ *  level so BOTH the per-installation closure below and the standalone `shadow_is_armed` getter (React-facing
+ *  section, bottom of file) share ONE definition — never two copies of the same arm logic (one home per fact). */
+const shadow_armed_on = (target) => {
+  if (target.__ARES_FIGHT_SHADOW_ENABLED === true) return true
+  return shadow_enabled_from({
+    search: target.location?.search ?? '',
+    storage_get: (key) => {
+      try {
+        return target.localStorage?.getItem(key) ?? null
+      } catch {
+        return null
+      }
+    },
+  })
+}
 
 /**
  * Install the transparent door tee once PER STORE (#568). Its enablement cache, sequence, and shadow driver
@@ -93,19 +114,7 @@ export const install_fight_trace_tee = (store = fight_store) => {
   // ~1s tick, occasional receipts), never a per-frame loop, so re-parsing a short query string plus one
   // localStorage read costs nothing worth a cache — and staying unmemoized keeps this trivially testable
   // per-case (a fresh `window` per test, no reset hook to remember).
-  const shadow_armed = () => {
-    if (target.__ARES_FIGHT_SHADOW_ENABLED === true) return true
-    return shadow_enabled_from({
-      search: target.location?.search ?? '',
-      storage_get: (key) => {
-        try {
-          return target.localStorage?.getItem(key) ?? null
-        } catch {
-          return null
-        }
-      },
-    })
-  }
+  const shadow_armed = () => shadow_armed_on(target)
 
   // MODULE-INSTANCE scope (never a module global — the order-independence gate bites those, and #568 is
   // exactly this bug for the ring): a fresh `shadow` + `shadow_seq` per install call, lazily created on the
@@ -150,4 +159,32 @@ export const install_fight_trace_tee = (store = fight_store) => {
   Object.defineProperty(teed, TEE_WRAPPED, { value: true })
   store.setState({ input: teed })
   target[CAPSULE_DUMP] = dump_capsules
+}
+
+// ── React-facing getters (ARCHITECTURE LAW: this file is the ONE window owner for fight-trace/shadow state —
+// no component/hook reads `window` directly; FightReport.jsx and fight_trace_export.js ask these instead).
+// Each is a plain read at render/effect time — never polled, SSR/node-safe (a no-op `window` reads null/false). ──
+
+/** Is the V2 shadow armed on this page load? Same switch install_fight_trace_tee's own per-installation
+ *  closure checks (the debug override or the query/storage flag) — exposed standalone so a caller can ask
+ *  without installing a store. Gates whether the end-card shadow-status chip renders at all. */
+export const shadow_is_armed = () => {
+  if (typeof window === 'undefined') return false
+  return shadow_armed_on(/** @type {any} */ (window))
+}
+
+/** The shadow driver's own status snapshot ({ fights_shadowed, divergences, last }), or null when the shadow
+ *  has never fed an envelope this page load (disarmed, or armed but no fight has opened yet). */
+export const get_shadow_status = () => {
+  if (typeof window === 'undefined') return null
+  const target = /** @type {any} */ (window)
+  return target[SHADOW_STATUS] ?? null
+}
+
+/** The last divergence's downloadable trace_format-2 capsule, or null when no divergence has been captured
+ *  this page load. fight_trace_export.js bundles this into the ② button's download when present. */
+export const get_shadow_capsule = () => {
+  if (typeof window === 'undefined') return null
+  const target = /** @type {any} */ (window)
+  return target[SHADOW_CAPSULE] ?? null
 }

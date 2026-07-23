@@ -1841,6 +1841,7 @@
     "slain_by": "Asesinado por {{killer}} con {{damage}} de daño",
     "export_replay": "Exportar repetición",
     "export_replay_hint": "Descarga el registro de este combate para adjuntarlo a un informe de error",
+    "shadow_status": "SOMBRA V2 · {{folded}} plegados · {{diverged}} divergencias",
     "continue": "Continuar",
     "you": "Tú"
   },

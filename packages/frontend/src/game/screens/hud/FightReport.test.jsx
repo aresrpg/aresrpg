@@ -3,7 +3,7 @@
 // FIGHT COST card-render proof: FightReport is a pure-props shell (no stores, no
 // react-i18next context — `t` rides in as a prop), so renderToStaticMarkup (react-dom/server, already a
 // dependency — no new dep) is enough to assert the formatted cost line actually reaches the DOM markup.
-import { beforeEach, describe, expect, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { reset_walrus_assets_for_test } from '@aresrpg/sdk/jobs'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { fight_store } from '@aresrpg/fight/store'
@@ -408,19 +408,23 @@ describe('FightReport — RED-FIRST fixture: a 2-player settle result (victory-c
   })
 })
 
-// EXPORT REPLAY row (issue #209) — the row reads the REAL app fight_store's trace instance (the exact door
-// FightReport itself reads at mount via has_dumpable_trace), so this exercises the actual wiring, not a stub.
-// Never a dead button: present exactly when the tap has something captured, hidden otherwise.
-describe('FightReport — the EXPORT REPLAY row (never a dead button)', () => {
+// EXPORT REPLAY row (issue #209; owner ruling 2026-07-24) — the row reads the REAL app fight_store's trace
+// instance (the exact door FightReport itself reads at mount via has_dumpable_trace), so this exercises the
+// actual wiring, not a stub. ALWAYS rendered now — never a SURPRISE affordance: has_dumpable_trace() gates the
+// button's disabled state, never its existence (the R-keybind alternate died precisely because a hidden button
+// read as "no visible change" whenever nothing had been captured yet).
+describe('FightReport — the EXPORT REPLAY button (always visible; never a surprise, never a dead click)', () => {
   const anchors = { applied_version: -1, view_version: -1, receipt_seq: 0 }
 
-  test('nothing captured (tap empty) — the row does not render at all', () => {
+  test('nothing captured (tap empty) — the button still renders, disabled', () => {
     fight_store.trace_tap._reset_for_test()
     const html = renderToStaticMarkup(<FightReport {...base} cost={null} />)
-    expect(html).not.toContain('fight_end.export_replay')
+    expect(html).toContain('fight_end.export_replay')
+    expect(html).toContain('btn--secondary')
+    expect(html).toContain('disabled=""')
   })
 
-  test('a captured fight (the tap holds an init for it) — the row renders as a secondary button', () => {
+  test('a captured fight (the tap holds an init for it) — the row renders as an ENABLED secondary button', () => {
     fight_store.trace_tap._reset_for_test()
     fight_store.trace_tap.tap_trace_input(
       { fight_id: null, ...anchors },
@@ -430,6 +434,7 @@ describe('FightReport — the EXPORT REPLAY row (never a dead button)', () => {
     const html = renderToStaticMarkup(<FightReport {...base} cost={null} />)
     expect(html).toContain('fight_end.export_replay')
     expect(html).toContain('btn--secondary')
+    expect(html).not.toContain('disabled=""')
   })
 
   test('a defeat card behaves identically (the row is shared shell chrome, not a victory-only affordance)', () => {
@@ -441,6 +446,7 @@ describe('FightReport — the EXPORT REPLAY row (never a dead button)', () => {
     )
     const html = renderToStaticMarkup(<FightReport {...base} verdict="Defeat" spoils={null} cost={null} />)
     expect(html).toContain('fight_end.export_replay')
+    expect(html).not.toContain('disabled=""')
   })
 })
 
@@ -528,5 +534,66 @@ describe('FightReport — participant-row model (#342: compact single-line rows)
       expect(html).toContain(`Ally${i}`)
       expect(html).toContain(`Foe${i}`)
     }
+  })
+})
+
+// V2 SHADOW status chip (issue #522 follow-up, owner ruling 2026-07-24) — a small dev/QA readout on the
+// end-card, present only while the shadow fan-out is armed (fight_trace_tee.js's shadow_is_armed/
+// get_shadow_status — this card never reads `window` itself, it asks the tee's own getters). Poking
+// `globalThis.window` mirrors fight_trace_tee.test.js's own convention for these exact two keys; only those
+// two keys are ever touched/cleaned up here, never `window` wholesale (other test files share this worker).
+describe('FightReport — the V2 SHADOW status chip (owner ruling 2026-07-24)', () => {
+  // the shared top-level `t` stub only interpolates {{sui}} — this block needs folded/diverged, so it rides
+  // its own local stub via the `t` PROP override (FightReport is a pure-props shell; no shared state to touch).
+  // No quotes/JSON here on purpose: renderToStaticMarkup HTML-escapes `"` to `&quot;` in text content, so a
+  // JSON.stringify stub would need escaped assertions — a plain `k=v` join sidesteps that entirely.
+  const chip_t = (key, opts) =>
+    opts ? `${key}:${Object.entries(opts).map(([k, v]) => `${k}=${v}`).join(',')}` : key
+
+  afterEach(() => {
+    if (globalThis.window) {
+      delete globalThis.window.__ARES_FIGHT_SHADOW_ENABLED
+      delete globalThis.window.__ARES_FIGHT_SHADOW
+    }
+  })
+
+  test('shadow unarmed — no chip at all', () => {
+    globalThis.window ??= /** @type {any} */ ({})
+    const html = renderToStaticMarkup(<FightReport {...base} cost={null} t={chip_t} />)
+    expect(html).not.toContain('fe-shadow-chip')
+  })
+
+  test('armed, zero divergences — the chip renders the fold/diverge counts, no warning modifier', () => {
+    globalThis.window ??= /** @type {any} */ ({})
+    globalThis.window.__ARES_FIGHT_SHADOW_ENABLED = true
+    globalThis.window.__ARES_FIGHT_SHADOW = { fights_shadowed: 3, divergences: 0, last: null }
+    const html = renderToStaticMarkup(<FightReport {...base} cost={null} t={chip_t} />)
+    expect(html).toContain('fe-shadow-chip')
+    expect(html).not.toContain('fe-shadow-chip--warn')
+    expect(html).toContain('folded=3')
+    expect(html).toContain('diverged=0')
+  })
+
+  test('armed with a divergence — the warning modifier lights up', () => {
+    globalThis.window ??= /** @type {any} */ ({})
+    globalThis.window.__ARES_FIGHT_SHADOW_ENABLED = true
+    globalThis.window.__ARES_FIGHT_SHADOW = {
+      fights_shadowed: 5,
+      divergences: 1,
+      last: { fight_id: '0xf1', fields: ['active'] },
+    }
+    const html = renderToStaticMarkup(<FightReport {...base} cost={null} t={chip_t} />)
+    expect(html).toContain('fe-shadow-chip--warn')
+    expect(html).toContain('diverged=1')
+  })
+
+  test('armed but the shadow has never fed an envelope yet (status null) — a sane 0/0 chip, never a crash', () => {
+    globalThis.window ??= /** @type {any} */ ({})
+    globalThis.window.__ARES_FIGHT_SHADOW_ENABLED = true
+    const html = renderToStaticMarkup(<FightReport {...base} cost={null} t={chip_t} />)
+    expect(html).toContain('fe-shadow-chip')
+    expect(html).not.toContain('fe-shadow-chip--warn')
+    expect(html).toContain('folded=0')
+    expect(html).toContain('diverged=0')
   })
 })

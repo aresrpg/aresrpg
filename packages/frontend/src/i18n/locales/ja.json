@@ -1841,6 +1841,7 @@
     "slain_by": "{{killer}}に{{damage}}ダメージで倒された",
     "export_replay": "リプレイを書き出す",
     "export_replay_hint": "この戦闘の記録をダウンロードしてバグ報告に添付できます",
+    "shadow_status": "V2シャドウ · {{folded}} 件処理 · {{diverged}} 件乖離",
     "continue": "続ける",
     "you": "あなた"
   },
