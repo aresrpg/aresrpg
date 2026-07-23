@@ -31,12 +31,12 @@ const damage_effect = input => ({
 
 const run_damage = input => {
   const effect = damage_effect(input)
+  // #577 — fixed effect (min==max): roll-independent, so any roll (0) yields the authored golden value.
   const result = calculate_final_damage(
-    rng_seed(input.seed ?? 1),
     /** @type {import('../src/spell_templates.js').DamageEffect} */ (effect),
     input.stats,
     input.target_stats ?? {},
-    input.level,
+    0,
     [],
   )
   return {
@@ -50,9 +50,9 @@ const run_damage = input => {
 
 const run_heal = input => ({
   heal: calculate_heal(
-    rng_seed(input.seed ?? 1),
     { type: 'HEAL', min: input.base, max: input.base },
     input.stats,
+    0,
   ).value,
 })
 

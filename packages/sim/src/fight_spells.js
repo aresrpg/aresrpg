@@ -31,6 +31,7 @@ import {
   effect_triggers,
   is_critical,
 } from './spell_calculator.js'
+import { slot_damage_roll, crank_damage_roll, turn_seed } from './turn_seed.js'
 import {
   apply_invisibility,
   invisible_enemy_at,
@@ -154,6 +155,7 @@ export const apply_spell_effect = (
   spell_target_cell,
   terrain_walkable,
   retro_context,
+  damage_roll = 0, // #577 — the per-cast turn-seed (player) / crank (mob) roll fraction; each damage/heal effect maps it onto its [min,max]
 ) => {
   const trigger = effect_triggers(state.rng, effect)
   state = { ...state, rng: trigger.rng }
@@ -186,19 +188,13 @@ export const apply_spell_effect = (
       : effect
     const shields = target.effects.filter(e => e.type === 'SHIELD')
     const dmg = calculate_final_damage(
-      state.rng,
       /** @type {any} */ (damage_effect),
       effective_stats(caster),
       effective_stats(target),
-      caster.level,
+      damage_roll,
       shields,
     )
-    const after = apply_incoming_damage(
-      { ...state, rng: dmg.rng },
-      target_id,
-      dmg.damage,
-      caster.id,
-    )
+    const after = apply_incoming_damage(state, target_id, dmg.damage, caster.id)
     const after_shields = consume_shields(
       after.state,
       target_id,
@@ -225,11 +221,11 @@ export const apply_spell_effect = (
   }
   if (effect.type === 'HEAL') {
     const h = calculate_heal(
-      state.rng,
       /** @type {any} */ (effect),
       effective_stats(caster),
+      damage_roll,
     )
-    const after = apply_heal({ ...state, rng: h.rng }, target_id, h.value)
+    const after = apply_heal(state, target_id, h.value)
     return {
       state: after,
       effects: [
@@ -248,7 +244,6 @@ export const apply_spell_effect = (
       retro_context.spell_id,
     )
     const dmg = calculate_final_damage(
-      state.rng,
       /** @type {any} */ ({
         ...effect,
         type: 'DAMAGE',
@@ -257,11 +252,11 @@ export const apply_spell_effect = (
       }),
       effective_stats(caster),
       effective_stats(target),
-      caster.level,
+      damage_roll,
       target.effects.filter(e => e.type === 'SHIELD'),
     )
     const after_dmg = apply_incoming_damage(
-      { ...state, rng: dmg.rng },
+      state,
       target_id,
       dmg.damage,
       caster.id,
@@ -538,6 +533,7 @@ export const process_spell_cast = (
   target,
   context,
   terrain_walkable = () => true,
+  turn_context = null, // #577 — {world_seed,spawn_id,turn_deadline_ms,seat,slot}: a PLAYER cast rolls damage off the turn seed (previewable). Absent / mob ⇒ crank roll.
 ) => {
   const validation = validate_cast(
     state,
@@ -562,6 +558,12 @@ export const process_spell_cast = (
   const stack_target_id = find_entity_at(state, target)?.id
   const crit_bonus = effective_stats(caster).critical_hit ?? 0
   const crit = is_critical(state.rng, spell_level.critical_chance, crit_bonus)
+  // #577 — ONE per-cast damage roll: a PLAYER cast derives it from the public turn seed (the client mirrors it to
+  // preview this turn's exact damage); a mob / turn-context-less cast derives a non-advancing roll off state.rng.
+  const damage_roll =
+    turn_context && caster.is_player && turn_context.slot != null
+      ? slot_damage_roll(turn_seed(turn_context), turn_context.slot)
+      : crank_damage_roll(state.rng)
   const effect_list =
     crit.value &&
     spell_level.crit_effects &&
@@ -695,6 +697,7 @@ export const process_spell_cast = (
             target,
             terrain_walkable,
             { spell_id: spell.id, stack_target_id },
+            damage_roll,
           )
           return {
             state: res.state,
