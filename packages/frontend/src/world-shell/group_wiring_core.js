@@ -112,7 +112,9 @@ export function create_group_wiring(deps) {
     for (const row of outputs.join_fight)
       track('fight_join', row.character_id, () => deps.join_fight(row.character_id, row.fight_id, { queued: true }))
     if (outputs.hud_focus) deps.focus_seat(outputs.hud_focus)
-    if (outputs.follow_render.length) deps.apply_follow(outputs.follow_render)
+    // follow_render is null on frames that didn't recompute it; an ARRAY (even empty) is a live render set —
+    // apply it so an all-out-of-range or last-follower-removed frame despawns the rigs it no longer names.
+    if (outputs.follow_render != null) deps.apply_follow(outputs.follow_render)
     return outputs
   }
 
@@ -135,13 +137,10 @@ export function create_group_wiring(deps) {
     enable_follow({ leader_character_id, follower_character_ids }, now = Date.now()) {
       return feed({ kind: 'follow_enable', leader_character_id, follower_character_ids, now })
     },
-    /** Per-character follow toggle (#496/#171). Disarm can empty the render set, and execute's length-guard
-     *  skips an empty follow_render — so force ONE reconcile on disable to despawn the follower's standalone
-     *  rig even when it was the last one following. */
+    /** Per-character follow toggle (#496/#171). Disable emits a live render set (array) which execute applies —
+     *  despawning the follower's rig even when it was the last one (an empty array is a real "render nobody"). */
     set_follow({ character_id, enabled, leader_character_id = null }, now = Date.now()) {
-      const outputs = feed({ kind: 'set_follow', character_id, enabled, leader_character_id, now })
-      if (!enabled) deps.apply_follow(outputs.follow_render)
-      return outputs
+      return feed({ kind: 'set_follow', character_id, enabled, leader_character_id, now })
     },
     /** One throttled avatar pose tick. A non-leader active avatar is ignored by the reducer. */
     pose_tick(pose, { character_id = null } = {}, now = Date.now()) {

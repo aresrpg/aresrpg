@@ -20,6 +20,9 @@
 
 export const MAX_OWNED_FOLLOWERS = 5
 export const FOLLOW_SNAP_DISTANCE = 30
+/** Blocks — beyond this from the leader a follower visually DESPAWNS (the proof-of-time timer keeps deriving);
+ *  it respawns and resumes its run-in the moment the projection re-enters range (#509 despawn-and-continue). */
+export const FOLLOW_VISIBLE_RANGE = 30
 export const FOLLOW_STUCK_MS = 3000
 /** A follower within this many blocks of its slot counts as arrived — never "stuck". */
 export const FOLLOW_ARRIVE_EPS = 2
@@ -43,11 +46,14 @@ const FORMATION_SLOTS = Object.freeze([
 ])
 
 const EMPTY_ROWS = Object.freeze([])
+// follow_render is `null` on frames that did NOT recompute the render set, and an array (possibly empty) on
+// the frames that did — so the edge tells an untouched frame apart from an all-despawn one (an all-out-of-range
+// render set is a meaningful []). Every other output stays a stable empty array.
 const no_outputs = () => ({
   join_world: EMPTY_ROWS,
   follow_move: EMPTY_ROWS,
   write_checkpoint: EMPTY_ROWS,
-  follow_render: EMPTY_ROWS,
+  follow_render: null,
   join_fight: EMPTY_ROWS,
   hud_focus: null,
   enter_dungeon: EMPTY_ROWS,
@@ -285,12 +291,41 @@ const begin_transit = (row, checkpoint, leader_pose, now) => {
   }
 }
 
+/**
+ * Deterministic projection of a follower's LIVE position from the proof-of-time timer — the pure function
+ * any client can run off the SAME RPC-visible facts (the join checkpoint + the timer's progress + the leader
+ * pose), never peer-channel presence (owner ruling 2026-07-23: public follower positions are RPC-derived
+ * truth; WebRTC is at most a cosmetic hint). While in transit the follower runs a straight line from its join
+ * checkpoint toward its formation slot at running speed (progress is time/eta, so it advances at ~run pace);
+ * once arrived it pins to the slot and trails. Returns null before a checkpoint exists (still joining).
+ * @param {any} row one follow.followers entry
+ * @param {{ x: number, z: number, yaw: number } | null} leader_pose
+ * @param {number} slot_index zero-based follower slot
+ * @returns {{ x: number, z: number, yaw: number } | null}
+ */
+export function project_follower_position(row, leader_pose, slot_index) {
+  if (!row || !leader_pose) return null
+  const slot = follow_formation_target(leader_pose, leader_pose.yaw, slot_index)
+  if (!slot) return null
+  if (row.status === 'arrived') return { x: slot.x, z: slot.z, yaw: leader_pose.yaw }
+  if (row.status !== 'in_transit' || ![row.checkpoint?.x, row.checkpoint?.z].every(Number.isFinite)) return null
+  const p = Math.max(0, Math.min(1, Number(row.progress ?? 0)))
+  const x = row.checkpoint.x + (slot.x - row.checkpoint.x) * p
+  const z = row.checkpoint.z + (slot.z - row.checkpoint.z) * p
+  // Face the direction of travel while running in (falls back to the leader's heading at the slot).
+  const yaw = p < 1 ? Math.atan2(slot.x - row.checkpoint.x, slot.z - row.checkpoint.z) : leader_pose.yaw
+  return { x, z, yaw }
+}
+
+// The render set: every follower's TIMER-DERIVED position, minus any whose projection sits beyond the visible
+// range (despawn-and-continue — the reducer's transit_tick keeps advancing progress while it's off-screen, so
+// it respawns and finishes its run once back in range). No arrival gate: the follower is visible running in.
 const rendered_followers = (state, pose) =>
   state.follow.follower_character_ids.flatMap((character_id, slot_index) => {
-    const row = state.follow.followers[character_id]
-    if (row?.status !== 'arrived' || !row.receipt_confirmed) return []
-    const target = follow_formation_target(pose, pose.yaw, slot_index)
-    return target ? [{ character_id, ...target, yaw: pose.yaw }] : []
+    const projected = project_follower_position(state.follow.followers[character_id], pose, slot_index)
+    if (!projected) return []
+    if (horizontal_distance_squared(projected, pose) > FOLLOW_VISIBLE_RANGE * FOLLOW_VISIBLE_RANGE) return []
+    return [{ character_id, x: projected.x, z: projected.z, yaw: projected.yaw }]
   })
 
 /**
@@ -430,9 +465,16 @@ function reduce_follow(state, input) {
         }
         write_checkpoint.push({ character_id, world_id: row.world_id, position })
       }
+      const next = { ...state, follow: { ...state.follow, followers } }
       return {
-        state: { ...state, follow: { ...state.follow, followers } },
-        outputs: { ...no_outputs(), write_checkpoint },
+        state: next,
+        outputs: {
+          ...no_outputs(),
+          write_checkpoint,
+          // Each tick advances progress → the projection moves → re-emit the render set so the run-in animates
+          // and a follower crossing the visible-range boundary despawns/respawns without waiting on a pose tick.
+          follow_render: state.leader_pose ? rendered_followers(next, state.leader_pose) : EMPTY_ROWS,
+        },
       }
     }
     case 'follow_checkpoint_written': {
@@ -467,7 +509,9 @@ function reduce_follow(state, input) {
         return still(state)
       return {
         state: { ...state, leader_pose: pose },
-        outputs: { ...no_outputs(), follow_render: rendered_followers(state, pose) },
+        // Only a render frame while follow is armed — an idle session never spends an apply on []. When armed,
+        // an empty projection is still emitted (all followers out of range → despawn-all is a real render).
+        outputs: { ...no_outputs(), follow_render: state.follow.enabled ? rendered_followers(state, pose) : null },
       }
     }
     default:

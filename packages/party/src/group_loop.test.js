@@ -9,10 +9,12 @@ import {
   reduce_group,
   empty_group_state,
   follow_formation_target,
+  project_follower_position,
   should_snap_to_leader,
   stuck_too_long,
   FOLLOW_SNAP_DISTANCE,
   FOLLOW_STUCK_MS,
+  FOLLOW_VISIBLE_RANGE,
   MAX_OWNED_FOLLOWERS,
 } from './group_loop.js'
 
@@ -212,6 +214,48 @@ test('set_follow is idempotent — re-arming a follower or disarming a non-follo
   expect(again.outputs.join_world).toEqual([])
   const inert = reduce_group(armed_one, { kind: 'set_follow', character_id: ALT_2, enabled: false })
   expect(inert.state).toBe(armed_one)
+})
+
+// ── timer-derived follower projection (#509 tranche 2) ────────────────────────────────────────────────────────────
+test('project_follower_position runs the alt from its checkpoint to the slot at the timer progress', () => {
+  const pose = { x: 0, z: 0, yaw: 0 }
+  const slot = follow_formation_target(pose, 0, 0)
+  const at = (progress) =>
+    project_follower_position({ status: 'in_transit', checkpoint: { x: 100, z: 0 }, progress }, pose, 0)
+  expect(at(0)).toMatchObject({ x: 100, z: 0 }) // progress 0 → still at the join checkpoint
+  expect(at(1)).toMatchObject({ x: slot.x, z: slot.z }) // progress 1 → arrived at the slot
+  const mid = at(0.5)
+  expect(mid.x).toBeCloseTo((100 + slot.x) / 2) // linear run-in
+  expect(mid.z).toBeCloseTo(slot.z / 2)
+  // arrived pins to the slot; joining (no checkpoint yet) projects nothing
+  expect(project_follower_position({ status: 'arrived' }, pose, 0)).toMatchObject({ x: slot.x, z: slot.z })
+  expect(project_follower_position({ status: 'joining' }, pose, 0)).toBe(null)
+})
+
+test('#509 — a following alt is INVISIBLE far out, then renders its run-in once inside the range (despawn-and-continue)', () => {
+  let state = reduce_group(positioned(), {
+    kind: 'set_follow',
+    character_id: ALT_1,
+    enabled: true,
+    leader_character_id: LEADER,
+    now: NOW,
+  }).state
+  // join from FAR out (50 blocks > FOLLOW_VISIBLE_RANGE=30) — the run-in begins at the checkpoint
+  expect(FOLLOW_VISIBLE_RANGE).toBe(30)
+  state = reduce_group(state, {
+    kind: 'follow_world_joined',
+    character_id: ALT_1,
+    world_id: WORLD,
+    checkpoint: { x: 50, z: 0 },
+    now: NOW,
+  }).state
+  // progress 0 → the projection sits at the far checkpoint → beyond the range → NOT rendered (visual despawn)
+  expect(reduce_group(state, { kind: 'leader_position', x: 0, z: 0, yaw: 0, now: NOW }).outputs.follow_render).toEqual(
+    []
+  )
+  // advance the proof-of-time timer to mid-run → the projection crosses into range → the alt renders its run-in
+  const ticked = reduce_group(state, { kind: 'transit_tick', now: NOW + 5000 })
+  expect(ticked.outputs.follow_render.map((row) => row.character_id)).toEqual([ALT_1])
 })
 
 // ── fight join + HUD focus ────────────────────────────────────────────────────────────────────────────────────────

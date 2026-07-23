@@ -133,7 +133,7 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
     expect(calls.join_fight).toHaveLength(0)
   })
 
-  test('transit stays invisible; expiry writes a checkpoint and its receipt renders beside the leader', async () => {
+  test('#509 — transit is a VISIBLE run-in; arrival writes the checkpoint; a dungeon hides the followers', async () => {
     const { wiring, calls } = make_harness()
     sync_full_group(wiring, [
       [LEADER, WORLD],
@@ -141,20 +141,23 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
       [ALT_2, WORLD],
     ])
     const now = Date.now()
-    wiring.pose_tick({ x: 100, z: 100, yaw: 0 }, { character_id: LEADER }, now)
+    wiring.pose_tick({ x: 100, z: 100, yaw: 0, facing_yaw: 0 }, { character_id: LEADER }, now)
     wiring.enable_follow({ leader_character_id: LEADER, follower_character_ids: [ALT_1] }, now)
     await wiring.settled()
-    expect(calls.follow).toEqual([])
-    wiring.transit_tick(now + 10_000)
+    // the run-in is VISIBLE: mid-transit the timer projects the follower into range and it renders (no
+    // arrival-spawn model). Position derives from the reducer's proof-of-time timer, never peer presence.
+    wiring.transit_tick(now + 5_000)
+    expect(wiring.store.getState().follow.followers[ALT_1].status).toBe('in_transit')
+    expect(calls.follow.at(-1).map((row) => row.character_id)).toEqual([ALT_1])
+    // arrival writes the checkpoint beside the leader's current cell
+    wiring.transit_tick(now + 30_000)
     await wiring.settled()
     expect(calls.write_checkpoint).toEqual([[ALT_1, WORLD, { x: 101.5, z: 100.5 }]])
-    expect(calls.follow.at(-1).map((row) => row.character_id)).toEqual([ALT_1])
-
+    expect(wiring.store.getState().follow.followers[ALT_1].status).toBe('arrived')
+    // a dungeon hides the in-world followers (the background timer keeps ticking, but nothing renders in-cave)
     wiring.dungeon_snapshot(true)
     expect(wiring.store.getState().follow.dungeon_background).toBe(true)
     expect(calls.follow.at(-1)).toEqual([])
-    wiring.transit_tick(now + 20_000)
-    expect(wiring.store.getState().follow.followers[ALT_1].status).toBe('arrived')
   })
 
   test('#171 — set_follow toggles ONE character; disabling the last follower despawns its standalone rig', async () => {

@@ -25,7 +25,8 @@ test('GROUP SESSION: invite → transit → arrive → engage → auto-join → 
   const record = (outputs) => {
     for (const row of outputs.join_world) transcript.push(`join_world ${row.character_id} -> ${row.world_id}`)
     for (const row of outputs.write_checkpoint) transcript.push(`checkpoint ${row.character_id}`)
-    for (const row of outputs.follow_render) transcript.push(`follow ${row.character_id}`)
+    // follow_render is null on frames that didn't recompute it (only pose/transit ticks project positions).
+    for (const row of outputs.follow_render ?? []) transcript.push(`follow ${row.character_id}`)
     for (const row of outputs.join_fight) transcript.push(`join_fight ${row.character_id} -> ${row.fight_id}`)
     if (outputs.hud_focus) transcript.push(`hud_focus ${outputs.hud_focus}`)
     for (const row of outputs.enter_dungeon) transcript.push(`enter_dungeon ${row.character_id}`)
@@ -60,7 +61,7 @@ test('GROUP SESSION: invite → transit → arrive → engage → auto-join → 
     `join_world ${ALT_2} -> ${WORLD}`,
   ])
 
-  // ── 3. each sequential join receipt begins its own ETA; no follower renders while in transit ───────────
+  // ── 3. each join receipt begins its own ETA; the timer-derived render emits only on a pose/transit tick ─
   feed({ kind: 'member_world_state', character_id: ALT_2, world_id: WORLD })
   feed({
     kind: 'follow_world_joined',
@@ -76,9 +77,9 @@ test('GROUP SESSION: invite → transit → arrive → engage → auto-join → 
     checkpoint: { x: 100 - TRANSIT_SPEED * 10, z: 100 },
     now: T0,
   })
-  expect(transcript.filter((line) => line.startsWith('follow'))).toEqual([])
+  expect(transcript.filter((line) => line.startsWith('follow'))).toEqual([]) // no render tick since the joins
 
-  // expiry targets two distinct cells beside the leader; only write receipts make the followers visible
+  // expiry writes each arrival checkpoint; the arrived followers then project onto their slots and render
   feed({ kind: 'leader_position', x: 101, z: 100, yaw: 0, now: T0 + 9_000 })
   feed({ kind: 'transit_tick', now: T0 + 10_000 })
   expect(transcript.filter((line) => line.startsWith('checkpoint'))).toEqual([
