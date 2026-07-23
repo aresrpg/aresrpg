@@ -324,7 +324,6 @@ test_reachability_hits() {
       "packages/rpc/", // rpc-api + gas-pool — NOT a bun workspace member (bun pm ls: packages/rpc has no package.json)
       "packages/simlab/", // no "test" script (dev/build only)
       "api/", // sponsor.mjs unit tests — api/ is not a workspace, no test script
-      "scripts/walrus/", // edge proxy + lib unit tests — no runner wires scripts/walrus/** in
       "scripts/oss/", // OSS copyright-header tests — no runner wires scripts/oss/** in
     ]
     const baseline_files = [
@@ -424,24 +423,21 @@ fi
 # the ones already leaked once and rotated off (S-22 audit) — their reappearance in a NEW file is a
 # strong signal of key reuse and fails the gate too, belt-and-braces.
 #
-# Three exclusions, all deliberate (not a growing escape hatch — see the brand-law gate's own EXCLUDE
+# Two exclusions, both deliberate (not a growing escape hatch — see the brand-law gate's own EXCLUDE
 # precedent above for the same pattern):
 #   1. This script itself — it necessarily contains the address literals to check against them.
 #   2. packages/move/scripts/out/** — GENERATED ceremony/seed manifest output. It legitimately
 #      records the publishing signer's ADDRESS (not a secret) and is regenerated fresh every ceremony
 #      run; a real code leak never lands here. If it ever contains a `suiprivkey1` literal, the first
 #      OR-branch below still catches it — only the address-reappearance check is scoped out.
-#   3. scripts/walrus/out/display_swap_report.json — same class as #2: a ceremony-record artifact that
-#      legitimately carries the publishing signer's ADDRESS. Addresses are
-#      public identifiers, the S-22 burn concerns the KEY, not the address — scoped to this one file,
-#      not gitignored, gate stays strict everywhere else.
+# (A former #3, scripts/walrus/out/display_swap_report.json, is gone with its only producer —
+# publish-boundary sweep 2026-07-23: walrus_display_step.mjs moved to the seed repo.)
 echo
 echo "== AresRPG secret-leak gate (no hardcoded suiprivkey1 literals) =="
 LEAKED_ADDR_RE='0xe2a45ca2df4efba794060847c157964cef4029084728ecfca004510a82d9c803|0xf3e422622a6713a7b7ec76309ff2734483f1d62845f27f2b6aaa4461ddc6872f|0xac3e6e4373708e69f29073ccb778afc8c2e16aa336c5e6d5513a2dedb8cb5db2|0xcbc75cafc71f3404f5a0ddde4fbe0990ec31feb9b5c5ee023392252bf9ed065c|0x75c0c5bfe253f86f664f0e41125c057020e505aa13b18261693a0362b917730e'
 SECRET_EXCLUDES=(
   ':(exclude)**/node_modules/**' ':(exclude)**/dist/**' ':(exclude)**/build/**' ':(exclude)**/target/**'
   ':(exclude)scripts/check-constraints.sh' ':(exclude)packages/move/scripts/out/**'
-  ':(exclude)scripts/walrus/out/display_swap_report.json'
 )
 mapfile -d '' SECRET_SCAN_FILES < <(
   git ls-files -z -- "${SECRET_EXCLUDES[@]}"
