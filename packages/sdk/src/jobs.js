@@ -242,14 +242,26 @@ export function recipe_ingredients(item_id) {
   })
 }
 
-// ── Walrus item-icon resolution ──
-// Product clients configure item art through the general asset manifest below. This legacy single-quilt state and
-// configurator remain only for SDK compatibility; one quilt cannot represent the four published item-icon shards.
-// The default is the edge-cache base used until configure_walrus_assets applies the manifest's baked aggregator.
-const WALRUS_AGGREGATOR_DEFAULT = 'https://cdn.aresrpg.world/walrus'
+// ── Asset resolution (MinIO — issue #650: full pivot off Walrus for SERVING; quilts are gone) ──
+// Every rendered asset class (items, spells, mobs, cosmetics, characters, music, shop renders) AND every
+// runtime content blob (mob_catalog, pet_catalog, spell_corpus, world_corpus, icon_slug_map) resolves
+// through walrus_asset_url below, seeded once at boot from the published manifest
+// (packages/frontend/public/asset_manifest.json). The name is historical (this resolver predates the
+// MinIO pivot); every caller and class is unchanged — only the URL SHAPE is.
+//
+// THE MAPPING LAW (content house census, adopted verbatim, #650): the resolver alone owns the host+path
+// table — one fixed rule, never duplicated per manifest row.
+//   flat art  → {host}/{family}/{key}[_hd].{ext}   e.g. https://assets.aresrpg.world/items/longsword.png
+//   geometry  → {host}/models/{family}/{key}.glb   e.g. https://assets.aresrpg.world/models/mobs/crab.glb
+//   data blob → {host}/data/{class}.json           e.g. https://assets.aresrpg.world/data/spell_corpus.json
+// Dispatched purely by the filename's own extension — `.json` is a data blob (keyed by CLASS, not the
+// filename, since every data-blob caller already passes `${class}.json`), `.glb` is geometry, everything
+// else (png/mp3/…) is flat art. Chain mints keep BARE slugs (item.move's Display is items/{item_type}.png,
+// already live) — item_icon_url below MUST keep resolving that identical shape for the same key.
+const ASSETS_HOST_DEFAULT = 'https://assets.aresrpg.world'
 
-/** @type {{ aggregator: string, item_quilt: string | null }} */
-const walrus_icons = { aggregator: WALRUS_AGGREGATOR_DEFAULT, item_quilt: null }
+/** @type {{ aggregator: string, classes: Record<string, { published?: boolean } | undefined> }} */
+const walrus_assets = { aggregator: ASSETS_HOST_DEFAULT, classes: {} }
 
 // Strip one trailing run of '/' in O(n). The obvious regex (/\/+$/) backtracks quadratically on
 // adversarial slash runs (js/polynomial-redos) — and the aggregator string is caller/manifest input.
@@ -260,69 +272,39 @@ function strip_trailing_slashes(s) {
   return s.slice(0, end)
 }
 
-/**
- * Legacy single-quilt SDK configuration. Product clients use configure_walrus_assets with the generated manifest,
- * because the published item-icon class spans multiple quilts. Kept for backwards-compatible SDK consumers only.
- * @param {{ aggregator?: string | null, item_quilt?: string | null }} [config]
- * @returns {void}
- */
-export function configure_item_icons({ aggregator, item_quilt } = {}) {
-  if (aggregator)
-    walrus_icons.aggregator = strip_trailing_slashes(String(aggregator))
-  if (item_quilt !== undefined) walrus_icons.item_quilt = item_quilt || null
-  if (aggregator) walrus_assets.aggregator = walrus_icons.aggregator
-  if (item_quilt !== undefined) {
-    if (item_quilt) walrus_assets.classes.item = { quilt: item_quilt }
-    else delete walrus_assets.classes.item // clearing → CDN fallback (progressive migration)
-  }
-}
-
-// ── The general Walrus asset resolver (single home for EVERY asset class, not just item icons).
-// Seeded once at boot from the published manifest (scripts/walrus/out/asset_manifest.json, projected
-// from the upload registry by scripts/walrus/census.mjs). Each url_class resolves to a QUILT (many
-// small files, addressed by filename identifier), a SHARDED quilt set (`quilts` — a class over the
-// Walrus 666-blob-per-quilt cap, split into N quilts each owning a sorted [first,last] identifier
-// range), or a BLOBS map (one blob id per file key). Walrus is THE asset store (the legacy AresRPG
-// asset CDN was retired). A url_class absent from the manifest returns null →
-// the caller falls back to the host-free relative /assets public path. ──
-/** @typedef {{ id: string, first: string, last: string }} QuiltShard */
-/** @type {{ aggregator: string, classes: Record<string, { quilt?: string, quilts?: QuiltShard[], blobs?: Record<string,string> }> }} */
-const walrus_assets = { aggregator: WALRUS_AGGREGATOR_DEFAULT, classes: {} }
-
-// Pick the shard owning `filename` from a sorted, contiguous set of [first,last] identifier ranges
-// (census emits them in order). Binary-search for the last shard whose `first <= filename`, then
-// confirm `filename <= last` — an out-of-range identifier (never uploaded) returns null so the caller
-// falls back to /assets, exactly as a missing single-quilt patch degrades to the category glyph. The
-// `<=` byte comparison MUST mirror the upload sharder's code-unit sort (lib.mjs shard_quilt_entries).
-/** @param {QuiltShard[]} quilts @param {string} filename @returns {string | null} */
-function resolve_quilt_shard(quilts, filename) {
-  let lo = 0
-  let hi = quilts.length - 1
-  let pick = -1
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1
-    if (quilts[mid].first <= filename) {
-      pick = mid
-      lo = mid + 1
-    } else {
-      hi = mid - 1
-    }
-  }
-  if (pick < 0) return null
-  const shard = quilts[pick]
-  return filename <= shard.last ? shard.id : null
+// The MinIO family (top-level folder) each url_class serves flat art / geometry under. `item` and
+// `cosmetic_icon` share `items` — a cosmetic's 2D icon IS an item icon (item.move's shared Display
+// already resolves every Item there; a cosmetic just needs its AUTHORED slug instead of the generic
+// item_type slot word — see cosmetic_icons.js / item_display_census.mjs). `mob` and `mob_icon` share
+// `mobs` (creature geometry + bestiary icon; distinct namespaces — `/models/mobs/` vs `/mobs/` — so no
+// collision). A class absent here falls back to its own name as the family (identity — a class the
+// manifest publishes tomorrow needs no code change here to resolve correctly).
+/** @type {Record<string, string>} */
+const ASSET_FAMILY = {
+  item: 'items',
+  cosmetic_icon: 'items',
+  spell: 'spells',
+  mob: 'mobs',
+  mob_icon: 'mobs',
+  cosmetic: 'cosmetics',
+  character: 'characters',
+  music: 'music',
+  shop_render: 'shop',
 }
 
 /**
- * Seed the app-wide Walrus asset resolver once at client boot from the published manifest.
- * @param {{ aggregator?: string | null, classes?: Record<string, { quilt?: string, blobs?: Record<string,string> }> | null }} [manifest]
+ * Seed the app-wide asset resolver once at client boot from the published manifest
+ * (packages/frontend/public/asset_manifest.json). `classes[url_class].published` gates whether that class
+ * resolves through the asset host at all — an absent/unpublished class (today: `vanilla`, and any class
+ * not yet migrated) returns null from walrus_asset_url so the caller falls back to its own host-free
+ * ASSET_BASE copy. Merge-only (Object.assign onto `classes`) — see reset_walrus_assets_for_test.
+ * @param {{ aggregator?: string | null, classes?: Record<string, { published?: boolean } | undefined> | null }} [manifest]
  * @returns {void}
  */
 export function configure_walrus_assets({ aggregator, classes } = {}) {
   if (aggregator)
     walrus_assets.aggregator = strip_trailing_slashes(String(aggregator))
   if (classes) Object.assign(walrus_assets.classes, classes)
-  if (classes?.item?.quilt) walrus_icons.item_quilt = classes.item.quilt
 }
 
 /**
@@ -335,60 +317,58 @@ export function configure_walrus_assets({ aggregator, classes } = {}) {
  * @returns {void}
  */
 export function reset_walrus_assets_for_test() {
-  walrus_assets.aggregator = WALRUS_AGGREGATOR_DEFAULT
+  walrus_assets.aggregator = ASSETS_HOST_DEFAULT
   walrus_assets.classes = {}
-  walrus_icons.aggregator = WALRUS_AGGREGATOR_DEFAULT
-  walrus_icons.item_quilt = null
 }
 
 /**
- * Resolve the Walrus aggregator URL for (url_class, filename) from the configured manifest, or null
- * if the class isn't published yet (caller falls back to the CDN/local copy — progressive migration).
- * Quilt classes → `{agg}/v1/blobs/by-quilt-id/{quilt}/{filename}`; sharded classes resolve the file's
- * quilt from its identifier range first; blob classes → `{agg}/v1/blobs/{id}`.
+ * Resolve the asset-host URL for (url_class, filename) from the configured manifest, or null if the class
+ * isn't published yet (caller falls back to the CDN/local copy — progressive migration). See the
+ * mapping-law comment above for the three URL shapes; dispatch is purely by the filename's extension.
  * @param {string} url_class  e.g. 'item' | 'spell' | 'vanilla' | 'mob' | 'cosmetic' | 'music'
- * @param {string} filename   the patch identifier / file key, e.g. 'longsword.png' | 'arctic.mp3'
+ * @param {string} filename   the file key, e.g. 'longsword.png' | 'arctic.mp3' | 'spell_corpus.json'
  * @returns {string | null}
  */
 export function walrus_asset_url(url_class, filename) {
-  const c = walrus_assets.classes[url_class]
-  if (!c || !filename) return null
-  // Single quilt (spell/music/mob/character/cosmetic…) — the common case, unchanged.
-  if (c.quilt)
-    return `${walrus_assets.aggregator}/v1/blobs/by-quilt-id/${c.quilt}/${filename}`
-  // Sharded quilt set (a class over the 666-blob cap, e.g. item icons): resolve the owning shard.
-  if (c.quilts?.length) {
-    const quilt = resolve_quilt_shard(c.quilts, filename)
-    return quilt
-      ? `${walrus_assets.aggregator}/v1/blobs/by-quilt-id/${quilt}/${filename}`
-      : null
-  }
-  const id = c.blobs?.[filename] ?? c.blobs?.[filename.replace(/\.[^.]+$/, '')]
-  return id ? `${walrus_assets.aggregator}/v1/blobs/${id}` : null
+  if (!walrus_assets.classes[url_class]?.published || !filename) return null
+  if (filename.endsWith('.json'))
+    return `${walrus_assets.aggregator}/data/${url_class}.json`
+  const family = ASSET_FAMILY[url_class] ?? url_class
+  return filename.endsWith('.glb')
+    ? `${walrus_assets.aggregator}/models/${family}/${filename}`
+    : `${walrus_assets.aggregator}/${family}/${filename}`
 }
 
 /**
- * Re-home a Walrus blob URL supplied by untrusted/runtime data (for example a Sui Display field) onto the
- * app-configured asset base. Only the path from `/v1/blobs/` onward survives, so a Display baked with an old
- * raw-aggregator origin can never make the browser bypass the manifest's CDN base. Non-Walrus URLs return null.
+ * Re-home an asset URL supplied by untrusted/runtime data (for example a Sui Display field) onto the
+ * app-configured asset host. ANY absolute URL re-homes — only its path (+ query) survives — so a Display
+ * baked with a stale/foreign/malicious origin can never make the browser fetch from anywhere but our own
+ * canonical host (#650: this used to only recognize a Walrus-shaped `/v1/blobs/` path; a Display now
+ * serving straight off assets.aresrpg.world needs the SAME guard, not a narrower one — keeping the
+ * host-confinement property is the point, not the exact old shape). A non-absolute string (already
+ * host-free, or plain garbage) returns null — callers already special-case `/`- and `data:`-prefixed
+ * values before reaching here (see components/item_image.tsx).
  * @param {string | null | undefined} url
  * @returns {string | null}
  */
 export function canonical_walrus_asset_url(url) {
   if (!url) return null
-  const value = String(url)
-  const marker = '/v1/blobs/'
-  const offset = value.indexOf(marker)
-  return offset < 0 ? null : `${walrus_assets.aggregator}${value.slice(offset)}`
+  try {
+    const { pathname, search } = new URL(String(url))
+    return `${walrus_assets.aggregator}${pathname}${search}`
+  } catch {
+    return null
+  }
 }
 
 // ── The ONE asset-fallback home (the external asset CDN host is DELETED) ──
-// Walrus (walrus_asset_url) is the origin for every class published in the manifest (spell / music / mob /
-// character / cosmetic …). A class with NO manifest entry (today: `vanilla`) resolves to this host-free,
+// The asset host (walrus_asset_url) is the origin for every class published in the manifest (item / spell /
+// mob / character / cosmetic …). A class with NO manifest entry (today: `vanilla`) resolves to this host-free,
 // origin-relative public path — `/assets/items/<id>.png` served from the frontend's public/ dir. Absent files
-// degrade honestly to a category glyph rather than resurrecting the dead host. To bring a
-// class onto Walrus, upload its quilt and add it to public/asset_manifest.json — the builder then prefers Walrus
-// automatically. NEVER hardcode an absolute asset host here again. Frontend twin home: env.ts ASSETS_URL.
+// degrade honestly to a category glyph rather than resurrecting a dead host. To bring a
+// class onto the asset host, publish its files and add it to public/asset_manifest.json — the builder then
+// prefers the asset host automatically. NEVER hardcode an absolute asset host here again. Frontend twin
+// home: env.ts ASSETS_URL.
 export const ASSET_BASE = '/assets'
 
 /**
@@ -396,14 +376,13 @@ export const ASSET_BASE = '/assets'
  * object may carry that identity as `slug`, `icon`, or a legacy slug-valued `id`; address-valued
  * ids throw so a lost template join cannot silently become `/assets/items/0x….png`. Returns null for an empty key.
  *
- * Resolves through the manifest-backed item class (including its multi-quilt shard ranges), else to the host-free
- * relative /assets public path (ASSET_BASE; the external CDN host was deleted). Both keep
- * the `<id>` / `<id>_hd` naming; `{ hd: true }` returns the high-res detail render. The
- * client renders an `<img>` with `referrerPolicy="no-referrer"`, falling back to a category glyph on error — so a
- * genuinely missing icon shows the glyph until its art is uploaded (an item shard added to the asset manifest, or
- * a file dropped in public/assets/items/).
- *   walrus:   ${aggregator}/v1/blobs/by-quilt-id/${resolved_item_quilt}/${icon ?? id}[_hd].png
- *   relative: /assets/items/${icon ?? id}[_hd].png
+ * Resolves through the manifest-backed item class, else to the host-free relative /assets public path
+ * (ASSET_BASE; the external CDN host was deleted). Both keep the `<id>` / `<id>_hd` naming; `{ hd: true }`
+ * returns the high-res detail render. The client renders an `<img>` with `referrerPolicy="no-referrer"`,
+ * falling back to a category glyph on error — so a genuinely missing icon shows the glyph until its art is
+ * uploaded (an item added to the asset manifest, or a file dropped in public/assets/items/).
+ *   asset host: ${aggregator}/items/${icon ?? id}[_hd].png  — chain mints resolve here identically (#650)
+ *   relative:   /assets/items/${icon ?? id}[_hd].png
  * @param {string | { slug?: string | null, icon?: string | null, id?: string | null } | null | undefined} item
  * @param {{ hd?: boolean, asset_class?: 'item' | 'cosmetic_icon' }} [opts]
  * @returns {string | null}
@@ -419,17 +398,16 @@ export function item_icon_url(item, { hd = false, asset_class = 'item' } = {}) {
       'item_icon_url requires a template slug, not a Sui object id',
     )
   const name = `${key}${hd ? '_hd' : ''}.png`
-  // Walrus (manifest) first — the decentralized home — else the host-free relative /assets public path.
+  // Asset host (manifest) first — else the host-free relative /assets public path.
   return walrus_asset_url(asset_class, name) ?? `${ASSET_BASE}/items/${name}`
 }
 
 /**
  * The URL for a spell icon — same resolver family as item_icon_url, just the `spells/` path. Accepts the spell's
  * `icon` key (e.g. 'ikari_haki'). `{ hd: true }` returns the `<icon>_hd.png` large variant. Returns null for an
- * empty key. Spell art IS on Walrus today (the `spell` quilt in the asset manifest — curl-verified 200), so this
- * resolves to the Walrus aggregator; the relative /assets/spells fallback only applies if the manifest is off.
- *   walrus:   ${aggregator}/v1/blobs/by-quilt-id/${spell_quilt}/${icon}[_hd].png
- *   relative: /assets/spells/${icon}[_hd].png
+ * empty key.
+ *   asset host: ${aggregator}/spells/${icon}[_hd].png
+ *   relative:   /assets/spells/${icon}[_hd].png
  * @param {string | { icon?: string | null } | null | undefined} spell
  * @param {{ hd?: boolean }} [opts]
  * @returns {string | null}

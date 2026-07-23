@@ -151,15 +151,15 @@ export default defineConfig({
               cacheableResponse: { statuses: [200] },
             },
           },
-          // (the retired assets.aresrpg.world rule died here 2026-07-14 — host deleted, owner strike #10)
+          // MinIO asset host (#650 — full pivot off Walrus for serving): item/spell/mob/cosmetic/character
+          // PNGs, GLBs, music mp3s, and the runtime /data/*.json content blobs all serve from this one origin
+          // now (packages/sdk/src/jobs.js walrus_asset_url). It's already Cloudflare-tunnel-fronted, so SWR
+          // mirrors that edge TTL client-side rather than fighting it — the SW never revalidates faster.
           {
-            // Walrus aggregator (item/spell/vanilla PNGs, mob/character/cosmetic GLBs, music mp3s served via
-            // by-quilt-id/{quilt}/{file}). The aggregator is already Cloudflare-fronted (24h), so SWR mirrors
-            // that TTL client-side rather than fighting it — the SW never revalidates faster than the CDN edge.
-            urlPattern: /^https:\/\/[^/]+\.walrus\.space\/v1\/blobs\/.+/,
+            urlPattern: /^https:\/\/assets\.aresrpg\.world\/.+/,
             handler: 'StaleWhileRevalidate',
             options: {
-              cacheName: 'walrus-assets',
+              cacheName: 'cdn-assets',
               expiration: { maxEntries: 800, maxAgeSeconds: 86400 },
             },
           },

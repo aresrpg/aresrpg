@@ -21,13 +21,12 @@ import { init_reporting, report_error, set_report_user } from './core/report.js'
 import { use_auth } from './auth'
 import { install_wallet_session_reset } from './auth/session_reset_subscription'
 
-// Full Walrus asset manifest (ALL classes — item/spell/vanilla/mob/cosmetic/music) as the legacy asset host sunsets.
-// scripts/walrus/census.mjs projects the upload registry → asset_manifest.json, served at the web root
-// (VITE_WALRUS_MANIFEST_URL overrides). Each class resolves Walrus-FIRST with the CDN/local copy as the
-// FALLBACK (walrus_asset_url returns null for an unpublished class). ALWAYS ON — Walrus IS the asset
-// store, unconditionally (the VITE_ASSETS_WALRUS gate died here, incl. its Vercel env var). Resolver config is module
-// state, so this critical manifest settles before React mounts. The load is retry-with-backoff (the ONE
-// home, src/asset_manifest.ts): a transient boot failure is NO LONGER cached as an empty manifest —
+// Full asset manifest (ALL classes — item/spell/vanilla/mob/cosmetic/music) served at the web root
+// (VITE_WALRUS_MANIFEST_URL overrides). Each class resolves the MinIO asset host FIRST (#650 — Walrus
+// retired for serving), with the CDN/local copy as the FALLBACK (walrus_asset_url returns null for an
+// unpublished class). ALWAYS ON — the asset host is THE asset store, unconditionally. Resolver config is
+// module state, so this critical manifest settles before React mounts. The load is retry-with-backoff (the
+// ONE home, src/asset_manifest.ts): a transient boot failure is NO LONGER cached as an empty manifest —
 // it stays retryable and self-heals in the background, invalidating blank tiles via the re-render below —
 // fixing the prior symptom of blank tiles persisting until a full page refresh. A still-unreachable
 // manifest mounts the app anyway on its honest local fallbacks.
