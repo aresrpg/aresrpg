@@ -103,50 +103,30 @@ function dungeon_active() {
   return !!(phase.in_session || phase.run_pass_id || phase.dungeon || phase.dungeon_id || phase.fight_id)
 }
 
-/** Membership + world truth resync — party members bind only while the SELECTED character is the basis. */
+/** Membership + world truth resync. GROUP MEMBERSHIP IS AUTO-FOLLOW (#613 DESIGN COLLAPSE): the SELECTED
+ *  character is the leader and its owned party members follow by construction — no toggle. sync_group reconciles
+ *  the follower set to that membership; party members bind only while the selected character is the party basis. */
 function resync() {
   if (!wiring) return
   const state = context.get_state()
   const { address } = use_auth.getState()
   const selected = state.selected_character_id ?? null
   const party_state = use_party.getState()
-  const { follow, my_address, members } = wiring.store.getState()
-  const captured_leader = follow.enabled ? follow.leader_character_id : null
+  const { follow, my_address } = wiring.store.getState()
   if (follow.enabled && my_address && address !== my_address) {
     wiring.reset()
     return
   }
-  const leader_character_id = captured_leader ?? selected
-  const bound =
-    !!leader_character_id && !!address && party_state._party_character_id === leader_character_id && !!party_state.party
-  const preserved_members = follow.enabled ? members : []
+  const bound = !!selected && !!address && party_state._party_character_id === selected && !!party_state.party
   wiring.sync_group({
     my_address: address ?? null,
-    leader_character_id,
-    members: bound ? party_state.party.members : preserved_members,
+    leader_character_id: selected,
+    members: bound ? party_state.party.members : [],
     worlds: (state.sui?.characters ?? []).map((card) => ({
       character_id: card.id,
       world_id: card.world_id ?? null,
     })),
   })
-}
-
-/** Batch enable door (invite-and-follow). IDs are explicit and captured by the reducer for this session. */
-export function enable_group_follow({ leader_character_id, follower_character_ids }) {
-  if (!wiring || !leader_character_id || !follower_character_ids?.length) return false
-  resync()
-  wiring.enable_follow({ leader_character_id, follower_character_ids })
-  return true
-}
-
-/** Per-character follow toggle door (#496/#171). Default OFF, session-scoped, never persisted; the roster
- *  row dispatches this for ITS character. Disable needs no leader (the reducer releases it on the last off). */
-export function set_group_follow({ character_id, enabled, leader_character_id = null }) {
-  if (!wiring || !character_id) return false
-  if (enabled && !(leader_character_id || wiring.store.getState().follow.leader_character_id)) return false
-  resync()
-  wiring.set_follow({ character_id, enabled, leader_character_id })
-  return true
 }
 
 /** Explicit session teardown (logout/pagehide); no persisted follow preference exists. */

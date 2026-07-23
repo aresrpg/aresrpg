@@ -53,11 +53,14 @@ function make_harness({ join_world_impl, join_fight_impl } = {}) {
   return { wiring, calls }
 }
 
-const sync_full_group = (wiring, world_rows) =>
+// GROUP MEMBERSHIP IS AUTO-FOLLOW (#613): sync_group now reconciles the follower set to the owned group members
+// behind the leader — no enable_follow/set_follow. To follow exactly `ids`, put exactly those owned alts in the
+// group; sync_group arms them (entry-eval) and a later sync that drops an id kicks it.
+const sync_full_group = (wiring, world_rows, ids = [ALT_1, ALT_2]) =>
   wiring.sync_group({
     my_address: ME,
     leader_character_id: LEADER,
-    members: members(LEADER, ALT_1, ALT_2),
+    members: members(LEADER, ...ids),
     worlds: worlds(world_rows),
   })
 
@@ -87,7 +90,6 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
       [ALT_2, OTHER_WORLD],
     ])
     wiring.pose_tick({ x: 100, z: 100, yaw: 0 }, { character_id: LEADER })
-    wiring.enable_follow({ leader_character_id: LEADER, follower_character_ids: [ALT_1, ALT_2] })
     await first_started
     expect(calls.join_world).toEqual([[ALT_1, WORLD]])
     release_first()
@@ -119,19 +121,21 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
     const { wiring, calls } = make_harness({
       join_world_impl: () => Promise.reject(Object.assign(new Error('abort'), { executed: true })),
     })
-    sync_full_group(wiring, [
-      [LEADER, WORLD],
-      [ALT_1, WORLD],
-      [ALT_2, OTHER_WORLD],
-    ])
+    sync_full_group(
+      wiring,
+      [
+        [LEADER, WORLD],
+        [ALT_2, OTHER_WORLD],
+      ],
+      [ALT_2]
+    ) // only ALT_2 in the group → follows
     wiring.pose_tick({ x: 100, z: 100, yaw: 0 }, { character_id: LEADER })
-    wiring.enable_follow({ leader_character_id: LEADER, follower_character_ids: [ALT_2] })
     await wiring.settled()
     expect(calls.join_world).toEqual([[ALT_2, WORLD]])
     wiring.sync_group({
       my_address: ME,
       leader_character_id: LEADER,
-      members: members(LEADER, ALT_1, ALT_2),
+      members: members(LEADER, ALT_2),
       worlds: worlds([[LEADER, '0xworld_c']]),
     })
     await wiring.settled()
@@ -142,15 +146,17 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
   test('#509 — transit is a VISIBLE run-in; arrival writes the checkpoint; a dungeon hides the followers', async () => {
     const { wiring, calls } = make_harness()
     // ALT_1 is in a DIFFERENT world → the join → proof-of-time flight leg (a same-world alt would resolve
-    // straight to with_you and never run this timer).
-    sync_full_group(wiring, [
-      [LEADER, WORLD],
-      [ALT_1, OTHER_WORLD],
-      [ALT_2, WORLD],
-    ])
+    // straight to with_you and never run this timer). Only ALT_1 is grouped, so only it follows.
+    sync_full_group(
+      wiring,
+      [
+        [LEADER, WORLD],
+        [ALT_1, OTHER_WORLD],
+      ],
+      [ALT_1]
+    )
     const now = Date.now()
     wiring.pose_tick({ x: 100, z: 100, yaw: 0, facing_yaw: 0 }, { character_id: LEADER }, now)
-    wiring.enable_follow({ leader_character_id: LEADER, follower_character_ids: [ALT_1] }, now)
     await wiring.settled()
     // the run-in is VISIBLE: mid-transit the timer projects the follower into range and it renders (no
     // arrival-spawn model). Position derives from the reducer's proof-of-time timer, never peer presence.
@@ -168,26 +174,33 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
     expect(calls.follow.at(-1)).toEqual([])
   })
 
-  test('#171 — set_follow toggles ONE character; disabling the last follower despawns its standalone rig', async () => {
+  test('#171/#613 — a same-world group member follows (with_you), and a KICK despawns its standalone rig', async () => {
     const { wiring, calls } = make_harness()
-    sync_full_group(wiring, [
-      [LEADER, WORLD],
-      [ALT_1, WORLD],
-      [ALT_2, WORLD],
-    ])
     const now = Date.now()
     wiring.pose_tick({ x: 100, z: 100, yaw: 0, facing_yaw: 0 }, { character_id: LEADER }, now)
-    wiring.set_follow({ character_id: ALT_1, enabled: true, leader_character_id: LEADER }, now)
+    // group ALT_1 with the leader — NEAR (read_checkpoint fake {105,100} is ~5 blocks off) → it resolves
+    // straight to the with_you free-run companion and renders its standalone rig at once. No redundant join.
+    sync_full_group(
+      wiring,
+      [
+        [LEADER, WORLD],
+        [ALT_1, WORLD],
+      ],
+      [ALT_1]
+    )
     await wiring.settled()
-    // #613 — ALT_1 is already in the leader's world and near → NO redundant join; it resolves straight to the
-    // with_you free-run companion and renders its standalone rig at once.
     expect(calls.join_world).toEqual([])
     expect(wiring.store.getState().follow.follower_character_ids).toEqual([ALT_1])
     expect(wiring.store.getState().follow.followers[ALT_1].status).toBe('with_you')
     expect(calls.follow.at(-1).map((r) => r.character_id)).toEqual([ALT_1])
-    // toggle OFF the last follower → the system disarms and the rig is despawned (apply_follow([]) forced
-    // past execute's empty-render guard). A bare length-gate would have leaked the standalone rig.
-    wiring.set_follow({ character_id: ALT_1, enabled: false }, now + 31_000)
+    // KICK — ALT_1 leaves the group → reconcile disarms it (kick is the only disable) and forces apply_follow([])
+    // so the standalone rig despawns. A bare length-gate would have leaked the rig; a kick MUST end following.
+    wiring.sync_group({
+      my_address: ME,
+      leader_character_id: LEADER,
+      members: members(LEADER),
+      worlds: worlds([[LEADER, WORLD]]),
+    })
     expect(wiring.store.getState().follow.enabled).toBe(false)
     expect(wiring.store.getState().follow.follower_character_ids).toEqual([])
     expect(calls.follow.at(-1)).toEqual([])
@@ -195,38 +208,45 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
 
   test('#509 — a FAR join rides the dragon: fast_travel drives dragon_fly, then follow_dragon_arrived seats it', async () => {
     const { wiring, calls } = make_harness()
-    sync_full_group(wiring, [
-      [LEADER, WORLD],
-      [ALT_1, WORLD],
-      [ALT_2, WORLD],
-    ])
-    // leader at the origin; the join checkpoint (read_checkpoint fake → {105,100}) is ~145 blocks out (> 50)
+    // leader at the origin; ALT_1 in another world → its join checkpoint (read_checkpoint fake → {105,100}) is
+    // ~145 blocks out (> DRAGON_DISTANCE 50) → the run-in ALSO dispatches the dragon.
     wiring.pose_tick({ x: 0, z: 0, yaw: 0, facing_yaw: 0 }, { character_id: LEADER })
-    wiring.enable_follow({ leader_character_id: LEADER, follower_character_ids: [ALT_1] })
+    sync_full_group(
+      wiring,
+      [
+        [LEADER, WORLD],
+        [ALT_1, OTHER_WORLD],
+      ],
+      [ALT_1]
+    )
     await wiring.settled()
     // the far run-in dispatched the dragon to the leader's cell, and its landing seated the follower
     expect(calls.dragon.map((row) => row.character_id)).toEqual([ALT_1])
     expect(calls.dragon[0].target).toEqual({ x: 0, z: 0 })
-    expect(wiring.store.getState().follow.followers[ALT_1].status).toBe('arrived')
+    expect(wiring.store.getState().follow.followers[ALT_1].status).toBe('with_you') // #613 — completion consumed
     expect(calls.write_checkpoint.at(-1)?.[0]).toBe(ALT_1) // the arrival checkpoint landed beside the leader
   })
 
-  test('an emptied party projection (manual character switch) leaves explicit follow state untouched', async () => {
+  test('#613 — an emptied party projection KICKS every follower (kick is the only disable, no ghost follow)', async () => {
     const { wiring, calls } = make_harness()
-    sync_full_group(wiring, [
-      [LEADER, WORLD],
-      [ALT_1, WORLD],
-      [ALT_2, WORLD],
-    ])
     // leader beside the join checkpoint ({105,100}) so the follower simply runs in — no dragon, no arrival churn
     wiring.pose_tick({ x: 100, z: 100, yaw: 0 }, { character_id: LEADER }, 1_000)
-    wiring.enable_follow({ leader_character_id: LEADER, follower_character_ids: [ALT_1] }, 1_000)
+    sync_full_group(
+      wiring,
+      [
+        [LEADER, WORLD],
+        [ALT_1, WORLD],
+      ],
+      [ALT_1]
+    ) // ALT_1 near → with_you companion
     await wiring.settled()
-    const before = wiring.store.getState().follow
-    const follow_calls = calls.follow.length
+    expect(wiring.store.getState().follow.follower_character_ids).toEqual([ALT_1])
+    // the party empties (leave / kick-all) → reconcile drops every follower. The OLD bug: the 'group' mirror
+    // never pruned follower_character_ids, so a kicked character followed forever with no escape. Kick MUST end it.
     wiring.sync_group({ my_address: ME, leader_character_id: LEADER, members: [], worlds: [] })
-    expect(wiring.store.getState().follow).toBe(before)
-    expect(calls.follow.length).toBe(follow_calls) // the empty projection touches nothing → no NEW render
+    expect(wiring.store.getState().follow.enabled).toBe(false)
+    expect(wiring.store.getState().follow.follower_character_ids).toEqual([])
+    expect(calls.follow.at(-1)).toEqual([]) // the render despawns the dropped rig
   })
 
   test('a placement fight joins the aligned alts ONCE across polls; focus follows each owned turn', async () => {
@@ -236,8 +256,7 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
       [ALT_1, WORLD],
       [ALT_2, WORLD],
     ])
-    // #540 — membership is not consent: fight_started only steers aligned alts once follow is armed.
-    wiring.enable_follow({ leader_character_id: LEADER, follower_character_ids: [ALT_1, ALT_2] })
+    // group membership IS auto-follow (#613): both grouped alts are followers → fight_started steers both.
     const facts = { fight_id: '0xf', placement: true, over: false, active_entity_id: null, seated: [LEADER] }
     wiring.fight_snapshot(facts, { join_open: true })
     wiring.fight_snapshot(facts, { join_open: true }) // poll echo
@@ -287,8 +306,7 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
       [ALT_1, WORLD],
       [ALT_2, WORLD],
     ])
-    // #540 — membership is not consent: fight_started only steers aligned alts once follow is armed.
-    wiring.enable_follow({ leader_character_id: LEADER, follower_character_ids: [ALT_1, ALT_2] })
+    // group membership IS auto-follow (#613): both grouped alts are followers → fight_started steers both.
 
     wiring.fight_snapshot(
       { fight_id: '0xf', placement: true, over: false, active_entity_id: null, seated: [LEADER] },

@@ -151,20 +151,14 @@ export function create_group_wiring(deps) {
     async settled() {
       while (pending.size) await Promise.all(pending)
     },
-    /** Membership + world truth arrive together (both derive from the same party/roster resync). */
+    /** Membership + world truth arrive together, then GROUP MEMBERSHIP IS AUTO-FOLLOW (#613 DESIGN COLLAPSE):
+     *  reconcile the follower set to the owned group members behind the driven leader. No toggle exists — invite
+     *  (a new member) arms it, a kick (a removed member) drops it. Party truth, immune to the toggle desync. */
     sync_group({ my_address, leader_character_id, members, worlds }) {
       feed({ kind: 'group', my_address, leader_character_id, members })
       const now = Date.now()
       for (const row of worlds ?? []) feed({ kind: 'member_world_state', ...row, now })
-    },
-    /** Explicit batch session enable (invite-and-follow): arm the whole passed set behind one leader. */
-    enable_follow({ leader_character_id, follower_character_ids }, now = Date.now()) {
-      return feed({ kind: 'follow_enable', leader_character_id, follower_character_ids, now })
-    },
-    /** Per-character follow toggle (#496/#171). Disable emits a live render set (array) which execute applies —
-     *  despawning the follower's rig even when it was the last one (an empty array is a real "render nobody"). */
-    set_follow({ character_id, enabled, leader_character_id = null }, now = Date.now()) {
-      return feed({ kind: 'set_follow', character_id, enabled, leader_character_id, now })
+      return feed({ kind: 'follow_reconcile', leader_character_id, now })
     },
     /** One throttled avatar pose tick. A non-leader active avatar is ignored by the reducer. */
     pose_tick(pose, { character_id = null } = {}, now = Date.now()) {
