@@ -82,7 +82,7 @@ export function resolve_cell_paints(candidates) {
  * DUNGEON: `bfsReachable(subject.cell, subject.mp, dungeon_blocked_cells(dungeon, subject_id))` — the on-chain
  *   twin, so the wash == DungeonBoard's `reachable` == the MP commit_turn charges. `blocked` is precomputed by
  *   the caller (it owns the dungeon glue + the mover's id for the self-exclusion).
- * WORLD: `get_reachable_cells(subject.cell, subject.mp, is_walkable-with-occupancy)` — the sim reach.
+ * WORLD: `get_reachable_cells(subject.cell, subject.mp, terrain, occupancy)` — the sim reach.
  *
  * @param {{ cell: Cell, mp: number }} subject
  * @param {{
@@ -102,9 +102,9 @@ export function move_reachable_set(subject, ctx) {
     return out
   }
   // world: the sim reach (cost 0 = the start cell) → drop the start, encode the rest.
-  const walk = (c) =>
-    !!ctx.is_walkable?.(c) && (cell_key(c.x, c.y) === cell_key(subject.cell.x, subject.cell.y) || !ctx.is_occupied?.(c))
-  for (const { cell } of get_reachable_cells(subject.cell, subject.mp, walk)) {
+  const terrain = (c) => !!ctx.is_walkable?.(c)
+  const occupied = (c) => cell_key(c.x, c.y) !== cell_key(subject.cell.x, subject.cell.y) && !!ctx.is_occupied?.(c)
+  for (const { cell } of get_reachable_cells(subject.cell, subject.mp, terrain, occupied)) {
     if (cell.x === subject.cell.x && cell.y === subject.cell.y) continue
     out.add(encode(cell.x, cell.y))
   }

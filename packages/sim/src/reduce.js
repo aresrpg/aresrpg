@@ -34,6 +34,7 @@ import { process_spell_cast } from './fight_spells.js'
 import { check_glyphs, check_traps, decay_glyphs } from './fight_traps.js'
 import { ai_choose_turn } from './fight_ai.js'
 import { process_delayed_payloads } from './fight_delayed.js'
+import { find_path_4dir } from './pathfind.js'
 
 // A fighter draws back up to a fixed hand size at end of turn (the card-deck model — REVIEW-jun-25 "## Fights":
 // "at the end of each turn if someone has less than 7 spells he will draw one automatically"). The opening
@@ -96,7 +97,7 @@ const total_health = state =>
  * @typedef {{ state: import('./fight_state.js').FightState, events: FightEvent[] }} ReduceResult
  */
 
-// ── Grid predicates (terrain AND fresh occupancy — occupancy NOT baked) ──────────
+// ── Grid predicates (terrain AND fresh occupancy — kept separate) ───────────────
 
 /**
  * Terrain walkability from the carved arena (0 = walkable, 1 = obstacle/void). Out-of-bounds = blocked.
@@ -116,17 +117,14 @@ const terrain_walkable = (arena, cell) => {
 }
 
 /**
- * Build the move-walkability predicate for one mover: terrain walkable AND not occupied by ANOTHER living
- * actor. The arena header rule: occupancy is checked fresh here, never stored in arena.cells.
+ * Build the frozen living-body predicate for one mover. Dead fighters never block; invisible living fighters do.
  * @param {import('./fight_state.js').FightState} state
- * @param {import('./arena.js').Arena} arena
  * @param {string} mover_id
  * @returns {(cell: import('./cell.js').Cell) => boolean}
  */
-const make_is_walkable = (state, arena, mover_id) => cell => {
-  if (!terrain_walkable(arena, cell)) return false
+const make_is_occupied = (state, mover_id) => cell => {
   const occupant = find_entity_at(state, cell)
-  return !occupant || occupant.id === mover_id
+  return !!occupant && occupant.id !== mover_id
 }
 
 /**
@@ -399,7 +397,8 @@ const handle_start = state => {
 }
 
 /**
- * Move along a path (validated against MP + walkability; tackle may interrupt). Donor loop.ts:244 + actions.ts:92.
+ * Move to the submitted path's destination; the canonical path is rebuilt here exactly as Move does.
+ * Donor loop.ts:244 + actions.ts:92.
  * @param {import('./fight_state.js').FightState} state
  * @param {CmdMove} cmd
  * @param {ReduceContext} ctx
@@ -409,15 +408,24 @@ const handle_move = (state, cmd, ctx) => {
   const current = acting_entity(state, cmd.entity_id)
   if (!current) return { state, events: [] }
 
-  // Validate the path is contiguous + walkable, and that MP covers the WHOLE submitted route (no partial trust
-  // of client paths). A covered trap no longer shortens the MP a route costs — the mover pays for every cell it
-  // actually walks, so an over-budget path is rejected uniformly whether or not it happens to cross a trap.
-  const is_walkable = make_is_walkable(state, ctx.arena, cmd.entity_id)
-  if (!is_path_valid(current.cell, cmd.path, is_walkable))
-    return { state, events: [] }
-  if (current.mp < cmd.path.length) return { state, events: [] }
+  // Move's public door is destination-only. Keep the legacy command shape, but treat only its final cell as input
+  // and rebuild the route over one frozen terrain+living-body mask. A same-cell/absent/blocked/over-budget target
+  // is illegal; caller intermediates never choose trap cells or an equal-cost detour for the deterministic twin.
+  const destination = cmd.path.at(-1)
+  if (!destination) return { state, events: [] }
+  const is_walkable = cell => terrain_walkable(ctx.arena, cell)
+  const is_occupied = make_is_occupied(state, cmd.entity_id)
+  const canonical = find_path_4dir(
+    current.cell,
+    destination,
+    current.mp,
+    is_walkable,
+    is_occupied,
+  )
+  if (!canonical || canonical.length < 2) return { state, events: [] }
+  const canonical_cmd = { ...cmd, path: canonical.slice(1) }
 
-  const walked = walk_path(state, cmd, ctx)
+  const walked = walk_path(state, canonical_cmd, ctx)
   const moved = find_entity(walked.state, cmd.entity_id)
   const moved_event = {
     type: 'fight_moved',
@@ -437,7 +445,7 @@ const handle_move = (state, cmd, ctx) => {
 }
 
 /**
- * Walk the validated path one cell at a time so a covered trap fires the INSTANT the mover ENTERS its cell and
+ * Walk the canonical path one cell at a time so a covered trap fires the INSTANT the mover ENTERS its cell and
  * the route RESUMES afterward (#325). Tackle contests once at the start cell (apply_move parity); each entered
  * trap resolves through the shared check_traps door — owner/ally-blind, every entry kind triggers (#320) — as an
  * INTERLEAVED effect, never a turn-terminal one. The walk stops early ONLY when the trigger removes the mover
@@ -494,25 +502,6 @@ const walk_path = (state, cmd, ctx) => {
     events: walked.events,
     tackled: false,
   }
-}
-
-/**
- * A client path is valid if every step is a 4-dir neighbor of the previous and is walkable.
- * @param {import('./cell.js').Cell} start
- * @param {import('./cell.js').Cell[]} path  excludes start
- * @param {(cell: import('./cell.js').Cell) => boolean} is_walkable
- * @returns {boolean}
- */
-const is_path_valid = (start, path, is_walkable) => {
-  let prev = start
-  for (const step of path) {
-    const dx = Math.abs(step.x - prev.x)
-    const dy = Math.abs(step.y - prev.y)
-    if (dx + dy !== 1) return false
-    if (!is_walkable(step)) return false
-    prev = step
-  }
-  return true
 }
 
 /**
@@ -737,13 +726,15 @@ const handle_ai_turn = (state, cmd, ctx) => {
   const current = get_current_turn_entity(state)
   if (!current || current.id !== cmd.entity_id) return { state, events: [] }
 
-  const is_walkable = make_is_walkable(state, ctx.arena, cmd.entity_id)
+  const is_walkable = cell => terrain_walkable(ctx.arena, cell)
+  const is_occupied = make_is_occupied(state, cmd.entity_id)
   const context = make_targeting_context(state, ctx.arena, cmd.entity_id)
   const plan = ai_choose_turn(
     state,
     cmd.entity_id,
     ctx.spell_templates,
     is_walkable,
+    is_occupied,
     context,
   )
 

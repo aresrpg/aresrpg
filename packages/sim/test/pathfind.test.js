@@ -10,6 +10,7 @@ import {
 import { manhattan_distance, cell_key } from '../src/cell.js'
 
 const open = () => true
+const unoccupied = () => false
 const blocked =
   (...keys) =>
   ({ x, y }) =>
@@ -17,7 +18,13 @@ const blocked =
 
 describe('find_path_4dir', () => {
   test('straight line on open grid', () => {
-    const path = find_path_4dir({ x: 0, y: 0 }, { x: 3, y: 0 }, 5, open)
+    const path = find_path_4dir(
+      { x: 0, y: 0 },
+      { x: 3, y: 0 },
+      5,
+      open,
+      unoccupied,
+    )
     expect(path).not.toBeNull()
     expect(path).toHaveLength(4)
     expect(path[0]).toEqual({ x: 0, y: 0 })
@@ -25,18 +32,20 @@ describe('find_path_4dir', () => {
   })
 
   test('path to self is just the start', () => {
-    expect(find_path_4dir({ x: 2, y: 2 }, { x: 2, y: 2 }, 5, open)).toEqual([
-      { x: 2, y: 2 },
-    ])
+    expect(
+      find_path_4dir({ x: 2, y: 2 }, { x: 2, y: 2 }, 5, open, unoccupied),
+    ).toEqual([{ x: 2, y: 2 }])
   })
 
   test('rejects path exceeding max_mp', () => {
-    expect(find_path_4dir({ x: 0, y: 0 }, { x: 3, y: 0 }, 2, open)).toBeNull()
+    expect(
+      find_path_4dir({ x: 0, y: 0 }, { x: 3, y: 0 }, 2, open, unoccupied),
+    ).toBeNull()
   })
 
   test('accepts path at exact budget', () => {
     expect(
-      find_path_4dir({ x: 0, y: 0 }, { x: 3, y: 0 }, 3, open),
+      find_path_4dir({ x: 0, y: 0 }, { x: 3, y: 0 }, 3, open, unoccupied),
     ).toHaveLength(4)
   })
 
@@ -46,6 +55,7 @@ describe('find_path_4dir', () => {
       { x: 2, y: 0 },
       6,
       blocked('1,0'),
+      unoccupied,
     )
     expect(path).not.toBeNull()
     expect(path.some(c => c.x === 1 && c.y === 0)).toBe(false)
@@ -54,12 +64,20 @@ describe('find_path_4dir', () => {
 
   test('null when goal is walled off', () => {
     const walls = blocked('1,0', '3,0', '2,1', '2,-1')
-    expect(find_path_4dir({ x: 0, y: 0 }, { x: 2, y: 0 }, 20, walls)).toBeNull()
+    expect(
+      find_path_4dir({ x: 0, y: 0 }, { x: 2, y: 0 }, 20, walls, unoccupied),
+    ).toBeNull()
   })
 
   test('null when goal itself is unwalkable', () => {
     expect(
-      find_path_4dir({ x: 0, y: 0 }, { x: 2, y: 0 }, 20, blocked('2,0')),
+      find_path_4dir(
+        { x: 0, y: 0 },
+        { x: 2, y: 0 },
+        20,
+        blocked('2,0'),
+        unoccupied,
+      ),
     ).toBeNull()
   })
 
@@ -69,12 +87,14 @@ describe('find_path_4dir', () => {
       { x: 4, y: 3 },
       20,
       blocked('2,1', '2,2'),
+      unoccupied,
     )
     const b = find_path_4dir(
       { x: 0, y: 0 },
       { x: 4, y: 3 },
       20,
       blocked('2,1', '2,2'),
+      unoccupied,
     )
     expect(a).toEqual(b)
   })
@@ -82,7 +102,7 @@ describe('find_path_4dir', () => {
 
 describe('get_reachable_cells', () => {
   test('open grid mp=2 reaches the manhattan diamond (13 cells)', () => {
-    const reachable = get_reachable_cells({ x: 0, y: 0 }, 2, open)
+    const reachable = get_reachable_cells({ x: 0, y: 0 }, 2, open, unoccupied)
     expect(reachable).toHaveLength(13)
     for (const { cell, cost } of reachable) {
       expect(cost).toBe(manhattan_distance({ x: 0, y: 0 }, cell))
@@ -90,20 +110,30 @@ describe('get_reachable_cells', () => {
   })
 
   test('includes the start at cost 0', () => {
-    const reachable = get_reachable_cells({ x: 5, y: 5 }, 3, open)
+    const reachable = get_reachable_cells({ x: 5, y: 5 }, 3, open, unoccupied)
     expect(reachable[0]).toEqual({ cell: { x: 5, y: 5 }, cost: 0 })
   })
 
   test('obstacles reduce the reachable set', () => {
     const walls = blocked('1,0', '0,1', '-1,0', '0,-1')
-    const reachable = get_reachable_cells({ x: 0, y: 0 }, 3, walls)
+    const reachable = get_reachable_cells({ x: 0, y: 0 }, 3, walls, unoccupied)
     expect(reachable).toHaveLength(1) // fully boxed in
   })
 
   test('deterministic: same inputs -> identical set', () => {
     const keys = m => m.map(({ cell }) => cell_key(cell.x, cell.y)).sort()
-    const a = get_reachable_cells({ x: 0, y: 0 }, 4, blocked('1,1', '2,0'))
-    const b = get_reachable_cells({ x: 0, y: 0 }, 4, blocked('1,1', '2,0'))
+    const a = get_reachable_cells(
+      { x: 0, y: 0 },
+      4,
+      blocked('1,1', '2,0'),
+      unoccupied,
+    )
+    const b = get_reachable_cells(
+      { x: 0, y: 0 },
+      4,
+      blocked('1,1', '2,0'),
+      unoccupied,
+    )
     expect(keys(a)).toEqual(keys(b))
   })
 })

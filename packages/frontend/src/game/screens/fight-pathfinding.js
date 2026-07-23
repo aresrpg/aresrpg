@@ -14,6 +14,7 @@ import { find_path_4dir, get_reachable_cells } from '@aresrpg/sim/pathfind'
 
 /** @typedef {{ x: number, y: number }} Cell */
 /** @typedef {(cell: Cell) => boolean} IsWalkable  walkable terrain AND unoccupied (the start cell is allowed) */
+const unoccupied = () => false
 
 /**
  * The STEERED MP PATH from `start` to `target` (the legacy signature): the shortest 4-directional route,
@@ -25,7 +26,15 @@ import { find_path_4dir, get_reachable_cells } from '@aresrpg/sim/pathfind'
  */
 export function steered_path(start, target, mp, is_walkable) {
   if (start.x === target.x && start.y === target.y) return []
-  const path = find_path_4dir(start, target, mp, is_walkable)
+  // This legacy adapter receives the already-combined terrain+body predicate; the explicit empty second mask
+  // acknowledges that contract at the canonical pathfinder boundary.
+  const path = find_path_4dir(
+    start,
+    target,
+    mp,
+    is_walkable,
+    unoccupied,
+  )
   return path && path.length > 1 ? path.slice(1) : []
 }
 
@@ -37,7 +46,7 @@ export function steered_path(start, target, mp, is_walkable) {
  * @returns {Cell[]}
  */
 export function reachable_cells(start, mp, is_walkable) {
-  return get_reachable_cells(start, mp, is_walkable)
+  return get_reachable_cells(start, mp, is_walkable, unoccupied)
     .filter(r => r.cost > 0)
     .map(r => r.cell)
 }

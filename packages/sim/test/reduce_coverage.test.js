@@ -366,11 +366,11 @@ describe('movement', () => {
     expect(r.events.length).toBe(0)
   })
 
-  test('a non-contiguous (teleport) path is rejected', () => {
+  test('an out-of-budget destination is rejected even when caller intermediates are omitted', () => {
     const { state, ctx } = started_fight(1)
     const r = reduce(
       state,
-      { type: 'move', entity_id: 'p0', path: [{ x: 4, y: 4 }] }, // jumps 3 cells in one step
+      { type: 'move', entity_id: 'p0', path: [{ x: 5, y: 4 }] },
       ctx,
     )
     expect(find_entity(r.state, 'p0').cell).toEqual({ x: 1, y: 4 })

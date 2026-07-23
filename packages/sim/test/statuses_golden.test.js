@@ -340,7 +340,14 @@ const run_mob_targeting = vector => {
     [mob],
     [mob.id, hidden.id, visible.id],
   )
-  const plan = ai_choose_turn(state, mob.id, templates, () => true, targeting)
+  const plan = ai_choose_turn(
+    state,
+    mob.id,
+    templates,
+    () => true,
+    () => false,
+    targeting,
+  )
   const cast = plan.find(action => action.type === 'cast')
   return { cast_target: cast ? encode(cast.target) : -1 }
 }

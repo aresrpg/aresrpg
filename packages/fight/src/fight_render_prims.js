@@ -95,11 +95,9 @@ export const path_between = (from, to) => {
 const RECONSTRUCT_BUDGET = 400
 
 /** Render-side TERRAIN walkability from the board's static obstacle facts (board_state.js decode shape) —
- *  obstacles ∪ holes ∪ out-of-shape ∪ out-of-bounds, encoded at `width` stride. Occupancy is deliberately
- *  untracked: within one receipt a later mover's snapshot is already stale by the time it renders (§ settled_cells
- *  tracks LANDING cells, not who stood where mid-wave), so baking live occupancy in here would trade one false
- *  detour for another. Terrain (this) is receipt-stable and is exactly the class the live bug hit. Returns null
- *  when the caller supplied no board dims (legacy/synthetic ctx) so callers fall back to the unaware line.
+ *  obstacles ∪ holes ∪ out-of-shape ∪ out-of-bounds, encoded at `width` stride. Live occupancy is supplied
+ *  separately to `reconstructed_path`, matching the two inputs the sim unions into Move's frozen wall mask.
+ *  Returns null when the caller supplied no board dims (legacy/synthetic ctx) so callers fall back to the unaware line.
  */
 export const terrain_walkable_at = ({ obstacles, holes, shape_mask, board_width, board_height, width }) => {
   if (!board_width || !board_height) return null
@@ -121,7 +119,8 @@ export const terrain_walkable_at = ({ obstacles, holes, shape_mask, board_width,
 export const reconstructed_path = (from, to, board = {}) => {
   const is_walkable = terrain_walkable_at(board)
   if (!is_walkable || !from || !to) return path_between(from, to)
-  const bfs = find_path_4dir(from, to, RECONSTRUCT_BUDGET, is_walkable)
+  const occupied = new Set((board.occupied_cells ?? []).map(cell_key))
+  const bfs = find_path_4dir(from, to, RECONSTRUCT_BUDGET, is_walkable, (cell) => occupied.has(cell_key(cell)))
   return bfs ? bfs.slice(1) : path_between(from, to)
 }
 

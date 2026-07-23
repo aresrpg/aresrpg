@@ -5,14 +5,19 @@
 // Unit step cost → BFS is optimal and simpler than A* (no priority heap, no float heuristic). Fight walks mirror
 // Move's `combat_grid::bfs_path_cost` queue discipline: complete layer-FIFO frontiers, visited on enqueue, and the
 // shared left/right/up/down neighbor order. Parent reconstruction therefore selects the same lexicographically
-// first shortest route as `movement::next_shortest_step`. Walkability is injected, so this layer is world-agnostic
-// — the reducer ANDs terrain walkability with a fresh occupancy check (occupancy is NOT baked into the predicate).
+// first shortest route as `movement::next_shortest_step`. Terrain and live occupancy are separate inputs: Move's
+// frozen wall mask is their union, and keeping both explicit prevents a caller from silently dropping body-blocking.
 
 import { cell_key, neighbors_4dir, neighbors_8dir } from './cell.js'
 
 /**
- * Terrain walkability predicate (occupancy handled separately by the reducer).
+ * Terrain walkability predicate.
  * @typedef {(cell: import('./cell.js').Cell) => boolean} IsWalkable
+ */
+
+/**
+ * Whether another living fighter occupies a cell.
+ * @typedef {(cell: import('./cell.js').Cell) => boolean} IsOccupied
  */
 
 /**
@@ -45,11 +50,19 @@ const reconstruct = (came_from, goal) => {
  * @param {import('./cell.js').Cell} goal
  * @param {number} max_mp
  * @param {IsWalkable} is_walkable
+ * @param {IsOccupied} is_occupied
  * @returns {import('./cell.js').Cell[] | null}
  */
-export const find_path_4dir = (start, goal, max_mp, is_walkable) => {
+export const find_path_4dir = (
+  start,
+  goal,
+  max_mp,
+  is_walkable,
+  is_occupied,
+) => {
   if (start.x === goal.x && start.y === goal.y) return [start]
-  if (!is_walkable(goal)) return null
+  const can_enter = cell => is_walkable(cell) && !is_occupied(cell)
+  if (!can_enter(goal)) return null
 
   const goal_key = cell_key(goal.x, goal.y)
   const came_from = new Map()
@@ -61,7 +74,7 @@ export const find_path_4dir = (start, goal, max_mp, is_walkable) => {
     for (const cell of frontier) {
       for (const neighbor of neighbors_4dir(cell)) {
         const key = cell_key(neighbor.x, neighbor.y)
-        if (visited.has(key) || !is_walkable(neighbor)) continue
+        if (visited.has(key) || !can_enter(neighbor)) continue
         visited.add(key)
         came_from.set(key, cell)
         if (key === goal_key) return reconstruct(came_from, goal)
@@ -78,19 +91,26 @@ export const find_path_4dir = (start, goal, max_mp, is_walkable) => {
  * @param {import('./cell.js').Cell} start
  * @param {number} max_mp
  * @param {IsWalkable} is_walkable
+ * @param {IsOccupied} is_occupied
  * @returns {Reachable[]}
  */
-export const get_reachable_cells = (start, max_mp, is_walkable) => {
+export const get_reachable_cells = (
+  start,
+  max_mp,
+  is_walkable,
+  is_occupied,
+) => {
   const result = [{ cell: start, cost: 0 }]
   const visited = new Set([cell_key(start.x, start.y)])
   let frontier = [start]
+  const can_enter = cell => is_walkable(cell) && !is_occupied(cell)
 
   for (let cost = 1; cost <= max_mp && frontier.length > 0; cost++) {
     const next = []
     for (const cell of frontier) {
       for (const neighbor of neighbors_4dir(cell)) {
         const key = cell_key(neighbor.x, neighbor.y)
-        if (visited.has(key) || !is_walkable(neighbor)) continue
+        if (visited.has(key) || !can_enter(neighbor)) continue
         visited.add(key)
         result.push({ cell: neighbor, cost })
         next.push(neighbor)

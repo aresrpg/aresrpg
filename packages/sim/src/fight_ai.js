@@ -95,7 +95,8 @@ const best_castable_damage_spell = (
  * @param {import('./fight_state.js').FightState} state
  * @param {string} entity_id
  * @param {Map<string, import('./spell_templates.js').SpellTemplate>} spell_templates
- * @param {(cell: import('./cell.js').Cell) => boolean} is_walkable   terrain AND occupancy (built by the reducer)
+ * @param {(cell: import('./cell.js').Cell) => boolean} is_walkable terrain walkability
+ * @param {(cell: import('./cell.js').Cell) => boolean} is_occupied living-body occupancy, excluding the mover
  * @param {import('./spell_targeting.js').TargetingContext} context
  * @returns {FightAction[]}
  */
@@ -104,6 +105,7 @@ export const ai_choose_turn = (
   entity_id,
   spell_templates,
   is_walkable,
+  is_occupied,
   context,
 ) => {
   const entity = find_entity(state, entity_id)
@@ -137,7 +139,12 @@ export const ai_choose_turn = (
   // 2. Otherwise move TOWARD the target: of all cells reachable within MP, pick the one minimizing manhattan
   // distance to the target (ties broken by lower MP cost, then scan order — deterministic). This handles
   // both "close the gap to get in range" and "step adjacent for melee".
-  const reachable = get_reachable_cells(entity.cell, entity.mp, is_walkable)
+  const reachable = get_reachable_cells(
+    entity.cell,
+    entity.mp,
+    is_walkable,
+    is_occupied,
+  )
   let best_goal = entity.cell
   let best_dist = manhattan_distance(entity.cell, target.cell)
   let best_cost = 0
@@ -153,7 +160,13 @@ export const ai_choose_turn = (
   const best_path =
     best_goal.x === entity.cell.x && best_goal.y === entity.cell.y
       ? null
-      : find_path_4dir(entity.cell, best_goal, entity.mp, is_walkable)
+      : find_path_4dir(
+          entity.cell,
+          best_goal,
+          entity.mp,
+          is_walkable,
+          is_occupied,
+        )
 
   if (best_path) {
     actions.push({ type: 'move', path: best_path })

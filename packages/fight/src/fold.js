@@ -507,6 +507,20 @@ export const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_
     const seat = escrow.findIndex((p) => participant_entity_id(p) === id)
     return seat >= 0 ? cell_of(`p${seat}`) : null
   }
+  const fighter_id_of_key = (key) => {
+    const idx = Number(key.slice(1))
+    if (key.startsWith('m')) return `mob-${idx}`
+    if (!key.startsWith('p')) return null
+    return participant_entity_id(escrow[idx] ?? {}) ?? `player-${idx}`
+  }
+  const fighter_positions = new Map(
+    Object.entries(draft.fighters ?? {}).flatMap(([key, fighter]) => {
+      if (fighter?.alive === false || Number(fighter?.hp ?? 1) <= 0) return []
+      const id = fighter_id_of_key(key)
+      const cell = cell_of(key)
+      return id && cell ? [[String(id), cell]] : []
+    })
+  )
   const committed = committed_state(draft)
   const fighter_health = (source_id) => {
     const id = String(source_id)
@@ -532,6 +546,7 @@ export const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_
       resolve_trap_owner,
       resolve_fighter_id,
       fighter_cells,
+      fighter_positions,
       fighter_health,
       resolve_cast,
       // Board terrain facts, straight off the adopted view (board_state.js decode) — feeds present.js's

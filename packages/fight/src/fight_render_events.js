@@ -65,6 +65,12 @@ const fighter_id_from = (event, role, resolve_fighter_id) => {
   return resolve_fighter_id({ is_mob, idx, character, role, event })
 }
 
+const position_entries = (positions) => {
+  if (positions?.entries) return [...positions.entries()]
+  if (positions && typeof positions === 'object') return Object.entries(positions)
+  return []
+}
+
 const trap_matcher = (trap_cells, is_trap_cell, width) => {
   const values = trap_cells ? [...trap_cells] : []
   const keys = new Set(
@@ -97,6 +103,9 @@ export function produce_receipt_render_turns(
     resolve_trap_owner = null,
     resolve_fighter_id = default_fighter_id,
     fighter_cells = null,
+    // Every living fighter's PRE-receipt cell. The producer advances this map in receipt order, so each walk
+    // freezes the same current body mask as Move (rather than reusing a stale snapshot for a later mover).
+    fighter_positions = null,
     fighter_health = null,
     move_path = null,
     resolve_cast = null,
@@ -117,10 +126,16 @@ export function produce_receipt_render_turns(
   const matches_trap = trap_matcher(trap_cells, is_trap_cell, grid_width)
   const hit_damage = new Map()
   const remaining_health = new Map()
+  const dead_fighters = new Set()
   let current_turn = null
   let pending = []
   let active_move = null
-  const settled_cells = new Map() // receipt-local landing cells — later walks originate where the slide ended (§7b)
+  const initial_positions = fighter_positions ?? (typeof fighter_cells === 'function' ? null : fighter_cells)
+  const settled_cells = new Map(
+    position_entries(initial_positions)
+      .filter(([, cell]) => cell != null)
+      .map(([id, cell]) => [String(id), cell])
+  )
 
   // Chain Hit.amount is raw authored damage while remaining_hp is saturated. Price every confirmed floater from
   // the victim's pre-receipt HP, then carry remaining_hp forward for later hits in this same receipt.
@@ -241,6 +256,10 @@ export function produce_receipt_render_turns(
         ...(trap_hit ? { trap_damage: true, trap_owner_id: trap_hit.trap_owner_id ?? null } : {}),
         source_event: event,
       })
+      if (Number(event.remaining_hp) === 0) {
+        dead_fighters.add(target_id)
+        settled_cells.delete(target_id)
+      }
     }
 
     for (const event of effects.filter((candidate) => candidate.kind === 'Drain'))
@@ -337,7 +356,7 @@ export function produce_receipt_render_turns(
         (typeof fighter_cells === 'function'
           ? fighter_cells(source_id, event)
           : (fighter_cells?.get?.(source_id) ?? fighter_cells?.[source_id] ?? null))
-      settled_cells.set(source_id, to)
+      const occupied_cells = [...settled_cells.entries()].filter(([id]) => id !== source_id).map(([, cell]) => cell)
       // INGESTION ASSERT (P0 move_path crash guard): move_path is a RESOLVER function or null. A non-null
       // non-function — a producer passing a raw path ARRAY — is the S2 "instanceof Array" crash: `move_path?.(…)`
       // throws "x is not a function" and takes the whole fight render down. Mirror the fighter_cells typeof guard
@@ -359,7 +378,9 @@ export function produce_receipt_render_turns(
           board_width,
           board_height,
           width: grid_width,
+          occupied_cells,
         })
+      if (!dead_fighters.has(source_id)) settled_cells.set(source_id, to)
       const rendered_path = path.length > 0 ? path : [to]
       append_to(turn, 'move', move_duration(rendered_path), {
         fight_id: event.fight,

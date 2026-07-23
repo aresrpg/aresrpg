@@ -471,7 +471,7 @@ describe('receipt move path — obstacle-aware reconstruction (mob-crossed-obsta
 
     const is_walkable = (cell) =>
       cell.x >= 0 && cell.x < 5 && cell.y >= 0 && cell.y < 3 && !(cell.x === 1 && cell.y === 0)
-    const sim_path = find_path_4dir({ x: 0, y: 0 }, { x: 2, y: 0 }, 400, is_walkable)
+    const sim_path = find_path_4dir({ x: 0, y: 0 }, { x: 2, y: 0 }, 400, is_walkable, () => false)
     expect(rendered_path).toEqual(sim_path.slice(1)) // origin-exclusive, matching path_between's own contract
   })
 
@@ -495,6 +495,61 @@ describe('receipt move path — obstacle-aware reconstruction (mob-crossed-obsta
       { x: 2, y: 2 },
       { x: 3, y: 2 },
       { x: 4, y: 2 },
+      { x: 4, y: 3 },
+    ])
+  })
+
+  test('a trap-killed earlier mover is not an occupied cell for a later receipt move (#618)', () => {
+    const receipt = produce_receipt_render_turns(
+      [
+        // movement::walk emits the lethal trap Hit before the mover's final MobMoved. The corpse lands at (3,3),
+        // but Move's next frozen body mask excludes it, so m1 must keep the direct three-step route through (3,3).
+        {
+          type: '0xENGINE::fight_events::Hit',
+          parsedJson: {
+            fight: 'fight-1',
+            victim_is_mob: true,
+            victim_idx: '0',
+            amount: '5',
+            remaining_hp: '0',
+          },
+        },
+        {
+          type: '0xENGINE::fight_events::MobMoved',
+          parsedJson: {
+            fight: 'fight-1',
+            idx: '0',
+            to_cell: String(encoded(3, 3)),
+          },
+        },
+        {
+          type: '0xENGINE::fight_events::MobMoved',
+          parsedJson: {
+            fight: 'fight-1',
+            idx: '1',
+            to_cell: String(encoded(4, 3)),
+          },
+        },
+      ],
+      {
+        fight_id: 'fight-1',
+        resolve_fighter_id,
+        fighter_cells: new Map([
+          ['m0', { x: 2, y: 3 }],
+          ['m1', { x: 1, y: 3 }],
+          ['p0', { x: 6, y: 6 }],
+        ]),
+        board_width: 7,
+        board_height: 7,
+      }
+    )
+    const later_path = receipt.turns
+      .find((turn) => turn.source_id === 'm1')
+      ?.events.find((event) => event.kind === 'move')?.payload.path
+
+    expect(later_path).toEqual([
+      { x: 2, y: 3 },
+      { x: 3, y: 3 },
       { x: 4, y: 3 },
     ])
   })
