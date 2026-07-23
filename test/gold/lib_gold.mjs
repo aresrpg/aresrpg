@@ -307,9 +307,17 @@ export function publishKiosk() {
   // carry a [dep-replacements.mainnet] Kiosk alongside the default testnet one), so testnet isn't
   // guaranteed to be the rev that actually lands on a fresh machine — determinism here just means picking
   // ONE reproducibly (sort | head -1), not policing which rev it is.
+  //
+  // TWO CACHE GENERATIONS: older sui toolchains laid the git cache out flat, keyed by the Move.toml rev
+  // LITERAL — `~/.move/<url>_git_<testnet|mainnet>/kiosk` (legs 1–2 below). sui 1.75's toolchain nests it
+  // one level deeper and keys by the RESOLVED COMMIT SHA instead — `~/.move/git/<url>_git_<sha>/kiosk`
+  // (leg 3). Both can coexist on a machine with build history spanning toolchain versions (old dirs are
+  // fossils from before the layout changed); a fresh machine on a current toolchain only ever populates
+  // the new one, so leg 3 is what actually matches in CI.
   const cache =
     sh(`ls -d ~/.move/https___github_com_MystenLabs_apps_git_testnet/kiosk 2>/dev/null | head -1`).trim() ||
-    sh(`ls -d ~/.move/https___github_com_MystenLabs_apps_git_*/kiosk 2>/dev/null | sort | head -1`).trim()
+    sh(`ls -d ~/.move/https___github_com_MystenLabs_apps_git_*/kiosk 2>/dev/null | sort | head -1`).trim() ||
+    sh(`ls -d ~/.move/git/https___github_com_MystenLabs_apps_git_*/kiosk 2>/dev/null | sort | head -1`).trim()
   if (!cache) throw new Error('Kiosk git cache not found in ~/.move — run a testnet build once to populate it')
   const kdir = path.join(P.BUILD, 'kiosk')
   fs.rmSync(kdir, { recursive: true, force: true })
@@ -320,9 +328,12 @@ export function publishKiosk() {
   let t = fs.readFileSync(ktoml, 'utf8')
   t = t.replace(/^published-at\s*=.*$/m, '')
   t = t.replace(/kiosk\s*=\s*"0x[0-9a-fA-F]+"/, 'kiosk = "0x0"')
-  // Widened to (?:testnet|mainnet): the cached copy may have come from either upstream rev (see the probe
-  // above) — its own Sui-framework pin literal follows suit either way, and both get repointed the same.
-  t = t.replace(/rev\s*=\s*"(?:testnet|mainnet)"/g, `rev = "${FRAMEWORK_REV}"`)
+  // Fully tolerant match: the cached copy may be either cache generation (see the probe above) — an
+  // old-layout clone's Sui-framework pin literal is a branch name ("testnet"/"mainnet"), a new-layout
+  // (sui 1.75+) clone may instead carry the resolved commit sha. Kiosk's own Move.toml has exactly one
+  // `rev = "..."` occurrence (its Sui dependency line) either way, so matching any quoted value here can't
+  // clobber anything else in the file.
+  t = t.replace(/rev\s*=\s*"[^"]+"/g, `rev = "${FRAMEWORK_REV}"`)
   fs.writeFileSync(ktoml, t)
   const out = sh(
     `cd '${kdir}' && SUI_CONFIG_DIR='${P.SUICFG}' sui client publish --skip-dependency-verification --json`,
