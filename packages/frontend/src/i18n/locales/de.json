@@ -1673,6 +1673,7 @@
     "gate_exploring": "Du bist auf Erkundung — wähle einen anderen Charakter",
     "state_resume": "FORTSETZEN",
     "dungeon_gone": "Dieses Verlies existiert nicht mehr — ein neues wird betreten",
+    "stuck_action_cleared": "Eine festgefahrene Aktion wurde gelöscht — du kannst jetzt wechseln",
     "action_enter_dungeon": "Betrete den Dungeon",
     "action_start_room_all": "Raum wird gestartet",
     "idle_title": "WARTERAUM",

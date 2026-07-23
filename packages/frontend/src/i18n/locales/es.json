@@ -1673,6 +1673,7 @@
     "gate_exploring": "Estás explorando — elige otro personaje",
     "state_resume": "REANUDAR",
     "dungeon_gone": "Esta mazmorra ya no existe — entrando en una nueva",
+    "stuck_action_cleared": "Se borró una acción atascada — ya puedes cambiar",
     "action_enter_dungeon": "Entrando en la mazmorra",
     "action_start_room_all": "Iniciando la sala",
     "idle_title": "SALA DE ESPERA",

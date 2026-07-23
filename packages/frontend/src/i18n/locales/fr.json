@@ -1673,6 +1673,7 @@
     "gate_exploring": "Vous êtes en exploration — choisissez un autre personnage",
     "state_resume": "REPRENDRE",
     "dungeon_gone": "Ce donjon n'existe plus — entrée dans un nouveau",
+    "stuck_action_cleared": "Une action bloquée a été effacée — tu peux changer maintenant",
     "action_enter_dungeon": "Entrée dans le donjon",
     "action_start_room_all": "Démarrage de la salle",
     "idle_title": "SALLE D'ATTENTE",

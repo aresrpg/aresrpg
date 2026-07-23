@@ -1673,6 +1673,7 @@
     "gate_exploring": "You are currently exploring — choose another character",
     "state_resume": "RESUME",
     "dungeon_gone": "This dungeon no longer exists — entering a fresh one",
+    "stuck_action_cleared": "A stuck action was cleared — you can switch now",
     "action_enter_dungeon": "Entering the dungeon",
     "action_start_room_all": "Starting the room",
     "idle_title": "WAITING ROOM",

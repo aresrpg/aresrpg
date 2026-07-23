@@ -1673,6 +1673,7 @@
     "gate_exploring": "現在探索中です — 別のキャラクターを選んでください",
     "state_resume": "再開",
     "dungeon_gone": "このダンジョンはもう存在しません — 新しいダンジョンに入ります",
+    "stuck_action_cleared": "停止していた操作を解除しました — 今すぐ切り替えられます",
     "action_enter_dungeon": "ダンジョンに入場中",
     "action_start_room_all": "部屋を開始中",
     "idle_title": "待機部屋",

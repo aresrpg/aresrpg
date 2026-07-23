@@ -97,6 +97,11 @@ import {
 
 const POLL_MS = 4000
 
+// #654 — a `busy` latch that outlives its own action (a cancelled/hung resume, mid-flight) bricks that
+// character's switch forever ("another character action is still in progress"). resume_dungeon stamps
+// `busy_since` when IT acquires the lock; past this ceiling the guard treats it as abandoned rather than live.
+const STALE_BUSY_MS = 45_000
+
 /**
  * Walk one M2b journal gap only while the character request and fight session that requested it still own the
  * adapter. The core's journal input is intentionally one-ingress data, but unlike snapshot it is not independently
@@ -329,6 +334,9 @@ export const use_dungeon = create((set, get) => ({
   /** @type {string | null} */
   error: null,
   busy: false,
+  /** @type {number | null} Date.now() a busy-holder acquired the lock — only resume_dungeon stamps this (#654
+   *  staleness ceiling); null means either idle or a non-stamped holder, and is never treated as stale. */
+  busy_since: null,
   /** @type {ReturnType<typeof setInterval> | null} */
   _poll_timer: null,
 
@@ -656,10 +664,27 @@ export const use_dungeon = create((set, get) => ({
     const cancelled_outcome = () => ({ status: 'refused', reason: 'cancelled' })
     if (cancelled()) return cancelled_outcome()
     if (get().busy) {
-      game_log('dungeon', 'resume ignored — store busy')
-      return { status: 'refused', reason: 'busy' }
+      // #654 STALENESS CEILING: a busy holder THIS door itself stamped (busy_since) past the ceiling is an
+      // abandoned lock (a cancelled/hung resume that never hit its own release), not a live one — clear it,
+      // surface one honest toast, and fall through to acquire fresh instead of refusing the switch forever. A
+      // holder this door never stamped (busy_since null — some other in-flight action, e.g. a turn commit) is
+      // always treated as fresh: never auto-cleared, so a genuinely different live action still wins the refusal.
+      const age_ms = get().busy_since != null ? Date.now() - get().busy_since : 0
+      if (age_ms <= STALE_BUSY_MS) {
+        game_log('dungeon', 'resume ignored — store busy')
+        return { status: 'refused', reason: 'busy' }
+      }
+      game_log('dungeon', 'resume: clearing a stale busy latch — an earlier action never released it', { age_ms })
+      push_event_toast({ state: 'info', title: i18n.t('dungeons.stuck_action_cleared') })
     }
-    set({ busy: true, error: null, phase: 'entering', character_id, session_address: use_auth.getState().address })
+    set({
+      busy: true,
+      busy_since: Date.now(),
+      error: null,
+      phase: 'entering',
+      character_id,
+      session_address: use_auth.getState().address,
+    })
     try {
       const sdk = await get_sdk()
       if (cancelled()) return cancelled_outcome()
@@ -756,10 +781,13 @@ export const use_dungeon = create((set, get) => ({
     } catch (error) {
       if (cancelled()) return cancelled_outcome()
       game_log('dungeon', 'resume_dungeon failed', error)
-      set({ error: humanize_abort(error?.message ?? String(error)), phase: 'idle', busy: false, in_session: false })
+      set({ error: humanize_abort(error?.message ?? String(error)), phase: 'idle', in_session: false })
       return { status: 'failed', error }
+    } finally {
+      // #654 — EVERY exit releases the lock (a cancelled()/gone-pass/dead-fight/refresh-raced early `return`
+      // above, the catch, or the plain success fallthrough): a rejected/aborted resume must never outlive itself.
+      set({ busy: false, busy_since: null })
     }
-    set({ busy: false })
     return { status: 'done' }
   },
 
@@ -1568,6 +1596,7 @@ export const use_dungeon = create((set, get) => ({
       phase: 'idle',
       error: null,
       busy: false,
+      busy_since: null,
       in_session: false,
       room_recap: null,
       _claiming: false,

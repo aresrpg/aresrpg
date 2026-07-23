@@ -178,6 +178,85 @@ test('a cancelled dungeon resume cannot publish after its awaited pass read comp
   expect(use_dungeon.getState()).toMatchObject({ run_pass_id: null, dungeon_id: null, busy: false })
 })
 
+// #654 — CharacterSwitcher maps a `resume_dungeon` busy refusal straight to "Another character action is still
+// in progress"; a `busy` that outlives its own cancelled/hung resume bricks THAT character's switch forever
+// (others switch fine — they never touch this store). The two tests below pin the fix: EVERY exit releases the
+// lock (a `finally`, not a manual reset_local() the way the test above simulates a full session teardown), and a
+// holder this door stamped past a staleness ceiling is abandoned garbage, cleared instead of refused forever.
+test('RED-FIRST: a cancelled resume releases its OWN busy latch with no external reset_local — switchable on the very next click', async () => {
+  const deferred_read = Promise.withResolvers()
+  let is_current = true
+  read_response = async (object_id) => {
+    if (object_id === RUN_PASS_ID) return deferred_read.promise
+    throw new Error(`unexpected object read: ${object_id}`)
+  }
+
+  const resume = use_dungeon.getState().resume_dungeon(RUN_PASS_ID, CHARACTER_ID, { is_current: () => is_current })
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  expect(get_object).toHaveBeenCalledTimes(1)
+
+  // The click that started this resume stops being "current" (a superseding session event) — no reset_local()
+  // here, unlike the test above: this isolates resume_dungeon's OWN release from an external teardown's.
+  is_current = false
+  deferred_read.resolve(run_object())
+
+  expect(await resume).toEqual({ status: 'refused', reason: 'cancelled' })
+  // Pre-fix: busy/busy_since survive a cancelled() early return — this assertion (and every future resume of
+  // this character) fails exactly like the field report ("another character action is still in progress").
+  expect(use_dungeon.getState()).toMatchObject({ busy: false, busy_since: null })
+
+  // A fresh click must be willing to ATTEMPT again — proven by a real second read, whatever it then finds
+  // (an unrelated "gone" failure here, never a short-circuited "still busy" refusal).
+  const reads_before_retry = get_object.mock.calls.length
+  read_response = async (object_id) => {
+    if (object_id === RUN_PASS_ID) throw { code: 'deleted', message: 'object read failed' }
+    throw new Error(`unexpected object read: ${object_id}`)
+  }
+  const retry = await use_dungeon.getState().resume_dungeon(RUN_PASS_ID, CHARACTER_ID)
+  expect(retry.status).not.toBe('refused')
+  expect(get_object.mock.calls.length).toBeGreaterThan(reads_before_retry)
+})
+
+test('RED-FIRST: a resume stuck past the staleness ceiling is cleared for the next attempt, never refused forever', async () => {
+  const hang = Promise.withResolvers() // never settles — models a dead network await (no reject, no resolve)
+  read_response = async (object_id) => {
+    if (object_id === RUN_PASS_ID) return hang.promise
+    throw new Error(`unexpected object read: ${object_id}`)
+  }
+
+  const real_now = Date.now
+  let fake_now = 1_000_000
+  Date.now = () => fake_now
+
+  try {
+    void use_dungeon.getState().resume_dungeon(RUN_PASS_ID, CHARACTER_ID)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(use_dungeon.getState()).toMatchObject({ busy: true, busy_since: 1_000_000 })
+
+    // Still inside the ceiling — the legitimate in-flight case keeps refusing (never break the guard's purpose).
+    fake_now = 1_000_000 + 10_000
+    expect(await use_dungeon.getState().resume_dungeon(RUN_PASS_ID, CHARACTER_ID)).toEqual({
+      status: 'refused',
+      reason: 'busy',
+    })
+
+    // Past the ceiling — the hung holder is abandoned garbage; THIS click clears it and proceeds (a real fresh
+    // read, not a short-circuited "still busy") instead of refusing forever.
+    fake_now = 1_000_000 + 46_000
+    const reads_before_retry = get_object.mock.calls.length
+    read_response = async (object_id) => {
+      if (object_id === RUN_PASS_ID) throw { code: 'deleted', message: 'object read failed' }
+      throw new Error(`unexpected object read: ${object_id}`)
+    }
+    const retry = await use_dungeon.getState().resume_dungeon(RUN_PASS_ID, CHARACTER_ID)
+    expect(retry.status).not.toBe('refused')
+    expect(get_object.mock.calls.length).toBeGreaterThan(reads_before_retry)
+    expect(use_dungeon.getState().busy).toBe(false)
+  } finally {
+    Date.now = real_now
+  }
+})
+
 test('a cancelled M2b journal walk cannot feed old-fight events into a replacement accept cursor', async () => {
   const OLD_FIGHT_ID = '0xoldfight'
   const NEW_FIGHT_ID = '0xnewfight'
