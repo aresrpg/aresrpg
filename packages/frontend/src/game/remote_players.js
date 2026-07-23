@@ -436,7 +436,7 @@ export function create_remote_players(engine, world_canvas = null) {
         if (desired_pet.spawn && desired_pet.glb_url) {
           if (!r.pet || r.pet_glb !== desired_pet.glb_url) {
             r.pet?.dispose()
-            r.pet = create_pet_companion_rig({ engine, glb_url: desired_pet.glb_url })
+            r.pet = create_pet_companion_rig({ engine, glb_url: desired_pet.glb_url, slug: desired_pet.key })
             r.pet_glb = desired_pet.glb_url
           }
           r.pet.set_visible(remote_rig_visible(fight_active))

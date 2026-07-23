@@ -668,7 +668,7 @@ export function create_player({
         if (desired_pet.spawn && desired_pet.glb_url) {
           if (!pet_ctl || pet_glb_url !== desired_pet.glb_url) {
             pet_ctl?.dispose()
-            pet_ctl = create_pet_companion_rig({ engine, glb_url: desired_pet.glb_url })
+            pet_ctl = create_pet_companion_rig({ engine, glb_url: desired_pet.glb_url, slug: desired_pet.key })
             pet_glb_url = desired_pet.glb_url
           }
           pet_ctl.set_visible(!own_hidden)
