@@ -499,7 +499,10 @@ describe('shadow casters — tier-gated leaf/grass (Rung 1) + LOW shadow-map dro
     expect(high.cutout).toBe(true)
     expect(medium.foliage).toBe(false)
     expect(high.foliage).toBe(true)
-  })
+    // 30s timeout (#641): two full tier renderer builds (medium + high) each bake a 357-layer atlas
+    // + allocate a ~120-145 MB quad pool — the default 5s flakes under full-suite/CI-runner load
+    // while passing isolated (same class as column_gen.test.js's documented 15s precedent).
+  }, 30000)
   test('LOW (SHADER DIET D8): nothing casts and nothing receives — the shadow map is dropped', () => {
     const cast = flags('low', 'castShadow')
     const recv = flags('low', 'receiveShadow')
@@ -513,5 +516,6 @@ describe('shadow casters — tier-gated leaf/grass (Rung 1) + LOW shadow-map dro
       const recv = flags(tier, 'receiveShadow')
       for (const cls of ['solid', 'foliage', 'cutout', 'canopy', 'liquid']) expect(recv[cls]).toBe(true)
     }
-  })
+    // 30s timeout (#641): same two-tier-build cost as the sibling test above.
+  }, 30000)
 })
