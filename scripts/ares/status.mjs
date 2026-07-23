@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // `ares status` — the testnet liveness/drift board: release pins vs chain objects, /v1 read-API
-// health, Walrus quilt registry shape, the deployed prod bundle's package pins, and the sponsor
-// station. Pure summary helpers are exported for scripts/ares.test.mjs (via the ares.mjs re-export).
+// health, the deployed prod bundle's package pins, and the sponsor station. Walrus publish-registry
+// health moved with the pipeline to the seed repo (2026-07-23 publish-boundary sweep) — this board
+// no longer probes it. Pure summary helpers are exported for scripts/ares.test.mjs (via the ares.mjs
+// re-export).
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -17,10 +19,6 @@ const max_indexer_lag_seconds = 5
 const frontend_rpc_default = 'http://localhost:3000'
 const prod_origin = 'https://testnet.aresrpg.world'
 const sponsor_url = 'https://sponsor.aresrpg.world/api/sponsor'
-const walrus_classes =
-  'mob_glb_quilt character_glb_quilt cosmetic_glb_quilt cosmetic_icon_quilt music_quilt spell_icon_quilt mob_icon_quilt item_icon_quilt shop_render_quilt'.split(
-    ' '
-  )
 const registry_fields = ['SOCIAL_FRIEND_REGISTRY', 'FIGHT_REGISTRY', 'POOL_REGISTRY', 'LOOT_REGISTRY']
 // SDK field, semantic release package, origin/latest selector, stale-hint flag, client-bundle flag.
 const package_pin_fields = [
@@ -179,46 +177,6 @@ async function pinned_rows(probe_ids) {
     package_result = status_row('DOWN', 'pins.package', `reason=${error_reason(error)} chain=not-evaluated`)
   }
   return [package_result, registry_row(registries, probe)]
-}
-export function registry_class_diff(registry_classes) {
-  const expected = new Set(walrus_classes)
-  const registered = new Set(registry_classes)
-  return {
-    missing: registry_classes.filter((asset_class) => !expected.has(asset_class)),
-    extra: walrus_classes.filter((asset_class) => !registered.has(asset_class)),
-  }
-}
-function walrus_rows() {
-  const registry_path = path.join(repo_root, 'scripts/walrus/registry.json')
-  let registry
-  try {
-    registry = JSON.parse(fs.readFileSync(registry_path, 'utf8'))
-  } catch (error) {
-    return walrus_classes.map((asset_class) =>
-      status_row('DOWN', `walrus.${asset_class.replace(/_quilt$/, '')}`, `reason=${error_reason(error)}`)
-    )
-  }
-  const registry_classes = Object.keys(registry.blobs ?? {})
-  const { missing } = registry_class_diff(registry_classes)
-  return [...walrus_classes, ...missing].map((asset_class) => {
-    const entry = registry.blobs?.[asset_class]
-    const entries = Array.isArray(entry) ? entry : entry ? [entry] : []
-    const quilt_ids = entries.map((item) => item?.blob_id).filter(Boolean)
-    const expected_count = asset_class === 'item_icon_quilt' ? 4 : 1
-    const shape_ok = asset_class === 'item_icon_quilt' ? Array.isArray(entry) : !!entry && !Array.isArray(entry)
-    const ok =
-      registry.network === 'testnet' &&
-      shape_ok &&
-      entries.length === expected_count &&
-      quilt_ids.length === expected_count
-    const count_label =
-      asset_class === 'item_icon_quilt' ? `item_shards=${entries.length} expected=4` : `quilts=${entries.length}`
-    return status_row(
-      ok ? 'OK' : 'DRIFT',
-      `walrus.${asset_class.replace(/_quilt$/, '')}`,
-      `network=${registry.network ?? '(missing)'} ${count_label} ids=${quilt_ids.join(',') || '(missing)'}`
-    )
-  })
 }
 function api_status_row(probe) {
   if (!is_success(probe)) return failed_probe_row('rpc.status', probe)
@@ -470,5 +428,5 @@ export async function run_status({
     prod_row(fetch_text_fn),
     sponsor_row(fetch_text_fn),
   ])
-  return print_status([...pins, ...rpc_rows, ...walrus_rows(), prod, sponsor])
+  return print_status([...pins, ...rpc_rows, prod, sponsor])
 }

@@ -17,7 +17,6 @@ export {
   bundle_pin_summary,
   package_pin_summary,
   probe_object_ids,
-  registry_class_diff,
   spell_manifest_ids,
   spell_presence_summary,
 } from './ares/status.mjs'
