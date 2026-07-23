@@ -356,18 +356,44 @@ function elements(tx) {
 }
 const fxVec = (tx, effects) =>
   tx.makeMoveVec({ type: T.effect, elements: effects })
-// Universal effect envelope (PHASE 8): all 22 corpus effect kinds are defined discriminants ≤ 29, so
-// `new_effect` builds them all and `is_legal` admits each (engine kinds the resolver doesn't yet READ mint
-// fine as data — balance C-6 FOLLOWUPS). element null→255; `value` = MAGNITUDE (sign rides FLAG_NEGATIVE);
-// `phase` per kind (glyph/dot tick at turn START, else on-enter=0) — signature in foundation spell_effect.
+// Universal effect envelope (PHASE 8): all corpus effect kinds are defined discriminants, so `new_effect_ranged`
+// builds them all and `is_legal` admits each. element null→255; `phase` per kind (glyph/dot tick at turn START,
+// else on-enter=0) — signature in foundation spell_effect.
+// #577 — every effect authors a RANGE [value, value_max] (a missing max ⇒ max = min, the degenerate FIXED case,
+// byte-identical to the pre-#577 single-value mint). R3 — alter_stat/alter_resist (kinds 9/11) author SIGNED
+// deltas encoded CENTERED at 32768 (SHIFT, the gear/resist convention); every OTHER kind is a raw magnitude and a
+// negative is a HARD ERROR (a debuff on a non-alter kind is a corpus bug, refused LOUDLY — never silently abs'd).
 const KIND_PHASE = { 20: 1, 21: 1 } // K_PLACE_GLYPH / K_APPLY_DOT → PHASE_START; all else PHASE_ON_ENTER
-const effectFx = (tx, e) =>
-  tx.moveCall({
-    target: `${CFND}::spell_effect::new_effect`,
+const SIGNED_EFFECT_KINDS = new Set([9, 11]) // K_ALTER_STAT / K_ALTER_RESIST — value/value_max centered at SHIFT
+// Encode ONE authored effect scalar for `kind`: signed kinds center at SHIFT (delta may be negative); every other
+// kind stays a raw magnitude and a negative aborts the seed (the R3 refuse-negative gate).
+const encodeEffectValue = (kind, raw) => {
+  const n = Number(raw ?? 0)
+  if (SIGNED_EFFECT_KINDS.has(kind)) return SHIFT + n // centered: n may be negative
+  if (n < 0)
+    throw new Error(
+      `effect kind ${kind}: negative value ${n} — only alter_stat/alter_resist (9/11) author signed deltas (R3)`
+    )
+  return n
+}
+// The authored [min, max] range of an effect (#577). Fields: value/value_max, base/baseMax, or damageMin/damageMax;
+// a missing max ⇒ max = min. Mob kits normalize through `mobEffect` (which threads base→value, baseMax→value_max).
+const effectRange = (e) => {
+  const min = e.value ?? e.base ?? e.damageMin ?? e.min ?? 0
+  const max = e.value_max ?? e.baseMax ?? e.damageMax ?? e.max ?? min
+  return [Number(min), Number(max)]
+}
+const effectFx = (tx, e) => {
+  const [rawMin, rawMax] = effectRange(e)
+  const a = encodeEffectValue(e.kind, rawMin)
+  const b = encodeEffectValue(e.kind, rawMax)
+  return tx.moveCall({
+    target: `${CFND}::spell_effect::new_effect_ranged`,
     arguments: [
       tx.pure.u8(e.kind),
       tx.pure.u8(e.element ?? 255),
-      tx.pure.u64(Math.abs(e.value ?? 0)),
+      tx.pure.u64(Math.min(a, b)), // value = the LOW endpoint (well-formed range: value <= value_max)
+      tx.pure.u64(Math.max(a, b)), // value_max = the HIGH endpoint
       tx.pure.u8(e.area_shape ?? 0),
       tx.pure.u64(e.area_size ?? 0),
       tx.pure.u8(e.target_filter ?? 0),
@@ -378,9 +404,11 @@ const effectFx = (tx, e) =>
       tx.pure.u8(KIND_PHASE[e.kind] ?? 0),
     ],
   })
-// Mob spell effects: `op` + string `element` + magnitude in `base` (dmg/dot/life-steal) or `value`
-// (points/stat), no target_filter. Normalize to the effectFx envelope (numeric element, magnitude in
-// `value`, offensive → TF_NOT_TEAM = spell_effect::damage's own default).
+}
+// Mob spell effects: `op` + string `element` + `base` (dmg/dot/life-steal) or `value` (points/stat), no
+// target_filter. Normalize to the effectFx envelope (numeric element, range in `value`/`value_max`, offensive →
+// TF_NOT_TEAM = spell_effect::damage's own default). #577: `baseMax`/`max` carry the range high endpoint (absent ⇒
+// fixed). SIGN stays authored (effectFx centers kinds 9/11, refuses a negative on any other kind — never abs'd).
 const EL_ID = { fire: 0, water: 1, earth: 2, air: 3, neutral: 255, none: 255 }
 const MOB_OFFENSIVE = new Set([0, 1, 2, 3, 4, 7, 8, 12, 13, 17, 21])
 const mobEffect = (e) => ({
@@ -390,6 +418,7 @@ const mobEffect = (e) => ({
       ? (EL_ID[e.element] ?? 255)
       : (e.element ?? 255),
   value: e.base ?? e.value ?? 0,
+  value_max: e.baseMax ?? e.value_max ?? e.max ?? e.base ?? e.value ?? 0, // #577 range high endpoint
   area_shape: e.area_shape,
   area_size: e.area_size,
   target_filter: e.target_filter ?? (MOB_OFFENSIVE.has(e.kind) ? 1 : 0),
@@ -618,6 +647,7 @@ export async function seed_full_corpus() {
         tx.pure.string(it.name),
         tx.pure.string(it.description ?? ''),
         tx.pure.string(it.itemType),
+        tx.pure.string(it.icon ?? it.slug), // R4: the per-variant art slug the Display `{icon}` resolves
         tx.pure.string(it.category),
         tx.pure.u16(it.level ?? 1),
         smin,

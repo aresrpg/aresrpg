@@ -445,3 +445,102 @@ describe('corpus sanity — seed/mainnet/*/items.json CONSUMABLEs', () => {
     expect(authored - ruledExceptions).toBeGreaterThan(0) // most rows DO resolve — the fix is real, not vacuous
   })
 })
+
+// ══════ COMMIT C — the ceremony mint speaks the new schema (ranges · loot chance · R3 sign · R4 icon) ══════
+// Pure mirrors of seed_full_corpus.mjs (no seeder import — its module load pulls client.js/keypair + the manifest).
+// Each mirror is byte-identical to the source helper it pins; a reviewer checks the source against these.
+const SHIFT = 32768 // seed_full_corpus SHIFT (item_stats + mob resistances centered here; R3 reuses it)
+const SIGNED_EFFECT_KINDS = new Set([9, 11]) // K_ALTER_STAT / K_ALTER_RESIST — value/value_max centered at SHIFT
+// mirrors seed_full_corpus encodeEffectValue()
+const encodeEffectValue = (kind, raw) => {
+  const n = Number(raw ?? 0)
+  if (SIGNED_EFFECT_KINDS.has(kind)) return SHIFT + n
+  if (n < 0)
+    throw new Error(
+      `effect kind ${kind}: negative value ${n} — only alter_stat/alter_resist (9/11) author signed deltas (R3)`
+    )
+  return n
+}
+// mirrors seed_full_corpus effectRange()
+const effectRange = e => {
+  const min = e.value ?? e.base ?? e.damageMin ?? e.min ?? 0
+  const max = e.value_max ?? e.baseMax ?? e.damageMax ?? e.max ?? min
+  return [Number(min), Number(max)]
+}
+const resolveIcon = it => it.icon ?? it.slug // mirrors buildItemCreate's `it.icon ?? it.slug`
+
+describe('COMMIT C ③ — R3 signed encode: alter_stat/alter_resist center at 32768, every other kind refuses a negative', () => {
+  test('a negative alter delta encodes CENTERED (a −33 debuff → 32735; a −8 → 32760)', () => {
+    expect(encodeEffectValue(9, -33)).toBe(SHIFT - 33) // 32735
+    expect(encodeEffectValue(11, -8)).toBe(SHIFT - 8) // 32760
+  })
+  test('a positive alter delta centers above SHIFT (a +50 buff → 32818)', () => {
+    expect(encodeEffectValue(9, 50)).toBe(SHIFT + 50) // 32818
+    expect(encodeEffectValue(11, 5)).toBe(SHIFT + 5) // 32773
+  })
+  test('a raw (non-signed) kind passes its magnitude through unchanged', () => {
+    expect(encodeEffectValue(0, 12)).toBe(12) // K_DAMAGE
+    expect(encodeEffectValue(21, 8)).toBe(8) // K_APPLY_DOT
+  })
+  test('THE R3 GATE: a negative on any NON-alter kind aborts LOUDLY (never silently abs\'d into a buff)', () => {
+    expect(() => encodeEffectValue(0, -5)).toThrow(/only alter_stat\/alter_resist/) // a debuff on K_DAMAGE = corpus bug
+    expect(() => encodeEffectValue(5, -1)).toThrow(/R3/) // K_HEAL
+  })
+})
+
+describe('COMMIT C ① — #577 ranges: value = min, value_max = max (a missing max ⇒ fixed), well-formed after centering', () => {
+  test('an authored damage range reads [damageMin, damageMax]', () => {
+    expect(effectRange({ kind: 0, damageMin: 4, damageMax: 12 })).toEqual([4, 12])
+  })
+  test('a single value is the degenerate FIXED case (max = min)', () => {
+    expect(effectRange({ kind: 0, value: 8 })).toEqual([8, 8])
+    expect(effectRange({ kind: 0, base: 15 })).toEqual([15, 15]) // mob `base`
+  })
+  test('a centered SIGNED range is emitted LOW→HIGH (value <= value_max) regardless of authored order', () => {
+    // A −33..−8 debuff range: both endpoints center, then value = min endpoint, value_max = max endpoint.
+    const [rawMin, rawMax] = effectRange({ kind: 9, damageMin: -33, damageMax: -8 })
+    const a = encodeEffectValue(9, rawMin)
+    const b = encodeEffectValue(9, rawMax)
+    expect([Math.min(a, b), Math.max(a, b)]).toEqual([32735, 32760])
+    expect(Math.max(a, b)).toBeGreaterThanOrEqual(Math.min(a, b)) // is_legal: value_max >= value
+  })
+})
+
+describe('COMMIT C ② — loot/rate chance is a FRACTION → basis points (Math.round(chance × 10000)); the never-drop guard', () => {
+  test('the documented fraction cases (0.0005 → 5bp, 0.05 → 500bp, 1 → 10000bp)', () => {
+    expect(bp(0.0005)).toBe(5) // the brief's pin: a 0.05% drop is 5bp, NOT 0 (a raw/×100 pass drops it forever)
+    expect(bp(0.05)).toBe(500)
+    expect(bp(1)).toBe(10000) // a certain drop
+    expect(bp(0)).toBe(0)
+  })
+  test('an over-1 fraction clamps to 100% (10000bp) and a nullish rate is 0 — never a wraparound', () => {
+    expect(bp(1.5)).toBe(10000)
+    expect(bp(undefined)).toBe(0)
+  })
+})
+
+describe('COMMIT C ④ — R4 icon: each item threads its per-variant slug into create_template (13-arg signature)', () => {
+  test('the icon resolves to the row\'s own `icon`, falling back to its `slug`', () => {
+    expect(resolveIcon({ slug: 'sword_iron' })).toBe('sword_iron') // default = the per-variant slug
+    expect(resolveIcon({ slug: 'x', icon: 'custom_art' })).toBe('custom_art') // explicit override wins
+  })
+  test('create_template now composes 13 args with the icon threaded 6th (between item_type and category)', () => {
+    const it = { name: 'Iron Sword', description: '', itemType: 'sword', slug: 'sword_iron', category: 'sword', level: 10 }
+    const tx = new Transaction()
+    tx.moveCall({
+      target: `${IPKG}::admin::create_template`,
+      arguments: [
+        tx.object(oid('cap')), tx.object(oid('cat')),
+        tx.pure.string(it.name), tx.pure.string(it.description ?? ''),
+        tx.pure.string(it.itemType), tx.pure.string(resolveIcon(it)), tx.pure.string(it.category),
+        tx.pure.u16(it.level ?? 1),
+        opt_none(tx, `${IPKG}::item_stats::ItemStatistics`), opt_none(tx, `${IPKG}::item_stats::ItemStatistics`),
+        tx.makeMoveVec({ type: `${IPKG}::item_damages::ItemDamages`, elements: [] }),
+        opt_none(tx, `${IPKG}::consumable_effect::ConsumableEffect`),
+        tx.object(oid('ver')),
+      ],
+    })
+    const call = tx.getData().commands.find(c => c.$kind === 'MoveCall' && c.MoveCall.function === 'create_template')
+    expect(call.MoveCall.arguments.length).toBe(13) // 12 (pre-R4) + the icon arg
+  })
+})
