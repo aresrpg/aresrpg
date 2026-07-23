@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 import { expect, test } from 'bun:test'
 
-const root = '/Users/sceatstudio/dev/aresrpg'
+const root = fileURLToPath(new URL('../..', import.meta.url))
 
 test('gold compose runs the sponsor protocol with only a throwaway localnet key', () => {
   const compose = fs.readFileSync(`${root}/test/gold/compose.gold.yml`, 'utf8')

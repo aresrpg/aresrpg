@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 import { describe, expect, test } from 'bun:test'
 
 import { MARKET_ASK_MIST, build_market_two_actor_fixture, market_purchase_math } from './market_two_actor.mjs'
+
+const root = fileURLToPath(new URL('../../..', import.meta.url))
 
 describe('cross-actor marketplace fixture', () => {
   test('selects two unique items and legal stack lots 1/10/100', () => {
@@ -34,7 +37,6 @@ describe('cross-actor marketplace fixture', () => {
   })
 
   test('buys into the selected character kiosk and asserts that exact placement', () => {
-    const root = '/Users/sceatstudio/dev/aresrpg'
     const backend = fs.readFileSync(`${root}/test/gold/bot/backend_sdk.mjs`, 'utf8')
     const market_row = fs.readFileSync(`${root}/test/gold/specs_multiplayer/marketplace.spec.ts`, 'utf8')
     expect(backend).toContain('driver.marketplace_buy({ ...ctx.ids, ...a })')
