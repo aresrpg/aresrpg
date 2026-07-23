@@ -418,27 +418,22 @@ const effectFx = (tx, e) => {
     ],
   })
 }
-// Mob spell effects: `op` + string `element` + `base` (dmg/dot/life-steal) or `value` (points/stat), no
-// target_filter. Normalize to the effectFx envelope (numeric element, range in `value`/`value_max`, offensive →
-// TF_NOT_TEAM = spell_effect::damage's own default). #577: `baseMax`/`max` carry the range high endpoint (absent ⇒
-// fixed). SIGN stays authored (effectFx centers kinds 9/11, refuses a negative on any other kind — never abs'd).
+// Mob spell effects: `op` + string `element` + `base`/`damageMin`/`damageMax` (dmg/dot/life-steal) or `value`
+// (points/stat), no target_filter. mobEffect owns exactly TWO mob-specific transforms — numeric element, and the
+// offensive → TF_NOT_TEAM default — and passes every OTHER field through RAW so effectRange (inside effectFx) is
+// the ONE home for family-paired range selection (its own law, a few lines up: value_max → base/baseMax →
+// damageMin/damageMax → fixed). Pre-resolving the range here used to shadow that law and silently collapse every
+// damageMin/damageMax mob row to its floor (census-proven: alley_bunny minted [1,1] against an authored [1,3],
+// all 374 mobs voided). SIGN stays authored (effectFx centers kinds 9/11, refuses a negative on any other kind).
 const EL_ID = { fire: 0, water: 1, earth: 2, air: 3, neutral: 255, none: 255 }
 const MOB_OFFENSIVE = new Set([0, 1, 2, 3, 4, 7, 8, 12, 13, 17, 21])
 const mobEffect = (e) => ({
-  kind: e.kind,
+  ...e,
   element:
     typeof e.element === 'string'
       ? (EL_ID[e.element] ?? 255)
       : (e.element ?? 255),
-  value: e.base ?? e.value ?? 0,
-  value_max: e.baseMax ?? e.value_max ?? e.max ?? e.base ?? e.value ?? 0, // #577 range high endpoint
-  area_shape: e.area_shape,
-  area_size: e.area_size,
   target_filter: e.target_filter ?? (MOB_OFFENSIVE.has(e.kind) ? 1 : 0),
-  chance: e.chance,
-  turns: e.turns,
-  stat: e.stat,
-  flags: e.flags,
 })
 // new_spell_level(min_cl,ap,rmin,rmax,mod,line,los,free,cpt,cpta,cd,crit_rate,ends,req[],forb[],fx[],crit_fx[])
 const spellLevel = (tx, o, fx, crit) =>
