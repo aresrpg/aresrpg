@@ -7,7 +7,6 @@ import {
   apply_resistance,
   calculate_final_damage,
 } from '../src/spell_calculator.js'
-import { rng_seed } from '../src/prng.js'
 import { consume_shields } from '../src/fight_actions.js'
 
 // Regression for the "shields never deplete" combat bug: apply_shields computed the absorbed amount for
@@ -52,7 +51,7 @@ describe('elementless damage does NOT crash (flying_soul steal — the cast->ser
     // reduce() -> unhandledRejection -> the whole server crashed mid-cast.
     const effect = { min: 1, max: 4, type: 'DAMAGE' } // no element
     expect(() =>
-      calculate_final_damage(rng_seed(1), effect, stats, stats, 1, []),
+      calculate_final_damage(effect, stats, stats, 0, []),
     ).not.toThrow()
   })
 })

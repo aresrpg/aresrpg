@@ -5,6 +5,7 @@
 
 import { find_entity, update_entity } from './fight_state.js'
 import { apply_spell_effect } from './fight_spells.js'
+import { crank_damage_roll } from './turn_seed.js'
 
 /** Resolve due timed payload rows before ordinary turn-start status decay. */
 export const process_delayed_payloads = (state, entity_id) => {
@@ -32,6 +33,7 @@ export const process_delayed_payloads = (state, entity_id) => {
           target.cell,
           () => true,
           { spell_id: row.spell_id ?? '', stack_target_id: entity_id },
+          crank_damage_roll(inner.state.rng), // #577 — deferred payload rolls off the bearer's rng (non-advancing; fixed ⇒ unchanged)
         )
         return {
           state: applied.state,

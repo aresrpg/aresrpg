@@ -14,7 +14,6 @@ import { check_victory } from '../src/fight_actions.js'
 import { has_line_of_sight } from '../src/visibility.js'
 import { get_aoe_cells } from '../src/spell_targeting.js'
 import { calculate_final_damage } from '../src/spell_calculator.js'
-import { rng_seed } from '../src/prng.js'
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 // A synthetic flat arena (all walkable) so tests exercise the reducer, not the carve. Spawns are fixed
@@ -501,28 +500,42 @@ describe('reduce: basic AI', () => {
 
 // ── Determinism (sim.md law) ─────────────────────────────────────────────────
 describe('determinism', () => {
-  test('damage roll is a pure function of the rng thread', () => {
+  test('damage is a pure function of the turn-seed roll (#577)', () => {
     const effect = { type: 'DAMAGE', min: 5, max: 50, element: 'FIRE' }
     const caster = { intelligence: 100 }
     const target = { fire_resistance: 0 }
+    // same roll -> byte-identical damage (rng-free; the roll is the sole variable input).
     const a = calculate_final_damage(
-      rng_seed(777),
       /** @type {any} */ (effect),
       caster,
       target,
-      1,
+      6000,
       [],
     )
     const b = calculate_final_damage(
-      rng_seed(777),
       /** @type {any} */ (effect),
       caster,
       target,
-      1,
+      6000,
       [],
     )
     expect(a.damage).toBe(b.damage)
-    expect(a.rng).toBe(b.rng)
+    // and the roll spans the authored range: the low roll is strictly weaker than the high roll.
+    const lo = calculate_final_damage(
+      /** @type {any} */ (effect),
+      caster,
+      target,
+      0,
+      [],
+    ).damage
+    const hi = calculate_final_damage(
+      /** @type {any} */ (effect),
+      caster,
+      target,
+      9999,
+      [],
+    ).damage
+    expect(hi).toBeGreaterThan(lo)
   })
 
   test('same seed + same command sequence -> byte-identical {state, events} twice', () => {
