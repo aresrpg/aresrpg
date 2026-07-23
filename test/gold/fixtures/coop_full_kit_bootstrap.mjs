@@ -4,7 +4,7 @@
 // enter/search/fight/settle doors; the final gate reads the Character's live Progression dynamic field.
 import { build_context, make_kiosk_client } from '../../localnet/bots/framework/context.js'
 import { Driver } from '../../localnet/bots/framework/driver.js'
-import { get_fields, LOCALNET_GAS_BUDGET, SubmitStats } from '../../localnet/bots/framework/sui.js'
+import { get_fields, LOCALNET_GAS_BUDGET, submit, SubmitStats } from '../../localnet/bots/framework/sui.js'
 import { reach_zone, win_fight } from '../../localnet/bots/framework/world_flow.js'
 import { signerOf } from '../lib_gold.mjs'
 
@@ -51,6 +51,9 @@ function driver_for({ client, ids, kiosk_pkg, wallet, signer }) {
     signer,
     coverage: { record: () => [] },
     stats: new SubmitStats(),
+    // One rebuild is safe only for a thrown pre-execution fetch/version race. submit() returns every digest-bearing
+    // abort immediately, so the leveler never repeats a gas-burning executed action.
+    submit_fn: (args) => submit({ ...args, max_retries: 1 }),
     budget: LOCALNET_GAS_BUDGET,
   })
 }

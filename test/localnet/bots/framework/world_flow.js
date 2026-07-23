@@ -19,14 +19,19 @@
 // admin-tuned for reachability (harness/lib.mjs tuneWorld: tiny zones, fast speed, strong L1 combat) so these
 // REAL Move paths (travel-verify, zone discovery, fight create/act/settle) run honestly in a short bot sprint.
 
+import { CHAIN_MIN_TURN_MS } from '../../../../packages/fight/src/draft_budget.js'
 import { derive_zone } from '../../../../packages/sim/src/zone_derive.js'
 
 import { deriveDynamicFieldID, bcs } from './deps.js'
-import { get_fields } from './sui.js'
+import { classify_throw, get_object } from './sui.js'
 
 // ── combat grid (foundation combat_grid.move): fixed encoding STRIDE 20, cell = y*20 + x, 380 cells ─────────
 const GRID_W = 20
 const GRID_CELLS = 380
+const FIGHT_POLL_INTERVAL_MS = 100
+const FIGHT_EFFECT_TIMEOUT_MS = 15_000
+const FIGHT_READ_RETRY_MS = 50
+const PASS_CLOCK_GRACE_MS = 100
 const cell_x = (c) => c % GRID_W
 const cell_y = (c) => Math.floor(c / GRID_W)
 export const manhattan = (a, b) => Math.abs(cell_x(a) - cell_x(b)) + Math.abs(cell_y(a) - cell_y(b))
@@ -194,13 +199,54 @@ export async function reach_zone({
 
 // ── fight board read + minimal tactical solver ──────────────────────────────────────────────────────────────
 
-/** Parse a Fight object into the flat combat state the solver needs (self cell/mp, living mobs, walls). */
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+const unreadable_fight = (error = null) => ({
+  version: null,
+  status: -1,
+  placement_deadline_ms: 0,
+  turn_deadline_ms: 0,
+  turn_ms: 0,
+  self_cell: null,
+  self_hp: 0,
+  self_ap: 0,
+  self_mp: 0,
+  self_weapon_ap_cost: 1,
+  mobs: [],
+  start_a: [],
+  walls: new Set(),
+  read_error: error == null ? null : String(error?.message ?? error),
+})
+
+const transient_read_error = (error) => {
+  const outcome = classify_throw(error)
+  return outcome === 'network' || outcome === 'version_conflict' || outcome === 'equivocation'
+}
+
+/** Settlement is legal only for the two terminal raw Fight statuses. */
+export const is_terminal_fight_status = (status) => status === 2 || status === 3
+
+/** Parse a Fight object into the flat combat state the solver needs (self cell/AP/MP, living mobs, walls). */
 export async function read_fight(client, fight_id, character_id) {
-  const f = await get_fields(client, fight_id).catch(() => null)
-  if (!f) return { status: -1, self_cell: null, self_mp: 0, mobs: [], walls: new Set() }
+  let object = null
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      object = await get_object(client, fight_id)
+      break
+    } catch (error) {
+      if (attempt === 0 && transient_read_error(error)) {
+        await sleep(FIGHT_READ_RETRY_MS)
+        continue
+      }
+      return unreadable_fight(error)
+    }
+  }
+  const f = object?.content?.fields
+  if (!f) return unreadable_fight()
   const status = Number(f.status ?? -1)
   const participants = (f.participants ?? []).map(unwrap)
   const self = participants.find((p) => p.character === character_id) ?? participants[0]
+  const weapon = unwrap(self?.weapon) ?? {}
   const mobs = (f.mobs ?? []).map(unwrap).map((m) => ({ cell: Number(m.cell ?? 0), hp: Number(m.hp ?? 0) }))
   const board = unwrap(f.board) ?? {}
   const obstacles = (board.obstacles ?? []).map(Number)
@@ -208,13 +254,42 @@ export async function read_fight(client, fight_id, character_id) {
   const start_a = (board.start_cells_a ?? []).map(Number)
   const walls = new Set([...obstacles, ...holes])
   return {
+    version: object.version ?? null,
     status,
+    placement_deadline_ms: Number(f.placement_deadline_ms ?? 0),
+    turn_deadline_ms: Number(f.turn_deadline_ms ?? 0),
+    turn_ms: Number(f.turn_ms ?? 0),
     self_cell: self != null ? Number(self.cell) : null,
-    self_mp: self != null ? Number(self.mp || self.base_mp || 6) : 6,
+    self_hp: self != null ? Number(self.hp ?? 0) : 0,
+    self_ap: self != null ? Number(self.ap ?? 0) : 0,
+    self_mp: self != null ? Number(self.mp ?? self.base_mp ?? 6) : 0,
+    self_weapon_ap_cost: Number(weapon.ap_cost ?? 1),
     mobs,
     start_a,
     walls,
+    read_error: null,
   }
+}
+
+/**
+ * Poll the authoritative Fight object until `predicate` matches. Successful-but-stale reads remain eligible;
+ * each thrown fetch/version race gets one immediate read retry inside `read_fight`.
+ */
+export async function poll_fight({
+  client,
+  fight_id,
+  character_id,
+  predicate,
+  timeout_ms = FIGHT_EFFECT_TIMEOUT_MS,
+  interval_ms = FIGHT_POLL_INTERVAL_MS,
+}) {
+  const expires_at = Date.now() + timeout_ms
+  let fight = await read_fight(client, fight_id, character_id)
+  while (!predicate(fight) && fight.read_error == null && Date.now() < expires_at) {
+    await sleep(interval_ms)
+    fight = await read_fight(client, fight_id, character_id)
+  }
+  return { matched: predicate(fight), fight }
 }
 
 /** In-grid, not a wall, not on a living mob (a standable cell). */
@@ -267,22 +342,97 @@ function step_toward(C, T, mp, walls, mobs) {
   return cur === C ? null : cur
 }
 
+const fight_failure = (fight_id, turn_gas, reason, detail = {}) => ({
+  fight_id,
+  settle: null,
+  won: false,
+  xp_share: 0,
+  result_id: null,
+  turn_gas,
+  reason,
+  ...detail,
+})
+
+const driven_failure = (step, driven) =>
+  driven?.res?.abort ?? driven?.res?.error ?? `${step}_failed (${driven?.res?.class ?? 'unknown'})`
+
+const mutated_version = (driven, fight_id) =>
+  (driven?.res?.objectChanges ?? []).find(
+    (change) => change?.objectId === fight_id && (change.type === 'mutated' || change.type === 'created')
+  )?.version ?? null
+
+const version_reached = (actual, expected) => {
+  if (actual == null || expected == null) return false
+  try {
+    return BigInt(actual) >= BigInt(expected)
+  } catch {
+    return actual === expected
+  }
+}
+
+const poll_fight_change = ({ client, fight_id, character_id, version, driven }) => {
+  const expected_version = mutated_version(driven, fight_id)
+  return poll_fight({
+    client,
+    fight_id,
+    character_id,
+    predicate: (fight) =>
+      fight.status !== -1 &&
+      (expected_version == null
+        ? version == null || fight.version !== version
+        : version_reached(fight.version, expected_version)),
+  })
+}
+
+async function wait_for_active_fight({ driver, client, fight_id, character_id, initial }) {
+  let fight = initial
+  let forced = null
+  let expires_at = Date.now() + FIGHT_EFFECT_TIMEOUT_MS
+  while (Date.now() < expires_at) {
+    if (fight.read_error) return { fight, forced, reason: `fight_read_failed: ${fight.read_error}` }
+    if (fight.status === 1 || is_terminal_fight_status(fight.status)) return { fight, forced, reason: null }
+    if (fight.placement_deadline_ms > 0)
+      expires_at = Math.max(expires_at, fight.placement_deadline_ms + FIGHT_EFFECT_TIMEOUT_MS)
+    if (
+      fight.status === 0 &&
+      fight.placement_deadline_ms > 0 &&
+      Date.now() >= fight.placement_deadline_ms &&
+      forced == null
+    ) {
+      forced = await driver.force_start({ fight_id })
+      if (!forced?.res?.ok) return { fight, forced, reason: driven_failure('force_start', forced) }
+    }
+    await sleep(FIGHT_POLL_INTERVAL_MS)
+    fight = await read_fight(client, fight_id, character_id)
+  }
+  const read_note = fight.read_error ? `, read=${fight.read_error}` : ''
+  return { fight, forced, reason: `fight_not_active(status=${fight.status}${read_note})` }
+}
+
+const emitted = (driven, name) => driven?.res?.event?.(`::fight_events::${name}`) != null
+
+const killed_mob = (driven) =>
+  (driven?.res?.events ?? []).some(
+    (event) =>
+      String(event?.type ?? '').endsWith('::fight_events::Hit') &&
+      event?.parsedJson?.victim_is_mob === true &&
+      Number(event?.parsedJson?.remaining_hp ?? 1) === 0
+  )
+
+async function wait_for_pass_window(fight) {
+  if (fight.turn_deadline_ms <= 0 || fight.turn_ms <= 0) return
+  const pass_at = fight.turn_deadline_ms - fight.turn_ms + CHAIN_MIN_TURN_MS
+  const wait_ms = pass_at - Date.now() + PASS_CLOCK_GRACE_MS
+  if (wait_ms > 0) await sleep(wait_ms)
+}
+
 /**
  * Create a fight against `zone.mob`, place on a real start cell, and drive it to VICTORY, then settle.
  * @returns {Promise<{ fight_id:string|null, settle:any, won:boolean, xp_share:number, result_id:string|null,
  *   turn_gas:number[], reason?:string }>}
  */
 export async function win_fight({ driver, client, ids, world, zone, max_turns = 24 }) {
-  if (!zone?.mob)
-    return {
-      fight_id: null,
-      settle: null,
-      won: false,
-      xp_share: 0,
-      result_id: null,
-      turn_gas: [],
-      reason: 'no_group_in_zone',
-    }
+  if (!zone?.mob) return fight_failure(null, [], 'no_group_in_zone')
   const cf = await driver.create_fight({
     world_id: world.id,
     ...ids,
@@ -292,27 +442,56 @@ export async function win_fight({ driver, client, ids, world, zone, max_turns = 
     mob_template_id: zone.mob.template_id,
   })
   const fight_id = cf?.fight_id
-  if (!fight_id)
-    return {
-      fight_id: null,
-      settle: null,
-      won: false,
-      xp_share: 0,
-      result_id: null,
-      turn_gas: [],
-      create: cf,
-      reason: 'create_fight_failed',
-    }
+  if (!fight_id) return fight_failure(null, [], driven_failure('create_fight', cf), { create: cf })
 
-  // place on a real near-side start cell (the last ready auto-starts a solo fight → ACTIVE)
-  let fb = await read_fight(client, fight_id, ids.character_id)
+  // Wait for the created shared object before choosing a real near-side cell. `place` is PLACE + READY; a solo
+  // fight auto-starts, while force_start is legal only after the immutable placement deadline.
+  const created = await poll_fight({
+    client,
+    fight_id,
+    character_id: ids.character_id,
+    predicate: (fight) => fight.status === 0 && (fight.start_a.length > 0 || fight.self_cell != null),
+  })
+  if (!created.matched)
+    return fight_failure(
+      fight_id,
+      [],
+      `fight_not_readable_after_create(status=${created.fight.status}, read=${created.fight.read_error ?? 'none'})`,
+      { create: cf }
+    )
+  let fb = created.fight
   const start = fb.start_a?.[0] ?? fb.self_cell ?? 0
-  await driver.place({ fight_id, character_id: ids.character_id, cell: start })
+  const placed = await driver.place({ fight_id, character_id: ids.character_id, cell: start })
+  if (!placed?.res?.ok)
+    return fight_failure(fight_id, [], driven_failure('place', placed), { create: cf, place: placed })
+  const placed_visible = await poll_fight_change({
+    client,
+    fight_id,
+    character_id: ids.character_id,
+    version: fb.version,
+    driven: placed,
+  })
+  if (!placed_visible.matched)
+    return fight_failure(fight_id, [], 'place_effect_not_visible', { create: cf, place: placed })
+  const active = await wait_for_active_fight({
+    driver,
+    client,
+    fight_id,
+    character_id: ids.character_id,
+    initial: placed_visible.fight,
+  })
+  if (active.reason)
+    return fight_failure(fight_id, [], active.reason, {
+      create: cf,
+      place: placed,
+      force_start: active.forced,
+    })
+  fb = active.fight
 
   const turn_gas = []
-  for (let turn = 0; turn < max_turns; turn++) {
-    fb = await read_fight(client, fight_id, ids.character_id)
-    if (fb.status !== 1) break // 0 placement / 2 victory / 3 defeat / -1 unreadable → done
+  turns: for (let turn = 0; turn < max_turns; turn++) {
+    if (is_terminal_fight_status(fb.status)) break
+    if (fb.status !== 1) return fight_failure(fight_id, turn_gas, `fight_left_active_drive(status=${fb.status})`)
     const living = fb.mobs.filter((m) => m.hp > 0)
     if (living.length === 0 || fb.self_cell == null) break
 
@@ -321,28 +500,84 @@ export async function win_fight({ driver, client, ids, world, zone, max_turns = 
     if (manhattan(fb.self_cell, T.cell) > 1) {
       const dest = step_toward(fb.self_cell, T.cell, fb.self_mp, fb.walls, living)
       if (dest != null) {
+        const { version } = fb
         const mv = await driver.act_move({ fight_id, character_id: ids.character_id, cell: dest })
         if (mv?.res?.gasMist != null) turn_gas.push(mv.res.gasMist)
-        fb = await read_fight(client, fight_id, ids.character_id)
+        if (!mv?.res?.ok) return fight_failure(fight_id, turn_gas, driven_failure('act_move', mv), { action: mv })
+        const changed = await poll_fight_change({
+          client,
+          fight_id,
+          character_id: ids.character_id,
+          version,
+          driven: mv,
+        })
+        if (!changed.matched) return fight_failure(fight_id, turn_gas, 'act_move_effect_not_visible', { action: mv })
+        fb = changed.fight
+        if (is_terminal_fight_status(fb.status)) break
       }
     }
 
-    // strike an ADJACENT living mob until it dies (over-strike aborts harmlessly on the dead cell) or AP runs out
-    const adj = fb.mobs.filter((m) => m.hp > 0).find((m) => manhattan(fb.self_cell, m.cell) === 1)
+    // Strike an adjacent mob until it dies or AP runs out. Every successful mutation is read back before another
+    // signed action, so a killing hit never turns into a gas-burning over-strike against the terminal fight.
+    const adj =
+      fb.self_hp <= 0 || fb.self_ap < fb.self_weapon_ap_cost
+        ? null
+        : fb.mobs.filter((m) => m.hp > 0).find((m) => manhattan(fb.self_cell, m.cell) === 1)
     if (adj) {
       for (let s = 0; s < 6; s++) {
+        const { version } = fb
         const w = await driver.act_weapon({ fight_id, character_id: ids.character_id, target_cell: adj.cell })
         if (w?.res?.gasMist != null) turn_gas.push(w.res.gasMist)
-        if (!w?.res?.ok) break // dead target, out of AP, or fight ended
+        if (!w?.res?.ok) return fight_failure(fight_id, turn_gas, driven_failure('act_weapon', w), { action: w })
+        const changed = await poll_fight_change({
+          client,
+          fight_id,
+          character_id: ids.character_id,
+          version,
+          driven: w,
+        })
+        if (!changed.matched) return fight_failure(fight_id, turn_gas, 'act_weapon_effect_not_visible', { action: w })
+        fb = changed.fight
+        if (emitted(w, 'Victory') || emitted(w, 'Defeat') || is_terminal_fight_status(fb.status)) break turns
+        if (killed_mob(w) || !fb.mobs.some((mob) => mob.hp > 0 && mob.cell === adj.cell)) break
+        if (fb.self_hp <= 0) break
+        if (fb.self_ap < fb.self_weapon_ap_cost) break
       }
     }
 
-    // end the turn (mobs act). ESomeoneOverdue (108) → crank the queue forward, then continue.
+    // End the turn (mobs act). Any returned abort has a digest and therefore surfaces; it is never a retry signal.
+    await wait_for_pass_window(fb)
+    const { version } = fb
     const p = await driver.act_pass({ fight_id, character_id: ids.character_id })
-    if (!p?.res?.ok && p?.res?.abort_code === 108) await driver.crank({ fight_id })
+    if (!p?.res?.ok) return fight_failure(fight_id, turn_gas, driven_failure('act_pass', p), { action: p })
+    const changed = await poll_fight_change({
+      client,
+      fight_id,
+      character_id: ids.character_id,
+      version,
+      driven: p,
+    })
+    if (!changed.matched) return fight_failure(fight_id, turn_gas, 'act_pass_effect_not_visible', { action: p })
+    fb = changed.fight
   }
 
+  // A receipt says the mutation executed; the Fight object says settlement is legal. Never infer one from the
+  // other: poll until the persisted raw status is exactly VICTORY/DEFEAT before consuming the shared Fight.
+  const terminal = await poll_fight({
+    client,
+    fight_id,
+    character_id: ids.character_id,
+    predicate: (fight) => is_terminal_fight_status(fight.status),
+  })
+  if (!terminal.matched)
+    return fight_failure(
+      fight_id,
+      turn_gas,
+      `fight_not_terminal(status=${terminal.fight.status}, read=${terminal.fight.read_error ?? 'none'})`
+    )
   const settle = await driver.settle_open_world({ fight_id, ...ids })
+  if (!settle?.res?.ok)
+    return fight_failure(fight_id, turn_gas, driven_failure('settle_open_world', settle), { settle })
   const opened = settle?.res?.event?.('::results::ResultOpened')
   const xp_share = Number(opened?.xp_share ?? 0)
   return { fight_id, settle, won: xp_share > 0, xp_share, result_id: settle?.result_id ?? null, turn_gas }

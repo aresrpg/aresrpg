@@ -258,8 +258,9 @@ export async function build_sdk_backend({ manifest, wallet, selected_character =
       level_after,
       settled: !!wf.settle?.res?.ok,
     }
-    // a settled fight (win OR honest loss) is progress + a balance datapoint; only a create/settle FAILURE is red
-    const ok = !!wf.fight_id && (wf.won || balance.settled || balance.turns > 0)
+    // A settled fight (win OR honest loss) is progress. Any driver reason is a red lifecycle failure even when an
+    // earlier action spent gas; partial execution must never masquerade as a completed balance datapoint.
+    const ok = !wf.reason && !!wf.fight_id && (wf.won || balance.settled)
     return {
       ok,
       digest: dig_of(wf.settle),

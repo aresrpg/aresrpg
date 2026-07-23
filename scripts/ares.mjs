@@ -162,6 +162,7 @@ export const unit_test_files = [
   'test/gold/specs_anchor/pacing_envelopes_test.ts', // the SPEC §7b beat-trace evaluator pure unit (same *_test.ts law)
   'test/gold/specs_anchor/trajectory_eval_test.ts', // the pos-trace trajectory-conformance evaluator pure unit (same *_test.ts law)
   'test/gold/tree_freeze_fingerprint.test.ts', // the mechanical tree-freeze pure unit
+  'test/localnet/bots/framework/world_flow.test.js', // terminal polling + transient pre-execution retry contract for driven fights
   'test/gold/rig_integrity.test.mjs', // localnet closure + the browser dynamic-import audit (stale rig URLs 404 silently at drive time)
   'test/gold/fixtures/runtime_catalog_export_parity.test.mjs', // TWIN-DRIFT gate: the aliased gold fight-spells fixture must export every name the real app module does (a missing export = ESM boot-crash, invisible off-browser; killed r12d's 4 driven rows on project_spell_effect)
 ]

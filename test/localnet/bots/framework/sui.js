@@ -181,23 +181,13 @@ export async function submit({ client, signer, tx, rebuild, budget = LOCALNET_GA
     if (sender) t.setSender(sender)
     else if (signer?.toSuiAddress) t.setSenderIfNotSet(signer.toSuiAddress())
     if (!t.getData?.().gasData?.budget) t.setGasBudget(budget)
+    let r
     try {
-      const r = await client.signAndExecuteTransaction({
+      r = await client.signAndExecuteTransaction({
         signer,
         transaction: t,
         options: { showEffects: true, showObjectChanges: true, showEvents: true },
       })
-      if (r?.digest && client.waitForTransaction) await client.waitForTransaction({ digest: r.digest })
-      // EXECUTED (a digest exists): classify, NEVER retry (money law) — even a failure is a real outcome.
-      const ex = classify_executed(r)
-      return {
-        ...wrap_result(r),
-        class: ex.class,
-        abort_code: ex.abort_code,
-        abort_module: ex.abort_module,
-        attempts: attempt,
-        retried,
-      }
     } catch (e) {
       // THROWN before execution (no digest): safe to retry the retryable classes, bounded + jittered.
       const cls = classify_throw(e)
@@ -221,6 +211,25 @@ export async function submit({ client, signer, tx, rebuild, budget = LOCALNET_GA
         createdAll: () => [],
         event: () => null,
       }
+    }
+    // A digest means execution happened. Waiting only improves read visibility; if that wait races the fullnode,
+    // return the executed outcome and let callers poll state. Retrying here could repeat a gas-burning abort.
+    let wait_error = null
+    if (r?.digest && client.waitForTransaction)
+      try {
+        await client.waitForTransaction({ digest: r.digest })
+      } catch (error) {
+        wait_error = String(error?.message ?? error)
+      }
+    const ex = classify_executed(r)
+    return {
+      ...wrap_result(r),
+      class: ex.class,
+      abort_code: ex.abort_code,
+      abort_module: ex.abort_module,
+      attempts: attempt,
+      retried,
+      wait_error,
     }
   }
 }
