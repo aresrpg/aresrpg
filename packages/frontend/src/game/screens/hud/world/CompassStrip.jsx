@@ -28,10 +28,11 @@
 //     zones store zone_row already reads below, zero extra fetch: undiscovered = gold, discovered = muted.
 // Self-gates on `player_pose` (null in spectate / before the walker's first frame → renders nothing).
 // DEV seam: window.__ARES_COMPASS_SYNTH = { world_id?, zone?, zone_ttl_ms?, spawns?, zones? } overrides the
-// network sources for harness/QA drives (zones? feeds the edge-marker neighbor-discovered lookup; mirrors
-// __ARES_WORLD_READS; tree-shaken from prod).
+// network sources for harness/QA drives (spawns? are WORLD-space spawn_markers rows now — the store already
+// ingests chain→world; zones? feeds the edge-marker neighbor-discovered lookup; mirrors __ARES_WORLD_READS;
+// tree-shaken from prod).
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useShallow } from 'zustand/react/shallow'
 
@@ -40,19 +41,15 @@ import { GATHER_RESOURCES } from '@aresrpg/sdk/jobs'
 
 import './compass-strip.css'
 import { DayNightBar } from './DayNightDial.jsx' // day-night cycle indicator — the subtle progress line on the strip's bottom edge
-import { use_game_state, context } from '../../../store.js'
+import { use_game_state } from '../../../store.js'
 import { play_sfx } from '../../../core/audio/sfx.js'
 import { InteractionChip } from '../../../touch/InteractionChip.jsx'
-import { use_rpc_view } from '../../../../rpc/use_view'
-import { get_zone } from '../../../../rpc/client'
 import { use_zones_view, refetch_zones } from '../../../../rpc/zones_poll'
-import { zone_rows_v1 } from '../../../zone_rows.js'
 import { use_world_binding } from '../../../../world-shell/session_gate.js'
 import { use_spawns } from '../../../../world-shell/spawns_adapter.js'
 import { use_prompt_stack, visible_prompts } from '../../../../world-shell/prompt_stack.js'
-import { zone_of, zone_of_world, world_offsets, chain_to_world, DEFAULT_ZONE_SIZE } from '@aresrpg/sdk/coords'
+import { zone_of, zone_of_world, world_offsets, DEFAULT_ZONE_SIZE } from '@aresrpg/sdk/coords'
 import { get_sdk } from '../../../../chain/sdk'
-import { game_log } from '../../../../core/log.js'
 import {
   CARDINALS,
   bearing_of,
@@ -66,11 +63,9 @@ import {
   relative_bearing,
   strip_x,
   thin_pip_labels,
-  zone_reconciled,
   reconciled_zone_row,
-  ZONE_REFRESH_TRIES,
-  ZONE_REFRESH_INTERVAL_MS,
 } from './compass_math.js'
+import { spawn_markers } from '@aresrpg/world/spawns_zones'
 import { reroll_at, zone_row_of } from '@aresrpg/world/spawns_reconcile'
 
 // A resource node's (job u8 0/1/2, tier 1-11) → its gatherable display NAME (the @aresrpg/sdk/jobs roster —
@@ -101,43 +96,6 @@ function fetch_world_doc(world_id) {
     world_docs.set(world_id, read)
   }
   return world_docs.get(world_id)
-}
-
-async function fetch_zone_spawns(world_id, zx, zy) {
-  return zone_rows_v1(world_id, zx, zy) // rows DERIVE from the zone's stored seed (zone_rows.js — the one home)
-}
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-
-/**
- * SEARCH-SUCCESS RECONCILE (UX-latency fix: the compass used to take a bit of time to update after
- * searching a zone): fired off the player's OWN `discovery/zone_searched` broadcast (discovery_actions.js,
- * the instant the search tx confirms). The indexer still needs 1-2 checkpoints (~1-3s) to project the fresh
- * Zone DF snapshot, so this polls the single-zone read FRESH (cache-bypassed — ZONE_REFRESH_INTERVAL_MS sits
- * under the client LRU's 3s TTL; without the bypass every retry would just hand back the same pre-search
- * snapshot) until `zone_reconciled` (compass_math.js) confirms the timestamp moved, then syncs both views
- * ONCE so the strip repaints from confirmed chain truth. Gives up silently past ZONE_REFRESH_TRIES — the
- * normal 6s poll still catches it eventually; a UX nicety never grows into an unbounded wait. Logs the
- * measured latency either way (the [discovery] bracket idiom) so the fix is provable in the live console.
- */
-async function wait_compass_reconciled({ world_id, zx, zy, prior_at_ms, prior_count, started, on_reconciled }) {
-  for (let i = 0; i < ZONE_REFRESH_TRIES; i += 1) {
-    await sleep(ZONE_REFRESH_INTERVAL_MS)
-    const zone = await get_zone(world_id, zx, zy, undefined, true).catch(() => null)
-    if (zone_reconciled(zone, prior_at_ms)) {
-      on_reconciled()
-      const count = Number(zone.mob_groups ?? 0) + Number(zone.resource_nodes ?? 0) // the projected event counts
-      game_log(
-        'discovery',
-        `compass zone refreshed +${count - prior_count} spawns in ${Date.now() - started}ms post-search`
-      )
-      return
-    }
-  }
-  game_log(
-    'discovery',
-    `compass zone refresh gave up after ${Date.now() - started}ms post-search — the next 6s poll will catch up`
-  )
 }
 
 /**
@@ -194,61 +152,21 @@ export function CompassStrip({ mobile = false } = {}) {
   const zone_row = synth?.zone ?? reconciled_zone_row(store_zone_row, rpc_zone_row)
   const discovered = !!zone_row && zone_row.discovered !== false
 
-  // Live spawns — chain-direct (the Zone DF in one fetch), discovered zones only, zone cadence.
-  const spawns_view = use_rpc_view(
-    () => (world_id && cell && discovered ? fetch_zone_spawns(world_id, cell.zx, cell.zy) : Promise.resolve(null)),
-    {
-      interval_ms: 6000,
-      enabled: !!world_id && !!cell && discovered && !synth_on,
-      deps: [world_id, cell?.zx, cell?.zy, discovered],
-    }
+  // Live spawns — the standing cell's slice of the ONE spawns store (spawn_markers), never a compass-owned
+  // per-zone fetch. The store is fed by the shared 6s poll AND the search fast-path (world_spawns.js folds the
+  // searched zone chain-direct the instant the tx certifies), so the strip repaints from the SAME truth the big
+  // map + 3-D world read — no divergence, no bespoke reconcile-wait. Marker x/z are WORLD space (offset applied
+  // at the door). An undiscovered cell has no store rows, so the pips vanish exactly as discovery flips.
+  const templates = use_spawns((s) => s.templates)
+  const pending = use_spawns((s) => s.pending)
+  const cell_spawns = useMemo(
+    () =>
+      !synth_on && cell
+        ? spawn_markers({ zones: spawns_zones, templates, pending }).filter((m) => m.zx === cell.zx && m.zy === cell.zy)
+        : [],
+    [synth_on, spawns_zones, templates, pending, cell?.zx, cell?.zy]
   )
-  const spawns = synth?.spawns ?? spawns_view.data ?? []
-
-  // Latest zone_row/spawns snapshot, read from the search-success effect below WITHOUT forcing it to
-  // re-subscribe on every 6s poll tick (a ref sidesteps the stale-closure trap; only world_id/synth_on
-  // change actually need a fresh subscription — see the effect's own deps). Written from an effect (never
-  // inline in the render body — this project runs StrictMode, whose dev double-invoke replays render
-  // bodies) so a discarded render can never leave a stray write behind.
-  const latest_ref = useRef(null)
-  useEffect(() => {
-    latest_ref.current = { cell, zone_row, spawns_count: spawns_view.data?.length ?? 0 }
-  })
-
-  // COMPASS REFRESH ON SEARCH (UX-latency fix — the compass used to take a bit of time to update after
-  // searching a zone): discovery_actions.js broadcasts `discovery/zone_searched` the instant the player's
-  // OWN search tx confirms (context.events — the same cross-module bus fight_entry/* already uses). Only
-  // reacts to a search of the CURRENT cell — a search always targets the searcher's own live position
-  // (zones.move derives zx/zy from x/z), so this only misses a same-tick zone-boundary crossing between
-  // press and confirm, an honest, rare miss the normal 6s poll still closes. Never wired for the DEV synth
-  // harness (it has no real search tx to react to).
-  useEffect(() => {
-    if (!world_id || synth_on) return undefined
-    let dead = false
-    const on_searched = (payload) => {
-      if (dead || payload?.world_id !== world_id) return
-      const { cell: cur_cell, zone_row: cur_row, spawns_count } = latest_ref.current ?? {}
-      if (!cur_cell || payload.zx !== cur_cell.zx || payload.zy !== cur_cell.zy) return
-      void wait_compass_reconciled({
-        world_id,
-        zx: payload.zx,
-        zy: payload.zy,
-        prior_at_ms: cur_row?.discovered_at_ms ?? null,
-        prior_count: spawns_count ?? 0,
-        started: Date.now(),
-        on_reconciled: () => {
-          if (dead) return
-          zones_view.refetch()
-          spawns_view.refetch()
-        },
-      })
-    }
-    context.events.on('discovery/zone_searched', on_searched)
-    return () => {
-      dead = true
-      context.events.off('discovery/zone_searched', on_searched)
-    }
-  }, [world_id, synth_on, zones_view.refetch, spawns_view.refetch])
+  const spawns = synth?.spawns ?? cell_spawns
 
   // Reroll countdown — a 1 s local tick, armed only while a real deadline exists (reroll_at: the ONE home,
   // compass_math — shared with the DiscoveryPrompts [F] re-arm so the countdown and the affordance never drift).
@@ -309,9 +227,9 @@ export function CompassStrip({ mobile = false } = {}) {
   // home — unit-tested there) BEFORE ever projecting to a strip position, so a merged/dropped pip never
   // even reaches strip_x. Size/opacity falloff stays pip_tier's job, unchanged, applied to what survives.
   const pip_candidates = spawns.map((s) => {
-    // Spawn x/z are CHAIN-absolute blocks; the pose is WORLD space → bring the spawn into world space first.
-    const dx = chain_to_world(s.x, off.x) - pose.x
-    const dz = chain_to_world(s.z, off.z) - pose.z
+    // Marker x/z are WORLD space already (the store ingests chain→world at the door); the pose is world space too.
+    const dx = s.x - pose.x
+    const dz = s.z - pose.z
     return {
       id: `${s.kind}:${s.spawn_id}`,
       kind: s.kind,

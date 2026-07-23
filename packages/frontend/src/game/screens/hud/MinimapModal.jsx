@@ -41,9 +41,10 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { world_minimap_column } from '@aresrpg/engine3'
+import { spawn_markers } from '@aresrpg/world/spawns_zones'
 
 import { use_game_state, context } from '../../store.js'
-import { use_world_spawns } from '../../world_spawns_store.js'
+import { use_spawns } from '../../../world-shell/spawns_adapter.js'
 import {
   sample_relief_grid,
   render_flat_terrain,
@@ -86,7 +87,12 @@ function use_viewport_size() {
  */
 export function MinimapModal({ onClose }) {
   const pose = use_game_state((s) => s.player_pose)
-  const spawns = use_world_spawns((s) => s.spawns)
+  // The ONE spawns store, projected (spawn_markers) — never a render-published copy. Stable slices → the memo
+  // survives the per-frame player_pos fold, so the marker overlay only recomputes on real spawn changes.
+  const zones = use_spawns((s) => s.zones)
+  const templates = use_spawns((s) => s.templates)
+  const pending = use_spawns((s) => s.pending)
+  const spawns = useMemo(() => spawn_markers({ zones, templates, pending }), [zones, templates, pending])
   const terrain_ref = useRef(/** @type {HTMLCanvasElement | null} */ (null))
   const overlay_ref = useRef(/** @type {HTMLCanvasElement | null} */ (null))
   const [hover, set_hover] = useState(/** @type {null | { key: string, cx: number, cy: number }} */ (null))

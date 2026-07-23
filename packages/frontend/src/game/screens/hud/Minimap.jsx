@@ -22,8 +22,10 @@
 
 import { useMemo, useRef, useState } from 'react'
 
+import { spawn_markers } from '@aresrpg/world/spawns_zones'
+
 import { use_game_state } from '../../store.js'
-import { use_world_spawns } from '../../world_spawns_store.js'
+import { use_spawns } from '../../../world-shell/spawns_adapter.js'
 import { use_minimap } from './use_minimap.js'
 import { MinimapModal } from './MinimapModal.jsx'
 import { peer_markers } from './presence_markers.js'
@@ -36,20 +38,25 @@ const SAMPLE_N = 80 // terrain bitmap resolution (≈2 blocks/texel over the cov
 /** @returns {import('react').ReactElement | null} */
 export function Minimap() {
   const pose = use_game_state((s) => s.player_pose)
-  const spawns = use_world_spawns((s) => s.spawns)
+  // The ONE spawns store, projected (spawn_markers) — never a render-published copy. Subscribe to the stable
+  // slices (zones/templates/pending don't change on the per-frame player_pos fold) so the memo holds across frames.
+  const zones = use_spawns((s) => s.zones)
+  const templates = use_spawns((s) => s.templates)
+  const pending = use_spawns((s) => s.pending)
   const visible_characters = use_game_state((s) => s.visible_characters)
   const canvas_ref = useRef(/** @type {HTMLCanvasElement | null} */ (null))
   const [open, set_open] = useState(false)
 
   // Markers: plot every live spawn (draw_minimap culls to the disc); dots only on the small map (no hover/click
-  // — the whole lens is one click target that opens the big map). Spawn markers are memoised (spawns change
-  // rarely — zone reconciliation); peer markers are recomputed fresh every render on purpose (presence_markers.js
-  // — visible_characters is a stable Map mutated in place, so a memo keyed on it would never see a peer move).
-  const spawn_markers = useMemo(
-    () => spawns.map((s) => ({ x: s.x, z: s.z, kind: s.kind, key: s.key })),
-    [spawns]
+  // — the whole lens is one click target that opens the big map). Spawn dots are memoised on the store slices
+  // (they change only on zone reconciliation); peer markers are recomputed fresh every render on purpose
+  // (presence_markers.js — visible_characters is a stable Map mutated in place, so a memo keyed on it would never
+  // see a peer move).
+  const spawn_dots = useMemo(
+    () => spawn_markers({ zones, templates, pending }).map((s) => ({ x: s.x, z: s.z, kind: s.kind, key: s.key })),
+    [zones, templates, pending]
   )
-  const markers = [...spawn_markers, ...peer_markers(visible_characters)]
+  const markers = [...spawn_dots, ...peer_markers(visible_characters)]
   use_minimap(canvas_ref, { size: SIZE, view_radius_blocks: VIEW_RADIUS_BLOCKS, sample_n: SAMPLE_N, markers, enabled: !!pose })
 
   // Spectate / pre-first-frame: no pose published → no map (PartyFrame's render-nothing idiom).

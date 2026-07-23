@@ -61,7 +61,6 @@ import { use_party } from '../world-shell/party_store.js'
 import { enter_world_fight, resume_world_fight } from '../world-shell/world_fight.js'
 import { use_prompt_stack } from '../world-shell/prompt_stack.js'
 
-import { use_world_spawns } from './world_spawns_store.js'
 import { start_fight_engage } from './fight_engage.js'
 import { push_event_toast } from './core/toast.js'
 import { context } from './core/game.js'
@@ -193,20 +192,22 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       get_sdk()
         .then((sdk) => get_mob_template({ grpc_client: sdk.grpc_client })(id))
         .then((tpl) => {
-          tmpl_cache.set(
-            id,
-            tpl
-              ? {
-                  // display_mob_name: interim swap for a shipped-but-unacceptable chain name (#521) — the
-                  // model resolver (game/data/mobs.js get_mob_model) undoes it before its catalog lookup,
-                  // so the group card AND the roaming rig both stay correct off this one cached value.
-                  name: display_mob_name(tpl.name) || short_id(id),
-                  min_level: tpl.min_level,
-                  max_level: tpl.max_level ?? tpl.min_level,
-                  element: tpl.element ?? 255, // carried into note_group_identity so the fight board resolves the mob's cast element
-                }
-              : null
-          )
+          const facts = tpl
+            ? {
+                // display_mob_name: interim swap for a shipped-but-unacceptable chain name (#521) — the
+                // model resolver (game/data/mobs.js get_mob_model) undoes it before its catalog lookup,
+                // so the group card AND the roaming rig both stay correct off this one cached value.
+                name: display_mob_name(tpl.name) || short_id(id),
+                min_level: tpl.min_level,
+                max_level: tpl.max_level ?? tpl.min_level,
+                element: tpl.element ?? 255, // carried into note_group_identity so the fight board resolves the mob's cast element
+              }
+            : null
+          tmpl_cache.set(id, facts)
+          // The async roster read re-enters the ONE spawns store as data (the reducer-door law) so the map /
+          // minimap markers carry the NAME + level band as a pure projection (spawn_markers) — never a second
+          // per-surface template read. The 3-D card still reads this same cache synchronously below.
+          if (facts) spawns_input({ type: 'template_resolved', template_id: id, ...facts })
           refresh_mob_card(id) // re-render any placed group of this template now its name is known
         })
         .catch(() => tmpl_cache.set(id, null))
@@ -302,43 +303,6 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
         })
       }
     }
-    publish_spawns() // mirror the synced set to the minimap store
-  }
-
-  // Publish the reconciled spawn set to the HUD minimap store (world_spawns_store.js) — flat marker rows the
-  // minimap/big-map overlay plots. The ANCHOR (row x/z, world space) is the stable position (mobs roam a few
-  // blocks around it; the compass/claim use the same); mob level band comes best-effort from the template
-  // cache (null until the read lands — refresh_mob_card re-publishes then). No fetch here: this only mirrors
-  // `entries`, so the minimap reuses the SAME data source with zero extra polling.
-  const publish_spawns = () => {
-    /** @type {import('./world_spawns_store.js').SpawnMarker[]} */
-    const list = []
-    for (const e of entries.values()) {
-      const row = e.row
-      /** @type {any} */
-      const m = {
-        key: e.key,
-        kind: e.kind,
-        x: Number(row.x),
-        z: Number(row.z),
-        spawn_id: row.spawn_id,
-        zx: e.zx,
-        zy: e.zy,
-        template_id: row.template_id,
-        job: Number(row.job) || 0,
-        tier: Number(row.tier) || 0,
-      }
-      if (e.kind === 'mob') {
-        const tpl = tmpl_cache.get(row.template_id)
-        if (tpl) {
-          m.name = tpl.name
-          m.level_min = tpl.min_level
-          m.level_max = tpl.max_level
-        }
-      } else m.name = resource_visual(Number(row.job) || 0, Number(row.tier) || 1).name
-      list.push(m)
-    }
-    use_world_spawns.getState().set_spawns(list)
   }
 
   // ── the ONE short-poll: current + adjacent discovered zones → ONE versioned snapshot into the core ─────────
@@ -505,7 +469,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
   const refresh_mob_card = (/** @type {string} */ template_id) => {
     for (const e of entries.values())
       if (e.kind === 'mob' && e.chip && e.row.template_id === template_id) render_mob_card(e)
-    publish_spawns() // the template name/level band just landed → fill it into the minimap markers
+    // the minimap markers pick up the name/level band from the store's template_resolved fold (resolve_template)
   }
 
   const spawn_chip = (/** @type {any} */ e) => {
@@ -1115,7 +1079,8 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       set_attack_target(null)
       for (const e of entries.values()) teardown(e)
       entries.clear()
-      use_world_spawns.getState().set_spawns([]) // session gone → clear the minimap overlay
+      // no minimap-store clear: the map projects the ONE spawns store, which resets on world unbind (poll's
+      // world_bound:null) / the session-gate ferry — no render-owned copy to wipe.
       layer.remove()
     },
   }
