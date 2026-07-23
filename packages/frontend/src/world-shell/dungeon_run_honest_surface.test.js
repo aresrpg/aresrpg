@@ -72,7 +72,14 @@ afterEach(() => {
   reset_auth_mock()
 })
 
-afterAll(restore_browser_globals)
+afterAll(() => {
+  // Sibling files (voxel_fight_beat_playback.test.js et al.) restore this; this file never did — a leaked
+  // globalThis.Audio (missing .load) survived into later files in the same bun test process and broke any
+  // other suite whose in_session:true transition reaches ambient_music.js's track-swap .load() call.
+  // @ts-expect-error test shim
+  if (!had_audio) delete globalThis.Audio
+  restore_browser_globals()
+})
 
 describe('RIDER B(a) — a fresh room fight is HELD, never collapsed, through the read-after-write gap', () => {
   test('start_when_ready (ENGAGE) marks the fresh mint fight_syncing → the receipt hold gate passes', async () => {
