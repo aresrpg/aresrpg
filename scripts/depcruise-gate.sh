@@ -6,9 +6,9 @@
 # gate a to a resolved allowlist) · engine-quarantine (engine3 only under game/ + world-shell/) ·
 # no-circular (hard-zero after issue #95 burned the census debt down; any cycle is red).
 #
-# Ratchet: .dependency-cruiser-known-violations.json is [] after issue #95's burn-down; both boundary
-# rules were already clean. `--ignore-known` therefore accepts ZERO violations. The write-baseline mode
-# exists for deliberate ratchet maintenance, never to absorb a new violation without review.
+# Ratchet: no baseline file means zero known violations after issue #95's burn-down; both boundary
+# rules were already clean. The write-baseline mode exists for deliberate ratchet maintenance,
+# never to absorb a new violation without review.
 #
 # Runs under bun (node 25 is outside dependency-cruiser's support matrix; bun's node-compat
 # version passes). dependency-cruiser is a root devDep — absent = SKIP green so the composite
@@ -35,8 +35,8 @@ if [ "${1:-}" = "--write-baseline" ]; then
   exit 0
 fi
 
-# --ignore-known requires the baseline file; without one (fresh clone pre-census) run bare so the
-# gate still guards — it will list every violation.
+# A missing baseline is the hard-zero floor: omit --ignore-known so every violation is new and red.
+# A reviewed baseline, when present, is the only source of known violations.
 IGNORE_KNOWN=()
 [ -f .dependency-cruiser-known-violations.json ] && IGNORE_KNOWN=(--ignore-known)
 bun node_modules/.bin/depcruise --config .dependency-cruiser.cjs "${IGNORE_KNOWN[@]}" \
