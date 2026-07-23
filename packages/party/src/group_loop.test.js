@@ -233,22 +233,22 @@ test('project_follower_position runs the alt from its checkpoint to the slot at 
 })
 
 test('#509 — a following alt is INVISIBLE far out, then renders its run-in once inside the range (despawn-and-continue)', () => {
-  let state = reduce_group(positioned(), {
+  let { state } = reduce_group(positioned(), {
     kind: 'set_follow',
     character_id: ALT_1,
     enabled: true,
     leader_character_id: LEADER,
     now: NOW,
-  }).state
+  })
   // join from FAR out (50 blocks > FOLLOW_VISIBLE_RANGE=30) — the run-in begins at the checkpoint
   expect(FOLLOW_VISIBLE_RANGE).toBe(30)
-  state = reduce_group(state, {
+  ;({ state } = reduce_group(state, {
     kind: 'follow_world_joined',
     character_id: ALT_1,
     world_id: WORLD,
     checkpoint: { x: 50, z: 0 },
     now: NOW,
-  }).state
+  }))
   // progress 0 → the projection sits at the far checkpoint → beyond the range → NOT rendered (visual despawn)
   expect(reduce_group(state, { kind: 'leader_position', x: 0, z: 0, yaw: 0, now: NOW }).outputs.follow_render).toEqual(
     []
