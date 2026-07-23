@@ -144,14 +144,16 @@ test('explicit follower inclusion caps at the five formation slots in chain orde
     follower_character_ids: ids.slice(0, MAX_OWNED_FOLLOWERS),
     now: NOW,
   })
-  expect(outputs.join_world).toHaveLength(MAX_OWNED_FOLLOWERS)
+  // all same-world as the leader → the entry read (no redundant joins), capped at the five formation slots
+  expect(outputs.read_position).toHaveLength(MAX_OWNED_FOLLOWERS)
+  expect(outputs.join_world).toEqual([])
   expect(state.follow.follower_character_ids).toEqual(ids.slice(0, MAX_OWNED_FOLLOWERS))
 })
 
 // ── per-character follow toggle (#496/#171) ───────────────────────────────────────────────────────────────────────
 const positioned = () => reduce_group(grouped(), { kind: 'leader_position', x: 0, z: 0, yaw: 0, now: NOW }).state
 
-test('set_follow arms ONE owned alt behind the current leader and emits only its world join', () => {
+test('set_follow arms ONE same-world owned alt behind the leader and reads its position (no redundant join)', () => {
   const { state, outputs } = reduce_group(positioned(), {
     kind: 'set_follow',
     character_id: ALT_1,
@@ -160,12 +162,13 @@ test('set_follow arms ONE owned alt behind the current leader and emits only its
     now: NOW,
   })
   expect(state.follow).toMatchObject({ enabled: true, leader_character_id: LEADER, follower_character_ids: [ALT_1] })
-  expect(state.follow.followers[ALT_1].status).toBe('joining')
-  expect(outputs.join_world).toEqual([{ character_id: ALT_1, world_id: WORLD }])
+  expect(state.follow.followers[ALT_1].status).toBe('resolving')
+  expect(outputs.join_world).toEqual([]) // #613 — same world ⇒ no zones::join_world (that rejoin burns gas)
+  expect(outputs.read_position).toEqual([{ character_id: ALT_1, world_id: WORLD }])
   // a second row toggles on independently, keeping the captured leader (no leader_character_id passed)
   const two = reduce_group(state, { kind: 'set_follow', character_id: ALT_2, enabled: true, now: NOW })
   expect(two.state.follow.follower_character_ids).toEqual([ALT_1, ALT_2])
-  expect(two.outputs.join_world).toEqual([{ character_id: ALT_2, world_id: WORLD }])
+  expect(two.outputs.read_position).toEqual([{ character_id: ALT_2, world_id: WORLD }])
 })
 
 test('set_follow OFF drops one follower, clears its transit row, and the rest keep following', () => {
@@ -223,8 +226,9 @@ test('project_follower_position runs the alt from its checkpoint to the slot at 
   const mid = at(0.5)
   expect(mid.x).toBeCloseTo((100 + slot.x) / 2) // linear run-in
   expect(mid.z).toBeCloseTo(slot.z / 2)
-  // arrived pins to the slot; joining (no checkpoint yet) projects nothing
-  expect(project_follower_position({ status: 'arrived' }, pose, 0)).toMatchObject({ x: slot.x, z: slot.z })
+  // #613 — with_you is a free-run companion steered at the edge, no longer a slot projection; joining and any
+  // other non-in_transit status project nothing here.
+  expect(project_follower_position({ status: 'with_you' }, pose, 0)).toBe(null)
   expect(project_follower_position({ status: 'joining' }, pose, 0)).toBe(null)
 })
 
@@ -236,15 +240,16 @@ test('#509 — a following alt is INVISIBLE far out, then renders its run-in onc
     leader_character_id: LEADER,
     now: NOW,
   })
-  // join from FAR out (50 blocks > FOLLOW_VISIBLE_RANGE=30) — the run-in begins at the checkpoint
+  // same-world but FAR (50 blocks > FOLLOW_VISIBLE_RANGE=30) → the in-world catch-up flight starts at the
+  // read checkpoint, no world join (#613).
   expect(FOLLOW_VISIBLE_RANGE).toBe(30)
   ;({ state } = reduce_group(state, {
-    kind: 'follow_world_joined',
+    kind: 'follow_position_read',
     character_id: ALT_1,
-    world_id: WORLD,
-    checkpoint: { x: 50, z: 0 },
+    position: { x: 50, z: 0 },
     now: NOW,
   }))
+  expect(state.follow.followers[ALT_1].status).toBe('in_transit')
   // progress 0 → the projection sits at the far checkpoint → beyond the range → NOT rendered (visual despawn)
   expect(reduce_group(state, { kind: 'leader_position', x: 0, z: 0, yaw: 0, now: NOW }).outputs.follow_render).toEqual(
     []

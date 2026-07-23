@@ -5,18 +5,24 @@
 // reduce.js (chain-reconciled); THIS reducer owns the leader-session orchestration facts and emits
 // EFFECT REQUESTS exactly once per need:
 //
-//   INPUTS   { group | invite_accepted | member_world_state | follow_enable | follow_world_joined |
-//              transit_tick | follow_checkpoint_written | leader_position | member_blocked |
-//              fight_started | fight_seat_update | turn_started | fight_ended | dungeon_entered |
-//              dungeon_ended | reset }
-//   OUTPUTS  { join_world[] · write_checkpoint[] · follow_render[] · join_fight[] · hud_focus ·
-//              enter_dungeon[] }
+//   INPUTS   { group | invite_accepted | member_world_state | follow_enable | follow_position_read |
+//              follow_world_joined | transit_tick | follow_checkpoint_written | leader_position |
+//              member_blocked | fight_started | fight_seat_update | turn_started | fight_ended |
+//              dungeon_entered | dungeon_ended | reset }
+//   OUTPUTS  { join_world[] · read_position[] · write_checkpoint[] · follow_render[] · join_fight[] ·
+//              hud_focus · enter_dungeon[] }
 //
-// Every request latches (idempotent re-folds emit nothing); executed tx failures re-enter as
-// `member_blocked` and hold the latch open forever (tx-retry burn law — the edge never re-fires a
-// digest-bearing failure). Formation geometry and proof-of-time transit projection live here: the
-// render set emits each timer-derived follower position, despawning beyond FOLLOW_VISIBLE_RANGE while
-// transit keeps advancing so it can re-enter naturally.
+// PER-FOLLOWER STATE MACHINE (#613): follow-enable reads chain truth FIRST. A follower already in the
+// leader's world takes NO world-join tx — it `read_position`s its checkpoint (a redundant same-world
+// zones::join_world EXECUTES on rejoin and burns sponsor gas), then resolves NEAR → `with_you` or FAR →
+// the in-world catch-up `in_transit`. A DIFFERENT world takes `joining` → the join tx → `in_transit`. The
+// ARRIVING timer completes INTO `with_you` (never a frozen 00:00). A `with_you` follower is a free-run
+// companion — its render row carries `free_run` + the leader `anchor` and is steered at the edge by
+// pet_follow (step_pet_follow), continuously present (never range-despawned; the module's own snap threshold
+// is the only "genuinely far" gate). An executed refusal (unopened fight result) latches the row to
+// `blocked`. Only the `in_transit` flight leg is timer-projected here (despawn-and-continue past
+// FOLLOW_VISIBLE_RANGE); executed tx failures re-enter as `member_blocked` and hold the latch forever
+// (tx-retry burn law — the edge never re-fires a digest-bearing failure).
 
 export const MAX_OWNED_FOLLOWERS = 5
 /** Blocks — beyond this from the leader a follower visually DESPAWNS (the proof-of-time timer keeps deriving);
@@ -48,6 +54,7 @@ const EMPTY_ROWS = Object.freeze([])
 // render set is a meaningful []). Every other output stays a stable empty array.
 const no_outputs = () => ({
   join_world: EMPTY_ROWS,
+  read_position: EMPTY_ROWS,
   follow_move: EMPTY_ROWS,
   write_checkpoint: EMPTY_ROWS,
   follow_render: null,
@@ -191,9 +198,18 @@ function reduce_membership(state, input) {
       const now = Number.isFinite(input.now) ? input.now : 0
       const followers = { ...state.follow.followers }
       const join_world = []
+      const read_position = []
       for (const follower_character_id of state.follow.follower_character_ids) {
         const row = followers[follower_character_id]
         if (!row || is_blocked(state, follower_character_id, 'world_join')) continue
+        // #613 — SAME entry evaluation as follow-enable, on the leader's world change: a follower ALREADY in the
+        // leader's new world reads its position (no redundant same-world join → no burned gas); only a genuinely
+        // cross-world follower takes the join tx, carrying its in-flight transit progress across the re-anchor.
+        if (state.world_by_character[follower_character_id] === world_id) {
+          followers[follower_character_id] = { ...row, status: 'resolving', world_id, carry_ratio: 1, receipt_confirmed: false }
+          read_position.push({ character_id: follower_character_id, world_id })
+          continue
+        }
         const remaining_ms =
           row.status === 'in_transit' ? Math.max(0, row.deadline_ms - now) : Number(row.remaining_ms ?? 0)
         const carry_ratio =
@@ -209,14 +225,29 @@ function reduce_membership(state, input) {
       }
       return {
         state: { ...next, follow: { ...state.follow, followers } },
-        outputs: { ...no_outputs(), join_world },
+        outputs: { ...no_outputs(), join_world, read_position },
       }
     }
     case 'member_blocked': {
       const { character_id, scope } = input
       if (!character_id || !scope) return still(state)
+      // #613 — the executed-failure latch is no longer a silent flag: a follower whose entry/arrival was
+      // refused (an unopened fight result aborts its join) becomes an explicit `blocked` ROW the party surface
+      // names inline, instead of a follower frozen mid-timer behind a context-free toast. The blocked[][] latch
+      // still holds (tx-retry burn law — the world/fight join is never re-fired for this member this session).
+      // Only a WORLD-JOIN (entry) refusal names the blocked row — that is the "needs its fight result opened"
+      // surface. A fight_join executed failure is a different cause; it keeps its silent latch, not this copy.
+      const row = state.follow.followers[character_id]
+      const follow =
+        row && scope === 'world_join'
+          ? {
+              ...state.follow,
+              followers: { ...state.follow.followers, [character_id]: { ...row, status: 'blocked', blocked_scope: scope } },
+            }
+          : state.follow
       return still({
         ...state,
+        follow,
         blocked: { ...state.blocked, [character_id]: { ...state.blocked[character_id], [scope]: true } },
       })
     }
@@ -269,13 +300,35 @@ const begin_transit = (row, checkpoint, leader_pose, now) => {
   }
 }
 
+/** Enter the free-run companion state seeded at `spot` (the edge's step_pet_follow motion starts here — never
+ *  on the leader, so a NEAR alt ambles from where it stood rather than teleporting in). Timer fields are
+ *  cleared: with_you shows NO ARRIVING bar. */
+const enter_with_you = (row, spot) => ({
+  ...row,
+  status: 'with_you',
+  seed: { x: spot.x, z: spot.z },
+  remaining_ms: 0,
+  progress: 1,
+  receipt_confirmed: false,
+})
+
+/** Settle a SAME-WORLD follower against the checkpoint chain truth just read: within the companion band it is
+ *  already beside you → with_you (no timer); beyond it, the in-world catch-up flight (in_transit) — never a
+ *  world join either way. The band reuses FOLLOW_VISIBLE_RANGE = the pet_follow snap threshold: inside it
+ *  step_pet_follow closes the gap as a companion (no snap); past it the timed flight animates the approach. */
+const settle_same_world = (row, position, leader_pose, now) =>
+  horizontal_distance_squared(position, leader_pose) <= FOLLOW_VISIBLE_RANGE * FOLLOW_VISIBLE_RANGE
+    ? enter_with_you(row, position)
+    : begin_transit({ ...row, carry_ratio: 1 }, position, leader_pose, now)
+
 /**
  * Deterministic projection of a follower's LIVE position from the proof-of-time timer — the pure function
  * any client can run off the SAME RPC-visible facts (the join checkpoint + the timer's progress + the leader
  * pose), never peer-channel presence (owner ruling 2026-07-23: public follower positions are RPC-derived
- * truth; WebRTC is at most a cosmetic hint). While in transit the follower runs a straight line from its join
- * checkpoint toward its formation slot at running speed (progress is time/eta, so it advances at ~run pace);
- * once arrived it pins to the slot and trails. Returns null before a checkpoint exists (still joining).
+ * truth; WebRTC is at most a cosmetic hint). This is the FLIGHT leg only: while in transit the follower runs a
+ * straight line from its join checkpoint toward its formation slot at running speed (progress is time/eta, so it
+ * advances at ~run pace — it RIDES the flight, never teleports). Returns null for any other status — a `with_you`
+ * follower is a free-run companion steered at the edge by pet_follow, not a slot-pinned projection (#613).
  * @param {any} row one follow.followers entry
  * @param {{ x: number, z: number, yaw: number } | null} leader_pose
  * @param {number} slot_index zero-based follower slot
@@ -285,7 +338,6 @@ export function project_follower_position(row, leader_pose, slot_index) {
   if (!row || !leader_pose) return null
   const slot = follow_formation_target(leader_pose, leader_pose.yaw, slot_index)
   if (!slot) return null
-  if (row.status === 'arrived') return { x: slot.x, z: slot.z, yaw: leader_pose.yaw }
   if (row.status !== 'in_transit' || ![row.checkpoint?.x, row.checkpoint?.z].every(Number.isFinite)) return null
   const p = Math.max(0, Math.min(1, Number(row.progress ?? 0)))
   const x = row.checkpoint.x + (slot.x - row.checkpoint.x) * p
@@ -295,12 +347,28 @@ export function project_follower_position(row, leader_pose, slot_index) {
   return { x, z, yaw }
 }
 
-// The render set: every follower's TIMER-DERIVED position, minus any whose projection sits beyond the visible
-// range (despawn-and-continue — the reducer's transit_tick keeps advancing progress while it's off-screen, so
-// it respawns and finishes its run once back in range). No arrival gate: the follower is visible running in.
+// The render set. A `with_you` follower is a FREE-RUN companion (#613): the reducer ships the pet_follow
+// consumer contract (free_run + the leader anchor step_pet_follow steers toward) and it is CONTINUOUSLY present
+// — never range-despawned here (the module's own snap threshold is the only "genuinely far" gate). The
+// `in_transit` FLIGHT leg stays TIMER-DERIVED, despawning beyond the visible range (despawn-and-continue —
+// transit_tick keeps advancing progress off-screen, so it respawns and finishes its run once back in range).
 const rendered_followers = (state, pose) =>
   state.follow.follower_character_ids.flatMap((character_id, slot_index) => {
-    const projected = project_follower_position(state.follow.followers[character_id], pose, slot_index)
+    const row = state.follow.followers[character_id]
+    if (row?.status === 'with_you') {
+      const seed = [row.seed?.x, row.seed?.z].every(Number.isFinite) ? row.seed : pose
+      return [
+        {
+          character_id,
+          x: seed.x,
+          z: seed.z,
+          yaw: pose.yaw,
+          free_run: true,
+          anchor: { x: pose.x, z: pose.z, yaw: pose.yaw },
+        },
+      ]
+    }
+    const projected = project_follower_position(row, pose, slot_index)
     if (!projected) return []
     if (horizontal_distance_squared(projected, pose) > FOLLOW_VISIBLE_RANGE * FOLLOW_VISIBLE_RANGE) return []
     return [{ character_id, x: projected.x, z: projected.z, yaw: projected.yaw }]
@@ -309,8 +377,15 @@ const rendered_followers = (state, pose) =>
 /**
  * Arm one-or-more owned alts as session followers — the SINGLE arming home shared by the batch
  * `follow_enable` door and the per-character `set_follow` toggle. Requires the leader in a known world;
- * already-armed / blocked / non-owned ids and anything past the five formation slots are skipped; each
- * newly-armed follower begins at `joining` and gets one sequenced world-join request.
+ * already-armed / blocked / non-owned ids and anything past the five formation slots are skipped.
+ *
+ * ENTRY EVALUATION reads chain truth FIRST (#613). A follower ALREADY in the leader's world takes NO
+ * world-join tx — the redundant same-world `zones::join_world` EXECUTES on a rejoin (Move only aborts a FIRST
+ * join below the level gate; a rejoin re-points the world field and emits WorldJoined) and burns sponsor gas,
+ * so it is a money leak, not a UX wart. Such a follower begins `resolving` and gets one `read_position`
+ * request; its checkpoint then settles it NEAR → `with_you` or FAR → the in-world catch-up transit. A follower
+ * in a DIFFERENT (or not-yet-known) world begins `joining` and gets one sequenced `join_world` request → the
+ * proof-of-time timer leg.
  */
 function arm_followers(state, leader_character_id, ids) {
   const world_id = state.world_by_character[leader_character_id] ?? null
@@ -332,14 +407,19 @@ function arm_followers(state, leader_character_id, ids) {
   if (!added.length) return still(state)
   const follower_character_ids = [...state.follow.follower_character_ids, ...added]
   const followers = { ...state.follow.followers }
-  for (const character_id of added)
-    followers[character_id] = { status: 'joining', world_id, carry_ratio: 1, receipt_confirmed: false }
+  const join_world = []
+  const read_position = []
+  for (const character_id of added) {
+    const same_world = state.world_by_character[character_id] === world_id
+    followers[character_id] = { status: same_world ? 'resolving' : 'joining', world_id, carry_ratio: 1, receipt_confirmed: false }
+    ;(same_world ? read_position : join_world).push({ character_id, world_id })
+  }
   return {
     state: {
       ...state,
       follow: { ...state.follow, enabled: true, leader_character_id, follower_character_ids, followers },
     },
-    outputs: { ...no_outputs(), join_world: added.map((character_id) => ({ character_id, world_id })) },
+    outputs: { ...no_outputs(), join_world, read_position },
   }
 }
 
@@ -468,6 +548,36 @@ function reduce_follow(state, input) {
         },
       }
     }
+    // #613 — the SAME-WORLD chain-truth result: no join happened, just a checkpoint read. Settle the resolving
+    // row NEAR → with_you (present immediately, no timer) or FAR → the in-world catch-up flight, and emit a
+    // render frame so a near follower pops in as a companion at once.
+    case 'follow_position_read': {
+      const row = state.follow.followers[input.character_id]
+      const { position } = input
+      if (
+        !state.follow.enabled ||
+        !row ||
+        row.status !== 'resolving' ||
+        ![position?.x, position?.z].every(Number.isFinite) ||
+        !state.leader_pose
+      )
+        return still(state)
+      const now = Number.isFinite(input.now) ? input.now : 0
+      const next = {
+        ...state,
+        follow: {
+          ...state.follow,
+          followers: {
+            ...state.follow.followers,
+            [input.character_id]: settle_same_world(row, position, state.leader_pose, now),
+          },
+        },
+      }
+      return {
+        state: next,
+        outputs: { ...no_outputs(), follow_render: rendered_followers(next, state.leader_pose) },
+      }
+    }
     case 'transit_tick': {
       if (!state.follow.enabled || !Number.isFinite(input.now)) return still(state)
       const followers = { ...state.follow.followers }
@@ -492,14 +602,10 @@ function reduce_follow(state, input) {
         const position = follow_arrival_cell(state.leader_pose, occupied)
         if (!position) continue
         occupied.add(`${position.x}:${position.z}`)
-        followers[character_id] = {
-          ...row,
-          status: 'arrived',
-          remaining_ms: 0,
-          progress: 1,
-          arrival_position: position,
-          receipt_confirmed: false,
-        }
+        // #613 — completion is CONSUMED: the ARRIVING timer becomes the with_you free-run companion (seeded at
+        // the arrival cell, timer fields cleared), never a bar frozen at 00:00 forever. arrival_position stays
+        // for the occupied-cell dedup across siblings arriving the same tick.
+        followers[character_id] = { ...enter_with_you(row, position), arrival_position: position }
         write_checkpoint.push({ character_id, world_id: row.world_id, position })
       }
       const next = { ...state, follow: { ...state.follow, followers } }
@@ -516,7 +622,7 @@ function reduce_follow(state, input) {
     }
     case 'follow_checkpoint_written': {
       const row = state.follow.followers[input.character_id]
-      if (!row || row.status !== 'arrived' || row.receipt_confirmed) return still(state)
+      if (!row || row.status !== 'with_you' || row.receipt_confirmed) return still(state)
       const confirmed = { ...row, receipt_confirmed: true }
       const next = {
         ...state,
@@ -655,6 +761,7 @@ const MEMBERSHIP_KINDS = new Set(['group', 'invite_accepted', 'member_world_stat
 const FOLLOW_KINDS = new Set([
   'follow_enable',
   'set_follow',
+  'follow_position_read',
   'follow_world_joined',
   'follow_dragon_arrived',
   'transit_tick',

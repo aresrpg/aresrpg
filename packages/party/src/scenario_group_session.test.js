@@ -24,6 +24,7 @@ test('GROUP SESSION: invite → transit → arrive → engage → auto-join → 
   const transcript = []
   const record = (outputs) => {
     for (const row of outputs.join_world) transcript.push(`join_world ${row.character_id} -> ${row.world_id}`)
+    for (const row of outputs.read_position) transcript.push(`read_position ${row.character_id} -> ${row.world_id}`)
     for (const row of outputs.write_checkpoint) transcript.push(`checkpoint ${row.character_id}`)
     // follow_render is null on frames that didn't recompute it (only pose/transit ticks project positions).
     for (const row of outputs.follow_render ?? []) transcript.push(`follow ${row.character_id}`)
@@ -45,9 +46,10 @@ test('GROUP SESSION: invite → transit → arrive → engage → auto-join → 
   feed({ kind: 'invite_accepted', character_id: ALT_1, owner: ME })
   feed({ kind: 'invite_accepted', character_id: ALT_2, owner: ME })
 
-  // ── 2. world facts alone are inert; the explicit enable joins BOTH included alts through one effect lane ─
-  feed({ kind: 'member_world_state', character_id: ALT_1, world_id: WORLD })
-  feed({ kind: 'member_world_state', character_id: ALT_2, world_id: OTHER_WORLD })
+  // ── 2. world facts alone are inert; the explicit enable READS CHAIN TRUTH FIRST (#613) — the SAME-WORLD alt
+  //       takes NO join (a redundant same-world join executes and burns gas), the CROSS-WORLD alt takes it. ──
+  feed({ kind: 'member_world_state', character_id: ALT_1, world_id: WORLD }) // already beside the leader
+  feed({ kind: 'member_world_state', character_id: ALT_2, world_id: OTHER_WORLD }) // a realm away
   expect(transcript).toEqual([])
   feed({ kind: 'leader_position', x: 100, z: 100, yaw: 0, now: T0 })
   feed({
@@ -56,39 +58,31 @@ test('GROUP SESSION: invite → transit → arrive → engage → auto-join → 
     follower_character_ids: [ALT_1, ALT_2],
     now: T0,
   })
-  expect(transcript.filter((line) => line.startsWith('join_world'))).toEqual([
-    `join_world ${ALT_1} -> ${WORLD}`,
-    `join_world ${ALT_2} -> ${WORLD}`,
-  ])
+  expect(transcript.filter((line) => line.startsWith('join_world'))).toEqual([`join_world ${ALT_2} -> ${WORLD}`])
+  expect(transcript.filter((line) => line.startsWith('read_position'))).toEqual([`read_position ${ALT_1} -> ${WORLD}`])
 
-  // ── 3. each join receipt begins its own ETA; the timer-derived render emits only on a pose/transit tick ─
-  feed({ kind: 'member_world_state', character_id: ALT_2, world_id: WORLD })
-  feed({
-    kind: 'follow_world_joined',
-    character_id: ALT_1,
-    world_id: WORLD,
-    checkpoint: { x: 100 + TRANSIT_SPEED * 10, z: 100 },
-    now: T0,
-  })
+  // ── 3. the same-world checkpoint read lands NEAR → the alt is with_you AT ONCE (no timer). The cross-world
+  //       alt joins, rides its own ETA, and its completion is CONSUMED into with_you (never a frozen 00:00). ─
+  feed({ kind: 'follow_position_read', character_id: ALT_1, position: { x: 103, z: 100 }, now: T0 }) // ~3 blocks off
+  expect(store.getState().follow.followers[ALT_1].status).toBe('with_you')
+  expect(transcript).toContain(`follow ${ALT_1}`) // present immediately as a free-run companion
+
+  feed({ kind: 'member_world_state', character_id: ALT_2, world_id: WORLD }) // the join landed → same world now
   feed({
     kind: 'follow_world_joined',
     character_id: ALT_2,
     world_id: WORLD,
-    checkpoint: { x: 100 - TRANSIT_SPEED * 10, z: 100 },
+    checkpoint: { x: 100 - TRANSIT_SPEED * 10, z: 100 }, // ~100 blocks out → a ~10s flight leg
     now: T0,
   })
-  expect(transcript.filter((line) => line.startsWith('follow'))).toEqual([]) // no render tick since the joins
+  expect(store.getState().follow.followers[ALT_2].status).toBe('in_transit')
 
-  // expiry writes each arrival checkpoint; the arrived followers then project onto their slots and render
+  // expiry writes ALT_2's arrival checkpoint and turns its timer INTO with_you
   feed({ kind: 'leader_position', x: 101, z: 100, yaw: 0, now: T0 + 9_000 })
   feed({ kind: 'transit_tick', now: T0 + 10_000 })
-  expect(transcript.filter((line) => line.startsWith('checkpoint'))).toEqual([
-    `checkpoint ${ALT_1}`,
-    `checkpoint ${ALT_2}`,
-  ])
-  feed({ kind: 'follow_checkpoint_written', character_id: ALT_1 })
+  expect(transcript.filter((line) => line.startsWith('checkpoint'))).toEqual([`checkpoint ${ALT_2}`])
+  expect(store.getState().follow.followers[ALT_2].status).toBe('with_you')
   feed({ kind: 'follow_checkpoint_written', character_id: ALT_2 })
-  expect(transcript).toContain(`follow ${ALT_1}`)
   expect(transcript).toContain(`follow ${ALT_2}`)
 
   // ── 4. the leader engages a mob group: both alts auto-join exactly once ────────────────────────────────

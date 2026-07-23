@@ -99,7 +99,7 @@ test("expiry dispatches the follower checkpoint write beside the leader's CURREN
 
   const { state: arrived, outputs } = fold(state, { kind: 'transit_tick', now: NOW + 10_000 })
 
-  expect(arrived.follow.followers[ALT_1].status).toBe('arrived')
+  expect(arrived.follow.followers[ALT_1].status).toBe('with_you') // #613 — completion is consumed, not a dead 00:00
   expect(outputs.write_checkpoint).toEqual([
     {
       character_id: ALT_1,
