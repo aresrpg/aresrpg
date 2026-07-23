@@ -2,12 +2,13 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // HP TRUTH — proves character_max_hp / projected_hp reproduce the LIVE on-chain kernels EXACTLY
 // (aresrpg_foundation::progression_math max_hp_from_base + regen_hp, via hp_math.js), so a client read matches
-// what a chain settle computes. max_hp = per-class base_hp (config default_classes) + 5·(level−1) + (vitality +
-// gear); regen = (150 + level·6 + wisdom·2)/75 HP/s with remainder-carry, wisdom 0 (the live block-settle rate,
-// character_link.move:296/330). Level from the shared 1.29 xp curve. Kernel-level parity lives in hp_math.test.js.
+// what a chain settle computes. Display max = per-class base_hp + 5·(level−1) + (vitality + gear), while regen
+// settles against the pre-gear max; rate = (150 + level·6 + wisdom·2)/75 HP/s with remainder-carry and wisdom 0
+// (the live callers at character_link.move:365/406). Kernel-level parity lives in hp_math.test.js.
 import { describe, expect, test } from 'bun:test'
+import { level_to_experience } from '@aresrpg/sdk/experience'
 
-import { character_max_hp, projected_hp, normalize_character } from './read_character.js'
+import { character_max_hp, next_projected_hp_ms, projected_hp, normalize_character } from './read_character.js'
 
 // A minimal normalized character (only the fields the two helpers read). No `experience` → xp 0 → level 1;
 // classe 'senshi' → base_hp 70 (config default_classes / hp_math.DEFAULT_CLASS_BASE_HP).
@@ -51,6 +52,23 @@ describe('character_max_hp — exact on-chain max_hp (per-class base_hp + 5·(le
 describe('projected_hp — exact on-chain lazy regen (kernel rate + remainder-carry, wisdom 0)', () => {
   const damaged = char({ current_hp: 40, hp_updated_ms: 0, vitality: 0 }) // 40/70, senshi L1, anchor 0
 
+  test('the projection exists and crosses the carried level-1 boundary at the exact millisecond', () => {
+    expect(typeof projected_hp).toBe('function')
+    const carried = char({ current_hp: 35, hp_updated_ms: 9_807 })
+
+    expect(projected_hp(carried, 9_807)).toBe(35)
+    expect(projected_hp(carried, 10_287)).toBe(35)
+    expect(projected_hp(carried, 10_288)).toBe(36)
+    expect(next_projected_hp_ms(carried, 10_287)).toBe(10_288)
+    expect(projected_hp(carried, 10_768)).toBe(36)
+    expect(next_projected_hp_ms(carried, 10_768)).toBe(10_769)
+    expect(projected_hp(carried, 10_769)).toBe(37)
+    // Absolute boundaries retain the fractional cadence; five points take 2404ms, not 5×481=2405ms.
+    expect(next_projected_hp_ms(carried, 11_731)).toBe(12_211)
+    expect(projected_hp(carried, 12_210)).toBe(39)
+    expect(projected_hp(carried, 12_211)).toBe(40)
+  })
+
   test('0 elapsed → stored current_hp (honest damage, NOT full)', () => {
     expect(projected_hp(damaged, 0)).toBe(40)
   })
@@ -77,10 +95,72 @@ describe('projected_hp — exact on-chain lazy regen (kernel rate + remainder-ca
     expect(projected_hp(char({ current_hp: 70, vitality: 0 }), 1_000_000_000_000)).toBe(70)
   })
 
-  test('geared character caps at the gear-inclusive max (damage not re-hidden)', () => {
-    // current 80 out of a gear-inclusive max 86 (senshi L1: 70 + vit 10 + gear 6): projects up but clamps at 86.
+  test('regen caps before gear is folded, exactly like combat_stats_settled → fold_gear', () => {
+    // Chain order: regen first caps at base + allocated vit = 80, then gear widens only the fight/display max to 86.
     const geared = char({ current_hp: 80, vitality: 10, gear_vitality: 6, hp_updated_ms: 0 })
-    expect(projected_hp(geared, 1_000_000_000_000)).toBe(86)
+    expect(character_max_hp(geared)).toBe(86)
+    expect(projected_hp(geared, 1_000_000_000_000)).toBe(80)
+  })
+
+  test('a signed gear vitality malus clamps after regen, matching fold_gear', () => {
+    const malused = char({
+      current_hp: 75,
+      vitality: 10,
+      equipment_stats: { vitality: -4 },
+      hp_updated_ms: 0,
+    })
+    expect(character_max_hp(malused)).toBe(76)
+    expect(projected_hp(malused, 1_000_000_000_000)).toBe(76)
+    expect(next_projected_hp_ms(malused, 1_000_000_000_000)).toBeNull()
+  })
+
+  test('drift proof: deterministic randomized anchors equal an independent BigInt Move settle', () => {
+    let seed = 0x617
+    const next_u32 = () => {
+      seed = (Math.imul(seed, 1_664_525) + 1_013_904_223) >>> 0
+      return seed
+    }
+    const settle_like_move = ({ hp, anchor_ms, regen_max_hp, folded_max_hp, level, now_ms }) => {
+      const settled = (() => {
+        if (hp >= regen_max_hp) return regen_max_hp
+        if (now_ms <= anchor_ms) return hp
+        const elapsed = BigInt(now_ms - anchor_ms)
+        const num = 150n + BigInt(level) * 6n // live callers pass wisdom=0
+        const accrued = (elapsed * num) / 75_000n
+        if (accrued === 0n) return hp
+        return Number(BigInt(hp) + accrued >= BigInt(regen_max_hp) ? BigInt(regen_max_hp) : BigInt(hp) + accrued)
+      })()
+      return Math.min(settled, folded_max_hp)
+    }
+
+    for (let sample = 0; sample < 512; sample += 1) {
+      const level = 1 + (next_u32() % 200)
+      const vitality = next_u32() % 81
+      const equipment_vitality = (next_u32() % 61) - 30
+      const regen_max_hp = 70 + (level - 1) * 5 + vitality
+      const folded_max_hp = 70 + (level - 1) * 5 + Math.max(0, vitality + equipment_vitality)
+      const current_hp = next_u32() % (Math.max(regen_max_hp, folded_max_hp) + 1)
+      const hp_updated_ms = 1_700_000_000_000 + (next_u32() % 1_000_000)
+      const now_ms = hp_updated_ms - 1_000 + (next_u32() % 1_001_001)
+      const character = char({
+        experience: level_to_experience(level),
+        vitality,
+        equipment_stats: { vitality: equipment_vitality },
+        current_hp,
+        hp_updated_ms,
+      })
+
+      expect(projected_hp(character, now_ms)).toBe(
+        settle_like_move({
+          hp: current_hp,
+          anchor_ms: hp_updated_ms,
+          regen_max_hp,
+          folded_max_hp,
+          level,
+          now_ms,
+        })
+      )
+    }
   })
 })
 

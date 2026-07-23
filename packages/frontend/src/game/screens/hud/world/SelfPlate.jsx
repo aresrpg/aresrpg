@@ -13,9 +13,10 @@
 import './game-world-hud.css'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { projected_hp, character_max_hp } from '../../../../chain/read_character.js'
+import { character_max_hp } from '../../../../chain/read_character.js'
 import { experience_to_level, xp_progress } from '@aresrpg/sdk/experience'
 
+import { use_projected_hp } from '../../../../hooks/use_projected_hp.js'
 import { use_game_state, use_fight_view } from '../../../store.js'
 import { use_expedition, STATUS_ACTIVE } from '../../../../roster/store'
 
@@ -33,8 +34,10 @@ const character_hp_revision = (state, my_entity_id) => {
     character?.hp_updated_ms,
     character?.health,
     character?.experience,
+    character?.level,
     character?.vitality,
     character?.gear_vitality,
+    character?.equipment_stats?.vitality,
     character?.classe ?? character?.class,
   ].join(':')
 }
@@ -75,8 +78,9 @@ export function SelfPlate() {
   // T76 HP TRUTH: in a fight `me` wins, on an active run `run` wins (live combat truth, untouched); OUT of both
   // (the lobby), project the on-chain current_hp so the plate reads honest HP, not stale full. The chain-exact
   // max (character_max_hp) pairs with current_hp's own scale — see read_character.js re: not get_max_health.
-  const health =
-    me?.health ?? run?.carried_hp ?? (character?._type ? projected_hp(character, Date.now()) : (character?.health ?? 0))
+  const projection_live = !me && !run && Boolean(character?._type)
+  const projected_health = use_projected_hp(character, projection_live)
+  const health = me?.health ?? run?.carried_hp ?? projected_health ?? character?.health ?? 0
   const max_health = me ? me.health_max : run ? run.max_hp : character?._type ? character_max_hp(character) : 0
   const hp_pct = max_health > 0 ? Math.max(0, Math.min(100, (health / max_health) * 100)) : 0
   // XP bar — the SDK's SSOT progress-within-level helper (the single home for the level/xp-bar math the HUD

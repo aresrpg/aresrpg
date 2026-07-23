@@ -16,7 +16,7 @@
 import { experience_to_level } from '@aresrpg/sdk/experience'
 import { get_total_stat } from '@aresrpg/sdk/stats'
 
-import { base_hp_for_class, max_hp_from_base, regen_hp } from './hp_math.js'
+import { base_hp_for_class, max_hp_from_base, next_regen_hp_ms, regen_hp } from './hp_math.js'
 
 /**
  * @typedef {{
@@ -29,6 +29,7 @@ import { base_hp_for_class, max_hp_from_base, regen_hp } from './hp_math.js'
  *   realm: string,
  *   position: string,
  *   experience: number,
+ *   level?: number,
  *   health: number,
  *   color_1: number,
  *   color_2: number,
@@ -135,22 +136,36 @@ export function normalize_character(f, id, type) {
   }
 }
 
+/** Stored progression level when `/v1` carries it, otherwise the same immutable XP-curve derivation as the chain.
+ * @param {CharacterFields} character @returns {number} */
+const character_level = (character) => {
+  const stored_level = Number(character.level)
+  return Number.isFinite(stored_level) && stored_level >= 1
+    ? stored_level
+    : experience_to_level(Number(character.experience ?? 0))
+}
+
 /**
- * A Character's max HP — the EXACT live on-chain formula (aresrpg_foundation::progression_math::max_hp_from_base,
- * ANNEX §4c): per-class `base_hp` + 5 per level GAINED + 1 per TOTAL vitality point, where total vitality =
- * effective vitality (allocated base + `equipment_stats.vitality`), folded 1:1 — i.e. the GEARED pool
- * `equipment::fold_gear` seats a character with. That aggregate is the same positive-cache minus active-malus-cache
- * pair fights read; the positive-only `gear_vitality` remains a pre-backfill fallback in `get_total_stat`.
- * `base_hp` is the per-class GameConfig row (`aresrpg::config`
- * default_classes; see hp_math.DEFAULT_CLASS_BASE_HP for provenance + the /v1-override follow-up). Level is
- * derived from `experience` via the shared 1.29 XP curve (`experience_to_level`, floored ≥1 so `level−1` never
- * underflows), exactly as the chain's `level_from_xp`. DELIBERATELY NOT the client stat-sheet `get_max_health`
- * (@aresrpg/sdk/stats), a different reference-faithful formula on another scale — this pairs with current_hp's own
- * scale so a projected-HP bar never clamps/overflows and re-hides damage.
+ * The max HP used by the chain's lazy-regen settle. `character_link::combat_scalars` settles BEFORE
+ * `equipment::fold_gear`, so this cap contains class base + level growth + allocated vitality only. The later
+ * signed gear fold recomputes the displayed/fight max; positive gear cannot create regen in added capacity, while
+ * a vitality malus clamps the settled HP afterward.
+ * @param {CharacterFields} character @returns {number}
+ */
+export function character_regen_max_hp(character) {
+  const level = character_level(character)
+  const base_hp = base_hp_for_class(character.classe ?? character.class)
+  return max_hp_from_base(base_hp, level, Number(character.vitality ?? 0))
+}
+
+/**
+ * The final geared max HP used by the HUD denominator and fight snapshot after `equipment::fold_gear`: per-class
+ * base + 5 per level gained + total effective vitality (allocated plus the signed equipment aggregate, floored at
+ * zero). This is deliberately distinct from the pre-gear lazy-regen cap above, matching the chain's call order.
  * @param {CharacterFields} character @returns {number}
  */
 export function character_max_hp(character) {
-  const level = experience_to_level(Number(character.experience ?? 0))
+  const level = character_level(character)
   const base_hp = base_hp_for_class(character.classe ?? character.class)
   const total_vit = get_total_stat(character, 'vitality')
   return max_hp_from_base(base_hp, level, total_vit)
@@ -159,23 +174,38 @@ export function character_max_hp(character) {
 /**
  * The character's current HP projected to `now_ms`, replicating the on-chain lazy natural regen
  * (aresrpg_foundation::progression_math::regen_hp, ANNEX §5.4) so an off-chain read matches what a chain settle
- * would compute: HP/sec = `(150 + level×6 + wisdom×2) / 75` accrued from the stored `current_hp`, capped at max,
- * clock-skew-guarded, with the REMAINDER-CARRY law (the sub-unit fraction stays on the clock — never re-stamp
- * without the carry). SINGLE HOME for the off-chain HP projection.
+ * would compute: HP/sec = `(150 + level×6 + wisdom×2) / 75` accrued from the stored `current_hp`, capped at the
+ * pre-gear regen max and then clamped to `equipment::fold_gear`'s signed geared max, clock-skew-guarded, with the
+ * REMAINDER-CARRY law (the sub-unit fraction stays on the clock — never re-stamp without the carry). SINGLE HOME
+ * for the off-chain HP projection.
  *
  * wisdom = 0: EVERY on-chain caller that settles the stored HP block passes wisdom `0`
- * (character_link.move:296 heal_hp, :330 combat_stats_settled) — the kernel accepts a wisdom term but the live
+ * (character_link.move:365 heal_hp, :406 combat_stats_settled) — the kernel accepts a wisdom term but the live
  * block-maintenance paths never wire it, so matching them with 0 keeps the projection identical to a chain settle.
  * (Passing the character's real wisdom would out-regen the chain and re-introduce the very drift this fixes.)
  * @param {CharacterFields} character @param {number} now_ms  Unix ms (typically Date.now()) @returns {number}
  */
 export function projected_hp(character, now_ms) {
-  const max = character_max_hp(character)
-  const level = experience_to_level(Number(character.experience ?? 0))
+  const regen_max = character_regen_max_hp(character)
+  const folded_max = character_max_hp(character)
+  const level = character_level(character)
   const current = Number(character.current_hp ?? 0)
   const last = Number(character.hp_updated_ms ?? 0)
-  const [hp] = regen_hp(current, last, max, level, 0, now_ms)
-  return hp
+  const [settled] = regen_hp(current, last, regen_max, level, 0, now_ms)
+  return Math.min(settled, folded_max)
+}
+
+/**
+ * Earliest absolute millisecond when `projected_hp` will gain its next integer point, or null at the chain settle
+ * cap. The unchanged `/v1` anchor remains the only input; timer ticks never manufacture a replacement anchor.
+ * @param {CharacterFields} character @param {number} now_ms @returns {number | null}
+ */
+export function next_projected_hp_ms(character, now_ms) {
+  const max = Math.min(character_regen_max_hp(character), character_max_hp(character))
+  const level = character_level(character)
+  const current = Number(character.current_hp ?? 0)
+  const last = Number(character.hp_updated_ms ?? 0)
+  return next_regen_hp_ms(current, last, max, level, 0, now_ms)
 }
 
 /**

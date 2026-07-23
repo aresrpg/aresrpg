@@ -15,6 +15,8 @@ const REGEN_PER_LEVEL = 6 // 0.08 HP/s per level × 75
 const REGEN_PER_WIS = 2 // (1/37.5) HP/s per wisdom × 75
 const REGEN_DEN_MS = 75_000 // 75 (per-second denominator) × 1000 ms/s
 
+const regen_num = (level, wisdom) => REGEN_BASE + level * REGEN_PER_LEVEL + wisdom * REGEN_PER_WIS
+
 // ── Per-class DEFAULT base HP — MIRRORS `aresrpg::config` default_classes() (§17.31 / ANNEX §4), the values the
 //    on-chain GameConfig ships with at init. These per-class rows are admin-TUNABLE via `set_class_base_hp`, but:
 //      1. NO `set_class_base_hp` is ever composed on THIS deployment (verified: no call in frontend / sdk / seed,
@@ -68,10 +70,25 @@ export function regen_hp(hp, hp_updated_ms, max_hp, level, wisdom, now_ms) {
   if (hp >= max_hp) return [max_hp, now_ms]
   if (now_ms <= hp_updated_ms) return [hp, hp_updated_ms]
   const elapsed = now_ms - hp_updated_ms
-  const num = REGEN_BASE + level * REGEN_PER_LEVEL + wisdom * REGEN_PER_WIS // ≥ REGEN_BASE, never 0
+  const num = regen_num(level, wisdom) // ≥ REGEN_BASE, never 0
   const accrued = Math.floor((elapsed * num) / REGEN_DEN_MS)
   if (accrued === 0) return [hp, hp_updated_ms] // sub-unit only — keep the stamp so the fraction carries forward
   if (hp + accrued >= max_hp) return [max_hp, now_ms] // reached full — no remainder to bank
   const consumed_ms = Math.floor((accrued * REGEN_DEN_MS) / num) // the ms that produced WHOLE hp (≤ elapsed)
   return [hp + accrued, hp_updated_ms + consumed_ms] // carry the leftover fraction as un-consumed time
+}
+
+// The earliest absolute millisecond at which the SAME untouched anchor projects one more whole HP. Absolute
+// boundaries are essential: repeatedly adding a rounded per-point delay loses the fractional cadence, while this
+// inversion of `floor(elapsed × num / den)` carries it exactly. Null means the projection is already at its chain
+// settle cap and needs no timer. Pure scheduling data only — callers own the timer edge.
+/** @param {number} hp @param {number} hp_updated_ms @param {number} max_hp @param {number} level @param {number} wisdom @param {number} now_ms @returns {number | null} */
+export function next_regen_hp_ms(hp, hp_updated_ms, max_hp, level, wisdom, now_ms) {
+  const [current] = regen_hp(hp, hp_updated_ms, max_hp, level, wisdom, now_ms)
+  if (current >= max_hp) return null
+  const elapsed = Math.max(0, now_ms - hp_updated_ms)
+  const num = regen_num(level, wisdom)
+  const accrued = Math.floor((elapsed * num) / REGEN_DEN_MS)
+  const next_elapsed_ms = Math.ceil(((accrued + 1) * REGEN_DEN_MS) / num)
+  return hp_updated_ms + next_elapsed_ms
 }
