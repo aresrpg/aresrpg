@@ -377,10 +377,10 @@ export async function execute_tx({
 //   1) POST /reserve {txKindBytes, sender, challenge, signature} → {reservationId, sponsorAddress, gasCoins,
 //      gasBudget}. Same policy inputs as before (kind-only PTB + a zkLogin personal-message challenge); ALL money
 //      + identity policy is enforced HERE (pre-gas, zero burn on refusal).
-//   2) The client applies the reserved gas data to the SAME tx object (kind stays byte-identical), dry-runs it
-//      (S-54 refuse-on-fail — the sponsor's gas is never burned on a would-fail tx), signs the SENDER half, and
-//      POSTs /execute {reservationId, txBytes, userSig}. The station co-signs the gas half + submits + returns the
-//      CERTIFIED effects — consumed DIRECTLY (zero fullnode wait). Used for create-character AND join-world.
+//   2) The client applies the reserved gas data to the SAME tx object (kind stays byte-identical), signs the SENDER
+//      half, and POSTs /execute {reservationId, txBytes, userSig}. The station co-signs the gas half + submits +
+//      returns the CERTIFIED effects — consumed DIRECTLY (zero fullnode wait). Used for create-character AND
+//      join-world.
 
 // SPONSOR-REFUSAL → SELF-PAY CONTRACT (funded-wallet join fix, money-UX review). ONLY the
 // @server's > 0.2-SUI BALANCE RULE (api/sponsor.mjs SELF_PAY_MIST) is tagged for a SILENT self-pay re-route: a
@@ -609,18 +609,10 @@ export async function execute_sponsored_tx({
   transaction.setGasPayment(gasCoins)
   transaction.setGasBudget(gasBudget)
 
-  // SIMULATE-FIRST GATE (S-54) — the tx now carries gas + sender, so it IS dry-runnable. Refuse a would-fail tx
-  // BEFORE signing/executing so the sponsor's real gas is NEVER burned (e.g. a taken character name), and /execute
-  // is never even reached. Returns the SAME failure-receipt shape an executed failure returns (digest '' — never
-  // read on the failure branch), so the consumer humanizes it identically with ZERO gas spent and no caller change.
-  const sim = await simulate(transaction)
-  const verdict = gas_guard_decision(sim, null)
+  // The reservation's server-priced budget is the sponsored trust anchor: /reserve already simulated this kind,
+  // and /execute verifies it is still byte-identical. Do not repeat that transport dry-run here. Self-pay remains
+  // behind guard()'s client-side simulation above.
   mark_engage_simulation_finished(transaction)
-  if (!verdict.ok && verdict.reason === 'sim_failed') {
-    const chain_error = (sim?.Transaction ?? sim?.FailedTransaction)?.effects?.status?.error
-    game_log('gas-guard', 'sponsored simulation says the tx would fail — refusing (zero gas):', chain_error)
-    return { digest: '', effects: { status: { status: 'failure', error: format_abort(chain_error) } } }
-  }
 
   // Sign the SENDER half — the wallet builds + signs the SAME (gas-pinned) tx and returns the EXACT bytes it
   // signed; those bytes go to /execute so the sender signature covers them byte-for-byte (mirrors the self-pay

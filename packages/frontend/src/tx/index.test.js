@@ -987,10 +987,10 @@ describe('execute_tx — EXECUTE-CERT fast path (want_effects, <1s lane)', () =>
   })
 })
 
-// TWO-CALL STATION FLOW (docs/SPONSOR_TWO_CALL_CONTRACT.md) — execute_sponsored_tx now RESERVES gas, applies it to
-// the SAME tx object EXACTLY, dry-runs it (S-54), signs the SENDER half, and hands the wallet's signed bytes to
-// /execute where the STATION co-signs the gas half + submits + returns certified effects. The CLIENT NEVER submits
-// a sponsored tx. Fetch is mocked (reserve/execute routed by path); the sdk mock above supplies the simulate gate.
+// TWO-CALL STATION FLOW (docs/SPONSOR_TWO_CALL_CONTRACT.md) — execute_sponsored_tx now RESERVES server-priced gas,
+// applies it to the SAME tx object EXACTLY, signs the SENDER half, and hands the wallet's signed bytes to /execute
+// where the STATION co-signs the gas half + submits + returns certified effects. The CLIENT NEVER submits or repeats
+// the server's pricing dry-run. Fetch is mocked (reserve/execute routed by path).
 describe('execute_sponsored_tx — two-call station flow', () => {
   const RESERVATION = {
     reservationId: 42,
@@ -1046,7 +1046,7 @@ describe('execute_sponsored_tx — two-call station flow', () => {
     globalThis.fetch = real_fetch
   })
 
-  test('happy path → reserve → apply reserved gas EXACTLY → dry-run → sign SENDER half → execute → consume effects', async () => {
+  test('happy path → reserve → apply reserved gas EXACTLY → sign SENDER half → execute → consume effects', async () => {
     sim.current = ok_sim('1000000', '2000000', '500000')
     let execute_body = null
     globalThis.fetch = mock(async (url, init) => {
@@ -1061,7 +1061,7 @@ describe('execute_sponsored_tx — two-call station flow', () => {
     const res = await run(tx)
     // the reserved gas is applied to the SAME tx byte-for-byte (fields — owner, coins, budget — all from /reserve)
     expect(gas_spy).toEqual({ sender: ADDR, owner: '0xspon', payment: RESERVATION.gasCoins, budget: 3_000_000 })
-    expect(grpc.core.simulateTransaction).toHaveBeenCalledTimes(1) // the S-54 dry-run ran before signing
+    expect(grpc.core.simulateTransaction).toHaveBeenCalledTimes(0) // /reserve already priced this transaction kind
     // /execute carries the reservation id + the wallet's EXACT signed bytes + the sender sig (station submits)
     expect(execute_body).toEqual({ reservationId: 42, txBytes: 'TXBYTES', userSig: 'sender-sig' })
     expect(res.digest).toBe('DIG')
@@ -1085,6 +1085,16 @@ describe('execute_sponsored_tx — two-call station flow', () => {
     )
   })
 
+  test('priced reservation → zero client dry-runs; reserve budget is the trust anchor (#585)', async () => {
+    sim.current = ok_sim('1000000', '2000000', '500000')
+    route({
+      reserve: () => ok_json(RESERVATION),
+      execute: () => ok_json({ effects: { status: { status: 'success' }, transactionDigest: 'DIG' }, digest: 'DIG' }),
+    })
+    await run()
+    expect(grpc.core.simulateTransaction).toHaveBeenCalledTimes(0)
+  })
+
   test('EXECUTED failure → station effects consumed directly, the raw JSON-RPC abort string passes through', async () => {
     sim.current = ok_sim('1000000', '2000000', '500000')
     const abort = 'MoveAbort(MoveLocation { module: Identifier("creation") }, 101) in command 0'
@@ -1102,17 +1112,21 @@ describe('execute_sponsored_tx — two-call station flow', () => {
     expect(res.effects.status.error).toBe(abort) // the legacy string the shared decoder maps — unmodified
   })
 
-  test('S-54 dry-run refuse → failure receipt (digest ""), /execute is NEVER called (zero sponsor gas)', async () => {
-    sim.current = failed_sim()
+  test('server pricing refusal → no client dry-run, signing, or /execute call', async () => {
+    const sign_transaction = mock(async () => ({ signature: 'sender-sig', bytes: 'TXBYTES' }))
     const spy = route({
-      reserve: () => ok_json(RESERVATION),
+      reserve: () => bad(400, 'sponsor-unpriceable: simulation failed — refusing'),
       execute: () => {
-        throw new Error('/execute must not be called on a would-fail tx')
+        throw new Error('/execute must not be called when reserve pricing refuses')
       },
     })
-    const res = await run()
-    expect(res.digest).toBe('') // refused before signing/executing — nothing burned
-    expect(res.effects.status.status).toBe('failure')
+    const error = await run(make_spon_tx(), make_spon_wallet(sign_transaction)).then(
+      () => null,
+      (reason) => reason
+    )
+    expect(error?.message).toBe(i18n.t('errors.sponsor_unpriceable'))
+    expect(grpc.core.simulateTransaction).toHaveBeenCalledTimes(0)
+    expect(sign_transaction).toHaveBeenCalledTimes(0)
     expect(spy.mock.calls.filter((c) => String(c[0]).endsWith('/execute'))).toHaveLength(0)
   })
 
