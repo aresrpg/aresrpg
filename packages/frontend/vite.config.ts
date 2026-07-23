@@ -197,5 +197,15 @@ export default defineConfig({
   // NO_HMR=1 freezes the running page: agents constantly edit the shared working tree, and every save
   // hot-reloading into a live dev session = half-written code on screen. With HMR off, file
   // changes apply only on a manual refresh. Agent dev servers on their own ports simply don't set the flag.
-  server: { port: 5173, hmr: process.env.NO_HMR ? false : undefined },
+  // host: '127.0.0.1' PINS the bind address (CI vite-hang lane, 2026-07-23): with host unset, Vite passes
+  // the bare string 'localhost' to Node's server.listen(), which resolves it via a SEPARATE single-result
+  // DNS lookup than the one Playwright's webServer readiness probe (and plain Node http.get) uses for the
+  // SAME string — on Linux GitHub Actions runners (glibc, IPv6-first /etc/hosts) they disagree: Vite binds
+  // ONLY [::1], the readiness probe's http.get('http://localhost/') resolves 'localhost' to 127.0.0.1 and
+  // gets ECONNREFUSED forever (confirmed via /proc/net/tcp6 + a direct http.get repro in a linux/amd64
+  // container). Playwright's webServer never logs the retries, so the gold anchor suite goes silent for
+  // the full budget then dies "Timed out waiting Nms from config.webServer." macOS's resolver agrees with
+  // itself (both paths pick 127.0.0.1), which is why this never reproduced locally. An explicit IP literal
+  // sidesteps hostname resolution entirely — byte-identical behavior on Mac (already resolved there).
+  server: { port: 5173, host: '127.0.0.1', hmr: process.env.NO_HMR ? false : undefined },
 })
