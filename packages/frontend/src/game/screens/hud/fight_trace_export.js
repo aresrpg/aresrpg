@@ -13,7 +13,8 @@
 // packages/fight/src/trace_store_replay.test.js). Effect edge only: dump_current_trace does the real work
 // (headless, testable without a DOM); this file owns the Blob/anchor download dance.
 
-import { dump_current_trace, stringify_trace } from '@aresrpg/fight/trace_tap'
+import { fight_store } from '@aresrpg/fight/store'
+import { stringify_trace } from '@aresrpg/fight/trace_tap'
 
 // Vite injects this build-wide (vite.config.ts __APP_VERSION__); `typeof` guards the non-Vite context (bun
 // test) — the same pattern core/report.js's RELEASE constant uses for __GIT_SHA__.
@@ -22,13 +23,14 @@ const app_version = () => (typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSIO
 /** Is there a fight trace worth offering right now? Cheap (reads the bounded in-memory ring buffer only) —
  *  the end-card row and the keybind both gate on this so neither is ever a dead affordance.
  * @returns {boolean} */
-export const has_dumpable_trace = () => dump_current_trace(app_version(), Date.now()) != null
+export const has_dumpable_trace = () =>
+  fight_store.trace_tap.dump_current_trace(app_version(), Date.now()) != null
 
 /** Dump the most recent fight's trace and trigger a browser download. No-op (returns false) when nothing was
  *  captured — never a fabricated empty file.
  * @returns {boolean} */
 export function export_fight_trace() {
-  const trace = dump_current_trace(app_version(), Date.now())
+  const trace = fight_store.trace_tap.dump_current_trace(app_version(), Date.now())
   if (!trace) return false
   // BigInt-safe: decode_fight()'s chain u64 fields (world_seed, shape_mask, …) ride a 'snapshot' input's
   // msg.fight verbatim — a bare JSON.stringify throws the instant the walk reaches one (trace_recorder.js).

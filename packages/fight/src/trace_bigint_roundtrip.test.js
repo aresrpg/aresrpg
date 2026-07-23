@@ -17,7 +17,6 @@
 import { describe, test, expect } from 'bun:test'
 
 import { create_fight_store } from './store.js'
-import { dump_current_trace, _reset_trace_for_test } from './trace_tap.js'
 import { stringify_trace, parse_trace } from './trace_recorder.js'
 
 const FIGHT = '0xtrace_bigint_fight'
@@ -98,9 +97,8 @@ const drive_fight = () => {
 
 describe('the reported crash, reproduced (RED)', () => {
   test('a bare JSON.stringify on a trace holding this snapshot throws — the exact live symptom', () => {
-    _reset_trace_for_test()
-    drive_fight()
-    const trace = dump_current_trace('bigint-red-test', T0 + 5_000, FIGHT)
+    const store = drive_fight()
+    const trace = store.trace_tap.dump_current_trace('bigint-red-test', T0 + 5_000, FIGHT)
     expect(trace).not.toBe(null)
     expect(() => JSON.stringify(trace)).toThrow(TypeError)
     expect(() => JSON.stringify(trace)).toThrow(/BigInt/)
@@ -109,9 +107,8 @@ describe('the reported crash, reproduced (RED)', () => {
 
 describe('stringify_trace / parse_trace — the BigInt round-trip fix (GREEN)', () => {
   test('stringify_trace succeeds, produces valid JSON, and parse_trace revives EXACT BigInt values', () => {
-    _reset_trace_for_test()
     const original = drive_fight()
-    const trace = dump_current_trace('bigint-green-test', T0 + 5_000, FIGHT)
+    const trace = original.trace_tap.dump_current_trace('bigint-green-test', T0 + 5_000, FIGHT)
 
     const text = stringify_trace(trace)
     expect(() => JSON.parse(text)).not.toThrow() // valid JSON on the wire — no raw BigInt leaked through
@@ -135,10 +132,9 @@ describe('stringify_trace / parse_trace — the BigInt round-trip fix (GREEN)', 
   })
 
   test('a trace with no BigInt at all still round-trips (the common case is untouched)', () => {
-    _reset_trace_for_test()
     const store = create_fight_store()
     store.getState().input({ type: 'init', fight_id: 'plain-fight' }, T0)
-    const trace = dump_current_trace('v', T0, 'plain-fight')
+    const trace = store.trace_tap.dump_current_trace('v', T0, 'plain-fight')
     const revived = parse_trace(stringify_trace(trace))
     expect(revived).toEqual(trace)
   })

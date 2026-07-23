@@ -47,7 +47,7 @@ import { board_state_from_fight, fight_geometry_complete } from './board_state.j
 import { prediction_identity } from './budget_claims.js'
 import { peer_batch_legality } from './peer_legality.js'
 import { reconcile_predictions } from './reconcile_action.js'
-import { tap_trace_input } from './trace_tap.js'
+import { create_trace_tap } from './trace_tap.js'
 import {
   base_budget,
   carry_statuses,
@@ -390,14 +390,21 @@ const empty_fight = () => ({
  * presentation acks, and UI/tx signals all reduce here; nothing else writes fight state.
  * @param {(fn:(s:any)=>any)=>void} set
  * @param {()=>any} get
+ * @param {ReturnType<typeof create_trace_tap>} trace_tap
  */
 const make_input =
-  (set, get) =>
+  (set, get, trace_tap) =>
   (msg, now = Date.now()) => {
     const state = get()
     // TRACE TAP (issue #209): every message crossing this door, VERBATIM, before any gate/set — pure data
-    // capture, zero behavior change (@aresrpg/fight/trace_tap). The bridge to a player-reachable fight report.
-    tap_trace_input(state, msg, now)
+    // capture, zero behavior change (@aresrpg/fight/trace_tap). Fault containment lives on this producer
+    // boundary: no diagnostic consumer — including a hostile accessor on an otherwise valid message — may stop
+    // the ONE reducer door.
+    try {
+      trace_tap.tap_trace_input(state, msg, now)
+    } catch {
+      /* a diagnostic tap NEVER perturbs the fight flow */
+    }
     // THE PROVIDER/SESSION GATE (INC-0, NORTH_STAR C2/C3): a mismatched-provenance local push, or a chain/ack
     // input for another fight or a superseded session, is REFUSED — recorded in `state.refused` (a logged
     // non-event) and never applied. Missing id is HELD (the current session claims it). Control signals
@@ -1103,13 +1110,16 @@ const make_input =
     }
   }
 
-export const create_fight_store = () =>
-  createStore((set, get) => ({
+export const create_fight_store = () => {
+  const trace_tap = create_trace_tap()
+  const store = createStore((set, get) => ({
     ...empty_fight(),
-    input: make_input(set, get),
+    input: make_input(set, get, trace_tap),
     // A raw fold helper for tests/tools that want a committed state from a log without the store plumbing.
     fold: (log) => log.reduce(apply_action, empty_state(get().fight_id)),
   }))
+  return { ...store, trace_tap }
+}
 
 /** The app-wide singleton — VANILLA zustand (node-clean); the React hook (`use_fight`) is a frontend adapter. */
 export const fight_store = create_fight_store()

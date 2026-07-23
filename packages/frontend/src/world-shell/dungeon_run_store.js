@@ -24,7 +24,6 @@ import { fight_store } from '@aresrpg/fight/store'
 import * as project from '@aresrpg/fight/project'
 import { fight_view } from '@aresrpg/fight/project'
 import { u64 } from '@aresrpg/fight/journal_u64'
-import { fight_opened_at } from '@aresrpg/fight/trace_tap'
 import {
   STATUS_OPEN,
   STATUS_ACTIVE,
@@ -212,7 +211,7 @@ function open_fight_recap(get, winner, xp = 0) {
   // wall-clock 'at' unconditionally, including the 'init' that opened this exact fight_id — the ONE fight state
   // home this store's bind field was always just a local echo of. Still null (never fabricated) if the ring has
   // nothing for it either (evicted past capacity, or never opened).
-  const started_at = fight_started_at_ms ?? (fight_id ? fight_opened_at(fight_id) : null)
+  const started_at = fight_started_at_ms ?? (fight_id ? fight_store.trace_tap.fight_opened_at(fight_id) : null)
   context.dispatch(
     'action/fight_summary/open',
     fight_recap_payload({

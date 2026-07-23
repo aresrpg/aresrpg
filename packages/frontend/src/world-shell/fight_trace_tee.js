@@ -36,86 +36,81 @@ import { fight_trace_enabled } from './fight_state_trace.js'
 import { create_shadow_driver, shadow_enabled_from } from './fight_v2_shadow.js'
 
 const CAPSULE_RING = '__ARES_FIGHT_CAPSULE' // window home of the bounded envelope ring
-const TEE_INSTALLED = '__ARES_FIGHT_TEE_INSTALLED'
 const CAPSULE_DUMP = '__ARES_FIGHT_CAPSULE_DUMP' // the copy-trace affordance, upgraded to format-2
 const SHADOW_STATUS = '__ARES_FIGHT_SHADOW' // { fights_shadowed, divergences, last } — debug-read, no UI
 const SHADOW_CAPSULE = '__ARES_FIGHT_SHADOW_CAPSULE' // the last divergence's downloadable capsule, if any
-
-let capture_seq = 0
-let url_flag = null // memoized ?fighttrace= parse (never re-parsed per input)
-
-const tee_enabled = () => {
-  if (typeof window === 'undefined') return false
-  if (/** @type {any} */ (window).__ARES_FIGHT_TRACE_ENABLED === true) return true
-  if (url_flag === null) url_flag = fight_trace_enabled(window.location?.search ?? '')
-  return url_flag
-}
-
-// UNMEMOIZED, unlike tee_enabled's url_flag: fight inputs arrive at human-interaction cadence (clicks, a
-// ~1s tick, occasional receipts), never a per-frame loop, so re-parsing a short query string plus one
-// localStorage read costs nothing worth a module-scope cache — and staying unmemoized keeps this trivially
-// testable per-case (a fresh `window` per test, no reset hook to remember).
-const shadow_armed = () => {
-  if (typeof window === 'undefined') return false
-  const target = /** @type {any} */ (window)
-  if (target.__ARES_FIGHT_SHADOW_ENABLED === true) return true
-  return shadow_enabled_from({
-    search: window.location?.search ?? '',
-    storage_get: (key) => {
-      try {
-        return window.localStorage?.getItem(key) ?? null
-      } catch {
-        return null
-      }
-    },
-  })
-}
+const TEE_WRAPPED = Symbol('ares-fight-trace-tee') // per-store idempotency latch (#568) — see install below
 
 // Vite injects __APP_VERSION__ at build; the typeof guard keeps this module import-safe under node/tests.
 const app_version = () => (typeof __APP_VERSION__ === 'undefined' ? null : __APP_VERSION__)
 
-/** Record ONE door message as an envelope in the bounded ring. Read-only: never touches `msg` or the
- *  store; `now` is the reducer's clock reading (the ONE tap timestamp). */
-const record_input = (msg, now) => {
-  if (!tee_enabled()) return
-  const target = /** @type {any} */ (window)
-  const ring = Array.isArray(target[CAPSULE_RING]) ? target[CAPSULE_RING] : []
-  const env = input_envelope({
-    session_id: msg?.fight_id ?? fight_store.getState().fight_id ?? null,
-    input_seq: capture_seq++,
-    observed_at_ms: typeof now === 'number' ? now : Date.now(),
-    payload: classify_input(msg),
-  })
-  target[CAPSULE_RING] = push_bounded(ring, env, CAPSULE_RING_LIMIT)
-}
-
-/** The copy-trace affordance, upgraded: dump the current ring as a portable trace_format-2 capsule. The
- *  legacy `__ARES_FIGHT_TRACE` (format-1 diagnostic rows) is untouched and still dumps as before. */
-const dump_capsules = () => {
-  const target = typeof window === 'undefined' ? {} : /** @type {any} */ (window)
-  const capsules = Array.isArray(target[CAPSULE_RING]) ? target[CAPSULE_RING] : []
-  return capsule_export({
-    session_id: fight_store.getState().fight_id ?? null,
-    app_version: app_version(),
-    captured_at: Date.now(),
-    capsules,
-  })
-}
-
 /**
- * Install the transparent door tee ONCE. Idempotent (a second call is a no-op); a no-op under node
- * (no window). The original `input` is captured and always invoked — behavior is unchanged.
+ * Install the transparent door tee once PER STORE (#568). Its enablement cache, sequence, and shadow driver
+ * all belong to THIS installation — every read/write goes through the supplied store, never the app
+ * singleton behind a fresh store, and two installs on two stores never share state. A no-op under node. The
+ * original `input` is captured and always invoked — behavior is unchanged.
  * @param {{ getState: () => any, setState: (partial: any) => void }} [store]
  */
 export const install_fight_trace_tee = (store = fight_store) => {
   if (typeof window === 'undefined') return
   const target = /** @type {any} */ (window)
-  if (target[TEE_INSTALLED]) return
   const original = store.getState().input
-  if (typeof original !== 'function') return
-  // MODULE-INSTANCE scope (never a module global — the order-independence gate bites those): a fresh
-  // `shadow` + `shadow_seq` per install call, lazily created on the FIRST armed envelope so a session that
-  // never arms the flag never allocates a v2 core at all (zero work — see fight_v2_shadow.js's header).
+  if (typeof original !== 'function' || /** @type {any} */ (original)[TEE_WRAPPED]) return
+  let capture_seq = 0
+  let url_flag = null // memoized ?fighttrace= parse for THIS installation
+
+  const tee_enabled = () => {
+    if (target.__ARES_FIGHT_TRACE_ENABLED === true) return true
+    if (url_flag === null) url_flag = fight_trace_enabled(target.location?.search ?? '')
+    return url_flag
+  }
+
+  /** Record ONE door message as an envelope. `now` is the reducer's ONE tap timestamp. */
+  const record_input = (msg, now) => {
+    if (!tee_enabled()) return
+    const ring = Array.isArray(target[CAPSULE_RING]) ? target[CAPSULE_RING] : []
+    const env = input_envelope({
+      session_id: msg?.fight_id ?? store.getState().fight_id ?? null,
+      input_seq: capture_seq++,
+      observed_at_ms: typeof now === 'number' ? now : Date.now(),
+      payload: classify_input(msg),
+    })
+    target[CAPSULE_RING] = push_bounded(ring, env, CAPSULE_RING_LIMIT)
+  }
+
+  /** Dump this installation's current ring as a portable trace_format-2 capsule. */
+  const dump_capsules = () => {
+    const capsules = Array.isArray(target[CAPSULE_RING]) ? target[CAPSULE_RING] : []
+    return capsule_export({
+      session_id: store.getState().fight_id ?? null,
+      app_version: app_version(),
+      captured_at: Date.now(),
+      capsules,
+    })
+  }
+
+  // UNMEMOIZED, unlike tee_enabled's url_flag: fight inputs arrive at human-interaction cadence (clicks, a
+  // ~1s tick, occasional receipts), never a per-frame loop, so re-parsing a short query string plus one
+  // localStorage read costs nothing worth a cache — and staying unmemoized keeps this trivially testable
+  // per-case (a fresh `window` per test, no reset hook to remember).
+  const shadow_armed = () => {
+    if (target.__ARES_FIGHT_SHADOW_ENABLED === true) return true
+    return shadow_enabled_from({
+      search: target.location?.search ?? '',
+      storage_get: (key) => {
+        try {
+          return target.localStorage?.getItem(key) ?? null
+        } catch {
+          return null
+        }
+      },
+    })
+  }
+
+  // MODULE-INSTANCE scope (never a module global — the order-independence gate bites those, and #568 is
+  // exactly this bug for the ring): a fresh `shadow` + `shadow_seq` per install call, lazily created on the
+  // FIRST armed envelope so a session that never arms the flag never allocates a v2 core at all (zero work —
+  // see fight_v2_shadow.js's header).
   let shadow = null
   let shadow_seq = 0
   /** THE SECOND CONSUMER of the one tap: feed the SAME `msg` (its own classify — header's ONE TAP note)
@@ -134,6 +129,7 @@ export const install_fight_trace_tee = (store = fight_store) => {
     target[SHADOW_STATUS] = shadow.status()
     if (verdict.capsule) target[SHADOW_CAPSULE] = verdict.capsule
   }
+
   const teed = (msg, now = Date.now()) => {
     try {
       record_input(msg, now)
@@ -141,16 +137,17 @@ export const install_fight_trace_tee = (store = fight_store) => {
       /* a diagnostic tap NEVER perturbs the fight flow */
     }
     const result = original(msg, now) // the OLD pipeline commits — read its board only AFTER this line
-    if (shadow_armed()) {
-      try {
-        feed_shadow(msg, now)
-      } catch {
-        /* a diagnostic tap NEVER perturbs the fight flow */
-      }
+    // Both `shadow_armed()` and `feed_shadow()` share ONE fault boundary (#568's own principle, applied to
+    // this second consumer too): neither the arm check nor the shadow's own work may ever poison the ring,
+    // the store, or each other.
+    try {
+      if (shadow_armed()) feed_shadow(msg, now)
+    } catch {
+      /* a diagnostic tap NEVER perturbs the fight flow */
     }
     return result
   }
+  Object.defineProperty(teed, TEE_WRAPPED, { value: true })
   store.setState({ input: teed })
-  target[TEE_INSTALLED] = true
   target[CAPSULE_DUMP] = dump_capsules
 }

@@ -10,7 +10,6 @@
 import { describe, test, expect } from 'bun:test'
 
 import { create_fight_store } from './store.js'
-import { dump_current_trace, _reset_trace_for_test } from './trace_tap.js'
 
 const FIGHT = '0xtrace_replay_fight'
 const ME = '0xchar_trace_replay'
@@ -100,8 +99,6 @@ const drive_fight = () => {
 
 describe('a captured fight trace replays through a fresh store (the store IS the reducer, its input log is its capsule)', () => {
   test('folding trace.inputs through a fresh create_fight_store() reproduces the SAME committed HP + timeline length', () => {
-    _reset_trace_for_test() // module-level tap singleton — isolate from whatever else shared this test process
-
     const original = drive_fight()
     // ground truth this test does NOT get from the tap: the exact numbers the live drive produced.
     expect(original.getState().fighters.m0.hp).toBe(20)
@@ -109,7 +106,7 @@ describe('a captured fight trace replays through a fresh store (the store IS the
     const original_timeline_length = Object.keys(original.getState().entries).length
     expect(original_timeline_length).toBe(8) // one folded action entry per receipt event
 
-    const trace = dump_current_trace('trace-replay-test', T0 + 5_000, FIGHT)
+    const trace = original.trace_tap.dump_current_trace('trace-replay-test', T0 + 5_000, FIGHT)
     expect(trace).not.toBe(null)
     expect(trace.inputs.map((i) => i.msg.type)).toEqual(['init', 'snapshot', 'receipt'])
 
@@ -125,8 +122,8 @@ describe('a captured fight trace replays through a fresh store (the store IS the
   })
 
   test('nothing captured yet (no fight opened) dumps null — never a fabricated empty trace', () => {
-    _reset_trace_for_test()
-    expect(dump_current_trace('trace-replay-test', T0)).toBe(null)
+    const store = create_fight_store()
+    expect(store.trace_tap.dump_current_trace('trace-replay-test', T0)).toBe(null)
   })
 })
 

@@ -6,10 +6,10 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { reset_walrus_assets_for_test } from '@aresrpg/sdk/jobs'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { fight_store } from '@aresrpg/fight/store'
 
 import player_experience from '../../core/modules/player_experience.js'
 import { FightReport } from './FightReport.jsx'
-import { tap_trace_input, _reset_trace_for_test } from '@aresrpg/fight/trace_tap'
 
 const t = (key, opts) => (opts?.sui != null ? `${key}:${opts.sui}` : key) // stub — no i18n init needed
 
@@ -408,29 +408,37 @@ describe('FightReport — RED-FIRST fixture: a 2-player settle result (victory-c
   })
 })
 
-// EXPORT REPLAY row (issue #209) — the row reads the REAL @aresrpg/fight/trace_tap singleton (the exact door
+// EXPORT REPLAY row (issue #209) — the row reads the REAL app fight_store's trace instance (the exact door
 // FightReport itself reads at mount via has_dumpable_trace), so this exercises the actual wiring, not a stub.
 // Never a dead button: present exactly when the tap has something captured, hidden otherwise.
 describe('FightReport — the EXPORT REPLAY row (never a dead button)', () => {
   const anchors = { applied_version: -1, view_version: -1, receipt_seq: 0 }
 
   test('nothing captured (tap empty) — the row does not render at all', () => {
-    _reset_trace_for_test()
+    fight_store.trace_tap._reset_for_test()
     const html = renderToStaticMarkup(<FightReport {...base} cost={null} />)
     expect(html).not.toContain('fight_end.export_replay')
   })
 
   test('a captured fight (the tap holds an init for it) — the row renders as a secondary button', () => {
-    _reset_trace_for_test()
-    tap_trace_input({ fight_id: null, ...anchors }, { type: 'init', fight_id: '0xfe_report_test' }, 0)
+    fight_store.trace_tap._reset_for_test()
+    fight_store.trace_tap.tap_trace_input(
+      { fight_id: null, ...anchors },
+      { type: 'init', fight_id: '0xfe_report_test' },
+      0
+    )
     const html = renderToStaticMarkup(<FightReport {...base} cost={null} />)
     expect(html).toContain('fight_end.export_replay')
     expect(html).toContain('btn--secondary')
   })
 
   test('a defeat card behaves identically (the row is shared shell chrome, not a victory-only affordance)', () => {
-    _reset_trace_for_test()
-    tap_trace_input({ fight_id: null, ...anchors }, { type: 'init', fight_id: '0xfe_report_test_2' }, 0)
+    fight_store.trace_tap._reset_for_test()
+    fight_store.trace_tap.tap_trace_input(
+      { fight_id: null, ...anchors },
+      { type: 'init', fight_id: '0xfe_report_test_2' },
+      0
+    )
     const html = renderToStaticMarkup(<FightReport {...base} verdict="Defeat" spoils={null} cost={null} />)
     expect(html).toContain('fight_end.export_replay')
   })
