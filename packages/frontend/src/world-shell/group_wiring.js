@@ -19,7 +19,33 @@ import { join_world_action } from './world_join.js'
 import { join_owned_world_fight } from './owned_team_actions.js'
 import { error_executed_digest } from './tx_digest_error.js'
 import { read_checkpoint_spawn, resolve_checkpoint_spawn, write_follow_checkpoint } from './world_checkpoint.js'
+import { ft_dispatch } from './fast_travel_store.js'
 import { create_group_wiring, build_follow_entries, fight_facts_of } from './group_wiring_core.js'
+
+/** A dragon catch-up flight — fixed, run-pace-ish, non-blocking (the leader keeps roaming while it flies). */
+const DRAGON_FLIGHT_MS = 12_000
+
+/** Fly a NON-active follower to the leader through the SAME keyed fast-travel store the player's own dragon uses
+ *  (owner ruling: drive my characters exactly as I would). A same-world coordinate flight — begin + a direct
+ *  same-world `resolved` skip the resolve/join edges (the follower already stands in the leader's world). The
+ *  slot goes `flying`, so switching to the follower mid-air hands the existing pilot its live flight; the timer
+ *  then lands + clears it (the group loop seats the follower beside the leader on follow_dragon_arrived). */
+function dragon_catch_up(character_id, world_id, target) {
+  ft_dispatch({ traveler_id: character_id, type: 'begin', character_id, world_id, x: target.x, z: target.z })
+  ft_dispatch({
+    traveler_id: character_id,
+    type: 'resolved',
+    world_id,
+    my_world_id: world_id,
+    x: target.x,
+    z: target.z,
+    live: false,
+  })
+  return new Promise((resolve) => setTimeout(resolve, DRAGON_FLIGHT_MS)).then(() => {
+    ft_dispatch({ traveler_id: character_id, type: 'arrived' }) // flying → landing
+    ft_dispatch({ traveler_id: character_id, type: 'reset' }) // clear the slot; the group loop owns the seating
+  })
+}
 
 /** @type {ReturnType<typeof create_group_wiring> | null} */
 // eslint-disable-next-line functional/no-let -- one app-lifetime wiring instance, initialized by wire_group_loop.
@@ -139,6 +165,7 @@ export function wire_group_loop() {
         members: [{ character_id }],
         queued,
       }),
+    dragon_fly: dragon_catch_up,
     // The EXISTING ctx door: my_entity_id re-resolves my_key against the adopted view (fight store), so the
     // HUD deck, prediction locality, and transaction_character_id all follow the acting owned seat.
     focus_seat: (character_id) => {

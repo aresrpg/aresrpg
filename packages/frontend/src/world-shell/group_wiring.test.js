@@ -17,7 +17,7 @@ const members = (...ids) => ids.map((character, order) => ({ character, owner: M
 const worlds = (rows) => rows.map(([character_id, world_id]) => ({ character_id, world_id }))
 
 function make_harness({ join_world_impl, join_fight_impl } = {}) {
-  const calls = { join_world: [], write_checkpoint: [], join_fight: [], focus: [], follow: [] }
+  const calls = { join_world: [], write_checkpoint: [], join_fight: [], focus: [], follow: [], dragon: [] }
   // Mirrors tx.js's run_character_action: `{ queued: true }` (every group-wiring join) waits behind
   // whatever this fake is already running, the SAME guarantee the real ONE cross-character lane gives —
   // a faithful double, not a bare pass-through, or this harness could never catch a lost serialization.
@@ -43,6 +43,10 @@ function make_harness({ join_world_impl, join_fight_impl } = {}) {
         : Promise.resolve(calls.join_fight.push([character_id, fight_id])),
     focus_seat: (character_id) => calls.focus.push(character_id),
     apply_follow: (rows) => calls.follow.push(rows),
+    dragon_fly: (character_id, world_id, target) => {
+      calls.dragon.push({ character_id, world_id, target })
+      return Promise.resolve()
+    },
     is_executed_failure: (error) => !!error?.executed,
     log: () => {},
   })
@@ -185,6 +189,24 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
     expect(calls.follow.at(-1)).toEqual([])
   })
 
+  test('#509 — a FAR join rides the dragon: fast_travel drives dragon_fly, then follow_dragon_arrived seats it', async () => {
+    const { wiring, calls } = make_harness()
+    sync_full_group(wiring, [
+      [LEADER, WORLD],
+      [ALT_1, WORLD],
+      [ALT_2, WORLD],
+    ])
+    // leader at the origin; the join checkpoint (read_checkpoint fake → {105,100}) is ~145 blocks out (> 50)
+    wiring.pose_tick({ x: 0, z: 0, yaw: 0, facing_yaw: 0 }, { character_id: LEADER })
+    wiring.enable_follow({ leader_character_id: LEADER, follower_character_ids: [ALT_1] })
+    await wiring.settled()
+    // the far run-in dispatched the dragon to the leader's cell, and its landing seated the follower
+    expect(calls.dragon.map((row) => row.character_id)).toEqual([ALT_1])
+    expect(calls.dragon[0].target).toEqual({ x: 0, z: 0 })
+    expect(wiring.store.getState().follow.followers[ALT_1].status).toBe('arrived')
+    expect(calls.write_checkpoint.at(-1)?.[0]).toBe(ALT_1) // the arrival checkpoint landed beside the leader
+  })
+
   test('an emptied party projection (manual character switch) leaves explicit follow state untouched', async () => {
     const { wiring, calls } = make_harness()
     sync_full_group(wiring, [
@@ -192,7 +214,8 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
       [ALT_1, WORLD],
       [ALT_2, WORLD],
     ])
-    wiring.pose_tick({ x: 10, z: 10, yaw: 0 }, { character_id: LEADER }, 1_000)
+    // leader beside the join checkpoint ({105,100}) so the follower simply runs in — no dragon, no arrival churn
+    wiring.pose_tick({ x: 100, z: 100, yaw: 0 }, { character_id: LEADER }, 1_000)
     wiring.enable_follow({ leader_character_id: LEADER, follower_character_ids: [ALT_1] }, 1_000)
     await wiring.settled()
     const before = wiring.store.getState().follow

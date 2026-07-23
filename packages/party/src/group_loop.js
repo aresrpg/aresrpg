@@ -22,6 +22,9 @@ export const MAX_OWNED_FOLLOWERS = 5
 /** Blocks — beyond this from the leader a follower visually DESPAWNS (the proof-of-time timer keeps deriving);
  *  it respawns and resumes its run-in the moment the projection re-enters range (#509 despawn-and-continue). */
 export const FOLLOW_VISIBLE_RANGE = 30
+/** Blocks — a run-in longer than this rides the EXISTING fast-travel (dragon) flow instead of a slow jog to
+ *  the leader (#509 §3 catch-up). The reducer only DECIDES + emits the request; the edge drives the flight. */
+export const DRAGON_DISTANCE = 50
 
 // Ruled follow transit: roughly the avatar's run pace, with humane lower/upper bounds regardless of distance.
 // Kept in this headless core instead of importing the engine package: @aresrpg/party stays dependency-free.
@@ -48,6 +51,7 @@ const no_outputs = () => ({
   follow_move: EMPTY_ROWS,
   write_checkpoint: EMPTY_ROWS,
   follow_render: null,
+  fast_travel: EMPTY_ROWS,
   join_fight: EMPTY_ROWS,
   hud_focus: null,
   enter_dungeon: EMPTY_ROWS,
@@ -394,7 +398,7 @@ function reduce_follow(state, input) {
       )
         return still(state)
       const now = Number.isFinite(input.now) ? input.now : 0
-      return still({
+      const next = {
         ...state,
         follow: {
           ...state.follow,
@@ -403,7 +407,66 @@ function reduce_follow(state, input) {
             [input.character_id]: begin_transit(row, checkpoint, state.leader_pose, now),
           },
         },
-      })
+      }
+      // DRAGON CATCH-UP (#509 §3): a run-in longer than DRAGON_DISTANCE ALSO requests the EXISTING fast-travel
+      // flow. The follower keeps its in_transit proof-of-time timer (so the twin math is untouched), but the edge
+      // flies it to the leader and lands it early via follow_dragon_arrived. It is already despawned past
+      // FOLLOW_VISIBLE_RANGE, so the dragon owns the visible catch-up; a near follower just runs in on foot.
+      const far = horizontal_distance_squared(checkpoint, state.leader_pose) > DRAGON_DISTANCE * DRAGON_DISTANCE
+      if (!far) return still(next)
+      return {
+        state: next,
+        outputs: {
+          ...no_outputs(),
+          fast_travel: [
+            {
+              character_id: input.character_id,
+              world_id: row.world_id,
+              x: state.leader_pose.x,
+              z: state.leader_pose.z,
+            },
+          ],
+        },
+      }
+    }
+    case 'follow_dragon_arrived': {
+      // The edge reports the dragon flight landed — seat the follower beside the leader's CURRENT cell, exactly
+      // like a run-in expiry (write the arrival checkpoint, render it in). Idempotent: once arrived (by the dragon
+      // OR a run-in expiry that beat it), a stray replay is inert.
+      const row = state.follow.followers[input.character_id]
+      if (!row || row.status !== 'in_transit' || !state.leader_pose) return still(state)
+      const occupied = new Set(
+        Object.values(state.follow.followers)
+          .filter((other) => other?.arrival_position)
+          .map((other) => `${other.arrival_position.x}:${other.arrival_position.z}`)
+      )
+      const position = follow_arrival_cell(state.leader_pose, occupied)
+      if (!position) return still(state)
+      const next = {
+        ...state,
+        follow: {
+          ...state.follow,
+          followers: {
+            ...state.follow.followers,
+            [input.character_id]: {
+              ...row,
+              status: 'arrived',
+              remaining_ms: 0,
+              progress: 1,
+              arrival_position: position,
+              receipt_confirmed: false,
+            },
+          },
+        },
+      }
+      return {
+        state: next,
+        outputs: {
+          ...no_outputs(),
+          write_checkpoint: [{ character_id: input.character_id, world_id: row.world_id, position }],
+          follow_render: rendered_followers(next, state.leader_pose),
+        },
+      }
     }
     case 'transit_tick': {
       if (!state.follow.enabled || !Number.isFinite(input.now)) return still(state)
@@ -593,6 +656,7 @@ const FOLLOW_KINDS = new Set([
   'follow_enable',
   'set_follow',
   'follow_world_joined',
+  'follow_dragon_arrived',
   'transit_tick',
   'follow_checkpoint_written',
   'follow_background',

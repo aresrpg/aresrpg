@@ -163,6 +163,32 @@ test('manual active-character selection is structurally inert: follow ids/state 
   expect(outputs.hud_focus).toBeNull()
 })
 
+test('#509 — a FAR join ALSO requests the dragon (fast_travel emitted); a NEAR join runs in on foot only', () => {
+  // FAR: the checkpoint is 200 blocks out (> DRAGON_DISTANCE 50) → the run-in timer holds AND a dragon flight
+  // is requested (the follower is already despawned past the visible range, so the dragon owns the catch-up)
+  const far = joined(enable(ready(), [ALT_1]).state, ALT_1, { x: 200, z: 0 })
+  expect(far.state.follow.followers[ALT_1].status).toBe('in_transit')
+  expect(far.outputs.fast_travel).toEqual([{ character_id: ALT_1, world_id: WORLD_A, x: 0, z: 0 }])
+  // NEAR: 10 blocks out (< 50) → the ordinary timer-derived run-in, never the dragon
+  const near = joined(enable(ready(), [ALT_1]).state, ALT_1, { x: 10, z: 0 })
+  expect(near.state.follow.followers[ALT_1].status).toBe('in_transit')
+  expect(near.outputs.fast_travel).toEqual([])
+})
+
+test('#509 — follow_dragon_arrived lands the flying follower beside the leader and writes its checkpoint', () => {
+  let { state } = enable(ready(), [ALT_1])
+  ;({ state } = joined(state, ALT_1, { x: 200, z: 0 }))
+  const landed = fold(state, { kind: 'follow_dragon_arrived', character_id: ALT_1 })
+  expect(landed.state.follow.followers[ALT_1].status).toBe('arrived')
+  expect(landed.outputs.write_checkpoint).toEqual([
+    { character_id: ALT_1, world_id: WORLD_A, position: { x: 1.5, z: 0.5 } },
+  ])
+  // idempotent: once arrived (dragon OR a run-in expiry that beat it), a replay is inert
+  expect(fold(landed.state, { kind: 'follow_dragon_arrived', character_id: ALT_1 }).outputs.write_checkpoint).toEqual(
+    []
+  )
+})
+
 test('session reset is the only implicit teardown: follow never survives or activates on a fresh state', () => {
   const active = enable(ready(), [ALT_1]).state
   const reset = fold(active, { kind: 'reset' }).state

@@ -64,6 +64,7 @@ export function build_follow_entries(rows, cards_by_id, leader_world_id) {
  *   read_checkpoint: (character_id: string, world_id: string) => Promise<{x:number,z:number}|null>|{x:number,z:number}|null,
  *   write_checkpoint: (character_id: string, world_id: string, position: {x:number,z:number}) => Promise<any>,
  *   join_fight: (character_id: string, fight_id: string, options: { queued: boolean }) => Promise<any>,
+ *   dragon_fly: (character_id: string, world_id: string, target: {x:number,z:number}) => Promise<any>,
  *   focus_seat: (character_id: string) => void,
  *   apply_follow: (rows: readonly any[]) => void,
  *   is_executed_failure: (error: any) => boolean,
@@ -110,6 +111,14 @@ export function create_group_wiring(deps) {
       })
     for (const row of outputs.join_fight)
       track('fight_join', row.character_id, () => deps.join_fight(row.character_id, row.fight_id, { queued: true }))
+    // DRAGON CATCH-UP (#509 §3): fly a far follower to the leader via the EXISTING fast-travel flow (keyed by
+    // this follower). When the flight lands, follow_dragon_arrived re-enters as an input — the follower seats
+    // beside the leader (its run-in timer is superseded). Switching to it mid-flight shows the pilot flying it.
+    for (const row of outputs.fast_travel)
+      track('dragon', row.character_id, async () => {
+        await deps.dragon_fly(row.character_id, row.world_id, { x: row.x, z: row.z })
+        feed({ kind: 'follow_dragon_arrived', character_id: row.character_id })
+      })
     if (outputs.hud_focus) deps.focus_seat(outputs.hud_focus)
     // follow_render is null on frames that didn't recompute it; an ARRAY (even empty) is a live render set —
     // apply it so an all-out-of-range or last-follower-removed frame despawns the rigs it no longer names.
