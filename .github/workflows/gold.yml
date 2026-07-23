@@ -44,7 +44,7 @@ jobs:
         run: bun install --frozen-lockfile --linker=hoisted
       - name: install sui CLI (pinned testnet-v1.75.1)
         timeout-minutes: 5
-        # Matches test/localnet/harness/Dockerfile's own pinned localnet image (aresrpg-localnet:1.75.1;
+        # Matches test/localnet/harness/Dockerfile's own pinned localnet image (aresrpg-localnet:1.75.1-<arch>;
         # compose.gold.yml calls it "the gate lane's pinned 1.75.1 build"). lib_gold.mjs shells out to a
         # HOST sui binary for client/keytool/publish calls up_gold.mjs makes outside the docker network.
         run: |
@@ -63,6 +63,11 @@ jobs:
         run: sui move build
       - name: bring up the gold rig
         timeout-minutes: 15
+        # SUI_ARCH=x86_64: ubuntu-latest is x86_64, but compose.gold.yml's localnet build arg defaults to
+        # aarch64 (the Mac-local default test/localnet/harness/Dockerfile ships) — an unset SUI_ARCH here
+        # links an ARM sui binary that exec-format-crashes on an x86 runner (run 29970085845).
+        env:
+          SUI_ARCH: x86_64
         run: node test/gold/up_gold.mjs
       - name: install Playwright chromium
         timeout-minutes: 5
