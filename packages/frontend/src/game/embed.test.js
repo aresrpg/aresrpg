@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 
 import { context } from './core/game.js'
 import { select_active_character } from './embed.js'
+import { use_world_binding, publish_world_binding, reset_world_binding } from '../world-shell/session_gate.js'
 
 // color_1 present so hydrate_appearance() treats these as already chain-hydrated and skips its chain-direct
 // read (no live RPC/gRPC in this test env) — mirrors read fixtures elsewhere in this suite.
@@ -67,5 +68,60 @@ describe('select_active_character — the world-mount character resolver (issue 
   test('a bound id absent from the roster falls back to the persisted/roster pick (defensive)', async () => {
     const chosen = await select_active_character(`0x${'9'.repeat(64)}`)
     expect(chosen?.id).toBe(CHAR_A.id)
+  })
+})
+
+// OLD_WORLD / NEW_WORLD — world ids distinct from anything above so a stray earlier binding can never
+// coincidentally match and mask the clobber this suite proves.
+const OLD_WORLD = `0x${'d'.repeat(64)}`
+const NEW_WORLD = `0x${'e'.repeat(64)}`
+// The roster row's world_id mirrors the pre-travel world — exactly what boot_roster/load_roster last indexed,
+// NOT what the just-settled join tx proved (that fact lives ONLY in session_gate.js until the next roster read).
+const CHAR_TRAVELER = {
+  id: `0x${'f'.repeat(64)}`,
+  name: 'Traveler',
+  classe: 'senshi',
+  experience: 0,
+  color_1: 0,
+  world_id: OLD_WORLD,
+}
+
+const settle_engine = () => new Promise((resolve) => setTimeout(resolve, 0))
+/** Resolves once `type` is processed by the engine's reduce loop (context.dispatch only enqueues), or after
+ *  one engine tick if `type` never fires — the fix under test makes a redundant reselect dispatch NOTHING,
+ *  so this must resolve either way instead of hanging on an event that correctly never arrives post-fix. */
+const wait_action = (type) => Promise.race([new Promise((resolve) => context.events.once(type, resolve)), settle_engine()])
+
+describe('select_active_character — travel remount must not clobber a fresher world binding (owner field report 2026-07-24)', () => {
+  beforeEach(async () => {
+    context.dispatch('action/sui_data', { characters: [CHAR_TRAVELER], loaded: true })
+    await wait_for_roster([CHAR_TRAVELER.id])
+  })
+
+  afterEach(() => reset_world_binding())
+
+  test('a same-character remount after the join publish must not fall back to the stale roster world_id (red before the fix)', async () => {
+    // Pre-travel: the character is already selected and bound to OLD_WORLD (mirrors a resident session
+    // before the player travels — the exact state GameWorldHost's FIRST mount of this character leaves).
+    const selected_once = wait_action('action/select_character')
+    await select_active_character(CHAR_TRAVELER.id)
+    await selected_once
+    expect(use_world_binding.getState().world).toBe(OLD_WORLD)
+
+    // The travel's OWN join tx settles and publishes chain truth — join_world_action's publish_world_binding
+    // (world_join.js:117), fired the instant run_tx resolves, BEFORE the roster has re-indexed the new world.
+    publish_world_binding(CHAR_TRAVELER.id, NEW_WORLD, 'manual')
+    expect(use_world_binding.getState().world).toBe(NEW_WORLD)
+
+    // GameWorldHost's mount effect re-runs (bound_world changed → scene_key changed) and re-resolves the
+    // SAME already-active character through select_active_character(bound_char_id) — exactly GameWorldHost's
+    // own resolve_character() call. The roster is still the stale one dispatched above.
+    const reselected = wait_action('action/select_character')
+    await select_active_character(CHAR_TRAVELER.id)
+    await reselected
+
+    // The fresh join publish must survive the redundant reselect — the client must stay switched to the new
+    // world, never silently fall back to the pre-travel one (owner: "had to refresh the page" to see it).
+    expect(use_world_binding.getState().world).toBe(NEW_WORLD)
   })
 })

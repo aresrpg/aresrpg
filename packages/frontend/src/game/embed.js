@@ -75,7 +75,19 @@ export async function select_active_character(bound_character_id) {
   if (bound_character_id) {
     const bound = context.get_state().sui.characters.find((c) => c.id === bound_character_id)
     if (bound) {
-      context.dispatch('action/select_character', bound.id)
+      // TRAVEL-SWITCH BINDING CLOBBER (owner field report 2026-07-24): GameWorldHost calls this on EVERY
+      // mount-effect re-run, including the travel remount (issue #221's own re-entry) — where
+      // bound_character_id names the SAME already-active character, only its WORLD changed. Re-announcing an
+      // unchanged selection is not a no-op: sui_session.js's action/select_character observer re-derives the
+      // world binding from THIS character's ROSTER row (`character.world_id`) and re-publishes it as a
+      // trusted 'manual' write — bypassing session_gate.js's stale-poll guard (that guard only screens the
+      // 'poll' source, see DiscoveryPrompts.jsx's binding-clobber comment for the sibling fix). The roster row
+      // is a cached snapshot that has NOT caught up with the just-settled join tx yet, so this redundant
+      // dispatch overwrote join_world_action's fresh chain-truth publish with the stale PRE-travel world on
+      // every foreign-world travel — the client silently snapped back to the old world (only a refetch, e.g.
+      // a full reload, re-read the by-then-indexed roster and got it right). A reselect of the SAME character
+      // carries no new fact worth announcing; only a genuine switch (a different id) does.
+      if (context.get_state().selected_character_id !== bound.id) context.dispatch('action/select_character', bound.id)
       return hydrate_appearance(bound)
     }
   }
