@@ -58,14 +58,23 @@ export const sorted_tail = (inbox) => {
 }
 
 /**
+ * canonical_base — the snapshot half of the canonical fold (issue #549: the ONE home for this fact — project.js's
+ * board/presentation projections share it rather than re-deriving their own). `fight_id` comes ONLY from the
+ * adopted snapshot's own id, never from an external caller: before the first snapshot lands there IS no known
+ * base identity yet, whatever the session/caller already knows — this is the corpus-proven behavior (9,829
+ * replayed envelopes), pinned by `test/v2/fold.test.js`.
+ * @param {import('./state.js').InboxState} inbox
+ * @returns {ReturnType<typeof empty_state>}
+ */
+export const canonical_base = (inbox) =>
+  inbox.base_view ? base_from_view(inbox.base_view, inbox.base_view.id) : empty_state(null)
+
+/**
  * fold_canonical — the committed chain truth: the snapshot base with the sorted admitted tail folded on top through
  * `apply_action`. Total and unconditional (every admitted row reduces; nothing waits on presentation). Intents are
- * NOT here — canonical is chain-only (the ledger's forecast folds them separately, §③).
+ * NOT here — canonical is chain-only (the ledger's forecast folds them separately, §③). THE single fold (issue
+ * #549) — project.js's board/presentation projections fold through this, never a second private implementation.
  * @param {import('./state.js').InboxState} inbox
- * @param {string|null} fight_id
  * @returns {ReturnType<typeof empty_state>} the committed observable state (fighters · active · phase · winner)
  */
-export const fold_canonical = (inbox, fight_id = null) => {
-  const base = inbox.base_view ? base_from_view(inbox.base_view, fight_id) : empty_state(fight_id)
-  return sorted_tail(inbox).reduce(apply_action, base)
-}
+export const fold_canonical = (inbox) => sorted_tail(inbox).reduce(apply_action, canonical_base(inbox))

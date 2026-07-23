@@ -13,10 +13,9 @@
 // MECHANICS the headless core owns — which beat the eye has reached, and the snap when it lags — over that queue.
 // The pacing POLICY is versioned (a bump is a visible pacing change, never a silent drift).
 
-import { apply_action, empty_state } from '../inputs.js'
-import { base_from_view } from '../fold.js'
+import { apply_action } from '../inputs.js'
 
-import { sorted_tail } from './fold.js'
+import { canonical_base, fold_canonical, sorted_tail } from './fold.js'
 import { truth_version } from './inbox.js'
 
 /**
@@ -73,26 +72,25 @@ export const advance_cursor = (clock, now_ms, beat_count, policy = PACING_POLICY
   return { now_ms, cursor: Math.max(0, Math.min(stepped, beat_count)) }
 }
 
-/** The snapshot base for a projection fold. */
-const fold_base = (inbox) => (inbox.base_view ? base_from_view(inbox.base_view, inbox.base_view.id) : empty_state(null))
-
 /**
  * project_board — the COMMITTED board at the truth frontier: base + the WHOLE admitted tail. Legality, reach, and
- * turn logic read this (truth never waits on the eye). Pure.
+ * turn logic read this (truth never waits on the eye). Pure. THE canonical fold (issue #549) — no private
+ * re-implementation; this IS `fold_canonical(state.inbox)`.
  * @param {import('./state.js').CoreState} state
  */
-export const project_board = (state) => sorted_tail(state.inbox).reduce(apply_action, fold_base(state.inbox))
+export const project_board = (state) => fold_canonical(state.inbox)
 
 /**
  * project_presentation — the board AS THE EYE SEES IT: base + the tail up to the (clock-driven, snap-corrected)
  * cursor. Always a legal prefix fold, even when the cursor is far behind the frontier (the starve state). Pure.
+ * Shares `canonical_base` with `fold_canonical` (issue #549) — the same snapshot half, folded to a shorter tail.
  * @param {import('./state.js').CoreState} state
  * @param {PacingPolicy} policy
  */
 export const project_presentation = (state, policy = PACING_POLICY) => {
   const tail = sorted_tail(state.inbox)
   const cursor = present_cursor(tail.length, state.clock.cursor, policy)
-  return tail.slice(0, cursor).reduce(apply_action, fold_base(state.inbox))
+  return tail.slice(0, cursor).reduce(apply_action, canonical_base(state.inbox))
 }
 
 /**
