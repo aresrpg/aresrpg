@@ -28,10 +28,11 @@ jobs:
     # carry no `label` context, so the first half of the OR always clears them.
     if: github.event_name != 'pull_request' || github.event.label.name == 'gold-cert'
     runs-on: ubuntu-latest
-    # Bumped from 60: the new build-images step (45m) plus rig-up (15m) alone already consumed the whole old
-    # ceiling, leaving zero room for setup, both Playwright suites, or teardown. 105 covers a realistic worst
-    # case (cold image build + a slow boot) without the job dying before per-step timeouts get a chance to.
-    timeout-minutes: 105
+    # Bumped 60->105->150: each raise follows the same arithmetic — the job ceiling must cover a realistic
+    # worst case across every step, not just each step's own budget. 105 didn't yet account for the suite
+    # steps growing 20->30m (GOLD_WEBSERVER_TIMEOUT_MS below); 150 = build-images(45) + rig-up(15) +
+    # anchor(30) + multiplayer(30) + a ~30m realistic buffer for setup/install/teardown.
+    timeout-minutes: 150
     env:
       GOLD_GREP: ${{ github.event.inputs.grep }}
       # GOLD_SPONSOR=0 on the PR/label run only: the gas-pool + sponsor images are a from-source Rust cargo
@@ -129,13 +130,19 @@ jobs:
           printf '#!/bin/sh\nexec "$@"\n' | sudo tee /Users/sceatstudio/.claude/hooks/bounded-run.sh > /dev/null
           sudo chmod +x /Users/sceatstudio/.claude/hooks/bounded-run.sh
       - name: anchor suite (L1 — full frontend on the gold localnet)
-        timeout-minutes: 20
+        # 30m: webServer(15m below) + 10m tests + margin, per "step >= webServer/60 + 10" (run 29970085845
+        # boot #12 — vite's cold three.js pre-bundle can legitimately eat most of the old 20m step alone).
+        timeout-minutes: 30
+        env:
+          GOLD_WEBSERVER_TIMEOUT_MS: '900000'
         run: |
           args=()
           if [ -n "$GOLD_GREP" ]; then args+=(--grep "$GOLD_GREP"); fi
           xvfb-run --auto-servernum bunx playwright test -c test/gold/playwright.anchor.config.ts "${args[@]}"
       - name: multiplayer suite (cross-wallet rows over the same rig)
-        timeout-minutes: 20
+        timeout-minutes: 30
+        env:
+          GOLD_WEBSERVER_TIMEOUT_MS: '900000'
         run: |
           args=()
           if [ -n "$GOLD_GREP" ]; then args+=(--grep "$GOLD_GREP"); fi
