@@ -28,7 +28,6 @@ import { push_event_toast } from '../../core/toast.js'
 import { min_turn_left } from '@aresrpg/fight/project'
 import { auto_commit_fire_at } from '@aresrpg/fight/draft_budget'
 import { ConfirmDialog } from './world/ConfirmDialog.jsx'
-import { use_fight_trace_keybind } from './use_fight_trace_keybind.js'
 import {
   copy_fight_bug_report,
   FIGHT_BUG_REPORT_ISSUES_URL,
@@ -153,10 +152,6 @@ export function FightControls({
   // `turn_started_at` — a field the projected view (`fight`, above) doesn't carry — so this subscribes to
   // the raw core state via the React binding (game/store.js use_fight; the core store itself is vanilla).
   const fight_state = use_fight()
-
-  // EXPORT REPLAY keybind (issue #209) — MUST precede the early return (Rules of Hooks), same as every other
-  // hook here; this component only mounts during a fight, so that's this chord's whole live window.
-  use_fight_trace_keybind()
 
   // S-80 FORFEIT confirm — in-app modal (never a native dialog, standing rule), owned HERE so every mount
   // gets it for free. Confirming runs `on_abandon` (default: the store's `abandon_fight`).

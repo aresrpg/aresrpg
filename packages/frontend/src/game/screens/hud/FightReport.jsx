@@ -43,7 +43,6 @@ import { resolve_rolled_stats } from '../../../chain/rolled_stats.js'
 import { resolve_character_docs } from '../../../world-shell/character_name_resolve.js'
 import { seed_manifest } from '../../../content/seed_manifest'
 import { export_fight_trace, has_dumpable_trace } from './fight_trace_export.js'
-import { use_fight_trace_keybind } from './use_fight_trace_keybind.js'
 import './result.css'
 
 // the single-realm MVP world label (mirrors Minimap.jsx / MapDrawer.jsx — one named realm for now).
@@ -284,12 +283,6 @@ export function FightReport({
   // at mount (this card mounts once per concluded fight; dumpability doesn't change while it's up). Hidden
   // entirely rather than a disabled/dead button when nothing was captured.
   const trace_available = useMemo(() => has_dumpable_trace(), [])
-  // issue #256: the bare "R" export shortcut used to die with FightControls (unmounts the instant the fight
-  // ends), so it went dead for exactly the post-fight beat this card owns — the one window a player reaching
-  // for the SAME keybind they used mid-fight would actually be in. This card is the export row's other home
-  // now; arming the SAME chord here (harmless no-op via export_fight_trace's own empty-buffer guard when
-  // trace_available is false) keeps the shortcut alive for as long as a result to export is on screen.
-  use_fight_trace_keybind()
   // Loot tooltips reuse the inventory/findables map for legacy slug-only rows, then overlay exact receipt IDs
   // with the canonical chain ItemTemplate reader (including decoded stat DFs). A defeat has no tiles to read.
   const tt = use_template_t()

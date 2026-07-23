@@ -1840,7 +1840,7 @@
     "cost_refund": "Erstattet: {{sui}} SUI",
     "slain_by": "Getötet von {{killer}} mit {{damage}} Schaden",
     "export_replay": "Wiederholung exportieren",
-    "export_replay_hint": "Lade die Aufzeichnung dieses Kampfes herunter, um sie einem Fehlerbericht beizufügen (oder drücke R während eines Kampfes)",
+    "export_replay_hint": "Lade die Aufzeichnung dieses Kampfes herunter, um sie einem Fehlerbericht beizufügen",
     "continue": "Weiter",
     "you": "Du"
   },
