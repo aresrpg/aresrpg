@@ -93,7 +93,7 @@ function parse_baseline(text) {
 // private monorepo's baseline) — every row below is test-fixture mock addresses this tree actually carries.
 const known_rogue_fingerprints = parse_baseline(
   `
-packages/fight/src/predict_cast.js	ElTBJZtJbB2KxMmCi9nitV=1
+packages/fight/src/predict_cast.js	Tbojy0RV9Rc-8xRC1Y_d1x=1
 packages/fight/test/trace_512_replay.test.js	Z0vfTLQXOu4aq8cMiSjZCN=1
 packages/frontend/e2e/world_fight_mount.spec.ts	2NDG4rOJJAx4-Rluwsehjx=1
 packages/frontend/e2e/world_fight_resume_proof.spec.ts	2NDG4rOJJAx4-Rluwsehjx=1 VKzKwy1nbcvFIFF90ntz1c=1 dRSuCQ_gLML4aMW4o5lgQR=1
