@@ -267,18 +267,27 @@ async function main() {
   phase('parity', t)
 
   // 7c — deterministic cross-wallet marketplace inventory: two unique objects plus native lots 1/10/100.
+  // PUBLIC-CI TOLERANCE: the fixture needs a non-stack-category shop Sale (select_sales in market_bootstrap.mjs)
+  // — the active corpus's only Sale is the pet_lootbox (category 'consumable', itself a STACK_CATEGORY), so it
+  // can never qualify. Skip honestly (absent field, never a faked fixture) rather than crash the whole boot;
+  // marketplace.spec.ts already gates on `!manifest?.market_two_actor`.
   t = Date.now()
-  const market_two_actor = await create_market_two_actor({
-    api: API,
-    client,
-    admin_signer,
-    ids,
-    kiosk_pkg: kiosk,
-    wallets,
-    characters,
-    wait_v1: waitV1,
-  })
-  log(`market fixture ready · items=${market_two_actor.unique_item_ids.length + market_two_actor.stack_lots.length}`)
+  const market_two_actor =
+    corpus_source === 'mainnet'
+      ? await create_market_two_actor({
+          api: API,
+          client,
+          admin_signer,
+          ids,
+          kiosk_pkg: kiosk,
+          wallets,
+          characters,
+          wait_v1: waitV1,
+        })
+      : null
+  if (market_two_actor)
+    log(`market fixture ready · items=${market_two_actor.unique_item_ids.length + market_two_actor.stack_lots.length}`)
+  else log(`market fixture SKIPPED — corpus '${corpus_source}' has no qualifying non-stack shop Sale`)
   phase('market_fixture', t)
 
   // Sponsor key was generated before compose interpolation; fund it only from this disposable localnet.
@@ -374,6 +383,7 @@ async function main() {
     ids: { aresrpg: ids, kiosk },
     world_id,
     dials: { speed_budget: 100_000, xp_multiplier: 400, loot_multiplier: 400, digest: dials.digest },
+    corpus_source, // 'mainnet' (production-parity) | 'active' (repo-owned minimal QA seed, public-CI safe)
     fight_fixtures,
     runtime_catalog,
     market_two_actor,

@@ -4,6 +4,7 @@
 // has exactly one roster row. These objects live only on the disposable localnet and their ids are meant to be
 // copied into the gold deployment manifest.
 import { load_deps } from '../deps_gold.mjs'
+import { log } from '../lib_gold.mjs'
 
 const localnet_gas_ceiling = 1_000_000_000
 const centered_resistance = 32_768
@@ -437,11 +438,15 @@ export async function create_fight_fixtures({ client, signer, ids, seeded_mobs }
 
   for (const spec of fixture_specs) {
     const seeded = spec.mode === 'seeded' ? seeded_mobs?.[spec.seed_key] : null
-    if (spec.mode === 'seeded' && !seeded)
-      throw new Error(
-        `fight fixtures: '${spec.seed_key}' is not in the seed manifest — ` +
-          `gold fight fixtures require the production corpus (GOLD_CORPUS=mainnet)`
+    if (spec.mode === 'seeded' && !seeded) {
+      // PUBLIC-CI TOLERANCE: only this ONE fixture (mode:'seeded') resolves a real corpus mob (razkin) instead
+      // of minting its own — a repo-owned corpus (active) has no such row. Skip honestly (the returned object
+      // simply omits this key) rather than throw; dependent specs gate on `fight_fixtures?.win` for exactly this.
+      log(
+        `fight fixtures: SKIP '${spec.key}' — '${spec.seed_key}' not in the seed manifest (needs GOLD_CORPUS=mainnet)`
       )
+      continue
+    }
     const create_transaction = new Transaction()
     build_fixture_objects(create_transaction, ids, spec)
     const create_receipt = await execute_transaction({
