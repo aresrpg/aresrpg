@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// COOP KERNEL — the pure decision legs of the two-actor coop gold row (specs_multiplayer/coop_fight.spec.ts).
+// COOP KERNEL — the pure decision legs shared by the multiplayer coop gold rows.
 // Plain data in → plain data out, zero IO, zero mutation (house FP constitution): the spec is the effect shell,
 // these are the transforms it routes through. The xp twin mirrors packages/move/engine/sources/settlement.move
 // `xp_share_kernel` BYTE-FOR-BYTE in u64 semantics (BigInt floor division, same operation order) so the per-seat
@@ -56,6 +56,193 @@ export function visibility_complete(ledger, required_pairs) {
   const missing = required_pairs
     .filter(([observer, caster]) => !(ledger[observer] ?? []).includes(caster))
     .map(([observer, caster]) => `${observer}→${caster}`)
+  return { ok: missing.length === 0, missing }
+}
+
+// The mapping is vocabulary, NOT a required-family checklist: requirements below are born only from kinds the
+// boot-published runtime catalog actually carries for that class. Kinds with no export-observable proof stay out.
+const observable_family_by_kind = {
+  DAMAGE: 'damage',
+  PERCENT_LIFE: 'damage',
+  PERCENT_LIFE_DAMAGE: 'damage',
+  LIFE_STEAL: 'damage',
+  CASTER_DAMAGE: 'damage',
+  PUNISHMENT: 'damage',
+  PUNISHMENT_DAMAGE: 'damage',
+  APPLY_DOT: 'damage',
+  GIVE_POINTS: 'buff',
+  ALTER_STAT: 'buff',
+  STEAL_STAT: 'buff',
+  ALTER_RESIST: 'buff',
+  REDUCE_DAMAGE: 'shield',
+  PUSH: 'displacement',
+  PULL: 'displacement',
+  TELEPORT: 'displacement',
+  SWAP: 'displacement',
+  SWAP_POSITIONS: 'displacement',
+  CARRY: 'displacement',
+  THROW: 'displacement',
+  RESET_POSITIONS: 'displacement',
+  GEOMETRIC_PUSH: 'displacement',
+  PLACE_TRAP: 'trap',
+}
+
+const normalized_kind = (kind) =>
+  String(kind ?? '')
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, '_')
+
+/**
+ * Map one runtime-catalog effect kind to the committed-board family whose application has a concrete oracle.
+ * Unknown/non-observable kinds return null and therefore cannot silently invent a requirement.
+ * @param {unknown} kind
+ * @returns {'damage'|'buff'|'shield'|'displacement'|'trap'|null}
+ */
+export function observable_effect_family(kind) {
+  return observable_family_by_kind[normalized_kind(kind)] ?? null
+}
+
+/**
+ * Derive the deterministic candidate spells for every observable family EACH requested class actually carries
+ * through `max_unlock_level`. A family is satisfied by any one candidate: an effect may be present in a spell
+ * whose target/range makes that leg inapplicable in the current fight. Resolution reads levels[0], so this does
+ * too. No family list is injected: catalog kinds alone create the returned requirements.
+ * @param {Array<{ class?: string, unlock_level?: number, name_key?: string,
+ *   levels?: Array<{ effects?: Array<{ kind?: unknown }> }> }>} spells
+ * @param {string[]} class_ids
+ * @param {number} max_unlock_level
+ * @returns {Record<string, Array<{ family: string, spell_ids: string[], effect_kinds: string[] }>>}
+ */
+export function effect_requirements_by_class(spells, class_ids, max_unlock_level = 100) {
+  const classes = [...new Set(class_ids.map((class_id) => String(class_id).toLowerCase()))]
+  const out = Object.fromEntries(classes.map((class_id) => [class_id, []]))
+  const candidates = [...spells]
+    .filter(
+      (spell) =>
+        classes.includes(String(spell?.class ?? '').toLowerCase()) &&
+        Number(spell?.unlock_level ?? Infinity) <= max_unlock_level &&
+        typeof spell?.name_key === 'string' &&
+        spell.name_key.length > 0
+    )
+    .sort(
+      (left, right) =>
+        Number(left.unlock_level) - Number(right.unlock_level) || left.name_key.localeCompare(right.name_key)
+    )
+
+  for (const spell of candidates) {
+    const class_id = String(spell.class).toLowerCase()
+    const kinds = [...new Set((spell.levels?.[0]?.effects ?? []).map((effect) => normalized_kind(effect.kind)))]
+    for (const effect_kind of kinds) {
+      const family = observable_effect_family(effect_kind)
+      if (!family) continue
+      let requirement = out[class_id].find((row) => row.family === family)
+      if (!requirement) {
+        requirement = { family, spell_ids: [], effect_kinds: [] }
+        out[class_id].push(requirement)
+      }
+      if (!requirement.spell_ids.includes(spell.name_key)) requirement.spell_ids.push(spell.name_key)
+      if (!requirement.effect_kinds.includes(effect_kind)) requirement.effect_kinds.push(effect_kind)
+    }
+  }
+  for (const class_id of classes) {
+    out[class_id].sort((left, right) => left.family.localeCompare(right.family))
+    for (const requirement of out[class_id]) requirement.effect_kinds.sort()
+  }
+  return out
+}
+
+const fighter_in = (board, id) =>
+  Array.isArray(board) ? (board.find((fighter) => String(fighter?.id) === String(id)) ?? null) : null
+
+const same_cell = (left, right) => {
+  if (left == null || right == null) return false
+  if (typeof left === 'object' && typeof right === 'object')
+    return Number(left.x) === Number(right.x) && Number(left.y) === Number(right.y)
+  return String(left) === String(right)
+}
+
+const effect_signature = (effect) =>
+  JSON.stringify([effect?.kind ?? null, effect?.stat ?? null, effect?.value ?? null, effect?.element ?? null])
+
+const gained_effect = (before, after, predicate = () => true) => {
+  const counts = new Map()
+  for (const effect of before?.effects ?? []) {
+    const signature = effect_signature(effect)
+    counts.set(signature, (counts.get(signature) ?? 0) + 1)
+  }
+  for (const effect of after?.effects ?? []) {
+    const signature = effect_signature(effect)
+    const remaining = counts.get(signature) ?? 0
+    if (remaining > 0) counts.set(signature, remaining - 1)
+    else if (predicate(effect)) return true
+  }
+  return false
+}
+
+const visible_stat_delta = (effect) =>
+  effect?.stat != null && Number.isFinite(Number(effect?.value)) && Number(effect.value) !== 0
+
+/**
+ * Prove one family from committed export snapshots. `before`/`after` bracket the cast (or trap trigger); shield
+ * additionally uses `followup` after a KNOWN subsequent hit and its positive pre-shield `incoming_damage`.
+ * Trap evidence names the observed trigger cell separately because a mover may finish beyond that mid-path cell.
+ * @param {{ family: string, target_id: string, before: unknown, after: unknown, followup?: unknown,
+ *   incoming_damage?: number, trap_cell?: unknown, trigger_cell?: unknown }} observation
+ * @returns {boolean}
+ */
+export function effect_evidence_observed(observation) {
+  const before = fighter_in(observation.before, observation.target_id)
+  const after = fighter_in(observation.after, observation.target_id)
+  if (!before || !after) return false
+  const hp_loss = Number(before.hp) - Number(after.hp)
+
+  if (observation.family === 'damage') return Number.isFinite(hp_loss) && hp_loss > 0
+  if (observation.family === 'buff') return gained_effect(before, after, visible_stat_delta)
+  if (observation.family === 'displacement') return !same_cell(before.cell, after.cell)
+  if (observation.family === 'trap') return hp_loss > 0 && same_cell(observation.trap_cell, observation.trigger_cell)
+  if (observation.family === 'shield') {
+    const followup = fighter_in(observation.followup, observation.target_id)
+    const incoming = Number(observation.incoming_damage)
+    if (!followup || !Number.isFinite(incoming) || incoming <= 0 || !gained_effect(before, after)) return false
+    const suffered = Number(after.hp) - Number(followup.hp)
+    return Number.isFinite(suffered) && suffered >= 0 && suffered < incoming
+  }
+  return false
+}
+
+/**
+ * Credit a candidate only when its family proof passes. Ledger shape is class → family → spell ids;
+ * the returned value and every nested row are fresh, so failed/duplicate observations cannot mutate history.
+ * @param {Record<string, Record<string, string[]>>} ledger
+ * @param {{ class_id: string, family: string, spell_id: string, target_id: string, before: unknown,
+ *   after: unknown, followup?: unknown, incoming_damage?: number, trap_cell?: unknown, trigger_cell?: unknown }} observation
+ * @returns {Record<string, Record<string, string[]>>}
+ */
+export function effect_evidence_fold(ledger, observation) {
+  if (!effect_evidence_observed(observation)) return ledger
+  const class_id = String(observation.class_id).toLowerCase()
+  const class_ledger = ledger[class_id] ?? {}
+  const credited = new Set(class_ledger[observation.family] ?? [])
+  credited.add(observation.spell_id)
+  return {
+    ...ledger,
+    [class_id]: { ...class_ledger, [observation.family]: [...credited] },
+  }
+}
+
+/**
+ * Name every catalog-derived family still lacking proof from any of its candidate spells.
+ * @param {Record<string, Array<{ family: string, spell_ids: string[] }>>} requirements
+ * @param {Record<string, Record<string, string[]>>} ledger
+ * @returns {{ ok: boolean, missing: string[] }}
+ */
+export function effect_evidence_verdict(requirements, ledger) {
+  const missing = Object.entries(requirements).flatMap(([class_id, rows]) =>
+    rows
+      .filter((row) => !row.spell_ids.some((spell_id) => (ledger[class_id]?.[row.family] ?? []).includes(spell_id)))
+      .map((row) => `${class_id}/${row.family}:[${row.spell_ids.join('|')}]`)
+  )
   return { ok: missing.length === 0, missing }
 }
 

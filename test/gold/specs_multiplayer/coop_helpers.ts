@@ -476,28 +476,40 @@ export async function assert_victory_and_continue(page: Page): Promise<bigint> {
  *  Per-client channels stay out by design: my_entity_id, prediction ap/mp, presented paces, trap overlays. */
 export async function chain_truth_export(page: Page): Promise<unknown> {
   return page.evaluate(async () => {
-    const { fight_store, engine_view_of } = await import('/@id/@aresrpg/fight')
-    const view = engine_view_of(fight_store.getState())
+    const [{ decode, fight_store, engine_view_of }, { committed_state }] = await Promise.all([
+      import('/@id/@aresrpg/fight'),
+      import('/@id/@aresrpg/fight/store'),
+    ])
+    const state = fight_store.getState()
+    const view = engine_view_of(state)
     if (!view?.fighters) return null
+    const committed = committed_state(state)
+    let player_index = 0
+    let mob_index = 0
     return [...view.fighters.values()]
-      .map((row: any) => ({
-        id: String(row.id),
-        owner: row.owner == null ? null : String(row.owner),
-        variant: row.variant == null ? null : String(row.variant),
-        team: Number(row.team),
-        cell: row.cell == null ? null : { x: Number(row.cell.x), y: Number(row.cell.y) },
-        hp: Number(row.committed_health),
-        alive: !!row.committed_alive,
-        hp_max: Number(row.health_max),
-        effects: (row.effects ?? []).map((effect: any) => ({
-          kind: effect.kind == null ? null : Number(effect.kind),
-          remaining_turns: effect.remaining_turns == null ? null : Number(effect.remaining_turns),
-          element: effect.element == null ? null : Number(effect.element),
-          value: effect.value == null ? null : Number(effect.value),
-          stat: effect.stat == null ? null : Number(effect.stat),
-          chance: effect.chance == null ? null : Number(effect.chance),
-        })),
-      }))
+      .map((row: any) => {
+        const key = row.is_player ? `p${player_index++}` : `m${mob_index++}`
+        const fighter = committed.fighters?.[key]
+        const cell = fighter?.cell == null ? row.cell : decode(fighter.cell)
+        return {
+          id: String(row.id),
+          owner: row.owner == null ? null : String(row.owner),
+          variant: row.variant == null ? null : String(row.variant),
+          team: Number(row.team),
+          cell: cell == null ? null : { x: Number(cell.x), y: Number(cell.y) },
+          hp: Number(fighter?.hp ?? row.committed_health),
+          alive: !!(fighter?.alive ?? row.committed_alive),
+          hp_max: Number(row.health_max),
+          effects: (fighter?.statuses ?? []).map((effect: any) => ({
+            kind: effect.kind == null ? null : Number(effect.kind),
+            remaining_turns: effect.remaining_turns == null ? null : Number(effect.remaining_turns),
+            element: effect.element == null ? null : Number(effect.element),
+            value: effect.value == null ? null : Number(effect.value),
+            stat: effect.stat == null ? null : Number(effect.stat),
+            chance: effect.chance == null ? null : Number(effect.chance),
+          })),
+        }
+      })
       .sort((left: any, right: any) => left.id.localeCompare(right.id))
   })
 }
