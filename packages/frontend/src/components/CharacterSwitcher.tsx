@@ -25,7 +25,8 @@ import {
 
 import { use_game_state, context, use_fight_view } from '../game/store.js'
 import { use_follow } from '../follow'
-import { get_group_follow_snapshot, set_group_follow, subscribe_group_follow } from '../world-shell/group_wiring.js'
+import { get_group_follow_snapshot, subscribe_group_follow } from '../world-shell/group_wiring.js'
+import { use_party } from '../world-shell/party_store.js'
 import { use_auth } from '../auth'
 import { use_dungeon } from '../world-shell/dungeon_store.js'
 import { rebind_world_character } from '../world-shell/session_gate.js'
@@ -57,8 +58,9 @@ export function CharacterSwitcher() {
   const switching_id = useStore(character_switch_store, (state) =>
     state.phase === 'switching' ? state.target_id : null
   )
-  // Auto-following characters FOLD as children under the leader's row and are NOT switch targets while following
-  // (#509 fold ruling); the × on the child row unfollows and restores a normal, switchable row.
+  // GROUP MEMBERSHIP IS AUTO-FOLLOW (#613 DESIGN COLLAPSE): the owned group members (party truth via the group
+  // loop's reconcile — no client toggle) FOLD as children under the leader's row and are NOT switch targets
+  // while grouped. There is no unfollow — the × KICKS from the group (the only disable), which ends following.
   const follow = useSyncExternalStore(subscribe_group_follow, get_group_follow_snapshot, get_group_follow_snapshot)
 
   if (!loaded) return <SkeletonRows />
@@ -67,7 +69,7 @@ export function CharacterSwitcher() {
   const following_ids = new Set(follow.follower_character_ids)
   const leader_id = follow.leader_character_id
   const followers = (characters as any[]).filter((c) => following_ids.has(c.id))
-  const on_unfollow = (character_id: string) => set_group_follow({ character_id, enabled: false })
+  const on_kick = (character_id: string) => void use_party.getState().kick(character_id)
   // Followers leave their normal group — they live nested under the leader instead.
   const dungeon_group = characters.filter((c: any) => group_of(c) === 'dungeon' && !following_ids.has(c.id))
   const lobby_group = characters.filter((c: any) => group_of(c) === 'lobby' && !following_ids.has(c.id))
@@ -157,7 +159,7 @@ export function CharacterSwitcher() {
             on_select={on_select}
             leader_id={leader_id}
             followers={followers}
-            on_unfollow={on_unfollow}
+            on_kick={on_kick}
           />
         )}
         {lobby_group.length > 0 && (
@@ -170,7 +172,7 @@ export function CharacterSwitcher() {
             on_select={on_select}
             leader_id={leader_id}
             followers={followers}
-            on_unfollow={on_unfollow}
+            on_kick={on_kick}
           />
         )}
       </div>
@@ -187,7 +189,7 @@ function CharacterGroup({
   on_select,
   leader_id,
   followers,
-  on_unfollow,
+  on_kick,
 }: {
   label: string
   characters: any[]
@@ -197,7 +199,7 @@ function CharacterGroup({
   on_select: (character: any) => void
   leader_id: string | null
   followers: any[]
-  on_unfollow: (character_id: string) => void
+  on_kick: (character_id: string) => void
 }) {
   const { t } = useTranslation()
   return (
@@ -220,7 +222,7 @@ function CharacterGroup({
           {character.id === leader_id && followers.length > 0 && (
             <div className="chsw-children">
               {followers.map((follower) => (
-                <FollowerRow key={follower.id} character={follower} on_unfollow={on_unfollow} />
+                <FollowerRow key={follower.id} character={follower} on_kick={on_kick} />
               ))}
             </div>
           )}
@@ -232,7 +234,7 @@ function CharacterGroup({
 
 /** A folded follower row — indented under the leader, NOT a switch target while following; the × unfollows it,
  *  restoring a normal switchable row. Mirrors the CharacterRow identity chips (glyph + name + level). */
-function FollowerRow({ character, on_unfollow }: { character: any; on_unfollow: (character_id: string) => void }) {
+function FollowerRow({ character, on_kick }: { character: any; on_kick: (character_id: string) => void }) {
   const { t } = useTranslation()
   const cls = get_class(character.classe ?? character.class_id)
   const level = experience_to_level(character.experience ?? 0)
@@ -250,7 +252,7 @@ function FollowerRow({ character, on_unfollow }: { character: any; on_unfollow: 
       <button
         type="button"
         className="chsw-row__abandon"
-        onClick={() => on_unfollow(character.id)}
+        onClick={() => on_kick(character.id)}
         title={t('characters.stop_following')}
         aria-label={t('characters.stop_following')}
       >
