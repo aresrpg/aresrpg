@@ -2656,6 +2656,8 @@
     "spectating": "Observando combate",
     "leave_spectate": "Dejar de observar",
     "action_join_fight": "Uniéndose al combate",
+    "action_join_fight_named": "Uniéndose al combate — {{character}}",
+    "alt_entry_refused": "{{character}} no pudo unirse — {{reason}}",
     "openness_label": "Combates",
     "openness_public": "Público",
     "openness_group": "Grupo",

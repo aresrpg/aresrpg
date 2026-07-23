@@ -2656,6 +2656,8 @@
     "spectating": "Watching fight",
     "leave_spectate": "Leave spectate",
     "action_join_fight": "Joining the fight",
+    "action_join_fight_named": "Joining the fight — {{character}}",
+    "alt_entry_refused": "{{character}} couldn't join — {{reason}}",
     "openness_label": "Fights",
     "openness_public": "Public",
     "openness_group": "Group",

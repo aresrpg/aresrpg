@@ -2656,6 +2656,8 @@
     "spectating": "Kampf wird angesehen",
     "leave_spectate": "Zuschauen beenden",
     "action_join_fight": "Kampf beitreten",
+    "action_join_fight_named": "Kampf beitreten — {{character}}",
+    "alt_entry_refused": "{{character}} konnte nicht beitreten — {{reason}}",
     "openness_label": "Kämpfe",
     "openness_public": "Öffentlich",
     "openness_group": "Gruppe",

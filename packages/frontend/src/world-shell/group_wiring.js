@@ -25,7 +25,12 @@ import { read_checkpoint_spawn, resolve_checkpoint_spawn, write_follow_checkpoin
 import { ft_dispatch } from './fast_travel_store.js'
 import { recover_fight_entry_refusal } from './dungeon_settlement.js'
 import { set_app_managed_followers } from './follow_gate.js'
-import { create_group_wiring, build_follow_entries, fight_facts_of } from './group_wiring_core.js'
+import {
+  create_group_wiring,
+  build_follow_entries,
+  fight_facts_of,
+  name_alt_fight_refusal,
+} from './group_wiring_core.js'
 
 /** A dragon catch-up flight — fixed, run-pace-ish, non-blocking (the leader keeps roaming while it flies). */
 const DRAGON_FLIGHT_MS = 12_000
@@ -77,6 +82,14 @@ const notify_follow = () => {
   // driven character, and the game-core reducer reads this leaf instead of importing group_wiring (cycle).
   set_app_managed_followers(get_group_follow_snapshot().follower_character_ids)
   for (const listener of follow_listeners) listener()
+}
+
+/** An OWNED character's roster display name, or null (never invent one) — the same `sui.characters` read
+ *  apply_follow already uses below, synchronous (no /v1 round trip): #614's alt-refusal toast needs the
+ *  name BEFORE it can even paint its pending state. */
+function owned_character_name(character_id) {
+  const roster = context.get_state().sui?.characters ?? []
+  return roster.find((card) => card?.id === character_id)?.name ?? null
 }
 
 /** Apply the reducer's follow rows to presence's stable Map; remote_players polls this Map every frame. */
@@ -146,8 +159,17 @@ export function wire_group_loop() {
     read_checkpoint: (character_id, world_id) =>
       read_checkpoint_spawn(character_id, world_id) ?? resolve_checkpoint_spawn(character_id, world_id),
     write_checkpoint: write_follow_checkpoint,
-    join_fight: (character_id, fight_id, { queued = false } = {}) =>
-      as_one_toast(i18n.t('fights.action_join_fight'), () =>
+    // #614 — every seat this door fills is an OWNED ALT, never the engaging character (owned_alts excludes
+    // the leader by construction), so both the pending label and any refusal name WHICH character it's
+    // about — a bare "you have an unopened result" reads as if it's about whoever the player is actively
+    // playing. name_alt_fight_refusal keeps each refusal's own honest per-abort copy (abort_copy.js's
+    // table); it only prefixes the acting alt's name onto whichever line that table already picked.
+    join_fight: (character_id, fight_id, { queued = false } = {}) => {
+      const character_name = owned_character_name(character_id)
+      const pending_label = character_name
+        ? i18n.t('fights.action_join_fight_named', { character: character_name })
+        : i18n.t('fights.action_join_fight')
+      return as_one_toast(pending_label, () =>
         run_fight_entry({
           submit: () =>
             join_owned_world_fight({
@@ -160,8 +182,11 @@ export function wire_group_loop() {
           // store state, but keep busy transactions and dungeon RunPass sessions behind the normal guard.
           recover_refusal: (error) =>
             recover_fight_entry_refusal(use_dungeon, character_id, error, { live_world_fight_id: fight_id }),
+        }).catch((error) => {
+          throw name_alt_fight_refusal(error, character_name)
         })
-      ),
+      )
+    },
     dragon_fly: dragon_catch_up,
     // The EXISTING ctx door: my_entity_id re-resolves my_key against the adopted view (fight store), so the
     // HUD deck, prediction locality, and transaction_character_id all follow the acting owned seat.

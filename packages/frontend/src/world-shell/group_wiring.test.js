@@ -4,7 +4,15 @@
 // executes its requests through injected fakes — no module mocks (bun mock.module is process-global), no DOM.
 import { describe, expect, test } from 'bun:test'
 
-import { create_group_wiring, build_follow_entries, fight_facts_of } from './group_wiring_core.js'
+import i18n from '../i18n'
+import { tx_error } from '../game/core/abort_copy.js'
+
+import {
+  create_group_wiring,
+  build_follow_entries,
+  fight_facts_of,
+  name_alt_fight_refusal,
+} from './group_wiring_core.js'
 
 const ME = '0xwallet'
 const LEADER = '0xleader'
@@ -401,5 +409,63 @@ describe('pure helpers', () => {
     expect(entry.follow_anchor).toEqual({ x: 9, z: 3, yaw: 0.2 }) // the leader target step_pet_follow steers toward
     expect(entry.position).toMatchObject({ x: 5, z: 7 }) // spawns at the alt's real seed, never on the leader
     expect(entry.target_position).toMatchObject({ x: 9, z: 3 }) // the range gate rides the anchor → always present
+  })
+})
+
+// #614 — a fight-entry refusal about an ALT (join_fight never seats the leader — owned_alts excludes it)
+// used to surface a toast that (a) could borrow a DIFFERENT reason's copy and (b) never named which
+// character it was about, reading as if it concerned whoever the player was actively engaging.
+describe('#614 — alt fight-entry refusals name the acting character, never collapse to one line', () => {
+  const abort = (module, code) =>
+    tx_error({ MoveAbort: { abortCode: code, location: { module } } }, { preflight: true })
+
+  // Every one of these is a REAL, reachable refusal for an owned-alt join (engine::join's own asserts +
+  // the shared fight_registry latch) — each already has its own honest line in abort_copy.js's table.
+  const REASONS = [
+    {
+      label: 'already seated in another live fight',
+      refusal: abort('fight_registry', 103),
+      key: 'errors.fight_character_busy',
+    },
+    { label: 'the fight side is already full', refusal: abort('fight', 102), key: 'errors.fight_team_full' },
+    {
+      label: 'already holds a seat in this exact fight',
+      refusal: abort('fight', 108),
+      key: 'errors.fight_already_seated',
+    },
+    {
+      label: 'an unopened fight result blocks the seat',
+      refusal: abort('fight', 111),
+      key: 'errors.fight_unclaimed_result',
+    },
+  ]
+
+  for (const { label, refusal, key } of REASONS)
+    test(`${label} keeps its own honest copy, named for the alt`, () => {
+      const named = name_alt_fight_refusal(refusal, 'Shadowdancer')
+      expect(named.message).toBe(i18n.t('fights.alt_entry_refused', { character: 'Shadowdancer', reason: i18n.t(key) }))
+      expect(named.message).toContain('Shadowdancer')
+    })
+
+  test('every refusal reason produces a DISTINCT composed string — none collapse to a shared line', () => {
+    const messages = REASONS.map(({ refusal }) => name_alt_fight_refusal(refusal, 'Shadowdancer').message)
+    expect(new Set(messages).size).toBe(REASONS.length)
+  })
+
+  test('no resolved character name degrades honestly to the plain reason (never "undefined")', () => {
+    const named = name_alt_fight_refusal(abort('fight_registry', 103), null)
+    expect(named.message).toBe(i18n.t('errors.fight_character_busy'))
+    expect(named.message).not.toContain('undefined')
+  })
+
+  test('an EXECUTED failure (gas burned) keeps its digest on the named error — the burn-law latch survives', () => {
+    const executed = Object.assign(new Error('on-chain fight abort'), { digest: '0xdeadbeef' })
+    const named = name_alt_fight_refusal(executed, 'Shadowdancer', { humanize: () => 'reason text' })
+    expect(named.digest).toBe('0xdeadbeef')
+  })
+
+  test('a PRE-FLIGHT refusal (zero gas spent) carries no digest onto the named error — never falsely latched', () => {
+    const named = name_alt_fight_refusal(abort('fight', 102), 'Shadowdancer')
+    expect(named.digest).toBeUndefined()
   })
 })

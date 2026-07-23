@@ -2656,6 +2656,8 @@
     "spectating": "戦闘を観戦中",
     "leave_spectate": "観戦を終了",
     "action_join_fight": "戦闘に参加",
+    "action_join_fight_named": "戦闘に参加 — {{character}}",
+    "alt_entry_refused": "{{character}} は参加できませんでした — {{reason}}",
     "openness_label": "戦闘",
     "openness_public": "公開",
     "openness_group": "グループ",

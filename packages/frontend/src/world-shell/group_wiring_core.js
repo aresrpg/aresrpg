@@ -9,6 +9,37 @@
 
 import { create_group_store } from '@aresrpg/party/store'
 
+import i18n from '../i18n'
+import { humanize_tx_error } from '../game/core/abort_copy.js'
+
+import { error_executed_digest } from './tx_digest_error.js'
+
+/**
+ * #614 — name a FOLLOWER's fight-entry refusal. `join_fight` only ever seats OWNED ALTS (group_loop.js's
+ * `owned_alts` excludes the leader by construction), so every refusal this door raises is about a character
+ * OTHER than whoever the player is actively engaging — the generic "you have…" copy reads as if it's about
+ * THEM. Wrap it so the toast says WHO, not just why. `humanize` supplies the reason: it stays the ONE table
+ * of honest per-abort-code copy (abort_copy.js) — this never collapses two distinct refusals into one line,
+ * it only prefixes whichever line the table already picked with the acting alt's name. The executed-tx
+ * digest (burn-law latch — group_wiring_core's own `track()` reads it via `is_executed_failure`) is copied
+ * onto the new error unmodified; a pre-flight refusal (no gas spent) carries none, same as the original.
+ * @param {unknown} error @param {string|null} character_name
+ * @param {{ humanize?: (error: unknown) => string, translate?: (key: string, opts?: any) => string }} [deps]
+ * @returns {Error}
+ */
+export function name_alt_fight_refusal(
+  error,
+  character_name,
+  { humanize = humanize_tx_error, translate = (key, opts) => i18n.t(key, opts) } = {}
+) {
+  const reason = humanize(error)
+  const message = character_name ? translate('fights.alt_entry_refused', { character: character_name, reason }) : reason
+  const named = new Error(message)
+  const digest = error_executed_digest(error)
+  if (digest) named.digest = digest
+  return named
+}
+
 /** Pure: extract the group-loop fight facts from one memoized engine view (fight_view()). */
 export function fight_facts_of(view) {
   if (!view?.fight_id) return null
