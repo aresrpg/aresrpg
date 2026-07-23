@@ -19,7 +19,15 @@ services:
     build:
       context: ../localnet/harness
       dockerfile: Dockerfile
-    image: aresrpg-localnet:1.75.1
+      # CI ARCH FIX (run 29970085845): the Dockerfile's own SUI_ARCH default (aarch64) is Mac-local — an
+      # x86_64 runner building with that default links an ARM sui binary that exec-format-crashes on boot.
+      # gold.yml's rig-up step exports SUI_ARCH=x86_64; every other caller (Mac dev boots) keeps the
+      # untouched aarch64 default via this ${VAR:-fallback} form.
+      args:
+        SUI_ARCH: ${SUI_ARCH:-aarch64}
+    # Tag carries the arch so a Mac-built image can never masquerade as an x86 one in a shared docker
+    # cache (or vice versa) — same default as the build arg above.
+    image: aresrpg-localnet:1.75.1-${SUI_ARCH:-aarch64}
     # TEST-RIG protocol dial (localnet only): raise max_move_package_size 100KB→256KB so the current-lineage
     # aresrpg package (104.7KB on this working tree) publishes to the disposable test chain. This is a test
     # localnet infra dial, NOT a gameplay fake — it does not alter any Move logic. NOTE (surfaced finding):
@@ -55,7 +63,11 @@ services:
         ]
       interval: 3s
       timeout: 4s
-      retries: 40
+      # 60 × 3s + start_period ≈ 3min (was 40 ≈ 2min — run 29970085845's observed unhealthy point, though
+      # that run's real cause was the arch crash-loop above, not slowness). Widened modestly: a cold
+      # x86 build-from-tgz start plus the documented ~50% force-regenesis race (command: below — faucet
+      # outruns genesis funding, retry loop re-regenesises) can burn more than one attempt before a boot sticks.
+      retries: 60
       start_period: 5s
 
   # A checkpoint "remote store" = plain static file serving of the ingestion dir (GET /<seq>.chk).
