@@ -870,15 +870,13 @@ export function DungeonBoard() {
   }
   // The reducer owns deadline/kill/busy/latch decisions. This is the ONE remaining effect: claim the derived
   // false→true edge once for the playable turn, read the draft live, and submit the existing background commit.
+  // #605: an idle (zero-draft) due commit is NEVER a no-op — an empty batch is the exact legal bare pass
+  // on_end_turn already sends with nothing staged (turn_commit.js's auto_commit_decision docblock: "a ZERO-draft
+  // turn still fires ... to trigger mob actions"); skipping it left an armed turn timer hanging past its
+  // deadline until the player clicked End Turn themselves — the one path this edge exists to replace.
   auto_submit_ref.current = () => {
     const { draft_actions, move_path: mp, cast_path: cq } = staged_turn_paths(fight_store)
     fight_state_trace('auto_flush_fired', { move_count: mp.length, cast_count: cq.length })
-    if (draft_actions.length === 0) {
-      game_log('board', 'auto-flush no-op — reducer draft queue is empty')
-      clear_picks()
-      fight_state_trace('flush_finished', { background: true, ok: true, noop: true })
-      return true
-    }
     return flush_commit(draft_actions, true)
   }
   useEffect(
