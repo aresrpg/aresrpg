@@ -1,122 +1,131 @@
 {
   "schema": 1,
-  "generated_at": "2026-07-23T14:44:00.289Z",
+  "generated_at": "2026-07-23T15:45:44.244Z",
   "networks": {
     "testnet": {
       "chain_id": "",
-      "source_hash": "f8403bc4ccacc30891690f32fc427acee7700fc912af6987dd97d23ab22f2971",
+      "source_hash": "0f8310c1c5832bc84f6182854f38fe90914760e8f145aaeecf5e2eebc958f728",
       "packages": {
         "foundation": {
-          "origin": "0x5ef0588d117303f7153341915d1c56713e715ed8b2065cc7890e9895fda9cf7c",
-          "latest": "0x5ef0588d117303f7153341915d1c56713e715ed8b2065cc7890e9895fda9cf7c",
+          "origin": "0x20289c5e566b09a5c79a5735411539e244db5a4520b6f3fc888c27d596f92905",
+          "latest": "0x20289c5e566b09a5c79a5735411539e244db5a4520b6f3fc888c27d596f92905",
           "previous": [
-            "0x45ecb708a615dae112f3c99a4166b5be98ef9f4cf4c44999c30920cc3431c0aa"
+            "0x45ecb708a615dae112f3c99a4166b5be98ef9f4cf4c44999c30920cc3431c0aa",
+            "0x5ef0588d117303f7153341915d1c56713e715ed8b2065cc7890e9895fda9cf7c"
           ],
-          "upgrade_cap": "0x5402d6b90c998f72211e2b449523b3afcb342e147b50b501d7a4f10c07dd34bc",
+          "upgrade_cap": "0x70cf9d2193db2dab9fa65d15e2eef1e1d3b529303d25c959c7f7c0db4db1f947",
           "admin": "",
           "caps": {},
           "publishers": {},
           "displays": {}
         },
         "spells": {
-          "origin": "0xa6bb254751113eb80256891fbceac4f0f997ca42ae407a0dadc9294d6977340a",
-          "latest": "0xa6bb254751113eb80256891fbceac4f0f997ca42ae407a0dadc9294d6977340a",
+          "origin": "0x634170ae84d594a45d597128ca760096fb19638f4ee9bfeb6099c85ceb0ce3da",
+          "latest": "0x634170ae84d594a45d597128ca760096fb19638f4ee9bfeb6099c85ceb0ce3da",
           "previous": [
-            "0x44e7d0aae7858f4aa83eef223d4c0f1e45d18929f0bd1b3044be98f0572861c8"
+            "0x44e7d0aae7858f4aa83eef223d4c0f1e45d18929f0bd1b3044be98f0572861c8",
+            "0xa6bb254751113eb80256891fbceac4f0f997ca42ae407a0dadc9294d6977340a"
           ],
-          "upgrade_cap": "0xb67825ca1da1a21e1b0e634c2524919c25337591be75ccae6b41b62d497301c2",
-          "admin": "0x22c5a7986701bfdcb5d4354e599271c747537ed9f8692eb0996e923fe0e7ae0b",
+          "upgrade_cap": "0xceaee78b0a5852e550229866debcf873bb7f15d19363fdf1ea7e2d9d66d0df75",
+          "admin": "0x96818a8a0b9325569525bed81988600d1ddc83e26863713d050e039d0abab230",
           "caps": {},
           "publishers": {},
           "displays": {}
         },
         "social": {
-          "origin": "0xb129b4b8d310096008a29f17b4c2f9126923e8d943fc5511e7e361d73b1bfd0e",
-          "latest": "0xb129b4b8d310096008a29f17b4c2f9126923e8d943fc5511e7e361d73b1bfd0e",
+          "origin": "0x2fa2b48f2c20138b4e31090a63fed23ba2a51dd59bec6fbadffe8da296eb38e5",
+          "latest": "0x2fa2b48f2c20138b4e31090a63fed23ba2a51dd59bec6fbadffe8da296eb38e5",
           "previous": [
-            "0x2620af297e913e99310f5966981e25d16c44edf3d03c4d8d13e2f0f6755b0983"
+            "0x2620af297e913e99310f5966981e25d16c44edf3d03c4d8d13e2f0f6755b0983",
+            "0xb129b4b8d310096008a29f17b4c2f9126923e8d943fc5511e7e361d73b1bfd0e"
           ],
-          "upgrade_cap": "0x641cfce6b2093e401b82dff0c7b7fd8a1c6e2789b4dbd469e6072f16c0ac6db0",
-          "admin": "0x58b5bd4db95574bc318793fee0f74a5e46424eaceb5589951e62e3f4c32ea687",
+          "upgrade_cap": "0x6ef0cbc73a726575d68370560ebe11d09363798d552996c9d917f57cf4ceb1b2",
+          "admin": "0x7507c2c36f6a2cba21c4f4e0b1702ddd8d5019a9626f7682d82a400ae38b6b45",
           "caps": {},
           "publishers": {},
           "displays": {}
         },
         "engine": {
-          "origin": "0xb9859920a061396f2b319789d9cb83620dcac2c33e873a62855fbf894386f80f",
-          "latest": "0xb9859920a061396f2b319789d9cb83620dcac2c33e873a62855fbf894386f80f",
+          "origin": "0x8b580c5a29f243ffb1b4e500eb559c664f06f21f7ebaa2cd1a9a6aff2e76ff68",
+          "latest": "0x8b580c5a29f243ffb1b4e500eb559c664f06f21f7ebaa2cd1a9a6aff2e76ff68",
           "previous": [
             "0x6145a3ecffe1f32f56d1ff973904aa342248feb3d9364639dba746cb492a0070",
-            "0xcc072a0dfd2084bb56af81e6d7142bd1e79389a7373488b2d7bbe48769372c7b"
+            "0xcc072a0dfd2084bb56af81e6d7142bd1e79389a7373488b2d7bbe48769372c7b",
+            "0xb9859920a061396f2b319789d9cb83620dcac2c33e873a62855fbf894386f80f"
           ],
-          "upgrade_cap": "0x986c95c0f17cd58c2269d4d788765039bb4f2a88630f1dba169010e902e67452",
-          "admin": "0xb15de540e872d012e9aea74b9fd85658cb37ca449ca350eb92f48053e2e34eb2",
+          "upgrade_cap": "0x2f3a4211fbd8ff05725f33e4318806eae49aea6cf2b2c0fbc351204cf0fa46a9",
+          "admin": "0x03327a7f088bcd066c53c9c490ff9694849731e77034e2fec90dfe4075b7e6f6",
           "caps": {},
           "publishers": {},
           "displays": {}
         },
         "aresrpg": {
-          "origin": "0xc05c8d9f65e4ee0a6dc9463c8c90341085daa062184043e1a6fd75bccd6842e1",
-          "latest": "0xc05c8d9f65e4ee0a6dc9463c8c90341085daa062184043e1a6fd75bccd6842e1",
+          "origin": "0x8781c9c8e9f87113536a6926e441b359a7bc24fda9a80a2b9b225a8d51d0da98",
+          "latest": "0x8781c9c8e9f87113536a6926e441b359a7bc24fda9a80a2b9b225a8d51d0da98",
           "previous": [
-            "0xae597a84ce38729bc0c2f272f9f76513c857fb95d8d571867f6253f9d5935083"
+            "0xae597a84ce38729bc0c2f272f9f76513c857fb95d8d571867f6253f9d5935083",
+            "0xc05c8d9f65e4ee0a6dc9463c8c90341085daa062184043e1a6fd75bccd6842e1"
           ],
-          "upgrade_cap": "0xc4c3839ba5f09cea2b7c262fadcad7cc14fbb2536b87ea498fb923445c35e0a1",
-          "admin": "0x8cef9b3354ce2e7c546c3e660e95123b7ce81b5b8effcee82a0a2caa6d16f704",
+          "upgrade_cap": "0xcfea4b8e17e46f374f66545a66d19ccaf4fdba99f31294bd1cd4cdca58223a52",
+          "admin": "0x634b7d64c1e4158abb412119c087be52ec6ed08517960560a3bbcce4cfd74637",
           "caps": {},
           "publishers": {
-            "item": "0x01ae81c3eab0e49515f18091d61776f1e0680f8a7ac871165c78d87fbba680e7",
-            "character": "0x3e838a399baeb7f05d1c7f15c1ff9b90576eae923603a4c5735dd222e2e49fce"
+            "character": "0x8171ef16758f8eb44d1b84a182839459ed8884c5c923a11c35655bc4e2658b29",
+            "item": "0xe84d2136d368d5015d528500cfca00e6e710503bbc5bda010960e40f5c7b279e"
           },
           "displays": {
-            "Item": "0x047d547af761c1be0e9eeb2b7bc9d9f949a55d0180224c2c359c3172af8bd77b",
-            "ItemTemplate": "0x2748f91208e5cb7f005640d9cbb28663165232452b873b44d0e5ef7a42463695",
-            "Character": "0xeebe4bc4d491413b87dceb16630c3fd0e1906d22cb5b7f873cc4812812c83e03"
+            "Item": "0x752cb3ae35f11d158ba34d591cce4f3359a427adc7556fda3bff9676e67a8d95",
+            "Character": "0x90b332d2e95482eecde88b821219e32b2af22cb20cc74ce0e2255204a5d11e83",
+            "ItemTemplate": "0xa9c5faf3d60d3d6a22487db91bb90de67fd020106930fe8388ea27af68c40560"
           }
         },
         "kolizeum": {
-          "origin": "0xc717b9b4d85cfeae23ba4151124246de9055f93de4686caaf07961aa2185b643",
-          "latest": "0xc717b9b4d85cfeae23ba4151124246de9055f93de4686caaf07961aa2185b643",
+          "origin": "0xaff0fd51360abfc00553dcdb2523521e91b3faf1c692c690afc57f7ac810204d",
+          "latest": "0xaff0fd51360abfc00553dcdb2523521e91b3faf1c692c690afc57f7ac810204d",
           "previous": [
-            "0x09415bbbe02a4e544f69f544ea9af9a780d772490414fcf5d765a03ed3dd9382"
+            "0x09415bbbe02a4e544f69f544ea9af9a780d772490414fcf5d765a03ed3dd9382",
+            "0xc717b9b4d85cfeae23ba4151124246de9055f93de4686caaf07961aa2185b643"
           ],
-          "upgrade_cap": "0x141f2390ebda8d7dd40d28c3ad6e992b40f2d112a328a13394334b10ddc06102",
+          "upgrade_cap": "0xbfca5f1dc151eff623a53a6aaf5f0fa8c51c1bcc1eb3cfb3a1e1d70950fb64ca",
           "admin": "",
           "caps": {},
           "publishers": {},
           "displays": {}
         },
         "forgemagie": {
-          "origin": "0x65b43e00d4d2e4ddde3faf8ac3c4ee6657a23118c0f8829bd2d636ebcca57d7b",
-          "latest": "0x65b43e00d4d2e4ddde3faf8ac3c4ee6657a23118c0f8829bd2d636ebcca57d7b",
+          "origin": "0x0a66a396d6ee492b3d90a051995a7f17ac747ec17da222caf24983ca8cf1c04f",
+          "latest": "0x0a66a396d6ee492b3d90a051995a7f17ac747ec17da222caf24983ca8cf1c04f",
           "previous": [
-            "0xa17b84ab53dc6240f4cce252e659ccb8a0cf1cee63f19e45dbbbff2ab18c1ecd"
+            "0xa17b84ab53dc6240f4cce252e659ccb8a0cf1cee63f19e45dbbbff2ab18c1ecd",
+            "0x65b43e00d4d2e4ddde3faf8ac3c4ee6657a23118c0f8829bd2d636ebcca57d7b"
           ],
-          "upgrade_cap": "0x4b5811790750202b20afb3591338a74bee8a5103be819a5143c6347862788104",
+          "upgrade_cap": "0x8dc8110d19b228d941b9fcebe5b8dd39b65004add74f62a5b07c715756b22d09",
           "admin": "",
           "caps": {},
           "publishers": {},
           "displays": {}
         },
         "gifting": {
-          "origin": "0xa9227ff284dea3524e0b981e9b9aaaf7105f53d41d2483c33217da5fed18bda8",
-          "latest": "0xa9227ff284dea3524e0b981e9b9aaaf7105f53d41d2483c33217da5fed18bda8",
+          "origin": "0x18214ac5a75e637b131f38ed3b3c1cd17eba4d089dd1d43d4c654e14eadeb89f",
+          "latest": "0x18214ac5a75e637b131f38ed3b3c1cd17eba4d089dd1d43d4c654e14eadeb89f",
           "previous": [
-            "0xba6478830d79cb391c2a625ee1ed013ede2b91022cf6057bb0613a08f7e64b7a"
+            "0xba6478830d79cb391c2a625ee1ed013ede2b91022cf6057bb0613a08f7e64b7a",
+            "0xa9227ff284dea3524e0b981e9b9aaaf7105f53d41d2483c33217da5fed18bda8"
           ],
-          "upgrade_cap": "0x94bdaddfa7b7de33f9f7b0ad6140f925ced971f7f508e0da5bbb304425021c5e",
+          "upgrade_cap": "0x5823829f43e32e0ca3a4ebf161ddc78469225f8edfb8a638b91a2e623fe488cf",
           "admin": "",
           "caps": {},
           "publishers": {},
           "displays": {}
         },
         "dungeon": {
-          "origin": "0x1c6e8d316c820dac00ba7220e124ba01b9792e76185f239d7326dcd0ea4704b0",
-          "latest": "0x1c6e8d316c820dac00ba7220e124ba01b9792e76185f239d7326dcd0ea4704b0",
+          "origin": "0x650d3750de4158075e3362a9a18f03f9de46c42d57159ceae373cb54973efbb4",
+          "latest": "0x650d3750de4158075e3362a9a18f03f9de46c42d57159ceae373cb54973efbb4",
           "previous": [
-            "0x1d9c1359a63bc181906cb3795f9991d4a14dbf810bde69adc8b5ef642bd20940"
+            "0x1d9c1359a63bc181906cb3795f9991d4a14dbf810bde69adc8b5ef642bd20940",
+            "0x1c6e8d316c820dac00ba7220e124ba01b9792e76185f239d7326dcd0ea4704b0"
           ],
-          "upgrade_cap": "0xb1096b9d17a841a015ce92abc465d0f3cc744ab207d440cbe6734751e5d2db47",
+          "upgrade_cap": "0xda9126d07b96a1edf5d35c77910050c0b91c37d3303655edbb3b1e231965b1bc",
           "admin": "",
           "caps": {},
           "publishers": {},
@@ -125,85 +134,85 @@
       },
       "shared": {
         "SPELLS_VERSION": {
-          "id": "0x80cd08dc4ac58797b1167aa1754caec5c4d2635f7837546eb704ffddfe5025b7",
+          "id": "0x9b245d9ff56f96657e6062c5e46b9337ae2334fa6b57339afff18f2b905368f5",
           "initial_shared_version": "1"
         },
         "SPELL_REGISTRY": {
-          "id": "0xd928774266cc266421223df7bbd2ee7eea55722c4c214ce4d22cf1f8e0aa19c4",
+          "id": "0x861bf91f23378a3e7f7fb8e2d39238be815b16e2e536ed6a36e907ff5e377c4b",
           "initial_shared_version": "1"
         },
         "SOCIAL_VERSION": {
-          "id": "0xfb0c84fcc777bd2755216fe9de5fedeef793922c90579dd3ca13ea8adbd93f44",
+          "id": "0x2cf9f33686a8aeaf78acd36dc39f498da5efca49d8eac4772d0a8e52277bc754",
           "initial_shared_version": "1"
         },
         "SOCIAL_FRIEND_REGISTRY": {
-          "id": "0x97410fbe2d9408b7dab5005af632638a19d50a79c44ffbcbea5be66833b27baf",
+          "id": "0x580479db1e108da05592bb60ac0a18acaa4b3bf176f7c7f2307f8e5ae25787bf",
           "initial_shared_version": "1"
         },
         "ENGINE_VERSION": {
-          "id": "0xf8041e19bce451cae047955254149dffa81d4c6e114ae6cc79f6714fd313e4e8",
+          "id": "0xcbf17f890332eea0428bbd0d48cbee7950c13ec128d8e1842d1943808c1a3c3b",
           "initial_shared_version": "1"
         },
         "FIGHT_REGISTRY": {
-          "id": "0x6cc2f20a92937726636683816e60e92fc4f5b2b578fbb922f264d4c88528d2b0",
+          "id": "0x1ccbb72b01b3384ceeef4422ce62989d2bfc9aca5118939d899531d6966104d6",
           "initial_shared_version": "1"
         },
         "VERSION": {
-          "id": "0xb55fe563fa71fca4b3bbb7fffc8e5e1dc7d2f098ffbf1db7ac5ad811ae739d78",
+          "id": "0x5ee4a160a709413b3e7f6012b85747c69bdf0a0276851ae6dd25a3ab1bd99ed2",
           "initial_shared_version": "1"
         },
         "GAME_CONFIG": {
-          "id": "0x67c2b23e53bea7e6044e9a56347ed338d9ab774eaf8224a497cadbf1029bd57e",
+          "id": "0xadf2c2761ac2d782e7f24634e9e62ad49eb4fc556d81d0938e099ccb3770e70b",
           "initial_shared_version": "1"
         },
         "CATALOG": {
-          "id": "0x01accd5412bcf96d4235661bc5774845ddb7baac21e3a9485a6c855ad7bbb7db",
+          "id": "0xa75184516ffb09c48f80629011fe21a9903180006c688766882295cb32936573",
           "initial_shared_version": "1"
         },
         "SCRIBE_CONFIG": {
-          "id": "0x69c76f81183984f8159e94549bda7234f49b8ac32fa8d762b263c83d053d23a2",
+          "id": "0x1ca5d348cb43941511b11e5f86f902e07c904599e766df0b0192f49437b2b6bb",
           "initial_shared_version": "1"
         },
         "PET_FEED_CONFIG": {
-          "id": "0xe193439000262b645e47c096ef015a2f471ba5203ef0d46abedd5a0a1821ddf0",
+          "id": "0x40c415751da5f64e89c08e6111233b0c40024805bedf2a504f7a30ce9235d62f",
           "initial_shared_version": "1"
         },
         "CREATION": {
-          "id": "0x9599bb5d3193f641547828f6e05e450cae5274fb33b14638b5a2e1e717b73d2f",
+          "id": "0xcd12b4a9dc8cd1570487933eeec468f22c46d5739882b604dd0bb515589045d9",
           "initial_shared_version": "1"
         },
         "POOL_REGISTRY": {
-          "id": "0x28a37a3372363a67b7ab3dee252c4fdada0b368d193b8530cf1d150c1fa9233a",
+          "id": "0xb9d60433307c0fd54016f47f20a192f7ee2f47b36e2e1a822b726e2f769070c3",
           "initial_shared_version": "1"
         },
         "LOOT_REGISTRY": {
-          "id": "0x65810330390367ac387b5e04f516065a4348881d4b2a1976c369b4a31ca6c372",
+          "id": "0xef34ae9c0d6e2cb70832f0de66d78ccf18021361191800206723be6cdc5dc100",
           "initial_shared_version": "1"
         },
         "CRUSH_BOARD": {
-          "id": "0x3dac6e0ac18637a280d2f3b8007c26e99702994d53469d587aada41f650b9a1e",
+          "id": "0x735623a65ca6307139378aab9492dfbdd6550b5781bbb1ec74d3953db794f240",
           "initial_shared_version": "2"
         }
       },
       "policies": {
         "character": {
-          "id": "0x8f6e6794df32a46baa24c004014bad1e71866e914bf131fafcc11b919488b1fb",
+          "id": "0x05a33be3f6727545ef16ba1bb6fc8a0993224de729b4828aeaa5e3a62173527b",
           "initial_shared_version": "2",
-          "cap": "0x9405d0021b36a2dc7abcd46fdfe144df4768fd56878c33f387fbb77c61e64033"
+          "cap": "0x947ced9452f2e2672aa3634a15c170d602967db196a16e08937dfa9671ce0a56"
         },
         "item": {
-          "id": "0xb947e71d2bc88af98ea5ad0ffc5dbdf26573fc8cd1986c93430d8be8560bd497",
+          "id": "0x0d720af1133f485dd372bbe238d435e26f6d448bdd45c41950d64b7c480df833",
           "initial_shared_version": "2",
-          "cap": "0xb3c6324aae7bfa4fdd1d678a81d47f703f844f128956327b50e59c7c4c8bd001"
+          "cap": "0x2dd3bd3bb8d084217a8aa7de6f044e21580d367efcf452936329d176a06ecd88"
         },
         "extract": {
-          "id": "0xa8ad71a33a75720382b3a3fb7f9d191a943f0649394ebf832f42cedec17c0323",
+          "id": "0x77930f322d4b8d0e34137f55b756dd34a3abc387605a8ba8dffd209bf9204bdc",
           "initial_shared_version": "3",
           "cap": ""
         }
       },
       "type_origins": {
-        "zone_group_root": "0xc05c8d9f65e4ee0a6dc9463c8c90341085daa062184043e1a6fd75bccd6842e1"
+        "zone_group_root": "0x8781c9c8e9f87113536a6926e441b359a7bc24fda9a80a2b9b225a8d51d0da98"
       },
       "rules_package": "0x0717a13f43deaf5345682153e3633f76cdcf695405959697fcd63f63f289320b",
       "external_coin_types": {
