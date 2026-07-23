@@ -87,10 +87,13 @@ jobs:
           # Compose-file-wide interpolation needs SOME value for gas-pool/sponsor's required SPONSOR_DEV_KEY
           # even when they're excluded from this run's target list below — never a real key, build-time only.
           SPONSOR_DEV_KEY: gold-image-build-placeholder-not-a-key
+          # bake's fs entitlements guard interactive misuse; on an ephemeral runner building our own checkout
+          # they only block the compose contexts — disabled per the documented escape hatch.
+          BUILDX_BAKE_ENTITLEMENTS_FS: '0'
         run: |
           targets=(localnet indexer api)
           if [ "$GOLD_SPONSOR" != "0" ]; then targets+=(gas-pool sponsor); fi
-          docker buildx bake -f test/gold/compose.gold.yml --load --allow=fs.read=.. \
+          docker buildx bake -f test/gold/compose.gold.yml --load \
             --set '*.cache-from=type=gha' --set '*.cache-to=type=gha,mode=max' \
             "${targets[@]}"
       - name: bring up the gold rig
