@@ -47,7 +47,6 @@
     "@aws-sdk/client-s3": "^3.1086.0",
     "@gltf-transform/core": "^4.4.1",
     "@gltf-transform/extensions": "^4.4.1",
-    "@gltf-transform/functions": "^4.4.1",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/vite": "^4.3.2",
     "@types/react": "^19.2.17",
