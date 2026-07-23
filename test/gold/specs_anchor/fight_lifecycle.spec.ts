@@ -13,6 +13,7 @@ import {
 
 test.describe('gold localnet — headed physical fight lifecycle', () => {
   test.skip(!gold_manifest, 'no .gold-deployment.json — run `node test/gold/up_gold.mjs` first')
+  test.skip(!gold_manifest?.fight_fixtures?.win, 'gold bootstrap did not publish fight_fixtures.win')
 
   // LANE LAG flagship row (lane_reports/CLI_TEST_AUDIT.md #5): @lagged re-runs this EXACT scenario through
   // playwright.anchor.config.ts's `lagged` project (Vite → proxy_lag.mjs → the same /v1 api, +700-1000ms/req).

@@ -37,6 +37,7 @@ async function character_row_text(page: Page) {
 
 test.describe('07-15 fixed-class regression · headed fight settlement', () => {
   test.skip(!gold_manifest, 'no .gold-deployment.json — run `node test/gold/up_gold.mjs` first')
+  test.skip(!gold_manifest?.fight_fixtures?.win, 'gold bootstrap did not publish fight_fixtures.win')
 
   test('@headed XP FRESHNESS · a real win advances self nameplate + character-tab XP without navigation', async ({
     page,
