@@ -24,6 +24,7 @@ import { peer_display_name } from './remote_player_name.js'
 import { open_player_menu } from './screens/hud/world/player_menu_store.js'
 import { create_mount_rig } from './mount_rig.js'
 import { create_pet_companion_rig } from './pet_companion.js'
+import { step_pet_follow, empty_pet_motion } from './pet_follow.js'
 import { CHARACTER_MODELS, character_glb_url, has_character_model } from './screens/character-glb.js'
 import { read_worn_templates } from './cosmetic_glb.js'
 import { create_remote_character_cache } from './remote_character_cache.js'
@@ -371,20 +372,43 @@ export function create_remote_players(engine, world_canvas = null) {
             r.colored = true
           }
         }
-        const t = entry.target_position ?? entry.position ?? r
-        // #509 — NO teleport-snap for owned followers: their position is the reducer's timer-derived
-        // projection, which stays within the visible range by construction (beyond it the reducer DESPAWNS the
-        // row entirely — despawn-and-continue). A respawn plants a fresh rig at the projection (spawn_rig), so
-        // there is never a cross-map glide to snap away. Big catch-ups ride the fast-travel flow (tranche F).
+        // #613 — a with_you follower is a FREE-RUN companion: it steers ITSELF toward the leader anchor through
+        // the SAME pet_follow core the pet companions use (dead zone + catch-up + roam + snap-when-genuinely-far),
+        // NOT gated on the leader standing still and never range-despawned — the field bug was a follower that
+        // popped on stop and vanished on move. An in_transit / peer rig keeps the #509 lerp toward its
+        // timer-projected target (no teleport-snap: beyond the visible range the reducer despawns the row and a
+        // respawn plants a fresh rig at the projection).
+        const free_run = !!entry.free_run && !!entry.follow_anchor
         const k = 1 - Math.exp(-LERP_LAMBDA * dt)
-        const dx = t.x - r.x
-        const dz = t.z - r.z
-        r.x += dx * k
-        r.z += dz * k
+        let dx
+        let dz
+        let speed
+        let steer_yaw = null // set by the free-run steering; the lerp path derives yaw from the broadcast/motion
+        if (free_run) {
+          // seed the rig's OWN motion at its current spot so a near companion ambles in rather than teleporting.
+          if (!r.follow_motion) r.follow_motion = { ...empty_pet_motion(), x: r.x, z: r.z, yaw: r.yaw }
+          const prev_x = r.x
+          const prev_z = r.z
+          r.follow_motion = step_pet_follow(r.follow_motion, entry.follow_anchor, dt)
+          r.x = r.follow_motion.x
+          r.z = r.follow_motion.z
+          dx = r.x - prev_x
+          dz = r.z - prev_z
+          speed = dt > 0 ? Math.hypot(dx, dz) / dt : 0
+          steer_yaw = r.follow_motion.yaw
+        } else {
+          r.follow_motion = null // left with_you (e.g. re-entered a transit leg) → drop the stale steering state
+          const t = entry.target_position ?? entry.position ?? r
+          dx = t.x - r.x
+          dz = t.z - r.z
+          r.x += dx * k
+          r.z += dz * k
+          speed = Math.hypot(dx, dz) * LERP_LAMBDA
+        }
         // D217: the payload's WORLD height wins (position.y > 1 = a real broadcast height — hills and
-        // jumps track exactly); 0/absent = an old payload → the ground-scan fallback (re-scan on cell
-        // change only; null = forest/water keeps last).
-        const th = Number(t.y ?? 0)
+        // jumps track exactly); 0/absent OR a free-run companion (no broadcast y — it trails the leader's
+        // ground) → the ground-scan fallback (re-scan on cell change only; null = forest/water keeps last).
+        const th = free_run ? 0 : Number((entry.target_position ?? entry.position ?? r).y ?? 0)
         if (th > 1) {
           r.gy += (th - r.gy) * k
         } else {
@@ -398,9 +422,11 @@ export function create_remote_players(engine, world_canvas = null) {
             if (gy !== null && gy !== undefined) r.gy = gy
           }
         }
-        const speed = Math.hypot(dx, dz) * LERP_LAMBDA
-        // D222: the TRUE broadcast heading wins (shortest-arc lerp); movement-derived = old-payload fallback.
-        if (typeof entry.target_yaw === 'number') {
+        // A free-run companion faces its OWN steering heading; else the TRUE broadcast heading wins (D222,
+        // shortest-arc lerp); movement-derived = old-payload fallback.
+        if (steer_yaw !== null) {
+          r.yaw = steer_yaw
+        } else if (typeof entry.target_yaw === 'number') {
           let dyaw = entry.target_yaw - r.yaw
           dyaw = ((dyaw + Math.PI) % (2 * Math.PI)) - Math.PI
           if (dyaw < -Math.PI) dyaw += 2 * Math.PI
