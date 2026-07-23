@@ -9,6 +9,10 @@
 #   • .github/workflows/promote.yml       — the owner's `/promote` command (one PR, interactive)
 #   • .github/workflows/promote-queue.yml — gate/checks workflow_run:completed (land-on-green)
 #
+# The green assert itself lives in the sibling promote-green-eval.sh (sourced below, unit-tested
+# in test/promote-green-eval.test.sh) — split out so "is this sha actually green" is testable
+# against canned `gh api` JSON without a live PR/repo.
+#
 # Master never takes a merge COMMIT: landing is a fast-forward push of the exact approved head
 # SHA, so master's commits stay BYTE-IDENTICAL to edge's (signatures survive perfectly) and the
 # pusher is the Actions bot — "reviewer ≠ pusher" holds by construction. The fast-forward assert
@@ -114,11 +118,21 @@ if ! git merge-base --is-ancestor "refs/remotes/origin/${BASE}" "$HEAD_SHA"; the
   emit stale; echo "PR #$PR is behind $BASE — author-side rebase required"; exit 3
 fi
 
-# ── checks green? (unchanged assert: nothing non-green among the head's check-runs) ──────────
-NOT_GREEN=$(gh api "repos/${REPO}/commits/${HEAD_SHA}/check-runs" \
-  --jq '[.check_runs[] | select(.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral")] | length')
-if [ "$NOT_GREEN" != "0" ]; then
-  emit not-green; echo "$NOT_GREEN check(s) not green on $HEAD_SHA — leaving it queued"; exit 3
+# ── checks green? — every REQUIRED check-run present + green on this exact sha (issue #695) ──
+# The old assert only rejected check-runs that EXISTED and were non-green — a required check that
+# hadn't been CREATED yet at evaluation time (promote-queue.yml fires on EITHER gate or checks
+# completing; a slow checks.yml leg like `smoke`, Playwright + live network, can still be
+# unregistered on the sha when the faster gate.yml run fires the queue first) was invisible to it
+# and read as clean — a still-red landing could fast-forward. evaluate_green() (sourced from
+# promote-green-eval.sh, unit-tested in test/promote-green-eval.test.sh) additionally requires
+# every name in REQUIRED_CHECKS to have a completed green check-run on $HEAD_SHA — missing/pending
+# = not eligible, and an empty check-runs response fails closed the same way.
+# shellcheck source=.github/scripts/promote-green-eval.sh
+source "$(dirname "${BASH_SOURCE[0]}")/promote-green-eval.sh"
+CHECK_RUNS_JSON=$(gh api --paginate "repos/${REPO}/commits/${HEAD_SHA}/check-runs" --jq '.check_runs[]' | jq -s '.')
+GREEN=$(evaluate_green "$CHECK_RUNS_JSON")
+if [ "$GREEN" != "green" ]; then
+  emit not-green; echo "${GREEN#not-green: } on $HEAD_SHA — leaving it queued"; exit 3
 fi
 
 # ── stamp the `promoted` status BEFORE the push (master only) — ORDER IS LOAD-BEARING ───────
