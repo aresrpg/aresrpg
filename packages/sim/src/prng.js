@@ -77,8 +77,8 @@ export const scramble = seed => rng_next(to_u32(seed)).value
 /**
  * Fold `x` into a 32-bit accumulator: wrapping-add then `scramble` (prng.move `mix`). Order-sensitive input
  * combiner — build a seed from several values with `mix(mix(a, b), c)`. Byte-identical to Move's
- * `scramble((acc + x) & MASK32)`; each fold avalanches so distinct input tuples collide only at the scrambler's
- * 1-in-2^32 rate (no additive cancellation).
+ * `scramble(((acc & MASK32) + (x & MASK32)) & MASK32)`; each fold avalanches so distinct input tuples collide
+ * only at the scrambler's 1-in-2^32 rate (no additive cancellation).
  * @param {number | bigint} acc
  * @param {number | bigint} x
  * @returns {number}  uint32
