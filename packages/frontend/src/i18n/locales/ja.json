@@ -1749,7 +1749,7 @@
     "action_disband": "パーティを解散中",
     "member_joined_toast": "{{name}} がパーティに参加しました",
     "owned_picker_title": "自分のキャラクターを連れて行く",
-    "invite_owned_cta": "オートフォロー",
+    "invite_owned_cta": "パーティに招待",
     "follow_joining": "ワールドに参加中",
     "follow_in_transit": "あなたに向かって移動中",
     "follow_with_you": "一緒にいます",
