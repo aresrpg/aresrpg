@@ -14,7 +14,7 @@ import { push_event_toast } from '../game/core/toast.js'
 import { game_log } from '../core/log.js'
 import i18n from '../i18n'
 
-import { fast_travel_store } from './fast_travel_store.js'
+import { fast_travel_store, initial_ft_state } from './fast_travel_store.js'
 import { resolve_route } from './fast_travel_target.js'
 import { join_world_action } from './world_join.js'
 
@@ -32,10 +32,11 @@ const peer_pos_of = (cid) => {
 
 const dispatch = (input) => fast_travel_store.getState().input(input)
 
-/** RESOLVE — /v1 world truth + gate facts → the reducer's `resolved`/`refused` input (the routing law). */
-async function run_resolve(target) {
+/** RESOLVE — /v1 world truth + gate facts → the reducer's `resolved`/`refused` input (the routing law).
+ *  `traveler_id` is WHO is flying (the active player, or a steered follower) — its /v1 doc is the "my" gate. */
+async function run_resolve(traveler_id, target) {
   try {
-    const my_id = context.get_state().selected_character_id ?? null
+    const my_id = traveler_id
     // A friend begin carries the exact live character id, never an owner guess. Its p2p cell refines position only;
     // world + cross-world anchor still come together from this /v1 document (the routing law).
     const target_doc = target.character_id
@@ -60,24 +61,28 @@ async function run_resolve(target) {
             ? peer_pos_of(cid)
             : null,
     })
-    dispatch(out.ok ? { type: 'resolved', character_id: cid, ...out.facts } : { type: 'refused', reason: out.reason })
+    dispatch(
+      out.ok
+        ? { traveler_id, type: 'resolved', character_id: cid, ...out.facts }
+        : { traveler_id, type: 'refused', reason: out.reason }
+    )
   } catch (error) {
     game_log('fast-travel', 'resolve failed', error)
-    dispatch({ type: 'refused', reason: REALM_UNREACHABLE })
+    dispatch({ traveler_id, type: 'refused', reason: REALM_UNREACHABLE })
   }
 }
 
 /** JOIN — the EXISTING self-pay world-join tx (a0070b64 receipt seeds the checkpoint). Executed failure never
  *  auto-refires (join_world_action latches); we surface it as the realm refusal and reset. */
-async function run_join(target) {
-  const my_id = context.get_state().selected_character_id ?? null
-  if (!my_id || !target.world_id) return dispatch({ type: 'refused', reason: REALM_UNREACHABLE })
+async function run_join(traveler_id, target) {
+  const my_id = traveler_id
+  if (!my_id || !target.world_id) return dispatch({ traveler_id, type: 'refused', reason: REALM_UNREACHABLE })
   try {
     await join_world_action({ character_id: my_id, world_id: target.world_id })
-    dispatch({ type: 'world_joined' }) // the session gate swaps spectate→resident; the player edge boots then flies
+    dispatch({ traveler_id, type: 'world_joined' }) // session gate swaps spectate→resident; the edge boots then flies
   } catch (error) {
     game_log('fast-travel', 'cross-world join failed', error)
-    dispatch({ type: 'refused', reason: REALM_UNREACHABLE })
+    dispatch({ traveler_id, type: 'refused', reason: REALM_UNREACHABLE })
   }
 }
 
@@ -101,9 +106,17 @@ let wired = false
 export function wire_fast_travel_effects() {
   if (wired) return
   wired = true
+  // Per-traveler: each character's flight folds its own slice, so the edges fire per WHO transitioned. Lifecycle
+  // toasts fire only for the character the player is driving (a follower's silent catch-up never spams the HUD).
   fast_travel_store.subscribe((state, prev) => {
-    fire_notice(state, prev)
-    if (state.phase === 'resolving' && prev.phase !== 'resolving') void run_resolve(state.target)
-    if (state.phase === 'joining' && prev.phase !== 'joining') void run_join(state.target)
+    const active_id = context.get_state().selected_character_id ?? null
+    for (const cid of new Set([...Object.keys(state.travelers), ...Object.keys(prev.travelers)])) {
+      const ft = state.travelers[cid] ?? initial_ft_state()
+      const prev_ft = prev.travelers[cid] ?? initial_ft_state()
+      if (ft === prev_ft) continue
+      if (cid === active_id) fire_notice(ft, prev_ft)
+      if (ft.phase === 'resolving' && prev_ft.phase !== 'resolving') void run_resolve(cid, ft.target)
+      if (ft.phase === 'joining' && prev_ft.phase !== 'joining') void run_join(cid, ft.target)
+    }
   })
 }

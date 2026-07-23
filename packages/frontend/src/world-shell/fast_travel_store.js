@@ -136,18 +136,38 @@ export const ft_flight_target = (state) =>
       }
     : null
 
+// ── keyed by TRAVELER character id — the app drives a non-active character's dragon exactly like the active one
+// (owner ruling 2026-07-23). Each traveler folds through the SAME pure reduce_fast_travel; a begin for one
+// traveler never touches another's flight, so the active player and a catching-up follower each own a slot. A
+// parallel store instance was rejected — one keyed home, the pure reducer parameterized by traveler. ────────────
+/**
+ * Route one input to its traveler's flight slice. The input's `traveler_id` names WHO is flying (the active
+ * player, or a follower the group loop is steering) — distinct from `target.character_id`, WHO they fly to.
+ * @param {Record<string, FtState>} travelers @param {any} input @returns {Record<string, FtState>}
+ */
+export function reduce_travelers(travelers, input) {
+  const cid = input?.traveler_id
+  if (!cid) return travelers // the door always stamps a traveler_id; a raw input is inert
+  const prev = travelers[cid] ?? initial_ft_state()
+  const next = reduce_fast_travel(prev, input)
+  return next === prev ? travelers : { ...travelers, [cid]: next }
+}
+
+/** One traveler's flight slice (idle when that character has no flight). @param {{travelers?:Record<string,FtState>}} state */
+export const ft_for = (state, cid) => (cid && state.travelers?.[cid]) || initial_ft_state()
+
 // ── the singleton store + its ONE input door (no external set) ─────────────────────────────────────────────────
 const make_input = (set, get) => (input) => {
-  const next = reduce_fast_travel(get(), input)
-  if (next !== get()) set(next, true)
+  const travelers = reduce_travelers(get().travelers, input)
+  if (travelers !== get().travelers) set({ travelers }) // merge (never replace — the input door survives)
 }
 
-/** @returns {import('zustand/vanilla').StoreApi<FtState & { input:(i:any)=>void }>} */
+/** @returns {import('zustand/vanilla').StoreApi<{ travelers:Record<string,FtState>, input:(i:any)=>void }>} */
 export function create_fast_travel_store() {
-  return createStore((set, get) => ({ ...initial_ft_state(), input: make_input(set, get) }))
+  return createStore((set, get) => ({ travelers: {}, input: make_input(set, get) }))
 }
 
-/** App-lifetime singleton — one local traveler. Consumed imperatively (getState/subscribe/input), like presence. */
+/** App-lifetime singleton — every traveler (active player + steered followers) keyed by character id. */
 export const fast_travel_store = create_fast_travel_store()
 
 /** Dispatch an input into the singleton (the menu, the pilot, and the effect wiring all pull this one lever). */

@@ -6,7 +6,14 @@
 // cancel/reset. No store, no effects.
 import { describe, expect, test } from 'bun:test'
 
-import { ft_active, ft_flight_target, initial_ft_state, reduce_fast_travel } from './fast_travel_store.js'
+import {
+  ft_active,
+  ft_flight_target,
+  ft_for,
+  initial_ft_state,
+  reduce_fast_travel,
+  reduce_travelers,
+} from './fast_travel_store.js'
 
 const run = (state, ...inputs) => inputs.reduce((s, i) => reduce_fast_travel(s, i), state)
 const begin = { type: 'begin', character_id: 'C_TARGET', address: '0xbob', name: 'Bob' }
@@ -194,6 +201,32 @@ describe('cancel / reset', () => {
   test('reset wipes target + refusal', () => {
     const s = reduce_fast_travel({ phase: 'landing', target: { x: 1 }, refusal: null }, { type: 'reset' })
     expect(s).toEqual(initial_ft_state())
+  })
+})
+
+describe('reduce_travelers — flights keyed by TRAVELER character id (tranche F)', () => {
+  test("a begin for one traveler never touches another traveler's live flight", () => {
+    let travelers = reduce_travelers({}, { traveler_id: 'A', ...begin })
+    travelers = reduce_travelers(travelers, { traveler_id: 'A', ...resolved() })
+    expect(travelers.A.phase).toBe('flying')
+    // a SECOND traveler begins independently — A's flight is untouched (no singleton clobber)
+    travelers = reduce_travelers(travelers, { traveler_id: 'B', ...begin })
+    expect(travelers.A.phase).toBe('flying')
+    expect(travelers.B.phase).toBe('resolving')
+    // each folds through the SAME pure reducer — B lands same-world while A keeps flying
+    travelers = reduce_travelers(travelers, { traveler_id: 'B', ...resolved() })
+    expect(travelers.B.phase).toBe('flying')
+    expect(travelers.A.phase).toBe('flying')
+  })
+  test('an input without a traveler_id is inert (the door always stamps one)', () => {
+    const travelers = { A: initial_ft_state() }
+    expect(reduce_travelers(travelers, { ...begin })).toBe(travelers)
+  })
+  test("ft_for returns a traveler's slice, or idle for an unknown/absent character", () => {
+    const travelers = reduce_travelers({}, { traveler_id: 'A', ...begin })
+    expect(ft_for({ travelers }, 'A').phase).toBe('resolving')
+    expect(ft_for({ travelers }, 'Z')).toEqual(initial_ft_state())
+    expect(ft_for({}, 'A')).toEqual(initial_ft_state())
   })
 })
 

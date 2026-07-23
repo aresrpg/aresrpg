@@ -89,7 +89,12 @@ export function PlayerActionMenu() {
     // Friend + in-world targets share this shaping seam and the ONE reducer door. Everything after the input —
     // route gates, cross-world join, dragon flight, and notices — remains owned by the existing travel pipeline.
     const friend_peers = target.kind === 'friend' ? get_peer_states_by_address(address) : []
-    dispatch_fast_travel({ ...target, address }, ft_dispatch, friend_peers)
+    // The store is keyed by traveler (tranche F): a manual fast-travel flies the character I'm driving.
+    dispatch_fast_travel(
+      { ...target, address },
+      (input) => ft_dispatch({ ...input, traveler_id: selected_character_id }),
+      friend_peers
+    )
   }
 
   // Clamp on-screen (the anchor can sit near the right/bottom edge — a nameplate at the viewport border).

@@ -37,7 +37,7 @@ import { create_mount_rig, ft_dragon_glb_url } from './mount_rig.js'
 import { create_pet_companion_rig, resolve_pet_companion } from './pet_companion.js'
 import { create_fast_travel_pilot } from './fast_travel_pilot.js'
 import { mount_is_moving } from './fast_travel_flight.js'
-import { fast_travel_store, ft_flight_target } from '../world-shell/fast_travel_store.js'
+import { fast_travel_store, ft_flight_target, ft_for } from '../world-shell/fast_travel_store.js'
 import { context } from './store.js'
 import i18n from '../i18n'
 import { game_log } from '../core/log.js'
@@ -279,9 +279,12 @@ export function create_player({
     mount_ctl = null
     push_event_toast({ state: 'info', title: i18n.t('world.mount_off') })
   }
+  // This local avatar's own flight slice — the store is keyed by traveler now (tranche F), so every read/drive
+  // of MY flight names my character id (a follower's catch-up flight lives under its own key, untouched here).
+  const ft_me = () => character?.id ?? null
   const toggle_mount = () => {
     // the mount key is inert mid-flight — the dragon is the pilot's, not the '1' toggle's
-    if (ft_flight_target(fast_travel_store.getState())) return
+    if (ft_flight_target(ft_for(fast_travel_store.getState(), ft_me()))) return
     return riding ? mount_down() : mount_up()
   }
   // FAST-TRAVEL DRAGON — a rideable dragon flown by the autopilot at RUN speed, seen by peers like any mount
@@ -318,8 +321,8 @@ export function create_player({
     return p && Number.isFinite(p.x) ? { x: p.x, z: p.z } : null
   }
   const ft_pilot = create_fast_travel_pilot({
-    get_ft: () => fast_travel_store.getState(),
-    dispatch: (input) => fast_travel_store.getState().input(input),
+    get_ft: () => ft_for(fast_travel_store.getState(), ft_me()),
+    dispatch: (input) => fast_travel_store.getState().input({ ...input, traveler_id: ft_me() }),
     get_pos: () => ctl.get_transform().position,
     sample_ground: sample_ft_ground,
     mount_dragon,
@@ -328,7 +331,7 @@ export function create_player({
     live_pos_of: ft_live_pos_of,
     can_fly: () => !is_fight(),
   })
-  const ft_is_flying = () => !!ft_flight_target(fast_travel_store.getState())
+  const ft_is_flying = () => !!ft_flight_target(ft_for(fast_travel_store.getState(), ft_me()))
   // Mobile stays app-owned: the adapter writes the same movement/jump shape as keys and calls only the
   // shoulder rig's public rotate/dolly methods. The engine controller remains an unchanged consumer.
   const mobile_input = create_mobile_session_input({
@@ -374,7 +377,7 @@ export function create_player({
       case 'Escape':
         // AUTO-RUN cancel (the player always wins). No preventDefault — other Esc handlers (modals) still run.
         if (down && auto_run.active()) auto_run.cancel()
-        if (down && ft_is_flying()) fast_travel_store.getState().input({ type: 'cancel' }) // …and cancel a flight
+        if (down && ft_is_flying()) fast_travel_store.getState().input({ type: 'cancel', traveler_id: ft_me() }) // cancel a flight
         break
       default:
     }
@@ -487,10 +490,10 @@ export function create_player({
     // exactly like creative fly below). The store is a module singleton, so a PENDING intent survives the
     // cross-world session swap; the moment physics is live in the new world we release it into flight (leg F,
     // the a0070b64 receipt-seeded boot). Movement/jump cancels mid-flight (the player always wins, like auto-run).
-    if (physics_live && fast_travel_store.getState().phase === 'awaiting_boot')
-      fast_travel_store.getState().input({ type: 'boot_ready', world_id })
+    if (physics_live && ft_for(fast_travel_store.getState(), ft_me()).phase === 'awaiting_boot')
+      fast_travel_store.getState().input({ type: 'boot_ready', world_id, traveler_id: ft_me() })
     if (ft_is_flying() && !is_fight() && !inert && (keys.forward || keys.strafe || keys.jump))
-      fast_travel_store.getState().input({ type: 'cancel' })
+      fast_travel_store.getState().input({ type: 'cancel', traveler_id: ft_me() })
     ft_pilot.update(dt)
     if (ft_is_flying() && !is_fight()) return // the pilot hard-placed the body this frame — skip walk/gravity
     // TR-1 v2 — FLY branch: while cinematic-fly is engaged, bypass walk physics and hard-place a
