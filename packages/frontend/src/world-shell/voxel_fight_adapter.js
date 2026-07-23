@@ -83,6 +83,7 @@ import {
   emit_trap_line,
 } from '../game/core/modules/fight.js'
 import { game_log } from '../core/log.js'
+import { finish_engage_timing } from '../core/engage_timing.js'
 
 import { create_fight_audio_observer, fight_audio_sfx_key, fight_damage_audio_beat } from './fight_audio.js'
 import { fight_state_trace } from './fight_state_trace.js'
@@ -1181,6 +1182,7 @@ export function create_voxel_fight_adapter(
           )
           last_paint_key = '' // force a fresh paint after a (re)build
           ensure_fight_wired(result, fight, dungeon, { just_built: true }) // RE-PROJECT every entity on the new seat
+          finish_engage_timing(fight.fight_id)
           // [prewarm/D3] compile every VFX preset pipeline this fight can mount while the intro beat still covers the
           // screen — moves the ~290ms first-cast WebGPU pipeline-compile hitch into fight-enter (the D221 class).
           // The COMPLETE castable universe (ALL_CAST_ELEMENTS), not just the mobs' elements: the PLAYER's own

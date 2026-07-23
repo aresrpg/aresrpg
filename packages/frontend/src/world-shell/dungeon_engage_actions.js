@@ -24,6 +24,7 @@ import { group_engage_blocked } from '@aresrpg/world/nearby_fights'
 import { use_auth } from '../auth'
 import { get_sdk } from '../chain/sdk'
 import { DEMO_NETWORK } from '../chain/deployment'
+import { mark_engage_ptb_built, note_engage_fight_id } from '../core/engage_timing.js'
 import i18n from '../i18n'
 import { tx_error } from '../game/core/abort_copy.js'
 import { clear_budget_cache } from '../tx/budget_cache.js'
@@ -176,12 +177,15 @@ export async function create_world_fight({
     is_public,
     party_id,
   })
+  mark_engage_ptb_built(tx)
   use_fight_cost.getState().reset() // FRESH fight entry — its own gas is the first line of the new total
   clear_budget_cache() // and drop any prior fight's cached act budgets (a new fight = new shapes)
   clear_fight_ref_cache() // + the prior fight's pinned shared-ref (a new fight = a new object)
   clear_gas_coin_cache() // + the prior fight's chained gas-coin pin (a new fight re-selects + re-chains)
   const receipt = await sign(tx, i18n.t('fights.action_engage'))
-  return { receipt, fight_id: remember_created_fight(receipt) } // + cache its pinned shared ref (zero-read)
+  const fight_id = remember_created_fight(receipt) // + cache its pinned shared ref (zero-read)
+  note_engage_fight_id(tx, fight_id)
+  return { receipt, fight_id }
 }
 
 // ╔════════════════ [ SETTLEMENT — the two standalone, no-cycle-embedded-consumer doors ] ══ ]

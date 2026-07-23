@@ -42,6 +42,7 @@ import { spawn_rows as core_spawn_rows } from '@aresrpg/world/spawns_zones'
 import { group_engage_blocked } from '@aresrpg/world/nearby_fights'
 
 import i18n from '../i18n'
+import { cancel_engage_timing, start_engage_timing } from '../core/engage_timing.js'
 import { game_log } from '../core/log.js'
 import { display_mob_name } from '../content/mob_name_overrides'
 import { report_error } from '../core/report.js'
@@ -676,6 +677,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     // data) and emits the claim_tx request THIS adapter executes.
     spawns_input({ type: 'claim_intent', key: e.key })
     if (!spawns_store.getState().pending.has(`claim:${e.key}`)) return hint_too_far()
+    start_engage_timing('world')
     const request = spawns_store.getState().tx_request
     engaging = true
     set_attack_target(null) // drop the [R] pill immediately; the receipt removes the claimed group
@@ -746,6 +748,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       sync_from_core()
       void poll()
     } catch (error) {
+      cancel_engage_timing()
       /* already surfaced by the intent-time engage toast's humaniser */
       // GRACEFUL 108 (zones::ESpawnNotFound — the rendered group no longer exists in that zone: claimed by
       // another player, or a stale gRPC read served a ghost row): the honest reaction is claim_failed with

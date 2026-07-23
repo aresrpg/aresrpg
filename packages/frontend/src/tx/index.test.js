@@ -37,6 +37,8 @@ const { chain_gas_from_receipt, clear_gas_coin_cache, _peek_gas_cache } = await 
 const { get_log_buffer, _reset_log_for_test } = await import('../core/log.js')
 const { error_executed_digest } = await import('../world-shell/tx_digest_error.js')
 const { is_preflight_refusal } = await import('../game/core/abort_copy.js')
+const { cancel_engage_timing, ENGAGE_MARK_NAMES, ENGAGE_MEASURE_NAMES, mark_engage_ptb_built, start_engage_timing } =
+  await import('../core/engage_timing.js')
 
 // grpc simulateTransaction result vectors (mirror gas_guard.test.js: gasUsed = computation + storage − rebate)
 const ok_sim = (computationCost, storageCost, storageRebate = '0') => ({
@@ -68,6 +70,9 @@ beforeEach(() => set_expedition_sdk_mock(get_sdk))
 afterEach(() => {
   grpc.core.simulateTransaction.mockClear()
   grpc.core.executeTransaction.mockClear()
+  cancel_engage_timing()
+  for (const name of Object.values(ENGAGE_MARK_NAMES)) performance.clearMarks(name)
+  for (const name of Object.values(ENGAGE_MEASURE_NAMES)) performance.clearMeasures(name)
   reset_expedition_sdk_mock()
 })
 
@@ -1050,7 +1055,10 @@ describe('execute_sponsored_tx — two-call station flow', () => {
       return ok_json({ effects: { status: { status: 'success' }, transactionDigest: 'DIG' }, digest: 'DIG' })
     })
     const gas_spy = {}
-    const res = await run(make_spon_tx(gas_spy))
+    const tx = make_spon_tx(gas_spy)
+    start_engage_timing('test')
+    mark_engage_ptb_built(tx)
+    const res = await run(tx)
     // the reserved gas is applied to the SAME tx byte-for-byte (fields — owner, coins, budget — all from /reserve)
     expect(gas_spy).toEqual({ sender: ADDR, owner: '0xspon', payment: RESERVATION.gasCoins, budget: 3_000_000 })
     expect(grpc.core.simulateTransaction).toHaveBeenCalledTimes(1) // the S-54 dry-run ran before signing
@@ -1059,6 +1067,22 @@ describe('execute_sponsored_tx — two-call station flow', () => {
     expect(res.digest).toBe('DIG')
     expect(res.effects.status.status).toBe('success')
     expect(grpc.core.executeTransaction).toHaveBeenCalledTimes(0) // the CLIENT never submits a sponsored tx
+    expect(
+      performance
+        .getEntriesByType('measure')
+        .map((entry) => entry.name)
+        .filter((name) => name.startsWith('fight-engage:'))
+        .sort()
+    ).toEqual(
+      [
+        'fight-engage:execution-wait',
+        'fight-engage:ptb-build',
+        'fight-engage:sponsor-prepare',
+        'fight-engage:sponsor-reserve',
+        'fight-engage:sponsor-simulation',
+        'fight-engage:wallet-sign',
+      ].sort()
+    )
   })
 
   test('EXECUTED failure → station effects consumed directly, the raw JSON-RPC abort string passes through', async () => {

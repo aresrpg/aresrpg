@@ -18,6 +18,13 @@ import { SPONSOR_URL } from '../env'
 import { read_sui_balance_mist } from '../auth/sui_balance'
 import { is_zklogin_wallet } from '../auth/zklogin_wallet'
 import { use_settings } from '../stores/settings'
+import {
+  mark_engage_execution_finished,
+  mark_engage_reserve_finished,
+  mark_engage_reserve_started,
+  mark_engage_simulation_finished,
+  mark_engage_wallet_signed,
+} from '../core/engage_timing.js'
 import { game_log } from '../core/log.js'
 import { attach_executed_digest } from '../world-shell/tx_digest_error.js'
 
@@ -586,12 +593,14 @@ export async function execute_sponsored_tx({
   // ── RESERVE (endpoint 1) ── same policy inputs as the retired single call (the kind-only PTB + the zkLogin
   // challenge). The sponsor enforces ALL money + identity policy HERE (pre-gas); any refusal is decoder-mapped by
   // sponsor_fetch (PRE-execution, zero gas). `self-pay-required` comes back TAGGED so the caller silently self-pays.
+  mark_engage_reserve_started(transaction)
   const { reservationId, sponsorAddress, gasCoins, gasBudget } = await sponsor_fetch(`${sponsor_url}/reserve`, {
     txKindBytes: toBase64(kind),
     sender: address,
     challenge,
     signature,
   })
+  mark_engage_reserve_finished(transaction)
 
   // ── BETWEEN THE CALLS ── apply the reserved gas EXACTLY to the SAME tx object (the kind stays byte-identical, so
   // the station's re-parse matches the reservation — do NOT rebuild the PTB from scratch; carry the object through).
@@ -606,6 +615,7 @@ export async function execute_sponsored_tx({
   // read on the failure branch), so the consumer humanizes it identically with ZERO gas spent and no caller change.
   const sim = await simulate(transaction)
   const verdict = gas_guard_decision(sim, null)
+  mark_engage_simulation_finished(transaction)
   if (!verdict.ok && verdict.reason === 'sim_failed') {
     const chain_error = (sim?.Transaction ?? sim?.FailedTransaction)?.effects?.status?.error
     game_log('gas-guard', 'sponsored simulation says the tx would fail — refusing (zero gas):', chain_error)
@@ -619,12 +629,14 @@ export async function execute_sponsored_tx({
   const st = wallet.features['sui:signTransaction'] as SignTransactionFeature | undefined
   if (!st?.signTransaction) throw new Error('Wallet does not support signTransaction')
   const { signature: userSig, bytes: txBytes } = await st.signTransaction({ account: { address }, transaction, chain })
+  mark_engage_wallet_signed(transaction)
 
   // ── EXECUTE (endpoint 2) ── the station co-signs the gas half + submits + returns the CERTIFIED effects. A
   // present `effects` ⇒ the tx EXECUTED (gas burned) — NEVER retried (tx-retry-burn law); an execute 400 is a
   // PRE-execution rejection decoder-mapped by sponsor_fetch (nothing charged). Consume the effects DIRECTLY (this
   // is faster than any client-side wait — the station already waited for finality).
   const { effects, digest } = await sponsor_fetch(`${sponsor_url}/execute`, { reservationId, txBytes, userSig })
+  mark_engage_execution_finished(transaction)
   const ok = effects?.status?.status === 'success'
   return {
     digest: digest ?? effects?.transactionDigest ?? '',

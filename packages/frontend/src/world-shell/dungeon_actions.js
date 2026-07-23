@@ -72,6 +72,7 @@ import { chain_gas_from_receipt, invalidate_gas_coin, clear_gas_coin_cache } fro
 // pinned-fight act PTB resolves nothing (build-offline). One owner-read per fight; cleared at each boundary.
 import { ensure_fight_shared_ref, remember_fight_shared_version, clear_fight_ref_cache } from '../tx/fight_ref_cache.js'
 import { FINALITY_POLL_SCHEDULE, flush_leg, now } from '../tx/latency.js'
+import { mark_engage_ptb_built, mark_engage_receipt_ready, note_engage_fight_id } from '../core/engage_timing.js'
 import { game_log } from '../core/log.js'
 
 // ── SDK per-domain builders (context-bound at call time — the kiosk_client rides the memoized SDK) ──────────
@@ -154,6 +155,7 @@ export async function sign(
         }))
       const res = normalize_receipt(raw)
       flush_leg(tx, label, now() - wait_t0) // ?txtiming=1: submit→effects wait (≈0 on the EXECUTE-CERT path)
+      mark_engage_receipt_ready(tx)
       // FIGHT COST LEDGER: a digest here means src/tx's choke already dry-ran + executed
       // on-chain — real gas is spent whether this lands success or an on-chain abort (tx-retry-burn law: a
       // digest = gas burned), so fold it in BEFORE the success-check throw below.
@@ -328,12 +330,15 @@ export async function next_room_fight({ world_id, run_pass_id, mob_template_id, 
     character_id,
     raised_spell_ids,
   })
+  mark_engage_ptb_built(tx)
   use_fight_cost.getState().reset() // FRESH fight entry — its own gas is the first line of the new total
   clear_budget_cache() // and drop any prior fight's cached act budgets (a new fight = new shapes)
   clear_fight_ref_cache() // + the prior fight's pinned shared-ref (a new fight = a new object)
   clear_gas_coin_cache() // + the prior fight's chained gas-coin pin (a new fight re-selects + re-chains)
   const receipt = await sign(tx, i18n.t('dungeons.action_start_room_all'))
-  return { receipt, fight_id: remember_created_fight(receipt) } // + cache its pinned shared ref (zero-read)
+  const fight_id = remember_created_fight(receipt) // + cache its pinned shared ref (zero-read)
+  note_engage_fight_id(tx, fight_id)
+  return { receipt, fight_id }
 }
 
 /**

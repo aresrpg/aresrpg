@@ -34,6 +34,7 @@ import { start_fight_engage } from '../game/fight_engage.js'
 import { context } from '../game/store.js'
 import { use_auth } from '../auth'
 import i18n from '../i18n'
+import { cancel_engage_timing, start_engage_timing } from '../core/engage_timing.js'
 import { game_log } from '../core/log.js'
 import { report_error } from '../core/report.js'
 
@@ -144,6 +145,7 @@ export const use_dungeon_dimension = create((set, get) => ({
     const me = use_auth.getState().address
     if (!dungeon || !me || dungeon.creator !== me) return // only the leader fires the start (party isn't surprised)
     if (get()._engaging) return
+    start_engage_timing('cave')
     set({ _engaging: true })
     // D107 tx-provenance: this engage IS the mob-cluster CLICK (the listener already asserted payload.user),
     // so thread the user gesture through to the store's start action — the ONLY legal room-start trigger.
@@ -173,10 +175,12 @@ export const use_dungeon_dimension = create((set, get) => ({
       // start surfaces here as "no fight was minted": roll the beat back FAST (parity with the world path's
       // fight_entry/abort — never the 20s belt) so the camera never hangs in iso view on a failed start.
       if (!use_dungeon.getState().fight_id) {
+        cancel_engage_timing()
         abort_fight_ceremony()
         context.events.emit('fight_entry/abort')
       }
     } catch (error) {
+      cancel_engage_timing()
       abort_fight_ceremony() // the start threw → drop the sword + bring the pack back (the toast showed the error)
       context.events.emit('fight_entry/abort') // + release the fight-entry camera (never a stuck iso view)
       throw error
