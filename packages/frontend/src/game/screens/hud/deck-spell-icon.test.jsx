@@ -5,7 +5,7 @@
 // exact pin-forever bug already fixed for SpellArt (SpellDetail.jsx) / ItemIcon via the shared retry ladder
 // (image_retry.js, design ruling 2026-07-17: pictures must not go missing until refresh) but never ported to the fight bar. A
 // class switch mounts a BURST of fresh sockets at once (new spell name_keys → new React keys), and a cold
-// Walrus quilt-patch miss under that burst 404'd once and pinned the element-tinted-initial fallback for
+// CDN-edge miss under that burst 404'd once and pinned the element-tinted-initial fallback for
 // the socket's whole mount life — only a full page refresh (fresh mount, warm edge) cleared it. Same
 // hook_runner/find_img idiom as image_retry.test.jsx (no DOM harness needed — SpellSocket's only hook is
 // use_image_retry → useState).
@@ -19,11 +19,9 @@ import { SpellSocket } from './deck-spell-socket.jsx'
 import { IMAGE_RETRY_DELAYS_MS } from './image_retry.js'
 
 const AGGREGATOR = 'https://hud-retry.example'
-const SPELL_QUILT = 'hud-retry-spell-icons'
-const url_for = (icon) => `${AGGREGATOR}/v1/blobs/by-quilt-id/${SPELL_QUILT}/${icon}.png`
+const url_for = (icon) => `${AGGREGATOR}/spells/${icon}.png`
 
-const configure = () =>
-  configure_walrus_assets({ aggregator: AGGREGATOR, classes: { spell: { quilt: SPELL_QUILT } } })
+const configure = () => configure_walrus_assets({ aggregator: AGGREGATOR, classes: { spell: { published: true } } })
 
 // class-A's starter (whatever class was active first) vs a senshi level-1 spell (Warcleave — one of the
 // THREE level-1 senshi starters that match the "slots 1-3" report; name_key = 'warcleave').

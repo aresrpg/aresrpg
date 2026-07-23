@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// items.test.tsx — ItemImage's HOST-FREE guard + HD-detail request, proven via react-dom/server (no jsdom,
-// mirroring item_detail_view.test.tsx). The external asset CDN host is DELETED, and a
-// stale on-chain Display `image_url` still pointing at ANY external host must be dropped to the origin-relative
-// /assets slug builder — never rendered. (The fake `legacy-cdn.example` host below stands in for the retired one
-// so this file itself stays free of the banned literal — the guard drops every non-Walrus absolute http url.)
+// items.test.tsx — ItemImage's re-homing guard + HD-detail request, proven via react-dom/server (no jsdom,
+// mirroring item_detail_view.test.tsx). The external asset CDN host is DELETED, and an on-chain Display
+// `image_url` pointing at ANY absolute host — stale, foreign, or the canonical asset host itself — is
+// RE-HOMED onto the configured asset host, keeping only its path (#650: host-confinement, not a
+// Walrus-specific shape). (The fake `legacy-cdn.example` host below stands in for a foreign origin so this
+// file itself stays free of the banned literal.)
 
 import { describe, test, expect } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -31,8 +32,8 @@ configure_walrus_assets({
 const src_of = (el: React.ReactElement): string =>
   (renderToStaticMarkup(el).match(/<img[^>]*\bsrc="([^"]*)"/) ?? [])[1] ?? ''
 
-describe('ItemImage — host-free guard + HD', () => {
-  test('a stale external-host Display url is DROPPED to the origin-relative /assets slug builder', () => {
+describe('ItemImage — Display re-homing guard + HD', () => {
+  test('a foreign-host Display url is RE-HOMED onto the configured asset host, never rendered raw (#650)', () => {
     const src = src_of(
       <ItemImage
         id="tool_herbalist"
@@ -41,8 +42,8 @@ describe('ItemImage — host-free guard + HD', () => {
         category="sword"
       />
     )
-    expect(src.startsWith('http')).toBe(false) // never an absolute external host
-    expect(src).toBe('/assets/items/tool_herbalist_hd.png') // host-free, HD variant requested
+    expect(src.startsWith('https://legacy-cdn.example')).toBe(false) // the foreign origin never survives
+    expect(src).toBe('https://cdn.aresrpg.world/walrus/items/tool_herbalist_hd.png') // re-homed, HD variant requested
   })
 
   test('hd derives the _hd variant of a host-free (relative) Display url first', () => {
@@ -50,7 +51,7 @@ describe('ItemImage — host-free guard + HD', () => {
     expect(src).toBe('/assets/items/wooden_sword_hd.png')
   })
 
-  test('a Walrus Display path is re-homed onto the configured CDN base', () => {
+  test('a Walrus-shaped Display path is re-homed onto the configured CDN base', () => {
     const raw = 'https://raw-origin.example/v1/blobs/by-quilt-id/Q/tool_herbalist.png'
     const src = src_of(<ItemImage id="tool_herbalist" image_url={raw} category="sword" />)
     expect(src).toBe('https://cdn.aresrpg.world/walrus/v1/blobs/by-quilt-id/Q/tool_herbalist.png')
@@ -60,7 +61,7 @@ describe('ItemImage — host-free guard + HD', () => {
     const src = src_of(
       <ItemImage id="tool_herbalist" image_url="https://legacy-cdn.example/items/tool_herbalist.png" category="sword" />
     )
-    expect(src).toBe('/assets/items/tool_herbalist.png')
+    expect(src).toBe('https://cdn.aresrpg.world/walrus/items/tool_herbalist.png')
   })
 
   test('a template object address is refused before <img> and renders the shared placeholder', () => {

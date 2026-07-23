@@ -19,9 +19,9 @@ import '../test_helpers/env_mock.js'
 
 // configure_walrus_assets has no test-reset seam (packages/sdk/src/jobs.js overwrites the aggregator with no
 // way to clear it back) — an earlier-run file (asset_manifest.test.ts) leaves a test aggregator configured
-// for the rest of the process (bun test runs every file in ONE process). The "re-homed onto the CDN" test
-// below expects the real default aggregator, so force it back before this file's tests run.
-configure_walrus_assets({ aggregator: 'https://cdn.aresrpg.world/walrus' })
+// for the rest of the process (bun test runs every file in ONE process). The "re-homed onto the CDN" tests
+// below expect the real default aggregator, so force it back before this file's tests run.
+configure_walrus_assets({ aggregator: 'https://cdn.aresrpg.world' })
 
 const {
   is_mount_item,
@@ -101,7 +101,7 @@ describe('resolve_mount — availability state machine', () => {
     const r = resolve_mount({ id: 'c1', mount: { id: 'm1', glb: '/models/pet/zot.glb' } }, '')
     expect(r.glb_url).toBe('/models/pet/zot.glb')
   })
-  test("an item's Walrus blob ref is re-homed onto the CDN", () => {
+  test("an item's Walrus-shaped blob ref is still re-homed onto the CDN (old minted Display data)", () => {
     const r = resolve_mount(
       {
         id: 'c1',
@@ -112,14 +112,29 @@ describe('resolve_mount — availability state machine', () => {
       },
       ''
     )
-    expect(r.glb_url).toBe('https://cdn.aresrpg.world/walrus/v1/blobs/by-quilt-id/MOUNT_Q/zot.glb')
+    expect(r.glb_url).toBe('https://cdn.aresrpg.world/v1/blobs/by-quilt-id/MOUNT_Q/zot.glb')
   })
-  test("an item's arbitrary absolute glb ref is discarded for the template convention", () => {
+  test("an item's arbitrary absolute glb ref is ALSO re-homed onto the CDN — any host, not just Walrus (#650)", () => {
+    // The old guard only recognized a `/v1/blobs/` marker and discarded anything else, falling through to
+    // the template convention. The new guard re-homes ANY absolute origin (host-confinement, not a
+    // Walrus-specific shape) — an attacker-hosted origin can never survive, but it no longer needs to BE
+    // Walrus-shaped for that property to hold.
     const r = resolve_mount(
       { id: 'c1', mount: { id: 'm1', template_id: 'mount_zot', glb: 'https://legacy-origin.example/zot.glb' } },
       ''
     )
-    expect(r.glb_url).toBe('https://cdn.test/cosmetics/mount_zot.glb')
+    expect(r.glb_url).toBe('https://cdn.aresrpg.world/zot.glb')
+  })
+  test("an item's OWN object address is NEVER used as the art key (owner ruling: one image per type, never per address)", () => {
+    // No template_id / item_type on the equipped mount — only its live Sui object id. Before the fix this
+    // fell through to `item?.id`, building a garbage per-address URL (.../cosmetics/0xdead….glb) that could
+    // never resolve; the honest behavior is no art, never a wrong per-instance request.
+    const r = resolve_mount(
+      { id: 'c1', mount: { id: '0xdeadbeef00000000000000000000000000000000000000000000000000000000' } },
+      ''
+    )
+    expect(r.available).toBe(true)
+    expect(r.glb_url).toBeNull()
   })
   test('no mount / empty / null → not available (never throws)', () => {
     expect(resolve_mount({ id: 'c1' }, '').available).toBe(false)
@@ -138,11 +153,13 @@ describe('worn_dev_url — DEV worn-slot override → served /models GLB', () =>
     expect(worn_dev_url('equipment/cape_fuwa.glb')).toBe('/models/equipment/cape_fuwa.glb')
     expect(worn_dev_url('equipment/solomonk.glb')).toBe('/models/equipment/solomonk.glb')
   })
-  test('a full URL / absolute served path passes through; empty → null', () => {
+  test('a same-origin absolute served path passes through; empty → null', () => {
     expect(worn_dev_url('/sui_helmet.glb')).toBe('/sui_helmet.glb')
-    expect(worn_dev_url('https://cdn.test/cosmetics/x.glb')).toBe('https://cdn.test/cosmetics/x.glb')
     expect(worn_dev_url('')).toBe(null)
     expect(worn_dev_url(null)).toBe(null)
+  })
+  test('a full external URL is ALSO re-homed onto the CDN — the host-confinement guard applies here too (#650)', () => {
+    expect(worn_dev_url('https://cdn.test/cosmetics/x.glb')).toBe('https://cdn.aresrpg.world/cosmetics/x.glb')
   })
 })
 

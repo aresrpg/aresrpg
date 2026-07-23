@@ -17,10 +17,9 @@ import { set_pet_catalog_for_test } from './data/pet_catalog.js'
 import { set_catalog_for_test as set_mob_catalog_for_test } from './data/mob_catalog.js'
 import { resolve_pet_companion, resolve_pet_model_url } from './pet_companion_resolver.js'
 
-const MOB_QUILT = 'mob-test'
-const mob_url = (glb) => `https://cdn.test/walrus/v1/blobs/by-quilt-id/${MOB_QUILT}/${glb}.glb`
+const mob_url = (glb) => `https://cdn.test/walrus/models/mobs/${glb}.glb`
 
-configure_walrus_assets({ aggregator: 'https://cdn.test/walrus', classes: { mob: { quilt: MOB_QUILT } } })
+configure_walrus_assets({ aggregator: 'https://cdn.test/walrus', classes: { mob: { published: true } } })
 
 afterEach(() => {
   set_pet_catalog_for_test()

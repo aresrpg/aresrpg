@@ -20,13 +20,13 @@ describe('pet catalog runtime loader', () => {
   })
 
   test('fetches pet_catalog.json once and caches the published rows', async () => {
-    configure_walrus_assets({ classes: { pet_catalog: { quilt: 'pet-test' } } })
+    configure_walrus_assets({ classes: { pet_catalog: { published: true } } })
     const rows = { pet_aloe_gaia: { appearance: 'Armadillo_Aloe', glb: 'hy_armadillo_aloe' } }
     const original_fetch = globalThis.fetch
     let calls = 0
     globalThis.fetch = (/** @type {any} */ url) => {
       calls += 1
-      expect(url).toContain('/pet-test/pet_catalog.json')
+      expect(url).toContain('/data/pet_catalog.json')
       return Promise.resolve(new Response(JSON.stringify(rows)))
     }
     try {
@@ -40,7 +40,7 @@ describe('pet catalog runtime loader', () => {
   })
 
   test('a failed fetch leaves the cache empty and retryable (never cached as truth)', async () => {
-    configure_walrus_assets({ classes: { pet_catalog: { quilt: 'pet-test' } } })
+    configure_walrus_assets({ classes: { pet_catalog: { published: true } } })
     const original_fetch = globalThis.fetch
     globalThis.fetch = () => Promise.resolve(new Response('', { status: 500 }))
     try {

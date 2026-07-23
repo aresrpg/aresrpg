@@ -302,7 +302,11 @@ export function resolve_mount(character, search) {
   // gate the speed selector uses, so a stray scalar never counts. GLB = the item's own ref, else convention.
   const item = character?.mount
   if (mount_speed_multiplier(character) > 1) {
-    const template_id = item?.template_id ?? item?.item_type ?? item?.id
+    // template_id NEVER falls to `item?.id` — that's the item's own Sui OBJECT ADDRESS on a live read-model,
+    // never an art key (owner ruling: one image per type, never per address). No template/type identifier ⇒
+    // an honest no-art degrade (cosmetic_glb_url(undefined) → null) instead of requesting a garbage
+    // address-named file that can never exist.
+    const template_id = item?.template_id ?? item?.item_type
     const explicit = item && (item.glb || item.glb_url)
     const explicit_local =
       typeof explicit === 'string' && explicit.startsWith('/') && !explicit.startsWith('//') ? explicit : null

@@ -27,12 +27,11 @@ const TEMPLATES = new Map([
   [CLOAK_TEMPLATE, { template_id: CLOAK_TEMPLATE, appearance: 'cape_fuwa', variant: 'black' }],
 ])
 
-// mob quilt config for pet_of — SAME registration pet_companion_resolver.test.js already makes (merge-only,
+// mob class config for pet_of — SAME registration pet_companion_resolver.test.js already makes (merge-only,
 // process-shared per jobs.js's reset_walrus_assets_for_test doc — the identical values keep this idempotent
 // regardless of bun test's file load order).
-const MOB_QUILT = 'mob-test'
-configure_walrus_assets({ aggregator: 'https://cdn.test/walrus', classes: { mob: { quilt: MOB_QUILT } } })
-const mob_url = (glb) => `https://cdn.test/walrus/v1/blobs/by-quilt-id/${MOB_QUILT}/${glb}.glb`
+configure_walrus_assets({ aggregator: 'https://cdn.test/walrus', classes: { mob: { published: true } } })
+const mob_url = (glb) => `https://cdn.test/walrus/models/mobs/${glb}.glb`
 
 // A captured/real `/v1/characters` row shape (views.js handle_characters): `worn` is keyed by CATEGORY, each
 // slot {item_id, template_id, category} — NOT the engine's {head,back}/{url,variant} shape. resolve_worn_cosmetics

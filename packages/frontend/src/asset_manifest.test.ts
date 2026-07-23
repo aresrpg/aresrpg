@@ -10,15 +10,14 @@ import { load_asset_manifest, reset_asset_manifest_for_test, subscribe } from '.
 beforeEach(reset_asset_manifest_for_test)
 
 // A url_class NO other test configures, so the resolver starts EMPTY (null) — the "cached absence"
-// precondition. Recovery must flip it to a real Walrus URL with NO page refresh.
+// precondition. Recovery must flip it to a real asset-host URL with NO page refresh.
 const CLASS = 'poison_probe_cosmetic'
 const FILE = 'wanted.png'
 const AGG = 'https://recovered.example'
-const QUILT = 'poison-probe-quilt'
-const EXPECTED = `${AGG}/v1/blobs/by-quilt-id/${QUILT}/${FILE}`
+const EXPECTED = `${AGG}/${CLASS}/${FILE}`
 
 const manifest_response = () =>
-  new Response(JSON.stringify({ aggregator: AGG, classes: { [CLASS]: { quilt: QUILT } } }))
+  new Response(JSON.stringify({ aggregator: AGG, classes: { [CLASS]: { published: true } } }))
 
 // A manual scheduler captures the background-retry callbacks so the test drives "time passing"
 // (NOT a page refresh) deterministically.

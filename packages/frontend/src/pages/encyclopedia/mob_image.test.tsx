@@ -25,13 +25,12 @@ test('EncyclopediaMobImage uses the shield glyph when no Walrus icon can be reso
 
 // ── first-navigation transient-failure repro: the encyclopedia doesn't display mob pictures unless the
 // page is refreshed. The resolver is correct post-boot (asset_manifest_boot.test.tsx)
-// and the URLs serve 200 — the broken window is the FIRST fetch itself: a cold Walrus edge takes
-// seconds per quilt patch and can fail under the bestiary's concurrent burst. The component must treat
+// and the URLs serve 200 — the broken window is the FIRST fetch itself: a cold CDN edge can take a beat
+// and fail under the bestiary's concurrent burst. The component must treat
 // that as transient (bounded retry), never pin the very first error into a glyph until a full reload. ──
 
 const AGGREGATOR = 'https://first-nav.example'
-const QUILT = 'first-nav-mob-icons'
-const HD_SRC = `${AGGREGATOR}/v1/blobs/by-quilt-id/${QUILT}/hy_bunny_hd.png`
+const HD_SRC = `${AGGREGATOR}/mobs/hy_bunny_hd.png`
 
 type StateSetter<T> = (next: T | ((current: T) => T)) => void
 type ReactInternals = { H: unknown }
@@ -85,7 +84,7 @@ test('a transient first-load failure retries on its own instead of pinning the g
   // set_catalog_for_test is the sanctioned seam (mirrors set_spell_corpus_for_test) — seed the one row this
   // test's mob needs so it exercises the REAL resolution path, not a skip (the fact IS testable).
   set_catalog_for_test({ alley_bunny: { appearance: null, glb: 'hy_bunny' } })
-  configure_walrus_assets({ aggregator: AGGREGATOR, classes: { mob_icon: { quilt: QUILT } } })
+  configure_walrus_assets({ aggregator: AGGREGATOR, classes: { mob_icon: { published: true } } })
   const runner = hook_runner()
   const element = <EncyclopediaMobImage mob={{ name: 'Alley Bunny' }} hd />
 

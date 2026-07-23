@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// HUD pin-forever image regression (encyclopedia-proven class): a cold Walrus quilt patch
-// takes ~2-3s to reconstruct and can fail under a concurrent burst. SpellArt and ItemIcon treated that
+// HUD pin-forever image regression (encyclopedia-proven class): a cold CDN edge
+// can take a beat and fail under a concurrent burst. SpellArt and ItemIcon treated that
 // very first transient error as PERMANENT — onError pinned the fallback (tinted initial / category
 // glyph) for the component's whole life; only a full page refresh re-attempted. The fix mirrors the
 // encyclopedia's landed reducer+ladder (pages/encyclopedia/mob_image.tsx): ONE pure reducer, a bounded
@@ -16,16 +16,14 @@ import { ItemIcon } from './ItemIcon.jsx'
 import { IMAGE_RETRY_DELAYS_MS, image_load_state, reduce_image_load } from './image_retry.js'
 
 const AGGREGATOR = 'https://hud-retry.example'
-const SPELL_QUILT = 'hud-retry-spell-icons'
-const ITEM_QUILT = 'hud-retry-item-icons'
-const SPELL_SRC = `${AGGREGATOR}/v1/blobs/by-quilt-id/${SPELL_QUILT}/ikari_haki.png`
-const ITEM_SRC = `${AGGREGATOR}/v1/blobs/by-quilt-id/${ITEM_QUILT}/aberrant_faceguard.png`
-const ITEM_HD_SRC = `${AGGREGATOR}/v1/blobs/by-quilt-id/${ITEM_QUILT}/aberrant_faceguard_hd.png`
+const SPELL_SRC = `${AGGREGATOR}/spells/ikari_haki.png`
+const ITEM_SRC = `${AGGREGATOR}/items/aberrant_faceguard.png`
+const ITEM_HD_SRC = `${AGGREGATOR}/items/aberrant_faceguard_hd.png`
 
 const configure = () =>
   configure_walrus_assets({
     aggregator: AGGREGATOR,
-    classes: { spell: { quilt: SPELL_QUILT }, item: { quilt: ITEM_QUILT } },
+    classes: { spell: { published: true }, item: { published: true } },
   })
 
 /** Minimal hook dispatcher (same idiom as mob_image.test.tsx / shop_preview_handler.test.tsx) — useState

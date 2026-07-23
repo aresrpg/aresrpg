@@ -18,9 +18,9 @@ import {
   type CardItem,
 } from './shop_vitrine'
 
-const CDN = 'https://cdn.aresrpg.world/walrus'
-const QUILT = 'YryaIHlXW9z8sRFQhpYdodkpJLs3R9syj0u-R4jzlSo'
-configure_walrus_assets({ aggregator: CDN, classes: { shop_render: { quilt: QUILT } } })
+const CDN = 'https://cdn.aresrpg.world'
+configure_walrus_assets({ aggregator: CDN, classes: { shop_render: { published: true } } })
+const shop_url = (file: string) => `${CDN}/shop/${file}`
 
 const test_i18n = i18next.createInstance()
 test_i18n.use(initReactI18next).init({
@@ -73,9 +73,9 @@ describe('shop render aliases and published media', () => {
       identifier: 'pet_bouloute',
       entry: { kind: 'pet', video: 'pet_bouloute_pet.webm' },
     })
-    expect(shop_asset_url(bara?.entry.video)).toBe(`${CDN}/v1/blobs/by-quilt-id/${QUILT}/capuche_bara_worn.webm`)
-    expect(shop_asset_url(kamui?.entry.video)).toBe(`${CDN}/v1/blobs/by-quilt-id/${QUILT}/cape_kamui_worn.webm`)
-    expect(shop_asset_url(pet?.entry.video)).toBe(`${CDN}/v1/blobs/by-quilt-id/${QUILT}/pet_bouloute_pet.webm`)
+    expect(shop_asset_url(bara?.entry.video)).toBe(shop_url('capuche_bara_worn.webm'))
+    expect(shop_asset_url(kamui?.entry.video)).toBe(shop_url('cape_kamui_worn.webm'))
+    expect(shop_asset_url(pet?.entry.video)).toBe(shop_url('pet_bouloute_pet.webm'))
   })
 
   test('Bara Hood recolor: the old vitality/wisdom keys still resolve, now through to the renamed obsidian/moonstone media', () => {
@@ -103,12 +103,8 @@ describe('shop render aliases and published media', () => {
     expect(resolve_shop_render('bara_hood_obsidian')?.identifier).toBe('capuche_bara_obsidian')
     expect(resolve_shop_render('bara_hood_moonstone')?.identifier).toBe('capuche_bara_moonstone')
 
-    expect(shop_asset_url(legacy_vitality?.entry.video)).toBe(
-      `${CDN}/v1/blobs/by-quilt-id/${QUILT}/capuche_bara_obsidian_worn.webm`
-    )
-    expect(shop_asset_url(legacy_wisdom?.entry.video)).toBe(
-      `${CDN}/v1/blobs/by-quilt-id/${QUILT}/capuche_bara_moonstone_worn.webm`
-    )
+    expect(shop_asset_url(legacy_vitality?.entry.video)).toBe(shop_url('capuche_bara_obsidian_worn.webm'))
+    expect(shop_asset_url(legacy_wisdom?.entry.video)).toBe(shop_url('capuche_bara_moonstone_worn.webm'))
   })
 
   test('resolves corrected cloak names and canonical Lorito gemstone names', () => {
@@ -130,7 +126,7 @@ describe('shop render aliases and published media', () => {
     const html = render_card({ ...ITEM, render_name: 'Bara Hood' })
     expect(html).not.toContain('class="mannequin"')
     expect(html).toContain('class="case-worn"')
-    expect(html).toContain(`${QUILT}/capuche_bara_hd.png`)
+    expect(html).toContain(shop_url('capuche_bara_hd.png'))
     expect(html).not.toContain('<video')
     expect(html).not.toContain('preview-btn')
   })
