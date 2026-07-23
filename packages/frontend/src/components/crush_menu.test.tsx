@@ -2,29 +2,27 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { readFileSync } from 'node:fs'
 
-import { describe, expect, mock, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider } from 'react-i18next'
 import { ITEM_CATEGORY } from '@aresrpg/sdk/items'
 
+import { reset_auth_mock } from '../test_helpers/auth_mock.js'
 import i18n from '../i18n'
 
 import { explorer_object_url } from './explorer_link'
 
-const crush_calls: any[] = []
-
 mock.module('virtual:item_catalog', () => ({ slugs: {} }))
 
-mock.module('../world-shell/crush_actions.js', () => ({
-  crush_preview: async () => ({ removed: false, rows: [], coeff_milli: 100_000, estimated: false }),
-  crush_item: async (args: any) => {
-    crush_calls.push(args)
-    return { result: {} }
-  },
-}))
+// #569: crush_actions is also tested in this Bun process, whose mock.module registry has no unmock operation.
+// Keep action doubles test-local through dispatch_crush_action's dependency seam.
+reset_auth_mock()
 
 const crush_menu = await import('./crush_menu')
 const crush_menu_source = readFileSync(new URL('./crush_menu.tsx', import.meta.url), 'utf8')
+
+beforeEach(() => reset_auth_mock())
+afterEach(() => reset_auth_mock())
 
 const item = (item_category: string) => ({
   id: '0xitem',
@@ -68,16 +66,21 @@ describe('CrushMenu action wiring', () => {
   })
 
   test('a crushable item dispatches the crush action exactly once', async () => {
-    crush_calls.length = 0
     const gear = item(ITEM_CATEGORY.HAT)
+    const outcome = { result: {}, timing: { digest: '11111111111111111111111111111111' } }
+    const crush = mock(async () => outcome)
 
-    await crush_menu.dispatch_crush_action?.({
-      item: gear,
-      character_id: '0xcharacter',
-      toast: async (promise: Promise<any>) => promise,
-    })
+    await expect(
+      crush_menu.dispatch_crush_action?.({
+        item: gear,
+        character_id: '0xcharacter',
+        crush,
+        toast: async (promise: Promise<any>) => promise,
+      })
+    ).resolves.toBe(outcome)
 
-    expect(crush_calls).toEqual([{ item: gear, character_id: '0xcharacter' }])
+    expect(crush).toHaveBeenCalledTimes(1)
+    expect(crush).toHaveBeenCalledWith({ item: gear, character_id: '0xcharacter' })
   })
 
   test('four concurrent confirms share one refused crush attempt and one toast, then re-arm', async () => {
@@ -119,18 +122,20 @@ describe('CrushMenu action wiring', () => {
   })
 
   // ISSUE #270 (RED before the fix — this threw "This item cannot be crushed into runes." before ever
-  // reaching crush(), so crush_calls stayed empty): a zero-rune, non-gear item composes the SAME PTB.
+  // reaching the injected action): a zero-rune, non-gear item composes the SAME PTB.
   test('a zero-rune (non-gear) item ALSO dispatches the crush action exactly once', async () => {
-    crush_calls.length = 0
     const resource = item(ITEM_CATEGORY.RESOURCE)
+    const crush = mock(async () => ({ result: {}, timing: { digest: '11111111111111111111111111111111' } }))
 
     await crush_menu.dispatch_crush_action?.({
       item: resource,
       character_id: '0xcharacter',
+      crush,
       toast: async (promise: Promise<any>) => promise,
     })
 
-    expect(crush_calls).toEqual([{ item: resource, character_id: '0xcharacter' }])
+    expect(crush).toHaveBeenCalledTimes(1)
+    expect(crush).toHaveBeenCalledWith({ item: resource, character_id: '0xcharacter' })
   })
 
   test('preview loading never deadlocks a valid crush button', () => {

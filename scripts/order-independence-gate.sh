@@ -52,6 +52,16 @@ run_combo "lootbox executed-failure durability — the hud suite" \
 run_combo "ambient music stream lifecycle — the game suite" \
   "$FE/game/"
 
+# ⑩⑪ Bun's mock.module registry is process-global and has no unmock operation. The crush menu suite used to
+# replace the whole crush_actions module, so the action suite later exercised that fake and lost timing.digest.
+# world_checkpoint also replaced @aresrpg/sdk/game with a partial export set, making the real action module
+# unloadable once the menu stopped masking it. Both suites now use per-test injected mocks/spies with lifecycle
+# cleanup; these exact pairs pin the two shared-process regressions from #569.
+run_combo "crush action seam — menu and action suites share no module replacement" \
+  "$FE/components/crush_menu.test.tsx" "$FE/world-shell/crush_actions.test.js"
+run_combo "crush SDK exports — checkpoint and action suites share the real module" \
+  "$FE/world-shell/world_checkpoint.test.js" "$FE/world-shell/crush_actions.test.js"
+
 if [ "$FAIL" -ne 0 ]; then
   echo "ORDER-INDEPENDENCE GATE FAILED — a reintroduced module-global leak broke a cold-state fixture."
   exit 1

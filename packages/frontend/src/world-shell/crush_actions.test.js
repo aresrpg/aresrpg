@@ -4,15 +4,12 @@
 // `/v1/owner-items` row; crush must compose against that kiosk/cap even when the active character lives in a
 // sibling kiosk. This is the action-level PTB proof: values change, the SDK builder's argument SHAPE does not.
 
-import { afterAll, beforeEach, describe, expect, spyOn, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 
 import { reset_auth_mock } from '../test_helpers/auth_mock.js'
 import { reset_expedition_sdk_mock, set_expedition_sdk_mock } from '../test_helpers/expedition_sdk_mock.js'
 
-reset_auth_mock({ address: '0xowner', wallet_name: 'zklogin' })
-
 const fake_sdk = { get_rolled_stats: async () => null, grpc_client: {} }
-set_expedition_sdk_mock(async () => fake_sdk)
 
 const sdk_game = await import('@aresrpg/sdk/game')
 const read_findables = await import('../chain/read_findables.js')
@@ -30,36 +27,41 @@ const item = {
 const item_cap_id = '0xitem-cap'
 const composed = []
 
-const template_map = spyOn(read_findables, 'get_template_map').mockResolvedValue(
-  new Map([[item.template_id, { id: item.template_id, item_type: item.item_type, level: 1 }]])
-)
-const template_type_map = spyOn(read_findables, 'get_template_by_item_type_map').mockResolvedValue(new Map())
-const registry = spyOn(sdk_game, 'get_crush_registry').mockImplementation(() => async () => ({ by_key: new Map() }))
-const compose = spyOn(sdk_game, 'crush_ptb').mockImplementation(() => (args) => {
-  composed.push(args)
-  return { fake: 'tx' }
-})
-const character_resolve = spyOn(kiosk_resolve, 'kiosk_for_character').mockResolvedValue({
-  kiosk_id: '0xcharacter-kiosk',
-  personal_kiosk_cap_id: '0xcharacter-cap',
-})
-const item_cap_resolve = spyOn(kiosk_resolve, 'cap_for_kiosk').mockResolvedValue(item_cap_id)
-const submit = spyOn(tx_seam, 'run_tx_random').mockResolvedValue({ result: { digest: '0xdigest' } })
-const refresh = spyOn(roster, 'load_roster').mockResolvedValue(undefined)
-
-const spies = [template_map, template_type_map, registry, compose, character_resolve, item_cap_resolve, submit, refresh]
-
 const { crush_item } = await import('./crush_actions.js')
+
+let item_cap_resolve
+let submit
+let refresh
+let spies = []
 
 beforeEach(() => {
   composed.length = 0
   reset_auth_mock({ address: '0xowner', wallet_name: 'zklogin' })
   set_expedition_sdk_mock(async () => fake_sdk)
-  for (const test_spy of spies) test_spy.mockClear()
+  const template_map = spyOn(read_findables, 'get_template_map').mockResolvedValue(
+    new Map([[item.template_id, { id: item.template_id, item_type: item.item_type, level: 1 }]])
+  )
+  const template_type_map = spyOn(read_findables, 'get_template_by_item_type_map').mockResolvedValue(new Map())
+  const registry = spyOn(sdk_game, 'get_crush_registry').mockImplementation(() => async () => ({
+    by_key: new Map(),
+  }))
+  const compose = spyOn(sdk_game, 'crush_ptb').mockImplementation(() => (args) => {
+    composed.push(args)
+    return { fake: 'tx' }
+  })
+  item_cap_resolve = spyOn(kiosk_resolve, 'cap_for_kiosk').mockResolvedValue(item_cap_id)
+  // run_tx_random returns the submitted digest on timing; normalized result is the effects/event receipt.
+  submit = spyOn(tx_seam, 'run_tx_random').mockResolvedValue({
+    result: {},
+    timing: { digest: '11111111111111111111111111111111' },
+  })
+  refresh = spyOn(roster, 'load_roster').mockResolvedValue(undefined)
+  spies = [template_map, template_type_map, registry, compose, item_cap_resolve, submit, refresh]
 })
 
-afterAll(() => {
+afterEach(() => {
   for (const test_spy of [...spies].reverse()) test_spy.mockRestore()
+  spies = []
   reset_expedition_sdk_mock()
   reset_auth_mock()
 })
@@ -67,10 +69,10 @@ afterAll(() => {
 describe('crush_item kiosk resolution', () => {
   test("builds a sibling-kiosk item's PTB against the item's own kiosk and cap", async () => {
     await expect(crush_item({ item, character_id: '0xcharacter' })).resolves.toEqual({
-      result: { digest: '0xdigest' },
+      result: {},
+      timing: { digest: '11111111111111111111111111111111' },
     })
 
-    expect(character_resolve).not.toHaveBeenCalled()
     expect(item_cap_resolve).toHaveBeenCalledWith(fake_sdk, '0xowner', item.kiosk_id)
     expect(composed).toHaveLength(1)
     expect(composed[0]).toMatchObject({
@@ -79,5 +81,7 @@ describe('crush_item kiosk resolution', () => {
       character_id: '0xcharacter',
       gear_item_ids: [item.id],
     })
+    expect(submit).toHaveBeenCalledWith('crush', { fake: 'tx' })
+    expect(refresh).toHaveBeenCalledTimes(1)
   })
 })

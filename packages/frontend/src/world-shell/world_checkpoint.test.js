@@ -11,15 +11,14 @@
 // position"). Drives the REAL module (no mocked internals of world_checkpoint.js itself) — only its chain-edge
 // dependencies (read_checkpoint, get_sdk, get_world) are doubled so the test runs offline.
 
-import { afterEach, beforeEach, expect, mock, test } from 'bun:test'
+import { afterEach, beforeEach, expect, spyOn, test } from 'bun:test'
+import * as sdk_game from '@aresrpg/sdk/game'
 
 import { reset_expedition_sdk_mock, set_expedition_sdk_mock } from '../test_helpers/expedition_sdk_mock.js'
+import * as checkpoint_read from '../chain/read_checkpoint.js'
 
-// mock.module is PROCESS-GLOBAL (bun) — registered once, before world_checkpoint.js (and its dependents) load.
-let read_checkpoint_impl = async () => null
-mock.module('../chain/read_checkpoint.js', () => ({
-  read_checkpoint: (...args) => read_checkpoint_impl(...args),
-}))
+// #569: these edge doubles must be lifecycle-scoped spies. A partial mock.module('@aresrpg/sdk/game') replaces
+// that package for every later Bun suite and makes consumers of any omitted export unloadable.
 // #123 (cross-file dangling-promise pollution, sibling class): chain/sdk's get_sdk is ALREADY mocked
 // process-wide by test_helpers/expedition_sdk_mock.js — a SECOND direct `mock.module('../chain/sdk', ...)`
 // here would compete for the same process-global registration (bun: no unmock API, last-loaded wins), and
@@ -30,13 +29,6 @@ mock.module('../chain/read_checkpoint.js', () => ({
 // (not module-top-once) since reset_expedition_sdk_mock() must run between files and the mock has to be back
 // in place before EACH of this file's own tests, not just its first.
 const world_checkpoint_sdk = async () => ({ grpc_client: {} })
-mock.module('@aresrpg/sdk/game', () => ({
-  // No live World doc in this test — world_offsets/checkpoint_to_world fall back to DEFAULT_WORLD_OFFSET
-  // (250_000 per axis), which is the exact behavior a transient world-doc read miss already tolerates.
-  get_world: () => async () => null,
-}))
-
-set_expedition_sdk_mock(world_checkpoint_sdk) // armed before the module-under-test import below
 
 const {
   resolve_checkpoint_spawn,
@@ -52,14 +44,24 @@ const WORLD = 'world-1'
 const CHAIN_POS = { x: 100, z: 200 }
 const EXPECTED_WORLD_POS = { x: 100 - 250_000, z: 200 - 250_000 }
 
+let read_checkpoint
+let get_world
+
 beforeEach(() => {
   _reset_for_test()
-  read_checkpoint_impl = async () => null // the chain-direct DF read finds nothing yet (indexer/RPC lag)
+  read_checkpoint = spyOn(checkpoint_read, 'read_checkpoint').mockResolvedValue(null)
+  // No live World doc in this test — world_offsets/checkpoint_to_world fall back to DEFAULT_WORLD_OFFSET
+  // (250_000 per axis), which is the exact behavior a transient world-doc read miss already tolerates.
+  get_world = spyOn(sdk_game, 'get_world').mockImplementation(() => async () => null)
   set_expedition_sdk_mock(world_checkpoint_sdk) // re-arm — afterEach below clears it for whichever test/file is next
 })
 
 // #123: never leave this file's sdk mock configured for whichever test/file the shared process runs next.
-afterEach(() => reset_expedition_sdk_mock())
+afterEach(() => {
+  get_world.mockRestore()
+  read_checkpoint.mockRestore()
+  reset_expedition_sdk_mock()
+})
 
 test('a receipt-seeded position is readable synchronously before any chain re-read', async () => {
   expect(read_checkpoint_spawn(CHAR, WORLD)).toBeNull() // nothing seeded yet
@@ -94,7 +96,7 @@ test('a lagging chain-direct read (still "no checkpoint") must NOT erase an alre
 test('a chain-direct read that DOES confirm a checkpoint still adopts (chain truth wins when it actually answers)', async () => {
   await seed_checkpoint_spawn(CHAR, WORLD, CHAIN_POS)
   const moved = { x: 300, z: 400 }
-  read_checkpoint_impl = async () => moved // a LATER search moved the checkpoint; the chain read now confirms it
+  read_checkpoint.mockResolvedValue(moved) // a LATER search moved the checkpoint; the chain read now confirms it
   await resolve_checkpoint_spawn(CHAR, WORLD)
   expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual({ x: moved.x - 250_000, z: moved.z - 250_000 })
 })

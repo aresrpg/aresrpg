@@ -109,7 +109,7 @@ export async function crush_preview(item) {
  * keep-budget &Random door. Throws translated Errors for the modal's toast; refreshes the shared roster/bag
  * store on success (the equip post-tx pattern).
  * @param {{ item: { id: string, template_id?: string|null, item_type: string, kiosk_id?: string, level?: number }, character_id: string }} args
- * @returns {Promise<{ result: any }>}
+ * @returns {Promise<{ result: any, timing: any }>}
  */
 export async function crush_item({ item, character_id }) {
   const { address } = use_auth.getState()
