@@ -426,7 +426,9 @@ const handle_move = (state, cmd, ctx) => {
   // trap it crossed inline (walk_path's own #325 resume loop), so entered_trap is always false for it.
   const trap_cell = walked.traversed[walked.traversed.length - 1]
   const post_trap = walked.entered_trap
-    ? check_traps(walked.state, trap_cell, cmd.entity_id, cell => terrain_walkable(ctx.arena, cell))
+    ? check_traps(walked.state, trap_cell, cmd.entity_id, cell =>
+        terrain_walkable(ctx.arena, cell),
+      )
     : null
   const final_state = post_trap?.state ?? walked.state
   const trap_events = post_trap?.triggered
@@ -483,7 +485,12 @@ const walk_path = (state, cmd, ctx) => {
     const survivor = find_entity(contest.state, cmd.entity_id)
     const start_cell = find_entity(state, cmd.entity_id).cell
     const cap = Math.min(cmd.path.length, survivor?.mp ?? 0)
-    const stepped = walk_taxed_prefix(contest.state, cmd.entity_id, [start_cell, ...cmd.path], cap)
+    const stepped = walk_taxed_prefix(
+      contest.state,
+      cmd.entity_id,
+      [start_cell, ...cmd.path],
+      cap,
+    )
     return {
       state: stepped.state,
       traversed: cmd.path.slice(0, stepped.steps),

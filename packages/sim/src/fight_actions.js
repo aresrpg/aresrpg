@@ -98,7 +98,11 @@ export const walk_taxed_prefix = (state, entity_id, path, cap) => {
       mp_used: e.mp_used + 1,
     }))
     steps += 1
-    if (state.traps.some(trap => trap.cells.some(c => c.x === next_cell.x && c.y === next_cell.y))) {
+    if (
+      state.traps.some(trap =>
+        trap.cells.some(c => c.x === next_cell.x && c.y === next_cell.y),
+      )
+    ) {
       entered_trap = true
       break
     }

@@ -31,7 +31,12 @@ describe('DungeonBoard flush — each cast validated against the evolved sequenc
     const evolve_call = body.slice(evolve_start, evolve_end)
     expect(evolve_call).toMatch(/\bactions\s*[:,]/)
     expect(evolve_call).not.toMatch(/\bcasts\s*:/)
-    expect(src).toMatch(/kind:\s*0,\s*target:\s*cell,\s*landed:\s*!bite/)
+    // #239 THE TACKLE TOLL: a bitten move now STILL stages (the chain rolls, taxes, and walks the survivor —
+    // it never "doesn't land"), so the stage intent no longer carries a landed flag for this call site.
+    // evolve_move's existing mp-budgeted walk already reflects the immediate 'Tackled' tax fold, so no landed
+    // signal is needed here for the toll case; `entry.landed` (asserted below) remains live for the drafted-
+    // action replay/evolution path, unrelated to this call site.
+    expect(src).toMatch(/kind:\s*0,\s*target:\s*cell\s*\}/)
     expect(src).toMatch(/landed:\s*entry\.landed/)
 
     // The old binary approximation destroyed interleaving by rebuilding two blocks. It must not remain as a
