@@ -475,7 +475,8 @@ export function create_player({
     desired_worn = resolve_worn_cosmetics(live, worn_templates)
     // PET COMPANION — same receipt-driven shape as desired_worn: character.pet/pet_equipped decides
     // spawn/despawn + appearance; frame2 reconciles the rig against this verdict. LOCAL rendering only
-    // (peer pets are the remote-side follow-up, same COSMETICS TRANSPORT RULING as worn cosmetics above).
+    // (peers render MY pet themselves off their own /v1 read — remote_players.js, #553 — same TRANSPORT
+    // RULING as worn cosmetics above; this path is untouched by that landing).
     desired_pet = resolve_pet_companion(live)
     // TR-97 — broadcast the aura state (edge-triggered) so remote players render my veteran aura too.
     if (aura_active !== last_veteran_bcast) {
