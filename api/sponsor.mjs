@@ -78,7 +78,37 @@ const release_package_ids = [
 ].filter(Boolean)
 const outdated_package_ids = package_releases.flatMap(({ previous }) => previous ?? [])
 
-const ARESRPG_PACKAGES = normalize_set(release_package_ids.join(','))
+const SUI_ADDRESS_RE = /^0x[0-9a-f]{64}$/
+// The PTB-scope allowlist: SPONSOR_ARESRPG_PACKAGES env (comma-separated 0x ids) wins when SET, so
+// a ceremony/republish is a config change, never an image rebuild (the 07-20 scope-bake outage).
+// Unset falls back to the release.json derivation below (dev/local convenience). FAIL CLOSED: a
+// SET-but-empty env, or any entry that isn't a full 0x + 64-hex address, refuses to boot with the
+// bad entry named — never a silent fallback (a typo'd allowlist must never quietly sponsor the
+// wrong scope).
+function resolve_aresrpg_packages() {
+  const env = process.env.SPONSOR_ARESRPG_PACKAGES
+  if (env == null) {
+    const ids = normalize_set(release_package_ids.join(','))
+    console.log(`sponsor allowlist: release.json(${ids.size})`)
+    return ids
+  }
+  const entries = env
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .map((value) => value.toLowerCase())
+  if (!entries.length)
+    throw new Error('sponsor-misconfig: SPONSOR_ARESRPG_PACKAGES is set but empty — refusing to boot (fail-closed)')
+  const bad_entry = entries.find((value) => !SUI_ADDRESS_RE.test(value))
+  if (bad_entry)
+    throw new Error(
+      `sponsor-misconfig: SPONSOR_ARESRPG_PACKAGES has a malformed entry "${bad_entry}" (want 0x + 64 hex chars) — refusing to boot (fail-closed)`
+    )
+  const ids = new Set(entries)
+  console.log(`sponsor allowlist: env(${ids.size})`)
+  return ids
+}
+const ARESRPG_PACKAGES = resolve_aresrpg_packages()
 const OUTDATED_PACKAGES = normalize_set(outdated_package_ids.join(','))
 const FRAMEWORK_PACKAGES = normalize_set((network_release?.system.sponsor_framework_packages ?? []).join(','))
 const OUTDATED_PACKAGE_REASON = 'outdated-package'
