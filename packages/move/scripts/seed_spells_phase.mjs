@@ -61,7 +61,14 @@ const ME = keypair.getPublicKey().toSuiAddress()
 // (B,P) = the corpus DESIGN budget (spell_kits.mjs authors within it; mint_spell re-validates).
 const SPELL_B = 10
 const SPELL_P = 9
-const BATCH_PROBE = { start: 30, cap: 40, step: 5, ceilingSuiPerItem: 0.03 }
+// Spell rows are the densest seed shape (the corpus's worst row, ikari_bloodletting, is 72 effects across 6
+// levels ≈ 962 PTB inputs alone) — probeBatchSize's `richest` always tests the densest rows first, and this
+// corpus's top-3 richest rows combined already exceed the 2048-input PTB cap (measured: n=1→962, n=2→1777,
+// n=3→2520 inputs against LIVE testnet dryRun) — n=2 is the actual safe ceiling for THIS corpus. step:1 (not
+// items/mobs' step:5) so the down-search never jumps PAST that n=2 window straight to the n=1 floor test;
+// ceilingSuiPerItem measured against the worst single row (0.0394 SUI/item at n=1) — 0.05 keeps honest
+// headroom over ground truth (money law: measure, don't guess).
+const BATCH_PROBE = { start: 6, cap: 40, step: 1, ceilingSuiPerItem: 0.05 }
 
 // ── manifest (SHARED with seed_full_corpus — same stamp guard, same shape) ─────────────────────
 if (!fs.existsSync(OUT_PATH))
@@ -98,24 +105,68 @@ function guard_network() {
 // ── PHASE 8 builders (verbatim from seed_full_corpus.mjs, spells slice only) ───────────────────
 const T_EFFECT = `${FND}::spell_effect::Effect`
 const T_LEVEL = `${FND}::spell_effect::SpellLevel`
-const KIND_PHASE = { 20: 1, 21: 1 }
-const effectFx = (tx, e) =>
-  tx.moveCall({
-    target: `${FND}::spell_effect::new_effect`,
+const KIND_PHASE = { 20: 1, 21: 1 } // K_PLACE_GLYPH / K_APPLY_DOT → PHASE_START; all else PHASE_ON_ENTER
+// HARDENED SERIALIZER CONTRACT — transcribed from seed_full_corpus.mjs's module-level effectFx/encodeEffectValue/
+// effectRange/effectFlags (that file does not export them; this is the ONE other call site, kept byte-faithful —
+// seed_full_corpus.mjs stays the home for any future contract change, per the #577/R3/F1/F2 rulings there).
+// #577 — every effect authors a RANGE [value, value_max] (a missing max ⇒ max = min, the degenerate FIXED case).
+// R3 — alter_stat/alter_resist (kinds 9/11) author SIGNED deltas encoded CENTERED at SHIFT (a debuff's negative
+// delta must NOT become Math.abs'd positive); every OTHER kind is a raw magnitude and a negative is a HARD ERROR.
+const SHIFT = 32768 // item_stats + mob resistances + alter_stat/alter_resist center here (spell.move RES_SHIFT)
+const SIGNED_EFFECT_KINDS = new Set([9, 11]) // K_ALTER_STAT / K_ALTER_RESIST — value/value_max centered at SHIFT
+const FLAG_NEGATIVE = 8 // spell_effect FLAG_NEGATIVE bit — the DECLARED sign band/filter/dispel read
+// Encode ONE authored effect scalar for `kind`: signed kinds center at SHIFT (delta may be negative); every other
+// kind stays a raw magnitude and a negative aborts the seed (the R3 refuse-negative gate).
+const encodeEffectValue = (kind, raw) => {
+  const n = Number(raw ?? 0)
+  if (SIGNED_EFFECT_KINDS.has(kind)) return SHIFT + n // centered: n may be negative
+  if (n < 0)
+    throw new Error(
+      `effect kind ${kind}: negative value ${n} — only alter_stat/alter_resist (9/11) author signed deltas (R3)`
+    )
+  return n
+}
+// The authored [min, max] range of an effect (#577), selected by FAMILY (max-gated) — NEVER mixing a legacy
+// midpoint `value` with a `damageMin/damageMax` range family: a row carrying BOTH is the damage-range family, not
+// a hybrid. A missing max family ⇒ FIXED at the single authored value.
+const effectRange = (e) => {
+  if (e.value_max != null) return [Number(e.value ?? 0), Number(e.value_max)]
+  if (e.baseMax != null) return [Number(e.base ?? 0), Number(e.baseMax)]
+  if (e.damageMax != null) return [Number(e.damageMin ?? 0), Number(e.damageMax)]
+  const fixed = Number(e.value ?? e.base ?? e.damageMin ?? 0) // no range family ⇒ FIXED (max == min)
+  return [fixed, fixed]
+}
+// DERIVE the FLAG_NEGATIVE bit for a signed kind from the authored SIGN (never trust corpus flags for it — the
+// corpus authors the sign in the delta, not a flag). A negative delta ⇒ bit 8 set; a positive delta clears it.
+// Non-signed kinds keep their authored flags verbatim.
+const effectFlags = (kind, rawMin, rawMax, authored = 0) => {
+  if (!SIGNED_EFFECT_KINDS.has(kind)) return authored
+  let flags = authored & ~FLAG_NEGATIVE // derive the sign bit, ignore any corpus-supplied FLAG_NEGATIVE
+  if (Math.min(rawMin, rawMax) < 0) flags |= FLAG_NEGATIVE
+  return flags
+}
+const effectFx = (tx, e) => {
+  const [rawMin, rawMax] = effectRange(e)
+  const a = encodeEffectValue(e.kind, rawMin)
+  const b = encodeEffectValue(e.kind, rawMax)
+  return tx.moveCall({
+    target: `${FND}::spell_effect::new_effect_ranged`,
     arguments: [
       tx.pure.u8(e.kind),
       tx.pure.u8(e.element ?? 255),
-      tx.pure.u64(Math.abs(e.value ?? 0)),
+      tx.pure.u64(Math.min(a, b)), // value = the LOW endpoint (well-formed range: value <= value_max)
+      tx.pure.u64(Math.max(a, b)), // value_max = the HIGH endpoint
       tx.pure.u8(e.area_shape ?? 0),
       tx.pure.u64(e.area_size ?? 0),
       tx.pure.u8(e.target_filter ?? 0),
       tx.pure.u8(e.chance ?? 100),
       tx.pure.u8(e.turns ?? 0),
       tx.pure.u8(e.stat ?? 0),
-      tx.pure.u8(e.flags ?? 0),
+      tx.pure.u8(effectFlags(e.kind, rawMin, rawMax, e.flags ?? 0)),
       tx.pure.u8(KIND_PHASE[e.kind] ?? 0),
     ],
   })
+}
 const fxVec = (tx, effects) =>
   tx.makeMoveVec({ type: T_EFFECT, elements: effects })
 const spellLevel = (tx, o, fx, crit) =>
