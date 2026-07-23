@@ -79,7 +79,9 @@ test.skipIf(!CEREMONY_MANIFEST_AVAILABLE)('release.json owns every SDK pin and s
   ])
     expect(readFileSync(path.join(here, file), 'utf8')).not.toContain('ceremony_manifest.json')
   const sponsor_source = readFileSync(path.join(repo, 'api', 'sponsor.mjs'), 'utf8')
-  expect(sponsor_source).not.toContain('SPONSOR_ARESRPG_PACKAGES')
+  // SPONSOR_ARESRPG_PACKAGES now wires up (owner ruling 2026-07-24: env config, fail-closed,
+  // release.json fallback) — FRAMEWORK_PACKAGES stays release.json-only, out of that ticket's scope.
+  expect(sponsor_source).toContain('SPONSOR_ARESRPG_PACKAGES')
   expect(sponsor_source).not.toContain('SPONSOR_FRAMEWORK_PACKAGES')
   expect(readFileSync(path.join(here, 'emergency', 'status.sh'), 'utf8')).not.toContain('types.json')
   const gold_compose = readFileSync(path.join(repo, 'test', 'gold', 'compose.gold.yml'), 'utf8')
