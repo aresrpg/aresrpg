@@ -161,4 +161,102 @@ describe('reconcile_equip_state', () => {
     ])
     expect(writes[0].items).toEqual([])
   })
+
+  // #526 field report ("equipped my Cryofin pet, didn't see it before refreshing") / #679 sibling finding:
+  // a pet's identity never rides character.equipment (views.js's character_pet_projection is a DEDICATED
+  // sibling snapshot — pet/pet_equipped), so the pre-fix equipped_ids_of could never find a pet's expected
+  // id "confirmed" no matter how many attempts ran.
+  test('a pet equip confirms through the SAME projection door as gear (#526/#679-sibling)', async () => {
+    const equipped_character = {
+      id: '0xcharacter',
+      equipment: [],
+      equipment_stats: { vitality: 3 },
+      pet_equipped: true,
+      pet: { item_id: '0xcryofin', template_id: '0xcryofintpl', slug: 'cryofin' },
+    }
+    // Enough pairs to cover a full drain + 4-attempt exhaustion (pre-fix reality) — the fixed code
+    // confirms on attempt 0 and simply never consumes the rest.
+    const responses = Array(5)
+      .fill([{ characters: [equipped_character] }, { items: [] }])
+      .flat()
+    const writes = []
+    const refreshed = await reconcile_equip_state(
+      {
+        address: '0xowner',
+        character_id: '0xcharacter',
+        expected_change: { equipped_ids: ['0xcryofin'], unequipped_ids: [] },
+      },
+      {
+        read: async () => responses.shift(),
+        get_state: () => ({ sui: { characters: [{ id: '0xcharacter' }], selected_address: null } }),
+        write: (payload) => writes.push(payload),
+        map_character: (row) => row,
+        mask_items: (rows) => rows,
+        merge_items: (rows) => rows,
+        wait: async () => {},
+      }
+    )
+    expect(refreshed).toBe(true)
+    expect(writes).toHaveLength(1)
+    // This is what feeds embed_voxel_player.js's per-frame `resolve_pet_companion(live)` (game/
+    // pet_companion_resolver.js) once the store's sui.characters row lands — the companion rig spawns off
+    // exactly these two fields, no reload required.
+    expect(writes[0].characters[0]).toMatchObject({
+      pet_equipped: true,
+      pet: { item_id: '0xcryofin', slug: 'cryofin' },
+    })
+  })
+
+  // The unequip half of the same blindness is a DIFFERENT failure shape, not a throw: equipped_ids_of never
+  // added the pet id in the first place, so the "must be ABSENT from equipment" half of the confirm check
+  // was already vacuously true regardless of whether pet_equipped had actually caught up. Pre-fix this lets
+  // reconcile_equip_state confirm — and write — a STALE pet_equipped:true row the instant the bag alone
+  // catches up, racing ahead of the character doc's own object-snapshot convergence.
+  test('a pet unequip never confirms a stale pet_equipped:true off the bag alone (#526/#679-sibling)', async () => {
+    const stale_still_equipped = {
+      id: '0xcharacter',
+      equipment: [],
+      equipment_stats: { vitality: 3 },
+      pet_equipped: true, // the object-snapshot side hasn't caught up to the chain-confirmed unequip yet
+      pet: { item_id: '0xcryofin', template_id: '0xcryofintpl', slug: 'cryofin' },
+    }
+    const converged_unequipped = {
+      id: '0xcharacter',
+      equipment: [],
+      equipment_stats: { vitality: 3 },
+      pet_equipped: false,
+      pet: null,
+    }
+    const loose_pet_row = { id: '0xcryofin', item_category: 'pet', template_id: '0xcryofintpl', listed: false }
+    const responses = [
+      { characters: [stale_still_equipped] },
+      { items: [loose_pet_row] }, // drain
+      { characters: [stale_still_equipped] },
+      { items: [loose_pet_row] }, // attempt 0 — bag already caught up, pet_equipped hasn't
+      { characters: [converged_unequipped] },
+      { items: [loose_pet_row] }, // attempt 1 — both sides converged
+    ]
+    const writes = []
+    const refreshed = await reconcile_equip_state(
+      {
+        address: '0xowner',
+        character_id: '0xcharacter',
+        expected_change: { equipped_ids: [], unequipped_ids: ['0xcryofin'] },
+      },
+      {
+        read: async () => responses.shift(),
+        get_state: () => ({ sui: { characters: [{ id: '0xcharacter' }], selected_address: null } }),
+        write: (payload) => writes.push(payload),
+        map_character: (row) => row,
+        mask_items: (rows) => rows,
+        merge_items: (rows) => rows,
+        wait: async () => {},
+      }
+    )
+    expect(refreshed).toBe(true)
+    expect(writes).toHaveLength(1)
+    // Must carry the CONVERGED pet state (attempt 1), never the attempt-0 stale snapshot — a premature
+    // confirm here is a silent wrong write, not a thrown error, so the companion would wrongly persist.
+    expect(writes[0].characters[0]).toMatchObject({ pet_equipped: false, pet: null })
+  })
 })

@@ -25,6 +25,15 @@ const equipped_ids_of = (character) => {
     const id = row?.item_id ?? row?.id
     if (id) ids.add(id)
   }
+  // The pet slot is EQUIPMENT_SLOTS' 'pet' entry (Inventory.jsx) but rides its own /v1 identity pair —
+  // character.pet/pet_equipped, never a row inside character.equipment (views.js character_pet_projection
+  // is a dedicated sibling snapshot, confirmed against the team's own views.test.js fixture: an equipped
+  // pet's item id never appears in that character's `equipment` map). Without this, a pet (un)equip's
+  // expected id can never be found here, so equip_projection_confirms always fails it.
+  if (character?.pet_equipped === true) {
+    const pet_id = character?.pet?.item_id ?? character?.pet?.id
+    if (pet_id) ids.add(pet_id)
+  }
   return ids
 }
 
