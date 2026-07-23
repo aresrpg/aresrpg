@@ -79,10 +79,10 @@ describe('LEG C — invisibility + MP buff hold continuously across adoption cyc
     expect(me(store).mp, 'buff persists cycle 2').toBe(4)
   })
 
-  // M2b · ONE INGRESS (#291): the foreign-replay wave + wholesale-adopt deferral is DELETED. A peer turn now
-  // arrives as journal events (its paced presentation is the peer lane's), and a mid-fight object read is an inert
-  // checkpoint — it can never drop my invisibility, so the flicker this guarded against is structurally impossible.
-  // Re-enable as a peer-lane journal test when that lane lands.
+  // V2 #522 cutover gate 7 — PACING OWNER (beats; §7b conformance is the oracle): the
+  // foreign-replay wave + wholesale-adopt deferral is DELETED. A peer turn now arrives as journal
+  // events, and a mid-fight object read is an inert checkpoint. Re-enable as a journal/clock
+  // projection test at the pacing-owner cutover.
   test.skip('the replay-deferral holds the effect while a foreign wave drains (mid-wave torn read deferred)', () => {
     const store = boot()
     // a PEER (P1) turn arrives as a fresher object read → foreign replay wave; the wholesale adopt is DEFERRED.
