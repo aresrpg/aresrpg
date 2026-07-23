@@ -6,11 +6,14 @@
 /// `spell`'s element consts, `dungeon::Actor.is_mob`). Element and stat are PARAMETERS, never separate
 /// opcodes, so ~130 reference effect-IDs collapse to ~24 kinds (taxonomy §5a). SUMMONING is EXCLUDED.
 ///
-/// OWNER ADDENDUM (the one allowed 1.29 deviation): NO damage ranges. Every damage/heal effect stores a
-/// single FIXED `base` (min==max); the exact 1.29 elemental-stat amplification (§5h) still applies. Crit is a
-/// DETERMINISTIC bonus — a separate higher-fixed `crit_effects` list, not a ×multiplier — so the ONLY RNG in
-/// the damage path is the crit boolean (predict-then-reconcile friendly). The value math lives in
-/// `spell_formula`; targeting in `spell_target`; persistent board state (traps/glyphs/DoT) in `spell_board`.
+/// #577 — RANDOM DAMAGE (owner ruling 2026-07-23, REVERSES the prior "NO damage ranges" addendum). Every
+/// damage/heal/life-steal/DoT effect stores an authored RANGE `[value, value_max]` (min..=max). One per-TURN
+/// seed roll (`spell_formula::slot_damage_roll`, DOMAIN_DMG) picks a value in that range for the whole cast —
+/// the client mirrors it byte-for-byte to preview this turn's exact damage before committing. `value_max == value`
+/// is the degenerate FIXED case (byte-identical to the old single-base behaviour), so non-range kinds and any
+/// un-authored content keep working unchanged. The exact 1.29 elemental-stat amplification (§5h) applies AFTER
+/// the roll; crit stays a DETERMINISTIC higher-range `crit_effects` swap (turn-seed boolean), never a ×multiplier.
+/// The value math lives in `spell_formula`; targeting in `spell_target`; persistent board state in `spell_board`.
 ///
 /// PURE DATA — no `Dungeon`/`Character` coupling. This is the vocabulary the (held) `apply_cast` rewrite will
 /// resolve against once the dungeon worker lands the Participant/board touchpoints.
@@ -227,7 +230,8 @@ public fun phase_end(): u8 { PHASE_END }
 public struct Effect has copy, drop, store {
   kind: u8,
   element: u8, //  spell element for damage/resist; spell::el_none() otherwise
-  value: u64, //  base dmg / heal / points / distance / stat amount / pct / state_id (per kind)
+  value: u64, //  base dmg / heal / points / distance / stat amount / pct / state_id (per kind); RANGE kinds: the MIN
+  value_max: u64, //  #577 — RANGE kinds (damage/heal/life-steal/DoT): the MAX of the authored roll range (== value ⇒ fixed). Other kinds: == value, ignored.
   area_shape: u8, //  §3 shape for the effect's own zone
   area_size: u64, //  shape radius/length
   target_filter: u8, //  §2b bitmask — who in the zone this effect hits
@@ -238,7 +242,8 @@ public struct Effect has copy, drop, store {
   phase: u8, //  PHASE_* — trigger timing for traps/glyphs/DoT
 }
 
-/// Full constructor — every field explicit. Convenience constructors below cover the common kinds.
+/// Full FIXED constructor — every field explicit, `value_max == value` (a single fixed base). Signature is
+/// UNCHANGED across #577 (its ~50 callers stay put); it delegates to `new_effect_ranged` with a degenerate range.
 public fun new_effect(
   kind: u8,
   element: u8,
@@ -252,13 +257,34 @@ public fun new_effect(
   flags: u8,
   phase: u8,
 ): Effect {
-  Effect { kind, element, value, area_shape, area_size, target_filter, chance, turns, stat, flags, phase }
+  new_effect_ranged(kind, element, value, value, area_shape, area_size, target_filter, chance, turns, stat, flags, phase)
+}
+
+/// #577 — the RANGE-aware full constructor: `value` = MIN, `value_max` = MAX. `aresrpg_spells` mints
+/// damage/heal/life-steal/DoT effects through this (or the range convenience constructors) when a spread is
+/// authored; every other kind mints through `new_effect` (max == min). The ONE home for the `Effect` literal.
+public fun new_effect_ranged(
+  kind: u8,
+  element: u8,
+  value: u64,
+  value_max: u64,
+  area_shape: u8,
+  area_size: u64,
+  target_filter: u8,
+  chance: u8,
+  turns: u8,
+  stat: u8,
+  flags: u8,
+  phase: u8,
+): Effect {
+  Effect { kind, element, value, value_max, area_shape, area_size, target_filter, chance, turns, stat, flags, phase }
 }
 
 // -- Accessors (field privacy: only this module can read Effect's fields) --
 public fun kind(e: &Effect): u8 { e.kind }
 public fun element(e: &Effect): u8 { e.element }
-public fun value(e: &Effect): u64 { e.value }
+public fun value(e: &Effect): u64 { e.value } //  RANGE kinds: the MIN/base of the roll range
+public fun value_max(e: &Effect): u64 { e.value_max } //  #577 — RANGE kinds: the MAX; == value() for fixed effects
 public fun area_shape(e: &Effect): u8 { e.area_shape }
 public fun area_size(e: &Effect): u64 { e.area_size }
 public fun target_filter(e: &Effect): u8 { e.target_filter }
@@ -291,6 +317,7 @@ public fun is_legal(e: &Effect): bool {
     && e.phase <= PHASE_END
     && e.stat <= STAT_PHYSICAL_DAMAGE
     && (e.element <= AIR_ELEMENT || e.element == NONE_ELEMENT) // fire/water/earth/air, or neutral(255)
+    && e.value_max >= e.value // #577 — a well-formed roll range (fixed effects have value_max == value)
 }
 const AIR_ELEMENT: u8 = 3; //  spell::el_air() — the top damage-element discriminant
 const NONE_ELEMENT: u8 = 255; //  spell::el_none() — neutral/elementless
@@ -307,6 +334,20 @@ public fun damage_shaped(element: u8, base: u64, area_shape: u8, area_size: u64)
 }
 public fun heal(base: u64): Effect {
   new_effect(K_HEAL, 255, base, SHAPE_POINT, 0, TF_NOT_ENEMY, 100, 0, 0, 0, PHASE_ON_ENTER)
+}
+// #577 — RANGE variants of the damage family: the turn-seed roll picks a value in `[min, max]` (min == max ⇒ the
+// fixed constructors above). The seed serializer mints authored spreads through these.
+public fun damage_range(element: u8, min: u64, max: u64): Effect {
+  new_effect_ranged(K_DAMAGE, element, min, max, SHAPE_POINT, 0, TF_NOT_TEAM, 100, 0, 0, 0, PHASE_ON_ENTER)
+}
+public fun heal_range(min: u64, max: u64): Effect {
+  new_effect_ranged(K_HEAL, 255, min, max, SHAPE_POINT, 0, TF_NOT_ENEMY, 100, 0, 0, 0, PHASE_ON_ENTER)
+}
+public fun life_steal_range(element: u8, min: u64, max: u64): Effect {
+  new_effect_ranged(K_LIFE_STEAL, element, min, max, SHAPE_POINT, 0, TF_NOT_TEAM, 100, 0, 0, 0, PHASE_ON_ENTER)
+}
+public fun apply_dot_range(element: u8, per_tick_min: u64, per_tick_max: u64, turns: u8): Effect {
+  new_effect_ranged(K_APPLY_DOT, element, per_tick_min, per_tick_max, SHAPE_POINT, 0, TF_NOT_TEAM, 100, turns, 0, 0, PHASE_START)
 }
 public fun life_steal(element: u8, base: u64): Effect {
   new_effect(K_LIFE_STEAL, element, base, SHAPE_POINT, 0, TF_NOT_TEAM, 100, 0, 0, 0, PHASE_ON_ENTER)

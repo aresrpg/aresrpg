@@ -150,10 +150,10 @@ const run_fumble = vector => {
 
 const damage = (base, element, bonus) =>
   calculate_final_damage(
-    1,
     { type: 'DAMAGE', min: base, max: base, element },
     { physical_damage: bonus },
     {},
+    0, // #577 — fixed effect (min==max): roll-independent
   ).damage
 
 const run_physical_damage = vector => ({

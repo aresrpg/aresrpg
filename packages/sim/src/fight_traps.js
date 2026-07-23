@@ -13,6 +13,7 @@
 import { next_id, find_entity, effective_stats } from './fight_state.js'
 import { apply_incoming_damage } from './fight_actions.js'
 import { calculate_final_damage } from './spell_calculator.js'
+import { crank_damage_roll } from './turn_seed.js'
 import { get_direction, handle_displacement } from './fight_displacement.js'
 
 /**
@@ -90,7 +91,6 @@ export const place_glyph = (
  */
 const hazard_damage = (state, hazard, entity) => {
   const res = calculate_final_damage(
-    state.rng,
     {
       type: /** @type {const} */ ('DAMAGE'),
       element: hazard.element,
@@ -99,10 +99,12 @@ const hazard_damage = (state, hazard, entity) => {
     },
     {}, // ZERO caster — no placer amplification (chain &ZERO)
     effective_stats(entity),
-    1,
+    // #577 — a trap tick is board-driven (non-previewable): roll off the threaded rng WITHOUT advancing it
+    // (fixed hazards, min==max, stay byte-identical; a range varies deterministically). rng is returned unchanged.
+    crank_damage_roll(state.rng),
     entity.effects.filter(e => e.type === 'SHIELD'),
   )
-  return { rng: res.rng, damage: res.damage }
+  return { rng: state.rng, damage: res.damage }
 }
 
 const hazard_hit = (state, target_id, damage, source_id) => {

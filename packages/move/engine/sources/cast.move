@@ -105,7 +105,7 @@ public fun apply_effect_for_testing(fight: &mut Fight, caster_side: u8, caster_i
   let mut bounds = vector[];
   let _did_damage = apply_effect(
     fight, caster_side, caster_idx, caster_cell, caster_stats, caster_level, target_cell, effect, 0,
-    option::none(), 0, rng, &mut domains, &mut ordinals, &mut rolls, &mut bounds,
+    0, option::none(), 0, rng, &mut domains, &mut ordinals, &mut rolls, &mut bounds,
   );
 }
 
@@ -231,6 +231,9 @@ public(package) fun resolve_player_cast(fight: &mut Fight, seat: u64, spell: &Sp
     // before commit and player casts stay &Random-free (deterministic single-PTB batch). One seed per cast
     // decorrelates its effects; the @aresrpg/sim mirror derives the identical state.
     let mut drain_rng = spell_formula::dodge_seed(turn_seed, casts);
+    // #577 — ONE per-cast damage roll from the public turn seed (the client mirrors it to preview this turn's
+    // exact damage). Applied to each damage/heal effect's own [value, value_max]; fixed effects (max==value) ignore it.
+    let damage_roll = spell_formula::slot_damage_roll(turn_seed, casts);
     let ne = effects.length();
     let mut e = 0;
     let mut did_damage = false;
@@ -258,7 +261,7 @@ public(package) fun resolve_player_cast(fight: &mut Fight, seat: u64, spell: &Sp
         };
       } else if (apply_effect(
         fight, PLAYER_SIDE, seat, caster_cell, &caster_stats, caster_level, target_cell, effect,
-        named_bonus, named_target, e, &mut drain_rng, &mut random_domains,
+        named_bonus, damage_roll, named_target, e, &mut drain_rng, &mut random_domains,
         &mut random_effect_ordinals, &mut random_rolls, &mut random_bounds,
       )) {
         did_damage = true;
@@ -545,6 +548,9 @@ public(package) fun resolve_mob_cast(fight: &mut Fight, midx: u64, spell_index: 
       };
       place_mob_glyphs(fight, target_cell, &effects);
     } else {
+      // #577 — the mob's per-cast damage roll: a non-advancing read of the crank rng state (mob damage is
+      // crank-driven, never previewable). Byte-identical for fixed (max==value) effects; the stream is untouched.
+      let mob_damage_roll = spell_formula::crank_damage_roll(*rng);
       let ne = effects.length();
       let mut e = 0;
       while (e < ne) {
@@ -570,7 +576,7 @@ public(package) fun resolve_mob_cast(fight: &mut Fight, midx: u64, spell_index: 
         } else if (effect.kind() != spell_effect::k_named_damage_stack()
           && apply_effect(
             fight, MOB_SIDE, midx, caster_cell, &caster_stats, caster_level, target_cell, effect, 0,
-            option::none(), e, rng, &mut random_domains, &mut random_effect_ordinals,
+            mob_damage_roll, option::none(), e, rng, &mut random_domains, &mut random_effect_ordinals,
             &mut random_rolls, &mut random_bounds,
           )) {
           did_damage = true;
@@ -617,36 +623,46 @@ public(package) fun mob_can_cast(fight: &Fight, midx: u64, spell_index: u64, tar
 /// (pre-wave-2a fights, un-authored weapons, bare hands): the single seated `Weapon` line (`fb_*`) — the exact old
 /// path. ONE crit boolean (resolved upstream from the turn-seed slot) swaps EVERY line to its crit base, mirroring
 /// how crit swaps a whole spell's effect list. Deterministic — no rolls (line ranges seed-roll in wave-2b).
-fun weapon_damage_total(lines: &vector<participant::WeaponLine>, fb_element: u8, fb_base: u64, fb_crit_base: u64, is_crit: bool, caster: &Stats, target: &Stats): u64 {
+fun weapon_damage_total(lines: &vector<participant::WeaponLine>, fb_element: u8, fb_min: u64, fb_max: u64, fb_crit_min: u64, fb_crit_max: u64, is_crit: bool, damage_roll: u64, caster: &Stats, target: &Stats): u64 {
   if (lines.is_empty()) {
-    let base = if (is_crit) fb_crit_base else fb_base;
-    return spell_formula::final_damage(base, fb_element, caster, target)
+    let (min, max) = if (is_crit) (fb_crit_min, fb_crit_max) else (fb_min, fb_max);
+    return spell_formula::final_damage(spell_formula::roll_in_range(min, max, damage_roll), fb_element, caster, target)
   };
   let n = lines.length();
   let (mut total, mut i) = (0, 0);
   while (i < n) {
     let w = lines.borrow(i);
-    let base = if (is_crit) participant::wl_crit_damage(w) else participant::wl_damage(w);
-    total = total + spell_formula::final_damage(base, participant::wl_element(w), caster, target);
+    let (min, max) = if (is_crit) (participant::wl_crit_damage(w), participant::wl_crit_damage_max(w))
+      else (participant::wl_damage(w), participant::wl_damage_max(w));
+    total = total + spell_formula::final_damage(spell_formula::roll_in_range(min, max, damage_roll), participant::wl_element(w), caster, target);
     i = i + 1;
   };
   total
 }
 
-/// Exact authored base represented by a weapon action marker. Multi-line weapons retain their ordered lines in
-/// the terminal identity; this aggregate descriptor is element-neutral and deliberately precedes resistance.
+/// #577 — the ROLLED authored base a weapon action marker records (element-neutral, deliberately precedes
+/// resistance): the same one per-strike `damage_roll` mapped onto each line's `[min, max]` and summed. Fixed
+/// weapons (max==min) emit their single base, byte-identical to the pre-#577 marker.
 fun weapon_effect_value(
   lines: &vector<participant::WeaponLine>,
-  fallback_damage: u64,
-  fallback_crit_damage: u64,
+  fb_min: u64,
+  fb_max: u64,
+  fb_crit_min: u64,
+  fb_crit_max: u64,
   critical: bool,
+  damage_roll: u64,
 ): u64 {
-  if (lines.is_empty()) return if (critical) fallback_crit_damage else fallback_damage;
+  if (lines.is_empty()) {
+    let (min, max) = if (critical) (fb_crit_min, fb_crit_max) else (fb_min, fb_max);
+    return spell_formula::roll_in_range(min, max, damage_roll)
+  };
   let mut total = 0;
   let mut i = 0;
   while (i < lines.length()) {
     let line = lines.borrow(i);
-    total = total + if (critical) participant::wl_crit_damage(line) else participant::wl_damage(line);
+    let (min, max) = if (critical) (participant::wl_crit_damage(line), participant::wl_crit_damage_max(line))
+      else (participant::wl_damage(line), participant::wl_damage_max(line));
+    total = total + spell_formula::roll_in_range(min, max, damage_roll);
     i = i + 1;
   };
   total
@@ -658,7 +674,7 @@ fun weapon_effect_value(
 /// cap — the AP economy IS the limit, §17.27). Does NOT advance the turn (an action, like a cast). PvM: mobs are the
 /// enemy side, so the shape hits mobs only (friendly players share team 0 — mirrors a damage effect's TF_NOT_TEAM).
 public(package) fun weapon_strike(fight: &mut Fight, seat: u64, target_cell: u64) {
-  let caster_cell; let caster_stats; let ap; let element; let dmg_base; let crit_base; let crit_rate; let ap_cost; let reach; let slot;
+  let caster_cell; let caster_stats; let ap; let element; let dmg_base; let dmg_max; let crit_base; let crit_max; let crit_rate; let ap_cost; let reach; let slot;
   {
     let p = fight::participants(fight).borrow(seat);
     caster_cell = participant::cell(p);
@@ -666,7 +682,9 @@ public(package) fun weapon_strike(fight: &mut Fight, seat: u64, target_cell: u64
     ap = participant::ap(p);
     element = participant::weapon_element(p);
     dmg_base = participant::weapon_damage(p);
+    dmg_max = participant::weapon_damage_max(p);
     crit_base = participant::weapon_crit_damage(p);
+    crit_max = participant::weapon_crit_damage_max(p);
     crit_rate = participant::weapon_crit_rate(p);
     ap_cost = participant::weapon_ap_cost(p);
     reach = participant::weapon_reach(p);
@@ -693,9 +711,14 @@ public(package) fun weapon_strike(fight: &mut Fight, seat: u64, target_cell: u64
   let turn_seed = fight::turn_seed(fight, seat);
   let crit_roll = spell_formula::slot_crit_roll(turn_seed, slot);
   let is_crit = spell_formula::crit_at(crit_roll, crit_rate, spell::stat_critical_hit(&caster_stats));
+  let damage_roll = spell_formula::slot_damage_roll(turn_seed, slot); // #577 — one previewable per-strike roll across every line
   let lines = fight::weapon_lines_at(fight, seat); // §17.27 wave-2a — authored item lines (empty ⇒ single-line fallback)
+  // §387 + #577: the emitted marker is the ONE rolled, element-neutral, pre-resist base (weapon_effect_value) —
+  // independent of which shape cells actually get hit; each struck mob resists it individually in the loop below
+  // via weapon_damage_total (per-target, element+resist aware). midx's own target_stats/damage predates the §387
+  // multi-target shape (single-target dead code) — superseded by the loop's own per-mob computation.
   let effect = spell_effect::damage_shaped(
-    spell::el_none(), weapon_effect_value(&lines, dmg_base, crit_base, is_crit), area_shape, area_size,
+    spell::el_none(), weapon_effect_value(&lines, dmg_base, dmg_max, crit_base, crit_max, is_crit, damage_roll), area_shape, area_size,
   );
   action_envelope::emit_started(
     fight_id, false, seat, action_turn, slot, fight_events::action_kind_weapon(), target_cell,
@@ -717,7 +740,7 @@ public(package) fun weapon_strike(fight: &mut Fight, seat: u64, target_cell: u64
     let (m_alive, m_cell) = { let m = fight::mobs(fight).borrow(mi); (mob::is_alive(m), mob::cell(m)) };
     if (m_alive && zone.contains(&m_cell)) {
       let target_stats = *mob::stats(fight::mobs(fight).borrow(mi));
-      let damage = weapon_damage_total(&lines, element, dmg_base, crit_base, is_crit, &caster_stats, &target_stats);
+      let damage = weapon_damage_total(&lines, element, dmg_base, dmg_max, crit_base, crit_max, is_crit, damage_roll, &caster_stats, &target_stats);
       hit_mob_from(
         fight, mi, PLAYER_SIDE, seat, damage, 0, &mut reaction_rng, &mut random_domains,
         &mut random_effect_ordinals, &mut random_rolls, &mut random_bounds,
@@ -743,7 +766,7 @@ public(package) fun weapon_strike(fight: &mut Fight, seat: u64, target_cell: u64
 /// TF_NOT_TEAM). Kept a SEPARATE path so the PvM strike stays byte-identical. (PvP seats currently carry no shape
 /// category ⇒ the POINT default ⇒ the single aimed enemy, exactly as today, until the arena adopts the seat path.)
 public(package) fun weapon_strike_player(fight: &mut Fight, seat: u64, target_cell: u64) {
-  let caster_cell; let caster_stats; let caster_team; let ap; let element; let dmg_base; let crit_base; let crit_rate; let ap_cost; let reach; let slot;
+  let caster_cell; let caster_stats; let caster_team; let ap; let element; let dmg_base; let dmg_max; let crit_base; let crit_max; let crit_rate; let ap_cost; let reach; let slot;
   {
     let p = fight::participants(fight).borrow(seat);
     caster_cell = participant::cell(p);
@@ -752,7 +775,9 @@ public(package) fun weapon_strike_player(fight: &mut Fight, seat: u64, target_ce
     ap = participant::ap(p);
     element = participant::weapon_element(p);
     dmg_base = participant::weapon_damage(p);
+    dmg_max = participant::weapon_damage_max(p);
     crit_base = participant::weapon_crit_damage(p);
+    crit_max = participant::weapon_crit_damage_max(p);
     crit_rate = participant::weapon_crit_rate(p);
     ap_cost = participant::weapon_ap_cost(p);
     reach = participant::weapon_reach(p);
@@ -777,9 +802,13 @@ public(package) fun weapon_strike_player(fight: &mut Fight, seat: u64, target_ce
   let turn_seed = fight::turn_seed(fight, seat);
   let crit_roll = spell_formula::slot_crit_roll(turn_seed, slot);
   let is_crit = spell_formula::crit_at(crit_roll, crit_rate, spell::stat_critical_hit(&caster_stats));
+  let damage_roll = spell_formula::slot_damage_roll(turn_seed, slot); // #577 — one previewable per-strike roll across every line
   let lines = fight::weapon_lines_at(fight, seat); // §17.27 wave-2a — authored item lines (empty ⇒ single-line fallback)
+  // §387 + #577: same split as weapon_strike — the emitted marker is the ONE rolled, element-neutral, pre-resist
+  // base; each struck OTHER-TEAM player resists it individually in the loop below via weapon_damage_total. The
+  // victim's own target_stats/damage predates the §387 multi-target shape — superseded by the loop.
   let effect = spell_effect::damage_shaped(
-    spell::el_none(), weapon_effect_value(&lines, dmg_base, crit_base, is_crit), area_shape, area_size,
+    spell::el_none(), weapon_effect_value(&lines, dmg_base, dmg_max, crit_base, crit_max, is_crit, damage_roll), area_shape, area_size,
   );
   action_envelope::emit_started(
     fight_id, false, seat, action_turn, slot, fight_events::action_kind_weapon(), target_cell,
@@ -803,7 +832,7 @@ public(package) fun weapon_strike_player(fight: &mut Fight, seat: u64, target_ce
     };
     if (p_alive && p_team != caster_team && zone.contains(&p_cell)) {
       let target_stats = *participant::stats(fight::participants(fight).borrow(pi));
-      let damage = weapon_damage_total(&lines, element, dmg_base, crit_base, is_crit, &caster_stats, &target_stats);
+      let damage = weapon_damage_total(&lines, element, dmg_base, dmg_max, crit_base, crit_max, is_crit, damage_roll, &caster_stats, &target_stats);
       hit_player_from(
         fight, pi, PLAYER_SIDE, seat, damage, 0, &mut reaction_rng, &mut random_domains,
         &mut random_effect_ordinals, &mut random_rolls, &mut random_bounds,
@@ -920,6 +949,9 @@ fun try_return_spell(
   let mut i = 0;
   let mut did_damage = false;
   let mut resolved = vector[];
+  // #577 — the returned-spell reflection rolls its damage the same non-advancing way a mob cast does (this is a
+  // reaction, off the threaded rng — byte-identical for fixed effects; a range varies deterministically).
+  let damage_roll = spell_formula::crank_damage_roll(*rng);
   while (i < n && fighter_alive(fight, caster_is_mob, caster_idx)) {
     let effect = effects.borrow(i);
     if (effect.kind() == spell_effect::k_damage()) {
@@ -928,7 +960,7 @@ fun try_return_spell(
         fight_id, caster_is_mob, caster_idx, action_turn, action_ordinal, effect_ordinal, *effect,
       );
       let damage = spell_formula::final_damage(
-        effect.value(), effect.element(), caster_stats, caster_stats,
+        spell_formula::roll_in_range(effect.value(), effect.value_max(), damage_roll), effect.element(), caster_stats, caster_stats,
       );
       if (caster_is_mob) hit_mob(fight, caster_idx, damage)
       else hit_player(fight, caster_idx, damage);
@@ -994,6 +1026,7 @@ fun apply_effect(
   target_cell: u64,
   effect: &Effect,
   damage_bonus: u64,
+  damage_roll: u64, // #577 — the per-cast turn-seed (player) / crank (mob) roll fraction, mapped onto each effect's range
   bonus_target: Option<u64>,
   effect_ordinal: u64,
   rng: &mut u64,
@@ -1051,7 +1084,7 @@ fun apply_effect(
           let target_bonus = if (bonus_target.is_some() && *bonus_target.borrow() == i) damage_bonus else 0;
           if (apply_to_player(
             fight, caster_side, caster_idx, i, caster_cell, caster_stats, caster_level, element,
-            effect, target_bonus, effect_ordinal, rng, random_domains, random_effect_ordinals,
+            effect, target_bonus, damage_roll, effect_ordinal, rng, random_domains, random_effect_ordinals,
             random_rolls, random_bounds,
           )) did_damage = true;
         };
@@ -1076,7 +1109,7 @@ fun apply_effect(
           let target_bonus = if (bonus_target.is_some() && *bonus_target.borrow() == mob_fid(j)) damage_bonus else 0;
           if (apply_to_mob(
             fight, caster_side, caster_idx, j, caster_cell, caster_stats, caster_level, element,
-            effect, target_bonus, effect_ordinal, rng, random_domains, random_effect_ordinals,
+            effect, target_bonus, damage_roll, effect_ordinal, rng, random_domains, random_effect_ordinals,
             random_rolls, random_bounds,
           )) did_damage = true;
         };
@@ -1099,6 +1132,7 @@ fun apply_to_player(
   element: u8,
   effect: &Effect,
   damage_bonus: u64,
+  damage_roll: u64,
   effect_ordinal: u64,
   rng: &mut u64,
   random_domains: &mut vector<u8>,
@@ -1107,20 +1141,22 @@ fun apply_to_player(
   random_bounds: &mut vector<u64>,
 ): bool {
   let kind = effect.kind();
-  let base = effect.value(); // no global variance — damage/heal is the authored base
+  let base = effect.value(); // scalar for points / distance / stat / %-life (deterministic, never rolled)
+  // #577 — the damage/heal ROLL: one value in [value, value_max] from the shared per-cast fraction (max==value ⇒ fixed).
+  let rolled = spell_formula::roll_in_range(base, effect.value_max(), damage_roll);
   let target_stats = *participant::stats(fight::participants(fight).borrow(pc));
   let mut did_damage = false;
   if (kind == spell_effect::k_damage()) {
-    let damage = spell_formula::final_damage(base + damage_bonus, element, caster_stats, &target_stats);
+    let damage = spell_formula::final_damage(rolled + damage_bonus, element, caster_stats, &target_stats);
     hit_player_from(
       fight, pc, caster_side, caster_idx, damage, effect_ordinal, rng, random_domains,
       random_effect_ordinals, random_rolls, random_bounds,
     );
     did_damage = damage > 0;
   } else if (kind == spell_effect::k_heal()) {
-    participant::apply_heal(fight::participants_mut(fight).borrow_mut(pc), spell_formula::heal_amount(base, caster_stats));
+    participant::apply_heal(fight::participants_mut(fight).borrow_mut(pc), spell_formula::heal_amount(rolled, caster_stats));
   } else if (kind == spell_effect::k_percent_life_damage()) {
-    // %-life is a fraction of the HP POOL, not an authored damage line → no variance (deterministic).
+    // %-life is a fraction of the HP POOL, not an authored damage line → no roll (deterministic).
     let (hp, maxhp) = { let p = fight::participants(fight).borrow(pc); (participant::hp(p), participant::max_hp(p)) };
     let pool = if (effect.has_flag(spell_effect::flag_life_lost())) maxhp - hp else hp;
     let damage = pool * base / 100;
@@ -1130,7 +1166,7 @@ fun apply_to_player(
     );
     did_damage = damage > 0;
   } else if (kind == spell_effect::k_life_steal()) {
-    let dmg = spell_formula::final_damage(base + damage_bonus, element, caster_stats, &target_stats);
+    let dmg = spell_formula::final_damage(rolled + damage_bonus, element, caster_stats, &target_stats);
     let actual = hit_player_from(
       fight, pc, caster_side, caster_idx, dmg, effect_ordinal, rng, random_domains,
       random_effect_ordinals, random_rolls, random_bounds,
@@ -1212,6 +1248,7 @@ fun apply_to_mob(
   element: u8,
   effect: &Effect,
   damage_bonus: u64,
+  damage_roll: u64,
   effect_ordinal: u64,
   rng: &mut u64,
   random_domains: &mut vector<u8>,
@@ -1220,18 +1257,19 @@ fun apply_to_mob(
   random_bounds: &mut vector<u64>,
 ): bool {
   let kind = effect.kind();
-  let base = effect.value(); // no global variance — damage/heal is the authored base
+  let base = effect.value(); // scalar for points / distance / stat / %-life (deterministic, never rolled)
+  let rolled = spell_formula::roll_in_range(base, effect.value_max(), damage_roll); // #577 — damage/heal roll (max==value ⇒ fixed)
   let target_stats = *mob::stats(fight::mobs(fight).borrow(midx)); // the struck mob's per-fight block (resist shred applies)
   let mut did_damage = false;
   if (kind == spell_effect::k_damage()) {
-    let damage = spell_formula::final_damage(base + damage_bonus, element, caster_stats, &target_stats);
+    let damage = spell_formula::final_damage(rolled + damage_bonus, element, caster_stats, &target_stats);
     hit_mob_from(
       fight, midx, caster_side, caster_idx, damage, effect_ordinal, rng, random_domains,
       random_effect_ordinals, random_rolls, random_bounds,
     );
     did_damage = damage > 0;
   } else if (kind == spell_effect::k_life_steal()) {
-    let damage = spell_formula::final_damage(base + damage_bonus, element, caster_stats, &target_stats);
+    let damage = spell_formula::final_damage(rolled + damage_bonus, element, caster_stats, &target_stats);
     let actual = hit_mob_from(
       fight, midx, caster_side, caster_idx, damage, effect_ordinal, rng, random_domains,
       random_effect_ordinals, random_rolls, random_bounds,
@@ -1239,7 +1277,7 @@ fun apply_to_mob(
     heal_caster(fight, caster_side, caster_idx, actual / 2);
     did_damage = damage > 0;
   } else if (kind == spell_effect::k_percent_life_damage()) {
-    // %-life is a fraction of the HP POOL, not an authored damage line → no variance (deterministic).
+    // %-life is a fraction of the HP POOL, not an authored damage line → no roll (deterministic).
     let (hp, maxhp) = { let m = fight::mobs(fight).borrow(midx); (mob::hp(m), mob::max_hp(m)) };
     let pool = if (effect.has_flag(spell_effect::flag_life_lost())) maxhp - hp else hp;
     let damage = pool * base / 100;
@@ -1249,7 +1287,7 @@ fun apply_to_mob(
     );
     did_damage = damage > 0;
   } else if (kind == spell_effect::k_punishment_damage()) {
-    let damage = spell_formula::final_damage(base + damage_bonus, element, caster_stats, &target_stats);
+    let damage = spell_formula::final_damage(rolled + damage_bonus, element, caster_stats, &target_stats);
     hit_mob_from(
       fight, midx, caster_side, caster_idx, damage, effect_ordinal, rng, random_domains,
       random_effect_ordinals, random_rolls, random_bounds,
@@ -1260,7 +1298,7 @@ fun apply_to_mob(
     spell_board::apply_dot(fight::fx_mut(fight), mob_fid(midx), fid_of(caster_side, caster_idx), *effect);
   } else if (kind == spell_effect::k_heal()) {
     // support mobs heal allies — same caster-stat amplification as the player heal.
-    mob::apply_heal(fight::mobs_mut(fight).borrow_mut(midx), spell_formula::heal_amount(base, caster_stats));
+    mob::apply_heal(fight::mobs_mut(fight).borrow_mut(midx), spell_formula::heal_amount(rolled, caster_stats));
   } else if (kind == spell_effect::k_give_points()) {
     // an ALLY mob feeds this mob AP/MP (boss-synergy: allies add MP to a boss): +n NOW
     // + a CREDIT row so the feed survives the boss's own begin_turn to the turn it was meant to boost
@@ -1678,12 +1716,15 @@ fun apply_board_batch_from(
     let element = effect.element();
     let is_damage = kind == spell_effect::k_damage() || kind == spell_effect::k_apply_dot() || kind == spell_effect::k_life_steal();
     let board_roll = prng::mix(fight::turn_seed(fight, if (is_mob) mob_fid(idx) else idx), e) % 100;
+    // #577 — board ticks (traps/glyphs/DoT) are turn-seed-derived + previewable; the damage roll uses the effect
+    // ordinal as its slot so each tick rolls its own [value, value_max] (fixed effects, max==value, are unchanged).
+    let board_damage = spell_formula::roll_in_range(base, effect.value_max(), spell_formula::slot_damage_roll(fight::turn_seed(fight, if (is_mob) mob_fid(idx) else idx), e));
     if ((kind == spell_effect::k_push() || kind == spell_effect::k_pull()) && origin.is_some()) {
       let _did_damage = displace_target(fight, is_mob, idx, *origin.borrow(), collision_level, kind, base);
     } else if (is_mob) {
       if (is_damage) {
         let target_stats = *mob::stats(fight::mobs(fight).borrow(idx)); // the mob's per-fight block (resist shred applies)
-        retro_effects::hit(fight, true, idx, false, 0, false, spell_formula::final_damage(base, element, &zero, &target_stats), board_roll);
+        retro_effects::hit(fight, true, idx, false, 0, false, spell_formula::final_damage(board_damage, element, &zero, &target_stats), board_roll);
       } else if (kind == spell_effect::k_percent_life_damage()) {
         let (hp, maxhp) = { let m = fight::mobs(fight).borrow(idx); (mob::hp(m), mob::max_hp(m)) };
         let pool = if (effect.has_flag(spell_effect::flag_life_lost())) maxhp - hp else hp;
@@ -1711,7 +1752,7 @@ fun apply_board_batch_from(
       };
     } else if (is_damage) {
       let target_stats = *participant::stats(fight::participants(fight).borrow(idx));
-      retro_effects::hit(fight, false, idx, false, 0, false, spell_formula::final_damage(base, element, &zero, &target_stats), board_roll);
+      retro_effects::hit(fight, false, idx, false, 0, false, spell_formula::final_damage(board_damage, element, &zero, &target_stats), board_roll);
     } else if (kind == spell_effect::k_percent_life_damage()) {
       let (hp, maxhp) = { let p = fight::participants(fight).borrow(idx); (participant::hp(p), participant::max_hp(p)) };
       let pool = if (effect.has_flag(spell_effect::flag_life_lost())) maxhp - hp else hp;

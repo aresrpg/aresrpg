@@ -125,10 +125,22 @@ export const compute_target_prediction = ({ fight, hover, dungeon, draft_len = 0
   // engine_view fighter cells are DECODED {x,y}; predict_cast's target_cell is an ENCODED int (it decode()s it),
   // so encode here — passing the raw {x,y} decode()s to NaN → an off-board target → no Hit (the live-silence bug).
   const target_cell = encode(target.cell.x, target.cell.y)
-  // Run the ONE damage home ONCE, on the RESOLVED branch — the exact number the chain lands, never a base+crit
-  // pair, never a probability. `critical` is an explicit boolean, so predict_cast skips its own turn-seed clock.
+  // #577 — the SAME resolved turn-seed slot that decides crit also rolls this cast's DAMAGE, so the previewed
+  // number is exactly what the chain lands (not the range). `critical` stays the explicit resolved boolean;
+  // `critical_clock` feeds only the damage roll. Seed-less / off-turn (crit_slot null) ⇒ no clock ⇒ an in-range
+  // estimate (the honest unknown, mirroring the non-crit branch above).
+  const critical_clock = crit_slot
+    ? {
+        world_seed: dungeon.world_seed,
+        spawn_id: dungeon.spawn_id,
+        turn_deadline_ms: dungeon.turn_deadline_ms || null,
+        seat: me?.seat ?? null,
+        slot: crit_slot.slot,
+      }
+    : null
+  // Run the ONE damage home ONCE, on the RESOLVED branch — the exact number the chain lands, never a base+crit pair.
   return {
-    prediction: predict_cast({ view: fight, caster_id, spell: template, target_cell, critical: is_crit, resolve_ref, stats_of }),
+    prediction: predict_cast({ view: fight, caster_id, spell: template, target_cell, critical: is_crit, critical_clock, resolve_ref, stats_of }),
     is_crit,
     effects: effects.filter((fx) => !HEAD_OR_MOVE_KINDS.has(fx.kind)),
     target_ref,

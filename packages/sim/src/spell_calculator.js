@@ -4,7 +4,8 @@
 // The value layer mirrors the chain's reference-corpus formula: element characteristic + percent damage amplify
 // the authored base, flat damage lands afterward, target resistance is capped at 50%, and crit odds cap at 1/2.
 
-import { rng_range, rng_int } from './prng.js'
+import { rng_int } from './prng.js'
+import { roll_in_range } from './turn_seed.js'
 
 // Types are referenced inline via `import('./module.js').Type` so this module re-exports no type names
 // (the barrel `export *`s every file; duplicate exported typedef names would collide). The canonical
@@ -66,14 +67,19 @@ export const calculate_raw_damage = (effect, caster_stats) => {
 }
 
 /**
- * Roll a value in [min, max] off the AresRPG PRNG thread.
- * @param {import("./prng.js").Rng} rng
- * @param {DamageRange} range
- * @returns {{ rng: import("./prng.js").Rng, value: number }}
+ * #577 — scalar §5h amplification of an already-ROLLED base: `base × (100 + primary + percent)/100 + raw`
+ * (+physical on earth/neutral). Mirrors spell_formula::amplify_damage. The roll happens BEFORE amplification
+ * (canonical order in BOTH twins), so the chain and client pick the identical number from the identical roll.
+ * @param {number} base @param {import("./fight_state.js").Element} element @param {import("./fight_state.js").Stats} caster_stats
+ * @returns {number}
  */
-export const roll_damage = (rng, range) => {
-  const { state, value } = rng_range(rng, range.min, range.max)
-  return { rng: state, value }
+export const amplify_damage = (base, element, caster_stats) => {
+  const primary = nonnegative(caster_stats[ELEMENT_STAT[element]])
+  const percent = nonnegative(caster_stats.percent_damage)
+  return (
+    Math.floor((base * (100 + primary + percent)) / 100) +
+    flat_damage_bonus(element, caster_stats)
+  )
 }
 
 /**
@@ -129,53 +135,55 @@ export const apply_shields = (damage, element, effects) => {
 }
 
 /**
- * Full chain-parity damage pipeline: amplify base -> roll -> add flats -> resistance -> shields. `caster_level`
- * remains in the signature for compatibility, but the reference-corpus damage formula never level-scales.
- * @param {import("./prng.js").Rng} rng
+ * #577 — chain-parity damage pipeline, RNG-FREE: roll the base in `[min, max]` from the turn-seed `roll` fraction
+ * → §5h amplify → resistance → shields. The client-local rng damage roll is DEAD; the roll is the same public
+ * turn-seed value the chain uses (`spell_formula::roll_in_range` + `final_damage`), so preview == settlement.
  * @param {import("./spell_templates.js").DamageEffect} effect
  * @param {import("./fight_state.js").Stats} caster_stats
  * @param {import("./fight_state.js").Stats} target_stats
- * @param {number} caster_level
+ * @param {number} roll  the [0,10000) turn-seed (player) / crank (mob) damage roll fraction
  * @param {import("./fight_state.js").ActiveEffect[]} target_shields
- * @returns {{ rng: import("./prng.js").Rng, damage: number, shields_consumed: { id: number, absorbed: number }[] }}
+ * @returns {{ damage: number, shields_consumed: { id: number, absorbed: number }[] }}
  */
 export const calculate_final_damage = (
-  rng,
   effect,
   caster_stats,
   target_stats,
-  caster_level = 1,
+  roll,
   target_shields = [],
 ) => {
-  void caster_level
-  const amplified = calculate_amplified_range(effect, caster_stats)
-  const rolled = roll_damage(rng, amplified)
-  const with_flats =
-    rolled.value + flat_damage_bonus(effect.element, caster_stats)
-  const resisted = apply_resistance(with_flats, effect.element, target_stats)
+  const base = roll_in_range(
+    effect.min ?? 0,
+    effect.max ?? effect.min ?? 0,
+    roll,
+  )
+  const amplified = amplify_damage(base, effect.element, caster_stats)
+  const resisted = apply_resistance(amplified, effect.element, target_stats)
   const { damage, shields_consumed } = apply_shields(
     resisted,
     effect.element,
     target_shields,
   )
-  return { rng: rolled.rng, damage, shields_consumed }
+  return { damage, shields_consumed }
 }
 
 /**
- * Heal amount: base × (100 + intelligence)/100 + flat heal, matching the chain formula.
- * @param {import("./prng.js").Rng} rng
+ * #577 — Heal amount, RNG-FREE: roll base in `[min, max]` from `roll`, then `base × (100 + intelligence)/100 +
+ * flat heal`. Mirrors spell_formula::heal_amount applied to the rolled base.
  * @param {import("./spell_templates.js").HealEffect} effect
  * @param {import("./fight_state.js").Stats} caster_stats
- * @returns {{ rng: import("./prng.js").Rng, value: number }}
+ * @param {number} roll  the [0,10000) turn-seed / crank damage roll fraction
+ * @returns {{ value: number }}
  */
-export const calculate_heal = (rng, effect, caster_stats) => {
-  const { state, value } = rng_range(rng, effect.min, effect.max)
+export const calculate_heal = (effect, caster_stats, roll) => {
+  const base = roll_in_range(
+    effect.min ?? 0,
+    effect.max ?? effect.min ?? 0,
+    roll,
+  )
   const intelligence = nonnegative(caster_stats.intelligence)
   const flat_heal = nonnegative(caster_stats.heal)
-  return {
-    rng: state,
-    value: Math.floor((value * (100 + intelligence)) / 100) + flat_heal,
-  }
+  return { value: Math.floor((base * (100 + intelligence)) / 100) + flat_heal }
 }
 
 /**

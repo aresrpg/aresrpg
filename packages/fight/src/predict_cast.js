@@ -293,6 +293,7 @@ export const predict_sim_cast = ({
   arena,
   critical = null,
   resolve_ref = entity_ref,
+  turn_context = null, // #577 — the public turn-seed clock {world_seed,spawn_id,turn_deadline_ms,seat,slot}: the sim rolls this player cast's damage off it (previewable), matching the chain
 }) => {
   const prediction = prediction_template(spell, spell_level, critical)
   if (!prediction)
@@ -314,7 +315,7 @@ export const predict_sim_cast = ({
   const output = produce_predicted_render_events(
     prepared,
     { type: 'cast', entity_id: caster_id, spell_id: template.id, target },
-    { arena, spell_templates: new Map([[template.id, template]]), teleport_ids }
+    { arena, spell_templates: new Map([[template.id, template]]), teleport_ids, turn_context }
   )
   const cast_event = output.sim_events.find((event) => event.type === 'fight_cast')
   if (!cast_event)
@@ -480,9 +481,11 @@ export const chain_critical = (clock, critical_chance, critical_bonus = 0) => {
  */
 export const weapon_spell_template = (weapon = {}) => {
   const shape = weapon_shape_of(weapon.category)
-  const damage_effect = (value) => ({
+  // #577 — value_max defaults to value (max==min ⇒ fixed, byte-parity with the Move twin's own default).
+  const damage_effect = (value, value_max = value) => ({
     kind: 0,
     value: Number(value),
+    value_max: Number(value_max),
     element: Number(weapon.element ?? 255),
     target_filter: 1,
     area_shape: shape.area_shape,
@@ -505,8 +508,14 @@ export const weapon_spell_template = (weapon = {}) => {
           casts_per_target: 255,
           cooldown_turns: 0,
           crit_rate: Number(weapon.crit_rate ?? 0),
-          effects: [damage_effect(weapon.damage ?? 0)],
-          crit_effects: [damage_effect(weapon.crit_damage ?? weapon.damage ?? 0)],
+          // #577 — the weapon's normal-hit range MAX (== value ⇒ fixed); the strike rolls in [value, value_max].
+          effects: [damage_effect(weapon.damage ?? 0, weapon.damage_max ?? weapon.damage ?? 0)],
+          crit_effects: [
+            damage_effect(
+              weapon.crit_damage ?? weapon.damage ?? 0,
+              weapon.crit_damage_max ?? weapon.crit_damage ?? weapon.damage ?? 0
+            ),
+          ],
         },
       ],
     },
@@ -540,6 +549,8 @@ export const predict_cast = ({
     critical:
       critical === undefined ? chain_critical(critical_clock, level?.critical_chance ?? 0, critical_bonus) : critical,
     resolve_ref,
+    // #577 — the SAME clock feeds the damage roll: the preview shows this turn's exact damage, chain-identical.
+    turn_context: critical_clock,
   })
 }
 

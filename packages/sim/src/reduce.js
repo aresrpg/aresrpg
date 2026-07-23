@@ -69,6 +69,9 @@ const total_health = state =>
  * @typedef {object} ReduceContext
  * @property {Map<string, import('./spell_templates.js').SpellTemplate>} spell_templates
  * @property {import('./arena.js').Arena} arena
+ * #577: `turn_context` is the public turn-seed clock {world_seed, spawn_id, turn_deadline_ms, seat, slot}; when
+ * present, a PLAYER cast rolls its damage off it (previewable), mirroring the chain. Absent/mob -> crank roll.
+ * @property {{ world_seed:number|bigint, spawn_id:number|bigint, turn_deadline_ms:number|bigint, seat:number|bigint, slot:number }} [turn_context]
  */
 
 /**
@@ -588,6 +591,7 @@ const handle_cast = (state, cmd, ctx) => {
     cmd.target,
     context,
     is_terrain_walkable,
+    ctx.turn_context ?? null, // #577 — a PLAYER cast rolls damage off the turn seed when the client supplies the clock
   )
   if (!res.success) return { state, events: [] }
 
