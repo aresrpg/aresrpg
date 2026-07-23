@@ -66,8 +66,15 @@ jobs:
         # SUI_ARCH=x86_64: ubuntu-latest is x86_64, but compose.gold.yml's localnet build arg defaults to
         # aarch64 (the Mac-local default test/localnet/harness/Dockerfile ships) — an unset SUI_ARCH here
         # links an ARM sui binary that exec-format-crashes on an x86 runner (run 29970085845).
+        # GOLD_CORPUS=active: the default 'mainnet' corpus delegates to seed_full_corpus.mjs, which walks up
+        # from the isolated move copy looking for the PRIVATE seed repo's seed/mainnet/** layout — a public
+        # runner can never have it (the content boundary, CLAUDE.md — by design, not a gap to route around).
+        # 'active' is the repo-owned minimal QA corpus (packages/move/scripts/seed_content.json, already
+        # git-tracked here) — up_gold.mjs/fight_fixtures.mjs/market fixture all skip honestly around the one
+        # fixture (fight_fixtures.win) and shop-fixture shape that genuinely need production content.
         env:
           SUI_ARCH: x86_64
+          GOLD_CORPUS: active
         run: node test/gold/up_gold.mjs
       - name: install Playwright chromium
         timeout-minutes: 5
