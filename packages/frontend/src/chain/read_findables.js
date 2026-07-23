@@ -10,6 +10,7 @@
 import { get_encyclopedia } from '../rpc/client'
 
 import { get_sdk } from './sdk'
+import { is_aresrpg_item } from './item_lineage'
 import { normalize_item_template, decode_item_stat_ranges } from './read_templates.js'
 
 // normalize_item_template UPPERCASEs item_category, so RESOURCE/CONSUMABLE/RUNE are the stackable categories
@@ -191,11 +192,15 @@ export async function resolve_recall_drops(item_ids, template_map) {
   }
 }
 
-/** Batch-fetch specific Item object ids (the freshly-minted recall drops), same shape as get_owned_items. */
-async function get_owned_items_by_id(
-  /** @type {import("@mysten/sui/grpc").SuiGrpcClient} */ grpc_client,
-  /** @type {string[]} */ ids
-) {
+/**
+ * Batch-fetch specific Item object ids (the freshly-minted recall drops), same shape as get_owned_items.
+ * LINEAGE-FILTERED (issue #524): `core.getObjects`' default read mask always returns each object's
+ * normalised `type` (free — no extra RPC), so a dead-package id is dropped here rather than rendered with
+ * a lost catalog join downstream. Exported for direct testing (the one-filter-home for this read).
+ * @param {import("@mysten/sui/grpc").SuiGrpcClient} grpc_client
+ * @param {string[]} ids
+ */
+export async function get_owned_items_by_id(grpc_client, ids) {
   const out = []
   for (let i = 0; i < ids.length; i += 50) {
     const chunk = ids.slice(i, i + 50)
@@ -203,6 +208,7 @@ async function get_owned_items_by_id(
     const { objects } = await grpc_client.core.getObjects({ objectIds: chunk, include: { json: true } })
     for (const o of objects ?? []) {
       if (o instanceof Error) continue
+      if (!is_aresrpg_item(o.type)) continue // dead-lineage object — never enters the result (issue #524)
       const f = o?.json
       if (!f) continue
       out.push({

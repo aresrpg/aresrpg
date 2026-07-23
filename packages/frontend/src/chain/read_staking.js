@@ -19,6 +19,7 @@ import { ITEM_CATEGORY } from '@aresrpg/sdk/items'
 import { get_owner_items } from '../rpc/client'
 import { with_timeout } from '../utils/with_timeout'
 import { game_log } from '../core/log.js'
+import { item_type_id } from './item_lineage'
 
 // Stackability is a CATEGORY property (consumable / resource / rune — item.move is_stackable_category),
 // never an Item field. The SINGLE client home for the derivation, applied to BOTH the /v1 rows and the
@@ -98,12 +99,15 @@ export async function get_owned_items(sdk, owner, package_id, fetch_v1 = get_own
 
   // FALLBACK (the sanctioned /v1-outage path — the reason this walk STAYS, not dead code). Below the frozen
   // read-count baseline: it adds ZERO new chain reads over what this file already had.
+  // item_type_id (issue #524's item_lineage — one home for the `${pkg}::item::Item` struct tag, shared with
+  // is_aresrpg_item) — same short-circuit as before: an empty/malformed package_id yields no chain walk at all.
   let want
   try {
-    want = normalizeStructTag(`${package_id}::item::Item`)
+    want = item_type_id(package_id)
   } catch {
     return []
   }
+  if (!want) return []
   const matches = (/** @type {string} */ type) => {
     try {
       return normalizeStructTag(type) === want
