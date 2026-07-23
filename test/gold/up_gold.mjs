@@ -307,6 +307,15 @@ async function main() {
   }
   fs.writeFileSync(P.SPONSOR_RELEASE, `${JSON.stringify(sponsor_release, null, 2)}\n`)
   process.env.GOLD_SPONSOR_RELEASE_PATH = P.SPONSOR_RELEASE
+  // api/Dockerfile's build-time `COPY release.json /packages/sdk/src/deployment/release.json` needs SOME
+  // valid JSON at api/release.json — gitignored machine-local prep step, absent on a fresh checkout (the CI
+  // break this closes). Its baked content is provably inert for this rig: compose.gold.yml's runtime volume
+  // mount shadows that exact in-image path with the REAL repo file, and sponsor.mjs's own release
+  // resolution prefers SPONSOR_RELEASE_PATH (→ this same stamp, above) over the baked-in static import
+  // whenever it's set — both true for every gold boot. Copy (never symlink — docker build contexts don't
+  // follow them) so the build-time placeholder is always THIS boot's own disposable localnet truth, never
+  // leftover residue from an unrelated manual image build. Left in place after boot — see the commit body.
+  fs.copyFileSync(P.SPONSOR_RELEASE, path.join(P.REPO, 'api', 'release.json'))
   boot_sponsor(sponsor_wallet.privkey)
   const sponsor_endpoint = await wait_sponsor()
   const sponsor_fixture = {
