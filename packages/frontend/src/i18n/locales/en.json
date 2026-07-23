@@ -1754,9 +1754,7 @@
     "follow_with_you": "With you",
     "follow_blocked_fight_result": "{{name}} needs its fight result opened",
     "follow_open_result_cta": "Open result",
-    "follow_background": "Background",
-    "follow_cta": "Follow",
-    "unfollow_cta": "Unfollow"
+    "follow_background": "Background"
   },
   "inventory": {
     "craft_success": "Crafted {{name}}",

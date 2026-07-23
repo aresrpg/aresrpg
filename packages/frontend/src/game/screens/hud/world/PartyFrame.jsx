@@ -20,12 +20,7 @@ import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
 import { get_characters } from '../../../../rpc/client'
 import { game_log } from '../../../../core/log.js'
 import { open_player_menu } from './player_menu_store.js'
-import {
-  enable_group_follow,
-  set_group_follow,
-  get_group_follow_snapshot,
-  subscribe_group_follow,
-} from '../../../../world-shell/group_wiring.js'
+import { get_group_follow_snapshot, subscribe_group_follow } from '../../../../world-shell/group_wiring.js'
 
 const MAX_ROWS = 6
 
@@ -120,11 +115,10 @@ export function PartyFrame() {
     get_group_follow_snapshot
   )
 
-  const invite_and_follow = async (character_id) => {
-    const leader_character_id = follow.leader_character_id || selected_character_id
-    if (!leader_character_id || !(await invite_owned([character_id]))) return
-    enable_group_follow({ leader_character_id, follower_character_ids: [character_id] })
-  }
+  // GROUP MEMBERSHIP IS AUTO-FOLLOW (#613 DESIGN COLLAPSE): inviting an owned character to the group IS the
+  // enable act — no separate follow toggle. The group loop reconciles the follower set to membership on the
+  // resulting party resync and auto-aligns / seats them; kicking from the group is the only disable.
+  const invite = (character_id) => void invite_owned([character_id])
 
   // MULTICHAR picker: the wallet's OTHER characters, invitable one exact pick at a time —
   // the group loop then auto-aligns worlds, follows, and seats them. Capacity honors the six-slot chain cap.
@@ -145,7 +139,7 @@ export function PartyFrame() {
                 type="button"
                 className="gw-party__lvl"
                 style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0 }}
-                onClick={() => void invite_and_follow(character.id)}
+                onClick={() => invite(character.id)}
                 disabled={party_busy}
               >
                 {t('party.invite_owned_cta')}
@@ -203,13 +197,8 @@ export function PartyFrame() {
           const character_id = member.character
           const row = member_cache.get(character_id)
           const is_leader = character_id === leader_character
-          const owned = (roster ?? []).some((character) => character.id === character_id)
           const transit = follow.followers[character_id] ?? null
-          const is_following = follow.follower_character_ids.includes(character_id)
-          // The follow toggle rides every OWNED row except the one I'm driving and the captured anchor —
-          // those two can never follow. Default OFF; dispatches set_follow for THIS character (#496/#171).
-          const can_toggle_follow =
-            owned && character_id !== selected_character_id && character_id !== follow.leader_character_id
+          const arriving = transit?.status === 'joining' || transit?.status === 'in_transit'
           const self_name = character_id === selected_character_id ? my_char_name : null
           const name = self_name || get_peer_state(character_id)?.name || row?.name || t('party.adventurer')
           const open_member_menu = (/** @type {any} */ e) => {
@@ -230,42 +219,25 @@ export function PartyFrame() {
               className={`gw-party__row${is_leader ? ' leader' : ''}`}
               onContextMenu={open_member_menu}
             >
+              {/* #613 — three-column grid (name · fixed LV · status) so levels align whether or not a row shows
+                  a follow status. Group membership IS auto-follow now: the row shows STATUS ONLY, never a control. */}
               <div className="gw-party__top">
                 <span className="gw-party__name">{name}</span>
-                {row?.level != null && (
-                  <span className="gw-party__lvl">{t('party.level_chip', { level: row.level })}</span>
-                )}
-                {can_toggle_follow && (
-                  <button
-                    type="button"
-                    className="gw-party__lvl gw-party__follow"
-                    style={{
-                      background: 'none',
-                      border: 0,
-                      cursor: 'pointer',
-                      padding: 0,
-                      color: is_following ? 'var(--color-gold)' : undefined,
-                    }}
-                    disabled={party_busy}
-                    aria-pressed={is_following}
-                    onClick={() =>
-                      set_group_follow({
-                        character_id,
-                        enabled: !is_following,
-                        leader_character_id: follow.leader_character_id || selected_character_id,
-                      })
-                    }
-                  >
-                    {t(is_following ? 'party.unfollow_cta' : 'party.follow_cta')}
-                  </button>
-                )}
+                <span className="gw-party__lvl">
+                  {row?.level != null ? t('party.level_chip', { level: row.level }) : ''}
+                </span>
+                <span className="gw-party__status">
+                  {transit?.status === 'with_you' ? (
+                    <span className="gw-party__with-you">{t('party.follow_with_you')}</span>
+                  ) : null}
+                </span>
               </div>
               {row?.health != null && row?.max_health != null && (
                 <div className="gw-party__bar">
                   <span className="gw-party__bar-fill" style={{ width: `${hp_pct(row.health, row.max_health)}%` }} />
                 </div>
               )}
-              {/* #613 — the party-row idiom: ARRIVING timer → with_you label → blocked state. A `resolving`
+              {/* the status idiom: ARRIVING timer → with_you (in the grid above) → blocked. A `resolving`
                   same-world read shows nothing (no "joining world" flash for a follower already beside you). */}
               {transit?.status === 'blocked' ? (
                 <div className="gw-party__blocked">
@@ -278,9 +250,7 @@ export function PartyFrame() {
                     {t('party.follow_open_result_cta')}
                   </button>
                 </div>
-              ) : transit?.status === 'with_you' ? (
-                <span className="gw-party__with-you">{t('party.follow_with_you')}</span>
-              ) : transit && (transit.status === 'joining' || transit.status === 'in_transit') ? (
+              ) : arriving ? (
                 <div className="gw-party__transit">
                   <div className="gw-party__transit-copy">
                     <span>

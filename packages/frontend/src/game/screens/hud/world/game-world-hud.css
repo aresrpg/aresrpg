@@ -412,14 +412,21 @@
 .gw-party__row + .gw-party__row {
   border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
+/* #613 — three-column grid (name · fixed LV · status): the 1fr name column pins the LV column's left edge to a
+   constant x across rows, so levels align whether or not a row carries a follow status (the field misalignment
+   was the old Follow control pushing the LV; the control is gone, membership IS auto-follow). */
 .gw-party__top {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: baseline;
-  justify-content: space-between;
   gap: 8px;
   margin-bottom: 4px;
   font-size: 10px;
   letter-spacing: 0.08em;
+}
+.gw-party__status {
+  justify-self: end;
+  font-size: 8px;
 }
 .gw-party__name {
   /* Keep the FULL character name in the "bring your characters" rows (no "immor…" clip). Long

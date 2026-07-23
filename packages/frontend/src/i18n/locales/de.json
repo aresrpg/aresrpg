@@ -1754,9 +1754,7 @@
     "follow_with_you": "Bei dir",
     "follow_blocked_fight_result": "{{name}} muss sein Kampfergebnis öffnen",
     "follow_open_result_cta": "Ergebnis öffnen",
-    "follow_background": "Im Hintergrund",
-    "follow_cta": "Folgen",
-    "unfollow_cta": "Nicht mehr folgen"
+    "follow_background": "Im Hintergrund"
   },
   "inventory": {
     "craft_success": "Hergestellt: {{name}}",

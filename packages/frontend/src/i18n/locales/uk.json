@@ -1754,9 +1754,7 @@
     "follow_with_you": "Поруч із вами",
     "follow_blocked_fight_result": "{{name}} потрібно відкрити результат бою",
     "follow_open_result_cta": "Відкрити результат",
-    "follow_background": "У фоновому режимі",
-    "follow_cta": "Слідувати",
-    "unfollow_cta": "Не слідувати"
+    "follow_background": "У фоновому режимі"
   },
   "inventory": {
     "craft_success": "Виготовлено: {{name}}",
