@@ -30,7 +30,7 @@ describe('dispose_terrain — engine teardown frees the terrain renderer + clear
     const scene = new Scene()
     const terrain = make(scene)
     const win = { __terrain_renderer: terrain }
-    expect(mesh_count(scene)).toBe(5) // solid/foliage/cutout/canopy/liquid pools are live
+    expect(mesh_count(scene)).toBe(6) // solid/foliage/cutout/canopy/liquid pools + foliage's scene_depth_mesh
 
     dispose_terrain(terrain, win)
 
@@ -78,12 +78,15 @@ describe('dispose_terrain — engine teardown frees the terrain renderer + clear
     // Next scene mount builds a brand-new renderer — must construct, upload, and report cleanly.
     const scene2 = new Scene()
     const next = make(scene2)
-    expect(mesh_count(scene2)).toBe(5)
+    expect(mesh_count(scene2)).toBe(6)
     // one solid grass-top quad (x=y=z=0,w=h=32,face=2,block=3) in the frozen 8-byte wire format
     const word_a = ((31 << 18) | (31 << 23) | (2 << 28)) >>> 0
     const word_b = (3 | (15 << 12) | (0xff << 20)) >>> 0
     next.upload_chunk([0, 0, 0], new Uint32Array([word_a, word_b]), 1)
     expect(next.get_stats().chunk_count).toBe(1)
     next.dispose()
-  })
+    // 30s timeout (#580/#641): this test builds TWO full renderers (the disposed one + the re-init
+    // one), each an atlas bake + quad-pool alloc — the default 5s flakes under full-suite/CI-runner
+    // load while passing isolated (same class as column_gen.test.js's documented 15s precedent).
+  }, 30000)
 })
