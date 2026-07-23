@@ -290,43 +290,56 @@ async function main() {
   else log(`market fixture SKIPPED — corpus '${corpus_source}' has no qualifying non-stack shop Sale`)
   phase('market_fixture', t)
 
-  // Sponsor key was generated before compose interpolation; fund it only from this disposable localnet.
-  await faucet(sponsor_wallet.address, 4)
-  const sponsor_release = {
-    schema: 1,
-    generated_at: new Date().toISOString(),
-    networks: {
-      localnet: {
-        packages: Object.fromEntries(
-          gold_move_packages.map((name) => [name, { origin: cer[name].pkg, latest: cer[name].latest ?? cer[name].pkg }])
-        ),
-        rules_package: ids.KIOSK_ROYALTY_RULE_PACKAGE_ID,
-        system: { sponsor_framework_packages: ['0x2', kiosk, ids.KIOSK_ROYALTY_RULE_PACKAGE_ID] },
+  // 7d — sponsor fixture (opt-out: GOLD_SPONSOR=0 skips the gas-pool/sponsor images entirely — their cold
+  // Rust compile is the single slowest leg of a fresh CI boot, run 29970085845's own timeout cause. Default
+  // ON so every Mac flow is unchanged; only gold.yml's PR/label run turns it off. regressions.spec.ts's
+  // sponsor test gates on `manifest.sponsor_fixture` for exactly this — never a faked fixture.
+  const sponsor_enabled = process.env.GOLD_SPONSOR !== '0'
+  let sponsor_fixture = null
+  if (sponsor_enabled) {
+    // Sponsor key was generated before compose interpolation; fund it only from this disposable localnet.
+    await faucet(sponsor_wallet.address, 4)
+    const sponsor_release = {
+      schema: 1,
+      generated_at: new Date().toISOString(),
+      networks: {
+        localnet: {
+          packages: Object.fromEntries(
+            gold_move_packages.map((name) => [
+              name,
+              { origin: cer[name].pkg, latest: cer[name].latest ?? cer[name].pkg },
+            ])
+          ),
+          rules_package: ids.KIOSK_ROYALTY_RULE_PACKAGE_ID,
+          system: { sponsor_framework_packages: ['0x2', kiosk, ids.KIOSK_ROYALTY_RULE_PACKAGE_ID] },
+        },
       },
-    },
-  }
-  fs.writeFileSync(P.SPONSOR_RELEASE, `${JSON.stringify(sponsor_release, null, 2)}\n`)
-  process.env.GOLD_SPONSOR_RELEASE_PATH = P.SPONSOR_RELEASE
-  // api/Dockerfile's build-time `COPY release.json /packages/sdk/src/deployment/release.json` needs SOME
-  // valid JSON at api/release.json — gitignored machine-local prep step, absent on a fresh checkout (the CI
-  // break this closes). Its baked content is provably inert for this rig: compose.gold.yml's runtime volume
-  // mount shadows that exact in-image path with the REAL repo file, and sponsor.mjs's own release
-  // resolution prefers SPONSOR_RELEASE_PATH (→ this same stamp, above) over the baked-in static import
-  // whenever it's set — both true for every gold boot. Copy (never symlink — docker build contexts don't
-  // follow them) so the build-time placeholder is always THIS boot's own disposable localnet truth, never
-  // leftover residue from an unrelated manual image build. Left in place after boot — see the commit body.
-  fs.copyFileSync(P.SPONSOR_RELEASE, path.join(P.REPO, 'api', 'release.json'))
-  boot_sponsor(sponsor_wallet.privkey)
-  const sponsor_endpoint = await wait_sponsor()
-  const sponsor_fixture = {
-    endpoint: `${sponsor_endpoint}/api/sponsor`,
-    wallet_index: N_WALLETS,
-    wallet: { address: poor_wallet.address },
-    character: {
-      character_id: poor_character_result.character_id,
-      kiosk_id: poor_character_result.kiosk_id,
-      personal_kiosk_cap_id: poor_character_result.personal_kiosk_cap_id,
-    },
+    }
+    fs.writeFileSync(P.SPONSOR_RELEASE, `${JSON.stringify(sponsor_release, null, 2)}\n`)
+    process.env.GOLD_SPONSOR_RELEASE_PATH = P.SPONSOR_RELEASE
+    // api/Dockerfile's build-time `COPY release.json /packages/sdk/src/deployment/release.json` needs SOME
+    // valid JSON at api/release.json — gitignored machine-local prep step, absent on a fresh checkout (the CI
+    // break this closes). Its baked content is provably inert for this rig: compose.gold.yml's runtime volume
+    // mount shadows that exact in-image path with the REAL repo file, and sponsor.mjs's own release
+    // resolution prefers SPONSOR_RELEASE_PATH (→ this same stamp, above) over the baked-in static import
+    // whenever it's set — both true for every gold boot. Copy (never symlink — docker build contexts don't
+    // follow them) so the build-time placeholder is always THIS boot's own disposable localnet truth, never
+    // leftover residue from an unrelated manual image build. Left in place after boot — see the commit body.
+    fs.copyFileSync(P.SPONSOR_RELEASE, path.join(P.REPO, 'api', 'release.json'))
+    boot_sponsor(sponsor_wallet.privkey)
+    const sponsor_endpoint = await wait_sponsor()
+    sponsor_fixture = {
+      endpoint: `${sponsor_endpoint}/api/sponsor`,
+      wallet_index: N_WALLETS,
+      wallet: { address: poor_wallet.address },
+      character: {
+        character_id: poor_character_result.character_id,
+        kiosk_id: poor_character_result.kiosk_id,
+        personal_kiosk_cap_id: poor_character_result.personal_kiosk_cap_id,
+      },
+    }
+  } else {
+    log('sponsor SKIPPED (GOLD_SPONSOR=0) — gas-pool/sponsor images never build; manifest.sponsor_fixture is null')
   }
 
   // 8 — deterministic fight fixtures live outside the production-parity world/count baseline: each dedicated
@@ -396,6 +409,7 @@ async function main() {
     fight_fixtures,
     runtime_catalog,
     market_two_actor,
+    sponsor_booted: sponsor_enabled, // false under GOLD_SPONSOR=0 — sponsor_fixture is null in lockstep
     sponsor_fixture,
     coop_full_kit_roster,
     publisher, // localnet throwaway — regenerated every boot, worthless off this chain

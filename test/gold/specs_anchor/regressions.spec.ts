@@ -363,6 +363,7 @@ async function assert_visual(root: Locator, allow_placeholder: boolean) {
 test.describe('07-15 fixed-class regressions — gold localnet', () => {
   test.skip(!manifest, 'no .gold-deployment.json — run `node test/gold/up_gold.mjs` first')
   test('POOR-WALLET SPONSOR ROUTING · station gas joins a zero-SUI character to the world', async () => {
+    test.skip(!manifest?.sponsor_fixture, 'gold bootstrap did not boot the sponsor (GOLD_SPONSOR=0)')
     const { sponsored_join_world } = await import('../sponsor_client.mjs')
     // @ts-expect-error The vendored gold ESM harness intentionally has no TypeScript declaration file.
     const { makeClient } = await import('../lib_gold.mjs')
