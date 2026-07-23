@@ -446,7 +446,7 @@ describe('corpus sanity — seed/mainnet/*/items.json CONSUMABLEs', () => {
   })
 })
 
-// ══════ COMMIT C — the ceremony mint speaks the new schema (ranges · loot chance · R3 sign · R4 icon) ══════
+// ══════ COMMIT C — the ceremony mint speaks the new schema (ranges · loot chance · R3 sign · art-key law) ══════
 // Pure mirrors of seed_full_corpus.mjs (no seeder import — its module load pulls client.js/keypair + the manifest).
 // Each mirror is byte-identical to the source helper it pins; a reviewer checks the source against these.
 const SHIFT = 32768 // seed_full_corpus SHIFT (item_stats + mob resistances centered here; R3 reuses it)
@@ -477,7 +477,6 @@ const effectFlags = (kind, rawMin, rawMax, authored = 0) => {
   if (Math.min(rawMin, rawMax) < 0) flags |= FLAG_NEGATIVE
   return flags
 }
-const resolveIcon = it => it.icon ?? it.slug // mirrors buildItemCreate's `it.icon ?? it.slug`
 
 describe('COMMIT C ③ — R3 signed encode: alter_stat/alter_resist center at 32768, every other kind refuses a negative', () => {
   test('a negative alter delta encodes CENTERED (a −33 debuff → 32735; a −8 → 32760)', () => {
@@ -529,20 +528,49 @@ describe('COMMIT C ② — loot/rate chance is a FRACTION → basis points (Math
   })
 })
 
-describe('COMMIT C ④ — R4 icon: each item threads its per-variant slug into create_template (13-arg signature)', () => {
-  test('the icon resolves to the row\'s own `icon`, falling back to its `slug`', () => {
-    expect(resolveIcon({ slug: 'sword_iron' })).toBe('sword_iron') // default = the per-variant slug
-    expect(resolveIcon({ slug: 'x', icon: 'custom_art' })).toBe('custom_art') // explicit override wins
+// ART-KEY LAW (owner ruling 2026-07-23 "item_type = the image"): item_type IS the art key — mirror of
+// seed_full_corpus assertUniqueItemTypes (no seeder import — import-time side effects).
+const assertUniqueItemTypes = rows => {
+  const seen = new Map()
+  for (const it of rows ?? []) {
+    const prior = seen.get(it.itemType)
+    if (prior)
+      throw new Error(
+        `item_type collision: '${it.itemType}' authored by BOTH '${prior}' and '${it.slug}' — item_type is the art key (owner ruling 07-23); every corpus item's item_type must be unique`
+      )
+    seen.set(it.itemType, it.slug)
+  }
+}
+
+describe('ART-KEY LAW — item_type is unique per item (owner ruling 07-23; the R4 icon crutch is dropped)', () => {
+  test('a corpus with all-unique item_types passes the gate', () => {
+    expect(() =>
+      assertUniqueItemTypes([
+        { slug: 'a', itemType: 'sword_iron' },
+        { slug: 'b', itemType: 'ring_gold' },
+        { slug: 'c', itemType: 'cloak_opal' },
+      ])
+    ).not.toThrow()
   })
-  test('create_template now composes 13 args with the icon threaded 6th (between item_type and category)', () => {
-    const it = { name: 'Iron Sword', description: '', itemType: 'sword', slug: 'sword_iron', category: 'sword', level: 10 }
+  test('THE GATE: two items sharing one item_type FAIL LOUD (the colliding slug pair, never silently minted)', () => {
+    expect(() =>
+      assertUniqueItemTypes([
+        { slug: 'lorito_cloak_opal', itemType: 'cloak' },
+        { slug: 'lorito_cloak_emerald', itemType: 'cloak' }, // the old slot-word pollution — now a hard error
+      ])
+    ).toThrow(
+      /item_type collision: 'cloak' authored by BOTH 'lorito_cloak_opal' and 'lorito_cloak_emerald'/
+    )
+  })
+  test('create_template composes 12 args — the icon arg is GONE (item_type carries the art)', () => {
+    const it = { name: 'Iron Sword', description: '', itemType: 'sword_iron', category: 'sword', level: 10 }
     const tx = new Transaction()
     tx.moveCall({
       target: `${IPKG}::admin::create_template`,
       arguments: [
         tx.object(oid('cap')), tx.object(oid('cat')),
         tx.pure.string(it.name), tx.pure.string(it.description ?? ''),
-        tx.pure.string(it.itemType), tx.pure.string(resolveIcon(it)), tx.pure.string(it.category),
+        tx.pure.string(it.itemType), tx.pure.string(it.category),
         tx.pure.u16(it.level ?? 1),
         opt_none(tx, `${IPKG}::item_stats::ItemStatistics`), opt_none(tx, `${IPKG}::item_stats::ItemStatistics`),
         tx.makeMoveVec({ type: `${IPKG}::item_damages::ItemDamages`, elements: [] }),
@@ -551,7 +579,7 @@ describe('COMMIT C ④ — R4 icon: each item threads its per-variant slug into 
       ],
     })
     const call = tx.getData().commands.find(c => c.$kind === 'MoveCall' && c.MoveCall.function === 'create_template')
-    expect(call.MoveCall.arguments.length).toBe(13) // 12 (pre-R4) + the icon arg
+    expect(call.MoveCall.arguments.length).toBe(12) // icon dropped — back to the pre-R4 signature
   })
 })
 

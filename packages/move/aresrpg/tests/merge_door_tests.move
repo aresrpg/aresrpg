@@ -44,8 +44,8 @@ fun boot(sc: &mut Scenario): (ID, ID) {
   let mut cat = sc.take_shared<Catalog>();
   admin::admin_set_enabled(&acap, &mut ver, true, sc.ctx());
   admin::add_category(&acap, &mut cat, b"resource".to_string(), &ver, sc.ctx());
-  let wood = admin::create_template(&acap, &cat, b"Wood".to_string(), b"".to_string(), b"wood".to_string(), b"icon".to_string(), b"resource".to_string(), 1, option::none(), option::none(), vector[], option::none(), &ver, sc.ctx());
-  let stone = admin::create_template(&acap, &cat, b"Stone".to_string(), b"".to_string(), b"stone".to_string(), b"icon".to_string(), b"resource".to_string(), 1, option::none(), option::none(), vector[], option::none(), &ver, sc.ctx());
+  let wood = admin::create_template(&acap, &cat, b"Wood".to_string(), b"".to_string(), b"wood".to_string(), b"resource".to_string(), 1, option::none(), option::none(), vector[], option::none(), &ver, sc.ctx());
+  let stone = admin::create_template(&acap, &cat, b"Stone".to_string(), b"".to_string(), b"stone".to_string(), b"resource".to_string(), 1, option::none(), option::none(), vector[], option::none(), &ver, sc.ctx());
   ts::return_shared(cat);
 
   sc.next_tx(OWNER);

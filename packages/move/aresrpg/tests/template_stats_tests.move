@@ -54,7 +54,7 @@ fun create_template(sc: &mut Scenario): ID {
     b"Seed Blade".to_string(),
     b"unchanged".to_string(),
     b"seed_blade".to_string(),
-    b"icon".to_string(), b"sword".to_string(),
+    b"sword".to_string(),
     42,
     option::some(neutral()),
     option::some(neutral()),

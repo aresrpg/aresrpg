@@ -442,10 +442,9 @@ async function main() {
               })
             )
           : optNone(tx, T.ceff)
-      // admin::create_template(cap, catalog, name, DESCRIPTION, item_type, ICON, category, level, stats_min,
-      // stats_max, damages, effect, version) — description lands 4th (between name and item_type); the R4 `icon`
-      // per-variant art slug lands 6th (between item_type and category). seed_content.json carries no descriptions
-      // (disposable QA seed) → default ''; the icon defaults to the per-variant `slug`. Matches seed_full_corpus.mjs.
+      // admin::create_template(cap, catalog, name, DESCRIPTION, item_type, category, level, stats_min, stats_max,
+      // damages, effect, version) — the `description` rider (admin.move:91) lands 4th, between name and item_type.
+      // seed_content.json carries no descriptions (disposable QA seed) → default ''; matches seed_full_corpus.mjs.
       tx.moveCall({
         target: `${ITEMS}::admin::create_template`,
         arguments: [
@@ -454,7 +453,6 @@ async function main() {
           tx.pure.string(name),
           tx.pure.string(opts.description ?? ''),
           tx.pure.string(itemType),
-          tx.pure.string(opts.icon ?? slug), // R4: the per-variant art slug the Display `{icon}` resolves
           tx.pure.string(category),
           tx.pure.u16(opts.level ?? 1),
           smin,

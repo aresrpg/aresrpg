@@ -74,7 +74,7 @@ fun super_cap_creates_template() {
   let version = sc.take_shared<Version>();
   assert!(admin::is_super(&cap));
   let tid = admin::create_template(
-    &cap, &cat, b"Potion".to_string(), b"".to_string(), b"potion".to_string(), b"icon".to_string(), b"misc".to_string(), 1,
+    &cap, &cat, b"Potion".to_string(), b"".to_string(), b"potion".to_string(), b"misc".to_string(), 1,
     option::none(), option::none(), vector[], option::none(), &version, sc.ctx(),
   );
 
@@ -113,7 +113,7 @@ fun create_template_attaches_ranges_and_damages() {
   );
   let dmg = item_damages::new(10, 25, b"melee".to_string(), b"fire".to_string());
   let tid = admin::create_template(
-    &cap, &cat, b"Sword".to_string(), b"".to_string(), b"sword".to_string(), b"icon".to_string(), b"sword".to_string(), 5,
+    &cap, &cat, b"Sword".to_string(), b"".to_string(), b"sword".to_string(), b"sword".to_string(), 5,
     option::some(stats_min), option::some(stats_max), vector[dmg], option::none(), &version, sc.ctx(),
   );
 
@@ -156,7 +156,7 @@ fun temp_cap_creates_template_within_its_epoch() {
   let version = sc.take_shared<Version>();
   assert!(!admin::is_super(&temp));
   admin::create_template(
-    &temp, &cat, b"x".to_string(), b"".to_string(), b"x".to_string(), b"icon".to_string(), b"misc".to_string(), 1,
+    &temp, &cat, b"x".to_string(), b"".to_string(), b"x".to_string(), b"misc".to_string(), 1,
     option::none(), option::none(), vector[], option::none(), &version, sc.ctx(),
   );
 
@@ -182,7 +182,7 @@ fun temp_cap_expires_after_its_epoch() {
   let cat = sc.take_shared<Catalog>();
   let version = sc.take_shared<Version>();
   admin::create_template(
-    &temp, &cat, b"x".to_string(), b"".to_string(), b"x".to_string(), b"icon".to_string(), b"misc".to_string(), 1,
+    &temp, &cat, b"x".to_string(), b"".to_string(), b"x".to_string(), b"misc".to_string(), 1,
     option::none(), option::none(), vector[], option::none(), &version, sc.ctx(),
   ); // EAdminCapExpired
   abort
@@ -245,7 +245,7 @@ fun create_template_unknown_category_aborts() {
   let cat = sc.take_shared<Catalog>();
   let version = sc.take_shared<Version>();
   admin::create_template(
-    &cap, &cat, b"Banana".to_string(), b"".to_string(), b"banana".to_string(), b"icon".to_string(), b"banana".to_string(), 1, // not whitelisted
+    &cap, &cat, b"Banana".to_string(), b"".to_string(), b"banana".to_string(), b"banana".to_string(), 1, // not whitelisted
     option::none(), option::none(), vector[], option::none(), &version, sc.ctx(),
   ); // EUnknownCategory
   abort
@@ -267,7 +267,7 @@ fun admin_adds_then_removes_category() {
 
   // a template can now be authored in the freshly-whitelisted category
   admin::create_template(
-    &cap, &cat, b"Gelano".to_string(), b"".to_string(), b"gelano".to_string(), b"icon".to_string(), b"ring".to_string(), 1,
+    &cap, &cat, b"Gelano".to_string(), b"".to_string(), b"gelano".to_string(), b"ring".to_string(), 1,
     option::none(), option::none(), vector[], option::none(), &version, sc.ctx(),
   );
 
@@ -306,7 +306,7 @@ fun stats_range_min_without_max_aborts() {
   let cat = sc.take_shared<Catalog>();
   let version = sc.take_shared<Version>();
   admin::create_template(
-    &cap, &cat, b"Half".to_string(), b"".to_string(), b"half".to_string(), b"icon".to_string(), b"sword".to_string(), 1,
+    &cap, &cat, b"Half".to_string(), b"".to_string(), b"half".to_string(), b"sword".to_string(), 1,
     option::some(neutral()), option::none(), vector[], option::none(), &version, sc.ctx(),
   ); // EStatsRangeMismatch — min present, max absent
   abort
@@ -323,7 +323,7 @@ fun consumable_effect_attaches_on_consumable() {
   let version = sc.take_shared<Version>();
   let effect = consumable_effect::new(consumable_effect::heal(), 50);
   admin::create_template(
-    &cap, &cat, b"Bread".to_string(), b"".to_string(), b"bread".to_string(), b"icon".to_string(), b"consumable".to_string(), 1,
+    &cap, &cat, b"Bread".to_string(), b"".to_string(), b"bread".to_string(), b"consumable".to_string(), 1,
     option::none(), option::none(), vector[], option::some(effect), &version, sc.ctx(),
   );
 
@@ -351,7 +351,7 @@ fun consumable_effect_on_non_consumable_aborts() {
   let version = sc.take_shared<Version>();
   let effect = consumable_effect::new(consumable_effect::heal(), 50);
   admin::create_template(
-    &cap, &cat, b"Sword".to_string(), b"".to_string(), b"sword".to_string(), b"icon".to_string(), b"sword".to_string(), 1, // NOT consumable
+    &cap, &cat, b"Sword".to_string(), b"".to_string(), b"sword".to_string(), b"sword".to_string(), 1, // NOT consumable
     option::none(), option::none(), vector[], option::some(effect), &version, sc.ctx(),
   ); // EEffectNotConsumable
   abort
@@ -393,7 +393,7 @@ fun burn_item_template_deletes_the_shared_template() {
   let version = sc.take_shared<Version>();
   let dmg = item_damages::new(10, 25, b"melee".to_string(), b"fire".to_string());
   admin::create_template(
-    &cap, &cat, b"Sword".to_string(), b"".to_string(), b"sword".to_string(), b"icon".to_string(), b"sword".to_string(), 5,
+    &cap, &cat, b"Sword".to_string(), b"".to_string(), b"sword".to_string(), b"sword".to_string(), 5,
     option::some(neutral()), option::some(neutral()), vector[dmg], option::none(), &version, sc.ctx(),
   );
   ts::return_shared(cat);
@@ -428,7 +428,7 @@ fun burn_consumable_then_recreate_same_type() {
   let version = sc.take_shared<Version>();
   let effect = consumable_effect::new(consumable_effect::heal(), 50);
   admin::create_template(
-    &cap, &cat, b"Bread".to_string(), b"".to_string(), b"bread".to_string(), b"icon".to_string(), b"consumable".to_string(), 1,
+    &cap, &cat, b"Bread".to_string(), b"".to_string(), b"bread".to_string(), b"consumable".to_string(), 1,
     option::none(), option::none(), vector[], option::some(effect), &version, sc.ctx(),
   );
   ts::return_shared(cat);
@@ -452,7 +452,7 @@ fun burn_consumable_then_recreate_same_type() {
   let cat = sc.take_shared<Catalog>();
   let version = sc.take_shared<Version>();
   let tid = admin::create_template(
-    &cap, &cat, b"Bread".to_string(), b"".to_string(), b"bread".to_string(), b"icon".to_string(), b"consumable".to_string(), 1,
+    &cap, &cat, b"Bread".to_string(), b"".to_string(), b"bread".to_string(), b"consumable".to_string(), 1,
     option::none(), option::none(), vector[], option::none(), &version, sc.ctx(),
   );
   sc.next_tx(OWNER);
@@ -478,7 +478,7 @@ fun burn_item_template_with_expired_cap_aborts() {
   let cat = sc.take_shared<Catalog>();
   let version = sc.take_shared<Version>();
   admin::create_template(
-    &super_cap, &cat, b"x".to_string(), b"".to_string(), b"x".to_string(), b"icon".to_string(), b"misc".to_string(), 1,
+    &super_cap, &cat, b"x".to_string(), b"".to_string(), b"x".to_string(), b"misc".to_string(), 1,
     option::none(), option::none(), vector[], option::none(), &version, sc.ctx(),
   );
   admin::mint_temp_admin_cap(&super_cap, TEMP, sc.ctx());
@@ -506,7 +506,7 @@ fun burn_item_template_on_stale_version_aborts() {
   let cat = sc.take_shared<Catalog>();
   let version = sc.take_shared<Version>();
   admin::create_template(
-    &cap, &cat, b"x".to_string(), b"".to_string(), b"x".to_string(), b"icon".to_string(), b"misc".to_string(), 1,
+    &cap, &cat, b"x".to_string(), b"".to_string(), b"x".to_string(), b"misc".to_string(), 1,
     option::none(), option::none(), vector[], option::none(), &version, sc.ctx(),
   );
   ts::return_shared(cat);
@@ -546,7 +546,7 @@ fun set_template_name_description_patches_name_and_desc_only() {
   );
   let dmg = item_damages::new(10, 25, b"melee".to_string(), b"fire".to_string());
   let tid = admin::create_template(
-    &cap, &cat, b"A Rock on a String".to_string(), b"joke desc".to_string(), b"sword".to_string(), b"icon".to_string(), b"sword".to_string(), 5,
+    &cap, &cat, b"A Rock on a String".to_string(), b"joke desc".to_string(), b"sword".to_string(), b"sword".to_string(), 5,
     option::some(stats_min), option::some(stats_max), vector[dmg], option::none(), &version, sc.ctx(),
   );
   ts::return_shared(cat);
@@ -591,7 +591,7 @@ fun set_template_name_description_on_stale_version_aborts() {
   let cat = sc.take_shared<Catalog>();
   let version = sc.take_shared<Version>();
   admin::create_template(
-    &cap, &cat, b"x".to_string(), b"".to_string(), b"x".to_string(), b"icon".to_string(), b"misc".to_string(), 1,
+    &cap, &cat, b"x".to_string(), b"".to_string(), b"x".to_string(), b"misc".to_string(), 1,
     option::none(), option::none(), vector[], option::none(), &version, sc.ctx(),
   );
   ts::return_shared(cat);
@@ -620,7 +620,7 @@ fun set_template_name_description_with_expired_cap_aborts() {
   let cat = sc.take_shared<Catalog>();
   let version = sc.take_shared<Version>();
   admin::create_template(
-    &super_cap, &cat, b"x".to_string(), b"".to_string(), b"x".to_string(), b"icon".to_string(), b"misc".to_string(), 1,
+    &super_cap, &cat, b"x".to_string(), b"".to_string(), b"x".to_string(), b"misc".to_string(), 1,
     option::none(), option::none(), vector[], option::none(), &version, sc.ctx(),
   );
   admin::mint_temp_admin_cap(&super_cap, TEMP, sc.ctx());
@@ -693,7 +693,7 @@ fun create_template_on_stale_version_aborts() {
   let mut version = sc.take_shared<Version>();
   version::test_set_stale(&mut version);
   admin::create_template(
-    &cap, &cat, b"x".to_string(), b"".to_string(), b"x".to_string(), b"icon".to_string(), b"misc".to_string(), 1,
+    &cap, &cat, b"x".to_string(), b"".to_string(), b"x".to_string(), b"misc".to_string(), 1,
     option::none(), option::none(), vector[], option::none(), &version, sc.ctx(),
   ); // EWrongVersion
   abort
@@ -711,7 +711,7 @@ fun create_template_stackable_with_ranges_aborts() {
   let cat = sc.take_shared<Catalog>();
   let version = sc.take_shared<Version>();
   admin::create_template(
-    &cap, &cat, b"Potion".to_string(), b"".to_string(), b"potion".to_string(), b"icon".to_string(), b"consumable".to_string(), 1,
+    &cap, &cat, b"Potion".to_string(), b"".to_string(), b"potion".to_string(), b"consumable".to_string(), 1,
     option::some(neutral()), option::some(neutral()), vector[], option::none(), &version, sc.ctx(),
   ); // EStackableHasRanges (consumable stacks → no ranges allowed)
   abort
@@ -733,7 +733,7 @@ fun template_max_raw_projects_ranges() {
   let version = sc.take_shared<Version>();
   // (a) rangeless template → template_max_raw == zero_raw (the EXOTIC all-zero rating).
   let plain_tid = admin::create_template(
-    &cap, &cat, b"Plain".to_string(), b"".to_string(), b"plain".to_string(), b"icon".to_string(), b"misc".to_string(), 1,
+    &cap, &cat, b"Plain".to_string(), b"".to_string(), b"plain".to_string(), b"misc".to_string(), 1,
     option::none(), option::none(), vector[], option::none(), &version, sc.ctx(),
   );
   // (b) ranged (non-stackable) template: vitality max = centre+132, every other field at centre both ends.
@@ -742,7 +742,7 @@ fun template_max_raw_projects_ranges() {
     32_768, 32_768, 32_768, 32_768, 32_768, 32_768, 32_768, 32_768,
   );
   let ranged_tid = admin::create_template(
-    &cap, &cat, b"Sword".to_string(), b"".to_string(), b"sword2".to_string(), b"icon".to_string(), b"sword".to_string(), 5,
+    &cap, &cat, b"Sword".to_string(), b"".to_string(), b"sword2".to_string(), b"sword".to_string(), 5,
     option::some(neutral()), option::some(stats_max), vector[], option::none(), &version, sc.ctx(),
   );
 

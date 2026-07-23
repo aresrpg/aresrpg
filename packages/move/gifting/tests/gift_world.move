@@ -88,7 +88,7 @@ public fun make_template(sc: &mut Scenario, name: vector<u8>, item_type: vector<
   let cat = sc.take_shared<Catalog>();
   let ver = sc.take_shared<Version>();
   let tid = admin::create_template(
-    &cap, &cat, name.to_string(), b"A gifting-suite artifact.".to_string(), item_type.to_string(), b"icon".to_string(), category.to_string(), level,
+    &cap, &cat, name.to_string(), b"A gifting-suite artifact.".to_string(), item_type.to_string(), category.to_string(), level,
     option::none(), option::none(), vector[], option::none(), &ver, sc.ctx(),
   );
   ts::return_shared(cat);

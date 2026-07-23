@@ -26,3 +26,5 @@ test/gold/.build/
 test/gold/out/
 test/gold/.gold-*.json
 scripts/walrus/out/quilt_receipt_*.json
+# Generated combinatorial-fight catalog (machine-emitted test output, never hand-formatted).
+packages/fight/test/combinatorial/out/

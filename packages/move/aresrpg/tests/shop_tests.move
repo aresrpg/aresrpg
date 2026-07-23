@@ -77,7 +77,7 @@ fun full_setup(
     option::some(item_stats::new(200, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5)),
   ) else (option::none(), option::none());
   let tid = admin::create_template(
-    &cap, &cat, b"Widget".to_string(), b"".to_string(), b"widget".to_string(), b"icon".to_string(), b"sword".to_string(), 1,
+    &cap, &cat, b"Widget".to_string(), b"".to_string(), b"widget".to_string(), b"sword".to_string(), 1,
     smin, smax, vector[], option::none(), &ver, sc.ctx(),
   );
   ts::return_shared(cat);
@@ -112,7 +112,7 @@ fun stackable_setup(sc: &mut Scenario, supply: Option<u64>, price: u64) {
   admin::admin_set_enabled(&cap, &mut ver, true, sc.ctx());
   admin::add_category(&cap, &mut cat, b"resource".to_string(), &ver, sc.ctx());
   let tid = admin::create_template(
-    &cap, &cat, b"Wood".to_string(), b"".to_string(), b"wood".to_string(), b"icon".to_string(), b"resource".to_string(), 1,
+    &cap, &cat, b"Wood".to_string(), b"".to_string(), b"wood".to_string(), b"resource".to_string(), 1,
     option::none(), option::none(), vector[], option::none(), &ver, sc.ctx(),
   );
   ts::return_shared(cat);

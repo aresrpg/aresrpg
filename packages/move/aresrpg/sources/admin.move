@@ -92,7 +92,6 @@ public fun create_template(
   name: String,
   description: String,
   item_type: String,
-  icon: String, // R4: the per-variant art slug the Display `{icon}` resolves (seeded from the corpus row's slug)
   category: String,
   level: u16,
   stats_min: Option<ItemStatistics>,
@@ -109,7 +108,7 @@ public fun create_template(
   // Reject at AUTHORING (root cause) so a stackable-with-ranges template can never exist; `shop::buy` re-asserts.
   if (item::is_stackable_category(category)) assert!(stats_min.is_none() && stats_max.is_none(), EStackableHasRanges);
 
-  let mut template = item::new_template(name, description, item_type, icon, category, level, ctx);
+  let mut template = item::new_template(name, description, item_type, category, level, ctx);
 
   // Stat ranges: BOTH-or-NEITHER — a gear template carries [min,max]; a resource/consumable carries none.
   if (stats_min.is_some() && stats_max.is_some()) {

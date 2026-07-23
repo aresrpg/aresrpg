@@ -49,7 +49,7 @@ fun setup_with(sc: &mut Scenario, category: vector<u8>, name: vector<u8>, itype:
   admin::admin_set_enabled(&acap, &mut ver, true, sc.ctx());
   admin::add_category(&acap, &mut cat, category.to_string(), &ver, sc.ctx());
   admin::create_template(
-    &acap, &cat, name.to_string(), b"".to_string(), itype.to_string(), b"icon".to_string(), category.to_string(), 1,
+    &acap, &cat, name.to_string(), b"".to_string(), itype.to_string(), category.to_string(), 1,
     option::none(), option::none(), vector[], option::none(), &ver, sc.ctx(),
   );
   ts::return_shared(cat);

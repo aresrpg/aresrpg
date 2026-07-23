@@ -497,6 +497,21 @@ const world_seed = (id) => {
   for (const c of String(id)) h = ((h * 33) ^ c.charCodeAt(0)) >>> 0
   return h || 1
 }
+// OWNER RULING 2026-07-23 "item_type = the image": `item_type` IS the art key the Display `{item_type}` resolves
+// (mechanics dispatch on `category`, NEVER item_type — verified), so it must be UNIQUE per item across the whole
+// corpus. Throws LOUD on the first collision (the colliding slug pair) — a shared item_type would silently mint two
+// items onto ONE art slug (the old slot-word pollution, dead with this lineage). One home for the type-identity fact.
+export const assertUniqueItemTypes = (rows) => {
+  const seen = new Map()
+  for (const it of rows ?? []) {
+    const prior = seen.get(it.itemType)
+    if (prior)
+      throw new Error(
+        `item_type collision: '${it.itemType}' authored by BOTH '${prior}' and '${it.slug}' — item_type is the art key (owner ruling 07-23); every corpus item's item_type must be unique`
+      )
+    seen.set(it.itemType, it.slug)
+  }
+}
 
 export function loadCorpus() {
   const readJson = (p) => JSON.parse(fs.readFileSync(p, 'utf8'))
@@ -660,7 +675,6 @@ export async function seed_full_corpus() {
         tx.pure.string(it.name),
         tx.pure.string(it.description ?? ''),
         tx.pure.string(it.itemType),
-        tx.pure.string(it.icon ?? it.slug), // R4: the per-variant art slug the Display `{icon}` resolves
         tx.pure.string(it.category),
         tx.pure.u16(it.level ?? 1),
         smin,
@@ -709,6 +723,8 @@ export async function seed_full_corpus() {
   const itemRows = [...C.items, ...C.resources, ...C.shop].filter(
     (it) => !seenSlugs.has(it.slug) && seenSlugs.add(it.slug)
   )
+  // ART-KEY LAW (owner 2026-07-23): item_type is THE image key — fail loud before minting if any two items share one.
+  assertUniqueItemTypes(itemRows)
   await backfillPending('items:', itemCreatedOf, (created) => {
     for (const { row, id } of claimCreated(
       itemRows.filter((it) => !OUT.items[it.slug]),
