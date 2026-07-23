@@ -31,23 +31,32 @@ const all_spells = Object.values(spells).flatMap(class_spells =>
   Object.entries(class_spells),
 )
 
-test('every class has a spell map and the 12 classes are present', () => {
-  expect(Object.keys(classes).length).toBe(12)
-  for (const id of [
-    'senshi',
-    'yajin',
-    'ikari',
-    'mori',
-    'tokei',
-    'shugo',
-    'yogen',
-    'rojin',
-    'shusen',
-    'tomoda',
-    'asobi',
-    'iyashi',
-  ])
-    expect(classes[id]).toBeDefined()
+const CLASS_IDS = [
+  'senshi',
+  'yajin',
+  'ikari',
+  'mori',
+  'tokei',
+  'shugo',
+  'yogen',
+  'rojin',
+  'shusen',
+  'tomoda',
+  'asobi',
+  'iyashi',
+]
+
+const CLASS_IDENTITY_FIELDS = [
+  'health',
+  'name',
+  'stamina',
+  'starter_weapon',
+  'title',
+  'weapon_category',
+]
+
+test('the 12 canonical class identities are present', () => {
+  expect(Object.keys(classes)).toEqual(CLASS_IDS)
 })
 
 test('spells: required fields, numeric AP cost, valid elements', () => {
@@ -135,21 +144,14 @@ test('item stats only use the AresRPG STATISTICS vocabulary', () => {
       expect(allowed.has(stat)).toBe(true)
 })
 
-test('classes: required fields and spellsJson unlock map references real spell ids', () => {
-  const known_spell_ids = new Set(
-    all_spells.map(([, spell]) => spell.icon).filter(Boolean),
-  )
+test('classes: only identity fields live in the class catalog', () => {
   for (const klass of Object.values(classes)) {
+    expect(Object.keys(klass).sort()).toEqual(CLASS_IDENTITY_FIELDS)
     expect(typeof klass.name).toBe('string')
+    expect(typeof klass.title).toBe('string')
     expect(typeof klass.health).toBe('number')
     expect(typeof klass.stamina).toBe('number')
-    // unlock keys are numeric levels; values are spell ids
-    for (const [level, spell_id] of Object.entries(klass.spells)) {
-      expect(Number.isFinite(Number(level))).toBe(true)
-      expect(typeof spell_id).toBe('string')
-      // every classed spell that HAS an icon must resolve to a seeded spell
-      if (known_spell_ids.has(spell_id))
-        expect(known_spell_ids.has(spell_id)).toBe(true)
-    }
+    expect(typeof klass.starter_weapon).toBe('string')
+    expect(typeof klass.weapon_category).toBe('string')
   }
 })
