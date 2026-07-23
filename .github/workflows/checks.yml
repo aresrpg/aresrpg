@@ -38,13 +38,21 @@ jobs:
     # red package must never hide another) and appends its pass/skip/fail triplet to the run
     # summary. Extraction failures are swallowed (`|| true`); the test's own exit code still fails
     # the leg — a parse miss must never mask a real red.
-    # engine + frontend are red for environment-dependent reasons (burn-down: #125).
-    # `continue-on-error` was tried and reverted: it's invisible to raw check-run consumers (the
-    # promote bot reads conclusions, not the derived merge rollup). Instead the test step itself
-    # swallows a red exit for these two packages ONLY: conclusion = policy (forced success, so
-    # landings aren't gated on someone else's ticket), summary = truth (the loud marker + real
-    # counts still land in $GITHUB_STEP_SUMMARY). The other six legs keep hard exit codes — a real
-    # red there still fails the run.
+    # #641 UNMASK: engine's leg used to be swallowed here too, for the same environment-dependent
+    # burn-down (#125 — closed, folded into #279, which only ever covered frontend) the frontend
+    # note below still cites. #641's audit found engine's row was never actually closed out: 6 real
+    # failures were hiding behind a forced-success conclusion. All 6 are now fixed at the root —
+    # 2 stale pre-dispose mesh-count assertions + 1 stale prettier-form string assertion + 3 tests
+    # whose default 5s bun:test timeout was too tight for their real GPU-pool-alloc/world-gen cost
+    # under load, not GPU/headless variance as #580 first suspected (dispose_terrain.test.js,
+    # pool_renderer.test.js, ground_height.test.js, board_highlights.test.js). Engine now keeps a
+    # hard exit code like the other six legs — a real red there fails the run.
+    # frontend is STILL red, for two tracked defects out of #641's scope (fight_trace_tee #568,
+    # crush_actions #589) — its leg stays masked until those close. `continue-on-error` was tried
+    # and reverted: it's invisible to raw check-run consumers (the promote bot reads conclusions,
+    # not the derived merge rollup). Instead the test step itself swallows a red exit for frontend
+    # ONLY: conclusion = policy (forced success, so landings aren't gated on someone else's
+    # ticket), summary = truth (the loud marker + real counts still land in $GITHUB_STEP_SUMMARY).
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -67,7 +75,7 @@ jobs:
           fi
           echo "code=$code" >> "$GITHUB_OUTPUT"
           case "${{ matrix.package }}" in
-            engine|frontend) exit 0 ;;
+            frontend) exit 0 ;;
             *) exit "$code" ;;
           esac
       - name: pass/skip/fail → step summary
@@ -80,9 +88,9 @@ jobs:
             fail=$(grep -oE '^ *[0-9]+ fail' "$log" | grep -oE '[0-9]+' || echo 0)
             note=""
             case "${{ matrix.package }}" in
-              engine|frontend)
+              frontend)
                 if [ "${{ steps.test.outputs.code }}" != "0" ]; then
-                  note=" ⚠ NON-BLOCKING RED (burn-down #125)"
+                  note=" ⚠ NON-BLOCKING RED (#568, #589)"
                 fi
                 ;;
             esac
