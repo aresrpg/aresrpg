@@ -976,6 +976,85 @@ pub struct ItemStatsField {
     pub air_resistance: u16,
 }
 
+/// The current ItemTemplate damage dynamic field:
+/// `Field<item_damages::DamagesKey, vector<item_damages::ItemDamages>>`.
+///
+/// `DamagesKey {}` contributes the same hidden bool byte as the stat-range keys. The value is
+/// still the authored corpus shape in the current and pending fresh-publish sources; it is not
+/// `participant::WeaponLine`. The read layer normalizes these endpoints separately in
+/// `snapshot::map_item_damages_field`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ItemDamagesField {
+    pub id: ObjectID,
+    pub dummy_field: bool,
+    pub lines: Vec<ItemDamage>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ItemDamage {
+    pub from: u16,
+    pub to: u16,
+    pub damage_type: String,
+    pub element: String,
+}
+
+/// Exact whole-body compatibility layouts for a template-owned
+/// `Field<item_damages::DamagesKey, vector<participant::WeaponLine>>`.
+///
+/// Templates do not emit this value type in the checked-in or pending publish source, but #619
+/// names the migration. BCS has no field names/defaultable struct fields, so V2-first then V1
+/// full-consumption decoding is the safe schema discriminator.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WeaponLinesFieldV1 {
+    pub id: ObjectID,
+    pub dummy_field: bool,
+    pub lines: Vec<WeaponLineV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WeaponLineV1 {
+    pub element: u8,
+    pub damage: u64,
+    pub crit_damage: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WeaponLinesFieldV2 {
+    pub id: ObjectID,
+    pub dummy_field: bool,
+    pub lines: Vec<WeaponLineV2>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WeaponLineV2 {
+    pub element: u8,
+    pub damage: u64,
+    pub damage_max: u64,
+    pub crit_damage: u64,
+    pub crit_damage_max: u64,
+}
+
+/// The pending ceremony source carries the same #619 range fields followed by the independently
+/// authored strike-shape override. Keep a separate exact body so those trailing fields cannot make
+/// the range projection reject the fresh object.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WeaponLinesFieldV2Shaped {
+    pub id: ObjectID,
+    pub dummy_field: bool,
+    pub lines: Vec<WeaponLineV2Shaped>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WeaponLineV2Shaped {
+    pub element: u8,
+    pub damage: u64,
+    pub damage_max: u64,
+    pub crit_damage: u64,
+    pub crit_damage_max: u64,
+    pub area_shape: u8,
+    pub area_size: u64,
+}
+
 /// `aresrpg::item::Item` object contents (the loose-bag `/v1/owner-items` view). `name`,
 /// `category` and `amount` live ONLY in the object — the `ItemMinted` event carries just
 /// `{ item, template, item_type, amount }` and NO name/category — so the bag's display

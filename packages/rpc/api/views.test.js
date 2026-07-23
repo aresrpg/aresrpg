@@ -414,8 +414,9 @@ beforeAll(async () => {
   await sadd('rpc:idx:worlds', WORLD_B)
 
   // item template: event arm sets item_type+live, object snapshot adds name/level/category,
-  // the StatsMinKey/StatsMaxKey DF snapshot adds stats_min/stats_max (issue #219) — independent
-  // per-DF sub-paths on the SAME doc, reshaped into `stats: {field: [min,max]}` at read time.
+  // the StatsMinKey/StatsMaxKey DF snapshot adds stats_min/stats_max (issue #219) and the
+  // DamagesKey DF snapshot adds the normalized weapon lines (issue #619) — independent
+  // per-DF sub-paths on the SAME doc, served together at read time.
   await setj('rpc:template:0xtplsword', {
     template: '0xtplsword',
     item_type: 'weapon',
@@ -425,6 +426,15 @@ beforeAll(async () => {
     live: true,
     stats_min: { vitality: 10, raw_damage: 5 },
     stats_max: { vitality: 20, raw_damage: 15 },
+    damages: [
+      {
+        element: 2,
+        damage: 7,
+        damage_max: 14,
+        crit_damage: 10,
+        crit_damage_max: 21,
+      },
+    ],
   })
   await sadd('rpc:idx:templates', '0xtplsword')
   // A SECOND template carrying only the MIN half (never observed live — both DFs land in the
@@ -1097,6 +1107,15 @@ describe('encyclopedia', () => {
         supply: 7,
         last_sale_mist: '2000000000', // lastsale doc joined (string MIST); null when never sold
         stats: { vitality: [10, 20], raw_damage: [5, 15] }, // stats_min/stats_max DF snapshot (issue #219)
+        damages: [
+          {
+            element: 2,
+            damage: 7,
+            damage_max: 14,
+            crit_damage: 10,
+            crit_damage_max: 21,
+          },
+        ], // DamagesKey DF snapshot (#619): chain-authored weapon range + crit range
       },
     ])
     // mob prefix + display-ready drops: the first row joins the Bronze Sword item doc

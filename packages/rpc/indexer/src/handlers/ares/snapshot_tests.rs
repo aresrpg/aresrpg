@@ -976,6 +976,154 @@ fn item_stats_field_garbage_bytes_are_a_safe_none() {
     assert!(map_item_stats_max_field("0xab", &[0x00, 0x01, 0x02]).is_none());
 }
 
+// ── Item-template damage dynamic field (#619 — encyclopedia weapon ranges) ─────────────────
+
+#[test]
+fn current_item_damages_field_projects_authored_and_crit_ranges() {
+    #[derive(serde::Serialize)]
+    struct ChainItemDamage {
+        from: u16,
+        to: u16,
+        damage_type: String,
+        element: String,
+    }
+    #[derive(serde::Serialize)]
+    struct ChainItemDamagesField {
+        id: ObjectID,
+        dummy_field: bool,
+        lines: Vec<ChainItemDamage>,
+    }
+
+    let field = ChainItemDamagesField {
+        id: ObjectID::from_hex_literal("0xda6").unwrap(),
+        dummy_field: false,
+        lines: vec![ChainItemDamage {
+            from: 7,
+            to: 14,
+            damage_type: "damage".into(),
+            element: "earth".into(),
+        }],
+    };
+    let template = "0xab";
+    let writes = map_item_damages_field(template, &bcs::to_bytes(&field).unwrap())
+        .expect("current ItemDamages field must decode");
+    let damages: Value = serde_json::from_str(set_json(&writes, "$.damages").unwrap()).unwrap();
+    assert_eq!(damages, json!([{
+        "element": 2, "damage": 7, "damage_max": 14,
+        "crit_damage": 10, "crit_damage_max": 21,
+    }]));
+    assert!(has_sadd(&writes, "rpc:idx:templates", template));
+}
+
+#[test]
+fn weapon_line_field_selects_complete_fresh_or_legacy_layouts() {
+    #[derive(serde::Serialize)]
+    struct LegacyLine { element: u8, damage: u64, crit_damage: u64 }
+    #[derive(serde::Serialize)]
+    struct LegacyField { id: ObjectID, dummy_field: bool, lines: Vec<LegacyLine> }
+    #[derive(serde::Serialize)]
+    struct FreshLine {
+        element: u8,
+        damage: u64,
+        damage_max: u64,
+        crit_damage: u64,
+        crit_damage_max: u64,
+    }
+    #[derive(serde::Serialize)]
+    struct FreshField { id: ObjectID, dummy_field: bool, lines: Vec<FreshLine> }
+    #[derive(serde::Serialize)]
+    struct FreshShapedLine {
+        element: u8,
+        damage: u64,
+        damage_max: u64,
+        crit_damage: u64,
+        crit_damage_max: u64,
+        area_shape: u8,
+        area_size: u64,
+    }
+    #[derive(serde::Serialize)]
+    struct FreshShapedField {
+        id: ObjectID,
+        dummy_field: bool,
+        lines: Vec<FreshShapedLine>,
+    }
+
+    let template = "0xab";
+    let legacy = LegacyField {
+        id: ObjectID::from_hex_literal("0x1e6").unwrap(),
+        dummy_field: false,
+        lines: vec![LegacyLine { element: 0, damage: 9, crit_damage: 13 }],
+    };
+    let writes = map_weapon_lines_field(template, &bcs::to_bytes(&legacy).unwrap())
+        .expect("legacy WeaponLine field must decode");
+    let legacy_json: Value = serde_json::from_str(set_json(&writes, "$.damages").unwrap()).unwrap();
+    assert_eq!(legacy_json, json!([{
+        "element": 0, "damage": 9, "damage_max": null,
+        "crit_damage": 13, "crit_damage_max": null,
+    }]));
+
+    let fresh = FreshField {
+        id: ObjectID::from_hex_literal("0xf2e5").unwrap(),
+        dummy_field: false,
+        lines: vec![FreshLine {
+            element: 3,
+            damage: 11,
+            damage_max: 17,
+            crit_damage: 16,
+            crit_damage_max: 25,
+        }],
+    };
+    let mut fresh_bytes = bcs::to_bytes(&fresh).unwrap();
+    let writes = map_weapon_lines_field(template, &fresh_bytes).expect("fresh WeaponLine field must decode");
+    let fresh_json: Value = serde_json::from_str(set_json(&writes, "$.damages").unwrap()).unwrap();
+    assert_eq!(fresh_json, json!([{
+        "element": 3, "damage": 11, "damage_max": 17,
+        "crit_damage": 16, "crit_damage_max": 25,
+    }]));
+
+    let fresh_shaped = FreshShapedField {
+        id: ObjectID::from_hex_literal("0x5a9e").unwrap(),
+        dummy_field: false,
+        lines: vec![FreshShapedLine {
+            element: 1,
+            damage: 13,
+            damage_max: 19,
+            crit_damage: 19,
+            crit_damage_max: 28,
+            area_shape: 255,
+            area_size: 0,
+        }],
+    };
+    let writes = map_weapon_lines_field(template, &bcs::to_bytes(&fresh_shaped).unwrap())
+        .expect("fresh shaped WeaponLine field must decode");
+    let fresh_shaped_json: Value =
+        serde_json::from_str(set_json(&writes, "$.damages").unwrap()).unwrap();
+    assert_eq!(fresh_shaped_json, json!([{
+        "element": 1, "damage": 13, "damage_max": 19,
+        "crit_damage": 19, "crit_damage_max": 28,
+    }]));
+
+    // Full-consumption schema selection: neither V2 nor the V1 fallback accepts trailing junk.
+    fresh_bytes.push(0);
+    assert!(map_weapon_lines_field(template, &fresh_bytes).is_none());
+}
+
+#[test]
+fn damage_field_type_guards_keep_item_damages_and_weapon_lines_distinct() {
+    use std::str::FromStr;
+    let key = TypeTag::from_str("0xa11ce::item_damages::DamagesKey").unwrap();
+    let item_lines = TypeTag::from_str("vector<0xa11ce::item_damages::ItemDamages>").unwrap();
+    let weapon_lines = TypeTag::from_str("vector<0xbeef::participant::WeaponLine>").unwrap();
+    let wrong = TypeTag::from_str("vector<0xa11ce::item_stats::ItemStatistics>").unwrap();
+    assert!(is_damages_key(&key));
+    assert!(is_item_damages_value(&item_lines));
+    assert!(!is_item_damages_value(&weapon_lines));
+    assert!(is_weapon_lines_value(&weapon_lines));
+    assert!(!is_weapon_lines_value(&item_lines));
+    assert!(!is_item_damages_value(&wrong));
+    assert!(!is_weapon_lines_value(&wrong));
+}
+
 // ── Item object snapshot (the /v1/owner-items loose bag) ──────────────────────
 
 #[test]

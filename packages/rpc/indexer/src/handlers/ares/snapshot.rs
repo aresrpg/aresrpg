@@ -40,9 +40,10 @@ use sui_indexer_alt_framework::types::object::Owner;
 use tracing::debug;
 
 use super::model::{
-    BoardCreated, CharacterObject, Crushed, EquippedItemField, FightOutcomeObject, ItemObject, ItemStatsField,
-    ItemTemplateObject, JobXpField, KioskItemListed, PersonalKioskCapObject, PetBoxClaimObject, PoolBuy, PoolSell,
-    ProgressionField, RecipeObject, RecipelessSet, SaleBought, ZoneField, ZoneGroupRootField,
+    BoardCreated, CharacterObject, Crushed, EquippedItemField, FightOutcomeObject, ItemDamagesField, ItemObject,
+    ItemStatsField, ItemTemplateObject, JobXpField, KioskItemListed, PersonalKioskCapObject, PetBoxClaimObject,
+    PoolBuy, PoolSell, ProgressionField, RecipeObject, RecipelessSet, SaleBought, WeaponLinesFieldV1,
+    WeaponLinesFieldV2, WeaponLinesFieldV2Shaped, ZoneField, ZoneGroupRootField,
 };
 use super::project::{
     self, char_init, del, k_character, k_item, k_lastsale, k_template, k_world, k_zone, k_zones, mpath, sadd,
@@ -69,6 +70,15 @@ const ITEM_TEMPLATE_TYPE: &str = "ItemTemplate";
 const ITEM_STATS_MODULE: &str = "item_stats";
 const STATS_MIN_KEY_TYPE: &str = "StatsMinKey";
 const STATS_MAX_KEY_TYPE: &str = "StatsMaxKey";
+/// Template damage blocks. The live/pending-publish template wire remains
+/// `Field<item_damages::DamagesKey, vector<item_damages::ItemDamages>>`; #619 also reserves
+/// compatibility for a `vector<participant::WeaponLine>` value whose two maxima arrive with the
+/// fresh engine publish. The value TypeTag is always checked before selecting a decoder.
+const ITEM_DAMAGES_MODULE: &str = "item_damages";
+const DAMAGES_KEY_TYPE: &str = "DamagesKey";
+const ITEM_DAMAGES_TYPE: &str = "ItemDamages";
+const PARTICIPANT_MODULE: &str = "participant";
+const WEAPON_LINE_TYPE: &str = "WeaponLine";
 /// `kiosk::personal_kiosk::PersonalKioskCap` — the mysten non-transferable kiosk-owner cap.
 /// Like `0x2::dynamic_field::Field` below, it is framework-adjacent (NOT an AresRPG package),
 /// so it is matched by `(module, name)` and EXEMPTED from the AresRPG package allowlist — it
@@ -353,6 +363,28 @@ fn is_stats_min_key(key_tag: &TypeTag) -> bool {
 fn is_stats_max_key(key_tag: &TypeTag) -> bool {
     let TypeTag::Struct(s) = key_tag else { return false };
     s.module.as_str() == ITEM_STATS_MODULE && s.name.as_str() == STATS_MAX_KEY_TYPE
+}
+
+/// The plain `item_damages::DamagesKey` attached directly to an ItemTemplate UID.
+fn is_damages_key(key_tag: &TypeTag) -> bool {
+    let TypeTag::Struct(s) = key_tag else { return false };
+    s.module.as_str() == ITEM_DAMAGES_MODULE && s.name.as_str() == DAMAGES_KEY_TYPE
+}
+
+fn is_vector_of(value_tag: &TypeTag, module: &str, name: &str) -> bool {
+    let TypeTag::Vector(inner) = value_tag else { return false };
+    matches!(&**inner, TypeTag::Struct(s) if s.module.as_str() == module && s.name.as_str() == name)
+}
+
+/// The actual template value in the current chain source and tonight's pending publish.
+fn is_item_damages_value(value_tag: &TypeTag) -> bool {
+    is_vector_of(value_tag, ITEM_DAMAGES_MODULE, ITEM_DAMAGES_TYPE)
+}
+
+/// Deliberately distinct from [`is_item_damages_value`]: feeding variable-width ItemDamages
+/// bytes to a fixed WeaponLine decoder would be schema confusion.
+fn is_weapon_lines_value(value_tag: &TypeTag) -> bool {
+    is_vector_of(value_tag, PARTICIPANT_MODULE, WEAPON_LINE_TYPE)
 }
 
 /// Project one per-job XP dynamic field onto its owner character's doc: `$.jobs["<job u8>"] =
@@ -723,6 +755,93 @@ pub fn map_item_stats_max_field(template_id: &str, contents: &[u8]) -> Option<Ve
         set(key, "$.stats_max", stats_json(&f)),
         sadd(K_TEMPLATES.into(), template_id.to_string()),
     ])
+}
+
+#[derive(Debug, Serialize)]
+struct ProjectedWeaponDamage {
+    element: u8,
+    damage: u64,
+    damage_max: Option<u64>,
+    crit_damage: u64,
+    crit_damage_max: Option<u64>,
+}
+
+fn item_damage_element_id(element: &str) -> u8 {
+    // Exact twin of `item_damages::element_id`; unknown/neutral uses spell::el_none().
+    match element {
+        "fire" => 0,
+        "water" => 1,
+        "earth" => 2,
+        "air" => 3,
+        _ => u8::MAX,
+    }
+}
+
+fn project_template_damages(template_id: &str, damages: Vec<ProjectedWeaponDamage>) -> Vec<RedisWrite> {
+    let key = k_template(template_id);
+    vec![
+        set_nx(key.clone(), "$", json!({ "template": template_id, "live": true })),
+        set(key, "$.damages", json!(damages)),
+        sadd(K_TEMPLATES.into(), template_id.to_string()),
+    ]
+}
+
+/// Decode the template damage wire actually published today (and unchanged in tonight's pending
+/// source): `Field<DamagesKey, vector<ItemDamages {from,to,damage_type,element}>>`.
+///
+/// `/v1` normalizes authored `[from,to]` endpoints into the engine's five-field vocabulary;
+/// critical endpoints apply its base `×3/2` rule independently. Class affinity is
+/// character-specific and intentionally absent from a template view.
+pub fn map_item_damages_field(template_id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
+    let f: ItemDamagesField = bcs::from_bytes(contents).ok()?;
+    let damages = f.lines.into_iter().map(|line| {
+        let damage = u64::from(line.from);
+        let damage_max = u64::from(line.to);
+        ProjectedWeaponDamage {
+            element: item_damage_element_id(&line.element),
+            damage,
+            damage_max: Some(damage_max),
+            crit_damage: damage * 3 / 2,
+            crit_damage_max: Some(damage_max * 3 / 2),
+        }
+    }).collect();
+    Some(project_template_damages(template_id, damages))
+}
+
+/// Decode the #619 compatibility form where a template DamagesKey value is a WeaponLine vector.
+///
+/// BCS has no field names, so select by exact whole-body presence: try the pending seven-field
+/// (range + shape) layout, the five-field range layout, then the three-field legacy layout.
+/// `bcs::from_bytes` requires full input consumption, preventing a fresh body from truncating into
+/// an older one. Legacy maxima remain honest `null`.
+pub fn map_weapon_lines_field(template_id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
+    let damages = if let Ok(fresh) = bcs::from_bytes::<WeaponLinesFieldV2Shaped>(contents) {
+        fresh.lines.into_iter().map(|line| ProjectedWeaponDamage {
+            element: line.element,
+            damage: line.damage,
+            damage_max: Some(line.damage_max),
+            crit_damage: line.crit_damage,
+            crit_damage_max: Some(line.crit_damage_max),
+        }).collect()
+    } else if let Ok(fresh) = bcs::from_bytes::<WeaponLinesFieldV2>(contents) {
+        fresh.lines.into_iter().map(|line| ProjectedWeaponDamage {
+            element: line.element,
+            damage: line.damage,
+            damage_max: Some(line.damage_max),
+            crit_damage: line.crit_damage,
+            crit_damage_max: Some(line.crit_damage_max),
+        }).collect()
+    } else {
+        let legacy: WeaponLinesFieldV1 = bcs::from_bytes(contents).ok()?;
+        legacy.lines.into_iter().map(|line| ProjectedWeaponDamage {
+            element: line.element,
+            damage: line.damage,
+            damage_max: None,
+            crit_damage: line.crit_damage,
+            crit_damage_max: None,
+        }).collect()
+    };
+    Some(project_template_damages(template_id, damages))
 }
 
 /// Snapshot one `aresrpg::item::Item` object's display fields into its item doc
@@ -1284,7 +1403,7 @@ impl Processor for AresSnapshotHandler {
                     // `ObjectOwner` IS that parent (a Character or the World). Discriminated by the key
                     // TYPE PARAMETER (never the byte-identical bodies), latest-wins per parent. Independent
                     // of the kiosk map above (a first-party-DF id is never looked up AS a wrapper, so the
-                    // shared insert stays inert for it). Nine arms:
+                    // shared insert stays inert for it). The arms are:
                     //   • job-xp   (`Field<NsKey<JobXpKey>, u64>`, parent=character)  — ABSOLUTE running total.
                     //   • progression (`…<ProgressionKey>, Progression>`, character)  — fight xp/level + RAW hp/stamp.
                     //   • equipment  (`…<EquipmentKey>, EquipmentMap>`, character)     — positive gear block.
@@ -1295,6 +1414,8 @@ impl Processor for AresSnapshotHandler {
                     //     fight-create diet's committed Blake2b mob-group root + count (witness ingredient).
                     //   • stats min/max (`Field<item_stats::StatsMinKey|StatsMaxKey, ItemStatistics>`,
                     //     parent=ITEM TEMPLATE) — the authored [min,max] roll ranges (issue #219).
+                    //   • damages (`Field<item_damages::DamagesKey, vector<ItemDamages|WeaponLine>>`,
+                    //     parent=ITEM TEMPLATE) — authored weapon ranges normalized for /v1 (#619).
                     if let Owner::ObjectOwner(parent) = obj.owner() {
                         let params = ty.type_params();
                         let key = params.first().map(|k| &**k);
@@ -1369,6 +1490,24 @@ impl Processor for AresSnapshotHandler {
                             // Same ITEM TEMPLATE parent as StatsMinKey — the sibling upper bound.
                             if let Some(mv) = obj.data.try_as_move() {
                                 if let Some(w) = map_item_stats_max_field(&id(), mv.contents()) {
+                                    writes.extend(w);
+                                }
+                            }
+                        } else if key.is_some_and(is_damages_key)
+                            && value.is_some_and(is_item_damages_value)
+                        {
+                            // The current/pending-publish template wire: authored {from,to,type,element} rows.
+                            if let Some(mv) = obj.data.try_as_move() {
+                                if let Some(w) = map_item_damages_field(&id(), mv.contents()) {
+                                    writes.extend(w);
+                                }
+                            }
+                        } else if key.is_some_and(is_damages_key)
+                            && value.is_some_and(is_weapon_lines_value)
+                        {
+                            // #619 compatibility seam: exact fresh-body decode, then exact legacy fallback.
+                            if let Some(mv) = obj.data.try_as_move() {
+                                if let Some(w) = map_weapon_lines_field(&id(), mv.contents()) {
                                     writes.extend(w);
                                 }
                             }

@@ -824,6 +824,30 @@ export async function handle_rare_links(params) {
 // — for a caller that already knows which templates it needs (a shop listing, an inventory
 // characteristics tooltip) instead of pulling the full ~1840-row liveness index. Absent →
 // the existing full-index behavior, unchanged (additive).
+const combine_stat_ranges = (min, max) => {
+  if (!min && !max) return {}
+  const fields = new Set([...Object.keys(min ?? {}), ...Object.keys(max ?? {})])
+  return Object.fromEntries([...fields].map((f) => [f, [min?.[f] ?? null, max?.[f] ?? null]]))
+}
+
+// Pure response boundary, exported for a Redis-free fixture test: independent ItemTemplate,
+// StatsMin/StatsMax and DamagesKey snapshots converge on one doc, then this function serves all
+// three together. Legacy WeaponLine maxima remain null; an absent damage DF is honestly [].
+export function project_encyclopedia_item(t, supply, last_sale_mist) {
+  return {
+    template_id: t.template,
+    item_type: t.item_type ?? null,
+    name: t.name ?? null, // object snapshot (null until snapshotted)
+    description: t.description ?? null, // object snapshot — the create_template EN description (§14); locale overlay is client-side
+    level: t.level ?? null, // object snapshot
+    category: t.category ?? null, // object snapshot
+    supply: supply ?? 0, // event-derived mint/burn counter (never null)
+    last_sale_mist: last_sale_mist ?? null, // null until the first sale ever
+    stats: combine_stat_ranges(t.stats_min, t.stats_max),
+    damages: t.damages ?? [],
+  }
+}
+
 export async function handle_encyclopedia(params) {
   const kind = params.get('kind')
   const want = (k) => !kind || kind === k
@@ -878,11 +902,6 @@ export async function handle_encyclopedia(params) {
   // practice both land together (`item_stats::attach_ranges` writes both DFs in the SAME PTB).
   // `{}` for a template with no ranges at all (resources/consumables/cosmetics carry none) or
   // whose snapshot has not reached it yet — same "gap, never fabricate" stance as name/level.
-  const combine_stat_ranges = (min, max) => {
-    if (!min && !max) return {}
-    const fields = new Set([...Object.keys(min ?? {}), ...Object.keys(max ?? {})])
-    return Object.fromEntries([...fields].map((f) => [f, [min?.[f] ?? null, max?.[f] ?? null]]))
-  }
   const join_drops = (rows) =>
     rows == null
       ? null // snapshot did not decode the loot table — honest unknown (not "no drops")
@@ -899,17 +918,9 @@ export async function handle_encyclopedia(params) {
         })
 
   return ok({
-    items: items.map((t) => ({
-      template_id: t.template,
-      item_type: t.item_type ?? null,
-      name: t.name ?? null, // object snapshot (null until snapshotted)
-      description: t.description ?? null, // object snapshot — the create_template EN description (§14); locale overlay is client-side
-      level: t.level ?? null, // object snapshot
-      category: t.category ?? null, // object snapshot
-      supply: supply_by_template.get(t.template) ?? 0, // event-derived mint/burn counter (never null — see join above)
-      last_sale_mist: lastsale_by_template.get(t.template) ?? null, // last realised per-unit price (string MIST) — null until the first sale ever
-      stats: combine_stat_ranges(t.stats_min, t.stats_max), // {field: [min,max]} authored roll ranges (issue #219, item_stats DF snapshot); {} for templates with none (resources/consumables/cosmetics) or not yet snapshotted
-    })),
+    items: items.map((t) =>
+      project_encyclopedia_item(t, supply_by_template.get(t.template), lastsale_by_template.get(t.template))
+    ),
     mobs: mobs.map((m) => ({
       template_id: m.template,
       name: m.name ?? null,

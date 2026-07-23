@@ -45,6 +45,7 @@ levels, seats and rooms are JSON numbers. IDs/addresses are canonical `0x…` he
 | `aresrpg_fight::settlement::FightOutcome` **object** | `settlement` | `/v1/pending-outcomes` (`ares_snapshot`; object create/delete) |
 | `aresrpg_game::zones::Zone` **DF object** (World UID) | `dynamic_field::Field<zones::ZoneKey>` | `/v1/zones?world=&zone=` live spawn roster (`ares_snapshot`; allowlist-exempt DF hop) |
 | `aresrpg_game::zones::ZoneGroupCommitment` **DF object** (World UID) | `dynamic_field::Field<zones::ZoneGroupRootKey>` | `/v1/zones?world=&zone=` `group_root`/`group_count` — the fight-create diet's claim-witness ingredient (`ares_snapshot`) |
+| `aresrpg::item_damages::ItemDamages` **DF object** (ItemTemplate UID) | `dynamic_field::Field<item_damages::DamagesKey>` | `/v1/encyclopedia` items[].damages (`ares_snapshot`) |
 | `aresrpg::loot_box::PetBoxClaim` **object** | `loot_box` | `/v1/pet-claims` (`ares_snapshot`; object create/delete) |
 | `aresrpg::forgemagie` events | `forgemagie` | `/v1/taux` (`ares_snapshot`) |
 
@@ -376,6 +377,47 @@ Redis) — the SAME documented lever this file already names for the job-xp/prog
 DFs above. Every write here is an idempotent `JSON.SET`, so a re-index safely reprocesses already-
 correct fields alongside the newly-added stats. The #488 `gear_positive`/`gear_malus` projection above requires
 this same watermark reset; one rebuild covers both additions.
+
+---
+
+## Item weapon ranges — `/v1/encyclopedia` items[].damages (issue #619)
+
+The published template wire is
+`Field<item_damages::DamagesKey, vector<item_damages::ItemDamages>>`, attached directly to the
+ItemTemplate UID. Each authored row is `{from:u16,to:u16,damage_type:String,element:String}`; the
+pending fresh-publish source leaves this type unchanged. The Phase-1 dynamic-field loop checks both
+the key and value TypeTags before decoding it, then writes the normalized array to `$.damages` on
+the same `rpc:template:{id}` doc as the base template and stat ranges:
+
+```json
+[
+  {
+    "element": 2,
+    "damage": 7,
+    "damage_max": 14,
+    "crit_damage": 10,
+    "crit_damage_max": 21
+  }
+]
+```
+
+`element` mirrors `item_damages::element_id` (`fire=0`, `water=1`, `earth=2`, `air=3`, unknown or
+neutral `=255`). Normal endpoints are the authored `[from,to]`; critical endpoints apply the
+engine's base `×3/2` rule independently. This is explicit template-view normalization—class
+affinity is character-specific and is not applied.
+
+The #619 compatibility seam also accepts a value TypeTag of
+`vector<participant::WeaponLine>`. It decodes complete bodies in ceremony order: the pending
+seven-field range-plus-shape layout, the five-field range layout, then the three-field legacy
+layout. `bcs::from_bytes` requires full-body consumption, which is the safe presence discriminator
+because BCS has no field names; the implementation never indexes raw bytes. Shape fields are not
+part of this response. Legacy rows serve both maxima as `null`, while fresh rows serve the real
+values. The ItemDamages and WeaponLine value tags are never conflated.
+
+`/v1/encyclopedia` serves `damages: []` when no damage DF exists. Like the stat-range arms, this
+projection is self-sufficient (NX template skeleton + `SADD idx:templates`) and idempotent. An
+already-watermarked deployment needs the same full `ares_snapshot` re-index described above to
+capture existing template DFs.
 
 ---
 
