@@ -15,6 +15,7 @@ const TEMP: address = @0xB0B;
 
 // ── mirrored error values (module-local; `location` disambiguates the aborting module) ──
 const EOutOfBounds: u64 = 101; // world
+const EBadEntryIndex: u64 = 102; // world (row index past vector end)
 const EBadRange: u64 = 103; // world
 const EWorldNotEmpty: u64 = 104; // world (destroy_world refuses populated tables)
 const V_EWrongVersion: u64 = 101; // version
@@ -222,6 +223,75 @@ fun table_setters_and_read_getters() {
   ts::return_shared(ver);
   sc.return_to_sender(cap);
   sc.end();
+}
+
+// ╔════════════════ [ Dungeon room REPLACE (`set_dungeon_room` — authored-room repair door) ] ═ ]
+
+#[test]
+/// `set_dungeon_room` REPLACES the room at an index in place — the roster length is unchanged, the replaced row
+/// reads back exactly, and the untouched neighbor room is undisturbed (repairs one authored room without
+/// reflowing the rest of the roster).
+fun set_dungeon_room_replaces_room() {
+  let mut sc = ts::begin(OWNER);
+  boot(&mut sc);
+  make(&mut sc);
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let mut w = sc.take_shared<World>();
+  let mob_a = object::id_from_address(@0xA1);
+  let mob_b = object::id_from_address(@0xB2);
+  let mob_c = object::id_from_address(@0xC3);
+
+  world::add_dungeon_room(&cap, &mut w, vector[mob_a], &ver, sc.ctx()); // room 0
+  world::add_dungeon_room(&cap, &mut w, vector[mob_b], &ver, sc.ctx()); // room 1
+  assert_eq!(world::room_count(&w), 2);
+
+  world::set_dungeon_room(&cap, &mut w, 0, vector[mob_c], &ver, sc.ctx()); // replace room 0's stale mob-template
+  assert_eq!(world::room_count(&w), 2); // length unchanged — REPLACE, not append
+  assert_eq!(world::room_mobs(world::dungeon_room(&w, 0)), vector[mob_c]); // room 0 repaired
+  assert_eq!(world::room_mobs(world::dungeon_room(&w, 1)), vector[mob_b]); // room 1 undisturbed
+
+  ts::return_shared(w);
+  ts::return_shared(ver);
+  sc.return_to_sender(cap);
+  sc.end();
+}
+
+#[test, expected_failure(abort_code = EBadEntryIndex, location = world)]
+/// `set_dungeon_room` past the room count aborts (`EBadEntryIndex`) — mirrors the `dungeon_room` getter's bounds
+/// check (non-clampable: there is no meaningful coercion for a row index).
+fun set_dungeon_room_out_of_bounds_aborts() {
+  let mut sc = ts::begin(OWNER);
+  boot(&mut sc);
+  make(&mut sc);
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let mut w = sc.take_shared<World>();
+  world::add_dungeon_room(&cap, &mut w, vector[object::id_from_address(@0xA1)], &ver, sc.ctx()); // room 0 only
+  world::set_dungeon_room(&cap, &mut w, 1, vector[object::id_from_address(@0xB2)], &ver, sc.ctx()); // index 1 >= len 1
+  abort
+}
+
+#[test, expected_failure(abort_code = A_EAdminCapExpired, location = admin)]
+/// `set_dungeon_room` with an expired temp AdminCap aborts — auth is enforced exactly like every other authoring
+/// door (mirrors `set_rare_link_expired_cap_aborts`); the cap gate fires before the bounds check, so this holds
+/// even against a room-less World.
+fun set_dungeon_room_expired_cap_aborts() {
+  let mut sc = ts::begin(OWNER);
+  boot(&mut sc);
+  make(&mut sc);
+  sc.next_tx(OWNER);
+  let super_cap = sc.take_from_sender<AdminCap>();
+  admin::mint_temp_admin_cap(&super_cap, TEMP, sc.ctx());
+  sc.return_to_sender(super_cap);
+  sc.next_epoch(TEMP); // the temp cap (stamped with the previous epoch) is now stale
+  let temp = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let mut w = sc.take_shared<World>();
+  world::set_dungeon_room(&temp, &mut w, 0, vector[object::id_from_address(@0xA1)], &ver, sc.ctx()); // EAdminCapExpired
+  abort
 }
 
 // ╔════════════════ [ Zone math — overflow-proof, bounds-checked edges ] ══════ ]
