@@ -279,6 +279,13 @@ export interface RpcEncyclopediaMob {
   // Display-ready loot rows (server-joined). `null` = the snapshot could not decode the loot
   // tail (honest unknown → the client falls back to the bundled catalog); `[]` = no drops.
   drops: RpcMobDrop[] | null
+  // Raw on-chain wire, CENTERED @32768 (spell.move RES_SHIFT) — undefined today: snapshot.rs
+  // deliberately skips a MobTemplate's `stats` tail (see its map_mob_template_object doc). Optional so a
+  // future index projecting them needs no client contract change; bestiary_tab.tsx decodes defensively.
+  earth_resistance?: number | null
+  fire_resistance?: number | null
+  water_resistance?: number | null
+  air_resistance?: number | null
 }
 
 // One on-chain `crafting::Recipe` (object-snapshotted — rpc:recipe:{id}, snapshot.rs

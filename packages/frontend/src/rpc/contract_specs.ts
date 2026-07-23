@@ -309,7 +309,14 @@ export const encyclopedia_mob_spec: Spec<RpcEncyclopediaMob> = {
     element: nullable(num),
     drops: nullable(arr(mob_drop_spec)),
   },
-  optional: {},
+  optional: {
+    // Raw wire, CENTERED @32768 — undefined on every live row today (snapshot.rs doesn't project a
+    // MobTemplate's stats tail yet); declared so the day it does, this contract stays exhaustive.
+    earth_resistance: nullable(num),
+    fire_resistance: nullable(num),
+    water_resistance: nullable(num),
+    air_resistance: nullable(num),
+  },
 }
 
 export const encyclopedia_world_spec: Spec<{ world_id: string; seed: number; biome: string; required_level: number }> =

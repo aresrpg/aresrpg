@@ -130,6 +130,12 @@ const mobs_t = MOB_LIST.map((mob) => ({
   xpReward: mob.xp_reward,
   boss: mob.boss,
   stats: map_stats(mob.stats as Stats),
+  // NOT chain/stat_bias.js territory: this reads the SEED (mobs.json), the pre-mint AUTHORED source, whose
+  // resist fields are already real signed deltas (e.g. -20, +40) — the +32768 RES_SHIFT centering
+  // (spell.move) is applied ONLY at mint time (packages/move/scripts/seed_mob_stats.mjs
+  // normalize_field: `authored + (centered ? resistance_bias : 0)`). Decoding here would corrupt every
+  // authored value the moment real content lands. Contrast bestiary_tab.tsx, which DOES decode — it reads
+  // the on-chain wire (once the §14 index projects it), a different source in a different format.
   earthResistance: mob.stats?.earth_resistance ?? 0,
   fireResistance: mob.stats?.fire_resistance ?? 0,
   waterResistance: mob.stats?.water_resistance ?? 0,

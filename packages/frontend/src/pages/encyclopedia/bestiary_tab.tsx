@@ -3,9 +3,13 @@
 // §14 encyclopedia bestiary — reads ON-CHAIN LIVENESS from the /v1 RPC indexer (get_encyclopedia('mobs')), the
 // single source of truth, NOT a client-side chain replay. The indexer serves each minted MobTemplate's snapshot
 // prefix (name / level range / hp / element) — the fields the bestiary list + element filter + level brackets
-// need. The mob's resistances, spell kit and xp are NOT projected (they live in the object's nested stats/spells
-// the §14 index deliberately does not decode — see packages/rpc/indexer/src/handlers/ares/snapshot.rs), so this
-// tab shows no resistances; XP and the SPELL KIT are joined from the authored corpus rows the templates were
+// need. The mob's resistances, spell kit and xp are NOT projected today (they live in the object's nested
+// stats/spells the §14 index deliberately does not decode — see packages/rpc/indexer/src/handlers/ares/
+// snapshot.rs): resistances read `m.*_resistance` defensively and DECODE through the shared chain/stat_bias.js
+// home (mob resist is CENTERED @32768 — spell.move's RES_SHIFT, the same convention item_stats.move uses), so
+// the section renders real signed values the day the index starts projecting it; until then every field is
+// absent and the section stays honestly hidden — never a fabricated "+0%" (see the `resistances` useMemo below).
+// XP and the SPELL KIT are joined from the authored corpus rows the templates were
 // minted from (world_corpus.ts CorpusMobFacts — same generation, id-gated, so no drift from chain truth is
 // possible). LOOT is the /v1 mob doc's server-joined ON-CHAIN drops (the indexer decodes each
 // MobTemplate's loot vector; the API joins each row's item template → name/category and derives the EXACT chance%
@@ -26,6 +30,7 @@ import { display_mob_name } from '../../content/mob_name_overrides'
 import { use_template_t } from '../../i18n/template_t'
 import { get_encyclopedia } from '../../rpc/client'
 import { use_rpc_view } from '../../rpc/use_view'
+import { decode_stat } from '../../chain/stat_bias'
 
 import { DetailLoading } from './shared'
 import { is_living_mob } from './living_corpus'
@@ -48,6 +53,14 @@ const ARCHIMOB_CHANCE_PERCENT = 0.5
 // spell::Stats element discriminants (0=fire,1=water,2=earth,3=air,255=none) → the ELEMENTS names the bestiary
 // filter + colours key by. A NONE/unknown element maps to '' (unselected), never a fabricated choice.
 const ELEMENT_NAMES = ['FIRE', 'WATER', 'EARTH', 'AIR']
+
+// A mob's on-chain resistance wire is CENTERED @32768 (spell.move RES_SHIFT — the SAME convention
+// item_stats.move's ItemStatistics uses), so decode through the ONE shared home the item side already
+// owns (chain/stat_bias.js's decode_stat — "the ONLY place the 32768 constant may live", no second copy
+// here). `null`/`undefined` (the §14 index does not project this field — see file header) passes through
+// as an honest "unknown", never miscast as a neutral 0.
+// Exported for bestiary_tab.test.tsx — the pure decode is the exact unit the RED-FIRST regression pins.
+export const decode_mob_resist = (v: number | null | undefined): number | null => (v == null ? null : decode_stat(v))
 
 type ViewMode = 'all' | 'by_level'
 type SortOption = 'level_asc' | 'level_desc' | 'name_asc'
@@ -88,10 +101,10 @@ function BestiaryTab({
           maxLevel: m.max_level ?? 0,
           health: m.base_hp ?? 0,
           element: ELEMENT_NAMES[m.element ?? -1] ?? '',
-          earthResistance: 0,
-          fireResistance: 0,
-          waterResistance: 0,
-          airResistance: 0,
+          earthResistance: decode_mob_resist(m.earth_resistance),
+          fireResistance: decode_mob_resist(m.fire_resistance),
+          waterResistance: decode_mob_resist(m.water_resistance),
+          airResistance: decode_mob_resist(m.air_resistance),
           drops: m.drops, // authoritative on-chain loot; null means an honestly undecoded tail
           found_in: world_corpus_for_mob(m.template_id).map(({ id, name, biome }) => ({ id, name, biome })),
           createdAt: undefined as number | undefined,
@@ -197,6 +210,17 @@ function BestiaryTab({
   const drops = useMemo(() => {
     const on_chain = selected_mob?.drops
     return on_chain != null ? v1_drops_to_display(on_chain) : null
+  }, [selected_mob])
+
+  // Resistances: already DECODED real signed values (see decode_mob_resist above) or `null` per field when
+  // the §14 index doesn't project them (true for every mob today). Every field absent → `null` here too, so
+  // MobDetailView's own `resistances != null` gate hides the section — honest-empty, matching the drops idiom,
+  // never a fabricated "+0%" for a stat nobody measured.
+  const resistances = useMemo(() => {
+    if (!selected_mob) return null
+    const { earthResistance: earth, fireResistance: fire, waterResistance: water, airResistance: air } = selected_mob
+    if (earth == null && fire == null && water == null && air == null) return null
+    return { earth: earth ?? 0, fire: fire ?? 0, water: water ?? 0, air: air ?? 0 }
   }, [selected_mob])
 
   // Authored per-template facts (xp + the spell kit) — minted VERBATIM from these corpus rows and
@@ -439,12 +463,7 @@ function BestiaryTab({
             isBoss: false,
             createdAt: selected_mob.createdAt,
             stats: {},
-            resistances: {
-              earth: Number(selected_mob.earthResistance) || 0,
-              fire: Number(selected_mob.fireResistance) || 0,
-              water: Number(selected_mob.waterResistance) || 0,
-              air: Number(selected_mob.airResistance) || 0,
-            },
+            resistances,
             drops,
             archi_mob: null,
             is_archi_of: null,
