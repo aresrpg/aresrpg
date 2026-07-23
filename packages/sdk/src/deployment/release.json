@@ -1,10 +1,10 @@
 {
   "schema": 1,
-  "generated_at": "2026-07-23T19:14:16.164Z",
+  "generated_at": "2026-07-23T21:42:16.084Z",
   "networks": {
     "testnet": {
       "chain_id": "",
-      "source_hash": "264e32b26802e64ff7ecf342c0744bc1b510cc0e12a2cd0cb6d9ddc1bd2995b7",
+      "source_hash": "7c3c3086a1290043002058076a841f809794581fb35d16c8b13a89cbccc35d12",
       "packages": {
         "foundation": {
           "origin": "0xd578da3450ffb5a9f4f792f942af13b56c968bc1484a7aaa80e616688fba4c80",
@@ -65,11 +65,12 @@
         },
         "aresrpg": {
           "origin": "0x045fdf6f7d05914335288d6acac90b6a0023395968b9b38fd6fdcc0c7180adc9",
-          "latest": "0x21a4e5807e4e4b04a5b0704a2276849401990e0fcca6c3d9abfdd910edc71b78",
+          "latest": "0x37266af87e28b31bfb78a73148e163ab8e9b31abf28f0b2d83113491ad638d15",
           "previous": [
             "0xae597a84ce38729bc0c2f272f9f76513c857fb95d8d571867f6253f9d5935083",
             "0xc05c8d9f65e4ee0a6dc9463c8c90341085daa062184043e1a6fd75bccd6842e1",
-            "0x8781c9c8e9f87113536a6926e441b359a7bc24fda9a80a2b9b225a8d51d0da98"
+            "0x8781c9c8e9f87113536a6926e441b359a7bc24fda9a80a2b9b225a8d51d0da98",
+            "0x21a4e5807e4e4b04a5b0704a2276849401990e0fcca6c3d9abfdd910edc71b78"
           ],
           "upgrade_cap": "0x6d583f0fee63c8271a12a3ac0c175746c8fffad277af315bf6f7494d2c8f277e",
           "admin": "0x9fe126c6e6b83cceb60eaeba2412338bcbfe251bc0939d420d8b2c54c33c529b",
