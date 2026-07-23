@@ -43,6 +43,8 @@ import {
   DEATH_BEAT_S,
   CAST_TRAVEL_S,
   CAST_SAFETY_MS,
+  CELL_PAINT_PRIORITY,
+  resolve_cell_paints,
 } from '../fight-engine/overlay_intents.js'
 import {
   derive_phase,
@@ -279,6 +281,16 @@ export function create_voxel_fight_adapter(
   )
   /** The last-painted highlight signature — skip a repaint when nothing that affects a wash changed. */
   let last_paint_key = ''
+  /** Renderer-neutral BASE candidates retained across reconcile + hover writers. The projection consumes all
+   * of them together, so a red target can replace its blue range cell instead of becoming a second surface. */
+  const base_paint_candidates = /** @type {Record<string, Set<number>>} */ (
+    Object.fromEntries(CELL_PAINT_PRIORITY.map((paint) => [paint, new Set()]))
+  )
+  /** What the board currently holds per renderer channel. This diff makes losing cells disappear instantly
+   * before their winner is installed; deferred fade-out must never create a transient two-paint frame. */
+  const rendered_base_paints = /** @type {Map<string, Set<number>>} */ (
+    new Map(BASE_PAINT_CHANNELS.map((channel) => [channel, new Set()]))
+  )
   let prev_my_turn = false // D242 rider: rising-edge tracker for the your-turn ground flash (board.flash_cell)
   // GLYPH TICK FLARE — two primitives copied by value (CODE_LAW L-P6), never a wave/event reference. A fight-id
   // change seeds a new baseline; within one fight the visible actor delta drives exactly one zone pulse per turn.
@@ -1181,6 +1193,10 @@ export function create_voxel_fight_adapter(
             `board built at [${live_origin.x}, ${live_origin.y}, ${live_origin.z}] ${args.grid_w}×${args.grid_h} (D230)`
           )
           last_paint_key = '' // force a fresh paint after a (re)build
+          // board.build replaces the engine highlight controller. Forget the prior controller's rendered diff
+          // even when the next room happens to project identical cells, or the equality fast-path would skip
+          // installing those paints on the fresh board.
+          for (const channel of BASE_PAINT_CHANNELS) rendered_base_paints.set(channel, new Set())
           ensure_fight_wired(result, fight, dungeon, { just_built: true }) // RE-PROJECT every entity on the new seat
           finish_engage_timing(fight.fight_id)
           // [prewarm/D3] compile every VFX preset pipeline this fight can mount while the intro beat still covers the
@@ -1417,9 +1433,55 @@ export function create_voxel_fight_adapter(
     }
   }
 
+  /** Paint the projection's one resolved BASE fact per cell. Channel replacement is diffed so every losing
+   * surface is removed synchronously (BoardHandle.highlight(..., false)) before a winner is written. */
+  const render_resolved_base_paints = () => {
+    /** @type {Map<string, Set<number>>} */
+    const next_by_channel = new Map(BASE_PAINT_CHANNELS.map((channel) => [channel, new Set()]))
+    for (const { cell, paint } of resolve_cell_paints(base_paint_candidates))
+      next_by_channel.get(BASE_PAINT_CHANNEL[paint])?.add(cell)
+
+    /** @type {{ channel: string, previous: Set<number>, next: Set<number> }[]} */
+    const changes = []
+    for (const channel of BASE_PAINT_CHANNELS) {
+      const previous = rendered_base_paints.get(channel) ?? new Set()
+      const next = next_by_channel.get(channel) ?? new Set()
+      if (previous.size === next.size && [...previous].every((cell) => next.has(cell))) continue
+      changes.push({ channel, previous, next })
+    }
+
+    // Phase one removes every losing surface across every channel. Phase two installs all winners. Keeping
+    // those phases separate makes a cross-channel priority change literally stack-free in either direction.
+    for (const { channel, previous, next } of changes) {
+      const removed = [...previous].filter((cell) => !next.has(cell)).map(decode_cell)
+      if (removed.length) {
+        // The real tactical handle always exposes highlight(); the fallback keeps lightweight test doubles
+        // compatible. Only the real path is the no-fade atomic removal required by the standing law.
+        if (typeof board.highlight === 'function') board.highlight(channel, removed, false)
+        else board.clear_states(channel)
+      }
+    }
+    for (const { channel, next } of changes) {
+      if (next.size) board.set_cell_state([...next].map(decode_cell), channel)
+      rendered_base_paints.set(channel, new Set(next))
+    }
+  }
+
+  /** Replace all base candidates on an authoritative state repaint (which also retires stale hover paints). */
+  const replace_base_paints = (/** @type {Record<string, number[]>} */ next) => {
+    for (const paint of CELL_PAINT_PRIORITY) base_paint_candidates[paint] = new Set(next[paint] ?? [])
+    render_resolved_base_paints()
+  }
+
+  /** Update only the hover-owned candidates, retaining the state-derived range/movement facts. */
+  const update_base_paints = (/** @type {Record<string, number[]>} */ changes) => {
+    for (const [paint, cells] of Object.entries(changes)) base_paint_candidates[paint] = new Set(cells)
+    render_resolved_base_paints()
+  }
+
   /**
-   * Paint the phase-appropriate highlight channels from overlay_intents cell sets. Memoized on a signature so a
-   * reconcile storm doesn't repaint an unchanged wash. TERMINAL paints nothing (frozen board).
+   * Paint phase-appropriate candidates, then project exactly one BASE paint per cell. Glyph/trap channels are
+   * the sanctioned overlays and remain independent. Memoized so a reconcile storm does not repaint unchanged.
    */
   const paint = (result, fight, dungeon) => {
     // Observe BEFORE the paint memo: two paced turns can change only the presentation actor while every wash input
@@ -1466,11 +1528,9 @@ export function create_voxel_fight_adapter(
       on_my_turn() // [W6 #5] hero zoom-punch beat — the embed pushes the fight cam IN when your turn opens
     }
     prev_my_turn = my_active_turn
-    // D253: highlights CUMULATE, never disappear — REPLACE lifecycle + fade-correct. Compute each channel's
-    // cells THIS frame into `lit`, then ONE authoritative pass below: set_cell_state(cells,ch) [instant clear + add =
-    // delta-fade] for LIT channels, clear_states(ch) [deferred fade-OUT] for EMPTY. NEVER clear_states-then-add the
-    // SAME channel — that cancels the deferred clear yet strands the un-re-added old cells → cumulation (architect D253).
-    /** @type {Record<string, {x:number,y:number}[]>} */
+    // Compute renderer-neutral encoded candidates first. replace_base_paints resolves all base semantics
+    // together; glyph/trap remain the only channels allowed to layer over that winner.
+    /** @type {Record<string, number[]>} */
     const lit = {}
     if (phase_is_placement(result)) {
       // per-team start cells (the D83 centre cluster the contract accepts) — gate on the phase machine (D112).
@@ -1480,14 +1540,14 @@ export function create_voxel_fight_adapter(
         const by_team = placement_cells_by_team(fight)
         const mine = fight.my_entity_id ? fight.fighters.get(fight.my_entity_id)?.team : 0
         // my team = 'placement' (the stand-here cells), the enemy zone = 'target' (a distinct tint).
-        const my_cells = (by_team[mine ?? 0] ?? []).map(decode_cell)
-        const foe_cells = (by_team[mine === 0 ? 1 : 0] ?? []).map(decode_cell)
+        const my_cells = by_team[mine ?? 0] ?? []
+        const foe_cells = by_team[mine === 0 ? 1 : 0] ?? []
         if (my_cells.length) lit.placement = my_cells
-        if (foe_cells.length) lit.target = foe_cells
+        if (foe_cells.length) lit.placement_enemy = foe_cells
         // PLACEMENT GHOSTS — peers' uncommitted picks (engine_view.placement_ghosts, fold.js-owned; cosmetic
         // only). Painted on the 'ghost' channel (board_highlight_style.js) regardless of whose team — a ghost
         // only ever exists for a fight participant, and this board only ever shows THIS fight.
-        const ghost_cells = (fight.placement_ghosts ?? []).map((g) => decode_cell(g.cell))
+        const ghost_cells = (fight.placement_ghosts ?? []).map((g) => g.cell)
         if (ghost_cells.length) lit.ghost = ghost_cells
       }
     } else if (phase_is_active(result)) {
@@ -1522,8 +1582,8 @@ export function create_voxel_fight_adapter(
         // mouse-INDEPENDENT. The adapter maps encoded → {x,y} and paints — it decides nothing; `targeting`
         // (an affordable armed spell flips the board to cast mode) + `busy` ride as edge inputs.
         const wash = project.move_wash(fight_store.getState(), { busy, targeting: !!wash_armed })
-        if (wash.reach.length) lit.mp_range = wash.reach.map(decode_cell)
-        if (wash.tackle_lost.length) lit.path_blocked = wash.tackle_lost.map(decode_cell)
+        if (wash.reach.length) lit.movement = wash.reach
+        if (wash.tackle_lost.length) lit.movement_blocked = wash.tackle_lost
         // CAST RANGE — D241 SPLIT: 'target' (DARK BLUE) = in-range + LOS-clear (castable); 'los_blocked' (LIGHT BLUE) =
         // in-range minus castable. Anchored at the active player's cell.
         // Weapon slot: the sentinel has no seed row — its ring is [1, reach] off the active seat's on-chain
@@ -1553,8 +1613,8 @@ export function create_voxel_fight_adapter(
           // light-blue wash so a trap ONLY ever lights FREE cells (not targetable on a mob).
           const free_blocked = flags.free_cell ? new Set(los) : null
           const blocked_cells = [...in_range].filter((c) => !castable.has(c) && !(free_blocked && free_blocked.has(c))) // in-reach, LOS says no
-          if (castable.size) lit.target = [...castable].map(decode_cell)
-          if (blocked_cells.length) lit.los_blocked = blocked_cells.map(decode_cell)
+          if (castable.size) lit.in_range = [...castable]
+          if (blocked_cells.length) lit.los_blocked = blocked_cells
         }
       }
     }
@@ -1562,12 +1622,12 @@ export function create_voxel_fight_adapter(
     // a committed detonation clears the marker without a renderer-owned mirror. A won/lost board stops painting it.
     if (fight.winner === -1) {
       const traps = fight.my_traps ?? []
-      if (traps.length) lit.trap = traps.map(decode_cell)
+      if (traps.length) lit.trap = traps
       // GLYPH ZONES (an orange blob on the ground that stays, like the traps but covering the zone) —
       // the caster's OWN placed glyphs, a persistent orange ground wash over each glyph's full AoE. Read straight
       // from engine_view.my_glyphs (the fold projection — SINGLE home, no overlay module): the fold carries the
       // durable record through turns/waves and expiry-drops it, so this paint needs no client-side spring/mirror.
-      if (fight.my_glyphs?.length) lit.glyph = fight.my_glyphs.map(decode_cell)
+      if (fight.my_glyphs?.length) lit.glyph = fight.my_glyphs
     }
     // TEAM SEAT GLOW migrated OFF this cell-state paint path (the marker under a
     // fighter must FOLLOW the walking mesh, never pre-jump to the destination cell the instant a move
@@ -1575,14 +1635,12 @@ export function create_voxel_fight_adapter(
     // see board_highlights.js's entity-anchor design note above CHANNELS). tick_entity_anchors (below, ridden
     // on the same per-frame tick_hover seam) now owns "cell under a fighter" entirely, fed by
     // board.render_position_of's continuous LIVE render XZ instead of a once-per-reconcile snapshot.
-    // ONE authoritative pass: replace lit channels (delta-fade in/swap), fade-out the rest. (path/aoe/glyph_hover
-    // are hover-owned but still fade-out here on a state change, matching the prior clear-all — the hover repaints
-    // them on the next move. [#238] glyph_hover — never `lit`-populated here — is the hover-preview SIBLING of the
-    // authoritative `glyph` row above; keeping it in this pass only clears a stale preview on a state change, it
-    // can never touch the persistent zone.)
-    for (const ch of PAINT_CHANNELS) {
+    // BASE: one projection owns priority and emits one resolved paint per cell. OVERLAYS: trap/glyph are
+    // deliberately independent and may sit over that base; glyph_hover is the glyph preview sibling.
+    replace_base_paints(lit)
+    for (const ch of OVERLAY_PAINT_CHANNELS) {
       const cells = lit[ch]
-      if (cells && cells.length) board.set_cell_state(cells, ch)
+      if (cells && cells.length) board.set_cell_state(cells.map(decode_cell), ch)
       else board.clear_states(ch)
     }
   }
@@ -1645,6 +1703,8 @@ export function create_voxel_fight_adapter(
     unplaceable_attempts = 0 // [bug-B] a fresh fight re-earns its full retry budget
     unplaceable_attempts_key = null
     last_paint_key = ''
+    for (const paint of CELL_PAINT_PRIORITY) base_paint_candidates[paint].clear()
+    for (const channel of BASE_PAINT_CHANNELS) rendered_base_paints.set(channel, new Set())
     observed_turn_fight_id = undefined
     observed_turn_actor_id = undefined
     // the torn-down fight's trap markers live in the fold (my_traps); the store re-inits per fight, so nothing leaks.
@@ -1663,41 +1723,39 @@ export function create_voxel_fight_adapter(
       const { dungeon } = use_dungeon.getState()
       // 'path_blocked' is NOT cleared here anymore — it is the WASH's static tackle-lost band now
       // (mouse-independent; the per-hover red suffix is dead), owned by paint()'s authoritative pass.
-      const clear = () => {
-        board.clear_states('path') // D253: real clear (empty-toggle was a no-op → path accumulated per hover)
+      const clear_hover = () => {
+        update_base_paints({ movement_path: [], target: [] })
+        board.clear_states('glyph_hover')
       }
-      if (!cell || !fight || !dungeon || fight.placement || fight.winner !== -1) return clear()
+      if (!cell || !fight || !dungeon || fight.placement || fight.winner !== -1) return clear_hover()
       const active = fight.active_entity_id ? fight.fighters.get(fight.active_entity_id) : null
       // END-TURN PRESS LAW + PRESENTATION GATE: the SAME turn_input_armed gate cell_click uses — a commit in
       // flight (busy) OR the mob cascade still animating (presenting) clears the hover preview (path/AoE)
       // immediately, even while active_entity_id already reads as my turn.
       const presenting = project.presenting(fight_store.getState()) // S2: derived from the core's unacked wave
       if (!turn_input_armed(!!active && active.id === fight.my_entity_id, use_dungeon.getState().busy, presenting))
-        return clear()
+        return clear_hover()
       const to_enc = encode_cell(cell.x, cell.y)
+      let movement_path = /** @type {number[]} */ ([])
       // D301b ARMED = TARGETING-ONLY: a spell armed ⇒ the board is in cast mode — NO dark-green steering path (the
       // move affordance is off); only the red AoE below paints on a castable cursor cell. Disarm → the D236 path
       // preview returns. Unarmed: the reachable-cell path preview is unchanged.
-      if (fight.armed_spell_id) {
-        clear()
-      } else {
+      if (!fight.armed_spell_id) {
         // [msg 3254 → 07-17] MP-SPLIT HOVER, green half only: the affordable prefix keeps the D236 dark-green
         // 'path' (the same legal_move_path the commit charges, so the green half can never lie). The soft-red
         // beyond-MP suffix is DEAD: the lost-range read is now the WASH's static
         // 'path_blocked' band (project.move_wash — mouse-independent, tackle-gated), never a per-hover paint.
         const blocked = presentation_blocked_cells(dungeon, fight.fighters, active.id)
         const path = move_path_dungeon(active, cell, { blocked, mp: GRID_CELLS })
-        if (!path.length) return clear()
+        if (!path.length) return clear_hover()
         const { walk } = split_path_at_mp(path, active.mp)
-        if (walk.length) board.set_cell_state(walk.map(decode_cell), 'path')
-        else board.clear_states('path') // 0 MP: nothing affordable to preview
+        movement_path = walk
       }
       // AoE/GLYPH-on-hover: while a spell is armed and the hover is a CASTABLE cell, paint the spell's FULL zone
       // footprint (cross/circle/line/glyph — spell_footprint reuses the sim's own get_aoe_cells, anchored at the
       // cursor cell, oriented caster→target for LINE/CONE/TBAR) so a "cross 1" reads as its whole plus, not one
-      // cell. A GLYPH-placing spell paints the orange 'glyph_hover' tint; every other spell the red 'aoe' strike
-      // (both outrank target/los_blocked so the zone reads as the actual hit). Cleared with 'path' on leave.
-      // D253: set_cell_state REPLACE when lit / clear_states fade-out when not (never clear-then-add the same channel).
+      // cell. A GLYPH-placing spell paints the sanctioned orange 'glyph_hover' overlay; every other spell feeds
+      // the red `target` BASE candidate into resolve_cell_paints, where it replaces blue range/LOS paints.
       // [#238] the CHANNEL PICK (paint vs clear) routes through hover_footprint_plan (voxel_fight_folds.js) —
       // 'glyph_hover' is its OWN transient channel, never the persistent 'glyph' paint() owns from
       // fight.my_glyphs (see hover_footprint_plan's docstring for the regression this split fixes).
@@ -1720,8 +1778,14 @@ export function create_voxel_fight_adapter(
         if (castable2.has(to_enc)) foot_cells = spell_footprint(fight.armed_spell_id, cell, active.cell)
       }
       const foot_plan = hover_footprint_plan(fight.armed_spell_id, foot_cells)
-      if (foot_plan.paint) board.set_cell_state(foot_plan.paint.cells, foot_plan.paint.channel)
-      for (const ch of foot_plan.clear) board.clear_states(ch)
+      const target_cells =
+        foot_plan.paint?.channel === 'aoe'
+          ? foot_plan.paint.cells.map((foot) => encode_cell(foot.x, foot.y))
+          : /** @type {number[]} */ ([])
+      update_base_paints({ movement_path, target: target_cells })
+      if (foot_plan.paint?.channel === 'glyph_hover')
+        board.set_cell_state(foot_plan.paint.cells, foot_plan.paint.channel)
+      else board.clear_states('glyph_hover')
     }
   )
 
@@ -1827,7 +1891,7 @@ export function create_voxel_fight_adapter(
     /** @type {any} */ (id) => {
       hovered_id = id || null
       // P0 item 13a: hover-off (or any invalid hover) clears the hovered fighter's reach wash with the tooltip.
-      const clear_hover_reach = () => board.clear_states('range')
+      const clear_hover_reach = () => update_base_paints({ hover_movement: [] })
       const fight = hovered_id ? read_board_fight() : null
       const f = hovered_id ? fight?.fighters?.get(hovered_id) : null
       if (!f?.cell) {
@@ -1847,7 +1911,7 @@ export function create_voxel_fight_adapter(
           mode: 'dungeon',
           blocked: presentation_blocked_cells(hover_dungeon, fight.fighters, f.id),
         })
-        if (reach.size) board.set_cell_state([...reach].map(decode_cell), 'range')
+        if (reach.size) update_base_paints({ hover_movement: [...reach] })
         else clear_hover_reach()
       } else {
         clear_hover_reach()
@@ -1894,31 +1958,27 @@ export function create_voxel_fight_adapter(
 
 // ── helpers ────────────────────────────────────────────────────────────────────────────────────────────────
 
-/** The engine highlight channels the adapter paints (cleared as a set each repaint). */
-// D241 canon channels: mp_range=LIGHT GREEN move reach, path=DARK GREEN steered hover, path_blocked=SOFT RED
-// beyond-MP hover suffix (msg 3254), target=DARK BLUE LOS-clear targetable, los_blocked=LIGHT BLUE
-// in-range-LOS-blocked, aoe=RED cursor zone. 'range' kept in the clear-loop only (legacy name; the adapter
-// now paints move reach on the greened 'mp_range'). ghost=TRANSLUCENT CYAN placement-only peer pick hint
-// (engine_view.placement_ghosts — cosmetic, never a trust surface).
-// [entity-anchor] 'ally_seat'/'enemy_seat' REMOVED 2026-07-11 — that cell-state wash is retired (see the
-// TEAM SEAT GLOW comment in paint()); the "cell under a fighter" marker is now tick_entity_anchors'
-// continuous board.set_entity_anchor, not a set_cell_state/clear_states channel this list would clear.
-// [#238] 'glyph_hover' joins 'aoe'/'path' as hover-owned (never lit[] here, see the loop comment above) — its
-// only job in THIS pass is clearing a stale preview on a state change; 'glyph' stays the sole persistent writer.
-const PAINT_CHANNELS = /** @type {const} */ ([
-  'placement',
-  'ghost',
-  'range',
-  'mp_range',
-  'target',
-  'los_blocked',
-  'path',
-  'path_blocked',
-  'aoe',
-  'glyph_hover',
-  'trap',
-  'glyph',
-])
+/**
+ * Projection semantic -> engine material channel. The awkward target/in_range names are intentionally mapped
+ * here, at the renderer boundary: engine `target` is the DARK-BLUE targetable range, while semantic `target`
+ * is the RED hovered cast footprint and therefore renders through engine `aoe`.
+ */
+const BASE_PAINT_CHANNEL = /** @type {const} */ ({
+  placement: 'placement',
+  placement_enemy: 'target',
+  ghost: 'ghost',
+  hover_movement: 'range',
+  movement: 'mp_range',
+  movement_blocked: 'path_blocked',
+  movement_path: 'path',
+  in_range: 'target',
+  los_blocked: 'los_blocked',
+  target: 'aoe',
+})
+const BASE_PAINT_CHANNELS = [...new Set(Object.values(BASE_PAINT_CHANNEL))]
+
+/** The only cell paints allowed to layer over a resolved base. `glyph_hover` is the transient glyph zone. */
+const OVERLAY_PAINT_CHANNELS = /** @type {const} */ (['glyph_hover', 'trap', 'glyph'])
 const CELL_M = 1.33 // DEFAULT_CELL_SIZE (D231) — cell world size for entity→screen projection
 const CAST_H = 1.2 // [F1] chest height (m above the board origin) the cast flare/orb/impact billboards ride at
 

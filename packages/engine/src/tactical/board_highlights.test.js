@@ -16,6 +16,7 @@ import { DEFAULT_GRADE, grade_rgb_lowfreq, luma } from '../render/grading.js'
 
 import {
   CHANNELS,
+  CELL_LAYER_ORDER,
   CORNER_RADIUS,
   DEFAULT_CENTER_STYLE,
   ENTITY_ANCHOR_EDGE_OPACITY,
@@ -124,17 +125,28 @@ describe('D256 punchy channel palette — deliberate saturation override', () =>
     expect(g).toBeGreaterThan(b)
     expect(g).toBeLessThan((CHANNELS.mp_range.color >> 8) & 0xff) // darker than the reach green
   })
-  test('[#440] hovered path is one opaque dark-green paint from its first frame, never a blend with mp_range', () => {
+  test('[#440] hovered path is one opaque dark-green paint from its first frame', () => {
     const style = resolve_highlight_style(CHANNELS.path)
-    expect(CHANNELS.path.order).toBeGreaterThan(CHANNELS.mp_range.order)
     expect(CHANNELS.path.opacity * style.center_alpha).toBe(1)
     expect(resolve_fade(CHANNELS.path).fade_in_s).toBe(0)
-
-    const ctrl = create_board_highlights(stub_board())
-    ctrl.set_channel([{ x: 1, y: 1 }], 'mp_range')
-    ctrl.set_channel([{ x: 1, y: 1 }], 'path')
-    expect(ctrl._fade_of('path')).toBe(1)
-    ctrl.dispose()
+  })
+  test('[#607] all resolved paints share one base tier; only glyph/trap layer above it', () => {
+    for (const channel of [
+      'placement',
+      'ghost',
+      'range',
+      'mp_range',
+      'target',
+      'los_blocked',
+      'path',
+      'path_blocked',
+      'aoe',
+    ])
+      expect(CHANNELS[channel].order).toBe(CELL_LAYER_ORDER.base)
+    expect(CHANNELS.glyph.order).toBeGreaterThan(CHANNELS.aoe.order)
+    expect(CHANNELS.glyph_hover.order).toBeGreaterThan(CHANNELS.glyph.order)
+    expect(CHANNELS.glyph_hover.order).toBeLessThan(CHANNELS.trap.order)
+    expect(CHANNELS.trap.order).toBeGreaterThan(CHANNELS.glyph.order)
   })
   test('[D256] target is PUNCHY DEEP BLUE — blue-dominant', () => {
     const tgt = chan(CHANNELS.target.color)

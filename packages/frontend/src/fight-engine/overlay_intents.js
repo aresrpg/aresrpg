@@ -36,7 +36,41 @@ export const TRAP_BEAT_S = 0.28 // a trap's trigger burst leads its damage float
 /**
  * @typedef {{ x: number, y: number }} Cell         arena-LOCAL cell (the coord space the overlay paints in)
  * @typedef {Set<number>} CellSet                    a Set of ENCODED cells (fight-los `encode`)
+ * @typedef {'placement' | 'placement_enemy' | 'ghost' | 'hover_movement' | 'movement' |
+ *   'movement_blocked' | 'movement_path' | 'in_range' | 'los_blocked' | 'target'} CellPaint
  */
+
+/**
+ * Bottom-to-top priority for mutually-exclusive BASE paints. Glyphs and traps intentionally do not appear:
+ * they are the only overlays sanctioned to sit over the resolved base cell.
+ * @type {readonly CellPaint[]}
+ */
+export const CELL_PAINT_PRIORITY = Object.freeze([
+  'placement',
+  'placement_enemy',
+  'ghost',
+  'hover_movement',
+  'movement',
+  'movement_blocked',
+  'movement_path',
+  'in_range',
+  'los_blocked',
+  'target',
+])
+
+/**
+ * Resolve mutually-exclusive base-paint semantics into renderer-neutral per-cell facts.
+ * Applying candidates from low to high and overwriting a Map makes overlap structurally unrepresentable:
+ * every encoded cell occurs exactly once and carries only its highest-priority semantic state.
+ * @param {Partial<Record<CellPaint, Iterable<number>>>} candidates encoded candidates per semantic paint
+ * @returns {{ cell: number, paint: CellPaint }[]}
+ */
+export function resolve_cell_paints(candidates) {
+  /** @type {Map<number, CellPaint>} */
+  const resolved = new Map()
+  for (const paint of CELL_PAINT_PRIORITY) for (const cell of candidates[paint] ?? []) resolved.set(cell, paint)
+  return [...resolved].map(([cell, paint]) => ({ cell, paint })).sort((a, b) => a.cell - b.cell)
+}
 
 // ── D126b / move range: the movement-REACHABLE set of a subject (the active local mover on their turn, OR any
 //    fighter/mob hovered — its MP reach) ─────────────────────────────────────────────────────────────────────

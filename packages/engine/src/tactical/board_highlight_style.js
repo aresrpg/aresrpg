@@ -28,6 +28,14 @@ export const TEAM_COLORS = { ally: 0x5db4ff, enemy: 0xff6b6b }
 /** Trap identity color shared by the semantic channel and its compound base/spike materials. */
 export const TRAP_COLOR = 0xc8963c
 
+/** Render tiers only: projection has already selected one base paint; glyph/trap are sanctioned layers above it. */
+export const CELL_LAYER_ORDER = Object.freeze({
+  base: 1,
+  glyph: 2,
+  glyph_hover: 2.1,
+  trap: 3,
+})
+
 // ── CELL-PAINT FADE CLOCKS — the ONE home (M3 rider, 2026-07-18). The retro-1.29 reference corpus carries NO
 // cell-paint fade/tint rows (D_PACING_RESEARCH beat table: movement/hit/damage-number clocks only — the 1.29
 // grid tint was an instant frame swap at 20 fps), so these are OUR parametric grammar, never extracted numbers. Defaults =
@@ -84,30 +92,35 @@ export const GLYPH_TICK_FLARE = Object.freeze({ color: GLYPH_TINT.color, peak: 0
 export const CHANNELS = {
   // §7 CellState vocabulary
   highlight: { color: 0x2f7bf5, opacity: 0.8, order: 1 },
-  // [#440] The hover path sits over mp_range, so its full tile must be opaque from frame one: the dark green
-  // replaces the light-green wash visually instead of alpha-blending into a pale double blob.
-  path: { color: 0x0b4712, opacity: 1, order: 4, center_alpha: 1, fade_in_s: 0 },
-  aoe: { color: 0xa01414, opacity: 0.86, order: 3 },
+  // Path is a movement semantic. Projection removes the underlying mp_range cell; opacity is visual tuning,
+  // never a renderer-time mask for a second blob.
+  path: { color: 0x0b4712, opacity: 1, order: CELL_LAYER_ORDER.base, center_alpha: 1, fade_in_s: 0 },
+  aoe: { color: 0xa01414, opacity: 0.86, order: CELL_LAYER_ORDER.base },
   start_a: { color: 0x2f6bd8, opacity: 0.8, order: 2 },
   start_b: { color: 0xff7a2c, opacity: 0.8, order: 2 },
   blocked: { color: 0x556070, opacity: 0.55, order: 1 },
 
   // Dapp-facing layer names
-  placement: { color: 0x2f6bd8, opacity: 0.78, order: 2 },
+  placement: { color: 0x2f6bd8, opacity: 0.78, order: CELL_LAYER_ORDER.base },
   // PLACEMENT GHOST (board #.. — uncommitted pre-start picks must be visible so teammates can SEE where
   // others intend to stand) — a PEER's uncommitted pick, p2p cosmetic hint only. Cyan (house secondary accent, never
   // used elsewhere in this table), distinct from the solid 'placement' blue (a clickable cell) and 'trap' gold
   // (MY own hazard) it may sit beside. RULE: every channel opacity is PUNCHY ≥0.5, no
-  // wishy-washy exception for this one — the rim stays bright; center_dim/center_alpha alone soften the fill so
-  // it still reads as a lighter hint than a solid wash. Order 3: above the placement wash (2) it's painted over,
-  // below target/trap (5-6) it never coexists with during placement.
-  ghost: { color: 0x4a9eff, opacity: 0.55, order: 3, center_alpha: 0.4, center_dim: 0.62 },
-  range: { color: 0x35b34a, opacity: 0.8, order: 1 }, // MEDIUM hovered-fighter movement range
-  target: { color: 0x3358f5, opacity: 0.92, order: 5 },
+  // wishy-washy exception for this one — the rim stays bright; center_dim/center_alpha alone soften the fill.
+  // Projection, not draw order, lets a peer ghost replace its placement candidate.
+  ghost: {
+    color: 0x4a9eff,
+    opacity: 0.55,
+    order: CELL_LAYER_ORDER.base,
+    center_alpha: 0.4,
+    center_dim: 0.62,
+  },
+  range: { color: 0x35b34a, opacity: 0.8, order: CELL_LAYER_ORDER.base }, // hovered-fighter movement
+  target: { color: 0x3358f5, opacity: 0.92, order: CELL_LAYER_ORDER.base },
   mp_range: {
     color: 0x6ee85c,
     opacity: 0.72,
-    order: 1,
+    order: CELL_LAYER_ORDER.base,
     unlit_gain: 1.35,
     center_dim: 0.72,
     center_alpha: 0.72,
@@ -116,12 +129,18 @@ export const CHANNELS = {
   // (0x5ed82e → 0x6ee85c here, path 0x0d6b16 → 0x0b4712) widens the lum-delta floor 180 → 300 (see the
   // [#212] test below) so "clear light green" vs "clear dark green" is unmistakable at fight-camera
   // distance, not just on paper.
-  los_blocked: { color: 0x7a95f8, opacity: 0.82, order: 5 },
+  los_blocked: { color: 0x7a95f8, opacity: 0.82, order: CELL_LAYER_ORDER.base },
   // The TACKLE-LOST band (project.move_wash tackle_lost — the at-risk cells while actually tackled). WAY
   // SOFTER than every strike red — soft enough to not feel
   // like a AoE blob: desaturated rosy tint at low opacity + a quieter center, so the hard aoe strike red
   // stays the loudest red on the board by a wide margin. TUNABLE: color/opacity/center dials await live A/B.
-  path_blocked: { color: 0xcf9a8c, opacity: 0.34, order: 4, center_alpha: 0.32, center_dim: 0.5 },
+  path_blocked: {
+    color: 0xcf9a8c,
+    opacity: 0.34,
+    order: CELL_LAYER_ORDER.base,
+    center_alpha: 0.32,
+    center_dim: 0.5,
+  },
 
   // GLYPH ZONE (a warm pumpkin-orange ground wash, persistent, covering the whole placed AoE) — the
   // caster's OWN glyph. [#164, owner restated 2026-07-21] "one blob per cell, reads too faint" — TWO
@@ -131,15 +150,14 @@ export const CHANNELS = {
   // opacity/center dials below are raised off the old "atmospheric, not flashy" floor to the
   // `mp_range`-grade punch (still inside the established token range — nothing here exceeds any
   // existing channel's ceiling) so the zone reads as clearly present at fight-camera distance, not
-  // just distinctly-shaped. Sits at order 2 so transient hovers (aoe/path=3-4), targets (5) and trap
-  // markers (6) still layer above it.
+  // just distinctly-shaped. Glyph is a sanctioned overlay above every resolved base paint and below traps.
   // [#238 regression fix] `glyph` is the AUTHORITATIVE, PERSISTENT channel — the adapter's paint() pass
   // owns it exclusively from fight.my_glyphs (mirrors mp_range/target/trap: one state-driven writer).
   // GLYPH_TINT is factored out so the placement-preview sibling below shares the exact same look without
   // copying the tint literals (one home per fact — a future recolor moves both together).
   glyph: {
     ...GLYPH_TINT,
-    order: 2,
+    order: CELL_LAYER_ORDER.glyph,
     fade_in_s: 0.45,
     fade_out_s: 0.55,
   },
@@ -149,17 +167,15 @@ export const CHANNELS = {
   // non-castable cell, ANY other spell/no spell armed) call clear_states('glyph') and wipe the caster's
   // OWN already-placed zone mid-turn — the exact "AoE glyph zone disappeared" report. This channel is
   // hover-OWNED only (like 'aoe' is for every non-glyph spell, never written by the authoritative paint
-  // pass) so the preview can never again reach into the persistent paint. Same tint, own order (3, the
-  // transient-hover tier next to 'aoe' — NOT order 2, so a preview overlapping an existing zone never
-  // z-fights it) and the FAST default fade (hover feedback must feel immediate, not the zone's slow
-  // atmospheric settle).
+  // pass) so the preview can never again reach into the persistent paint. Same tint and sanctioned overlay
+  // tier, with a micro-order above the persistent glyph to avoid co-planar z-fighting and the FAST default fade.
   glyph_hover: {
     ...GLYPH_TINT,
-    order: 3,
+    order: CELL_LAYER_ORDER.glyph_hover,
   },
   // The compound marker consumes this exact gold for both of its unlit materials, so trap identity survives
   // midnight unchanged instead of collapsing to the old near-black silhouette.
-  trap: { color: TRAP_COLOR, opacity: 0.95, order: 6, border: true },
+  trap: { color: TRAP_COLOR, opacity: 0.95, order: CELL_LAYER_ORDER.trap, border: true },
   selection: { color: 0xdff0ff, opacity: 0.95, order: 6, outline: true },
   ally_seat: { color: TEAM_COLORS.ally, opacity: 0.9, order: 7, border: true },
   enemy_seat: { color: TEAM_COLORS.enemy, opacity: 0.9, order: 7, border: true },

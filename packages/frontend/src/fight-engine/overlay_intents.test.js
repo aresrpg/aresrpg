@@ -22,9 +22,27 @@ import {
   MOB_TURN_MIN_MS,
   DEATH_BEAT_S,
   TRAP_BEAT_S,
+  resolve_cell_paints,
 } from './overlay_intents.js'
 
 const c = (x, y) => ({ x, y })
+
+describe('resolve_cell_paints — one base paint per cell', () => {
+  it('target red wins when the same cell is also in targetable range', () => {
+    const cell = encode(4, 4)
+    expect(resolve_cell_paints({ in_range: [cell], target: [cell] })).toEqual([{ cell, paint: 'target' }])
+  })
+
+  it('LOS-blocked wins when the same in-range cell is not visible', () => {
+    const cell = encode(6, 4)
+    expect(resolve_cell_paints({ in_range: [cell], los_blocked: [cell] })).toEqual([{ cell, paint: 'los_blocked' }])
+  })
+
+  it('a steered movement path replaces the underlying movement-range cell', () => {
+    const cell = encode(5, 4)
+    expect(resolve_cell_paints({ movement: [cell], movement_path: [cell] })).toEqual([{ cell, paint: 'movement_path' }])
+  })
+})
 
 describe('move_reachable_set — dungeon regime (bfsReachable twin)', () => {
   it('equals bfsReachable over the same blocked set (cell-for-cell parity with DungeonBoard.reachable)', () => {

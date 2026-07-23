@@ -4,11 +4,10 @@
 //
 // The current-prod CPU-flat-tile model (C fight-overlay.js), ported to WebGPU: each cell in a channel
 // is a flat PlaneGeometry laid on the floor plane with a translucent NodeMaterial (transparent,
-// depthWrite:false, DoubleSide). Channels are independent groups, each a distinct color, stacked by a
-// micro-y offset + renderOrder so overlapping washes (a path cell inside the move range) read cleanly
-// without z-fighting. The engine ONLY paints — the dapp computes every cell set (BFS/LoS/AoE); the
-// engine gets WHAT, never WHY (contract). Out-of-mask cells are silently ignored (nothing to paint on
-// a void).
+// depthWrite:false, DoubleSide). Channels remain independent render groups, but the frontend projection
+// emits exactly ONE base channel per cell; only glyph/trap may layer over it. renderOrder mirrors that law
+// defensively and never resolves semantics at draw time. The engine ONLY paints — the dapp computes every
+// cell set (BFS/LoS/AoE); the engine gets WHAT, never WHY (contract). Out-of-mask cells are ignored.
 //
 // ONE DESIGN LANGUAGE for every cell highlight:
 //   • INNER GRADIENT per cell — a saturated color at the cell RIM fading toward a darker + more
@@ -20,7 +19,7 @@
 //     radius house rule, confined to these overlay tiles (it does NOT relax sharp corners anywhere
 //     else in the app). DO NOT "fix" these back to sharp edges — this is a deliberate, requested
 //     rounding on cell highlights (cto flagged this in v1.2 review notes too).
-//   • FOUR owner-named highlight classes share the construction: movement/mp_range (DARK BLUE, kept),
+//   • FOUR owner-named highlight classes share the construction: movement/mp_range (GREEN),
 //     targetable 'target' (DARK BLUE), 'los_blocked' (LIGHT BLUE — LoS required by the spell yet the
 //     cell is non-targetable), and AoE-hover 'aoe' (RED — the zone under the spell cursor).
 //
@@ -73,6 +72,7 @@ export {
 export {
   CHANNEL_KEYS,
   CHANNELS,
+  CELL_LAYER_ORDER,
   DEFAULT_CENTER_STYLE,
   FADE_DEFAULTS,
   GLYPH_TICK_FLARE,
@@ -86,8 +86,8 @@ export {
  *  buried the LOW orders (mp_range=order1 → 0.06) UNDER the slab on the voxel cave board — the
  *  light-green MP-reach never rendered. FLOOR_CLEAR (0.37) lifts the whole stack above the slab top
  *  (0.07 headroom); WASH_LIFT then separates channels by paint order (renderOrder does the real
- *  transparency ordering — this micro-step only prevents same-depth z-fight between overlapping
- *  washes). Kept tight so the top channel never visibly floats. */
+ *  transparency ordering — this micro-step only separates sanctioned glyph/trap overlays from the base).
+ *  Kept tight so the top channel never visibly floats. */
 const FLOOR_CLEAR = 0.37
 const WASH_LIFT = 0.012
 // Tile edge as a fraction of the cell — the highlight quad slightly overfills grout so the rounded
