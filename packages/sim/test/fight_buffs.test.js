@@ -290,6 +290,25 @@ describe('ap/mp pool modifiers', () => {
     expect(find_entity(round.state, 'p0').mp).toBe(8)
   })
 
+  // #598 (twin-parity): a turns=2 mp buff must boost the pool on its cast turn + ONE refill, then wear off —
+  // exactly like the strength buff above and like Move's give CREDIT row (aged at the prior turn-END, so its
+  // begin_turn refill never sees an expiring credit). The sim USED to refill from the row one turn too long
+  // (advance_turn reads the effective max BEFORE process_turn_effects drops the expiring row), granting a turn
+  // the chain had already expired — the "+1 MP badge showed but the MP was unusable" field report.
+  test('an mp buff wears off after its 2 turns — pool back to BASE on turn 3, not the stale buffed max (#598)', () => {
+    const { state, ctx } = duel(4)
+    const buffed = cast(state, ctx, 'p0', 'mp_buff', { x: 1, y: 5 }) // +3 mp, turns=2
+    expect(find_entity(buffed.state, 'p0').mp).toBe(8) // T (cast): immediate 5 -> 8
+    const t1 = end(end(buffed.state, ctx, 'p0').state, ctx, 'p1')
+    expect(find_entity(t1.state, 'p0').mp).toBe(8) // T+1: buff still live, refill 5 + 3
+    // The timed row is gone by T+2 (badge honest); the pool must follow it back to BASE, not linger at 8.
+    const t2 = end(end(t1.state, ctx, 'p0').state, ctx, 'p1')
+    expect(
+      find_entity(t2.state, 'p0').effects.filter(e => e.stat === 'mp').length,
+    ).toBe(0)
+    expect(find_entity(t2.state, 'p0').mp).toBe(5) // T+2: 2-turn buff expired -> base 5 (was a stale 8)
+  })
+
   test('an mp debuff reduces the enemy pool immediately', () => {
     const { state, ctx } = duel(5)
     const r = cast(state, ctx, 'p0', 'mp_debuff', { x: 9, y: 5 })

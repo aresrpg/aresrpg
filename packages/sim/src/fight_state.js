@@ -333,18 +333,41 @@ export const effective_stats = entity => {
 }
 
 /**
- * Effective AP pool max = base ap_max + active ap modifiers (clamped >= 0). advance_turn refills to THIS, so
- * an ap buff/debuff persists across the target's turns; the modifier's expiry restores the base max.
+ * Sum of the ap/mp pool modifiers that are STILL ACTIVE for the upcoming turn — a row expiring on this turn's
+ * start-decrement (turns_remaining <= 1) is NOT active this turn and must not sustain the refill. This is the
+ * SAME activeness condition effective_stats folds by: a stat row survives into a turn iff its turns_remaining
+ * outlasts that turn's decrement, so the pool refill and the live stat fold agree instead of the pool lingering
+ * one turn longer. #598: advance_turn reads this BEFORE process_turn_effects drops the row, so counting an
+ * expiring row refilled the pool one turn past the buff's life — the sim granted a turn the chain had already
+ * expired (Move ages the give/drain CREDIT row at the PRIOR turn-END, so its begin_turn refill never sees one).
+ * NOT stat_modifier (that one counts every live row and also serves the 'summons' cap, which has no refill edge).
+ * @param {FightEntity} entity
+ * @param {'ap'|'mp'} key
+ * @returns {number}
+ */
+const active_pool_modifier = (entity, key) =>
+  entity.effects.reduce((sum, eff) => {
+    if (eff.stat !== key || eff.turns_remaining <= 1) return sum
+    if (eff.type === 'STAT_BUFF') return sum + eff.value
+    if (eff.type === 'STAT_DEBUFF') return sum - eff.value
+    return sum
+  }, 0)
+
+/**
+ * Effective AP pool max = base ap_max + the ap modifiers active for the upcoming turn (clamped >= 0).
+ * advance_turn refills to THIS, so an ap buff/debuff persists across the target's turns and its expiry restores
+ * the base max on the FIRST turn it is no longer active (twin-parity with Move's credit aging — #598).
  * @param {FightEntity} entity
  * @returns {number}
  */
 export const effective_ap_max = entity =>
-  Math.max(0, entity.ap_max + stat_modifier(entity, 'ap'))
+  Math.max(0, entity.ap_max + active_pool_modifier(entity, 'ap'))
 
 /**
- * Effective MP pool max = base mp_max + active mp modifiers (clamped >= 0). See effective_ap_max.
+ * Effective MP pool max = base mp_max + the mp modifiers active for the upcoming turn (clamped >= 0). See
+ * effective_ap_max.
  * @param {FightEntity} entity
  * @returns {number}
  */
 export const effective_mp_max = entity =>
-  Math.max(0, entity.mp_max + stat_modifier(entity, 'mp'))
+  Math.max(0, entity.mp_max + active_pool_modifier(entity, 'mp'))
