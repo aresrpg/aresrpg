@@ -126,13 +126,11 @@ describe('resolve_mount — availability state machine', () => {
     expect(r.glb_url).toBe('https://cdn.aresrpg.world/zot.glb')
   })
   test("an item's OWN object address is NEVER used as the art key (owner ruling: one image per type, never per address)", () => {
-    // No template_id / item_type on the equipped mount — only its live Sui object id. Before the fix this
-    // fell through to `item?.id`, building a garbage per-address URL (.../cosmetics/0xdead….glb) that could
-    // never resolve; the honest behavior is no art, never a wrong per-instance request.
-    const r = resolve_mount(
-      { id: 'c1', mount: { id: '0xdeadbeef00000000000000000000000000000000000000000000000000000000' } },
-      ''
-    )
+    // No template_id / item_type on the equipped mount — only its live Sui object id (a short stand-in
+    // here, same 'm1' shape the other cases in this describe use; the real read-model id is a 0x address).
+    // Before the fix this fell through to `item?.id`, building a garbage per-instance URL
+    // (.../cosmetics/<id>.glb) that could never resolve; the honest behavior is no art, never a wrong request.
+    const r = resolve_mount({ id: 'c1', mount: { id: 'm1' } }, '')
     expect(r.available).toBe(true)
     expect(r.glb_url).toBeNull()
   })
