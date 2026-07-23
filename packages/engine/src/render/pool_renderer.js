@@ -274,6 +274,18 @@ export const SLOTS_PER_COLUMN = /** @type {Record<RenderClass, number>} */ ({
 const RENDER_CLASSES = ['solid', 'foliage', 'cutout', 'canopy', 'liquid']
 
 /**
+ * Semantic class order within Three's opaque/transparent queues: depth-writing terrain before the
+ * non-writing foliage colour pass; water before the colorless foliage depth restore. Three reverses
+ * both sorted queues for a reversed-Z camera, so mirror the raw order to preserve those semantics on
+ * the live WebGPU path (the same gotcha as tactical/board_highlights.js).
+ * @param {RenderClass|'foliage_depth'} cls @param {boolean} [reversed_depth]
+ */
+export function terrain_render_order(cls, reversed_depth = false) {
+  const order = cls === 'foliage_depth' ? 2 : cls === 'liquid' ? 1 : cls === 'foliage' ? 0.5 : 0
+  return reversed_depth ? -order : order
+}
+
+/**
  * Resolves the per-class quad-pool sizing for a tier — the boot-time FIXED allocation (POOL_CONFIG, now
  * TIER-DRIVEN). max_slots is DERIVED, never guessed: resident columns = (2·(radius + UNLOAD_MARGIN) + 1)²
  * for the tier's TIER_LOAD_RADIUS (LOW r4 / MEDIUM r7 / HIGH r8), × the class SLOTS_PER_COLUMN rate,
@@ -367,6 +379,7 @@ export function create_terrain_renderer({
   retry_time_budget_ms = 3,
 }) {
   const tier_def = get_tier(tier)
+  const reversed_depth = renderer?.reversedDepthBuffer === true
   // [FIRST-LOAD] the radial materialization front (?reveal=dissolve|rise|scan, default dissolve). Only the
   // chosen variant's TSL graph compiles (read ONCE here, baked into every class material). Absent location
   // (node/tests) ⇒ 'dissolve' — but with no reveal_front uniforms wired it folds to a no-op regardless.
@@ -510,6 +523,7 @@ export function create_terrain_renderer({
     const mesh = new Mesh(pool.geometry, material)
     mesh.frustumCulled = false // culling is per-slot on the GPU, not three's object-level test
     mesh.matrixAutoUpdate = false // static at identity — chunk origin is applied in-shader
+    mesh.renderOrder = terrain_render_order(cls, reversed_depth)
     // SHADOW CASTING — INTERIM directional term (VOXEL-SUN, a GPU-compute per-surface-voxel DDA
     // sun-visibility trace, will retire the whole terrain shadow map; keep this simple, no cascade
     // tuning). SOLID always casts + receives (tree TRUNKS + terrain self-shadow). The BFS sun-leak gate
@@ -536,7 +550,7 @@ export function create_terrain_renderer({
       (cls === 'solid' || ((cls === 'cutout' || cls === 'foliage' || cls === 'canopy') && foliage_casts_shadow))
     mesh.receiveShadow = !simple_shaders
     if (cls === 'liquid') {
-      mesh.renderOrder = 1 // draw translucent water after opaque solids so blending reads right
+      // Transparent-queue order 1: after opaque terrain/foliage colour, before the foliage depth restore.
       mesh.userData.is_liquid = true
       water_sun_hook = material.userData.set_water_sun ?? null
     } else if (cls === 'foliage' || cls === 'cutout' || cls === 'canopy') {
@@ -561,7 +575,7 @@ export function create_terrain_renderer({
       const scene_depth_mesh = new Mesh(pool.geometry, scene_depth_material)
       scene_depth_mesh.frustumCulled = false
       scene_depth_mesh.matrixAutoUpdate = false
-      scene_depth_mesh.renderOrder = 2
+      scene_depth_mesh.renderOrder = terrain_render_order('foliage_depth', reversed_depth)
       scene_depth_mesh.userData.render_class = 'foliage_depth'
       scene_depth_mesh.userData.scene_depth_restore = true
       scene.add(scene_depth_mesh)

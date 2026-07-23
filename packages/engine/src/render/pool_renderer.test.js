@@ -25,6 +25,7 @@ import {
   render_class_aabb_margin,
   resolve_pool_config,
   SLOT_QUADS,
+  terrain_render_order,
 } from './pool_renderer.js'
 import { create_quad_pool } from './quad_pool.js'
 import { foliage_cull_margin } from './terrain_flora.js'
@@ -51,6 +52,23 @@ describe('per-class GPU frustum bounds', () => {
   test('only shader-displaced foliage uses the expanded chunk AABB', () => {
     expect(render_class_aabb_margin('foliage')).toBe(foliage_cull_margin)
     for (const cls of ['solid', 'cutout', 'canopy', 'liquid']) expect(render_class_aabb_margin(cls)).toBe(1)
+  })
+})
+
+describe('terrain render order', () => {
+  test('normal and reversed-depth queues both draw terrain → foliage and water → final foliage depth', () => {
+    /** @param {string[]} classes @param {boolean} reversed_depth */
+    const draw_order = (classes, reversed_depth) => {
+      const sorted = classes
+        .map((render_class, id) => ({ render_class, id, order: terrain_render_order(render_class, reversed_depth) }))
+        .sort((a, b) => a.order - b.order || a.id - b.id)
+      return (reversed_depth ? sorted.reverse() : sorted).map(({ render_class }) => render_class)
+    }
+
+    for (const reversed_depth of [false, true]) {
+      expect(draw_order(['solid', 'foliage'], reversed_depth)).toEqual(['solid', 'foliage'])
+      expect(draw_order(['liquid', 'foliage_depth'], reversed_depth)).toEqual(['liquid', 'foliage_depth'])
+    }
   })
 })
 
