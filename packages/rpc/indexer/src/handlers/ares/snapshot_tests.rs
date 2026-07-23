@@ -665,6 +665,89 @@ fn group_root_garbage_bytes_are_a_safe_none() {
     assert!(map_group_root_field("0xe01", &[0x00, 0x01, 0x02]).is_none());
 }
 
+// ── Origin gate for Phase-1 DF children (2026-07-24 ①-fix: the inbound-ghost leak) ──
+// `results::open` / `zones::join_world` on an ORPHANED old-lineage package can still attach a
+// byte-identical DF (job-xp/progression/equipment/malus/equipped-item/zone/group-root/stats-
+// min/stats-max/damages) to a legacy parent — the `is_*_key` predicates above match purely by
+// (module, name), so without this gate the write ghosts a fresh `rpc:character:{parent}` (or
+// `rpc:zone:…`) doc into existence via the arm's own NX skeleton, even though the parent object
+// itself never re-appears as an admitted Phase-2 output. `key_origin_admitted` is what `process`
+// filters `key` through before ANY of the ten arms run — proven here at the same TypeTag level
+// the `is_*_key_discriminates_…` tests above already use for the (module, name) half.
+
+#[test]
+fn orphaned_lineage_progression_key_is_rejected_fresh_lineage_is_admitted() {
+    use std::str::FromStr;
+    // Reuse the file's own correctly zero-padded origin constant rather than hand-typing a new
+    // 64-hex-char literal (a hand-typed one silently under-padded here on the first attempt,
+    // masking the real assertion behind a canonical-string mismatch).
+    let fresh = FRESH_ARESRPG_ORIGIN;
+    let orphaned = "0xd0";
+    let handler = AresSnapshotHandler::new(Some(HashSet::from([fresh.to_string()])));
+
+    let fresh_key =
+        TypeTag::from_str(&format!("{fresh}::extension::NsKey<{fresh}::character_link::ProgressionKey>"))
+            .unwrap();
+    let orphaned_key = TypeTag::from_str(&format!(
+        "{orphaned}::extension::NsKey<{orphaned}::character_link::ProgressionKey>"
+    ))
+    .unwrap();
+
+    assert!(handler.key_origin_admitted(&fresh_key));
+    assert!(!handler.key_origin_admitted(&orphaned_key));
+
+    // The exact mechanism `process` runs: `key.filter(|k| self.key_origin_admitted(k))` collapses
+    // an orphaned key to `None` before `key.is_some_and(is_progression_key)` — the real dispatch
+    // condition — ever runs, even though the (module, name) shape is byte-identical and would
+    // otherwise match.
+    assert!(handler.key_origin_admitted(&fresh_key) && is_progression_key(&fresh_key));
+    assert!(
+        !(handler.key_origin_admitted(&orphaned_key) && is_progression_key(&orphaned_key)),
+        "orphaned-lineage progression DF must NOT project"
+    );
+}
+
+#[test]
+fn orphaned_lineage_zone_key_is_rejected_the_unwrapped_struct_shape_too() {
+    use std::str::FromStr;
+    // The sibling key FAMILY (zones/item_stats/item_damages): a bare struct, no `NsKey<…>`
+    // envelope. Proves the origin check is uniform across both key shapes, not just the wrapped one.
+    let fresh = FRESH_ARESRPG_ORIGIN;
+    let orphaned = "0xd0";
+    let handler = AresSnapshotHandler::new(Some(HashSet::from([fresh.to_string()])));
+
+    let fresh_key = TypeTag::from_str(&format!("{fresh}::zones::ZoneKey")).unwrap();
+    let orphaned_key = TypeTag::from_str(&format!("{orphaned}::zones::ZoneKey")).unwrap();
+
+    assert!(handler.key_origin_admitted(&fresh_key));
+    assert!(!handler.key_origin_admitted(&orphaned_key));
+
+    assert!(handler.key_origin_admitted(&fresh_key) && is_zone_key(&fresh_key));
+    assert!(
+        !(handler.key_origin_admitted(&orphaned_key) && is_zone_key(&orphaned_key)),
+        "orphaned-lineage zone DF must NOT project"
+    );
+}
+
+#[test]
+fn unset_allowlist_admits_every_origin() {
+    // Regression guard: local/dev runs with no ARES_PACKAGES configured must keep matching by
+    // (module, name) alone, exactly like `admits`'s existing `None => true` contract — this gate
+    // must never accidentally require an allowlist to be configured.
+    use std::str::FromStr;
+    let handler = AresSnapshotHandler::new(None);
+    let any_origin = TypeTag::from_str("0xdeadbeef::zones::ZoneKey").unwrap();
+    assert!(handler.key_origin_admitted(&any_origin));
+}
+
+#[test]
+fn non_struct_key_is_conservatively_rejected() {
+    // The ten Phase-1 arms only ever see struct keys, but the type is generic — a non-struct
+    // TypeTag (never happens in practice) must fail closed, not panic or vacuously admit.
+    let handler = AresSnapshotHandler::new(None);
+    assert!(!handler.key_origin_admitted(&TypeTag::U64));
+}
+
 // ── Taux (forgemagie) events ─────────────────────────────────────────────────
 
 #[test]

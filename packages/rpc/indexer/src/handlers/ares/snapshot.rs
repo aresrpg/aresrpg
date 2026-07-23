@@ -264,9 +264,11 @@ pub fn map_character_object(id: &str, contents: &[u8], kiosk_id: Option<&str>) -
 /// name) — stable across package upgrades (a type's defining module never moves) and the SAME
 /// (module, name) trust the sibling object arms run under while the package allowlist is unset. A
 /// forged look-alike cannot poison a real character: attaching a `JobXpKey` DF to a Character's UID
-/// needs `&mut UID` (package-gated), so only our own package writes these. Residual hardening (like
-/// the personal-kiosk cap): pin the inner `character_link` package address here when the
-/// `ARES_PACKAGES` allowlist is activated for production.
+/// needs `&mut UID` (package-gated), so only our own package writes these — but "our own package"
+/// spans every lineage ever published, including orphaned ones whose bytecode stays callable
+/// forever. Origin hardening lands at the CALL SITE (`process`'s `key_origin_admitted`, gating the
+/// whole ten-arm match on `key`'s own top-level struct address) rather than here — this predicate
+/// stays a pure (module, name) shape check.
 fn is_job_xp_key(key_tag: &TypeTag) -> bool {
     let TypeTag::Struct(ns) = key_tag else { return false };
     if ns.module.as_str() != EXTENSION_MODULE || ns.name.as_str() != NS_KEY_TYPE {
@@ -341,7 +343,8 @@ fn is_spell_stats_value(value_tag: &TypeTag) -> bool {
 /// match-by-name trust the sibling arms run under. Attaching a `ZoneKey` DF to a World's UID needs `&mut UID`
 /// (package-gated — only `zones::search_zone` does it), so only our own package writes these; a forged
 /// look-alike keyed to an attacker's own object lands under a non-world parent id the client never queries.
-/// Residual hardening (like the sibling arms): pin the `zones` package address when the allowlist activates.
+/// Origin hardening lives at the call site (`process`'s `key_origin_admitted`), not here — see
+/// [`is_job_xp_key`]'s doc for why (an orphaned lineage's `zones::search_zone` stays callable forever).
 fn is_zone_key(key_tag: &TypeTag) -> bool {
     let TypeTag::Struct(s) = key_tag else { return false };
     s.module.as_str() == ZONES_MODULE && s.name.as_str() == ZONE_KEY_TYPE
@@ -352,7 +355,7 @@ fn is_zone_key(key_tag: &TypeTag) -> bool {
 /// parent, same plain-struct-key shape — only the NAME differs), carrying the fight-create diet's
 /// search-committed Blake2b root + group count. Same package-gated trust: only `zones::search_zone`
 /// can attach it to a World's UID (`&mut UID`), so a forged look-alike lands under an attacker-owned
-/// parent the client never queries. Residual hardening rides the same future package-address pin.
+/// parent the client never queries. Origin hardening rides the same call-site gate as [`is_zone_key`].
 fn is_group_root_key(key_tag: &TypeTag) -> bool {
     let TypeTag::Struct(s) = key_tag else { return false };
     s.module.as_str() == ZONES_MODULE && s.name.as_str() == ZONE_GROUP_ROOT_KEY_TYPE
@@ -1353,7 +1356,11 @@ pub fn kiosk_purchase_per_unit(price_mist: u64, amount: u64) -> Option<u64> {
 /// optional package allowlist as the event handler — but note the allowlist must
 /// include EVERY emitting package address: `character::Character` keeps its original
 /// defining address, while `forgemagie` now lives in its OWN sibling `aresrpg_forgemagie`
-/// package (package-split 2026-07-12). Unset = match by `(module, name)` alone.
+/// package (package-split 2026-07-12). Unset = match by `(module, name)` alone. Phase 2's
+/// object-snapshot loop gates every arm on `self.admits(&ty.address()...)`; Phase 1's
+/// dynamic-field arms (job-xp/progression/equipment/malus/equipped-item/zone/group-root/
+/// stats-min/stats-max/damages) gate identically via [`key_origin_admitted`] — see that
+/// method's doc for why a DF child needs its OWN origin check independent of its parent.
 pub struct AresSnapshotHandler {
     packages: Option<HashSet<String>>,
 }
@@ -1367,6 +1374,34 @@ impl AresSnapshotHandler {
         match &self.packages {
             None => true,
             Some(allow) => allow.contains(pkg),
+        }
+    }
+
+    /// Origin gate for a Phase-1 dynamic-field KEY (the ①-fix, 2026-07-24 ghost-leak
+    /// incident). Every `is_*_key` predicate below matches purely by (module, name) —
+    /// deliberately, so it stays a structural shape check — which means, on its own, it
+    /// admits a BYTE-IDENTICAL key attached by an ORPHANED old-lineage package just as
+    /// readily as the current one. Move type-tag addresses are ALWAYS the defining
+    /// (origin) package, never the "latest" upgrade pointer — a VM-level guarantee
+    /// (`sui-types`' `type_origin_table`), not a choice this indexer makes — so the top-
+    /// level struct address of the key TypeTag (the `extension::NsKey<…>` wrapper for the
+    /// eight NsKey-wrapped arms, or the bare struct itself for `zones`/`item_stats`/
+    /// `item_damages`'s unwrapped keys) is exactly the package whose `&mut UID` access
+    /// wrote this field. `extension`/`character_link`/`equipment`/`zones`/`item_stats`/
+    /// `item_damages` are all modules of the ONE `packages/move/aresrpg` package, so this
+    /// single check is uniform across all ten arms regardless of wrapping.
+    ///
+    /// This closes a leak Phase 2's object-snapshot gate (`self.admits(&ty.address()...)`
+    /// on the OUTPUT object's own type) never covered: an old-lineage package's bytecode
+    /// stays callable forever, so a post-anchor tx on a legacy parent (`results::open`,
+    /// `zones::join_world`, …) can re-attach one of these DFs to it even though the parent
+    /// Character/World itself never re-appears as an admitted output object. Without this
+    /// gate, that write alone ghosts a fresh `rpc:character:{parent}` (or `rpc:zone:…`) doc
+    /// into existence via the arm's own `char_init`/NX skeleton.
+    fn key_origin_admitted(&self, key_tag: &TypeTag) -> bool {
+        match key_tag {
+            TypeTag::Struct(s) => self.admits(&s.address.to_canonical_string(true)),
+            _ => false,
         }
     }
 }
@@ -1421,7 +1456,11 @@ impl Processor for AresSnapshotHandler {
                     //     parent=ITEM TEMPLATE) — the authored weapon damage lines (issue #619 leg 3).
                     if let Owner::ObjectOwner(parent) = obj.owner() {
                         let params = ty.type_params();
-                        let key = params.first().map(|k| &**k);
+                        // Origin-gated (the ①-fix — see `key_origin_admitted`'s doc): an
+                        // old-lineage key fails the filter and becomes `None`, so every
+                        // `key.is_some_and(is_*_key)` below is automatically `false` for it —
+                        // one gate for all ten mutually-exclusive arms.
+                        let key = params.first().map(|k| &**k).filter(|k| self.key_origin_admitted(k));
                         let value = params.get(1).map(|v| &**v);
                         let id = || ObjectID::from(*parent).to_canonical_string(true);
                         if key.is_some_and(is_job_xp_key) {
