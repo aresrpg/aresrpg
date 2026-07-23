@@ -1418,7 +1418,14 @@ export async function seed_full_corpus() {
       // 2026-07-15: the kit sweep's zone-rich effects fattened spell rows to ~600 PTB inputs each
       // (10 rows = 6,035 inputs > the 2,048 cap) — BATCH_PROBE's floor (step 10) never probed lower
       // and the phase refused. Spells probe small: 3 rows ≈ 1,800 inputs clears both caps.
-      { ...BATCH_PROBE, start: 6, step: 1 }
+      // 2026-07-24: BATCH_PROBE is items/mobs-shaped (ceilingSuiPerItem:0.03) — kit-fattening also
+      // pushed real spell cost to ~0.0394 SUI/item (measured; seed_spells_phase.mjs's own calibration,
+      // commit 627039f2). The old `...BATCH_PROBE` spread silently kept that stale 0.03 ceiling, so
+      // every batch size — even n=1 — failed the cost check, not the PTB-input check. seed_full_corpus.mjs
+      // can't import seed_spells_phase.mjs's config (that file is a standalone script, not a module — it
+      // self-executes main() on import and exports nothing), so this call owns its opts outright: no
+      // shared default left to drift out from under it again.
+      { start: 6, step: 1, ceilingSuiPerItem: 0.06 }
     )
     console.log(
       `  spells: batch size ${size} (${pendingSpells.length} pending → ${Math.ceil(pendingSpells.length / size)} txs)`
