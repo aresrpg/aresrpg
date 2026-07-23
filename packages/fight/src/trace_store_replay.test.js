@@ -129,3 +129,30 @@ describe('a captured fight trace replays through a fresh store (the store IS the
     expect(dump_current_trace('trace-replay-test', T0)).toBe(null)
   })
 })
+
+describe('the reducer-door trace belongs to its store instance', () => {
+  test('two fresh stores keep independent recorder histories', () => {
+    const first = create_fight_store()
+    const second = create_fight_store()
+    first.getState().input({ type: 'init', fight_id: '0xfirst' }, T0)
+    second.getState().input({ type: 'init', fight_id: '0xsecond' }, T0 + 1)
+
+    expect(first.trace_tap.dump_current_trace('test', T0 + 2).fight_id).toBe('0xfirst')
+    expect(first.trace_tap.dump_current_trace('test', T0 + 2, '0xsecond')).toBe(null)
+    expect(second.trace_tap.dump_current_trace('test', T0 + 2).fight_id).toBe('0xsecond')
+    expect(second.trace_tap.dump_current_trace('test', T0 + 2, '0xfirst')).toBe(null)
+  })
+
+  test('a diagnostic consumer fault never breaks the input door', () => {
+    const store = create_fight_store()
+    const poison = {
+      type: 'tick',
+      get fight_id() {
+        throw new Error('boom')
+      },
+    }
+    expect(() => store.getState().input(poison, T0)).not.toThrow()
+    store.getState().input({ type: 'arm', spell_id: 'x' }, T0 + 1)
+    expect(store.getState().armed_spell_id).toBe('x')
+  })
+})
