@@ -14,6 +14,7 @@ import {
   K_REMOVE_POINTS,
   POINT_AP,
   POINT_MP,
+  SIGNED_SHIFT,
   TF_NOT_TEAM,
 } from '../src/spell_effect.js'
 
@@ -31,7 +32,10 @@ import golden from './vectors/missing_effect_stats_golden.json' with { type: 'js
 const run_normalize_stats = vector => {
   const spell = spell_of(
     vector.id,
-    vector.input.ids.map(stat => raw_effect(K_ALTER_STAT, { stat, value: 5 })),
+    // R3: a +5 buff per stat — the on-chain alter_stat value is CENTERED at 32768.
+    vector.input.ids.map(stat =>
+      raw_effect(K_ALTER_STAT, { stat, value: SIGNED_SHIFT + 5 }),
+    ),
   )
   return {
     types: spell.levels[0].base_effects.map(effect => effect.type),
@@ -80,9 +84,10 @@ const run_negative_ap_dodge = vector => {
     stats: { ap_dodge: vector.input.base_ap_dodge },
   })
   const spell = spell_of(vector.id, [
+    // R3: a negative ap_dodge debuff of magnitude `debuff` — the value is CENTERED at 32768.
     raw_effect(K_ALTER_STAT, {
       stat: 12,
-      value: vector.input.debuff,
+      value: SIGNED_SHIFT - vector.input.debuff,
       flags: FLAG_NEGATIVE,
       turns: 1,
     }),

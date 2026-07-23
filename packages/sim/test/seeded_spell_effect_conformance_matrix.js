@@ -124,7 +124,13 @@ export const matrix_rows = [
         },
       },
     },
-    { effect: { stat: spell_effect.STAT_STRENGTH, value: 5 } },
+    // R3: a +5 strength buff — the on-chain alter_stat value is CENTERED at 32768.
+    {
+      effect: {
+        stat: spell_effect.STAT_STRENGTH,
+        value: spell_effect.SIGNED_SHIFT + 5,
+      },
+    },
   ),
   effect_row(
     spell_effect.K_STEAL_STAT,
@@ -158,7 +164,8 @@ export const matrix_rows = [
         },
       },
     },
-    { effect: { element: 2, value: 5 } },
+    // R3: a +5 earth-resist buff — the on-chain alter_resist value is CENTERED at 32768.
+    { effect: { element: 2, value: spell_effect.SIGNED_SHIFT + 5 } },
   ),
   effect_row(
     spell_effect.K_PUSH,

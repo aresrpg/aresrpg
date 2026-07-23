@@ -42,7 +42,9 @@ fun earth_dmg(base: u64): Effect { spell_effect::damage(spell::el_earth(), base)
 fun resist_alter(element: u8, amount: u64, negative: bool, turns: u8): Effect {
   let flags = if (negative) spell_effect::flag_negative() else 0;
   let filter = if (negative) spell_effect::tf_not_team() else spell_effect::tf_not_enemy();
-  spell_effect::new_effect(spell_effect::k_alter_resist(), element, amount, spell_effect::shape_point(), 0, filter, 100, turns, 0, flags, spell_effect::phase_on_enter())
+  // R3: alter_resist value is CENTERED at 32768 — mirror how the seed/constructor store the signed delta.
+  let value = if (negative) spell_effect::signed_shift() - amount else spell_effect::signed_shift() + amount;
+  spell_effect::new_effect(spell_effect::k_alter_resist(), element, value, spell_effect::shape_point(), 0, filter, 100, turns, 0, flags, spell_effect::phase_on_enter())
 }
 fun steal_ap(n: u64): Effect {
   spell_effect::new_effect(spell_effect::k_steal_points(), 255, n, spell_effect::shape_point(), 0, spell_effect::tf_not_team(), 100, 0, spell_effect::point_ap(), 0, spell_effect::phase_on_enter())

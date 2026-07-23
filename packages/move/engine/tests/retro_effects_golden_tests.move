@@ -276,8 +276,9 @@ fun physical_damage_zero_duration_expires_at_turn_end() {
   stand_up(&mut sc);
   let mut fight = create_fresh(&mut sc, 1, CHAR_A);
   let cell = participant::cell(fight::participants(&fight).borrow(0));
+  // R3: a +20 physical_damage buff — the alter_stat value is CENTERED at 32768.
   let effect = effect_of(
-    spell_effect::k_alter_stat(), 20, 100, 0, spell_effect::stat_physical_damage(), 0, 0,
+    spell_effect::k_alter_stat(), spell_effect::signed_shift() + 20, 100, 0, spell_effect::stat_physical_damage(), 0, 0,
   );
   let caster_stats = *participant::stats(fight::participants(&fight).borrow(0));
   let mut rng = 7;

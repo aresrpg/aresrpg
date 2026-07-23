@@ -63,7 +63,9 @@ fun t_dispel_fighter_reverts_flagged_alter_preserves_unflagged() {
 
   let reverted = board::dispel_fighter(&mut b, 1);
   assert!(reverted.length() == 1, 2); // the removed alter row needs a live-stat re-derivation
-  assert!(eff::value(reverted.borrow(0)) == 20, 3);
+  // R3: alter value is CENTERED — decode the +20 buff magnitude.
+  let (rv_neg, rv_mag) = eff::signed_delta(eff::kind(reverted.borrow(0)), eff::value(reverted.borrow(0)));
+  assert!(!rv_neg && rv_mag == 20, 3);
   assert!(board::status_count(&b) == 1, 4);
   assert!(board::fighter_alter_rows(&b, 1).is_empty(), 5);
   assert!(board::fighter_status_of(&b, 1, eff::k_apply_dot()).is_some(), 6);

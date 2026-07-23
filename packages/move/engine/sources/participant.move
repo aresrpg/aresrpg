@@ -393,10 +393,13 @@ fun fold_alters(s: &mut Stats, rows: &vector<Effect>, negatives: bool) {
   let mut i = 0;
   while (i < n) {
     let e = rows.borrow(i);
-    if (e.has_flag(spell_effect::flag_negative()) == negatives) {
+    // R3: alter rows carry a CENTERED value — `signed_delta` decodes the sign + magnitude (the sole apply home,
+    // twin of the sim `stats_derive.js` fold). The sign it returns matches the row's FLAG_NEGATIVE by construction.
+    let (neg, mag) = spell_effect::signed_delta(e.kind(), e.value());
+    if (neg == negatives) {
       if (e.kind() == spell_effect::k_alter_stat()) {
-        if (negatives) spell::sub_stat(s, e.stat(), e.value()) else spell::add_stat(s, e.stat(), e.value());
-      } else if (negatives) spell::sub_resist(s, e.element(), e.value()) else spell::add_resist(s, e.element(), e.value());
+        if (negatives) spell::sub_stat(s, e.stat(), mag) else spell::add_stat(s, e.stat(), mag);
+      } else if (negatives) spell::sub_resist(s, e.element(), mag) else spell::add_resist(s, e.element(), mag);
     };
     i = i + 1;
   };

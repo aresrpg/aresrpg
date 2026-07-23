@@ -295,6 +295,33 @@ public fun flags(e: &Effect): u8 { e.flags }
 public fun phase(e: &Effect): u8 { e.phase }
 public fun has_flag(e: &Effect, flag: u8): bool { e.flags & flag == flag }
 
+// ╔════════════════ [ Signed-value convention — the KIND_SIGNED {alter_stat, alter_resist} decode ] ══════ ]
+// R3 (owner ruling 2026-07-23 — negative stat/resist deltas must WORK): effect kinds 9/11 author BOTH signs in
+// the corpus (a debuff spell authors −8..−33), but `value`/`value_max` are u64 — negatives cannot mint raw. For
+// EXACTLY these two kinds the fields are CENTERED at 32768 (`value = 32768 + delta`), the SAME convention gear
+// `ItemStatistics` and mob resistances already use (spell.move RES_SHIFT). Damage/heal and every other kind stay
+// RAW. `signed_delta` is the ONE decode home both apply call sites (permanent `apply_alter`, timed `fold_alters`)
+// AND the sim twin (`spell_effect.js`) read through, so a rolled/stored centered value always resolves to the same
+// (is_negative, magnitude) pair on chain and client. A ranged debuff rolls on the centered endpoints first
+// (`spell_formula::roll_in_range` needs no change — centered endpoints are ordinary ascending u64s) and the decode
+// applies to the ROLLED result.
+const SIGNED_SHIFT: u64 = 32768;
+public fun signed_shift(): u64 { SIGNED_SHIFT }
+
+/// The KIND_SIGNED set — the only kinds whose `value`/`value_max` are centered (else the field is raw).
+public fun is_signed_kind(kind: u8): bool { kind == K_ALTER_STAT || kind == K_ALTER_RESIST }
+
+/// Decode a (possibly centered) effect `value` for `kind` → `(is_negative, magnitude)`. Signed kinds decode the
+/// 32768-centering; every other kind passes through as `(false, value)` (raw). The magnitude is the absolute
+/// stat/resist delta the apply path adds (buff) or saturating-subtracts (debuff).
+public fun signed_delta(kind: u8, value: u64): (bool, u64) {
+  if (is_signed_kind(kind)) {
+    if (value >= SIGNED_SHIFT) (false, value - SIGNED_SHIFT) else (true, SIGNED_SHIFT - value)
+  } else {
+    (false, value)
+  }
+}
+
 // ╔════════════════ [ Structural legality — the "legal against the effect system" gate ] ══════ ]
 // The `aresrpg_spells` admission (`mint_spell`) AND every cap-gated live-tune setter run this on EVERY effect of
 // a level (base + crit) — paired with the `spell_bands` MAGNITUDE law (annex §3 F1). An effect is structurally
@@ -386,12 +413,17 @@ public fun credit_row(point_kind: u8, given: u64, turns: u8): Effect {
 public fun give_points(point_kind: u8, n: u64): Effect {
   new_effect(K_GIVE_POINTS, 255, n, SHAPE_POINT, 0, TF_NOT_ENEMY, 100, 1, point_kind, 0, PHASE_ON_ENTER)
 }
+/// `amount` is a RAW magnitude + `negative` sign; the stored `value` is CENTERED (R3, signed-value convention):
+/// `32768 − amount` for a debuff, `32768 + amount` for a buff — so every runtime alter row (a steal split, a
+/// retro grant, a seed template) shares the ONE representation `signed_delta` decodes. FLAG_NEGATIVE stays set as
+/// the declared sign the mint-time bands legality (`spell_bands` F5) and dispel classification read.
 public fun alter_stat(stat_id: u8, amount: u64, negative: bool, dispellable: bool, turns: u8): Effect {
   let mut flags = 0;
   if (negative) flags = flags | FLAG_NEGATIVE;
   if (dispellable) flags = flags | FLAG_DISPELLABLE;
   let filter = if (negative) TF_NOT_TEAM else TF_NOT_ENEMY;
-  new_effect(K_ALTER_STAT, 255, amount, SHAPE_POINT, 0, filter, 100, turns, stat_id, flags, PHASE_ON_ENTER)
+  let value = if (negative) SIGNED_SHIFT - amount else SIGNED_SHIFT + amount;
+  new_effect(K_ALTER_STAT, 255, value, SHAPE_POINT, 0, filter, 100, turns, stat_id, flags, PHASE_ON_ENTER)
 }
 // A trap placement effect: `zone_*` is the trap's own blast lozenge; the DETONATION payload is carried
 // board-side (spell_board::place_trap) — Move forbids a recursive `vector<Effect>` inside `Effect`.
@@ -563,6 +595,36 @@ fun t_alter_stat_sign_and_filter() {
   let debuff = alter_stat(STAT_AGILITY, 40, true, false, 2);
   assert!(debuff.has_flag(FLAG_NEGATIVE), 0);
   assert!(debuff.target_filter() == TF_NOT_TEAM, 0); // debuffs target enemies
+}
+
+#[test]
+fun t_signed_delta_centering_roundtrip() {
+  // R3: the alter_stat constructor CENTERS; signed_delta decodes back to the authored (sign, magnitude).
+  let buff = alter_stat(STAT_STRENGTH, 50, false, true, 3);
+  assert!(buff.value() == SIGNED_SHIFT + 50, 0); // +50 centered
+  let (neg, mag) = signed_delta(buff.kind(), buff.value());
+  assert!(!neg && mag == 50, 1);
+  let debuff = alter_stat(STAT_AGILITY, 33, true, true, 2);
+  assert!(debuff.value() == SIGNED_SHIFT - 33, 2); // −33 centered
+  let (dneg, dmag) = signed_delta(debuff.kind(), debuff.value());
+  assert!(dneg && dmag == 33, 3);
+  // Raw kinds pass through unchanged (magnitude == value, never negative).
+  let (rneg, rmag) = signed_delta(K_DAMAGE, 42);
+  assert!(!rneg && rmag == 42, 4);
+  // A centered ranged debuff (delta −33..−8 ⇒ centered 32735..32760): each endpoint decodes to its magnitude,
+  // and roll_in_range on the centered endpoints then decode yields the exact delta. These three (roll → magnitude)
+  // pairs are the SIM PARITY FIXTURE twin (signed_alter_r3.test.js) — chain and client decode the identical delta.
+  let (lo_neg, lo_mag) = signed_delta(K_ALTER_STAT, SIGNED_SHIFT - 33); // 32735
+  let (hi_neg, hi_mag) = signed_delta(K_ALTER_STAT, SIGNED_SHIFT - 8); //  32760
+  assert!(lo_neg && lo_mag == 33 && hi_neg && hi_mag == 8, 5);
+  let lo = SIGNED_SHIFT - 33;
+  let hi = SIGNED_SHIFT - 8;
+  let (r0_neg, r0_mag) = signed_delta(K_ALTER_STAT, aresrpg_foundation::spell_formula::roll_in_range(lo, hi, 0));
+  let (r5_neg, r5_mag) = signed_delta(K_ALTER_STAT, aresrpg_foundation::spell_formula::roll_in_range(lo, hi, 5000));
+  let (r9_neg, r9_mag) = signed_delta(K_ALTER_STAT, aresrpg_foundation::spell_formula::roll_in_range(lo, hi, 9999));
+  assert!(r0_neg && r0_mag == 33, 6); // roll 0 → the min (most-negative) endpoint
+  assert!(r5_neg && r5_mag == 20, 7); // roll 5000 → −20
+  assert!(r9_neg && r9_mag == 8, 8); //  roll 9999 → the max (least-negative) endpoint
 }
 
 #[test]

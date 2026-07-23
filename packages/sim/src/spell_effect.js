@@ -189,6 +189,27 @@ export const flags = e => e.flags
 export const phase = e => e.phase
 export const has_flag = (e, flag) => (e.flags & flag) === flag
 
+// ╔════════════════ [ Signed-value convention — the KIND_SIGNED {alter_stat, alter_resist} decode ] ════ ]
+// R3 twin of spell_effect.move (owner ruling 2026-07-23): kinds 9/11 store `value`/`value_max` CENTERED at 32768
+// (`value = 32768 + delta`), the same convention gear ItemStatistics + mob resistances use, so a negative stat/
+// resist delta mints through a u64. `signed_delta` is the ONE decode home the sim apply paths read (the
+// `stats_derive.js` fold + the `spell_templates.js` normalize projection), byte-parity with the chain apply.
+export const SIGNED_SHIFT = 32768
+export const is_signed_kind = kind =>
+  kind === K_ALTER_STAT || kind === K_ALTER_RESIST
+
+/**
+ * Decode a (possibly centered) `value` for `kind` → `[is_negative, magnitude]`. Signed kinds decode the
+ * 32768-centering; every other kind passes through as `[false, value]` (raw). Mirrors spell_effect::signed_delta.
+ * @returns {[boolean, number]}
+ */
+export const signed_delta = (kind, value) =>
+  is_signed_kind(kind)
+    ? value >= SIGNED_SHIFT
+      ? [false, value - SIGNED_SHIFT]
+      : [true, SIGNED_SHIFT - value]
+    : [false, value]
+
 // ╔════════════════ [ Structural legality — mirrors spell_effect::is_legal ] ════════ ]
 const TF_ALL_MASK = 39 // NOT_TEAM|NOT_SELF|NOT_ENEMY|ONLY_CASTER
 const FLAG_ALL_MASK = 31 // all five FLAG_* bits; bit 32 is dead vocabulary, matching Move
@@ -361,7 +382,11 @@ export const credit_row = (point_kind, given, turns) =>
     PHASE_ON_ENTER,
   )
 
-/** Buff/debuff a stat — mirrors spell_effect::alter_stat (sign→FLAG_NEGATIVE, filter follows sign). */
+/**
+ * Buff/debuff a stat — mirrors spell_effect::alter_stat. `amount` is a RAW magnitude + `negative` sign; the
+ * stored `value` is CENTERED at 32768 (R3), the ONE representation `signed_delta` decodes. FLAG_NEGATIVE stays
+ * the declared sign for classification/legality.
+ */
 export const alter_stat = (
   stat_id,
   amount,
@@ -373,10 +398,11 @@ export const alter_stat = (
   if (negative) flag |= FLAG_NEGATIVE
   if (dispellable) flag |= FLAG_DISPELLABLE
   const filter = negative ? TF_NOT_TEAM : TF_NOT_ENEMY
+  const value = negative ? SIGNED_SHIFT - amount : SIGNED_SHIFT + amount
   return new_effect(
     K_ALTER_STAT,
     255,
-    amount,
+    value,
     SHAPE_POINT,
     0,
     filter,

@@ -252,7 +252,7 @@ describe('sim-backed own-cast prediction', () => {
       'range_self',
       {
         kind: SE.K_ALTER_STAT,
-        value: 1,
+        value: SE.SIGNED_SHIFT + 1, // R3: a +1 range buff — the on-chain alter_stat value is CENTERED at 32768
         stat: SE.STAT_RANGE,
         flags: 0,
         turns: 3,

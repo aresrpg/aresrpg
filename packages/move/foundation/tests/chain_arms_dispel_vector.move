@@ -49,7 +49,9 @@ fun dispel_removes_only_flagged_row_and_preserves_sticky_state() {
   let removed = reverted.borrow(0);
   assert!(removed.kind() == effect::k_alter_stat(), 4);
   assert!(removed.stat() == effect::stat_strength(), 5);
-  assert!(removed.value() == 5, 6);
+  // R3: alter value is CENTERED — decode the +5 buff magnitude.
+  let (r_neg, r_mag) = effect::signed_delta(removed.kind(), removed.value());
+  assert!(!r_neg && r_mag == 5, 6);
   assert!(removed.turns() == 3, 7);
   assert!(removed.has_flag(effect::flag_dispellable()), 8);
 

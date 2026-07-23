@@ -190,10 +190,13 @@ public(package) fun revert_expired_max_hp(fight: &mut Fight, target_is_mob: bool
     let effect = expired.borrow(i);
     if (effect.kind() == spell_effect::k_alter_stat()
       && (effect.stat() == spell_effect::stat_vitality() || effect.stat() == spell_effect::stat_max_hp())) {
-      if (effect.has_flag(spell_effect::flag_negative())) {
-        add_max_hp(fight, target_is_mob, target_idx, effect.value());
+      // R3: the expired row's value is CENTERED — decode to (sign, magnitude); a debuff (neg) that shrank max-HP
+      // gets its magnitude ADDED back on revert, a buff removed.
+      let (neg, mag) = spell_effect::signed_delta(effect.kind(), effect.value());
+      if (neg) {
+        add_max_hp(fight, target_is_mob, target_idx, mag);
       } else {
-        remove_max_hp(fight, target_is_mob, target_idx, effect.value());
+        remove_max_hp(fight, target_is_mob, target_idx, mag);
       };
     };
     i = i + 1;

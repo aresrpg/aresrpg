@@ -13,7 +13,7 @@
 // ingress both converge here on one internal shape.
 
 import {
-  FLAG_NEGATIVE,
+  signed_delta,
   K_ALTER_RESIST,
   K_ALTER_STAT,
   K_APPLY_DOT,
@@ -299,6 +299,19 @@ const TARGET_FILTER_MAP = {
 }
 
 /**
+ * R3: decode a CENTERED alter (kind 9/11) `value`/`value_max` → the sim's [type, min_magnitude, max_magnitude].
+ * Both endpoints of a valid same-sign range decode to the same sign (a debuff's more-negative centered endpoint
+ * is the larger magnitude, so magnitudes sort ascending). This is the sim's fight decode boundary — downstream
+ * `apply_stat_effect` rolls in [min,max] and applies the sign via `type`. Mirrors chain `signed_delta`.
+ * @returns {['ADD'|'REMOVE', number, number]}
+ */
+const signed_alter = (kind, value, value_max) => {
+  const [neg, mag_a] = signed_delta(kind, value)
+  const [, mag_b] = signed_delta(kind, value_max)
+  return [neg ? 'REMOVE' : 'ADD', Math.min(mag_a, mag_b), Math.max(mag_a, mag_b)]
+}
+
+/**
  * Normalize one AresRPG effect into the sim's UPPERCASE SpellEffect.
  * Handlers exist for: damage, heal, steal, stun, poison, teleport, push, pull, glyph, trap (placement),
  * add/remove (stat + ap/mp buff/debuff), summon, invisibility, and reveal. Still inert (flagged TODO):
@@ -379,28 +392,38 @@ const normalize_effect = (e, fallback_area) => {
       return { ...base, type: 'ADD', stat: POINT_ID_MAP[Number(e['stat'])] }
     if (numeric_kind === K_REMOVE_POINTS)
       return { ...base, type: 'REMOVE', stat: POINT_ID_MAP[Number(e['stat'])] }
-    if (numeric_kind === K_ALTER_STAT)
+    if (numeric_kind === K_ALTER_STAT) {
+      // R3: value/value_max are CENTERED — decode sign + magnitude range through the one home.
+      const [type, min, max] = signed_alter(numeric_kind, value, value_max)
       return {
         ...base,
-        type:
-          (Number(e['flags'] ?? 0) & FLAG_NEGATIVE) !== 0 ? 'REMOVE' : 'ADD',
+        type,
+        value: min,
+        min,
+        max,
         stat: STAT_ID_MAP[Number(e['stat'])],
       }
+    }
     if (numeric_kind === K_STEAL_STAT)
       // STEAL a stat = alter_stat's twin (spell_effect.move:33 "debuff target + buff caster same stat; value =
       // amount"): unconditionally the target LOSES `value` and the caster GAINS it — both timed rows reverting on
       // expiry. Normalizes to the debuff (REMOVE) leg; fight_stat_effects.js reads `kind === K_STEAL_STAT` to ALSO
       // mint the caster's mirror STAT_BUFF (the K_STEAL_POINTS twin feeds the caster the same way). Chain arm: next train.
       return { ...base, type: 'REMOVE', stat: STAT_ID_MAP[Number(e['stat'])] }
-    if (numeric_kind === K_ALTER_RESIST)
+    if (numeric_kind === K_ALTER_RESIST) {
       // AlterResist is an alter row on an element's resist (chain: alter_base_resist(effect.element())).
       // A missing element mints to 255=NONE -> neutral resist; the `stat` field is vestigial for this kind.
+      // R3: value/value_max are CENTERED — decode sign + magnitude range through the one home.
+      const [type, min, max] = signed_alter(numeric_kind, value, value_max)
       return {
         ...base,
-        type:
-          (Number(e['flags'] ?? 0) & FLAG_NEGATIVE) !== 0 ? 'REMOVE' : 'ADD',
+        type,
+        value: min,
+        min,
+        max,
         stat: RESIST_STAT_MAP[element ?? 'NONE'] ?? 'neutral_resistance',
       }
+    }
     if (numeric_kind === K_STEAL_POINTS)
       // Steal = the dodge-contested AP/MP drain (REMOVE path) whose removed count also feeds the caster
       // (fight_stat_effects.js reads the K_STEAL_POINTS kind to add the caster-feed). Mirrors cast.move:583-586.

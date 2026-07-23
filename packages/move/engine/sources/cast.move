@@ -1787,11 +1787,15 @@ fun apply_alter(fight: &mut Fight, pc: u64, effect: &Effect, base: u64) {
   // Corpus raw142 duration 0 means the bearer's current turn, not fight-permanent. `record_timed` creates its
   // synthetic one-turn row; never write this new stat id into the permanent base block.
   if (effect.kind() == spell_effect::k_alter_stat() && effect.stat() == spell_effect::stat_physical_damage()) return;
+  // R3: `base` is CENTERED for alter kinds — decode to (sign, magnitude) through the one home before it lands on
+  // the base block. Permanent alters roll their (usually degenerate) range at the call site; `base` is the rolled
+  // centered value.
+  let (neg, mag) = spell_effect::signed_delta(effect.kind(), base);
   let p = fight::participants_mut(fight).borrow_mut(pc);
   if (effect.kind() == spell_effect::k_alter_stat()) {
-    participant::alter_base_stat(p, effect.stat(), base, effect.has_flag(spell_effect::flag_negative()))
+    participant::alter_base_stat(p, effect.stat(), mag, neg)
   } else {
-    participant::alter_base_resist(p, effect.element(), base, effect.has_flag(spell_effect::flag_negative()))
+    participant::alter_base_resist(p, effect.element(), mag, neg)
   };
 }
 
@@ -1905,11 +1909,13 @@ fun record_credit(fight: &mut Fight, target_fid: u64, src_fid: u64, effect: &Eff
 fun apply_alter_mob(fight: &mut Fight, midx: u64, effect: &Effect, base: u64) {
   if (effect.turns() > 0) return;
   if (effect.kind() == spell_effect::k_alter_stat() && effect.stat() == spell_effect::stat_physical_damage()) return;
+  // R3: decode the CENTERED value → (sign, magnitude) via the one home (the `apply_alter` player twin).
+  let (neg, mag) = spell_effect::signed_delta(effect.kind(), base);
   let m = fight::mobs_mut(fight).borrow_mut(midx);
   if (effect.kind() == spell_effect::k_alter_stat()) {
-    mob::alter_base_stat(m, effect.stat(), base, effect.has_flag(spell_effect::flag_negative()))
+    mob::alter_base_stat(m, effect.stat(), mag, neg)
   } else {
-    mob::alter_base_resist(m, effect.element(), base, effect.has_flag(spell_effect::flag_negative()))
+    mob::alter_base_resist(m, effect.element(), mag, neg)
   };
 }
 
@@ -1983,9 +1989,10 @@ fun record_timed(fight: &mut Fight, pc: u64, src_fid: u64, effect: &Effect) {
   if (effect.turns() > 0) {
     spell_board::add_status(fight::fx_mut(fight), pc, src_fid, *effect);
   } else if (effect.kind() == spell_effect::k_alter_stat() && effect.stat() == spell_effect::stat_physical_damage()) {
-    let current_turn = spell_effect::alter_stat(
-      spell_effect::stat_physical_damage(), effect.value(), effect.has_flag(spell_effect::flag_negative()), false, 1,
-    );
+    // R3: `effect.value()` is CENTERED — decode to (sign, magnitude) before re-minting through `alter_stat`
+    // (which re-centers), or the row would double-center.
+    let (neg, mag) = spell_effect::signed_delta(effect.kind(), effect.value());
+    let current_turn = spell_effect::alter_stat(spell_effect::stat_physical_damage(), mag, neg, false, 1);
     spell_board::add_status(fight::fx_mut(fight), pc, src_fid, current_turn);
   };
 }

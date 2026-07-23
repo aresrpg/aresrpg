@@ -226,7 +226,9 @@ fun steal_stat_has_two_timed_legs_and_both_expire() {
     fight::fx(&fight), MOB_FID, spell_effect::k_alter_stat(),
   );
   assert!(debit.is_some());
-  assert!(debit.borrow().value() == 11 && debit.borrow().has_flag(spell_effect::flag_negative()));
+  // R3: the debit row's value is CENTERED — decode the −11 magnitude.
+  let (d_neg, d_mag) = spell_effect::signed_delta(spell_effect::k_alter_stat(), debit.borrow().value());
+  assert!(d_mag == 11 && d_neg && debit.borrow().has_flag(spell_effect::flag_negative()));
 
   cast::tick_turn_end(&mut fight, true, 0);
   cast::tick_turn_end(&mut fight, false, 0);

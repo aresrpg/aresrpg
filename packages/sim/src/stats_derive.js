@@ -19,8 +19,7 @@ import {
 } from './spell.js'
 import {
   K_ALTER_STAT,
-  FLAG_NEGATIVE,
-  has_flag,
+  signed_delta,
   kind,
   stat,
   element,
@@ -78,12 +77,15 @@ export const refresh_stats = (f, rows) => {
  */
 const fold_alters = (s, rows, negatives) => {
   for (const e of rows) {
-    if (has_flag(e, FLAG_NEGATIVE) === negatives) {
+    // R3: alter rows carry a CENTERED value — signed_delta decodes the sign + magnitude (the sole apply home,
+    // twin of participant::fold_alters). The decoded sign matches the row's FLAG_NEGATIVE by construction.
+    const [neg, mag] = signed_delta(kind(e), value(e))
+    if (neg === negatives) {
       if (kind(e) === K_ALTER_STAT) {
-        if (negatives) sub_stat(s, stat(e), value(e))
-        else add_stat(s, stat(e), value(e))
-      } else if (negatives) sub_resist(s, element(e), value(e))
-      else add_resist(s, element(e), value(e))
+        if (negatives) sub_stat(s, stat(e), mag)
+        else add_stat(s, stat(e), mag)
+      } else if (negatives) sub_resist(s, element(e), mag)
+      else add_resist(s, element(e), mag)
     }
   }
 }
