@@ -179,6 +179,16 @@ describe('attempt registry (auto-open burn-law rails)', () => {
         return () => listeners.delete(listener)
       },
     }
+    // The single-flight ACQUIRE door (dungeon_run_store's `claim_settling`) the production store carries:
+    // acquire_settlement_flight claims through it, never a raw external setState.
+    state = {
+      ...state,
+      claim_settling: () => {
+        if (store.getState()._settling) return false
+        store.setState({ _settling: true })
+        return true
+      },
+    }
     const first = acquire_settlement_flight(store)
     let second_acquired = false
     const second = acquire_settlement_flight(store).then(() => {

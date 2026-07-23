@@ -151,18 +151,18 @@ export function attempt_error(/** @type {string} */ outcome_id) {
   return attempts.get(outcome_id)?.error ?? null
 }
 
-/** Acquire the store-wide settlement flight; concurrent result ids queue without spending their attempt. */
+/**
+ * Acquire the store-wide settlement flight; concurrent result ids queue without spending their attempt. The
+ * claim routes through the store's `claim_settling` action door (an async result re-entering as an INPUT, never
+ * a laundered external setState), so a waiter's re-claim on release is a store-owned reducer transition. Every
+ * release notification re-reads live state; the first waiter to win the door hands the slot off exactly once.
+ */
 export function acquire_settlement_flight(store) {
-  const acquire = () => {
-    if (store.getState()._settling) return false
-    store.setState({ _settling: true })
-    return true
-  }
-  if (acquire()) return Promise.resolve()
+  if (store.getState().claim_settling()) return Promise.resolve()
   return new Promise((resolve) => {
     const unsubscribe = store.subscribe(() => {
-      // Re-read live state: another waiter may have acquired it from an earlier callback in this notification.
-      if (!acquire()) return
+      // Re-read live state: another waiter may have claimed it from an earlier callback in this notification.
+      if (!store.getState().claim_settling()) return
       unsubscribe()
       resolve()
     })

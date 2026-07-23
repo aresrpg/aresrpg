@@ -474,6 +474,18 @@ export const use_dungeon = create((set, get) => ({
   },
 
   /**
+   * The single-flight ACQUIRE door for the background settlement chain: claims `_settling` only when free and
+   * returns whether THIS call won the slot. The pending-outcome flight queue (pending_outcomes.js) re-enters
+   * here on every release — an async result routed through the store's action door, never a laundered external
+   * setState. Release stays a plain `_settling: false` write at the settling caller's own edge.
+   */
+  claim_settling: () => {
+    if (get()._settling) return false
+    set({ _settling: true })
+    return true
+  },
+
+  /**
    * ENGAGE = mint the CURRENT room's fight (`dungeon::next_fight`) — fired by the mob-cluster click only
    * (tx-provenance: a room fight begins ONLY on an explicit user gesture).
    * @param {{ user?: boolean }} [opts]
