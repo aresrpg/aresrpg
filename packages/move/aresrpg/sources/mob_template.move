@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/// MOB TEMPLATE — the admin-minted mob CONTENT blueprint (stats, a ≤4-spell kit, a ≤16-entry loot table, xp).
+/// MOB TEMPLATE — the admin-minted mob CONTENT blueprint (stats, a ≤5-spell kit, a ≤16-entry loot table, xp).
 /// S-46 final split: the ENGINE spawns from a plain `MobSpec` — this module owns the shared authoring object and
 /// mirrors it into the spec at the core fight doors (`to_spec` — resistances stored CENTERED here are DECENTERED
 /// into true magnitudes exactly where the old engine spawn decoded them).
@@ -12,7 +12,7 @@ use aresrpg_foundation::{spell::{Self, Stats}, spell_effect::SpellLevel};
 use std::string::String;
 use sui::event;
 
-const MAX_SPELLS: u64 = 4; // §17.21 mob spell-list bound
+const MAX_SPELLS: u64 = 5; // §17.21 mob spell-list bound (4–5 spells for elite/dungeon_boss tiers)
 const MAX_LOOT: u64 = 16; // §17.14 loot entries per mob template
 
 const ETooManySpells: u64 = 101; // mint: spell kit exceeds MAX_SPELLS

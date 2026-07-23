@@ -8,7 +8,7 @@ module aresrpg::mob_template_tests;
 
 use aresrpg::{admin::{Self, AdminCap}, mob_template::{Self, MobTemplate}, version::{Self, Version}};
 use aresrpg_fight::mob;
-use aresrpg_foundation::spell;
+use aresrpg_foundation::{spell, spell_effect::{Self, SpellLevel}};
 use std::unit_test::assert_eq;
 use sui::test_scenario::{Self as ts};
 
@@ -17,6 +17,7 @@ const TEMP: address = @0xD;
 const A_EAdminCapExpired: u64 = 101; // admin (mirrored; `location` disambiguates the aborting module)
 const V_EWrongVersion: u64 = 101; // version (mirrored; `location` disambiguates the aborting module)
 const MT_ETooManyLoot: u64 = 102; // mob_template ETooManyLoot (mirrored; `location` disambiguates)
+const MT_ETooManySpells: u64 = 101; // mob_template ETooManySpells (mirrored; `location` disambiguates)
 
 #[test]
 fun mint_reflects_content_getters() {
@@ -397,5 +398,60 @@ fun set_loot_with_expired_temp_cap_aborts() {
   let ver = sc.take_shared<Version>();
   let mut tmpl = ts::take_shared_by_id<MobTemplate>(&sc, tid);
   mob_template::set_loot(&temp_cap, &ver, &mut tmpl, vector[mob::new_loot_entry(object::id_from_address(@0x1), 100, 1, 1)], sc.ctx()); // EAdminCapExpired
+  abort
+}
+
+// ╔════════════════ [ spell-kit bound — mint accepts up to MAX_SPELLS (§17.21, 4→5) ] ═════════════ ]
+
+// A minimal kit spell — only the kit LENGTH matters for the MAX_SPELLS mint bound (no effects needed).
+fun a_spell(): SpellLevel {
+  spell_effect::new_spell_level(1, 4, 1, 4, false, false, false, false, 255, 255, 0, 0, false, vector[], vector[], vector[], vector[])
+}
+fun spell_kit(n: u64): vector<SpellLevel> {
+  let mut v = vector[];
+  let mut i = 0;
+  while (i < n) { v.push_back(a_spell()); i = i + 1; };
+  v
+}
+
+#[test]
+/// The seed corpus authors 5-spell kits for its three elite/dungeon_boss bosses — `mint` must ACCEPT a full
+/// 5-spell kit (RED at the old 4-bound: it aborted ETooManySpells). A live shared template = mint took the kit.
+fun mint_accepts_five_spell_kit() {
+  let mut sc = ts::begin(OWNER);
+  version::test_init(sc.ctx());
+  admin::test_init(sc.ctx());
+
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let tid = mob_template::mint(
+    &cap, &ver, b"boss".to_string(), 30, 30, 5000, 12, 6, 0,
+    spell::new_stats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), spell_kit(5), vector[], 9000, sc.ctx(),
+  );
+  ts::return_shared(ver);
+  sc.return_to_sender(cap);
+
+  sc.next_tx(OWNER);
+  let tmpl = ts::take_shared_by_id<MobTemplate>(&sc, tid);
+  assert_eq!(mob_template::mob_xp_reward(&tmpl), 9000); // mint completed with the 5-spell kit
+  ts::return_shared(tmpl);
+  sc.end();
+}
+
+#[test, expected_failure(abort_code = MT_ETooManySpells, location = mob_template)]
+/// The widened bound is still a bound: a 6-spell kit exceeds MAX_SPELLS (5) and aborts `ETooManySpells` at mint.
+fun mint_over_spell_cap_aborts() {
+  let mut sc = ts::begin(OWNER);
+  version::test_init(sc.ctx());
+  admin::test_init(sc.ctx());
+
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let _tid = mob_template::mint(
+    &cap, &ver, b"boss".to_string(), 30, 30, 5000, 12, 6, 0,
+    spell::new_stats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), spell_kit(6), vector[], 9000, sc.ctx(),
+  ); // ETooManySpells (6 > 5)
   abort
 }
