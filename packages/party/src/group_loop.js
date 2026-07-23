@@ -14,20 +14,14 @@
 //
 // Every request latches (idempotent re-folds emit nothing); executed tx failures re-enter as
 // `member_blocked` and hold the latch open forever (tx-retry burn law — the edge never re-fires a
-// digest-bearing failure). Thresholds ride `config` as INPUT constants. The formation/snap/stuck
-// geometry moved here VERBATIM from frontend owned_follow.js (one home; the renderer imports the same
-// rules for its ease-time snap — one definition, two application points, zero copies).
+// digest-bearing failure). Formation geometry and proof-of-time transit projection live here: the
+// render set emits each timer-derived follower position, despawning beyond FOLLOW_VISIBLE_RANGE while
+// transit keeps advancing so it can re-enter naturally.
 
 export const MAX_OWNED_FOLLOWERS = 5
-export const FOLLOW_SNAP_DISTANCE = 30
 /** Blocks — beyond this from the leader a follower visually DESPAWNS (the proof-of-time timer keeps deriving);
  *  it respawns and resumes its run-in the moment the projection re-enters range (#509 despawn-and-continue). */
 export const FOLLOW_VISIBLE_RANGE = 30
-export const FOLLOW_STUCK_MS = 3000
-/** A follower within this many blocks of its slot counts as arrived — never "stuck". */
-export const FOLLOW_ARRIVE_EPS = 2
-/** Minimum per-sample displacement (blocks) that counts as progress toward the slot. */
-export const FOLLOW_PROGRESS_EPS = 0.25
 
 // Ruled follow transit: roughly the avatar's run pace, with humane lower/upper bounds regardless of distance.
 // Kept in this headless core instead of importing the engine package: @aresrpg/party stays dependency-free.
@@ -91,22 +85,7 @@ export function horizontal_distance_squared(
   return dx * dx + dz * dz
 }
 
-/** Snap only once an alt is strictly farther than the configured distance from its leader. */
-export function should_snap_to_leader(
-  /** @type {{ x: number, z: number }} */ follower_position,
-  /** @type {{ x: number, z: number }} */ leader_position,
-  max_distance = FOLLOW_SNAP_DISTANCE
-) {
-  return horizontal_distance_squared(follower_position, leader_position) > max_distance * max_distance
-}
-
-/** A blocked interval becomes snap-worthy only after it strictly exceeds the staleness threshold. */
-export function stuck_too_long(stuck_since_ms, now_ms, threshold_ms = FOLLOW_STUCK_MS) {
-  return Number.isFinite(stuck_since_ms) && Number.isFinite(now_ms) && now_ms - stuck_since_ms > threshold_ms
-}
-
-/** @param {{ snap_distance?: number, stuck_ms?: number, arrive_eps?: number }} [config] */
-export const empty_group_state = (config = {}) => ({
+export const empty_group_state = () => ({
   my_address: null,
   leader_character_id: null,
   members: /** @type {Array<{ character: string, owner: string, order: number }>} */ ([]),
@@ -127,11 +106,6 @@ export const empty_group_state = (config = {}) => ({
     /** @type {Record<string, any>} */
     followers: {},
     dungeon_background: false,
-  },
-  config: {
-    snap_distance: config.snap_distance ?? FOLLOW_SNAP_DISTANCE,
-    stuck_ms: config.stuck_ms ?? FOLLOW_STUCK_MS,
-    arrive_eps: config.arrive_eps ?? FOLLOW_ARRIVE_EPS,
   },
 })
 
@@ -639,6 +613,6 @@ export function reduce_group(state, input) {
   if (FOLLOW_KINDS.has(kind)) return reduce_follow(state, input)
   if (FIGHT_KINDS.has(kind)) return reduce_fight(state, input)
   if (DUNGEON_KINDS.has(kind)) return reduce_dungeon(state, input)
-  if (kind === 'reset') return still({ ...empty_group_state(), config: state.config })
+  if (kind === 'reset') return still(empty_group_state())
   return still(state)
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Red-first units for the GROUP LOOP reducer (D769b design note, MULTICHAR lane): per input kind, the
-// emit-once request latches, the teleport-if-stuck pure rule, and the owned/world/seat eligibility fences.
+// emit-once request latches, timer-derived follow projection, and the owned/world/seat eligibility fences.
 // Fixtures reuse the REAL party member shape ({ character, owner, order }) and chain ids.
 import { expect, test } from 'bun:test'
 
@@ -10,10 +10,6 @@ import {
   empty_group_state,
   follow_formation_target,
   project_follower_position,
-  should_snap_to_leader,
-  stuck_too_long,
-  FOLLOW_SNAP_DISTANCE,
-  FOLLOW_STUCK_MS,
   FOLLOW_VISIBLE_RANGE,
   MAX_OWNED_FOLLOWERS,
 } from './group_loop.js'
@@ -397,28 +393,4 @@ test('formation slots stay 3–6 blocks behind the leader along its yaw conventi
     expect(distance).toBeLessThanOrEqual(7)
   }
   expect(follow_formation_target({ x: 0, z: 0 }, 0, 99)).toBe(null)
-})
-
-test('should_snap_to_leader/stuck_too_long keep their strict-threshold contracts', () => {
-  expect(should_snap_to_leader({ x: 0, z: 0 }, { x: FOLLOW_SNAP_DISTANCE, z: 0 })).toBe(false)
-  expect(should_snap_to_leader({ x: 0, z: 0 }, { x: FOLLOW_SNAP_DISTANCE + 1, z: 0 })).toBe(true)
-  expect(stuck_too_long(NOW, NOW + FOLLOW_STUCK_MS)).toBe(false)
-  expect(stuck_too_long(NOW, NOW + FOLLOW_STUCK_MS + 1)).toBe(true)
-  expect(stuck_too_long(undefined, NOW)).toBe(false)
-})
-
-test('reset returns to the empty state while preserving injected config thresholds', () => {
-  const custom = empty_group_state({ snap_distance: 12, stuck_ms: 500 })
-  const busy = fold(
-    [
-      { kind: 'group', my_address: ME, leader_character_id: LEADER, members: members(LEADER, ALT_1) },
-      { kind: 'fight_started', fight_id: '0xf', seated: [] },
-    ],
-    custom
-  )
-  const { state } = reduce_group(busy.state, { kind: 'reset' })
-  expect(state.members).toEqual([])
-  expect(state.fight).toBe(null)
-  expect(state.config.snap_distance).toBe(12)
-  expect(state.config.stuck_ms).toBe(500)
 })

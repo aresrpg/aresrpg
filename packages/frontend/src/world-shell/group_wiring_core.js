@@ -68,11 +68,10 @@ export function build_follow_entries(rows, cards_by_id, leader_world_id) {
  *   apply_follow: (rows: readonly any[]) => void,
  *   is_executed_failure: (error: any) => boolean,
  *   log: (message: string, data?: any) => void,
- *   config?: { snap_distance?: number, stuck_ms?: number, arrive_eps?: number },
  * }} deps
  */
 export function create_group_wiring(deps) {
-  const { store, dispatch } = create_group_store(deps.config ?? {})
+  const { store, dispatch } = create_group_store()
   const pending = new Set()
   let last_turn_entity = /** @type {string | null} */ (null)
 

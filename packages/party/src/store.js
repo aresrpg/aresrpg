@@ -37,11 +37,10 @@ export function create_party_store(edge_state = {}) {
 
 /**
  * The GROUP LOOP atom — same idiom, second domain (group_loop.js): effects at the caller's edge,
- * thresholds injectable as config, edge-owned keys riding the atom untouched.
- * @param {{ snap_distance?: number, stuck_ms?: number, arrive_eps?: number }} [config]
+ * edge-owned keys riding the atom untouched.
  * @param {Record<string, any>} [edge_state]
  * @returns {{ store: import('zustand/vanilla').StoreApi<any>, dispatch: (input: any) => any }}
  */
-export function create_group_store(config = {}, edge_state = {}) {
-  return bind_reducer_store({ ...empty_group_state(config), ...edge_state }, reduce_group)
+export function create_group_store(edge_state = {}) {
+  return bind_reducer_store({ ...empty_group_state(), ...edge_state }, reduce_group)
 }
