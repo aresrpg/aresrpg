@@ -119,22 +119,17 @@ jobs:
       - name: install Playwright chromium
         timeout-minutes: 5
         run: bunx playwright install --with-deps chromium
-      - name: shim bounded-run.sh
-        timeout-minutes: 2
-        # playwright.anchor.config.ts wraps its webServer commands in an absolute, hardcoded path to the
-        # owner's local dev-machine process-lease hook — no env override exists to redirect it. CI has no
-        # orphan-sweeper daemon to guard against (the whole VM dies with the job), so a transparent passthrough
-        # at that exact path satisfies the hardcode without editing rig code.
-        run: |
-          sudo mkdir -p /Users/sceatstudio/.claude/hooks
-          printf '#!/bin/sh\nexec "$@"\n' | sudo tee /Users/sceatstudio/.claude/hooks/bounded-run.sh > /dev/null
-          sudo chmod +x /Users/sceatstudio/.claude/hooks/bounded-run.sh
       - name: anchor suite (L1 — full frontend on the gold localnet)
         # 30m: webServer(15m below) + 10m tests + margin, per "step >= webServer/60 + 10" (run 29970085845
         # boot #12 — vite's cold three.js pre-bundle can legitimately eat most of the old 20m step alone).
         timeout-minutes: 30
         env:
           GOLD_WEBSERVER_TIMEOUT_MS: '900000'
+          # playwright.anchor.config.ts now resolves its own wrapper (GOLD_RUN_WRAPPER, else the legacy Mac
+          # hook path only if that file actually exists) — the shim step that used to fake that file for CI
+          # is gone; forcing empty here is redundant with the runner's own fs.existsSync miss, but explicit
+          # beats implicit for a decision this load-bearing.
+          GOLD_RUN_WRAPPER: ''
         run: |
           args=()
           if [ -n "$GOLD_GREP" ]; then args+=(--grep "$GOLD_GREP"); fi
