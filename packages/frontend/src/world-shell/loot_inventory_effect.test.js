@@ -2,6 +2,15 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Production settle edge coverage: the resolved mint receipt itself must dispatch exactly one typed inventory
 // INPUT, while an account switch during the await must dispatch nothing into the new owner's reducer.
+//
+// IDENTITY SOURCE (#265 recurrence, 2026-07-24): `current_address` is the LIVE wallet identity (the
+// `use_auth` stand-in) — never `context.sui.selected_address`. That engine field is written ONLY by the
+// `action/sui_login` dispatch that used to live in embed.js's start_session(); commit 671266c2 deleted
+// start_session wholesale (the old WebSocket "online" server model) without deleting this guard's read of
+// the field it fed. Since then `sui.selected_address` has sat permanently null in production, silently
+// defeating this exact owner-match guard for EVERY mint path (fight loot AND lootbox pets) — the receipt
+// arrives, the row is built, and the dispatch never fires. These tests never dispatch `action/sui_login`
+// for identity (mirroring production reality) — they prove the fix no longer needs that dead field.
 
 import { afterEach, describe, expect, it } from 'bun:test'
 
@@ -38,17 +47,18 @@ afterEach(async () => {
 })
 
 describe('production settle → inventory effect edge', () => {
-  it('dispatches the successful async outcome exactly once as a reducer INPUT', async () => {
-    await dispatch_and_wait('action/sui_login', { address: '0xowner-a' })
+  it('dispatches the successful async outcome exactly once as a reducer INPUT — sui.selected_address stays null (production reality)', async () => {
     const inputs = []
     const on_input = (input) => inputs.push(input)
     context.events.on('action/sui_data', on_input)
 
     try {
+      expect(context.get_state().sui.selected_address).toBe(null) // the dead field — never touched below
       const outcome = await mint_and_reduce_inventory('0xresult', [template_id], {
         mint_and_burn: async () => settlement,
         load_templates: async () => templates,
         reducer_door: context,
+        current_address: () => '0xowner-a',
       })
       await settle_engine()
 
@@ -65,19 +75,20 @@ describe('production settle → inventory effect edge', () => {
   })
 
   it('drops a late wallet-A outcome after the active account switches to wallet B', async () => {
-    await dispatch_and_wait('action/sui_login', { address: '0xowner-a' })
     const inputs = []
     const on_input = (input) => inputs.push(input)
     context.events.on('action/sui_data', on_input)
     const pending_settlement = Promise.withResolvers()
+    let live_address = '0xowner-a' // the use_auth stand-in — mutated below to simulate the mid-flight switch
 
     try {
       const edge = mint_and_reduce_inventory('0xresult', [template_id], {
         mint_and_burn: async () => pending_settlement.promise,
         load_templates: async () => templates,
         reducer_door: context,
+        current_address: () => live_address,
       })
-      await dispatch_and_wait('action/sui_login', { address: '0xowner-b' })
+      live_address = '0xowner-b' // wallet switches while the tx "runs"
       pending_settlement.resolve(settlement)
       await edge
       await settle_engine()
@@ -90,7 +101,6 @@ describe('production settle → inventory effect edge', () => {
   })
 
   it('dispatches no inventory input when the mint effect rejects', async () => {
-    await dispatch_and_wait('action/sui_login', { address: '0xowner-a' })
     const inputs = []
     const on_input = (input) => inputs.push(input)
     context.events.on('action/sui_data', on_input)
@@ -103,6 +113,7 @@ describe('production settle → inventory effect edge', () => {
           },
           load_templates: async () => templates,
           reducer_door: context,
+          current_address: () => '0xowner-a',
         })
       ).rejects.toThrow('preflight failed')
       await settle_engine()

@@ -63,12 +63,15 @@ async function read_result_with_retry(read_once, sleep = (ms) => new Promise((r)
  *  event lands. Mirrors loot_from_rolled's D53 degrade shape — resolve_loot_tile.js already renders the letter fallback. */
 const floor_loot = (units) => (units > 0 ? [{ item_type: '', name: '', amount: units }] : [])
 
-/** Atomic mint+burn effect edge: async chain/template DATA returns as one typed inventory reducer INPUT. */
+/** Atomic mint+burn effect edge: async chain/template DATA returns as one typed inventory reducer INPUT.
+ *  `current_address` is the LIVE use_auth identity — never context.sui.selected_address, dead since
+ *  embed.js's start_session was deleted in 671266c2 (loot_inventory_effect.js's header has the story). */
 const mint_and_reduce_inventory = (result_id, templates) =>
   reduce_minted_inventory(result_id, templates, {
     mint_and_burn: mint_all_and_burn,
     load_templates: get_template_map,
     reducer_door: context,
+    current_address: () => use_auth.getState().address,
   })
 
 /** The pending-mints queue's deps: the chain-direct FightResult read (mint eligibility = chain truth, never a /v1 answer) + the atomic mint+burn edge, rebuilt per call for the memoized SDK's gRPC client. */

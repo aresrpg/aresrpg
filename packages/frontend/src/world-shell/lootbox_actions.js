@@ -175,8 +175,10 @@ export async function claim_pet({ claim_id, rolled_template }) {
   // Deterministic self-pay: run_tx throws the humanized abort on an executed failure; a pre-flight/gas throw is
   // re-routed through the SAME decoder. No auto-retry — the claim survives a failure, so the user may retry COLLECT.
   // Identity captured BEFORE the tx (the fight-settle door's same race guard): a wallet switch mid-flight must
-  // never paint the new owner's bag with the pet THIS signer minted.
-  const owner_address = context.get_state().sui.selected_address
+  // never paint the new owner's bag with the pet THIS signer minted. `address` (use_auth, fetched at entry) —
+  // NEVER `context.sui.selected_address`, a field nothing has written since embed.js's start_session was
+  // deleted in 671266c2 (see loot_inventory_effect.js's header for the #265-recurrence story).
+  const owner_address = address
   let result, timing
   try {
     ;({ result, timing } = await run_tx('claim_pet', tx))
@@ -188,7 +190,7 @@ export async function claim_pet({ claim_id, rolled_template }) {
   await reduce_minted_receipt(
     { receipt: result, kiosk_id: handle.kiosk_id, kiosk_cap_id: handle.personal_kiosk_cap_id },
     owner_address,
-    { load_templates: get_template_map, reducer_door: context }
+    { load_templates: get_template_map, reducer_door: context, current_address: () => use_auth.getState().address }
   )
   return { digest: timing?.digest, created_pet_id: created_ids(result, '::item::Item')[0] ?? null }
 }
