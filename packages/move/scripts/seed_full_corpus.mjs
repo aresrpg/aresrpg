@@ -873,7 +873,8 @@ export async function seed_full_corpus() {
     }
   } // seed_recipes — invoked after PHASE 6 (see the PHASE 4 header)
 
-  // ── PHASE 5 · mob templates (fight bounds: ≤4 spells, ≤16 loot; loot = faithful MobLootEntry vectors).
+  // ── PHASE 5 · mob templates (fight bounds: spell-kit width per Move's MAX_SPELLS, ≤16 loot; loot =
+  //    faithful MobLootEntry vectors; mint asserts loud on an oversized kit — never truncated here).
   //    Corpus mob spell kits are param-less stubs → each mob gets ONE canonical element-damage SpellLevel
   //    (enough for a real, settleable fight). BATCHED like PHASE 2; `MobTemplateCreated` only carries `name`
   //    (not unique across ~250 mobs) → CONTENT read-back (name+levels+hp+ap+mp+xp key), chunked. ──
@@ -892,7 +893,7 @@ export async function seed_full_corpus() {
         return true
       })
       const elH = el(elMove(m.element))
-      const kit = (
+      const kit =
         m.spells && m.spells.length
           ? m.spells
           : [
@@ -909,8 +910,7 @@ export async function seed_full_corpus() {
                   { kind: 0, element: m.element, base: 11 + (m.minLevel ?? 1) },
                 ],
               },
-            ]
-      ).slice(0, 4) // MAX_SPELLS = 4 (mob_template.move §17.21)
+            ] // spell-kit width bound lives in Move (mob_template.move MAX_SPELLS / ETooManySpells) — mint fails loud if a kit exceeds it; never truncated here
       const spells = levelVec(
         tx,
         kit.map((sp) =>
