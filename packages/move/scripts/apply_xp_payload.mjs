@@ -48,9 +48,11 @@ const read_json = (file_path) => JSON.parse(read_file(file_path, 'utf8'))
 
 // ── constants ───────────────────────────────────────────────────────────────────────────────────
 export const RES_SHIFT = 32768 // foundation spell::RES_SHIFT — mob resistances stored centered
-export const MAX_RESIST_MAGNITUDE = 50 // the SPEC §7.4 / S4-2 real-time cap — combat clamps at foundation
-// spell.move:280 `apply_resistance` (`if (resistance > 50) 50 else resistance`). The DECENTERED magnitude a
-// restored resistance decodes to (centered − RES_SHIFT; a weakness floors to 0) must not exceed it (law ④).
+export const MAX_RESIST_MAGNITUDE = 60 // owner ruling 2026-07-23: 50→60 (Dofus 1.29 boss-resist practice runs past
+// 50 in-element — limits flex to faithful data, data never trims to a stale ceiling; the ramrage earthRes 55
+// outlier STANDS as authored). Twin of foundation spell.move:280 `apply_resistance` (`if (resistance > 60) 60`).
+// The DECENTERED magnitude a restored resistance decodes to (centered − RES_SHIFT; a weakness floors to 0) must
+// not exceed it (law ④).
 export const MAX_CALLS_PER_PTB = 30 // ≤30 set_stats calls per batch (each expands to new_stats + set_stats)
 export const GAS_BUDGET_MIST = 50_000_000 // fixed 0.05 SUI/PTB: the post-upgrade target isn't
 // simulatable pre-ceremony, and Sui charges ACTUAL — a high fixed budget is safe, only a LOW one burns (D747 shape).

@@ -166,17 +166,17 @@ test('field_histogram splits the two-set headline (xp vs stats)', () => {
 const changed_row = (over) => ({ key: 'm', id: id(1), desired: state({ stats: stats(over) }) })
 
 test('resistance_outliers FLAGS a restored resistance whose decentered magnitude exceeds the cap', () => {
-  const out = resistance_outliers([changed_row({ earth_resistance: RES_SHIFT + 60 })])
-  expect(out).toEqual([{ key: 'm', id: id(1), field: 'earth_resistance', magnitude: 60, cap: MAX_RESIST_MAGNITUDE }])
+  const out = resistance_outliers([changed_row({ earth_resistance: RES_SHIFT + 61 })]) // 61 > 60 cap
+  expect(out).toEqual([{ key: 'm', id: id(1), field: 'earth_resistance', magnitude: 61, cap: MAX_RESIST_MAGNITUDE }])
 })
 
 test('resistance_outliers PASSES a value exactly at the cap and a weakness (floors to 0)', () => {
-  const at_cap = changed_row({ fire_resistance: RES_SHIFT + MAX_RESIST_MAGNITUDE }) // 50 == cap, not > cap
+  const at_cap = changed_row({ fire_resistance: RES_SHIFT + MAX_RESIST_MAGNITUDE }) // 60 == cap, not > cap
   const weakness = changed_row({ air_resistance: RES_SHIFT - 25 }) // decenters to 0
   expect(resistance_outliers([at_cap, weakness])).toEqual([])
 })
 
-test('the real corpus surfaces its over-cap authoring outlier (ramrage earthRes 55 > 50 — NEEDS-RULING)', () => {
+test('the real corpus is CLEAN under the ruled 60% resist cap (ramrage earthRes 55 LANDS as authored)', () => {
   const dirs = require('node:fs')
     .readdirSync(join(repo_dir, 'seed', 'mainnet'))
     .filter((name) => /^\d\d_/.test(name))
@@ -187,8 +187,9 @@ test('the real corpus surfaces its over-cap authoring outlier (ramrage earthRes 
   const { desired } = desired_state_by_key(rows)
   const corpus_changed = Object.entries(desired).map(([key, d]) => ({ key, id: id(1), desired: d }))
   const out = resistance_outliers(corpus_changed)
-  // The mechanical assert turns "should be clean" into PROOF: exactly one authored value breaks the cap today.
-  expect(out.map(({ key, field, magnitude }) => `${key}:${field}=${magnitude}`)).toEqual(['ramrage:earth_resistance=55'])
+  // Owner ruling 2026-07-23 (cap 50→60): the ramrage earthRes 55 outlier now stands as authored — ZERO refusals,
+  // proving the fresh mint bakes 55 (no silent clamp to the old 50 ceiling). The readback census confirms 55 lands.
+  expect(out).toEqual([])
 })
 
 // ── mode + deployment ─────────────────────────────────────────────────────────────────────────────
