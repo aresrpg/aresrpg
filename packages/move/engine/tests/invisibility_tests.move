@@ -20,6 +20,7 @@ use sui::{clock, test_scenario::{Self as ts, Scenario}};
 
 const OWNER: address = @0xA;
 const OWNER2: address = @0xB;
+const CHAR: address = @0xC0; // the scaffold's creator character id source (fight_scaffold::CHAR)
 const CHAR2: address = @0xC2;
 const WORLD: address = @0x704D;
 const CAST_EILLEGAL: u64 = 102;
@@ -312,6 +313,39 @@ fun mob_target_input_excludes_hidden_and_all_hidden_idles_with_expiry() {
   assert!(mob::cell(fight::mobs(&fight).borrow(0)) == before);
   assert!(spell_board::fighter_status_of(fight::fx(&fight), MOB_FID, spell_effect::k_apply_state()).is_none());
   ts::return_shared(fight);
+  sc.end();
+}
+
+#[test]
+/// Vector: all_targets_invisible_full_crank_advances (#599 — the SOFT-LOCK guard, whole-crank, not the isolated
+/// mob turn above). A SOLO fight whose only player is hidden: the permissionless `crank` forfeits the overdue
+/// player, the mob's turn finds ZERO visible targets and must PASS (never the ENoLivingTargets abort a naked
+/// `decide_turn` would raise), and the walk lands the turn BACK on the still-alive hidden player. Proves the
+/// fresh-publish crank can never wedge on an all-invisible board — the field-report freeze, resolved as a pass.
+fun all_targets_invisible_full_crank_advances() {
+  let mut sc = ts::begin(OWNER);
+  stand_up(&mut sc);
+  create_fight(&mut sc, 100, 1, 0, 1000, true, option::none());
+  sc.next_tx(OWNER);
+  let mut fight = sc.take_shared<Fight>();
+  let ver = sc.take_shared<Version>();
+  // Place the SOLO creator → the last ready auto-starts the fight ACTIVE (turn_ptr on the player).
+  let c0 = participant::cell(fight::participants(&fight).borrow(0));
+  let clock = mk_clock(&mut sc, 1000);
+  turns::place_for_testing(&mut fight, object::id_from_address(CHAR), c0, &ver, &clock, OWNER);
+  clock::destroy_for_testing(clock);
+  assert!(fight::status(&fight) == fight::status_active());
+  assert!(turns::is_current_seat(&fight, 0));
+  // Hide the ONLY player: the mob's turn will see an empty target set.
+  spell_board::add_status(fight::fx_mut(&mut fight), 0, 0, invisibility(3, spell_effect::tf_none()));
+  assert!(turns::visible_player_cells_for_testing(&fight).is_empty());
+  // Permissionless crank far past the deadline → forfeit p0, resolve the mob (idle-pass), land back on p0.
+  turns::crank_for_testing(&mut fight, 999_999);
+  assert!(fight::status(&fight) == fight::status_active()); // NO abort, NO soft-lock — the fight advanced
+  assert!(turns::is_current_seat(&fight, 0)); // the turn returned to the still-alive hidden player
+  assert!(mob::is_alive(fight::mobs(&fight).borrow(0))); // the mob is intact — it passed, it did not die/abort
+  ts::return_shared(fight);
+  ts::return_shared(ver);
   sc.end();
 }
 
