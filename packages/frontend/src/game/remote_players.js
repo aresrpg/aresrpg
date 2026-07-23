@@ -11,7 +11,6 @@
 // dispose() tears everything down. NO game logic here.
 
 import { create_character_avatar, create_title_aura, create_worn_cosmetics, ground_surface_y } from '@aresrpg/engine3/player'
-import { should_snap_to_leader } from '@aresrpg/party/group_loop'
 
 import { get_peer_state } from '../p2p/lobby-room.js'
 import { use_dungeon } from '../world-shell/dungeon_store.js'
@@ -367,15 +366,10 @@ export function create_remote_players(engine, world_canvas = null) {
           }
         }
         const t = entry.target_position ?? entry.position ?? r
-        // MULTICHAR teleport-if-stuck: an OWNED follower left beyond the snap radius (leader checkpoint /
-        // world travel) jumps to its slot instead of gliding across the map — the SAME pure @aresrpg/party
-        // rule the group-loop core applies for headless drivers (one rule, two application points). The
-        // cleared cell_key forces a ground re-scan at the landing cell. Peers keep the never-snap ease.
-        if (entry.owned_follow && should_snap_to_leader(r, t)) {
-          r.x = t.x
-          r.z = t.z
-          r.cell_key = ''
-        }
+        // #509 — NO teleport-snap for owned followers: their position is the reducer's timer-derived
+        // projection, which stays within the visible range by construction (beyond it the reducer DESPAWNS the
+        // row entirely — despawn-and-continue). A respawn plants a fresh rig at the projection (spawn_rig), so
+        // there is never a cross-map glide to snap away. Big catch-ups ride the fast-travel flow (tranche F).
         const k = 1 - Math.exp(-LERP_LAMBDA * dt)
         const dx = t.x - r.x
         const dz = t.z - r.z

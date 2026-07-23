@@ -1748,8 +1748,8 @@
     "owned_picker_title": "Emmenez vos personnages",
     "invite_owned_cta": "Suivi auto",
     "follow_joining": "Connexion au monde",
-    "follow_in_transit": "En transit",
-    "follow_arrived": "Arrivé",
+    "follow_in_transit": "Court vers vous",
+    "follow_arrived": "Arrive",
     "follow_background": "En arrière-plan",
     "follow_cta": "Suivre",
     "unfollow_cta": "Ne plus suivre"
