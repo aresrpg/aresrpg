@@ -203,6 +203,17 @@ describe('ItemDetailView — CHARACTERISTICS section (never a bare empty header)
     expect(html).toContain('Vitality')
   })
 
+  test('an unavailable owned-stat read renders one quiet explicit state instead of a blank block', () => {
+    const html = renderToStaticMarkup(
+      <I18nextProvider i18n={test_i18n}>
+        <ItemDetailView item={{ ...BASE_ITEM, stats: {}, stats_unavailable: true }} />
+      </I18nextProvider>
+    )
+    expect(html).toContain('CHARACTERISTICS')
+    expect(html).toContain('Stats unavailable')
+    expect(html).not.toContain('Vitality')
+  })
+
   test('a damage line alone still earns the section (damages count as characteristics)', () => {
     const html = renderToStaticMarkup(
       <I18nextProvider i18n={test_i18n}>

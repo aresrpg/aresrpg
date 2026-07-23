@@ -728,6 +728,7 @@
   },
   "stats": {
     "no_character": "Aucun personnage sélectionné",
+    "unavailable": "Caractéristiques indisponibles",
     "level": "Nv. {{level}}",
     "adventurer": "Aventurier",
     "points_to_assign": "Points à attribuer",

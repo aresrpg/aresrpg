@@ -237,6 +237,8 @@ export function ItemDetailView({
     createdAt?: number | string
     damages: { element: string; from: number; to: number; damage_type?: string }[]
     stats: Record<string, number | [number, number]>
+    /** An owned template authors stats, but its instance roll is still pending or unavailable. */
+    stats_unavailable?: boolean
     description?: string
     consumable_effect?: { type: string; [key: string]: any } | null
     /** Legacy catalog metadata. It is not a verified character gate and is intentionally not rendered as one. */
@@ -281,7 +283,11 @@ export function ItemDetailView({
     Array.isArray(v) ? v[0] !== 0 || v[1] !== 0 : v !== 0
   )
   const has_characteristics =
-    item.damages.length > 0 || filtered_stats.length > 0 || !!item.particle_trail || !!item.consumable_effect
+    item.damages.length > 0 ||
+    filtered_stats.length > 0 ||
+    !!item.stats_unavailable ||
+    !!item.particle_trail ||
+    !!item.consumable_effect
   return (
     <div className="flex flex-col gap-4 max-w-2xl mx-auto w-full">
       {/* Header */}
@@ -389,6 +395,11 @@ export function ItemDetailView({
             </div>
           )}
           {/* Stats */}
+          {item.stats_unavailable && (
+            <div className="text-[10px] tracking-wide px-2 py-1" style={{ color: '#6b7280', fontStyle: 'italic' }}>
+              {t('stats.unavailable')}
+            </div>
+          )}
           {filtered_stats.length > 0 && (
             <div className="flex flex-col gap-0.5">
               {sort_stat_entries(filtered_stats).map(([key, val], idx) => {

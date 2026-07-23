@@ -152,6 +152,11 @@ export function BrowsePanel() {
     () => types.find((type) => type.template_id === selected) ?? types[0] ?? null,
     [types, selected]
   )
+  const selected_template = selected_type
+    ? (templates_item.find(
+        (template: any) => String(template.template_id ?? template.id) === selected_type.template_id
+      ) ?? null)
+    : null
   const listing_rows = useMemo(() => {
     if (!selected_type) return []
     return [...selected_type.listings].sort((left, right) => {
@@ -301,7 +306,11 @@ export function BrowsePanel() {
                       const armed = confirm_id === listing.id
                       const price_label = `${format_mist_to_sui(BigInt(listing.price_mist), 2)} SUI`
                       return (
-                        <ItemHoverTooltip key={listing.id} item={{ ...listing.item, name: selected_type.name }}>
+                        <ItemHoverTooltip
+                          key={listing.id}
+                          item={{ ...listing.item, name: selected_type.name }}
+                          template={selected_template}
+                        >
                           {(handlers) => (
                             <MarketplaceListingRow
                               seller_address={listing.seller_sui_address}

@@ -34,6 +34,17 @@ export function display_rolled_stats(rolled_stats) {
 }
 
 /**
+ * Whether a template authors at least one meaningful item stat. Normalized chain templates already drop
+ * neutral [0, 0] fields, but the explicit value check also keeps seed/legacy callers honest.
+ * @param {Record<string, number|[number, number]> | null | undefined} stats
+ */
+export function has_authored_stats(stats) {
+  return Object.values(stats ?? {}).some((value) =>
+    (Array.isArray(value) ? value : [value]).some((bound) => Number.isFinite(Number(bound)) && Number(bound) !== 0)
+  )
+}
+
+/**
  * Read one owned item's centered StatsKey block through the SDK's canonical getter. Null is retried briefly:
  * execute certification can precede dynamic-field readability for a freshly minted item. Concurrent callers
  * share the whole bounded read; settled reads are not cached because forgemagie can mutate the roll.

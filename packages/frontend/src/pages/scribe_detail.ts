@@ -16,9 +16,9 @@
 // field already exists and is already wired into the SDK: `sdk.get_rolled_stats(item_id)`
 // (packages/sdk/src/sui/read/items.js `get_rolled_stats`), the SAME read the crush action already uses for
 // this exact gear (world-shell/crush_actions.js `crush_preview`/`crush_item`) — one home for "this item's
-// real stats" across forgemagie. `gear_stats` (the resolved read) wins over the template's placeholder when
-// it has landed; falls back to the template's honest empty while the read is in flight or the item carries
-// none (never fabricated).
+// real stats" across forgemagie. `gear_stats` (the resolved read) wins when it has landed; while a
+// stats-authoring template's read is null, the shared detail view says the stats are unavailable (never
+// fabricates its range). A genuinely statless item remains empty.
 
 import { onchain_template_to_detail_props } from '../components/items'
 import { item_display_level } from '../game/screens/hud/inventory-equip.js'
@@ -42,7 +42,7 @@ export type Item = {
  * @param sel_gear the selected bag/equipment row (Item shape above), or null when nothing is picked
  * @param template_map item_type slug -> template row (get_template_by_item_type_map, read_findables.js)
  * @param gear_stats the item's centered-u16 rolled stats (resolve_rolled_stats(sel_gear.id)), or null while
- *   that read is in flight / unavailable — owned cards stay honestly empty until the instance read lands
+ *   that read is in flight / unavailable — authored stats render the shared explicit unavailable state
  * @param tt use_template_t() — localizes the template's name/description
  */
 export function scribe_detail_props(

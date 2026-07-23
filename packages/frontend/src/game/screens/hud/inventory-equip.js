@@ -8,7 +8,8 @@ import { ITEM_CATEGORY, WEAPONS, MISC, to_chain_category } from '@aresrpg/sdk/it
 import { is_developer_item } from '@aresrpg/sdk/jobs'
 
 import { projected_hp, character_max_hp } from '../../../chain/read_character.js'
-import { display_rolled_stats } from '../../../chain/rolled_stats.js'
+import { display_rolled_stats, has_authored_stats } from '../../../chain/rolled_stats.js'
+import { safe_json_parse } from '../../../safe_json_parse'
 import { cosmetic_icon_of } from '../../cosmetic_icons.js'
 import { chain_icon_slug, group_by_stack_identity, is_cosmetic_item, item_type_equip_slot } from '../../item_classification'
 import { equip_slot_accepts, equip_slot_kind_of } from './inventory_context_actions'
@@ -382,15 +383,25 @@ export const TOTALS_STATS = /** @type {const} */ ([
  * centered-u16 block flows through the shared owned-item display decoder; template/flat item fields are ignored.
  * @param {Record<string, any>} equipment
  * @param {Record<string, Record<string, number>|null|undefined>} rolled_stats_by_id
- * @returns {{ key: string, label: string, value: number }[]}
+ * @param {Map<string, any>} [template_id_map]
+ * @param {Map<string, any>} [template_map]
+ * @returns {{ key: string, label: string, value: number }[] | null}
  */
-export function equipped_totals(equipment, rolled_stats_by_id = {}) {
+export function equipped_totals(equipment, rolled_stats_by_id = {}, template_id_map, template_map) {
   /** @type {Record<string, number>} */
   const sum = {}
   for (const slot of EQUIPMENT_SLOTS) {
     const item = equipment[slot]
     if (!item) continue
-    const rolled_stats = display_rolled_stats(rolled_stats_by_id[item.id])
+    const template =
+      template_id_map?.get?.(item.template_id ?? item.template) ?? template_map?.get?.(item.item_type) ?? item
+    const authored_stats =
+      template?.stats ??
+      safe_json_parse(template?.statsJson ?? template?.stats_json ?? item.statsJson ?? item.stats_json, {})
+    const authored_totals = Object.fromEntries(TOTALS_STATS.map(([key]) => [key, authored_stats[key]]))
+    const raw_rolled_stats = rolled_stats_by_id[item.id]
+    if (has_authored_stats(authored_totals) && raw_rolled_stats == null) return null
+    const rolled_stats = display_rolled_stats(raw_rolled_stats)
     for (const [key] of TOTALS_STATS) sum[key] = (sum[key] ?? 0) + Number(rolled_stats[key]?.[0] ?? 0)
   }
   return TOTALS_STATS.map(([key, label]) => ({

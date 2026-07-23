@@ -728,6 +728,7 @@
   },
   "stats": {
     "no_character": "キャラクターが選択されていません",
+    "unavailable": "ステータスを取得できません",
     "level": "Lv. {{level}}",
     "adventurer": "冒険者",
     "points_to_assign": "割り振り可能ポイント",

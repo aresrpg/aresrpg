@@ -100,3 +100,14 @@ test('a failed post-tx reconcile can never strand the equipment panel locked (#5
   expect(reconcile_block).toContain('await reconcile_equip_state(')
   expect(reconcile_block).toMatch(/finally\s*\{[\s\S]*?set_committing\(false\)[\s\S]*?\}/)
 })
+
+test('equipped totals render the shared quiet unavailable marker for an unresolved contributor', () => {
+  const totals_start = inventory_source.indexOf('<div className="inv__totals">')
+  const totals_end = inventory_source.indexOf('</div>', totals_start)
+  expect(totals_start).toBeGreaterThan(-1)
+  expect(totals_end).toBeGreaterThan(totals_start)
+  const totals_markup = inventory_source.slice(totals_start, totals_end)
+
+  expect(totals_markup).toMatch(/totals === null[\s\S]*?inv__totals-empty[\s\S]*?t\('stats\.unavailable'\)/)
+  expect(totals_markup.indexOf('totals === null')).toBeLessThan(totals_markup.indexOf('totals.length === 0'))
+})

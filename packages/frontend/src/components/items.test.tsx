@@ -128,7 +128,8 @@ describe('onchain_template_to_detail_props — icon_slug wins for the detail ima
 // possible roll) render only on TEMPLATE surfaces (findables/encyclopedia/shop). An OWNED instance
 // (Inventory bag/equipment) has its OWN fixed rolled stat — showing the template's full spread there is a
 // lie ("+3 to 0 Vitality" prod regression). `owned: true` marks the payload as an instance surface: its
-// resolved `rolled_stats` block is the only valid stat read; while that read is absent, the card stays empty.
+// resolved `rolled_stats` block is the only valid stat read; while an authored stat read is absent, the card
+// says so explicitly.
 describe('onchain_template_to_detail_props — owned instances never show a template RANGE (#437)', () => {
   test('an owned rolled instance renders its roll, never the template range', () => {
     const detail = onchain_template_to_detail_props({
@@ -147,6 +148,7 @@ describe('onchain_template_to_detail_props — owned instances never show a temp
 
     expect(text).toContain('+7 Vitality')
     expect(text).not.toContain('+3 to 8 Vitality')
+    expect(text).not.toContain('Stats unavailable')
   })
 
   test('a genuine template range is suppressed on an owned surface', () => {
@@ -181,7 +183,7 @@ describe('onchain_template_to_detail_props — owned instances never show a temp
     expect(detail.stats).toEqual({ vitality: [3, 8] })
   })
 
-  test('end-to-end: a variable-roll stat never renders as "N to M" on an owned item hover card', () => {
+  test('end-to-end: a null owned roll with authored stats renders an explicit unavailable state, never a range', () => {
     const detail = onchain_template_to_detail_props({
       item_type: 'iron_sword',
       category: 'sword',
@@ -194,8 +196,28 @@ describe('onchain_template_to_detail_props — owned instances never show a temp
         <ItemDetailView item={detail as any} />
       </I18nextProvider>
     )
-    expect(html).not.toContain('CHARACTERISTICS')
+    expect(html).toContain('CHARACTERISTICS')
+    expect(html).toContain('Stats unavailable')
     expect(html).not.toContain('Vitality')
+    expect(html).not.toContain('+3 to 8')
+  })
+
+  test('a genuinely statless owned template remains sectionless while its rolled read is null', () => {
+    const detail = onchain_template_to_detail_props({
+      item_type: 'plain_hat',
+      category: 'hat',
+      level: 1,
+      statsJson: '{}',
+      rolled_stats: null,
+      owned: true,
+    } as any)
+    const html = renderToStaticMarkup(
+      <I18nextProvider i18n={test_i18n}>
+        <ItemDetailView item={detail as any} />
+      </I18nextProvider>
+    )
+    expect(html).not.toContain('CHARACTERISTICS')
+    expect(html).not.toContain('Stats unavailable')
   })
 })
 

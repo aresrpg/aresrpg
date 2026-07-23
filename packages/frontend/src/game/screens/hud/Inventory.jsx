@@ -284,7 +284,7 @@ export function Inventory() {
     category,
   })
 
-  const totals = equipped_totals(equipment, rolled_stats_by_id)
+  const totals = equipped_totals(equipment, rolled_stats_by_id, template_id_map, template_map)
 
   const dragging = (/** @type {DragEvent | any} */ e) =>
     owned.find((item) => item.id === e.dataTransfer.getData('text/plain')) ?? null
@@ -631,7 +631,9 @@ export function Inventory() {
 
         <div className="inv__eyebrow">Equipped totals</div>
         <div className="inv__totals">
-          {totals.length === 0 ? (
+          {totals === null ? (
+            <span className="inv__totals-empty">{t('stats.unavailable')}</span>
+          ) : totals.length === 0 ? (
             <span className="inv__totals-empty">No gear equipped</span>
           ) : (
             totals.map(({ key, label, value }) => (

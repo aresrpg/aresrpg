@@ -21,7 +21,7 @@ import { use_content } from '../pages/encyclopedia/content'
 import { type ItemInfo } from '../types/chain'
 import { safe_json_parse } from '../safe_json_parse'
 import { use_template_t } from '../i18n/template_t'
-import { display_rolled_stats } from '../chain/rolled_stats.js'
+import { display_rolled_stats, has_authored_stats } from '../chain/rolled_stats.js'
 // Rarity SSOT: QUALITY_COLOR-derived tint + hue (quality.js) so an item's rarity reads the SAME here as
 // on every HUD surface. Replaces the old whitish RARITY_COLORS border with a per-tier inset radial tint.
 import { quality_color, rarity_tint } from '../game/screens/hud/quality'
@@ -294,10 +294,11 @@ export function onchain_template_to_detail_props(
     category?: string
     level?: number
     statsJson?: string
+    stats?: Record<string, number | [number, number]>
     /** True only for a concrete owned instance. Owned surfaces never consume `statsJson` (the template range). */
     owned?: boolean
     /** The instance's centered-u16 StatsKey block from sdk.get_rolled_stats(item_id). It is decoded through the
-     * one rolled-stat display home; null while unresolved/absent keeps the owned card honestly stat-empty. */
+     * one rolled-stat display home; a null authored-stat read renders the shared unavailable state. */
     rolled_stats?: Record<string, number> | null
     // D240: normalize_item_template's decoded heal effect ({ type:'LIFE_REGEN', amount } | null) — carried
     // through so the shared ItemDetailView shows "Restores N HP" on consumables (bag/findables/recall tooltips).
@@ -308,6 +309,7 @@ export function onchain_template_to_detail_props(
 ) {
   const parsed_stats = safe_json_parse<Record<string, number | [number, number]>>(tmpl.statsJson, {})
   const raw_stats = tmpl.owned ? display_rolled_stats(tmpl.rolled_stats) : parsed_stats
+  const stats_unavailable = !!tmpl.owned && tmpl.rolled_stats == null && has_authored_stats(tmpl.stats ?? parsed_stats)
   const en_description = tmpl.display?.description || undefined
   return {
     id: tmpl.icon_slug || tmpl.item_type || tmpl.id,
@@ -318,6 +320,7 @@ export function onchain_template_to_detail_props(
     level: tmpl.level ?? 0,
     damages: [],
     stats: raw_stats,
+    stats_unavailable,
     description: tt
       ? tt({ desc_key: tmpl.item_type, description: en_description }, 'description') || undefined
       : en_description,

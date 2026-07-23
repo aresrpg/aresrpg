@@ -11,6 +11,8 @@ import { configure_walrus_assets, item_icon_url } from '@aresrpg/sdk/jobs'
 import { to_detail_item } from './item_hover_tooltip'
 
 const asset_manifest = JSON.parse(readFileSync(new URL('../../public/asset_manifest.json', import.meta.url), 'utf8'))
+const browse_panel_source = readFileSync(new URL('./marketplace/browse_panel.tsx', import.meta.url), 'utf8')
+const marketplace_store_source = readFileSync(new URL('../stores/marketplace_chain.ts', import.meta.url), 'utf8')
 
 const cloak = {
   id: '0xitem',
@@ -47,11 +49,27 @@ describe('to_detail_item — cosmetic icon resolution', () => {
 })
 
 describe('to_detail_item — owned listing stats', () => {
+  test('the live canonical-template caller threads decoded authored stats into the owned tooltip adapter', () => {
+    expect(marketplace_store_source).toContain('stats: item_stats_from_v1(t.stats)')
+    expect(browse_panel_source).toMatch(
+      /const selected_template =[\s\S]*?templates_item\.find[\s\S]*?<ItemHoverTooltip[\s\S]*?template=\{selected_template\}/
+    )
+  })
+
+  test('a null roll is explicit when the owned item template authors stats', () => {
+    const listed_item = { ...cloak, stats_json: '{}' }
+    const detail = to_detail_item(listed_item, { stats: { vitality: [3, 8] } }, tt, null)
+
+    expect(detail.stats).toEqual({})
+    expect(detail.stats_unavailable).toBe(true)
+  })
+
   test('a listed instance displays its decoded roll, never the joined template range', () => {
     const listed_item = { ...cloak, stats_json: '{"vitality":[3,8]}' }
-    const detail = to_detail_item(listed_item, null, tt, { vitality: 32775 })
+    const detail = to_detail_item(listed_item, { stats: { vitality: [3, 8] } }, tt, { vitality: 32775 })
 
     expect(detail.stats).toEqual({ vitality: [7, 7] })
     expect(detail.stats).not.toEqual({ vitality: [3, 8] })
+    expect(detail.stats_unavailable).toBe(false)
   })
 })

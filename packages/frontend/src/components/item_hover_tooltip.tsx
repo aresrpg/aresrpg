@@ -7,7 +7,7 @@ import { safe_json_parse } from '../safe_json_parse'
 import { use_template_t } from '../i18n/template_t'
 import { use_content } from '../pages/encyclopedia/content'
 import { type ItemInfo } from '../types/chain'
-import { display_rolled_stats, resolve_rolled_stats } from '../chain/rolled_stats.js'
+import { display_rolled_stats, has_authored_stats, resolve_rolled_stats } from '../chain/rolled_stats.js'
 
 import { ItemDetailView } from './entity_display'
 import { marketplace_item_icon } from './marketplace/marketplace_icon'
@@ -20,6 +20,8 @@ export function to_detail_item(
   rolled_stats: Record<string, number> | null = null
 ) {
   const stats = display_rolled_stats(rolled_stats)
+  const authored_stats =
+    tmpl?.stats ?? safe_json_parse<Record<string, number | [number, number]>>(tmpl?.statsJson ?? item.stats_json, {})
   const damages = safe_json_parse(item.damages_json, []) || []
   const consumable = safe_json_parse(item.consumable_json, null)
   const particle = safe_json_parse(item.particle_trail_json, null)
@@ -38,6 +40,7 @@ export function to_detail_item(
     level: item.level || 0,
     damages,
     stats,
+    stats_unavailable: rolled_stats == null && has_authored_stats(authored_stats),
     description,
     consumable_effect: consumable,
     weapon_class: item.weapon_class,
@@ -49,6 +52,8 @@ type TooltipState = { item: ItemInfo; rect: DOMRect; rolled_stats: Record<string
 
 type WrapperProps = {
   item: ItemInfo
+  /** Exact live template metadata when the item carries a canonical object id instead of a seed slug. */
+  template?: any
   children: (handlers: {
     onMouseEnter: (e: React.MouseEvent<HTMLElement>) => void
     onMouseLeave: () => void
@@ -62,7 +67,7 @@ type WrapperProps = {
 //   <ItemHoverTooltip item={item}>
 //     {handlers => <div {...handlers}>...</div>}
 //   </ItemHoverTooltip>
-export function ItemHoverTooltip({ item, children, delay_ms = 300 }: WrapperProps) {
+export function ItemHoverTooltip({ item, template, children, delay_ms = 300 }: WrapperProps) {
   const [state, set_state] = useState<TooltipState>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hover_request = useRef(0)
@@ -100,7 +105,14 @@ export function ItemHoverTooltip({ item, children, delay_ms = 300 }: WrapperProp
   return (
     <>
       {children(handlers)}
-      {state && <TooltipPortal item={state.item} anchor_rect={state.rect} rolled_stats={state.rolled_stats} />}
+      {state && (
+        <TooltipPortal
+          item={state.item}
+          template={template}
+          anchor_rect={state.rect}
+          rolled_stats={state.rolled_stats}
+        />
+      )}
     </>
   )
 }
@@ -109,16 +121,18 @@ export function ItemHoverTooltip({ item, children, delay_ms = 300 }: WrapperProp
 // Flips side if near the right edge; clamps vertically to viewport.
 function TooltipPortal({
   item,
+  template,
   anchor_rect,
   rolled_stats,
 }: {
   item: ItemInfo
+  template?: any
   anchor_rect: DOMRect
   rolled_stats: Record<string, number> | null
 }) {
   const tt = use_template_t()
   const { templates } = use_content()
-  const tmpl = (templates.item || []).find((tp: any) => tp.id === item.template_id)
+  const tmpl = template ?? (templates.item || []).find((tp: any) => tp.id === item.template_id)
   const detail = to_detail_item(item, tmpl, tt, rolled_stats)
 
   const viewport_w = typeof window !== 'undefined' ? window.innerWidth : 1200

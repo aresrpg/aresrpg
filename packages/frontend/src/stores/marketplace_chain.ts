@@ -9,6 +9,7 @@ import i18n from '../i18n'
 import { game_log } from '../core/log.js'
 import { with_timeout } from '../utils/with_timeout'
 import { build_listing_from_view, get_listable_items, get_listable_characters } from '../chain/read_listings'
+import { item_stats_from_v1 } from '../chain/read_findables'
 import { get_kiosk_profits } from '../chain/read_kiosk_profits'
 import { get_sdk } from '../chain/sdk'
 import { format_mist_to_sui } from '../utils/sui_mist'
@@ -267,12 +268,11 @@ export const use_marketplace_chain = create<MarketplaceChainStore>((set, get) =>
     // from the keyless `/v1/encyclopedia` items view, then partition + map client-side — "load everything in one
     // call, then per category". Both are keyless `/v1` reads: the browser NEVER sweeps the chain — the old
     // `get_item_templates_cached` catalog (a graphql.testnet.sui.io event-replay + gRPC BatchGetObjects the browser
-    // could not reach: CORS-blocked + 429) is retired here. The encyclopedia items carry name/category/level (keyed
-    // by item_type slug — the frozen page's `templates_item` lookup key); stats/pods/damages are NOT indexed by /v1
-    // (the Redis template doc is id/name/item_type/category/level only), so the BUY item-detail renders those from
-    // name/category/level and omits stat lines — the same absence testnet already showed (the GraphQL catalog failed
-    // to empty), now with real names/categories. Characters are their own category (CharactersPanel), filtered OUT
-    // of this item set. Still with_timeout-bound (never an infinite spinner). The async result DISPATCHES
+    // could not reach: CORS-blocked + 429) is retired here. The encyclopedia items carry name/category/level and
+    // authored stat ranges, keyed by item_type slug plus canonical template id. The ranges are decoded here only
+    // to tell an owned listing whether stats exist; they never enter its `stats_json` or render as instance values.
+    // Characters are their own category (CharactersPanel), filtered OUT of this item set. Still
+    // with_timeout-bound (never an infinite spinner). The async result DISPATCHES
     // a snapshot input — it never set()s listings directly (ONE-PIPELINE law): the reducer's merge rule decides state.
     load: async () => {
       if (!buy_latch_open()) return // latched after a recent failure — hold the one honest error state, don't re-burst
@@ -295,6 +295,7 @@ export const use_marketplace_chain = create<MarketplaceChainStore>((set, get) =>
           name: t.name,
           category: t.category,
           level: t.level,
+          stats: item_stats_from_v1(t.stats),
         }))
         const candidates = new Map<string, any[]>()
         for (const template of raw_templates) {

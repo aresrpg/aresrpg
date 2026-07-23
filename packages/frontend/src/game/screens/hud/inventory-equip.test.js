@@ -53,8 +53,28 @@ describe('equipped_totals (owned rolls only)', () => {
     ])
   })
 
-  test('never falls back to template ranges or flat projected fields while rolls are unresolved', () => {
-    expect(equipped_totals(equipment)).toEqual([])
+  test('a null contributor suppresses partial totals instead of presenting them as complete', () => {
+    expect(
+      equipped_totals(equipment, {
+        '0xsword': { vitality: 32775, action: 32769 },
+        '0xring': null,
+      })
+    ).toBeNull()
+  })
+
+  test('pending contributors are unavailable and never fall back to template ranges or flat projected fields', () => {
+    expect(equipped_totals(equipment)).toBeNull()
+  })
+
+  test('statless equipped items do not make the totals unavailable', () => {
+    expect(equipped_totals({ hat: { id: '0xhat', statsJson: '{}' } })).toEqual([])
+  })
+
+  test('a newly staged owner row resolves its authored contribution through the template-id map', () => {
+    const staged = { weapon: { id: '0xstaged', template_id: '0xtemplate' } }
+    const templates = new Map([['0xtemplate', { statsJson: '{"strength":[2,6]}' }]])
+
+    expect(equipped_totals(staged, {}, templates)).toBeNull()
   })
 })
 

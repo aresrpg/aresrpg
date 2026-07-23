@@ -728,6 +728,7 @@
   },
   "stats": {
     "no_character": "Персонажа не вибрано",
+    "unavailable": "Характеристики недоступні",
     "level": "Рів. {{level}}",
     "adventurer": "Шукач пригод",
     "points_to_assign": "Очки для розподілу",

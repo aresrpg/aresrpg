@@ -728,6 +728,7 @@
   },
   "stats": {
     "no_character": "Kein Charakter ausgewählt",
+    "unavailable": "Werte nicht verfügbar",
     "level": "Lv. {{level}}",
     "adventurer": "Abenteurer",
     "points_to_assign": "Zu verteilende Punkte",

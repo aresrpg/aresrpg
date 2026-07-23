@@ -728,6 +728,7 @@
   },
   "stats": {
     "no_character": "No character selected",
+    "unavailable": "Stats unavailable",
     "level": "Lv. {{level}}",
     "adventurer": "Adventurer",
     "points_to_assign": "Points to assign",
