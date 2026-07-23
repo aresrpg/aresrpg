@@ -20,7 +20,7 @@ rev = "testnet"
 # one build. A package linking a DUAL framework rev is rejected by testnet-128's UPGRADE path (FeatureNotYetSupported);
 # a trivial single-rev pkg upgraded fine (devops control) — so it's the DUAL, not the version. These `override = true`
 # pins force the ENTIRE graph (incl Kiosk's transitive) to ONE rev = 8fc60f1f, the ACTIVE sui CLI's own framework
-# (`sui --version` → 1.74.1-8fc60f1fa966), which the control PROVED testnet-128 accepts for upgrades.
+# (`sui --version` → 1.75.1-8fc60f1fa966), which the control PROVED testnet-128 accepts for upgrades.
 # VERIFICATION: Move.lock has ONE sui-framework + ONE move-stdlib rev (no duals). STANDING RULE: NO floating revs —
 # pins only, and the pin MUST match the build CLI's framework hash (re-pin to the new `sui --version` hash if the CLI changes).
 [dependencies.Sui]
