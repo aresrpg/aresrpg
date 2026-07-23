@@ -30,7 +30,6 @@ import {
   CHAIN_IDS,
   getNetwork,
   MOVE_DIR,
-  OUT,
 } from './ceremony_lib.mjs'
 import { move_sources_hash } from './move_sources_hash.mjs'
 
@@ -193,11 +192,10 @@ function main() {
     seedPlan: seed_plan(),
   }
 
+  // ONE HOME: the browser-served manifest under frontend/public (the release page fetches it, the test reads it).
+  // The old scripts/out/ second copy was a dual-home (the same desync class as the original ceremony blocker) — deleted.
   fs.mkdirSync(FRONTEND_PUBLIC, { recursive: true })
   fs.writeFileSync(MANIFEST_OUT, JSON.stringify(manifest, null, 2))
-  // a copy under scripts/out for CLI reference / diffing (same home as ceremony_manifest.json)
-  fs.mkdirSync(OUT, { recursive: true })
-  fs.writeFileSync(path.join(OUT, 'release_manifest.json'), JSON.stringify(manifest, null, 2))
 
   const totalKB = Object.values(packages).reduce((n, p) => n + p.byteSize, 0) / 1024
   console.log(`\n  policy steps: ${POLICY_STEPS.length} · enable steps: ${ENABLE_STEPS.length}`)

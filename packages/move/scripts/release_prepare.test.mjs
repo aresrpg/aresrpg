@@ -28,17 +28,17 @@ test('manifest exists (run `bun run release:prepare` first)', () => {
   expect(existsSync(MANIFEST)).toBe(true)
 })
 
-test('manifest publish order === ceremony topological order (all 7 packages, exact sequence)', () => {
+test('manifest publish order === ceremony topological order (all 9 packages, exact sequence)', () => {
   const m = JSON.parse(readFileSync(MANIFEST, 'utf8'))
   expect(m._kind).toBe('aresrpg-release-manifest')
   expect(m.publishOrder).toEqual(publishOrder().order)
   expect(m.publishOrder.length).toBe(TICKET_ORDER.length)
-  expect(m.publishOrder.length).toBe(7) // the 07-11/12 splits: kolizeum + forgemagie are their own packages
+  expect(m.publishOrder.length).toBe(9) // the 07-11/12/13 splits: kolizeum + forgemagie + gifting + dungeon are their own packages
   // every sibling that must publish before the core is present + ordered before aresrpg
   for (const dep of ['foundation', 'spells', 'social', 'engine'])
     expect(m.publishOrder.indexOf(dep)).toBeLessThan(m.publishOrder.indexOf('aresrpg'))
-  // kolizeum + forgemagie depend on aresrpg → publish after it
-  for (const sib of ['kolizeum', 'forgemagie'])
+  // kolizeum + forgemagie + gifting + dungeon depend on aresrpg → publish after it
+  for (const sib of ['kolizeum', 'forgemagie', 'gifting', 'dungeon'])
     expect(m.publishOrder.indexOf(sib)).toBeGreaterThan(m.publishOrder.indexOf('aresrpg'))
 })
 
