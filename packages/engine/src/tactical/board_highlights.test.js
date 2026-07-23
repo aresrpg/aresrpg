@@ -528,7 +528,7 @@ describe('⑬ trap marker renders ABOVE the MP-range blob wash', () => {
 
   test('the tactical facade supplies the live camera reversed-depth flag', async () => {
     const src = await Bun.file(new URL('./index.js', import.meta.url)).text()
-    expect(src).toContain('reversed_depth: !!(/** @type {any} */ (engine.get_camera()))?.reversedDepth')
+    expect(src).toContain('reversed_depth: !!(/** @type {any} */ (engine.get_camera())?.reversedDepth)')
   })
 })
 
