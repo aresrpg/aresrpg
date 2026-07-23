@@ -66,9 +66,11 @@ public fun scramble(seed: u64): u64 {
 /// Fold `x` into a 32-bit accumulator: wrapping-add then `scramble`. Order-sensitive input combiner — build a
 /// seed from several values with `mix(mix(a, b), c)`. Each fold avalanches, so distinct input tuples collide
 /// only at the scrambler's 1-in-2^32 rate (no additive `(seat, deadline)` cancellation). JS mirror:
-/// `rng_next(((acc + x) >>> 0)).value`.
+/// `rng_next((((acc & MASK32) + (x & MASK32)) >>> 0)).value`.
 public fun mix(acc: u64, x: u64): u64 {
-    scramble((acc + x) & MASK32)
+    // #574: mask full-u64 provenance before Move's checked add so the 32-bit fold wraps like the JS twin
+    // instead of aborting before a post-add mask can run.
+    scramble(((acc & MASK32) + (x & MASK32)) & MASK32)
 }
 
 #[test]
@@ -106,3 +108,8 @@ fun scramble_and_mix_are_deterministic() {
     assert!(mix(mix(7, 3), 9) != mix(mix(7, 9), 3), 5); // chained folds are order-sensitive (avalanche per step)
 }
 
+#[test]
+fun mix_masks_degenerate_u64_before_add() {
+    // The old checked `1 + u64::MAX` aborted before its post-add mask; both twins wrap the low 32 bits to zero.
+    assert!(mix(1, 18_446_744_073_709_551_615) == 1144304738, 0);
+}
