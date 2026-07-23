@@ -81,16 +81,28 @@ public struct WeaponLine has copy, drop, store {
   damage_max: u64, // #577 — MAX (== damage ⇒ fixed)
   crit_damage: u64, // #577 — MIN of the crit range
   crit_damage_max: u64, // #577 — MAX (== crit_damage ⇒ fixed)
+  // The AUTHORED cell-set shape OVERRIDE (owner's 8-tier weapon-shape table — future wave; tonight the SLOT + a live
+  // path). `spell_effect::shape_no_override()` (255) ⇒ no override, resolve the category table. Any spell shape ⇒
+  // that shape/size drives the strike's cell set instead. Read ONLY through `weapon_shape_resolved` (one resolver).
+  area_shape: u8,
+  area_size: u64,
 }
 
-/// FIXED alias (range == single value). `new_weapon_line_ranged` authors a spread (the equipment path feeds it once items carry ranges).
+/// FIXED alias (range == single value), NO shape override (the category table resolves). `new_weapon_line_ranged`
+/// authors a spread; `new_weapon_line_shaped` authors a shape override (the equipment path feeds them once items carry either).
 public fun new_weapon_line(element: u8, damage: u64, crit_damage: u64): WeaponLine {
-  WeaponLine { element, damage, damage_max: damage, crit_damage, crit_damage_max: crit_damage }
+  WeaponLine { element, damage, damage_max: damage, crit_damage, crit_damage_max: crit_damage, area_shape: spell_effect::shape_no_override(), area_size: 0 }
 }
 
-/// #577 — RANGE-aware line constructor: `[damage, damage_max]` normal, `[crit_damage, crit_damage_max]` crit.
+/// #577 — RANGE-aware line constructor: `[damage, damage_max]` normal, `[crit_damage, crit_damage_max]` crit. NO shape override.
 public fun new_weapon_line_ranged(element: u8, damage: u64, damage_max: u64, crit_damage: u64, crit_damage_max: u64): WeaponLine {
-  WeaponLine { element, damage, damage_max, crit_damage, crit_damage_max }
+  WeaponLine { element, damage, damage_max, crit_damage, crit_damage_max, area_shape: spell_effect::shape_no_override(), area_size: 0 }
+}
+
+/// The shape-OVERRIDE authoring constructor (owner's weapon-shape table): a ranged line PLUS an explicit
+/// `(area_shape, area_size)` that overrides the category resolver. Pass `shape_no_override()` for no override.
+public fun new_weapon_line_shaped(element: u8, damage: u64, damage_max: u64, crit_damage: u64, crit_damage_max: u64, area_shape: u8, area_size: u64): WeaponLine {
+  WeaponLine { element, damage, damage_max, crit_damage, crit_damage_max, area_shape, area_size }
 }
 
 public(package) fun wl_element(w: &WeaponLine): u8 { w.element }
@@ -98,6 +110,8 @@ public(package) fun wl_damage(w: &WeaponLine): u64 { w.damage } // #577 — MIN 
 public(package) fun wl_damage_max(w: &WeaponLine): u64 { w.damage_max } // #577 — MAX
 public(package) fun wl_crit_damage(w: &WeaponLine): u64 { w.crit_damage } // #577 — MIN of the crit range
 public(package) fun wl_crit_damage_max(w: &WeaponLine): u64 { w.crit_damage_max } // #577 — MAX
+public(package) fun wl_area_shape(w: &WeaponLine): u8 { w.area_shape } // the authored shape override (255 = none)
+public(package) fun wl_area_size(w: &WeaponLine): u64 { w.area_size }
 
 // ── the §17.27 v1 per-family attack lines (parallel CONST tables, index-aligned with WL_FAMILIES). A CONST by
 // the same shape-freeze ruling as equipment's CLASS_FAMILIES: reach/AP-cost are MECHANICS, not dials. The damage
@@ -194,6 +208,22 @@ public(package) fun weapon_shape_of(category: &Option<String>): (u8, u64, bool, 
   // LINE 1-5 FIXED — single aimed cell, fixed range, the aim must lie on a straight cardinal line.
   if (b == &b"spellbook") return (spell_effect::shape_point(), 0, false, true);
   (spell_effect::shape_point(), 0, false, false)
+}
+
+/// THE RESOLVED strike shape for a weapon (owner's merge-lives-once ruling): an authored per-line shape OVERRIDE
+/// (the primary line's `area_shape` when it is not `shape_no_override()`) WINS over the category table; otherwise
+/// `weapon_shape_of(category)` resolves it. range_modifiable / line_only ALWAYS come from the category (an override
+/// tunes ONLY the cell-set shape + size). THE ONE HOME every strike consumer reads — none touches `wl_area_shape`
+/// directly. Empty lines (a bare-hands / family-fallback strike) carry no override → the category table, unchanged.
+public(package) fun weapon_shape_resolved(lines: &vector<WeaponLine>, category: &Option<String>): (u8, u64, bool, bool) {
+  let (cat_shape, cat_size, range_mod, line_only) = weapon_shape_of(category);
+  if (!lines.is_empty()) {
+    let line = lines.borrow(0);
+    if (line.area_shape != spell_effect::shape_no_override()) {
+      return (line.area_shape, line.area_size, range_mod, line_only)
+    }
+  };
+  (cat_shape, cat_size, range_mod, line_only)
 }
 
 // ╔════════════════ [ Combatant — the character combat SNAPSHOT (the game-read seam shape) ] ═ ]

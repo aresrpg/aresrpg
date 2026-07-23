@@ -15,7 +15,7 @@ import { produce_predicted_render_events } from './fight_predicted_render.js'
 import { DISPLACE_TELEPORT } from './fight_render_prims.js'
 import { bfsPath, decode, encode } from './los.js'
 import { sim_effects_of } from './statuses.js'
-import { WEAPON_ATTACK_ID, weapon_shape_of } from './weapon.js'
+import { WEAPON_ATTACK_ID, weapon_shape_resolved } from './weapon.js'
 
 // B7 ENGINE FOSSIL — the deployed engine lineage the CHAIN_PENDING exclusion set below was ruled against. UPDATE
 // RITUAL: on every engine upgrade re-stamp this to `ceremony_manifest.engine.latest` (the boundary test asserts the
@@ -474,13 +474,15 @@ export const chain_critical = (clock, critical_chance, critical_bonus = 0) => {
 }
 
 /**
- * Build the equipped weapon's attack line through the same sim template normalizer. §387: the weapon's FINE
- * category drives the CELL-SET SHAPE (`weapon_shape_of` — the one-home table) onto the damage effect's `area_shape`,
- * so the hover preview and the sim resolve the SAME multi-cell set through the existing spell-AoE machinery. `linear`
+ * Build the equipped weapon's attack line through the same sim template normalizer. §387 + wave-D: the CELL-SET
+ * SHAPE comes from `weapon_shape_resolved` (an authored per-line override wins, else the category table) onto the
+ * damage effect's `area_shape`, so the hover preview and the sim resolve the SAME multi-cell set. `linear`
  * carries the spellbook line-only aim constraint; the bow's modifiable range is the range-bonus feed at cast time.
  */
 export const weapon_spell_template = (weapon = {}) => {
-  const shape = weapon_shape_of(weapon.category)
+  // Wave-D: an authored per-line shape OVERRIDE on the weapon wins over the category table (weapon_shape_resolved —
+  // the one home). Tonight the equipment read carries no override (area_shape undefined ⇒ the category resolves).
+  const shape = weapon_shape_resolved(weapon, weapon.category)
   // #577 — value_max defaults to value (max==min ⇒ fixed, byte-parity with the Move twin's own default).
   const damage_effect = (value, value_max = value) => ({
     kind: 0,

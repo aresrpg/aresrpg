@@ -691,8 +691,10 @@ public(package) fun weapon_strike(fight: &mut Fight, seat: u64, target_cell: u64
     slot = participant::casts_this_turn(p); // §7 turn-seed slot index (pre-action)
   };
   // §387 — the equipped weapon's FINE category → its cell-set shape + ranged range profile (POINT default when absent).
+  // Wave-D: an authored per-line shape OVERRIDE wins over the category table (weapon_shape_resolved — the one home).
+  let lines = fight::weapon_lines_at(fight, seat); // §17.27 wave-2a — authored item lines (empty ⇒ single-line fallback)
   let (area_shape, area_size, range_modifiable, line_only) =
-    participant::weapon_shape_of(&fight::weapon_category_at(fight, seat));
+    participant::weapon_shape_resolved(&lines, &fight::weapon_category_at(fight, seat));
   assert!(ap >= ap_cost, EInsufficientAP);
   // RANGE: a MODIFIABLE ranged weapon (bow) reaches further with the caster's range stat; every other weapon is fixed.
   let reach_eff = if (range_modifiable) reach + spell::stat_range(&caster_stats) else reach;
@@ -712,7 +714,7 @@ public(package) fun weapon_strike(fight: &mut Fight, seat: u64, target_cell: u64
   let crit_roll = spell_formula::slot_crit_roll(turn_seed, slot);
   let is_crit = spell_formula::crit_at(crit_roll, crit_rate, spell::stat_critical_hit(&caster_stats));
   let damage_roll = spell_formula::slot_damage_roll(turn_seed, slot); // #577 — one previewable per-strike roll across every line
-  let lines = fight::weapon_lines_at(fight, seat); // §17.27 wave-2a — authored item lines (empty ⇒ single-line fallback)
+  // `lines` fetched above (wave-D shape resolution); reused here for the damage marker.
   // §387 + #577: the emitted marker is the ONE rolled, element-neutral, pre-resist base (weapon_effect_value) —
   // independent of which shape cells actually get hit; each struck mob resists it individually in the loop below
   // via weapon_damage_total (per-target, element+resist aware). midx's own target_stats/damage predates the §387
@@ -783,8 +785,10 @@ public(package) fun weapon_strike_player(fight: &mut Fight, seat: u64, target_ce
     reach = participant::weapon_reach(p);
     slot = participant::casts_this_turn(p); // §7 turn-seed slot index (pre-action)
   };
+  // Wave-D: an authored per-line shape OVERRIDE wins over the category table (weapon_shape_resolved — the one home).
+  let lines = fight::weapon_lines_at(fight, seat); // §17.27 wave-2a — authored item lines (empty ⇒ single-line fallback)
   let (area_shape, area_size, range_modifiable, line_only) =
-    participant::weapon_shape_of(&fight::weapon_category_at(fight, seat));
+    participant::weapon_shape_resolved(&lines, &fight::weapon_category_at(fight, seat));
   assert!(ap >= ap_cost, EInsufficientAP);
   let reach_eff = if (range_modifiable) reach + spell::stat_range(&caster_stats) else reach;
   let d = combat_grid::manhattan(caster_cell, target_cell);
@@ -803,7 +807,7 @@ public(package) fun weapon_strike_player(fight: &mut Fight, seat: u64, target_ce
   let crit_roll = spell_formula::slot_crit_roll(turn_seed, slot);
   let is_crit = spell_formula::crit_at(crit_roll, crit_rate, spell::stat_critical_hit(&caster_stats));
   let damage_roll = spell_formula::slot_damage_roll(turn_seed, slot); // #577 — one previewable per-strike roll across every line
-  let lines = fight::weapon_lines_at(fight, seat); // §17.27 wave-2a — authored item lines (empty ⇒ single-line fallback)
+  // `lines` fetched above (wave-D shape resolution); reused here for the damage marker.
   // §387 + #577: same split as weapon_strike — the emitted marker is the ONE rolled, element-neutral, pre-resist
   // base; each struck OTHER-TEAM player resists it individually in the loop below via weapon_damage_total. The
   // victim's own target_stats/damage predates the §387 multi-target shape — superseded by the loop.

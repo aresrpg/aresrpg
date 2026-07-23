@@ -137,7 +137,12 @@ const SHAPE_RING: u8 = 5; //  hollow lozenge perimeter at radius = size
 const SHAPE_ALLMAP: u8 = 6; //  every cell on the board (1.29 "C_")
 const SHAPE_CONE: u8 = 7; //  #55-E9 triangle fanning from the caster toward the target — tip 1-wide, widening to 3, `size` deep
 const SHAPE_PODIUM: u8 = 8; //  #387 weapon PODIUM — the TBAR front-arc PLUS one cell beyond the target along the strike axis
+// The WeaponLine shape-OVERRIDE sentinel: an authored line whose `area_shape` is this value carries NO override and
+// falls through to the category resolver (`weapon_shape_of`). 255 (NOT 0 — SHAPE_POINT=0 is a live single-cell
+// override a line may legitimately author). Lives HERE because a line's override uses the SAME spell shape vocabulary.
+const SHAPE_NO_OVERRIDE: u8 = 255;
 
+public fun shape_no_override(): u8 { SHAPE_NO_OVERRIDE }
 public fun shape_point(): u8 { SHAPE_POINT }
 public fun shape_circle(): u8 { SHAPE_CIRCLE }
 public fun shape_cross(): u8 { SHAPE_CROSS }

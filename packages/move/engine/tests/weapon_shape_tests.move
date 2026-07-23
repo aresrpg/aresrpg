@@ -11,7 +11,7 @@ module aresrpg_fight::weapon_shape_tests;
 
 use aresrpg_fight::{actions, fight::{Self, Fight}, mob, participant, turns, version::Version};
 use aresrpg_fight::fight_scaffold::{create_fight_group, mk_clock, stand_up};
-use aresrpg_foundation::spell_effect;
+use aresrpg_foundation::{spell_effect, spell, combat_grid};
 use sui::{clock, test_scenario::{Self as ts, Scenario}};
 
 const OWNER: address = @0xA;
@@ -47,6 +47,33 @@ fun shape_table_maps_every_ruled_category() {
   // tool / bare hands / unknown ⇒ the 1-cell default
   assert_shape(&option::none(), spell_effect::shape_point(), 0, false, false);
   assert_shape(&opt(b"tool_miner"), spell_effect::shape_point(), 0, false, false);
+}
+
+#[test]
+/// Wave-D — the RESOLVED strike shape (`weapon_shape_resolved`): an authored per-line shape OVERRIDE wins over the
+/// category table; the sentinel (255) falls through BYTE-IDENTICALLY. RED-FIRST where behavior changes: the
+/// fall-through cases must equal today's `weapon_shape_of` output exactly. The override's resolved (shape,size)
+/// drives the SAME 9-cell CROSS/2 set the sim resolves (the shared parity vector — twin of weapon_shapes.test.js).
+fun line_shape_override_wins_and_sentinel_falls_through() {
+  // OVERRIDE — a line authoring SHAPE_CROSS size 2 (via new_weapon_line_shaped) resolves to that shape, NOT the
+  // category; range_modifiable / line_only still come from the category (bare hands here → both false).
+  let override_lines = vector[
+    participant::new_weapon_line_shaped(spell::el_fire(), 30, 30, 45, 45, spell_effect::shape_cross(), 2),
+  ];
+  let (s, sz, m, l) = participant::weapon_shape_resolved(&override_lines, &option::none());
+  assert!(s == spell_effect::shape_cross() && sz == 2 && !m && !l, 0);
+  // SENTINEL — a plain line (area_shape = 255) falls through to the category table BYTE-IDENTICALLY (battleaxe → podium).
+  let plain_lines = vector[participant::new_weapon_line(spell::el_fire(), 30, 45)];
+  let (rs, rsz, rm, rl) = participant::weapon_shape_resolved(&plain_lines, &opt(b"battleaxe"));
+  let (cs, csz, cm, cl) = participant::weapon_shape_of(&opt(b"battleaxe"));
+  assert!(rs == cs && rsz == csz && rm == cm && rl == cl, 1); // exactly today's output
+  assert!(rs == spell_effect::shape_podium() && rsz == 1, 2);
+  // Empty lines (bare hands / family fallback) carry no override → the category table, unchanged.
+  let (es, esz, _, _) = participant::weapon_shape_resolved(&vector[], &option::none());
+  assert!(es == spell_effect::shape_point() && esz == 0, 3);
+  // The resolved override drives the SAME 9-cell CROSS/2 set the sim resolves (shared vector; anchor cell 105 = (5,5)).
+  let cells = combat_grid::zone_cells(s, sz, 105, 100);
+  assert!(cells == vector[65, 85, 103, 104, 105, 106, 107, 125, 145], 4);
 }
 
 #[test]

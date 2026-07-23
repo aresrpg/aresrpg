@@ -30,7 +30,13 @@ export const WEAPON_ATTACK_AP = 0
 // existing spell `area_shape` machinery (`get_aoe_cells` / `combat_grid::zone_cells`), so the hover preview, the
 // sim twin, and the chain all derive the SAME cells from one descriptor. Shapes key on the FINE category the
 // equipped weapon carries; ranged classes additionally carry range attributes (see below).
-import { SHAPE_LINE, SHAPE_PODIUM, SHAPE_POINT, SHAPE_TBAR } from '@aresrpg/sim/spell_effect'
+import {
+  SHAPE_LINE,
+  SHAPE_NO_OVERRIDE,
+  SHAPE_PODIUM,
+  SHAPE_POINT,
+  SHAPE_TBAR,
+} from '@aresrpg/sim/spell_effect'
 
 /**
  * @typedef {Object} WeaponShape
@@ -75,3 +81,25 @@ export const WEAPON_SHAPES = /** @type {Record<string, WeaponShape>} */ ({
 
 /** The shape descriptor for a weapon's FINE category (nullish / unknown / tool / bare hands ⇒ the 1-cell default). */
 export const weapon_shape_of = (category) => (category != null && WEAPON_SHAPES[category]) || WEAPON_SHAPE_DEFAULT
+
+/**
+ * THE RESOLVED strike shape (twin of participant.move::weapon_shape_resolved, owner's merge-lives-once ruling): an
+ * authored per-line shape OVERRIDE (`override.area_shape` when it is not SHAPE_NO_OVERRIDE) WINS over the category
+ * table; otherwise `weapon_shape_of(category)` resolves it. range_modifiable / line_only ALWAYS come from the
+ * category (an override tunes ONLY the cell-set shape + size). THE ONE HOME every strike consumer reads.
+ * @param {{ area_shape?: number, area_size?: number }} [override]  the weapon's authored override (nullish ⇒ none)
+ * @param {string|null|undefined} category
+ * @returns {WeaponShape}
+ */
+export const weapon_shape_resolved = (override, category) => {
+  const cat = weapon_shape_of(category)
+  const shape = override?.area_shape
+  if (shape != null && shape !== SHAPE_NO_OVERRIDE)
+    return {
+      area_shape: shape,
+      area_size: Number(override.area_size ?? 0),
+      range_modifiable: cat.range_modifiable,
+      line_only: cat.line_only,
+    }
+  return cat
+}
