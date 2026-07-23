@@ -52,7 +52,10 @@ test.skipIf(!CEREMONY_MANIFEST_AVAILABLE)('release.json owns every SDK pin and s
     ['apps/admin/src/admin-gate.js', 'owner'],
     ['apps/admin/src/components/admin_release_steps.tsx', 'owner'],
   ]) {
-    const source = readFileSync(path.join(repo, consumer), 'utf8')
+    const consumer_path = path.join(repo, consumer)
+    // OSS split (2026-07-19): admin-surface consumers live only in the private apps/admin overlay.
+    if (!existsSync(consumer_path)) continue
+    const source = readFileSync(consumer_path, 'utf8')
     expect(source).toContain('release_network')
     expect(source).toContain(`actors?.${actor}`)
     expect(source).not.toMatch(/0x[0-9a-f]{64}/)
