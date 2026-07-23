@@ -334,13 +334,16 @@ export const effective_stats = entity => {
 
 /**
  * Sum of the ap/mp pool modifiers that are STILL ACTIVE for the upcoming turn — a row expiring on this turn's
- * start-decrement (turns_remaining <= 1) is NOT active this turn and must not sustain the refill. This is the
- * SAME activeness condition effective_stats folds by: a stat row survives into a turn iff its turns_remaining
- * outlasts that turn's decrement, so the pool refill and the live stat fold agree instead of the pool lingering
- * one turn longer. #598: advance_turn reads this BEFORE process_turn_effects drops the row, so counting an
- * expiring row refilled the pool one turn past the buff's life — the sim granted a turn the chain had already
- * expired (Move ages the give/drain CREDIT row at the PRIOR turn-END, so its begin_turn refill never sees one).
- * NOT stat_modifier (that one counts every live row and also serves the 'summons' cap, which has no refill edge).
+ * start-decrement (turns_remaining <= 1) is NOT active this turn and must not sustain the refill. This is NOT
+ * the same check stat_modifier/effective_stats make — those apply NO turns_remaining filter at all (see their
+ * own docstrings above): they trust the effects array is already pruned by process_turn_effects by the time
+ * they're read. advance_turn's ap/mp refill is the ONE read that happens BEFORE process_turn_effects prunes the
+ * entity's expiring rows for that turn — every other stat_modifier/effective_stats call site reads AFTER the
+ * prune, so it never needed its own turns_remaining check. This filter is a genuinely new, narrower predicate
+ * needed only because of WHERE it's called (pools refill at turn start, ahead of the prune), not a restatement
+ * of a rule effective_stats already enforces. #598: without it, counting an expiring row refilled the pool one
+ * turn past the buff's life — the sim granted a turn the chain had already expired (Move ages the give/drain
+ * CREDIT row at the PRIOR turn-END, so its begin_turn refill never sees one).
  * @param {FightEntity} entity
  * @param {'ap'|'mp'} key
  * @returns {number}
