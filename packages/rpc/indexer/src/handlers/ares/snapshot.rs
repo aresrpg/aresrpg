@@ -84,14 +84,17 @@ const MOB_TEMPLATE_MODULE: &str = "mob_template";
 const MOB_TEMPLATE_TYPE: &str = "MobTemplate";
 /// The 2026-07-23 fresh-publish `aresrpg` origin (a NEW package, not an in-place upgrade —
 /// `Published.toml`'s `original-id`/`version = 1` for this ceremony), verified against the
-/// ceremony's own stamp. A MobTemplate's BCS layout is fixed at the checkpoint it was CREATED,
-/// by whichever `aresrpg_foundation::spell_effect::Effect` shape that MobTemplate's own
-/// `aresrpg` package was built against — so the MINTING object's package address (never the
-/// bytes, which give no reliable shape signal once every field is variable-length) is the one
-/// durable signal for which width `skip_effect_vec` needs (issue #629 round-2, `effect_byte_width`).
-/// Every OLDER `aresrpg` origin (the full `aresPackages` history) keeps decoding the pre-#577
-/// width — this constant names ONLY the boundary, not the old side's enumeration.
-const FRESH_ARESRPG_ORIGIN: &str = "0xc05c8d9f65e4ee0a6dc9463c8c90341085daa062184043e1a6fd75bccd6842e1";
+/// ceremony's own stamp. RE-KEYED to ceremony #2 (the icon-field collapse republished the
+/// whole universe again — ceremony #1's origin, 0xc05c8d9f…6842e1, never went live and is
+/// superseded, not additive). A MobTemplate's BCS layout is fixed at the checkpoint it was
+/// CREATED, by whichever `aresrpg_foundation::spell_effect::Effect` shape that MobTemplate's
+/// own `aresrpg` package was built against — so the MINTING object's package address (never
+/// the bytes, which give no reliable shape signal once every field is variable-length) is the
+/// one durable signal for which width `skip_effect_vec` needs (issue #629 round-2,
+/// `effect_byte_width`). Every OLDER `aresrpg` origin (the full `aresPackages` history) keeps
+/// decoding the pre-#577 width — this constant names ONLY the boundary, not the old side's
+/// enumeration.
+const FRESH_ARESRPG_ORIGIN: &str = "0x8781c9c8e9f87113536a6926e441b359a7bc24fda9a80a2b9b225a8d51d0da98";
 /// `aresrpg::crafting::Recipe` — the §14 encyclopedia crafting blueprint. The shared object
 /// carries the FULL recipe truth (ingredient list + output + job/level/xp); the `RecipeCreated`
 /// EVENT carries only counts, so the encyclopedia's recipe view snapshots the object, exactly
