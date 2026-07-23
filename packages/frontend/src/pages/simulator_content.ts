@@ -32,7 +32,6 @@ interface SeedItem {
 }
 
 interface SeedClass {
-  id: string
   name: string
   title: string
   health: number
@@ -133,8 +132,8 @@ export const load_seed_items = async (): Promise<SimItemTemplate[]> => {
 }
 
 // ── classes ────────────────────────────────────────────────────────────────────────────────────────
-export const SEED_CLASSES: SimClassTemplate[] = Object.values(CLASSES).map((c) => ({
-  id: c.id,
+export const SEED_CLASSES: SimClassTemplate[] = Object.entries(CLASSES).map(([id, c]) => ({
+  id,
   displayName: c.name,
   title: c.title,
   weaponCategory: (c.weapon_category ?? '').toUpperCase(),

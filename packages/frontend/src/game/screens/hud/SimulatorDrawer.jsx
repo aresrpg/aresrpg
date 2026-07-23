@@ -10,9 +10,9 @@
 // and the derived secondaries: critical, raw damage, the 4 elemental resistances)
 // straight from the SDK so the planner and the live Stats panel agree by construction.
 //
-// SSOT: classes + per-level spell unlocks come from @aresrpg/sdk/classes (classes.json); the point
-// budget from @aresrpg/sdk/experience; every derived number from @aresrpg/sdk/stats
-// (get_max_health / get_total_stat / get_secondary_stats). This component computes NO balance.
+// SSOT: class identity comes from @aresrpg/sdk/classes; spell unlocks come from the runtime-published
+// fight-spell catalog; the point budget from @aresrpg/sdk/experience; every derived number from
+// @aresrpg/sdk/stats (get_max_health / get_total_stat / get_secondary_stats). This component computes NO balance.
 //
 // CONVENIENCE: "Load current" seeds the form from the active on-chain character (class, level
 // inferred from xp, allocated base stats) so the player can plan from their real build. Equipment
@@ -43,13 +43,13 @@ import { element_color } from './encyclopedia-data.js'
 import './hud-panels.css'
 import './simulator.css'
 
-// classes.json = class IDENTITY only (id / name / title) for the picker; fight-spells.json carries no class
-// metadata. The spell roster below comes from the on-chain fight-spell SSOT (class_spells), not this map.
+// classes.json = class IDENTITY only for the picker; its outer keys own class ids. The spell roster below
+// comes from the published fight-spell catalog (class_spells), not this map.
 const CLASSES =
-  /** @type {Record<string, { id: string, name: string, title: string }>} */ (
+  /** @type {Record<string, { name: string, title: string }>} */ (
     classes_json
   )
-const CLASS_LIST = Object.values(CLASSES)
+const CLASS_LIST = Object.entries(CLASSES).map(([id, class_def]) => ({ id, ...class_def }))
 
 // 5 characteristic points per level (the level-up grant — see the Stats deliverable). Level 1 is
 // the floor with no points spent yet; each level above grants 5.

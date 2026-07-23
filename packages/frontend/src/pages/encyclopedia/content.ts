@@ -9,13 +9,13 @@
 // cross-references already live in `../../game/screens/hud/encyclopedia-data.js` (the in-game
 // encyclopedia data builder). We import those and only RESHAPE the seed fields into the companion
 // template field names (e.g. `min_level` -> `minLevel`, `quality` -> `rarity`, snake_case stats ->
-// camelCase, `recipes.json` -> a `recipeJson` string). All data is static, so every fetch_* is a
-// no-op and template_detail is precomputed at module load.
+// camelCase, `recipes.json` -> a `recipeJson` string). Class spell details bypass this static adapter
+// and read the runtime-published catalog directly in classes_tab.tsx.
 
 import { GATHER_RESOURCES, job_for_recipe } from '@aresrpg/sdk/jobs'
 import npcs_json from '@aresrpg/sdk/npcs' with { type: 'json' }
 
-import { ITEM_LIST, MOB_LIST, CLASS_LIST, SPELLS_BY_CLASS, RECIPES } from '../../game/screens/hud/encyclopedia-data.js'
+import { ITEM_LIST, MOB_LIST, CLASS_LIST, RECIPES } from '../../game/screens/hud/encyclopedia-data.js'
 
 // ── seeded shapes (the SDK JSON carries fields the in-game typedefs don't model) ──────────────
 type Stats = Record<string, number | [number, number]>
@@ -42,7 +42,6 @@ interface RawClass {
   health: number
   weapon_category: string
   starter_weapon: string
-  spells: Record<string, string>
 }
 
 interface RawNpc {
@@ -52,19 +51,6 @@ interface RawNpc {
   appearance: string | null
   dialog_text: string | null
   item_in_hand: string | null
-}
-
-interface RawSpellLevel {
-  cost?: number
-  area?: number
-  turns_to_recast?: number
-  base_effects?: {
-    type: string
-    element?: string
-    min?: number
-    max?: number
-    turns?: number
-  }[]
 }
 
 const ITEM_LIST_RAW = ITEM_LIST as unknown as RawItem[]
@@ -167,56 +153,6 @@ const npcs_t = Object.values(NPCS_RAW).map((npc) => ({
   appearance: npc.appearance,
 }))
 
-// ── precomputed detail panes (class spell decks) ───────────────────────────────────────────────
-// The old `item:`/`mob:` drop precomputes (item_dropped_by / mob_drops) were DELETED with the loot
-// re-point: every drop surface now reads the /v1 ON-CHAIN loot projection with the exact chance
-// (bestiary_tab.tsx / items_tab.tsx / loot.ts — never a seed-catalog guess). Only the
-// CLASSES tab still reads `template_detail['class:'*]` from here.
-
-// Seed turn-based spell `levels` array -> the companion's keyframe map (interpolate_levels reads
-// numeric keys + builds the 10 displayed levels). cost = AP -> stamina_cost, area -> aoe, and each
-// base effect maps to the companion `{ type, element, damages: [min, max], duration }` effect shape.
-function spell_keyframes(levels: RawSpellLevel[] | undefined): Record<string, unknown> {
-  const keyframes: Record<string, unknown> = {}
-  ;(levels ?? []).forEach((level, index) => {
-    keyframes[String(index + 1)] = {
-      cooldown: level.turns_to_recast ?? 0,
-      stamina_cost: level.cost ?? 0,
-      aoe: level.area ?? 0,
-      effects: (level.base_effects ?? []).map((effect) => {
-        const out: Record<string, unknown> = { type: effect.type }
-        if (effect.element) out.element = effect.element
-        if (effect.type === 'damage' || effect.type === 'heal' || effect.type === 'life_steal')
-          out.damages = [effect.min ?? 0, effect.max ?? 0]
-        if (effect.turns != null) out.duration = effect.turns
-        return out
-      }),
-    }
-  })
-  return keyframes
-}
-
-function class_spells(cls: RawClass) {
-  return Object.entries(cls.spells ?? {})
-    .map(([unlock, full_id]) => {
-      const short = full_id.startsWith(`${cls.id}_`) ? full_id.slice(cls.id.length + 1) : full_id
-      const spell = SPELLS_BY_CLASS[cls.id]?.[short]
-      if (!spell) return null
-      return {
-        id: full_id,
-        name: spell.name,
-        description: spell.description ?? '',
-        unlock_level: Number(unlock),
-        levelsJson: JSON.stringify(spell_keyframes(spell.levels as unknown as RawSpellLevel[])),
-      }
-    })
-    .filter((spell): spell is NonNullable<typeof spell> => spell !== null)
-    .sort((a, b) => a.unlock_level - b.unlock_level)
-}
-
-const template_detail: Record<string, unknown> = {}
-for (const cls of CLASS_LIST_RAW) template_detail[`class:${cls.id}`] = { spells: class_spells(cls) }
-
 // ── the drop-in store slice (mirrors the `use_ws()` API the encyclopedia consumed) ─────────────
 // T8 (board ticket #8): the `dungeon` field was removed — it was a hardcoded-empty stub (the seed has no
 // dungeon content) feeding a DUNGEONS encyclopedia tab that has since been deleted for showing nothing
@@ -233,9 +169,6 @@ const CONTENT = {
   },
   templates_loading: false,
   fetch_templates: noop,
-  fetch_template_detail: noop,
-  template_detail,
-  template_detail_loading: false,
   fetch_marketplace_chart: noop,
   marketplace_chart: null,
   marketplace_chart_loading: false,

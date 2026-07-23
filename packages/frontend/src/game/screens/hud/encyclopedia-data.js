@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Encyclopedia content data + helpers (NO JSX). The single home for the seeded content casts
-// (items.json / spells.json / classes.json from @aresrpg/sdk), the derived browse lists the panes
-// iterate, and the small formatting/colour helpers they share. The drawer computes no balance and
-// stores nothing — it renders the data the sim and server already consume; mobs come from the client
-// roster (data/mobs.js) since the SDK carries no mob templates yet (FLAGGED with the content seed).
+// Encyclopedia content data + helpers (NO JSX). The single home for seeded identity/content casts,
+// derived browse lists, and the small formatting/colour helpers the panes share. Class spells deliberately
+// do not live here: the class tab reads the runtime-published catalog through fight-spells.js.
 
 import classes_json from '@aresrpg/sdk/classes' with { type: 'json' }
-import spells_json from '@aresrpg/sdk/spells' with { type: 'json' }
 import items_json from '@aresrpg/sdk/items-data' with { type: 'json' }
 import mobs_json from '@aresrpg/sdk/mobs' with { type: 'json' }
 import recipes_json from '@aresrpg/sdk/recipes' with { type: 'json' }
@@ -19,14 +16,9 @@ import { is_developer_item } from '@aresrpg/sdk/jobs'
  *   quality: string, level: number, stackable: boolean,
  *   stats: Record<string, [number, number]>,
  *   damages: { element: string, min: number, max: number }[], icon: string }} ItemDef
- * @typedef {{ cost: number, range: [number, number], area: number, area_type: string,
- *   line_of_sight: boolean, linear: boolean, modifiable_range: boolean,
- *   base_effects: { type: string, element?: string, min?: number, max?: number, turns?: number }[] }} SpellLevel
- * @typedef {{ name: string, icon: string, level: number,
- *   description: string, levels: SpellLevel[] }} RawSpell
- * @typedef {RawSpell & { key: string, class_id: string }} SpellDef
- * @typedef {{ id: string, name: string, title: string, health: number, stamina: number,
- *   weapon_category: string, spells: Record<string, string> }} ClassDef
+ * @typedef {{ name: string, title: string, health: number, stamina: number,
+ *   starter_weapon: string, weapon_category: string }} ClassDef
+ * @typedef {ClassDef & { id: string }} ClassEntry
  */
 
 // The seeded JSON has no .d.ts, so TS infers narrow literal shapes that don't overlap our typedefs;
@@ -37,10 +29,6 @@ export const ITEMS = /** @type {Record<string, ItemDef>} */ (
 export const CLASSES = /** @type {Record<string, ClassDef>} */ (
   /** @type {unknown} */ (classes_json)
 )
-export const SPELLS_BY_CLASS =
-  /** @type {Record<string, Record<string, RawSpell>>} */ (
-    /** @type {unknown} */ (spells_json)
-  )
 
 /**
  * @typedef {{ ingredients: { id: string, qty: number }[], craft_xp: number }} RecipeDef
@@ -120,17 +108,9 @@ export const ITEM_LIST = /** @type {ItemDef[]} */ (
   Object.values(ITEMS).filter(it => !is_developer_item(it))
 )
 
-export const SPELL_LIST = /** @type {SpellDef[]} */ (
-  Object.entries(SPELLS_BY_CLASS).flatMap(([class_id, spells]) =>
-    Object.entries(spells).map(([key, def]) => ({
-      ...def,
-      key: `${class_id}.${key}`,
-      class_id,
-    })),
-  )
+export const CLASS_LIST = /** @type {ClassEntry[]} */ (
+  Object.entries(CLASSES).map(([id, class_def]) => ({ id, ...class_def }))
 )
-
-export const CLASS_LIST = /** @type {ClassDef[]} */ (Object.values(CLASSES))
 
 /**
  * @typedef {{ id: string, name: string, element: string, boss: boolean, min_level: number,

@@ -8,10 +8,10 @@
 // owned by core/modules/player_experience.js.
 //
 // Data is pulled, never hardcoded: the new level + points gained come from the level-up EVENT (the slice);
-// the class line + the unlocked spell are resolved from @aresrpg/sdk (classes.json level->spell map cross-
-// referenced against spells.json for the real name + AP cost + CDN icon). The +5 characteristic / +1 spell
-// grant is already credited on-chain (AresCharacter.java); this only celebrates it. If no spell unlocks at
-// the crossed level, the unlock row is omitted entirely (no empty card).
+// the class line is resolved from @aresrpg/sdk/classes identity, while the unlocked spell comes from the
+// runtime-published fight spell catalog (name + AP cost + CDN icon). The +5 characteristic / +1 spell grant
+// is already credited on-chain (AresCharacter.java); this only celebrates it. If no spell unlocks at the
+// crossed level, the unlock row is omitted entirely (no empty card).
 
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'

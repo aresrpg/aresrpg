@@ -34,7 +34,7 @@ const LOCALES = { de, en, es, fr, ja, uk }
 describe('class identity labels', () => {
   test('the twelve simulator and SDK identities match the sanctioned roster', () => {
     expect(Object.fromEntries(CLASSES.map(({ id, title }) => [id, title]))).toEqual(SANCTIONED_TITLES)
-    expect(Object.fromEntries(Object.values(sdk_classes).map(({ id, title }) => [id.toUpperCase(), title]))).toEqual(
+    expect(Object.fromEntries(Object.entries(sdk_classes).map(([id, { title }]) => [id.toUpperCase(), title]))).toEqual(
       SANCTIONED_TITLES
     )
     expect(get_class('tomoda')?.title).toBe('Tomoda')
