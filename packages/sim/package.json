@@ -66,6 +66,10 @@
       "types": "./types/spell_targeting.d.ts",
       "import": "./src/spell_targeting.js"
     },
+    "./spell_effect": {
+      "types": "./types/spell_effect.d.ts",
+      "import": "./src/spell_effect.js"
+    },
     "./spell_calculator": {
       "types": "./types/spell_calculator.d.ts",
       "import": "./src/spell_calculator.js"

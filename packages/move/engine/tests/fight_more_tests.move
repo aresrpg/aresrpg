@@ -29,7 +29,7 @@ fun real_create_and_join_door_cover_seat_and_field_getters() {
   let clock = mk_clock(&mut sc, 1_000);
   fight::create<W>(
     W {}, &mut registry, object::id_from_address(WORLD), 9, 12345, 100, 200, 0, true, option::none(), false,
-    &bag_spec(50), 1, 42, object::id_from_address(LOOT), combatant(CHAR, 100), vector[], fight::test_dials(), &ver, &clock, sc.ctx(),
+    &bag_spec(50), 1, 42, object::id_from_address(LOOT), combatant(CHAR, 100), vector[], option::none(), fight::test_dials(), &ver, &clock, sc.ctx(),
   );
   clock::destroy_for_testing(clock);
   ts::return_shared(registry);
@@ -39,7 +39,7 @@ fun real_create_and_join_door_cover_seat_and_field_getters() {
   let mut fight = sc.take_shared<Fight>();
   let mut registry = tsreg(&sc);
   let ver = sc.take_shared<Version>();
-  fight::join<W>(W {}, &mut fight, &mut registry, combatant(CHAR2, 100), vector[], option::none(), 0, false, &ver, sc.ctx());
+  fight::join<W>(W {}, &mut fight, &mut registry, combatant(CHAR2, 100), vector[], option::none(), option::none(), 0, false, &ver, sc.ctx());
   assert!(fight::participant_count(&fight) == 2);
 
   assert!(fight::group_template(&fight) == object::id_from_address(LOOT));

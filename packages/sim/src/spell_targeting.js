@@ -16,6 +16,7 @@ import {
   SHAPE_CONE,
   SHAPE_CROSS,
   SHAPE_LINE,
+  SHAPE_PODIUM,
   SHAPE_POINT,
   SHAPE_RING,
   SHAPE_TBAR,
@@ -241,6 +242,18 @@ const cells_in_tbar = (caster, target, size) => {
   ]
 }
 
+// PODIUM (#387 — battleaxe / mace / hammer): the tbar front-arc PLUS one cell beyond the target along the strike
+// axis. Twin of `combat_grid::podium_cells`; same cell ORDER (tbar set, then the forward stem).
+const cells_in_podium = (caster, target, size) => {
+  const direction = dominant_direction(caster, target)
+  const cells = cells_in_tbar(caster, target, size)
+  if (direction.x !== 0 || direction.y !== 0) {
+    const forward = { x: target.x + direction.x, y: target.y + direction.y }
+    if (in_grid(forward)) cells.push(forward)
+  }
+  return cells
+}
+
 const cells_in_cone = (caster, target, size) => {
   const direction = dominant_direction(caster, target)
   if (direction.x === 0 && direction.y === 0) return []
@@ -301,6 +314,8 @@ export const get_aoe_cells = (spell, target, caster) => {
       return cells_in_line(caster, target, area + 1, dominant_direction)
     if (shape === SHAPE_TBAR && caster)
       return cells_in_tbar(caster, target, area)
+    if (shape === SHAPE_PODIUM && caster)
+      return cells_in_podium(caster, target, area)
     if (shape === SHAPE_RING)
       return scan_grid(cell => manhattan_distance(target, cell) === area)
     if (shape === SHAPE_ALLMAP) return scan_grid(() => true)

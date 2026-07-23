@@ -15,7 +15,7 @@ import { produce_predicted_render_events } from './fight_predicted_render.js'
 import { DISPLACE_TELEPORT } from './fight_render_prims.js'
 import { bfsPath, decode, encode } from './los.js'
 import { sim_effects_of } from './statuses.js'
-import { WEAPON_ATTACK_ID } from './weapon.js'
+import { WEAPON_ATTACK_ID, weapon_shape_of } from './weapon.js'
 
 // B7 ENGINE FOSSIL — the deployed engine lineage the CHAIN_PENDING exclusion set below was ruled against. UPDATE
 // RITUAL: on every engine upgrade re-stamp this to `ceremony_manifest.engine.latest` (the boundary test asserts the
@@ -472,9 +472,24 @@ export const chain_critical = (clock, critical_chance, critical_bonus = 0) => {
   return crit_at(slot_crit_roll(seed, clock.slot), critical_chance, critical_bonus)
 }
 
-/** Build the equipped weapon's attack line through the same sim template normalizer. */
-export const weapon_spell_template = (weapon = {}) =>
-  normalize_spell_templates([
+/**
+ * Build the equipped weapon's attack line through the same sim template normalizer. §387: the weapon's FINE
+ * category drives the CELL-SET SHAPE (`weapon_shape_of` — the one-home table) onto the damage effect's `area_shape`,
+ * so the hover preview and the sim resolve the SAME multi-cell set through the existing spell-AoE machinery. `linear`
+ * carries the spellbook line-only aim constraint; the bow's modifiable range is the range-bonus feed at cast time.
+ */
+export const weapon_spell_template = (weapon = {}) => {
+  const shape = weapon_shape_of(weapon.category)
+  const damage_effect = (value) => ({
+    kind: 0,
+    value: Number(value),
+    element: Number(weapon.element ?? 255),
+    target_filter: 1,
+    area_shape: shape.area_shape,
+    area_size: shape.area_size,
+    chance: 100,
+  })
+  return normalize_spell_templates([
     {
       id: WEAPON_ATTACK_ID,
       name: 'Weapon attack',
@@ -484,33 +499,19 @@ export const weapon_spell_template = (weapon = {}) =>
           range_min: 1,
           range_max: Math.max(1, Number(weapon.reach ?? 1)),
           line_of_sight: true,
+          linear: shape.line_only,
           free_cell: false,
           casts_per_turn: 255,
           casts_per_target: 255,
           cooldown_turns: 0,
           crit_rate: Number(weapon.crit_rate ?? 0),
-          effects: [
-            {
-              kind: 0,
-              value: Number(weapon.damage ?? 0),
-              element: Number(weapon.element ?? 255),
-              target_filter: 1,
-              chance: 100,
-            },
-          ],
-          crit_effects: [
-            {
-              kind: 0,
-              value: Number(weapon.crit_damage ?? weapon.damage ?? 0),
-              element: Number(weapon.element ?? 255),
-              target_filter: 1,
-              chance: 100,
-            },
-          ],
+          effects: [damage_effect(weapon.damage ?? 0)],
+          crit_effects: [damage_effect(weapon.crit_damage ?? weapon.damage ?? 0)],
         },
       ],
     },
   ]).get(WEAPON_ATTACK_ID)
+}
 
 /** Convert the live fight projection to a sim state, then run predict_sim_cast synchronously. */
 export const predict_cast = ({
