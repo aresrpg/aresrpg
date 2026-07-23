@@ -310,8 +310,11 @@ const normalize_effect = (e, fallback_area) => {
   const numeric_kind = typeof e['kind'] === 'number' ? e['kind'] : undefined
   const raw_type = String(e['type'] ?? numeric_kind)
   const value = Number(e['value'] ?? 0)
+  // #577 — the chain now carries a damage/heal RANGE: `value` = MIN, `value_max` = MAX (== value ⇒ fixed). No
+  // longer collapsed to a single number — the sim rolls in [min, max] off the turn seed, exactly like the chain.
+  const value_max =
+    typeof e['value_max'] === 'number' ? Number(e['value_max']) : value
   const raw_stat = Number(e['stat'] ?? 0)
-  const fixed_value = numeric_kind === undefined ? undefined : value
   const element = ELEMENT_MAP[String(e['element'])]
   const target = TARGET_MAP[String(e['target'])] ?? 'cell'
   const area_shape = Number(
@@ -321,8 +324,21 @@ const normalize_effect = (e, fallback_area) => {
   const base = {
     kind: numeric_kind,
     value: numeric_kind === undefined ? undefined : value,
-    min: fixed_value ?? (typeof e['min'] === 'number' ? e['min'] : undefined),
-    max: fixed_value ?? (typeof e['max'] === 'number' ? e['max'] : undefined),
+    // #577 — the authored damage/heal range for KNOWN chain kinds: min = value, max = value_max. UNKNOWN-kind
+    // (donor / `statistic`-shaped stat buffs) keep their explicit min/max — their magnitude draws from that range
+    // (fight_stat_effects.js), so forcing it undefined silently dropped every stat buff.
+    min:
+      numeric_kind === undefined
+        ? typeof e['min'] === 'number'
+          ? Number(e['min'])
+          : undefined
+        : value,
+    max:
+      numeric_kind === undefined
+        ? typeof e['max'] === 'number'
+          ? Number(e['max'])
+          : undefined
+        : value_max,
     element,
     chance: typeof e['chance'] === 'number' ? e['chance'] : undefined,
     turns: typeof e['turns'] === 'number' ? e['turns'] : undefined,

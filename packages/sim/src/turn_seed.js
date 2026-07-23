@@ -9,20 +9,23 @@
 // of the turn takes the next SLOT index (the escrow's `casts_this_turn` counter — weapon strikes count too), and
 // slot `i` carries a fixed crit roll bound to the INDEX ONLY (never the spell/target — kills cross-target
 // fishing; slot-routing is the mechanic). The client folds this to PREVIEW, before committing, which queued
-// slots crit. DAMAGE IS EXACT: a hit deals precisely its authored base — crit swaps to
-// the crit base, nothing else moves. (The pre-ceremony ±15% global variance band was REMOVED from the chain;
-// per-spell authored ranges are a future spells-package schema evolution, not this layer.)
+// slots crit. #577 (owner ruling 2026-07-23) — DAMAGE IS RANDOM: one per-cast `slot_damage_roll` (a DISTINCT
+// domain tag from crit) picks a value in each effect's authored `[min, max]`; crit swaps to the crit RANGE.
+// `max == min` is the fixed case (byte-identical to the pre-#577 single base). The client mirrors the roll to
+// preview this turn's EXACT damage before committing, exactly as it previews crit.
 //
 // DERIVATION (every step a `prng.mix` fold — mirrors spell_formula.move / fight.move byte-for-byte):
-//   turn_seed  = mix(mix(mix(world_seed, spawn_id), turn_deadline_ms), seat)
-//   crit_roll  = mix(mix(turn_seed, slot), DOMAIN_CRIT) % 10000     ∈ [0, 10000)   (basis points)
+//   turn_seed   = mix(mix(mix(world_seed, spawn_id), turn_deadline_ms), seat)
+//   crit_roll   = mix(mix(turn_seed, slot), DOMAIN_CRIT) % 10000    ∈ [0, 10000)   (basis points)
+//   damage_roll = mix(mix(turn_seed, slot), DOMAIN_DMG)  % 10000    ∈ [0, 10000)   (#577, decorrelated from crit)
 // Parity is pinned by test/turn_seed.test.js against golden vectors extracted from the Move source of truth
 // (`sui move test` debug-print probe over aresrpg_foundation) + spell_formula's own t_crit_at_bp_threshold set.
 
-import { mix } from './prng.js'
+import { mix, scramble } from './prng.js'
 
-const CRIT_SCALE = 10000 // crit-roll fixed-point scale (basis points)
+const CRIT_SCALE = 10000 // crit/damage-roll fixed-point scale (basis points)
 const DOMAIN_CRIT = 0 // crit stream domain tag (spell_formula::DOMAIN_CRIT)
+const DOMAIN_DMG = 0xd1b54a35 // #577 damage stream domain tag (spell_formula::DOMAIN_DMG); ≠ crit/dodge/failure/tackle
 
 /**
  * The turn's seed — derived PURELY from public fight state (no stored field; upgrade-safe). Mirrors
@@ -44,6 +47,32 @@ export const turn_seed = ({ world_seed, spawn_id, turn_deadline_ms, seat }) =>
  */
 export const slot_crit_roll = (seed, slot) =>
   mix(mix(seed, slot), DOMAIN_CRIT) % CRIT_SCALE
+
+/**
+ * #577 — Slot `i`'s DAMAGE ROLL — a spell/target-INDEPENDENT fraction in [0, 10000) from (turn_seed, slot),
+ * decorrelated from the crit stream by DOMAIN_DMG. Mirrors spell_formula::slot_damage_roll byte-for-byte, so a
+ * client previews this turn's exact damage. One roll per cast is mapped onto each effect's own range.
+ * @param {number} seed the turn_seed @param {number} slot casts_this_turn pre-action @returns {number} [0,10000)
+ */
+export const slot_damage_roll = (seed, slot) =>
+  mix(mix(seed, slot), DOMAIN_DMG) % CRIT_SCALE
+
+/**
+ * #577 — a MOB's damage roll fraction: mobs have no turn seed (crank-driven, never previewable), so it derives
+ * from the threaded rng STATE by a NON-ADVANCING `scramble` — one roll per cast that does NOT consume the stream
+ * (fixed effects stay byte-identical; a range never shifts the mob's dodge draws). Mirrors spell_formula::crank_damage_roll.
+ * @param {number} rng_state the current threaded prng state @returns {number} [0,10000)
+ */
+export const crank_damage_roll = rng_state => scramble(rng_state) % CRIT_SCALE
+
+/**
+ * #577 — Map a damage roll ∈ [0, 10000) onto an authored `[min, max]` (inclusive): `min + roll·span/10000` where
+ * `span = max − min + 1`. `max <= min` ⇒ `min` (the fixed case). Mirrors spell_formula::roll_in_range — both
+ * twins pick the identical integer from the identical roll.
+ * @param {number} min @param {number} max @param {number} roll ∈ [0,10000) @returns {number}
+ */
+export const roll_in_range = (min, max, roll) =>
+  max <= min ? min : min + Math.floor((roll * (max - min + 1)) / CRIT_SCALE)
 
 // AP/MP-removal DODGE stream: the point-removal contest draws off the SAME public turn-seed as
 // crit — a NEW domain tag, zero new RNG — so a client previews a drain's dodge before commit exactly like a crit.

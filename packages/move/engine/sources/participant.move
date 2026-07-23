@@ -40,14 +40,17 @@ public struct Participant has store, drop {
 
 // ╔════════════════ [ Weapon — the §17.27 equipped-weapon attack snapshot ] ═ ]
 
-/// The equipped weapon's attack line (§17.27): a fixed elemental `damage` (crit swaps to `crit_damage`,
-/// shape-freeze law — damage is a FIXED base, crit is the only damage RNG), an AP `ap_cost`, and a Manhattan
-/// `reach` by weapon family. SEAM: comes from the declared game EquipmentShim read (equipment module not built
-/// yet); no weapon is granted at creation (early weapons = easy loot; bare hands = unarmed_line). Repeatable while AP lasts — no per-turn cap.
+/// The equipped weapon's attack line (§17.27): an elemental damage RANGE `[damage, damage_max]` (crit swaps to
+/// `[crit_damage, crit_damage_max]`), an AP `ap_cost`, and a Manhattan `reach` by weapon family. #577 — a strike
+/// rolls one value in that range off the turn seed (previewable), exactly like a spell; `damage_max == damage`
+/// is the degenerate FIXED base (pre-#577 behaviour). SEAM: comes from the declared game EquipmentShim read;
+/// no weapon is granted at creation (early weapons = easy loot; bare hands = unarmed_line). Repeatable while AP lasts.
 public struct Weapon has copy, drop, store {
   element: u8,
-  damage: u64,
-  crit_damage: u64,
+  damage: u64, // #577 — the MIN of the normal-hit range
+  damage_max: u64, // #577 — the MAX (== damage ⇒ fixed)
+  crit_damage: u64, // #577 — the MIN of the crit range
+  crit_damage_max: u64, // #577 — the MAX (== crit_damage ⇒ fixed)
   crit_rate: u64, // 1-in-X; 0 = never crit
   ap_cost: u64,
   reach: u64,
@@ -55,31 +58,46 @@ public struct Weapon has copy, drop, store {
 
 /// PACKAGE-PRIVATE by the anti-forgery ruling (F-02): a public weapon constructor + a public combatant
 /// constructor + a raw-param `create` was the forge-a-god-seat exploit chain. Fight-internal code (and this
-/// package's tests) build weapons; PTBs never do.
+/// package's tests) build weapons; PTBs never do. FIXED alias (range == single value); `new_weapon_ranged` authors a spread.
 public(package) fun new_weapon(element: u8, damage: u64, crit_damage: u64, crit_rate: u64, ap_cost: u64, reach: u64): Weapon {
-  Weapon { element, damage, crit_damage, crit_rate, ap_cost, reach }
+  Weapon { element, damage, damage_max: damage, crit_damage, crit_damage_max: crit_damage, crit_rate, ap_cost, reach }
 }
 
-/// ONE authored damage LINE of the equipped weapon (§17.27 wave-2a): a flat elemental `damage` (crit swaps to
-/// `crit_damage`), keyed by `element` (spell::el_* id). A weapon carries a `vector<WeaponLine>` — a multi-element
-/// weapon (fire line + water line) resolves each line vs its own resist, exactly as a multi-element spell does.
-/// The line carries ONLY damage; the SHARED mechanics (ap_cost / reach / crit_rate) stay on `Weapon` (the family
-/// mechanics that never came from the item). PUBLIC (like `new_combatant`): the game package builds lines from a
-/// character's chain-verified equipped item and threads them through the BRAND-GATED `fight::create`/`join`
-/// — a forged line can only enter a fight the forger self-brands (worthless loot, the F-02 guarantee).
+/// #577 — RANGE-aware weapon constructor: `[damage, damage_max]` normal, `[crit_damage, crit_damage_max]` crit.
+public(package) fun new_weapon_ranged(element: u8, damage: u64, damage_max: u64, crit_damage: u64, crit_damage_max: u64, crit_rate: u64, ap_cost: u64, reach: u64): Weapon {
+  Weapon { element, damage, damage_max, crit_damage, crit_damage_max, crit_rate, ap_cost, reach }
+}
+
+/// ONE authored damage LINE of the equipped weapon (§17.27 wave-2a): an elemental damage RANGE `[damage,
+/// damage_max]` (crit swaps to `[crit_damage, crit_damage_max]`), keyed by `element` (spell::el_* id). A weapon
+/// carries a `vector<WeaponLine>` — a multi-element weapon resolves each line vs its own resist, exactly as a
+/// multi-element spell does. The line carries ONLY damage; the SHARED mechanics (ap_cost / reach / crit_rate) stay
+/// on `Weapon`. PUBLIC (like `new_combatant`): the game package builds lines from a character's chain-verified
+/// equipped item and threads them through the BRAND-GATED `fight::create`/`join` (a forged line can only enter a
+/// fight the forger self-brands — worthless loot, the F-02 guarantee).
 public struct WeaponLine has copy, drop, store {
   element: u8,
-  damage: u64,
-  crit_damage: u64,
+  damage: u64, // #577 — MIN of the normal-hit range
+  damage_max: u64, // #577 — MAX (== damage ⇒ fixed)
+  crit_damage: u64, // #577 — MIN of the crit range
+  crit_damage_max: u64, // #577 — MAX (== crit_damage ⇒ fixed)
 }
 
+/// FIXED alias (range == single value). `new_weapon_line_ranged` authors a spread (the equipment path feeds it once items carry ranges).
 public fun new_weapon_line(element: u8, damage: u64, crit_damage: u64): WeaponLine {
-  WeaponLine { element, damage, crit_damage }
+  WeaponLine { element, damage, damage_max: damage, crit_damage, crit_damage_max: crit_damage }
+}
+
+/// #577 — RANGE-aware line constructor: `[damage, damage_max]` normal, `[crit_damage, crit_damage_max]` crit.
+public fun new_weapon_line_ranged(element: u8, damage: u64, damage_max: u64, crit_damage: u64, crit_damage_max: u64): WeaponLine {
+  WeaponLine { element, damage, damage_max, crit_damage, crit_damage_max }
 }
 
 public(package) fun wl_element(w: &WeaponLine): u8 { w.element }
-public(package) fun wl_damage(w: &WeaponLine): u64 { w.damage }
-public(package) fun wl_crit_damage(w: &WeaponLine): u64 { w.crit_damage }
+public(package) fun wl_damage(w: &WeaponLine): u64 { w.damage } // #577 — MIN of the normal range
+public(package) fun wl_damage_max(w: &WeaponLine): u64 { w.damage_max } // #577 — MAX
+public(package) fun wl_crit_damage(w: &WeaponLine): u64 { w.crit_damage } // #577 — MIN of the crit range
+public(package) fun wl_crit_damage_max(w: &WeaponLine): u64 { w.crit_damage_max } // #577 — MAX
 
 // ── the §17.27 v1 per-family attack lines (parallel CONST tables, index-aligned with WL_FAMILIES). A CONST by
 // the same shape-freeze ruling as equipment's CLASS_FAMILIES: reach/AP-cost are MECHANICS, not dials. The damage
@@ -111,10 +129,14 @@ public fun weapon_line_of(family: Option<String>, affinity: bool): Weapon {
   while (i < n) {
     if (&fams[i] == bytes) {
       let (el, dmg, cdmg, crate, ap, reach) = (WL_ELEMENT, WL_DAMAGE, WL_CRIT_DAMAGE, WL_CRIT_RATE, WL_AP_COST, WL_REACH);
+      let d = affinity_scale(dmg[i], affinity);
+      let cd = affinity_scale(cdmg[i], affinity);
       return Weapon {
         element: el[i],
-        damage: affinity_scale(dmg[i], affinity),
-        crit_damage: affinity_scale(cdmg[i], affinity),
+        damage: d,
+        damage_max: d, // #577 — family lines are FIXED (max == min) until per-item ranges land
+        crit_damage: cd,
+        crit_damage_max: cd,
         crit_rate: crate[i], // affinity NEVER touches crit_rate / ap_cost / reach (mechanics, not damage)
         ap_cost: ap[i],
         reach: reach[i],
@@ -131,7 +153,7 @@ fun affinity_scale(base: u64, affinity: bool): u64 { if (affinity) base * 110 / 
 
 /// Bare hands: earth (the guaranteed-resolvable element), low fixed damage, cheap swings, melee reach.
 fun unarmed_line(): Weapon {
-  Weapon { element: 2, damage: 4, crit_damage: 6, crit_rate: 30, ap_cost: 3, reach: 1 }
+  Weapon { element: 2, damage: 4, damage_max: 4, crit_damage: 6, crit_damage_max: 6, crit_rate: 30, ap_cost: 3, reach: 1 }
 }
 
 // ╔════════════════ [ Combatant — the character combat SNAPSHOT (the game-read seam shape) ] ═ ]
@@ -181,8 +203,10 @@ public(package) fun new(c: Combatant, owner: address, team: u8, cell: u64): Part
 
 // ── weapon accessors (§17.27 attack resolution) ──
 public(package) fun weapon_element(self: &Participant): u8 { self.weapon.element }
-public(package) fun weapon_damage(self: &Participant): u64 { self.weapon.damage }
-public(package) fun weapon_crit_damage(self: &Participant): u64 { self.weapon.crit_damage }
+public(package) fun weapon_damage(self: &Participant): u64 { self.weapon.damage } // #577 — MIN of the normal range
+public(package) fun weapon_damage_max(self: &Participant): u64 { self.weapon.damage_max } // #577 — MAX
+public(package) fun weapon_crit_damage(self: &Participant): u64 { self.weapon.crit_damage } // #577 — MIN of the crit range
+public(package) fun weapon_crit_damage_max(self: &Participant): u64 { self.weapon.crit_damage_max } // #577 — MAX
 public(package) fun weapon_crit_rate(self: &Participant): u64 { self.weapon.crit_rate }
 public(package) fun weapon_ap_cost(self: &Participant): u64 { self.weapon.ap_cost }
 public(package) fun weapon_reach(self: &Participant): u64 { self.weapon.reach }
