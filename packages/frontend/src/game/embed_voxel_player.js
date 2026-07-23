@@ -561,11 +561,15 @@ export function create_player({
     if (frame_n % 10 === 0) {
       // D188(b)/D199 relocation — position + CAMERA yaw (rig azimuth, the compass heading basis) + fps
       // publish as ONE throttled pose; the CompassStrip (3A top-strip) renders all three from the store.
+      // #496 — ALSO carry the avatar's TRUE heading (facing_yaw, derived from motion): the group-loop
+      // follow formation anchors to it, never the camera azimuth. Anchoring followers to cam yaw swung the
+      // whole formation around a STANDING avatar the moment the camera orbited — "chases the camera".
       context.dispatch('action/player_pose', {
         x: t.position[0],
         y: t.position[1],
         z: t.position[2],
         yaw: cam.get_yaw(),
+        facing_yaw: t.facing_yaw,
         fps: Math.round(engine.get_stats?.().fps ?? 0),
       })
       // D206: announce our cell to the p2p room on ACTUAL change only (lobby-room's own throttle contract).

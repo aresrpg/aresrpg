@@ -94,6 +94,21 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
     expect(wiring.store.getState().follow.followers[ALT_2].status).toBe('in_transit')
   })
 
+  test('#496 — the follow formation anchors to the avatar facing_yaw, never the camera azimuth (pose.yaw)', () => {
+    const { wiring } = make_harness()
+    sync_full_group(wiring, [
+      [LEADER, WORLD],
+      [ALT_1, WORLD],
+    ])
+    // Orbiting a STANDING avatar: the camera azimuth (pose.yaw) swings while the avatar heading holds.
+    // The leader pose the reducer clocks must track facing_yaw — feeding pose.yaw is the #496 camera chase.
+    wiring.pose_tick({ x: 0, z: 0, yaw: Math.PI, facing_yaw: 0 }, { character_id: LEADER })
+    expect(wiring.store.getState().leader_pose.yaw).toBe(0)
+    // Absent facing_yaw (pre-motion frame) still degrades to the camera yaw so the pose is never dropped.
+    wiring.pose_tick({ x: 0, z: 0, yaw: 1.25 }, { character_id: LEADER })
+    expect(wiring.store.getState().leader_pose.yaw).toBe(1.25)
+  })
+
   test('an EXECUTED follow join failure latches the member and a leader world change never re-fires it', async () => {
     const { wiring, calls } = make_harness({
       join_world_impl: () => Promise.reject(Object.assign(new Error('abort'), { executed: true })),

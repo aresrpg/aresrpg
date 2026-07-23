@@ -137,7 +137,10 @@ export function create_group_wiring(deps) {
     },
     /** One throttled avatar pose tick. A non-leader active avatar is ignored by the reducer. */
     pose_tick(pose, { character_id = null } = {}, now = Date.now()) {
-      return feed({ kind: 'leader_position', character_id, x: pose.x, z: pose.z, yaw: pose.yaw, now })
+      // #496 — anchor the formation to the leader AVATAR's heading (facing_yaw), never the camera azimuth
+      // (pose.yaw = cam.get_yaw()). Fallback to pose.yaw only when facing_yaw is absent (pre-motion frame).
+      const yaw = Number.isFinite(pose.facing_yaw) ? pose.facing_yaw : pose.yaw
+      return feed({ kind: 'leader_position', character_id, x: pose.x, z: pose.z, yaw, now })
     },
     /** The timer owns no state: every cadence re-enters through the reducer input door. */
     transit_tick(now = Date.now()) {
