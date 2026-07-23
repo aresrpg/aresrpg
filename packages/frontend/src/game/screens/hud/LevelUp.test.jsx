@@ -5,7 +5,7 @@
 //
 // (a) DISMISS CONTRACT — no timer-driven hide; only the explicit Allocate/Later buttons unmount the card.
 // This repo's HUD component tests are SSR-only (renderToStaticMarkup, no jsdom/happy-dom dependency — see
-// FightsCount.test.jsx / PetFeedModal.test.jsx), and `useEffect` never runs under SSR, so a mounted-DOM
+// PetFeedModal.test.jsx), and `useEffect` never runs under SSR, so a mounted-DOM
 // timer-fired proof isn't reachable without adding a new dependency. The mechanical pin is therefore the
 // static file shape: LevelUp.jsx must contain no `setTimeout` at all (its only historical use WAS the
 // auto-dismiss). This was RED before the fix (the timer existed) and is GREEN after (deleted).

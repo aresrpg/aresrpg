@@ -2465,61 +2465,10 @@ button.hud-socket:focus-visible {
   width: 100%;
 }
 
-/* ── Nearby fights (Wave SPECTATE): the count card + the chooser modal ──────────── */
-
-/* count card — bottom-left, above chat, near the craft-queue area. Clickable; opens the modal. */
-.hud-fights-count {
-  position: fixed;
-  left: var(--s-4);
-  /* sits as a small card ABOVE the chat panel (chat is bottom-left, ~344px tall from bottom:16, so
-     its top is ~360px). 372px clears the chat top with a gap so the two never overlap (a standing rule:
-     no UI overlaps). Measured empirically across 1024-1440 widths. */
-  bottom: 372px;
-  z-index: 22;
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-  padding: var(--s-2) var(--s-3);
-  background: linear-gradient(160deg, var(--glass-hi), var(--glass));
-  border: 1px solid var(--edge);
-  border-top-color: var(--edge-top);
-  border-radius: var(--r-2);
-  box-shadow: 0 6px 20px rgb(0 0 0 / 0.35);
-  backdrop-filter: blur(14px) saturate(150%);
-  -webkit-backdrop-filter: blur(14px) saturate(150%);
-  color: var(--fg);
-  cursor: pointer;
-  transition:
-    border-color var(--dur-1) var(--ease),
-    transform var(--dur-1) var(--ease);
-}
-.hud-fights-count:hover {
-  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
-  transform: translateY(-1px);
-}
-.hud-fights-count__icon {
-  display: grid;
-  place-items: center;
-  color: var(--accent);
-}
-.hud-fights-count__icon svg {
-  width: 18px;
-  height: 18px;
-}
-.hud-fights-count__num {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--accent);
-}
-/* #499: house uppercase micro-label (was plain-case body text — the one chip in this file skipping it). */
-.hud-fights-count__label {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--fg-muted);
-}
+/* ── Nearby fights (Wave SPECTATE): the chooser modal ──────────── */
+/* the separate count-card indicator (bottom-left, above chat) is deleted (owner 2026-07-23: an unstyled
+   duplicate of the [V] PromptStack chip's own signal — world_fights_discovery.js now folds the in-range
+   count into that ONE pill's label instead). */
 
 /* chooser modal — reuses .hud-middle / .hud-modal; per-fight teams + Join/Spectate */
 .fights-modal {

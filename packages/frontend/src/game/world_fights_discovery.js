@@ -4,8 +4,10 @@
 // see a "see fights in the area" prompt (the same idiom as "press to gather"), opening a panel with the
 // current fights in range. A SIBLING of world_spawns.js: same
 // world binding, same get_player_pos, same 6s cadence, same PromptStack idiom. It folds the /v1/fights?world
-// read into the EXISTING state.visible_fights Map (the seam FightsCount + FightsModal already read; its dead
-// WS packet source is gone) and arms a [V] prompt whenever a fight sits within 50 blocks. RULING 2026-07-19:
+// read into the EXISTING state.visible_fights Map (the seam FightsModal already reads; its dead WS packet
+// source is gone) and arms a [V] prompt whenever a fight sits within 50 blocks — the prompt's OWN label
+// folds in the in-range count (owner 2026-07-23: the separate raw count-card indicator was an unstyled
+// duplicate of this same signal and is deleted; this pill is the ONE surface for it now). RULING 2026-07-19:
 // when someone starts a fight, other players must see the sword too — a FORMING (placement) fight
 // in range also plants the SAME fight_sword.js herald every player sees when *I* start one (ground-sampled at
 // its own x/z, never my own feet Y — mirrors remote_players.js's per-entity grounding), diffed+despawned every
@@ -38,6 +40,12 @@ const POLL_MS = 6000 // the world_spawns zone cadence — one more read on the s
 const PROMPT_ID = 'fights'
 const PROMPT_KEY = 'V' // [V]iew fights — E/F/G/R are taken (dungeon/search/gather/attack); AZERTY-safe (KeyV)
 
+/** The [V] prompt's copy — the base "see fights" verb folded with the pluralized in-range count (owner
+ *  2026-07-23: this replaces the deleted raw count-card indicator as the ONE surface for the signal). Composes
+ *  two already-translated, already-6-locale keys rather than adding a third — one home per fact. */
+export const fights_prompt_label = (/** @type {number} */ count) =>
+  `${i18n.t('fights.see_nearby')} · ${i18n.t('fights.fights_nearby', { count })}`
+
 /**
  * Drive the nearby-fights discovery loop on the given player-position getter. Returns `{ dispose }`.
  * @param {{ get_player_pos: () => ArrayLike<number>, engine?: any }} args `engine` is the live engine facade
@@ -50,7 +58,7 @@ export function create_world_fights_discovery({ get_player_pos, engine = null })
   let offsets_resolved = false
   let offset_x = 0
   let offset_z = 0
-  let armed = false // is the [V] prompt currently registered?
+  let armed_count = 0 // 0 = the [V] prompt is unregistered; otherwise the exact count it was last armed with
   /** @type {Map<string, { dispose: () => void }>} */
   const planted_swords = new Map()
   const sample = (/** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ z) =>
@@ -86,20 +94,20 @@ export function create_world_fights_discovery({ get_player_pos, engine = null })
     return b.character_id === character_id ? (b.world ?? null) : null
   }
 
-  const arm_prompt = () => {
-    if (armed) return
-    armed = true
+  const arm_prompt = (/** @type {number} */ count) => {
+    if (armed_count === count) return // same count as last poll — skip the re-register (stable pill identity)
+    armed_count = count
     use_prompt_stack.getState().register_prompt({
       id: PROMPT_ID,
       key: PROMPT_KEY,
-      label: i18n.t('fights.see_nearby'),
+      label: fights_prompt_label(count),
       priority: 70, // below gather/attack (a fight you can act on) but a visible ambient affordance
       on_trigger: () => context.dispatch('action/fights_modal', { focus_id: null }),
     })
   }
   const clear_prompt = () => {
-    if (!armed) return
-    armed = false
+    if (!armed_count) return
+    armed_count = 0
     use_prompt_stack.getState().clear_prompt(PROMPT_ID)
   }
 
@@ -131,7 +139,7 @@ export function create_world_fights_discovery({ get_player_pos, engine = null })
         clear_world()
         clear_dungeon()
       }
-      if (count > 0) arm_prompt()
+      if (count > 0) arm_prompt(count)
       else clear_prompt()
     } finally {
       polling = false

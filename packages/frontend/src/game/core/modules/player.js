@@ -30,7 +30,7 @@ export default function player() {
           return { ...state, fights_modal: payload ?? null }
         case 'action/set_visible_fights':
           // The nearby-fights discovery poll (world_fights_discovery.js) reconciles the WHOLE in-range set at
-          // once (a Map<fight_id, marker>), replacing the dead WS packet source. FightsCount/FightsModal read it.
+          // once (a Map<fight_id, marker>), replacing the dead WS packet source. FightsModal reads it.
           return { ...state, visible_fights: payload instanceof Map ? payload : new Map() }
         case 'action/set_visible_dungeon_fights':
           // The SAME discovery poll, in a dungeon: my party members' current room-fights (Map<fight_id, row>) for

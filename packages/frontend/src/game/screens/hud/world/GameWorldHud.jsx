@@ -56,7 +56,6 @@ import { PromptStack } from './PromptStack.jsx'
 import { DungeonsModal } from './DungeonsModal.jsx'
 import { FightsModal } from './FightsModal.jsx'
 import { FightOpennessToggle } from './FightOpennessToggle.jsx'
-import { FightsCount } from '../FightsCount.jsx'
 import { Minimap } from '../Minimap.jsx' // CUBE-WORLD MINIMAP — top-right 3-D relief map (self-gates on pose)
 import { CommissionModal } from './commission/CommissionModal.jsx'
 import { Tutorial } from '../Tutorial.jsx'
@@ -253,9 +252,9 @@ export function GameWorldHud() {
         <NpcPrompt />
         <DiscoveryPrompts />
         <PromptStack />
-        {/* Nearby-fights DISCOVERY: the count card (bottom-left, above chat) + the panel it opens (the
-            [V] prompt opens the same). Both self-hide with no fights in range / in my own fight. */}
-        {!mobile && !fight_mode && <FightsCount />}
+        {/* Nearby-fights DISCOVERY: the [V] PromptStack chip (world_fights_discovery.js — its label carries
+            the in-range count) opens this panel. The old separate count-card indicator is deleted (owner
+            2026-07-23: it was an unstyled duplicate of this same signal). */}
         <FightsModal />
         <DungeonsModal />
         {/* Artisan commissions (world-tab modal, mirrors DungeonsModal's mount): a store-flag-gated overlay
