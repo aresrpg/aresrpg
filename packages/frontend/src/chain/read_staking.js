@@ -19,6 +19,7 @@ import { ITEM_CATEGORY } from '@aresrpg/sdk/items'
 import { get_owner_items } from '../rpc/client'
 import { with_timeout } from '../utils/with_timeout'
 import { game_log } from '../core/log.js'
+
 import { item_type_id } from './item_lineage'
 
 // Stackability is a CATEGORY property (consumable / resource / rune — item.move is_stackable_category),
