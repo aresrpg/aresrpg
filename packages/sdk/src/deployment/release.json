@@ -1,10 +1,10 @@
 {
   "schema": 1,
-  "generated_at": "2026-07-23T17:59:25.674Z",
+  "generated_at": "2026-07-23T19:14:16.164Z",
   "networks": {
     "testnet": {
       "chain_id": "",
-      "source_hash": "6b8332536acd4393545858ebb674540f156de6880dc946d56fb6677938ca176d",
+      "source_hash": "264e32b26802e64ff7ecf342c0744bc1b510cc0e12a2cd0cb6d9ddc1bd2995b7",
       "packages": {
         "foundation": {
           "origin": "0xd578da3450ffb5a9f4f792f942af13b56c968bc1484a7aaa80e616688fba4c80",
@@ -65,7 +65,7 @@
         },
         "aresrpg": {
           "origin": "0x045fdf6f7d05914335288d6acac90b6a0023395968b9b38fd6fdcc0c7180adc9",
-          "latest": "0x045fdf6f7d05914335288d6acac90b6a0023395968b9b38fd6fdcc0c7180adc9",
+          "latest": "0x21a4e5807e4e4b04a5b0704a2276849401990e0fcca6c3d9abfdd910edc71b78",
           "previous": [
             "0xae597a84ce38729bc0c2f272f9f76513c857fb95d8d571867f6253f9d5935083",
             "0xc05c8d9f65e4ee0a6dc9463c8c90341085daa062184043e1a6fd75bccd6842e1",
