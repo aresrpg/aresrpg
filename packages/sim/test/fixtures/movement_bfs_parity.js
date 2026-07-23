@@ -140,13 +140,44 @@ export const walk_parity_scenarios = [
     ],
     expected_trigger: true,
   },
+  {
+    meta: {
+      id: 'occupied_cell_equal_detour',
+      symptom:
+        'predicted mob route crossed a living fighter instead of taking Move’s upper equal-cost detour (#618)',
+    },
+    board: { width: 7, height: 7, obstacles: [] },
+    mover: { id: 'm0', is_player: false, start: { x: 2, y: 3 } },
+    opponent: { id: 'p0', is_player: true, cell: { x: 6, y: 6 } },
+    bodies: [{ id: 'm1', is_player: false, cell: { x: 3, y: 3 } }],
+    destination: { x: 4, y: 3 },
+    budget: 4,
+    trap: { source_id: 'p0', cell: { x: 0, y: 0 } },
+    // Hand trace of movement.move::walk over the frozen body mask:
+    // cost=4; from (2,3), left cannot finish in 3 and right=(3,3) is occupied. Up=(2,2) and down=(2,4)
+    // both finish in 3, so Move's left/right/up/down order picks up; then right, right, down reaches (4,3).
+    expected_path: [
+      { x: 2, y: 3 },
+      { x: 2, y: 2 },
+      { x: 3, y: 2 },
+      { x: 4, y: 2 },
+      { x: 4, y: 3 },
+    ],
+    // A valid, equal-length caller path to the same destination. Move ignores these intermediates and rebuilds
+    // the upper route above; the pre-#618 sim trusted and walked this lower route instead.
+    alternate_path: [
+      { x: 2, y: 4 },
+      { x: 3, y: 4 },
+      { x: 4, y: 4 },
+      { x: 4, y: 3 },
+    ],
+    expected_trigger: false,
+  },
 ]
 
-export const scenario_walkable = scenario => {
+export const scenario_terrain_walkable = scenario => {
   const blocked = new Set(
-    [...scenario.board.obstacles, ...scenario.bodies, scenario.opponent].map(
-      item => cell_key(item.cell ?? item),
-    ),
+    scenario.board.obstacles.map(item => cell_key(item.cell ?? item)),
   )
   return cell =>
     cell.x >= 0 &&
@@ -154,4 +185,19 @@ export const scenario_walkable = scenario => {
     cell.x < scenario.board.width &&
     cell.y < scenario.board.height &&
     !blocked.has(cell_key(cell))
+}
+
+export const scenario_occupied = scenario => {
+  const occupied = new Set(
+    [...scenario.bodies, scenario.opponent].map(item =>
+      cell_key(item.cell ?? item),
+    ),
+  )
+  return cell => occupied.has(cell_key(cell))
+}
+
+export const scenario_walkable = scenario => {
+  const terrain = scenario_terrain_walkable(scenario)
+  const occupied = scenario_occupied(scenario)
+  return cell => terrain(cell) && !occupied(cell)
 }

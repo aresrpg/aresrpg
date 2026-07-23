@@ -1,0 +1,324 @@
+{
+  "meta": {
+    "id": "occupied_cell_equal_detour",
+    "class": "movement",
+    "authored": "2026-07-23",
+    "source": "authored",
+    "notes": "Issue #618: m0 routes around live ally m1; equal upper/lower detours pin Move left/right/up/down tie-breaking."
+  },
+  "arena": {
+    "width": 7,
+    "height": 7,
+    "cells": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "spawns_a": [
+      {
+        "x": 5,
+        "y": 3
+      }
+    ],
+    "spawns_b": [
+      {
+        "x": 1,
+        "y": 3
+      },
+      {
+        "x": 3,
+        "y": 3
+      }
+    ]
+  },
+  "templates_raw": {},
+  "initial": {
+    "fight_id": "capsule_occupied_cell_equal_detour",
+    "arena_seed": 1,
+    "team0": [
+      {
+        "id": "p0",
+        "name": "p0",
+        "cell": {
+          "x": 5,
+          "y": 3
+        },
+        "health": 100,
+        "health_max": 100,
+        "ap": 10,
+        "ap_max": 10,
+        "mp": 5,
+        "mp_max": 5,
+        "ap_used": 0,
+        "mp_used": 0,
+        "is_player": true,
+        "template_id": "yajin",
+        "level": 1,
+        "stats": {
+          "agility": 0,
+          "intelligence": 0,
+          "range": 0,
+          "strength": 0
+        },
+        "effects": [],
+        "deck": [],
+        "hand": [],
+        "discard": [],
+        "spell_levels": {},
+        "ap_reserve": 0
+      }
+    ],
+    "team1": [
+      {
+        "id": "m0",
+        "name": "m0",
+        "cell": {
+          "x": 1,
+          "y": 3
+        },
+        "health": 100,
+        "health_max": 100,
+        "ap": 10,
+        "ap_max": 10,
+        "mp": 5,
+        "mp_max": 5,
+        "ap_used": 0,
+        "mp_used": 0,
+        "is_player": false,
+        "template_id": "yajin",
+        "level": 1,
+        "stats": {
+          "agility": 0,
+          "intelligence": 0,
+          "range": 0,
+          "strength": 0
+        },
+        "effects": [],
+        "deck": [],
+        "hand": [],
+        "discard": [],
+        "spell_levels": {},
+        "ap_reserve": 0
+      },
+      {
+        "id": "m1",
+        "name": "m1",
+        "cell": {
+          "x": 3,
+          "y": 3
+        },
+        "health": 100,
+        "health_max": 100,
+        "ap": 10,
+        "ap_max": 10,
+        "mp": 5,
+        "mp_max": 5,
+        "ap_used": 0,
+        "mp_used": 0,
+        "is_player": false,
+        "template_id": "yajin",
+        "level": 1,
+        "stats": {
+          "agility": 0,
+          "intelligence": 0,
+          "range": 0,
+          "strength": 0
+        },
+        "effects": [],
+        "deck": [],
+        "hand": [],
+        "discard": [],
+        "spell_levels": {},
+        "ap_reserve": 0
+      }
+    ]
+  },
+  "commands": [
+    {
+      "type": "start"
+    },
+    {
+      "type": "move",
+      "entity_id": "m0",
+      "path": [
+        {
+          "x": 2,
+          "y": 3
+        },
+        {
+          "x": 2,
+          "y": 4
+        },
+        {
+          "x": 3,
+          "y": 4
+        },
+        {
+          "x": 4,
+          "y": 4
+        },
+        {
+          "x": 4,
+          "y": 3
+        }
+      ]
+    }
+  ],
+  "pinned_move_path": [
+    {
+      "x": 2,
+      "y": 3
+    },
+    {
+      "x": 2,
+      "y": 2
+    },
+    {
+      "x": 3,
+      "y": 2
+    },
+    {
+      "x": 4,
+      "y": 2
+    },
+    {
+      "x": 4,
+      "y": 3
+    }
+  ],
+  "expected": {
+    "events": [
+      {
+        "type": "fight_started",
+        "fight_id": "capsule_occupied_cell_equal_detour",
+        "turn_order": [
+          "m0",
+          "p0",
+          "m1"
+        ],
+        "seed": 1
+      },
+      {
+        "type": "hand_update",
+        "fight_id": "capsule_occupied_cell_equal_detour",
+        "entity_id": "p0",
+        "hand": [],
+        "deck_size": 0,
+        "discard_size": 0
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_occupied_cell_equal_detour",
+        "entity_id": "m0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_moved",
+        "fight_id": "capsule_occupied_cell_equal_detour",
+        "entity_id": "m0",
+        "path": [
+          {
+            "x": 2,
+            "y": 3
+          },
+          {
+            "x": 2,
+            "y": 2
+          },
+          {
+            "x": 3,
+            "y": 2
+          },
+          {
+            "x": 4,
+            "y": 2
+          },
+          {
+            "x": 4,
+            "y": 3
+          }
+        ],
+        "tackled": false,
+        "mp_remaining": 0
+      }
+    ],
+    "terminal_digest": "7a857b67",
+    "terminal_summary": {
+      "winner": -1,
+      "turn_number": 1,
+      "entities": [
+        {
+          "id": "p0",
+          "health": 100,
+          "cell": {
+            "x": 5,
+            "y": 3
+          }
+        },
+        {
+          "id": "m0",
+          "health": 100,
+          "cell": {
+            "x": 4,
+            "y": 3
+          }
+        },
+        {
+          "id": "m1",
+          "health": 100,
+          "cell": {
+            "x": 3,
+            "y": 3
+          }
+        }
+      ]
+    }
+  }
+}

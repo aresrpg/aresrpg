@@ -25,6 +25,7 @@ import { normalize_spell_templates } from './spell_templates.js'
  * @property {object} templates_raw raw spell templates (normalized at load)
  * @property {{ fight_id: string, arena_seed: number, team0: object[], team1: object[] }} initial
  * @property {object[]} commands ordered reducer commands, `start` included explicitly
+ * @property {{x:number,y:number}[]} [pinned_move_path] independently hand-traced Move route, origin-exclusive
  * @property {{ events: object[], terminal_digest: string, terminal_summary: object }} [expected]
  */
 

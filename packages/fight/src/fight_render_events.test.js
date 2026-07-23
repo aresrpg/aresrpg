@@ -475,6 +475,30 @@ describe('receipt move path — obstacle-aware reconstruction (mob-crossed-obsta
     expect(rendered_path).toEqual(sim_path.slice(1)) // origin-exclusive, matching path_between's own contract
   })
 
+  test('occupied-cell equal-cost detour follows Move exactly (#618)', () => {
+    const receipt = produce_receipt_render_turns(mob_moved_to(4, 3), {
+      fight_id: 'fight-1',
+      resolve_fighter_id,
+      fighter_cells: new Map([
+        ['m1', { x: 1, y: 3 }],
+        ['m0', { x: 3, y: 3 }],
+        ['p0', { x: 5, y: 3 }],
+      ]),
+      board_width: 7,
+      board_height: 7,
+    })
+
+    // movement::walk hand trace: from (1,3), right reaches (2,3); right is then occupied by m0. Up and down
+    // both finish in three, so left/right/up/down picks up, followed by right, right, down.
+    expect(move_path_of(receipt)).toEqual([
+      { x: 2, y: 3 },
+      { x: 2, y: 2 },
+      { x: 3, y: 2 },
+      { x: 4, y: 2 },
+      { x: 4, y: 3 },
+    ])
+  })
+
   test('no board facts supplied: falls back to the prior straight-line reconstruction (zero regression)', () => {
     const receipt = produce_receipt_render_turns(mob_moved_to(2, 0), {
       fight_id: 'fight-1',

@@ -170,6 +170,74 @@ const make_entity = (id, cell, is_player, overrides = {}) => ({
 
 const scenarios = [
   {
+    // #618 deterministic-twin discriminator. The direct (1,3)→(4,3) lane crosses living m1 at (3,3), while
+    // upper and lower five-step detours are equal. Hand-tracing movement::walk: right reaches (2,3); right is then
+    // occupied, so up wins before down in Move's left/right/up/down order; the remainder is right, right, down.
+    // The command deliberately carries the other valid detour: the sim must treat its last cell as Move's
+    // destination-only input and reconstruct the pinned upper route, never trust caller intermediates.
+    meta: {
+      id: 'occupied_cell_equal_detour',
+      class: 'movement',
+      authored: '2026-07-23',
+      source: 'authored',
+      notes:
+        'Issue #618: m0 routes around live ally m1; equal upper/lower detours pin Move left/right/up/down tie-breaking.',
+    },
+    arena: {
+      ...flat_arena_json(7),
+      spawns_a: [{ x: 5, y: 3 }],
+      spawns_b: [
+        { x: 1, y: 3 },
+        { x: 3, y: 3 },
+      ],
+    },
+    templates_raw: {},
+    initial: {
+      fight_id: 'capsule_occupied_cell_equal_detour',
+      arena_seed: 1,
+      team0: [
+        make_entity('p0', { x: 5, y: 3 }, true, {
+          deck: [],
+          hand: [],
+          spell_levels: {},
+        }),
+      ],
+      team1: [
+        make_entity('m0', { x: 1, y: 3 }, false, {
+          deck: [],
+          hand: [],
+          spell_levels: {},
+        }),
+        make_entity('m1', { x: 3, y: 3 }, false, {
+          deck: [],
+          hand: [],
+          spell_levels: {},
+        }),
+      ],
+    },
+    commands: [
+      { type: 'start' },
+      {
+        type: 'move',
+        entity_id: 'm0',
+        path: [
+          { x: 2, y: 3 },
+          { x: 2, y: 4 },
+          { x: 3, y: 4 },
+          { x: 4, y: 4 },
+          { x: 4, y: 3 },
+        ],
+      },
+    ],
+    pinned_move_path: [
+      { x: 2, y: 3 },
+      { x: 2, y: 2 },
+      { x: 3, y: 2 },
+      { x: 4, y: 2 },
+      { x: 4, y: 3 },
+    ],
+  },
+  {
     // Continue-through-traps ruling LANDED (#320/#325): a covered trap fires the instant the mover ENTERS
     // its cell and the walk RESUMES — it no longer truncates the route (the earlier chain-by-design first-trap
     // truncation, DECISIONS 2026-07-20 00:31, is repealed here; the twin Move `movement::walk` matches, shipping
@@ -380,6 +448,8 @@ describe('fight-replay gate (capsule goldens)', () => {
           commands: capsule.commands,
         }),
       )
+      if (scenario.pinned_move_path)
+        expect(capsule.pinned_move_path).toEqual(scenario.pinned_move_path)
 
       const replay = replay_capsule(capsule)
 
@@ -392,6 +462,10 @@ describe('fight-replay gate (capsule goldens)', () => {
         capsule.expected.terminal_summary,
       )
       expect(digest(replay.terminal)).toBe(capsule.expected.terminal_digest)
+      if (scenario.pinned_move_path) {
+        const moved = replay.events.find(event => event.type === 'fight_moved')
+        expect(moved?.path).toEqual(scenario.pinned_move_path)
+      }
 
       // 3. DETERMINISM — an independent second replay produces the identical trace.
       expect(replay_capsule(capsule).trace_digest).toBe(replay.trace_digest)

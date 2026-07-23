@@ -8,6 +8,8 @@ import { create_fight_state, reduce } from '../src/reduce.js'
 
 import {
   chain_walk_path,
+  scenario_occupied,
+  scenario_terrain_walkable,
   scenario_walkable,
   walk_parity_scenarios,
 } from './fixtures/movement_bfs_parity.js'
@@ -88,6 +90,8 @@ describe('Move/sim canonical walk parity (#474 interim)', () => {
   for (const scenario of walk_parity_scenarios) {
     test(scenario.meta.id, () => {
       const is_walkable = scenario_walkable(scenario)
+      const terrain_walkable = scenario_terrain_walkable(scenario)
+      const is_occupied = scenario_occupied(scenario)
       const chain_path = chain_walk_path(
         scenario.mover.start,
         scenario.destination,
@@ -100,7 +104,8 @@ describe('Move/sim canonical walk parity (#474 interim)', () => {
         scenario.mover.start,
         scenario.destination,
         scenario.budget,
-        is_walkable,
+        terrain_walkable,
+        is_occupied,
       )
       expect(sim_path, scenario.meta.symptom).toEqual(chain_path)
 
@@ -130,5 +135,24 @@ describe('Move/sim canonical walk parity (#474 interim)', () => {
         crossed_trap ? 93 : 100,
       )
     })
+
+    if (scenario.alternate_path) {
+      test(`${scenario.meta.id} canonicalizes caller intermediates`, () => {
+        const arena = arena_of(scenario)
+        const result = reduce(
+          state_of(scenario, arena),
+          {
+            type: 'move',
+            entity_id: scenario.mover.id,
+            path: scenario.alternate_path,
+          },
+          { arena, spell_templates: new Map() },
+        )
+        const moved = result.events.find(event => event.type === 'fight_moved')
+        expect(moved?.path, scenario.meta.symptom).toEqual(
+          scenario.expected_path.slice(1),
+        )
+      })
+    }
   }
 })
