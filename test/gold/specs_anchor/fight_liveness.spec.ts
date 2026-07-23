@@ -12,6 +12,7 @@ import {
 
 test.describe('gold localnet — fight teardown liveness', () => {
   test.skip(!gold_manifest, 'no .gold-deployment.json — run `node test/gold/up_gold.mjs` first')
+  test.skip(!gold_manifest?.fight_fixtures?.win, 'gold bootstrap did not publish fight_fixtures.win')
 
   test('@headed FIGHT TEARDOWN · settlement releases the fight and restores the live world', async ({ page }) => {
     test.setTimeout(300_000)
