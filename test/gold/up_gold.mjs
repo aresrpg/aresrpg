@@ -10,6 +10,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
+import { level_coop_full_kit_fighters } from './fixtures/coop_full_kit_bootstrap.mjs'
 import { create_fight_fixtures } from './fixtures/fight_fixtures.mjs'
 import { character_fixture_plan, validate_character_fixture } from './fixtures/actor_fixture.mjs'
 import { create_market_two_actor } from './fixtures/market_bootstrap.mjs'
@@ -50,6 +51,7 @@ import {
 } from './lib_gold.mjs'
 
 const CLASSES = ['senshi', 'yajin', 'tomoda', 'shugo'] // one per wallet — L2 covers all 12
+const coop_full_kit_classes = [...CLASSES, 'senshi'] // four fighter classes + one seatless spectator identity
 
 async function main() {
   const t0 = Date.now()
@@ -185,6 +187,45 @@ async function main() {
   if (!drained.ok || (await balanceSui(poor_wallet.address)) > 0.2)
     throw new Error(`poor-wallet drain FAILED: ${drained.abort ?? 'balance remains above sponsor threshold'}`)
 
+  // FULL-KIT COOP ISOLATION: five dedicated, fully funded wallets live after the existing poor-wallet row.
+  // The first four own one class apiece; the fifth owns the spectator identity. Never add these characters to
+  // wallets 0..3: sibling fixtures deliberately assert their original per-wallet roster cardinalities.
+  const coop_full_kit_wallet_offset = N_WALLETS + 1
+  const coop_full_kit_wallets = await genKeypairs(coop_full_kit_classes.length)
+  for (const wallet of coop_full_kit_wallets) await faucet(wallet.address, 2)
+  const coop_full_kit_characters = []
+  for (const [offset, character_class] of coop_full_kit_classes.entries()) {
+    const wallet_index = coop_full_kit_wallet_offset + offset
+    const wallet = coop_full_kit_wallets[offset]
+    const result = await tryCreateCharacter({
+      client,
+      wallet,
+      ids,
+      kiosk_pkg: kiosk,
+      name: `gold_w${wallet_index}_c0_${Date.now() % 100000}`,
+      character_class,
+    })
+    if (!result.ok || !result.character_id || !result.kiosk_id || !result.personal_kiosk_cap_id)
+      throw new Error(
+        `coop full-kit character mint FAILED for w${wallet_index}/c0: ` +
+          `${result.reason ?? result.abort ?? 'missing character kiosk state'}`
+      )
+    const row = {
+      wallet: wallet_index,
+      wallet_index,
+      slot: 0,
+      character_id: result.character_id,
+      kiosk_id: result.kiosk_id,
+      personal_kiosk_cap_id: result.personal_kiosk_cap_id,
+      class: character_class,
+    }
+    characters.push(row)
+    coop_full_kit_characters.push(row)
+    log(`coop full-kit character minted for w${wallet_index}/c0 → ${result.character_id}`)
+  }
+  validate_character_fixture(characters)
+  const manifest_wallets = [...wallets, poor_wallet, ...coop_full_kit_wallets]
+
   // B1 FIXTURE ISOLATION (2026-07-20): two more fully isolated wallets, each owning ZERO seeded characters —
   // dedicated targets for the anchor suite's two ad-hoc "mint a character live through the app" writes
   // (anchor.spec.ts's "ui create" proof + regressions.spec.ts's CHECKPOINT/SPEED GATE fresh-character gate).
@@ -288,6 +329,32 @@ async function main() {
     120_000,
     'fight fixture mobs visible'
   )
+  const coop_full_kit_fighters = await level_coop_full_kit_fighters({
+    client,
+    ids,
+    kiosk_pkg: kiosk,
+    wallets: manifest_wallets,
+    fighters: coop_full_kit_characters.slice(0, CLASSES.length),
+    fixture: fight_fixtures.coop_full_kit_leveler,
+  })
+  const coop_full_kit_roster = {
+    fighters: coop_full_kit_fighters,
+    spectator: { ...coop_full_kit_characters[CLASSES.length], level: 1 },
+  }
+  await Promise.all(
+    coop_full_kit_fighters.map((fighter) =>
+      waitV1(
+        `/v1/characters?owner=${manifest_wallets[fighter.wallet_index].address}`,
+        (json) =>
+          (json.characters ?? []).some(
+            (character) => character.id === fighter.character_id && Number(character.level) === fighter.level
+          ),
+        120_000,
+        `coop full-kit ${fighter.class} L${fighter.level} visible`
+      )
+    )
+  )
+  log(`coop full-kit roster ready · ${coop_full_kit_fighters.map((row) => `${row.class}=L${row.level}`).join(' · ')}`)
   const runtime_catalog = write_runtime_catalog({
     seed,
     corpus_source,
@@ -311,8 +378,9 @@ async function main() {
     runtime_catalog,
     market_two_actor,
     sponsor_fixture,
+    coop_full_kit_roster,
     publisher, // localnet throwaway — regenerated every boot, worthless off this chain
-    wallets: [...wallets, poor_wallet], // localnet throwaway dev actors; sponsor gas wallet is never included
+    wallets: manifest_wallets, // localnet throwaway dev actors; sponsor gas wallet is never included
     anchor_write_wallet, // localnet throwaway — anchor.spec.ts "ui create" WRITE only; unseeded, unread elsewhere
     speed_gate_wallet, // localnet throwaway — regressions.spec.ts CHECKPOINT/SPEED GATE fresh char only; unseeded, unread elsewhere
     characters,
