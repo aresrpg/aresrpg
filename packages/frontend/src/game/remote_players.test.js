@@ -45,9 +45,10 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('remote_rig_visible — fight view o
     expect(source).toContain('use_dungeon.getState().fight_id')
   })
 
-  it('wired at every render-output site — avatar body, mount, aura, and nameplate all gate on it', () => {
+  it('wired at every render-output site — avatar body, mount, pet, aura, and nameplate all gate on it', () => {
     expect(source).toContain('r.avatar.object3d.visible = remote_rig_visible(fight_active)')
     expect(source).toContain('r.mount.set_visible(remote_rig_visible(fight_active))')
+    expect(source).toContain('r.pet.set_visible(remote_rig_visible(fight_active))') // #553 — public pets
     expect(source).toContain('r.aura.set_active(remote_rig_visible(fight_active))')
     expect(source).toContain('remote_rig_visible(fight_active) && px')
   })

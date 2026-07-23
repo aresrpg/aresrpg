@@ -4,7 +4,8 @@
 // foreign-player sprites). ONE home for BOTH modes: the walk session AND the logged-out spectate
 // diorama create this layer; it renders every presence entry (visible_characters — fed by p2p
 // lobby-room.js → presence.js plus locally-driven owned followers; the active id is never inserted) as a real
-// engine avatar (class rig + hair +
+// engine avatar (class rig + hair + mount + equipped pet companion (#553 — public pets, same rig factory the
+// local player's own companion uses) +
 // p2p-state colors via get_peer_state), eases position → target_position (presence retargets, we
 // lerp — roam's contract), stands the body on the terrain via ground_surface_y (presence packets
 // carry CELLS, no y), derives yaw/anim from motion, and cleans up on despawn. Self-contained rAF;
@@ -22,9 +23,10 @@ import { plate_occluded, project_plate } from './nameplate_occlusion.js'
 import { peer_display_name } from './remote_player_name.js'
 import { open_player_menu } from './screens/hud/world/player_menu_store.js'
 import { create_mount_rig } from './mount_rig.js'
+import { create_pet_companion_rig } from './pet_companion.js'
 import { CHARACTER_MODELS, character_glb_url, has_character_model } from './screens/character-glb.js'
 import { read_worn_templates } from './cosmetic_glb.js'
-import { create_remote_worn_cache } from './remote_worn_cosmetics.js'
+import { create_remote_character_cache } from './remote_character_cache.js'
 import { context } from './store.js'
 import { game_log } from '../core/log.js'
 import { instrument_cpu_callback } from './cpu_span.js'
@@ -65,18 +67,21 @@ export function create_remote_players(engine, world_canvas = null) {
     engine.sample_block?.(x, y, z) ?? 0
   /** @type {Map<string, any>} id → { avatar, x, z, gy, yaw, cell_key } */
   const rigs = new Map()
-  // COSMETICS TRANSPORT RULING: cosmetics never trust the webrtc payload — they load from the rpc
-  // directly. A peer's worn hat/cloak resolves from /v1 (chain truth, unspoofable), never the p2p presence
-  // payload (presence.js carries identity only now). `worn_templates` is the SAME /v1/encyclopedia join catalog
-  // embed_voxel_player.js loads for the LOCAL player's own cosmetics (read_worn_templates — one fetch home, two
-  // consumers); `worn_cache` batches every stale peer id into ONE /v1/characters read per refresh wave.
+  // TRANSPORT RULING: neither worn cosmetics nor an equipped pet trust the webrtc payload — both load from the
+  // rpc directly. A peer's worn hat/cloak AND equipped pet resolve from /v1 (chain truth, unspoofable), never
+  // the p2p presence payload (presence.js carries identity only; WebRTC carries at most a cosmetic
+  // mounted-vs-trotting hint, never pet existence — #553's owner ruling). `worn_templates` is the SAME
+  // /v1/encyclopedia join catalog embed_voxel_player.js loads for the LOCAL player's own cosmetics
+  // (read_worn_templates — one fetch home, two consumers); `peer_cache` batches every stale peer id into ONE
+  // /v1/characters read per refresh wave and derives BOTH worn cosmetics and pet companion from it (#553 —
+  // never a second batched-fetch cache for the same doc).
   let worn_templates = new Map()
   void read_worn_templates()
     .then((templates) => {
       worn_templates = templates
     })
     .catch((error) => game_log('worn', 'template identity join failed — remote worn GLBs stay unmounted', error))
-  const worn_cache = create_remote_worn_cache({ templates: () => worn_templates })
+  const peer_cache = create_remote_character_cache({ templates: () => worn_templates })
   let raf = 0
   let last_t = performance.now()
   let anim_ticks = 0 // D218 — DEV telemetry (ticked rigs per window)
@@ -163,7 +168,7 @@ export function create_remote_players(engine, world_canvas = null) {
     chip_layer.appendChild(chip)
     // WORN COSMETICS (other players weren't seeing worn cosmetics) — the SAME rig create_worn_cosmetics
     // mounts on the LOCAL player's Head/cape bones (embed_voxel_player.js), keyed off the peer's /v1-resolved
-    // worn set (worn_cache — see the reconcile call below; COSMETICS TRANSPORT RULING, not the p2p payload).
+    // worn set (peer_cache — see the reconcile call below; COSMETICS TRANSPORT RULING, not the p2p payload).
     // Safe to create before avatar.ready: it only sets up closures until set_slots() first fires (the
     // board_entities.js precedent).
     rigs.set(id, {
@@ -194,8 +199,9 @@ export function create_remote_players(engine, world_canvas = null) {
       /* best-effort */
     }
     r.mount?.dispose() // TR-97 — the remote mount rig dies with the player (REMOVE-ONLY; cache owns the GLB)
+    r.pet?.dispose() // #553 — the remote pet companion dies with the player (REMOVE-ONLY; cache owns the GLB)
     r.worn?.dispose() // worn hat/cloak GLBs die with the player (REMOVE-ONLY — the cache owns the GPU buffers)
-    worn_cache.drop(id) // forget the /v1 resolution too — bounds cache growth across a long session's peer churn
+    peer_cache.drop(id) // forget the /v1 resolution too — bounds cache growth across a long session's peer churn
     if (r.aura) {
       try {
         engine.remove_from_scene(r.aura.object3d)
@@ -322,11 +328,11 @@ export function create_remote_players(engine, world_canvas = null) {
         drop_rig(id, r)
       }
     }
-    // COSMETICS TRANSPORT RULING — batch-refresh every currently-rigged peer's /v1 worn resolution ONCE per
-    // frame (cheap: a Map-timestamp scan; only fires network for ids that are missing/stale/not already in
-    // flight — see remote_worn_cosmetics.js). A rig spawned THIS frame has no cache row yet, so it's picked up
-    // immediately (no separate "identity change" trigger needed); re-equips heal within the ~60s TTL.
-    if (rigs.size) void worn_cache.refresh(rigs.keys())
+    // TRANSPORT RULING — batch-refresh every currently-rigged peer's /v1 worn + pet resolution ONCE per frame
+    // (cheap: a Map-timestamp scan; only fires network for ids that are missing/stale/not already in flight —
+    // see remote_character_cache.js). A rig spawned THIS frame has no cache row yet, so it's picked up
+    // immediately (no separate "identity change" trigger needed); re-equips/unequips heal within the ~60s TTL.
+    if (rigs.size) void peer_cache.refresh(rigs.keys())
     const plate_canvas = rigs.size ? (world_canvas ?? document.querySelector('canvas')) : null
     let plate_rect = plate_canvas?.getBoundingClientRect() ?? null
     if (!plate_rect && rigs.size) {
@@ -419,13 +425,33 @@ export function create_remote_players(engine, world_canvas = null) {
           r.mount = null
           r.mount_glb = null
         }
+        // #553 — PUBLIC PETS: a peer's equipped pet resolves from /v1 chain truth (peer_cache.pet_of, the SAME
+        // batched read + resolver worn cosmetics above joins — TRANSPORT RULING again, never the p2p payload),
+        // through the SAME rig factory (pet_companion.js) and reconcile shape embed_voxel_player.js's own
+        // desired_pet uses: recreate only when the glb identity actually changes, ease it every frame, hide it
+        // with the fight-view cull like everything else this rig owns. Independent of riding — the local path
+        // never gates a companion on the mount slot either, so this is a pure mirror, not a new rule.
+        const desired_pet = peer_cache.pet_of(id)
+        if (desired_pet.spawn && desired_pet.glb_url) {
+          if (!r.pet || r.pet_glb !== desired_pet.glb_url) {
+            r.pet?.dispose()
+            r.pet = create_pet_companion_rig({ engine, glb_url: desired_pet.glb_url })
+            r.pet_glb = desired_pet.glb_url
+          }
+          r.pet.set_visible(remote_rig_visible(fight_active))
+          r.pet.update(r.x, r.gy, r.z, r.yaw, dt)
+        } else if (r.pet) {
+          r.pet.dispose()
+          r.pet = null
+          r.pet_glb = null
+        }
         // WORN COSMETICS (other players weren't seeing worn cosmetics; COSMETICS TRANSPORT RULING —
         // cosmetics don't trust the webrtc payload, they load from the rpc directly) — the peer's hat/cloak resolves from
-        // /v1 chain truth (worn_cache, refreshed in the batch above), never the p2p payload: a player can't
+        // /v1 chain truth (peer_cache, refreshed in the batch above), never the p2p payload: a player can't
         // spoof cosmetics they don't own. Reconcile is idempotent (set_slots diffs internally, mount.js), so
         // calling it every frame is cheap; gated on avatar.ready (a bone lookup needs the skeleton parsed —
         // the same gate embed_voxel_player.js applies locally).
-        if (r.avatar.ready) r.worn?.set_slots(worn_cache.worn_of(id))
+        if (r.avatar.ready) r.worn?.set_slots(peer_cache.worn_of(id))
         r.avatar.object3d.position.set(r.x, r.gy + seat, r.z)
         r.avatar.object3d.visible = remote_rig_visible(fight_active)
         // D218 v1 (heavy concurrency): beyond ANIM_CULL_M from the CAMERA the mixer never ticks —

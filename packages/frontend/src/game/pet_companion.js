@@ -17,8 +17,10 @@
 // no-silent-substitute law.
 //
 // The rig factory is a DELIBERATE parallel of mount_rig.js's GLB-cache/clone/scale/ground/dispose
-// lifecycle, not a shared import: mount_rig.js is also remote_players.js's rig (this lane's local-only,
-// peer pets are the follow-up row) and a companion's positioning (eased trail behind the player) and
+// lifecycle, not a shared import: mount_rig.js is also remote_players.js's rig, and this factory now is too
+// (#553 — public pets: remote_players.js spawns the identical rig for a peer's equipped pet, resolved off
+// remote_character_cache.js's /v1 read instead of the local live-character read below) — a companion's
+// positioning (eased trail behind the player) and
 // sizing (a small critter, never MOUNT_TABLE's rideable scale) genuinely differ from a ridden mount's
 // (posed at the feet, seat-lifted). It skips mount_rig's idle/move blend + root-y-pin: those exist to
 // fight baked root translation in WALK/RUN clips, and a companion only ever loops its IDLE clip (no
