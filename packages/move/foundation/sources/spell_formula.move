@@ -507,6 +507,13 @@ fun t_roll_in_range_endpoints_and_degenerate() {
   assert!(roll_in_range(7, 7, 9999) == 7, 3); // min==max ⇒ fixed
   assert!(roll_in_range(7, 3, 9999) == 7, 4); // malformed max<min ⇒ min (never > min)
   assert!(roll_in_range(0, 0, 9999) == 0, 5); // zero stays zero
+  // #574-SIBLING — DEGENERATE-SPAN PARITY: roll_in_range's `roll * span` is checked-u64 here (aborts clean past
+  // ~1.8e15), but the sim twin is a JS Number — silently imprecise past ~9e11 with NO abort, a twin break the
+  // #574 mix() fix didn't cover (this is a different multiply). Pin a LARGE-BUT-SAFE span (8e11, an order below
+  // the JS boundary) so both twins are proven byte-identical at real stress magnitude, not just small authored
+  // ranges. A span beyond ~9e11 is a SEED-VALIDATOR concern (the content pipeline's authored value_max cap,
+  // armed separately) — never a runtime path either twin has to defend past this point.
+  assert!(roll_in_range(0, 799999999999, 9999) == 799920000000, 6);
 }
 
 #[test]

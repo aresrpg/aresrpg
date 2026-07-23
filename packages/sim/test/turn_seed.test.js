@@ -132,6 +132,16 @@ describe('turn-seed parity (Move golden vectors)', () => {
     expect(roll_in_range(7, 3, 9999)).toBe(7) // malformed max<min ⇒ min
   })
 
+  test('#574-SIBLING — roll_in_range holds byte-parity on a large-but-safe span (degenerate-multiply twin risk)', () => {
+    // roll * span is checked-u64 on the Move side (aborts clean past ~1.8e15) but a JS Number here — silently
+    // imprecise past ~9e11 with no abort, the SAME class of twin break #574 fixed for mix(), on a different
+    // multiply. This pins a span an order below the JS boundary (8e11) so both twins are proven identical at
+    // real stress magnitude, mirroring spell_formula::t_roll_in_range_endpoints_and_degenerate's #6 case exactly.
+    // A span beyond ~9e11 is a seed-validator concern (the content pipeline's authored value_max cap, armed
+    // separately) — never a runtime path either twin has to defend past this point.
+    expect(roll_in_range(0, 799999999999, 9999)).toBe(799920000000)
+  })
+
   test('damage roll spans its range over 10k decorrelated seeds (both endpoints hit, mean central)', () => {
     let lo = false
     let hi = false
