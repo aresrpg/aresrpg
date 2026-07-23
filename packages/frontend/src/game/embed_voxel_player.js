@@ -663,7 +663,8 @@ export function create_player({
         if (avatar.ready && worn) worn.set_slots(desired_worn)
         // PET COMPANION — reconcile against desired_pet (set in feed): recreate the rig only when the GLB
         // identity actually changes (an equip re-read of the SAME pet must not thrash the loaded model),
-        // ease it to a trailing spot each frame, and hide it with the walk body exactly like the mount.
+        // steer it toward the player each frame (#593 — its own dead-zone follow, not welded), and hide it
+        // with the walk body exactly like the mount.
         if (desired_pet.spawn && desired_pet.glb_url) {
           if (!pet_ctl || pet_glb_url !== desired_pet.glb_url) {
             pet_ctl?.dispose()
@@ -671,7 +672,7 @@ export function create_player({
             pet_glb_url = desired_pet.glb_url
           }
           pet_ctl.set_visible(!own_hidden)
-          pet_ctl.update(t.position[0], t.visual_y, t.position[2], t.facing_yaw, dt)
+          pet_ctl.update(t.position[0], t.visual_y, t.position[2], dt) // #593 — independent dead-zone follow, not welded
         } else if (pet_ctl) {
           pet_ctl.dispose()
           pet_ctl = null

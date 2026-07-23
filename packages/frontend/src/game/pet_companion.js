@@ -20,7 +20,8 @@
 // lifecycle, not a shared import: mount_rig.js is also remote_players.js's rig, and this factory now is too
 // (#553 — public pets: remote_players.js spawns the identical rig for a peer's equipped pet, resolved off
 // remote_character_cache.js's /v1 read instead of the local live-character read below) — a companion's
-// positioning (eased trail behind the player) and
+// positioning (an independent world entity that follows with a dead zone — pet_follow.js, NOT a rig welded to
+// the owner's transform) and
 // sizing (a small critter, never MOUNT_TABLE's rideable scale) genuinely differ from a ridden mount's
 // (posed at the feet, seat-lifted). It skips mount_rig's idle/move blend + root-y-pin: those exist to
 // fight baked root translation in WALK/RUN clips, and a companion only ever loops its IDLE clip (no
@@ -33,14 +34,11 @@ import { apply_avatar_material, get_glb_loader } from '@aresrpg/engine3/player'
 import { canonical_walrus_asset_url } from '@aresrpg/sdk/jobs'
 
 import { game_log } from '../core/log.js'
+import { step_pet_follow, empty_pet_motion } from './pet_follow.js'
 
 export { resolve_pet_companion } from './pet_companion_resolver.js'
 
 const COMPANION_HEIGHT = 0.7 // world blocks — a small trailing critter (player avatar ruler = 1.5 blocks)
-const FOLLOW_BEHIND = 1.4 // blocks behind the player along facing
-const FOLLOW_SIDE = 0.6 // blocks to the player's right — keeps it out of the dead-behind camera blind spot
-const EASE_LAMBDA = 8 // position/yaw ease — matches remote_players.js LERP_LAMBDA / mount_rig.js BLEND_RATE
-const SPEED_EPS = 0.15 // m/s under which the companion keeps its last facing (no idle jitter)
 
 /** @type {Map<string, Promise<any>>} fetch+parse each unique pet GLB ONCE; clone per rig. */
 const _cache = new Map()
@@ -54,18 +52,19 @@ const load_glb = (/** @type {string} */ url) => {
 }
 
 /**
- * A trailing companion rig for `glb_url`. Fills in ASYNC — `update()`/`set_visible()` no-op until the GLB
- * resolves, so the caller can create it and feed it every frame immediately. `update()` eases the rig
- * toward a fixed offset behind+right of the fed player transform (remote_players.js's
- * `k = 1 - exp(-λ·dt)` idiom) and loops its one idle clip. `dispose()` detaches it (REMOVE-ONLY — never a
- * GPU free; clones share the cached GLB's geometry/material, mount_rig.js's shared-dispose law).
+ * A companion rig for `glb_url` that follows its owner as an INDEPENDENT world entity. Fills in ASYNC —
+ * `update()`/`set_visible()` no-op until the GLB resolves, so the caller can create it and feed it every frame
+ * immediately. `update()` steps the pure pet_follow steering (its own world position, a 5-block dead zone,
+ * catch-up beyond it, idle roam within it) and loops its one idle clip — it is NOT welded to the owner's
+ * transform. `dispose()` detaches it (REMOVE-ONLY — never a GPU free; clones share the cached GLB's
+ * geometry/material, mount_rig.js's shared-dispose law).
  * @param {{ engine: any, glb_url: string }} args the live engine facade + the pet model URL.
  * @returns {{ readonly ready: boolean,
- *   update: (player_x: number, player_gy: number, player_z: number, player_yaw: number, dt: number) => void,
+ *   update: (owner_x: number, owner_gy: number, owner_z: number, dt: number) => void,
  *   set_visible: (v: boolean) => void, dispose: () => void }}
  */
 export function create_pet_companion_rig({ engine, glb_url }) {
-  /** @type {{ root: any, mixer: AnimationMixer, ground_off: number, x: number, z: number, yaw: number } | null} */
+  /** @type {{ root: any, mixer: AnimationMixer, ground_off: number, motion: ReturnType<typeof empty_pet_motion> } | null} */
   let rig = null
   let disposed = false
   let want_visible = true
@@ -95,7 +94,7 @@ export function create_pet_companion_rig({ engine, glb_url }) {
       const clips = gltf.animations ?? []
       const idle_clip = clips.find((/** @type {any} */ c) => /idle/i.test(c.name)) ?? clips[0]
       idle_clip && mixer.clipAction(idle_clip).play()
-      rig = { root, mixer, ground_off, x: NaN, z: NaN, yaw: 0 }
+      rig = { root, mixer, ground_off, motion: empty_pet_motion() }
       engine.add_to_scene(root)
     })
     .catch((/** @type {any} */ error) => game_log('pet', `GLB load failed (${source_url ?? 'rejected'}):`, error))
@@ -105,26 +104,15 @@ export function create_pet_companion_rig({ engine, glb_url }) {
     get ready() {
       return !!rig
     },
-    /** Ease the companion toward a spot behind+right of the fed player transform; loops its idle clip. */
-    update(player_x, player_gy, player_z, player_yaw, dt) {
+    /** Step the independent follow steering toward the owner's position (dead zone + roam); loops its idle clip. */
+    update(owner_x, owner_gy, owner_z, dt) {
       if (!rig) return
-      const target_x = player_x + Math.sin(player_yaw) * FOLLOW_BEHIND + Math.cos(player_yaw) * FOLLOW_SIDE
-      const target_z = player_z + Math.cos(player_yaw) * FOLLOW_BEHIND - Math.sin(player_yaw) * FOLLOW_SIDE
-      if (!Number.isFinite(rig.x)) {
-        // first frame after load — snap instead of sliding in from NaN/origin
-        rig.x = target_x
-        rig.z = target_z
-        rig.yaw = player_yaw
-      }
-      const k = 1 - Math.exp(-EASE_LAMBDA * dt)
-      const dx = target_x - rig.x
-      const dz = target_z - rig.z
-      rig.x += dx * k
-      rig.z += dz * k
-      const speed = Math.hypot(dx, dz) * EASE_LAMBDA
-      if (speed > SPEED_EPS) rig.yaw = Math.atan2(dx, dz) // face its own travel direction (remote_players.js idiom)
-      rig.root.position.set(rig.x, player_gy + rig.ground_off, rig.z)
-      rig.root.rotation.y = rig.yaw
+      // The pure reducer owns the pet's world position; Math.random (roam entropy) rides its default at this edge.
+      rig.motion = step_pet_follow(rig.motion, { x: owner_x, z: owner_z }, dt)
+      // Ground y trails the owner's fed height — the same tolerance the character auto-follow accepts (no
+      // per-pet voxel scan; #593 explicitly forbids collision agonizing for a cosmetic companion).
+      rig.root.position.set(rig.motion.x, owner_gy + rig.ground_off, rig.motion.z)
+      rig.root.rotation.y = rig.motion.yaw
       rig.mixer.update(dt)
     },
     /** Show / hide the companion (fights hide it with the walk avatar) without a dispose/reload. */

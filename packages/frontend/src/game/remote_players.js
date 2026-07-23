@@ -428,8 +428,9 @@ export function create_remote_players(engine, world_canvas = null) {
         // #553 — PUBLIC PETS: a peer's equipped pet resolves from /v1 chain truth (peer_cache.pet_of, the SAME
         // batched read + resolver worn cosmetics above joins — TRANSPORT RULING again, never the p2p payload),
         // through the SAME rig factory (pet_companion.js) and reconcile shape embed_voxel_player.js's own
-        // desired_pet uses: recreate only when the glb identity actually changes, ease it every frame, hide it
-        // with the fight-view cull like everything else this rig owns. Independent of riding — the local path
+        // desired_pet uses: recreate only when the glb identity actually changes, steer it toward the peer rig
+        // every frame (#593 — its own dead-zone follow, not welded), hide it with the fight-view cull like
+        // everything else this rig owns. Independent of riding — the local path
         // never gates a companion on the mount slot either, so this is a pure mirror, not a new rule.
         const desired_pet = peer_cache.pet_of(id)
         if (desired_pet.spawn && desired_pet.glb_url) {
@@ -439,7 +440,7 @@ export function create_remote_players(engine, world_canvas = null) {
             r.pet_glb = desired_pet.glb_url
           }
           r.pet.set_visible(remote_rig_visible(fight_active))
-          r.pet.update(r.x, r.gy, r.z, r.yaw, dt)
+          r.pet.update(r.x, r.gy, r.z, dt) // #593 — the pet steers itself toward the peer rig (dead zone + roam)
         } else if (r.pet) {
           r.pet.dispose()
           r.pet = null
