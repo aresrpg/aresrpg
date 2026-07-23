@@ -40,11 +40,26 @@ const ready = (alt_world = WORLD_A) => {
   return s
 }
 
-const enable = (state, ids = [ALT]) =>
-  fold(state, { kind: 'follow_enable', leader_character_id: LEADER, follower_character_ids: ids, now: NOW })
+// Group membership IS auto-follow (#613 DESIGN COLLAPSE): the owned group members (here just ALT) follow by
+// construction — no toggle. `enable` is the reconcile the frontend fires after a membership/world sync.
+const enable = (state) => fold(state, { kind: 'follow_reconcile', leader_character_id: LEADER, now: NOW })
+
+// ── DESIGN COLLAPSE — group membership IS auto-follow: no toggle; an owned group member follows, a kick drops it.
+test('#613 an owned group member auto-follows on reconcile; a KICK (gone from the group) is the only disable', () => {
+  const { state, outputs } = enable(ready(WORLD_A)) // ALT is an owned group member → auto-followed
+  expect(state.follow.enabled).toBe(true)
+  expect(state.follow.follower_character_ids).toEqual([ALT])
+  expect(outputs.read_position).toEqual([{ character_id: ALT, world_id: WORLD_A }])
+  // KICK: the party drops ALT (only the leader remains) → reconcile disarms it and re-emits the render.
+  const s = next(state, { kind: 'group', my_address: ME, leader_character_id: LEADER, members: [members[0]] })
+  const kicked = fold(s, { kind: 'follow_reconcile', leader_character_id: LEADER })
+  expect(kicked.state.follow.enabled).toBe(false)
+  expect(kicked.state.follow.follower_character_ids).toEqual([])
+  expect(kicked.state.follow.followers[ALT]).toBeUndefined()
+})
 
 // ── Defect ① — entry evaluation: a SAME-WORLD follower never fires the world-join tx (the money leak). ──────
-test('#613·1 same-world follow-enable emits NO join_world (reads chain truth, resolves position instead)', () => {
+test('#613·1 a same-world member auto-follows with NO join_world (reads chain truth, resolves position instead)', () => {
   const { state, outputs } = enable(ready(WORLD_A))
   expect(outputs.join_world).toEqual([]) // the redundant same-world join is gone (no zones::join_world, no gas)
   expect(outputs.read_position).toEqual([{ character_id: ALT, world_id: WORLD_A }]) // chain-truth read first
@@ -60,7 +75,7 @@ test('#613·1 a DIFFERENT-world follower still takes the join transaction + time
 
 test('#613·1 a leader world change never re-joins a follower already standing in that world', () => {
   let state = ready(WORLD_B) // ALT is in WORLD_B, leader in WORLD_A
-  state = next(state, { kind: 'follow_enable', leader_character_id: LEADER, follower_character_ids: [ALT], now: NOW })
+  state = next(state, { kind: 'follow_reconcile', leader_character_id: LEADER, now: NOW })
   // the leader hops to WORLD_B — where ALT already is → read its position, never a redundant same-world join
   const moved = fold(state, { kind: 'member_world_state', character_id: LEADER, world_id: WORLD_B, now: NOW + 1000 })
   expect(moved.outputs.join_world).toEqual([])

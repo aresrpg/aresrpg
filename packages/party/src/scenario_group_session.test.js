@@ -52,12 +52,9 @@ test('GROUP SESSION: invite → transit → arrive → engage → auto-join → 
   feed({ kind: 'member_world_state', character_id: ALT_2, world_id: OTHER_WORLD }) // a realm away
   expect(transcript).toEqual([])
   feed({ kind: 'leader_position', x: 100, z: 100, yaw: 0, now: T0 })
-  feed({
-    kind: 'follow_enable',
-    leader_character_id: LEADER,
-    follower_character_ids: [ALT_1, ALT_2],
-    now: T0,
-  })
+  // group membership IS auto-follow (#613): the two invited owned alts follow by construction — reconcile is
+  // the frontend's post-sync door, no toggle. Entry evaluation reads chain truth first per alt.
+  feed({ kind: 'follow_reconcile', leader_character_id: LEADER, now: T0 })
   expect(transcript.filter((line) => line.startsWith('join_world'))).toEqual([`join_world ${ALT_2} -> ${WORLD}`])
   expect(transcript.filter((line) => line.startsWith('read_position'))).toEqual([`read_position ${ALT_1} -> ${WORLD}`])
 

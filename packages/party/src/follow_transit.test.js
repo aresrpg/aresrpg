@@ -27,19 +27,22 @@ const state_after = (state, input) => {
 
 const ready = () => {
   let state = empty_group_state()
-  state = state_after(state, { kind: 'group', my_address: ME, members })
+  state = state_after(state, { kind: 'group', my_address: ME, leader_character_id: LEADER, members })
   state = state_after(state, { kind: 'member_world_state', character_id: LEADER, world_id: WORLD_A, now: NOW })
   state = state_after(state, { kind: 'leader_position', x: 0, z: 0, yaw: 0, now: NOW })
   return state
 }
 
-const enable = (state, follower_character_ids = [ALT_1, ALT_2]) =>
-  fold(state, {
-    kind: 'follow_enable',
-    leader_character_id: LEADER,
-    follower_character_ids,
-    now: NOW,
-  })
+// Group membership IS auto-follow (#613): to follow exactly `ids`, put exactly those owned alts in the group
+// behind the leader, then reconcile — the frontend's post-sync door. No toggle exists.
+const enable = (state, ids = [ALT_1, ALT_2]) => {
+  const rows = [
+    { character: LEADER, owner: ME, order: 0 },
+    ...ids.map((c, i) => ({ character: c, owner: ME, order: i + 1 })),
+  ]
+  const grouped = state_after(state, { kind: 'group', my_address: ME, leader_character_id: LEADER, members: rows })
+  return fold(grouped, { kind: 'follow_reconcile', leader_character_id: LEADER, now: NOW })
+}
 
 const joined = (state, character_id, checkpoint, now = NOW) =>
   fold(state, {
@@ -179,11 +182,11 @@ test('#509 — follow_dragon_arrived lands the flying follower beside the leader
   let { state } = enable(ready(), [ALT_1])
   ;({ state } = joined(state, ALT_1, { x: 200, z: 0 }))
   const landed = fold(state, { kind: 'follow_dragon_arrived', character_id: ALT_1 })
-  expect(landed.state.follow.followers[ALT_1].status).toBe('arrived')
+  expect(landed.state.follow.followers[ALT_1].status).toBe('with_you') // #613 — completion consumed, no dead 00:00
   expect(landed.outputs.write_checkpoint).toEqual([
     { character_id: ALT_1, world_id: WORLD_A, position: { x: 1.5, z: 0.5 } },
   ])
-  // idempotent: once arrived (dragon OR a run-in expiry that beat it), a replay is inert
+  // idempotent: once with_you (dragon OR a run-in expiry that beat it), a replay is inert
   expect(fold(landed.state, { kind: 'follow_dragon_arrived', character_id: ALT_1 }).outputs.write_checkpoint).toEqual(
     []
   )

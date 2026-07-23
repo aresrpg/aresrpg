@@ -5,7 +5,7 @@
 // reduce.js (chain-reconciled); THIS reducer owns the leader-session orchestration facts and emits
 // EFFECT REQUESTS exactly once per need:
 //
-//   INPUTS   { group | invite_accepted | member_world_state | follow_enable | follow_position_read |
+//   INPUTS   { group | invite_accepted | member_world_state | follow_reconcile | follow_position_read |
 //              follow_world_joined | transit_tick | follow_checkpoint_written | leader_position |
 //              member_blocked | fight_started | fight_seat_update | turn_started | fight_ended |
 //              dungeon_entered | dungeon_ended | reset }
@@ -138,9 +138,9 @@ const aligned_alts = (state) => {
   return owned_alts(state).filter((member) => state.world_by_character[member.character] === world)
 }
 
-/** Aligned alts that are ALSO explicitly armed to follow (in the session follower set) — the only members
- *  the loop seats into fights. #495: membership + world alignment is NOT consent; only a toggled-on
- *  follower is auto-joined, so an invited-but-not-following alt never gets dragged into the leader's fight. */
+/** Aligned alts that are in the follower set — the members the loop seats into fights. Since group membership
+ *  IS auto-follow now (#613 DESIGN COLLAPSE), the follower set == the owned group members, so this is the
+ *  aligned owned members; the guard still holds a blocked/not-yet-armed member out of the leader's fight. */
 const armed_aligned_alts = (state) =>
   aligned_alts(state).filter((member) => state.follow.follower_character_ids.includes(member.character))
 
@@ -206,7 +206,13 @@ function reduce_membership(state, input) {
         // leader's new world reads its position (no redundant same-world join → no burned gas); only a genuinely
         // cross-world follower takes the join tx, carrying its in-flight transit progress across the re-anchor.
         if (state.world_by_character[follower_character_id] === world_id) {
-          followers[follower_character_id] = { ...row, status: 'resolving', world_id, carry_ratio: 1, receipt_confirmed: false }
+          followers[follower_character_id] = {
+            ...row,
+            status: 'resolving',
+            world_id,
+            carry_ratio: 1,
+            receipt_confirmed: false,
+          }
           read_position.push({ character_id: follower_character_id, world_id })
           continue
         }
@@ -242,7 +248,10 @@ function reduce_membership(state, input) {
         row && scope === 'world_join'
           ? {
               ...state.follow,
-              followers: { ...state.follow.followers, [character_id]: { ...row, status: 'blocked', blocked_scope: scope } },
+              followers: {
+                ...state.follow.followers,
+                [character_id]: { ...row, status: 'blocked', blocked_scope: scope },
+              },
             }
           : state.follow
       return still({
@@ -282,6 +291,16 @@ export function follow_arrival_cell(leader_position, occupied = new Set()) {
   }
   return { x: base_x + 2, z: base_z }
 }
+
+/** #643 — the ONE derivation of the occupied arrival cells: every seated follower's `arrival_position` keyed
+ *  "x:z". Both the run-in expiry (transit_tick) and the dragon landing (follow_dragon_arrived) seat beside the
+ *  leader and must not collide; a single home means a future change to how cells are decided touches one place. */
+const occupied_arrival_cells = (followers) =>
+  new Set(
+    Object.values(followers)
+      .filter((row) => row?.arrival_position)
+      .map((row) => `${row.arrival_position.x}:${row.arrival_position.z}`)
+  )
 
 const begin_transit = (row, checkpoint, leader_pose, now) => {
   const ratio = Number.isFinite(row.carry_ratio) ? row.carry_ratio : 1
@@ -375,96 +394,84 @@ const rendered_followers = (state, pose) =>
   })
 
 /**
- * Arm one-or-more owned alts as session followers — the SINGLE arming home shared by the batch
- * `follow_enable` door and the per-character `set_follow` toggle. Requires the leader in a known world;
- * already-armed / blocked / non-owned ids and anything past the five formation slots are skipped.
+ * GROUP MEMBERSHIP IS AUTO-FOLLOW (#613 DESIGN COLLAPSE, supersedes the per-character toggle): the follower set
+ * IS the player's owned group members other than the driven leader — PARTY TRUTH, never a client toggle set (so
+ * it is immune to the state-desync class the toggle caused). Reconcile the machine to that truth on every
+ * membership/leader sync: a newly-grouped alt is armed through the SAME entry evaluation; a KICKED member (gone
+ * from the group) is dropped — kicking is the ONLY disable, no toggle exists. Idempotent: an already-following
+ * member keeps its live row (resolving / joining / in_transit / with_you / blocked) untouched.
  *
- * ENTRY EVALUATION reads chain truth FIRST (#613). A follower ALREADY in the leader's world takes NO
- * world-join tx — the redundant same-world `zones::join_world` EXECUTES on a rejoin (Move only aborts a FIRST
- * join below the level gate; a rejoin re-points the world field and emits WorldJoined) and burns sponsor gas,
- * so it is a money leak, not a UX wart. Such a follower begins `resolving` and gets one `read_position`
- * request; its checkpoint then settles it NEAR → `with_you` or FAR → the in-world catch-up transit. A follower
- * in a DIFFERENT (or not-yet-known) world begins `joining` and gets one sequenced `join_world` request → the
- * proof-of-time timer leg.
+ * ENTRY EVALUATION reads chain truth FIRST. A follower ALREADY in the leader's world takes NO world-join tx —
+ * the redundant same-world `zones::join_world` EXECUTES on a rejoin (Move only aborts a FIRST join below the
+ * level gate; a rejoin re-points the world field and emits WorldJoined) and burns sponsor gas, a money leak. It
+ * begins `resolving` + one `read_position` (settled NEAR → with_you / FAR → the catch-up transit); a follower in
+ * a DIFFERENT world begins `joining` + one sequenced `join_world` → the proof-of-time timer leg.
  */
-function arm_followers(state, leader_character_id, ids) {
-  const world_id = state.world_by_character[leader_character_id] ?? null
-  if (!leader_character_id || !world_id) return still(state)
-  const allowed = new Set(
-    state.members
-      .filter((member) => member.character !== leader_character_id && member.owner === state.my_address)
-      .map((member) => member.character)
-  )
-  const room = Math.max(0, MAX_OWNED_FOLLOWERS - state.follow.follower_character_ids.length)
-  const added = [...new Set(ids ?? [])]
-    .filter(
-      (character_id) =>
-        allowed.has(character_id) &&
-        !is_blocked(state, character_id, 'world_join') &&
-        !state.follow.follower_character_ids.includes(character_id)
-    )
-    .slice(0, room)
-  if (!added.length) return still(state)
-  const follower_character_ids = [...state.follow.follower_character_ids, ...added]
-  const followers = { ...state.follow.followers }
+function reconcile_follow(state, leader_character_id) {
+  const leader = leader_character_id ?? state.leader_character_id
+  const base = leader === state.leader_character_id ? state : { ...state, leader_character_id: leader }
+  const desired = (leader ? owned_alts(base).map((member) => member.character) : []).slice(0, MAX_OWNED_FOLLOWERS)
+  const world_id = base.world_by_character[leader] ?? null
+  const followers = {}
+  const follower_character_ids = []
   const join_world = []
   const read_position = []
-  for (const character_id of added) {
-    const same_world = state.world_by_character[character_id] === world_id
-    followers[character_id] = { status: same_world ? 'resolving' : 'joining', world_id, carry_ratio: 1, receipt_confirmed: false }
+  for (const character_id of desired) {
+    const existing = base.follow.follower_character_ids.includes(character_id)
+      ? base.follow.followers[character_id]
+      : null
+    if (existing) {
+      followers[character_id] = existing // already following — its live row is untouched (idempotent)
+      follower_character_ids.push(character_id)
+      continue
+    }
+    if (!world_id) continue // cannot place a follower until the leader's world is known; a later sync arms it
+    const same_world = base.world_by_character[character_id] === world_id
+    followers[character_id] = {
+      status: same_world ? 'resolving' : 'joining',
+      world_id,
+      carry_ratio: 1,
+      receipt_confirmed: false,
+    }
     ;(same_world ? read_position : join_world).push({ character_id, world_id })
+    follower_character_ids.push(character_id)
   }
-  return {
-    state: {
-      ...state,
-      follow: { ...state.follow, enabled: true, leader_character_id, follower_character_ids, followers },
-    },
-    outputs: { ...no_outputs(), join_world, read_position },
-  }
-}
-
-/**
- * Toggle one follower OFF (the per-character `set_follow` disable). Drops it from the session set, clears its
- * transit row, and re-emits the render set so its standalone rig despawns. Emptying the set disarms the whole
- * system (enabled → false, leader released) so no stray latch keeps steering after the last toggle goes dark.
- */
-function disarm_follower(state, character_id) {
-  if (!character_id || !state.follow.follower_character_ids.includes(character_id)) return still(state)
-  const follower_character_ids = state.follow.follower_character_ids.filter((id) => id !== character_id)
   const enabled = follower_character_ids.length > 0
   const next = {
-    ...state,
+    ...base,
     follow: {
-      ...state.follow,
+      ...base.follow,
       enabled,
-      leader_character_id: enabled ? state.follow.leader_character_id : null,
+      leader_character_id: enabled ? leader : null,
       follower_character_ids,
-      followers: prune_keys(state.follow.followers, new Set(follower_character_ids)),
-      dungeon_background: enabled ? state.follow.dungeon_background : false,
+      followers,
+      dungeon_background: enabled ? base.follow.dungeon_background : false,
     },
   }
+  // A kick shrinks the set → re-emit the render so the dropped follower's standalone rig despawns.
+  const changed =
+    follower_character_ids.length !== base.follow.follower_character_ids.length ||
+    join_world.length > 0 ||
+    read_position.length > 0
   return {
     state: next,
     outputs: {
       ...no_outputs(),
-      follow_render: next.leader_pose ? rendered_followers(next, next.leader_pose) : EMPTY_ROWS,
+      join_world,
+      read_position,
+      follow_render: changed && base.leader_pose ? rendered_followers(next, base.leader_pose) : null,
     },
   }
 }
 
-// ── follow transit: explicit session ids + reducer-clocked ETA, never active-character selection ──────────
+// ── follow transit: membership-driven follower set + reducer-clocked ETA, never active-character selection ──
 // eslint-disable-next-line complexity -- one exhaustive event switch is the reducer's single write door.
 function reduce_follow(state, input) {
   switch (input.kind) {
-    // Batch enable door (invite-and-follow): arm the whole passed set behind one leader.
-    case 'follow_enable':
-      return arm_followers(state, input.leader_character_id, input.follower_character_ids)
-    // Per-character toggle (#496/#171): each owned character's row flips its OWN follow flag. Default OFF,
-    // session-scoped, never persisted; the leader defaults to the currently-captured one (the driven char).
-    case 'set_follow':
-      return input.enabled
-        ? arm_followers(state, input.leader_character_id ?? state.follow.leader_character_id, [input.character_id])
-        : disarm_follower(state, input.character_id)
+    // GROUP MEMBERSHIP IS AUTO-FOLLOW (#613): reconcile the follower set to the owned group members behind the
+    // driven leader. Invite (a new member) arms it here; a kick (a removed member) drops it. No toggle exists.
+    case 'follow_reconcile':
+      return reconcile_follow(state, input.leader_character_id)
     case 'follow_world_joined': {
       const row = state.follow.followers[input.character_id]
       const { checkpoint } = input
@@ -511,16 +518,12 @@ function reduce_follow(state, input) {
     }
     case 'follow_dragon_arrived': {
       // The edge reports the dragon flight landed — seat the follower beside the leader's CURRENT cell, exactly
-      // like a run-in expiry (write the arrival checkpoint, render it in). Idempotent: once arrived (by the dragon
-      // OR a run-in expiry that beat it), a stray replay is inert.
+      // like a run-in expiry: the ARRIVING timer is CONSUMED into the with_you free-run companion (#613), never
+      // left at a dead 00:00. Idempotent: once with_you (by the dragon OR a run-in expiry that beat it), a stray
+      // replay is inert (status is no longer in_transit).
       const row = state.follow.followers[input.character_id]
       if (!row || row.status !== 'in_transit' || !state.leader_pose) return still(state)
-      const occupied = new Set(
-        Object.values(state.follow.followers)
-          .filter((other) => other?.arrival_position)
-          .map((other) => `${other.arrival_position.x}:${other.arrival_position.z}`)
-      )
-      const position = follow_arrival_cell(state.leader_pose, occupied)
+      const position = follow_arrival_cell(state.leader_pose, occupied_arrival_cells(state.follow.followers))
       if (!position) return still(state)
       const next = {
         ...state,
@@ -528,14 +531,7 @@ function reduce_follow(state, input) {
           ...state.follow,
           followers: {
             ...state.follow.followers,
-            [input.character_id]: {
-              ...row,
-              status: 'arrived',
-              remaining_ms: 0,
-              progress: 1,
-              arrival_position: position,
-              receipt_confirmed: false,
-            },
+            [input.character_id]: { ...enter_with_you(row, position), arrival_position: position },
           },
         },
       }
@@ -563,29 +559,39 @@ function reduce_follow(state, input) {
       )
         return still(state)
       const now = Number.isFinite(input.now) ? input.now : 0
+      const settled = settle_same_world(row, position, state.leader_pose, now)
       const next = {
         ...state,
-        follow: {
-          ...state.follow,
-          followers: {
-            ...state.follow.followers,
-            [input.character_id]: settle_same_world(row, position, state.leader_pose, now),
-          },
-        },
+        follow: { ...state.follow, followers: { ...state.follow.followers, [input.character_id]: settled } },
       }
+      // Same-world FAR rides the dragon too (owner ruling: "same world but far ⇒ the in-world catch-up leg,
+      // fast-travel/dragon"): a catch-up longer than DRAGON_DISTANCE requests the flight, exactly like the
+      // cross-world far leg — the follower keeps its proof-of-time timer, the edge flies it in and lands early.
+      const far =
+        settled.status === 'in_transit' &&
+        horizontal_distance_squared(position, state.leader_pose) > DRAGON_DISTANCE * DRAGON_DISTANCE
       return {
         state: next,
-        outputs: { ...no_outputs(), follow_render: rendered_followers(next, state.leader_pose) },
+        outputs: {
+          ...no_outputs(),
+          fast_travel: far
+            ? [
+                {
+                  character_id: input.character_id,
+                  world_id: row.world_id,
+                  x: state.leader_pose.x,
+                  z: state.leader_pose.z,
+                },
+              ]
+            : EMPTY_ROWS,
+          follow_render: rendered_followers(next, state.leader_pose),
+        },
       }
     }
     case 'transit_tick': {
       if (!state.follow.enabled || !Number.isFinite(input.now)) return still(state)
       const followers = { ...state.follow.followers }
-      const occupied = new Set(
-        Object.values(followers)
-          .filter((row) => row?.arrival_position)
-          .map((row) => `${row.arrival_position.x}:${row.arrival_position.z}`)
-      )
+      const occupied = occupied_arrival_cells(followers)
       const write_checkpoint = []
       for (const character_id of state.follow.follower_character_ids) {
         const row = followers[character_id]
@@ -759,8 +765,7 @@ function reduce_dungeon(state, input) {
 
 const MEMBERSHIP_KINDS = new Set(['group', 'invite_accepted', 'member_world_state', 'member_blocked'])
 const FOLLOW_KINDS = new Set([
-  'follow_enable',
-  'set_follow',
+  'follow_reconcile',
   'follow_position_read',
   'follow_world_joined',
   'follow_dragon_arrived',

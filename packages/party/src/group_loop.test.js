@@ -2,6 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Red-first units for the GROUP LOOP reducer (D769b design note, MULTICHAR lane): per input kind, the
 // emit-once request latches, timer-derived follow projection, and the owned/world/seat eligibility fences.
+// GROUP MEMBERSHIP IS AUTO-FOLLOW (#613 DESIGN COLLAPSE): the follower set IS the owned group members behind
+// the driven leader — no toggle; `follow_reconcile` is the door, a kick is the only disable.
 // Fixtures reuse the REAL party member shape ({ character, owner, order }) and chain ids.
 import { expect, test } from 'bun:test'
 
@@ -41,10 +43,26 @@ const grouped = (
     ...world_rows.map(([character_id, world_id]) => ({ kind: 'member_world_state', character_id, world_id })),
   ]).state
 
-/** #540 — fight_started/dungeon_entered only steer aligned alts once the player has explicitly consented
- *  (follow.enabled); arm it the same way the future auto-follow UI will (enable_group_follow → follow_enable). */
-const armed = (state = grouped(), follower_character_ids = [ALT_1, ALT_2]) =>
-  reduce_group(state, { kind: 'follow_enable', leader_character_id: LEADER, follower_character_ids, now: NOW }).state
+const positioned = () => reduce_group(grouped(), { kind: 'leader_position', x: 0, z: 0, yaw: 0, now: NOW }).state
+
+/** Reconcile a grouped state so its owned group members become the follower set (membership IS auto-follow). */
+const armed = (state = grouped()) =>
+  reduce_group(state, { kind: 'follow_reconcile', leader_character_id: LEADER, now: NOW }).state
+
+/** Group EXACTLY these owned alts (all standing in the leader's WORLD) behind a positioned leader, then
+ *  reconcile → they become the follower set. Returns { state, outputs } — the membership arming call. */
+const following = (...ids) => {
+  let s = reduce_group(empty_group_state(), {
+    kind: 'group',
+    my_address: ME,
+    leader_character_id: LEADER,
+    members: members(LEADER, ...ids),
+  }).state
+  for (const character_id of [LEADER, ...ids])
+    s = reduce_group(s, { kind: 'member_world_state', character_id, world_id: WORLD }).state
+  s = reduce_group(s, { kind: 'leader_position', x: 0, z: 0, yaw: 0, now: NOW }).state
+  return reduce_group(s, { kind: 'follow_reconcile', leader_character_id: LEADER, now: NOW })
+}
 
 // ── membership + world alignment ──────────────────────────────────────────────────────────────────────────────────
 test('group fold mirrors membership; nothing is requested while worlds are unknown', () => {
@@ -56,7 +74,7 @@ test('group fold mirrors membership; nothing is requested while worlds are unkno
   expect(outputs.follow_move).toEqual([])
 })
 
-test('world divergence alone never enables follow or emits a join', () => {
+test('membership mirror alone never enables follow or emits a join (reconcile is the door)', () => {
   const base = fold([
     { kind: 'group', my_address: ME, leader_character_id: LEADER, members: members(LEADER, ALT_1) },
     { kind: 'member_world_state', character_id: LEADER, world_id: WORLD },
@@ -66,14 +84,8 @@ test('world divergence alone never enables follow or emits a join', () => {
   expect(first.state.follow.enabled).toBe(false)
 })
 
-test('an explicitly followed leader world change re-arms join_world for included followers only', () => {
-  const positioned = reduce_group(grouped(), { kind: 'leader_position', x: 0, z: 0, yaw: 0, now: NOW }).state
-  const { state } = reduce_group(positioned, {
-    kind: 'follow_enable',
-    leader_character_id: LEADER,
-    follower_character_ids: [ALT_1, ALT_2],
-    now: NOW,
-  })
+test('a followed leader world change re-joins its owned group followers to the new world', () => {
+  const { state } = following(ALT_1, ALT_2) // both stand in WORLD (same as leader) → resolving followers
   const { outputs } = reduce_group(state, {
     kind: 'member_world_state',
     character_id: LEADER,
@@ -85,7 +97,7 @@ test('an explicitly followed leader world change re-arms join_world for included
 })
 
 test('non-owned members and the leader never receive a join_world request', () => {
-  const { outputs } = fold([
+  const base = fold([
     {
       kind: 'group',
       my_address: ME,
@@ -95,7 +107,8 @@ test('non-owned members and the leader never receive a join_world request', () =
     { kind: 'member_world_state', character_id: LEADER, world_id: WORLD },
     { kind: 'member_world_state', character_id: STRANGER, world_id: OTHER_WORLD },
   ])
-  expect(outputs.join_world).toEqual([])
+  const { outputs } = reduce_group(base.state, { kind: 'follow_reconcile', leader_character_id: LEADER, now: NOW })
+  expect(outputs.join_world).toEqual([]) // STRANGER is not owned → never a follower
 })
 
 test('member_blocked(world_join) latches a member out of world requests (executed-failure law)', () => {
@@ -103,6 +116,7 @@ test('member_blocked(world_join) latches a member out of world requests (execute
     { kind: 'group', my_address: ME, leader_character_id: LEADER, members: members(LEADER, ALT_1) },
     { kind: 'member_world_state', character_id: LEADER, world_id: WORLD },
     { kind: 'member_world_state', character_id: ALT_1, world_id: OTHER_WORLD },
+    { kind: 'follow_reconcile', leader_character_id: LEADER, now: NOW },
     { kind: 'member_blocked', character_id: ALT_1, scope: 'world_join' },
   ])
   // a leader world change would normally re-arm — the blocked latch must hold
@@ -114,7 +128,7 @@ test('member_blocked(world_join) latches a member out of world requests (execute
   expect(outputs.join_world).toEqual([])
 })
 
-test('invite_accepted appends a distinct member but never activates follow implicitly', () => {
+test('invite_accepted appends a distinct member but never activates follow implicitly (reconcile does)', () => {
   const base = fold([
     { kind: 'group', my_address: ME, leader_character_id: LEADER, members: members(LEADER) },
     { kind: 'member_world_state', character_id: LEADER, world_id: WORLD },
@@ -123,25 +137,24 @@ test('invite_accepted appends a distinct member but never activates follow impli
   const { state, outputs } = reduce_group(base.state, { kind: 'invite_accepted', character_id: ALT_1, owner: ME })
   expect(state.members.map((m) => m.character)).toEqual([LEADER, ALT_1])
   expect(outputs.join_world).toEqual([])
-  expect(state.follow.enabled).toBe(false)
+  expect(state.follow.enabled).toBe(false) // membership changed, but follow arms on the next reconcile
   // idempotent — accepting twice neither duplicates nor requests
   const again = reduce_group(state, { kind: 'invite_accepted', character_id: ALT_1, owner: ME })
   expect(again.state.members.length).toBe(2)
   expect(again.outputs.join_world).toEqual([])
 })
 
-// ── explicit follow bounds ───────────────────────────────────────────────────────────────────────────────────────
-test('explicit follower inclusion caps at the five formation slots in chain order', () => {
+// ── follower-set bounds ──────────────────────────────────────────────────────────────────────────────────────────
+test('the follower set caps at the five formation slots in chain order', () => {
   const ids = ['0xa', '0xb', '0xc', '0xd', '0xe', '0xf']
-  const { state: grouped_many } = fold([
+  const grouped_many = fold([
     { kind: 'group', my_address: ME, leader_character_id: LEADER, members: members(LEADER, ...ids) },
     { kind: 'member_world_state', character_id: LEADER, world_id: WORLD },
     ...ids.map((character_id) => ({ kind: 'member_world_state', character_id, world_id: WORLD })),
-  ])
+  ]).state
   const { state, outputs } = reduce_group(grouped_many, {
-    kind: 'follow_enable',
+    kind: 'follow_reconcile',
     leader_character_id: LEADER,
-    follower_character_ids: ids.slice(0, MAX_OWNED_FOLLOWERS),
     now: NOW,
   })
   // all same-world as the leader → the entry read (no redundant joins), capped at the five formation slots
@@ -150,69 +163,53 @@ test('explicit follower inclusion caps at the five formation slots in chain orde
   expect(state.follow.follower_character_ids).toEqual(ids.slice(0, MAX_OWNED_FOLLOWERS))
 })
 
-// ── per-character follow toggle (#496/#171) ───────────────────────────────────────────────────────────────────────
-const positioned = () => reduce_group(grouped(), { kind: 'leader_position', x: 0, z: 0, yaw: 0, now: NOW }).state
-
-test('set_follow arms ONE same-world owned alt behind the leader and reads its position (no redundant join)', () => {
-  const { state, outputs } = reduce_group(positioned(), {
-    kind: 'set_follow',
-    character_id: ALT_1,
-    enabled: true,
-    leader_character_id: LEADER,
-    now: NOW,
-  })
+// ── membership IS auto-follow: arm on grouping, drop on kick (#613) ───────────────────────────────────────────────
+test('a same-world owned member auto-follows on reconcile and reads its position (no redundant join)', () => {
+  const { state, outputs } = following(ALT_1)
   expect(state.follow).toMatchObject({ enabled: true, leader_character_id: LEADER, follower_character_ids: [ALT_1] })
   expect(state.follow.followers[ALT_1].status).toBe('resolving')
   expect(outputs.join_world).toEqual([]) // #613 — same world ⇒ no zones::join_world (that rejoin burns gas)
   expect(outputs.read_position).toEqual([{ character_id: ALT_1, world_id: WORLD }])
-  // a second row toggles on independently, keeping the captured leader (no leader_character_id passed)
-  const two = reduce_group(state, { kind: 'set_follow', character_id: ALT_2, enabled: true, now: NOW })
-  expect(two.state.follow.follower_character_ids).toEqual([ALT_1, ALT_2])
-  expect(two.outputs.read_position).toEqual([{ character_id: ALT_2, world_id: WORLD }])
 })
 
-test('set_follow OFF drops one follower, clears its transit row, and the rest keep following', () => {
-  const armed_two = reduce_group(positioned(), {
-    kind: 'follow_enable',
+test('a KICK (member removed from the group) drops that follower; the rest keep following', () => {
+  const two = following(ALT_1, ALT_2).state
+  // the party kicks ALT_1 → the group now holds only LEADER + ALT_2 → reconcile drops ALT_1's row
+  const regrouped = reduce_group(two, {
+    kind: 'group',
+    my_address: ME,
     leader_character_id: LEADER,
-    follower_character_ids: [ALT_1, ALT_2],
-    now: NOW,
+    members: members(LEADER, ALT_2),
   }).state
-  const { state } = reduce_group(armed_two, { kind: 'set_follow', character_id: ALT_1, enabled: false })
+  const { state } = reduce_group(regrouped, { kind: 'follow_reconcile', leader_character_id: LEADER, now: NOW })
   expect(state.follow.enabled).toBe(true)
   expect(state.follow.follower_character_ids).toEqual([ALT_2])
   expect(state.follow.followers[ALT_1]).toBeUndefined()
   expect(state.follow.followers[ALT_2]).toBeDefined()
 })
 
-test('set_follow OFF for the LAST follower disarms the whole system (enabled false, leader released)', () => {
-  const armed_one = reduce_group(positioned(), {
-    kind: 'set_follow',
-    character_id: ALT_1,
-    enabled: true,
+test('kicking the LAST follower disarms the whole system (enabled false, leader released)', () => {
+  const one = following(ALT_1).state
+  const regrouped = reduce_group(one, {
+    kind: 'group',
+    my_address: ME,
     leader_character_id: LEADER,
-    now: NOW,
+    members: members(LEADER),
   }).state
-  const { state } = reduce_group(armed_one, { kind: 'set_follow', character_id: ALT_1, enabled: false })
+  const { state } = reduce_group(regrouped, { kind: 'follow_reconcile', leader_character_id: LEADER, now: NOW })
   expect(state.follow.enabled).toBe(false)
   expect(state.follow.leader_character_id).toBe(null)
   expect(state.follow.follower_character_ids).toEqual([])
   expect(state.follow.followers).toEqual({})
 })
 
-test('set_follow is idempotent — re-arming a follower or disarming a non-follower changes nothing', () => {
-  const armed_one = reduce_group(positioned(), {
-    kind: 'set_follow',
-    character_id: ALT_1,
-    enabled: true,
-    leader_character_id: LEADER,
-    now: NOW,
-  }).state
-  const again = reduce_group(armed_one, { kind: 'set_follow', character_id: ALT_1, enabled: true, now: NOW })
-  expect(again.state).toBe(armed_one)
+test('reconcile is idempotent — re-running with the same membership re-emits no new join/read', () => {
+  const one = following(ALT_1).state
+  const again = reduce_group(one, { kind: 'follow_reconcile', leader_character_id: LEADER, now: NOW })
+  expect(again.state.follow.follower_character_ids).toEqual([ALT_1])
+  expect(again.state.follow.followers[ALT_1]).toBe(one.follow.followers[ALT_1]) // the live row is untouched
   expect(again.outputs.join_world).toEqual([])
-  const inert = reduce_group(armed_one, { kind: 'set_follow', character_id: ALT_2, enabled: false })
-  expect(inert.state).toBe(armed_one)
+  expect(again.outputs.read_position).toEqual([])
 })
 
 // ── timer-derived follower projection (#509 tranche 2) ────────────────────────────────────────────────────────────
@@ -233,13 +230,7 @@ test('project_follower_position runs the alt from its checkpoint to the slot at 
 })
 
 test('#509 — a following alt is INVISIBLE far out, then renders its run-in once inside the range (despawn-and-continue)', () => {
-  let { state } = reduce_group(positioned(), {
-    kind: 'set_follow',
-    character_id: ALT_1,
-    enabled: true,
-    leader_character_id: LEADER,
-    now: NOW,
-  })
+  let { state } = following(ALT_1)
   // same-world but FAR (50 blocks > FOLLOW_VISIBLE_RANGE=30) → the in-world catch-up flight starts at the
   // read checkpoint, no world join (#613).
   expect(FOLLOW_VISIBLE_RANGE).toBe(30)
@@ -260,24 +251,37 @@ test('#509 — a following alt is INVISIBLE far out, then renders its run-in onc
 })
 
 // ── fight join + HUD focus ────────────────────────────────────────────────────────────────────────────────────────
-// #540 — MEMBERSHIP IS NOT CONSENT: an aligned alt used to auto-attempt every fight the active character
-// engaged (never completes its join, the fight never starts, refresh doesn't re-adopt — a full multi-char
-// block). RED (pre-fix): this fired join_fight for ALT_1/ALT_2 with follow never explicitly enabled.
-test('fight_started emits NOTHING for aligned alts while follow is not enabled (#540)', () => {
-  const state = grouped()
-  expect(state.follow.enabled).toBe(false)
-  const { outputs } = reduce_group(state, { kind: 'fight_started', fight_id: '0xfight', seated: [LEADER] })
+test('a SOLO leader (no owned group members) emits no fight-join (#540 — nobody to steer)', () => {
+  const solo = reduce_group(
+    reduce_group(empty_group_state(), {
+      kind: 'group',
+      my_address: ME,
+      leader_character_id: LEADER,
+      members: members(LEADER),
+    }).state,
+    { kind: 'follow_reconcile', leader_character_id: LEADER, now: NOW }
+  ).state
+  expect(solo.follow.enabled).toBe(false)
+  const { outputs } = reduce_group(solo, { kind: 'fight_started', fight_id: '0xfight', seated: [LEADER] })
   expect(outputs.join_fight).toEqual([])
 })
 
-test('dungeon_entered emits NOTHING for owned alts while follow is not enabled (#540)', () => {
-  const state = grouped()
+test('a SOLO leader emits no dungeon-enter for a non-member alt (#540)', () => {
+  const solo = reduce_group(
+    reduce_group(empty_group_state(), {
+      kind: 'group',
+      my_address: ME,
+      leader_character_id: LEADER,
+      members: members(LEADER),
+    }).state,
+    { kind: 'follow_reconcile', leader_character_id: LEADER, now: NOW }
+  ).state
   const assignments = [{ character_id: ALT_1, key_item_id: '0xk1', key_kiosk_id: '0xkk1', key_kiosk_cap_id: '0xkc1' }]
-  const { outputs } = reduce_group(state, { kind: 'dungeon_entered', world_id: WORLD, assignments })
+  const { outputs } = reduce_group(solo, { kind: 'dungeon_entered', world_id: WORLD, assignments })
   expect(outputs.enter_dungeon).toEqual([])
 })
 
-test('fight_started emits join_fight ONCE per aligned unseated owned member once follow is armed; seats/latches dedupe', () => {
+test('fight_started emits join_fight ONCE per aligned unseated group member; seats/latches dedupe', () => {
   const state = armed()
   const first = reduce_group(state, { kind: 'fight_started', fight_id: '0xfight', seated: [LEADER] })
   expect(first.outputs.join_fight.map((r) => r.character_id).sort()).toEqual([ALT_1, ALT_2].sort())
@@ -290,19 +294,6 @@ test('fight_started emits join_fight ONCE per aligned unseated owned member once
   expect(seated.state.fight.seated).toContain(ALT_1)
   const fresh = reduce_group(seated.state, { kind: 'fight_started', fight_id: '0xnext', seated: [LEADER] })
   expect(fresh.outputs.join_fight.map((r) => r.character_id).sort()).toEqual([ALT_1, ALT_2].sort())
-})
-
-test('#495 — fight_started joins ONLY armed followers, never an aligned-but-unfollowing party alt', () => {
-  // ALT_1 and ALT_2 are both owned and standing in the leader's world, but only ALT_1 toggled follow ON.
-  const armed_one = reduce_group(positioned(), {
-    kind: 'set_follow',
-    character_id: ALT_1,
-    enabled: true,
-    leader_character_id: LEADER,
-    now: NOW,
-  }).state
-  const { outputs } = reduce_group(armed_one, { kind: 'fight_started', fight_id: '0xfight', seated: [LEADER] })
-  expect(outputs.join_fight.map((r) => r.character_id)).toEqual([ALT_1])
 })
 
 test('fight_started with join_open:false arms focus/seats but emits NO join (closed chain window)', () => {
@@ -356,7 +347,7 @@ test('turn_started focuses OWNED seats only, once per change, and only while a f
 })
 
 // ── dungeon sequencing ────────────────────────────────────────────────────────────────────────────────────────────
-test('dungeon_entered sequences enter_dungeon once per owned member with an assignment (leader excluded)', () => {
+test('dungeon_entered sequences enter_dungeon once per owned group member with an assignment (leader excluded)', () => {
   const state = armed()
   const assignments = [
     { character_id: LEADER, key_item_id: '0xk0', key_kiosk_id: '0xkk0', key_kiosk_cap_id: '0xkc0' },
@@ -371,22 +362,6 @@ test('dungeon_entered sequences enter_dungeon once per owned member with an assi
     []
   )
   expect(reduce_group(next, { kind: 'dungeon_ended' }).state.dungeon).toBe(null)
-})
-
-test('#495 — dungeon_entered enters ONLY armed followers, skipping an unfollowing alt that holds a key', () => {
-  const armed_one = reduce_group(positioned(), {
-    kind: 'set_follow',
-    character_id: ALT_1,
-    enabled: true,
-    leader_character_id: LEADER,
-    now: NOW,
-  }).state
-  const assignments = [
-    { character_id: ALT_1, key_item_id: '0xk1', key_kiosk_id: '0xkk1', key_kiosk_cap_id: '0xkc1' },
-    { character_id: ALT_2, key_item_id: '0xk2', key_kiosk_id: '0xkk2', key_kiosk_cap_id: '0xkc2' },
-  ]
-  const { outputs } = reduce_group(armed_one, { kind: 'dungeon_entered', world_id: WORLD, assignments })
-  expect(outputs.enter_dungeon.map((r) => r.character_id)).toEqual([ALT_1])
 })
 
 // ── pure rule parity (migrated from frontend owned_follow.test.js) ───────────────────────────────────────────────
