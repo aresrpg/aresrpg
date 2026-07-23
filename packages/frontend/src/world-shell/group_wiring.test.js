@@ -62,7 +62,7 @@ const sync_full_group = (wiring, world_rows) =>
   })
 
 describe('group wiring — feeds the reducer, executes its requests once', () => {
-  test('explicit enable runs owned joins sequentially through the one transaction queue', async () => {
+  test('explicit enable runs owned CROSS-WORLD joins sequentially through the one transaction queue', async () => {
     let release_first
     let mark_started
     const first_started = new Promise((resolve) => {
@@ -79,9 +79,11 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
         }
       },
     })
+    // both alts are in a DIFFERENT world → both take the join transaction (a same-world alt would read its
+    // position instead and never queue a join — #613); the queue serializes the two joins.
     sync_full_group(wiring, [
       [LEADER, WORLD],
-      [ALT_1, WORLD],
+      [ALT_1, OTHER_WORLD],
       [ALT_2, OTHER_WORLD],
     ])
     wiring.pose_tick({ x: 100, z: 100, yaw: 0 }, { character_id: LEADER })
@@ -139,9 +141,11 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
 
   test('#509 — transit is a VISIBLE run-in; arrival writes the checkpoint; a dungeon hides the followers', async () => {
     const { wiring, calls } = make_harness()
+    // ALT_1 is in a DIFFERENT world → the join → proof-of-time flight leg (a same-world alt would resolve
+    // straight to with_you and never run this timer).
     sync_full_group(wiring, [
       [LEADER, WORLD],
-      [ALT_1, WORLD],
+      [ALT_1, OTHER_WORLD],
       [ALT_2, WORLD],
     ])
     const now = Date.now()
@@ -157,7 +161,7 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
     wiring.transit_tick(now + 30_000)
     await wiring.settled()
     expect(calls.write_checkpoint).toEqual([[ALT_1, WORLD, { x: 101.5, z: 100.5 }]])
-    expect(wiring.store.getState().follow.followers[ALT_1].status).toBe('arrived')
+    expect(wiring.store.getState().follow.followers[ALT_1].status).toBe('with_you') // #613 — completion consumed
     // a dungeon hides the in-world followers (the background timer keeps ticking, but nothing renders in-cave)
     wiring.dungeon_snapshot(true)
     expect(wiring.store.getState().follow.dungeon_background).toBe(true)
@@ -175,11 +179,11 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
     wiring.pose_tick({ x: 100, z: 100, yaw: 0, facing_yaw: 0 }, { character_id: LEADER }, now)
     wiring.set_follow({ character_id: ALT_1, enabled: true, leader_character_id: LEADER }, now)
     await wiring.settled()
-    expect(calls.join_world).toEqual([[ALT_1, WORLD]])
+    // #613 — ALT_1 is already in the leader's world and near → NO redundant join; it resolves straight to the
+    // with_you free-run companion and renders its standalone rig at once.
+    expect(calls.join_world).toEqual([])
     expect(wiring.store.getState().follow.follower_character_ids).toEqual([ALT_1])
-    // arrive so the follower renders a real standalone rig beside the leader (tick well past the 10s clamp)
-    wiring.transit_tick(now + 30_000)
-    await wiring.settled()
+    expect(wiring.store.getState().follow.followers[ALT_1].status).toBe('with_you')
     expect(calls.follow.at(-1).map((r) => r.character_id)).toEqual([ALT_1])
     // toggle OFF the last follower → the system disarms and the rig is despawned (apply_follow([]) forced
     // past execute's empty-render guard). A bare length-gate would have leaked the standalone rig.
@@ -219,9 +223,10 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
     wiring.enable_follow({ leader_character_id: LEADER, follower_character_ids: [ALT_1] }, 1_000)
     await wiring.settled()
     const before = wiring.store.getState().follow
+    const follow_calls = calls.follow.length
     wiring.sync_group({ my_address: ME, leader_character_id: LEADER, members: [], worlds: [] })
     expect(wiring.store.getState().follow).toBe(before)
-    expect(calls.follow).toEqual([])
+    expect(calls.follow.length).toBe(follow_calls) // the empty projection touches nothing → no NEW render
   })
 
   test('a placement fight joins the aligned alts ONCE across polls; focus follows each owned turn', async () => {
@@ -368,5 +373,15 @@ describe('pure helpers', () => {
     })
     expect(entries[0].cache_position).toEqual({ character_id: ALT_1, world_id: WORLD, x: 5, z: 7 })
     expect(build_follow_entries(rows, cards, null)).toEqual([])
+  })
+
+  test('#613 build_follow_entries threads the free-run companion contract (free_run + follow_anchor) for pet_follow', () => {
+    const rows = [{ character_id: ALT_1, x: 5, z: 7, yaw: 1, free_run: true, anchor: { x: 9, z: 3, yaw: 0.2 } }]
+    const cards = new Map([[ALT_1, { id: ALT_1, name: 'Kara', classe: 'yajin', male: false }]])
+    const [{ entry }] = build_follow_entries(rows, cards, WORLD)
+    expect(entry.free_run).toBe(true)
+    expect(entry.follow_anchor).toEqual({ x: 9, z: 3, yaw: 0.2 }) // the leader target step_pet_follow steers toward
+    expect(entry.position).toMatchObject({ x: 5, z: 7 }) // spawns at the alt's real seed, never on the leader
+    expect(entry.target_position).toMatchObject({ x: 9, z: 3 }) // the range gate rides the anchor → always present
   })
 })

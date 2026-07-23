@@ -34,7 +34,13 @@ export function build_follow_entries(rows, cards_by_id, leader_world_id) {
   return rows.flatMap((row) => {
     const card = cards_by_id.get(row.character_id)
     if (!card) return []
-    const target_position = { x: row.x, y: 0, z: row.z }
+    const spawn = { x: row.x, y: 0, z: row.z }
+    // #613 — a with_you follower is a FREE-RUN companion: it carries the pet_follow consumer contract (the
+    // leader `follow_anchor` step_pet_follow steers toward). Its spawn seed is the alt's real read/arrival
+    // position (steer in from there — never a teleport onto the leader), while target_position rides the anchor
+    // so the renderer's range gate keeps it beside the leader (always present, never range-despawned). An
+    // in_transit flight row has no anchor: it stays a timer-projected target the renderer eases toward.
+    const target_position = row.free_run && row.anchor ? { x: row.anchor.x, y: 0, z: row.anchor.z } : spawn
     return [
       {
         id: row.character_id,
@@ -46,11 +52,13 @@ export function build_follow_entries(rows, cards_by_id, leader_world_id) {
           color_1: Number(card.color_1 ?? 0),
           color_2: Number(card.color_2 ?? 0),
           color_3: Number(card.color_3 ?? 0),
-          position: { ...target_position },
+          position: { ...spawn },
           target_position,
           target_yaw: row.yaw,
           action: 'IDLE',
           owned_follow: true,
+          free_run: !!row.free_run,
+          follow_anchor: row.anchor ? { x: row.anchor.x, z: row.anchor.z, yaw: row.anchor.yaw } : null,
         },
         cache_position: { character_id: row.character_id, world_id: leader_world_id, x: row.x, z: row.z },
       },
@@ -103,6 +111,14 @@ export function create_group_wiring(deps) {
           checkpoint: await deps.read_checkpoint(row.character_id, row.world_id),
           now: Date.now(),
         })
+      })
+    // #613 — SAME-WORLD entry: read chain truth ONLY (no world-join tx — that redundant same-world join executes
+    // and burns sponsor gas). The checkpoint settles the follower NEAR → with_you or FAR → the in-world catch-up
+    // flight inside the reducer. A pure read, so it never latches member_blocked on failure (no gas at stake).
+    for (const row of outputs.read_position)
+      track('follow_position', row.character_id, async () => {
+        const position = await deps.read_checkpoint(row.character_id, row.world_id)
+        feed({ kind: 'follow_position_read', character_id: row.character_id, position, now: Date.now() })
       })
     for (const row of outputs.write_checkpoint)
       track('follow_checkpoint', row.character_id, async () => {
