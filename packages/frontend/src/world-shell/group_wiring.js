@@ -97,11 +97,21 @@ function resync() {
   })
 }
 
-/** The only production enable door. IDs are explicit and captured by the reducer for this session. */
+/** Batch enable door (invite-and-follow). IDs are explicit and captured by the reducer for this session. */
 export function enable_group_follow({ leader_character_id, follower_character_ids }) {
   if (!wiring || !leader_character_id || !follower_character_ids?.length) return false
   resync()
   wiring.enable_follow({ leader_character_id, follower_character_ids })
+  return true
+}
+
+/** Per-character follow toggle door (#496/#171). Default OFF, session-scoped, never persisted; the roster
+ *  row dispatches this for ITS character. Disable needs no leader (the reducer releases it on the last off). */
+export function set_group_follow({ character_id, enabled, leader_character_id = null }) {
+  if (!wiring || !character_id) return false
+  if (enabled && !(leader_character_id || wiring.store.getState().follow.leader_character_id)) return false
+  resync()
+  wiring.set_follow({ character_id, enabled, leader_character_id })
   return true
 }
 

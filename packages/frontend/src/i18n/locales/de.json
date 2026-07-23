@@ -1750,7 +1750,9 @@
     "follow_joining": "Weltbeitritt",
     "follow_in_transit": "Unterwegs",
     "follow_arrived": "Angekommen",
-    "follow_background": "Im Hintergrund"
+    "follow_background": "Im Hintergrund",
+    "follow_cta": "Folgen",
+    "unfollow_cta": "Nicht mehr folgen"
   },
   "inventory": {
     "craft_success": "Hergestellt: {{name}}",

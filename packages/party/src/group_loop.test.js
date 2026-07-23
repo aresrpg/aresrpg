@@ -150,6 +150,70 @@ test('explicit follower inclusion caps at the five formation slots in chain orde
   expect(state.follow.follower_character_ids).toEqual(ids.slice(0, MAX_OWNED_FOLLOWERS))
 })
 
+// ── per-character follow toggle (#496/#171) ───────────────────────────────────────────────────────────────────────
+const positioned = () => reduce_group(grouped(), { kind: 'leader_position', x: 0, z: 0, yaw: 0, now: NOW }).state
+
+test('set_follow arms ONE owned alt behind the current leader and emits only its world join', () => {
+  const { state, outputs } = reduce_group(positioned(), {
+    kind: 'set_follow',
+    character_id: ALT_1,
+    enabled: true,
+    leader_character_id: LEADER,
+    now: NOW,
+  })
+  expect(state.follow).toMatchObject({ enabled: true, leader_character_id: LEADER, follower_character_ids: [ALT_1] })
+  expect(state.follow.followers[ALT_1].status).toBe('joining')
+  expect(outputs.join_world).toEqual([{ character_id: ALT_1, world_id: WORLD }])
+  // a second row toggles on independently, keeping the captured leader (no leader_character_id passed)
+  const two = reduce_group(state, { kind: 'set_follow', character_id: ALT_2, enabled: true, now: NOW })
+  expect(two.state.follow.follower_character_ids).toEqual([ALT_1, ALT_2])
+  expect(two.outputs.join_world).toEqual([{ character_id: ALT_2, world_id: WORLD }])
+})
+
+test('set_follow OFF drops one follower, clears its transit row, and the rest keep following', () => {
+  const armed_two = reduce_group(positioned(), {
+    kind: 'follow_enable',
+    leader_character_id: LEADER,
+    follower_character_ids: [ALT_1, ALT_2],
+    now: NOW,
+  }).state
+  const { state } = reduce_group(armed_two, { kind: 'set_follow', character_id: ALT_1, enabled: false })
+  expect(state.follow.enabled).toBe(true)
+  expect(state.follow.follower_character_ids).toEqual([ALT_2])
+  expect(state.follow.followers[ALT_1]).toBeUndefined()
+  expect(state.follow.followers[ALT_2]).toBeDefined()
+})
+
+test('set_follow OFF for the LAST follower disarms the whole system (enabled false, leader released)', () => {
+  const armed_one = reduce_group(positioned(), {
+    kind: 'set_follow',
+    character_id: ALT_1,
+    enabled: true,
+    leader_character_id: LEADER,
+    now: NOW,
+  }).state
+  const { state } = reduce_group(armed_one, { kind: 'set_follow', character_id: ALT_1, enabled: false })
+  expect(state.follow.enabled).toBe(false)
+  expect(state.follow.leader_character_id).toBe(null)
+  expect(state.follow.follower_character_ids).toEqual([])
+  expect(state.follow.followers).toEqual({})
+})
+
+test('set_follow is idempotent — re-arming a follower or disarming a non-follower changes nothing', () => {
+  const armed_one = reduce_group(positioned(), {
+    kind: 'set_follow',
+    character_id: ALT_1,
+    enabled: true,
+    leader_character_id: LEADER,
+    now: NOW,
+  }).state
+  const again = reduce_group(armed_one, { kind: 'set_follow', character_id: ALT_1, enabled: true, now: NOW })
+  expect(again.state).toBe(armed_one)
+  expect(again.outputs.join_world).toEqual([])
+  const inert = reduce_group(armed_one, { kind: 'set_follow', character_id: ALT_2, enabled: false })
+  expect(inert.state).toBe(armed_one)
+})
+
 // ── fight join + HUD focus ────────────────────────────────────────────────────────────────────────────────────────
 // #540 — MEMBERSHIP IS NOT CONSENT: an aligned alt used to auto-attempt every fight the active character
 // engaged (never completes its join, the fight never starts, refresh doesn't re-adopt — a full multi-char

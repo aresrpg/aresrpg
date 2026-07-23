@@ -157,6 +157,31 @@ describe('group wiring — feeds the reducer, executes its requests once', () =>
     expect(wiring.store.getState().follow.followers[ALT_1].status).toBe('arrived')
   })
 
+  test('#171 — set_follow toggles ONE character; disabling the last follower despawns its standalone rig', async () => {
+    const { wiring, calls } = make_harness()
+    sync_full_group(wiring, [
+      [LEADER, WORLD],
+      [ALT_1, WORLD],
+      [ALT_2, WORLD],
+    ])
+    const now = Date.now()
+    wiring.pose_tick({ x: 100, z: 100, yaw: 0, facing_yaw: 0 }, { character_id: LEADER }, now)
+    wiring.set_follow({ character_id: ALT_1, enabled: true, leader_character_id: LEADER }, now)
+    await wiring.settled()
+    expect(calls.join_world).toEqual([[ALT_1, WORLD]])
+    expect(wiring.store.getState().follow.follower_character_ids).toEqual([ALT_1])
+    // arrive so the follower renders a real standalone rig beside the leader (tick well past the 10s clamp)
+    wiring.transit_tick(now + 30_000)
+    await wiring.settled()
+    expect(calls.follow.at(-1).map((r) => r.character_id)).toEqual([ALT_1])
+    // toggle OFF the last follower → the system disarms and the rig is despawned (apply_follow([]) forced
+    // past execute's empty-render guard). A bare length-gate would have leaked the standalone rig.
+    wiring.set_follow({ character_id: ALT_1, enabled: false }, now + 31_000)
+    expect(wiring.store.getState().follow.enabled).toBe(false)
+    expect(wiring.store.getState().follow.follower_character_ids).toEqual([])
+    expect(calls.follow.at(-1)).toEqual([])
+  })
+
   test('an emptied party projection (manual character switch) leaves explicit follow state untouched', async () => {
     const { wiring, calls } = make_harness()
     sync_full_group(wiring, [

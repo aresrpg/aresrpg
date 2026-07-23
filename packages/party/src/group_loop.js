@@ -287,47 +287,85 @@ const rendered_followers = (state, pose) =>
     return target ? [{ character_id, ...target, yaw: pose.yaw }] : []
   })
 
+/**
+ * Arm one-or-more owned alts as session followers — the SINGLE arming home shared by the batch
+ * `follow_enable` door and the per-character `set_follow` toggle. Requires the leader in a known world;
+ * already-armed / blocked / non-owned ids and anything past the five formation slots are skipped; each
+ * newly-armed follower begins at `joining` and gets one sequenced world-join request.
+ */
+function arm_followers(state, leader_character_id, ids) {
+  const world_id = state.world_by_character[leader_character_id] ?? null
+  if (!leader_character_id || !world_id) return still(state)
+  const allowed = new Set(
+    state.members
+      .filter((member) => member.character !== leader_character_id && member.owner === state.my_address)
+      .map((member) => member.character)
+  )
+  const room = Math.max(0, MAX_OWNED_FOLLOWERS - state.follow.follower_character_ids.length)
+  const added = [...new Set(ids ?? [])]
+    .filter(
+      (character_id) =>
+        allowed.has(character_id) &&
+        !is_blocked(state, character_id, 'world_join') &&
+        !state.follow.follower_character_ids.includes(character_id)
+    )
+    .slice(0, room)
+  if (!added.length) return still(state)
+  const follower_character_ids = [...state.follow.follower_character_ids, ...added]
+  const followers = { ...state.follow.followers }
+  for (const character_id of added)
+    followers[character_id] = { status: 'joining', world_id, carry_ratio: 1, receipt_confirmed: false }
+  return {
+    state: {
+      ...state,
+      follow: { ...state.follow, enabled: true, leader_character_id, follower_character_ids, followers },
+    },
+    outputs: { ...no_outputs(), join_world: added.map((character_id) => ({ character_id, world_id })) },
+  }
+}
+
+/**
+ * Toggle one follower OFF (the per-character `set_follow` disable). Drops it from the session set, clears its
+ * transit row, and re-emits the render set so its standalone rig despawns. Emptying the set disarms the whole
+ * system (enabled → false, leader released) so no stray latch keeps steering after the last toggle goes dark.
+ */
+function disarm_follower(state, character_id) {
+  if (!character_id || !state.follow.follower_character_ids.includes(character_id)) return still(state)
+  const follower_character_ids = state.follow.follower_character_ids.filter((id) => id !== character_id)
+  const enabled = follower_character_ids.length > 0
+  const next = {
+    ...state,
+    follow: {
+      ...state.follow,
+      enabled,
+      leader_character_id: enabled ? state.follow.leader_character_id : null,
+      follower_character_ids,
+      followers: prune_keys(state.follow.followers, new Set(follower_character_ids)),
+      dungeon_background: enabled ? state.follow.dungeon_background : false,
+    },
+  }
+  return {
+    state: next,
+    outputs: {
+      ...no_outputs(),
+      follow_render: next.leader_pose ? rendered_followers(next, next.leader_pose) : EMPTY_ROWS,
+    },
+  }
+}
+
 // ── follow transit: explicit session ids + reducer-clocked ETA, never active-character selection ──────────
 // eslint-disable-next-line complexity -- one exhaustive event switch is the reducer's single write door.
 function reduce_follow(state, input) {
   switch (input.kind) {
-    case 'follow_enable': {
-      const { leader_character_id } = input
-      const world_id = state.world_by_character[leader_character_id] ?? null
-      if (!leader_character_id || !world_id) return still(state)
-      const allowed = new Set(
-        state.members
-          .filter((member) => member.character !== leader_character_id && member.owner === state.my_address)
-          .map((member) => member.character)
-      )
-      const room = Math.max(0, MAX_OWNED_FOLLOWERS - state.follow.follower_character_ids.length)
-      const added = [...new Set(input.follower_character_ids ?? [])]
-        .filter((character_id) => allowed.has(character_id) && !is_blocked(state, character_id, 'world_join'))
-        .slice(0, room)
-      if (!added.length) return still(state)
-      const follower_character_ids = [
-        ...state.follow.follower_character_ids.filter((character_id) => character_id !== leader_character_id),
-        ...added.filter((character_id) => !state.follow.follower_character_ids.includes(character_id)),
-      ]
-      const followers = { ...state.follow.followers }
-      for (const character_id of added)
-        followers[character_id] = {
-          status: 'joining',
-          world_id,
-          carry_ratio: 1,
-          receipt_confirmed: false,
-        }
-      return {
-        state: {
-          ...state,
-          follow: { ...state.follow, enabled: true, leader_character_id, follower_character_ids, followers },
-        },
-        outputs: {
-          ...no_outputs(),
-          join_world: added.map((character_id) => ({ character_id, world_id })),
-        },
-      }
-    }
+    // Batch enable door (invite-and-follow): arm the whole passed set behind one leader.
+    case 'follow_enable':
+      return arm_followers(state, input.leader_character_id, input.follower_character_ids)
+    // Per-character toggle (#496/#171): each owned character's row flips its OWN follow flag. Default OFF,
+    // session-scoped, never persisted; the leader defaults to the currently-captured one (the driven char).
+    case 'set_follow':
+      return input.enabled
+        ? arm_followers(state, input.leader_character_id ?? state.follow.leader_character_id, [input.character_id])
+        : disarm_follower(state, input.character_id)
     case 'follow_world_joined': {
       const row = state.follow.followers[input.character_id]
       const { checkpoint } = input
@@ -529,6 +567,7 @@ function reduce_dungeon(state, input) {
 const MEMBERSHIP_KINDS = new Set(['group', 'invite_accepted', 'member_world_state', 'member_blocked'])
 const FOLLOW_KINDS = new Set([
   'follow_enable',
+  'set_follow',
   'follow_world_joined',
   'transit_tick',
   'follow_checkpoint_written',

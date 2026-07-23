@@ -1750,7 +1750,9 @@
     "follow_joining": "Joining world",
     "follow_in_transit": "In transit",
     "follow_arrived": "Arrived",
-    "follow_background": "Background"
+    "follow_background": "Background",
+    "follow_cta": "Follow",
+    "unfollow_cta": "Unfollow"
   },
   "inventory": {
     "craft_success": "Crafted {{name}}",

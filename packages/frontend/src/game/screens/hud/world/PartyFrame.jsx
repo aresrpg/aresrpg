@@ -22,6 +22,7 @@ import { game_log } from '../../../../core/log.js'
 import { open_player_menu } from './player_menu_store.js'
 import {
   enable_group_follow,
+  set_group_follow,
   get_group_follow_snapshot,
   subscribe_group_follow,
 } from '../../../../world-shell/group_wiring.js'
@@ -206,6 +207,11 @@ export function PartyFrame() {
           const is_leader = character_id === leader_character
           const owned = (roster ?? []).some((character) => character.id === character_id)
           const transit = follow.followers[character_id] ?? null
+          const is_following = follow.follower_character_ids.includes(character_id)
+          // The follow toggle rides every OWNED row except the one I'm driving and the captured anchor —
+          // those two can never follow. Default OFF; dispatches set_follow for THIS character (#496/#171).
+          const can_toggle_follow =
+            owned && character_id !== selected_character_id && character_id !== follow.leader_character_id
           const self_name = character_id === selected_character_id ? my_char_name : null
           const name = self_name || get_peer_state(character_id)?.name || row?.name || t('party.adventurer')
           const open_member_menu = (/** @type {any} */ e) => {
@@ -231,20 +237,28 @@ export function PartyFrame() {
                 {row?.level != null && (
                   <span className="gw-party__lvl">{t('party.level_chip', { level: row.level })}</span>
                 )}
-                {owned && !is_leader && !transit && (
+                {can_toggle_follow && (
                   <button
                     type="button"
-                    className="gw-party__lvl"
-                    style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0 }}
+                    className="gw-party__lvl gw-party__follow"
+                    style={{
+                      background: 'none',
+                      border: 0,
+                      cursor: 'pointer',
+                      padding: 0,
+                      color: is_following ? 'var(--color-gold)' : undefined,
+                    }}
                     disabled={party_busy}
+                    aria-pressed={is_following}
                     onClick={() =>
-                      enable_group_follow({
+                      set_group_follow({
+                        character_id,
+                        enabled: !is_following,
                         leader_character_id: follow.leader_character_id || selected_character_id,
-                        follower_character_ids: [character_id],
                       })
                     }
                   >
-                    {t('party.invite_owned_cta')}
+                    {t(is_following ? 'party.unfollow_cta' : 'party.follow_cta')}
                   </button>
                 )}
               </div>

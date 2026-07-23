@@ -1750,7 +1750,9 @@
     "follow_joining": "Uniéndose al mundo",
     "follow_in_transit": "En tránsito",
     "follow_arrived": "Ha llegado",
-    "follow_background": "En segundo plano"
+    "follow_background": "En segundo plano",
+    "follow_cta": "Seguir",
+    "unfollow_cta": "Dejar de seguir"
   },
   "inventory": {
     "craft_success": "Fabricado: {{name}}",

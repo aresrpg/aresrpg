@@ -1750,7 +1750,9 @@
     "follow_joining": "ワールドに参加中",
     "follow_in_transit": "移動中",
     "follow_arrived": "到着",
-    "follow_background": "バックグラウンド"
+    "follow_background": "バックグラウンド",
+    "follow_cta": "フォロー",
+    "unfollow_cta": "フォロー解除"
   },
   "inventory": {
     "craft_success": "{{name}} を作成しました",

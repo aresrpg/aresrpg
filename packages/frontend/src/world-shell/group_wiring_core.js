@@ -131,9 +131,17 @@ export function create_group_wiring(deps) {
       const now = Date.now()
       for (const row of worlds ?? []) feed({ kind: 'member_world_state', ...row, now })
     },
-    /** Explicit session enable; this is the only input that can create follow state or world joins. */
+    /** Explicit batch session enable (invite-and-follow): arm the whole passed set behind one leader. */
     enable_follow({ leader_character_id, follower_character_ids }, now = Date.now()) {
       return feed({ kind: 'follow_enable', leader_character_id, follower_character_ids, now })
+    },
+    /** Per-character follow toggle (#496/#171). Disarm can empty the render set, and execute's length-guard
+     *  skips an empty follow_render — so force ONE reconcile on disable to despawn the follower's standalone
+     *  rig even when it was the last one following. */
+    set_follow({ character_id, enabled, leader_character_id = null }, now = Date.now()) {
+      const outputs = feed({ kind: 'set_follow', character_id, enabled, leader_character_id, now })
+      if (!enabled) deps.apply_follow(outputs.follow_render)
+      return outputs
     },
     /** One throttled avatar pose tick. A non-leader active avatar is ignored by the reducer. */
     pose_tick(pose, { character_id = null } = {}, now = Date.now()) {

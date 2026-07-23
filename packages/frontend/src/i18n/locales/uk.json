@@ -1750,7 +1750,9 @@
     "follow_joining": "Приєднання до світу",
     "follow_in_transit": "У дорозі",
     "follow_arrived": "Прибув",
-    "follow_background": "У фоновому режимі"
+    "follow_background": "У фоновому режимі",
+    "follow_cta": "Слідувати",
+    "unfollow_cta": "Не слідувати"
   },
   "inventory": {
     "craft_success": "Виготовлено: {{name}}",
