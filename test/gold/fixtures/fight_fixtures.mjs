@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Gold-only deterministic fight corpus: 1 real seeded template + 4 real-identity mints. Each dedicated World
+// Gold-only deterministic fight corpus: 1 real seeded template + 6 real-identity mints. Each dedicated World
 // has exactly one roster row. These objects live only on the disposable localnet and their ids are meant to be
 // copied into the gold deployment manifest.
 import { load_deps } from '../deps_gold.mjs'
@@ -120,6 +120,59 @@ export const fixture_specs = [
     lethal_damage: null,
   },
   {
+    // OPTION B — a dedicated one-hit leveling Strawman, inert so bootstrap can earn (never administratively
+    // write) the four full-kit characters' XP. The live gold dial applies once in settlement and again when the
+    // result grants progression: 5,992,875 × 4 × 4 = 95,886,000, the EXACT L100 threshold. One mob and one solo
+    // winner keep party division/aging out; boot fights it while the freshly authored mob is age-hour zero.
+    key: 'coop_full_kit_leveler',
+    mode: 'mint',
+    mob_name: 'Strawman',
+    biome: 'gold-level-100',
+    world_seed: 0x474f4c444c564c31n,
+    level: 1,
+    hp: 1,
+    ap: 0,
+    mp: 0,
+    element: 'el_earth',
+    stats: {},
+    xp_reward: 5_992_875,
+    lethal_damage: null,
+  },
+  {
+    // OPTION B — the full-kit sibling stays separate from multi_turn: one planted Strawman must survive every
+    // once-only cast in the published L100 core-class catalog before cleanup begins. L100 UNLOCKS all 80 ids but
+    // unallocated spells snapshot learned rank 1 (participant::spell_level's absent=1 law). The immutable corpus
+    // at d6d32bcd:seed/mainnet/spells/{senshi,yajin,tomoda,shugo}.json has a 726 direct critical upper sum across
+    // those levels[0] rows (269+179+204+74); 1,200 HP leaves 474 for DoT/push/order variance. Its one 5-base,
+    // ALLMAP hit per mob turn deterministically reaches every shielded class; MP 0 keeps push-into-trap positioning
+    // under the players' control. Cleanup stays bounded: rank-1 Quietus needs <=39 hits; four seats are faster.
+    key: 'coop_full_kit',
+    mode: 'mint',
+    mob_name: 'Strawman',
+    biome: 'gold-full-kit',
+    world_seed: 0x474f4c44464b4954n,
+    level: 1,
+    hp: 1_200,
+    ap: 1,
+    mp: 0,
+    element: 'el_earth',
+    stats: {},
+    spell: {
+      damage: 5,
+      ap: 1,
+      rmin: 0,
+      rmax: 64,
+      los: false,
+      cpt: 1,
+      cpta: 1,
+      cd: 0,
+      crit: 0,
+      area_shape: 'allmap',
+    },
+    xp_reward: 400,
+    lethal_damage: null,
+  },
+  {
     // OPTION B — real Bonelet identity (seed/mainnet/01_first_shore/mobs.json), pinned in-band at level 7 with
     // the corpus stats (air_res -10 — the senshi's air cross-zone spell always lands >0). Inert (ap/mp 0 — the
     // aligned adjacency never drifts) and durable (10M hp — every AoE hp delta is measurable, nothing dies),
@@ -226,10 +279,29 @@ function damage_spell(transaction, foundation_package, foundation_type_package, 
   const element = transaction.moveCall({
     target: `${foundation_package}::spell::${spec.element}`,
   })
-  const damage = transaction.moveCall({
-    target: `${foundation_package}::spell_effect::damage`,
-    arguments: [element, transaction.pure.u64(damage_value)],
-  })
+  const effect_constant = (name) => transaction.moveCall({ target: `${foundation_package}::spell_effect::${name}` })
+  const damage =
+    spell.area_shape === 'allmap'
+      ? transaction.moveCall({
+          target: `${foundation_package}::spell_effect::new_effect`,
+          arguments: [
+            effect_constant('k_damage'),
+            element,
+            transaction.pure.u64(damage_value),
+            effect_constant('shape_allmap'),
+            transaction.pure.u64(0),
+            effect_constant('tf_not_team'),
+            transaction.pure.u8(100),
+            transaction.pure.u8(0),
+            transaction.pure.u8(0),
+            transaction.pure.u8(0),
+            effect_constant('phase_on_enter'),
+          ],
+        })
+      : transaction.moveCall({
+          target: `${foundation_package}::spell_effect::damage`,
+          arguments: [element, transaction.pure.u64(damage_value)],
+        })
   const effect_type = `${foundation_type_package}::spell_effect::Effect`
   return transaction.moveCall({
     target: `${foundation_package}::spell_effect::new_spell_level`,
@@ -355,7 +427,7 @@ function build_world_authoring(transaction, ids, world_id, mob_template_id, grou
 }
 
 /**
- * Resolve 1 real seeded template, mint 4 real-identity matchups, and author one dedicated World per fixture.
+ * Resolve 1 real seeded template, mint 6 real-identity matchups, and author one dedicated World per fixture.
  * No transaction is retried: any executed failure is returned as a hard boot failure with its digest.
  */
 export async function create_fight_fixtures({ client, signer, ids, seeded_mobs }) {
@@ -397,7 +469,12 @@ export async function create_fight_fixtures({ client, signer, ids, seeded_mobs }
       label: `${spec.key}:author`,
     })
     fixtures[spec.key] = {
-      outcome: spec.key === 'beats' || spec.key === 'aoe' ? 'durable' : spec.key === 'multi_turn' ? 'win' : spec.key,
+      outcome:
+        spec.key === 'beats' || spec.key === 'aoe'
+          ? 'durable'
+          : spec.key === 'multi_turn' || spec.key === 'coop_full_kit_leveler' || spec.key === 'coop_full_kit'
+            ? 'win'
+            : spec.key,
       world_id,
       world_seed: spec.world_seed.toString(),
       world_biome: spec.biome,
@@ -408,6 +485,8 @@ export async function create_fight_fixtures({ client, signer, ids, seeded_mobs }
       mob_hp: spec.hp,
       mob_ap: spec.ap,
       mob_mp: spec.mp,
+      mob_spell_damage: spec.spell?.damage ?? null,
+      mob_spell_area_shape: spec.spell?.area_shape ?? null,
       group: spec.group ?? [1, 1],
       xp_reward: spec.xp_reward,
       lethal_damage: spec.lethal_damage,
