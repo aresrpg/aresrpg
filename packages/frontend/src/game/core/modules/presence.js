@@ -70,7 +70,16 @@ export default function presence() {
           })
         }
       }
-      for (const id of vc.keys()) if (!listed.has(id)) vc.delete(id) // DESPAWN — the freshness law: an expired peer leaves no ghost
+      // DESPAWN — the freshness law: an expired peer leaves no ghost. SHARED-MAP GUARD (#595): group_wiring.js's
+      // apply_follow writes owned-follow rows into this SAME Map outside this reducer's door (its own render
+      // set, keyed off the party group_loop, never a p2p fact) — this reducer only owns P2P peer rows, so it
+      // must never reap an owned_follow row it didn't list; that row's REMOVE-side is apply_follow's job
+      // (deps.apply_follow already gates its own delete on the identical flag). Without this, EVERY p2p
+      // presence tick wiped every owned follower's registry row a beat before apply_follow's next tick could
+      // restore it — remote_players.js reacted correctly to the row vanishing (same-tick teardown), but the
+      // vanish itself was spurious: a live follower's pet/avatar cycling torn-down↔respawned off a race
+      // between two uncoordinated writers, not an actual despawn.
+      for (const id of vc.keys()) if (!listed.has(id) && !vc.get(id)?.owned_follow) vc.delete(id)
       return { ...state, visible_characters: vc }
     },
     /** @param {import('../game.js').Context} context */
