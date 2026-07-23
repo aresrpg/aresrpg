@@ -24,7 +24,8 @@ subdir = "crates/sui-framework/packages/move-stdlib"
 rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
 override = true
 
-# Kiosk (PersonalKioskCap — the ownership proof the activate/next-fight doors thread). Default = testnet lineage.
+# Kiosk (PersonalKioskCap — the ownership proof the activate/next-fight doors thread).
+# The default dependency serves the verified testnet lineage.
 [dependencies.Kiosk]
 git = "https://github.com/MystenLabs/apps.git"
 subdir = "kiosk"
@@ -45,8 +46,8 @@ local = "../engine"
 testnet = { chain-id = "4c78adac" }
 mainnet = { chain-id = "35834a8a" }
 
-[dep-replacements.mainnet]
-Kiosk = { git = "https://github.com/MystenLabs/apps.git", subdir = "kiosk", rev = "mainnet" }
+# The future mainnet ceremony owns the real Kiosk pin.
+# Until then, the verified testnet dependency remains the default.
 
 [addresses]
 # `aresrpg_dungeon` binds implicitly to 0x0 via the [package] name; per-network published ids self-record.

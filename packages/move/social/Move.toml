@@ -18,7 +18,7 @@ rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
 override = true
 
 # Party proves current character custody through the same personal-kiosk capability seam as
-# `aresrpg::fight::join`. Default = testnet lineage; mainnet is pinned below like the core package.
+# `aresrpg::fight::join`. The default dependency serves the verified testnet lineage.
 [dependencies.Kiosk]
 git = "https://github.com/MystenLabs/apps.git"
 subdir = "kiosk"
@@ -28,7 +28,7 @@ rev = "testnet"
 testnet = { chain-id = "4c78adac" }
 mainnet = { chain-id = "35834a8a" }
 
-[dep-replacements.mainnet]
-Kiosk = { git = "https://github.com/MystenLabs/apps.git", subdir = "kiosk", rev = "mainnet" }
+# The future mainnet ceremony owns the real Kiosk pin.
+# Until then, the verified testnet dependency remains the default.
 
 [addresses]

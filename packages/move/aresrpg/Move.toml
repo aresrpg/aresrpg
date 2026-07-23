@@ -22,7 +22,7 @@ rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7"
 override = true
 
 # Kiosk LOCK + TransferPolicy (the kiosk-lock constitution: every item/character in a personal kiosk). The default
-# dep serves testnet; [dep-replacements.mainnet] re-pins to the mainnet kiosk lineage under `--build-env mainnet`.
+# dependency serves the verified testnet lineage.
 [dependencies.Kiosk]
 git = "https://github.com/MystenLabs/apps.git"
 subdir = "kiosk"
@@ -50,8 +50,8 @@ local = "../spells"
 testnet = { chain-id = "4c78adac" }
 mainnet = { chain-id = "35834a8a" }
 
-[dep-replacements.mainnet]
-Kiosk = { git = "https://github.com/MystenLabs/apps.git", subdir = "kiosk", rev = "mainnet" }
+# The future mainnet ceremony owns the real Kiosk pin.
+# Until then, the verified testnet dependency remains the default.
 
 [addresses]
 # `aresrpg` binds implicitly to 0x0 via the [package] name; the per-network published id self-records in Move.lock.
