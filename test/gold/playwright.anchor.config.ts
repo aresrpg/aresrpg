@@ -56,6 +56,11 @@ const LEGACY_GOLD_RUN_WRAPPER = '/Users/sceatstudio/.claude/hooks/bounded-run.sh
 const GOLD_RUN_WRAPPER =
   process.env.GOLD_RUN_WRAPPER ?? (fs.existsSync(LEGACY_GOLD_RUN_WRAPPER) ? LEGACY_GOLD_RUN_WRAPPER : '')
 const with_gold_run_wrapper = (command: string) => (GOLD_RUN_WRAPPER ? `${GOLD_RUN_WRAPPER} ${command}` : command)
+// GOLD_WEBSERVER_TIMEOUT_MS (CI escape hatch, gold.yml only): a cold rolldown pre-bundle of the three.js
+// graph on a runner can legitimately exceed the 360s default (run 29970085845 boot #12 — vite never reached
+// "ready" inside it, and the budget alone can't tell slow from hung). Default unchanged so every Mac flow
+// keeps its existing 360s.
+const WEBSERVER_TIMEOUT_MS = Number(process.env.GOLD_WEBSERVER_TIMEOUT_MS ?? 360_000)
 
 export default defineConfig({
   // OWN testDir (specs_anchor/), disjoint from the slice's specs/ — so the testnet-default gold config never
@@ -102,13 +107,17 @@ export default defineConfig({
       // gRPC endpoint (SDK chain-direct reads + tx build), the gold /v1 read-api, and the gold rig's REAL local
       // sponsor fixture (VITE_SPONSOR_URL) — without it the frontend falls through to its dev-default sponsor
       // URL, nothing answers, and a ≤0.2-SUI wallet's sponsor-first tx dies "Failed to fetch" (r11 anchor gate).
+      // --clearScreen false: vite's default clear-screen ANSI sequence around its own "ready in Xms" banner
+      // is a documented CI-legibility trap (piped/non-TTY logs can lose the line around it) — disabled so a
+      // slow-but-alive cold bundle is still provably distinguishable from a hang in the CI log (see the
+      // timeout comment below).
       command: with_gold_run_wrapper(
-        `env GOLD_VITE_CACHE_DIR=${VITE_CACHE_DIR} VITE_NETWORK=localnet VITE_RPC_URL=${API} VITE_SUI_GRPC_URL=${GRPC} VITE_SPONSOR_URL=${SPONSOR} bunx --bun vite --config ${VITE_CONFIG} --port ${PORT} --strictPort`
+        `env GOLD_VITE_CACHE_DIR=${VITE_CACHE_DIR} VITE_NETWORK=localnet VITE_RPC_URL=${API} VITE_SUI_GRPC_URL=${GRPC} VITE_SPONSOR_URL=${SPONSOR} bunx --bun vite --config ${VITE_CONFIG} --port ${PORT} --strictPort --clearScreen false`
       ),
       cwd: FRONTEND,
       url: `${BASE}/`,
-      // cold dep-optimizer re-bundle after an engine merge legitimately exceeds 120s (r9/r10 2026-07-19); warm boots in ~5s — the budget covers the cold class
-      timeout: 360_000,
+      // cold dep-optimizer re-bundle after an engine merge legitimately exceeds 120s (r9/r10 2026-07-19); warm boots in ~5s — the budget covers the cold class. CI-tunable — see WEBSERVER_TIMEOUT_MS above.
+      timeout: WEBSERVER_TIMEOUT_MS,
       reuseExistingServer: false,
       stdout: 'pipe',
       stderr: 'pipe',
@@ -135,12 +144,12 @@ export default defineConfig({
       // through the lag proxy (the fixture sponsor is the rig's own precondition, same as API/GRPC above) — the
       // lagged lane exercises /v1 latency, not sponsor latency.
       command: with_gold_run_wrapper(
-        `env GOLD_VITE_CACHE_DIR=${LAGGED_VITE_CACHE_DIR} VITE_NETWORK=localnet VITE_RPC_URL=${LAG_BASE} VITE_SUI_GRPC_URL=${GRPC} VITE_SPONSOR_URL=${SPONSOR} bunx --bun vite --config ${VITE_CONFIG} --port ${LAGGED_PORT} --strictPort`
+        `env GOLD_VITE_CACHE_DIR=${LAGGED_VITE_CACHE_DIR} VITE_NETWORK=localnet VITE_RPC_URL=${LAG_BASE} VITE_SUI_GRPC_URL=${GRPC} VITE_SPONSOR_URL=${SPONSOR} bunx --bun vite --config ${VITE_CONFIG} --port ${LAGGED_PORT} --strictPort --clearScreen false`
       ),
       cwd: FRONTEND,
       url: `${LAGGED_BASE}/`,
-      // cold dep-optimizer re-bundle after an engine merge legitimately exceeds 120s (r9/r10 2026-07-19); warm boots in ~5s — the budget covers the cold class
-      timeout: 360_000,
+      // cold dep-optimizer re-bundle after an engine merge legitimately exceeds 120s (r9/r10 2026-07-19); warm boots in ~5s — the budget covers the cold class. CI-tunable — see WEBSERVER_TIMEOUT_MS above.
+      timeout: WEBSERVER_TIMEOUT_MS,
       reuseExistingServer: false,
       stdout: 'pipe',
       stderr: 'pipe',

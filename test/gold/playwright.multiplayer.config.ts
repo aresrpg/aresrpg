@@ -27,6 +27,9 @@ const PORT = Number(process.env.MULTIPLAYER_PORT ?? 5493)
 const BASE = `http://localhost:${PORT}`
 const API = manifest?.api ?? 'http://127.0.0.1:3100'
 const GRPC = manifest?.rpc ?? 'http://127.0.0.1:9100'
+// GOLD_WEBSERVER_TIMEOUT_MS (CI escape hatch, gold.yml only) — see playwright.anchor.config.ts's sibling
+// constant for the full rationale (run 29970085845 boot #12). Default unchanged for Mac flows.
+const WEBSERVER_TIMEOUT_MS = Number(process.env.GOLD_WEBSERVER_TIMEOUT_MS ?? 360_000)
 
 export default defineConfig({
   testDir: path.join(GOLD, 'specs_multiplayer'),
@@ -54,11 +57,13 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `GOLD_VITE_CACHE_DIR='${VITE_CACHE_DIR}' VITE_NETWORK=localnet VITE_RPC_URL=${API} VITE_SUI_GRPC_URL=${GRPC} bunx --bun vite --config '${VITE_CONFIG}' --port ${PORT} --strictPort`,
+    // --clearScreen false: see playwright.anchor.config.ts — keeps vite's own "ready in Xms" line legible in
+    // a piped/non-TTY CI log instead of behind its default clear-screen ANSI sequence.
+    command: `GOLD_VITE_CACHE_DIR='${VITE_CACHE_DIR}' VITE_NETWORK=localnet VITE_RPC_URL=${API} VITE_SUI_GRPC_URL=${GRPC} bunx --bun vite --config '${VITE_CONFIG}' --port ${PORT} --strictPort --clearScreen false`,
     cwd: FRONTEND,
     url: `${BASE}/`,
-    // cold dep-optimizer re-bundle after an engine merge legitimately exceeds 120s (r9/r10 2026-07-19); warm boots in ~5s — the budget covers the cold class
-    timeout: 360_000,
+    // cold dep-optimizer re-bundle after an engine merge legitimately exceeds 120s (r9/r10 2026-07-19); warm boots in ~5s — the budget covers the cold class. CI-tunable — see WEBSERVER_TIMEOUT_MS above.
+    timeout: WEBSERVER_TIMEOUT_MS,
     reuseExistingServer: false,
     stdout: 'pipe',
     stderr: 'pipe',
