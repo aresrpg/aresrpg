@@ -7,7 +7,7 @@ use super::*;
 // CharacterObject / BoardCreated / Crushed / RecipelessSet / ZoneField ride in via `super::*`
 // (imported by `snapshot.rs`); the rest are only constructed in tests.
 use super::super::model::{
-    Customization, ItemTemplateObject, PositionAnchor, RecipeIngredient,
+    Customization, ItemDamagesLine, ItemTemplateObject, PositionAnchor, RecipeIngredient,
 };
 use std::collections::HashMap;
 use sui_indexer_alt_framework::types::base_types::{ObjectID, SuiAddress};
@@ -976,6 +976,69 @@ fn item_stats_field_garbage_bytes_are_a_safe_none() {
     assert!(map_item_stats_max_field("0xab", &[0x00, 0x01, 0x02]).is_none());
 }
 
+// ── Item damages projection (issue #619 leg 3: /v1's item shape had no damages field) ──
+
+#[test]
+fn is_damages_key_discriminates_from_the_stats_keys_and_the_zone_key() {
+    use std::str::FromStr;
+    let damages = TypeTag::from_str("0xa11ce::item_damages::DamagesKey").unwrap();
+    let min = TypeTag::from_str("0xa11ce::item_stats::StatsMinKey").unwrap();
+    assert!(is_damages_key(&damages));
+    assert!(!is_damages_key(&min));
+    assert!(!is_damages_key(&TypeTag::U64));
+    // Cross-guard: the sibling stats arms never claim the damages key either.
+    assert!(!is_stats_min_key(&damages));
+    assert!(!is_stats_max_key(&damages));
+}
+
+#[test]
+fn item_damages_field_projects_a_multi_element_line_array() {
+    let id = "0x00000000000000000000000000000000000000000000000000000000000000ad";
+    let f = ItemDamagesField {
+        id: ObjectID::from_hex_literal("0xdf3").unwrap(),
+        dummy_field: false,
+        lines: vec![
+            ItemDamagesLine { from: 22, to: 39, damage_type: "weapon".into(), element: "earth".into() },
+            ItemDamagesLine { from: 19, to: 36, damage_type: "weapon".into(), element: "air".into() },
+        ],
+    };
+    let writes = map_item_damages_field(id, &bcs::to_bytes(&f).unwrap()).expect("item damages DF must decode");
+    assert!(matches!(&writes[0], RedisWrite::Set { key, nx: true, .. } if key == &k_template(id)));
+    let damages = set_json(&writes, "$.damages").unwrap();
+    assert!(damages.contains(r#"{"element":"earth","from":22,"to":39,"damage_type":"weapon"}"#), "{damages}");
+    assert!(damages.contains(r#"{"element":"air","from":19,"to":36,"damage_type":"weapon"}"#), "{damages}");
+    assert!(has_sadd(&writes, "rpc:idx:templates", id));
+}
+
+/// RUNTIME PROVENANCE (issue #619): the exact 66 bytes of the LIVE testnet `DamagesKey` dynamic
+/// field `0xa6f55cd6…bffc1f9` on ItemTemplate `0x76faa8b1…7f7f49b` ("Longdraw", a bow — a
+/// two-line multi-element weapon, earth + air) fetched via `sui client dynamic-field <template>
+/// --json` (the CLI's own gRPC config; testnet JSON-RPC is dead — see
+/// reference_sui_testnet_rpc_endpoint), reading `fieldObject.contents.value`. Proves the
+/// `DamagesKey {}` empty-struct wire (`id:UID(32) | dummy_field:bool(1) | vector<ItemDamages>`)
+/// matches the live chain byte-for-byte, not just a self-encoded round trip.
+const REAL_LONGDRAW_DAMAGES_BCS_HEX: &str = "a6f55cd63c10abf995392f4f07f980a77d0d91f92010eb53418cc2376bffc1f900021600270006776561706f6e0565617274681300240006776561706f6e03616972";
+
+#[test]
+fn real_testnet_longdraw_damages_bcs_decodes_the_real_onchain_wire() {
+    let bytes = hex::decode(REAL_LONGDRAW_DAMAGES_BCS_HEX).unwrap();
+    let decoded: ItemDamagesField = bcs::from_bytes(&bytes).expect("real DamagesKey DF bytes must decode");
+    assert_eq!(decoded.lines.len(), 2);
+    assert_eq!((decoded.lines[0].from, decoded.lines[0].to, decoded.lines[0].element.as_str()), (22, 39, "earth"));
+    assert_eq!((decoded.lines[1].from, decoded.lines[1].to, decoded.lines[1].element.as_str()), (19, 36, "air"));
+
+    let id = "0x76faa8b18c3aba367f51640fd676502d95a902a8bdcf53b8e4d4ca7cc7f7f49b";
+    let writes = map_item_damages_field(id, &bytes).expect("must project");
+    let damages = set_json(&writes, "$.damages").unwrap();
+    assert!(damages.contains(r#"{"element":"earth","from":22,"to":39,"damage_type":"weapon"}"#), "{damages}");
+    assert!(damages.contains(r#"{"element":"air","from":19,"to":36,"damage_type":"weapon"}"#), "{damages}");
+}
+
+#[test]
+fn item_damages_field_garbage_bytes_are_a_safe_none() {
+    assert!(map_item_damages_field("0xab", &[0x00, 0x01, 0x02]).is_none());
+}
+
 // ── Item object snapshot (the /v1/owner-items loose bag) ──────────────────────
 
 #[test]
@@ -994,9 +1057,11 @@ fn item_object_snapshots_display_fields_and_kiosk_membership() {
     };
     let bytes = bcs::to_bytes(&obj).unwrap();
 
+    let package = "0x4217b46f8dfe7c1ccc6a5e1c37e012a53bf25b07e0edb228a3c5a1575eeb2b06";
+
     // Resolved kiosk → the item doc carries name/category/amount/template + kiosk_id, and the
     // item joins its kiosk's membership set (the two halves an owner-items join reads).
-    let writes = map_item_object(id, &bytes, Some(kiosk)).expect("item bytes must decode");
+    let writes = map_item_object(id, &bytes, Some(kiosk), package).expect("item bytes must decode");
     assert!(matches!(&writes[0], RedisWrite::Set { key, nx: true, .. } if key == &k_item(id)));
     assert_eq!(set_json(&writes, "$.name"), Some(r#""Iron Sword""#));
     assert_eq!(set_json(&writes, "$.item_type"), Some(r#""sword_iron""#));
@@ -1005,20 +1070,26 @@ fn item_object_snapshots_display_fields_and_kiosk_membership() {
     assert_eq!(set_json(&writes, "$.amount"), Some("1"));
     assert_eq!(set_json(&writes, "$.template"), Some(format!("\"{}\"", tpl.to_canonical_string(true)).as_str()));
     assert_eq!(set_json(&writes, "$.kiosk_id"), Some(format!("\"{kiosk}\"").as_str()));
+    // issue #524 server half: the object's OWN package id, so the frontend's dead-universe
+    // lineage filter (`is_aresrpg_item`) can run on the PRIMARY `/v1/owner-items` path.
+    assert_eq!(set_json(&writes, "$.package"), Some(format!("\"{package}\"").as_str()));
     assert!(has_sadd(&writes, &format!("rpc:idx:kiosk_items:{kiosk}"), id));
 
     // Unresolved kiosk → NO kiosk_id / kiosk_items write (never fabricate; the row waits for a
     // checkpoint where the wrapper is an output object — mint/place/trade always are).
-    let no_kiosk = map_item_object(id, &bytes, None).unwrap();
+    let no_kiosk = map_item_object(id, &bytes, None, package).unwrap();
     assert!(no_kiosk.iter().all(|w| !matches!(w, RedisWrite::Set { path, .. } if path == "$.kiosk_id")));
     assert!(no_kiosk
         .iter()
         .all(|w| !matches!(w, RedisWrite::SetAdd { key, .. } if key.starts_with("rpc:idx:kiosk_items:"))));
+    // `package` is written regardless of kiosk resolution — it comes off the object's own type,
+    // not the kiosk join.
+    assert_eq!(set_json(&no_kiosk, "$.package"), Some(format!("\"{package}\"").as_str()));
 }
 
 #[test]
 fn item_garbage_bytes_are_a_safe_none() {
-    assert!(map_item_object("0xabc", &[0x00, 0x01, 0x02], None).is_none());
+    assert!(map_item_object("0xabc", &[0x00, 0x01, 0x02], None, "0xdead").is_none());
 }
 
 /// DRIFT GUARD for the `Item` bag decode (same 2026-07-12 `description` insertion, between
@@ -1047,8 +1118,8 @@ fn item_object_decodes_current_onchain_field_order() {
         category: "sword".into(),
         amount: 1,
     };
-    let writes =
-        map_item_object(id, &bcs::to_bytes(&chain).unwrap(), None).expect("current-layout Item must decode");
+    let writes = map_item_object(id, &bcs::to_bytes(&chain).unwrap(), None, "0xdead")
+        .expect("current-layout Item must decode");
     assert_eq!(set_json(&writes, "$.name"), Some(r#""Iron Sword""#));
     assert_eq!(set_json(&writes, "$.item_type"), Some(r#""sword_iron""#));
     assert_eq!(set_json(&writes, "$.description"), Some(r#""Forged in the deep.""#));
@@ -1158,6 +1229,14 @@ fn real_testnet_mob_template_decodes_prefix_and_loot() {
     assert!(doc.contains(r#""base_hp":40"#), "doc: {doc}");
     assert!(doc.contains(r#""element":2"#), "doc: {doc}"); // EARTH
 
+    // Resistances (issue #629): Test Brute authors no resistance bonus — all four sit at the
+    // neutral SHIFT_U16 centre (32768), proving the block DECODED (not absent/null) even
+    // though every field happens to equal the centre value.
+    assert!(doc.contains(r#""fire_resistance":32768"#), "doc: {doc}");
+    assert!(doc.contains(r#""water_resistance":32768"#), "doc: {doc}");
+    assert!(doc.contains(r#""earth_resistance":32768"#), "doc: {doc}");
+    assert!(doc.contains(r#""air_resistance":32768"#), "doc: {doc}");
+
     // Loot: longsword @ 5000 bp (qty 1) + iron_ore @ 8000 bp (qty 1-3), decoded past the
     // 176-byte Stats + the SpellLevel kit — the exact on-chain seed content.
     assert!(
@@ -1173,6 +1252,62 @@ fn real_testnet_mob_template_decodes_prefix_and_loot() {
     assert!(doc.contains(r#""min_qty":1"#), "doc: {doc}");
     assert!(doc.contains(r#""max_qty":3"#), "doc: {doc}");
     assert!(has_sadd(&writes, "rpc:idx:mob_templates", id));
+}
+
+/// RUNTIME PROVENANCE (issue #629): the exact 513 bytes of the LIVE testnet MobTemplate
+/// `0xc6be9c23…d07f35` ("Boar") fetched via `sui client object <id> --bcs --json` (the CLI's
+/// own gRPC config; testnet JSON-RPC is dead — reference_sui_testnet_rpc_endpoint). Proves the
+/// resistance read lands on the published Stats block byte-for-byte, NOT just a self-encoded
+/// round trip — and, critically, that it is NON-neutral (issue #629's own cited donor profile:
+/// "+40 earth / −20 air on the boar" — earth centred at 32768+40=32808, air at 32768−20=32748,
+/// matching the identity-decode demo in PR #628's own body word-for-word).
+const REAL_MOB_BOAR_BCS_HEX: &str = "c6be9c23359f0bb512b494b4635920acf4f7d96e04c0915f88f241e073d07f3504426f617212001c00960000000000000004000000000000000300000000000000022e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000800000000000002880000000000000ec7f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001010004000000000000000100000000000000010000000000000000000100ffff000a000000000000000000000100020f000000000000000000000000000000000164000000000005aa6d6e1b80816f009e3b74e211488dabde467664a49f8c02931745b008f47fdf6c160100010025fcacf2cf521e29f6a6da63f6a9f52089b0abe5cab3678254411ccd6cb2295c480d01000100b313e6386305a1b779f8eb957f6fe0cdebedbf011f9d12621588172a821e85b2e5010100010041fbad9f338b723a6753ad441c9a064c647152e39cc8ebe58123a3704f74363e600001000100aaa08cdb6ea754151369c2fd7cc1daac3a80f0921a28a71b9bc68f67f4c03a40410001000100d606000000000000";
+
+#[test]
+fn real_testnet_boar_mob_projects_nonzero_resistances() {
+    let bytes = hex::decode(REAL_MOB_BOAR_BCS_HEX).unwrap();
+    let id = "0xc6be9c23359f0bb512b494b4635920acf4f7d96e04c0915f88f241e073d07f35";
+    let writes = map_mob_template_object(id, &bytes).expect("real Boar bytes must decode");
+    let doc = set_json(&writes, "$").expect("mob template writes its whole doc");
+
+    assert!(doc.contains(r#""name":"Boar""#), "doc: {doc}");
+    assert!(doc.contains(r#""min_level":18"#), "doc: {doc}");
+    assert!(doc.contains(r#""max_level":28"#), "doc: {doc}");
+    assert!(doc.contains(r#""base_hp":150"#), "doc: {doc}");
+    assert!(doc.contains(r#""element":2"#), "doc: {doc}"); // EARTH
+
+    // The cited donor profile, wire-value passthrough (client owns the 32768 decode).
+    assert!(doc.contains(r#""fire_resistance":32768"#), "doc: {doc}"); // neutral
+    assert!(doc.contains(r#""water_resistance":32768"#), "doc: {doc}"); // neutral
+    assert!(doc.contains(r#""earth_resistance":32808"#), "doc: {doc}"); // +40
+    assert!(doc.contains(r#""air_resistance":32748"#), "doc: {doc}"); // -20
+
+    // The loot table still decodes past the resistance read (5 real drop rows on this mob).
+    assert!(
+        doc.contains(r#""template_id":"0xaa6d6e1b80816f009e3b74e211488dabde467664a49f8c02931745b008f47fdf""#),
+        "doc: {doc}"
+    );
+    assert!(doc.contains(r#""chance_bp":5740"#), "doc: {doc}");
+}
+
+#[test]
+fn mob_resistances_survive_a_loot_tail_that_fails_to_decode() {
+    // A body with a VALID 176-byte Stats block (real resistance values) followed by garbage
+    // that can never form a valid `spells`/`loot` walk. Resistances must still project — the
+    // loot decode failing can never regress the (already-consumed, already-correct) stats read.
+    let mut stats = vec![0u8; 176];
+    // fire_resistance is field index 7 of 22 (byte offset 7*8 = 56).
+    stats[56..64].copy_from_slice(&32_800u64.to_le_bytes());
+    let mut trailing = stats;
+    trailing.extend_from_slice(&[0xff; 40]); // an unparseable spells/loot tail
+    let bytes = mob_template_bytes("Snarler", 3, 7, 80, 0 /* FIRE */, &trailing);
+    let id = "0x0000000000000000000000000000000000000000000000000000000000000dad";
+    let writes = map_mob_template_object(id, &bytes).expect("mob prefix must parse");
+    let doc = set_json(&writes, "$").expect("mob template writes its whole doc");
+
+    assert!(doc.contains(r#""fire_resistance":32800"#), "doc: {doc}");
+    assert!(doc.contains(r#""water_resistance":0"#), "doc: {doc}"); // raw 0 — the zeroed synthetic stand-in
+    assert!(doc.contains(r#""drops":null"#), "doc: {doc}"); // loot walk failed — honest unknown
 }
 
 #[test]

@@ -40,9 +40,9 @@ use sui_indexer_alt_framework::types::object::Owner;
 use tracing::debug;
 
 use super::model::{
-    BoardCreated, CharacterObject, Crushed, EquippedItemField, FightOutcomeObject, ItemObject, ItemStatsField,
-    ItemTemplateObject, JobXpField, KioskItemListed, PersonalKioskCapObject, PetBoxClaimObject, PoolBuy, PoolSell,
-    ProgressionField, RecipeObject, RecipelessSet, SaleBought, ZoneField, ZoneGroupRootField,
+    BoardCreated, CharacterObject, Crushed, EquippedItemField, FightOutcomeObject, ItemDamagesField, ItemObject,
+    ItemStatsField, ItemTemplateObject, JobXpField, KioskItemListed, PersonalKioskCapObject, PetBoxClaimObject,
+    PoolBuy, PoolSell, ProgressionField, RecipeObject, RecipelessSet, SaleBought, ZoneField, ZoneGroupRootField,
 };
 use super::project::{
     self, char_init, del, k_character, k_item, k_lastsale, k_template, k_world, k_zone, k_zones, mpath, sadd,
@@ -69,6 +69,11 @@ const ITEM_TEMPLATE_TYPE: &str = "ItemTemplate";
 const ITEM_STATS_MODULE: &str = "item_stats";
 const STATS_MIN_KEY_TYPE: &str = "StatsMinKey";
 const STATS_MAX_KEY_TYPE: &str = "StatsMaxKey";
+/// `aresrpg::item_damages` — owns the authored weapon-damage-line dynamic-field KEY attached to an
+/// ItemTemplate's UID (`item_damages::attach`, issue #619 leg 3). A PLAIN struct key (NOT `NsKey`-
+/// wrapped), mirroring `ITEM_STATS_MODULE` above — matched directly by (module, name).
+const ITEM_DAMAGES_MODULE: &str = "item_damages";
+const DAMAGES_KEY_TYPE: &str = "DamagesKey";
 /// `kiosk::personal_kiosk::PersonalKioskCap` — the mysten non-transferable kiosk-owner cap.
 /// Like `0x2::dynamic_field::Field` below, it is framework-adjacent (NOT an AresRPG package),
 /// so it is matched by `(module, name)` and EXEMPTED from the AresRPG package allowlist — it
@@ -353,6 +358,14 @@ fn is_stats_min_key(key_tag: &TypeTag) -> bool {
 fn is_stats_max_key(key_tag: &TypeTag) -> bool {
     let TypeTag::Struct(s) = key_tag else { return false };
     s.module.as_str() == ITEM_STATS_MODULE && s.name.as_str() == STATS_MAX_KEY_TYPE
+}
+
+/// Is a `0x2::dynamic_field::Field`'s KEY type parameter the weapon-damages key —
+/// `aresrpg::item_damages::DamagesKey`? A PLAIN struct key attached directly to an ItemTemplate's
+/// UID — mirrors [`is_stats_min_key`]'s match-by-(module,name) shape (issue #619 leg 3).
+fn is_damages_key(key_tag: &TypeTag) -> bool {
+    let TypeTag::Struct(s) = key_tag else { return false };
+    s.module.as_str() == ITEM_DAMAGES_MODULE && s.name.as_str() == DAMAGES_KEY_TYPE
 }
 
 /// Project one per-job XP dynamic field onto its owner character's doc: `$.jobs["<job u8>"] =
@@ -725,6 +738,35 @@ pub fn map_item_stats_max_field(template_id: &str, contents: &[u8]) -> Option<Ve
     ])
 }
 
+/// Project an ItemTemplate's authored weapon damage lines (issue #619 leg 3: `/v1`'s item shape
+/// carried no damages field at all — the frontend's weapon-line renderer was correct and
+/// starving) onto its encyclopedia doc `rpc:template:{id}` as `$.damages`, a JSON array of
+/// `{element, from, to, damage_type}` — mirrors `item_damages::ItemDamages` byte-for-byte AND
+/// `@aresrpg/sdk`'s own `decode_damages` shape (`packages/sdk/src/sui/read/items.js`), so every
+/// frontend surface already built against the SDK's direct-chain read (simulator.tsx,
+/// item_detail_view.tsx, marketplace_model.ts, items_tab.tsx…) is served a drop-in match with no
+/// client change. `from`/`to` are BOTH fields of the SAME struct in the SAME DF — unlike
+/// item_stats' independently-attached StatsMinKey/StatsMaxKey, there is no cross-DF desync to
+/// tolerate (verified live: the Longdraw bow's DamagesKey DF carries both bounds for both its
+/// lines atomically — see `snapshot_tests.rs`'s runtime-provenance fixture). Self-sufficient (NX
+/// skeleton + SADD) so a template surfaces even if this snapshot lands before the `TemplateCreated`
+/// event. `None` = the bytes did not decode as an `ItemDamagesField` (defensive — never fails the
+/// batch, mirrors the stats min/max arms).
+pub fn map_item_damages_field(template_id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
+    let f: ItemDamagesField = bcs::from_bytes(contents).ok()?;
+    let key = k_template(template_id);
+    let lines: Vec<Value> = f
+        .lines
+        .iter()
+        .map(|l| json!({ "element": l.element, "from": l.from, "to": l.to, "damage_type": l.damage_type }))
+        .collect();
+    Some(vec![
+        set_nx(key.clone(), "$", json!({ "template": template_id, "live": true })),
+        set(key, "$.damages", json!(lines)),
+        sadd(K_TEMPLATES.into(), template_id.to_string()),
+    ])
+}
+
 /// Snapshot one `aresrpg::item::Item` object's display fields into its item doc
 /// `rpc:item:{id}` — the SAME doc the `item::ItemMinted`/`scribe::Scribed` event arms project
 /// (see `project.rs`), so the two converge idempotently (the event sets template/item_type/
@@ -732,8 +774,14 @@ pub fn map_item_stats_max_field(template_id: &str, contents: &[u8]) -> Option<Ve
 /// surfaces even if its snapshot lands before its mint event. When the wrapper→kiosk hop
 /// resolved (see [`resolve_kiosk`]), the item's CURRENT kiosk is written latest-wins AND the
 /// item joins that kiosk's membership set — the two halves the `/v1/owner-items` join reads.
+/// `package` is the Item's OWN Move type's package address (issue #524's server half — the
+/// PRIMARY `/v1/owner-items` path served no type/package field, so the frontend's dead-universe
+/// lineage filter (`is_aresrpg_item`) could only run against the chain-direct fallback). Written
+/// as the bare package id (never a fabricated full type string) so a future republish that
+/// re-stamps the deployment's package id is followed automatically — the same "derive, never
+/// hardcode" stance `item_lineage.ts`'s `ARESRPG_PACKAGE_ID` already takes client-side.
 /// `None` = the bytes did not decode as an Item (defensive — never fails the batch).
-pub fn map_item_object(id: &str, contents: &[u8], kiosk_id: Option<&str>) -> Option<Vec<RedisWrite>> {
+pub fn map_item_object(id: &str, contents: &[u8], kiosk_id: Option<&str>, package: &str) -> Option<Vec<RedisWrite>> {
     let it: ItemObject = bcs::from_bytes(contents).ok()?;
     let key = k_item(id);
     let mut writes = vec![
@@ -746,6 +794,7 @@ pub fn map_item_object(id: &str, contents: &[u8], kiosk_id: Option<&str>) -> Opt
         set(key.clone(), "$.description", json!(it.description)),
         set(key.clone(), "$.category", json!(it.category)),
         set(key.clone(), "$.amount", json!(it.amount)),
+        set(key.clone(), "$.package", json!(package)),
     ];
     // Kiosk edge (latest-wins) + membership in that kiosk's item set. Only written when the
     // wrapper→kiosk hop resolved (never fabricate a kiosk); an item that leaves this kiosk
@@ -784,22 +833,42 @@ pub fn map_personal_kiosk_cap(id: &str, contents: &[u8], owner: &Owner) -> Optio
     ])
 }
 
-/// The scalar prefix + loot table of an `aresrpg::mob_template::MobTemplate` object.
+/// The scalar prefix + stats tail of an `aresrpg::mob_template::MobTemplate` object.
 /// The prefix (name / level range / hp / element) is REQUIRED — the §14 bestiary list.
-/// `drops` is a BEST-EFFORT tail decode: BCS is positional, so reaching the `loot`
-/// vector means walking past the intervening `stats` (a fixed `Stats` = 22 `u64` = 176
-/// bytes — spell.move) and `spells` (`vector<SpellLevel>`, each a variable record with
-/// nested `vector<Effect>` — spell_effect.move). We SKIP those (no view serves a mob's
-/// resistances or spell kit) and DECODE only `loot` (`vector<MobLootEntry>` — mob.move).
-/// A malformed/foreign tail yields `drops = None` (honest-unknown) WITHOUT dropping the
-/// prefix — the loot walk can never regress the working name/level projection.
+/// `resistances`/`drops` are BEST-EFFORT tail decodes: BCS is positional, so reaching
+/// `loot` means walking past the intervening `stats` (a fixed `Stats` = 22 `u64` = 176
+/// bytes — spell.move, the SAME wire `ByteReader::equipment_stats` reads for gear) and
+/// `spells` (`vector<SpellLevel>`, each a variable record with nested `vector<Effect>` —
+/// spell_effect.move). `resistances` reads FOUR of the 22 Stats fields (issue #629 — the
+/// bestiary decodes and waits); `drops` DECODES `loot` (`vector<MobLootEntry>` — mob.move).
+/// The two are INDEPENDENTLY optional though positionally sequential: `resistances` needs
+/// only the fixed-width Stats block, so a short/foreign `spells`/`loot` tail (e.g. a wider
+/// on-chain `Effect` than this binary's byte-width assumption — see the fresh-schema audit)
+/// can fail `drops` alone WITHOUT regressing resistances, exactly as `drops` alone already
+/// never regressed the name/level prefix.
 struct MobTemplatePrefix {
     name: String,
     min_level: u16,
     max_level: u16,
     base_hp: u64,
     element: u8,
+    resistances: Option<MobResistances>,
     drops: Option<Vec<LootRow>>,
+}
+
+/// The four elemental resistances read from a MobTemplate's embedded `spell::Stats` block
+/// (issue #629), RAW WIRE — centered @32768 (spell.move `RES_SHIFT`, the same convention
+/// `item_stats.move` uses), wire-value passthrough: the client owns the decode (one bias
+/// home, `chain/stat_bias.js` — already shipped, was waiting on these fields). Field order
+/// mirrors `ByteReader::equipment_stats`'s SAME `spell::Stats` wire (spell.move): fields 7-10
+/// of the 22 (fire/water/earth/air), the same four positions that reader already picks out
+/// for equipment. Live-verified against the Boar MobTemplate (issue #629's own donor:
+/// +40 earth / −20 air) — see `snapshot_tests.rs`'s runtime-provenance fixture.
+struct MobResistances {
+    fire_resistance: u64,
+    water_resistance: u64,
+    earth_resistance: u64,
+    air_resistance: u64,
 }
 
 /// One decoded `aresrpg_fight::mob::MobLootEntry` row for the §14 bestiary drops view.
@@ -818,8 +887,8 @@ impl MobTemplatePrefix {
     /// Layout: `id:UID(32) | name:String | min_level:u16 | max_level:u16 | base_hp:u64 |
     /// ap:u64 | mp:u64 | element:u8 | stats:Stats(176) | spells:vector<SpellLevel> |
     /// loot:vector<MobLootEntry> | xp_reward:u64`. The prefix (through `element`) is
-    /// required (`None` on truncation); `loot` is a best-effort tail — a short/foreign
-    /// body past the prefix sets `drops = None` and never fails the prefix.
+    /// required (`None` on truncation); resistances + loot are a best-effort tail — a
+    /// short/foreign body past the prefix sets them `None` and never fails the prefix.
     fn parse(bytes: &[u8]) -> Option<Self> {
         let mut r = ByteReader::new(bytes);
         r.skip(32)?; // UID = a bare 32-byte ObjectID (no length prefix)
@@ -830,10 +899,12 @@ impl MobTemplatePrefix {
         let _ap = r.u64()?;
         let _mp = r.u64()?;
         let element = r.u8()?;
-        // Best-effort: skip `stats` + `spells`, decode `loot`. `None` here (short/foreign
-        // tail) leaves the already-parsed prefix intact — loot never regresses the list.
-        let drops = r.read_mob_loot();
-        Some(Self { name, min_level, max_level, base_hp, element, drops })
+        // Best-effort: the fixed-width Stats block reads resistances (issue #629); only THEN
+        // (cursor now past `stats`) is `loot` attempted — a short/foreign `spells`/`loot` tail
+        // drops `drops` alone, never regressing the just-read resistances or the prefix.
+        let resistances = r.read_mob_resistances();
+        let drops = if resistances.is_some() { r.read_mob_loot() } else { None };
+        Some(Self { name, min_level, max_level, base_hp, element, resistances, drops })
     }
 }
 
@@ -841,7 +912,9 @@ impl MobTemplatePrefix {
 /// `rpc:mob_template:{id}` (+ the `idx:mob_templates` index the view reads). `None` = a
 /// truncated/foreign body that did not parse as the prefix (defensive — never fails the
 /// batch). `element` is the raw `spell` discriminant (0=fire,1=water,2=earth,3=air,255=none);
-/// the frontend maps it to a name, exactly as the legacy reader did.
+/// the frontend maps it to a name, exactly as the legacy reader did. The four resistances
+/// (issue #629) are RAW WIRE, `null` until this snapshot lands — same honest-gap convention
+/// as every other field here; the bestiary's `decode_mob_resist` already handles the null case.
 pub fn map_mob_template_object(id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
     let p = MobTemplatePrefix::parse(contents)?;
     let key = k_mob_template(id);
@@ -856,6 +929,10 @@ pub fn map_mob_template_object(id: &str, contents: &[u8]) -> Option<Vec<RedisWri
                 "max_level": p.max_level,
                 "base_hp": p.base_hp,
                 "element": p.element,
+                "fire_resistance": p.resistances.as_ref().map(|r| r.fire_resistance),
+                "water_resistance": p.resistances.as_ref().map(|r| r.water_resistance),
+                "earth_resistance": p.resistances.as_ref().map(|r| r.earth_resistance),
+                "air_resistance": p.resistances.as_ref().map(|r| r.air_resistance),
                 // Raw on-chain loot rows (id + basis-point chance + qty band); `null` when
                 // the nested tail did not decode. The JS view joins name/category + %.
                 "drops": p.drops,
@@ -1105,12 +1182,27 @@ impl<'a> ByteReader<'a> {
         self.skip_effect_vec()
     }
 
-    /// From just after `element`: skip `stats` (fixed `Stats` = 22 `u64` = 176 bytes;
-    /// spell.move), skip the `spells` vector (walking each `SpellLevel`), then decode the
-    /// `loot` vector (`MobLootEntry { item_template: ID(32), chance_bp: u16, min_qty: u16,
-    /// max_qty: u16 }` — mob.move) into display rows. `None` on any short read.
+    /// From just after `element`: read the fixed `Stats` block (22 `u64` = 176 bytes; spell.move)
+    /// — the SAME wire `equipment_stats` reads for gear — picking out the four resistances
+    /// (fields 7-10) and skipping the other 18 (issue #629). Advances the cursor exactly 176
+    /// bytes on success, positioning it at `spells` for a following [`read_mob_loot`] call;
+    /// `None` on any short read (the caller then skips `read_mob_loot` too — no valid position
+    /// to resume from).
+    fn read_mob_resistances(&mut self) -> Option<MobResistances> {
+        self.skip(7 * 8)?; // strength, intelligence, chance, agility, raw_damage, critical_hit, range
+        let fire_resistance = self.u64()?;
+        let water_resistance = self.u64()?;
+        let earth_resistance = self.u64()?;
+        let air_resistance = self.u64()?;
+        self.skip(11 * 8)?; // percent_damage..the D172 gear-fold carriers — the remaining 22-11 fields
+        Some(MobResistances { fire_resistance, water_resistance, earth_resistance, air_resistance })
+    }
+
+    /// From just after `stats` (the caller already consumed it via [`read_mob_resistances`]):
+    /// skip the `spells` vector (walking each `SpellLevel`), then decode the `loot` vector
+    /// (`MobLootEntry { item_template: ID(32), chance_bp: u16, min_qty: u16, max_qty: u16 }` —
+    /// mob.move) into display rows. `None` on any short read.
     fn read_mob_loot(&mut self) -> Option<Vec<LootRow>> {
-        self.skip(22 * 8)?; // Stats — 22 u64
         let spells = self.uleb()?;
         for _ in 0..spells {
             self.skip_spell_level()?;
@@ -1284,7 +1376,7 @@ impl Processor for AresSnapshotHandler {
                     // `ObjectOwner` IS that parent (a Character or the World). Discriminated by the key
                     // TYPE PARAMETER (never the byte-identical bodies), latest-wins per parent. Independent
                     // of the kiosk map above (a first-party-DF id is never looked up AS a wrapper, so the
-                    // shared insert stays inert for it). Nine arms:
+                    // shared insert stays inert for it). Ten arms:
                     //   • job-xp   (`Field<NsKey<JobXpKey>, u64>`, parent=character)  — ABSOLUTE running total.
                     //   • progression (`…<ProgressionKey>, Progression>`, character)  — fight xp/level + RAW hp/stamp.
                     //   • equipment  (`…<EquipmentKey>, EquipmentMap>`, character)     — positive gear block.
@@ -1295,6 +1387,8 @@ impl Processor for AresSnapshotHandler {
                     //     fight-create diet's committed Blake2b mob-group root + count (witness ingredient).
                     //   • stats min/max (`Field<item_stats::StatsMinKey|StatsMaxKey, ItemStatistics>`,
                     //     parent=ITEM TEMPLATE) — the authored [min,max] roll ranges (issue #219).
+                    //   • damages (`Field<item_damages::DamagesKey, vector<ItemDamages>>`,
+                    //     parent=ITEM TEMPLATE) — the authored weapon damage lines (issue #619 leg 3).
                     if let Owner::ObjectOwner(parent) = obj.owner() {
                         let params = ty.type_params();
                         let key = params.first().map(|k| &**k);
@@ -1369,6 +1463,13 @@ impl Processor for AresSnapshotHandler {
                             // Same ITEM TEMPLATE parent as StatsMinKey — the sibling upper bound.
                             if let Some(mv) = obj.data.try_as_move() {
                                 if let Some(w) = map_item_stats_max_field(&id(), mv.contents()) {
+                                    writes.extend(w);
+                                }
+                            }
+                        } else if key.is_some_and(is_damages_key) {
+                            // Same ITEM TEMPLATE parent as stats min/max — the authored damage lines.
+                            if let Some(mv) = obj.data.try_as_move() {
+                                if let Some(w) = map_item_damages_field(&id(), mv.contents()) {
                                     writes.extend(w);
                                 }
                             }
@@ -1530,7 +1631,8 @@ impl Processor for AresSnapshotHandler {
                     // the character (both personal-kiosk-locked), threading an owner-items join.
                     (ITEM_MODULE, ITEM_TYPE) => {
                         let kiosk = resolve_kiosk(obj.owner(), &kiosk_of_wrapper);
-                        map_item_object(&id, mv.contents(), kiosk.as_deref())
+                        let package = ty.address().to_canonical_string(true);
+                        map_item_object(&id, mv.contents(), kiosk.as_deref(), &package)
                     }
                     (ITEM_MODULE, ITEM_TEMPLATE_TYPE) => map_item_template_object(&id, mv.contents()),
                     (MOB_TEMPLATE_MODULE, MOB_TEMPLATE_TYPE) => map_mob_template_object(&id, mv.contents()),

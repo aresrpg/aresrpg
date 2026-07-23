@@ -976,6 +976,35 @@ pub struct ItemStatsField {
     pub air_resistance: u16,
 }
 
+/// The contents of an ItemTemplate's authored weapon damage lines — `0x2::dynamic_field::Field<
+/// item_damages::DamagesKey, vector<item_damages::ItemDamages>>` (issue #619 leg 3). A PLAIN struct
+/// key (NOT `NsKey`-wrapped), attached DIRECTLY to the ItemTemplate's UID by `item_damages::attach`
+/// — the SAME first-party-DF shape as `ItemStatsField` above (Field UID | dummy_field bool for the
+/// empty `DamagesKey {}` | the value). Unlike stats' fixed 17×u16, the value here is a
+/// `vector<ItemDamages>` with variable-length `String` fields — plain serde `Vec<T>`/`String`
+/// decode handles that natively (no manual ByteReader needed, unlike the MobTemplate tail below).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ItemDamagesField {
+    pub id: ObjectID,
+    pub dummy_field: bool, // DamagesKey {} — empty Move struct is one bool on the wire
+    pub lines: Vec<ItemDamagesLine>,
+}
+
+/// One `aresrpg::item_damages::ItemDamages` line: an authored `[from, to]` roll range (BOTH
+/// halves live in this ONE struct — unlike item_stats' min/max split across two DFs, so there is
+/// no cross-DF desync to tolerate here) plus the free-form `damage_type`/`element` slugs. Field
+/// order mirrors the Move struct byte-for-byte (BCS is positional). Served verbatim as
+/// `{element, from, to, damage_type}` — the EXACT shape `@aresrpg/sdk`'s own direct-chain
+/// `decode_damages` already produces (`packages/sdk/src/sui/read/items.js`), so `/v1` is a
+/// drop-in match for every frontend surface already built against that shape.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ItemDamagesLine {
+    pub from: u16,
+    pub to: u16,
+    pub damage_type: String,
+    pub element: String,
+}
+
 /// `aresrpg::item::Item` object contents (the loose-bag `/v1/owner-items` view). `name`,
 /// `category` and `amount` live ONLY in the object — the `ItemMinted` event carries just
 /// `{ item, template, item_type, amount }` and NO name/category — so the bag's display
