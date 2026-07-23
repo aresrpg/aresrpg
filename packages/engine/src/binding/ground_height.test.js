@@ -95,7 +95,9 @@ describe('binding/ground_height — matches the generated terrain (generate & co
       checked += 1
     }
     expect(checked).toBeGreaterThan(50)
-  })
+    // 30s timeout (#641): up to 100 real generate_world_chunk calls — the default 5s flakes under
+    // full-suite/CI-runner load while passing isolated (same class as column_gen.test.js's 15s precedent).
+  }, 30000)
 })
 
 describe('binding/ground_height — fluid rejection (§4)', () => {
