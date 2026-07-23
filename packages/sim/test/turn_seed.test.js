@@ -17,6 +17,8 @@ describe('turn-seed parity (Move golden vectors)', () => {
     // prng.move scramble_and_mix_are_deterministic pins these two against the SAME numbers.
     expect(scramble(0)).toBe(1144304738)
     expect(mix(0, 0)).toBe(1144304738)
+    // #574: the hardened Move twin masks before its checked add, so 1 + u64::MAX wraps to the scramble(0) vector.
+    expect(mix(1n, 18_446_744_073_709_551_615n)).toBe(1144304738)
     // order-sensitive folds (the Move test's mix(mix(7,3),9) != mix(mix(7,9),3) assertion)
     expect(mix(mix(7, 3), 9)).not.toBe(mix(mix(7, 9), 3))
   })

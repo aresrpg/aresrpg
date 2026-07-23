@@ -26,7 +26,6 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-functional": "^10.0.0",
     "eslint-plugin-import": "^2.32.0",
-    "falkordb": "^6.6.2",
     "globals": "^16.5.0",
     "prettier": "^3.9.5",
     "typescript": "^5.9.3",
