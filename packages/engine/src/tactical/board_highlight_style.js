@@ -25,6 +25,9 @@ export function resolve_highlight_style(spec) {
 /** Ally/enemy palette shared by seat glows and entity outlines. */
 export const TEAM_COLORS = { ally: 0x5db4ff, enemy: 0xff6b6b }
 
+/** Trap identity color shared by the semantic channel and its compound base/spike materials. */
+export const TRAP_COLOR = 0xc8963c
+
 // ── CELL-PAINT FADE CLOCKS — the ONE home (M3 rider, 2026-07-18). The retro-1.29 reference corpus carries NO
 // cell-paint fade/tint rows (D_PACING_RESEARCH beat table: movement/hit/damage-number clocks only — the 1.29
 // grid tint was an instant frame swap at 20 fps), so these are OUR parametric grammar, never extracted numbers. Defaults =
@@ -154,8 +157,9 @@ export const CHANNELS = {
     ...GLYPH_TINT,
     order: 3,
   },
-  // The live trap renderer is the compound black blob + gold sprite; these values retain its channel contract.
-  trap: { color: 0xc8963c, opacity: 0.95, order: 6, border: true },
+  // The compound marker consumes this exact gold for both of its unlit materials, so trap identity survives
+  // midnight unchanged instead of collapsing to the old near-black silhouette.
+  trap: { color: TRAP_COLOR, opacity: 0.95, order: 6, border: true },
   selection: { color: 0xdff0ff, opacity: 0.95, order: 6, outline: true },
   ally_seat: { color: TEAM_COLORS.ally, opacity: 0.9, order: 7, border: true },
   enemy_seat: { color: TEAM_COLORS.enemy, opacity: 0.9, order: 7, border: true },

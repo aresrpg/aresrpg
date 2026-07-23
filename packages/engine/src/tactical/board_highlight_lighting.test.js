@@ -23,7 +23,7 @@ import {
 import { EXPOSURE_BASELINE } from '../render/lighting/auto_exposure.js'
 
 import { CELL_FLOOR } from './board.js'
-import { create_board_highlights } from './board_highlights.js'
+import { CHANNELS, TRAP_BLOB_COLOR, create_board_highlights } from './board_highlights.js'
 import {
   make_entity_anchor_material,
   make_gradient_tile_material,
@@ -58,6 +58,10 @@ describe('night-unlit — every highlight material is fog-exempt (lighting-immun
       expect(mat.toneMapped).toBe(false)
     })
   }
+
+  test('trap base keeps the semantic trap identity instead of becoming a black night silhouette', () => {
+    expect(TRAP_BLOB_COLOR).toBe(CHANNELS.trap.color)
+  })
 })
 
 function stub_board() {
@@ -116,10 +120,18 @@ describe('route_board_highlight_overlay — POST-AgX board-highlight overlay rou
     const spike = new Mesh(undefined, fake_mat())
     trap.add(blob, spike)
     root.add(wash, trap)
+    for (const mesh of [wash, blob, spike]) {
+      // A future factory is allowed to arrive with hostile defaults. The board-overlay route is the
+      // standing-law boundary and must erase both shadow axes rather than relying on Mesh defaults.
+      mesh.castShadow = true
+      mesh.receiveShadow = true
+    }
 
     expect(route_board_highlight_overlay(root)).toBe(3) // wash + blob + spike; the two Groups carry no material
 
     for (const mesh of [wash, blob, spike]) {
+      expect(mesh.castShadow).toBe(false)
+      expect(mesh.receiveShadow).toBe(false)
       expect(mesh.material.depthWrite).toBe(true) // records a representative floor depth for the occlusion mask
       expect(mesh.material.depthTest).toBe(false) // overlapping washes still BLEND by renderOrder (none occlude)
       expect(mesh.material.blending).toBe(NormalBlending) // UNCHANGED — an alpha wash, NOT the VFX additive glow

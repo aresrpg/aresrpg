@@ -18,7 +18,20 @@ import {
   edges_of_mask,
   rounded_rect_gradient,
 } from './board_highlight_shapes.js'
-import { resolve_highlight_style } from './board_highlight_style.js'
+import { TRAP_COLOR, resolve_highlight_style } from './board_highlight_style.js'
+
+/**
+ * The one material path for fight-board overlays. This matches the engine's materialization-floor and
+ * mana-barrier idiom: MeshBasicNodeMaterial supplies authored color directly, while fog and tone mapping are
+ * explicitly excluded so scene lighting/day-night cannot alter the semantic paint.
+ * @param {any} [parameters]
+ */
+export function make_unlit_overlay_material(parameters) {
+  const mat = new MeshBasicNodeMaterial(parameters)
+  mat.toneMapped = false
+  mat.fog = false
+  return mat
+}
 
 /**
  * Build one unlit gradient/rounded material for a semantic channel. [#164] `edges` is the TSL mirror of
@@ -37,15 +50,13 @@ import { resolve_highlight_style } from './board_highlight_style.js'
  * @param {*} [shared_u_fade]
  */
 export function make_gradient_tile_material(spec, edges = {}, shared_u_fade = null) {
-  const mat = new MeshBasicNodeMaterial()
+  const mat = make_unlit_overlay_material()
   mat.transparent = true
   mat.depthWrite = false
   mat.side = DoubleSide
   // A UI overlay: immune to scene lighting/day-night. Unlit (MeshBasicNodeMaterial), fog-exempt (three
   // mixes scene.fogNode into ANY material whose .fog is true, so at night the dark aerial fog would drain
   // the color), and tone-map-exempt. The engine's shared whole-scene AgX post still applies.
-  mat.toneMapped = false
-  mat.fog = false
   const u_fade = shared_u_fade ?? uniform(1)
   const { unlit_gain, center_dim, center_alpha } = resolve_highlight_style(spec)
   const base = new Color(spec.color)
@@ -115,12 +126,10 @@ export function make_merge_aware_channel(spec) {
 
 /** Build one team-colored, unlit entity-anchor material. */
 export function make_entity_anchor_material(/** @type {number} */ color_int) {
-  const mat = new MeshBasicNodeMaterial()
+  const mat = make_unlit_overlay_material()
   mat.transparent = true
   mat.depthWrite = false
   mat.side = DoubleSide
-  mat.toneMapped = false
-  mat.fog = false
   const base = new Color(color_int)
   mat.color = base
   const rgb = vec3(base.r, base.g, base.b)
@@ -150,12 +159,10 @@ export function make_outline_material(
   /** @type {{ color: number, opacity: number }} */ spec,
   /** @type {CanvasTexture | null} */ tex
 ) {
-  const mat = new MeshBasicNodeMaterial()
+  const mat = make_unlit_overlay_material()
   mat.transparent = true
   mat.depthWrite = false
   mat.side = DoubleSide
-  mat.toneMapped = false
-  mat.fog = false
   mat.color = new Color(spec.color)
   mat.opacity = spec.opacity
   if (tex) mat.map = tex
@@ -188,13 +195,13 @@ export function make_diamond_texture() {
   return t
 }
 
-export const TRAP_BLOB_COLOR = 0x0a0a0c
+export const TRAP_BLOB_COLOR = TRAP_COLOR
 export const TRAP_BLOB_OPACITY = 0.88
 
 // SPIKE accent dims (× cell_size — the shared cone geometry is sized when board_highlights builds it).
 export const TRAP_SPIKE_RADIUS = 0.12
 export const TRAP_SPIKE_HEIGHT = 0.42
-export const TRAP_SPIKE_COLOR = 0x1a1d24
+export const TRAP_SPIKE_COLOR = TRAP_COLOR
 const TRAP_SPIKE_SEGMENTS = 6
 
 /** Pure coverage oracle for the trap BASE — it is the shared cell-bounded rounded-rect tile (a dark
@@ -204,9 +211,8 @@ export function trap_blob_alpha(/** @type {number} */ u, /** @type {number} */ v
   return rounded_rect_gradient(u, v).coverage
 }
 
-/** Build the trap BASE: a dark, cell-bounded highlight in the shared gradient-tile-wash idiom (dark
- *  palette + a solid-biased center so it reads as a filled dark blob, not a hollow ring). The center
- *  dials + shade are OWNER-TUNE — the pixel look is the screenshot pass's call. */
+/** Build the trap BASE: a cell-bounded semantic-gold highlight in the shared gradient-tile-wash idiom.
+ *  The solid-biased center keeps the trap recognizable while the unlit path preserves that identity at night. */
 export function make_trap_blob_material() {
   return make_gradient_tile_material({
     color: TRAP_BLOB_COLOR,
@@ -224,15 +230,13 @@ export function make_trap_spike_geometry(/** @type {number} */ radius, /** @type
   return geo
 }
 
-/** Build the dark unlit SPIKE material — a night-immune UI overlay (fog + tone-map exempt), like the
- *  rest of the highlight family. Solid dark iron; the exact shade is OWNER-TUNE (screenshot pass). */
+/** Build the semantic-gold unlit SPIKE material — a night-immune UI overlay (fog + tone-map exempt), like
+ *  the rest of the highlight family. */
 export function make_trap_spike_material() {
-  const mat = new MeshBasicNodeMaterial()
+  const mat = make_unlit_overlay_material()
   mat.transparent = true
   mat.depthWrite = false
   mat.side = DoubleSide
-  mat.toneMapped = false
-  mat.fog = false
   mat.color = new Color(TRAP_SPIKE_COLOR)
   return mat
 }

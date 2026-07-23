@@ -75,6 +75,10 @@ export function route_board_highlight_overlay(root) {
     const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : []
     if (mats.length === 0) return
     o.layers.set(BOARD_HIGHLIGHT_LAYER)
+    // Standing overlay law: hostile/future factory defaults cannot opt a tactical paint into either shadow
+    // path. BasicNode already ignores scene lights; these object flags close the cast/receive axes explicitly.
+    o.castShadow = false
+    o.receiveShadow = false
     for (const m of mats) {
       m.depthWrite = true // record a representative floor depth for the occlusion mask
       m.depthTest = false // overlapping washes still blend by renderOrder (none occlude one another)

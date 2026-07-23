@@ -420,15 +420,13 @@ describe('[#164] glyph channel is MERGE-AWARE + MORE VISIBLE (owner 2026-07-21 r
   })
 })
 
-// ── trap marker — design correction 2026-07-19: replace the soft shadow blob (read as ugly) with
-// a dark highlight and a spike. Rejected: an organic soft-shadow
-// stain + a bear-trap sprite. Now: a DARK cell-bounded gradient-tile highlight + a SPIKE cone rising from
-// the cell center. These lock STRUCTURE only — the pixel look is a separate screenshot-pass call. ──────
+// ── trap marker — cell-bounded semantic-gold highlight + spike. The old near-black material preserved its
+// bytes at night but lost the trap identity; both layers now read the channel's unlit gold at every TOD. ────
 
-describe('trap BASE — a dark CELL-BOUNDED gradient-tile highlight ("a dark highlight", NOT the organic soft-shadow)', () => {
+describe('trap BASE — a semantic-gold CELL-BOUNDED gradient-tile highlight', () => {
   test('the blob coverage is cell-bounded (edge midpoints solidly inside) and SYMMETRIC — not the lopsided organic island', () => {
     // the rejected form was an organic lobed union: edge midpoints fell OUTSIDE it and opposite axes read
-    // wildly differently. The dark highlight is the shared rounded-rect tile — solid to the flat edges,
+    // wildly differently. The trap highlight is the shared rounded-rect tile — solid to the flat edges,
     // only the corners round off, perfectly symmetric.
     expect(trap_blob_alpha(0.5, 0.9)).toBeGreaterThan(0.9) // top edge mid — inside
     expect(trap_blob_alpha(0.5, 0.1)).toBeGreaterThan(0.9) // bottom edge mid — inside
@@ -438,11 +436,13 @@ describe('trap BASE — a dark CELL-BOUNDED gradient-tile highlight ("a dark hig
     expect(trap_blob_alpha(0.5, 0.8)).toBeCloseTo(trap_blob_alpha(0.5, 0.2), 5) // symmetric Y
   })
 
-  test('TRAP_BLOB_COLOR is a dark near-black palette + TRAP_BLOB_OPACITY is solid (a dark highlight, not a wishy wash)', () => {
+  test('TRAP_BLOB_COLOR is the semantic trap gold + TRAP_BLOB_OPACITY is solid', () => {
     const r = (TRAP_BLOB_COLOR >> 16) & 0xff
     const g = (TRAP_BLOB_COLOR >> 8) & 0xff
     const b = TRAP_BLOB_COLOR & 0xff
-    expect(Math.max(r, g, b)).toBeLessThan(0x20) // dark, not a tinted gray
+    expect(TRAP_BLOB_COLOR).toBe(CHANNELS.trap.color)
+    expect(r).toBeGreaterThan(g)
+    expect(g).toBeGreaterThan(b)
     expect(TRAP_BLOB_OPACITY).toBeGreaterThanOrEqual(0.8) // solid
   })
 

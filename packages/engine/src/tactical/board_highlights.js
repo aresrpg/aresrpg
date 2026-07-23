@@ -34,7 +34,6 @@
 // must not throw). Distinct colors per channel are the acceptance requirement. 2026-07-05.
 
 import { Color, DoubleSide, Mesh, Object3D, PlaneGeometry } from 'three'
-import { MeshBasicNodeMaterial } from 'three/webgpu'
 import { Fn, float, max, smoothstep, uniform, uv, vec3, vec4 } from 'three/tsl'
 
 // NIGHT-WASH FIX: route every highlight mesh onto the POST-AgX overlay layer (board_highlight_overlay_pass.js)
@@ -53,6 +52,7 @@ import {
   make_trap_blob_material,
   make_trap_spike_geometry,
   make_trap_spike_material,
+  make_unlit_overlay_material,
 } from './board_highlight_materials.js'
 import { CORNER_RADIUS, EDGE_SOFTNESS, ENTITY_ANCHOR_RENDER_ORDER, neighbor_mask } from './board_highlight_shapes.js'
 import { CHANNEL_KEYS, CHANNELS, TEAM_COLORS, resolve_fade } from './board_highlight_style.js'
@@ -215,11 +215,11 @@ export function create_board_highlights(board, { reversed_depth = false } = {}) 
   // still lets the avatar's legs occlude it correctly.
   const ANCHOR_LIFT = FLOOR_CLEAR + WASH_LIFT
 
-  // [trap marker — design correction 2026-07-19: the soft shadow blob read as ugly; use a dark highlight
+  // [trap marker — design correction 2026-07-19: the soft shadow blob read as ugly; use a cell highlight
   // and a spike instead]. SUPERSEDES the organic-stain +
   // bear-trap-sprite form (that soft organic blob read as an ugly shadow). NOW a compound TWO-LAYER marker:
-  //   1. BASE — a dark, cell-bounded gradient-tile HIGHLIGHT (make_trap_blob_material — the shared wash
-  //      idiom in a dark palette), the primary read; high-contrast against the warm-tan board.
+  //   1. BASE — a semantic-gold, cell-bounded gradient-tile HIGHLIGHT (make_trap_blob_material — the shared
+  //      wash idiom), the primary read and the same authored identity at noon and midnight.
   //   2. ACCENT — a small SPIKE (an upright cone, make_trap_spike_*) rising from the cell center.
   // Routes through the SAME set_channel/add_tile path as every wash (zero adapter/visibility change — the
   // caster-only trap_overlay logic is untouched); add_tile calls the channel's `build` factory, which for
@@ -397,13 +397,11 @@ export function create_board_highlights(board, { reversed_depth = false } = {}) 
 
   const make_emph_material = (/** @type {number} */ color_int) => {
     const u_alpha = uniform(0)
-    const em = new MeshBasicNodeMaterial()
+    const em = make_unlit_overlay_material()
     em.transparent = true
     em.depthWrite = false
     em.depthTest = false
     em.side = DoubleSide
-    em.toneMapped = false
-    em.fog = false // UI overlay — immune to the night fogNode (see board_highlight_materials note)
     const col = new Color(color_int)
     em.colorNode = /** @type {any} */ (
       Fn(() => {
