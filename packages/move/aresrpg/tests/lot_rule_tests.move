@@ -29,7 +29,7 @@ fun prove_and_confirm(category: String, amount: u64, wrong_item: bool) {
     b"Lot Test Item".to_string(),
     b"".to_string(),
     b"lot_test_item".to_string(),
-    category,
+    b"icon".to_string(), category,
     1,
     sc.ctx(),
   );

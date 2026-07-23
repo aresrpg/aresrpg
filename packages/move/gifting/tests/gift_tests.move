@@ -67,7 +67,7 @@ fun boot(sc: &mut Scenario): ID {
   config::set_enabled(&acap, &mut cfg, true, sc.ctx());
   let mut cat = sc.take_shared<Catalog>();
   admin::add_category(&acap, &mut cat, b"ring".to_string(), &ver, sc.ctx());
-  let tid = admin::create_template(&acap, &cat, b"Ruby Ring".to_string(), b"".to_string(), b"ruby_ring".to_string(), b"ring".to_string(), 1, option::none(), option::none(), vector[], option::none(), &ver, sc.ctx());
+  let tid = admin::create_template(&acap, &cat, b"Ruby Ring".to_string(), b"".to_string(), b"ruby_ring".to_string(), b"icon".to_string(), b"ring".to_string(), 1, option::none(), option::none(), vector[], option::none(), &ver, sc.ctx());
   ts::return_shared(cat);
 
   sc.next_tx(OWNER);

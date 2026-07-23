@@ -89,7 +89,7 @@ public fun make_resource_template(sc: &mut Scenario): ID {
   let ver = sc.take_shared<Version>();
   let tid = admin::create_template(
     &cap, &cat, b"Wheat".to_string(), b"A dungeon-suite artifact.".to_string(), b"wheat".to_string(),
-    b"resource".to_string(), 1, option::none(), option::none(), vector[], option::none(), &ver, sc.ctx(),
+    b"icon".to_string(), b"resource".to_string(), 1, option::none(), option::none(), vector[], option::none(), &ver, sc.ctx(),
   );
   ts::return_shared(cat);
   ts::return_shared(ver);

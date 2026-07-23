@@ -120,7 +120,7 @@ fun mk_template(sc: &mut Scenario, item_type: vector<u8>, level: u16, effect: Op
   let cap = sc.take_from_sender<AdminCap>();
   let cat = sc.take_shared<Catalog>();
   let tid = admin::create_template(
-    &cap, &cat, b"Potion".to_string(), b"".to_string(), item_type.to_string(), b"consumable".to_string(), level,
+    &cap, &cat, b"Potion".to_string(), b"".to_string(), item_type.to_string(), b"icon".to_string(), b"consumable".to_string(), level,
     option::none(), option::none(), vector[], effect, &ver, sc.ctx(),
   );
   ts::return_shared(cat); ts::return_shared(ver); sc.return_to_sender(cap);

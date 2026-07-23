@@ -291,6 +291,7 @@ export function reauthor_box_tx(operation, deployment) {
       tx.pure.string(operation.fresh_template.name),
       tx.pure.string(operation.fresh_template.description),
       tx.pure.string(operation.fresh_template.item_type),
+      tx.pure.string(operation.fresh_template.icon ?? operation.fresh_template.item_type), // R4 icon slug (defaults to item_type)
       tx.pure.string(operation.fresh_template.category),
       tx.pure.u16(operation.fresh_template.level),
       move_option(tx, stats_type), // stats_min: none (a consumable carries no roll ranges)

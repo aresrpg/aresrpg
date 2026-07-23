@@ -56,8 +56,8 @@ fun boot(sc: &mut Scenario): (ID, ID) {
   config::set_gifting_brand<Gifting>(&acap, &mut cfg, &ver, sc.ctx()); // the split's pin
   let mut cat = sc.take_shared<Catalog>();
   admin::add_category(&acap, &mut cat, b"cosmetic".to_string(), &ver, sc.ctx());
-  let reserved = admin::create_template(&acap, &cat, b"Vaporeon Aura".to_string(), b"".to_string(), b"vaporeon_aura".to_string(), b"cosmetic".to_string(), 1, option::none(), option::none(), vector[], option::none(), &ver, sc.ctx());
-  let decoy = admin::create_template(&acap, &cat, b"Decoy".to_string(), b"".to_string(), b"decoy".to_string(), b"cosmetic".to_string(), 1, option::none(), option::none(), vector[], option::none(), &ver, sc.ctx());
+  let reserved = admin::create_template(&acap, &cat, b"Vaporeon Aura".to_string(), b"".to_string(), b"vaporeon_aura".to_string(), b"icon".to_string(), b"cosmetic".to_string(), 1, option::none(), option::none(), vector[], option::none(), &ver, sc.ctx());
+  let decoy = admin::create_template(&acap, &cat, b"Decoy".to_string(), b"".to_string(), b"decoy".to_string(), b"icon".to_string(), b"cosmetic".to_string(), 1, option::none(), option::none(), vector[], option::none(), &ver, sc.ctx());
   ts::return_shared(cat);
 
   sc.next_tx(OWNER);

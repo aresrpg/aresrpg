@@ -103,7 +103,7 @@ fun author_longsword(sc: &mut Scenario): ID {
   let cat = sc.take_shared<Catalog>();
   let ver = sc.take_shared<Version>();
   let tid = admin::create_template(
-    &cap, &cat, b"longsword".to_string(), b"".to_string(), b"longsword".to_string(), b"longsword".to_string(), 1,
+    &cap, &cat, b"longsword".to_string(), b"".to_string(), b"longsword".to_string(), b"icon".to_string(), b"longsword".to_string(), 1,
     option::none(), option::none(), vector[], option::none(), &ver, sc.ctx(),
   );
   ts::return_shared(cat);

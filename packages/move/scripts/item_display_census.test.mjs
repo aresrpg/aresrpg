@@ -72,6 +72,28 @@ test('classify_image_url — relative is dead on explorers; slot-word absolute i
   })
 })
 
+test('R4 icon Display — the absolute {icon} template resolves per-variant and is explorer_ok', () => {
+  // The R4 fix ships Display<Item>.image_url as an ABSOLUTE host + the PER-VARIANT {icon} slug (item.move init).
+  // An item carrying its own icon field resolves to a discriminating, explorer-visible URL.
+  const resolved = interpolate_display(
+    { image_url: 'https://assets.aresrpg.world/items/{icon}.png' },
+    { item_type: 'cloak', icon: 'cape_lorito_air' },
+  )
+  expect(resolved.image_url).toBe('https://assets.aresrpg.world/items/cape_lorito_air.png')
+  expect(classify_image_url(resolved.image_url)).toMatchObject({
+    kind: 'absolute',
+    unresolved: false,
+    explorer_ok: true,
+    host: 'assets.aresrpg.world',
+  })
+  // The bug this fixes: the OLD relative {item_type} slot-word template was dead on every external explorer.
+  const old = interpolate_display(
+    { image_url: '/assets/items/{item_type}.png' },
+    { item_type: 'cloak', icon: 'cape_lorito_air' },
+  )
+  expect(classify_image_url(old.image_url)).toMatchObject({ kind: 'relative', explorer_ok: false })
+})
+
 test('item_type_collisions — slot words shared by >1 template vs unique', () => {
   const templates = [
     { id: id(1), item_type: 'cloak' },

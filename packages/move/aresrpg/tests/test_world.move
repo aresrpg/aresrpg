@@ -99,6 +99,7 @@ public fun make_resource_template(sc: &mut Scenario): ID {
     &cat,
     b"Wheat".to_string(), b"A test artifact of the harness.".to_string(),
     b"wheat".to_string(),
+    b"wheat".to_string(), // R4 icon (defaults to item_type in the harness)
     b"resource".to_string(),
     1,
     option::none(),
@@ -135,7 +136,7 @@ public fun make_template(sc: &mut Scenario, name: vector<u8>, item_type: vector<
   let cat = sc.take_shared<Catalog>();
   let ver = sc.take_shared<Version>();
   let tid = admin::create_template(
-    &cap, &cat, name.to_string(), b"A test artifact of the harness.".to_string(), item_type.to_string(), category.to_string(), level,
+    &cap, &cat, name.to_string(), b"A test artifact of the harness.".to_string(), item_type.to_string(), item_type.to_string(), category.to_string(), level,
     option::none(), option::none(), vector[], option::none(), &ver, sc.ctx(),
   );
   ts::return_shared(cat);

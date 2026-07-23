@@ -100,7 +100,7 @@ fun author(sc: &mut Scenario, category: vector<u8>, level: u16): ID {
   let cat = sc.take_shared<Catalog>();
   let ver = sc.take_shared<Version>();
   let tid = admin::create_template(
-    &cap, &cat, category.to_string(), b"".to_string(), category.to_string(), category.to_string(), level,
+    &cap, &cat, category.to_string(), b"".to_string(), category.to_string(), b"icon".to_string(), category.to_string(), level,
     option::none(), option::none(), vector[], option::none(), &ver, sc.ctx(),
   );
   ts::return_shared(cat);
@@ -116,7 +116,7 @@ fun author_with_damages(sc: &mut Scenario, category: vector<u8>, level: u16, dam
   let cat = sc.take_shared<Catalog>();
   let ver = sc.take_shared<Version>();
   let tid = admin::create_template(
-    &cap, &cat, category.to_string(), b"".to_string(), category.to_string(), category.to_string(), level,
+    &cap, &cat, category.to_string(), b"".to_string(), category.to_string(), b"icon".to_string(), category.to_string(), level,
     option::none(), option::none(), damages, option::none(), &ver, sc.ctx(),
   );
   ts::return_shared(cat);

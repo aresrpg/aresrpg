@@ -63,6 +63,10 @@ public struct Item has key, store {
   // Display can only interpolate the object's own fields — it cannot hop to the template).
   name: String,
   item_type: String,
+  // R4 (owner "option A", 2026-07-23): the PER-VARIANT art slug — snapshotted from the template at mint like
+  // name. `item_type` is a shared SLOT word (many variants), so the icon Display keyed on `{item_type}` emitted
+  // one generic art per class; `{icon}` is the discriminating per-item slug the CDN art is actually keyed by.
+  icon: String,
   // Snapshotted at mint like name (Display interpolates the object's OWN fields — no template hop).
   description: String,
   // Also snapshotted at mint: dispatch (equip slot / consume / burn / stackability) reads the category off the
@@ -89,6 +93,9 @@ public struct ItemTemplate has key {
   // tonight was the only moment). Display interpolates it; external marketplaces render it.
   description: String,
   item_type: String,
+  // R4: the per-variant art slug (see `Item.icon`) — the source of every minted item's snapshotted `icon`, and
+  // the field the template's own `{icon}` Display resolves. Set at creation from the corpus row's slug.
+  icon: String,
   category: String,
   level: u16,
 }
@@ -126,19 +133,19 @@ public struct ItemSplit has copy, drop { from: ID, into: ID, take: u64, remainin
 
 public struct ItemPolicyCreated has copy, drop { policy: ID }
 
-// ╔════════════════ [ Display (media is a PATTERN keyed by item_type, never a struct field) ] ═ ]
+// ╔════════════════ [ Display (media is a PATTERN keyed by the per-variant `icon` slug) ] ═ ]
 
-/// Claims the `Publisher` and registers `Display<Item>` + `Display<ItemTemplate>`. Media lives ONLY in these
-/// Display objects as an interpolation over the `item_type` slug — the art CDN is keyed by that catalog slug,
-/// so both an item and its template resolve to the same art. The structs carry ZERO url/image fields. The
-/// `Publisher` + both Display objects go to the publishing admin, who creates the transfer policy at ceremony time.
+/// Claims the `Publisher` and registers `Display<Item>` + `Display<ItemTemplate>`. Media lives in these Display
+/// objects as an interpolation over the `icon` field (R4) — the art CDN is keyed by that PER-VARIANT slug, so an
+/// item resolves its own art on external explorers (the URL is ABSOLUTE, not host-relative). The `Publisher` +
+/// both Display objects go to the publishing admin, who creates the transfer policy at ceremony time.
 fun init(otw: ITEM, ctx: &mut TxContext) {
   let publisher = package::claim(otw, ctx);
 
   let item_keys = vector[utf8(b"name"), utf8(b"image_url"), utf8(b"description"), utf8(b"project_url")];
   let item_values = vector[
     utf8(b"{name}"),
-    utf8(b"/assets/items/{item_type}.png"), // host-free relative form (jobs.js ASSET_BASE fallback); the walrus_display_step ceremony swaps this to the walrus by-quilt-id URL post-upload
+    utf8(b"https://assets.aresrpg.world/items/{icon}.png"), // R4: ABSOLUTE (external explorers have no app host) + the PER-VARIANT `{icon}` slug (not the shared `{item_type}` slot word) so each item resolves its own art
     utf8(b"{description}"),
     utf8(b"https://aresrpg.world"),
   ];
@@ -148,7 +155,7 @@ fun init(otw: ITEM, ctx: &mut TxContext) {
   let tmpl_keys = vector[utf8(b"name"), utf8(b"image_url"), utf8(b"description"), utf8(b"project_url")];
   let tmpl_values = vector[
     utf8(b"{name}"),
-    utf8(b"/assets/items/{item_type}.png"), // host-free relative form (jobs.js ASSET_BASE fallback); the walrus_display_step ceremony swaps this to the walrus by-quilt-id URL post-upload
+    utf8(b"https://assets.aresrpg.world/items/{icon}.png"), // R4: ABSOLUTE (external explorers have no app host) + the PER-VARIANT `{icon}` slug (not the shared `{item_type}` slot word) so each item resolves its own art
     utf8(b"{description}"),
     utf8(b"https://aresrpg.world"),
   ];
@@ -169,11 +176,12 @@ public(package) fun new_template(
   name: String,
   description: String,
   item_type: String,
+  icon: String,
   category: String,
   level: u16,
   ctx: &mut TxContext,
 ): ItemTemplate {
-  ItemTemplate { id: object::new(ctx), name, description, item_type, category, level }
+  ItemTemplate { id: object::new(ctx), name, description, item_type, icon, category, level }
 }
 
 /// The single home for the LEVEL gate (you can't consume or equip an item below the level of the
@@ -199,7 +207,7 @@ public(package) fun share_template(template: ItemTemplate): ID {
 /// its UID. Minted `Item`s are UNAFFECTED — an item snapshots its `template` as a plain `ID` (and `item_type` as
 /// a `String`), never an object ref, so burning a template dangles no live item or sale.
 public(package) fun destroy_template(template: ItemTemplate) {
-  let ItemTemplate { id, name: _, description: _, item_type, category: _, level: _ } = template;
+  let ItemTemplate { id, name: _, description: _, item_type, icon: _, category: _, level: _ } = template;
   event::emit(TemplateBurned { template: id.to_inner(), item_type });
   object::delete(id);
 }
@@ -228,8 +236,9 @@ public(package) fun mint(template: &ItemTemplate, ctx: &mut TxContext): (Item, L
     id: object::new(ctx),
     template: tid,
     name: template.name,
-    description: template.description,
     item_type: template.item_type,
+    icon: template.icon, // R4: snapshot the per-variant art slug
+    description: template.description,
     category: template.category,
     amount: 1,
   };
@@ -251,8 +260,9 @@ public(package) fun mint_stack(template: &ItemTemplate, quantity: u64, ctx: &mut
     id: object::new(ctx),
     template: tid,
     name: template.name,
-    description: template.description,
     item_type: template.item_type,
+    icon: template.icon, // R4: snapshot the per-variant art slug
+    description: template.description,
     category: template.category,
     amount: quantity,
   };
@@ -270,7 +280,7 @@ public(package) fun merge(a: &mut Item, b: Item) {
   assert!(a.template == b.template, ETemplateMismatch);
   assert!(is_stackable_category(a.category), ENotStackable);
   let into_id = object::id(a);
-  let Item { id, template: _, name: _, description: _, item_type: _, category: _, amount } = b;
+  let Item { id, template: _, name: _, item_type: _, icon: _, description: _, category: _, amount } = b;
   a.amount = a.amount + amount;
   event::emit(ItemMerged { into: into_id, from: id.to_inner(), added: amount, total: a.amount });
   object::delete(id);
@@ -289,8 +299,9 @@ public(package) fun split(a: &mut Item, take: u64, ctx: &mut TxContext): (Item, 
     id: object::new(ctx),
     template: a.template,
     name: a.name,
-    description: a.description,
     item_type: a.item_type,
+    icon: a.icon, // R4: the split inherits the source stack's per-variant art slug
+    description: a.description,
     category: a.category,
     amount: take,
   };
@@ -331,7 +342,7 @@ public(package) fun new_lock_pledge(item_id: ID): LockPledge { LockPledge { item
 /// caller to credit. Any first-party DF still attached (a crushed gear's rolled-stats block, pet metadata) orphans
 /// on delete — harmless (the item is gone) and unavoidable (the base can't enumerate another package's DF keys).
 public(package) fun destroy(item: Item) {
-  let Item { id, template: _, name: _, description: _, item_type: _, category: _, amount: _ } = item;
+  let Item { id, template: _, name: _, item_type: _, icon: _, description: _, category: _, amount: _ } = item;
   object::delete(id);
 }
 
@@ -400,6 +411,8 @@ public fun name(self: &Item): String { self.name }
 
 public fun item_type(self: &Item): String { self.item_type }
 
+public fun icon(self: &Item): String { self.icon } // R4: the per-variant art slug
+
 public fun category(self: &Item): String { self.category }
 
 public fun amount(self: &Item): u64 { self.amount }
@@ -409,6 +422,8 @@ public fun template_id(self: &ItemTemplate): ID { object::id(self) }
 public fun template_name(self: &ItemTemplate): String { self.name }
 
 public fun template_item_type(self: &ItemTemplate): String { self.item_type }
+
+public fun template_icon(self: &ItemTemplate): String { self.icon } // R4: the per-variant art slug
 
 public fun template_category(self: &ItemTemplate): String { self.category }
 
@@ -445,8 +460,9 @@ public fun mint_zero_stack_for_testing(template: &ItemTemplate, ctx: &mut TxCont
     id: object::new(ctx),
     template: object::id(template),
     name: template.name,
-    description: template.description,
     item_type: template.item_type,
+    icon: template.icon,
+    description: template.description,
     category: template.category,
     amount: 0,
   }

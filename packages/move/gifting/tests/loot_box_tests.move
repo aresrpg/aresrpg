@@ -105,7 +105,7 @@ fun mk_template(sc: &mut Scenario, item_type: std::string::String, category: std
   let cap = sc.take_from_sender<AdminCap>();
   let cat = sc.take_shared<Catalog>();
   let tid = admin::create_template(
-    &cap, &cat, b"Item".to_string(), b"".to_string(), item_type, category, 1,
+    &cap, &cat, b"Item".to_string(), b"".to_string(), item_type, b"icon".to_string(), category, 1,
     option::none(), option::none(), vector[], effect, &ver, sc.ctx(),
   );
   ts::return_shared(cat); ts::return_shared(ver); sc.return_to_sender(cap);

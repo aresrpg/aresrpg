@@ -49,7 +49,7 @@ fun author_pet(sc: &mut Scenario): ID {
   let max = pet_max();
   let tid = admin::create_template(
     &cap, &cat, b"Wolf".to_string(), b"A growing test pet.".to_string(), b"wolf".to_string(),
-    b"pet".to_string(), 1, option::some(max), option::some(max), vector[], option::none(), &ver, sc.ctx(),
+    b"icon".to_string(), b"pet".to_string(), 1, option::some(max), option::some(max), vector[], option::none(), &ver, sc.ctx(),
   );
   ts::return_shared(cat);
   ts::return_shared(ver);

@@ -44,7 +44,7 @@ fun setup(sc: &mut Scenario, enable: bool) {
   if (enable) admin::admin_set_enabled(&cap, &mut ver, true, sc.ctx());
   admin::add_category(&cap, &mut cat, b"sword".to_string(), &ver, sc.ctx());
   admin::create_template(
-    &cap, &cat, b"Sword".to_string(), b"".to_string(), b"sword".to_string(), b"sword".to_string(), 1,
+    &cap, &cat, b"Sword".to_string(), b"".to_string(), b"sword".to_string(), b"icon".to_string(), b"sword".to_string(), 1,
     option::none(), option::none(), vector[], option::none(), &ver, sc.ctx(),
   );
   ts::return_shared(cat);
