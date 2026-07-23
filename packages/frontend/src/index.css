@@ -530,6 +530,25 @@ body::after {
   cursor: default;
 }
 
+/* #509 fold: a leader's auto-followers nest beneath it — indented, hairline-guided children. */
+.chsw-children {
+  margin-left: 12px;
+  border-left: 1px solid var(--color-border);
+}
+.chsw-child {
+  padding-left: 2px;
+}
+/* a folded follower is NOT a switch target — no gold hover affordance, just a quiet resting row. */
+.chsw-row--following {
+  cursor: default;
+  opacity: 0.85;
+}
+.chsw-row--following:hover {
+  color: var(--color-muted);
+  background: transparent;
+  box-shadow: none;
+}
+
 .chsw-empty {
   padding: 10px 8px 4px;
   border-top: 1px solid var(--color-border);

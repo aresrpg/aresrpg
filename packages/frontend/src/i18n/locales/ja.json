@@ -372,6 +372,7 @@
     "crafting": "製作",
     "no_job": "なし",
     "switcher_exploring": "探索中",
+    "stop_following": "フォローをやめる",
     "alloc_unavailable": "ポイント割り振りは近日公開",
     "broke": {
       "title": "残高不足です",

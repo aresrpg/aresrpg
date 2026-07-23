@@ -10,6 +10,7 @@
 // Chain-direct only: reads state.sui.characters (populated by roster/load_roster.js), never a WS/
 // backend call. Reuses the ALREADY-DISPATCHED roster — no new fetch.
 
+import { useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useStore } from 'zustand'
 import { Compass } from 'lucide-react'
@@ -24,6 +25,7 @@ import {
 
 import { use_game_state, context, use_fight_view } from '../game/store.js'
 import { use_follow } from '../follow'
+import { get_group_follow_snapshot, set_group_follow, subscribe_group_follow } from '../world-shell/group_wiring.js'
 import { use_auth } from '../auth'
 import { use_dungeon } from '../world-shell/dungeon_store.js'
 import { rebind_world_character } from '../world-shell/session_gate.js'
@@ -55,12 +57,20 @@ export function CharacterSwitcher() {
   const switching_id = useStore(character_switch_store, (state) =>
     state.phase === 'switching' ? state.target_id : null
   )
+  // Auto-following characters FOLD as children under the leader's row and are NOT switch targets while following
+  // (#509 fold ruling); the × on the child row unfollows and restores a normal, switchable row.
+  const follow = useSyncExternalStore(subscribe_group_follow, get_group_follow_snapshot, get_group_follow_snapshot)
 
   if (!loaded) return <SkeletonRows />
   if (!characters?.length) return <div className="chsw-empty">{t('characters.switcher_none')}</div>
 
-  const dungeon_group = characters.filter((c: any) => group_of(c) === 'dungeon')
-  const lobby_group = characters.filter((c: any) => group_of(c) === 'lobby')
+  const following_ids = new Set(follow.follower_character_ids)
+  const leader_id = follow.leader_character_id
+  const followers = (characters as any[]).filter((c) => following_ids.has(c.id))
+  const on_unfollow = (character_id: string) => set_group_follow({ character_id, enabled: false })
+  // Followers leave their normal group — they live nested under the leader instead.
+  const dungeon_group = characters.filter((c: any) => group_of(c) === 'dungeon' && !following_ids.has(c.id))
+  const lobby_group = characters.filter((c: any) => group_of(c) === 'lobby' && !following_ids.has(c.id))
 
   const on_select = (character: any) => {
     const switch_address = use_auth.getState().address
@@ -145,6 +155,9 @@ export function CharacterSwitcher() {
             switching_character_id={switching_id}
             is_their_turn={is_their_turn}
             on_select={on_select}
+            leader_id={leader_id}
+            followers={followers}
+            on_unfollow={on_unfollow}
           />
         )}
         {lobby_group.length > 0 && (
@@ -155,6 +168,9 @@ export function CharacterSwitcher() {
             switching_character_id={switching_id}
             is_their_turn={is_their_turn}
             on_select={on_select}
+            leader_id={leader_id}
+            followers={followers}
+            on_unfollow={on_unfollow}
           />
         )}
       </div>
@@ -169,6 +185,9 @@ function CharacterGroup({
   switching_character_id,
   is_their_turn,
   on_select,
+  leader_id,
+  followers,
+  on_unfollow,
 }: {
   label: string
   characters: any[]
@@ -176,25 +195,67 @@ function CharacterGroup({
   switching_character_id: string | null
   is_their_turn: (character: any) => boolean
   on_select: (character: any) => void
+  leader_id: string | null
+  followers: any[]
+  on_unfollow: (character_id: string) => void
 }) {
   const { t } = useTranslation()
   return (
     <div className="chsw-group">
       <div className="chsw-group__label">{label}</div>
       {characters.map((character) => (
-        <CharacterRow
-          key={character.id}
-          character={character}
-          active={character.id === active_character_id}
-          switching={character.id === switching_character_id}
-          dot={is_their_turn(character)}
-          exploring={!!character.exploring}
-          status_label={
-            character.in_dungeon ? t(`dungeons.${DUNGEON_STATUS_KEY[character.status] ?? 'status_open'}`) : null
-          }
-          on_click={() => on_select(character)}
-        />
+        <div key={character.id}>
+          <CharacterRow
+            character={character}
+            active={character.id === active_character_id}
+            switching={character.id === switching_character_id}
+            dot={is_their_turn(character)}
+            exploring={!!character.exploring}
+            status_label={
+              character.in_dungeon ? t(`dungeons.${DUNGEON_STATUS_KEY[character.status] ?? 'status_open'}`) : null
+            }
+            on_click={() => on_select(character)}
+          />
+          {/* the leader's auto-followers fold in beneath it as indented, non-switchable children (#509) */}
+          {character.id === leader_id && followers.length > 0 && (
+            <div className="chsw-children">
+              {followers.map((follower) => (
+                <FollowerRow key={follower.id} character={follower} on_unfollow={on_unfollow} />
+              ))}
+            </div>
+          )}
+        </div>
       ))}
+    </div>
+  )
+}
+
+/** A folded follower row — indented under the leader, NOT a switch target while following; the × unfollows it,
+ *  restoring a normal switchable row. Mirrors the CharacterRow identity chips (glyph + name + level). */
+function FollowerRow({ character, on_unfollow }: { character: any; on_unfollow: (character_id: string) => void }) {
+  const { t } = useTranslation()
+  const cls = get_class(character.classe ?? character.class_id)
+  const level = experience_to_level(character.experience ?? 0)
+  const hue = color_to_hue(character.color_1 ?? 0)
+  const initial = (cls?.name ?? character.classe ?? '?').charAt(0).toUpperCase()
+  return (
+    <div className="chsw-rowwrap chsw-child">
+      <div className="chsw-row chsw-row--following" title={character.name}>
+        <span className="chsw-row__glyph" style={{ '--hue': hue } as React.CSSProperties}>
+          {initial}
+        </span>
+        <span className="chsw-row__name">{character.name}</span>
+        <span className="chsw-row__lvl">Lv {level}</span>
+      </div>
+      <button
+        type="button"
+        className="chsw-row__abandon"
+        onClick={() => on_unfollow(character.id)}
+        title={t('characters.stop_following')}
+        aria-label={t('characters.stop_following')}
+      >
+        ×
+      </button>
     </div>
   )
 }

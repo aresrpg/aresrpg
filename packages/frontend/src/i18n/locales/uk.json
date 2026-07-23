@@ -372,6 +372,7 @@
     "crafting": "Ремесло",
     "no_job": "Немає",
     "switcher_exploring": "ДОСЛІДЖУЄ",
+    "stop_following": "Припинити стежити",
     "alloc_unavailable": "Розподіл очок скоро з'явиться",
     "broke": {
       "title": "У вас немає коштів",
