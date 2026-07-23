@@ -45,7 +45,7 @@ import {
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { create_mob_model, find_open_spawn, ground_surface_y, seat_surface_y } from '@aresrpg/engine3/player'
 import { GUST, advance_gust, gather_night_tint, node_glow, synth_gather_buffer } from '@aresrpg/engine3/gather'
-import { GATHER_RESOURCES } from '@aresrpg/sdk/jobs'
+import { GATHER_JOB_KEYS, gather_resource_for } from '@aresrpg/sdk/jobs'
 
 import { advance_member_wander, feet_of, make_rng } from './ambient_placement.js'
 import { get_mob_model } from './data/mobs.js'
@@ -311,8 +311,6 @@ export function pick_gather_target({ armed_key, armed_d2, nearest_key, nearest_d
 // own stand, so a field COMPOSES from stands; this module resolves one row's ground seat + builds its stand
 // as ONE InstancedMesh(count=cards) — the sprite art is fixed per id (spawn_id jitters placement/yaw/scale).
 
-// Job index → family (SPEC §6 order: 0 FARMER · 1 HERBALIST · 2 MINER).
-const JOB_KEYS = /** @type {const} */ (['farmer', 'herbalist', 'miner'])
 // Design ruling 2026-07-12: a node must READ as a desirable landmark, distinctly TALLER/punchier than ambient decoration.
 // Wheat sheaves clear the tallest ambient grass (tall_grass 2.2, grass_tuft 1.4) so a crop stand towers over the
 // meadow; herbs rise above the ground carpet; ore stays a low mineral knuckle (its punch is the crystal colour).
@@ -337,10 +335,9 @@ const APEX_TIER = 11 // the level-100 apex of each family gets the sanctioned ra
  * @returns {{ id:string, name:string, job_key:string, family:string, h:number, w:number, sway:number, rock:boolean, cards:number, is_apex:boolean }}
  */
 export function resource_visual(job, tier) {
-  const job_key = JOB_KEYS[Math.max(0, Math.min(2, Number(job) | 0))]
+  const job_key = GATHER_JOB_KEYS[Math.max(0, Math.min(2, Number(job) | 0))]
   const t = Math.max(1, Math.min(11, Number(tier) | 0))
-  const roster = GATHER_RESOURCES[job_key] ?? []
-  const res = roster.find((r) => r.tier === t) ?? roster[0] ?? { id: 'wheat', name: 'Resource' }
+  const res = gather_resource_for(job, tier) ?? { id: 'wheat', name: 'Resource' }
   const fam = FAMILY[job_key]
   const h = fam.h * (0.85 + 0.15 * (t / 11)) // taller toward the apex — height is a per-tier signal too, not just hue
   return {

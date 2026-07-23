@@ -565,6 +565,26 @@ export const GATHER_RESOURCES = {
   ],
 }
 
+// Job index → GATHER_RESOURCES key (SPEC §6 order: 0 FARMER · 1 HERBALIST · 2 MINER) — the ONE home for the
+// (job, tier) → gatherable roster-entry lookup shared by every consumer (the 3-D node prop's resource_visual,
+// the spawn-marker projection's resource_marker_name, the compass).
+export const GATHER_JOB_KEYS = /** @type {const} */ (['farmer', 'herbalist', 'miner'])
+
+/**
+ * Resolve a gathering (job, tier) pair to its GATHER_RESOURCES roster entry. Clamps job to [0,2] and tier to
+ * [1,11] — both arrive as raw chain numbers, never pre-validated — then falls back to the roster's first entry
+ * if the exact tier is missing.
+ * @param {number} job 0 farmer · 1 herbalist · 2 miner
+ * @param {number} tier 1-11 (the resource's level band)
+ * @returns {{ id: string, name: string, tier: number, icon: string } | undefined}
+ */
+export function gather_resource_for(job, tier) {
+  const job_key = GATHER_JOB_KEYS[Math.max(0, Math.min(2, Number(job) | 0))]
+  const t = Math.max(1, Math.min(11, Number(tier) | 0))
+  const roster = GATHER_RESOURCES[job_key] ?? []
+  return roster.find((r) => r.tier === t) ?? roster[0]
+}
+
 /**
  * A tool-like item the job resolver accepts: either a READ-MODEL equipped item (`id` = the Sui object id,
  * `item_type` = the items.json id, `item_category` = the on-chain/COLLAPSED category) or a raw items.json

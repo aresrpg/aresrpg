@@ -16,7 +16,7 @@
 
 import { createStore } from 'zustand/vanilla'
 import { zone_of, zone_of_world, world_offsets, DEFAULT_ZONE_SIZE, chain_to_world } from '@aresrpg/sdk/coords'
-import { GATHER_RESOURCES } from '@aresrpg/sdk/jobs'
+import { gather_resource_for } from '@aresrpg/sdk/jobs'
 
 import { OPENNESS_PUBLIC, OPENNESS_GROUP } from './openness.js'
 import { resolve_boot_spawn } from './checkpoint.js'
@@ -400,14 +400,10 @@ export function spawn_rows(state) {
   return out
 }
 
-// A resource's (job, tier) → its gatherable display NAME (the @aresrpg/sdk/jobs roster). ONE home shared with
-// the 3-D node prop (spawn_rigs resource_visual) and the compass — the pip/marker label, never a charge counter.
-const JOB_KEYS = ['farmer', 'herbalist', 'miner']
-const resource_marker_name = (job, tier) => {
-  const roster = GATHER_RESOURCES[JOB_KEYS[Math.max(0, Math.min(2, Number(job) | 0))]] ?? []
-  const t = Math.max(1, Math.min(11, Number(tier) | 0))
-  return (roster.find((r) => r.tier === t) ?? roster[0])?.name ?? null
-}
+// A resource's (job, tier) → its gatherable display NAME, via @aresrpg/sdk/jobs' gather_resource_for — the ONE
+// home shared with the 3-D node prop (spawn_rigs resource_visual) and the compass — the pip/marker label, never
+// a charge counter.
+const resource_marker_name = (job, tier) => gather_resource_for(job, tier)?.name ?? null
 
 /** Flat OVERWORLD MARKERS — the ONE projection the big map, the minimap, AND the compass all plot from (killing
  *  the render-published `use_world_spawns` copy and the compass's private `zone_rows_v1` fetch). World-space x/z
