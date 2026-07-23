@@ -12,16 +12,23 @@
 // full `bun test src` sweep, bisected 2026-07-10 (that pair has since been DELETED from env.ts — the
 // station is server-side-only). Keep this object's keys in lockstep with env.ts's exports.)
 
-import { describe, expect, test, spyOn } from 'bun:test'
+import { afterEach, describe, expect, test, spyOn } from 'bun:test'
 import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
 
 import '../test_helpers/env_mock.js'
+import { set_pet_catalog_for_test } from './data/pet_catalog.js'
+import { set_catalog_for_test as set_mob_catalog_for_test } from './data/mob_catalog.js'
 
 // configure_walrus_assets has no test-reset seam (packages/sdk/src/jobs.js overwrites the aggregator with no
 // way to clear it back) — an earlier-run file (asset_manifest.test.ts) leaves a test aggregator configured
 // for the rest of the process (bun test runs every file in ONE process). The "re-homed onto the CDN" tests
 // below expect the real default aggregator, so force it back before this file's tests run.
 configure_walrus_assets({ aggregator: 'https://cdn.aresrpg.world' })
+// #594's pet fallback resolves through the SAME mob-quilt walrus_asset_url join resolve_pet_model_url uses
+// (pet_companion_resolver.test.js's own MOB_QUILT convention) — configure it here too rather than depend on
+// another file having configured `classes.mob` first (classes only ever MERGE for the process lifetime, per
+// the header note above, so this file's own pet-fallback tests must not assume load order).
+configure_walrus_assets({ classes: { mob: { published: true } } })
 
 const {
   is_mount_item,
@@ -29,6 +36,7 @@ const {
   cosmetic_glb_url,
   read_worn_templates,
   resolve_mount,
+  pet_mount_hint_visible,
   worn_dev_url,
   resolve_worn_cosmetics,
 } = await import('./cosmetic_glb.js')
@@ -140,6 +148,81 @@ describe('resolve_mount — availability state machine', () => {
     expect(resolve_mount(null, '').available).toBe(false)
     // a stray scalar in the slot never grants a mount (mirrors the mount_speed item-like gate)
     expect(resolve_mount({ id: 'c1', mount: 1 }, '').available).toBe(false)
+  })
+})
+
+// #594 RED-FIRST: pressing the mount key with an equipped pet companion out said "no mount to ride" — the
+// resolver only ever looked at the `.mount` equip slot (inert pre-republish), never the pet. Fixed by
+// falling back to resolve_pet_companion's own catalog join (the SAME one the trailing-companion rig uses).
+describe('resolve_mount — pet fallback (#594: the pet is BOTH a companion AND a mountable ride)', () => {
+  afterEach(() => {
+    set_pet_catalog_for_test()
+    set_mob_catalog_for_test()
+  })
+
+  test('no dedicated mount equipped, an active pet resolves as the ride target — source "pet"', () => {
+    set_mob_catalog_for_test({ bouloute: { appearance: 'Lamb', glb: 'hy_lamb' } })
+    const r = resolve_mount({ id: 'c1', pet_equipped: true, pet: { item_id: '0xa004', slug: 'pet_bouloute' } }, '')
+    expect(r.available).toBe(true)
+    expect(r.source).toBe('pet')
+    expect(r.glb_url).toContain('hy_lamb')
+  })
+
+  test('a dedicated equipped mount still wins over an active pet (equip stays authoritative)', () => {
+    set_mob_catalog_for_test({ bouloute: { appearance: 'Lamb', glb: 'hy_lamb' } })
+    const r = resolve_mount(
+      {
+        id: 'c1',
+        mount: { id: 'm1', template_id: 'mount_suicune' },
+        pet_equipped: true,
+        pet: { item_id: '0xa004', slug: 'pet_bouloute' },
+      },
+      ''
+    )
+    expect(r.source).toBe('equip')
+  })
+
+  test('pet_equipped but the slug has no catalog entry -> still unavailable (no placeholder mount)', () => {
+    const r = resolve_mount({ id: 'c1', pet_equipped: true, pet: { item_id: '0xa004', slug: 'pet_unknown_xyz' } }, '')
+    expect(r.available).toBe(false)
+    expect(r.glb_url).toBeNull()
+  })
+
+  test('no mount, no pet -> still unavailable (regression guard on the pre-#594 behavior)', () => {
+    expect(resolve_mount({ id: 'c1' }, '').available).toBe(false)
+  })
+})
+
+describe('pet_mount_hint_visible — the [X] world-hint arm condition (#594)', () => {
+  afterEach(() => {
+    set_pet_catalog_for_test()
+    set_mob_catalog_for_test()
+  })
+
+  const with_pet = { id: 'c1', pet_equipped: true, pet: { item_id: '0xa004', slug: 'pet_bouloute' } }
+
+  test('an active, resolvable pet while grounded and out of a fight -> visible', () => {
+    set_mob_catalog_for_test({ bouloute: { appearance: 'Lamb', glb: 'hy_lamb' } })
+    expect(pet_mount_hint_visible(with_pet, false, false, '')).toBe(true)
+  })
+
+  test('already riding -> hidden even with an active pet (no dead re-prompt mid-ride)', () => {
+    set_mob_catalog_for_test({ bouloute: { appearance: 'Lamb', glb: 'hy_lamb' } })
+    expect(pet_mount_hint_visible(with_pet, true, false, '')).toBe(false)
+  })
+
+  test('mid-fight -> hidden (mount_up refuses mid-fight; a hint there would be a dead click)', () => {
+    set_mob_catalog_for_test({ bouloute: { appearance: 'Lamb', glb: 'hy_lamb' } })
+    expect(pet_mount_hint_visible(with_pet, false, true, '')).toBe(false)
+  })
+
+  test('no active pet -> hidden', () => {
+    expect(pet_mount_hint_visible({ id: 'c1' }, false, false, '')).toBe(false)
+  })
+
+  test('a dedicated equipped mount with no pet -> hidden (this hint is pet-specific copy only)', () => {
+    const r = pet_mount_hint_visible({ id: 'c1', mount: { id: 'm1', template_id: 'mount_suicune' } }, false, false, '')
+    expect(r).toBe(false)
   })
 })
 

@@ -32,12 +32,19 @@ import { push_event_toast } from './core/toast.js'
 import { set_local_beat } from './core/local_beat.js'
 import { walk_fov_pulse } from './core/camera_juice.js'
 import { MOUNT_SPEED_MULTIPLIER } from './mount_speed.js'
-import { read_worn_templates, resolve_mount, resolve_worn_cosmetics, resolve_avatar_override } from './cosmetic_glb.js'
+import {
+  read_worn_templates,
+  resolve_mount,
+  resolve_worn_cosmetics,
+  resolve_avatar_override,
+  pet_mount_hint_visible,
+} from './cosmetic_glb.js'
 import { create_mount_rig, ft_dragon_glb_url } from './mount_rig.js'
 import { create_pet_companion_rig, resolve_pet_companion } from './pet_companion.js'
 import { create_fast_travel_pilot } from './fast_travel_pilot.js'
 import { mount_is_moving } from './fast_travel_flight.js'
 import { fast_travel_store, ft_flight_target, ft_for } from '../world-shell/fast_travel_store.js'
+import { use_prompt_stack } from '../world-shell/prompt_stack.js'
 import { context } from './store.js'
 import i18n from '../i18n'
 import { game_log } from '../core/log.js'
@@ -242,22 +249,25 @@ export function create_player({
     on_cinematic_change?.(cinematic) // host hides the OTHER DOM plate layers (remote players / world spawns)
     push_event_toast({ state: 'info', title: i18n.t(cinematic ? 'world.cinematic_on' : 'world.cinematic_off') })
   }
-  // TR-97 MOUNT (pressing '1' spawns the mount and makes the character ride it, with the 50%
-  // speed boost… visible in multiplayer"): press 1 to TOGGLE riding. On mount-on we resolve the character's
-  // mount (dev `?mount=<glb>` trailer override, else the equipped `.mount` slot post-republish), spawn the
-  // mount GLB under the body, ride it (×1.5 roam via the speed_scale knob below), and BROADCAST the mount so
-  // peers render it. Roam only — a fight ignores the key. The rig-load discipline lives in mount_rig.js.
+  // TR-97 MOUNT (KeyX spawns the mount and makes the character ride it, with the 50% speed boost, visible
+  // in multiplayer): press X to TOGGLE riding. On mount-on we resolve the character's ride (dev `?mount=<glb>`
+  // trailer override, else the equipped `.mount` slot post-republish, else — #594 — the active PET: the pet
+  // is BOTH a walking companion AND a mountable ride), spawn the GLB under the body, ride it (×1.5 roam via
+  // the speed_scale knob below), and BROADCAST the mount so peers render it. Roam only — a fight ignores the
+  // key. The rig-load discipline lives in mount_rig.js.
   let riding = false
   /** @type {ReturnType<typeof create_mount_rig> | null} */ let mount_ctl = null
+  /** @type {'dev' | 'equip' | 'pet' | 'dragon' | null} */ let mount_source = null // what riding=true IS right now
   // PET COMPANION (an equipped pet wasn't showing in the world, and couldn't be mounted) —
   // receipt-driven, NOT a toggle: resolve_pet_companion (fed every frame below) decides spawn/despawn off
   // the live character.pet/pet_equipped read, mirroring desired_worn's reconcile shape exactly.
   /** @type {ReturnType<typeof create_pet_companion_rig> | null} */ let pet_ctl = null
   /** @type {string | null} */ let pet_glb_url = null // last-spawned URL — recreate the rig only on a real change
+  let mount_hint_armed = false // #594 — the [X] "Mount the pet" world-hint registration, edge-triggered
   const mount_up = () => {
     if (is_fight()) return // no mounting mid-fight (the board owns the body)
     const live = context.get_state().sui?.characters?.find((c) => c.id === character?.id) ?? null
-    const { available, glb_url } = resolve_mount(live)
+    const { available, glb_url, source } = resolve_mount(live)
     if (!available || !glb_url) {
       push_event_toast({ state: 'info', title: i18n.t('world.mount_none') })
       return
@@ -265,6 +275,7 @@ export function create_player({
     mount_ctl?.dispose()
     mount_ctl = create_mount_rig({ engine, glb_url })
     riding = true
+    mount_source = source
     set_local_cosmetic({ mounted: true, mount_glb: glb_url }) // peers render my mount + whitelist my ×1.5
     push_event_toast({
       state: 'success',
@@ -274,6 +285,7 @@ export function create_player({
   const mount_down = () => {
     if (!riding) return
     riding = false
+    mount_source = null
     set_local_cosmetic({ mounted: false, mount_glb: null })
     mount_ctl?.dispose()
     mount_ctl = null
@@ -283,7 +295,7 @@ export function create_player({
   // of MY flight names my character id (a follower's catch-up flight lives under its own key, untouched here).
   const ft_me = () => character?.id ?? null
   const toggle_mount = () => {
-    // the mount key is inert mid-flight — the dragon is the pilot's, not the '1' toggle's
+    // the mount key is inert mid-flight — the dragon is the pilot's, not the toggle's
     if (ft_flight_target(ft_for(fast_travel_store.getState(), ft_me()))) return
     return riding ? mount_down() : mount_up()
   }
@@ -298,11 +310,13 @@ export function create_player({
     mount_ctl?.dispose()
     mount_ctl = create_mount_rig({ engine, glb_url })
     riding = true
+    mount_source = 'dragon'
     set_local_cosmetic({ mounted: true, mount_glb: glb_url }) // peers render the dragon + whitelist the ride (§5/§7)
   }
   const unmount_dragon = () => {
     if (!riding) return
     riding = false
+    mount_source = null
     set_local_cosmetic({ mounted: false, mount_glb: null })
     mount_ctl?.dispose()
     mount_ctl = null
@@ -356,9 +370,10 @@ export function create_player({
       case 'KeyC':
         if (down && !e.repeat) toggle_cinematic() // one-shot on press (ignore auto-repeat)
         break
-      case 'Digit1':
-      case 'Numpad1':
-        if (down && !e.repeat) toggle_mount() // TR-97 — mount ride toggle (roam only; guarded inside)
+      case 'KeyX':
+        // TR-97/#594 — mount ride toggle (roam only; guarded inside). NOT Digit1: that key is the fast-slot
+        // row's (FastSlots.jsx) — X is AZERTY-safe (same physical key/glyph as QWERTY, like C/V above).
+        if (down && !e.repeat) toggle_mount()
         break
       case 'Space':
         keys.jump = down
@@ -457,7 +472,7 @@ export function create_player({
     // — the captured `character` closure is stale after a mid-session equip. The scale rides set_input to
     // the controller's ONE speed home; get_state() is a cached read + the roster is tiny (negligible cost).
     const live = context.get_state().sui?.characters?.find((c) => c.id === character?.id) ?? null
-    // CF-B / TR-97 MOUNT SPEED: ×1.5 WHILE RIDING (press 1), not merely while a mount is equipped — the
+    // CF-B / TR-97 MOUNT SPEED: ×1.5 WHILE RIDING (press X), not merely while a mount is equipped — the
     // ride is the boost. `__force_mount` (DEV) forces the ride so QA can prove the ×1.5 ratio without a rig.
     const ride = riding || (import.meta.env.DEV && !!(/** @type {any} */ (window).__force_mount))
     const speed_scale = ride ? MOUNT_SPEED_MULTIPLIER : 1
@@ -481,6 +496,23 @@ export function create_player({
     // (peers render MY pet themselves off their own /v1 read — remote_players.js, #553 — same TRANSPORT
     // RULING as worn cosmetics above; this path is untouched by that landing).
     desired_pet = resolve_pet_companion(live)
+    // MOUNT HINT (#594) — the "[X] Mount the pet" world pill: armed exactly when pressing the mount key
+    // would resolve to the PET (pet_mount_hint_visible mirrors resolve_mount's own dev > equip > pet
+    // precedence), cleared the instant riding starts, a fight begins, or the pet itself despawns. Edge-
+    // triggered register/clear — the SAME idiom world_fights_discovery.js's [V] pill uses.
+    const mountable = pet_mount_hint_visible(live, riding, is_fight())
+    if (mountable !== mount_hint_armed) {
+      mount_hint_armed = mountable
+      if (mountable)
+        use_prompt_stack.getState().register_prompt({
+          id: 'mount',
+          key: 'X',
+          label: i18n.t('world.mount_hint'),
+          priority: 50,
+          on_trigger: toggle_mount,
+        })
+      else use_prompt_stack.getState().clear_prompt('mount')
+    }
     // TR-97 — broadcast the aura state (edge-triggered) so remote players render my veteran aura too.
     if (aura_active !== last_veteran_bcast) {
       last_veteran_bcast = aura_active
@@ -665,7 +697,10 @@ export function create_player({
         // identity actually changes (an equip re-read of the SAME pet must not thrash the loaded model),
         // steer it toward the player each frame (#593 — its own dead-zone follow, not welded), and hide it
         // with the walk body exactly like the mount.
-        if (desired_pet.spawn && desired_pet.glb_url) {
+        // #594 — while RIDING the pet itself (mount_source 'pet'), the steered rig IS the same creature
+        // mount_ctl already poses under the rider; spawning both would double it visibly.
+        const riding_the_pet = riding && mount_source === 'pet'
+        if (desired_pet.spawn && desired_pet.glb_url && !riding_the_pet) {
           if (!pet_ctl || pet_glb_url !== desired_pet.glb_url) {
             pet_ctl?.dispose()
             pet_ctl = create_pet_companion_rig({ engine, glb_url: desired_pet.glb_url, slug: desired_pet.key })
@@ -815,6 +850,7 @@ export function create_player({
     }
     mount_ctl?.dispose() // TR-97 — the mount rig dies with the session (REMOVE-ONLY; cache owns the GLB)
     pet_ctl?.dispose() // companion rig dies with the session (REMOVE-ONLY; cache owns the GLB)
+    if (mount_hint_armed) use_prompt_stack.getState().clear_prompt('mount') // #594 — the [X] pill dies with the session
     my_plate?.dispose() // D227 — the local plate dies with the session
     for (const p of puffs) {
       try {

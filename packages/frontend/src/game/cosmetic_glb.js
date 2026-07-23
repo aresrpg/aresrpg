@@ -19,6 +19,7 @@ import { get_encyclopedia } from '../rpc/client'
 
 import { cosmetic_icon_of } from './cosmetic_icons.js'
 import { mount_speed_multiplier } from './mount_speed.js'
+import { resolve_pet_companion } from './pet_companion_resolver.js'
 
 // Call-time read on purpose: vite statically inlines `import.meta.env.DEV` (true in dev serve,
 // false in prod builds — the QA branches stay dead there), while bun tests can toggle the QA
@@ -287,10 +288,14 @@ export function is_mount_item(item) {
  * Resolve the mount a character can ride THIS session. The DEV `?mount=` override wins (the trailer path);
  * otherwise the character's equipped `.mount` slot — forward-compatible with the cosmetic-equip republish
  * (today the chain read carries no such slot, so the equip branch is inert until then, exactly like the
- * veteran-title aura). Pure; safe on a null character.
- * @param {any} character the live selected character (may carry a `.mount` equip slot post-republish)
+ * veteran-title aura); otherwise the active PET (#594 standing ruling: the pet is BOTH a walking companion
+ * AND a mountable ride — no dedicated mount equipped falls back to whatever resolve_pet_companion resolves,
+ * the SAME catalog join the trailing-companion rig itself uses, so this never invents a second appearance
+ * lookup). Pure; safe on a null character.
+ * @param {any} character the live selected character (may carry a `.mount` equip slot post-republish, and/or
+ *   the `.pet`/`.pet_equipped` fields the companion rig already reads)
  * @param {string} [search] the URL query string (defaults to the live location — injectable for tests)
- * @returns {{ available: boolean, glb_url: string | null, source: 'dev' | 'equip' | null }}
+ * @returns {{ available: boolean, glb_url: string | null, source: 'dev' | 'equip' | 'pet' | null }}
  */
 export function resolve_mount(character, search) {
   const query = search ?? (typeof location !== 'undefined' ? location.search : '')
@@ -315,7 +320,23 @@ export function resolve_mount(character, search) {
     const glb = canonical_walrus_asset_url(explicit) || explicit_local || cosmetic_glb_url(template_id)
     return { available: true, glb_url: glb, source: 'equip' }
   }
+  // #594 — no dedicated mount: the active pet (if any) IS a valid ride target.
+  const pet = resolve_pet_companion(character, search)
+  if (pet.spawn && pet.glb_url) return { available: true, glb_url: pet.glb_url, source: 'pet' }
   return { available: false, glb_url: null, source: null }
+}
+
+/**
+ * Should the "[X] Mount the pet" world hint be armed right now? Mirrors resolve_mount's own dev > equip >
+ * pet precedence rather than re-deriving it (one home for that fact) — armed only when pressing the mount
+ * key would actually target the PET specifically, riding isn't already engaged, and no fight is running
+ * (mount_up's own guards; a hint for a dead click is worse than no hint — NpcPrompt's no-dead-click law).
+ * Pure. @param {any} character @param {boolean} riding @param {boolean} in_fight @param {string} [search]
+ * @returns {boolean}
+ */
+export function pet_mount_hint_visible(character, riding, in_fight, search) {
+  if (riding || in_fight) return false
+  return resolve_mount(character, search).source === 'pet'
 }
 
 // DEV SCREENSHOT TOOL: `?avatar=<key>` swaps the LOCAL player's rendered body for a

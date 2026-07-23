@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // DISCOVERY prompt sources (S-18, DECISIONS 07-09 pick + addendum) — renderless registrars feeding the
-// PromptStack (keys: F search · G gather · R ride; E dungeon lives in NpcPrompt.jsx):
+// PromptStack (keys: F search · G gather; E dungeon lives in NpcPrompt.jsx; X mount lives in
+// embed_voxel_player.js):
 //
 //   AUTO-JOIN (no [J] button): only the selected character's identity-matched RPC doc can arm this registrar.
 //       An explicit `world: null` fires the SPONSORED `zones::join_world` once per session; it stays silent only
@@ -16,9 +17,10 @@
 //   [G] GATHER — registered while the roam scene's gather signal is live (`action/gather_target`). The
 //       trigger resolves the character kiosk then submits the real `gathering::gather` tx (gather_actions.js,
 //       the [F]-search twin) — the yield mints into the personal kiosk. (UI map #9 rewire — LANDED.)
-//   [R] RIDE — SIGNAL SEAM ONLY: no mount-possession signal exists in the engine store yet (pets/mounts
-//       equip via items; the ride affordance lands with the pet-feed/mount pass). Registering nothing is
-//       honest — a pill without a real signal would be a fake affordance.
+//   [X] MOUNT — landed (#594), but NOT here: it lives in embed_voxel_player.js, which already resolves the
+//       live character + pet each frame for the ride toggle itself, so the world hint registers from that
+//       SAME read rather than a second one here. R was this bullet's original pick, but world_spawns.js's
+//       [R] ATTACK is a live prompt today — X avoids the collision (AZERTY-safe, same idiom as C/V).
 
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'

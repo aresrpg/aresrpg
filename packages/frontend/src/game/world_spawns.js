@@ -535,7 +535,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       set_highlight(e, engageable ? 'claimable' : 'off')
       register_prompt({
         id: 'attack',
-        key: 'R', // ride is a non-registering seam (DECISIONS 07-09) so R is free at runtime; AZERTY-safe (KeyR)
+        key: 'R', // #594: mount/ride now registers for real under KeyX (embed_voxel_player.js); AZERTY-safe (KeyR)
         label: i18n.t('discovery.attack'),
         priority: 90, // most-actionable: a group you're standing in anchors the stack bottom
         on_trigger: () => engage(e),
