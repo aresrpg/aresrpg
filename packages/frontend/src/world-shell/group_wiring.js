@@ -24,6 +24,7 @@ import { error_executed_digest } from './tx_digest_error.js'
 import { read_checkpoint_spawn, resolve_checkpoint_spawn, write_follow_checkpoint } from './world_checkpoint.js'
 import { ft_dispatch } from './fast_travel_store.js'
 import { recover_fight_entry_refusal } from './dungeon_settlement.js'
+import { set_app_managed_followers } from './follow_gate.js'
 import { create_group_wiring, build_follow_entries, fight_facts_of } from './group_wiring_core.js'
 
 /** A dragon catch-up flight — fixed, run-pace-ish, non-blocking (the leader keeps roaming while it flies). */
@@ -72,6 +73,9 @@ export const subscribe_group_follow = (listener) => {
 }
 export const get_group_follow_snapshot = () => wiring?.store.getState().follow ?? idle_follow
 const notify_follow = () => {
+  // Publish the follow set to the selection door's gate (#509): an app-managed follower can never become the
+  // driven character, and the game-core reducer reads this leaf instead of importing group_wiring (cycle).
+  set_app_managed_followers(get_group_follow_snapshot().follower_character_ids)
   for (const listener of follow_listeners) listener()
 }
 

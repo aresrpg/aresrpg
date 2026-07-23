@@ -11,6 +11,7 @@
 import { reduce_sui_data } from '@aresrpg/inventory/reduce'
 
 import { session_gate_input } from '../../../world-shell/session_gate.js'
+import { is_app_managed_follower } from '../../../world-shell/follow_gate.js'
 
 /** @type {import('../game.js').Module} */
 export default function sui_session() {
@@ -18,6 +19,10 @@ export default function sui_session() {
     /** @param {import('../game.js').Context} context */
     observe({ events, get_state }) {
       events.on('action/select_character', (character_id) => {
+        // #509 — an app-managed auto-follower can never become the driven character. Refusing at this ONE door
+        // keeps the session scene from re-keying to a follower (the world-join auto-select focus-steal); the
+        // reduce half below refuses the selection state itself. The × unfollow clears the gate, restoring both.
+        if (is_app_managed_follower(character_id)) return
         const character = get_state().sui.characters.find((row) => row.id === character_id)
         // An indexed roster row carries explicit membership (`string | null`). Ferry that selection through
         // the world shell's ONE typed-input door so its character-keyed scene remounts with the HUD. An
@@ -71,6 +76,9 @@ export default function sui_session() {
             },
           }
         case 'action/select_character':
+          // #509 — refuse embodying an app-managed auto-follower (by sidebar click OR programmatically). The ×
+          // on the folded row unfollows FIRST (clearing the follow gate), so the restored ordinary row selects.
+          if (is_app_managed_follower(payload)) return state
           return { ...state, selected_character_id: payload }
         // LIVE health stream: health is transient server/Redis state (regen tick + leave=death),
         // NOT the chain object. The server broadcasts packet/characterHealth on every change; fold it
