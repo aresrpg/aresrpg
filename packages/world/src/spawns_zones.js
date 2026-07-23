@@ -16,6 +16,7 @@
 
 import { createStore } from 'zustand/vanilla'
 import { zone_of, zone_of_world, world_offsets, DEFAULT_ZONE_SIZE, chain_to_world } from '@aresrpg/sdk/coords'
+import { GATHER_RESOURCES } from '@aresrpg/sdk/jobs'
 
 import { OPENNESS_PUBLIC, OPENNESS_GROUP } from './openness.js'
 import { resolve_boot_spawn } from './checkpoint.js'
@@ -222,6 +223,22 @@ const fold_gather_receipt = (state, input, now) => {
   return { ...cleared, zones }
 }
 
+// A MobTemplate's roster facts, resolved once per template by the effect edge (the async chain read) and fed
+// back through the door as data — so the map/hover NAME + level band is a pure projection of the ONE store,
+// never a second per-surface read. The name is already display-overridden at the edge; the core just stores it.
+const fold_template_resolved = (state, input) => {
+  const id = input.template_id
+  if (!id || state.templates.has(id)) return state // one home per template; the first resolve wins
+  const templates = new Map(state.templates)
+  templates.set(id, {
+    name: input.name ?? null,
+    min_level: Number(input.min_level) || 0,
+    max_level: Number(input.max_level ?? input.min_level) || 0,
+    element: input.element ?? 255,
+  })
+  return { ...state, templates }
+}
+
 const fold_player_pos = (state, input) => {
   const x = Number(input.x)
   const z = Number(input.z)
@@ -308,6 +325,8 @@ export function reduce_spawns(state, input, now) {
       return fold_player_pos(state, input)
     case 'member_positions':
       return fold_member_positions(state, input)
+    case 'template_resolved':
+      return fold_template_resolved(state, input)
     case 'openness_set': {
       const openness = input.value === OPENNESS_GROUP ? OPENNESS_GROUP : OPENNESS_PUBLIC
       return openness === state.openness ? state : { ...state, openness }
@@ -379,6 +398,61 @@ export function spawn_rows(state) {
     }
   }
   return out
+}
+
+// A resource's (job, tier) → its gatherable display NAME (the @aresrpg/sdk/jobs roster). ONE home shared with
+// the 3-D node prop (spawn_rigs resource_visual) and the compass — the pip/marker label, never a charge counter.
+const JOB_KEYS = ['farmer', 'herbalist', 'miner']
+const resource_marker_name = (job, tier) => {
+  const roster = GATHER_RESOURCES[JOB_KEYS[Math.max(0, Math.min(2, Number(job) | 0))]] ?? []
+  const t = Math.max(1, Math.min(11, Number(tier) | 0))
+  return (roster.find((r) => r.tier === t) ?? roster[0])?.name ?? null
+}
+
+/** Flat OVERWORLD MARKERS — the ONE projection the big map, the minimap, AND the compass all plot from (killing
+ *  the render-published `use_world_spawns` copy and the compass's private `zone_rows_v1` fetch). World-space x/z
+ *  (offset already applied at ingest), the mob roster name+level band from the folded template facts, the
+ *  resource name pure from (job,tier). Consumers compute nothing — they filter (compass: to the standing cell). */
+export function spawn_markers(state) {
+  const out = []
+  for (const [zk, zone] of state.zones) {
+    const [zx, zy] = zk.split(':').map(Number)
+    for (const [rk, row] of zone.rows) {
+      const key = `${zk}:${rk}`
+      /** @type {any} */
+      const m = {
+        key,
+        kind: row.kind,
+        x: Number(row.x),
+        z: Number(row.z),
+        spawn_id: row.spawn_id,
+        zx,
+        zy,
+        template_id: row.template_id,
+        job: Number(row.job) || 0,
+        tier: Number(row.tier) || 0,
+        size: Number(row.size) || 0,
+        pending: state.pending.get(`claim:${key}`)?.kind ?? null,
+      }
+      if (row.kind === 'mob') {
+        const tpl = state.templates.get(row.template_id)
+        if (tpl) {
+          m.name = tpl.name
+          m.level_min = tpl.min_level
+          m.level_max = tpl.max_level
+        }
+      } else m.name = resource_marker_name(row.job, row.tier)
+      out.push(m)
+    }
+  }
+  return out
+}
+
+/** ENGAGE ELIGIBILITY — the mob groups a player could fight: present in the store and not already claimed
+ *  (a pending-claim row is mid-optimistic-hide; a receipt/ghost has already removed a gone one). The [R]
+ *  proximity arming (attack_target) rides on top; this is the presence set every surface agrees on. */
+export function engage_candidates(state) {
+  return spawn_rows(state).filter((r) => r.kind === 'mob' && r.pending !== 'claim')
 }
 
 /** The armed [G] target's full row (or null) — the hysteresis decision, already made. */

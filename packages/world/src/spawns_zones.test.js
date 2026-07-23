@@ -12,6 +12,8 @@ import {
   create_spawns_store,
   reduce_spawns,
   spawn_rows,
+  spawn_markers,
+  engage_candidates,
   gather_target,
   attack_target,
   searchable_zone,
@@ -147,25 +149,26 @@ describe('the versioned snapshot — chain rows in, world space out, stale polls
     input(snap(2))
     expect(spawn_rows(state())).toEqual(before)
   })
-  it('a fresh cell read MERGES rows instead of replacing already-visible spawns', () => {
+  it('a FETCHED cell is authoritative — a group its fresh derivation omits (consumed) is dropped (#596)', () => {
+    // The client derives every row from the zone's consumed bitmaps, so a fetched cell that stops listing a
+    // group means its bit was set (it was fought) — the derivation is truth, not a lagging omission. The old
+    // additive merge kept it forever (disease ①: consumed groups lingering on the map); a fetched cell now
+    // REPLACES. The search fast-path's "don't lose just-searched spawns" is the PROVEN-row grace shield below,
+    // never this merge — a lagging indexer never omits a live row from a whole-zone derivation.
     const { input, state } = boot()
     input({
       type: 'zones_rows_snapshot',
       version: 1,
       zones: [{ zx: 5, zy: 5, discovered_at_ms: 9 }],
-      cells: [{ zx: 5, zy: 5, rows: [mob('visible', 520, 540)] }],
+      cells: [{ zx: 5, zy: 5, rows: [mob('visible', 520, 540), mob('consumed', 522, 542)] }],
     })
     input({
       type: 'zones_rows_snapshot',
       version: 2,
       zones: [{ zx: 5, zy: 5, discovered_at_ms: 10 }],
-      cells: [{ zx: 5, zy: 5, rows: [mob('searched', 522, 542)] }],
+      cells: [{ zx: 5, zy: 5, rows: [mob('visible', 520, 540)] }], // 'consumed' fought → omitted by the derivation
     })
-    expect(
-      spawn_rows(state())
-        .map((row) => row.key)
-        .sort()
-    ).toEqual(['5:5:mob:searched', '5:5:mob:visible'])
+    expect(spawn_rows(state()).map((row) => row.key)).toEqual(['5:5:mob:visible'])
   })
 })
 
@@ -632,5 +635,74 @@ describe('constitution — purity + no-op discipline', () => {
     input({ type: 'search_intent', x: 30, z: 45 })
     input({ type: 'zone_searched', zx: 5, zy: 5, x: 30, z: 45, found: { mob_groups: 1, resource_nodes: 0 } })
     expect(kinds).toEqual(['search_progress', 'reveal_chime', 'reveal_banner', 'fov_pulse'])
+  })
+})
+
+// ─── #596 SPAWN-TRUTH CONSOLIDATION (red-first, three rows) ───────────────────────────────────────────────────
+// The disease: map, compass, 3-D world markers, and engage were reading ≥2 private sources, so after a refresh a
+// consumed group lingered on the map (but not the compass/engage), and after a paid search revealed groups showed
+// on the map+compass but not the world. The cure: ONE store, four PURE projections — spawn_markers (map+compass),
+// spawn_rows (world), engage_candidates (engage) — all folding the SAME truth. These lock the store as the one home.
+describe('#596 — the map projection drops a consumed group after a fetched re-poll (disease ①)', () => {
+  it('a fetched cell REPLACES its rows: a group the fresh derivation omits (its consumed bit is set) is GONE', () => {
+    const { input, state } = boot()
+    input({
+      type: 'zones_rows_snapshot',
+      version: 1,
+      zones: [{ zx: 5, zy: 5, discovered_at_ms: 9 }],
+      cells: [{ zx: 5, zy: 5, rows: [mob('live', 520, 540), mob('consumed', 522, 542)] }],
+    })
+    expect(
+      spawn_rows(state())
+        .map((r) => r.row.spawn_id)
+        .sort()
+    ).toEqual(['consumed', 'live'])
+    // 'consumed' was fought (by anyone) → its consumed-bitmap bit is set → the authoritative derivation omits it.
+    // The fetched cell's fresh rows are truth; the additive-merge that kept it forever was disease ①.
+    input({
+      type: 'zones_rows_snapshot',
+      version: 2,
+      zones: [{ zx: 5, zy: 5, discovered_at_ms: 9 }],
+      cells: [{ zx: 5, zy: 5, rows: [mob('live', 520, 540)] }],
+    })
+    expect(spawn_rows(state()).map((r) => r.row.spawn_id)).toEqual(['live']) // world markers: dropped
+    expect(spawn_markers(state()).map((m) => m.spawn_id)).toEqual(['live']) // map projection: dropped too
+  })
+})
+
+describe('#596 — a search reveal folded into the store lands in ALL FOUR projections the same tick (disease ②)', () => {
+  it('one zone_rows reveal is present in map, compass (cell-filtered), world markers, and engage', () => {
+    const { input, state } = boot(10_000)
+    // the paid search: the zone is discovered by the receipt, its rows fold chain-direct (proven) — one clock.
+    input({ type: 'zone_searched', zx: 5, zy: 5, x: 30, z: 45, found: { mob_groups: 1, resource_nodes: 0 } }, 10_000)
+    input({ type: 'zone_rows', zx: 5, zy: 5, proven: true, rows: [mob('revealed', 520, 540)] }, 10_000)
+    const has = (rows) => rows.some((r) => (r.spawn_id ?? r.row?.spawn_id) === 'revealed')
+    expect(has(spawn_markers(state())), 'map shows the revealed group').toBe(true)
+    expect(
+      has(spawn_markers(state()).filter((m) => m.zx === 5 && m.zy === 5)),
+      'compass (the current cell) points at it'
+    ).toBe(true)
+    expect(has(spawn_rows(state())), 'the 3-D world tracks it (placeable/engageable)').toBe(true)
+    expect(has(engage_candidates(state())), 'engage can target it').toBe(true)
+  })
+})
+
+describe('#596 — a claim-failure drops the group from ALL FOUR projections the same tick (extends #480)', () => {
+  it('a ghost claim_failed removes the group from map, compass, world, and engage together', () => {
+    const { input, state } = boot()
+    input({
+      type: 'zones_rows_snapshot',
+      version: 1,
+      zones: [{ zx: 5, zy: 5, discovered_at_ms: 9 }],
+      cells: [{ zx: 5, zy: 5, rows: [mob('gone', 520, 540)] }],
+    })
+    const has = (rows) => rows.some((r) => (r.spawn_id ?? r.row?.spawn_id) === 'gone')
+    expect(has(spawn_markers(state()))).toBe(true) // present before the refusal
+    // #480: the local "someone got there first" refusal folds through the ghost door — chain truth, one tick.
+    input({ type: 'claim_failed', key: '5:5:mob:gone', ghost: true })
+    expect(has(spawn_markers(state())), 'map drops it').toBe(false)
+    expect(has(spawn_markers(state()).filter((m) => m.zx === 5 && m.zy === 5)), 'compass drops it').toBe(false)
+    expect(has(spawn_rows(state())), 'world drops it').toBe(false)
+    expect(has(engage_candidates(state())), 'engage drops it').toBe(false)
   })
 })

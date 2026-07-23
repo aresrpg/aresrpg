@@ -154,6 +154,9 @@ export const blank_world = () => ({
   /** @type {Map<string, {x:number,z:number}>} stable terrain-resolved mob-group homes reported by the renderer;
    * claimability uses this same placement fact and falls back to the row anchor until a group is placed. */
   group_homes: new Map(),
+  /** @type {Map<string, {name:string|null,min_level:number,max_level:number,element:number}>} MobTemplate roster
+   * facts resolved by the effect edge (async chain read) and fed back as data — the map/hover NAME + level band. */
+  templates: new Map(),
 })
 
 // ── shared fold helpers (every fold clones what it changes; inputs are never mutated) ────────────────────────
@@ -275,21 +278,24 @@ export const retarget = (state) => {
 
 // ── the reconcile folds ──────────────────────────────────────────────────────────────────────────────────────
 
-/** Merge one fetched cell into its live row set: a read can add/update facts, never erase an omitted entity.
- *  Live tombstones still win, while receipt-proven values hold against a lagging disagreement. */
+/** Reconcile one FETCHED cell against its fresh derivation — which is AUTHORITATIVE, so a row it omits is GONE.
+ *  The client derives every row locally from the zone's `{seed, consumed bitmaps}`; a bit is only ever SET (on
+ *  consumption) or reset by a whole-zone reroll (a new seed → fold_zone_searched), so the derived set only ever
+ *  SHRINKS on real consumption — a lagging bitmap never omits a still-live group. #596: the old additive merge
+ *  (start from prev.rows, add-only) therefore kept a consumed group forever with no invalidation edge — disease
+ *  ①. Start EMPTY: the fresh set stands, EXCEPT (a) a tombstoned row within grace stays removed, and (b) a
+ *  RECEIPT-PROVEN row a still-lagging snapshot disagrees with holds until its grace lapses. #367's no-silent-
+ *  despawn is preserved for its real case — a FAILED/absent fetch (carry_proven_rows), never a successful one. */
 const reconcile_cell = (state, prev, fresh, zk, tombstones, now) => {
   /** @type {Map<string, SpawnRow>} */
-  const rows = new Map(prev?.rows ?? [])
+  const rows = new Map()
   /** @type {Map<string, number>} */
   const row_proven = new Map()
   for (const [rk, row] of fresh) {
     const flat = `${zk}:${rk}`
     const removed_at = tombstones.get(flat)
     // a receipt removed this row; a lagging snapshot re-listing it within grace must NOT resurrect it.
-    if (removed_at != null && now < removed_at + RECEIPT_GRACE_MS) {
-      rows.delete(rk)
-      continue
-    }
+    if (removed_at != null && now < removed_at + RECEIPT_GRACE_MS) continue
     if (removed_at != null) tombstones.delete(flat)
     rows.set(rk, row)
   }
