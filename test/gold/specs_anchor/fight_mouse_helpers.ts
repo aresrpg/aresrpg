@@ -307,7 +307,7 @@ async function forfeit_via_app(
 ) {
   // abandon_fight self-guards to a false no-op with no live fight_id, so wait for the fight session to mount first.
   await expect
-    .poll(() => page.evaluate(async () => !!(await import('/@id/@aresrpg/fight')).fight_view()), {
+    .poll(() => page.evaluate(async () => !!(await import('/@id/@aresrpg/fight/project')).fight_view()), {
       timeout: 30_000,
       message: `the stale ACTIVE fight ${fight.fight_id} never mounted a fight session to forfeit`,
     })
@@ -323,7 +323,7 @@ async function forfeit_via_app(
   ).toBe(true)
   // teardown → re-mount the roam world clean (drops the abandon recap overlay; the character is settled by claim())
   await expect
-    .poll(() => page.evaluate(async () => !(await import('/@id/@aresrpg/fight')).fight_view()), {
+    .poll(() => page.evaluate(async () => !(await import('/@id/@aresrpg/fight/project')).fight_view()), {
       timeout: 45_000,
       message: `the forfeited fight ${fight.fight_id} never tore down`,
     })
@@ -440,7 +440,7 @@ export async function snapshot(page: Page): Promise<FightSnapshot> {
     // ≥1 async dispatch (the AP-desync root) and was deleted. The ONE read surface is the fight core's
     // synchronous view door, `fight_view()` = memoized engine_view (@aresrpg/fight project.js), which preserves
     // the FightSlice contract verbatim — every field below maps 1:1, so the snapshot shape is unchanged.
-    const { fight_view } = await import('/@id/@aresrpg/fight')
+    const { fight_view } = await import('/@id/@aresrpg/fight/project')
     const fight = fight_view()
     if (!fight)
       return {
@@ -1020,7 +1020,7 @@ async function drafted_cell(page: Page, key: 'move_target' | 'cast_target' | 'pl
   return page.evaluate(async (field) => {
     const [{ use_dungeon_turn }, { decode }] = await Promise.all([
       import('/src/game/screens/dungeon-turn.js'),
-      import('/@id/@aresrpg/fight'),
+      import('/@id/@aresrpg/fight/los'),
     ])
     const t = (use_dungeon_turn.getState() as Record<string, any>)[field]
     return t == null ? null : decode(t)
@@ -1102,25 +1102,26 @@ async function click_seq(page: Page): Promise<number> {
 async function move_click_diag(page: Page, target: Cell, seq_before: number) {
   return page.evaluate(
     async ({ tx, ty, sb }) => {
-      const [dt_mod, ds_mod, fight_mod] = await Promise.all([
+      const [dt_mod, ds_mod, fight_project, fight_los] = await Promise.all([
         import('/src/game/screens/dungeon-turn.js'),
         import('/src/world-shell/dungeon_store.js'),
-        import('/@id/@aresrpg/fight'), // los encode/decode + fight_view — one barrel since M1a
+        import('/@id/@aresrpg/fight/project'),
+        import('/@id/@aresrpg/fight/los'),
       ])
       const dt = dt_mod.use_dungeon_turn.getState()
       const { dungeon } = ds_mod.use_dungeon.getState()
       // the fight core's view (the SAME source `snapshot()` reads — mirror kill 07-17) — its me.mp is the
       // project.js projection of the chain participant; DungeonBoard's my_mp reads the escrow row below.
-      const fight = fight_mod.fight_view() ?? null
+      const fight = fight_project.fight_view() ?? null
       const eid = fight?.my_entity_id ?? null
       const me = eid && fight?.fighters?.get ? fight.fighters.get(eid) : null
       const row = dungeon?.escrow?.find((p: any) => (p.character ?? p.character_id) === eid) ?? null
       const proj = (window as any).__ARES_DEV_CELL_SCREEN?.(tx, ty)
       return {
         target: `${tx},${ty}`,
-        encoded: fight_mod.encode(tx, ty),
+        encoded: fight_los.encode(tx, ty),
         seq_delta: dt.clicked_seq - sb, // >0 = the click reached the board's emit_click; 0 = it never landed
-        clicked_decoded: dt.clicked_cell == null ? null : fight_mod.decode(dt.clicked_cell),
+        clicked_decoded: dt.clicked_cell == null ? null : fight_los.decode(dt.clicked_cell),
         clicked_cast: dt.clicked_cast,
         move_target: dt.move_target,
         placement_pick: dt.placement_pick,
@@ -1217,7 +1218,7 @@ async function cast_queue(page: Page): Promise<{ length: number; last: Cell | nu
   return page.evaluate(async () => {
     const [{ use_dungeon_turn }, { decode }] = await Promise.all([
       import('/src/game/screens/dungeon-turn.js'),
-      import('/@id/@aresrpg/fight'),
+      import('/@id/@aresrpg/fight/los'),
     ])
     const { cast_path } = use_dungeon_turn.getState()
     const tail = cast_path.length ? cast_path[cast_path.length - 1].cell : null
@@ -1300,7 +1301,7 @@ export async function clean_return(page: Page, spawn_id: string) {
         page.evaluate(async (claimed) => {
           // mirror kill 07-17: fight-over truth = the fight core's view door (null once the session tears
           // down); `fight_mode` still lives on the engine store (the fight edge flips it on the null edge).
-          const { fight_view } = await import('/@id/@aresrpg/fight')
+          const { fight_view } = await import('/@id/@aresrpg/fight/project')
           const state = (window as any).__ARES_ENGINE?.get_state()
           const board = (window as any).__voxel_board?._descriptor?.() ?? null
           let claimed_present = false

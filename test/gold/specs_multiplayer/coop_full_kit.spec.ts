@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // COOP FULL-KIT GOLD ROW — four wallets, one L100 core class each, one public fight, and a fifth-wallet
-// spectator. A spell earns coverage only from DungeonBoard's committed clock; export-visible effect evidence is
-// derived from the runtime catalog, and all five clients must converge before the four-seat settlement oracle.
+// spectator. A spell earns coverage only from DungeonBoard's committed clock; committed-board deltas and rendered
+// trigger beats are derived from the runtime catalog, and all five clients converge before the settlement oracle.
 import fs from 'node:fs'
 
 import { expect, test, type BrowserContext, type Page } from '@playwright/test'
@@ -22,10 +22,12 @@ import {
   changed_target_ids,
   find_trap_formation,
   full_kit,
+  hazard_formation_holds,
   move_toward_formation,
   pass_coverage_turn,
+  play_ap_grant_turn,
   play_coverage_turn,
-  trap_formation_holds,
+  play_mp_grant_turn,
   type coverage_result,
   type exported_fighter,
   type runtime_spell,
@@ -36,6 +38,10 @@ import {
   boot_roster_lite,
   boot_world_lite,
   chain_truth_export,
+  committed_drain_export,
+  committed_dot_tick_export,
+  committed_resource_turn_export,
+  committed_visibility_export,
   discover_fights,
   fighters_snapshot,
   join_fight_by_door,
@@ -43,15 +49,20 @@ import {
   living_mob,
   place_and_ready,
   play_turn,
+  probe_beats,
   watch_fight_by_door,
+  type committed_drain,
+  type committed_dot_tick,
+  type committed_resource_turn,
+  type committed_visibility,
   type GoldWallet,
 } from './coop_helpers'
 import {
   actor_for_turn,
+  effect_catalog_verdict,
   effect_evidence_fold,
   effect_evidence_verdict,
   effect_requirements_by_class,
-  observable_effect_family,
   split_verdict,
   xp_share_kernel,
 } from './coop_kernel.mjs'
@@ -78,14 +89,6 @@ type seat_row = {
   entity: string
   spell_ids: string[]
 }
-type shield_pending = {
-  class_id: core_class
-  spell_id: string
-  target_id: string
-  before: exported_fighter[]
-  after: exported_fighter[]
-}
-
 const unwrap = (value: any): any => (value && typeof value === 'object' && 'fields' in value ? value.fields : value)
 
 function dig(value: any, key: string): any {
@@ -99,31 +102,11 @@ function dig(value: any, key: string): any {
   return undefined
 }
 
-function spell_families(spell: runtime_spell) {
-  return [
-    ...new Set(
-      (spell.levels[0]?.effects ?? []).flatMap((effect) => {
-        const family = observable_effect_family(effect.kind)
-        return family ? [family] : []
-      })
-    ),
-  ]
-}
-
-function unshielded_control_loss(before: exported_fighter[], after: exported_fighter[], target_id: string) {
-  const later = new Map(after.map((row) => [row.id, row]))
-  return Math.max(
-    0,
-    ...before
-      .filter(
-        (row) =>
-          row.team === 0 &&
-          row.id !== target_id &&
-          !row.effects.some((effect) => effect.kind === 24 && Number(effect.value ?? 0) > 0)
-      )
-      .map((row) => row.hp - (later.get(row.id)?.hp ?? row.hp))
-  )
-}
+const spell_kinds = (spell: runtime_spell) => [
+  ...new Set((spell.levels[0]?.effects ?? []).map((effect) => effect.kind)),
+]
+const resource_for_stat = (stat: unknown): 'ap' | 'mp' | null =>
+  Number(stat) === 0 ? 'ap' : Number(stat) === 1 ? 'mp' : null
 
 test.describe('gold localnet — four-class coop full-kit fight plus spectator', () => {
   test.skip(!gold_manifest, 'no .gold-deployment.json — run `node test/gold/up_gold.mjs` first')
@@ -168,8 +151,8 @@ test.describe('gold localnet — four-class coop full-kit fight plus spectator',
     ).toBe(true)
     expect(roster.fighters.every((row) => row.wallet_index !== roster.spectator.wallet_index)).toBe(true)
     expect(wallets[roster.spectator.wallet_index], 'the fifth wallet is missing').toBeTruthy()
-    expect(fixture.mob_spell_damage, 'the shield oracle needs a positive control hit').toBeGreaterThan(0)
-    expect(fixture.mob_spell_area_shape, 'the control hit must reach every seat').toBe('allmap')
+    expect(fixture.mob_spell_damage, 'the heal/life-steal oracles need a positive injury source').toBeGreaterThan(0)
+    expect(fixture.mob_spell_area_shape, 'the injury source must reach every seat').toBe('allmap')
 
     const kits = Object.fromEntries(
       core_classes.map((class_id) => [class_id, full_kit(class_id, runtime_spells)])
@@ -184,6 +167,24 @@ test.describe('gold localnet — four-class coop full-kit fight plus spectator',
       ])
     ) as Record<core_class, string[]>
     const effect_requirements = effect_requirements_by_class(runtime_spells, [...core_classes], 100)
+    const catalog_verdict = effect_catalog_verdict(effect_requirements)
+    expect(
+      catalog_verdict.ok,
+      `runtime effect kinds lack an oracle classification: ${catalog_verdict.uncovered.join(', ')}`
+    ).toBe(true)
+    expect(
+      new Set([...catalog_verdict.asserted_kinds, ...catalog_verdict.unassertable_kinds]),
+      'asserted + explicitly unassertable kinds must exactly partition the runtime inventory'
+    ).toEqual(new Set(catalog_verdict.kinds))
+    expect(
+      catalog_verdict.asserted_kinds.filter((kind: string) => catalog_verdict.unassertable_kinds.includes(kind)),
+      'asserted and explicitly unassertable runtime kinds must be disjoint'
+    ).toEqual([])
+    for (const mandatory of ['ALTER_STAT', 'INVISIBILITY', 'GIVE_POINTS'])
+      if (catalog_verdict.kinds.includes(mandatory))
+        expect(catalog_verdict.asserted_kinds, `${mandatory} must never fall through an honesty waiver`).toContain(
+          mandatory
+        )
     for (const class_id of core_classes) {
       expect(kits[class_id].length, `${class_id} has no runtime L100 kit`).toBeGreaterThan(0)
       expect(new Set(kits[class_id]).size, `${class_id} runtime ids are duplicated`).toBe(kits[class_id].length)
@@ -194,7 +195,7 @@ test.describe('gold localnet — four-class coop full-kit fight plus spectator',
       ).toBe(true)
       expect(
         effect_requirements[class_id].length,
-        `${class_id} has no export-observable effect family`
+        `${class_id} has no runtime-derived effect-kind requirement`
       ).toBeGreaterThan(0)
     }
 
@@ -266,10 +267,12 @@ test.describe('gold localnet — four-class coop full-kit fight plus spectator',
       const fields = await get_fields(client, fight_id)
       expect(fields, 'the live full-kit Fight object was unreadable').toBeTruthy()
       const group = unwrap(fields.group)
-      const participants = (fields.participants ?? []).map((row: any) => ({
-        character: String(dig(row, 'character')),
-        wisdom: Number(dig(row, 'wisdom') ?? 0),
-      }))
+      const participants: Array<{ character: string; wisdom: number }> = (fields.participants ?? []).map(
+        (row: any) => ({
+          character: String(dig(row, 'character')),
+          wisdom: Number(dig(row, 'wisdom') ?? 0),
+        })
+      )
       const facts = {
         xp_mult: Number(fields.xp_mult),
         aged_bp: Number(fields.aged_bp),
@@ -290,127 +293,488 @@ test.describe('gold localnet — four-class coop full-kit fight plus spectator',
       expect((await fighters_snapshot(pages[0])).filter((row) => row.is_player)).toHaveLength(4)
       await watch_fight_by_door(page_spectator, fight_id, fixture.world_id)
 
-      // A committed spell id proves coverage; a separate ledger requires an export-visible applied effect.
+      const observer_pages = [...seats.map((seat) => seat.page), page_spectator]
+      const converged_exports = async (accept: (exports: exported_fighter[][]) => boolean = () => true) => {
+        let accepted_exports: exported_fighter[][] | null = null
+        await expect
+          .poll(
+            async () => {
+              const candidates = await Promise.all(observer_pages.map(chain_truth_export))
+              const ready = candidates.every((board) => board !== null)
+              const exports = candidates as exported_fighter[][]
+              const serialized = exports.map((board) => JSON.stringify(board))
+              const diverged = serialized.slice(1).filter((board) => board !== serialized[0]).length
+              const accepted = ready && diverged === 0 && accept(exports)
+              if (accepted) accepted_exports = exports
+              return {
+                seats: 4,
+                spectators: 1,
+                ready,
+                diverged,
+                accepted,
+              }
+            },
+            { timeout: 90_000, message: 'four seats and the spectator never converged on one committed board' }
+          )
+          .toEqual({ seats: 4, spectators: 1, ready: true, diverged: 0, accepted: true })
+        expect(
+          accepted_exports,
+          'the convergence poll returned without retaining its exact accepted sample'
+        ).toBeTruthy()
+        return accepted_exports!
+      }
+      const observed_exports = async (accept: (exports: exported_fighter[][]) => boolean) => {
+        let accepted_exports: exported_fighter[][] | null = null
+        await expect
+          .poll(
+            async () => {
+              const candidates = await Promise.all(observer_pages.map(chain_truth_export))
+              const ready = candidates.every((board) => board !== null)
+              const exports = candidates as exported_fighter[][]
+              const accepted = ready && accept(exports)
+              if (accepted) accepted_exports = exports
+              return { ready, accepted }
+            },
+            { timeout: 90_000, message: 'the five observers never exposed the required committed fighter field' }
+          )
+          .toEqual({ ready: true, accepted: true })
+        expect(accepted_exports, 'the field-observation poll retained no accepted five-way sample').toBeTruthy()
+        return accepted_exports!
+      }
+      const converged_visibility = async (target: string, invisible: boolean) => {
+        let accepted: committed_visibility[] | null = null
+        await expect
+          .poll(
+            async () => {
+              const candidates = await Promise.all(
+                observer_pages.map((page) => committed_visibility_export(page, { fight_id, target }))
+              )
+              const ready = candidates.every(Boolean)
+              const proofs = candidates as committed_visibility[]
+              const serialized = proofs.map((proof) => JSON.stringify(proof))
+              const diverged = ready ? serialized.slice(1).filter((proof) => proof !== serialized[0]).length : 5
+              const matched = ready && proofs.every((proof) => proof.invisible === invisible)
+              if (ready && diverged === 0 && matched) accepted = proofs
+              return { ready, diverged, matched }
+            },
+            {
+              timeout: 90_000,
+              message: `the five authoritative Fight exports never agreed that ${target} invisible=${invisible}`,
+            }
+          )
+          .toEqual({ ready: true, diverged: 0, matched: true })
+        expect(accepted, 'the visibility poll returned without retaining its accepted five-way sample').toBeTruthy()
+        return accepted!
+      }
+      const converged_resource_turn = async (args: {
+        entity: string
+        resource: 'ap' | 'mp'
+        expected_actions: number
+        minimum_grant: number
+        action_costs: number[]
+        grant_target: { x: number; y: number }
+        before: exported_fighter[]
+      }) => {
+        let accepted: committed_resource_turn[] | null = null
+        await expect
+          .poll(
+            async () => {
+              const candidates = await Promise.all(
+                observer_pages.map((page) => committed_resource_turn_export(page, args))
+              )
+              const ready = candidates.every(Boolean)
+              const proofs = candidates as committed_resource_turn[]
+              const serialized = proofs.map((proof) => JSON.stringify(proof))
+              const diverged = ready ? serialized.slice(1).filter((proof) => proof !== serialized[0]).length : 5
+              if (ready && diverged === 0) accepted = proofs
+              return { ready, diverged }
+            },
+            { timeout: 90_000, message: 'the five observers never agreed on the committed excess-budget turn' }
+          )
+          .toEqual({ ready: true, diverged: 0 })
+        expect(accepted, 'the grant proof poll returned without retaining its accepted sample').toBeTruthy()
+        return accepted!
+      }
+      const converged_dot_tick = async (args: {
+        caster: string
+        target: string
+        target_cell: { x: number; y: number }
+      }) => {
+        let accepted: committed_dot_tick[] | null = null
+        await expect
+          .poll(
+            async () => {
+              const candidates = await Promise.all(observer_pages.map((page) => committed_dot_tick_export(page, args)))
+              const ready = candidates.every(Boolean)
+              const proofs = candidates as committed_dot_tick[]
+              const serialized = proofs.map((proof) => JSON.stringify(proof))
+              const diverged = ready ? serialized.slice(1).filter((proof) => proof !== serialized[0]).length : 5
+              if (ready && diverged === 0) accepted = proofs
+              return { ready, diverged }
+            },
+            { timeout: 90_000, message: 'the five observers never agreed on the isolated committed DoT tick' }
+          )
+          .toEqual({ ready: true, diverged: 0 })
+        expect(accepted, 'the DoT proof poll returned without retaining its accepted sample').toBeTruthy()
+        return accepted!
+      }
+      const converged_drain = async (args: {
+        caster: string
+        target: string
+        resource: 'ap' | 'mp'
+        cast_target: { x: number; y: number }
+      }) => {
+        let accepted: committed_drain[] | null = null
+        await expect
+          .poll(
+            async () => {
+              const candidates = await Promise.all(observer_pages.map((page) => committed_drain_export(page, args)))
+              const ready = candidates.every(Boolean)
+              const proofs = candidates as committed_drain[]
+              const serialized = proofs.map((proof) => JSON.stringify(proof))
+              const diverged = ready ? serialized.slice(1).filter((proof) => proof !== serialized[0]).length : 5
+              if (ready && diverged === 0) accepted = proofs
+              return { ready, diverged }
+            },
+            { timeout: 90_000, message: 'the five observers never agreed on the committed point-removal row' }
+          )
+          .toEqual({ ready: true, diverged: 0 })
+        expect(accepted, 'the point-removal poll returned without retaining its accepted sample').toBeTruthy()
+        return accepted!
+      }
+
+      // A committed spell id proves coverage; the raw-kind ledger separately requires applied-effect evidence.
       const cast_ledger = Object.fromEntries(seats.map((seat) => [seat.actor, new Set<string>()])) as Record<
         actor_name,
         Set<string>
       >
       const completed_turns = Object.fromEntries(seats.map((seat) => [seat.actor, 0])) as Record<actor_name, number>
       let effect_ledger: Record<string, Record<string, string[]>> = {}
-      let shield_pendings: shield_pending[] = []
       let formation: trap_formation | null = null
-      let armed_trap: { spell_id: string; formation: trap_formation } | null = null
+      let armed_hazard: {
+        spell_id: string
+        formation: trap_formation
+      } | null = null
       const retry_cursor: Record<string, number> = {}
+      const isolated_resource_turns = new Set<string>()
 
-      const trap_row = effect_requirements.yajin.find((row: any) => row.family === 'trap')
-      const [trap_spell_id] = trap_row?.spell_ids ?? []
+      const trap_row = effect_requirements.yajin.find((row: any) => row.kind === 'PLACE_TRAP')
+      const trap_oracle_spell_id = trap_row?.spell_ids.find((spell_id: string) => {
+        const spell = runtime_by_id.get(spell_id)
+        return spell && Number(spell.levels[0]?.range?.[1] ?? 0) >= 2 && !spell_kinds(spell).includes('APPLY_DOT')
+      })
       const push_spell_id = kits.yajin.find((spell_id) => {
         const spell = runtime_by_id.get(spell_id)
-        return spell && !spell.levels[0]?.free_cell && spell_families(spell).includes('displacement')
+        return spell && !spell.levels[0]?.free_cell && spell_kinds(spell).includes('PUSH')
       })
-      expect(trap_spell_id, 'runtime Yajin catalog has no trap-family spell').toBeTruthy()
+      const [ap_spend_spell] = kits.tomoda
+        .flatMap((spell_id) => {
+          const spell = runtime_by_id.get(spell_id)
+          return spell &&
+            !spell.levels[0]?.free_cell &&
+            Number(spell.levels[0]?.casts_per_turn ?? 0) > 1 &&
+            Number(spell.levels[0]?.casts_per_target ?? 0) > 1 &&
+            spell_kinds(spell).includes('DAMAGE') &&
+            !spell_kinds(spell).includes('GIVE_POINTS')
+            ? [spell]
+            : []
+        })
+        .sort((left, right) => Number(right.levels[0]?.ap) - Number(left.levels[0]?.ap))
+      expect(trap_row?.spell_ids.length, 'runtime Yajin catalog has no trap-kind spell').toBeGreaterThan(0)
+      expect(trap_oracle_spell_id, 'no range-2 Yajin trap can be crossed by an occupied-target push').toBeTruthy()
       expect(push_spell_id, 'runtime Yajin catalog has no occupied-target displacement spell').toBeTruthy()
+      expect(ap_spend_spell, 'runtime Tomoda catalog has no AP-spend follow-up spell').toBeTruthy()
 
       const coverage_complete = () => seats.every((seat) => cast_ledger[seat.actor].size === seat.spell_ids.length)
-      const requirement_met = (class_id: core_class, row: any) =>
-        row.spell_ids.some((spell_id: string) => (effect_ledger[class_id]?.[row.family] ?? []).includes(spell_id))
+      const requirement_met = (row: any) =>
+        core_classes.some((class_id) =>
+          effect_requirements[class_id]
+            .filter((candidate: any) => candidate.key === row.key && !candidate.unassertable_reason)
+            .some((candidate: any) =>
+              candidate.spell_ids.some((spell_id: string) =>
+                (effect_ledger[class_id]?.[candidate.key] ?? []).includes(spell_id)
+              )
+            )
+        )
+      const exempted = (row: any) => !!row.unassertable_reason
       const effects_complete = () => effect_evidence_verdict(effect_requirements, effect_ledger).ok
       const retry_spell_for = (seat: seat_row) => {
-        const missing = effect_requirements[seat.class_id].find((row: any) => !requirement_met(seat.class_id, row))
+        const missing = effect_requirements[seat.class_id].find(
+          (row: any) => !exempted(row) && !['GIVE_POINTS', 'INVISIBILITY'].includes(row.kind) && !requirement_met(row)
+        )
         if (!missing) return undefined
+        if (missing.kind === 'PLACE_TRAP') return trap_oracle_spell_id
         const candidates = missing.spell_ids.filter((spell_id: string) => seat.spell_ids.includes(spell_id))
-        const key = `${seat.class_id}:${missing.family}`
+        const key = `${seat.class_id}:${missing.key}`
         const index = retry_cursor[key] ?? 0
         retry_cursor[key] = index + 1
         return candidates[index % candidates.length]
       }
-      const credit_cast = (seat: seat_row, spell_id: string, result: coverage_result) => {
+      const credit_cast = async (seat: seat_row, spell_id: string, result: coverage_result) => {
         const spell = runtime_by_id.get(spell_id)
         if (!spell) return
-        for (const family of spell_families(spell)) {
-          if (family === 'trap') continue
-          const targets = changed_target_ids(result.before, result.after, family)
-          if (family === 'shield') {
-            shield_pendings.push(
-              ...targets.map((target_id) => ({
-                class_id: seat.class_id,
-                spell_id,
-                target_id,
-                before: result.before,
-                after: result.after,
-              }))
+        const rows = effect_requirements[seat.class_id].filter((row: any) => row.spell_ids.includes(spell_id))
+        for (const row of rows) {
+          if (exempted(row) || requirement_met(row)) continue
+          if (['GIVE_POINTS', 'INVISIBILITY', 'PLACE_TRAP'].includes(row.kind)) continue
+          const runtime_effect = spell.levels[0]?.effects.find((effect) => effect.kind === row.kind)
+          const stat = runtime_effect?.stat ?? row.stat
+          const kind_id = runtime_effect?.kind_id ?? row.kind_id
+          const resource = resource_for_stat(stat)
+          if (row.kind === 'APPLY_DOT') {
+            const target = result.before.find(
+              (fighter) =>
+                fighter.team === 1 && fighter.cell?.x === result.target?.x && fighter.cell?.y === result.target?.y
             )
-            continue
-          }
-          for (const target_id of targets)
+            if (!target || kind_id == null) continue
+            const target_after = result.after.find((fighter) => fighter.id === target.id)
+            // Patient Venom is Yajin seat 1; the 4v1 Euclidean queue is p0,p1,m0,p2,p3, so its victim-mob
+            // start tick is in the same committed PTB immediately after p1 ends. Enemy status rows are absent
+            // from the spectator's flat journal, so the fresh HP edge gates the stronger ordered Hit proof below.
+            if (!target_after || target_after.hp >= target.hp) continue
+            const dot_exports = await converged_dot_tick({
+              caster: seat.entity,
+              target: target.id,
+              target_cell: result.target!,
+            })
+            const tick_hp = dot_exports[0].remaining_hp
+            const observer_exports = await observed_exports((exports) =>
+              exports.every((board) => Number(board.find((fighter) => fighter.id === target.id)?.hp) === tick_hp)
+            )
             effect_ledger = effect_evidence_fold(effect_ledger, {
               class_id: seat.class_id,
-              family,
+              requirement_key: row.key,
+              kind: row.kind,
+              kind_id,
+              spell_id,
+              target_id: target.id,
+              caster_id: seat.entity,
+              before: result.before,
+              after: observer_exports[0],
+              observer_exports,
+              dot_exports,
+            })
+            continue
+          }
+          const targets = changed_target_ids(result.before, result.after, row.kind, seat.entity, resource, stat)
+          for (const target_id of targets) {
+            const drain_exports =
+              row.kind === 'REMOVE_POINTS' && resource && result.target
+                ? await converged_drain({
+                    caster: seat.entity,
+                    target: target_id,
+                    resource,
+                    cast_target: result.target,
+                  })
+                : undefined
+            effect_ledger = effect_evidence_fold(effect_ledger, {
+              class_id: seat.class_id,
+              requirement_key: row.key,
+              kind: row.kind,
+              kind_id,
               spell_id,
               target_id,
+              caster_id: seat.entity,
+              stat,
+              resource,
               before: result.before,
               after: result.after,
+              cast_target: result.target,
+              drain_exports,
             })
+          }
         }
       }
-      const fold_shield_followups = async () => {
-        const followup = (await chain_truth_export(pages[0])) as exported_fighter[]
-        shield_pendings = shield_pendings.filter((pending) => {
-          const incoming_damage = unshielded_control_loss(pending.after, followup, pending.target_id)
-          const shielded_before = pending.after.find((row) => row.id === pending.target_id)?.hp
-          const shielded_after = followup.find((row) => row.id === pending.target_id)?.hp
-          if (!incoming_damage || shielded_before !== shielded_after) return true
-          const next = effect_evidence_fold(effect_ledger, {
-            ...pending,
-            family: 'shield',
-            followup,
-            incoming_damage,
+      const resource_probe_for = (seat: seat_row) => {
+        const rows = effect_requirements[seat.class_id]
+        const resource = rows.find((row: any) => row.kind === 'GIVE_POINTS' && !requirement_met(row))
+        if (resource) return resource
+        return rows.find((row: any) => row.kind === 'INVISIBILITY' && !requirement_met(row))
+      }
+      const credit_resource_probe = async (seat: seat_row, row: any) => {
+        const resource_row =
+          row.kind === 'GIVE_POINTS'
+            ? row
+            : effect_requirements[seat.class_id].find(
+                (candidate: any) => candidate.kind === 'GIVE_POINTS' && candidate.stat === 1
+              )
+        const spell_id = row.kind === 'INVISIBILITY' ? row.spell_ids[0] : resource_row?.spell_ids[0]
+        const spell = runtime_by_id.get(spell_id)
+        const invisibility_row = effect_requirements[seat.class_id].find(
+          (candidate: any) => candidate.kind === 'INVISIBILITY' && candidate.spell_ids.includes(spell_id)
+        )
+        const invisibility = invisibility_row && !requirement_met(invisibility_row) ? invisibility_row : undefined
+        expect(resource_row, `${seat.class_id}/${row.key} has no matching resource requirement`).toBeTruthy()
+        expect(spell, `${seat.class_id}/${row.key} has no runtime grant spell`).toBeTruthy()
+        expect(
+          resource_row!.spell_ids,
+          `${seat.class_id}/${row.key} must be proved by the same spell that carries its catalog grant`
+        ).toContain(spell_id)
+        if (resource_row?.stat === 0) {
+          expect(seat.class_id, 'the AP spender must belong to the AP-granting seat').toBe(ap_spend_spell!.class)
+        }
+        if (
+          invisibility_row &&
+          (await committed_visibility_export(seat.page, { fight_id, target: seat.entity }))?.invisible
+        ) {
+          // Full-kit casting may have armed Vanish before this isolated proof turn. Let that real status expire;
+          // accepting an already-hidden baseline would erase the required false→true visibility edge.
+          await pass_coverage_turn(seat.page)
+          completed_turns[seat.actor] += 1
+          return
+        }
+        const baseline_exports = await converged_exports()
+        const visibility_before_exports = invisibility ? await converged_visibility(seat.entity, false) : undefined
+        const [baseline] = baseline_exports
+        const baseline_fighter = baseline.find((fighter) => fighter.id === seat.entity)
+        const live = (await snapshot(seat.page)).me
+        const baseline_pool = resource_row?.stat === 0 ? baseline_fighter?.ap : baseline_fighter?.mp
+        const live_pool = resource_row?.stat === 0 ? live?.ap : live?.mp
+        expect(live_pool, 'the isolated resource turn did not start at the committed five-way baseline').toBe(
+          baseline_pool
+        )
+        const result =
+          resource_row?.stat === 0
+            ? await play_ap_grant_turn(seat.page, seat.entity, spell!, ap_spend_spell!)
+            : await play_mp_grant_turn(seat.page, seat.entity, spell!)
+        completed_turns[seat.actor] += 1
+        if (!result.spell_committed || (!result.committed && !invisibility)) return
+        if (result.committed) {
+          const observer_exports = await observed_exports((exports) => {
+            const fighters = exports.map((board) => board.find((candidate) => candidate.id === seat.entity))
+            const cells = fighters.map((fighter) => JSON.stringify(fighter?.cell ?? null))
+            return fighters.every(Boolean) && cells.slice(1).every((cell) => cell === cells[0])
           })
-          const credited = next !== effect_ledger
-          effect_ledger = next
-          return !credited
-        })
+          const [after] = observer_exports
+          const minimum_grant = spell!.levels[0]?.effects
+            .filter((effect) => effect.kind === 'GIVE_POINTS' && Number(effect.stat) === Number(resource_row!.stat))
+            .reduce((sum, effect) => sum + Number(effect.base ?? 0), 0)
+          expect(minimum_grant, `${spell_id} has no positive learned-rank grant floor`).toBeGreaterThan(0)
+          // A critical grant can exceed the catalog floor. Retry it instead of asking five flat-journal exports
+          // to pretend they can recover the hidden critical delta; the ordinary row is proved exactly.
+          if (result.grant === minimum_grant) {
+            expect(result.remaining, `${spell_id} did not retain a real post-spend budget`).not.toBeNull()
+            expect(result.grant_target, `${spell_id} did not retain its committed grant target`).toBeTruthy()
+            const action_costs =
+              result.resource === 'ap'
+                ? [
+                    Number(spell!.levels[0]?.ap ?? 0),
+                    ...Array.from({ length: Math.max(0, result.committed_casts - 1) }, () =>
+                      Number(ap_spend_spell!.levels[0]?.ap ?? 0)
+                    ),
+                  ]
+                : []
+            const turn_exports = await converged_resource_turn({
+              entity: seat.entity,
+              resource: result.resource,
+              expected_actions: result.committed_casts,
+              minimum_grant,
+              action_costs,
+              grant_target: result.grant_target!,
+              before: result.before,
+            })
+            effect_ledger = effect_evidence_fold(effect_ledger, {
+              class_id: seat.class_id,
+              requirement_key: resource_row!.key,
+              kind: 'GIVE_POINTS',
+              spell_id,
+              target_id: seat.entity,
+              stat: resource_row!.stat,
+              before: result.before,
+              after,
+              resource: result.resource,
+              grant: result.grant,
+              minimum_grant,
+              spent: result.spent,
+              remaining: result.remaining,
+              committed_casts: result.committed_casts,
+              grant_target: result.grant_target,
+              observer_exports,
+              before_exports: baseline_exports,
+              turn_exports,
+            })
+          }
+        }
+        if (invisibility && visibility_before_exports) {
+          const visibility_after_exports = await converged_visibility(seat.entity, true)
+          effect_ledger = effect_evidence_fold(effect_ledger, {
+            class_id: seat.class_id,
+            requirement_key: invisibility.key,
+            kind: 'INVISIBILITY',
+            kind_id: invisibility.kind_id,
+            spell_id,
+            target_id: seat.entity,
+            before: result.before,
+            after: result.after,
+            before_exports: visibility_before_exports,
+            observer_exports: visibility_after_exports,
+          })
+        }
       }
 
       const coverage_deadline = Date.now() + 1_200_000
       while ((!coverage_complete() || !effects_complete()) && Date.now() < coverage_deadline) {
-        await fold_shield_followups()
         let acted = false
         for (const seat of seats) {
           const state = await snapshot(seat.page)
           const actor = actor_for_turn({ active: state.active, presenting: state.presenting }, seats)
           if (actor !== seat.actor || state.active !== seat.entity) continue
           if (
-            armed_trap &&
-            !trap_formation_holds(
-              (await chain_truth_export(seat.page)) as exported_fighter[],
-              seats[1].entity,
-              armed_trap.formation
-            )
+            armed_hazard &&
+            !hazard_formation_holds((await chain_truth_export(seat.page)) as exported_fighter[], armed_hazard.formation)
           )
-            armed_trap = null
-          const trap_push_due =
-            armed_trap &&
-            seat.class_id === 'yajin' &&
-            (!cast_ledger[seat.actor].has(push_spell_id!) || coverage_complete())
-          if (armed_trap && !trap_push_due && seat.class_id !== 'yajin') {
+            armed_hazard = null
+          const hazard_push_due: boolean = armed_hazard != null && seat.class_id === 'yajin'
+          if (armed_hazard && !hazard_push_due) {
             await pass_coverage_turn(seat.page)
             completed_turns[seat.actor] += 1
             acted = true
             break
           }
-          const uncast = seat.spell_ids.find((spell_id) => !cast_ledger[seat.actor].has(spell_id))
-          const spell_id = trap_push_due
+          if (hazard_push_due && (await move_toward_formation(seat.page, armed_hazard!.formation))) {
+            completed_turns[seat.actor] += 1
+            acted = true
+            break
+          }
+          const resource_probe = !hazard_push_due && coverage_complete() ? resource_probe_for(seat) : null
+          if (resource_probe) {
+            const isolation_key = `${seat.class_id}/${resource_probe.key}`
+            if (!isolated_resource_turns.has(isolation_key)) {
+              await pass_coverage_turn(seat.page)
+              isolated_resource_turns.add(isolation_key)
+              completed_turns[seat.actor] += 1
+              acted = true
+              break
+            }
+            isolated_resource_turns.delete(isolation_key)
+            await credit_resource_probe(seat, resource_probe)
+            acted = true
+            break
+          }
+          const dot_pending = effect_requirements.yajin.find(
+            (row: any) => row.kind === 'APPLY_DOT' && !requirement_met(row)
+          )
+          const uncast = seat.spell_ids.find(
+            (spell_id) =>
+              !cast_ledger[seat.actor].has(spell_id) &&
+              !(
+                dot_pending &&
+                seat.class_id === 'shugo' &&
+                spell_kinds(runtime_by_id.get(spell_id)!).includes('PLACE_GLYPH')
+              )
+          )
+          const spell_id: string | undefined = hazard_push_due
             ? push_spell_id!
-            : (uncast ?? (coverage_complete() ? retry_spell_for(seat) : undefined))
+            : (uncast ??
+              (coverage_complete() || (dot_pending && seat.class_id === 'yajin') ? retry_spell_for(seat) : undefined))
           if (!spell_id) {
             await pass_coverage_turn(seat.page)
             completed_turns[seat.actor] += 1
             acted = true
             break
           }
-
-          if (seat.class_id === 'yajin' && spell_id === trap_spell_id) {
+          const places_trap: boolean = seat.class_id === 'yajin' && spell_id === trap_oracle_spell_id
+          if (places_trap) {
             formation = await find_trap_formation(seat.page)
             expect(formation, 'no reachable player→mob→trap formation exists').toBeTruthy()
             if (await move_toward_formation(seat.page, formation!)) {
@@ -419,35 +783,87 @@ test.describe('gold localnet — four-class coop full-kit fight plus spectator',
               break
             }
           }
-          const preferred_target = spell_id === trap_spell_id ? formation!.trap : null
+          const preferred_target = places_trap ? formation!.trap : null
+          const trap_trigger_after_t =
+            armed_hazard && spell_id === push_spell_id
+              ? Math.max(0, ...(await probe_beats(seat.page)).map((beat) => beat.t))
+              : null
           const result = await play_coverage_turn(seat.page, seat.entity, spell_id, preferred_target)
           completed_turns[seat.actor] += 1
           acted = true
           if (!result.committed) break
 
           cast_ledger[seat.actor].add(spell_id)
-          credit_cast(seat, spell_id, result)
-          if (spell_id === trap_spell_id) armed_trap = { spell_id, formation: formation! }
-          if (spell_id === push_spell_id && armed_trap) {
-            const before_mob = result.before.find((row) => row.id === armed_trap!.formation.mob_id)
-            const after_mob = result.after.find((row) => row.id === armed_trap!.formation.mob_id)
+          await credit_cast(seat, spell_id, result)
+          if (places_trap) {
+            const trap_armed = await expect
+              .poll(
+                () =>
+                  seat.page.evaluate(async (cell) => {
+                    const [{ fight_view }, { encode }] = await Promise.all([
+                      import('/@id/@aresrpg/fight/project'),
+                      import('/@id/@aresrpg/fight/los'),
+                    ])
+                    return fight_view()?.my_traps?.includes(encode(cell.x, cell.y)) === true
+                  }, formation!.trap),
+                { timeout: 4_000 }
+              )
+              .toBe(true)
+              .then(() => true)
+              .catch(() => false)
+            if (trap_armed)
+              armed_hazard = {
+                spell_id,
+                formation: formation!,
+              }
+          }
+          if (spell_id === push_spell_id && armed_hazard) {
+            const hazard = armed_hazard
+            const before_mob = result.before.find((fighter) => fighter.id === hazard.formation.mob_id)
+            const after_mob = result.after.find((fighter) => fighter.id === hazard.formation.mob_id)
             if (
-              before_mob &&
-              after_mob?.cell?.x === armed_trap.formation.trap.x &&
-              after_mob.cell.y === armed_trap.formation.trap.y &&
-              after_mob.hp < before_mob.hp
+              !before_mob?.cell ||
+              !after_mob?.cell ||
+              (before_mob.cell.x === after_mob.cell.x && before_mob.cell.y === after_mob.cell.y)
             )
+              break
+            let trigger_beat: Awaited<ReturnType<typeof probe_beats>>[number] | null = null
+            expect(trap_trigger_after_t, 'trap push did not retain its acting-client beat cursor').not.toBeNull()
+            await expect
+              .poll(
+                async () => {
+                  trigger_beat =
+                    (await probe_beats(seat.page)).find(
+                      (beat) =>
+                        beat.t > trap_trigger_after_t! &&
+                        beat.kind === 'trap_trigger' &&
+                        beat.id === hazard.formation.mob_id
+                    ) ?? null
+                  return trigger_beat
+                },
+                {
+                  timeout: 60_000,
+                  message: 'the acting mounted participant never rendered the pushed mob’s trap-trigger beat',
+                }
+              )
+              .toMatchObject({ kind: 'trap_trigger', id: hazard.formation.mob_id })
+            const placed = effect_requirements.yajin.find(
+              (row: any) => row.kind === 'PLACE_TRAP' && row.spell_ids.includes(hazard.spell_id)
+            )
+            if (placed)
               effect_ledger = effect_evidence_fold(effect_ledger, {
                 class_id: 'yajin',
-                family: 'trap',
-                spell_id: armed_trap.spell_id,
-                target_id: armed_trap.formation.mob_id,
+                requirement_key: placed.key,
+                kind: 'PLACE_TRAP',
+                spell_id: hazard.spell_id,
+                target_id: hazard.formation.mob_id,
                 before: result.before,
                 after: result.after,
-                trap_cell: armed_trap.formation.trap,
-                trigger_cell: after_mob.cell,
+                trap_cell: hazard.formation.trap,
+                trigger_after_t: trap_trigger_after_t,
+                trigger_beat,
               })
-            armed_trap = null
+            armed_hazard = null
           }
           break
         }
@@ -457,8 +873,6 @@ test.describe('gold localnet — four-class coop full-kit fight plus spectator',
           'the fixture died before coverage and effect evidence completed'
         ).toBeTruthy()
       }
-      await fold_shield_followups()
-
       for (const seat of seats) {
         expect(completed_turns[seat.actor], `${seat.actor}/${seat.class_id} never completed a turn`).toBeGreaterThan(0)
         expect([...cast_ledger[seat.actor]].sort(), `${seat.class_id} did not cast its complete runtime kit`).toEqual(
@@ -473,43 +887,45 @@ test.describe('gold localnet — four-class coop full-kit fight plus spectator',
       expect(effect_verdict.ok, `export-visible effect evidence missing: ${effect_verdict.missing.join(', ')}`).toBe(
         true
       )
-      for (const class_id of core_classes)
-        for (const requirement of effect_requirements[class_id])
-          expect(
-            requirement.spell_ids.some((spell_id: string) =>
-              (effect_ledger[class_id]?.[requirement.family] ?? []).includes(spell_id)
-            ),
-            `${class_id}/${requirement.family} has no applied runtime-catalog effect`
-          ).toBe(true)
+
+      // Receipt-only timed rows (notably Vanish) legitimately make the caster richer than journal-only observers.
+      // Advance real turns until those rows expire; the final byte-equality oracle must never erase that difference.
+      let exports: exported_fighter[][] | null = null
+      const convergence_deadline = Date.now() + 240_000
+      while (!exports && Date.now() < convergence_deadline) {
+        const candidates = await Promise.all(observer_pages.map(chain_truth_export))
+        if (
+          candidates.every((board) => board !== null) &&
+          candidates.slice(1).every((board) => JSON.stringify(board) === JSON.stringify(candidates[0]))
+        ) {
+          exports = candidates as exported_fighter[][]
+          break
+        }
+        let advanced = false
+        for (const seat of seats) {
+          const state = await snapshot(seat.page)
+          const actor = actor_for_turn({ active: state.active, presenting: state.presenting }, seats)
+          if (actor !== seat.actor || state.active !== seat.entity) continue
+          await pass_coverage_turn(seat.page)
+          completed_turns[seat.actor] += 1
+          advanced = true
+          break
+        }
+        if (!advanced) await pages[0].waitForTimeout(400)
+        expect(await living_mob(pages[0]), 'the fixture died while timed rows settled for export').toBeTruthy()
+      }
+      expect(exports, 'four seats and the spectator never converged after timed rows expired').toBeTruthy()
 
       // Pre-victory oracle: four seats plus the watch-door spectator converge on one committed byte stream.
-      const observer_pages = [...seats.map((seat) => seat.page), page_spectator]
-      await expect
-        .poll(
-          async () => {
-            const exports = await Promise.all(observer_pages.map(chain_truth_export))
-            const serialized = exports.map((board) => JSON.stringify(board))
-            return {
-              seats: 4,
-              spectators: 1,
-              ready: exports.every((board) => board !== null),
-              diverged: serialized.slice(1).filter((board) => board !== serialized[0]).length,
-            }
-          },
-          { timeout: 90_000, message: 'four seats and the spectator never converged on one committed board' }
-        )
-        .toEqual({ seats: 4, spectators: 1, ready: true, diverged: 0 })
-
-      const exports = await Promise.all(observer_pages.map(chain_truth_export))
       const export_names = ['a', 'b', 'c', 'd', 'spectator'] as const
-      const export_bytes = exports.map((board) => `${JSON.stringify(board, null, 2)}\n`)
+      const export_bytes = exports!.map((board) => `${JSON.stringify(board, null, 2)}\n`)
       for (const bytes of export_bytes.slice(1))
         expect(bytes, 'committed board exports were not byte-identical').toBe(export_bytes[0])
       const out_dir = new URL('../out/', import.meta.url)
       fs.mkdirSync(out_dir, { recursive: true })
       for (let index = 0; index < export_names.length; index += 1)
         fs.writeFileSync(new URL(`coop_full_kit_export_${export_names[index]}.json`, out_dir), export_bytes[index])
-      for (const board of exports.slice(1)) expect(board, 'a five-way export diverged').toEqual(exports[0])
+      for (const board of exports!.slice(1)) expect(board, 'a five-way export diverged').toEqual(exports![0])
 
       const victory = pages[0].locator('[role="dialog"][aria-label^="Victory:"]')
       const kill_deadline = Date.now() + 360_000

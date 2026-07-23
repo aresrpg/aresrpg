@@ -144,8 +144,8 @@ export const fixture_specs = [
     // unallocated spells snapshot learned rank 1 (participant::spell_level's absent=1 law). The immutable corpus
     // at d6d32bcd:seed/mainnet/spells/{senshi,yajin,tomoda,shugo}.json has a 726 direct critical upper sum across
     // those levels[0] rows (269+179+204+74); 1,200 HP leaves 474 for DoT/push/order variance. Its one 5-base,
-    // ALLMAP hit per mob turn deterministically reaches every shielded class; MP 0 keeps push-into-trap positioning
-    // under the players' control. Cleanup stays bounded: rank-1 Quietus needs <=39 hits; four seats are faster.
+    // ALLMAP hit per mob turn deterministically reaches every shielded class. MP 1 makes MP-removal observable,
+    // while the already-in-range ALLMAP cast keeps the AI planted for push/trap positioning. Cleanup stays bounded.
     key: 'coop_full_kit',
     mode: 'mint',
     mob_name: 'Strawman',
@@ -154,7 +154,7 @@ export const fixture_specs = [
     level: 1,
     hp: 1_200,
     ap: 1,
-    mp: 0,
+    mp: 1,
     element: 'el_earth',
     stats: {},
     spell: {

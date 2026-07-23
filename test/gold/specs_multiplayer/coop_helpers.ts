@@ -192,7 +192,7 @@ export async function watch_fight_by_door(page: Page, fight_id: string, world_id
         page.evaluate(async (expected_fight_id) => {
           const [{ use_dungeon }, { fight_view }] = await Promise.all([
             import('/src/world-shell/dungeon_store.js'),
-            import('/@id/@aresrpg/fight'),
+            import('/@id/@aresrpg/fight/project'),
           ])
           const dungeon = use_dungeon.getState()
           const fight = fight_view()
@@ -246,13 +246,17 @@ export async function fighters_snapshot(page: Page): Promise<FighterRow[]> {
   })
 }
 
-/** The page's rendered beat probe (?fighttrace=1) — the cross-visibility evidence source. */
-export async function probe_beats(page: Page): Promise<Array<{ kind: string; id: string | null }>> {
+/** The page's rendered beat probe — the cross-visibility and trap-trigger evidence source. */
+export async function probe_beats(
+  page: Page
+): Promise<Array<{ t: number; kind: string; id: string | null; spell_id: string | null }>> {
   return page.evaluate(() => {
     const probe = (window as any).__ARES_FIGHT_PROBE
     return (probe?.beats ?? []).map((row: any) => ({
+      t: Number(row.t ?? 0),
       kind: String(row.kind),
       id: row.id == null ? null : String(row.id),
+      spell_id: row.spell_id == null ? null : String(row.spell_id),
     }))
   })
 }
@@ -269,7 +273,7 @@ async function drafted_cell(page: Page, key: 'move_target' | 'cast_target' | 'pl
   return page.evaluate(async (field) => {
     const [{ use_dungeon_turn }, { decode }] = await Promise.all([
       import('/src/game/screens/dungeon-turn.js'),
-      import('/@id/@aresrpg/fight'), // los decode — packages/fight/src/los.js since M1a
+      import('/@id/@aresrpg/fight/los'),
     ])
     const value = (use_dungeon_turn.getState() as Record<string, any>)[field]
     return value == null ? null : decode(value)
@@ -473,24 +477,39 @@ export async function assert_victory_and_continue(page: Page): Promise<bigint> {
 
 /** CHAIN-TRUTH EXPORT (the coop desync oracle, ruled 2026-07-22): one client's settled COMMITTED board,
  *  serialized comparable. Two clients that folded the same journal MUST export deep-equal values here.
- *  Per-client channels stay out by design: my_entity_id, prediction ap/mp, presented paces, trap overlays. */
+ *  Per-client channels stay out by design: my_entity_id, presented paces, and trap/glyph overlays. Accepted
+ *  budget is exported separately because chain-silent GIVE_POINTS claims are authoritative draft legality. */
 export async function chain_truth_export(page: Page): Promise<unknown> {
   return page.evaluate(async () => {
-    const [{ decode, fight_store, engine_view_of }, { committed_state }] = await Promise.all([
-      import('/@id/@aresrpg/fight'),
-      import('/@id/@aresrpg/fight/store'),
-    ])
+    const [{ decode }, { engine_view_of }, { fight_store, claimed_budget_state, committed_state }, { range_bonus_of }] =
+      await Promise.all([
+        import('/@id/@aresrpg/fight/los'),
+        import('/@id/@aresrpg/fight/project'),
+        import('/@id/@aresrpg/fight/store'),
+        import('/@id/@aresrpg/fight/statuses'),
+      ])
     const state = fight_store.getState()
     const view = engine_view_of(state)
     if (!view?.fighters) return null
     const committed = committed_state(state)
+    const budget = claimed_budget_state(state)
     let player_index = 0
     let mob_index = 0
     return [...view.fighters.values()]
       .map((row: any) => {
         const key = row.is_player ? `p${player_index++}` : `m${mob_index++}`
         const fighter = committed.fighters?.[key]
+        const accepted = budget.fighters?.[key]
         const cell = fighter?.cell == null ? row.cell : decode(fighter.cell)
+        const effects = (fighter?.statuses ?? []).map((effect: any) => ({
+          kind: effect.kind == null ? null : Number(effect.kind),
+          remaining_turns: effect.remaining_turns == null ? null : Number(effect.remaining_turns),
+          element: effect.element == null ? null : Number(effect.element),
+          value: effect.value == null ? null : Number(effect.value),
+          stat: effect.stat == null ? null : Number(effect.stat),
+          chance: effect.chance == null ? null : Number(effect.chance),
+          flags: effect.flags == null ? null : Number(effect.flags),
+        }))
         return {
           id: String(row.id),
           owner: row.owner == null ? null : String(row.owner),
@@ -500,16 +519,437 @@ export async function chain_truth_export(page: Page): Promise<unknown> {
           hp: Number(fighter?.hp ?? row.committed_health),
           alive: !!(fighter?.alive ?? row.committed_alive),
           hp_max: Number(row.health_max),
-          effects: (fighter?.statuses ?? []).map((effect: any) => ({
-            kind: effect.kind == null ? null : Number(effect.kind),
-            remaining_turns: effect.remaining_turns == null ? null : Number(effect.remaining_turns),
-            element: effect.element == null ? null : Number(effect.element),
-            value: effect.value == null ? null : Number(effect.value),
-            stat: effect.stat == null ? null : Number(effect.stat),
-            chance: effect.chance == null ? null : Number(effect.chance),
-          })),
+          ap: fighter?.ap == null ? null : Number(fighter.ap),
+          mp: fighter?.mp == null ? null : Number(fighter.mp),
+          accepted_ap: accepted?.ap == null ? null : Number(accepted.ap),
+          accepted_mp: accepted?.mp == null ? null : Number(accepted.mp),
+          turn_number: fighter?.turn_number == null ? null : Number(fighter.turn_number),
+          invisible: !!fighter?.invisible,
+          effective_range: Number(
+            range_bonus_of({
+              id: String(row.id),
+              base_range: Number(row.base_range ?? 0),
+              effects,
+            })
+          ),
+          effects,
         }
       })
       .sort((left: any, right: any) => left.id.localeCompare(right.id))
   })
+}
+
+export type committed_visibility = {
+  target: string
+  status_kind: number | null
+  invisible: boolean
+  remaining_turns: number
+}
+
+/**
+ * Five-way visibility oracle over a fresh authoritative Fight-object read. Kind-27 ActionEffect is receipt-only
+ * and the flat journal has no kind-27 event twin, so a spectator's settled store cannot honestly reconstruct it.
+ * Every browser instead reads the committed Fight.fx status row and maps its fighter seat back to the target id.
+ */
+export async function committed_visibility_export(
+  page: Page,
+  args: { fight_id: string; target: string }
+): Promise<committed_visibility | null> {
+  return page.evaluate(
+    async ({ requested_fight, target_id }) => {
+      const [{ get_sdk }, { read_object }, { decode_fight }, statuses, controls] = await Promise.all([
+        import('/src/chain/sdk'),
+        import('/src/world-shell/run_reads.js'),
+        import('/@id/@aresrpg/sdk/fight'),
+        import('/@id/@aresrpg/fight/fight_status_snapshot'),
+        import('/@id/@aresrpg/fight/fight_control'),
+      ])
+      const read = await read_object(await get_sdk(), requested_fight).catch(() => null)
+      const fight = read ? decode_fight(read.json) : null
+      if (!fight) return null
+      const seat = (fight.participants ?? []).findIndex((participant: any) => {
+        const row = participant?.fields ?? participant
+        const entity = controls.participant_entity_id({
+          character: row?.character ?? row?.character_id,
+          addr: row?.addr ?? row?.owner,
+        })
+        return String(entity ?? '') === target_id
+      })
+      if (seat < 0) return null
+      const active = statuses
+        .read_fighter_statuses(read.json)
+        .filter((row: any) => Number(row.fighter) === seat && Number(row.kind) === statuses.INVISIBILITY_STATUS_KIND)
+      const remaining_turns = active.reduce(
+        (longest: number, row: any) => Math.max(longest, Number(row.remaining_turns) || 0),
+        0
+      )
+      return {
+        target: target_id,
+        status_kind: remaining_turns > 0 ? statuses.INVISIBILITY_STATUS_KIND : null,
+        invisible: remaining_turns > 0,
+        remaining_turns,
+      }
+    },
+    { requested_fight: args.fight_id, target_id: args.target }
+  )
+}
+
+export type committed_resource_turn = {
+  entity: string
+  seat: number
+  turn: number
+  resource: 'ap' | 'mp'
+  start: number
+  minimum_grant: number
+  spent: number
+  minimum_remaining: number
+  action_count: number
+  grant_target: Cell
+  destination: Cell | null
+}
+
+/**
+ * Five-way grant oracle. `claimed_budget_state` is a local current-turn legality overlay and expires at TurnEnded,
+ * so every observer instead projects the flat canonical Cast/Moved journal. The actor-side committed spell clocks
+ * bind those actions to the catalog ids; this export proves all five observers accepted the same excess-budget use.
+ */
+export async function committed_resource_turn_export(
+  page: Page,
+  args: {
+    entity: string
+    resource: 'ap' | 'mp'
+    expected_actions: number
+    minimum_grant: number
+    action_costs: number[]
+    grant_target: Cell
+    before: Array<{ id: string; cell: Cell | null; ap: number | null; mp: number | null; alive?: boolean }>
+  }
+): Promise<committed_resource_turn | null> {
+  return page.evaluate(
+    async ({ fighter_id, pool, action_count, grant_floor, costs, aimed, before_board }) => {
+      const [{ fight_store }, { engine_view_of }, { bfsPath, decode, encode, GRID_CELLS }] = await Promise.all([
+        import('/@id/@aresrpg/fight/store'),
+        import('/@id/@aresrpg/fight/project'),
+        import('/@id/@aresrpg/fight/los'),
+      ])
+      const state = fight_store.getState()
+      const view = engine_view_of(state)
+      if (!view?.fighters) return null
+
+      let player_seat = -1
+      let cursor = 0
+      for (const fighter of view.fighters.values()) {
+        if (!fighter.is_player) continue
+        if (String(fighter.id) === fighter_id) player_seat = cursor
+        cursor += 1
+      }
+      if (player_seat < 0) return null
+
+      const rows = Object.values(state.entries ?? {})
+        .filter((entry: any) => entry.source === 'canonical')
+        .sort(
+          (left: any, right: any) =>
+            Number(left.version) - Number(right.version) || Number(left.event_idx) - Number(right.event_idx)
+        )
+      const turn_end = rows.findLastIndex(
+        (row: any) => row.kind === 'TurnEnded' && !row.is_mob && Number(row.idx) === player_seat
+      )
+      const turn_start = rows.findLastIndex(
+        (row: any, index: number) =>
+          index < turn_end && row.kind === 'TurnStarted' && !row.is_mob && Number(row.idx) === player_seat
+      )
+      if (turn_start < 0 || turn_end < 0) return null
+      const turn_rows = rows.slice(turn_start, turn_end + 1)
+      const casts = turn_rows.filter(
+        (row: any) => row.kind === 'Cast' && !row.caster_is_mob && Number(row.caster_idx) === player_seat
+      )
+      if (
+        casts.length !== action_count ||
+        !casts[0] ||
+        Number(casts[0].target_cell) !== encode(aimed.x, aimed.y) ||
+        !(grant_floor > 0)
+      )
+        return null
+
+      const baseline = before_board.find((fighter: any) => String(fighter.id) === fighter_id)
+      const start = Number(baseline?.[pool])
+      if (!baseline?.cell || !Number.isFinite(start)) return null
+      const grant = grant_floor
+      const grant_target = decode(Number(casts[0].target_cell))
+
+      if (pool === 'ap') {
+        if (costs.length !== casts.length || costs.some((cost: number) => !(cost > 0))) return null
+        const spent = costs.reduce((sum: number, cost: number) => sum + cost, 0)
+        if (!(spent > start && spent <= start + grant)) return null
+        return {
+          entity: fighter_id,
+          seat: player_seat,
+          turn: Number(rows[turn_end].version),
+          resource: pool,
+          start,
+          minimum_grant: grant,
+          spent,
+          minimum_remaining: start + grant - spent,
+          action_count: casts.length,
+          grant_target,
+          destination: null,
+        }
+      }
+
+      const cast_index = turn_rows.indexOf(casts[0])
+      const move_index = turn_rows.findIndex((row: any) => row.kind === 'Moved' && String(row.character) === fighter_id)
+      const moved = turn_rows[move_index]
+      if (!moved || move_index <= cast_index) return null
+      const blocked = new Set<number>()
+      for (const [cell, value] of (view.arena?.cells ?? []).entries()) if (value) blocked.add(cell)
+      for (const fighter of before_board)
+        if (fighter.id !== fighter_id && fighter.alive !== false && fighter.cell)
+          blocked.add(encode(fighter.cell.x, fighter.cell.y))
+      const route = bfsPath(encode(baseline.cell.x, baseline.cell.y), Number(moved.to_cell), blocked, GRID_CELLS)
+      const spent = route.length
+      if (!(spent > start && spent <= start + grant)) return null
+      return {
+        entity: fighter_id,
+        seat: player_seat,
+        turn: Number(rows[turn_end].version),
+        resource: pool,
+        start,
+        minimum_grant: grant,
+        spent,
+        minimum_remaining: start + grant - spent,
+        action_count: casts.length,
+        grant_target,
+        destination: decode(Number(moved.to_cell)),
+      }
+    },
+    {
+      fighter_id: args.entity,
+      pool: args.resource,
+      action_count: args.expected_actions,
+      grant_floor: args.minimum_grant,
+      costs: args.action_costs,
+      aimed: args.grant_target,
+      before_board: args.before,
+    }
+  )
+}
+
+export type committed_drain = {
+  caster: string
+  caster_seat: number
+  target: string
+  target_is_mob: boolean
+  target_index: number
+  resource: 'ap' | 'mp'
+  removed: number
+  requested: number
+  cast_target: Cell
+  cast_count: number
+}
+
+/** Five-way point-removal oracle over the canonical Cast + Drain rows that the indexer preserves. */
+export async function committed_drain_export(
+  page: Page,
+  args: { caster: string; target: string; resource: 'ap' | 'mp'; cast_target: Cell }
+): Promise<committed_drain | null> {
+  return page.evaluate(
+    async ({ caster_id, target_id, pool, aimed }) => {
+      const [{ fight_store }, { engine_view_of }, { decode, encode }] = await Promise.all([
+        import('/@id/@aresrpg/fight/store'),
+        import('/@id/@aresrpg/fight/project'),
+        import('/@id/@aresrpg/fight/los'),
+      ])
+      const state = fight_store.getState()
+      const view = engine_view_of(state)
+      if (!view?.fighters) return null
+
+      let caster_seat = -1
+      let target_index = -1
+      let target_is_mob = false
+      let player_index = 0
+      let mob_index = 0
+      for (const fighter of view.fighters.values()) {
+        if (fighter.is_player) {
+          if (String(fighter.id) === caster_id) caster_seat = player_index
+          if (String(fighter.id) === target_id) {
+            target_index = player_index
+            target_is_mob = false
+          }
+          player_index += 1
+        } else {
+          if (String(fighter.id) === target_id) {
+            target_index = mob_index
+            target_is_mob = true
+          }
+          mob_index += 1
+        }
+      }
+      if (caster_seat < 0 || target_index < 0) return null
+
+      const rows = Object.values(state.entries ?? {})
+        .filter((entry: any) => entry.source === 'canonical')
+        .sort(
+          (left: any, right: any) =>
+            Number(left.version) - Number(right.version) || Number(left.event_idx) - Number(right.event_idx)
+        )
+      const turn_end = rows.findLastIndex(
+        (row: any) => row.kind === 'TurnEnded' && !row.is_mob && Number(row.idx) === caster_seat
+      )
+      const turn_start = rows.findLastIndex(
+        (row: any, index: number) =>
+          index < turn_end && row.kind === 'TurnStarted' && !row.is_mob && Number(row.idx) === caster_seat
+      )
+      if (turn_start < 0 || turn_end < 0) return null
+      const turn_rows = rows.slice(turn_start, turn_end + 1)
+      const casts = turn_rows.filter(
+        (row: any) => row.kind === 'Cast' && !row.caster_is_mob && Number(row.caster_idx) === caster_seat
+      )
+      const fumbled = turn_rows.some(
+        (row: any) => row.kind === 'CriticalFailure' && !row.caster_is_mob && Number(row.caster_idx) === caster_seat
+      )
+      if (fumbled || casts.length !== 1 || Number(casts[0].target_cell) !== encode(aimed.x, aimed.y)) return null
+
+      const point_kind = pool === 'ap' ? 0 : 1
+      const drains = turn_rows.filter(
+        (row: any) =>
+          row.kind === 'Drain' &&
+          !!row.target_is_mob === target_is_mob &&
+          Number(row.target_idx) === target_index &&
+          Number(row.point_kind) === point_kind &&
+          Number(row.removed) > 0
+      )
+      if (drains.length !== 1) return null
+      const [drain] = drains
+      return {
+        caster: caster_id,
+        caster_seat,
+        target: target_id,
+        target_is_mob,
+        target_index,
+        resource: pool,
+        removed: Number(drain.removed),
+        requested: Number(drain.requested),
+        cast_target: decode(Number(casts[0].target_cell)),
+        cast_count: casts.length,
+      }
+    },
+    {
+      caster_id: args.caster,
+      target_id: args.target,
+      pool: args.resource,
+      aimed: args.cast_target,
+    }
+  )
+}
+
+export type committed_dot_tick = {
+  caster: string
+  caster_seat: number
+  target: string
+  target_index: number
+  cast_target: Cell
+  amount: number
+  remaining_hp: number
+  cast_count: number
+}
+
+/**
+ * Five-way DoT oracle over the flat canonical journal. Rich ActionEffect envelopes are deliberately not
+ * journalled, so this isolates the caster's one accepted Cast and the target mob's next start-of-turn Hit.
+ * The caller additionally binds that Cast to Patient Venom through DungeonBoard's exact per-spell clock.
+ */
+export async function committed_dot_tick_export(
+  page: Page,
+  args: { caster: string; target: string; target_cell: Cell }
+): Promise<committed_dot_tick | null> {
+  return page.evaluate(
+    async ({ caster_id, target_id, aimed }) => {
+      const [{ fight_store }, { engine_view_of }, { decode, encode }] = await Promise.all([
+        import('/@id/@aresrpg/fight/store'),
+        import('/@id/@aresrpg/fight/project'),
+        import('/@id/@aresrpg/fight/los'),
+      ])
+      const state = fight_store.getState()
+      const view = engine_view_of(state)
+      if (!view?.fighters) return null
+
+      let caster_seat = -1
+      let target_index = -1
+      let player_index = 0
+      let mob_index = 0
+      for (const fighter of view.fighters.values()) {
+        if (fighter.is_player) {
+          if (String(fighter.id) === caster_id) caster_seat = player_index
+          player_index += 1
+        } else {
+          if (String(fighter.id) === target_id) target_index = mob_index
+          mob_index += 1
+        }
+      }
+      if (caster_seat < 0 || target_index < 0) return null
+
+      const rows = Object.values(state.entries ?? {})
+        .filter((entry: any) => entry.source === 'canonical')
+        .sort(
+          (left: any, right: any) =>
+            Number(left.version) - Number(right.version) || Number(left.event_idx) - Number(right.event_idx)
+        )
+      const turn_end = rows.findLastIndex(
+        (row: any) => row.kind === 'TurnEnded' && !row.is_mob && Number(row.idx) === caster_seat
+      )
+      const turn_start = rows.findLastIndex(
+        (row: any, index: number) =>
+          index < turn_end && row.kind === 'TurnStarted' && !row.is_mob && Number(row.idx) === caster_seat
+      )
+      if (turn_start < 0 || turn_end < 0) return null
+
+      const casts = rows
+        .slice(turn_start, turn_end + 1)
+        .filter((row: any) => row.kind === 'Cast' && !row.caster_is_mob && Number(row.caster_idx) === caster_seat)
+      const fumbled = rows
+        .slice(turn_start, turn_end + 1)
+        .some(
+          (row: any) => row.kind === 'CriticalFailure' && !row.caster_is_mob && Number(row.caster_idx) === caster_seat
+        )
+      if (fumbled || casts.length !== 1 || Number(casts[0].target_cell) !== encode(aimed.x, aimed.y)) return null
+
+      const next_player = rows.findIndex(
+        (row: any, index: number) => index > turn_end && row.kind === 'TurnStarted' && !row.is_mob
+      )
+      if (next_player < 0) return null
+      // Production emits no mob TurnStarted/TurnEnded anchors. In this fixed 4v1 queue, Yajin p1 is followed by
+      // m0, so its complete mob phase is exactly the open interval from p1 TurnEnded to the next player start.
+      const mob_rows = rows.slice(turn_end + 1, next_player)
+      const hit_index = mob_rows.findIndex(
+        (row: any) =>
+          row.kind === 'Hit' && row.victim_is_mob && Number(row.victim_idx) === target_index && Number(row.amount) > 0
+      )
+      const moved = mob_rows.some(
+        (row: any) =>
+          (row.kind === 'MobMoved' && Number(row.idx) === target_index) ||
+          (row.kind === 'Displaced' && row.target_is_mob && Number(row.target_idx) === target_index)
+      )
+      const mob_cast_index = mob_rows.findIndex(
+        (row: any) => row.kind === 'Cast' && row.caster_is_mob && Number(row.caster_idx) === target_index
+      )
+      const hits = mob_rows.filter(
+        (row: any) =>
+          row.kind === 'Hit' && row.victim_is_mob && Number(row.victim_idx) === target_index && Number(row.amount) > 0
+      )
+      if (moved || hit_index < 0 || (mob_cast_index >= 0 && hit_index > mob_cast_index) || hits.length !== 1)
+        return null
+      const [hit] = hits
+      return {
+        caster: caster_id,
+        caster_seat,
+        target: target_id,
+        target_index,
+        cast_target: decode(Number(casts[0].target_cell)),
+        amount: Number(hit.amount),
+        remaining_hp: Number(hit.remaining_hp),
+        cast_count: casts.length,
+      }
+    },
+    { caster_id: args.caster, target_id: args.target, aimed: args.target_cell }
+  )
 }

@@ -60,6 +60,7 @@ const shape_names = { 0: 'POINT', 1: 'CIRCLE', 2: 'CROSS', 3: 'LINE', 4: 'TBAR',
 
 const decode_effect = (effect) => ({
   kind: kind_names[effect.kind] ?? String(effect.kind),
+  kind_id: Number(effect.kind),
   ...(effect.element != null ? { element: element_names[effect.element] ?? String(effect.element) } : {}),
   base: effect.value ?? 0,
   ...(effect.damageMin != null ? { damageMin: effect.damageMin } : {}),
@@ -72,6 +73,7 @@ const decode_effect = (effect) => ({
     ? { zone: { shape: shape_names[effect.zone.shape ?? 0] ?? 'POINT', size: effect.zone.size ?? 0 } }
     : {}),
   ...(effect.stat != null ? { stat: effect.stat } : {}),
+  ...(effect.flags != null ? { flags: effect.flags } : {}),
 })
 
 const level_of = (level) => ({

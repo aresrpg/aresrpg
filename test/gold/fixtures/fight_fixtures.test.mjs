@@ -22,7 +22,6 @@ const progression_xp_multiplier = 400
 // max(base, critical) direct DAMAGE/LIFE_STEAL/PUNISHMENT values = 269 + 179 + 204 + 74.
 const full_kit_direct_crit_base = 726
 const quietus_base = 31 // same snapshot: yajin_quietus levels[0].effects[0].value (the non-critical floor)
-const stoneward_absorb = 9 // shugo_stoneward learned-rank REDUCE_DAMAGE value
 
 describe('multi_turn fight fixture stays inside the drive turn budget', () => {
   const multi_turn = fixture_specs.find((spec) => spec.key === 'multi_turn')
@@ -71,7 +70,8 @@ describe('coop full-kit fight fixtures preserve the leveling and cast budgets', 
   test('the coop target survives full-kit coverage and retains a bounded cleanup', () => {
     expect(full_kit, 'no fixture spec with key "coop_full_kit"').toBeTruthy()
     expect(full_kit.ap, 'the full-kit mob needs one AP-priced hit per turn').toBe(1)
-    expect(full_kit.mp, 'the full-kit mob must stay planted for push-into-trap evidence').toBe(0)
+    expect(full_kit.mp, 'the full-kit mob needs an observable MP-removal pool').toBe(1)
+    expect(full_kit.spell.rmin, 'the ALLMAP spell must remain castable without AI movement').toBe(0)
     expect(full_kit.spell).toMatchObject({
       damage: 5,
       ap: 1,
@@ -84,10 +84,7 @@ describe('coop full-kit fight fixtures preserve the leveling and cast budgets', 
       crit: 0,
       area_shape: 'allmap',
     })
-    expect(full_kit.spell.damage, 'the mob hit must be positive to prove shield absorption').toBeGreaterThan(0)
-    expect(full_kit.spell.damage, 'learned-rank Stoneward must fully absorb the fixture hit').toBeLessThanOrEqual(
-      stoneward_absorb
-    )
+    expect(full_kit.spell.damage, 'the mob hit must be positive to make every seat healable').toBeGreaterThan(0)
     expect(full_kit.group).toBeUndefined() // default [1,1]: one target, no accidental HP multiplication
     expect(full_kit.hp / full_kit_direct_crit_base).toBeGreaterThan(1.5)
     expect(Math.ceil(full_kit.hp / quietus_base)).toBeLessThanOrEqual(39)
