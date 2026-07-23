@@ -308,7 +308,11 @@ const TARGET_FILTER_MAP = {
 const signed_alter = (kind, value, value_max) => {
   const [neg, mag_a] = signed_delta(kind, value)
   const [, mag_b] = signed_delta(kind, value_max)
-  return [neg ? 'REMOVE' : 'ADD', Math.min(mag_a, mag_b), Math.max(mag_a, mag_b)]
+  return [
+    neg ? 'REMOVE' : 'ADD',
+    Math.min(mag_a, mag_b),
+    Math.max(mag_a, mag_b),
+  ]
 }
 
 /**

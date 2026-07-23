@@ -33,7 +33,7 @@ describe('R3 signed alter (kind 9/11) decode', () => {
     const spell = spell_of('r3_debuff', [
       raw_effect(K_ALTER_STAT, { stat: 0, value: SIGNED_SHIFT - 18, turns: 2 }),
     ])
-    const e = spell.levels[0].base_effects[0]
+    const [e] = spell.levels[0].base_effects
     expect(e.type).toBe('REMOVE')
     expect(e.min).toBe(18)
     expect(e.max).toBe(18)
@@ -43,7 +43,7 @@ describe('R3 signed alter (kind 9/11) decode', () => {
     const spell = spell_of('r3_buff', [
       raw_effect(K_ALTER_STAT, { stat: 0, value: SIGNED_SHIFT + 12, turns: 2 }),
     ])
-    const e = spell.levels[0].base_effects[0]
+    const [e] = spell.levels[0].base_effects
     expect(e.type).toBe('ADD')
     expect(e.min).toBe(12)
     expect(e.max).toBe(12)
@@ -60,7 +60,7 @@ describe('R3 signed alter (kind 9/11) decode', () => {
         turns: 2,
       }),
     ])
-    const e = spell.levels[0].base_effects[0]
+    const [e] = spell.levels[0].base_effects
     expect(e.type).toBe('REMOVE')
     expect(e.min).toBe(8)
     expect(e.max).toBe(33)
@@ -72,12 +72,17 @@ describe('R3 signed alter (kind 9/11) decode', () => {
   test('ranged debuff roll∘decode parity vector (−33..−8 · rolls 0/5000/9999)', () => {
     const lo = SIGNED_SHIFT - 33 // 32735
     const hi = SIGNED_SHIFT - 8 //  32760
-    expect(signed_delta(K_ALTER_STAT, roll_in_range(lo, hi, 0))).toEqual([true, 33])
+    expect(signed_delta(K_ALTER_STAT, roll_in_range(lo, hi, 0))).toEqual([
+      true,
+      33,
+    ])
     expect(signed_delta(K_ALTER_STAT, roll_in_range(lo, hi, 5000))).toEqual([
-      true, 20,
+      true,
+      20,
     ])
     expect(signed_delta(K_ALTER_STAT, roll_in_range(lo, hi, 9999))).toEqual([
-      true, 8,
+      true,
+      8,
     ])
   })
 })
