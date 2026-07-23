@@ -798,7 +798,9 @@ describe.skipIf(!CEREMONY_MANIFEST_AVAILABLE || !SPELLS_CORPUS_AVAILABLE)(
   () => {
     test('the exact ruled set is stamped to the currently deployed engine lineage', () => {
       expect([...CHAIN_PENDING].sort((a, b) => a - b)).toEqual(B7_KINDS)
-      expect(CHAIN_PENDING_ENGINE_VERSION).toBe(CEREMONY_MANIFEST.engine.latest)
+      // A from-scratch republish stamps no `.latest` (only an in-place upgrade repoints it) — same
+      // `entry.latest ?? entry.pkg` fallback stamp_all.mjs's package_row uses for this exact manifest shape.
+      expect(CHAIN_PENDING_ENGINE_VERSION).toBe(CEREMONY_MANIFEST.engine.latest ?? CEREMONY_MANIFEST.engine.pkg)
     })
 
     test('every excluded kind paints Cast but no predicted effect outcome', () => {

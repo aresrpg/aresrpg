@@ -19,8 +19,8 @@ import { WEAPON_ATTACK_ID } from './weapon.js'
 
 // B7 ENGINE FOSSIL — the deployed engine lineage the CHAIN_PENDING exclusion set below was ruled against. UPDATE
 // RITUAL: on every engine upgrade re-stamp this to `ceremony_manifest.engine.latest` (the boundary test asserts the
-// equality) and re-verify CHAIN_PENDING against the new arms. Re-stamped to the fresh publish's origin id (07-23).
-export const CHAIN_PENDING_ENGINE_VERSION = '0x8b580c5a29f243ffb1b4e500eb559c664f06f21f7ebaa2cd1a9a6aff2e76ff68'
+// equality) and re-verify CHAIN_PENDING against the new arms. Re-stamped to ceremony #3's fresh publish id (07-24).
+export const CHAIN_PENDING_ENGINE_VERSION = '0xe8c6c46893799e85e697ef0e524626c6323ea4db5a86da6c9de4a6d53c7ac41a'
 
 // BRIDGE B7 — expires when the <next-train> ships the 8 chain arms; deletion criterion: on-chain kind handling verified.
 export const CHAIN_PENDING = new Set([10, 15, 16, 17, 22, 25, 26, 29])
