@@ -393,6 +393,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
         cells: fetched.filter((c) => Array.isArray(c.rows)),
       })
       sync_from_core()
+      if (drop_claimed_ghosts()) sync_from_core() // fold visible_fights truth in the SAME tick (#480)
     } finally {
       polling = false
     }
@@ -621,6 +622,31 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
   const group_has_live_fight = (/** @type {any} */ e) =>
     e?.kind === 'mob' && group_engage_blocked(context.get_state().visible_fights, e.row?.spawn_id)
 
+  // GHOST DROP (#480 "someone got there first" bounce): fold a group_has_live_fight fact through the SAME
+  // claim_failed/ghost door the on-chain zones-108 abort already uses (fold_claim_failed → remove_row_proven,
+  // spawns_zones.js) — the refusal itself IS chain truth (visible_fights), so treating it exactly like a
+  // proven ghost claim is correct, not a new concept. This does NOT touch spawns_reconcile.js's deliberate
+  // additive-merge (issue #367: an ordinary background zone poll must never SILENTLY despawn a visible group
+  // with no explained cause) — visible_fights is already an EXPLAINED signal (world_fights_discovery plants a
+  // sword marker for it elsewhere), so retiring the stale idle-group marker in favour of that honest cue is
+  // not a silent vanish.
+  const drop_ghost = (/** @type {any} */ e) => spawns_input({ type: 'claim_failed', key: e.key, ghost: true })
+
+  // AMBIENT GHOST SWEEP: a group ANOTHER player claims never reaches engage()'s gate unless THIS player
+  // personally presses [R] on it — so a marker nobody here ever tried to engage could sit forever. Reusing
+  // the SAME visible_fights truth once per steady poll (the EXISTING 6s cadence — never a new poll, per the
+  // reducer-discipline law: async facts already reaching the client re-enter as inputs) retires any
+  // currently-tracked marker a live fight already claimed, whether or not it was ever pressed.
+  const drop_claimed_ghosts = () => {
+    let dropped = false
+    for (const e of entries.values()) {
+      if (e.engaged || !group_has_live_fight(e)) continue // e.engaged: OUR OWN in-flight claim owns this row
+      drop_ghost(e)
+      dropped = true
+    }
+    return dropped
+  }
+
   const engage = async (/** @type {any} */ e) => {
     if (engaging || !e) return
     // [world-fight mobs] rigs now stay placed during a WORLD fight (in_cave = cave-only), so a direct rig
@@ -636,6 +662,12 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     // (create_world_fight) shrinks the residual poll-lag window this 6s-polled truth can't.
     if (group_has_live_fight(e)) {
       push_event_toast({ state: 'info', title: i18n.t('errors.fight_group_claimed') })
+      // The refusal IS chain truth — drop the SAME marker synchronously so this exact bounce can never repeat
+      // (#480: a stale marker used to survive its own refusal toast and re-fire the identical "gone" bounce
+      // on every future press until an unrelated poll noticed, which — see drop_claimed_ghosts above — it
+      // never reliably did on its own for a group nobody re-engaged).
+      drop_ghost(e)
+      sync_from_core()
       return
     }
     // THE DOOR DECIDES (D770a W2): claim_intent re-checks proximity off the rendered group home + pending state in the
