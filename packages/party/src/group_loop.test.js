@@ -247,6 +247,19 @@ test('fight_started emits join_fight ONCE per aligned unseated owned member once
   expect(fresh.outputs.join_fight.map((r) => r.character_id).sort()).toEqual([ALT_1, ALT_2].sort())
 })
 
+test('#495 — fight_started joins ONLY armed followers, never an aligned-but-unfollowing party alt', () => {
+  // ALT_1 and ALT_2 are both owned and standing in the leader's world, but only ALT_1 toggled follow ON.
+  const armed_one = reduce_group(positioned(), {
+    kind: 'set_follow',
+    character_id: ALT_1,
+    enabled: true,
+    leader_character_id: LEADER,
+    now: NOW,
+  }).state
+  const { outputs } = reduce_group(armed_one, { kind: 'fight_started', fight_id: '0xfight', seated: [LEADER] })
+  expect(outputs.join_fight.map((r) => r.character_id)).toEqual([ALT_1])
+})
+
 test('fight_started with join_open:false arms focus/seats but emits NO join (closed chain window)', () => {
   const state = armed()
   const { state: next, outputs } = reduce_group(state, {
@@ -313,6 +326,22 @@ test('dungeon_entered sequences enter_dungeon once per owned member with an assi
     []
   )
   expect(reduce_group(next, { kind: 'dungeon_ended' }).state.dungeon).toBe(null)
+})
+
+test('#495 — dungeon_entered enters ONLY armed followers, skipping an unfollowing alt that holds a key', () => {
+  const armed_one = reduce_group(positioned(), {
+    kind: 'set_follow',
+    character_id: ALT_1,
+    enabled: true,
+    leader_character_id: LEADER,
+    now: NOW,
+  }).state
+  const assignments = [
+    { character_id: ALT_1, key_item_id: '0xk1', key_kiosk_id: '0xkk1', key_kiosk_cap_id: '0xkc1' },
+    { character_id: ALT_2, key_item_id: '0xk2', key_kiosk_id: '0xkk2', key_kiosk_cap_id: '0xkc2' },
+  ]
+  const { outputs } = reduce_group(armed_one, { kind: 'dungeon_entered', world_id: WORLD, assignments })
+  expect(outputs.enter_dungeon.map((r) => r.character_id)).toEqual([ALT_1])
 })
 
 // ── pure rule parity (migrated from frontend owned_follow.test.js) ───────────────────────────────────────────────

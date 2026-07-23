@@ -140,12 +140,18 @@ const owned_alts = (state) =>
 
 const is_blocked = (state, character_id, scope) => !!state.blocked[character_id]?.[scope]
 
-/** Owned alts standing in the leader's world — the only members the loop may steer/seat. */
+/** Owned alts standing in the leader's world — the movement/seat candidate set. */
 const aligned_alts = (state) => {
   const world = leader_world(state)
   if (!world) return []
   return owned_alts(state).filter((member) => state.world_by_character[member.character] === world)
 }
+
+/** Aligned alts that are ALSO explicitly armed to follow (in the session follower set) — the only members
+ *  the loop seats into fights. #495: membership + world alignment is NOT consent; only a toggled-on
+ *  follower is auto-joined, so an invited-but-not-following alt never gets dragged into the leader's fight. */
+const armed_aligned_alts = (state) =>
+  aligned_alts(state).filter((member) => state.follow.follower_character_ids.includes(member.character))
 
 const prune_keys = (record, keep) => {
   const next = {}
@@ -481,15 +487,14 @@ function reduce_fight(state, input) {
       const same = state.fight?.fight_id === fight_id
       const seated_now = [...new Set([...(same ? state.fight.seated : []), ...(seated ?? [])])]
       const requested_before = same ? state.fight.requested : []
-      // #540 — MEMBERSHIP IS NOT CONSENT: an aligned alt used to auto-join every fight the active character
-      // engaged (never completes, the fight never starts, refresh doesn't re-adopt — a full multi-char block).
-      // Gate behind the SAME explicit follow.enabled this reducer already requires for follow_world_joined /
-      // transit — no separate flag: the future auto-follow UI (enable_group_follow, unwired today) is exactly
-      // "consent to steer my alts," and that single switch should arm joins/dungeons alongside positioning.
+      // #540/#495 — MEMBERSHIP IS NOT CONSENT: an aligned alt used to auto-join every fight the active
+      // character engaged (never completes, the fight never starts, refresh doesn't re-adopt — a full
+      // multi-char block). Steer ONLY the per-character armed followers (follow.follower_character_ids, the
+      // toggled-on set), never every owned alt in the world — an invited-but-not-following alt stays out.
       const joiners =
         !join_open || !state.follow.enabled
           ? []
-          : aligned_alts(state).filter(
+          : armed_aligned_alts(state).filter(
               (member) =>
                 !seated_now.includes(member.character) &&
                 !requested_before.includes(member.character) &&
@@ -542,9 +547,10 @@ function reduce_dungeon(state, input) {
       const { world_id, assignments } = input
       if (!world_id) return still(state)
       const requested_before = state.dungeon?.world_id === world_id ? state.dungeon.requested : []
-      // #540 — same membership-is-not-consent hole as fight_started: an owned alt used to auto-enter every
-      // dungeon assignment regardless of follow.enabled. Same gate, same reasoning.
-      const owned = state.follow.enabled ? new Set(owned_alts(state).map((member) => member.character)) : new Set()
+      // #540/#495 — same membership-is-not-consent hole as fight_started: an owned alt used to auto-enter
+      // every dungeon assignment regardless of consent. Gate to the per-character armed set (dungeons need no
+      // world adjacency, so the follower set — not aligned_alts — is the honest team roster here).
+      const owned = new Set(state.follow.enabled ? state.follow.follower_character_ids : [])
       const rows = (Array.isArray(assignments) ? assignments : []).filter(
         (assignment) =>
           owned.has(assignment?.character_id) &&
