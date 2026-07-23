@@ -5,12 +5,7 @@ import { get_aoe_cells } from '@aresrpg/sim/spell_targeting'
 import { SHAPE_CROSS, SHAPE_NO_OVERRIDE, SHAPE_POINT } from '@aresrpg/sim/spell_effect'
 
 import { weapon_spell_template } from './predict_cast.js'
-import {
-  WEAPON_SHAPE_DEFAULT,
-  WEAPON_SHAPES,
-  weapon_shape_of,
-  weapon_shape_resolved,
-} from './weapon.js'
+import { WEAPON_SHAPE_DEFAULT, WEAPON_SHAPES, weapon_shape_of, weapon_shape_resolved } from './weapon.js'
 
 // §387 — the ONE-HOME shape TABLE + the preview wiring. `weapon_spell_template` stamps the category's cell-set shape
 // onto the synthetic weapon spell, so the SAME `get_aoe_cells` the board paints for spell AoEs paints the weapon's
@@ -88,37 +83,28 @@ describe('§387 preview wiring — weapon_spell_template paints the shape throug
 //    path). Twin of participant.move::weapon_shape_resolved + weapon_shape_tests.move.
 describe('wave-D — weapon_shape_resolved (an authored override wins; the 255 sentinel falls through)', () => {
   test('an authored override (CROSS/2) wins over the category table', () => {
-    expect(
-      weapon_shape_resolved({ area_shape: SHAPE_CROSS, area_size: 2 }, null),
-    ).toMatchObject({
+    expect(weapon_shape_resolved({ area_shape: SHAPE_CROSS, area_size: 2 }, null)).toMatchObject({
       area_shape: SHAPE_CROSS,
       area_size: 2,
       range_modifiable: false,
       line_only: false,
     })
     // range_modifiable / line_only still come from the CATEGORY even under an override (bow stays modifiable).
-    expect(
-      weapon_shape_resolved({ area_shape: SHAPE_CROSS, area_size: 2 }, 'bow'),
-    ).toMatchObject({ area_shape: SHAPE_CROSS, area_size: 2, range_modifiable: true })
+    expect(weapon_shape_resolved({ area_shape: SHAPE_CROSS, area_size: 2 }, 'bow')).toMatchObject({
+      area_shape: SHAPE_CROSS,
+      area_size: 2,
+      range_modifiable: true,
+    })
   })
 
   test('the 255 sentinel / a missing override field falls through to weapon_shape_of BYTE-IDENTICALLY', () => {
-    expect(
-      weapon_shape_resolved({ area_shape: SHAPE_NO_OVERRIDE }, 'battleaxe'),
-    ).toEqual(weapon_shape_of('battleaxe'))
-    expect(weapon_shape_resolved({}, 'battleaxe')).toEqual(
-      weapon_shape_of('battleaxe'),
-    )
-    expect(weapon_shape_resolved(undefined, 'spear')).toEqual(
-      weapon_shape_of('spear'),
-    )
+    expect(weapon_shape_resolved({ area_shape: SHAPE_NO_OVERRIDE }, 'battleaxe')).toEqual(weapon_shape_of('battleaxe'))
+    expect(weapon_shape_resolved({}, 'battleaxe')).toEqual(weapon_shape_of('battleaxe'))
+    expect(weapon_shape_resolved(undefined, 'spear')).toEqual(weapon_shape_of('spear'))
   })
 
   test('the resolved override drives the SAME 9-cell CROSS/2 set the chain resolves (shared vector; cell 105 = (5,5))', () => {
-    const { area_shape, area_size } = weapon_shape_resolved(
-      { area_shape: SHAPE_CROSS, area_size: 2 },
-      null,
-    )
+    const { area_shape, area_size } = weapon_shape_resolved({ area_shape: SHAPE_CROSS, area_size: 2 }, null)
     const cells = get_aoe_cells({ area_shape, area_size }, { x: 5, y: 5 }, { x: 0, y: 5 })
       .map((c) => c.y * 20 + c.x)
       .sort((a, b) => a - b)
