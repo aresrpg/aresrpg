@@ -73,3 +73,30 @@ test('Accept refuses legacy pet power before optimistic mutation or equip PTB co
   expect(composer_at).toBeGreaterThan(guard_at)
   expect(body.slice(guard_at, Math.min(bag_remove_at, bag_add_at))).toMatch(/if \(legacy_pet\)[\s\S]*?return/)
 })
+
+// #590 — a reconcile that FAILS after a successful equip/unequip tx must never leave the equipment panel
+// locked. Root cause: on_accept committed the optimistic stage (`stage.committed = true`) and the panel LOCK
+// keyed on it (`pending: committing || !!stage.committed`); reconcile_equip_state throws on ordinary /v1
+// indexer lag, and its catch cleared nothing — so `equip_lock` stayed "Updating equipment…" forever, and
+// every later unequip double-click hit the equip_lock guard (a silent info toast, no tx, no digest, retries
+// stacking frozen toasts). Two structural invariants close it, in this file's on_accept source-contract idiom:
+//   (1) the panel LOCK is the tx-in-flight signal ONLY — `stage.committed` is optimistic DISPLAY state
+//       (it drives which map the doll paints), never a lock reason.
+//   (2) `set_committing(false)` runs in a `finally`, so a FAILED reconcile unlocks exactly like a success.
+test('a failed post-tx reconcile can never strand the equipment panel locked (#590)', () => {
+  // (1) the lock never keys on the optimistic-display flag
+  const lock_start = inventory_source.indexOf('equip_lock_of({')
+  expect(lock_start).toBeGreaterThan(-1)
+  const lock_call = inventory_source.slice(lock_start, inventory_source.indexOf('})', lock_start))
+  expect(lock_call).toContain('pending:')
+  expect(lock_call).not.toContain('stage.committed')
+
+  // (2) the reconcile await clears the in-flight lock in a finally — success AND failure both unlock
+  const commit_at = inventory_source.indexOf("dispatch_stage({ type: 'commit' })")
+  const cancel_at = inventory_source.indexOf('const on_cancel = ()')
+  expect(commit_at).toBeGreaterThan(-1)
+  expect(cancel_at).toBeGreaterThan(commit_at)
+  const reconcile_block = inventory_source.slice(commit_at, cancel_at)
+  expect(reconcile_block).toContain('await reconcile_equip_state(')
+  expect(reconcile_block).toMatch(/finally\s*\{[\s\S]*?set_committing\(false\)[\s\S]*?\}/)
+})

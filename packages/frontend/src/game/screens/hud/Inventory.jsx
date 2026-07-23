@@ -243,8 +243,12 @@ export function Inventory() {
   const equip_state_stale = is_equip_state_stale(character.id)
   // Lock reason as data (equip_lock_of): `inline` gates the panel notice — the transient pending tx is
   // toast-owned (use_toast.promise below), so it must never render the in-panel box (night-batch #2).
+  // #590 — the LOCK is the tx-in-flight signal ONLY: `committing` is held across the reconcile and cleared
+  // in on_accept's `finally`, so a reconcile that fails on /v1 indexer lag can never strand the panel. The
+  // post-success optimistic `stage.committed` drives DISPLAY (the `equipment` map below) but MUST NOT lock —
+  // conflating it here left "Updating equipment…" latched forever, silently eating every later unequip.
   const lock = equip_lock_of({
-    pending: committing || !!stage.committed,
+    pending: committing,
     retry_blocked: equip_retry_blocked,
     state_stale: equip_state_stale,
     in_dungeon: !!character.in_dungeon,
@@ -469,7 +473,13 @@ export function Inventory() {
     // A changed object reference is not confirmation. Hide Accept but keep the optimistic stage authoritative
     // until fresh /v1 character + bag rows jointly prove the submitted item transition.
     dispatch_stage({ type: 'commit' })
-    set_committing(false)
+    // #590 — the panel stays LOCKED (committing) across the reconcile and unlocks in the `finally` on EITHER
+    // outcome. reconcile_equip_state throws on ordinary /v1 indexer lag; clearing the lock only on success
+    // stranded `stage.committed` as a permanent "Updating equipment…" lock — every later unequip then hit the
+    // equip_lock guard (a silent info toast, no tx, no digest). The optimistic stage stays authoritative for
+    // DISPLAY (stage.committed) until a fresh /v1 read proves the transition; the load_roster poll is the
+    // standing safety net when this reconcile cannot confirm in time. The panel remounts per character
+    // (CharactersDrawer keys the tab body by id), so a lingering committed display never leaks across chars.
     try {
       await reconcile_equip_state(
         { address, character_id: character.id, expected_change },
@@ -480,6 +490,8 @@ export function Inventory() {
       game_log('inventory', 'equip succeeded but projection reconcile is still pending', error)
       remove_bag_items(equipped_full.map((item) => item.id))
       add_bag_items(unequipped_full)
+    } finally {
+      set_committing(false)
     }
   }
 
