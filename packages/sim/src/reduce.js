@@ -20,6 +20,7 @@ import {
 } from './fight_state.js'
 import {
   contest_tackle,
+  walk_taxed_prefix,
   advance_turn,
   abandon_fight,
   check_victory,
@@ -419,18 +420,38 @@ const handle_move = (state, cmd, ctx) => {
 
   const walked = walk_path(state, cmd, ctx)
   const moved = find_entity(walked.state, cmd.entity_id)
+  // THE TOLL (ruling #239, Move twin actions.move::apply_move): a taxed walk that stopped on a trap detected it
+  // but never fired inline (walk_path/movement::walk_prefix parity) — fire it exactly once here, mirroring
+  // Move's `if (entered_trap) cast::trigger_on_enter(...)` tail. An escaped walk already fully resolved every
+  // trap it crossed inline (walk_path's own #325 resume loop), so entered_trap is always false for it.
+  const trap_cell = walked.traversed[walked.traversed.length - 1]
+  const post_trap = walked.entered_trap
+    ? check_traps(walked.state, trap_cell, cmd.entity_id, cell => terrain_walkable(ctx.arena, cell))
+    : null
+  const final_state = post_trap?.state ?? walked.state
+  const trap_events = post_trap?.triggered
+    ? [
+        {
+          type: 'fight_trap_triggered',
+          fight_id: state.fight_id,
+          entity_id: cmd.entity_id,
+          cell: trap_cell,
+          effects: post_trap.effects,
+        },
+      ]
+    : []
   const moved_event = {
     type: 'fight_moved',
     fight_id: state.fight_id,
     entity_id: cmd.entity_id,
-    path: walked.tackled ? [moved?.cell ?? current.cell] : walked.traversed,
+    path: walked.traversed,
     tackled: walked.tackled,
-    mp_remaining: moved?.mp ?? 0,
+    mp_remaining: find_entity(final_state, cmd.entity_id)?.mp ?? moved?.mp ?? 0,
   }
-  if (walked.tackled) return { state: walked.state, events: [moved_event] }
-  const won = with_victory(state.winner, walked.state, [
+  const won = with_victory(state.winner, final_state, [
     moved_event,
     ...walked.events,
+    ...trap_events,
   ])
   // If the mover died on a trap but the fight continues, its turn ends now (c156: no dead-actor turn).
   return advance_if_dead(won, cmd.entity_id)
@@ -443,16 +464,34 @@ const handle_move = (state, cmd, ctx) => {
  * INTERLEAVED effect, never a turn-terminal one. The walk stops early ONLY when the trigger removes the mover
  * from the route: it DIED, or a payload (a repulsive trap) displaced it off the cell it just entered. Every
  * crossed trap fires, in path order (a path may cross more than one).
+ *
+ * THE TACKLE TOLL (ruling #239, Move twin movement.move::walk_prefix): a FAILED escape already paid its AP/MP
+ * tax in contest_tackle — this still walks, toward the SAME requested path, truncated to however many cells the
+ * SURVIVING (post-tax) MP affords (walk_taxed_prefix, the shared stepper apply_move's tackled branch also
+ * uses — one contest roll here, never re-rolled). Unlike the escaped walk above, a taxed walk that reaches a
+ * trapped cell STOPS there — it does not fire the trap inline and does not resume; handle_move fires it exactly
+ * once afterward, mirroring actions.move's apply_move `if (entered_trap) cast::trigger_on_enter`.
  * @param {import('./fight_state.js').FightState} state
  * @param {CmdMove} cmd
  * @param {ReduceContext} ctx
- * @returns {{ state: import('./fight_state.js').FightState, traversed: import('./cell.js').Cell[], events: FightEvent[], tackled: boolean }}
+ * @returns {{ state: import('./fight_state.js').FightState, traversed: import('./cell.js').Cell[], events: FightEvent[], tackled: boolean, entered_trap: boolean }}
  */
 const walk_path = (state, cmd, ctx) => {
   const terrain = cell => terrain_walkable(ctx.arena, cell)
   const contest = contest_tackle(state, cmd.entity_id)
-  if (!contest.escaped)
-    return { state: contest.state, traversed: [], events: [], tackled: true }
+  if (!contest.escaped) {
+    const survivor = find_entity(contest.state, cmd.entity_id)
+    const start_cell = find_entity(state, cmd.entity_id).cell
+    const cap = Math.min(cmd.path.length, survivor?.mp ?? 0)
+    const stepped = walk_taxed_prefix(contest.state, cmd.entity_id, [start_cell, ...cmd.path], cap)
+    return {
+      state: stepped.state,
+      traversed: cmd.path.slice(0, stepped.steps),
+      events: [],
+      tackled: true,
+      entered_trap: stepped.entered_trap,
+    }
+  }
   const walked = cmd.path.reduce(
     (acc, target) => {
       if (acc.stop) return acc
@@ -493,6 +532,7 @@ const walk_path = (state, cmd, ctx) => {
     traversed: walked.traversed,
     events: walked.events,
     tackled: false,
+    entered_trap: false,
   }
 }
 

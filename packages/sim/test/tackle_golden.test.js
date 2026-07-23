@@ -150,16 +150,18 @@ describe('tackle golden — reduce-level behavior (the sim rng thread)', () => {
     expect(find_entity(res.state, 'mover')?.cell).toEqual({ x: 6, y: 5 })
   })
 
-  test('seed42_den24_boundary_tackles: roll 12 ≥ num 12 — denied at the exact boundary, pools bitten', () => {
+  test('seed42_den24_boundary_tackles: roll 12 ≥ num 12 — escape fails; TAXED then the survivor walks (toll)', () => {
     const [, c] = golden.sim_thread_cases
     const res = apply_move(state_of(c.rng_seed, 100, 100), 'mover', path)
     expect(res.success).toBe(false)
     expect(res.tackled).toBe(true)
     expect(res.error).toBe('TACKLED')
+    // ruling #239: not a wall — the failed escape is a toll. lost fraction 12/24 of (ap 6, mp 3) → ceil 3 AP +
+    // ceil 1.5 = 2 MP, leaving 1 MP; that surviving MP walks the 1-cell request → cell 6,5, MP 0, 1 cell moved.
+    expect(res.cells_moved).toBe(1)
     const caught = find_entity(res.state, 'mover')
-    expect(caught?.cell).toEqual({ x: 5, y: 5 })
-    // lost fraction 12/24 of (ap 6, mp 3) → ceil 3 AP + ceil 1.5 = 2 MP (the exact_half_rounds_up vector).
+    expect(caught?.cell).toEqual({ x: 6, y: 5 })
     expect(caught?.ap).toBe(3)
-    expect(caught?.mp).toBe(1)
+    expect(caught?.mp).toBe(0)
   })
 })

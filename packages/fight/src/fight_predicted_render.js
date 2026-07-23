@@ -184,10 +184,10 @@ export function produce_predicted_render_events(state, command, ctx) {
     const { append } = writer
     if (event.type === 'fight_moved') {
       const path = event.path ?? []
-      // mp_spent = the traversed cells (twin of the receipt lane). A tackled fight_moved carries a single
-      // placeholder cell but denied the move, so it forfeits ZERO move-MP here (the tackle's own pool loss
-      // rides its Tackled beat) — guard it so no green floater lies about a step that never happened.
-      append('move', move_duration(path), { ...event, mp_spent: event.tackled ? 0 : move_mp_spent(path) }, source_turn)
+      // mp_spent = the traversed cells (twin of the receipt lane). Under THE TOLL (ruling #239) a tackled
+      // fight_moved carries the ACTUAL walked prefix (0 cells only when the tax zeroed MP), so mp_spent is just
+      // the path length — the walk's own MP spend; the tackle's pool TAX rides its separate Tackled beat.
+      append('move', move_duration(path), { ...event, mp_spent: move_mp_spent(path) }, source_turn)
       append(
         'arrival',
         FIGHT_RENDER_TIMINGS.instant,

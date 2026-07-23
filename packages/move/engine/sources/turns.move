@@ -280,11 +280,12 @@ fun resolve_mob_turn(fight: &mut Fight, midx: u64, rng: &mut u64, off_shape: &ve
   let los = cast::los_obstacles(fight);
   let (new_cell, spell_opt, target_cell) = mob::decide_turn(fight::mobs(fight).borrow(midx), mob::kit_spells(fight::group_kit(fight)), &cells, &ally_cells, &ally_missing, &move_blocked, &los, rng);
   let move_budget = mob::mp(fight::mobs(fight).borrow(midx));
-  // TACKLE (sim twin fight_actions.js:63-100, mob orientation): a mob leaving a living adjacent player's zone
-  // contests the exit off the CRANK rng thread (the wave's entropy — like mob-cast drains; mob turns are never
-  // previewable). Gated on an ACTUAL planned move so a standing mob draws nothing. A failed escape drains the
-  // mob's pools + emits Tackled and skips the walk — its planned cast then re-validates from the HELD cell
-  // (mob_can_cast), so an out-of-band cast simply dies with the escape.
+  // TACKLE (sim twin fight_actions.js apply_move, mob orientation): a mob leaving a living adjacent player's
+  // zone contests the exit off the CRANK rng thread (the wave's entropy — like mob-cast drains; mob turns are
+  // never previewable). Gated on an ACTUAL planned move so a standing mob draws nothing.
+  // THE TOLL (ruling #239): a failed escape drains the mob's pools + emits Tackled, then STILL walks — the move
+  // proceeds toward `new_cell` along the affordable prefix with the surviving MP (never a hard skip). A tax that
+  // zeroes MP walks 0, so the planned cast still re-validates from the HELD cell (mob_can_cast).
   let escaped = {
     let start_cell = mob::cell(fight::mobs(fight).borrow(midx));
     if (new_cell == start_cell) true
@@ -294,17 +295,22 @@ fun resolve_mob_turn(fight: &mut Fight, midx: u64, rng: &mut u64, off_shape: &ve
       else tackle::resolve(fight, true, midx, &lockers, prng::draw(rng))
     }
   };
-  if (escaped) {
-    let (legal_move, moved_steps) = movement::walk(fight, true, midx, new_cell, &move_blocked, move_budget);
+  let (moved_steps, entered_trap) = if (escaped) {
+    let (legal_move, steps, trap) = movement::walk(fight, true, midx, new_cell, &move_blocked, move_budget);
     assert!(legal_move);
-    if (moved_steps > 0) {
-      // Reposition observability (chain-forensics 2026-07-11): a mob whose turn draws reposition-only emitted NOTHING,
-      // so no client/indexer could ever render the move. Fire MobMoved on any cell change (a move-SPELL turn ALSO
-      // rides the Cast event's target_cell, so this is the sole home for the no-cast reposition case).
-      // `movement::walk` already fired any crossed trap inline (entrant-blind) and resumed the mob's route.
-      let landed = mob::cell(fight::mobs(fight).borrow(midx));
-      fight_events::emit_mob_moved(fight::id(fight), midx, landed);
-    };
+    (steps, trap)
+  } else {
+    // TAXED — walk the affordable prefix toward the planned cell with the mob's surviving (post-tax) MP.
+    let survived = mob::mp(fight::mobs(fight).borrow(midx));
+    movement::walk_prefix(fight, true, midx, new_cell, &move_blocked, move_budget, survived)
+  };
+  if (moved_steps > 0) {
+    // Reposition observability (chain-forensics 2026-07-11): a mob whose turn draws reposition-only emitted NOTHING,
+    // so no client/indexer could ever render the move. Fire MobMoved on any cell change (a move-SPELL turn ALSO
+    // rides the Cast event's target_cell, so this is the sole home for the no-cast reposition case).
+    let landed = mob::cell(fight::mobs(fight).borrow(midx));
+    fight_events::emit_mob_moved(fight::id(fight), midx, landed);
+    if (entered_trap) cast::trigger_on_enter(fight, true, midx);
   };
   if (mob::is_alive(fight::mobs(fight).borrow(midx))) {
     if (spell_opt.is_some()) {

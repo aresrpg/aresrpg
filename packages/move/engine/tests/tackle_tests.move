@@ -67,18 +67,20 @@ fun move_p0(fight: &mut Fight, ver: &Version, cell: u64) {
 // ╔════════════════ [ The contest fires on leaving melee ] ══════════════════ ]
 
 #[test]
-/// engine_mp3_locker0: runner agi 0 (dodge 2) vs one adjacent agi-0 mob (den 4, num 2 — the even contest);
-/// draw 702229519 % 4 = 3 ≥ 2 → TACKLED: the move is DENIED (cell holds) and the runner loses the failed
-/// fraction of both pools — ceil(6·2/4)=3 AP, ceil(3·2/4)=2 MP → AP 6→3, MP 3→1. One Tackled event, no Moved.
-fun move_out_of_melee_contested_and_denied() {
+/// engine_mp3_locker0 under THE TOLL (ruling #239): runner agi 0 (dodge 2) vs one adjacent agi-0 mob (den 4,
+/// num 2 — the even contest); draw 702229519 % 4 = 3 ≥ 2 → the escape FAILS. Not a wall: the runner is taxed
+/// the failed fraction of both pools — ceil(6·2/4)=3 AP, ceil(3·2/4)=2 MP → AP 6→3, MP 3→1 — and then the
+/// surviving 1 MP still WALKS: the 2-cell request (165→167) truncates to its 1-cell prefix (165→166), MP→0.
+/// One Tackled AND one Moved — the move progressed, never a hard pin.
+fun move_out_of_melee_taxed_then_walks_survivor() {
   let mut sc = ts::begin(OWNER);
   let (mut fight, ver) = active_adjacent_fight(&mut sc);
   move_p0(&mut fight, &ver, 167);
   let (cell, ap, mp) = p_state(&fight);
-  assert!(cell == 165, 0); // move denied — the runner never left the tackle zone
+  assert!(cell == 166, 0); // the toll walked the affordable 1-cell prefix — never pinned at 165
   assert!(ap == 3, 1);
-  assert!(mp == 1, 2);
-  assert!(event::events_by_type<fight_events::Moved>().is_empty(), 3); // a denied move never emits Moved
+  assert!(mp == 0, 2); // 3 − 2 tax = 1 survivor, then the 1-cell walk spends it
+  assert!(event::events_by_type<fight_events::Moved>().length() == 1, 3); // the taxed move DID walk
   let tackled = event::events_by_type<fight_events::Tackled>();
   assert!(tackled.length() == 1, 4);
   let (_fid, runner_is_mob, runner_idx, ap_lost, mp_lost, num, den) =
@@ -157,31 +159,33 @@ fun invisible_tackler_still_locks() {
   assert!(statuses::is_invisible(&fight, true, 0), 0);
   move_p0(&mut fight, &ver, 167);
   let (cell, ap, mp) = p_state(&fight);
-  assert!(cell == 165 && ap == 3 && mp == 1, 1); // engine_mp3_locker0 numbers — invisibility changed nothing
+  assert!(cell == 166 && ap == 3 && mp == 0, 1); // engine_mp3_locker0 toll numbers — invisibility changed nothing
   assert!(event::events_by_type<fight_events::Tackled>().length() == 1, 2);
   ts::return_shared(fight);
   ts::return_shared(ver);
   sc.end();
 }
 
-// ╔════════════════ [ Re-attempts reprice — the MP-bound roll ] ══════════════ ]
+// ╔════════════════ [ The toll can consume everything — the honest 0-cell walk ] ══════════════ ]
 
 #[test]
-/// A failed escape LOSES pools and thereby RE-PRICES the next attempt (the tackle state folds the runner's live
-/// MP, which strictly decreases on every failure — no free identical re-roll). Cascade at agi 0 vs agi 0:
-///   attempt 1 (slot 0, mp 3): draw 702229519 % 4 = 3 ≥ 2 → tackled, AP 6→3, MP 3→1
-///   attempt 2 (slot 0, mp 1): draw 1887051738 % 4 = 2 ≥ 2 → tackled, AP 3→1 (ceil 1.5), MP 1→0
-/// Two Tackled events, still standing on 165, MP exhausted by the zone itself.
-fun failed_escape_reprices_the_next_attempt() {
+/// THE TOLL CAN CONSUME EVERYTHING (ruling #239): an overwhelming lock (runner agi 0 vs mob agi 1000 → num 2,
+/// den 204) taxes both pools to 0 on the failed escape (draw 702229519 % 204 = 115 ≥ 2), so the surviving MP is
+/// 0 and the move walks NOWHERE — a legitimate 0-cell outcome decided by the SURVIVOR, not by a hard pin. Cell
+/// held 165, AP 6→0 (ceil 6·202/204), MP 3→0 (ceil 3·202/204), one Tackled, NO Moved (a 0-cell walk emits none).
+fun overwhelming_lock_taxes_all_mp_walks_zero() {
   let mut sc = ts::begin(OWNER);
   let (mut fight, ver) = active_adjacent_fight(&mut sc);
-  move_p0(&mut fight, &ver, 167);
-  let (cell1, ap1, mp1) = p_state(&fight);
-  assert!(cell1 == 165 && ap1 == 3 && mp1 == 1, 0);
-  move_p0(&mut fight, &ver, 166); // 1-step retry within the reduced MP
-  let (cell2, ap2, mp2) = p_state(&fight);
-  assert!(cell2 == 165 && ap2 == 1 && mp2 == 0, 1);
-  assert!(event::events_by_type<fight_events::Tackled>().length() == 2, 2);
+  mob::set_stats_for_testing(fight::mobs_mut(&mut fight).borrow_mut(0), agi_stats(1000));
+  move_p0(&mut fight, &ver, 166); // a 1-cell request; the tax zeroes MP, so the toll still walks 0
+  let (cell, ap, mp) = p_state(&fight);
+  assert!(cell == 165, 0); // walked 0 — the tax left no MP to spend
+  assert!(ap == 0 && mp == 0, 1);
+  assert!(event::events_by_type<fight_events::Moved>().is_empty(), 2); // a 0-cell walk emits no Moved
+  let tackled = event::events_by_type<fight_events::Tackled>();
+  assert!(tackled.length() == 1, 3);
+  let (_fid, _rim, _ri, ap_lost, mp_lost, num, den) = fight_events::tackled_for_testing(tackled.borrow(0));
+  assert!(ap_lost == 6 && mp_lost == 3 && num == 2 && den == 204, 4);
   ts::return_shared(fight);
   ts::return_shared(ver);
   sc.end();

@@ -31,9 +31,10 @@ import {
 /**
  * Contest the start-cell tackle ONCE: every living enemy adjacent to `entity_id`'s current cell locks the exit
  * as one exact product fraction (fight_tackle.js — the Move-parity math home). Returns the rng-advanced state
- * plus whether the mover ESCAPED; a failed escape applies the AP/MP penalty and denies the move. No adjacent
- * enemy ⇒ a free escape with NO roll (rng untouched). The single home shared by apply_move and the ordinary-move
- * trap walk (reduce.js) — both contest exactly once, before any cell is entered.
+ * plus whether the mover ESCAPED; a failed escape applies the AP/MP penalty (the toll — ruling #239, see
+ * apply_move) but never itself denies the move. No adjacent enemy ⇒ a free escape with NO roll (rng untouched).
+ * The single home shared by apply_move and the ordinary-move trap walk (reduce.js) — both contest exactly once,
+ * before any cell is entered.
  * @param {import('./fight_state.js').FightState} state
  * @param {string} entity_id
  * @returns {{ state: import('./fight_state.js').FightState, escaped: boolean }}
@@ -51,7 +52,8 @@ export const contest_tackle = (state, entity_id) => {
   const roll = rng_int(state.rng, escape.den)
   if (roll.value < escape.num)
     return { state: { ...state, rng: roll.state }, escaped: true }
-  // A failed escape loses the failed fraction of both pools and denies movement.
+  // A failed escape loses the failed fraction of both pools — THE TOLL (ruling #239), not a wall: apply_move's
+  // caller still walks the taxed survivor, so this commits the tax only and never denies movement itself.
   const { ap_lost, mp_lost } = tackle_losses(
     entity.ap,
     entity.mp,
@@ -71,11 +73,51 @@ export const contest_tackle = (state, entity_id) => {
 }
 
 /**
- * Apply a movement path with the exact multi-lock agility contest.
+ * THE TAXED-WALK STEPPER (ruling #239, Move twin movement::walk_prefix) — shared by apply_move's tackled branch
+ * AND reduce.js's walk_path, which each own their OWN single contest_tackle roll (re-contesting here would
+ * double-roll the rng thread, diverging from the Move side's one-roll-per-move contract). Walks up to `cap`
+ * cells of `path` (excludes the start cell) toward the destination, stopping EARLY the instant it enters a
+ * trap-covered cell — never fires it, never resumes (asymmetric with an escaped walk's #325 multi-trap resume);
+ * the caller fires the ONE trap afterward if `entered_trap`.
+ * @param {import('./fight_state.js').FightState} state  already tax-applied (contest_tackle's tackled_state)
+ * @param {string} entity_id
+ * @param {import('./cell.js').Cell[]} path   inclusive of the start cell (steps index from path[1])
+ * @param {number} cap  min(requested path length, surviving MP)
+ * @returns {{ state: import('./fight_state.js').FightState, steps: number, entered_trap: boolean }}
+ */
+export const walk_taxed_prefix = (state, entity_id, path, cap) => {
+  let walked_state = state
+  let steps = 0
+  let entered_trap = false
+  while (steps < cap) {
+    const next_cell = path[steps + 1]
+    walked_state = update_entity(walked_state, entity_id, e => ({
+      ...e,
+      cell: next_cell,
+      mp: Math.max(0, e.mp - 1),
+      mp_used: e.mp_used + 1,
+    }))
+    steps += 1
+    if (state.traps.some(trap => trap.cells.some(c => c.x === next_cell.x && c.y === next_cell.y))) {
+      entered_trap = true
+      break
+    }
+  }
+  return { state: walked_state, steps, entered_trap }
+}
+
+/**
+ * Apply a movement path with the exact multi-lock agility contest. A failed escape is a TOLL, not a wall
+ * (ruling #239, Move twin actions.move::apply_move + movement::walk_prefix): contest_tackle already committed
+ * the AP/MP tax; the survivor still walks the SAME requested path, cell by cell, stopping at whichever comes
+ * first — the surviving MP or a trapped cell (`cells_moved` reports the prefix actually walked — 0 only when
+ * the tax leaves no MP). Unlike an escaped walk (reduce.js walk_path, #325 resume), a taxed walk that reaches a
+ * trap stops there and does NOT fire it — `entered_trap` tells the caller to fire it exactly once, same as
+ * Move's `if (entered_trap) cast::trigger_on_enter(...)` tail.
  * @param {import('./fight_state.js').FightState} state
  * @param {string} entity_id
  * @param {import('./cell.js').Cell[]} path   inclusive of the start cell
- * @returns {{ state: import('./fight_state.js').FightState, success: boolean, error?: string, tackled?: boolean, cells_moved: number }}
+ * @returns {{ state: import('./fight_state.js').FightState, success: boolean, error?: string, tackled?: boolean, cells_moved: number, entered_trap?: boolean }}
  */
 export const apply_move = (state, entity_id, path) => {
   if (!state.started)
@@ -96,14 +138,23 @@ export const apply_move = (state, entity_id, path) => {
     return { state, success: false, error: 'INSUFFICIENT_MP', cells_moved: 0 }
 
   const contest = contest_tackle(state, entity_id)
-  if (!contest.escaped)
+  if (!contest.escaped) {
+    // THE TOLL (ruling #239): contest_tackle already committed the AP/MP tax; the survivor walks the SAME
+    // requested path cell by cell, stopping at whichever comes first — the surviving MP or a trapped cell (Move
+    // twin movement::walk_prefix — never resumes past a trap, unlike an escaped walk's #325 resume). A tax that
+    // zeroes MP legitimately walks 0 cells; it is never a hard cells_moved:0 pin regardless of path length.
+    const survivor = find_entity(contest.state, entity_id)
+    const cap = Math.min(mp_cost, survivor?.mp ?? 0)
+    const walked = walk_taxed_prefix(contest.state, entity_id, path, cap)
     return {
-      state: contest.state,
+      state: walked.state,
       success: false,
       tackled: true,
-      cells_moved: 0,
+      cells_moved: walked.steps,
       error: 'TACKLED',
+      entered_trap: walked.entered_trap,
     }
+  }
 
   // Relocate along the path (skip the start cell), then deduct MP for the distance traveled.
   const destination = path[path.length - 1]

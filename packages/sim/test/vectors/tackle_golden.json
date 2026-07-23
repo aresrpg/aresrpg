@@ -136,7 +136,7 @@
     "turn_seed": 3840164576,
     "cases": [
       {
-        "id": "move_out_of_melee_contested_and_denied",
+        "id": "move_out_of_melee_contested",
         "slot": 0,
         "mp": 3,
         "ap": 6,
@@ -180,7 +180,7 @@
         "escaped": true
       },
       {
-        "id": "failed_escape_reprices_the_next_attempt",
+        "id": "low_mp_reprices_the_tackle_seed",
         "slot": 0,
         "mp": 1,
         "ap": 3,

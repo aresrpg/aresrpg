@@ -565,13 +565,15 @@ export function DungeonBoard() {
     })
   }
 
-  // NO-WALK LAW (v31 — tackles are deterministic, so the walk must not be allowed at all): when
-  // next_move_tackle says my next move fails its escape, the walk NEVER starts. Predict the sim's EXACT outcome
-  // (fight_actions.apply_move failed-escape = cells_moved 0, both pools bitten): the 'Tackled' action folds the
-  // forfeit THIS frame + the hit-anim/pool-forfeit beat plays — the SAME action + producer the receipt uses, so
-  // the receipt's own Tackled event CONFIRMS (version-purge → re-fold), never corrects. Zero displacement — the
-  // move draft is untouched, my_key stays on its committed cell.
-  const predict_tackle = ({ ap_lost, mp_lost }) => {
+  // THE TOLL (ruling #239 — a failed escape is a toll, not a wall): when next_move_tackle says my next move
+  // fails its escape, I predict the sim's EXACT outcome (fight_actions.apply_move failed-escape = tax then a
+  // partial walk). Two folds THIS frame, the SAME actions + producer the receipt uses so the receipt's own
+  // [Tackled, Moved] CONFIRMS (version-purge → re-fold), never corrects: (1) the 'Tackled' action drops both
+  // pools + plays the hit-anim/forfeit beat; (2) a 'move' to the SURVIVOR prefix — the requested destination
+  // truncated to the MP that survived the tax — walks after it. A bitten move is always the FIRST step out of
+  // the zone (once you've walked a cell you're no longer adjacent), so the anchor is the committed chain cell;
+  // a tax that zeroes MP folds the forfeit alone (the chain emits no Moved), my_key holding its committed cell.
+  const predict_tackle = ({ ap_lost, mp_lost }, dest_cell) => {
     const runner_idx = dungeon.escrow.findIndex((p) => (p.character ?? p.character_id) === entity_id)
     if (runner_idx < 0) return
     fight_store.getState().input({
@@ -585,6 +587,27 @@ export function DungeonBoard() {
             character != null ? String(character) : is_mob ? `mob-${Number(idx)}` : entity_id,
         }
       ),
+    })
+    // THE SURVIVOR WALK: the taxed move still walks whatever MP survived, toward dest_cell along the same BFS
+    // route, truncated to the affordable prefix. The Moved carries the EXPLICIT post-tax remaining MP (absolute),
+    // so the fold order (Tackled tax → Moved) lands the exact chain numbers. Zeroed survivor ⇒ no walk (chain
+    // emits no Moved either), so my_key holds its committed cell.
+    const survived = Math.max(0, my_mp_eff - mp_lost)
+    if (survived <= 0 || dest_cell == null) return
+    const blocked = presentation_blocked_cells(dungeon, fight?.fighters, entity_id, optimistic_vacated)
+    const from_enc = me.committed?.cell ?? me.cell // the FIRST move of the turn contests → anchor on the chain cell
+    const route = bfsPath(from_enc, dest_cell, blocked, GRID_CELLS) // encoded cells, inclusive of from_enc
+    const walked = Math.min(route.length - 1, survived)
+    if (walked <= 0) return
+    fight_store.getState().input({
+      type: 'intent',
+      intent: { kind: 'move', character: entity_id, to_cell: route[walked], mp_left: survived - walked },
+      beats: local_move_beats({
+        fight_id: fight.fight_id,
+        character: entity_id,
+        to_cell: route[walked],
+        path: route.slice(1, walked + 1).map(decode),
+      }),
     })
   }
 
@@ -988,16 +1011,16 @@ export function DungeonBoard() {
     // free cancel-and-replay that also ate the turn clock, feeding ③). Rollback of a draft is not a user gesture; a
     // click on your own cell is now an inert no-op (the anchor is excluded from `reachable`) and a drafted turn stands.
     if (reachable.has(cell)) {
-      // NO-WALK LAW (v31 — tackles are deterministic, so the walk must not be allowed at all): consult the
-      // SAME deterministic contest the commit path enforces. A bitten move is STILL a committed attempt — the
-      // chain rolls act_move(cell), fails the escape, and forfeits both pools with ZERO displacement (the sim's
-      // apply_move → cells_moved 0) — so it STAGES like any move (the receipt then CONFIRMS the forfeit; an
-      // unstaged forfeit would revert on the next commit). Only the OPTIMISTIC PRESENTATION differs: an escaping
-      // roll walks as before; a bitten one predicts the forfeit + hit-anim THIS frame and the walk NEVER starts.
+      // THE TOLL (ruling #239): consult the SAME deterministic contest the commit path enforces. A bitten move
+      // is STILL a committed attempt — the chain rolls act_move(cell), fails the escape, taxes both pools, and
+      // then WALKS the survivor prefix — so it STAGES like any move (the receipt then CONFIRMS; an unstaged
+      // forfeit/walk would revert on the next commit). Only the OPTIMISTIC PRESENTATION branches: an escaping
+      // roll walks the full path as before; a bitten one predicts the tax + hit-anim AND the survivor walk THIS
+      // frame, so the receipt's [Tackled, Moved] confirms, never corrects.
       const bite = next_move_tackle(fight_store.getState())
       append_move_step(cell)
-      fight_store.getState().input({ type: 'stage', intent: { kind: 0, target: cell, landed: !bite } })
-      if (bite) predict_tackle(bite)
+      fight_store.getState().input({ type: 'stage', intent: { kind: 0, target: cell } })
+      if (bite) predict_tackle(bite, cell)
       else optimistic_walk([...move_path, cell])
     }
   }

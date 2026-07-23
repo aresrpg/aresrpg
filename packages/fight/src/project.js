@@ -695,11 +695,12 @@ const tackle_roll = (tseed, slot, mp, ap, num, den) => {
  * we can't spend or WILL loose by trying", respects max range (green ∪ red = the live-MP reach), and NEVER
  * triggers on plain MP spending. A PLAYER move's contest is DETERMINISTIC + PREVIEWABLE (actions.move:
  * tackle_seed(turn_seed, casts_this_turn, live mp) — the golden-pinned sim mirror), so "actually tackled" is
- * a FACT, not a probability: the wash PREVIEWS the exact roll chain — an escaping next roll paints NO red
- * (the move walks free, exactly as the chain will resolve it); a failing one folds the failure chain (each
- * denial strips ceil(mp·lost/den) ≥ 1 MP and reprices the next roll) to the exact MP the bites WILL eat.
- * A view without world_seed/spawn_id (legacy/partial read) can't derive the roll — it keeps the fraction
- * risk-band as the honest degraded paint.
+ * a FACT, not a probability: the wash PREVIEWS the exact roll — an escaping next roll paints NO red (the move
+ * walks free, exactly as the chain will resolve it); a FAILING one is THE TOLL (ruling #239): it taxes mp_lost
+ * then walks whatever survives, so the green reach is bfs(surviving MP) and the red band is the truncated
+ * remainder the tax ate. One roll — the toll walks and progresses, never a pin-and-retry loop. A view without
+ * world_seed/spawn_id (legacy/partial read) can't derive the roll — it keeps the fraction risk-band as the
+ * honest degraded paint (the same survivor shape, worst-cased).
  *
  * `targeting` is an edge input: an AFFORDABLE armed spell puts the board in cast mode (the blue ranges own it)
  * — its truth needs the frontend seed row (AP cost), unavailable core-side; the adapter passes the verdict of
@@ -735,22 +736,16 @@ export const move_wash = (s, { busy = false, targeting = false } = {}) => {
   const { world_seed, spawn_id } = s.view
   const deadline = s.turn_deadline_ms ?? s.view.turn_deadline_ms
   if (world_seed != null && spawn_id != null && deadline != null) {
-    // EXACT PREVIEW (the chain twin, byte-for-byte): fold the deterministic failure chain via the shared roll —
-    // moves never advance the slot; every denial strips ≥1 MP and reprices the next roll at the lower MP. Only
-    // mp_lost bounds the reach (ap_lost is the EXECUTION's forfeit, not the paint's — so no ap thread here).
+    // EXACT PREVIEW (the chain twin, byte-for-byte): the next move's roll is deterministic. An ESCAPING roll
+    // reaches the full live MP (the walk is free — NO red); a FAILED roll is THE TOLL (ruling #239) — it taxes
+    // mp_lost then WALKS the survivor, so the reach is exactly bfs(surviving MP) and the red band is the toll's
+    // truncated remainder. ONE roll: the toll walks once and progresses (no pin-and-retry loop). Only mp_lost
+    // bounds the paint (ap_lost is the EXECUTION's forfeit, not the reach's — so no ap thread here).
     const tseed = turn_seed({ world_seed, spawn_id, turn_deadline_ms: deadline, seat })
     const slot = my_next_move_slot(s, seat, row)
-    let mp_now = mp
-    let bitten = false
-    while (mp_now > 0) {
-      const bite = tackle_roll(tseed, slot, mp_now, ap, num, den)
-      if (!bite) break // this attempt ESCAPES — the walk proceeds at mp_now
-      bitten = true
-      if (!(bite.mp_lost > 0)) break // unreachable while lost > 0 ∧ mp > 0 (ceil ≥ 1); belt against a stuck fold
-      mp_now -= bite.mp_lost
-    }
-    if (!bitten) return free // the next move walks free — NO red (the "red then walked free" killer)
-    const keep = new Set(bfsReachable(me.cell, mp_now, blocked))
+    const bite = tackle_roll(tseed, slot, mp, ap, num, den)
+    if (!bite) return free // the next move escapes — NO red (the "red then walked free" killer)
+    const keep = new Set(bfsReachable(me.cell, Math.max(0, mp - bite.mp_lost), blocked))
     return {
       armed,
       tackled: true,
@@ -771,12 +766,13 @@ export const move_wash = (s, { busy = false, targeting = false } = {}) => {
 }
 
 /**
- * THE MOVE'S TACKLE — the deterministic forfeit MY next move's escape roll WILL take, or null when the move
- * walks free (no living enemy locks me, the roll escapes, I have no MP to spend, or a seed-less view can't
- * derive the roll — then the receipt rules). The chain twin of ONE actions.move roll, the SAME contest
- * move_wash previews, EXPOSED so the optimistic execution obeys the tackle law: tackles are
- * deterministic, so the walk is never allowed at all — a bitten move NEVER walks; the client predicts the
- * sim's exact resolution (apply_move failed-escape = cells_moved 0, both pools bitten). Shares `tackle_roll`.
+ * THE MOVE'S TACKLE — the deterministic forfeit (AP/MP tax) MY next move's escape roll WILL take, or null when
+ * the move walks free (no living enemy locks me, the roll escapes, I have no MP to spend, or a seed-less view
+ * can't derive the roll — then the receipt rules). The chain twin of ONE actions.move roll, the SAME contest
+ * move_wash previews, EXPOSED so the optimistic execution obeys THE TOLL (ruling #239): a failed escape is not a
+ * wall — the caller folds this forfeit and THEN walks the survivor (mp − mp_lost) prefix toward the target, so
+ * the client predicts the sim's exact resolution (apply_move failed-escape = tax then partial walk) and the
+ * receipt (Tackled + Moved) confirms, never corrects. Shares `tackle_roll`.
  * @param {any} s the fight store state @returns {{ ap_lost: number, mp_lost: number } | null}
  */
 export const next_move_tackle = (s) => {
