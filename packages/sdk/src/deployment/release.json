@@ -1,97 +1,122 @@
 {
   "schema": 1,
-  "generated_at": "2026-07-21T21:37:37.000Z",
+  "generated_at": "2026-07-23T14:44:00.289Z",
   "networks": {
     "testnet": {
       "chain_id": "",
-      "source_hash": "8731e8b894a5437e138b40dd1750fd7aa52a22f328b0f38c0fdd7497d0701688",
+      "source_hash": "f8403bc4ccacc30891690f32fc427acee7700fc912af6987dd97d23ab22f2971",
       "packages": {
         "foundation": {
-          "origin": "0xdddba0b8cef57969c920a39a989fd2e4744164e2072d1215e50d2d21c97bc4e8",
-          "latest": "0x45ecb708a615dae112f3c99a4166b5be98ef9f4cf4c44999c30920cc3431c0aa",
-          "upgrade_cap": "0x4ae5d75fe6b6fb40941d3bad8fa30fe2badd7a839c15cb6c5aff56da26e7d960",
+          "origin": "0x5ef0588d117303f7153341915d1c56713e715ed8b2065cc7890e9895fda9cf7c",
+          "latest": "0x5ef0588d117303f7153341915d1c56713e715ed8b2065cc7890e9895fda9cf7c",
+          "previous": [
+            "0x45ecb708a615dae112f3c99a4166b5be98ef9f4cf4c44999c30920cc3431c0aa"
+          ],
+          "upgrade_cap": "0x5402d6b90c998f72211e2b449523b3afcb342e147b50b501d7a4f10c07dd34bc",
           "admin": "",
           "caps": {},
           "publishers": {},
           "displays": {}
         },
         "spells": {
-          "origin": "0x44e7d0aae7858f4aa83eef223d4c0f1e45d18929f0bd1b3044be98f0572861c8",
-          "latest": "0x44e7d0aae7858f4aa83eef223d4c0f1e45d18929f0bd1b3044be98f0572861c8",
-          "upgrade_cap": "0x6013501c3ab5856b605957603cd2ded85de7c9888609663ed065cd495bd0f2e8",
-          "admin": "0x4312de1b8c584a4110909b2f3e1aae9ba9af35acb3b8aefe6e1a1f943380c4e0",
+          "origin": "0xa6bb254751113eb80256891fbceac4f0f997ca42ae407a0dadc9294d6977340a",
+          "latest": "0xa6bb254751113eb80256891fbceac4f0f997ca42ae407a0dadc9294d6977340a",
+          "previous": [
+            "0x44e7d0aae7858f4aa83eef223d4c0f1e45d18929f0bd1b3044be98f0572861c8"
+          ],
+          "upgrade_cap": "0xb67825ca1da1a21e1b0e634c2524919c25337591be75ccae6b41b62d497301c2",
+          "admin": "0x22c5a7986701bfdcb5d4354e599271c747537ed9f8692eb0996e923fe0e7ae0b",
           "caps": {},
           "publishers": {},
           "displays": {}
         },
         "social": {
-          "origin": "0x2620af297e913e99310f5966981e25d16c44edf3d03c4d8d13e2f0f6755b0983",
-          "latest": "0x2620af297e913e99310f5966981e25d16c44edf3d03c4d8d13e2f0f6755b0983",
-          "upgrade_cap": "0x1df358088163686dd5e7dc0d92ba6ed9817f3f101fb2a9ab3bbf0d4750ee49f2",
-          "admin": "0xfb9def8fc64ebd07477ede45d3b109b47bc86e089f315ab0174e7ab4ea91b5bb",
+          "origin": "0xb129b4b8d310096008a29f17b4c2f9126923e8d943fc5511e7e361d73b1bfd0e",
+          "latest": "0xb129b4b8d310096008a29f17b4c2f9126923e8d943fc5511e7e361d73b1bfd0e",
+          "previous": [
+            "0x2620af297e913e99310f5966981e25d16c44edf3d03c4d8d13e2f0f6755b0983"
+          ],
+          "upgrade_cap": "0x641cfce6b2093e401b82dff0c7b7fd8a1c6e2789b4dbd469e6072f16c0ac6db0",
+          "admin": "0x58b5bd4db95574bc318793fee0f74a5e46424eaceb5589951e62e3f4c32ea687",
           "caps": {},
           "publishers": {},
           "displays": {}
         },
         "engine": {
-          "origin": "0x599bda2208863411b5753d1fee3af86095a26b625ee4136ba7469f7d5e23dafb",
-          "latest": "0xcc072a0dfd2084bb56af81e6d7142bd1e79389a7373488b2d7bbe48769372c7b",
+          "origin": "0xb9859920a061396f2b319789d9cb83620dcac2c33e873a62855fbf894386f80f",
+          "latest": "0xb9859920a061396f2b319789d9cb83620dcac2c33e873a62855fbf894386f80f",
           "previous": [
-            "0x6145a3ecffe1f32f56d1ff973904aa342248feb3d9364639dba746cb492a0070"
+            "0x6145a3ecffe1f32f56d1ff973904aa342248feb3d9364639dba746cb492a0070",
+            "0xcc072a0dfd2084bb56af81e6d7142bd1e79389a7373488b2d7bbe48769372c7b"
           ],
-          "upgrade_cap": "0x99998b458da902e95e89a1954ab28b13d6e02c1025172a3146c099f45f76a4fb",
-          "admin": "0xd7468c4625f6a27cb3d863931db1267b8978811ac1677862e27fb97f5de02d84",
+          "upgrade_cap": "0x986c95c0f17cd58c2269d4d788765039bb4f2a88630f1dba169010e902e67452",
+          "admin": "0xb15de540e872d012e9aea74b9fd85658cb37ca449ca350eb92f48053e2e34eb2",
           "caps": {},
           "publishers": {},
           "displays": {}
         },
         "aresrpg": {
-          "origin": "0x4217b46f8dfe7c1ccc6a5e1c37e012a53bf25b07e0edb228a3c5a1575eeb2b06",
-          "latest": "0xae597a84ce38729bc0c2f272f9f76513c857fb95d8d571867f6253f9d5935083",
-          "upgrade_cap": "0xa2fde4c7b23fd512ed1cf6cfe5abc4e86fda95509bdc68219bd80a7d79148432",
-          "admin": "0x60200a144b9a6e2a69cb685bd6291c07207bbc7a02f2988e3680f7674b4f7d19",
+          "origin": "0xc05c8d9f65e4ee0a6dc9463c8c90341085daa062184043e1a6fd75bccd6842e1",
+          "latest": "0xc05c8d9f65e4ee0a6dc9463c8c90341085daa062184043e1a6fd75bccd6842e1",
+          "previous": [
+            "0xae597a84ce38729bc0c2f272f9f76513c857fb95d8d571867f6253f9d5935083"
+          ],
+          "upgrade_cap": "0xc4c3839ba5f09cea2b7c262fadcad7cc14fbb2536b87ea498fb923445c35e0a1",
+          "admin": "0x8cef9b3354ce2e7c546c3e660e95123b7ce81b5b8effcee82a0a2caa6d16f704",
           "caps": {},
           "publishers": {
-            "character": "0x2628acb855216ea5ced61261e36214c2fb932179f9edc52c0dd5a216f0ad3467",
-            "item": "0x4d2e47a6eb27e0b25097f4ba671a400b27df98767f41bad7c8835bda4c931280"
+            "item": "0x01ae81c3eab0e49515f18091d61776f1e0680f8a7ac871165c78d87fbba680e7",
+            "character": "0x3e838a399baeb7f05d1c7f15c1ff9b90576eae923603a4c5735dd222e2e49fce"
           },
           "displays": {
-            "Character": "0xeb8b42535a929b952eab1cdf0ff45c7a4e8dd42ae6eec8760ff17d1e513a3bc1",
-            "ItemTemplate": "0xf766362b82d4545a65cbcd935ae4509483c17cf36c69ae2b4c2cd94b5fad8950",
-            "Item": "0xf9eb60e58df58c713a566a7de4c0a8d3d80e5572029c90ae049d7fc70abbd32a"
+            "Item": "0x047d547af761c1be0e9eeb2b7bc9d9f949a55d0180224c2c359c3172af8bd77b",
+            "ItemTemplate": "0x2748f91208e5cb7f005640d9cbb28663165232452b873b44d0e5ef7a42463695",
+            "Character": "0xeebe4bc4d491413b87dceb16630c3fd0e1906d22cb5b7f873cc4812812c83e03"
           }
         },
         "kolizeum": {
-          "origin": "0x09415bbbe02a4e544f69f544ea9af9a780d772490414fcf5d765a03ed3dd9382",
-          "latest": "0x09415bbbe02a4e544f69f544ea9af9a780d772490414fcf5d765a03ed3dd9382",
-          "upgrade_cap": "0xc617b9f5d101acebe620b9c57d49b23d376452de79ac8024570b2d5eb23fcdd1",
+          "origin": "0xc717b9b4d85cfeae23ba4151124246de9055f93de4686caaf07961aa2185b643",
+          "latest": "0xc717b9b4d85cfeae23ba4151124246de9055f93de4686caaf07961aa2185b643",
+          "previous": [
+            "0x09415bbbe02a4e544f69f544ea9af9a780d772490414fcf5d765a03ed3dd9382"
+          ],
+          "upgrade_cap": "0x141f2390ebda8d7dd40d28c3ad6e992b40f2d112a328a13394334b10ddc06102",
           "admin": "",
           "caps": {},
           "publishers": {},
           "displays": {}
         },
         "forgemagie": {
-          "origin": "0xa17b84ab53dc6240f4cce252e659ccb8a0cf1cee63f19e45dbbbff2ab18c1ecd",
-          "latest": "0xa17b84ab53dc6240f4cce252e659ccb8a0cf1cee63f19e45dbbbff2ab18c1ecd",
-          "upgrade_cap": "0x976d47d1b383d9b24e92ff3fc84c947602fbb486e67316c44472eb6281882273",
+          "origin": "0x65b43e00d4d2e4ddde3faf8ac3c4ee6657a23118c0f8829bd2d636ebcca57d7b",
+          "latest": "0x65b43e00d4d2e4ddde3faf8ac3c4ee6657a23118c0f8829bd2d636ebcca57d7b",
+          "previous": [
+            "0xa17b84ab53dc6240f4cce252e659ccb8a0cf1cee63f19e45dbbbff2ab18c1ecd"
+          ],
+          "upgrade_cap": "0x4b5811790750202b20afb3591338a74bee8a5103be819a5143c6347862788104",
           "admin": "",
           "caps": {},
           "publishers": {},
           "displays": {}
         },
         "gifting": {
-          "origin": "0xba6478830d79cb391c2a625ee1ed013ede2b91022cf6057bb0613a08f7e64b7a",
-          "latest": "0xba6478830d79cb391c2a625ee1ed013ede2b91022cf6057bb0613a08f7e64b7a",
-          "upgrade_cap": "0xa1756c0c1ae1d7ff07e91ff67aaed0ed8854009a31195fd569b3316e2df73c3e",
+          "origin": "0xa9227ff284dea3524e0b981e9b9aaaf7105f53d41d2483c33217da5fed18bda8",
+          "latest": "0xa9227ff284dea3524e0b981e9b9aaaf7105f53d41d2483c33217da5fed18bda8",
+          "previous": [
+            "0xba6478830d79cb391c2a625ee1ed013ede2b91022cf6057bb0613a08f7e64b7a"
+          ],
+          "upgrade_cap": "0x94bdaddfa7b7de33f9f7b0ad6140f925ced971f7f508e0da5bbb304425021c5e",
           "admin": "",
           "caps": {},
           "publishers": {},
           "displays": {}
         },
         "dungeon": {
-          "origin": "0x1d9c1359a63bc181906cb3795f9991d4a14dbf810bde69adc8b5ef642bd20940",
-          "latest": "0x1d9c1359a63bc181906cb3795f9991d4a14dbf810bde69adc8b5ef642bd20940",
-          "upgrade_cap": "0xfec792f01316b7d5516e1f23c34c469be1fd1a0ebef39e732d990e2a52b9b1ea",
+          "origin": "0x1c6e8d316c820dac00ba7220e124ba01b9792e76185f239d7326dcd0ea4704b0",
+          "latest": "0x1c6e8d316c820dac00ba7220e124ba01b9792e76185f239d7326dcd0ea4704b0",
+          "previous": [
+            "0x1d9c1359a63bc181906cb3795f9991d4a14dbf810bde69adc8b5ef642bd20940"
+          ],
+          "upgrade_cap": "0xb1096b9d17a841a015ce92abc465d0f3cc744ab207d440cbe6734751e5d2db47",
           "admin": "",
           "caps": {},
           "publishers": {},
@@ -100,85 +125,85 @@
       },
       "shared": {
         "SPELLS_VERSION": {
-          "id": "0x53a2062e567814ed8286e5a3a3dd4bdbe50a2500f465480e5ca7c23ea824b773",
+          "id": "0x80cd08dc4ac58797b1167aa1754caec5c4d2635f7837546eb704ffddfe5025b7",
           "initial_shared_version": "1"
         },
         "SPELL_REGISTRY": {
-          "id": "0x0a6f41995a3d27b157dc8abc81209c0a0de8d3dcf09429785f2098fa4aa3bab2",
+          "id": "0xd928774266cc266421223df7bbd2ee7eea55722c4c214ce4d22cf1f8e0aa19c4",
           "initial_shared_version": "1"
         },
         "SOCIAL_VERSION": {
-          "id": "0xf271f23a707a3dd7fb6bd21350e17039619450fe3bb639745d622266c43f3d9c",
+          "id": "0xfb0c84fcc777bd2755216fe9de5fedeef793922c90579dd3ca13ea8adbd93f44",
           "initial_shared_version": "1"
         },
         "SOCIAL_FRIEND_REGISTRY": {
-          "id": "0xd7f135a62ef072a8f6cc65ed78f88e8fd37e47aacea97a28747f18819f6b4682",
+          "id": "0x97410fbe2d9408b7dab5005af632638a19d50a79c44ffbcbea5be66833b27baf",
           "initial_shared_version": "1"
         },
         "ENGINE_VERSION": {
-          "id": "0x983ebb635339f21bda360088c349961ab76cd4d24527906d8319cb028d76ccec",
+          "id": "0xf8041e19bce451cae047955254149dffa81d4c6e114ae6cc79f6714fd313e4e8",
           "initial_shared_version": "1"
         },
         "FIGHT_REGISTRY": {
-          "id": "0x06109048503c4895c48c64c46907b8bf9542ceaf9b2d16018a0d57c9b77a425b",
+          "id": "0x6cc2f20a92937726636683816e60e92fc4f5b2b578fbb922f264d4c88528d2b0",
           "initial_shared_version": "1"
         },
         "VERSION": {
-          "id": "0xe1eea0728c6f631f3d24e8cfce8f59a75f1baf0fac5245c5d9350ba14c83a82c",
+          "id": "0xb55fe563fa71fca4b3bbb7fffc8e5e1dc7d2f098ffbf1db7ac5ad811ae739d78",
           "initial_shared_version": "1"
         },
         "GAME_CONFIG": {
-          "id": "0x1d905f5da96a4b0bed3e1e12ab0205cc809162763cd16cc8b2ec9131b3ff5734",
+          "id": "0x67c2b23e53bea7e6044e9a56347ed338d9ab774eaf8224a497cadbf1029bd57e",
           "initial_shared_version": "1"
         },
         "CATALOG": {
-          "id": "0x7e5fa280d75f3d25ddc3d372ae32d258eb2efb1c804d04ac4a949df9be5f4b00",
+          "id": "0x01accd5412bcf96d4235661bc5774845ddb7baac21e3a9485a6c855ad7bbb7db",
           "initial_shared_version": "1"
         },
         "SCRIBE_CONFIG": {
-          "id": "0x27632ca4177ab32a572d4bc0f127a311da5d5581510fa82ca3264ca777482ff3",
+          "id": "0x69c76f81183984f8159e94549bda7234f49b8ac32fa8d762b263c83d053d23a2",
           "initial_shared_version": "1"
         },
         "PET_FEED_CONFIG": {
-          "id": "0x0305c90a518e339790421074adea8db423dea238a0940833046a635dca9551e0",
+          "id": "0xe193439000262b645e47c096ef015a2f471ba5203ef0d46abedd5a0a1821ddf0",
           "initial_shared_version": "1"
         },
         "CREATION": {
-          "id": "0x8b71e53a1aa165ee162c3ac68d8fc272310f7d882bc4e424f4d368799095f29e",
+          "id": "0x9599bb5d3193f641547828f6e05e450cae5274fb33b14638b5a2e1e717b73d2f",
           "initial_shared_version": "1"
         },
         "POOL_REGISTRY": {
-          "id": "0x2bb14878cdbaccf746afb134901399df6870966befb9a83ed00a0000ce030c5e",
+          "id": "0x28a37a3372363a67b7ab3dee252c4fdada0b368d193b8530cf1d150c1fa9233a",
           "initial_shared_version": "1"
         },
         "LOOT_REGISTRY": {
-          "id": "0x57547db72cf98a65008c19d7d274eea6af50da8619e5ac8ad2594a7d86efa0ca",
+          "id": "0x65810330390367ac387b5e04f516065a4348881d4b2a1976c369b4a31ca6c372",
           "initial_shared_version": "1"
         },
         "CRUSH_BOARD": {
-          "id": "0xd9a50f3910c91cb963069ddcc5e3808b5b39dafddcab9831e89685c63faa2542",
-          "initial_shared_version": "248"
+          "id": "0x3dac6e0ac18637a280d2f3b8007c26e99702994d53469d587aada41f650b9a1e",
+          "initial_shared_version": "2"
         }
       },
       "policies": {
         "character": {
-          "id": "0x7518bcafc2acd44b4ea8eda6e7f466ecc0c5ca0721bbf1b9d14f1c802ba83854",
+          "id": "0x8f6e6794df32a46baa24c004014bad1e71866e914bf131fafcc11b919488b1fb",
           "initial_shared_version": "2",
-          "cap": "0xae65c35817f65c0230d00eae5f7b76c87f3b31526ebf42eded8bde7b30228d43"
+          "cap": "0x9405d0021b36a2dc7abcd46fdfe144df4768fd56878c33f387fbb77c61e64033"
         },
         "item": {
-          "id": "0xc07b818f82ccee1c6a783852ba7a9fbae95baac158a12123c25444d47b6b86dc",
+          "id": "0xb947e71d2bc88af98ea5ad0ffc5dbdf26573fc8cd1986c93430d8be8560bd497",
           "initial_shared_version": "2",
-          "cap": "0xb6554976c7e28efbc78fdf33fae464d7f636f30f93fff22611ac30a7aeb6e948"
+          "cap": "0xb3c6324aae7bfa4fdd1d678a81d47f703f844f128956327b50e59c7c4c8bd001"
         },
         "extract": {
-          "id": "0xfe3516264c94d8b1ea1ecc59104cf49b7a79111baedab17bafad1bfbc9545088",
+          "id": "0xa8ad71a33a75720382b3a3fb7f9d191a943f0649394ebf832f42cedec17c0323",
           "initial_shared_version": "3",
           "cap": ""
         }
       },
       "type_origins": {
-        "zone_group_root": "0x37b108c10c3872a58a397b436151e84e3bf084fcccf061ba617f6cce37670c5b"
+        "zone_group_root": "0xc05c8d9f65e4ee0a6dc9463c8c90341085daa062184043e1a6fd75bccd6842e1"
       },
       "rules_package": "0x0717a13f43deaf5345682153e3633f76cdcf695405959697fcd63f63f289320b",
       "external_coin_types": {
