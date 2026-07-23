@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Transaction } from '@mysten/sui/transactions'
-
 import {
   aresrpg_deployment,
   shared_object_arg,
 } from '../../deployment/aresrpg.js'
 import { as_object_arg } from '../object_arg.js'
+
+import { new_ptb } from './header.js'
 
 // FRIENDS PTB BUILDERS for the STANDALONE `aresrpg_social` package's `friends` module — a NON-TRANSFERABLE,
 // address-bound personal whitelist (§13). There is NO invite / accept / request flow on-chain and none here:
@@ -41,13 +41,25 @@ function require_id(value, name) {
  */
 export function create_friend_list_ptb(context) {
   const { network } = context
-  return ({ tx = new Transaction() } = {}) => {
+  return ({ tx = new_ptb(context.network, context.ids?.aresrpg) } = {}) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     tx.moveCall({
       target: `${require_id(a.SOCIAL_PACKAGE_ID, 'SOCIAL_PACKAGE_ID')}::friends::create_friend_list`,
       arguments: [
-        shared_object_arg(tx, network, 'SOCIAL_FRIEND_REGISTRY', true, a.SOCIAL_FRIEND_REGISTRY), // registry: &mut FriendRegistry (S-51b static — &mut → mutable:true)
-        shared_object_arg(tx, network, 'SOCIAL_VERSION', false, a.SOCIAL_VERSION), // version: &Version (social's own — S-51b static)
+        shared_object_arg(
+          tx,
+          network,
+          'SOCIAL_FRIEND_REGISTRY',
+          true,
+          a.SOCIAL_FRIEND_REGISTRY,
+        ), // registry: &mut FriendRegistry (S-51b static — &mut → mutable:true)
+        shared_object_arg(
+          tx,
+          network,
+          'SOCIAL_VERSION',
+          false,
+          a.SOCIAL_VERSION,
+        ), // version: &Version (social's own — S-51b static)
       ],
     })
     return tx
@@ -61,14 +73,24 @@ export function create_friend_list_ptb(context) {
  */
 export function add_friend_ptb(context) {
   const { network } = context
-  return ({ friend_list_id, addr, tx = new Transaction() }) => {
+  return ({
+    friend_list_id,
+    addr,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     tx.moveCall({
       target: `${require_id(a.SOCIAL_PACKAGE_ID, 'SOCIAL_PACKAGE_ID')}::friends::add_friend`,
       arguments: [
         as_object_arg(tx, friend_list_id), // list: &mut FriendList (the caller's own; OWNED — ref-or-id seam)
         tx.pure.address(addr), // addr: address
-        shared_object_arg(tx, network, 'SOCIAL_VERSION', false, a.SOCIAL_VERSION), // version: &Version (S-51b static)
+        shared_object_arg(
+          tx,
+          network,
+          'SOCIAL_VERSION',
+          false,
+          a.SOCIAL_VERSION,
+        ), // version: &Version (S-51b static)
       ],
     })
     return tx
@@ -82,14 +104,24 @@ export function add_friend_ptb(context) {
  */
 export function remove_friend_ptb(context) {
   const { network } = context
-  return ({ friend_list_id, addr, tx = new Transaction() }) => {
+  return ({
+    friend_list_id,
+    addr,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     tx.moveCall({
       target: `${require_id(a.SOCIAL_PACKAGE_ID, 'SOCIAL_PACKAGE_ID')}::friends::remove_friend`,
       arguments: [
         as_object_arg(tx, friend_list_id), // list: &mut FriendList (the caller's own; OWNED — ref-or-id seam)
         tx.pure.address(addr), // addr: address
-        shared_object_arg(tx, network, 'SOCIAL_VERSION', false, a.SOCIAL_VERSION), // version: &Version (S-51b static)
+        shared_object_arg(
+          tx,
+          network,
+          'SOCIAL_VERSION',
+          false,
+          a.SOCIAL_VERSION,
+        ), // version: &Version (S-51b static)
       ],
     })
     return tx

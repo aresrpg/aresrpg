@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Transaction } from '@mysten/sui/transactions'
-
 import {
   aresrpg_deployment,
   shared_object_arg,
 } from '../../deployment/aresrpg.js'
 import { as_object_arg } from '../object_arg.js'
+
+import { new_ptb } from './header.js'
 
 /**
  * @typedef {Object} SplitStackArgs
@@ -14,16 +14,16 @@ import { as_object_arg } from '../object_arg.js'
  * @property {string} personal_kiosk_cap_id
  * @property {string} item_id
  * @property {bigint | number | string} amount
- * @property {Transaction} [tx]
+ * @property {import('@mysten/sui/transactions').Transaction} [tx]
  *
- * @typedef {Omit<SplitStackArgs, 'tx'> & {tx: Transaction}} SplitStackCommandArgs
+ * @typedef {Omit<SplitStackArgs, 'tx'> & {tx: import('@mysten/sui/transactions').Transaction}} SplitStackCommandArgs
  *
  * @typedef {Object} MergeStackArgs
  * @property {string} kiosk_id
  * @property {string} personal_kiosk_cap_id
  * @property {string} target_item_id
  * @property {string} source_item_id
- * @property {Transaction} [tx]
+ * @property {import('@mysten/sui/transactions').Transaction} [tx]
  */
 
 /** @param {bigint | number | string} amount */
@@ -70,7 +70,7 @@ export function split_locked_stack_id(context) {
  * Split `amount` units from a kiosk-locked stack. The Move door extracts the source, applies the package-private
  * Item arithmetic, and re-locks both survivors into this same personal kiosk before returning the new stack ID.
  * @param {import("../../../types.js").Context} context
- * @returns {(args: SplitStackArgs) => Transaction}
+ * @returns {(args: SplitStackArgs) => import('@mysten/sui/transactions').Transaction}
  */
 export function split_stack_ptb(context) {
   const split_locked_stack = split_locked_stack_id(context)
@@ -79,7 +79,7 @@ export function split_stack_ptb(context) {
     personal_kiosk_cap_id,
     item_id,
     amount,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     split_locked_stack({
       kiosk_id,
@@ -96,7 +96,7 @@ export function split_stack_ptb(context) {
  * Merge two same-template kiosk-locked stacks. The Move door extracts both and re-locks the surviving target into
  * this same personal kiosk; no address-delivery path exists in the composer.
  * @param {import("../../../types.js").Context} context
- * @returns {(args: MergeStackArgs) => Transaction}
+ * @returns {(args: MergeStackArgs) => import('@mysten/sui/transactions').Transaction}
  */
 export function merge_stack_ptb(context) {
   const { network } = context
@@ -105,7 +105,7 @@ export function merge_stack_ptb(context) {
     personal_kiosk_cap_id,
     target_item_id,
     source_item_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     if (!target_item_id || !source_item_id)
       throw new Error(

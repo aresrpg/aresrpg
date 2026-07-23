@@ -61,7 +61,9 @@ describe('open_box_ptb — loot_box::open_box builder (terminal &Random)', () =>
   test('MEASURED_OPEN_BOX_GAS_MIST is a generous fixed CEILING (a Sui budget is a ceiling, charged = actual; only a LOW value burns)', () => {
     expect(MEASURED_OPEN_BOX_GAS_MIST).toBe(50_000_000)
     // ×1.5 headroom must stay under the 0.1 SUI hard cap (GAS_CEILING law)
-    expect(Math.ceil(MEASURED_OPEN_BOX_GAS_MIST * 1.5)).toBeLessThanOrEqual(100_000_000)
+    expect(Math.ceil(MEASURED_OPEN_BOX_GAS_MIST * 1.5)).toBeLessThanOrEqual(
+      100_000_000,
+    )
   })
 
   test('WITHOUT a gas override → builds with the ceiling budget (ceil(ceiling × 1.5))', () => {
@@ -102,7 +104,7 @@ describe('claim_pet_ptb — loot_box::claim_pet builder (deterministic)', () => 
     const call = find_call(tx, 'loot_box::claim_pet')
     expect(call.package).toBe(IDS.aresrpg.GIFTING_PACKAGE_ID)
     expect(call.args).toBe(7) // claim, template, config (gifting split), version, kiosk, pkcap, policy
-    expect(targets(tx)).toEqual(['loot_box::claim_pet']) // one call, no &Random ⇒ freely composable
+    expect(targets(tx)).toEqual(['header::aresrpg', 'loot_box::claim_pet']) // header leads, no &Random ⇒ freely composable
     expect(typeof tx.serialize()).toBe('string')
   })
 

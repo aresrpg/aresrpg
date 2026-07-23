@@ -57,7 +57,10 @@ describe('friends builders — refuse loudly when undeployed', () => {
 describe('friends builders — target strings + arg shapes (STANDALONE social package)', () => {
   test('create_friend_list → friends::create_friend_list, 2 args, social package', () => {
     const tx = create_friend_list_ptb(deployed_context)()
-    expect(targets(tx)).toEqual(['friends::create_friend_list'])
+    expect(targets(tx)).toEqual([
+      'header::aresrpg',
+      'friends::create_friend_list',
+    ])
     const call = find_call(tx, 'friends::create_friend_list')
     expect(call.args).toBe(2) // registry + version
     expect(call.package).toBe(IDS.aresrpg.SOCIAL_PACKAGE_ID) // NOT the core PACKAGE_ID

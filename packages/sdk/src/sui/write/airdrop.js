@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Transaction } from '@mysten/sui/transactions'
-
 import {
   aresrpg_deployment,
   shared_object_arg,
 } from '../../deployment/aresrpg.js'
 import { as_object_arg } from '../object_arg.js'
+
+import { new_ptb } from './header.js'
 
 // AIRDROP PTB BUILDERS for the merged `aresrpg` package's `airdrop` module — whitelist claim-MINT for
 // external-collection holders (design `docs/ITEM_SEND_PLAN.md` Part B). The
@@ -39,7 +39,7 @@ export function airdrop_claim_ptb(context) {
     template_id,
     kiosk_id,
     personal_kiosk_cap_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     if (!airdrop_id || !template_id || !kiosk_id || !personal_kiosk_cap_id)
@@ -74,7 +74,7 @@ export function airdrop_create_ptb(context) {
     template_id,
     name,
     description = '',
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     if (!admin_cap_id || !template_id || !name)
@@ -101,7 +101,12 @@ export function airdrop_create_ptb(context) {
  */
 export function airdrop_add_addresses_ptb(context) {
   const { network } = context
-  return ({ admin_cap_id, airdrop_id, addresses, tx = new Transaction() }) => {
+  return ({
+    admin_cap_id,
+    airdrop_id,
+    addresses,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     if (!admin_cap_id || !airdrop_id)
       throw new Error(
@@ -130,7 +135,12 @@ export function airdrop_add_addresses_ptb(context) {
  */
 export function airdrop_remove_addresses_ptb(context) {
   const { network } = context
-  return ({ admin_cap_id, airdrop_id, addresses, tx = new Transaction() }) => {
+  return ({
+    admin_cap_id,
+    airdrop_id,
+    addresses,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     if (!admin_cap_id || !airdrop_id)
       throw new Error(
@@ -160,7 +170,11 @@ export function airdrop_remove_addresses_ptb(context) {
  */
 export function airdrop_close_ptb(context) {
   const { network } = context
-  return ({ admin_cap_id, airdrop_id, tx = new Transaction() }) => {
+  return ({
+    admin_cap_id,
+    airdrop_id,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     if (!admin_cap_id || !airdrop_id)
       throw new Error(

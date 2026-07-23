@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Transaction } from '@mysten/sui/transactions'
-
 import {
   aresrpg_deployment,
   shared_object_arg,
@@ -9,6 +7,8 @@ import {
 } from '../../deployment/aresrpg.js'
 import { world_to_chain, DEFAULT_WORLD_OFFSET } from '../../coords.js'
 import { as_object_arg } from '../object_arg.js'
+
+import { new_ptb } from './header.js'
 
 // &Random (0x8) PIN — mirrors fight.js's `random_arg` (see there for the full latency rationale). Pins the
 // system object via `random_shared_ref` when the network's genesis version is stamped; falls back to the
@@ -69,7 +69,7 @@ export function join_world_ptb(context) {
     kiosk_id,
     personal_kiosk_cap_id,
     character_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     tx.moveCall({
@@ -110,7 +110,7 @@ export function search_zone_ptb(context) {
     z,
     offset_x = DEFAULT_WORLD_OFFSET,
     offset_z = DEFAULT_WORLD_OFFSET,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     tx.setGasBudget(SEARCH_ZONE_GAS_MIST)
@@ -161,7 +161,7 @@ export function gather_ptb(context) {
     template_id,
     rare_template_id = template_id,
     protector_template_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     tx.moveCall({
@@ -177,9 +177,21 @@ export function gather_ptb(context) {
         as_object_arg(tx, template_id), // template: &ItemTemplate (the node's yielded item)
         as_object_arg(tx, rare_template_id), // rare_template: &ItemTemplate (§6 golden variant; dummy-defaults to template — inert unless a rare link exists)
         shared_object_arg(tx, network, 'ITEM_POLICY', false, a.ITEM_POLICY), // policy: &TransferPolicy<Item>
-        shared_object_arg(tx, network, 'FIGHT_REGISTRY', true, a.FIGHT_REGISTRY), // registry: &mut FightRegistry (§17.22 ambush — derivation parent + in-fight latch)
+        shared_object_arg(
+          tx,
+          network,
+          'FIGHT_REGISTRY',
+          true,
+          a.FIGHT_REGISTRY,
+        ), // registry: &mut FightRegistry (§17.22 ambush — derivation parent + in-fight latch)
         as_object_arg(tx, protector_template_id), // protector_template: &MobTemplate (the (job,tier)-matched world protector — REQUIRED)
-        shared_object_arg(tx, network, 'ENGINE_VERSION', false, a.ENGINE_VERSION), // engine_version: &EngineVersion (the ENGINE package's shared Version)
+        shared_object_arg(
+          tx,
+          network,
+          'ENGINE_VERSION',
+          false,
+          a.ENGINE_VERSION,
+        ), // engine_version: &EngineVersion (the ENGINE package's shared Version)
         shared_object_arg(tx, network, 'GAME_CONFIG', false, a.GAME_CONFIG), // config: &GameConfig
         shared_object_arg(tx, network, 'VERSION', false, a.VERSION), // version: &Version
         tx.object.clock(), // clock: &Clock (0x6)

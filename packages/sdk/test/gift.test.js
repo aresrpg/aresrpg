@@ -68,7 +68,7 @@ describe('gift_send_ptb — gift::send builder (funds off the STAMPED royalty fl
     expect(call.package).toBe(IDS.aresrpg.GIFTING_PACKAGE_ID)
     expect(call.args).toBe(7)
     // The royalty coin is split off gas before the send moveCall (SplitCoins is not a MoveCall).
-    expect(targets(tx)).toEqual(['gift::send'])
+    expect(targets(tx)).toEqual(['header::aresrpg', 'gift::send'])
     expect(typeof tx.serialize()).toBe('string')
   })
 
@@ -84,6 +84,7 @@ describe('gift_send_ptb — gift::send builder (funds off the STAMPED royalty fl
     })
 
     expect(targets(tx)).toEqual([
+      'header::aresrpg',
       'extract::split_locked_stack',
       'vector::singleton',
       'vector::push_back',
@@ -147,7 +148,7 @@ describe('gift_send_ptb — gift::send builder (funds off the STAMPED royalty fl
         { item_id: id('item1'), amount: 10, available_amount: 10 },
       ],
     })
-    expect(targets(tx)).toEqual(['gift::send'])
+    expect(targets(tx)).toEqual(['header::aresrpg', 'gift::send'])
     expect(
       tx.getData().commands.some(command => command.$kind === 'MakeMoveVec'),
     ).toBe(false)
@@ -252,7 +253,7 @@ describe('gift_claim_ptb — gift::claim builder (receipt tail resolved IN Move)
     expect(call.args).toBe(7)
     // The FULL royalty + lock receipt is resolved on-chain inside gift::claim → the PTB is a single call, with
     // ZERO royalty_rule/kiosk_lock_rule moveCalls (the InvalidLinkage money-path risk items_marketplace flags).
-    expect(targets(tx)).toEqual(['gift::claim'])
+    expect(targets(tx)).toEqual(['header::aresrpg', 'gift::claim'])
     expect(typeof tx.serialize()).toBe('string')
   })
 
@@ -280,7 +281,7 @@ describe('gift_recall_ptb — gift::recall builder', () => {
     const call = find_call(tx, 'gift::recall')
     expect(call.package).toBe(IDS.aresrpg.GIFTING_PACKAGE_ID)
     expect(call.args).toBe(2)
-    expect(targets(tx)).toEqual(['gift::recall'])
+    expect(targets(tx)).toEqual(['header::aresrpg', 'gift::recall'])
   })
 
   test('refuses a missing gift_id / sender_kiosk_id', () => {

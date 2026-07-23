@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Transaction } from '@mysten/sui/transactions'
-
 import {
   aresrpg_deployment,
   shared_object_arg,
@@ -9,6 +7,7 @@ import {
 import { as_object_arg } from '../object_arg.js'
 
 import { borrow_personal_kiosk_cap } from './borrow_personal_kiosk_cap.js'
+import { new_ptb } from './header.js'
 
 // ITEMS EXTRACT SEAM PTB BUILDERS for the merged `aresrpg` package — the two royalty-safe ways a kiosk-LOCKED
 // item leaves the market for a NON-trade reason: to be WORN (equip/unequip) or DESTROYED (burn). The S-46 merge
@@ -68,7 +67,7 @@ export function equip_ptb(context) {
     item_template_id,
     item_kiosk_id,
     item_kiosk_cap_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     if (!item_template_id)
@@ -88,8 +87,12 @@ export function equip_ptb(context) {
     const character_kiosk = as_object_arg(tx, kiosk_id)
     const character_pkcap = as_object_arg(tx, personal_kiosk_cap_id)
     // THE ITEM's own kiosk — defaults to the character's (the pre-fix, still-common co-located case).
-    const item_kiosk = item_kiosk_id ? as_object_arg(tx, item_kiosk_id) : character_kiosk
-    const item_pkcap = item_kiosk_id ? as_object_arg(tx, item_kiosk_cap_id) : character_pkcap
+    const item_kiosk = item_kiosk_id
+      ? as_object_arg(tx, item_kiosk_id)
+      : character_kiosk
+    const item_pkcap = item_kiosk_id
+      ? as_object_arg(tx, item_kiosk_cap_id)
+      : character_pkcap
     const version = shared_object_arg(tx, network, 'VERSION', false, a.VERSION)
 
     // 1. extract the locked item OUT of ITS OWN kiosk (its own internal cap borrow is scoped to this call).
@@ -99,7 +102,13 @@ export function equip_ptb(context) {
         item_kiosk,
         item_pkcap,
         tx.pure.id(item_id),
-        shared_object_arg(tx, network, 'EXTRACT_POLICY', false, a.EXTRACT_POLICY), // policy: &ItemExtractPolicy (S-51b static)
+        shared_object_arg(
+          tx,
+          network,
+          'EXTRACT_POLICY',
+          false,
+          a.EXTRACT_POLICY,
+        ), // policy: &ItemExtractPolicy (S-51b static)
         version,
       ],
     })
@@ -143,7 +152,7 @@ export function unequip_ptb(context) {
     personal_kiosk_cap_id,
     character_id,
     item_key_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     const kiosk = as_object_arg(tx, kiosk_id)
@@ -196,7 +205,7 @@ export function burn_ptb(context) {
     kiosk_id,
     personal_kiosk_cap_id,
     item_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     const version = shared_object_arg(tx, network, 'VERSION', false, a.VERSION)
@@ -206,7 +215,13 @@ export function burn_ptb(context) {
         as_object_arg(tx, kiosk_id),
         as_object_arg(tx, personal_kiosk_cap_id),
         tx.pure.id(item_id),
-        shared_object_arg(tx, network, 'EXTRACT_POLICY', false, a.EXTRACT_POLICY), // policy: &ItemExtractPolicy (S-51b static)
+        shared_object_arg(
+          tx,
+          network,
+          'EXTRACT_POLICY',
+          false,
+          a.EXTRACT_POLICY,
+        ), // policy: &ItemExtractPolicy (S-51b static)
         version,
       ],
     })

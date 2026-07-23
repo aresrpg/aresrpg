@@ -56,7 +56,7 @@ describe('Party builders — character-keyed ABI and current-owner proof argumen
   for (const [name, builder, target, arg_count] of CASES) {
     test(`${name} → ${target} (${arg_count} args, typed social latest)`, () => {
       const tx = builder(ctx)(PARTY_ARGS)
-      expect(targets(tx)).toEqual([target])
+      expect(targets(tx)).toEqual(['header::aresrpg', target])
       const call = find_call(tx, target)
       expect(call.args).toBe(arg_count)
       expect(call.package).toBe(IDS.aresrpg.SOCIAL_LATEST_PACKAGE_ID)
@@ -69,7 +69,11 @@ describe('Party builders — character-keyed ABI and current-owner proof argumen
 
   test('invite_accept_own → invite(7) then accept(5) on the same social package', () => {
     const tx = party_invite_accept_own_ptb(ctx)(PARTY_ARGS)
-    expect(targets(tx)).toEqual(['party::invite', 'party::accept'])
+    expect(targets(tx)).toEqual([
+      'header::aresrpg',
+      'party::invite',
+      'party::accept',
+    ])
     expect(find_call(tx, 'party::invite').args).toBe(7)
     expect(find_call(tx, 'party::accept').args).toBe(5)
     expect(find_call(tx, 'party::invite').package).toBe(
@@ -82,7 +86,11 @@ describe('Party builders — character-keyed ABI and current-owner proof argumen
   })
 
   test('refuses at the existing social deployment guard', () => {
-    expect(() => create_party_ptb(no_social)(PARTY_ARGS)).toThrow(/aresrpg_social/)
-    expect(() => party_accept_ptb(undeployed)(PARTY_ARGS)).toThrow(/not deployed/)
+    expect(() => create_party_ptb(no_social)(PARTY_ARGS)).toThrow(
+      /aresrpg_social/,
+    )
+    expect(() => party_accept_ptb(undeployed)(PARTY_ARGS)).toThrow(
+      /not deployed/,
+    )
   })
 })

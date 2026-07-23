@@ -42,7 +42,7 @@ describe('airdrop_claim_ptb — airdrop::claim builder (mint-lock, no royalty)',
     const call = find_call(tx, 'airdrop::claim')
     expect(call.package).toBe(IDS.aresrpg.GIFTING_PACKAGE_ID)
     expect(call.args).toBe(7)
-    expect(targets(tx)).toEqual(['airdrop::claim'])
+    expect(targets(tx)).toEqual(['header::aresrpg', 'airdrop::claim'])
     expect(typeof tx.serialize()).toBe('string')
   })
 

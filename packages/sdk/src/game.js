@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Transaction } from '@mysten/sui/transactions'
-
 import {
   aresrpg_deployment,
   shared_object_arg,
   random_shared_ref,
 } from './deployment/aresrpg.js'
 import { as_object_arg } from './sui/object_arg.js'
+import { new_ptb } from './sui/write/header.js'
 
 // &Random (0x8) PIN — mirrors fight.js's `random_arg` (see there for the full latency rationale). Pins the
 // system object via `random_shared_ref` when the network's genesis version is stamped; falls back to the
@@ -49,7 +48,11 @@ export {
   gather_ptb,
 } from './sui/write/game_world.js'
 export { get_world, get_mob_template } from './sui/read/game.js'
-export { get_zone_state, decode_zone_state, zone_key_bytes } from './sui/read/zone_spawns.js'
+export {
+  get_zone_state,
+  decode_zone_state,
+  zone_key_bytes,
+} from './sui/read/zone_spawns.js'
 export { craft_ptb } from './sui/write/craft.js'
 export {
   commission_request_ptb,
@@ -128,7 +131,7 @@ export function raise_spell_level_ptb(context) {
     personal_kiosk_cap_id,
     character_id,
     spell_template_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     tx.moveCall({
@@ -165,7 +168,7 @@ export function raise_stat_ptb(context) {
     character_id,
     stat,
     points,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
 
@@ -201,11 +204,12 @@ export function feed_ptb(context) {
     pet_item_id,
     pet_template_id,
     food_item_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     if (!kiosk_id) throw new Error('kiosk_id is required')
-    if (!personal_kiosk_cap_id) throw new Error('personal_kiosk_cap_id is required')
+    if (!personal_kiosk_cap_id)
+      throw new Error('personal_kiosk_cap_id is required')
     if (!character_id) throw new Error('character_id is required')
     if (!pet_item_id) throw new Error('pet_item_id is required')
     if (!pet_template_id) throw new Error('pet_template_id is required')
@@ -435,7 +439,7 @@ export function crush_ptb(context) {
     rune_template_ids = [],
     filler_template_ids = [],
     gas_budget_mist,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     if (!Array.isArray(gear_item_ids) || gear_item_ids.length === 0)
@@ -518,7 +522,7 @@ export function scribe_rune_ptb(context) {
     gear_template_id,
     rune_item_id,
     rune_template_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
 

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { KioskClient, KioskTransaction } from '@mysten/kiosk'
-import { Transaction } from '@mysten/sui/transactions'
 
 import {
   aresrpg_deployment,
@@ -15,6 +14,7 @@ import {
 } from '../transfer_policies.js'
 
 import { borrow_personal_kiosk_cap } from './borrow_personal_kiosk_cap.js'
+import { new_ptb } from './header.js'
 
 /**
  * @typedef {Object} MarketplacePolicy
@@ -28,7 +28,7 @@ import { borrow_personal_kiosk_cap } from './borrow_personal_kiosk_cap.js'
  * @property {string | null} [kiosk_id]
  * @property {string | null} [personal_kiosk_cap_id]
  * @property {MarketplacePolicy} policy
- * @property {Transaction} [tx]
+ * @property {import('@mysten/sui/transactions').Transaction} [tx]
  *
  * @typedef {MarketplaceBuyBase & { item_id: string }} MarketplaceItemBuy
  * @typedef {MarketplaceBuyBase & { character_id: string }} MarketplaceCharacterBuy
@@ -40,7 +40,7 @@ import { borrow_personal_kiosk_cap } from './borrow_personal_kiosk_cap.js'
  * @property {bigint | number | string} amount
  * @property {bigint | number | string} price_mist seller ask for the complete lot, excluding royalty
  * @property {MarketplacePolicy} policy
- * @property {Transaction} [tx]
+ * @property {import('@mysten/sui/transactions').Transaction} [tx]
  */
 
 // ITEMS MARKETPLACE PTB BUILDERS — P2P resale of a kiosk-LOCKED item via the Sui kiosk framework (NOT a custom Move
@@ -206,7 +206,7 @@ export function list_ptb(context) {
     item_id,
     price_mist,
     policy,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     assert_policy_id(policy, a.ITEM_POLICY)
@@ -242,7 +242,7 @@ export function list_ptb(context) {
  * pre-flight snapshot of the listed object's on-chain amount; the universal `lot_rule` repeats this check against
  * the purchased Item at policy resolution, so a stale or hostile client cannot bypass it.
  * @param {import("../../../types.js").Context} context
- * @returns {(args: MarketplaceStackList) => Transaction}
+ * @returns {(args: MarketplaceStackList) => import('@mysten/sui/transactions').Transaction}
  */
 export function list_stack_ptb(context) {
   const list_item = list_ptb(context)
@@ -253,7 +253,7 @@ export function list_stack_ptb(context) {
     amount,
     price_mist,
     policy,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     assert_legal_lot_size(amount)
     return list_item({
@@ -278,7 +278,7 @@ export function delist_ptb(context) {
     personal_kiosk_cap_id,
     item_id,
     policy,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     assert_policy_id(policy, a.ITEM_POLICY)
@@ -322,7 +322,7 @@ function marketplace_buy_ptb(context, kind) {
     kiosk_id = null,
     personal_kiosk_cap_id = null,
     policy,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     const is_item = kind === 'item'
@@ -350,9 +350,8 @@ function marketplace_buy_ptb(context, kind) {
       lot_rule_target = a.LATEST_PACKAGE_ID
     }
 
-    // Preserve the live marketplace command shape: branded header, personal-cap borrow/create, purchase, policy
-    // receipts, confirm, then return/share the personal cap.
-    tx.moveCall({ target: `${a.LATEST_PACKAGE_ID}::header::aresrpg` })
+    // Live marketplace command shape: branded header (now riding the default `tx` from `new_ptb` —
+    // see header.js), personal-cap borrow/create, purchase, policy receipts, confirm, return/share the cap.
     const binding = buyer_kiosk(
       context,
       tx,
@@ -416,7 +415,7 @@ function marketplace_buy_ptb(context, kind) {
 /**
  * Build a secondary-market Item purchase from an already-fetched TransferPolicy snapshot.
  * @param {import('../../../types.js').Context} context
- * @returns {(args: MarketplaceItemBuy) => Transaction}
+ * @returns {(args: MarketplaceItemBuy) => import('@mysten/sui/transactions').Transaction}
  */
 export function marketplace_buy_item_ptb(context) {
   return marketplace_buy_ptb(context, 'item')
@@ -425,7 +424,7 @@ export function marketplace_buy_item_ptb(context) {
 /**
  * Build a secondary-market Character purchase from an already-fetched TransferPolicy snapshot.
  * @param {import('../../../types.js').Context} context
- * @returns {(args: MarketplaceCharacterBuy) => Transaction}
+ * @returns {(args: MarketplaceCharacterBuy) => import('@mysten/sui/transactions').Transaction}
  */
 export function marketplace_buy_character_ptb(context) {
   return marketplace_buy_ptb(context, 'character')

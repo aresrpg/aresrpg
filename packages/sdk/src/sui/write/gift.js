@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Transaction } from '@mysten/sui/transactions'
-
 import {
   aresrpg_deployment,
   shared_object_arg,
@@ -9,6 +7,7 @@ import {
 import { as_object_arg } from '../object_arg.js'
 
 import { split_locked_stack_id } from './item_stacks.js'
+import { new_ptb } from './header.js'
 
 // GIFT PTB BUILDERS for the merged `aresrpg` package's `gift` module — escrow-recoverable player-to-player item
 // send (design `docs/ITEM_SEND_PLAN.md` §A4). Three signer-split doors:
@@ -59,7 +58,7 @@ export function gift_send_ptb(context) {
     item_transfers,
     recipient,
     royalty_mist,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     if (!kiosk_id || !personal_kiosk_cap_id || !recipient)
@@ -213,7 +212,7 @@ export function gift_claim_ptb(context) {
     sender_kiosk_id,
     recipient_kiosk_id,
     personal_kiosk_cap_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     if (
@@ -249,7 +248,11 @@ export function gift_claim_ptb(context) {
  */
 export function gift_recall_ptb(context) {
   const { network } = context
-  return ({ gift_id, sender_kiosk_id, tx = new Transaction() }) => {
+  return ({
+    gift_id,
+    sender_kiosk_id,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     if (!gift_id || !sender_kiosk_id)
       throw new Error(

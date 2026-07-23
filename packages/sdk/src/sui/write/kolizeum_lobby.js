@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Transaction } from '@mysten/sui/transactions'
-
 import {
   aresrpg_deployment,
   shared_object_arg,
@@ -10,6 +8,7 @@ import {
 import { as_object_arg } from '../object_arg.js'
 
 import { borrow_personal_kiosk_cap } from './borrow_personal_kiosk_cap.js'
+import { new_ptb } from './header.js'
 
 // KOLIZEUM PTB BUILDERS for the sibling `aresrpg_kolizeum` package's `kolizeum` — the wagered-PvP lobby lifecycle
 // (§17.9: a REAL WIN's pot takes a 10% platform cut at settle — PLATFORM CUTS; a
@@ -89,7 +88,7 @@ export function create_public_ptb(context) {
     character_id,
     kiosk_id,
     personal_kiosk_cap_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = kolizeum_ids(network, context.ids?.aresrpg)
     const [pledge] = tx.splitCoins(tx.gas, [tx.pure.u64(BigInt(pledge_amount))])
@@ -135,7 +134,7 @@ export function create_friends_only_ptb(context) {
     character_id,
     kiosk_id,
     personal_kiosk_cap_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = kolizeum_ids(network, context.ids?.aresrpg)
     const [pledge] = tx.splitCoins(tx.gas, [tx.pure.u64(BigInt(pledge_amount))])
@@ -180,7 +179,7 @@ export function join_ptb(context) {
     character_id,
     kiosk_id,
     personal_kiosk_cap_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = kolizeum_ids(network, context.ids?.aresrpg)
     const [pledge] = tx.splitCoins(tx.gas, [tx.pure.u64(BigInt(pledge_amount))])
@@ -218,7 +217,10 @@ export function join_ptb(context) {
  */
 export function exit_ptb(context) {
   const { network } = context
-  return ({ kolizeum_id, tx = new Transaction() }) => {
+  return ({
+    kolizeum_id,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = kolizeum_ids(network, context.ids?.aresrpg)
     tx.moveCall({
       target: `${a.KOLIZEUM_PACKAGE_ID}::kolizeum::exit`,
@@ -237,7 +239,10 @@ export function exit_ptb(context) {
  */
 export function cancel_ptb(context) {
   const { network } = context
-  return ({ kolizeum_id, tx = new Transaction() }) => {
+  return ({
+    kolizeum_id,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = kolizeum_ids(network, context.ids?.aresrpg)
     tx.moveCall({
       target: `${a.KOLIZEUM_PACKAGE_ID}::kolizeum::cancel`,
@@ -256,7 +261,10 @@ export function cancel_ptb(context) {
  */
 export function sweep_ptb(context) {
   const { network } = context
-  return ({ kolizeum_id, tx = new Transaction() }) => {
+  return ({
+    kolizeum_id,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = kolizeum_ids(network, context.ids?.aresrpg)
     tx.moveCall({
       target: `${a.KOLIZEUM_PACKAGE_ID}::kolizeum::sweep`,

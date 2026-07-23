@@ -18,10 +18,9 @@
 // S-51b STATIC REFS: SOCIAL_VERSION rides the shared-version cache (aresrpg_shared_ref — & everywhere here);
 // the shared Party is a runtime object on the ref-or-id seam (`as_object_arg`): id string or caller-cached ref.
 
-import { Transaction } from '@mysten/sui/transactions'
-
 import { aresrpg_deployment, shared_object_arg } from './deployment/aresrpg.js'
 import { as_object_arg } from './sui/object_arg.js'
+import { new_ptb } from './sui/write/header.js'
 
 export {
   create_friend_list_ptb,
@@ -115,7 +114,7 @@ export function create_party_ptb(context) {
     kiosk_id,
     personal_kiosk_cap_id,
     leader_character_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = social_ids(network, context.ids?.aresrpg)
     tx.moveCall({
@@ -151,7 +150,7 @@ export function party_invite_ptb(context) {
     leader_character_id,
     invited_character_id,
     invited_owner,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = social_ids(network, context.ids?.aresrpg)
     append_party_invite({
@@ -187,7 +186,7 @@ export function party_accept_ptb(context) {
     kiosk_id,
     personal_kiosk_cap_id,
     character_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = social_ids(network, context.ids?.aresrpg)
     append_party_member_action({
@@ -222,7 +221,7 @@ export function party_decline_ptb(context) {
     kiosk_id,
     personal_kiosk_cap_id,
     character_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = social_ids(network, context.ids?.aresrpg)
     append_party_member_action({
@@ -262,7 +261,7 @@ export function party_invite_accept_own_ptb(context) {
     leader_character_id,
     invited_character_id,
     invited_owner,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = social_ids(network, context.ids?.aresrpg)
     const party = as_object_arg(tx, party_id)
@@ -320,7 +319,7 @@ export function party_leave_ptb(context) {
     kiosk_id,
     personal_kiosk_cap_id,
     character_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = social_ids(network, context.ids?.aresrpg)
     append_party_member_action({
@@ -353,7 +352,7 @@ export function party_kick_ptb(context) {
     leader_personal_kiosk_cap_id,
     leader_character_id,
     target_character_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = social_ids(network, context.ids?.aresrpg)
     tx.moveCall({
@@ -386,7 +385,7 @@ export function party_disband_ptb(context) {
     leader_kiosk_id,
     leader_personal_kiosk_cap_id,
     leader_character_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = social_ids(network, context.ids?.aresrpg)
     append_party_member_action({

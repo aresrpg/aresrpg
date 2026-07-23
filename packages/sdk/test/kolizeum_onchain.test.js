@@ -73,6 +73,7 @@ describe('kolizeum builders — target strings + arg shapes', () => {
     const t = targets(tx)
     // the locked-character borrow-val dance brackets the call
     expect(t).toEqual([
+      'header::aresrpg',
       'personal_kiosk::borrow_val',
       'kiosk::borrow_val',
       'kolizeum::create_public',

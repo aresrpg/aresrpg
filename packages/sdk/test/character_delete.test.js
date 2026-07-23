@@ -49,7 +49,10 @@ describe('character delete builder — refuse loudly when undeployed', () => {
 describe('delete — ONE character_extract::delete_character call (guards live on-chain)', () => {
   test('target + arg shape + aresrpg package', () => {
     const tx = delete_character_ptb(prestamp_context)(delete_args)
-    expect(targets(tx)).toEqual(['character_extract::delete_character'])
+    expect(targets(tx)).toEqual([
+      'header::aresrpg',
+      'character_extract::delete_character',
+    ])
     const call = find_call(tx, 'character_extract::delete_character')
     expect(call.args).toBe(5) // kiosk, pkcap, character_id, policy, version
     expect(call.package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
@@ -63,7 +66,10 @@ describe('delete — ONE character_extract::delete_character call (guards live o
       character_id: id('ca1'),
       tx: first,
     })
+    // ONE header — it rides the FIRST tx (fresh-constructed); the second call chains onto the caller-supplied
+    // `tx`, so its own header default never fires (never duplicated mid-batch).
     expect(targets(tx)).toEqual([
+      'header::aresrpg',
       'character_extract::delete_character',
       'character_extract::delete_character',
     ])

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Transaction } from '@mysten/sui/transactions'
-
 import {
   aresrpg_deployment,
   shared_object_arg,
   random_shared_ref,
 } from '../../deployment/aresrpg.js'
 import { as_object_arg } from '../object_arg.js'
+
+import { new_ptb } from './header.js'
 
 // &Random (0x8) PIN — mirrors game_world.js / fight.js `random_arg`: pins the system object via `random_shared_ref`
 // when the network's genesis version is stamped; else the unresolved `tx.object.random()`. Byte-identical either way.
@@ -50,7 +50,7 @@ export function craft_ptb(context) {
     character_id,
     input_item_ids,
     output_template_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     if (!recipe_id || !output_template_id)
@@ -75,7 +75,13 @@ export function craft_ptb(context) {
         tx.pure.id(character_id), // character_id: ID (crafter's char — the roll runs at its job level)
         tx.pure.vector('id', input_item_ids), // input_item_ids: vector<ID>
         as_object_arg(tx, output_template_id), // output_template: &ItemTemplate (asserted == recipe's output)
-        shared_object_arg(tx, network, 'EXTRACT_POLICY', false, a.EXTRACT_POLICY), // xpolicy: &ItemExtractPolicy
+        shared_object_arg(
+          tx,
+          network,
+          'EXTRACT_POLICY',
+          false,
+          a.EXTRACT_POLICY,
+        ), // xpolicy: &ItemExtractPolicy
         shared_object_arg(tx, network, 'ITEM_POLICY', false, a.ITEM_POLICY), // policy: &TransferPolicy<Item>
         shared_object_arg(tx, network, 'GAME_CONFIG', false, a.GAME_CONFIG), // config: &GameConfig (assert_enabled + crafting kill-switch)
         shared_object_arg(tx, network, 'VERSION', false, a.VERSION), // version: &Version (THE one)

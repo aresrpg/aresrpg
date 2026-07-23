@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Transaction } from '@mysten/sui/transactions'
-
 import {
   aresrpg_deployment,
   shared_object_arg,
 } from '../../deployment/aresrpg.js'
 import { as_object_arg } from '../object_arg.js'
+
+import { new_ptb } from './header.js'
 
 // CHARACTER DELETE PTB BUILDER — deletes a character from the characters tab, provided everything was
 // unequipped first (even the free one). The Move door is
@@ -35,7 +35,7 @@ export function delete_character_ptb(context) {
     kiosk_id,
     personal_kiosk_cap_id,
     character_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     if (!a.CHARACTER_EXTRACT_POLICY)
@@ -50,7 +50,13 @@ export function delete_character_ptb(context) {
         as_object_arg(tx, kiosk_id), // kiosk: &mut Kiosk
         as_object_arg(tx, personal_kiosk_cap_id), // pkcap: &PersonalKioskCap
         tx.pure.id(character_id), // character_id: ID
-        shared_object_arg(tx, network, 'CHARACTER_EXTRACT_POLICY', false, a.CHARACTER_EXTRACT_POLICY), // policy: &CharacterExtractPolicy
+        shared_object_arg(
+          tx,
+          network,
+          'CHARACTER_EXTRACT_POLICY',
+          false,
+          a.CHARACTER_EXTRACT_POLICY,
+        ), // policy: &CharacterExtractPolicy
         shared_object_arg(tx, network, 'VERSION', false, a.VERSION), // version: &Version
       ],
     })

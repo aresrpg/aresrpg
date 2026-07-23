@@ -28,7 +28,10 @@ describe('locked stack shaping composers', () => {
       item_id: id('split-source'),
       amount: 10,
     })
-    expect(targets(tx)).toEqual(['extract::split_locked_stack'])
+    expect(targets(tx)).toEqual([
+      'header::aresrpg',
+      'extract::split_locked_stack',
+    ])
     const call = find_call(tx, 'extract::split_locked_stack')
     expect(call.package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
     expect(call.args).toBe(7)
@@ -40,7 +43,10 @@ describe('locked stack shaping composers', () => {
       target_item_id: id('merge-target'),
       source_item_id: id('merge-source'),
     })
-    expect(targets(tx)).toEqual(['extract::merge_locked_stacks_and_relock'])
+    expect(targets(tx)).toEqual([
+      'header::aresrpg',
+      'extract::merge_locked_stacks_and_relock',
+    ])
     const call = find_call(tx, 'extract::merge_locked_stacks_and_relock')
     expect(call.package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
     expect(call.args).toBe(7)

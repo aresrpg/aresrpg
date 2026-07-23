@@ -77,7 +77,7 @@ describe('kolizeum bridge builders — targets + arg shapes (no Random)', () => 
     const call = find_call(tx, 'kolizeum::settle')
     expect(call.package).toBe(IDS.aresrpg.KOLIZEUM_PACKAGE_ID)
     expect(call.args).toBe(3)
-    expect(targets(tx)).toEqual(['kolizeum::settle'])
+    expect(targets(tx)).toEqual(['header::aresrpg', 'kolizeum::settle'])
   })
 })
 
@@ -87,12 +87,14 @@ describe('kolizeum arena-outcome terminal — open + the one-PTB compose', () =>
     const call = find_call(tx, 'kolizeum::open')
     expect(call.package).toBe(IDS.aresrpg.KOLIZEUM_PACKAGE_ID)
     expect(call.args).toBe(1)
-    expect(targets(tx)).toEqual(['kolizeum::open'])
+    expect(targets(tx)).toEqual(['header::aresrpg', 'kolizeum::open'])
   })
   test('settle_arena → settle_and_take (ENGINE) → kolizeum::settle(&o) → kolizeum::open(o)', () => {
     const tx = settle_arena_ptb(ctx)(A)
-    // the exact one-PTB terminal chain, in order
+    // the exact one-PTB terminal chain, in order (ONE header — it rides the fresh tx settle_arena_ptb opens;
+    // the chained settle_and_take_ptb call receives that same tx explicitly, so its own default never fires)
     expect(targets(tx)).toEqual([
+      'header::aresrpg',
       'settlement::settle_and_take',
       'kolizeum::settle',
       'kolizeum::open',

@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Transaction } from '@mysten/sui/transactions'
-
 import {
   aresrpg_deployment,
   shared_object_arg,
   random_shared_ref,
 } from './deployment/aresrpg.js'
 import { as_object_arg } from './sui/object_arg.js'
+import { new_ptb } from './sui/write/header.js'
 
 /** @typedef {import('./fight_proof.js').MobGroupProof} MobGroupProof */
 
@@ -194,7 +193,7 @@ export function create_fight_ptb(context) {
     mob_template_id,
     is_public = true,
     party_id = null,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     const committed = a.ZONE_GROUP_ROOT_PACKAGE_ID
@@ -311,7 +310,7 @@ export function join_fight_ptb(context) {
     character_id,
     party_id = null,
     raised_spell_ids = [],
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
 
@@ -358,7 +357,12 @@ export function join_fight_ptb(context) {
  */
 export function place_ptb(context) {
   const { network } = context
-  return ({ fight_id, character_id, cell, tx = new Transaction() }) => {
+  return ({
+    fight_id,
+    character_id,
+    cell,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
 
     tx.moveCall({
@@ -390,7 +394,10 @@ export function place_ptb(context) {
  */
 export function force_start_ptb(context) {
   const { network } = context
-  return ({ fight_id, tx = new Transaction() }) => {
+  return ({
+    fight_id,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
 
     tx.moveCall({
@@ -421,7 +428,10 @@ export function force_start_ptb(context) {
  */
 export function crank_ptb(context) {
   const { network } = context
-  return ({ fight_id, tx = new Transaction() }) => {
+  return ({
+    fight_id,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
 
     tx.moveCall({
@@ -454,7 +464,12 @@ export function crank_ptb(context) {
  */
 export function act_move_ptb(context) {
   const { network } = context
-  return ({ fight_id, character_id, cell, tx = new Transaction() }) => {
+  return ({
+    fight_id,
+    character_id,
+    cell,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
 
     tx.moveCall({
@@ -485,7 +500,12 @@ export function act_move_ptb(context) {
  */
 export function act_weapon_ptb(context) {
   const { network } = context
-  return ({ fight_id, character_id, target_cell, tx = new Transaction() }) => {
+  return ({
+    fight_id,
+    character_id,
+    target_cell,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
 
     tx.moveCall({
@@ -522,7 +542,7 @@ export function act_cast_ptb(context) {
     character_id,
     spell_template_id,
     target_cell,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
 
@@ -555,7 +575,11 @@ export function act_cast_ptb(context) {
  */
 export function act_pass_ptb(context) {
   const { network } = context
-  return ({ fight_id, character_id, tx = new Transaction() }) => {
+  return ({
+    fight_id,
+    character_id,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
 
     tx.moveCall({
@@ -625,10 +649,15 @@ export function turn_gas_budget_mist() {
  *   { kind: 'move', cell: number } |
  *   { kind: 'weapon', target_cell: number } |
  *   { kind: 'cast', spell_template_id: string | object, target_cell: number }
- * >, tx?: Transaction }) => Transaction}
+ * >, tx?: import('@mysten/sui/transactions').Transaction }) => import('@mysten/sui/transactions').Transaction}
  */
 export function commit_turn_ptb(context) {
-  return ({ fight_id, character_id, actions = [], tx = new Transaction() }) => {
+  return ({
+    fight_id,
+    character_id,
+    actions = [],
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     for (const action of actions) {
       if (action.kind === 'move')
         act_move_ptb(context)({ fight_id, character_id, cell: action.cell, tx })
@@ -671,7 +700,11 @@ export function commit_turn_ptb(context) {
  */
 export function abandon_fight_ptb(context) {
   const { network } = context
-  return ({ fight_id, character_id, tx = new Transaction() }) => {
+  return ({
+    fight_id,
+    character_id,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
 
     tx.moveCall({
@@ -708,7 +741,10 @@ export function abandon_fight_ptb(context) {
  */
 export function settle_fight_ptb(context) {
   const { network } = context
-  return ({ fight_id, tx = new Transaction() }) => {
+  return ({
+    fight_id,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
 
     tx.moveCall({
@@ -751,7 +787,7 @@ export function open_result_ptb(context) {
     outcome_id,
     kiosk_id,
     personal_kiosk_cap_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
 
@@ -791,7 +827,11 @@ export function open_result_ptb(context) {
  */
 export function settle_and_take_ptb(context) {
   const { network } = context
-  return ({ fight_id, character_id, tx = new Transaction() }) => {
+  return ({
+    fight_id,
+    character_id,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
 
     const [outcome] = tx.moveCall({
@@ -909,7 +949,7 @@ export function settle_open_world_ptb(context) {
     character_id,
     kiosk_id,
     personal_kiosk_cap_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const { tx: chained, outcome } = settle_and_take_ptb(context)({
       fight_id,
@@ -939,7 +979,7 @@ export function mint_rolled_ptb(context) {
     item_template_id,
     kiosk_id,
     personal_kiosk_cap_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
 
@@ -967,7 +1007,10 @@ export function mint_rolled_ptb(context) {
  */
 export function burn_result_ptb(context) {
   const { network } = context
-  return ({ result_id, tx = new Transaction() }) => {
+  return ({
+    result_id,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
 
     tx.moveCall({

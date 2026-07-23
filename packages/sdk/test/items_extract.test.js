@@ -71,6 +71,7 @@ describe('equip — extract_for_equip then equipment::equip (the map fold: gear 
     // equipment::equip borrows the character out of the kiosk INTERNALLY (kiosk.borrow_mut) and calls
     // extract::confirm_equip inside it — so the PTB is a clean 2-call aresrpg composite, no borrow_val dance.
     expect(targets(tx)).toEqual([
+      'header::aresrpg',
       'extract::extract_for_equip',
       'equipment::equip',
     ])
@@ -82,7 +83,10 @@ describe('equip — extract_for_equip then equipment::equip (the map fold: gear 
 
   test('refuses without item_template_id — never composes the combat-inert confirm_equip-only path', () => {
     expect(() =>
-      equip_ptb(deployed_context)({ ...equip_args, item_template_id: undefined }),
+      equip_ptb(deployed_context)({
+        ...equip_args,
+        item_template_id: undefined,
+      }),
     ).toThrow(/item_template_id/)
   })
 
@@ -99,10 +103,15 @@ describe('equip — extract_for_equip then equipment::equip (the map fold: gear 
       item_kiosk_id,
       item_kiosk_cap_id,
     })
-    const [extract, equip] = tx.getData().commands
+    // commands[0] is the header::aresrpg no-op — skip it.
+    const [, extract, equip] = tx.getData().commands
     expect(arg_object_id(tx, extract.MoveCall.arguments[0])).toBe(item_kiosk_id)
-    expect(arg_object_id(tx, extract.MoveCall.arguments[1])).toBe(item_kiosk_cap_id)
-    expect(arg_object_id(tx, equip.MoveCall.arguments[0])).toBe(equip_args.kiosk_id)
+    expect(arg_object_id(tx, extract.MoveCall.arguments[1])).toBe(
+      item_kiosk_cap_id,
+    )
+    expect(arg_object_id(tx, equip.MoveCall.arguments[0])).toBe(
+      equip_args.kiosk_id,
+    )
     expect(arg_object_id(tx, equip.MoveCall.arguments[1])).toBe(
       equip_args.personal_kiosk_cap_id,
     )
@@ -110,8 +119,11 @@ describe('equip — extract_for_equip then equipment::equip (the map fold: gear 
 
   test('omitted item_kiosk_id defaults both legs to the character kiosk (co-located case, unchanged)', () => {
     const tx = equip_ptb(deployed_context)(equip_args)
-    const [extract] = tx.getData().commands
-    expect(arg_object_id(tx, extract.MoveCall.arguments[0])).toBe(equip_args.kiosk_id)
+    // commands[0] is the header::aresrpg no-op — skip it.
+    const [, extract] = tx.getData().commands
+    expect(arg_object_id(tx, extract.MoveCall.arguments[0])).toBe(
+      equip_args.kiosk_id,
+    )
     expect(arg_object_id(tx, extract.MoveCall.arguments[1])).toBe(
       equip_args.personal_kiosk_cap_id,
     )
@@ -119,7 +131,10 @@ describe('equip — extract_for_equip then equipment::equip (the map fold: gear 
 
   test('refuses item_kiosk_id without its cap — never composes a tx that can only abort on-chain', () => {
     expect(() =>
-      equip_ptb(deployed_context)({ ...equip_args, item_kiosk_id: id('pet-kiosk') }),
+      equip_ptb(deployed_context)({
+        ...equip_args,
+        item_kiosk_id: id('pet-kiosk'),
+      }),
     ).toThrow(/item_kiosk_cap_id/)
   })
 })
@@ -130,6 +145,7 @@ describe('unequip — equipment::unequip (un-fold + detach) then re-lock into th
     // equipment::unequip borrows the character INTERNALLY + reverses the map fold; the re-lock needs the RAW
     // owner cap, so only item::lock_in_kiosk is wrapped in the personal-cap borrow/return dance.
     expect(targets(tx)).toEqual([
+      'header::aresrpg',
       'equipment::unequip',
       'personal_kiosk::borrow_val',
       'item::lock_in_kiosk',
@@ -146,7 +162,11 @@ describe('unequip — equipment::unequip (un-fold + detach) then re-lock into th
 describe('burn — extract_for_burn then burn', () => {
   test('target order + arg shapes', () => {
     const tx = burn_ptb(deployed_context)(burn_args)
-    expect(targets(tx)).toEqual(['extract::extract_for_burn', 'extract::burn'])
+    expect(targets(tx)).toEqual([
+      'header::aresrpg',
+      'extract::extract_for_burn',
+      'extract::burn',
+    ])
     expect(find_call(tx, 'extract::extract_for_burn').args).toBe(5)
     expect(find_call(tx, 'extract::burn').args).toBe(3) // the merge dropped the ExtensionCap arg
   })

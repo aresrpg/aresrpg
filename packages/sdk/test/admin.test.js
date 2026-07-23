@@ -55,9 +55,10 @@ describe('admin teardown composers', () => {
   test('burn_sale is the symmetric AdminCap-first 3-argument door', () => {
     const sale_id = id('sale')
     const tx = burn_sale_ptb(deployed_context)({ admin_cap_id, sale_id })
-    const [command] = tx.getData().commands
+    // commands[0] is the header::aresrpg no-op — skip it.
+    const [, command] = tx.getData().commands
 
-    expect(targets(tx)).toEqual(['shop::burn_sale'])
+    expect(targets(tx)).toEqual(['header::aresrpg', 'shop::burn_sale'])
     expect(find_call(tx, 'shop::burn_sale').args).toBe(3)
     expect(argument_object_id(tx, command.MoveCall.arguments[0])).toBe(
       admin_cap_id,

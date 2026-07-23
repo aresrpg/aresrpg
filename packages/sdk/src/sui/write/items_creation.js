@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { KioskClient, KioskTransaction } from '@mysten/kiosk'
-import { Transaction } from '@mysten/sui/transactions'
 
 import {
   aresrpg_deployment,
   shared_object_arg,
 } from '../../deployment/aresrpg.js'
 import { as_object_arg } from '../object_arg.js'
+
+import { new_ptb } from './header.js'
 
 // CHARACTER CREATION PTB BUILDERS for the merged `aresrpg` package's `creation` — the pure transaction composers for the character
 // mint gate. Both `create_character_free`/`create_character_paid` are COMPOSABLE `public fun`s (no `&Random` — the
@@ -58,8 +59,8 @@ function personal_kiosk_call_client(read_client, network, linkage_pkg) {
  * inline (kiosk-less creator — the default) or by borrowing an EXISTING personal kiosk's owner cap. `finalize()`
  * closes the binding (shares the new kiosk + soulbinds its cap / returns the borrowed cap). Both branches are the
  * proven house patterns (character_new.js create-inline; borrow_personal_kiosk_cap.js borrow/return dance).
- * @param {{ kiosk_client: import('@mysten/kiosk').KioskClient, tx: Transaction, kiosk_id: string | null,
- *   personal_kiosk_cap_id: string | null, personal_kiosk_package_id: string }} args
+ * @param {{ kiosk_client: import('@mysten/kiosk').KioskClient, tx: import('@mysten/sui/transactions').Transaction,
+ *   kiosk_id: string | null, personal_kiosk_cap_id: string | null, personal_kiosk_package_id: string }} args
  */
 function personal_kiosk_binding({
   kiosk_client,
@@ -116,7 +117,7 @@ function personal_kiosk_binding({
  */
 export function onboard_kiosk_ptb(context) {
   const { kiosk_client } = context
-  return ({ tx = new Transaction() } = {}) => {
+  return ({ tx = new_ptb(context.network, context.ids?.aresrpg) } = {}) => {
     const ktx = new KioskTransaction({
       transaction: tx,
       kioskClient: kiosk_client,
@@ -149,7 +150,7 @@ export function create_character_free_ptb(context) {
     address_seed,
     kiosk_id = null,
     personal_kiosk_cap_id = null,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const dep = aresrpg_deployment(network, context.ids?.aresrpg)
     if (address_seed === undefined || address_seed === null)
@@ -242,7 +243,7 @@ export function create_character_paid_ptb(context) {
     price_mist,
     kiosk_id = null,
     personal_kiosk_cap_id = null,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const dep = aresrpg_deployment(network, context.ids?.aresrpg)
     if (price_mist == null)

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Transaction } from '@mysten/sui/transactions'
-
 import { aresrpg_deployment } from '../../deployment/aresrpg.js'
 import { as_object_arg } from '../object_arg.js'
+
+import { new_ptb } from './header.js'
 
 // KIOSK-RULE-LINKAGE LAW — the same law items_creation.js's `personal_kiosk_call_client` enforces for the
 // create-or-borrow dance, applied HERE for the borrow/return dance (this file's whole reason to exist, and the
@@ -28,7 +28,7 @@ export function borrow_personal_kiosk_cap(context) {
   return ({
     personal_kiosk_cap_id,
     personal_kiosk_package_id = null,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
     handler,
   }) => {
     const dep = aresrpg_deployment(network, context.ids?.aresrpg)

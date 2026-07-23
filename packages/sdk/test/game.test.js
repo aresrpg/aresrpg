@@ -94,12 +94,24 @@ describe('game progression builders — guards for the ceremony objects', () => 
     expect(() => feed_ptb(bare)(A)).toThrow(/PET_FEED_CONFIG/)
   })
   test('feed refuses every missing runtime identity before composing', () => {
-    expect(() => feed_ptb(ctx)({ ...A, kiosk_id: undefined })).toThrow(/kiosk_id/)
-    expect(() => feed_ptb(ctx)({ ...A, personal_kiosk_cap_id: undefined })).toThrow(/personal_kiosk_cap_id/)
-    expect(() => feed_ptb(ctx)({ ...A, character_id: undefined })).toThrow(/character_id/)
-    expect(() => feed_ptb(ctx)({ ...A, pet_item_id: undefined })).toThrow(/pet_item_id/)
-    expect(() => feed_ptb(ctx)({ ...A, pet_template_id: undefined })).toThrow(/pet_template_id/)
-    expect(() => feed_ptb(ctx)({ ...A, food_item_id: undefined })).toThrow(/food_item_id/)
+    expect(() => feed_ptb(ctx)({ ...A, kiosk_id: undefined })).toThrow(
+      /kiosk_id/,
+    )
+    expect(() =>
+      feed_ptb(ctx)({ ...A, personal_kiosk_cap_id: undefined }),
+    ).toThrow(/personal_kiosk_cap_id/)
+    expect(() => feed_ptb(ctx)({ ...A, character_id: undefined })).toThrow(
+      /character_id/,
+    )
+    expect(() => feed_ptb(ctx)({ ...A, pet_item_id: undefined })).toThrow(
+      /pet_item_id/,
+    )
+    expect(() => feed_ptb(ctx)({ ...A, pet_template_id: undefined })).toThrow(
+      /pet_template_id/,
+    )
+    expect(() => feed_ptb(ctx)({ ...A, food_item_id: undefined })).toThrow(
+      /food_item_id/,
+    )
   })
   test('crush/scribe refuse without the CrushBoard (ceremony object)', () => {
     expect(() => crush_ptb(ctx)({ ...A, crush_board_id: undefined })).toThrow(
@@ -123,9 +135,13 @@ describe('game progression builders — guards for the ceremony objects', () => 
     expect(MEASURED_CRUSH_GAS_MIST).toBe(46_369_600) // real crush, digest 9jrVSfNW… (2026-07-11, 5-stack L20 gear)
     // Budget = ceil(peak × 1.5) × items — the un-simulatable &Random crush pins from the measured constant.
     expect(crush_gas_budget_mist()).toBe(Math.ceil(46_369_600 * 1.5))
-    expect(crush_gas_budget_mist({ items: 3 })).toBe(Math.ceil(46_369_600 * 1.5) * 3)
+    expect(crush_gas_budget_mist({ items: 3 })).toBe(
+      Math.ceil(46_369_600 * 1.5) * 3,
+    )
     // A crush now COMPOSES without an explicit budget (the constant supplies it); no throw.
-    expect(() => crush_ptb(ctx)({ ...A, gas_budget_mist: undefined })).not.toThrow()
+    expect(() =>
+      crush_ptb(ctx)({ ...A, gas_budget_mist: undefined }),
+    ).not.toThrow()
     // Refusal path (MEASURED_CRUSH_GAS_MIST == null → throw /unset/) is compile-frozen while stamped.
   })
 })
@@ -140,7 +156,10 @@ describe('game progression builders — targets + arg shapes', () => {
     expect(call.args).toBe(5)
   })
   test('raise_stat → stat_allocation::raise_stat, 6 args (kiosk+pkcap+id+stat+points+version — the raise_spell_level twin)', () => {
-    const call = find_call(raise_stat_ptb(ctx)(A), 'stat_allocation::raise_stat')
+    const call = find_call(
+      raise_stat_ptb(ctx)(A),
+      'stat_allocation::raise_stat',
+    )
     expect(call.package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
     expect(call.args).toBe(6)
   })
@@ -151,10 +170,16 @@ describe('game progression builders — targets + arg shapes', () => {
     const tx = feed_ptb(ctx)(A)
     expect(find_call(tx, 'pet::feed_pet').args).toBe(11)
     const data = tx.getData()
-    const command = data.commands.find((candidate) => candidate.$kind === 'MoveCall').MoveCall
-    expect(command.arguments.map((argument) => argument.Input)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-    const object_id = (index) =>
-      data.inputs[index].Object?.SharedObject?.objectId ?? data.inputs[index].UnresolvedObject?.objectId
+    // header::aresrpg leads as command #0 (also $kind MoveCall, zero args, zero inputs) — target feed_pet by name.
+    const command = data.commands.find(
+      candidate => candidate.MoveCall?.function === 'feed_pet',
+    ).MoveCall
+    expect(command.arguments.map(argument => argument.Input)).toEqual([
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+    ])
+    const object_id = index =>
+      data.inputs[index].Object?.SharedObject?.objectId ??
+      data.inputs[index].UnresolvedObject?.objectId
     expect([0, 1, 2, 5, 7, 8, 9, 10].map(object_id)).toEqual([
       IDS.aresrpg.PET_FEED_CONFIG,
       A.kiosk_id,
@@ -165,8 +190,13 @@ describe('game progression builders — targets + arg shapes', () => {
       IDS.aresrpg.VERSION,
       `0x${'0'.repeat(63)}6`,
     ])
-    const pure_id = (index) => `0x${Buffer.from(data.inputs[index].Pure.bytes, 'base64').toString('hex')}`
-    expect([3, 4, 6].map(pure_id)).toEqual([A.character_id, A.pet_item_id, A.food_item_id])
+    const pure_id = index =>
+      `0x${Buffer.from(data.inputs[index].Pure.bytes, 'base64').toString('hex')}`
+    expect([3, 4, 6].map(pure_id)).toEqual([
+      A.character_id,
+      A.pet_item_id,
+      A.food_item_id,
+    ])
     expect(typeof tx.serialize()).toBe('string')
   })
   test('crush → forgemagie::crush, 46 args (6 + 35 template slots + 5), terminal &Random, ONE command', () => {
@@ -176,7 +206,7 @@ describe('game progression builders — targets + arg shapes', () => {
     expect(call.package).toBe(IDS.aresrpg.FORGEMAGIE_PACKAGE_ID)
     expect(call.package).not.toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
     expect(call.args).toBe(6 + CRUSH_TEMPLATE_SLOTS + 5) // 46 — pinned against the Move source by the arity gate
-    expect(targets(tx)).toEqual(['forgemagie::crush']) // single call — &Random LAST arg ⇒ Random-PTB compliant
+    expect(targets(tx)).toEqual(['header::aresrpg', 'forgemagie::crush']) // header leads — &Random LAST arg ⇒ Random-PTB compliant
     expect(typeof tx.serialize()).toBe('string')
   })
   test('crush slots dedup: a duplicate registered id never repeats an object across slots', () => {
@@ -189,7 +219,11 @@ describe('game progression builders — targets + arg shapes', () => {
     const call = find_call(tx, 'forgemagie::crush')
     expect(call.args).toBe(46)
     // slot inputs are all DISTINCT object ids (the distinct-padding law) — count unique object inputs.
-    const inputs = tx.getData().inputs.filter(i => i.$kind === 'Object' || i.$kind === 'UnresolvedObject')
+    const inputs = tx
+      .getData()
+      .inputs.filter(
+        i => i.$kind === 'Object' || i.$kind === 'UnresolvedObject',
+      )
     const unique = new Set(inputs.map(i => JSON.stringify(i)))
     expect(unique.size).toBe(inputs.length)
     expect(typeof tx.serialize()).toBe('string')
@@ -201,7 +235,7 @@ describe('game progression builders — targets + arg shapes', () => {
     expect(call.package).toBe(IDS.aresrpg.FORGEMAGIE_PACKAGE_ID)
     expect(call.package).not.toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
     expect(call.args).toBe(13)
-    expect(targets(tx)).toEqual(['forgemagie::scribe_rune'])
+    expect(targets(tx)).toEqual(['header::aresrpg', 'forgemagie::scribe_rune'])
     expect(typeof tx.serialize()).toBe('string')
   })
 })
@@ -214,7 +248,13 @@ describe('forgemagie catalog codes — mirror foundation rune_catalog.move', () 
     expect(FORGE_TIERS).toEqual({ BA: 1, PA: 2, RA: 3 })
   })
   test('catalog tables are 17-wide and internally consistent (runeable ⇔ ba amount exists)', () => {
-    for (const key of ['unit_weights', 'runeable', 'ba_amount', 'pa_amount', 'ra_amount'])
+    for (const key of [
+      'unit_weights',
+      'runeable',
+      'ba_amount',
+      'pa_amount',
+      'ra_amount',
+    ])
       expect(FORGE_CATALOG[key].length).toBe(17)
     expect(FORGE_STAT_ORDER.length).toBe(17)
     FORGE_CATALOG.runeable.forEach((r, stat) => {
@@ -222,7 +262,13 @@ describe('forgemagie catalog codes — mirror foundation rune_catalog.move', () 
     })
     // the 35-slot law: 10 multi-tier × 3 + 5 single-tier = 35 (the CRUSH_TEMPLATE_SLOTS derivation)
     const total = FORGE_CATALOG.runeable.reduce(
-      (n, r, stat) => n + (r ? 1 + (FORGE_CATALOG.pa_amount[stat] > 0 ? 1 : 0) + (FORGE_CATALOG.ra_amount[stat] > 0 ? 1 : 0) : 0),
+      (n, r, stat) =>
+        n +
+        (r
+          ? 1 +
+            (FORGE_CATALOG.pa_amount[stat] > 0 ? 1 : 0) +
+            (FORGE_CATALOG.ra_amount[stat] > 0 ? 1 : 0)
+          : 0),
       0,
     )
     expect(total).toBe(CRUSH_TEMPLATE_SLOTS)
@@ -268,7 +314,9 @@ describe('crush yield preview + reachable set — pure mirrors of foundation cru
       { stat: FORGE_STATS.strength, tier: 1 },
     ])
     // action +1 (single-tier major): Ba only; critical +5: NOT runeable — nothing.
-    expect(reachable_rune_keys(centered({ action: 1 }))).toEqual([{ stat: FORGE_STATS.action, tier: 1 }])
+    expect(reachable_rune_keys(centered({ action: 1 }))).toEqual([
+      { stat: FORGE_STATS.action, tier: 1 },
+    ])
     expect(reachable_rune_keys(centered({ critical: 5 }))).toEqual([])
     // malus: nothing (raw 0).
     expect(reachable_rune_keys(centered({ chance: -12 }))).toEqual([])
@@ -276,13 +324,23 @@ describe('crush yield preview + reachable set — pure mirrors of foundation cru
 
   test('yield preview pins the Move golden: L50 × +40 Fo @100% ⇒ EV 0.978 ⇒ {0,1}', () => {
     // num = 50×40×5×100000 = 1e9 ; den = 100×1000×(1×5)×2044 = 1.022e9 → floor 0, frac ⇒ max 1.
-    const rows = crush_yield_preview({ centered_stats: centered({ strength: 40 }), item_level: 50 })
-    expect(rows).toEqual([{ stat: FORGE_STATS.strength, stat_key: 'strength', min: 0, max: 1 }])
+    const rows = crush_yield_preview({
+      centered_stats: centered({ strength: 40 }),
+      item_level: 50,
+    })
+    expect(rows).toEqual([
+      { stat: FORGE_STATS.strength, stat_key: 'strength', min: 0, max: 1 },
+    ])
   })
   test('yield preview: the maxed +50 line floors to ≥1 (the Move ≥1-owed fixture)', () => {
     // num = 50×50×5×100000 = 1.25e9 ; den = 1.022e9 → 1.223 ⇒ {1,2}.
-    const rows = crush_yield_preview({ centered_stats: centered({ strength: 50 }), item_level: 50 })
-    expect(rows).toEqual([{ stat: FORGE_STATS.strength, stat_key: 'strength', min: 1, max: 2 }])
+    const rows = crush_yield_preview({
+      centered_stats: centered({ strength: 50 }),
+      item_level: 50,
+    })
+    expect(rows).toEqual([
+      { stat: FORGE_STATS.strength, stat_key: 'strength', min: 1, max: 2 },
+    ])
   })
   test('yield preview: the recipe-less cap halves the EV before the divisor', () => {
     // coeff capped at 50% → num 5e8 / 1.022e9 = 0.489 ⇒ {0,1} (the Move recipeless golden).
@@ -291,13 +349,20 @@ describe('crush yield preview + reachable set — pure mirrors of foundation cru
       item_level: 50,
       recipe_less: true,
     })
-    expect(rows).toEqual([{ stat: FORGE_STATS.strength, stat_key: 'strength', min: 0, max: 1 }])
+    expect(rows).toEqual([
+      { stat: FORGE_STATS.strength, stat_key: 'strength', min: 0, max: 1 },
+    ])
   })
   test('yield preview: an exact division shows a FIXED count (no phantom band)', () => {
     // Craft the exact case: L20 (divisor 277) — strength value v with num % den == 0.
     // num = 20×v×5×100000 = 1e7×v ; den = 100×1000×5×277 = 1.385e8 → v = 1385 ⇒ num/den = 100 exactly.
-    const rows = crush_yield_preview({ centered_stats: centered({ strength: 1385 }), item_level: 20 })
-    expect(rows).toEqual([{ stat: FORGE_STATS.strength, stat_key: 'strength', min: 100, max: 100 }])
+    const rows = crush_yield_preview({
+      centered_stats: centered({ strength: 1385 }),
+      item_level: 20,
+    })
+    expect(rows).toEqual([
+      { stat: FORGE_STATS.strength, stat_key: 'strength', min: 100, max: 100 },
+    ])
   })
 })
 
@@ -319,19 +384,25 @@ describe('crush rune registry — chain-direct cached read (get_crush_registry)'
         listDynamicFields: async ({ cursor }) => {
           const page = cursor == null ? 0 : Number(cursor)
           return {
-            dynamicFields: pages[page].map((_, i) => ({ fieldId: `f${page}:${i}` })),
+            dynamicFields: pages[page].map((_, i) => ({
+              fieldId: `f${page}:${i}`,
+            })),
             hasNextPage: page + 1 < pages.length,
             cursor: String(page + 1),
           }
         },
-        getObjects: async ({ objectIds }) =>
-          ({
-            objects: objectIds.map(fid => {
-              const [p, i] = fid.slice(1).split(':').map(Number)
-              const e = pages[p][i]
-              return { json: { name: e.template_id, value: { stat: e.stat, tier: e.tier } } }
-            }),
+        getObjects: async ({ objectIds }) => ({
+          objects: objectIds.map(fid => {
+            const [p, i] = fid.slice(1).split(':').map(Number)
+            const e = pages[p][i]
+            return {
+              json: {
+                name: e.template_id,
+                value: { stat: e.stat, tier: e.tier },
+              },
+            }
           }),
+        }),
       },
     }
     return { client, board_reads: () => board_reads }
@@ -345,7 +416,11 @@ describe('crush rune registry — chain-direct cached read (get_crush_registry)'
       ],
       [{ template_id: id('rgu'), stat: 13, tier: 1 }],
     ])
-    const read = get_crush_registry({ grpc_client: client, network: 'testnet', ids: { aresrpg: { CRUSH_BOARD: BOARD } } })
+    const read = get_crush_registry({
+      grpc_client: client,
+      network: 'testnet',
+      ids: { aresrpg: { CRUSH_BOARD: BOARD } },
+    })
     const registry = await read()
     expect(registry.entries.length).toBe(3)
     expect(registry.by_key.get('2:1')).toBe(id('rba'))
@@ -357,7 +432,11 @@ describe('crush rune registry — chain-direct cached read (get_crush_registry)'
   })
 
   test('refuses loudly when CRUSH_BOARD is unstamped (refuse, never guess)', async () => {
-    const read = get_crush_registry({ grpc_client: {}, network: 'mainnet', ids: { aresrpg: { CRUSH_BOARD: '' } } })
+    const read = get_crush_registry({
+      grpc_client: {},
+      network: 'mainnet',
+      ids: { aresrpg: { CRUSH_BOARD: '' } },
+    })
     expect(read()).rejects.toThrow(/CRUSH_BOARD is unstamped/)
   })
 })

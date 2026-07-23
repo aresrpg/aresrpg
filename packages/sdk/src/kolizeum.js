@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Transaction } from '@mysten/sui/transactions'
-
 import { shared_object_arg } from './deployment/aresrpg.js'
 import { as_object_arg } from './sui/object_arg.js'
 import { settle_and_take_ptb } from './fight.js'
 import { kolizeum_ids } from './sui/write/kolizeum_lobby.js'
+import { new_ptb } from './sui/write/header.js'
 
 // KOLIZEUM — the public per-domain home for the sibling `aresrpg_kolizeum` package's wagered PvP (§7 / §17.9; a
 // REAL WIN's pot takes a 10% platform cut at settle (PLATFORM CUTS) — draw/cancel/exit
@@ -64,7 +63,7 @@ export function start_ptb(context) {
     personal_kiosk_cap_id,
     character_id,
     raised_spell_ids = [],
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = kolizeum_ids(network, context.ids?.aresrpg)
 
@@ -72,14 +71,26 @@ export function start_ptb(context) {
       target: `${a.KOLIZEUM_PACKAGE_ID}::kolizeum::start`,
       arguments: [
         as_object_arg(tx, kolizeum_id), // kolizeum: &mut Kolizeum (a cached ref must be mutable:true)
-        shared_object_arg(tx, network, 'FIGHT_REGISTRY', true, a.FIGHT_REGISTRY), // registry: &mut FightRegistry
+        shared_object_arg(
+          tx,
+          network,
+          'FIGHT_REGISTRY',
+          true,
+          a.FIGHT_REGISTRY,
+        ), // registry: &mut FightRegistry
         as_object_arg(tx, kiosk_id), // kiosk: &Kiosk (READ-ONLY here — a kiosk ref may be mutable:false)
         as_object_arg(tx, personal_kiosk_cap_id), // pkcap: &PersonalKioskCap
         tx.pure.id(character_id), // character_id: ID
         tx.pure.vector('id', raised_spell_ids), // raised_spell_ids: vector<ID>
         shared_object_arg(tx, network, 'GAME_CONFIG', false, a.GAME_CONFIG), // config: &GameConfig
         shared_object_arg(tx, network, 'VERSION', false, a.VERSION), // version: &Version (THE one core version)
-        shared_object_arg(tx, network, 'ENGINE_VERSION', false, a.ENGINE_VERSION), // fight_version: &FightVersion — the ENGINE package's own shared Version (NOT core VERSION)
+        shared_object_arg(
+          tx,
+          network,
+          'ENGINE_VERSION',
+          false,
+          a.ENGINE_VERSION,
+        ), // fight_version: &FightVersion — the ENGINE package's own shared Version (NOT core VERSION)
         tx.object.clock(), // clock: &Clock (0x6)
       ],
     })
@@ -105,7 +116,7 @@ export function seat_ptb(context) {
     personal_kiosk_cap_id,
     character_id,
     raised_spell_ids = [],
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = kolizeum_ids(network, context.ids?.aresrpg)
 
@@ -114,14 +125,26 @@ export function seat_ptb(context) {
       arguments: [
         as_object_arg(tx, kolizeum_id), // kolizeum: &Kolizeum (READ-ONLY here — a ref may be mutable:false)
         as_object_arg(tx, fight_id), // fight: &mut Fight (a cached ref must be mutable:true)
-        shared_object_arg(tx, network, 'FIGHT_REGISTRY', true, a.FIGHT_REGISTRY), // fight_registry: &mut FightRegistry
+        shared_object_arg(
+          tx,
+          network,
+          'FIGHT_REGISTRY',
+          true,
+          a.FIGHT_REGISTRY,
+        ), // fight_registry: &mut FightRegistry
         as_object_arg(tx, kiosk_id), // kiosk: &Kiosk (READ-ONLY post-split — a ref may be mutable:false)
         as_object_arg(tx, personal_kiosk_cap_id), // pkcap: &PersonalKioskCap
         tx.pure.id(character_id), // character_id: ID
         tx.pure.vector('id', raised_spell_ids), // raised_spell_ids: vector<ID>
         shared_object_arg(tx, network, 'GAME_CONFIG', false, a.GAME_CONFIG), // config: &GameConfig
         shared_object_arg(tx, network, 'VERSION', false, a.VERSION), // version: &Version (THE one core version — post-split `seat` dropped its duplicate items_version arg)
-        shared_object_arg(tx, network, 'ENGINE_VERSION', false, a.ENGINE_VERSION), // fight_version: &FightVersion — the ENGINE package's own shared Version (NOT core VERSION)
+        shared_object_arg(
+          tx,
+          network,
+          'ENGINE_VERSION',
+          false,
+          a.ENGINE_VERSION,
+        ), // fight_version: &FightVersion — the ENGINE package's own shared Version (NOT core VERSION)
         tx.object.clock(), // clock: &Clock (0x6) — appended LAST (before auto-injected ctx)
       ],
     })
@@ -141,7 +164,11 @@ export function seat_ptb(context) {
  */
 export function settle_ptb(context) {
   const { network } = context
-  return ({ kolizeum_id, outcome_id, tx = new Transaction() }) => {
+  return ({
+    kolizeum_id,
+    outcome_id,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = kolizeum_ids(network, context.ids?.aresrpg)
 
     tx.moveCall({
@@ -169,7 +196,10 @@ export function settle_ptb(context) {
  */
 export function open_ptb(context) {
   const { network } = context
-  return ({ outcome_id, tx = new Transaction() }) => {
+  return ({
+    outcome_id,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = kolizeum_ids(network, context.ids?.aresrpg)
 
     tx.moveCall({
@@ -197,7 +227,12 @@ export function open_ptb(context) {
  */
 export function settle_arena_ptb(context) {
   const { network } = context
-  return ({ fight_id, character_id, kolizeum_id, tx = new Transaction() }) => {
+  return ({
+    fight_id,
+    character_id,
+    kolizeum_id,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = kolizeum_ids(network, context.ids?.aresrpg) // guard KOLIZEUM_PACKAGE_ID before building anything
 
     // 1. settle_and_take (ENGINE) → the caller's own outcome as a chainable RESULT HANDLE (the Fight is consumed here)

@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Transaction } from '@mysten/sui/transactions'
-
-import {
-  aresrpg_deployment,
-  shared_object_arg,
-} from './deployment/aresrpg.js'
+import { aresrpg_deployment, shared_object_arg } from './deployment/aresrpg.js'
 import { as_object_arg } from './sui/object_arg.js'
+import { new_ptb } from './sui/write/header.js'
 
 // DUNGEON — the public per-domain home for the merged `aresrpg` package's dungeon flows (§9 "the key IS the run").
 // The `abandon` builder + the bound-`RunPass` read live in `sui/write/dungeon_run.js` / `sui/read/dungeon.js`; this
@@ -62,7 +58,7 @@ export function activate_ptb(context) {
     key_item_id,
     key_kiosk_id,
     key_kiosk_cap_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     const version = shared_object_arg(tx, network, 'VERSION', false, a.VERSION)
@@ -117,7 +113,10 @@ export function activate_ptb(context) {
  */
 export function activate_many_ptb(context) {
   const append = activate_ptb(context)
-  return ({ members = [], tx = new Transaction() } = {}) => {
+  return ({
+    members = [],
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  } = {}) => {
     if (!Array.isArray(members))
       throw new Error('[activate_many_ptb] members must be an array.')
     for (const member of members) append({ ...member, tx })
@@ -142,7 +141,7 @@ export function next_fight_ptb(context) {
     personal_kiosk_cap_id,
     character_id,
     raised_spell_ids = [],
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     const version = shared_object_arg(tx, network, 'VERSION', false, a.VERSION)
@@ -193,7 +192,7 @@ export function join_fight_ptb(context) {
     personal_kiosk_cap_id,
     character_id,
     raised_spell_ids = [],
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     const version = shared_object_arg(tx, network, 'VERSION', false, a.VERSION)
@@ -246,7 +245,7 @@ export function settle_run_ptb(context) {
     world_id,
     kiosk_id,
     personal_kiosk_cap_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     tx.moveCall({

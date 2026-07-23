@@ -54,7 +54,7 @@ describe('craft_ptb — consume exact inputs, mint the output, one tx', () => {
 
   test('targets crafting::craft at LATEST with the frozen 11-arg shape (+ character_id, + &Random)', () => {
     const tx = craft_ptb(deployed_context)(args)
-    expect(targets(tx)).toEqual(['crafting::craft'])
+    expect(targets(tx)).toEqual(['header::aresrpg', 'crafting::craft'])
     const call = find_call(tx, 'crafting::craft')
     expect(call.package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
     expect(call.args).toBe(11)

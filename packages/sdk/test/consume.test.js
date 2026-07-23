@@ -39,7 +39,7 @@ describe('consume_potion_ptb — consume::use_many builder', () => {
     const call = find_call(tx, 'consume::use_many')
     expect(call.package).toBe(IDS.aresrpg.GIFTING_PACKAGE_ID)
     expect(call.args).toBe(12)
-    expect(targets(tx)).toEqual(['consume::use_many']) // one call, no &Random ⇒ freely composable
+    expect(targets(tx)).toEqual(['header::aresrpg', 'consume::use_many']) // header leads, no &Random ⇒ freely composable
     expect(typeof tx.serialize()).toBe('string')
   })
 

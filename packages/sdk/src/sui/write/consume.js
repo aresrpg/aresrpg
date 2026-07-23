@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Transaction } from '@mysten/sui/transactions'
-
 import {
   aresrpg_deployment,
   shared_object_arg,
 } from '../../deployment/aresrpg.js'
 import { as_object_arg } from '../object_arg.js'
+
+import { new_ptb } from './header.js'
 
 // CONSUME PTB BUILDER for the merged `aresrpg` package's `consume` — the out-of-fight USE of a heal consumable
 // (SPEC §10). ONE call targets `consume::use_many(quantity)`: it extracts the potion stack from the caller's
@@ -43,7 +43,7 @@ export function consume_potion_ptb(context) {
     item_id,
     template_id,
     quantity = 1,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     if (!kiosk_id || !personal_kiosk_cap_id)
@@ -71,7 +71,13 @@ export function consume_potion_ptb(context) {
         tx.pure.id(character_id), // character_id: ID
         tx.pure.id(item_id), // item_id: ID (the potion stack)
         as_object_arg(tx, template_id), // template: &ItemTemplate (the potion's own template)
-        shared_object_arg(tx, network, 'EXTRACT_POLICY', false, a.EXTRACT_POLICY), // xpolicy: &ItemExtractPolicy
+        shared_object_arg(
+          tx,
+          network,
+          'EXTRACT_POLICY',
+          false,
+          a.EXTRACT_POLICY,
+        ), // xpolicy: &ItemExtractPolicy
         shared_object_arg(tx, network, 'ITEM_POLICY', false, a.ITEM_POLICY), // market_policy: &TransferPolicy<Item>
         shared_object_arg(tx, network, 'GAME_CONFIG', false, a.GAME_CONFIG), // config: &GameConfig (assert_enabled + the game freeze)
         shared_object_arg(tx, network, 'VERSION', false, a.VERSION), // version: &Version (THE one)

@@ -82,9 +82,10 @@ describe('marketplace builders — refuse loudly when items undeployed', () => {
 })
 
 describe('marketplace list/delist — target strings + arg shapes', () => {
-  test('list → kiosk::list at the Item type, 4 args, inside the personal-cap dance', () => {
+  test('list → aresrpg header leads, then kiosk::list at the Item type, 4 args, inside the personal-cap dance', () => {
     const tx = list_ptb(deployed_context)(list_args)
     expect(targets(tx)).toEqual([
+      'header::aresrpg',
       'personal_kiosk::borrow_val',
       'kiosk::list',
       'personal_kiosk::return_val',
@@ -96,6 +97,7 @@ describe('marketplace list/delist — target strings + arg shapes', () => {
   test('delist → kiosk::delist, 3 args', () => {
     const tx = delist_ptb(deployed_context)(delist_args)
     expect(targets(tx)).toEqual([
+      'header::aresrpg',
       'personal_kiosk::borrow_val',
       'kiosk::delist',
       'personal_kiosk::return_val',
@@ -108,6 +110,7 @@ describe('marketplace list/delist — target strings + arg shapes', () => {
       expect(is_legal_lot_size(amount)).toBe(true)
       const tx = list_stack_ptb(deployed_context)({ ...list_args, amount })
       expect(targets(tx)).toEqual([
+        'header::aresrpg',
         'personal_kiosk::borrow_val',
         'kiosk::list',
         'personal_kiosk::return_val',

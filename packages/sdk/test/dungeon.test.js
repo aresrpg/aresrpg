@@ -101,6 +101,7 @@ describe('dungeon activate — split exactly one then enter with an internal mut
   test('is a literal 2-call composite with the frozen 5/9-argument ABI', () => {
     const tx = activate_ptb(ctx)(A)
     expect(targets(tx)).toEqual([
+      'header::aresrpg',
       'extract::extract_one_for_burn',
       'dungeon::activate',
     ])
@@ -120,7 +121,8 @@ describe('dungeon activate — split exactly one then enter with an internal mut
       key_kiosk_id,
       key_kiosk_cap_id,
     })
-    const [extract, activate] = tx.getData().commands
+    // commands[0] is the header::aresrpg no-op — skip it.
+    const [, extract, activate] = tx.getData().commands
     expect(arg_object_id(tx, extract.MoveCall.arguments[0])).toBe(key_kiosk_id)
     expect(arg_object_id(tx, extract.MoveCall.arguments[1])).toBe(
       key_kiosk_cap_id,
@@ -159,7 +161,7 @@ describe('dungeon next_fight / join_fight / settle_run — targets, arg shapes, 
   test('join_fight → dungeon::join_fight, 13 args (clock appended LAST), deterministic; fight_version = ENGINE_VERSION', () => {
     const tx = join_fight_ptb(ctx)(A)
     expect(find_call(tx, 'dungeon::join_fight').args).toBe(13)
-    expect(targets(tx)).toEqual(['dungeon::join_fight'])
+    expect(targets(tx)).toEqual(['header::aresrpg', 'dungeon::join_fight'])
     expect(input_ids(tx)).toContain(IDS.aresrpg.ENGINE_VERSION)
   })
   test('settle_run → dungeon::settle_run, 7 args with character-restore proofs', () => {

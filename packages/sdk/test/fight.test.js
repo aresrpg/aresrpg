@@ -167,7 +167,11 @@ describe('mob-group proof producer — Move BCS/duplicate-last parity', () => {
           group_proof: witness,
         }),
       ),
-    ).toEqual(['zones::claim_mob_group_in_zone_with_proof', 'fight::create'])
+    ).toEqual([
+      'header::aresrpg',
+      'zones::claim_mob_group_in_zone_with_proof',
+      'fight::create',
+    ])
 
     const bad_root = [...MOVE_GROUP_VECTOR.group_root]
     bad_root[0] ^= 1
@@ -187,7 +191,11 @@ describe('mob-group proof producer — Move BCS/duplicate-last parity', () => {
           group_proof: fallback,
         }),
       ),
-    ).toEqual(['zones::claim_mob_group_in_zone', 'fight::create'])
+    ).toEqual([
+      'header::aresrpg',
+      'zones::claim_mob_group_in_zone',
+      'fight::create',
+    ])
   })
 
   test('flat all-groups commitment matches Move and emits an empty proof', () => {
@@ -384,7 +392,7 @@ describe('fight single-call builders — target, arg count, package, Random disc
   ] of SINGLE_CALL_BUILDERS) {
     test(`${name} → ${target}`, () => {
       const tx = builder(ctx)(args)
-      expect(targets(tx)).toEqual([target])
+      expect(targets(tx)).toEqual(['header::aresrpg', target])
       const call = find_call(tx, target)
       expect(call.args).toBe(arg_count)
       expect(call.package).toBe(pkg)
@@ -414,14 +422,16 @@ describe('commit_turn — the WHOLE TURN in ONE PTB', () => {
   test('N actions + terminal act_pass: 4 commands in order, &Random ONLY in the last', () => {
     const tx = commit_turn_ptb(ctx)(batch_args)
     expect(targets(tx)).toEqual([
+      'header::aresrpg',
       'actions::act_move',
       'actions::act_weapon',
       'actions::act_cast',
       'actions::act_pass',
     ])
-    // arities ride the SAME single builders (one home per moveCall shape — no drift possible).
+    // arities ride the SAME single builders (one home per moveCall shape — no drift possible). header::aresrpg
+    // (0 args) leads.
     const calls = move_calls(tx)
-    expect(calls.map(c => c.args)).toEqual([5, 5, 6, 5])
+    expect(calls.map(c => c.args)).toEqual([0, 5, 5, 6, 5])
     // Random-PTB compliance: 0x8 is the LAST argument of the LAST command, and appears in NO other command.
     expect(random_is_last(tx)).toBe(true)
     const data = tx.getData()
@@ -444,7 +454,7 @@ describe('commit_turn — the WHOLE TURN in ONE PTB', () => {
       fight_id: A.fight_id,
       character_id: A.character_id,
     })
-    expect(targets(tx)).toEqual(['actions::act_pass'])
+    expect(targets(tx)).toEqual(['header::aresrpg', 'actions::act_pass'])
     expect(random_is_last(tx)).toBe(true)
   })
 
@@ -464,24 +474,26 @@ describe('create_fight — claim_mob_group → create compose in ONE PTB', () =>
     const tx = create_fight_ptb(ctx)(A)
     const calls = move_calls(tx)
 
-    // exactly the two-call compose, in order (same package since the S-46 merge)
+    // header::aresrpg leads (command 0), then the two-call compose, in order (same package since the S-46 merge)
     expect(calls.map(c => c.target)).toEqual([
+      'header::aresrpg',
       'zones::claim_mob_group',
       'fight::create',
     ])
     // both calls run on THE merged aresrpg package
-    expect(calls[0].package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
     expect(calls[1].package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
+    expect(calls[2].package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
     // arg counts (ctx auto-injected everywhere; the merge dropped claim's link + second version)
-    expect(calls[0].args).toBe(8)
-    expect(calls[1].args).toBe(13)
+    expect(calls[1].args).toBe(8)
+    expect(calls[2].args).toBe(13)
 
     // create is DETERMINISTIC now (verifier law — spawn rolls at place/force_start): no Random in this PTB
-    // the GroupTicket hot potato flows claim→create IN-PTB: create's 2nd arg is claim's result (NestedResult 0)
-    const create_cmd = tx.getData().commands.at(1)
+    // the GroupTicket hot potato flows claim→create IN-PTB: create's 2nd arg is claim's result (NestedResult 1 —
+    // header::aresrpg is command 0, claim_mob_group is command 1)
+    const create_cmd = tx.getData().commands.at(2)
     const ticket_arg = create_cmd.MoveCall.arguments.at(1)
     expect(ticket_arg.$kind).toBe('NestedResult')
-    expect(ticket_arg.NestedResult[0]).toBe(0) // result of command 0 (claim_mob_group)
+    expect(ticket_arg.NestedResult[0]).toBe(1) // result of command 1 (claim_mob_group)
 
     // terminal &Random compliance: the action is LAST, so nothing follows the Random MoveCall
     expect(has_no_random(tx)).toBe(true)
@@ -492,21 +504,22 @@ describe('create_fight — claim_mob_group → create compose in ONE PTB', () =>
     const tx = create_fight_ptb(ctx)({ ...A, zx: 3, zy: 4 })
     const calls = move_calls(tx)
 
-    // the CLAIM target flips to the global-search door; create is unchanged
+    // header::aresrpg leads; the CLAIM target flips to the global-search door; create is unchanged
     expect(calls.map(c => c.target)).toEqual([
+      'header::aresrpg',
       'zones::claim_mob_group_in_zone',
       'fight::create',
     ])
-    expect(calls[0].package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
+    expect(calls[1].package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
     // arg counts: claim gains zx+zy (8 → 10); create unchanged (ctx auto-injected)
-    expect(calls[0].args).toBe(10)
-    expect(calls[1].args).toBe(13)
+    expect(calls[1].args).toBe(10)
+    expect(calls[2].args).toBe(13)
 
-    // the GroupTicket hot potato still flows claim→create IN-PTB (create's 2nd arg = claim's result)
-    const create_cmd = tx.getData().commands.at(1)
+    // the GroupTicket hot potato still flows claim→create IN-PTB (create's 2nd arg = claim's result, command 1)
+    const create_cmd = tx.getData().commands.at(2)
     const ticket_arg = create_cmd.MoveCall.arguments.at(1)
     expect(ticket_arg.$kind).toBe('NestedResult')
-    expect(ticket_arg.NestedResult[0]).toBe(0)
+    expect(ticket_arg.NestedResult[0]).toBe(1)
 
     expect(has_no_random(tx)).toBe(true)
     expect(typeof tx.serialize()).toBe('string')
@@ -516,14 +529,15 @@ describe('create_fight — claim_mob_group → create compose in ONE PTB', () =>
     const tx = create_fight_ptb(ctx)({ ...A, group_proof: GROUP_PROOF })
     const calls = move_calls(tx)
     expect(calls.map(c => c.target)).toEqual([
+      'header::aresrpg',
       'zones::claim_mob_group_with_proof',
       'fight::create',
     ])
-    expect(calls[0].args).toBe(15)
-    expect(calls[1].args).toBe(13)
-    const ticket_arg = tx.getData().commands.at(1).MoveCall.arguments.at(1)
+    expect(calls[1].args).toBe(15)
+    expect(calls[2].args).toBe(13)
+    const ticket_arg = tx.getData().commands.at(2).MoveCall.arguments.at(1)
     expect(ticket_arg.$kind).toBe('NestedResult')
-    expect(ticket_arg.NestedResult[0]).toBe(0)
+    expect(ticket_arg.NestedResult[0]).toBe(1)
     expect(has_no_random(tx)).toBe(true)
     expect(typeof tx.serialize()).toBe('string')
   })
@@ -537,11 +551,12 @@ describe('create_fight — claim_mob_group → create compose in ONE PTB', () =>
     })
     const calls = move_calls(tx)
     expect(calls.map(c => c.target)).toEqual([
+      'header::aresrpg',
       'zones::claim_mob_group_in_zone_with_proof',
       'fight::create',
     ])
-    expect(calls[0].args).toBe(17)
-    expect(calls[1].args).toBe(13)
+    expect(calls[1].args).toBe(17)
+    expect(calls[2].args).toBe(13)
     expect(has_no_random(tx)).toBe(true)
     expect(typeof tx.serialize()).toBe('string')
   })
@@ -606,10 +621,11 @@ describe('create_fight — claim_mob_group → create compose in ONE PTB', () =>
     ).toThrow(/group_proof facts\.group_seed/)
   })
 
-  // BCS bytes of create's `party_id: Option<ID>` pure input (create is command 1, party_id is arg 7).
+  // BCS bytes of create's `party_id: Option<ID>` pure input (header::aresrpg is command 0, claim is command 1,
+  // create is command 2, party_id is arg 7).
   function party_id_bytes(tx) {
     const data = tx.getData()
-    const arg = data.commands.at(1).MoveCall.arguments.at(7)
+    const arg = data.commands.at(2).MoveCall.arguments.at(7)
     return Buffer.from(data.inputs.at(arg.Input).Pure.bytes, 'base64')
   }
 
@@ -630,7 +646,10 @@ describe('create_fight — claim_mob_group → create compose in ONE PTB', () =>
 describe('settle_and_take / open_taken — PTB-composed settle+open (no stranded outcome)', () => {
   test('settle_and_take alone: 4 args, ENGINE package, deterministic (no &Random), returns {tx, outcome}', () => {
     const { tx, outcome } = settle_and_take_ptb(ctx)(A)
-    expect(targets(tx)).toEqual(['settlement::settle_and_take'])
+    expect(targets(tx)).toEqual([
+      'header::aresrpg',
+      'settlement::settle_and_take',
+    ])
     const call = find_call(tx, 'settlement::settle_and_take')
     expect(call.args).toBe(4) // fight (by value), character_id, FIGHT_REGISTRY, ENGINE_VERSION
     expect(call.package).toBe(IDS.aresrpg.ENGINE_LATEST_PACKAGE_ID)
@@ -648,21 +667,24 @@ describe('settle_and_take / open_taken — PTB-composed settle+open (no stranded
       tx,
     })
     const calls = move_calls(chained)
+    // header::aresrpg leads (command 0) — it rides the fresh tx settle_and_take_ptb opens; open_taken_ptb
+    // receives that same tx explicitly, so its own header default never fires.
     expect(calls.map(c => c.target)).toEqual([
+      'header::aresrpg',
       'settlement::settle_and_take',
       'results::open_taken',
     ])
-    expect(calls[0].package).toBe(IDS.aresrpg.ENGINE_LATEST_PACKAGE_ID)
-    expect(calls[1].package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
-    expect(calls[0].args).toBe(4)
-    expect(calls[1].args).toBe(7) // outcome, kiosk, pkcap, config, version, clock, random
+    expect(calls[1].package).toBe(IDS.aresrpg.ENGINE_LATEST_PACKAGE_ID)
+    expect(calls[2].package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
+    expect(calls[1].args).toBe(4)
+    expect(calls[2].args).toBe(7) // outcome, kiosk, pkcap, config, version, clock, random
 
     // the outcome flows settle_and_take → open_taken IN-PTB: open_taken's 1st arg is settle_and_take's
     // RESULT (a NestedResult), never an object id/ref — as_object_arg is never invoked for this argument.
-    const open_cmd = chained.getData().commands.at(1)
+    const open_cmd = chained.getData().commands.at(2)
     const outcome_arg = open_cmd.MoveCall.arguments.at(0)
     expect(outcome_arg.$kind).toBe('NestedResult')
-    expect(outcome_arg.NestedResult[0]).toBe(0) // result of command 0 (settle_and_take)
+    expect(outcome_arg.NestedResult[0]).toBe(1) // result of command 1 (settle_and_take)
 
     // terminal &Random compliance: open_taken is LAST, so nothing follows its Random draw
     expect(random_is_last(chained)).toBe(true)
@@ -686,28 +708,31 @@ describe('settle_and_take / open_taken — PTB-composed settle+open (no stranded
       tx,
     })
     const calls = move_calls(tx)
-    // the pinned order: settle_and_take (ENGINE) → settle_run (CORE) → open_taken (CORE), Random terminal
+    // header::aresrpg leads (command 0 — rides the fresh tx settle_and_take_ptb opens; every chained call
+    // downstream receives that same tx explicitly, so no header duplicates). Then the pinned order: settle_and_take
+    // (ENGINE) → settle_run (CORE) → open_taken (CORE), Random terminal
     expect(calls.map(c => c.target)).toEqual([
+      'header::aresrpg',
       'settlement::settle_and_take',
       'dungeon::settle_run',
       'results::open_taken',
     ])
-    expect(calls[0].package).toBe(IDS.aresrpg.ENGINE_LATEST_PACKAGE_ID)
-    expect(calls[1].package).toBe(IDS.aresrpg.DUNGEON_PACKAGE_ID) // gifting/dungeon split: dungeon moved out of core
-    expect(calls[2].package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
-    expect(calls[1].args).toBe(7) // pass, outcome, world, kiosk, cap, config, version
+    expect(calls[1].package).toBe(IDS.aresrpg.ENGINE_LATEST_PACKAGE_ID)
+    expect(calls[2].package).toBe(IDS.aresrpg.DUNGEON_PACKAGE_ID) // gifting/dungeon split: dungeon moved out of core
+    expect(calls[3].package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
+    expect(calls[2].args).toBe(7) // pass, outcome, world, kiosk, cap, config, version
 
-    // settle_run BORROWS the outcome handle (arg 1 = command 0's NestedResult, placed AS-IS — never as_object_arg)
-    const settle_run_cmd = tx.getData().commands.at(1)
+    // settle_run BORROWS the outcome handle (arg 1 = command 1's NestedResult, placed AS-IS — never as_object_arg)
+    const settle_run_cmd = tx.getData().commands.at(2)
     const borrowed = settle_run_cmd.MoveCall.arguments.at(1)
     expect(borrowed.$kind).toBe('NestedResult')
-    expect(borrowed.NestedResult[0]).toBe(0) // result of command 0 (settle_and_take)
+    expect(borrowed.NestedResult[0]).toBe(1) // result of command 1 (settle_and_take)
 
-    // open_taken then CONSUMES the SAME handle BY VALUE (arg 0 = command 0's NestedResult)
-    const open_cmd = tx.getData().commands.at(2)
+    // open_taken then CONSUMES the SAME handle BY VALUE (arg 0 = command 1's NestedResult)
+    const open_cmd = tx.getData().commands.at(3)
     const consumed = open_cmd.MoveCall.arguments.at(0)
     expect(consumed.$kind).toBe('NestedResult')
-    expect(consumed.NestedResult[0]).toBe(0)
+    expect(consumed.NestedResult[0]).toBe(1)
 
     // terminal &Random compliance: open_taken is LAST, so nothing follows its Random draw
     expect(random_is_last(tx)).toBe(true)
@@ -718,18 +743,19 @@ describe('settle_and_take / open_taken — PTB-composed settle+open (no stranded
     const tx = settle_open_world_ptb(ctx)(A)
     const calls = move_calls(tx)
     expect(calls.map(c => c.target)).toEqual([
+      'header::aresrpg',
       'settlement::settle_and_take',
       'results::open_taken',
     ])
-    expect(calls[0].package).toBe(IDS.aresrpg.ENGINE_LATEST_PACKAGE_ID)
-    expect(calls[1].package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
-    expect(calls[0].args).toBe(4)
-    expect(calls[1].args).toBe(7)
+    expect(calls[1].package).toBe(IDS.aresrpg.ENGINE_LATEST_PACKAGE_ID)
+    expect(calls[2].package).toBe(IDS.aresrpg.LATEST_PACKAGE_ID)
+    expect(calls[1].args).toBe(4)
+    expect(calls[2].args).toBe(7)
 
-    const open_cmd = tx.getData().commands.at(1)
+    const open_cmd = tx.getData().commands.at(2)
     const outcome_arg = open_cmd.MoveCall.arguments.at(0)
     expect(outcome_arg.$kind).toBe('NestedResult')
-    expect(outcome_arg.NestedResult[0]).toBe(0)
+    expect(outcome_arg.NestedResult[0]).toBe(1)
 
     expect(random_is_last(tx)).toBe(true)
     expect(typeof tx.serialize()).toBe('string')

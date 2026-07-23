@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Transaction } from '@mysten/sui/transactions'
-
 import {
   aresrpg_deployment,
   shared_object_arg,
   random_shared_ref,
 } from '../../deployment/aresrpg.js'
 import { as_object_arg } from '../object_arg.js'
+
+import { new_ptb } from './header.js'
 
 // &Random (0x8) PIN — mirrors fight.js's `random_arg` (see there for the full latency rationale). Pins the
 // system object via `random_shared_ref` when the network's genesis version is stamped; falls back to the
@@ -115,7 +115,7 @@ export function buy_ptb(context) {
     kiosk_id,
     personal_kiosk_cap_id,
     gas_budget_mist,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const dep = aresrpg_deployment(network, context.ids?.aresrpg)
     tx.setGasBudget(gas_budget_mist ?? buy_gas_budget_mist({ quantity: 1 }))
@@ -159,7 +159,7 @@ export function buy_many_ptb(context) {
     kiosk_id,
     personal_kiosk_cap_id,
     gas_budget_mist,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const dep = aresrpg_deployment(network, context.ids?.aresrpg)
     const q = clamp_quantity(quantity)

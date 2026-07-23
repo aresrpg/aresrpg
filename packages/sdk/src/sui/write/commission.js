@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Transaction } from '@mysten/sui/transactions'
-
 import {
   aresrpg_deployment,
   shared_object_arg,
   random_shared_ref,
 } from '../../deployment/aresrpg.js'
 import { as_object_arg } from '../object_arg.js'
+
+import { new_ptb } from './header.js'
 
 // COMMISSION PTB BUILDERS for the merged `aresrpg` package's `commission` module — the v2 artisan-commission flow
 // (supersedes the v1 pay-X escrow): the CUSTOMER brings the RESOURCES + an
@@ -56,7 +56,12 @@ function random_arg(network, tx) {
  */
 export function commission_request_ptb(context) {
   const { network } = context
-  return ({ artisan, recipe_id, amount_mist = 0, tx = new Transaction() }) => {
+  return ({
+    artisan,
+    recipe_id,
+    amount_mist = 0,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     if (!artisan || !recipe_id)
       throw new Error(
@@ -64,7 +69,9 @@ export function commission_request_ptb(context) {
       )
     // Escrow split exactly off gas, folded into a Balance by `request` — the CLIENT does not enforce the 0.1 SUI
     // floor here (`EAmountTooLow` aborts on-chain below it; commission_actions.js `meets_min_payment` is the guard).
-    const [payment] = tx.splitCoins(tx.gas, [tx.pure.u64(BigInt(amount_mist ?? 0))])
+    const [payment] = tx.splitCoins(tx.gas, [
+      tx.pure.u64(BigInt(amount_mist ?? 0)),
+    ])
     tx.moveCall({
       target: `${a.LATEST_PACKAGE_ID}::commission::request`,
       arguments: [
@@ -93,10 +100,16 @@ export function commission_accept_ptb(context) {
     artisan_kiosk_id,
     personal_kiosk_cap_id,
     character_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
-    if (!request_id || !recipe_id || !artisan_kiosk_id || !personal_kiosk_cap_id || !character_id)
+    if (
+      !request_id ||
+      !recipe_id ||
+      !artisan_kiosk_id ||
+      !personal_kiosk_cap_id ||
+      !character_id
+    )
       throw new Error(
         '[commission_accept_ptb] request_id, recipe_id, artisan_kiosk_id, personal_kiosk_cap_id and character_id are all required.',
       )
@@ -133,7 +146,7 @@ export function commission_execute_ptb(context) {
     personal_kiosk_cap_id,
     input_item_ids,
     output_template_id,
-    tx = new Transaction(),
+    tx = new_ptb(context.network, context.ids?.aresrpg),
   }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     if (!request_id || !recipe_id || !output_template_id)
@@ -153,7 +166,13 @@ export function commission_execute_ptb(context) {
         as_object_arg(tx, personal_kiosk_cap_id), // pkcap: &PersonalKioskCap (the customer's)
         tx.pure.vector('id', input_item_ids), // input_item_ids: vector<ID>
         as_object_arg(tx, output_template_id), // output_template: &ItemTemplate (asserted == recipe's output)
-        shared_object_arg(tx, network, 'EXTRACT_POLICY', false, a.EXTRACT_POLICY), // xpolicy: &ItemExtractPolicy
+        shared_object_arg(
+          tx,
+          network,
+          'EXTRACT_POLICY',
+          false,
+          a.EXTRACT_POLICY,
+        ), // xpolicy: &ItemExtractPolicy
         shared_object_arg(tx, network, 'ITEM_POLICY', false, a.ITEM_POLICY), // policy: &TransferPolicy<Item>
         shared_object_arg(tx, network, 'GAME_CONFIG', false, a.GAME_CONFIG), // config: &GameConfig (crafting kill-switch)
         shared_object_arg(tx, network, 'VERSION', false, a.VERSION), // version: &Version
@@ -172,10 +191,15 @@ export function commission_execute_ptb(context) {
  */
 export function commission_cancel_ptb(context) {
   const { network } = context
-  return ({ request_id, tx = new Transaction() }) => {
+  return ({
+    request_id,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     if (!request_id)
-      throw new Error('[commission_cancel_ptb] request_id is required — the shared CraftRequest id.')
+      throw new Error(
+        '[commission_cancel_ptb] request_id is required — the shared CraftRequest id.',
+      )
     tx.moveCall({
       target: `${a.LATEST_PACKAGE_ID}::commission::cancel`,
       arguments: [as_object_arg(tx, request_id)], // request: CraftRequest (shared, consumed by value + deleted)
@@ -192,7 +216,12 @@ export function commission_cancel_ptb(context) {
  */
 export function commission_redeem_xp_ptb(context) {
   const { network } = context
-  return ({ voucher_id, kiosk_id, personal_kiosk_cap_id, tx = new Transaction() }) => {
+  return ({
+    voucher_id,
+    kiosk_id,
+    personal_kiosk_cap_id,
+    tx = new_ptb(context.network, context.ids?.aresrpg),
+  }) => {
     const a = aresrpg_deployment(network, context.ids?.aresrpg)
     if (!voucher_id || !kiosk_id || !personal_kiosk_cap_id)
       throw new Error(

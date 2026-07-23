@@ -161,17 +161,26 @@ describe('mob_group_witness — the /v1-ingredient witness producer', () => {
     // stamped manifest + witness → the cheap proof door
     expect(
       targets(create_fight_ptb(stamped)({ ...base, group_proof: witness })),
-    ).toEqual(['zones::claim_mob_group_in_zone_with_proof', 'fight::create'])
+    ).toEqual([
+      'header::aresrpg',
+      'zones::claim_mob_group_in_zone_with_proof',
+      'fight::create',
+    ])
     // stamped manifest + unavailable ingredients (null witness) → the ORIGINAL door, never a broken create
     expect(
       targets(create_fight_ptb(stamped)({ ...base, group_proof: null })),
-    ).toEqual(['zones::claim_mob_group_in_zone', 'fight::create'])
+    ).toEqual([
+      'header::aresrpg',
+      'zones::claim_mob_group_in_zone',
+      'fight::create',
+    ])
     // UNSTAMPED manifest: the same witness is IGNORED — old claim+create, BYTE-IDENTICAL to the null path
     const unstamped_with_witness = create_fight_ptb(unstamped)({
       ...base,
       group_proof: witness,
     })
     expect(targets(unstamped_with_witness)).toEqual([
+      'header::aresrpg',
       'zones::claim_mob_group_in_zone',
       'fight::create',
     ])
