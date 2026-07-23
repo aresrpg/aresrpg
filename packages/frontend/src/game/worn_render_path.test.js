@@ -231,7 +231,12 @@ describe('world worn-cosmetic state -> rig slots', () => {
     // slug and on-chain Display name never changed (no republish) — only the shipped GLB's variant id did.
     // Already-minted "Bara Hood (Vitality)"/"(Wisdom)" items must keep resolving through cosmetic_icons.js's
     // UNCHANGED annex, then translate through cosmetic_glb.js's RECOLORED_VARIANTS — the one mapping home.
-    const vitality_id = seed_manifest.items.capuche_bara_vitality
+    // capuche_bara_vitality retired from the manifest's `items` in the ceremony #3 corpus rebuild (same
+    // retirement pattern as cape_lorito_air/earth/fire/water and corbac_helmet elsewhere in this file) — no
+    // longer sold, but an already-minted "Bara Hood (Vitality)" keeps this STABLE historical template id
+    // forever. Pinned literally (the pre-ceremony-#3 manifest's value) since the retired slug no longer
+    // resolves through seed_manifest.items.
+    const vitality_id = '0x5e3639cfe220a9a651cfc398be53ad496e8232f54ac46e1ffc3e2b7a2a1fc23b'
     const wisdom_id = seed_manifest.items.capuche_bara_wisdom
     const templates = new Map([
       [vitality_id, { template_id: vitality_id, name: 'Bara Hood (Vitality)', item_type: 'hat' }],
