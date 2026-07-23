@@ -64,6 +64,7 @@ packages/move/forgemagie/Published.toml
 packages/move/foundation/Published.toml
 packages/move/gifting/Published.toml
 packages/move/kolizeum/Published.toml
+packages/move/scripts/out/ceremony_manifest.json
 packages/move/scripts/out/seed_manifest.json
 packages/move/social/Published.toml
 packages/move/spells/Published.toml
@@ -234,6 +235,8 @@ function generated_purpose(file) {
   if (stamp_all_files.has(file)) return 'SANCTIONED — stamp_all output'
   if (file.endsWith('Published.toml')) return 'SANCTIONED — Move/ceremony lineage record'
   if (file === 'packages/frontend/public/release_manifest.json') return 'SANCTIONED — release_prepare output'
+  if (file === 'packages/move/scripts/out/ceremony_manifest.json')
+    return 'SANCTIONED — publish/upgrade ceremony receipt'
   if (file === 'packages/move/scripts/out/seed_manifest.json') return 'SANCTIONED — seed ceremony run receipt'
   return 'SANCTIONED — CLI-generated evidence/receipt'
 }
