@@ -6,8 +6,8 @@
 // exact group/cell lists DERIVE from the seed. This module is the byte-for-byte twin of
 // `aresrpg_foundation::zone_gen` (zone_gen.move) so the overworld map advertises EXACTLY what the on-chain
 // fight/gather doors materialise (composition-at-discovery). SPAWN SPACING (minimum distance of
-// 20 blocks between each spawn of mobs) is enforced HERE in the position derivation — the same deterministic
-// rejection sampling the chain runs, so client and chain agree on every position.
+// 20 blocks between each spawn of mobs) is enforced HERE in the position derivation. Existing commitments retain
+// their rejection-sampled stream; newly discovered zones use the chain's deterministic shuffled-cell placement.
 //
 // DETERMINISM IS LAW (@aresrpg/sim): only `prng.js` (mulberry32) is the randomness source — the SAME PRNG the
 // Move `prng` module ports. No Math.random, no floats in the draw path. spawn_id is a full 64-bit value (two u32
@@ -22,6 +22,10 @@ const CLUSTER_CAP = 20 // hard rail on cells per gather field (zone_gen.move twi
 const MIN_SPAWN_SPACING = 20 // mob group spawns pairwise ≥ 20 blocks apart
 const SPACING_D2 = MIN_SPAWN_SPACING * MIN_SPAWN_SPACING // squared compare (= 400)
 const POS_ATTEMPTS = 64 // rejection cap; on exhaustion accept the last roll (a zone too small to fit the spacing)
+const GRID_PITCH = MIN_SPAWN_SPACING * 2 // 40-block cells; centred jitter bands stay 20 apart
+const GRID_MARGIN = MIN_SPAWN_SPACING / 2 // 10-block fixed inset on every cell edge
+const GRID_JITTER = MIN_SPAWN_SPACING // inclusive 0..20 jitter after the fixed inset
+const FLAT_COMMITMENT_FORMAT = 2
 
 /** prng-state twin of `zone_gen::p_roll_u64` — SKIP the draw when `lo >= hi` (point/malformed band). */
 const p_roll_u64 = (state, lo, hi) =>
@@ -77,6 +81,31 @@ const p_roll_pos_spaced = (state, xs, zs, ox, oz, zsize, bx, bz) => {
     if (far_enough(xs, zs, r.x, r.z)) return { state: s, x: r.x, z: r.z }
   }
   return { state: s, x: fx, z: fz }
+}
+
+/** Row-major indices for complete 40-block cells inside `zone intersection world`. */
+const grid_cell_pool = (ox, oz, zsize, bx, bz) => {
+  const width = Math.max(0, Math.min(ox + zsize, bx) - ox)
+  const depth = Math.max(0, Math.min(oz + zsize, bz) - oz)
+  const cols = Math.floor(width / GRID_PITCH)
+  const count = cols * Math.floor(depth / GRID_PITCH)
+  return { cols, cells: Array.from({ length: count }, (_, index) => index) }
+}
+
+/** One partial Fisher-Yates cell pick followed by x then z jitter — twin of `zone_gen::p_pick_grid_pos`. */
+const p_pick_grid_pos = (state, cells, used, cols, ox, oz) => {
+  const picked = p_roll_u64(state, used, cells.length - 1)
+  ;[cells[used], cells[picked.value]] = [cells[picked.value], cells[used]]
+  const jitter_x = p_roll_u64(picked.state, 0, GRID_JITTER)
+  const jitter_z = p_roll_u64(jitter_x.state, 0, GRID_JITTER)
+  const cell = cells[used]
+  const cell_x = cell % cols
+  const cell_z = Math.floor(cell / cols)
+  return {
+    state: jitter_z.state,
+    x: ox + cell_x * GRID_PITCH + GRID_MARGIN + jitter_x.value,
+    z: oz + cell_z * GRID_PITCH + GRID_MARGIN + jitter_z.value,
+  }
 }
 
 /** Clamp a rolled group size to `[1, size_bound]` — twin of `world_math::clamp_group_u16`. */
@@ -145,6 +174,53 @@ export function derive_mob_groups({
     })
     xs.push(pos.x)
     zs.push(pos.z)
+  }
+  return out
+}
+
+/**
+ * Shuffled grid-cell placement for newly discovered zones — byte-for-byte twin of
+ * `zone_gen::derive_mob_groups_grid`, added alongside the pinned legacy function above. Draw order per group:
+ * weighted template, size, remaining-cell choice, x jitter, z jitter, group seed, spawn-id hi, spawn-id lo.
+ */
+export function derive_mob_groups_grid({
+  seed,
+  min_g,
+  max_g,
+  weights,
+  min_group,
+  max_group,
+  size_bound,
+  ox,
+  oz,
+  zsize,
+  bx,
+  bz,
+}) {
+  const out = []
+  let s = rng_seed(mix(seed, MOB_SALT))
+  const group_count = p_roll_u64(s, min_g, max_g)
+  s = group_count.state
+  const { cols, cells } = grid_cell_pool(ox, oz, zsize, bx, bz)
+  for (let i = 0; i < group_count.value && i < cells.length; i++) {
+    const pick = p_pick_weighted(s, weights)
+    s = pick.state
+    if (pick.idx === null) break
+    const { idx } = pick
+    const size_roll = p_roll_u64(s, min_group[idx], max_group[idx])
+    const pos = p_pick_grid_pos(size_roll.state, cells, i, cols, ox, oz)
+    const group_seed = rng_next(pos.state)
+    const spawn_hi = rng_next(group_seed.state)
+    const spawn_lo = rng_next(spawn_hi.state)
+    s = spawn_lo.state
+    out.push({
+      spawn_id: (BigInt(spawn_hi.value) << 32n) | BigInt(spawn_lo.value),
+      template_idx: idx,
+      x: pos.x,
+      z: pos.z,
+      size: clamp_group(size_roll.value, size_bound),
+      group_seed: group_seed.value,
+    })
   }
   return out
 }
@@ -220,6 +296,73 @@ export function derive_resources({
         push_cell(grown.xs[c], grown.zs[c])
     } else {
       push_cell(anchor.x, anchor.z) // non-gather: ONE cell, one harvest (the one-bit collapse)
+    }
+  }
+  return out
+}
+
+/**
+ * Shuffled grid-cell anchors for newly discovered resources — twin of `zone_gen::derive_resources_grid`.
+ * One distinct cell is consumed per pick; gather-field growth and per-cell ID draws remain unchanged.
+ */
+export function derive_resources_grid({
+  seed,
+  min_n,
+  max_n,
+  weights,
+  min_qty,
+  max_qty,
+  jobs,
+  ox,
+  oz,
+  zsize,
+  bx,
+  bz,
+}) {
+  const out = []
+  let s = rng_seed(mix(seed, RES_SALT))
+  const target = p_roll_u64(s, min_n, max_n)
+  s = target.state
+  const { cols, cells } = grid_cell_pool(ox, oz, zsize, bx, bz)
+  let used = 0
+  const max_cx = Math.min(ox + zsize - 1, bx - 1)
+  const max_cz = Math.min(oz + zsize - 1, bz - 1)
+  while (out.length < target.value && used < cells.length) {
+    const pick = p_pick_weighted(s, weights)
+    s = pick.state
+    if (pick.idx === null) break
+    const { idx } = pick
+    const qty = p_roll_u64(s, min_qty[idx], max_qty[idx])
+    const anchor = p_pick_grid_pos(qty.state, cells, used, cols, ox, oz)
+    s = anchor.state
+    used++
+    const push_cell = (x, z) => {
+      const spawn_hi = rng_next(s)
+      const spawn_lo = rng_next(spawn_hi.state)
+      s = spawn_lo.state
+      out.push({
+        spawn_id: (BigInt(spawn_hi.value) << 32n) | BigInt(spawn_lo.value),
+        template_idx: idx,
+        x,
+        z,
+      })
+    }
+    if (jobs[idx] <= MAX_GATHER_JOB) {
+      const grown = p_grow_cluster(
+        s,
+        anchor.x,
+        anchor.z,
+        Math.min(qty.value, CLUSTER_CAP),
+        ox,
+        max_cx,
+        oz,
+        max_cz,
+      )
+      s = grown.state
+      for (let c = 0; c < grown.xs.length; c++)
+        push_cell(grown.xs[c], grown.zs[c])
+    } else {
+      push_cell(anchor.x, anchor.z)
     }
   }
   return out
@@ -393,7 +536,8 @@ export const bit_get = (bitmap, i) => {
  * the chain doors key on (`node_index` for gathers; stable across consumption, unlike the retired swap-remove
  * positional index). `spawn_id`/`group_seed` are DECIMAL STRINGS (64-bit — Number would corrupt them).
  * @param {object} p
- * @param {object} p.zone  `{ seed, discovered_at_ms, mob_bitmap: number[], res_bitmap: number[] }` — the Zone DF
+ * @param {object} p.zone  `{ seed, discovered_at_ms, mob_bitmap: number[], res_bitmap: number[],
+ *   group_root?: number[] }` — the Zone DF plus adjacent commitment marker
  * @param {number} p.zx @param {number} p.zy  the zone key
  * @param {object} p.world  the World doc: `{ zone_size, bounds_x, bounds_z, min_groups, max_groups, min_nodes,
  *   max_nodes, mobs: Array<{template_id, rate_bp, min_group, max_group, level?}>,
@@ -413,6 +557,9 @@ export function derive_zone({ zone, zx, zy, world, team_bound = 6 }) {
   const resources = world.resources ?? []
   const { seed } = zone
   const spawned_at_ms = Number(zone.discovered_at_ms ?? 0)
+  const uses_grid =
+    zone.group_root?.length === 33 &&
+    Number(zone.group_root[0]) === FLAT_COMMITMENT_FORMAT
 
   // §4 distance-difficulty inputs — the EXACT chain pipeline (zones.move derive internals)
   const levels = mobs.map(m => Number(m.level ?? 0))
@@ -432,7 +579,7 @@ export function derive_zone({ zone, zx, zy, world, team_bound = 6 }) {
   )
   const size_bound = size_cap(progress, Number(team_bound) || 6)
 
-  const groups = derive_mob_groups({
+  const groups = (uses_grid ? derive_mob_groups_grid : derive_mob_groups)({
     seed,
     min_g: Number(world.min_groups),
     max_g: Number(world.max_groups),
@@ -446,7 +593,7 @@ export function derive_zone({ zone, zx, zy, world, team_bound = 6 }) {
     bx,
     bz,
   })
-  const cells = derive_resources({
+  const cells = (uses_grid ? derive_resources_grid : derive_resources)({
     seed,
     min_n: Number(world.min_nodes),
     max_n: Number(world.max_nodes),

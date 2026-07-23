@@ -245,8 +245,8 @@ fun search_internal(
   };
 
   // derived counts for the honest event (compute-only — nothing per-row is stored)
-  let (msids, mt, mx, mz, ms, mg) = zone_comp::derive_mobs(world, zx, zy, seed, config.team_size_bound());
-  let (rsids, _rt, _rx, _rz, _rj, _rr) = zone_comp::derive_res(world, zx, zy, seed);
+  let (msids, mt, mx, mz, ms, mg) = zone_comp::derive_mobs_grid(world, zx, zy, seed, config.team_size_bound());
+  let (rsids, _rt, _rx, _rz, _rj, _rr) = zone_comp::derive_res_grid(world, zx, zy, seed);
 
   // ── write: create-or-RE-ROLL the zone DF (new seed, bitmaps reset — the top-up's derivation-model successor) ──
   let wuid = world::uid_mut(world);
@@ -259,7 +259,7 @@ fun search_internal(
   } else {
     df::add(wuid, key, Zone { discovered_at_ms: now, seed, mob_bitmap: vector[], res_bitmap: vector[] });
   };
-  let group_root = zone_gen::mob_group_root(wid, zx, zy, seed, now, &msids, &mt, &mx, &mz, &ms, &mg);
+  let group_root = zone_gen::mob_group_commitment(wid, zx, zy, seed, now, &msids, &mt, &mx, &mz, &ms, &mg);
   let root_key = ZoneGroupRootKey { zx, zy };
   if (df::exists(wuid, root_key)) {
     let stored: &mut ZoneGroupCommitment = df::borrow_mut(wuid, root_key);
@@ -399,10 +399,23 @@ fun resolve_mob_group(
   assert!(df::exists(uid, key), ESpawnNotFound);
   let zone: &Zone = df::borrow(uid, key);
   let stored: &ZoneGroupCommitment = df::borrow(uid, root_key);
-  assert!(zone_gen::mob_group_root_matches(
-    &stored.root, stored.count, object::id(world), zx, zy, zone.seed, zone.discovered_at_ms, index, spawn_id, template,
-    x, z, group_size, group_seed, &proof,
-  ), EBadGroupProof);
+  if (zone_gen::mob_group_commitment_format(&stored.root) == 2) {
+    assert!(proof.is_empty(), EBadGroupProof);
+    let (sids, tpls, xs, zs, sizes, gseeds) =
+      zone_comp::derive_mobs_grid(world, zx, zy, zone.seed, team_bound);
+    assert!(stored.count == sids.length() && index < stored.count, EBadGroupProof);
+    assert!(zone_gen::mob_group_commitment_matches(
+      &stored.root, object::id(world), zx, zy, zone.seed, zone.discovered_at_ms,
+      &sids, &tpls, &xs, &zs, &sizes, &gseeds,
+    ), EBadGroupProof);
+    assert!(sids[index] == spawn_id && tpls[index] == template && xs[index] == x && zs[index] == z &&
+      sizes[index] == group_size && gseeds[index] == group_seed, EBadGroupProof);
+  } else {
+    assert!(zone_gen::mob_group_root_matches(
+      &stored.root, stored.count, object::id(world), zx, zy, zone.seed, zone.discovered_at_ms, index, spawn_id, template,
+      x, z, group_size, group_seed, &proof,
+    ), EBadGroupProof);
+  };
   assert!(!bit_get(&zone.mob_bitmap, index), ESpawnNotFound);
   (template, x, z, group_size, zone.discovered_at_ms, group_seed, index)
 }
@@ -414,7 +427,7 @@ fun find_mob_group(world: &World, zx: u32, zy: u32, spawn_id: u64, team_bound: u
   let key = ZoneKey { zx, zy };
   assert!(df::exists(world::uid(world), key), ESpawnNotFound);
   let zone: &Zone = df::borrow(world::uid(world), key);
-  let (sids, tpls, xs, zs, sizes, gseeds) = zone_comp::derive_mobs(world, zx, zy, zone.seed, team_bound);
+  let (sids, tpls, xs, zs, sizes, gseeds) = derive_mobs(world, zx, zy, zone.seed, team_bound);
   let n = sids.length();
   let mut i = 0;
   while (i < n) {
@@ -441,7 +454,7 @@ public(package) fun read_resource_node(world: &World, zx: u32, zy: u32, node_ind
   let key = ZoneKey { zx, zy };
   assert!(df::exists(world::uid(world), key), EBadNode);
   let zone: &Zone = df::borrow(world::uid(world), key);
-  let (_sids, tpls, xs, zs, jobs, tiers) = zone_comp::derive_res(world, zx, zy, zone.seed);
+  let (_sids, tpls, xs, zs, jobs, tiers) = derive_res(world, zx, zy, zone.seed);
   assert!(node_index < xs.length(), EBadNode);
   assert!(!bit_get(&zone.res_bitmap, node_index), ENodeEmpty);
   (xs[node_index], zs[node_index], jobs[node_index], tiers[node_index], tpls[node_index])
@@ -518,6 +531,32 @@ public fun resource_remaining(world: &World, zx: u32, zy: u32, i: u64): u16 {
 
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
 
+/// Derive with the placement math pinned by the adjacent commitment. A missing commitment predates the
+/// commitment feature and therefore retains the historical stream.
+public(package) fun derive_mobs(
+  world: &World, zx: u32, zy: u32, seed: u64, team_bound: u64,
+): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u16>, vector<u64>) {
+  if (group_commitment_format(world, zx, zy) == 2)
+    zone_comp::derive_mobs_grid(world, zx, zy, seed, team_bound)
+  else zone_comp::derive_mobs(world, zx, zy, seed, team_bound)
+}
+
+/// Resource anchors share the mob commitment's format marker, pinning both derivation streams per discovery.
+public(package) fun derive_res(
+  world: &World, zx: u32, zy: u32, seed: u64,
+): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u8>, vector<u8>) {
+  if (group_commitment_format(world, zx, zy) == 2)
+    zone_comp::derive_res_grid(world, zx, zy, seed)
+  else zone_comp::derive_res(world, zx, zy, seed)
+}
+
+fun group_commitment_format(world: &World, zx: u32, zy: u32): u8 {
+  let key = ZoneGroupRootKey { zx, zy };
+  if (!df::exists(world::uid(world), key)) return 1;
+  let stored: &ZoneGroupCommitment = df::borrow(world::uid(world), key);
+  zone_gen::mob_group_commitment_format(&stored.root)
+}
+
 fun borrow_zone(world: &World, zx: u32, zy: u32): &Zone {
   df::borrow(world::uid(world), ZoneKey { zx, zy })
 }
@@ -563,6 +602,32 @@ public fun remove_group_commitment_for_testing(world: &mut World, zx: u32, zy: u
 #[test_only]
 public fun group_commitment_exists_for_testing(world: &World, zx: u32, zy: u32): bool {
   df::exists(world::uid(world), ZoneGroupRootKey { zx, zy })
+}
+
+#[test_only]
+public fun group_commitment_format_for_testing(world: &World, zx: u32, zy: u32): u8 {
+  group_commitment_format(world, zx, zy)
+}
+
+/// Model a zone discovered by the prior package: same stored layout, historical derivation, 32-byte tree root.
+#[test_only]
+public fun replace_group_commitment_for_testing(
+  world: &mut World, zx: u32, zy: u32, team_bound: u64,
+) {
+  let (seed, discovered_at_ms) = {
+    let zone = borrow_zone(world, zx, zy);
+    (zone.seed, zone.discovered_at_ms)
+  };
+  let (sids, tpls, xs, zs, sizes, gseeds) =
+    zone_comp::derive_mobs(world, zx, zy, seed, team_bound);
+  let root = zone_gen::mob_group_root(
+    object::id(world), zx, zy, seed, discovered_at_ms,
+    &sids, &tpls, &xs, &zs, &sizes, &gseeds,
+  );
+  let stored: &mut ZoneGroupCommitment =
+    df::borrow_mut(world::uid_mut(world), ZoneGroupRootKey { zx, zy });
+  stored.root = root;
+  stored.count = sids.length();
 }
 
 #[test_only]

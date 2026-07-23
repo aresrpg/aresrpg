@@ -9,6 +9,145 @@ module aresrpg_foundation::zone_gen_tests;
 
 use aresrpg_foundation::zone_gen;
 
+// ╔════════════════ [ Gas profile fixtures ] ══════════════════════════════════ ]
+
+/// Representative pre-upgrade search payload: 53 groups in a 512-block zone. Both profile tests call this
+/// exact helper, including construction of the parallel template vector, so their statistics delta isolates
+/// only the authenticated commitment calculation.
+fun gas_profile_groups(): (ID, vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u16>, vector<u64>) {
+  let world = object::id_from_address(@0x1);
+  let (spawn_ids, template_idxs, xs, zs, sizes, group_seeds) = zone_gen::derive_mob_groups(
+    123456789, 53, 53, &vector[100, 50], &vector[1, 2], &vector[6, 6], 6,
+    0, 0, 512, 500000, 500000,
+  );
+  let mut templates = vector[];
+  let mut i = 0;
+  while (i < template_idxs.length()) {
+    templates.push_back(if (template_idxs[i] == 0) object::id_from_address(@0x1f)
+      else object::id_from_address(@0x20));
+    i = i + 1;
+  };
+  (world, spawn_ids, templates, xs, zs, sizes, group_seeds)
+}
+
+fun gas_profile_grid_groups(): (ID, vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u16>, vector<u64>) {
+  let world = object::id_from_address(@0x1);
+  let (spawn_ids, template_idxs, xs, zs, sizes, group_seeds) = zone_gen::derive_mob_groups_grid(
+    123456789, 53, 53, &vector[100, 50], &vector[1, 2], &vector[6, 6], 6,
+    0, 0, 512, 500000, 500000,
+  );
+  let mut templates = vector[];
+  let mut i = 0;
+  while (i < template_idxs.length()) {
+    templates.push_back(if (template_idxs[i] == 0) object::id_from_address(@0x1f)
+      else object::id_from_address(@0x20));
+    i = i + 1;
+  };
+  (world, spawn_ids, templates, xs, zs, sizes, group_seeds)
+}
+
+#[test]
+fun gas_profile_zone_groups_control() {
+  assert!(vector[0u8].length() == 1, 0);
+}
+
+#[test]
+fun gas_profile_zone_groups_without_commitment() {
+  let (_world, spawn_ids, templates, xs, zs, sizes, group_seeds) = gas_profile_groups();
+  assert!(spawn_ids.length() == 53 && templates.length() == 53 && xs.length() == 53 &&
+    zs.length() == 53 && sizes.length() == 53 && group_seeds.length() == 53, 0);
+}
+
+#[test]
+fun gas_profile_zone_groups_with_commitment() {
+  let (world, spawn_ids, templates, xs, zs, sizes, group_seeds) = gas_profile_groups();
+  let root = zone_gen::mob_group_root(
+    world, 7, 9, 123456789, 13, &spawn_ids, &templates, &xs, &zs, &sizes, &group_seeds,
+  );
+  assert!(root.length() == 32, 0);
+}
+
+#[test]
+fun gas_profile_zone_groups_with_flat_commitment() {
+  let (world, spawn_ids, templates, xs, zs, sizes, group_seeds) = gas_profile_groups();
+  let commitment = zone_gen::mob_group_commitment(
+    world, 7, 9, 123456789, 13, &spawn_ids, &templates, &xs, &zs, &sizes, &group_seeds,
+  );
+  assert!(commitment.length() == 33, 0);
+}
+
+#[test]
+fun gas_profile_grid_groups_without_commitment() {
+  let (_world, spawn_ids, templates, xs, zs, sizes, group_seeds) = gas_profile_grid_groups();
+  assert!(spawn_ids.length() == 53 && templates.length() == 53 && xs.length() == 53 &&
+    zs.length() == 53 && sizes.length() == 53 && group_seeds.length() == 53, 0);
+}
+
+#[test]
+fun gas_profile_grid_groups_with_flat_commitment() {
+  let (world, spawn_ids, templates, xs, zs, sizes, group_seeds) = gas_profile_grid_groups();
+  let commitment = zone_gen::mob_group_commitment(
+    world, 7, 9, 123456789, 13, &spawn_ids, &templates, &xs, &zs, &sizes, &group_seeds,
+  );
+  assert!(commitment.length() == 33, 0);
+}
+
+// ╔════════════════ [ Commitment formats ] ════════════════════════════════════ ]
+
+#[test]
+/// Historical 32-byte roots and membership proofs remain pinned for already-committed zones.
+fun t_tree_commitment_verification_remains_live() {
+  let world = object::id_from_address(@0x1);
+  let spawn_ids = vector[21, 22, 23];
+  let templates = vector[
+    object::id_from_address(@0x1f), object::id_from_address(@0x20), object::id_from_address(@0x21),
+  ];
+  let xs = vector[41, 42, 43];
+  let zs = vector[51, 52, 53];
+  let sizes = vector[2, 3, 4];
+  let seeds = vector[61, 62, 63];
+  let root = zone_gen::mob_group_root(
+    world, 7, 9, 11, 13, &spawn_ids, &templates, &xs, &zs, &sizes, &seeds,
+  );
+  assert!(zone_gen::mob_group_commitment_format(&root) == 1, 0);
+  let proof = zone_gen::mob_group_proof_for_testing(
+    world, 7, 9, 11, 13, &spawn_ids, &templates, &xs, &zs, &sizes, &seeds, 2,
+  );
+  assert!(zone_gen::mob_group_root_matches(
+    &root, 3, world, 7, 9, 11, 13, 2, 23, templates[2], 43, 53, 4, 63, &proof,
+  ), 1);
+}
+
+#[test]
+/// Flat all-groups BCS vector captured from the JS twin; one format byte plus one Blake2b-256 digest.
+fun t_flat_commitment_matches_js_mirror() {
+  let world = object::id_from_address(@0x1);
+  let spawn_ids = vector[21, 22, 23];
+  let templates = vector[
+    object::id_from_address(@0x1f), object::id_from_address(@0x20), object::id_from_address(@0x21),
+  ];
+  let mut xs = vector[41, 42, 43];
+  let zs = vector[51, 52, 53];
+  let sizes = vector[2, 3, 4];
+  let seeds = vector[61, 62, 63];
+  let commitment = zone_gen::mob_group_commitment(
+    world, 7, 9, 11, 13, &spawn_ids, &templates, &xs, &zs, &sizes, &seeds,
+  );
+  assert!(commitment == vector[
+    2,196,251,68,160,163,9,36,219,179,174,232,97,183,84,101,138,
+    122,153,41,53,251,118,215,126,29,56,242,26,113,69,100,111,
+  ], 0);
+  assert!(zone_gen::mob_group_commitment_format(&commitment) == 2, 1);
+  assert!(zone_gen::mob_group_commitment_matches(
+    &commitment, world, 7, 9, 11, 13, &spawn_ids, &templates, &xs, &zs, &sizes, &seeds,
+  ), 2);
+  let x = &mut xs[2];
+  *x = 44;
+  assert!(!zone_gen::mob_group_commitment_matches(
+    &commitment, world, 7, 9, 11, 13, &spawn_ids, &templates, &xs, &zs, &sizes, &seeds,
+  ), 3);
+}
+
 // ╔════════════════ [ Mob-group derivation ] ═══════════════════════════════════ ]
 
 #[test]
@@ -78,6 +217,48 @@ fun t_derive_mob_groups_starved_table_is_empty() {
   assert!(sids.length() == 0 && xs.length() == 0, 0);
 }
 
+#[test]
+/// NEW-DISCOVERY PARITY CONTRACT — partial Fisher-Yates cell picks and centred jitter match the JS twin.
+fun t_grid_mob_groups_match_js_mirror() {
+  let (sids, idxs, xs, zs, sizes, seeds) = zone_gen::derive_mob_groups_grid(
+    123456789, 8, 8, &vector[100, 50], &vector[1, 2], &vector[6, 6], 6,
+    0, 0, 512, 500000, 500000,
+  );
+  assert!(xs.length() == 8, 0);
+  assert!(idxs[0] == 0 && xs[0] == 93 && zs[0] == 69 && sizes[0] == 2 &&
+    seeds[0] == 1061825901 && sids[0] == 17335301868684203457, 1);
+  assert!(idxs[1] == 1 && xs[1] == 29 && zs[1] == 299 && sizes[1] == 6 &&
+    seeds[1] == 1337586162 && sids[1] == 11222636116455882630, 2);
+  assert!(idxs[4] == 0 && xs[4] == 214 && zs[4] == 263 && sizes[4] == 6 &&
+    seeds[4] == 1128920888 && sids[4] == 5785876176118380760, 3);
+  assert!(idxs[7] == 0 && xs[7] == 183 && zs[7] == 414 && sizes[7] == 4 &&
+    seeds[7] == 1767650018 && sids[7] == 7940677434439223471, 4);
+}
+
+#[test]
+/// Grid placement enforces the same `SPACING_D2 = 400` law without scanning prior positions.
+fun t_grid_mob_groups_spacing_law_holds() {
+  let mut seed = 1u64;
+  while (seed <= 60) {
+    let (_s, _i, xs, zs, _sz, _gs) = zone_gen::derive_mob_groups_grid(
+      seed, 53, 53, &vector[100, 50], &vector[1, 2], &vector[6, 6], 6,
+      0, 0, 512, 500000, 500000,
+    );
+    let mut a = 0;
+    while (a < xs.length()) {
+      let mut b = a + 1;
+      while (b < xs.length()) {
+        let dx = if (xs[a] >= xs[b]) (xs[a] - xs[b]) as u64 else (xs[b] - xs[a]) as u64;
+        let dz = if (zs[a] >= zs[b]) (zs[a] - zs[b]) as u64 else (zs[b] - zs[a]) as u64;
+        assert!(dx * dx + dz * dz >= 400, seed);
+        b = b + 1;
+      };
+      a = a + 1;
+    };
+    seed = seed + 1;
+  };
+}
+
 // ╔════════════════ [ Resource-cell derivation (one-harvest / one-bit) ] ═══════ ]
 
 #[test]
@@ -129,6 +310,20 @@ fun t_derive_resources_deterministic() {
   let (a2, b2, c2, d2) = zone_gen::derive_resources(
     77, 5, 5, &vector[100], &vector[3, 3], &vector[3, 3], &vector[1], 0, 0, 256, 400000, 400000);
   assert!(a1 == a2 && b1 == b2 && c1 == c2 && d1 == d2, 0);
+}
+
+#[test]
+/// NEW-DISCOVERY resource parity: shuffled anchor cells, unchanged field walk, and unchanged per-cell id order.
+fun t_grid_resources_match_js_mirror() {
+  let (sids, idxs, xs, zs) = zone_gen::derive_resources_grid(
+    424242, 8, 8, &vector[100, 100], &vector[6, 6], &vector[6, 6], &vector[0, 5],
+    0, 0, 512, 500000, 500000,
+  );
+  assert!(xs.length() == 12, 0);
+  assert!(idxs[0] == 0 && xs[0] == 469 && zs[0] == 19 && sids[0] == 6634652389384369540, 1);
+  assert!(idxs[5] == 0 && xs[5] == 469 && zs[5] == 16 && sids[5] == 10314631233044501749, 2);
+  assert!(idxs[6] == 0 && xs[6] == 250 && zs[6] == 58 && sids[6] == 3358247984041777083, 3);
+  assert!(idxs[11] == 0 && xs[11] == 247 && zs[11] == 58 && sids[11] == 11429233443734658865, 4);
 }
 
 /// Every cell in `[from, to)` (after the first) edge-adjacent to an EARLIER cell of the range — one connected blob.

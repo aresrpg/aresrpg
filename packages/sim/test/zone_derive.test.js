@@ -4,7 +4,9 @@ import { describe, test, expect } from 'bun:test'
 
 import {
   derive_mob_groups,
+  derive_mob_groups_grid,
   derive_resources,
+  derive_resources_grid,
   derive_zone,
   bit_get,
   level_cap,
@@ -106,6 +108,62 @@ describe('zone_derive — seed-derived zone composition', () => {
   })
 })
 
+describe('zone_derive — shuffled grid placement for new discoveries', () => {
+  test('mob vectors match zone_gen_tests.move byte-for-byte', () => {
+    const groups = derive_mob_groups_grid(base)
+    expect(groups).toHaveLength(8)
+    expect(groups[0]).toEqual({
+      spawn_id: 17335301868684203457n,
+      template_idx: 0,
+      x: 93,
+      z: 69,
+      size: 2,
+      group_seed: 1061825901,
+    })
+    expect(groups[1]).toEqual({
+      spawn_id: 11222636116455882630n,
+      template_idx: 1,
+      x: 29,
+      z: 299,
+      size: 6,
+      group_seed: 1337586162,
+    })
+    expect(groups[4]).toEqual({
+      spawn_id: 5785876176118380760n,
+      template_idx: 0,
+      x: 214,
+      z: 263,
+      size: 6,
+      group_seed: 1128920888,
+    })
+    expect(groups[7]).toEqual({
+      spawn_id: 7940677434439223471n,
+      template_idx: 0,
+      x: 183,
+      z: 414,
+      size: 4,
+      group_seed: 1767650018,
+    })
+  })
+
+  test('53 groups preserve the 20-block law over many seeds', () => {
+    for (let seed = 1; seed <= 200; seed++) {
+      const groups = derive_mob_groups_grid({
+        ...base,
+        seed,
+        min_g: 53,
+        max_g: 53,
+      })
+      for (let i = 0; i < groups.length; i++)
+        for (let j = i + 1; j < groups.length; j++) {
+          const dx = groups[i].x - groups[j].x
+          const dz = groups[i].z - groups[j].z
+          expect(dx * dx + dz * dz).toBeGreaterThanOrEqual(spacing * spacing)
+        }
+    }
+  })
+})
+
 describe('zone_derive — resource cells (one-harvest / one-bit)', () => {
   const res_base = {
     seed: 424242,
@@ -184,6 +242,35 @@ describe('zone_derive — resource cells (one-harvest / one-bit)', () => {
 
   test('deterministic: same seed -> identical cell list', () => {
     expect(derive_resources(res_base)).toEqual(derive_resources(res_base))
+  })
+
+  test('grid vectors match zone_gen_tests.move byte-for-byte', () => {
+    const cells = derive_resources_grid(res_base)
+    expect(cells).toHaveLength(12)
+    expect(cells[0]).toEqual({
+      spawn_id: 6634652389384369540n,
+      template_idx: 0,
+      x: 469,
+      z: 19,
+    })
+    expect(cells[5]).toEqual({
+      spawn_id: 10314631233044501749n,
+      template_idx: 0,
+      x: 469,
+      z: 16,
+    })
+    expect(cells[6]).toEqual({
+      spawn_id: 3358247984041777083n,
+      template_idx: 0,
+      x: 250,
+      z: 58,
+    })
+    expect(cells[11]).toEqual({
+      spawn_id: 11429233443734658865n,
+      template_idx: 0,
+      x: 247,
+      z: 58,
+    })
   })
 })
 
@@ -268,6 +355,53 @@ describe('zone_derive — the full derive_zone pipeline (chain twin: zone_comp.m
       x: 250267,
       z: 250287,
     })
+  })
+
+  test('flat commitment marker selects the Move grid pipeline', () => {
+    const rows = derive_zone({
+      zone: { ...zone, group_root: [2, ...Array(32).fill(0)] },
+      zx: 488,
+      zy: 488,
+      world,
+      team_bound: 6,
+    })
+    expect(rows.filter(row => row.kind === 'mob')).toEqual([
+      expect.objectContaining({
+        index: 0,
+        spawn_id: '15762170440549013951',
+        x: 250036,
+        z: 250308,
+        group_seed: '2612523531',
+      }),
+      expect.objectContaining({
+        index: 1,
+        spawn_id: '16326306039438772607',
+        x: 250106,
+        z: 250121,
+        group_seed: '89174157',
+      }),
+      expect.objectContaining({
+        index: 2,
+        spawn_id: '1405262335024366198',
+        x: 249884,
+        z: 250004,
+        group_seed: '2946783652',
+      }),
+    ])
+    expect(rows.filter(row => row.kind === 'resource')).toEqual([
+      expect.objectContaining({
+        index: 0,
+        spawn_id: '2030442199321838059',
+        x: 250325,
+        z: 250146,
+      }),
+      expect.objectContaining({
+        index: 1,
+        spawn_id: '11817208362644989319',
+        x: 250310,
+        z: 250045,
+      }),
+    ])
   })
 
   test('consumed bits filter rows out but surviving rows KEEP their derivation index', () => {
