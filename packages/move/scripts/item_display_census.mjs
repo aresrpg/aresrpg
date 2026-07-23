@@ -20,8 +20,9 @@
 //      per-variant `icon` slug (never an on-chain field), so no display::edit can fix a slot-word class.
 //
 // This tool DIAGNOSES; it does not (and cannot) apply. The remediation needs a manual decision (see the printed
-// WALLS block). Leg B for the UNIQUE-item_type classes is the EXISTING walrus_display_step.mjs (already
-// built, DRY, fail-closed on the display-url law) — this census never rebuilds it.
+// WALLS block). Leg B for the UNIQUE-item_type classes is the Display-swap ceremony (DRY, fail-closed
+// on the display-url law) that now lives in the seed repo alongside the rest of the Walrus publish
+// pipeline (publish-boundary sweep, 2026-07-23) — this census never rebuilds it.
 import { readFileSync as read_file, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath as file_url_to_path } from 'node:url'
@@ -114,7 +115,7 @@ export function diff_object_vs_template(objects, template_name_by_id) {
 
 /** Group templates by on-chain `item_type`; a value shared by >1 template is a SLOT-WORD class whose
  * per-variant icon Display can NEVER resolve (the discriminating slug is off-chain). Unique values are
- * the Display-fixable classes (walrus_display_step's `{item_type}.png` quilt-patch route). */
+ * the Display-fixable classes (the seed repo's Display-swap ceremony `{item_type}.png` quilt-patch route). */
 export function item_type_collisions(templates) {
   const by_type = {}
   for (const t of templates ?? []) {
@@ -293,7 +294,7 @@ async function main() {
   console.log(
     `     ${Object.entries(collisions.shared).map(([it, ids]) => `${it}×${ids.length}`).slice(0, 12).join('  ')}`,
   )
-  console.log(`   UNIQUE-item_type templates (Display-fixable via walrus_display_step.mjs): ${collisions.unique_count}`)
+  console.log(`   UNIQUE-item_type templates (Display-fixable via the seed repo's swap ceremony): ${collisions.unique_count}`)
 
   console.log(
     `\n=== WALLS (why the tooling cannot APPLY either leg — a manual decision is required) ===\n` +
@@ -303,7 +304,7 @@ async function main() {
       `     — a Move upgrade that BREAKS the "immutable provenance" law — then a sweep. Not buildable today.\n` +
       `  B. On-chain item_type is the CATEGORY word for ${collisions.shared_templates}/${templates.length} templates, so Display's\n` +
       `     {item_type}.png yields ONE generic icon per category — the per-item art slug is NEVER on-chain and\n` +
-      `     Display cannot reach it. walrus_display_step.mjs's {item_type}.png quilt-patch route only resolves\n` +
+      `     Display cannot reach it. The seed repo's {item_type}.png quilt-patch route only resolves\n` +
       `     the ${collisions.unique_count} UNIQUE-item_type templates (and only if art is staged under those exact names);\n` +
       `     it is structurally incapable for the category classes. A real fix = a per-item on-chain icon slug\n` +
       `     (struct change, impossible post-publish) or a re-mint with item_type=slug — both owner-gated.\n` +
