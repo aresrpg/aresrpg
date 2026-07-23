@@ -90,7 +90,7 @@ jobs:
         run: |
           targets=(localnet indexer api)
           if [ "$GOLD_SPONSOR" != "0" ]; then targets+=(gas-pool sponsor); fi
-          docker buildx bake -f test/gold/compose.gold.yml --load \
+          docker buildx bake -f test/gold/compose.gold.yml --load --allow=fs.read=.. \
             --set '*.cache-from=type=gha' --set '*.cache-to=type=gha,mode=max' \
             "${targets[@]}"
       - name: bring up the gold rig
