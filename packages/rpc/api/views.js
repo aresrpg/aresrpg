@@ -447,6 +447,11 @@ export async function handle_owner_items(params) {
       level: Number(d.level ?? 0), // event-sourced scribe level (null → 0 for the unscribed majority)
       amount: Number(d.amount ?? 1),
       listed: !!listing_docs[i],
+      // The Item object's OWN Move package id (issue #524 server half — snapshot.rs's
+      // map_item_object writes it off the object's own type tag). Lets a dead-universe lineage
+      // filter (`is_aresrpg_item`-equivalent) run on THIS primary read path, matching the
+      // chain-direct fallback (read_findables.js) that already filters by `.type`.
+      package: d.package ?? null,
       ...pet_projection_fields(d.category, pet_feed_docs[i], d.template, allowed_foods),
     })
   })
@@ -909,6 +914,11 @@ export async function handle_encyclopedia(params) {
       supply: supply_by_template.get(t.template) ?? 0, // event-derived mint/burn counter (never null — see join above)
       last_sale_mist: lastsale_by_template.get(t.template) ?? null, // last realised per-unit price (string MIST) — null until the first sale ever
       stats: combine_stat_ranges(t.stats_min, t.stats_max), // {field: [min,max]} authored roll ranges (issue #219, item_stats DF snapshot); {} for templates with none (resources/consumables/cosmetics) or not yet snapshotted
+      // Authored weapon damage lines (issue #619 leg 3, item_damages DF snapshot): [{element, from,
+      // to, damage_type}] — the EXACT shape `@aresrpg/sdk`'s decode_damages already produces, so
+      // every frontend surface built against that shape is a drop-in match. `[]` for non-weapons
+      // (no DamagesKey DF) or a template not yet snapshotted — same honest-gap stance as `stats`.
+      damages: t.damages ?? [],
     })),
     mobs: mobs.map((m) => ({
       template_id: m.template,
@@ -917,6 +927,13 @@ export async function handle_encyclopedia(params) {
       max_level: m.max_level ?? null,
       base_hp: m.base_hp ?? null,
       element: m.element ?? null, // raw spell discriminant (0=fire,1=water,2=earth,3=air,255=none)
+      // Issue #629: the four resistances, RAW WIRE centered @32768 — the bestiary's
+      // `decode_mob_resist` (chain/stat_bias.js) already handles both the decode and the `null`
+      // gap (a template snapshot that hasn't landed yet), so this is a pure passthrough.
+      earth_resistance: m.earth_resistance ?? null,
+      fire_resistance: m.fire_resistance ?? null,
+      water_resistance: m.water_resistance ?? null,
+      air_resistance: m.air_resistance ?? null,
       drops: join_drops(m.drops ?? null), // display-ready loot rows (name + chance% + qty), or null
     })),
     worlds: worlds.map((w) => ({

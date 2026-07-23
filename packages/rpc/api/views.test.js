@@ -239,6 +239,7 @@ beforeAll(async () => {
     amount: 1,
     level: 12, // a scribed level — proves the doc's level passes through
     kiosk_id: BK_B,
+    package: '0xa1e5000000000000000000000000000000000000000000000000000000000000', // issue #524 server half
   })
   // MOVED: still SADD'd in BK_A's set, but its doc's live kiosk_id is a kiosk BAG_OWNER does NOT own.
   await setj(`rpc:item:${BAG_MOVED}`, {
@@ -425,6 +426,8 @@ beforeAll(async () => {
     live: true,
     stats_min: { vitality: 10, raw_damage: 5 },
     stats_max: { vitality: 20, raw_damage: 15 },
+    // item_damages DF snapshot (issue #619 leg 3) — served verbatim, the SDK's own decode_damages shape.
+    damages: [{ element: 'earth', from: 8, to: 14, damage_type: 'weapon' }],
   })
   await sadd('rpc:idx:templates', '0xtplsword')
   // A SECOND template carrying only the MIN half (never observed live — both DFs land in the
@@ -459,6 +462,12 @@ beforeAll(async () => {
     max_level: 7,
     base_hp: 90,
     element: 2,
+    // Stats block resistances (issue #629), raw wire centered @32768 — the bestiary's
+    // decode_mob_resist owns the decode; the view passes these through verbatim.
+    fire_resistance: 32768,
+    water_resistance: 32768,
+    earth_resistance: 32808, // +40
+    air_resistance: 32748, // -20
     drops: [
       { template_id: '0xtplsword', chance_bp: 5000, min_qty: 1, max_qty: 2 },
       { template_id: '0xtplmissing', chance_bp: 10000, min_qty: 1, max_qty: 1 },
@@ -847,6 +856,7 @@ describe('owner items (loose kiosk-locked bag)', () => {
       level: 0, // null doc level → 0 (parity with the chain-direct bag)
       amount: 1,
       listed: false,
+      package: null, // no `package` on the seed doc → views.js `d.package ?? null`
     })
     // the potion carries its stack amount; the key sits in the SIBLING kiosk with its own cap AND is
     // ALREADY LISTED (S-87 join against rpc:listing:{id}) — the SELL picker excludes it, this view doesn't.
@@ -860,6 +870,9 @@ describe('owner items (loose kiosk-locked bag)', () => {
       kiosk_cap_id: CAP_B,
       level: 12,
       listed: true,
+      // issue #524 server half: the object's own package id, so the frontend's dead-universe
+      // lineage filter can run on this primary read path (was chain-direct-fallback-only).
+      package: '0xa1e5000000000000000000000000000000000000000000000000000000000000',
     })
   })
 
@@ -1097,6 +1110,7 @@ describe('encyclopedia', () => {
         supply: 7,
         last_sale_mist: '2000000000', // lastsale doc joined (string MIST); null when never sold
         stats: { vitality: [10, 20], raw_damage: [5, 15] }, // stats_min/stats_max DF snapshot (issue #219)
+        damages: [{ element: 'earth', from: 8, to: 14, damage_type: 'weapon' }], // item_damages DF snapshot (issue #619)
       },
     ])
     // mob prefix + display-ready drops: the first row joins the Bronze Sword item doc
@@ -1110,6 +1124,11 @@ describe('encyclopedia', () => {
         max_level: 7,
         base_hp: 90,
         element: 2,
+        // issue #629: raw wire, centered @32768 — the client (bestiary) owns the decode.
+        fire_resistance: 32768,
+        water_resistance: 32768,
+        earth_resistance: 32808,
+        air_resistance: 32748,
         drops: [
           {
             template_id: '0xtplsword',
