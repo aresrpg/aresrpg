@@ -50,8 +50,12 @@ const PROXY_SCRIPT = path.join(GOLD, 'proxy_lag.mjs')
 // 15:40:20 · both 5491/5492). Wrapping each long-lived server in bounded-run.sh registers a /tmp/agent-leases
 // entry the sweeper spares AND keeps a live babysitting parent; its own teardown sweep also frees the ports on
 // exit (killing the leftover-proxy 3101 conflict). `env` (not a shell prefix) carries the per-server vars so
-// bounded-run's argv stays a clean command. Absolute path — no tilde/PATH assumptions under playwright's sh -c.
-const BR = '/Users/sceatstudio/.claude/hooks/bounded-run.sh'
+// bounded-run's argv stays a clean command. Portable lanes can provide GOLD_RUN_WRAPPER; the legacy Mac wrapper
+// remains the default only where it is installed, while every other environment launches the command directly.
+const LEGACY_GOLD_RUN_WRAPPER = '/Users/sceatstudio/.claude/hooks/bounded-run.sh'
+const GOLD_RUN_WRAPPER =
+  process.env.GOLD_RUN_WRAPPER ?? (fs.existsSync(LEGACY_GOLD_RUN_WRAPPER) ? LEGACY_GOLD_RUN_WRAPPER : '')
+const with_gold_run_wrapper = (command: string) => (GOLD_RUN_WRAPPER ? `${GOLD_RUN_WRAPPER} ${command}` : command)
 
 export default defineConfig({
   // OWN testDir (specs_anchor/), disjoint from the slice's specs/ — so the testnet-default gold config never
@@ -98,7 +102,9 @@ export default defineConfig({
       // gRPC endpoint (SDK chain-direct reads + tx build), the gold /v1 read-api, and the gold rig's REAL local
       // sponsor fixture (VITE_SPONSOR_URL) — without it the frontend falls through to its dev-default sponsor
       // URL, nothing answers, and a ≤0.2-SUI wallet's sponsor-first tx dies "Failed to fetch" (r11 anchor gate).
-      command: `${BR} env GOLD_VITE_CACHE_DIR=${VITE_CACHE_DIR} VITE_NETWORK=localnet VITE_RPC_URL=${API} VITE_SUI_GRPC_URL=${GRPC} VITE_SPONSOR_URL=${SPONSOR} bunx --bun vite --config ${VITE_CONFIG} --port ${PORT} --strictPort`,
+      command: with_gold_run_wrapper(
+        `env GOLD_VITE_CACHE_DIR=${VITE_CACHE_DIR} VITE_NETWORK=localnet VITE_RPC_URL=${API} VITE_SUI_GRPC_URL=${GRPC} VITE_SPONSOR_URL=${SPONSOR} bunx --bun vite --config ${VITE_CONFIG} --port ${PORT} --strictPort`
+      ),
       cwd: FRONTEND,
       url: `${BASE}/`,
       // cold dep-optimizer re-bundle after an engine merge legitimately exceeds 120s (r9/r10 2026-07-19); warm boots in ~5s — the budget covers the cold class
@@ -115,7 +121,7 @@ export default defineConfig({
       // /v1/status made the whole gate hostage to a live rig — a dead upstream → Bun 500 → never Playwright's
       // `<404` → 30s webServer timeout, zero tests collected. The proxy is ready the instant it binds :3101;
       // broken forwarding surfaces as a clear spec failure, not an opaque gate hang.
-      command: `${BR} bun ${PROXY_SCRIPT}`,
+      command: with_gold_run_wrapper(`bun ${PROXY_SCRIPT}`),
       env: { ...process.env, LAG_UPSTREAM: API, LAG_PORT: String(LAG_PORT) },
       port: LAG_PORT,
       timeout: 30_000,
@@ -128,7 +134,9 @@ export default defineConfig({
       // cold-start optimizers never mutate one dependency graph concurrently. VITE_SPONSOR_URL is NOT routed
       // through the lag proxy (the fixture sponsor is the rig's own precondition, same as API/GRPC above) — the
       // lagged lane exercises /v1 latency, not sponsor latency.
-      command: `${BR} env GOLD_VITE_CACHE_DIR=${LAGGED_VITE_CACHE_DIR} VITE_NETWORK=localnet VITE_RPC_URL=${LAG_BASE} VITE_SUI_GRPC_URL=${GRPC} VITE_SPONSOR_URL=${SPONSOR} bunx --bun vite --config ${VITE_CONFIG} --port ${LAGGED_PORT} --strictPort`,
+      command: with_gold_run_wrapper(
+        `env GOLD_VITE_CACHE_DIR=${LAGGED_VITE_CACHE_DIR} VITE_NETWORK=localnet VITE_RPC_URL=${LAG_BASE} VITE_SUI_GRPC_URL=${GRPC} VITE_SPONSOR_URL=${SPONSOR} bunx --bun vite --config ${VITE_CONFIG} --port ${LAGGED_PORT} --strictPort`
+      ),
       cwd: FRONTEND,
       url: `${LAGGED_BASE}/`,
       // cold dep-optimizer re-bundle after an engine merge legitimately exceeds 120s (r9/r10 2026-07-19); warm boots in ~5s — the budget covers the cold class
