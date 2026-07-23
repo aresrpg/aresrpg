@@ -365,6 +365,7 @@ const fxVec = (tx, effects) =>
 // negative is a HARD ERROR (a debuff on a non-alter kind is a corpus bug, refused LOUDLY — never silently abs'd).
 const KIND_PHASE = { 20: 1, 21: 1 } // K_PLACE_GLYPH / K_APPLY_DOT → PHASE_START; all else PHASE_ON_ENTER
 const SIGNED_EFFECT_KINDS = new Set([9, 11]) // K_ALTER_STAT / K_ALTER_RESIST — value/value_max centered at SHIFT
+const FLAG_NEGATIVE = 8 // spell_effect FLAG_NEGATIVE bit — the DECLARED sign band/filter/dispel read
 // Encode ONE authored effect scalar for `kind`: signed kinds center at SHIFT (delta may be negative); every other
 // kind stays a raw magnitude and a negative aborts the seed (the R3 refuse-negative gate).
 const encodeEffectValue = (kind, raw) => {
@@ -376,12 +377,24 @@ const encodeEffectValue = (kind, raw) => {
     )
   return n
 }
-// The authored [min, max] range of an effect (#577). Fields: value/value_max, base/baseMax, or damageMin/damageMax;
-// a missing max ⇒ max = min. Mob kits normalize through `mobEffect` (which threads base→value, baseMax→value_max).
+// The authored [min, max] range of an effect (#577), selected by FAMILY (max-gated) — NEVER mixing a legacy
+// midpoint `value` with a `damageMin/damageMax` range family (F1): a row carrying BOTH {value:7, damageMin:5,
+// damageMax:9} is the range [5,9], not the hybrid [7,9]. A missing max family ⇒ FIXED at the single authored value.
 const effectRange = (e) => {
-  const min = e.value ?? e.base ?? e.damageMin ?? e.min ?? 0
-  const max = e.value_max ?? e.baseMax ?? e.damageMax ?? e.max ?? min
-  return [Number(min), Number(max)]
+  if (e.value_max != null) return [Number(e.value ?? 0), Number(e.value_max)]
+  if (e.baseMax != null) return [Number(e.base ?? 0), Number(e.baseMax)]
+  if (e.damageMax != null) return [Number(e.damageMin ?? 0), Number(e.damageMax)]
+  const fixed = Number(e.value ?? e.base ?? e.damageMin ?? 0) // no range family ⇒ FIXED (max == min)
+  return [fixed, fixed]
+}
+// F2 — DERIVE the FLAG_NEGATIVE bit for a signed kind from the authored SIGN (never trust corpus flags for it: the
+// corpus authors the sign in the delta, not a flag). A negative delta ⇒ bit 8 set so band/filter/dispel read the
+// declared sign; a positive delta clears it. Non-signed kinds keep their authored flags verbatim.
+const effectFlags = (kind, rawMin, rawMax, authored = 0) => {
+  if (!SIGNED_EFFECT_KINDS.has(kind)) return authored
+  let flags = authored & ~FLAG_NEGATIVE // derive the sign bit, ignore any corpus-supplied FLAG_NEGATIVE
+  if (Math.min(rawMin, rawMax) < 0) flags |= FLAG_NEGATIVE
+  return flags
 }
 const effectFx = (tx, e) => {
   const [rawMin, rawMax] = effectRange(e)
@@ -400,7 +413,7 @@ const effectFx = (tx, e) => {
       tx.pure.u8(e.chance ?? 100),
       tx.pure.u8(e.turns ?? 0),
       tx.pure.u8(e.stat ?? 0),
-      tx.pure.u8(e.flags ?? 0),
+      tx.pure.u8(effectFlags(e.kind, rawMin, rawMax, e.flags ?? 0)),
       tx.pure.u8(KIND_PHASE[e.kind] ?? 0),
     ],
   })

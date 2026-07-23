@@ -461,11 +461,21 @@ const encodeEffectValue = (kind, raw) => {
     )
   return n
 }
-// mirrors seed_full_corpus effectRange()
+const FLAG_NEGATIVE = 8
+// mirrors seed_full_corpus effectRange() — FAMILY-selected, max-gated (F1)
 const effectRange = e => {
-  const min = e.value ?? e.base ?? e.damageMin ?? e.min ?? 0
-  const max = e.value_max ?? e.baseMax ?? e.damageMax ?? e.max ?? min
-  return [Number(min), Number(max)]
+  if (e.value_max != null) return [Number(e.value ?? 0), Number(e.value_max)]
+  if (e.baseMax != null) return [Number(e.base ?? 0), Number(e.baseMax)]
+  if (e.damageMax != null) return [Number(e.damageMin ?? 0), Number(e.damageMax)]
+  const fixed = Number(e.value ?? e.base ?? e.damageMin ?? 0)
+  return [fixed, fixed]
+}
+// mirrors seed_full_corpus effectFlags() (F2)
+const effectFlags = (kind, rawMin, rawMax, authored = 0) => {
+  if (!SIGNED_EFFECT_KINDS.has(kind)) return authored
+  let flags = authored & ~FLAG_NEGATIVE
+  if (Math.min(rawMin, rawMax) < 0) flags |= FLAG_NEGATIVE
+  return flags
 }
 const resolveIcon = it => it.icon ?? it.slug // mirrors buildItemCreate's `it.icon ?? it.slug`
 
@@ -542,5 +552,30 @@ describe('COMMIT C ④ — R4 icon: each item threads its per-variant slug into 
     })
     const call = tx.getData().commands.find(c => c.$kind === 'MoveCall' && c.MoveCall.function === 'create_template')
     expect(call.MoveCall.arguments.length).toBe(13) // 12 (pre-R4) + the icon arg
+  })
+})
+
+describe('COMMIT F1 — effectRange selects the range by FAMILY (a legacy midpoint never hybridizes a range family)', () => {
+  test('a row carrying BOTH a midpoint value AND a damageMin/Max range mints the RANGE [5,9], not the hybrid [7,9]', () => {
+    expect(effectRange({ kind: 0, value: 7, damageMin: 5, damageMax: 9 })).toEqual([5, 9])
+  })
+  test('base/baseMax and value/value_max families select intact; a max-less midpoint is FIXED', () => {
+    expect(effectRange({ kind: 0, base: 6, baseMax: 14 })).toEqual([6, 14])
+    expect(effectRange({ kind: 0, value: 3, value_max: 11 })).toEqual([3, 11])
+    expect(effectRange({ kind: 0, value: 7, damageMin: 5 })).toEqual([7, 7]) // no MAX family ⇒ fixed at the midpoint
+  })
+})
+
+describe('COMMIT F2 — effectFlags DERIVES FLAG_NEGATIVE from the authored sign (never trusts corpus flags for it)', () => {
+  test('a negative-delta alter row sets FLAG_NEGATIVE (bit 8); a positive one clears it', () => {
+    expect(effectFlags(9, -20, -20, 0) & FLAG_NEGATIVE).toBe(FLAG_NEGATIVE) // a −20 strength debuff
+    expect(effectFlags(11, -33, -8, 0) & FLAG_NEGATIVE).toBe(FLAG_NEGATIVE) // a −33..−8 resist debuff range
+    expect(effectFlags(9, 50, 50, 0) & FLAG_NEGATIVE).toBe(0) // a +50 buff
+  })
+  test('a stray corpus FLAG_NEGATIVE on a POSITIVE alter is CLEARED (the sign rules, never the flag)', () => {
+    expect(effectFlags(9, 5, 5, FLAG_NEGATIVE) & FLAG_NEGATIVE).toBe(0)
+  })
+  test('non-signed kinds keep their authored flags verbatim (no derivation)', () => {
+    expect(effectFlags(0, 10, 10, 2)).toBe(2) // K_DAMAGE — flags untouched
   })
 })
