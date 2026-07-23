@@ -92,6 +92,8 @@ function parse_baseline(text) {
 // Removing an occurrence is allowed; changing an ID, adding a copy, or moving it to another file is not.
 // Re-derived 2026-07-21 by running this gate's own scan against the public checkout (never copied from the
 // private monorepo's baseline) — every row below is test-fixture mock addresses this tree actually carries.
+// packages/frontend/src/game/worn_render_path.test.js: worn_render_path repin — retired
+// capuche_bara_vitality's stable id, manifest no longer carries it (ceremony #3).
 const known_rogue_fingerprints = parse_baseline(
   `
 packages/fight/src/predict_cast.js	P84p9M8_YyJmgWfE4dDG3s=1
@@ -109,7 +111,7 @@ packages/frontend/src/follow.test.ts	W3gkgkQLEmIYAZG6AKX-fZ=1 WEE_pEq7li8vQT0s30
 packages/frontend/src/game/core/abort_copy.test.js	au005r3f9eHYcrXX1WmKe3=1
 packages/frontend/src/game/cosmetic_icons.test.js	k3I6Lc73q-sXIlrfEqll_e=1
 packages/frontend/src/game/screens/hud/equipment-drag-render.test.jsx	k3I6Lc73q-sXIlrfEqll_e=1
-packages/frontend/src/game/worn_render_path.test.js	POpkB6Z7QwedxOoFayWY-D=1
+packages/frontend/src/game/worn_render_path.test.js	POpkB6Z7QwedxOoFayWY-D=1 b16OI16aOci7oriuENId-r=1
 packages/frontend/src/pages/encyclopedia/recipes.test.ts	3Hl0yoqwBSiOH9myknmaJo=2 O4rUo_ZptFE_7iZqB9Hu4B=1 XabwXqAfLUIMmxRqwNz2xj=1 ZXTYppw8UYTuvWcz-l_aBo=1
 packages/frontend/src/world-shell/equip_actions.test.js	DRjUtrm7ml7HWcdu4yU59l=1 _hU7zEHPFwE9DnDOwzL0li=1 l8sL2o7urtAf40JFeWysVx=1
 packages/frontend/src/world-shell/pending_outcomes.test.js	N5aFzifDFbJx31Hkto3BCF=1 VQQqSbFb9D_xPE9jAm5yOp=1 XtSGlQVulX97xUrdkTGuAe=1 ekgxD8TdUMvdkff1DobEfj=1
