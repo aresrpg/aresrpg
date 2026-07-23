@@ -82,6 +82,10 @@ jobs:
         # buildx bake reads compose.gold.yml AS-IS (zero edits to it or lib_gold.mjs) — targets are literal
         # service names, bypassing `profiles:` filtering entirely, so Mac's plain `docker compose build` flow
         # is untouched and never sees a cache-from/cache-to key it can't resolve locally.
+        # working-directory: bake resolves each service's build context relative to the CWD, not the compose
+        # file's own directory (docker compose's rule) — running from test/gold anchors it the same way
+        # bootStack's later `docker compose ... --build` already does.
+        working-directory: test/gold
         env:
           SUI_ARCH: x86_64
           # Compose-file-wide interpolation needs SOME value for gas-pool/sponsor's required SPONSOR_DEV_KEY
@@ -93,7 +97,7 @@ jobs:
         run: |
           targets=(localnet indexer api)
           if [ "$GOLD_SPONSOR" != "0" ]; then targets+=(gas-pool sponsor); fi
-          docker buildx bake -f test/gold/compose.gold.yml --load \
+          docker buildx bake -f compose.gold.yml --load \
             --set '*.cache-from=type=gha' --set '*.cache-to=type=gha,mode=max' \
             "${targets[@]}"
       - name: bring up the gold rig
