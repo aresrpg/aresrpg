@@ -274,4 +274,63 @@ describe('world spawn mob-card layer route gate', () => {
     expect(claim_intent_at, 'the refuse precedes the optimistic claim_intent').toBeGreaterThan(gate_at)
     expect(create_at, 'the refuse precedes the compose+submit (create_world_fight)').toBeGreaterThan(gate_at)
   })
+
+  test(
+    'leg ② (#480) — the local refusal drops the SAME marker synchronously, never bouncing the identical toast twice',
+    () => {
+      // Regression (#480): leg ① refuses the engage LOCALLY but historically left the spawns-core row — and
+      // therefore the rendered marker + [R] prompt — untouched. A player could press [R] on the SAME stale
+      // marker forever, re-triggering the identical "That monster group is gone — someone got there first."
+      // toast every time, since spawns_reconcile.js's additive-merge (issue #367: an ordinary background zone
+      // poll must never SILENTLY despawn a visible group with no explained cause) never reliably converges a
+      // group nobody re-engages back to "gone" on its own. The refusal itself already IS a chain-truth fact
+      // (visible_fights via group_engage_blocked) — fold it through the SAME claim_failed/ghost door the
+      // on-chain zones-108 abort already uses (drop_ghost), then reconcile the render/minimap the same tick,
+      // all BEFORE the early return — source-shape locked since engage() is an un-exported closure.
+      const gate_at = world_spawns_source.indexOf('if (group_has_live_fight(e)) {')
+      const toast_at = world_spawns_source.indexOf("push_event_toast({ state: 'info'", gate_at)
+      const drop_at = world_spawns_source.indexOf('drop_ghost(e)', gate_at)
+      const resync_at = world_spawns_source.indexOf('sync_from_core()', drop_at)
+      const next_statement_at = world_spawns_source.indexOf('// THE DOOR DECIDES', gate_at)
+      expect(gate_at, 'engage() carries the local refuse gate').toBeGreaterThan(-1)
+      expect(toast_at, 'the honest toast still fires').toBeGreaterThan(gate_at)
+      expect(drop_at, 'the SAME row drops through the existing ghost-claim door').toBeGreaterThan(toast_at)
+      expect(resync_at, 'entries/markers reconcile before the early return').toBeGreaterThan(drop_at)
+      expect(next_statement_at, 'the drop stays INSIDE the gate, before the next statement').toBeGreaterThan(
+        resync_at
+      )
+      expect(resync_at).toBeLessThan(next_statement_at)
+    }
+  )
+
+  test(
+    'the ambient ghost sweep folds visible_fights into the EXISTING poll cadence — never a new poll (#480)',
+    () => {
+      // Regression (#480): a group ANOTHER player claims never reaches engage()'s gate at all unless THIS
+      // player personally presses [R] on it, so a marker nobody here ever tried to engage could sit as a
+      // permanent ghost. drop_claimed_ghosts reuses the SAME visible_fights truth already read by
+      // group_has_live_fight, scanning tracked entries once per steady poll — the pre-existing 6s cadence,
+      // never a second poll loop (POLL_MS stays the ONE timer) — and folds any live-fight-claimed group
+      // through the SAME claim_failed/ghost door leg ② uses.
+      const sweep_at = world_spawns_source.indexOf('const drop_claimed_ghosts = ()')
+      const scan_at = world_spawns_source.indexOf('for (const e of entries.values())', sweep_at)
+      const live_check_at = world_spawns_source.indexOf('group_has_live_fight(e)', scan_at)
+      const drop_at = world_spawns_source.indexOf('drop_ghost(e)', live_check_at)
+      // The call site lives INSIDE poll() — textually EARLIER in the file than the (later-declared) closure
+      // it calls, which is normal JS (closures resolve by the time poll() actually RUNS, not by text order) —
+      // so anchor the call to poll()'s own body, never to the sweep's declaration position.
+      const poll_body_at = world_spawns_source.indexOf('poll_seq += 1')
+      const wired_at = world_spawns_source.indexOf('if (drop_claimed_ghosts())', poll_body_at)
+      const poll_end_at = world_spawns_source.indexOf('polling = false', wired_at)
+      const one_timer_at = world_spawns_source.indexOf('const timer = setInterval(poll, POLL_MS)')
+      expect(sweep_at, 'the ambient sweep exists').toBeGreaterThan(-1)
+      expect(scan_at, 'it scans the tracked entries, not a fresh fetch').toBeGreaterThan(sweep_at)
+      expect(live_check_at, 'it reuses the SAME chain-truth helper as the engage gate').toBeGreaterThan(scan_at)
+      expect(drop_at, 'it folds through the SAME existing ghost door').toBeGreaterThan(live_check_at)
+      expect(poll_body_at, 'anchor: the ONE poll() function body').toBeGreaterThan(-1)
+      expect(wired_at, 'the poll loop actually calls it — not a dead export').toBeGreaterThan(poll_body_at)
+      expect(poll_end_at, 'the call sits inside the SAME poll() try block').toBeGreaterThan(wired_at)
+      expect(one_timer_at, 'still exactly ONE poll timer in the whole module').toBeGreaterThan(-1)
+    }
+  )
 })
