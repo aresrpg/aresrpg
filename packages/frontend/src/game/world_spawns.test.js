@@ -210,7 +210,7 @@ describe('world spawn mob-card layer route gate', () => {
   })
 
   test('owned-character world joins use the same reducer and keep the leader world fight mounted', () => {
-    const aggregate_at = group_wiring_source.indexOf("as_one_toast(i18n.t('fights.action_join_fight')")
+    const aggregate_at = group_wiring_source.indexOf('as_one_toast(pending_label')
     const seam_at = group_wiring_source.indexOf('run_fight_entry({', aggregate_at)
     const join_at = group_wiring_source.indexOf('join_owned_world_fight({', seam_at)
     const recover_at = group_wiring_source.indexOf('recover_fight_entry_refusal(', join_at)
