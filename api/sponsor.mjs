@@ -51,6 +51,7 @@ const CORS = {
   'access-control-allow-origin': '*',
   'access-control-allow-headers': 'content-type',
   'access-control-allow-methods': 'POST,OPTIONS',
+  'access-control-max-age': '86400',
 }
 const RESERVE_DURATION_SECS = Number(process.env.SPONSOR_RESERVE_DURATION_SECS || 60)
 const CHALLENGE_TTL_MS = Number(process.env.SPONSOR_CHALLENGE_TTL_MS || 5 * 60_000)
