@@ -82,6 +82,16 @@ const PERSONAL_KIOSK_MODULE: &str = "personal_kiosk";
 const PERSONAL_KIOSK_CAP_TYPE: &str = "PersonalKioskCap";
 const MOB_TEMPLATE_MODULE: &str = "mob_template";
 const MOB_TEMPLATE_TYPE: &str = "MobTemplate";
+/// The 2026-07-23 fresh-publish `aresrpg` origin (a NEW package, not an in-place upgrade —
+/// `Published.toml`'s `original-id`/`version = 1` for this ceremony), verified against the
+/// ceremony's own stamp. A MobTemplate's BCS layout is fixed at the checkpoint it was CREATED,
+/// by whichever `aresrpg_foundation::spell_effect::Effect` shape that MobTemplate's own
+/// `aresrpg` package was built against — so the MINTING object's package address (never the
+/// bytes, which give no reliable shape signal once every field is variable-length) is the one
+/// durable signal for which width `skip_effect_vec` needs (issue #629 round-2, `effect_byte_width`).
+/// Every OLDER `aresrpg` origin (the full `aresPackages` history) keeps decoding the pre-#577
+/// width — this constant names ONLY the boundary, not the old side's enumeration.
+const FRESH_ARESRPG_ORIGIN: &str = "0xc05c8d9f65e4ee0a6dc9463c8c90341085daa062184043e1a6fd75bccd6842e1";
 /// `aresrpg::crafting::Recipe` — the §14 encyclopedia crafting blueprint. The shared object
 /// carries the FULL recipe truth (ingredient list + output + job/level/xp); the `RecipeCreated`
 /// EVENT carries only counts, so the encyclopedia's recipe view snapshots the object, exactly
@@ -889,7 +899,9 @@ impl MobTemplatePrefix {
     /// loot:vector<MobLootEntry> | xp_reward:u64`. The prefix (through `element`) is
     /// required (`None` on truncation); resistances + loot are a best-effort tail — a
     /// short/foreign body past the prefix sets them `None` and never fails the prefix.
-    fn parse(bytes: &[u8]) -> Option<Self> {
+    /// `effect_bytes` resolves the `spells` walk's per-`Effect` width (issue #629 round-2 —
+    /// [`effect_byte_width`] is the ONE place that maps a MobTemplate's minting origin to it).
+    fn parse(bytes: &[u8], effect_bytes: usize) -> Option<Self> {
         let mut r = ByteReader::new(bytes);
         r.skip(32)?; // UID = a bare 32-byte ObjectID (no length prefix)
         let name = r.string()?;
@@ -903,9 +915,16 @@ impl MobTemplatePrefix {
         // (cursor now past `stats`) is `loot` attempted — a short/foreign `spells`/`loot` tail
         // drops `drops` alone, never regressing the just-read resistances or the prefix.
         let resistances = r.read_mob_resistances();
-        let drops = if resistances.is_some() { r.read_mob_loot() } else { None };
+        let drops = if resistances.is_some() { r.read_mob_loot(effect_bytes) } else { None };
         Some(Self { name, min_level, max_level, base_hp, element, resistances, drops })
     }
+}
+
+/// The `spell_effect::Effect` wire width for a MobTemplate minted under `package` (issue #629
+/// round-2 rider — the fresh publish's #577 `value_max: u64` widens every Effect 25→33 bytes).
+/// ONE home for the origin→width decision; `skip_effect_vec`'s caller chain never re-derives it.
+fn effect_byte_width(package: &str) -> usize {
+    if package == FRESH_ARESRPG_ORIGIN { 33 } else { 25 }
 }
 
 /// Snapshot one `aresrpg::mob_template::MobTemplate` object into its encyclopedia doc
@@ -915,8 +934,11 @@ impl MobTemplatePrefix {
 /// the frontend maps it to a name, exactly as the legacy reader did. The four resistances
 /// (issue #629) are RAW WIRE, `null` until this snapshot lands — same honest-gap convention
 /// as every other field here; the bestiary's `decode_mob_resist` already handles the null case.
-pub fn map_mob_template_object(id: &str, contents: &[u8]) -> Option<Vec<RedisWrite>> {
-    let p = MobTemplatePrefix::parse(contents)?;
+/// `package` is the object's OWN type-tag address — resolves the embedded `spells` vector's
+/// per-`Effect` width (issue #629 round-2: the fresh publish widens `Effect` 25→33 bytes; an
+/// unwidened skip would misalign `loot` for every mob minted after tonight's republish).
+pub fn map_mob_template_object(id: &str, contents: &[u8], package: &str) -> Option<Vec<RedisWrite>> {
+    let p = MobTemplatePrefix::parse(contents, effect_byte_width(package))?;
     let key = k_mob_template(id);
     Some(vec![
         set(
@@ -1163,23 +1185,28 @@ impl<'a> ByteReader<'a> {
         self.skip(n.checked_mul(32)?)
     }
 
-    /// Skip a `vector<Effect>` — each `Effect` (spell_effect.move) is 11 fixed-width
-    /// fields = 25 bytes (`u8+u8+u64+u8+u64+u8+u8+u8+u8+u8+u8`).
-    fn skip_effect_vec(&mut self) -> Option<()> {
+    /// Skip a `vector<Effect>` — each `Effect` (spell_effect.move) is a FIXED-width record whose
+    /// byte width depends on which `aresrpg_foundation` origin minted the enclosing MobTemplate
+    /// (issue #629 round-2 rider): the pre-2026-07-23 shape is 11 fields = 25 bytes
+    /// (`u8+u8+u64+u8+u64+u8+u8+u8+u8+u8+u8`); the fresh-publish shape (#577 `value_max: u64`
+    /// inserted right after `value`) is 12 fields = 33 bytes. `effect_bytes` is the caller's
+    /// resolved width (see [`effect_byte_width`]) — never re-derived here, one home for the
+    /// origin→width decision.
+    fn skip_effect_vec(&mut self, effect_bytes: usize) -> Option<()> {
         let n = self.uleb()?;
-        self.skip(n.checked_mul(25)?)
+        self.skip(n.checked_mul(effect_bytes)?)
     }
 
     /// Skip one `SpellLevel` (spell_effect.move): a 42-byte fixed head
-    /// (`u16 + 3×u64 + 4 bool + 3 u8 + u64 + bool`) then four vectors —
-    /// `required_states`/`forbidden_states` (`vector<u16>`) and
-    /// `effects`/`crit_effects` (`vector<Effect>`).
-    fn skip_spell_level(&mut self) -> Option<()> {
+    /// (`u16 + 3×u64 + 4 bool + 3 u8 + u64 + bool`, UNCHANGED by the #577 Effect widening) then
+    /// four vectors — `required_states`/`forbidden_states` (`vector<u16>`) and
+    /// `effects`/`crit_effects` (`vector<Effect>`, width-dependent — see [`skip_effect_vec`]).
+    fn skip_spell_level(&mut self, effect_bytes: usize) -> Option<()> {
         self.skip(42)?;
         self.skip_u16_vec()?;
         self.skip_u16_vec()?;
-        self.skip_effect_vec()?;
-        self.skip_effect_vec()
+        self.skip_effect_vec(effect_bytes)?;
+        self.skip_effect_vec(effect_bytes)
     }
 
     /// From just after `element`: read the fixed `Stats` block (22 `u64` = 176 bytes; spell.move)
@@ -1199,13 +1226,13 @@ impl<'a> ByteReader<'a> {
     }
 
     /// From just after `stats` (the caller already consumed it via [`read_mob_resistances`]):
-    /// skip the `spells` vector (walking each `SpellLevel`), then decode the `loot` vector
-    /// (`MobLootEntry { item_template: ID(32), chance_bp: u16, min_qty: u16, max_qty: u16 }` —
-    /// mob.move) into display rows. `None` on any short read.
-    fn read_mob_loot(&mut self) -> Option<Vec<LootRow>> {
+    /// skip the `spells` vector (walking each `SpellLevel`, `effect_bytes`-aware), then decode
+    /// the `loot` vector (`MobLootEntry { item_template: ID(32), chance_bp: u16, min_qty: u16,
+    /// max_qty: u16 }` — mob.move) into display rows. `None` on any short read.
+    fn read_mob_loot(&mut self, effect_bytes: usize) -> Option<Vec<LootRow>> {
         let spells = self.uleb()?;
         for _ in 0..spells {
-            self.skip_spell_level()?;
+            self.skip_spell_level(effect_bytes)?;
         }
         let loot = self.uleb()?;
         let mut rows = Vec::new();
@@ -1635,7 +1662,9 @@ impl Processor for AresSnapshotHandler {
                         map_item_object(&id, mv.contents(), kiosk.as_deref(), &package)
                     }
                     (ITEM_MODULE, ITEM_TEMPLATE_TYPE) => map_item_template_object(&id, mv.contents()),
-                    (MOB_TEMPLATE_MODULE, MOB_TEMPLATE_TYPE) => map_mob_template_object(&id, mv.contents()),
+                    (MOB_TEMPLATE_MODULE, MOB_TEMPLATE_TYPE) => {
+                        map_mob_template_object(&id, mv.contents(), &ty.address().to_canonical_string(true))
+                    }
                     (WORLD_MODULE, WORLD_TYPE) => map_world_object(&id, mv.contents()),
                     (CRAFTING_MODULE, RECIPE_TYPE) => map_recipe_object(&id, mv.contents()),
                     (SETTLEMENT_MODULE, FIGHT_OUTCOME_TYPE) => {

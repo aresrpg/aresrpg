@@ -1196,7 +1196,7 @@ fn mob_template_prefix_reads_head_even_when_loot_tail_is_unparseable() {
     // project (loot decode can never regress the working name/level/element fields).
     let trailing: Vec<u8> = (0..200u32).map(|i| (i % 251) as u8).collect();
     let bytes = mob_template_bytes("Ronin", 5, 9, 140, 2 /* EARTH */, &trailing);
-    let writes = map_mob_template_object(id, &bytes).expect("mob prefix must parse");
+    let writes = map_mob_template_object(id, &bytes, "0xold").expect("mob prefix must parse");
 
     let doc = set_json(&writes, "$").expect("mob template writes its whole doc");
     assert!(doc.contains(r#""name":"Ronin""#), "doc: {doc}");
@@ -1219,7 +1219,8 @@ const REAL_MOB_BRUTE_BCS_HEX: &str = "0be2e4ae1dc4ae65256b6cb6a5e321fd750d3ab748
 fn real_testnet_mob_template_decodes_prefix_and_loot() {
     let bytes = hex::decode(REAL_MOB_BRUTE_BCS_HEX).unwrap();
     let id = "0x0be2e4ae1dc4ae65256b6cb6a5e321fd750d3ab7484e08cc12f92451dfc66ffb";
-    let writes = map_mob_template_object(id, &bytes).expect("real mob bytes must decode");
+    // Captured pre-2026-07-23 republish — the pre-#577 25-byte Effect shape (any non-fresh origin).
+    let writes = map_mob_template_object(id, &bytes, "0xold").expect("real mob bytes must decode");
     let doc = set_json(&writes, "$").expect("mob template writes its whole doc");
 
     // Prefix (unchanged behaviour).
@@ -1267,7 +1268,8 @@ const REAL_MOB_BOAR_BCS_HEX: &str = "c6be9c23359f0bb512b494b4635920acf4f7d96e04c
 fn real_testnet_boar_mob_projects_nonzero_resistances() {
     let bytes = hex::decode(REAL_MOB_BOAR_BCS_HEX).unwrap();
     let id = "0xc6be9c23359f0bb512b494b4635920acf4f7d96e04c0915f88f241e073d07f35";
-    let writes = map_mob_template_object(id, &bytes).expect("real Boar bytes must decode");
+    // Captured pre-2026-07-23 republish — the pre-#577 25-byte Effect shape (any non-fresh origin).
+    let writes = map_mob_template_object(id, &bytes, "0xold").expect("real Boar bytes must decode");
     let doc = set_json(&writes, "$").expect("mob template writes its whole doc");
 
     assert!(doc.contains(r#""name":"Boar""#), "doc: {doc}");
@@ -1302,7 +1304,7 @@ fn mob_resistances_survive_a_loot_tail_that_fails_to_decode() {
     trailing.extend_from_slice(&[0xff; 40]); // an unparseable spells/loot tail
     let bytes = mob_template_bytes("Snarler", 3, 7, 80, 0 /* FIRE */, &trailing);
     let id = "0x0000000000000000000000000000000000000000000000000000000000000dad";
-    let writes = map_mob_template_object(id, &bytes).expect("mob prefix must parse");
+    let writes = map_mob_template_object(id, &bytes, "0xold").expect("mob prefix must parse");
     let doc = set_json(&writes, "$").expect("mob template writes its whole doc");
 
     assert!(doc.contains(r#""fire_resistance":32800"#), "doc: {doc}");
@@ -1313,7 +1315,97 @@ fn mob_resistances_survive_a_loot_tail_that_fails_to_decode() {
 #[test]
 fn mob_template_truncated_body_is_dropped_not_panicked() {
     // A body cut off inside the prefix must return None (defensive), never panic.
-    assert!(map_mob_template_object("0xdead", &[0u8; 10]).is_none());
+    assert!(map_mob_template_object("0xdead", &[0u8; 10], "0xold").is_none());
+}
+
+// ── Dual-shape Effect width (issue #629 round-2: 2026-07-23 republish widens Effect 25→33B) ──
+
+#[test]
+fn effect_byte_width_keys_on_the_fresh_aresrpg_origin_only() {
+    assert_eq!(effect_byte_width(FRESH_ARESRPG_ORIGIN), 33);
+    assert_eq!(effect_byte_width("0xold"), 25);
+    // Every prior origin in the aresPackages history — not just a generic placeholder.
+    assert_eq!(effect_byte_width("0x44e7d0aae7858f4aa83eef223d4c0f1e45d18929f0bd1b3044be98f0572861c8"), 25);
+}
+
+/// Build a `spells: vector<SpellLevel>` (ONE level, ONE `effects` entry sized `effect_bytes`,
+/// zero `crit_effects`) + `loot: vector<MobLootEntry>` (ONE row) trailing block. The minimal
+/// real walk that proves the cursor lands correctly PAST the width-dependent `effects` vector —
+/// a wrong width misaligns every byte after it, corrupting or failing the loot decode entirely.
+fn spells_and_loot_tail(effect_bytes: usize, loot_template_hex: &str) -> Vec<u8> {
+    let mut b = Vec::new();
+    b.push(1); // spells: ULEB count = 1
+    b.extend_from_slice(&[0u8; 42]); // SpellLevel's fixed head — values irrelevant to this test
+    b.push(0); // required_states: vector<u16> ULEB count = 0
+    b.push(0); // forbidden_states: vector<u16> ULEB count = 0
+    b.push(1); // effects: vector<Effect> ULEB count = 1
+    b.extend_from_slice(&vec![0u8; effect_bytes]); // ONE Effect, all-zero — only its WIDTH matters here
+    b.push(0); // crit_effects: vector<Effect> ULEB count = 0
+    b.push(1); // loot: vector<MobLootEntry> ULEB count = 1
+    b.extend_from_slice(&hex::decode(loot_template_hex).unwrap()); // item_template: ID(32)
+    b.extend_from_slice(&5000u16.to_le_bytes()); // chance_bp
+    b.extend_from_slice(&1u16.to_le_bytes()); // min_qty
+    b.extend_from_slice(&2u16.to_le_bytes()); // max_qty
+    b
+}
+
+#[test]
+fn fresh_origin_mob_decodes_resistances_and_loot_past_the_widened_effect() {
+    let loot_template = "aa6d6e1b80816f009e3b74e211488dabde467664a49f8c02931745b008f47fdf";
+    let mut stats = vec![0u8; 176];
+    stats[56..64].copy_from_slice(&32_808u64.to_le_bytes()); // fire_resistance (field 7): +40 centred
+    let mut trailing = stats;
+    trailing.extend_from_slice(&spells_and_loot_tail(33, loot_template)); // FRESH width
+    let bytes = mob_template_bytes("Glowmoth", 20, 30, 200, 3 /* AIR */, &trailing);
+    let id = "0x0000000000000000000000000000000000000000000000000000000000fee5";
+
+    let writes = map_mob_template_object(id, &bytes, FRESH_ARESRPG_ORIGIN).expect("fresh-shape mob must parse");
+    let doc = set_json(&writes, "$").expect("mob template writes its whole doc");
+    assert!(doc.contains(r#""name":"Glowmoth""#), "doc: {doc}");
+    assert!(doc.contains(r#""fire_resistance":32808"#), "doc: {doc}");
+    // The tell: loot only decodes correctly if the 33-byte Effect was skipped, not 25.
+    assert!(doc.contains(&format!(r#""template_id":"0x{loot_template}""#)), "doc: {doc}");
+    assert!(doc.contains(r#""chance_bp":5000"#), "doc: {doc}");
+    assert!(doc.contains(r#""min_qty":1"#), "doc: {doc}");
+    assert!(doc.contains(r#""max_qty":2"#), "doc: {doc}");
+}
+
+#[test]
+fn old_origin_mob_using_the_25_byte_effect_still_decodes_loot() {
+    // The SAME shape of fixture as the fresh-origin test above, but with the PRE-#577 25-byte
+    // Effect and an old-lineage origin — the sibling half of the dual-shape proof.
+    let loot_template = "aa6d6e1b80816f009e3b74e211488dabde467664a49f8c02931745b008f47fdf";
+    let trailing_stats = vec![0u8; 176];
+    let mut trailing = trailing_stats;
+    trailing.extend_from_slice(&spells_and_loot_tail(25, loot_template)); // OLD width
+    let bytes = mob_template_bytes("Glowmoth Elder", 20, 30, 200, 3, &trailing);
+    let id = "0x0000000000000000000000000000000000000000000000000000000000fee6";
+
+    let writes = map_mob_template_object(id, &bytes, "0xold").expect("old-shape mob must parse");
+    let doc = set_json(&writes, "$").expect("mob template writes its whole doc");
+    assert!(doc.contains(&format!(r#""template_id":"0x{loot_template}""#)), "doc: {doc}");
+    assert!(doc.contains(r#""chance_bp":5000"#), "doc: {doc}");
+}
+
+#[test]
+fn fresh_origin_bytes_decoded_with_the_wrong_old_width_misaligns_loot() {
+    // Negative control: prove the bug the round-2 rider fixes. Fresh-shape (33B Effect) bytes,
+    // decoded as though origin were old (25B) — the loot walk must NOT land on the real
+    // template id (the classic silent-misalignment failure mode this fix eliminates).
+    let loot_template = "aa6d6e1b80816f009e3b74e211488dabde467664a49f8c02931745b008f47fdf";
+    let stats = vec![0u8; 176];
+    let mut trailing = stats;
+    trailing.extend_from_slice(&spells_and_loot_tail(33, loot_template)); // FRESH width bytes
+    let bytes = mob_template_bytes("Glowmoth", 20, 30, 200, 3, &trailing);
+    let id = "0x0000000000000000000000000000000000000000000000000000000000fee7";
+
+    // Wrong origin ⇒ wrong (old, 25B) width chosen for genuinely fresh (33B) bytes.
+    let writes = map_mob_template_object(id, &bytes, "0xold").expect("prefix still parses");
+    let doc = set_json(&writes, "$").expect("mob template writes its whole doc");
+    assert!(
+        !doc.contains(&format!(r#""template_id":"0x{loot_template}""#)),
+        "misaligned decode must NOT recover the real loot template: {doc}"
+    );
 }
 
 // ── World object snapshot (S-67 world switcher / travel-modal level gates) ────
