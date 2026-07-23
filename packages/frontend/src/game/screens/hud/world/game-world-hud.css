@@ -477,6 +477,37 @@
   background: linear-gradient(90deg, var(--color-gold-dark), var(--color-gold));
   transition: width 0.25s ease;
 }
+/* #613 — the follower reached the leader: a quiet "with you" micro-label, NO timer bar. */
+.gw-party__with-you {
+  display: inline-block;
+  color: var(--color-gold);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* #613 — the follower's entry was refused (an unopened fight result): an explicit, named inline state with the
+   open action, never a dead 00:00 bar or a context-free toast. */
+.gw-party__blocked {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.gw-party__blocked-open {
+  align-self: flex-start;
+  color: var(--color-gold);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  text-transform: uppercase;
+}
 
 /* ── self plate → bottom-CENTER (Option B "Minimal Float") ───────────────────────────────────────
    Always-on exploration HP plate (lobby only — combat keeps `Vitals` for AP/MP pips). Compact: level

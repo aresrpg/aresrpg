@@ -1751,7 +1751,9 @@
     "invite_owned_cta": "Автослідування",
     "follow_joining": "Приєднання до світу",
     "follow_in_transit": "Біжить до вас",
-    "follow_arrived": "Прибуває",
+    "follow_with_you": "Поруч із вами",
+    "follow_blocked_fight_result": "{{name}} потрібно відкрити результат бою",
+    "follow_open_result_cta": "Відкрити результат",
     "follow_background": "У фоновому режимі",
     "follow_cta": "Слідувати",
     "unfollow_cta": "Не слідувати"

@@ -1751,7 +1751,9 @@
     "invite_owned_cta": "Autoseguir",
     "follow_joining": "Uniéndose al mundo",
     "follow_in_transit": "Corriendo hacia ti",
-    "follow_arrived": "Llegando",
+    "follow_with_you": "Contigo",
+    "follow_blocked_fight_result": "{{name}} necesita abrir su resultado de combate",
+    "follow_open_result_cta": "Abrir resultado",
     "follow_background": "En segundo plano",
     "follow_cta": "Seguir",
     "unfollow_cta": "Dejar de seguir"

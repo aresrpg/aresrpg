@@ -1751,7 +1751,9 @@
     "invite_owned_cta": "オートフォロー",
     "follow_joining": "ワールドに参加中",
     "follow_in_transit": "あなたに向かって移動中",
-    "follow_arrived": "到着中",
+    "follow_with_you": "一緒にいます",
+    "follow_blocked_fight_result": "{{name}} の戦闘結果を開く必要があります",
+    "follow_open_result_cta": "結果を開く",
     "follow_background": "バックグラウンド",
     "follow_cta": "フォロー",
     "unfollow_cta": "フォロー解除"

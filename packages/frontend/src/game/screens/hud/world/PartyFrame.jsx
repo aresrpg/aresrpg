@@ -11,7 +11,7 @@ import { projected_hp, character_max_hp } from '../../../../chain/read_character
 import { v1_character_to_party_row } from '../../../../chain/read_staking.js'
 
 import './game-world-hud.css'
-import { use_game_state } from '../../../store.js'
+import { context, use_game_state } from '../../../store.js'
 import { get_peer_state } from '../../../../p2p/lobby-room.js'
 import { project_party_view } from '@aresrpg/party/reduce'
 
@@ -45,16 +45,14 @@ const transit_time = (remaining_ms) => {
 }
 
 const transit_progress = (row) => {
-  if (row?.status === 'arrived') return 100
   if (row?.status !== 'in_transit') return 0
   return Math.max(0, Math.min(100, Number(row.progress ?? 0) * 100))
 }
 
-const transit_status = (t, status) => {
-  if (status === 'joining') return t('party.follow_joining')
-  if (status === 'in_transit') return t('party.follow_in_transit')
-  return t('party.follow_arrived')
-}
+// #613 — only the ARRIVING legs carry a timer copy. with_you (arrived) and blocked are distinct row states
+// rendered inline below, never a "still arriving" label frozen at 00:00.
+const transit_status = (t, status) =>
+  status === 'joining' ? t('party.follow_joining') : t('party.follow_in_transit')
 
 /** Resolve one exact party character; never query every character owned by its wallet. */
 async function resolve_member(/** @type {string} */ character_id) {
@@ -267,7 +265,22 @@ export function PartyFrame() {
                   <span className="gw-party__bar-fill" style={{ width: `${hp_pct(row.health, row.max_health)}%` }} />
                 </div>
               )}
-              {transit && (
+              {/* #613 — the party-row idiom: ARRIVING timer → with_you label → blocked state. A `resolving`
+                  same-world read shows nothing (no "joining world" flash for a follower already beside you). */}
+              {transit?.status === 'blocked' ? (
+                <div className="gw-party__blocked">
+                  <span>{t('party.follow_blocked_fight_result', { name })}</span>
+                  <button
+                    type="button"
+                    className="gw-party__blocked-open"
+                    onClick={() => context.dispatch('action/select_character', character_id)}
+                  >
+                    {t('party.follow_open_result_cta')}
+                  </button>
+                </div>
+              ) : transit?.status === 'with_you' ? (
+                <span className="gw-party__with-you">{t('party.follow_with_you')}</span>
+              ) : transit && (transit.status === 'joining' || transit.status === 'in_transit') ? (
                 <div className="gw-party__transit">
                   <div className="gw-party__transit-copy">
                     <span>
@@ -282,7 +295,7 @@ export function PartyFrame() {
                     <span style={{ width: `${transit_progress(transit)}%` }} />
                   </div>
                 </div>
-              )}
+              ) : null}
             </div>
           )
         })}
