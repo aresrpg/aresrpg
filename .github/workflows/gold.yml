@@ -1,0 +1,106 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
+# GOLD CERTIFICATION — the localnet gold rig (test/gold/) driven end-to-end in Actions: compose up the
+# disposable chain + indexer + api, publish/seed/fixture the world, then run the anchor (L1 — full
+# frontend on localnet) and multiplayer (cross-wallet) Playwright projects against it. Heavy suite, no
+# push trigger: fires on a manual dispatch, labeling a PR `gold-cert`, or the nightly schedule.
+# Distinct from edge-smoke.yml (a live-testnet prod smoke, never touched by this file).
+name: gold
+on:
+  workflow_dispatch:
+    inputs:
+      grep:
+        description: 'Optional Playwright --grep pattern to filter specs'
+        required: false
+        type: string
+  pull_request:
+    types: [labeled]
+  schedule:
+    - cron: '0 3 * * *'
+concurrency:
+  group: gold-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  rig:
+    # pull_request fires on EVERY label add; only gold-cert runs the suite. workflow_dispatch/schedule
+    # carry no `label` context, so the first half of the OR always clears them.
+    if: github.event_name != 'pull_request' || github.event.label.name == 'gold-cert'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GOLD_GREP: ${{ github.event.inputs.grep }}
+    steps:
+      - uses: actions/checkout@v4
+        timeout-minutes: 5
+      - uses: oven-sh/setup-bun@v2
+        timeout-minutes: 5
+      - name: install deps
+        timeout-minutes: 10
+        # --linker=hoisted: bunx playwright (invoked from repo root below) needs @playwright/test resolvable
+        # from root node_modules/.bin — the default linker keeps it isolated inside packages/frontend and
+        # bunx would silently fetch an unpinned playwright instead. Same fix edge-smoke.yml already carries.
+        run: bun install --frozen-lockfile --linker=hoisted
+      - name: install sui CLI (pinned testnet-v1.75.1)
+        timeout-minutes: 5
+        # Matches test/localnet/harness/Dockerfile's own pinned localnet image (aresrpg-localnet:1.75.1;
+        # compose.gold.yml calls it "the gate lane's pinned 1.75.1 build"). lib_gold.mjs shells out to a
+        # HOST sui binary for client/keytool/publish calls up_gold.mjs makes outside the docker network.
+        run: |
+          curl -fsSL -o /tmp/sui.tgz https://github.com/MystenLabs/sui/releases/download/testnet-v1.75.1/sui-testnet-v1.75.1-ubuntu-x86_64.tgz
+          mkdir -p "$HOME/.local/bin"
+          tar -xzf /tmp/sui.tgz -C "$HOME/.local/bin"
+          rm /tmp/sui.tgz
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/sui" --version
+      - name: warm ~/.move dependency cache
+        timeout-minutes: 10
+        working-directory: packages/move
+        # lib_gold.mjs's publishKiosk() asserts the Kiosk git dependency is already cached under ~/.move and
+        # THROWS rather than fetching it itself — a fresh runner has no cache. `sui move build` resolves every
+        # git dependency (Kiosk + the pinned Sui/MoveStdlib framework revs) into that same cache once, up front.
+        run: sui move build
+      - name: bring up the gold rig
+        timeout-minutes: 15
+        run: node test/gold/up_gold.mjs
+      - name: install Playwright chromium
+        timeout-minutes: 5
+        run: bunx playwright install --with-deps chromium
+      - name: shim bounded-run.sh
+        timeout-minutes: 2
+        # playwright.anchor.config.ts wraps its webServer commands in an absolute, hardcoded path to the
+        # owner's local dev-machine process-lease hook — no env override exists to redirect it. CI has no
+        # orphan-sweeper daemon to guard against (the whole VM dies with the job), so a transparent passthrough
+        # at that exact path satisfies the hardcode without editing rig code.
+        run: |
+          sudo mkdir -p /Users/sceatstudio/.claude/hooks
+          printf '#!/bin/sh\nexec "$@"\n' | sudo tee /Users/sceatstudio/.claude/hooks/bounded-run.sh > /dev/null
+          sudo chmod +x /Users/sceatstudio/.claude/hooks/bounded-run.sh
+      - name: anchor suite (L1 — full frontend on the gold localnet)
+        timeout-minutes: 20
+        run: |
+          args=()
+          if [ -n "$GOLD_GREP" ]; then args+=(--grep "$GOLD_GREP"); fi
+          xvfb-run --auto-servernum bunx playwright test -c test/gold/playwright.anchor.config.ts "${args[@]}"
+      - name: multiplayer suite (cross-wallet rows over the same rig)
+        timeout-minutes: 20
+        run: |
+          args=()
+          if [ -n "$GOLD_GREP" ]; then args+=(--grep "$GOLD_GREP"); fi
+          xvfb-run --auto-servernum bunx playwright test -c test/gold/playwright.multiplayer.config.ts "${args[@]}"
+      - name: upload Playwright artifacts
+        if: failure()
+        timeout-minutes: 5
+        uses: actions/upload-artifact@v4
+        with:
+          name: gold-playwright-artifacts
+          path: |
+            test/gold/out/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+      - name: tear down the gold rig
+        if: always()
+        timeout-minutes: 5
+        run: node test/gold/down_gold.mjs
