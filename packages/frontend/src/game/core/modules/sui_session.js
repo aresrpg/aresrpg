@@ -18,22 +18,36 @@ export default function sui_session() {
   return {
     /** @param {import('../game.js').Context} context */
     observe({ events, get_state }) {
+      // #708 (the root cause behind aa123037's embed.js guard): publish below only on a genuine selection
+      // DELTA. The roster row's `world_id` is a CACHED snapshot — re-deriving and republishing it on EVERY
+      // dispatch, even a redundant reselect of the character already active, can clobber a fresher
+      // chain-truth binding a manual write (join success, the resolve-time fetch) already published for
+      // this same id. aa123037 stopped one caller (embed.js) from redispatching; this closes the class at
+      // its root so every caller (PartyFrame, CharacterSwitcher, boot_roster, ...) is covered without each
+      // hand-rolling its own guard. Track the last id THIS observer actually published for, in its own
+      // closure — the reducer-door idiom, no new store. No reset needed on logout/switch: a different
+      // account's character carries a different on-chain id, and healing an externally-drifted binding is
+      // the poll's job (session_gate.js's stale-poll guard), never a reselect's.
+      let last_published_id = null
       events.on('action/select_character', (character_id) => {
         // #509 — an app-managed auto-follower can never become the driven character. Refusing at this ONE door
         // keeps the session scene from re-keying to a follower (the world-join auto-select focus-steal); the
         // reduce half below refuses the selection state itself. The × unfollow clears the gate, restoring both.
         if (is_app_managed_follower(character_id)) return
+        if (character_id === last_published_id) return
         const character = get_state().sui.characters.find((row) => row.id === character_id)
         // An indexed roster row carries explicit membership (`string | null`). Ferry that selection through
         // the world shell's ONE typed-input door so its character-keyed scene remounts with the HUD. An
         // optimistic create row deliberately has `world_id === undefined`; begin_join owns that receipt path,
         // so never invent a confirmed-unbound binding (or release its joining hold) here.
-        if (character?.world_id !== undefined)
+        if (character?.world_id !== undefined) {
+          last_published_id = character.id
           session_gate_input({
             type: 'character_selected',
             character_id: character.id,
             world_id: character.world_id,
           })
+        }
       })
     },
     /** @param {import('../game.js').State} state @param {import('../game.js').Action} action */
