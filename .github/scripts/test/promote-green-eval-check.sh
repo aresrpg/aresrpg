@@ -2,12 +2,12 @@
 # SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 # © 2026 Sceat — All rights reserved. See LICENSE.
 #
-# promote-green-eval.test.sh — pure-function test harness for evaluate_green() (issue #695: the
+# promote-green-eval-check.sh — pure-function test harness for evaluate_green() (issue #695: the
 # promotion engine raced a still-red landing past a required check that hadn't registered on the
 # sha yet). No bats in this repo, so this is a plain-bash runner in the same idiom as the scripts
 # it tests — canned `gh api check-runs` JSON in, a PASS/FAIL line + a summary out.
 #
-# Run: bash .github/scripts/test/promote-green-eval.test.sh
+# Run: bash .github/scripts/test/promote-green-eval-check.sh
 # Exit: 0 all passed, 1 any failed.
 
 set -uo pipefail
