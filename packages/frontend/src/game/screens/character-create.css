@@ -370,12 +370,14 @@
 
 .cc__foot {
   display: flex;
+  flex-wrap: wrap;
   gap: 14px;
   align-items: flex-end;
   margin-top: 6px;
 }
 .cc__namebox {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 7px;
@@ -469,6 +471,140 @@
   }
   .cc__body {
     flex-direction: column;
+  }
+}
+
+/* SHORT-VIEWPORT LANDSCAPE (phones on their side: ~390-430px tall) — the max-width:900 block above
+   stacks .cc__body into a column, which is exactly what breaks landscape: a ~230-380px-tall panel has no
+   headroom for a title + pedestal + 12-class grid + colors + name stacked vertically, and it never even
+   reaches the Create button (owner report). This block fires on HEIGHT alone — a 932px-wide landscape phone
+   misses the max-width:900 crossover entirely, so it can't be the one carrying this fix — and keeps
+   `.cc__body` a ROW while compressing every piece of chrome so the whole panel fits with ZERO scroll. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .cc {
+    padding: max(8px, var(--safe-top)) max(8px, var(--safe-right)) max(8px, var(--safe-bottom)) max(8px, var(--safe-left));
+  }
+  /* The confirmed-empty inline host (WorldCharacterCreate.jsx) sits BELOW the mobile HUD's menu FAB:
+     .world-character-create is z-index 80, .mobile-hud-actions is z-index 90 (mobile-hud.css) — and
+     GameWorldHud mounts that FAB unconditionally, roster state or not, so the panel must clear its ~44px
+     hit box + top offset or the FAB sits on top of the title. The overlay variant (secondary character,
+     z-index 1000) already paints above the FAB and keeps the smaller uniform padding set above. Inline
+     also STRETCHES (it replaces a world slot, so it should fill it) while overlay stays a content-sized
+     centered card (its own base rule's place-items: center), never artificially stretched with dead space. */
+  .cc.cc--inline {
+    place-items: stretch;
+    padding: calc(max(6px, var(--safe-top)) + 50px) max(8px, var(--safe-right)) max(8px, var(--safe-bottom))
+      max(8px, var(--safe-left));
+  }
+  .cc__panel {
+    max-height: 100%;
+    padding: 8px 12px;
+  }
+  .cc__head {
+    margin-bottom: 4px;
+  }
+  .cc__head h1 {
+    font-size: 14px;
+  }
+  .cc__free {
+    font-size: 8px;
+  }
+  .cc__lead,
+  .cc__era {
+    display: none;
+  }
+  .cc__body {
+    flex-direction: row;
+    gap: 10px;
+  }
+  .cc__hero {
+    flex: 0 0 34%;
+  }
+  .cc__stage {
+    min-height: min(180px, 60dvh);
+  }
+  .cc__meta {
+    padding: 4px 8px;
+  }
+  .cc__meta h2 {
+    font-size: 13px;
+  }
+  .cc__role {
+    margin: 2px 0 4px;
+    font-size: 8px;
+  }
+  .cc__tags {
+    display: none;
+  }
+  .cc__ctl {
+    gap: 5px;
+  }
+  .cc__label {
+    margin-bottom: 3px;
+    font-size: 8px;
+  }
+  .cc__grid {
+    gap: 2px;
+  }
+  .cc__cls {
+    padding: 2px;
+    gap: 1px;
+  }
+  .cc__sq {
+    height: 14px;
+  }
+  .cc__thumb {
+    height: 18px;
+  }
+  .cc__cn {
+    font-size: 7px;
+  }
+  .cc__soonbadge {
+    font-size: 6px;
+  }
+  .cc__gender {
+    margin: 2px 0;
+    gap: 4px;
+  }
+  .cc__gender-opt {
+    padding: 3px 0;
+    font-size: 7.5px;
+  }
+  .cc__swrow {
+    gap: 6px;
+  }
+  .cc__sw-c {
+    height: 16px;
+  }
+  .cc__sw-l {
+    font-size: 7px;
+  }
+  .cc__foot {
+    margin-top: 3px;
+    gap: 8px;
+  }
+  .cc__namebox {
+    gap: 2px;
+  }
+  .cc__name {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+  .cc__inputmeta {
+    min-height: 6px;
+    font-size: 8px;
+  }
+  .cc__go {
+    margin-bottom: 0;
+    gap: 6px;
+  }
+  .cc__cancel {
+    padding: 7px 10px;
+    font-size: 8.5px;
+  }
+  .cc__create {
+    padding: 8px 14px;
+    font-size: 10px;
   }
 }
 

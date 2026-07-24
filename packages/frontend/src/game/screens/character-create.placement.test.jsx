@@ -131,3 +131,24 @@ test('zero-character chrome keeps the rendered desktop wallet address and naviga
   expect(wallet).toContain('aria-label="Copy address"')
   expect(mobile_hud).toContain('navigate(item.id)')
 })
+
+describe('landscape-fit (#740) — short-viewport phones fit with zero scroll', () => {
+  test('a dedicated short-height landscape query keeps .cc__body a ROW (the max-width:900 block alone stacks it into a column, which is the bug: a 932px-wide landscape phone never crosses that width threshold, so height is the only reliable signal)', () => {
+    const css = read_fixture('./character-create.css')
+    const landscape_block = css.match(/@media \(max-height: 500px\) and \(orientation: landscape\) \{([\s\S]*)\n\}\n\n\/\* D212/)?.[1] ?? ''
+    expect(landscape_block, 'the short-viewport landscape query exists').not.toBe('')
+    expect(landscape_block).toMatch(/\.cc__body\s*\{\s*flex-direction:\s*row/)
+    // the inline (confirmed-empty onboarding) host clears the mobile HUD's menu FAB (mobile-hud-actions,
+    // z-index 90 — .world-character-create is z-index 80, see the test above) with real top padding, not
+    // a guess; the overlay variant (already z-index 1000, above the FAB) keeps the smaller uniform padding.
+    expect(landscape_block).toMatch(/\.cc\.cc--inline\s*\{[^}]*padding:\s*calc\(max\(6px, var\(--safe-top\)\) \+ 50px\)/)
+  })
+
+  test('the Cancel/Create foot row wraps instead of overflowing horizontally at narrow widths (#740: it ran ~172px past a 390px viewport)', () => {
+    const css = read_fixture('./character-create.css')
+    const foot_rule = css.match(/\.cc__foot\s*\{([^}]*)\}/)?.[1] ?? ''
+    const namebox_rule = css.match(/\.cc__namebox\s*\{([^}]*)\}/)?.[1] ?? ''
+    expect(foot_rule).toContain('flex-wrap: wrap')
+    expect(namebox_rule).toContain('min-width: 0')
+  })
+})
