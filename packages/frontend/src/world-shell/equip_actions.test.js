@@ -8,8 +8,13 @@ import { resolve_equip_templates } from './equip_version_gate.js'
 const refusal_copy = (unresolved) =>
   `Couldn't equip ${unresolved.map((r) => r.item_type || 'unknown item').join(', ')} — its item template wasn't found on-chain. Unstage it and try again.`
 
-const emerald_id = '0xf296a0233b9e055364eae64e4f5cf639105c8e846b71ec7008162b8f8af213a1'
-const amethyst_id = '0x01229549bb153e4f44b59190590a572180bdb2939e22e6ff917ccdaebe830c23'
+// emerald_id/amethyst_id are synthetic "two distinct fresh-universe cloaks" stand-ins, not real slugs —
+// they just need to be two DIFFERENT ids currently living in the manifest. Repinned to the ceremony #3
+// corpus (cape_kamui / cape_fuwa_black from packages/move/scripts/out/seed_manifest.json); the prior pair
+// predated ceremony #3 and no longer resolves (same drift class as d034e13a). previous_emerald_id is
+// deliberately NOT in any manifest generation — it only needs to stay absent, so it is untouched.
+const emerald_id = '0x1edd164881dba58cd54f8b30fc174d3a7074e39c6889d250d41fe66152f3d395'
+const amethyst_id = '0x5da6ad1b4191ffe13ae9426019580e57e7f46d8d979ad753e13bb00befe37366'
 const previous_emerald_id = '0xa6a4b12ab46d2dd1518f823aeeaac5d48d5e47debd51192606bcd0fc10f63425'
 
 describe('resolve_equip_templates (exact template-identity gate)', () => {

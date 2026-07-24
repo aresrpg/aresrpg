@@ -94,6 +94,8 @@ function parse_baseline(text) {
 // private monorepo's baseline) — every row below is test-fixture mock addresses this tree actually carries.
 // packages/frontend/src/game/worn_render_path.test.js: worn_render_path repin — retired
 // capuche_bara_vitality's stable id, manifest no longer carries it (ceremony #3).
+// packages/frontend/src/world-shell/equip_actions.test.js (#702): emerald_id/amethyst_id repinned to
+// cape_kamui/cape_fuwa_black — the prior pair predated ceremony #3 and no longer resolves as living.
 const known_rogue_fingerprints = parse_baseline(
   `
 packages/fight/src/predict_cast.js	P84p9M8_YyJmgWfE4dDG3s=1
@@ -113,7 +115,7 @@ packages/frontend/src/game/cosmetic_icons.test.js	k3I6Lc73q-sXIlrfEqll_e=1
 packages/frontend/src/game/screens/hud/equipment-drag-render.test.jsx	k3I6Lc73q-sXIlrfEqll_e=1
 packages/frontend/src/game/worn_render_path.test.js	POpkB6Z7QwedxOoFayWY-D=1 b16OI16aOci7oriuENId-r=1
 packages/frontend/src/pages/encyclopedia/recipes.test.ts	3Hl0yoqwBSiOH9myknmaJo=2 O4rUo_ZptFE_7iZqB9Hu4B=1 XabwXqAfLUIMmxRqwNz2xj=1 ZXTYppw8UYTuvWcz-l_aBo=1
-packages/frontend/src/world-shell/equip_actions.test.js	DRjUtrm7ml7HWcdu4yU59l=1 _hU7zEHPFwE9DnDOwzL0li=1 l8sL2o7urtAf40JFeWysVx=1
+packages/frontend/src/world-shell/equip_actions.test.js	l8sL2o7urtAf40JFeWysVx=1 Y3wZ61S6zw6V2qe_fBgR7N=1 hAc9Ks9Z7oNCEsDzX2nU_i=1
 packages/frontend/src/world-shell/pending_outcomes.test.js	N5aFzifDFbJx31Hkto3BCF=1 VQQqSbFb9D_xPE9jAm5yOp=1 XtSGlQVulX97xUrdkTGuAe=1 ekgxD8TdUMvdkff1DobEfj=1
 packages/move/Move.toml	7zQ9MEWAI2Yn_7h_zoZr3-=1 dvy6XX6oy7UlkvdwIKEBsX=1
 packages/move/aresrpg/Move.toml	gfRzOLD-_cQDZ7FzpF66U1=1
