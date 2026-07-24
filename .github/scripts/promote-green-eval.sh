@@ -23,42 +23,76 @@
 #      is the half that catches the race.
 #   An empty check-runs response fails closed via gate 2: every required name is missing.
 #
-# Sourced by promote-land.sh (the real engine) and by test/promote-green-eval.test.sh (canned `gh
-# api` JSON fixtures) — this file has no side effects of its own and is never executed directly.
+# Sourced by promote-land.sh (the real engine) and by test/promote-green-eval-check.sh (canned `gh
+# api` JSON fixtures, plus direct calls into derive_required_checks() against fixture YAML) — this
+# file has no side effects of its own and is never executed directly.
 #
-# THE REQUIRED SET — every check-run NAME that gate.yml + checks.yml produce on a PR/push head
-# (both trigger on `pull_request|push: branches: [edge, master]`, so the set is identical for
-# either promotion base). Ground-truthed against a live commit, not guessed from the YAML: `gh api
-# repos/aresrpg/aresrpg/commits/<edge-tip-sha>/check-runs --paginate --jq '.check_runs[].name'` on
-# 2026-07-24 returned exactly these 14 names. Matrix jobs (checks.yml's `tests`) render as
-# "<job> (<matrix-value>)"; `CodeQL` is NOT a job id in either workflow file — it is the separate
-# check-run the codeql-action `analyze` step files under the github-advanced-security app,
-# distinct from the `fp-codeql` job's own actions check-run. Severity-ratchet direction: keep this
-# list in sync BY HAND when a job is renamed/added/removed — a stale entry shows up as a MISSING
-# check on the real SHA and fails closed (blocks landing) rather than silently under-checking; the
-# repo's ruleset required_status_checks was considered as a "queryable source of truth" instead of
-# a hardcoded list but rejected — it lists only `gate` for edge and only `promoted` for master
-# (the bot's own stamp), both far narrower than "every check from both workflows" and would have
-# made the race WORSE, not fixed it.
-REQUIRED_CHECKS=(
-  # gate.yml
-  gate
-  api_image_smoke
-  # checks.yml
-  ladder
-  smoke
-  fp-codeql
-  CodeQL
-  "tests (fight)"
-  "tests (sim)"
-  "tests (world)"
-  "tests (inventory)"
-  "tests (party)"
-  "tests (sdk)"
-  "tests (engine)"
-  "tests (frontend)"
+# THE REQUIRED SET IS DERIVED, NOT HAND-KEPT (issue #725): a hand-maintained REQUIRED_CHECKS array
+# went stale ONE commit after its own creation — f6c7686b added the `tests (api)` job to gate.yml
+# without updating the array, so the newest required job was invisible to gate 2 above, reopening
+# the #695 race for exactly that job. A hand-kept list WILL drift every time a job is added or
+# renamed; derive_required_checks() below reads the set from the thing that actually creates the
+# check-runs — gate.yml + checks.yml themselves — so a new job or matrix leg auto-joins the bar
+# the next time this file is sourced. Removing a job still needs a real YAML edit; the bar only
+# grows by accident, never shrinks.
+#
+# The repo's branch-protection ruleset was considered as a queryable API alternative to parsing
+# YAML, and rejected: `gh api repos/aresrpg/aresrpg/rulesets/<id>` requires only `gate` on edge and
+# only `promoted` (the bot's own landing stamp) on master — both far narrower than "every check
+# both workflows produce" and would make the #695 race WORSE, not fix it.
+#
+# HOW: yq (mikefarah — confirmed preinstalled on GitHub's ubuntu-latest hosted runner image per
+# actions/runner-images's tool inventory, present locally too) turns each workflow file into JSON;
+# jq then reads `.jobs`. A job's check-run name is its `name:` override if it has one, else its
+# job id verbatim — this is exactly the regression: `tests_api`'s id is `tests_api`, its real
+# check-run name (the override) is `tests (api)`. A `strategy.matrix` leg renders the way GitHub
+# renders it: "<name> (<axis-value>[, <axis-value>...])", cartesian across every axis (jq's
+# `combinations`), skipping the matrix's own `include`/`exclude` keys. `CodeQL` is the one name
+# that can never come from a job/matrix name at all: `github/codeql-action/analyze` (the
+# `fp-codeql` job's own step) files a SEPARATE check-run literally named "CodeQL" under the
+# github-advanced-security app, distinct from `fp-codeql`'s own Actions check-run — any job with
+# an `analyze` step contributes that literal name once.
+
+# derive_required_checks <workflow.yml> [<workflow.yml>...] — prints a JSON array of every
+# check-run NAME the given workflow file(s) produce on a PR/push head (see HOW above). Deduped +
+# sorted (jq `unique`) for a stable, diffable set. Takes explicit file args (never a hardcoded
+# path) so tests can point it at fixture YAML instead of the real workflows.
+derive_required_checks() {
+  command -v yq >/dev/null || { echo "derive_required_checks: yq not found (needed to parse workflow YAML)" >&2; return 1; }
+  local docs
+  docs=$(
+    local file
+    for file in "$@"; do yq -o=json eval '.' "$file"; done | jq -s '.'
+  )
+  jq -c '
+    [
+      .[] | (.jobs // {}) | to_entries[] |
+      (.value.name // .key) as $base |
+      (.value.strategy.matrix // null) as $matrix |
+      if $matrix == null then
+        $base
+      else
+        ($matrix | to_entries | map(select(.key != "include" and .key != "exclude")) | map(.value)) as $lists |
+        if ($lists | length) == 0 then
+          $base
+        else
+          [$lists | combinations] | .[] | $base + " (" + (map(tostring) | join(", ")) + ")"
+        end
+      end
+    ] + (
+      [.[] | (.jobs // {})[] | .steps // [] | .[] | select(.uses? // "" | startswith("github/codeql-action/analyze"))]
+      | if length > 0 then ["CodeQL"] else [] end
+    ) | unique
+  ' <<<"$docs"
+}
+
+# The real production set: gate.yml + checks.yml resolved relative to THIS file's own location
+# (BASH_SOURCE[0] of the currently-executing sourced file, not the caller's cwd) inside a subshell
+# so the path-resolution scratch var never leaks into the sourcing script's namespace.
+REQUIRED_CHECKS_JSON=$(
+  dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  derive_required_checks "${dir}/../workflows/gate.yml" "${dir}/../workflows/checks.yml"
 )
-REQUIRED_CHECKS_JSON=$(jq -n '$ARGS.positional' --args -- "${REQUIRED_CHECKS[@]}")
 
 # evaluate_green <check_runs_json> [required_checks_json]
 #   check_runs_json      = the raw JSON body of GET /repos/{repo}/commits/{sha}/check-runs — the

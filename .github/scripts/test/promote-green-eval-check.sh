@@ -4,8 +4,12 @@
 #
 # promote-green-eval-check.sh — pure-function test harness for evaluate_green() (issue #695: the
 # promotion engine raced a still-red landing past a required check that hadn't registered on the
-# sha yet). No bats in this repo, so this is a plain-bash runner in the same idiom as the scripts
-# it tests — canned `gh api check-runs` JSON in, a PASS/FAIL line + a summary out.
+# sha yet) AND for derive_required_checks() (issue #725: the hand-kept REQUIRED_CHECKS array
+# drifted the first time a job was added — cases 11-13 below prove the derived replacement both
+# closes that exact regression and auto-joins a job it has never seen). No bats in this repo, so
+# this is a plain-bash runner in the same idiom as the scripts it tests — canned `gh api
+# check-runs` JSON (and, for the new cases, a fixture workflow YAML) in, a PASS/FAIL line + a
+# summary out.
 #
 # Run: bash .github/scripts/test/promote-green-eval-check.sh
 # Exit: 0 all passed, 1 any failed.
@@ -147,6 +151,76 @@ REAL_MINUS_SMOKE_RUNS_JSON=$(jq -c '.[]' <<<"$REQUIRED_CHECKS_JSON" | while IFS=
   check_run "$name" completed success
 done | jq -s '.')
 expect_contains "reported-bug-reproduced-smoke-missing" smoke "$REAL_MINUS_SMOKE_RUNS_JSON" # default (real) required set
+
+# expect_array_contains <case-name> <needle> <json_array>
+# Asserts a bare JSON array (e.g. derive_required_checks()'s own output) contains needle exactly —
+# for checks on the derived SET itself, as opposed to expect_contains() above which checks
+# evaluate_green()'s "not-green: ..." diagnostic string.
+expect_array_contains() {
+  local case_name="$1" needle="$2" json_array="$3"
+  if jq -e --arg needle "$needle" 'any(.[]; . == $needle)' <<<"$json_array" >/dev/null; then
+    echo "PASS  $case_name  →  contains [$needle]"
+    PASS=$((PASS + 1))
+  else
+    echo "FAIL  $case_name  →  $json_array does not contain [$needle]"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
+# ── 11. issue #725 regression guard: `tests (api)` — the job f6c7686b added to gate.yml one
+#       commit after the old hand-kept REQUIRED_CHECKS array was created, without updating it — is
+#       present in the DERIVED production set (sourced from the real gate.yml, not remembered) ──
+expect_array_contains "tests-api-in-derived-set" "tests (api)" "$REQUIRED_CHECKS_JSON"
+
+# ── 12. issue #725's reported bug, reproduced exactly with the OLD failure mode: every real check
+#       green EXCEPT tests (api), which never registered on the sha. Under the old hand-kept array
+#       (which never listed "tests (api)" — that's the bug) this exact input evaluated `green`; a
+#       still-red tests(api) run could have fast-forwarded onto edge. It now fails closed, naming
+#       it — the same shape as case 10's smoke proof, for the check that actually regressed. ────
+REAL_MINUS_TESTS_API_RUNS_JSON=$(jq -c '.[]' <<<"$REQUIRED_CHECKS_JSON" | while IFS= read -r name_json; do
+  name=$(jq -r . <<<"$name_json")
+  [ "$name" = "tests (api)" ] && continue
+  check_run "$name" completed success
+done | jq -s '.')
+expect_contains "tests-api-reported-bug-reproduced" "tests (api)" "$REAL_MINUS_TESTS_API_RUNS_JSON"
+
+# ── 13. auto-join proof (issue #725's actual fix): derive_required_checks() called directly on a
+#       FIXTURE workflow whose job ids/names exist NOWHERE in this file, promote-green-eval.sh, or
+#       the real gate.yml/checks.yml. A plain job, a `name:` override, a matrix leg, and a
+#       codeql-action/analyze step all join the derived set with zero code change — proving the
+#       MECHANISM does the work, not a list someone remembered to update. ─────────────────────────
+FIXTURE_YML=$(mktemp)
+trap 'rm -f "$FIXTURE_YML"' EXIT
+cat >"$FIXTURE_YML" <<'YAML'
+name: fixture
+on: push
+jobs:
+  totally_new_job:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  matrix_job:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        leg: [alpha, beta]
+    steps:
+      - run: echo hi
+  overridden_name_job:
+    name: custom display name (v2)
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+  codeql_job:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: github/codeql-action/analyze@v3
+YAML
+FIXTURE_DERIVED_JSON=$(derive_required_checks "$FIXTURE_YML")
+expect_array_contains "fixture-plain-job-auto-joins" "totally_new_job" "$FIXTURE_DERIVED_JSON"
+expect_array_contains "fixture-matrix-leg-auto-joins" "matrix_job (alpha)" "$FIXTURE_DERIVED_JSON"
+expect_array_contains "fixture-name-override-auto-joins" "custom display name (v2)" "$FIXTURE_DERIVED_JSON"
+expect_array_contains "fixture-codeql-analyze-step-auto-joins" "CodeQL" "$FIXTURE_DERIVED_JSON"
 
 echo
 echo "── ${PASS} passed, ${FAIL} failed ──"
