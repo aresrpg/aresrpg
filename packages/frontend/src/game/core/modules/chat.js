@@ -40,8 +40,13 @@ export default function chat() {
     /** @param {import('../game.js').Context} context */
     observe({ get_state, dispatch }) {
       // Incoming PEER chat: the presence core's chat stream head (fed `chat_received` by the transport)
-      // delivers each row exactly once, in order — fold it into message_history. from_me is false for peers
-      // (a peer's address never equals my own selected wallet); my own lines echo locally through chat_send.js.
+      // delivers each row exactly once, in order — fold it into message_history. from_me compares the
+      // sender's character id (`address`, per the header above) against MY active character
+      // (selected_character_id) — never sui.selected_address: that field is dead (nothing has dispatched
+      // action/sui_login since 671266c2 deleted its only caller — #265/e5fa26f3) and was a category error
+      // regardless (a character id can never equal a wallet address). My own outgoing lines already echo
+      // locally through chat_send.js, so this only ever resolves true for another session/tab on the same
+      // active character (#707).
       subscribe_chat(
         presence_store,
         ({ id, message, address, name = '', channel = CHANNEL.general, target = '' }) => {
@@ -52,7 +57,7 @@ export default function chat() {
             name,
             channel,
             target,
-            from_me: address === get_state().sui.selected_address,
+            from_me: address === get_state().selected_character_id,
           })
         },
       )
