@@ -275,13 +275,17 @@ const RENDER_CLASSES = ['solid', 'foliage', 'cutout', 'canopy', 'liquid']
 
 /**
  * Semantic class order within Three's opaque/transparent queues: depth-writing terrain before the
- * non-writing foliage colour pass; water before the colorless foliage depth restore. Three reverses
- * both sorted queues for a reversed-Z camera, so mirror the raw order to preserve those semantics on
- * the live WebGPU path (the same gotcha as tactical/board_highlights.js).
+ * non-writing foliage colour pass; then the colorless GRASS-DEPTH restore BEFORE water, so water
+ * depth-tests against grass and stops painting over emergent blades (#675). Water never writes depth,
+ * so grass depth still survives into the final scene depth for the post silhouettes (#454). Three
+ * reverses both sorted queues for a reversed-Z camera, so mirror the raw order to preserve those
+ * semantics on the live WebGPU path (the same gotcha as tactical/board_highlights.js).
  * @param {RenderClass|'foliage_depth'} cls @param {boolean} [reversed_depth]
  */
 export function terrain_render_order(cls, reversed_depth = false) {
-  const order = cls === 'foliage_depth' ? 2 : cls === 'liquid' ? 1 : cls === 'foliage' ? 0.5 : 0
+  // foliage_depth 0.75: after foliage colour (0.5), BEFORE water (1). Was 2 (after water) — leaving grass
+  // out of the depth buffer at water's draw, so water painted over emergent grass blades (#675).
+  const order = cls === 'foliage_depth' ? 0.75 : cls === 'liquid' ? 1 : cls === 'foliage' ? 0.5 : 0
   return reversed_depth ? -order : order
 }
 
@@ -550,7 +554,8 @@ export function create_terrain_renderer({
       (cls === 'solid' || ((cls === 'cutout' || cls === 'foliage' || cls === 'canopy') && foliage_casts_shadow))
     mesh.receiveShadow = !simple_shaders
     if (cls === 'liquid') {
-      // Transparent-queue order 1: after opaque terrain/foliage colour, before the foliage depth restore.
+      // Transparent-queue order 1: after opaque terrain/foliage colour AND after the grass-depth restore
+      // (#675) — so water depth-tests against grass and never paints over emergent blades.
       mesh.userData.is_liquid = true
       water_sun_hook = material.userData.set_water_sun ?? null
     } else if (cls === 'foliage' || cls === 'cutout' || cls === 'canopy') {
@@ -563,10 +568,14 @@ export function create_terrain_renderer({
     scene.add(mesh) // NO BundleGroup — the pool mesh is a plain scene child (survey F1)
     meshes.push(mesh)
     if (cls === 'foliage') {
-      // Water samples viewport depth during its transparent renderOrder=1 draw, so the visible foliage pass
-      // above must not seed that solid-bed depth. Restore the same alpha-tested silhouette AFTER water so
-      // final scene depth still protects grass from depth-composited clouds/fog. The clone shares the pool,
-      // atlas and TSL nodes; it is colorless and allocated once at boot (no per-frame objects or uploads).
+      // GRASS DEPTH (#675): the foliage COLOUR pass above is depthWrite:false, so grass leaves no depth for
+      // water to test against — water (transparent) then painted straight over emergent blades. This colorless
+      // clone writes the alpha-tested grass silhouette into depth BEFORE water (renderOrder 0.75 < liquid 1),
+      // so water is correctly occluded by grass. Water never writes depth, so the same silhouette still stands
+      // in the final scene depth for the depth-composited clouds/fog (#454). Tradeoff vs the old after-water
+      // placement (#303): where grass is fully submerged water now samples the nearer grass depth (reads
+      // slightly clearer there) — accepted, the emergent-over-water case is the visible defect. The clone
+      // shares the pool, atlas and TSL nodes; it is colorless and allocated once at boot (no per-frame work).
       const scene_depth_material = material.clone()
       scene_depth_material.transparent = true
       scene_depth_material.alphaTest = material.alphaTest

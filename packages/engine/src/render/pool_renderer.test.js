@@ -56,7 +56,7 @@ describe('per-class GPU frustum bounds', () => {
 })
 
 describe('terrain render order', () => {
-  test('normal and reversed-depth queues both draw terrain → foliage and water → final foliage depth', () => {
+  test('normal and reversed-depth queues both draw terrain → foliage colour, then grass-depth → water', () => {
     /** @param {string[]} classes @param {boolean} reversed_depth */
     const draw_order = (classes, reversed_depth) => {
       const sorted = classes
@@ -67,7 +67,9 @@ describe('terrain render order', () => {
 
     for (const reversed_depth of [false, true]) {
       expect(draw_order(['solid', 'foliage'], reversed_depth)).toEqual(['solid', 'foliage'])
-      expect(draw_order(['liquid', 'foliage_depth'], reversed_depth)).toEqual(['liquid', 'foliage_depth'])
+      // #675 water-over-grass: the colorless grass-depth restore draws BEFORE water, so water depth-tests
+      // against grass and stops painting over emergent blades. (Was ['liquid','foliage_depth'].)
+      expect(draw_order(['foliage_depth', 'liquid'], reversed_depth)).toEqual(['foliage_depth', 'liquid'])
     }
   })
 })
@@ -404,11 +406,14 @@ describe('dispose — full GPU teardown empties the resident set and clears the 
   })
 })
 
-// ── WATER-BED / FINAL SCENE-DEPTH CONTRACT (#303 + #454) ──────────────────────────────────────────
-// Water samples viewport depth while its transparent pass draws. Non-solid cross flora must stay out of
-// that bed, but the completed scene depth still needs the same alpha-tested silhouettes for post effects.
+// ── GRASS-DEPTH / WATER-OCCLUSION CONTRACT (#303 + #454, amended by #675) ──────────────────────────
+// The colorless grass-depth pass draws BEFORE water (was after): water then depth-tests against grass and
+// stops painting over emergent blades (#675 "water draws in front of grass"). Liquid never writes depth,
+// so grass depth still survives into the completed scene depth for the post-effect silhouettes (#454).
+// Tradeoff vs the old solid-only bed (#303): where grass is fully submerged water now samples the nearer
+// grass depth (slightly clearer there) — accepted, since emergent-grass occlusion is the visible defect.
 describe('foliage depth ordering', () => {
-  test('water sees only solid terrain, then a colorless pass restores foliage to final scene depth', () => {
+  test('grass depth restores BEFORE water so water is occluded by grass, and stays in final scene depth', () => {
     const scene = new Scene()
     const terrain = make_renderer(scene)
     try {
@@ -434,7 +439,10 @@ describe('foliage depth ordering', () => {
       expect(foliage_depth_mesh.material.colorWrite).toBe(false)
       expect(foliage_depth_mesh.material.depthTest).toBe(true)
       expect(foliage_depth_mesh.material.depthWrite).toBe(true)
-      expect(foliage_depth_mesh.renderOrder).toBeGreaterThan(liquid_mesh.renderOrder)
+      // #675: grass depth draws BEFORE water (was after) so water is occluded by grass. renderer:null here ⇒
+      // non-reversed convention, so "before" = a smaller renderOrder. (Both convention signs covered by the
+      // draw_order test above.)
+      expect(foliage_depth_mesh.renderOrder).toBeLessThan(liquid_mesh.renderOrder)
 
       terrain.set_class_visible('foliage', false)
       expect(foliage_mesh.visible).toBe(false)
