@@ -46,7 +46,7 @@ export function reset_wallet_session(input = { type: 'wallet_session/reset' }) {
 
   // 1. ENGINE session — clear the selected character + the roster (+ reset loaded/load_error), so B's
   //    select_active_character waits for B's roster instead of re-resolving A's. Reuses the sui_logout reducer
-  //    (this is its only live caller). online/wallet/account are already null on the chain-direct build.
+  //    (this is its only live caller).
   context.dispatch('action/sui_logout')
 
   // 2. DUNGEON session — drop the LOCAL session (stop polling + tear the fight/plane engine down + in_session:false)

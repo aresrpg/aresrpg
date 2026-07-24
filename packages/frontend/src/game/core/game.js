@@ -77,10 +77,6 @@ export const INITIAL_STATE = {
   local_position: null,
 
   sui: {
-    /** @type {import('@mysten/wallet-standard').Wallet | null} */
-    wallet: null,
-    /** @type {import('@mysten/wallet-standard').WalletAccount | null} */
-    account: null,
     /** @type {boolean} true once the read-model has been fetched at least once (empty vs loading) */
     loaded: false,
     /** @type {string | null} a human reason the roster fetch/connect failed (the read-model never

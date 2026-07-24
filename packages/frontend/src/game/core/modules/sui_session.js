@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Session + sui state reducer: the zkLogin wallet/account, the selected character, and
-// server-pushed sui data (characters/items/balance/...). Pure reducer, no I/O.
+// Session + sui state reducer: the selected character and server-pushed sui data
+// (characters/items/balance/...). Pure reducer, no I/O.
 //
 // M5 (audit row #3): the `action/sui_data` merge is NO LONGER a blind spread. Every async source
 // dispatches a TYPED input and the merge law (XP floor, pending ledgers, receipt-over-snapshot) lives
@@ -64,8 +64,6 @@ export default function sui_session() {
             selected_character_id: null,
             sui: {
               ...state.sui,
-              wallet: null,
-              account: null,
               characters: [],
               items: [],
               settled_item_floor: {},
