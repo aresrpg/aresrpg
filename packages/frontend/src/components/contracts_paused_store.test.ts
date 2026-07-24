@@ -11,7 +11,7 @@ import { get_log_buffer, _reset_log_for_test } from '../core/log.js'
 import { use_contracts_paused } from './contracts_paused_store'
 
 beforeEach(() => {
-  use_contracts_paused.setState({ paused: false })
+  use_contracts_paused.setState({ paused: false, dismissed: false })
   _reset_log_for_test()
 })
 
@@ -56,6 +56,54 @@ describe('use_contracts_paused — the store transitions', () => {
     expect(use_contracts_paused.getState().paused).toBe(true)
     use_contracts_paused.getState().mark_paused()
     expect(get_log_buffer().filter((e) => e.ns === 'maintenance')).toHaveLength(1) // one flip, one breadcrumb
+  })
+})
+
+describe('the dismiss latch — owner ruling 2026-07-24, "I should be able to close it"', () => {
+  test('dismiss() hides the wall without lying about the chain — paused stays true', () => {
+    use_contracts_paused.getState().report(false)
+    use_contracts_paused.getState().dismiss()
+    expect(use_contracts_paused.getState().paused).toBe(true)
+    expect(use_contracts_paused.getState().dismissed).toBe(true)
+  })
+
+  test('a routine reconfirming poll never reopens a dismissed wall (it fires every 30s)', () => {
+    use_contracts_paused.getState().report(false)
+    use_contracts_paused.getState().dismiss()
+    use_contracts_paused.getState().report(false) // same signal, already known — must not re-arm
+    expect(use_contracts_paused.getState().dismissed).toBe(true)
+  })
+
+  test('a live version/102 tx abort (mark_paused) re-arms a dismissed wall — the honest "still paused" proof', () => {
+    use_contracts_paused.getState().report(false)
+    use_contracts_paused.getState().dismiss()
+    use_contracts_paused.getState().mark_paused()
+    expect(use_contracts_paused.getState().paused).toBe(true)
+    expect(use_contracts_paused.getState().dismissed).toBe(false)
+  })
+
+  test('recovery (report(true)) clears both paused and the dismiss latch', () => {
+    use_contracts_paused.getState().report(false)
+    use_contracts_paused.getState().dismiss()
+    use_contracts_paused.getState().report(true)
+    expect(use_contracts_paused.getState().paused).toBe(false)
+    expect(use_contracts_paused.getState().dismissed).toBe(false)
+  })
+
+  test('a fresh pause onset after recovery starts undismissed (a stale dismiss never suppresses a NEW pause)', () => {
+    use_contracts_paused.getState().report(false) // onset 1
+    use_contracts_paused.getState().dismiss()
+    use_contracts_paused.getState().report(true) // recovery — clears the latch
+    use_contracts_paused.getState().report(false) // onset 2 — a genuinely new pause
+    expect(use_contracts_paused.getState().paused).toBe(true)
+    expect(use_contracts_paused.getState().dismissed).toBe(false)
+  })
+
+  test('null (unknown) never touches the dismiss latch either', () => {
+    use_contracts_paused.getState().report(false)
+    use_contracts_paused.getState().dismiss()
+    use_contracts_paused.getState().report(null)
+    expect(use_contracts_paused.getState().dismissed).toBe(true)
   })
 })
 
