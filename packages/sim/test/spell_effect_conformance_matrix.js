@@ -103,10 +103,10 @@ export const MATRIX_ARENA = {
   spawns_a: [],
   spawns_b: [],
 }
-const CASTER_CELL = { x: 2, y: 4 }
-const ALLY_CELL = { x: 2, y: 5 }
+export const CASTER_CELL = { x: 2, y: 4 }
+export const ALLY_CELL = { x: 2, y: 5 }
 export const ENEMY_CELL = { x: 4, y: 4 }
-const EMPTY_CELL = { x: 6, y: 6 } // open ground for teleport / trap / glyph destinations
+export const EMPTY_CELL = { x: 6, y: 6 } // open ground for teleport / trap / glyph destinations
 
 const make_fighter = (
   id,
@@ -199,7 +199,7 @@ export const single_effect_spell = (
 export const CAST_CTX = { blocks_los: () => false, is_occupied: () => false }
 
 // Who does this effect hit, from its target_filter (spell_targeting.effect_hits semantics)?
-const victim_of = target_filter => {
+export const victim_of = target_filter => {
   const tf = target_filter ?? 0
   if ((tf & SE.TF_ONLY_CASTER) === SE.TF_ONLY_CASTER) return 'caster'
   if (tf === SE.TF_NONE) return 'zone'
