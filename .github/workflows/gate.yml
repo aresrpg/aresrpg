@@ -69,3 +69,28 @@ jobs:
           printf 'api image did not reach its listen line after %s attempts\n' "$attempt_number" >&2
           docker logs "$container_name" >&2
           exit 1
+  tests_api:
+    # Issue #683: the sponsor's unit suite (a MONEY path — scope/station/fail-closed families) ran
+    # in no CI workflow; api_image_smoke above only proves the image boots. Each file below is its
+    # own bun process on purpose — sponsor.mjs/sponsor_state.mjs memoize Redis + the PTB allowlist
+    # once at module load, the same module-global class scripts/order-independence-gate.sh guards
+    # elsewhere — so api/run_tests.sh (the package's own `test` script) runs them one process per
+    # file, never the combined single-process run the files' own headers forbid.
+    name: tests (api)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: setup Bun
+        id: setup_bun
+        continue-on-error: true
+        uses: oven-sh/setup-bun@v2
+      - name: setup Bun (retry)
+        if: steps.setup_bun.outcome == 'failure'
+        uses: oven-sh/setup-bun@v2
+      - name: install
+        working-directory: api
+        run: bun install --frozen-lockfile
+      - name: sponsor api unit suite — one bun process per file (module-load memoization)
+        working-directory: api
+        run: bun run test
