@@ -1,0 +1,298 @@
+{
+  "meta": {
+    "id": "mob_steps_to_band_and_fires",
+    "class": "mob_ai",
+    "authored": "2026-07-24",
+    "source": "authored",
+    "notes": "#606: ranged [3,5] mob at d2 (inside min-range) steps out to a band cell and fires; twin of the Move policy proof."
+  },
+  "arena": {
+    "width": 21,
+    "height": 21,
+    "cells": [
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    ],
+    "spawns_a": [
+      {
+        "x": 5,
+        "y": 5
+      },
+      {
+        "x": 5,
+        "y": 6
+      }
+    ],
+    "spawns_b": [
+      {
+        "x": 7,
+        "y": 5
+      }
+    ]
+  },
+  "templates_raw": {
+    "yajin": {
+      "bolt": {
+        "name": "Bolt",
+        "description": "a ranged bolt",
+        "levels": [
+          {
+            "cost": 3,
+            "range": [3, 5],
+            "critical_chance": 0,
+            "area": 0,
+            "area_type": "cell",
+            "casts_per_turn": 255,
+            "casts_per_target": 255,
+            "cooldown_turns": 0,
+            "modifiable_range": false,
+            "line_of_sight": true,
+            "linear": false,
+            "free_cell": false,
+            "base_effects": [
+              {
+                "type": "damage",
+                "min": 5,
+                "max": 9,
+                "target": "enemies",
+                "element": "earth",
+                "chance": 100
+              }
+            ],
+            "critical_effects": []
+          }
+        ]
+      }
+    }
+  },
+  "initial": {
+    "fight_id": "capsule_mob_band_fire",
+    "arena_seed": 1,
+    "team0": [
+      {
+        "id": "p0",
+        "name": "p0",
+        "cell": {
+          "x": 10,
+          "y": 10
+        },
+        "health": 100,
+        "health_max": 100,
+        "ap": 10,
+        "ap_max": 10,
+        "mp": 5,
+        "mp_max": 5,
+        "ap_used": 0,
+        "mp_used": 0,
+        "is_player": true,
+        "template_id": "yajin",
+        "level": 1,
+        "stats": {
+          "agility": 0,
+          "intelligence": 0,
+          "range": 0,
+          "strength": 0
+        },
+        "effects": [],
+        "deck": [],
+        "hand": [],
+        "discard": [],
+        "spell_levels": {},
+        "ap_reserve": 0
+      }
+    ],
+    "team1": [
+      {
+        "id": "m0",
+        "name": "m0",
+        "cell": {
+          "x": 12,
+          "y": 10
+        },
+        "health": 100,
+        "health_max": 100,
+        "ap": 10,
+        "ap_max": 10,
+        "mp": 5,
+        "mp_max": 5,
+        "ap_used": 0,
+        "mp_used": 0,
+        "is_player": false,
+        "template_id": "yajin",
+        "level": 1,
+        "stats": {
+          "agility": 0,
+          "intelligence": 0,
+          "range": 0,
+          "strength": 0
+        },
+        "effects": [],
+        "deck": [],
+        "hand": ["bolt"],
+        "discard": [],
+        "spell_levels": {
+          "bolt": 1
+        },
+        "ap_reserve": 0
+      }
+    ]
+  },
+  "commands": [
+    {
+      "type": "start"
+    },
+    {
+      "type": "end_turn",
+      "entity_id": "p0"
+    },
+    {
+      "type": "ai_turn",
+      "entity_id": "m0"
+    }
+  ],
+  "expected": {
+    "events": [
+      {
+        "type": "fight_started",
+        "fight_id": "capsule_mob_band_fire",
+        "turn_order": ["p0", "m0"],
+        "seed": 1
+      },
+      {
+        "type": "hand_update",
+        "fight_id": "capsule_mob_band_fire",
+        "entity_id": "p0",
+        "hand": [],
+        "deck_size": 0,
+        "discard_size": 0
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_mob_band_fire",
+        "entity_id": "p0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "hand_update",
+        "fight_id": "capsule_mob_band_fire",
+        "entity_id": "p0",
+        "hand": [],
+        "deck_size": 0,
+        "discard_size": 0
+      },
+      {
+        "type": "fight_turn_end",
+        "fight_id": "capsule_mob_band_fire",
+        "entity_id": "p0"
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_mob_band_fire",
+        "entity_id": "m0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_moved",
+        "fight_id": "capsule_mob_band_fire",
+        "entity_id": "m0",
+        "path": [
+          {
+            "x": 12,
+            "y": 9
+          }
+        ],
+        "tackled": false,
+        "mp_remaining": 4
+      },
+      {
+        "type": "fight_cast",
+        "fight_id": "capsule_mob_band_fire",
+        "entity_id": "m0",
+        "spell_id": "bolt",
+        "target": {
+          "x": 10,
+          "y": 10
+        },
+        "effects": [
+          {
+            "target_id": "p0",
+            "damage": 7,
+            "new_health": 93,
+            "killed": false
+          }
+        ],
+        "is_critical": false,
+        "ap_remaining": 7
+      },
+      {
+        "type": "hand_update",
+        "fight_id": "capsule_mob_band_fire",
+        "entity_id": "m0",
+        "hand": [],
+        "deck_size": 0,
+        "discard_size": 1
+      },
+      {
+        "type": "hand_update",
+        "fight_id": "capsule_mob_band_fire",
+        "entity_id": "m0",
+        "hand": ["bolt"],
+        "deck_size": 0,
+        "discard_size": 0
+      },
+      {
+        "type": "fight_turn_end",
+        "fight_id": "capsule_mob_band_fire",
+        "entity_id": "m0"
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_mob_band_fire",
+        "entity_id": "p0",
+        "ap": 10,
+        "mp": 5
+      }
+    ],
+    "terminal_digest": "56c3a137",
+    "terminal_summary": {
+      "winner": -1,
+      "turn_number": 2,
+      "entities": [
+        {
+          "id": "p0",
+          "health": 93,
+          "cell": {
+            "x": 10,
+            "y": 10
+          }
+        },
+        {
+          "id": "m0",
+          "health": 100,
+          "cell": {
+            "x": 12,
+            "y": 9
+          }
+        }
+      ]
+    }
+  }
+}

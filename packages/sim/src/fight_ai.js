@@ -2,16 +2,25 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Basic enemy AI: a pure turn planner the reducer runs for mob entities.
 //
-// SCOPE (per the port task): "move toward + cast on the nearest enemy if in range, else move." This is the
-// deterministic, dependency-light slice. The donor's exhaustive two-stage combo generator + scorer
-// (ai/{generator,simulation,scoring}.ts) + its LLM `select_action` chooser are a FLAGGED TODO — deepen the
-// AI later. This planner REUSES the sim's own `find_path_4dir` / `get_reachable_cells` (pathfind.js),
-// `manhattan_distance` (cell.js), and `can_target` (spell_targeting.js) — no donor pathfinding/grid-context.
+// SCOPE: "attack the nearest visible enemy from the CLOSEST cell inside a spell's range band, else advance toward
+// it." This is the DETERMINISTIC skeleton of the on-chain §17.21 policy (`aresrpg_foundation::mob_ai::decide_turn`,
+// mob_ai.move): band-aware cast positioning (`cast_cell_for`/`bfs_cast_cell`) and the monotonic reposition fallback
+// (`bfs_best_toward`) — the same integer distance metric and the same (cost/dist/index) tie-breaks, so the two twins
+// pick the SAME cell whenever the viable-action set has a single member (the parity regime). The chain adds a
+// WEIGHTED DRAW across a multi-action set off `&Random`; this planner (offline/parity twin — the frontend never
+// drives it, live mob turns are chain-rendered) stays pure and deterministic and consumes no rng.
 //
-// Pure: it READS state and returns a list of FightActions; it consumes no rng (execution rolls do). Same
-// state -> same plan. The reducer feeds the actions back through its own move/cast/end_turn handlers.
+// #606 fix: the old planner walked to the MIN-MANHATTAN reachable cell then cast if in range — for a min-range
+// (ranged) spell that OVERSHOT into the point-blank dead zone (walked up but could never fire) and, at point-blank,
+// idled. It now stops at the closest cell INSIDE the band (stepping AWAY when the target is inside min-range), so a
+// mob that can reach a firing cell always fires; a mob that can't advances (strictly closer, never a lateral no-op).
+//
+// This planner REUSES the sim's own `get_reachable_cells` / `find_path_4dir` (pathfind.js — the Move BFS queue-order
+// twin), `manhattan_distance` + `encode` (cell.js / combat_grid.js — the same cell metric + index the chain uses),
+// and `can_target` (spell_targeting.js). The reducer feeds the actions back through its own move/cast handlers.
 
 import { manhattan_distance } from './cell.js'
+import { encode } from './combat_grid.js'
 import { find_path_4dir, get_reachable_cells } from './pathfind.js'
 import { find_entity, living_enemies } from './fight_state.js'
 import { is_invisible } from './fight_statuses.js'
@@ -89,8 +98,93 @@ const best_castable_damage_spell = (
 }
 
 /**
- * Plan a mob's turn: cast nearest-enemy if already in range, else step toward it (then cast if newly in
- * range), else end turn. Returns an ordered action list for the reducer to execute.
+ * The CLOSEST reachable cell a damage spell can strike `target` from — the sim twin of Move's `cast_cell_for` /
+ * `combat_grid::bfs_cast_cell`. Over every reachable cell (incl. the mob's own cell at cost 0 = strike from
+ * standing), keep the one minimizing (MP cost, then manhattan distance to target, then cell index — byte-identical
+ * to the chain's tie-break). Returns `{ cell, cost, spell_id, level }` or null when no reachable cell can cast.
+ * A min-range spell thus HOLDS at its band (stepping away from a point-blank target) instead of overshooting.
+ * @param {import('./fight_state.js').FightState} state
+ * @param {import('./fight_state.js').FightEntity} entity
+ * @param {import('./cell.js').Cell} target
+ * @param {import('./pathfind.js').Reachable[]} reachable
+ * @param {Map<string, import('./spell_templates.js').SpellTemplate>} spell_templates
+ * @param {import('./spell_targeting.js').TargetingContext} context
+ * @returns {{ cell: import('./cell.js').Cell, cost: number, spell_id: string, level: number } | null}
+ */
+const closest_cast_cell = (
+  state,
+  entity,
+  target,
+  reachable,
+  spell_templates,
+  context,
+) => {
+  let best = null
+  let best_cost = Infinity
+  let best_dist = Infinity
+  let best_idx = Infinity
+  for (const { cell, cost } of reachable) {
+    const cast = best_castable_damage_spell(
+      state,
+      entity,
+      cell,
+      target,
+      spell_templates,
+      context,
+    )
+    if (!cast) continue
+    const dist = manhattan_distance(cell, target)
+    const idx = encode(cell.x, cell.y)
+    if (
+      cost < best_cost ||
+      (cost === best_cost && dist < best_dist) ||
+      (cost === best_cost && dist === best_dist && idx < best_idx)
+    ) {
+      best = { cell, cost, spell_id: cast.spell_id, level: cast.level }
+      best_cost = cost
+      best_dist = dist
+      best_idx = idx
+    }
+  }
+  return best
+}
+
+/**
+ * The cell to advance to when NO cast is reachable — the sim twin of `combat_grid::bfs_best_toward`. Over every
+ * reachable cell that is NOT the target's own cell (stop adjacent), keep the one minimizing (manhattan distance to
+ * target, then MP cost, then cell index). `start` is the cost-0 seed (the mob holds if it is already at the local
+ * minimum), so the chosen cell is NEVER farther from the target than the mob started — MP is spent only to CLOSE.
+ * @param {import('./cell.js').Cell} start
+ * @param {import('./cell.js').Cell} target
+ * @param {import('./pathfind.js').Reachable[]} reachable
+ * @returns {import('./cell.js').Cell}
+ */
+const best_toward = (start, target, reachable) => {
+  let best = start
+  let best_dist = manhattan_distance(start, target)
+  let best_cost = 0
+  let best_idx = encode(start.x, start.y)
+  for (const { cell, cost } of reachable) {
+    if (cell.x === target.x && cell.y === target.y) continue
+    const dist = manhattan_distance(cell, target)
+    const idx = encode(cell.x, cell.y)
+    if (
+      dist < best_dist ||
+      (dist === best_dist && cost < best_cost) ||
+      (dist === best_dist && cost === best_cost && idx < best_idx)
+    ) {
+      best = cell
+      best_dist = dist
+      best_cost = cost
+      best_idx = idx
+    }
+  }
+  return best
+}
+
+/**
+ * Plan a mob's turn: strike the nearest enemy from the closest reachable band cell (moving there first if needed),
+ * else advance toward it, else end turn. Returns an ordered action list for the reducer to execute.
  *
  * @param {import('./fight_state.js').FightState} state
  * @param {string} entity_id
@@ -114,80 +208,55 @@ export const ai_choose_turn = (
   const target = nearest_enemy(state, entity)
   if (!target) return [{ type: 'end_turn' }]
 
-  /** @type {FightAction[]} */
-  const actions = []
-
-  // 1. Cast from the current cell if a damage spell already reaches the target.
-  const here = best_castable_damage_spell(
-    state,
-    entity,
-    entity.cell,
-    target.cell,
-    spell_templates,
-    context,
-  )
-  if (here) {
-    actions.push({
-      type: 'cast',
-      spell_id: here.spell_id,
-      target: target.cell,
-      level: here.level,
-    })
-    return actions
-  }
-
-  // 2. Otherwise move TOWARD the target: of all cells reachable within MP, pick the one minimizing manhattan
-  // distance to the target (ties broken by lower MP cost, then scan order — deterministic). This handles
-  // both "close the gap to get in range" and "step adjacent for melee".
+  // Cells reachable within MP (4-dir BFS — the Move `bfs_*` queue-discipline twin), including the mob's own cell.
   const reachable = get_reachable_cells(
     entity.cell,
     entity.mp,
     is_walkable,
     is_occupied,
   )
-  let best_goal = entity.cell
-  let best_dist = manhattan_distance(entity.cell, target.cell)
-  let best_cost = 0
-  for (const { cell, cost } of reachable) {
-    const dist = manhattan_distance(cell, target.cell)
-    if (dist < best_dist || (dist === best_dist && cost < best_cost)) {
-      best_dist = dist
-      best_cost = cost
-      best_goal = cell
-    }
+
+  // 1. ATTACK: strike from the CLOSEST reachable band cell. cost 0 = strike from standing (attack-now); cost > 0 =
+  //    advance exactly to that cast cell then strike (attack-move, no wasted MP). Band-aware, so a min-range spell
+  //    steps to its band instead of walking into the point-blank dead zone (#606).
+  const cast_plan = closest_cast_cell(
+    state,
+    entity,
+    target.cell,
+    reachable,
+    spell_templates,
+    context,
+  )
+  if (cast_plan) {
+    const cast_action = /** @type {FightAction} */ ({
+      type: 'cast',
+      spell_id: cast_plan.spell_id,
+      target: target.cell,
+      level: cast_plan.level,
+    })
+    if (cast_plan.cost === 0) return [cast_action]
+    const path = find_path_4dir(
+      entity.cell,
+      cast_plan.cell,
+      entity.mp,
+      is_walkable,
+      is_occupied,
+    )
+    if (path) return [{ type: 'move', path }, cast_action]
   }
 
-  const best_path =
-    best_goal.x === entity.cell.x && best_goal.y === entity.cell.y
-      ? null
-      : find_path_4dir(
-          entity.cell,
-          best_goal,
-          entity.mp,
-          is_walkable,
-          is_occupied,
-        )
-
-  if (best_path) {
-    actions.push({ type: 'move', path: best_path })
-    // 3. After moving, cast if a damage spell now reaches the target from the destination.
-    const dest = best_path[best_path.length - 1]
-    const after = best_castable_damage_spell(
-      state,
-      entity,
-      dest,
-      target.cell,
-      spell_templates,
-      context,
+  // 2. REPOSITION: no reachable cast cell → a single advance toward the target, monotonic (never ends farther —
+  //    MP spent only to close for next turn). Mirrors the on-chain reposition fallback.
+  const goal = best_toward(entity.cell, target.cell, reachable)
+  if (goal.x !== entity.cell.x || goal.y !== entity.cell.y) {
+    const path = find_path_4dir(
+      entity.cell,
+      goal,
+      entity.mp,
+      is_walkable,
+      is_occupied,
     )
-    if (after)
-      actions.push({
-        type: 'cast',
-        spell_id: after.spell_id,
-        target: target.cell,
-        level: after.level,
-      })
-    return actions
+    if (path) return [{ type: 'move', path }]
   }
 
   return [{ type: 'end_turn' }]

@@ -35,6 +35,11 @@ fun fire(): SpellLevel {
 fun fire_melee(): SpellLevel {
   spell_effect::new_spell_level(1, 4, 1, 1, false, false, true, false, 255, 255, 0, 0, false, vector[], vector[], vector[spell_effect::damage(spell::el_fire(), 15)], vector[])
 }
+// #606 ranged fire with a MIN-range of 3 (band [3,5]) — the dead-zone class: a target closer than 3 forces a STEP-OUT.
+#[test_only]
+fun fire_minrange(): SpellLevel {
+  spell_effect::new_spell_level(1, 4, 3, 5, false, false, true, false, 255, 255, 0, 0, false, vector[], vector[], vector[spell_effect::damage(spell::el_fire(), 15)], vector[])
+}
 // heal: AP 4, range 1..6, LOS req — a support kit (effects_contain_heal ⇒ treated as heal, never as an attack).
 #[test_only]
 fun heal_spell(): SpellLevel {
@@ -205,4 +210,31 @@ fun range_stat_extends_band_and_shred_shrinks_it() {
   let mut r2 = prng::scramble(1);
   let (c2, sp2, _t2) = mob_ai::decide_turn(mob, 6, 0, &spells, &targets, &EMPTY, &EMPTY, &EMPTY, &EMPTY, 0, &ww, &mut r2);
   assert!(sp2.is_none() && c2 == mob, 1); // no cast, idle in place — the reachable set shrank
+}
+
+// ── (f) #606 — target INSIDE a ranged spell's min-range ⇒ STEP OUT to the band and FIRE (never point-blank) ────
+// A [3,5] mob with the player at d2 (inside the min-range of 3): castable-in-place is impossible, so the ONLY
+// viable action is attack_move to the CLOSEST band cell (`cast_cell_for`/`bfs_cast_cell`) — the mob STEPS to a cell
+// at manhattan ∈ [3,5] and casts, never walking deeper into the point-blank dead zone. This is the on-chain twin of
+// the sim's #606 fix (packages/sim/test/mob_ai_close_attack.test.js) — the two produce the identical firing cell, so
+// the close-and-attack path can never drift. Deterministic across a 64-seed sweep (single spell + single target ⇒
+// exactly one cast row → the weighted draw is a no-op).
+#[test]
+fun ranged_target_inside_min_range_steps_out_and_fires() {
+  let mob = combat_grid::encode(5, 5);
+  let target = combat_grid::encode(5, 7); // d2 — inside the [3,5] band's min-range
+  let spells = vector[fire_minrange()];
+  let targets = vector[target];
+  let ww = w();
+  let mut seed = 1;
+  while (seed < 65) {
+    let mut rng = prng::scramble(seed);
+    let (c, sp, tgt) = mob_ai::decide_turn(mob, 6, 6, &spells, &targets, &EMPTY, &EMPTY, &EMPTY, &EMPTY, 0, &ww, &mut rng);
+    assert!(sp.is_some(), seed);           // it FIRES — never idles or repositions without casting
+    assert!(c != mob, 100 + seed);         // it STEPPED to a firing cell (out of the point-blank dead zone)
+    let d = combat_grid::manhattan(c, target);
+    assert!(d >= 3 && d <= 5, 200 + seed); // the firing cell is INSIDE the band, not point-blank
+    assert!(tgt == target, 300 + seed);
+    seed = seed + 1;
+  };
 }

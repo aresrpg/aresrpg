@@ -112,6 +112,44 @@ const push_trap_templates_raw = {
   },
 }
 
+// A ranged bolt (band [3,5], LOS-required) — the #606 mob-AI parity vehicle: a mob whose target sits inside its
+// min-range must STEP OUT to the band and fire. Raw seed shape (lowercase type/element/target) → normalized at replay.
+const bolt_templates_raw = {
+  yajin: {
+    bolt: {
+      name: 'Bolt',
+      description: 'a ranged bolt',
+      levels: [
+        {
+          cost: 3,
+          range: [3, 5],
+          critical_chance: 0,
+          area: 0,
+          area_type: 'cell',
+          casts_per_turn: 255,
+          casts_per_target: 255,
+          cooldown_turns: 0,
+          modifiable_range: false,
+          line_of_sight: true,
+          linear: false,
+          free_cell: false,
+          base_effects: [
+            {
+              type: 'damage',
+              min: 5,
+              max: 9,
+              target: 'enemies',
+              element: 'earth',
+              chance: 100,
+            },
+          ],
+          critical_effects: [],
+        },
+      ],
+    },
+  },
+}
+
 // Self-cast invisibility (engine-supported `invisibility`/`turns` shape; no shipped spell carries
 // it yet — the v35 live-symptom class still deserves its sim-truth pin).
 const veil_templates_raw = {
@@ -366,6 +404,45 @@ const scenarios = [
       },
       // post-conclusion probe — the kill must stick:
       { type: 'end_turn', entity_id: 'p0' },
+    ],
+  },
+  {
+    // #606 mob-AI band step + fire (the "moved near me, didn't attack" / "never touch me" class). A ranged [3,5]
+    // mob with the player INSIDE its min-range (d2) must STEP OUT to a band cell and CAST — never walk into the
+    // point-blank dead zone and whiff. The golden pins the sim's true move+cast+damage arc for this turn; the Move
+    // twin (mob_ai_policy_tests::ranged_target_inside_min_range_steps_out_and_fires) produces the identical firing
+    // cell, so the deterministic close-and-attack path is locked byte-for-byte on both sides.
+    meta: {
+      id: 'mob_steps_to_band_and_fires',
+      class: 'mob_ai',
+      authored: '2026-07-24',
+      source: 'authored',
+      notes:
+        '#606: ranged [3,5] mob at d2 (inside min-range) steps out to a band cell and fires; twin of the Move policy proof.',
+    },
+    arena: flat_arena_json(),
+    templates_raw: bolt_templates_raw,
+    initial: {
+      fight_id: 'capsule_mob_band_fire',
+      arena_seed: 1,
+      team0: [
+        make_entity('p0', { x: 10, y: 10 }, true, {
+          deck: [],
+          hand: [],
+          spell_levels: {},
+        }),
+      ],
+      team1: [
+        make_entity('m0', { x: 12, y: 10 }, false, {
+          hand: ['bolt'],
+          spell_levels: { bolt: 1 },
+        }),
+      ],
+    },
+    commands: [
+      { type: 'start' },
+      { type: 'end_turn', entity_id: 'p0' },
+      { type: 'ai_turn', entity_id: 'm0' },
     ],
   },
   {
