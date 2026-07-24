@@ -9,10 +9,10 @@
 //
 // RECURRENCE (2026-07-24), owner field report on edge: a lootbox-won pet stayed invisible until a full
 // refresh — even after the above door landed. Root cause: identity now comes from `current_address` (the
-// live `use_auth` stand-in), never `context.sui.selected_address` — see loot_inventory_effect.test.js's
-// header for the dead-field story (commit 671266c2 deleted the only dispatcher of `action/sui_login`,
-// embed.js's start_session; this exact guard silently no-opped every claim_pet since). These tests never
-// dispatch `action/sui_login`.
+// live `use_auth` stand-in), never the reducer's own state — see loot_inventory_effect.test.js's header
+// for the dead-field story (commit 671266c2 deleted the only dispatcher of `action/sui_login`, embed.js's
+// start_session; this exact guard silently no-opped every claim_pet since). #712 deleted the field
+// itself; these tests dispatch no `action/sui_login` and assert nothing about it.
 
 import { afterEach, describe, expect, it } from 'bun:test'
 
@@ -51,13 +51,12 @@ afterEach(async () => {
 })
 
 describe('lootbox claim → inventory reducer door (#265)', () => {
-  it('folds a claim_pet receipt into the bag without a refresh — sui.selected_address stays null (production reality)', async () => {
+  it('folds a claim_pet receipt into the bag without a refresh', async () => {
     const inputs = []
     const on_input = (input) => inputs.push(input)
     context.events.on('action/sui_data', on_input)
 
     try {
-      expect(context.get_state().sui.selected_address).toBe(null) // the dead field — never touched below
       await reduce_minted_receipt(claim_settlement, '0xowner-a', {
         load_templates: async () => templates,
         reducer_door: context,

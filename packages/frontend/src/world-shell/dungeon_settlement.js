@@ -64,8 +64,7 @@ async function read_result_with_retry(read_once, sleep = (ms) => new Promise((r)
 const floor_loot = (units) => (units > 0 ? [{ item_type: '', name: '', amount: units }] : [])
 
 /** Atomic mint+burn effect edge: async chain/template DATA returns as one typed inventory reducer INPUT.
- *  `current_address` is the LIVE use_auth identity — never context.sui.selected_address, dead since
- *  embed.js's start_session was deleted in 671266c2 (loot_inventory_effect.js's header has the story). */
+ *  `current_address` is the LIVE use_auth identity (loot_inventory_effect.js's header has the story). */
 const mint_and_reduce_inventory = (result_id, templates) =>
   reduce_minted_inventory(result_id, templates, {
     mint_and_burn: mint_all_and_burn,

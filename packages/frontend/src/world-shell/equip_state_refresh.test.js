@@ -188,7 +188,7 @@ describe('reconcile_equip_state', () => {
       },
       {
         read: async () => responses.shift(),
-        get_state: () => ({ sui: { characters: [{ id: '0xcharacter' }], selected_address: null } }),
+        get_state: () => ({ sui: { characters: [{ id: '0xcharacter' }] } }),
         write: (payload) => writes.push(payload),
         map_character: (row) => row,
         mask_items: (rows) => rows,
@@ -245,7 +245,7 @@ describe('reconcile_equip_state', () => {
       },
       {
         read: async () => responses.shift(),
-        get_state: () => ({ sui: { characters: [{ id: '0xcharacter' }], selected_address: null } }),
+        get_state: () => ({ sui: { characters: [{ id: '0xcharacter' }] } }),
         write: (payload) => writes.push(payload),
         map_character: (row) => row,
         mask_items: (rows) => rows,

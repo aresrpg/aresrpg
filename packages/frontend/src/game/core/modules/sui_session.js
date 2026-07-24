@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Session + sui state reducer: the zkLogin wallet/account/address, the selected character, and
-// server-pushed sui data (characters/items/balance/...). Pure reducer, no I/O — the React
-// onboarding dispatches action/sui_login after Enoki connect, then connect().
+// Session + sui state reducer: the zkLogin wallet/account, the selected character, and
+// server-pushed sui data (characters/items/balance/...). Pure reducer, no I/O.
 //
 // M5 (audit row #3): the `action/sui_data` merge is NO LONGER a blind spread. Every async source
 // dispatches a TYPED input and the merge law (XP floor, pending ledgers, receipt-over-snapshot) lives
@@ -53,16 +52,6 @@ export default function sui_session() {
     /** @param {import('../game.js').State} state @param {import('../game.js').Action} action */
     reduce(state, { type, payload }) {
       switch (type) {
-        case 'action/sui_login':
-          return {
-            ...state,
-            sui: {
-              ...state.sui,
-              wallet: payload.wallet,
-              account: payload.account,
-              selected_address: payload.address,
-            },
-          }
         // Full engine-session teardown — the SINGLE authority for it is game/wallet_session_reset.js, fired on a
         // wallet switch (disconnect A → connect B). Clears the SELECTED character + the roster so the next account
         // never inherits the prior one's identity, and resets `loaded`/`load_error` back to the pre-fetch state so
@@ -77,7 +66,6 @@ export default function sui_session() {
               ...state.sui,
               wallet: null,
               account: null,
-              selected_address: null,
               characters: [],
               items: [],
               settled_item_floor: {},

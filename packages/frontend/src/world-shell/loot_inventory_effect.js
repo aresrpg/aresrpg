@@ -10,13 +10,12 @@
 // future mint door repeats the same call — never a component-level refresh, never a timer.
 //
 // IDENTITY (#265 recurrence, 2026-07-24): the owner-match race guard reads `current_address()` — the LIVE
-// wallet identity (callers inject `() => use_auth.getState().address`) — NEVER `reducer_door`'s
-// `sui.selected_address`. That engine field is only ever written by the `action/sui_login` dispatch that
-// used to live in embed.js's start_session(); commit 671266c2 deleted start_session wholesale (the old
-// WebSocket "online" server model) without deleting this guard's read of the field it fed. From that commit
-// on, `sui.selected_address` sat permanently null, so `owner_address && ...` was always false and this
-// door's dispatch silently never fired — for fight loot AND lootbox pets alike. `use_auth` is the confirmed
-// single source of truth for wallet identity everywhere else in this codebase.
+// wallet identity (callers inject `() => use_auth.getState().address`) — never the reducer's own state.
+// The reducer used to carry a parallel `sui.selected_address`, written only by the `action/sui_login`
+// dispatch that lived in embed.js's start_session(); commit 671266c2 deleted start_session wholesale
+// without deleting this guard's read of the field it fed, so it sat permanently null and this door's
+// dispatch silently never fired — for fight loot AND lootbox pets alike (#712 deleted the field outright).
+// `use_auth` is the confirmed single source of truth for wallet identity everywhere else in this codebase.
 
 import { settled_loot_input } from './loot_inventory.js'
 
@@ -35,7 +34,7 @@ import { settled_loot_input } from './loot_inventory.js'
  * routes through. `owner_address` is the CALLER's pre-await snapshot, never read fresh in here: a receipt must
  * be judged against the identity that was active when its tx started, so a late wallet-A receipt can never
  * enter wallet B's reducer floor. `current_address()` is the LIVE identity read at verification time (never
- * `reducer_door`'s `sui.selected_address` — see the file header for why that field is dead).
+ * the reducer's own state — see the file header for the #265/#712 story).
  * @param {any} settlement @param {string|null|undefined} owner_address
  * @param {{ load_templates: () => Promise<Map<string, any>>, reducer_door: ReducerDoor, current_address: () => string|null|undefined }} deps
  */

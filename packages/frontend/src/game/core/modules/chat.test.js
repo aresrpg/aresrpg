@@ -3,7 +3,7 @@
 // D770a W3b regression — incoming PEER chat must reach message_history THROUGH @aresrpg/world's presence atom
 // (the WS-era `packet/chatMessage` shim is dead). Drives the real wire: a `chat_received` input on the presence
 // store → chat.js's observe subscription → an `action/chat_message` dispatch, with from_me computed off my
-// active CHARACTER (selected_character_id) — never the dead sui.selected_address wallet field (#707).
+// active CHARACTER (selected_character_id) — never a wallet address (#707).
 
 import { afterEach, beforeEach, expect, test } from 'bun:test'
 
@@ -17,13 +17,11 @@ const reset = () => presence_store.getState().input({ type: 'reset' })
 beforeEach(reset)
 afterEach(reset)
 
-/** Mount chat's observe with minimal doubles — PRODUCTION-REAL state: sui.selected_address stays null (the
- *  dead field #707 retired; nothing has dispatched action/sui_login since 671266c2). Returns the array of
- *  dispatched actions. */
+/** Mount chat's observe with minimal doubles. Returns the array of dispatched actions. */
 function mount_chat(selected_character_id = '0xme') {
   const dispatched = []
   chat().observe({
-    get_state: () => ({ selected_character_id, sui: { selected_address: null } }),
+    get_state: () => ({ selected_character_id }),
     dispatch: (type, payload) => dispatched.push({ type, payload }),
   })
   return dispatched
@@ -49,7 +47,7 @@ test('an incoming peer chat row dispatches action/chat_message (from_me=false)',
   })
 })
 
-test('a row whose address is my own active character folds as from_me, with sui.selected_address null (production reality) — #707', () => {
+test('a row whose address is my own active character folds as from_me — #707', () => {
   const dispatched = mount_chat('0xMY_CHARACTER')
   presence_input({ type: 'chat_received', row: { id: '0xMY_CHARACTER', message: 'echo', address: '0xMY_CHARACTER' } })
   expect(dispatched.at(-1)?.payload.from_me).toBe(true)

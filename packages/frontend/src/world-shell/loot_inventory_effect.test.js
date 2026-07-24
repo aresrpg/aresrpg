@@ -4,13 +4,13 @@
 // INPUT, while an account switch during the await must dispatch nothing into the new owner's reducer.
 //
 // IDENTITY SOURCE (#265 recurrence, 2026-07-24): `current_address` is the LIVE wallet identity (the
-// `use_auth` stand-in) — never `context.sui.selected_address`. That engine field is written ONLY by the
-// `action/sui_login` dispatch that used to live in embed.js's start_session(); commit 671266c2 deleted
-// start_session wholesale (the old WebSocket "online" server model) without deleting this guard's read of
-// the field it fed. Since then `sui.selected_address` has sat permanently null in production, silently
-// defeating this exact owner-match guard for EVERY mint path (fight loot AND lootbox pets) — the receipt
-// arrives, the row is built, and the dispatch never fires. These tests never dispatch `action/sui_login`
-// for identity (mirroring production reality) — they prove the fix no longer needs that dead field.
+// `use_auth` stand-in), never the reducer's own state. The reducer used to carry a parallel
+// `sui.selected_address` field, written only by the `action/sui_login` dispatch that lived in embed.js's
+// start_session(); commit 671266c2 deleted start_session wholesale (the old WebSocket "online" server
+// model) without deleting this guard's read of the field it fed, so it sat permanently null and silently
+// defeated this exact owner-match guard for EVERY mint path (fight loot AND lootbox pets) — the receipt
+// arrives, the row is built, and the dispatch never fires. #712 deleted the field outright; these tests
+// dispatch no `action/sui_login` and assert nothing about it.
 
 import { afterEach, describe, expect, it } from 'bun:test'
 
@@ -47,13 +47,12 @@ afterEach(async () => {
 })
 
 describe('production settle → inventory effect edge', () => {
-  it('dispatches the successful async outcome exactly once as a reducer INPUT — sui.selected_address stays null (production reality)', async () => {
+  it('dispatches the successful async outcome exactly once as a reducer INPUT', async () => {
     const inputs = []
     const on_input = (input) => inputs.push(input)
     context.events.on('action/sui_data', on_input)
 
     try {
-      expect(context.get_state().sui.selected_address).toBe(null) // the dead field — never touched below
       const outcome = await mint_and_reduce_inventory('0xresult', [template_id], {
         mint_and_burn: async () => settlement,
         load_templates: async () => templates,

@@ -176,8 +176,7 @@ export async function claim_pet({ claim_id, rolled_template }) {
   // re-routed through the SAME decoder. No auto-retry — the claim survives a failure, so the user may retry COLLECT.
   // Identity captured BEFORE the tx (the fight-settle door's same race guard): a wallet switch mid-flight must
   // never paint the new owner's bag with the pet THIS signer minted. `address` (use_auth, fetched at entry) —
-  // NEVER `context.sui.selected_address`, a field nothing has written since embed.js's start_session was
-  // deleted in 671266c2 (see loot_inventory_effect.js's header for the #265-recurrence story).
+  // never the reducer's own state (see loot_inventory_effect.js's header for the #265-recurrence story).
   const owner_address = address
   let result, timing
   try {
