@@ -94,3 +94,24 @@ jobs:
       - name: sponsor api unit suite — one bun process per file (module-load memoization)
         working-directory: api
         run: bun run test
+  bundle-gate:
+    # Issue #737: scripts/assert_clean_bundle.mjs only ran inside Vercel's own build (postbuild),
+    # so a commit that tripped it landed green here in CI while every deployment silently
+    # ERRORed (an outage with zero READY deploys). This job reproduces Vercel's own buildCommand
+    # (packages/frontend/vercel.json) so a tripping commit fails CI and can never land.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: setup Bun
+        id: setup_bun
+        continue-on-error: true
+        uses: oven-sh/setup-bun@v2
+      - name: setup Bun (retry)
+        if: steps.setup_bun.outcome == 'failure'
+        uses: oven-sh/setup-bun@v2
+      - name: install
+        run: bun install --frozen-lockfile
+      - name: bundle-cleanliness gate — vite build && assert_clean_bundle.mjs
+        working-directory: packages/frontend
+        run: bunx vite build && node scripts/assert_clean_bundle.mjs
