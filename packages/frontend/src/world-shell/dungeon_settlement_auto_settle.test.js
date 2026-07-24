@@ -29,7 +29,11 @@ import { begin_attempt, end_attempt, attempt_state, reset_attempts_for_test } fr
  * through fight.move/the indexer/results.move — documented honestly, not assumed.
  * @param {{ characters: {id:string}[], get_dungeon_runs: () => Promise<any[]>, get_fights: (character_id: string) => Promise<any[]>,
  *           settle_chain: (args: any) => Promise<boolean>,
- *           get_settling_state: () => { _settling: boolean, busy: boolean, fight_id: any, run_pass_id: any } }} deps
+ *           get_settling_state: () => { _settling: boolean, busy: boolean, fight_id: any, run_pass_id: any },
+ *           announce_claim?: () => void }} deps announce_claim mirrors dungeon_settlement.js's announce_auto_claim
+ *   (#684): fired immediately before settle_chain, ONLY on the attempt that actually reaches it — a silent
+ *   background settle+open reads as malware with no other UI in view. Defaults to a no-op so every pre-existing
+ *   call site below stays byte-identical.
  */
 async function auto_settle_terminal_fights_mirror({
   characters,
@@ -37,6 +41,7 @@ async function auto_settle_terminal_fights_mirror({
   get_fights,
   settle_chain,
   get_settling_state,
+  announce_claim = () => {},
 }) {
   if (!characters.length) return
   let runs = []
@@ -65,6 +70,7 @@ async function auto_settle_terminal_fights_mirror({
       end_attempt(fight_id, 'transient') // never stomp a live session on ANY character of this wallet
       continue
     }
+    announce_claim() // #684: name the claim BEFORE settle_chain builds its tx — fires only on a real attempt
     const ok = await settle_chain({ terminal: true, fight_id, world_id: terminal.world ?? null, character_id })
     end_attempt(fight_id, ok ? 'settled' : 'executed_failure')
   }
@@ -289,5 +295,38 @@ describe('auto_settle_terminal_fights mirror — LEAF-2 stranded-fight auto-reco
       get_settling_state: idle_state,
     })
     expect(attempt_state('fight-1')).toBe('latched')
+  })
+
+  it('#684: announces the claim exactly once, BEFORE settle_chain builds its tx', async () => {
+    const events = []
+    await auto_settle_terminal_fights_mirror({
+      characters: [{ id: 'char-1' }],
+      get_dungeon_runs: async () => [],
+      get_fights: async () => [{ fight: 'fight-1', world: 'world-1', status: 'defeat' }],
+      settle_chain: async (args) => {
+        events.push({ kind: 'settle', args })
+        return true
+      },
+      get_settling_state: idle_state,
+      announce_claim: () => events.push({ kind: 'announce' }),
+    })
+    expect(events.map((e) => e.kind)).toEqual(['announce', 'settle']) // ordering: named BEFORE the tx fires
+    expect(events.filter((e) => e.kind === 'announce').length).toBe(1) // once per attempt, never per-character-loop-iteration extra
+  })
+
+  it('#684: a skipped attempt (dungeon-bound) never announces — no tx will fire, so no false claim notice', async () => {
+    const events = []
+    await auto_settle_terminal_fights_mirror({
+      characters: [{ id: 'char-1' }],
+      get_dungeon_runs: async () => [{ pass: 'pass-1', fight: 'fight-1' }], // dungeon-bound → left to the manual press
+      get_fights: async () => [{ fight: 'fight-1', world: 'world-1', status: 'defeat' }],
+      settle_chain: async (args) => {
+        events.push({ kind: 'settle', args })
+        return true
+      },
+      get_settling_state: idle_state,
+      announce_claim: () => events.push({ kind: 'announce' }),
+    })
+    expect(events).toEqual([]) // neither the notice nor the tx — an honest silence, not a lying toast
   })
 })

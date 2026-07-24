@@ -2665,6 +2665,7 @@
     "openness_group": "Grupo",
     "action_engage": "Atacando a la manada",
     "action_open_result": "Abriendo el botín",
+    "claiming_pending_result": "Reclamando tu resultado de combate pendiente…",
     "a_fight": "el combate",
     "a_dungeon": "la mazmorra",
     "board_place_failed": "No se pudo colocar el tablero de combate — recarga la página."

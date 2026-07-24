@@ -2665,6 +2665,7 @@
     "openness_group": "Gruppe",
     "action_engage": "Rudel wird angegriffen",
     "action_open_result": "Beute wird geöffnet",
+    "claiming_pending_result": "Dein ausstehendes Kampfergebnis wird eingefordert…",
     "a_fight": "dem Kampf",
     "a_dungeon": "dem Dungeon",
     "board_place_failed": "Spielfeld konnte nicht platziert werden — bitte neu laden."

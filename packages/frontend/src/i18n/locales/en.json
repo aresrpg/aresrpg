@@ -2665,6 +2665,7 @@
     "openness_group": "Group",
     "action_engage": "Engaging the pack",
     "action_open_result": "Opening the spoils",
+    "claiming_pending_result": "Claiming your pending fight result…",
     "a_fight": "the fight",
     "a_dungeon": "the dungeon",
     "board_place_failed": "Couldn't place the fight board — please reload."

@@ -2665,6 +2665,7 @@
     "openness_group": "グループ",
     "action_engage": "群れに交戦中",
     "action_open_result": "戦利品を開封中",
+    "claiming_pending_result": "保留中の戦闘結果を受け取り中…",
     "a_fight": "戦闘",
     "a_dungeon": "ダンジョン",
     "board_place_failed": "戦闘盤面を配置できませんでした — 再読み込みしてください。"

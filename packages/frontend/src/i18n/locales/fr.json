@@ -2665,6 +2665,7 @@
     "openness_group": "Groupe",
     "action_engage": "Engagement du groupe",
     "action_open_result": "Ouverture du butin",
+    "claiming_pending_result": "Réclamation de ton résultat de combat en attente…",
     "a_fight": "le combat",
     "a_dungeon": "le donjon",
     "board_place_failed": "Impossible de placer le plateau de combat — recharge la page."

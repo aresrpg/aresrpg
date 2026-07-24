@@ -63,6 +63,12 @@ async function read_result_with_retry(read_once, sleep = (ms) => new Promise((r)
  *  event lands. Mirrors loot_from_rolled's D53 degrade shape — resolve_loot_tile.js already renders the letter fallback. */
 const floor_loot = (units) => (units > 0 ? [{ item_type: '', name: '', amount: units }] : [])
 
+/** AUTO-FIRE NOTICE (#684 — "it's spamming me with tx"): every background claim/settle names itself BEFORE its
+ *  tx builds. ONE shared copy fired at each auto-fire site (the boot sweep's two leaves + the entry-refusal
+ *  recovery) — a silent wallet tx with zero UI reads as malware to a player. Best-effort: fires once per
+ *  attempted row, same as the dead announce-toast below it corrects a blocked one after the fact. */
+const announce_auto_claim = () => push_event_toast({ state: 'info', title: i18n.t('fights.claiming_pending_result') })
+
 /** Atomic mint+burn effect edge: async chain/template DATA returns as one typed inventory reducer INPUT.
  *  `current_address` is the LIVE use_auth identity (loot_inventory_effect.js's header has the story). */
 const mint_and_reduce_inventory = (result_id, templates) =>
@@ -426,6 +432,7 @@ export async function recover_fight_entry_refusal(store, character_id, refusal, 
     open_result: (row) => {
       const { address } = use_auth.getState()
       if (!address) return Promise.resolve({ status: 'blocked', error: refusal })
+      announce_auto_claim() // #684: entry-refusal recovery auto-opens with zero other UI surface in view
       return open_pending_row(store, address, character_id, row, {
         allow_run_bound: true,
         live_world_fight_id,
@@ -551,6 +558,7 @@ export async function auto_open_pending_outcomes(store, address, { announce = fa
           : { state: 'info', title: i18n.t('errors.fight_result_opening') }
       )
     if (state) continue // inflight (already opening) or latched (manual-only) — never double-fire
+    announce_auto_claim() // #684: name the claim BEFORE its tx builds — the boot sweep has no other UI surface
     const res = await open_pending_row(store, address, character_id, row)
     // honest correction: we announced an auto-open but the row is NOT auto-openable (dungeon-bound/session-live)
     if (announce && res.status === 'blocked')
@@ -622,6 +630,7 @@ async function auto_settle_terminal_fights(store, address, announce) {
       continue
     }
     if (announce) push_event_toast({ state: 'info', title: i18n.t('errors.fight_result_opening') })
+    announce_auto_claim() // #684: this leaf settles+opens a stranded terminal fight — same silent-tx exposure
     await settle_chain_latched(store, {
       terminal: true,
       fight_id,
