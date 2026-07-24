@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, test } from 'bun:test'
 
-import { find_entity } from '../src/fight_state.js'
+import { effective_stats, find_entity } from '../src/fight_state.js'
 import { process_spell_cast } from '../src/fight_spells.js'
 import { apply_invisibility, is_invisible } from '../src/fight_statuses.js'
 import * as SE from '../src/spell_effect.js'
@@ -142,5 +142,34 @@ describe('spell-effect conformance matrix — real corpus × reducer postconditi
       is_invisible(find_entity(res.state, 'p0')),
       'invisible caster stayed hidden after a damaging cast — sim does NOT mirror the chain reveal',
     ).toBe(false)
+  })
+
+  // ── SIGN DECODE (#728 ikari_martyrs_call): a double-encoded debuff — a NEGATIVE authored value AND
+  //    FLAG_NEGATIVE — must still fold as a DEBUFF. The chain treats `value` as a magnitude (u64; the seed
+  //    writer emits Math.abs(value) on-chain) and direction rides FLAG_NEGATIVE alone; the sim must decode
+  //    the same way regardless of what sign the raw corpus row itself carries. ──
+  test('sign decode: a negative authored value + FLAG_NEGATIVE still applies as a DEBUFF (never a buff)', () => {
+    const state = fresh_state([])
+    const before = effective_stats(find_entity(state, 'm0')).strength ?? 0
+    const spell = single_effect_spell(
+      'martyrs_sign_regression',
+      {
+        kind: SE.K_ALTER_STAT,
+        stat: SE.STAT_STRENGTH,
+        value: -8, // double-encoded exactly like the corpus bug: negative value AND the flag
+        flags: SE.FLAG_NEGATIVE,
+        target_filter: SE.TF_NOT_TEAM,
+        turns: 2,
+      },
+      3,
+      false,
+    )
+    const res = process_spell_cast(state, 'p0', spell, 1, ENEMY_CELL, CAST_CTX)
+    expect(res.success).toBe(true)
+    const after = effective_stats(find_entity(res.state, 'm0')).strength
+    expect(
+      after,
+      `strength ${before}->${after}: a FLAG_NEGATIVE effect must SUBTRACT its magnitude, never add it`,
+    ).toBe(before - 8)
   })
 })

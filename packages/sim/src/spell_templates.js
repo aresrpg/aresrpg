@@ -309,7 +309,18 @@ const TARGET_FILTER_MAP = {
 const normalize_effect = (e, fallback_area) => {
   const numeric_kind = typeof e['kind'] === 'number' ? e['kind'] : undefined
   const raw_type = String(e['type'] ?? numeric_kind)
-  const value = Number(e['value'] ?? 0)
+  // ALTER_STAT / ALTER_RESIST / STEAL_STAT carry sign via FLAG_NEGATIVE alone (spell_effect.move:203) —
+  // value is a MAGNITUDE, same as the chain: the seed writer always emits `Math.abs(value)` on-chain
+  // (seed_full_corpus.mjs:365, Move's Effect.value is u64). Decode the same way here: never trust a raw
+  // corpus row's own sign for these kinds, or a double-encoded debuff (negative value + FLAG_NEGATIVE)
+  // folds as `-(-x)` = a buff (#728 — ikari_martyrs_call).
+  const magnitude_signed_kind =
+    numeric_kind === K_ALTER_STAT ||
+    numeric_kind === K_ALTER_RESIST ||
+    numeric_kind === K_STEAL_STAT
+  const value = magnitude_signed_kind
+    ? Math.abs(Number(e['value'] ?? 0))
+    : Number(e['value'] ?? 0)
   const raw_stat = Number(e['stat'] ?? 0)
   const fixed_value = numeric_kind === undefined ? undefined : value
   const element = ELEMENT_MAP[String(e['element'])]

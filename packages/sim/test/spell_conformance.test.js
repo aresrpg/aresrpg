@@ -27,22 +27,12 @@ import {
 // A fix that resolves a row makes it drop out of the fold, and the stale-baseline assertion below then FAILS
 // until the row is deleted here — so the baseline can never drift upward or hide a regression.
 //
-// SPELL-CONF-MARTYRS (6 rows) — ikari_martyrs_call, all 6 levels, the strength-debuff effect. The authored row
-// double-encodes its sign: a NEGATIVE value (-8..-33) AND FLAG_NEGATIVE (8). Every OTHER corpus debuff uses a
-// POSITIVE value + FLAG_NEGATIVE, which the sim resolves correctly. The seed writes `Math.abs(value)` on-chain,
-// so the CHAIN debuffs correctly (−8 strength); the sim's `normalize_effect` keeps the negative value, stores it
-// in a STAT_DEBUFF row, and `effective_stats` folds a debuff as `−value` → −(−8) = **+8**: the sim BUFFS the
-// enemy where the chain debuffs it — a deterministic-twin BREAK. Fix is a one-liner on EITHER side (sim: abs the
-// alter value like the seed does; or corpus: author +8 + FLAG_NEGATIVE like every sibling). Owner's call — this
-// harness reports, it does not fix. Filed back to the lead as the sweep's sole named finding.
-const BASELINE = new Set([
-  'ikari_martyrs_call:L1:base0:sign_magnitude',
-  'ikari_martyrs_call:L2:base0:sign_magnitude',
-  'ikari_martyrs_call:L3:base0:sign_magnitude',
-  'ikari_martyrs_call:L4:base0:sign_magnitude',
-  'ikari_martyrs_call:L5:base0:sign_magnitude',
-  'ikari_martyrs_call:L6:base0:sign_magnitude',
-])
+// SPELL-CONF-MARTYRS — RESOLVED. ikari_martyrs_call (6 levels) double-encoded its strength-debuff sign: a
+// NEGATIVE value (-8..-33) AND FLAG_NEGATIVE. `normalize_effect` (spell_templates.js) now decodes ALTER_STAT/
+// ALTER_RESIST/STEAL_STAT the way the chain does — magnitude = abs(value), direction = the flag alone (the
+// seed writer emits `Math.abs(value)` on-chain; Move's Effect.value is u64) — so it never trusts a raw corpus
+// row's own sign for these kinds. The baseline is empty: any future sign_magnitude mismatch is a NEW regression.
+const BASELINE = new Set([])
 
 const key = f => `${f.spell_id}:L${f.level}:${f.slot}:${f.axis}`
 

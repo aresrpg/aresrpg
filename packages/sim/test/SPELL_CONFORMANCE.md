@@ -14,13 +14,11 @@ by design (issue #96). This sweep runs where the corpus is materialized locally 
 ## Verdict
 
 - **Spells:** 240 · **level variants:** 1440 · **effects driven:** 4043 · **AP debits driven:** 1368
-- **Axes PASS:** 13256 · **MISMATCH:** 6 · **NAMED GAP:** 1676
+- **Axes PASS:** 13262 · **MISMATCH:** 0 · **NAMED GAP:** 1909
 
 ## Findings — every mismatch named
 
-| root | kind · axis | rows | spells | mechanism |
-| --- | --- | ---: | ---: | --- |
-| `ikari_martyrs_call` | ALTER_STAT · sign_magnitude | 6 | 1 | strength net +8 != authored -8 (value -8, flags 12) |
+_None. Every driven axis conforms to its authored definition._
 
 ## Named gaps — authored fields the sim + chain twin does not express
 
@@ -29,9 +27,9 @@ corpus field with no runtime consumer on EITHER side — a content-design signal
 
 | kind · axis | effects | mechanism |
 | --- | ---: | --- |
-| DAMAGE · range | 1124 | authored range [4,11] resolves as fixed value 4 — no per-cast damage roll on the single-PTB twin (value_max has no on-chain Effect field) |
+| DAMAGE · range | 1321 | authored range [9,undefined] resolves as fixed value 9 — no per-cast damage roll on the single-PTB twin (value_max has no on-chain Effect field) |
 | REMOVE_POINTS · duration | 258 | drain lifetime is a debt-row refill schedule (dodge-contested), not a folded stat row |
-| LIFE_STEAL · range | 108 | authored range [21,35] resolves as fixed value 21 — no per-cast damage roll on the single-PTB twin (value_max has no on-chain Effect field) |
+| LIFE_STEAL · range | 144 | authored range [20,undefined] resolves as fixed value 20 — no per-cast damage roll on the single-PTB twin (value_max has no on-chain Effect field) |
 | GLYPH · duration | 48 | glyph lifetime lives on the board object, not a fighter row |
 | PERCENT_LIFE · value | 36 | percent-of-life magnitude scales with live target HP — exact value board-dependent |
 | HEAL · duration | 36 | authored heal-over-turns is resolved as one instant heal — no per-turn regen row in the sim |
