@@ -13,6 +13,8 @@ packages/sdk/
 packages/engine/assets/
 # V2 fight-replay corpus (commit d4ebe84c) — captured chain wire bytes with provenance, never hand-formatted (same rationale as the chain-id gate exemption).
 packages/fight/test/fixtures/capsules/
+# #701 parity fixture — a captured trace_format-1 edge fight (real chain wire bytes, provenance), never hand-formatted.
+packages/fight/test/fixtures/parity/
 # Generated type surfaces (tsc emit — never hand-formatted).
 packages/party/types/
 packages/inventory/types/

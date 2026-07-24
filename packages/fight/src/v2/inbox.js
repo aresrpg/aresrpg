@@ -114,8 +114,11 @@ export const journal_to_actions = (rows) => {
  * Admit verified chain-event actions into the inbox log. Idempotent by coordinate; a higher-or-equal-rank source
  * adopts on a collision; a DIFFERENT content hash at an occupied coordinate is failure-as-data + a refetch request.
  * The frontier is DERIVED (`truth_frontier`), so admission only touches the log. Pure: returns a fresh
- * `{ inbox, failures, effects }` (the door threads them). Actions already reflected by the adopted snapshot base
- * (version ≤ base_version) are dropped as settled — order-independently, since a snapshot always wins its version.
+ * `{ inbox, failures, effects }` (the door threads them). Events the bootstrap base already reflects
+ * (version ≤ base_version) are NOT dropped here (#701): the fold's `version > base_version` filter (v2/fold.js
+ * `sorted_tail`) settles them at fold time. Dropping on admit keyed off a MUTABLE base_version was order-DEPENDENT —
+ * a transiently-higher base (a late-arriving earlier bootstrap under the shuffle property) would drop events the
+ * final, lower base must keep — so the settle floor lives only in the fold, where the base is final.
  * @param {import('./state.js').InboxState} inbox
  * @param {Array<Record<string, any>>} actions pure-data actions (batch_to_actions / journal_to_actions)
  * @param {number} now
@@ -127,7 +130,6 @@ export const admit_events = (inbox, actions, now) => {
   const effects = []
   for (const action of actions) {
     const coord = action_coord(action)
-    if (coord.version <= inbox.base_version) continue // settled: the snapshot base already reflects it
     const key = coord_key(coord)
     const existing = log[key]
     if (existing) {
@@ -152,11 +154,17 @@ export const admit_events = (inbox, actions, now) => {
 }
 
 /**
- * Adopt a decoded Fight OBJECT (snapshot) as the SNAPSHOT+TAIL base at its version — the boot seed AND every later
- * catch-up read (consensus §Unanimous: "boot IS catch-up"). A read at/below the current base version is stale →
- * ignored (never regresses). A newer read adopts wholesale; log entries it now subsumes (version ≤ V) are pruned
- * (they are settled into the base). Pure. `board_state_from_fight` decodes the rich view (the ONE home); the raw
- * `rows` are wire-revived first (the `$bigint` un-wrap).
+ * Adopt a decoded Fight OBJECT (snapshot) as the SNAPSHOT+TAIL base — the BOOTSTRAP seed the canonical event tail
+ * folds on top of, EXACTLY as the OLD store's `committed_state` (M2b #291 DEMOTED the object read to a bootstrap
+ * base + a checkpoint: "everything that guessed history from an object read is deleted"). The base is the EARLIEST
+ * (lowest-version) object read; a later HIGHER-version object is a CHECKPOINT that must NOT re-adopt (#701) — its
+ * cells are a 4s-stale / possibly-torn read and `base_from_view` can only DERIVE turn_number as `status→1/0`, so
+ * re-adopting stranded every fighter's cell at the stale object and RESET their accumulated per-turn count to 1,
+ * discarding the tail. Only a strictly-EARLIER read lowers the bootstrap floor (an out-of-order delivery of the true
+ * first read). Order-independent: the base is `min(object versions)`, a pure function of the read SET, so the
+ * shuffle property holds. NO destructive prune — the fold's `version > base_version` filter (v2/fold.js `sorted_tail`)
+ * settles the subsumed tail, and keeping those rows lets a late-arriving earlier bootstrap still fold them.
+ * Pure. `board_state_from_fight` decodes the rich view (the ONE home); the raw `rows` are wire-revived first.
  * @param {import('./state.js').InboxState} inbox
  * @param {any} rows the raw snapshot fight object
  * @param {number} version the object version
@@ -165,7 +173,7 @@ export const admit_events = (inbox, actions, now) => {
  */
 export const adopt_snapshot = (inbox, rows, version, ctx = {}) => {
   const object_version = Number(version ?? 0)
-  if (object_version <= inbox.base_version) return inbox
+  if (inbox.base_view != null && object_version >= inbox.base_version) return inbox // checkpoint — never re-adopt
   const fight = revive_wire(rows)
   const base_view = board_state_from_fight({
     fight,
@@ -178,10 +186,7 @@ export const adopt_snapshot = (inbox, rows, version, ctx = {}) => {
     creator: ctx.creator ?? null,
     ...(ctx.offset ? { offset: ctx.offset } : {}),
   })
-  const log = Object.fromEntries(
-    Object.entries(inbox.log).filter(([, action]) => Number(action.version) > object_version)
-  )
-  return { ...inbox, base_view, base_version: object_version, log }
+  return { ...inbox, base_view, base_version: object_version }
 }
 
 /**

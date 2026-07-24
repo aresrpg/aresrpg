@@ -155,6 +155,9 @@ const sanctioned_fixture_prefixes = [
   // issue #512's pinned live fight/store capsule (trace_512_replay.test.js) — the exported wire payload,
   // not a model-generated twin; the filename itself embeds the captured fight's id.
   'packages/fight/test/fixtures/traces/',
+  // issue #701's captured trace_format-1 edge fight (parity_committed.test.js) — real recorder-tee wire bytes
+  // with provenance, replayed through both fold pipelines; every id is a historical testnet object, not wiring.
+  'packages/fight/test/fixtures/parity/',
 ]
 const slash_path = (value) => value.split(path.sep).join('/')
 const id_fingerprint = (id) => create_hash('sha256').update(id).digest('base64url').slice(0, 22)
