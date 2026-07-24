@@ -220,6 +220,11 @@ if [ "${1:-}" = "--hardcoded-ids" ]; then
   node scripts/check-chain-ids.mjs "$@"
   exit $?
 fi
+if [ "${1:-}" = "--manifest-lineage" ]; then
+  shift
+  node scripts/check-manifest-lineage.mjs "$@"
+  exit $?
+fi
 if [ "${1:-}" = "--move-public-surfaces" ]; then
   move_public_surface_gate
   exit $?
@@ -365,7 +370,7 @@ if [ "${1:-}" = "--test-reachability" ]; then
   exit $?
 fi
 if [ "$#" -ne 0 ]; then
-  echo "usage: bash scripts/check-constraints.sh [--move-public-surfaces | --app-clean-names | --test-reachability | --hardcoded-ids [--strict] [--inventory]]" >&2
+  echo "usage: bash scripts/check-constraints.sh [--move-public-surfaces | --app-clean-names | --test-reachability | --hardcoded-ids [--strict] [--inventory] | --manifest-lineage]" >&2
   exit 2
 fi
 
@@ -373,6 +378,11 @@ FAIL=0
 
 echo
 if ! node scripts/check-chain-ids.mjs; then
+  FAIL=1
+fi
+
+echo
+if ! node scripts/check-manifest-lineage.mjs; then
   FAIL=1
 fi
 

@@ -110,9 +110,18 @@ try {
   }
 
   if (!grid_seen) {
+    // 4-way HARNESS candidate list (#698 added the 4th): a stale BUNDLED seed manifest can starve this
+    // same grid exactly like a dev-login failure or a dead /v1 route — its ids simply don't exist against
+    // the live-pinned packages. Discriminator: an item template_id read from the bundled manifest that
+    // does NOT resolve in a live /v1 response means staleness (the #698 class), not an outage — a genuine
+    // outage or route regression fails every id alike, not a lineage-shaped subset.
     failures.push(
-      'HARNESS: the ARMOR items grid never rendered (dev-login failed, /v1/encyclopedia never resolved, or ' +
-        'the route regressed) — cannot evaluate icon/detail truth. See the proof report for the server log.'
+      'HARNESS: the ARMOR items grid never rendered (dev-login failed, /v1/encyclopedia never resolved, ' +
+        'the route regressed, or the bundled seed manifest is stale against the release.json pins — #698 ' +
+        'class; discriminate by checking whether an item template_id from packages/move/scripts/out/' +
+        'seed_manifest.json still resolves in a live /v1 response: present in the manifest but absent from ' +
+        '/v1 means staleness, not an outage) — cannot evaluate icon/detail truth. See the proof report for ' +
+        'the server log.'
     )
   } else {
     // Let the eager-loaded row icons' fallback chains (candidate -> onError -> next candidate) finish
