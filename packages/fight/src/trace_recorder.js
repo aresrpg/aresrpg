@@ -77,9 +77,15 @@ export const record_input = (rec, { fight_id, msg, at, anchors }) => ({
   entries: [...rec.entries, { seq: rec.seq, fight_id, at, msg, anchors }].slice(-rec.capacity),
 })
 
-/** The fight_id of the most recently opened ('init') recording still in the buffer (or null). */
+/** The fight_id of the most recently OPENED ('init' carrying a real fight_id) recording still in the buffer, or
+ *  null. A null-fight_id init is dungeon_run_store.js's teardown() idle-reset — fired right after opening the
+ *  result card on EVERY terminal (forfeit and the ordinary win/defeat claim alike), through this SAME reducer
+ *  door trace_tap taps unconditionally. That reset is not a fight OPENING, so it must never supersede the fight
+ *  that just ended as "the latest" — doing so blinded this no-arg lookup (dump_current_trace's own call shape)
+ *  to the just-ended fight the instant its own teardown ran, before its result card ever got to mount: a fully
+ *  captured trace, reported as un-dumpable (issue #700 — the export button read a dead disabled state). */
 const latest_open_fight = (rec) => {
-  const opens = rec.entries.filter((entry) => entry.msg?.type === 'init')
+  const opens = rec.entries.filter((entry) => entry.msg?.type === 'init' && entry.fight_id != null)
   return opens.length > 0 ? opens[opens.length - 1].fight_id : null
 }
 

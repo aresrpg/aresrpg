@@ -448,6 +448,33 @@ describe('FightReport — the EXPORT REPLAY button (always visible; never a surp
     expect(html).toContain('fight_end.export_replay')
     expect(html).not.toContain('disabled=""')
   })
+
+  // issue #700: driven QA proved export_fight_trace() works MID-FIGHT (a real 187KB capsule downloaded), but
+  // the button on the card itself read disabled — dungeon_run_store.js's teardown() (fires right after
+  // open_fight_recap() on EVERY terminal: forfeit via abandon_fight->claim, and the ordinary win/defeat claim)
+  // sends `fight_store.getState().input({ type: 'init', fight_id: null })` to close the live board. That message
+  // crosses the SAME reducer door the trace tap records unconditionally, so by the time THIS card mounts (React's
+  // commit is async relative to that synchronous open_fight_recap()+teardown() pair), the tap's last recorded
+  // 'init' is the teardown's own null-fight_id one — blinding has_dumpable_trace()'s "latest open fight" lookup.
+  // This reproduces the exact sequence (real fight init -> traffic -> teardown's null-fight_id init) BEFORE
+  // mounting the card, exactly as the store leaves things by the time FightReport's mount-time useMemo runs.
+  test('the just-ended fight survives ITS OWN teardown — the button reads ENABLED at card mount (issue #700, forfeit + ordinary terminal share teardown())', () => {
+    fight_store.trace_tap._reset_for_test()
+    fight_store.trace_tap.tap_trace_input({ fight_id: null, ...anchors }, { type: 'init', fight_id: '0xfe_700' }, 0)
+    fight_store.trace_tap.tap_trace_input({ fight_id: '0xfe_700', ...anchors }, { type: 'tick' }, 1)
+    // dungeon_run_store.js's teardown(): fight_store.getState().input({ type: 'init', fight_id: null }) — fired
+    // synchronously right after open_fight_recap(), BEFORE this card ever gets to mount.
+    fight_store.trace_tap.tap_trace_input({ fight_id: null, ...anchors }, { type: 'init', fight_id: null }, 2)
+
+    const html = renderToStaticMarkup(<FightReport {...base} cost={null} />)
+    expect(html).toContain('fight_end.export_replay')
+    expect(html).not.toContain('disabled=""') // RED on current edge: this reads disabled=&quot;&quot; — the dead click issue #700 reports
+
+    // export_fight_trace()'s own data source (dump_current_trace) must resolve to the ENDED fight, not null.
+    const dumped = fight_store.trace_tap.dump_current_trace('test', Date.now())
+    expect(dumped).not.toBe(null)
+    expect(dumped.fight_id).toBe('0xfe_700')
+  })
 })
 
 // ── #342 — VICTORY-CARD DENSITY: participant rows go HALF the height (single-line: avatar chip · name +

@@ -175,4 +175,54 @@ describe('dump_trace', () => {
     expect(trace.captured_at).toBe(1_700_000_000_000)
     expect(JSON.parse(JSON.stringify(trace))).toEqual(trace)
   })
+
+  // issue #700: dungeon_run_store.js's teardown() (called right after open_fight_recap() on EVERY terminal —
+  // forfeit/win/defeat alike) unconditionally sends `input({ type: 'init', fight_id: null })` to close the live
+  // board. That message crosses the SAME one reducer door trace_tap taps, so it lands in this recorder as a
+  // perfectly ordinary 'init' entry — just one whose fight_id is null (an idle-reset, not a fight opening). The
+  // no-arg call FightReport.jsx's has_dumpable_trace()/export_fight_trace() use (`dump_trace(rec, v, t)`, no
+  // fight_id) leans on "latest open fight" to find the just-ended fight — so a null-fight_id entry must never
+  // count as one, or the export button reads as un-dumpable the instant the card that offers it mounts.
+  describe('a teardown reset (fight_id: null init) never blinds "latest open fight" (issue #700)', () => {
+    test('dump_trace still finds the just-ended REAL fight after its teardown init lands', () => {
+      let rec = record_input(create_trace_recorder(), {
+        fight_id: 'a',
+        msg: { type: 'init', fight_id: 'a' },
+        at: 0,
+        anchors,
+      })
+      rec = record_input(rec, { fight_id: 'a', msg: { type: 'tick' }, at: 1, anchors })
+      // dungeon_run_store.js teardown(): fight_store.getState().input({ type: 'init', fight_id: null })
+      rec = record_input(rec, { fight_id: null, msg: { type: 'init', fight_id: null }, at: 2, anchors })
+
+      const dumped = dump_trace(rec, 'v1', 999) // no fight_id -> "the most recently opened" (the card's own call shape)
+      expect(dumped).not.toBe(null)
+      expect(dumped.fight_id).toBe('a')
+      expect(dumped.inputs.map((i) => i.msg.type)).toEqual(['init', 'tick'])
+    })
+
+    test('a genuine NEXT fight still supersedes correctly — the teardown entry never sticks around as a false floor', () => {
+      let rec = record_input(create_trace_recorder(), {
+        fight_id: 'a',
+        msg: { type: 'init', fight_id: 'a' },
+        at: 0,
+        anchors,
+      })
+      rec = record_input(rec, { fight_id: null, msg: { type: 'init', fight_id: null }, at: 1, anchors }) // teardown
+      rec = record_input(rec, { fight_id: 'b', msg: { type: 'init', fight_id: 'b' }, at: 2, anchors }) // the NEXT fight opens
+      expect(dump_trace(rec, 'v1', 999).fight_id).toBe('b')
+    })
+
+    test('multiple teardowns in a row still resolve to the last REAL fight, not null', () => {
+      let rec = record_input(create_trace_recorder(), {
+        fight_id: 'a',
+        msg: { type: 'init', fight_id: 'a' },
+        at: 0,
+        anchors,
+      })
+      rec = record_input(rec, { fight_id: null, msg: { type: 'init', fight_id: null }, at: 1, anchors }) // teardown #1
+      rec = record_input(rec, { fight_id: null, msg: { type: 'init', fight_id: null }, at: 2, anchors }) // a stray re-teardown
+      expect(dump_trace(rec, 'v1', 999).fight_id).toBe('a')
+    })
+  })
 })
