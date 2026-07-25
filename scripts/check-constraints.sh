@@ -642,6 +642,20 @@ if ! bash scripts/depcruise-gate.sh; then
   red "ARCH GATE (dependency-cruiser) FAILED."
   FAIL=1
 fi
+# ZERO-DRIFT (issue #914): the two fight compositions — the world's and the simulator's — resolved
+# from their roots and diffed module by module. The depcruise rules above fence which DIRECTORIES
+# the simulator may import from; this one asserts it runs THE SAME MODULES the world does, with the
+# receipt source as the single sanctioned divergence. Same ratchet idiom: the difference is an
+# enumerated manifest inside the gate, so drift reds the commit it appears in. Runs under bun (it
+# uses dependency-cruiser's own resolver) and SKIPs green when the tool is absent.
+echo
+if ! command -v bun >/dev/null 2>&1; then
+  echo "== AresRPG zero-drift gate · world fight ≡ simulator fight (issue #914) =="
+  echo "  SKIP: bun not available (this bun-first repo runs dependency-cruiser under bun)"
+elif ! bun scripts/zero-drift-gate.mjs; then
+  red "ARCH GATE (zero-drift: world fight ≡ simulator fight) FAILED."
+  FAIL=1
+fi
 # Deep tier (codeql: interprocedural laundered store writes / fight-fold purity / boundary
 # mutation — fresh DB each run, ~40s; SKIPs green when the codeql binary is absent). Same
 # ratchet: baseline/aresrpg-fp.baseline.txt is the worklist, any NEW fingerprint is red.

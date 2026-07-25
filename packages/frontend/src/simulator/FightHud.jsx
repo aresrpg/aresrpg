@@ -17,6 +17,12 @@
 // (`use_fight_phase` → `should_mount_board`). Every one of them is imported from its shipped home — nothing is
 // copied, forked, or re-styled, and the world-shell/fight_* modules the cutover lane owns are untouched.
 //
+// SEVEN OF EIGHT (issue #914). Every sibling above with a shipped home is mounted here. `SpellBar` is the one
+// that is NOT: it is a PRIVATE component of GameWorldHud.jsx (declared inside the world HUD's composition
+// root, never exported), so the cast bar and its vitals gems have no shared home to import — the only way to
+// put them on this page today would be to copy them, which is precisely the divergence the zero-divergence law
+// forbids. The extraction is boarded, not worked around here.
+//
 // ── WHY THIS NEEDS NO S5 EXTRACTION ────────────────────────────────────────────────────────────────────────
 // S5 exists in case a chain claim is hard-wired inside the surface. It is not: `DungeonBoard.jsx:133-136` reads
 // `commit_turn` / `claim` / `mint_loot` / `abandon` as STORE STATE off `use_dungeon`. fight_shim.js seeds all
