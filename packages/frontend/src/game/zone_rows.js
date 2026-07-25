@@ -110,6 +110,9 @@ export async function zone_rows_v1(world_id, zx, zy, { signal = undefined, fresh
     discovered_at_ms: Number(zone.discovered_at_ms ?? 0),
     mob_bitmap: zone.mob_bitmap,
     res_bitmap: zone.res_bitmap,
+    // The commitment root's leading byte selects WHICH derivation this zone was committed under; dropping it
+    // here would silently derive the other one — a whole zone of spawn_ids the chain never committed.
+    group_root: zone.group_root,
   })
 }
 

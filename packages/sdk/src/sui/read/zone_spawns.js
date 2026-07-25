@@ -73,10 +73,19 @@ export function decode_zone_group_commitment(value) {
 }
 
 /**
- * Read zone `(zx, zy)`'s raw state in `world_id`: `{ discovered_at_ms, seed, mob_bitmap, res_bitmap }`, or
- * **null when the zone is undiscovered** (its DF does not exist — the honest "unsearched" signal). Feed the
- * result plus the `get_world` doc into `@aresrpg/sim`'s `derive_zone` to obtain the live spawn rows.
- * @param {import("../../../types.js").Context} context
+ * Read zone `(zx, zy)`'s raw state in `world_id`: `{ discovered_at_ms, seed, mob_bitmap, res_bitmap,
+ * group_root }`, or **null when the zone is undiscovered** (its DF does not exist — the honest "unsearched"
+ * signal). Feed the result plus the `get_world` doc into `@aresrpg/sim`'s `derive_zone` to obtain the live
+ * spawn rows.
+ *
+ * `group_root` comes from the SIBLING commitment DF and is part of the zone's derivable state, not an extra:
+ * its leading byte is what `zones::derive_mobs` dispatches on, so a state read that omitted it would let the
+ * caller derive the WRONG composition — a full zone of spawn_ids the chain never committed, every one of
+ * which the claim door rejects. `null` when the commitment is absent (the chain reads a missing commitment as
+ * the legacy derivation, which is exactly what `derive_zone` does with a null root).
+ * @param {import("../../../types.js").Context & { network:'mainnet'|'testnet'|'devnet'|'localnet',
+ *   ids?: { aresrpg?: import('../../deployment/aresrpg.js').AresrpgIds },
+ *   group_root_package_id?:string }} context
  */
 export function get_zone_state(context) {
   const { grpc_client, network } = context
@@ -89,7 +98,12 @@ export function get_zone_state(context) {
     )
     const json = await get_object_json(grpc_client, field_id)
     if (json?.value == null) return null
-    return decode_zone_state(json.value)
+    const commitment = await get_zone_group_commitment(context)(
+      world_id,
+      zx,
+      zy,
+    )
+    return { ...decode_zone_state(json.value), group_root: commitment?.root ?? null }
   }
 }
 
