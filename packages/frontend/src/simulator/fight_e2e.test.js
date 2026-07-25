@@ -250,9 +250,13 @@ describe('L4 · determinism — the seed is the whole fight', () => {
     const digest_of = (run) => replay_capsule(capsule_of(run.chain)).trace_digest
     expect(digest_of(a)).toBe(digest_of(b))
     // A pinned golden: a change here means the sim, the seed threading, or the command list moved. That is a
-    // conversation, not a rebaseline — the whole determinism story rides on this number. It moved ONCE, when
-    // the recorder header started holding raw templates: it pins the REPLAY's trace, which until then folded
-    // inert spells. The LIVE run's digest (sim_chain.test.js SIM_CHAIN_RUN_DIGEST) never moved.
+    // conversation, not a rebaseline — the whole determinism story rides on this number. It moved TWICE:
+    //   1. when the recorder header started holding raw templates — it pins the REPLAY's trace, which until
+    //      then folded inert spells;
+    //   2. d78e5fd0 → c57c71b0 (#867), when the seats stopped fighting on off-chain HP pools: this roster's
+    //      level-30 Senshi seat went 280 → 315 max HP (class base 70 + 29×5 + 100 vitality, the chain's
+    //      `progression_math::max_hp_from_base`), so the same commands now kill on a different turn.
+    // The LIVE run's digest (sim_chain.test.js SIM_CHAIN_RUN_DIGEST) never moved — it seats no characters.
     expect(digest_of(a)).toMatchSnapshot()
   })
 

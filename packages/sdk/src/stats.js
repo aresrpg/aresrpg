@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import CLASSES from './classes.json' with { type: 'json' }
 import { experience_to_level } from './experience.js'
 
-const LIFE_PER_LEVEL = 5
-const BASE_LIFE = 30
+// ANNEX §4c, FROZEN: it rides with the immutable XP curve, it is not an admin dial.
+// VERBATIM from `aresrpg_foundation::progression_math` HP_PER_LEVEL.
+const HP_PER_LEVEL = 5
 
 // Worn-item rows carry the canonical Move stat vocabulary (item_stats::ItemStatistics: `action`/`movement`),
 // while character documents use the ap/mp shorthand — the display lookup must accept both or gear AP/MP
@@ -90,13 +92,30 @@ export function get_total_stat(character, stat) {
   return Math.max(0, get_base_stat(character, stat) + get_equipment_stat(character, stat))
 }
 
-/** @type {(character: import("./../types.js").SuiCharacter) => number} */
+/**
+ * Per-class BASE HP — read off the SDK's own class table, whose `health` column IS the twin of
+ * `aresrpg::config` default_classes() (§17.31 / ANNEX §4); the parity test pins the two tables equal so they
+ * cannot drift apart. Total function: an unknown/absent slug (a mob row, a not-yet-hydrated party card) falls
+ * back to Senshi's baseline rather than returning NaN — the same policy the client's HP surfaces already run.
+ * @type {(classe: string | null | undefined) => number}
+ */
+function base_hp_for_class(classe) {
+  return Number(CLASSES[String(classe ?? '')]?.health ?? CLASSES.senshi.health)
+}
+
+/**
+ * Max HP — the deterministic twin of `aresrpg::progression::max_hp` (progression.move:34), i.e.
+ * `progression_math::max_hp_from_base(config::base_hp(row), level, vitality)`: the character's CLASS BASE,
+ * plus 5 per level GAINED (level 1 grants none), plus total effective vitality (allocated + the signed
+ * equipment aggregate, floored at zero). The class base is the whole point — a class-blind flat base put the
+ * client 35 points under the chain for a level-1 Senshi (#867).
+ * @type {(character: import("./../types.js").SuiCharacter) => number}
+ */
 export function get_max_health(character) {
   const level = experience_to_level(character.experience)
-  const vitality = get_total_stat(character, 'vitality')
-  // it's okay to include lvl 1 here, let's start at 25
-  const life_level_bonus = level * LIFE_PER_LEVEL
-  return BASE_LIFE + life_level_bonus + vitality
+  const base_hp = base_hp_for_class(character?.classe)
+  const growth = level > 1 ? (level - 1) * HP_PER_LEVEL : 0
+  return base_hp + growth + get_total_stat(character, 'vitality')
 }
 
 /**

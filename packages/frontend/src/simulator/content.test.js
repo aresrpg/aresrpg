@@ -78,7 +78,7 @@ describe('centered_max_roll — item ranges to the centered wire', () => {
 })
 
 describe('build_seat — a roster character to its fight-start numbers', () => {
-  const CHARACTER = { level: 100, stat_alloc: { vitality: 100, strength: 50 } }
+  const CHARACTER = { level: 100, class_id: 'senshi', stat_alloc: { vitality: 100, strength: 50 } }
   const seat = build_seat(CHARACTER, [HELM, BOOTS, AMULET])
 
   test('stats are allocation + the summed gear deltas, floored at zero', () => {
@@ -97,9 +97,13 @@ describe('build_seat — a roster character to its fight-start numbers', () => {
     expect(seat.mp_max).toBe(4)
   })
 
-  test('hp follows get_max_health: 30 + 5·level + total vitality', () => {
-    expect(seat.max_hp).toBe(30 + 5 * 100 + 170)
+  test('hp follows get_max_health: class base + 5 per level GAINED + total vitality', () => {
+    expect(seat.max_hp).toBe(70 + 5 * 99 + 170) // senshi base 70, 99 levels gained (#867)
     expect(seat.hp).toBe(seat.max_hp) // a seat starts the fight full
+  })
+
+  test('the class drives the base pool — a Yogen seat is 40 HP lighter than a Senshi one', () => {
+    expect(build_seat({ ...CHARACTER, class_id: 'yogen' }, [HELM, BOOTS, AMULET]).max_hp).toBe(seat.max_hp - 40)
   })
 
   test('the equipment aggregate carries the gear-only contribution under the sdk stat names', () => {
@@ -115,15 +119,20 @@ describe('build_seat — a roster character to its fight-start numbers', () => {
   })
 
   test('a bare character (no gear, no allocation) is the naked baseline', () => {
-    const naked = build_seat({ level: 1, stat_alloc: {} }, [])
+    const naked = build_seat({ level: 1, class_id: 'senshi', stat_alloc: {} }, [])
     expect(naked.ap_max).toBe(BASE_AP)
     expect(naked.mp_max).toBe(BASE_MP)
-    expect(naked.max_hp).toBe(35) // 30 + 5·1 + 0
+    expect(naked.max_hp).toBe(70) // the senshi class base — level 1 gains no level bonus (#867)
   })
 
   test('a level outside the on-chain curve is refused, never silently floored to 1', () => {
-    expect(() => build_seat({ level: 0, stat_alloc: {} }, [])).toThrow()
-    expect(() => build_seat({ level: 201, stat_alloc: {} }, [])).toThrow()
+    expect(() => build_seat({ level: 0, class_id: 'senshi', stat_alloc: {} }, [])).toThrow()
+    expect(() => build_seat({ level: 201, class_id: 'senshi', stat_alloc: {} }, [])).toThrow()
+  })
+
+  test('an unseeded class is refused, never silently seated on another class’s HP pool', () => {
+    expect(() => build_seat({ level: 1, class_id: 'sorcerer', stat_alloc: {} }, [])).toThrow()
+    expect(() => build_seat(/** @type {any} */ ({ level: 1, stat_alloc: {} }), [])).toThrow()
   })
 })
 
@@ -333,11 +342,11 @@ describe('the fold over rows that came from the live corpus', () => {
     ])
     expect(real).toHaveLength(3)
 
-    const seat = build_seat({ level: 100, stat_alloc: { vitality: 100 } }, real)
+    const seat = build_seat({ level: 100, class_id: 'senshi', stat_alloc: { vitality: 100 } }, real)
     for (const item of real) expect(centered_max_roll(item)).toHaveLength(ITEM_STAT_CATALOG_ORDER.length)
     expect(seat.ap_max).toBeGreaterThanOrEqual(BASE_AP)
     expect(seat.mp_max).toBeGreaterThanOrEqual(BASE_MP)
-    expect(seat.max_hp).toBe(30 + 500 + seat.stats.vitality)
+    expect(seat.max_hp).toBe(70 + 495 + seat.stats.vitality)
     // max roll, through the real decode: 40 + 30 gear vitality on top of the 100 allocated.
     expect(seat.stats.vitality).toBe(170)
   })

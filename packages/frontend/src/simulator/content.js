@@ -113,7 +113,7 @@ export const resolve_loadout = (corpus, loadout) => {
 /**
  * A roster character + its max-rolled loadout → the numbers a fight seat starts with. `stat_alloc` is the
  * player's allocation (the reducer owns its budget); everything else is derived.
- * @param {{ level: number, stat_alloc?: Record<string, number> }} character
+ * @param {{ level: number, class_id: string, stat_alloc?: Record<string, number> }} character
  * @param {CorpusItem[]} [items]  the equipped catalog rows, any slot order (the fold is order-independent)
  * @returns {{ level: number, stats: Record<string, number>, hp: number, max_hp: number,
  *   ap_max: number, mp_max: number, equipment_stats: Record<string, number> }}
@@ -122,6 +122,12 @@ export const build_seat = (character, items = []) => {
   const level = Number(character?.level)
   if (!Number.isInteger(level) || level < 1 || level > MAX_CHARACTER_LEVEL)
     throw new Error(`build_seat: level ${character?.level} is outside the on-chain curve [1, ${MAX_CHARACTER_LEVEL}]`)
+  // A seat's HP pool starts at its CLASS base (#867), so an unseeded class is out-of-domain input: refuse it
+  // rather than let the SDK's total-function fallback quietly seat everyone as a Senshi.
+  if (!CLASSES_JSON[character?.class_id])
+    throw new Error(
+      `build_seat: class ${character?.class_id} is not one of the ${SIMULATOR_CLASSES.length} seeded classes`
+    )
 
   const folded = fold_equipment_snapshot(
     /** @type {any} */ (character.stat_alloc ?? {}),
@@ -129,10 +135,15 @@ export const build_seat = (character, items = []) => {
     BASE_MP,
     items.map(centered_max_roll)
   )
-  // get_max_health is the SDK's own 30 + 5·level + total vitality; the folded vitality is already
-  // allocation + gear, so it goes in as the character's base and no equipment row is passed twice.
+  // get_max_health is the SDK's own chain twin (class base + 5 per level GAINED + total vitality); the folded
+  // vitality is already allocation + gear, so it goes in as the character's base and no equipment row is
+  // passed twice.
   const max_hp = get_max_health(
-    /** @type {any} */ ({ experience: level_to_experience(level), vitality: folded.stats.vitality ?? 0 })
+    /** @type {any} */ ({
+      classe: character.class_id,
+      experience: level_to_experience(level),
+      vitality: folded.stats.vitality ?? 0,
+    })
   )
   return {
     level,
