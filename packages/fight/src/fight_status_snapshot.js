@@ -7,6 +7,30 @@
 export const INVISIBILITY_STATUS_KIND = 27
 export const MOB_FIGHTER_ID_BASE = 1000
 
+// ── THE SIGNED-EFFECT WIRE DECODE (issue #886) ────────────────────────────────────────────────────────
+// `Effect.value` is a u64 on chain, but alter_stat (kind 9) and alter_resist (kind 11) author BOTH signs, so
+// for exactly those two kinds the mint stores the delta CENTERED at 32768 (`value = 32768 + delta` — the same
+// RES_SHIFT convention gear ItemStatistics and mob resistances use; `FLAG_NEGATIVE` is DERIVED from the
+// delta's sign, never an independent fact). Captured live 2026-07-26 (testnet MobTemplates, `sui client
+// object`): Razkin `0x4a00a579…be97` authors +25% damage → chain `value "32793"`, flags 0; Bonelet
+// `0xb80ade53…d444` authors −17 agility → `value "32751"`, flags 8; Kraken Leviathan `0x89072bd3…af56`
+// −7 range → `32761`, flags 8.
+//
+// This function is where that wire ENTERS the client, so it is the ONE place the centering is stripped
+// (decode-once law): every downstream reader — the effect badges, the range-bonus prediction fold — sees a
+// real SIGNED delta and never touches 32768. Displaying the raw wire is exactly the `-32793 Percent Damage`
+// bug. Non-signed kinds pass through untouched: their `value` is a plain magnitude.
+const SIGNED_SHIFT = 32768
+const SIGNED_KINDS = new Set([9, 11]) // K_ALTER_STAT · K_ALTER_RESIST (spell_effect.move)
+
+/**
+ * A status row's chain `value` → the real signed delta. Signed kinds strip the 32768 centering; every other
+ * kind (and an absent value) passes through verbatim.
+ * @param {number} kind @param {number | null} value @returns {number | null}
+ */
+export const decode_status_value = (kind, value) =>
+  value == null || !SIGNED_KINDS.has(Number(kind)) ? value : value - SIGNED_SHIFT
+
 const fields_of = (value) => value?.fields ?? value ?? {}
 const num = (value) => (value == null || value === '' ? null : Number(value))
 
@@ -14,8 +38,10 @@ const num = (value) => (value == null || value === '' ? null : Number(value))
  * Read ALL active fighter-status rows from a raw json:true Fight document — the chain corpus is already generic
  * (FighterStatus{ fighter, kind, effect, remaining_turns, source } — spell_board.move, mirrored by
  * sim/effect_board.js). Was invisibility-only (kind 27); now carries EVERY status kind with its chain duration so
- * the HUD renders every effect badge, not just the haze. The effect ints (element/value/stat/chance) ride RAW —
- * the same passthrough convention `element` uses on a mob; the badge component interprets them downstream.
+ * the HUD renders every effect badge, not just the haze. The effect ints (element/stat/chance) ride RAW — the
+ * same passthrough convention `element` uses on a mob; the badge component interprets them downstream. `value`
+ * is the ONE exception: it is decoded HERE (see decode_status_value above) because its encoding is a property
+ * of the wire, not of any one reader.
  * @param {any} json
  * @returns {{ fighter:number, kind:number, remaining_turns:number, element:number|null, value:number|null, stat:number|null, chance:number|null }[]}
  */
@@ -35,7 +61,7 @@ export function read_fighter_statuses(json) {
         kind,
         remaining_turns,
         element: num(effect.element),
-        value: num(effect.value),
+        value: decode_status_value(kind, num(effect.value)),
         stat: num(effect.stat),
         chance: num(effect.chance),
         ...(num(effect.flags) != null ? { flags: num(effect.flags) } : {}),

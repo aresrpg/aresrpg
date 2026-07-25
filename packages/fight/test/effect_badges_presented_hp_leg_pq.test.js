@@ -97,7 +97,9 @@ describe('LEG Q — every fighter status rides engine_view.effects (was invisibi
       fx: {
         statuses: [
           { fighter: 0, kind: INVISIBILITY_STATUS_KIND, remaining_turns: 2, effect: {} },
-          { fighter: 0, kind: 9, remaining_turns: 3, effect: { stat: 1, value: 5 } }, // K_ALTER_STAT (e.g. MP)
+          // K_ALTER_STAT (e.g. MP): the chain mints signed kinds CENTERED at 32768 (#886), so a +5 buff rides
+          // the wire as 32773 and the wire door hands the fighter row the decoded +5.
+          { fighter: 0, kind: 9, remaining_turns: 3, effect: { stat: 1, value: 32773 } },
         ],
       },
     })

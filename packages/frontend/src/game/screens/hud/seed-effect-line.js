@@ -48,8 +48,10 @@ export const TONE_BUFF = '#4fd6a0' // green — beneficial value (house --good /
 export const TONE_BAD = '#ff6b6b' // red — penalty/drain value (house --bad)
 export const HEAL_PINK = '#ff6bb0' // heal value — the house heal grammar (--clog-num-heal)
 
-// Move STAT_* id (spell_effect.move:135-149) → { statistics/<icon>.png key, stat.* i18n leaf }. AP/MP ride the
-// POINT_AP/POINT_MP ids of GIVE/REMOVE_POINTS through the same asset set (action/movement).
+// Move STAT_* id (spell_effect.move:135-149) → { statistics/<icon>.png key, stat.* i18n leaf, unit? }. AP/MP
+// ride the POINT_AP/POINT_MP ids of GIVE/REMOVE_POINTS through the same asset set (action/movement).
+// `unit` rides the VALUE, not the stat name (owner copy law, issue #886: the reading is `+25% Damage` — the
+// symbol '%', never the word "percent" in any locale). Percent-typed stats are the only ones that carry one.
 const STAT_VIEW = {
   0: { icon: 'strength', key: 'stat.strength' },
   1: { icon: 'intelligence', key: 'stat.intelligence' },
@@ -59,7 +61,7 @@ const STAT_VIEW = {
   5: { icon: 'vitality', key: 'stat.vitality' },
   6: { icon: 'range', key: 'stat.range' },
   7: { icon: 'crit', key: 'stat.critical_hit' },
-  8: { icon: 'raw_damage', key: 'stat.percent_damage' },
+  8: { icon: 'raw_damage', key: 'stat.percent_damage', unit: '%' },
   9: { icon: 'raw_damage', key: 'stat.raw_damage' },
   11: { icon: 'health', key: 'stat.heal' },
 }
@@ -180,7 +182,7 @@ const damage_parts = (t, fx, key) => ({
  * STAT_* id in all 6 locales — never 2 keys × 12 stats. */
 const stat_parts = (t, view, signed_value) => {
   const gain = signed_value >= 0
-  const s = split_value(t, 'spells.fx_stat', { stat: t(view.key) }, Math.abs(signed_value))
+  const s = split_value(t, 'spells.fx_stat', { stat: t(view.key) }, `${Math.abs(signed_value)}${view.unit ?? ''}`)
   return { icon: view.icon, dot: null, tone: gain ? TONE_BUFF : TONE_BAD, ...s, pre: `${s.pre}${gain ? '+' : '-'}` }
 }
 

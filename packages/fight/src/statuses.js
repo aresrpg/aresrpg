@@ -8,7 +8,6 @@ import { effective_stats } from '@aresrpg/sim/fight_state'
 const K_ALTER_STAT = 9
 const K_INVISIBILITY = 27
 const STAT_RANGE = 6
-const FLAG_NEGATIVE = 8
 
 const active = (row) => row?.remaining_turns == null || Number(row.remaining_turns) > 0
 
@@ -24,16 +23,22 @@ export const sim_effects_of = (fighter) => {
       continue
     }
     const kind = Number(row?.kind)
-    if (kind === K_ALTER_STAT && Number(row.stat) === STAT_RANGE)
+    if (kind === K_ALTER_STAT && Number(row.stat) === STAT_RANGE) {
+      // The row's `value` is already the real SIGNED delta (fight_status_snapshot.js strips the chain's
+      // 32768 centering at the wire door, issue #886), so the SIGN LIVES ONCE — in the value. Reading
+      // FLAG_NEGATIVE here as well would re-apply it: the sim vocabulary carries the sign in the row TYPE,
+      // so a debuff is `STAT_DEBUFF` + the magnitude (effective_stats subtracts it).
+      const delta = Number(row.value) || 0
       effects.push({
         id: row.id ?? `range:${index}`,
-        type: (Number(row.flags) & FLAG_NEGATIVE) === FLAG_NEGATIVE ? 'STAT_DEBUFF' : 'STAT_BUFF',
+        type: delta < 0 ? 'STAT_DEBUFF' : 'STAT_BUFF',
         timing: 'TURN_END',
         source_id: fighter?.id ?? null,
         stat: 'range',
-        value: Number(row.value) || 0,
+        value: Math.abs(delta),
         turns_remaining: Number(row.remaining_turns) || 0,
       })
+    }
     else if (kind === K_INVISIBILITY)
       effects.push({
         id: row.id ?? `invisibility:${index}`,
