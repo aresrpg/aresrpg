@@ -46,6 +46,10 @@
       "types": "./types/zone_derive.d.ts",
       "import": "./src/zone_derive.js"
     },
+    "./board_gen": {
+      "types": "./types/board_gen.d.ts",
+      "import": "./src/board_gen.js"
+    },
     "./fight_state": {
       "types": "./types/fight_state.d.ts",
       "import": "./src/fight_state.js"
@@ -133,6 +137,14 @@
     "./evolve": {
       "types": "./types/evolve.d.ts",
       "import": "./src/evolve.js"
+    },
+    "./timeline": {
+      "types": "./types/timeline.d.ts",
+      "import": "./src/timeline.js"
+    },
+    "./recorder": {
+      "types": "./types/recorder.d.ts",
+      "import": "./src/recorder.js"
     }
   },
   "author": "AresRPG's Team",
