@@ -28,8 +28,15 @@
 // and inverted into a kill switch: live inputs fan to the new log for every session on edge, and `?v2shadow=0`
 // / localStorage `ares_v2shadow='0'` / `window.__ARES_FIGHT_SHADOW_ENABLED = false` disarm it in one reload.
 // The recorder's own gate is untouched by that flip — the two consumers remain independently gated.
+//
+// BOX 4 REVERSED THE SHADOW. The headless core is now the COMMITTED-TRUTH OWNER and folds inside the fight
+// store's own door (fight/src/store.js), so this file no longer drives a core of its own: the shadow consumer
+// reads BOTH boards off the same post-commit state and puts the LEGACY fold on trial. This file also stamps
+// the truth source's ROLLBACK SWITCH on the store at install — the fight package is hermetic and cannot read
+// a URL or localStorage itself, and this is the app's one window owner for the family.
 
-import { fight_store, committed_state } from '@aresrpg/fight/store'
+import { fight_store, committed_state, truth_source_from } from '@aresrpg/fight/store'
+import { project_board } from '@aresrpg/fight/v2'
 import { input_envelope } from '@aresrpg/fight/envelope'
 import { classify_input } from '@aresrpg/fight/classify_input'
 import { push_bounded, capsule_export, CAPSULE_RING_LIMIT } from '@aresrpg/fight/capsule'
@@ -56,18 +63,17 @@ const app_version = () => (typeof __APP_VERSION__ === 'undefined' ? null : __APP
  *  The debug override is TWO-WAY now that the shadow is default-on (box 3): `true` forces it on, `false` is the
  *  console-side kill switch (a force-on-only override would have nothing left to do), anything else — including
  *  the usual `undefined` — falls through to the query/storage switch, which itself now defaults ON. */
+const storage_reader = (target) => (key) => {
+  try {
+    return target.localStorage?.getItem(key) ?? null
+  } catch {
+    return null
+  }
+}
+
 const shadow_armed_on = (target) => {
   if (typeof target.__ARES_FIGHT_SHADOW_ENABLED === 'boolean') return target.__ARES_FIGHT_SHADOW_ENABLED
-  return shadow_enabled_from({
-    search: target.location?.search ?? '',
-    storage_get: (key) => {
-      try {
-        return target.localStorage?.getItem(key) ?? null
-      } catch {
-        return null
-      }
-    },
-  })
+  return shadow_enabled_from({ search: target.location?.search ?? '', storage_get: storage_reader(target) })
 }
 
 /**
@@ -80,6 +86,13 @@ const shadow_armed_on = (target) => {
 export const install_fight_trace_tee = (store = fight_store) => {
   if (typeof window === 'undefined') return
   const target = /** @type {any} */ (window)
+  // THE TRUTH-SOURCE STAMP (box 4, issue #522). The fight package is hermetic (D769: no URL, no storage, no DOM
+  // in its src), so it cannot read its own rollback switch — this file is the app's ONE window owner for the
+  // fight-migration family, and it is wired before any dispatch (dungeon_run_store.js), so the stamp lands here.
+  // `?v2truth=0` / localStorage `ares_v2truth='0'` puts committed truth back on the legacy fold in one reload.
+  store.setState({
+    truth_source: truth_source_from({ search: target.location?.search ?? '', storage_get: storage_reader(target) }),
+  })
   const original = store.getState().input
   if (typeof original !== 'function' || /** @type {any} */ (original)[TEE_WRAPPED]) return
   let capture_seq = 0
@@ -123,23 +136,28 @@ export const install_fight_trace_tee = (store = fight_store) => {
 
   // MODULE-INSTANCE scope (never a module global — the order-independence gate bites those, and #568 is
   // exactly this bug for the ring): a fresh `shadow` + `shadow_seq` per install call, lazily created on the
-  // FIRST armed envelope so a session that never arms the flag never allocates a v2 core at all (zero work —
-  // see fight_v2_shadow.js's header).
+  // FIRST armed envelope so a session that never arms the flag never allocates a driver at all.
   let shadow = null
   let shadow_seq = 0
-  /** THE SECOND CONSUMER of the one tap: feed the SAME `msg` (its own classify — header's ONE TAP note)
-   *  through the v2 core and diff it against the OLD side's post-commit board. `store` here is always the
-   *  instance `install_fight_trace_tee` was called with, never the `fight_store` singleton, so a test's own
-   *  store is compared against itself. */
+  /** THE SECOND CONSUMER of the one tap — the REVERSE SHADOW since box 4. Both boards are folded by the store
+   *  now (the core owns committed truth and lives in the atom), so this reads the pair off the SAME post-commit
+   *  state and puts the LEGACY fold on trial against it. `store` here is always the instance
+   *  `install_fight_trace_tee` was called with, never the `fight_store` singleton, so a test's own store is
+   *  judged against itself. */
   const feed_shadow = (msg, now) => {
     shadow = shadow ?? create_shadow_driver({ app_version: app_version() })
+    const state = store.getState()
     const envelope = input_envelope({
-      session_id: msg?.fight_id ?? store.getState().fight_id ?? null,
+      session_id: msg?.fight_id ?? state.fight_id ?? null,
       input_seq: shadow_seq++,
       observed_at_ms: typeof now === 'number' ? now : Date.now(),
       payload: classify_input(msg),
     })
-    const verdict = shadow.ingest_envelope(envelope, committed_state(store.getState()))
+    const verdict = shadow.observe(envelope, {
+      truth_board: project_board(state.core),
+      shadow_board: committed_state(state),
+      fight_id: state.core?.fight_id ?? null,
+    })
     target[SHADOW_STATUS] = shadow.status()
     if (verdict.capsule) target[SHADOW_CAPSULE] = verdict.capsule
   }
