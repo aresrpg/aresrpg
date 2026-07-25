@@ -27,8 +27,10 @@ import { normalize_spell_templates } from '../src/spell_templates.js'
 import * as SE from '../src/spell_effect.js'
 
 // ── The corpus: every class spell file (auto-discovered, like validation/spell_kit_laws.test.ts) ─────
-// MISSING-ARTIFACT (#96): seed/mainnet/spells is generated content authored+published by the content
-// pipeline (private repo) and is absent by design in this public repo. Degrade to an empty corpus rather
+// MISSING-ARTIFACT (settled #96): seed/mainnet/spells is generated content authored+published by the
+// content pipeline and reaches the game as chain state + CDN assets — it never enters this repo (CLAUDE.md,
+// "The content boundary"), so this gate is PERMANENT by design, not pending work. #746 verified the path is
+// real and still the one the corpus would occupy. Degrade to an empty corpus rather
 // than throw — every OTHER export in this file (fresh_state, single_effect_spell, run_matrix, …) is pure/
 // synthetic and must stay usable with zero real spells loaded; consumers that genuinely need real corpus
 // rows gate themselves on SPELLS_CORPUS_AVAILABLE.

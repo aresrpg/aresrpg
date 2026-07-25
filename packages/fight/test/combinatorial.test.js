@@ -17,20 +17,17 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, test, expect, beforeAll } from 'bun:test'
 
-// MISSING-ARTIFACT (#96): this integration suite needs THREE artifacts the content pipeline (private repo)
-// produces — all absent by design in this public repo:
-//   - test/gold/specs_anchor/trajectory_eval.ts   (gold anchor, via combinatorial/oracles.js)
-//   - test/gold/specs_anchor/pacing_envelopes.ts  (gold anchor, via combinatorial/oracles.js)
-//   - seed/mainnet/spells/                        (real spell corpus, via combinatorial/entities.js)
+// MISSING-ARTIFACT: this integration suite drives REAL authored spells (seed/mainnet/spells, via
+// combinatorial/entities.js) — content-pipeline output published to chain + CDN, absent by design in this
+// public repo (CLAUDE.md, "The content boundary"). The two gold anchors it also needs
+// (test/gold/specs_anchor/{trajectory_eval,pacing_envelopes}.ts) are TRACKED here, so they are no longer
+// part of the gate: the corpus is the only thing that can actually be missing (#746).
 // Guarded via dynamic import so combinatorial/{matrix,driver,oracles,entities}.js are never touched when
-// any is missing — none of those support files are used anywhere else in this repo.
-const COMBINATORIAL_ARTIFACTS_AVAILABLE =
-  existsSync(fileURLToPath(new URL('../../../test/gold/specs_anchor/trajectory_eval.ts', import.meta.url))) &&
-  existsSync(fileURLToPath(new URL('../../../test/gold/specs_anchor/pacing_envelopes.ts', import.meta.url))) &&
-  existsSync(fileURLToPath(new URL('../../../seed/mainnet/spells', import.meta.url)))
+// it is absent — none of those support files are used anywhere else in this repo.
+const SPELLS_CORPUS_AVAILABLE = existsSync(fileURLToPath(new URL('../../../seed/mainnet/spells', import.meta.url)))
 
 const { MATRIX, drive_combo, beat_grammar_violations, parity_violations, pacing_order_violations } =
-  COMBINATORIAL_ARTIFACTS_AVAILABLE
+  SPELLS_CORPUS_AVAILABLE
     ? {
         ...(await import('./combinatorial/matrix.js')),
         ...(await import('./combinatorial/driver.js')),
@@ -105,7 +102,7 @@ const write_catalog = () => {
 }
 
 beforeAll(() => {
-  if (!COMBINATORIAL_ARTIFACTS_AVAILABLE) return
+  if (!SPELLS_CORPUS_AVAILABLE) return
   for (const combo of MATRIX) {
     try {
       results.push(drive_combo(combo))
@@ -123,7 +120,7 @@ beforeAll(() => {
   write_catalog()
 })
 
-describe.skipIf(!COMBINATORIAL_ARTIFACTS_AVAILABLE)(
+describe.skipIf(!SPELLS_CORPUS_AVAILABLE)(
   'combinatorial fight matrix — sim-driven, chain-free, the real fold/beat pipeline',
   () => {
     test('every combination runs without throwing and the breadth spans the effect families', () => {
@@ -185,7 +182,7 @@ describe.skipIf(!COMBINATORIAL_ARTIFACTS_AVAILABLE)(
 )
 
 // ── ANTI-LYING SELF-TESTS — the oracles CATCH a deliberately broken fold (mutation proof, the matrix idiom). ─
-describe.skipIf(!COMBINATORIAL_ARTIFACTS_AVAILABLE)(
+describe.skipIf(!SPELLS_CORPUS_AVAILABLE)(
   'oracle liveness — a broken beat stream / divergent fold is CAUGHT (the gate is not lying-green)',
   () => {
     test('grammar catches a displacement whose slide path does not end at to_cell', () => {

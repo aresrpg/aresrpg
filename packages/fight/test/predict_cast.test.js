@@ -1,8 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { existsSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-
 import { describe, expect, test } from 'bun:test'
 
 import { normalize_chain_spell_corpus } from '../../sim/src/chain_spell_corpus.js'
@@ -36,14 +33,11 @@ import { STATUS_ACTIVE } from '../src/board_state.js'
 import { retarget_cast } from '../src/txs.js'
 import { strike_flush_illegal } from '../src/turn_commit.js'
 
-// MISSING-ARTIFACT (#96): packages/move/scripts/out/ceremony_manifest.json is stamped by the content
-// pipeline's engine-upgrade ceremony (private repo — see the RITUAL comment in predict_cast.js) and is
-// absent by design in this public repo. Guarded so the rest of this file's non-manifest tests still run.
-const CEREMONY_MANIFEST_PATH = fileURLToPath(new URL('../../move/scripts/out/ceremony_manifest.json', import.meta.url))
-const CEREMONY_MANIFEST_AVAILABLE = existsSync(CEREMONY_MANIFEST_PATH)
-const CEREMONY_MANIFEST = CEREMONY_MANIFEST_AVAILABLE
-  ? (await import('../../move/scripts/out/ceremony_manifest.json', { with: { type: 'json' } })).default
-  : undefined
+// The ceremony manifest is TRACKED in this repo (packages/move/scripts/out/ceremony_manifest.json — the
+// stamped engine lineage, see the RITUAL comment in predict_cast.js), so it is imported unconditionally:
+// a lost/renamed manifest reds the B7 boundary suite instead of silently skipping it (#746).
+const CEREMONY_MANIFEST = (await import('../../move/scripts/out/ceremony_manifest.json', { with: { type: 'json' } }))
+  .default
 
 const FIGHT = '0xf1'
 const CHAR = '0xc1'
@@ -347,8 +341,9 @@ describe('sim-backed own-cast prediction', () => {
     expect(prediction.beats.map((beat) => beat.kind)).toEqual(['cast'])
   })
 
-  // MISSING-ARTIFACT (#96): seed/mainnet/spells is generated content from the content pipeline (private
-  // repo), absent by design here — CORPUS degrades to [] (spell_effect_conformance_matrix.js).
+  // MISSING-ARTIFACT: needs a REAL authored spell row (senshi_warcleave). seed/mainnet/spells never enters
+  // this repo (CLAUDE.md, "The content boundary") so CORPUS degrades to [] — see the gate's one home,
+  // packages/sim/test/spell_effect_conformance_matrix.js. Permanent by design, verified real in #746.
   test.skipIf(!SPELLS_CORPUS_AVAILABLE)(
     'public crit selection swaps the whole authored branch; an unknown branch stays cast-only',
     () => {
@@ -789,62 +784,61 @@ describe('#300 evolve_caster_cell — the movement-draft anchor after a drafted 
   })
 })
 
-// MISSING-ARTIFACT (#96): needs BOTH packages/move/scripts/out/ceremony_manifest.json (the content
-// pipeline's engine-upgrade ceremony) and the real seed/mainnet/spells corpus — every test in this
-// describe reads real corpus rows against the stamped engine lineage. Absent by design in this repo.
-describe.skipIf(!CEREMONY_MANIFEST_AVAILABLE || !SPELLS_CORPUS_AVAILABLE)(
-  'B7 deployed-chain exclusion boundary',
-  () => {
-    test('the exact ruled set is stamped to the currently deployed engine lineage', () => {
-      expect([...CHAIN_PENDING].sort((a, b) => a - b)).toEqual(B7_KINDS)
-      // A from-scratch republish stamps no `.latest` (only an in-place upgrade repoints it) — same
-      // `entry.latest ?? entry.pkg` fallback stamp_all.mjs's package_row uses for this exact manifest shape.
-      expect(CHAIN_PENDING_ENGINE_VERSION).toBe(CEREMONY_MANIFEST.engine.latest ?? CEREMONY_MANIFEST.engine.pkg)
-    })
+// MISSING-ARTIFACT: every test here reads REAL corpus rows (seed/mainnet/spells) against the stamped
+// engine lineage — the corpus is content-pipeline output, absent by design in this public repo (CLAUDE.md,
+// "The content boundary"). The ceremony manifest it also reads
+// (packages/move/scripts/out/ceremony_manifest.json) is TRACKED here, so it is no longer part of the gate:
+// the corpus is the only thing that can actually be missing (#746).
+describe.skipIf(!SPELLS_CORPUS_AVAILABLE)('B7 deployed-chain exclusion boundary', () => {
+  test('the exact ruled set is stamped to the currently deployed engine lineage', () => {
+    expect([...CHAIN_PENDING].sort((a, b) => a - b)).toEqual(B7_KINDS)
+    // A from-scratch republish stamps no `.latest` (only an in-place upgrade repoints it) — same
+    // `entry.latest ?? entry.pkg` fallback stamp_all.mjs's package_row uses for this exact manifest shape.
+    expect(CHAIN_PENDING_ENGINE_VERSION).toBe(CEREMONY_MANIFEST.engine.latest ?? CEREMONY_MANIFEST.engine.pkg)
+  })
 
-    test('every excluded kind paints Cast but no predicted effect outcome', () => {
-      for (const kind of B7_KINDS) {
-        const raw = CORPUS.flatMap((spell) => [
-          ...(spell.levels?.[0]?.effects ?? []),
-          ...(spell.levels?.[0]?.crit_effects ?? []),
-        ]).find((effect) => effect.kind === kind)
-        expect(raw, `corpus has no witness for kind ${kind}`).toBeTruthy()
-        const prediction = predict_effect(raw)
-        expect(
-          prediction.actions.map((action) => action.kind),
-          `kind ${kind}`
-        ).toEqual(['cast'])
-        expect(prediction.result.effects, `kind ${kind}`).toEqual([])
-        expect(
-          prediction.beats.map((beat) => beat.kind),
-          `kind ${kind}`
-        ).toEqual(['cast'])
-      }
-    })
+  test('every excluded kind paints Cast but no predicted effect outcome', () => {
+    for (const kind of B7_KINDS) {
+      const raw = CORPUS.flatMap((spell) => [
+        ...(spell.levels?.[0]?.effects ?? []),
+        ...(spell.levels?.[0]?.crit_effects ?? []),
+      ]).find((effect) => effect.kind === kind)
+      expect(raw, `corpus has no witness for kind ${kind}`).toBeTruthy()
+      const prediction = predict_effect(raw)
+      expect(
+        prediction.actions.map((action) => action.kind),
+        `kind ${kind}`
+      ).toEqual(['cast'])
+      expect(prediction.result.effects, `kind ${kind}`).toEqual([])
+      expect(
+        prediction.beats.map((beat) => beat.kind),
+        `kind ${kind}`
+      ).toEqual(['cast'])
+    }
+  })
 
-    test('the reused full-corpus conformance matrix convicts exactly the B7 rows and no shipped kind', () => {
-      const sim_matrix = run_matrix()
-      const matrix = run_matrix(
-        (state, caster_id, spell, spell_level, target) =>
-          predict_sim_cast({ state, caster_id, spell, spell_level, target, arena: MATRIX_ARENA }).result,
-        normalize_chain_spell_corpus
-      )
-      const expected_slots = CORPUS.reduce(
-        (count, spell) =>
-          count +
-          [...(spell.levels?.[0]?.effects ?? []), ...(spell.levels?.[0]?.crit_effects ?? [])].filter((effect) =>
-            CHAIN_PENDING.has(effect.kind)
-          ).length,
-        0
-      )
-      expect(matrix.convictions.filter((row) => !CHAIN_PENDING.has(row.kind))).toEqual(
-        sim_matrix.convictions.filter((row) => !CHAIN_PENDING.has(row.kind))
-      )
-      expect(matrix.convictions).toHaveLength(expected_slots)
-      expect([...new Set(matrix.convictions.map((row) => row.kind))].sort((a, b) => a - b)).toEqual(B7_KINDS)
-    })
-  }
-)
+  test('the reused full-corpus conformance matrix convicts exactly the B7 rows and no shipped kind', () => {
+    const sim_matrix = run_matrix()
+    const matrix = run_matrix(
+      (state, caster_id, spell, spell_level, target) =>
+        predict_sim_cast({ state, caster_id, spell, spell_level, target, arena: MATRIX_ARENA }).result,
+      normalize_chain_spell_corpus
+    )
+    const expected_slots = CORPUS.reduce(
+      (count, spell) =>
+        count +
+        [...(spell.levels?.[0]?.effects ?? []), ...(spell.levels?.[0]?.crit_effects ?? [])].filter((effect) =>
+          CHAIN_PENDING.has(effect.kind)
+        ).length,
+      0
+    )
+    expect(matrix.convictions.filter((row) => !CHAIN_PENDING.has(row.kind))).toEqual(
+      sim_matrix.convictions.filter((row) => !CHAIN_PENDING.has(row.kind))
+    )
+    expect(matrix.convictions).toHaveLength(expected_slots)
+    expect([...new Set(matrix.convictions.map((row) => row.kind))].sort((a, b) => a - b)).toEqual(B7_KINDS)
+  })
+})
 
 // ── ⑤a/⑤b MP GRANT — an invisibility MP grant wasn't rendering on the hud nor on
 // the mp blob. give_points raises a pool (Vanish +1 MP) and is CHAIN-SILENT (cast.move:997 → participant.move

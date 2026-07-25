@@ -15,12 +15,12 @@ import { committed_state, create_fight_store } from '../src/store.js'
 // GREEN after. The decoders are the SDK's proven `decode_fight_event` (FIGHTREAL: zero shape drift vs the chain).
 
 const repo_root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
+// The captured receipt is TRACKED in this repo (test/gold/fixtures/receipts/real_receipt_events.json) —
+// it is a pinned wire capture, not content-pipeline output, so there is nothing to gate on: reading it
+// unconditionally means a lost/renamed fixture reds this suite instead of silently skipping it (#746).
 const RECEIPT_PATH = path.join(repo_root, 'test/gold/fixtures/receipts/real_receipt_events.json')
-// MISSING-ARTIFACT (#96): test/gold/fixtures/receipts/real_receipt_events.json is a FIGHTREAL-captured
-// testnet receipt curated by the content pipeline (private repo) and is absent by design in this public repo.
-const RECEIPT_AVAILABLE = fs.existsSync(RECEIPT_PATH)
-const receipt = RECEIPT_AVAILABLE ? JSON.parse(fs.readFileSync(RECEIPT_PATH, 'utf8')) : { events: [] }
-const FIGHT_ID = RECEIPT_AVAILABLE ? receipt.events[0].parsedJson.fight : null
+const receipt = JSON.parse(fs.readFileSync(RECEIPT_PATH, 'utf8'))
+const FIGHT_ID = receipt.events[0].parsedJson.fight
 const PKG = '0xa11ce5_pkg_synthetic'
 const ev = (name, json) => ({ type: `${PKG}::fight_events::${name}`, parsedJson: { fight: FIGHT_ID, ...json } })
 
@@ -32,7 +32,7 @@ const via_store = (order = null) => {
   return store.getState()
 }
 
-describe.skipIf(!RECEIPT_AVAILABLE)('fight-core parity — real receipt → sim-shaped state (byte parity)', () => {
+describe('fight-core parity — real receipt → sim-shaped state (byte parity)', () => {
   test('core fold byte-matches a direct fold of the same events', () => {
     const store_state = via_store()
     const direct = fold_log(normalize_events(receipt, { version: 1, fight_id: FIGHT_ID }), FIGHT_ID)
