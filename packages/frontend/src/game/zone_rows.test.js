@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, test } from 'bun:test'
 
-import { rows_from_state } from './zone_rows.js'
+import { rows_from_state, zone_state_resolvable } from './zone_rows.js'
 
 // The PURE composer seam of the search-cost rework: zone {seed, bitmaps} + World doc → live spawn rows. The
 // vectors below are the SAME cross-language fixture both parity suites pin (zone_gen_tests.move
@@ -46,6 +46,28 @@ describe('zone_rows — the derived spawn-row composer', () => {
     const rows = rows_from_state({ ...state, mob_bitmap: [0b001], res_bitmap: [0b001] }, 488, 488, world, 6)
     expect(rows.filter((r) => r.kind === 'mob').map((r) => r.index)).toEqual([1, 2])
     expect(rows.filter((r) => r.kind === 'resource').map((r) => r.index)).toEqual([1])
+  })
+
+  // THE CACHE-LAW INVERSION (absence read as "nothing consumed"). The consumed bitmaps are the ONLY per-group
+  // liveness truth (zones.move `bit_set` fires at CLAIM time), and #596 made a fetched cell AUTHORITATIVE — its
+  // rows REPLACE the zone's. So deriving from an absent bitmap does not merely lose a filter: it republishes
+  // every consumed group as proven-live truth, which is the ghost-mob bug with extra confidence. An absent
+  // bitmap is UNRESOLVABLE, never an empty one.
+  test('a zone doc carrying a seed but NO bitmap is UNRESOLVABLE — absence is not emptiness', () => {
+    const seeded = { seed: '9876543210', discovered_at_ms: 2000 }
+    expect(zone_state_resolvable({ ...seeded, res_bitmap: [] })).toBe(false) // mob_bitmap absent
+    expect(zone_state_resolvable({ ...seeded, mob_bitmap: [] })).toBe(false) // res_bitmap absent
+    expect(zone_state_resolvable(seeded)).toBe(false) // both absent
+    expect(zone_state_resolvable(null)).toBe(false)
+  })
+
+  test('a PRESENT-but-empty bitmap stays resolvable — the #596 replace path is untouched', () => {
+    expect(zone_state_resolvable(state)).toBe(true)
+    expect(zone_state_resolvable({ ...state, mob_bitmap: [0b001] })).toBe(true)
+    // …and that empty-bitmap doc legitimately derives the FULL group set — which is exactly the row set an
+    // absent bitmap would have fabricated. The two cases are indistinguishable downstream, which is why the
+    // decision has to happen here, at the read seam, and not in the derivation.
+    expect(rows_from_state(state, 488, 488, world, 6).filter((r) => r.kind === 'mob')).toHaveLength(3)
   })
 
   test('spawn spacing law holds through the composer (pairwise >= 20 blocks)', () => {

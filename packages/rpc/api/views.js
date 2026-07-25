@@ -758,8 +758,14 @@ const shape_zone = (z, with_state) => {
   // only) has no `seed` yet → the client treats it as not-yet-derivable and retries next poll.
   if (with_state) {
     base.seed = z.seed
-    base.mob_bitmap = z.mob_bitmap ?? []
-    base.res_bitmap = z.res_bitmap ?? []
+    // ABSENCE IS NOT EMPTINESS (cache law). The consumed-bitmaps are the only per-group liveness truth there
+    // is, and since #596 a fetched cell REPLACES the client's rows — so serving `[]` for a bitmap that simply
+    // has not been projected yet (a half-landed doc while the indexer re-anchors: the event arm wrote the
+    // counts, `map_zone_field` has not written the state) would republish every consumed group as authoritative
+    // live truth. OMIT the field instead: the client (zone_rows.js `zone_state_resolvable`) then tells
+    // "nothing consumed" apart from "consumption unknown" and declines to derive rather than raising ghosts.
+    if (Array.isArray(z.mob_bitmap)) base.mob_bitmap = z.mob_bitmap
+    if (Array.isArray(z.res_bitmap)) base.res_bitmap = z.res_bitmap
     // The diet's witness ingredients, VERBATIM (never re-encoded — the SDK composer takes number[]).
     // null = no commitment projected (pre-diet zone / snapshot lag) → the client keeps the old door.
     base.group_root = z.group_root ?? null

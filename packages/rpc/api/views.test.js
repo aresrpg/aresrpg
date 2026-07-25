@@ -1050,6 +1050,33 @@ describe('zones', () => {
     expect(z.resources).toBeUndefined()
   })
 
+  // HALF-PROJECTED DOC (the indexer re-anchor window): the ZoneSearched event arm + the group-root DF can land
+  // `seed`-adjacent fields before `map_zone_field` writes the consumed-bitmaps. Fabricating `[]` here would tell
+  // the client "nothing consumed" with full confidence — and since #596 a fetched cell REPLACES the zone's rows,
+  // that lie republishes every consumed group as live truth. The field must be ABSENT so the client can tell
+  // "nothing consumed" apart from "consumption unknown" (zone_rows.js zone_state_resolvable).
+  test('a doc whose consumed-bitmaps have NOT landed OMITS them — absence is never served as empty', async () => {
+    await setj(`rpc:zone:${WORLD}:8:8`, {
+      world: WORLD,
+      zx: 8,
+      zy: 8,
+      discovered: true,
+      discovered_at_ms: 1700000010000,
+      mob_groups: 3,
+      resource_nodes: 2,
+      seed: '18446744073709551615', // the seed landed…
+      // …but map_zone_field has not written $.mob_bitmap / $.res_bitmap yet.
+    })
+    const { data } = await handle_zones(P({ world: WORLD, zone: '8:8' }))
+    const [z] = data.zones
+    expect(z.seed).toBe('18446744073709551615')
+    expect(z.mob_bitmap).toBeUndefined()
+    expect(z.res_bitmap).toBeUndefined()
+    expect('mob_bitmap' in z).toBe(false)
+    // the live counts degrade to the event totals (a popcount of nothing is 0) — honest, not fabricated
+    expect(z).toMatchObject({ mob_groups: 3, resource_nodes: 2 })
+  })
+
   test('?zone= serves the group commitment verbatim (the fight-create diet witness ingredient)', async () => {
     const { data } = await handle_zones(P({ world: WORLD, zone: '3:4' }))
     const [z] = data.zones

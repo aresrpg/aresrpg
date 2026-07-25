@@ -74,18 +74,42 @@ async function compose(/** @type {string} */ world_id, /** @type {number} */ zx,
 }
 
 /**
+ * Whether a served zone doc's LIVENESS is resolvable: both consumed-bitmaps actually arrived. The bitmaps are
+ * the only per-group liveness truth there is (`zones.move::claim` sets a group's bit at CLAIM time, and
+ * `ESpawnNotFound` is asserted off it), so a doc that carries a `seed` with an ABSENT bitmap states nothing
+ * about consumption — it is UNRESOLVABLE, not "nothing consumed". Reading absence as emptiness is the cache-law
+ * inversion: since #596 a fetched cell is AUTHORITATIVE and REPLACES the zone's rows, so deriving off a missing
+ * bitmap would republish every already-consumed group as proven-live truth — the ghost-mob bug, restored with
+ * confidence. Absence and emptiness are indistinguishable one hop downstream, which is why this decision lives
+ * at the read seam.
+ * @param {{ mob_bitmap?: number[], res_bitmap?: number[] } | null | undefined} zone the /v1 zone doc
+ */
+export const zone_state_resolvable = (zone) => Array.isArray(zone?.mob_bitmap) && Array.isArray(zone?.res_bitmap)
+
+/**
  * Zone rows via the /v1 read layer (the steady-state poll path). The v1 zone doc carries the raw
  * `{ seed, mob_bitmap, res_bitmap, discovered_at_ms }` the indexer projected off the Zone DF.
- * `null` = undiscovered (the honest "unsearched" signal).
+ * `null` = undiscovered, OR a doc whose liveness is unresolvable (see `zone_state_resolvable`) — both mean
+ * "no derivable truth this poll", which the caller already handles by leaving the zone's rows alone rather
+ * than deriving a set it cannot trust.
  */
 export async function zone_rows_v1(world_id, zx, zy, { signal = undefined, fresh = false } = {}) {
   const zone = await get_zone(world_id, zx, zy, signal, fresh)
   if (zone?.seed == null) return null // discovered-list form or a pre-rework doc — no state to derive from
+  // LOUD but graceful: never silently derive a zone whose consumption state did not arrive (a half-projected
+  // doc while the indexer re-anchors is exactly this shape). One warn names the gap; the rows stand pat.
+  if (!zone_state_resolvable(zone)) {
+    console.warn(
+      `[zone-rows] zone ${zx}:${zy} served a seed with no consumed-bitmap — group liveness is UNRESOLVABLE ` +
+        '(an absent bitmap is not an empty one); keeping the last known rows instead of deriving them all live'
+    )
+    return null
+  }
   return compose(world_id, zx, zy, {
     seed: zone.seed,
     discovered_at_ms: Number(zone.discovered_at_ms ?? 0),
-    mob_bitmap: zone.mob_bitmap ?? [],
-    res_bitmap: zone.res_bitmap ?? [],
+    mob_bitmap: zone.mob_bitmap,
+    res_bitmap: zone.res_bitmap,
   })
 }
 
