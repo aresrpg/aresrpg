@@ -61,9 +61,10 @@ board is an ENG-20 no-op there):
 
 - Everything **before** the fork stays: `set_gen_config(world_config)` (`engine.js:361`) still
   runs with the REAL world recipe, so the pure-gen consumers that are _map truth_, not
-  presentation — region music (`world_region_at`), the minimap (`world_minimap_column`),
-  `world_biome_at` — keep answering about the real world. The minimap deliberately keeps showing
-  the real terrain map (it is navigation data, exactly what a pro player wants).
+  presentation — region music (`world_region_at`), `world_minimap_column`, `world_biome_at` —
+  keep answering about the real world. The gen side is unchanged; what changed is the HUD's use
+  of it: the minimap renders the lattice in hack mode and never calls `world_minimap_column`
+  (A1, §10 — this paragraph originally said it deliberately kept showing the real terrain map).
 - At the `is_synthetic` construction fork (`engine.js:817`), a `hackgrid` presentation takes a
   third branch: **no** gen_pool / mesh_pool / ring_manager / materialization_floor / far_field /
   far_pool / far_streamer. `terrain_renderer` **is still created** (`engine.js:749-765`) — zero
@@ -225,8 +226,11 @@ asserted by the e2e slice):
    `engine.get_stats()`, `get_active_world_config()` — the `world_lobby_movement.spec.ts`
    idiom), never pixel-diffing (entity idle anim + grid shimmer make pixels non-deterministic by
    design).
-8. **NOT covered**: the minimap still shows the real terrain map; dungeons still render their
-   cave room; cross-mode players are intentionally invisible (§4); spectate ignores hack mode.
+8. **The minimap is hack-mode too** (A1, §10 — this line originally said it still showed the
+   real terrain map): both the small map and the expanded modal render the lattice and probe no
+   terrain, so a driver may assert zero `world_minimap_column` calls, never real-map pixels.
+9. **NOT covered**: dungeons still render their cave room; cross-mode players are intentionally
+   invisible (§4); spectate ignores hack mode.
 
 ---
 
@@ -304,7 +308,9 @@ Never constructed (not "hidden" — zero cost):
 Kept (correctness/feature): WebGPU renderer + post (AgX/taau), pipeline warm queue + fight-VFX
 prewarm, tactical board + occlusion uniforms, avatars/mob models/cosmetics, mana barrier, cave
 dungeon path (incl. the terrain_renderer seam + atlas bake — the one retained boot cost, needed
-the moment a dungeon opens), DOM plates/prompts/HUD, region music + minimap (pure gen math).
+the moment a dungeon opens), DOM plates/prompts/HUD, region music (pure gen math — the minimap
+no longer rides it in hack mode, A1 §10; it renders the lattice and probes nothing, which is a
+perf win on top of this list, not a kept cost).
 
 Expected effect: draw calls drop from thousands (terrain quads) to dozens (entities + grid +
 board); zero streaming main-thread cost; ~1 GB+ renderer-process RSS headroom from the absent
@@ -340,22 +346,22 @@ identical; only the scenery changes. Applies live (blocked during a fight).`
 
 **Generic — consumes the oracle/composition, ZERO change** (the proof the seam holds):
 
-| Consumer                                                      | Anchor                                                                                               |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| character controller collision                                | `engine/src/player/character_controller.js` via the session sampler closure `embed_voxel.js:352-362` |
-| physics/input gate                                            | `game/spawn_column_gate.js:21-26`, `embed_voxel.js:661-700`                                          |
-| boot veil readiness                                           | `game/embed_voxel_boot.js:52-81`                                                                     |
-| entombment guard / under-map rescue / floor net               | `embed_voxel.js:456-513, 701-747` (can no longer fire; still correct)                                |
-| mob/gather/NPC grounding                                      | `game/spawn_rigs.js:91,181,212`, `game/world_spawns.js`                                              |
-| nearby-fights herald grounding                                | `game/world_fights_discovery.js:81`                                                                  |
-| remote rig grounding                                          | `game/remote_players.js:421`                                                                         |
-| local player retarget/teleport Y                              | `game/embed_voxel_player.js:325-330`, `embed_voxel.js:432-437`                                       |
-| world-fight board seating (p90 of a flat footprint = flat)    | `embed_voxel.js:838-859`, `world-shell/voxel_fight_folds.js:90-95`                                   |
-| cave/dungeon presentation + sampler swap                      | `game/cave_session.js` via `embed_voxel.js:354-356, 572-589`                                         |
-| zone/group/gather derivation (x,z pure)                       | `packages/sim/src/zone_derive.js`                                                                    |
-| region music / minimap / biome probes (real-world truth kept) | `engine.js:73-79` re-exports; `set_gen_config` still runs (`engine.js:361`)                          |
-| chat online count (mode-blind)                                | `game/core/presence_count.js:7` + `presence_count_ssot.test.js`                                      |
-| checkpoint/session position restore (x,z; Y re-derived)       | `embed_voxel.js:364-399`                                                                             |
+| Consumer                                                   | Anchor                                                                                               |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| character controller collision                             | `engine/src/player/character_controller.js` via the session sampler closure `embed_voxel.js:352-362` |
+| physics/input gate                                         | `game/spawn_column_gate.js:21-26`, `embed_voxel.js:661-700`                                          |
+| boot veil readiness                                        | `game/embed_voxel_boot.js:52-81`                                                                     |
+| entombment guard / under-map rescue / floor net            | `embed_voxel.js:456-513, 701-747` (can no longer fire; still correct)                                |
+| mob/gather/NPC grounding                                   | `game/spawn_rigs.js:91,181,212`, `game/world_spawns.js`                                              |
+| nearby-fights herald grounding                             | `game/world_fights_discovery.js:81`                                                                  |
+| remote rig grounding                                       | `game/remote_players.js:421`                                                                         |
+| local player retarget/teleport Y                           | `game/embed_voxel_player.js:325-330`, `embed_voxel.js:432-437`                                       |
+| world-fight board seating (p90 of a flat footprint = flat) | `embed_voxel.js:838-859`, `world-shell/voxel_fight_folds.js:90-95`                                   |
+| cave/dungeon presentation + sampler swap                   | `game/cave_session.js` via `embed_voxel.js:354-356, 572-589`                                         |
+| zone/group/gather derivation (x,z pure)                    | `packages/sim/src/zone_derive.js`                                                                    |
+| region music / biome probes (real-world truth kept)        | `engine.js:73-79` re-exports; `set_gen_config` still runs (`engine.js:361`)                          |
+| chat online count (mode-blind)                             | `game/core/presence_count.js:7` + `presence_count_ssot.test.js`                                      |
+| checkpoint/session position restore (x,z; Y re-derived)    | `embed_voxel.js:364-399`                                                                             |
 
 **Needs-seam — the exhaustive edit list** (anything beyond this list in review = drift):
 
@@ -375,6 +381,7 @@ identical; only the scenery changes. Applies live (blocked during a fight).`
 | hack axis on the render-instance predicate                                                                                     | `packages/frontend/src/game/remote_visibility_scope.js:22-28`                                             |
 | scope read (mine/peer hack)                                                                                                    | `packages/frontend/src/game/remote_players.js:251-259`                                                    |
 | e2e rail spec (NEW)                                                                                                            | `packages/frontend/e2e/hack_mode_boot.spec.ts`                                                            |
+| minimap lattice rendering — ADDED BY AMENDMENT A1 (§10), not in the original list                                              | `game/screens/hud/use_minimap.js`, `hud/MinimapModal.jsx`, `hud/minimap_engine.js`                        |
 
 **Live-lane fences respected**: `packages/engine/src/tactical/*` + the entity-placeholder /
 world character-resolver files (P0 lane) — consumed, never edited. `constants/navigation.ts`
@@ -454,6 +461,35 @@ verbatim before handing back (CI-exact-invocation law). Attempt budget 2 per sli
 None. Decided in this spec from the repo + the briefs: plane Y (=138, §1.3), option name
 (`presentation: 'hackgrid'`), pref/URL spelling (`aresrpg.hack_mode_enabled` / `?hack=1`),
 default OFF, live-apply via session reboot (fight-blocked), spectate excluded, WebGL floor
-ignores the option (warn), minimap keeps the real map, dungeons keep the cave room, sun fixed
-north as a landmark, broadcast field `hack` on the `state` payload with receiver-side filtering,
-presence untouched, `world_props` skipped, mana barrier kept.
+ignores the option (warn), **the minimap renders the lattice, not the real map** (A1 — this line
+originally said the opposite), dungeons keep the cave room, sun fixed north as a landmark,
+broadcast field `hack` on the `state` payload with receiver-side filtering, presence untouched,
+`world_props` skipped, mana barrier kept.
+
+---
+
+## 10. Amendments
+
+A decision in this spec that ships differently is superseded HERE, dated, with the change that
+did it — the section above keeps stating the current decision, and this section keeps the fact
+that it changed. A spec whose §9 says "None" and whose code says otherwise is worse than one that
+never claimed to be closed.
+
+**A1 — the minimap renders the lattice (2026-07-25, `58a6cf36` / #818; recorded 2026-07-26 per
+#843, #847).** This spec decided "the minimap keeps the real terrain map" in FIVE places — §1.2
+(the rationale), §3 item 8 (the QA contract), §5 (the kept-cost list), §7 (the zero-change
+matrix) and §9 (the summary). Shipped hack mode does the opposite, deliberately: the world under
+a hack session IS a flat neon lattice, so a relief map of terrain nobody can see is both a lie
+and a pointless terrain-probe pass. All five statements above now read the shipped behaviour.
+
+Ground truth: both map surfaces branch on the same `resolve_hack_mode(location.search)` the world
+reads — `use_minimap.js` (skips the colour-table warm and the resample entirely) and
+`MinimapModal.jsx` (builds the slab, skips both progressive passes) — and both paint through
+`minimap_engine.js`'s `hack_relief_grid` (a constant-height slab, zero `world_minimap_column`
+probes) and `render_hack_grid_map` (an analytic lattice painter), whose palette and lattice pitch
+come from the one shared home, `@aresrpg/engine3/hack` (`HACK_PALETTE` / `HACK_LATTICE`).
+
+The §3 site is the one that mattered most: a QA contract does not merely describe the past, it
+licenses what a driver may assume. Nothing else in this spec changed. The §2.1 palette table is a
+separate finding — it re-types hexes that `packages/engine/src/render/hack_palette.js` owns and
+is already stale; it is tracked on #847, not amended here.
