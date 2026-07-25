@@ -20,9 +20,11 @@
 // shape a payload whose envelope session id disagrees with the seed the sim capsule was recorded under.
 //
 // PURE CORE, THIN EDGE: `build_sim_trace` / `trace_filename` / the id codec are pure and tested; only
-// `export_sim_trace` touches Blob/anchor/IndexedDB, and every one of its collaborators is injected.
+// `export_sim_trace` reaches the download/IndexedDB edges, and every one of its collaborators is injected.
 
 import { stringify_trace } from '@aresrpg/fight/trace_tap'
+
+import { download_text_file } from '../utils/download_file.js'
 
 /** The wrapper's own version — bumped only if the two-capsule envelope shape itself changes. */
 export const SIM_TRACE_FORMAT = 'aresrpg-simfight-1'
@@ -77,6 +79,9 @@ export const push_trace_ring = (ring, trace, limit = TRACE_RING_LIMIT) =>
  * Download the dual capsule and hand it to the ring. Every collaborator is injected so this is drivable
  * headless; the defaults are the production ones.
  *
+ * The Blob/anchor edge is the GAME's own (utils/download_file.js — the same one fight_trace_export.js hands a
+ * bug-report trace through), never a simulator-local copy of it.
+ *
  * `dump_envelope` defaults to the tee's own window dumper — the tee is the ONE owner of that global
  * (fight_trace_tee.js's header), so this reads it through the same name the game's export button does rather
  * than reaching into the capsule ring itself.
@@ -88,7 +93,7 @@ export const export_sim_trace = ({
   fight_id,
   sim_capsule = null,
   dump_envelope = () => (typeof window === 'undefined' ? null : (window.__ARES_FIGHT_CAPSULE_DUMP?.() ?? null)),
-  download = default_download,
+  download = download_text_file,
   save = null,
   now = Date.now,
 }) => {
@@ -100,17 +105,4 @@ export const export_sim_trace = ({
   download(trace_filename(seed, fight_id), stringify_trace(trace, 2))
   if (save) void save(trace)
   return { ok: true, trace }
-}
-
-/** The Blob/anchor dance, isolated so every other line above is testable without a DOM. */
-function default_download(filename, text) {
-  const blob = new Blob([text], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  document.body.appendChild(anchor)
-  anchor.click()
-  anchor.remove()
-  URL.revokeObjectURL(url)
 }

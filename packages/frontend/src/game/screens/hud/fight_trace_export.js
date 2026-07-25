@@ -25,6 +25,7 @@ import { fight_store } from '@aresrpg/fight/store'
 import { stringify_trace } from '@aresrpg/fight/trace_tap'
 
 import { get_shadow_capsule } from '../../../world-shell/fight_trace_tee.js'
+import { download_text_file } from '../../../utils/download_file.js'
 
 // Vite injects this build-wide (vite.config.ts __APP_VERSION__); `typeof` guards the non-Vite context (bun
 // test) — the same pattern core/report.js's RELEASE constant uses for __GIT_SHA__.
@@ -53,14 +54,9 @@ export function export_fight_trace() {
   const payload = build_export_payload(trace, get_shadow_capsule())
   // BigInt-safe: decode_fight()'s chain u64 fields (world_seed, shape_mask, …) ride a 'snapshot' input's
   // msg.fight verbatim — a bare JSON.stringify throws the instant the walk reaches one (trace_recorder.js).
-  const blob = new Blob([stringify_trace(payload, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = `aresrpg-fight-trace-${trace.fight_id}-${trace.captured_at}.json`
-  document.body.appendChild(anchor)
-  anchor.click()
-  anchor.remove()
-  URL.revokeObjectURL(url)
+  download_text_file(
+    `aresrpg-fight-trace-${trace.fight_id}-${trace.captured_at}.json`,
+    stringify_trace(payload, 2)
+  )
   return true
 }
