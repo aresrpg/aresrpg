@@ -228,6 +228,18 @@ test('package_row rolls the retired latest into `previous` on repoint (sponsor d
   ).toEqual([id('e3'), id('e4')])
   // a latest that returns to origin never lands in `previous` — origin is always allowlisted
   expect(rolled({ pkg: id('e0'), latest: id('e0'), ...cap }, { origin: id('e0'), latest: id('e0') })).toBeUndefined()
+  // LINEAGE SWITCH: a fresh publish mints a new origin, so the prior lineage's ids are NOT this package's
+  // history — they must be dropped, never carried into the sponsor's outdated list.
+  expect(
+    rolled({ pkg: id('f0'), latest: id('f0'), ...cap }, { origin: id('e0'), latest: id('e5'), previous: [id('e3'), id('e4')] })
+  ).toBeUndefined()
+  // …and the new lineage then accumulates only its own retired ids
+  expect(
+    rolled({ pkg: id('f0'), latest: id('f2'), ...cap }, { origin: id('e0'), latest: id('e5'), previous: [id('e3')] })
+  ).toBeUndefined()
+  expect(
+    rolled({ pkg: id('f0'), latest: id('f2'), ...cap }, { origin: id('f0'), latest: id('f1'), previous: [] })
+  ).toEqual([id('f1')])
 })
 
 test('release validation rejects malformed preserved deployment ids', async () => {

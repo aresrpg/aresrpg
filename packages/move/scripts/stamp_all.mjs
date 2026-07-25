@@ -70,11 +70,20 @@ const require_coin_type = (value, label) => {
 // on it drain out (see api/sponsor.mjs release_package_ids). `previous` accumulates every prior latest
 // across ceremonies — origin is always allowlisted, so it never needs a slot — and only appears when
 // non-empty, so un-upgraded packages stay byte-identical to the pre-roll shape.
+//
+// An upgrade keeps the ORIGIN fixed; a fresh publish mints a new one. So a changed origin means this is a
+// different package lineage, and every id the prior row accumulated belongs to the OLD one — carrying them
+// forward pins ids this package never had (they land in the sponsor's outdated-package list, and in any
+// consumer that reads `previous` as this lineage's history). A lineage switch therefore RESETS the
+// accumulation rather than appending to it.
 export function package_row(entry, name, prior = {}) {
   if (!entry || typeof entry !== 'object') throw new Error(`ceremony manifest has no ${name} package`)
   const origin = require_id(entry.pkg, `${name}.pkg`)
   const latest = require_id(entry.latest ?? entry.pkg, `${name}.latest`)
-  const retired = prior.latest && prior.latest !== latest ? [...(prior.previous ?? []), prior.latest] : prior.previous
+  const same_lineage = !prior.origin || prior.origin === origin
+  const inherited = same_lineage ? prior.previous : []
+  const prior_latest = same_lineage ? prior.latest : null
+  const retired = prior_latest && prior_latest !== latest ? [...(inherited ?? []), prior_latest] : inherited
   const previous = [...new Set(retired ?? [])].filter((id) => id !== latest && id !== origin)
   return {
     origin,
