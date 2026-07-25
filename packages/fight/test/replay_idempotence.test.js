@@ -31,15 +31,47 @@ const RED_PENDING = new Map([
   // e.g. ['some_scenario', '#274: a re-read replays the death a second time'] — none at this HEAD.
 ])
 
-// V2 #522 cutover gate 8 — MODES (parties one-frontier): the COOP peer-turn presentation
-// these scenarios exercise rides the deleted snapshot-diff replay; peer-turn pacing now derives
-// from the journal/clock projection. Re-enable when the party-mode cutover lands. (Solo receipt
-// pacing remains covered by the scenario_solo suite.)
-describe.skip('replay-idempotence — duplicate authoritative delivery never changes the presentation (#281)', () => {
+/**
+ * NO-PRESENTATION registry — scenario name → `#issue: one-line why`. A row here asserts the scenario
+ * currently emits NO presentation at all, so delivery-idempotence over it would be VACUOUSLY true: the
+ * honest assertion is the emptiness itself, not a green idempotence row (#746). Same self-healing shape as
+ * RED_PENDING, one rung lower — the moment the scenario presents anything the row reds and forces promotion.
+ *
+ * Every row here is a snapshot-SHAPED coop scenario: it reveals a peer's committed turn as a wholesale
+ * object read, and under V2 a post-bootstrap read is an inert checkpoint (peer turns arrive as journal
+ * events). The owning cutover therefore promotes a row by RE-SHAPING its scenario journal-driven in
+ * harness/scenarios.js, at which point the emptiness assertion reds and the row is deleted. The list only
+ * shrinks; nothing here is ever skip-silent.
+ * @type {Map<string, string>}
+ */
+const NO_PRESENTATION = new Map([
+  [
+    'coop_peer_turn',
+    '#522 gate 8 (MODES — parties one-frontier): a peer turn revealed by a wholesale object read paces nothing; re-shape the scenario journal-driven at the cutover',
+  ],
+  ['coop_peer_kill', '#522 gate 8 (MODES — parties one-frontier): as coop_peer_turn, for the peer’s killing blow'],
+  [
+    'coop_two_peer_waves',
+    '#522 gate 8 (MODES — parties one-frontier): as coop_peer_turn, for two consecutive peer waves',
+  ],
+])
+
+describe('replay-idempotence — duplicate authoritative delivery never changes the presentation (#281)', () => {
   for (const scenario of SCENARIOS) {
     const red = RED_PENDING.get(scenario.name)
-    test(`${scenario.name} — ${red ? `RED-PENDING (${red})` : 'presentation is delivery-idempotent'}`, () => {
+    const empty = NO_PRESENTATION.get(scenario.name)
+    const label = empty ? `NO-PRESENTATION (${empty.split(':')[0]})` : red ? `RED-PENDING (${red})` : null
+    test(`${scenario.name} — ${label ?? 'presentation is delivery-idempotent'}`, () => {
       const { single, duplicated } = replay_idempotent(create_fight_store, scenario.log)
+      if (empty) {
+        expect(
+          JSON.parse(single).length,
+          `${scenario.name} now presents — remove it from NO_PRESENTATION and let the idempotence property own it (${empty})`
+        ).toBe(0)
+        // vacuous by construction, asserted anyway: nothing may differ between the two deliveries either.
+        expect(duplicated).toBe(single)
+        return
+      }
       // A scenario that emits nothing proves nothing — every corpus entry must exercise real presentation.
       expect(
         JSON.parse(single).length,
