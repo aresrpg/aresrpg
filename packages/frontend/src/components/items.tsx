@@ -277,7 +277,8 @@ export function item_info_to_detail_props(
  * to be per-surface ad-hoc shaping into one place. statsJson is already REAL-valued (decoded + neutrals
  * dropped by read_templates.js normalize_item_template — the single decode home); pass it straight through,
  * never re-decode here.
- * @param tmpl the normalize_item_template() shape: { id, name, item_type, category, level, pods, statsJson, display }
+ * @param tmpl the normalize_item_template() shape: { id, name, item_type, category, level, pods, statsJson,
+ *        damages, display }
  * @param tt optional use_template_t() resolver — routes the description through the lazy item_desc
  *           catalog (keyed by the item_type SLUG; chain Display carries EN only) before falling back
  *           to the Display EN string. Callers are components/hooks, so each threads its own tt.
@@ -295,6 +296,10 @@ export function onchain_template_to_detail_props(
     level?: number
     statsJson?: string
     stats?: Record<string, number | [number, number]>
+    /** The template's AUTHORED weapon damage lines (item_damages::DamagesKey, served by /v1 and decoded through
+     * item_damages_from_v1). Unlike stats they are identical on both sides of the #619 contract — a weapon
+     * instance deals exactly the range its template authors — so they render on owned surfaces too. */
+    damages?: { element: string; from: number; to: number; damage_type?: string }[]
     /** True only for a concrete owned instance. Owned surfaces never consume `statsJson` (the template range). */
     owned?: boolean
     /** The instance's centered-u16 StatsKey block from sdk.get_rolled_stats(item_id). It is decoded through the
@@ -318,7 +323,7 @@ export function onchain_template_to_detail_props(
     category: tmpl.category ?? '',
     rarity: 'common',
     level: tmpl.level ?? 0,
-    damages: [],
+    damages: tmpl.damages ?? [],
     stats: raw_stats,
     stats_unavailable,
     description: tt

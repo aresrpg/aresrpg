@@ -246,6 +246,10 @@ export interface RpcEncyclopediaItem {
   // Biased on-chain StatsMinKey/StatsMaxKey ranges. The frontend decodes these through
   // chain/read_templates.js's shared item-stat decoder before rendering them.
   stats?: Record<string, [number | null, number | null]>
+  // The template's AUTHORED weapon damage lines (item_damages::DamagesKey projection, issue #619) —
+  // the EXACT shape @aresrpg/sdk's decode_damages produces. Absent/[] for every non-weapon; decoded for
+  // display through chain/read_findables.js's item_damages_from_v1.
+  damages?: { from: number; to: number; damage_type: string; element: string }[]
   // Live on-chain supply (indexer HANDLERS.md "Item supply"): SUM of still-alive `amount` units
   // across every minted Item of this template. Fully event-derived (mint +amount / burn -amount),
   // so — unlike level/category — never null; a template with zero mints/burns ever seen is an

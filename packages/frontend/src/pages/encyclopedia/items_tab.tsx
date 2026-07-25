@@ -28,7 +28,7 @@ import { get_encyclopedia, get_rare_links } from '../../rpc/client'
 import { use_rpc_view } from '../../rpc/use_view'
 import { use_items_shop_chain } from '../../stores/items_shop_chain'
 import { marketplace_item_type_key } from '../../components/marketplace/marketplace_model'
-import { item_stats_from_v1 } from '../../chain/read_findables'
+import { item_damages_from_v1, item_stats_from_v1 } from '../../chain/read_findables'
 
 import { DetailLoading } from './shared'
 import { DroppedBySection } from './dropped_by_section'
@@ -130,7 +130,15 @@ export function ItemsTab({
           level: it.level ?? 0,
           rarity: tmpl?.rarity ?? '',
           stats: item_stats_from_v1(it.stats) as Record<string, number | [number, number]>,
-          damages: (tmpl?.damages ?? []) as { element: string; from: number; to: number; damage_type?: string }[],
+          // #619 — CHAIN FIRST: the authored damage lines ship on the same /v1 row as the stat ranges
+          // (item_damages::DamagesKey projection). The seed catalog stays a fallback for the pre-projection
+          // window only; it resolves EMPTY in a corpus-less build, which is what blanked every weapon.
+          damages: (it.damages?.length ? item_damages_from_v1(it.damages) : (tmpl?.damages ?? [])) as {
+            element: string
+            from: number
+            to: number
+            damage_type?: string
+          }[],
           display: null as { image_url?: string } | null,
           createdAt: undefined as number | undefined,
           supply: it.supply ?? 0, // live on-chain mint/burn counter (indexer HANDLERS.md "Item supply")

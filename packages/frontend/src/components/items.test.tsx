@@ -174,6 +174,36 @@ describe('onchain_template_to_detail_props — owned instances never show a temp
     expect(detail.stats).toEqual({})
   })
 
+  // #619 leg 3 (owner report: "a longsword with zero damage characteristics"). The weapon damage lines are
+  // AUTHORED on the template and identical on both sides of the stat contract — an owned instance shows the
+  // same {from,to} range its template authors, so this adapter must carry them through on BOTH surfaces
+  // instead of hardcoding an empty list.
+  test('a weapon renders its authored damage lines — owned instance AND template surface (#619)', () => {
+    const damages = [{ from: 16, to: 29, damage_type: 'weapon', element: 'WATER' }]
+    const text_of = (owned?: boolean) =>
+      renderToStaticMarkup(
+        <I18nextProvider i18n={test_i18n}>
+          <ItemDetailView
+            item={
+              onchain_template_to_detail_props({
+                item_type: 'practice_longsword',
+                category: 'longsword',
+                level: 1,
+                damages,
+                owned,
+              } as any) as any
+            }
+          />
+        </I18nextProvider>
+      ).replace(/<[^>]+>/g, '')
+
+    for (const text of [text_of(true), text_of(undefined)]) {
+      expect(text).toContain('16')
+      expect(text).toContain('29')
+      expect(text).toContain('WATER')
+    }
+  })
+
   test('a template surface (owned unset) keeps the full range — findables/encyclopedia/shop unaffected', () => {
     const detail = onchain_template_to_detail_props({
       item_type: 'iron_sword',

@@ -5,7 +5,7 @@ import i18next from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider, initReactI18next } from 'react-i18next'
 
-import { item_stats_from_v1 } from '../../chain/read_findables'
+import { item_damages_from_v1, item_stats_from_v1 } from '../../chain/read_findables'
 import { ItemDetailView } from '../../components/item_detail_view'
 import en from '../../i18n/locales/en.json'
 
@@ -42,4 +42,30 @@ test('item encyclopedia decodes live stat ranges and renders min to max while om
 
   expect(text).toContain('+3 to 8 Vitality')
   expect(text).not.toContain('Wisdom')
+})
+
+// #619 leg 3 — the encyclopedia joined `damages` from the build-time seed catalog, which resolves EMPTY in
+// this repo's build (vite.config.ts catalog_fallback_plugin), so every weapon rendered a characteristics block
+// with no damage line at all. The chain truth ships on the same /v1 row as the stat ranges.
+test('a weapon renders its authored damage line off the live /v1 projection (#619)', () => {
+  const damages = item_damages_from_v1([{ from: 16, to: 29, damage_type: 'weapon', element: 'water' }])
+  const text = visible_text(
+    renderToStaticMarkup(
+      <I18nextProvider i18n={en_i18n}>
+        <ItemDetailView
+          item={{
+            name: 'Practice Longsword',
+            category: 'LONGSWORD',
+            rarity: '',
+            level: 1,
+            damages,
+            stats: {},
+          }}
+        />
+      </I18nextProvider>
+    )
+  )
+
+  expect(text).toContain('16 - 29')
+  expect(text).toContain('WATER')
 })

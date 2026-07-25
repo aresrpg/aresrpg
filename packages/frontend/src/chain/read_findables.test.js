@@ -40,6 +40,18 @@ const get_encyclopedia = spyOn(rpc_client, 'get_encyclopedia').mockImplementatio
           range: [32773, null],
         },
       },
+      {
+        // #619 leg 3 — a WEAPON row: `damages` is the item_damages::DamagesKey projection, the shape
+        // captured off a live template in item_damages_v1.test.js.
+        template_id: '0xweapon',
+        item_type: 'practice_longsword',
+        name: 'Practice Longsword',
+        level: 1,
+        category: 'longsword',
+        supply: 1,
+        last_sale_mist: null,
+        damages: [{ from: 16, to: 29, damage_type: 'weapon', element: 'water' }],
+      },
     ],
     mobs: [],
     worlds: [],
@@ -70,9 +82,25 @@ test('template maps resolve exact lootbox identity from the /v1 encyclopedia pro
     category: 'CONSUMABLE',
     level: 1,
     statsJson: '{}',
+    damages: [],
     display: null,
   })
   expect(by_type.get('pet_lootbox')?.id).toBe('0xbox')
+})
+
+// #619 leg 3 — every owned/template surface resolves its template through THIS map, so a row that drops
+// `damages` starves the weapon damage lines on all of them at once (a longsword with no damage block).
+test('get_template_map carries the /v1 weapon damage lines onto the template row (#619)', async () => {
+  const by_id = await get_template_map()
+  const by_type = await get_template_by_item_type_map()
+
+  expect(by_id.get('0xweapon').damages).toEqual([{ from: 16, to: 29, damage_type: 'weapon', element: 'WATER' }])
+  // the slug-keyed twin (the inventory bag's join key) carries the same lines
+  expect(by_type.get('practice_longsword').damages).toEqual([
+    { from: 16, to: 29, damage_type: 'weapon', element: 'WATER' },
+  ])
+  // a non-weapon template has no DamagesKey field at all → honest empty, never a fabricated line
+  expect(by_id.get('0xgear').damages).toEqual([])
 })
 
 test('get_template_map decodes the /v1 stat projection into real-valued characteristics (issue #219)', async () => {

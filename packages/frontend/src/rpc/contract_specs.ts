@@ -287,6 +287,13 @@ export const encyclopedia_item_spec: Spec<RpcEncyclopediaItem> = {
   },
   optional: {
     stats: record_of((value) => Array.isArray(value) && value.length === 2 && value.every(nullable(num))),
+    // #619 — the item_damages::DamagesKey projection: absent on every non-weapon template.
+    damages: arr(
+      shape({ from: num, to: num, damage_type: str, element: str } satisfies Record<
+        keyof NonNullable<RpcEncyclopediaItem['damages']>[number],
+        Checker
+      >)
+    ),
   },
 }
 

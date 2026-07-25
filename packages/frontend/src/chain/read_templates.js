@@ -135,6 +135,24 @@ export function decode_item_stat_ranges(min, max) {
 }
 
 /**
+ * The SHARED weapon-damage decode (issue #619): the on-chain `item_damages::ItemDamages` lines — from the SDK's
+ * canonical template read or the identical `/v1/encyclopedia` projection — normalized for display. Only the
+ * `element` slug is touched (uppercased to the one convention ELEMENT_COLORS and the seed catalog rows already
+ * use); `damage_type` stays the chain's own lowercase slug, which ItemDetailView keys its life_steal label off.
+ * A template with no DamagesKey field decodes to `[]` — honest-empty, never a fabricated line.
+ * @param {Array<{ from?: number, to?: number, damage_type?: string, element?: string }> | null | undefined} lines
+ * @returns {Array<{ from: number, to: number, damage_type: string, element: string }>}
+ */
+export function decode_item_damages(lines) {
+  return (Array.isArray(lines) ? lines : []).map((line) => ({
+    from: Number(line?.from ?? 0),
+    to: Number(line?.to ?? 0),
+    damage_type: String(line?.damage_type ?? ''),
+    element: String(line?.element ?? '').toUpperCase(),
+  }))
+}
+
+/**
  * Normalize a MobTemplate's decoded `fields` into the flat shape mob_editor.tsx / templates_tab.tsx expect.
  * @param {Record<string, any>} f  the MobTemplate struct's decoded `fields`
  * @param {string} id  the MobTemplate object id
@@ -216,6 +234,10 @@ export function normalize_item_template(f, id, display) {
     // the asset SLUG (e.g. "white_whool") — ItemImage builds `items/{item_type}.png`. Distinct from the object
     // `id`; passing the object id to ItemImage 404s (the WorldCard bug). Encyclopedia + world cards pass this.
     item_type: String(f.item_type ?? ''),
+    // #619 — the SDK's canonical template read (`get_item_template`) already decodes the DamagesKey DF into
+    // `{from,to,damage_type,element}`; carry it so the chain-direct surfaces that skip /v1 (the recall/receipt
+    // detail map) render a weapon's damage block too. Raw gRPC template json has no such field (it is a DF) → [].
+    damages: decode_item_damages(f.damages),
     // MISMATCH (flagged, see write_templates.js): the on-chain category domain (item.move's verify_category —
     // lowercase: misc/consumable/relic/rune/mount/hat/cloak/cosmetic_helmet/cosmetic_cloak/amulet/ring/belt/
     // boots/bow/wand/staff/dagger/scythe/axe/hammer/shovel/sword/fishingRod/pickaxe/key/resource/pet/title) is

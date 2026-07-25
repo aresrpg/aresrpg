@@ -11,7 +11,7 @@ import { get_encyclopedia } from '../rpc/client'
 
 import { get_sdk } from './sdk'
 import { is_aresrpg_item } from './item_lineage'
-import { normalize_item_template, decode_item_stat_ranges } from './read_templates.js'
+import { normalize_item_template, decode_item_stat_ranges, decode_item_damages } from './read_templates.js'
 
 // normalize_item_template UPPERCASEs item_category, so RESOURCE/CONSUMABLE/RUNE are the stackable categories
 // (mirrors item.move `is_stackable_category` — rune joined 2026-07-11 with the single-tx crush mint; all gear
@@ -20,9 +20,8 @@ const STACKABLE = new Set(['RESOURCE', 'CONSUMABLE', 'RUNE'])
 
 let _templates_promise =
   /** @type {Promise<Map<string, { id: string, name: string, category: string, item_type: string,
-   *   level: number, statsJson: string, display: { name: string, image_url: string, description: string } | null }>> | null} */ (
-    null
-  )
+   *   level: number, statsJson: string, damages: Array<{ from: number, to: number, damage_type: string, element: string }>,
+   *   display: { name: string, image_url: string, description: string } | null }>> | null} */ (null)
 
 /**
  * The `/v1/encyclopedia` item projection serves the authored StatsMin/MaxKey ranges as BIASED
@@ -44,6 +43,17 @@ export function item_stats_from_v1(v1_stats) {
 }
 
 const stats_json_from_v1 = (v1_stats) => JSON.stringify(item_stats_from_v1(v1_stats))
+
+/**
+ * The `/v1/encyclopedia` item projection serves a weapon template's authored `item_damages::DamagesKey` lines
+ * verbatim — the EXACT shape the SDK's own template read produces (issue #619) — so they go through the SAME
+ * decode home the SDK path uses. Twin of `item_stats_from_v1` above: one decoder, both read paths.
+ * @param {Array<{ from?: number, to?: number, damage_type?: string, element?: string }> | null | undefined} v1_damages
+ * @returns {Array<{ from: number, to: number, damage_type: string, element: string }>}
+ */
+export function item_damages_from_v1(v1_damages) {
+  return decode_item_damages(v1_damages)
+}
 
 /**
  * id → the legacy template-row shape, adapted from the `/v1/encyclopedia` item projection. The projection
@@ -68,6 +78,10 @@ export function get_template_map() {
             // Authored [min,max] characteristics from the /v1 stat projection (issue #219), decoded through
             // the single stat_bias home. The indexer projection still has no Display image data.
             statsJson: stats_json_from_v1(t.stats),
+            // Authored weapon damage lines from the same projection (issue #619) — every owned/template item
+            // surface resolves its template through this map, so dropping them here blanked the damage block
+            // on all of them at once.
+            damages: item_damages_from_v1(t.damages),
             display: null,
           })
         }
@@ -114,6 +128,7 @@ export function split_findables(drop_table, template_map) {
       percent: Number(entry?.percent ?? 0),
       level: tmpl?.level ?? 0,
       statsJson: tmpl?.statsJson ?? '{}',
+      damages: tmpl?.damages ?? [],
       display: tmpl?.display ?? null,
     }
     // Unknown category (template not resolved) → treat as gear (an item drop), never silently dropped.

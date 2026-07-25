@@ -30,6 +30,8 @@
 import { get_owner_items, get_characters, get_encyclopedia } from '../rpc/client'
 import { STACKABLE_CATEGORIES } from '../constants/item_categories'
 
+import { item_damages_from_v1 } from './read_findables'
+
 // The on-chain `item::Item` category domain is lowercase and a DIFFERENT vocabulary from the frozen
 // marketplace page's PascalCase filter groups (constants/item_categories.ts). Map the ones that have a clean UI
 // equivalent so the ALL/EQUIPMENT/PETS/RUNES/CONSUMABLE/RESOURCES filters + the stackable detection keep
@@ -129,7 +131,10 @@ export function build_listing_from_view(row, tmpl_by_slug) {
       // (`resource`, `pet`, `hat`, ...); use it as the honest fallback instead of misclassifying the row as Misc.
       category,
       level: Number(row.level ?? tmpl?.level ?? 0),
-      damages_json: '[]',
+      // #619 — unlike the instance's stat ROLL, damage lines are AUTHORED on the template and identical for
+      // every instance of it, so a resolved template lights the lot's damage block honestly (the unresolved
+      // multi-candidate slug keeps `[]`, same stance as name/level above).
+      damages_json: JSON.stringify(item_damages_from_v1(tmpl?.damages)),
       consumable_json: 'null',
       particle_trail_json: 'null',
       appearance: '', // no on-chain appearance; ItemImage falls back to items/{slug}.png

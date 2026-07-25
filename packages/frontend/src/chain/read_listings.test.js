@@ -188,6 +188,8 @@ describe('build_listing_from_view — /v1 row → MarketplaceListing', () => {
         level: 12,
         pods: 3,
         statsJson: '{"strength":[1,4]}',
+        // #619 — the /v1 encyclopedia row's authored DamagesKey lines (raw chain casing)
+        damages: [{ from: 16, to: 29, damage_type: 'weapon', element: 'water' }],
       },
     ],
   ])
@@ -215,6 +217,9 @@ describe('build_listing_from_view — /v1 row → MarketplaceListing', () => {
     expect(l.item.level).toBe(12) // row.level null → template level
     expect(l.item.quantity).toBe(1)
     expect(l.item.stats_json).toBe('{}') // owned listing hover resolves this instance's roll by item id
+    // #619 — damage lines are AUTHORED per template (not rolled per instance), so a resolved template lights
+    // the lot's damage block; RED before the fix: hardcoded '[]' on every weapon lot.
+    expect(JSON.parse(l.item.damages_json)).toEqual([{ from: 16, to: 29, damage_type: 'weapon', element: 'WATER' }])
   })
 
   test('a template miss still renders — name/category degrade to the slug, never fabricated', () => {
@@ -226,6 +231,7 @@ describe('build_listing_from_view — /v1 row → MarketplaceListing', () => {
     expect(l.item.name).toBe('unknown_slug') // no template → slug is the honest display fallback
     expect(l.item.category).toBe('Misc') // ui_category('') → Misc → EQUIPMENT bucket
     expect(l.item.level).toBe(7) // row.level present → used directly
+    expect(l.item.damages_json).toBe('[]') // unresolved template → no damage line is fabricated
     expect(l.seller_name).toBe('') // empty seller → no shortened handle
   })
 
