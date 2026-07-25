@@ -4,8 +4,7 @@ import { Dice5, PackageX } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { use_content } from '../pages/encyclopedia/content'
-import { use_template_t } from '../i18n/template_t'
+import { use_item_lookup } from '../pages/encyclopedia/item_lookup'
 
 import { ItemImage } from './item_image'
 import {
@@ -29,9 +28,9 @@ export function ConsumableEffectLine({
   on_item_click?: (template_id: string) => void
 }) {
   const { t } = useTranslation()
-  const tt = use_template_t()
-  // Consumable-referenced item names resolve from the seeded content catalog (was the dead WS templates.item).
-  const templates_item = use_content().templates.item
+  // Consumable-referenced item names resolve through the live /v1 door (#856) — they used to be looked up in
+  // the bundled seed catalog, `{}` by construction here, so every referenced roll printed its raw slug.
+  const { find, name_of } = use_item_lookup()
   switch (effect.type) {
     case 'RESET_STATS':
       return (
@@ -74,7 +73,6 @@ export function ConsumableEffectLine({
       const rolls: { template_id: string; weight: number; quantity?: number }[] = effect.rolls || []
       const total_weight = rolls.reduce((sum, r) => sum + (r.weight || 0), 0)
       if (!rolls.length || !total_weight) return null
-      const items = templates_item || []
       return (
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-1.5">
@@ -87,12 +85,12 @@ export function ConsumableEffectLine({
             {rolls
               .sort((a, b) => b.weight - a.weight)
               .map((roll) => {
-                const tmpl = items.find((t: any) => t.id === roll.template_id)
-                const name = tmpl ? tt(tmpl, 'name') : roll.template_id.replace(/_/g, ' ')
+                const name = name_of(roll.template_id)
                 // NO quality tiers — roll rows render in the neutral body tone.
                 const color = '#e8e4dc'
                 const pct = ((roll.weight / total_weight) * 100).toFixed(1)
-                const appearance = tmpl?.appearance || undefined
+                // The icon key of a published row IS its authored art slug; a template OBJECT id 404s.
+                const icon_id = find(roll.template_id)?.item_type || roll.template_id
                 return (
                   <div
                     key={roll.template_id}
@@ -114,11 +112,7 @@ export function ConsumableEffectLine({
                         : undefined
                     }
                   >
-                    <ItemImage
-                      id={roll.template_id}
-                      appearance={appearance}
-                      className="w-5 h-5 object-contain shrink-0"
-                    />
+                    <ItemImage id={icon_id} className="w-5 h-5 object-contain shrink-0" />
                     <span className="text-[9px] tracking-[0.1em] uppercase flex-1 truncate" style={{ color }}>
                       {name}
                     </span>

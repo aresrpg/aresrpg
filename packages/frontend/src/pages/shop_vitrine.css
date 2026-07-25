@@ -453,28 +453,3 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-
-/* ---- compact pet purchase-decision blocks (stats newborn→max, food) ---- */
-.shop-armory .pet-stats {
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.015);
-  padding: 8px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.shop-armory .pet-stats-head {
-  font-size: 8px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-  margin-bottom: 2px;
-}
-.shop-armory .pet-stat-line {
-  font-size: 9px;
-  letter-spacing: 0.04em;
-  display: flex;
-  gap: 5px;
-  align-items: baseline;
-  font-variant-numeric: tabular-nums;
-}

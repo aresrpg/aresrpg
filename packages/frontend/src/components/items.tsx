@@ -17,7 +17,7 @@ import {
   Rabbit,
 } from 'lucide-react'
 
-import { use_content } from '../pages/encyclopedia/content'
+import { use_item_lookup } from '../pages/encyclopedia/item_lookup'
 import { type ItemInfo } from '../types/chain'
 import { safe_json_parse } from '../safe_json_parse'
 import { use_template_t } from '../i18n/template_t'
@@ -43,11 +43,14 @@ export { ItemImage } from './item_image'
 export function ItemTooltipContent({ item }: { item: ItemInfo }) {
   const { t } = useTranslation()
   const tt = use_template_t()
-  const { templates } = use_content()
+  // The PUBLISHED template behind this instance, resolved through the live /v1 door (#856). It used to be
+  // looked up in the bundled seed catalog, which is `{}` here, so a hovered item could only ever fall back
+  // to its own chain-carried name — never the localized published one.
+  const { find, name_of } = use_item_lookup()
   const rarity_color = RARITY_COLORS[item.rarity] || RARITY_COLORS.common
-  const tmpl = (templates.item || []).find((tmpl: any) => tmpl.id === item.template_id)
-  const display_name = tmpl ? tt(tmpl, 'name') : item.name || item.template_id.replace(/_/g, ' ')
-  const resolved_description = tmpl ? tt(tmpl, 'description') : item.description
+  const tmpl = find(item.template_id)
+  const display_name = name_of(item.template_id, item.name)
+  const resolved_description = (tmpl && tt(tmpl, 'description')) || item.description
   const stats = safe_json_parse(item.stats_json, {})
   const stat_entries = Object.entries(stats).filter(([, v]) => (Array.isArray(v) ? v[0] !== 0 || v[1] !== 0 : v !== 0))
   const damages: { element: string; from: number; to: number; damage_type: string }[] = safe_json_parse(

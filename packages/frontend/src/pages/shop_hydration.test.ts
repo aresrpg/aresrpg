@@ -58,6 +58,26 @@ describe('shop optimistic purchase hydration', () => {
     ).toBe(1)
   })
 
+  // #856: the templates handed in are now the PUBLISHED corpus (pages/encyclopedia/item_corpus.ts), whose
+  // rows are keyed by the on-chain template OBJECT id and carry the authored art slug as `item_type`. The
+  // bundled seed catalog this page used to read is `{}` by construction, so every purchase painted the
+  // level-1 default; a corpus row must join on either key.
+  test('joins a published corpus row by its template object id, and by its art slug', () => {
+    const corpus = [
+      { id: '0xstorm', item_type: 'storm_chronicle', name: 'Storm Chronicle', level: 37 },
+      { id: '0xother', item_type: 'other_relic', name: 'Other Relic', level: 4 },
+    ]
+    expect(
+      shop_hydration_metadata({ item_template_id: 'relic', template_id: '0xstorm', name: 'Storm Chronicle' }, corpus)
+    ).toEqual({ item_type: 'relic', template_id: '0xstorm', level: 37 })
+    expect(
+      shop_hydration_metadata(
+        { item_template_id: 'storm_chronicle', template_id: '0xunindexed', name: 'Renamed On Chain' },
+        corpus
+      ).level
+    ).toBe(37)
+  })
+
   test('uses the shop seed default level when a cosmetic is absent from the local item corpus', () => {
     expect(
       shop_hydration_metadata({ item_template_id: 'cloak', template_id: '0xcosmetic', name: 'Shop-only Cloak' }, [])

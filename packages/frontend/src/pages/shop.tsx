@@ -6,13 +6,6 @@ import { Loader2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 import { ItemImage } from '../components/items'
-import {
-  STAT_COLORS,
-  STAT_LABEL_KEYS,
-  format_stat_name,
-  stat_color_key,
-  sort_stat_entries,
-} from '../components/entity_display'
 import { use_template_t } from '../i18n/template_t'
 import { AddFundsModal } from '../components/add_funds_modal'
 import { ShopSuccessModal } from '../components/shop_success_modal'
@@ -29,7 +22,7 @@ import { load_roster } from '../roster/load_roster'
 import { use_toast } from '../toast'
 import { format_mist_to_sui } from '../utils/sui_mist'
 
-import { use_content } from './encyclopedia/content'
+import { use_item_lookup } from './encyclopedia/item_lookup'
 import { pool_with_percent } from './lootbox_pool'
 import LOOTBOX_POOLS from './lootbox_pools.json'
 import {
@@ -57,11 +50,20 @@ function split_variant(name: string): { base: string; variant?: string } {
   const m = name.match(/^(.*?)\s*\(([^)]+)\)\s*$/)
   return m ? { base: m[1], variant: m[2] } : { base: name }
 }
+/**
+ * The metadata an optimistically-painted purchase carries until the roster reconciles. `templates` is the
+ * PUBLISHED corpus, whose rows are keyed by their on-chain template object id — so the sale's own
+ * `template_id` is the exact key, tried before the authored art slug (`item_template_id`, the key a legacy
+ * bundled row carried). A name match is the last resort and refuses ambiguity: two templates sharing a name
+ * yield the seed default rather than a coin-flipped level.
+ */
 export function shop_hydration_metadata(
   item: { item_template_id: string; template_id: string; name: string },
-  templates: ReadonlyArray<{ id: string; name: string; level: number }>
+  templates: ReadonlyArray<{ id: string; item_type?: string; name: string; level: number }>
 ) {
-  const exact = templates.find(({ id }) => id === item.item_template_id)
+  const exact =
+    templates.find(({ id }) => id === item.template_id) ??
+    templates.find(({ id, item_type }) => id === item.item_template_id || item_type === item.item_template_id)
   const named = templates.filter(({ name }) => name === item.name)
   const template = exact ?? (named.length === 1 ? named[0] : undefined)
   return { item_type: item.item_template_id, template_id: item.template_id, level: template?.level ?? 1 }
@@ -70,7 +72,9 @@ export function ShopPage() {
   const { t } = useTranslation()
   const tt = use_template_t()
   const router_navigate = useNavigate()
-  const { templates } = use_content()
+  // Published item templates, live from /v1 (#856). This page used to read them out of the bundled seed
+  // catalog, `{}` by construction here, so every name it resolved fell back to a raw underscored slug.
+  const { items: item_templates, name_of } = use_item_lookup()
 
   const address = use_auth((s: AuthState) => s.address)
   const balance_mist = use_auth((s: AuthState) => s.sui_balance_mist)
@@ -100,17 +104,16 @@ export function ShopPage() {
     const resolved = await Promise.all(
       raw.map(async (c) => {
         const { slug } = await resolve_rolled({ rolled_template: c.rolled_template })
-        const tmpl = (templates.item || []).find((it: any) => it.id === slug || it.item_type === slug)
         return {
           claim_id: c.claim_id,
           rolled_template: c.rolled_template,
           slug: slug || c.rolled_template,
-          name: tmpl ? tt(tmpl, 'name') : String(slug || c.rolled_template).replace(/_/g, ' '),
+          name: name_of(slug || c.rolled_template),
         }
       })
     )
     set_claims(resolved)
-  }, [address, templates.item, tt])
+  }, [address, name_of])
 
   // Subscribe on stable address while calling the latest translation-sensitive closure.
   const reload_claims_ref = useRef(reload_claims)
@@ -209,7 +212,7 @@ export function ShopPage() {
           created_item_ids.map((id) => ({
             id,
             name: shop_name(tt(item, 'name') || item.name, t),
-            ...shop_hydration_metadata(item, templates.item),
+            ...shop_hydration_metadata(item, item_templates),
             item_category: item.category.toLowerCase(),
             item_set: '',
             amount: paint_amount,
@@ -231,7 +234,7 @@ export function ShopPage() {
         set_buying_id(null)
       }
     },
-    [address, buying_id, load, apply_purchase, tt, t, templates.item]
+    [address, buying_id, load, apply_purchase, tt, t, item_templates]
   )
 
   // The pure plan chooses the broke card or the quantity modal — the modal is the UNIVERSAL gate before the buy
@@ -253,25 +256,6 @@ export function ShopPage() {
     const display_name = shop_name(tt(item, 'name') || item.name || item.item_template_id.replace(/_/g, ' '), t)
     set_amount_item({ item, max_qty: plan.max_qty, display_name })
   }
-
-  // template slug → encyclopedia pet data
-  const pet_data_map = useMemo(() => {
-    const map = new Map<string, { stats: [string, number][]; food_ids: string[] }>()
-    const items = templates.item || []
-    for (const t of items) {
-      if (t.category !== 'PET') continue
-      try {
-        const stats_raw = JSON.parse((t as any).petStatsJson || '{}')
-        const food_raw = JSON.parse((t as any).petFoodJson || '{}')
-        const stats = sort_stat_entries(Object.entries(stats_raw).filter(([, v]) => v !== 0)) as [string, number][]
-        const food_ids = Object.keys(food_raw)
-        map.set(t.id, { stats, food_ids })
-      } catch {
-        /* skip malformed */
-      }
-    }
-    return map
-  }, [templates.item])
 
   // Every on-chain kind gets its own section and filter chip.
   const KIND_LABELS: Record<string, string> = {
@@ -316,50 +300,6 @@ export function ShopPage() {
   }, [shop_catalog, t])
 
   const visible_sections = active_kind ? sections.filter((s) => s.key === active_kind) : sections
-
-  /** Compact purchase-decision blocks for a PET card (newborn → max stats, accepted food). */
-  const pet_info_blocks = (item: (typeof shop_catalog)[number]) => {
-    const pet = pet_data_map.get(item.item_template_id)
-    if (!pet) return null
-    return (
-      <>
-        {pet.stats.length > 0 && (
-          <div className="pet-stats">
-            <span className="pet-stats-head">
-              {t('shop.newborn')} → {t('shop.max_power')}
-            </span>
-            {pet.stats.map(([key, val]) => {
-              const color = STAT_COLORS[stat_color_key(key)] || '#e8e4dc'
-              return (
-                <div key={key} className="pet-stat-line">
-                  <span style={{ color: '#6b7280' }}>0 →</span>
-                  <span style={{ color }}>{val}</span>
-                  <span style={{ color }}>
-                    {t(STAT_LABEL_KEYS[key] ?? '', { defaultValue: format_stat_name(key) })}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        )}
-        {pet.food_ids.length > 0 && (
-          <div className="pet-stats">
-            <span className="pet-stats-head">{t('shop.food_sources')}</span>
-            <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-              {pet.food_ids.map((id) => {
-                const tmpl = (templates.item || []).find((it: any) => it.id === id)
-                return (
-                  <span key={id} className="text-[9px] tracking-[0.1em] uppercase" style={{ color: '#4ade80' }}>
-                    {tmpl ? tt(tmpl, 'name') : id.replace(/_/g, ' ')}
-                  </span>
-                )
-              })}
-            </div>
-          </div>
-        )}
-      </>
-    )
-  }
 
   return (
     <div className="p-3 lg:p-8 shop-armory">
@@ -494,10 +434,7 @@ export function ShopPage() {
 
                 // A known loot-box pool gets the icon-forward odds ledger; every row deep-links by pet slug.
                 if (is_box && pool && pool.length > 0) {
-                  const pool_rows = pool_with_percent(pool).map((row) => {
-                    const tmpl = (templates.item || []).find((it: any) => it.id === row.pet || it.item_type === row.pet)
-                    return { ...row, name: tmpl ? tt(tmpl, 'name') : row.pet.replace(/_/g, ' ') }
-                  })
+                  const pool_rows = pool_with_percent(pool).map((row) => ({ ...row, name: name_of(row.pet) }))
                   return (
                     <VaultCard
                       key={item.item_id}
@@ -519,9 +456,6 @@ export function ShopPage() {
                     : is_box
                       ? 'box'
                       : 'icon'
-                const has_trail = !!((templates.item || []).find((tm) => tm.id === item.item_template_id) as any)
-                  ?.particleTrailJson
-
                 return (
                   <VitrineCard
                     key={item.item_id}
@@ -532,16 +466,7 @@ export function ShopPage() {
                     description={description}
                     on_open_encyclopedia={open_encyclopedia}
                     buy={buy}
-                  >
-                    {has_trail && (
-                      <div className="py-2 px-3 border border-gold/20" style={{ background: 'rgba(200,150,60,0.04)' }}>
-                        <span className="text-[10px] tracking-wide" style={{ color: '#c8963c', fontStyle: 'italic' }}>
-                          ✦ {t('entity.particle_trail_effect')}
-                        </span>
-                      </div>
-                    )}
-                    {item.category === 'PET' && pet_info_blocks(item)}
-                  </VitrineCard>
+                  />
                 )
               })}
             </div>

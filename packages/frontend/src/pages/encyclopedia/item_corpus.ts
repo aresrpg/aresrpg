@@ -28,6 +28,9 @@ import { is_living_item } from './living_corpus'
 export type CorpusItem = {
   id: string
   name: string
+  /** The published EN description (chain Display carries EN only — the locale overlay is `use_template_t`'s
+   *  job, keyed by the authored art slug). `''` for a template that authors none. */
+  description: string
   category: string
   item_type: string
   level: number
@@ -53,6 +56,7 @@ export const item_corpus_from_v1 = (rows: readonly RpcEncyclopediaItem[] | null 
     .map((row) => ({
       id: row.template_id,
       name: row.name ?? '',
+      description: row.description ?? '',
       category: (row.category ?? '').toLowerCase(),
       item_type: row.item_type ?? '',
       level: row.level ?? 0,

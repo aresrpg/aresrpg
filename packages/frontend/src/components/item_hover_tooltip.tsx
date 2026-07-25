@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 
 import { safe_json_parse } from '../safe_json_parse'
 import { use_template_t } from '../i18n/template_t'
-import { use_content } from '../pages/encyclopedia/content'
+import { use_item_lookup } from '../pages/encyclopedia/item_lookup'
 import { type ItemInfo } from '../types/chain'
 import { display_rolled_stats, has_authored_stats, resolve_rolled_stats } from '../chain/rolled_stats.js'
 
@@ -117,6 +117,26 @@ export function ItemHoverTooltip({ item, template, children, delay_ms = 300 }: W
   )
 }
 
+/**
+ * The tooltip's whole CONTENT derivation, portal-free — the same split (and the same reason) as the
+ * simulator's `use_slot_picker_content`: TooltipPortal renders through `createPortal`, which this repo's SSR
+ * test harness cannot resolve, so driving this hook is how the tooltip's data wiring gets driven.
+ *
+ * A caller that already holds the exact live template (the marketplace threads its canonical row) wins;
+ * otherwise the template is resolved through the live /v1 door. That fallback used to search the bundled seed
+ * catalog, `{}` by construction in this repo (#856), so a hovered item never found the published name — nor
+ * the authored stats the "roll unavailable" line is decided on.
+ */
+export function use_tooltip_detail(
+  item: ItemInfo,
+  template: any,
+  rolled_stats: Record<string, number> | null
+): ReturnType<typeof to_detail_item> {
+  const tt = use_template_t()
+  const { find } = use_item_lookup()
+  return to_detail_item(item, template ?? find(item.template_id), tt, rolled_stats)
+}
+
 // Renders the ItemDetailView in a portal, positioned near the anchor.
 // Flips side if near the right edge; clamps vertically to viewport.
 function TooltipPortal({
@@ -130,10 +150,7 @@ function TooltipPortal({
   anchor_rect: DOMRect
   rolled_stats: Record<string, number> | null
 }) {
-  const tt = use_template_t()
-  const { templates } = use_content()
-  const tmpl = template ?? (templates.item || []).find((tp: any) => tp.id === item.template_id)
-  const detail = to_detail_item(item, tmpl, tt, rolled_stats)
+  const detail = use_tooltip_detail(item, template, rolled_stats)
 
   const viewport_w = typeof window !== 'undefined' ? window.innerWidth : 1200
   const viewport_h = typeof window !== 'undefined' ? window.innerHeight : 800
