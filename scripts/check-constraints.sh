@@ -16,18 +16,60 @@ red() { printf '\033[31m%s\033[0m\n' "$1"; }
 grn() { printf '\033[32m%s\033[0m\n' "$1"; }
 ylw() { printf '\033[33m%s\033[0m\n' "$1"; }
 
+# ── file collection: portable, and fail-closed by construction ──────────────────────────────────
+# Every scan gate below starts by collecting a file set from git. Two properties it depends on:
+#
+#   · PORTABLE — macOS ships /bin/bash 3.2, which has no `mapfile`; the NUL-safe `read -r -d ''`
+#     loop is the equivalent that runs everywhere. (3.2 also aborts on an empty-array expansion
+#     under `set -u`, so the array is always declared before it is read — issue #824's shape.)
+#   · FAIL-CLOSED — an empty result returns NON-ZERO. A scan gate's ✓ means "I read these files and
+#     found nothing"; a collection step that silently yields nothing would turn it into "I read
+#     nothing", which is the same checkmark and a lie. Callers must branch on the return value.
+#
+# The result lands in COLLECTED_FILES — bash 3.2 has no namerefs, so one shared array is the single
+# home for a collected set: read it before the next collect_files call. `git ls-files` keeps listing
+# a tracked file DELETED in the working tree, so entries are filtered to what actually exists and a
+# scanner never dies on a mid-cleanup tree.
+COLLECTED_FILES=()
+collect_files() {
+  local include_untracked=1
+  if [ "${1:-}" = "--tracked-only" ]; then
+    include_untracked=0
+    shift
+  fi
+  COLLECTED_FILES=()
+  local file
+  while IFS= read -r -d '' file; do
+    [ -f "$file" ] && COLLECTED_FILES+=("$file")
+  done < <(
+    git ls-files -z -- "$@"
+    [ "$include_untracked" -eq 1 ] && git ls-files -z --others --exclude-standard -- "$@"
+  )
+  [ "${#COLLECTED_FILES[@]}" -gt 0 ]
+}
+
+# One extended grep over COLLECTED_FILES; hits go to stdout, tool errors stay on stderr (never
+# swallowed — a silent scan failure is the thing this whole block exists to prevent).
+# Returns non-zero only when the scan did NOT run, so "no hits" and "grep never happened" can never
+# look alike. Status contract, portable: 0 = every invocation matched; 1 or 123 = at least one
+# matched nothing (GNU xargs reports 123, BSD/macOS reports 1, and grep's own "no match" is 1 —
+# indistinguishable, and all mean the scan ran); 126/127 = could not exec; 128+N = killed.
+grep_collected() {
+  local pattern="$1"
+  shift
+  local status=0
+  printf '%s\0' "${COLLECTED_FILES[@]}" | xargs -0 grep "$@" -e "$pattern" || status=$?
+  case "$status" in
+    0 | 1 | 123) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 # D756 — on-chain names are generationless. Signature changes republish the package under the one clean name;
 # they never add V2/V3, _old, legacy, or deprecated markers to a module, callable, struct, enum, or event type.
+MOVE_SOURCE_PATHSPEC=':(glob)packages/move/*/sources/*.move'
 move_public_surface_hits() {
-  local move_source_files=()
-  local move_source
-  for move_source in packages/move/*/sources/*.move; do
-    [ -f "$move_source" ] && move_source_files+=("$move_source")
-  done
-  if [ "${#move_source_files[@]}" -eq 0 ]; then
-    return
-  fi
-  printf '%s\0' "${move_source_files[@]}" | xargs -0 awk '
+  printf '%s\0' "${COLLECTED_FILES[@]}" | xargs -0 awk '
     function has_marker(name) { return tolower(name) ~ /(v2|v3|_old|legacy|deprecated)/ }
     function without_comments(text,    ch, pair, result, cursor) {
       result = ""
@@ -99,6 +141,11 @@ move_public_surface_gate() {
   echo "== AresRPG Move clean-name gate (D756: no public version markers) =="
   local hits
   local scan_status
+  if ! collect_files "$MOVE_SOURCE_PATHSPEC"; then
+    red "  ✗ FAIL: no Move sources collected — this gate cannot pass on an empty scan set."
+    return 1
+  fi
+  local scanned="${#COLLECTED_FILES[@]}"
   hits="$(move_public_surface_hits)"
   scan_status=$?
   if [ "$scan_status" -ne 0 ]; then
@@ -111,7 +158,7 @@ move_public_surface_gate() {
     red "MOVE CLEAN-NAME GATE FAILED. Fresh-republish the package with one clean, unversioned surface."
     return 1
   fi
-  grn "  ✓ no V2/V3/_old/legacy/deprecated identifiers on Move public surfaces"
+  grn "  ✓ no V2/V3/_old/legacy/deprecated identifiers on Move public surfaces ($scanned files scanned)"
 }
 
 # The same generationless law, extended to app SOURCE identifiers — the
@@ -123,29 +170,15 @@ move_public_surface_gate() {
 # Vector3 scratch idiom (engine tactical/index.js `_occ_v3`), so vN>=3 stays the Move gate's problem.
 # Limitation, accepted: identifiers used only inside a template-literal ${} are blanked with the
 # string — the declaration/import site still catches them.
+# :(glob) magic is LOAD-BEARING: default pathspec fnmatch gives `**/` no zero-directory match, so
+# files sitting DIRECTLY in src/ (env.ts, boot_shim.ts, …) would silently escape the scan.
+APP_SOURCE_PATHSPEC=(
+  ':(glob)packages/*/src/**/*.js' ':(glob)packages/*/src/**/*.jsx'
+  ':(glob)packages/*/src/**/*.ts' ':(glob)packages/*/src/**/*.tsx' ':(glob)packages/*/src/**/*.mjs'
+  ':(exclude)**/*.d.ts'
+)
 app_identifier_hits() {
-  local app_files=()
-  # :(glob) magic is LOAD-BEARING: default pathspec fnmatch gives `**/` no zero-directory match, so
-  # files sitting DIRECTLY in src/ (env.ts, boot_shim.ts, …) would silently escape the scan.
-  mapfile -d '' app_files < <(
-    git ls-files -z -- ':(glob)packages/*/src/**/*.js' ':(glob)packages/*/src/**/*.jsx' \
-      ':(glob)packages/*/src/**/*.ts' ':(glob)packages/*/src/**/*.tsx' ':(glob)packages/*/src/**/*.mjs' \
-      ':(exclude)**/*.d.ts'
-    git ls-files -z --others --exclude-standard -- ':(glob)packages/*/src/**/*.js' ':(glob)packages/*/src/**/*.jsx' \
-      ':(glob)packages/*/src/**/*.ts' ':(glob)packages/*/src/**/*.tsx' ':(glob)packages/*/src/**/*.mjs' \
-      ':(exclude)**/*.d.ts'
-  )
-  # git ls-files keeps listing a tracked file DELETED in the working tree — filter to what exists
-  # (same [ -f ] guard as the Move scan) so awk never dies on a mid-cleanup tree.
-  local existing_files=()
-  local app_file
-  for app_file in "${app_files[@]}"; do
-    [ -f "$app_file" ] && existing_files+=("$app_file")
-  done
-  if [ "${#existing_files[@]}" -eq 0 ]; then
-    return
-  fi
-  printf '%s\0' "${existing_files[@]}" | xargs -0 awk '
+  printf '%s\0' "${COLLECTED_FILES[@]}" | xargs -0 awk '
     function without_comments_or_strings(text,    ch, pair, result, cursor) {
       result = ""
       cursor = 1
@@ -200,6 +233,11 @@ app_identifier_gate() {
   echo "== AresRPG app-side clean-name gate (D756 extension: no _v2 identifiers in packages/*/src) =="
   local hits
   local scan_status
+  if ! collect_files "${APP_SOURCE_PATHSPEC[@]}"; then
+    red "  ✗ FAIL: no app sources collected — this gate cannot pass on an empty scan set."
+    return 1
+  fi
+  local scanned="${#COLLECTED_FILES[@]}"
   hits="$(app_identifier_hits)"
   scan_status=$?
   if [ "$scan_status" -ne 0 ]; then
@@ -212,7 +250,7 @@ app_identifier_gate() {
     red "APP CLEAN-NAME GATE FAILED. Rename to the one clean name (D756) — versioned identifiers never land app-side."
     return 1
   fi
-  grn "  ✓ no _v2-versioned identifiers in packages/*/src"
+  grn "  ✓ no _v2-versioned identifiers in packages/*/src ($scanned files scanned)"
 }
 
 if [ "${1:-}" = "--hardcoded-ids" ]; then
@@ -407,16 +445,25 @@ fi
 spdx_gate() {
   echo "== SPDX license-header gate =="
   local missing
-  missing="$(git ls-files -- '*.js' '*.mjs' '*.cjs' '*.ts' '*.tsx' '*.jsx' '*.move' '*.rs' '*.css' '*.sh' '*.yml' '*.yaml' \
-    | while IFS= read -r f; do
-        head -3 "$f" | grep -q 'SPDX-License-Identifier' || echo "$f"
-      done)"
+  # Tracked files only: the stamper runs before a file is committed, so an in-flight untracked
+  # scratch file is not this gate's business.
+  if ! collect_files --tracked-only '*.js' '*.mjs' '*.cjs' '*.ts' '*.tsx' '*.jsx' '*.move' '*.rs' '*.css' '*.sh' '*.yml' '*.yaml'; then
+    red "  ✗ FAIL: no source files collected — this gate cannot pass on an empty scan set."
+    return 1
+  fi
+  local scanned="${#COLLECTED_FILES[@]}"
+  local f
+  missing="$(
+    for f in "${COLLECTED_FILES[@]}"; do
+      head -3 "$f" | grep -q 'SPDX-License-Identifier' || echo "$f"
+    done
+  )"
   if [ -n "$missing" ]; then
     red "  ✗ FAIL: source file(s) missing the SPDX header (run: node scripts/stamp_copyright.mjs):"
     echo "$missing" | sed 's/^/      /' | head -20
     return 1
   fi
-  grn "  ✓ every source file carries the SPDX header"
+  grn "  ✓ every source file carries the SPDX header ($scanned files scanned)"
 }
 
 echo
@@ -449,23 +496,33 @@ SECRET_EXCLUDES=(
   ':(exclude)**/node_modules/**' ':(exclude)**/dist/**' ':(exclude)**/build/**' ':(exclude)**/target/**'
   ':(exclude)scripts/check-constraints.sh' ':(exclude)packages/move/scripts/out/**'
 )
-mapfile -d '' SECRET_SCAN_FILES < <(
-  git ls-files -z -- "${SECRET_EXCLUDES[@]}"
-  git ls-files -z --others --exclude-standard -- "${SECRET_EXCLUDES[@]}"
-)
-SECRET_HITS=""
-if [ "${#SECRET_SCAN_FILES[@]}" -gt 0 ]; then
-  SECRET_HITS="$(printf '%s\0' "${SECRET_SCAN_FILES[@]}" | xargs -0 grep -IinE "suiprivkey1[a-z0-9]{20,}|$LEAKED_ADDR_RE" 2>/dev/null || true)"
-fi
-if [ -n "$SECRET_HITS" ]; then
-  red "  ✗ FAIL: hardcoded Sui private key (or a previously-leaked S-22 address) in a tracked/working-tree file:"
-  echo "$SECRET_HITS" | cut -c1-160 | sed 's/^/      /' | head -40
-  echo
-  red "SECRET-LEAK GATE FAILED. Keys live ONLY in an untracked .env / gitignored source, read via"
-  red "process.env — a literal bech32 secret (or a burned S-22 address) must never touch a tracked file."
+SECRET_RE="suiprivkey1[a-z0-9]{20,}|$LEAKED_ADDR_RE"
+# Positive control, run every pass: the same pattern through the same grep, over this script — which
+# necessarily carries the S-22 address literals (exclusion 1 above exists for exactly that reason).
+# Zero hits HERE means the scan machinery is broken, and a clean verdict from a broken scan is a lie.
+if ! grep -IinE -e "$SECRET_RE" scripts/check-constraints.sh >/dev/null; then
+  red "  ✗ FAIL: self-test found no known literal in scripts/check-constraints.sh — the scan machinery is broken."
+  FAIL=1
+elif ! collect_files "${SECRET_EXCLUDES[@]}"; then
+  red "  ✗ FAIL: no files collected — this gate cannot pass on an empty scan set."
   FAIL=1
 else
-  grn "  ✓ no hardcoded suiprivkey1 secrets, no reappearance of the S-22 leaked addresses"
+  SECRET_SCANNED="${#COLLECTED_FILES[@]}"
+  SECRET_SCAN_OK=0
+  SECRET_HITS="$(grep_collected "$SECRET_RE" -IinE)" || SECRET_SCAN_OK=$?
+  if [ "$SECRET_SCAN_OK" -ne 0 ]; then
+    red "  ✗ FAIL: the scan did not run to completion — see the error above; a gate that did not run never passes."
+    FAIL=1
+  elif [ -n "$SECRET_HITS" ]; then
+    red "  ✗ FAIL: hardcoded Sui private key (or a previously-leaked S-22 address) in a tracked/working-tree file:"
+    echo "$SECRET_HITS" | cut -c1-160 | sed 's/^/      /' | head -40
+    echo
+    red "SECRET-LEAK GATE FAILED. Keys live ONLY in an untracked .env / gitignored source, read via"
+    red "process.env — a literal bech32 secret (or a burned S-22 address) must never touch a tracked file."
+    FAIL=1
+  else
+    grn "  ✓ no hardcoded suiprivkey1 secrets, no reappearance of the S-22 leaked addresses ($SECRET_SCANNED files scanned)"
+  fi
 fi
 
 # ── Move security-pattern gate (D321, lens-C pre-publish audit 2026-07-13) ──────────────────────────
@@ -475,79 +532,77 @@ fi
 # hits, so any future introduction trips the gate immediately. Checks 3-4 are WARN-only: the pattern
 # already has legitimate/known hits today (printed, non-fatal, tracked for a follow-up review) — never
 # weaken these patterns to silence a hit; add a reasoned exclusion instead if one is ever warranted.
+#
+# All four checks share ONE collected file set. `severity` is fail|warn: a warn prints and moves on,
+# a fail is fatal. A scan that could NOT run is fatal at either severity — an unproven pattern is not
+# an absent one, and the checkmark reads the same either way.
+move_pattern_check() {
+  local severity="$1" pattern="$2" hit_msg="$3" remedy="$4" clean_msg="$5"
+  local hits
+  local scan_ok=0
+  hits="$(grep_collected "$pattern" -InE)" || scan_ok=$?
+  if [ "$scan_ok" -ne 0 ]; then
+    red "  ✗ FAIL: the scan did not run to completion — see the error above; an unproven pattern is not an absent one."
+    return 1
+  fi
+  if [ -z "$hits" ]; then
+    grn "  ✓ $clean_msg"
+    return 0
+  fi
+  if [ "$severity" = warn ]; then
+    ylw "  ⚠ WARN: $hit_msg"
+    echo "$hits" | cut -c1-160 | sed 's/^/      /' | head -40
+    return 0
+  fi
+  red "  ✗ FAIL: $hit_msg"
+  echo "$hits" | cut -c1-160 | sed 's/^/      /' | head -40
+  red "$remedy"
+  return 1
+}
+
 echo
 echo "== AresRPG Move security-pattern gate (mul_mod / u256-narrow / type_name::get / div-before-mul) =="
-mapfile -d '' MOVE_FILES < <(
-  git ls-files -z -- 'packages/move/**/*.move'
-  git ls-files -z --others --exclude-standard -- 'packages/move/**/*.move'
-)
-
-# 1) HARD FAIL — hand-rolled modular/wide math (the OZ Contracts-for-Sui `mul_mod` bug family: a
-#    512-bit mul_mod/div_rem early-exits on quotient overflow and silently zeros the remainder). Our
-#    codebase only ever uses the framework's u128-upcast `mul_div`/`mul_div_ceil` — a hand-rolled
-#    mul_mod/div_rem, or a locally-defined `mul_div`, must never appear.
-MULMOD_HITS=""
-if [ "${#MOVE_FILES[@]}" -gt 0 ]; then
-  MULMOD_HITS="$(printf '%s\0' "${MOVE_FILES[@]}" | xargs -0 grep -InE 'mul_mod|mulmod|div_rem|fun mul_div' 2>/dev/null || true)"
-fi
-if [ -n "$MULMOD_HITS" ]; then
-  red "  ✗ FAIL: hand-rolled modular/wide math (mul_mod/div_rem/custom mul_div) in packages/move:"
-  echo "$MULMOD_HITS" | cut -c1-160 | sed 's/^/      /' | head -40
-  red "MUL_MOD GATE FAILED. Use the framework u128-upcast mul_div/mul_div_ceil — never hand-roll modular math."
+if ! collect_files ':(glob)packages/move/**/*.move'; then
+  red "  ✗ FAIL: no Move sources collected — none of the four checks below can pass on an empty scan set."
   FAIL=1
 else
-  grn "  ✓ no hand-rolled mul_mod/div_rem/custom mul_div (framework mul_div/mul_div_ceil only)"
-fi
+  # 1) HARD FAIL — hand-rolled modular/wide math (the OZ Contracts-for-Sui `mul_mod` bug family: a
+  #    512-bit mul_mod/div_rem early-exits on quotient overflow and silently zeros the remainder). Our
+  #    codebase only ever uses the framework's u128-upcast `mul_div`/`mul_div_ceil` — a hand-rolled
+  #    mul_mod/div_rem, or a locally-defined `mul_div`, must never appear.
+  move_pattern_check fail 'mul_mod|mulmod|div_rem|fun mul_div' \
+    'hand-rolled modular/wide math (mul_mod/div_rem/custom mul_div) in packages/move:' \
+    'MUL_MOD GATE FAILED. Use the framework u128-upcast mul_div/mul_div_ceil — never hand-roll modular math.' \
+    'no hand-rolled mul_mod/div_rem/custom mul_div (framework mul_div/mul_div_ceil only)' || FAIL=1
 
-# 2) HARD FAIL — u256 narrowing/overflow-prone casts (same OZ bug family: wide math cast back down
-#    loses the overflow signal). Scoped to an in-statement u256↔narrower-cast pairing so the
-#    legitimate zkLogin `address_seed: u256` field and the framework `address::from_u256(x as u256)`
-#    WIDENING call (creation.move, loot_box_tests.move) don't trip it — only a u256 value narrowed
-#    back down to u8/16/32/64/128 in the same statement does.
-U256_NARROW_HITS=""
-if [ "${#MOVE_FILES[@]}" -gt 0 ]; then
-  U256_NARROW_HITS="$(printf '%s\0' "${MOVE_FILES[@]}" | xargs -0 grep -InE 'u256[^;]*as u(8|16|32|64|128)\b|as u(8|16|32|64|128)\b[^;]*u256' 2>/dev/null || true)"
-fi
-if [ -n "$U256_NARROW_HITS" ]; then
-  red "  ✗ FAIL: u256 narrowing/overflow-prone cast in packages/move:"
-  echo "$U256_NARROW_HITS" | cut -c1-160 | sed 's/^/      /' | head -40
-  red "U256-NARROW GATE FAILED. A u256 value cast down to a narrower int is the Cetus/OZ hazard shape — re-derive without the wide type, or prove the narrowing is bounds-checked."
-  FAIL=1
-else
-  grn "  ✓ no u256 value narrowed by an in-statement cast to a smaller int"
-fi
+  # 2) HARD FAIL — u256 narrowing/overflow-prone casts (same OZ bug family: wide math cast back down
+  #    loses the overflow signal). Scoped to an in-statement u256↔narrower-cast pairing so the
+  #    legitimate zkLogin `address_seed: u256` field and the framework `address::from_u256(x as u256)`
+  #    WIDENING call (creation.move, loot_box_tests.move) don't trip it — only a u256 value narrowed
+  #    back down to u8/16/32/64/128 in the same statement does.
+  move_pattern_check fail 'u256[^;]*as u(8|16|32|64|128)\b|as u(8|16|32|64|128)\b[^;]*u256' \
+    'u256 narrowing/overflow-prone cast in packages/move:' \
+    'U256-NARROW GATE FAILED. A u256 value cast down to a narrower int is the Cetus/OZ hazard shape — re-derive without the wide type, or prove the narrowing is bounds-checked.' \
+    'no u256 value narrowed by an in-statement cast to a smaller int' || FAIL=1
 
-# 3) WARN — type_name::get (deprecated) vs with_defining_ids (upgrade-stable: defining-id vs
-#    original-id can differ for a type introduced in a package upgrade). Fires TODAY —
-#    config.move:258,266 pin the forge witness with the deprecated call while fight.move/kolizeum.move
-#    already use with_defining_ids (lens-C finding F2). Non-fatal: a mismatch fails CLOSED (forge DoS),
-#    not open, but tracked for a migration to with_defining_ids for consistency + future-proofing.
-TYPE_NAME_HITS=""
-if [ "${#MOVE_FILES[@]}" -gt 0 ]; then
-  TYPE_NAME_HITS="$(printf '%s\0' "${MOVE_FILES[@]}" | xargs -0 grep -InE 'type_name::get\b' 2>/dev/null || true)"
-fi
-if [ -n "$TYPE_NAME_HITS" ]; then
-  ylw "  ⚠ WARN: deprecated type_name::get — migrate to with_defining_ids (non-fatal, see F2):"
-  echo "$TYPE_NAME_HITS" | cut -c1-160 | sed 's/^/      /' | head -40
-else
-  grn "  ✓ no deprecated type_name::get call sites"
-fi
+  # 3) WARN — type_name::get (deprecated) vs with_defining_ids (upgrade-stable: defining-id vs
+  #    original-id can differ for a type introduced in a package upgrade). Fires TODAY —
+  #    config.move:258,266 pin the forge witness with the deprecated call while fight.move/kolizeum.move
+  #    already use with_defining_ids (lens-C finding F2). Non-fatal: a mismatch fails CLOSED (forge DoS),
+  #    not open, but tracked for a migration to with_defining_ids for consistency + future-proofing.
+  move_pattern_check warn 'type_name::get\b' \
+    'deprecated type_name::get — migrate to with_defining_ids (non-fatal, see F2):' '' \
+    'no deprecated type_name::get call sites' || FAIL=1
 
-# 4) WARN — rounding-direction hazard: division before multiplication in the same expression
-#    (`a / b * c` truncates early and compounds; the safe form multiplies first — `a * c / b`, the
-#    framework mul_div idiom). Fires TODAY in real value math: settlement.move's XP-share kernel and
-#    foundation/world_math.move's pet speed-budget both divide-then-multiply; none of the three are
-#    proven exploitable (percentage-style scaling, not an AMM price/settlement transfer) but are
-#    tracked for a rounding-safety pass. Non-fatal.
-DIV_MUL_HITS=""
-if [ "${#MOVE_FILES[@]}" -gt 0 ]; then
-  DIV_MUL_HITS="$(printf '%s\0' "${MOVE_FILES[@]}" | xargs -0 grep -InE '[A-Za-z0-9_]+ */ *[A-Za-z0-9_]+ *\*' 2>/dev/null || true)"
-fi
-if [ -n "$DIV_MUL_HITS" ]; then
-  ylw "  ⚠ WARN: division-before-multiplication (rounding-direction hazard) in value math (non-fatal):"
-  echo "$DIV_MUL_HITS" | cut -c1-160 | sed 's/^/      /' | head -40
-else
-  grn "  ✓ no division-before-multiplication pattern in value math"
+  # 4) WARN — rounding-direction hazard: division before multiplication in the same expression
+  #    (`a / b * c` truncates early and compounds; the safe form multiplies first — `a * c / b`, the
+  #    framework mul_div idiom). Fires TODAY in real value math: settlement.move's XP-share kernel and
+  #    foundation/world_math.move's pet speed-budget both divide-then-multiply; none of the three are
+  #    proven exploitable (percentage-style scaling, not an AMM price/settlement transfer) but are
+  #    tracked for a rounding-safety pass. Non-fatal.
+  move_pattern_check warn '[A-Za-z0-9_]+ */ *[A-Za-z0-9_]+ *\*' \
+    'division-before-multiplication (rounding-direction hazard) in value math (non-fatal):' '' \
+    'no division-before-multiplication pattern in value math' || FAIL=1
 fi
 
 # The LimitsVerifier struct-field cap, sourced from the 04:09 gold-rig publish failure. The offline
