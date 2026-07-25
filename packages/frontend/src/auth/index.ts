@@ -16,6 +16,7 @@ import { game_log } from '../core/log.js'
 import { tx_refusal_input } from '../world-shell/tx_refusal.js'
 
 import { derive_zklogin_seed } from './zklogin_seed'
+import { ZKLOGIN_FAILURE_COPY, read_zklogin_seed, type ZkloginSession } from './zklogin_session_seed'
 import { read_sui_balance_mist, with_post_tx_refresh, settle_balance_after_tx } from './sui_balance'
 import { is_zklogin_wallet } from './zklogin_wallet'
 
@@ -276,34 +277,21 @@ export async function sponsor_and_execute_transaction(
 // ⇒ one derived address ⇒ one free character — the sybil economics). NEVER guesses a seed.
 export async function get_zklogin_address_seed(wallet_name: string): Promise<string> {
   const wallet = find_wallet(wallet_name)
-  const feature = wallet?.features['enoki:getSession'] as
-    { getSession: () => Promise<{ jwt?: string; proof?: { addressSeed?: string } } | null> } | undefined
-  if (!feature?.getSession) throw new Error(i18n.t('errors.zklogin_required'))
-  // getSession itself can REJECT for a fresh / second Enoki session whose state isn't ready. Left unguarded
-  // (it sat outside the derive try/catch below), that raw Enoki rejection leaked past every user surface into
-  // the create flow's generic tx decoder — mislabelling a pre-send session-read failure as "failed on-chain"
-  // (nothing was ever sent). Guard it: the same honest zkLogin-required copy the derive path throws, mechanical
-  // cause kept in the console (no-silent-failure law).
-  let session: { jwt?: string; proof?: { addressSeed?: string } } | null
-  try {
-    session = await feature.getSession()
-  } catch (e) {
-    game_log('auth', 'zkLogin getSession failed:', e)
-    throw new Error(i18n.t('errors.zklogin_required'))
-  }
-  const proof_seed = session?.proof?.addressSeed
-  if (proof_seed) return String(proof_seed)
-  const jwt = session?.jwt
-  const address = wallet?.accounts[0]?.address
-  if (!jwt || !address) throw new Error(i18n.t('errors.zklogin_required'))
-  try {
-    const { salt } = await new EnokiClient({ apiKey: ENOKI_API_KEY }).getZkLogin({ jwt })
-    return derive_zklogin_seed({ jwt, salt, address })
-  } catch (e) {
-    // no-silent-failure law: keep the mechanical cause in the console; the player gets the humanized toast
-    game_log('auth', 'zkLogin seed derivation failed:', e)
-    throw new Error(i18n.t('errors.zklogin_required'))
-  }
+  const feature = wallet?.features['enoki:getSession'] as { getSession: () => Promise<ZkloginSession> } | undefined
+  // This function is the I/O EDGE; zklogin_session_seed.ts owns the classification. Every failure used to
+  // collapse into `zklogin_required` — so a signed-in player whose session was unreadable, whose Enoki salt
+  // fetch 401'd, or whose derivation refused was told to do the one thing they had already done. The read now
+  // returns its cause as data and is decoded exactly ONCE, here, into copy that matches the actual failure.
+  const result = await read_zklogin_seed({
+    get_session: feature?.getSession ? () => feature.getSession() : null,
+    address: wallet?.accounts[0]?.address ?? null,
+    fetch_salt: async (jwt) => (await new EnokiClient({ apiKey: ENOKI_API_KEY }).getZkLogin({ jwt })).salt,
+    derive: derive_zklogin_seed,
+  })
+  if (result.ok) return result.seed
+  // no-silent-failure law: the mechanical cause stays in the console; the player gets the honest toast.
+  game_log('auth', `zkLogin seed read failed (${result.failure}):`, result.cause)
+  throw new Error(i18n.t(ZKLOGIN_FAILURE_COPY[result.failure]))
 }
 
 export interface AuthState {
