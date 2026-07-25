@@ -14,16 +14,19 @@ import { readFileSync } from 'node:fs'
 
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { JOBS } from '@aresrpg/sdk/jobs'
 
 import { craft_recipes_for_job } from '../../../pages/encyclopedia/recipes'
 import { reset_auth_mock } from '../../../test_helpers/auth_mock.js'
+
+const visible_text = (html) => html.replace(/<[^>]+>/g, '')
 
 // JobsDrawer reaches the craft tx seam, which pulls in the browser wallet — isolate this DOM-less unit
 // surface from Enoki's module-load `window.location` access (the Stats.test.jsx guard). No test below
 // executes a wallet action; the grid is pure render.
 reset_auth_mock()
 
-const { RecipeGrid } = await import('./JobsDrawer.jsx')
+const { RecipeGrid, JobItemDetail } = await import('./JobsDrawer.jsx')
 
 // CAPTURED PROVENANCE: the values are the verbatim live projection read from rpc-redis on 2026-07-25 —
 // a real armorsmith (SDK JOBS index 8) recipe minted 07-23, knowledge gate 26, output at level 151.
@@ -43,9 +46,14 @@ const LIVE_ITEMS = [
     template_id: LIVE_RECIPE.output_template_id,
     item_type: 'feathergilt_visor_of_silent_court_crown',
     name: 'Feathergilt Visor Crown',
-    description: null,
+    // The §14 projection carries the template's Display description and its AUTHORED characteristics on the
+    // SAME row as the identity fields — biased stat ranges (RES_SHIFT/stat centering, decoded client-side)
+    // and the weapon damage lines. The detail pane must consume them.
+    description: 'Worn by the silent court, its feathers still catch the light.',
     level: 151,
     category: 'helmet',
+    stats: { vitality: [32771, 32776] },
+    damages: [{ from: 16, to: 29, damage_type: 'weapon', element: 'water' }],
     supply: 0,
     last_sale_mist: null,
   },
@@ -100,6 +108,57 @@ describe('RecipeGrid — the served corpus renders rows (issue #765)', () => {
     const html = grid({ recipes: [], loading: true, level: 30 })
     expect(html).toContain(LOADING_COPY)
     expect(html).not.toContain(EMPTY_COPY)
+  })
+})
+
+// The recipe DETAIL pane rendered a generic cube, no description and no characteristics while the list rows
+// beside it showed the right icons. Root cause: the pane resolved its content through `use_content()` — the
+// bundled seed catalog (packages/sdk/src/items.json), `{}` in this repo BY CONSTRUCTION — so the join always
+// missed and it fell back to the recipe row, which carries no art slug, no description and no stats. The live
+// /v1 row it was handed already carries all three (the SAME row the encyclopedia ITEMS tab renders from).
+describe('the recipe detail pane consumes the live item row (#799 follow-up)', () => {
+  const OUTPUT_ROW = LIVE_ITEMS[0]
+  const [row] = rows
+  const pane = (props) =>
+    renderToStaticMarkup(
+      <JobItemDetail
+        item={OUTPUT_ROW}
+        recipe={row}
+        job={JOBS[ARMORSMITH]}
+        level={30}
+        owned={{}}
+        on_back={() => {}}
+        {...props}
+      />
+    )
+
+  test('the HD icon resolves off the row’s chain art slug, never the object id', () => {
+    // chain_icon_slug: the icon key of a /v1 row IS its item_type; ItemDetailImage asks for the _hd variant.
+    // The FILENAME is the assertion, never the origin — a sibling test file installs an asset manifest
+    // process-wide, and which host serves the art is not what this pins.
+    const html = pane()
+    expect(html).toContain(`${OUTPUT_ROW.item_type}_hd.png`)
+    // The bug itself: an icon keyed by the Sui object address, which is not an art identity and 404s.
+    expect(html).not.toContain(OUTPUT_ROW.template_id)
+  })
+
+  test('the description renders', () => {
+    expect(visible_text(pane())).toContain(OUTPUT_ROW.description)
+  })
+
+  test('the authored damage + stat lines render, decoded like every other item surface', () => {
+    const text = visible_text(pane())
+    // Damages pass through decode_item_damages (element UPPERCASED); the biased stat pair un-biases to +3..8.
+    expect(text).toContain('16 - 29')
+    expect(text).toContain('WATER')
+    expect(text).toContain('+3 to 8 Vitality')
+  })
+
+  test('a row the projection has not reached keeps the honest recipe fallback — nothing fabricated', () => {
+    const text = visible_text(pane({ item: null }))
+    expect(text).toContain(row.name)
+    expect(text).not.toContain(OUTPUT_ROW.description)
+    expect(text).not.toContain('Vitality')
   })
 })
 

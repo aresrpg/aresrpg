@@ -21,16 +21,15 @@ import { PetFullFedNote } from '../../components/pet_power_card'
 import { use_deferred_search } from '../../hooks/use_deferred_search'
 import { CATEGORY_GROUPS, type CategoryGroupKey } from '../../constants/encyclopedia'
 import { display_mob_name } from '../../content/mob_name_overrides'
-import { item_display_category } from '../../game/item_classification'
 import { normalize_search } from '../../utils/search'
 import { use_template_t } from '../../i18n/template_t'
 import { get_encyclopedia, get_rare_links } from '../../rpc/client'
 import { use_rpc_view } from '../../rpc/use_view'
 import { use_items_shop_chain } from '../../stores/items_shop_chain'
 import { marketplace_item_type_key } from '../../components/marketplace/marketplace_model'
-import { item_damages_from_v1, item_stats_from_v1 } from '../../chain/read_findables'
 
 import { DetailLoading } from './shared'
+import { encyclopedia_item_view } from './item_view_model'
 import { DroppedBySection } from './dropped_by_section'
 import { PetFoodSection } from './pet_food_section'
 import { RecipeSections } from './recipe_sections'
@@ -109,41 +108,15 @@ export function ItemsTab({
     for (const rows of idx.values()) rows.sort((a, b) => b.chance_percent - a.chance_percent)
     return idx
   }, [enc])
-  // Join each living /v1 row to authored characteristics by slug; unmatched rows stay honestly empty.
+  // Join each living /v1 row to authored characteristics by slug; unmatched rows stay honestly empty. The
+  // row → detail-view projection itself lives in item_view_model.ts — the ONE home the in-game Jobs drawer
+  // reads too, so a crafting surface can never disagree with the encyclopedia about what an item IS.
   const items = useMemo(
     () =>
       // The id whitelist removes old-generation chain ghosts before any catalog join.
       (enc?.items ?? []).filter(is_living_item).map((it) => {
         const name = it.name ?? ''
-        // /v1 carries a generic item_type, so the current seed name recovers the asset/description slug.
-        const slug = slugs[name] || undefined
-        const tmpl = catalog_for_name(name)
-        const item_type = it.item_type ?? tmpl?.item_type ?? ''
-        return {
-          id: it.template_id,
-          name,
-          slug,
-          desc_key: slug,
-          description: it.description ?? '', // §14 EN description (chain Display, surfaced by /v1); locale via tt
-          item_type,
-          category: item_display_category({ item_type, category: it.category }),
-          level: it.level ?? 0,
-          rarity: tmpl?.rarity ?? '',
-          stats: item_stats_from_v1(it.stats) as Record<string, number | [number, number]>,
-          // #619 — CHAIN FIRST: the authored damage lines ship on the same /v1 row as the stat ranges
-          // (item_damages::DamagesKey projection). The seed catalog stays a fallback for the pre-projection
-          // window only; it resolves EMPTY in a corpus-less build, which is what blanked every weapon.
-          damages: (it.damages?.length ? item_damages_from_v1(it.damages) : (tmpl?.damages ?? [])) as {
-            element: string
-            from: number
-            to: number
-            damage_type?: string
-          }[],
-          display: null as { image_url?: string } | null,
-          createdAt: undefined as number | undefined,
-          supply: it.supply ?? 0, // live on-chain mint/burn counter (indexer HANDLERS.md "Item supply")
-          last_sale_mist: it.last_sale_mist ?? null, // last realised per-unit price (marketcap = supply × this; null = never sold)
-        }
+        return encyclopedia_item_view(it, { slug: slugs[name] || undefined, catalog_row: catalog_for_name(name) })
       }),
     [enc]
   )

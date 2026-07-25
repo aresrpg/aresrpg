@@ -57,11 +57,13 @@ import { craft_affordability_of, craft_recipes_for_job } from '../../../pages/en
 import { get_encyclopedia } from '../../../rpc/client'
 import { use_rpc_view } from '../../../rpc/use_view'
 import { Tooltip } from './Tooltip.jsx'
-// Item detail REUSES the EXACT encyclopedia item-display (ItemDetailView) fed the same seeded content
-// (use_content) the Encyclopedia tab + the Inventory render — bigger icon, type, rarity, DESCRIPTION +
-// characteristics (right-section, not a modal/little-card).
+// Item detail REUSES the EXACT encyclopedia item-display (ItemDetailView) over the EXACT same live /v1 row
+// projection the Encyclopedia tab renders (item_view_model.ts + encyclopedia_item_asset — one home for the
+// shape, one home for the art slug) — HD icon, type, DESCRIPTION + characteristics (right-section, not a
+// modal/little-card).
 import { ItemDetailView } from '../../../components/entity_display'
-import { use_content } from '../../../pages/encyclopedia/content'
+import { encyclopedia_item_view } from '../../../pages/encyclopedia/item_view_model'
+import { encyclopedia_item_asset } from '../../../pages/encyclopedia/encyclopedia_assets'
 import { use_template_t } from '../../../i18n/template_t'
 import { craft_item } from '../../../world-shell/craft_actions.js'
 import { use_toast } from '../../../toast'
@@ -388,13 +390,19 @@ function CraftControls({ recipe, job, level, owned }) {
 }
 
 /**
- * The selected item's detail in the RIGHT-SECTION — the EXACT encyclopedia
- * item-display (ItemDetailView), fed the SAME seeded content (use_content) the inventory + encyclopedia
- * render, so it shows the big icon, type, rarity, DESCRIPTION + characteristics. A craftable recipe also
- * renders the inline CraftControls (bill of materials + Craft button) as ItemDetailView children. NO
+ * The selected item's detail in the RIGHT-SECTION — the EXACT encyclopedia item-display (ItemDetailView),
+ * fed the SAME live `/v1` row the encyclopedia ITEMS tab renders (through the one projection home,
+ * item_view_model.ts), so it shows the HD icon, type, DESCRIPTION + characteristics. A craftable recipe
+ * also renders the inline CraftControls (bill of materials + Craft button) as ItemDetailView children. NO
  * modal, NO little card. A "Back" affordance returns to the job's resource/recipe browse.
+ *
+ * `item` is the selected row's live /v1 record, joined by the caller (JobDetail owns the read). It used to
+ * resolve through `use_content()` — the bundled seed catalog, `{}` in this repo BY CONSTRUCTION — so the
+ * join always missed and the pane fell through to the recipe row: an icon keyed by the Sui OBJECT ID (a
+ * guaranteed 404 → the generic glyph), no description, no stats. The seed path is deleted, not ranked
+ * behind /v1: it is a second home for facts the chain already carries, and it can only be wrong.
  * @param {{
- *   item_id: string,
+ *   item: import('../../../rpc/views').RpcEncyclopediaItem | null,
  *   recipe: import('../../../pages/encyclopedia/recipes').CraftRecipeRow | null,
  *   job: import('@aresrpg/sdk/jobs').JobDef,
  *   level: number,
@@ -403,37 +411,36 @@ function CraftControls({ recipe, job, level, owned }) {
  * }} props
  * @returns {import('react').JSX.Element}
  */
-function JobItemDetail({ item_id, recipe, job, level, owned, on_back }) {
-  const content_items = use_content().templates.item
+export function JobItemDetail({ item, recipe, job, level, owned, on_back }) {
   const tt = use_template_t()
 
-  // The seeded catalog is keyed by SLUG; a recipe row's `item_id` is its on-chain output TEMPLATE id, so
-  // resolve through the row's own `item_type` when it has one (a gathered resource's item_id IS a slug,
-  // and an output whose template has not snapshotted carries '').
-  const content_key = recipe?.item_type || item_id
-  const content = useMemo(
-    () => content_items.find((it) => it.id === content_key) ?? null,
-    [content_items, content_key]
-  )
+  const view = useMemo(() => (item ? encyclopedia_item_view(item) : null), [item])
+  // chain_icon_slug via encyclopedia_item_asset: the icon key of a live row IS its `item_type`, the same key
+  // the seed uploads `items/{item_type}.png` under. The runtime object address is not an art identity —
+  // deriving the icon from it 404'd every single one.
+  const asset = view ? encyclopedia_item_asset(view) : null
 
-  // The ItemDetailView shape, resolved from the seed (mirrors Inventory.jsx). Falls back to the raw
-  // recipe row for any craft output not present in the seed.
-  const detail_item = content
+  // The ItemDetailView shape. `supply`/`last_sale_mist` are deliberately NOT passed: the supply + marketcap
+  // block under the icon is the encyclopedia's own opt-in, not a crafting fact. Falls back to the raw recipe
+  // row for an output the projection has not reached — honest partial, never a fabricated stat.
+  const detail_item = view
     ? {
-        id: content.id,
-        appearance: content.appearance,
-        name: tt(content, 'name'),
-        category: content.category,
-        rarity: content.rarity,
-        level: content.level || 0,
-        damages: content.damages || [],
-        stats: content.stats || {},
-        description: tt(content, 'description'),
-        weapon_class: content.weapon_class,
+        id: asset.id,
+        image_url: asset.image_url,
+        name: tt(view, 'name'),
+        description: tt(view, 'description'),
+        category: view.category,
+        rarity: view.rarity,
+        level: view.level,
+        damages: view.damages,
+        stats: view.stats,
       }
     : recipe
       ? {
-          id: recipe.id,
+          // The row's art slug — the SAME key the grid cell beside it renders from. Never `recipe.id`
+          // (the output TEMPLATE id): an object address is not an art identity, and no slug at all is an
+          // honest glyph rather than a guaranteed 404.
+          id: recipe.item_type || '',
           name: recipe.name?.trim() || recipe.id,
           category: String(recipe.category ?? '').toUpperCase(),
           // The chain's item projection carries no quality/rarity field — the neutral default, never a
@@ -643,6 +650,18 @@ function JobDetail({ job, xp, active, owned }) {
     () => craft_recipes_for_job(encyclopedia?.recipes, encyclopedia?.items, job_index),
     [encyclopedia, job_index]
   )
+  // THE JOIN: the selected row's live /v1 record, from the read this component already owns. Two disjoint
+  // keys because two surfaces select by two different identities — a recipe cell by its output TEMPLATE id
+  // (`recipe.id`), a gather row by its resource SLUG (== the row's `item_type`). Absent → the detail pane
+  // renders its honest fallback, never a fabricated one.
+  const item_by_key = useMemo(() => {
+    const map = new Map()
+    for (const it of encyclopedia?.items ?? []) {
+      map.set(it.template_id, it)
+      if (it.item_type) map.set(it.item_type, it)
+    }
+    return map
+  }, [encyclopedia])
   const { level, current, needed } = job_level_progress(xp)
   const pct = needed > 0 ? Math.max(0, Math.min(100, (current / needed) * 100)) : 100
 
@@ -742,7 +761,7 @@ function JobDetail({ job, xp, active, owned }) {
 
         {selected && (
           <JobItemDetail
-            item_id={selected.item_id}
+            item={item_by_key.get(selected.item_id) ?? null}
             recipe={selected.recipe}
             job={job}
             level={level}
