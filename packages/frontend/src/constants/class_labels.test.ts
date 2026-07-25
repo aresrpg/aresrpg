@@ -11,8 +11,6 @@ import fr from '../i18n/locales/fr.json'
 import ja from '../i18n/locales/ja.json'
 import uk from '../i18n/locales/uk.json'
 
-import { CLASSES } from './simulator'
-
 const SANCTIONED_TITLES = {
   SENSHI: 'Warrior',
   YAJIN: 'Assassin',
@@ -32,8 +30,9 @@ const SANCTIONED_TITLES = {
 const LOCALES = { de, en, es, fr, ja, uk }
 
 describe('class identity labels', () => {
-  test('the twelve simulator and SDK identities match the sanctioned roster', () => {
-    expect(Object.fromEntries(CLASSES.map(({ id, title }) => [id, title]))).toEqual(SANCTIONED_TITLES)
+  // The SDK's classes.json is the ONE class roster since the simulator's duplicate table died with the
+  // legacy build calculator (docs/design/simulator_rebuild_spec.md §10).
+  test('the twelve SDK identities match the sanctioned roster', () => {
     expect(Object.fromEntries(Object.entries(sdk_classes).map(([id, { title }]) => [id.toUpperCase(), title]))).toEqual(
       SANCTIONED_TITLES
     )

@@ -24,8 +24,14 @@ const state_of = (): SimulatorState => {
   return { seed, roster, focus_id }
 }
 
-/** Hydrate from IndexedDB through the reducer door, then keep it flushed. Returns the unmount disposer. */
+/**
+ * Hydrate from IndexedDB through the reducer door, then keep it flushed. Returns the unmount disposer.
+ * A never-seeded page rolls its determinism seed here — randomness is an edge value the reducer receives,
+ * never one it invents (a pure reducer that rolls dice is not replayable).
+ */
 export const boot_simulator = async (): Promise<() => void> => {
-  use_simulator.getState().input(hydrated_input(await load_simulator_state()))
+  const { input } = use_simulator.getState()
+  input(hydrated_input(await load_simulator_state()))
+  if (use_simulator.getState().seed === 0) input({ type: 'seed_set', seed: Math.floor(Math.random() * 0xffffffff) })
   return install_simulator_persistence((listener) => use_simulator.subscribe(listener), state_of)
 }
