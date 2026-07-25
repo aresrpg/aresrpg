@@ -5,7 +5,7 @@
 // three shapes; this is the one file proving all three, replacing the coverage walrus_multi_quilt.test.js
 // used to carry for the (now-deleted) quilt-sharding branch:
 //   flat art  → {host}/{family}/{key}[_hd].{ext}
-//   geometry  → {host}/models/{family}/{key}.glb
+//   geometry  → {host}/{geometry folder}/{key}.glb   ('models/{family}' for every class but `character`)
 //   data blob → {host}/data/{class}.json
 // RED-FIRST: every assertion here is red against the quilt-era `by-quilt-id/<quilt>/...` output (the
 // resolver never produced a `/data/` or `/models/` path before #650) and green against the rewrite.
@@ -49,14 +49,24 @@ describe('the mapping law — flat art', () => {
 })
 
 describe('the mapping law — geometry (.glb)', () => {
-  test('mob/character/cosmetic all resolve {host}/models/{family}/{key}.glb once published', () => {
+  test('mob/cosmetic resolve {host}/models/{family}/{key}.glb once published', () => {
     configure_walrus_assets({
       aggregator: HOST,
-      classes: { mob: { published: true }, character: { published: true }, cosmetic: { published: true } },
+      classes: { mob: { published: true }, cosmetic: { published: true } },
     })
     expect(walrus_asset_url('mob', 'crab.glb')).toBe(`${HOST}/models/mobs/crab.glb`)
-    expect(walrus_asset_url('character', 'senshi_male.glb')).toBe(`${HOST}/models/characters/senshi_male.glb`)
     expect(walrus_asset_url('cosmetic', 'vaporeon.glb')).toBe(`${HOST}/models/cosmetics/vaporeon.glb`)
+  })
+
+  // The character corpus mirrors the frontend's public/ tree on the host and was never re-homed under
+  // models/. Probed 2026-07-25: `sprites/characters/senshi_male.glb` = 206, `models/characters/…` = 404
+  // (the P0 that left every world character as a floating nameplate). GEOMETRY_FOLDER records that truth.
+  test('character rigs resolve {host}/sprites/characters/{key}.glb — where the corpus actually is', () => {
+    configure_walrus_assets({ aggregator: HOST, classes: { character: { published: true } } })
+    expect(walrus_asset_url('character', 'senshi_male.glb')).toBe(`${HOST}/sprites/characters/senshi_male.glb`)
+    expect(walrus_asset_url('character', 'yajin_female_hair.glb')).toBe(
+      `${HOST}/sprites/characters/yajin_female_hair.glb`
+    )
   })
 
   test('an unpublished geometry class returns null (caller falls back to the bundled copy)', () => {

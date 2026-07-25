@@ -252,7 +252,7 @@ export function recipe_ingredients(item_id) {
 // THE MAPPING LAW (content house census, adopted verbatim, #650): the resolver alone owns the host+path
 // table — one fixed rule, never duplicated per manifest row.
 //   flat art  → {host}/{family}/{key}[_hd].{ext}   e.g. https://assets.aresrpg.world/items/longsword.png
-//   geometry  → {host}/models/{family}/{key}.glb   e.g. https://assets.aresrpg.world/models/mobs/crab.glb
+//   geometry  → {host}/{geometry folder}/{key}.glb e.g. https://assets.aresrpg.world/models/mobs/crab.glb
 //   data blob → {host}/data/{class}.json           e.g. https://assets.aresrpg.world/data/spell_corpus.json
 // Dispatched purely by the filename's own extension — `.json` is a data blob (keyed by CLASS, not the
 // filename, since every data-blob caller already passes `${class}.json`), `.glb` is geometry, everything
@@ -290,6 +290,18 @@ const ASSET_FAMILY = {
   character: 'characters',
   music: 'music',
   shop_render: 'shop',
+}
+
+// Where each class's .glb corpus actually LIVES on the asset host. `models/{family}` is the rule (mobs,
+// cosmetics); `character` is the one class whose rigs were uploaded mirroring the frontend's own public/
+// tree and never re-homed — so its bytes sit under `sprites/characters/`, not `models/characters/`.
+// This table records the host's truth; it is not a preference. Probed 2026-07-25 (P0: every world
+// character rendered as a floating nameplate over nothing): all 13 published rigs answer 206 under
+// `sprites/characters/` and 404 under `models/characters/` — see the frontend's character_glb_url.test.js
+// for the captured per-key provenance. Delete this row the day the corpus is re-uploaded under models/.
+/** @type {Record<string, string>} */
+const GEOMETRY_FOLDER = {
+  character: 'sprites/characters',
 }
 
 /**
@@ -335,7 +347,7 @@ export function walrus_asset_url(url_class, filename) {
     return `${walrus_assets.aggregator}/data/${url_class}.json`
   const family = ASSET_FAMILY[url_class] ?? url_class
   return filename.endsWith('.glb')
-    ? `${walrus_assets.aggregator}/models/${family}/${filename}`
+    ? `${walrus_assets.aggregator}/${GEOMETRY_FOLDER[url_class] ?? `models/${family}`}/${filename}`
     : `${walrus_assets.aggregator}/${family}/${filename}`
 }
 
