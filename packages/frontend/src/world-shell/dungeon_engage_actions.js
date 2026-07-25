@@ -19,6 +19,7 @@ import {
   burn_result_ptb,
 } from '@aresrpg/sdk/fight'
 import { get_zone_state } from '@aresrpg/sdk/game'
+import { aresrpg_id } from '@aresrpg/sdk/deployment/aresrpg'
 import { group_engage_blocked } from '@aresrpg/world/nearby_fights'
 
 import { use_auth } from '../auth'
@@ -58,22 +59,38 @@ const same_object_id = (left, right) => {
 }
 
 /**
+ * WHICH claim door this engage takes, as DATA — the one place the choice is decoded (no silent second path).
+ * - `proof`: the witness `zones::*_with_proof` accepts, locally replayed against the chain commitment.
+ * - `derivation`: the proofless door is the LEGAL one here — an occupied-zone claim (no zx/zy), an unstamped
+ *   deployment (create_fight_ptb ignores witnesses by law there), or a zone searched before commitments existed.
+ * - `blocked`: we could not prove what we are about to claim. That is a refusal, never a quieter door.
+ * @typedef {{ door:'proof', proof:any } | { door:'derivation', reason:string }
+ *   | { door:'blocked', reason:string, cause?:unknown }} WorldGroupDoor
+ */
+
+/**
  * Fail-closed join of chain commitment + the FULL sim-derived row stream. Exported for the scoped call-site
  * regression test; production obtains each input immediately before composing the fight PTB below.
  * @param {{ world_id:string, spawn_id:number|string, mob_template_id:string, zx:number, zy:number,
  *   zone:any, commitment:any, groups:any[] }} input
+ * @returns {WorldGroupDoor}
  */
-export function verified_world_group_proof({ world_id, spawn_id, mob_template_id, zx, zy, zone, commitment, groups }) {
-  if (!zone || !commitment || !Array.isArray(groups)) return null
+export function world_group_door({ world_id, spawn_id, mob_template_id, zx, zy, zone, commitment, groups }) {
+  if (!zone || !Array.isArray(groups) || !groups.length) return { door: 'blocked', reason: 'zone_unreadable' }
+  // A zone searched before the commitment upgrade has nothing to prove against: the derivation door is its ONLY
+  // door, and taking it is a deliberate branch — not a swallowed failure.
+  if (!commitment) return { door: 'derivation', reason: 'uncommitted_zone' }
   const matches = groups.filter((group) => same_unsigned(group.spawn_id, spawn_id))
-  if (matches.length !== 1) return null
+  if (matches.length !== 1) return { door: 'blocked', reason: 'stale_stream' }
   const [target] = matches
-  if (!same_object_id(target.template_id, mob_template_id)) return null
+  if (!same_object_id(target.template_id, mob_template_id)) return { door: 'blocked', reason: 'stale_stream' }
   const index = Number(target.index)
-  if (!Number.isSafeInteger(index) || index < 0) return null
+  if (!Number.isSafeInteger(index) || index < 0) return { door: 'blocked', reason: 'stale_stream' }
+  // Consumption is MONOTONIC on chain and the served bitmap can only lag BEHIND it, so a set bit is always true:
+  // refusing here is the same outcome the claim door would abort with (108), minus the burned gas.
   const consumed = ((Number(zone.mob_bitmap?.[index >> 3] ?? 0) >> (index & 7)) & 1) !== 0
-  if (consumed) return null
-  return compose_mob_group_proof({
+  if (consumed) return { door: 'blocked', reason: 'consumed' }
+  const proof = compose_mob_group_proof({
     world_id,
     zx,
     zy,
@@ -84,10 +101,19 @@ export function verified_world_group_proof({ world_id, spawn_id, mob_template_id
     groups,
     index,
   })
+  if (!proof) return { door: 'blocked', reason: 'commitment_mismatch' }
+  return { door: 'proof', proof }
 }
 
-async function load_world_group_proof({ sdk, world_id, spawn_id, mob_template_id, zx, zy }) {
-  if (zx == null || zy == null) return null
+/** @returns {Promise<WorldGroupDoor>} */
+async function load_world_group_door({ sdk, world_id, spawn_id, mob_template_id, zx, zy }) {
+  // No zone coordinates ⇒ the occupied-zone claim door, which takes no witness at all.
+  if (zx == null || zy == null) return { door: 'derivation', reason: 'occupied_zone_door' }
+  // DOOR POLARITY (the SDK's law): on a deployment whose ceremony never stamped the ZoneGroupRootKey origin,
+  // create_fight_ptb ignores a supplied witness — so composing one there would be theatre, and failing on it
+  // would refuse an engage the chain accepts.
+  if (!aresrpg_id(DEMO_NETWORK, 'ZONE_GROUP_ROOT_PACKAGE_ID'))
+    return { door: 'derivation', reason: 'unstamped_network' }
   try {
     const read_context = { grpc_client: sdk.grpc_client, network: DEMO_NETWORK }
     const [zone, commitment, world, config] = await Promise.all([
@@ -96,9 +122,11 @@ async function load_world_group_proof({ sdk, world_id, spawn_id, mob_template_id
       zone_world_doc(world_id),
       get_config().catch(() => null),
     ])
-    if (!zone || !world || !commitment) return null
+    if (!zone || !world) return { door: 'blocked', reason: 'zone_unreadable' }
     // Commitments cover EVERY search-time group, including consumed siblings. Clear only the mob bitmap before
-    // calling the existing sim mirror; verified_world_group_proof checks that the selected target is still live.
+    // calling the existing sim mirror; world_group_door checks that the selected target is still live. The zone
+    // state carries the commitment root, which selects WHICH derivation the zone was searched under — a stream
+    // derived without it is a different world than the chain's.
     const groups = rows_from_state(
       { ...zone, mob_bitmap: [] },
       zx,
@@ -106,7 +134,7 @@ async function load_world_group_proof({ sdk, world_id, spawn_id, mob_template_id
       world,
       config?.dials?.team_size_bound != null ? Number(config.dials.team_size_bound) : 6
     ).filter((row) => row.kind === 'mob')
-    return verified_world_group_proof({
+    return world_group_door({
       world_id,
       spawn_id,
       mob_template_id,
@@ -116,8 +144,9 @@ async function load_world_group_proof({ sdk, world_id, spawn_id, mob_template_id
       commitment,
       groups,
     })
-  } catch {
-    return null
+  } catch (cause) {
+    // A read that threw is a refusal with a reason, not a quieter door.
+    return { door: 'blocked', reason: 'zone_unreadable', cause }
   }
 }
 
@@ -149,9 +178,9 @@ export async function create_world_fight({
   const { address } = use_auth.getState()
   if (!address) throw new Error('Not connected')
   const sdk = await get_sdk()
-  const [handle, group_proof, live_fights] = await Promise.all([
+  const [handle, group_door, live_fights] = await Promise.all([
     kiosk_for_character(sdk, address, character_id),
-    load_world_group_proof({ sdk, world_id, spawn_id, mob_template_id, zx, zy }),
+    load_world_group_door({ sdk, world_id, spawn_id, mob_template_id, zx, zy }),
     // TOCTOU SHRINK (leg ③): the SAME /v1 fight truth the engage affordance gates on, read FRESH here (parallel
     // with the kiosk/proof reads — zero added latency) so the residual poll-lag window between the affordance's
     // 6s snapshot and this press collapses to one read. A claimed spawn shows a live fight here even when the
@@ -163,6 +192,14 @@ export async function create_world_fight({
   // shape, IMMEDIATELY before compose/sign. The throw propagates to engage()'s catch, which reads the 108 and
   // reconciles (ghost-drop the row + re-poll) — identical to the on-chain claim race, minus the burned gas.
   if (group_engage_blocked(live_fights, spawn_id)) throw tx_error(GROUP_CLAIMED_ABORT, { preflight: true })
+  // The DOOR, decided honestly (issue #810). A group we cannot prove is a refusal PRE-SIGN: a quiet proofless
+  // submit would name a group on the strength of a stream we just failed to reconcile with the chain, and
+  // surface as a misleading downstream abort. A target the bitmap shows consumed refuses with the SAME 108
+  // shape the claim race produces, so engage() reconciles it exactly like the on-chain loss.
+  if (group_door.door === 'blocked') {
+    if (group_door.reason === 'consumed') throw tx_error(GROUP_CLAIMED_ABORT, { preflight: true })
+    throw new Error(i18n.t('errors.group_proof_unavailable'), { cause: group_door.cause ?? group_door.reason })
+  }
   const tx = create_fight_ptb(ctx_of(sdk))({
     world_id,
     kiosk_id: handle.kiosk_id,
@@ -172,7 +209,7 @@ export async function create_world_fight({
     spawn_id,
     zx,
     zy,
-    group_proof,
+    group_proof: group_door.door === 'proof' ? group_door.proof : null,
     mob_template_id,
     is_public,
     party_id,

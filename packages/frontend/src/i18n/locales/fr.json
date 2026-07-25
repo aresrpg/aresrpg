@@ -2440,7 +2440,8 @@
     "delete_items_equipped": "Ce personnage a encore des objets équipés. Déséquipez tout, puis réessayez.",
     "delete_unfinished_fight": "Ce personnage a un résultat de combat non ouvert. Ouvrez-le d'abord, puis réessayez.",
     "delete_in_dungeon": "Ce personnage est en plein donjon. Quittez-le ou abandonnez-le d'abord.",
-    "sponsor_zklogin_only": "Le gas sponsorisé est réservé à la connexion Google — ce portefeuille paie son propre gas."
+    "sponsor_zklogin_only": "Le gas sponsorisé est réservé à la connexion Google — ce portefeuille paie son propre gas.",
+    "group_proof_unavailable": "Impossible de vérifier ce groupe auprès de la chaîne — rien n'a été envoyé. Réessayez dans un instant."
   },
   "vault": {
     "connect_wallet": "Connecter le portefeuille",

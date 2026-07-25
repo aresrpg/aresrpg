@@ -12,8 +12,8 @@ import { parse_move_abort, humanize_tx_error } from '../game/core/abort_copy.js'
 // that graph's host surface and never initializes or calls a wallet.
 const restore_browser_globals = install_browser_globals()
 
-// SIZE-LAW SPLIT (2026-07-20): verified_world_group_proof + create_world_fight moved to dungeon_engage_actions.js.
-const { verified_world_group_proof } = await import('./dungeon_engage_actions.js')
+// SIZE-LAW SPLIT (2026-07-20): the world-group door helper + create_world_fight moved to dungeon_engage_actions.js.
+const { world_group_door } = await import('./dungeon_engage_actions.js')
 const dungeon_engage_actions_source = readFileSync(new URL('./dungeon_engage_actions.js', import.meta.url), 'utf8')
 
 afterAll(restore_browser_globals)
@@ -40,9 +40,10 @@ const base = {
 
 describe('world fight proof attachment', () => {
   test('attaches only the locally verified full-stream witness', () => {
-    const witness = verified_world_group_proof(base)
-    expect(witness?.index).toBe(2)
-    expect(witness?.proof).toEqual(
+    const door = world_group_door(base)
+    expect(door.door).toBe('proof')
+    expect(door.proof?.index).toBe(2)
+    expect(door.proof?.proof).toEqual(
       hex_bytes(
         'c75b70b9207525ec6dc3baca7219cad412e62ee0ce9516e034a49d576a045d21' +
           'ca47040173b19e32ec5c387f00afbf58b30a69b7e95011cf875ce6772d5f4da2'
@@ -50,11 +51,41 @@ describe('world fight proof attachment', () => {
     )
   })
 
-  test('returns null for a root mismatch or consumed target', () => {
+  // ISSUE #810: a proof we cannot compose used to return null, and null took the proofless door in silence.
+  // Every un-provable outcome is now a TYPED refusal at this seam — there is no second door to fall into.
+  test('a root mismatch or a consumed target BLOCKS — it never degrades to the proofless door', () => {
     const bad_root = [...base.commitment.root]
     bad_root[0] ^= 1
-    expect(verified_world_group_proof({ ...base, commitment: { ...base.commitment, root: bad_root } })).toBeNull()
-    expect(verified_world_group_proof({ ...base, zone: { ...base.zone, mob_bitmap: [0b100] } })).toBeNull()
+    expect(world_group_door({ ...base, commitment: { ...base.commitment, root: bad_root } })).toEqual({
+      door: 'blocked',
+      reason: 'commitment_mismatch',
+    })
+    expect(world_group_door({ ...base, zone: { ...base.zone, mob_bitmap: [0b100] } })).toEqual({
+      door: 'blocked',
+      reason: 'consumed',
+    })
+    expect(world_group_door({ ...base, spawn_id: '999' })).toEqual({ door: 'blocked', reason: 'stale_stream' })
+    expect(world_group_door({ ...base, mob_template_id: '0x99' })).toEqual({ door: 'blocked', reason: 'stale_stream' })
+    expect(world_group_door({ ...base, zone: null })).toEqual({ door: 'blocked', reason: 'zone_unreadable' })
+  })
+
+  // The one legal proofless case: a zone searched before commitments existed has nothing to prove against, so
+  // the derivation door is EXPLICIT here — a named branch with its own reason, not a swallowed failure.
+  test('an uncommitted zone takes the derivation door explicitly', () => {
+    expect(world_group_door({ ...base, commitment: null })).toEqual({ door: 'derivation', reason: 'uncommitted_zone' })
+  })
+
+  test('the blocked door refuses BEFORE compose and BEFORE sign — no proofless submit', () => {
+    const blocked_at = dungeon_engage_actions_source.indexOf("if (group_door.door === 'blocked')")
+    const compose_at = dungeon_engage_actions_source.indexOf('create_fight_ptb(ctx_of(sdk))(', blocked_at)
+    const sign_at = dungeon_engage_actions_source.indexOf("await sign(tx, i18n.t('fights.action_engage')", blocked_at)
+    expect(blocked_at, 'an unprovable group refuses at the seam').toBeGreaterThan(-1)
+    expect(compose_at, 'the refusal precedes compose').toBeGreaterThan(blocked_at)
+    expect(sign_at, 'the refusal precedes submit').toBeGreaterThan(blocked_at)
+    // and the ONLY witness the PTB can receive is a composed one
+    expect(dungeon_engage_actions_source).toContain(
+      "group_proof: group_door.door === 'proof' ? group_door.proof : null"
+    )
   })
 })
 

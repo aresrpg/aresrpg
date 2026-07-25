@@ -2440,7 +2440,8 @@
     "delete_items_equipped": "Dieser Charakter hat noch Gegenstände angelegt. Lege alles ab und versuche es erneut.",
     "delete_unfinished_fight": "Dieser Charakter hat ein ungeöffnetes Kampfergebnis. Öffne es zuerst und versuche es erneut.",
     "delete_in_dungeon": "Dieser Charakter ist mitten in einem Verlies. Verlasse es zuerst oder brich den Durchlauf ab.",
-    "sponsor_zklogin_only": "Gesponsertes Gas gilt nur für die Google-Anmeldung — dieses Wallet zahlt sein eigenes Gas."
+    "sponsor_zklogin_only": "Gesponsertes Gas gilt nur für die Google-Anmeldung — dieses Wallet zahlt sein eigenes Gas.",
+    "group_proof_unavailable": "Diese Gruppe konnte nicht gegen die Chain geprüft werden — es wurde nichts gesendet. Versuche es gleich noch einmal."
   },
   "vault": {
     "connect_wallet": "Wallet verbinden",

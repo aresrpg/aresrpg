@@ -58,7 +58,8 @@ function team_bound() {
 /**
  * PURE composer: zone state + world doc (+ the dial) → live spawn rows. Exported for tests and for callers
  * that already hold both reads.
- * @param {{ seed:string|number, discovered_at_ms:number, mob_bitmap:number[], res_bitmap:number[] }} state
+ * @param {{ seed:string|number, discovered_at_ms:number, mob_bitmap:number[], res_bitmap:number[],
+ *   group_root?:number[]|Uint8Array|null }} state the commitment root rides along: it selects the derivation
  * @param {number} zx @param {number} zy @param {any} world @param {number} bound
  */
 export function rows_from_state(state, zx, zy, world, bound) {
