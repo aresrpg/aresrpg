@@ -74,6 +74,8 @@ export default [
     // encyclopedia/simulator view, but it may never feed the fight reducer or its live cast adapter again.
     files: [
       'packages/fight/src/**/*.{js,ts,tsx}',
+      // the package's tests live in test/ (src is source only) — same door law, same scope
+      'packages/fight/test/**/*.{js,ts,tsx}',
       'packages/frontend/src/game/core/modules/fight.js',
       'packages/frontend/src/game/screens/hud/world/DungeonBoard.jsx',
     ],
