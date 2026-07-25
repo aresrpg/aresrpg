@@ -44,7 +44,7 @@ levels, seats and rooms are JSON numbers. IDs/addresses are canonical `0x…` he
 | `0x2::dynamic_field::Field` **object** (kiosk DOF wrapper) | `dynamic_field` | `/v1/characters` `kiosk_id` — generic kiosk discovery (`ares_snapshot`; allowlist-exempt) |
 | `aresrpg_fight::settlement::FightOutcome` **object** | `settlement` | `/v1/pending-outcomes` (`ares_snapshot`; object create/delete) |
 | `aresrpg_game::zones::Zone` **DF object** (World UID) | `dynamic_field::Field<zones::ZoneKey>` | `/v1/zones?world=&zone=` live spawn roster (`ares_snapshot`; allowlist-exempt DF hop) |
-| `aresrpg_game::zones::ZoneGroupCommitment` **DF object** (World UID) | `dynamic_field::Field<zones::ZoneGroupRootKey>` | `/v1/zones?world=&zone=` `group_root`/`group_count` — the fight-create diet's claim-witness ingredient (`ares_snapshot`) |
+| `aresrpg_game::zones::ZoneGroupCommitment` **DF object** (World UID) | `dynamic_field::Field<zones::ZoneGroupRootKey>` | `/v1/zones?world=&zone=` `group_root`/`group_count` — the claim-witness ingredient AND the derivation-format byte, `docs/ZONE_COMPOSITION.md` (`ares_snapshot`) |
 | `aresrpg::loot_box::PetBoxClaim` **object** | `loot_box` | `/v1/pet-claims` (`ares_snapshot`; object create/delete) |
 | `aresrpg::forgemagie` events | `forgemagie` | `/v1/taux` (`ares_snapshot`) |
 
@@ -501,11 +501,12 @@ the event totals for live counts. Only discovered zones exist as data (§17.18).
 Two view forms:
 - `?world=` → the discovered-zone LIST (counts only) — the compass / discovery overview.
 - `?world=&zone=zx:zy` → ONE zone WITH its raw derivation state (`seed`, `mob_bitmap`,
-  `res_bitmap`) plus the fight-create diet's **group commitment** (`group_root`, `group_count`).
+  `res_bitmap`) plus the zone's **group commitment** (`group_root`, `group_count`).
   The frontend's `zone_rows` composer derives the exact live spawn rows from this state and the
-  World tables; the SDK's `compose_mob_group_proof` composes the ≤6-level claim WITNESS from the
-  FULL (empty-bitmap) stream + the commitment, failing shut to the original claim door on any
-  mismatch. An undiscovered zone → empty `zones` array (the honest "unsearched" signal).
+  World tables; the SDK's `compose_mob_group_proof` composes the claim WITNESS from the FULL
+  (empty-bitmap) stream + the commitment — a ≤6-level Merkle path on a format-1 zone, an EMPTY
+  proof vector on a format-2 one — failing shut to the original claim door on any mismatch. An
+  undiscovered zone → empty `zones` array (the honest "unsearched" signal).
 
 ```jsonc
 { "world":"0x…", "zx":7, "zy":9, "discovered":true, "discovered_at_ms":170…,
@@ -522,9 +523,14 @@ Two view forms:
 
 `seed` is served as a STRING (a full random u64 > 2⁵³). `discovered_at_ms` is served RAW
 (lazy-accrual law — the client owns the §17.1 TTL math; the indexer never pre-computes it).
-`group_root` is the 32-byte Blake2b-256 duplicate-last Merkle root `zones::search_zone` commits over
-the FULL derived mob-group stream (fight-create compute diet: claims verify a witness against it via
-`claim_mob_group_*_with_proof` instead of re-deriving — 577.8M → 7.32M MIST computation at G=64);
+`group_root` is the commitment `zones::search_zone` writes over the FULL derived mob-group stream,
+and its LEADING BYTE decides both the zone's placement algorithm and what a valid claim witness is —
+the two formats and the whole rule live in `docs/ZONE_COMPOSITION.md`, which this field is one
+consumer of. A bare 32-byte digest is the format-1 duplicate-last Blake2b-256 Merkle root, where the
+`claim_mob_group_*_with_proof` diet applies (≤6-level path instead of re-deriving — 577.8M → 7.32M
+MIST at G=64). A 33-byte `0x02 ‖ digest` is a format-2 whole-set commitment: no tree, no siblings,
+the chain re-derives and the diet's numbers do NOT apply. Serving the field verbatim is what lets the
+client dispatch at all — a composer that drops it derives the legacy world.
 `group_count` is that stream's size, INDEPENDENT of consumption. Search (re)upserts the commitment in
 the SAME tx that rolls the zone state, so both snapshot arms re-emit together and the doc stays
 intra-coherent; a pre-diet zone never gets the fields → the view serves nulls → clients keep the old
