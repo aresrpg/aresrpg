@@ -27,9 +27,18 @@
 // coarse-then-fine, and never re-samples/redraws the terrain per frame — only the marker/arrow overlay
 // redraws on pose/hover change, on its OWN canvas layer so that stays cheap regardless of terrain size).
 
+import { HACK_LATTICE, HACK_PALETTE, hack_css_hex, hack_css_rgba } from '@aresrpg/engine3/hack'
+
 /** Oblique ground-plane squash (screen-fixed tilt) — lower = more tilted/3-D, higher = more top-down. Tuned
  *  to the Cube-World reference (a strongly tilted slab). */
 export const MAP_TILT = 0.48
+
+/** HACK MODE: the flat world's map height — any constant works (nothing reads it as terrain), so the map
+ *  reuses the world plane's own ground y to keep the two readings literally the same number. */
+const HACK_GROUND_MAP_Y = 137
+/** Below this on-screen pitch a lattice is dropped instead of drawn — sub-pixel lines alias into grey mush
+ *  (the same "dim it rather than draw it thin" judgement the world grid's shader makes with fwidth). */
+const MIN_LATTICE_PX = 3.5
 /** Heading-up rotation binding to camera yaw. DERIVED (not guessed) from the proven compass convention
  *  (compass_math.js): the rig's forward is (-sin yaw, -cos yaw), so rotating a map element by θ = yaw makes
  *  camera-forward project to straight UP. ONE home — the small map's terrain rotation (use_minimap.js) AND
@@ -256,9 +265,6 @@ export function render_oblique(ctx, grid, o) {
   const { n, span, center_x, center_z, heights, shaded, prominence, ref_h, order, depth } = grid
   const cx = o.cx ?? size / 2
   const cy = o.cy ?? size / 2
-  // the north-tick's orbit radius must clear EVERY edge from the (possibly off-centre) anchor, not just
-  // assume a symmetric half-frame — the tightest of the 4 clearances bounds it safely in every direction.
-  const r = Math.min(cx, size - cx, cy, size - cy) - 1
   const cos = Math.cos(theta)
   const sin = Math.sin(theta)
   const step = span / n
@@ -310,6 +316,32 @@ export function render_oblique(ctx, grid, o) {
     ctx.fillStyle = `rgb(${shaded[o3]},${shaded[o3 + 1]},${shaded[o3 + 2]})`
     ctx.fillRect(sx - tile_w / 2, top_y - top_h / 2, tile_w, top_h)
   }
+
+  draw_oblique_overlay(ctx, grid, o)
+}
+
+/**
+ * The markers + player arrow + north tick of an OBLIQUE map, on their own — extracted so the terrain slab
+ * (render_oblique) and the hack-mode lattice (render_hack_grid_map) share ONE marker projection instead of
+ * two that can drift apart. Markers are lifted to the surface under them, so on hack mode's constant-height
+ * ground every lift is identically zero and they simply sit on the grid.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {ReliefGrid} grid the slab markers are culled/lifted against
+ * @param {object} o same option bag render_oblique receives
+ * @param {number} o.size @param {number} o.ppb @param {number} o.tilt @param {number} o.height_scale
+ * @param {number} o.theta @param {number} o.player_x @param {number} o.player_z
+ * @param {number} [o.cx] @param {number} [o.cy]
+ * @param {Array<{x:number,z:number,kind:string,hot?:boolean}>} [o.markers] @param {boolean} [o.arrow]
+ * @returns {void}
+ */
+export function draw_oblique_overlay(ctx, grid, o) {
+  const { size, ppb, tilt, height_scale, theta, player_x, player_z } = o
+  const { heights, ref_h } = grid
+  const cx = o.cx ?? size / 2
+  const cy = o.cy ?? size / 2
+  const r = Math.min(cx, size - cx, cy, size - cy) - 1
+  const cos = Math.cos(theta)
+  const sin = Math.sin(theta)
 
   // entity markers — projected onto the tilted plane + lifted to the terrain top under them. Culled to the
   // SAMPLED SLAB's world footprint (round 4): the island floats inside the frame now, so a frame-edge cull
@@ -424,6 +456,118 @@ export function render_flat_overlay(ctx, grid, o) {
   const np = project_offset(0, -1, theta, 1)
   const nlen = Math.hypot(np.x, np.z) || 1
   draw_north_tick(ctx, c + (np.x / nlen) * r, c + (np.z / nlen) * r)
+}
+
+// ── HACK MODE — the minimap draws the RETRO GRID, never the terrain ───────────────────────────────
+// In hack mode the world IS a flat neon lattice, so a relief map of terrain the player cannot see would be
+// a lie (and a pointless cost). These two are the mode's map: a slab with NO probe calls at all, and an
+// analytic lattice painter. Both read hack_palette.js — the SAME numbers the world grid's shader derives
+// from — so the HUD and the world can never disagree about the palette or the lattice pitch.
+
+/**
+ * The hack-mode slab: a ReliefGrid of CONSTANT height and the hack ground colour, built without a single
+ * terrain probe (the perf win the rider asks for — the whole world_minimap_column pass disappears). Same
+ * shape as sample_relief_grid's output, so markers, the marker cull and the hit-tester keep working
+ * unchanged; a flat `heights` makes every lift/wall in the oblique overlay identically zero.
+ * @param {number} center_x @param {number} center_z @param {number} span @param {number} n
+ * @param {ReliefGrid} [prev] a same-`n` grid to reuse the buffers of
+ * @returns {ReliefGrid}
+ */
+export function hack_relief_grid(center_x, center_z, span, n, prev) {
+  const reuse = prev && prev.n === n
+  const heights = reuse ? prev.heights : new Float32Array(n * n)
+  const shaded = reuse ? prev.shaded : new Uint8Array(n * n * 3)
+  const prominence = reuse ? prev.prominence : new Float32Array(n * n)
+  const order = reuse ? prev.order : new Int32Array(n * n)
+  const depth = reuse ? prev.depth : new Float32Array(n * n)
+  heights.fill(HACK_GROUND_MAP_Y)
+  prominence.fill(0)
+  const [gr, gg, gb] = [
+    (HACK_PALETTE.ground >> 16) & 0xff,
+    (HACK_PALETTE.ground >> 8) & 0xff,
+    HACK_PALETTE.ground & 0xff,
+  ]
+  for (let i = 0; i < n * n; i++) {
+    shaded[i * 3] = gr
+    shaded[i * 3 + 1] = gg
+    shaded[i * 3 + 2] = gb
+  }
+  return { n, span, center_x, center_z, heights, shaded, prominence, ref_h: HACK_GROUND_MAP_Y, order, depth }
+}
+
+/**
+ * Paints the retrowave lattice — the minimap's answer to the world's grid quad. Analytic: two nested line
+ * loops over the visible world window, projected with the map's own rotation + oblique squash, so it costs
+ * a few dozen strokes regardless of view distance (no sampling, no per-cell fill). The lattice is drawn in
+ * WORLD space and projected, so the lines stay locked to the same blocks the world grid marks and slide
+ * under the player exactly as the ground does.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {object} o
+ * @param {number} o.size viewport side (px) @param {number} o.ppb pixels per block
+ * @param {number} o.tilt oblique squash (1 = flat/top-down, MAP_TILT = the small map's tilted slab)
+ * @param {number} o.theta heading rotation (rad) @param {number} o.player_x @param {number} o.player_z
+ * @param {number} o.span world side (blocks) the map covers
+ * @param {number} [o.cx] anchor x (px, default size/2) @param {number} [o.cy] anchor y (px, default size/2)
+ * @returns {void}
+ */
+export function render_hack_grid_map(ctx, o) {
+  const { size, ppb, tilt, theta, player_x, player_z, span } = o
+  const cx = o.cx ?? size / 2
+  const cy = o.cy ?? size / 2
+  const cos = Math.cos(theta)
+  const sin = Math.sin(theta)
+  const half = span / 2
+  ctx.clearRect(0, 0, size, size) // unpainted px stay transparent — the map floats over the live game
+
+  /** world (wx,wz) → canvas px, through the same rotate-then-squash the terrain slab uses. */
+  const to_screen = (wx, wz) => {
+    const dx = wx - player_x
+    const dz = wz - player_z
+    return { x: cx + (dx * cos - dz * sin) * ppb, y: cy + (dx * sin + dz * cos) * ppb * tilt }
+  }
+  // the ground slab itself, as a rotated quad — the dark plate the neon sits on
+  ctx.beginPath()
+  for (const [ox, oz] of [
+    [-half, -half],
+    [half, -half],
+    [half, half],
+    [-half, half],
+  ]) {
+    const p = to_screen(player_x + ox, player_z + oz)
+    ctx.lineTo(p.x, p.y)
+  }
+  ctx.closePath()
+  ctx.fillStyle = hack_css_hex(HACK_PALETTE.ground)
+  ctx.fill()
+
+  // MINOR then MAJOR so a major line always paints over the minor it shares a block edge with. Lines are
+  // snapped to the world lattice (the same "one line = one block" contract the world grid keeps), and the
+  // minor pitch is skipped entirely once it would draw sub-pixel — a grey mush at region zoom.
+  const passes = [
+    { pitch: HACK_LATTICE.minor_m, color: HACK_PALETTE.grid_minor, alpha: 0.5, width: 1 },
+    { pitch: HACK_LATTICE.major_m, color: HACK_PALETTE.grid_major, alpha: 0.95, width: 1.4 },
+  ]
+  for (const { pitch, color, alpha, width } of passes) {
+    if (pitch * ppb < MIN_LATTICE_PX) continue
+    ctx.strokeStyle = hack_css_rgba(color, alpha)
+    ctx.lineWidth = width
+    ctx.beginPath()
+    const x0 = Math.ceil((player_x - half) / pitch) * pitch
+    for (let wx = x0; wx <= player_x + half; wx += pitch) {
+      const a = to_screen(wx, player_z - half)
+      const b = to_screen(wx, player_z + half)
+      ctx.moveTo(a.x, a.y)
+      ctx.lineTo(b.x, b.y)
+    }
+    const z0 = Math.ceil((player_z - half) / pitch) * pitch
+    for (let wz = z0; wz <= player_z + half; wz += pitch) {
+      const a = to_screen(player_x - half, wz)
+      const b = to_screen(player_x + half, wz)
+      ctx.moveTo(a.x, a.y)
+      ctx.lineTo(b.x, b.y)
+    }
+    ctx.stroke()
+  }
 }
 
 /** Nearest grid cell index for a world (x,z), or -1 if outside the sampled slab — the marker cull AND the

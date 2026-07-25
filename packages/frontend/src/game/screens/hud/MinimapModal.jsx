@@ -45,8 +45,11 @@ import { spawn_markers } from '@aresrpg/world/spawns_zones'
 
 import { use_game_state, context } from '../../store.js'
 import { use_spawns } from '../../../world-shell/spawns_adapter.js'
+import { resolve_hack_mode } from './world/engine_flags_pref.js'
 import {
   sample_relief_grid,
+  hack_relief_grid,
+  render_hack_grid_map,
   render_flat_terrain,
   render_flat_overlay,
   grid_index_at,
@@ -104,6 +107,8 @@ export function MinimapModal({ onClose }) {
   // markers (so they never drift apart); the player ARROW still tracks the LIVE heading (cheap — see below).
   const grid_ref = useRef(/** @type {import('./minimap_engine.js').ReliefGrid | null} */ (null))
   const origin_ref = useRef({ x: 0, z: 0 })
+  // same resolver the world + small map read (one home) — hack sessions map the grid, not the terrain.
+  const hack_map = resolve_hack_mode(location.search)
   const [grid_ver, set_grid_ver] = useState(0)
 
   // ESC closes (modal idiom).
@@ -121,6 +126,13 @@ export function MinimapModal({ onClose }) {
     const pose0 = context.get_state().player_pose
     if (!pose0) return undefined
     origin_ref.current = { x: pose0.x, z: pose0.z }
+    // HACK MODE: a flat lattice needs no sampling at all — build the slab and skip BOTH passes (the
+    // progressive coarse→fine fill exists only to hide terrain-probe cost that no longer happens).
+    if (hack_map) {
+      grid_ref.current = hack_relief_grid(pose0.x, pose0.z, SPAN, COARSE_SAMPLE_N)
+      set_grid_ver((v) => v + 1)
+      return undefined
+    }
     try {
       grid_ref.current = sample_relief_grid(pose0.x, pose0.z, SPAN, COARSE_SAMPLE_N, world_minimap_column)
       set_grid_ver((v) => v + 1)
@@ -147,8 +159,11 @@ export function MinimapModal({ onClose }) {
     const ctx = setup_dpr_canvas(canvas, SIZE)
     if (!ctx) return
     const origin = origin_ref.current
-    render_flat_terrain(ctx, grid, { size: SIZE, ppb, theta: 0, player_x: origin.x, player_z: origin.z })
-  }, [grid_ver, SIZE, ppb])
+    const draw = { size: SIZE, ppb, theta: 0, player_x: origin.x, player_z: origin.z }
+    // tilt 1 = the expanded map's flat, north-up read (the small map passes MAP_TILT for its oblique slab).
+    if (hack_map) render_hack_grid_map(ctx, { ...draw, tilt: 1, span: grid.span })
+    else render_flat_terrain(ctx, grid, draw)
+  }, [grid_ver, SIZE, ppb, hack_map])
 
   const markers = useMemo(
     () => spawns.map((s) => ({ x: s.x, z: s.z, kind: s.kind, key: s.key, hot: s.key === hover?.key })),

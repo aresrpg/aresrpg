@@ -5,7 +5,19 @@
 // depth-sort / tile+wall fillRects) is proven by the headless side-by-side screenshot, not here.
 import { describe, expect, test } from 'bun:test'
 
-import { sample_relief_grid, project_offset, day_remap, lift_px, angle_lerp, MAP_TILT } from './minimap_engine.js'
+import { HACK_PALETTE } from '@aresrpg/engine3/hack'
+
+import {
+  sample_relief_grid,
+  hack_relief_grid,
+  render_hack_grid_map,
+  grid_index_at,
+  project_offset,
+  day_remap,
+  lift_px,
+  angle_lerp,
+  MAP_TILT,
+} from './minimap_engine.js'
 
 describe('sample_relief_grid — the relief grid', () => {
   test('flat window: shade neutral (colour = the fixed-day grade), zero INTERIOR prominence, right shape', () => {
@@ -149,3 +161,82 @@ describe('angle_lerp — round-5 eased heading (shortest-path, wrap-safe)', () =
     expect(next).toBeCloseTo(0.3, 6)
   })
 })
+
+describe('hack mode — the minimap draws the RETRO GRID, never the terrain', () => {
+  test('hack_relief_grid builds the slab with ZERO terrain probes (flat, ground-coloured, right shape)', () => {
+    const n = 8
+    const g = hack_relief_grid(40, -24, 64, n)
+    expect(g.heights.length).toBe(n * n)
+    expect(g.shaded.length).toBe(n * n * 3)
+    // flat by construction: one height everywhere ⇒ every marker lift and every extruded wall is zero
+    expect([...new Set(g.heights)]).toEqual([g.ref_h])
+    expect([...new Set(g.prominence)]).toEqual([0])
+    // the plate is the world grid's own ground colour — read from the shared palette, never re-typed here
+    const expected = [(HACK_PALETTE.ground >> 16) & 0xff, (HACK_PALETTE.ground >> 8) & 0xff, HACK_PALETTE.ground & 0xff]
+    expect([g.shaded[0], g.shaded[1], g.shaded[2]]).toEqual(expected)
+    // the slab keeps sample_relief_grid's contract, so the marker cull/hit-test work unchanged
+    expect(grid_index_at(g, 40, -24)).toBeGreaterThanOrEqual(0)
+    expect(grid_index_at(g, 40 + 999, -24)).toBe(-1)
+  })
+
+  test('hack_relief_grid reuses a same-n grid buffers (no per-resample allocation)', () => {
+    const prev = hack_relief_grid(0, 0, 64, 8)
+    const next = hack_relief_grid(10, 10, 64, 8, prev)
+    expect(next.heights).toBe(prev.heights)
+    expect(next.center_x).toBe(10)
+  })
+
+  test('render_hack_grid_map strokes BOTH lattices at the shared pitches, and no terrain path runs', () => {
+    const calls = []
+    const ctx = fake_ctx(calls)
+    render_hack_grid_map(ctx, { size: 200, ppb: 4, tilt: 1, theta: 0, player_x: 0, player_z: 0, span: 64 })
+    const strokes = calls.filter((c) => c.op === 'stroke')
+    expect(strokes.length).toBe(2) // one pass per lattice (minor, then major over it)
+    // every line lands on the world lattice the WORLD grid uses — the one-home contract with hack_palette
+    const xs = calls.filter((c) => c.op === 'moveTo').map((c) => c.args[0])
+    expect(xs.length).toBeGreaterThan(0)
+    expect(new Set(calls.map((c) => c.op)).has('fill')).toBe(true) // the dark ground plate under the neon
+  })
+
+  test('a lattice whose on-screen pitch is sub-pixel is DROPPED, not drawn as mush', () => {
+    const calls = []
+    // ppb 0.05 ⇒ minor pitch (1 m) is 0.05 px and major (8 m) is 0.4 px — both below the floor
+    render_hack_grid_map(fake_ctx(calls), {
+      size: 200,
+      ppb: 0.05,
+      tilt: 1,
+      theta: 0,
+      player_x: 0,
+      player_z: 0,
+      span: 64,
+    })
+    expect(calls.filter((c) => c.op === 'stroke').length).toBe(0)
+  })
+})
+
+/** A recording 2-D context double — the render fns are imperative, so the test asserts the CALLS. */
+function fake_ctx(calls) {
+  const rec =
+    (op) =>
+    (...args) =>
+      calls.push({ op, args })
+  return {
+    clearRect: rec('clearRect'),
+    beginPath: rec('beginPath'),
+    closePath: rec('closePath'),
+    moveTo: rec('moveTo'),
+    lineTo: rec('lineTo'),
+    fill: rec('fill'),
+    stroke: rec('stroke'),
+    fillRect: rec('fillRect'),
+    set fillStyle(v) {
+      calls.push({ op: 'fillStyle', args: [v] })
+    },
+    set strokeStyle(v) {
+      calls.push({ op: 'strokeStyle', args: [v] })
+    },
+    set lineWidth(v) {
+      calls.push({ op: 'lineWidth', args: [v] })
+    },
+  }
+}

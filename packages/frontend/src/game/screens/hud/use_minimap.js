@@ -21,9 +21,14 @@ import { world_minimap_column } from '@aresrpg/engine3'
 import { use_game_state, context } from '../../store.js'
 import { use_world_binding } from '../../../world-shell/session_gate.js'
 import { instrument_cpu_callback } from '../../cpu_span.js'
+import { resolve_hack_mode } from './world/engine_flags_pref.js'
+
 import {
   sample_relief_grid,
+  hack_relief_grid,
   render_oblique,
+  render_hack_grid_map,
+  draw_oblique_overlay,
   angle_lerp,
   setup_dpr_canvas,
   MAP_TILT,
@@ -87,6 +92,9 @@ export function use_minimap(canvas_ref, { size, view_radius_blocks, sample_n, ma
     return p ? `${Math.round(p.x / RESAMPLE_STEP)}:${Math.round(p.z / RESAMPLE_STEP)}` : null
   })
   const world_id = use_world_binding((s) => s.world)
+  // The SAME resolver embed_voxel.js reads to choose the world presentation — one home, so the map can
+  // never disagree with the world about which mode the session is in. Read once: the toggle live-reboots.
+  const hack_map = resolve_hack_mode(location.search)
 
   const grid_ref = useRef(/** @type {import('./minimap_engine.js').ReliefGrid | null} */ (null))
   const grid_ver_ref = useRef(0)
@@ -100,7 +108,7 @@ export function use_minimap(canvas_ref, { size, view_radius_blocks, sample_n, ma
 
   // Warm the engine colour table once (first world_minimap_column triggers a one-shot map-colour bake) off idle.
   useEffect(() => {
-    if (!enabled) return undefined
+    if (!enabled || hack_map) return undefined // hack mode never probes terrain — nothing to warm
     const warm = () => {
       try {
         world_minimap_column(0, 0)
@@ -111,7 +119,7 @@ export function use_minimap(canvas_ref, { size, view_radius_blocks, sample_n, ma
     const id =
       typeof requestIdleCallback === 'function' ? requestIdleCallback(warm, { timeout: 1500 }) : setTimeout(warm, 200)
     return () => (typeof cancelIdleCallback === 'function' ? cancelIdleCallback(id) : clearTimeout(id))
-  }, [enabled])
+  }, [enabled, hack_map])
 
   // LAZY RESAMPLE — rebuild the cached relief grid centred on the player's current cell.
   useEffect(() => {
@@ -119,12 +127,16 @@ export function use_minimap(canvas_ref, { size, view_radius_blocks, sample_n, ma
     const pose = context.get_state().player_pose
     if (!pose) return
     try {
-      grid_ref.current = sample_relief_grid(pose.x, pose.z, tex_span, sample_n, world_minimap_column, grid_ref.current ?? undefined)
+      // HACK MODE: the world is a flat neon lattice, so the map is too — and it costs NO terrain probes
+      // (the whole world_minimap_column pass is skipped, not merely hidden).
+      grid_ref.current = hack_map
+        ? hack_relief_grid(pose.x, pose.z, tex_span, sample_n, grid_ref.current ?? undefined)
+        : sample_relief_grid(pose.x, pose.z, tex_span, sample_n, world_minimap_column, grid_ref.current ?? undefined)
       grid_ver_ref.current += 1
     } catch (err) {
       console.warn('[minimap] terrain resample failed', err) // no silent blank map
     }
-  }, [enabled, cell_key, world_id, tex_span, sample_n])
+  }, [enabled, cell_key, world_id, tex_span, sample_n, hack_map])
 
   // PER-FRAME DRAW — re-project only when the (eased) yaw/position moved (or the grid was just resampled).
   useEffect(() => {
@@ -172,7 +184,7 @@ export function use_minimap(canvas_ref, { size, view_radius_blocks, sample_n, ma
       last_z = pose.z
       last_ver = grid_ver_ref.current
       last_markers = markers_ref.current
-      render_oblique(ctx, grid, {
+      const draw = {
         size,
         ppb,
         tilt: MAP_TILT,
@@ -183,10 +195,16 @@ export function use_minimap(canvas_ref, { size, view_radius_blocks, sample_n, ma
         cx,
         cy,
         markers: markers_ref.current,
-      })
+      }
+      // HACK MODE: the retro lattice replaces the terrain slab; the marker/arrow/north overlay is the SAME
+      // pass both presentations use, so markers behave identically either way.
+      if (hack_map) {
+        render_hack_grid_map(ctx, { ...draw, span: grid.span })
+        draw_oblique_overlay(ctx, grid, draw)
+      } else render_oblique(ctx, grid, draw)
     }
     const frame = instrument_cpu_callback('render', frame_body)
     raf = requestAnimationFrame(frame)
     return () => cancelAnimationFrame(raf)
-  }, [enabled, size, ppb, height_scale, canvas_ref, cx, cy])
+  }, [enabled, size, ppb, height_scale, canvas_ref, cx, cy, hack_map])
 }
