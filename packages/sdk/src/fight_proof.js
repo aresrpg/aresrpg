@@ -6,8 +6,15 @@ import { fromHex } from '@mysten/sui/utils'
 
 const LEAF_DOMAIN = new TextEncoder().encode('aresrpg.zone-group.leaf')
 const NODE_DOMAIN = new TextEncoder().encode('aresrpg.zone-group.node')
+const SET_DOMAIN = new TextEncoder().encode('aresrpg.zone-group.commitment')
 const MAX_GROUPS = 64
 const HASH_BYTES = 32
+
+// The two commitment shapes `zone_gen::mob_group_commitment_format` reports off a stored root, mirrored by
+// `@aresrpg/sim`'s `commitment_format` on the derivation side (this SDK ships no sim dependency, so the byte
+// rule is stated once per side of that boundary and pinned to captured chain bytes by test).
+const FORMAT_MERKLE = 1 // a bare 32-byte Merkle root — legacy zones, witnessed by a sibling path
+const FORMAT_SET = 2 // `0x02 ‖ blake2b256(domain ‖ 0x02 ‖ bcs(MobGroupSet))` — lattice zones, NO tree
 
 // ID is a one-address-field Move struct, so its BCS bytes are exactly the address bytes.
 const mob_group_leaf_bcs = bcs.struct('MobGroupLeaf', {
@@ -23,6 +30,25 @@ const mob_group_leaf_bcs = bcs.struct('MobGroupLeaf', {
   z: bcs.u32(),
   group_size: bcs.u16(),
   group_seed: bcs.u64(),
+})
+
+// The FORMAT-2 preimage: one whole-set struct, not a per-group leaf (`zone_gen::MobGroupSet`/`MobGroup`).
+const mob_group_bcs = bcs.struct('MobGroup', {
+  spawn_id: bcs.u64(),
+  template: bcs.Address,
+  x: bcs.u32(),
+  z: bcs.u32(),
+  group_size: bcs.u16(),
+  group_seed: bcs.u64(),
+})
+
+const mob_group_set_bcs = bcs.struct('MobGroupSet', {
+  world: bcs.Address,
+  zx: bcs.u32(),
+  zy: bcs.u32(),
+  zone_seed: bcs.u64(),
+  discovered_at_ms: bcs.u64(),
+  groups: bcs.vector(mob_group_bcs),
 })
 
 const concat_bytes = (...parts) => {
@@ -68,18 +94,31 @@ const normalized_id = (value, label) => {
   return value
 }
 
-const normalized_hash = value => {
+const COMMITMENT_SHAPE =
+  'group_root must be a 32-byte legacy root or a 33-byte `0x02 ‖ digest` set commitment'
+
+/**
+ * Decode a stored `ZoneGroupCommitment.root` into the derivation it selects — the client twin of
+ * `zone_gen::mob_group_commitment_format`. Anything else is a typed failure: an unknown commitment shape is a
+ * chain/client version skew, never a witness to guess at.
+ * @param {number[]|Uint8Array} value
+ * @returns {{ format:1|2, digest:Uint8Array }}
+ */
+const normalized_commitment = value => {
   if (!Array.isArray(value) && !(value instanceof Uint8Array))
-    throw new Error('[fight-proof] group_root must be 32 bytes')
+    throw new Error(`[fight-proof] ${COMMITMENT_SHAPE}`)
   const out = Uint8Array.from(value)
   if (
-    out.length !== HASH_BYTES ||
     Array.from(value).some(
       byte => !Number.isInteger(byte) || byte < 0 || byte > 255,
     )
   )
-    throw new Error('[fight-proof] group_root must be 32 bytes')
-  return out
+    throw new Error(`[fight-proof] ${COMMITMENT_SHAPE}`)
+  if (out.length === HASH_BYTES)
+    return { format: FORMAT_MERKLE, digest: out }
+  if (out.length === HASH_BYTES + 1 && out[0] === FORMAT_SET)
+    return { format: FORMAT_SET, digest: out.subarray(1) }
+  throw new Error(`[fight-proof] ${COMMITMENT_SHAPE}`)
 }
 
 const bytes_equal = (left, right) =>
@@ -129,6 +168,68 @@ export function mob_group_leaf_bytes({
     })
     .toBytes()
 }
+
+/**
+ * Serialize the exact `zone_gen::MobGroupSet` BCS layout — the FORMAT-2 commitment preimage's payload. Exported
+ * as a parity/audit seam beside {@link mob_group_leaf_bytes}; groups are the FULL derivation stream in stream
+ * order (the set commitment covers every search-time group, consumed siblings included).
+ * @param {{ world_id:string, zx:number, zy:number, zone_seed:string|number|bigint,
+ *   discovered_at_ms:string|number|bigint, groups:Array<{ spawn_id:string|number|bigint, template_id:string,
+ *     x:number, z:number, size:number, group_seed:string|number|bigint }> }} set
+ * @returns {Uint8Array}
+ */
+export function mob_group_set_bytes({
+  world_id,
+  zx,
+  zy,
+  zone_seed,
+  discovered_at_ms,
+  groups,
+}) {
+  return mob_group_set_bcs
+    .serialize({
+      world: normalized_id(world_id, 'world_id'),
+      zx: normalized_number(zx, 32, 'zx'),
+      zy: normalized_number(zy, 32, 'zy'),
+      zone_seed: normalized_unsigned(zone_seed, 64, 'zone_seed'),
+      discovered_at_ms: normalized_unsigned(
+        discovered_at_ms,
+        64,
+        'discovered_at_ms',
+      ),
+      groups: groups.map((group, position) => ({
+        spawn_id: normalized_unsigned(
+          group.spawn_id,
+          64,
+          `groups[${position}].spawn_id`,
+        ),
+        template: normalized_id(
+          group.template_id,
+          `groups[${position}].template_id`,
+        ),
+        x: normalized_number(group.x, 32, `groups[${position}].x`),
+        z: normalized_number(group.z, 32, `groups[${position}].z`),
+        group_size: normalized_number(group.size, 16, `groups[${position}].size`),
+        group_seed: normalized_unsigned(
+          group.group_seed,
+          64,
+          `groups[${position}].group_seed`,
+        ),
+      })),
+    })
+    .toBytes()
+}
+
+// The FORMAT-2 digest: ONE hash over the whole set, domain-separated and format-tagged exactly as
+// `zone_gen::mob_group_commitment` builds it before prefixing the tag byte.
+const set_digest = (context, groups) =>
+  blake2b_256(
+    concat_bytes(
+      SET_DOMAIN,
+      Uint8Array.from([FORMAT_SET]),
+      mob_group_set_bytes({ ...context, groups }),
+    ),
+  )
 
 const leaf_hash = (context, group) =>
   blake2b_256(
@@ -192,11 +293,40 @@ const proof_root = (leaf, proof, target_index) => {
  * @property {number} index
  * @property {{ spawn_id:string, template_id:string, x:number, z:number,
  *   group_size:number, group_seed:string }} facts
- * @property {number[]} proof flattened 32-byte sibling hashes
+ * @property {number[]} proof flattened 32-byte sibling hashes — EMPTY on a format-2 (lattice) zone, whose
+ *   commitment is a whole-set hash the chain re-derives rather than a tree
  */
 
 /**
- * Compose a duplicate-last Merkle witness from the FULL `@aresrpg/sim` derived mob-row stream. This fails shut:
+ * The witness bytes the claim door accepts for THIS commitment shape, or `null` when the locally rebuilt stream
+ * does not reproduce the stored commitment (fail shut — the caller keeps the derivation door).
+ *
+ * FORMAT 2 (lattice, `0x02 ‖ digest`): there is NO Merkle tree. `zone_gen::mob_group_commitment` hashes the whole
+ * `MobGroupSet` once, and `zones::resolve_mob_group` re-derives the stream on-chain to compare it — so the door
+ * takes an EMPTY proof vector and aborts 110 (`EBadGroupProof`) on a non-empty one. Reproducing the digest here is
+ * still what makes the witness honest: it proves our stream is the chain's stream before we name a group.
+ * FORMAT 1 (legacy, bare 32-byte root): the duplicate-last sibling path, replay-verified before it is handed out.
+ * @returns {number[]|null}
+ */
+const commitment_proof = (commitment, context, groups, target_index) => {
+  if (commitment.format === FORMAT_SET)
+    return bytes_equal(set_digest(context, groups), commitment.digest)
+      ? []
+      : null
+  const leaves = groups.map(group => leaf_hash(context, group))
+  if (!bytes_equal(root_of(leaves), commitment.digest)) return null
+  const proof = proof_of(leaves, target_index)
+  return bytes_equal(
+    proof_root(leaves[target_index], proof, target_index),
+    commitment.digest,
+  )
+    ? proof
+    : null
+}
+
+/**
+ * Compose the claim witness from the FULL `@aresrpg/sim` derived mob-row stream — a Merkle path on a legacy zone,
+ * an empty vector on a lattice zone (see {@link commitment_proof}). This fails shut:
  * malformed facts, a filtered/reordered row set, or any count/root mismatch returns `null`, so callers retain the
  * original derivation door. A returned witness has also been replay-verified locally against the chain commitment.
  * @param {{ world_id:string, zx:number, zy:number, zone_seed:string|number|bigint,
@@ -257,17 +387,9 @@ export function compose_mob_group_proof(input) {
         ).toString(),
       }
     })
-    const leaves = normalized_groups.map(group => leaf_hash(context, group))
-    const committed_root = normalized_hash(group_root)
-    if (!bytes_equal(root_of(leaves), committed_root)) return null
-    const proof = proof_of(leaves, target_index)
-    if (
-      !bytes_equal(
-        proof_root(leaves[target_index], proof, target_index),
-        committed_root,
-      )
-    )
-      return null
+    const commitment = normalized_commitment(group_root)
+    const proof = commitment_proof(commitment, context, normalized_groups, target_index)
+    if (proof == null) return null
     const group = normalized_groups[target_index]
     return {
       index: target_index,
@@ -327,7 +449,8 @@ const bit_consumed = (bitmap, index) =>
  *     group_root?:number[]|Uint8Array|null, group_count?:number|null }|null|undefined,
  *   world:object|null|undefined, team_bound?:number,
  *   derive_zone:(input:{ zone:{ seed:string|number|bigint, discovered_at_ms:number, mob_bitmap:number[],
- *     res_bitmap:number[] }, zx:number, zy:number, world:object, team_bound:number }) =>
+ *     res_bitmap:number[], group_root?:number[]|Uint8Array|null }, zx:number, zy:number, world:object,
+ *     team_bound:number }) =>
  *     Array<{ kind:string, index:number, spawn_id:string, template_id:string, x:number, z:number,
  *       size:number, group_seed:string }>,
  *   index?:number|string|bigint|null, spawn_id?:number|string|bigint|null,
@@ -369,6 +492,9 @@ export function mob_group_witness({
         discovered_at_ms: Number(zone.discovered_at_ms ?? 0),
         mob_bitmap: [],
         res_bitmap: [],
+        // The commitment root PICKS the derivation (lattice vs legacy placement) — dropping it here derived a
+        // different world than the chain's and the composer then failed shut on every lattice zone.
+        group_root: zone.group_root,
       },
       zx,
       zy,
