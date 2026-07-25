@@ -227,40 +227,67 @@ describe('§1 · CLASS A — the GAP WINDOW: the legacy arm holds a page it cann
   })
 })
 
-describe('§2 · CLASS B — the PAGE-SPLIT ordinal collision resurrects a dead fighter on the CORE arm', () => {
-  // ONE object version, TWO contiguous pages — the read layer cuts on seq, never on version. Page two's rows are
-  // re-stamped from ordinal 0 and overwrite page one's at the same coordinates; the killing `Hit` is among them.
+describe('§2 · CLASS B — a version SPLIT across pages keeps one continuous ordinal run', () => {
+  // ONE object version, TWO contiguous pages — the read layer cuts on seq, never on version. The intra-version
+  // ordinal is therefore derived from the chain's own `seq` (`seq - min(seq of that version)`, re-derived over every
+  // journal row received so far — v2/inbox.js `stamp_journal` / `rederive_journal`), never from a row's position in
+  // the page that carried it. The ordinal LAW is untouched: 0..n-1 within a version, the same coordinate the receipt
+  // lane stamps by position — §2.4 pins that the two lanes still land on it together.
   const split = [...boot(), page(200, rollover.slice(0, 3), 2, 8, 3), page(200, rollover.slice(3), 5, 8, 4)]
+  const DEAD_M0 = { cell: 9, hp: 0, alive: false, turn_number: 1 }
 
-  test('a version split across two pages folds identically only while the split has not landed', () => {
+  test('§2.1 — every beat of the split agrees, page one alone and page two landed', () => {
     const steps = fold_both(split)
-    expect(steps.at(-2).core, 'page one alone agrees').toEqual(steps.at(-2).legacy)
+    for (let i = 0; i < steps.length; i++)
+      expect(steps[i].core, `the arms diverged at step ${i}`).toEqual(steps[i].legacy)
   })
 
-  test('PINNED DEFECT — the core loses the killing Hit and the mob is alive again; the legacy arm is right', () => {
+  test('§2.2 — the killing Hit keeps its slot: the mob is dead on BOTH arms', () => {
     const after_split = fold_both(split).at(-1)
     // The legacy arm holds chain truth: the accept machine keys on the absolute seq, which no page split can shift.
-    expect(after_split.legacy.fighters.m0, 'legacy: dead, correctly').toEqual({
-      cell: 9,
-      hp: 0,
-      alive: false,
-      turn_number: 1,
-    })
-    // THE DEFECT, asserted as it stands today so the fix flips this test red: v2/inbox.js `journal_to_actions`
-    // re-stamps page two from ordinal 0, `admit_events` hands the slot to the newcomer, and the Hit is gone.
-    expect(after_split.core.fighters.m0, 'core: RESURRECTED — this is the bug, not the contract').toEqual({
-      cell: 9,
-      hp: 8,
-      alive: true,
-      turn_number: 1,
-    })
-    expect(diverging_fields(after_split.legacy, after_split.core)).toEqual(['fighters.m0.alive', 'fighters.m0.hp'])
+    expect(after_split.legacy.fighters.m0, 'legacy: dead, correctly').toEqual(DEAD_M0)
+    expect(after_split.core.fighters.m0, 'core: dead too — page two no longer overwrites page one').toEqual(DEAD_M0)
+    expect(diverging_fields(after_split.legacy, after_split.core)).toEqual([])
   })
 
-  test('the resurrection is PERMANENT — a further contiguous page never heals it', () => {
+  test('§2.3 — a further contiguous page leaves both arms at chain truth', () => {
     const trailing = [{ type: `${EV}TurnEnded`, parsedJson: { fight: F, is_mob: false, idx: 0 } }]
     const settled = fold_both([...split, page(210, trailing, 8, 9, 5)]).at(-1)
-    expect(settled.core.fighters.m0.alive, 'still standing').toBe(true)
+    expect(settled.core.fighters.m0.alive, 'still dead').toBe(false)
     expect(settled.legacy.fighters.m0.alive, 'still dead, correctly').toBe(false)
+    expect(diverging_fields(settled.legacy, settled.core)).toEqual([])
+  })
+
+  test('§2.4 — COORDINATE LAW: the receipt twin of a split version dedupes, it never double-folds', () => {
+    // My own tx proof lands the whole version at (200, 0..5) by position; the journal then redelivers it in two
+    // pages. Both lanes must resolve to the SAME coordinates or the tail folds twice (TurnStarted counts turns).
+    const receipt_only = fold_both([
+      ...boot(),
+      { msg: { type: 'receipt', fight_id: F, version: 200, receipt: { events: rollover } }, at: 3 },
+    ]).at(-1)
+    const with_journal = fold_both([
+      ...boot(),
+      { msg: { type: 'receipt', fight_id: F, version: 200, receipt: { events: rollover } }, at: 3 },
+      page(200, rollover.slice(0, 3), 2, 8, 4),
+      page(200, rollover.slice(3), 5, 8, 5),
+    ]).at(-1)
+    expect(with_journal.core, 'the journal confirmation changed nothing').toEqual(receipt_only.core)
+    expect(with_journal.core.fighters.m0, 'and the board is chain truth').toEqual(DEAD_M0)
+  })
+
+  test('§2.5 — THE CLASSES COMPOSE: a gap makes the walker re-drive from a MID-VERSION seq', () => {
+    // §1's gap window is what produces the straddle in the wild: the walker paginates ahead of a stale cursor, the
+    // legacy arm discards the un-placeable page, and the re-drive redelivers the version from its start — so the
+    // core sees page two BEFORE page one. The floor is a min over the received set, so page one's arrival lowers it
+    // and the whole version's rows move down together instead of colliding.
+    const redriven = [
+      ...boot(),
+      page(200, rollover.slice(3), 5, 8, 3), // ahead of the cursor: seqs 5,6,7 of a version that starts at 2
+      page(200, rollover.slice(0, 3), 2, 8, 4), // the re-drive, from the version's true start
+      page(200, rollover.slice(3), 5, 8, 5), // …and the rest, redelivered contiguously
+    ]
+    const settled = fold_both(redriven).at(-1)
+    expect(settled.core.fighters.m0, 'the core healed into chain truth').toEqual(DEAD_M0)
+    expect(diverging_fields(settled.legacy, settled.core), 'and both arms agree').toEqual([])
   })
 })

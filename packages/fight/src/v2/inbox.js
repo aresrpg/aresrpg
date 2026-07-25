@@ -90,24 +90,83 @@ export const batch_to_actions = (rows, { version, source, fight_id = null }) =>
   )
 
 /**
+ * Stamp a SET of journal rows with their intra-version ordinal, DERIVED from the chain's own dense per-fight `seq`:
+ * `seq - min(seq among the set's rows of that version)`. The read layer cuts pages on seq and NEVER on version
+ * (`rpc/api/views.js handle_fight_events` — the window is `[from, from+limit)`), so a row's position in the page
+ * that carried it is a DELIVERY ARTIFACT, not a coordinate: one version straddling a page boundary would re-stamp
+ * page two from ordinal 0 on top of page one (#761 — the killing `Hit` lost its slot and the corpse stood back up).
+ * The ordinal LAW is unchanged (0..n-1 within a version, the same coordinate the receipt lane stamps by position, so
+ * a journal row and its receipt twin still dedupe); only its derivation moves from page position to chain truth.
+ * Pure function of the SET — `min` is commutative — so re-deriving over a LARGER set is order-independent: a re-walk
+ * that redelivers an EARLIER page of the same version lowers the floor and every row of that version moves with it,
+ * together, instead of colliding. A row whose ordinal does not move is returned by IDENTITY (admission's
+ * idempotence short-circuit depends on it).
+ * @param {Array<Record<string, any>>} rows journal actions carrying `{ version, seq }`
+ * @returns {Array<Record<string, any>>}
+ */
+const stamp_journal = (rows) => {
+  /** @type {Record<number, number>} */
+  const floor = {}
+  for (const row of rows) {
+    const version = Number(row.version)
+    const seq = Number(row.seq)
+    if (!(version in floor) || seq < floor[version]) floor[version] = seq
+  }
+  return rows.map((row) => {
+    const event_idx = Number(row.seq) - floor[Number(row.version)]
+    return event_idx === row.event_idx ? row : { ...row, event_idx }
+  })
+}
+
+/**
  * Decode a JOURNAL batch's events into pure-data actions. Journal events are `{ kind, data, seq, version }` (not the
  * `{ type, parsedJson }` receipt shape), so each is reshaped onto the ONE decoder (`decode_fight_event` splits the
- * type suffix as `kind` and coerces numerics) and stamped with its OWN version + an intra-version ordinal (position
- * among events sharing that version — the seq densifies the same order). `seq` rides for the gap finding.
+ * type suffix as `kind` and coerces numerics) and stamped with its OWN version + the `seq`-derived intra-version
+ * ordinal (`stamp_journal`). `seq` rides on for the gap finding AND as the coordinate's chain-truth anchor —
+ * `admit_events` re-derives the ordinal over every journal row received so far, so a page boundary is invisible.
  * @param {any} rows the journal batch (wire-revived): `{ events:[{ kind, data, seq, version }], head }`
  * @returns {Array<Record<string, any>>}
  */
 export const journal_to_actions = (rows) => {
   const events = Array.isArray(rows?.events) ? rows.events : []
-  /** @type {Map<number, number>} */
-  const per_version = new Map()
-  return events.map((ev) => {
-    const version = Number(ev.version ?? 0)
-    const ordinal = per_version.get(version) ?? 0
-    per_version.set(version, ordinal + 1)
-    const decoded = decode_fight_event({ type: `journal::${ev.kind}`, parsedJson: ev.data ?? {} }) ?? { kind: ev.kind }
-    return { ...decoded, version, event_idx: ordinal, source: 'journal', seq: Number(ev.seq ?? ordinal) }
-  })
+  return stamp_journal(
+    events.map((ev, position) => {
+      const decoded = decode_fight_event({ type: `journal::${ev.kind}`, parsedJson: ev.data ?? {} }) ?? {
+        kind: ev.kind,
+      }
+      return { ...decoded, version: Number(ev.version ?? 0), source: 'journal', seq: Number(ev.seq ?? position) }
+    })
+  )
+}
+
+/** A journal row — the one source whose coordinate is DERIVED from `seq` rather than carried by its own transport. */
+const is_journal = (action) => action.source === 'journal' && action.seq != null
+
+/**
+ * Re-place EVERY journal row — the ones already in the log and the arriving ones — over their UNION, so one object
+ * version keeps a single continuous ordinal run however the read layer happened to cut the pages that carried it.
+ * The held rows are lifted out and re-admitted through the same door as the newcomers: placement is a DERIVATION
+ * over the received set, never a latch, which is exactly what lets a late-arriving EARLIER page (the walker's
+ * re-drive after a gap, `journal_accept.js` fetch_gap) heal the run instead of colliding with it.
+ * @param {Record<string, Record<string, any>>} log
+ * @param {Array<Record<string, any>>} actions
+ * @returns {{ log: Record<string, Record<string, any>>, actions: Array<Record<string, any>> }}
+ */
+const rederive_journal = (log, actions) => {
+  const arriving = actions.filter(is_journal)
+  if (!arriving.length) return { log, actions }
+  const held = Object.values(log).filter(is_journal)
+  return {
+    log: Object.fromEntries(Object.entries(log).filter(([, action]) => !is_journal(action))),
+    actions: [...actions.filter((action) => !is_journal(action)), ...stamp_journal([...held, ...arriving])],
+  }
+}
+
+/** Two log maps hold the same rows (same keys, same row identities) — admission's no-op short-circuit. Reference
+ *  equality no longer answers it on its own: `rederive_journal` rebuilds the map even when nothing actually moves. */
+const same_log = (a, b) => {
+  const keys = Object.keys(a)
+  return keys.length === Object.keys(b).length && keys.every((key) => a[key] === b[key])
 }
 
 /**
@@ -119,16 +178,19 @@ export const journal_to_actions = (rows) => {
  * `sorted_tail`) settles them at fold time. Dropping on admit keyed off a MUTABLE base_version was order-DEPENDENT —
  * a transiently-higher base (a late-arriving earlier bootstrap under the shuffle property) would drop events the
  * final, lower base must keep — so the settle floor lives only in the fold, where the base is final.
+ * Journal rows are re-derived over the whole received set first (`rederive_journal`) — their ordinal is chain truth
+ * from `seq`, so admission is the only place that sees enough of the stream to place a page-straddling version.
  * @param {import('./state.js').InboxState} inbox
  * @param {Array<Record<string, any>>} actions pure-data actions (batch_to_actions / journal_to_actions)
  * @param {number} now
  * @returns {{ inbox: import('./state.js').InboxState, failures: any[], effects: any[] }}
  */
 export const admit_events = (inbox, actions, now) => {
-  let { log } = inbox
+  const placed = rederive_journal(inbox.log, actions)
+  let { log } = placed
   const failures = []
   const effects = []
-  for (const action of actions) {
+  for (const action of placed.actions) {
     const coord = action_coord(action)
     const key = coord_key(coord)
     const existing = log[key]
@@ -150,7 +212,7 @@ export const admit_events = (inbox, actions, now) => {
     }
     log = { ...log, [key]: action }
   }
-  return { inbox: log === inbox.log ? inbox : { ...inbox, log }, failures, effects }
+  return { inbox: same_log(log, inbox.log) ? inbox : { ...inbox, log }, failures, effects }
 }
 
 /**
