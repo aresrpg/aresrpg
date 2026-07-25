@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: file or update unresolved Sentry issues
         env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_READ_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           GITHUB_TOKEN: ${{ github.token }}
