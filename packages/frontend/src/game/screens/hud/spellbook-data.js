@@ -14,6 +14,8 @@
 // seed mints [1, 20, 40, 60, 80, unlock + 100]). Unspent points are DERIVED: (character level − 1) − spent.
 // Damage is a FIXED value per level (`base`) with a SEPARATE fixed crit (`crit_base`) — never a rolled range.
 
+import { spell_upgrade_cost } from '@aresrpg/sdk/progression'
+
 import { element_color } from './element-colors.js'
 import { class_spells } from './fight-spells.js'
 // The house heal-pink grammar — ONE home in seed-effect-line.js (the effect-line tone SSOT).
@@ -21,8 +23,10 @@ import { HEAL_PINK } from './seed-effect-line.js'
 
 export const MAX_SPELL_LEVEL = 6
 
-/** The spell-point COST to raise a spell FROM `current` to `current+1` — the on-chain rule (target − 1 = current). */
-export const upgrade_cost = current => current
+/** The spell-point COST to raise a spell FROM `current` to `current+1` — the on-chain rule (target − 1 =
+ *  current), owned by @aresrpg/sdk/progression and re-exported here so the grimoire's legacy import surface
+ *  stays stable. The simulator's cumulative `spell_cost` is Σ of this same function — one home, two views. */
+export { spell_upgrade_cost as upgrade_cost } from '@aresrpg/sdk/progression'
 
 const GOLD = 'var(--color-gold)'
 
@@ -132,7 +136,7 @@ export const upgrade_state = (row, char_level, points) => {
     return { state: 'mastered' }
   const next = cur + 1
   const req = Number(row.levels?.[next - 1]?.min_char_level ?? Infinity)
-  const cost = upgrade_cost(cur)
+  const cost = spell_upgrade_cost(cur)
   if (char_level < req) return { state: 'char_short', req, next, cost }
   if (points < cost) return { state: 'no_points', req, next, cost }
   return { state: 'enabled', req, next, cost }

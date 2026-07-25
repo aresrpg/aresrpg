@@ -43,6 +43,10 @@
       "types": "./types/experience.d.ts",
       "import": "./src/experience.js"
     },
+    "./progression": {
+      "types": "./types/progression.d.ts",
+      "import": "./src/progression.js"
+    },
     "./stats": {
       "types": "./types/stats.d.ts",
       "import": "./src/stats.js"

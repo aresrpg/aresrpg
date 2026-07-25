@@ -18,6 +18,7 @@
 // slice; it never computes the reward — that is chain-authoritative, credited by the settle+open tx.
 
 import { experience_to_level } from '@aresrpg/sdk/experience'
+import { points_for_level_range } from '@aresrpg/sdk/progression'
 
 import { game_log } from '../../../core/log.js'
 import { reconcile_fight_character } from '../../../roster/fight_character_refresh.js'
@@ -66,10 +67,6 @@ import { push_event_toast } from '../toast.js'
  * @property {number} spell_points      spell points earned (= 1 * levels_gained)
  */
 
-// Legacy reference-corpus grant per level: 5 characteristic points + 1 spell point.
-const STAT_POINTS_PER_LEVEL = 5
-const SPELL_POINTS_PER_LEVEL = 1
-
 /**
  * Fold one `action/level_up/*` into the slice.
  * @param {LevelUpSlice | null} slice
@@ -80,11 +77,12 @@ const SPELL_POINTS_PER_LEVEL = 1
 const fold_level_up = (slice, type, payload) => {
   switch (type) {
     case 'action/level_up/open':
+      // the grant is the CHAIN's own `points_for_level_range` (@aresrpg/sdk/progression) — the same door the
+      // spellbook, the build drawer and the simulator read, never a per-surface 5/1 literal.
       return {
         level: payload.level,
         levels_gained: payload.levels_gained,
-        stat_points: payload.levels_gained * STAT_POINTS_PER_LEVEL,
-        spell_points: payload.levels_gained * SPELL_POINTS_PER_LEVEL,
+        ...points_for_level_range(0, payload.levels_gained),
       }
     case 'action/level_up/close':
       return null

@@ -7,15 +7,19 @@
 // no chain write, no async — IndexedDB is a PERSISTENCE EDGE (simulator/persistence.ts) whose boot read
 // re-enters here as the `hydrated` input, never as a store write.
 //
-// The point budgets are the CHAIN's, mirrored: a character earns 5 stat points and 1 spell point per level
-// from 2 (`progression_math.move points_for_level_range`, read by `character_link.move
-// unspent_stat_points`/`unspent_spell_points`), stat allocation costs 1 point per point
-// (`stat_allocation.move raise_stat`), and raising a spell TO level `t` costs `t − 1` points — the S8
-// escalating cost of `spell_level.move raise_spell_level`, so a spell sitting at level `l` has cost
-// `l·(l−1)/2` in total. Spell level 1 is the FREE baseline (an absent row reads 1 on chain), so only raised
-// spells are stored. A level DROP re-fits both allocations to the smaller budget rather than leaving an
-// invalid build: stats scale down proportionally, spells fall to the highest level the budget still affords.
+// The point budgets are the CHAIN's, CONSUMED not mirrored: `@aresrpg/sdk/progression` is the one home for
+// the per-level grants and the S8 escalating spell cost (the same module the world's level-up event, build
+// drawer and spellbook read), so a budget the simulator shows can never disagree with the one the world
+// spends. Stat allocation costs 1 point per point (`stat_allocation.move raise_stat`). Spell level 1 is the
+// FREE baseline (an absent row reads 1 on chain), so only raised spells are stored. A level DROP re-fits both
+// allocations to the smaller budget rather than leaving an invalid build: stats scale down proportionally,
+// spells fall to the highest level the budget still affords.
 
+import {
+  spell_points_for_level,
+  spell_points_invested,
+  stat_points_for_level,
+} from '@aresrpg/sdk/progression'
 import { STATISTICS_PRIMARY } from '@aresrpg/sdk/stats'
 
 import { board_of, type SimBoard } from './board'
@@ -31,8 +35,6 @@ export const MAX_ROSTER = 6
 export const MAX_MOBS = 6
 export const MAX_LEVEL = 200
 export const MAX_NAME_LENGTH = 24
-const STAT_POINTS_PER_LEVEL = 5
-const SPELL_POINTS_PER_LEVEL = 1
 
 export type SimCharacter = {
   id: string
@@ -148,25 +150,24 @@ const clamp_level_in_band = (level: number, min_level: number, max_level: number
   return clamp_int(level, low, high)
 }
 
-/** Stat points earned by reaching `level` — 5 per level from 2 (progression_math.move). */
-export const stat_budget = (level: number): number => Math.max(0, level - 1) * STAT_POINTS_PER_LEVEL
-
-/** Spell points earned by reaching `level` — 1 per level from 2 (progression_math.move). */
-export const spell_budget = (level: number): number => Math.max(0, level - 1) * SPELL_POINTS_PER_LEVEL
-
-/** Total spell points sunk into ONE spell sitting at `level` — Σ(t−1) for t in 2..level (S8 escalating). */
-export const spell_cost = (level: number): number => (level * (level - 1)) / 2
+// The three budget functions the page editors read are the SDK's, re-exported under this domain's names —
+// one home (`@aresrpg/sdk/progression`), zero re-derivation, and the world surfaces read the very same fns.
+export {
+  stat_points_for_level as stat_budget,
+  spell_points_for_level as spell_budget,
+  spell_points_invested as spell_cost,
+} from '@aresrpg/sdk/progression'
 
 export const stats_spent = (character: Readonly<SimCharacter>): number =>
   SIM_STATS.reduce((sum, stat) => sum + (character.stat_alloc[stat] ?? 0), 0)
 
 export const spells_spent = (character: Readonly<SimCharacter>): number =>
-  Object.values(character.spell_levels).reduce((sum, level) => sum + spell_cost(level), 0)
+  Object.values(character.spell_levels).reduce((sum, level) => sum + spell_points_invested(level), 0)
 
 /** The highest level ≤ `wanted` whose total cost fits `budget` (1 = the free baseline, always affordable). */
 const affordable_level = (wanted: number, budget: number): number => {
   const fits = Array.from({ length: Math.max(0, wanted - 1) }, (_, index) => wanted - index).find(
-    (level) => spell_cost(level) <= budget
+    (level) => spell_points_invested(level) <= budget
   )
   return fits ?? 1
 }
@@ -186,7 +187,7 @@ const fit_spells = (spell_levels: Readonly<Record<string, number>>, budget: numb
   const { rows } = entries.reduce<{ left: number; rows: [string, number][] }>(
     ({ left, rows: kept }, [spell_id, level]) => {
       const fitted = affordable_level(level, left)
-      return { left: left - spell_cost(fitted), rows: fitted > 1 ? [...kept, [spell_id, fitted]] : kept }
+      return { left: left - spell_points_invested(fitted), rows: fitted > 1 ? [...kept, [spell_id, fitted]] : kept }
     },
     { left: budget, rows: [] }
   )
@@ -196,8 +197,8 @@ const fit_spells = (spell_levels: Readonly<Record<string, number>>, budget: numb
 /** Re-fit a character's allocations to its own level's budgets — the ONE invariant every arm restores. */
 const refit = (character: Readonly<SimCharacter>): SimCharacter => ({
   ...character,
-  stat_alloc: fit_stats(character.stat_alloc, stat_budget(character.level)),
-  spell_levels: fit_spells(character.spell_levels, spell_budget(character.level)),
+  stat_alloc: fit_stats(character.stat_alloc, stat_points_for_level(character.level)),
+  spell_levels: fit_spells(character.spell_levels, spell_points_for_level(character.level)),
 })
 
 /** A cell-keyed row map → sorted numeric entries. JSON/IndexedDB hands back STRING keys; this is the one decode. */
@@ -465,7 +466,7 @@ export function reduce_simulator(state: Readonly<SimulatorState>, input: Readonl
     case 'stat_set':
       return map_character(state, input.id, (character) => {
         const others = stats_spent(character) - (character.stat_alloc[input.stat] ?? 0)
-        const ceiling = Math.max(0, stat_budget(character.level) - others)
+        const ceiling = Math.max(0, stat_points_for_level(character.level) - others)
         return {
           ...character,
           stat_alloc: { ...character.stat_alloc, [input.stat]: clamp_int(input.value, 0, ceiling) },
@@ -477,8 +478,8 @@ export function reduce_simulator(state: Readonly<SimulatorState>, input: Readonl
 
     case 'spell_level_set':
       return map_character(state, input.id, (character) => {
-        const others = spells_spent(character) - spell_cost(character.spell_levels[input.spell_id] ?? 1)
-        const left = Math.max(0, spell_budget(character.level) - others)
+        const others = spells_spent(character) - spell_points_invested(character.spell_levels[input.spell_id] ?? 1)
+        const left = Math.max(0, spell_points_for_level(character.level) - others)
         const wanted = clamp_int(input.level, 1, Math.max(1, Math.trunc(input.max_level)))
         const level = affordable_level(wanted, left)
         const { [input.spell_id]: _dropped, ...rest } = character.spell_levels

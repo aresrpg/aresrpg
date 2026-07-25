@@ -32,6 +32,7 @@ import {
   STATISTICS_PRIMARY,
 } from '@aresrpg/sdk/stats'
 import { experience_to_level, level_to_experience } from '@aresrpg/sdk/experience'
+import { stat_points_for_level } from '@aresrpg/sdk/progression'
 
 import i18n from '../../../i18n'
 import { use_game_state } from '../../store.js'
@@ -51,9 +52,8 @@ const CLASSES =
   )
 const CLASS_LIST = Object.entries(CLASSES).map(([id, class_def]) => ({ id, ...class_def }))
 
-// 5 characteristic points per level (the level-up grant — see the Stats deliverable). Level 1 is
-// the floor with no points spent yet; each level above grants 5.
-const POINTS_PER_LEVEL = 5
+// The characteristic-point budget is the CHAIN's grant, read through @aresrpg/sdk/progression
+// (`stat_points_for_level`) — the one home every surface that shows a build budget consumes.
 const MAX_LEVEL = 100
 
 // Per-stat tint, reused from the Stats panel so the two surfaces read as one design.
@@ -135,7 +135,7 @@ export function SimulatorDrawer() {
   const [spells, set_spells] = useState(/** @type {Set<string>} */ (new Set()))
   const [equipment, set_equipment] = useState(empty_equipment())
 
-  const budget = (level - 1) * POINTS_PER_LEVEL
+  const budget = stat_points_for_level(level)
   const used = STATISTICS_PRIMARY.reduce((sum, k) => sum + (stats[k] ?? 0), 0)
   const remaining = budget - used
 
@@ -165,7 +165,7 @@ export function SimulatorDrawer() {
     const lv = Math.max(1, Math.min(MAX_LEVEL, Math.round(next || 1)))
     set_level(lv)
     // drop over-budget allocation when the level (and budget) shrinks
-    const new_budget = (lv - 1) * POINTS_PER_LEVEL
+    const new_budget = stat_points_for_level(lv)
     set_stats(prev => {
       let spent = STATISTICS_PRIMARY.reduce((s, k) => s + (prev[k] ?? 0), 0)
       if (spent <= new_budget) return prev

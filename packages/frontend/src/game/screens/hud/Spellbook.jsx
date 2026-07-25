@@ -27,6 +27,7 @@ import { useTranslation } from 'react-i18next'
 
 import { xp_progress } from '@aresrpg/sdk/experience'
 import { spell_icon_url } from '@aresrpg/sdk/jobs'
+import { spell_points_for_level } from '@aresrpg/sdk/progression'
 
 import { use_game_state } from '../../store.js'
 import { get_class } from '../../data/classes.js'
@@ -123,10 +124,10 @@ export function Spellbook({ on_open, embedded = false }) {
   const book = useMemo(() => {
     if (!character) return null
     const { level } = xp_progress(character.experience)
-    // REAL on-chain spell economy (#55, S-46): unspent points DERIVE from progression — (level − 1) earned
-    // (+1 per level-up from 2) minus the chain's running spent total; per-spell invested levels come off the
-    // SpellLevelKey DFs (absent = the free baseline 1).
-    const points = Math.max(0, level - 1 - (alloc?.spent ?? 0))
+    // REAL on-chain spell economy (#55, S-46): unspent points DERIVE from progression — the grant earned by
+    // reaching `level` (@aresrpg/sdk/progression, the chain's own `points_for_level_range`) minus the chain's
+    // running spent total; per-spell invested levels come off the SpellLevelKey DFs (absent = baseline 1).
+    const points = Math.max(0, spell_points_for_level(level) - (alloc?.spent ?? 0))
     return { ...grimoire(class_id, level, points, alloc?.levels ?? {}), level, points }
   }, [character, class_id, alloc])
 
