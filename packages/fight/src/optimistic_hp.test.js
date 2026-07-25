@@ -97,11 +97,21 @@ describe('committed mob HP — cumulative optimistic casts', () => {
     })
   })
 
-  test('a peer Hit is committed and lowers the selector HP', () => {
+  // BOX 4 (issue #522) TIGHTENED THIS. Committed truth is now folded by the headless core, and the core treats an
+  // UNVERIFIED courtesy (p2p) row as exactly that: a peer's relayed word, buffered until a verified chain row
+  // matches it (v2/inbox.js, rider R1). The legacy fold committed it on arrival — which let a peer move MY
+  // committed anchor (the pool DungeonBoard's draft math subtracts from, and the liveness gate that decides
+  // whether a target is castable) on nothing but their say-so. The eye still sees the peer's hit instantly: the
+  // presented fold is unchanged by that box.
+  test('an unverified peer Hit paints but does NOT move committed truth; the receipt is what commits it', () => {
     const store = store_from_snapshot()
     store.getState().input({ type: 'p2p', events: [peer_hit(13)], version: 6 }, TURN_STARTED_AT + 100)
 
-    expect(committed_mob_hp(store.getState(), 0)).toBe(13)
+    expect(project.board_view(store.getState()).mobs[0].hp, 'the eye sees the peer hit at once').toBe(13)
+    expect(committed_mob_hp(store.getState(), 0), 'chain-verified truth has not moved').toBe(16)
+
+    store.getState().input({ type: 'receipt', receipt: { events: [peer_hit(13)] }, version: 6 }, TURN_STARTED_AT + 200)
+    expect(committed_mob_hp(store.getState(), 0), 'the verified row commits it').toBe(13)
   })
 })
 
