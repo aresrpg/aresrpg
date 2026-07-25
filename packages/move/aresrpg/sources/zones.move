@@ -428,7 +428,7 @@ fun find_mob_group(world: &World, zx: u32, zy: u32, spawn_id: u64, team_bound: u
   let key = ZoneKey { zx, zy };
   assert!(df::exists(world::uid(world), key), ESpawnNotFound);
   let zone: &Zone = df::borrow(world::uid(world), key);
-  let (sids, tpls, xs, zs, sizes, gseeds) = zone_comp::derive_mobs(world, zx, zy, zone.seed, team_bound);
+  let (sids, tpls, xs, zs, sizes, gseeds) = derive_mobs(world, zx, zy, zone.seed, team_bound);
   let n = sids.length();
   let mut i = 0;
   while (i < n) {
@@ -508,7 +508,7 @@ public(package) fun read_resource_node(world: &World, zx: u32, zy: u32, node_ind
   let key = ZoneKey { zx, zy };
   assert!(df::exists(world::uid(world), key), EBadNode);
   let zone: &Zone = df::borrow(world::uid(world), key);
-  let (_sids, tpls, xs, zs, jobs, tiers) = zone_comp::derive_res(world, zx, zy, zone.seed);
+  let (_sids, tpls, xs, zs, jobs, tiers) = derive_res(world, zx, zy, zone.seed);
   assert!(node_index < xs.length(), EBadNode);
   assert!(!bit_get(&zone.res_bitmap, node_index), ENodeEmpty);
   (xs[node_index], zs[node_index], jobs[node_index], tiers[node_index], tpls[node_index])
@@ -586,6 +586,38 @@ public fun resource_remaining(world: &World, zx: u32, zy: u32, i: u64): u16 {
 
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
 
+/// Derive this zone's mob groups the way the zone's OWN stored commitment says it was derived. A zone carrying
+/// a format-2 commitment was placed on the lattice; anything else (including a zone with no commitment at all)
+/// is legacy. The dispatch lives HERE because only this module can see the stored bytes — `zone_comp` is pure
+/// over a World, and the foundation kernel is pure over scalars. Every in-package reader of a zone's groups goes
+/// through this door, so a zone can never be read with a derivation other than the one it was written with.
+public(package) fun derive_mobs(world: &World, zx: u32, zy: u32, seed: u64, team_bound: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u16>, vector<u64>) {
+  if (group_commitment_format(world, zx, zy) == 2) { // 2 = zone_gen lattice commitment
+    zone_comp::derive_mobs_grid(world, zx, zy, seed, team_bound)
+  } else {
+    zone_comp::derive_mobs(world, zx, zy, seed, team_bound)
+  }
+}
+
+/// The resource twin of `derive_mobs` — the SAME commitment byte selects both streams, so a zone's mobs and its
+/// resource cells are always derived by one algorithm.
+public(package) fun derive_res(world: &World, zx: u32, zy: u32, seed: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u8>, vector<u8>) {
+  if (group_commitment_format(world, zx, zy) == 2) { // 2 = zone_gen lattice commitment
+    zone_comp::derive_res_grid(world, zx, zy, seed)
+  } else {
+    zone_comp::derive_res(world, zx, zy, seed)
+  }
+}
+
+/// The zone's derivation format, read off its stored commitment. A MISSING commitment reports `1` (legacy) —
+/// the zone predates commitments entirely, so its groups were placed by the spaced sampler.
+fun group_commitment_format(world: &World, zx: u32, zy: u32): u8 {
+  let key = ZoneGroupRootKey { zx, zy };
+  if (!df::exists(world::uid(world), key)) return 1; // no commitment = a pre-commitment zone = legacy
+  let stored: &ZoneGroupCommitment = df::borrow(world::uid(world), key);
+  zone_gen::mob_group_commitment_format(&stored.root)
+}
+
 fun borrow_zone(world: &World, zx: u32, zy: u32): &Zone {
   df::borrow(world::uid(world), ZoneKey { zx, zy })
 }
@@ -618,6 +650,22 @@ fun bit_clear(bm: &mut vector<u8>, i: u64) {
 }
 
 // ╔════════════════ [ Testing ] ══════════════════════════════════════════════ ]
+
+#[test_only]
+/// Overwrite the zone's stored commitment with a FORMAT-2 (lattice) one — the shape every zone searched by the
+/// deployed package carries. Lets a test drive the derivation dispatch without replaying a chain search.
+public fun set_lattice_commitment_for_testing(world: &mut World, zx: u32, zy: u32, team_bound: u64) {
+  let seed = zone_seed(world, zx, zy);
+  let now = zone_discovered_at(world, zx, zy);
+  let wid = object::id(world);
+  let (sids, tpls, xs, zs, sizes, gseeds) = zone_comp::derive_mobs_grid(world, zx, zy, seed, team_bound);
+  let root = zone_gen::mob_group_commitment(wid, zx, zy, seed, now, &sids, &tpls, &xs, &zs, &sizes, &gseeds);
+  let count = sids.length();
+  let wuid = world::uid_mut(world);
+  let stored: &mut ZoneGroupCommitment = df::borrow_mut(wuid, ZoneGroupRootKey { zx, zy });
+  stored.root = root;
+  stored.count = count;
+}
 
 #[test_only]
 /// The zone's stored mob-bitmap BYTES — what the client's `zone_derive.js` mirror reads verbatim. Tests pin the

@@ -164,6 +164,11 @@ const sanctioned_fixture_prefixes = [
   // pointer any code reads. Registered as the exact file, not its directory: the sibling fixtures in that
   // folder are model-derived and must keep facing the gate.
   'packages/sim/test/fixtures/zone_487_chain_truth.json',
+  // the Move half of that SAME capture (zone_gen_grid_tests.move): the twin-fixture law puts the identical
+  // chain reading on both sides of the derivation, and a Move test cannot read the JSON above — the ids are
+  // transcribed from it, with the capture's provenance in the file header. Same evidence, same zone 487:487,
+  // same `zones_view` reading; nothing here is a pointer any shipped code follows. Exact file, not a directory.
+  'packages/move/foundation/tests/zone_gen_grid_tests.move',
 ]
 const slash_path = (value) => value.split(path.sep).join('/')
 const id_fingerprint = (id) => create_hash('sha256').update(id).digest('base64url').slice(0, 22)

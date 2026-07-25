@@ -27,9 +27,20 @@ const CLUSTER_CAP: u64 = 20;
 const MIN_SPAWN_SPACING: u64 = 20; // mob group spawns pairwise ≥ 20 blocks apart
 const SPACING_D2: u64 = MIN_SPAWN_SPACING * MIN_SPAWN_SPACING; // squared compare (no sqrt) = 400
 const POS_ATTEMPTS: u64 = 64; // rejection-sampling cap; on exhaustion accept the last roll (a zone too small to fit)
+/// LATTICE placement: the zone box is diced into whole `GRID_CELL` squares, one spawn per cell, drawn without
+/// replacement. Spacing becomes STRUCTURAL rather than rejection-sampled — two spawns can never share a cell, and
+/// the `GRID_PAD` inset around a `GRID_JITTER` span keeps any two neighbours ≥ `MIN_SPAWN_SPACING` on every axis
+/// (40 − 2×10 + 0 = 20 worst case). Cheaper AND stricter than the 64-attempt reject loop it supersedes.
+const GRID_CELL: u64 = 40;
+const GRID_PAD: u64 = 10; // a spawn sits in the middle 21 blocks of its cell
+const GRID_JITTER: u64 = 20; // inclusive jitter span [0, 20] per axis
 const EBadGroupCommitmentInput: u64 = 1;
 const GROUP_HASH_BYTES: u64 = 32;
 const MAX_GROUPS: u64 = 64;
+/// Stored-commitment FORMAT bytes. A bare 32-byte digest is the legacy Merkle root (format 1); a 33-byte
+/// `0x02 ‖ digest` is the whole-set commitment (format 2) that ALSO selects lattice placement for the zone.
+const GROUP_FORMAT_LEGACY: u8 = 1;
+const GROUP_FORMAT_LATTICE: u8 = 2;
 
 /// Canonical BCS leaf for a searched-zone commitment. The pure foundation can calculate hashes, but only the
 /// owning `zones` module can attach a root to World state.
@@ -46,6 +57,27 @@ public struct MobGroupLeaf has copy, drop {
   z: u32,
   group_size: u16,
   group_seed: u64,
+}
+
+/// One group of a whole-set commitment (format 2) — the per-group facts, positional in BCS.
+public struct MobGroup has copy, drop {
+  spawn_id: u64,
+  template: ID,
+  x: u32,
+  z: u32,
+  group_size: u16,
+  group_seed: u64,
+}
+
+/// The zone's ENTIRE derived group list committed as one value — a claim proves membership by re-deriving the
+/// list and comparing the whole commitment, so no per-index Merkle path travels with the transaction.
+public struct MobGroupSet has copy, drop {
+  world: ID,
+  zx: u32,
+  zy: u32,
+  zone_seed: u64,
+  discovered_at_ms: u64,
+  groups: vector<MobGroup>,
 }
 
 // ╔════════════════ [ prng-threaded roll primitives (replayable twins of the retired &Random helpers) ] ═ ]
@@ -123,6 +155,44 @@ fun p_roll_pos_spaced(state: u64, xs: &vector<u32>, zs: &vector<u32>, ox: u32, o
   (s, fx, fz)
 }
 
+// ╔════════════════ [ The placement lattice (structural spacing) ] ═══════════════ ]
+
+/// Dice the zone box — clipped to the world bounds, so a straddling last zone loses its out-of-world strip —
+/// into whole `GRID_CELL` squares. Returns `(cols, pool)` where `pool` is every cell index `0 .. cols*rows - 1`;
+/// callers draw from it WITHOUT replacement, which is what makes spacing structural. A zone smaller than one
+/// cell on either axis yields an EMPTY pool (and therefore hosts no spawns at all).
+fun grid_cell_pool(ox: u32, oz: u32, zsize: u32, bx: u32, bz: u32): (u64, vector<u64>) {
+  let end_x = (ox as u64) + (zsize as u64);
+  let end_z = (oz as u64) + (zsize as u64);
+  let max_x = if (end_x < (bx as u64)) end_x else (bx as u64);
+  let max_z = if (end_z < (bz as u64)) end_z else (bz as u64);
+  let span_x = if (max_x > (ox as u64)) max_x - (ox as u64) else 0;
+  let span_z = if (max_z > (oz as u64)) max_z - (oz as u64) else 0;
+  let cols = span_x / GRID_CELL;
+  let total = cols * (span_z / GRID_CELL);
+  let mut pool = vector<u64>[];
+  let mut i = 0;
+  while (i < total) {
+    pool.push_back(i);
+    i = i + 1;
+  };
+  (cols, pool)
+}
+
+/// Consume the `i`-th lattice cell. THREE draws: a partial Fisher-Yates selection from the unconsumed tail
+/// `pool[i..]` (swapped down to `i`, so `pool` carries the draw state — the LAST cell costs no draw at all,
+/// because `p_roll_u64` skips when `lo >= hi`), then one jitter draw per axis inside the chosen cell.
+fun p_pick_grid_pos(state: u64, pool: &mut vector<u64>, i: u64, cols: u64, ox: u32, oz: u32): (u64, u32, u32) {
+  let (s1, j) = p_roll_u64(state, i, pool.length() - 1);
+  pool.swap(i, j);
+  let cell = pool[i];
+  let (s2, jx) = p_roll_u64(s1, 0, GRID_JITTER);
+  let (s3, jz) = p_roll_u64(s2, 0, GRID_JITTER);
+  let x = (ox as u64) + (cell % cols) * GRID_CELL + GRID_PAD + jx;
+  let z = (oz as u64) + (cell / cols) * GRID_CELL + GRID_PAD + jz;
+  (s3, x as u32, z as u32)
+}
+
 // ╔════════════════ [ Mob-group derivation ] ═══════════════════════════════════ ]
 
 /// Derive a discovered zone's FULL mob-group list from its composition `seed` — the on-chain twin of
@@ -170,6 +240,60 @@ public fun derive_mob_groups(
     let (s3, x, z) = p_roll_pos_spaced(s, &xs, &zs, ox, oz, zsize, bx, bz);
     s = s3;
     let (s4, gseed) = prng::rng_next(s);
+    let (s5, sid_hi) = prng::rng_next(s4);
+    let (s6, sid_lo) = prng::rng_next(s5);
+    s = s6;
+    spawn_ids.push_back((sid_hi << 32) | sid_lo);
+    tmpl_idxs.push_back(idx);
+    xs.push_back(x);
+    zs.push_back(z);
+    sizes.push_back(gsize);
+    seeds.push_back(gseed);
+    i = i + 1;
+  };
+  (spawn_ids, tmpl_idxs, xs, zs, sizes, seeds)
+}
+
+/// LATTICE twin of `derive_mob_groups` — same tables, same stream salt, same six PARALLEL returns; the ONLY
+/// difference is placement: instead of the 2-draws-per-attempt rejection loop, group `i` consumes lattice cell
+/// `i` (`p_pick_grid_pos`, a fixed 3 draws). Draw order PER GROUP is therefore weighted pick(1) · size roll(1) ·
+/// cell + jitter(3) · `group_seed`(1) · `spawn_id` hi+lo(2) = 8 — 7 for the last cell, whose selection roll is
+/// skipped. The pool ALSO caps the count: a zone with fewer cells than the rolled group target hosts one group
+/// per cell. Mirrored byte-for-byte in `zone_derive.js` (format 2).
+public fun derive_mob_groups_grid(
+  seed: u64,
+  min_g: u64,
+  max_g: u64,
+  weights: &vector<u64>,
+  min_group: &vector<u64>,
+  max_group: &vector<u64>,
+  size_bound: u64,
+  ox: u32,
+  oz: u32,
+  zsize: u32,
+  bx: u32,
+  bz: u32,
+): (vector<u64>, vector<u64>, vector<u32>, vector<u32>, vector<u16>, vector<u64>) {
+  let mut spawn_ids = vector<u64>[];
+  let mut tmpl_idxs = vector<u64>[];
+  let mut xs = vector<u32>[];
+  let mut zs = vector<u32>[];
+  let mut sizes = vector<u16>[];
+  let mut seeds = vector<u64>[];
+  let mut s = prng::rng_seed(prng::mix(seed, MOB_SALT));
+  let (s0, g) = p_roll_u64(s, min_g, max_g);
+  s = s0;
+  let (cols, mut pool) = grid_cell_pool(ox, oz, zsize, bx, bz);
+  let mut i = 0;
+  while (i < g && i < pool.length()) {
+    let (s1, opt) = p_pick_weighted(s, weights);
+    s = s1;
+    if (opt.is_none()) break;
+    let idx = opt.destroy_some();
+    let (s2, raw) = p_roll_u64(s, min_group[idx], max_group[idx]);
+    let (s3, x, z) = p_pick_grid_pos(s2, &mut pool, i, cols, ox, oz);
+    let gsize = world_math::clamp_group_u16(raw, size_bound);
+    let (s4, gseed) = prng::rng_next(s3);
     let (s5, sid_hi) = prng::rng_next(s4);
     let (s6, sid_lo) = prng::rng_next(s5);
     s = s6;
@@ -249,6 +373,58 @@ public fun mob_group_root(
   if (nodes.is_empty()) return hash::blake2b256(&b"aresrpg.zone-group.empty");
   while (nodes.length() > 1) nodes = next_mob_group_level(&nodes);
   nodes.pop_back()
+}
+
+/// Which commitment a stored root IS, read off its own bytes — the one home for the format dispatch every
+/// deriver (chain, SDK, client mirror) makes. `1` = a bare 32-byte Merkle root (legacy, spaced placement);
+/// `2` = `0x02 ‖ digest`, the whole-set commitment that ALSO selects lattice placement; `0` = neither, which
+/// no writer produces. A zone with NO stored commitment reads as `1` at the caller (`zones`), not here.
+public fun mob_group_commitment_format(bytes: &vector<u8>): u8 {
+  if (bytes.length() == GROUP_HASH_BYTES) GROUP_FORMAT_LEGACY
+  else if (bytes.length() == GROUP_HASH_BYTES + 1 && bytes[0] == GROUP_FORMAT_LATTICE) GROUP_FORMAT_LATTICE
+  else 0
+}
+
+/// Commit the zone's ENTIRE derived group list as one value: `0x02 ‖ blake2b256(domain ‖ 0x02 ‖ bcs(MobGroupSet))`.
+/// A claim authenticates by RE-DERIVING the list and comparing this whole commitment, so no per-index Merkle
+/// path rides the transaction — the derivation is the proof. Same input validation as `mob_group_root`.
+public fun mob_group_commitment(
+  world: ID, zx: u32, zy: u32, zone_seed: u64, discovered_at_ms: u64,
+  spawn_ids: &vector<u64>, templates: &vector<ID>, xs: &vector<u32>, zs: &vector<u32>,
+  sizes: &vector<u16>, group_seeds: &vector<u64>,
+): vector<u8> {
+  let count = spawn_ids.length();
+  assert!(count <= MAX_GROUPS && templates.length() == count && xs.length() == count &&
+    zs.length() == count && sizes.length() == count && group_seeds.length() == count, EBadGroupCommitmentInput);
+  let mut groups = vector<MobGroup>[];
+  let mut i = 0;
+  while (i < count) {
+    groups.push_back(MobGroup {
+      spawn_id: spawn_ids[i], template: templates[i], x: xs[i], z: zs[i],
+      group_size: sizes[i], group_seed: group_seeds[i],
+    });
+    i = i + 1;
+  };
+  let set = MobGroupSet { world, zx, zy, zone_seed, discovered_at_ms, groups };
+  let mut bytes = b"aresrpg.zone-group.commitment";
+  bytes.push_back(GROUP_FORMAT_LATTICE);
+  bytes.append(bcs::to_bytes(&set));
+  let mut out = vector[GROUP_FORMAT_LATTICE];
+  out.append(hash::blake2b256(&bytes));
+  out
+}
+
+/// `true` iff `commitment` is a format-2 commitment AND it equals the one these arrays produce. A legacy or
+/// malformed stored value returns `false` rather than falling back — the caller picks its verifier by format.
+public fun mob_group_commitment_matches(
+  commitment: &vector<u8>, world: ID, zx: u32, zy: u32, zone_seed: u64, discovered_at_ms: u64,
+  spawn_ids: &vector<u64>, templates: &vector<ID>, xs: &vector<u32>, zs: &vector<u32>,
+  sizes: &vector<u16>, group_seeds: &vector<u64>,
+): bool {
+  if (mob_group_commitment_format(commitment) != GROUP_FORMAT_LATTICE) return false;
+  *commitment == mob_group_commitment(
+    world, zx, zy, zone_seed, discovered_at_ms, spawn_ids, templates, xs, zs, sizes, group_seeds,
+  )
 }
 
 fun mob_group_proof_depth(mut count: u64): u64 {
@@ -353,6 +529,77 @@ public fun derive_resources(
     s = s2;
     let (s3, ax, az) = p_roll_pos(s, ox, oz, zsize, bx, bz);
     s = s3;
+    if (jobs[idx] <= MAX_GATHER_JOB) {
+      // FIELD: grow k contiguous cells from the anchor; each cell is one bit (one plant, one harvest)
+      let k = if (qty > CLUSTER_CAP) CLUSTER_CAP else qty;
+      let (s4, cxs, czs) = p_grow_cluster(s, ax, az, k, ox, max_cx, oz, max_cz);
+      s = s4;
+      let cells = cxs.length();
+      let mut c = 0;
+      while (c < cells) {
+        let (s5, sid_hi) = prng::rng_next(s);
+        let (s6, sid_lo) = prng::rng_next(s5);
+        s = s6;
+        spawn_ids.push_back((sid_hi << 32) | sid_lo);
+        tmpl_idxs.push_back(idx);
+        xs.push_back(cxs[c]);
+        zs.push_back(czs[c]);
+        c = c + 1;
+      };
+    } else {
+      // non-gather resource: ONE cell, one harvest (the one-bit collapse — no multi-charge nodes)
+      let (s5, sid_hi) = prng::rng_next(s);
+      let (s6, sid_lo) = prng::rng_next(s5);
+      s = s6;
+      spawn_ids.push_back((sid_hi << 32) | sid_lo);
+      tmpl_idxs.push_back(idx);
+      xs.push_back(ax);
+      zs.push_back(az);
+    };
+  };
+  (spawn_ids, tmpl_idxs, xs, zs)
+}
+
+/// LATTICE twin of `derive_resources` — identical table rolls, field growth and one-bit cells; the ONLY
+/// difference is the ANCHOR, which comes from the placement lattice (`p_pick_grid_pos`, a fixed 3 draws) rather
+/// than the unspaced 2-draw roll. The cursor advances once per ENTRY, not per cell: a grown field spends ONE
+/// lattice cell for its anchor and then walks out of it normally, so fields still touch. The pool also caps the
+/// entry count. Mirrored byte-for-byte in `zone_derive.js` (format 2).
+public fun derive_resources_grid(
+  seed: u64,
+  min_n: u64,
+  max_n: u64,
+  weights: &vector<u64>,
+  min_qty: &vector<u64>,
+  max_qty: &vector<u64>,
+  jobs: &vector<u8>,
+  ox: u32,
+  oz: u32,
+  zsize: u32,
+  bx: u32,
+  bz: u32,
+): (vector<u64>, vector<u64>, vector<u32>, vector<u32>) {
+  let mut spawn_ids = vector<u64>[];
+  let mut tmpl_idxs = vector<u64>[];
+  let mut xs = vector<u32>[];
+  let mut zs = vector<u32>[];
+  let mut s = prng::rng_seed(prng::mix(seed, RES_SALT));
+  let (s0, target_n) = p_roll_u64(s, min_n, max_n);
+  s = s0;
+  let (cols, mut pool) = grid_cell_pool(ox, oz, zsize, bx, bz);
+  let mut anchor_i = 0;
+  // zone ∩ world inclusive box (the last zone of a world may straddle the barrier) — the field-growth confinement
+  let max_cx = { let m = ox + zsize - 1; if (m > bx - 1) bx - 1 else m };
+  let max_cz = { let m = oz + zsize - 1; if (m > bz - 1) bz - 1 else m };
+  while (xs.length() < target_n && anchor_i < pool.length()) {
+    let (s1, opt) = p_pick_weighted(s, weights);
+    s = s1;
+    if (opt.is_none()) break;
+    let idx = opt.destroy_some();
+    let (s2, qty) = p_roll_u64(s, min_qty[idx], max_qty[idx]);
+    let (s3, ax, az) = p_pick_grid_pos(s2, &mut pool, anchor_i, cols, ox, oz);
+    s = s3;
+    anchor_i = anchor_i + 1;
     if (jobs[idx] <= MAX_GATHER_JOB) {
       // FIELD: grow k contiguous cells from the anchor; each cell is one bit (one plant, one harvest)
       let k = if (qty > CLUSTER_CAP) CLUSTER_CAP else qty;
