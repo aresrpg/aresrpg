@@ -21,11 +21,13 @@
 // `input_seq` sequencing (and its `tee_enabled()` gating) stays byte-for-byte what it was before this file
 // grew a second consumer.
 //
-// Gated OFF in ordinary play (same switch as fight_state_trace: `?fighttrace=1` or
-// `window.__ARES_FIGHT_TRACE_ENABLED = true`). When off, a tap is two boolean reads then a straight
-// delegate — no classification, no allocation, no serialization (that happens only at dump time). The
-// shadow fan-out has its OWN independent switch (`?v2shadow=1` / localStorage — fight_v2_shadow.js) and is
-// zero work when disarmed, whatever the trace flag is doing.
+// The CAPSULE-RING RECORDER stays gated OFF in ordinary play (same switch as fight_state_trace:
+// `?fighttrace=1` or `window.__ARES_FIGHT_TRACE_ENABLED = true`). When off, a tap is two boolean reads then a
+// straight delegate — no classification, no allocation, no serialization (that happens only at dump time).
+// The SHADOW FAN-OUT keeps its own independent switch, but as of box 3 (issue #522) that switch is DEFAULT-ON
+// and inverted into a kill switch: live inputs fan to the new log for every session on edge, and `?v2shadow=0`
+// / localStorage `ares_v2shadow='0'` / `window.__ARES_FIGHT_SHADOW_ENABLED = false` disarm it in one reload.
+// The recorder's own gate is untouched by that flip — the two consumers remain independently gated.
 
 import { fight_store, committed_state } from '@aresrpg/fight/store'
 import { input_envelope } from '@aresrpg/fight/envelope'
@@ -50,9 +52,12 @@ const app_version = () => (typeof __APP_VERSION__ === 'undefined' ? null : __APP
 
 /** The shadow arm check itself — a pure read of `target`'s debug override / query / storage switch. Module
  *  level so BOTH the per-installation closure below and the standalone `shadow_is_armed` getter (React-facing
- *  section, bottom of file) share ONE definition — never two copies of the same arm logic (one home per fact). */
+ *  section, bottom of file) share ONE definition — never two copies of the same arm logic (one home per fact).
+ *  The debug override is TWO-WAY now that the shadow is default-on (box 3): `true` forces it on, `false` is the
+ *  console-side kill switch (a force-on-only override would have nothing left to do), anything else — including
+ *  the usual `undefined` — falls through to the query/storage switch, which itself now defaults ON. */
 const shadow_armed_on = (target) => {
-  if (target.__ARES_FIGHT_SHADOW_ENABLED === true) return true
+  if (typeof target.__ARES_FIGHT_SHADOW_ENABLED === 'boolean') return target.__ARES_FIGHT_SHADOW_ENABLED
   return shadow_enabled_from({
     search: target.location?.search ?? '',
     storage_get: (key) => {

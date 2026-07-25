@@ -31,21 +31,42 @@ import { push_bounded, capsule_export, CAPSULE_RING_LIMIT } from '@aresrpg/fight
 
 import { game_log } from '../core/log.js'
 
-/** The arming switch's public spelling — a query key and a localStorage key. Both are STRING DATA (quoted
- *  literals are exempt from the D756 identifier scan), so the string content is free to say "v2shadow". */
+/** The switch's public spelling — a query key and a localStorage key. Both are STRING DATA (quoted literals
+ *  are exempt from the D756 identifier scan), so the string content is free to say "v2shadow". */
 export const SHADOW_QUERY_PARAM = 'v2shadow'
 export const SHADOW_STORAGE_KEY = 'ares_v2shadow'
 
 /**
- * shadow_enabled_from — the pure arm check. `search`/`storage_get` are injected so this is testable without
- * a DOM `window` (mirrors fight_state_trace.js's `fight_trace_enabled(search)`).
+ * shadow_enabled_from — the pure arm check. DEFAULT-ON as of box 3 (issue #522): live inputs fan to the new
+ * log for every session, so this switch is now a KILL switch rather than an opt-in. `?v2shadow=0` disarms
+ * this page load; localStorage `ares_v2shadow='0'` disarms stickily; an explicit query value always beats the
+ * stored preference (a URL is a deliberate act, a stored key is a leftover). `=1` still arms explicitly, so
+ * every spelling that worked while the shadow was opt-in keeps working unchanged. `search`/`storage_get` are
+ * injected so this is testable without a DOM `window` (mirrors fight_state_trace.js's `fight_trace_enabled`).
  * @param {{ search?: string, storage_get?: (key: string) => string | null }} [fields]
  * @returns {boolean}
  */
 export const shadow_enabled_from = ({ search = '', storage_get = () => null } = {}) => {
-  if (new URLSearchParams(search).get(SHADOW_QUERY_PARAM) === '1') return true
-  return storage_get(SHADOW_STORAGE_KEY) === '1'
+  const query = new URLSearchParams(search).get(SHADOW_QUERY_PARAM)
+  if (query != null) return query !== '0'
+  return storage_get(SHADOW_STORAGE_KEY) !== '0'
 }
+
+/**
+ * The envelope kinds that provably CANNOT move committed truth on EITHER side, so comparing the two boards
+ * would only re-prove the previous envelope's verdict at the cost of a full re-fold per side. The v2 door
+ * documents both as fold no-ops (`player_draft` returns the state unchanged; `clock_observed` writes only
+ * `state.clock`, which `project_board`'s fold never reads — v2/ingest.js), and the V1 side is symmetric: a
+ * draft or a tick writes staged/commit/wave bookkeeping, never the view/entries/view_version/retired
+ * quadruple `committed_state` folds (fight/src/fold.js). Both kinds are still INGESTED below — the core stays
+ * a faithful replica of the input log and the clock cursor keeps advancing — only the COMPARISON is skipped.
+ * This is what makes default-on affordable: FightTimeline drives a 4 Hz `tick` for the whole of every turn
+ * (FightTimeline.jsx), so comparing on ticks would spend two full log re-folds, four times a second, all
+ * fight, to reprint a verdict neither side could have changed. A divergence introduced under one of these
+ * kinds is impossible by construction; the very next truth-moving envelope compares the whole board anyway,
+ * so detection is never weakened — only its timestamp moves to the next real input.
+ */
+const TRUTH_STILL_KINDS = new Set(['clock_observed', 'player_draft'])
 
 // The stable per-fighter fields both folds derive through the same `apply_action` reducer (see header).
 const FIGHTER_FIELDS = ['cell', 'hp', 'alive', 'turn_number']
@@ -102,6 +123,9 @@ export const create_shadow_driver = ({ app_version = null } = {}) => {
       logged_fight_id = null
     }
     fight_envelopes = push_bounded(fight_envelopes, envelope, CAPSULE_RING_LIMIT)
+    // Ingested and RECORDED above (the capsule must replay the whole input stream), compared below only when
+    // the envelope could have moved truth — see TRUTH_STILL_KINDS.
+    if (TRUTH_STILL_KINDS.has(envelope?.payload?.kind)) return { diverged: false }
 
     const fields = diff_boards(old_board, project_board(v2_state))
     if (!fields.length) return { diverged: false }
