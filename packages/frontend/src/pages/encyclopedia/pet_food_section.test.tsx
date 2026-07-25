@@ -8,14 +8,14 @@
 import { expect, test } from 'bun:test'
 import i18next from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { I18nextProvider, initReactI18next } from 'react-i18next'
+import { I18nextProvider } from 'react-i18next'
 
 import en from '../../i18n/locales/en.json'
 
 import { PetFoodSection, PetFoodHoverRow } from './pet_food_section'
 
 const EN_I18N = i18next.createInstance()
-EN_I18N.use(initReactI18next).init({
+EN_I18N.init({
   lng: 'en',
   resources: { en: { translation: en } },
   interpolation: { escapeValue: false },

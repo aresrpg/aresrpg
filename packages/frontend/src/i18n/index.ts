@@ -22,6 +22,10 @@ export const LANGUAGES = [
 
 export type Language = (typeof LANGUAGES)[number]['code']
 
+// This module is the ONE home of `initReactI18next` — that plugin's init is a process-global write
+// (`setI18n` + react defaults), so a second registration re-points every provider-less
+// `useTranslation()` in the process at a foreign instance (#833). Guarded by react_default_instance.test.js.
+//
 // Attach the lazy-locale loader BEFORE init so the initial `languageChanged` that init emits when it
 // resolves the detected/persisted language is caught (attaching after init misses it — the boot language
 // would silently never get its bundle). Fires again on every user language switch.

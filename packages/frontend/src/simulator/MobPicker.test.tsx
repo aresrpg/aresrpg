@@ -20,7 +20,7 @@
 import { afterEach, describe, expect, spyOn, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import i18next from 'i18next'
-import { I18nextProvider, initReactI18next } from 'react-i18next'
+import { I18nextProvider } from 'react-i18next'
 
 import en from '../i18n/locales/en.json'
 import fixture from '../pages/encyclopedia/world_corpus.fixture.json'
@@ -30,7 +30,7 @@ import type { WorldCorpusBlob } from '../pages/encyclopedia/world_corpus'
 import { simulator_mob_roster, use_mob_picker_content } from './MobPicker'
 
 const test_i18n = i18next.createInstance()
-void test_i18n.use(initReactI18next).init({
+void test_i18n.init({
   lng: 'en',
   resources: { en: { translation: en } },
   interpolation: { escapeValue: false },

@@ -3,7 +3,7 @@
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import i18next from 'i18next'
-import { I18nextProvider, initReactI18next } from 'react-i18next'
+import { I18nextProvider } from 'react-i18next'
 import { configure_walrus_assets } from '@aresrpg/sdk/jobs'
 
 import en from '../i18n/locales/en.json'
@@ -23,7 +23,7 @@ configure_walrus_assets({ aggregator: CDN, classes: { shop_render: { published: 
 const shop_url = (file: string) => `${CDN}/shop/${file}`
 
 const test_i18n = i18next.createInstance()
-test_i18n.use(initReactI18next).init({
+test_i18n.init({
   lng: 'en',
   resources: { en: { translation: en } },
   interpolation: { escapeValue: false },

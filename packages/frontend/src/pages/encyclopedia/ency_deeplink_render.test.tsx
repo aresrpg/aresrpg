@@ -7,12 +7,12 @@ import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import i18next from 'i18next'
-import { I18nextProvider, Trans, initReactI18next } from 'react-i18next'
+import { I18nextProvider, Trans } from 'react-i18next'
 
 import { EncyclopediaLink } from './EncyclopediaLink'
 
 const i18n = i18next.createInstance()
-await i18n.use(initReactI18next).init({
+await i18n.init({
   lng: 'en',
   resources: { en: { translation: { need_key: 'You need a <link>{{key}}</link> to enter.' } } },
   interpolation: { escapeValue: false },

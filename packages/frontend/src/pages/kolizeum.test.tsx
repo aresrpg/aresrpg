@@ -15,7 +15,6 @@ import { readFileSync } from 'node:fs'
 import { describe, test, expect } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import i18next from 'i18next'
-import { initReactI18next } from 'react-i18next'
 
 import en from '../i18n/locales/en.json'
 import fr from '../i18n/locales/fr.json'
@@ -25,7 +24,7 @@ import { gate_cta_label } from './kolizeum_gate'
 const read_fixture = (relative_path) => readFileSync(new URL(relative_path, import.meta.url), 'utf8')
 
 const test_i18n = i18next.createInstance()
-test_i18n.use(initReactI18next).init({
+test_i18n.init({
   lng: 'en',
   resources: { en: { translation: en }, fr: { translation: fr } },
   interpolation: { escapeValue: false },

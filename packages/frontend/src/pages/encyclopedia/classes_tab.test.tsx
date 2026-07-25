@@ -3,7 +3,7 @@
 import { describe, expect, test } from 'bun:test'
 import i18next from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { I18nextProvider, initReactI18next } from 'react-i18next'
+import { I18nextProvider } from 'react-i18next'
 
 import en from '../../i18n/locales/en.json'
 import fr from '../../i18n/locales/fr.json'
@@ -12,14 +12,14 @@ import { project_spell_effect } from '../../game/screens/hud/fight-spells-core.j
 import { SpellDetail } from './classes_tab'
 
 const EN_I18N = i18next.createInstance()
-EN_I18N.use(initReactI18next).init({
+EN_I18N.init({
   lng: 'en',
   resources: { en: { translation: en } },
   interpolation: { escapeValue: false },
 })
 
 const FR_I18N = i18next.createInstance()
-FR_I18N.use(initReactI18next).init({
+FR_I18N.init({
   lng: 'fr',
   resources: { fr: { translation: fr } },
   interpolation: { escapeValue: false },
