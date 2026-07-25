@@ -9,7 +9,8 @@
 //
 // CONTRACT: every export is a pure `(inputs) -> value`. No store reads, no IO, no three.js scene work.
 
-import { decode as decode_cell, encode as encode_cell } from '@aresrpg/fight/los'
+import { decode as decode_cell } from '@aresrpg/fight/los'
+import { voids_from_shape_mask } from '@aresrpg/fight/board_state'
 import { engine_view } from '@aresrpg/fight/project'
 // get_aoe_cells is the ONE shape home the sim + chain use to enumerate a spell's affected cells (spell_targeting.js:
 // CIRCLE/CROSS/RING/LINE/TBAR/CONE). The hover footprint below REUSES it verbatim so the telegraph can never
@@ -46,17 +47,12 @@ export function build_args_from_dungeon(dungeon, origin = VOXEL_BOARD_ORIGIN) {
     anchor: { origin },
   }
   // D75 forward → D231: the engine build now takes VOIDS — cells OUTSIDE the deterministic shape (render
-  // nothing, unpickable; "squares are forbidden", the D25 move-module grid is the only shape author). A
-  // record carrying a shape_mask (Set of CANONICAL encoded INSIDE cells) ships the COMPLEMENT over the
-  // rect as voids. A mask-less (train-3) record ships none — the engine renders the full rect (legacy
-  // records only; every D75+ dungeon carries a mask).
-  if (dungeon?.shape_mask?.size) {
-    const voids = []
-    for (let y = 0; y < args.grid_h; y++)
-      for (let x = 0; x < args.grid_w; x++) if (!dungeon.shape_mask.has(encode_cell(x, y))) voids.push({ x, y })
-    return { ...args, voids }
-  }
-  return args
+  // nothing, unpickable; "squares are forbidden", the D25 move-module grid is the only shape author). The
+  // complement is derived by `voids_from_shape_mask` (@aresrpg/fight/board_state), the ONE home the
+  // simulator's own board derivation reads too. A mask-less (train-3) record ships none — the engine renders
+  // the full rect (legacy records only; every D75+ dungeon carries a mask).
+  const voids = voids_from_shape_mask(args.grid_w, args.grid_h, dungeon?.shape_mask)
+  return voids.length ? { ...args, voids } : args
 }
 
 // ── WORLD-BOARD SEATING (robust grounding — pure math over sampled surfaces) ─────────────────────────────

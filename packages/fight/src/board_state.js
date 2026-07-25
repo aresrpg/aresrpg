@@ -12,7 +12,7 @@
 
 import { chain_to_world, DEFAULT_WORLD_OFFSET } from '@aresrpg/sdk/coords'
 
-import { GRID_CELLS } from './los.js'
+import { GRID_CELLS, encode } from './los.js'
 import { status_snapshot_entities } from './fight_status_snapshot.js'
 import { participant_entity_id } from './fight_control.js'
 
@@ -78,6 +78,29 @@ export function decode_shape_mask(words) {
     }
   }
   return mask
+}
+
+/**
+ * The VOID cells of a `width × height` board — every cell inside the rect that the deterministic shape mask
+ * does NOT cover (D231: the renderer draws nothing there and they are unpickable, which is what makes a
+ * generated board organic instead of a square). The complement is the ONE derivation both board renderers
+ * read: the world fight board (world-shell/voxel_fight_folds `build_args_from_dungeon`) and the simulator's
+ * derived board (simulator/board.ts) used to walk this rect independently, so a mask convention change could
+ * have landed on one surface and not the other.
+ *
+ * An EMPTY mask means "no shape was published" (a legacy mask-less record), which is not the same as "every
+ * cell is a void": it yields NO voids and the caller renders the full rect, exactly as before.
+ *
+ * @param {number} width @param {number} height
+ * @param {ReadonlySet<number>} inside the canonical stride-20 ON-cells (`decode_shape_mask`'s output)
+ * @returns {{ x: number, y: number }[]} the complement, row-major
+ */
+export function voids_from_shape_mask(width, height, inside) {
+  if (!inside?.size) return []
+  const voids = []
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++) if (!inside.has(encode(x, y))) voids.push({ x, y })
+  return voids
 }
 
 /** A decoded participant `Weapon` struct → the plain attack line the board prices the strike from. Tolerates the

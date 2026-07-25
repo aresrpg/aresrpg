@@ -18,8 +18,8 @@
 import { generate, board_seed_from_anchor } from '@aresrpg/sim/board_gen'
 import { WORLD_SEED } from '@aresrpg/sim/world'
 import { rng_seed, rng_range, mix } from '@aresrpg/sim/prng'
-import { decode_shape_mask } from '@aresrpg/fight/board_state'
-import { decode, encode } from '@aresrpg/fight/los'
+import { decode_shape_mask, voids_from_shape_mask } from '@aresrpg/fight/board_state'
+import { decode } from '@aresrpg/fight/los'
 
 /** A board-local cell — the engine's {x,y} vocabulary (x east, y north from the board origin). */
 export type SimCell = { x: number; y: number }
@@ -66,13 +66,11 @@ const derive_board = (seed: number, nonce: number): SimBoard => {
   const anchor = anchor_of(seed, nonce)
   const board_seed = board_seed_from_anchor(WORLD_SEED, anchor.x, anchor.z)
   const { width, height, shape_mask, obstacles, holes, start_cells_a, start_cells_b } = generate(board_seed, 0)
-  const in_shape = decode_shape_mask(shape_mask)
   // D231 — the cells inside the w×h rect that the deterministic shape does NOT cover: the engine renders
-  // nothing there, which is what makes a generated board organic instead of a square.
-  const voids = Array.from({ length: width * height }, (_, index) => ({
-    x: index % width,
-    y: Math.floor(index / width),
-  })).filter(({ x, y }) => !in_shape.has(encode(x, y)))
+  // nothing there, which is what makes a generated board organic instead of a square. The complement is the
+  // PRODUCTION derivation (`@aresrpg/fight/board_state`), the same one the world fight board's
+  // `build_args_from_dungeon` folds — never a local twin of the mask convention.
+  const voids = voids_from_shape_mask(width, height, decode_shape_mask(shape_mask))
   return {
     anchor,
     board_seed,
