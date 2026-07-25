@@ -60,7 +60,7 @@ function resolve_unlock(class_id, level, levels_gained) {
     name_key: fresh.name_key,
     name: fresh.name,
     cost: typeof l1.ap === 'number' ? l1.ap : null,
-    icon: spell_icon_url(fresh.name_key),
+    icon: spell_icon_url(fresh.icon_key),
     class_name: class_def.name,
   }
 }

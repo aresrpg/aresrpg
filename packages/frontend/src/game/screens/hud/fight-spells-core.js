@@ -126,6 +126,13 @@ export function build_fight_spells(spell_corpus) {
       unlock_level: spell.unlock,
       name: spell.name,
       name_key: name_key(spell.name),
+      // THE SPELL-ART KEY (issue #884) — the asset host keys spell icons by the corpus row's own id
+      // (`<class>_<name>`, e.g. `spells/rojin_greed.png`), NOT by name_key. Probed 2026-07-26 against the live
+      // host: `spells/rojin_greed.png` → 200 while `spells/greed.png` → 404, and the content house's own upload
+      // manifest lists all 239 keys in the id shape. name_key stays the display/selection identity; this is the
+      // ONE home for "which file is this spell's art", so every icon surface derives it here instead of
+      // re-deriving a key that resolves to nothing.
+      icon_key: spell.id ?? name_key(spell.name),
       template_id: spell.id,
       template: templates.get(spell.id),
       kind: spell.role === 'heal' ? 'heal' : 'dmg',

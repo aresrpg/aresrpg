@@ -138,7 +138,7 @@ function SpellDetail({ spell }: { spell: any }) {
           style={{ background: 'rgba(200,150,60,0.06)', boxShadow: '0 0 16px rgba(200,150,60,0.08)' }}
         >
           <img
-            src={spell_icon_url(spell.name_key) ?? undefined}
+            src={spell_icon_url(spell.icon_key) ?? undefined}
             alt=""
             className="w-[72px] h-[72px] object-cover"
             onError={(e) => {
@@ -444,7 +444,7 @@ function ClassesTab({
                 onClick={() => set_selected_spell_key(spell.name_key)}
               >
                 <img
-                  src={spell_icon_url(spell.name_key) ?? undefined}
+                  src={spell_icon_url(spell.icon_key) ?? undefined}
                   alt=""
                   className="w-4 h-4 shrink-0 object-cover"
                   onError={(e) => {
@@ -481,7 +481,7 @@ function ClassesTab({
                 }}
               >
                 <img
-                  src={spell_icon_url(spell.name_key) ?? undefined}
+                  src={spell_icon_url(spell.icon_key) ?? undefined}
                   alt=""
                   className="w-5 h-5 shrink-0 object-cover"
                   onError={(e) => {
