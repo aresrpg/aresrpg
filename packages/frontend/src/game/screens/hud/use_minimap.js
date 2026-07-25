@@ -21,7 +21,7 @@ import { world_minimap_column } from '@aresrpg/engine3'
 import { use_game_state, context } from '../../store.js'
 import { use_world_binding } from '../../../world-shell/session_gate.js'
 import { instrument_cpu_callback } from '../../cpu_span.js'
-import { resolve_hack_mode } from './world/engine_flags_pref.js'
+import { select_hack_presentation } from '../../core/world_presentation.js'
 
 import {
   sample_relief_grid,
@@ -92,9 +92,10 @@ export function use_minimap(canvas_ref, { size, view_radius_blocks, sample_n, ma
     return p ? `${Math.round(p.x / RESAMPLE_STEP)}:${Math.round(p.z / RESAMPLE_STEP)}` : null
   })
   const world_id = use_world_binding((s) => s.world)
-  // The SAME resolver embed_voxel.js reads to choose the world presentation — one home, so the map can
-  // never disagree with the world about which mode the session is in. Read once: the toggle live-reboots.
-  const hack_map = resolve_hack_mode(location.search)
+  // The LIVE session's presentation, not a second read of the preference (#812): the settings toggle
+  // re-creates the session in place with no page reload, so the map must re-branch off the reducer door the
+  // session publishes on every (re)boot — a preference read only re-branches when React remounts this hook.
+  const hack_map = use_game_state(select_hack_presentation)
 
   const grid_ref = useRef(/** @type {import('./minimap_engine.js').ReliefGrid | null} */ (null))
   const grid_ver_ref = useRef(0)

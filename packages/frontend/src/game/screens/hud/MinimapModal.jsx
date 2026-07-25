@@ -45,7 +45,7 @@ import { spawn_markers } from '@aresrpg/world/spawns_zones'
 
 import { use_game_state, context } from '../../store.js'
 import { use_spawns } from '../../../world-shell/spawns_adapter.js'
-import { resolve_hack_mode } from './world/engine_flags_pref.js'
+import { select_hack_presentation } from '../../core/world_presentation.js'
 import {
   sample_relief_grid,
   hack_relief_grid,
@@ -107,8 +107,9 @@ export function MinimapModal({ onClose }) {
   // markers (so they never drift apart); the player ARROW still tracks the LIVE heading (cheap — see below).
   const grid_ref = useRef(/** @type {import('./minimap_engine.js').ReliefGrid | null} */ (null))
   const origin_ref = useRef({ x: 0, z: 0 })
-  // same resolver the world + small map read (one home) — hack sessions map the grid, not the terrain.
-  const hack_map = resolve_hack_mode(location.search)
+  // Same reducer-door signal the world + small map read (one home) — hack sessions map the grid, not the
+  // terrain, and a live settings flip re-branches this map without a reload (#812).
+  const hack_map = use_game_state(select_hack_presentation)
   const [grid_ver, set_grid_ver] = useState(0)
 
   // ESC closes (modal idiom).

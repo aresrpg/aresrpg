@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next'
 
 import { set_music_stream_owned } from '../../../core/audio/ambient_music.js'
 import { use_game_state } from '../../../store.js'
+import { select_hack_presentation } from '../../../core/world_presentation.js'
 import { create_radio, load_radio_tracks } from './hack_radio.js'
 
 /** @returns {import('react').ReactElement | null} null unless the player is on the hack grid */
@@ -31,7 +32,7 @@ export function HackRadioPlayer() {
   // The LIVE session's presentation, not a second read of the preference: GameWorldHost outlives every route
   // change, so a settings flip must reach this widget through the reducer door (embed_voxel publishes it on
   // every session (re)boot) or the radio would only appear after a page reload. Spectate is never the grid.
-  const hack = use_game_state((state) => state.world_presentation === 'hackgrid')
+  const hack = use_game_state(select_hack_presentation)
   const radio_ref = useRef(/** @type {ReturnType<typeof create_radio>} */ (null))
   const [tracks, set_tracks] = useState(/** @type {ReadonlyArray<{ src: string, title: string }>} */ ([]))
   const [playing, set_playing] = useState(false)
