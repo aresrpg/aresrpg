@@ -189,13 +189,18 @@ export function create_hack_presentation({ scene }) {
   const sun_dir = vec3(0, Math.sin(SUN_ELEVATION_RAD), Math.cos(SUN_ELEVATION_RAD))
   const cos_sun = view.dot(sun_dir)
   const disc = smoothstep(float(Math.cos(SUN_ANGULAR_RADIUS_RAD)), float(Math.cos(SUN_ANGULAR_RADIUS_RAD * 0.985)), cos_sun) // prettier-ignore
-  // vertical parameter across the disc, −1 (bottom) → +1 (top): drives the gradient AND the gap stripes.
-  const disc_t = up.sub(float(Math.sin(SUN_ELEVATION_RAD))).div(float(Math.sin(SUN_ANGULAR_RADIUS_RAD)))
-  const sun_rgb = mix(HACK_SUN_BOTTOM, HACK_SUN_TOP, clamp(disc_t.mul(float(0.5)).add(float(0.5)), 0, 1))
-  // 4 horizontal gaps carved into the LOWER half only (the retrowave grammar), faded in across the middle.
-  const stripes = smoothstep(float(0.42), float(0.5), fract(disc_t.mul(float(2.6))))
-  const sun_mask = mix(float(1), stripes, smoothstep(float(0.1), float(-0.15), disc_t))
-  const halo = pow(clamp(cos_sun, 0, 1), float(220)).mul(float(0.5))
+  // Vertical parameter over the VISIBLE disc — 0 at the horizon, 1 at the disc top. The sun is half
+  // sunk into the horizon (elevation < radius, the retrowave silhouette), so a bottom-of-disc origin
+  // would hide the whole magenta half under the plane; anchoring at the horizon puts the spec's
+  // #ff2975 → #ffd319 ramp exactly across what a player sees.
+  const disc_t = clamp(up.div(float(Math.sin(SUN_ELEVATION_RAD) + Math.sin(SUN_ANGULAR_RADIUS_RAD))), 0, 1)
+  // ^1.7 holds the magenta across the disc's lower third (the disc's widest band sits BELOW its centre
+  // here, so a linear ramp reads as an all-yellow ball); ×0.8 keeps it off AgX's desaturating shoulder.
+  const sun_rgb = mix(HACK_SUN_BOTTOM, HACK_SUN_TOP, pow(disc_t, float(1.7))).mul(float(0.8))
+  // 4 horizontal gap stripes carved into the lower half (the retrowave grammar), fading out by mid-disc.
+  const stripes = smoothstep(float(0.34), float(0.46), fract(disc_t.mul(float(7))))
+  const sun_mask = mix(float(1), stripes, smoothstep(float(0.55), float(0.1), disc_t))
+  const halo = pow(clamp(cos_sun, 0, 1), float(320)).mul(float(0.35))
   const sky_node = sky_gradient
     .add(HACK_HORIZON_GLOW.mul(horizon_band.mul(float(HORIZON_GAIN))))
     .add(sun_rgb.mul(disc.mul(sun_mask)))
