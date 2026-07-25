@@ -17,7 +17,6 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dices, X } from 'lucide-react'
-
 import { encode } from '@aresrpg/fight/los'
 
 import type { CorpusMob } from '../pages/encyclopedia/world_corpus'

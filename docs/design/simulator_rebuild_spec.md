@@ -148,7 +148,8 @@ the chain action vocabulary; node-clean, fully bun-testable). Pure core + one th
 start_cells_a, start_cells_b}` — the EXACT chain derivation (`board.move` twin, golden-pinned).
 Derive the sim `Arena` from it: `cells` Uint8Array (off-mask/obstacle/hole ⇒ 1), `spawns_a/b`
 from the start cells (decode stride-20 → `{x,y}` via `@aresrpg/fight/los` `decode`). REROLL =
-new seed. The board renders over real streamed terrain at the anchor (§7).
+new seed. The board renders ALONE IN THE VOID under a true isometric camera (§7) — the anchor still
+picks WHICH board the chain derivation yields, it is no longer a place the board is rendered at.
 
 ### 4.3 Snapshot bootstrap
 
@@ -318,9 +319,11 @@ seed/board/mob_picks/placements/focus), `traces` (last 10 exports, key = `<fight
 `packages/frontend/src/simulator/mount.js` — the page's imperative composition (the
 `board_demo.js` standalone precedent, upgraded to production wiring):
 
-1. `create_engine` (`@aresrpg/engine3`) into the page canvas, streaming the REAL terrain
-   (`WORLD_SEED`) around the board anchor — the board sits on genuine world ground exactly as a
-   live world fight does. Quality prefs via the existing `quality_pref.js` read.
+1. `create_engine` (`@aresrpg/engine3`) into the page canvas with `void_scene: true` — the world
+   composition MINUS the world: no streaming ring, no far shell, no cloud deck, no ambient particles,
+   a near-black backdrop, and an ORTHOGRAPHIC camera at the tactical tilt (owner ruling 2026-07-25:
+   "do not show the terrain, show the void with a single fight board, isometric view"). The renderer,
+   lighting and every mount seam stay the world's own. Quality prefs via `quality_pref.js`.
 2. `create_tactical_board` (`@aresrpg/engine3/tactical`).
 3. `create_voxel_fight_adapter` (`world-shell/voxel_fight_adapter.js`) — the production
    renderer-#2 wiring: entities (real GLBs + S4 capsules), beats, VFX/SFX, cell paints,
@@ -467,8 +470,8 @@ Files: `packages/frontend/src/simulator/mount.js`, S4 capsule fallback in
 `packages/engine/src/tactical/`, wiring into the page (board pane), placement + mob-picker
 interactions, mob picker component.
 Acceptance: driven proof (screenshot per the repo's verification law): reroll regenerates the
-board over real terrain; blue-cell placement paints; red-cell click opens the picker; a placed
-GLB-less class shows a capsule.
+board in the void; blue-cell placement paints; red-cell click opens the picker (verified against the
+ORTHOGRAPHIC projection — ray construction differs); a placed GLB-less class shows a capsule.
 
 **L4 — fight phase end-to-end.**
 Files: `packages/frontend/src/simulator/fight_shim.js` (the sim context shim: store seeds §6,

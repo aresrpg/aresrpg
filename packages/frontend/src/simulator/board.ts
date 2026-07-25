@@ -23,7 +23,8 @@ import { decode } from '@aresrpg/fight/los'
 
 /** A board-local cell — the engine's {x,y} vocabulary (x east, y north from the board origin). */
 export type SimCell = { x: number; y: number }
-/** The world block the board's min corner sits on (the terrain the board is grounded over). */
+/** The world block the chain derivation folds into a board seed. It selects WHICH board, not where it is
+ *  rendered — the simulator's board floats in the void, on no terrain at all. */
 export type SimAnchor = { x: number; z: number }
 
 export type SimBoard = {
@@ -98,13 +99,20 @@ export const board_of = (seed: number, nonce: number): SimBoard => {
   return board
 }
 
-/** The engine `board.build` spec for a derived board, grounded at `origin`. */
+/**
+ * The engine `board.build` spec for a derived board, seated at `origin`. `flat` because the simulator's
+ * board floats in the void: there is no terrain to follow, and the relief path would sample an empty world.
+ */
 export const build_spec_of = (board: Readonly<SimBoard>, origin: Readonly<{ x: number; y: number; z: number }>) => ({
   grid_w: board.width,
   grid_h: board.height,
   obstacles: board.obstacles as SimCell[],
   holes: board.holes as SimCell[],
   voids: board.voids as SimCell[],
-  clear_footprint: true,
+  flat: true,
   anchor: { origin },
 })
+
+/** The identity of a MOUNTED board: same key ⇒ same geometry, so a repaint can skip the bake. In the void
+ *  the layout is the whole truth — the world anchor only picks which layout the chain derivation yields. */
+export const board_key_of = (board: Readonly<SimBoard>): string => `${board.board_seed}:${board.width}x${board.height}`

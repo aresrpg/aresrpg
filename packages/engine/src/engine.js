@@ -8,7 +8,7 @@
 // synchronously with the 7×7 test island (§brief — worker pool wiring exists and is unit-tested,
 // but M0 doesn't route the demo through it yet; that's M1's streaming ring manager).
 
-import { Euler, Vector3 } from 'three'
+import { Color, Euler, Vector3 } from 'three'
 
 import { LOAD_RADIUS_CHUNKS, TIER_LOAD_RADIUS, MASTER_SEED, WORLD_HEIGHT } from './config/world_config.js'
 import { get_block_by_name } from './config/block_registry.js'
@@ -104,6 +104,10 @@ export {
  *  visually end at the barrier; the LOD shell starts past these. */
 const BORDER_MARGIN_CHUNKS = 2
 
+/** The colour the 'void' presentation clears to — the house near-black (DESIGN.md bg #0a0a0f). ONE home
+ *  for the void's look, so every consumer of the shared fork floats in the SAME dark. */
+export const VOID_SCENE_BACKGROUND = 0x0a0a0f
+
 /** [D194/D210] the border box = the EXACT chunk extent around the floor-divided centre chunk — the
  *  single source the fence/clamp/wall derive from (chunk truth; never mid-terrain).
  *  @param {[number, number]} zone_origin @param {number} zone_size_m
@@ -163,11 +167,18 @@ const ANALYTIC_GROUND_ID = /** @type {number} */ (get_block_by_name('stone')?.id
  * @property {boolean} [force_webgl] ENG-20: force the minimal WebGL fallback path (a colored heightmap
  *   of basic blocks, no TSL/post/atmosphere) even when WebGPU is available — the demo's `?force_webgl=1`
  *   test lever. Auto-detection (navigator.gpu absent → webgl) applies regardless of this flag.
- * @property {'terrain'|'hackgrid'} [presentation] world presentation; default 'terrain' (today's world).
- *   HACK MODE (docs/design/hack_mode_spec.md): 'hackgrid' constructs NO terrain system at all (gen/mesh/
- *   far workers, ring, far shell, materialization floor, waterfalls, ambience, atmosphere) and mounts the
- *   retrowave grid instead; the collision/residency oracle becomes a constant plane, so every consumer
- *   downstream inherits it through the SAME api methods. WebGPU-only (the WebGL floor ignores it, warns).
+ * @property {'terrain'|'hackgrid'|'void'} [presentation] world presentation; default 'terrain' (today's
+ *   world). Both alternatives construct NO terrain system at all (gen/mesh/far workers, ring, far shell,
+ *   materialization floor, waterfalls, ambience) — they differ in what stands in its place, and every
+ *   consumer downstream inherits the swap through the SAME api methods. WebGPU-only (the WebGL floor
+ *   ignores them, warns).
+ *   • 'hackgrid' — HACK MODE (docs/design/hack_mode_spec.md): the retrowave grid + its own sky node, no
+ *     atmosphere/post stack, and a constant-plane collision/residency oracle.
+ *   • 'void' — THE VOID: nothing at all. A near-black backdrop, no cloud deck, no volumetric fog, and an
+ *     ORTHOGRAPHIC render camera (a true isometric). The post stack STAYS — the tactical board paints its
+ *     highlight channels through it — so this is the world composition minus the world, never a second
+ *     renderer. Everything on screen is what the dapp itself mounts. Pair with `zone_size_m: 0` (no border
+ *     wall to arm); the fight simulator's board viewport is the shipped consumer.
  */
 
 /**
@@ -213,6 +224,9 @@ const ANALYTIC_GROUND_ID = /** @type {number} */ (get_block_by_name('stone')?.id
  * @property {(yaw: number, pitch: number) => void} set_camera_orientation radians
  * @property {(magnitude: number) => void} shake_camera [D248] fire a decaying impact camera shake (0.10 light / 0.20 std / 0.5+ crit); no-op at rest.
  * @property {(on: boolean) => void} set_motion_blur_enabled [D251-2] runtime toggle for the camera-rotation blur (dapp kills it in fights); no-op if uncreated.
+ * @property {(height_m: number) => void} set_camera_view_size ORTHOGRAPHIC frustum HEIGHT in world metres
+ *   (the ortho twin of set_camera_fov — the board camera rig drives whichever the live camera answers to).
+ *   No-op unless the engine booted `presentation: 'void'` (the only orthographic composition).
  * @property {(fov_degrees: number) => void} set_camera_fov vertical field-of-view in degrees; the
  *   walk-mode shoulder camera widens this dynamically with speed (dapp feel). No-op pre-boot.
  * @property {(speed: number) => void} set_camera_speed [ENG camera-feel] horizontal player ground speed
@@ -237,7 +251,8 @@ const ANALYTIC_GROUND_ID = /** @type {number} */ (get_block_by_name('stone')?.id
  *   added Object3D from the scene.
  * @property {() => import('three').Scene | null} get_scene the live render scene (null pre-boot) —
  *   for advanced avatar wiring (shadow flags). Prefer add_to_scene/remove_from_scene.
- * @property {() => import('three').PerspectiveCamera | null} get_camera the live render camera (null
+ * @property {() => import('three').PerspectiveCamera | import('three').OrthographicCamera | null} get_camera
+ *   the live render camera — ORTHOGRAPHIC on a `void_scene` engine, perspective otherwise (null
  *   pre-boot). ENG-16 tactical board reads it for picking rays + float billboarding; it is NOT in the
  *   scene graph (renderer owns it standalone), so get_scene() cannot reach it. Read-only.
  * @property {() => import('./render/pool_renderer.js').TerrainRenderer | null} get_terrain_renderer
@@ -327,7 +342,7 @@ export function create_engine({
   // work). The app's logged-out backdrop passes this; login swaps to a full-size engine instance.
   zone_size_m = 600, // [D205/D210] playable side — defines the BORDER BOX ONLY (the world streams around the player; the fence is what makes it finite)
   force_webgl = false,
-  // HACK MODE: the world PRESENTATION (docs/design/hack_mode_spec.md §1.2). 'hackgrid' forks the
+  // The world PRESENTATION (docs/design/hack_mode_spec.md §1.2): 'hackgrid' and 'void' each fork the
   // construction recipe below — the same way the synthetic bench path already boots the WebGPU stack
   // with no streaming ring at all — never a scattered `if` in the frame loop.
   presentation = 'terrain',
@@ -336,8 +351,10 @@ export function create_engine({
   if (tier !== undefined && !TIER_ORDER.includes(tier)) {
     throw new TypeError(`create_engine: unknown tier "${tier}" — expected one of ${TIER_ORDER.join(', ')}`)
   }
-  if (presentation !== 'terrain' && presentation !== 'hackgrid') {
-    throw new TypeError(`create_engine: unknown presentation "${presentation}" — expected 'terrain' or 'hackgrid'`)
+  if (presentation !== 'terrain' && presentation !== 'hackgrid' && presentation !== 'void') {
+    throw new TypeError(
+      `create_engine: unknown presentation "${presentation}" — expected 'terrain', 'hackgrid' or 'void'`
+    )
   }
   // ENGINE_AAA_PLAN C4: procedural trees are now the DEFAULT (trees.procedural true). `?proctrees` stays as
   // the escape/kill-flag A/B: `?proctrees=0` forces procedural OFF (a rock-only world — the perf isolation),
@@ -406,16 +423,20 @@ export function create_engine({
       : 'webgpu'
   const engine_search = typeof location === 'undefined' ? '' : location.search
   if (backend === 'webgl') {
-    // HACK MODE is a TSL presentation (grid + sky nodes), so the ENG-20 heightmap floor ignores it —
-    // exactly how the tactical board is a no-op there. One honest warn, never a silent half-mode.
-    if (presentation === 'hackgrid') console.warn('[voxel] hack mode needs WebGPU — the WebGL floor renders the real terrain') // prettier-ignore
+    // Both alternative presentations are TSL/post compositions (the hack grid's sky nodes, the void's
+    // orthographic board scene), so the ENG-20 heightmap floor ignores them — exactly how the tactical
+    // board is a no-op there. One honest warn, never a silent half-mode.
+    if (presentation !== 'terrain') console.warn(`[voxel] the '${presentation}' presentation needs WebGPU — the WebGL floor renders the real terrain`) // prettier-ignore
     return create_webgl_engine({ canvas, seed: gen_seed, zone_origin, search: engine_search })
   }
-  /** HACK MODE (docs/design/hack_mode_spec.md): the third construction branch below + the oracle swap.
+  /** HACK MODE (docs/design/hack_mode_spec.md): an alternative construction branch below + the oracle swap.
    *  The ORACLE is armed HERE, at create — the decoration can only be built once the renderer exists,
    *  but the height/residency truth must answer from the very first consumer call (the boot veil asks
    *  before init resolves). Null in the terrain presentation ⇒ every path below is byte-identical. */
   const is_hack = presentation === 'hackgrid'
+  /** THE VOID: a worldless scene (no terrain system, near-black backdrop, orthographic camera). It needs
+   *  no oracle — nothing is ever sampled in an empty world. */
+  const is_void = presentation === 'void'
   const hack_oracle = is_hack ? create_hack_oracle() : null
   const hitch_enabled = url_flag_on('hitch', engine_search)
   const hitch_probe = create_hitch_probe({ search: engine_search })
@@ -704,6 +725,9 @@ export function create_engine({
         // HACK MODE: no physical sky, no cloud/froxel/god-ray post — the retrowave sky node replaces
         // the background below and the grid does its own distance fade (spec §1.4).
         atmosphere: !is_hack,
+        // THE VOID: an ORTHOGRAPHIC camera at the tactical tilt and no world dressing (cloud deck +
+        // volumetric fog off). The post stack itself stays — the board paints through it.
+        void_scene: is_void,
       })
     } catch (error) {
       // A rejected renderer promise can settle after dispose. The dead engine must neither boot a fallback
@@ -745,6 +769,16 @@ export function create_engine({
     })
     set_active_pipeline_warm_queue(pipeline_warm_queue)
     __tr = performance.now() // [TTP-init] renderer (WebGPU + sky/atmosphere/post) is up
+    // THE VOID: swap the sky background for the house near-black and kill the aerial fog. The sky node
+    // itself stays (it owns sun_direction — the lighting every mounted rig and the board's own materials
+    // read), so a void scene is lit exactly like the world; only the backdrop is nothing. Set here, once
+    // the renderer is up: create_renderer has already assigned its final background node (analytic at low
+    // tier, Hillaire above), so this is the last word.
+    if (is_void) {
+      renderer_handle.scene.backgroundNode = null
+      renderer_handle.scene.background = new Color(VOID_SCENE_BACKGROUND)
+      renderer_handle.set_fog_scale?.(0)
+    }
     fly_camera = create_fly_camera(renderer_handle.camera)
     // BENCH-ONLY hook (§7, same spirit as demo/main.js's `window.__engine` + `?synthetic_chunks`):
     // expose the scene so the W11 bench spec can A/B the shadow-cache (flip the sun's
@@ -790,9 +824,13 @@ export function create_engine({
     // carries it. The SEPARATE legacy weather field at atmosphere.js:726 (its own create_particles()
     // instance, never scene-mounted) is untouched by this flip — still owner-disabled, not resurrected.
     // Ticked in the frame loop; disposed below.
-    // HACK MODE: ambience is biome decoration (snow, leaf-fall, sand) — a grid world has no biome.
+    // Ambience is biome decoration (snow, leaf-fall, sand): a grid world has no biome and the void has
+    // no environment at all — neither dresses.
     const ambience_enabled =
-      !is_hack && typeof location !== 'undefined' && new URLSearchParams(location.search).get('ambience') !== '0'
+      !is_hack &&
+      !is_void &&
+      typeof location !== 'undefined' &&
+      new URLSearchParams(location.search).get('ambience') !== '0'
     if (ambience_enabled) {
       ambience = create_ambience({
         scene: renderer_handle.scene,
@@ -885,6 +923,10 @@ export function create_engine({
       renderer_handle.scene.backgroundNode = hack_presentation.sky_node
       if (typeof window !== 'undefined') /** @type {any} */ (window).__hack_presentation = hack_presentation
       emit_hack_boot_signals()
+    } else if (is_void) {
+      // THE VOID: nothing to build. No gen/mesh worker pools, no streaming ring, no far shell, no
+      // materialization holo-grid — the scene holds exactly what the dapp mounts and nothing else.
+      if (disposed) return
     } else if (is_synthetic) {
       const { chunks_loaded } = load_synthetic_chunks({
         terrain_renderer,
@@ -1441,10 +1483,20 @@ export function create_engine({
     },
     set_camera_fov(fov_degrees) {
       const camera = renderer_handle?.camera
-      if (!camera || typeof fov_degrees !== 'number' || !Number.isFinite(fov_degrees)) return
-      if (camera.fov === fov_degrees) return
-      camera.fov = fov_degrees
-      camera.updateProjectionMatrix()
+      // A `void_scene` renderer is ORTHOGRAPHIC — a field of view means nothing there (set_camera_view_size
+      // is its knob), so this is a no-op rather than a silent write onto a property that does not exist.
+      if (!camera || !(/** @type {any} */ (camera).isPerspectiveCamera)) return
+      const perspective = /** @type {import('three').PerspectiveCamera} */ (camera)
+      if (typeof fov_degrees !== 'number' || !Number.isFinite(fov_degrees)) return
+      if (perspective.fov === fov_degrees) return
+      perspective.fov = fov_degrees
+      perspective.updateProjectionMatrix()
+    },
+    set_camera_view_size(height_m) {
+      // The ORTHO twin of set_camera_fov: the frustum HEIGHT in world metres (the horizontal half follows
+      // the canvas aspect). No-op on the perspective camera, so ONE camera rig drives both projections.
+      if (defer_until_boot(() => api.set_camera_view_size(height_m))) return
+      renderer_handle?.set_view_size?.(height_m)
     },
     set_camera_speed(speed) {
       // [ENG camera-feel] the app's per-frame horizontal ground speed (m/s) — the SAME value it feeds
@@ -1834,6 +1886,9 @@ function create_webgl_engine({ canvas, seed, zone_origin, search = '' }) {
       if (disposed) return
       if (fb) fb.set_camera_fov(fov_degrees)
       else pending.fov = fov_degrees
+    },
+    set_camera_view_size() {
+      // [void_scene] the WebGL floor has no orthographic composition (no tactical board to frame).
     },
     shake_camera() {
       // [D248] the impact shake is a cinematic-camera cue — a no-op in the webgl heightmap fallback.

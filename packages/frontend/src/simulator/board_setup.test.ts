@@ -76,13 +76,19 @@ describe('board derivation — pure, seeded, chain-identical', () => {
     }
   })
 
-  test('build_spec_of hands the engine the grid dims + the three cell lists at the grounded origin', () => {
+  test('build_spec_of hands the engine the grid dims + the three cell lists at the seated origin', () => {
     const board = board_of(SEED, 0)
     const spec = build_spec_of(board, { x: 10, y: 130, z: -4 })
     expect(spec.grid_w).toBe(board.width)
     expect(spec.grid_h).toBe(board.height)
     expect(spec.anchor.origin).toEqual({ x: 10, y: 130, z: -4 })
     expect(spec.voids.length).toBe(board.voids.length)
+  })
+
+  test('the spec is FLAT — a board floating in the void never samples terrain relief', () => {
+    // flat:true is what makes the engine skip its per-cell ground sampler (tactical/index.js build): in a
+    // worldless scene that sampler reads an empty column and the board would seat itself on nothing.
+    expect(build_spec_of(board_of(SEED, 0), { x: 0, y: 0, z: 0 }).flat).toBe(true)
   })
 })
 

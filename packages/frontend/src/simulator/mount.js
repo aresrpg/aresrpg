@@ -2,38 +2,37 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // simulator/mount.js — the board VIEWPORT (docs/design/simulator_rebuild_spec.md §7, setup phase).
 //
-// The page's imperative 3D composition, the `packages/engine/demo/board_demo.js` standalone precedent
-// upgraded to production wiring: ONE engine streaming the REAL world terrain around the board's anchor, the
-// production tactical board mounted ON that ground, and the setup-phase paints applied from a scene the pure
-// fold (simulator/board_paint.ts) computed. It decides NOTHING: a cell click is relayed as a fact ("cell
-// (3,4) was clicked"), and legality is the reducer's, whose oracle is simulator/board.ts.
+// THE BOARD FLOATS IN THE VOID. The simulator is not a place in the world: it is one fight board, alone,
+// under a TRUE ISOMETRIC camera. So the engine boots WORLDLESS (`presentation: 'void'` — no streaming ring, no far
+// shell, no materialization grid, no cloud deck, no ambient particles, a near-black backdrop, and an
+// ORTHOGRAPHIC render camera) and the board mounts flat at the origin. There is no terrain to stream,
+// nothing to wait for, and nothing to bury the camera in.
 //
-// This file is glue by construction — every decision it could have made lives in board_paint.ts or
-// ground_probe.js, both of which are tested headless. It is the one module a bun test cannot import (the
-// tactical facade pulls the character avatar's GLB), which is exactly why it holds no logic.
+// What it is NOT is a second renderer. Every pixel comes from the SAME modules the world's fights render
+// through — `create_engine` (renderer, lighting, camera seam), `create_tactical_board` (geometry,
+// highlights, entities, picking, the locked-iso rig), the same `build`/`highlight`/`set_cell_state`/
+// `entity_upsert` calls `world-shell/voxel_fight_adapter.js` drives in a live fight. The only difference
+// between this scene and a real one is that the world isn't in it.
 //
-// L4 (the fight phase) mounts `create_voxel_fight_adapter` + the locked-iso fight camera over this SAME
-// engine + board handle: the calls below are the setup-phase subset of the adapter's own channels, so the
-// cutover is an addition, never a rewrite.
+// It decides NOTHING: a cell click is relayed as a fact ("cell (3,4) was clicked"), and legality is the
+// reducer's, whose oracle is simulator/board.ts. Every decision it could have made lives in board_paint.ts,
+// tested headless — this file is glue, which is why a bun test never needs to import it (the tactical
+// facade pulls the character avatar's GLB).
+//
+// L4 (the fight phase) mounts `create_voxel_fight_adapter` over this SAME engine + board handle: the calls
+// below are the setup-phase subset of the adapter's own channels, so the cutover is an addition.
 
-import { create_engine, world_config_for_biome } from '@aresrpg/engine3'
+import { create_engine } from '@aresrpg/engine3'
 import { create_tactical_board, TEAM_COLORS } from '@aresrpg/engine3/tactical'
-import { ground_surface_y } from '@aresrpg/engine3/player'
 
 import { get_saved_quality, LABEL_TO_TIER } from '../game/screens/hud/world/quality_pref.js'
 
-import { build_spec_of } from './board'
-import { wait_for_ground, board_mount_key } from './ground_probe.js'
+import { board_key_of, build_spec_of } from './board'
 
-/** The lobby world recipe — the terrain a player already knows from the world tab. */
-const SIMULATOR_BIOME = 'rainforest'
-/** Mid-morning: warm enough to read the two start-band paints against the ground. */
+/** Mid-morning: the sun angle the board's relief and the two start-band paints read best under. */
 const BOARD_TIME_OF_DAY = 0.28
-
-const raf_frame = () =>
-  new Promise((resolve) => {
-    requestAnimationFrame(() => resolve(undefined))
-  })
+/** Where the board sits. Arbitrary — in the void there is nothing else to sit near. */
+const BOARD_ORIGIN = { x: 0, y: 0, z: 0 }
 
 /**
  * Create the setup-phase board viewport on `canvas`. Nothing is on screen until `show()` resolves.
@@ -41,29 +40,27 @@ const raf_frame = () =>
  * @param {HTMLCanvasElement} args.canvas
  * @param {object} [args.deps] injectable factories — production passes nothing
  * @returns {{ show: (board: any, scene: any) => Promise<void>,
- *   on_cell_click: (cb: (cell: { x: number, y: number }) => void) => (() => void), destroy: () => void }}
+ *   on_cell_click: (cb: (cell: { x: number, y: number } | null) => void) => (() => void), destroy: () => void }}
  */
 export function create_board_viewport({ canvas, deps = {} }) {
-  const {
-    engine_factory = create_engine,
-    board_factory = create_tactical_board,
-    next_frame = raf_frame,
-    now = () => performance.now(),
-  } = /** @type {any} */ (deps)
+  const { engine_factory = create_engine, board_factory = create_tactical_board } = /** @type {any} */ (deps)
 
   const engine = engine_factory({
     canvas,
     tier: LABEL_TO_TIER[get_saved_quality()] ?? undefined,
-    zone_origin: [0, 0],
-    load_radius: 4,
-    world_config: world_config_for_biome(SIMULATOR_BIOME),
+    // THE VOID (the engine's shared `presentation` fork, beside 'terrain' and hack mode's 'hackgrid'):
+    // the world composition minus the world — same renderer, same post stack, same lighting, same mount
+    // seams; no terrain, no sky, no dressing, and an ORTHOGRAPHIC camera. `zone_size_m: 0` leaves the
+    // border wall unarmed: there is no world to fence.
+    presentation: 'void',
+    zone_size_m: 0,
   })
   engine.start?.()
   engine.set_time_of_day?.(BOARD_TIME_OF_DAY)
   const board = board_factory({ engine, canvas })
 
   let destroyed = false
-  /** the board currently mounted — a repaint must not re-stream terrain that has not changed */
+  /** the board currently mounted — a repaint must not re-bake geometry that has not changed */
   let mounted_key = /** @type {string | null} */ (null)
   /** every fighter id on the board, so an unpicked mob / unplaced character is actually despawned */
   let mounted_ids = /** @type {string[]} */ ([])
@@ -93,39 +90,29 @@ export function create_board_viewport({ canvas, deps = {} }) {
 
   return {
     /**
-     * Mount `sim_board` over the real terrain at its anchor and paint `scene`. Re-showing the SAME board
-     * only repaints — the terrain wait and the geometry bake never run twice.
+     * Mount `sim_board` in the void and paint `scene`. Re-showing the SAME layout only repaints — the
+     * geometry bake never runs twice.
      */
     async show(sim_board, scene) {
       if (destroyed) return
-      const key = board_mount_key(sim_board)
+      const key = board_key_of(sim_board)
       if (key === mounted_key) return paint(scene)
 
-      // Aim the streaming ring at the site, then WAIT for real ground: the board grounds itself off the
-      // land at build() time, so the column must be resident first (the demo's D167-B discipline).
-      const center_x = sim_board.anchor.x + sim_board.width
-      const center_z = sim_board.anchor.z + sim_board.height
-      engine.set_camera_position?.([center_x, 175, center_z + 40])
-      engine.set_camera_orientation?.(Math.PI, -0.5)
-      const floor_y = await wait_for_ground({
-        surface_at: (x, z) => ground_surface_y((bx, by, bz) => engine.sample_block(bx, by, bz), x, z),
-        sample_block: (x, y, z) => engine.sample_block(x, y, z),
-        next_frame,
-        now,
-        x: Math.floor(center_x),
-        z: Math.floor(center_z),
-      })
-      if (destroyed) return
-
-      await board.build(build_spec_of(sim_board, { x: sim_board.anchor.x, y: floor_y, z: sim_board.anchor.z }))
+      // flat:true — the board is dead flat at BOARD_ORIGIN.y instead of following ground per cell. There
+      // is no ground: the terrain-relief path would sample an empty world and hoist the board onto nothing.
+      await board.build(build_spec_of(sim_board, BOARD_ORIGIN))
       if (destroyed) return
       mounted_key = key
       mounted_ids = []
+      // The locked-iso rig (engine tactical/board_camera.js): polar frozen at 50°, target = the board
+      // centroid, azimuth drag + wheel zoom live. The SAME rig every live fight locks onto — it just sizes
+      // an orthographic frustum here instead of setting a fov, so the framing math is never duplicated.
       board.camera_lock()
       paint(scene)
     },
 
-    /** Subscribe to raw cell clicks (board-local {x,y}); returns the unsubscribe. */
+    /** Subscribe to raw cell clicks — board-local {x,y}, or NULL when the click missed the board (the
+     *  engine's contract v1.2: a miss is an event, not silence). Returns the unsubscribe. */
     on_cell_click(callback) {
       return board.on('cell_click', /** @type {any} */ (callback))
     },

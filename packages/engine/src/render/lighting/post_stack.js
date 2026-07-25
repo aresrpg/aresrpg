@@ -60,7 +60,7 @@ const LF_H = 54
 /**
  * @typedef {object} PostStack
  * @property {import('three/webgpu').RenderPipeline} pipeline
- * @property {(camera: import('three').PerspectiveCamera, speed?: number) => void} update per-frame
+ * @property {(camera: import('three').PerspectiveCamera | import('three').OrthographicCamera, speed?: number) => void} update per-frame
  *   BEFORE render: copies the scene camera's matrices into the reconstruction uniforms. `speed` (m/s,
  *   ENG camera-feel, default 0) forwards the player's ground speed to the output effect (motion blur).
  * @property {() => void} render_frame renders the composed pipeline (replaces renderer.render).
@@ -88,7 +88,7 @@ const LF_H = 54
 /**
  * @typedef {object} OutputEffect
  * @property {(final_node: *, ctx: OutputEffectContext) => *} build wraps the final graded vec4.
- * @property {(camera: import('three').PerspectiveCamera, speed?: number) => void} update per-frame,
+ * @property {(camera: import('three').PerspectiveCamera | import('three').OrthographicCamera, speed?: number) => void} update per-frame,
  *   before render. `speed` (m/s, ENG camera-feel) is the player's horizontal ground speed — optional,
  *   forwarded from render_frame's own optional `speed` param; effects that don't use it just ignore it.
  */
@@ -99,7 +99,7 @@ const LF_H = 54
  * @param {object} opts
  * @param {import('three/webgpu').WebGPURenderer} opts.renderer
  * @param {import('three').Scene} opts.scene
- * @param {import('three').PerspectiveCamera} opts.camera
+ * @param {import('three').PerspectiveCamera | import('three').OrthographicCamera} opts.camera
  * @param {import('three').DirectionalLight} opts.sun shadow-casting sun (kept: underwater/output effects may consume; unused by the core chain since the godrays deletion)
  * @param {import('../atmosphere.js').Atmosphere} opts.atmo
  * @param {import('../../core/quality/tiers.js').TierName} [opts.tier] quality tier — gates HALF-RES POST
@@ -523,7 +523,7 @@ export function create_post_stack({
     return true
   }
 
-  /** @param {import('three').PerspectiveCamera} active_camera @param {number} [speed] horizontal player
+  /** @param {import('three').PerspectiveCamera | import('three').OrthographicCamera} active_camera @param {number} [speed] horizontal player
    *  ground speed (m/s), forwarded to the output effect (ENG-8 motion blur's run-speed trigger) — the
    *  same per-frame idiom as the sky/underwater uniforms above. Optional; 0 is a safe default. */
   const update = (active_camera, speed = 0) => {

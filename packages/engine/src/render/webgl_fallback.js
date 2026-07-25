@@ -118,6 +118,7 @@ function warn_once(feature) {
  * @property {(position: [number, number, number]) => void} set_camera_position
  * @property {(yaw: number, pitch: number) => void} set_camera_orientation
  * @property {(fov_degrees: number) => void} set_camera_fov
+ * @property {(height_m: number) => void} set_camera_view_size
  * @property {(x: number, y: number, z: number) => number} sample_block heightmap collision oracle.
  * @property {(o: import('three').Object3D) => void} add_to_scene
  * @property {(o: import('three').Object3D) => void} remove_from_scene
@@ -282,6 +283,9 @@ export async function create_webgl_fallback({ canvas, seed, zone_origin, on_fram
     set_camera_orientation(new_yaw, new_pitch) {
       yaw = new_yaw
       pitch = new_pitch
+    },
+    set_camera_view_size() {
+      // [void_scene] no orthographic composition on the WebGL floor — it has no board to frame.
     },
     set_camera_fov(fov_degrees) {
       if (typeof fov_degrees !== 'number' || !Number.isFinite(fov_degrees) || camera.fov === fov_degrees) return

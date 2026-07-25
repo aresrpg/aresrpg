@@ -513,6 +513,8 @@ export function point_scatter_integral(cam, dir, frag_dist, light) {
  * @property {import('./sky/sky_node.js').SkyNode} sky the shared sky node (sun_direction + sample_sky).
  * @property {import('three').DirectionalLight} [sun] the scene sun (for sun_radiance init; godrays wired separately).
  * @property {number} [world_size] world span (m) for the cloud shadow footprint. Default 16384.
+ * @property {boolean} [void_scene] a worldless scene (engine `void_scene`): the cloud deck and the
+ *   volumetric fog grid are off — there is no world for them to dress. Every other pass is unchanged.
  * @property {(x:number, z:number)=>number} [height_at] [2026-07-05 PLAN A] CPU ground-height probe
  *   (world_surface_y) feeding the froxel fog's camera-following HEIGHT FIELD (fog_height.js) — the
  *   SMOOTH open-air sun-occlusion input that replaced the voxel-sun volume there (the static-arc fix).
@@ -719,9 +721,13 @@ export function create_atmosphere(opts) {
   // so the ?froxels=0 test disabled BOTH — bloom is the other suspect that flag cleared).
   const flag_off = (/** @type {string} */ name) =>
     typeof location !== 'undefined' && new URLSearchParams(location.search).get(name) === '0'
+  // THE VOID (engine `void_scene`): a scene with no world has nothing for the sky dressing to dress —
+  // the cloud deck and the volumetric fog grid are switched OFF at the same gate the URL kill-flags use,
+  // so the board is the only thing in frame. Every other pass (AgX, grade, the board's overlay) stands.
+  const void_scene = opts.void_scene === true
   const features = {
-    clouds: clouds.tier.march_steps > 0 && !flag_off('clouds'),
-    froxels: froxels_on, // ⛔ flag-gated with the same ?froxels=1 switch (see froxels_on above)
+    clouds: clouds.tier.march_steps > 0 && !flag_off('clouds') && !void_scene,
+    froxels: froxels_on && !void_scene, // ⛔ flag-gated with the same ?froxels=1 switch (see froxels_on above)
     bloom_off: flag_off('bloom'), // consumed by post_stack's with_bloom
   }
 

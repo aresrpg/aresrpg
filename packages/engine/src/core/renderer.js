@@ -17,6 +17,7 @@ import {
   DirectionalLight,
   FloatType,
   HemisphereLight,
+  OrthographicCamera,
   PCFSoftShadowMap,
   PerspectiveCamera,
   Scene,
@@ -71,7 +72,10 @@ export const FOG_COOL_TILT = [0.62, 0.75, 1.0]
  * @typedef {object} RendererHandle
  * @property {import('three/webgpu').WebGPURenderer} renderer
  * @property {Scene} scene
- * @property {PerspectiveCamera} camera
+ * @property {PerspectiveCamera | OrthographicCamera} camera the render camera — ORTHOGRAPHIC on a
+ *   `void_scene` renderer (a true isometric board), perspective everywhere else.
+ * @property {(height_m: number) => void} set_view_size orthographic frustum HEIGHT in metres; no-op on
+ *   the perspective camera (the board camera rig drives whichever the live camera is).
  * @property {'webgpu'|'webgl2'} backend which backend actually initialized (post-detect)
  * @property {(camera: import('three').Camera, terrain_epoch: number, queue_depth?: number) => void} sync_shadow
  *   per-frame shadow driver (W11 T1+T2 + stream debounce): recenters the sun's ortho shadow box on
@@ -122,6 +126,8 @@ export const FOG_COOL_TILT = [0.62, 0.75, 1.0]
  * @property {number} [fov] vertical FOV in degrees, default 70
  * @property {number} [near] default 0.1
  * @property {number} [far] default 20000 (§5.1 far-field horizons run to 16km+)
+ * @property {boolean} [void_scene] a worldless scene (engine `void_scene`): an ORTHOGRAPHIC camera at
+ *   the tactical tilt and no world dressing (cloud deck + volumetric fog off). The post stack stays.
  * @property {import('./quality/tiers.js').TierName} [tier] quality tier — gates the NG2-ATMO
  *   pass budgets (cloud march steps, froxel grid, god rays). Default 'high'.
  * @property {string} [seed] deterministic night-sky seed.
@@ -248,6 +254,10 @@ export async function create_renderer({
   hillaire_rebuild_on_rotate = true,
   on_hillaire_aerial,
   atmosphere = true,
+  // THE VOID (engine.js `void_scene`): a worldless scene — an ORTHOGRAPHIC camera at the tactical tilt
+  // and no world dressing (no cloud deck, no volumetric fog). The post stack itself STAYS: the tactical
+  // board's own highlight channels render through its post-AgX overlay pass.
+  void_scene = false,
 }) {
   const requested_webgpu = has_webgpu_support()
 
@@ -681,7 +691,14 @@ export async function create_renderer({
   //     fog color above samples too — so far shell, fog, and sky share one palette and cannot drift.
   scene.backgroundNode = sky.background_node
 
-  const camera = new PerspectiveCamera(fov, aspect_of(canvas), near, far)
+  // TRUE ISOMETRIC in the void: an OrthographicCamera, not a perspective one posed isometrically — a
+  // tactical board must read with no convergence at all (parallel cell edges, equal cells front to back).
+  // `view_size` is the frustum HEIGHT in world metres; the board camera rig drives it (set_view_size) the
+  // way it drives fov on the perspective rig, and apply_size derives the horizontal half from the aspect.
+  let view_size = 40
+  const camera = void_scene
+    ? new OrthographicCamera(-view_size / 2, view_size / 2, view_size / 2, -view_size / 2, near, far)
+    : new PerspectiveCamera(fov, aspect_of(canvas), near, far)
   camera.position.set(0, 0, 0)
 
   // SINGLE-OWNER RESIZE (§2.1). The renderer owns every resize: `renderer.setSize(..., false)`
@@ -693,8 +710,27 @@ export async function create_renderer({
     const width = canvas.clientWidth || canvas.width || 1
     const height = canvas.clientHeight || canvas.height || 1
     renderer.setSize(width, height, false)
-    camera.aspect = width / height
+    if (/** @type {any} */ (camera).isOrthographicCamera) {
+      const ortho = /** @type {import('three').OrthographicCamera} */ (/** @type {unknown} */ (camera))
+      const half_h = view_size / 2
+      const half_w = (half_h * width) / height
+      ortho.left = -half_w
+      ortho.right = half_w
+      ortho.top = half_h
+      ortho.bottom = -half_h
+    } else {
+      ;/** @type {import('three').PerspectiveCamera} */ (/** @type {unknown} */ (camera)).aspect = width / height
+    }
     camera.updateProjectionMatrix()
+  }
+
+  /** Frustum HEIGHT in world metres for the orthographic (void) camera — the ortho twin of set fov.
+   *  No-op on the perspective camera, so the same rig can drive both. @param {number} height_m */
+  function set_view_size(height_m) {
+    if (!(/** @type {any} */ (camera).isOrthographicCamera)) return
+    if (!Number.isFinite(height_m) || height_m <= 0 || height_m === view_size) return
+    view_size = height_m
+    apply_size()
   }
 
   apply_size()
@@ -742,7 +778,11 @@ export async function create_renderer({
       // [2026-07-05 PLAN A] height_at feeds the froxel fog's camera-following HEIGHT FIELD (fog_height.js)
       // — the SMOOTH open-air sun-occlusion + real ground for the fog's height falloff (the static-arc fix;
       // world_surface_y is the same gen the terrain/far shell draw, so fog shadows match the world).
-      atmo = create_atmosphere({ tier, sky, sun, height_at: world_surface_y })
+      // THE VOID (`void_scene`) keeps this post stack — the tactical board's OWN highlight channels
+      // render through its post-AgX overlay pass, so dropping it would leave the start bands unpainted —
+      // and drops only the WORLD DRESSING: the cloud deck and the volumetric fog grid have nothing to
+      // dress in an empty scene (measured: a cloud band was the only thing visible there).
+      atmo = create_atmosphere({ tier, sky, sun, height_at: world_surface_y, void_scene })
       // ENG-8 CAMERA MOTION BLUR — REMOVED FROM THE MOUNT (2026-07-05, owner release session). Its
       // 12-sample reprojection smear under ROTATION paints tangential arc streaks around the rotation
       // center — a "huge white circle static texture" artifact (concentric rings of ghost scene copies,
@@ -1254,6 +1294,7 @@ export async function create_renderer({
     renderer,
     scene,
     camera,
+    set_view_size,
     set_fog_scale,
     set_motion_blur_enabled,
     backend,

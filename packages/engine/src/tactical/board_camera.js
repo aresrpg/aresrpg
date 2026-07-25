@@ -2,10 +2,15 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // ENG-16 Phase B — TACTICAL BOARD CAMERA RIG (the "locked isometric").
 //
-// A CONSTRAINED PERSPECTIVE rig (never orthographic — the study §3 law, both AresRPG eras used a
-// locked-polar perspective, not ortho). Faux-iso = polar FROZEN at ~50° from vertical, azimuth FREE
-// (the player still orbits horizontally by dragging), dolly ∝ board span, target = board center. Only
-// polar is locked; azimuth + dolly stay live.
+// A CONSTRAINED rig: polar FROZEN at ~50° from vertical, azimuth FREE (the player still orbits
+// horizontally by dragging), target = board center. Only polar is locked.
+//
+// TWO PROJECTIONS, ONE POSE. In the WORLD the rig drives a perspective camera (faux-iso, fov 42, dolly ∝
+// board span — the study §3 call, both AresRPG eras used a locked-polar perspective). On a `void_scene`
+// engine the render camera is a real OrthographicCamera (owner ruling 2026-07-25: the simulator's board
+// floats in the void under a TRUE isometric), and the rig sizes its frustum instead of setting a fov —
+// same pose, same drag, same wheel gesture, and the wheel zooms the frustum because eye distance means
+// nothing under a parallel projection. The rig ASKS the live camera which it is; no consumer configures it.
 //
 // LOCK MECHANISM — the engine's frame loop unconditionally applies the fly camera's stored pose each
 // frame (core/fly_camera.js .apply()). This rig therefore does NOT fight that: while active it runs
@@ -31,6 +36,12 @@ const DOLLY_MAX = 60
 const AZIMUTH_SENSITIVITY = 0.006 // radians per pixel of horizontal drag
 const WHEEL_SENSITIVITY = 0.015 // dolly meters per wheel delta unit
 const FOV_DEGREES = 42 // a modest perspective FOV — narrow enough to read as faux-iso
+/** TRUE ISOMETRIC (an engine booted `void_scene` renders through an OrthographicCamera): the frustum
+ *  HEIGHT that frames a board of `span` metres with a house margin. Sizing, not posing — the eye distance
+ *  no longer scales anything under a parallel projection, so this is what the wheel zooms. */
+const ORTHO_SPAN_FACTOR = 1.4
+const ORTHO_VIEW_MIN = 6
+const ORTHO_VIEW_MAX = 120
 
 /**
  * @typedef {object} CameraRig
@@ -40,7 +51,8 @@ const FOV_DEGREES = 42 // a modest perspective FOV — narrow enough to read as 
  * @property {(distance: number) => void} dolly_to dapp zoom knob (clamped)
  * @property {(target: [number, number, number]) => void} set_target override the orbit target (dev/bench)
  * @property {boolean} active
- * @property {() => { azimuth: number, dolly: number, target: [number, number, number] }} get_state debug/bench readout
+ * @property {() => { azimuth: number, dolly: number, view_h: number, target: [number, number, number] }} get_state
+ *   debug/bench readout (`view_h` = the orthographic frustum height, meaningful on a void_scene engine)
  * @property {() => void} dispose
  */
 
@@ -57,12 +69,18 @@ export function create_board_camera({ engine, dom, target, span }) {
   let azimuth = Math.PI / 4 // start at a 45° corner view (classic tactical presentation)
   let dolly = clamp(span * SPAN_FACTOR, DOLLY_MIN, DOLLY_MAX)
   let tgt = /** @type {[number, number, number]} */ ([...target])
+  /** ortho frustum height (metres). Only read when the live camera IS orthographic. */
+  let view_h = clamp(span * ORTHO_SPAN_FACTOR, ORTHO_VIEW_MIN, ORTHO_VIEW_MAX)
   let active = false
   let raf = /** @type {number | null} */ (null)
   let dragging = false
   let last_x = 0
 
-  /** Computes + pushes the iso pose (position + yaw/pitch + fov) for the current azimuth/dolly/target. */
+  /** Is the live render camera orthographic (a `void_scene` engine)? Asked per push — the engine boots
+   *  asynchronously, so the answer can flip from "no camera yet" to the real one. */
+  const is_ortho = () => !!(/** @type {any} */ (engine.get_camera?.())?.isOrthographicCamera)
+
+  /** Computes + pushes the iso pose (position + yaw/pitch + fov|view-size) for the current state. */
   const push_pose = () => {
     // Spherical → cartesian offset from the target. Polar measured from vertical: the camera sits
     // above + to the side. horizontal_radius shrinks the XZ ring as polar → 0 (straight down).
@@ -83,7 +101,11 @@ export function create_board_camera({ engine, dom, target, span }) {
     const yaw = Math.atan2(-dx, -dz)
     const pitch = Math.asin(dy / dist)
     engine.set_camera_orientation(yaw, pitch)
-    engine.set_camera_fov(FOV_DEGREES)
+    // ONE rig, two projections: an orthographic engine (void_scene) is SIZED by its frustum height — a fov
+    // means nothing under a parallel projection — while the world's perspective camera keeps the faux-iso
+    // fov. The pose above is identical either way; only the projection knob differs.
+    if (is_ortho()) engine.set_camera_view_size?.(view_h)
+    else engine.set_camera_fov(FOV_DEGREES)
   }
 
   const loop = () => {
@@ -108,7 +130,9 @@ export function create_board_camera({ engine, dom, target, span }) {
   }
   const on_wheel = (/** @type {WheelEvent} */ e) => {
     e.preventDefault()
-    dolly = clamp(dolly + e.deltaY * WHEEL_SENSITIVITY, DOLLY_MIN, DOLLY_MAX)
+    // Under a parallel projection the eye distance changes nothing on screen — zoom IS the frustum.
+    if (is_ortho()) view_h = clamp(view_h + e.deltaY * WHEEL_SENSITIVITY * 2, ORTHO_VIEW_MIN, ORTHO_VIEW_MAX)
+    else dolly = clamp(dolly + e.deltaY * WHEEL_SENSITIVITY, DOLLY_MIN, DOLLY_MAX)
   }
 
   return {
@@ -145,7 +169,7 @@ export function create_board_camera({ engine, dom, target, span }) {
       tgt = [...next]
     },
     get_state() {
-      return { azimuth, dolly, target: /** @type {[number,number,number]} */ ([...tgt]) }
+      return { azimuth, dolly, view_h, target: /** @type {[number,number,number]} */ ([...tgt]) }
     },
     dispose() {
       this.deactivate()

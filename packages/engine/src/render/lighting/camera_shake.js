@@ -72,7 +72,8 @@ export function create_camera_shake() {
 
     /**
      * Offset the camera for THIS frame; returns a restore() to run after render (non-accumulating).
-     * @param {import('three').PerspectiveCamera} camera
+     * @param {import('three').Camera} camera the live render camera (perspective, or ORTHOGRAPHIC in a
+     *   void_scene) — the shake only touches its pose, never a projection property
      * @param {number} dt seconds
      * @returns {(() => void) | null} restore fn, or null when idle (nothing offset)
      */

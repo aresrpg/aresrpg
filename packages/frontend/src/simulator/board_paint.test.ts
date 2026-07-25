@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// board_paint.test.ts / ground_probe — the viewport's whole decision surface, headless.
+// board_paint.test.ts — the viewport's whole decision surface, headless.
 //
 // What is proven here is what the mount would otherwise hide: the two start bands and the seat glows come
 // from the DERIVED board and the reducer's own picks (never from the renderer's memory), an unrigged class
-// resolves NO model so the S4 capsule stands in rather than another class's body, and the board never
-// mounts on terrain that has not actually streamed.
+// resolves NO model so the S4 capsule stands in rather than another class's body, and the same layout
+// repaints instead of re-baking its geometry.
 
 import { describe, test, expect } from 'bun:test'
 
-import { board_of } from './board'
+import { board_key_of, board_of } from './board'
 import { cell_intent_of, class_body_url, setup_scene_of } from './board_paint'
-import { board_mount_key, wait_for_ground, FALLBACK_SURFACE_Y, HIGH_SENTINEL } from './ground_probe.js'
 import { INITIAL_SIMULATOR_STATE, reduce_simulator, type SimulatorState } from './reducer'
 
 const SEED = 0xc81f3a92
@@ -128,47 +127,9 @@ describe('what a cell click means', () => {
   })
 })
 
-describe('the ground probe — never mount on terrain that has not streamed', () => {
-  const drive = (
-    reads: readonly (number | null)[],
-    { top_air = true }: { top_air?: boolean } = {}
-  ): Promise<number> => {
-    let tick = 0
-    let clock = 0
-    return wait_for_ground({
-      sample_block: (_x, y, _z) => (y === HIGH_SENTINEL && top_air ? 0 : 1),
-      surface_at: () => reads[Math.min(tick, reads.length - 1)] ?? null,
-      next_frame: async () => {
-        tick += 1
-        clock += 16
-      },
-      now: () => clock,
-      x: 0,
-      z: 0,
-    })
-  }
-
-  test('a stable surface resolves its TOP FACE (surface + 1)', async () => {
-    expect(await drive([127, 127, 127])).toBe(128)
-  })
-
-  test('an unstable column is NOT trusted until it repeats — the deep-pocket trap', async () => {
-    // 32 is the too-early read the demo measured; the real surface settles at 127
-    expect(await drive([32, 127, 100, 127, 127, 127])).toBe(128)
-  })
-
-  test('a solid top column is never read at all (the surface chunk has not arrived)', async () => {
-    expect(await drive([127, 127, 127], { top_air: false })).toBe(FALLBACK_SURFACE_Y)
-  })
-
-  test('a ring that never resolves falls back to sea level — the board mounts, it never hangs', async () => {
-    expect(await drive([null])).toBe(FALLBACK_SURFACE_Y)
-  })
-})
-
 describe('the mount key', () => {
-  test('the same board repaints (same key); a reroll re-streams (new key)', () => {
-    expect(board_mount_key(board_of(SEED, 0))).toBe(board_mount_key(board_of(SEED, 0)))
-    expect(board_mount_key(board_of(SEED, 1))).not.toBe(board_mount_key(board_of(SEED, 0)))
+  test('the same board repaints (same key); a reroll re-bakes (new key)', () => {
+    expect(board_key_of(board_of(SEED, 0))).toBe(board_key_of(board_of(SEED, 0)))
+    expect(board_key_of(board_of(SEED, 1))).not.toBe(board_key_of(board_of(SEED, 0)))
   })
 })
