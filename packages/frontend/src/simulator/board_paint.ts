@@ -74,12 +74,10 @@ const rig_urls_of = (class_id: string, male: boolean) =>
   character_model_urls(String(class_id ?? '').toLowerCase(), male)
 
 /** The class body GLB for a character, or undefined when this class ships no rig (⇒ S4 capsule). */
-export const class_body_url = (class_id: string, male: boolean): string | undefined =>
-  rig_urls_of(class_id, male).body
+export const class_body_url = (class_id: string, male: boolean): string | undefined => rig_urls_of(class_id, male).body
 
 /** The class hair mesh, or undefined (a bald row is bald, never broken). */
-export const class_hair_url = (class_id: string, male: boolean): string | undefined =>
-  rig_urls_of(class_id, male).hair
+export const class_hair_url = (class_id: string, male: boolean): string | undefined => rig_urls_of(class_id, male).hair
 
 /**
  * Fold the setup state into everything the viewport paints.

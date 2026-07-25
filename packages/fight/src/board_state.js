@@ -98,8 +98,7 @@ export function decode_shape_mask(words) {
 export function voids_from_shape_mask(width, height, inside) {
   if (!inside?.size) return []
   const voids = []
-  for (let y = 0; y < height; y++)
-    for (let x = 0; x < width; x++) if (!inside.has(encode(x, y))) voids.push({ x, y })
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) if (!inside.has(encode(x, y))) voids.push({ x, y })
   return voids
 }
 

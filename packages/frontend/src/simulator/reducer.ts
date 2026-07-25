@@ -15,11 +15,7 @@
 // allocations to the smaller budget rather than leaving an invalid build: stats scale down proportionally,
 // spells fall to the highest level the budget still affords.
 
-import {
-  spell_points_for_level,
-  spell_points_invested,
-  stat_points_for_level,
-} from '@aresrpg/sdk/progression'
+import { spell_points_for_level, spell_points_invested, stat_points_for_level } from '@aresrpg/sdk/progression'
 import { STATISTICS_PRIMARY } from '@aresrpg/sdk/stats'
 
 import { board_of, type SimBoard } from './board'
