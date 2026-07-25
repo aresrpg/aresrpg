@@ -7,7 +7,7 @@
 // sim entities, `fight_shim.js` already opens the local chain and seeds the production HUD's stores, and the
 // page reducer already has its `fight_started` / `fight_stopped` arms. What nothing owned was the join —
 // "which characters, wearing what, casting which templates, against which mobs" — so the page had no way to
-// press START at all (#883 ④). This module is exactly that join and nothing else: every number comes from L1
+// press START at all (#883 ⑤). This module is exactly that join and nothing else: every number comes from L1
 // (`content.js`), every entity shape from L4 (`fight_setup.js`), and no balance is computed here.
 //
 // TEMPLATES ARE RAW. `create_sim_chain` runs the sim's own `normalize_spell_templates` over `templates_raw`
@@ -109,9 +109,7 @@ export const build_start_args = ({ state, board, item_by_id, mob_by_id, mob_spel
       // Class rows + every picked mob's authored kit, in ONE raw list — exactly what the chain normalizes and
       // the capsule records.
       templates_raw: [
-        ...new Map(
-          [...decks.values()].flatMap(({ rows }) => rows).map((row) => [String(row.id), row])
-        ).values(),
+        ...new Map([...decks.values()].flatMap(({ rows }) => rows).map((row) => [String(row.id), row])).values(),
         ...mobs.flatMap(({ mob, spells }) => mob_spell_rows(mob.template_id, spells)),
       ],
       roster: seated.map(({ character }) => character),

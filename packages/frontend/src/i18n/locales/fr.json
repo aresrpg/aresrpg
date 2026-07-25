@@ -1292,8 +1292,7 @@
     "roster_panel_hint": "Les nouveaux personnages se créent dans le panneau ÉQUIPE",
     "seat_empty": "VIDE",
     "start_fight": "LANCER LE COMBAT",
-    "stop_fight": "ARRÊTER",
-    "item_stats_hint": "Survolez une ligne pour ses stats complètes · appui long au toucher"
+    "stop_fight": "ARRÊTER"
   },
   "purchase": {
     "acquisition_complete": "Acquisition Terminée",
@@ -1530,9 +1529,7 @@
       "Couleur de tag exclusive en chat",
       "Réduction permanente de 30% en boutique"
     ],
-    "veteran_app_perks": [
-      "Tous les avantages Membre"
-    ],
+    "veteran_app_perks": ["Tous les avantages Membre"],
     "min_level": "NIVEAU MIN",
     "recommended_level": "NIVEAU RECOMMANDÉ",
     "dungeon_mobs": "MONSTRES",

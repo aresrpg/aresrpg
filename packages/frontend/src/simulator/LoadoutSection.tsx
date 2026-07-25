@@ -17,11 +17,13 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { item_icon_url } from '@aresrpg/sdk/jobs'
 
+import { ItemTooltipCard } from '../components/item_hover_tooltip'
 import { SearchPickerModal, type PickerItem } from '../components/search_picker_modal'
 import { CosmeticSlots, EquipmentDoll } from '../game/screens/hud/EquipmentDoll.jsx'
 import { inventory_item_icon, SLOT_LABEL } from '../game/screens/hud/inventory-equip.js'
 import { items_for_slot } from '../game/screens/hud/simulator-equip.js'
 import * as item_corpus from '../pages/encyclopedia/item_corpus'
+import type { CorpusItem } from '../pages/encyclopedia/item_corpus'
 
 import type { SimCharacter } from './reducer'
 import { use_simulator } from './store'
@@ -104,6 +106,28 @@ export function use_slot_picker_content(slot: string): { items: PickerItem[]; em
   return { items, empty_label: loading ? t('simulator.item_corpus_loading') : undefined }
 }
 
+/**
+ * One published row → the shape the shared item card renders (#883 ⑦). It is the SAME projection the
+ * encyclopedia's item pane feeds that component: authored stat ranges and damage lines straight off the /v1
+ * row, art through the one icon resolver. Nothing is invented — a template carries no rarity in this game
+ * (the quality tiers died with the concept), and `stats_unavailable` belongs to owned instances whose roll is
+ * still pending, never to a template that authors its ranges in the open.
+ */
+export const picker_item_detail = (item: CorpusItem) => {
+  const slug = inventory_item_icon(item)
+  return {
+    id: item.id,
+    image_url: (slug ? item_icon_url(slug) : null) ?? undefined,
+    name: item.name || item.id,
+    category: item.category,
+    rarity: '',
+    level: item.level,
+    stats: item.stats,
+    damages: item.damages,
+    description: item.description,
+  }
+}
+
 /** The picker shell — a pass-through over the hook above. */
 function SlotPicker({
   slot,
@@ -118,6 +142,7 @@ function SlotPicker({
 }>) {
   const { t } = useTranslation()
   const { items, empty_label } = use_slot_picker_content(slot)
+  const { by_id } = item_corpus.use_item_corpus()
 
   return (
     <SearchPickerModal
@@ -127,6 +152,13 @@ function SlotPicker({
       value={current}
       on_close={on_close}
       on_select={on_pick}
+      // WHAT IT DOES, BEFORE THE PICK. Twenty slots against a whole published catalog is a lot of blind
+      // equipping otherwise: the row hover (long-press on touch — the picker's own gesture) shows the
+      // game's item card, the same one the encyclopedia and the bag render.
+      render_tooltip={(id) => {
+        const row = by_id.get(id)
+        return row ? <ItemTooltipCard item={picker_item_detail(row)} /> : null
+      }}
     />
   )
 }

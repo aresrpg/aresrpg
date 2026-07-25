@@ -137,6 +137,37 @@ export function use_tooltip_detail(
   return to_detail_item(item, template ?? find(item.template_id), tt, rolled_stats)
 }
 
+/**
+ * THE HOVER CARD — the one chrome an item's hover detail wears: the gold-hairline obsidian panel around the
+ * shared ItemDetailView, scrolling internally rather than clipping. Exported because positioning is the
+ * CALLER's in some contexts: SearchPickerModal already tracks its own hovered row and places its tooltip box
+ * (it flips at the viewport edges too), so a picker that wants item detail needs the card, not the portal —
+ * and a second hand-rolled panel would be a second truth about what an item tooltip looks like (#883 ⑦).
+ */
+export function ItemTooltipCard({
+  item,
+  max_height = 480,
+}: {
+  item: Parameters<typeof ItemDetailView>[0]['item']
+  max_height?: number
+}) {
+  return (
+    <div
+      className="overflow-y-auto p-4"
+      style={{
+        maxHeight: max_height,
+        width: 320,
+        background: 'rgba(10,10,15,0.98)',
+        border: '1px solid rgba(200,150,60,0.4)',
+        boxShadow: '0 0 40px rgba(0,0,0,0.6), 0 0 8px rgba(200,150,60,0.15)',
+        backdropFilter: 'blur(12px)',
+      }}
+    >
+      <ItemDetailView item={item} />
+    </div>
+  )
+}
+
 // Renders the ItemDetailView in a portal, positioned near the anchor.
 // Flips side if near the right edge; clamps vertically to viewport.
 function TooltipPortal({
@@ -182,18 +213,7 @@ function TooltipPortal({
         zIndex: 9999,
       }}
     >
-      <div
-        className="overflow-y-auto p-4"
-        style={{
-          maxHeight: max_tooltip_h,
-          background: 'rgba(10,10,15,0.98)',
-          border: '1px solid rgba(200,150,60,0.4)',
-          boxShadow: '0 0 40px rgba(0,0,0,0.6), 0 0 8px rgba(200,150,60,0.15)',
-          backdropFilter: 'blur(12px)',
-        }}
-      >
-        <ItemDetailView item={detail as any} />
-      </div>
+      <ItemTooltipCard item={detail as any} max_height={max_tooltip_h} />
     </div>,
     document.body
   )

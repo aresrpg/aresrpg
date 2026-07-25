@@ -1292,8 +1292,7 @@
     "roster_panel_hint": "New characters are created in the roster panel",
     "seat_empty": "EMPTY",
     "start_fight": "START FIGHT",
-    "stop_fight": "STOP",
-    "item_stats_hint": "Hover a row for its full stats · long-press on touch"
+    "stop_fight": "STOP"
   },
   "purchase": {
     "acquisition_complete": "Acquisition Complete",
@@ -1530,9 +1529,7 @@
       "Exclusive chat tag color",
       "Lifetime 30% shop discount"
     ],
-    "veteran_app_perks": [
-      "All Member advantages"
-    ],
+    "veteran_app_perks": ["All Member advantages"],
     "min_level": "MIN LEVEL",
     "recommended_level": "RECOMMENDED LEVEL",
     "dungeon_mobs": "MONSTERS",

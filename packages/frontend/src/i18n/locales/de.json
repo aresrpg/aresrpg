@@ -1292,8 +1292,7 @@
     "roster_panel_hint": "Neue Figuren werden im Kader angelegt",
     "seat_empty": "LEER",
     "start_fight": "KAMPF STARTEN",
-    "stop_fight": "STOPP",
-    "item_stats_hint": "Zeile überfahren für alle Werte · auf Touch lange drücken"
+    "stop_fight": "STOPP"
   },
   "purchase": {
     "acquisition_complete": "Erwerb abgeschlossen",
@@ -1530,9 +1529,7 @@
       "Exklusive Chat-Tag-Farbe",
       "Lebenslanger 30% Shop-Rabatt"
     ],
-    "veteran_app_perks": [
-      "Alle Mitgliedervorteile"
-    ],
+    "veteran_app_perks": ["Alle Mitgliedervorteile"],
     "min_level": "MIN LEVEL",
     "recommended_level": "EMPFOHLENES LEVEL",
     "dungeon_mobs": "MONSTER",

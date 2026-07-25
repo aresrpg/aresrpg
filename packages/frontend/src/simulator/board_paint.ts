@@ -46,10 +46,7 @@ export type SetupScene = {
 
 /** What a click on a board cell MEANS in setup — the one place the two bands' verbs are decided. */
 export type CellIntent =
-  | { type: 'mob_cell'; cell: number }
-  | { type: 'ally_cell'; cell: number }
-  | { type: 'unplace'; cell: number }
-  | null
+  { type: 'mob_cell'; cell: number } | { type: 'ally_cell'; cell: number } | { type: 'unplace'; cell: number } | null
 
 /**
  * Read a raw cell click. BOTH bands answer the same two verbs, which is why there is no branch per band

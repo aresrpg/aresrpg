@@ -1292,8 +1292,7 @@
     "roster_panel_hint": "Los personajes nuevos se crean en la plantilla",
     "seat_empty": "VACÍO",
     "start_fight": "INICIAR COMBATE",
-    "stop_fight": "DETENER",
-    "item_stats_hint": "Pasa el cursor por una fila para ver sus stats · mantén pulsado en táctil"
+    "stop_fight": "DETENER"
   },
   "purchase": {
     "acquisition_complete": "Adquisicion Completada",
@@ -1530,9 +1529,7 @@
       "Color de tag exclusivo en chat",
       "Descuento permanente del 30% en la tienda"
     ],
-    "veteran_app_perks": [
-      "Todas las ventajas de Miembro"
-    ],
+    "veteran_app_perks": ["Todas las ventajas de Miembro"],
     "min_level": "NIVEL MÍN",
     "recommended_level": "NIVEL RECOMENDADO",
     "dungeon_mobs": "MONSTRUOS",

@@ -74,8 +74,9 @@ function Pane({
 }
 
 /**
- * One seat — ally or enemy, filled or empty. A ROW, not a card: the only rules it draws are the hairline that
- * separates it from the next seat and, when it is the focused one, a gold spine on its leading edge.
+ * One ROSTER slot, filled or empty. A ROW, not a card: the only rules it draws are the hairline that separates
+ * it from the next slot and, when it is the focused one, a gold spine on its leading edge. It opens the
+ * character EDITOR — placement is the board's, so this is the only thing a slot still does.
  */
 function Seat({ active, on_open, children }: Readonly<{ active: boolean; on_open: () => void; children: ReactNode }>) {
   return (

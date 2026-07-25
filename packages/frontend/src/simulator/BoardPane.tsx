@@ -96,7 +96,7 @@ export function SimulatorBoardPane() {
   // one frame earlier.
   const pointer = useRef({ x: 0, y: 0 })
 
-  const { seed, anchor_nonce, roster, placements, mob_picks, input } = use_simulator()
+  const { seed, anchor_nonce, roster, placements, mob_picks, phase, input } = use_simulator()
   const board = useMemo(() => board_of(seed, anchor_nonce), [seed, anchor_nonce])
 
   // The corpus is a boot-time blob: an empty index simply means it has not landed (or is unpublished).
@@ -113,8 +113,8 @@ export function SimulatorBoardPane() {
   )
 
   // The LIVE state the click handler must read — a handler captured at mount would seat a stale board.
-  const click_state = useRef({ board, placements })
-  click_state.current = { board, placements }
+  const click_state = useRef({ board, placements, phase })
+  click_state.current = { board, placements, phase }
 
   // ONE mount per page visit; the engine is disposed on unmount (never the world session's singleton).
   useEffect(() => {
@@ -136,6 +136,9 @@ export function SimulatorBoardPane() {
         if (!cell) return
         const { x, y } = cell
         const { current } = click_state
+        // SETUP ONLY. Once a fight is live the production surface owns every board input; a setup gesture
+        // reaching this handler would edit a line-up the sim has already snapshotted.
+        if (current.phase !== 'setup') return
         const intent = cell_intent_of(current.board, current, encode(x, y))
         if (!intent) return
         if (intent.type === 'mob_cell') set_mob_cell(intent.cell)

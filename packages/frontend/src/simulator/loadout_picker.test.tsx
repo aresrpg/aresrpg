@@ -21,8 +21,9 @@ import en from '../i18n/locales/en.json'
 import { seed_manifest } from '../content/seed_manifest'
 import type { RpcEncyclopediaItem } from '../rpc/views'
 import * as item_corpus from '../pages/encyclopedia/item_corpus'
+import { ItemTooltipCard } from '../components/item_hover_tooltip'
 
-import { use_slot_picker_content } from './LoadoutSection'
+import { picker_item_detail, use_slot_picker_content } from './LoadoutSection'
 
 const test_i18n = i18next.createInstance()
 void test_i18n.init({
@@ -128,5 +129,33 @@ describe('the corpus landing populates the picker — the empty→populated tran
   test('a row carries the authored art slug as its icon key — a template object id would 404', () => {
     const [row] = item_corpus.item_corpus_from_v1([wire(0, 'helmet')])
     expect(row.item_type).toBe('art_helmet_0')
+  })
+})
+
+// #883 ⑦ — a row said its NAME and its level and nothing else, so twenty slots were equipped blind. The
+// hover (long-press on touch) now shows the game's own item card over the same published row.
+describe('the hover detail a row shows BEFORE the pick', () => {
+  const [row] = item_corpus.item_corpus_from_v1([wire(0, 'helmet')])
+
+  test('the projection is the published row itself — authored ranges, art slug, no invented fields', () => {
+    const detail = picker_item_detail(row)
+    expect(detail.name).toBe('Live helmet 0')
+    expect(detail.level).toBe(10)
+    expect(detail.stats).toEqual(row.stats)
+    expect(detail.image_url).toContain('art_helmet_0')
+    // a TEMPLATE authors its ranges in the open — it is never an instance with a pending roll
+    expect('stats_unavailable' in detail).toBe(false)
+  })
+
+  test('the SHARED card renders it — the same component the encyclopedia and the bag show', () => {
+    const html = renderToStaticMarkup(
+      <I18nextProvider i18n={test_i18n}>
+        <ItemTooltipCard item={picker_item_detail(row)} />
+      </I18nextProvider>
+    )
+    expect(html).toContain('Live helmet 0')
+    // the authored [1, 7] vitality range reaches the card, decoded off its bias
+    expect(html).toContain('1')
+    expect(html).toContain('7')
   })
 })

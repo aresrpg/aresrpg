@@ -1292,8 +1292,7 @@
     "roster_panel_hint": "新規キャラクターはロスターで作成します",
     "seat_empty": "空",
     "start_fight": "戦闘開始",
-    "stop_fight": "停止",
-    "item_stats_hint": "行にホバーで詳細ステータス · タッチは長押し"
+    "stop_fight": "停止"
   },
   "purchase": {
     "acquisition_complete": "購入完了",
@@ -1530,9 +1529,7 @@
       "限定チャットタグカラー",
       "ショップ永久30%割引"
     ],
-    "veteran_app_perks": [
-      "全メンバー特典"
-    ],
+    "veteran_app_perks": ["全メンバー特典"],
     "min_level": "最低レベル",
     "recommended_level": "推奨レベル",
     "dungeon_mobs": "モンスター",

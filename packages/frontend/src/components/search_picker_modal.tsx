@@ -36,6 +36,9 @@ function PickerIcon({ src }: { src: string }) {
   )
 }
 
+/** How long a finger has to rest on a row before it counts as "show me this one" rather than "pick it". */
+export const LONG_PRESS_MS = 400
+
 export function SearchPickerModal({
   title,
   items,
@@ -66,6 +69,16 @@ export function SearchPickerModal({
   const [hovered_id, set_hovered_id] = useState<string | null>(null)
   const [tooltip_pos, set_tooltip_pos] = useState({ x: 0, y: 0 })
   const tooltip_ref = useRef<HTMLDivElement>(null)
+  // TOUCH: a long press is the pointer-less hover. Same state, same box — a finger has no hover, and on a
+  // phone the only other way to read what an item does is to equip it and look afterwards.
+  const press_timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** true between a fired long press and the click it would otherwise become — reading is not choosing. */
+  const press_read = useRef(false)
+  const cancel_press = () => {
+    if (press_timer.current) clearTimeout(press_timer.current)
+    press_timer.current = null
+  }
+  useEffect(() => cancel_press, [])
 
   const has_categories = useMemo(() => items.some((i) => i.category), [items])
 
@@ -251,7 +264,15 @@ export function SearchPickerModal({
                       ? 'bg-gold/10 text-gold border-gold'
                       : 'hover:bg-gold/10 hover:text-gold border-transparent'
                   }`}
-                  onClick={() => on_select(item.id)}
+                  onClick={() => {
+                    // The click a long press ends with must not equip what the player was only reading.
+                    if (press_read.current) {
+                      press_read.current = false
+                      set_hovered_id(null)
+                      return
+                    }
+                    on_select(item.id)
+                  }}
                   onMouseEnter={
                     render_tooltip
                       ? (e) => {
@@ -277,6 +298,28 @@ export function SearchPickerModal({
                       : undefined
                   }
                   onMouseLeave={render_tooltip ? () => set_hovered_id(null) : undefined}
+                  onTouchStart={
+                    render_tooltip
+                      ? (e) => {
+                          // `TouchList` is an indexed collection, not an iterable — `item(0)` is its own door.
+                          const touch = e.touches.item(0)
+                          if (!touch) return
+                          const { clientX: x, clientY: y } = touch
+                          cancel_press()
+                          press_timer.current = setTimeout(() => {
+                            press_timer.current = null
+                            press_read.current = true
+                            // Anchor ABOVE-LEFT of the finger: under it is exactly where the hand is.
+                            set_tooltip_pos({ x: Math.max(8, x - 296), y: Math.max(8, y - 220) })
+                            set_hovered_id(item.id)
+                          }, LONG_PRESS_MS)
+                        }
+                      : undefined
+                  }
+                  // A scroll or a lift before the press lands is a scroll or a tap, never a tooltip.
+                  onTouchMove={render_tooltip ? cancel_press : undefined}
+                  onTouchEnd={render_tooltip ? cancel_press : undefined}
+                  onTouchCancel={render_tooltip ? cancel_press : undefined}
                 >
                   {item.icon && <PickerIcon src={item.icon} />}
                   <div className="flex-1 min-w-0">

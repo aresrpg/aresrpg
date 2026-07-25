@@ -49,7 +49,10 @@ export function use_sim_fight() {
       mob_spells_of: (id) => mob_corpus_of(id)?.spells ?? [],
     })
     if (!built.ok) return set_blocked(built.reason)
-    const { create_fight_shim } = await load_shim()
+    // A chunk that will not load is a REASON, not a dead button (`simulator.fight_blocked_sim_chain_missing`).
+    const loaded = await load_shim().catch(() => null)
+    if (!loaded) return set_blocked('sim_chain_missing')
+    const { create_fight_shim } = loaded
 
     // The reducer mints the fight id (`sim:<seed>:<n>`, fresh on every START — spec §4.7), so the phase flips
     // FIRST and the shim is handed the id the page now holds. One home for the id, one for the phase.
