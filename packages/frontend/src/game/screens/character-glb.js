@@ -63,6 +63,50 @@ export const CHARACTER_MODELS = {
 /** @param {string} class_id @returns {boolean} */
 export const has_character_model = (class_id) => class_id in CHARACTER_MODELS
 
+/**
+ * The gender-matched placeholder rig a surface substitutes when a class ships no art of its own. Named once
+ * so "which class stands in" is a fact, not four literals scattered across the render surfaces.
+ */
+export const PLACEHOLDER_RIG_CLASS = 'senshi'
+
+/**
+ * The class rig a character actually RENDERS with. Only the 4 rigged classes have art; every other class
+ * resolves to `fallback` when one is named (the world's gender-matched Senshi placeholder — a body must be
+ * on screen), or to null when none is (the caller then shows an honest "no art yet" placeholder of its own).
+ * @param {string | null | undefined} class_id
+ * @param {string | null} [fallback]
+ * @returns {string | null}
+ */
+export const character_rig_of = (class_id, fallback = null) =>
+  class_id && has_character_model(class_id) ? String(class_id) : fallback
+
+/**
+ * THE ONE HOME for "a class + a gender → the GLB urls that render it" — consumed by the roam avatar
+ * (embed_voxel_player), remote players, the world fight board (world-shell/voxel_fight_folds) and the
+ * simulator board, so a body on one surface is the same body on every other. Urls are Walrus-first through
+ * `character_glb_url`; a bald class/gender row resolves `hair: undefined` (bald, never broken).
+ *
+ * `fallback` is the ONLY thing that differs between surfaces and it is an explicit argument, not a fork: the
+ * world substitutes `PLACEHOLDER_RIG_CLASS` because a live board must show a body, while the simulator seats
+ * all twelve classes and passes none — putting a Senshi body on the Iyashi you are building would be a lie
+ * about the very thing that page exists to show, so an unrigged class resolves no url and the engine's own
+ * capsule stands in. The RULE is shared; only the policy argument varies.
+ *
+ * @param {string | null | undefined} class_id
+ * @param {boolean} male
+ * @param {{ fallback?: string | null }} [options]
+ * @returns {{ rig: string | null, body: string | undefined, hair: string | undefined }}
+ */
+export const character_model_urls = (class_id, male, { fallback = null } = {}) => {
+  const rig = character_rig_of(class_id, fallback)
+  const urls = rig ? CHARACTER_MODELS[rig]?.[male ? 'male' : 'female'] : undefined
+  return {
+    rig,
+    body: character_glb_url(urls?.body) ?? undefined,
+    hair: character_glb_url(urls?.hair) ?? undefined,
+  }
+}
+
 // ONE shared GLTFLoader + DRACOLoader (the GLBs are KHR_draco_mesh_compression — without a
 // DRACOLoader the load throws "No DRACOLoader instance provided"). Decoder served from /draco/.
 let _loader = /** @type {GLTFLoader | null} */ (null)

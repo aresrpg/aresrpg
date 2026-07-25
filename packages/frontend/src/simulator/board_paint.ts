@@ -7,16 +7,18 @@
 // mount (simulator/mount.js) does nothing but hand the result to the board handle, which is why the whole
 // decision surface is testable with no engine, no canvas and no GLB on disk.
 //
-// MODEL RESOLUTION, and why it differs from the live game's: `voxel_fight_folds.glb_variant_of` substitutes
-// the Senshi rig for a class that ships none, because the live board must show a body. The simulator seats
-// ALL TWELVE classes on purpose, so a substitution would put a Senshi body on the Iyashi you are building —
-// a lie about the very thing the page exists to show. Here an unrigged class resolves NO url, and the
-// engine's S4 capsule stands in: honest, and visibly "no art yet". Mobs keep the production resolver (its
-// own miss path is already loud).
+// MODEL RESOLUTION is the GENERIC one — `character_model_urls` (game/screens/character-glb.js), the same door
+// the roam avatar, remote players and the world fight board resolve through. The only thing this surface says
+// differently is its `fallback` ARGUMENT: the live board substitutes the Senshi rig for a class that ships
+// none because a board must show a body, while the simulator seats ALL TWELVE classes on purpose — a
+// substitution would put a Senshi body on the Iyashi you are building, a lie about the very thing the page
+// exists to show. So an unrigged class resolves NO url here and the engine's S4 capsule stands in: honest,
+// and visibly "no art yet". One rule, one home, one explicit policy argument. Mobs keep the production
+// resolver (its own miss path is already loud).
 
 import { decode } from '@aresrpg/fight/los'
 
-import { CHARACTER_MODELS, character_glb_url, has_character_model } from '../game/screens/character-glb.js'
+import { character_model_urls } from '../game/screens/character-glb.js'
 import { get_mob_model } from '../game/data/mobs.js'
 
 import type { SimBoard, SimCell } from './board'
@@ -66,19 +68,18 @@ export const cell_intent_of = (
   return setup.focus_id ? { type: 'place', cell, id: setup.focus_id } : null
 }
 
+/** The shared rig resolver with THIS surface's policy: no placeholder substitution (see the header). The
+ *  page stores class ids as authored, so the lookup is case-folded here — a decode, not a second rule. */
+const rig_urls_of = (class_id: string, male: boolean) =>
+  character_model_urls(String(class_id ?? '').toLowerCase(), male)
+
 /** The class body GLB for a character, or undefined when this class ships no rig (⇒ S4 capsule). */
-export const class_body_url = (class_id: string, male: boolean): string | undefined => {
-  const rig = String(class_id ?? '').toLowerCase()
-  if (!has_character_model(rig)) return undefined
-  return character_glb_url(CHARACTER_MODELS[rig]?.[male ? 'male' : 'female']?.body) ?? undefined
-}
+export const class_body_url = (class_id: string, male: boolean): string | undefined =>
+  rig_urls_of(class_id, male).body
 
 /** The class hair mesh, or undefined (a bald row is bald, never broken). */
-export const class_hair_url = (class_id: string, male: boolean): string | undefined => {
-  const rig = String(class_id ?? '').toLowerCase()
-  if (!has_character_model(rig)) return undefined
-  return character_glb_url(CHARACTER_MODELS[rig]?.[male ? 'male' : 'female']?.hair) ?? undefined
-}
+export const class_hair_url = (class_id: string, male: boolean): string | undefined =>
+  rig_urls_of(class_id, male).hair
 
 /**
  * Fold the setup state into everything the viewport paints.

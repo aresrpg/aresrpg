@@ -25,7 +25,7 @@ import { open_player_menu } from './screens/hud/world/player_menu_store.js'
 import { create_mount_rig } from './mount_rig.js'
 import { create_pet_companion_rig } from './pet_companion.js'
 import { step_pet_follow, empty_pet_motion } from './pet_follow.js'
-import { CHARACTER_MODELS, character_glb_url, has_character_model } from './screens/character-glb.js'
+import { PLACEHOLDER_RIG_CLASS, character_model_urls, character_rig_of } from './screens/character-glb.js'
 import { read_worn_templates } from './cosmetic_glb.js'
 import { create_remote_character_cache } from './remote_character_cache.js'
 import { context } from './store.js'
@@ -108,7 +108,7 @@ export function create_remote_players(engine, world_canvas = null) {
   const identity_of = (/** @type {string} */ id, /** @type {any} */ entry) => {
     const st = get_peer_state(id)
     const classe_raw = st?.classe ?? entry.classe
-    const classe = has_character_model(classe_raw) ? classe_raw : 'senshi'
+    const classe = character_rig_of(classe_raw, PLACEHOLDER_RIG_CLASS)
     const male = (st?.male ?? entry.male) !== false
     identity_scratch.classe = classe
     identity_scratch.male = male
@@ -123,12 +123,13 @@ export function create_remote_players(engine, world_canvas = null) {
         'remote',
         `identity UNRESOLVED for ${id.slice(0, 10)} — senshi fallback until the peer's state lands (D222)`
       )
-    const urls = CHARACTER_MODELS[classe][male ? 'male' : 'female']
+    // ONE home for the rig rule — the same door the roam avatar, the fight board and the simulator read.
+    const urls = character_model_urls(classe, male)
     const st = get_peer_state(id)
     const colors = st ?? entry
     const avatar = create_character_avatar({
-      glb_url: character_glb_url(urls.body), // Walrus-first, bundled /sprites fallback (progressive migration)
-      hair_url: character_glb_url(urls.hair),
+      glb_url: urls.body, // Walrus-first, bundled /sprites fallback (character_model_urls)
+      hair_url: urls.hair,
       colors:
         colors && (colors.color_1 || colors.color_2 || colors.color_3)
           ? [colors.color_1, colors.color_2, colors.color_3]

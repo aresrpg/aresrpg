@@ -27,7 +27,7 @@ import { resolve_cosmetic_aura } from './cosmetic_aura.js'
 import { tick_environment_audio, dispose_environment_audio } from './core/audio/environment_audio.js'
 import { broadcast_position, set_local_cosmetic } from '../p2p/lobby-room.js'
 import { create_local_nameplate } from './local_nameplate.js'
-import { CHARACTER_MODELS, character_glb_url, has_character_model } from './screens/character-glb.js'
+import { PLACEHOLDER_RIG_CLASS, character_model_urls } from './screens/character-glb.js'
 import { push_event_toast } from './core/toast.js'
 import { set_local_beat } from './core/local_beat.js'
 import { walk_fov_pulse } from './core/camera_juice.js'
@@ -121,25 +121,26 @@ export function create_player({
     // REMOTE player already fell back to senshi, so only the local roam avatar was broken.
     // ASSET GAP: only senshi/shugo/tomoda/yajin ship a GLB (CHARACTER_MODELS); the other 8 classes
     // (yogen/iyashi/ikari/mori/tokei/rojin/shusen/asobi) reuse the senshi rig until their own art lands.
-    const rig_class = class_id && has_character_model(class_id) ? class_id : 'senshi'
-    if (rig_class !== class_id)
+    // ONE home for the rig rule (character_model_urls) — the same door remote players, the fight board and
+    // the simulator board resolve through; only the placeholder POLICY is this surface's argument.
+    const urls = character_model_urls(class_id, male, { fallback: PLACEHOLDER_RIG_CLASS })
+    if (urls.rig !== class_id)
       // LOUD (no silent failure): the placeholder is honest in the console — the player is visible + walkable,
       // NOT the old invisible camera-only. A null character (decorative/spectate world) stays quiet above.
       game_log(
         'voxel',
         `no rig for class '${class_id ?? ''}' (character ${character?.id ?? '?'}) — senshi placeholder (visible + walkable)`
       )
-    const urls = CHARACTER_MODELS[rig_class][male ? 'male' : 'female']
     // DEV SCREENSHOT TOOL: `?avatar=<key>` (e.g. `primemachin`) replaces ONLY this
     // local body — read once at boot, resolve_avatar_override (cosmetic_glb.js) is the guarded allowlist
     // (unknown key → null + one console.warn, never a crash). Remote peers / p2p broadcast are untouched:
     // this never reaches set_local_cosmetic, so other players keep seeing the real on-chain character.
     const avatar_override = resolve_avatar_override()
     avatar = create_character_avatar({
-      glb_url: avatar_override ?? character_glb_url(urls.body), // Walrus-first, bundled /sprites fallback
+      glb_url: avatar_override ?? urls.body, // Walrus-first, bundled /sprites fallback (character_model_urls)
       // hair/recolor are keyed to the CLASS rig's own texture atlas — skip both under an override (a
       // foreign preview GLB has no matching Head bone convention or _base/_colorN mask layers to wear them).
-      hair_url: avatar_override ? undefined : character_glb_url(urls.hair),
+      hair_url: avatar_override ? undefined : urls.hair,
       colors:
         !avatar_override && (character.color_1 || character.color_2 || character.color_3)
           ? [character.color_1, character.color_2, character.color_3]

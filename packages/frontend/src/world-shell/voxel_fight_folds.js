@@ -18,7 +18,7 @@ import { get_aoe_cells } from '@aresrpg/sim/spell_targeting'
 
 import { dungeon_grid_of } from '../game/screens/dungeon-grid.js'
 import { get_mob_model } from '../game/data/mobs.js'
-import { CHARACTER_MODELS, character_glb_url, has_character_model } from '../game/screens/character-glb.js'
+import { PLACEHOLDER_RIG_CLASS, character_model_urls } from '../game/screens/character-glb.js'
 import { fight_spell } from '../game/screens/hud/fight-spells.js'
 
 // The voxel board floats above the streamed terrain at a fixed designated origin (the cave-gen picks this in the
@@ -104,27 +104,28 @@ export function world_seat_from_surfaces(surfaces, quantile = 0.9) {
   return sorted[idx] + 1 // feet_of — the top face of the dominant-high ground block
 }
 
+/** A fight row's gender, decoded off the two shapes the chain/read-model hand us. The DECODE is this
+ *  surface's (it knows its own record shape); the rig RULE it feeds is shared. */
+const is_male_fighter = (fighter) => !(fighter.male === false || fighter.sex === 'female')
+
 /**
- * The GLB url for a fighter — the template-id law, resolved through the SAME frontend model maps the roam
- * world + fight-overlay use, so a voxel avatar matches the plane. Player: the escrowed character's CLASS body GLB
- * (CHARACTER_MODELS[class][gender]); a class with no rig uses the same gender-matched Senshi placeholder as the
- * roam avatar, never the engine avatar's implicit male default.
+ * The GLB url for a fighter — the template-id law, resolved through `character_model_urls`, the ONE home the
+ * roam world, remote players and the simulator board also read, so a voxel avatar matches the plane. Player:
+ * the escrowed character's CLASS body GLB; a class with no rig uses the same gender-matched Senshi placeholder
+ * as the roam avatar, never the engine avatar's implicit male default.
  * Mob: get_mob_model keyed on fighter.variant (= the chain mob template id). Pure.
  * @param {{ is_player?: boolean, class_id?: string, variant?: string, sex?: string, male?: boolean, name?: string }} fighter
  * @returns {string | undefined} a public GLB url
  */
 export function glb_variant_of(fighter) {
-  if (fighter.is_player) {
-    const rig_class = fighter.class_id && has_character_model(fighter.class_id) ? fighter.class_id : 'senshi'
-    const gender = fighter.male === false || fighter.sex === 'female' ? 'female' : 'male'
-    return character_glb_url(CHARACTER_MODELS[rig_class]?.[gender]?.body)
-  }
+  if (fighter.is_player)
+    return character_model_urls(fighter.class_id, is_male_fighter(fighter), { fallback: PLACEHOLDER_RIG_CLASS }).body
   return get_mob_model({ variant: fighter.variant, name: fighter.name }).url
 }
 
 /**
  * [D242] The HAIR GLB url for a fighter, or undefined. A PLAYER gets their class/gender `_hair` mesh from the
- * SAME CHARACTER_MODELS map the roam avatar (embed_voxel) mounts — so a fight avatar is NOT bald (D242
+ * SAME `character_model_urls` door the roam avatar (embed_voxel) mounts — so a fight avatar is NOT bald (D242
  * rejects a hairless fight avatar). Mobs and hairless class/gender rows resolve undefined (the engine avatar home
  * simply skips hair — bald, not broken); rig-less classes use the roam avatar's Senshi placeholder. Pure — mirrors
  * glb_variant_of.
@@ -133,9 +134,7 @@ export function glb_variant_of(fighter) {
  */
 export function hair_variant_of(fighter) {
   if (!fighter.is_player) return undefined
-  const rig_class = fighter.class_id && has_character_model(fighter.class_id) ? fighter.class_id : 'senshi'
-  const gender = fighter.male === false || fighter.sex === 'female' ? 'female' : 'male'
-  return character_glb_url(CHARACTER_MODELS[rig_class]?.[gender]?.hair)
+  return character_model_urls(fighter.class_id, is_male_fighter(fighter), { fallback: PLACEHOLDER_RIG_CLASS }).hair
 }
 
 /**
