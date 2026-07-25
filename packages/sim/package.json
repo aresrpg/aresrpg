@@ -50,6 +50,10 @@
       "types": "./types/board_gen.d.ts",
       "import": "./src/board_gen.js"
     },
+    "./mob_stats": {
+      "types": "./types/mob_stats.d.ts",
+      "import": "./src/mob_stats.js"
+    },
     "./fight_state": {
       "types": "./types/fight_state.d.ts",
       "import": "./src/fight_state.js"
