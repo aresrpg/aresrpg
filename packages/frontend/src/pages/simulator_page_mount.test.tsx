@@ -41,11 +41,22 @@ describe('the /simulator route mounts', () => {
     expect(html).toContain(en.simulator.title)
     expect(html).toContain(en.simulator.roster)
     expect(html).toContain(en.simulator.board)
-    // nothing focused and an empty roster — the honest empty state, not a phantom inspector
-    expect(html).toContain(en.simulator.no_selection)
+    // YOUR team left, the board middle, the ENEMY team right — the third pane is the mob roster now, not a
+    // standing inspector (the editors are modals a seat opens).
+    expect(html).toContain(en.simulator.mob_team)
   })
 
   test('the roster shows every empty slot as a create affordance rather than dead space', () => {
     expect(markup().split(en.simulator.new_character).length - 1).toBeGreaterThan(1)
+  })
+
+  test('every enemy seat is an invitation to pick a mob, never dead space', () => {
+    expect(markup().split(en.simulator.pick_mob).length - 1).toBeGreaterThan(1)
+  })
+
+  test('no editor is mounted until a seat is opened — the page is seats, not a standing form', () => {
+    const html = markup()
+    expect(html).not.toContain('role="dialog"')
+    expect(html).not.toContain(en.simulator.equipment)
   })
 })
