@@ -18,6 +18,8 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dices, X } from 'lucide-react'
 
+import { encode } from '@aresrpg/fight/los'
+
 import type { CorpusMob } from '../pages/encyclopedia/world_corpus'
 
 import { board_of, type SimBoard } from './board'
@@ -30,12 +32,11 @@ import { use_simulator } from './store'
 const GOLD = '#c8963c'
 const HAIRLINE = '1px solid rgba(255,255,255,0.06)'
 const micro = 'text-[9px] tracking-[0.22em] uppercase'
-/** stride-20 (combat_grid GRID_W) — the canonical cell encoding the whole fight stack speaks */
-const STRIDE = 20
 
 type ViewportHandle = {
   show: (board: unknown, scene: unknown) => Promise<void>
-  on_cell_click: (cb: (cell: { x: number; y: number }) => void) => () => void
+  /** the board reports a MISS as `null` (contract v1.2) — a click into the void is an event, not silence */
+  on_cell_click: (cb: (cell: { x: number; y: number } | null) => void) => () => void
   destroy: () => void
 }
 
@@ -137,7 +138,11 @@ export function BoardPaneView({
 
 export function SimulatorBoardPane() {
   const canvas_ref = useRef<HTMLCanvasElement | null>(null)
-  const viewport_ref = useRef<ViewportHandle | null>(null)
+  // The viewport is STATE, not a ref, on purpose: the engine module is imported lazily, so it lands one or
+  // more renders AFTER the first board+scene exist. A ref would leave that first show() falling into a null
+  // viewport and the board would only appear on the next change (measured: nothing until a reroll). As a
+  // dependency of the show effect below, the very existence of the viewport re-triggers the paint.
+  const [viewport, set_viewport] = useState<ViewportHandle | null>(null)
   const [picker_cell, set_picker_cell] = useState<number | null>(null)
 
   const { seed, anchor_nonce, roster, placements, mob_picks, focus_id, input } = use_simulator()
@@ -164,34 +169,40 @@ export function SimulatorBoardPane() {
   // ONE mount per page visit; the engine is disposed on unmount (never the world session's singleton).
   useEffect(() => {
     let live = true
+    let handle: ViewportHandle | null = null
     let unsubscribe: (() => void) | null = null
     const canvas = canvas_ref.current
     if (!canvas) return undefined
     void import('./mount.js').then(({ create_board_viewport }) => {
       if (!live) return
-      const viewport = create_board_viewport({ canvas }) as ViewportHandle
-      viewport_ref.current = viewport
-      unsubscribe = viewport.on_cell_click(({ x, y }) => {
+      handle = create_board_viewport({ canvas }) as ViewportHandle
+      unsubscribe = handle.on_cell_click((cell) => {
+        // A click that hit no cell (the void around the board) — the engine reports the miss so a dapp can
+        // deselect on it; this page has nothing to deselect, so it is simply not an interaction.
+        if (!cell) return
+        const { x, y } = cell
         const { current } = click_state
-        const intent = cell_intent_of(current.board, current, y * STRIDE + x)
+        const intent = cell_intent_of(current.board, current, encode(x, y))
         if (!intent) return
         if (intent.type === 'mob_cell') set_picker_cell(intent.cell)
         else if (intent.type === 'place') input({ type: 'character_placed', cell: intent.cell, id: intent.id })
         else input({ type: 'character_unplaced', cell: intent.cell })
       })
+      set_viewport(handle)
     })
     return () => {
       live = false
       unsubscribe?.()
-      viewport_ref.current?.destroy()
-      viewport_ref.current = null
+      handle?.destroy()
+      set_viewport(null)
     }
   }, [input])
 
-  // Every board/scene change re-shows: the viewport re-streams only when the BOARD itself moved.
+  // Every board/scene change re-shows — and so does the viewport's own arrival. The mount re-bakes the
+  // geometry only when the BOARD itself changed; anything else is a repaint.
   useEffect(() => {
-    void viewport_ref.current?.show(board, scene)
-  }, [board, scene])
+    void viewport?.show(board, scene)
+  }, [viewport, board, scene])
 
   const picked: PickedRow[] = useMemo(
     () =>
