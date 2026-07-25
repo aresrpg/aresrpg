@@ -100,6 +100,50 @@ module.exports = {
       to: { path: '^packages/fight/src/(fight_render_events|fight_predicted_render)\\.js$' },
     },
     {
+      name: 'simulator-consumes-shared-only',
+      comment:
+        'ZERO-DIVERGENCE law (owner ruling 2026-07-25): "everything we use in the simulator is the exact same ' +
+        'generic code we use in the real world — we can NEVER have any divergence or adapted modules for ' +
+        'display; the single only mocked system are the chain events for the simulator page". The /simulator ' +
+        'page is a COMPOSITION over shared homes, so its import graph is an ALLOWLIST of them: itself, the ' +
+        'workspace packages (@aresrpg/sdk|sim|fight|world|party|inventory|engine3 — the deterministic twins and ' +
+        'the sanctioned sim_chain event mock), the shared frontend surfaces it mounts (game/, world-shell/, ' +
+        'components/, fight-engine/, core/, utils/, i18n/) and the published world corpus (pages/encyclopedia/). ' +
+        'EVERYTHING ELSE is red on purpose. auth/ tx/ chain/ rpc/ p2p/ roster/ stores/ are the sharp ones: the ' +
+        'simulator is local by constitution (a fight there must be structurally unable to sign a transaction), ' +
+        'so an import of the real chain/tx layer is either a live chain call on a local page or a ' +
+        'simulator-local re-implementation of a world fact — both are the divergence this rule exists to stop. ' +
+        'A new directory here is a deliberate, reviewed decision, never a drive-by (the fight-core-hermetic ' +
+        'idiom applied to the page).',
+      severity: 'error',
+      from: { path: '^packages/frontend/src/simulator/' },
+      to: {
+        pathNot: [
+          '^packages/frontend/src/simulator/',
+          '^packages/frontend/src/(components|core|fight-engine|game|i18n|utils|world-shell)/',
+          '^packages/frontend/src/pages/encyclopedia/',
+          '^packages/(engine|fight|inventory|party|sdk|sim|world)/',
+          'node_modules',
+        ],
+      },
+    },
+    {
+      name: 'simulator-no-reverse-leak',
+      comment:
+        'The other half of the zero-divergence law: the simulator CONSUMES shared homes, it never BECOMES one. ' +
+        'Nothing outside simulator/** may import it except its composition root, pages/simulator.tsx — the ' +
+        'page that mounts it. A world surface reaching into simulator/** would make a local-only, chain-free ' +
+        'module authoritative for the real game, which is the divergence running in the opposite direction: ' +
+        'the extraction of a shared fact belongs in its shared home (@aresrpg/* or game/world-shell), and both ' +
+        'sides import THAT. Enforced on the resolved graph, so a re-export chain cannot launder it either.',
+      severity: 'error',
+      from: {
+        path: '^packages/(frontend|fight|party|inventory|world)/src/',
+        pathNot: '^packages/frontend/src/(simulator/|pages/simulator\\.tsx$)',
+      },
+      to: { path: '^packages/frontend/src/simulator/' },
+    },
+    {
       name: 'no-circular',
       comment:
         'L-C1 (composition is associative only on a DAG): no module-level import cycles inside ' +
