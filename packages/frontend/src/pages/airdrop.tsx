@@ -11,6 +11,8 @@ import type { RpcAirdrop } from '../rpc/views'
 import { ItemImage } from '../components/items'
 import { cosmetic_icon_of } from '../game/cosmetic_icons.js'
 
+import { AirdropShowcase } from './airdrop_showcase'
+
 // AIRDROP — the whitelist claim-MINT sidebar page. A shop-card-like grid of
 // reserved-item drops; each shows whether the CONNECTED identity (zkLogin address + optional external wallet) is
 // on that drop's whitelist, and a claim that mints ONE into the claimer's own kiosk (mint-lock, no royalty) and
@@ -130,21 +132,22 @@ export function AirdropPage() {
         </span>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
+      {/* The CLAIM half (chain state) sits above the SET half (published showcase data, #803): what you can
+          take now, then what the set is. With no live drop the claim half collapses to one honest line — the
+          page is no longer empty, so it must not read as if it were. */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 flex flex-col gap-6">
         {loading && !loaded_once ? (
-          <div className="flex items-center justify-center gap-2 py-20">
+          <div className="flex items-center justify-center gap-2 py-8">
             <Loader2 size={14} className="animate-spin text-gold opacity-40" />
             <span className="text-muted text-[10px] tracking-[0.2em] uppercase animate-pulse">
               {t('common.loading')}
             </span>
           </div>
         ) : airdrops.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-24 text-center text-muted">
-            <Gift size={28} style={{ opacity: 0.2 }} />
-            <span className="text-[11px] tracking-[0.2em] uppercase">{t('airdrop.empty')}</span>
-            <span className="text-[9px] tracking-[0.12em] text-muted/60 max-w-[320px] leading-relaxed">
-              {t('airdrop.empty_hint')}
-            </span>
+          <div className="flex items-center gap-2.5 text-muted border border-border/60 px-3 py-2.5">
+            <Gift size={13} style={{ opacity: 0.4 }} />
+            <span className="text-[9px] tracking-[0.18em] uppercase">{t('airdrop.empty')}</span>
+            <span className="text-[9px] tracking-[0.08em] text-muted/60 truncate">{t('airdrop.empty_hint')}</span>
           </div>
         ) : (
           <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
@@ -159,6 +162,8 @@ export function AirdropPage() {
             ))}
           </div>
         )}
+
+        <AirdropShowcase />
       </div>
     </div>
   )

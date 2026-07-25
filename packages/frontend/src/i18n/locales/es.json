@@ -2966,6 +2966,23 @@
     "empty": "No hay airdrops activos",
     "empty_hint": "Los airdrops para titulares de colecciones asociadas aparecerán aquí cuando se activen.",
     "pending_claim": "Reclamando airdrop…",
-    "toast_claimed": "Airdrop reclamado"
+    "toast_claimed": "Airdrop reclamado",
+    "set": {
+      "title": "La colección",
+      "subtitle": "Objetos reservados — solo muestra",
+      "error": "No se pudo cargar la colección del airdrop",
+      "retry": "Reintentar",
+      "empty": "La colección del airdrop aún no está publicada",
+      "no_preview": "Vista previa pendiente",
+      "aura": "Aura",
+      "aura_pending": "Aura pendiente",
+      "awaiting_ruling": "Pendiente de decisión",
+      "kind": {
+        "pet_glb": "Mascota",
+        "cosmetic": "Cosmético",
+        "title_relic": "Reliquia de título",
+        "outfit": "Atuendo"
+      }
+    }
   }
 }

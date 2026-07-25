@@ -2966,6 +2966,23 @@
     "empty": "Keine aktiven Airdrops",
     "empty_hint": "Airdrops für Inhaber von Partner-Kollektionen erscheinen hier, sobald sie live gehen.",
     "pending_claim": "Airdrop wird eingelöst…",
-    "toast_claimed": "Airdrop eingelöst"
+    "toast_claimed": "Airdrop eingelöst",
+    "set": {
+      "title": "Die Kollektion",
+      "subtitle": "Reservierte Gegenstände — nur zur Ansicht",
+      "error": "Die Airdrop-Kollektion konnte nicht geladen werden",
+      "retry": "Erneut versuchen",
+      "empty": "Die Airdrop-Kollektion ist noch nicht veröffentlicht",
+      "no_preview": "Vorschau folgt",
+      "aura": "Aura",
+      "aura_pending": "Aura folgt",
+      "awaiting_ruling": "Entscheidung ausstehend",
+      "kind": {
+        "pet_glb": "Begleiter",
+        "cosmetic": "Kosmetik",
+        "title_relic": "Titel-Relikt",
+        "outfit": "Outfit"
+      }
+    }
   }
 }

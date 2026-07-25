@@ -2966,6 +2966,23 @@
     "empty": "Aucun airdrop actif",
     "empty_hint": "Les airdrops pour les détenteurs de collections partenaires apparaîtront ici à leur lancement.",
     "pending_claim": "Réclamation de l'airdrop…",
-    "toast_claimed": "Airdrop réclamé"
+    "toast_claimed": "Airdrop réclamé",
+    "set": {
+      "title": "La collection",
+      "subtitle": "Objets réservés — vitrine uniquement",
+      "error": "Impossible de charger la collection airdrop",
+      "retry": "Réessayer",
+      "empty": "La collection airdrop n'est pas encore publiée",
+      "no_preview": "Aperçu à venir",
+      "aura": "Aura",
+      "aura_pending": "Aura à venir",
+      "awaiting_ruling": "En attente de décision",
+      "kind": {
+        "pet_glb": "Familier",
+        "cosmetic": "Cosmétique",
+        "title_relic": "Relique de titre",
+        "outfit": "Tenue"
+      }
+    }
   }
 }

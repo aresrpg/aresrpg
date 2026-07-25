@@ -2966,6 +2966,23 @@
     "empty": "No active airdrops",
     "empty_hint": "Airdrops for holders of partner collections will appear here when they go live.",
     "pending_claim": "Claiming airdrop…",
-    "toast_claimed": "Airdrop claimed"
+    "toast_claimed": "Airdrop claimed",
+    "set": {
+      "title": "The set",
+      "subtitle": "Reserved items — showcase only",
+      "error": "The airdrop set could not be loaded",
+      "retry": "Retry",
+      "empty": "The airdrop set is not published yet",
+      "no_preview": "Preview pending",
+      "aura": "Aura",
+      "aura_pending": "Aura pending",
+      "awaiting_ruling": "Awaiting ruling",
+      "kind": {
+        "pet_glb": "Pet",
+        "cosmetic": "Cosmetic",
+        "title_relic": "Title relic",
+        "outfit": "Outfit"
+      }
+    }
   }
 }

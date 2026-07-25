@@ -15,6 +15,7 @@
     "mob_icon": { "published": true },
     "item": { "published": true },
     "shop_render": { "published": true },
-    "hack_radio": { "published": true }
+    "hack_radio": { "published": true },
+    "airdrop": { "published": true }
   }
 }

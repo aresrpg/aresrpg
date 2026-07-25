@@ -2966,6 +2966,23 @@
     "empty": "有効なエアドロップはありません",
     "empty_hint": "提携コレクションのホルダー向けエアドロップは、開始時にここに表示されます。",
     "pending_claim": "エアドロップを受取中…",
-    "toast_claimed": "エアドロップを受け取りました"
+    "toast_claimed": "エアドロップを受け取りました",
+    "set": {
+      "title": "セット",
+      "subtitle": "予約アイテム — 展示のみ",
+      "error": "エアドロップセットを読み込めませんでした",
+      "retry": "再試行",
+      "empty": "エアドロップセットはまだ公開されていません",
+      "no_preview": "プレビュー準備中",
+      "aura": "オーラ",
+      "aura_pending": "オーラ準備中",
+      "awaiting_ruling": "判断待ち",
+      "kind": {
+        "pet_glb": "ペット",
+        "cosmetic": "コスメティック",
+        "title_relic": "称号レリック",
+        "outfit": "衣装"
+      }
+    }
   }
 }
