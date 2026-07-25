@@ -1,0 +1,79 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
+// pages/encyclopedia/item_corpus.ts — THE PUBLISHED ITEM CORPUS, subscribed.
+//
+// Sibling of world_corpus.ts (the published mob/world corpus) and its exact counterpart for items: one home
+// for "which item templates does the live game contain", read from `/v1/encyclopedia` — the same door the
+// items tab renders from. Any surface that needs to BROWSE items reads it here.
+//
+// It exists because the alternative kept shipping empty surfaces: the bundled seed catalog
+// (`@aresrpg/sdk/items-data`) is `{}` by construction in this repo — the content boundary — so anything
+// sourcing a list from it renders blank on every real deployment while the chain holds the full catalog.
+// That is the Jobs-drawer bug (#765/#800) and it is what emptied all 20 of the simulator's gear pickers.
+//
+// Rolls are NOT resolved here. A row carries its authored `[min, max]` ranges verbatim; resolving a ceiling
+// is the consumer's own generic resolver (simulator-equip.js's `equip_item` for the max-roll fold).
+
+import { useMemo } from 'react'
+
+import { item_damages_from_v1, item_stats_from_v1 } from '../../chain/read_findables.js'
+import { get_encyclopedia } from '../../rpc/client'
+import { use_rpc_view } from '../../rpc/use_view'
+import type { RpcEncyclopediaItem } from '../../rpc/views'
+
+import { is_living_item } from './living_corpus'
+
+/** One published item template. `item_type` is the authored art slug (the icon key every item surface
+ *  resolves through); `category` is the raw Move category, which is what slot legality is decided on. */
+export type CorpusItem = {
+  id: string
+  name: string
+  category: string
+  item_type: string
+  level: number
+  stats: Record<string, [number, number] | number>
+  damages: { from: number; to: number; damage_type: string; element: string }[]
+}
+
+/** A developer/cheat template never reaches a player's build. Mirrors the SDK predicate, read off the raw
+ *  /v1 category (a template row carries no `quality`). */
+const is_developer_row = (row: RpcEncyclopediaItem): boolean => (row.category ?? '').toLowerCase() === 'developer'
+
+/**
+ * The `/v1/encyclopedia` item rows → the browsable corpus, sorted by level then name (the order every item
+ * list in the game already uses).
+ *
+ * `is_living_item` is the SAME whitelist the items tab applies: an old-generation chain ghost must not be
+ * offerable. It goes inert (and logs) when the seed manifest is absent — see living_corpus.ts — so a
+ * manifest-less build degrades to an honestly empty corpus, never to fabricated rows.
+ */
+export const item_corpus_from_v1 = (rows: readonly RpcEncyclopediaItem[] | null | undefined): CorpusItem[] =>
+  (rows ?? [])
+    .filter((row) => is_living_item(row) && !is_developer_row(row))
+    .map((row) => ({
+      id: row.template_id,
+      name: row.name ?? '',
+      category: (row.category ?? '').toLowerCase(),
+      item_type: row.item_type ?? '',
+      level: row.level ?? 0,
+      stats: item_stats_from_v1(row.stats) as Record<string, [number, number] | number>,
+      damages: item_damages_from_v1(row.damages),
+    }))
+    .sort((left, right) => left.level - right.level || (left.name || left.id).localeCompare(right.name || right.id))
+
+export type ItemCorpus = {
+  items: CorpusItem[]
+  by_id: ReadonlyMap<string, CorpusItem>
+  /** true only before the first /v1 answer lands. Consumers must SAY this rather than render an empty list:
+   *  absence is not emptiness (cache law), and the two are indistinguishable once drawn. */
+  loading: boolean
+}
+
+/** The live corpus, subscribed. One shared app-lifetime read (the client caches `encyclopedia:all`), so a
+ *  consumer rides the same fetch the encyclopedia already made. */
+export function use_item_corpus(): ItemCorpus {
+  const { data, loading } = use_rpc_view((signal) => get_encyclopedia(undefined, signal), { deps: [] })
+  const items = useMemo(() => item_corpus_from_v1(data?.items), [data])
+  const by_id = useMemo(() => new Map(items.map((item) => [item.id, item])), [items])
+  return { items, by_id, loading }
+}

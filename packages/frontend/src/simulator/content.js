@@ -11,7 +11,6 @@
 // reducer's — one home). It refuses out-of-domain input loudly instead of silently coercing it.
 
 import CLASSES_JSON from '@aresrpg/sdk/classes' with { type: 'json' }
-import ITEMS_JSON from '@aresrpg/sdk/items-data' with { type: 'json' }
 import { experience_to_level, level_to_experience } from '@aresrpg/sdk/experience'
 import { STATISTICS, get_equipment_stat, get_max_health, get_total_stat } from '@aresrpg/sdk/stats'
 import { normalize_chain_spell_corpus } from '@aresrpg/sim/chain_spell_corpus'
@@ -22,10 +21,10 @@ import { fight_spells_data } from '../game/screens/hud/fight-spells.js'
 import { equip_item } from '../game/screens/hud/simulator-equip.js'
 
 // The simulator's paper-doll vocabulary IS the inventory's — re-exported through this door so the page never
-// re-derives a second slot list (`items_for_slot` fills each slot's picker from the same catalog).
-export { EQUIPMENT_SLOTS, EQUIPPABLE_SLOTS, SLOT_LABEL, items_for_slot } from '../game/screens/hud/simulator-equip.js'
+// re-derives a second slot list. The item POPULATION lives in pages/encyclopedia/item_corpus.ts (the /v1 door).
+export { EQUIPMENT_SLOTS, SLOT_LABEL } from '../game/screens/hud/simulator-equip.js'
 
-/** @typedef {import('../game/screens/hud/encyclopedia-data.js').ItemDef} ItemDef */
+/** @typedef {import('../pages/encyclopedia/item_corpus').CorpusItem} CorpusItem */
 /** @typedef {import('../pages/encyclopedia/world_corpus').CorpusMob} CorpusMob */
 /** @typedef {import('../pages/encyclopedia/world_corpus').CorpusMobSpell} CorpusMobSpell */
 
@@ -59,7 +58,7 @@ const CATALOG_TO_STATISTIC = /** @type {Record<string, string>} */ ({
  * One catalog item → its centered max-roll row, in ITEM_STAT_CATALOG_ORDER positions (32768 = neutral).
  * MAX ROLL is `equip_item`'s range ceiling — the same flattening the build planner equips, so the simulator
  * and the planner can never disagree about what an item is worth.
- * @param {ItemDef} item
+ * @param {CorpusItem} item
  * @returns {number[]}
  */
 export const centered_max_roll = (item) => {
@@ -73,7 +72,7 @@ export const centered_max_roll = (item) => {
  * The gear-only aggregate under the SDK stat names — the `equipment_stats` field the production HUD's
  * `stats_of` reads, so the seeded engine-store character records feed `predict_cast` exactly as a chain
  * character does. RAW sums: the zero floor is the fold's job, not this projection's.
- * @param {ItemDef[]} items
+ * @param {CorpusItem[]} items
  * @returns {Record<string, number>}
  */
 const equipment_aggregate = (items) =>
@@ -86,31 +85,22 @@ const equipment_aggregate = (items) =>
   }, /** @type {Record<string, number>} */ ({}))
 
 /**
- * A stored loadout (slot → item template id, the reducer's `SimCharacter.loadout`) → the catalog rows to
- * fold. Unresolvable ids come back as `unresolved` rather than vanishing: the catalog ships EMPTY in this
- * repo (MISSING-ARTIFACT #117), so a silent drop would render every build naked with no explanation.
+ * A stored loadout (slot → item template id, the reducer's `SimCharacter.loadout`) → the live corpus rows to
+ * fold. The corpus is the caller's (`use_item_corpus().by_id`) — this module stays pure and storeless.
+ *
+ * Unresolvable ids come back as `unresolved` rather than vanishing: a build saved before a republish can
+ * reference a template the current corpus no longer mints, and a silent drop would render that build naked
+ * with no explanation. A COLD corpus resolves everything as unresolved, which is why the caller must
+ * distinguish "still loading" from "genuinely gone" before it says anything to the player.
+ * @param {ReadonlyMap<string, CorpusItem>} corpus
  * @param {Record<string, string>} [loadout]
- * @returns {{ items: ItemDef[], unresolved: Array<{ slot: string, template_id: string }> }}
+ * @returns {{ items: CorpusItem[], unresolved: Array<{ slot: string, template_id: string }> }}
  */
-/**
- * One catalog row by template id — `items_for_slot`'s inverse (the picker hands out ids, the loadout stores
- * them, the doll needs the row back). `slug` is joined on so the paper doll's own icon resolver
- * (`inventory_item_icon`) finds the authored art: a catalog row's identity IS its id.
- * @param {string | null | undefined} template_id
- * @returns {(ItemDef & { slug: string }) | undefined}
- */
-export const catalog_item = (template_id) => {
-  const catalog = /** @type {Record<string, ItemDef>} */ (/** @type {unknown} */ (ITEMS_JSON))
-  const item = template_id ? catalog[template_id] : undefined
-  return item ? { ...item, slug: item.id } : undefined
-}
-
-export const resolve_loadout = (loadout) => {
-  const catalog = /** @type {Record<string, ItemDef>} */ (/** @type {unknown} */ (ITEMS_JSON))
+export const resolve_loadout = (corpus, loadout) => {
   const rows = Object.entries(loadout ?? {}).map(([slot, template_id]) => ({
     slot,
     template_id,
-    item: catalog[template_id],
+    item: corpus?.get(template_id),
   }))
   return {
     items: rows.filter((row) => row.item).map((row) => row.item),
@@ -124,7 +114,7 @@ export const resolve_loadout = (loadout) => {
  * A roster character + its max-rolled loadout → the numbers a fight seat starts with. `stat_alloc` is the
  * player's allocation (the reducer owns its budget); everything else is derived.
  * @param {{ level: number, stat_alloc?: Record<string, number> }} character
- * @param {ItemDef[]} [items]  the equipped catalog rows, any slot order (the fold is order-independent)
+ * @param {CorpusItem[]} [items]  the equipped catalog rows, any slot order (the fold is order-independent)
  * @returns {{ level: number, stats: Record<string, number>, hp: number, max_hp: number,
  *   ap_max: number, mp_max: number, equipment_stats: Record<string, number> }}
  */

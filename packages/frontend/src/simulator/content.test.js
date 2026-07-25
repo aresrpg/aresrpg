@@ -2,17 +2,17 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Simulator content builders — the max-roll gear fold, the class seat and the mob build.
 //
-// ITEM FIXTURES, not catalog rows: packages/sdk/src/items.json ships as an empty `{}` placeholder in this
-// public repo (MISSING-ARTIFACT #117 — the catalog is authored by the private content pipeline), so the
-// hand-computed vectors below run on ItemDef-shaped fixtures. They pin the ARITHMETIC (max roll → centered
-// wire → fold → seat), which is what this module owns; the catalog-bearing case at the bottom folds three
-// REAL catalog rows wherever the artifact is present.
+// HAND-BUILT FIXTURES pin the ARITHMETIC (max roll → centered wire → fold → seat), which is what this module
+// owns. The block at the bottom then folds rows that came out of the REAL live-corpus projection, pinning the
+// seam between the two: it used to be a permanently-skipped test over the bundled catalog, which ships empty
+// here by construction, so it never ran once.
 import { describe, expect, test } from 'bun:test'
 import { ITEM_STAT_CATALOG_ORDER, ITEM_STAT_SHIFT } from '@aresrpg/sim/equipment_stats'
 
-import { ITEMS_CATALOG_AVAILABLE } from '../test_helpers/items_fixture.js'
-import { EQUIPMENT_SLOTS as INVENTORY_EQUIPMENT_SLOTS, items_for_slot } from '../game/screens/hud/simulator-equip.js'
+import { EQUIPMENT_SLOTS as INVENTORY_EQUIPMENT_SLOTS } from '../game/screens/hud/simulator-equip.js'
 import { set_spell_corpus_for_test } from '../game/data/spell_corpus.js'
+import { seed_manifest } from '../content/seed_manifest'
+import { item_corpus_from_v1 } from '../pages/encyclopedia/item_corpus'
 
 import {
   BASE_AP,
@@ -127,19 +127,36 @@ describe('build_seat — a roster character to its fight-start numbers', () => {
   })
 })
 
-describe('resolve_loadout — the reducer loadout to catalog rows', () => {
-  test('reports unresolvable template ids instead of dropping them (#117 makes this the normal case here)', () => {
-    const { items, unresolved } = resolve_loadout({ helmet: 'not_in_catalog', weapon: 'also_missing' })
+describe('resolve_loadout — the reducer loadout to live corpus rows', () => {
+  const CORPUS = new Map([
+    [HELM.id, HELM],
+    [BOOTS.id, BOOTS],
+  ])
+
+  test('a stored loadout resolves against the LIVE corpus it is given', () => {
+    const { items, unresolved } = resolve_loadout(CORPUS, { helmet: HELM.id, boots: BOOTS.id })
+    expect(items).toEqual([HELM, BOOTS])
+    expect(unresolved).toEqual([])
+  })
+
+  test('reports unresolvable template ids instead of dropping them — a build never goes silently naked', () => {
+    const { items, unresolved } = resolve_loadout(CORPUS, { helmet: 'not_in_corpus', weapon: 'also_missing' })
     expect(items).toEqual([])
     expect(unresolved).toEqual([
-      { slot: 'helmet', template_id: 'not_in_catalog' },
+      { slot: 'helmet', template_id: 'not_in_corpus' },
       { slot: 'weapon', template_id: 'also_missing' },
     ])
   })
 
+  test('a COLD corpus resolves nothing — every id is unresolved, never a fabricated row', () => {
+    const { items, unresolved } = resolve_loadout(new Map(), { helmet: HELM.id })
+    expect(items).toEqual([])
+    expect(unresolved).toEqual([{ slot: 'helmet', template_id: HELM.id }])
+  })
+
   test('an empty loadout resolves to nothing, quietly', () => {
-    expect(resolve_loadout({})).toEqual({ items: [], unresolved: [] })
-    expect(resolve_loadout(undefined)).toEqual({ items: [], unresolved: [] })
+    expect(resolve_loadout(CORPUS, {})).toEqual({ items: [], unresolved: [] })
+    expect(resolve_loadout(CORPUS, undefined)).toEqual({ items: [], unresolved: [] })
   })
 })
 
@@ -287,18 +304,41 @@ describe('class_spell_templates — the published corpus to the sim template map
   })
 })
 
-// MISSING-ARTIFACT (#117): only runs where the item catalog artifact is present (a content-bearing tree/CI).
-// It proves the same fold over REAL catalog rows — the fixtures above prove the arithmetic everywhere else.
-describe('the fold over real catalog rows', () => {
-  test.skipIf(!ITEMS_CATALOG_AVAILABLE)('three seeded items fold into a seat with sane pools', () => {
-    const [helmet] = items_for_slot('helmet')
-    const [boots] = items_for_slot('boots')
-    const [amulet] = items_for_slot('amulet')
-    const real = [helmet, boots, amulet]
+// THE SEAM between the two modules: rows that came out of the live /v1 projection must fold. This used to be
+// a `skipIf(!ITEMS_CATALOG_AVAILABLE)` over the bundled catalog — permanently skipped in this repo, so it
+// never once ran and could not have caught the empty-picker bug. The corpus door has no such artifact
+// dependency, so it runs everywhere: what it pins is that the projection's output shape IS what the fold eats.
+describe('the fold over rows that came from the live corpus', () => {
+  // The wire is BIASED at 32768 (see item_corpus.test.ts); these decode to real ranges on the way through.
+  const wire = (template_id, category, level, stats) => ({
+    template_id,
+    item_type: `art_${category}`,
+    name: `Live ${category}`,
+    description: null,
+    level,
+    category,
+    stats: Object.fromEntries(Object.entries(stats).map(([key, [lo, hi]]) => [key, [32768 + lo, 32768 + hi]])),
+    damages: [],
+    supply: 1,
+    last_sale_mist: null,
+  })
+
+  const living = Object.values(seed_manifest.items).filter((id) => typeof id === 'string' && id.startsWith('0x'))
+
+  test('three live templates fold into a seat with sane pools', () => {
+    const real = item_corpus_from_v1([
+      wire(living[0], 'helmet', 60, { vitality: [10, 40], strength: [2, 8] }),
+      wire(living[1], 'boots', 40, { agility: [5, 25], intelligence: [-15, -5] }),
+      wire(living[2], 'amulet', 80, { vitality: [0, 30], critical: [1, 5] }),
+    ])
+    expect(real).toHaveLength(3)
+
     const seat = build_seat({ level: 100, stat_alloc: { vitality: 100 } }, real)
     for (const item of real) expect(centered_max_roll(item)).toHaveLength(ITEM_STAT_CATALOG_ORDER.length)
     expect(seat.ap_max).toBeGreaterThanOrEqual(BASE_AP)
     expect(seat.mp_max).toBeGreaterThanOrEqual(BASE_MP)
     expect(seat.max_hp).toBe(30 + 500 + seat.stats.vitality)
+    // max roll, through the real decode: 40 + 30 gear vitality on top of the 100 allocated.
+    expect(seat.stats.vitality).toBe(170)
   })
 })

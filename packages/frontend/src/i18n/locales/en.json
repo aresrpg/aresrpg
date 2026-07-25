@@ -1271,6 +1271,7 @@
     "mob_band": "LV {{min}}–{{max}}",
     "combat_block_unpublished": "NO COMBAT BLOCK",
     "mob_roster_loading": "LOADING THE MOB CORPUS…",
+    "item_corpus_loading": "LOADING THE ITEM CORPUS…",
     "combat_block_hint": "This mob's combat stats are not published yet — the fight uses a declared placeholder.",
     "remove_mob": "REMOVE",
     "fight_draw": "DRAW",
