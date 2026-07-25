@@ -15,8 +15,10 @@
 // IS the newest published version of that lineage. This reads those caps (READ-ONLY, no signer,
 // no keystore) and fails on any package whose pinned `latest` is not the cap's package.
 //
-// NOT wired into `bun run lint`/CI — it needs a fullnode. Run it after every ceremony and in the
-// ops loop: `node packages/move/scripts/check_release_pins.mjs [--network testnet]`.
+// NOT in `bun run lint` — it needs a fullnode, so the hermetic ladder cannot hold it. It runs in
+// CI as gate.yml's `release-pin chain gate (testnet)` job, on every PR and every landing (#848);
+// run it by hand after every ceremony too:
+// `node packages/move/scripts/check_release_pins.mjs [--network testnet]`.
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath as file_url_to_path } from 'node:url'

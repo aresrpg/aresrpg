@@ -94,6 +94,46 @@ jobs:
       - name: sponsor api unit suite — one bun process per file (module-load memoization)
         working-directory: api
         run: bun run test
+  release_pins:
+    # Issue #848 (one instance of the #858 class: a check's arming path disjoint from the check).
+    # check_release_pins.mjs — #770's remedy — was armed by its own header comment and nothing
+    # else. It lands HERE, unfiltered, rather than on a path filter or a schedule:
+    #   · #770 was chain drift with an UNTOUCHED repo (two upgrades executed, neither recording
+    #     landed), so no `packages/move/**` path filter could ever have seen it;
+    #   · `schedule:` fires only from the default branch — a scheduled leg authored on edge runs
+    #     zero times until it reaches master (#809, still open, is exactly that);
+    #   · gate.yml's pull_request/push triggers fire from the branch the file lives on, so this
+    #     executes on every PR and every landing, and the promotion PR into master — the one PR
+    #     allowed to move the pins — is gated by the same leg. promote-green-eval.sh derives its
+    #     required set from gate.yml's own jobs (#725), so this job joins the promotion bar with
+    #     no registry to remember.
+    # The fullnode is a HARD dependency, never a silent skip: exit 1 = the chain disagrees with
+    # the pins (deterministic — never retried), exit 2 = the chain could not be read (retried
+    # once, then RED). testnet only — mainnet's packages are unpublished (no upgrade_cap rows in
+    # release.json), so every mainnet row reads UNKNOWN; that leg joins when mainnet publishes.
+    name: release-pin chain gate (testnet)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: setup Bun
+        id: setup_bun
+        continue-on-error: true
+        uses: oven-sh/setup-bun@v2
+      - name: setup Bun (retry)
+        if: steps.setup_bun.outcome == 'failure'
+        uses: oven-sh/setup-bun@v2
+      - name: install
+        run: bun install --frozen-lockfile
+      - name: release pins vs chain — check_release_pins.mjs (#770)
+        run: |
+          run_pin_gate() { node packages/move/scripts/check_release_pins.mjs --network testnet; }
+          status=0
+          run_pin_gate || status=$?
+          test "$status" -eq 0 && exit 0
+          test "$status" -eq 2 || exit "$status"
+          echo "release-pin gate: fullnode unreadable (exit 2) — one retry, then this job is RED" >&2
+          run_pin_gate
   bundle-gate:
     # Issue #737: scripts/assert_clean_bundle.mjs only ran inside Vercel's own build (postbuild),
     # so a commit that tripped it landed green here in CI while every deployment silently
