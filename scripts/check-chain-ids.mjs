@@ -158,6 +158,12 @@ const sanctioned_fixture_prefixes = [
   // issue #701's captured trace_format-1 edge fight (parity_committed.test.js) — real recorder-tee wire bytes
   // with provenance, replayed through both fold pipelines; every id is a historical testnet object, not wiring.
   'packages/fight/test/fixtures/parity/',
+  // the live zone-composition truth (zone_chain_parity.test.js): every id is a `zones_view` SimulateTransaction
+  // reading of the deployed package for zone 487:487 — the world, its package lineage and the mob/resource
+  // template ids the CHAIN reports, captured with provenance. Evidence the twin is checked against, never a
+  // pointer any code reads. Registered as the exact file, not its directory: the sibling fixtures in that
+  // folder are model-derived and must keep facing the gate.
+  'packages/sim/test/fixtures/zone_487_chain_truth.json',
 ]
 const slash_path = (value) => value.split(path.sep).join('/')
 const id_fingerprint = (id) => create_hash('sha256').update(id).digest('base64url').slice(0, 22)

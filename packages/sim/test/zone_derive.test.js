@@ -187,6 +187,29 @@ describe('zone_derive — resource cells (one-harvest / one-bit)', () => {
   test('deterministic: same seed -> identical cell list', () => {
     expect(derive_resources(res_base)).toEqual(derive_resources(res_base))
   })
+
+  test('resource anchors are UNSPACED — only mob groups owe each other distance', () => {
+    // `zone_gen::derive_resources` rolls its anchor with a plain `p_roll_pos`, while the mob stream uses the
+    // rejection loop `p_roll_pos_spaced`. Applying the mob spacing here would burn extra draws and desync the
+    // whole cell stream from the chain. Seed 2 puts two cells 305 (< 400) apart squared: a spaced sampler
+    // could never emit it, so this pins the difference rather than trusting a comment.
+    const cells = derive_resources({
+      ...res_base,
+      seed: 2,
+      min_n: 6,
+      max_n: 6,
+      weights: [100],
+      min_qty: [1],
+      max_qty: [1],
+      jobs: [5],
+    })
+    const closest = Math.min(
+      ...cells.flatMap((a, i) =>
+        cells.slice(i + 1).map(b => (a.x - b.x) ** 2 + (a.z - b.z) ** 2),
+      ),
+    )
+    expect(closest).toBeLessThan(spacing * spacing)
+  })
 })
 
 describe('zone_derive — the full derive_zone pipeline (chain twin: zone_comp.move)', () => {

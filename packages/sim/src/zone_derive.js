@@ -5,9 +5,15 @@
 // chain (never the spawn rows — the searcher no longer pays storage whose rebate leaks to other players); the
 // exact group/cell lists DERIVE from the seed. This module is the byte-for-byte twin of
 // `aresrpg_foundation::zone_gen` (zone_gen.move) so the overworld map advertises EXACTLY what the on-chain
-// fight/gather doors materialise (composition-at-discovery). SPAWN SPACING (minimum distance of
-// 20 blocks between each spawn of mobs) is enforced HERE in the position derivation — the same deterministic
-// rejection sampling the chain runs, so client and chain agree on every position.
+// fight/gather doors materialise (composition-at-discovery). SPAWN SPACING (minimum distance of 20 blocks
+// between spawns) is honoured by BOTH placement strategies the chain ships:
+//   · LEGACY (format 1) — rejection sampling: re-roll a free position until it clears the spacing.
+//   · LATTICE (format 2) — the zone is diced into 40×40 cells drawn WITHOUT replacement and jittered into each
+//     cell's middle 21 blocks, so spacing is structural and every placement costs a FIXED number of draws.
+// WHICH one a zone uses is not a version flag we choose: the chain reads the leading byte of that zone's
+// stored commitment root and dispatches (`zones::derive_mobs`), so this module reads the same byte off the
+// zone doc. Getting it wrong derives a world the chain never committed — every spawn_id becomes fiction and
+// the claim door aborts `ESpawnNotFound`. Zones discovered by the current package are format 2.
 //
 // DETERMINISM IS LAW (@aresrpg/sim): only `prng.js` (mulberry32) is the randomness source — the SAME PRNG the
 // Move `prng` module ports. No Math.random, no floats in the draw path. spawn_id is a full 64-bit value (two u32
@@ -19,9 +25,13 @@ const MOB_SALT = 0x4d4f_425f // sub-seed decorrelation for the mob stream — MU
 const RES_SALT = 0x5245_535f // sub-seed decorrelation for the resource stream — MUST equal zone_gen.move RES_SALT
 const MAX_GATHER_JOB = 2 // SPEC §6: FARMER/HERBALIST/MINER entries grow FIELDS; job above = single cell
 const CLUSTER_CAP = 20 // hard rail on cells per gather field (zone_gen.move twin)
+const GRID_CELL = 40 // LATTICE placement: a zone is diced into 40×40 cells, one spawn per cell
+const GRID_PAD = 10 // jitter origin inside a cell — a spawn sits in the middle 21 blocks of its 40
+const GRID_JITTER = 20 // inclusive jitter span [0, 20] on each axis
 const MIN_SPAWN_SPACING = 20 // mob group spawns pairwise ≥ 20 blocks apart
 const SPACING_D2 = MIN_SPAWN_SPACING * MIN_SPAWN_SPACING // squared compare (= 400)
 const POS_ATTEMPTS = 64 // rejection cap; on exhaustion accept the last roll (a zone too small to fit the spacing)
+const FORMAT_LATTICE = 2 // the commitment-format byte that selects LATTICE placement (zone_gen.move)
 
 /** prng-state twin of `zone_gen::p_roll_u64` — SKIP the draw when `lo >= hi` (point/malformed band). */
 const p_roll_u64 = (state, lo, hi) =>
@@ -79,6 +89,92 @@ const p_roll_pos_spaced = (state, xs, zs, ox, oz, zsize, bx, bz) => {
   return { state: s, x: fx, z: fz }
 }
 
+/**
+ * The zone's placement lattice — twin of `zone_gen::grid_cell_pool`. The zone box (clipped to the world
+ * bounds) is diced into whole GRID_CELL squares; the pool is every cell index `0 .. cols*rows - 1`, drawn
+ * WITHOUT replacement. Spacing is therefore structural, not rejection-sampled: no two spawns share a cell,
+ * and the GRID_PAD/GRID_JITTER inset keeps neighbours ≥ MIN_SPAWN_SPACING apart on every axis.
+ * @returns {{ cols: number, pool: number[] }}
+ */
+const grid_cell_pool = (ox, oz, zsize, bx, bz) => {
+  const max_x = Math.min(ox + zsize, bx)
+  const max_z = Math.min(oz + zsize, bz)
+  const cols = Math.floor(Math.max(max_x - ox, 0) / GRID_CELL)
+  const rows = Math.floor(Math.max(max_z - oz, 0) / GRID_CELL)
+  const pool = []
+  for (let i = 0; i < cols * rows; i++) pool.push(i)
+  return { cols, pool }
+}
+
+/**
+ * Consume the `i`-th lattice cell — twin of `zone_gen::p_pick_grid_pos`. THREE draws: a Fisher-Yates
+ * selection from the unconsumed tail `pool[i..]` (swapped to `i`, so the pool is drawn without replacement
+ * and `pool` is MUTATED in place, exactly as the Move `vector::swap` does), then one jitter draw per axis.
+ */
+const p_pick_grid_pos = (state, pool, i, cols, ox, oz) => {
+  const j = p_roll_u64(state, i, pool.length - 1)
+  const swap = pool[i]
+  pool[i] = pool[j.value]
+  pool[j.value] = swap
+  const cell = pool[i]
+  const jx = p_roll_u64(j.state, 0, GRID_JITTER)
+  const jz = p_roll_u64(jx.state, 0, GRID_JITTER)
+  return {
+    state: jz.state,
+    x: ox + (cell % cols) * GRID_CELL + GRID_PAD + jx.value,
+    z: oz + Math.floor(cell / cols) * GRID_CELL + GRID_PAD + jz.value,
+  }
+}
+
+/**
+ * A placement strategy: `capacity` bounds how many spawns the zone can host, `place(state, i)` consumes the
+ * draws for spawn `i`. The derivations differ ONLY here — everything downstream (pick, size, ids) is shared.
+ * `format === FORMAT_LATTICE` selects the lattice for BOTH streams; every other value selects the legacy
+ * sampler, matching `zones::derive_mobs`, which reads the zone's commitment-format byte and defaults to
+ * legacy. Under legacy the two streams differ: `spaced` is the mob stream's rejection loop
+ * (`zone_gen::derive_mob_groups`), while the resource stream places its anchors with a plain unspaced roll
+ * (`zone_gen::derive_resources`) — resource fields may sit anywhere, only mob groups owe each other distance.
+ */
+const placer = (format, spaced, ox, oz, zsize, bx, bz) => {
+  if (format === FORMAT_LATTICE) {
+    const { cols, pool } = grid_cell_pool(ox, oz, zsize, bx, bz)
+    return {
+      capacity: pool.length,
+      place: (state, i) => p_pick_grid_pos(state, pool, i, cols, ox, oz),
+    }
+  }
+  if (!spaced)
+    return {
+      capacity: Infinity,
+      place: state => p_roll_pos(state, ox, oz, zsize, bx, bz),
+    }
+  const xs = []
+  const zs = []
+  return {
+    capacity: Infinity,
+    place: state => {
+      const r = p_roll_pos_spaced(state, xs, zs, ox, oz, zsize, bx, bz)
+      xs.push(r.x)
+      zs.push(r.z)
+      return r
+    },
+  }
+}
+
+/**
+ * The derivation a zone's stored commitment selects — twin of `zone_gen::mob_group_commitment_format`. A bare
+ * 32-byte digest is format 1 (legacy); a 33-byte `0x02 ‖ digest` is format 2 (lattice); anything else is 0. An
+ * ABSENT root reads as 1, exactly as `zones::group_commitment_format` reports a missing commitment field.
+ * @param {number[] | Uint8Array | null | undefined} root
+ * @returns {number}
+ */
+export const commitment_format = root => {
+  if (!root) return 1
+  if (root.length === 32) return 1
+  if (root.length === 33 && root[0] === FORMAT_LATTICE) return FORMAT_LATTICE
+  return 0
+}
+
 /** Clamp a rolled group size to `[1, size_bound]` — twin of `world_math::clamp_group_u16`. */
 const clamp_group = (v, bound) => {
   const capped = v > bound ? bound : v
@@ -98,6 +194,7 @@ const clamp_group = (v, bound) => {
  * @param {number[]} p.min_group @param {number[]} p.max_group  per-row group-size bands
  * @param {number} p.size_bound  the §4 distance group-size cap
  * @param {number} p.ox @param {number} p.oz @param {number} p.zsize @param {number} p.bx @param {number} p.bz
+ * @param {number} [p.format]  the zone's commitment format — 2 = lattice, anything else = legacy (the default)
  * @returns {Array<{ spawn_id: bigint, template_idx: number, x: number, z: number, size: number, group_seed: number }>}
  */
 export function derive_mob_groups({
@@ -113,38 +210,37 @@ export function derive_mob_groups({
   zsize,
   bx,
   bz,
+  format = 1,
 }) {
   const out = []
-  const xs = []
-  const zs = []
   let s = rng_seed(mix(seed, MOB_SALT))
   const g = p_roll_u64(s, min_g, max_g)
   s = g.state
-  for (let i = 0; i < g.value; i++) {
+  const { capacity, place } = placer(format, true, ox, oz, zsize, bx, bz)
+  // Draws per group: pick(1) · size(1) · position(2 per rejection attempt, or a fixed 3 on the lattice) ·
+  // group_seed(1) · spawn_id hi/lo(2). The lattice also caps the count — a zone with fewer cells than groups
+  // yields one group per cell.
+  for (let i = 0; i < g.value && i < capacity; i++) {
     const pick = p_pick_weighted(s, weights)
     s = pick.state
     if (pick.idx === null) break
     const { idx } = pick
     const sz = p_roll_u64(s, min_group[idx], max_group[idx])
     s = sz.state
-    const size = clamp_group(sz.value, size_bound)
-    const pos = p_roll_pos_spaced(s, xs, zs, ox, oz, zsize, bx, bz)
+    const pos = place(s, i)
     s = pos.state
     const gseed = rng_next(s)
     const hi = rng_next(gseed.state)
     const lo = rng_next(hi.state)
     s = lo.state
-    const spawn_id = (BigInt(hi.value) << 32n) | BigInt(lo.value)
     out.push({
-      spawn_id,
+      spawn_id: (BigInt(hi.value) << 32n) | BigInt(lo.value),
       template_idx: idx,
       x: pos.x,
       z: pos.z,
-      size,
+      size: clamp_group(sz.value, size_bound),
       group_seed: gseed.value,
     })
-    xs.push(pos.x)
-    zs.push(pos.z)
   }
   return out
 }
@@ -159,6 +255,7 @@ export function derive_mob_groups({
  * @param {number} p.min_n @param {number} p.max_n  node-target band
  * @param {number[]} p.weights @param {number[]} p.min_qty @param {number[]} p.max_qty @param {number[]} p.jobs
  * @param {number} p.ox @param {number} p.oz @param {number} p.zsize @param {number} p.bx @param {number} p.bz
+ * @param {number} [p.format]  the zone's commitment format — 2 = lattice, anything else = legacy (the default)
  * @returns {Array<{ spawn_id: bigint, template_idx: number, x: number, z: number }>}
  */
 export function derive_resources({
@@ -174,6 +271,7 @@ export function derive_resources({
   zsize,
   bx,
   bz,
+  format = 1,
 }) {
   const out = []
   let s = rng_seed(mix(seed, RES_SALT))
@@ -183,15 +281,18 @@ export function derive_resources({
   // zone ∩ world inclusive box (a straddling last zone clamps in) — the field-growth confinement
   const max_cx = Math.min(ox + zsize - 1, bx - 1)
   const max_cz = Math.min(oz + zsize - 1, bz - 1)
-  while (out.length < target_n) {
+  const { capacity, place } = placer(format, false, ox, oz, zsize, bx, bz)
+  let anchor_i = 0 // placement cursor — advances once per ENTRY (a grown field spends one anchor, not one per cell)
+  while (out.length < target_n && anchor_i < capacity) {
     const pick = p_pick_weighted(s, weights)
     s = pick.state
     if (pick.idx === null) break
     const { idx } = pick
     const q = p_roll_u64(s, min_qty[idx], max_qty[idx])
     s = q.state
-    const anchor = p_roll_pos(s, ox, oz, zsize, bx, bz)
+    const anchor = place(s, anchor_i)
     s = anchor.state
+    anchor_i += 1
     const push_cell = (x, z) => {
       const hi = rng_next(s)
       const lo = rng_next(hi.state)
@@ -393,7 +494,9 @@ export const bit_get = (bitmap, i) => {
  * the chain doors key on (`node_index` for gathers; stable across consumption, unlike the retired swap-remove
  * positional index). `spawn_id`/`group_seed` are DECIMAL STRINGS (64-bit — Number would corrupt them).
  * @param {object} p
- * @param {object} p.zone  `{ seed, discovered_at_ms, mob_bitmap: number[], res_bitmap: number[] }` — the Zone DF
+ * @param {object} p.zone  `{ seed, discovered_at_ms, mob_bitmap: number[], res_bitmap: number[], group_root?:
+ *   number[] }` — the Zone DF plus its sibling commitment root. `group_root` is NOT optional in practice: it
+ *   carries the format byte that selects the derivation, and omitting it silently derives the legacy one
  * @param {number} p.zx @param {number} p.zy  the zone key
  * @param {object} p.world  the World doc: `{ zone_size, bounds_x, bounds_z, min_groups, max_groups, min_nodes,
  *   max_nodes, mobs: Array<{template_id, rate_bp, min_group, max_group, level?}>,
@@ -413,6 +516,9 @@ export function derive_zone({ zone, zx, zy, world, team_bound = 6 }) {
   const resources = world.resources ?? []
   const { seed } = zone
   const spawned_at_ms = Number(zone.discovered_at_ms ?? 0)
+  // WHICH derivation this zone was discovered under — the chain reads the same byte off the stored
+  // ZoneGroupCommitment before it derives, so the client must read it too or it derives a different world.
+  const format = commitment_format(zone.group_root)
 
   // §4 distance-difficulty inputs — the EXACT chain pipeline (zones.move derive internals)
   const levels = mobs.map(m => Number(m.level ?? 0))
@@ -445,6 +551,7 @@ export function derive_zone({ zone, zx, zy, world, team_bound = 6 }) {
     zsize,
     bx,
     bz,
+    format,
   })
   const cells = derive_resources({
     seed,
@@ -459,6 +566,7 @@ export function derive_zone({ zone, zx, zy, world, team_bound = 6 }) {
     zsize,
     bx,
     bz,
+    format,
   })
 
   const rows = []
