@@ -105,3 +105,45 @@ describe('world corpus runtime loader (#196)', () => {
     expect(has_world_corpus()).toBe(false)
   })
 })
+
+// SEAM S2 (docs/design/simulator_rebuild_spec.md §3): the Fight-side mob truth (MobSpec's base_hp/ap/mp/stats —
+// mob.move:52-62) reaches the client ONLY through this blob, and the projection used to drop it on the floor.
+// The authored vocabulary is the seeder's (`hp`/`ap`/`mp`/`stats`, defaults 30/6/3 — move/scripts/
+// apply_xp_payload.mjs `desired_state_by_key`); it surfaces under the CHAIN names the consumers read.
+// Both halves are pinned: carried when authored, ABSENT (never zero-filled) when not, so a consumer can tell
+// "unpublished" from "published as 0" and degrade loudly instead of presenting a fabricated combat block.
+const with_mob_fields = (blob: WorldCorpusBlob, wid: string, key: string, fields: Record<string, unknown>) => ({
+  ...blob,
+  [wid]: { ...blob[wid], mobs: blob[wid].mobs.map((mob) => (mob.key === key ? { ...mob, ...fields } : mob)) },
+})
+
+const mob_named = (name: string) => WORLD_CORPUS.worlds.flatMap((world) => world.mobs).find((mob) => mob.name === name)
+
+describe('mob combat block (seam S2)', () => {
+  test('an authored combat block projects onto the roster row under the chain names', () => {
+    set_world_corpus_for_test(
+      with_mob_fields(fixture as WorldCorpusBlob, '01_first_shore', 'alley_bunny', {
+        hp: 42,
+        ap: 5,
+        mp: 4,
+        stats: { strength: 12, fire_resistance: 3 },
+      })
+    )
+    const bunny = mob_named('Alley Bunny')
+    expect(bunny).toBeDefined()
+    expect(bunny?.base_hp).toBe(42)
+    expect(bunny?.ap).toBe(5)
+    expect(bunny?.mp).toBe(4)
+    expect(bunny?.stats).toEqual({ strength: 12, fire_resistance: 3 })
+  })
+
+  test('an unauthored combat block leaves the fields ABSENT — never a fabricated zero', () => {
+    set_world_corpus_for_test(fixture as WorldCorpusBlob) // the captured blob carries no combat tail
+    const bunny = mob_named('Alley Bunny')
+    expect(bunny).toBeDefined()
+    expect(bunny?.base_hp).toBeUndefined()
+    expect(bunny?.ap).toBeUndefined()
+    expect(bunny?.mp).toBeUndefined()
+    expect(bunny?.stats).toBeUndefined()
+  })
+})

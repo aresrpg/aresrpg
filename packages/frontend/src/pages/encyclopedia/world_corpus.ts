@@ -39,6 +39,18 @@ export interface CorpusMob {
   role: string | null
   minLevel: number
   maxLevel: number
+  // ── COMBAT BLOCK (optional) — the Fight-side mob truth (`MobSpec`: base_hp/ap/mp/stats, mob.move:52-62).
+  // It exists nowhere else client-side: /v1's mob rows stop before the stats tail, so a chain-free consumer
+  // (the local fight simulator) can only get it from this blob. The authored rows spell it `hp`/`ap`/`mp`/
+  // `stats` with seeder defaults 30/6/3 (move/scripts/apply_xp_payload.mjs `desired_state_by_key`); it lands
+  // here under the CHAIN names the consumers read, `stats` in TRUE magnitudes (the chain's centering is a
+  // storage convention the seeder applies at mint — MobSpec's own doc: "already DECENTERED").
+  // ABSENT ⇒ UNPUBLISHED, never 0: a consumer must degrade loudly (badge + a declared fallback), never
+  // present a fabricated combat block as truth.
+  base_hp?: number
+  ap?: number
+  mp?: number
+  stats?: Record<string, number>
 }
 
 export interface CorpusResource {
@@ -125,6 +137,11 @@ interface AuthoredMob {
   maxLevel?: number
   xp?: number
   spells?: CorpusMobSpell[]
+  /** the authored combat tail (seeder vocabulary) — projected onto CorpusMob's chain names. */
+  hp?: number
+  ap?: number
+  mp?: number
+  stats?: Record<string, number>
 }
 
 interface AuthoredResource {
@@ -223,6 +240,11 @@ function project_roster(authored_mobs: AuthoredMob[]): { roster: CorpusMob[]; fa
       role: mob.role ?? null,
       minLevel: mob.minLevel ?? 0,
       maxLevel: mob.maxLevel ?? 0,
+      // The combat block rides through only when authored — an absent field stays absent (see CorpusMob).
+      ...(mob.hp != null ? { base_hp: mob.hp } : {}),
+      ...(mob.ap != null ? { ap: mob.ap } : {}),
+      ...(mob.mp != null ? { mp: mob.mp } : {}),
+      ...(mob.stats != null ? { stats: mob.stats } : {}),
     })
   }
   roster.sort((left, right) => left.minLevel - right.minLevel || left.name.localeCompare(right.name))
