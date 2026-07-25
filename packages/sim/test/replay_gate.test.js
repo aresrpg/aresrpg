@@ -150,6 +150,44 @@ const bolt_templates_raw = {
   },
 }
 
+// A life-steal drain BOTH sides carry (raw `steal` shape, sdk spells.json lineage; min===max so the damage is
+// deterministic and the steal-back is exactly half of a known number).
+const drain_templates_raw = {
+  yajin: {
+    drain: {
+      name: 'Drain',
+      description: 'steal life from the target',
+      levels: [
+        {
+          cost: 3,
+          range: [1, 4],
+          critical_chance: 0,
+          area: 0,
+          area_type: 'cell',
+          casts_per_turn: 255,
+          casts_per_target: 255,
+          cooldown_turns: 0,
+          modifiable_range: false,
+          line_of_sight: true,
+          linear: false,
+          free_cell: false,
+          base_effects: [
+            {
+              type: 'steal',
+              min: 20,
+              max: 20,
+              target: 'enemies',
+              element: 'earth',
+              chance: 100,
+            },
+          ],
+          critical_effects: [],
+        },
+      ],
+    },
+  },
+}
+
 // Self-cast invisibility (engine-supported `invisibility`/`turns` shape; no shipped spell carries
 // it yet — the v35 live-symptom class still deserves its sim-truth pin).
 const veil_templates_raw = {
@@ -482,6 +520,59 @@ const scenarios = [
       { type: 'ai_turn', entity_id: 'm0' },
       { type: 'end_turn', entity_id: 'p0' },
       { type: 'ai_turn', entity_id: 'm0' },
+    ],
+  },
+  {
+    // #755 twin parity — the SAME life-steal cast from both sides of the board, in one capsule. The chain's
+    // `heal_caster` (cast.move:1385) gates the steal-back on `caster_side == PLAYER_SIDE`, so p0's drain heals
+    // it for half the damage dealt while m0's identical drain heals the mob NOTHING. The golden pins both the
+    // hp arc AND the caster-heal effect row the sim used to fold silently (the row is what lets any consumer —
+    // the sim_chain encoder, the timeline, any projection — carry the caster's hp change at all).
+    meta: {
+      id: 'life_steal_player_only_heal',
+      class: 'twin',
+      authored: '2026-07-25',
+      source: 'authored',
+      notes:
+        'Issue #755: p0 drains m0 (heals half, emits the caster-heal row); m0 drains p0 back and heals nothing — cast.move:1385 heals PLAYER_SIDE only.',
+    },
+    arena: flat_arena_json(),
+    templates_raw: drain_templates_raw,
+    initial: {
+      fight_id: 'capsule_life_steal_twin',
+      arena_seed: 1,
+      team0: [
+        make_entity('p0', { x: 5, y: 5 }, true, {
+          health: 60,
+          deck: ['drain'],
+          spell_levels: { drain: 1 },
+        }),
+      ],
+      team1: [
+        make_entity('m0', { x: 7, y: 5 }, false, {
+          health: 60,
+          deck: [],
+          hand: ['drain'],
+          spell_levels: { drain: 1 },
+        }),
+      ],
+    },
+    commands: [
+      { type: 'start' },
+      {
+        type: 'cast',
+        entity_id: 'p0',
+        spell_id: 'drain',
+        target: { x: 7, y: 5 },
+      },
+      { type: 'end_turn', entity_id: 'p0' },
+      {
+        type: 'cast',
+        entity_id: 'm0',
+        spell_id: 'drain',
+        target: { x: 5, y: 5 },
+      },
+      { type: 'end_turn', entity_id: 'm0' },
     ],
   },
 ]

@@ -271,15 +271,31 @@ export const apply_spell_effect = (
       target_id,
       dmg.shields_consumed,
     )
-    const healed = apply_heal(
-      after_shields,
-      caster.id,
-      Math.floor(after_dmg.damage_dealt / 2),
-    )
+    // THE STEAL-BACK, chain-exact (cast.move:1385 `heal_caster` + the `actual` it is fed, retro_effects.move:266).
+    // Two conditions the sim used to ignore: the chain heals ONLY a PLAYER_SIDE caster (a mob's life-steal heals
+    // nobody), and it heals half the damage the victim ACTUALLY took — a full redirect returns 0, so a redirected
+    // steal steals nothing back. The heal then rides its OWN effect row (#755): the fold inside the state was
+    // invisible to every consumer, so no encoder/timeline/projection could carry the caster's hp change.
+    const stolen =
+      caster.is_player && after_dmg.recipient_id === target_id
+        ? Math.floor(after_dmg.damage_dealt / 2)
+        : 0
+    const healed = apply_heal(after_shields, caster.id, stolen)
     return {
       state: healed,
       direct_damage: after_dmg.damage_dealt,
-      effects: hit_result_effects(healed, after_dmg, target_id),
+      effects: [
+        ...hit_result_effects(healed, after_dmg, target_id),
+        ...(stolen > 0
+          ? [
+              {
+                target_id: caster.id,
+                heal: stolen,
+                new_health: find_entity(healed, caster.id)?.health ?? 0,
+              },
+            ]
+          : []),
+      ],
     }
   }
   if (effect.type === 'SHIELD') {

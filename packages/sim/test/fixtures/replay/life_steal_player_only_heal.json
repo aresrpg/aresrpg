@@ -1,0 +1,338 @@
+{
+  "meta": {
+    "id": "life_steal_player_only_heal",
+    "class": "twin",
+    "authored": "2026-07-25",
+    "source": "authored",
+    "notes": "Issue #755: p0 drains m0 (heals half, emits the caster-heal row); m0 drains p0 back and heals nothing — cast.move:1385 heals PLAYER_SIDE only."
+  },
+  "arena": {
+    "width": 21,
+    "height": 21,
+    "cells": [
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    ],
+    "spawns_a": [
+      {
+        "x": 5,
+        "y": 5
+      },
+      {
+        "x": 5,
+        "y": 6
+      }
+    ],
+    "spawns_b": [
+      {
+        "x": 7,
+        "y": 5
+      }
+    ]
+  },
+  "templates_raw": {
+    "yajin": {
+      "drain": {
+        "name": "Drain",
+        "description": "steal life from the target",
+        "levels": [
+          {
+            "cost": 3,
+            "range": [1, 4],
+            "critical_chance": 0,
+            "area": 0,
+            "area_type": "cell",
+            "casts_per_turn": 255,
+            "casts_per_target": 255,
+            "cooldown_turns": 0,
+            "modifiable_range": false,
+            "line_of_sight": true,
+            "linear": false,
+            "free_cell": false,
+            "base_effects": [
+              {
+                "type": "steal",
+                "min": 20,
+                "max": 20,
+                "target": "enemies",
+                "element": "earth",
+                "chance": 100
+              }
+            ],
+            "critical_effects": []
+          }
+        ]
+      }
+    }
+  },
+  "initial": {
+    "fight_id": "capsule_life_steal_twin",
+    "arena_seed": 1,
+    "team0": [
+      {
+        "id": "p0",
+        "name": "p0",
+        "cell": {
+          "x": 5,
+          "y": 5
+        },
+        "health": 60,
+        "health_max": 100,
+        "ap": 10,
+        "ap_max": 10,
+        "mp": 5,
+        "mp_max": 5,
+        "ap_used": 0,
+        "mp_used": 0,
+        "is_player": true,
+        "template_id": "yajin",
+        "level": 1,
+        "stats": {
+          "agility": 0,
+          "intelligence": 0,
+          "range": 0,
+          "strength": 0
+        },
+        "effects": [],
+        "deck": ["drain"],
+        "hand": [],
+        "discard": [],
+        "spell_levels": {
+          "drain": 1
+        },
+        "ap_reserve": 0
+      }
+    ],
+    "team1": [
+      {
+        "id": "m0",
+        "name": "m0",
+        "cell": {
+          "x": 7,
+          "y": 5
+        },
+        "health": 60,
+        "health_max": 100,
+        "ap": 10,
+        "ap_max": 10,
+        "mp": 5,
+        "mp_max": 5,
+        "ap_used": 0,
+        "mp_used": 0,
+        "is_player": false,
+        "template_id": "yajin",
+        "level": 1,
+        "stats": {
+          "agility": 0,
+          "intelligence": 0,
+          "range": 0,
+          "strength": 0
+        },
+        "effects": [],
+        "deck": [],
+        "hand": ["drain"],
+        "discard": [],
+        "spell_levels": {
+          "drain": 1
+        },
+        "ap_reserve": 0
+      }
+    ]
+  },
+  "commands": [
+    {
+      "type": "start"
+    },
+    {
+      "type": "cast",
+      "entity_id": "p0",
+      "spell_id": "drain",
+      "target": {
+        "x": 7,
+        "y": 5
+      }
+    },
+    {
+      "type": "end_turn",
+      "entity_id": "p0"
+    },
+    {
+      "type": "cast",
+      "entity_id": "m0",
+      "spell_id": "drain",
+      "target": {
+        "x": 5,
+        "y": 5
+      }
+    },
+    {
+      "type": "end_turn",
+      "entity_id": "m0"
+    }
+  ],
+  "expected": {
+    "events": [
+      {
+        "type": "fight_started",
+        "fight_id": "capsule_life_steal_twin",
+        "turn_order": ["p0", "m0"],
+        "seed": 1
+      },
+      {
+        "type": "hand_update",
+        "fight_id": "capsule_life_steal_twin",
+        "entity_id": "p0",
+        "hand": ["drain"],
+        "deck_size": 0,
+        "discard_size": 0
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_life_steal_twin",
+        "entity_id": "p0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_cast",
+        "fight_id": "capsule_life_steal_twin",
+        "entity_id": "p0",
+        "spell_id": "drain",
+        "target": {
+          "x": 7,
+          "y": 5
+        },
+        "effects": [
+          {
+            "target_id": "m0",
+            "damage": 20,
+            "new_health": 40,
+            "killed": false
+          },
+          {
+            "target_id": "p0",
+            "heal": 10,
+            "new_health": 70
+          }
+        ],
+        "is_critical": false,
+        "ap_remaining": 7
+      },
+      {
+        "type": "hand_update",
+        "fight_id": "capsule_life_steal_twin",
+        "entity_id": "p0",
+        "hand": [],
+        "deck_size": 0,
+        "discard_size": 1
+      },
+      {
+        "type": "hand_update",
+        "fight_id": "capsule_life_steal_twin",
+        "entity_id": "p0",
+        "hand": ["drain"],
+        "deck_size": 0,
+        "discard_size": 0
+      },
+      {
+        "type": "fight_turn_end",
+        "fight_id": "capsule_life_steal_twin",
+        "entity_id": "p0"
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_life_steal_twin",
+        "entity_id": "m0",
+        "ap": 10,
+        "mp": 5
+      },
+      {
+        "type": "fight_cast",
+        "fight_id": "capsule_life_steal_twin",
+        "entity_id": "m0",
+        "spell_id": "drain",
+        "target": {
+          "x": 5,
+          "y": 5
+        },
+        "effects": [
+          {
+            "target_id": "p0",
+            "damage": 20,
+            "new_health": 50,
+            "killed": false
+          }
+        ],
+        "is_critical": false,
+        "ap_remaining": 7
+      },
+      {
+        "type": "hand_update",
+        "fight_id": "capsule_life_steal_twin",
+        "entity_id": "m0",
+        "hand": [],
+        "deck_size": 0,
+        "discard_size": 1
+      },
+      {
+        "type": "hand_update",
+        "fight_id": "capsule_life_steal_twin",
+        "entity_id": "m0",
+        "hand": ["drain"],
+        "deck_size": 0,
+        "discard_size": 0
+      },
+      {
+        "type": "fight_turn_end",
+        "fight_id": "capsule_life_steal_twin",
+        "entity_id": "m0"
+      },
+      {
+        "type": "fight_turn_start",
+        "fight_id": "capsule_life_steal_twin",
+        "entity_id": "p0",
+        "ap": 10,
+        "mp": 5
+      }
+    ],
+    "terminal_digest": "98ade86e",
+    "terminal_summary": {
+      "winner": -1,
+      "turn_number": 2,
+      "entities": [
+        {
+          "id": "p0",
+          "health": 50,
+          "cell": {
+            "x": 5,
+            "y": 5
+          }
+        },
+        {
+          "id": "m0",
+          "health": 40,
+          "cell": {
+            "x": 7,
+            "y": 5
+          }
+        }
+      ]
+    }
+  }
+}
