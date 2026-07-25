@@ -302,6 +302,15 @@
   border-radius: var(--r-3);
 }
 
+/* FLAT doll — layout only, no frame. For surfaces that are already a card (a dialog): one level of visual
+   containment, never a card inside a card. */
+.inv__doll--flat {
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+
 /* the Accept/Cancel commit bar (only when staged) — a static row under the doll, never overlapping it */
 .inv__doll-edit {
   display: flex;

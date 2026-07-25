@@ -35,13 +35,16 @@ export const RIG_SLOTS = /** @type {const} */ ([
 ])
 
 /**
- * The doll frame: relic rail + body rig, with an optional footer row inside the frame (the inventory's
- * Accept/Cancel commit bar).
- * @param {{ slot_props: (slot: string) => object, footer?: import('react').ReactNode }} props
+ * The doll: relic rail + body rig, with an optional footer row (the inventory's Accept/Cancel commit bar).
+ *
+ * `flat` drops the doll's own frame (border + fill + padding) and keeps only the layout. A surface that is
+ * ALREADY a card — a dialog — must not nest a second framed card inside itself; the slot cells are the only
+ * containment that level of the page needs. The chain inventory sits in a scrolling panel and keeps its frame.
+ * @param {{ slot_props: (slot: string) => object, footer?: import('react').ReactNode, flat?: boolean }} props
  */
-export function EquipmentDoll({ slot_props, footer = null }) {
+export function EquipmentDoll({ slot_props, footer = null, flat = false }) {
   return (
-    <div className="inv__doll">
+    <div className={`inv__doll${flat ? ' inv__doll--flat' : ''}`}>
       <div className="inv__doll-body">
         <div className="inv__relics">
           {RELIC_SLOTS.map((slot) => (

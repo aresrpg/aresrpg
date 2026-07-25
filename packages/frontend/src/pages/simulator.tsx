@@ -14,6 +14,11 @@
 //
 // The right panel is a MIRROR of the red band, not a second store: each seat IS an enemy start cell, so
 // clicking a red cell on the board and clicking its seat here open the same modal over the same cell.
+//
+// CHROME: ONE level of containment, nowhere more. A region is a micro-label plus whitespace plus at most a
+// single hairline — never a bordered box holding bordered boxes holding bordered rows. The nesting this page
+// used to carry (framed pane → framed seat → framed row) spent its width three times on padding and borders;
+// the rhythm below spends it on content instead, and the board keeps the space it wins.
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -30,7 +35,6 @@ import { boot_simulator, use_simulator } from '../simulator/store'
 
 const GOLD = '#c8963c'
 const HAIRLINE = '1px solid rgba(255,255,255,0.06)'
-const PANE_FILL = 'rgba(255,255,255,0.02)'
 
 const CLASS_ROWS = Object.entries(sdk_classes as Record<string, { name: string }>).map(([id, row]) => ({
   id,
@@ -43,35 +47,35 @@ function Label({ text }: Readonly<{ text: string }>) {
   return <span className={`${micro} font-semibold text-muted`}>{text}</span>
 }
 
+/** A region: a micro-label, a hairline under it, and content. No frame, no fill, no inner padding pyramid. */
 function Pane({
   title,
   children,
   className = '',
 }: Readonly<{ title: string; children: ReactNode; className?: string }>) {
   return (
-    <section className={`flex flex-col min-h-0 ${className}`} style={{ border: HAIRLINE, background: PANE_FILL }}>
-      <header className="px-3 py-2" style={{ borderBottom: HAIRLINE }}>
+    <section className={`flex flex-col min-h-0 ${className}`}>
+      <header className="pb-2 mb-3" style={{ borderBottom: HAIRLINE }}>
         <Label text={title} />
       </header>
-      <div className="flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-4">{children}</div>
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-5">{children}</div>
     </section>
   )
 }
 
-/** The shared seat shell — one look for an ally seat and an enemy seat, filled or empty. */
-function Seat({
-  filled,
-  active,
-  on_open,
-  children,
-}: Readonly<{ filled: boolean; active: boolean; on_open: () => void; children: ReactNode }>) {
+/**
+ * One seat — ally or enemy, filled or empty. A ROW, not a card: the only rules it draws are the hairline that
+ * separates it from the next seat and, when it is the focused one, a gold spine on its leading edge.
+ */
+function Seat({ active, on_open, children }: Readonly<{ active: boolean; on_open: () => void; children: ReactNode }>) {
   return (
     <button
       type="button"
-      className="px-2 py-2 text-left cursor-pointer transition-colors flex items-center gap-2 min-h-[46px]"
+      className="py-2.5 pr-1 text-left cursor-pointer transition-colors flex items-center gap-2.5 min-h-[52px] hover:bg-white/[0.03]"
       style={{
-        border: active ? `1px solid ${GOLD}` : HAIRLINE,
-        background: filled ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.015)',
+        borderBottom: HAIRLINE,
+        borderLeft: `2px solid ${active ? GOLD : 'transparent'}`,
+        paddingLeft: '10px',
       }}
       onClick={on_open}
     >
@@ -97,7 +101,7 @@ function RosterSeat({
   const { t } = useTranslation()
   const row = character ? CLASS_ROWS.find(({ id }) => id === character.class_id) : null
   return (
-    <Seat filled={character !== null} active={active} on_open={on_open}>
+    <Seat active={active} on_open={on_open}>
       {character ? (
         <span className="flex flex-col min-w-0 flex-1">
           <span className="text-[11px] truncate" style={{ color: active ? GOLD : '#e8e4dc' }}>
@@ -124,7 +128,7 @@ function MobSeat({ cell, on_open }: Readonly<{ cell: number; on_open: () => void
   const mob = useMemo(() => mob_of(pick?.template_id), [pick?.template_id])
 
   return (
-    <Seat filled={!!pick} active={false} on_open={on_open}>
+    <Seat active={false} on_open={on_open}>
       {pick && mob ? (
         <>
           <EncyclopediaMobImage mob={mob} className="w-7 h-7 shrink-0" style={{ imageRendering: 'pixelated' }} />
@@ -175,9 +179,9 @@ export function SimulatorPage() {
   const editing_character = editing === 'new' ? null : (roster.find(({ id }) => id === editing) ?? null)
 
   return (
-    <div className="flex flex-col gap-2 p-2 lg:p-3 lg:pt-14 h-full min-h-0">
+    <div className="flex flex-col gap-5 p-4 lg:px-6 lg:pt-16 lg:pb-5 h-full min-h-0">
       {/* TOP BAR */}
-      <div className="flex flex-wrap items-center gap-4 px-3 py-2" style={{ border: HAIRLINE, background: PANE_FILL }}>
+      <div className="flex flex-wrap items-center gap-6 pb-3" style={{ borderBottom: HAIRLINE }}>
         <span className="text-[11px] tracking-[0.3em] uppercase" style={{ color: GOLD }}>
           {t('simulator.title')}
         </span>
@@ -211,9 +215,10 @@ export function SimulatorPage() {
       </div>
 
       {/* THREE PANES — your team · the board · the enemy team */}
-      <div className="flex-1 min-h-0 grid gap-2 grid-cols-1 lg:grid-cols-[240px_1fr_240px]">
-        <Pane title={t('simulator.roster')}>
-          <div className="grid grid-cols-2 lg:grid-cols-1 gap-1">
+      {/* THREE REGIONS — separated by gutters and single hairlines, not by three nested frames. */}
+      <div className="flex-1 min-h-0 grid gap-6 lg:gap-8 grid-cols-1 lg:grid-cols-[230px_1fr_230px] lg:divide-x lg:divide-white/[0.06]">
+        <Pane title={t('simulator.roster')} className="lg:pr-8">
+          <div className="grid grid-cols-2 lg:grid-cols-1">
             {slots.map((character, index) => (
               <RosterSeat
                 key={character?.id ?? `empty_${index}`}
@@ -228,12 +233,12 @@ export function SimulatorPage() {
           </div>
         </Pane>
 
-        <Pane title={t('simulator.board')} className="min-h-[220px]">
+        <Pane title={t('simulator.board')} className="min-h-[220px] lg:px-8">
           <SimulatorBoardPane />
         </Pane>
 
-        <Pane title={t('simulator.mob_team')}>
-          <div className="grid grid-cols-2 lg:grid-cols-1 gap-1">
+        <Pane title={t('simulator.mob_team')} className="lg:pl-8">
+          <div className="grid grid-cols-2 lg:grid-cols-1">
             {enemy_cells.map((cell) => (
               <MobSeat key={cell} cell={cell} on_open={() => set_mob_cell(cell)} />
             ))}

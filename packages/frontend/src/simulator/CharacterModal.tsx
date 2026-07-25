@@ -11,6 +11,10 @@
 //   · equipment      → EquipmentDoll/EquipmentSlot via LoadoutSection (the inventory's paper doll)
 //   · the dialog     → ModalFrame (components/modal_frame.tsx, extracted from the maintenance modal)
 // Everything numeric it shows comes from the page reducer's budgets; it computes no balance of its own.
+//
+// CHROME: the dialog card IS the one level of containment. Inside it every section is a micro-label plus
+// whitespace — no sub-cards, no framed groups, no bordered row containers. Rows separate with a single
+// hairline; the only boxes left are the atoms themselves (a slot cell, an input).
 
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -57,17 +61,18 @@ function Label({ text }: Readonly<{ text: string }>) {
 function ClassGrid({ selected, on_pick }: Readonly<{ selected: string | null; on_pick: (class_id: string) => void }>) {
   const { t } = useTranslation()
   return (
-    <div className="grid grid-cols-3 gap-1">
+    <div className="grid grid-cols-3 sm:grid-cols-4 gap-x-6 gap-y-1">
       {CLASS_ROWS.map((row) => {
         const active = row.id === selected
         return (
           <button
             key={row.id}
             type="button"
-            className="px-2 py-1.5 text-left cursor-pointer transition-colors"
+            className="py-1.5 text-left cursor-pointer transition-colors hover:opacity-100 opacity-80"
             style={{
-              border: active ? `1px solid ${GOLD}` : HAIRLINE,
-              background: active ? 'rgba(200,150,60,0.08)' : 'rgba(255,255,255,0.02)',
+              borderLeft: `2px solid ${active ? GOLD : 'transparent'}`,
+              paddingLeft: '8px',
+              opacity: active ? 1 : undefined,
             }}
             onClick={() => on_pick(row.id)}
           >
@@ -96,7 +101,10 @@ function SexToggle({ male, on_pick }: Readonly<{ male: boolean; on_pick: (male: 
           key={String(value)}
           type="button"
           className={`${micro} px-3 py-1.5 cursor-pointer`}
-          style={{ border: male === value ? `1px solid ${GOLD}` : HAIRLINE, color: male === value ? GOLD : undefined }}
+          style={{
+            borderBottom: `2px solid ${male === value ? GOLD : 'transparent'}`,
+            color: male === value ? GOLD : undefined,
+          }}
           onClick={() => on_pick(value)}
         >
           {value ? t('simulator.male') : t('simulator.female')}
@@ -147,7 +155,7 @@ function StatEditor({ character }: Readonly<{ character: SimCharacter }>) {
         total={budget}
         on_reset={() => input({ type: 'stats_reset', id: character.id })}
       />
-      <div className="stats__card">
+      <div>
         {SIM_STATS.map((stat: SimStat) => (
           <div className="stats__prow" key={stat}>
             <StatIdentity t={t} stat_key={stat} describe={false} />
@@ -261,7 +269,7 @@ function CreateForm({ on_created }: Readonly<{ on_created: (id: string | null) =
   const [male, set_male] = useState(true)
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <Label text={t('simulator.class')} />
         <ClassGrid selected={class_id} on_pick={set_class_id} />
@@ -307,7 +315,7 @@ export function CharacterEditor({
   const [confirming, set_confirming] = useState(false)
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-7">
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
           <Label text={t('simulator.name')} />
@@ -392,7 +400,7 @@ export function CharacterModal({
 
   return (
     <ModalFrame on_close={on_close} max_width="max-w-3xl" label={title}>
-      <div className="flex flex-col gap-4 px-6 py-6">
+      <div className="flex flex-col gap-5 px-7 py-7">
         <div className="text-gradient text-[12px] font-semibold tracking-[0.28em] uppercase">{title}</div>
         <div className="w-full h-px bg-border" />
         {character ? (

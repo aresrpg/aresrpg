@@ -44,8 +44,8 @@ export function LoadoutSection({ character }: Readonly<{ character: SimCharacter
   })
 
   return (
-    <div className="flex flex-col gap-2">
-      <EquipmentDoll slot_props={slot_props} />
+    <div className="flex flex-col gap-3">
+      <EquipmentDoll slot_props={slot_props} flat />
       <CosmeticSlots slot_props={slot_props} />
       {picking && (
         <SlotPicker
