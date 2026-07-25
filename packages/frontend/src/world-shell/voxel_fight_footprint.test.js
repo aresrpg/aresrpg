@@ -85,7 +85,7 @@ describe('is_glyph_spell — glyph placements take the orange tint on hover, eve
     expect(is_glyph_spell('__no_such_spell__')).toBe(false)
   })
 
-  // MISSING-ARTIFACT (#117): is_glyph_spell resolves through fight-spells.js's runtime spell corpus, empty
+  // MISSING-ARTIFACT (settled #117): is_glyph_spell resolves through fight-spells.js's runtime spell corpus, empty
   // in this environment — see test_helpers/spells_fixture.js.
   it.skipIf(!SPELLS_SEED_AVAILABLE)('is true for a real seeded glyph-role spell', () => {
     // 'Rooting Glyph' (mori) — a seeded role:'glyph' spell; its name_key is the armed id the hover reads.
