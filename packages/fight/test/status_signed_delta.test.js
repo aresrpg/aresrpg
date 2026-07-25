@@ -6,13 +6,13 @@
 //
 // CAPTURED WIRE (testnet, `sui client object <id> --json`, 2026-07-26 — real minted MobTemplate spell effects,
 // the exact rows a fight's Fight.fx.statuses carries once cast):
-//   Razkin           0x4a00a579a3ae4592310219ec550fba0c97ea0171a2bcdf38caa41b7aecdcbe97
+//   Razkin           0x4a00a579…be97
 //                    kind 9 · stat 8 · value "32793" · flags 0 · turns 2   → authored +25% damage
-//   Bonelet          0xb80ade532904c3651160c7658f603e0cd73501746694c8becbd8a4366425d444
+//   Bonelet          0xb80ade53…d444
 //                    kind 9 · stat 3 · value "32751" · flags 8 · turns 2   → authored -17 agility
-//   Kraken Leviathan 0x89072bd34117d8a69d265f26f39946ed05045b194322d5167400f9421788af56
+//   Kraken Leviathan 0x89072bd3…af56
 //                    kind 9 · stat 6 · value "32761" · flags 8 · turns 5   → authored -7 range
-//   Cauldron Imp     0x8fd6540418d095066a0c58182b540c6670da3c13ecb245f1958b277a77525d1d
+//   Cauldron Imp     0x8fd65404…5d1d
 //                    kind 11 · value "32745" · flags 8 · turns 2           → authored -23 resistance
 // The authored magnitudes are the published world_corpus blob's own rows for those mobs (uncentered — only the
 // CHAIN mint centers), which is what makes each pair a decode oracle rather than a restatement.

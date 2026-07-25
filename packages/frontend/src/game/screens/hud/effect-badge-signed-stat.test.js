@@ -6,7 +6,7 @@
 // localized line — so neither half can regress alone.
 //
 // The payload is the real minted effect of Razkin's self-buff (testnet MobTemplate
-// 0x4a00a579a3ae4592310219ec550fba0c97ea0171a2bcdf38caa41b7aecdcbe97, `sui client object --json`, 2026-07-26:
+// 0x4a00a579…be97, `sui client object --json`, 2026-07-26:
 // kind 9 · stat 8 · value "32793" · flags 0 · turns 2), wrapped in the Fight.fx.statuses shape the chain
 // serves once that buff is live. Copy law (owner, #886): the reading uses the symbol '%', never the word.
 
