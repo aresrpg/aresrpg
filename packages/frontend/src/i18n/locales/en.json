@@ -1187,7 +1187,6 @@
     "reroll": "REROLL SEED",
     "roster": "ROSTER",
     "board": "BOARD",
-    "board_pending": "BOARD VIEWPORT NOT MOUNTED YET",
     "inspector": "INSPECTOR",
     "new_character": "NEW CHARACTER",
     "no_selection": "NO CHARACTER SELECTED",

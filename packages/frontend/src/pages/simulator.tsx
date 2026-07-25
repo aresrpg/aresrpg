@@ -7,9 +7,8 @@
 // thin editor over the ONE page reducer (simulator/reducer.ts), whose budgets mirror the chain's, and every
 // edit persists to IndexedDB through the store's persistence edge (reload-proof by construction).
 //
-// L0 scope: the shell, the roster, and the character editors (class / level / stats / spells). The board
-// viewport, the mob picks and the fight itself mount in the following lanes — this page shows their region
-// as an honest empty frame rather than pretending it exists.
+// Scope: the shell, the roster, the character editors (class / level / stats / spells) and the board
+// viewport, which SimulatorBoardPane owns. The fight itself mounts over the same board handle in a later lane.
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -18,6 +17,7 @@ import sdk_classes from '@aresrpg/sdk/classes'
 
 import { STAT_COLORS, stat_label } from '../components/entity_colors'
 import { class_spells } from '../game/screens/hud/fight-spells.js'
+import { SimulatorBoardPane } from '../simulator/BoardPane'
 import {
   MAX_LEVEL,
   MAX_ROSTER,
@@ -477,13 +477,8 @@ export function SimulatorPage() {
           </div>
         </Pane>
 
-        {/* The board viewport's region — honestly empty until the board lane mounts the engine here. */}
         <Pane title={t('simulator.board')} className="min-h-[220px]">
-          <div className="flex-1 flex items-center justify-center">
-            <span className={`${micro} text-muted`} style={{ opacity: 0.5 }}>
-              {t('simulator.board_pending')}
-            </span>
-          </div>
+          <SimulatorBoardPane />
         </Pane>
 
         <Pane title={creating ? t('simulator.new_character') : t('simulator.inspector')}>
