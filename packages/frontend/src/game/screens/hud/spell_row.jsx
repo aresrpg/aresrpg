@@ -55,13 +55,28 @@ export function SpellIcon({ icon, color, name, cls = 'sb__ic' }) {
  * plain <div>, which is what a row carrying its own interactive control (a <select>) requires — a form
  * control nested in a button is neither valid HTML nor operable.
  * `tip` wraps the row in the house Tooltip so hovering shows the full spell detail card.
+ * `dense` is the LIST-density knob: smaller art and the subline inline after the name, so a whole class
+ * (~20 spells) fits a screen instead of demanding three of them. Nothing is dropped — the same three facts
+ * are on one line instead of two, and the hover card still carries the full detail.
  *
  * @param {{ row: { icon: string, color: string, name_key: string }, name: string, subline: string,
- *   selected?: boolean, locked?: boolean, on_click?: () => void, right?: import('react').ReactNode,
- *   tip?: import('react').ReactNode }} props
+ *   selected?: boolean, locked?: boolean, dense?: boolean, on_click?: () => void,
+ *   right?: import('react').ReactNode, tip?: import('react').ReactNode }} props
  */
-export function SpellRow({ row, name, subline, selected = false, locked = false, on_click, right = null, tip = null }) {
-  const className = `sb__row${selected ? ' is-sel' : ''}${locked ? ' is-locked' : ''}`
+export function SpellRow({
+  row,
+  name,
+  subline,
+  selected = false,
+  locked = false,
+  dense = false,
+  on_click,
+  right = null,
+  tip = null,
+}) {
+  const className = `sb__row${dense ? ' sb__row--dense' : ''}${selected ? ' is-sel' : ''}${
+    locked ? ' is-locked' : ''
+  }`
   const style = /** @type {import('react').CSSProperties} */ ({ '--el': row.color })
   const body = (
     <>

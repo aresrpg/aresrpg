@@ -121,6 +121,36 @@ describe('every equipment slot is assignable, pet included', () => {
   test('an empty slot is activatable — the picker opens from the cell itself', () => {
     expect(markup).toContain('role="button"')
   })
+
+  test('EVERY slot is activatable, relics and pet included — one picker door, no dead cells', () => {
+    // The activation attributes ride on the slot div itself, so a cell that never got `on_activate`
+    // renders as a plain div: count them against the slot count rather than trusting one sample.
+    const slots = markup.match(/class="inv__slot inv__slot--/g)?.length ?? 0
+    const activatable = markup.match(/class="inv__slot inv__slot--[a-z_0-9]+" role="button" tabindex="0"/g)?.length ?? 0
+    expect(slots).toBe(20)
+    expect(activatable).toBe(slots)
+  })
+})
+
+// The reported layout defects, from one screenshot: gear sat under three screens of spells, and the doll's
+// cells were drawer-sized (~210px each) inside the dialog. Each is pinned by the ONE thing that fixes it.
+// (The class spell corpus resolves EMPTY under bun — the published-artifact boundary — so the spell half of
+// the fix is pinned on SpellEditorRow below, which renders from a fixture.)
+describe('gear sits ABOVE the spells, at editor density', () => {
+  const markup = render(<CharacterEditor character={CHARACTER} on_deleted={() => {}} />)
+
+  test('EQUIPMENT renders BEFORE the spell section', () => {
+    const doll = markup.indexOf('inv__doll')
+    const spells = markup.indexOf('>SPELLS<')
+    expect(doll).toBeGreaterThan(-1)
+    expect(spells).toBeGreaterThan(-1)
+    expect(doll).toBeLessThan(spells)
+  })
+
+  test('the doll is asked for its COMPACT size — the shared prop, never a local slot grid', () => {
+    expect(markup).toContain('inv__doll--compact')
+    expect(markup).toContain('inv__cosmetics--compact')
+  })
 })
 
 describe('spell rows: icon · name · level dropdown', () => {
@@ -129,6 +159,10 @@ describe('spell rows: icon · name · level dropdown', () => {
   test('the row is the grimoire’s row, keyed by the spell', () => {
     expect(markup).toContain('sb__row')
     expect(markup).toContain('data-spell-row="ember_strike"')
+  })
+
+  test('the row is DENSE — a class publishes ~20 of these and they have to fit one screen', () => {
+    expect(markup).toContain('sb__row sb__row--dense')
   })
 
   test('the row names the spell', () => {

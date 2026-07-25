@@ -15,6 +15,12 @@
 // CHROME: the dialog card IS the one level of containment. Inside it every section is a micro-label plus
 // whitespace — no sub-cards, no framed groups, no bordered row containers. Rows separate with a single
 // hairline; the only boxes left are the atoms themselves (a slot cell, an input).
+//
+// DENSITY: identity (name/level/sex) on ONE row · class · stats BESIDE equipment · spells last, dense and
+// two-up. The editor shows a whole build at once, so it is sized for that (max-w-6xl) and every shared
+// component it borrows is asked for its compact size — `EquipmentDoll compact` and `SpellRow dense`, props
+// on the ONE component, never a local lookalike. Before that, the doll's stretch-to-column cells reached
+// ~210px each and twenty two-line spell rows put the gear three screens below the fold.
 
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -42,7 +48,6 @@ import {
 import { use_simulator } from './store'
 
 const GOLD = '#c8963c'
-const HAIRLINE = '1px solid rgba(255,255,255,0.06)'
 const micro = 'text-[9px] tracking-[0.22em] uppercase'
 
 /** The narrow `t` signature the HUD's JSDoc-typed components declare (mob_spells_section.tsx's precedent). */
@@ -61,7 +66,7 @@ function Label({ text }: Readonly<{ text: string }>) {
 function ClassGrid({ selected, on_pick }: Readonly<{ selected: string | null; on_pick: (class_id: string) => void }>) {
   const { t } = useTranslation()
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-4 gap-x-6 gap-y-1">
+    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-x-6 gap-y-1">
       {CLASS_ROWS.map((row) => {
         const active = row.id === selected
         return (
@@ -204,6 +209,7 @@ export function SpellEditorRow({ character, row }: Readonly<{ character: SimChar
     <SpellRow
       row={row}
       name={name}
+      dense
       subline={`${seed_el_label(translate, row.subline_kind)} · ${t(`spells.tag_${row.subline_descriptor}`)}`}
       tip={<SpellTip t={translate} row={row} name={name} level={level} />}
       right={
@@ -249,7 +255,10 @@ function SpellEditor({ character }: Readonly<{ character: SimCharacter }>) {
       {rows.length === 0 ? (
         <span className={`${micro} text-muted`}>{t('simulator.spells_unavailable')}</span>
       ) : (
-        <div className="sb__rows">
+        // TWO COLUMNS wherever the dialog is wide enough (auto-fit, so a narrow viewport collapses to one).
+        // A class publishes ~20 spells; one dense column is still half a screen of scrolling, two is a list
+        // you read at a glance — which is the whole point of a build editor.
+        <div className="sb__rows sb__rows--grid">
           {rows.map((row) => (
             <SpellEditorRow key={row.id} character={character} row={row} />
           ))}
@@ -276,8 +285,9 @@ function CreateForm({ on_created }: Readonly<{ on_created: (id: string | null) =
       </div>
       <div className="flex flex-col gap-2">
         <Label text={t('simulator.name')} />
+        {/* Same cap as the editor's identity row: a 24-character field does not need a full dialog of width. */}
         <input
-          className="template-input w-full"
+          className="template-input w-full max-w-[460px]"
           value={name}
           maxLength={24}
           placeholder={t('simulator.name')}
@@ -315,32 +325,49 @@ export function CharacterEditor({
   const [confirming, set_confirming] = useState(false)
 
   return (
-    <div className="flex flex-col gap-7">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-2">
+    <div className="flex flex-col gap-6">
+      {/* IDENTITY on one row: the name, the level and the sex are three small controls, not three sections. */}
+      <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+        <div className="flex flex-col gap-2 flex-1 min-w-[220px] max-w-[460px]">
           <Label text={t('simulator.name')} />
-          <button
-            type="button"
-            className={`${micro} flex items-center gap-1 cursor-pointer`}
-            style={{ color: confirming ? '#ff5f5f' : undefined }}
-            onClick={() => {
-              if (!confirming) return set_confirming(true)
-              // The seat this modal was opened for no longer holds anything to edit — close with the delete.
-              input({ type: 'character_removed', id: character.id })
-              on_deleted()
-            }}
-          >
-            <Trash2 size={11} />
-            {confirming ? t('simulator.delete_confirm') : t('simulator.delete')}
-          </button>
+          <input
+            className="template-input w-full"
+            value={character.name}
+            maxLength={24}
+            aria-label={t('simulator.name')}
+            onChange={(event) => input({ type: 'character_named', id: character.id, name: event.target.value })}
+          />
         </div>
-        <input
-          className="template-input w-full"
-          value={character.name}
-          maxLength={24}
-          aria-label={t('simulator.name')}
-          onChange={(event) => input({ type: 'character_named', id: character.id, name: event.target.value })}
+        <div className="flex flex-col gap-2">
+          <Label text={t('simulator.level')} />
+          <input
+            type="number"
+            className="template-input w-20"
+            aria-label={t('simulator.level')}
+            value={character.level}
+            min={1}
+            max={MAX_LEVEL}
+            onChange={(event) => input({ type: 'level_set', id: character.id, level: Number(event.target.value) })}
+          />
+        </div>
+        <SexToggle
+          male={character.male}
+          on_pick={(male) => input({ type: 'character_sex_set', id: character.id, male })}
         />
+        <button
+          type="button"
+          className={`${micro} flex items-center gap-1 cursor-pointer pb-2 ml-auto`}
+          style={{ color: confirming ? '#ff5f5f' : undefined }}
+          onClick={() => {
+            if (!confirming) return set_confirming(true)
+            // The seat this modal was opened for no longer holds anything to edit — close with the delete.
+            input({ type: 'character_removed', id: character.id })
+            on_deleted()
+          }}
+        >
+          <Trash2 size={11} />
+          {confirming ? t('simulator.delete_confirm') : t('simulator.delete')}
+        </button>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -354,34 +381,22 @@ export function CharacterEditor({
         </span>
       </div>
 
-      <div className="flex items-end gap-3">
+      {/* STATS beside EQUIPMENT: both are short, fixed-height sections, and the dialog's width is otherwise
+          spent on nothing. Reading order stays stats → equipment → spells; gear is above the spell list,
+          which is the point (it is what a build IS, and it used to sit under three screens of spells). */}
+      <div className="flex flex-wrap gap-x-12 gap-y-6">
+        {/* Capped: a stat row is an icon, a name and a number — stretched across a full dialog it is one
+            lonely digit at the end of a rule. The game's own panel gives it about this much. */}
+        <div className="flex-1 min-w-[280px] max-w-[460px]">
+          <StatEditor character={character} />
+        </div>
         <div className="flex flex-col gap-2">
-          <Label text={t('simulator.level')} />
-          <input
-            type="number"
-            className="template-input w-20"
-            aria-label={t('simulator.level')}
-            value={character.level}
-            min={1}
-            max={MAX_LEVEL}
-            onChange={(event) => input({ type: 'level_set', id: character.id, level: Number(event.target.value) })}
-          />
-        </div>
-        <div className="pb-1">
-          <SexToggle
-            male={character.male}
-            on_pick={(male) => input({ type: 'character_sex_set', id: character.id, male })}
-          />
+          <Label text={t('simulator.equipment')} />
+          <LoadoutSection character={character} />
         </div>
       </div>
 
-      <StatEditor character={character} />
       <SpellEditor character={character} />
-
-      <div className="flex flex-col gap-2">
-        <Label text={t('simulator.equipment')} />
-        <LoadoutSection character={character} />
-      </div>
     </div>
   )
 }
@@ -399,8 +414,10 @@ export function CharacterModal({
   const title = character ? t('simulator.edit_character') : t('simulator.new_character')
 
   return (
-    <ModalFrame on_close={on_close} max_width="max-w-3xl" label={title}>
-      <div className="flex flex-col gap-5 px-7 py-7">
+    // A build editor is a WIDE surface: six stats, twenty spells and twenty slots at once. At max-w-3xl the
+    // dialog spent 40% of a desktop viewport on backdrop and asked for three screens of scrolling instead.
+    <ModalFrame on_close={on_close} max_width="max-w-6xl" label={title}>
+      <div className="flex flex-col gap-5 px-7 py-6">
         <div className="text-gradient text-[12px] font-semibold tracking-[0.28em] uppercase">{title}</div>
         <div className="w-full h-px bg-border" />
         {character ? (

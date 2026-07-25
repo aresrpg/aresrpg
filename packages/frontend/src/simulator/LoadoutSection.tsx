@@ -43,10 +43,13 @@ export function LoadoutSection({ character }: Readonly<{ character: SimCharacter
     on_unequip: () => input({ type: 'loadout_set', id: character.id, slot, template_id: null }),
   })
 
+  // COMPACT: in this dialog the doll is an INDEX of slots, not the drawer's hero art — a cell only has to be
+  // a legible click target for its picker. Same shared component, one size prop (`compact`); the world
+  // inventory keeps the stretching cells its drawer width is built for.
   return (
-    <div className="flex flex-col gap-3">
-      <EquipmentDoll slot_props={slot_props} flat />
-      <CosmeticSlots slot_props={slot_props} />
+    <div className="flex flex-col gap-2 items-start">
+      <EquipmentDoll slot_props={slot_props} flat compact />
+      <CosmeticSlots slot_props={slot_props} compact />
       {picking && (
         <SlotPicker
           slot={picking}

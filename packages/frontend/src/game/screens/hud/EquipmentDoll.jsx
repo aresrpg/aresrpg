@@ -40,11 +40,17 @@ export const RIG_SLOTS = /** @type {const} */ ([
  * `flat` drops the doll's own frame (border + fill + padding) and keeps only the layout. A surface that is
  * ALREADY a card — a dialog — must not nest a second framed card inside itself; the slot cells are the only
  * containment that level of the page needs. The chain inventory sits in a scrolling panel and keeps its frame.
- * @param {{ slot_props: (slot: string) => object, footer?: import('react').ReactNode, flat?: boolean }} props
+ *
+ * `compact` fixes the cells at index size instead of letting them stretch to the column. The rig cells are
+ * width:100% + aspect-ratio by default, which is right in the drawer and wrong in a wide dialog — there the
+ * same rule blew each cell up to ~210px of empty placeholder glyph. Only the cell EDGE changes: same slots,
+ * same order, same art.
+ * @param {{ slot_props: (slot: string) => object, footer?: import('react').ReactNode, flat?: boolean,
+ *   compact?: boolean }} props
  */
-export function EquipmentDoll({ slot_props, footer = null, flat = false }) {
+export function EquipmentDoll({ slot_props, footer = null, flat = false, compact = false }) {
   return (
-    <div className={`inv__doll${flat ? ' inv__doll--flat' : ''}`}>
+    <div className={`inv__doll${flat ? ' inv__doll--flat' : ''}${compact ? ' inv__doll--compact' : ''}`}>
       <div className="inv__doll-body">
         <div className="inv__relics">
           {RELIC_SLOTS.map((slot) => (
@@ -65,10 +71,11 @@ export function EquipmentDoll({ slot_props, footer = null, flat = false }) {
   )
 }
 
-/** The three cosmetic slots — the same slot grid as the rig, wired through the same prop builder. */
-export function CosmeticSlots({ slot_props }) {
+/** The three cosmetic slots — the same slot grid as the rig, wired through the same prop builder.
+ *  `compact` is the doll's, for the same reason: the two rows are one grid to the eye and must size as one. */
+export function CosmeticSlots({ slot_props, compact = false }) {
   return (
-    <div className="inv__cosmetics">
+    <div className={`inv__cosmetics${compact ? ' inv__cosmetics--compact' : ''}`}>
       {COSMETIC_SLOTS.map((slot) => (
         <EquipmentSlot key={slot} {...slot_props(slot)} />
       ))}

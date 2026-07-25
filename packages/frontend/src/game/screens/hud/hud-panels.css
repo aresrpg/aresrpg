@@ -311,6 +311,61 @@
   border-radius: 0;
 }
 
+/* COMPACT doll — cells at a fixed index size instead of stretching to their column. The rig's default
+   `width:100% + aspect-ratio:1` fills the drawer correctly and MISFIRES in a wide dialog: at editor width it
+   sized every cell to ~210px, i.e. a 100px placeholder glyph per slot. Here the doll is an INDEX of slots
+   (click one, pick an item), so the cell only has to be a legible target. One knob, one home — the layout,
+   the slot order and the art stay the doll's. */
+.inv__doll--compact .inv__doll-body {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+/* The relic RAIL becomes a relic ROW. In the drawer the six relics are a tall column beside a
+   column-height rig; at index size that same column is half again taller than the rig and hangs into
+   nothing. Six-across keeps the six together as one group — the only thing the rail ever meant — and the
+   whole doll reads as one tight block. */
+.inv__doll--compact .inv__relics {
+  width: auto;
+  grid-template-columns: repeat(6, 44px);
+  gap: var(--s-2);
+}
+.inv__doll--compact .inv__rig {
+  flex: none;
+  grid-template-columns: repeat(3, 44px);
+}
+.inv__doll--compact .inv__slot-gap {
+  width: 44px;
+}
+.inv__doll--compact .inv__relics .inv__slot,
+.inv__doll--compact .inv__rig .inv__slot,
+.inv__cosmetics.inv__cosmetics--compact .inv__slot {
+  width: 44px;
+  height: 44px;
+}
+.inv__cosmetics.inv__cosmetics--compact {
+  grid-template-columns: repeat(3, 44px);
+  justify-content: flex-start;
+}
+/* A 44px cell still names itself — the caption is the only thing telling relic #4 from relic #5. It just
+   has to fit: the drawer's size ran CHESTPLATE into its neighbour. */
+.inv__doll--compact .inv__slot-glyph,
+.inv__cosmetics.inv__cosmetics--compact .inv__slot-glyph {
+  width: 36%;
+  height: 36%;
+  margin-bottom: 7px;
+}
+.inv__doll--compact .inv__slot-label,
+.inv__cosmetics.inv__cosmetics--compact .inv__slot-label {
+  bottom: 3px;
+  padding: 0 2px;
+  font-size: 0.4rem;
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* the Accept/Cancel commit bar (only when staged) — a static row under the doll, never overlapping it */
 .inv__doll-edit {
   display: flex;

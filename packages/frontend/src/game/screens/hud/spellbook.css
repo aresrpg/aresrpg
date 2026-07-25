@@ -181,6 +181,42 @@
 .sb__row:hover {
   background: rgba(200, 150, 60, 0.04);
 }
+
+/* DENSE list — a build editor lists a whole class at once (~20 spells). The grimoire's two-line row spends
+   three viewports on that, so the dense variant folds the element·kind subline INLINE after the name and
+   halves the art: same row, same facts, one line. The hover card is where the full detail already lives. */
+.sb__rows--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  column-gap: 22px;
+  overflow: visible;
+}
+.sb__row--dense {
+  gap: 9px;
+  padding: 5px 4px 5px 6px;
+}
+.sb__row--dense .sb__ic {
+  width: 26px;
+  height: 26px;
+}
+.sb__row--dense .sb__meta {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+}
+.sb__row--dense .sb__nm {
+  flex: 0 1 auto;
+  font-size: 0.66rem;
+}
+.sb__row--dense .sb__rl {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-top: 0;
+  font-size: 0.44rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .sb__row.is-sel {
   border-left-color: var(--color-gold);
   background: linear-gradient(90deg, rgba(200, 150, 60, 0.1), rgba(200, 150, 60, 0.01));
