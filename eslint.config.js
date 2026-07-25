@@ -141,6 +141,34 @@ export default [
   // the not-wired verdicts live in the layer file.
   ...typed_fp_layer,
   {
+    // THE REFERENCE-ERROR GATE (P0 2026-07-25). A refactor deleted a `const rig_class` binding and left one
+    // reference behind in a log template three statements below; `create_player` threw `ReferenceError:
+    // rig_class is not defined` at world boot, so the roam avatar, the character controller and the camera
+    // bind never mounted — terrain streamed with no player to follow and the live world was unplayable.
+    // Nothing caught it: the frontend's plain-JS corpus is `checkJs: false`, so tsc never sees an undefined
+    // identifier there, and the base block turns `no-undef` off for the whole repo. That left the game's
+    // LARGEST source tree with zero undefined-identifier checking. `no-undef` is the only mechanical gate
+    // for that class, so it is armed here for every non-TS source. TypeScript files keep it off — the
+    // compiler owns the check there and the rule reports false positives on type-only identifiers.
+    // `.jsx` is deliberately NOT in this net: matching it activates the 15 stale `react-hooks/*` disable
+    // comments those files carry, which error against an unregistered rule (the pre-existing F-1 janitor
+    // ticket the one-pipeline block below already documents). The defect class this gate exists for lives
+    // in the plain-JS game logic corpus, which is fully covered here.
+    files: ['**/*.js', '**/*.mjs', '**/*.cjs'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        ...globals.es2021,
+        ...globals.worker,
+        Bun: 'readonly', // the test/script runtime global (bun:test suites, api/sponsor.mjs)
+        __APP_VERSION__: 'readonly', // vite `define` build-time constants (packages/frontend/vite.config.ts:188)
+        __GIT_SHA__: 'readonly',
+      },
+    },
+    rules: { 'no-undef': 'error' },
+  },
+  {
     // Vendored game source + migrated sim/sdk packages keep their own lint/format/typecheck
     // pipelines (run inside each package); the indexer is Rust. Keep them out of the companion lint.
     ignores: [

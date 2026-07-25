@@ -153,7 +153,7 @@ export function create_player({
     // frame loop below re-adds until the scene exists and actually takes it.
     game_log(
       'voxel',
-      `avatar mounted (${class_id} → ${rig_class} rig) — engine create_character_avatar (D191/D192/D193)`
+      `avatar mounted (${class_id} → ${urls.rig} rig) — engine create_character_avatar (D191/D192/D193)`
     )
     // ENG-16 beat seam (the attack animation should play once when gathering resolves successfully).
     // Register the live avatar's one-shot trigger: fire play_beat AND hold locomotion for its duration
