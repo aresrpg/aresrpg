@@ -242,7 +242,8 @@ entry fun execute(
   execute_gate(&request, recipe, ctx);
   let mut gen = random::new_generator(r, ctx);
   let success = crafting::success_roll(request.artisan_level, &mut gen);
-  execute_body(request, recipe, kiosk, pkcap, input_item_ids, output_template, success, xpolicy, policy, config, version, ctx);
+  // the output's stat roll shares this one terminal draw with the success roll (#758).
+  execute_body(request, recipe, kiosk, pkcap, input_item_ids, output_template, success, gen.generate_u64(), xpolicy, policy, config, version, ctx);
 }
 
 /// The execute preconditions (shared by the live entry and the deterministic test door): customer-only, accepted,
@@ -265,6 +266,7 @@ fun execute_body(
   input_item_ids: vector<ID>,
   output_template: &ItemTemplate,
   success: bool,
+  stat_seed: u64,
   xpolicy: &ItemExtractPolicy,
   policy: &TransferPolicy<Item>,
   config: &GameConfig,
@@ -279,7 +281,7 @@ fun execute_body(
   // mint LOCKED into the customer's OWN personal kiosk ON SUCCESS (kiosk-lock constitution — never a raw address).
   crafting::craft_consume(recipe, kiosk, pkcap, input_item_ids, output_template, artisan_level, xpolicy, policy, config, version, ctx);
   let owner_cap = personal_kiosk::borrow(pkcap);
-  crafting::settle_output(recipe, output_template, success, kiosk, owner_cap, policy, version, ctx);
+  crafting::settle_output(recipe, output_template, success, stat_seed, kiosk, owner_cap, policy, version, ctx);
 
   // ARTISAN XP (always — success or failure): computed at the artisan's level, delivered as a claim voucher.
   let xp = crafting::craft_xp_gain(crafting::craft_xp(recipe), crafting::input_count(recipe), artisan_level);
@@ -315,6 +317,7 @@ public fun execute_forced(
   input_item_ids: vector<ID>,
   output_template: &ItemTemplate,
   success: bool,
+  stat_seed: u64,
   xpolicy: &ItemExtractPolicy,
   policy: &TransferPolicy<Item>,
   config: &GameConfig,
@@ -322,7 +325,7 @@ public fun execute_forced(
   ctx: &mut TxContext,
 ) {
   execute_gate(&request, recipe, ctx);
-  execute_body(request, recipe, kiosk, pkcap, input_item_ids, output_template, success, xpolicy, policy, config, version, ctx);
+  execute_body(request, recipe, kiosk, pkcap, input_item_ids, output_template, success, stat_seed, xpolicy, policy, config, version, ctx);
 }
 
 #[test_only]

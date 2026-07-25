@@ -189,7 +189,7 @@ fun do_execute(sc: &mut Scenario, req_id: ID, recipe_id: ID, c_kid: ID, input_id
   let policy = sc.take_shared<TransferPolicy<Item>>();
   let cfg = sc.take_shared<GameConfig>();
   let ver = sc.take_shared<Version>();
-  commission::execute_forced(req, &recipe, &mut k, &pkcap, input_ids, &out_tmpl, success, &xpolicy, &policy, &cfg, &ver, sc.ctx());
+  commission::execute_forced(req, &recipe, &mut k, &pkcap, input_ids, &out_tmpl, success, 0xC0FFEE, &xpolicy, &policy, &cfg, &ver, sc.ctx());
   ts::return_shared(recipe);
   ts::return_shared(k);
   sc.return_to_sender(pkcap);
@@ -474,7 +474,7 @@ fun execute_by_non_customer_aborts() {
   let policy = sc.take_shared<TransferPolicy<Item>>();
   let cfg = sc.take_shared<GameConfig>();
   let ver = sc.take_shared<Version>();
-  commission::execute_forced(req, &rec, &mut k, &pkcap, vector[wheat_id], &out_tmpl, true, &xpolicy, &policy, &cfg, &ver, sc.ctx());
+  commission::execute_forced(req, &rec, &mut k, &pkcap, vector[wheat_id], &out_tmpl, true, 0xC0FFEE, &xpolicy, &policy, &cfg, &ver, sc.ctx());
   let _ = a_cid;
   abort
 }

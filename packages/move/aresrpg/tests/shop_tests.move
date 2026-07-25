@@ -370,7 +370,9 @@ fun unlimited_supply_sells_repeatedly() {
 }
 
 #[test]
-/// A RANGED template: `buy` rolls the stats in-line and lands a born-rolled item locked in the kiosk.
+/// A RANGED template: `buy` rolls the stats in-line and lands a born-rolled item locked in the kiosk. The block is
+/// ASSERTED, not merely counted — the roll moved into the shared gear-mint door (#758) and a silent regression
+/// there would otherwise pass as "one item landed".
 fun buy_with_ranges_lands_rolled_item() {
   let mut sc = ts::begin(OWNER);
   full_setup(&mut sc, option::some(SUPPLY), PRICE, true, option::none(), true);
@@ -381,10 +383,20 @@ fun buy_with_ranges_lands_rolled_item() {
   let clk = clock_at(&mut sc, 0);
 
   let pay = coin::mint_for_testing<SUI>(PRICE, sc.ctx());
-  shop::buy_for_testing(&mut sale, &template, pay, &mut kiosk, &pkcap, &policy, &clk, &ver, sc.ctx());
+  let minted = shop::buy_for_testing(&mut sale, &template, pay, &mut kiosk, &pkcap, &policy, &clk, &ver, sc.ctx());
 
   assert_eq!(shop::minted(&sale), 1);
   assert_eq!(kiosk.item_count(), 1);
+  assert_eq!(minted.length(), 1);
+  {
+    // the authored ranges are vitality [100,200], every other field degenerate at 5 (see `full_setup`)
+    let it = kiosk.borrow<Item>(personal_kiosk::borrow(&pkcap), minted[0]);
+    assert!(item_stats::has_rolled_stats(it));
+    let rolled = item_stats::rolled_stats(it);
+    let v = item_stats::vitality(rolled);
+    assert!(v >= 100 && v <= 200);
+    assert_eq!(item_stats::wisdom(rolled), 5); // degenerate field lands on its fixed value
+  };
 
   clk.destroy_for_testing();
   keep_personal_kiosk(&mut sc, kiosk, pkcap);

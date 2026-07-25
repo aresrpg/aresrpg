@@ -15,7 +15,7 @@ use aresrpg::{extension, item::{Self, Item, ItemTemplate}};
 use aresrpg_fight::{mob, mob::MobLootEntry, settlement::{Self, FightOutcome}};
 use aresrpg_foundation::prng;
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
-use sui::{clock::Clock, event, kiosk::Kiosk, random::{Self, Random}, transfer_policy::TransferPolicy};
+use sui::{clock::Clock, dynamic_field as df, event, kiosk::Kiosk, random::{Self, Random}, transfer_policy::TransferPolicy};
 
 // (102 EAlreadyOpened / 103 ENotOpened retired — engine unpack is one-shot; codes stay reserved in the error map)
 const ENoMatching: u64 = 104; // mint_rolled: nothing owed for this template
@@ -42,6 +42,13 @@ public struct FightResult has key {
 }
 
 public struct RolledLoot has copy, drop, store { item_template: ID, qty: u64 }
+
+/// #758 — the ticket's STAT-ROLL entropy, planted as a dynamic field on the `FightResult` UID at `open` (the one
+/// moment this claim touches `&Random`) and spent at `mint_rolled`, where the template object finally exists but
+/// no randomness does. A DF, not a struct field: the layout of a live `key` struct is frozen across upgrades.
+/// Tickets opened BEFORE this shipped carry no seed — they mint blank, exactly as they did before (honest, never
+/// a fabricated roll).
+public struct StatSeedKey has copy, drop, store {}
 
 // ── claim events (core-side; the engine emits the settlement events) ──
 public struct ResultOpened has copy, drop { result: ID, character: ID, xp_share: u64, loot_units: u64 }
@@ -131,7 +138,10 @@ fun open_internal(
     m = m + 1;
   };
   let units = total_units(&rolled);
-  let result = FightResult { id: object::new(ctx), fight, world, character: character_id, outcome: outcome_status, final_hp, xp_share, pvp, team, winner_team, rolled };
+  let mut result = FightResult { id: object::new(ctx), fight, world, character: character_id, outcome: outcome_status, final_hp, xp_share, pvp, team, winner_team, rolled };
+  // the stat-roll entropy for whatever gear this ticket owes — drawn HERE, off the same `&Random` stream that
+  // rolled the checklist, because `mint_rolled` has none (#758).
+  df::add(&mut result.id, StatSeedKey {}, prng::draw(rng));
   event::emit(ResultOpened { result: object::id(&result), character: character_id, xp_share, loot_units: units });
   transfer::transfer(result, ctx.sender());
 }
@@ -139,7 +149,8 @@ fun open_internal(
 // ╔════════════════ [ Mint the rolled loot (per template) ] ═══════════════════ ]
 
 /// Mint what the roll owes for ONE template into the result-holder's personal kiosk (LockPledge law). Stackables mint
-/// as ONE stack of the owed qty; gear mints qty singletons. Only the result's owner can call (owned object).
+/// as ONE stack of the owed qty; gear mints qty singletons, each born with its rolled stat block (#758). Only the
+/// result's owner can call (owned object).
 entry fun mint_rolled(
   result: &mut FightResult,
   template: &ItemTemplate,
@@ -149,30 +160,73 @@ entry fun mint_rolled(
   policy: &TransferPolicy<Item>,
   ctx: &mut TxContext,
 ) {
+  mint_rolled_internal(result, template, version, kiosk, pkcap, policy, ctx);
+}
+
+/// The mint body, returning the minted item ids (the `entry` discards them; tests assert on them).
+fun mint_rolled_internal(
+  result: &mut FightResult,
+  template: &ItemTemplate,
+  version: &Version,
+  kiosk: &mut Kiosk,
+  pkcap: &PersonalKioskCap,
+  policy: &TransferPolicy<Item>,
+  ctx: &mut TxContext,
+): vector<ID> {
   version.assert_enabled();
   let tid = item::template_id(template);
   let qty = take_rolled(result, tid); // aborts ENoMatching if nothing owed
   let owner_cap = personal_kiosk::borrow(pkcap);
+  let mut minted = vector<ID>[];
   if (item::is_stackable_category(item::template_category(template))) {
     let (stack, pledge) = extension::mint_item_stack(template, qty, version, ctx);
+    minted.push_back(object::id(&stack));
     item::lock_in_kiosk(pledge, stack, kiosk, owner_cap, policy);
   } else {
+    let base = stat_seed(result);
     let mut i = 0;
     while (i < qty) {
-      let (loot_item, pledge) = extension::mint_item(template, version, ctx);
+      let seed = if (base.is_some()) option::some(unit_seed(*base.borrow(), tid, i)) else option::none();
+      let (loot_item, pledge) = extension::mint_item(template, seed, version, ctx);
+      minted.push_back(object::id(&loot_item));
       item::lock_in_kiosk(pledge, loot_item, kiosk, owner_cap, policy);
       i = i + 1;
     };
   };
   event::emit(LootMinted { result: object::id(result), item_template: tid, qty });
+  minted
 }
 
 /// Delete an EMPTIED result (the storage rebate). Aborts while rolled loot remains — mint it first.
-entry fun burn_result(result: FightResult) {
+entry fun burn_result(mut result: FightResult) {
   assert!(result.rolled.is_empty(), ENotEmpty);
+  // the stat seed dies with its ticket — a UID with a live dynamic field cannot be deleted. Pre-#758 tickets
+  // carry none, hence the existence check.
+  if (df::exists(&result.id, StatSeedKey {})) { let _: u64 = df::remove(&mut result.id, StatSeedKey {}); };
   let FightResult { id, fight: _, world: _, character: _, outcome: _, final_hp: _, xp_share: _, pvp: _, team: _, winner_team: _, rolled: _ } = result;
   event::emit(ResultBurned { result: id.to_inner() });
   object::delete(id);
+}
+
+/// This ticket's open-time stat entropy, or NONE for a ticket opened before #758 shipped (it mints blank gear —
+/// the same honestly-empty block it would have had, never a fabricated one).
+fun stat_seed(result: &FightResult): Option<u64> {
+  if (df::exists(&result.id, StatSeedKey {})) option::some(*df::borrow(&result.id, StatSeedKey {}))
+  else option::none()
+}
+
+/// The per-unit stat seed: the ticket's own entropy folded with the template id and the unit index. DERIVED, never
+/// a running counter — unit `i` of template `t` always rolls the same block, so a holder cannot shop the mint
+/// ORDER of the templates they owe to steer a good roll onto the item they care about.
+fun unit_seed(base: u64, template: ID, index: u64): u64 {
+  let bytes = object::id_to_bytes(&template);
+  let mut acc = base;
+  let mut i = 0;
+  while (i < bytes.length()) {
+    acc = prng::mix(acc, bytes[i] as u64);
+    i = i + 1;
+  };
+  prng::mix(acc, index)
 }
 
 // ╔════════════════ [ Roll kernels (pure — harvested from dungeon_claim, aging-scaled) ] ═ ]
@@ -252,6 +306,20 @@ public fun rolled_qty(result: &FightResult, template: ID): u64 {
 }
 
 // ╔════════════════ [ Testing ] ══════════════════════════════════════════════ ]
+
+#[test_only]
+/// `mint_rolled` returning the minted ids, so a test can read the born-rolled stat block off the kiosk.
+public fun mint_rolled_for_testing(
+  result: &mut FightResult,
+  template: &ItemTemplate,
+  version: &Version,
+  kiosk: &mut Kiosk,
+  pkcap: &PersonalKioskCap,
+  policy: &TransferPolicy<Item>,
+  ctx: &mut TxContext,
+): vector<ID> {
+  mint_rolled_internal(result, template, version, kiosk, pkcap, policy, ctx)
+}
 
 #[test_only]
 public fun open_for_testing(

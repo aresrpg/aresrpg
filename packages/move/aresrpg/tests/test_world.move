@@ -18,6 +18,7 @@ use aresrpg::{
   extension,
   extract,
   item::{Self as item, Item, ItemTemplate},
+  item_stats,
   pet,
   scribe,
   version::{Self, Version},
@@ -114,6 +115,43 @@ public fun make_resource_template(sc: &mut Scenario): ID {
   tid
 }
 
+/// Author + share a NON-stackable GEAR ItemTemplate carrying authored [min,max] stat RANGES — the shape every
+/// mint seam must roll (#758). `vitality` varies in [`min_vitality`, `max_vitality`]; every other field is
+/// degenerate at `min_vitality`, so a rolled block is trivially checkable. `category` must be whitelisted and
+/// non-stackable (`admin::create_template` rejects ranges on a stackable one).
+public fun make_ranged_gear_template(sc: &mut Scenario, name: vector<u8>, category: vector<u8>, min_vitality: u16, max_vitality: u16): ID {
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let cat = sc.take_shared<Catalog>();
+  let ver = sc.take_shared<Version>();
+  let f = min_vitality;
+  let tid = admin::create_template(
+    &cap, &cat, name.to_string(), b"A ranged test artifact of the harness.".to_string(), name.to_string(),
+    category.to_string(), 1,
+    option::some(item_stats::new(min_vitality, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f)),
+    option::some(item_stats::new(max_vitality, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f)),
+    vector[], option::none(), &ver, sc.ctx(),
+  );
+  ts::return_shared(cat);
+  ts::return_shared(ver);
+  sc.return_to_sender(cap);
+  tid
+}
+
+/// The rolled block a `make_ranged_gear_template` item must carry, read off the kiosk-locked item — aborts if the
+/// item never got a `StatsKey` (that IS the #758 regression: `has_rolled_stats` false ⇒ `rolled_stats` aborts).
+public fun rolled_vitality(sc: &mut Scenario, who: address, kiosk_id: ID, item_id: ID): u16 {
+  sc.next_tx(who);
+  let k = ts::take_shared_by_id<Kiosk>(sc, kiosk_id);
+  let pkcap = sc.take_from_sender<PersonalKioskCap>();
+  let it = k.borrow<Item>(personal_kiosk::borrow(&pkcap), item_id);
+  assert!(item_stats::has_rolled_stats(it), 0);
+  let v = item_stats::vitality(item_stats::rolled_stats(it));
+  ts::return_shared(k);
+  sc.return_to_sender(pkcap);
+  v
+}
+
 /// Whitelist a category on the items catalog (craft/pet/rune suites author their own categories).
 public fun whitelist(sc: &mut Scenario, category: vector<u8>) {
   sc.next_tx(OWNER);
@@ -168,7 +206,7 @@ public fun mint_lock_gear(sc: &mut Scenario, who: address, template_id: ID): ID 
   let mkt = sc.take_shared<TransferPolicy<Item>>();
   let mut k = sc.take_shared<Kiosk>();
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
-  let (it, pledge) = extension::mint_item(&tmpl, &ver, sc.ctx());
+  let (it, pledge) = extension::mint_item(&tmpl, option::none(), &ver, sc.ctx());
   let iid = object::id(&it);
   item::lock_in_kiosk(pledge, it, &mut k, personal_kiosk::borrow(&pkcap), &mkt);
   ts::return_shared(tmpl); ts::return_shared(ver); ts::return_shared(mkt); ts::return_shared(k); sc.return_to_sender(pkcap);

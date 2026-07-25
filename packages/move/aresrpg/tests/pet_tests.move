@@ -86,7 +86,7 @@ fun mint_lock_shop_pet(sc: &mut Scenario, pet_template: ID): ID {
   let market = sc.take_shared<TransferPolicy<Item>>();
   let mut kiosk = sc.take_shared<Kiosk>();
   let pkcap = sc.take_from_sender<PersonalKioskCap>();
-  let (mut pet_item, pledge) = extension::mint_item(&template, &version, sc.ctx());
+  let (mut pet_item, pledge) = extension::mint_item(&template, option::none(), &version, sc.ctx());
   item_stats::attach_rolled(&mut pet_item, *item_stats::stats_max(&template));
   let pet_id = object::id(&pet_item);
   item::lock_in_kiosk(

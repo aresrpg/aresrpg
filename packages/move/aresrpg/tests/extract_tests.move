@@ -77,7 +77,7 @@ fun mint_and_lock(sc: &mut Scenario, actor: address): (Kiosk, PersonalKioskCap, 
   let tmpl = sc.take_shared<ItemTemplate>();
   let ver = sc.take_shared<Version>();
   let mkt = sc.take_shared<TransferPolicy<Item>>();
-  let (it, pledge) = extension::mint_item(&tmpl, &ver, sc.ctx());
+  let (it, pledge) = extension::mint_item(&tmpl, option::none(), &ver, sc.ctx());
   let item_id = object::id(&it);
   let (mut kiosk, kcap) = kiosk::new(sc.ctx());
   let pkcap = personal_kiosk::new(&mut kiosk, kcap, sc.ctx());
@@ -257,7 +257,7 @@ fun burn_tolerates_attached_dynamic_field() {
   let ver = sc.take_shared<Version>();
   let mkt = sc.take_shared<TransferPolicy<Item>>();
   let xpolicy = sc.take_shared<ItemExtractPolicy>();
-  let (mut it, pledge) = extension::mint_item(&tmpl, &ver, sc.ctx());
+  let (mut it, pledge) = extension::mint_item(&tmpl, option::none(), &ver, sc.ctx());
   let item_id = object::id(&it);
   extension::add_item_field(extension::ns_item(), &mut it, TestKey {}, 123u64, &ver); // a live DF on the item
   let (mut kiosk, kcap) = kiosk::new(sc.ctx());
