@@ -337,6 +337,54 @@ describe('world spawn mob-card layer route gate', () => {
     }
   )
 
+  test('#861 — the [R] pill and engage() read the SAME gate; no refusal path is a bare return', () => {
+    // Reported: clicking the armed ENGAGE pill "composed zero transactions — no toast, no error, no fight"
+    // while the pill stayed armed. engage()'s preconditions used to be three BARE `return`s (`engaging`, the
+    // dungeon store's fight_id/run_pass_id, and a missing character_id) that the pill's presentation never
+    // saw — so it armed gold over a press that could never fire, and the press itself said nothing. Both
+    // sides now derive from engage_gate.js (behaviour proven in engage_gate.test.js); engage() and
+    // set_attack_target are un-exported closures, so their WIRING is locked by shape — this file's own
+    // convention for that seam.
+    const import_at = world_spawns_source.indexOf("from './engage_gate.js'")
+    expect(import_at, 'the ONE gate home is imported').toBeGreaterThan(-1)
+
+    // the presentation side: the pill derives its blocked state from the gate before it registers
+    const arm_at = world_spawns_source.indexOf('const set_attack_target = (')
+    const arm_block_at = world_spawns_source.indexOf('engage_block(', arm_at)
+    const register_at = world_spawns_source.indexOf('register_prompt({', arm_at)
+    const busy_at = world_spawns_source.indexOf('busy:', register_at)
+    expect(arm_at).toBeGreaterThan(-1)
+    expect(arm_block_at, 'the pill asks the gate BEFORE it registers').toBeGreaterThan(arm_at)
+    expect(arm_block_at).toBeLessThan(register_at)
+    expect(busy_at, 'a blocked pill registers the honest-block variant, never a gold armed pill').toBeGreaterThan(
+      register_at
+    )
+    // …and the gate answer is part of the idempotence key, so a session that STARTS (or ends) a fight
+    // re-registers the pill on the next frame instead of leaving a stale gold pill over a dead press.
+    const idempotence_line = world_spawns_source.slice(arm_at, register_at).split('\n').find((l) => l.includes('=== attack_target_engageable'))
+    expect(idempotence_line, 'the early-return idempotence guard exists').toBeTruthy()
+    expect(idempotence_line, 'the gate answer is part of it').toContain('attack_target_block')
+
+    // the press side: the same gate, and an honest surface instead of a bare return
+    const engage_at = world_spawns_source.indexOf('const engage = async (')
+    const engage_block_at = world_spawns_source.indexOf('engage_block(', engage_at)
+    const refuse_at = world_spawns_source.indexOf('refuse_engage(', engage_at)
+    const claim_intent_at = world_spawns_source.indexOf("spawns_input({ type: 'claim_intent'", engage_at)
+    expect(engage_block_at, 'engage() keeps the gate as its last line of defense').toBeGreaterThan(engage_at)
+    expect(refuse_at, 'a blocked press SURFACES — never a bare return').toBeGreaterThan(engage_block_at)
+    expect(refuse_at, 'the refusal precedes any claim_intent/compose/submit').toBeLessThan(claim_intent_at)
+
+    // …and the three original bare returns are gone from engage()'s head
+    const engage_head = world_spawns_source.slice(engage_at, claim_intent_at)
+    expect(engage_head, 'the engaging latch no longer returns silently').not.toContain('if (engaging || !e) return')
+    expect(engage_head, 'the fight-session door no longer returns silently').not.toContain(
+      'if (use_dungeon.getState().fight_id || use_dungeon.getState().run_pass_id) return'
+    )
+    expect(engage_head, 'the missing-character door no longer returns silently').not.toContain(
+      'if (!character_id) return'
+    )
+  })
+
   test(
     'the ambient ghost sweep folds visible_fights into the EXISTING poll cadence — never a new poll (#480)',
     () => {

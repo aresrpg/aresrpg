@@ -2387,6 +2387,7 @@
     "fight_already_seated": "Ya estás participando en ese combate.",
     "fight_unclaimed_result": "Tienes un resultado de combate sin abrir — ábrelo desde el panel de tu personaje para volver a luchar.",
     "fight_character_busy": "Este personaje ya está en un combate en curso — termínalo o liquídalo antes de empezar otro.",
+    "engage_no_character": "Selecciona un personaje antes de empezar un combate.",
     "fight_group_claimed": "Ese grupo de monstruos ya no está — alguien llegó primero.",
     "fight_zone_changed": "Esta zona cambió — busca de nuevo para encontrar otro grupo.",
     "gather_not_in_world": "Necesitas estar en este mundo para recolectar aquí — vuelve a unirte e inténtalo de nuevo.",

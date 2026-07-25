@@ -2387,6 +2387,7 @@
     "fight_already_seated": "You're already seated in that fight.",
     "fight_unclaimed_result": "You have an unfinished fight result — open it from your character panel to fight again.",
     "fight_character_busy": "This character is already in a live fight — finish or settle it before starting another.",
+    "engage_no_character": "Select a character before you start a fight.",
     "fight_group_claimed": "That monster group is gone — someone got there first.",
     "fight_zone_changed": "This zone changed under you — search again to find another group.",
     "gather_not_in_world": "You need to be in this world to gather here — rejoin and try again.",

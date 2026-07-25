@@ -61,6 +61,7 @@ import { use_party } from '../world-shell/party_store.js'
 import { enter_world_fight, resume_world_fight } from '../world-shell/world_fight.js'
 import { use_prompt_stack } from '../world-shell/prompt_stack.js'
 
+import { engage_block, engage_block_copy_key } from './engage_gate.js'
 import { start_fight_engage } from './fight_engage.js'
 import { push_event_toast } from './core/toast.js'
 import { context } from './core/game.js'
@@ -148,6 +149,10 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
   let my_gather_key = /** @type {string | null} */ (null) // the gather_target WE set (never stomp another writer's)
   let attack_entry = /** @type {any} */ (null) // the mob group the [R] prompt + card-highlight point at
   let attack_target_engageable = false // is attack_entry within the ENGAGE ring (gold) or only VISIBLE?
+  let attack_target_block = /** @type {import('./engage_gate.js').EngageBlock | null} */ (null) // #861: the
+  // gate answer the CURRENTLY registered pill was built from — part of set_attack_target's idempotence key, so
+  // a session that starts (or ends) a fight re-registers the pill on the very next frame instead of leaving a
+  // gold pill over a press that can no longer fire.
   let render_probe_at = /** @type {number | null} */ (null) // cert ts of the latest search fast-path → one cert→visible log
 
   /** @type {Map<string, any>} */
@@ -508,6 +513,24 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
   // closer" instead of firing a doomed claim.
   const hint_too_far = () => push_event_toast({ state: 'info', title: i18n.t('discovery.engage_too_far') })
 
+  // #861 — the live inputs of the ONE engage gate (engage_gate.js). This is the whole effectful half: the
+  // predicate itself is pure, so both the pill's presentation and engage()'s press door decide off the SAME
+  // fact and can never disagree about whether — or why — a press is refused.
+  const engage_state = () => ({
+    engaging,
+    fight_session_id: use_dungeon.getState().fight_id ?? use_dungeon.getState().run_pass_id ?? null,
+    character_id: context.get_state().selected_character_id,
+  })
+
+  // NO SILENT FAILURES (docs craft law): a refused press always leaves a trace. Player-relevant blocks get the
+  // house event toast — the same copy the on-chain refusal words this way; the in-flight re-entry latch is
+  // internal (the frame loop has already cleared the pill), so it takes the debug-gated log line instead.
+  const refuse_engage = (/** @type {import('./engage_gate.js').EngageBlock} */ block) => {
+    const copy_key = engage_block_copy_key(block)
+    if (copy_key) push_event_toast({ state: 'info', title: i18n.t(copy_key) })
+    else game_log('world-spawns', `engage press refused — ${block}`)
+  }
+
   // FIGHT-ENTRY OPTIMISTIC BEAT (press → authoritative task + spectacle in one turn) — the engaged group hides
   // immediately (mob disappearance is part of the beat) and returns on a failed/refused tx.
   // `e.engaged` parks the frame loop for this entry (roam/draw_chip/nearest-targeting all skip it — draw_chip
@@ -526,19 +549,26 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
   // GOLD when claimable, the default border when only VISIBLE (a press there gets engage()'s honest "get closer").
   // Idempotent per (target, engageable). The PromptStack renderer owns the key + click.
   const set_attack_target = (/** @type {any} */ e, /** @type {boolean} */ engageable = false) => {
-    if (e === attack_entry && engageable === attack_target_engageable) return
+    // #861 — ONE gate, read here for PRESENTATION and again inside engage() as the last line of defense, so the
+    // pill can never promise a press that cannot fire. A blocked pill renders the house honest-block variant
+    // (`busy` — gold→muted, still clickable, label = the reason) exactly like the [G] gather gate.
+    const block = e ? engage_block(engage_state()) : null
+    if (e === attack_entry && engageable === attack_target_engageable && block === attack_target_block) return
     if (attack_entry && attack_entry !== e) set_highlight(attack_entry, 'off')
     attack_entry = e
     attack_target_engageable = engageable
+    attack_target_block = block
     const { register_prompt, clear_prompt } = use_prompt_stack.getState()
     if (e) {
-      set_highlight(e, engageable ? 'claimable' : 'off')
+      const copy_key = engage_block_copy_key(block)
+      set_highlight(e, engageable && !block ? 'claimable' : 'off')
       register_prompt({
         id: 'attack',
         key: 'R', // #594: mount/ride now registers for real under KeyX (embed_voxel_player.js); AZERTY-safe (KeyR)
-        label: i18n.t('discovery.attack'),
+        label: copy_key ? i18n.t(copy_key) : i18n.t('discovery.attack'),
         priority: 90, // most-actionable: a group you're standing in anchors the stack bottom
-        on_trigger: () => engage(e),
+        busy: !!block,
+        on_trigger: () => engage(e), // ONE press door: engage() re-reads the gate and surfaces the same reason
       })
     } else {
       clear_prompt('attack')
@@ -614,14 +644,15 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
   }
 
   const engage = async (/** @type {any} */ e) => {
-    if (engaging || !e) return
-    // [world-fight mobs] rigs now stay placed during a WORLD fight (in_cave = cave-only), so a direct rig
-    // CLICK could reach here mid-fight (the [R] prompt is already fight-gated) — never fire a second
-    // claim+create tx while any fight/dungeon session is live. Cross-domain locks are ADAPTER logic (the
-    // core never reads another domain's store — seams law).
-    if (use_dungeon.getState().fight_id || use_dungeon.getState().run_pass_id) return
+    if (!e) return
+    // #861 — THE SAME gate the pill above renders from, re-read here at press time (state can move between the
+    // frame that armed the pill and the press). [world-fight mobs] rigs stay placed during a WORLD fight
+    // (in_cave = cave-only), so a direct rig CLICK can reach here mid-fight — the fight_session block is what
+    // stops a second claim+create tx. Cross-domain locks are ADAPTER logic (the core never reads another
+    // domain's store — seams law), which is why the store reads happen HERE and the gate itself stays pure.
+    const block = engage_block(engage_state())
+    if (block) return refuse_engage(block)
     const character_id = context.get_state().selected_character_id
-    if (!character_id) return
     // ENGAGE-GROUP GATE (leg ①): refuse LOCALLY here — BEFORE claim_intent / compose / submit — with the SAME
     // honest "already taken" copy the on-chain zones-108 abort surfaces, so account 2's engage of a group
     // account 1 already claimed never composes a doomed, gas-burning tx. The pre-sign liveness re-check

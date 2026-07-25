@@ -2387,6 +2387,7 @@
     "fight_already_seated": "Du nimmst bereits an diesem Kampf teil.",
     "fight_unclaimed_result": "Du hast ein ungeöffnetes Kampfergebnis — öffne es im Charakter-Panel, um erneut zu kämpfen.",
     "fight_character_busy": "Dieser Charakter befindet sich bereits in einem laufenden Kampf — beende oder schließe ihn ab, bevor du einen weiteren beginnst.",
+    "engage_no_character": "Wähle einen Charakter, bevor du einen Kampf beginnst.",
     "fight_group_claimed": "Diese Monstergruppe ist verschwunden — jemand war schneller.",
     "fight_zone_changed": "Diese Zone hat sich verändert — suche erneut, um eine andere Gruppe zu finden.",
     "gather_not_in_world": "Du musst in dieser Welt sein, um hier zu sammeln — tritt erneut bei und versuch es noch einmal.",
