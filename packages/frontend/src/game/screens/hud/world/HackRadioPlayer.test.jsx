@@ -63,7 +63,15 @@ describe('the hack-mode album radio', () => {
     expect(html).toContain('gw-radio__track')
     expect(html).toContain('gw-radio__btn')
     expect(html).toContain('aria-label=') // the control always announces its action
-    expect(html).toContain('▶') // paused at mount — playback waits for the user's own click
+    // The FIRST paint is paused by construction: autoplay is an effect, and this renderer runs none. That the
+    // engine starts itself — and how it survives a browser refusing it — is hack_radio.test.js's job.
+    expect(html).toContain('▶')
+  })
+
+  test('the control cancels the pending autoplay retry on its own pointerdown, before its click toggles', () => {
+    const source = readFileSync(new URL('./HackRadioPlayer.jsx', import.meta.url), 'utf8')
+    expect(source).toContain('onPointerDown={on_pointer_down}')
+    expect(source).toContain('dismiss_gesture_retry()')
   })
 
   test('it is TEXT ONLY — no player region, no iframe, no third-party embed survives', () => {

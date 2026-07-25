@@ -4,6 +4,10 @@
 // on hack mode exactly the way the Minimap self-gates on pose: off the grid, this component renders nothing and
 // no byte is ever fetched for it (the manifest load lives behind the same gate).
 //
+// IT PLAYS ON ARRIVAL: arming hack mode is the intent to hear the album, so the engine starts as soon as the
+// manifest lands — the button is an override, not the ignition. A browser that refuses the first attempt for
+// want of a gesture is handled inside hack_radio.js (the widget just stays on its play button until then).
+//
 // THE CHANNEL HANDOFF is the mount itself: while this widget lives, ambient_music's own beds stand down
 // (set_music_stream_owned) — one owner per channel, the D226 law follow.ts already lives under. Unmount hands
 // the channel back, so a player leaving hack mode hears the game again with their mute preference intact.
@@ -69,8 +73,10 @@ export function HackRadioPlayer() {
     }
   }, [hack, tracks])
 
-  // The user gesture browsers require: playback only ever starts from this click.
+  // The radio starts itself the moment it has tracks (hack_radio.js) — this control is the player's override,
+  // and its pointerdown cancels any pending autoplay retry so the click that follows means what the label says.
   const on_toggle = useCallback(() => radio_ref.current?.toggle(), [])
+  const on_pointer_down = useCallback(() => radio_ref.current?.dismiss_gesture_retry(), [])
 
   if (!hack) return null
 
@@ -87,6 +93,7 @@ export function HackRadioPlayer() {
         type="button"
         className="gw-radio__btn"
         onClick={on_toggle}
+        onPointerDown={on_pointer_down}
         disabled={failed || !track}
         aria-label={action}
       >

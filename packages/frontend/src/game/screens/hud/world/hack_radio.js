@@ -83,27 +83,63 @@ export const next_index = (index, count) => (count > 0 ? (index + 1) % count : 0
  * its play/pause state to the widget. Returns null when there is nothing to play or the environment has no
  * media (headless) — an absent radio, never a crashing one.
  *
- * The cursor is a closure local rather than component state on purpose: "which track is loaded" already has
- * a home in the element's own `src`, and the widget only ever needs the TITLE to render.
+ * IT STARTS ITSELF. Arming hack mode IS the intent to hear the album, so the build attempts play at once. A
+ * browser that refuses because no gesture has happened yet (NotAllowedError) is POLICY, never an error row:
+ * the widget keeps showing its play button and ONE armed listener retries on the next pointer/key event. Any
+ * other rejection is a real failure and surfaces as one.
+ *
+ * A MANUAL PAUSE IS STICKY for the session — user intent outranks autoplay, so neither a later gesture nor a
+ * track boundary ever restarts the album behind the player. Only the button brings it back.
+ *
+ * The cursor and that intent are closure locals rather than component state on purpose: "which track is
+ * loaded" already has a home in the element's own `src`, and the widget only ever needs the TITLE to render.
  *
  * @param {ReadonlyArray<{ src: string, title: string }>} tracks in manifest order
  * @param {{ on_track?: (title: string) => void, on_playing?: (playing: boolean) => void,
- *           on_error?: () => void, make_audio?: typeof create_audio }} [handlers]
- * @returns {{ toggle: () => void, dispose: () => void } | null}
+ *           on_error?: () => void, make_audio?: typeof create_audio,
+ *           gesture_target?: Pick<Window, 'addEventListener' | 'removeEventListener'> | null }} [handlers]
+ * @returns {{ toggle: () => void, dismiss_gesture_retry: () => void, dispose: () => void } | null}
  */
-export function create_radio(tracks, { on_track, on_playing, on_error, make_audio = create_audio } = {}) {
+export function create_radio(
+  tracks,
+  { on_track, on_playing, on_error, make_audio = create_audio, gesture_target = globalThis.window } = {},
+) {
   if (tracks.length === 0) return null
   const player = make_audio(tracks[0].src, { preload: 'none', volume: MUSIC_VOLUME })
   if (!player) return null
 
   let cursor = 0
+  let paused_by_user = false
+  let armed = false
   const announce = () => on_track?.(tracks[cursor].title)
-  const play = () => Promise.resolve(player.play()).catch(() => on_error?.())
+
+  // ONE shot: the listeners are gone the moment a gesture lands, whether or not the retry succeeded — a radio
+  // that re-armed forever would fight the player on every click for the rest of the session.
+  const on_gesture = () => {
+    dismiss_gesture_retry()
+    if (!paused_by_user) play()
+  }
+  const dismiss_gesture_retry = () => {
+    if (!armed) return
+    armed = false
+    gesture_target?.removeEventListener('pointerdown', on_gesture)
+    gesture_target?.removeEventListener('keydown', on_gesture)
+  }
+  const arm_gesture_retry = () => {
+    if (armed || paused_by_user || !gesture_target) return
+    armed = true
+    gesture_target.addEventListener('pointerdown', on_gesture)
+    gesture_target.addEventListener('keydown', on_gesture)
+  }
+  const play = () =>
+    Promise.resolve(player.play()).catch((error) =>
+      error?.name === 'NotAllowedError' ? arm_gesture_retry() : on_error?.(),
+    )
   const on_ended = () => {
     cursor = next_index(cursor, tracks.length)
     player.src = tracks[cursor].src
     announce()
-    play() // the boundary is exactly where the stream must NOT stall
+    if (!paused_by_user) play() // the boundary is exactly where the stream must NOT stall
   }
   const on_play = () => on_playing?.(true)
   const on_pause = () => on_playing?.(false)
@@ -114,11 +150,19 @@ export function create_radio(tracks, { on_track, on_playing, on_error, make_audi
   player.addEventListener('pause', on_pause)
   player.addEventListener('error', on_media_error)
   announce()
+  play()
 
   return {
-    toggle: () => (player.paused ? play() : player.pause()),
+    toggle: () => {
+      paused_by_user = !player.paused
+      return paused_by_user ? player.pause() : play()
+    },
+    // The control's own pointerdown calls this so the window retry cannot start playback a beat before the
+    // click that follows would pause it — the button always does exactly what it says.
+    dismiss_gesture_retry,
     dispose: () => {
       // Unwire BEFORE pausing: a teardown must not push one last state change into a widget that is going away.
+      dismiss_gesture_retry()
       player.removeEventListener('ended', on_ended)
       player.removeEventListener('play', on_play)
       player.removeEventListener('pause', on_pause)

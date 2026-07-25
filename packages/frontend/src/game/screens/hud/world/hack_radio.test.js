@@ -12,8 +12,11 @@ import { create_radio, load_radio_tracks, next_index, parse_radio_manifest, radi
 const HOST = 'https://assets.aresrpg.world'
 const publish = () => configure_walrus_assets({ aggregator: HOST, classes: { hack_radio: { published: true } } })
 
-/** A stand-in HTMLAudioElement: records listeners so a test can fire the real events the engine listens for. */
-function fake_audio(src) {
+/**
+ * A stand-in HTMLAudioElement: records listeners so a test can fire the real events the engine listens for.
+ * `blocked` reproduces the browser autoplay policy — play() rejects with NotAllowedError until a gesture.
+ */
+function fake_audio(src, { blocked = false } = {}) {
   const listeners = /** @type {Record<string, Function[]>} */ ({})
   return {
     src,
@@ -21,9 +24,17 @@ function fake_audio(src) {
     volume: 1,
     preload: '',
     plays: 0,
+    refusals: 0,
+    blocked,
     addEventListener: (type, fn) => (listeners[type] = [...(listeners[type] ?? []), fn]),
     removeEventListener: (type, fn) => (listeners[type] = (listeners[type] ?? []).filter((f) => f !== fn)),
     play() {
+      if (this.blocked) {
+        this.refusals++
+        const refusal = new Error("play() failed because the user didn't interact with the document first")
+        refusal.name = 'NotAllowedError'
+        return Promise.reject(refusal)
+      }
       this.plays++
       this.paused = false
       listeners.play?.forEach((fn) => fn())
@@ -37,6 +48,20 @@ function fake_audio(src) {
     listener_count: () => Object.values(listeners).reduce((n, fns) => n + fns.length, 0),
   }
 }
+
+/** A stand-in window for the one-shot autoplay retry — the engine never touches the real one in this suite. */
+function fake_gestures() {
+  const listeners = /** @type {Record<string, Function[]>} */ ({})
+  return {
+    addEventListener: (type, fn) => (listeners[type] = [...(listeners[type] ?? []), fn]),
+    removeEventListener: (type, fn) => (listeners[type] = (listeners[type] ?? []).filter((f) => f !== fn)),
+    emit: (type) => [...(listeners[type] ?? [])].forEach((fn) => fn()),
+    listener_count: () => Object.values(listeners).reduce((n, fns) => n + fns.length, 0),
+  }
+}
+
+/** Let the play() promise settle — the autoplay refusal is only observable after its rejection lands. */
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 const MANIFEST = {
   tracks: [
@@ -132,26 +157,108 @@ describe('the sequential engine', () => {
     expect(next_index(0, 0)).toBe(0) // an empty list can never index out of itself
   })
 
-  test('arms the first track and announces it, paused — playback waits for the user gesture', () => {
+  test('arms the first track, announces it and STARTS ITSELF — arming hack mode IS the intent to hear the album', () => {
     const titles = []
+    const states = []
     let audio
-    const radio = create_radio(tracks, { on_track: (x) => titles.push(x), make_audio: (src) => (audio = fake_audio(src)) })
+    const radio = create_radio(tracks, {
+      on_track: (x) => titles.push(x),
+      on_playing: (x) => states.push(x),
+      make_audio: (src) => (audio = fake_audio(src)),
+    })
     expect(audio.src).toBe('a.m4a')
-    expect(audio.paused).toBe(true)
-    expect(audio.plays).toBe(0)
+    expect(audio.paused).toBe(false)
+    expect(audio.plays).toBe(1)
     expect(titles).toEqual(['A'])
+    expect(states).toEqual([true])
     radio.dispose()
   })
 
-  test('toggle plays, then pauses, and reports both to the widget', () => {
+  test('a refused autoplay is POLICY, not an error row: the control stays, and the first gesture retries once', async () => {
     const states = []
+    let errors = 0
     let audio
-    const radio = create_radio(tracks, { on_playing: (x) => states.push(x), make_audio: (src) => (audio = fake_audio(src)) })
+    const gestures = fake_gestures()
+    const radio = create_radio(tracks, {
+      on_playing: (x) => states.push(x),
+      on_error: () => errors++,
+      gesture_target: gestures,
+      make_audio: (src) => (audio = fake_audio(src, { blocked: true })),
+    })
+    await settle()
+    expect(audio.refusals).toBe(1)
+    expect(audio.paused).toBe(true) // the widget keeps showing its play button
+    expect(errors).toBe(0) // an autoplay refusal must never disable the control
+    expect(states).toEqual([])
+    expect(gestures.listener_count()).toBe(2) // pointerdown + keydown, armed and waiting
+
+    audio.blocked = false
+    gestures.emit('keydown')
+    expect(audio.paused).toBe(false)
+    expect(states).toEqual([true])
+    expect(gestures.listener_count()).toBe(0) // ONE shot — the retry never outlives the gesture that ran it
+    radio.dispose()
+  })
+
+  test('a play() that fails for a REAL reason still surfaces as an error — only the policy refusal is silent', async () => {
+    let errors = 0
+    const radio = create_radio(tracks, {
+      on_error: () => errors++,
+      make_audio: () => ({
+        src: 'a.m4a',
+        paused: true,
+        addEventListener() {},
+        removeEventListener() {},
+        play: () => Promise.reject(new Error('decode failed')),
+        pause() {},
+      }),
+    })
+    await settle()
+    expect(errors).toBe(1)
+    radio.dispose()
+  })
+
+  test('a manual pause is STICKY — no gesture and no track boundary ever restarts the album behind the player', async () => {
+    const titles = []
+    let audio
+    const gestures = fake_gestures()
+    const radio = create_radio(tracks, {
+      on_track: (x) => titles.push(x),
+      gesture_target: gestures,
+      make_audio: (src) => (audio = fake_audio(src)),
+    })
+    radio.toggle() // the player's own pause
+    expect(audio.paused).toBe(true)
+
+    audio.emit('ended') // the boundary loads the next track but must NOT resume it
+    expect(audio.src).toBe('b.m4a')
+    expect(titles).toEqual(['A', 'B'])
+    expect(audio.paused).toBe(true)
+    expect(audio.plays).toBe(1) // the autostart, and nothing since
+
+    gestures.emit('pointerdown')
+    expect(audio.plays).toBe(1)
+    radio.toggle() // only the button brings it back
+    expect(audio.paused).toBe(false)
+    radio.dispose()
+  })
+
+  test('the control cancels a pending retry on its own pointerdown, so the click that follows means what it says', async () => {
+    let audio
+    const gestures = fake_gestures()
+    const radio = create_radio(tracks, {
+      gesture_target: gestures,
+      make_audio: (src) => (audio = fake_audio(src, { blocked: true })),
+    })
+    await settle()
+    expect(gestures.listener_count()).toBe(2)
+
+    radio.dismiss_gesture_retry() // the button's pointerdown, before the click reaches toggle
+    audio.blocked = false
+    gestures.emit('pointerdown')
+    expect(audio.paused).toBe(true) // the retry did not fire — the click alone decides
     radio.toggle()
     expect(audio.paused).toBe(false)
-    radio.toggle()
-    expect(audio.paused).toBe(true)
-    expect(states).toEqual([true, false])
     radio.dispose()
   })
 
@@ -159,7 +266,6 @@ describe('the sequential engine', () => {
     const titles = []
     let audio
     const radio = create_radio(tracks, { on_track: (x) => titles.push(x), make_audio: (src) => (audio = fake_audio(src)) })
-    radio.toggle()
     audio.emit('ended')
     expect(audio.src).toBe('b.m4a')
     audio.emit('ended')
@@ -167,7 +273,7 @@ describe('the sequential engine', () => {
     audio.emit('ended')
     expect(audio.src).toBe('a.m4a') // loop
     expect(titles).toEqual(['A', 'B', 'C', 'A'])
-    expect(audio.plays).toBe(4) // the first toggle + one per advance — the stream never stalls on a boundary
+    expect(audio.plays).toBe(4) // the autostart + one per advance — the stream never stalls on a boundary
     radio.dispose()
   })
 
@@ -180,13 +286,30 @@ describe('the sequential engine', () => {
     radio.dispose()
   })
 
-  test('dispose stops the element and unwires every listener — a remount never leaves a ghost playing', () => {
+  test('dispose stops the element and unwires every listener — a remount never leaves a ghost playing', async () => {
     let audio
-    const radio = create_radio(tracks, { make_audio: (src) => (audio = fake_audio(src)) })
-    radio.toggle()
+    const gestures = fake_gestures()
+    const radio = create_radio(tracks, { gesture_target: gestures, make_audio: (src) => (audio = fake_audio(src)) })
     radio.dispose()
     expect(audio.paused).toBe(true)
     expect(audio.listener_count()).toBe(0)
+    expect(gestures.listener_count()).toBe(0)
+  })
+
+  test('a disposed radio leaves NO armed gesture behind — hack mode off can never start music later', async () => {
+    let audio
+    const gestures = fake_gestures()
+    const radio = create_radio(tracks, {
+      gesture_target: gestures,
+      make_audio: (src) => (audio = fake_audio(src, { blocked: true })),
+    })
+    await settle()
+    expect(gestures.listener_count()).toBe(2)
+    radio.dispose()
+    expect(gestures.listener_count()).toBe(0)
+    audio.blocked = false
+    gestures.emit('pointerdown')
+    expect(audio.plays).toBe(0)
   })
 
   test('no tracks and no audio element both yield no radio at all', () => {
