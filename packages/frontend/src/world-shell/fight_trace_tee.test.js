@@ -136,8 +136,9 @@ describe('fight_trace_tee — transparent capture on the door', () => {
 
 // ── v2 SHADOW FAN-OUT (build-order step 3, issue #522) — the second consumer riding the ONE tap ──────────
 // fight_v2_shadow.test.js pins the driver's own logic (converge / throttle / capsule) in isolation. These
-// tests pin the WIRING: the real store, the real classify_input bridge, the arm gate, and that disarmed
-// really means zero work — exactly the shape a real fight dispatches through dungeon_run_store.js.
+// tests pin the WIRING: the real store, the real classify_input bridge, the DEFAULT-ON gate (box 3) and its
+// kill switch, and that killed really means zero work — exactly the shape a real fight dispatches through
+// dungeon_run_store.js.
 describe('v2 shadow fan-out — the second consumer riding the one tap', () => {
   const FIGHT = '0xf1647'
   const ME = '0xchar_a'
@@ -188,6 +189,10 @@ describe('v2 shadow fan-out — the second consumer riding the one tap', () => {
   const arm_shadow = () => {
     globalThis.window.__ARES_FIGHT_SHADOW_ENABLED = true
   }
+  /** The box-3 KILL switch, console spelling — the query/storage spellings are pinned in fight_v2_shadow.test.js. */
+  const disarm_shadow = () => {
+    globalThis.window.__ARES_FIGHT_SHADOW_ENABLED = false
+  }
   const shadow_status = () => globalThis.window.__ARES_FIGHT_SHADOW
 
   test('a real fight flow (init → snapshot → receipt) converges: zero divergences, no log, no capsule', () => {
@@ -214,9 +219,20 @@ describe('v2 shadow fan-out — the second consumer riding the one tap', () => {
     expect(globalThis.window.__ARES_FIGHT_SHADOW_CAPSULE).toBeUndefined()
   })
 
-  test('disarmed (no v2shadow flag): zero shadow work — the fight still runs untouched', () => {
+  test('DEFAULT-ON (box 3, no flag at all): the shadow fans out on its own — live inputs reach the new log', () => {
     const store = create_fight_store()
-    // no arm_shadow() call — the shadow stays off regardless of fighttrace
+    // no arm_shadow() call and no query/storage flag — box 3 made this the armed default
+    install_fight_trace_tee(store)
+    store.getState().input({ type: 'init', fight_id: FIGHT, ctx: { my_entity_id: ME } }, 1000)
+    store.getState().input({ type: 'snapshot', fight: fight_object(), version: 1 }, 1010)
+
+    expect(store.getState().fight_id).toBe(FIGHT) // the real fight ran
+    expect(shadow_status()).toMatchObject({ fights_shadowed: 1, divergences: 0, last: null })
+  })
+
+  test('KILLED (the box-3 opt-out): zero shadow work — the fight still runs untouched', () => {
+    const store = create_fight_store()
+    disarm_shadow()
     install_fight_trace_tee(store)
     store.getState().input({ type: 'init', fight_id: FIGHT, ctx: { my_entity_id: ME } }, 1000)
     store.getState().input({ type: 'snapshot', fight: fight_object(), version: 1 }, 1010)
@@ -263,16 +279,20 @@ describe('v2 shadow fan-out — the second consumer riding the one tap', () => {
   // button's capsule bundling) — "the tee's own test seams": these read the EXACT same window keys the tests
   // above already prove the tee writes, never a separate/parallel contract. ──
   describe('shadow_is_armed / get_shadow_status / get_shadow_capsule', () => {
-    test('shadow_is_armed reflects the same switch the tee itself checks — disarmed by default', () => {
-      expect(shadow_is_armed()).toBe(false)
+    test('shadow_is_armed reflects the same switch the tee itself checks — ARMED by default (box 3)', () => {
+      expect(shadow_is_armed()).toBe(true)
     })
 
-    test('shadow_is_armed — the debug override arms it, with no store/install involved at all', () => {
+    test('shadow_is_armed — the debug override disarms it, with no store/install involved at all', () => {
+      disarm_shadow()
+      expect(shadow_is_armed()).toBe(false)
       arm_shadow()
       expect(shadow_is_armed()).toBe(true)
     })
 
-    test('shadow_is_armed — the query-param switch arms it too (fight_v2_shadow.js SHADOW_QUERY_PARAM)', () => {
+    test('shadow_is_armed — the query-param kill switch disarms it (fight_v2_shadow.js SHADOW_QUERY_PARAM)', () => {
+      fresh_window('?v2shadow=0')
+      expect(shadow_is_armed()).toBe(false)
       fresh_window('?v2shadow=1')
       expect(shadow_is_armed()).toBe(true)
     })

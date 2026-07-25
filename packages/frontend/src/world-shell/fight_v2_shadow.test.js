@@ -21,20 +21,30 @@ import {
 
 beforeEach(() => _reset_log_for_test())
 
-describe('shadow_enabled_from — the pure arm check', () => {
-  test(`the ?${SHADOW_QUERY_PARAM}=1 query flag arms it`, () => {
-    expect(shadow_enabled_from({ search: `?${SHADOW_QUERY_PARAM}=1` })).toBe(true)
+// BOX 3 (issue #522) flipped this switch DEFAULT-ON: the shadow now runs for every session and the flag is a
+// KILL switch. These assertions are the inversion of the opt-in era's — nothing but an explicit "0" disarms.
+describe('shadow_enabled_from — the pure arm check, default-on', () => {
+  test('no flag anywhere — ARMED (the box-3 default)', () => {
+    expect(shadow_enabled_from({})).toBe(true)
+    expect(shadow_enabled_from()).toBe(true)
   })
-  test('a truthy localStorage key arms it', () => {
+  test(`the ?${SHADOW_QUERY_PARAM}=0 query flag is the kill switch`, () => {
+    expect(shadow_enabled_from({ search: `?${SHADOW_QUERY_PARAM}=0` })).toBe(false)
+  })
+  test(`localStorage ${SHADOW_STORAGE_KEY}='0' is the sticky kill switch`, () => {
+    expect(shadow_enabled_from({ storage_get: (key) => (key === SHADOW_STORAGE_KEY ? '0' : null) })).toBe(false)
+  })
+  test(`the opt-in era's spellings still arm it explicitly (?${SHADOW_QUERY_PARAM}=1 / storage '1')`, () => {
+    expect(shadow_enabled_from({ search: `?${SHADOW_QUERY_PARAM}=1` })).toBe(true)
     expect(shadow_enabled_from({ storage_get: (key) => (key === SHADOW_STORAGE_KEY ? '1' : null) })).toBe(true)
   })
-  test('neither present — disarmed', () => {
-    expect(shadow_enabled_from({})).toBe(false)
-    expect(shadow_enabled_from()).toBe(false)
+  test('an EXPLICIT query value beats the stored preference, both directions', () => {
+    const stored = (value) => (key) => (key === SHADOW_STORAGE_KEY ? value : null)
+    expect(shadow_enabled_from({ search: `?${SHADOW_QUERY_PARAM}=1`, storage_get: stored('0') })).toBe(true)
+    expect(shadow_enabled_from({ search: `?${SHADOW_QUERY_PARAM}=0`, storage_get: stored('1') })).toBe(false)
   })
-  test('an unrelated query param, or the flag set to anything but "1" — disarmed', () => {
-    expect(shadow_enabled_from({ search: '?other=1' })).toBe(false)
-    expect(shadow_enabled_from({ search: `?${SHADOW_QUERY_PARAM}=0` })).toBe(false)
+  test('an unrelated query param leaves the default alone — armed', () => {
+    expect(shadow_enabled_from({ search: '?other=1' })).toBe(true)
   })
 })
 
@@ -171,6 +181,60 @@ describe('create_shadow_driver — converging stream', () => {
     shadow.ingest_envelope(opened('0xf1'), ref.step(opened('0xf1')))
     shadow.ingest_envelope(opened('0xf2'), ref.step(opened('0xf2')))
     expect(shadow.status().fights_shadowed).toBe(2)
+  })
+})
+
+// The default-on affordance (box 3): FightTimeline drives a 4 Hz `tick` all turn, and neither a tick nor a
+// pre-commit draft can move committed truth on EITHER side, so the driver ingests + records them and skips
+// only the board comparison. A lie fed under those kinds must therefore go unreported — that is the point.
+describe('create_shadow_driver — truth-still envelopes: ingested, recorded, not compared', () => {
+  const tick = (at) => ({ payload: { kind: 'clock_observed', at_ms: at }, observed_at_ms: at })
+  const draft = (at) => ({
+    payload: { kind: 'player_draft', draft_kind: 'arm', spell_id: 'spell_1' },
+    observed_at_ms: at,
+  })
+  const A_LIE = { active: 'nonsense', fighters: { p0: { cell: -1, hp: -1, alive: false, turn_number: 99 } } }
+
+  test('a LYING board on a tick or a draft never diverges, never logs', () => {
+    const shadow = create_shadow_driver()
+    const ref = build_reference()
+    for (const envelope of [opened('0xf1'), snapshot('0xf1', 100)]) shadow.ingest_envelope(envelope, ref.step(envelope))
+
+    for (const envelope of [tick(2), draft(3)]) {
+      ref.step(envelope) // the reference core folds the identical stream; these two are fold no-ops for it too
+      expect(shadow.ingest_envelope(envelope, A_LIE)).toEqual({ diverged: false })
+    }
+    expect(shadow.status()).toMatchObject({ divergences: 0, last: null })
+    expect(get_log_buffer().filter((e) => e.ns === 'v2-shadow')).toEqual([])
+  })
+
+  test('a skipped envelope is still INGESTED and RECORDED — it rides the next real divergence capsule', () => {
+    const shadow = create_shadow_driver()
+    const ref = build_reference()
+    for (const envelope of [opened('0xf1'), snapshot('0xf1', 100)]) shadow.ingest_envelope(envelope, ref.step(envelope)) // compared, so they get the honest board
+    for (const envelope of [tick(2), draft(3)]) {
+      ref.step(envelope)
+      expect(shadow.ingest_envelope(envelope, A_LIE).diverged).toBe(false) // skipped, so the lie goes unread
+    }
+
+    // A truth-MOVING envelope right after: the comparison runs again and the capsule carries all five inputs.
+    const env = hit_receipt('0xf1', 200, 70, 4)
+    const real_board = ref.step(env)
+    const lying_board = {
+      ...real_board,
+      fighters: { ...real_board.fighters, m0: { ...real_board.fighters.m0, hp: 1 } },
+    }
+    const verdict = shadow.ingest_envelope(env, lying_board)
+
+    expect(verdict.fields).toEqual(['fighters.m0.hp'])
+    expect(verdict.capsule.capsules.length).toBe(5) // opened + snapshot + tick + draft + this receipt
+    expect(verdict.capsule.capsules.map((c) => c.payload.kind)).toEqual([
+      'session_opened',
+      'journal_rows_received',
+      'clock_observed',
+      'player_draft',
+      'journal_rows_received',
+    ])
   })
 })
 
