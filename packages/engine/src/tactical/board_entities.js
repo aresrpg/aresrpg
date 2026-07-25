@@ -24,13 +24,19 @@ import { attach_invisibility_heat_haze } from '../render/invisibility_heat_haze.
 
 import { FLOOR_THICKNESS } from './board.js'
 import { entity_id_at_cell } from './board_entity_picking.js'
+import {
+  BOARD_PLAYER_HEIGHT,
+  create_capsule_placeholder,
+  dispose_capsule_placeholder,
+  placeholder_body_of,
+} from './entity_placeholder.js'
 import { install_pos_trace } from './pos_trace.js'
 import { weld_smoothed_normals } from './smooth_normals.js'
 
 export { entity_id_at_cell }
 
-// Fight-only player height; mob size is intrinsic and owned by create_mob_model.
-const BOARD_PLAYER_HEIGHT = 1.4
+// BOARD_PLAYER_HEIGHT (the fight-only player height; mob size is intrinsic and owned by create_mob_model)
+// now lives beside the model-miss body that must match it — entity_placeholder.js, imported above.
 
 /** Mob body trees stay identical to the overworld factory output; only players may get the fight shell. */
 export const entity_outline_color = (
@@ -245,6 +251,8 @@ export function create_board_entities(
    *   hat/cloak GLB mounts on THIS player's rig (null for mobs) — the roam create_worn_cosmetics mechanism,
    *   fed the desired slots once the async avatar is ready (the same gate embed_voxel_player uses).
    * @property {WornSlots | null} desired_worn the last resolved worn slots to reconcile.
+   * @property {import('three').Mesh | null} placeholder [S4] the model-miss capsule body (null when a real
+   *   GLB was resolved) — owned here, so removal frees its own buffers.
    */
   /** @type {Map<string, Entity>} */
   const entities = new Map()
@@ -315,6 +323,8 @@ export function create_board_entities(
     // the clones share them, so dispose only unparents) before avatar.dispose frees the rig tree.
     e.worn_rig?.dispose()
     dispose_outline(e)
+    // [S4] the placeholder capsule is OURS (the avatar's dispose_tree only frees what the loader mounted).
+    dispose_capsule_placeholder(e.placeholder)
     engine.remove_from_scene(e.avatar.object3d)
     e.avatar.dispose()
     entities.delete(id)
@@ -348,6 +358,13 @@ export function create_board_entities(
           mob_model_factory: spec.kind === 'mob' ? create_mob_model : null,
         })
         engine.add_to_scene(avatar.object3d)
+        // [S4] MODEL MISS — no glb url resolved for this fighter (an unpublished class/mob model, a catalog
+        // gap). The avatar loader has nothing to load, so its root would stay an empty group and the fighter
+        // would be INVISIBLE while still acting. Stand a team-tinted capsule in the body's place instead:
+        // one home, every board (game, simulator, demo) inherits it.
+        const body = placeholder_body_of(spec)
+        const placeholder = body ? create_capsule_placeholder(body) : null
+        if (placeholder) avatar.object3d.add(placeholder)
         // [cosmetics-in-fights] owner v1.12.31 ②: worn hat/cloak GLBs render on the ROAM avatar but the fight
         // rig ignored them. Build the SAME create_worn_cosmetics rig the roam player uses (bone-child mounts on
         // this avatar's Head/cape) for PLAYERS only — mobs never wear cosmetics. Slots reconcile in tick() once
@@ -374,6 +391,7 @@ export function create_board_entities(
           invisibility: null,
           worn_rig,
           desired_worn: spec.worn ?? null,
+          placeholder,
         }
         entities.set(spec.id, e)
       } else {
