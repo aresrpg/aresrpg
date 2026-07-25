@@ -207,8 +207,9 @@ export function FightControls({
   // #882 THE EXIT IS VISIBLE: a fight whose turn deadline lapsed past the janitors' grace is not advancing on
   // its own, and the board says `0s` forever. Name it, and name the door that works — the FORFEIT sitting right
   // beside this notice (proven live: it resolved the expired fight terminal on the first attempt). My OWN
-  // overdue turn is a softer beat: the chain still grants it grace (turns.move:177), so END TURN stays armed
-  // and only explains itself.
+  // overdue turn is a distinct, softer beat: the chain still grants it grace (turns.move:177), so END TURN
+  // stays ARMED and the notice says exactly that — a late press is the move that advances the fight. Both are
+  // RENDERED, never a hover-only `title`: an explanation the player must discover is not an honest surface.
   const stalled = turn_stalled(chain_turn, now_ms)
   const my_turn_overdue = turn_phase !== 'hidden' && turn_overdue_ms(chain_turn, now_ms) != null
 
@@ -257,9 +258,20 @@ export function FightControls({
           {auto_commit_label?.(Math.max(0, commit_in_s ?? 0))}
         </div>
       )}
-      {stalled && (
-        <div className="hud-fightctl__stalled" role="status" aria-live="polite" data-fight-stalled="true">
-          {t(TURN_STALLED_COPY_KEY)}
+      {(stalled || my_turn_overdue) && (
+        // Stacked directly ABOVE the action bar (`.hud-bottom` is the positioned ancestor), so the notice and
+        // the FORFEIT it names read as one thing — never a chip pushed off to the side of the row.
+        <div className="hud-fightctl__notices">
+          {stalled && (
+            <div className="hud-fightctl__stalled" role="status" aria-live="polite" data-fight-stalled="true">
+              {t(TURN_STALLED_COPY_KEY)}
+            </div>
+          )}
+          {my_turn_overdue && (
+            <div className="hud-fightctl__overdue" role="status" aria-live="polite" data-turn-overdue="true">
+              {t(TURN_OVERDUE_COPY_KEY)}
+            </div>
+          )}
         </div>
       )}
       <div className="hud-fightctl" data-controlled-character={fight.my_entity_id ?? undefined}>
@@ -284,13 +296,7 @@ export function FightControls({
             disabled={end_is_disabled}
             end_label={end_label}
             disabled_label={min_turn_gating ? `${end_label} · ${Math.ceil(min_turn_left_ms / 1000)}` : null}
-            title={
-              min_turn_gating
-                ? t('errors.turn_too_fast')
-                : my_turn_overdue
-                  ? t(TURN_OVERDUE_COPY_KEY) // still armed — the chain grants the caller's own overdue turn grace
-                  : undefined
-            }
+            title={min_turn_gating ? t('errors.turn_too_fast') : undefined}
           />
         )}
         {show_abandon && (

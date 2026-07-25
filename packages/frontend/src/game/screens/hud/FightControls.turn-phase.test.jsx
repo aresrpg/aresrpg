@@ -222,30 +222,51 @@ describe('fight turn controls — one phase source for the button and countdown'
   // hint that FORFEIT — the door proven to resolve it on the first attempt — was sitting right there. The notice
   // derives from the SAME predicate the permissionless crank door reads (fight_expiry_gate.js), so the surface
   // and the janitor can never disagree.
-  test('a STALLED turn (deadline lapsed past the grace) names the state and the forfeit exit', () => {
+  test('a STALLED turn (deadline lapsed past the grace) names the state, the exit, and that END TURN still lands', () => {
     seed()
 
     const html = renderToStaticMarkup(
-      <FightControls abandon_label="FORFEIT" fight_status={1} turn_deadline_ms={Date.now() - 6 * 3_600_000} />
+      <FightControls
+        abandon_label="FORFEIT"
+        end_label="END TURN"
+        fight_status={1}
+        turn_deadline_ms={Date.now() - 6 * 3_600_000}
+      />
     )
 
-    expect(html).toContain('hud-fightctl__stalled')
-    expect(html).toContain('data-fight-stalled="true"')
-    expect(html).toContain('hud-fightctl__abandon') // the working exit is mounted beside the notice it names
+    expect(html).toContain('data-fight-stalled="true"') // the fight is not advancing…
+    expect(html).toContain('hud-fightctl__abandon') // …and the working exit is mounted right beside that notice
     expect(html).toContain('>FORFEIT<')
+    // RENDERED, not a hover-only title: an explanation the player has to discover is not an honest surface.
+    expect(html).toContain('data-turn-overdue="true"')
+    // …and END TURN is still MOUNTED: the expiry gate never disarms it, because on chain a late press is the
+    // legal move that advances the fight (turns.move:177 grants the caller's own overdue turn grace).
+    expect(html).toContain('hud-fightctl__end')
   })
 
-  test('a live turn — and a JUST-lapsed one, still inside the crank grace — say nothing', () => {
+  test('a live turn says nothing; a JUST-lapsed one is overdue but NOT yet stalled', () => {
     seed()
-    const bar = (props) => renderToStaticMarkup(<FightControls {...props} />)
+    const bar = (props) => renderToStaticMarkup(<FightControls end_label="END TURN" {...props} />)
 
-    expect(bar({ fight_status: 1, turn_deadline_ms: Date.now() + 45_000 })).not.toContain('hud-fightctl__stalled')
-    // a watcher's crank is very likely in flight here — crying "stalled" at t+1s would be noise, not honesty
-    expect(bar({ fight_status: 1, turn_deadline_ms: Date.now() - 1_000 })).not.toContain('hud-fightctl__stalled')
+    const live = bar({ fight_status: 1, turn_deadline_ms: Date.now() + 45_000 })
+    expect(live).not.toContain('hud-fightctl__stalled')
+    expect(live).not.toContain('hud-fightctl__overdue')
+
+    // a watcher's crank is very likely in flight here — crying "the fight is stuck" at t+1s would be noise, not
+    // honesty; MY OWN late turn is still worth saying, because ending it is exactly what advances the fight.
+    const just_lapsed = bar({ fight_status: 1, turn_deadline_ms: Date.now() - 1_000 })
+    expect(just_lapsed).not.toContain('hud-fightctl__stalled')
+    expect(just_lapsed).toContain('hud-fightctl__overdue')
+
     // …a PLACEMENT window is a different clock entirely (force_start owns it)
-    expect(bar({ fight_status: 5, turn_deadline_ms: Date.now() - 6 * 3_600_000 })).not.toContain('hud-fightctl__stalled')
+    const placement_window = bar({ fight_status: 5, turn_deadline_ms: Date.now() - 6 * 3_600_000 })
+    expect(placement_window).not.toContain('hud-fightctl__stalled')
+    expect(placement_window).not.toContain('hud-fightctl__overdue')
+
     // …and a mount that never learns the chain status claims nothing at all
-    expect(bar({ turn_deadline_ms: Date.now() - 6 * 3_600_000 })).not.toContain('hud-fightctl__stalled')
+    const statusless = bar({ turn_deadline_ms: Date.now() - 6 * 3_600_000 })
+    expect(statusless).not.toContain('hud-fightctl__stalled')
+    expect(statusless).not.toContain('hud-fightctl__overdue')
   })
 
   test('mobile placement renders READY and FORFEIT inside the compact fight-layer modifier', async () => {
