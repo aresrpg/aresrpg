@@ -20,6 +20,7 @@ import {
   PCFSoftShadowMap,
   PerspectiveCamera,
   Scene,
+  UnsignedIntType,
   Vector3,
 } from 'three'
 import { WebGPURenderer } from 'three/webgpu'
@@ -428,12 +429,6 @@ export async function create_renderer({
       else console.error(line)
     }
   }
-
-  // WATER DEPTH-GRAB FORMAT (NG2-ATMO integration): under the post stack the scene renders into a
-  // PassNode whose depth is FloatType/depth32float on the reversed-Z WebGPU path (PassNode.js:770) —
-  // align the water material's viewport-depth grab texture so the per-frame depth copy validates
-  // (default depth24plus mismatches → one WebGPU error per frame). WebGL2 keeps the default.
-  if (backend === 'webgpu') set_water_depth_texture_type(FloatType)
 
   // dpr policy — TIER-capped (low:1 ⇒ 4× fewer pixels on a Retina/mobile screen — the fill-rate lever),
   // applied ONCE here BEFORE any pipeline compiles. The 07-11 incident law stands: never realloc the
@@ -875,6 +870,15 @@ export async function create_renderer({
       error
     )
   }
+
+  // WATER DEPTH-GRAB FORMAT (NG2-ATMO integration): the water material grabs scene depth every frame,
+  // and the copy only validates when its grab texture matches THE ACTIVE RENDER PATH's depth format.
+  // With the post stack the scene renders into a PassNode forced to FloatType/depth32float on the
+  // reversed-Z WebGPU path (PassNode.js:770); on the BARE render path (post null — an atmosphere
+  // construction failure, or hack mode's `atmosphere: false`) it renders straight into the swapchain's
+  // depth24plus, where FloatType is the mismatch instead. Resolved HERE, once the real path is known —
+  // an unaligned grab spams one WebGPU validation error per frame. WebGL2 keeps the default.
+  if (backend === 'webgpu') set_water_depth_texture_type(post ? FloatType : UnsignedIntType)
 
   // ── HILLAIRE PHYSICAL SKY — THE DEFAULT at MEDIUM/HIGH (the sky tier ladder) ───────────────────────
   // The 4-LUT pipeline (transmittance / multiple-scattering / sky-view / aerial-perspective) rebuilt on the
