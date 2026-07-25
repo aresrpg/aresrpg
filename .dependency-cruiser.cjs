@@ -69,11 +69,15 @@ module.exports = {
         'HOUSE law (CLAUDE.md: the dApp is a renderer of chain truth): the voxel engine ' +
         '(@aresrpg/engine3) mounts only inside the 3D shells — game/ and world-shell/ (census ' +
         '2026-07-17: every live import site sits there). fight/, stores/, pages/, components/, ' +
-        'auth/… must stay engine-free.',
+        'auth/… must stay engine-free. The local fight simulator (docs/design/' +
+        'simulator_rebuild_spec.md §7) is the third sanctioned 3D shell, and it is admitted as ONE ' +
+        'FILE, not a directory: simulator/mount.js owns the engine + tactical board composition and ' +
+        'hands every other simulator module a handle, so the page, its reducer and its components ' +
+        'stay engine-free exactly like the rest of src/.',
       severity: 'error',
       from: {
         path: '^packages/frontend/src/',
-        pathNot: '^packages/frontend/src/(game|world-shell)/',
+        pathNot: '^packages/frontend/src/(game|world-shell)/|^packages/frontend/src/simulator/mount\\.js$',
       },
       to: { path: 'node_modules/@aresrpg/engine3(/|$)|^packages/engine/' },
     },

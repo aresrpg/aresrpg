@@ -66,7 +66,9 @@ describe('the capsule body', () => {
     const group = new Group()
     group.add(mesh)
     let freed = 0
-    const material = /** @type {import('three').MeshStandardMaterial} */ (mesh.material)
+    const { material } = /** @type {{ material: import('three').MeshStandardMaterial }} */ (
+      /** @type {unknown} */ (mesh)
+    )
     mesh.geometry.addEventListener('dispose', () => (freed += 1))
     material.addEventListener('dispose', () => (freed += 1))
     dispose_capsule_placeholder(mesh)
