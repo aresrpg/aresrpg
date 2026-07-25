@@ -21,6 +21,7 @@ import {
   type SimMobPicks,
   type SimPlacements,
 } from './reducer'
+import { push_trace_ring } from './trace_export.js'
 
 const DB_NAME = 'aresrpg_simulator'
 const DB_VERSION = 1
@@ -150,6 +151,41 @@ export const save_simulator_state = async (state: Readonly<SimulatorState>): Pro
     })
   } catch (error) {
     console.error('[simulator] IndexedDB write failed — this build will not survive a reload', error)
+  }
+}
+
+/**
+ * Append one exported trace to the bounded `traces` ring (spec §6/§8). Keyed by fight id, so re-exporting the
+ * same fight replaces its row; the ring is trimmed to the newest `TRACE_RING_LIMIT` by `push_trace_ring`,
+ * which owns that policy — this function is only the write. A failed write is loud and non-fatal: the file
+ * the player asked for has already been downloaded, and losing the in-page history is not worth a thrown error.
+ */
+export const save_trace = async (trace: Readonly<{ fight_id: string }>): Promise<void> => {
+  try {
+    const kept = push_trace_ring(await load_traces(), trace as never)
+    await transact([TRACES_STORE], 'readwrite', (get_store) => {
+      const store = get_store(TRACES_STORE)
+      store.clear()
+      for (const row of kept) store.put(row, row.fight_id)
+    })
+  } catch (error) {
+    console.error('[simulator] IndexedDB trace write failed — the download itself succeeded', error)
+  }
+}
+
+/** The stored export ring, newest first. A missing/failed database degrades to an empty history. */
+export const load_traces = async (): Promise<{ fight_id: string; captured_at?: number }[]> => {
+  try {
+    const db = await open_db()
+    const tx = db.transaction([TRACES_STORE], 'readonly')
+    const rows = await request_value(
+      tx.objectStore(TRACES_STORE).getAll() as IDBRequest<{ fight_id: string; captured_at?: number }[]>
+    )
+    db.close()
+    return [...(rows ?? [])].sort((a, b) => Number(b.captured_at ?? 0) - Number(a.captured_at ?? 0))
+  } catch (error) {
+    console.error('[simulator] IndexedDB trace read failed — the export history opens empty', error)
+    return []
   }
 }
 

@@ -19,6 +19,7 @@
 import { STATISTICS_PRIMARY } from '@aresrpg/sdk/stats'
 
 import { board_of, type SimBoard } from './board'
+import { sim_fight_id } from './trace_export.js'
 
 /** The six allocatable primary stats — the SDK's vocabulary, pinned by a drift test in reducer.test.ts. */
 export type SimStat = 'vitality' | 'wisdom' | 'strength' | 'intelligence' | 'chance' | 'agility'
@@ -53,6 +54,10 @@ export type SimMobPick = { template_id: string; level: number }
 export type SimMobPicks = Readonly<Record<number, SimMobPick>>
 export type SimPlacements = Readonly<Record<number, string>>
 
+/** The live fight session (L4). Deliberately thin: the FIGHT's own truth lives in `@aresrpg/fight/store` and
+ *  the sim session the shim holds — duplicating any of it here would be a second home for the same fact. */
+export type SimFight = { fight_id: string; seed: number }
+
 export type SimulatorState = {
   seed: number
   roster: readonly SimCharacter[]
@@ -63,6 +68,12 @@ export type SimulatorState = {
   mob_picks: SimMobPicks
   /** blue-band placements: ally start cell → roster character id */
   placements: SimPlacements
+  /** 'setup' edits the build; 'fight' hands input to the production fight surface (spec §9 flow 7). */
+  phase: 'setup' | 'fight'
+  fight: SimFight | null
+  /** Monotonic per page visit — the `n` in the `sim:<seed>:<n>` fight id, so START always mints a FRESH one
+   *  (spec §4.7) and a REMATCH on the same seed can never collide with the fight it is replaying. */
+  fight_count: number
 }
 
 /** The BOARD half of the door (spec §9 flows 4–6): reroll, the enemy-band mob picks, the ally-band placements. */
@@ -97,6 +108,8 @@ export type SimulatorInput =
   | { type: 'spell_level_set'; id: string; spell_id: string; level: number; max_level: number }
   | { type: 'spells_reset'; id: string }
   | { type: 'focus_set'; id: string | null }
+  | { type: 'fight_started' }
+  | { type: 'fight_stopped' }
 
 export const EMPTY_STAT_ALLOC: Record<SimStat, number> = {
   vitality: 0,
@@ -114,7 +127,14 @@ export const INITIAL_SIMULATOR_STATE: SimulatorState = {
   anchor_nonce: 0,
   mob_picks: {},
   placements: {},
+  phase: 'setup',
+  fight: null,
+  fight_count: 0,
 }
+
+/** The §4.7 fight id. Re-exported from its ONE home (trace_export.js owns the `sim:<seed>:<n>` convention
+ *  because that is where the seed must be recoverable from a downloaded trace). */
+export { sim_fight_id } from './trace_export.js'
 
 const clamp_int = (value: number, min: number, max: number): number =>
   Number.isFinite(value) ? Math.min(max, Math.max(min, Math.trunc(value))) : min
@@ -341,6 +361,9 @@ export function reduce_simulator(state: Readonly<SimulatorState>, input: Readonl
     case 'hydrated': {
       const roster = input.roster.slice(0, MAX_ROSTER).map(normalize_character)
       const focus_id = roster.some(({ id }) => id === input.focus_id) ? input.focus_id : (roster[0]?.id ?? null)
+      // A FIGHT IS NEVER PERSISTED (spec §11 · L5). Hydration always lands in `setup` with the roster intact:
+      // the fight's truth lives in the fight core and the sim session, neither of which survives a reload, and
+      // restoring a page phase whose backing state is gone would mount a board over nothing.
       return refit_board({
         seed: clamp_int(input.seed, 0, 0xffffffff),
         roster,
@@ -348,6 +371,9 @@ export function reduce_simulator(state: Readonly<SimulatorState>, input: Readonl
         anchor_nonce: clamp_int(Number(input.anchor_nonce ?? 0), 0, 0xffffffff),
         mob_picks: (input.mob_picks ?? {}) as SimMobPicks,
         placements: (input.placements ?? {}) as SimPlacements,
+        phase: 'setup',
+        fight: null,
+        fight_count: 0,
       })
     }
 
@@ -435,6 +461,22 @@ export function reduce_simulator(state: Readonly<SimulatorState>, input: Readonl
       return state.roster.some(({ id }) => id === input.id) || input.id === null
         ? { ...state, focus_id: input.id }
         : state
+
+    // ── L4: the fight phase (spec §4.7). START mints a FRESH id every time; a rematch on the same seed gets
+    // its own `n`, so two runs of one seed never share a fight id (and never share a trace file).
+    case 'fight_started': {
+      if (state.phase === 'fight') return state // already fighting — START is not a re-entry door
+      const fight_count = state.fight_count + 1
+      return {
+        ...state,
+        phase: 'fight',
+        fight_count,
+        fight: { fight_id: sim_fight_id(state.seed, fight_count), seed: state.seed },
+      }
+    }
+
+    case 'fight_stopped':
+      return state.phase === 'setup' ? state : { ...state, phase: 'setup', fight: null }
 
     // the board/pick/placement arms — one door, delegated for readability
     default:
