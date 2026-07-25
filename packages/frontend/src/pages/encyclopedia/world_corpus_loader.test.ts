@@ -23,6 +23,7 @@ import {
   load_world_corpus,
   mob_corpus_of,
   set_world_corpus_for_test,
+  use_world_corpus,
   world_corpus_for_mob,
   world_corpus_for_resource,
   type WorldCorpusBlob,
@@ -103,6 +104,39 @@ describe('world corpus runtime loader (#196)', () => {
     set_world_corpus_for_test()
     expect(WORLD_CORPUS.worlds).toEqual([])
     expect(has_world_corpus()).toBe(false)
+  })
+})
+
+// THE EMPTY→POPULATED TRANSITION (the cache-law class). The corpus lands SECONDS after any surface that
+// reads it has mounted, so the cache cannot be a module `let`: a React consumer that read it once would
+// stay frozen on the boot-empty derivation forever (exactly what the simulator's mob picker did — it
+// opened "NO RESULTS FOUND · 0/0" on a corpus that had, additionally, no loader wired at all).
+// These pin the channel: a pristine cache is honestly LOADING (not "empty"), and settling it NOTIFIES.
+describe('the corpus cache is a subscribable store, not frozen module state', () => {
+  test('pristine reads as LOADING — absence is never published as emptiness', () => {
+    set_world_corpus_for_test()
+    expect(use_world_corpus.getState().status).toBe('loading')
+    expect(use_world_corpus.getState().worlds).toEqual([])
+  })
+
+  test('the blob landing notifies subscribers with the populated corpus (a mounted surface re-renders)', () => {
+    set_world_corpus_for_test()
+    const seen: { count: number; status: string }[] = []
+    const stop = use_world_corpus.subscribe((state) => seen.push({ count: state.worlds.length, status: state.status }))
+    set_world_corpus_for_test(fixture as WorldCorpusBlob)
+    stop()
+    expect(seen).toEqual([{ count: Object.keys(fixture).length, status: 'ready' }])
+  })
+
+  test('a degraded load settles INERT, still retryable — a later load can still populate it', async () => {
+    set_world_corpus_for_test()
+    const spy = spyOn(console, 'error').mockImplementation(() => {})
+    await load_world_corpus() // no manifest row in the offline test manifest → the degrade path
+    expect(use_world_corpus.getState().status).toBe('inert') // settled, so the UI stops saying LOADING
+    spy.mockRestore()
+    set_world_corpus_for_test(fixture as WorldCorpusBlob) // …and a later landing still populates
+    expect(use_world_corpus.getState().status).toBe('ready')
+    expect(has_world_corpus()).toBe(true)
   })
 })
 

@@ -24,7 +24,7 @@ import type { CorpusMob } from '../pages/encyclopedia/world_corpus'
 import { board_of, type SimBoard } from './board'
 import { cell_intent_of, setup_scene_of } from './board_paint'
 import { build_mob } from './content.js'
-import { MobPicker, simulator_mob_roster } from './MobPicker'
+import { MobPicker, use_mob_roster } from './MobPicker'
 import { MAX_MOBS, type SimMobPick } from './reducer'
 import { use_simulator } from './store'
 
@@ -148,7 +148,7 @@ export function SimulatorBoardPane() {
   const board = useMemo(() => board_of(seed, anchor_nonce), [seed, anchor_nonce])
 
   // The corpus is a boot-time blob: an empty roster simply means it has not landed (or is unpublished).
-  const mob_rows = useMemo(simulator_mob_roster, [])
+  const mob_rows = use_mob_roster()
   const mob_of = useMemo(() => new Map(mob_rows.map((mob) => [mob.id, mob])), [mob_rows])
   const scene = useMemo(
     () =>

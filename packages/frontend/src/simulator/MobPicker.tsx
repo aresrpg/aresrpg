@@ -12,23 +12,43 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { SearchPickerModal, type PickerItem } from '../components/search_picker_modal'
-import { is_listed_mob_role, WORLD_CORPUS, type CorpusMob } from '../pages/encyclopedia/world_corpus'
+import {
+  is_listed_mob_role,
+  use_world_corpus,
+  type CorpusMob,
+  type CorpusWorld,
+} from '../pages/encyclopedia/world_corpus'
 
 import { build_mob } from './content.js'
 
-/** Every corpus mob, deduped by template id and sorted by level band — the picker's whole population. */
-export const simulator_mob_roster = (): CorpusMob[] =>
-  [...new Map(WORLD_CORPUS.worlds.flatMap(({ mobs }) => mobs).map((mob) => [mob.id, mob])).values()]
+/** Every corpus mob, deduped by template id and sorted by level band — the picker's whole population. PURE
+ *  over the worlds it is given: the corpus arrives asynchronously (main.tsx `load_world_corpus`), so callers
+ *  read `worlds` off the store and re-derive when it lands — never a `useMemo(..., [])` over module state. */
+export const simulator_mob_roster = (worlds: readonly CorpusWorld[]): CorpusMob[] =>
+  [...new Map(worlds.flatMap(({ mobs }) => mobs).map((mob) => [mob.id, mob])).values()]
     .filter(({ role }) => is_listed_mob_role(role))
     .sort((left, right) => left.minLevel - right.minLevel || left.name.localeCompare(right.name))
 
-export function MobPicker({
-  on_pick,
-  on_close,
-  value,
-}: Readonly<{ on_pick: (mob: CorpusMob) => void; on_close: () => void; value?: string }>) {
+/** The subscribed roster hook — one home for "how a component gets the simulator's mob population". */
+export const use_mob_roster = (): CorpusMob[] => {
+  const worlds = use_world_corpus((state) => state.worlds)
+  return useMemo(() => simulator_mob_roster(worlds), [worlds])
+}
+
+/**
+ * The picker's whole CONTENT derivation, portal-free: subscribed roster → modal rows + the empty line.
+ * Split out because SearchPickerModal renders through `createPortal`, which this repo's SSR test harness
+ * (no jsdom/happy-dom — see PetFeedModal.test.jsx) cannot resolve; the component below is a pass-through
+ * shell over it, so driving this hook drives the picker.
+ *
+ * `empty_label`: absence is NOT emptiness (cache law). Until a load settles the list says LOADING — the
+ * old picker rendered "NO RESULTS FOUND · 0/0" forever, because nothing ever loaded the corpus and a
+ * `useMemo(..., [])` over module state could not have noticed if something had.
+ */
+export function use_mob_picker_content(): { roster: CorpusMob[]; items: PickerItem[]; empty_label?: string } {
   const { t } = useTranslation()
-  const roster = useMemo(simulator_mob_roster, [])
+  const roster = use_mob_roster()
+  const status = use_world_corpus((state) => state.status)
 
   const items: PickerItem[] = useMemo(
     () =>
@@ -46,10 +66,22 @@ export function MobPicker({
     [roster, t]
   )
 
+  return { roster, items, empty_label: status === 'loading' ? t('simulator.mob_roster_loading') : undefined }
+}
+
+export function MobPicker({
+  on_pick,
+  on_close,
+  value,
+}: Readonly<{ on_pick: (mob: CorpusMob) => void; on_close: () => void; value?: string }>) {
+  const { t } = useTranslation()
+  const { roster, items, empty_label } = use_mob_picker_content()
+
   return (
     <SearchPickerModal
       title={t('simulator.pick_mob')}
       items={items}
+      empty_label={empty_label}
       value={value}
       on_close={on_close}
       on_select={(id) => {

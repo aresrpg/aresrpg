@@ -1270,6 +1270,7 @@
     "pick_mob": "モンスターを選択",
     "mob_band": "LV {{min}}–{{max}}",
     "combat_block_unpublished": "戦闘データ未公開",
+    "mob_roster_loading": "モブコーパスを読み込み中…",
     "combat_block_hint": "このモンスターの戦闘ステータスは未公開です — 戦闘には宣言済みの暫定値を使用します。",
     "remove_mob": "削除",
     "fight_draw": "引き分け",

@@ -1270,6 +1270,7 @@
     "pick_mob": "CHOISIR UN MONSTRE",
     "mob_band": "NIV {{min}}–{{max}}",
     "combat_block_unpublished": "PAS DE BLOC DE COMBAT",
+    "mob_roster_loading": "CHARGEMENT DU CORPUS DE MOBS…",
     "combat_block_hint": "Les statistiques de combat de ce monstre ne sont pas encore publiées — le combat utilise une valeur de remplacement déclarée.",
     "remove_mob": "RETIRER",
     "fight_draw": "ÉGALITÉ",

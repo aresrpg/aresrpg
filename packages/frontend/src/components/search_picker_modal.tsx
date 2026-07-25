@@ -44,6 +44,7 @@ export function SearchPickerModal({
   on_close,
   pills,
   render_tooltip,
+  empty_label,
 }: {
   title: string
   items: PickerItem[]
@@ -52,6 +53,9 @@ export function SearchPickerModal({
   on_close: () => void
   pills?: readonly string[]
   render_tooltip?: (id: string) => React.ReactNode | null
+  /** What an empty list says. Defaults to NO RESULTS FOUND; a caller whose population is still loading
+   *  passes its own line so absence is never rendered as emptiness (cache law). */
+  empty_label?: string
 }) {
   const { t } = useTranslation()
   const [search, set_search] = useState('')
@@ -233,7 +237,7 @@ export function SearchPickerModal({
           <div className="flex-1 overflow-y-auto">
             {filtered.length === 0 && (
               <div className="text-muted text-[10px] px-4 py-8 text-center tracking-[0.2em] uppercase">
-                {t('search_picker.no_results')}
+                {empty_label ?? t('search_picker.no_results')}
               </div>
             )}
             {filtered.map((item, idx) => {

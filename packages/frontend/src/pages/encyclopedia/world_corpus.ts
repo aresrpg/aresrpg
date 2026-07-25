@@ -9,9 +9,13 @@
 // mob_catalog.js — one runtime-content pattern, now three consumers. Gameplay content NEVER ships inside
 // this repo; it reaches the game only as published chain state + CDN blobs. Until the blob publishes (or
 // on a fetch failure) the corpus DEGRADES LOUDLY to inert (zero worlds + ONE console.error) and the app
-// still mounts — never a crash, never a cached absence (a failed load leaves the cache empty AND `loaded`
-// false, so a later load still populates it). The prior build-time `import.meta.glob` over the (repo-absent)
-// seed/mainnet/*.json is what logged `joined 0 worlds` in prod; this loader replaces it.
+// still mounts — never a crash, never a cached absence (a failed load leaves the cache empty AND `status`
+// non-ready, so a later load still populates it). The prior build-time `import.meta.glob` over the
+// (repo-absent) seed/mainnet/*.json is what logged `joined 0 worlds` in prod; this loader replaces it.
+//
+// WHO LOADS IT: main.tsx, next to load_mob_catalog / load_pet_catalog / load_spell_corpus — the ONE boot home
+// for every runtime content blob. The cache is a store (below), so surfaces mounted before the blob lands
+// re-render when it does.
 //
 // WHY AUTHORED CORPUS AND NOT /v1: the read-API's mob rows carry NO world provenance (views.js projects
 // template_id/name/levels/element/drops — never the world), so the world->roster relation simply does
@@ -23,6 +27,7 @@
 //
 // The chain stays the source of truth for WHICH worlds are live: the worlds tab lists /v1's rows and
 // joins THIS for their display knowledge (a /v1 world absent here still renders, honestly degraded).
+import { create } from 'zustand'
 import { walrus_asset_url } from '@aresrpg/sdk/jobs'
 
 import { is_object_id, seed_manifest } from '../../content/seed_manifest'
@@ -357,10 +362,34 @@ function build_world_corpus(blob: WorldCorpusBlob): Derived {
 }
 
 // ─── runtime cache (mirrors spell_corpus.js / mob_catalog.js) ────────────────────────────────────────
-// Empty until load_world_corpus resolves the blob; a failed load leaves it empty AND `loaded` false so a
-// later call still populates it (absence is NEVER cached as truth — house law).
-let derived: Derived = build_world_corpus({})
-let loaded = false
+// A STORE, not a module `let`: a mutable module object is invisible to React, so every component that read
+// it once (the simulator's mob picker) stayed frozen on the boot-empty corpus forever even after the blob
+// landed. Sync callers below read `.getState()`; components subscribe with the hook — ONE home either way.
+//
+// `status` is the honest three-state the UI needs: 'loading' until a load settles (absence is NEVER rendered
+// as emptiness), 'ready' once a blob joined, 'inert' when the load degraded — inert stays RETRYABLE, so a
+// later load_world_corpus still populates it.
+type CorpusStatus = 'loading' | 'ready' | 'inert'
+
+/** The ONE cache input: a load settled (a blob ⇒ ready, nothing ⇒ inert), or the cache was reset to pristine. */
+type CorpusInput = { type: 'settled'; blob?: WorldCorpusBlob } | { type: 'pristine' }
+
+const reduce_world_corpus = (message: Readonly<CorpusInput>): Derived & { status: CorpusStatus } =>
+  message.type === 'pristine'
+    ? { ...build_world_corpus({}), status: 'loading' }
+    : { ...build_world_corpus(message.blob ?? {}), status: message.blob ? 'ready' : 'inert' }
+
+export const use_world_corpus = create<Derived & { status: CorpusStatus; input: (message: CorpusInput) => void }>(
+  (set) => ({
+    ...build_world_corpus({}),
+    status: 'loading',
+    input: (message) => set(reduce_world_corpus(message)),
+  })
+)
+
+/** The live derivation + its load status — the synchronous read every non-React caller below takes. */
+const corpus = (): Derived & { status: CorpusStatus } => use_world_corpus.getState()
+
 let warned = false
 
 // ONE deduped content-degrade shout (per session). The boot-smoke check allowlists this exact prefix — the
@@ -374,6 +403,12 @@ const warn_degrade = (why: string): void => {
   )
 }
 
+/** A load that never produced a blob: settle the cache INERT (retryable — never a frozen 'loading') + shout. */
+const degrade = (why: string): void => {
+  use_world_corpus.getState().input({ type: 'settled' })
+  warn_degrade(why)
+}
+
 /**
  * Fetch the published blob once and cache its derivation. Non-blocking at boot (the app mounts while it
  * resolves; the encyclopedia fills in on arrival — the worlds tab re-renders when its /v1 list settles).
@@ -382,65 +417,66 @@ const warn_degrade = (why: string): void => {
  * Call after the asset manifest is seeded (main.tsx, post load_asset_manifest).
  */
 export async function load_world_corpus(): Promise<void> {
-  if (loaded) return
+  if (corpus().status === 'ready') return
   const url = walrus_asset_url('world_corpus', 'world_corpus.json')
-  if (!url) return warn_degrade('unpublished — not in the asset manifest')
+  if (!url) return degrade('unpublished — not in the asset manifest')
   try {
     const response = await fetch(url)
-    if (!response.ok) return warn_degrade(`HTTP ${response.status}`)
-    derived = build_world_corpus((await response.json()) as WorldCorpusBlob)
-    loaded = true
-    const roster = derived.worlds.reduce((count, world) => count + world.mobs.length, 0)
-    const gatherables = derived.worlds.reduce((count, world) => count + world.resources.length, 0)
-    if (!derived.worlds.length || !roster || !gatherables)
-      warn_degrade(`joined ${derived.worlds.length} worlds / ${roster} mobs / ${gatherables} resources`)
+    if (!response.ok) return degrade(`HTTP ${response.status}`)
+    const blob = (await response.json()) as WorldCorpusBlob
+    // The blob landed: it enters the cache through the reducer door, so every subscribed surface re-renders.
+    use_world_corpus.getState().input({ type: 'settled', blob })
+    const { worlds } = corpus()
+    const roster = worlds.reduce((count, world) => count + world.mobs.length, 0)
+    const gatherables = worlds.reduce((count, world) => count + world.resources.length, 0)
+    if (!worlds.length || !roster || !gatherables)
+      warn_degrade(`joined ${worlds.length} worlds / ${roster} mobs / ${gatherables} resources`)
   } catch (error) {
     // Network / parse failure — stay retryable; the encyclopedia stays inert until a later load lands.
-    warn_degrade(`fetch failed: ${(error as Error)?.message ?? String(error)}`)
+    degrade(`fetch failed: ${(error as Error)?.message ?? String(error)}`)
   }
 }
 
 /**
- * Test seam (mirrors set_spell_corpus_for_test): seed the module-state derivation directly, no fetch. Pass a
- * blob (the #196 shape) to exercise the real projection (marks the cache loaded), or nothing to reset to
- * PRISTINE — empty and NOT loaded, so load_world_corpus runs again. Always clears the degrade latch.
+ * Test seam (mirrors set_spell_corpus_for_test): seed the cache directly, no fetch. Pass a blob (the #196
+ * shape) to exercise the real projection (marks the cache ready), or nothing to reset to PRISTINE — empty
+ * and never-loaded, so load_world_corpus runs again. Always clears the degrade latch.
  */
 export function set_world_corpus_for_test(blob?: WorldCorpusBlob): void {
-  derived = build_world_corpus(blob ?? {})
-  loaded = blob !== undefined
+  use_world_corpus.getState().input(blob === undefined ? { type: 'pristine' } : { type: 'settled', blob })
   warned = false
 }
 
 /** The derived corpus worlds (synchronous — read live; empty until load_world_corpus resolves the blob). */
 export const WORLD_CORPUS = {
   get worlds(): CorpusWorld[] {
-    return derived.worlds
+    return corpus().worlds
   },
 }
 
 /** Whether the runtime blob loaded with content (the loader ran and joined ≥1 world). Tests skip the
  * full-corpus cardinality cases on this — a headless unit test never fetches the blob (issue #106 / #196). */
-export const has_world_corpus = (): boolean => derived.worlds.length > 0
+export const has_world_corpus = (): boolean => corpus().worlds.length > 0
 
 /** Authored knowledge for a live /v1 world row, or undefined (=> the caller renders an honest gap). */
 export const world_corpus_of = (world_id: string | null | undefined): CorpusWorld | undefined =>
-  derived.by_id.get(world_id ?? '')
+  corpus().by_id.get(world_id ?? '')
 
 /** Offline-authored spawn provenance for a live mob template id; /v1 mob rows do not project a world field. */
 export const world_corpus_for_mob = (mob_template_id: string | null | undefined): readonly CorpusWorld[] =>
-  derived.by_mob_id.get(mob_template_id ?? '') ?? []
+  corpus().by_mob_id.get(mob_template_id ?? '') ?? []
 
 /** Offline-authored placement provenance for a live gatherable item template id — the items-tab
  * "FOUND IN" list (night-batch #8), mirroring the mob idiom above. Empty for non-gatherables. */
 export const world_corpus_for_resource = (item_template_id: string | null | undefined): readonly CorpusWorld[] =>
-  derived.by_resource_id.get(item_template_id ?? '') ?? []
+  corpus().by_resource_id.get(item_template_id ?? '') ?? []
 
 /** Authored xp/spell facts for a live mob template id (minted verbatim from these rows — see
  * CorpusMobFacts), or undefined => the caller renders an honest gap. */
 export const mob_corpus_of = (mob_template_id: string | null | undefined): CorpusMobFacts | undefined =>
-  derived.mob_facts.get(mob_template_id ?? '')
+  corpus().mob_facts.get(mob_template_id ?? '')
 
 /** The gather progression for a job id ('FARMER'|'HERBALIST'|'MINER'), tier-sorted and deduped; [] until
  * the blob loads or for an unknown/absent job id. */
 export const gather_ladder_of = (job_id: string | null | undefined): GatherRow[] =>
-  derived.gather_ladders[job_id ?? ''] ?? []
+  corpus().gather_ladders[job_id ?? ''] ?? []

@@ -1270,6 +1270,7 @@
     "pick_mob": "GEGNER WÄHLEN",
     "mob_band": "STUFE {{min}}–{{max}}",
     "combat_block_unpublished": "KEIN KAMPFBLOCK",
+    "mob_roster_loading": "MOB-KORPUS WIRD GELADEN…",
     "combat_block_hint": "Die Kampfwerte dieses Gegners sind noch nicht veröffentlicht — der Kampf nutzt einen deklarierten Platzhalter.",
     "remove_mob": "ENTFERNEN",
     "fight_draw": "UNENTSCHIEDEN",
