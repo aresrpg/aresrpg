@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, mock, test } from 'bun:test'
 
-import { resolve_friend_target, submit_friend_target } from './friend_target.js'
+import { resolve_friend_target, submit_friend_target } from '../src/friend_target.js'
 
 const owner = `0x${'a'.repeat(64)}`
 

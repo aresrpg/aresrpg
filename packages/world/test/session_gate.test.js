@@ -20,7 +20,7 @@ import {
   JOIN_FAILSAFE_MS,
   SCENE_SPECTATE,
   SCENE_SESSION,
-} from './session_gate.js'
+} from '../src/session_gate.js'
 
 const WORLD = `0x${'a'.repeat(64)}`
 const WORLD_B = `0x${'9'.repeat(64)}`

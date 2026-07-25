@@ -6,7 +6,7 @@
 // the two toggles filter, and the list caps at 20. Standalone — no store/IO imports, no mocks.
 import { describe, expect, test } from 'bun:test'
 
-import { OPENNESS_PUBLIC, OPENNESS_GROUP } from './openness.js'
+import { OPENNESS_PUBLIC, OPENNESS_GROUP } from '../src/openness.js'
 import {
   FIGHT_PROXIMITY_M,
   FIGHT_LIST_CAP,
@@ -24,7 +24,7 @@ import {
   to_dungeon_fight,
   forming_fight_sword_markers,
   group_engage_blocked,
-} from './nearby_fights.js'
+} from '../src/nearby_fights.js'
 
 // A served /v1/fights row (shape_fight — the shape get_fights actually returns).
 const served = (over = {}) => ({

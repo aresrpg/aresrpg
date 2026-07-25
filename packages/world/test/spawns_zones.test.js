@@ -22,7 +22,7 @@ import {
   subscribe_spawn_tx,
   subscribe_spawn_beats,
   subscribe_fight_entry,
-} from './spawns_zones.js'
+} from '../src/spawns_zones.js'
 import {
   zone_row_of,
   pick_gather_target,
@@ -32,8 +32,8 @@ import {
   GATHER_HYSTERESIS_M,
   RECEIPT_GRACE_MS,
   SEARCH_PROGRESS_MS,
-} from './spawns_reconcile.js'
-import { OPENNESS_GROUP } from './openness.js'
+} from '../src/spawns_reconcile.js'
+import { OPENNESS_GROUP } from '../src/openness.js'
 
 const WORLD = `0x${'a'.repeat(64)}`
 const TMPL = `0x${'b'.repeat(64)}`

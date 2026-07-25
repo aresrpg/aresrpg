@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, it } from 'bun:test'
 
-import { gather_gate } from './gather_gate.js'
+import { gather_gate } from '../src/gather_gate.js'
 
 // The read-model keys the equipped gathering tool under the collapsed `pickaxe` slot (jobs.js
 // GATHER_TOOL_SLOTS); job_from_tool recovers the true job (farmer/herbalist/miner) from the tool. A node

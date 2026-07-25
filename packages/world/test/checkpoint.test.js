@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, it } from 'bun:test'
 
-import { checkpoint_to_world, resolve_boot_spawn, AGREE_RADIUS_M } from './checkpoint.js'
+import { checkpoint_to_world, resolve_boot_spawn, AGREE_RADIUS_M } from '../src/checkpoint.js'
 
 const WORLD_SPAWN = /** @type {[number, number, number]} */ ([0.5, 131, 0.5])
 const [, Y] = WORLD_SPAWN

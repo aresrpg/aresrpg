@@ -10,8 +10,8 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, test, expect } from 'bun:test'
 
-const src_dir = path.dirname(fileURLToPath(import.meta.url))
-const pkg_dir = path.resolve(src_dir, '..')
+const pkg_dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const src_dir = path.join(pkg_dir, 'src')
 
 const src_files = fs
   .readdirSync(src_dir)
@@ -24,6 +24,9 @@ const import_specifiers = (text) =>
 
 describe('@aresrpg/world hermeticity (D769 MODULE LAW)', () => {
   test('every src import specifier is inside the fence — zero exemptions', () => {
+    // non-vacuity pin (the party/inventory twins' idiom): src_dir is derived from THIS file's
+    // location, so a wrong derivation would scan zero files and pass green.
+    expect(src_files.length).toBeGreaterThan(0)
     const violations = []
     for (const file of src_files)
       for (const spec of import_specifiers(fs.readFileSync(file, 'utf8')))

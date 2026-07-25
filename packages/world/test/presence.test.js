@@ -25,7 +25,7 @@ import {
   MAX_PLAUSIBLE_TILES_PER_SEC,
   MOUNTED_SPEED_HEADROOM,
   PEER_EXPIRY_MS,
-} from './presence.js'
+} from '../src/presence.js'
 
 const ME = `0x${'1'.repeat(64)}`
 const PEER = `0x${'2'.repeat(64)}`

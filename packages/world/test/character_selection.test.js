@@ -10,7 +10,7 @@ import {
   reduce_character_switch,
   run_character_switch,
   select_character_session,
-} from './character_selection.js'
+} from '../src/character_selection.js'
 
 const CHAR_A = '0xcharacter-a'
 const CHAR_B = '0xcharacter-b'
