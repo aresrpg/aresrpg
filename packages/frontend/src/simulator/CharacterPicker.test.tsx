@@ -4,6 +4,10 @@
 //
 // Proven: it offers the WHOLE roster at the cell (a seated character included — picking it moves the seat),
 // an empty roster gets an honest line instead of a blank card, and the anchor never leaves the viewport.
+//
+// ROUND 2 (the owner's screenshot): it FUNCTIONED but rendered as a skinny text list — it read as a tooltip,
+// not as a picker. So the rows are the roster's OWN row component now, portrait included; a bare list of
+// name/class lines is the red these tests hold down.
 
 import { describe, test, expect } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -65,6 +69,20 @@ describe('the character picker a blue cell opens', () => {
     const html = markup([])
     expect(html).toContain(en.simulator.roster_empty_hint)
     expect(html).not.toContain(en.simulator.placed)
+  })
+
+  // #883 round 2 — a picker shows WHO, not a line of text about who.
+  test('every row carries the class PORTRAIT — the same row the roster panel renders', () => {
+    const html = markup([character('sim_c1', 'KAELIS')])
+    // the game's CharacterPortrait mounts a canvas for a class that ships sprites (senshi does)
+    expect(html).toContain('<canvas')
+  })
+
+  test('a class with NO sprite gets its initial, never a substituted body', () => {
+    const iyashi = { ...character('sim_c1', 'MIRAI'), class_id: 'iyashi' }
+    const html = markup([iyashi])
+    expect(html).not.toContain('<canvas')
+    expect(html).toContain('>M<')
   })
 
   test('the card is clamped into the viewport — a cell at the edge never opens off-screen', () => {

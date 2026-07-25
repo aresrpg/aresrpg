@@ -15,6 +15,7 @@ import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus } from 'lucide-react'
 
+import { CharacterRow } from './CharacterRow'
 import type { SimCharacter, SimPlacements } from './reducer'
 
 const GOLD = '#c8963c'
@@ -22,7 +23,7 @@ const HAIRLINE = '1px solid rgba(255,255,255,0.06)'
 const micro = 'text-[9px] tracking-[0.22em] uppercase'
 
 /** Card size, in CSS px — used to keep it inside the viewport rather than half off the right/bottom edge. */
-const CARD_WIDTH = 220
+const CARD_WIDTH = 268
 const CARD_MAX_HEIGHT = 320
 
 /** Clamp the anchor so the whole card stays on screen (a cell near the right edge would otherwise clip). */
@@ -92,28 +93,29 @@ export function CharacterPicker({
             <button
               key={character.id}
               type="button"
-              className="flex items-center gap-2 px-3 py-2 text-left cursor-pointer hover:bg-white/[0.05]"
-              style={{ borderBottom: HAIRLINE }}
+              // The picker's own row chrome — the gear picker's density and hover, and the roster panel's
+              // leading gold spine on the row the board already seats.
+              className="flex items-center gap-2.5 px-3 py-2 text-left cursor-pointer transition-colors hover:bg-gold/10 min-h-[52px]"
+              style={{
+                borderBottom: HAIRLINE,
+                borderLeft: `2px solid ${seated.has(character.id) ? GOLD : 'transparent'}`,
+              }}
               onClick={() => on_pick(character.id)}
             >
-              <span className="flex flex-col min-w-0 flex-1">
-                <span className="text-[11px] truncate" style={{ color: '#e8e4dc' }}>
-                  {character.name}
-                </span>
-                <span className={`${micro} text-muted truncate`}>
-                  {t(`simulator.classes.${character.class_id.toUpperCase()}.display`, {
-                    defaultValue: character.class_id,
-                  })}{' '}
-                  · {t('simulator.level')} {character.level}
-                </span>
-              </span>
-              {/* A seated character is still offered: picking it MOVES it here (the reducer frees its old
-                  cell), which is the only way to rearrange a line-up without emptying it first. */}
-              {seated.has(character.id) && (
-                <span className={micro} style={{ color: GOLD, opacity: 0.7 }}>
-                  {t('simulator.placed')}
-                </span>
-              )}
+              <CharacterRow
+                character={character}
+                active={seated.has(character.id)}
+                t={t as unknown as (key: string, params?: object) => string}
+                // A seated character is still offered: picking it MOVES it here (the reducer frees its old
+                // cell), which is the only way to rearrange a line-up without emptying it first.
+                right={
+                  seated.has(character.id) ? (
+                    <span className={micro} style={{ color: GOLD, opacity: 0.7 }}>
+                      {t('simulator.placed')}
+                    </span>
+                  ) : null
+                }
+              />
             </button>
           ))
         )}

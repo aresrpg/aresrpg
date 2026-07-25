@@ -24,12 +24,12 @@
 import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dices, Play, Plus, Square, Swords } from 'lucide-react'
-import sdk_classes from '@aresrpg/sdk/classes'
 
 import { EncyclopediaMobImage } from '../pages/encyclopedia/mob_image'
 import { board_of } from '../simulator/board'
 import { SimulatorBoardPane } from '../simulator/BoardPane'
 import { CharacterModal } from '../simulator/CharacterModal'
+import { CharacterRow } from '../simulator/CharacterRow'
 import { build_mob } from '../simulator/content.js'
 import { use_mob_of } from '../simulator/MobModal'
 import { MAX_MOBS, MAX_ROSTER, type SimCharacter } from '../simulator/reducer'
@@ -45,11 +45,6 @@ const HAIRLINE = '1px solid rgba(255,255,255,0.06)'
 const SimulatorFightHud = lazy(() =>
   import('../simulator/FightHud.jsx').then((m) => ({ default: m.SimulatorFightHud }))
 )
-
-const CLASS_ROWS = Object.entries(sdk_classes as Record<string, { name: string }>).map(([id, row]) => ({
-  id,
-  name: row.name,
-}))
 
 const micro = 'text-[9px] tracking-[0.22em] uppercase'
 
@@ -110,21 +105,16 @@ function RosterSeat({
   on_open,
 }: Readonly<{ character: SimCharacter | null; active: boolean; on_open: () => void }>) {
   const { t } = useTranslation()
-  const row = character ? CLASS_ROWS.find(({ id }) => id === character.class_id) : null
   return (
     <Seat active={active} on_open={on_open}>
       {character ? (
-        <span className="flex flex-col min-w-0 flex-1">
-          <span className="text-[11px] truncate" style={{ color: active ? GOLD : '#e8e4dc' }}>
-            {character.name}
-          </span>
-          <span className={`${micro} text-muted truncate`}>
-            {t(`simulator.classes.${character.class_id.toUpperCase()}.display`, { defaultValue: row?.name ?? '—' })}
-          </span>
-          <span className={micro} style={{ color: GOLD, opacity: 0.7 }}>
-            {t('simulator.level')} {character.level}
-          </span>
-        </span>
+        // THE row — the same one the board's picker offers (simulator/CharacterRow.tsx). Two surfaces asking
+        // "which character?" must not answer in two visual languages.
+        <CharacterRow
+          character={character}
+          active={active}
+          t={t as unknown as (key: string, params?: object) => string}
+        />
       ) : (
         <EmptySeat text={t('simulator.new_character')} />
       )}
