@@ -19,6 +19,10 @@ const FIXED_SFX_ASSETS = Object.freeze({
   player_death: '/sfx/player_death.ogg',
   fight_hit_medium: '/sfx/fight/being-hit-medium.ogg',
   fight_hit_heavy: '/sfx/fight/being-hit-heavy.ogg',
+  // The struck CHARACTER's own voice, layered over the generic being-hit thwack above (authored one-shots,
+  // shipped as delivered — aac plays natively, same as the menu cues).
+  fight_hurt_male: '/sfx/fight/hurt-male.aac',
+  fight_hurt_female: '/sfx/fight/hurt-female.aac',
   fight_cast_charge_air: '/sfx/fight/cast-charge-air.ogg',
   fight_cast_charge_earth: '/sfx/fight/cast-charge-earth.ogg',
   fight_cast_charge_fire: '/sfx/fight/cast-charge-fire.ogg',

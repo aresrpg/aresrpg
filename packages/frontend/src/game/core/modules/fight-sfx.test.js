@@ -18,7 +18,7 @@ import * as sfx from '../audio/sfx.js'
 const play = spyOn(sfx, 'play_element_sfx').mockImplementation(() => {})
 const play_one = spyOn(sfx, 'play_sfx').mockImplementation(() => {})
 
-const { default: fight_sfx } = await import('./fight-sfx.js')
+const { default: fight_sfx, hurt_sfx_key, play_hurt_sfx } = await import('./fight-sfx.js')
 const { fight_store } = await import('@aresrpg/fight/store')
 
 /** Boot the REAL fight core to the given identity facts (S2 mirror kill: the module reads fight_view(), the
@@ -171,5 +171,46 @@ describe('fight-sfx — player death sting (a distinct death sound for players, 
   it('is inert when there is no fight slice yet (get_state → no fight)', () => {
     mount(/** @type {any} */ (null))(death_packet('0xme'))
     expect(play_one).not.toHaveBeenCalledWith('player_death')
+  })
+})
+
+describe('fight-sfx — gendered hurt cry (a character struck by a mob voices its own hurt sound)', () => {
+  const hit = (source_id = 'mob-0', target_id = '0xme', damage = 12) => ({ source_id, target_id, damage })
+  const woman = { is_player: true, male: false }
+  const man = { is_player: true, male: true }
+  const mob = { is_player: false }
+
+  it('a mob hit on a FEMALE character asks for the female cry', () => {
+    expect(hurt_sfx_key(hit(), woman)).toBe('fight_hurt_female')
+  })
+
+  it('a mob hit on a MALE character asks for the male cry', () => {
+    expect(hurt_sfx_key(hit(), man)).toBe('fight_hurt_male')
+  })
+
+  it('a MOB victim never cries — the hurt voices belong to characters only', () => {
+    expect(hurt_sfx_key(hit('mob-0', 'mob-1'), mob)).toBeNull()
+  })
+
+  it('a PLAYER-sourced hit is silent — these are the "hit by a mob" voices', () => {
+    expect(hurt_sfx_key(hit('0xpeer'), woman)).toBeNull()
+  })
+
+  it('a zero-damage (absorbed) or heal beat is silent — no blow landed', () => {
+    expect(hurt_sfx_key(hit('mob-0', '0xme', 0), man)).toBeNull()
+    expect(hurt_sfx_key({ source_id: 'mob-0', target_id: '0xme', heal: 9 }, man)).toBeNull()
+  })
+
+  it('an unresolved gender stays silent rather than guessing one', () => {
+    expect(hurt_sfx_key(hit(), { is_player: true })).toBeNull()
+    expect(hurt_sfx_key(hit(), null)).toBeNull()
+  })
+
+  it('play_hurt_sfx voices exactly the resolved key, and nothing when there is none', () => {
+    play_hurt_sfx(hit(), man)
+    expect(play_one).toHaveBeenCalledWith('fight_hurt_male')
+    play_one.mockClear()
+    play_hurt_sfx(hit('mob-0', 'mob-1'), mob)
+    expect(play_one).not.toHaveBeenCalled()
   })
 })

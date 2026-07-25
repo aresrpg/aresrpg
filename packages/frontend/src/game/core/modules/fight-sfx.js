@@ -9,6 +9,10 @@
 //                   the flipbook burst + damage float resolve), so it lands WITH the visual impact, not on a
 //                   fixed timer. ONE home for the impact layer, both paths (player + mob).
 //
+// It also owns the VICTIM-side hurt cry policy (`hurt_sfx_key` / `play_hurt_sfx` below) — the struck
+// character's own gendered voice. That one is a pure verdict called BY the adapter at the flinch beat, so the
+// cry lands inside the paced slot with the hit; this module never subscribes it to a raw packet.
+//
 // This module OWNS only the player's caster whoosh. It never renders, never reads/writes fight state, never
 // touches the board. MOB casts are voiced INSIDE their ≥3s-paced replay slot by the adapter (both layers),
 // so this module skips them — the existing two-paths-one-voice law: a raw-packet caster whoosh for the
@@ -27,6 +31,40 @@ import { fight_view } from '@aresrpg/fight/project'
 
 // One caster whoosh per caster inside this window — a duplicate dispatch of the same cast is dropped.
 const CAST_THROTTLE_MS = 300
+
+// Entity-id convention shared with the fight projection: mobs are `mob-<idx>`, characters carry their id.
+const MOB_ID_PREFIX = 'mob-'
+
+/**
+ * The gendered hurt cry for ONE presented damage beat — the struck CHARACTER's own voice, layered over the
+ * generic being-hit thwack (fight_audio's fight_hit_*). Silent unless a mob-sourced blow actually landed on a
+ * player character: mob victims keep their own impact vocabulary, a peer's hit is not "hit by a mob", and a
+ * zero-damage absorb or a heal is no blow at all. An unresolved gender stays silent rather than guessing one —
+ * a misgendered cry is worse than the thwack alone, which already voices the beat.
+ * Pure: the fighter row is the honest gender source (`male`, packages/fight/src/project.js).
+ * @param {{ source_id?: string | null, target_id?: string | null, damage?: number | null } | null} event
+ * @param {{ is_player?: boolean, male?: boolean } | null | undefined} victim the struck fighter's projected row
+ * @returns {'fight_hurt_male' | 'fight_hurt_female' | null}
+ */
+export const hurt_sfx_key = (event, victim) => {
+  if (!(Number(event?.damage) > 0)) return null
+  if (!String(event?.source_id ?? '').startsWith(MOB_ID_PREFIX)) return null
+  if (String(event?.target_id ?? '').startsWith(MOB_ID_PREFIX)) return null
+  if (!victim?.is_player || typeof victim.male !== 'boolean') return null
+  return victim.male ? 'fight_hurt_male' : 'fight_hurt_female'
+}
+
+/**
+ * Effect edge for the cry above — voiced by the adapter AT the victim's flinch beat, so it lands inside the
+ * paced replay slot with the hit rather than seconds early on the raw packet. Best-effort, mute-aware (play_sfx).
+ * @param {{ source_id?: string | null, target_id?: string | null, damage?: number | null } | null} event
+ * @param {{ is_player?: boolean, male?: boolean } | null | undefined} victim
+ * @returns {void}
+ */
+export const play_hurt_sfx = (event, victim) => {
+  const key = hurt_sfx_key(event, victim)
+  if (key) play_sfx(key)
+}
 
 /** @type {import('../game.js').Module} */
 export default function fight_sfx() {

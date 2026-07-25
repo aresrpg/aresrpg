@@ -59,6 +59,7 @@ import { dungeon_grid_of } from '../game/screens/dungeon-grid.js'
 import { read_worn_templates, resolve_worn_cosmetics } from '../game/cosmetic_glb.js'
 import { context } from '../game/store.js'
 import { play_fight_sfx, play_element_sfx, play_sfx } from '../game/core/audio/sfx.js'
+import { play_hurt_sfx } from '../game/core/modules/fight-sfx.js'
 import { cast_vfx, burst_vfx, arrival_vfx, is_burst_element, prewarm_fight_vfx } from '../game/fight_cast_vfx.js'
 import {
   IMPACT_FEEL,
@@ -527,6 +528,12 @@ export function create_voxel_fight_adapter(
     const target = read_board_fight()?.fighters?.get(id)
     const fight_audio_beat = fight_damage_audio_beat(event, target?.health_max)
     if (fight_audio_beat) observe_fight_audio(fight_audio_beat)
+    // The struck CHARACTER's own gendered cry, layered over that generic thwack. This is the ONE victim-hit
+    // seam of the paced sequence: every queued cast renders with `split_render`, so play_cast defers its victim
+    // reactions to the separate damage beats that land here. Gender comes from the projected fighter row
+    // (`male`, packages/fight/src/project.js) — the same field the creation flow packs; the verdict itself lives
+    // in fight-sfx.js.
+    play_hurt_sfx(event, target)
     const source = floater && event.source_id ? read_board_fight()?.fighters?.get(event.source_id) : null
     const kind = floater?.kind ?? 'damage'
     const done = board.entity_beat(id, {
