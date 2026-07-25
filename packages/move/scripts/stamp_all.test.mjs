@@ -186,6 +186,27 @@ test.skipIf(!CEREMONY_MANIFEST_AVAILABLE)('release.json owns every SDK pin and s
   }
 })
 
+// #770 — the shipped pins silently kept the ORIGIN as `latest` through two aresrpg upgrades, so every
+// SDK moveCall (LATEST_PACKAGE_ID, packages/sdk/src/deployment/aresrpg.js) targeted retired bytecode.
+// The ceremony manifest is the receipt stamp_all reads; release.json must be nothing but its faithful
+// stamp. Chain drift itself is caught by check_release_pins.mjs (it needs a fullnode); this locks the
+// two checked-in artifacts together so a recorded upgrade can never fail to reach the pins again.
+test.skipIf(!CEREMONY_MANIFEST_AVAILABLE)('release.json pins the ceremony receipt\'s latest for every package', () => {
+  const ceremony = JSON.parse(readFileSync(ceremony_path, 'utf8'))
+  const release = JSON.parse(readFileSync(release_path, 'utf8'))
+  const packages = release.networks[ceremony._network].packages
+  for (const [name, pins] of Object.entries(packages)) {
+    // stamp_all's own fallback: an un-upgraded package records no `latest`, so the origin IS latest.
+    expect(pins.latest).toBe(ceremony[name].latest ?? ceremony[name].pkg)
+    expect(pins.origin).toBe(ceremony[name].pkg)
+    // A retired version stays sponsorable (drain window) and never collides with the live pair.
+    for (const retired of pins.previous ?? []) {
+      expect(retired).not.toBe(pins.latest)
+      expect(retired).not.toBe(pins.origin)
+    }
+  }
+})
+
 test('package_row rolls the retired latest into `previous` on repoint (sponsor drain window)', async () => {
   const stamp_all_url = pathToFileURL(path.join(here, 'stamp_all.mjs'))
   stamp_all_url.searchParams.set('roll-test', String(Date.now()))
