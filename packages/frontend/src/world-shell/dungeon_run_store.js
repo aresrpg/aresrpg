@@ -1638,8 +1638,17 @@ let _dungeon_music_armed = false
 use_dungeon.subscribe((state) => {
   if (state.in_session === _dungeon_music_armed) return
   _dungeon_music_armed = state.in_session
-  if (state.in_session) set_zone_music('arctic')
-  else stop_zone_music()
+  // EFFECT ISOLATION (the never-freeze law fight.js's combat-music edge already keeps, applied at this edge):
+  // this subscriber runs INSIDE the fight core's own input() set — the busy mirror above re-enters that door
+  // from a use_dungeon.setState, so an audio engine that throws here (a codec fault, an autoplay refusal, a
+  // missing bed) would break the reducer's caller mid-commit and lose a fight-state write. A music bed is
+  // never worth that; the failure is logged and the state change it rode on is unaffected.
+  try {
+    if (state.in_session) set_zone_music('arctic')
+    else stop_zone_music()
+  } catch (error) {
+    game_log('dungeon', 'zone-music edge threw (isolated); the state change that triggered it is unaffected', error)
+  }
 })
 
 // ── UNOPENED-RESULTS BOOT WIRE: detection must not depend on a UI surface (a restore straight into the WORLD
