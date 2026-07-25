@@ -90,6 +90,9 @@ const beat_kinds = (turn) => turn.beats.map((b) => b.kind)
 // (foreign_replay_*) is DELETED. A peer's committed turn now arrives as JOURNAL events; its paced
 // presentation enters through the same accept door. Re-enable as a journal/clock projection test
 // when the spectator-mode cutover lands.
+// #746 adjudication: un-skipped at HEAD, all 4 rows RED for exactly this reason (a post-bootstrap object
+// read is an inert checkpoint — no replay wave, no wholesale re-adopt). Registered on #522 as coverage
+// gate 8 must restore; kept as the written spec of what the cutover owes.
 describe.skip('spectator replay — a peer’s committed turn paces through the SAME beat pipeline', () => {
   // ① VECTOR A — a peer's committed CAST arrives only as a wholesale object read; it must REPLAY as paced beats
   // (walk + cast + damage floater), never an instant state jump.

@@ -93,6 +93,8 @@ describe('coop — two actors, one truth', () => {
   // (a peer joining after this client bootstrapped) propagates through the party journal path — a
   // second object read is an inert checkpoint, it no longer re-adopts the roster. Re-enable when the
   // modes cutover lands roster propagation over the one door.
+  // #746 adjudication: un-skipped at HEAD, RED for exactly this reason (the second read leaves BOB out of
+  // the roster). Registered on #522 as coverage gate 8 must restore.
   test.skip('JOIN DOOR: the second seat adopts through the same snapshot input; each client resolves ITS seat', () => {
     const alice = seat_of('0xa11ce', ALICE)
     // room opens with alice alone…

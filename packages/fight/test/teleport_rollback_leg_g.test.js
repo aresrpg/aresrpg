@@ -210,6 +210,8 @@ const peer_moved = {
 // snapshot ADOPTION (foreign_replay + the intent-rebase) rolling back my optimistic turn — that
 // adoption path is DELETED (a mid-fight object read is an inert checkpoint, so it can never roll
 // back my prediction). Re-enable at the intent-owner cutover.
+// #746 adjudication: un-skipped at HEAD, both rows RED for exactly this reason. Registered on #522 as
+// coverage gate 5 must restore; kept as the written spec of what the cutover owes.
 describe.skip('LEG G-FIX — a foreign adoption must not roll back my un-flushed optimistic turn', () => {
   test('① a peer turn adopted mid-my-draft keeps my optimistic teleport (red today: purged → snapped HOME)', () => {
     const store = boot_coop()

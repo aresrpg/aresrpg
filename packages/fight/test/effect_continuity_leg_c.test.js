@@ -83,6 +83,8 @@ describe('LEG C — invisibility + MP buff hold continuously across adoption cyc
   // foreign-replay wave + wholesale-adopt deferral is DELETED. A peer turn now arrives as journal
   // events, and a mid-fight object read is an inert checkpoint. Re-enable as a journal/clock
   // projection test at the pacing-owner cutover.
+  // #746 adjudication: un-skipped at HEAD, RED for exactly this reason (no foreign replay wave enqueues).
+  // Registered on #522 as coverage gate 7 must restore.
   test.skip('the replay-deferral holds the effect while a foreign wave drains (mid-wave torn read deferred)', () => {
     const store = boot()
     // a PEER (P1) turn arrives as a fresher object read → foreign replay wave; the wholesale adopt is DEFERRED.
