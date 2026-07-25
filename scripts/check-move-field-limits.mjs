@@ -9,8 +9,16 @@
 //
 // This gate re-parses every packages/move/*/sources/*.move file with a small hand-rolled Move tokenizer
 // (no external Move toolchain dependency for the parse itself) and counts fields per struct. It only ever
-// renders a verdict against a FRESH local `sui move build` output — the offline source counter refuses to
-// silently pass judgment on a stale or absent build artifact; it SKIPs loudly instead (never lies green).
+// renders a verdict against a FRESH local `sui move build` output: the built copy of each source must be
+// byte-identical to the source it parses, which is what proves the tokenized bytes are compiler-accepted.
+//
+// FAIL-CLOSED (#896, extending #892's empty-set policy to tooling absence): this script has no exit-0
+// path that renders no verdict. Absent `sui`, absent Move sources, absent/stale build output — each is a
+// LOUD non-zero naming its remedy. It used to print `SKIP: sui CLI absent/unusable` and exit 0, which is
+// exactly what every CI runner did: the leg's verdict was absent on every PR, including the promotion PR
+// into master, under a green `ladder`. The arming lives in .github/workflows/checks.yml (ladder job:
+// pinned sui + `sui move build` for every Move package) — the only place this gate can now be satisfied
+// without a laptop.
 //
 // Wired into scripts/check-constraints.sh (the green-check). Standalone: `node scripts/check-move-field-limits.mjs`.
 import { spawnSync as spawn_sync } from 'node:child_process'
@@ -297,12 +305,21 @@ function source_structs(input) {
   }))
 }
 
+// A gate that cannot run never prints green: every no-verdict exit is red and carries its remedy.
+function no_verdict(reasons, remedy) {
+  for (const reason of reasons) console.error(`  ✗ NO VERDICT: ${reason}`)
+  console.error(`MOVE FIELD-CAP GATE FAILED (nothing was judged). ${remedy}`)
+  process.exit(1)
+}
+
 console.log('== AresRPG Move field-definition cap gate (all structs ≤ 32 fields) ==')
 
 const sui_version = spawn_sync('sui', ['--version'], { cwd: repo_root, encoding: 'utf8' })
 if (sui_version.error?.code === 'ENOENT' || sui_version.status !== 0) {
-  console.log('  SKIP: sui CLI absent/unusable; no Move field-cap verdict')
-  process.exit(0)
+  no_verdict(
+    ['sui CLI absent/unusable — the field-cap verdict needs a fresh `sui move build` witness.'],
+    'Install the Sui toolchain (`suiup install sui`), then build the Move packages.'
+  )
 }
 
 let input_state
@@ -314,15 +331,16 @@ try {
 }
 const { inputs, missing_source_packages } = input_state
 if (missing_source_packages.length > 0) {
-  for (const package_dir of missing_source_packages) {
-    console.log(`  SKIP: Move source inputs absent for ${package_dir}`)
-  }
-  console.log('  SKIP: no partial Move field-cap verdict')
-  process.exit(0)
+  no_verdict(
+    missing_source_packages.map((package_dir) => `Move source inputs absent for ${package_dir}`),
+    'A package with a Move.toml and no sources/*.move renders no verdict — restore the sources or drop the package.'
+  )
 }
 if (inputs.length === 0) {
-  console.log('  SKIP: Move source inputs absent; no Move field-cap verdict')
-  process.exit(0)
+  no_verdict(
+    ['Move source inputs absent (no packages/move/*/sources/*.move in this checkout).'],
+    'This gate needs the Move sources it judges — run it from a full checkout.'
+  )
 }
 
 const stale_inputs = inputs.filter((input) => {
@@ -335,13 +353,13 @@ const stale_inputs = inputs.filter((input) => {
   return !fs.readFileSync(input.source_path).equals(fs.readFileSync(input.built_source_path))
 })
 if (stale_inputs.length > 0) {
-  for (const input of stale_inputs) {
-    console.log(
-      `  SKIP: absent/stale build output for ${path.relative(repo_root, input.source_path)}; run ${input.build_command}`
-    )
-  }
-  console.log('  SKIP: no partial Move field-cap verdict')
-  process.exit(0)
+  no_verdict(
+    stale_inputs.map(
+      (input) =>
+        `absent/stale build output for ${path.relative(repo_root, input.source_path)}; run ${input.build_command}`
+    ),
+    'The verdict is only rendered against fresh build output — rebuild the packages above and re-run.'
+  )
 }
 
 try {

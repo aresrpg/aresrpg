@@ -5,9 +5,12 @@
 #   fp-codeql — the custom FP query pack as a native GitHub code-scanning analysis (the deep tier).
 #
 # gate.yml stays the fast deterministic fight-replay gate and is untouched; this file adds the
-# constraint + dataflow tiers. Fork-safe: no secrets. Legs whose tooling is absent on a hosted
-# runner SKIP loudly via the repo's own fail-open-on-absence mechanism — never weakened, never
-# deleted. See the PR / CODE_LAW for the CI-vs-local leg split.
+# constraint + dataflow tiers. Fork-safe: no secrets. A leg whose tooling is absent on a hosted
+# runner is ARMED here (semgrep, sui) rather than skipped: #896 measured the alternative — the
+# Move field-cap leg printed `SKIP: sui CLI absent/unusable` and exited 0 on every CI run since it
+# landed, so a green `ladder` meant "some gates ran" with nothing distinguishing it from "all of
+# them did". Legs that genuinely belong elsewhere name their other verdict path in the SKIP text
+# (the CodeQL deep tier names the fp-codeql job below). See the PR / CODE_LAW for the leg split.
 name: checks
 on:
   pull_request:
@@ -34,6 +37,28 @@ jobs:
         # Pinned: semgrep-gate.sh's fixture self-test compares exact match counts, which can shift
         # between semgrep versions. This is the version the committed baselines were validated against.
         run: pipx install semgrep==1.170.0
+      - name: install sui (arms the Move field-cap leg — #896)
+        # Pinned, same reason semgrep is: the field-cap verdict is only rendered against build output
+        # this toolchain produced. Only the `sui` member is extracted from the release tarball.
+        env:
+          SUI_RELEASE: testnet-v1.75.1
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/sui.tgz \
+            "https://github.com/MystenLabs/sui/releases/download/${SUI_RELEASE}/sui-${SUI_RELEASE}-ubuntu-x86_64.tgz"
+          mkdir -p "$HOME/.local/bin"
+          tar -xzf /tmp/sui.tgz -C "$HOME/.local/bin" ./sui
+          rm -f /tmp/sui.tgz
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/sui" --version
+      - name: build Move packages (the field-cap leg's freshness witness)
+        # Also the repo's only Move compile in CI: a package that no longer builds now reds here
+        # instead of at the publish ceremony.
+        run: |
+          set -euo pipefail
+          for manifest in packages/move/*/Move.toml; do
+            sui move build --path "$(dirname "$manifest")"
+          done
       - name: enforcement ladder — bun run lint
         run: bun run lint
 

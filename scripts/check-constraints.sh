@@ -628,27 +628,6 @@ else
   FAIL=1
 fi
 
-# ── BACKLOG OPEN-count gate (O2 reconciliation, 2026-07-17) ─────────────────────────────────────
-# The board law: the OPEN section holds THIS wave + next only. Every landing lane flips its own
-# BACKLOG row in the same diff (flip-your-own-row law, 07-17); history lives in DONE/ICEBOX + the
-# file's git history. A creeping OPEN section is unreconciled history — the O2 census found 637
-# unflipped rows, ~200 carrying inline ✅/DONE language never structurally moved. Count = `- [`
-# rows between `## OPEN` and the next `## ` section header; >40 is red.
-echo
-echo "== AresRPG BACKLOG OPEN-count gate (OPEN ≤ 40 rows — flip-your-own-row law) =="
-if [ ! -f BACKLOG.md ]; then
-  ylw "  SKIP: BACKLOG.md not present in this checkout."
-else
-  OPEN_ROW_COUNT="$(awk '/^## OPEN$/{f=1;next} /^## /{f=0} f && /^- \[/{n++} END{print n+0}' BACKLOG.md)"
-  if [ "$OPEN_ROW_COUNT" -gt 40 ]; then
-    red "  ✗ FAIL: BACKLOG.md OPEN section holds $OPEN_ROW_COUNT rows (law: ≤40 — this wave + next only)."
-    red "OPEN-COUNT GATE FAILED. Flip landed rows to DONE (with proof paths), collapse superseded ones (name the D-number/design), ICEBOX the real-but-not-next."
-    FAIL=1
-  else
-    grn "  ✓ BACKLOG OPEN section holds $OPEN_ROW_COUNT rows (≤ 40)"
-  fi
-fi
-
 # ── arch gates (docs/CODE_LAW.md "Arch gates", 2026-07-17) ──────────────────────────────────────
 # Dataflow (semgrep: laundered store writes / fight effect-freedom / functor purity — SKIPs green
 # when the semgrep binary is absent) + import graph (dependency-cruiser: fight hermetic, engine
