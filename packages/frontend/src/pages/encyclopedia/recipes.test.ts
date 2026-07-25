@@ -15,7 +15,14 @@ import { describe, test, expect } from 'bun:test'
 
 import type { RpcEncyclopediaItem, RpcRecipe } from '../../rpc/views'
 
-import { craftable_items_for_job, recipe_for_output, recipes_consuming, short_id } from './recipes'
+import {
+  craft_affordability_of,
+  craft_recipes_for_job,
+  craftable_items_for_job,
+  recipe_for_output,
+  recipes_consuming,
+  short_id,
+} from './recipes'
 
 // The live-localnet jeweler recipe (snapshot_tests.rs REAL_RECIPE_BCS_HEX → the /v1 row shape): two
 // 1-quantity ingredients → 1 output, job 11 (jeweler), knowledge level 1, 23 craft xp.
@@ -186,5 +193,176 @@ describe('craftable_items_for_job — the JOBS tab item source (chain truth, no 
     const bag_recipe: RpcRecipe = { ...JEWELER_RECIPE, output_template_id: BAG_OF_QUARTZ.template_id }
     const [row] = craftable_items_for_job([bag_recipe], [BAG_OF_QUARTZ], 11)
     expect(row.item_type).toBe('bag_quartz')
+  })
+})
+
+// ── the IN-GAME Jobs drawer source (issue #765) ────────────────────────────────────────────────
+// Issue #765 reported "recipes never seeded — every profession shows the empty state". The premise
+// moved under it: the corpus IS live (1434 `rpc:idx:recipes` rows) and /v1/encyclopedia has served it
+// since the encyclopedia JOBS tab moved onto this projection. The IN-GAME drawer (JobsDrawer.jsx) was
+// the one surface still reading the bundled seed snapshot — packages/sdk/src/{items,recipes}.json,
+// which are `{}` in this repo BY CONSTRUCTION (the content boundary: content reaches the game only as
+// published chain state). So it rendered `jobs.recipes.empty_seed` for every profession, forever.
+// craft_recipes_for_job is craftable_items_for_job with the BILL OF MATERIALS resolved — the drawer
+// needs the ingredient rows and the live `recipe_id` to actually fire a craft tx.
+//
+// CAPTURED PROVENANCE: every VALUE below is the verbatim live projection read from rpc-redis on
+// 2026-07-25 (`JSON.GET rpc:recipe:0x5fe1…c3c` plus its five `rpc:template:*` docs) — a real armorsmith
+// (job 8) recipe minted 07-23, and identical to what `/v1/encyclopedia?kind=recipes` serves today. Its
+// output sits at level 151, ABOVE the bundled catalog's 110 cap: it could never have rendered from the
+// seed snapshot, on any code path. Only the object IDS are placeholders (the BAKER_RECIPE convention
+// above) — the chain-id gate ratchets on new hardcoded 32-byte ids, and nothing here asserts a
+// specific id, only that ids JOIN correctly. The real bytes are pinned once, where the decode actually
+// happens: indexer snapshot_tests.rs REAL_RECIPE_BCS_HEX.
+const LIVE_ARMORSMITH_RECIPE: RpcRecipe = {
+  recipe_id: '0xrecipe_feathergilt_visor_crown',
+  output_template_id: '0xtpl_feathergilt_visor_crown',
+  output_quantity: 1,
+  required_job: 8, // armorsmith (SDK JOBS index)
+  required_level: 26,
+  craft_xp: 3448,
+  inputs: [
+    { template_id: '0xtpl_diadem_lattice_crown', quantity: 3 },
+    { template_id: '0xtpl_gilded_extract', quantity: 3 },
+    { template_id: '0xtpl_throneless_extract', quantity: 3 },
+    { template_id: '0xtpl_coronet_resin', quantity: 3 },
+  ],
+}
+
+/** The five captured `rpc:template:*` docs, in the /v1 items row shape. */
+const live_item = (template_id: string, item_type: string, name: string, level: number, category: string) =>
+  ({ template_id, item_type, name, description: null, level, category, supply: 0, last_sale_mist: null }) as const
+
+const LIVE_ITEMS: RpcEncyclopediaItem[] = [
+  live_item(
+    LIVE_ARMORSMITH_RECIPE.output_template_id,
+    'feathergilt_visor_of_silent_court_crown',
+    'Feathergilt Visor Crown',
+    151,
+    'helmet'
+  ),
+  live_item(
+    LIVE_ARMORSMITH_RECIPE.inputs[0].template_id,
+    'diadem_lattice_crown',
+    'Diadem Lattice Crown',
+    173,
+    'resource'
+  ),
+  live_item(LIVE_ARMORSMITH_RECIPE.inputs[1].template_id, 'gilded_extract', 'Gilded Extract', 166, 'resource'),
+  live_item(LIVE_ARMORSMITH_RECIPE.inputs[2].template_id, 'throneless_extract', 'Throneless Extract', 146, 'resource'),
+  live_item(LIVE_ARMORSMITH_RECIPE.inputs[3].template_id, 'coronet_resin', 'Coronet Resin', 167, 'resource'),
+]
+
+describe('craft_recipes_for_job — the in-game drawer source (issue #765)', () => {
+  test('projects a real live recipe into a craftable row with its bill of materials', () => {
+    const [row] = craft_recipes_for_job([LIVE_ARMORSMITH_RECIPE], LIVE_ITEMS, 8)
+    expect(row.id).toBe(LIVE_ARMORSMITH_RECIPE.output_template_id)
+    expect(row.recipe_id).toBe(LIVE_ARMORSMITH_RECIPE.recipe_id)
+    expect(row.item_type).toBe('feathergilt_visor_of_silent_court_crown')
+    expect(row.name).toBe('Feathergilt Visor Crown')
+    expect(row.level).toBe(151) // the OUTPUT item's level — display only
+    expect(row.required_level).toBe(26) // the on-chain KNOWLEDGE gate (crafting.move EUnderLevel)
+    expect(row.craft_xp).toBe(3448)
+    expect(row.output_quantity).toBe(1)
+    // Ingredients resolve to the SLUG the on-chain bag is keyed by (item::Item.item_type), with the
+    // exact chain quantity — never a derived or rounded value.
+    expect(row.ingredients).toEqual([
+      {
+        id: 'diadem_lattice_crown',
+        template_id: LIVE_ARMORSMITH_RECIPE.inputs[0].template_id,
+        qty: 3,
+        name: 'Diadem Lattice Crown',
+        level: 173,
+      },
+      {
+        id: 'gilded_extract',
+        template_id: LIVE_ARMORSMITH_RECIPE.inputs[1].template_id,
+        qty: 3,
+        name: 'Gilded Extract',
+        level: 166,
+      },
+      {
+        id: 'throneless_extract',
+        template_id: LIVE_ARMORSMITH_RECIPE.inputs[2].template_id,
+        qty: 3,
+        name: 'Throneless Extract',
+        level: 146,
+      },
+      {
+        id: 'coronet_resin',
+        template_id: LIVE_ARMORSMITH_RECIPE.inputs[3].template_id,
+        qty: 3,
+        name: 'Coronet Resin',
+        level: 167,
+      },
+    ])
+  })
+
+  test('the level-151 output the bundled seed snapshot could never carry is present', () => {
+    // The regression this closes: a 110-capped static catalog structurally cannot hold this row.
+    expect(craft_recipes_for_job([LIVE_ARMORSMITH_RECIPE], LIVE_ITEMS, 8).map((r) => r.level)).toEqual([151])
+  })
+
+  test('a different job, an unsnapshotted output, or a nullish projection is honest-empty', () => {
+    expect(craft_recipes_for_job([LIVE_ARMORSMITH_RECIPE], LIVE_ITEMS, 11)).toEqual([])
+    expect(craft_recipes_for_job([LIVE_ARMORSMITH_RECIPE], [], 8)).toEqual([])
+    expect(craft_recipes_for_job(undefined, LIVE_ITEMS, 8)).toEqual([])
+    expect(craft_recipes_for_job([LIVE_ARMORSMITH_RECIPE], undefined, 8)).toEqual([])
+    expect(craft_recipes_for_job([LIVE_ARMORSMITH_RECIPE], LIVE_ITEMS, -1)).toEqual([])
+  })
+
+  test('an ingredient whose template has not snapshotted keeps the ROW but carries no slug', () => {
+    // Dropping it would understate the bill of materials and let Craft enable on an incomplete tally —
+    // the tx would then abort EMissingIngredient on chain. It stays, unresolved and honestly uncountable.
+    const rows = craft_recipes_for_job([LIVE_ARMORSMITH_RECIPE], LIVE_ITEMS.slice(0, 2), 8)
+    expect(rows[0].ingredients).toHaveLength(4)
+    expect(rows[0].ingredients[0].id).toBe('diadem_lattice_crown')
+    expect(rows[0].ingredients[1].id).toBeNull()
+    expect(rows[0].ingredients[1].name).toBe(short_id(LIVE_ARMORSMITH_RECIPE.inputs[1].template_id))
+  })
+
+  test('craftable_items_for_job stays the same projection (one home, no second walk)', () => {
+    const rich = craft_recipes_for_job([LIVE_ARMORSMITH_RECIPE], LIVE_ITEMS, 8)
+    expect(craftable_items_for_job([LIVE_ARMORSMITH_RECIPE], LIVE_ITEMS, 8)).toEqual(
+      rich.map(({ id, item_type, name, level, category }) => ({ id, item_type, name, level, category }))
+    )
+  })
+})
+
+describe('craft_affordability_of — the client gate mirrors what the craft tx can burn', () => {
+  const [ROW] = craft_recipes_for_job([LIVE_ARMORSMITH_RECIPE], LIVE_ITEMS, 8)
+
+  test('affordable when every ingredient slug is owned in at least the chain quantity', () => {
+    const owned = { diadem_lattice_crown: 3, gilded_extract: 9, throneless_extract: 3, coronet_resin: 4 }
+    const afford = craft_affordability_of(ROW.ingredients, owned, 1)
+    expect(afford.affordable).toBe(true)
+    expect(afford.rows.map((r) => r.need)).toEqual([3, 3, 3, 3])
+    expect(afford.rows[1].have).toBe(9)
+  })
+
+  test('a shortfall is not affordable and names the short row', () => {
+    const owned = { diadem_lattice_crown: 3, gilded_extract: 3, throneless_extract: 3, coronet_resin: 2 }
+    const afford = craft_affordability_of(ROW.ingredients, owned, 1)
+    expect(afford.affordable).toBe(false)
+    expect(afford.rows.filter((r) => !r.enough).map((r) => r.id)).toEqual(['coronet_resin'])
+  })
+
+  test('count scales every requirement (need = qty × count)', () => {
+    const owned = { diadem_lattice_crown: 6, gilded_extract: 6, throneless_extract: 6, coronet_resin: 6 }
+    expect(craft_affordability_of(ROW.ingredients, owned, 2).affordable).toBe(true)
+    expect(craft_affordability_of(ROW.ingredients, owned, 3).affordable).toBe(false)
+  })
+
+  test('an UNRESOLVED ingredient can never count as owned — the gate stays closed', () => {
+    const [partial] = craft_recipes_for_job([LIVE_ARMORSMITH_RECIPE], LIVE_ITEMS.slice(0, 2), 8)
+    // Even with a bag that covers every KNOWN slug generously, the unresolvable rows keep it closed.
+    const owned = { diadem_lattice_crown: 99, gilded_extract: 99, throneless_extract: 99, coronet_resin: 99 }
+    const afford = craft_affordability_of(partial.ingredients, owned, 1)
+    expect(afford.affordable).toBe(false)
+    expect(afford.rows.filter((r) => !r.enough)).toHaveLength(3)
+  })
+
+  test('an empty bill of materials is never affordable (nothing to craft)', () => {
+    expect(craft_affordability_of([], {}, 1)).toEqual({ rows: [], affordable: false })
   })
 })

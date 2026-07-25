@@ -3,7 +3,7 @@
 // #304 STANDING GATE — browser reads leave the fullnode. Constitution: player DISPLAY reads ride the keyless
 // `/v1` read layer (packages/rpc); the fullnode is for server-side paths (api/sponsor.mjs — the verified
 // POSITIVE CONTROL below) plus a small, EXPLICITLY NAMED set of browser exceptions (tx pre-flight state and
-// documented /v1 gaps — SPEC's "chain-direct ONLY for tx pre-flight" carve-out, e.g. craft_actions.js below).
+// documented /v1 gaps — SPEC's "chain-direct ONLY for tx pre-flight" carve-out, e.g. read_staking.js below).
 //
 // WHY THIS SHAPE, NOT A DIST-BUNDLE STRING GREP: the fullnode URL literal
 // (`https://fullnode.testnet.sui.io:443`, packages/sdk/src/sui.js) is the SHARED transport default for the
@@ -53,10 +53,11 @@ const ALLOWLIST = {
   'chain/read_staking.js':
     'get_owned_items — /v1 FIRST (/v1/owner-items); this batch read fires ONLY as the sanctioned /v1-outage ' +
     'fallback (get_owned_items catches the /v1 failure before ever reaching it) — the reference pattern for a gap.',
-  'world-shell/craft_actions.js':
-    'template_slugs/build_recipe_index — resolves the craft recipe index at TX PRE-FLIGHT (SPEC-sanctioned: ' +
-    '"chain-direct ONLY for tx pre-flight"), never a display list; no /v1 RecipeCreated projection exists ' +
-    '(packages/rpc defers it — Rust out of scope) to reroute to instead.',
+  // world-shell/craft_actions.js — PRUNED 2026-07-25 (issue #765). Its template_slugs/build_recipe_index
+  // pair resolved the craft recipe index chain-direct because "no /v1 RecipeCreated projection exists".
+  // That premise expired: `/v1/encyclopedia?kind=recipes` serves the object-snapshotted Recipe set
+  // (rpc:idx:recipes), so the craft path now takes the recipe id straight off the row the player clicked
+  // and the batch fan-out is gone — one fewer browser call at the public fullnode.
   'chain/read_templates.js':
     'get_mob_templates/get_item_templates — CONFIRMED DEAD (zero live callers: onchain_templates.ts dropped ' +
     'its only consumer, use_onchain_templates, in this #304 lane; grep of dist/assets/*.js for the ' +

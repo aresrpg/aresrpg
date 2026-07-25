@@ -8,12 +8,19 @@
 // both UNLOCKED and LOCKED (locked greyed with the unlock level); gathering jobs show their 11-tier
 // resource table (locked tiers greyed with the required level).
 //
-// SSOT: all job definitions + the XP curve + gathering formulas + the recipe + ingredient data live
-// in @aresrpg/sdk/jobs (ported 1:1 from the reference corpus's Job.java / JobExperience.java / GatheringFormulas.java;
-// the 11-tier gatherables + the crafting recipes/ingredients projected 1:1 from the real aresrpg
-// content seed — items.json + recipes.json). This component renders them — it computes no balance.
-// Resources + recipes + ingredients all carry the REAL companion display name + icon key (no
-// placeholder "?" names remain). Clicking a resource or recipe opens its detail in the RIGHT-SECTION
+// SSOT: job definitions + the XP curve + gathering formulas live in @aresrpg/sdk/jobs (ported 1:1 from
+// the reference corpus's Job.java / JobExperience.java / GatheringFormulas.java; the 11-tier gatherables
+// ride along). This component renders them — it computes no balance.
+//
+// RECIPES ARE CHAIN TRUTH (issue #765): the crafting rows come from the live `/v1/encyclopedia`
+// projection of the on-chain `crafting::Recipe` objects, through the ONE home every crafting surface
+// reads — pages/encyclopedia/recipes.ts. They used to come from the bundled seed snapshot
+// (packages/sdk/src/{items,recipes}.json), which is `{}` in this repo BY CONSTRUCTION — the content
+// boundary means content reaches the game only as published chain state — so every profession rendered
+// the empty state forever while 1434 recipes sat live on chain. A job with no live recipe still renders
+// the honest empty; nothing is ever fabricated to fill it.
+//
+// Clicking a resource or recipe opens its detail in the RIGHT-SECTION
 // (right-section, not a modal/little-card): the SAME encyclopedia item-display (ItemDetailView) the inventory + the
 // encyclopedia render — NO modal, NO little card. A craftable recipe also shows the inline bill of
 // materials + a Craft button below the characteristics.
@@ -34,9 +41,6 @@ import {
   JOBS,
   JOB_CATEGORY,
   GATHER_RESOURCES,
-  craft_recipes,
-  recipe_ingredients,
-  craft_affordability,
   item_icon_url,
   job_level_progress,
   job_from_tool,
@@ -49,6 +53,9 @@ import {
 } from '@aresrpg/sdk/jobs'
 
 import { use_game_state, context } from '../../store.js'
+import { craft_affordability_of, craft_recipes_for_job } from '../../../pages/encyclopedia/recipes'
+import { get_encyclopedia } from '../../../rpc/client'
+import { use_rpc_view } from '../../../rpc/use_view'
 import { Tooltip } from './Tooltip.jsx'
 // Item detail REUSES the EXACT encyclopedia item-display (ItemDetailView) fed the same seeded content
 // (use_content) the Encyclopedia tab + the Inventory render — bigger icon, type, rarity, DESCRIPTION +
@@ -262,13 +269,14 @@ function ResourceTable({ job, level, on_select, selected_id = null }) {
  * Inline craft controls — rendered as ItemDetailView CHILDREN in the right-section,
  * NOT a modal. The bill of materials: each ingredient row = ICON + NAME + LVL + AMOUNT shown as
  * OWNED/REQUIRED with COLOR (GREEN when owned >= required, ORANGE when short), then the CRAFT button —
- * enabled ONLY when the player's job level >= the recipe level AND the ingredients are affordable (off the
- * on-chain bag; else disabled WITH the reason). Clicking crafts ONE unit as a REAL self-pay tx
+ * enabled ONLY when the player's job level clears the recipe's on-chain `required_level` AND the
+ * ingredients are affordable (off the on-chain bag; else disabled WITH the reason) — the same two
+ * conditions `crafting::craft` itself asserts. Clicking crafts ONE unit as a REAL self-pay tx
  * (world-shell/craft_actions.js → crafting::craft): burn the exact kiosk-locked ingredient stacks, mint the
  * output into the same kiosk, all atomic — no server, no queue. ONE honest toast per outcome.
  *
  * @param {{
- *   recipe: import('@aresrpg/sdk/jobs').CraftRecipe,
+ *   recipe: import('../../../pages/encyclopedia/recipes').CraftRecipeRow,
  *   job: import('@aresrpg/sdk/jobs').JobDef,
  *   level: number,
  *   owned: Record<string, number>,
@@ -276,26 +284,33 @@ function ResourceTable({ job, level, on_select, selected_id = null }) {
  * @returns {import('react').JSX.Element}
  */
 function CraftControls({ recipe, job, level, owned }) {
-  const ingredients = useMemo(() => recipe_ingredients(recipe.id), [recipe.id])
+  // The bill of materials rides ON the live recipe row (craft_recipes_for_job resolved it against the same
+  // /v1 items list) — no second lookup, no second source that could disagree with what the tx will burn.
+  const ingredients = recipe.ingredients
   // The ON-CHAIN bag — the exact stacks the craft tx burns (chain-truth home; also drives affordability above).
   const bag_items = use_game_state((s) => s.sui.items)
   // The crafter's active character — the reference-corpus success roll runs at ITS job level (craft_ptb requires the id).
   const selected_character_id = use_game_state((s) => s.selected_character_id)
   const [pending, set_pending] = useState(false)
-  const afford = useMemo(() => craft_affordability(recipe.id, owned, 1), [recipe.id, owned])
-  // Per-ingredient have/need (drives the GREEN/ORANGE rows), keyed by ingredient id.
+  const afford = useMemo(() => craft_affordability_of(ingredients, owned, 1), [ingredients, owned])
+  // Per-ingredient have/need (drives the GREEN/ORANGE rows), keyed by the ingredient's TEMPLATE id — the
+  // one key every row always has (an unsnapshotted ingredient has no slug; see CraftIngredientRow.id).
   const have_need = useMemo(() => {
     /** @type {Record<string, { have: number, need: number, enough: boolean }>} */
     const map = {}
-    for (const row of afford?.rows ?? []) map[row.id] = row
+    for (const row of afford.rows) map[row.template_id] = row
     return map
   }, [afford])
 
-  const level_ok = level >= recipe.level
-  const can_craft = level_ok && !!afford?.affordable && ingredients.length > 0
+  // The chain's own gate: crafting.move asserts `crafter_level >= recipe.required_level` (EUnderLevel).
+  // The old bundled path gated on the OUTPUT ITEM's level instead — a different number entirely, so the
+  // button could disagree with what the tx would do.
+  const level_ok = level >= recipe.required_level
+  const can_craft = level_ok && afford.affordable
 
-  // REAL on-chain craft (world-shell/craft_actions.js): resolve the live Recipe object chain-direct, burn the
-  // exact kiosk-locked ingredient stacks, mint the output — ONE self-pay tx through the standard run_tx choke
+  // REAL on-chain craft (world-shell/craft_actions.js): the live row already carries the Recipe object id,
+  // so it just burns the exact kiosk-locked ingredient stacks and mints the output — ONE self-pay tx
+  // through the standard run_tx choke
   // (dryRun-guarded, no auto-retry). ONE honest toast per outcome; a success repaints the bag (load_roster),
   // which flips the onboarding quest-ladder 'craft' step the moment the crafted item lands.
   const on_craft = async () => {
@@ -326,18 +341,18 @@ function CraftControls({ recipe, job, level, owned }) {
       <div className="jobs__craft-head">{i18n.t('jobs.craft.ingredients_head')}</div>
       <div className="jobs__ingredients">
         {ingredients.map((ing) => {
-          const hn = have_need[ing.id]
+          const hn = have_need[ing.template_id]
           const enough = hn?.enough ?? false
           return (
-            <div key={ing.id} className="jobs__ingredient">
-              <ItemIcon icon={ing.icon} size={32} />
+            <div key={ing.template_id} className="jobs__ingredient">
+              <ItemIcon icon={ing.id ?? ''} size={32} />
               <span className="jobs__ingredient-id">
                 <span className="jobs__ingredient-name">{ing.name}</span>
                 <span className="jobs__ingredient-lvl hud-num">{i18n.t('jobs.lv_badge', { level: ing.level })}</span>
               </span>
               {/* OWNED/REQUIRED: GREEN when owned>=required, ORANGE when short */}
               <span className={`jobs__ingredient-amt hud-num ${enough ? 'is-enough' : 'is-short'}`}>
-                {hn?.have ?? owned[ing.id] ?? 0} / {hn?.need ?? ing.qty}
+                {hn?.have ?? 0} / {hn?.need ?? ing.qty}
               </span>
             </div>
           )
@@ -348,8 +363,8 @@ function CraftControls({ recipe, job, level, owned }) {
         <Tooltip
           text={
             !level_ok
-              ? i18n.t('jobs.craft.requires_level', { job: job.label, required: recipe.level, level })
-              : !afford?.affordable
+              ? i18n.t('jobs.craft.requires_level', { job: job.label, required: recipe.required_level, level })
+              : !afford.affordable
                 ? i18n.t('jobs.craft.not_enough')
                 : i18n.t('jobs.craft.craft_tooltip', { name: recipe.name?.trim() || recipe.id })
           }
@@ -364,7 +379,7 @@ function CraftControls({ recipe, job, level, owned }) {
               ? i18n.t('inventory.craft_pending')
               : level_ok
                 ? i18n.t('jobs.craft.craft_button')
-                : i18n.t('jobs.craft.locked_level', { level: recipe.level })}
+                : i18n.t('jobs.craft.locked_level', { level: recipe.required_level })}
           </button>
         </Tooltip>
       </div>
@@ -380,7 +395,7 @@ function CraftControls({ recipe, job, level, owned }) {
  * modal, NO little card. A "Back" affordance returns to the job's resource/recipe browse.
  * @param {{
  *   item_id: string,
- *   recipe: import('@aresrpg/sdk/jobs').CraftRecipe | null,
+ *   recipe: import('../../../pages/encyclopedia/recipes').CraftRecipeRow | null,
  *   job: import('@aresrpg/sdk/jobs').JobDef,
  *   level: number,
  *   owned: Record<string, number>,
@@ -392,7 +407,14 @@ function JobItemDetail({ item_id, recipe, job, level, owned, on_back }) {
   const content_items = use_content().templates.item
   const tt = use_template_t()
 
-  const content = useMemo(() => content_items.find((it) => it.id === item_id) ?? null, [content_items, item_id])
+  // The seeded catalog is keyed by SLUG; a recipe row's `item_id` is its on-chain output TEMPLATE id, so
+  // resolve through the row's own `item_type` when it has one (a gathered resource's item_id IS a slug,
+  // and an output whose template has not snapshotted carries '').
+  const content_key = recipe?.item_type || item_id
+  const content = useMemo(
+    () => content_items.find((it) => it.id === content_key) ?? null,
+    [content_items, content_key]
+  )
 
   // The ItemDetailView shape, resolved from the seed (mirrors Inventory.jsx). Falls back to the raw
   // recipe row for any craft output not present in the seed.
@@ -414,7 +436,9 @@ function JobItemDetail({ item_id, recipe, job, level, owned, on_back }) {
           id: recipe.id,
           name: recipe.name?.trim() || recipe.id,
           category: String(recipe.category ?? '').toUpperCase(),
-          rarity: recipe.quality ?? 'common',
+          // The chain's item projection carries no quality/rarity field — the neutral default, never a
+          // fabricated tier (the house is no-tiers anyway).
+          rarity: 'common',
           level: recipe.level ?? 0,
           damages: [],
           stats: {},
@@ -450,23 +474,28 @@ function JobItemDetail({ item_id, recipe, job, level, owned, on_back }) {
  * item icon (NO quality dot, NO left-accent rail — no-tiers + house law) and opens the recipe's detail in
  * the RIGHT-SECTION on click, NOT a modal.
  * @param {{
- *   job: import('@aresrpg/sdk/jobs').JobDef,
+ *   recipes: import('../../../pages/encyclopedia/recipes').CraftRecipeRow[],
+ *   loading: boolean,
  *   level: number,
- *   on_select: (recipe: import('@aresrpg/sdk/jobs').CraftRecipe) => void,
+ *   on_select: (recipe: import('../../../pages/encyclopedia/recipes').CraftRecipeRow) => void,
  *   selected_id?: string | null,
  * }} props
  */
-function RecipeGrid({ job, level, on_select, selected_id = null }) {
-  const recipes = useMemo(() => craft_recipes(job.id), [job.id])
+export function RecipeGrid({ recipes, loading, level, on_select, selected_id = null }) {
   const { unlocked, locked } = useMemo(() => {
-    /** @type {import('@aresrpg/sdk/jobs').CraftRecipe[]} */
+    /** @type {typeof recipes} */
     const u = []
-    /** @type {import('@aresrpg/sdk/jobs').CraftRecipe[]} */
+    /** @type {typeof recipes} */
     const l = []
-    for (const r of recipes) (level >= r.level ? u : l).push(r)
+    // Grouped by the CHAIN's gate (required_level), so what reads "Unlocked" is exactly what
+    // `crafting::craft` will accept — not the output item's level, which gates nothing.
+    for (const r of recipes) (level >= r.required_level ? u : l).push(r)
     return { unlocked: u, locked: l }
   }, [recipes, level])
 
+  // Loading is NOT emptiness — the honest-empty copy would read as "this job has no recipes" while the
+  // projection is still in flight (no-silent-staleness law, use_rpc_view).
+  if (loading) return <div className="jobs__recipe-empty">{i18n.t('common.loading')}</div>
   if (!recipes.length) {
     return <div className="jobs__recipe-empty">{i18n.t('jobs.recipes.empty_seed')}</div>
   }
@@ -481,11 +510,13 @@ function RecipeGrid({ job, level, on_select, selected_id = null }) {
       className={`jobs__recipe${is_locked ? ' is-locked' : ''}${r.id === selected_id ? ' is-selected' : ''}`}
       onClick={() => on_select(r)}
     >
-      <ItemIcon icon={r.icon} size={32} />
+      <ItemIcon icon={r.item_type} size={32} />
       <span className="jobs__recipe-id">
         <span className="jobs__recipe-name">{r.name?.trim() || r.id}</span>
+        {/* The UNLOCK level, so the number on the card agrees with the block it sits in. The output
+            item's own level rides in its detail pane (ItemDetailView), where it belongs. */}
         <span className="jobs__recipe-meta hud-num">
-          {i18n.t('jobs.recipes.meta', { level: r.level, category: r.category })}
+          {i18n.t('jobs.recipes.meta', { level: r.required_level, category: r.category })}
         </span>
       </span>
     </button>
@@ -598,7 +629,19 @@ function JobDetail({ job, xp, active, owned }) {
   // (no modal/little-card). `recipe` is set only for a craftable recipe click (drives
   // the inline Craft controls); null for a gathered resource.
   const [selected, set_selected] = useState(
-    /** @type {{ item_id: string, recipe: import('@aresrpg/sdk/jobs').CraftRecipe | null } | null} */ (null)
+    /** @type {{ item_id: string, recipe: import('../../../pages/encyclopedia/recipes').CraftRecipeRow | null } | null} */ (
+      null
+    )
+  )
+  // The live crafting corpus (issue #765) — ONE batched, session-cached `/v1/encyclopedia` read (items +
+  // recipes in a single envelope, content_get-memoized), projected to this job. Fetched here, at the only
+  // component that owns both the grid and the selected row, so the bill of materials the Craft button
+  // gates on is the SAME object the grid rendered.
+  const { data: encyclopedia, loading } = use_rpc_view((signal) => get_encyclopedia(undefined, signal), { deps: [] })
+  const job_index = useMemo(() => JOBS.findIndex((j) => j.id === job.id), [job.id])
+  const recipes = useMemo(
+    () => craft_recipes_for_job(encyclopedia?.recipes, encyclopedia?.items, job_index),
+    [encyclopedia, job_index]
   )
   const { level, current, needed } = job_level_progress(xp)
   const pct = needed > 0 ? Math.max(0, Math.min(100, (current / needed) * 100)) : 100
@@ -688,7 +731,8 @@ function JobDetail({ job, xp, active, owned }) {
             />
           ) : (
             <RecipeGrid
-              job={job}
+              recipes={recipes}
+              loading={loading}
               level={level}
               selected_id={selected?.item_id ?? null}
               on_select={(recipe) => set_selected({ item_id: recipe.id, recipe })}
