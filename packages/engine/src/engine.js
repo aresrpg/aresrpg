@@ -58,6 +58,9 @@ import { configure_water_optics, configure_water_night_floor, sky_day_factor } f
 import { configure_night_lighting } from './render/lighting/sky_light_coupling.js'
 import { create_mood_driver } from './render/biome_mood.js'
 import { create_ambience } from './render/ambience.js'
+// HACK MODE (docs/design/hack_mode_spec.md): the retrowave flat-grid presentation — the grid quad, the
+// sky node, and the constant-plane oracle the api swaps onto below. Constructed ONLY in that branch.
+import { create_hack_oracle, create_hack_presentation } from './render/hack_grid.js'
 import { create_waterfall_system } from './render/waterfall_sheet.js'
 import { prepare_fight_vfx_fallback } from './render/vfx_preset_engine.js'
 import { set_far_textures } from './lod/colors.js'
@@ -160,6 +163,11 @@ const ANALYTIC_GROUND_ID = /** @type {number} */ (get_block_by_name('stone')?.id
  * @property {boolean} [force_webgl] ENG-20: force the minimal WebGL fallback path (a colored heightmap
  *   of basic blocks, no TSL/post/atmosphere) even when WebGPU is available — the demo's `?force_webgl=1`
  *   test lever. Auto-detection (navigator.gpu absent → webgl) applies regardless of this flag.
+ * @property {'terrain'|'hackgrid'} [presentation] world presentation; default 'terrain' (today's world).
+ *   HACK MODE (docs/design/hack_mode_spec.md): 'hackgrid' constructs NO terrain system at all (gen/mesh/
+ *   far workers, ring, far shell, materialization floor, waterfalls, ambience, atmosphere) and mounts the
+ *   retrowave grid instead; the collision/residency oracle becomes a constant plane, so every consumer
+ *   downstream inherits it through the SAME api methods. WebGPU-only (the WebGL floor ignores it, warns).
  */
 
 /**
@@ -319,10 +327,17 @@ export function create_engine({
   // work). The app's logged-out backdrop passes this; login swaps to a full-size engine instance.
   zone_size_m = 600, // [D205/D210] playable side — defines the BORDER BOX ONLY (the world streams around the player; the fence is what makes it finite)
   force_webgl = false,
+  // HACK MODE: the world PRESENTATION (docs/design/hack_mode_spec.md §1.2). 'hackgrid' forks the
+  // construction recipe below — the same way the synthetic bench path already boots the WebGPU stack
+  // with no streaming ring at all — never a scattered `if` in the frame loop.
+  presentation = 'terrain',
 }) {
   if (!canvas) throw new TypeError('create_engine: options.canvas is required')
   if (tier !== undefined && !TIER_ORDER.includes(tier)) {
     throw new TypeError(`create_engine: unknown tier "${tier}" — expected one of ${TIER_ORDER.join(', ')}`)
+  }
+  if (presentation !== 'terrain' && presentation !== 'hackgrid') {
+    throw new TypeError(`create_engine: unknown presentation "${presentation}" — expected 'terrain' or 'hackgrid'`)
   }
   // ENGINE_AAA_PLAN C4: procedural trees are now the DEFAULT (trees.procedural true). `?proctrees` stays as
   // the escape/kill-flag A/B: `?proctrees=0` forces procedural OFF (a rock-only world — the perf isolation),
@@ -391,8 +406,17 @@ export function create_engine({
       : 'webgpu'
   const engine_search = typeof location === 'undefined' ? '' : location.search
   if (backend === 'webgl') {
+    // HACK MODE is a TSL presentation (grid + sky nodes), so the ENG-20 heightmap floor ignores it —
+    // exactly how the tactical board is a no-op there. One honest warn, never a silent half-mode.
+    if (presentation === 'hackgrid') console.warn('[voxel] hack mode needs WebGPU — the WebGL floor renders the real terrain') // prettier-ignore
     return create_webgl_engine({ canvas, seed: gen_seed, zone_origin, search: engine_search })
   }
+  /** HACK MODE (docs/design/hack_mode_spec.md): the third construction branch below + the oracle swap.
+   *  The ORACLE is armed HERE, at create — the decoration can only be built once the renderer exists,
+   *  but the height/residency truth must answer from the very first consumer call (the boot veil asks
+   *  before init resolves). Null in the terrain presentation ⇒ every path below is byte-identical. */
+  const is_hack = presentation === 'hackgrid'
+  const hack_oracle = is_hack ? create_hack_oracle() : null
   const hitch_enabled = url_flag_on('hitch', engine_search)
   const hitch_probe = create_hitch_probe({ search: engine_search })
   const cpu_probe = create_cpu_probe({ search: engine_search })
@@ -455,6 +479,9 @@ export function create_engine({
   let ambience = /** @type {ReturnType<typeof create_ambience> | null} */ (null)
   /** [B4] waterfall sheet/spray/foam overlay — DEFAULT ON (null under ?falls=0 or no `location` ⇒ off byte-identity). */
   let falls = /** @type {ReturnType<typeof create_waterfall_system> | null} */ (null)
+  /** HACK MODE: the retrowave grid + sky + the constant-plane oracle (null in the terrain presentation,
+   *  so every terrain path below is byte-identical). @type {ReturnType<typeof create_hack_presentation> | null} */
+  let hack_presentation = null
   /** [D185] true once ANY consumer calls set_camera_position/orientation — gates the boot self-rescue. */
   let camera_externally_driven = false
   /** [ENG camera-feel] the last horizontal player ground speed (m/s) pushed via set_camera_speed —
@@ -550,7 +577,8 @@ export function create_engine({
     // is the valley-floor fallback when the centre isn't resident yet.
     const mid_x = Math.round((bounds.min_x + bounds.max_x) / 2)
     const mid_z = Math.round((bounds.min_z + bounds.max_z) / 2)
-    let base_y = SEA_LEVEL
+    // HACK MODE: the plane is the ground everywhere, so the wall anchors on it (no ring to scan).
+    let base_y = hack_oracle ? hack_oracle.ground_at(mid_x, mid_z) : SEA_LEVEL
     if (ring_manager) {
       for (let y = 320; y >= 1; y -= 1) {
         if (ring_manager.block_id_at(mid_x, y, mid_z) !== 0) {
@@ -565,8 +593,35 @@ export function create_engine({
     // pure noise math, no chunk residency): the border arms on frame 1 and hugs the real land even
     // where nothing is streamed yet. (Supersedes the D197 resident-probe + inward clamp — the
     // residency dependency was why the wall could only arm after a full fixed boot.)
-    const ground_at = /** @param {number} x @param {number} z */ (x, z) => world_surface_y(Math.round(x), Math.round(z))
+    // HACK MODE: the wall is gameplay (the world fence), so it stays — but its terrain-following probe
+    // reads the presentation's oracle, which answers the same constant everywhere ⇒ a flat wall base.
+    const ground_at =
+      hack_oracle?.ground_at ??
+      /** @param {number} x @param {number} z */ ((x, z) => world_surface_y(Math.round(x), Math.round(z)))
     mana_barrier?.set_bounds(bounds, base_y, ground_at)
+  }
+
+  /** HACK MODE boot signals (spec §1.2). With no ring, nothing drives the streaming boot phases the
+   *  frame loop emits — so the hack branch emits them itself the moment the renderer is up. focus_ready
+   *  is immediate and TRUE: is_column_resident answers true from create, so the app's blur veil clears
+   *  synchronously and the physics/input gate opens on frame 1. visual_ready → done follow the SAME D221
+   *  pipeline pre-warm (avatar/VFX pipelines still compile behind the veil, never at first visible use). */
+  function emit_hack_boot_signals() {
+    focus_ready_emitted = true
+    emit('load_progress', { phase: 'focus_ready', loaded: 1, total: 1 })
+    const rh = renderer_handle
+    // [C1] batch every ALREADY-QUEUED late-GLB warm into this warm, exactly as the streaming path does.
+    pipeline_warm_queue?.flush_all()
+    Promise.resolve()
+      .then(() => (rh?.post?.render_frame ? rh.post.render_frame() : rh?.renderer?.compileAsync?.(rh.scene, rh.camera)))
+      .catch((error) => console.warn('[voxel] hack-mode pipeline pre-warm failed (world stays playable):', error))
+      .finally(() => {
+        if (disposed) return
+        prewarm_settled = true
+        emit('load_progress', { phase: 'visual_ready', loaded: 1, total: 1 })
+        boot_done_emitted = true
+        emit('load_progress', { phase: 'done', loaded: 1, total: 1 })
+      })
   }
 
   async function init() {
@@ -646,6 +701,9 @@ export function create_engine({
         on_device_restore: (ok) => emit('device_restored', ok), // witness-r4 — the app can now say so, not just log it
         hillaire_rebuild_on_rotate: aerialturn_enabled,
         on_hillaire_aerial: hitch_enabled ? hitch_probe.aerial_dispatched : undefined,
+        // HACK MODE: no physical sky, no cloud/froxel/god-ray post — the retrowave sky node replaces
+        // the background below and the grid does its own distance fade (spec §1.4).
+        atmosphere: !is_hack,
       })
     } catch (error) {
       // A rejected renderer promise can settle after dispose. The dead engine must neither boot a fallback
@@ -732,8 +790,9 @@ export function create_engine({
     // carries it. The SEPARATE legacy weather field at atmosphere.js:726 (its own create_particles()
     // instance, never scene-mounted) is untouched by this flip — still owner-disabled, not resurrected.
     // Ticked in the frame loop; disposed below.
+    // HACK MODE: ambience is biome decoration (snow, leaf-fall, sand) — a grid world has no biome.
     const ambience_enabled =
-      typeof location !== 'undefined' && new URLSearchParams(location.search).get('ambience') !== '0'
+      !is_hack && typeof location !== 'undefined' && new URLSearchParams(location.search).get('ambience') !== '0'
     if (ambience_enabled) {
       ambience = create_ambience({
         scene: renderer_handle.scene,
@@ -781,7 +840,9 @@ export function create_engine({
     // stands byte-identical (frozen water_material law). Fed FallSpans by the main-thread hydrology twin
     // (world_fall_spans, memoized column profiles); the ring hooks below register/unregister per-column
     // groups with residency.
-    const falls_enabled = typeof location !== 'undefined' && new URLSearchParams(location.search).get('falls') !== '0'
+    // HACK MODE: waterfalls are terrain hydrology — there is no terrain to fall off.
+    const falls_enabled =
+      !is_hack && typeof location !== 'undefined' && new URLSearchParams(location.search).get('falls') !== '0'
     if (falls_enabled) {
       falls = create_waterfall_system({ scene: renderer_handle.scene, tier: tier_name, get_spans: world_fall_spans })
       if (typeof window !== 'undefined') /** @type {any} */ (window).__falls = falls
@@ -814,8 +875,17 @@ export function create_engine({
     // streaming ring manager over the gen worker pool. engine.start() returns immediately either
     // way; the ring streams the world in around the camera over the following seconds (no boot
     // freeze). §3.2.
+    // HACK MODE (spec §1.2): the THIRD branch — no gen/mesh/far pool, no ring, no far shell, no
+    // materialization floor. terrain_renderer above still exists (zero chunks ever upload in the
+    // overworld; the cave dungeon room uploads through that same seam, so dungeons are untouched).
     const is_synthetic = synthetic_chunks !== undefined
-    if (is_synthetic) {
+    if (is_hack) {
+      hack_presentation = create_hack_presentation({ scene: renderer_handle.scene })
+      // the retrowave sky takes the seam the analytic sky owns (renderer.js `scene.backgroundNode`).
+      renderer_handle.scene.backgroundNode = hack_presentation.sky_node
+      if (typeof window !== 'undefined') /** @type {any} */ (window).__hack_presentation = hack_presentation
+      emit_hack_boot_signals()
+    } else if (is_synthetic) {
       const { chunks_loaded } = load_synthetic_chunks({
         terrain_renderer,
         chunk_count: /** @type {number} */ (synthetic_chunks),
@@ -1020,6 +1090,9 @@ export function create_engine({
         fly_camera.apply()
         // Advance the far shell's fade-dither clock so section cross-fades animate at real time.
         far_field?.tick(frame_dt_seconds)
+        // HACK MODE: the grid's shimmer clock + its camera-snapped re-centre. Null-guarded like every
+        // other optional system here — the hack branch adds NO conditional to this loop body.
+        hack_presentation?.tick(frame_dt_seconds, renderer_handle.camera.position)
         // [B5] crossfade the atmosphere mood toward the camera's current biome (no-op unless ?mood=1
         // created the driver). Pure uniform writes over an already-live stack — ~zero GPU cost.
         mood_driver?.tick(frame_dt_seconds, renderer_handle.camera.position.x, renderer_handle.camera.position.z)
@@ -1390,6 +1463,11 @@ export function create_engine({
       renderer_handle?.set_motion_blur_enabled?.(on)
     },
     sample_block(x, y, z) {
+      // HACK MODE (spec §1.3 — THE DEEP SEAM): the presentation owns the height source. One home; every
+      // consumer downstream (controller, physics gate, boot veil, entity grounding, board seating, the
+      // rescue nets) reads this closure and inherits the constant plane. The cave/dungeon sampler swap
+      // (D211) is UNTOUCHED — it overrides this from the app side, so dungeons still carve their room.
+      if (hack_oracle) return hack_oracle.sample_block(x, y, z)
       // Real streaming path: read the resident chunk store. Synthetic bench path has no ring → air.
       return ring_manager?.block_id_at(x, y, z) ?? 0
     },
@@ -1402,6 +1480,8 @@ export function create_engine({
       // through unstreamed void. world_surface_y is pure gen math (no residency — set_gen_config ran at
       // create), so this answers correctly even before init() resolves. As chunks land, block_id_or_null
       // returns the real voxel and truth takes over (a ≤2-block y snap; the under-map rescue is the net).
+      // HACK MODE: no residency concept exists — the plane IS the answer (same oracle as sample_block).
+      if (hack_oracle) return hack_oracle.sample_block(x, y, z)
       const v = ring_manager?.block_id_or_null(x, y, z)
       if (v !== null && v !== undefined) return v
       const iy = Math.floor(y)
@@ -1409,6 +1489,9 @@ export function create_engine({
       return iy < world_surface_y(Math.floor(x), Math.floor(z)) ? ANALYTIC_GROUND_ID : 0
     },
     is_column_resident(x, z) {
+      // HACK MODE: nothing streams, so nothing can be missing — true from create (before init even
+      // resolves), which is what makes the boot veil clear synchronously and the physics gate open.
+      if (hack_oracle) return hack_oracle.is_column_resident(x, z)
       const ground_y = world_surface_y(Math.floor(x), Math.floor(z)) - 1
       return ring_manager?.chunk_resident(x, ground_y, z) ?? false
     },
@@ -1614,6 +1697,7 @@ export function create_engine({
         pipeline_warm_queue = null
       }
       ambience?.dispose() // [S-AMBIENCE] two-phase free of every pooled ambient particle field
+      hack_presentation?.dispose() // HACK MODE: unmount the grid quad + free its geometry/material
       mana_barrier?.dispose() // ENG-18: free the wall geometry/material + banner sprites
       falls?.dispose() // [B4] free every resident waterfall group + the shared sheet material
       materialization_floor?.dispose() // [FIRST-LOAD] free the holo-grid geometry/material

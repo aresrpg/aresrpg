@@ -132,6 +132,11 @@ export const FOG_COOL_TILT = [0.62, 0.75, 1.0]
  *   further retry — the caller's job is to say so honestly instead of leaving a silent black canvas).
  * @property {boolean} [hillaire_rebuild_on_rotate] false suppresses only orientation-triggered aerial rebuilds.
  * @property {() => void} [on_hillaire_aerial] hitch-probe hook at the aerial compute dispatch.
+ * @property {boolean} [atmosphere] default true. `false` (HACK MODE — docs/design/hack_mode_spec.md
+ *   §1.4) forces the two EXISTING degradation paths instead of adding a third: the physical sky is
+ *   skipped (the LOW/analytic ladder rung) and the atmosphere/post stack is never constructed (atmo,
+ *   post and underwater stay null — the shape every consumer already handles, and AgX still tone-maps
+ *   on the bare render path). The caller supplies its own `scene.backgroundNode`.
  */
 
 /**
@@ -241,6 +246,7 @@ export async function create_renderer({
   on_device_restore,
   hillaire_rebuild_on_rotate = true,
   on_hillaire_aerial,
+  atmosphere = true,
 }) {
   const requested_webgpu = has_webgpu_support()
 
@@ -733,119 +739,125 @@ export async function create_renderer({
   /** @type {import('../render/lighting/underwater.js').UnderwaterPass | null} */
   let underwater = null
   try {
-    // [2026-07-05 PLAN A] height_at feeds the froxel fog's camera-following HEIGHT FIELD (fog_height.js)
-    // — the SMOOTH open-air sun-occlusion + real ground for the fog's height falloff (the static-arc fix;
-    // world_surface_y is the same gen the terrain/far shell draw, so fog shadows match the world).
-    atmo = create_atmosphere({ tier, sky, sun, height_at: world_surface_y })
-    // ENG-8 CAMERA MOTION BLUR — REMOVED FROM THE MOUNT (2026-07-05, owner release session). Its
-    // 12-sample reprojection smear under ROTATION paints tangential arc streaks around the rotation
-    // center — a "huge white circle static texture" artifact (concentric rings of ghost scene copies,
-    // one per sample; worst at 5K where the uv deltas span more pixels). Every pinned-camera probe
-    // missed it because a static camera has zero frame delta — the artifact only exists while the
-    // view MOVES (verify-the-pixels law addendum: verify post effects with a MOVING camera).
-    // ENG-13 UNDERWATER — constructed at EVERY atmosphere tier (low included: it renders tint/fog
-    // only, its warp amplitude gated to 0 by the tier — so a SINGLE graph serves all tiers). The engine
-    // frame loop pushes the submerged state via update_underwater() (it owns the resident chunk store).
-    underwater = create_underwater_pass({ tier })
-    // [D214] Camera-rotation motion blur — smooths the view during fast camera rotation. Implemented via the
-    // ENG-8 output_effect hook realized for the CAMERA-ONLY case (no motion vectors needed). One
-    // full-internal-res rtt + 6 taps; tier-gated to HIGH; magnitude gates to zero at rest
-    // (still frames byte-identical). ?blur=0 kill switch for bisection (one flag, one system).
-    const blur_off = typeof location !== 'undefined' && new URLSearchParams(location.search).get('blur') === '0'
-    motion_blur = tier === 'high' && !blur_off ? create_camera_rotation_blur() : undefined
-    // BENCH HOOK (§7, same spirit as window.__godrays/__sharpen): expose the live handle so a bench/QA
-    // probe can read u_mag.value directly instead of diffing pixels. No-op cost (a reference copy).
-    if (typeof window !== 'undefined') /** @type {any} */ (window).__motion_blur = motion_blur
-    // ── S-43 release-visual prototypes — DEFAULT OFF, flag-gated (brand law: __ARES_* globals set by the
-    // bench via addInitScript, with a ?taau=1 / ?godrays=1 URL convenience). These are graded behind
-    // the flag; NO default is flipped here. taau_scale: a numeric flag in (0,1] is the scene render-scale,
-    // a bare truthy uses 0.66 (a clear, measurable downscale taau() upscales back). godrays_on: mount the
-    // shadow-volume shafts on the sun.
-    const ares_flag = (/** @type {string} */ name, /** @type {string} */ param) => {
-      const g = /** @type {any} */ (typeof globalThis !== 'undefined' ? globalThis : {})[`__ARES_${name}`]
-      if (g !== undefined && g !== 0 && g !== false && g !== '0') return g
-      return typeof location !== 'undefined' && new URLSearchParams(location.search).get(param) === '1' ? 1 : null
+    // HACK MODE (`atmosphere: false`): the whole enhancement stack is skipped BY CONSTRUCTION — the
+    // same degraded shape the catch below lands on, chosen deliberately instead of suffered. There is
+    // no third code path: atmo/post/underwater stay null and render_frame takes the bare-render branch.
+    if (!atmosphere) enable_fight_vfx_layer(camera)
+    else {
+      // [2026-07-05 PLAN A] height_at feeds the froxel fog's camera-following HEIGHT FIELD (fog_height.js)
+      // — the SMOOTH open-air sun-occlusion + real ground for the fog's height falloff (the static-arc fix;
+      // world_surface_y is the same gen the terrain/far shell draw, so fog shadows match the world).
+      atmo = create_atmosphere({ tier, sky, sun, height_at: world_surface_y })
+      // ENG-8 CAMERA MOTION BLUR — REMOVED FROM THE MOUNT (2026-07-05, owner release session). Its
+      // 12-sample reprojection smear under ROTATION paints tangential arc streaks around the rotation
+      // center — a "huge white circle static texture" artifact (concentric rings of ghost scene copies,
+      // one per sample; worst at 5K where the uv deltas span more pixels). Every pinned-camera probe
+      // missed it because a static camera has zero frame delta — the artifact only exists while the
+      // view MOVES (verify-the-pixels law addendum: verify post effects with a MOVING camera).
+      // ENG-13 UNDERWATER — constructed at EVERY atmosphere tier (low included: it renders tint/fog
+      // only, its warp amplitude gated to 0 by the tier — so a SINGLE graph serves all tiers). The engine
+      // frame loop pushes the submerged state via update_underwater() (it owns the resident chunk store).
+      underwater = create_underwater_pass({ tier })
+      // [D214] Camera-rotation motion blur — smooths the view during fast camera rotation. Implemented via the
+      // ENG-8 output_effect hook realized for the CAMERA-ONLY case (no motion vectors needed). One
+      // full-internal-res rtt + 6 taps; tier-gated to HIGH; magnitude gates to zero at rest
+      // (still frames byte-identical). ?blur=0 kill switch for bisection (one flag, one system).
+      const blur_off = typeof location !== 'undefined' && new URLSearchParams(location.search).get('blur') === '0'
+      motion_blur = tier === 'high' && !blur_off ? create_camera_rotation_blur() : undefined
+      // BENCH HOOK (§7, same spirit as window.__godrays/__sharpen): expose the live handle so a bench/QA
+      // probe can read u_mag.value directly instead of diffing pixels. No-op cost (a reference copy).
+      if (typeof window !== 'undefined') /** @type {any} */ (window).__motion_blur = motion_blur
+      // ── S-43 release-visual prototypes — DEFAULT OFF, flag-gated (brand law: __ARES_* globals set by the
+      // bench via addInitScript, with a ?taau=1 / ?godrays=1 URL convenience). These are graded behind
+      // the flag; NO default is flipped here. taau_scale: a numeric flag in (0,1] is the scene render-scale,
+      // a bare truthy uses 0.66 (a clear, measurable downscale taau() upscales back). godrays_on: mount the
+      // shadow-volume shafts on the sun.
+      const ares_flag = (/** @type {string} */ name, /** @type {string} */ param) => {
+        const g = /** @type {any} */ (typeof globalThis !== 'undefined' ? globalThis : {})[`__ARES_${name}`]
+        if (g !== undefined && g !== 0 && g !== false && g !== '0') return g
+        return typeof location !== 'undefined' && new URLSearchParams(location.search).get(param) === '1' ? 1 : null
+      }
+      const taau_flag = ares_flag('TAAU', 'taau')
+      // A fractional flag in (0,1) is an explicit scene render-scale; anything else truthy (incl. the common
+      // `=1`) means "on at the default 0.66". (Bugfix: `=1` must NOT map to scale 1.0 = no downscale.)
+      let taau_scale =
+        taau_flag == null ? null : typeof taau_flag === 'number' && taau_flag > 0 && taau_flag < 1 ? taau_flag : 0.66
+      // S-43 SHARPEN (default OFF): FSR1 RCAS to recover the detail the taau_scale bilinear upscale softens.
+      // A fractional flag in (0,2) sets three's `sharpness` (0=max, 2=none); anything else truthy ⇒ 0.4.
+      const sharpen_flag = ares_flag('SHARPEN', 'sharpen')
+      let sharpen_amount =
+        sharpen_flag == null
+          ? null
+          : typeof sharpen_flag === 'number' && sharpen_flag > 0 && sharpen_flag < 2
+            ? sharpen_flag
+            : 0.4
+      // THE MEDIUM RECIPE — NOW THE BASE-GAME DEFAULT: the taau medium recipe merged into the base
+      // game. MEDIUM renders the SCENE pass at 0.66 + RCAS sharpen (the buildable Fortnite-lite path; real
+      // temporal reconstruction stays varying-blocked). The half-res bloom + the governor floor are already
+      // medium defaults, so this completes medium's perf recipe. MEDIUM tier ONLY (high/low untouched — this
+      // block is tier-gated, mirroring the is_medium_tier half-res-bloom branch in post_stack.js).
+      // ESCAPE to native medium: ?taau_medium=0 (or the global __ARES_TAAU_MEDIUM=0). NOTE: this is a BOOT-tier
+      // bake (baked into the post-stack at construction, like half-res bloom / motion blur / grass sway) — a
+      // live no-reload set_tier only re-applies render_scale (setPixelRatio), NOT the scene-pass scale/sharpen,
+      // so switching TO medium in-session arms this on the next reload. AXES: the 0.66 is the SCENE pass only
+      // (post/UI stay full-res); the governor's setPixelRatio dip (floor 0.72) is a SEPARATE whole-swapchain
+      // axis — worst-case they compose on the beauty only (0.66 × 0.72) under sustained fill load, never on post/UI.
+      const taau_medium_g = /** @type {any} */ (typeof globalThis !== 'undefined' ? globalThis : {}).__ARES_TAAU_MEDIUM
+      const taau_medium_off =
+        taau_medium_g === 0 ||
+        taau_medium_g === false ||
+        taau_medium_g === '0' ||
+        (typeof location !== 'undefined' && new URLSearchParams(location.search).get('taau_medium') === '0')
+      if (tier === 'medium' && !taau_medium_off) {
+        if (taau_scale == null) taau_scale = 0.66 // an explicit ?taau=<frac> override still wins
+        if (sharpen_amount == null) sharpen_amount = 0.4
+      }
+      // Real temporal resolve (velocity + jitter). BLOCKED on this engine's varying-heavy materials
+      // (velocity's positionPrevious varying pushes them past the 16 WebGPU inter-stage limit) — kept as an
+      // explicit opt-in for a future material varying-diet, never the default TAAU path.
+      const taau_temporal = ares_flag('TAAU_TEMPORAL', 'taau_temporal') != null
+      // [S-85 ULTRA → REVERTED 2026-07-11, owner #71/#73/#74] god-rays stay DEFAULT-OFF (flag-gated) at every
+      // tier. The S-85 experiment flipped them ON at HIGH, but the in-tree GodraysNode in-scatters ADDITIVELY
+      // camera→depth with NO per-pixel occlusion: on any LEVEL/UP framing in open sun every lit ray saturates to
+      // maxDensity and the additive shaft (≈maxDensity·sun_radiance·GODRAYS_GAIN ≈ +0.30 linear) washes the whole
+      // NEAR/MID field to a milky-white veil — looking up instantly turned everything white, not realistic
+      // + the under-canopy "bright void" (canopy gaps = sky-facing rays through the same term). The pitch/sun GAIN
+      // (godray_gain.js → u_godray_gain) only fades DOWNWARD framings, so looking DOWN was clean while level/up
+      // stayed washed — a purely PITCH-keyed flood (A/B-proven: mid-band luma 161 on vs 88 off at level, 46=46 at
+      // pitch −0.7). Gating OFF restores the clean committed look at ALL pitches; the endorsed blue distance haze
+      // (sky/far-shell aerial perspective) is untouched. The proper always-on shaft system is froxels.js
+      // (DEFAULT-OFF, real occlusion) — the queued lighting-overhaul lane's job, NOT a default flip here.
+      // ?godrays=1 / __ARES_GODRAYS still force it ON at any tier for bench isolation (?godrays=0 ⇒ off too).
+      const godrays_on = ares_flag('GODRAYS', 'godrays') != null
+      // GodraysNode.setup() reads sun.shadow.map.depthTexture — allocated only once a shadow CASTER first
+      // renders, which is AFTER this boot (terrain streams in later, and the scene is empty here). So
+      // godrays mounts LAZILY: post.try_mount_godrays() (called each frame in render_frame) rebuilds the
+      // output graph the moment the map exists. No forced pre-render — an empty scene never allocates it.
+      post = create_post_stack(
+        /** @type {Parameters<typeof create_post_stack>[0] & {fog_range: {near: typeof u_fog_near, far: typeof u_fog_far}}} */ ({
+          renderer,
+          scene,
+          camera,
+          sun,
+          atmo,
+          underwater,
+          output_effect: motion_blur,
+          taau_scale,
+          taau_temporal,
+          sharpen_amount,
+          godrays_light: godrays_on ? sun : null,
+          // [TASTE 2026-07-11] READ-ONLY fog range for the godray far-haze falloff (post_stack): the SAME
+          // u_fog_near/u_fog_far the frozen scene.fogNode uses, so the additive godray wash yields to the
+          // deep-blue haze in the far field with one source of truth. The fog node itself is NOT touched.
+          fog_range: { near: u_fog_near, far: u_fog_far },
+          // HALF-RES POST gate: the bloom pyramid drops to a lower internal resolution on MEDIUM only.
+          tier,
+        })
+      )
+      // bake the cloud noise volumes + particle seeds once (compute passes; awaited so the first frame
+      // never samples an empty 3D texture).
+      await atmo.bake(renderer)
     }
-    const taau_flag = ares_flag('TAAU', 'taau')
-    // A fractional flag in (0,1) is an explicit scene render-scale; anything else truthy (incl. the common
-    // `=1`) means "on at the default 0.66". (Bugfix: `=1` must NOT map to scale 1.0 = no downscale.)
-    let taau_scale =
-      taau_flag == null ? null : typeof taau_flag === 'number' && taau_flag > 0 && taau_flag < 1 ? taau_flag : 0.66
-    // S-43 SHARPEN (default OFF): FSR1 RCAS to recover the detail the taau_scale bilinear upscale softens.
-    // A fractional flag in (0,2) sets three's `sharpness` (0=max, 2=none); anything else truthy ⇒ 0.4.
-    const sharpen_flag = ares_flag('SHARPEN', 'sharpen')
-    let sharpen_amount =
-      sharpen_flag == null
-        ? null
-        : typeof sharpen_flag === 'number' && sharpen_flag > 0 && sharpen_flag < 2
-          ? sharpen_flag
-          : 0.4
-    // THE MEDIUM RECIPE — NOW THE BASE-GAME DEFAULT: the taau medium recipe merged into the base
-    // game. MEDIUM renders the SCENE pass at 0.66 + RCAS sharpen (the buildable Fortnite-lite path; real
-    // temporal reconstruction stays varying-blocked). The half-res bloom + the governor floor are already
-    // medium defaults, so this completes medium's perf recipe. MEDIUM tier ONLY (high/low untouched — this
-    // block is tier-gated, mirroring the is_medium_tier half-res-bloom branch in post_stack.js).
-    // ESCAPE to native medium: ?taau_medium=0 (or the global __ARES_TAAU_MEDIUM=0). NOTE: this is a BOOT-tier
-    // bake (baked into the post-stack at construction, like half-res bloom / motion blur / grass sway) — a
-    // live no-reload set_tier only re-applies render_scale (setPixelRatio), NOT the scene-pass scale/sharpen,
-    // so switching TO medium in-session arms this on the next reload. AXES: the 0.66 is the SCENE pass only
-    // (post/UI stay full-res); the governor's setPixelRatio dip (floor 0.72) is a SEPARATE whole-swapchain
-    // axis — worst-case they compose on the beauty only (0.66 × 0.72) under sustained fill load, never on post/UI.
-    const taau_medium_g = /** @type {any} */ (typeof globalThis !== 'undefined' ? globalThis : {}).__ARES_TAAU_MEDIUM
-    const taau_medium_off =
-      taau_medium_g === 0 ||
-      taau_medium_g === false ||
-      taau_medium_g === '0' ||
-      (typeof location !== 'undefined' && new URLSearchParams(location.search).get('taau_medium') === '0')
-    if (tier === 'medium' && !taau_medium_off) {
-      if (taau_scale == null) taau_scale = 0.66 // an explicit ?taau=<frac> override still wins
-      if (sharpen_amount == null) sharpen_amount = 0.4
-    }
-    // Real temporal resolve (velocity + jitter). BLOCKED on this engine's varying-heavy materials
-    // (velocity's positionPrevious varying pushes them past the 16 WebGPU inter-stage limit) — kept as an
-    // explicit opt-in for a future material varying-diet, never the default TAAU path.
-    const taau_temporal = ares_flag('TAAU_TEMPORAL', 'taau_temporal') != null
-    // [S-85 ULTRA → REVERTED 2026-07-11, owner #71/#73/#74] god-rays stay DEFAULT-OFF (flag-gated) at every
-    // tier. The S-85 experiment flipped them ON at HIGH, but the in-tree GodraysNode in-scatters ADDITIVELY
-    // camera→depth with NO per-pixel occlusion: on any LEVEL/UP framing in open sun every lit ray saturates to
-    // maxDensity and the additive shaft (≈maxDensity·sun_radiance·GODRAYS_GAIN ≈ +0.30 linear) washes the whole
-    // NEAR/MID field to a milky-white veil — looking up instantly turned everything white, not realistic
-    // + the under-canopy "bright void" (canopy gaps = sky-facing rays through the same term). The pitch/sun GAIN
-    // (godray_gain.js → u_godray_gain) only fades DOWNWARD framings, so looking DOWN was clean while level/up
-    // stayed washed — a purely PITCH-keyed flood (A/B-proven: mid-band luma 161 on vs 88 off at level, 46=46 at
-    // pitch −0.7). Gating OFF restores the clean committed look at ALL pitches; the endorsed blue distance haze
-    // (sky/far-shell aerial perspective) is untouched. The proper always-on shaft system is froxels.js
-    // (DEFAULT-OFF, real occlusion) — the queued lighting-overhaul lane's job, NOT a default flip here.
-    // ?godrays=1 / __ARES_GODRAYS still force it ON at any tier for bench isolation (?godrays=0 ⇒ off too).
-    const godrays_on = ares_flag('GODRAYS', 'godrays') != null
-    // GodraysNode.setup() reads sun.shadow.map.depthTexture — allocated only once a shadow CASTER first
-    // renders, which is AFTER this boot (terrain streams in later, and the scene is empty here). So
-    // godrays mounts LAZILY: post.try_mount_godrays() (called each frame in render_frame) rebuilds the
-    // output graph the moment the map exists. No forced pre-render — an empty scene never allocates it.
-    post = create_post_stack(
-      /** @type {Parameters<typeof create_post_stack>[0] & {fog_range: {near: typeof u_fog_near, far: typeof u_fog_far}}} */ ({
-        renderer,
-        scene,
-        camera,
-        sun,
-        atmo,
-        underwater,
-        output_effect: motion_blur,
-        taau_scale,
-        taau_temporal,
-        sharpen_amount,
-        godrays_light: godrays_on ? sun : null,
-        // [TASTE 2026-07-11] READ-ONLY fog range for the godray far-haze falloff (post_stack): the SAME
-        // u_fog_near/u_fog_far the frozen scene.fogNode uses, so the additive godray wash yields to the
-        // deep-blue haze in the far field with one source of truth. The fog node itself is NOT touched.
-        fog_range: { near: u_fog_near, far: u_fog_far },
-        // HALF-RES POST gate: the bloom pyramid drops to a lower internal resolution on MEDIUM only.
-        tier,
-      })
-    )
-    // bake the cloud noise volumes + particle seeds once (compute passes; awaited so the first frame
-    // never samples an empty 3D texture).
-    await atmo.bake(renderer)
   } catch (error) {
     atmo = null
     post = null
@@ -874,7 +886,8 @@ export async function create_renderer({
   // (never URL-parsed). Its OWN resilience guard degrades to the analytic sky on any construction/bake
   // failure (never kills the boot), mirroring the atmo law.
   const analytic_override = typeof globalThis !== 'undefined' && /** @type {any} */ (globalThis).__ARES_SKY_ANALYTIC
-  const sky_hillaire_on = tier !== 'low' && !analytic_override
+  // HACK MODE (`atmosphere: false`) takes the SAME rung the LOW tier already takes — no physical sky.
+  const sky_hillaire_on = atmosphere && tier !== 'low' && !analytic_override
   if (sky_hillaire_on) {
     try {
       // share sky.sun_direction so set_time_of_day drives the physical sun with zero extra plumbing;

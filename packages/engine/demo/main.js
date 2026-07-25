@@ -103,6 +103,10 @@ const force_webgl = params.get('force_webgl') === '1'
 // palette. Read-only resolve via world_config_for_biome (unknown/empty ⇒ the DEFAULT world, warns). The
 // demo `seed` box still works: the recipe's seed is overridden with state.seed at boot (below).
 const biome_param = params.get('biome')
+// HACK MODE (`?hack=1` — docs/design/hack_mode_spec.md): boot the retrowave flat-grid presentation
+// instead of the streamed terrain. This page is slice A's acceptance surface: zero terrain, a neon
+// interaction grid, the fixed north sun. The dapp arms the same option from its settings toggle.
+const hack_mode = params.get('hack') === '1'
 
 const state = {
   seed: params.get('seed') || MASTER_SEED,
@@ -113,9 +117,11 @@ const state = {
   // Default pose: oblique overview above the REAL streamed world (world_gen surface ≈ y 128-140
   // near spawn). The previous [70,55,70] pose predated world_gen and sat ~80 blocks UNDERGROUND
   // (fresh loads framed void until the player flew up — a recurring "I see nothing" report).
-  position: /** @type {[number, number, number]} */ ([70, 175, 70]),
-  yaw: Math.PI / 4,
-  pitch: -0.5,
+  // Hack mode gets an EYE-LEVEL pose facing north (+Z): the fixed retrowave sun is a standing
+  // landmark on that azimuth, so this framing shows the whole presentation — grid, horizon, sun.
+  position: /** @type {[number, number, number]} */ (hack_mode ? [70, 141, 70] : [70, 175, 70]),
+  yaw: hack_mode ? Math.PI : Math.PI / 4,
+  pitch: hack_mode ? -0.04 : -0.5,
 }
 
 const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('canvas'))
@@ -181,6 +187,8 @@ function boot_engine() {
       // static field centre in STREAMING mode (harmless under WebGPU streaming, where it's ignored) so
       // ?force_webgl=1 lays its heightmap around the demo's spawn XZ, not the origin.
       ...(force_webgl ? { force_webgl, zone_origin: ZONE_ORIGIN } : {}),
+      // HACK MODE: the third presentation — no gen/mesh/far workers, no ring, no atmosphere.
+      ...(hack_mode ? { presentation: /** @type {const} */ ('hackgrid') } : {}),
     })
     // [D210] boot timeline: log each `load_progress` phase transition (focus_ready = walkable; done =
     // the full streaming ring resident) — the same events the dapp's loading screen consumes.

@@ -123,22 +123,52 @@ function lattice_coverage(p, px, spacing, half_w) {
 }
 
 /**
- * @typedef {object} HackPresentation
- * @property {*} sky_node vec3 node for `scene.backgroundNode` — the retrowave sky + its fixed sun.
+ * @typedef {object} HackOracle
  * @property {(x: number, y: number, z: number) => number} sample_block the constant-plane oracle; the
  *   engine swaps BOTH sample_block and sample_block_analytic onto it (residency is meaningless here).
  * @property {(x: number, z: number) => boolean} is_column_resident always true — nothing streams, so
  *   nothing can be missing.
  * @property {(x: number, z: number) => number} ground_at the top solid block y (HACK_GROUND_Y − 1) —
  *   the mana barrier's terrain-following probe, flat by construction.
+ */
+
+/**
+ * @typedef {object} HackDecoration
+ * @property {*} sky_node vec3 node for `scene.backgroundNode` — the retrowave sky + its fixed sun.
  * @property {(dt: number, camera_position: { x: number, z: number }) => void} tick advances the shimmer
  *   clock and re-centres the quad on the camera (snapped to the major lattice).
  * @property {() => void} dispose unmounts the quad and frees its geometry/material.
  */
 
+/** @typedef {HackOracle & HackDecoration} HackPresentation */
+
 /**
- * Builds the hack-mode presentation and mounts it into the scene. Pure construction: no GPU work, no
- * streaming, no workers — the engine's hack branch skips every terrain system and calls this instead.
+ * The height/residency truth of hack mode, on its own — no scene, no GPU, no clock. The engine arms it
+ * at CREATE time (the decoration below can only be built once the renderer exists), so the very first
+ * `is_column_resident` a consumer asks — the boot veil's, before init has even resolved — already
+ * answers true and no readiness path can ever wait on streaming.
+ * @returns {HackOracle}
+ */
+export function create_hack_oracle() {
+  return {
+    sample_block(_x, y, _z) {
+      const iy = Math.floor(y)
+      // (HACK_GROUND_Y < WORLD_HEIGHT, so the world box's ceiling is already implied by the plane.)
+      return iy >= 0 && iy < HACK_GROUND_Y ? GROUND_BLOCK_ID : 0
+    },
+    is_column_resident() {
+      return true
+    },
+    ground_at() {
+      return HACK_GROUND_Y - 1
+    },
+  }
+}
+
+/**
+ * Builds the hack-mode presentation — the oracle above plus its decoration — and mounts the grid quad
+ * into the scene. Pure construction: no GPU work, no streaming, no workers; the engine's hack branch
+ * skips every terrain system and calls this instead.
  * @param {{ scene: import('three').Scene }} opts
  * @returns {HackPresentation}
  */
@@ -211,18 +241,8 @@ export function create_hack_presentation({ scene }) {
   scene.add(mesh)
 
   return {
+    ...create_hack_oracle(),
     sky_node,
-    sample_block(_x, y, _z) {
-      const iy = Math.floor(y)
-      // (HACK_GROUND_Y < WORLD_HEIGHT, so the world box's ceiling is already implied by the plane.)
-      return iy >= 0 && iy < HACK_GROUND_Y ? GROUND_BLOCK_ID : 0
-    },
-    is_column_resident() {
-      return true
-    },
-    ground_at() {
-      return HACK_GROUND_Y - 1
-    },
     tick(dt, camera_position) {
       u_time.value += dt
       // Snap to the MAJOR pitch: the local lattice then coincides with the world lattice exactly, so
