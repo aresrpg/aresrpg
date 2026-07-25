@@ -239,6 +239,13 @@ export const create_fight_shim = ({
       my_key: null,
       ctx: {
         address: LOCAL_ADDRESS,
+        // THE SEAT NAMES (#883 ③). `snapshot_from_sim` carries no `name` on a participant row (the chain's
+        // own participant has none either), so the core's projection falls back to `ctx.roster` and, failing
+        // that, prints the OWNER ADDRESS — every sim seat read as `0X51M0…0000` on its turn card. The roster
+        // is handed straight to the core here rather than hoped for on the engine's global `sui.characters`,
+        // which on this page holds whatever the world session last loaded (often the player's real roster,
+        // which never contains `sim_c1`).
+        roster: roster.map(({ id, name, class_id, level }) => ({ id, name, classe: class_id, level })),
         my_entity_id: focus_id ?? roster[0]?.id ?? null,
         creator: LOCAL_ADDRESS,
         spectator: false,

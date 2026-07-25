@@ -1292,7 +1292,8 @@
     "roster_panel_hint": "Les nouveaux personnages se créent dans le panneau ÉQUIPE",
     "seat_empty": "VIDE",
     "start_fight": "LANCER LE COMBAT",
-    "stop_fight": "ARRÊTER"
+    "stop_fight": "ARRÊTER",
+    "board_hint_fight": "Le combat contrôle le plateau — ARRÊTER revient à la préparation"
   },
   "purchase": {
     "acquisition_complete": "Acquisition Terminée",

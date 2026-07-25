@@ -1292,7 +1292,8 @@
     "roster_panel_hint": "新規キャラクターはロスターで作成します",
     "seat_empty": "空",
     "start_fight": "戦闘開始",
-    "stop_fight": "停止"
+    "stop_fight": "停止",
+    "board_hint_fight": "戦闘がボードを制御中 — 停止で編成に戻ります"
   },
   "purchase": {
     "acquisition_complete": "購入完了",

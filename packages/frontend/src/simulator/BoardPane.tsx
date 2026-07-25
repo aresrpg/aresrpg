@@ -39,15 +39,26 @@ type ViewportHandle = {
   show: (board: unknown, scene: unknown) => Promise<void>
   /** the board reports a MISS as `null` (contract v1.2) — a click into the void is an event, not silence */
   on_cell_click: (cb: (cell: { x: number; y: number } | null) => void) => () => void
+  /** hand the board to the world's fight adapter for the fight phase, and take it back after */
+  arm_fight: () => Promise<void>
+  disarm_fight: () => void
   destroy: () => void
 }
 
+/**
+ * The board region. `setup` is the EDITING phase and owns every verb on this pane — the reroll, the hint, the
+ * two start bands. In `fight` the same viewport shows the fight's own seats and nothing else: a surface that
+ * still offers a reroll and still says "click a blue cell" is telling the player they are editing a line-up
+ * the sim has already snapshotted (#883 ②⑤).
+ */
 export function BoardPaneView({
   board,
+  setup,
   canvas_ref,
   on_reroll,
 }: Readonly<{
   board: SimBoard
+  setup: boolean
   canvas_ref?: RefObject<HTMLCanvasElement | null>
   on_reroll: () => void
 }>) {
@@ -61,22 +72,24 @@ export function BoardPaneView({
         <span className={`${micro} text-muted`}>
           {t('simulator.anchor')} {board.anchor.x},{board.anchor.z}
         </span>
-        <button
-          type="button"
-          className={`${micro} flex items-center gap-1 px-2 py-1 cursor-pointer`}
-          style={{ border: `1px solid ${GOLD}`, color: GOLD }}
-          onClick={on_reroll}
-        >
-          <Dices size={12} />
-          {t('simulator.reroll_board')}
-        </button>
+        {setup && (
+          <button
+            type="button"
+            className={`${micro} flex items-center gap-1 px-2 py-1 cursor-pointer`}
+            style={{ border: `1px solid ${GOLD}`, color: GOLD }}
+            onClick={on_reroll}
+          >
+            <Dices size={12} />
+            {t('simulator.reroll_board')}
+          </button>
+        )}
       </div>
 
       <div className="relative flex-1 min-h-[220px]" style={{ border: HAIRLINE, background: '#0c0c14' }}>
         <canvas ref={canvas_ref} className="absolute inset-0 w-full h-full block" />
       </div>
 
-      <p className={`${micro} text-muted`}>{t('simulator.board_hint')}</p>
+      <p className={`${micro} text-muted`}>{t(setup ? 'simulator.board_hint' : 'simulator.board_hint_fight')}</p>
     </div>
   )
 }
@@ -101,16 +114,17 @@ export function SimulatorBoardPane() {
 
   // The corpus is a boot-time blob: an empty index simply means it has not landed (or is unpublished).
   const mob_of = use_mob_index()
-  const scene = useMemo(
-    () =>
-      setup_scene_of(board, {
-        roster,
-        placements,
-        mob_picks,
-        mob_name_of: (template_id) => mob_of.get(template_id)?.name ?? template_id,
-      }),
-    [board, roster, placements, mob_picks, mob_of]
-  )
+  const scene = useMemo(() => {
+    const painted = setup_scene_of(board, {
+      roster,
+      placements,
+      mob_picks,
+      mob_name_of: (template_id) => mob_of.get(template_id)?.name ?? template_id,
+    })
+    // THE BANDS ARE A SETUP AFFORDANCE. They mean "you may put someone here"; once the fight owns the board
+    // they are a lie in blue and red, and the fighters are the only thing left to show.
+    return phase === 'setup' ? painted : { ...painted, start_a: [], start_b: [] }
+  }, [board, roster, placements, mob_picks, mob_of, phase])
 
   // The LIVE state the click handler must read — a handler captured at mount would seat a stale board.
   const click_state = useRef({ board, placements, phase })
@@ -157,14 +171,31 @@ export function SimulatorBoardPane() {
   }, [input])
 
   // Every board/scene change re-shows — and so does the viewport's own arrival. The mount re-bakes the
-  // geometry only when the BOARD itself changed; anything else is a repaint.
+  // geometry only when the BOARD itself changed; anything else is a repaint. In the FIGHT phase the world's
+  // adapter owns this same board handle, so the setup painter stands down entirely (one writer, always).
   useEffect(() => {
+    if (phase !== 'setup') return
     void viewport?.show(board, scene)
-  }, [viewport, board, scene])
+  }, [viewport, board, scene, phase])
+
+  // THE CUTOVER. The fight phase is rendered by the world's own `voxel_fight_adapter` over this very engine
+  // and board — the same builder, rigs, washes, walk/cast beats and click relay a live dungeon fight uses.
+  // Nothing about combat is re-implemented here; the page only says WHEN the fight owns the board.
+  useEffect(() => {
+    if (!viewport) return undefined
+    if (phase !== 'fight') return undefined
+    void viewport.arm_fight()
+    return () => viewport.disarm_fight()
+  }, [viewport, phase])
 
   return (
     <>
-      <BoardPaneView board={board} canvas_ref={canvas_ref} on_reroll={() => input({ type: 'board_rerolled' })} />
+      <BoardPaneView
+        board={board}
+        setup={phase === 'setup'}
+        canvas_ref={canvas_ref}
+        on_reroll={() => input({ type: 'board_rerolled' })}
+      />
       {ally_pick && (
         <CharacterPicker
           roster={roster}

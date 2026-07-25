@@ -391,8 +391,12 @@ const reduce_fight_phase = (
     case 'fight_stopped':
       return state.phase === 'setup' ? state : { ...state, phase: 'setup', fight: null }
 
+    // EVERY BOARD ARM IS SETUP-ONLY (#883 ⑤). A reroll mid-fight regenerates the layout the sim is already
+    // fighting on and re-fits the picks/placements under it — the page would then paint a board the authority
+    // has never heard of, and the fight's own cells would point into a different derivation. The same is true
+    // of every placement and pick arm, so the phase gate lives at the door rather than on one button.
     default:
-      return reduce_board_setup(state, input)
+      return state.phase === 'setup' ? reduce_board_setup(state, input) : state
   }
 }
 

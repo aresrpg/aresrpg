@@ -1292,7 +1292,8 @@
     "roster_panel_hint": "Нових персонажів створюють у панелі складу",
     "seat_empty": "ПОРОЖНЬО",
     "start_fight": "ПОЧАТИ БІЙ",
-    "stop_fight": "ЗУПИНИТИ"
+    "stop_fight": "ЗУПИНИТИ",
+    "board_hint_fight": "Бій керує полем — ЗУПИНИТИ повертає до налаштування"
   },
   "purchase": {
     "acquisition_complete": "Придбання завершено",

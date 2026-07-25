@@ -1,0 +1,33 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+/*
+ * The SIMULATOR's own fight-layer rules — the only thing this page adds to the production HUD it mounts.
+ * Scoped to `.sim-fight-layer` so nothing here can reach the world's fight, and deliberately tiny: the HUD
+ * is borrowed whole, never re-skinned.
+ */
+
+/* FORFEIT IS A WORLD VERB (#883 ⑥). `FightControls` shows an `actions::abandon` door on every fight because
+ * every on-chain fight has stakes to walk away from. This one has none — it is a sandbox, its "abandon" is
+ * wired to a local no-op, and it would leave the PAGE in its fight phase with the session already torn down
+ * (the page reducer's `fight_stopped` only fires from the top bar). So the sandbox keeps exactly one exit:
+ * STOP, in the top bar, which stops the sim AND returns the page to setup. */
+.sim-fight-layer .hud-fightctl__abandon {
+  display: none;
+}
+
+/* The sim's third outcome (winner 2) has no chain status of its own, so the page paints its own banner over
+ * the production defeat card. It had a class and no rule anywhere in the app. */
+.sim-fight-layer .sim-draw-banner {
+  position: fixed;
+  left: 50%;
+  top: 18%;
+  transform: translateX(-50%);
+  z-index: 60;
+  padding: 10px 22px;
+  font-size: 12px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #c8963c;
+  background: rgba(12, 12, 20, 0.92);
+  border: 1px solid #c8963c;
+}

@@ -1292,7 +1292,8 @@
     "roster_panel_hint": "New characters are created in the roster panel",
     "seat_empty": "EMPTY",
     "start_fight": "START FIGHT",
-    "stop_fight": "STOP"
+    "stop_fight": "STOP",
+    "board_hint_fight": "The fight owns the board — STOP returns to setup"
   },
   "purchase": {
     "acquisition_complete": "Acquisition Complete",

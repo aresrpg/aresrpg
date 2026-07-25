@@ -33,10 +33,23 @@ import { fight_layer_class } from '../game/screens/hud/mobile_layout.js'
 import { should_mount_board } from '../fight-engine/phase.js'
 import { use_fight_phase } from '../game/screens/hud/world/use_fight_phase.js'
 import { DungeonBoard } from '../game/screens/hud/world/DungeonBoard.jsx'
+import { EntityTooltip } from '../game/screens/hud/EntityTooltip.jsx'
 import { FightTimeline } from '../game/screens/hud/FightTimeline.jsx'
 import { FightPlacementBanner } from '../game/screens/hud/FightPlacementBanner.jsx'
 import { FightResult } from '../game/screens/hud/FightResult.jsx'
 import { FightSummary } from '../game/screens/hud/FightSummary.jsx'
+import { TurnBanner } from '../game/screens/hud/TurnBanner.jsx'
+
+// THE HUD'S OWN STYLESHEETS. Every `.hud-*` / `.gw-fight-layer` rule the components below are built out of
+// lives in these three files, and they were imported by exactly ONE module in the app: GameWorldHud.jsx, the
+// world tab this page is not. So the whole layer mounted with no CSS at all — the turn timer and the HP
+// numbers leaked out as bare text while the bar, the timeline cards and the board chrome had no box, no
+// position and no z-index. The binding is not "mount the components", it is "mount the surface": it brings
+// its styles with it, exactly like the world host does.
+import '../game/screens/hud/hud.css'
+import '../game/screens/hud/world/game-world-hud.css'
+import '../game/screens/hud/mobile-fight-hud.css'
+import './fight-hud.css'
 
 /**
  * The fight-phase HUD. Renders nothing until the phase machine says a board is up, so the setup phase is never
@@ -50,11 +63,16 @@ export function SimulatorFightHud({ draw = false }) {
   const phase = use_fight_phase()
   if (!should_mount_board(phase)) return null
   return (
-    <div className={fight_layer_class(false)}>
+    // `sim-fight-layer` marks this composition as the SIMULATOR's: it is what the sim-only CSS below hangs
+    // off (the forfeit door — a sandbox has nothing to forfeit; STOP in the top bar is the one exit).
+    <div className={`${fight_layer_class(false)} sim-fight-layer`}>
       {/* placement countdown + the "your turn" cue — both self-gate on the fight core's own phase */}
       <FightPlacementBanner />
+      <TurnBanner />
       {/* turn-order cards (left-center) — a pure fight-view reader */}
       <FightTimeline />
+      {/* the fighter under the cursor: name + team + HP */}
+      <EntityTooltip />
       {/* the turn-INPUT bridge: draft a move path, arm and drop a cast, end the turn. Its commit edge routes
           to `use_dungeon.commit_turn`, which fight_shim.js seeded with the local sim submit. */}
       <DungeonBoard />

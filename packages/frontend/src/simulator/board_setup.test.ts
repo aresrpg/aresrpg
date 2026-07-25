@@ -334,3 +334,49 @@ describe('the board invariant — every stored cell is legal on the CURRENT boar
     expect(legal.mob_picks[board.start_cells_b[0]]).toEqual({ template_id: 'mob_gronk', level: 4 })
   })
 })
+
+// #883 ⑤ — the owner drove a live fight and found REROLL BOARD still clickable. The button is gone from the
+// pane (BoardPane.test.tsx), but a button is chrome: the DOOR is what has to refuse, or any other caller —
+// a stale handler, a keyboard path, a future surface — can still regenerate the layout the sim is fighting
+// on, re-fitting every pick and placement under a snapshot the authority has already taken.
+describe('the board door is SETUP-only', () => {
+  const fighting = (): SimulatorState => {
+    const board = board_of(SEED, 0)
+    const seated = fold(with_roster(1), {
+      type: 'character_placed',
+      cell: board.start_cells_a[0],
+      id: 'sim_c1',
+    })
+    return fold(seated, { type: 'fight_started' })
+  }
+
+  test('a reroll mid-fight is refused — the board the sim opened on is the board that stays', () => {
+    const live = fighting()
+    expect(live.phase).toBe('fight')
+    const after = reduce_simulator(live, { type: 'board_rerolled' })
+    expect(after.anchor_nonce).toBe(live.anchor_nonce)
+    expect(after).toBe(live) // the very same state object — nothing was re-fitted
+  })
+
+  test('so is every other board verb — placing, unplacing and picking all belong to setup', () => {
+    const live = fighting()
+    const board = board_of(SEED, 0)
+    expect(reduce_simulator(live, { type: 'character_unplaced', cell: board.start_cells_a[0] })).toBe(live)
+    expect(
+      reduce_simulator(live, {
+        type: 'mob_picked',
+        cell: board.start_cells_b[0],
+        template_id: 'mob_gronk',
+        level: 4,
+        min_level: 1,
+        max_level: 10,
+      })
+    ).toBe(live)
+  })
+
+  test('STOP hands the board back — the same verbs work again in setup', () => {
+    const back = fold(fighting(), { type: 'fight_stopped' })
+    expect(back.phase).toBe('setup')
+    expect(reduce_simulator(back, { type: 'board_rerolled' }).anchor_nonce).toBe(back.anchor_nonce + 1)
+  })
+})

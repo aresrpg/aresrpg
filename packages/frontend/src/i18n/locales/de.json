@@ -1292,7 +1292,8 @@
     "roster_panel_hint": "Neue Figuren werden im Kader angelegt",
     "seat_empty": "LEER",
     "start_fight": "KAMPF STARTEN",
-    "stop_fight": "STOPP"
+    "stop_fight": "STOPP",
+    "board_hint_fight": "Der Kampf besitzt das Feld — STOPP kehrt zur Aufstellung zurück"
   },
   "purchase": {
     "acquisition_complete": "Erwerb abgeschlossen",

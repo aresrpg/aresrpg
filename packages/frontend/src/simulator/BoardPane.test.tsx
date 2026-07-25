@@ -27,10 +27,10 @@ void test_i18n.init({
 const SEED = 0xc81f3a92
 const BOARD = board_of(SEED, 0)
 
-const markup = () =>
+const markup = (setup = true) =>
   renderToStaticMarkup(
     <I18nextProvider i18n={test_i18n}>
-      <BoardPaneView board={BOARD} on_reroll={() => {}} />
+      <BoardPaneView board={BOARD} setup={setup} on_reroll={() => {}} />
     </I18nextProvider>
   )
 
@@ -47,6 +47,17 @@ describe('the simulator board pane', () => {
     expect(html).toContain(en.simulator.board_hint)
     // the two-panel dance is gone: nothing here talks about selecting a roster row first
     expect(html).not.toContain('Select a roster character')
+  })
+
+  // #883 ②⑤ — the owner drove a live fight and found the setup chrome still there, REROLL included. A reroll
+  // mid-fight regenerates the layout the sim is already fighting on; the button must not exist to be pressed.
+  test('the fight phase drops every setup verb — no reroll, no place-a-character hint', () => {
+    const html = markup(false)
+    expect(html).not.toContain('REROLL BOARD')
+    expect(html).not.toContain(en.simulator.board_hint)
+    expect(html).toContain(en.simulator.board_hint_fight)
+    // the board's own identity stays — it is the same board, under new ownership
+    expect(html).toContain(`${BOARD.width} × ${BOARD.height}`)
   })
 
   test('the pane holds no mob line-up of its own — the bottom section was deleted (#883 ④)', () => {

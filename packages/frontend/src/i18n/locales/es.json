@@ -1292,7 +1292,8 @@
     "roster_panel_hint": "Los personajes nuevos se crean en la plantilla",
     "seat_empty": "VACÍO",
     "start_fight": "INICIAR COMBATE",
-    "stop_fight": "DETENER"
+    "stop_fight": "DETENER",
+    "board_hint_fight": "El combate controla el tablero — DETENER vuelve a la preparación"
   },
   "purchase": {
     "acquisition_complete": "Adquisicion Completada",

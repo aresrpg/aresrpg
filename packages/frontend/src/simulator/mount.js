@@ -19,8 +19,10 @@
 // tested headless — this file is glue, which is why a bun test never needs to import it (the tactical
 // facade pulls the character avatar's GLB).
 //
-// L4 (the fight phase) mounts `create_voxel_fight_adapter` over this SAME engine + board handle: the calls
-// below are the setup-phase subset of the adapter's own channels, so the cutover is an addition.
+// L4 (the fight phase) mounts `create_voxel_fight_adapter` over this SAME engine + board handle — and that is
+// exactly what `arm_fight()` below does. There is NO simulator fight renderer: the world's adapter builds the
+// board, upserts the rigs, paints the range/target/LoS washes, plays every walk and cast beat and relays the
+// turn clicks, off the same fight core the world reads. One board language, one implementation, no drift.
 
 import { create_engine } from '@aresrpg/engine3'
 import { create_tactical_board, TEAM_COLORS } from '@aresrpg/engine3/tactical'
@@ -64,6 +66,8 @@ export function create_board_viewport({ canvas, deps = {} }) {
   let mounted_key = /** @type {string | null} */ (null)
   /** every fighter id on the board, so an unpicked mob / unplaced character is actually despawned */
   let mounted_ids = /** @type {string[]} */ ([])
+  /** the WORLD's fight adapter while a fight owns this board (null in setup) */
+  let adapter = /** @type {{ destroy: () => void } | null} */ (null)
 
   /** Apply a folded scene (simulator/board_paint.ts) to the board handle. */
   const paint = (/** @type {any} */ scene) => {
@@ -117,9 +121,39 @@ export function create_board_viewport({ canvas, deps = {} }) {
       return board.on('cell_click', /** @type {any} */ (callback))
     },
 
+    /**
+     * HAND THE BOARD TO THE FIGHT. `create_voxel_fight_adapter` is the world's own board driver: from here on
+     * it owns the build, the rigs, the washes, the beats and the click relay, reading the SAME fight core and
+     * dungeon store the world reads (fight_shim.js seeds both). The setup painter goes quiet for the
+     * duration — two writers on one board handle is the one thing this seam must not do.
+     *
+     * Lazy-imported: the adapter drags the whole combat presentation tree (vfx, sfx, the fight folds), and a
+     * setup session must not pay for it.
+     */
+    async arm_fight() {
+      if (destroyed || adapter) return
+      const { create_voxel_fight_adapter } = await import('../world-shell/voxel_fight_adapter.js')
+      if (destroyed || adapter) return
+      // The board floats at the origin in the void — the same seat the setup board is built on, so the fight
+      // opens exactly where the player was just editing instead of flying somewhere else.
+      adapter = create_voxel_fight_adapter(board, { origin: BOARD_ORIGIN, engine, canvas })
+      mounted_key = null // the adapter rebuilds the board itself; the setup bake is no longer what stands
+      mounted_ids = []
+    },
+
+    /** Take it back for setup. The next `show()` re-bakes the setup board from scratch (`mounted_key` null). */
+    disarm_fight() {
+      adapter?.destroy()
+      adapter = null
+      mounted_key = null
+      mounted_ids = []
+    },
+
     destroy() {
       if (destroyed) return
       destroyed = true
+      adapter?.destroy()
+      adapter = null
       board.teardown()
       engine.dispose?.()
     },
