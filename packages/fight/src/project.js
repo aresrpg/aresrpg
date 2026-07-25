@@ -61,7 +61,7 @@ const decode_cell = (encoded, width) =>
   encoded == null ? null : { x: Number(encoded) % width, y: Math.floor(Number(encoded) / width) }
 
 /** Every fighter as the board wants it — encoded `cell` plus a decoded `cell_xy` (grid_width from the Fight board). */
-export const fighters = (state, grid_width = 20) =>
+export const fighters = (state, grid_width = GRID_W) =>
   Object.keys(state.fighters ?? {})
     .sort()
     .map((key) => {

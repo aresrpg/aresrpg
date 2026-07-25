@@ -20,6 +20,7 @@ import {
   TELEPORT_ARRIVAL_MS,
   TRAP_BEAT_MS,
 } from './fight_render_prims.js'
+import { GRID_W } from './los.js'
 
 // The reference gaits + timing constants and the pure grid/path/writer primitives live in fight_render_prims.js;
 // the SIM-prediction render path (also a live producer — DungeonBoard.jsx's own-cast prediction) lives in
@@ -97,7 +98,7 @@ export function produce_receipt_render_turns(
   raw_events,
   {
     fight_id = null,
-    grid_width = 20,
+    grid_width = GRID_W,
     trap_cells = [],
     is_trap_cell = null,
     resolve_trap_owner = null,

@@ -29,6 +29,7 @@
 
 import { fight_store } from '@aresrpg/fight/store'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_WON } from '@aresrpg/fight/board_state'
+import { GRID_W } from '@aresrpg/fight/los'
 import {
   LOCAL_ADDRESS,
   abandon_fight,
@@ -255,7 +256,10 @@ export const create_fight_shim = ({
         mob_levels: dungeon.getState().mob_levels,
         mob_elements: dungeon.getState().mob_elements,
         offset: { x: 0, z: 0 }, // identity codec — the board's anchor is already world space (dev_synth precedent)
-        beat_ctx: { grid_width: 20 },
+        // The canonical stride, imported — never the literal 20. `GRID_W` is the ONE home (los.js's D75-stride
+        // keystone, matched to combat_grid.move); a copy here would be a fight fact with a second implementation
+        // inside the simulator composition, which is exactly issue #914's defect class.
+        beat_ctx: { grid_width: GRID_W },
       },
     })
     store.getState().input({ type: 'snapshot', fight: snapshot_from_sim(chain, { now_ms: now() }), version: 1 })

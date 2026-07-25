@@ -13,6 +13,7 @@ import { participant_entity_id } from './fight_control.js'
 import { apply_action, empty_state, seat_resolver } from './inputs.js'
 import * as settle_input from './inputs.js'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_WON } from './board_state.js'
+import { GRID_W } from './los.js'
 import { INVISIBILITY_STATUS_KIND } from './fight_status_snapshot.js'
 import { masks_entries, pace_segment } from './present.js'
 import {
@@ -480,7 +481,7 @@ export const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_
   const my_entity = ctx.my_entity_id ?? null
   const escrow = draft.view?.escrow ?? []
   const my_seat = settle_input.actor_from_key(draft.my_key)?.idx ?? seat_resolver(draft.view)(my_entity)
-  const grid_w = Number(ctx.beat_ctx.grid_width) || 20
+  const grid_w = Number(ctx.beat_ctx.grid_width) || GRID_W
   // Receipt trap cells come from engine_view.my_traps — the local-only durable trap ledger. That makes their
   // owner the local entity even though Hit carries no source. Any trap detected outside this set stays unknown
   // and therefore renders through the neutral fallback instead of borrowing the semantic turn actor.
