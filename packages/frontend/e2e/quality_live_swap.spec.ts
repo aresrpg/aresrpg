@@ -14,7 +14,7 @@ import { test, expect } from '@playwright/test'
 //     engine stats actually moved,
 //   • same-tier content counts return to baseline (the two MEDIUM re-boots) — no unbounded accumulation,
 //   • the player POSE is preserved across the swaps (the session_position flush) — never snapped to spawn.
-// Modeled on world_lobby_movement.spec.ts (the proven dev-login + reach-the-world path).
+// Modeled on the proven dev-login + reach-the-world path (world_rig.ts owns it for the world drives).
 
 const DEV_KEY = process.env.VITE_DEV_KEY ?? ''
 
@@ -56,7 +56,7 @@ test('live quality swap re-boots the pipeline in place — no page reload', asyn
   await page.goto('/game-world?dev', { waitUntil: 'domcontentloaded' })
   await expect(page.locator('[data-nav="game-world"]')).toContainText('World', { timeout: 30_000 })
 
-  // Mint a throwaway character if this identity's roster is empty (same guard as world_lobby_movement) — this
+  // Mint a throwaway character if this identity's roster is empty (the family's create-character guard) — this
   // may reload once (CharacterMenu drops ?dev), which is fine: the swap-navigation baseline is taken AFTER.
   const play = page.locator('button:has-text("PLAY")')
   let needsCreate = false

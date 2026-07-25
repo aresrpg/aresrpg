@@ -13,7 +13,7 @@ import { test, expect, chromium, type Page } from '@playwright/test'
 //   4. despawn — leaving the room emits packet/charactersDespawn.
 //
 // This tests the p2p module in isolation (no on-chain mint needed) because the scene-mount + movement
-// side is already proven by world_lobby_movement.spec.ts. It exercises the risky part — real relay
+// side is already proven by golden_path.spec.ts's wasd_move step. It exercises the risky part — real relay
 // discovery + WebRTC data channel between two peers — deterministically.
 
 const APP_ROUTE = '/game-world' // any app route boots the vite module graph; we import modules directly

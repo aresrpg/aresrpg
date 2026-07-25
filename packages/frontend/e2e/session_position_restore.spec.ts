@@ -8,8 +8,8 @@ import { test, expect, type Page } from '@playwright/test'
 // sessionStorage contract; embed_voxel.js reads it at boot to pick boot_spawn instead of WORLD_SPAWN.
 //
 // Reads the LIVE controller position via the DEV-only `window.__voxel_ctl` hook (embed_voxel_dev.js) — a
-// direct, deterministic signal instead of screenshot heuristics (matches world_lobby_movement.spec.ts's
-// approach, using the CURRENT hook now that roam.js/__ARES_PLAYER are gone post-D139).
+// direct, deterministic signal instead of screenshot heuristics, and the CURRENT hook now that
+// roam.js/`__ARES_PLAYER` are gone post-D139 (the specs that kept driving the dead global were ported in #872).
 
 const DEV_KEY = process.env.VITE_DEV_KEY ?? ''
 const OUT = process.env.ARES_TEST_OUT ?? new URL('../test-results/out', import.meta.url).pathname
@@ -37,7 +37,7 @@ test('walking away from spawn then refreshing restores the live position (not WO
 
   await page.goto('/game-world?dev', { waitUntil: 'domcontentloaded' })
 
-  // create-character fallback (mirrors world_lobby_movement.spec.ts) — a confirmed-empty roster shows PLAY.
+  // create-character fallback (the family's guard) — a confirmed-empty roster shows PLAY.
   const createAndPlay = page.locator('button:has-text("PLAY")')
   let needsCreate = false
   for (let i = 0; i < 15 && !needsCreate; i++) {

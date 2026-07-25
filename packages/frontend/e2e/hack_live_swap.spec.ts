@@ -56,7 +56,7 @@ test('the hack-mode toggle swaps the world presentation live — no page reload'
   await page.goto('/game-world?dev', { waitUntil: 'domcontentloaded' })
   await expect(page.locator('[data-nav="game-world"]')).toContainText('World', { timeout: 30_000 })
 
-  // Mint a throwaway character if this identity's roster is empty (the world_lobby_movement guard) — it may
+  // Mint a throwaway character if this identity's roster is empty (the family's create-character guard) — it may
   // reload once, which is fine: the no-reload sentinel below is planted afterwards.
   const play = page.locator('button:has-text("PLAY")')
   let needs_create = false
