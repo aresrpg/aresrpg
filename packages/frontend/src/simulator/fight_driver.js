@@ -20,29 +20,53 @@
 
 import { reduce, create_fight_state } from '@aresrpg/sim/reduce'
 import { get_current_turn_entity } from '@aresrpg/sim/fight_state'
+import { create_recorder, dump_capsule, observe_reduce_checked, open_recording } from '@aresrpg/sim/recorder'
 
 /** Consecutive mob turns can chain (§4.6), but never unboundedly — a planner bug must surface as a loud stop,
  *  never a hung page. Sized well past any real roster/mob count so a legitimate chain is never truncated. */
 export const MAX_CHAINED_MOB_TURNS = 64
 
 /**
- * The bootstrap session — the sim's placement-phase state plus the chain-object bookkeeping the store's door
- * needs. `seed` is the ONE u32 determinism root (spec §1): it seeds the board upstream and `state.rng` here.
- * @param {{ fight_id: string, seed: number, arena: any, team0: any[], team1: any[] }} params
+ * The bootstrap session — the sim's placement-phase state, the chain-object bookkeeping the store's door
+ * needs, and the sim recorder's black box. `seed` is the ONE u32 determinism root (spec §1): it seeds the
+ * board upstream and `state.rng` here.
+ *
+ * THE RECORDER LIVES WITH THE DRIVER, not with the encoder. `@aresrpg/sim/recorder` taps `reduce` CALLS, and
+ * this module is what calls `reduce`; a tap anywhere else would have to re-derive the transitions it never
+ * saw. Its ring is what `dump_sim_capsule` folds into the replayable timeline.js Capsule the trace export
+ * ships (spec §8, row 2) — commands + seed, so a captured fight re-folds byte-identically and is a fixture
+ * candidate for `packages/sim/test/fixtures/replay/`.
+ *
+ * @param {{ fight_id: string, seed: number, arena: any, team0: any[], team1: any[], templates_raw?: any }} params
  */
-export const create_session = ({ fight_id, seed, arena, team0, team1 }) => ({
-  fight_id,
-  seed: seed >>> 0,
-  version: 1,
-  sim_state: create_fight_state({
+export const create_session = ({ fight_id, seed, arena, team0, team1, templates_raw = [] }) => {
+  const sim_state = create_fight_state({
     fight_id,
     arena_seed: seed >>> 0,
     arena_radius: arena.radius,
     arena,
     team0,
     team1,
-  }),
-})
+  })
+  return {
+    fight_id,
+    seed: seed >>> 0,
+    version: 1,
+    sim_state,
+    violations: [],
+    recorder: open_recording(create_recorder(), {
+      fight_id,
+      arena,
+      templates_raw,
+      // exactly the four fields `timeline.js replay_capsule` reconstructs the initial state from
+      initial: { fight_id, arena_seed: seed >>> 0, team0, team1 },
+      meta: { seed: seed >>> 0, fight_seed: seed >>> 0 },
+    }),
+  }
+}
+
+/** The replayable sim Capsule for this session, or null when nothing has been recorded (spec §8). */
+export const dump_sim_capsule = (session) => dump_capsule(session.recorder, session.fight_id)
 
 /** The seat whose turn it is, or null once the fight is decided. `is_player` picks the driver's next move:
  *  a player seat WAITS for input, a mob seat is folded immediately (§4.6). */
@@ -66,7 +90,25 @@ export const fold_command = (session, command, ctx) => {
   const pre = session.sim_state
   const { state: post, events } = reduce(pre, command, ctx)
   if (post === pre && events.length === 0) return { session, step: null }
-  return { session: { ...session, sim_state: post }, step: { pre, post, events } }
+  // The CHECKED tap: it records the transition AND sweeps the physics tripwires over it. A live invariant
+  // breach is DATA here (the recorder is structurally unable to throw into the fight), so violations
+  // accumulate on the session for the page to surface rather than crashing a running board.
+  const { rec, violations } = observe_reduce_checked(session.recorder, {
+    fight_id: session.fight_id,
+    command,
+    pre_state: pre,
+    post_state: post,
+    events,
+  })
+  return {
+    session: {
+      ...session,
+      sim_state: post,
+      recorder: rec,
+      violations: violations.length ? [...session.violations, ...violations] : session.violations,
+    },
+    step: { pre, post, events },
+  }
 }
 
 /**
@@ -123,7 +165,11 @@ export const drive_mob_turns = (session, ctx, encode_step, { max_turns = MAX_CHA
   const run = (acc) => {
     const seat = active_seat(acc.session)
     if (!seat || seat.is_player || acc.turns >= max_turns) return acc
-    const { session: folded, steps, refused } = fold_commands(acc.session, [{ type: 'ai_turn', entity_id: seat.id }], ctx)
+    const {
+      session: folded,
+      steps,
+      refused,
+    } = fold_commands(acc.session, [{ type: 'ai_turn', entity_id: seat.id }], ctx)
     // A refused ai_turn means the planner and the turn pointer disagree — stop LOUDLY rather than spin the
     // chain forever on a seat that will never advance (the bounded-liveness law; the caller surfaces it).
     if (refused) return { ...acc, stalled_on: seat.id }

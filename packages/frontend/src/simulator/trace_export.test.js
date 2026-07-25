@@ -4,7 +4,6 @@
 // the determinism seed recoverable from each half.
 
 import { describe, expect, test } from 'bun:test'
-
 import { capsule_export } from '@aresrpg/fight/capsule'
 
 import {
@@ -52,7 +51,12 @@ describe('the fight id IS the determinism root (spec §4.7)', () => {
 
 describe('the payload carries BOTH shipped formats, with the seed in each', () => {
   test('it bundles the sim capsule and the trace_format-2 envelope capsule', () => {
-    const trace = build_sim_trace({ seed: SEED, fight_id: FIGHT_ID, sim_capsule: sim_capsule(), envelope_capsule: envelope() })
+    const trace = build_sim_trace({
+      seed: SEED,
+      fight_id: FIGHT_ID,
+      sim_capsule: sim_capsule(),
+      envelope_capsule: envelope(),
+    })
     expect(trace.format).toBe(SIM_TRACE_FORMAT)
     expect(trace.seed).toBe(SEED)
     // half 1 — the sim capsule's own meta (replayed by timeline.js replay_capsule)
@@ -65,7 +69,12 @@ describe('the payload carries BOTH shipped formats, with the seed in each', () =
 
   test('a capsule from ANOTHER fight is refused — a mismatched pair looks like a sim bug on replay', () => {
     expect(() =>
-      build_sim_trace({ seed: SEED, fight_id: FIGHT_ID, sim_capsule: sim_capsule(), envelope_capsule: envelope(sim_fight_id(SEED, 2)) })
+      build_sim_trace({
+        seed: SEED,
+        fight_id: FIGHT_ID,
+        sim_capsule: sim_capsule(),
+        envelope_capsule: envelope(sim_fight_id(SEED, 2)),
+      })
     ).toThrow(/envelope capsule is for/)
   })
 

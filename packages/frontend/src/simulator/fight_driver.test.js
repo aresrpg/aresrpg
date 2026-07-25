@@ -19,10 +19,10 @@
 // sim with no live rng thread, would pass a same-seed equality check trivially.
 
 import { describe, expect, test } from 'bun:test'
-
 import { normalize_spell_templates, MOB_ATTACK_ID } from '@aresrpg/sim/spell_templates'
 import { find_path_4dir } from '@aresrpg/sim/pathfind'
 import { reduce } from '@aresrpg/sim/reduce'
+import { replay_capsule } from '@aresrpg/sim/timeline'
 
 import {
   abandon_all,
@@ -30,6 +30,7 @@ import {
   commit_batch,
   create_session,
   drive_mob_turns,
+  dump_sim_capsule,
   is_over,
   winner_of,
 } from './fight_driver.js'
@@ -90,6 +91,7 @@ const build_session = (seed) => {
     fight_id: `sim:${seed}:1`,
     seed,
     arena,
+    templates_raw: [],
     team0: [
       fighter({ id: 'sim_c1', cell: { x: 4, y: 4 }, is_player: true, health: 400 }),
       fighter({ id: 'sim_c2', cell: { x: 4, y: 6 }, is_player: true, health: 400 }),
@@ -113,7 +115,7 @@ const chebyshev = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y))
  */
 const draft_player_turn = (state, ctx, entity_id) => {
   const me = entity_of(state, entity_id)
-  const target = state.team1.filter((mob) => mob.health > 0).sort((a, b) => (a.id < b.id ? -1 : 1))[0]
+  const [target] = state.team1.filter((mob) => mob.health > 0).sort((a, b) => (a.id < b.id ? -1 : 1))
   if (!target) return [{ type: 'end_turn', entity_id }]
   const occupied = new Set(
     all_entities(state)
@@ -121,7 +123,10 @@ const draft_player_turn = (state, ctx, entity_id) => {
       .map((entity) => `${entity.cell.x},${entity.cell.y}`)
   )
   const walkable = (cell) =>
-    cell.x >= 0 && cell.y >= 0 && cell.x < ctx.arena.width && cell.y < ctx.arena.height &&
+    cell.x >= 0 &&
+    cell.y >= 0 &&
+    cell.x < ctx.arena.width &&
+    cell.y < ctx.arena.height &&
     ctx.arena.cells[cell.y * ctx.arena.width + cell.x] === 0
   const step_to = () => {
     if (chebyshev(me.cell, target.cell) <= 1) return []
@@ -148,9 +153,19 @@ const draft_player_turn = (state, ctx, entity_id) => {
   return [...moves, ...casts, { type: 'end_turn', entity_id }]
 }
 
-/** Ready every player seat — the sim auto-starts once both sides are ready (mobs auto-ready). */
-const start_fight = (session, ctx) =>
-  session.sim_state.team0.reduce((state, entity) => reduce(state, { type: 'ready', entity_id: entity.id }, ctx).state, session.sim_state)
+/**
+ * Ready every player seat — the sim auto-starts once both sides are ready (mobs auto-ready). Folded THROUGH
+ * the driver, exactly as fight_shim.js's `start` does, so the ready commands land in the recorder and the
+ * dumped capsule replays the WHOLE fight rather than a headless tail. `version` is reset to the bootstrap 1
+ * because the snapshot subsumes placement/ready (the shim's own note).
+ */
+const start_fight = (session, ctx) => ({
+  ...session.sim_state.team0.reduce(
+    (acc, entity) => commit_batch(acc, [{ type: 'ready', entity_id: entity.id }], ctx, fake_encode_step).session,
+    session
+  ),
+  version: 1,
+})
 
 /**
  * Run the whole fight and return everything the determinism assertions compare: the ordered chain rows every
@@ -158,13 +173,18 @@ const start_fight = (session, ctx) =>
  */
 const run_scripted_fight = (seed, { max_rounds = 60 } = {}) => {
   const built = build_session(seed)
-  const ctx = built.ctx
-  const start = { ...built.session, sim_state: start_fight(built.session, ctx) }
+  const { ctx } = built
+  const start = start_fight(built.session, ctx)
   const step = (acc) => {
     const seat = active_seat(acc.session)
     if (!seat || is_over(acc.session) || acc.rounds >= max_rounds) return acc
     if (seat.is_player) {
-      const result = commit_batch(acc.session, draft_player_turn(acc.session.sim_state, ctx, seat.id), ctx, fake_encode_step)
+      const result = commit_batch(
+        acc.session,
+        draft_player_turn(acc.session.sim_state, ctx, seat.id),
+        ctx,
+        fake_encode_step
+      )
       // A refused draft is a script bug, not a driver outcome — surface it instead of looping forever.
       if (!result.ok) return { ...acc, refused: result.error }
       return step({
@@ -193,6 +213,7 @@ const run_scripted_fight = (seed, { max_rounds = 60 } = {}) => {
     cell: entity.cell,
   }))
   return {
+    session: done.session,
     rows: done.rows,
     versions: done.versions,
     fold,
@@ -252,7 +273,7 @@ describe('L4 · determinism — the seed is the whole fight', () => {
 describe('L4 · the submit door', () => {
   test('a refused command discards the WHOLE batch — never a half-applied turn', () => {
     const { session, ctx } = build_session(1)
-    const started = { ...session, sim_state: start_fight(session, ctx) }
+    const started = start_fight(session, ctx)
     const seat = active_seat(started)
     const result = commit_batch(
       started,
@@ -284,7 +305,7 @@ describe('L4 · mob turns chain until a player seat holds the turn (§4.6)', () 
     const { session, ctx } = build_session(3)
     // Kill the turn weave's player interleave by ending both player turns first, so the two mob seats are
     // consecutive in the order and a single drive must chain them.
-    const started = { ...session, sim_state: start_fight(session, ctx) }
+    const started = start_fight(session, ctx)
     const after_players = ['sim_c1', 'sim_c2'].reduce((acc, id) => {
       const seat = active_seat(acc)
       if (!seat || seat.is_player === false) return acc
@@ -301,7 +322,7 @@ describe('L4 · mob turns chain until a player seat holds the turn (§4.6)', () 
 
   test('the chain is bounded — a driver can never spin forever on a stuck seat', () => {
     const { session, ctx } = build_session(4)
-    const started = { ...session, sim_state: start_fight(session, ctx) }
+    const started = start_fight(session, ctx)
     const driven = drive_mob_turns(started, ctx, fake_encode_step, { max_turns: 0 })
     expect(driven.turns).toBe(0)
     expect(driven.session).toBe(started)
@@ -311,7 +332,7 @@ describe('L4 · mob turns chain until a player seat holds the turn (§4.6)', () 
 describe('L4 · STOP mid-fight (§4.7)', () => {
   test('abandon_all decides the fight through the sim and emits the terminal rows', () => {
     const { session, ctx } = build_session(5)
-    const started = { ...session, sim_state: start_fight(session, ctx) }
+    const started = start_fight(session, ctx)
     const result = abandon_all(started, ctx, fake_encode_step)
     expect(result.ok).toBe(true)
     expect(is_over(result.session)).toBe(true)
@@ -322,11 +343,44 @@ describe('L4 · STOP mid-fight (§4.7)', () => {
 
   test('abandoning an already-decided fight is a tolerated no-op, not a failed batch', () => {
     const { session, ctx } = build_session(6)
-    const started = { ...session, sim_state: start_fight(session, ctx) }
+    const started = start_fight(session, ctx)
     const once = abandon_all(started, ctx, fake_encode_step)
     const twice = abandon_all(once.session, ctx, fake_encode_step)
     expect(twice.ok).toBe(true)
     expect(twice.receipt).toBeNull()
     expect(twice.session.version).toBe(once.session.version)
+  })
+})
+
+describe('L4 · the recorded sim capsule REPLAYS (spec §8, the deterministic half)', () => {
+  const run = run_scripted_fight(0xc81f3a92)
+  const capsule = dump_sim_capsule(run.session)
+
+  test('the whole fight was recorded as a replayable timeline.js capsule', () => {
+    expect(capsule).not.toBeNull()
+    expect(capsule.commands.length).toBeGreaterThan(10)
+    expect(capsule.meta.seed).toBe(0xc81f3a92)
+    expect(capsule.initial.arena_seed).toBe(0xc81f3a92)
+  })
+
+  test('replay_capsule re-folds it to the SAME terminal — the capsule is the fight, not a summary of it', () => {
+    const replayed = replay_capsule(capsule)
+    expect(replayed.terminal.winner).toBe(run.winner)
+    expect(replayed.terminal.team1.map((mob) => mob.health)).toEqual(
+      run.session.sim_state.team1.map((mob) => mob.health)
+    )
+    expect(replayed.terminal.team0.map((seat) => seat.health)).toEqual(
+      run.session.sim_state.team0.map((seat) => seat.health)
+    )
+  })
+
+  test('the replay trips ZERO physics invariants, and so did the live fold', () => {
+    expect(replay_capsule(capsule).violations).toEqual([])
+    expect(run.session.violations).toEqual([])
+  })
+
+  test('two captures of the same seed carry the same trace digest', () => {
+    const again = dump_sim_capsule(run_scripted_fight(0xc81f3a92).session)
+    expect(replay_capsule(again).trace_digest).toBe(replay_capsule(capsule).trace_digest)
   })
 })

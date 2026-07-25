@@ -1268,7 +1268,11 @@
     "mob_band": "NV {{min}}–{{max}}",
     "combat_block_unpublished": "SIN BLOQUE DE COMBATE",
     "combat_block_hint": "Las estadísticas de combate de este monstruo aún no están publicadas — el combate usa un valor de reemplazo declarado.",
-    "remove_mob": "QUITAR"
+    "remove_mob": "QUITAR",
+    "fight_draw": "EMPATE",
+    "fight_blocked_empty_roster": "Coloca al menos un personaje antes de empezar.",
+    "fight_blocked_no_mobs": "Elige al menos un monstruo antes de empezar.",
+    "fight_blocked_sim_chain_missing": "La cadena local no está disponible en esta versión."
   },
   "purchase": {
     "acquisition_complete": "Adquisicion Completada",

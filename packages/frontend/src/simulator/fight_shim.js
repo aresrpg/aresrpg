@@ -191,8 +191,7 @@ export const create_fight_shim = ({
    * would fold the same facts twice into a log the snapshot already subsumes.
    */
   const start = ({ seed, fight_id, arena, board, team0, team1, roster, mobs, spell_templates, focus_id = null }) => {
-    if (!chain_ready())
-      return { ok: false, reason: 'sim_chain_missing' } // the local chain (lane L2) is not in this build
+    if (!chain_ready()) return { ok: false, reason: 'sim_chain_missing' } // the local chain (lane L2) is not in this build
     if (!roster?.length) return { ok: false, reason: 'empty_roster' }
     if (!mobs?.length) return { ok: false, reason: 'no_mobs' }
     arm_trace_tee(store)

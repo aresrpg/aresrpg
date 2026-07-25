@@ -53,7 +53,10 @@ const cell_of = (sim_state, entity_id) =>
  * @param {{ sim_state: any, arena: any, entity_id: string, weapon_spell_id?: string|null, end_turn?: boolean }} deps
  * @returns {{ commands: any[], rejected: Array<{ action: any, reason: string }> }}
  */
-export const stage_to_commands = (actions, { sim_state, arena, entity_id, weapon_spell_id = null, end_turn = true }) => {
+export const stage_to_commands = (
+  actions,
+  { sim_state, arena, entity_id, weapon_spell_id = null, end_turn = true }
+) => {
   const is_walkable = walkable_in(arena)
   const is_occupied = occupancy_of(sim_state, entity_id)
   const start = cell_of(sim_state, entity_id)
@@ -64,9 +67,10 @@ export const stage_to_commands = (actions, { sim_state, arena, entity_id, weapon
         // `find_path_4dir` returns the path INCLUSIVE of the start cell; `handle_move` wants it excluded.
         // `max_mp` is deliberately generous here: MP legality is the sim's call at fold time, not the
         // mapping's — a mapping that pre-refused on MP would be a second, drifting copy of the budget rule.
-        const path = acc.cell ? find_path_4dir(acc.cell, target, arena.width * arena.height, is_walkable, is_occupied) : null
-        if (!path || path.length < 2)
-          return { ...acc, rejected: [...acc.rejected, { action, reason: 'unreachable' }] }
+        const path = acc.cell
+          ? find_path_4dir(acc.cell, target, arena.width * arena.height, is_walkable, is_occupied)
+          : null
+        if (!path || path.length < 2) return { ...acc, rejected: [...acc.rejected, { action, reason: 'unreachable' }] }
         return {
           cell: target,
           commands: [...acc.commands, { type: 'move', entity_id, path: path.slice(1) }],

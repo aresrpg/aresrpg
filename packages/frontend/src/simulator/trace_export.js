@@ -54,7 +54,7 @@ export const trace_filename = (seed, fight_id) =>
 export const build_sim_trace = ({ seed, fight_id, sim_capsule, envelope_capsule, captured_at = Date.now() }) => {
   const rooted = seed_from_fight_id(fight_id)
   if (rooted == null) throw new Error(`simulator trace: "${fight_id}" is not a sim:<seed>:<n> fight id`)
-  if (rooted !== (seed >>> 0))
+  if (rooted !== seed >>> 0)
     throw new Error(`simulator trace: fight id carries seed ${hex_seed(rooted)}, recorded seed is ${hex_seed(seed)}`)
   const session = envelope_capsule?.session_id ?? null
   if (session != null && String(session) !== String(fight_id))
@@ -87,7 +87,7 @@ export const export_sim_trace = ({
   seed,
   fight_id,
   sim_capsule = null,
-  dump_envelope = () => (typeof window === 'undefined' ? null : window.__ARES_FIGHT_CAPSULE_DUMP?.() ?? null),
+  dump_envelope = () => (typeof window === 'undefined' ? null : (window.__ARES_FIGHT_CAPSULE_DUMP?.() ?? null)),
   download = default_download,
   save = null,
   now = Date.now,

@@ -6,7 +6,6 @@
 // what the HUD stages breaks here rather than silently committing a different turn than the player drafted.
 
 import { describe, expect, test } from 'bun:test'
-
 import { encode } from '@aresrpg/fight/los'
 import { normalize_spell_templates, MOB_ATTACK_ID } from '@aresrpg/sim/spell_templates'
 import { create_fight_state, reduce } from '@aresrpg/sim/reduce'
@@ -147,7 +146,10 @@ describe('staged casts and weapon strikes', () => {
   test('an unmappable row is REJECTED with a reason, never silently dropped', () => {
     const board = arena()
     const { commands, rejected } = stage_to_commands(
-      [{ kind: 1, target: encode(5, 5) }, { kind: 2, target: encode(5, 5) }],
+      [
+        { kind: 1, target: encode(5, 5) },
+        { kind: 2, target: encode(5, 5) },
+      ],
       { sim_state: state_of(board), arena: board, entity_id: 'sim_c1', end_turn: false }
     )
     expect(commands).toEqual([])

@@ -1268,7 +1268,11 @@
     "mob_band": "LV {{min}}–{{max}}",
     "combat_block_unpublished": "NO COMBAT BLOCK",
     "combat_block_hint": "This mob's combat stats are not published yet — the fight uses a declared placeholder.",
-    "remove_mob": "REMOVE"
+    "remove_mob": "REMOVE",
+    "fight_draw": "DRAW",
+    "fight_blocked_empty_roster": "Place at least one character before starting.",
+    "fight_blocked_no_mobs": "Pick at least one mob before starting.",
+    "fight_blocked_sim_chain_missing": "The local chain is not available in this build."
   },
   "purchase": {
     "acquisition_complete": "Acquisition Complete",

@@ -1268,7 +1268,11 @@
     "mob_band": "РІВ {{min}}–{{max}}",
     "combat_block_unpublished": "НЕМАЄ БОЙОВОГО БЛОКУ",
     "combat_block_hint": "Бойові характеристики цього монстра ще не опубліковані — бій використовує оголошений замінник.",
-    "remove_mob": "ПРИБРАТИ"
+    "remove_mob": "ПРИБРАТИ",
+    "fight_draw": "НІЧИЯ",
+    "fight_blocked_empty_roster": "Розмістіть хоча б одного персонажа перед початком.",
+    "fight_blocked_no_mobs": "Оберіть хоча б одного моба перед початком.",
+    "fight_blocked_sim_chain_missing": "Локальний ланцюг недоступний у цій збірці."
   },
   "purchase": {
     "acquisition_complete": "Придбання завершено",

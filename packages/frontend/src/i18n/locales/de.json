@@ -1268,7 +1268,11 @@
     "mob_band": "STUFE {{min}}–{{max}}",
     "combat_block_unpublished": "KEIN KAMPFBLOCK",
     "combat_block_hint": "Die Kampfwerte dieses Gegners sind noch nicht veröffentlicht — der Kampf nutzt einen deklarierten Platzhalter.",
-    "remove_mob": "ENTFERNEN"
+    "remove_mob": "ENTFERNEN",
+    "fight_draw": "UNENTSCHIEDEN",
+    "fight_blocked_empty_roster": "Platziere mindestens einen Charakter, bevor du startest.",
+    "fight_blocked_no_mobs": "Wähle mindestens einen Gegner, bevor du startest.",
+    "fight_blocked_sim_chain_missing": "Die lokale Chain ist in diesem Build nicht verfügbar."
   },
   "purchase": {
     "acquisition_complete": "Erwerb abgeschlossen",
