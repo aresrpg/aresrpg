@@ -1,28 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// simulator/fight_setup.test.js — the fight-start fold (spec §5): L1's builder output → sim entities that the
-// REAL authority accepts. The proof is not the shape but the fight: the folded teams are dropped into
-// `create_session` and actually fought, so a wrong field surfaces as a fight that cannot start rather than as
-// a green shape assertion.
+// simulator/fight_setup.test.js — the fight-start fold (spec §5): L1's builder output → the sim entity rows the
+// authority is created from. These are the SHAPE assertions; the behavioural proof (the folded teams driven
+// through the real chain to a decided winner) lives in fight_e2e.test.js.
 
 import { describe, expect, test } from 'bun:test'
-import { normalize_spell_templates, MOB_ATTACK_ID } from '@aresrpg/sim/spell_templates'
 
 import { build_seat } from './content.js'
 import { build_teams, mob_entity, seat_entity } from './fight_setup.js'
-import { active_seat, commit_batch, create_session, drive_mob_turns, is_over } from './fight_driver.js'
-
-const fake_encode_step = (pre, post, events) => events.map((event) => ({ type: event.type, parsedJson: event }))
-
-const arena = (width = 11) => ({
-  width,
-  height: width,
-  radius: (width - 1) / 2,
-  center: { x: (width - 1) / 2, y: (width - 1) / 2 },
-  cells: new Uint8Array(width * width),
-  spawns_a: [{ x: 4, y: 5 }],
-  spawns_b: [{ x: 6, y: 5 }],
-})
 
 const character = {
   id: 'sim_c1',
@@ -137,38 +122,5 @@ describe('build_teams merges every template into ONE map the authority carries',
   })
 })
 
-describe('the folded teams actually FIGHT (the shape proof that matters)', () => {
-  test('a folded roster seat and a folded mob run a real turn through the authority', () => {
-    const board = arena()
-    // the built-in strike stands in for the published corpus here — the fold is what is under test, not balance
-    const { team0, team1 } = build_teams({
-      placements: [{ cell: { x: 4, y: 5 }, character, seat: build_seat(character, []), spell_ids: [MOB_ATTACK_ID] }],
-      picks: [{ cell: { x: 6, y: 5 }, mob: { ...mob_block, hp: 20, max_hp: 20 } }],
-      class_templates: normalize_spell_templates([]),
-    })
-    const ctx = { spell_templates: normalize_spell_templates([]), arena: board }
-    const session = create_session({ fight_id: 'sim:1:1', seed: 42, arena: board, team0, team1 })
-    const ready = commit_batch(session, [{ type: 'ready', entity_id: 'sim_c1' }], ctx, fake_encode_step)
-    expect(ready.ok).toBe(true)
-    expect(active_seat(ready.session)).toEqual({ id: 'sim_c1', is_player: true })
-
-    const turn = commit_batch(
-      ready.session,
-      [
-        { type: 'move', entity_id: 'sim_c1', path: [{ x: 5, y: 5 }] },
-        { type: 'cast', entity_id: 'sim_c1', spell_id: MOB_ATTACK_ID, target: { x: 6, y: 5 } },
-        { type: 'end_turn', entity_id: 'sim_c1' },
-      ],
-      ctx,
-      fake_encode_step
-    )
-    expect(turn.ok).toBe(true)
-    expect(turn.session.sim_state.team1[0].health).toBeLessThan(20)
-
-    // and the mob answers on its own turn — a folded mob is a real actor, not a dummy
-    const driven = drive_mob_turns(turn.session, ctx, fake_encode_step)
-    expect(driven.turns).toBe(1)
-    expect(driven.stalled_on).toBeNull()
-    expect(is_over(driven.session)).toBe(false)
-  })
-})
+// The folded teams are driven through the REAL authority end to end in fight_e2e.test.js — that file is
+// where a wrong field surfaces as a fight that cannot start, so it is not re-staged here.

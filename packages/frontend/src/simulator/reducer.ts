@@ -77,6 +77,9 @@ export type SimulatorState = {
 }
 
 /** The BOARD half of the door (spec §9 flows 4–6): reroll, the enemy-band mob picks, the ally-band placements. */
+/** The L4 half of the door: enter and leave the fight phase (spec §4.7). */
+export type SimulatorFightInput = { type: 'fight_started' } | { type: 'fight_stopped' }
+
 export type SimulatorBoardInput =
   | { type: 'board_rerolled' }
   | { type: 'mob_picked'; cell: number; template_id: string; level: number; min_level: number; max_level: number }
@@ -97,6 +100,7 @@ export type SimulatorInput =
     }
   | { type: 'seed_set'; seed: number }
   | SimulatorBoardInput
+  | SimulatorFightInput
   | { type: 'character_added'; class_id: string; name: string; male: boolean }
   | { type: 'character_removed'; id: string }
   | { type: 'character_named'; id: string; name: string }
@@ -108,8 +112,6 @@ export type SimulatorInput =
   | { type: 'spell_level_set'; id: string; spell_id: string; level: number; max_level: number }
   | { type: 'spells_reset'; id: string }
   | { type: 'focus_set'; id: string | null }
-  | { type: 'fight_started' }
-  | { type: 'fight_stopped' }
 
 export const EMPTY_STAT_ALLOC: Record<SimStat, number> = {
   vitality: 0,
@@ -356,6 +358,35 @@ function reduce_board_setup(state: Readonly<SimulatorState>, input: Readonly<Sim
   }
 }
 
+/**
+ * The L4 fight-phase arms (spec §4.7). START mints a FRESH fight id every time — a rematch on the same seed
+ * gets its own `n`, so two runs of one seed never share a fight id and never overwrite each other's trace.
+ * Split out of the main switch for the same reason the board arms are: one door, readable arms.
+ */
+const reduce_fight_phase = (
+  state: Readonly<SimulatorState>,
+  input: Readonly<SimulatorBoardInput | SimulatorFightInput>
+): SimulatorState => {
+  switch (input.type) {
+    case 'fight_started': {
+      if (state.phase === 'fight') return state // already fighting — START is not a re-entry door
+      const fight_count = state.fight_count + 1
+      return {
+        ...state,
+        phase: 'fight',
+        fight_count,
+        fight: { fight_id: sim_fight_id(state.seed, fight_count), seed: state.seed },
+      }
+    }
+
+    case 'fight_stopped':
+      return state.phase === 'setup' ? state : { ...state, phase: 'setup', fight: null }
+
+    default:
+      return reduce_board_setup(state, input)
+  }
+}
+
 export function reduce_simulator(state: Readonly<SimulatorState>, input: Readonly<SimulatorInput>): SimulatorState {
   switch (input.type) {
     case 'hydrated': {
@@ -462,24 +493,8 @@ export function reduce_simulator(state: Readonly<SimulatorState>, input: Readonl
         ? { ...state, focus_id: input.id }
         : state
 
-    // ── L4: the fight phase (spec §4.7). START mints a FRESH id every time; a rematch on the same seed gets
-    // its own `n`, so two runs of one seed never share a fight id (and never share a trace file).
-    case 'fight_started': {
-      if (state.phase === 'fight') return state // already fighting — START is not a re-entry door
-      const fight_count = state.fight_count + 1
-      return {
-        ...state,
-        phase: 'fight',
-        fight_count,
-        fight: { fight_id: sim_fight_id(state.seed, fight_count), seed: state.seed },
-      }
-    }
-
-    case 'fight_stopped':
-      return state.phase === 'setup' ? state : { ...state, phase: 'setup', fight: null }
-
-    // the board/pick/placement arms — one door, delegated for readability
+    // the board/pick/placement and fight-phase arms — one door, delegated for readability
     default:
-      return reduce_board_setup(state, input)
+      return reduce_fight_phase(state, input)
   }
 }

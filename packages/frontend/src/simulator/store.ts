@@ -20,8 +20,9 @@ export const use_simulator = create<SimulatorStore>((set) => ({
 }))
 
 const state_of = (): SimulatorState => {
-  const { seed, roster, focus_id, anchor_nonce, mob_picks, placements } = use_simulator.getState()
-  return { seed, roster, focus_id, anchor_nonce, mob_picks, placements }
+  const { seed, roster, focus_id, anchor_nonce, mob_picks, placements, phase, fight, fight_count } =
+    use_simulator.getState()
+  return { seed, roster, focus_id, anchor_nonce, mob_picks, placements, phase, fight, fight_count }
 }
 
 /**
