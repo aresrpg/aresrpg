@@ -35,6 +35,14 @@ export const use_mob_roster = (): CorpusMob[] => {
   return useMemo(() => simulator_mob_roster(worlds), [worlds])
 }
 
+/** The roster indexed by template id — "which corpus row is this stored pick?". Re-derived when the corpus
+ *  lands, never cached in module state: a `??=` index built before the blob arrives would answer "this mob
+ *  no longer exists" for every stored seat, for the whole session. */
+export const use_mob_index = (): Map<string, CorpusMob> => {
+  const roster = use_mob_roster()
+  return useMemo(() => new Map(roster.map((mob) => [mob.id, mob])), [roster])
+}
+
 /**
  * The picker's whole CONTENT derivation, portal-free: subscribed roster → modal rows + the empty line.
  * Split out because SearchPickerModal renders through `createPortal`, which this repo's SSR test harness

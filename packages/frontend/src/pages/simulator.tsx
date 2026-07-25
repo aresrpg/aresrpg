@@ -29,7 +29,7 @@ import { EncyclopediaMobImage } from '../pages/encyclopedia/mob_image'
 import { board_of } from '../simulator/board'
 import { SimulatorBoardPane } from '../simulator/BoardPane'
 import { CharacterModal } from '../simulator/CharacterModal'
-import { MobModal, mob_of } from '../simulator/MobModal'
+import { MobModal, use_mob_of } from '../simulator/MobModal'
 import { MAX_MOBS, MAX_ROSTER, type SimCharacter } from '../simulator/reducer'
 import { boot_simulator, use_simulator } from '../simulator/store'
 
@@ -125,7 +125,7 @@ function RosterSeat({
 function MobSeat({ cell, on_open }: Readonly<{ cell: number; on_open: () => void }>) {
   const { t } = useTranslation()
   const pick = use_simulator((state) => state.mob_picks[cell])
-  const mob = useMemo(() => mob_of(pick?.template_id), [pick?.template_id])
+  const mob = use_mob_of(pick?.template_id)
 
   return (
     <Seat active={false} on_open={on_open}>

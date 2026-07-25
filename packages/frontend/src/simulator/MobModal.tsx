@@ -15,7 +15,7 @@
 // Both doors into this modal — a red board cell and a right-panel seat — write the SAME `mob_picked` /
 // `mob_level_set` inputs against the SAME cell, so the two surfaces cannot drift apart.
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Trash2 } from 'lucide-react'
 
@@ -26,22 +26,18 @@ import { MobSpellsSection } from '../pages/encyclopedia/mob_spells_section'
 import { mob_corpus_of, type CorpusMob } from '../pages/encyclopedia/world_corpus'
 
 import { build_mob } from './content.js'
-import { MobPicker, simulator_mob_roster } from './MobPicker'
+import { MobPicker, use_mob_index } from './MobPicker'
 import type { SimMobPick } from './reducer'
 import { use_simulator } from './store'
 
 const GOLD = '#c8963c'
 const micro = 'text-[9px] tracking-[0.22em] uppercase'
 
-// The roster is a pure derivation over the published corpus, so it is indexed ONCE — six seats re-reading it
-// on every store change would rescan every world's mob list per render.
-let roster_index: Map<string, CorpusMob> | null = null
-
-/** The corpus row a stored pick refers to, or null when the corpus no longer publishes it. */
-export const mob_of = (template_id: string | undefined): CorpusMob | null => {
-  roster_index ??= new Map(simulator_mob_roster().map((mob) => [mob.id, mob]))
-  return (template_id && roster_index.get(template_id)) || null
-}
+/** The corpus row a stored pick refers to, or null when the corpus no longer publishes it. Subscribed: the
+ *  corpus is fetched at boot (main.tsx `load_world_corpus`), so a seat mounted before it lands must be told
+ *  when it does — an index frozen at first read would call every stored pick a vanished mob. */
+export const use_mob_of = (template_id: string | undefined): CorpusMob | null =>
+  use_mob_index().get(template_id ?? '') ?? null
 
 export function MobModal({
   cell,
@@ -51,7 +47,7 @@ export function MobModal({
   const { t } = useTranslation()
   const input = use_simulator((state) => state.input)
   const [picking, set_picking] = useState(pick === null)
-  const mob = useMemo(() => mob_of(pick?.template_id), [pick?.template_id])
+  const mob = use_mob_of(pick?.template_id)
 
   // A pick whose corpus row vanished is still a stored seat: say so instead of rendering an empty editor.
   if (picking || !mob || !pick)
