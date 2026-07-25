@@ -68,6 +68,9 @@
     "./predict_cast": {
       "import": "./src/predict_cast.js"
     },
+    "./sim_chain": {
+      "import": "./src/sim_chain.js"
+    },
     "./trace_tap": {
       "import": "./src/trace_tap.js"
     },
