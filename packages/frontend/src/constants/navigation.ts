@@ -40,7 +40,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'characters', path: '/characters', label: 'nav.characters', Icon: Swords },
   { id: 'leaderboard', path: '/leaderboard', label: 'nav.leaderboard', Icon: Trophy, disabled: true },
   { id: 'shop', path: '/shop', label: 'nav.shop', Icon: ShoppingBag },
-  { id: 'simulator', path: '/simulator', label: 'nav.simulator', Icon: FlaskConical, disabled: true },
+  { id: 'simulator', path: '/simulator', label: 'nav.simulator', Icon: FlaskConical },
   { id: 'encyclopedia', path: '/encyclopedia', label: 'nav.encyclopedia', Icon: BookOpen },
   { id: 'marketplace', path: '/marketplace', label: 'nav.marketplace', Icon: Store },
   { id: 'airdrop', path: '/airdrop', label: 'nav.airdrop', Icon: Gift },
@@ -62,10 +62,9 @@ export function path_to_page(pathname: string): Page | null {
 }
 
 // The mobile-reachable destination set (shared by the mobile page switcher). `disabled` T55 coming-soon
-// placeholders (leaderboard/simulator) are inert on EVERY surface, so mobile drops them entirely (the
-// desktop Sidebar keeps them, greyed-with-tooltip). Desktop passes `mobile: false` and keeps the full
-// set. One home for this filter — the switcher and any future nav surface derive from here, never a
-// second copy.
+// placeholders (leaderboard) are inert on EVERY surface, so mobile drops them entirely (the desktop
+// Sidebar keeps them, greyed-with-tooltip). Desktop passes `mobile: false` and keeps the full set. One
+// home for this filter — the switcher and any future nav surface derive from here, never a second copy.
 export function visible_nav_items(items: NavItem[], { mobile }: { mobile: boolean }): NavItem[] {
   return items.filter((item) => {
     if (mobile && item.disabled) return false

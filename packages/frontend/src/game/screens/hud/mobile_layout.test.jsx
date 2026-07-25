@@ -220,18 +220,19 @@ describe('shared mobile-mode render branches', () => {
 
 // MOBFIX defect #1 (BLOCKER, full-app mobile audit): 390px portrait rendered all 11 nav items at the
 // desktop-derived 48px column width (11*48=528px) — airdrop/kolizeum/settings clipped off the right
-// edge, reachable only by scrolling a bar with zero affordance. leaderboard + simulator are BOTH
-// `disabled: true` coming-soon placeholders (T55) on every surface today — hiding them on mobile loses
-// no reachability (they were never clickable there either); with the removed profile destination gone,
-// the live set drops 10 -> 8, which fits a 390px bar.
+// edge, reachable only by scrolling a bar with zero affordance. A `disabled: true` coming-soon
+// placeholder (T55) is inert on every surface, so hiding it on mobile loses no reachability (it was
+// never clickable there either). Only leaderboard is still a placeholder — the SIMULATOR page shipped,
+// so it is a real destination on BOTH surfaces and must take a switcher slot.
 describe('mobile switcher — every enabled destination is reachable (MOBFIX defect #1 lineage)', () => {
   test('mobile hides the disabled coming-soon meta-tabs so only reachable destinations take a slot', () => {
     const ids = visible_nav_items(NAV_ITEMS, { mobile: true }).map((i) => i.id)
     expect(ids).not.toContain('leaderboard')
-    expect(ids).not.toContain('simulator')
     expect(ids).not.toContain('admin')
     expect(ids).not.toContain('profile')
-    expect(ids).toHaveLength(8)
+    // the rebuilt simulator page is LIVE — mobile reaches it like any other destination
+    expect(ids).toContain('simulator')
+    expect(ids).toHaveLength(9)
   })
 
   test('desktop keeps the coming-soon meta-tabs visible — the sidebar shows them disabled-with-tooltip unchanged', () => {
@@ -240,9 +241,13 @@ describe('mobile switcher — every enabled destination is reachable (MOBFIX def
     expect(ids).toContain('simulator')
   })
 
-  test('the switcher stack lists exactly the 8 enabled destinations for a player', () => {
+  test('the simulator is a live destination on both surfaces — no coming-soon flag on a shipped page', () => {
+    expect(NAV_ITEMS.find((i) => i.id === 'simulator')?.disabled).toBeUndefined()
+  })
+
+  test('the switcher stack lists exactly the 9 enabled destinations for a player', () => {
     const enabled_count = NAV_ITEMS.filter((i) => !i.disabled).length
-    expect(enabled_count).toBe(8)
+    expect(enabled_count).toBe(9)
   })
 
   test('nit #5 desktop half: the sidebar disabled-tooltip affordance for coming-soon tabs is already shipped', () => {
