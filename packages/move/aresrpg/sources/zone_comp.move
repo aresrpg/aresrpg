@@ -3,9 +3,10 @@
 /// ZONE COMP — the seed → composition pipeline of the search-cost rework: snapshots a World's tables + the §4
 /// distance-difficulty inputs (the EXACT inputs the retired materialising search computed) and runs the pure
 /// `aresrpg_foundation::zone_gen` kernel. ONE home for "what does zone (zx,zy) of this world contain at seed S" —
-/// `zones` (search event counts, the claim door, the gather seam) and `zones_view` (the RPC/test getters) both
-/// call through here, and the client mirror (`packages/sim/src/zone_derive.js::derive_zone`) runs the identical
-/// pipeline over the same World doc, so map, claim, and fight can never disagree (composition-at-discovery).
+/// every reader reaches it through `zones`' derivation door, which picks the placement a zone's own stored
+/// commitment names — the claim door, the gather seam and `zones_view` (the RPC/test getters) all take that one
+/// route, and the client mirror (`packages/sim/src/zone_derive.js::derive_zone`) reads the same byte and runs
+/// the identical pipeline, so map, claim, and fight can never disagree (composition-at-discovery).
 module aresrpg::zone_comp;
 
 use aresrpg::world::{Self, World};

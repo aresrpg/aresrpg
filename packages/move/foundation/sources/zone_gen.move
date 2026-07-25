@@ -8,8 +8,11 @@
 /// fight/gather doors reproduce IDENTICAL lists (composition-at-discovery, DECISIONS 07-08). The derivation
 /// threads the foundation `prng` (mulberry32) instead of Sui's `RandomGenerator` because only a seedable PRNG is
 /// replayable + JS-mirrorable — `&Random` fires ONCE at search (the seed); everything after is a pure function.
-/// SPAWN SPACING: there should be a minimum distance of 20 blocks between each spawn
-/// of mobs, enforced IN the position derivation by rejection sampling — deterministic, every deriver agrees.
+/// SPAWN SPACING: there should be a minimum distance of 20 blocks between each spawn of mobs, enforced IN the
+/// position derivation — deterministic, every deriver agrees. TWO placements do that, and a zone is derived by
+/// the one its stored commitment names (`mob_group_commitment_format`, dispatched in `zones`): the LEGACY
+/// sampler rejection-samples until the distance clears, and the LATTICE (`*_grid`) gives each spawn its own
+/// 40×40 cell so the distance holds by construction, at a fixed draw cost and with no reject loop at all.
 /// Pure transforms over plain scalars (quarantine law): zero objects, zero events, zero state.
 module aresrpg_foundation::zone_gen;
 
