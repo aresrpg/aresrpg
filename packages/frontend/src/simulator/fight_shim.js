@@ -43,7 +43,7 @@ import {
 import { use_dungeon } from '../world-shell/dungeon_store.js'
 import { install_fight_trace_tee } from '../world-shell/fight_trace_tee.js'
 import { context } from '../game/store.js'
-import { game_log } from '../game/core/log.js'
+import { game_log } from '../core/log.js'
 
 import { export_sim_trace } from './trace_export.js'
 import { save_trace } from './persistence'
