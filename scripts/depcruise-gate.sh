@@ -37,7 +37,12 @@ fi
 
 # A missing baseline is the hard-zero floor: omit --ignore-known so every violation is new and red.
 # A reviewed baseline, when present, is the only source of known violations.
-IGNORE_KNOWN=()
-[ -f .dependency-cruiser-known-violations.json ] && IGNORE_KNOWN=(--ignore-known)
-bun node_modules/.bin/depcruise --config .dependency-cruiser.cjs "${IGNORE_KNOWN[@]}" \
-  --output-type err packages/frontend/src packages/fight/src packages/party/src packages/inventory/src packages/world/src
+# The whole argv lives in the array — never just the optional flag — so it is never empty: bash 3.2
+# (macOS /bin/bash) aborts on an empty-array expansion under `set -u`, bash 5 does not (issue #824).
+# --ignore-known takes an OPTIONAL argument: it stays followed by --output-type, never adjacent to a
+# positional, or it swallows packages/frontend/src as its baseline path (EISDIR).
+CRUISE_ARGS=(--config .dependency-cruiser.cjs)
+[ -f .dependency-cruiser-known-violations.json ] && CRUISE_ARGS+=(--ignore-known)
+CRUISE_ARGS+=(--output-type err)
+bun node_modules/.bin/depcruise "${CRUISE_ARGS[@]}" \
+  packages/frontend/src packages/fight/src packages/party/src packages/inventory/src packages/world/src
