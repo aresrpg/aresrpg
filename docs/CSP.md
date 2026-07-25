@@ -52,7 +52,9 @@ Rename the header to `Content-Security-Policy` only when all of these hold:
 - [ ] The **undriven** sources are exercised at least once: a Google zkLogin sign-in
       (`api.enoki.mystenlabs.com`, `accounts.google.com`, `graphql.testnet.sui.io`) and a sponsored
       transaction (`sponsor.aresrpg.world`). Local verification could not reach these: the dev wallet
-      is DEV-only, so the production-shaped build has no way to sign in.
+      is DEV-only, so the production-shaped build has no way to sign in. Watch `form-action` on the
+      sign-in specifically — an OAuth flow using `response_mode=form_post` submits a form to Google,
+      which `form-action 'self'` would refuse. A redirect-mode flow is unaffected.
 - [ ] A browser-extension wallet is driven (Sui Wallet / Suiet) — extension-injected page scripts are
       the one class local dev-wallet driving cannot observe.
 - [ ] The two `script-src` hashes are re-derived from the **built** `dist/index.html`, and something
