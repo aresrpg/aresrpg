@@ -1,0 +1,59 @@
+{
+  "issue": 609,
+  "what": "A mob group's world lifecycle across a LOST fight: claimed (consumed) -> defeat RELEASES it back at its spot. Only a player victory consumes a group.",
+  "provenance": "The mob_bitmap bytes of every step are the exact values asserted on chain by packages/move/aresrpg/tests/fight_door_tests.move::defeat_releases_the_group_and_the_rematch_lands (zones::mob_bitmap_for_testing). zones.move sets bit 0 at claim (bit_set) and clears it plus the trailing zero byte at release (bit_clear) - the client mirror reads these bytes verbatim.",
+  "world": {
+    "zone_size": 512,
+    "bounds_x": 500000,
+    "bounds_z": 500000,
+    "spawn_zone_x": 1000,
+    "spawn_zone_z": 1000,
+    "min_groups": 3,
+    "max_groups": 3,
+    "min_nodes": 2,
+    "max_nodes": 2,
+    "mobs": [
+      {
+        "template_id": "0xb0b",
+        "rate_bp": 100,
+        "min_group": 2,
+        "max_group": 2,
+        "level": 0
+      }
+    ],
+    "resources": [
+      {
+        "template_id": "0xwheat",
+        "rate_bp": 100,
+        "min_qty": 1,
+        "max_qty": 1,
+        "job": 0,
+        "tier": 1
+      }
+    ]
+  },
+  "zone": {
+    "zx": 488,
+    "zy": 488,
+    "seed": 9876543210,
+    "discovered_at_ms": 2000,
+    "res_bitmap": []
+  },
+  "steps": [
+    { "label": "searched", "mob_bitmap": [], "live_indices": [0, 1, 2] },
+    { "label": "claimed", "mob_bitmap": [1], "live_indices": [1, 2] },
+    {
+      "label": "released_after_defeat",
+      "mob_bitmap": [],
+      "live_indices": [0, 1, 2]
+    }
+  ],
+  "released_group": {
+    "index": 0,
+    "spawn_id": "11220703129345358465",
+    "x": 250008,
+    "z": 250195,
+    "size": 2,
+    "template_id": "0xb0b"
+  }
+}

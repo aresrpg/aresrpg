@@ -132,7 +132,38 @@ public fun create<W: drop>(
   clock: &Clock,
   ctx: &TxContext,
 ) {
-  create_inner(_w, registry, world, spawn_id, world_seed, anchor_x, anchor_z, spawned_at_ms, is_public, party_id, gated_joins, spec, group_size, group_seed, content_template, creator, creator_lines, dials, version, clock, ctx);
+  create_inner(_w, registry, world, spawn_id, 0, world_seed, anchor_x, anchor_z, spawned_at_ms, is_public, party_id, gated_joins, spec, group_size, group_seed, content_template, creator, creator_lines, dials, version, clock, ctx);
+}
+
+/// `create` for a RE-ENGAGED group (#609 — a defeat releases the group back into the world at its spot, so it
+/// can be fought again). Identical in every way except the fight's derived ADDRESS, which is namespaced by the
+/// group's engagement `round` (a derived address is claimed once, forever — see `fight_registry`). Round 0 IS
+/// `create`, same address, same everything: the consumer reads the round off its own world state and passes it.
+public fun create_round<W: drop>(
+  _w: W,
+  registry: &mut FightRegistry,
+  world: ID,
+  spawn_id: u64,
+  round: u64,
+  world_seed: u64,
+  anchor_x: u32,
+  anchor_z: u32,
+  spawned_at_ms: u64,
+  is_public: bool,
+  party_id: Option<ID>,
+  gated_joins: bool,
+  spec: &MobSpec,
+  group_size: u16,
+  group_seed: u64,
+  content_template: ID,
+  creator: Combatant,
+  creator_lines: vector<WeaponLine>,
+  dials: Dials,
+  version: &Version,
+  clock: &Clock,
+  ctx: &TxContext,
+) {
+  create_inner(_w, registry, world, spawn_id, round, world_seed, anchor_x, anchor_z, spawned_at_ms, is_public, party_id, gated_joins, spec, group_size, group_seed, content_template, creator, creator_lines, dials, version, clock, ctx);
 }
 
 fun create_inner<W: drop>(
@@ -140,6 +171,7 @@ fun create_inner<W: drop>(
   registry: &mut FightRegistry,
   world: ID,
   spawn_id: u64,
+  round: u64,
   world_seed: u64,
   anchor_x: u32,
   anchor_z: u32,
@@ -167,7 +199,14 @@ fun create_inner<W: drop>(
   let bspec = board::generate_for_anchor(world_seed, anchor_x, anchor_z);
   assert!(bspec.start_cells_a().length() >= dials.team_bound, EBadStartCells);
 
-  let id = sui::derived_object::claim(fight_registry::uid_mut(registry), fight_registry::new_key(world, spawn_id));
+  // The first-come gate. The branch is the whole #609 story: every fight ever created claimed the plain
+  // (world, spawn_id) address, and a claimed address is `Reserved` forever — so a RE-ENGAGED group (round ≥ 1)
+  // must claim in the round-namespaced key or its rematch would abort on an address nobody occupies any more.
+  let id = if (round == 0) {
+    sui::derived_object::claim(fight_registry::uid_mut(registry), fight_registry::new_key(world, spawn_id))
+  } else {
+    sui::derived_object::claim(fight_registry::uid_mut(registry), fight_registry::new_round_key(world, spawn_id, round))
+  };
   let fid = id.to_inner();
   let creator_id = participant::combatant_character(&creator);
 

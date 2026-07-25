@@ -37,6 +37,12 @@ public struct FightRegistry has key {
 /// aborts in `derived_object::claim` — the first-come gate.
 public struct FightKey has copy, drop, store { world: ID, spawn_id: u64 }
 
+/// The RE-ENGAGEMENT claim key (#609 — a group the MOBS won is released back into the world at its spot, so it
+/// must be fightable again). A derived address is claimed once and stays `Reserved` even after the object is
+/// deleted, so engagement N needs its own address: `round` is the group's engagement ordinal. Round 0 keeps the
+/// historical `FightKey` address — every fight ever created lives there, and nothing about it moves.
+public struct FightRoundKey has copy, drop, store { world: ID, spawn_id: u64, round: u64 }
+
 /// The brand-scoped latch key (S-46 witness law — see `active_fighters`).
 public struct LatchKey has copy, drop, store { brand: TypeName, character: ID }
 
@@ -59,7 +65,11 @@ public(package) fun uid_mut(registry: &mut FightRegistry): &mut UID { &mut regis
 
 public(package) fun new_key(world: ID, spawn_id: u64): FightKey { FightKey { world, spawn_id } }
 
-/// Has a fight over (world, spawn_id) ever been created? (RPC + a client's pre-flight "is this group taken".)
+public(package) fun new_round_key(world: ID, spawn_id: u64, round: u64): FightRoundKey { FightRoundKey { world, spawn_id, round } }
+
+/// Has a fight over (world, spawn_id) ever been created AT ROUND 0? (RPC + a client's pre-flight "is this group
+/// taken".) Since #609 a released group is fought again at round ≥ 1, so pair this with the group's live bit —
+/// this alone answers "was it ever fought", never "is it fightable now".
 public fun fight_exists(registry: &FightRegistry, world: ID, spawn_id: u64): bool {
   sui::derived_object::exists(&registry.id, FightKey { world, spawn_id })
 }
@@ -67,6 +77,14 @@ public fun fight_exists(registry: &FightRegistry, world: ID, spawn_id: u64): boo
 /// The deterministic address a (world, spawn_id) fight lives at — a client resolves the Fight without a scan.
 public fun fight_address(registry: &FightRegistry, world: ID, spawn_id: u64): address {
   sui::derived_object::derive_address(registry.id.to_inner(), FightKey { world, spawn_id })
+}
+
+/// The deterministic address of the (world, spawn_id) fight at engagement `round` — ONE home for the formula
+/// `fight::create_round` claims and the consumer's defeat-release door authenticates an outcome against
+/// (#609: the outcome carries the fight id, so matching it against this address PROVES which group was lost).
+public fun group_fight_address(registry: &FightRegistry, world: ID, spawn_id: u64, round: u64): address {
+  if (round == 0) fight_address(registry, world, spawn_id)
+  else sui::derived_object::derive_address(registry.id.to_inner(), FightRoundKey { world, spawn_id, round })
 }
 
 // ╔════════════════ [ S-12f — the in-fight character latch ] ══════════════════ ]

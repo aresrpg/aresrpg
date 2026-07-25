@@ -13,6 +13,8 @@ import {
   spacing,
 } from '../src/zone_derive.js'
 
+import fixture from './fixtures/zone_group_release.json'
+
 // The fixed input the Move parity test (zone_gen_tests.move::t_derive_mob_groups_matches_js_mirror) pins its
 // reference vectors against — same seed/bands/geometry on both sides so a divergence fails ONE of the two suites.
 const base = {
@@ -283,6 +285,39 @@ describe('zone_derive — the full derive_zone pipeline (chain twin: zone_comp.m
     const cells = rows.filter(r => r.kind === 'resource')
     expect(mobs.map(m => m.index)).toEqual([1, 2]) // group 0 consumed; survivors keep indices 1 and 2
     expect(cells.map(c => c.index)).toEqual([0]) // cell 1 harvested; cell 0 survives at its own index
+  })
+
+  test('#609 parity fixture — a LOST fight releases the group back at its spot', () => {
+    // The chain twin: every `mob_bitmap` below is the exact byte vector the Move door test asserts on the World
+    // (see the fixture's provenance field). Projecting each step must show the group leaving the map at the claim
+    // and coming back — same index, same spawn_id, same position — once the defeat releases it. A regression on
+    // either side (a chain release that stops clearing the bit, a mirror that stops re-showing the group)
+    // fails HERE and in the Move suite.
+    const { world, zone, steps, released_group } = fixture
+    const project = mob_bitmap =>
+      derive_zone({
+        zone: { ...zone, mob_bitmap },
+        zx: zone.zx,
+        zy: zone.zy,
+        world,
+        team_bound: 6,
+      }).filter(r => r.kind === 'mob')
+
+    const projected = steps.map(s => project(s.mob_bitmap))
+    steps.forEach((s, i) =>
+      expect(projected[i].map(m => m.index)).toEqual(s.live_indices),
+    )
+    const [searched, , released] = projected
+    const before = searched.find(m => m.index === released_group.index)
+    const after = released.find(m => m.index === released_group.index)
+    expect(after).toEqual(before) // back at its spot, unchanged — not a re-rolled replacement group
+    expect(after).toMatchObject({
+      spawn_id: released_group.spawn_id,
+      x: released_group.x,
+      z: released_group.z,
+      size: released_group.size,
+      template_id: released_group.template_id,
+    })
   })
 
   test('bit_get reads the zones.move bitmap layout (byte i>>3, bit i&7; short bitmaps read 0)', () => {

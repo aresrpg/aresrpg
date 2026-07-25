@@ -896,11 +896,52 @@ export function settle_run_taken_ptb(context) {
 }
 
 /**
+ * RELEASE the mob group of a LOST open-world fight back into the world at its spot (`fight::release_group`, CORE
+ * package, NO &Random) — issue #609: the mobs won, so only a player VICTORY consumes a group; without this call a
+ * lost fight drains the world's mob population by one group, permanently. It BORROWS the outcome
+ * (`&FightOutcome`), so it composes BETWEEN `settle_and_take` (which produces the handle) and `open_taken` (which
+ * consumes it BY VALUE), exactly like `settle_run_taken_ptb`. `zx`/`zy`/`index` merely NAME the group — the door
+ * proves the naming on chain against the outcome's own fight address, and REFUSES a victory outcome. `tx` is
+ * REQUIRED (no default): the handle is only valid on the tx that produced it.
+ * @param {FightContext} context
+ */
+export function release_group_ptb(context) {
+  const { network } = context
+  return ({ world_id, outcome, zx, zy, index, tx }) => {
+    const a = aresrpg_deployment(network, context.ids?.aresrpg)
+
+    tx.moveCall({
+      target: `${a.LATEST_PACKAGE_ID}::fight::release_group`,
+      arguments: [
+        as_object_arg(tx, world_id), // world: &mut World (a cached ref must carry mutable:true)
+        shared_object_arg(
+          tx,
+          network,
+          'FIGHT_REGISTRY',
+          false,
+          a.FIGHT_REGISTRY,
+        ), // registry: &FightRegistry (read-only — the derived fight address is the proof)
+        outcome, // outcome: &FightOutcome (the settle_and_take RESULT HANDLE — borrowed, NEVER an object id)
+        tx.pure.u32(Number(zx)), // zx: u32
+        tx.pure.u32(Number(zy)), // zy: u32
+        tx.pure.u64(index), // index: u64 — the group's DERIVATION index (the mob-bitmap bit)
+        shared_object_arg(tx, network, 'GAME_CONFIG', false, a.GAME_CONFIG), // config: &GameConfig
+        shared_object_arg(tx, network, 'VERSION', false, a.VERSION), // version: &Version (core)
+      ],
+    })
+
+    return tx
+  }
+}
+
+/**
  * CONVENIENCE compose: settle a terminal open-world fight AND open the caller's own outcome in ONE PTB —
- * `settle_and_take_ptb` → `open_taken_ptb`, the &Random-drawing call LAST (Random-PTB compliance: Sui forbids any
- * command after a Random moveCall bar TransferObjects/MergeCoins). This is the PLAIN open-world two-call chain
- * only — the dungeon/kolizeum variants (which insert their own `&outcome` read BEFORE the open) are the CLIENT
- * lane's composition to build, not this SDK's (YAGNI).
+ * `settle_and_take_ptb` → (`release_group_ptb` when the fight was LOST) → `open_taken_ptb`, the &Random-drawing
+ * call LAST (Random-PTB compliance: Sui forbids any command after a Random moveCall bar
+ * TransferObjects/MergeCoins). `lost_group` is DATA, not a flag: pass `{ world_id, zx, zy, index }` when the
+ * party lost — that is the group to give back (#609) — and omit it on a victory, which has no group to release
+ * (the door would refuse one anyway). The dungeon/kolizeum variants (which insert their own `&outcome` read) stay
+ * the CLIENT lane's composition to build, not this SDK's (YAGNI).
  * @param {FightContext} context
  */
 export function settle_open_world_ptb(context) {
@@ -909,6 +950,7 @@ export function settle_open_world_ptb(context) {
     character_id,
     kiosk_id,
     personal_kiosk_cap_id,
+    lost_group,
     tx = new Transaction(),
   }) => {
     const { tx: chained, outcome } = settle_and_take_ptb(context)({
@@ -916,6 +958,15 @@ export function settle_open_world_ptb(context) {
       character_id,
       tx,
     })
+    if (lost_group)
+      release_group_ptb(context)({
+        world_id: lost_group.world_id,
+        outcome,
+        zx: lost_group.zx,
+        zy: lost_group.zy,
+        index: lost_group.index,
+        tx: chained,
+      })
     return open_taken_ptb(context)({
       outcome,
       kiosk_id,

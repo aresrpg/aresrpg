@@ -17,7 +17,7 @@ use aresrpg::{
 };
 use aresrpg_foundation::{world_math, zone_gen};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
-use sui::{clock::Clock, dynamic_field as df, event, kiosk::Kiosk, random::{Self, Random, RandomGenerator}};
+use sui::{clock::Clock, dynamic_field as df, event, kiosk::Kiosk, random::{Self, Random, RandomGenerator}, vec_map::{Self, VecMap}};
 
 // ╔════════════════ [ Errors ] ═══════════════════════════════════════════════ ]
 
@@ -31,6 +31,7 @@ const ENodeEmpty: u64 = 107; // gathering seam: the resource cell is already har
 const ESpawnNotFound: u64 = 108; // claim: no LIVE derived group with this spawn_id in the target zone (an unsearched/undiscovered zone has no Zone DF → also 108)
 const EBadDrainInput: u64 = 109; // drain_zones: the zx / zy coordinate lists have mismatched lengths
 const EBadGroupProof: u64 = 110; // claim: supplied facts/index/proof do not authenticate against the searched-zone root
+const EGroupNotConsumed: u64 = 111; // release: the group is already live in the world — nothing to put back
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
@@ -51,6 +52,15 @@ public struct ZoneKey has copy, drop, store { zx: u32, zy: u32 }
 /// Adjacent root storage is owned here: no sibling module can construct this private-field key or write roots.
 public struct ZoneGroupRootKey has copy, drop, store { zx: u32, zy: u32 }
 public struct ZoneGroupCommitment has store { root: vector<u8>, count: u64 }
+
+/// The zone's ENGAGEMENT ROUNDS (#609 — a group the mobs WON goes back into the world at its spot): `spawn_id →
+/// how many times this group has been released`. Absent, or a spawn absent from the map, means 0 — never lost to.
+/// A fight's derived address is claimed once and stays reserved forever, so the round is what gives the NEXT
+/// fight over a released group an address to live at (`fight_registry::group_fight_address`). Zone-scoped: the
+/// re-search that re-rolls the seed (new seed = new spawn ids) drops it with the bitmaps, and `drain_zones`
+/// reclaims it with the rest of the zone.
+public struct ZoneRoundsKey has copy, drop, store { zx: u32, zy: u32 }
+public struct ZoneRounds has store { rounds: VecMap<u64, u64> }
 
 /// The PROVENANCE HOT POTATO a successful `claim_mob_group` returns — the ONLY way to open a world fight.
 /// No abilities: it cannot be stored, dropped, or copied, so the claiming PTB MUST consume it in the same tx
@@ -99,6 +109,9 @@ public struct WorldJoined has copy, drop { world: ID, character: ID, x: u32, z: 
 public struct ZoneSearched has copy, drop { world: ID, zx: u32, zy: u32, at_ms: u64, mob_groups: u64, resource_nodes: u64 }
 
 public struct MobGroupClaimed has copy, drop { world: ID, character: ID, spawn_id: u64, template: ID, x: u32, z: u32, group_size: u16 }
+
+/// The mobs won: their group is back in the world at its spot, fightable again at engagement `round` (#609).
+public struct MobGroupReleased has copy, drop { world: ID, spawn_id: u64, x: u32, z: u32, round: u64 }
 
 /// A batch of discovered-zone dynamic fields (`ZoneKey → Zone`) was drained off a World UID ahead of a
 /// `world::destroy_world` (storage reclaim). `zones_removed` counts what actually existed — the drain is idempotent.
@@ -268,6 +281,7 @@ fun search_internal(
   } else {
     df::add(wuid, root_key, ZoneGroupCommitment { root: group_root, count: msids.length() });
   };
+  drop_zone_rounds(wuid, zx, zy); // the re-roll renames every spawn — the old rounds name nothing
 
   event::emit(ZoneSearched { world: wid, zx, zy, at_ms: now, mob_groups: msids.length(), resource_nodes: rsids.length() });
 }
@@ -433,6 +447,59 @@ fun mark_mob_consumed(world: &mut World, zx: u32, zy: u32, index: u64) {
   bit_set(&mut zone.mob_bitmap, index);
 }
 
+// ╔════════════════ [ RELEASE THE GROUP (#609 — only a player VICTORY consumes it) ] ═ ]
+
+/// Put a consumed group BACK in the world at its spot: clear its consumed bit and bump its engagement round.
+/// §7 says a defeat costs only time — the mobs winning is not a reason for them to vanish, and without this the
+/// world's mob population drains as a pure function of player deaths. Package-internal on purpose: the ONLY
+/// caller is `aresrpg::fight::release_group`, which authenticates the defeat against the fight's derived address
+/// before asking for this write (this module owns the bitmap; that one owns the fight's semantics). The new round
+/// — the address namespace the next fight over the group will claim — rides the event.
+public(package) fun release_mob_group(world: &mut World, zx: u32, zy: u32, index: u64, spawn_id: u64, x: u32, z: u32) {
+  assert!(!mob_group_live(world, zx, zy, index), EGroupNotConsumed);
+  let wid = object::id(world);
+  let wuid = world::uid_mut(world);
+  {
+    let zone: &mut Zone = df::borrow_mut(wuid, ZoneKey { zx, zy });
+    bit_clear(&mut zone.mob_bitmap, index);
+  };
+  let round = bump_group_round(wuid, zx, zy, spawn_id);
+  event::emit(MobGroupReleased { world: wid, spawn_id, x, z, round });
+}
+
+/// The group's ENGAGEMENT ROUND — 0 until the group has been released, +1 per release. `fight::create` reads it
+/// to namespace the fight's derived address; the release door reads it to authenticate an outcome against that
+/// same address. An undiscovered zone (no rounds DF) is 0, like every never-lost-to group.
+public fun group_round(world: &World, zx: u32, zy: u32, spawn_id: u64): u64 {
+  let key = ZoneRoundsKey { zx, zy };
+  if (!df::exists(world::uid(world), key)) return 0;
+  let stored: &ZoneRounds = df::borrow(world::uid(world), key);
+  if (stored.rounds.contains(&spawn_id)) *stored.rounds.get(&spawn_id) else 0
+}
+
+/// +1 to the group's round, creating the zone's rounds map on first use. Returns the new value.
+fun bump_group_round(wuid: &mut UID, zx: u32, zy: u32, spawn_id: u64): u64 {
+  let key = ZoneRoundsKey { zx, zy };
+  if (!df::exists(wuid, key)) df::add(wuid, key, ZoneRounds { rounds: vec_map::empty() });
+  let stored: &mut ZoneRounds = df::borrow_mut(wuid, key);
+  if (!stored.rounds.contains(&spawn_id)) {
+    stored.rounds.insert(spawn_id, 1);
+    return 1
+  };
+  let r = stored.rounds.get_mut(&spawn_id);
+  *r = *r + 1;
+  *r
+}
+
+/// Drop a zone's rounds map (the re-search re-roll and the pre-destruction drain — both already discard the
+/// bitmaps, and a new seed means new spawn ids, so the old rounds name nothing).
+fun drop_zone_rounds(wuid: &mut UID, zx: u32, zy: u32) {
+  let key = ZoneRoundsKey { zx, zy };
+  if (df::exists(wuid, key)) {
+    let ZoneRounds { rounds: _ } = df::remove(wuid, key);
+  };
+}
+
 // ╔════════════════ [ Gathering seam (package-internal derived-cell read + consume) ] ══ ]
 
 /// Read a LIVE derived resource cell's (x, z, job, tier, template_id) by its derivation index. Aborts `EBadNode`
@@ -482,6 +549,7 @@ public fun drain_zones(cap: &AdminCap, world: &mut World, zxs: vector<u32>, zys:
     if (df::exists(wuid, root_key)) {
       let ZoneGroupCommitment { root: _, count: _ } = df::remove(wuid, root_key);
     };
+    drop_zone_rounds(wuid, zxs[i], zys[i]);
     i = i + 1;
   };
   event::emit(ZonesDrained { world: wid, zones_removed: removed });
@@ -538,17 +606,28 @@ fun bit_set(bm: &mut vector<u8>, i: u64) {
   *b = *b | (1 << ((i % 8) as u8));
 }
 
+/// Clear bit `i`, then pop trailing zero bytes — the exact inverse of `bit_set`, so a released group leaves the
+/// bitmap byte-identical to what it was before its claim (the cost shape stays lazy, and the JS mirror's
+/// `bit_get` reads a shorter vector as all-live).
+fun bit_clear(bm: &mut vector<u8>, i: u64) {
+  let byte = i / 8;
+  if (byte >= bm.length()) return;
+  let b = &mut bm[byte];
+  *b = *b & (255u8 ^ (1u8 << ((i % 8) as u8)));
+  while (!bm.is_empty() && bm[bm.length() - 1] == 0) { bm.pop_back(); };
+}
+
 // ╔════════════════ [ Testing ] ══════════════════════════════════════════════ ]
+
+#[test_only]
+/// The zone's stored mob-bitmap BYTES — what the client's `zone_derive.js` mirror reads verbatim. Tests pin the
+/// exact bytes so the sim's parity fixture (`packages/sim/test/fixtures/zone_group_release.json`) has provenance.
+public fun mob_bitmap_for_testing(world: &World, zx: u32, zy: u32): vector<u8> { borrow_zone(world, zx, zy).mob_bitmap }
 
 #[test_only]
 public fun reopen_mob_group_for_testing(world: &mut World, zx: u32, zy: u32, index: u64) {
   let zone: &mut Zone = df::borrow_mut(world::uid_mut(world), ZoneKey { zx, zy });
-  let byte = index / 8;
-  if (byte < zone.mob_bitmap.length()) {
-    let b = &mut zone.mob_bitmap[byte];
-    *b = *b & (255u8 ^ (1u8 << ((index % 8) as u8)));
-    while (!zone.mob_bitmap.is_empty() && zone.mob_bitmap[zone.mob_bitmap.length() - 1] == 0) { zone.mob_bitmap.pop_back(); };
-  };
+  bit_clear(&mut zone.mob_bitmap, index);
 }
 
 #[test_only]
