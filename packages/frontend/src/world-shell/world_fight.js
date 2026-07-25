@@ -6,13 +6,15 @@
 import { use_auth } from '../auth'
 import { get_fights } from '../rpc/client'
 import { game_log } from '../core/log.js'
+import i18n from '../i18n'
+import { push_event_toast } from '../game/core/toast.js'
 
 import { use_dungeon } from './dungeon_store.js'
 import { use_party } from './party_store.js'
 import { fight_state_trace } from './fight_state_trace.js'
 import { poll_receipt_fight, receipt_entry_decision } from './world_fight_receipt.js'
 import { init_dungeon_fight } from './dungeon_fight_shim.js'
-import { ensure_resumable_placement } from './fight-liquidation.js'
+import { ensure_resumable_fight } from './fight-liquidation.js'
 
 const { getState } = use_dungeon
 /** True while a fight/dungeon session already owns the shared store (never stomp a live board). */
@@ -110,10 +112,12 @@ export function spectate_world_fight({ fight_id, world_id = null, public_fight =
 }
 
 /** RESUME after a reload: discover the candidate, then validate it is still live BEFORE entry (absent/terminal
- *  stays in-world; a transient read holds for a later boot pass). A PLACEMENT candidate must ALSO pass the
- *  chain-truth presentability gate (fight-liquidation.js — the REJOIN-SPAWN root: an expired window liquidates
- *  via force_start BEFORE adoption, never entered as-is; 'active' passes untouched, the P0 refresh law).
- *  @param {string} character_id @param {{ force_start_door?: Function, is_current?: () => boolean }} [deps] unit seam only */
+ *  stays in-world; a transient read holds for a later boot pass). EVERY candidate then passes the chain-truth
+ *  presentability gate (fight-liquidation.js — the REJOIN-SPAWN root, widened by #882): an expired placement
+ *  window liquidates via `force_start` and an expired TURN via `crank` BEFORE adoption, and a fight those doors
+ *  resolved terminal routes back to the world with an honest toast instead of re-capturing the character.
+ *  @param {string} character_id
+ *  @param {{ force_start_door?: Function, crank_door?: Function, is_current?: () => boolean }} [deps] unit seam only */
 export async function resume_world_fight(character_id, deps = {}) {
   const is_current = deps.is_current ?? (() => true)
   if (!character_id || !is_current() || session_busy()) return
@@ -142,10 +146,20 @@ export async function resume_world_fight(character_id, deps = {}) {
       })
     return getState()._recover_dead_fight_reference({ character_id, state: 'absent' })
   }
-  if (current.status === 'placement') {
-    const decision = await ensure_resumable_placement(fight_id, deps.force_start_door)
-    if (!is_current() || decision !== 'enter') return
+  // ONE chain-truth gate for both live statuses (#882): expired placement → force_start, expired turn → crank,
+  // and whatever the chain reports AFTER that door decides. `gone` = the door resolved it terminal (or it was
+  // destroyed): route out honestly — the character is freed and its outcome recovered, never re-captured.
+  const decision = await ensure_resumable_fight(fight_id, {
+    force_start_door: deps.force_start_door,
+    crank_door: deps.crank_door,
+  })
+  if (!is_current()) return
+  if (decision === 'gone') {
+    fight_state_trace('fight_resume_expired_gone', { fight_id, character_id })
+    push_event_toast({ state: 'info', title: i18n.t('fights.expired_fight_cleared') })
+    return getState()._recover_dead_fight_reference({ character_id, state: 'settled' })
   }
+  if (decision !== 'enter') return
   if (!is_current() || session_busy()) return // a session opened or the request changed while reading — never stomp it
   enter_world_fight({ fight_id, world_id: current.world ?? live.world ?? null, character_id, resumed: true })
 }

@@ -21,6 +21,12 @@ import { useTranslation } from 'react-i18next'
 
 import { use_dungeon } from '../../../world-shell/dungeon_store.js'
 import { turn_input_armed } from '../../../world-shell/voxel_fight_folds.js'
+import {
+  TURN_OVERDUE_COPY_KEY,
+  TURN_STALLED_COPY_KEY,
+  turn_overdue_ms,
+  turn_stalled,
+} from '../../../world-shell/fight_expiry_gate.js'
 import { use_dungeon_turn } from '../dungeon-turn.js'
 import { fight_store } from '@aresrpg/fight/store'
 import { use_fight, use_fight_view } from '../../store.js'
@@ -141,6 +147,10 @@ export function FightControls({
   turn_deadline_ms = 0,
   has_turn_draft = false,
   auto_commit_label,
+  // #882: the CHAIN status beside the chain deadline already drilled above — together they are the whole input
+  // of the expiry gate (fight_expiry_gate.js), the SAME two fields the permissionless crank door watches. The
+  // dungeon/world board passes `dungeon.status`; a mount that omits it simply never claims a fight is stalled.
+  fight_status = null,
 } = {}) {
   const { t } = useTranslation()
   const fight = use_fight_view() // synchronous core view (S2 mirror kill)
@@ -165,9 +175,15 @@ export function FightControls({
   const placement = placement_override != null ? placement_override : !!fight?.placement && fight?.winner === -1
   const has_placement_deadline = placement_deadline_ms > 0
   const has_turn_deadline = !placement && turn_phase === 'armed' && has_turn_draft && turn_deadline_ms > 0
+  const chain_turn = { status: fight_status, turn_deadline_ms }
   // One clock for every countdown rendered by this action bar. The old DungeonBoard urgency interval was a
-  // parallel renderer that survived commit-phase changes; it is deliberately gone.
-  const clock_live = min_turn_gating || (placement && has_placement_deadline) || has_turn_deadline
+  // parallel renderer that survived commit-phase changes; it is deliberately gone. A live chain deadline joins
+  // it (#882): the stalled notice must appear when the deadline actually lapses, not when a poll next lands.
+  const clock_live =
+    min_turn_gating ||
+    (placement && has_placement_deadline) ||
+    has_turn_deadline ||
+    (!placement && fight_status != null && turn_deadline_ms > 0)
   useEffect(() => {
     if (!clock_live) return undefined
     const id = setInterval(() => set_now_ms(Date.now()), min_turn_gating ? 200 : 1000)
@@ -188,6 +204,13 @@ export function FightControls({
     placement && has_placement_deadline ? Math.max(0, Math.ceil((placement_deadline_ms - now_ms) / 1000)) : null
   const commit_in_s = turn_commit_countdown_s(turn_phase, has_turn_draft, turn_deadline_ms, now_ms, fight?.turn_ms ?? 0)
   const show_commit_cue = !placement && commit_in_s != null && commit_in_s <= 15 && !!auto_commit_label
+  // #882 THE EXIT IS VISIBLE: a fight whose turn deadline lapsed past the janitors' grace is not advancing on
+  // its own, and the board says `0s` forever. Name it, and name the door that works — the FORFEIT sitting right
+  // beside this notice (proven live: it resolved the expired fight terminal on the first attempt). My OWN
+  // overdue turn is a softer beat: the chain still grants it grace (turns.move:177), so END TURN stays armed
+  // and only explains itself.
+  const stalled = turn_stalled(chain_turn, now_ms)
+  const my_turn_overdue = turn_phase !== 'hidden' && turn_overdue_ms(chain_turn, now_ms) != null
 
   const on_forfeit_confirmed = () => {
     set_confirm_open(false)
@@ -234,6 +257,11 @@ export function FightControls({
           {auto_commit_label?.(Math.max(0, commit_in_s ?? 0))}
         </div>
       )}
+      {stalled && (
+        <div className="hud-fightctl__stalled" role="status" aria-live="polite" data-fight-stalled="true">
+          {t(TURN_STALLED_COPY_KEY)}
+        </div>
+      )}
       <div className="hud-fightctl" data-controlled-character={fight.my_entity_id ?? undefined}>
         {placement && countdown_s != null && placement_label && (
           <span className="hud-fightctl__countdown" role="status" aria-live="polite">
@@ -256,7 +284,13 @@ export function FightControls({
             disabled={end_is_disabled}
             end_label={end_label}
             disabled_label={min_turn_gating ? `${end_label} · ${Math.ceil(min_turn_left_ms / 1000)}` : null}
-            title={min_turn_gating ? t('errors.turn_too_fast') : undefined}
+            title={
+              min_turn_gating
+                ? t('errors.turn_too_fast')
+                : my_turn_overdue
+                  ? t(TURN_OVERDUE_COPY_KEY) // still armed — the chain grants the caller's own overdue turn grace
+                  : undefined
+            }
           />
         )}
         {show_abandon && (

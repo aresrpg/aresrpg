@@ -2705,7 +2705,10 @@
     "claiming_pending_result": "Dein ausstehendes Kampfergebnis wird eingefordert…",
     "a_fight": "dem Kampf",
     "a_dungeon": "dem Dungeon",
-    "board_place_failed": "Spielfeld konnte nicht platziert werden — bitte neu laden."
+    "board_place_failed": "Spielfeld konnte nicht platziert werden — bitte neu laden.",
+    "turn_expired": "Dieser Zug ist über seiner Frist — beende ihn jetzt, jeder Zuschauer kann ihn erzwingen.",
+    "turn_expired_exit": "Zugfrist abgelaufen · dieser Kampf geht nicht weiter. Gib auf, um deinen Charakter zu befreien.",
+    "expired_fight_cleared": "Dieser Kampf war bereits aufgelöst — dein Charakter ist frei."
   },
   "jobs": {
     "category": {

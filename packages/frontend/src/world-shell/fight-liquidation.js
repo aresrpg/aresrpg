@@ -25,7 +25,8 @@ import i18n from '../i18n'
 import { push_event_toast } from '../game/core/toast.js'
 
 import { crank as tx_crank, force_start as tx_force_start } from './dungeon_actions'
-import { read_object } from './run_reads.js'
+import { is_gone_error, read_object } from './run_reads.js'
+import { turn_liquidatable } from './fight_expiry_gate.js'
 
 const STATUS_ACTIVE = 1
 const STATUS_PLACEMENT = 5
@@ -43,9 +44,9 @@ let force_fired_for_deadline = /** @type {number | null} */ (null)
 const executed_failure = (/** @type {any} */ error) =>
   Boolean(error?.cause) || /MoveAbort|abort|EInvalid|ENot|deadline/i.test(String(error?.message ?? ''))
 
-/** The active turn's on-chain deadline has passed (and there IS a live turn to liquidate). */
-const expired = (/** @type {any} */ v) =>
-  !!v && v.status === STATUS_ACTIVE && v.turn_deadline_ms > 0 && Date.now() >= v.turn_deadline_ms
+/** The active turn's on-chain deadline has passed (and there IS a live turn to liquidate) — fight_expiry_gate.js
+ *  is its ONE home now: the player-facing "this fight cannot advance" surface reads the SAME predicate (#882). */
+const expired = (/** @type {any} */ v) => turn_liquidatable(v)
 
 /** The PLACEMENT window's deadline has passed (and we're still in placement → force_start is eligible). */
 const placement_expired = (/** @type {any} */ v) =>
@@ -165,58 +166,87 @@ export function reset_liquidation() {
   force_fired_for_deadline = null
 }
 
-// ── BOOT-RESUME PRESENTABILITY (REJOIN-SPAWN root, 2026-07-17) ──────────────────────────────────────────────
+// ── BOOT-RESUME PRESENTABILITY (REJOIN-SPAWN root, 2026-07-17 · widened to ACTIVE by #882) ─────────────────
 // A character rejoining a world while a ZOMBIE world fight (PLACEMENT, window expired — left by a dead
 // session) was still on-chain got its boot HIJACKED: the one-shot resume adopted the session as-is, the first
 // snapshot flipped the fight-view edge (`fight_mode`), and the roam self rig/SelfPlate unmounted with no
 // presentable board behind them (a "spectate view"). The resume must adopt ONLY a fight the phase
-// machine can present — an expired window goes through the SAME permissionless `force_start` door this module
-// already embodies, BEFORE adoption. This is that policy's one home (world_fight.js stays a thin shim).
+// machine can present — an expired window goes through the SAME permissionless door this module already
+// embodies, BEFORE adoption. This is that policy's one home (world_fight.js stays a thin shim).
+//
+// #882 widened it to the ACTIVE sibling: a re-entry used to adopt ANY 'active' fight blind, including one whose
+// TURN deadline expired hours earlier — the zombie that re-captured the character session after session. The
+// same rule now covers both live statuses, each through its own janitor door: PLACEMENT→`force_start`,
+// ACTIVE→`crank`. What the chain reports AFTER that door decides adoption; a fight the door resolved terminal
+// is `gone` (route out + recover the outcome), never a board to mount.
 
 /**
  * PURE — presentability of a chain-read fight for a boot resume.
- * `enter` = presentable now (ACTIVE, or PLACEMENT inside its window — a genuine mid-fight/mid-placement
- * refresh) · `liquidate` = expired placement, needs the `force_start` heal first · `skip` = never adopt
- * (terminal/unknown/unreadable — the pending-outcome recovery/receipt flows own any marker discharge).
- * @param {{ status?: number, placement_deadline_ms?: bigint|number|null } | null} decoded
+ * `enter` = presentable now (ACTIVE inside its turn deadline, or PLACEMENT inside its window — a genuine
+ * mid-fight/mid-placement refresh) · `force_start`/`crank` = live but expired, needs THAT permissionless heal
+ * first · `skip` = never adopt (terminal/unknown/unreadable — the pending-outcome recovery/receipt flows own
+ * any marker discharge).
+ * @param {{ status?: number, placement_deadline_ms?: bigint|number|null,
+ *           turn_deadline_ms?: bigint|number|null } | null} decoded
  * @param {number} now
- * @returns {'enter'|'liquidate'|'skip'}
+ * @returns {'enter'|'force_start'|'crank'|'skip'}
  */
-export function placement_resume_decision(decoded, now) {
+export function resume_decision(decoded, now) {
   if (!decoded) return 'skip' // unreadable fight — never adopt on hope; a later boot pass retries
   const status = Number(decoded.status)
-  if (status === STATUS_ACTIVE) return 'enter' // advanced under us (a racing janitor/join) — genuinely live
+  if (status === STATUS_ACTIVE) return turn_liquidatable(decoded, now) ? 'crank' : 'enter'
   if (status !== STATUS_PLACEMENT) return 'skip' // terminal/unknown — nothing a live session can present
   const deadline = Number(decoded.placement_deadline_ms ?? 0)
   if (!deadline || now < deadline) return 'enter' // window open (or windowless, defensive) — a real refresh
-  return 'liquidate'
+  return 'force_start'
 }
 
 /**
- * Chain-truth gate for a /v1 'placement' resume candidate (the /v1 fight doc carries NO placement deadline —
- * only the Fight object does). Expired window → fire `force_start` FIRST (silent, the embodiment law above):
- * a certified force_start is RECEIPT TRUTH the fight is ACTIVE → enter. A refusal re-reads once and defers
- * honestly — never re-fired this pass (tx-retry burn law; a raced janitor may already have advanced it).
- * @param {string} fight_id @param {(fight_id: string, silent: boolean) => Promise<any>} [force_start_door]
- * @returns {Promise<'enter'|'skip'>}
+ * Chain-truth gate for a /v1 resume candidate (the /v1 fight doc carries NO deadlines — only the Fight object
+ * does). Expired → fire that status's permissionless door FIRST (silent, the embodiment law above), then let
+ * the RE-READ decide: still live ⇒ enter (the board mounts, and an ACTIVE fight the crank could not advance
+ * mounts with its honest expired surface + the forfeit exit), terminal/destroyed ⇒ `gone` (the caller routes
+ * out and recovers the outcome), unreadable/refused-placement ⇒ `skip` (defer, never loop a refused door).
+ * Each door fires at most ONCE per pass — the tx-retry burn law; a raced janitor may already have advanced it.
+ * @param {string} fight_id
+ * @param {{ force_start_door?: (fight_id: string, silent: boolean) => Promise<any>,
+ *           crank_door?: (fight_id: string, silent: boolean) => Promise<any> }} [doors]
+ * @returns {Promise<'enter'|'gone'|'skip'>}
  */
-export async function ensure_resumable_placement(fight_id, force_start_door = tx_force_start) {
+export async function ensure_resumable_fight(fight_id, doors = {}) {
+  const { force_start_door = tx_force_start, crank_door = tx_crank } = doors
+  // A TRANSPORT failure is not news about the fight: it holds for a later boot pass (`unreadable`), never a
+  // "your fight was cleared" claim. Only a definitive gone-error or a decoded terminal status is that claim.
   const read_decoded = async () => {
     try {
-      return decode_fight((await read_object(await get_sdk(), fight_id))?.json)
+      const read = await read_object(await get_sdk(), fight_id)
+      return read ? { readable: true, decoded: decode_fight(read.json) } : { readable: false, decoded: null }
     } catch (error) {
-      game_log('world-fight', 'resume placement read failed — no reconnect this pass', error)
-      return null
+      if (is_gone_error(error)) return { readable: true, decoded: null } // destroyed — settled/swept elsewhere
+      game_log('world-fight', 'resume liveness read failed — no reconnect this pass', error)
+      return { readable: false, decoded: null }
     }
   }
-  const decision = placement_resume_decision(await read_decoded(), Date.now())
-  if (decision !== 'liquidate') return decision
-  try {
-    await force_start_door(fight_id, true) // silent janitor tx — certified ⇒ the fight IS active now
-    return 'enter'
-  } catch (error) {
-    game_log('world-fight', 'boot liquidation (force_start) did not land — resume deferred', error)
-    const after = placement_resume_decision(await read_decoded(), Date.now())
-    return after === 'liquidate' ? 'skip' : after // never loop a refused liquidation
+  const verdict = ({ readable, decoded }) => {
+    const decision = resume_decision(decoded, Date.now())
+    // `skip` off a READABLE chain = terminal or destroyed: route out and recover the outcome. Off an unreadable
+    // one it is exactly what it says — we do not know; hold.
+    return decision === 'skip' && !readable ? 'unreadable' : decision
   }
+  const decision = verdict(await read_decoded())
+  if (decision === 'enter') return 'enter'
+  if (decision === 'skip') return 'gone' // terminal/absent on chain — nothing to mount, an outcome to recover
+  if (decision === 'unreadable') return 'skip'
+  const door = decision === 'crank' ? crank_door : force_start_door
+  try {
+    await door(fight_id, true) // silent janitor tx
+  } catch (error) {
+    game_log('world-fight', `boot liquidation (${decision}) did not land — resume deferred`, error)
+  }
+  const after = verdict(await read_decoded())
+  if (after === 'enter') return 'enter'
+  if (after === 'skip') return 'gone' // the door resolved it terminal (or it vanished) — route out, never mount
+  // Still expired after its one door: an ACTIVE board is still PRESENTABLE and holds the working exit (forfeit),
+  // so mount it — the expiry gate surfaces the honest state there. A placement window nothing can start is not.
+  return after === 'crank' ? 'enter' : 'skip'
 }

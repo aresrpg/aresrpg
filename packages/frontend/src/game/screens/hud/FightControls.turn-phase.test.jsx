@@ -217,6 +217,37 @@ describe('fight turn controls — one phase source for the button and countdown'
     expect(context.get_state().fight).toBeUndefined()
   })
 
+  // ── #882 · THE EXIT IS VISIBLE ────────────────────────────────────────────────────────────────────────────
+  // A fight whose turn deadline lapsed hours ago showed `0s` forever and said nothing: no path forward and no
+  // hint that FORFEIT — the door proven to resolve it on the first attempt — was sitting right there. The notice
+  // derives from the SAME predicate the permissionless crank door reads (fight_expiry_gate.js), so the surface
+  // and the janitor can never disagree.
+  test('a STALLED turn (deadline lapsed past the grace) names the state and the forfeit exit', () => {
+    seed()
+
+    const html = renderToStaticMarkup(
+      <FightControls abandon_label="FORFEIT" fight_status={1} turn_deadline_ms={Date.now() - 6 * 3_600_000} />
+    )
+
+    expect(html).toContain('hud-fightctl__stalled')
+    expect(html).toContain('data-fight-stalled="true"')
+    expect(html).toContain('hud-fightctl__abandon') // the working exit is mounted beside the notice it names
+    expect(html).toContain('>FORFEIT<')
+  })
+
+  test('a live turn — and a JUST-lapsed one, still inside the crank grace — say nothing', () => {
+    seed()
+    const bar = (props) => renderToStaticMarkup(<FightControls {...props} />)
+
+    expect(bar({ fight_status: 1, turn_deadline_ms: Date.now() + 45_000 })).not.toContain('hud-fightctl__stalled')
+    // a watcher's crank is very likely in flight here — crying "stalled" at t+1s would be noise, not honesty
+    expect(bar({ fight_status: 1, turn_deadline_ms: Date.now() - 1_000 })).not.toContain('hud-fightctl__stalled')
+    // …a PLACEMENT window is a different clock entirely (force_start owns it)
+    expect(bar({ fight_status: 5, turn_deadline_ms: Date.now() - 6 * 3_600_000 })).not.toContain('hud-fightctl__stalled')
+    // …and a mount that never learns the chain status claims nothing at all
+    expect(bar({ turn_deadline_ms: Date.now() - 6 * 3_600_000 })).not.toContain('hud-fightctl__stalled')
+  })
+
   test('mobile placement renders READY and FORFEIT inside the compact fight-layer modifier', async () => {
     seed()
     const html = renderToStaticMarkup(

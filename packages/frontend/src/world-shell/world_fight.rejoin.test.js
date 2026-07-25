@@ -50,7 +50,7 @@ const { use_dungeon } = await import('./dungeon_store.js')
 const { fight_store } = await import('@aresrpg/fight/store')
 const { board_view } = await import('@aresrpg/fight/project')
 const { resume_world_fight } = await import('./world_fight.js')
-const { placement_resume_decision } = await import('./fight-liquidation.js')
+const { resume_decision } = await import('./fight-liquidation.js')
 
 const initial_dungeon = use_dungeon.getInitialState()
 const real_fetch = globalThis.fetch
@@ -190,16 +190,87 @@ describe('boot resume vs a zombie world fight (REJOIN-SPAWN)', () => {
   })
 })
 
-describe('placement_resume_decision (pure)', () => {
+// ── #882 · THE ACTIVE SIBLING: re-entry must not adopt a fight whose TURN deadline expired hours ago ─────────
+// The reported loop: "a later session re-mounted the SAME fight id instead of reaching a claimable world — the
+// zombie fight captures the character indefinitely". The gate that already protected an expired PLACEMENT window
+// now covers the ACTIVE fight too, through ITS permissionless door (`turns::crank`): fire it BEFORE adoption and
+// let the RE-READ decide. A fight the crank resolved terminal is routed OUT (character freed + outcome
+// recovered), never mounted. A fight that survives it stays enterable — an ACTIVE board is presentable and holds
+// the ONLY working exit (forfeit), and the expiry gate surfaces its honest state there.
+describe('boot resume vs an EXPIRED-turn zombie (#882)', () => {
+  test('RED-FIRST: an expired ACTIVE fight is no longer adopted blind — the crank door fires FIRST', async () => {
+    serve_v1_fight({ fight_id: FIGHT_ID, world: WORLD_ID, status: 'active' })
+    let cranked = false
+    read_response = async (object_id) => {
+      if (object_id !== FIGHT_ID) throw new Error(`unexpected object read: ${object_id}`)
+      // the crank forfeited the overdue turn and resolved the fight terminal (WON) — nothing left to mount
+      return cranked ? fight_object(3) : fight_object(STATUS_ACTIVE, { turn_deadline_ms: Date.now() - 6 * 3_600_000 })
+    }
+    const crank_door = mock(async () => {
+      cranked = true
+      return { digest: '0xcrank' }
+    })
+
+    await resume_world_fight(CHARACTER_ID, { crank_door })
+    await settle_tick()
+
+    expect(crank_door).toHaveBeenCalledTimes(1)
+    expect(crank_door.mock.calls[0]).toEqual([FIGHT_ID, true]) // the silent janitor door, not a toast path
+    // The loop of record: the session was adopted as-is and the zombie re-captured the character.
+    expect(use_dungeon.getState().fight_id).toBeNull()
+    expect(use_dungeon.getState().dungeon_id).toBeNull()
+    expect(board_view(fight_store.getState())).toBeNull()
+  })
+
+  test('a fight the crank could not advance still ENTERS — the forfeit exit lives on the board', async () => {
+    serve_v1_fight({ fight_id: FIGHT_ID, world: WORLD_ID, status: 'active' })
+    read_response = async (object_id) => {
+      if (object_id !== FIGHT_ID) throw new Error(`unexpected object read: ${object_id}`)
+      return fight_object(STATUS_ACTIVE, { turn_deadline_ms: Date.now() - 6 * 3_600_000 })
+    }
+    const crank_door = mock(async () => {
+      throw new Error('executed abort (test)')
+    })
+
+    await resume_world_fight(CHARACTER_ID, { crank_door })
+
+    expect(crank_door).toHaveBeenCalledTimes(1) // ONE attempt — the tx-retry burn law, never a loop
+    expect(use_dungeon.getState().fight_id).toBe(FIGHT_ID)
+    expect(use_dungeon.getState().fight_fresh).toBe(false)
+  })
+
+  test('a TRANSIENT read failure claims nothing — no door, no adoption, no "your fight was cleared"', async () => {
+    serve_v1_fight({ fight_id: FIGHT_ID, world: WORLD_ID, status: 'active' })
+    read_response = async () => {
+      throw new Error('fullnode unavailable (test)') // NOT a gone-error: we do not know anything yet
+    }
+    const crank_door = mock(async () => ({ digest: '0xnever' }))
+
+    await resume_world_fight(CHARACTER_ID, { crank_door })
+    await settle_tick()
+
+    expect(crank_door).not.toHaveBeenCalled() // never spend gas on a fight we could not read
+    expect(use_dungeon.getState().fight_id).toBeNull() // held for a later boot pass, exactly as before
+  })
+})
+
+describe('resume_decision (pure)', () => {
   const NOW = 1_000_000
-  test('rules: active enters · open window enters · expired liquidates · terminal/unreadable skip', () => {
-    expect(placement_resume_decision({ status: STATUS_ACTIVE }, NOW)).toBe('enter')
-    expect(placement_resume_decision({ status: STATUS_PLACEMENT, placement_deadline_ms: NOW + 1 }, NOW)).toBe('enter')
-    expect(placement_resume_decision({ status: STATUS_PLACEMENT, placement_deadline_ms: 0 }, NOW)).toBe('enter') // windowless — defensive, never wedge on absent data
-    expect(placement_resume_decision({ status: STATUS_PLACEMENT, placement_deadline_ms: NOW }, NOW)).toBe('liquidate')
-    expect(placement_resume_decision({ status: STATUS_PLACEMENT, placement_deadline_ms: 12n }, NOW)).toBe('liquidate') // bigint decode shape
-    expect(placement_resume_decision({ status: 3 }, NOW)).toBe('skip') // WON — pending-outcome recovery owns the discharge
-    expect(placement_resume_decision({ status: 4 }, NOW)).toBe('skip') // FAILED
-    expect(placement_resume_decision(null, NOW)).toBe('skip') // unreadable — never adopt on hope
+  test('placement rules: open window enters · expired force_starts · terminal/unreadable skip', () => {
+    expect(resume_decision({ status: STATUS_PLACEMENT, placement_deadline_ms: NOW + 1 }, NOW)).toBe('enter')
+    expect(resume_decision({ status: STATUS_PLACEMENT, placement_deadline_ms: 0 }, NOW)).toBe('enter') // windowless — defensive, never wedge on absent data
+    expect(resume_decision({ status: STATUS_PLACEMENT, placement_deadline_ms: NOW }, NOW)).toBe('force_start')
+    expect(resume_decision({ status: STATUS_PLACEMENT, placement_deadline_ms: 12n }, NOW)).toBe('force_start') // bigint decode shape
+    expect(resume_decision({ status: 3 }, NOW)).toBe('skip') // WON — pending-outcome recovery owns the discharge
+    expect(resume_decision({ status: 4 }, NOW)).toBe('skip') // FAILED
+    expect(resume_decision(null, NOW)).toBe('skip') // unreadable — never adopt on hope
+  })
+
+  test('active rules (#882): a live turn enters · an EXPIRED turn cranks first', () => {
+    expect(resume_decision({ status: STATUS_ACTIVE, turn_deadline_ms: NOW + 1 }, NOW)).toBe('enter')
+    expect(resume_decision({ status: STATUS_ACTIVE, turn_deadline_ms: 0 }, NOW)).toBe('enter') // no deadline stamped yet
+    expect(resume_decision({ status: STATUS_ACTIVE }, NOW)).toBe('enter') // the P0 mid-fight refresh law, untouched
+    expect(resume_decision({ status: STATUS_ACTIVE, turn_deadline_ms: NOW }, NOW)).toBe('crank')
+    expect(resume_decision({ status: STATUS_ACTIVE, turn_deadline_ms: BigInt(NOW - 60_000) }, NOW)).toBe('crank')
   })
 })

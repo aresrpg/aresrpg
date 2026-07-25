@@ -1155,6 +1155,7 @@ export function DungeonBoard() {
             placement_deadline_ms={dungeon.placement_deadline_ms} /* D110: REAL chain force-start deadline */
             placement_label={(n) => t('dungeons.placement_starts_in', { n })}
             turn_deadline_ms={dungeon.turn_deadline_ms}
+            fight_status={dungeon.status} /* #882: with the deadline above, the whole input of the expiry gate */
             has_turn_draft={has_draft}
             auto_commit_label={(n) => t('dungeons.auto_pass_in', { n })}
             abandon_disabled={busy}

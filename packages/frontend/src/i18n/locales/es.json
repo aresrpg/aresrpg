@@ -2705,7 +2705,10 @@
     "claiming_pending_result": "Reclamando tu resultado de combate pendiente…",
     "a_fight": "el combate",
     "a_dungeon": "la mazmorra",
-    "board_place_failed": "No se pudo colocar el tablero de combate — recarga la página."
+    "board_place_failed": "No se pudo colocar el tablero de combate — recarga la página.",
+    "turn_expired": "Este turno superó su plazo — termínalo ya, cualquier espectador puede forzarlo.",
+    "turn_expired_exit": "Plazo del turno expirado · este combate no avanza. Ríndete para liberar a tu personaje.",
+    "expired_fight_cleared": "Ese combate ya estaba resuelto — tu personaje está libre."
   },
   "jobs": {
     "category": {

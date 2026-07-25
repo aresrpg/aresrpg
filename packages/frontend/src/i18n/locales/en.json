@@ -2705,7 +2705,10 @@
     "claiming_pending_result": "Claiming your pending fight result…",
     "a_fight": "the fight",
     "a_dungeon": "the dungeon",
-    "board_place_failed": "Couldn't place the fight board — please reload."
+    "board_place_failed": "Couldn't place the fight board — please reload.",
+    "turn_expired": "This turn is past its deadline — end it now, any watcher may crank it away.",
+    "turn_expired_exit": "Turn deadline expired · this fight is not advancing. Forfeit to free your character.",
+    "expired_fight_cleared": "That fight was already resolved — your character is free."
   },
   "jobs": {
     "category": {

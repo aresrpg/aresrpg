@@ -43,6 +43,8 @@ import {
   is_preflight_failure,
 } from './pending_outcomes.js'
 import { run_latched_claim } from './fight_claim_latch.js'
+import { settle_verdict } from './fight_settle_confirm.js'
+import { read_fight_liveness } from './fight_liveness.js'
 import { character_run_pass_id } from './team_entry.js'
 import { enqueue_mint, drain_pending_mints, sweep_stranded_results } from './pending_mints.js'
 
@@ -129,6 +131,22 @@ export async function settle_chain(store, { terminal, on_halt, on_settled, ...id
         character_id,
       })
       ;({ result_id, xp_share, loot_units, final_hp } = opened)
+      // SETTLE HONESTY (#882 — settled=true while the chain object lived): a resolved tx is not, by itself, a
+      // settled fight. The `ResultOpened` result id IS the chain's own proof; without it the ONLY honest
+      // confirmation is a liveness re-read that no longer finds a LIVE Fight. Unconfirmed ⇒ report the halt,
+      // never a settlement (fight_settle_confirm.js owns the rule; the read costs nothing on the proven path).
+      const verdict = await settle_verdict({
+        fight_id,
+        result_id,
+        read_liveness: async (id) => read_fight_liveness(await get_sdk(), id),
+      })
+      if (!verdict.settled) {
+        game_log('dungeon', 'settle+open landed with NO chain confirmation — reporting unsettled', { fight_id })
+        push_event_toast({ state: 'error', title: i18n.t('errors.fight_unclaimed_result') })
+        invalidate_pending_outcomes() // whatever this tx did, /v1 truth (not this client) owns the next step
+        on_halt?.(verdict.halt) // executed: gas was spent, so the latch holds — never an automatic re-fire
+        return false
+      }
       // The active receipt also proves every same-wallet companion outcome. A caller-supplied lane may advance
       // those distinct RunPasses now; its failure must never relabel this already-landed leader settlement as a
       // failed/retriable leader tx.
