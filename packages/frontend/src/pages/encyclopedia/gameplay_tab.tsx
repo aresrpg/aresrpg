@@ -3,6 +3,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Swords, Sparkles, Zap, Users, TrendingUp, Activity, DoorOpen, Crown, Coins } from 'lucide-react'
+import { MAX_MEMBERS } from '@aresrpg/party/reduce'
+import sdk_classes from '@aresrpg/sdk/classes'
+import { level_to_experience } from '@aresrpg/sdk/experience'
+import { SPELL_POINTS_PER_LEVEL, STAT_POINTS_PER_LEVEL } from '@aresrpg/sdk/progression'
+import { STATISTICS, get_total_stat } from '@aresrpg/sdk/stats'
 
 // Forgemagie rune catalog — HARDCODED, mirrors packages/move/foundation/sources/rune_catalog.move exactly
 // (runes are sealed content, "never admin data" per DECISIONS 2026-07-09 2143-2145). `unit_weight` is the
@@ -28,6 +33,18 @@ const RUNE_CATALOG = [
   { key: 'rune_stat_raw_damage', unit_weight: 20, ba: 1, pa: null, ra: null },
   { key: 'rune_stat_critical_chance', unit_weight: 10, ba: 1, pa: null, ra: null },
 ] as const
+
+// THE RULEBOOK PUBLISHES NUMBERS, IT DOES NOT OWN THEM (#846). Every figure below is READ from the module the
+// game itself reads, so a rebalance can never leave this page lying: the per-level grants are the SDK's
+// progression constants (progression_math.move's twin), base AP/MP are the SDK's own empty-character derivation
+// (the same one src/simulator/content.js uses), the xp milestones are the SDK curve, the party cap is the party
+// reducer's, and the class table is @aresrpg/sdk/classes verbatim. Add a displayed number here only if it has
+// no importable home — and then say which module it mirrors.
+const BASE_AP = get_total_stat({} as any, STATISTICS.ACTION)
+const BASE_MP = get_total_stat({} as any, STATISTICS.MOVEMENT)
+const XP_MILESTONE_LEVELS = [10, 50, 100] as const
+type SdkClass = { name: string; title: string; health: number; weapon_category: string }
+const SDK_CLASSES = Object.values(sdk_classes as Record<string, SdkClass>)
 
 function WikiSection({
   id,
@@ -144,80 +161,14 @@ function GameplayTab({ is_mobile }: { is_mobile: boolean }) {
     section_refs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  const CLASS_DATA = [
-    {
-      name: 'Senshi',
-      role: t('encyclopedia.gameplay.role_warrior'),
-      weapon: t('encyclopedia.gameplay.weapon_longsword'),
-      hp: 70,
-    },
-    {
-      name: 'Yajin',
-      role: t('encyclopedia.gameplay.role_assassin'),
-      weapon: t('encyclopedia.gameplay.weapon_daggers'),
-      hp: 45,
-    },
-    {
-      name: 'Ikari',
-      role: t('encyclopedia.gameplay.role_berserker'),
-      weapon: t('encyclopedia.gameplay.weapon_battleaxe'),
-      hp: 120,
-    },
-    {
-      name: 'Mori',
-      role: t('encyclopedia.gameplay.role_druid'),
-      weapon: t('encyclopedia.gameplay.weapon_spear'),
-      hp: 55,
-    },
-    {
-      name: 'Tokei',
-      role: t('encyclopedia.gameplay.role_chronomancer'),
-      weapon: t('encyclopedia.gameplay.weapon_staff'),
-      hp: 45,
-    },
-    {
-      name: 'Shugo',
-      role: t('encyclopedia.gameplay.role_guardian'),
-      weapon: t('encyclopedia.gameplay.weapon_spellbook'),
-      hp: 50,
-    },
-    {
-      name: 'Yogen',
-      role: t('encyclopedia.gameplay.role_archer'),
-      weapon: t('encyclopedia.gameplay.weapon_bow'),
-      hp: 30,
-    },
-    {
-      name: 'Rojin',
-      role: t('encyclopedia.gameplay.role_prospector'),
-      weapon: t('encyclopedia.gameplay.weapon_axe'),
-      hp: 50,
-    },
-    {
-      name: 'Shusen',
-      role: t('encyclopedia.gameplay.role_brawler'),
-      weapon: t('encyclopedia.gameplay.weapon_mace'),
-      hp: 65,
-    },
-    {
-      name: 'Tomoda',
-      role: t('encyclopedia.gameplay.role_tomoda'),
-      weapon: t('encyclopedia.gameplay.weapon_club'),
-      hp: 30,
-    },
-    {
-      name: 'Asobi',
-      role: t('encyclopedia.gameplay.role_gambler'),
-      weapon: t('encyclopedia.gameplay.weapon_sword'),
-      hp: 55,
-    },
-    {
-      name: 'Iyashi',
-      role: t('encyclopedia.gameplay.role_healer'),
-      weapon: t('encyclopedia.gameplay.weapon_staff'),
-      hp: 50,
-    },
-  ]
+  // Identity, affinity, weapon and base HP are the published class corpus — the affinity/weapon LABELS are the
+  // only authored part, keyed off the corpus's own `title`/`weapon_category`.
+  const CLASS_DATA = SDK_CLASSES.map((row) => ({
+    name: row.name,
+    role: t(`encyclopedia.gameplay.role_${row.title.toLowerCase()}`),
+    weapon: t(`encyclopedia.gameplay.weapon_${row.weapon_category}`),
+    hp: row.health,
+  }))
 
   const gameplay_content = (
     <div ref={content_ref} className={`flex-1 overflow-y-auto ${is_mobile ? 'p-3' : 'p-6'}`}>
@@ -275,7 +226,9 @@ function GameplayTab({ is_mobile }: { is_mobile: boolean }) {
             {t('encyclopedia.gameplay.life_steal')}
           </span>
           <WikiText>{t('encyclopedia.gameplay.life_steal_desc')}</WikiText>
-          <FormulaBox>healed = floor(damageDealt / 2)</FormulaBox>
+          {/* packages/sim/src/fight_spells.js STEAL ↔ cast.move `heal_caster`: player-side casters only, over the
+              health the intended target ACTUALLY lost (a redirected hit returns 0). */}
+          <FormulaBox>healed = casterIsPlayer ? floor(targetHealthLost / 2) : 0</FormulaBox>
           <WikiText>{t('encyclopedia.gameplay.life_steal_note')}</WikiText>
 
           <span className="text-[9px] tracking-[0.2em] uppercase text-muted mt-2">
@@ -308,12 +261,12 @@ function GameplayTab({ is_mobile }: { is_mobile: boolean }) {
           <div className="flex flex-col gap-0.5">
             <InfoRow
               label={t('encyclopedia.gameplay.stat_points')}
-              value={t('encyclopedia.gameplay.stat_points_value')}
+              value={t('encyclopedia.gameplay.stat_points_value', { n: STAT_POINTS_PER_LEVEL })}
               color="#c8963c"
             />
             <InfoRow
               label={t('encyclopedia.gameplay.spell_points')}
-              value={t('encyclopedia.gameplay.spell_points_value')}
+              value={t('encyclopedia.gameplay.spell_points_value', { n: SPELL_POINTS_PER_LEVEL })}
               color="#c8963c"
             />
           </div>
@@ -322,9 +275,13 @@ function GameplayTab({ is_mobile }: { is_mobile: boolean }) {
             {t('encyclopedia.gameplay.xp_milestones')}
           </span>
           <div className="flex flex-col gap-0.5">
-            <InfoRow label={t('encyclopedia.gameplay.level_10')} value="19,200 XP" />
-            <InfoRow label={t('encyclopedia.gameplay.level_50')} value="5,350,000 XP" />
-            <InfoRow label={t('encyclopedia.gameplay.level_100')} value="95,886,000 XP" />
+            {XP_MILESTONE_LEVELS.map((level) => (
+              <InfoRow
+                key={level}
+                label={t(`encyclopedia.gameplay.level_${level}`)}
+                value={`${level_to_experience(level).toLocaleString('en-US')} XP`}
+              />
+            ))}
           </div>
 
           <span className="text-[9px] tracking-[0.2em] uppercase text-muted mt-2">
@@ -386,13 +343,13 @@ function GameplayTab({ is_mobile }: { is_mobile: boolean }) {
               <span className="text-[9px] tracking-[0.15em] uppercase text-muted">
                 {t('encyclopedia.gameplay.action_points')}
               </span>
-              <FormulaBox>6 + equipment AP</FormulaBox>
+              <FormulaBox>{BASE_AP} + equipment AP</FormulaBox>
             </div>
             <div className="flex flex-col gap-0.5">
               <span className="text-[9px] tracking-[0.15em] uppercase text-muted">
                 {t('encyclopedia.gameplay.movement_points')}
               </span>
-              <FormulaBox>3 + equipment MP</FormulaBox>
+              <FormulaBox>{BASE_MP} + equipment MP</FormulaBox>
             </div>
             <div className="flex flex-col gap-0.5">
               <span className="text-[9px] tracking-[0.15em] uppercase text-muted">
@@ -430,9 +387,9 @@ function GameplayTab({ is_mobile }: { is_mobile: boolean }) {
         {/* GROUPS */}
         <WikiSection id="groups" title={t('encyclopedia.gameplay.section_groups')} refs={section_refs}>
           <div className="flex flex-col gap-0.5">
-            <InfoRow label={t('encyclopedia.gameplay.max_members')} value="6" color="#c8963c" />
+            <InfoRow label={t('encyclopedia.gameplay.max_members')} value={String(MAX_MEMBERS)} color="#c8963c" />
           </div>
-          <WikiText>{t('encyclopedia.gameplay.groups_desc')}</WikiText>
+          <WikiText>{t('encyclopedia.gameplay.groups_desc', { max: MAX_MEMBERS })}</WikiText>
 
           <span className="text-[9px] tracking-[0.2em] uppercase text-muted mt-2">
             {t('encyclopedia.gameplay.groups_xp')}
