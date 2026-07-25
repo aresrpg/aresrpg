@@ -2,14 +2,14 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { createPortal } from 'react-dom'
-import { ShieldAlert, RefreshCw, X } from 'lucide-react'
+import { ShieldAlert, RefreshCw } from 'lucide-react'
 
 import { use_auth, type AuthState } from '../auth'
 import { get_config } from '../rpc/client'
 import { use_rpc_view } from '../rpc/use_view'
 import { DISCORD_URL } from '../constants/links'
 
+import { ModalFrame } from './modal_frame'
 import { use_contracts_paused, type TriBool } from './contracts_paused_store'
 
 // S-84 — CONTRACTS PAUSED modal. The Move packages ship a Version/GameConfig `enabled` flag (the ceremony
@@ -86,78 +86,39 @@ function ContractsPausedModal({ on_retry, on_dismiss }: { on_retry: () => void; 
   // the wall hides — so the player can browse whatever doesn't need a tx. Re-arm semantics live in
   // contracts_paused_store.ts's `dismissed` latch: a live version/102 abort or a fresh pause onset reopens it,
   // a routine reconfirming poll does not.
-  useEffect(() => {
-    const on_key = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') on_dismiss()
-    }
-    window.addEventListener('keydown', on_key)
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      window.removeEventListener('keydown', on_key)
-      document.body.style.overflow = prev
-    }
-  }, [on_dismiss])
+  return (
+    <ModalFrame on_close={on_dismiss} label={t('maintenance.title')}>
+      <div className="flex flex-col items-center px-8 py-8 gap-5">
+        <ShieldAlert size={34} style={{ color: '#c8963c', filter: 'drop-shadow(0 0 12px rgba(200,150,60,0.5))' }} />
+        <div className="text-gradient text-[13px] font-semibold tracking-[0.28em] uppercase text-center">
+          {t('maintenance.title')}
+        </div>
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)' }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) on_dismiss()
-      }}
-    >
-      <div
-        className="bg-surface w-full max-w-md mx-4 relative"
-        style={{
-          animation: 'modal-enter 0.3s ease-out',
-          border: '1px solid var(--color-border)',
-          borderImage: 'linear-gradient(135deg, #c8963c, #8b6914, #f5d0a9) 1',
-          boxShadow: '0 0 30px rgba(200,150,60,0.12), inset 0 0 30px rgba(200,150,60,0.03)',
-        }}
-      >
-        <button
-          type="button"
-          onClick={on_dismiss}
-          className="absolute top-4 right-4 cursor-pointer opacity-40 hover:opacity-80 transition-opacity"
-          aria-label={t('common.close')}
-        >
-          <X size={16} className="text-muted" />
-        </button>
+        <div className="w-full h-px bg-border" />
 
-        <div className="flex flex-col items-center px-8 py-8 gap-5">
-          <ShieldAlert size={34} style={{ color: '#c8963c', filter: 'drop-shadow(0 0 12px rgba(200,150,60,0.5))' }} />
-          <div className="text-gradient text-[13px] font-semibold tracking-[0.28em] uppercase text-center">
-            {t('maintenance.title')}
-          </div>
+        <div className="text-text/70 text-[10px] tracking-wide text-center leading-relaxed">
+          {t('maintenance.body')}
+        </div>
 
-          <div className="w-full h-px bg-border" />
-
-          <div className="text-text/70 text-[10px] tracking-wide text-center leading-relaxed">
-            {t('maintenance.body')}
-          </div>
-
-          <div className="flex gap-3 w-full mt-2">
-            <a
-              href={DISCORD_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-gold flex-1 py-2.5 px-4 text-[10px] tracking-[0.15em] cursor-pointer text-center"
-            >
-              {t('maintenance.discord_cta')}
-            </a>
-            <button
-              type="button"
-              className="btn-outline flex-1 py-2.5 px-4 text-[10px] tracking-[0.2em] cursor-pointer flex items-center justify-center gap-1.5"
-              onClick={on_retry}
-            >
-              <RefreshCw size={11} />
-              {t('maintenance.retry')}
-            </button>
-          </div>
+        <div className="flex gap-3 w-full mt-2">
+          <a
+            href={DISCORD_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-gold flex-1 py-2.5 px-4 text-[10px] tracking-[0.15em] cursor-pointer text-center"
+          >
+            {t('maintenance.discord_cta')}
+          </a>
+          <button
+            type="button"
+            className="btn-outline flex-1 py-2.5 px-4 text-[10px] tracking-[0.2em] cursor-pointer flex items-center justify-center gap-1.5"
+            onClick={on_retry}
+          >
+            <RefreshCw size={11} />
+            {t('maintenance.retry')}
+          </button>
         </div>
       </div>
-    </div>,
-    document.body
+    </ModalFrame>
   )
 }

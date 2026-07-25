@@ -336,19 +336,26 @@ describe('Stats characteristic descriptions', () => {
   // Sim-truth one-liners (issue #371): every PRIMARY row renders a muted description line under its label,
   // sourced from stats.description.<key> — locale coverage is pinned separately in
   // i18n/locales/stat_description_parity.test.js. This proves the RENDER wiring, not the translation content.
+  // The PRIMARY row's identity (icon + label + this description line) and the `stat_text` copy table were
+  // extracted to stat_row.jsx so the simulator's build editor renders the SAME rows; the panel re-composes
+  // them. Both files are therefore the panel's source for this assertion.
+  const panel_source = async () =>
+    (await Bun.file(new URL('./Stats.jsx', import.meta.url)).text()) +
+    (await Bun.file(new URL('./stat_row.jsx', import.meta.url)).text())
+
   test('every PRIMARY row renders a muted description line under its label', async () => {
-    const stats_jsx = await Bun.file(new URL('./Stats.jsx', import.meta.url)).text()
-    expect(stats_jsx).toContain('stats__prow-desc')
+    const source = await panel_source()
+    expect(source).toContain('stats__prow-desc')
     for (const key of ['vitality', 'wisdom', 'strength', 'intelligence', 'chance', 'agility']) {
-      expect(stats_jsx).toContain(`stats.description.${key}`)
+      expect(source).toContain(`stats.description.${key}`)
     }
   })
 
   test('the visible SECONDARY rows (Critical Hit, Raw Damage) render the same description line', async () => {
-    const stats_jsx = await Bun.file(new URL('./Stats.jsx', import.meta.url)).text()
-    expect(stats_jsx).toContain('stats__srow-desc')
-    expect(stats_jsx).toContain('stats.description.critical_hit')
-    expect(stats_jsx).toContain('stats.description.raw_damage')
+    const source = await panel_source()
+    expect(source).toContain('stats__srow-desc')
+    expect(source).toContain('stats.description.critical_hit')
+    expect(source).toContain('stats.description.raw_damage')
   })
 
   // #489: the description line (Raw Damage observed) ellipsis-clipped mid-sentence — block-scoped so a

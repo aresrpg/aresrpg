@@ -27,7 +27,6 @@ import { CharacterPortrait } from './CharacterPortrait.jsx'
 import { is_lootbox } from '../../../world-shell/lootbox_actions.js'
 import {
   EQUIPMENT_SLOTS,
-  RELIC_SLOTS,
   WORN_CATEGORIES,
   can_consume,
   equip_lock_of,
@@ -45,7 +44,7 @@ import {
   wallet_equipped_ids,
 } from './inventory-equip.js'
 import { equip_preflight } from './inventory_context_actions'
-import { EquipmentSlot } from './EquipmentSlot.jsx'
+import { CosmeticSlots, EquipmentDoll } from './EquipmentDoll.jsx'
 import { EquipmentLockNotice } from './EquipmentLockNotice.jsx'
 import { InventoryBag } from './InventoryBag.jsx'
 import { InventoryOverlays } from './InventoryOverlays.jsx'
@@ -583,51 +582,27 @@ export function Inventory() {
             on_refresh={equip_retry_blocked || equip_state_stale ? refresh_equip_state : null}
           />
         )}
-        <div className="inv__doll">
-          <div className="inv__doll-body">
-            <div className="inv__relics">
-              {RELIC_SLOTS.map((slot) => (
-                <EquipmentSlot key={slot} {...slot_props(slot)} />
-              ))}
-            </div>
-            <div className="inv__rig">
-              {/* Cosmetics live in their own real slots below. The spacer keeps the combat
-                  spine (helmet/chestplate/belt/pants) column-centred. */}
-              <div className="inv__slot-gap" aria-hidden="true" />
-              <EquipmentSlot {...slot_props('helmet')} />
-              <EquipmentSlot {...slot_props('amulet')} />
-              <EquipmentSlot {...slot_props('gauntlets')} />
-              <EquipmentSlot {...slot_props('chestplate')} />
-              <EquipmentSlot {...slot_props('weapon')} />
-              <EquipmentSlot {...slot_props('left_ring')} />
-              <EquipmentSlot {...slot_props('belt')} />
-              <EquipmentSlot {...slot_props('right_ring')} />
-              <EquipmentSlot {...slot_props('pet')} />
-              <EquipmentSlot {...slot_props('pants')} />
-              <EquipmentSlot {...slot_props('boots')} />
-            </div>
-          </div>
-          {stage.dirty && (
-            <div className="inv__doll-edit">
-              <button type="button" className="hud-btn" disabled={committing} onClick={on_cancel}>
-                Cancel
-              </button>
-              <button type="button" className="hud-btn hud-btn--accent" disabled={committing} onClick={on_accept}>
-                {committing ? '…' : 'Accept'}
-              </button>
-            </div>
-          )}
-        </div>
+        <EquipmentDoll
+          slot_props={slot_props}
+          footer={
+            stage.dirty ? (
+              <div className="inv__doll-edit">
+                <button type="button" className="hud-btn" disabled={committing} onClick={on_cancel}>
+                  Cancel
+                </button>
+                <button type="button" className="hud-btn hud-btn--accent" disabled={committing} onClick={on_accept}>
+                  {committing ? '…' : 'Accept'}
+                </button>
+              </div>
+            ) : null
+          }
+        />
 
         {/* COSMETICS — the three real Move slots, all wired through the same staging/equip path as gear. */}
         <div className="inv__eyebrow">
           <b>{t('inventory.cosmetics')}</b>
         </div>
-        <div className="inv__cosmetics">
-          <EquipmentSlot {...slot_props('hat')} />
-          <EquipmentSlot {...slot_props('cloak')} />
-          <EquipmentSlot {...slot_props('title')} />
-        </div>
+        <CosmeticSlots slot_props={slot_props} />
 
         <div className="inv__eyebrow">Equipped totals</div>
         <div className="inv__totals">

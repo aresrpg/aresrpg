@@ -1194,15 +1194,12 @@
     "reroll": "НОВИЙ СІД",
     "roster": "СКЛАД",
     "board": "ПОЛЕ",
-    "inspector": "ІНСПЕКТОР",
     "new_character": "НОВИЙ ПЕРСОНАЖ",
-    "no_selection": "ПЕРСОНАЖА НЕ ОБРАНО",
     "name": "ІМ'Я",
     "appearance": "ЗОВНІШНІСТЬ",
     "male": "ЧОЛОВІК",
     "female": "ЖІНКА",
     "create": "СТВОРИТИ",
-    "cancel": "СКАСУВАТИ",
     "delete": "ВИДАЛИТИ",
     "delete_confirm": "ПІДТВЕРДИТИ",
     "reset": "СКИНУТИ",
@@ -1212,7 +1209,6 @@
     "stats": "ХАРАКТЕРИСТИКИ",
     "spells": "ЗАКЛЯТТЯ",
     "spells_unavailable": "НЕМАЄ ОПУБЛІКОВАНИХ ЗАКЛЯТЬ ДЛЯ ЦЬОГО КЛАСУ",
-    "spell_cost": "{{cost}} ОЧ",
     "points_left": "{{left}} / {{total}} ОЧ",
     "classes": {
       "SENSHI": {
@@ -1279,7 +1275,17 @@
     "fight_draw": "НІЧИЯ",
     "fight_blocked_empty_roster": "Розмістіть хоча б одного персонажа перед початком.",
     "fight_blocked_no_mobs": "Оберіть хоча б одного моба перед початком.",
-    "fight_blocked_sim_chain_missing": "Локальний ланцюг недоступний у цій збірці."
+    "fight_blocked_sim_chain_missing": "Локальний ланцюг недоступний у цій збірці.",
+    "mob_team": "КОМАНДА МОБІВ",
+    "edit_character": "РЕДАГУВАТИ ПЕРСОНАЖА",
+    "equipment": "СПОРЯДЖЕННЯ",
+    "pick_item": "ОБРАТИ {{slot}}",
+    "item_level": "РІВ {{level}}",
+    "spell_level": "РІВЕНЬ {{name}}",
+    "spell_level_option": "РІВ {{level}} · {{cost}} ОЧ",
+    "mob_spells_auto": "ЗАКЛЯТТЯ ЗАВАНТАЖУЮТЬСЯ АВТОМАТИЧНО З МОБОМ",
+    "mob_hp": "{{hp}} ЗД",
+    "mob_unpublished": "НЕОПУБЛІКОВАНИЙ МОБ {{id}}"
   },
   "purchase": {
     "acquisition_complete": "Придбання завершено",
@@ -1516,7 +1522,9 @@
       "Ексклюзивний колір тегу в чаті",
       "Довічна знижка 30% у крамниці"
     ],
-    "veteran_app_perks": ["Усі переваги Учасника"],
+    "veteran_app_perks": [
+      "Усі переваги Учасника"
+    ],
     "min_level": "МІН РІВЕНЬ",
     "recommended_level": "РЕКОМЕНДОВАНИЙ РІВЕНЬ",
     "dungeon_mobs": "МОНСТРИ",

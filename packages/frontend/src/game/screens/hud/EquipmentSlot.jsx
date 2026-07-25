@@ -65,9 +65,26 @@ export function EquipmentSlot({
   on_hover_move,
   on_hover_leave,
   on_context_menu,
+  on_activate,
 }) {
   const label = SLOT_LABEL[slot]
   const Glyph = SLOT_ICON[label] ?? Sparkles
+  // `on_activate` makes the WHOLE cell — empty included — a keyboard-reachable activation target. The chain
+  // inventory doesn't pass it (its empty slots are drop targets, filled ones are selected by their art), but
+  // a surface that ASSIGNS gear by picking from a catalog needs the empty cell itself to open the picker.
+  const activation = on_activate
+    ? {
+        role: 'button',
+        tabIndex: 0,
+        onClick: on_activate,
+        onKeyDown: (/** @type {any} */ e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            on_activate()
+          }
+        },
+      }
+    : {}
   // Shared rarity CELL treatment (rarity_tint SSOT, quality.js): the inset radial gradient, painted as a
   // background layer by the CSS — never a border/edge. One source across every item cell (D11).
   const tint = item ? rarity_tint(item.quality ?? item.rarity) : null
@@ -83,6 +100,7 @@ export function EquipmentSlot({
       }
       onDragOver={e => e.preventDefault()}
       onDrop={on_drop}
+      {...activation}
     >
       {item ? (
         <>

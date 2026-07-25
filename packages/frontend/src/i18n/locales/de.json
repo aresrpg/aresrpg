@@ -1194,15 +1194,12 @@
     "reroll": "SAAT NEU WÜRFELN",
     "roster": "KADER",
     "board": "SPIELFELD",
-    "inspector": "INSPEKTOR",
     "new_character": "NEUER CHARAKTER",
-    "no_selection": "KEIN CHARAKTER AUSGEWÄHLT",
     "name": "NAME",
     "appearance": "AUSSEHEN",
     "male": "MÄNNLICH",
     "female": "WEIBLICH",
     "create": "ERSTELLEN",
-    "cancel": "ABBRECHEN",
     "delete": "LÖSCHEN",
     "delete_confirm": "BESTÄTIGEN",
     "reset": "ZURÜCKSETZEN",
@@ -1212,7 +1209,6 @@
     "stats": "WERTE",
     "spells": "ZAUBER",
     "spells_unavailable": "KEINE VERÖFFENTLICHTEN ZAUBER FÜR DIESE KLASSE",
-    "spell_cost": "{{cost}} PKT",
     "points_left": "{{left}} / {{total}} PKT",
     "classes": {
       "SENSHI": {
@@ -1279,7 +1275,17 @@
     "fight_draw": "UNENTSCHIEDEN",
     "fight_blocked_empty_roster": "Platziere mindestens einen Charakter, bevor du startest.",
     "fight_blocked_no_mobs": "Wähle mindestens einen Gegner, bevor du startest.",
-    "fight_blocked_sim_chain_missing": "Die lokale Chain ist in diesem Build nicht verfügbar."
+    "fight_blocked_sim_chain_missing": "Die lokale Chain ist in diesem Build nicht verfügbar.",
+    "mob_team": "MONSTER-TEAM",
+    "edit_character": "CHARAKTER BEARBEITEN",
+    "equipment": "AUSRÜSTUNG",
+    "pick_item": "{{slot}} WÄHLEN",
+    "item_level": "STUFE {{level}}",
+    "spell_level": "STUFE VON {{name}}",
+    "spell_level_option": "STUFE {{level}} · {{cost}} PKT",
+    "mob_spells_auto": "ZAUBER LADEN AUTOMATISCH MIT DEM MONSTER",
+    "mob_hp": "{{hp}} LP",
+    "mob_unpublished": "UNVERÖFFENTLICHTES MONSTER {{id}}"
   },
   "purchase": {
     "acquisition_complete": "Erwerb abgeschlossen",
@@ -1516,7 +1522,9 @@
       "Exklusive Chat-Tag-Farbe",
       "Lebenslanger 30% Shop-Rabatt"
     ],
-    "veteran_app_perks": ["Alle Mitgliedervorteile"],
+    "veteran_app_perks": [
+      "Alle Mitgliedervorteile"
+    ],
     "min_level": "MIN LEVEL",
     "recommended_level": "EMPFOHLENES LEVEL",
     "dungeon_mobs": "MONSTER",

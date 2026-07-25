@@ -1194,15 +1194,12 @@
     "reroll": "REROLL SEED",
     "roster": "ROSTER",
     "board": "BOARD",
-    "inspector": "INSPECTOR",
     "new_character": "NEW CHARACTER",
-    "no_selection": "NO CHARACTER SELECTED",
     "name": "NAME",
     "appearance": "APPEARANCE",
     "male": "MALE",
     "female": "FEMALE",
     "create": "CREATE",
-    "cancel": "CANCEL",
     "delete": "DELETE",
     "delete_confirm": "CONFIRM",
     "reset": "RESET",
@@ -1212,7 +1209,6 @@
     "stats": "STATS",
     "spells": "SPELLS",
     "spells_unavailable": "NO PUBLISHED SPELLS FOR THIS CLASS",
-    "spell_cost": "{{cost}} PTS",
     "points_left": "{{left}} / {{total}} PTS",
     "classes": {
       "SENSHI": {
@@ -1279,7 +1275,17 @@
     "fight_draw": "DRAW",
     "fight_blocked_empty_roster": "Place at least one character before starting.",
     "fight_blocked_no_mobs": "Pick at least one mob before starting.",
-    "fight_blocked_sim_chain_missing": "The local chain is not available in this build."
+    "fight_blocked_sim_chain_missing": "The local chain is not available in this build.",
+    "mob_team": "MOB TEAM",
+    "edit_character": "EDIT CHARACTER",
+    "equipment": "EQUIPMENT",
+    "pick_item": "PICK {{slot}}",
+    "item_level": "LV {{level}}",
+    "spell_level": "LEVEL OF {{name}}",
+    "spell_level_option": "LV {{level}} · {{cost}} PTS",
+    "mob_spells_auto": "SPELLS LOAD AUTOMATICALLY WITH THE MOB",
+    "mob_hp": "{{hp}} HP",
+    "mob_unpublished": "UNPUBLISHED MOB {{id}}"
   },
   "purchase": {
     "acquisition_complete": "Acquisition Complete",
@@ -1516,7 +1522,9 @@
       "Exclusive chat tag color",
       "Lifetime 30% shop discount"
     ],
-    "veteran_app_perks": ["All Member advantages"],
+    "veteran_app_perks": [
+      "All Member advantages"
+    ],
     "min_level": "MIN LEVEL",
     "recommended_level": "RECOMMENDED LEVEL",
     "dungeon_mobs": "MONSTERS",

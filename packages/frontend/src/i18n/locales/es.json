@@ -1194,15 +1194,12 @@
     "reroll": "REGENERAR SEMILLA",
     "roster": "PLANTILLA",
     "board": "TABLERO",
-    "inspector": "INSPECTOR",
     "new_character": "NUEVO PERSONAJE",
-    "no_selection": "NINGÚN PERSONAJE SELECCIONADO",
     "name": "NOMBRE",
     "appearance": "APARIENCIA",
     "male": "HOMBRE",
     "female": "MUJER",
     "create": "CREAR",
-    "cancel": "CANCELAR",
     "delete": "ELIMINAR",
     "delete_confirm": "CONFIRMAR",
     "reset": "REINICIAR",
@@ -1212,7 +1209,6 @@
     "stats": "STATS",
     "spells": "HECHIZOS",
     "spells_unavailable": "NO HAY HECHIZOS PUBLICADOS PARA ESTA CLASE",
-    "spell_cost": "{{cost}} PTS",
     "points_left": "{{left}} / {{total}} PTS",
     "classes": {
       "SENSHI": {
@@ -1279,7 +1275,17 @@
     "fight_draw": "EMPATE",
     "fight_blocked_empty_roster": "Coloca al menos un personaje antes de empezar.",
     "fight_blocked_no_mobs": "Elige al menos un monstruo antes de empezar.",
-    "fight_blocked_sim_chain_missing": "La cadena local no está disponible en esta versión."
+    "fight_blocked_sim_chain_missing": "La cadena local no está disponible en esta versión.",
+    "mob_team": "EQUIPO DE MOBS",
+    "edit_character": "EDITAR PERSONAJE",
+    "equipment": "EQUIPO",
+    "pick_item": "ELEGIR {{slot}}",
+    "item_level": "NV {{level}}",
+    "spell_level": "NIVEL DE {{name}}",
+    "spell_level_option": "NV {{level}} · {{cost}} PTS",
+    "mob_spells_auto": "LOS HECHIZOS SE CARGAN CON EL MOB",
+    "mob_hp": "{{hp}} PV",
+    "mob_unpublished": "MOB NO PUBLICADO {{id}}"
   },
   "purchase": {
     "acquisition_complete": "Adquisicion Completada",
@@ -1516,7 +1522,9 @@
       "Color de tag exclusivo en chat",
       "Descuento permanente del 30% en la tienda"
     ],
-    "veteran_app_perks": ["Todas las ventajas de Miembro"],
+    "veteran_app_perks": [
+      "Todas las ventajas de Miembro"
+    ],
     "min_level": "NIVEL MÍN",
     "recommended_level": "NIVEL RECOMENDADO",
     "dungeon_mobs": "MONSTRUOS",

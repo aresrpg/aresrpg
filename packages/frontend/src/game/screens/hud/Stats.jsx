@@ -26,69 +26,18 @@ import { get_class } from '../../data/classes.js'
 import { color_to_hue } from '../../data/color.js'
 import { CharacterPortrait } from './CharacterPortrait.jsx'
 import { Tooltip } from './Tooltip.jsx'
-import vitality_icon from '../../assets/statistics/vitality.png'
-import wisdom_icon from '../../assets/statistics/wisdom.png'
-import strength_icon from '../../assets/statistics/strength.png'
-import intelligence_icon from '../../assets/statistics/intelligence.png'
-import chance_icon from '../../assets/statistics/chance.png'
-import agility_icon from '../../assets/statistics/agility.png'
+// The characteristic identity (icon art, tint, label, description) lives in ONE home so the simulator's build
+// editor can render the exact same rows — see stat_row.jsx's header.
+import { PRIMARY_STATS as PRIMARY, STAT_INDEX, StatIdentity, stat_text } from './stat_row.jsx'
 import health_icon from '../../assets/statistics/health.png'
 import action_icon from '../../assets/statistics/action.png'
 import movement_icon from '../../assets/statistics/movement.png'
 import './hud-panels.css'
 import './Stats.css'
 
-/** Move order differs from display order: Agility=4, Chance=5. */
-export const STAT_INDEX = Object.freeze({
-  [STATISTICS.VITALITY]: 0,
-  [STATISTICS.WISDOM]: 1,
-  [STATISTICS.STRENGTH]: 2,
-  [STATISTICS.INTELLIGENCE]: 3,
-  [STATISTICS.AGILITY]: 4,
-  [STATISTICS.CHANCE]: 5,
-})
-
-/** @type {{ key: string, stat: number, icon: string, tint: string }[]} */
-const PRIMARY = [
-  { key: STATISTICS.VITALITY, stat: STAT_INDEX.vitality, icon: vitality_icon, tint: '#ef5350' },
-  { key: STATISTICS.WISDOM, stat: STAT_INDEX.wisdom, icon: wisdom_icon, tint: '#b07cff' },
-  { key: STATISTICS.STRENGTH, stat: STAT_INDEX.strength, icon: strength_icon, tint: '#c9905a' },
-  {
-    key: STATISTICS.INTELLIGENCE,
-    stat: STAT_INDEX.intelligence,
-    icon: intelligence_icon,
-    tint: '#5db4ff',
-  },
-  { key: STATISTICS.CHANCE, stat: STAT_INDEX.chance, icon: chance_icon, tint: '#4fd6a0' },
-  { key: STATISTICS.AGILITY, stat: STAT_INDEX.agility, icon: agility_icon, tint: '#ffce85' },
-]
+export { STAT_INDEX }
 
 const PRIMARY_KEYS = PRIMARY.map(({ key }) => key)
-
-/** label + sim-truth description (issue #371) per stat row, primary or secondary — literal t() calls keep
- * the 6-locale coverage gate authoritative; formula citations (file:line) live in the PR body. */
-const stat_text = (t, key) => {
-  switch (key) {
-    case STATISTICS.VITALITY:
-      return { label: t('stat.vitality'), description: t('stats.description.vitality') }
-    case STATISTICS.WISDOM:
-      return { label: t('stat.wisdom'), description: t('stats.description.wisdom') }
-    case STATISTICS.STRENGTH:
-      return { label: t('stat.strength'), description: t('stats.description.strength') }
-    case STATISTICS.INTELLIGENCE:
-      return { label: t('stat.intelligence'), description: t('stats.description.intelligence') }
-    case STATISTICS.CHANCE:
-      return { label: t('stat.chance'), description: t('stats.description.chance') }
-    case STATISTICS.AGILITY:
-      return { label: t('stat.agility'), description: t('stats.description.agility') }
-    case STATISTICS.CRITICAL:
-      return { label: t('stat.critical_hit'), description: t('stats.description.critical_hit') }
-    case STATISTICS.RAW_DAMAGE:
-      return { label: t('stat.raw_damage'), description: t('stats.description.raw_damage') }
-    default:
-      return { label: '', description: '' }
-  }
-}
 
 /** @type {{ key: string, color: string }[]} Fire / Water / Earth / Air. */
 const RESISTANCES = [
@@ -494,29 +443,14 @@ export function Stats() {
         {/* PRIMARY (allocatable) characteristics */}
         <div className="stats__section">{t('stats.characteristics')}</div>
         <div className="stats__card">
-          {PRIMARY.map(({ key, icon, tint }) => {
-            const { label, description } = stat_text(t, key)
+          {PRIMARY.map(({ key }) => {
+            const { label } = stat_text(t, key)
             const base = character[key] ?? 0
             const pending = alloc[key] ?? 0
             const bonus = equipment_bonus(character, key)
             return (
               <div className="stats__prow" key={key}>
-                <Tooltip text={label}>
-                  <span
-                    className="stats__prow-icon"
-                    style={
-                      /** @type {import('react').CSSProperties} */ ({
-                        '--tint': tint,
-                      })
-                    }
-                  >
-                    <img src={icon} alt="" />
-                  </span>
-                </Tooltip>
-                <span className="stats__prow-labels">
-                  <span className="stats__prow-label">{label}</span>
-                  <span className="stats__prow-desc">{description}</span>
-                </span>
+                <StatIdentity t={t} stat_key={key} />
                 {characteristic_value({ base, bonus, pending })}
                 {allocation_stepper({
                   kind: 'remove',

@@ -108,6 +108,7 @@ export type SimulatorInput =
   | { type: 'stat_set'; id: string; stat: SimStat; value: number }
   | { type: 'stats_reset'; id: string }
   | { type: 'spell_level_set'; id: string; spell_id: string; level: number; max_level: number }
+  | { type: 'loadout_set'; id: string; slot: string; template_id: string | null }
   | { type: 'spells_reset'; id: string }
   | { type: 'focus_set'; id: string | null }
 
@@ -159,6 +160,17 @@ export const stats_spent = (character: Readonly<SimCharacter>): number =>
 
 export const spells_spent = (character: Readonly<SimCharacter>): number =>
   Object.values(character.spell_levels).reduce((sum, level) => sum + spell_points_invested(level), 0)
+
+/**
+ * The spell points still available to ONE spell — the character's budget minus what its OTHER spells hold,
+ * so raising a spell always "refunds" its own current investment first (the chain re-levels, it does not
+ * re-buy). THE affordability fact: the `spell_level_set` arm clamps with it and the editor's level dropdown
+ * greys unaffordable options with it, so a shown option and an accepted input can never disagree.
+ */
+export const spell_points_left = (character: Readonly<SimCharacter>, spell_id: string): number => {
+  const others = spells_spent(character) - spell_points_invested(character.spell_levels[spell_id] ?? 1)
+  return Math.max(0, spell_points_for_level(character.level) - others)
+}
 
 /** The highest level ≤ `wanted` whose total cost fits `budget` (1 = the free baseline, always affordable). */
 const affordable_level = (wanted: number, budget: number): number => {
@@ -474,12 +486,24 @@ export function reduce_simulator(state: Readonly<SimulatorState>, input: Readonl
 
     case 'spell_level_set':
       return map_character(state, input.id, (character) => {
-        const others = spells_spent(character) - spell_points_invested(character.spell_levels[input.spell_id] ?? 1)
-        const left = Math.max(0, spell_points_for_level(character.level) - others)
+        const left = spell_points_left(character, input.spell_id)
         const wanted = clamp_int(input.level, 1, Math.max(1, Math.trunc(input.max_level)))
         const level = affordable_level(wanted, left)
         const { [input.spell_id]: _dropped, ...rest } = character.spell_levels
         return { ...character, spell_levels: level > 1 ? { ...rest, [input.spell_id]: level } : rest }
+      })
+
+    // The max-roll loadout: slot → catalog template id, `null` clearing the slot. The slot VOCABULARY is the
+    // paper doll's (inventory-equip.js EQUIPMENT_SLOTS, reached through simulator/content.js) and the picker
+    // only ever offers real slots; what this arm owns is the SHAPE — an absent slot, never a null value, so
+    // `resolve_loadout` sees exactly the filled slots.
+    case 'loadout_set':
+      return map_character(state, input.id, (character) => {
+        const { [input.slot]: _cleared, ...rest } = character.loadout
+        return {
+          ...character,
+          loadout: input.template_id ? { ...rest, [input.slot]: String(input.template_id) } : rest,
+        }
       })
 
     case 'spells_reset':

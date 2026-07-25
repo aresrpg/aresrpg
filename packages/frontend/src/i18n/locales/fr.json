@@ -1194,15 +1194,12 @@
     "reroll": "RELANCER LA GRAINE",
     "roster": "ÉQUIPE",
     "board": "PLATEAU",
-    "inspector": "INSPECTEUR",
     "new_character": "NOUVEAU PERSONNAGE",
-    "no_selection": "AUCUN PERSONNAGE SÉLECTIONNÉ",
     "name": "NOM",
     "appearance": "APPARENCE",
     "male": "HOMME",
     "female": "FEMME",
     "create": "CRÉER",
-    "cancel": "ANNULER",
     "delete": "SUPPRIMER",
     "delete_confirm": "CONFIRMER",
     "reset": "RÉINITIALISER",
@@ -1212,7 +1209,6 @@
     "stats": "STATS",
     "spells": "SORTS",
     "spells_unavailable": "AUCUN SORT PUBLIÉ POUR CETTE CLASSE",
-    "spell_cost": "{{cost}} PTS",
     "points_left": "{{left}} / {{total}} PTS",
     "classes": {
       "SENSHI": {
@@ -1279,7 +1275,17 @@
     "fight_draw": "ÉGALITÉ",
     "fight_blocked_empty_roster": "Placez au moins un personnage avant de commencer.",
     "fight_blocked_no_mobs": "Choisissez au moins un monstre avant de commencer.",
-    "fight_blocked_sim_chain_missing": "La chaîne locale n'est pas disponible dans cette version."
+    "fight_blocked_sim_chain_missing": "La chaîne locale n'est pas disponible dans cette version.",
+    "mob_team": "ÉQUIPE DE MONSTRES",
+    "edit_character": "MODIFIER LE PERSONNAGE",
+    "equipment": "ÉQUIPEMENT",
+    "pick_item": "CHOISIR : {{slot}}",
+    "item_level": "NIV {{level}}",
+    "spell_level": "NIVEAU DE {{name}}",
+    "spell_level_option": "NIV {{level}} · {{cost}} PTS",
+    "mob_spells_auto": "LES SORTS SE CHARGENT AVEC LE MONSTRE",
+    "mob_hp": "{{hp}} PV",
+    "mob_unpublished": "MONSTRE NON PUBLIÉ {{id}}"
   },
   "purchase": {
     "acquisition_complete": "Acquisition Terminée",
@@ -1516,7 +1522,9 @@
       "Couleur de tag exclusive en chat",
       "Réduction permanente de 30% en boutique"
     ],
-    "veteran_app_perks": ["Tous les avantages Membre"],
+    "veteran_app_perks": [
+      "Tous les avantages Membre"
+    ],
     "min_level": "NIVEAU MIN",
     "recommended_level": "NIVEAU RECOMMANDÉ",
     "dungeon_mobs": "MONSTRES",

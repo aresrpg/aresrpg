@@ -223,3 +223,51 @@ describe('hydration', () => {
     ).toEqual(INITIAL_SIMULATOR_STATE)
   })
 })
+
+// The loadout door (the editor's paper doll): a slot holds a template id, `null` CLEARS it. The invariant
+// that matters is the SHAPE — a cleared slot is ABSENT, never a null value, because `resolve_loadout` reads
+// "the filled slots" as "the keys present".
+describe('loadout_set', () => {
+  const with_character = () =>
+    reduce_simulator(INITIAL_SIMULATOR_STATE, {
+      type: 'character_added',
+      class_id: 'senshi',
+      name: 'Probe',
+      male: true,
+    })
+
+  test('assigns a slot, replaces it, and CLEARS it by absence', () => {
+    const seated = with_character()
+    const [{ id }] = seated.roster
+
+    const equipped = reduce_simulator(seated, { type: 'loadout_set', id, slot: 'pet', template_id: 'fuwa' })
+    expect(equipped.roster[0].loadout).toEqual({ pet: 'fuwa' })
+
+    const swapped = reduce_simulator(equipped, { type: 'loadout_set', id, slot: 'pet', template_id: 'kaguya' })
+    expect(swapped.roster[0].loadout).toEqual({ pet: 'kaguya' })
+
+    const cleared = reduce_simulator(swapped, { type: 'loadout_set', id, slot: 'pet', template_id: null })
+    expect(cleared.roster[0].loadout).toEqual({})
+    expect('pet' in cleared.roster[0].loadout).toBe(false)
+  })
+
+  test('slots are independent — assigning one never disturbs another', () => {
+    const seated = with_character()
+    const [{ id }] = seated.roster
+    const two = [
+      { slot: 'weapon', template_id: 'oak_staff' },
+      { slot: 'pet', template_id: 'fuwa' },
+    ].reduce((state, row) => reduce_simulator(state, { type: 'loadout_set', id, ...row }), seated)
+    expect(two.roster[0].loadout).toEqual({ weapon: 'oak_staff', pet: 'fuwa' })
+
+    const cleared = reduce_simulator(two, { type: 'loadout_set', id, slot: 'weapon', template_id: null })
+    expect(cleared.roster[0].loadout).toEqual({ pet: 'fuwa' })
+  })
+
+  test('an unknown character id is a no-op, not a crash', () => {
+    const seated = with_character()
+    expect(reduce_simulator(seated, { type: 'loadout_set', id: 'nobody', slot: 'pet', template_id: 'fuwa' })).toEqual(
+      seated
+    )
+  })
+})

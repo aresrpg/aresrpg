@@ -92,6 +92,19 @@ const equipment_aggregate = (items) =>
  * @param {Record<string, string>} [loadout]
  * @returns {{ items: ItemDef[], unresolved: Array<{ slot: string, template_id: string }> }}
  */
+/**
+ * One catalog row by template id — `items_for_slot`'s inverse (the picker hands out ids, the loadout stores
+ * them, the doll needs the row back). `slug` is joined on so the paper doll's own icon resolver
+ * (`inventory_item_icon`) finds the authored art: a catalog row's identity IS its id.
+ * @param {string | null | undefined} template_id
+ * @returns {(ItemDef & { slug: string }) | undefined}
+ */
+export const catalog_item = (template_id) => {
+  const catalog = /** @type {Record<string, ItemDef>} */ (/** @type {unknown} */ (ITEMS_JSON))
+  const item = template_id ? catalog[template_id] : undefined
+  return item ? { ...item, slug: item.id } : undefined
+}
+
 export const resolve_loadout = (loadout) => {
   const catalog = /** @type {Record<string, ItemDef>} */ (/** @type {unknown} */ (ITEMS_JSON))
   const rows = Object.entries(loadout ?? {}).map(([slot, template_id]) => ({

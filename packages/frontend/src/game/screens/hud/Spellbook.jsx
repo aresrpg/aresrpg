@@ -26,7 +26,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { xp_progress } from '@aresrpg/sdk/experience'
-import { spell_icon_url } from '@aresrpg/sdk/jobs'
 import { spell_points_for_level } from '@aresrpg/sdk/progression'
 
 import { use_game_state } from '../../store.js'
@@ -49,32 +48,10 @@ import { class_spells } from './fight-spells.js'
 import { grimoire, upgrade_state, crit_pct, spell_effects, MAX_SPELL_LEVEL } from './spellbook-data.js'
 import { seed_effect_parts, seed_el_label } from './seed-effect-line.js'
 import { EffectLine } from './EffectLine.jsx'
+// The row (art + name + subline + trailing slot) and the i18n-first spell copy live in ONE home so the
+// simulator's build editor lists the same spells identically — see spell_row.jsx's header.
+import { SpellIcon, SpellRow, spell_copy as chain_copy } from './spell_row.jsx'
 import './spellbook.css'
-
-/** i18n-first spell copy with the on-chain string as the honest fallback (the fight lane's spell_card rule);
- *  a missing key + no fallback renders NOTHING (suffix keys like `_desc` never show a raw slug). */
-const chain_copy = (t, name_key, suffix = '', fallback = null) => {
-  const key = `spells.spell_${name_key}${suffix}`
-  const translated = t(key)
-  return translated === key ? fallback : translated
-}
-
-/** Spell art tile with a graceful element-tinted fallback (only ~24 seeded spells carry CDN art). */
-function Art({ icon, color, name, cls }) {
-  const [failed, set_failed] = useState(false)
-  const url = failed ? null : spell_icon_url(icon)
-  if (!url)
-    return (
-      <span
-        className={`${cls} sb__art--fallback`}
-        style={/** @type {import('react').CSSProperties} */ ({ '--el': color })}
-        aria-hidden="true"
-      >
-        {(name || '?').slice(0, 1).toUpperCase()}
-      </span>
-    )
-  return <img className={cls} src={url} alt="" draggable={false} onError={() => set_failed(true)} />
-}
 
 /** @param {{ on_open?: (panel: string) => void }} props */
 export function Spellbook({ on_open, embedded = false }) {
@@ -221,24 +198,20 @@ export function Spellbook({ on_open, embedded = false }) {
             {book.rows.map((row) => {
               const name = chain_copy(t, row.name_key, '', row.name)
               return (
-                <button
-                  type="button"
+                <SpellRow
                   key={row.id}
-                  onClick={() => set_sel(row.id)}
-                  className={`sb__row${row.id === selected?.id ? ' is-sel' : ''}${row.unlocked ? '' : ' is-locked'}`}
-                  style={/** @type {import('react').CSSProperties} */ ({ '--el': row.color })}
-                >
-                  <Art icon={row.icon} color={row.color} name={name} cls="sb__ic" />
-                  <span className="sb__meta">
-                    <span className="sb__nm">{name}</span>
-                    <span className="sb__rl">
-                      {row.unlocked
-                        ? `${seed_el_label(t, row.subline_kind)} · ${t(`spells.tag_${row.subline_descriptor}`)}`
-                        : t('spells.locked')}
-                    </span>
-                  </span>
-                  <span className="sb__right">
-                    {row.unlocked ? (
+                  row={row}
+                  name={name}
+                  subline={
+                    row.unlocked
+                      ? `${seed_el_label(t, row.subline_kind)} · ${t(`spells.tag_${row.subline_descriptor}`)}`
+                      : t('spells.locked')
+                  }
+                  selected={row.id === selected?.id}
+                  locked={!row.unlocked}
+                  on_click={() => set_sel(row.id)}
+                  right={
+                    row.unlocked ? (
                       <>
                         <span className="sb__lvbadge">
                           {t('spells.lv_of', { cur: row.current_level, max: MAX_SPELL_LEVEL })}
@@ -247,9 +220,9 @@ export function Spellbook({ on_open, embedded = false }) {
                       </>
                     ) : (
                       <span className="sb__lockchip">🔒 {t('spells.unlocks_at', { level: row.unlock_tier })}</span>
-                    )}
-                  </span>
-                </button>
+                    )
+                  }
+                />
               )
             })}
           </div>
@@ -364,7 +337,7 @@ function SpellDetailPanel({ t, row, char_level, points, character_id, ready, on_
   return (
     <div className="sb__detail" style={/** @type {import('react').CSSProperties} */ ({ '--el': row.color })}>
       <div className="sb__dhead">
-        <Art icon={row.icon} color={row.color} name={name} cls="sb__bigic" />
+        <SpellIcon icon={row.icon} color={row.color} name={name} cls="sb__bigic" />
         <div className="sb__dtitle">
           <h2>{name}</h2>
           <div className="sb__tagrow">
