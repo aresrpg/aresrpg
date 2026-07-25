@@ -1522,9 +1522,7 @@
       "Exclusive chat tag color",
       "Lifetime 30% shop discount"
     ],
-    "veteran_app_perks": [
-      "All Member advantages"
-    ],
+    "veteran_app_perks": ["All Member advantages"],
     "min_level": "MIN LEVEL",
     "recommended_level": "RECOMMENDED LEVEL",
     "dungeon_mobs": "MONSTERS",

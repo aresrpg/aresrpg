@@ -1522,9 +1522,7 @@
       "Color de tag exclusivo en chat",
       "Descuento permanente del 30% en la tienda"
     ],
-    "veteran_app_perks": [
-      "Todas las ventajas de Miembro"
-    ],
+    "veteran_app_perks": ["Todas las ventajas de Miembro"],
     "min_level": "NIVEL MÍN",
     "recommended_level": "NIVEL RECOMENDADO",
     "dungeon_mobs": "MONSTRUOS",
