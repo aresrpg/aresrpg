@@ -292,7 +292,7 @@ public(package) fun mint_and_lock_output(template: &ItemTemplate, quantity: u64,
 /// NO STAT SEED (#758): this signature is FROZEN by upgrade compatibility, so the sibling has no channel to hand
 /// its own `&Random` entropy through — a gear item minted here still lands with a blank block, and inventing a
 /// `ctx`-derived seed instead would hand the caller free dry-run re-rolls. The gifting sibling gets a seeded door
-/// of its own at its next publish (tracked as an issue); its live flows mint stackables, which never roll.
+/// of its own at its next publish (#777); its live flows mint stackables, which never roll.
 public fun mint_and_lock_output_brand<W: drop>(_: W, config: &GameConfig, template: &ItemTemplate, quantity: u64, version: &Version, kiosk: &mut Kiosk, owner_cap: &KioskOwnerCap, policy: &TransferPolicy<Item>, ctx: &mut TxContext): ID {
   config.assert_gifting_brand<W>();
   mint_and_lock_output(template, quantity, option::none(), version, kiosk, owner_cap, policy, ctx)
