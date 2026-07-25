@@ -50,8 +50,21 @@ describe('the /simulator route mounts', () => {
     expect(markup().split(en.simulator.new_character).length - 1).toBeGreaterThan(1)
   })
 
-  test('every enemy seat is an invitation to pick a mob, never dead space', () => {
-    expect(markup().split(en.simulator.pick_mob).length - 1).toBeGreaterThan(1)
+  // #883 ③ — the enemy panel is a READ-OUT: no seat of it is a button, and it invites no picking (that door
+  // is the red cell itself). An empty seat still says EMPTY rather than rendering as dead space.
+  test('the enemy panel is inert — a composition read-out, not a second picking door', () => {
+    const html = markup()
+    expect(html).not.toContain(en.simulator.pick_mob)
+    expect(html.split(en.simulator.seat_empty).length - 1).toBeGreaterThan(1)
+  })
+
+  // #883 ⑤ — the page had no way at all to start a fight. It is in the top bar, disabled until a character
+  // stands on the board, and it says WHY while it is.
+  test('a START FIGHT control exists, disabled until at least one character is placed', () => {
+    const html = markup()
+    expect(html).toContain(en.simulator.start_fight)
+    expect(html).toContain('disabled=""')
+    expect(html).toContain(en.simulator.fight_blocked_empty_roster)
   })
 
   test('no editor is mounted until a seat is opened — the page is seats, not a standing form', () => {

@@ -1263,9 +1263,7 @@
     "board_size": "{{width}} × {{height}}",
     "anchor": "ANCRE",
     "reroll_board": "REGÉNÉRER LE PLATEAU",
-    "board_hint": "Cliquez une case bleue pour placer le personnage sélectionné · une case rouge pour choisir un monstre",
-    "board_hint_no_focus": "Sélectionnez un personnage, puis cliquez une case bleue pour le placer",
-    "mobs": "MONSTRES",
+    "board_hint": "Cliquez une case bleue pour placer un personnage · une case rouge pour choisir un monstre · une case occupée pour la vider",
     "no_mobs": "AUCUN MONSTRE — CLIQUEZ UNE CASE ROUGE",
     "pick_mob": "CHOISIR UN MONSTRE",
     "mob_band": "NIV {{min}}–{{max}}",
@@ -1287,7 +1285,15 @@
     "spell_level_option": "NIV {{level}} · {{cost}} PTS",
     "mob_spells_auto": "LES SORTS SE CHARGENT AVEC LE MONSTRE",
     "mob_hp": "{{hp}} PV",
-    "mob_unpublished": "MONSTRE NON PUBLIÉ {{id}}"
+    "mob_unpublished": "MONSTRE NON PUBLIÉ {{id}}",
+    "place_character": "PLACER UN PERSONNAGE",
+    "placed": "PLACÉ",
+    "roster_empty_hint": "Aucun personnage — créez-en un dans le panneau ÉQUIPE.",
+    "roster_panel_hint": "Les nouveaux personnages se créent dans le panneau ÉQUIPE",
+    "seat_empty": "VIDE",
+    "start_fight": "LANCER LE COMBAT",
+    "stop_fight": "ARRÊTER",
+    "item_stats_hint": "Survolez une ligne pour ses stats complètes · appui long au toucher"
   },
   "purchase": {
     "acquisition_complete": "Acquisition Terminée",
@@ -1524,7 +1530,9 @@
       "Couleur de tag exclusive en chat",
       "Réduction permanente de 30% en boutique"
     ],
-    "veteran_app_perks": ["Tous les avantages Membre"],
+    "veteran_app_perks": [
+      "Tous les avantages Membre"
+    ],
     "min_level": "NIVEAU MIN",
     "recommended_level": "NIVEAU RECOMMANDÉ",
     "dungeon_mobs": "MONSTRES",

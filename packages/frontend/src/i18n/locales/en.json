@@ -1263,9 +1263,7 @@
     "board_size": "{{width}} × {{height}}",
     "anchor": "ANCHOR",
     "reroll_board": "REROLL BOARD",
-    "board_hint": "Click a blue cell to place the focused character · a red cell to pick a mob",
-    "board_hint_no_focus": "Select a roster character, then click a blue cell to place it",
-    "mobs": "MOBS",
+    "board_hint": "Click a blue cell to place a character · a red cell to pick a mob · an occupied cell to empty it",
     "no_mobs": "NO MOBS — CLICK A RED CELL",
     "pick_mob": "PICK A MOB",
     "mob_band": "LV {{min}}–{{max}}",
@@ -1287,7 +1285,15 @@
     "spell_level_option": "LV {{level}} · {{cost}} PTS",
     "mob_spells_auto": "SPELLS LOAD AUTOMATICALLY WITH THE MOB",
     "mob_hp": "{{hp}} HP",
-    "mob_unpublished": "UNPUBLISHED MOB {{id}}"
+    "mob_unpublished": "UNPUBLISHED MOB {{id}}",
+    "place_character": "PLACE A CHARACTER",
+    "placed": "PLACED",
+    "roster_empty_hint": "No characters yet — create one in the roster panel.",
+    "roster_panel_hint": "New characters are created in the roster panel",
+    "seat_empty": "EMPTY",
+    "start_fight": "START FIGHT",
+    "stop_fight": "STOP",
+    "item_stats_hint": "Hover a row for its full stats · long-press on touch"
   },
   "purchase": {
     "acquisition_complete": "Acquisition Complete",
@@ -1524,7 +1530,9 @@
       "Exclusive chat tag color",
       "Lifetime 30% shop discount"
     ],
-    "veteran_app_perks": ["All Member advantages"],
+    "veteran_app_perks": [
+      "All Member advantages"
+    ],
     "min_level": "MIN LEVEL",
     "recommended_level": "RECOMMENDED LEVEL",
     "dungeon_mobs": "MONSTERS",

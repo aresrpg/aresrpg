@@ -1263,9 +1263,7 @@
     "board_size": "{{width}} × {{height}}",
     "anchor": "ANCLA",
     "reroll_board": "REGENERAR TABLERO",
-    "board_hint": "Haz clic en una casilla azul para colocar el personaje seleccionado · en una roja para elegir un monstruo",
-    "board_hint_no_focus": "Selecciona un personaje y luego haz clic en una casilla azul para colocarlo",
-    "mobs": "MONSTRUOS",
+    "board_hint": "Haz clic en una casilla azul para colocar un personaje · en una roja para elegir un monstruo · en una ocupada para vaciarla",
     "no_mobs": "SIN MONSTRUOS — HAZ CLIC EN UNA CASILLA ROJA",
     "pick_mob": "ELEGIR MONSTRUO",
     "mob_band": "NV {{min}}–{{max}}",
@@ -1287,7 +1285,15 @@
     "spell_level_option": "NV {{level}} · {{cost}} PTS",
     "mob_spells_auto": "LOS HECHIZOS SE CARGAN CON EL MOB",
     "mob_hp": "{{hp}} PV",
-    "mob_unpublished": "MOB NO PUBLICADO {{id}}"
+    "mob_unpublished": "MOB NO PUBLICADO {{id}}",
+    "place_character": "COLOCAR UN PERSONAJE",
+    "placed": "COLOCADO",
+    "roster_empty_hint": "Aún no hay personajes — crea uno en la plantilla.",
+    "roster_panel_hint": "Los personajes nuevos se crean en la plantilla",
+    "seat_empty": "VACÍO",
+    "start_fight": "INICIAR COMBATE",
+    "stop_fight": "DETENER",
+    "item_stats_hint": "Pasa el cursor por una fila para ver sus stats · mantén pulsado en táctil"
   },
   "purchase": {
     "acquisition_complete": "Adquisicion Completada",
@@ -1524,7 +1530,9 @@
       "Color de tag exclusivo en chat",
       "Descuento permanente del 30% en la tienda"
     ],
-    "veteran_app_perks": ["Todas las ventajas de Miembro"],
+    "veteran_app_perks": [
+      "Todas las ventajas de Miembro"
+    ],
     "min_level": "NIVEL MÍN",
     "recommended_level": "NIVEL RECOMENDADO",
     "dungeon_mobs": "MONSTRUOS",

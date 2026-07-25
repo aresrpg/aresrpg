@@ -1263,9 +1263,7 @@
     "board_size": "{{width}} × {{height}}",
     "anchor": "ANKER",
     "reroll_board": "SPIELFELD NEU WÜRFELN",
-    "board_hint": "Blaues Feld anklicken, um die gewählte Figur zu setzen · rotes Feld, um einen Gegner zu wählen",
-    "board_hint_no_focus": "Wähle eine Figur aus der Truppe und klicke dann ein blaues Feld an",
-    "mobs": "GEGNER",
+    "board_hint": "Blaues Feld anklicken, um eine Figur zu setzen · rotes Feld für einen Gegner · besetztes Feld, um es zu leeren",
     "no_mobs": "KEINE GEGNER — ROTES FELD ANKLICKEN",
     "pick_mob": "GEGNER WÄHLEN",
     "mob_band": "STUFE {{min}}–{{max}}",
@@ -1287,7 +1285,15 @@
     "spell_level_option": "STUFE {{level}} · {{cost}} PKT",
     "mob_spells_auto": "ZAUBER LADEN AUTOMATISCH MIT DEM MONSTER",
     "mob_hp": "{{hp}} LP",
-    "mob_unpublished": "UNVERÖFFENTLICHTES MONSTER {{id}}"
+    "mob_unpublished": "UNVERÖFFENTLICHTES MONSTER {{id}}",
+    "place_character": "FIGUR SETZEN",
+    "placed": "GESETZT",
+    "roster_empty_hint": "Noch keine Figuren — leg im Kader eine an.",
+    "roster_panel_hint": "Neue Figuren werden im Kader angelegt",
+    "seat_empty": "LEER",
+    "start_fight": "KAMPF STARTEN",
+    "stop_fight": "STOPP",
+    "item_stats_hint": "Zeile überfahren für alle Werte · auf Touch lange drücken"
   },
   "purchase": {
     "acquisition_complete": "Erwerb abgeschlossen",
@@ -1524,7 +1530,9 @@
       "Exklusive Chat-Tag-Farbe",
       "Lebenslanger 30% Shop-Rabatt"
     ],
-    "veteran_app_perks": ["Alle Mitgliedervorteile"],
+    "veteran_app_perks": [
+      "Alle Mitgliedervorteile"
+    ],
     "min_level": "MIN LEVEL",
     "recommended_level": "EMPFOHLENES LEVEL",
     "dungeon_mobs": "MONSTER",

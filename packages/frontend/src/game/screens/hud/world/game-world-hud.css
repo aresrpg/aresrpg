@@ -1626,11 +1626,10 @@
    display:contents, so it paints NO box (no obsidian fill / padding / scroll over the live world) and
    forms no containing block — the fixed .hud-dock + .hud-drawer keep their own positioning and
    pointer-events. --dock-clear is restored: the meta-tab bridge zeroes it (no fixed dock there), but
-   here the launcher dock IS present, so every drawer body must clear it. */
-.gw-tab.gw-tab--carrier {
-  display: contents;
-  --dock-clear: 132px;
-}
+   here the launcher dock IS present, so every drawer body must clear it.
+   THE RULE ITSELF MOVED to game-tab.css (#883): it defines `.gw-tab`, and a bridge with two homes is a
+   bridge half the app cannot reach — this stylesheet is the world HUD's, so a body-portalled surface on
+   another page (the simulator's editor dialog) had the carrier CLASS available and no rule behind it. */
 
 /* ── COMBAT chrome (#54) ──────────────────────────────────────────────────────────────────────────
    The proven fight HUD (hud.css `.hud-*`) is mounted as a `.hud-root.gw-tab` sibling of `.gw-hud`

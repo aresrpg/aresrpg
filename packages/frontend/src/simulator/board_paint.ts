@@ -47,25 +47,27 @@ export type SetupScene = {
 /** What a click on a board cell MEANS in setup — the one place the two bands' verbs are decided. */
 export type CellIntent =
   | { type: 'mob_cell'; cell: number }
-  | { type: 'place'; cell: number; id: string }
+  | { type: 'ally_cell'; cell: number }
   | { type: 'unplace'; cell: number }
   | null
 
 /**
- * Read a raw cell click. The enemy band always opens the mob picker (for that seat, occupied or not); the
- * ally band seats the FOCUSED character, and clicking the cell that already holds it lifts it back off.
+ * Read a raw cell click. BOTH bands answer the same two verbs, which is why there is no branch per band
+ * beyond naming the seat: an EMPTY start cell opens its picker at that cell, an OCCUPIED one empties it.
  * A click anywhere else — an obstacle, a mid-board cell, the void — is not an interaction at all.
+ *
+ * Placement used to read a FOCUSED roster row, so seating a character was a two-panel dance (select left,
+ * click middle) and an unfocused click did nothing at all. The cell is the whole gesture now: the board is
+ * the only door onto who stands where, and the panels beside it are a roster and a read-out.
  */
 export const cell_intent_of = (
   board: Readonly<SimBoard>,
-  setup: Readonly<{ placements: SimPlacements; focus_id: string | null }>,
+  setup: Readonly<{ placements: SimPlacements }>,
   cell: number
 ): CellIntent => {
   if (board.start_cells_b.includes(cell)) return { type: 'mob_cell', cell }
   if (!board.start_cells_a.includes(cell)) return null
-  if (setup.placements[cell] !== undefined && setup.placements[cell] === setup.focus_id)
-    return { type: 'unplace', cell }
-  return setup.focus_id ? { type: 'place', cell, id: setup.focus_id } : null
+  return setup.placements[cell] === undefined ? { type: 'ally_cell', cell } : { type: 'unplace', cell }
 }
 
 /** The shared rig resolver with THIS surface's policy: no placeholder substitution (see the header). The

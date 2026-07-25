@@ -7,6 +7,11 @@
 // `cell_intent_of` into the reducer door — this component holds no board truth of its own, which is why a
 // reload, a reroll and a deleted character all reconcile with no special case here.
 //
+// THE BOARD IS THE DOOR (#883). Every seat is edited where it stands: an empty start cell opens its picker
+// AT the cell (characters get the roster popover, mobs the seat modal), an occupied one empties it. The
+// panels beside the board are a roster and a read-out, never a second placement surface — so this pane owns
+// no roster list of its own either; the mob line-up it used to print underneath is the right panel's job.
+//
 // Split in two on purpose: `BoardPaneView` is presentation over explicit props (provable with
 // react-dom/server, no jsdom), and `SimulatorBoardPane` is the store + engine wiring around it.
 //
@@ -16,16 +21,14 @@
 
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Dices, X } from 'lucide-react'
+import { Dices } from 'lucide-react'
 import { encode } from '@aresrpg/fight/los'
-
-import type { CorpusMob } from '../pages/encyclopedia/world_corpus'
 
 import { board_of, type SimBoard } from './board'
 import { cell_intent_of, setup_scene_of } from './board_paint'
-import { build_mob } from './content.js'
-import { MobPicker, use_mob_index } from './MobPicker'
-import { MAX_MOBS, type SimMobPick } from './reducer'
+import { CharacterPicker } from './CharacterPicker'
+import { MobModal } from './MobModal'
+import { use_mob_index } from './MobPicker'
 import { use_simulator } from './store'
 
 const GOLD = '#c8963c'
@@ -39,25 +42,14 @@ type ViewportHandle = {
   destroy: () => void
 }
 
-/** One seated mob as the pane renders it: its cell, the pick, and the corpus row it resolved to (or none). */
-export type PickedRow = { cell: number; pick: SimMobPick; row: CorpusMob | null }
-
 export function BoardPaneView({
   board,
-  picked,
-  focused,
   canvas_ref,
   on_reroll,
-  on_level,
-  on_remove,
 }: Readonly<{
   board: SimBoard
-  picked: readonly PickedRow[]
-  focused: boolean
   canvas_ref?: RefObject<HTMLCanvasElement | null>
   on_reroll: () => void
-  on_level: (row: PickedRow, level: number) => void
-  on_remove: (row: PickedRow) => void
 }>) {
   const { t } = useTranslation()
   return (
@@ -84,53 +76,7 @@ export function BoardPaneView({
         <canvas ref={canvas_ref} className="absolute inset-0 w-full h-full block" />
       </div>
 
-      <p className={`${micro} text-muted`}>{t(focused ? 'simulator.board_hint' : 'simulator.board_hint_no_focus')}</p>
-
-      <div className="flex flex-col gap-1">
-        <span className={`${micro} font-semibold text-muted`}>
-          {t('simulator.mobs')} {picked.length}/{MAX_MOBS}
-        </span>
-        {picked.length === 0 ? (
-          <span className={`${micro} text-muted`} style={{ opacity: 0.5 }}>
-            {t('simulator.no_mobs')}
-          </span>
-        ) : (
-          picked.map((row) => {
-            // S2 — a mob whose combat block was never published is BADGED, never silently completed.
-            const built = row.row ? build_mob(row.row, row.pick.level) : null
-            return (
-              <div key={row.cell} className="flex items-center gap-2 px-2 py-1" style={{ border: HAIRLINE }}>
-                <span className="text-[11px] flex-1 truncate" style={{ color: '#e8e4dc' }}>
-                  {row.row?.name ?? row.pick.template_id}
-                </span>
-                {built && !built.combat_block_published && (
-                  <span className={micro} style={{ color: GOLD }} title={t('simulator.combat_block_hint')}>
-                    {t('simulator.combat_block_unpublished')}
-                  </span>
-                )}
-                <input
-                  type="number"
-                  className="w-14 px-1 py-0.5 text-[11px] bg-transparent"
-                  style={{ border: HAIRLINE, color: '#e8e4dc' }}
-                  value={row.pick.level}
-                  min={row.row?.minLevel ?? 1}
-                  max={row.row?.maxLevel ?? 200}
-                  aria-label={t('simulator.level')}
-                  onChange={(event) => on_level(row, Number(event.target.value))}
-                />
-                <button
-                  type="button"
-                  className="cursor-pointer text-muted hover:text-white"
-                  title={t('simulator.remove_mob')}
-                  onClick={() => on_remove(row)}
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            )
-          })
-        )}
-      </div>
+      <p className={`${micro} text-muted`}>{t('simulator.board_hint')}</p>
     </div>
   )
 }
@@ -142,9 +88,15 @@ export function SimulatorBoardPane() {
   // viewport and the board would only appear on the next change (measured: nothing until a reroll). As a
   // dependency of the show effect below, the very existence of the viewport re-triggers the paint.
   const [viewport, set_viewport] = useState<ViewportHandle | null>(null)
-  const [picker_cell, set_picker_cell] = useState<number | null>(null)
+  const [mob_cell, set_mob_cell] = useState<number | null>(null)
+  /** the ally cell being seated, with the pointer position its picker opens at */
+  const [ally_pick, set_ally_pick] = useState<{ cell: number; x: number; y: number } | null>(null)
+  // WHERE the click happened. The board reports a CELL, not a pixel (it is a renderer-neutral contract), so
+  // the pointer position the popover anchors to is read off the canvas' own pointer event — the same gesture,
+  // one frame earlier.
+  const pointer = useRef({ x: 0, y: 0 })
 
-  const { seed, anchor_nonce, roster, placements, mob_picks, focus_id, input } = use_simulator()
+  const { seed, anchor_nonce, roster, placements, mob_picks, input } = use_simulator()
   const board = useMemo(() => board_of(seed, anchor_nonce), [seed, anchor_nonce])
 
   // The corpus is a boot-time blob: an empty index simply means it has not landed (or is unpublished).
@@ -160,9 +112,9 @@ export function SimulatorBoardPane() {
     [board, roster, placements, mob_picks, mob_of]
   )
 
-  // The LIVE state the click handler must read — a handler captured at mount would seat a stale focus.
-  const click_state = useRef({ board, placements, focus_id })
-  click_state.current = { board, placements, focus_id }
+  // The LIVE state the click handler must read — a handler captured at mount would seat a stale board.
+  const click_state = useRef({ board, placements })
+  click_state.current = { board, placements }
 
   // ONE mount per page visit; the engine is disposed on unmount (never the world session's singleton).
   useEffect(() => {
@@ -171,6 +123,10 @@ export function SimulatorBoardPane() {
     let unsubscribe: (() => void) | null = null
     const canvas = canvas_ref.current
     if (!canvas) return undefined
+    const track = (event: PointerEvent) => {
+      pointer.current = { x: event.clientX, y: event.clientY }
+    }
+    canvas.addEventListener('pointerdown', track)
     void import('./mount.js').then(({ create_board_viewport }) => {
       if (!live) return
       handle = create_board_viewport({ canvas }) as ViewportHandle
@@ -182,14 +138,15 @@ export function SimulatorBoardPane() {
         const { current } = click_state
         const intent = cell_intent_of(current.board, current, encode(x, y))
         if (!intent) return
-        if (intent.type === 'mob_cell') set_picker_cell(intent.cell)
-        else if (intent.type === 'place') input({ type: 'character_placed', cell: intent.cell, id: intent.id })
+        if (intent.type === 'mob_cell') set_mob_cell(intent.cell)
+        else if (intent.type === 'ally_cell') set_ally_pick({ cell: intent.cell, ...pointer.current })
         else input({ type: 'character_unplaced', cell: intent.cell })
       })
       set_viewport(handle)
     })
     return () => {
       live = false
+      canvas.removeEventListener('pointerdown', track)
       unsubscribe?.()
       handle?.destroy()
       set_viewport(null)
@@ -202,53 +159,31 @@ export function SimulatorBoardPane() {
     void viewport?.show(board, scene)
   }, [viewport, board, scene])
 
-  const picked: PickedRow[] = useMemo(
-    () =>
-      Object.entries(mob_picks)
-        .map(([cell, pick]) => ({ cell: Number(cell), pick, row: mob_of.get(pick.template_id) ?? null }))
-        .sort((left, right) => left.cell - right.cell),
-    [mob_picks, mob_of]
-  )
-
   return (
     <>
-      <BoardPaneView
-        board={board}
-        picked={picked}
-        focused={focus_id !== null}
-        canvas_ref={canvas_ref}
-        on_reroll={() => input({ type: 'board_rerolled' })}
-        on_level={(row, level) =>
-          input({
-            type: 'mob_level_set',
-            cell: row.cell,
-            level,
-            min_level: row.row?.minLevel ?? 1,
-            max_level: row.row?.maxLevel ?? MAX_LEVEL_FALLBACK,
-          })
-        }
-        on_remove={(row) => input({ type: 'mob_unpicked', cell: row.cell })}
-      />
-      {picker_cell !== null && (
-        <MobPicker
-          value={mob_picks[picker_cell]?.template_id}
-          on_close={() => set_picker_cell(null)}
-          on_pick={(mob) => {
-            input({
-              type: 'mob_picked',
-              cell: picker_cell,
-              template_id: mob.id,
-              level: mob.minLevel,
-              min_level: mob.minLevel,
-              max_level: mob.maxLevel,
-            })
-            set_picker_cell(null)
+      <BoardPaneView board={board} canvas_ref={canvas_ref} on_reroll={() => input({ type: 'board_rerolled' })} />
+      {ally_pick && (
+        <CharacterPicker
+          roster={roster}
+          placements={placements}
+          at={ally_pick}
+          on_close={() => set_ally_pick(null)}
+          on_pick={(id) => {
+            input({ type: 'character_placed', cell: ally_pick.cell, id })
+            set_ally_pick(null)
           }}
+        />
+      )}
+      {/* The mob seat's own editor — which mob, at what level. It opens its picker itself when the seat is
+          still empty, so a red cell is one click from a line-up whether or not it already holds one. */}
+      {mob_cell !== null && (
+        <MobModal
+          key={mob_cell}
+          cell={mob_cell}
+          pick={mob_picks[mob_cell] ?? null}
+          on_close={() => set_mob_cell(null)}
         />
       )}
     </>
   )
 }
-
-/** A row with no resolved corpus mob has no band to clamp into — the reducer's own ceiling stands in. */
-const MAX_LEVEL_FALLBACK = 200

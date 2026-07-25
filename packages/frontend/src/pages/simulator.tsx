@@ -7,34 +7,44 @@
 // thin editor over the ONE page reducer (simulator/reducer.ts), whose budgets mirror the chain's, and every
 // edit persists to IndexedDB through the store's persistence edge (reload-proof by construction).
 //
-// LAYOUT: your team on the LEFT (six roster seats), the board in the MIDDLE, the enemy team on the RIGHT
-// (the six enemy start cells). Both teams are edited the same way — a seat opens a modal — because they are
-// the same act: "who stands here". The editors themselves live in simulator/CharacterModal.tsx and
-// simulator/MobModal.tsx; the board viewport is SimulatorBoardPane's.
+// LAYOUT: your roster on the LEFT (six character slots), the board in the MIDDLE, the enemy line-up on the
+// RIGHT (the six enemy start cells). WHO STANDS WHERE IS THE BOARD'S QUESTION (#883): a start cell opens its
+// own picker at the cell and empties on a second click, so neither side panel places anything. The left one
+// is the roster — a slot opens that character's EDITOR (simulator/CharacterModal.tsx) — and the right one is
+// a read-out of the mob composition the red band currently holds, with no click handler at all.
 //
-// The right panel is a MIRROR of the red band, not a second store: each seat IS an enemy start cell, so
-// clicking a red cell on the board and clicking its seat here open the same modal over the same cell.
+// The right panel is a MIRROR of the red band, not a second store: each row IS an enemy start cell, read
+// back out of the same `mob_picks`, so it cannot drift from what the board shows.
 //
 // CHROME: ONE level of containment, nowhere more. A region is a micro-label plus whitespace plus at most a
 // single hairline — never a bordered box holding bordered boxes holding bordered rows. The nesting this page
 // used to carry (framed pane → framed seat → framed row) spent its width three times on padding and borders;
 // the rhythm below spends it on content instead, and the board keeps the space it wins.
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Dices, Plus, Swords } from 'lucide-react'
+import { Dices, Play, Plus, Square, Swords } from 'lucide-react'
 import sdk_classes from '@aresrpg/sdk/classes'
 
 import { EncyclopediaMobImage } from '../pages/encyclopedia/mob_image'
 import { board_of } from '../simulator/board'
 import { SimulatorBoardPane } from '../simulator/BoardPane'
 import { CharacterModal } from '../simulator/CharacterModal'
-import { MobModal, use_mob_of } from '../simulator/MobModal'
+import { build_mob } from '../simulator/content.js'
+import { use_mob_of } from '../simulator/MobModal'
 import { MAX_MOBS, MAX_ROSTER, type SimCharacter } from '../simulator/reducer'
 import { boot_simulator, use_simulator } from '../simulator/store'
+import { use_sim_fight } from '../simulator/use_sim_fight.js'
 
 const GOLD = '#c8963c'
 const HAIRLINE = '1px solid rgba(255,255,255,0.06)'
+
+// The production fight surface, LAZY: it is the heaviest module tree the app has (the fight core, the
+// tactical board, the wallet-aware world shell) and a setup session never enters it. Mounted only once the
+// page is in its fight phase — which is also what keeps this page renderable outside a browser.
+const SimulatorFightHud = lazy(() =>
+  import('../simulator/FightHud.jsx').then((m) => ({ default: m.SimulatorFightHud }))
+)
 
 const CLASS_ROWS = Object.entries(sdk_classes as Record<string, { name: string }>).map(([id, row]) => ({
   id,
@@ -121,14 +131,22 @@ function RosterSeat({
   )
 }
 
-/** One enemy start cell as a roster row — the board's red band, read back as a list. */
-function MobSeat({ cell, on_open }: Readonly<{ cell: number; on_open: () => void }>) {
+/**
+ * One enemy start cell, READ-ONLY (#883 ③): the board's red band shown as a list. It carries no handler on
+ * purpose — a mob is picked, levelled and removed on its own cell, and a second door onto the same seat is
+ * exactly the two-panel dance this page stopped asking for.
+ */
+function MobRow({ cell }: Readonly<{ cell: number }>) {
   const { t } = useTranslation()
   const pick = use_simulator((state) => state.mob_picks[cell])
   const mob = use_mob_of(pick?.template_id)
+  const built = mob && pick ? build_mob(mob, pick.level) : null
 
   return (
-    <Seat active={false} on_open={on_open}>
+    <div
+      className="py-2.5 pr-1 flex items-center gap-2.5 min-h-[52px]"
+      style={{ borderBottom: HAIRLINE, paddingLeft: '10px' }}
+    >
       {pick && mob ? (
         <>
           <EncyclopediaMobImage mob={mob} className="w-7 h-7 shrink-0" style={{ imageRendering: 'pixelated' }} />
@@ -137,9 +155,15 @@ function MobSeat({ cell, on_open }: Readonly<{ cell: number; on_open: () => void
               {mob.name}
             </span>
             <span className={micro} style={{ color: '#ff8b6b', opacity: 0.8 }}>
-              {t('simulator.level')} {pick.level}
+              {t('simulator.level')} {pick.level} · {t('simulator.mob_hp', { hp: built?.hp ?? 0 })}
             </span>
           </span>
+          {/* S2 — a mob whose combat block was never published is BADGED, never silently completed. */}
+          {built && !built.combat_block_published && (
+            <span className={micro} style={{ color: GOLD }} title={t('simulator.combat_block_hint')}>
+              {t('simulator.combat_block_unpublished')}
+            </span>
+          )}
         </>
       ) : pick ? (
         // A stored seat whose corpus row is gone — named, never silently blank.
@@ -147,9 +171,58 @@ function MobSeat({ cell, on_open }: Readonly<{ cell: number; on_open: () => void
           {t('simulator.mob_unpublished', { id: pick.template_id })}
         </span>
       ) : (
-        <EmptySeat text={t('simulator.pick_mob')} />
+        <span className={`${micro} text-muted`} style={{ opacity: 0.45 }}>
+          {t('simulator.seat_empty')}
+        </span>
       )}
-    </Seat>
+    </div>
+  )
+}
+
+/**
+ * START / STOP (#883 ⑤ · spec §4.7) — the page's one fight control, in the top bar where the spec's own
+ * chrome sketch puts it. It is a full gold button the moment a character stands on the board: starting a
+ * fight is the point of the page, and it had no door at all until now.
+ */
+function FightControls() {
+  const { t } = useTranslation()
+  const { phase, can_start, blocked, start, stop } = use_sim_fight()
+
+  return (
+    <div className="flex items-center gap-3 ml-auto">
+      {blocked && (
+        <span className={micro} style={{ color: '#ff9f43' }} role="status">
+          {t(`simulator.fight_blocked_${blocked}`, { defaultValue: t('simulator.fight_blocked_empty_roster') })}
+        </span>
+      )}
+      {phase === 'fight' ? (
+        <button
+          type="button"
+          className={`${micro} flex items-center gap-2 px-4 py-2 cursor-pointer`}
+          style={{ border: '1px solid rgba(255,95,95,0.5)', color: '#ff5f5f' }}
+          onClick={stop}
+        >
+          <Square size={11} />
+          {t('simulator.stop_fight')}
+        </button>
+      ) : (
+        <button
+          type="button"
+          className={`${micro} flex items-center gap-2 px-4 py-2 cursor-pointer disabled:cursor-not-allowed`}
+          style={
+            can_start
+              ? { border: `1px solid ${GOLD}`, color: GOLD, background: 'rgba(200,150,60,0.12)' }
+              : { border: HAIRLINE, color: '#6b7280' }
+          }
+          disabled={!can_start}
+          title={can_start ? undefined : t('simulator.fight_blocked_empty_roster')}
+          onClick={start}
+        >
+          <Play size={11} />
+          {t('simulator.start_fight')}
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -160,10 +233,10 @@ export function SimulatorPage() {
   const seed = use_simulator((state) => state.seed)
   const anchor_nonce = use_simulator((state) => state.anchor_nonce)
   const mob_picks = use_simulator((state) => state.mob_picks)
+  const phase = use_simulator((state) => state.phase)
   const input = use_simulator((state) => state.input)
   /** null = closed · 'new' = an empty roster seat · an id = that character's editor. */
   const [editing, set_editing] = useState<string | null>(null)
-  const [mob_cell, set_mob_cell] = useState<number | null>(null)
 
   // ONE boot per mount: IndexedDB is read at the edge and re-enters as the `hydrated` input; the disposer
   // flushes whatever is still debounced when the page unmounts.
@@ -212,6 +285,7 @@ export function SimulatorPage() {
             {Object.keys(mob_picks).length}/{MAX_MOBS}
           </span>
         </div>
+        <FightControls />
       </div>
 
       {/* THREE PANES — your team · the board · the enemy team */}
@@ -237,10 +311,11 @@ export function SimulatorPage() {
           <SimulatorBoardPane />
         </Pane>
 
+        {/* READ-ONLY (#883 ③): what the red band currently holds. Every verb lives on the cell itself. */}
         <Pane title={t('simulator.mob_team')} className="lg:pl-8">
           <div className="grid grid-cols-2 lg:grid-cols-1">
             {enemy_cells.map((cell) => (
-              <MobSeat key={cell} cell={cell} on_open={() => set_mob_cell(cell)} />
+              <MobRow key={cell} cell={cell} />
             ))}
           </div>
           {enemy_cells.length === 0 && <span className={`${micro} text-muted`}>{t('simulator.no_mobs')}</span>}
@@ -255,13 +330,12 @@ export function SimulatorPage() {
           on_created={(id) => set_editing(id)}
         />
       )}
-      {mob_cell !== null && (
-        <MobModal
-          key={mob_cell}
-          cell={mob_cell}
-          pick={mob_picks[mob_cell] ?? null}
-          on_close={() => set_mob_cell(null)}
-        />
+      {/* The production fight surface. It self-gates on the fight core's own phase machine; the page gate
+          here is the LOAD gate — a setup session must not pay for the module tree at all. */}
+      {phase === 'fight' && (
+        <Suspense fallback={null}>
+          <SimulatorFightHud />
+        </Suspense>
       )}
     </div>
   )

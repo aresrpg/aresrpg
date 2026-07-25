@@ -1263,9 +1263,7 @@
     "board_size": "{{width}} × {{height}}",
     "anchor": "アンカー",
     "reroll_board": "ボードを再生成",
-    "board_hint": "青いマスをクリックで選択中のキャラを配置 · 赤いマスでモンスターを選択",
-    "board_hint_no_focus": "ロスターでキャラを選んでから青いマスをクリック",
-    "mobs": "モンスター",
+    "board_hint": "青いマスをクリックでキャラを配置 · 赤いマスでモンスターを選択 · 埋まったマスで解除",
     "no_mobs": "モンスターなし — 赤いマスをクリック",
     "pick_mob": "モンスターを選択",
     "mob_band": "LV {{min}}–{{max}}",
@@ -1287,7 +1285,15 @@
     "spell_level_option": "Lv {{level}} · {{cost}} ポイント",
     "mob_spells_auto": "呪文はモンスターと共に自動で読み込まれます",
     "mob_hp": "HP {{hp}}",
-    "mob_unpublished": "未公開モンスター {{id}}"
+    "mob_unpublished": "未公開モンスター {{id}}",
+    "place_character": "キャラクターを配置",
+    "placed": "配置済み",
+    "roster_empty_hint": "キャラクターがいません — ロスターで作成してください。",
+    "roster_panel_hint": "新規キャラクターはロスターで作成します",
+    "seat_empty": "空",
+    "start_fight": "戦闘開始",
+    "stop_fight": "停止",
+    "item_stats_hint": "行にホバーで詳細ステータス · タッチは長押し"
   },
   "purchase": {
     "acquisition_complete": "購入完了",
@@ -1524,7 +1530,9 @@
       "限定チャットタグカラー",
       "ショップ永久30%割引"
     ],
-    "veteran_app_perks": ["全メンバー特典"],
+    "veteran_app_perks": [
+      "全メンバー特典"
+    ],
     "min_level": "最低レベル",
     "recommended_level": "推奨レベル",
     "dungeon_mobs": "モンスター",

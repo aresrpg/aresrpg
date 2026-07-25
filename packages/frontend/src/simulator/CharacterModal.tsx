@@ -417,14 +417,23 @@ export function CharacterModal({
     // A build editor is a WIDE surface: six stats, twenty spells and twenty slots at once. At max-w-3xl the
     // dialog spent 40% of a desktop viewport on backdrop and asked for three screens of scrolling instead.
     <ModalFrame on_close={on_close} max_width="max-w-6xl" label={title}>
-      <div className="flex flex-col gap-5 px-7 py-6">
-        <div className="text-gradient text-[12px] font-semibold tracking-[0.28em] uppercase">{title}</div>
-        <div className="w-full h-px bg-border" />
-        {character ? (
-          <CharacterEditor character={character} on_deleted={on_close} />
-        ) : (
-          <CreateForm on_created={on_created} />
-        )}
+      {/* THE TOKEN BRIDGE (#883). Every borrowed component here — the paper doll, the stat rows, the spell
+          rows — is styled in hud-panels.css against the GAME tokens, which live on `.gw-tab` (game-tab.css)
+          and nowhere else; the character page gets them by BEING a `.gw-tab`. This dialog is portalled to
+          <body>, outside any of it, so `var(--s-2)` resolved to nothing and every gap and row padding in the
+          shared markup collapsed to zero — the doll read as a bare grid and the stat rows sat flush against
+          their icons. The carrier is the house's own answer (display:contents): same tokens, no tab box. */}
+      {/* The carrier is `display:contents` — it must stay a bare wrapper, never the layout box itself. */}
+      <div className="gw-tab gw-tab--carrier">
+        <div className="flex flex-col gap-5 px-7 py-6">
+          <div className="text-gradient text-[12px] font-semibold tracking-[0.28em] uppercase">{title}</div>
+          <div className="w-full h-px bg-border" />
+          {character ? (
+            <CharacterEditor character={character} on_deleted={on_close} />
+          ) : (
+            <CreateForm on_created={on_created} />
+          )}
+        </div>
       </div>
     </ModalFrame>
   )

@@ -195,18 +195,29 @@ const mob_spell_level = (spell) => ({
 })
 
 /**
+ * One mob's authored kit as RAW chain-shaped SpellTemplate rows — what the normalizer eats, and what a
+ * capsule must record verbatim (`create_sim_chain` re-normalizes its `templates_raw` on replay, and the
+ * normalizer is not idempotent). The template map below is derived FROM these rows, so a fight's ctx and its
+ * recorded header can never describe different spells.
+ * @param {string} mob_template_id
+ * @param {CorpusMobSpell[]} [spells]  `mob_corpus_of(id)?.spells` — the real minted SpellLevels
+ * @returns {Array<{ id: string, name: string, levels: object[] }>}
+ */
+export const mob_spell_rows = (mob_template_id, spells) =>
+  (spells ?? []).map((spell, index) => ({
+    id: mob_spell_id(mob_template_id, index),
+    name: mob_spell_id(mob_template_id, index),
+    levels: [mob_spell_level(spell)],
+  }))
+
+/**
  * One mob's authored kit → sim spell templates, through the same normalizer the class corpus uses.
  * @param {string} mob_template_id
  * @param {CorpusMobSpell[]} [spells]  `mob_corpus_of(id)?.spells` — the real minted SpellLevels
  * @returns {Map<string, object>}
  */
 export const build_mob_spell_templates = (mob_template_id, spells) => {
-  const rows = (spells ?? []).map((spell, index) => ({
-    id: mob_spell_id(mob_template_id, index),
-    name: mob_spell_id(mob_template_id, index),
-    levels: [mob_spell_level(spell)],
-  }))
-  const templates = normalize_chain_spell_corpus(rows)
+  const templates = normalize_chain_spell_corpus(mob_spell_rows(mob_template_id, spells))
   return /** @type {Map<string, object>} */ (templates)
 }
 

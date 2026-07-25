@@ -99,22 +99,29 @@ describe('what a cell click means', () => {
     expect(cell_intent_of(board, state, free)).toEqual({ type: 'mob_cell', cell: free })
   })
 
-  test('an ally-band cell seats the FOCUSED character; the focused seat itself lifts it back off', () => {
-    const state = { ...seated(), focus_id: 'sim_c1' }
+  // #883 ① — the board IS the picking door: an empty blue cell opens the character picker AT that cell.
+  test('an EMPTY ally cell opens the character picker for that seat', () => {
+    const state = seated()
     const board = board_of(state.seed, state.anchor_nonce)
     const free = board.start_cells_a.at(4) as number
-    expect(cell_intent_of(board, state, free)).toEqual({ type: 'place', cell: free, id: 'sim_c1' })
-    const own_seat = board.start_cells_a.at(0) as number // sim_c1 sits here
-    expect(cell_intent_of(board, state, own_seat)).toEqual({ type: 'unplace', cell: own_seat })
-    // another character's seat is a SWAP target, not an unplace
-    const other_seat = board.start_cells_a.at(1) as number
-    expect(cell_intent_of(board, state, other_seat)).toEqual({ type: 'place', cell: other_seat, id: 'sim_c1' })
+    expect(cell_intent_of(board, state, free)).toEqual({ type: 'ally_cell', cell: free })
   })
 
-  test('with nothing focused an ally cell does nothing — the page says so instead of guessing', () => {
+  // #883 ① — clicking an OCCUPIED cell removes whoever stands on it, whatever the roster panel is doing.
+  test('an OCCUPIED ally cell empties it — any occupant, not just a focused one', () => {
+    const state = seated()
+    const board = board_of(state.seed, state.anchor_nonce)
+    const own_seat = board.start_cells_a.at(0) as number // sim_c1 sits here
+    const other_seat = board.start_cells_a.at(1) as number // sim_c2 sits here
+    expect(cell_intent_of(board, state, own_seat)).toEqual({ type: 'unplace', cell: own_seat })
+    expect(cell_intent_of(board, state, other_seat)).toEqual({ type: 'unplace', cell: other_seat })
+  })
+
+  test('an ally cell answers with no roster row focused — focus stopped gating placement', () => {
     const state = { ...seated(), focus_id: null }
     const board = board_of(state.seed, state.anchor_nonce)
-    expect(cell_intent_of(board, state, board.start_cells_a.at(4) as number)).toBeNull()
+    const free = board.start_cells_a.at(4) as number
+    expect(cell_intent_of(board, state, free)).toEqual({ type: 'ally_cell', cell: free })
   })
 
   test('a cell in neither band is not an interaction', () => {

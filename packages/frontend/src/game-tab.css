@@ -106,6 +106,20 @@
   box-sizing: border-box;
 }
 
+/* THE CARRIER — the same token set, carried onto a surface that must NOT become a tab box. `display:contents`
+   paints nothing (no padding, no scroll, no containing block), so a body-portalled layer — the world HUD's
+   dock/drawers, the coachmark tour, the simulator's editor dialog — inherits the bridge's tokens exactly
+   where it stands. It lives HERE, beside the `.gw-tab` set it carries: a vendored HUD component reads those
+   tokens wherever it is mounted, so the rule that supplies them cannot sit inside one page's stylesheet
+   (#883 — the simulator's paper doll and stat rows rendered token-less: `var(--s-2)` resolved to nothing, so
+   every gap and every row padding collapsed to zero and the shared doll read as a bare grid).
+   `--dock-clear` is restored for the world case: the tab bridge zeroes it (no fixed dock in a meta-tab) and
+   the launcher dock IS present wherever this carrier hosts the drawers. */
+.gw-tab.gw-tab--carrier {
+  display: contents;
+  --dock-clear: 132px;
+}
+
 /* drawers built to fill a fixed Hud drawer body assume height:100%; give them the tab's content
    height so their own internal scroll regions resolve (instead of collapsing). */
 .gw-tab > .chr,
