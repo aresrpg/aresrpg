@@ -53,12 +53,13 @@ jobs:
     # under load, not GPU/headless variance as #580 first suspected (dispose_terrain.test.js,
     # pool_renderer.test.js, ground_height.test.js, board_highlights.test.js). Engine now keeps a
     # hard exit code like the other six legs — a real red there fails the run.
-    # frontend is STILL red, for two tracked defects out of #641's scope (fight_trace_tee #568,
-    # crush_actions #589) — its leg stays masked until those close. `continue-on-error` was tried
-    # and reverted: it's invisible to raw check-run consumers (the promote bot reads conclusions,
-    # not the derived merge rollup). Instead the test step itself swallows a red exit for frontend
-    # ONLY: conclusion = policy (forced success, so landings aren't gated on someone else's
-    # ticket), summary = truth (the loud marker + real counts still land in $GITHUB_STEP_SUMMARY).
+    # #801 UNMASK: frontend was the last masked leg (`case … frontend) exit 0`), waived for
+    # fight_trace_tee #568 + crush_actions #589 — both closed 2026-07-23, so the waiver outlived its
+    # own reasons while six genuine reds shipped as green check-runs in a 32h window (#801's
+    # measurement). The mask is gone: EVERY leg now exits its suite's real code. The flake that stood
+    # in the way (#769, a playback assertion sampling the pace queue mid-drain on a wall-clock window)
+    # is fixed at the root in the same commit — the tests await the queue's own drained signal.
+    # No leg in this job may be re-masked: severities only ratchet up (FROZEN.md).
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -76,20 +77,10 @@ jobs:
       - name: install deps
         run: bun install --frozen-lockfile
       - name: test — packages/${{ matrix.package }}
-        id: test
         working-directory: packages/${{ matrix.package }}
         run: |
           set -o pipefail
-          if bun run test 2>&1 | tee /tmp/test-${{ matrix.package }}.log; then
-            code=0
-          else
-            code=$?
-          fi
-          echo "code=$code" >> "$GITHUB_OUTPUT"
-          case "${{ matrix.package }}" in
-            frontend) exit 0 ;;
-            *) exit "$code" ;;
-          esac
+          bun run test 2>&1 | tee /tmp/test-${{ matrix.package }}.log
       - name: pass/skip/fail → step summary
         if: always()
         run: |
@@ -98,18 +89,10 @@ jobs:
             pass=$(grep -oE '^ *[0-9]+ pass' "$log" | grep -oE '[0-9]+' || echo 0)
             skip=$(grep -oE '^ *[0-9]+ skip' "$log" | grep -oE '[0-9]+' || echo 0)
             fail=$(grep -oE '^ *[0-9]+ fail' "$log" | grep -oE '[0-9]+' || echo 0)
-            note=""
-            case "${{ matrix.package }}" in
-              frontend)
-                if [ "${{ steps.test.outputs.code }}" != "0" ]; then
-                  note=" ⚠ NON-BLOCKING RED (#568, #589)"
-                fi
-                ;;
-            esac
             {
               echo "| package | pass | skip | fail |"
               echo "|---|---|---|---|"
-              echo "| ${{ matrix.package }}$note | $pass | $skip | $fail |"
+              echo "| ${{ matrix.package }} | $pass | $skip | $fail |"
             } >> "$GITHUB_STEP_SUMMARY"
           ) || true
 

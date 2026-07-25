@@ -200,14 +200,12 @@ describe('mob turn playback is one serial queue (move completes before the cast 
       log.push('cast:end')
     }
     // the exact flush_mob_buffer slot body (move awaited, THEN cast).
-    await new Promise((resolve) => {
-      const q = create_pace_queue({ min_ms: 0 })
-      void q.run(async () => {
-        await play_move()
-        await play_cast()
-      })
-      // settle after the slot drains — one more macrotask past the two ticks.
-      setTimeout(resolve, 10)
+    const q = create_pace_queue({ min_ms: 0 })
+    // await the queue's OWN drained signal (run's promise settles after the slot + its floor) — never a
+    // wall-clock window, which samples the log mid-drain under load (#769).
+    await q.run(async () => {
+      await play_move()
+      await play_cast()
     })
     expect(log).toEqual(['move:start', 'move:end', 'cast:start', 'cast:end'])
     // the load-bearing guarantee: the cast VFX is not even CALLED until the move has fully ended.
@@ -224,12 +222,10 @@ describe('mob turn playback is one serial queue (move completes before the cast 
       await tick()
       log.push(`${mob}:cast:end`)
     }
-    await new Promise((resolve) => {
-      const q = create_pace_queue({ min_ms: 0 })
-      void q.run(slot('mob-0'))
-      void q.run(slot('mob-1')) // buffered behind mob-0; the serial queue never overlaps them
-      setTimeout(resolve, 20)
-    })
+    const q = create_pace_queue({ min_ms: 0 })
+    void q.run(slot('mob-0'))
+    // buffered behind mob-0; the serial queue never overlaps them, so mob-1's drained signal is the cascade's.
+    await q.run(slot('mob-1'))
     // mob-0's whole turn precedes any of mob-1's beats.
     expect(log).toEqual([
       'mob-0:move:start',
@@ -259,11 +255,11 @@ describe('mob turn playback is one serial queue (move completes before the cast 
     let turn = append_mob_turn_beat(null, 'move', { kind: 'move', label: 'mob:move' })
     turn = append_mob_turn_beat(turn, 'cast', { kind: 'cast', label: 'mob:same-spell:1' })
     turn = append_mob_turn_beat(turn, 'cast', { kind: 'cast', label: 'mob:same-spell:2' })
-    void mobs.run(async () => {
+    // the mob slot gates on the player's barrier, so its drained signal is the whole chain's (#769).
+    await mobs.run(async () => {
       await player_list_done
       for (const step of mob_turn_steps(turn)) await cast(step.label)()
     })
-    await new Promise((resolve) => setTimeout(resolve, 30))
 
     expect(log).toEqual([
       'player:same-spell:1:start',
@@ -327,16 +323,13 @@ describe('mob trap crossing — walk PAUSES at the trap cell, triggers, then RES
       await tick() // the flinch beat plays out
       stamp('resume')
     }
-    await new Promise((resolve) => {
-      const q = create_pace_queue({ min_ms: 0 })
-      void q.run(async () => {
-        // THE play_move loop, verbatim in shape (real split_move_at_traps).
-        for (const step of split_move_at_traps(path, trap_hits)) {
-          if (step.walk.length) await entity_move(step.walk)
-          if (step.trap) await play_trap_trigger(step.trap)
-        }
-      })
-      setTimeout(resolve, 40)
+    const q = create_pace_queue({ min_ms: 0 })
+    await q.run(async () => {
+      // THE play_move loop, verbatim in shape (real split_move_at_traps).
+      for (const step of split_move_at_traps(path, trap_hits)) {
+        if (step.walk.length) await entity_move(step.walk)
+        if (step.trap) await play_trap_trigger(step.trap)
+      }
     })
     return events
   }
