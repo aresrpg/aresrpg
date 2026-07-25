@@ -32,6 +32,7 @@ import { use_contracts_paused } from './contracts_paused_store'
 // races the mock and hits the REAL auth module, which touches `window` at import time and throws.
 const contracts_paused_modal = await import('./contracts_paused_modal')
 const contracts_paused_modal_source = readFileSync(new URL('./contracts_paused_modal.tsx', import.meta.url), 'utf8')
+const modal_frame_source = readFileSync(new URL('./modal_frame.tsx', import.meta.url), 'utf8')
 
 const render_host = () =>
   renderToStaticMarkup(
@@ -71,16 +72,23 @@ describe('the dismiss affordances are wired to on_dismiss (source-shape — no c
     expect(contracts_paused_modal_source).toContain('on_dismiss={dismiss}')
   })
 
-  test('the corner X button fires on_dismiss directly', () => {
-    expect(contracts_paused_modal_source).toContain('onClick={on_dismiss}')
-    expect(contracts_paused_modal_source).toContain('<X size={16} className="text-muted" />')
+  // The three dismiss doors (X / Escape / backdrop) were extracted VERBATIM into the shared house dialog
+  // shell (modal_frame.tsx) that this modal now re-composes; that file is where the wiring lives, and the
+  // modal proves it threads `on_dismiss` into it. One home, same three doors.
+  test('the modal hands its on_dismiss to the shared dialog shell', () => {
+    expect(contracts_paused_modal_source).toContain('<ModalFrame on_close={on_dismiss}')
   })
 
-  test('Escape fires on_dismiss', () => {
-    expect(contracts_paused_modal_source).toContain("if (e.key === 'Escape') on_dismiss()")
+  test('the corner X button fires the shell close directly', () => {
+    expect(modal_frame_source).toContain('onClick={on_close}')
+    expect(modal_frame_source).toContain('<X size={16} className="text-muted" />')
   })
 
-  test('a backdrop click (not a click on the card itself) fires on_dismiss', () => {
-    expect(contracts_paused_modal_source).toContain('if (e.target === e.currentTarget) on_dismiss()')
+  test('Escape fires the shell close', () => {
+    expect(modal_frame_source).toContain("if (event.key === 'Escape') on_close()")
+  })
+
+  test('a backdrop click (not a click on the card itself) fires the shell close', () => {
+    expect(modal_frame_source).toContain('if (event.target === event.currentTarget) on_close()')
   })
 })
