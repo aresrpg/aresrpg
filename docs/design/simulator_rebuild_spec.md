@@ -54,38 +54,38 @@ the seed rides both trace exports.
 
 Legend: GENERIC = consumed as-is, zero change. SEAM = a named, minimal change (listed §3).
 
-| # | Module (path) | Simulator uses | Verdict |
-|---|---|---|---|
-| 1 | `packages/sim/src/reduce.js` (`@aresrpg/sim/reduce`) | `reduce`, `create_fight_state`, `HAND_SIZE` — the authority | GENERIC |
-| 2 | `packages/sim/src/board_gen.js` | `board_seed_from_anchor`, `generate` — the chain board twin (mask/obstacles/holes/6+6 start cells) | SEAM S1 (export row only) |
-| 3 | `packages/sim/src/fight_ai.js` (`@aresrpg/sim/fight_ai`) | via `reduce({type:'ai_turn'})` — mob turns | GENERIC |
-| 4 | `packages/sim/src/prng.js`, `turn_seed.js` | seeded rng thread; turn-seed only for the deck-glow preview parity fields | GENERIC |
-| 5 | `packages/sim/src/spell_templates.js` + `chain_spell_corpus.js` | `normalize_chain_spell_corpus` over the published corpus rows → the sim template map | GENERIC |
-| 6 | `packages/sim/src/equipment_stats.js` | `fold_equipment_snapshot` (centered @32768 gear fold) — max-roll loadout → fight stats/ap/mp | GENERIC |
-| 7 | `packages/sim/src/timeline.js` + `recorder.js` | Capsule format + the client black box (`open_recording`/`observe_reduce_checked`/`dump_capsule`) | SEAM S1 (export rows only) |
-| 8 | `packages/fight/src/store.js` (`@aresrpg/fight/store`) | the `fight_store` singleton + its ONE `input` door (init/snapshot/receipt/intent/predicted/tick/…) | GENERIC |
-| 9 | `packages/fight/src/inputs.js`, `project.js`, `present.js`, `board_state.js`, `los.js`, `statuses.js`, `weapon.js` | fold/projections/beats/cell codec (stride-20 `encode(x,y)`)/weapon strike | GENERIC |
-| 10 | `packages/fight/src/txs.js` | `subscribe_commit_due(store, { submit })` — submit is ALREADY dependency-injected: the simulator injects its LOCAL submit | GENERIC (the load-bearing seam, already DI) |
-| 11 | `packages/fight/src/predict_cast.js` | own-cast optimistic prediction (already sim-backed) — untouched, keeps working because the store sees ordinary snapshots/receipts | GENERIC |
-| 12 | `packages/fight/src/fight_control.js` | `controlled_character_ids` / `selected_controlled_character_id` — THE multi-account seat controller (pure) | GENERIC |
-| 13 | `packages/fight/src/capsule.js`, `envelope.js`, `classify_input.js`, `v2/*` | trace_format-2 capsules + v2 replay of them | GENERIC |
-| 14 | `packages/frontend/src/world-shell/fight_trace_tee.js` | `install_fight_trace_tee` — the door tap; simulator force-arms it (`__ARES_FIGHT_TRACE_ENABLED = true` on page mount) | GENERIC |
-| 15 | `packages/frontend/src/game/screens/hud/fight_trace_export.js` + `FightReport.jsx` | the result card's trace export button — the SAME export the game ships | GENERIC |
-| 16 | `packages/engine/src/engine.js` + `src/tactical/index.js` (`@aresrpg/engine3`, `/tactical`) | `create_engine` + `create_tactical_board` — standalone-mount precedent: `packages/engine/demo/board_demo.js` | GENERIC (+ SEAM S4 capsule placeholder) |
-| 17 | `packages/frontend/src/world-shell/voxel_fight_adapter.js` + `fight-engine/{phase,overlay_intents}.js` | renderer #2 wiring: board build, entity specs, beats, cell paints, click relay | GENERIC — store-seeded (dev_synth precedent); binding note §7 (cutover lane) |
-| 18 | `packages/frontend/src/game/embed_voxel_fight_camera.js` | the locked-iso fight camera | GENERIC |
-| 19 | `packages/frontend/src/game/dev/dev_synth_fight.js` | NOT consumed — it is the PRECEDENT for store seeding (use_dungeon/context/auth seeds, decoded-Fight shape) | reference only |
-| 20 | `packages/frontend/src/game/data/spell_corpus.js` | `load_spell_corpus`/`get_spell_corpus` — the published chain spell corpus (Walrus blob, NOT a chain read) | GENERIC |
-| 21 | `packages/frontend/src/game/data/mob_catalog.js` | mob GLB resolution (Walrus blob) | GENERIC |
-| 22 | `packages/frontend/src/pages/encyclopedia/world_corpus.ts` | mob roster: names/roles/level bands/SPELLS (`CorpusMobSpell` = the real minted SpellLevels) | SEAM S2 (combat block missing) |
-| 23 | `packages/frontend/src/content/seed_manifest.ts` | living-content ids (mob/spell identity join) — build-inlined receipt, not a chain read | GENERIC |
-| 24 | `packages/sdk/src/stats.js` (`@aresrpg/sdk/stats`) | base AP 6 / MP 3, `get_max_health` (30 + 5·level + vitality), `get_total_stat`, `STATISTICS` vocabulary | GENERIC |
-| 25 | `@aresrpg/sdk/classes`, `@aresrpg/sdk/items-data`, `@aresrpg/sdk/jobs` (asset urls) | class list, the bundled item catalog with `stats: Record<key,[min,max]>` ranges (max roll = `range[1]`), icons | GENERIC |
-| 26 | `packages/frontend/src/components/{items,search_picker_modal,entity_display}` | ItemSlot paper-doll (kept-verbatim look), SearchPickerModal, stat/element color tokens | GENERIC |
-| 27 | `packages/frontend/src/game/core/draft.js` | the IndexedDB promise-wrapper PATTERN (copied shape, own DB) | pattern reference |
-| 28 | Roster loaders `packages/frontend/src/roster/{boot_roster,load_roster,store.ts}` | NOT consumed (chain-coupled by design); the simulator seeds the engine store roster directly (`context.dispatch('action/sui_data', …)` — dev_synth precedent) | correctly out of scope |
-| 29 | `packages/frontend/src/world-shell/dungeon_fight_shim.js` | NOT consumed — the PATTERN for the sim shim (thin ≤120-LoC shim, gate c verb-ban) | reference only |
-| 30 | Move sources `packages/move/engine/sources/{fight_events,mob,interleave}.move`, `foundation/sources/mob_ai.move` | the encoder's shape oracle; `scaled_hp` formula (S3) | oracle only |
+| #   | Module (path)                                                                                                      | Simulator uses                                                                                                                                                | Verdict                                                                      |
+| --- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| 1   | `packages/sim/src/reduce.js` (`@aresrpg/sim/reduce`)                                                               | `reduce`, `create_fight_state`, `HAND_SIZE` — the authority                                                                                                   | GENERIC                                                                      |
+| 2   | `packages/sim/src/board_gen.js`                                                                                    | `board_seed_from_anchor`, `generate` — the chain board twin (mask/obstacles/holes/6+6 start cells)                                                            | SEAM S1 (export row only)                                                    |
+| 3   | `packages/sim/src/fight_ai.js` (`@aresrpg/sim/fight_ai`)                                                           | via `reduce({type:'ai_turn'})` — mob turns                                                                                                                    | GENERIC                                                                      |
+| 4   | `packages/sim/src/prng.js`, `turn_seed.js`                                                                         | seeded rng thread; turn-seed only for the deck-glow preview parity fields                                                                                     | GENERIC                                                                      |
+| 5   | `packages/sim/src/spell_templates.js` + `chain_spell_corpus.js`                                                    | `normalize_chain_spell_corpus` over the published corpus rows → the sim template map                                                                          | GENERIC                                                                      |
+| 6   | `packages/sim/src/equipment_stats.js`                                                                              | `fold_equipment_snapshot` (centered @32768 gear fold) — max-roll loadout → fight stats/ap/mp                                                                  | GENERIC                                                                      |
+| 7   | `packages/sim/src/timeline.js` + `recorder.js`                                                                     | Capsule format + the client black box (`open_recording`/`observe_reduce_checked`/`dump_capsule`)                                                              | SEAM S1 (export rows only)                                                   |
+| 8   | `packages/fight/src/store.js` (`@aresrpg/fight/store`)                                                             | the `fight_store` singleton + its ONE `input` door (init/snapshot/receipt/intent/predicted/tick/…)                                                            | GENERIC                                                                      |
+| 9   | `packages/fight/src/inputs.js`, `project.js`, `present.js`, `board_state.js`, `los.js`, `statuses.js`, `weapon.js` | fold/projections/beats/cell codec (stride-20 `encode(x,y)`)/weapon strike                                                                                     | GENERIC                                                                      |
+| 10  | `packages/fight/src/txs.js`                                                                                        | `subscribe_commit_due(store, { submit })` — submit is ALREADY dependency-injected: the simulator injects its LOCAL submit                                     | GENERIC (the load-bearing seam, already DI)                                  |
+| 11  | `packages/fight/src/predict_cast.js`                                                                               | own-cast optimistic prediction (already sim-backed) — untouched, keeps working because the store sees ordinary snapshots/receipts                             | GENERIC                                                                      |
+| 12  | `packages/fight/src/fight_control.js`                                                                              | `controlled_character_ids` / `selected_controlled_character_id` — THE multi-account seat controller (pure)                                                    | GENERIC                                                                      |
+| 13  | `packages/fight/src/capsule.js`, `envelope.js`, `classify_input.js`, `v2/*`                                        | trace_format-2 capsules + v2 replay of them                                                                                                                   | GENERIC                                                                      |
+| 14  | `packages/frontend/src/world-shell/fight_trace_tee.js`                                                             | `install_fight_trace_tee` — the door tap; simulator force-arms it (`__ARES_FIGHT_TRACE_ENABLED = true` on page mount)                                         | GENERIC                                                                      |
+| 15  | `packages/frontend/src/game/screens/hud/fight_trace_export.js` + `FightReport.jsx`                                 | the result card's trace export button — the SAME export the game ships                                                                                        | GENERIC                                                                      |
+| 16  | `packages/engine/src/engine.js` + `src/tactical/index.js` (`@aresrpg/engine3`, `/tactical`)                        | `create_engine` + `create_tactical_board` — standalone-mount precedent: `packages/engine/demo/board_demo.js`                                                  | GENERIC (+ SEAM S4 capsule placeholder)                                      |
+| 17  | `packages/frontend/src/world-shell/voxel_fight_adapter.js` + `fight-engine/{phase,overlay_intents}.js`             | renderer #2 wiring: board build, entity specs, beats, cell paints, click relay                                                                                | GENERIC — store-seeded (dev_synth precedent); binding note §7 (cutover lane) |
+| 18  | `packages/frontend/src/game/embed_voxel_fight_camera.js`                                                           | the locked-iso fight camera                                                                                                                                   | GENERIC                                                                      |
+| 19  | `packages/frontend/src/game/dev/dev_synth_fight.js`                                                                | NOT consumed — it is the PRECEDENT for store seeding (use_dungeon/context/auth seeds, decoded-Fight shape)                                                    | reference only                                                               |
+| 20  | `packages/frontend/src/game/data/spell_corpus.js`                                                                  | `load_spell_corpus`/`get_spell_corpus` — the published chain spell corpus (Walrus blob, NOT a chain read)                                                     | GENERIC                                                                      |
+| 21  | `packages/frontend/src/game/data/mob_catalog.js`                                                                   | mob GLB resolution (Walrus blob)                                                                                                                              | GENERIC                                                                      |
+| 22  | `packages/frontend/src/pages/encyclopedia/world_corpus.ts`                                                         | mob roster: names/roles/level bands/SPELLS (`CorpusMobSpell` = the real minted SpellLevels)                                                                   | SEAM S2 (combat block missing)                                               |
+| 23  | `packages/frontend/src/content/seed_manifest.ts`                                                                   | living-content ids (mob/spell identity join) — build-inlined receipt, not a chain read                                                                        | GENERIC                                                                      |
+| 24  | `packages/sdk/src/stats.js` (`@aresrpg/sdk/stats`)                                                                 | base AP 6 / MP 3, `get_max_health` (30 + 5·level + vitality), `get_total_stat`, `STATISTICS` vocabulary                                                       | GENERIC                                                                      |
+| 25  | `@aresrpg/sdk/classes`, `@aresrpg/sdk/items-data`, `@aresrpg/sdk/jobs` (asset urls)                                | class list, the bundled item catalog with `stats: Record<key,[min,max]>` ranges (max roll = `range[1]`), icons                                                | GENERIC                                                                      |
+| 26  | `packages/frontend/src/components/{items,search_picker_modal,entity_display}`                                      | ItemSlot paper-doll (kept-verbatim look), SearchPickerModal, stat/element color tokens                                                                        | GENERIC                                                                      |
+| 27  | `packages/frontend/src/game/core/draft.js`                                                                         | the IndexedDB promise-wrapper PATTERN (copied shape, own DB)                                                                                                  | pattern reference                                                            |
+| 28  | Roster loaders `packages/frontend/src/roster/{boot_roster,load_roster,store.ts}`                                   | NOT consumed (chain-coupled by design); the simulator seeds the engine store roster directly (`context.dispatch('action/sui_data', …)` — dev_synth precedent) | correctly out of scope                                                       |
+| 29  | `packages/frontend/src/world-shell/dungeon_fight_shim.js`                                                          | NOT consumed — the PATTERN for the sim shim (thin ≤120-LoC shim, gate c verb-ban)                                                                             | reference only                                                               |
+| 30  | Move sources `packages/move/engine/sources/{fight_events,mob,interleave}.move`, `foundation/sources/mob_ai.move`   | the encoder's shape oracle; `scaled_hp` formula (S3)                                                                                                          | oracle only                                                                  |
 
 Verdict count: 24 modules truly generic, 4 named seams (S1–S4 below), 2 reference-only. No
 parallel re-implementation anywhere.
@@ -104,7 +104,7 @@ parallel re-implementation anywhere.
   Seam: (a) client-side, extend the `CorpusMob` interface with OPTIONAL
   `base_hp/ap/mp/stats` fields and have the simulator's mob builder consume them; (b) absent
   fields DEGRADE LOUDLY per the house content pattern: the mob row renders with a `COMBAT BLOCK
-  UNPUBLISHED` badge and falls back to `{base_hp: 50·max_level, ap: 6, mp: 3, stats: zero}` —
+UNPUBLISHED` badge and falls back to `{base_hp: 50·max_level, ap: 6, mp: 3, stats: zero}` —
   flagged in the UI, never silent; (c) file ONE issue titled "world_corpus publish leg: include
   the MobSpec combat block" for the seed ceremony (content boundary: the blob is authored in the
   private repo — an issue, not a PR).
@@ -132,6 +132,7 @@ Home: `packages/fight` (sibling of `predict_cast.js` — it already composes `@a
 the chain action vocabulary; node-clean, fully bun-testable). Pure core + one thin driver.
 
 ### 4.1 State
+
 ```
 { seed, sim_state,            // @aresrpg/sim FightState (rng threaded inside)
   ctx,                        // { spell_templates: Map, arena }  (reduce's ReduceContext)
@@ -141,6 +142,7 @@ the chain action vocabulary; node-clean, fully bun-testable). Pure core + one th
 ```
 
 ### 4.2 Board (owner: "generate a random fight board")
+
 `board_seed_from_anchor(WORLD_SEED, anchor_x, anchor_z)` with a seed-derived random anchor, then
 `board_gen.generate(board_seed, 0)` → `{width, height, shape_mask, obstacles, holes,
 start_cells_a, start_cells_b}` — the EXACT chain derivation (`board.move` twin, golden-pinned).
@@ -149,6 +151,7 @@ from the start cells (decode stride-20 → `{x,y}` via `@aresrpg/fight/los` `dec
 new seed. The board renders over real streamed terrain at the anchor (§7).
 
 ### 4.3 Snapshot bootstrap
+
 `snapshot_from_sim(sim_state, board, roster, mobs)` → the decoded-Fight shape the store's
 snapshot door adopts (`board_state_from_fight` input). Shape oracle: the two existing
 hand-builders — `world-shell/fight_board_simdrive.test.js:17-60` and
@@ -164,6 +167,7 @@ Dispatch: `fight_store.getState().input({type:'init', fight_id, my_key:null, ctx
 `ctx.offset = {x:0, z:0}` identity codec (dev_synth precedent).
 
 ### 4.4 The event encoder — sim events → chain rows (THE mock the owner named)
+
 `encode_sim_step(pre_state, post_state, sim_events) → [{type: '0xsim::fight_events::<Kind>',
 parsedJson}]`, consumed by the store as `input({type:'receipt', version: ++v,
 receipt:{events}})` — the same rows `normalize_events` decodes via the SDK's
@@ -171,23 +175,23 @@ receipt:{events}})` — the same rows `normalize_events` decodes via the SDK's
 `fight_events.move` + the `apply_action` arms (`inputs.js:272-473`). Mapping (sim event names
 from `packages/sim/src/reduce.js`):
 
-| sim event | chain rows emitted |
-|---|---|
-| `fight_placed` | `Placed{character, cell}` (players) — mobs are pre-placed in the snapshot |
-| `fight_ready` | `Ready{character}` |
-| `fight_started` | nothing (the start is visible as the first `TurnStarted`) |
-| `fight_turn_start` | `TurnStarted{is_mob, idx, deadline_ms}` — deadline stamped `now + TURN_MS` (real-time UX like the chain's `clock + turn_ms`; determinism lives in the sim commands, not the clock) |
-| `fight_turn_end` | `TurnEnded{is_mob, idx}` |
-| `fight_turn_skipped` | `TurnEnded{…}` for the skipped seat (stun/dead skip) |
-| `fight_moved` (player) | `Moved{character, to_cell}` (path end; the renderer re-walks the path — production behavior) |
-| `fight_moved` (mob) | `MobMoved{idx, to_cell}` |
-| `fight_moved.tackled` | `Tackled{runner_is_mob, runner_idx, ap_lost, mp_lost}` (deltas from pre→post pools) |
-| `fight_cast` | `Cast{caster_is_mob, caster_idx, target_cell}` + per effect, in order: `Hit{victim_is_mob, victim_idx, amount, remaining_hp}` (remaining_hp read from POST-state — authoritative, never re-derived), `Displaced{target_is_mob, target_idx, to_cell}`, `Drain`/`Granted{target…, point_kind, removed/granted}`, `StatusAdded{target…, status}` for timed effects, `CriticalFailure{caster…}` on fumble |
-| `fight_trap_triggered` | its `effects` encode exactly like a cast's (Hit/Displaced/…) |
-| `fight_turn_effects` (DoT/glyph ticks) | `Hit` rows per damage tick / `Granted` per heal-shaped tick |
-| `ap_reserve_used` | `Granted{point_kind:0, granted}` |
-| `hand_update` | NOT a chain row — forwarded as the store's own `input({type:'hand_update', hand})` (name_keys) |
-| `fight_ended` | `Victory{}` (winner 0) / `Defeat{}` (winner 1) / DRAW (winner 2) → `Defeat` + a page-level DRAW banner |
+| sim event                              | chain rows emitted                                                                                                                                                                                                                                                                                                                                                                                    |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fight_placed`                         | `Placed{character, cell}` (players) — mobs are pre-placed in the snapshot                                                                                                                                                                                                                                                                                                                             |
+| `fight_ready`                          | `Ready{character}`                                                                                                                                                                                                                                                                                                                                                                                    |
+| `fight_started`                        | nothing (the start is visible as the first `TurnStarted`)                                                                                                                                                                                                                                                                                                                                             |
+| `fight_turn_start`                     | `TurnStarted{is_mob, idx, deadline_ms}` — deadline stamped `now + TURN_MS` (real-time UX like the chain's `clock + turn_ms`; determinism lives in the sim commands, not the clock)                                                                                                                                                                                                                    |
+| `fight_turn_end`                       | `TurnEnded{is_mob, idx}`                                                                                                                                                                                                                                                                                                                                                                              |
+| `fight_turn_skipped`                   | `TurnEnded{…}` for the skipped seat (stun/dead skip)                                                                                                                                                                                                                                                                                                                                                  |
+| `fight_moved` (player)                 | `Moved{character, to_cell}` (path end; the renderer re-walks the path — production behavior)                                                                                                                                                                                                                                                                                                          |
+| `fight_moved` (mob)                    | `MobMoved{idx, to_cell}`                                                                                                                                                                                                                                                                                                                                                                              |
+| `fight_moved.tackled`                  | `Tackled{runner_is_mob, runner_idx, ap_lost, mp_lost}` (deltas from pre→post pools)                                                                                                                                                                                                                                                                                                                   |
+| `fight_cast`                           | `Cast{caster_is_mob, caster_idx, target_cell}` + per effect, in order: `Hit{victim_is_mob, victim_idx, amount, remaining_hp}` (remaining_hp read from POST-state — authoritative, never re-derived), `Displaced{target_is_mob, target_idx, to_cell}`, `Drain`/`Granted{target…, point_kind, removed/granted}`, `StatusAdded{target…, status}` for timed effects, `CriticalFailure{caster…}` on fumble |
+| `fight_trap_triggered`                 | its `effects` encode exactly like a cast's (Hit/Displaced/…)                                                                                                                                                                                                                                                                                                                                          |
+| `fight_turn_effects` (DoT/glyph ticks) | `Hit` rows per damage tick / `Granted` per heal-shaped tick                                                                                                                                                                                                                                                                                                                                           |
+| `ap_reserve_used`                      | `Granted{point_kind:0, granted}`                                                                                                                                                                                                                                                                                                                                                                      |
+| `hand_update`                          | NOT a chain row — forwarded as the store's own `input({type:'hand_update', hand})` (name_keys)                                                                                                                                                                                                                                                                                                        |
+| `fight_ended`                          | `Victory{}` (winner 0) / `Defeat{}` (winner 1) / DRAW (winner 2) → `Defeat` + a page-level DRAW banner                                                                                                                                                                                                                                                                                                |
 
 Effect-record field shapes: read `packages/sim/src/fight_spells.js` (`process_spell_cast`
 effects) and `fight_actions.js` at implementation time — the encoder switches on
@@ -201,8 +205,10 @@ boundary. This is the "one observable, two folders" twin contract (`packages/fig
 fold.js` header) applied to the mock — the mechanical proof the mock cannot drift.
 
 ### 4.5 The submit door (player turns) — zero new seams
+
 Production already injects submit: `subscribe_commit_due(store, { submit })`
 (`packages/fight/src/txs.js:31`). The simulator's submit:
+
 1. read `staged` intents → sim commands (`move` with the drafted path, `cast{spell_id, target}`
    decoded to `{x,y}`, `end_turn`) — the staged shapes are the same the PTB composer reads
    (`turn_commit.js compose_turn_actions`);
@@ -210,10 +216,11 @@ Production already injects submit: `subscribe_commit_due(store, { submit })`
    (`observe_reduce_checked` — physics tripwires live);
 3. encode all resulting events → ONE receipt batch → `input({type:'receipt', version:++v, …})`;
 4. return `{ok:true}`. Errors → `{ok:false, error}` (the core rolls the prediction back itself).
-No PTB, no gas, no digest — and the production optimistic-prediction/reconcile machinery
-(predict_cast → 'predicted' → receipt claim/retire) runs UNCHANGED against these receipts.
+   No PTB, no gas, no digest — and the production optimistic-prediction/reconcile machinery
+   (predict_cast → 'predicted' → receipt claim/retire) runs UNCHANGED against these receipts.
 
 ### 4.6 Mob turns
+
 On any emitted `TurnStarted{is_mob:true}` the driver (after the presentation wave for the prior
 batch, next macrotask) folds `reduce(sim_state, {type:'ai_turn', entity_id}, ctx)` → one receipt
 batch. The AI is `@aresrpg/sim/fight_ai` — the deterministic on-chain-policy skeleton; its
@@ -221,6 +228,7 @@ batch. The AI is `@aresrpg/sim/fight_ai` — the deterministic on-chain-policy s
 Consecutive mob turns chain until a player seat's TurnStarted lands.
 
 ### 4.7 STOP / restart
+
 STOP mid-fight = `reduce({type:'abandon'})` per living roster seat → terminal rows → the result
 card; or (setup shortcut) `input({type:'init', fight_id:null})` teardown + page reducer back to
 `setup`. START always builds a FRESH `fight_id` (`sim:<seed>:<n>`).
@@ -230,6 +238,7 @@ card; or (setup shortcut) `input({type:'init', fight_id:null})` teardown + page 
 ## 5. Content & builders (all chain-free)
 
 New module `packages/frontend/src/simulator/content.js` (pure; unit-tested):
+
 - **Classes**: `@aresrpg/sdk/classes` (12). Class GLBs via the character-create path
   (`game/screens/character-glb.js` / `character-pedestal.js` precedent); missing model ⇒ S4
   capsule.
@@ -239,7 +248,7 @@ New module `packages/frontend/src/simulator/content.js` (pure; unit-tested):
   budget = `(level − 1)` (chain law: `character_link.move:505-510`), stat points =
   `(level − 1) × 5` (`character_link.move:538-544`). The editor enforces both budgets.
 - **Items (max roll)**: `@aresrpg/sdk/items-data` (bundled catalog; `stats:
-  Record<key,[min,max]>`). MAX ROLL = `range[1]` per stat — derived, never hardcoded. Fold to
+Record<key,[min,max]>`). MAX ROLL = `range[1]` per stat — derived, never hardcoded. Fold to
   the centered wire (`32768 + value` per `ITEM_STAT_CATALOG_ORDER`) and through
   `fold_equipment_snapshot` (`@aresrpg/sim/equipment_stats`) → `{stats, ap_max, mp_max}`.
   Slots = the paper-doll set the old page proved (6 relics + HEAD/AMULET/HANDS/CHEST/WEAPON/
@@ -266,6 +275,7 @@ auto seat-focus), the core re-resolves `my_key` from `ctx.my_entity_id` on every
 (`store.js` 'ctx' arm), and team joins are DI-generic (`owned_team_actions_core.js`). Only the
 roster LOADERS are wallet/chain-coupled — and those are correctly not reused. The simulator's
 "identity provider" is therefore just data:
+
 - `LOCAL_ADDRESS = '0xsim…'` (one constant); every roster character's `owner` = it ⇒
   `controlled_character_ids` returns all seats ⇒ the production seat-focus switching drives the
   whole roster — the owner's "multi account simulation" with zero new mechanism.
@@ -273,13 +283,14 @@ roster LOADERS are wallet/chain-coupled — and those are correctly not reused. 
   MULTICHAR path, `store.js` 'ctx' arm) + the same auto-focus `fight_control` selector the live
   board uses.
 - Engine-store seed for HUD surfaces: `context.dispatch('action/sui_data', {characters,
-  loaded:true, …})` + `use_dungeon.setState({fight_id, phase:'playing', mob_names/levels/
-  elements, in_session:false, …})` — the dev_synth_fight proven seed set (`dev_synth_fight.js:
-  168-205`).
+loaded:true, …})` + `use_dungeon.setState({fight_id, phase:'playing', mob_names/levels/
+elements, in_session:false, …})` — the dev_synth_fight proven seed set (`dev_synth_fight.js:
+168-205`).
 
 **Page reducer** (FP constitution: ONE reducer per stateful domain):
 `packages/frontend/src/simulator/reducer.ts` — pure
 `reduce_simulator(state, input) → state` over:
+
 ```
 { phase: 'setup' | 'fight',
   seed: number,
@@ -291,6 +302,7 @@ roster LOADERS are wallet/chain-coupled — and those are correctly not reused. 
   placements: { cell:number → character_id },            // blue start cells
   fight: { fight_id, version } | null }
 ```
+
 Vanilla zustand store, one `input` door; IndexedDB is a PERSISTENCE EDGE: a store subscriber
 flushes (debounced) to IDB, boot hydration re-enters through `input({type:'hydrated', …})` —
 no async write into the store ever (deep-tier law).
@@ -305,6 +317,7 @@ seed/board/mob_picks/placements/focus), `traces` (last 10 exports, key = `<fight
 
 `packages/frontend/src/simulator/mount.js` — the page's imperative composition (the
 `board_demo.js` standalone precedent, upgraded to production wiring):
+
 1. `create_engine` (`@aresrpg/engine3`) into the page canvas, streaming the REAL terrain
    (`WORLD_SEED`) around the board anchor — the board sits on genuine world ground exactly as a
    live world fight does. Quality prefs via the existing `quality_pref.js` read.
@@ -335,10 +348,10 @@ game world tab).
 
 ## 8. Trace export — byte-compatible, two formats, both replayable in-repo
 
-| Format | Home (the format's constitution) | Produced by | Replayed by |
-|---|---|---|---|
-| trace_format-2 envelope capsule | `packages/fight/src/capsule.js` (`capsule_export`) | the door tee (`fight_trace_tee.js`) → the SAME FightReport export button the game ships (`fight_trace_export.js`) | `packages/fight/src/v2/replay.js` (`replay_trace`) |
-| sim Capsule (arena + templates_raw + initial + commands) | `packages/sim/src/timeline.js` | `sim_chain`'s recorder (`recorder.js dump_capsule`), meta carries `{seed, fight_seed}` | `timeline.js replay_capsule` — the replay-gate door; a captured fight IS a fixture candidate for `packages/sim/test/fixtures/replay/` |
+| Format                                                   | Home (the format's constitution)                   | Produced by                                                                                                       | Replayed by                                                                                                                           |
+| -------------------------------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| trace_format-2 envelope capsule                          | `packages/fight/src/capsule.js` (`capsule_export`) | the door tee (`fight_trace_tee.js`) → the SAME FightReport export button the game ships (`fight_trace_export.js`) | `packages/fight/src/v2/replay.js` (`replay_trace`)                                                                                    |
+| sim Capsule (arena + templates_raw + initial + commands) | `packages/sim/src/timeline.js`                     | `sim_chain`'s recorder (`recorder.js dump_capsule`), meta carries `{seed, fight_seed}`                            | `timeline.js replay_capsule` — the replay-gate door; a captured fight IS a fixture candidate for `packages/sim/test/fixtures/replay/` |
 
 The TRACE button (top bar + result card) downloads both as one JSON
 (`aresrpg-simfight-<seed>-<fight_id>.json` `{sim_capsule, envelope_capsule}`), and appends to
@@ -377,6 +390,7 @@ keyboard-friendly, everything visible at once on desktop; the page is a TOOL, no
 ```
 
 Flows (each maps 1:1 to an owner requirement):
+
 1. **Roster**: `+` on an empty slot → class picker (12 classes, capsule/GLB preview via the
    pedestal component) → a named character appears; click a card → INSPECTOR edits it; ✕ with
    confirm deletes. All edits hit the page reducer and persist (reload-proof).
@@ -396,8 +410,8 @@ Flows (each maps 1:1 to an owner requirement):
    card.
 8. **Result card** = the production FightReport (trace export button included) + `REMATCH`
    (same seed) / `NEW SEED` actions.
-i18n: every new string in all six locales (`packages/frontend/src/i18n/locales/`), same commit
-as the surface introducing it.
+   i18n: every new string in all six locales (`packages/frontend/src/i18n/locales/`), same commit
+   as the surface introducing it.
 
 ---
 
@@ -420,6 +434,7 @@ sim capsule's command list, never the clock.
 ---
 
 ## 11. LANE PLAN (Opus workers, ≤~90 min each, file-disjoint; every slice ends green on
+
 `bun run test && bun run lint && bun run typecheck` at repo root — the CI-exact invocations)
 
 **L0 — page shell + reducer + persistence (VISIBLE FIRST).**
