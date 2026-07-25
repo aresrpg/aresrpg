@@ -28,10 +28,7 @@ import { push_event_toast } from '../../core/toast.js'
 import { min_turn_left } from '@aresrpg/fight/project'
 import { auto_commit_fire_at } from '@aresrpg/fight/draft_budget'
 import { ConfirmDialog } from './world/ConfirmDialog.jsx'
-import {
-  copy_fight_bug_report,
-  FIGHT_BUG_REPORT_ISSUES_URL,
-} from './fight_bug_report.js'
+import { copy_fight_bug_report, fight_bug_report_issue_url } from './fight_bug_report.js'
 
 // DEFAULT handlers = the live on-chain path (the ONLY fight backend now the WS server is gone). The dungeon
 // board INJECTS a richer End Turn (draft-flush) + Ready (place_at the picked cell) as props that ALWAYS win
@@ -197,20 +194,22 @@ export function FightControls({
     on_abandon()
   }
 
-  // Issue #166 — the only effect edge for the compact report: snapshot the fight core at PRESS, copy locally,
-  // then name the repository issue destination. No upload/fetch/open occurs; clipboard rejection is surfaced.
+  // Issue #166 / #885 — the only effect edge for the compact report: snapshot the fight core at PRESS, open
+  // GitHub's new-issue page ALREADY PREFILLED (title + body skeleton) so Create is the last remaining click,
+  // and copy the trace locally for the one paste the URL cannot carry. The window.open is SYNCHRONOUS inside
+  // the click: deferring it behind the clipboard promise is what popup blockers kill. Clipboard rejection is
+  // still surfaced — the issue page stands on its own, the reporter just has no trace to paste.
   const on_bug_report = () => {
+    const state = fight_store.getState()
+    if (typeof window !== 'undefined')
+      window.open(fight_bug_report_issue_url(state), '_blank', 'noopener,noreferrer')
     const clipboard = typeof navigator !== 'undefined' ? navigator.clipboard : null
     if (!clipboard?.writeText) {
       push_event_toast({ state: 'error', title: t('fight.bug_report_copy_failed') })
       return
     }
-    void copy_fight_bug_report(fight_store.getState(), (blob) => clipboard.writeText(blob)).then(
-      () =>
-        push_event_toast({
-          state: 'success',
-          title: t('fight.bug_report_copied', { url: FIGHT_BUG_REPORT_ISSUES_URL }),
-        }),
+    void copy_fight_bug_report(state, (blob) => clipboard.writeText(blob)).then(
+      () => push_event_toast({ state: 'success', title: t('fight.bug_report_copied') }),
       () => push_event_toast({ state: 'error', title: t('fight.bug_report_copy_failed') })
     )
   }

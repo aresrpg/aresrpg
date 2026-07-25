@@ -166,6 +166,11 @@
      (abort_copy.js humanize_tx_error) — inherited onto the title/message spans below so it renders as an
      actual line break instead of collapsing to a space (default `white-space: normal`). */
   white-space: pre-wrap;
+  /* #885: a toast wraps, it never truncates. `pre-wrap` alone only breaks at whitespace, so one long
+     unbreakable token (a URL, an object id) overflowed the 260px card and was CLIPPED mid-string by the
+     stack's own `overflow: hidden` — the reader lost the tail with no ellipsis to warn them. Breaking
+     inside the token keeps every character on screen; the card just grows a line. */
+  overflow-wrap: anywhere;
 }
 .gw-toast__dot {
   width: 5px;

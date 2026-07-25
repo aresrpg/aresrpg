@@ -84,8 +84,8 @@
     "predicted_kill": "KILLS THE MOB",
     "courtesy_dropped": "Couldn't show a teammate's live preview",
     "bug_report": "Copy bug report",
-    "bug_report_copied": "Fight data copied. Paste it into a new issue at {{url}}.",
-    "bug_report_copy_failed": "Couldn't copy the fight data."
+    "bug_report_copied": "Fight data copied — paste it into the issue we just opened.",
+    "bug_report_copy_failed": "Couldn't copy the fight data — describe the bug in the issue we opened."
   },
   "nav": {
     "world": "World",

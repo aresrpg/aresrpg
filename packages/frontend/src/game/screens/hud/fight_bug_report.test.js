@@ -8,8 +8,10 @@ import { describe, expect, test } from 'bun:test'
 
 import {
   FIGHT_BUG_REPORT_EVENT_LIMIT,
+  FIGHT_BUG_REPORT_ISSUES_URL,
   capture_fight_bug_report,
   copy_fight_bug_report,
+  fight_bug_report_issue_url,
 } from './fight_bug_report.js'
 
 const event = (event_idx) => ({
@@ -68,5 +70,42 @@ describe('fight bug report capture', () => {
       event_count: 1,
       events: [{ chain_value: '9' }],
     })
+  })
+})
+
+// Issue #885 — the flow now opens GitHub's new-issue page ALREADY prefilled so Create is the only remaining
+// click, and the trace stays on the clipboard (it does not fit a query string). These pin the URL contract:
+// the destination, the identity of the fight, and the paste marker the body must carry.
+describe('the prefilled issue destination', () => {
+  const url_of = (state) => new URL(fight_bug_report_issue_url(state, '1.13.0'))
+
+  test('RED-FIRST: the button lands on the repository new-issue form, prefilled', () => {
+    const url = url_of({ fight_id: '0xfeedfacecafebabe0000000000000000deadbeef', applied_version: 47 })
+
+    expect(url.origin + url.pathname).toBe(`${FIGHT_BUG_REPORT_ISSUES_URL}/new`)
+    expect(url.searchParams.get('title')).toContain('0xfeedfa…beef')
+    const body = url.searchParams.get('body') ?? ''
+    expect(body).toContain('already on your clipboard')
+    expect(body).toContain('0xfeedfacecafebabe0000000000000000deadbeef')
+    expect(body).toContain('state version 47')
+    expect(body).toContain('client 1.13.0')
+  })
+
+  test('the URL stays inside the browser address ceiling — the TRACE never rides the query string', () => {
+    const state = {
+      fight_id: '0xfight',
+      applied_version: 51,
+      log: Array.from({ length: 500 }, (_unused, i) => ({ kind: 'Hit', event_idx: i, remaining_hp: i })),
+    }
+
+    expect(fight_bug_report_issue_url(state, '1.13.0').length).toBeLessThan(2000)
+    expect(fight_bug_report_issue_url(state, '1.13.0')).not.toContain('remaining_hp')
+  })
+
+  test('a fight with no id still yields a usable form', () => {
+    const url = url_of({})
+
+    expect(url.searchParams.get('title')).toContain('unknown')
+    expect(url.searchParams.get('body')).toContain('unknown')
   })
 })

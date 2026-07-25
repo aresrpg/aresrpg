@@ -84,8 +84,8 @@
     "predicted_kill": "モンスターを倒す",
     "courtesy_dropped": "仲間のライブプレビューを表示できませんでした",
     "bug_report": "バグ報告をコピー",
-    "bug_report_copied": "戦闘データをコピーしました。{{url}} の新しい Issue に貼り付けてください。",
-    "bug_report_copy_failed": "戦闘データをコピーできませんでした。"
+    "bug_report_copied": "戦闘データをコピーしました。今開いた Issue に貼り付けてください。",
+    "bug_report_copy_failed": "戦闘データをコピーできませんでした。開いた Issue にバグの内容を書いてください。"
   },
   "nav": {
     "world": "ワールド",

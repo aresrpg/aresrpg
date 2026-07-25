@@ -84,8 +84,8 @@
     "predicted_kill": "MATA AL MONSTRUO",
     "courtesy_dropped": "No se pudo mostrar la vista previa de un compañero",
     "bug_report": "Copiar informe de error",
-    "bug_report_copied": "Datos del combate copiados. Pégalos en una nueva incidencia en {{url}}.",
-    "bug_report_copy_failed": "No se pudieron copiar los datos del combate."
+    "bug_report_copied": "Datos del combate copiados: pégalos en la incidencia que acabamos de abrir.",
+    "bug_report_copy_failed": "No se pudieron copiar los datos del combate: describe el error en la incidencia abierta."
   },
   "nav": {
     "world": "Mundo",

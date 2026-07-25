@@ -84,8 +84,8 @@
     "predicted_kill": "TUE LE MONSTRE",
     "courtesy_dropped": "Impossible d'afficher l'aperçu en direct d'un équipier",
     "bug_report": "Copier le rapport de bug",
-    "bug_report_copied": "Données du combat copiées. Collez-les dans un nouveau ticket sur {{url}}.",
-    "bug_report_copy_failed": "Impossible de copier les données du combat."
+    "bug_report_copied": "Données du combat copiées — collez-les dans le ticket qui vient de s'ouvrir.",
+    "bug_report_copy_failed": "Impossible de copier les données du combat — décrivez le bug dans le ticket ouvert."
   },
   "nav": {
     "world": "Monde",
