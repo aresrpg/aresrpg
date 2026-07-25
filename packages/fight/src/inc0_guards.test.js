@@ -254,9 +254,12 @@ describe('INC-0 · composite prediction (rider #1 — a whole cast folds atomica
     })
     store.getState().input(cast_batch(), T0 + 1_100)
     unsub()
-    // exactly ONE set(): a subscriber can never observe the Cast without its Hit (register #22 dissolved)
-    expect(notifications).toBe(1)
-    expect(seen[0]).toEqual({ ap: 7, mob_hp: 6 }) // both effects already present in that single update
+    // THE LAW: a subscriber can never observe the Cast without its Hit (register #22 dissolved) — EVERY update
+    // this message produces already carries the whole composite. The legacy fold commits it in exactly one set();
+    // box 4 (issue #522) adds the headless core's own fold of the same message as a second, later update, and the
+    // guard is that neither one can ever show a partial cast.
+    expect(seen).toEqual(seen.map(() => ({ ap: 7, mob_hp: 6 })))
+    expect(notifications).toBe(2) // the legacy commit, then the core's fold of the same message
   })
 
   test('a reverted composite cast rolls back atomically by intent_id', () => {
