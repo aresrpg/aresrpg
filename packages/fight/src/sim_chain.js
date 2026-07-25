@@ -25,6 +25,7 @@ import { rng_int, rng_seed } from '@aresrpg/sim/prng'
 import { board_seed_from_anchor, generate } from '@aresrpg/sim/board_gen'
 import { create_fight_state, reduce } from '@aresrpg/sim/reduce'
 import { create_recorder, dump_capsule, observe_reduce_checked, open_recording } from '@aresrpg/sim/recorder'
+import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
 
 import { decode, encode } from './los.js'
 import { DEFAULT_TURN_MS, encode_sim_step, side_of } from './sim_chain_events.js'
@@ -174,8 +175,14 @@ export const snapshot_from_sim = (chain, { now_ms = 0, turn_ms = DEFAULT_TURN_MS
  *
  * `team0` / `team1` are sim `FightEntity` rows whose `cell` is the seat's chosen start cell.
  *
+ * TEMPLATES ARE RAW, exactly as the real chain holds them: `templates_raw` are authored `SpellTemplate` rows
+ * and the sim's `normalize_spell_templates` is the ONE ingress that turns them into the reducer's map — the
+ * same door production runs. That is also what makes the capsule replayable: `replay_capsule` re-normalizes
+ * `templates_raw`, and the normalizer is NOT idempotent (its own output re-reads as `UNSUPPORTED`), so a
+ * recorder header holding normalized rows would replay every spell inert. Raw in, raw recorded, one home.
+ *
  * @param {{ seed: number, fight_id: string, team0: object[], team1: object[],
- *   spell_templates: Map<string, object>, anchor?: { anchor_x?: number, anchor_z?: number },
+ *   templates_raw?: object[], anchor?: { anchor_x?: number, anchor_z?: number },
  *   group_template?: string|null, capacity?: number }} params
  */
 export const create_sim_chain = ({
@@ -183,14 +190,14 @@ export const create_sim_chain = ({
   fight_id,
   team0,
   team1,
-  spell_templates,
+  templates_raw = [],
   anchor = {},
   group_template = null,
   capacity,
 }) => {
   const { board, anchor_x, anchor_z } = derive_board(seed, anchor)
   const arena = arena_from_board(board)
-  const ctx = { spell_templates, arena }
+  const ctx = { spell_templates: normalize_spell_templates(templates_raw), arena }
   const initial = create_fight_state({
     fight_id,
     arena_seed: seed >>> 0,
@@ -216,7 +223,7 @@ export const create_sim_chain = ({
     group_template,
     sim_state: initial,
     version: 1,
-    recorder: open_recorder({ fight_id, arena, spell_templates, initial, capacity }),
+    recorder: open_recorder({ fight_id, arena, templates_raw, initial, capacity }),
     violations: [],
   }
   return commands.reduce((chain, command) => fold_command(chain, command).chain, opened)
@@ -224,7 +231,7 @@ export const create_sim_chain = ({
 
 /** The recorder ring, opened with the capsule HEADER (arena + raw templates + initial teams) — the exact
  *  `timeline.js Capsule` field set, so a dumped simulator fight replays through the authored-golden door. */
-const open_recorder = ({ fight_id, arena, spell_templates, initial, capacity }) =>
+const open_recorder = ({ fight_id, arena, templates_raw, initial, capacity }) =>
   open_recording(create_recorder(capacity), {
     fight_id,
     arena: {
@@ -234,7 +241,7 @@ const open_recorder = ({ fight_id, arena, spell_templates, initial, capacity }) 
       spawns_a: arena.spawns_a,
       spawns_b: arena.spawns_b,
     },
-    templates_raw: [...spell_templates.values()],
+    templates_raw,
     initial: { fight_id, arena_seed: initial.arena_seed, team0: initial.team0, team1: initial.team1 },
     meta: { class: 'simulator' },
   })

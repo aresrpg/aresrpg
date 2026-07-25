@@ -220,14 +220,17 @@ export const create_fight_shim = ({
    * through the reducer door (so the capsule's command list is complete) and hands back a started chain; the
    * snapshot it builds is the bootstrap base the core's door adopts at version 1.
    *
-   * @param {{ seed:number, fight_id:string, team0:any[], team1:any[], spell_templates:Map<string,any>,
+   * `templates_raw` are the AUTHORED corpus rows, not a normalized map: the chain normalizes them through the
+   * sim's own door and records them verbatim, which is what makes its capsule replay to the same terminal.
+   *
+   * @param {{ seed:number, fight_id:string, team0:any[], team1:any[], templates_raw:any[],
    *   roster:any[], mobs:any[], focus_id?:string|null, anchor?:object }} params
    */
-  const start = ({ seed, fight_id, team0, team1, spell_templates, roster, mobs, focus_id = null, anchor = {} }) => {
+  const start = ({ seed, fight_id, team0, team1, templates_raw, roster, mobs, focus_id = null, anchor = {} }) => {
     if (!team0?.length) return { ok: false, reason: 'empty_roster' }
     if (!team1?.length) return { ok: false, reason: 'no_mobs' }
     arm_trace_tee(store)
-    const chain = create_sim_chain({ seed, fight_id, team0, team1, spell_templates, anchor })
+    const chain = create_sim_chain({ seed, fight_id, team0, team1, templates_raw, anchor })
     live = { chain, fight_id, seed }
     seed_stores({ fight_id, roster, mobs, width: chain.board.width, height: chain.board.height })
     store.getState().input({

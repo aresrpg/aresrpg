@@ -23,7 +23,7 @@ import { create_fight_store } from '@aresrpg/fight/store'
 import { decode } from '@aresrpg/fight/los'
 import { committed_state } from '@aresrpg/fight/store'
 import { normalize_spell_templates, MOB_ATTACK_ID } from '@aresrpg/sim/spell_templates'
-import { replay_capsule } from '@aresrpg/sim/timeline'
+import { digest, replay_capsule } from '@aresrpg/sim/timeline'
 import {
   abandon_fight,
   capsule_of,
@@ -81,18 +81,22 @@ const setup_of = () => {
  */
 const build_fight = (seed) => {
   const { roster, mobs } = setup_of()
-  const templates = normalize_spell_templates([])
+  // The chain takes RAW template rows and normalizes them itself. Neither the class corpus nor the picked mobs
+  // carry authored spells here, so the raw set is empty — every fighter casts `mob_attack`, which the sim's
+  // normalizer seeds on its own (spell_templates.js MOB_ATTACK_TEMPLATE), live and on replay alike.
+  const templates_raw = []
+  const templates = normalize_spell_templates(templates_raw)
   // probe the board this seed derives, so placements land on its real start cells
   const probe = create_sim_chain({
     seed,
     fight_id: 'probe',
     team0: [],
     team1: [],
-    spell_templates: templates,
+    templates_raw,
   })
   const ally = probe.board.start_cells_a.map((cell) => decode(Number(cell)))
   const enemy = probe.board.start_cells_b.map((cell) => decode(Number(cell)))
-  const { team0, team1, spell_templates } = build_teams({
+  const { team0, team1 } = build_teams({
     placements: roster.slice(0, 2).map((row, index) => ({
       cell: ally[index],
       character: row,
@@ -117,9 +121,8 @@ const build_fight = (seed) => {
         hand: [MOB_ATTACK_ID],
         spell_levels: { [MOB_ATTACK_ID]: 1 },
       })),
-      spell_templates,
+      templates_raw,
     }),
-    ctx_templates: spell_templates,
   }
 }
 
@@ -247,7 +250,9 @@ describe('L4 · determinism — the seed is the whole fight', () => {
     const digest_of = (run) => replay_capsule(capsule_of(run.chain)).trace_digest
     expect(digest_of(a)).toBe(digest_of(b))
     // A pinned golden: a change here means the sim, the seed threading, or the command list moved. That is a
-    // conversation, not a rebaseline — the whole determinism story rides on this number.
+    // conversation, not a rebaseline — the whole determinism story rides on this number. It moved ONCE, when
+    // the recorder header started holding raw templates: it pins the REPLAY's trace, which until then folded
+    // inert spells. The LIVE run's digest (sim_chain.test.js SIM_CHAIN_RUN_DIGEST) never moved.
     expect(digest_of(a)).toMatchSnapshot()
   })
 
@@ -276,24 +281,19 @@ describe('L4 · the exported trace replays (spec §8, both halves)', () => {
     expect(replay_capsule(capsule_of(run.chain)).violations).toEqual([])
   })
 
-  // ── KNOWN GAP (cross-lane, filed against L2 · packages/fight/src/sim_chain.js `open_recorder`) ─────────────
-  // `replay_capsule` rebuilds its templates with `normalize_spell_templates(capsule.templates_raw)`, so that
-  // field must hold RAW corpus rows. The recorder header currently stores `[...spell_templates.values()]` —
-  // rows that are ALREADY normalized — and `normalize_spell_templates` is not idempotent: re-normalizing its
-  // own output degrades every effect to `type: 'UNSUPPORTED'`. The replay therefore runs the real command list
-  // against inert spells: nobody takes damage and the fight never decides.
-  //
-  // This test PINS that gap rather than hiding it. It fails the moment L2 stores raw rows — at which point
-  // delete it and assert the real contract instead: replayed.terminal.winner === run.chain.sim_state.winner.
-  // packages/fight is outside this lane's fence, so the fix belongs to L2, not here.
-  test('KNOWN GAP — the sim capsule does not yet re-fold to the same terminal (L2 templates_raw)', () => {
+  // THE REPLAY CONTRACT. `replay_capsule` rebuilds its ctx with `normalize_spell_templates(templates_raw)`, so
+  // the recorder header holds the RAW corpus rows the chain was built from — never the normalized map, which
+  // re-normalizes into inert `UNSUPPORTED` effects (the normalizer is not idempotent). Storing raw makes the
+  // capsule a true re-fold of the live fight: same spells, same commands, same terminal.
+  test('sim capsule replays to the same terminal', () => {
     const replayed = replay_capsule(capsule_of(run.chain))
     expect(run.chain.sim_state.winner).not.toBe(-1) // the LIVE fight decides
-    expect(replayed.terminal.winner).toBe(-1) // the REPLAY does not — the gap above, in one line
-    expect(
-      normalize_spell_templates([...capsule_of(run.chain).templates_raw]).get(MOB_ATTACK_ID).levels[0].base_effects[0]
-        .type
-    ).toBe('UNSUPPORTED')
+    expect(replayed.terminal.winner).toBe(run.chain.sim_state.winner) // …and the REPLAY decides it the same way
+    // the WHOLE terminal state, byte for byte. `arena_radius` is the one field a capsule does not carry:
+    // `revive_arena` re-derives it as (width-1)/2 while the chain uses width>>1. No reducer path reads it
+    // (it is a carried donor field, fight_state.js:137), so it is normalized out of the comparison.
+    const comparable = (state) => digest({ ...state, arena_radius: 0 })
+    expect(comparable(replayed.terminal)).toBe(comparable(run.chain.sim_state))
   })
 
   test('the download payload bundles both formats, each rooted in the seed', () => {

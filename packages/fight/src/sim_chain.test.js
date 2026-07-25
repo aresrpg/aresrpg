@@ -131,8 +131,8 @@ const MOB_KIT = [
   },
 ]
 
-/** The whole castable corpus, through the real normalizer — the same map `ctx.spell_templates` carries. */
-const SPELL_TEMPLATES = normalize_spell_templates([...PLAYER_KIT, ...MOB_KIT])
+/** The whole castable corpus, RAW — what the chain stores and hands the sim's normalizer (and the recorder). */
+const TEMPLATES_RAW = [...PLAYER_KIT, ...MOB_KIT]
 
 const fighter = (id, cell, is_player, { health, ap, mp, deck = [], level: lvl = 20, stats = {} }) => ({
   id,
@@ -173,7 +173,7 @@ const build_chain = ({ seed = SEED, fight_id = FIGHT_ID } = {}) => {
   const team1 = arena.spawns_b
     .slice(0, 3)
     .map((cell, i) => fighter(`mob_${i}`, cell, false, { health: 46, ap: 6, mp: 3, deck: MOB_DECK, level: 12 }))
-  return create_sim_chain({ seed, fight_id, team0, team1, spell_templates: SPELL_TEMPLATES, group_template: '0xgroup' })
+  return create_sim_chain({ seed, fight_id, team0, team1, templates_raw: TEMPLATES_RAW, group_template: '0xgroup' })
 }
 
 const living = (state, team) => state[team].filter((e) => e.health > 0)
@@ -487,6 +487,10 @@ describe('physics + capsule', () => {
     expect(capsule.meta.seed).toBe(SEED >>> 0)
     expect(capsule.meta.source).toBe('sentry')
     expect(capsule.commands.length).toBeGreaterThan(run.batches.length)
+    // The header holds the RAW rows, never `ctx.spell_templates`: `replay_capsule` re-normalizes this field,
+    // and `normalize_spell_templates` is NOT idempotent — fed its own output it degrades effects to
+    // `UNSUPPORTED`, so a normalized header replays every spell inert and the fight never decides.
+    expect(capsule.templates_raw).toEqual(TEMPLATES_RAW)
     const replayed = replay_capsule(JSON.parse(JSON.stringify(capsule)))
     expect(replayed.violations).toEqual([])
     // The capsule is a FIXTURE CANDIDATE: replaying its commands reproduces the run's own terminal fight.
@@ -496,6 +500,9 @@ describe('physics + capsule', () => {
     // cosmetic metadata mismatch is a timeline.js round-trip defect, reported upward, not this lane's to fix.
     expect(terminal_summary(replayed.terminal)).toEqual(terminal_summary(run.chain.sim_state))
     expect(sim_projection(replayed.terminal)).toEqual(sim_projection(run.chain.sim_state))
+    // …and the WHOLE state matches too, that one re-derived field aside — effects, traps, hands, rng included.
+    const comparable = (state) => digest({ ...state, arena_radius: 0 })
+    expect(comparable(replayed.terminal)).toBe(comparable(run.chain.sim_state))
   })
 
   test('STOP mid-fight forfeits every living seat and drives the terminal rows', () => {

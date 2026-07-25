@@ -69,7 +69,7 @@ const chain = (() => {
     fight_id: FIGHT_ID,
     team0: [fighter('sim_c1', arena.spawns_a[0], true)],
     team1: [fighter('mob_0', arena.spawns_b[0], false)],
-    spell_templates: new Map(),
+    templates_raw: [],
     group_template: '0xgroup',
   })
 })()
