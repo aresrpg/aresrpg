@@ -22,13 +22,44 @@ cd "$(dirname "$0")"
 
 REDIS_PORT="${API_TESTS_REDIS_PORT:-6399}"
 REDIS_CONTAINER=aresrpg-api-tests-redis
+# Issue #828: a bare `redis:8` resolved a FLOATING tag against Docker Hub inside `docker run`, so
+# every api leg made one unretried registry call before a single test ran — a Hub timeout reddened
+# the gate on a third party's weather, then burned 30 more seconds in the PING loop below. The
+# digest is the multi-arch INDEX digest, so it resolves on amd64 (CI) and arm64 (dev macs) alike.
+# To bump: `docker buildx imagetools inspect redis:8` and paste its `Digest:` line here.
+REDIS_IMAGE="redis:8@sha256:c88d347edef6249a6d2293f926f1eeb48bd40c57cbcd02c07f52e7f1fd2cb46b"
 FAIL=0
 
 cleanup() { docker rm --force "$REDIS_CONTAINER" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 
+# Pre-pull, bounded: a cached image (warm runner, local dev) skips the registry entirely, and a
+# cold one gets 3 attempts with a short backoff instead of one shot. Pulling BEFORE `docker run`
+# is what keeps a registry failure honest — it aborts here saying so, rather than surfacing 30
+# seconds later as a Redis that "never answered PING".
+if docker image inspect "$REDIS_IMAGE" >/dev/null 2>&1; then
+  echo "redis image already present locally — no registry call"
+else
+  pulled=0
+  for attempt in 1 2 3; do
+    if docker pull --quiet "$REDIS_IMAGE" >/dev/null; then
+      pulled=1
+      break
+    fi
+    echo "docker pull of $REDIS_IMAGE failed (attempt $attempt/3)" >&2
+    [ "$attempt" -lt 3 ] && sleep $((attempt * 3))
+  done
+  if [ "$pulled" -ne 1 ]; then
+    echo "could not pull $REDIS_IMAGE after 3 attempts — aborting before any test ran" >&2
+    exit 1
+  fi
+fi
+
 echo "starting throwaway redis on 127.0.0.1:$REDIS_PORT for sponsor.test.js"
-docker run --detach --rm --name "$REDIS_CONTAINER" --publish "$REDIS_PORT:6379" redis:8 >/dev/null
+if ! docker run --detach --rm --name "$REDIS_CONTAINER" --publish "$REDIS_PORT:6379" "$REDIS_IMAGE" >/dev/null; then
+  echo "throwaway redis container failed to start — aborting" >&2
+  exit 1
+fi
 ready=0
 for _ in $(seq 1 30); do
   if docker exec "$REDIS_CONTAINER" redis-cli ping 2>/dev/null | grep -q PONG; then
