@@ -111,6 +111,21 @@ let teardown_gen = 0 // bumped on every start/stop so a pending engine_stop tear
 let self_armed = false
 
 /**
+ * ONE OWNER PER CHANNEL (the D226 law follow.ts already lives under, now with a second claimant): true while
+ * an EXTERNAL stream owns the music channel — hack mode's YouTube mini-player, whose whole point is
+ * "stream this playlist instead of our musics". Not a second mute preference: `user_muted` is what the
+ * PLAYER wants and is persisted; this is who currently holds the channel, and it is never written to storage.
+ */
+let stream_owned = false
+
+/**
+ * The ONE audibility gate every start door reads — the player opted out, or the channel isn't ours. Keeping
+ * both reasons behind a single predicate is why no door can grow its own half-check.
+ * @returns {boolean} true when the game's own beds must stay silent
+ */
+const music_off = () => user_muted || stream_owned
+
+/**
  * The armed zone's biome (null = no zone = the DEFAULT, no biome music). Set ONLY by set_zone_music (the
  * follow-cam trigger), cleared by stop_zone_music. THE FOLLOW-GATE: biome music never sounds while null.
  * @type {string | null}
@@ -121,7 +136,7 @@ const music_heal = create_music_self_heal({
   get_players: () => ({ roam, battle }),
   get_active_players: () => (combat && !fight_music_muted ? { roam: null, battle } : { roam, battle: null }),
   get_tracks: () => resolve_tracks(current_biome),
-  is_active: () => started && !user_muted && current_biome != null,
+  is_active: () => started && !music_off() && current_biome != null,
 })
 
 // ---------------------------------------------------------------------------------------------
@@ -351,7 +366,7 @@ function engine_stop() {
 }
 export const suspend_zone_music = engine_stop
 export function resume_zone_music() {
-  if (!current_biome || user_muted) return
+  if (!current_biome || music_off()) return
   teardown_gen++
   engine_start(resolve_tracks(current_biome))
   document.addEventListener('visibilitychange', on_visibility)
@@ -383,7 +398,7 @@ export function set_zone_music(biome) {
   if (current_biome !== biome) game_log('music', `zone ${current_biome ?? 'none'} → ${biome} (D226 single-switch)`)
   current_biome = biome
   self_armed = false // a REAL external arm (dungeon/follow-cam) owns this zone now — combat-exit must never touch it
-  if (user_muted) return // zone armed, but the user opted out of music — stay silent
+  if (music_off()) return // zone armed, but the player opted out (or the stream owns the channel) — stay silent
   teardown_gen++ // cancel any pending engine_stop teardown
   if (switching && started)
     engine_retune(tracks) // live zone change → fade-out/swap/fade-in, never two simultaneous streams
@@ -420,7 +435,7 @@ export function start() {
   user_muted = false
   write_pref(false)
   teardown_gen++ // cancel any pending engine_stop teardown
-  if (!current_biome) return // no armed zone (not following) — nothing to play yet
+  if (!current_biome || music_off()) return // no armed zone, or the stream owns the channel — nothing to play
   const tracks = resolve_tracks(current_biome)
   if (!tracks) return
   engine_start(tracks)
@@ -437,9 +452,23 @@ export function stop() {
   engine_stop()
 }
 
-/** @returns {boolean} true while a zone is armed, playing, and the user hasn't muted (music is audible) */
+/** @returns {boolean} true while a zone is armed, playing, and nothing gates it (music is audible) */
 export function is_playing() {
-  return started && !user_muted && current_biome != null
+  return started && !music_off() && current_biome != null
+}
+
+/**
+ * Hand the music channel to an external stream — or take it back. Hack mode's YouTube mini-player calls this
+ * on mount/unmount: taking the channel pauses the live bed NOW (the same engine_stop a dungeon exit uses) and
+ * closes every start door above; giving it back resumes whatever zone is still armed, honouring the player's
+ * own mute preference exactly as before. The preference is never read or written here — one owner, one flag.
+ * @param {boolean} owned @returns {void}
+ */
+export function set_music_stream_owned(owned) {
+  if (stream_owned === owned) return
+  stream_owned = owned
+  if (owned) engine_stop()
+  else resume_zone_music()
 }
 
 /** @returns {boolean} true unless the user muted music — the SETTINGS-page reading, independent of whether
@@ -608,5 +637,6 @@ export function reset_ambient_music_for_test() {
   volume = DEFAULT_VOLUME
   combat = false
   self_armed = false
+  stream_owned = false
   current_biome = null
 }

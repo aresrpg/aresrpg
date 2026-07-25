@@ -57,6 +57,7 @@ import { DungeonsModal } from './DungeonsModal.jsx'
 import { FightsModal } from './FightsModal.jsx'
 import { FightOpennessToggle } from './FightOpennessToggle.jsx'
 import { Minimap } from '../Minimap.jsx' // CUBE-WORLD MINIMAP — top-right 3-D relief map (self-gates on pose)
+import { YoutubeStreamPlayer } from './YoutubeStreamPlayer.jsx' // HACK MODE — the playlist radio (self-gates on hack)
 import { CommissionModal } from './commission/CommissionModal.jsx'
 import { Tutorial } from '../Tutorial.jsx'
 import { FightControls } from '../FightControls.jsx'
@@ -185,6 +186,11 @@ export function GameWorldHud() {
             overworld sky keeps cycling behind the board. The VISIBLE indicator is now the DayNightBar
             progress line on the compass strip (mounted by CompassStrip), which hides in fights with it. */}
         <DayNightDriver />
+        {/* HACK MODE'S RADIO (top-right, over the minimap corner): the owner's YouTube playlist replaces our
+            own beds while the grid is armed. Self-gates on hack mode — nothing renders (and nothing loads
+            from youtube.com) off the grid. Mounted BEFORE the toast stack on purpose: same corner, same
+            z-index, so a transient toast still paints over the permanent widget. */}
+        <YoutubeStreamPlayer />
         <Toasts />
         {/* ONBOARDING: the compact quest-ladder objective card (CENTER-RIGHT, design ruling 2026-07-13 — its old top-right
             slot is reserved for the minimap; compact in a fight). Self-hides when every quest is resolved. */}

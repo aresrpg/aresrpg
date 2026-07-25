@@ -84,6 +84,85 @@
   gap: 7px;
   align-items: flex-end;
 }
+/* ── HACK MODE RADIO → the SAME top-right corner, layered above the minimap ─────────────────────────────
+   Anchored exactly like the toast stack above (top:14/right:14 + a z-index over `.mm`'s 6) — the house
+   already settled this question: same corner, z-index decides, never a hand-tuned "below the minimap" offset
+   that drifts the next time `--mm-size` changes. It sits UNDER the toast layer (mounted before it, same
+   z-index) so a transient error toast is never hidden by the permanent widget. */
+.gw-ytp {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 7; /* above .mm (z-index:6), same plane as .gw-toasts — toasts paint over it while they live */
+  width: 208px;
+  padding: 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.gw-ytp__screen {
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #000;
+  border: 1px solid var(--color-border);
+}
+.gw-ytp__screen iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.gw-ytp__bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.gw-ytp__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0; /* the truncation below only works if the flex child may shrink past its content */
+  flex: 1;
+}
+.gw-ytp__lbl {
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+.gw-ytp__track {
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--color-gold-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* no marquee idiom in this house — truncate, full title on hover */
+}
+.gw-ytp__btn {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-family: inherit;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--color-gold);
+  background: rgba(200, 150, 60, 0.08);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+.gw-ytp__btn:hover:not(:disabled) {
+  background: rgba(200, 150, 60, 0.18);
+  color: var(--color-gold-light);
+}
+.gw-ytp__btn:disabled {
+  color: var(--color-muted);
+  cursor: default;
+}
+
 .gw-toast {
   display: flex;
   align-items: center;

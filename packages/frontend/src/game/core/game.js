@@ -42,6 +42,15 @@ export const INITIAL_STATE = {
   fight_mode: false,
 
   /**
+   * The LIVE world session's presentation (docs/design/hack_mode_spec.md) — 'hackgrid' while the player is on
+   * the retrowave grid, 'terrain' otherwise. Published by embed_voxel's create_session, which is the ONE place
+   * the mode is resolved (URL over saved pref, spectate always terrain), and re-published on every in-place
+   * session reboot — so a settings toggle reaches the HUD live, with no page reload and no second pref read.
+   * @type {'terrain' | 'hackgrid'}
+   */
+  world_presentation: 'terrain',
+
+  /**
    * Blocking upgrade modal latch. A sponsor refusal tagged `outdated-package` enters through run_tx (or the
    * direct sponsored onboarding wrapper) as `action/sponsor_upgrade_required`; player.js folds it true. There
    * is deliberately no dismiss action: refreshing onto the latest package is the only safe continuation.

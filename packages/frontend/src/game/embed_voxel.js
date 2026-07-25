@@ -189,6 +189,11 @@ function create_session(
   // seating) inherits the flat world through the SAME surface it already reads. SPECTATE is excluded: the
   // login backdrop stays the scenic terrain vista — hack is a preference for sessions you PLAY.
   const presentation = !spectate && resolve_hack_mode(location.search) ? 'hackgrid' : 'terrain'
+  // The HUD needs the SAME answer (hack mode streams the owner's playlist instead of our beds — the radio
+  // widget mounts on this). Publishing it through the reducer door here, at the one place the mode is
+  // resolved, is what makes a settings flip reach the HUD live: set_hack_mode re-creates the session, which
+  // re-runs this line. No second pref read, no page reload, and spectate is correctly never the grid.
+  context.dispatch('action/world_presentation', presentation)
   const world_config = world_config_for_biome(recipe_name)
   active_world_config = world_config // DEV/proof accessor — get_active_world_config()
   // Resident bound-world music refines this session's base biome to `${world}:${region}` while the player roams.
@@ -945,6 +950,7 @@ function create_session(
     cancel_boot_prewarm() // drop any throwaway prewarm handles still mid-compile
     context.dispatch('action/npc_prompt', null) // D162: the gate affordance dies with the session
     context.dispatch('action/player_pose', null) // the CompassStrip self-gates on pose — never a stale strip over spectate
+    context.dispatch('action/world_presentation', 'terrain') // the grid dies with its session (so does its radio)
     cancelAnimationFrame(raf)
     fight_camera.dispose() // D238/D250/D264a — the fight-orbit pointer + wheel listeners die with the session
     fight_entry.dispose() // the fight-entry store subscription + any herald sword die with the session

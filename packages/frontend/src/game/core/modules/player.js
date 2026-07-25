@@ -21,6 +21,10 @@ export default function player() {
           return { ...state, player_pose: payload }
         case 'action/fight_mode':
           return { ...state, fight_mode: !!payload }
+        case 'action/world_presentation':
+          // The live session's world presentation (hack mode). Normalized here so no consumer has to know
+          // what a malformed payload means: anything that isn't the grid is the ordinary terrain world.
+          return { ...state, world_presentation: payload === 'hackgrid' ? 'hackgrid' : 'terrain' }
         case 'action/sponsor_upgrade_required':
           // Strict sponsor policy: a client composing a retired package cannot continue safely. This is a
           // one-way session latch; the blocking modal's refresh button obtains a fresh app/package bundle.
