@@ -16,7 +16,11 @@ import {
   TAAU_MEDIUM_STORAGE_KEY,
   FAR_FIELD_EXPERIMENTAL_STORAGE_KEY,
   REVEAL_STYLE_STORAGE_KEY,
+  HACK_MODE_STORAGE_KEY,
   REVEAL_STYLE_OPTIONS,
+  get_saved_hack_mode,
+  save_hack_mode,
+  resolve_hack_mode,
   get_saved_ambience,
   save_ambience,
   get_saved_sun_follow,
@@ -64,6 +68,10 @@ describe('engine_flags_pref — defaults match the shipped engine behavior', () 
   it("reveal_style defaults to 'dissolve' (pool_renderer.js's own default)", () => {
     expect(get_saved_reveal_style()).toBe('dissolve')
   })
+
+  it('hack_mode defaults OFF (the terrain world is what every player boots into)', () => {
+    expect(get_saved_hack_mode()).toBe(false)
+  })
 })
 
 describe('engine_flags_pref — toggle → persisted → fresh read hydrates it', () => {
@@ -107,6 +115,15 @@ describe('engine_flags_pref — toggle → persisted → fresh read hydrates it'
     expect(get_saved_reveal_style()).toBe('scan')
   })
 
+  it('hack_mode — the settings toggle round-trip: persisted under the QA-contract key, hydrated back', () => {
+    save_hack_mode(true)
+    expect(store.get(HACK_MODE_STORAGE_KEY)).toBe('1') // the ?hack=1 sibling spelling a driver writes pre-boot
+    expect(get_saved_hack_mode()).toBe(true)
+    save_hack_mode(false)
+    expect(store.get(HACK_MODE_STORAGE_KEY)).toBe('0')
+    expect(get_saved_hack_mode()).toBe(false)
+  })
+
   it('garbage reveal_style in storage falls back to dissolve, never leaks into state', () => {
     store.set(REVEAL_STYLE_STORAGE_KEY, 'banana')
     expect(get_saved_reveal_style()).toBe('dissolve')
@@ -144,6 +161,41 @@ describe('engine_flags_pref — URL-override precedence (on-escape: far_terrace/
 
   it("a non-'1' URL value is NOT a recognized override — matches the engine's own `!== '1'` check exactly", () => {
     expect(resolve_on_escape('?farterrace=0', 'farterrace', true)).toBe(true)
+  })
+})
+
+// HACK MODE arming (docs/design/hack_mode_spec.md §3.1 + §6) — the QA rail's contract: a driver arms the
+// grid world with `?hack=1` OR by writing the storage key before boot, with the URL always winning BOTH ways
+// (`?hack=0` is the A/B escape a saved-ON player needs to compare against the real terrain). That two-way
+// win is why this is its own resolver and not resolve_on_escape (which only recognizes '1').
+describe('engine_flags_pref — hack-mode arming (query beats storage, default off)', () => {
+  beforeEach(() => store.clear())
+
+  it('no URL param and nothing saved ⇒ OFF (the shipped default world)', () => {
+    expect(resolve_hack_mode('')).toBe(false)
+  })
+
+  it('the saved preference arms it when the URL is silent', () => {
+    save_hack_mode(true)
+    expect(resolve_hack_mode('')).toBe(true)
+  })
+
+  it('?hack=1 arms it over a saved OFF (no clicks needed — the driven-QA rail)', () => {
+    expect(resolve_hack_mode('?hack=1')).toBe(true)
+  })
+
+  it('?hack=0 forces it off over a saved ON (the A/B escape)', () => {
+    save_hack_mode(true)
+    expect(resolve_hack_mode('?hack=0')).toBe(false)
+  })
+
+  it('an unrelated URL param never arms it', () => {
+    expect(resolve_hack_mode('?biome=riviera')).toBe(false)
+  })
+
+  it('the persisted value is injectable, so precedence is pure and DOM-free', () => {
+    expect(resolve_hack_mode('', true)).toBe(true)
+    expect(resolve_hack_mode('?hack=0', true)).toBe(false)
   })
 })
 

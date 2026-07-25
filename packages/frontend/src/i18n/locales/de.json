@@ -225,6 +225,8 @@
     "sky_couple_hint": "Die Geländebeleuchtung folgt der tatsächlichen Himmelsfarbe bei Morgendämmerung, Abenddämmerung und Nacht.",
     "taau_medium_label": "Upscale-Schärfung",
     "taau_medium_hint": "Mittlere Qualität rendert in einer niedrigeren internen Auflösung und schärft das Ergebnis für mehr Leistung.",
+    "hack_mode_label": "Hack-Modus",
+    "hack_mode_hint": "Ersetzt das Gelände durch ein flaches Retrowave-Gitter — volle x,z-Lesbarkeit für Profis und eine deutlich geringere GPU-Last. Kämpfe, Sammeln und Positionen bleiben identisch; nur die Kulisse ändert sich. Wird sofort angewendet (im Kampf blockiert).",
     "far_field_experimental_label": "Experimentelles Fernfeld",
     "far_field_experimental_hint": "Terrassiert den fernen Horizont und gleicht seine Beleuchtung dem nahen Gelände an (Vorschau in Prüfung).",
     "reveal_style_label": "Enthüllung beim ersten Laden",

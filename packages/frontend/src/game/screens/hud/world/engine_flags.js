@@ -25,10 +25,33 @@ import {
   save_sky_couple,
   get_saved_taau_medium,
   save_taau_medium,
+  get_saved_hack_mode,
+  save_hack_mode,
   save_ambience,
   save_far_field_experimental,
   save_reveal_style,
 } from './engine_flags_pref.js'
+
+/**
+ * @typedef {object} FlagEffects the three live edges a flag change touches
+ * @property {() => boolean} has_session is a world session live right now
+ * @property {(tier: string) => { ok: boolean, reason?: string }} reboot re-create it in place
+ * @property {(title: string) => void} toast tell the player the swap was refused
+ */
+
+/**
+ * The live edges, loaded lazily so /settings never pulls embed_voxel.js's import graph into its chunk.
+ * Injected into apply_wireable_flag so the guard below is testable without process-global module stubs.
+ * @returns {Promise<FlagEffects>}
+ */
+const live_effects = async () => {
+  const { get_voxel_engine, reboot_voxel_session_tier } = await import('../../../embed_voxel.js')
+  return {
+    has_session: () => !!get_voxel_engine(),
+    reboot: reboot_voxel_session_tier,
+    toast: (title) => push_event_toast({ state: 'error', title }),
+  }
+}
 
 /**
  * Persist a new value for one of the 3 boot-time-baked flags and, if a world session is live, reboot it in
@@ -38,18 +61,19 @@ import {
  * QualitySelect.jsx's on_change). No live session (logged out / meta tab) ⇒ nothing to reboot; the
  * persisted value simply applies on the next boot.
  * @param {() => boolean} get_previous @param {(v: boolean) => void} persist @param {boolean} enabled
+ * @param {() => Promise<FlagEffects>} [load_effects] the live session/toast edges (injected in tests)
  * @returns {Promise<boolean>} true when applied (or persisted for a later mount); false when a live fight blocked it
  */
-async function apply_wireable_flag(get_previous, persist, enabled) {
+export async function apply_wireable_flag(get_previous, persist, enabled, load_effects = live_effects) {
   const previous = get_previous()
   if (previous === enabled) return true // already this value — nothing to reboot
   persist(enabled)
-  const { get_voxel_engine, reboot_voxel_session_tier } = await import('../../../embed_voxel.js')
-  if (!get_voxel_engine()) return true // no live session — persisted value applies on next boot
-  const result = reboot_voxel_session_tier(get_saved_quality() || 'high')
+  const { has_session, reboot, toast } = await load_effects()
+  if (!has_session()) return true // no live session — persisted value applies on next boot
+  const result = reboot(get_saved_quality() || 'high')
   if (!result.ok && result.reason === 'fight') {
     persist(previous)
-    push_event_toast({ state: 'error', title: i18n.t('world.quality_fight_blocked') })
+    toast(i18n.t('world.quality_fight_blocked'))
     return false
   }
   return true
@@ -61,6 +85,11 @@ export const set_sun_follow = (enabled) => apply_wireable_flag(get_saved_sun_fol
 export const set_sky_couple = (enabled) => apply_wireable_flag(get_saved_sky_couple, save_sky_couple, enabled)
 /** @param {boolean} enabled @returns {Promise<boolean>} */
 export const set_taau_medium = (enabled) => apply_wireable_flag(get_saved_taau_medium, save_taau_medium, enabled)
+// HACK MODE rides the SAME machinery (hack_mode_spec.md §1.5): the presentation is baked at engine
+// construction, so a flip re-creates the session in place behind its own boot veil — no page reload, and no
+// `__ARES_*` global to push (create_session reads resolve_hack_mode(location.search) directly).
+/** @param {boolean} enabled @returns {Promise<boolean>} */
+export const set_hack_mode = (enabled) => apply_wireable_flag(get_saved_hack_mode, save_hack_mode, enabled)
 
 // The 3 needs-a-setter flags (ambience / far-field-experimental / reveal-style — see engine_flags_pref.js's
 // header survey): no engine hook exists yet, so these persist ONLY. settings.tsx renders their rows disabled

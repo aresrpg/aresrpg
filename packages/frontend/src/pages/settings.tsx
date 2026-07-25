@@ -13,11 +13,12 @@ import {
   get_saved_sun_follow,
   get_saved_sky_couple,
   get_saved_taau_medium,
+  get_saved_hack_mode,
   get_saved_far_field_experimental,
   get_saved_reveal_style,
   REVEAL_STYLE_OPTIONS,
 } from '../game/screens/hud/world/engine_flags_pref.js'
-import { set_sun_follow, set_sky_couple, set_taau_medium } from '../game/screens/hud/world/engine_flags.js'
+import { set_sun_follow, set_sky_couple, set_taau_medium, set_hack_mode } from '../game/screens/hud/world/engine_flags.js'
 import {
   is_music_enabled,
   start as start_music,
@@ -147,6 +148,7 @@ export function SettingsPage() {
   const [sun_follow, set_sun_follow_state] = useState(get_saved_sun_follow)
   const [sky_couple, set_sky_couple_state] = useState(get_saved_sky_couple)
   const [taau_medium, set_taau_medium_state] = useState(get_saved_taau_medium)
+  const [hack_mode, set_hack_mode_state] = useState(get_saved_hack_mode)
   const [far_field_experimental] = useState(get_saved_far_field_experimental)
   const [reveal_style] = useState(get_saved_reveal_style)
 
@@ -183,6 +185,10 @@ export function SettingsPage() {
   const on_taau_medium = async (next: boolean) => {
     set_taau_medium_state(next)
     if ((await set_taau_medium(next)) === false) set_taau_medium_state(!next)
+  }
+  const on_hack_mode = async (next: boolean) => {
+    set_hack_mode_state(next)
+    if ((await set_hack_mode(next)) === false) set_hack_mode_state(!next)
   }
 
   return (
@@ -276,6 +282,12 @@ export function SettingsPage() {
           hint={t('world.taau_medium_hint')}
           checked={taau_medium}
           on_change={on_taau_medium}
+        />
+        <ToggleRow
+          label={t('world.hack_mode_label')}
+          hint={t('world.hack_mode_hint')}
+          checked={hack_mode}
+          on_change={on_hack_mode}
         />
         <ToggleRow
           label={t('world.far_field_experimental_label')}

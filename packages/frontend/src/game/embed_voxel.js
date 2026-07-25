@@ -31,7 +31,7 @@ import { read_world_biome } from '../world-shell/world_biome.js'
 import { resolve_engine_recipe } from '../chain/deployment'
 import { join_lobby } from '../p2p/lobby-room.js'
 import { get_saved_quality } from './screens/hud/world/quality_pref.js'
-import { apply_saved_engine_flags } from './screens/hud/world/engine_flags_pref.js'
+import { apply_saved_engine_flags, resolve_hack_mode } from './screens/hud/world/engine_flags_pref.js'
 import {
   can_cache_live_position,
   note_live_position,
@@ -182,6 +182,13 @@ function create_session(
   // (re)boot of this function (fresh mount AND a live tier-reboot) re-applies fresh, so a settings change
   // saved via engine_flags.js is live the moment the session next re-creates.
   apply_saved_engine_flags()
+  // HACK MODE (docs/design/hack_mode_spec.md §1.5) — the world PRESENTATION, resolved ONCE here beside the
+  // biome recipe because it is a composition-root selection, not a runtime branch: 'hackgrid' builds no
+  // gen/mesh/far workers, no ring, no water/ambience/atmosphere, and answers the collision/residency oracle
+  // with a constant plane, so every downstream consumer (controller, boot veil, entity grounding, board
+  // seating) inherits the flat world through the SAME surface it already reads. SPECTATE is excluded: the
+  // login backdrop stays the scenic terrain vista — hack is a preference for sessions you PLAY.
+  const presentation = !spectate && resolve_hack_mode(location.search) ? 'hackgrid' : 'terrain'
   const world_config = world_config_for_biome(recipe_name)
   active_world_config = world_config // DEV/proof accessor — get_active_world_config()
   // Resident bound-world music refines this session's base biome to `${world}:${region}` while the player roams.
@@ -198,8 +205,8 @@ function create_session(
     : null
   const region_base_biome = (bound_world ? read_world_biome(bound_world) : null) ?? 'arctic'
   const engine = spectate
-    ? create_engine({ canvas, tier, zone_origin: [0, 0], load_radius: 4, world_config })
-    : create_engine({ canvas, tier, zone_origin: [0, 0], world_config })
+    ? create_engine({ canvas, tier, zone_origin: [0, 0], load_radius: 4, world_config, presentation })
+    : create_engine({ canvas, tier, zone_origin: [0, 0], world_config, presentation })
   if (owns_ambient_music(spectate, follow, bound_world)) set_zone_music(region_base_biome)
   // BOUNDLESS WORLD + COORD CODEC: world space is SIGNED and centred on the origin,
   // so the finite fence is symmetric — ±(bounds/2) on each axis. That half-extent is exactly the world↔chain
@@ -552,7 +559,12 @@ function create_session(
   // WORLD PROPS — sparse FlameFX ambience camps (bonfire + candle torches) dusted across the overworld on a
   // deterministic grid, grounded on the real surface, range-gated + dungeon-suspended. Decorative only (no chain,
   // no interaction); the WORLD-PROPS d_world VFX lane's overworld half (the dungeon half lives in cave_scene).
-  const world_props = create_world_props({ engine, get_player_pos: () => ctl.get_transform().position })
+  // Skipped entirely in hack mode: the camps are pure terrain decoration, and "not be bothered by the real
+  // terrain" means a clean grid (hack_mode_spec.md §1.5).
+  const world_props =
+    presentation === 'hackgrid'
+      ? null
+      : create_world_props({ engine, get_player_pos: () => ctl.get_transform().position })
   // TR-97 SKY DRAGON (trailer): `?dragon=1` (variant via `?dragon=frost|fire|void`) soars a scripted dragon
   // high across the demo sky for trailer capture. Absent by default — the module only imports when the
   // flag is set (zero cost otherwise). Lazy import mirrors cave_session (never loaded for a flagless session).
@@ -633,7 +645,7 @@ function create_session(
     on_cinematic_change: (/** @type {boolean} */ on) => {
       remotes.set_hidden?.(on)
       world_spawns.set_hidden?.(on)
-      world_props.set_hidden?.(on)
+      world_props?.set_hidden?.(on)
     },
   })
   game_log(
@@ -941,7 +953,7 @@ function create_session(
     remotes.dispose() // D206 — remote rigs die with the session
     world_spawns.dispose() // chain zone spawns (mob groups + resource nodes) die with the session
     world_fights.dispose() // nearby-fights discovery poll + its [V] prompt die with the session
-    world_props.dispose() // FlameFX overworld ambience camps die with the session
+    world_props?.dispose() // FlameFX overworld ambience camps die with the session (absent in hack mode)
     cave_session?.dispose() // D211 — cave room + oracle swap die with the session
   }
 

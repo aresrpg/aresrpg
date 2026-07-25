@@ -225,6 +225,8 @@
     "sky_couple_hint": "La iluminación del terreno sigue el color real del cielo en el amanecer, el atardecer y la noche.",
     "taau_medium_label": "Nitidez de escalado",
     "taau_medium_hint": "La calidad media renderiza a una resolución interna menor y afila el resultado para más rendimiento.",
+    "hack_mode_label": "Modo hack",
+    "hack_mode_hint": "Sustituye el terreno por una rejilla retrowave plana: legibilidad x,z pura para el juego experto y una carga de GPU mucho menor. Los combates, la recolección y las posiciones son idénticos; solo cambia el decorado. Se aplica al instante (bloqueado durante un combate).",
     "far_field_experimental_label": "Horizonte lejano experimental",
     "far_field_experimental_hint": "Aterraza el horizonte lejano y acerca su iluminación al terreno cercano (vista previa en evaluación).",
     "reveal_style_label": "Revelado en la primera carga",

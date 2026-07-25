@@ -31,6 +31,11 @@ export const SKY_COUPLE_STORAGE_KEY = 'aresrpg.sky_couple_enabled'
 export const TAAU_MEDIUM_STORAGE_KEY = 'aresrpg.taau_medium_enabled'
 export const FAR_FIELD_EXPERIMENTAL_STORAGE_KEY = 'aresrpg.far_field_experimental_enabled'
 export const REVEAL_STYLE_STORAGE_KEY = 'aresrpg.reveal_style'
+// HACK MODE (docs/design/hack_mode_spec.md) — the world PRESENTATION preference: the real terrain is
+// swapped for a flat retrowave grid, since chain truth is x,z and terrain height is client decoration.
+// It lives here rather than beside the engine because create_session reads it at composition time (it picks
+// create_engine's `presentation` option) — there is no `__ARES_*` global to mirror, unlike the trio above.
+export const HACK_MODE_STORAGE_KEY = 'aresrpg.hack_mode_enabled'
 
 /** The 3 first-load materialization styles (pool_renderer.js), low→high visual complexity order in the UI. */
 export const REVEAL_STYLE_OPTIONS = /** @type {const} */ (['dissolve', 'rise', 'scan'])
@@ -78,6 +83,11 @@ export const get_saved_far_field_experimental = () => read_bool(FAR_FIELD_EXPERI
 /** @param {boolean} v */
 export const save_far_field_experimental = (v) => write_bool(FAR_FIELD_EXPERIMENTAL_STORAGE_KEY, v)
 
+// Default OFF — every player boots into the real world; the grid is a deliberate opt-in.
+export const get_saved_hack_mode = () => read_bool(HACK_MODE_STORAGE_KEY, false)
+/** @param {boolean} v */
+export const save_hack_mode = (v) => write_bool(HACK_MODE_STORAGE_KEY, v)
+
 /** The saved reveal style, or 'dissolve' (the engine default) when unset/unrecognized. @returns {'dissolve'|'rise'|'scan'} */
 export function get_saved_reveal_style() {
   try {
@@ -113,6 +123,20 @@ export function resolve_off_escape(search, param, persisted) {
  */
 export function resolve_on_escape(search, param, persisted) {
   return new URLSearchParams(search).get(param) === '1' ? true : persisted
+}
+
+/**
+ * Hack mode's arming (hack_mode_spec.md §3.1 — the driven-QA rail's contract): an EXPLICIT `?hack=` value
+ * always wins, in BOTH directions — `?hack=1` arms the grid over a saved OFF (a driver needs zero clicks),
+ * `?hack=0` forces the real terrain back over a saved ON (the A/B escape a hack player needs to compare).
+ * That two-way win is why this is its own resolver rather than resolve_on_escape (which only recognizes an
+ * arming '1'); it is the `?v2shadow` dual-spelling shape (world-shell/fight_v2_shadow.js). The persisted
+ * value is a defaulted argument so precedence stays pure/DOM-free under test.
+ * @param {string} search raw `location.search` @param {boolean} [persisted] @returns {boolean}
+ */
+export function resolve_hack_mode(search, persisted = get_saved_hack_mode()) {
+  const raw = new URLSearchParams(search).get('hack')
+  return raw == null ? persisted : raw !== '0'
 }
 
 /**

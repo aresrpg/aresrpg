@@ -225,6 +225,8 @@
     "sky_couple_hint": "Terrain lighting follows the sky's real colour as it shifts through dawn, dusk and night.",
     "taau_medium_label": "Upscale Sharpening",
     "taau_medium_hint": "Medium quality renders at a lower internal resolution and sharpens the result for extra performance.",
+    "hack_mode_label": "Hack mode",
+    "hack_mode_hint": "Replaces the terrain with a flat retrowave grid — pure x,z readability for pro play, and a much lighter GPU load. Fights, gathering and positions are identical; only the scenery changes. Applies live (blocked during a fight).",
     "far_field_experimental_label": "Experimental Far-Field",
     "far_field_experimental_hint": "Terraces the distant horizon and blends its shading toward the near terrain (experimental preview).",
     "reveal_style_label": "First-Load Reveal",
