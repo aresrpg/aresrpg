@@ -18,7 +18,12 @@ import {
   get_saved_reveal_style,
   REVEAL_STYLE_OPTIONS,
 } from '../game/screens/hud/world/engine_flags_pref.js'
-import { set_sun_follow, set_sky_couple, set_taau_medium, set_hack_mode } from '../game/screens/hud/world/engine_flags.js'
+import {
+  set_sun_follow,
+  set_sky_couple,
+  set_taau_medium,
+  set_hack_mode,
+} from '../game/screens/hud/world/engine_flags.js'
 import {
   is_music_enabled,
   start as start_music,
