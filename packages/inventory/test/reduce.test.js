@@ -7,7 +7,7 @@
 import { test, expect, describe } from 'bun:test'
 import { experience_to_level } from '@aresrpg/sdk/experience'
 
-import { reduce_sui_data } from './reduce.js'
+import { reduce_sui_data } from '../src/reduce.js'
 
 const base = (over = {}) => ({ characters: [], items: [], xp_floor: {}, loaded: false, ...over })
 const ids = (rows) => rows.map((r) => r.id)

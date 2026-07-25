@@ -15,7 +15,7 @@ import {
   mask_pending_items,
   pending_units,
   reset_pending,
-} from './consumable_ledger.js'
+} from '../src/consumable_ledger.js'
 
 const POTION = '0xp0'
 const CHAR = '0xc0'

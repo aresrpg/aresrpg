@@ -6,7 +6,12 @@
 // duplicate). An empty ledger is a pass-through (no cost on the common path).
 import { beforeEach, describe, expect, it } from 'bun:test'
 
-import { add_pending_buy, drop_pending_buy, merge_pending_buys, reset_pending_buys } from './bought_items_ledger.js'
+import {
+  add_pending_buy,
+  drop_pending_buy,
+  merge_pending_buys,
+  reset_pending_buys,
+} from '../src/bought_items_ledger.js'
 
 const KEY = { id: '0xkey', item_type: 'dungeon_key', item_category: 'key', amount: 1 }
 

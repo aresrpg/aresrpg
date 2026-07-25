@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, test } from 'bun:test'
 
-import { apply_fight_receipt_to_roster } from './fight_receipt_roster.js'
+import { apply_fight_receipt_to_roster } from '../src/fight_receipt_roster.js'
 
 describe('ResultOpened receipt roster convergence', () => {
   test('patches XP, derived level/points, and exact final HP without mutating the prior roster', () => {
