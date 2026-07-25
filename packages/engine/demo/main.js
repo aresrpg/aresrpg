@@ -20,6 +20,8 @@ import GUI from 'lil-gui'
 import { create_engine, world_config_for_biome, WORLD_NAMES } from '../src/engine.js'
 import { TIER_ORDER } from '../src/core/quality/tiers.js'
 import { CHUNK_SIZE, LOAD_RADIUS_CHUNKS, MASTER_SEED } from '../src/config/world_config.js'
+import { create_capsule_placeholder } from '../src/tactical/entity_placeholder.js'
+import { HACK_GROUND_Y } from '../src/render/hack_grid.js'
 
 import { mount_hud } from './hud.js'
 import { create_walk_mode } from './walk_mode.js'
@@ -107,6 +109,11 @@ const biome_param = params.get('biome')
 // instead of the streamed terrain. This page is slice A's acceptance surface: zero terrain, a neon
 // interaction grid, the fixed north sun. The dapp arms the same option from its settings toggle.
 const hack_mode = params.get('hack') === '1'
+// `?body=1` — stand ONE entity on the presentation (the tactical model-miss capsule, the engine's
+// existing MeshStandardMaterial body). The grid alone draws no lit material, so this is the only demo
+// framing that exercises an ENTITY against the hack composition: the depth-correct-standing proof, and
+// the repro surface for the standard-material pipeline bug. Works in either presentation.
+const body_probe = params.get('body') === '1'
 
 const state = {
   seed: params.get('seed') || MASTER_SEED,
@@ -230,6 +237,13 @@ function boot_engine() {
     // DEBUG export (coordinator-approved): pointer lock is blocked under browser automation, so
     // the bench/culling pose probes drive the engine api directly through this handle.
     Object.assign(window, { __engine: engine })
+    // `?body=1`: seat the capsule on the ground a few meters in front of the default pose, feet on the
+    // surface (the hack plane's top face is HACK_GROUND_Y; the streamed world keeps its own surface).
+    if (body_probe) {
+      const body = create_capsule_placeholder({ height: 1.8, color: 0x9be7ff })
+      body.position.set(state.position[0], hack_mode ? HACK_GROUND_Y : state.position[1] - 20, state.position[2] + 9)
+      engine.add_to_scene(body)
+    }
     gate.dataset.hidden = 'true'
     const effective_radius = load_radius_param ? Number(load_radius_param) : LOAD_RADIUS_CHUNKS
     // ENG-8 walk mode (character controller) — created per boot since it holds the engine reference.

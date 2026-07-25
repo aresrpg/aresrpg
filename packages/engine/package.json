@@ -7,6 +7,7 @@
   "exports": {
     ".": "./src/engine.js",
     "./tactical": "./src/tactical/index.js",
+    "./hack": "./src/render/hack_palette.js",
     "./player": "./src/player/character_controller.js",
     "./cave": "./src/scene/cave_scene.js",
     "./vfx": "./src/render/vfx_presets.js",
