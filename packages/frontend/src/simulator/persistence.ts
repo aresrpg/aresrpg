@@ -13,7 +13,14 @@
 // `traces` (the last exports ring the L4 trace lane fills — declared at v1 so landing it needs no
 // version bump).
 
-import { type SimulatorInput, type SimulatorState, type SimCharacter } from './reducer'
+import {
+  type SimulatorInput,
+  type SimulatorState,
+  type SimCharacter,
+  type SimMobPick,
+  type SimMobPicks,
+  type SimPlacements,
+} from './reducer'
 
 const DB_NAME = 'aresrpg_simulator'
 const DB_VERSION = 1
@@ -22,13 +29,31 @@ const SETUP_STORE = 'setup'
 const TRACES_STORE = 'traces'
 const SETUP_KEY = 'current'
 
-export type PersistedSetup = { seed: number; focus_id: string | null }
+/** The setup row. The BOARD is not stored — it is derived from `seed` + `anchor_nonce` (simulator/board.ts),
+ *  so a reload can never hand back a layout that disagrees with its own seed. */
+export type PersistedSetup = {
+  seed: number
+  focus_id: string | null
+  anchor_nonce?: number
+  mob_picks?: Record<string, SimMobPick>
+  placements?: Record<string, string>
+}
 export type PersistedSimulator = { roster: readonly SimCharacter[]; setup: PersistedSetup | null }
+
+/** Cell-keyed rows → the string-keyed shape IndexedDB stores (structured clone keeps numeric keys as strings). */
+const cell_rows = <T>(rows: Readonly<Record<number, T>>): Record<string, T> =>
+  Object.fromEntries(Object.entries(rows ?? {}))
 
 /** The page state as stored rows — the roster keyed by id, everything else under the single setup row. */
 export const to_persisted = (state: Readonly<SimulatorState>): PersistedSimulator => ({
   roster: state.roster,
-  setup: { seed: state.seed, focus_id: state.focus_id },
+  setup: {
+    seed: state.seed,
+    focus_id: state.focus_id,
+    anchor_nonce: state.anchor_nonce,
+    mob_picks: cell_rows(state.mob_picks as Record<number, SimMobPick>),
+    placements: cell_rows(state.placements as Record<number, string>),
+  },
 })
 
 /**
@@ -44,6 +69,10 @@ export const hydrated_input = (persisted: Readonly<PersistedSimulator> | null): 
     roster: rows,
     seed: Number(persisted?.setup?.seed ?? 0),
     focus_id: typeof persisted?.setup?.focus_id === 'string' ? persisted.setup.focus_id : null,
+    anchor_nonce: Number(persisted?.setup?.anchor_nonce ?? 0),
+    // Cell legality is the reducer's own re-fit (it owns the board oracle) — decoded once, here, into shape.
+    mob_picks: (persisted?.setup?.mob_picks ?? {}) as SimMobPicks,
+    placements: (persisted?.setup?.placements ?? {}) as SimPlacements,
   }
 }
 

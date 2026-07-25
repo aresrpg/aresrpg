@@ -107,14 +107,22 @@ describe('the pure mapping', () => {
     const built = two_character_build()
     expect(to_persisted(built)).toEqual({
       roster: built.roster,
-      setup: { seed: built.seed, focus_id: 'sim_c1' },
+      setup: { seed: built.seed, focus_id: 'sim_c1', anchor_nonce: 0, mob_picks: {}, placements: {} },
     })
 
     const input = hydrated_input({
       roster: [null, { name: 'no id' }, built.roster[0]] as never,
       setup: { seed: 7, focus_id: 'sim_c1' },
     })
-    expect(input).toEqual({ type: 'hydrated', roster: [built.roster[0]], seed: 7, focus_id: 'sim_c1' })
+    expect(input).toEqual({
+      type: 'hydrated',
+      roster: [built.roster[0]],
+      seed: 7,
+      focus_id: 'sim_c1',
+      anchor_nonce: 0,
+      mob_picks: {},
+      placements: {},
+    })
   })
 
   test('an absent database hydrates to the initial state, not to a crash', () => {

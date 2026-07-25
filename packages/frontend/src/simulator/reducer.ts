@@ -18,12 +18,16 @@
 
 import { STATISTICS_PRIMARY } from '@aresrpg/sdk/stats'
 
+import { board_of, type SimBoard } from './board'
+
 /** The six allocatable primary stats — the SDK's vocabulary, pinned by a drift test in reducer.test.ts. */
 export type SimStat = 'vitality' | 'wisdom' | 'strength' | 'intelligence' | 'chance' | 'agility'
 
 export const SIM_STATS = STATISTICS_PRIMARY as readonly SimStat[]
 
 export const MAX_ROSTER = 6
+/** 1–6 mobs per fight — the enemy band seats exactly six (board_gen `MAX_SEATS`), so the cap is the board's. */
+export const MAX_MOBS = 6
 export const MAX_LEVEL = 200
 export const MAX_NAME_LENGTH = 24
 const STAT_POINTS_PER_LEVEL = 5
@@ -42,15 +46,46 @@ export type SimCharacter = {
   loadout: Record<string, string>
 }
 
+/** One mob seated on an enemy start cell — its corpus template + the level rolled/steppered within its band. */
+export type SimMobPick = { template_id: string; level: number }
+
+/** encoded stride-20 cell → occupant. Keys are numbers; a hydrated row arrives with string keys (JSON). */
+export type SimMobPicks = Readonly<Record<number, SimMobPick>>
+export type SimPlacements = Readonly<Record<number, string>>
+
 export type SimulatorState = {
   seed: number
   roster: readonly SimCharacter[]
   focus_id: string | null
+  /** how many times the board was rerolled off this seed — the board itself is DERIVED (simulator/board.ts) */
+  anchor_nonce: number
+  /** red-band picks: enemy start cell → mob */
+  mob_picks: SimMobPicks
+  /** blue-band placements: ally start cell → roster character id */
+  placements: SimPlacements
 }
 
+/** The BOARD half of the door (spec §9 flows 4–6): reroll, the enemy-band mob picks, the ally-band placements. */
+export type SimulatorBoardInput =
+  | { type: 'board_rerolled' }
+  | { type: 'mob_picked'; cell: number; template_id: string; level: number; min_level: number; max_level: number }
+  | { type: 'mob_level_set'; cell: number; level: number; min_level: number; max_level: number }
+  | { type: 'mob_unpicked'; cell: number }
+  | { type: 'character_placed'; cell: number; id: string }
+  | { type: 'character_unplaced'; cell: number }
+
 export type SimulatorInput =
-  | { type: 'hydrated'; seed: number; roster: readonly SimCharacter[]; focus_id: string | null }
+  | {
+      type: 'hydrated'
+      seed: number
+      roster: readonly SimCharacter[]
+      focus_id: string | null
+      anchor_nonce?: number
+      mob_picks?: Readonly<Record<string | number, SimMobPick>>
+      placements?: Readonly<Record<string | number, string>>
+    }
   | { type: 'seed_set'; seed: number }
+  | SimulatorBoardInput
   | { type: 'character_added'; class_id: string; name: string; male: boolean }
   | { type: 'character_removed'; id: string }
   | { type: 'character_named'; id: string; name: string }
@@ -72,10 +107,24 @@ export const EMPTY_STAT_ALLOC: Record<SimStat, number> = {
   agility: 0,
 }
 
-export const INITIAL_SIMULATOR_STATE: SimulatorState = { seed: 0, roster: [], focus_id: null }
+export const INITIAL_SIMULATOR_STATE: SimulatorState = {
+  seed: 0,
+  roster: [],
+  focus_id: null,
+  anchor_nonce: 0,
+  mob_picks: {},
+  placements: {},
+}
 
 const clamp_int = (value: number, min: number, max: number): number =>
   Number.isFinite(value) ? Math.min(max, Math.max(min, Math.trunc(value))) : min
+
+/** Clamp a mob level into its authored band (a corpus row's [minLevel, maxLevel]); a junk band falls to [1, MAX]. */
+const clamp_level_in_band = (level: number, min_level: number, max_level: number): number => {
+  const low = clamp_int(Number(min_level), 1, MAX_LEVEL)
+  const high = clamp_int(Number(max_level), low, MAX_LEVEL)
+  return clamp_int(level, low, high)
+}
 
 /** Stat points earned by reaching `level` — 5 per level from 2 (progression_math.move). */
 export const stat_budget = (level: number): number => Math.max(0, level - 1) * STAT_POINTS_PER_LEVEL
@@ -129,6 +178,59 @@ const refit = (character: Readonly<SimCharacter>): SimCharacter => ({
   spell_levels: fit_spells(character.spell_levels, spell_budget(character.level)),
 })
 
+/** A cell-keyed row map → sorted numeric entries. JSON/IndexedDB hands back STRING keys; this is the one decode. */
+const cell_entries = <T>(rows: Readonly<Record<string | number, T>> | undefined): [number, T][] =>
+  Object.entries(rows ?? {})
+    .map(([cell, value]) => [Number(cell), value] as [number, T])
+    .filter(([cell]) => Number.isInteger(cell))
+    .sort(([left], [right]) => left - right)
+
+/** Keep the mob rows the enemy band still seats, capped — cell order decides who survives a shrink. */
+const fit_mob_picks = (rows: Readonly<Record<string | number, SimMobPick>> | undefined, seats: ReadonlySet<number>) =>
+  Object.fromEntries(
+    cell_entries(rows)
+      .filter(([cell, pick]) => seats.has(cell) && typeof pick?.template_id === 'string')
+      .slice(0, MAX_MOBS)
+      .map(([cell, pick]) => [cell, { template_id: pick.template_id, level: clamp_int(pick.level, 1, MAX_LEVEL) }])
+  ) as SimMobPicks
+
+/** Keep the placements the ally band still seats — one cell per LIVING roster character, first seat wins. */
+const fit_placements = (
+  rows: Readonly<Record<string | number, string>> | undefined,
+  seats: ReadonlySet<number>,
+  roster_ids: ReadonlySet<string>
+): SimPlacements =>
+  Object.fromEntries(
+    cell_entries(rows).reduce<{ taken: readonly string[]; kept: [number, string][] }>(
+      ({ taken, kept }, [cell, id]) =>
+        seats.has(cell) && roster_ids.has(id) && !taken.includes(id) && kept.length < MAX_ROSTER
+          ? { taken: [...taken, id], kept: [...kept, [cell, id]] }
+          : { taken, kept },
+      { taken: [], kept: [] }
+    ).kept
+  ) as SimPlacements
+
+/** The board the CURRENT (seed, nonce) derives — the legality oracle every cell-bearing arm reads. */
+const board_now = (seed: number, anchor_nonce: number): SimBoard => board_of(seed, anchor_nonce)
+
+/**
+ * Re-fit the picks/placements to the state's OWN board — the board arms' counterpart to `refit`'s budgets.
+ * Every door that can invalidate a cell (a reroll, a new seed, a deleted character, a hydrated row) runs it,
+ * so an out-of-band cell can never be read back out of this reducer.
+ */
+const refit_board = (state: SimulatorState): SimulatorState => {
+  const board = board_now(state.seed, state.anchor_nonce)
+  return {
+    ...state,
+    mob_picks: fit_mob_picks(state.mob_picks, new Set(board.start_cells_b)),
+    placements: fit_placements(
+      state.placements,
+      new Set(board.start_cells_a),
+      new Set(state.roster.map(({ id }) => id))
+    ),
+  }
+}
+
 const clean_name = (name: string, fallback: string): string => {
   const trimmed = String(name ?? '')
     .trim()
@@ -172,16 +274,85 @@ export const normalize_character = (raw: Readonly<Partial<SimCharacter> & { id: 
     ),
   })
 
+/**
+ * The board half of the ONE door (delegated from `reduce_simulator`, never called directly): every arm here
+ * validates its cell against the state's OWN derived board, so an out-of-band pick simply does not happen.
+ */
+function reduce_board_setup(state: Readonly<SimulatorState>, input: Readonly<SimulatorBoardInput>): SimulatorState {
+  switch (input.type) {
+    // REROLL = the next anchor draw off this seed (simulator/board.ts) — the board changes wholesale, so the
+    // seats it no longer has are dropped rather than silently kept out of bounds.
+    case 'board_rerolled':
+      return refit_board({ ...state, anchor_nonce: (state.anchor_nonce + 1) % 0x100000000 })
+
+    case 'mob_picked': {
+      const board = board_now(state.seed, state.anchor_nonce)
+      const seated = state.mob_picks[input.cell] !== undefined
+      if (!board.start_cells_b.includes(input.cell)) return state
+      if (!seated && Object.keys(state.mob_picks).length >= MAX_MOBS) return state
+      return {
+        ...state,
+        mob_picks: {
+          ...state.mob_picks,
+          [input.cell]: {
+            template_id: String(input.template_id),
+            level: clamp_level_in_band(input.level, input.min_level, input.max_level),
+          },
+        },
+      }
+    }
+
+    case 'mob_level_set': {
+      const pick = state.mob_picks[input.cell]
+      if (!pick) return state
+      return {
+        ...state,
+        mob_picks: {
+          ...state.mob_picks,
+          [input.cell]: { ...pick, level: clamp_level_in_band(input.level, input.min_level, input.max_level) },
+        },
+      }
+    }
+
+    case 'mob_unpicked': {
+      const { [input.cell]: _freed, ...rest } = state.mob_picks
+      return { ...state, mob_picks: rest }
+    }
+
+    // A character holds exactly ONE seat: placing a seated character MOVES it, and the target cell's previous
+    // occupant is replaced (the spec's "swap by re-click").
+    case 'character_placed': {
+      const board = board_now(state.seed, state.anchor_nonce)
+      if (!board.start_cells_a.includes(input.cell)) return state
+      if (!state.roster.some(({ id }) => id === input.id)) return state
+      const freed = Object.fromEntries(cell_entries(state.placements).filter(([, id]) => id !== input.id))
+      return { ...state, placements: { ...freed, [input.cell]: input.id } as SimPlacements }
+    }
+
+    case 'character_unplaced': {
+      const { [input.cell]: _vacated, ...rest } = state.placements
+      return { ...state, placements: rest }
+    }
+  }
+}
+
 export function reduce_simulator(state: Readonly<SimulatorState>, input: Readonly<SimulatorInput>): SimulatorState {
   switch (input.type) {
     case 'hydrated': {
       const roster = input.roster.slice(0, MAX_ROSTER).map(normalize_character)
       const focus_id = roster.some(({ id }) => id === input.focus_id) ? input.focus_id : (roster[0]?.id ?? null)
-      return { seed: clamp_int(input.seed, 0, 0xffffffff), roster, focus_id }
+      return refit_board({
+        seed: clamp_int(input.seed, 0, 0xffffffff),
+        roster,
+        focus_id,
+        anchor_nonce: clamp_int(Number(input.anchor_nonce ?? 0), 0, 0xffffffff),
+        mob_picks: (input.mob_picks ?? {}) as SimMobPicks,
+        placements: (input.placements ?? {}) as SimPlacements,
+      })
     }
 
     case 'seed_set':
-      return { ...state, seed: clamp_int(input.seed, 0, 0xffffffff) }
+      return refit_board({ ...state, seed: clamp_int(input.seed, 0, 0xffffffff) })
 
     case 'character_added': {
       const id = next_character_id(state.roster)
@@ -202,7 +373,13 @@ export function reduce_simulator(state: Readonly<SimulatorState>, input: Readonl
     case 'character_removed': {
       const roster = state.roster.filter(({ id }) => id !== input.id)
       if (roster.length === state.roster.length) return state
-      return { ...state, roster, focus_id: state.focus_id === input.id ? (roster[0]?.id ?? null) : state.focus_id }
+      // refit_board also clears the deleted character's seat — a placement outliving its character would
+      // seat a ghost at START.
+      return refit_board({
+        ...state,
+        roster,
+        focus_id: state.focus_id === input.id ? (roster[0]?.id ?? null) : state.focus_id,
+      })
     }
 
     case 'character_named':
@@ -258,5 +435,9 @@ export function reduce_simulator(state: Readonly<SimulatorState>, input: Readonl
       return state.roster.some(({ id }) => id === input.id) || input.id === null
         ? { ...state, focus_id: input.id }
         : state
+
+    // the board/pick/placement arms — one door, delegated for readability
+    default:
+      return reduce_board_setup(state, input)
   }
 }

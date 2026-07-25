@@ -58,6 +58,10 @@
       "types": "./types/fight_state.d.ts",
       "import": "./src/fight_state.js"
     },
+    "./board_gen": {
+      "types": "./types/board_gen.d.ts",
+      "import": "./src/board_gen.js"
+    },
     "./visibility": {
       "types": "./types/visibility.d.ts",
       "import": "./src/visibility.js"
