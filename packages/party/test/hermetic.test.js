@@ -10,7 +10,7 @@ import { join } from 'node:path'
 
 import { expect, test } from 'bun:test'
 
-const SRC = import.meta.dir
+const SRC = join(import.meta.dir, '..', 'src')
 const source_files = readdirSync(SRC).filter((name) => name.endsWith('.js') && !name.endsWith('.test.js'))
 
 const specifiers_of = (code) => [

@@ -135,8 +135,8 @@ function run_ledger_gate(run = run_test_command) {
 }
 // LANE PRODASSET: prod /v1 + the real icon resolvers → URL census → HEAD 200 + sha-distinctness (CLI_TEST_AUDIT.md #1) — read-only against prod, its own selector, never the local no-selector pipeline.
 export const unit_test_files = [
-  'packages/party/src', // M2 rung 4 (D768): the @aresrpg/party core suite + its hermeticity pin
-  'packages/inventory/src', // M2 rung 4 (D768): the @aresrpg/inventory core suite + its hermeticity pin
+  'packages/party/test', // M2 rung 4 (D768): the @aresrpg/party core suite + its hermeticity pin
+  'packages/inventory/test', // M2 rung 4 (D768): the @aresrpg/inventory core suite + its hermeticity pin
   // THE SPELL-EFFECT CONFORMANCE MATRIX (survival gate): drives EVERY declared effect of the 240-spell mainnet
   // corpus through the reducer and asserts its effect-class postcondition held. RED the moment any SUPPORTED
   // effect kind regresses; the known-unsupported kinds are the enumerated worklist in MATRIX_CONVICTIONS.md.

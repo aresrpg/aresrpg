@@ -13,7 +13,7 @@ import {
   FOLLOW_VISIBLE_RANGE,
   project_follower_position,
   follow_formation_target,
-} from './group_loop.js'
+} from '../src/group_loop.js'
 
 const ME = '0xwallet'
 const LEADER = '0xleader'

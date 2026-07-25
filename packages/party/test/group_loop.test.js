@@ -14,7 +14,7 @@ import {
   project_follower_position,
   FOLLOW_VISIBLE_RANGE,
   MAX_OWNED_FOLLOWERS,
-} from './group_loop.js'
+} from '../src/group_loop.js'
 
 const ME = '0xwallet'
 const LEADER = '0xleader'

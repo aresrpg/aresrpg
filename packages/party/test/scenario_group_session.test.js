@@ -6,8 +6,8 @@
 // EFFECT-REQUEST stream (the coop-scenario idiom: plain objects, explicit clocks, zero browser).
 import { expect, test } from 'bun:test'
 
-import { create_group_store } from './store.js'
-import { TRANSIT_SPEED } from './group_loop.js'
+import { create_group_store } from '../src/store.js'
+import { TRANSIT_SPEED } from '../src/group_loop.js'
 
 const ME = '0xwallet'
 const LEADER = '0xleader'

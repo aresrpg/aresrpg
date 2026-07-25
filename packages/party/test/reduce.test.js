@@ -14,7 +14,7 @@ import {
   DEPART_LATCH_MS,
   MAX_MEMBERS,
   INVITE_PENDING_TTL_MS,
-} from './reduce.js'
+} from '../src/reduce.js'
 
 const NOW = 1_000_000
 const party = {

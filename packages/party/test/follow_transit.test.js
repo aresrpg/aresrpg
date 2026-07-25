@@ -3,7 +3,7 @@
 // #509 red-first contract: explicit, session-scoped follower transit lives inside the ONE group-loop reducer.
 import { expect, test } from 'bun:test'
 
-import { empty_group_state, reduce_group, TRANSIT_SPEED, TRANSIT_MIN_MS, TRANSIT_MAX_MS } from './group_loop.js'
+import { empty_group_state, reduce_group, TRANSIT_SPEED, TRANSIT_MIN_MS, TRANSIT_MAX_MS } from '../src/group_loop.js'
 
 const ME = '0xwallet'
 const LEADER = '0xleader'
