@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// HACK MODE — "start streaming this playlist instead of our musics": while the YouTube mini-player holds the
+// HACK MODE — "stream his album instead of our musics": while the album radio holds the
 // music channel, the game's OWN beds must be silent AND unable to re-arm themselves. This pins the seam
 // (ambient_music's `stream_owned` gate) at the three doors that can start audio: the zone arm (region
 // follower / boot arm / follow.ts), the HUD unmute, and a world fight's self-arm — plus the restore when the

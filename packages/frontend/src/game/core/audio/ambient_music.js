@@ -15,14 +15,14 @@
 // the pool later by registering a new roam/battle pair and adding its name to the registry.
 
 import { game_log } from '../../../core/log.js'
-import { MUSIC_TRACK_NAMES, create_audio, music_audio_src } from './audio_registry.js'
+import { MUSIC_TRACK_NAMES, MUSIC_VOLUME, create_audio, music_audio_src } from './audio_registry.js'
 import { create_music_self_heal } from './music_self_heal.js'
 
 // ---------------------------------------------------------------------------------------------
 // tuning
 // ---------------------------------------------------------------------------------------------
 
-const DEFAULT_VOLUME = 0.35 // master, 0..1 — subtle by default, never harsh
+const DEFAULT_VOLUME = MUSIC_VOLUME // master, 0..1 — the house level, one home in audio_registry
 const FADE = 1.4 // seconds for visibility ducking and one-stream track handoff ramps
 
 /**
@@ -112,8 +112,8 @@ let self_armed = false
 
 /**
  * ONE OWNER PER CHANNEL (the D226 law follow.ts already lives under, now with a second claimant): true while
- * an EXTERNAL stream owns the music channel — hack mode's YouTube mini-player, whose whole point is
- * "stream this playlist instead of our musics". Not a second mute preference: `user_muted` is what the
+ * an EXTERNAL stream owns the music channel — hack mode's album radio, whose whole point is
+ * "stream his album instead of our musics". Not a second mute preference: `user_muted` is what the
  * PLAYER wants and is persisted; this is who currently holds the channel, and it is never written to storage.
  */
 let stream_owned = false
@@ -458,7 +458,7 @@ export function is_playing() {
 }
 
 /**
- * Hand the music channel to an external stream — or take it back. Hack mode's YouTube mini-player calls this
+ * Hand the music channel to an external stream — or take it back. Hack mode's album radio calls this
  * on mount/unmount: taking the channel pauses the live bed NOW (the same engine_stop a dungeon exit uses) and
  * closes every start door above; giving it back resumes whatever zone is still armed, honouring the player's
  * own mute preference exactly as before. The preference is never read or written here — one owner, one flag.

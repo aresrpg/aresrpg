@@ -125,6 +125,12 @@ export function is_music_asset_resolved(key) {
 }
 
 /**
+ * The house music level, 0..1 — subtle by default, never harsh. ONE home: the ambient beds and the hack
+ * radio both play at it, so switching stream owner is never a level jump.
+ */
+export const MUSIC_VOLUME = 0.35
+
+/**
  * Construct a media player from an already registry-resolved source. Headless environments stay inert.
  * @param {string} src
  * @param {{ loop?: boolean, preload?: string, volume?: number, on_error?: EventListener }} [options]

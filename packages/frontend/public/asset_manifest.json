@@ -14,6 +14,7 @@
     "world_corpus": { "published": true },
     "mob_icon": { "published": true },
     "item": { "published": true },
-    "shop_render": { "published": true }
+    "shop_render": { "published": true },
+    "hack_radio": { "published": true }
   }
 }
