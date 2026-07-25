@@ -38,8 +38,7 @@ export const sim_effects_of = (fighter) => {
         value: Math.abs(delta),
         turns_remaining: Number(row.remaining_turns) || 0,
       })
-    }
-    else if (kind === K_INVISIBILITY)
+    } else if (kind === K_INVISIBILITY)
       effects.push({
         id: row.id ?? `invisibility:${index}`,
         type: 'INVISIBILITY',
