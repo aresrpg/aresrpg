@@ -11,7 +11,7 @@ import { level_to_experience } from '@aresrpg/sdk/experience'
 import { character_max_hp, next_projected_hp_ms, projected_hp, normalize_character } from './read_character.js'
 
 // A minimal normalized character (only the fields the two helpers read). No `experience` → xp 0 → level 1;
-// classe 'senshi' → base_hp 70 (config default_classes / hp_math.DEFAULT_CLASS_BASE_HP).
+// classe 'senshi' → base_hp 70 (config default_classes, via @aresrpg/sdk/stats base_hp_for_class).
 const char = (over = {}) => ({
   classe: 'senshi',
   vitality: 0,

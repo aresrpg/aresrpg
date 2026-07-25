@@ -97,25 +97,37 @@ export function get_total_stat(character, stat) {
  * `aresrpg::config` default_classes() (§17.31 / ANNEX §4); the parity test pins the two tables equal so they
  * cannot drift apart. Total function: an unknown/absent slug (a mob row, a not-yet-hydrated party card) falls
  * back to Senshi's baseline rather than returning NaN — the same policy the client's HP surfaces already run.
+ * THE off-chain home for this fact — the frontend re-exports it rather than carrying its own table (#878).
+ * The rows are the on-chain INIT defaults; they stay chain-truthful only while no `config::set_class_base_hp`
+ * is ever composed (none is, on any surface), since the indexer projects `ClassRowSet` events and never the
+ * init defaults — the first admin tune makes a `/v1/config.classes[class_id]` override the required source.
  * @type {(classe: string | null | undefined) => number}
  */
-function base_hp_for_class(classe) {
+export function base_hp_for_class(classe) {
   return Number(CLASSES[String(classe ?? '')]?.health ?? CLASSES.senshi.health)
 }
 
 /**
+ * Max HP over a class BASE at `level` with `vitality` — VERBATIM from `progression_math::max_hp_from_base`
+ * (ANNEX §4c, FROZEN): base, plus 5 per level GAINED (level 1 grants none), plus the vitality TOTAL folded
+ * into the pool. THE off-chain home for this kernel; the frontend re-exports it (#878).
+ * @type {(base_hp: number, level: number, vitality: number) => number}
+ */
+export function max_hp_from_base(base_hp, level, vitality) {
+  const growth = level > 1 ? (level - 1) * HP_PER_LEVEL : 0
+  return base_hp + growth + vitality
+}
+
+/**
  * Max HP — the deterministic twin of `aresrpg::progression::max_hp` (progression.move:34), i.e.
- * `progression_math::max_hp_from_base(config::base_hp(row), level, vitality)`: the character's CLASS BASE,
- * plus 5 per level GAINED (level 1 grants none), plus total effective vitality (allocated + the signed
- * equipment aggregate, floored at zero). The class base is the whole point — a class-blind flat base put the
- * client 35 points under the chain for a level-1 Senshi (#867).
+ * `progression_math::max_hp_from_base(config::base_hp(row), level, vitality)`, over total effective vitality
+ * (allocated + the signed equipment aggregate, floored at zero). The class base is the whole point — a
+ * class-blind flat base put the client 35 points under the chain for a level-1 Senshi (#867).
  * @type {(character: import("./../types.js").SuiCharacter) => number}
  */
 export function get_max_health(character) {
   const level = experience_to_level(character.experience)
-  const base_hp = base_hp_for_class(character?.classe)
-  const growth = level > 1 ? (level - 1) * HP_PER_LEVEL : 0
-  return base_hp + growth + get_total_stat(character, 'vitality')
+  return max_hp_from_base(base_hp_for_class(character?.classe), level, get_total_stat(character, 'vitality'))
 }
 
 /**

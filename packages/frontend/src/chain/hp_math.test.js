@@ -3,11 +3,19 @@
 // HP KERNEL PARITY — proves hp_math.js reproduces aresrpg_foundation::progression_math BYTE-FOR-BYTE (the same
 // integer arithmetic, the same branch table). Vectors mirror the Move module's OWN tests
 // (packages/move/foundation/sources/progression_math.move `max_hp_slope_and_floor` + `regen_carries_remainder`)
-// so a drift in either side fails here. Plus: the base-HP table (config default_classes) and the remainder-carry
-// starvation guard that the flat "1%/min" formula this replaces did NOT have.
+// so a drift in either side fails here. Plus the remainder-carry starvation guard that the flat "1%/min" formula
+// this replaces did NOT have, and the identity pin that keeps the max-HP kernel single-homed in the SDK (#878).
 import { describe, expect, test } from 'bun:test'
+import * as sdk_stats from '@aresrpg/sdk/stats'
 
-import { base_hp_for_class, max_hp_from_base, regen_hp, DEFAULT_CLASS_BASE_HP } from './hp_math.js'
+import { base_hp_for_class, max_hp_from_base, regen_hp } from './hp_math.js'
+
+describe('the max-HP kernel has ONE home: the SDK (#878 / #880)', () => {
+  test('the client kernel IS the SDK kernel — same function object, not a copy that can drift', () => {
+    expect(max_hp_from_base).toBe(sdk_stats.max_hp_from_base)
+    expect(base_hp_for_class).toBe(sdk_stats.base_hp_for_class)
+  })
+})
 
 describe('max_hp_from_base — mirrors progression_math.move max_hp_slope_and_floor', () => {
   test('level 1 → base verbatim (no growth term)', () => {
@@ -87,9 +95,6 @@ describe('base_hp_for_class — config default_classes mirror (§17.31 / ANNEX �
     expect(base_hp_for_class('ikari')).toBe(120)
     expect(base_hp_for_class('yogen')).toBe(30)
     expect(base_hp_for_class('iyashi')).toBe(50)
-  })
-  test('all 12 §3 classes are present (no missing row)', () => {
-    expect(Object.keys(DEFAULT_CLASS_BASE_HP)).toHaveLength(12)
   })
   test('unknown / null / empty class → senshi baseline 70 (total fn)', () => {
     expect(base_hp_for_class('mob')).toBe(70)
