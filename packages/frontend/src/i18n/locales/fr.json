@@ -1257,7 +1257,19 @@
         "display": "Iyashi",
         "title": "Soigneur"
       }
-    }
+    },
+    "board_size": "{{width}} × {{height}}",
+    "anchor": "ANCRE",
+    "reroll_board": "REGÉNÉRER LE PLATEAU",
+    "board_hint": "Cliquez une case bleue pour placer le personnage sélectionné · une case rouge pour choisir un monstre",
+    "board_hint_no_focus": "Sélectionnez un personnage, puis cliquez une case bleue pour le placer",
+    "mobs": "MONSTRES",
+    "no_mobs": "AUCUN MONSTRE — CLIQUEZ UNE CASE ROUGE",
+    "pick_mob": "CHOISIR UN MONSTRE",
+    "mob_band": "NIV {{min}}–{{max}}",
+    "combat_block_unpublished": "PAS DE BLOC DE COMBAT",
+    "combat_block_hint": "Les statistiques de combat de ce monstre ne sont pas encore publiées — le combat utilise une valeur de remplacement déclarée.",
+    "remove_mob": "RETIRER"
   },
   "purchase": {
     "acquisition_complete": "Acquisition Terminée",

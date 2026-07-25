@@ -1257,7 +1257,19 @@
         "display": "Iyashi",
         "title": "Heiler"
       }
-    }
+    },
+    "board_size": "{{width}} × {{height}}",
+    "anchor": "ANKER",
+    "reroll_board": "SPIELFELD NEU WÜRFELN",
+    "board_hint": "Blaues Feld anklicken, um die gewählte Figur zu setzen · rotes Feld, um einen Gegner zu wählen",
+    "board_hint_no_focus": "Wähle eine Figur aus der Truppe und klicke dann ein blaues Feld an",
+    "mobs": "GEGNER",
+    "no_mobs": "KEINE GEGNER — ROTES FELD ANKLICKEN",
+    "pick_mob": "GEGNER WÄHLEN",
+    "mob_band": "STUFE {{min}}–{{max}}",
+    "combat_block_unpublished": "KEIN KAMPFBLOCK",
+    "combat_block_hint": "Die Kampfwerte dieses Gegners sind noch nicht veröffentlicht — der Kampf nutzt einen deklarierten Platzhalter.",
+    "remove_mob": "ENTFERNEN"
   },
   "purchase": {
     "acquisition_complete": "Erwerb abgeschlossen",

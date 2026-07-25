@@ -1257,7 +1257,19 @@
         "display": "Iyashi",
         "title": "Healer"
       }
-    }
+    },
+    "board_size": "{{width}} × {{height}}",
+    "anchor": "ANCHOR",
+    "reroll_board": "REROLL BOARD",
+    "board_hint": "Click a blue cell to place the focused character · a red cell to pick a mob",
+    "board_hint_no_focus": "Select a roster character, then click a blue cell to place it",
+    "mobs": "MOBS",
+    "no_mobs": "NO MOBS — CLICK A RED CELL",
+    "pick_mob": "PICK A MOB",
+    "mob_band": "LV {{min}}–{{max}}",
+    "combat_block_unpublished": "NO COMBAT BLOCK",
+    "combat_block_hint": "This mob's combat stats are not published yet — the fight uses a declared placeholder.",
+    "remove_mob": "REMOVE"
   },
   "purchase": {
     "acquisition_complete": "Acquisition Complete",

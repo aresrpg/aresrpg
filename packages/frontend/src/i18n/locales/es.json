@@ -1257,7 +1257,19 @@
         "display": "Iyashi",
         "title": "Sanador"
       }
-    }
+    },
+    "board_size": "{{width}} × {{height}}",
+    "anchor": "ANCLA",
+    "reroll_board": "REGENERAR TABLERO",
+    "board_hint": "Haz clic en una casilla azul para colocar el personaje seleccionado · en una roja para elegir un monstruo",
+    "board_hint_no_focus": "Selecciona un personaje y luego haz clic en una casilla azul para colocarlo",
+    "mobs": "MONSTRUOS",
+    "no_mobs": "SIN MONSTRUOS — HAZ CLIC EN UNA CASILLA ROJA",
+    "pick_mob": "ELEGIR MONSTRUO",
+    "mob_band": "NV {{min}}–{{max}}",
+    "combat_block_unpublished": "SIN BLOQUE DE COMBATE",
+    "combat_block_hint": "Las estadísticas de combate de este monstruo aún no están publicadas — el combate usa un valor de reemplazo declarado.",
+    "remove_mob": "QUITAR"
   },
   "purchase": {
     "acquisition_complete": "Adquisicion Completada",

@@ -1257,7 +1257,19 @@
         "display": "Iyashi",
         "title": "ヒーラー"
       }
-    }
+    },
+    "board_size": "{{width}} × {{height}}",
+    "anchor": "アンカー",
+    "reroll_board": "ボードを再生成",
+    "board_hint": "青いマスをクリックで選択中のキャラを配置 · 赤いマスでモンスターを選択",
+    "board_hint_no_focus": "ロスターでキャラを選んでから青いマスをクリック",
+    "mobs": "モンスター",
+    "no_mobs": "モンスターなし — 赤いマスをクリック",
+    "pick_mob": "モンスターを選択",
+    "mob_band": "LV {{min}}–{{max}}",
+    "combat_block_unpublished": "戦闘データ未公開",
+    "combat_block_hint": "このモンスターの戦闘ステータスは未公開です — 戦闘には宣言済みの暫定値を使用します。",
+    "remove_mob": "削除"
   },
   "purchase": {
     "acquisition_complete": "購入完了",
