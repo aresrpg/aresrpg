@@ -20,6 +20,8 @@ import { rng_next, rng_seed } from '@aresrpg/sim/prng'
 
 import { GRID_W, GRID_H, decode as decode_xy, encode as encode_xy, bfsReachable } from './los.js'
 import { participant_entity_id, participant_character_id } from './fight_control.js'
+import { apply_retirement } from './fold.js'
+import { project_board } from './v2/project.js'
 import {
   claimed_budget_state,
   committed_state,
@@ -31,6 +33,29 @@ import {
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
 
 export const DUNGEON_BOARD_ORIGIN = { x: 0, y: 0 }
+
+/**
+ * THE COMMITTED-TRUTH SOURCE (box 4, issue #522) — the ONE place this module decides which fold owns the committed
+ * board. It is the HEADLESS CORE (`state.core`, fed by the same one door — store.js `with_core_fold`), projected by
+ * `project_board`; the legacy `committed_state` fold stays wired and is now the REVERSE SHADOW the tee diffs against
+ * it. Only the SOURCE moved: presentation (`presented_state` / `display_state` / `claimed_budget_state`) still
+ * derives from the legacy machinery, so the eye's pacing, the SNAP-THEN-RUN hold and the draft budget are untouched
+ * by this box.
+ *
+ * TWO ARMS fall back to the legacy fold, both by construction rather than by guess:
+ *   · `truth_source === 'legacy'` — the one-flip rollback switch (store.js TRUTH_QUERY_PARAM).
+ *   · no `core` on the state — a hand-built projection input (tests, tools, the board authority's synthetic states)
+ *     that never crossed the door and therefore HAS no core fold to read. A real store atom always carries one.
+ *
+ * The APPEND-ONLY DEATH FLOOR rides on top either way: `retired` is a store-level fact about authoritative deaths
+ * (fold.derive_retired), not legacy fold machinery, and dropping it here would re-open the resurrection root — a
+ * later object read carrying a positive hp standing a floor-dead fighter back up.
+ */
+const committed_truth = (s) => {
+  if (s.truth_source === 'legacy' || s.core == null) return committed_state(s)
+  const board = project_board(s.core)
+  return { ...board, fighters: apply_retirement(board.fighters, s.retired) }
+}
 
 const decode_cell = (encoded, width) =>
   encoded == null ? null : { x: Number(encoded) % width, y: Math.floor(Number(encoded) / width) }
@@ -86,7 +111,7 @@ export const chain_terminal_status = (state) => {
  * (its wipe/abandon recap doors own it). The REWARDS stay receipt-gated — this opens the card PENDING; the settle
  * receipt (ResultOpened) fills xp/loot (a17c9fc: never fabricate reward content). @returns {0 | null} */
 export const decided_outcome = (state) => {
-  const c = committed_state(state)
+  const c = committed_truth(state)
   const mobs = Object.values(c.fighters ?? {}).filter((f) => f.is_mob)
   if (!mobs.length || mobs.some((f) => f.alive)) return null // no enemy provably wiped ⇒ undecided
   // SOUND victory ONLY: I am still standing. all-mobs-dead ∧ my-seat-alive ⟹ the chain CANNOT call it a defeat
@@ -228,7 +253,7 @@ const drafted_mp_grant = (log, seat) =>
   )
 
 /** A mob's authoritative HP: snapshot + peer/receipt tail, with this client's optimistic intents excluded. */
-export const committed_mob_hp = (state, idx) => committed_state(state).fighters?.[mob_key(idx)]?.hp ?? null
+export const committed_mob_hp = (state, idx) => committed_truth(state).fighters?.[mob_key(idx)]?.hp ?? null
 
 /** Entity id of a thin-fold key (`p0` → the seat's character id, `m2` → `mob-2`), resolved through the view. */
 export const entity_id_of_key = (view, key) => {
@@ -285,7 +310,7 @@ export const board_view = (s) => {
   if (!view) return null
   const p = presented_state(s)
   const d = display_state(s) // DISPLAY cell only — holds an in-flight walk at its pre-move cell (SNAP-THEN-RUN)
-  const c = committed_state(s)
+  const c = committed_truth(s)
   const budget = claimed_budget_state(s)
   const escrow = (view.escrow ?? []).map((row, seat) => {
     const cf = c.fighters?.[seat_key(seat)]
@@ -366,7 +391,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
   if (!view) return null
   const p = presented_state(s)
   const d = display_state(s) // DISPLAY cell only — an in-flight walk holds at its pre-move cell (SNAP-THEN-RUN)
-  const c = committed_state(s)
+  const c = committed_truth(s)
   const death_hold = death_presenting_ids(s) // liveness-only mask: dead presents at the killing turn's ack
   // LEG P — while a peer/mob replay drains, the HP NUMBER must hold with the beat: the turn card only updates
   // once the vfx ends. `presented_health` = the paced presented fold during a wave, the settled committed value
