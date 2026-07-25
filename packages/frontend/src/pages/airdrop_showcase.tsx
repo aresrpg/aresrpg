@@ -38,7 +38,10 @@ const KIND_GLYPH: Record<string, typeof Sparkles> = {
 }
 
 const TILE = 'flex flex-col border border-border bg-black/40'
-const ART = 'aspect-square flex flex-col items-center justify-center gap-1.5 border-b border-border/60'
+// 5:4, not a square: two thirds of the set has no served art today, and a full square turns those into
+// cavernous empty boxes (driven capture, 2026-07-26). The icon fills most of the box so the art carries
+// the tile instead of floating in it.
+const ART = 'aspect-[5/4] flex flex-col items-center justify-center gap-1.5 border-b border-border/60'
 const ART_BG = { background: 'radial-gradient(circle at 50% 35%, rgba(200,150,60,0.07), rgba(0,0,0,0) 70%)' }
 const MICRO = 'text-[8px] tracking-[0.18em] uppercase text-muted/60'
 
@@ -57,7 +60,7 @@ function ItemTile({ item }: { item: AirdropSetItem }) {
             alt=""
             loading="lazy"
             referrerPolicy="no-referrer"
-            className="w-3/5 h-3/5 object-contain"
+            className="w-[78%] h-[78%] object-contain"
             style={{ imageRendering: 'pixelated' }}
             onError={() => set_broken(true)}
             onLoad={(e) => {
@@ -68,7 +71,7 @@ function ItemTile({ item }: { item: AirdropSetItem }) {
           />
         ) : (
           <>
-            <Glyph size={26} className="text-gold" style={{ opacity: 0.25 }} aria-hidden="true" />
+            <Glyph size={34} className="text-gold" style={{ opacity: 0.25 }} aria-hidden="true" />
             <span className={MICRO}>{t('airdrop.set.no_preview')}</span>
           </>
         )}
