@@ -19,5 +19,9 @@ messages cite law ids; this file is the summary an agent must hold at all times:
   decodes with proves nothing; pin at least one real captured payload with provenance.
 - **snake_case for every dev-chosen binding.** camelCase is a library's name, never a choice.
   PascalCase = components; SCREAMING_SNAKE = constants.
+- **Tests live in `test/`; `src/` is source only** (L-L1). New tests go to the package's `test/`
+  tree, mirroring the source subpath — including in `engine` and `frontend`, whose 586 in-src
+  tests are a measured migration debt, not a carve-out. `scripts/relocate-tests.mjs` is the one
+  codemod for moving them.
 - **Severities only ratchet up.** A cleaned domain is promoted to ERROR, never demoted. Baselines
   only shrink; `--rebaseline` is an explicit, reviewed act (see `FROZEN.md`).

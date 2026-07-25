@@ -162,6 +162,32 @@ WARN where the census found mass — a cleaned domain gets promoted, never the r
 - **L-N2 — Name by meaning, generically.** Data-tied names shrink reuse ("compact", not
   "validArticles"); if the honest name is awkward, the design is. [MAG ch02] → judgment.
 
+## Layout
+
+- **L-L1 — Tests live in `test/`; `src/` is source only.** A package's `src/` holds shipped
+  source and nothing else; every `*.test.*` / `*.spec.*` file lives under the package's sibling
+  `test/`, mirroring the source subpath. _Why:_ `src/` is the tree consumers read, bundlers walk
+  and lint scopes name — interleaving tests doubles the surface every glob has to reason about,
+  and a path that means two things is a gate input that quietly covers the wrong set. [HOUSE —
+  standing order; codified 2026-07-26 (#844) after it had already bound four packages and two
+  gate inputs while living in no rule file] → **judgment**, backed by the gate inputs already
+  keyed on the split: `eslint.config.js` extends the fight `no-restricted-imports` scope to
+  `packages/fight/test/**` so a relocation cannot shrink coverage; `scripts/ares.mjs`
+  `unit_test_files` points the party/inventory rows at their `test/` dirs and the fight/world
+  core legs run `bun test` from the package root. `scripts/relocate-tests.mjs` is the one codemod
+  that performs a migration (`git mv` + resolved-path specifier rewrite; 9 self-test probes gate
+  every run, `--self-test` refuses to touch the tree if they fail). **No gate rejects a new
+  in-src test today** — mechanization is the named debt below, not a claim already true.
+
+  **Migration state, measured at `edge`** (tracked `*.test.*`/`*.spec.*`): COMPLETE — `fight` 122,
+  `sim` 60, `sdk` 42, `world` 10, `party` 6, `inventory` 5, all with zero in `src/`. PENDING —
+  `engine` 142 in `src/` and `frontend` 444 in `src/`, none relocated. That is 586 files, the
+  majority of the corpus, on the losing side of the law until their lanes run; a contributor
+  adding a test there today follows local precedent and violates this line, which is why the debt
+  is written here rather than pretended away. Out of scope, deliberately: `packages/frontend/e2e`
+  (35 Playwright specs) and `packages/engine/bench` (5) are their own genres, and `packages/rpc`
+  has no `src/` tree at all (its JS lives in `api/` and `gas-pool/`, 16 colocated tests).
+
 ## Operating the law
 
 - Escape hatches: rule option `allow: ['path-fragment']` (repo-relative) per module class;
