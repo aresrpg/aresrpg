@@ -28,6 +28,9 @@
 
 import { createStore } from 'zustand/vanilla'
 
+import { classify_input } from './classify_input.js'
+import { input_envelope } from './envelope.js'
+import { empty_core_state, ingest } from './v2/index.js'
 import { auto_commit_fire_at } from './draft_budget.js'
 import { auto_commit_decision, turn_commit_key, turn_submit_epoch } from './turn_commit.js'
 import { DISPLACE_TELEPORT } from './fight_render_prims.js'
@@ -74,6 +77,89 @@ const COURTESY_EVENT_BASE = 1_000_000
 // grace past a wave turn's OWN duration before the tick watchdog force-acks it — derived headroom, never a
 // guessed absolute (the turn's duration is the base; this only pads renderer jitter).
 export const WAVE_ACK_GRACE_MS = 6000
+
+// ── THE TRUTH SOURCE (box 4, issue #522) ──────────────────────────────────────────────────────────────────────
+// The COMMITTED board every projection reads (project.js) is folded by the HEADLESS CORE that lives in this atom
+// as `core` — the legacy `committed_state` fold is DEMOTED to a reverse shadow (fight_trace_tee.js keeps comparing
+// it on every input, now as the shadow rather than the truth). Presentation is untouched: the paced/display folds
+// still derive from the legacy machinery until boxes 5-7 move them.
+//
+// THE ROLLBACK SWITCH: `?v2truth=0` flips committed truth back to the legacy fold for this page load, the stored
+// key `ares_v2truth='0'` flips it stickily, and an explicit query value always beats the stored preference (a URL
+// is a deliberate act, a stored key is a leftover) — the same spelling discipline the shadow's kill switch keeps
+// (fight_v2_shadow.js). Both keys are STRING DATA (quoted literals are exempt from the D756 identifier scan).
+export const TRUTH_QUERY_PARAM = 'v2truth'
+export const TRUTH_STORAGE_KEY = 'ares_v2truth'
+
+/** The pure arm check behind that switch: `'legacy'` on an explicit `0`, `'core'` otherwise (the default owner).
+ *  `search`/`storage_get` are INJECTED because this package is hermetic (D769 — no URL, no storage, no DOM in
+ *  src): the app's one window owner (fight_trace_tee.js) does the reading and stamps `truth_source` on the atom
+ *  before the first dispatch. Under node — and until that stamp lands — the atom's own default is the new owner.
+ *  @returns {'core'|'legacy'} */
+export const truth_source_from = ({ search = '', storage_get = () => null } = {}) => {
+  const query = new URLSearchParams(search).get(TRUTH_QUERY_PARAM)
+  if (query != null) return query === '0' ? 'legacy' : 'core'
+  return storage_get(TRUTH_STORAGE_KEY) === '0' ? 'legacy' : 'core'
+}
+
+/** The door accepts a LEGACY `{ page }` alias for a journal delivery (the production edge always sends the
+ *  already-normalized `{ batch }` — dungeon_run_store.js). Resolving it HERE, once at the ingress, is what keeps
+ *  the legacy reducer and the core's classify bridge looking at the SAME message: a shape the door accepts must
+ *  never be a shape the core silently ignores, now that the core owns committed truth. */
+const resolve_journal_alias = (msg, fight_id) =>
+  msg?.type === 'journal' && msg.batch == null && msg.page != null
+    ? { ...msg, batch: normalize_journal_page(msg.page, { fight_id: msg.fight_id ?? fight_id }) }
+    : msg
+
+/** The classify bridge reads whatever fields a message carries, so a hostile accessor on one of them (the
+ *  trace suite's poison-getter case) would otherwise take the door down. A message the bridge cannot read is
+ *  MALFORMED, and malformed is a first-class outcome here: a null payload lands on the core's `failures` as a
+ *  `malformed_envelope` record (v2/ingest.js). Never a throw, never a silent skip — a failure on the record. */
+const payload_of = (msg) => {
+  try {
+    return classify_input(msg)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * THE CORE'S INGRESS — the SAME one door, wrapped once. `input(msg, now)` remains the ONLY writer of fight state;
+ * this folds that same message into the headless core AFTER the legacy pipeline has committed, so the core is fed
+ * by the identical ingress the recorder tee taps (one home for "what the machinery observed"). The envelope bridge
+ * is `classify_input` — the same pure map the tee and the historical-corpus converter already share.
+ *
+ * The capture ordinal lives in THIS closure, never in the atom: it is provenance for the envelope, not fight state
+ * (the tee keeps its own the same way). Session identity comes from the STORE's own post-commit `fight_id`, never
+ * from the raw message — the door already gated the message's provenance, and a hostile accessor on a diagnostic
+ * field must not reach the reducer. `ingest` returns the SAME atom for a fold no-op (a draft, an unmapped
+ * lifecycle), and returning `s` unchanged makes zustand skip the notify — a no-op input costs no subscriber round.
+ *
+ * NO FAULT BOUNDARY, deliberately: the core is the truth owner now, so swallowing a throw here would freeze the
+ * board silently — the exact class the no-silent-failure law bans. `ingest` is total by construction (v2/ingest.js)
+ * and the rollback switch above is the escape hatch if that ever stops being true.
+ * @param {(msg: any, now?: number) => any} door the legacy reducer door
+ * @param {(fn:(s:any)=>any)=>void} set
+ * @param {()=>any} get
+ */
+const with_core_fold = (door, set, get) => {
+  let capture_seq = 0
+  return (raw, now = Date.now()) => {
+    const msg = resolve_journal_alias(raw, get().fight_id)
+    const result = door(msg, now)
+    const envelope = input_envelope({
+      session_id: get().fight_id ?? null,
+      input_seq: capture_seq++,
+      observed_at_ms: now,
+      payload: payload_of(msg),
+    })
+    set((s) => {
+      const core = ingest(s.core, envelope, now)
+      return core === s.core ? s : { ...s, core }
+    })
+    return result
+  }
+}
 
 // PROVIDER TOKEN + SESSION IDENTITY (INC-0 — the additive mechanical floor). `refuse_reason` is the ONE gate the
 // door runs before every input: a LOCAL push (my HUD intent / composite prediction) is refused unless the local
@@ -519,7 +605,7 @@ const make_input =
         // own fill (the walker re-drives from `from`). Pure canonical fold — no presentation pacing here (backfilled
         // history is not re-animated; a live peer/mob turn's presentation rides the receipt/peer lane). `journal_gap`
         // clears when this page catches the frontier up (no fetch effect), or re-arms if it reveals a further hole.
-        const batch = msg.batch ?? normalize_journal_page(msg.page, { fight_id: msg.fight_id ?? state.fight_id })
+        const { batch } = msg // the legacy `{ page }` alias is normalized at the ingress (resolve_journal_alias)
         set((s) => {
           const { accept_state, actions, confirmed_actions, gap, fault } = accept_and_decode(s, batch)
           const claim = claim_predictions(s, confirmed_actions, now)
@@ -1114,7 +1200,15 @@ export const create_fight_store = () => {
   const trace_tap = create_trace_tap()
   const store = createStore((set, get) => ({
     ...empty_fight(),
-    input: make_input(set, get, trace_tap),
+    // THE HEADLESS CORE (box 4) — the committed-truth owner, folded by `with_core_fold` below. It is stamped HERE
+    // rather than in `empty_fight()` because it owns its OWN reset: an `init` classifies as session_opened /
+    // session_closed and the core returns a fresh atom for both (v2/ingest.js), so re-seeding it from the legacy
+    // reset would wipe the session the very same message just opened. One home for "a new fight clears the fold".
+    core: empty_core_state(null),
+    // WHICH FOLD OWNS COMMITTED TRUTH — stamped outside `empty_fight()` so a mid-session `init` can never silently
+    // re-arm the new owner under a player who rolled back. The app's window owner overwrites it at install.
+    truth_source: 'core',
+    input: with_core_fold(make_input(set, get, trace_tap), set, get),
     // A raw fold helper for tests/tools that want a committed state from a log without the store plumbing.
     fold: (log) => log.reduce(apply_action, empty_state(get().fight_id)),
   }))
