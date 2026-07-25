@@ -1,42 +1,46 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Encyclopedia icon starvation (issue #160): in production `virtual:item_catalog` resolves EMPTY (the seed
-// name->icon map is private — vite.config.ts catalog_fallback_plugin), so every /v1 encyclopedia item row has
-// NO `slug`. The old resolver keyed the icon off that absent slug and degraded straight to '' (the glyph),
-// which is why the owner saw "placeholder icons everywhere". The icon must instead derive from what the /v1
-// row DOES carry: `item_type` (a unique `pet_*` slug for pets, else the generic family word) + `name`.
+// Encyclopedia icon starvation: in production `virtual:item_catalog` resolves EMPTY (the seed name->icon map
+// is private — vite.config.ts catalog_fallback_plugin), so every /v1 encyclopedia item row has NO `slug` and
+// the icon key must come from what the row DOES carry. That key is `item_type`, the authored art slug the
+// seed uploads `items/{item_type}.png` under; the earlier resolver mistook it for a generic family word (that
+// is `category`) and derived the key from the display NAME instead, which is what put the placeholder flask
+// on "Bag of Quartz" in the owner's detail-page screenshot.
 //
-// PROVENANCE (live CDN + /v1, verified 2026-07-21):
-//   • "Timon"        item_type "pet_timon"  -> items/pet_timon.png      HTTP 200 (pet: item_type IS the slug)
-//   • "Cinder Heart" item_type "resource"   -> items/cinder_heart.png   HTTP 200 (slugified display name)
-//   • "Cinder Cuirass" item_type "chestplate" -> items/cinder_cuirass.png HTTP 200
-//   • generic family words items/resource.png, items/chestplate.png     HTTP 404 (never the icon)
+// PROVENANCE (live /v1 + assets.aresrpg.world, verified 2026-07-25 — full 1854-row census in
+// item_classification.test.js): item_type unique on 1854/1854 rows; name-derivation diverges on 984 and
+// serves 2 icons where item_type serves 515.
+//   • "Bag of Quartz"  item_type "bag_quartz"  -> items/bag_quartz.png     HTTP 200
+//     slugified name                              items/bag_of_quartz.png  HTTP 404
+//   • "Timon"          item_type "pet_timon"   -> items/pet_timon.png      HTTP 200
+//   • "Cinder Heart"   item_type "cinder_heart"-> items/cinder_heart.png   HTTP 200 (category "resource")
 import { describe, expect, test } from 'bun:test'
 
 import { encyclopedia_item_asset } from './encyclopedia_assets'
 
-describe('encyclopedia_item_asset — derives the icon slug from the live /v1 row (no seed slug in prod)', () => {
-  test('pet: the unique pet_* item_type is the icon slug (Timon -> pet_timon)', () => {
-    const asset = encyclopedia_item_asset({ id: '0xabc', item_type: 'pet_timon', name: 'Timon' })
-    expect(asset.id).toBe('pet_timon')
+describe('encyclopedia_item_asset — the icon key is the live /v1 row itemType (no seed slug in prod)', () => {
+  test('SPECIMEN: the list + detail icon is items/bag_quartz.png, never the name-derived bag_of_quartz', () => {
+    const asset = encyclopedia_item_asset({ id: '0x97f1', item_type: 'bag_quartz', name: 'Bag of Quartz' })
+    expect(asset.id).toBe('bag_quartz')
   })
 
-  test('gear/resource: the slugified display name is the icon slug (Cinder Heart -> cinder_heart)', () => {
-    const asset = encyclopedia_item_asset({ id: '0xdef', item_type: 'resource', name: 'Cinder Heart' })
-    expect(asset.id).toBe('cinder_heart')
+  test('pet and resource rows key off the same field — no per-class branch survives', () => {
+    expect(encyclopedia_item_asset({ id: '0xabc', item_type: 'pet_timon', name: 'Timon' }).id).toBe('pet_timon')
+    expect(encyclopedia_item_asset({ id: '0xdef', item_type: 'cinder_heart', name: 'Cinder Heart' }).id).toBe(
+      'cinder_heart'
+    )
   })
 
-  test('gear with a generic family item_type: still slugifies the name (Cinder Cuirass -> cinder_cuirass)', () => {
-    const asset = encyclopedia_item_asset({ id: '0x01', item_type: 'chestplate', name: 'Cinder Cuirass' })
-    expect(asset.id).toBe('cinder_cuirass')
-  })
-
-  test('a mapped shop cosmetic still wins over the name derivation (regression)', () => {
-    const asset = encyclopedia_item_asset({ id: '0x02', item_type: 'cloak', name: 'Lorito Cloak (Emerald)' })
+  test('a mapped shop cosmetic alias still wins over the itemType (regression)', () => {
+    const asset = encyclopedia_item_asset({
+      id: '0x02',
+      item_type: 'cape_lorito_agility',
+      name: 'Lorito Cloak (Emerald)',
+    })
     expect(asset.id).toBe('cape_lorito-agility')
   })
 
-  test('an authored seed slug (dev/local, when the catalog IS bundled) still wins over the derivation', () => {
+  test('an authored seed slug (dev/local, when the catalog IS bundled) still wins over the itemType', () => {
     const asset = encyclopedia_item_asset({
       id: '0x03',
       slug: 'authored_slug',
@@ -46,8 +50,8 @@ describe('encyclopedia_item_asset — derives the icon slug from the live /v1 ro
     expect(asset.id).toBe('authored_slug')
   })
 
-  test('no name and no slug -> empty id so ItemImage renders the honest category glyph', () => {
-    const asset = encyclopedia_item_asset({ id: '0x04', item_type: 'chestplate' })
-    expect(asset.id).toBe('')
+  test('a row with no itemType -> empty id: the honest category glyph, never a guess from the name', () => {
+    expect(encyclopedia_item_asset({ id: '0x04' }).id).toBe('')
+    expect(encyclopedia_item_asset({ id: '0x05', name: 'Bag of Quartz' }).id).toBe('')
   })
 })

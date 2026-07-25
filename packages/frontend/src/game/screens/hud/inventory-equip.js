@@ -54,17 +54,11 @@ export const WORN_CATEGORIES = /** @type {readonly string[]} */ (['title', 'hat'
 export function inventory_item_icon(item, slug_by_name = {}) {
   if (!item) return null
   const template_slug = slug_by_name[item.name] ?? item.slug
-  // `chain_icon_slug` before the generic `item_type` fallback: production ships an empty seed catalog, so
-  // `slug_by_name` is `{}` and the on-chain `item_type` is only the family word ('chestplate' -> 404). Deriving
-  // the pet item_type / slugified name recovers the real icon (the SAME home the encyclopedia paints with).
-  return (
-    cosmetic_icon_of({ ...item, slug: template_slug }) ??
-    template_slug ??
-    item.icon ??
-    chain_icon_slug(item) ??
-    item.item_type ??
-    null
-  )
+  // `chain_icon_slug` is the on-chain itemType — the art key itself, and the LAST resort only because a
+  // bundled seed slug (dev) and the cosmetic alias table are more specific authored identities. Production
+  // ships an empty seed catalog, so `slug_by_name` is `{}` and this is what actually paints the bag. The
+  // SAME home the encyclopedia paints with, so the two surfaces can never diverge.
+  return cosmetic_icon_of({ ...item, slug: template_slug }) ?? template_slug ?? item.icon ?? chain_icon_slug(item)
 }
 
 const with_authored_icon = (item, slug_by_name = {}) => {

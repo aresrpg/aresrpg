@@ -77,12 +77,14 @@ describe('resolve_loot_tile — exact RESOURCE art + template characteristics', 
   // synthetic 32-byte id built at runtime — the resolver only needs id identity, and a source
   // literal would trip the hardcoded chain-id gate.
   const template_id = `0x${'e13d'.repeat(16)}`
-  const entry = { template_id, item_type: 'resource', name: 'Obsidian Core', amount: 2 }
+  // Chain-truth shape (live /v1, 2026-07-25): `item_type` is the AUTHORED art slug `obsidian_core`;
+  // the generic family word 'resource' is the row's `category`. The two are never the same field.
+  const entry = { template_id, item_type: 'obsidian_core', name: 'Obsidian Core', amount: 2 }
   const items = [
     {
       id: '0xitem',
       template_id,
-      item_type: 'resource',
+      item_type: 'obsidian_core',
       item_category: 'resource',
       name: 'Obsidian Core',
     },
@@ -92,7 +94,7 @@ describe('resolve_loot_tile — exact RESOURCE art + template characteristics', 
       template_id,
       {
         id: template_id,
-        item_type: 'resource',
+        item_type: 'obsidian_core',
         category: 'RESOURCE',
         name: 'Obsidian Core',
         statsJson: JSON.stringify({ vitality: [4, 9], wisdom: [1, 3] }),
@@ -127,7 +129,7 @@ describe('resolve_loot_tile — exact RESOURCE art + template characteristics', 
         template_id,
         {
           id: template_id,
-          item_type: 'resource',
+          item_type: 'obsidian_core',
           category: 'RESOURCE',
           name: 'Obsidian Core',
           statsJson: JSON.stringify({ vitality: [4, 4] }),
@@ -167,9 +169,9 @@ describe('resolve_loot_tile — exact RESOURCE art + template characteristics', 
     expect(out.item_id).toBeNull()
   })
 
-  test('an unmapped RESOURCE still resolves the name-derived slug (render layer glyphs on 404)', () => {
-    // Contract updated by the chain_icon_slug home (#160): resolve returns the slugified chain
-    // name even without a catalog mapping; ItemImage's 404 fallback owns the unpublished-art glyph.
+  test('a RESOURCE with no published-slug mapping still resolves its itemType (render layer glyphs on 404)', () => {
+    // chain_icon_slug is the itemType itself, so a missing catalog mapping costs nothing; ItemImage's
+    // 404 fallback owns the unpublished-art glyph (obsidian_core.png is genuinely not uploaded yet).
     const out = resolve_loot_tile(entry, items, template_map, undefined, t, {})
     expect(out.icon).toBe('obsidian_core')
     expect(out.category).toBe('resource')

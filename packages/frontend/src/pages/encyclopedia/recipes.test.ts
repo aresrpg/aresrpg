@@ -165,4 +165,26 @@ describe('craftable_items_for_job — the JOBS tab item source (chain truth, no 
     expect(craftable_items_for_job([HIGH_LEVEL_RECIPE], undefined, 11)).toEqual([])
     expect(craftable_items_for_job([HIGH_LEVEL_RECIPE], [HIGH_LEVEL_ITEM], -1)).toEqual([])
   })
+
+  // DATA-PLUMBING (icon-slug canon): the JOBS tab paints each craftable row's icon through
+  // encyclopedia_item_asset, whose key is the row's `item_type`. This projection used to drop that field
+  // on the floor (id/name/level/category only), leaving the jobs tab nothing but the display name to
+  // guess from — the same starvation the encyclopedia detail showed on "Bag of Quartz".
+  test('the projected row carries item_type — the key the icon resolver needs (specimen: bag_quartz)', () => {
+    // Mock id in the same shape the fixtures above use — the live template id is not the fact under
+    // test (a hardcoded one would drift on republish and trip the chain-id gate); `item_type` is.
+    const BAG_OF_QUARTZ: RpcEncyclopediaItem = {
+      template_id: '0xtpl_bag_quartz',
+      item_type: 'bag_quartz',
+      name: 'Bag of Quartz',
+      description: null,
+      level: 1,
+      category: 'consumable',
+      supply: 0,
+      last_sale_mist: null,
+    }
+    const bag_recipe: RpcRecipe = { ...JEWELER_RECIPE, output_template_id: BAG_OF_QUARTZ.template_id }
+    const [row] = craftable_items_for_job([bag_recipe], [BAG_OF_QUARTZ], 11)
+    expect(row.item_type).toBe('bag_quartz')
+  })
 })

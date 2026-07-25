@@ -40,6 +40,9 @@ export const short_id = (id: string) => `${id.slice(0, 6)}…${id.slice(-4)}`
 
 export interface CraftableItemRow {
   id: string
+  /** The row's on-chain art key — what encyclopedia_item_asset builds `items/{item_type}.png` from. Kept on
+   *  the projection because a display name is not an art identity: dropping it left the jobs tab guessing. */
+  item_type: string
   name: string
   level: number
   category: string
@@ -69,6 +72,7 @@ export function craftable_items_for_job(
     .filter((item): item is RpcEncyclopediaItem => item !== undefined)
     .map((item) => ({
       id: item.template_id,
+      item_type: item.item_type ?? '',
       name: item.name ?? '',
       level: item.level ?? 0,
       category: item.category ?? '',

@@ -70,7 +70,7 @@ function JobsTab({
     () =>
       craftable_items_for_job(enc?.recipes, enc?.items, job_index).map((row) => ({
         ...row,
-        asset: encyclopedia_item_asset({ id: row.id, slug: slugs[row.name], name: row.name }),
+        asset: encyclopedia_item_asset({ id: row.id, slug: slugs[row.name], item_type: row.item_type, name: row.name }),
       })),
     [enc, job_index]
   )

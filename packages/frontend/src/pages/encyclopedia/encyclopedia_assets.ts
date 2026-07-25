@@ -31,10 +31,10 @@ export function encyclopedia_item_asset(
   const cosmetic_identifier = cosmetic_icon_of(item)
   const asset_class = icon_asset_class(item.item_type)
   // Production ships an EMPTY seed catalog (virtual:item_catalog — see vite.config.ts), so `item.slug` is
-  // absent for every /v1 row; derive the published icon key from the row's own fields (pet item_type, else the
-  // slugified display name) before degrading to '' (the glyph). NOT `item_type` as a raw fallback: for 1342/1840
-  // items it is only the generic family word ('chestplate'/'resource' -> items/chestplate.png 404). Chain-truth
-  // twin: inventory_item_icon threads the same chain_icon_slug so bag and encyclopedia can never diverge.
+  // absent for every /v1 row and the key comes from `item_type` — the authored art slug (chain_icon_slug),
+  // unique on every one of the 1854 live rows; the generic family word is `category`, never item_type. A row
+  // with no item_type degrades to '' (the glyph), never a guess from the display name. Chain-truth twin:
+  // inventory_item_icon threads the same chain_icon_slug so bag and encyclopedia can never diverge.
   const icon = cosmetic_identifier ?? item.slug ?? chain_icon_slug(item)
   return {
     // The art `id` deliberately never falls back to `item.id` (the runtime Sui object address is not an art

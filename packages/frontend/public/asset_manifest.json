@@ -12,7 +12,6 @@
     "spell": { "published": true },
     "spell_corpus": { "published": true },
     "world_corpus": { "published": true },
-    "icon_slug_map": { "published": true },
     "mob_icon": { "published": true },
     "item": { "published": true },
     "shop_render": { "published": true }

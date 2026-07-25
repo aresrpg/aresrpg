@@ -20,6 +20,7 @@ import {
   is_item_listed,
   is_slot_valid,
   invalid_equip_change,
+  inventory_item_icon,
   item_display_level,
   partition_bag,
   real_equipment_of,
@@ -526,5 +527,18 @@ describe('stage_reducer (equip action — combat category branches)', () => {
 
     expect(equipment.helmet).toBe(helmet)
     expect(equipment.hat).toBeNull()
+  })
+})
+
+// SPECIMEN twin of the encyclopedia (see item_classification.test.js): the bag / paper doll / loot tiles
+// resolve their icon through inventory_item_icon, so a name-derived key starved them the same way.
+describe('inventory_item_icon — the icon key is the itemType (specimen: Bag of Quartz)', () => {
+  test('an owned bag row resolves items/bag_quartz.png, not the name-derived bag_of_quartz', () => {
+    expect(inventory_item_icon({ id: '0xbag', item_type: 'bag_quartz', name: 'Bag of Quartz' })).toBe('bag_quartz')
+  })
+
+  test('a bundled seed catalog slug (dev) still wins, and a cosmetic alias still wins over both', () => {
+    expect(inventory_item_icon({ id: '0xa', item_type: 'bag_quartz', name: 'Bag of Quartz' }, { 'Bag of Quartz': 'authored' })).toBe('authored')
+    expect(inventory_item_icon({ id: '0xb', item_type: 'cape_lorito_agility', name: 'Lorito Cloak (Emerald)' })).toBe('cape_lorito-agility')
   })
 })

@@ -251,13 +251,14 @@ describe('FightReport — the loot D53 letter-tile fallback (an orphaned drop, m
 describe('FightReport — loot tile icon resolution routes through the SAME shared resolver as the inventory (never a raw item_type bypass)', () => {
   test('a published RESOURCE renders its exact manifest art, never the generic resource package', () => {
     const template_id = `0x${'e13d'.repeat(16)}` // synthetic runtime id — a source literal trips the chain-id gate
+    // Chain-truth shape (live /v1): `item_type` is the authored art slug; 'resource' is the CATEGORY.
     const items = [
-      { template_id, item_type: 'resource', name: 'Obsidian Core', item_category: 'resource' },
+      { template_id, item_type: 'obsidian_core', name: 'Obsidian Core', item_category: 'resource' },
     ]
     const spoils = {
       xp: 10,
       tokens: 0,
-      loot: [{ template_id, item_type: 'resource', name: 'Obsidian Core', amount: 2 }],
+      loot: [{ template_id, item_type: 'obsidian_core', name: 'Obsidian Core', amount: 2 }],
     }
     const html = renderToStaticMarkup(<FightReport {...base} spoils={spoils} items={items} cost={null} />)
     expect(html).toContain('/assets/items/obsidian_core.png')
