@@ -176,7 +176,14 @@ describe('crafting reads chain truth, never the bundled seed catalog (#765 root 
   const source = (relative_path) => readFileSync(new URL(relative_path, import.meta.url), 'utf8')
   const BUNDLED_CATALOG_EXPORTS = ['craft_recipes', 'recipe_ingredients', 'craft_affordability']
 
-  for (const file of ['./JobsDrawer.jsx', '../../../world-shell/craft_actions.js']) {
+  // The remaining two surfaces landed with #800 (the job level-up unlock panel and the artisan commission
+  // list). The guard covers EVERY crafting surface now, so the class cannot come back on any of them.
+  for (const file of [
+    './JobsDrawer.jsx',
+    '../../../world-shell/craft_actions.js',
+    './level_unlocks.js',
+    './world/commission/commission_recipes.js',
+  ]) {
     test(`${file} resolves no recipe through @aresrpg/sdk/jobs`, () => {
       const [sdk_import] = source(file).match(/import \{[^}]*\} from '@aresrpg\/sdk\/jobs'/s) ?? ['']
       for (const symbol of BUNDLED_CATALOG_EXPORTS) expect(sdk_import).not.toContain(symbol)

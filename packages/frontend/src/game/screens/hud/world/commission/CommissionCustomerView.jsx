@@ -5,8 +5,13 @@
 // checked against the CUSTOMER's OWN kiosk stock (`s.sui.items`, the same chain-truth bag the JobsDrawer
 // reads): a row the customer can't supply is GREYED with a "missing: X×2" tail. Selecting a
 // craftable recipe reveals the optional SUI payment (0 allowed) + REQUEST CRAFT. All derivation is the
-// SDK-backed commission_recipes.js + the pure commission_logic.js (unit-tested); the request itself goes
-// through the chain-decoupled stub (commission_actions.js) so this is complete + demoable now.
+// live-/v1-backed commission_recipes.js + the pure commission_logic.js (unit-tested); the request itself
+// goes through the chain-decoupled stub (commission_actions.js) so this is complete + demoable now.
+//
+// Issue #800: the recipe list + every bill of materials used to resolve through the BUNDLED seed catalog
+// (@aresrpg/sdk/jobs `craft_recipes` / `recipe_ingredients` → packages/sdk/src/{items,recipes}.json, `{}` in
+// this repo BY CONSTRUCTION), so this view was guaranteed empty. It now reads the same `/v1/encyclopedia`
+// projection the Jobs drawer crafts from — and an in-flight read renders as LOADING, never as "no recipes".
 
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -15,9 +20,11 @@ import { JOBS, job_level_progress } from '@aresrpg/sdk/jobs'
 import { use_game_state, context } from '../../../../store.js'
 import { use_toast } from '../../../../../toast'
 import { use_auth } from '../../../../../auth'
+import { get_encyclopedia } from '../../../../../rpc/client'
+import { use_rpc_view } from '../../../../../rpc/use_view'
 import { add_friend_flow, on_friends_changed } from '../../../../../world-shell/friends_actions'
 import { ItemIcon } from '../../ItemIcon.jsx'
-import { artisan_craftable_recipes, recipe_ingredients } from './commission_recipes.js'
+import { artisan_craftable_recipes } from './commission_recipes.js'
 import { owned_from_items, commission_recipe_row, missing_summary, artisan_net_mist } from './commission_logic.js'
 import { list_artisans, request_craft, to_mist, from_mist, meets_min_payment, MIN_PAYMENT_SUI } from './commission_actions.js'
 
@@ -76,17 +83,25 @@ export function CommissionCustomerView() {
   )
   const owned = useMemo(() => owned_from_items(items), [items])
 
-  // The recipes THIS artisan can craft (their job levels filter the list), each priced against the
-  // customer's stock into a greying row (commission_recipe_row — the unit-tested core).
+  // The live crafting corpus — ONE batched, session-cached `/v1/encyclopedia` read (items + recipes in a
+  // single envelope), the SAME source the Jobs drawer projects through craft_recipes_for_job.
+  const { data: encyclopedia, loading: catalog_loading } = use_rpc_view(
+    (signal) => get_encyclopedia(undefined, signal),
+    { deps: [] }
+  )
+
+  // The recipes THIS artisan can craft (their job levels vs each recipe's CHAIN gate filter the list), each
+  // priced against the customer's stock into a greying row (commission_recipe_row — the unit-tested core).
+  // The bill of materials rides ON the projected row — one walk, no second lookup, no second source.
   const rows = useMemo(() => {
     if (!artisan) return []
-    return artisan_craftable_recipes(artisan.jobs).map(recipe =>
-      commission_recipe_row(recipe, recipe_ingredients(recipe.id), owned)
+    return artisan_craftable_recipes(artisan.jobs, encyclopedia?.recipes, encyclopedia?.items).map(recipe =>
+      commission_recipe_row(recipe, recipe.ingredients, owned)
     )
-  }, [artisan, owned])
+  }, [artisan, owned, encyclopedia])
 
   const selected_row = useMemo(
-    () => rows.find(r => r.recipe.id === selected_recipe_id) ?? null,
+    () => rows.find(r => r.recipe.recipe_id === selected_recipe_id) ?? null,
     [rows, selected_recipe_id]
   )
 
@@ -114,13 +129,15 @@ export function CommissionCustomerView() {
       const me = state.sui.characters.find(c => c.id === state.selected_character_id)
       await request_craft({
         artisan_address: artisan.address,
-        recipe_id: selected_row.recipe.id,
+        // The on-chain `crafting::Recipe` object id — the craft tx's own input, not the output template.
+        recipe_id: selected_row.recipe.recipe_id,
         job_id: selected_row.recipe.job_id,
         payment_mist: to_mist(payment),
         customer_address: address ?? undefined,
         customer_name: me?.name || undefined,
         recipe_name: selected_row.recipe.name,
-        recipe_icon: selected_row.recipe.icon,
+        // The chain art key (`items/{item_type}.png`); the object id is not an art identity.
+        recipe_icon: selected_row.recipe.item_type,
         recipe_category: selected_row.recipe.category,
       })
       use_toast.getState().add(t('commission.request_sent', { recipe: selected_row.recipe.name }), 'info')
@@ -199,25 +216,33 @@ export function CommissionCustomerView() {
         </div>
 
         <div className="gw-cm__section-h">{t('commission.recipes_head')}</div>
-        {rows.length === 0 ? (
+        {catalog_loading ? (
+          // Cache law: absence is not emptiness. "This artisan has no craftable recipes yet" is a claim
+          // nothing has established until the corpus read lands.
+          <div className="gw-cm__empty">{t('common.loading')}</div>
+        ) : rows.length === 0 ? (
           <div className="gw-cm__empty">{t('commission.no_recipes')}</div>
         ) : (
           <div className="gw-cm__recipes">
             {rows.map(row => {
               const greyed = !row.craftable
-              const selected = row.recipe.id === selected_recipe_id
+              const selected = row.recipe.recipe_id === selected_recipe_id
               return (
                 <button
-                  key={row.recipe.id}
+                  key={row.recipe.recipe_id}
                   type="button"
                   disabled={greyed}
                   aria-disabled={greyed}
                   className={`gw-cm__recipe${greyed ? ' is-greyed' : ''}${selected ? ' is-selected' : ''}`}
-                  onClick={() => !greyed && set_selected_recipe_id(row.recipe.id)}
+                  onClick={() => !greyed && set_selected_recipe_id(row.recipe.recipe_id)}
                 >
                   <span className="gw-cm__recipe-icon">
                     <ItemIcon
-                      item={{ icon: row.recipe.icon, id: row.recipe.id, category: row.recipe.category }}
+                      item={{
+                        icon: row.recipe.item_type,
+                        id: row.recipe.recipe_id,
+                        category: row.recipe.category,
+                      }}
                       alt={row.recipe.name}
                     />
                   </span>

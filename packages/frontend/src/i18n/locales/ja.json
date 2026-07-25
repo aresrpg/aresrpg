@@ -1627,7 +1627,7 @@
     "req_level": "Lv {{level}}",
     "success_chance": "成功率 {{pct}}%",
     "missing": "不足: {{list}}",
-    "not_seeded": "このレシピはまだコンテンツに含まれていません",
+    "not_seeded": "このレシピには材料が登録されていません",
     "in_stock": "在庫あり",
     "payment_label": "支払い (SUI)",
     "for_recipe": "対象",

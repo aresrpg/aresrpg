@@ -2,17 +2,12 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // LEVEL-UP UNLOCK MATH — the pure "what did I just unlock" computations for the two congrats cards
 // (LevelUp.jsx = character, JobLevelUp.jsx = job). Every function is a pure transform over plain data
-// (no I/O, no React) so the unlock logic is unit-tested in isolation (level_unlocks.test.js). Content +
-// formulas are the @aresrpg/sdk/jobs SSOT (the SAME tables the JobsDrawer renders) and the chain's own
-// gather-yield formula — nothing here invents a gain (honest-UI law: show only real unlocks).
+// (no I/O, no React) so the unlock logic is unit-tested in isolation (level_unlocks.test.js). The job
+// roster + the gather tiers + the chain's gather-yield formula are the @aresrpg/sdk/jobs SSOT; CRAFTING is
+// chain content and arrives as live `/v1` rows from the caller (issue #800 — see recipes_unlocked_between).
+// Nothing here invents a gain (honest-UI law: show only real unlocks).
 
-import {
-  GATHER_RESOURCES,
-  craft_recipes,
-  tier_to_level,
-  get_job,
-  JOB_CATEGORY,
-} from '@aresrpg/sdk/jobs'
+import { GATHER_RESOURCES, tier_to_level, get_job, JOB_CATEGORY } from '@aresrpg/sdk/jobs'
 
 /**
  * CHARACTER — the worlds a level gain just made accessible. A world gates on-chain on `required_level`
@@ -54,19 +49,23 @@ export function resources_unlocked_between(job_id, before, after) {
 }
 
 /**
- * JOB (craft) — the recipes a job level gain just unlocked. A recipe unlocks when the job level reaches the
- * recipe item's own level (JobsDrawer gates `level >= recipe.level`), so it's newly unlocked when that level
- * is in `(before, after]`. Returns [] for a gathering job (craft_recipes is empty) or when none crossed.
- * @param {string} job_id
+ * JOB (craft) — the recipes a job level gain just unlocked, off the LIVE `/v1` crafting corpus. `recipes` is
+ * the job's own `craft_recipes_for_job(...)` projection (pages/encyclopedia/recipes.ts — the ONE home the
+ * Jobs drawer already crafts from), so the card and the drawer can never disagree about what a job unlocks.
+ *
+ * The gate is the CHAIN's `required_level` (`crafting.move` asserts `crafter_level >= required_level`,
+ * EUnderLevel), NOT the output item's display level: they are different numbers on real content, so gating
+ * on the item level announced recipes at a level the chain would have refused (or never announced them).
+ * @param {import('../../../pages/encyclopedia/recipes').CraftRecipeRow[] | null | undefined} recipes
  * @param {number} before
  * @param {number} after
- * @returns {import('@aresrpg/sdk/jobs').CraftRecipe[]}
+ * @returns {import('../../../pages/encyclopedia/recipes').CraftRecipeRow[]}
  */
-export function recipes_unlocked_between(job_id, before, after) {
+export function recipes_unlocked_between(recipes, before, after) {
   if (after <= before) return []
-  return craft_recipes(job_id)
-    .filter(r => r.level > before && r.level <= after)
-    .sort((a, b) => a.level - b.level)
+  return (recipes ?? [])
+    .filter(r => r.required_level > before && r.required_level <= after)
+    .sort((a, b) => a.required_level - b.required_level)
 }
 
 /**
@@ -103,30 +102,39 @@ export function yield_improved_between(before, after) {
  * JOB — the full unlock bundle a job level gain surfaces, resolved by the job's category (gathering →
  * resources + yield; craft → recipes). One call the card renders; `has_any` is the "is there anything to
  * celebrate beyond the level number" flag. Pure — the card adds no logic.
+ *
+ * `live.recipes` is the job's `/v1` projection and `live.loading` whether that read is still in flight.
+ * CACHE LAW: absence is not emptiness — a craft job whose corpus has not arrived reports `recipes_loading`
+ * so the card shows a loading row, instead of silently omitting the section and telling the player their
+ * level-up opened no recipe. A gathering job makes no recipe read at all, so it never reports one.
  * @param {string} job_id
  * @param {number} before
  * @param {number} after
+ * @param {{ recipes?: import('../../../pages/encyclopedia/recipes').CraftRecipeRow[], loading?: boolean }} live
  * @returns {{
  *   is_gathering: boolean,
  *   resources: ReturnType<typeof resources_unlocked_between>,
  *   recipes: ReturnType<typeof recipes_unlocked_between>,
+ *   recipes_loading: boolean,
  *   yield: ReturnType<typeof yield_improved_between>,
  *   has_any: boolean,
  * }}
  */
-export function job_unlocks(job_id, before, after) {
+export function job_unlocks(job_id, before, after, { recipes = [], loading = false } = {}) {
   const job = get_job(job_id)
   const is_gathering = job?.category === JOB_CATEGORY.GATHERING
   const resources = is_gathering ? resources_unlocked_between(job_id, before, after) : []
-  const recipes = is_gathering ? [] : recipes_unlocked_between(job_id, before, after)
+  const unlocked = is_gathering ? [] : recipes_unlocked_between(recipes, before, after)
+  const recipes_loading = !is_gathering && loading
   const yield_gain = is_gathering
     ? yield_improved_between(before, after)
     : { improved: false, amount: 0, previous: 0 }
   return {
     is_gathering,
     resources,
-    recipes,
+    recipes: unlocked,
+    recipes_loading,
     yield: yield_gain,
-    has_any: resources.length > 0 || recipes.length > 0 || yield_gain.improved,
+    has_any: resources.length > 0 || unlocked.length > 0 || recipes_loading || yield_gain.improved,
   }
 }

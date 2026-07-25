@@ -47,10 +47,11 @@ describe('owned_from_items (bag → owned map, JobsDrawer idiom)', () => {
 })
 
 describe('commission_recipe_row (the greying / stock check)', () => {
-  const recipe = { id: 'iron_sword', name: 'Iron Sword', level: 10 }
+  // `required_level` is the CHAIN gate the live recipe row carries, not the output item's display level.
+  const recipe = { id: 'iron_sword', name: 'Iron Sword', required_level: 10 }
   const ingredients = [
-    { id: 'oak_log', name: 'Oak Log', qty: 3, level: 1, icon: 'oak_log', quality: 'common' },
-    { id: 'iron', name: 'Iron', qty: 2, level: 1, icon: 'iron', quality: 'common' },
+    { id: 'oak_log', template_id: '0xtpl_oak_log', name: 'Oak Log', qty: 3, level: 1 },
+    { id: 'iron', template_id: '0xtpl_iron', name: 'Iron', qty: 2, level: 1 },
   ]
 
   it('is CRAFTABLE (not greyed) when the customer holds every ingredient', () => {
@@ -83,11 +84,21 @@ describe('commission_recipe_row (the greying / stock check)', () => {
     expect(row.bill.map((b) => `${b.have}/${b.need}`)).toEqual(['3/3', '2/2'])
   })
 
-  it('treats an un-seeded recipe (empty bill) as NOT craftable — never silently free', () => {
+  it('treats a recipe with no bill at all as NOT craftable — never silently free', () => {
     const row = commission_recipe_row(recipe, [], { oak_log: 99 })
     expect(row.seeded).toBe(false)
     expect(row.craftable).toBe(false)
     expect(row.missing).toEqual([])
+  })
+
+  it('an ingredient whose template has not snapshotted counts as 0 owned — the gate stays CLOSED', () => {
+    // craft_recipes_for_job keeps such a line with a null slug: it can never be proven owned, and dropping
+    // it would understate the tally `crafting::craft` will demand (EMissingIngredient).
+    const row = commission_recipe_row(recipe, [{ id: null, template_id: '0xtpl_ghost', name: '0xtpl_…host', qty: 1 }], {
+      oak_log: 99,
+    })
+    expect(row.craftable).toBe(false)
+    expect(row.bill[0].have).toBe(0)
   })
 })
 

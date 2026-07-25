@@ -1627,7 +1627,7 @@
     "req_level": "Niv {{level}}",
     "success_chance": "{{pct}} % de réussite",
     "missing": "Manque : {{list}}",
-    "not_seeded": "Recette absente du contenu pour l'instant",
+    "not_seeded": "Cette recette ne liste aucun ingrédient",
     "in_stock": "En stock",
     "payment_label": "Paiement (SUI)",
     "for_recipe": "Pour",

@@ -5,20 +5,25 @@
 // number in a ring, the ice-blue accent, mono nums) reusing result.css atoms, so the two celebrations read
 // as one family. Gated off the discrete `job_level_up` slice owned by core/modules/job_progression.js.
 //
-// The card names the CONCRETE gains, never a bare "you leveled" — resolved from the @aresrpg/sdk/jobs SSOT
-// (the SAME content the JobsDrawer renders) via level_unlocks.js: a gathering job shows the resources now
-// gatherable + whether the per-node yield stepped up (chain gather-yield formula); a craft job shows the
-// recipes now craftable. Sections with nothing to show are omitted (no empty card). Persists until the
-// player dismisses it (issue #369 pair — no auto-dismiss timer); hides while the character level-up /
-// fight-result cards are up (never card-over-card).
+// The card names the CONCRETE gains, never a bare "you leveled" — via level_unlocks.js: a gathering job
+// shows the resources now gatherable + whether the per-node yield stepped up (chain gather-yield formula,
+// off the @aresrpg/sdk/jobs roster); a craft job shows the recipes now craftable, resolved from the LIVE
+// `/v1` crafting projection (issue #800 — it used to read the bundled seed catalog, `{}` in this repo BY
+// CONSTRUCTION, so a craft level-up could never announce a recipe). Sections with nothing to show are
+// omitted (no empty card) — except an in-flight recipe read, which shows a loading row rather than lying
+// by omission. Persists until the player dismisses it (issue #369 pair — no auto-dismiss timer); hides
+// while the character level-up / fight-result cards are up (never card-over-card).
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { get_job, item_icon_url } from '@aresrpg/sdk/jobs'
+import { JOB_CATEGORY, JOBS, get_job, item_icon_url } from '@aresrpg/sdk/jobs'
 
 import { use_game_state, context } from '../../store.js'
 import { play_fight_sfx } from '../../core/audio/sfx.js'
+import { get_encyclopedia } from '../../../rpc/client'
+import { use_rpc_view } from '../../../rpc/use_view'
+import { craft_recipes_for_job } from '../../../pages/encyclopedia/recipes'
 import { job_unlocks } from './level_unlocks.js'
 import './result.css'
 import './joblevelup.css'
@@ -70,6 +75,22 @@ export function JobLevelUp() {
   const blocked = use_game_state(s => !!s.level_up || !!s.fight_result)
   const visible = !!job_level_up && !blocked
 
+  const job_id = job_level_up?.job_id ?? null
+  const job = job_id ? get_job(job_id) : null
+  // The live crafting corpus (issue #800) — the SAME batched, session-cached `/v1/encyclopedia` read the
+  // Jobs drawer projects through `craft_recipes_for_job`, so the card announces exactly what the drawer
+  // will let the player craft. A gathering job crafts nothing, so it never fires the read.
+  const is_craft = !!job && job.category !== JOB_CATEGORY.GATHERING
+  const { data: encyclopedia, loading } = use_rpc_view((signal) => get_encyclopedia(undefined, signal), {
+    enabled: visible && is_craft,
+    deps: [job_id],
+  })
+  const job_index = useMemo(() => JOBS.findIndex(j => j.id === job_id), [job_id])
+  const craft_rows = useMemo(
+    () => craft_recipes_for_job(encyclopedia?.recipes, encyclopedia?.items, job_index),
+    [encyclopedia, job_index]
+  )
+
   // First paint of the card: play the win-family SFX. Issue #369 pair: the card used to auto-dismiss on a
   // timer — deleted. It now persists until the player explicitly presses the CTA below; nothing else may
   // unmount it.
@@ -80,9 +101,8 @@ export function JobLevelUp() {
 
   if (!visible) return null
 
-  const { job_id, level, levels_gained } = job_level_up
-  const job = get_job(job_id)
-  const unlocks = job_unlocks(job_id, level - levels_gained, level)
+  const { level, levels_gained } = job_level_up
+  const unlocks = job_unlocks(job_id, level - levels_gained, level, { recipes: craft_rows, loading })
   const dismiss = () => context.dispatch('action/job_level_up/close')
 
   return (
@@ -130,7 +150,21 @@ export function JobLevelUp() {
           </div>
         )}
 
-        {/* Craft: newly craftable recipes */}
+        {/* Craft: the live recipe read still in flight — a loading row, never a silent omission that would
+            claim the level-up opened nothing (cache law: absence is not emptiness). */}
+        {unlocks.recipes_loading && (
+          <div className="jlu-sec">
+            <div className="jlu-lbl">{t('job_level_up.new_recipes')}</div>
+            <div className="jlu-chips">
+              <span className="jlu-chip">
+                <span className="jlu-chip__name">{t('common.loading')}</span>
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Craft: newly craftable recipes. The chip art is the row's on-chain `item_type` — the key the
+            assets CDN serves `items/{item_type}.png` under; the Sui object id is not an art identity. */}
         {unlocks.recipes.length > 0 && (
           <div className="jlu-sec">
             <div className="jlu-lbl">
@@ -138,7 +172,7 @@ export function JobLevelUp() {
             </div>
             <div className="jlu-chips">
               {unlocks.recipes.map(r => (
-                <UnlockChip key={r.id} icon={r.icon} name={r.name?.trim() || r.id} />
+                <UnlockChip key={r.recipe_id} icon={r.item_type} name={r.name?.trim() || r.item_type} />
               ))}
             </div>
           </div>

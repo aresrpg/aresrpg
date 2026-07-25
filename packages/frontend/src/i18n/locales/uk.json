@@ -1627,7 +1627,7 @@
     "req_level": "Рів {{level}}",
     "success_chance": "{{pct}} % успіху",
     "missing": "Бракує: {{list}}",
-    "not_seeded": "Рецепт ще не додано до вмісту",
+    "not_seeded": "У цьому рецепті немає інгредієнтів",
     "in_stock": "У наявності",
     "payment_label": "Оплата (SUI)",
     "for_recipe": "Для",

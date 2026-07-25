@@ -2,13 +2,15 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure commission logic — the CUSTOMER-side greying/stock math, split out so it is unit-testable with ZERO
 // React / chain / SDK-render coupling (component tests exercise the greying/stock logic as pure
-// fns). Every chain/SDK read + the tx compose live behind commission_actions.js; the SDK-backed recipe
+// fns). Every chain/SDK read + the tx compose live behind commission_actions.js; the live `/v1` recipe
 // DERIVATION lives in commission_recipes.js. This file only transforms plain data, so its test imports no
-// heavy graph and never couples to the content seed.
+// heavy graph and never couples to any content source.
 //
-// The stock check mirrors @aresrpg/sdk/jobs `craft_affordability` have>=need semantics (jobs.js:689) — the
-// SAME rule the JobsDrawer uses to gate a craft — so a commission greys exactly what a craft tx could not
-// burn. Computed inline here (not imported) to keep the tested core dependency-free.
+// The stock check mirrors `craft_affordability_of` have>=need semantics (pages/encyclopedia/recipes.ts) —
+// the SAME rule the JobsDrawer uses to gate a craft — so a commission greys exactly what a craft tx could
+// not burn. Computed inline here (not imported) to keep the tested core dependency-free. An ingredient
+// whose template has not snapshotted carries a null id and therefore counts as 0 owned: the row still
+// renders (the chain will demand it) but holds the gate CLOSED — honest gap, never a silent drop.
 //
 // Also home to the PLATFORM CUT math (platform_cut_mist / artisan_net_mist) — the customer request-create view
 // and the artisan request queue both need the IDENTICAL 10%-floor split, so it lives here ONCE.
@@ -46,15 +48,17 @@ export function owned_from_items(items) {
 /**
  * One customer-facing recipe row: the ingredient bill priced against the CUSTOMER's own stock. A row the
  * customer cannot fully supply (any ingredient short) is `craftable: false` → the UI greys it and renders
- * the `missing` tail ("missing: Oak Log ×2"). An un-seeded recipe (empty bill) is treated as NOT craftable —
- * never silently free. `success_chance` and the artisan's `required_level` ride along for the row display.
- * @param {{ id: string, name: string, level?: number, success_chance?: number }} recipe
- * @param {Array<{ id: string, name: string, qty: number, level?: number, icon?: string, quality?: string }>} ingredients
+ * the `missing` tail ("missing: Oak Log ×2"). A recipe with no bill at all is treated as NOT craftable —
+ * never silently free. `success_chance` and the artisan's `required_level` ride along for the row display;
+ * `required_level` is the CHAIN gate the recipe carries (`crafting.move`, EUnderLevel), never the output
+ * item's display level — they are different numbers on real content.
+ * @param {{ id: string, name: string, required_level?: number, success_chance?: number }} recipe
+ * @param {Array<{ id: string | null, name: string, qty: number, level?: number }>} ingredients
  * @param {Record<string, number>} owned  the customer's owned map (owned_from_items)
  */
 export function commission_recipe_row(recipe, ingredients, owned) {
   const bill = (ingredients ?? []).map((ing) => {
-    const have = owned?.[ing.id] ?? 0
+    const have = ing.id ? (owned?.[ing.id] ?? 0) : 0
     const short = Math.max(0, ing.qty - have)
     return { ...ing, have, need: ing.qty, short, enough: short === 0 }
   })
@@ -68,7 +72,7 @@ export function commission_recipe_row(recipe, ingredients, owned) {
     seeded,
     has_ingredients,
     success_chance: recipe_success_chance(recipe),
-    required_level: recipe.level ?? 1,
+    required_level: recipe.required_level ?? 1,
     // GREYED when the customer can't supply the resources. The artisan-level gate is applied
     // upstream (the list is pre-filtered to what the artisan CAN craft), so the row's own gate is stock.
     craftable: has_ingredients,

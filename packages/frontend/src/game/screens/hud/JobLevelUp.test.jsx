@@ -57,6 +57,30 @@ describe('JobLevelUp — issue #369 pair: opaque ground + no auto-dismiss', () =
   })
 })
 
+// Issue #800 — the "new recipes unlocked" panel resolved its list through the BUNDLED seed catalog
+// (`craft_recipes` → packages/sdk/src/{items,recipes}.json, `{}` in this repo BY CONSTRUCTION), so a craft
+// job level-up could never announce a recipe. It now reads the live `/v1` crafting projection, which means
+// the card has an IN-FLIGHT state — and cache law says absence is not emptiness: silently omitting the
+// section while the read is in flight tells the player their level-up opened nothing.
+//
+// SSR renders the first paint (renderToStaticMarkup never runs `useEffect`, so use_rpc_view is exactly at
+// its pre-fetch state) — which is precisely the moment the omission would have lied.
+describe('JobLevelUp — the recipe unlock list is live, and honest while it loads (#800)', () => {
+  test('a craft job level-up shows a LOADING recipe row on first paint, never a silent omission', () => {
+    state.job_level_up = { job_id: 'armorsmith', level: 26, levels_gained: 1 }
+    const text = render().replace(/<[^>]+>/g, '')
+    expect(text).toContain(en.job_level_up.new_recipes)
+    expect(text).toContain(en.common.loading)
+    state.job_level_up = { job_id: 'miner', level: 2, levels_gained: 1 }
+  })
+
+  test('a gathering job never claims a recipe read it does not make', () => {
+    const text = render().replace(/<[^>]+>/g, '')
+    expect(text).not.toContain(en.job_level_up.new_recipes)
+    expect(text).not.toContain(en.common.loading)
+  })
+})
+
 afterAll(() => {
   for (const spy of spies) spy.mockRestore()
 })

@@ -1627,7 +1627,7 @@
     "req_level": "Lv {{level}}",
     "success_chance": "{{pct}}% success",
     "missing": "Missing: {{list}}",
-    "not_seeded": "Recipe not yet in the content seed",
+    "not_seeded": "This recipe lists no ingredients",
     "in_stock": "In stock",
     "payment_label": "Payment (SUI)",
     "for_recipe": "For",

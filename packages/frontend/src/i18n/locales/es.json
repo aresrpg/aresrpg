@@ -1627,7 +1627,7 @@
     "req_level": "Nv {{level}}",
     "success_chance": "{{pct}} % de éxito",
     "missing": "Faltan: {{list}}",
-    "not_seeded": "Receta aún no incluida en el contenido",
+    "not_seeded": "Esta receta no indica ingredientes",
     "in_stock": "En inventario",
     "payment_label": "Pago (SUI)",
     "for_recipe": "Para",
