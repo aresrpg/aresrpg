@@ -50,8 +50,17 @@ const crit_effect_for = (level: any, effect: any, index: number) => {
   return crit_effects.find((candidate: any) => String(candidate.kind) === String(effect.kind)) ?? null
 }
 
-const encyclopedia_effect_parts = (t: Translate, effect: any, crit_effect: any, area_visualized: boolean) => {
+const encyclopedia_effect_parts = (
+  t: Translate,
+  effect: any,
+  crit_effect: any,
+  crit_rate: number | null | undefined,
+  area_visualized: boolean
+) => {
   const line_effect = area_visualized ? { ...effect, area_shape: 'POINT', area_size: 0 } : effect
+  if (!(Number(crit_rate) > 0)) {
+    return seed_effect_parts(t as any, { ...line_effect, crit_base: undefined, crit_effect: undefined })
+  }
   if (!DAMAGE_KINDS.has(effect.kind)) return seed_effect_parts(t as any, line_effect)
   const critical_damage = crit_effect ? seed_effect_value(t as any, { ...effect, ...crit_effect }) : undefined
   return seed_effect_parts(t as any, { ...line_effect, crit_base: critical_damage })
@@ -299,6 +308,7 @@ function SpellDetail({ spell }: { spell: any }) {
                         t as Translate,
                         eff,
                         crit_effect_for(lvl, eff, i),
+                        lvl.crit_rate,
                         area_grid != null
                       )}
                     />

@@ -56,7 +56,11 @@ export const crit_pct = level =>
  * resolve). @param {{ effects?: Array<object> } | null | undefined} level
  */
 export const spell_effects = level =>
-  (level?.effects ?? []).map(e => ({ ...e, color: effect_color(e) }))
+  (level?.effects ?? []).map(e => ({
+    ...e,
+    ...(level?.crit_rate > 0 ? {} : { crit_base: undefined, crit_effect: undefined }),
+    color: effect_color(e),
+  }))
 
 /** A short targeting descriptor for the list subline ('self' / 'melee' / 'ranged'). @param {{ range?: number[], effects?: Array<object> }} level */
 const descriptor = level => {
