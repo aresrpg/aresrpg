@@ -78,6 +78,74 @@ fun derive_mobs_inner(world: &World, zx: u32, zy: u32, seed: u64, team_bound: u6
   (sids, tpls, xs, zs, sizes, gseeds)
 }
 
+/// MEMBER-LIST variant (format 3, #1110/#1111) — the RULED SPAWN MODEL. Two substitutions land here together,
+/// because either one alone is a shipped regression (the design ruling's words):
+///
+/// 1. **The level cap is GONE from the pick table.** `eligible_mob_weights` zeroes a row whose eligibility level
+///    sits above the zone's distance cap, which is what made 9 of 20 worlds admit ≤2 species at their own spawn
+///    box (7 of them at 100% one mob). The ruled model is EQUAL SPAWN EVERYWHERE: every authored row of the
+///    world may appear anywhere in it, and DISTANCE grades the difficulty instead of the membership. So this
+///    path weights the roll by the authored `rate_bp` alone.
+/// 2. **Difficulty rides distance.** `progress` (0-1000, the §4 curve) comes back as the eighth return value:
+///    it still caps GROUP SIZE here, and it is the value the fight door plumbs into the engine so a member's
+///    level is drawn from a window that slides up its authored band with distance from the world centre.
+///
+/// Formats 1/2 keep their own untouched functions above — dropping the level cap on THEIR path would re-derive
+/// every in-flight zone into fiction (a different weight total picks a different row from the same roll), so the
+/// substitution is format-gated by construction, not by a flag.
+///
+/// The MEMBER table is the pick table with every row named by the world's `boss_mask` zeroed — the kernel reads
+/// a zero there as "this primary is a boss" and keeps that group single-spec. An absent mask reads as EMPTY, so
+/// the member table is simply the pick table: one degradation path, no second shape.
+public(package) fun derive_mobs_members(world: &World, zx: u32, zy: u32, seed: u64, team_bound: u64): (vector<u64>, vector<ID>, vector<vector<ID>>, vector<u32>, vector<u32>, vector<u16>, vector<u64>, u64) {
+  let zsize = world::zone_size(world);
+  let bx = world::bounds_x(world);
+  let bz = world::bounds_z(world);
+  let (ox, oz) = world::zone_origin(world, zx, zy);
+  let mob_tab = world::mobs_snapshot(world);
+  let progress = spawn_distance_progress(
+    ox, oz, zsize, bx, bz, world::spawn_zone_x(world), world::spawn_zone_z(world),
+  );
+  let size_bound = world_math::size_cap(progress, team_bound);
+  let n = mob_tab.length();
+  let boss = world::boss_mask(world);
+  let mut weights = vector<u64>[];
+  let mut member_w = vector<u64>[];
+  let mut min_gs = vector<u64>[];
+  let mut max_gs = vector<u64>[];
+  let mut i = 0;
+  while (i < n) {
+    let e = &mob_tab[i];
+    let w = world::me_rate_bp(e) as u64;
+    weights.push_back(w);
+    member_w.push_back(if (boss.contains(&(i as u16))) 0 else w);
+    min_gs.push_back(world::me_min_group(e) as u64);
+    max_gs.push_back(world::me_max_group(e) as u64);
+    i = i + 1;
+  };
+  let (sids, idxs, member_idxs, xs, zs, sizes, gseeds) = zone_gen::derive_mob_groups_members(
+    seed, world::min_groups(world) as u64, world::max_groups(world) as u64,
+    &weights, &member_w, &min_gs, &max_gs, size_bound, ox, oz, zsize, bx, bz,
+  );
+  let mut tpls = vector<ID>[];
+  let mut member_tpls = vector<vector<ID>>[];
+  let m = idxs.length();
+  let mut j = 0;
+  while (j < m) {
+    tpls.push_back(world::me_template(&mob_tab[idxs[j]]));
+    let roster = &member_idxs[j];
+    let mut row = vector<ID>[];
+    let mut k = 0;
+    while (k < roster.length()) {
+      row.push_back(world::me_template(&mob_tab[roster[k] as u64]));
+      k = k + 1;
+    };
+    member_tpls.push_back(row);
+    j = j + 1;
+  };
+  (sids, tpls, member_tpls, xs, zs, sizes, gseeds, progress)
+}
+
 /// Derive the zone's FULL resource-cell list from `seed` — table snapshot → the pure `zone_gen` kernel (gather
 /// entries grow contiguous FIELDS; every cell is one-harvest/one-bit). Returns PARALLEL `(spawn_ids,
 /// template_ids, xs, zs, jobs, tiers)` in stream order — the index IS the zone res-bitmap's bit index.
