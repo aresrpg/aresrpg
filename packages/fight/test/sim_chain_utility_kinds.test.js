@@ -54,9 +54,7 @@ const KIT = [
   {
     id: 'u_invis',
     levels: [
-      level([
-        { kind: SE.K_INVISIBILITY, value: 1, turns: 3, target: 'self', target_filter: SE.TF_ONLY_CASTER },
-      ]),
+      level([{ kind: SE.K_INVISIBILITY, value: 1, turns: 3, target: 'self', target_filter: SE.TF_ONLY_CASTER }]),
     ],
   },
   {
@@ -74,7 +72,10 @@ const KIT = [
 ]
 
 const MOB_KIT = [
-  { id: 'm_hit', levels: [level([{ kind: SE.K_DAMAGE, element: 0, value: 5, target_filter: SE.TF_NOT_TEAM }], { range_max: 1 })] },
+  {
+    id: 'm_hit',
+    levels: [level([{ kind: SE.K_DAMAGE, element: 0, value: 5, target_filter: SE.TF_NOT_TEAM }], { range_max: 1 })],
+  },
 ]
 
 const fighter = (id, cell, is_player, { health, ap, mp, deck = [], level: lvl = 20 }) => ({
