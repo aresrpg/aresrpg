@@ -94,7 +94,7 @@ export const CHANNELS = {
   highlight: { color: 0x2f7bf5, opacity: 0.8, order: 1 },
   // Path is a movement semantic. Projection removes the underlying mp_range cell; opacity is visual tuning,
   // never a renderer-time mask for a second blob.
-  path: { color: 0x0b4712, opacity: 1, order: CELL_LAYER_ORDER.base, center_alpha: 1, fade_in_s: 0 },
+  path: { color: 0x176a24, opacity: 1, order: CELL_LAYER_ORDER.base, center_alpha: 1, fade_in_s: 0 },
   aoe: { color: 0xa01414, opacity: 0.86, order: CELL_LAYER_ORDER.base },
   start_a: { color: 0x2f6bd8, opacity: 0.8, order: 2 },
   start_b: { color: 0xff7a2c, opacity: 0.8, order: 2 },
@@ -118,17 +118,20 @@ export const CHANNELS = {
   range: { color: 0x35b34a, opacity: 0.8, order: CELL_LAYER_ORDER.base }, // hovered-fighter movement
   target: { color: 0x3358f5, opacity: 0.92, order: CELL_LAYER_ORDER.base },
   mp_range: {
-    color: 0x6ee85c,
+    color: 0x7bf06a,
     opacity: 0.72,
     order: CELL_LAYER_ORDER.base,
     unlit_gain: 1.35,
     center_dim: 0.72,
     center_alpha: 0.72,
   }, // [#212] LIGHT local-player movement range; raised center survives a dark floor. Owner 2026-07-21
-  // live-QA on v1.12.39: the D302 mp_range/path pair still read "too little difference" — this recolor
-  // (0x5ed82e → 0x6ee85c here, path 0x0d6b16 → 0x0b4712) widens the lum-delta floor 180 → 300 (see the
-  // [#212] test below) so "clear light green" vs "clear dark green" is unmistakable at fight-camera
-  // distance, not just on paper.
+  // live-QA on v1.12.39: the D302 mp_range/path pair still read "too little difference" — the [#212]
+  // recolor (0x5ed82e → 0x6ee85c here, path 0x0d6b16 → 0x0b4712) widened the lum-delta floor 180 → 300
+  // (see the [#212] test below) so "clear light green" vs "clear dark green" is unmistakable at
+  // fight-camera distance, not just on paper. [#950] the owner picked OPTION B off the swatch pair
+  // (evidence/fight-hud-seats/950-paint-hue-options.png): mp_range 0x6ee85c → 0x7bf06a, path
+  // 0x0b4712 → 0x176a24 — the path lifts off near-black into a readable dark green of the SAME hue
+  // family while the pair keeps the ≥300 lum-delta floor (469 − 165 = 304).
   los_blocked: { color: 0x7a95f8, opacity: 0.82, order: CELL_LAYER_ORDER.base },
   // The TACKLE-LOST band (project.move_wash tackle_lost — the at-risk cells while actually tackled). WAY
   // SOFTER than every strike red — soft enough to not feel
