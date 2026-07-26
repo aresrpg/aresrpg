@@ -10,16 +10,19 @@
 // press START at all (#883 ⑤). This module is exactly that join and nothing else: every number comes from L1
 // (`content.js`), every entity shape from L4 (`fight_setup.js`), and no balance is computed here.
 //
-// TEMPLATES ARE RAW. `create_sim_chain` runs the sim's own `normalize_spell_templates` over `templates_raw`
-// and RECORDS those rows in the capsule, and that normalizer is not idempotent — handing it the already
-// normalized map (`fight_spells_data.spells[].template`) would replay every spell inert. So the rows here are
-// the corpus' own; the spell ids and the invested spell levels are re-keyed onto that same id space, because
+// TEMPLATES ARE RAW — un-normalized, and in the CHAIN's dialect. `create_sim_chain` runs the sim's own
+// `normalize_spell_templates` over `templates_raw` and RECORDS those rows in the capsule, and that normalizer
+// is not idempotent — handing it the already normalized map (`fight_spells_data.spells[].template`) would
+// replay every spell inert. So the rows here are the corpus' own, minted to the dialect the chain holds them
+// in (`mint_authored_spell`, #1166); the spell ids and the invested spell levels are re-keyed onto that same
+// id space, because
 // the page persists spell levels by `name_key` (stable across republishes) while a cast names the spell by
 // its on-chain object id. One translation, one place — `cast_id_of` below is that place.
 
 import { decode } from '@aresrpg/fight/los'
 
 import { class_spells } from '../game/screens/hud/fight-spells.js'
+import { mint_authored_spell } from '../game/screens/hud/fight-spells-core.js'
 import { get_spell_corpus } from '../game/data/spell_corpus.js'
 
 import { build_mob, build_seat, mob_spell_rows, resolve_loadout } from './content.js'
@@ -136,8 +139,20 @@ export const build_start_args = ({ state, board, item_by_id, mob_by_id, mob_spel
       team1,
       // Class rows + every picked mob's authored kit, in ONE raw list — exactly what the chain normalizes and
       // the capsule records.
+      //
+      // RAW MEANS UN-NORMALIZED, NOT UN-MINTED (#1166). The sim's normalizer is the CHAIN-dialect door: the two
+      // signed kinds (ALTER_STAT · ALTER_RESIST) reach it centered at 32768 and it strips that centering. Mob
+      // kits already speak it — `mob_spell_rows` reads them off minted MobTemplates — but a class row comes
+      // from the published corpus in the AUTHORED dialect, so handing it over as-is folded every buff as its
+      // complement (`+42 Raw Damage` → a REMOVE of 32726, which is what the turn card printed once the receipt
+      // landed). `mint_authored_spell` is the ONE authored→chain door, shared with the HUD's own corpus door.
       templates_raw: [
-        ...new Map([...books.values()].flatMap(({ rows }) => rows).map((row) => [String(row.id), row])).values(),
+        ...new Map(
+          [...books.values()]
+            .flatMap(({ rows }) => rows)
+            .map(mint_authored_spell)
+            .map((row) => [String(row.id), row])
+        ).values(),
         ...mobs.flatMap(({ mob, spells }) => mob_spell_rows(mob.template_id, spells)),
       ],
       roster: seated.map(({ character }) => character),

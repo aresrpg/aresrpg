@@ -38,8 +38,11 @@ export const decode_status_value = (kind, value) =>
   value == null || !is_signed_status_kind(kind) ? value : value - SIGNED_SHIFT
 
 /**
- * The exact inverse — a real signed delta → the u64 the chain rides it as. Only the local mock chain needs it
- * (its receipts must be byte-identical to a minted row, #983); nothing that talks to the real chain encodes.
+ * The exact inverse — a real signed delta → the u64 the chain rides it as. Two callers, both minting rows the
+ * chain-dialect doors then read: the local mock chain (its receipts must be byte-identical to a minted row,
+ * #983) and the frontend's authored→chain corpus mint (`fight-spells-core.mint_authored_spell`, #1166 — the
+ * published corpus states the AUTHORED magnitude, so every door handing it to the sim's normalizer centers it
+ * first). Nothing ENCODES toward the real chain: a transaction's own effects are authored on chain.
  * @param {number} kind @param {number | null} delta @returns {number | null}
  */
 export const encode_status_value = (kind, delta) =>

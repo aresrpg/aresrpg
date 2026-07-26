@@ -6,6 +6,7 @@
 // receipt) and calls build_fight_spells with the loaded rows.
 
 import { normalize_chain_spell_corpus } from '@aresrpg/sim/chain_spell_corpus'
+import { encode_status_value, is_signed_status_kind } from '@aresrpg/fight/fight_status_snapshot'
 
 const kind_names = {
   0: 'DAMAGE',
@@ -139,12 +140,17 @@ export const project_spell_level = (level) => {
 // The door that KNOWS which dialect it holds states it: authored rows are minted here, once, on the way to the
 // sim. Display keeps reading the authored row (`project_spell_effect` below), the ONE home for the signed
 // magnitude a player reads.
-const SIGNED_SHIFT = 32_768
-const SIGNED_KINDS = new Set([9, 11]) // K_ALTER_STAT · K_ALTER_RESIST (spell_effect.move)
+//
+// EXPORTED because it is the ONE authored→chain door, not this file's private detail (#1166). The simulator's
+// START fold opens its local chain with corpus rows too (`simulator/fight_start.js`), and handing that same
+// normalizer the AUTHORED dialect folded every alter row as its 32768-complement: a `+42 Raw Damage` buff
+// became `-32726` on the turn card the moment the receipt retired the (correctly minted) prediction. The
+// centering itself has ONE home — `fight_status_snapshot.encode_status_value`, the exact inverse of the
+// decoder every wire door reads through — so this file states WHICH ROWS are authored, never how to center.
 
 const minted_effect = (effect) => {
-  if (!SIGNED_KINDS.has(Number(effect?.kind))) return effect
-  const mint = (value) => (value == null ? value : SIGNED_SHIFT + Number(value))
+  if (!is_signed_status_kind(effect?.kind)) return effect
+  const mint = (value) => (value == null ? value : encode_status_value(effect.kind, Number(value)))
   return {
     ...effect,
     value: mint(effect.value),
@@ -158,7 +164,14 @@ const minted_level = (level) => ({
   ...(level?.crit_effects ? { crit_effects: level.crit_effects.map(minted_effect) } : {}),
 })
 
-const minted_spell = (spell) => ({ ...spell, levels: (spell?.levels ?? []).map(minted_level) })
+/**
+ * ONE authored corpus spell → the row the CHAIN holds: the two signed kinds (ALTER_STAT · ALTER_RESIST) ride
+ * centered at 32768, everything else verbatim. Every door that hands corpus rows to `@aresrpg/sim`'s
+ * chain-dialect normalizer passes them through here first.
+ * @param {Record<string, any>} spell an authored corpus row
+ * @returns {Record<string, any>} the same row in the chain's dialect
+ */
+export const mint_authored_spell = (spell) => ({ ...spell, levels: (spell?.levels ?? []).map(minted_level) })
 
 /**
  * Project the runtime-loaded spell corpus (the merged blob the seed ceremony publishes — authored rows joined
@@ -171,7 +184,7 @@ const minted_spell = (spell) => ({ ...spell, levels: (spell?.levels ?? []).map(m
  */
 export function build_fight_spells(spell_corpus) {
   const corpus = Array.isArray(spell_corpus) ? spell_corpus : []
-  const templates = normalize_chain_spell_corpus(corpus.map(minted_spell))
+  const templates = normalize_chain_spell_corpus(corpus.map(mint_authored_spell))
   const spells = corpus
     .map((spell) => ({
       object_id: spell.object_id ?? null,
