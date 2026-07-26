@@ -349,20 +349,48 @@ describe('reduce: core loop', () => {
 
   // #936 / #937 — the sim's forfeit is the twin of actions.move `begin_abandon`: it refuses exactly where the
   // chain aborts, as DATA (unchanged state, no events), so no fight is re-decided and no death is doubled.
+
+  // A PvP pair: a chain seat exists on BOTH sides, so team1's fighter is a participant who could otherwise
+  // legally forfeit — the ONLY thing refusing it here is the winner latch.
+  const pvp_fight = (seed = 12345) => {
+    const arena = flat_arena()
+    const ctx = { spell_templates, arena }
+    const base = create_fight_state({
+      fight_id: 'pvp',
+      arena_seed: seed,
+      arena_radius: arena.radius,
+      arena,
+      team0: [make_entity('p0', 0, { x: 1, y: 4 }, true)],
+      team1: [make_entity('p1', 1, { x: 7, y: 4 }, true)],
+    })
+    return { state: reduce(base, { type: 'start' }, ctx).state, ctx }
+  }
+
   test('abandon on a DECIDED fight is refused, winner untouched (EFightOver twin)', () => {
-    const { state, ctx } = started_fight()
+    const { state, ctx } = pvp_fight()
     const decided = reduce(state, { type: 'abandon', entity_id: 'p0' }, ctx)
     expect(decided.state.winner).toBe(1)
-    // team1's mob now forfeits too: on-chain this aborts EFightOver (105); here it changes nothing.
+    // p1 is a live PARTICIPANT — on-chain this aborts EFightOver (105); here it changes nothing.
     const late = reduce(
       decided.state,
-      { type: 'abandon', entity_id: 'm0' },
+      { type: 'abandon', entity_id: 'p1' },
       ctx,
     )
     expect(late.state).toBe(decided.state)
     expect(late.events).toEqual([])
     expect(late.state.winner).toBe(1)
-    expect(find_entity(late.state, 'm0')?.health).toBeGreaterThan(0)
+    expect(find_entity(late.state, 'p1')?.health).toBeGreaterThan(0)
+  })
+
+  test('a PvP opponent on team1 CAN forfeit — the seat, not the side, is the gate', () => {
+    const { state, ctx } = pvp_fight()
+    const r = reduce(state, { type: 'abandon', entity_id: 'p1' }, ctx)
+    expect(find_entity(r.state, 'p1')?.health).toBe(0)
+    expect(r.state.winner).toBe(0)
+    expect(r.events.map(e => e.type)).toEqual([
+      'fight_abandoned',
+      'fight_ended',
+    ])
   })
 
   test('abandon by an already-dead fighter is refused (EAlreadyDead twin)', () => {
@@ -374,6 +402,14 @@ describe('reduce: core loop', () => {
     expect(again.state).toBe(reopened)
     expect(again.events).toEqual([])
     expect(find_entity(again.state, 'p0')?.health).toBe(0)
+  })
+
+  test('a MOB holds no chain seat and cannot forfeit (ENotParticipant twin)', () => {
+    const { state, ctx } = started_fight()
+    const r = reduce(state, { type: 'abandon', entity_id: 'm0' }, ctx)
+    expect(r.state).toBe(state)
+    expect(r.events).toEqual([])
+    expect(find_entity(r.state, 'm0')?.health).toBeGreaterThan(0)
   })
 
   test('abandon by an unknown fighter is refused', () => {

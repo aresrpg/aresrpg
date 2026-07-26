@@ -789,6 +789,10 @@ const drop_start = path => (path.length > 0 ? path.slice(1) : path)
  * single death write, same announcement:
  *   • `begin_abandon` asserts the fight is placement|active, so a TERMINAL fight aborts `EFightOver` (105) —
  *     here the winner latch (`state.winner !== -1`) refuses instead, so a decided fight is never re-decided.
+ *   • `begin_abandon` resolves `fight::seat_of(fight, character_id)` and aborts `ENotParticipant` when the
+ *     character holds no SEAT. A chain seat is a player character, on EITHER side (PvP participants span both
+ *     teams — `abandon_in_placement` hands a walkover to the other one), so `is_player` is that predicate:
+ *     a mob and a mid-fight SUMMON (fight_summon.js `is_player: false`) have no seat and cannot forfeit.
  *   • `begin_abandon` asserts the seat `is_alive`, so a corpse aborts `EAlreadyDead` (106) — here the same
  *     refusal, so the event stream never doubles a death.
  * A chain ABORT is a refusal; the reducer's refusal is DATA (the input state back, no events) — never a throw.
@@ -800,9 +804,11 @@ const drop_start = path => (path.length > 0 ? path.slice(1) : path)
  * @returns {ReduceResult}
  */
 const handle_abandon = (state, cmd) => {
+  // Chain gate order (begin_abandon): status, then seat_of, then is_alive.
   if (state.winner !== -1) return { state, events: [] }
   const entity = find_entity(state, cmd.entity_id)
-  if (!entity || entity.health <= 0) return { state, events: [] }
+  if (!entity || !entity.is_player) return { state, events: [] }
+  if (entity.health <= 0) return { state, events: [] }
 
   const hit = apply_damage(state, cmd.entity_id, entity.health)
   return with_victory(state.winner, hit.state, [

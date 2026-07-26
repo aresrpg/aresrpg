@@ -8,6 +8,7 @@ import {
   MOB_ATTACK_ID,
 } from '../src/spell_templates.js'
 import { find_entity, get_current_turn_entity } from '../src/fight_state.js'
+import { apply_damage } from '../src/fight_actions.js'
 import { summon_entity } from '../src/fight_summon.js'
 import real_spells from '../../sdk/src/spells.json'
 
@@ -181,13 +182,11 @@ describe('SUMMON dies as a corpse', () => {
     const { state, ctx } = fight(3)
     const summoned = cast(state, ctx, 'p0', 'summon1', { x: 4, y: 5 })
     const s = summon_of(summoned.state)
-    // kill the minion outright
-    const killed = reduce(
-      summoned.state,
-      { type: 'abandon', entity_id: s.id },
-      ctx,
-    )
+    // Kill the minion the way a minion actually dies: lethal damage through the ordinary write. (A minion holds
+    // no chain seat, so it cannot forfeit — actions.move `begin_abandon` aborts ENotParticipant.)
+    const killed = apply_damage(summoned.state, s.id, s.health)
     expect(find_entity(killed.state, s.id).health).toBe(0)
+    expect(killed.killed).toBe(true)
     expect(killed.state.winner).toBe(-1) // p0 still alive -> fight continues
 
     // cycle: p0 ends, m0 AI -> the dead minion is stepped over, turn returns to p0
