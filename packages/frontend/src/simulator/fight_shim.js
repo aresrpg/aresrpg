@@ -35,11 +35,11 @@ import {
   LOCAL_ADDRESS,
   abandon_fight,
   capsule_of,
-  commands_from_staged,
   create_sim_chain,
   pending_mob_turn,
   snapshot_from_sim,
   submit_commands,
+  submit_staged,
 } from '@aresrpg/fight/sim_chain'
 
 import { with_experience } from '../world-shell/seat_character.js'
@@ -154,7 +154,9 @@ export const create_fight_shim = ({
     }
     try {
       const before = live.chain.violations.length
-      const result = submit_commands(live.chain, commands_from_staged(actions, seat), { now_ms: now() })
+      // THE STAGED DOOR (#1012), never the raw one: a staged cast the sim declines must refuse the turn rather
+      // than commit a version that carries no cast, no damage and no AP spend.
+      const result = submit_staged(live.chain, actions, seat, { now_ms: now() })
       live = { ...live, chain: result.chain }
       feed(result)
       if (result.chain.violations.length > before)
@@ -163,9 +165,10 @@ export const create_fight_shim = ({
       pump_mobs()
       return true
     } catch (error) {
-      // `commands_from_staged` throws by design on a staged row with no sim command (the weapon strike).
+      // `submit_staged` throws by design on a staged row the chain cannot land: a kind-2 weapon strike (no sim
+      // command) or a cast the sim declined (#1012 — the error names which of the two, and why).
       // Loud and refused: committing a turn the player did not draft is worse than refusing this one.
-      log('simulator', 'commit refused — a staged action has no sim command', error)
+      log('simulator', 'commit refused — a staged action did not fold', error)
       return false
     }
   }

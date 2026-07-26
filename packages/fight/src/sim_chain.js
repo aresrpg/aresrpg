@@ -367,6 +367,64 @@ export const commands_from_staged = (staged, entity_id) => {
   return [...flush(folded), { type: 'end_turn', entity_id }]
 }
 
+/** A staged row is a cast (spec §4.5 kind 1) — the rows the receipt owes a `Cast` for. */
+const staged_casts = (staged) => (staged ?? []).filter((action) => action.kind === 1)
+
+/**
+ * WHY a staged cast folded nothing (#1012). The sim reducer answers every refusal the same way — the state
+ * back, untouched, with no events — so the reason is re-derived from the state the turn started in, in the
+ * order `handle_cast` gates them. Diagnosis only: the refusal itself is the invariant above.
+ * @param {object} chain the chain the turn was folded against
+ * @param {{ entity_id: string, spell_id: string, recast: boolean }} cast
+ * @returns {string}
+ */
+const cast_refusal_reason = (chain, { entity_id, spell_id, recast }) => {
+  const state = chain.sim_state
+  const caster = [...state.team0, ...state.team1].find((e) => e.id === entity_id)
+  if (!caster) return `this fight holds no such fighter`
+  if (current_actor(chain) !== entity_id) return `it is not that seat's turn`
+  if (!chain.ctx.spell_templates.has(spell_id))
+    return `this fight's ctx holds no template with that id — the fight was started on another id space`
+  if (!caster.hand.includes(spell_id))
+    return `the seat does not hold that card — its dealt hand is [${caster.hand.join(', ')}]`
+  if (recast) return `the seat already cast that card this turn, and the sim discarded it out of the hand`
+  return `the sim refused it (range, line of sight, AP, or a cast limit)`
+}
+
+/**
+ * THE PLAYER'S COMMITTED TURN (#1012) — `commands_from_staged` + the submit door, with the staged draft's own
+ * receipt owed back. Every staged cast MUST produce its `Cast` row: the sim reducer declines a cast it cannot
+ * honour by returning the state untouched with ZERO events, and encoding that as an ordinary turn is how a
+ * player's card became a no-op — the turn committed, a version landed, and nothing said a word: no damage, no
+ * AP spent, no refusal, nothing on the console. So the door REFUSES the whole turn instead, exactly as
+ * `commands_from_staged` already refuses the kind-2 weapon strike. `fight_shim`'s `commit_turn` catches it,
+ * logs it and returns false, which rolls the drafted turn back through the production failure path and leaves
+ * the turn in the player's hands.
+ *
+ * The raw `submit_commands` stays tolerant on purpose: it is the door the mob AI, the abandon path and the
+ * property oracle fold arbitrary commands through, where a refused command IS the case under test. A COMMITTED
+ * TURN is the one place a refusal must never be a receipt.
+ *
+ * @param {object} chain
+ * @param {Array<{ kind:number, target:number, spell_template_id?:string }>} staged the store's staged draft
+ * @param {string} entity_id the seat committing
+ * @param {{ now_ms?: number, turn_ms?: number }} [clock]
+ * @returns {ReturnType<typeof submit_commands>}
+ */
+export const submit_staged = (chain, staged, entity_id, clock) => {
+  const result = submit_commands(chain, commands_from_staged(staged, entity_id), clock)
+  const cast_rows = result.receipt.events.filter((row) => String(row.type).endsWith('::Cast')).length
+  const owed = staged_casts(staged)
+  if (cast_rows === owed.length) return result
+  const dissolved = owed[cast_rows] // the rows encode in staged order, so the first unpaid cast is this one
+  const spell_id = String(dissolved?.spell_template_id)
+  const recast = owed.slice(0, cast_rows).some((cast) => String(cast.spell_template_id) === spell_id)
+  throw new Error(
+    `sim_chain: cast of '${spell_id}' by '${entity_id}' folded nothing — ` +
+      `${cast_refusal_reason(chain, { entity_id, spell_id, recast })}`
+  )
+}
+
 /** STOP mid-fight (spec §4.7): every living roster seat forfeits, which drives the terminal rows. */
 export const abandon_fight = (chain, clock) =>
   submit_commands(
