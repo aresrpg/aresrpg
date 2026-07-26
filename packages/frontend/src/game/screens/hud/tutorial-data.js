@@ -6,9 +6,9 @@
 // only (the seen flag is a localStorage UI PREFERENCE — house law: preferences only there, never gameplay).
 //
 // Targets are the companion SIDEBAR nav tabs (`[data-nav="…"]` in components/sidebar.tsx), which carry a
-// stable `data-nav={item.id}` hook. Ids come from constants/navigation.ts NAV_ITEMS — we tour only the SIX
-// core tabs: game-world, exploration, characters, shop, encyclopedia, marketplace. Everything else is
-// intentionally untoured: the disabled coming-soon tabs (leaderboard/simulator), the
+// stable `data-nav={item.id}` hook. Ids come from constants/navigation.ts NAV_ITEMS — we tour only the FIVE
+// core tabs: game-world, characters, shop, encyclopedia, marketplace. Everything else is intentionally
+// untoured: the disabled coming-soon tabs (leaderboard/simulator), the
 // kolizeum later-game surface, and other secondary destinations. `placement: 'right'` sits the card
 // beside the vertical sidebar tab; a null
 // target is a centered card with no cutout (the closing step). House voice: plain, warm, no jargon — the
@@ -39,13 +39,6 @@ export const TOUR_STEPS = [
     placement: 'right',
     title_key: 'tutorial.world_title',
     body_key: 'tutorial.world_body',
-  },
-  {
-    id: 'exploration',
-    target: '[data-nav="exploration"]',
-    placement: 'right',
-    title_key: 'tutorial.exploration_title',
-    body_key: 'tutorial.exploration_body',
   },
   {
     id: 'characters',

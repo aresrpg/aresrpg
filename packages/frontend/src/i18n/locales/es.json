@@ -1812,8 +1812,6 @@
   "tutorial": {
     "world_title": "Mundo",
     "world_body": "Este es el mundo. Camina con tu personaje, conoce a otros jugadores y lucha contra los monstruos que encuentres.",
-    "exploration_title": "Exploración",
-    "exploration_body": "Mira cada mundo y lo que se puede encontrar en él. Ya en el mundo, descubre nuevas zonas para que aparezcan monstruos y recursos para todos.",
     "characters_title": "Personajes",
     "characters_body": "Crea y gestiona a tus héroes aquí. Ajusta sus estadísticas, equipa su equipo y elige sus hechizos.",
     "shop_title": "Tienda",

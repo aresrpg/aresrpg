@@ -1812,8 +1812,6 @@
   "tutorial": {
     "world_title": "Monde",
     "world_body": "Voici le monde. Baladez-vous avec votre personnage, croisez d’autres joueurs et lancez des combats contre les monstres que vous trouvez.",
-    "exploration_title": "Exploration",
-    "exploration_body": "Découvrez chaque monde et ce qu’on peut y trouver. Une fois sur place, découvrez de nouvelles zones pour faire apparaître monstres et ressources pour tout le monde.",
     "characters_title": "Personnages",
     "characters_body": "Créez et gérez vos héros ici. Réglez leurs statistiques, équipez leur matériel et choisissez leurs sorts.",
     "shop_title": "Boutique",

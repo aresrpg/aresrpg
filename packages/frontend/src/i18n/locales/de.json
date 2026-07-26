@@ -1812,8 +1812,6 @@
   "tutorial": {
     "world_title": "Welt",
     "world_body": "Das ist die Welt. Lauf mit deinem Charakter herum, triff andere Spieler und kämpfe gegen die Monster, die dir begegnen.",
-    "exploration_title": "Erkundung",
-    "exploration_body": "Sieh dir jede Welt an und was es dort zu finden gibt. Draußen in der Welt entdeckst du neue Zonen, damit Monster und Ressourcen für alle erscheinen.",
     "characters_title": "Charaktere",
     "characters_body": "Erstelle und verwalte hier deine Helden. Lege ihre Werte fest, rüste ihre Ausrüstung aus und wähle ihre Zauber.",
     "shop_title": "Shop",

@@ -1812,8 +1812,6 @@
   "tutorial": {
     "world_title": "World",
     "world_body": "This is the world. Walk around with your character, meet other players, and pick fights with the monsters you find.",
-    "exploration_title": "Exploration",
-    "exploration_body": "See every world and what can be found in it. Out in the world, discover new zones to make monsters and resources appear for everyone.",
     "characters_title": "Characters",
     "characters_body": "Create and manage your heroes here. Set their stats, equip their gear, and pick their spells.",
     "shop_title": "Shop",
