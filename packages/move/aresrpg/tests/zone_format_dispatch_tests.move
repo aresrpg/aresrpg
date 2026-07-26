@@ -82,9 +82,18 @@ fun the_commitment_byte_selects_the_mob_derivation() {
   let mut w = sc.take_shared<World>();
   let seed = zones::zone_seed(&w, zx, zy);
 
+  // RUNG 3 — a FRESH search writes a member-list commitment, so the dispatcher must reach the member kernel.
+  let (mem_ids, _tm, _mm, mem_x, mem_z, _sm, _gm, _pm) = zone_comp::derive_mobs_members(&w, zx, zy, seed, TEAM_BOUND);
+  let (got3, _t5, got3_x, got3_z, _s5, _g5) = zones::derive_mobs(&w, zx, zy, seed, TEAM_BOUND);
+  assert!(got3 == mem_ids && got3_x == mem_x && got3_z == mem_z, 2); // format 3 ⇒ member kernel
+
+  // RUNG 1 — strip the commitment and the same zone, same seed, reads through the LEGACY kernel.
+  zones::remove_group_commitment_for_testing(&mut w, zx, zy);
   let (want_ids, _t, want_x, want_z, _s, _g) = zone_comp::derive_mobs(&w, zx, zy, seed, TEAM_BOUND);
   let (got_ids, _t2, got_x, got_z, _s2, _g2) = zones::derive_mobs(&w, zx, zy, seed, TEAM_BOUND);
   assert!(got_ids == want_ids && got_x == want_x && got_z == want_z, 0); // no commitment ⇒ legacy
+  // and the three rungs are genuinely different derivations — the assertions above cannot pass by coincidence
+  assert!(mem_x != want_x || mem_z != want_z, 3);
 
   zones::set_lattice_commitment_for_testing(&mut w, zx, zy, TEAM_BOUND);
   let (grid_ids, _t3, grid_x, grid_z, _s3, _g3) = zone_comp::derive_mobs_grid(&w, zx, zy, seed, TEAM_BOUND);
@@ -105,6 +114,12 @@ fun the_commitment_byte_selects_the_resource_derivation() {
   let mut w = sc.take_shared<World>();
   let seed = zones::zone_seed(&w, zx, zy);
 
+  // A member-list zone is a LATTICE zone: format 3 changed what a group HOLDS, never where anything sits.
+  let (mem_ids, _tm, mem_x, mem_z, _jm, _rm) = zone_comp::derive_res_grid(&w, zx, zy, seed);
+  let (got3, _t5, got3_x, got3_z, _j5, _r5) = zones::derive_res(&w, zx, zy, seed);
+  assert!(got3 == mem_ids && got3_x == mem_x && got3_z == mem_z, 2);
+
+  zones::remove_group_commitment_for_testing(&mut w, zx, zy);
   let (want_ids, _t, want_x, want_z, _j, _r) = zone_comp::derive_res(&w, zx, zy, seed);
   let (got_ids, _t2, got_x, got_z, _j2, _r2) = zones::derive_res(&w, zx, zy, seed);
   assert!(got_ids == want_ids && got_x == want_x && got_z == want_z, 0);
@@ -130,6 +145,12 @@ fun the_view_getters_follow_the_commitment_byte() {
   let mut w = sc.take_shared<World>();
   let seed = zones::zone_seed(&w, zx, zy);
 
+  // fresh search ⇒ format 3: the view getter must land on the member kernel's placement
+  let (mem_vx, mem_vz) = zones_view::mob_group_pos(&w, zx, zy, 0);
+  let (_i3, _t3, _m3, mx3, mz3, _s3, _g3, _p3) = zone_comp::derive_mobs_members(&w, zx, zy, seed, 1);
+  assert!(mem_vx == mx3[0] && mem_vz == mz3[0], 3);
+
+  zones::remove_group_commitment_for_testing(&mut w, zx, zy);
   let (want_x, want_z) = zones_view::mob_group_pos(&w, zx, zy, 0);
   let (_i, _t, legacy_x, legacy_z, _s, _g) = zone_comp::derive_mobs(&w, zx, zy, seed, 1);
   assert!(want_x == legacy_x[0] && want_z == legacy_z[0], 0);

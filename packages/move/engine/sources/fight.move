@@ -676,9 +676,17 @@ public(package) fun member_content(fight: &Fight, index: u64): &GroupContent {
   if (df::exists(&fight.id, k)) df::borrow(&fight.id, k) else &fight.group
 }
 
-/// Does this fight seat SEVERAL specs? The one thing settlement needs beyond the per-index read: a mixed pack's
-/// loot checklist is the members' tables concatenated, a mono pack's is one table repeated (§4.3 of the spec).
-public(package) fun is_mixed(fight: &Fight): bool { df::exists(&fight.id, MemberContentKey { index: 0 }) }
+/// Does this fight seat SEVERAL specs? Settlement needs it (a mixed pack's loot checklist is the members' tables
+/// concatenated, a mono pack's is one table repeated — §4.3 of the spec), and so does any reader deciding whether
+/// one species name describes the whole board.
+public fun is_mixed(fight: &Fight): bool { df::exists(&fight.id, MemberContentKey { index: 0 }) }
+
+/// The SPECIES seated at mob `index` — the read a client, an indexer or a consumer needs to paint a mixed pack.
+/// Falls back to the group's own template, so it answers for every fight ever created.
+public fun mob_template_at(fight: &Fight, index: u64): ID { member_content(fight, index).template }
+
+/// What mob `index` is worth in XP — the per-member half of the settlement kernel, readable from outside.
+public fun mob_xp_at(fight: &Fight, index: u64): u64 { member_content(fight, index).xp }
 
 public(package) fun content_template(c: &GroupContent): ID { c.template }
 public(package) fun content_xp(c: &GroupContent): u64 { c.xp }

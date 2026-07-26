@@ -10,7 +10,7 @@ module aresrpg::fight;
 
 use aresrpg::{character_link, config::{Self, GameConfig}, equipment, fight_marker, item_damages, mob_template::{Self, MobTemplate}, world::{Self as game_world, World}, zones, zones_view};
 use aresrpg::{character::Character, version::Version};
-use aresrpg_fight::{fight::{Self as engine, Dials, Fight}, fight_registry, participant::{Self, Combatant, WeaponLine}, settlement::{Self, FightOutcome}, version::Version as EngineVersion};
+use aresrpg_fight::{fight::{Self as engine, Dials, Fight, GroupBuild}, fight_registry, participant::{Self, Combatant, WeaponLine}, settlement::{Self, FightOutcome}, version::Version as EngineVersion};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::type_name::{Self, TypeName};
 use sui::{clock::Clock, kiosk::Kiosk, vec_map};
@@ -90,6 +90,52 @@ public fun create(
     is_public, party_id, false, &mob_template::to_spec(mob_tmpl), group_size, group_seed,
     t_template, creator, creator_lines, dial_snapshot(config), engine_version, clock, ctx,
   );
+}
+
+// ╔════════════════ [ MIXED-PACK create — the member door (#1110/#1111) ] ════ ]
+
+/// OPEN a fight over a claimed MEMBER-LIST group. Everything `create` does — ticket provenance, the authentic
+/// creator snapshot, the dirty-counter mark, the #609 engagement round — happens right here, once; what follows
+/// in the PTB is `add_member` per species and then `engine::create_members`.
+///
+/// The PTB shape exists because a pack of N species needs N `&MobTemplate` shared objects in one create, and
+/// Move has no signature that takes a variable roster of them. It costs nothing in trust: the roster the ticket
+/// carries is the one the zone COMMITTED, and every `add_member` is checked against it in order.
+public fun open_group(
+  ticket: zones::MemberGroupTicket,
+  world: &World,
+  kiosk: &mut Kiosk,
+  pkcap: &PersonalKioskCap,
+  is_public: bool,
+  party_id: Option<ID>,
+  raised_spell_ids: vector<ID>,
+  config: &GameConfig,
+  version: &Version,
+  engine_version: &EngineVersion,
+  clock: &Clock,
+): GroupBuild {
+  config.assert_enabled();
+  config.assert_domain(config::domain_fight()); // S-46 kill-switch bit
+  version.assert_enabled();
+  let (t_world, t_character, spawn_id, _t_template, members, progress, anchor_x, anchor_z, _group_size, spawned_at_ms, group_seed) =
+    zones::consume_member_ticket(ticket);
+  assert!(object::id(world) == t_world, EWrongWorld);
+  let (creator, creator_lines) = combatant_of(kiosk, pkcap, t_character, raised_spell_ids, config, clock.timestamp_ms());
+  mark_seated(kiosk, pkcap, t_character, version);
+  let (zx, zy) = game_world::zone_of(world, anchor_x, anchor_z);
+  let round = zones::group_round(world, zx, zy, spawn_id);
+  engine::open_group(
+    FightBrand {}, t_world, spawn_id, round, game_world::seed(world), anchor_x, anchor_z, spawned_at_ms,
+    is_public, party_id, false, group_seed, progress, members, creator, creator_lines,
+    dial_snapshot(config), engine_version,
+  )
+}
+
+/// ADD the next committed member's template. `to_spec` is the same mirror `create` uses, so a member of a mixed
+/// pack is combat-identical to the same species fought alone. The engine holds the only check that matters (the
+/// template's id against the committed roster) — this door adds no second opinion.
+public fun add_member(build: &mut GroupBuild, mob_tmpl: &MobTemplate) {
+  engine::add_member(build, mob_template::template_id(mob_tmpl), &mob_template::to_spec(mob_tmpl));
 }
 
 // ╔════════════════ [ DEFEAT RELEASES THE GROUP (#609) ] ══════════════════════ ]
