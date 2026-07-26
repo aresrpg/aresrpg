@@ -38,6 +38,10 @@ const u64 = (value) => String(Math.trunc(Number(value) || 0))
 const DISPLACE_PUSH = 12
 const DISPLACE_TELEPORT = 14
 
+/** `Drain.point_kind` / `Granted.point_kind` — the chain's pool discriminant (`spell_effect::point_ap()` = 0,
+ *  `point_mp()` = 1). Only these two sim stat keys are POOLS; every other stat is a timed block row. */
+const POOL_POINT_KIND = { ap: 0, mp: 1 }
+
 // ╔════════════════ [ Fighter identity — the sim's entity ids ↔ the chain's (side, idx) ] ═══════════════════ ]
 
 /** `team0` = players (seat order) · `team1` = mobs (spawn order) — the §17.28 interleave's own two sides. */
@@ -176,6 +180,23 @@ const encode_effect = (state, effect, ctx) => {
     ]
   }
   if (effect.status == null) throw new Error(`sim_chain: unmapped effect row ${JSON.stringify(effect)}`)
+  // AP/MP POOL moves. On chain a give lands SILENTLY (cast.move:1098-1101 → participant::give_points) and the
+  // DURABLE number reaches the client through the object read; a drain does emit (cast.move:1796 emit_drain).
+  // The simulator has NO object read behind the receipt — `snapshot_from_sim` is the read — so a silent grant
+  // would be a fact the client can only ever roll back (#952: the owner lost the bonus MP the instant the
+  // receipt landed). `Granted` is the fold's own grant kind and THE one home both grant doors ride (inputs.js),
+  // so the pool move is stated there. A non-pool stat row carries no chain event and stays inert below.
+  const pool_kind = POOL_POINT_KIND[effect.stat]
+  if (pool_kind !== undefined && (effect.status === 'STAT_BUFF' || effect.status === 'STAT_DEBUFF')) {
+    const amount = Math.max(0, Math.trunc(Number(effect.value) || 0))
+    if (amount === 0) return [] // a fully-dodged drain moved no pool — POINT_DODGED already carries the miss
+    const target = { fight, target_is_mob: is_mob, target_idx: u64(idx), point_kind: pool_kind }
+    return [
+      effect.status === 'STAT_BUFF'
+        ? row('Granted', { ...target, granted: u64(amount) })
+        : row('Drain', { ...target, removed: u64(amount), requested: u64(effect.requested ?? amount) }),
+    ]
+  }
   if (effect.status === 'CRITICAL_FAILURE_FUMBLE')
     return [row('CriticalFailure', { fight, caster_is_mob: is_mob, caster_idx: u64(idx) })]
   if (effect.status === 'REVEAL') return [row('Revealed', { fight, is_mob, idx: u64(idx) })]

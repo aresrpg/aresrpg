@@ -82,7 +82,16 @@ export const apply_stat_effect = (state, effect, caster, target) => {
       handled: true,
       state: after,
       effects: [
-        { target_id: target.id, status: 'STAT_DEBUFF', value: result.removed },
+        // `stat` + `requested` ride the row so a POOL drain can be stated on the wire as the chain states it
+        // (cast.move:1796 `emit_drain(point_kind, removed, requested)`). A consumer that only knows statuses
+        // still reads STAT_DEBUFF; one that folds pools reads the pool and the count. #952.
+        {
+          target_id: target.id,
+          status: 'STAT_DEBUFF',
+          stat: effect.stat,
+          value: result.removed,
+          requested,
+        },
       ],
     }
   }
@@ -112,12 +121,24 @@ export const apply_stat_effect = (state, effect, caster, target) => {
     handled: true,
     state: with_caster_gain,
     effects: [
+      // The row STATES the stat it moved and by how much. An AP/MP row is a POOL move the chain performs
+      // silently (cast.move:1098-1101 give_points) and the object read carries; the simulator has no object
+      // read, so the receipt is the only channel and needs both facts to encode a Granted/Drain. #952.
       {
         target_id: target.id,
         status: effect.type === 'ADD' ? 'STAT_BUFF' : 'STAT_DEBUFF',
+        stat: effect.stat,
+        value: draw.value,
       },
       ...(effect.kind === K_STEAL_STAT
-        ? [{ target_id: caster.id, status: 'STAT_BUFF', value: draw.value }]
+        ? [
+            {
+              target_id: caster.id,
+              status: 'STAT_BUFF',
+              stat: effect.stat,
+              value: draw.value,
+            },
+          ]
         : []),
     ],
   }
