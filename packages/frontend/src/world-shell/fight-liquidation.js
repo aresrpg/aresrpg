@@ -26,9 +26,14 @@ import { push_event_toast } from '../game/core/toast.js'
 
 import { crank as tx_crank, force_start as tx_force_start } from './dungeon_actions'
 import { read_object } from './run_reads.js'
+import { CHAIN_STATUS_ACTIVE, CHAIN_STATUS_PLACEMENT, chain_status_label } from './fight_chain_status.js'
 
-const STATUS_ACTIVE = 1
-const STATUS_PLACEMENT = 5
+// TWO NAMESPACES LIVE IN THIS FILE — keep them named apart (#932). The janitor probes below are fed an
+// ADAPTED BOARD VIEW (dungeon_store.refresh → @aresrpg/fight/board_state), whose placement scalar is 5;
+// the boot-resume gate at the bottom reads a RAW CHAIN decode, whose placement scalar is 0. ACTIVE is 1 in
+// both, which is precisely why mixing them stays invisible until a placement fight shows up.
+const VIEW_STATUS_ACTIVE = 1
+const VIEW_STATUS_PLACEMENT = 5
 const MAX_JITTER_MS = 1500
 
 let in_flight = false
@@ -45,11 +50,11 @@ const executed_failure = (/** @type {any} */ error) =>
 
 /** The active turn's on-chain deadline has passed (and there IS a live turn to liquidate). */
 const expired = (/** @type {any} */ v) =>
-  !!v && v.status === STATUS_ACTIVE && v.turn_deadline_ms > 0 && Date.now() >= v.turn_deadline_ms
+  !!v && v.status === VIEW_STATUS_ACTIVE && v.turn_deadline_ms > 0 && Date.now() >= v.turn_deadline_ms
 
 /** The PLACEMENT window's deadline has passed (and we're still in placement → force_start is eligible). */
 const placement_expired = (/** @type {any} */ v) =>
-  !!v && v.status === STATUS_PLACEMENT && v.placement_deadline_ms > 0 && Date.now() >= v.placement_deadline_ms
+  !!v && v.status === VIEW_STATUS_PLACEMENT && v.placement_deadline_ms > 0 && Date.now() >= v.placement_deadline_ms
 
 /**
  * LIQUIDATION probe — call once per poll with the freshly-adapted view (dungeon_store.refresh). Schedules a
@@ -174,22 +179,29 @@ export function reset_liquidation() {
 // already embodies, BEFORE adoption. This is that policy's one home (world_fight.js stays a thin shim).
 
 /**
- * PURE — presentability of a chain-read fight for a boot resume.
+ * PURE — presentability of a CHAIN-read fight for a boot resume (statuses per fight_chain_status.js, NOT the
+ * board-view scalars used by the janitor probes above).
  * `enter` = presentable now (ACTIVE, or PLACEMENT inside its window — a genuine mid-fight/mid-placement
  * refresh) · `liquidate` = expired placement, needs the `force_start` heal first · `skip` = never adopt
  * (terminal/unknown/unreadable — the pending-outcome recovery/receipt flows own any marker discharge).
+ * Returns the REASON alongside the verdict: a refusal that cannot say why is a silent strand (#932).
  * @param {{ status?: number, placement_deadline_ms?: bigint|number|null } | null} decoded
  * @param {number} now
- * @returns {'enter'|'liquidate'|'skip'}
+ * @returns {{ decision: 'enter'|'liquidate'|'skip', reason: string }}
  */
 export function placement_resume_decision(decoded, now) {
-  if (!decoded) return 'skip' // unreadable fight — never adopt on hope; a later boot pass retries
+  // unreadable fight — never adopt on hope; a later boot pass retries
+  if (!decoded) return { decision: 'skip', reason: 'fight object unreadable' }
   const status = Number(decoded.status)
-  if (status === STATUS_ACTIVE) return 'enter' // advanced under us (a racing janitor/join) — genuinely live
-  if (status !== STATUS_PLACEMENT) return 'skip' // terminal/unknown — nothing a live session can present
+  // advanced under us (a racing janitor/join) — genuinely live
+  if (status === CHAIN_STATUS_ACTIVE) return { decision: 'enter', reason: 'active' }
+  // terminal/unknown — nothing a live session can present
+  if (status !== CHAIN_STATUS_PLACEMENT)
+    return { decision: 'skip', reason: `chain status ${chain_status_label(status)} is not resumable` }
   const deadline = Number(decoded.placement_deadline_ms ?? 0)
-  if (!deadline || now < deadline) return 'enter' // window open (or windowless, defensive) — a real refresh
-  return 'liquidate'
+  // window open (or windowless, defensive) — a real refresh
+  if (!deadline || now < deadline) return { decision: 'enter', reason: 'placement window open' }
+  return { decision: 'liquidate', reason: `placement window expired ${now - deadline}ms ago` }
 }
 
 /**
@@ -198,7 +210,7 @@ export function placement_resume_decision(decoded, now) {
  * a certified force_start is RECEIPT TRUTH the fight is ACTIVE → enter. A refusal re-reads once and defers
  * honestly — never re-fired this pass (tx-retry burn law; a raced janitor may already have advanced it).
  * @param {string} fight_id @param {(fight_id: string, silent: boolean) => Promise<any>} [force_start_door]
- * @returns {Promise<'enter'|'skip'>}
+ * @returns {Promise<{ decision: 'enter'|'skip', reason: string }>}
  */
 export async function ensure_resumable_placement(fight_id, force_start_door = tx_force_start) {
   const read_decoded = async () => {
@@ -209,14 +221,16 @@ export async function ensure_resumable_placement(fight_id, force_start_door = tx
       return null
     }
   }
-  const decision = placement_resume_decision(await read_decoded(), Date.now())
-  if (decision !== 'liquidate') return decision
+  const first = placement_resume_decision(await read_decoded(), Date.now())
+  if (first.decision !== 'liquidate') return /** @type {any} */ (first)
   try {
     await force_start_door(fight_id, true) // silent janitor tx — certified ⇒ the fight IS active now
-    return 'enter'
+    return { decision: 'enter', reason: 'liquidated then entered' }
   } catch (error) {
     game_log('world-fight', 'boot liquidation (force_start) did not land — resume deferred', error)
     const after = placement_resume_decision(await read_decoded(), Date.now())
-    return after === 'liquidate' ? 'skip' : after // never loop a refused liquidation
+    // never loop a refused liquidation
+    if (after.decision === 'liquidate') return { decision: 'skip', reason: `liquidation refused (${after.reason})` }
+    return /** @type {any} */ (after)
   }
 }

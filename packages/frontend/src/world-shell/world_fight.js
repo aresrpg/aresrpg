@@ -143,8 +143,15 @@ export async function resume_world_fight(character_id, deps = {}) {
     return getState()._recover_dead_fight_reference({ character_id, state: 'absent' })
   }
   if (current.status === 'placement') {
-    const decision = await ensure_resumable_placement(fight_id, deps.force_start_door)
-    if (!is_current() || decision !== 'enter') return
+    const { decision, reason } = await ensure_resumable_placement(fight_id, deps.force_start_door)
+    if (!is_current()) return
+    if (decision !== 'enter') {
+      // NEVER a silent return (#932): the serving node says this character has a LIVE fight, so refusing to
+      // re-enter strands them in roam with a seat on-chain. Say so loudly enough to reach a bug report.
+      console.error(`[world-fight] placement resume refused — fight ${fight_id} not re-entered: ${reason}`)
+      game_log('world-fight', 'placement resume refused', { fight_id, reason })
+      return
+    }
   }
   if (!is_current() || session_busy()) return // a session opened or the request changed while reading — never stomp it
   enter_world_fight({ fight_id, world_id: current.world ?? live.world ?? null, character_id, resumed: true })

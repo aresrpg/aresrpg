@@ -32,8 +32,12 @@ const OWNER = '0xowner'
 const CHARACTER_ID = '0xcharacter'
 const FIGHT_ID = '0xzombiefight'
 const WORLD_ID = '0xworld'
-const STATUS_ACTIVE = 1
-const STATUS_PLACEMENT = 5
+// CHAIN scalars (fight.move) — `fight_object` below is a raw Fight object read, so these must be the chain
+// namespace, never the projected board-view one. Pinning them to the shared home keeps this fixture honest:
+// it previously hard-coded placement as 5 (a VIEW scalar the chain can never emit), which is what let #932
+// ship green — every "zombie placement" case below was exercising a status that does not exist on chain.
+const { CHAIN_STATUS_ACTIVE: STATUS_ACTIVE, CHAIN_STATUS_PLACEMENT: STATUS_PLACEMENT } =
+  await import('./fight_chain_status.js')
 
 let read_response = /** @type {(object_id:string) => Promise<any>} */ (
   async () => {
@@ -192,14 +196,15 @@ describe('boot resume vs a zombie world fight (REJOIN-SPAWN)', () => {
 
 describe('placement_resume_decision (pure)', () => {
   const NOW = 1_000_000
+  const decision_of = (decoded) => placement_resume_decision(decoded, NOW).decision
   test('rules: active enters · open window enters · expired liquidates · terminal/unreadable skip', () => {
-    expect(placement_resume_decision({ status: STATUS_ACTIVE }, NOW)).toBe('enter')
-    expect(placement_resume_decision({ status: STATUS_PLACEMENT, placement_deadline_ms: NOW + 1 }, NOW)).toBe('enter')
-    expect(placement_resume_decision({ status: STATUS_PLACEMENT, placement_deadline_ms: 0 }, NOW)).toBe('enter') // windowless — defensive, never wedge on absent data
-    expect(placement_resume_decision({ status: STATUS_PLACEMENT, placement_deadline_ms: NOW }, NOW)).toBe('liquidate')
-    expect(placement_resume_decision({ status: STATUS_PLACEMENT, placement_deadline_ms: 12n }, NOW)).toBe('liquidate') // bigint decode shape
-    expect(placement_resume_decision({ status: 3 }, NOW)).toBe('skip') // WON — pending-outcome recovery owns the discharge
-    expect(placement_resume_decision({ status: 4 }, NOW)).toBe('skip') // FAILED
-    expect(placement_resume_decision(null, NOW)).toBe('skip') // unreadable — never adopt on hope
+    expect(decision_of({ status: STATUS_ACTIVE })).toBe('enter')
+    expect(decision_of({ status: STATUS_PLACEMENT, placement_deadline_ms: NOW + 1 })).toBe('enter')
+    expect(decision_of({ status: STATUS_PLACEMENT, placement_deadline_ms: 0 })).toBe('enter') // windowless — defensive, never wedge on absent data
+    expect(decision_of({ status: STATUS_PLACEMENT, placement_deadline_ms: NOW })).toBe('liquidate')
+    expect(decision_of({ status: STATUS_PLACEMENT, placement_deadline_ms: 12n })).toBe('liquidate') // bigint decode shape
+    expect(decision_of({ status: 2 })).toBe('skip') // VICTORY — pending-outcome recovery owns the discharge
+    expect(decision_of({ status: 3 })).toBe('skip') // DEFEAT
+    expect(decision_of(null)).toBe('skip') // unreadable — never adopt on hope
   })
 })
