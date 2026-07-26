@@ -52,6 +52,10 @@ import { PromptStack } from './PromptStack.jsx'
 import { DungeonsModal } from './DungeonsModal.jsx'
 import { FightsModal } from './FightsModal.jsx'
 import { FightOpennessToggle } from './FightOpennessToggle.jsx'
+// AUTO-SEARCH (#1106) — the DEV scouting loop (walk a ranged zone, search it, stop at a wanted mob). Every
+// leg it fires is a real gas-burning transaction, so it is gated on import.meta.env.DEV exactly like the
+// other dev rigs above: the branch is statically false in a production build and the tree drops.
+import { AutoSearchPanel } from '../../../dev/AutoSearchPanel.jsx'
 import { Minimap } from '../Minimap.jsx' // CUBE-WORLD MINIMAP — top-right 3-D relief map (self-gates on pose)
 import { HackRadioPlayer } from './HackRadioPlayer.jsx' // HACK MODE — the album radio (self-gates on hack)
 import { CommissionModal } from './commission/CommissionModal.jsx'
@@ -230,6 +234,8 @@ export function GameWorldHud() {
             {!fight_mode && has_character && <FightOpennessToggle />}
             {!fight_mode && has_character && <OnlinePlayers />}
             {!fight_mode && has_character && <WorldSwitcher />}
+            {/* AUTO-SEARCH (#1106) — directly under the world panel, DEV builds only (real transactions). */}
+            {import.meta.env.DEV && !fight_mode && has_character && <AutoSearchPanel />}
           </div>
         )}
         {/* S-67 — the shared player-action menu (chat name click / in-world nameplate click). Renders null
