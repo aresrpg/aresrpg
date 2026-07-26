@@ -13,6 +13,7 @@
 
 import {
   create_fight_ptb,
+  create_member_fight_ptb,
   compose_mob_group_proof,
   get_zone_group_commitment,
   mint_rolled_ptb,
@@ -62,7 +63,8 @@ const same_object_id = (left, right) => {
  * WHICH claim door this engage takes, as DATA — the one place the choice is decoded (no silent second path).
  * - `proof`: the witness `zones::*_with_proof` accepts, locally replayed against the chain commitment.
  * - `derivation`: the proofless door is the LEGAL one here — an occupied-zone claim (no zx/zy), an unstamped
- *   deployment (create_fight_ptb ignores witnesses by law there), or a zone searched before commitments existed.
+ *   deployment (create_fight_ptb ignores witnesses by law there), a zone searched before commitments existed,
+ *   or a FORMAT-3 member-roster group, whose claim door takes no witness at all (see below).
  * - `blocked`: we could not prove what we are about to claim. That is a refusal, never a quieter door.
  * @typedef {{ door:'proof', proof:any } | { door:'derivation', reason:string }
  *   | { door:'blocked', reason:string, cause?:unknown }} WorldGroupDoor
@@ -71,11 +73,22 @@ const same_object_id = (left, right) => {
 /**
  * Fail-closed join of chain commitment + the FULL sim-derived row stream. Exported for the scoped call-site
  * regression test; production obtains each input immediately before composing the fight PTB below.
- * @param {{ world_id:string, spawn_id:number|string, mob_template_id:string, zx:number, zy:number,
- *   zone:any, commitment:any, groups:any[] }} input
+ * @param {{ world_id:string, spawn_id:number|string, mob_template_id:string, member_template_ids?:string[],
+ *   zx:number, zy:number, zone:any, commitment:any, groups:any[] }} input
+ *   `member_template_ids` is the roster this engage is about to seat (empty on a mono-spec group).
  * @returns {WorldGroupDoor}
  */
-export function world_group_door({ world_id, spawn_id, mob_template_id, zx, zy, zone, commitment, groups }) {
+export function world_group_door({
+  world_id,
+  spawn_id,
+  mob_template_id,
+  member_template_ids = [],
+  zx,
+  zy,
+  zone,
+  commitment,
+  groups,
+}) {
   if (!zone || !Array.isArray(groups) || !groups.length) return { door: 'blocked', reason: 'zone_unreadable' }
   // A zone searched before the commitment upgrade has nothing to prove against: the derivation door is its ONLY
   // door, and taking it is a deliberate branch — not a swallowed failure.
@@ -84,12 +97,27 @@ export function world_group_door({ world_id, spawn_id, mob_template_id, zx, zy, 
   if (matches.length !== 1) return { door: 'blocked', reason: 'stale_stream' }
   const [target] = matches
   if (!same_object_id(target.template_id, mob_template_id)) return { door: 'blocked', reason: 'stale_stream' }
+  // FORMAT 3 — the ROSTER gets the same cross-check the primary template already gets: the freshly derived stream
+  // must agree, member for member and in order, with the roster we are about to feed `add_member`. A disagreement
+  // (a rerolled zone, a stale render) means we are naming a pack that no longer exists — a refusal, not a door.
+  const roster = Array.isArray(member_template_ids) ? member_template_ids : []
+  const derived_roster = Array.isArray(target.members) ? target.members : []
+  if (
+    roster.length !== derived_roster.length ||
+    roster.some((template_id, slot) => !same_object_id(template_id, derived_roster[slot]))
+  )
+    return { door: 'blocked', reason: 'stale_stream' }
   const index = Number(target.index)
   if (!Number.isSafeInteger(index) || index < 0) return { door: 'blocked', reason: 'stale_stream' }
   // Consumption is MONOTONIC on chain and the served bitmap can only lag BEHIND it, so a set bit is always true:
   // refusing here is the same outcome the claim door would abort with (108), minus the burned gas.
   const consumed = ((Number(zone.mob_bitmap?.[index >> 3] ?? 0) >> (index & 7)) & 1) !== 0
   if (consumed) return { door: 'blocked', reason: 'consumed' }
+  // The member claim door takes NO witness: a format-3 commitment covers the whole derived set, so the chain's own
+  // re-derivation IS the proof (`create_member_fight_ptb` has no `group_proof` parameter). Composing one here would
+  // also be impossible — the commitment preimage carries the RAW rolled roster while a `derive_zone` row carries the
+  // team-bound-TRIMMED one — so the digest could never reproduce and every format-3 engage would refuse.
+  if (roster.length) return { door: 'derivation', reason: 'member_roster_door' }
   const proof = compose_mob_group_proof({
     world_id,
     zx,
@@ -106,7 +134,7 @@ export function world_group_door({ world_id, spawn_id, mob_template_id, zx, zy, 
 }
 
 /** @returns {Promise<WorldGroupDoor>} */
-async function load_world_group_door({ sdk, world_id, spawn_id, mob_template_id, zx, zy }) {
+async function load_world_group_door({ sdk, world_id, spawn_id, mob_template_id, member_template_ids, zx, zy }) {
   // No zone coordinates ⇒ the occupied-zone claim door, which takes no witness at all.
   if (zx == null || zy == null) return { door: 'derivation', reason: 'occupied_zone_door' }
   // DOOR POLARITY (the SDK's law): on a deployment whose ceremony never stamped the ZoneGroupRootKey origin,
@@ -138,6 +166,7 @@ async function load_world_group_door({ sdk, world_id, spawn_id, mob_template_id,
       world_id,
       spawn_id,
       mob_template_id,
+      member_template_ids,
       zx,
       zy,
       zone,
@@ -160,8 +189,14 @@ const GROUP_CLAIMED_ABORT = { MoveAbort: { abortCode: 108, location: { module: '
  * compose in ONE PTB (the ONLY provenance create accepts). First-come on the spawn. Passing the GROUP's zone
  * `zx`/`zy` uses the global-search door `zones::claim_mob_group_in_zone` (2026-07-10 — claim any searched
  * zone's group in reach); omitting them falls back to the occupied-zone `zones::claim_mob_group`.
+ *
+ * WHICH door composes is DERIVED from `member_template_ids` — the roster the zone row carried into the claim
+ * request (`derive_zone` row `.members`, format 3 / #1110). A roster means the pack is a real member list, so
+ * the `*_members` claim door seats it one `add_member` at a time; no roster is the mono-spec door, unchanged.
+ * There is no flag: a format-1/2 row has no roster to carry, and that absence IS the signal.
  * @param {{ world_id:string, spawn_id:number|string, zx?:number|null, zy?:number|null, mob_template_id:string,
- *           character_id:string, raised_spell_ids?:string[], is_public?:boolean, party_id?:string|null }} args
+ *           member_template_ids?:string[], character_id:string, raised_spell_ids?:string[], is_public?:boolean,
+ *           party_id?:string|null }} args
  * @returns {Promise<{ receipt:any, fight_id:string|null }>}
  */
 export async function create_world_fight({
@@ -170,6 +205,7 @@ export async function create_world_fight({
   zx = null,
   zy = null,
   mob_template_id,
+  member_template_ids = [],
   character_id,
   raised_spell_ids = [],
   is_public = true,
@@ -180,7 +216,7 @@ export async function create_world_fight({
   const sdk = await get_sdk()
   const [handle, group_door, live_fights] = await Promise.all([
     kiosk_for_character(sdk, address, character_id),
-    load_world_group_door({ sdk, world_id, spawn_id, mob_template_id, zx, zy }),
+    load_world_group_door({ sdk, world_id, spawn_id, mob_template_id, member_template_ids, zx, zy }),
     // TOCTOU SHRINK (leg ③): the SAME /v1 fight truth the engage affordance gates on, read FRESH here (parallel
     // with the kiosk/proof reads — zero added latency) so the residual poll-lag window between the affordance's
     // 6s snapshot and this press collapses to one read. A claimed spawn shows a live fight here even when the
@@ -200,7 +236,7 @@ export async function create_world_fight({
     if (group_door.reason === 'consumed') throw tx_error(GROUP_CLAIMED_ABORT, { preflight: true })
     throw new Error(i18n.t('errors.group_proof_unavailable'), { cause: group_door.cause ?? group_door.reason })
   }
-  const tx = create_fight_ptb(ctx_of(sdk))({
+  const entry = {
     world_id,
     kiosk_id: handle.kiosk_id,
     personal_kiosk_cap_id: handle.personal_kiosk_cap_id,
@@ -209,11 +245,16 @@ export async function create_world_fight({
     spawn_id,
     zx,
     zy,
-    group_proof: group_door.door === 'proof' ? group_door.proof : null,
-    mob_template_id,
     is_public,
     party_id,
-  })
+  }
+  const tx = member_template_ids.length
+    ? create_member_fight_ptb(ctx_of(sdk))({ ...entry, member_template_ids })
+    : create_fight_ptb(ctx_of(sdk))({
+        ...entry,
+        group_proof: group_door.door === 'proof' ? group_door.proof : null,
+        mob_template_id,
+      })
   mark_engage_ptb_built(tx)
   use_fight_cost.getState().reset() // FRESH fight entry — its own gas is the first line of the new total
   clear_budget_cache() // and drop any prior fight's cached act budgets (a new fight = new shapes)

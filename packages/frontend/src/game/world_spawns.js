@@ -710,16 +710,20 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
                 throw new Error(reason)
               }
             }
-            const { world_id, spawn_id, zx, zy, template_id, is_public } = request.payload
+            const { world_id, spawn_id, zx, zy, template_id, member_template_ids, is_public } = request.payload
             const party_id = is_public ? null : use_party.getState().party_id
             // The request carries spawn_id + template + the GROUP's zone (zx,zy) → the global-search claim door;
-            // claim any discovered zone's group you can reach. The aggregate intent toast owns this whole task.
+            // claim any discovered zone's group you can reach. A format-3 row also carries its member ROSTER,
+            // which is what selects the member claim door inside create_world_fight (#1110) — the fold's request
+            // row is that roster's one home, so nothing here decides anything. The aggregate intent toast owns
+            // this whole task.
             return create_world_fight({
               world_id,
               spawn_id,
               zx,
               zy,
               mob_template_id: template_id,
+              member_template_ids,
               character_id,
               is_public,
               party_id,
