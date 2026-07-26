@@ -161,6 +161,12 @@ export function GameWorldHud() {
     import('../../../dev/dev_synth_fight.js').then((m) => {
       if (!cleared) m.register_dev_synth_fight()
     })
+    // #1100 — the scripted fight bot's doors (__ARES_DEV_READ full-state read / __ARES_DEV_TURN batched
+    // player turn). Same DEV gate + tree-shake; the simulator registers the identical pair, so ONE bot
+    // drives both surfaces.
+    import('../../../dev/dev_bot_seam.js').then((m) => {
+      if (!cleared) m.register_dev_bot_seam()
+    })
     return () => {
       cleared = true
     }

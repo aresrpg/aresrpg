@@ -42,7 +42,14 @@ export async function register_sim_dev_seams({ engine, board, canvas }) {
     configurable: true,
     get: () => (canvas.isConnected ? canvas : (slot?.querySelector('canvas') ?? canvas)),
   })
-  const [probe, cast] = await Promise.all([import('../game/dev/dev_probe.js'), import('../game/dev/dev_cast.js')])
+  const [probe, cast, bot] = await Promise.all([
+    import('../game/dev/dev_probe.js'),
+    import('../game/dev/dev_cast.js'),
+    import('../game/dev/dev_bot_seam.js'),
+  ])
   probe.register_dev_probe()
   cast.register_dev_cast()
+  // #1100 — the scripted fight bot's two doors (__ARES_DEV_READ / __ARES_DEV_TURN). Same registrar shape,
+  // same DEV gate: the bot drives BOTH surfaces through one seam set, exactly like the #1025 pair above.
+  bot.register_dev_bot_seam()
 }
