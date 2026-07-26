@@ -75,11 +75,15 @@ export function is_stuck(samples, now, window_ms = STUCK_WINDOW_MS, min_progress
   return Math.hypot(last.x - ref.x, last.z - ref.z) < min_progress
 }
 
-/** Normalise a marker-click payload into a steer target, or null when it isn't a valid mob/resource marker.
+/** Every steerable payload type. 'point' is a BARE leg — walk there and stop, no interaction on arrival
+ *  (the auto-search scouter's zone/group legs: it must never engage anything by walking onto it). */
+const STEER_TYPES = new Set(['mob', 'resource', 'point'])
+
+/** Normalise a marker-click payload into a steer target, or null when it isn't a valid steerable marker.
  *  Accepts position as {x,z} · {x,y,z} · {x,y} (map convention: y = world Z) · [x,z] · [x,y,z].
- *  @param {any} ev @returns {{ type: 'mob'|'resource', id: any, x: number, z: number } | null} */
+ *  @param {any} ev @returns {{ type: 'mob'|'resource'|'point', id: any, x: number, z: number } | null} */
 export function normalize_target(ev) {
-  if (!ev || (ev.type !== 'mob' && ev.type !== 'resource')) return null
+  if (!ev || !STEER_TYPES.has(ev.type)) return null
   const pos = ev.position
   let x
   let z
@@ -176,8 +180,11 @@ export function create_auto_run({
     hide_chip()
   }
 
-  /** Begin steering to a marker-click payload ({ type, id, position }). A no-op on a malformed payload. */
+  /** Begin steering to a marker-click payload ({ type, id, position }). A no-op on a malformed payload.
+   *  `{ type: 'cancel' }` stops an in-flight run — the seam a headless caller (auto-search) uses to halt
+   *  the body without reaching into this closure. */
   const start = (/** @type {any} */ ev) => {
+    if (ev?.type === 'cancel') return cancel()
     const next = normalize_target(ev)
     if (!next) return
     cancel() // drop any in-flight run (retarget)
@@ -232,7 +239,12 @@ export function create_auto_run({
       return { forward: 1, strafe: 0, yaw, jump }
     }
 
-    // phase === 'arrive': stand on the target and pull the SAME [R]/[G] lever the moment it's armed.
+    // phase === 'arrive': a BARE point leg is already done — stand still, never look for a lever to pull.
+    if (!INTERACT_ID[target.type]) {
+      cancel()
+      return null
+    }
+    // stand on the target and pull the SAME [R]/[G] lever the moment it's armed.
     if (trigger_interact(target.type)) {
       cancel()
       return null

@@ -78,6 +78,38 @@ describe('normalize_target — flexible marker payloads', () => {
   })
 })
 
+describe('bare POINT legs — walk there and stop, never interact (the auto-search scouter, #1106)', () => {
+  test('a point payload normalises like any other marker', () => {
+    expect(normalize_target({ type: 'point', position: { x: 5, z: 9 } })).toMatchObject({ type: 'point', x: 5, z: 9 })
+  })
+
+  test('arriving at a point finishes the run WITHOUT pulling any interaction lever', () => {
+    const { ar, state } = harness()
+    state.armed = true // an [R]/[G] prompt IS armed here — a point leg must still never fire it
+    ar.start({ type: 'point', position: { x: 30, z: 0 } })
+    ar.update(1 / 60)
+
+    state.pos = [28.5, 1, 0] // inside the arrive radius → plant
+    state.clock += 16
+    expect(ar.update(1 / 60).forward).toBe(0)
+
+    state.clock += 16
+    expect(ar.update(1 / 60)).toBeNull()
+    expect(ar.active()).toBe(false)
+    expect(state.triggered).toEqual([])
+    expect(state.blocked).toBe(0) // arriving IS the goal — never the "can't reach it" toast
+  })
+
+  test('a cancel payload stops an in-flight run (the headless halt seam)', () => {
+    const { ar } = harness()
+    ar.start({ type: 'point', position: { x: 300, z: 0 } })
+    expect(ar.active()).toBe(true)
+    ar.start({ type: 'cancel' })
+    expect(ar.active()).toBe(false)
+    expect(ar.update(1 / 60)).toBeNull()
+  })
+})
+
 /** A driveable steerer with injected effects + a controllable clock/position. */
 function harness() {
   const state = { pos: [0, 1, 0], clock: 0, triggered: [], blocked: 0, armed: false }
