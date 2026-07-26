@@ -1,0 +1,713 @@
+{
+  "tip": "8dc6107e",
+  "base": "http://localhost:5340",
+  "world": "0xf69fe397444a1a278deb9a67d4516aac2f6cfa1e083581c21d99f763b543fc3c",
+  "started": "2026-07-26T08:30:40.184Z",
+  "bars": {
+    "1": {
+      "verdict": "PASS",
+      "fight_id": "0x1e4dc8f08ac50ab8678942029c95de4bc3e156fcbe07bcf4780a45631e4bca46",
+      "participants": 2,
+      "seats": [
+        "0xe3d99d59#0",
+        "0x6ceb2369#1"
+      ],
+      "alice_seated": true,
+      "bob_seated": true,
+      "join_path": "B proximity prompt \"V SEE FIGHTS IN THE AREA · 1 FIGHT NEARBY\" → [V] → JOIN (attempt-1 run)",
+      "clients_folded": {
+        "A2_alice": true,
+        "B2_bob": true
+      },
+      "at": "2026-07-26T08:37:59.051Z"
+    },
+    "2": {
+      "verdict": "PASS",
+      "A2_alice": {
+        "addresses_shown": [],
+        "names_shown": [
+          "qa88e113c7",
+          "qa2f178667",
+          "qa3c15f0be"
+        ]
+      },
+      "B2_bob": {
+        "addresses_shown": [],
+        "names_shown": [
+          "qaf0e63e15",
+          "qa3c15f0be",
+          "qa88e113c7"
+        ]
+      },
+      "at": "2026-07-26T08:37:59.355Z"
+    },
+    "3": {
+      "verdict": "PASS",
+      "alice_acts": [
+        {
+          "t": 8657,
+          "kind": "end_turn_click"
+        },
+        {
+          "t": 14143,
+          "kind": "move",
+          "to": {
+            "x": 2,
+            "y": 0
+          },
+          "mp_after": 3
+        }
+      ],
+      "bob_acts": [
+        {
+          "t": 3556,
+          "kind": "move",
+          "to": {
+            "x": 2,
+            "y": 1
+          },
+          "mp_after": 3
+        },
+        {
+          "t": 19056,
+          "kind": "end_turn_click"
+        }
+      ],
+      "max_lag_ms": {
+        "alice_client": 0,
+        "bob_client": 0
+      },
+      "unmatched_turns": {
+        "alice_client": 0,
+        "bob_client": 0
+      },
+      "chain_turn_changes": 2,
+      "at": "2026-07-26T08:38:18.707Z"
+    },
+    "4": {
+      "verdict": "BLOCKED",
+      "why": "no fight after bob [R]",
+      "at": "2026-07-26T08:49:17.799Z"
+    },
+    "5": {
+      "verdict": "N/A",
+      "why": "both seats committed MOVE/END-TURN only — no kind-9/11 buff cast on this drive",
+      "cast_kinds": [],
+      "at": "2026-07-26T08:38:18.707Z"
+    },
+    "6": {
+      "verdict": "PASS",
+      "forfeited": {
+        "A2_alice": true,
+        "B2_bob": true
+      },
+      "lists_empty": true,
+      "alice_fights_after": 0,
+      "bob_fights_after": 0,
+      "final_status": "gone",
+      "page_error_counts": {
+        "A2_alice": 1,
+        "B2_bob": 0
+      },
+      "at": "2026-07-26T08:39:08.422Z"
+    }
+  },
+  "notes": [],
+  "addresses": {
+    "alice": "0xb4951afe3682d3e9425671f1772e3676bc6ff361ac00896ea131cf52765cd177",
+    "bob": "0xa066756b957bad2b2b224908357da64f77d04122ddebf9e11d8538258ff8d2d6"
+  },
+  "pack": {
+    "spawn_id": "5285737554502123820",
+    "world_xz": {
+      "x": -440,
+      "z": -439
+    }
+  },
+  "separation": 23,
+  "fight_id": "0x1e4dc8f08ac50ab8678942029c95de4bc3e156fcbe07bcf4780a45631e4bca46",
+  "chain_pre_join": {
+    "err": "Failed to resolve module specifier '@aresrpg/sdk/fight'"
+  },
+  "bar2_panel_text": [
+    "Graphics",
+    "Quest 1 / 5",
+    "Skip",
+    "⋯",
+    "Win a Fight",
+    "Defeat an enemy in combat to begin your journey.",
+    "Chat",
+    "·",
+    "2",
+    "Online",
+    "General",
+    "Commerce",
+    "Party",
+    "Combat",
+    "General",
+    "Party",
+    "Bring your characters",
+    "qaf0e63e15",
+    "Invite to group",
+    "Fights",
+    "Public",
+    "Group",
+    "Friends",
+    "No friends online",
+    "Verdant Hollow",
+    "Travel",
+    "qa88e113c7",
+    "LV 1",
+    "70",
+    "/",
+    "70",
+    "0",
+    "/",
+    "110",
+    "N",
+    "NE",
+    "E",
+    "W",
+    "NW",
+    "56",
+    "m",
+    "67",
+    "m",
+    "Edge · 232m",
+    "-424",
+    "131",
+    "-416",
+    "Zone -1·-1",
+    "68 FPS",
+    "F",
+    "Search the zone",
+    "E",
+    "[E] ENTER THE DUNGEONS",
+    "V",
+    "See fights in the area · 1 fight nearby",
+    "AresRPG",
+    "Navigation",
+    "World",
+    "CHARACTERS",
+    "LEADERBOARD",
+    "SOON",
+    "SHOP",
+    "SIMULATOR",
+    "ENCYCLOPEDIA",
+    "MARKETPLACE",
+    "Airdrop",
+    "Kolizeum",
+    "Settings",
+    "0xa066…d2d6",
+    "2.03",
+    "SUI",
+    "Send",
+    "Add Funds",
+    "Disconnect",
+    "Self-Pay",
+    "Gas spent (24h)",
+    "-<0.01",
+    "SUI",
+    "CHARACTERS",
+    "IN LOBBY"
+  ],
+  "placement": {
+    "A_alice": {
+      "path": "dev_place_ready_hook",
+      "result": {
+        "cell": {
+          "x": 1,
+          "y": 0
+        },
+        "ok": true
+      },
+      "ready_button_present": false
+    },
+    "B_bob": {
+      "path": "dev_place_ready_hook",
+      "result": {
+        "ok": false,
+        "reason": "my fighter not in slice"
+      },
+      "ready_button_present": false
+    }
+  },
+  "attempt2_started": "2026-07-26T08:36:23.959Z",
+  "bar2_detail": {
+    "A2_alice": {
+      "addresses_shown": [],
+      "names_shown": [
+        "qa88e113c7",
+        "qa2f178667",
+        "qa3c15f0be"
+      ],
+      "sample": [
+        "Quest 1 / 5",
+        "Skip",
+        "⋯",
+        "Win a Fight",
+        "Chat",
+        "·",
+        "2",
+        "Online",
+        "General",
+        "Commerce",
+        "Party",
+        "Combat",
+        "Combat",
+        "Plaza Chicklet",
+        "cast",
+        "Attack",
+        "Combat",
+        "Plaza Chicklet",
+        "hit",
+        "qa88e113c7",
+        "for",
+        "2",
+        "General",
+        "Party",
+        "Bring your characters",
+        "qa2f178667",
+        "Invite to group",
+        "Q",
+        "qa3c15f0be",
+        "Lv",
+        "1",
+        "70",
+        "P",
+        "Plaza Chicklet",
+        "Lv",
+        "3",
+        "16",
+        "Q",
+        "qa88e113c7",
+        "Lv",
+        "1",
+        "66",
+        "11",
+        "s",
+        "P",
+        "Plaza Chicklet",
+        "Lv",
+        "3",
+        "16",
+        "70",
+        "70",
+        "6",
+        "3",
+        "`",
+        "1",
+        "5",
+        "2",
+        "6",
+        "3",
+        "5"
+      ]
+    },
+    "B2_bob": {
+      "addresses_shown": [],
+      "names_shown": [
+        "qaf0e63e15",
+        "qa3c15f0be",
+        "qa88e113c7"
+      ],
+      "sample": [
+        "Quest 1 / 5",
+        "Skip",
+        "⋯",
+        "Win a Fight",
+        "Chat",
+        "·",
+        "2",
+        "Online",
+        "General",
+        "Commerce",
+        "Party",
+        "Combat",
+        "General",
+        "Party",
+        "Bring your characters",
+        "qaf0e63e15",
+        "Invite to group",
+        "Q",
+        "qa3c15f0be",
+        "Lv",
+        "1",
+        "70",
+        "P",
+        "Plaza Chicklet",
+        "Lv",
+        "3",
+        "16",
+        "Q",
+        "qa88e113c7",
+        "Lv",
+        "1",
+        "66",
+        "10",
+        "s",
+        "P",
+        "Plaza Chicklet",
+        "Lv",
+        "3",
+        "16",
+        "66",
+        "70",
+        "6",
+        "3",
+        "`",
+        "1",
+        "5",
+        "2",
+        "6",
+        "3",
+        "5",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "1",
+        "End Turn",
+        "FORFEIT",
+        "Copy bug report"
+      ]
+    }
+  },
+  "samples": [
+    {
+      "t": 270,
+      "chain_status": "active",
+      "chain_turn": "0x6ceb23694c67eb344378e897ca4e229a6e2ac8b1584b3878446b24366f7e9b5c",
+      "A_active": "0x6ceb23694c67eb344378e897ca4e229a6e2ac8b1584b3878446b24366f7e9b5c",
+      "A_turn": 2,
+      "A_hp": "70/70",
+      "A_me": "0xe3d99d594f2acab553445e83ad122482ae242fa42df0771a4f5c4e98b33fce7b",
+      "B_active": "0x6ceb23694c67eb344378e897ca4e229a6e2ac8b1584b3878446b24366f7e9b5c",
+      "B_turn": 2,
+      "B_hp": "66/70",
+      "B_me": "0x6ceb23694c67eb344378e897ca4e229a6e2ac8b1584b3878446b24366f7e9b5c"
+    },
+    {
+      "t": 6324,
+      "chain_status": "active",
+      "chain_turn": "0xe3d99d594f2acab553445e83ad122482ae242fa42df0771a4f5c4e98b33fce7b",
+      "A_active": "0xe3d99d594f2acab553445e83ad122482ae242fa42df0771a4f5c4e98b33fce7b",
+      "A_turn": 3,
+      "A_hp": "70/70",
+      "A_me": "0xe3d99d594f2acab553445e83ad122482ae242fa42df0771a4f5c4e98b33fce7b",
+      "B_active": "0xe3d99d594f2acab553445e83ad122482ae242fa42df0771a4f5c4e98b33fce7b",
+      "B_turn": 2,
+      "B_hp": "66/70",
+      "B_me": "0x6ceb23694c67eb344378e897ca4e229a6e2ac8b1584b3878446b24366f7e9b5c"
+    },
+    {
+      "t": 11486,
+      "chain_status": "active",
+      "chain_turn": "0xe3d99d594f2acab553445e83ad122482ae242fa42df0771a4f5c4e98b33fce7b",
+      "A_active": "0xe3d99d594f2acab553445e83ad122482ae242fa42df0771a4f5c4e98b33fce7b",
+      "A_turn": 3,
+      "A_hp": "70/70",
+      "A_me": "0xe3d99d594f2acab553445e83ad122482ae242fa42df0771a4f5c4e98b33fce7b",
+      "B_active": "0xe3d99d594f2acab553445e83ad122482ae242fa42df0771a4f5c4e98b33fce7b",
+      "B_turn": 2,
+      "B_hp": "66/70",
+      "B_me": "0x6ceb23694c67eb344378e897ca4e229a6e2ac8b1584b3878446b24366f7e9b5c"
+    },
+    {
+      "t": 16932,
+      "chain_status": "active",
+      "chain_turn": "0x6ceb23694c67eb344378e897ca4e229a6e2ac8b1584b3878446b24366f7e9b5c",
+      "A_active": "0x6ceb23694c67eb344378e897ca4e229a6e2ac8b1584b3878446b24366f7e9b5c",
+      "A_turn": 3,
+      "A_hp": "67/70",
+      "A_me": "0xe3d99d594f2acab553445e83ad122482ae242fa42df0771a4f5c4e98b33fce7b",
+      "B_active": "0x6ceb23694c67eb344378e897ca4e229a6e2ac8b1584b3878446b24366f7e9b5c",
+      "B_turn": 3,
+      "B_hp": "66/70",
+      "B_me": "0x6ceb23694c67eb344378e897ca4e229a6e2ac8b1584b3878446b24366f7e9b5c"
+    }
+  ],
+  "acts": {
+    "A2_alice": [
+      {
+        "t": 8657,
+        "kind": "end_turn_click"
+      },
+      {
+        "t": 14143,
+        "kind": "move",
+        "to": {
+          "x": 2,
+          "y": 0
+        },
+        "mp_after": 3
+      }
+    ],
+    "B2_bob": [
+      {
+        "t": 3556,
+        "kind": "move",
+        "to": {
+          "x": 2,
+          "y": 1
+        },
+        "mp_after": 3
+      },
+      {
+        "t": 19056,
+        "kind": "end_turn_click"
+      }
+    ]
+  },
+  "lag": {
+    "sample_interval_ms": 2000,
+    "A": {
+      "pairs": [
+        {
+          "chain_turn": "0xe3d99d594f2acab553445e83ad122482ae242fa42df0771a4f5c4e98b33fce7b",
+          "t_chain": 6324,
+          "t_client": 6324,
+          "lag_ms": 0
+        },
+        {
+          "chain_turn": "0x6ceb23694c67eb344378e897ca4e229a6e2ac8b1584b3878446b24366f7e9b5c",
+          "t_chain": 16932,
+          "t_client": 16932,
+          "lag_ms": 0
+        }
+      ],
+      "max_lag_ms": 0,
+      "unmatched": 0
+    },
+    "B": {
+      "pairs": [
+        {
+          "chain_turn": "0xe3d99d594f2acab553445e83ad122482ae242fa42df0771a4f5c4e98b33fce7b",
+          "t_chain": 6324,
+          "t_client": 6324,
+          "lag_ms": 0
+        },
+        {
+          "chain_turn": "0x6ceb23694c67eb344378e897ca4e229a6e2ac8b1584b3878446b24366f7e9b5c",
+          "t_chain": 16932,
+          "t_client": 16932,
+          "lag_ms": 0
+        }
+      ],
+      "max_lag_ms": 0,
+      "unmatched": 0
+    }
+  },
+  "errors": {
+    "A2_alice": [
+      "[console.error] [fight] expired turn could not be advanced {fight_id: 0x1e4dc8f08ac50ab8678942029c95de4bc3e156fcbe07bcf4780a45631e4bca46, status: 1, turn_deadline_ms: 1785054909371, active_entity_id: 0x6ceb23694c67eb344378e897ca4e229a6e2ac8b1584b3878446b24366f7e9b5c, my_entity_id: 0xe3d99d594f2acab553445e83ad122482ae242fa42df0771a4f5c4e98b33fce7b}"
+    ],
+    "B2_bob": []
+  },
+  "digests_stageA": {
+    "A": [],
+    "B": []
+  },
+  "alice_immobility": {
+    "position": {
+      "x": -440,
+      "y": 138,
+      "z": -439,
+      "zx": -1,
+      "zy": -1
+    },
+    "key_probes": {
+      "KeyW": {
+        "dx": 0,
+        "dz": 0,
+        "dy": 0
+      },
+      "KeyS": {
+        "dx": 0,
+        "dz": 0,
+        "dy": 0
+      },
+      "KeyA": {
+        "dx": 0,
+        "dz": 0,
+        "dy": 0
+      },
+      "KeyD": {
+        "dx": 0,
+        "dz": 0,
+        "dy": 0
+      }
+    },
+    "jump_recovery": {
+      "before": {
+        "x": -440,
+        "y": 138,
+        "z": -439,
+        "zx": -1,
+        "zy": -1
+      },
+      "after": {
+        "x": -440,
+        "y": 138,
+        "z": -439,
+        "zx": -1,
+        "zy": -1
+      },
+      "freed": false
+    },
+    "hud_readable": true,
+    "page_errors": [],
+    "note": "alice sat at the settled fight site (-440,-439); bob at his own spot calibrated and walked normally in the same session"
+  },
+  "bar4b_exit": "no fight",
+  "finished": "2026-07-26T08:49:17.800Z",
+  "mission": "SLEEP MANDATE — COOP closing drive (two accounts, one world fight) on the SERVED build tip 8dc6107e",
+  "substrate": {
+    "tip": "8dc6107e",
+    "worktree": "/tmp/aresrpg-lanes/coop-drive-2 (detached at origin/edge)",
+    "dev_server": "http://localhost:5340 (VITE_RPC_URL=https://rpc.aresrpg.world), vite v8.1.4 ready in 781ms",
+    "chain": "Sui testnet via the keyless read layer https://rpc.aresrpg.world/v1",
+    "identities": {
+      "alice": "qa3c15f0be (SENSHI lv1)",
+      "bob": "qa88e113c7 (lv1)"
+    }
+  },
+  "balances": {
+    "unit": "MIST",
+    "alice": {
+      "before": 1694439248,
+      "after": 1521236032,
+      "delta": -173203216,
+      "sui_spent": 0.173203216
+    },
+    "bob": {
+      "before": 2038336196,
+      "after": 2040475372,
+      "delta": 2139176,
+      "note": "net positive — bob's joins/actions were sponsored"
+    },
+    "total_sui_spent": 0.17106404,
+    "budget_sui": 0.3
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "HIGH",
+      "title": "Player left permanently embedded in terrain at a settled world-fight site (hard-stuck, no in-product recovery)",
+      "seat": "alice / qa3c15f0be",
+      "position": {
+        "x": -440,
+        "y": 138,
+        "z": -439,
+        "world": "VERDANT HOLLOW",
+        "zone": "-1·-1"
+      },
+      "repro": [
+        "1. Walk a character to a mob pack in VERDANT HOLLOW and press [R] to engage a public world fight.",
+        "2. Let the fight resolve (here: both seats forfeited through the product's FORFEIT + confirm dialog).",
+        "3. Dismiss the fight report (CONTINUE). Observe the character's world position.",
+        "OBSERVED: the character stands at the old fight site at y=138 while the pre-fight ground there was y=133 — the camera renders solid voxels at point-blank range and the character model is not visible."
+      ],
+      "mechanical_pin": {
+        "key_probes": {
+          "KeyW": {
+            "dx": 0,
+            "dz": 0,
+            "dy": 0
+          },
+          "KeyS": {
+            "dx": 0,
+            "dz": 0,
+            "dy": 0
+          },
+          "KeyA": {
+            "dx": 0,
+            "dz": 0,
+            "dy": 0
+          },
+          "KeyD": {
+            "dx": 0,
+            "dz": 0,
+            "dy": 0
+          }
+        },
+        "jump_recovery": {
+          "before": {
+            "x": -440,
+            "y": 138,
+            "z": -439,
+            "zx": -1,
+            "zy": -1
+          },
+          "after": {
+            "x": -440,
+            "y": 138,
+            "z": -439,
+            "zx": -1,
+            "zy": -1
+          },
+          "freed": false
+        },
+        "note": "ALL of KeyW/KeyS/KeyA/KeyD held 1.5s each produced dx=0, dz=0, dy=0. Space+KeyW also produced zero on every axis — the character cannot even fall, i.e. fully encased, not merely blocked."
+      },
+      "persistence": "Survived 3 independent fresh browser boots (3 separate contexts, ~10 minutes apart). Not a client hang: HUD at 46 FPS, HP 70/70, chat live, prompts responsive, wallet panel live.",
+      "contrast": "bob, in the SAME session and build, calibrated and walked normally (W→(0,-13), D→(11,0)). Earlier in the run alice herself walked normally from (-468,-389) BEFORE the fight — the immobility begins only after the fight at that site settles.",
+      "impact": "A player who finishes a world fight can be permanently unable to move. No unstuck affordance is offered; jump does not free them. The only apparent escape is the TRAVEL modal (world change), which was not exercised.",
+      "evidence_shots": [
+        "mcd_shots/A4_alice_diag_00_stuck.png",
+        "mcd_shots/A4_alice_diag_01_after_jump.png"
+      ],
+      "blocks": "BAR 4 attempt A — alice could not walk to a pack to engage a fresh fight."
+    },
+    {
+      "id": "F2",
+      "severity": "MEDIUM",
+      "title": "Joining seat's client does not mount the placement board during the placement window",
+      "seat": "bob / qa88e113c7",
+      "observed": "Bob clicked JOIN in FIGHTS IN RANGE; chain seated him (participants seat 1) within seconds. ~13s later his client still showed the OVERWORLD with only a FORFEIT button — no placement board, no fighters, no timeline. __ARES_DEV_PLACE_READY refused with \"my fighter not in slice\" and DEV_STATE had my_cell:null, my_hp:null while alice's client already had my_cell {1,0}.",
+      "consequence": "Bob never placed or readied. The chain force-started the fight at the placement deadline, so bob was auto-placed and lost his placement turn — a coop seat silently forfeits its positioning.",
+      "resolves": "NOT permanent — after a fresh boot resuming the same fight ACTIVE, bob's client folded his seat correctly (my_cell {2,0}, hp 66/70) and both clients rendered both names. So this is a PLACEMENT-WINDOW fold latency, not a lost seat.",
+      "evidence_shots": [
+        "mcd_shots/B_bob_40_names.png (overworld + FORFEIT only)",
+        "mcd_shots/A_alice_40_names.png (alice's board at the same instant, bob's card absent)"
+      ]
+    },
+    {
+      "id": "F3",
+      "severity": "INFO",
+      "title": "Honest error surfacing on an expired turn",
+      "console": "[fight] expired turn could not be advanced {fight_id, status:1, turn_deadline_ms, active_entity_id: bob, my_entity_id: alice}",
+      "attribution": "Caused by THIS drive: the fight sat past its turn deadline for ~4 minutes while the rig was being repaired between attempts. Not a product defect — the client surfaced the condition instead of failing silently."
+    }
+  ],
+  "bar4_escalation_brief": {
+    "SYMPTOM": "BAR 4 (hard-refresh ONE client mid-PLACEMENT on the coop path) never reached its measurement window.",
+    "REPRO": "Two independent attempts, both stopped before a coop placement board existed to refresh.",
+    "TRIED": [
+      "Attempt A (mcd_bar4.mjs, alice engages): alice is hard-stuck in terrain at the previous fight site (finding F1) — she stalled 34 blocks from the nearest pack and the [R] ATTACK prompt never armed. Disproved \"the client was merely showing a modal\": a fresh boot with a clean, readable HUD still produced zero movement on all axes.",
+      "Attempt B (mcd_bar4b.mjs, roles inverted — bob engages a pack 34 blocks from alice so her 50-block [V] prompt would arm without walking): bob reached the pack (d=4), his ATTACK prompt armed (attack=true), separation A-B 31, but his [R] produced NO fight on /v1 within 150s. Disproved \"alice's immobility is the only blocker\" — the engage itself did not fire for bob at that pack."
+    ],
+    "HYPOTHESIS": "Two independent causes. F1 immobilises any seat that settled a fight at a site. For attempt B, the most likely cause is that focus_world() clicks the canvas centre-bottom to hand keyboard focus to the game, and that click may have re-targeted or de-armed the ATTACK prompt between the arm check and the [R] press; a second possibility is a silent engage refusal on a pack whose spawn was already consumed. EVIDENCE GAP: no screenshot was taken between bob's arm check and his [R] press, and no console line was captured for a refused engage.",
+    "SMALLEST_QUESTION": "On the served build, does a world-fight engage [R] ever silently no-op after the ATTACK prompt has armed — and if so, does it emit any console line? A single-seat rig that screenshots + dumps console immediately before and after [R] answers it in one run.",
+    "NOTE": "BAR 4 was independently verified GREEN on the SOLO path in the PR-934 run (placement re-entry after two hard refreshes). Only the COOP variant is unproven here."
+  },
+  "bars_summary": {
+    "1": "PASS",
+    "2": "PASS",
+    "3": "PASS",
+    "4": "BLOCKED",
+    "5": "N/A",
+    "6": "PASS"
+  },
+  "teardown": {
+    "drive_procs": 0,
+    "chromium_procs": 0,
+    "fights_open": {
+      "alice_chars": 0,
+      "bob_chars": 0
+    },
+    "verified_at": "2026-07-26T08:50:39.991Z"
+  }
+}
