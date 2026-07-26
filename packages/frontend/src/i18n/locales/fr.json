@@ -2993,5 +2993,21 @@
         "outfit": "Tenue"
       }
     }
+  },
+  "auto_search": {
+    "label": "Recherche auto",
+    "fee_title": "Chaque recherche coûte du gas",
+    "fee_message": "La recherche auto envoie une vraie transaction sur Sui pour chaque zone explorée, et continue jusqu’à trouver un de tes monstres ciblés. Garde un œil sur tes dépenses.",
+    "fee_confirm": "Activer la recherche auto",
+    "config_title": "Réglages de la recherche auto",
+    "range_label": "Distance depuis le centre du monde (blocs)",
+    "range_from": "De",
+    "range_to": "À",
+    "mobs_label": "Monstres ciblés",
+    "mobs_filter": "Filtrer les monstres",
+    "mobs_empty": "Aucun monstre disponible",
+    "selected": "{{count}} sélectionné(s)",
+    "found": "{{mob}} trouvé",
+    "exhausted": "Plus aucune zone à explorer dans cette plage"
   }
 }

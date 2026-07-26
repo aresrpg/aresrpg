@@ -2993,5 +2993,21 @@
         "outfit": "Outfit"
       }
     }
+  },
+  "auto_search": {
+    "label": "Auto search",
+    "fee_title": "Each search costs gas",
+    "fee_message": "Auto search fires a real transaction on Sui for every zone it scouts, and keeps going until it finds one of your wanted mobs. Keep an eye on your spend.",
+    "fee_confirm": "Arm auto search",
+    "config_title": "Auto search settings",
+    "range_label": "Distance from the world centre (blocks)",
+    "range_from": "From",
+    "range_to": "To",
+    "mobs_label": "Wanted mobs",
+    "mobs_filter": "Filter mobs",
+    "mobs_empty": "No mobs available",
+    "selected": "{{count}} selected",
+    "found": "{{mob}} found",
+    "exhausted": "No zone left to scout in that range"
   }
 }

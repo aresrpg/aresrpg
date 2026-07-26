@@ -2993,5 +2993,21 @@
         "outfit": "Atuendo"
       }
     }
+  },
+  "auto_search": {
+    "label": "Búsqueda auto",
+    "fee_title": "Cada búsqueda cuesta gas",
+    "fee_message": "La búsqueda automática envía una transacción real en Sui por cada zona que explora y continúa hasta encontrar uno de tus monstruos objetivo. Vigila tu gasto.",
+    "fee_confirm": "Activar búsqueda auto",
+    "config_title": "Ajustes de búsqueda auto",
+    "range_label": "Distancia desde el centro del mundo (bloques)",
+    "range_from": "Desde",
+    "range_to": "Hasta",
+    "mobs_label": "Monstruos buscados",
+    "mobs_filter": "Filtrar monstruos",
+    "mobs_empty": "No hay monstruos disponibles",
+    "selected": "{{count}} seleccionados",
+    "found": "{{mob}} encontrado",
+    "exhausted": "No queda ninguna zona que explorar en ese rango"
   }
 }

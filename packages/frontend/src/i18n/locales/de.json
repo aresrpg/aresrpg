@@ -2993,5 +2993,21 @@
         "outfit": "Outfit"
       }
     }
+  },
+  "auto_search": {
+    "label": "Auto-Suche",
+    "fee_title": "Jede Suche kostet Gas",
+    "fee_message": "Die Auto-Suche sendet für jede erkundete Zone eine echte Transaktion auf Sui und läuft weiter, bis sie eines deiner gesuchten Monster findet. Behalte deine Ausgaben im Blick.",
+    "fee_confirm": "Auto-Suche starten",
+    "config_title": "Auto-Suche — Einstellungen",
+    "range_label": "Entfernung vom Weltzentrum (Blöcke)",
+    "range_from": "Von",
+    "range_to": "Bis",
+    "mobs_label": "Gesuchte Monster",
+    "mobs_filter": "Monster filtern",
+    "mobs_empty": "Keine Monster verfügbar",
+    "selected": "{{count}} ausgewählt",
+    "found": "{{mob}} gefunden",
+    "exhausted": "Keine Zone mehr in dieser Reichweite"
   }
 }
