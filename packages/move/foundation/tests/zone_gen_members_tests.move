@@ -184,7 +184,7 @@ fun format_2_derivation_is_byte_identical() {
 
 #[test]
 /// TWIN PARITY — the JS mirror's rows, row for row. Every number here also lives in
-/// `packages/sim/test/fixtures/replay/zone_members_format3_parity.json`, which
+/// `packages/sim/test/fixtures/zone_members_format3_parity.json`, which
 /// `packages/sim/test/zone_members_parity.test.js` asserts on the client side: ONE fixture, both twins, neither
 /// checking itself. A mixed pack the map draws that the chain does not seat is the whole failure mode this
 /// derivation can have, and it is silent — the fight simply spawns a different world than the player was shown.

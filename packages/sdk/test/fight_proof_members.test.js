@@ -12,7 +12,7 @@ import { describe, test, expect } from 'bun:test'
 import { PublicKey } from '@mysten/sui/cryptography'
 import { fromHex } from '@mysten/sui/utils'
 
-import fixture from '../../sim/test/fixtures/replay/zone_members_format3_parity.json' with { type: 'json' }
+import fixture from '../../sim/test/fixtures/zone_members_format3_parity.json' with { type: 'json' }
 import {
   compose_mob_group_proof,
   mob_group_member_set_bytes,

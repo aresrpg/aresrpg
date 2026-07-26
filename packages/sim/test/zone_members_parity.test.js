@@ -12,7 +12,7 @@ import { describe, test, expect } from 'bun:test'
 
 import { derive_mob_groups_members, commitment_format } from '../src/zone_derive.js'
 
-import fixture from './fixtures/replay/zone_members_format3_parity.json'
+import fixture from './fixtures/zone_members_format3_parity.json'
 
 const derived = () =>
   derive_mob_groups_members({
