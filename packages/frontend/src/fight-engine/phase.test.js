@@ -473,6 +473,34 @@ describe('D153/D37 keystone — a live fight-end cycle FORCES ROAM (no ghost / z
       })
     ).toBe('teardown') // a non-terminal park IS a designed exit (unchanged behaviour)
   })
+
+  it("#1056 — an UNEARNED terminal HOLDS this fight's built board: only the gate tears a terminal board down", () => {
+    // The [terminal-gate2] sentinel's own class, generalised past the simulator that surfaced it: whenever a
+    // TERMINAL read fails its preconditions the machine routes to EXIT, and EXIT used to tear the BUILT board
+    // down on the spot — ahead of the death-beat-gated present(), so the killing wave and the result card were
+    // preempted (the black screen). The reader may REQUEST the exit; only the gate sequences it.
+    const d = dungeon(STATUS_WON) // no mark_active_seat: the D81 latch is missing ⇒ an unearned terminal
+    const r = derive_phase(d, fight({ winner: 0 }), seat())
+    expect(r.phase).toBe(PHASE.EXIT) // the CARD is still refused (D81 is untouched)…
+    expect(r.desired).toBe(PHASE.TERMINAL)
+    expect(r.unmet).toContain('never_active_seated_this_session')
+    const KEY = `${DID}#0`
+    const decide = (over) =>
+      board_lifecycle_decision({
+        phase: r.phase,
+        desired: r.desired,
+        unmet: r.unmet,
+        has_dungeon: true,
+        has_fight: true,
+        built_for: KEY,
+        build_key: KEY,
+        building: false,
+        ...over,
+      })
+    expect(decide({})).toBe('hold') // …but the board this fight was FOUGHT on survives to its gated teardown
+    // and the ghost-board guard is intact: a client that never built a board still exits without mounting one.
+    expect(decide({ built_for: null })).toBe('teardown')
+  })
 })
 
 // ── #33 ALL-CLIENTS VICTORY MODAL — the linchpin. The terminal card mounts on the TERMINAL phase, which is

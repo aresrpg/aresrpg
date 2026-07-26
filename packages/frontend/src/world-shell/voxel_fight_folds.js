@@ -585,7 +585,8 @@ export { turn_input_armed } from '@aresrpg/fight/project'
 // build IN FLIGHT is uninterruptible (teardown defers until it settles). Decisions:
 //   'build'          — a live-board phase wants a board the handle hasn't built (new fight/room).
 //   'wire'           — the wanted board is built: idempotently re-assert wiring (fight_on/entities/paint).
-//   'hold'           — transiently incoherent mid-fight (HELD phase, same fight built or building): do NOTHING.
+//   'hold'           — transiently incoherent mid-fight, OR a HELD terminal on this fight's own board (#1056):
+//                      do NOTHING — the terminal gate, not a reader, owns a terminal board's teardown.
 //   'defer_teardown' — a genuine exit arrived while a build is in flight: run the teardown after it settles.
 //   'teardown'       — a genuine exit (no board phase wanted, no transient hold): tear down now.
 /**
@@ -627,7 +628,15 @@ export function board_lifecycle_decision({
   if (want_board) return built_for !== build_key ? 'build' : 'wire'
   // HELD short of a live-board phase (the machine WANTED placement/active but a precondition is transiently
   // unmet — the spawn→sync gap) while THIS fight's board is built or building ⇒ wait for coherence.
-  const held_for_board = (desired === 'ACTIVE' || desired === 'PLACEMENT') && unmet.length > 0
+  // THE TERMINAL GATE OWNS TERMINAL TEARDOWN (#1056 — the [terminal-gate2] sentinel's own class, generalised).
+  // A TERMINAL desire whose preconditions are unmet routes the phase machine to EXIT, and EXIT used to tear a
+  // BUILT board down on the spot — ahead of the death-beat-gated present(), so the killing wave and the result
+  // card were preempted and the screen went black where the victory sequence belongs. A board built for THIS
+  // fight is therefore HELD on a terminal read exactly as it is on a held ACTIVE/PLACEMENT read: the reader may
+  // REQUEST the exit, only the gate sequences it — and the gate's own set(cleared_session) drops the dungeon,
+  // which arrives here as an ordinary (non-terminal) teardown. A client that never built a board is unaffected:
+  // `same_fight` is false, so an unearned terminal still exits without ever mounting one.
+  const held_for_board = (desired === 'ACTIVE' || desired === 'PLACEMENT' || desired === 'TERMINAL') && unmet.length > 0
   const same_fight = build_key !== null && built_for === build_key
   if (held_for_board && (building || same_fight)) return 'hold'
   return building ? 'defer_teardown' : 'teardown'
