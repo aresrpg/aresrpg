@@ -18,6 +18,7 @@ import i18n from '../../../i18n'
 
 import { CHANNEL } from './chat.js'
 import { fight_spell, fight_spells_data } from '../../screens/hud/fight-spells.js'
+import { create_seat_follower, focus_seat } from '../../screens/hud/seat_follow.js'
 import {
   resolve_character_docs,
   missing_roster_character_ids,
@@ -601,12 +602,22 @@ export default function fight() {
           })
         push_roster()
       }
-      // 2) FIGHT-MODE EDGE + 3) COMBAT MUSIC: flip `action/fight_mode` only on the null↔non-null EDGE
+      // 2) SEAT FOLLOW (#948): on every turn change, bind the HUD to the active seat when it is one of MINE.
+      //    Everything turn-scoped — deck, vitals, END TURN, the deadline auto-pass — hangs off the core's
+      //    my_entity_id, so a second seated character was unplayable AND its expired turn never auto-passed.
+      //    The party path already does this for GROUP members (group_loop's turn_started → hud_focus); here it
+      //    covers every composition, including a simulator sandbox with no group at all.
+      const follower = create_seat_follower()
+      // 3) FIGHT-MODE EDGE + 4) COMBAT MUSIC: flip `action/fight_mode` only on the null↔non-null EDGE
       //    (player.js folds it, unchanged) and drive the D111 battle bed off the FRESH synchronous view.
       let was_active = fight_view() != null
       const sync = () => {
         ensure_roster()
         const view = fight_view()
+        // The ctx input below re-enters this subscriber; the follower's turn latch has already advanced, so the
+        // second pass answers null — one bind per turn change, never a loop.
+        const seat = follower.follow(view)
+        if (seat) focus_seat(seat)
         if ((view != null) !== was_active) {
           was_active = view != null
           dispatch('action/fight_mode', view != null)

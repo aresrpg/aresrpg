@@ -20,6 +20,7 @@ import { use_fight_view } from '../../store.js'
 import { COMMIT_BUFFER_MS, effective_deadline } from '@aresrpg/fight/draft_budget'
 import { Tooltip } from './Tooltip.jsx'
 import { EffectBadges } from './EffectBadges.jsx'
+import { focus_seat } from './seat_follow.js'
 import { game_log } from '../../../core/log.js'
 
 // [fight-polish 07-12] Active-turn highlight variant switch (a real highlight, not a blue border).
@@ -159,15 +160,17 @@ export function FightTimeline() {
             role={controlled ? 'button' : undefined}
             tabIndex={controlled ? 0 : undefined}
             aria-label={controlled ? f.name : undefined}
-            // multi-char select: S3 (core my_key switch) — action/fight/select_controlled_character's fold case
-            // retired with the 25-case packet fold; single-controlled behavior is the whole of S2, so a click/
-            // Enter on an already-controlled card is a no-op rather than a dead dispatch.
-            onClick={controlled ? () => {} : undefined}
+            // MULTI-CHAR SELECT (#948): a click/Enter on a controlled card binds the HUD to THAT seat through
+            // the core's ctx door — the manual half of the seat follow above (the automatic half re-binds on
+            // its turn). This used to be a dead no-op, so a second seated character could not be reached at
+            // all. Focusing the already-focused card is idempotent (the ctx door re-resolves the same key).
+            onClick={controlled ? () => focus_seat(f.id) : undefined}
             onKeyDown={
               controlled
                 ? (event) => {
                     if (event.key !== 'Enter' && event.key !== ' ') return
                     event.preventDefault()
+                    focus_seat(f.id)
                   }
                 : undefined
             }
