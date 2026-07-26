@@ -24,6 +24,7 @@ import { game_log } from '../core/log.js'
 import { get_sdk } from '../chain/sdk'
 import i18n from '../i18n'
 import { push_event_toast } from '../game/core/toast.js'
+import { FINALITY_POLL_SCHEDULE } from '../tx/latency.js'
 
 import { crank as tx_crank, force_start as tx_force_start } from './dungeon_actions'
 import { is_gone_error, read_object } from './run_reads.js'
@@ -256,11 +257,19 @@ export async function ensure_resumable_fight(fight_id, doors = {}) {
   if (decision === 'skip') return { decision: 'gone', reason: chain_reason(first) }
   if (decision === 'unreadable') return { decision: 'skip', reason: chain_reason(first) }
   const door = decision === 'crank' ? crank_door : force_start_door
+  let digest = /** @type {string | null} */ (null)
   try {
-    await door(fight_id, true) // silent janitor tx
+    digest = (await door(fight_id, true))?.digest ?? null // silent janitor tx
   } catch (error) {
     game_log('world-fight', `boot liquidation (${decision}) did not land — resume deferred`, error)
   }
+  // OBSERVE THE SENT TRANSACTION BEFORE JUDGING IT (#978). The door resolves the moment its effects are
+  // CERTIFIED — dungeon_actions' EXECUTE-CERT fast path deliberately skips the finality wait — so the READ node
+  // is still a beat behind and the re-read below would serve the PRE-heal object: an expired window we just
+  // started, refused as "did not land", by the only client that could have healed it. `waitForTransaction` is
+  // the house door for "this node can see my tx" (world_join.js, tx.js); after it the re-read is durable data.
+  // A wait that fails is NOT a re-fire trigger — `turns::force_start` asserts placement, a second send aborts.
+  await observe_digest(digest)
   const read = await read_decoded()
   const after = verdict(read)
   if (after === 'enter') return { decision: 'enter', reason: chain_reason(read) }
@@ -269,5 +278,30 @@ export async function ensure_resumable_fight(fight_id, doors = {}) {
   // Still expired after its one door: an ACTIVE board is still PRESENTABLE and holds the working exit (forfeit),
   // so mount it — the expiry gate surfaces the honest state there. A placement window nothing can start is not.
   if (after === 'crank') return { decision: 'enter', reason: chain_reason(read) }
-  return { decision: 'skip', reason: `${chain_reason(read)} — its ${decision} door did not land` }
+  // A digest means the door DID execute — the refusal must carry it, or a bug report cannot name the tx (#978).
+  const door_clause = digest
+    ? `its ${decision} door executed (${digest}) and left it unstartable`
+    : `its ${decision} door did not land`
+  return { decision: 'skip', reason: `${chain_reason(read)} — ${door_clause}` }
+}
+
+/**
+ * Wait for the read node to SEE a transaction we just sent — the house confirmation door
+ * (`grpc_client.core.waitForTransaction`, on the same finality-poll diet every other caller uses). A failure
+ * here is deliberately swallowed: the caller re-reads and refuses out loud WITH the digest, and nothing may
+ * re-send a permissionless door that already executed (the tx-retry burn law).
+ * @param {string | null} digest
+ */
+async function observe_digest(digest) {
+  if (!digest) return
+  try {
+    const sdk = await get_sdk()
+    await sdk.grpc_client.core.waitForTransaction({
+      digest,
+      include: { effects: true },
+      pollSchedule: FINALITY_POLL_SCHEDULE,
+    })
+  } catch (error) {
+    game_log('world-fight', `boot liquidation ${digest} was not observable — judging on the read anyway`, error)
+  }
 }

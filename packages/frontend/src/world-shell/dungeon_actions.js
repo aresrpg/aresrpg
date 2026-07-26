@@ -172,7 +172,9 @@ export async function sign(
       // epoch-price read floats — it is bookkeeping for the NEXT commit, and its documented failure mode is a pin
       // miss → ordinary gas selection (gas_coin_cache.js). Never worth ~150ms on the hot path.
       if (gas_pin) void chain_gas_from_receipt(sdk, raw).catch(() => {})
-      return res
+      // The DIGEST rides the receipt (#978): a caller that must OBSERVE this tx on the read node before judging
+      // it (the boot heal re-reads the fight it just force-started) needs the id of what it sent. Purely additive.
+      return { ...res, digest }
     } catch (error) {
       // From this point onward submission returned a digest: even a network-looking finality error is EXECUTED.
       // Preserve that proof so every automatic claim/settlement caller latches instead of spending gas again.
