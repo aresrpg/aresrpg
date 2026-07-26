@@ -1,0 +1,22 @@
+GREEN — the four new suites (each drives the REAL fight core / the REAL corpus projection)
+
+$ cd packages/frontend && bun test src/world-shell/fight_participant_naming.test.js
+ 4 pass · 0 fail · 10 expect() calls
+
+$ bun test src/game/screens/hud/seat_follow.test.js
+ 5 pass · 0 fail · 16 expect() calls
+
+$ bun test src/game/screens/hud/spell_tooltip_numbers.test.js
+ 5 pass · 0 fail · 56 expect() calls
+
+$ bun test src/world-shell/hover_path_reach.test.js
+ 3 pass · 0 fail · 13 expect() calls
+
+GREEN — the whole frontend suite (the package's own test script)
+
+$ cd packages/frontend && bun test src
+ 3934 pass
+ 204 skip
+ 0 fail
+ 2 snapshots, 95466 expect() calls
+Ran 4138 tests across 466 files. [89.48s]

@@ -1,0 +1,26 @@
+RED — #929
+(compose_fight_roster temporarily reverted to the old behaviour: ctx.roster := sui.characters ∪ /v1 docs)
+
+$ cd packages/frontend && bun test src/world-shell/fight_participant_naming.test.js
+
+132 |     const [, remote] = names_of(store)
+133 |     expect(remote).toBe(short_fighter_id('sim_c2'))
+                         ^
+error: expect(received).toBe(expected)
+
+Expected: "sim_c2"
+Received: "0x51m0…0000"        <-- the served build's every-player-row address, reproduced through the
+                                   REAL projection (project.engine_view over the real fight store)
+
+162 |     const rows = compose_fight_roster({ fighters })
+163 |     expect(rows.map((row) => row.id).sort()).toEqual(['a', 'b'])
+                                                   ^
+error: expect(received).toEqual(expected)
+- [ "a", "b" ]
++ []
+
+ 1 pass
+ 3 fail
+ 7 expect() calls
+
+GREEN after the fix: 4 pass, 0 fail, 10 expect() calls.

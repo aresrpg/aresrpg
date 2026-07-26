@@ -1,0 +1,24 @@
+GATES — verbatim
+
+$ cd packages/frontend && bun test src
+ 3934 pass · 204 skip · 0 fail · 2 snapshots, 95466 expect() calls
+ Ran 4138 tests across 466 files. [89.48s]
+
+$ npx eslint . && npx prettier . --check
+✖ 2423 problems (0 errors, 2423 warnings)      <-- warnings are the repo's standing baseline
+Checking formatting...
+All matched files use Prettier code style!
+LINT_OK
+
+$ bun run lint    (root: eslint && prettier --check && sim lint && check-constraints.sh)
+  eslint ✓ · prettier ✓ · sim lint ✓
+  i18n gate PASSED — every used key resolves; all 6 normalized locale key sets match
+  semgrep ratchet: 4 findings, none above the floor
+  dependency-cruiser: no violations (841 modules, 3309 dependencies cruised)
+  zero-drift gate (world fight ≡ simulator fight, #914):
+    ✓ 323 world · 368 simulator · 322 shared · 46 sim-only + 1 world-only, all enumerated
+  ✗ move-source verdict rung:
+    "NO VERDICT: absent/stale build output for packages/move/aresrpg/sources/*.move;
+     run sui move build --path packages/move/aresrpg"
+    ENVIRONMENTAL, not this diff: a fresh worktree has no packages/move/aresrpg/build (gitignored),
+    and this lane touches no Move at all (fence: packages/frontend/src/**). CI builds Move first.

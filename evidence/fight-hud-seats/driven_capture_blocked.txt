@@ -1,0 +1,32 @@
+DRIVEN CAPTURE — what ran, and where it stopped (honest account)
+
+Dev server: packages/frontend, `bunx --bun vite --port 5320 --strictPort` → HTTP 200 on /simulator.
+Browser: ONE chromium (Playwright), seats_drive.mjs — seeds the simulator's OWN IndexedDB
+(aresrpg_simulator v1: two characters, two ally placements, one mob pick), reloads, presses the real
+START FIGHT button, then plays the turns off the production HUD.
+
+STOPPED — the sandboxed browser has no outbound network, so the two runtime corpora a fight needs never
+load. Page console, verbatim:
+
+  error: [world_corpus] world knowledge inert (fetch failed: Failed to fetch) — the encyclopedia lists
+         no worlds until the seed ceremony publishes world_corpus.json (issue #106).
+  info:  [worn] template identity join failed — remote worn GLBs stay unmounted RpcError: Failed to fetch
+  error: Failed to load resource: net::ERR_CONNECTION_REFUSED
+
+Consequences, both structural:
+  · the mob roster derives from world_corpus.json (simulator/MobPicker `use_mob_roster`), so the seeded
+    mob pick resolves to nothing and `build_start_args` refuses with `no_mobs` — no fight can open;
+  · the page renders the SIGN IN gate (boot-trace: MOUNT spectate) instead of the simulator surface.
+`curl https://assets.aresrpg.world/data/world_corpus.json` succeeds from the shell — the block is the
+browser sandbox, not the host or the build.
+
+WHAT PROVES THE FIXES INSTEAD — all four suites drive the REAL fight core (create_fight_store, the
+snapshot door, project.engine_view / project.move_wash) and the REAL corpus projection over CAPTURED
+WIRE BYTES:
+  packages/frontend/src/world-shell/fight_participant_naming.test.js    (#929)
+  packages/frontend/src/game/screens/hud/seat_follow.test.js            (#948, incl. the auto-pass addendum)
+  packages/frontend/src/game/screens/hud/spell_tooltip_numbers.test.js  (#951)
+  packages/frontend/src/world-shell/hover_path_reach.test.js            (#950 derivation)
+
+A felt play-test on the served build remains the last mile for #948 and #950 — it needs a browser with
+network, which this lane could not provide.

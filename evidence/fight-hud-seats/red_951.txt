@@ -1,0 +1,23 @@
+RED — #951
+(the value/value_max → damageMin/damageMax mapping temporarily removed from project_spell_effect)
+
+$ cd packages/frontend && bun test src/game/screens/hud/spell_tooltip_numbers.test.js
+
+ 53 |       const parts = seed_effect_parts(t_stub, fx)
+ 54 |       expect(parts.value).not.toBe('—')
+                                    ^
+error: expect(received).not.toBe(expected)
+Expected: not "—"
+
+ 63 |     expect(seed_effect_line(t_stub, fx)).toContain(`${raw.value} entity.range_to ${raw.value_max}`)
+                                              ^
+error: expect(received).toContain(expected)
+Expected to contain: "5 entity.range_to 9"
+Received: "spells.fx_damage(element=spells.el_earth,value=—) · spells.crit_val(value=7)"
+          ^-- the reported "− Earth damage · crit N", byte for byte, off CAPTURED WIRE BYTES
+
+ 2 pass
+ 3 fail
+ 9 expect() calls
+
+GREEN after the fix: 5 pass, 0 fail, 56 expect() calls.
