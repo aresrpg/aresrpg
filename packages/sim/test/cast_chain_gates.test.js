@@ -77,11 +77,6 @@ const make_entity = (id, cell, is_player, spell_ids) => ({
   level: 200,
   stats: { agility: 0, intelligence: 0, range: 0 },
   effects: [],
-  // RETIRED BY THIS CHANGE — the card fields the reducer still deals from today. They exist here only so
-  // these two cases fail on the CARD RULES rather than on a missing field; the deletion commit drops them.
-  deck: spell_ids,
-  hand: [],
-  discard: [],
   spell_levels: Object.fromEntries(spell_ids.map(sid => [sid, 1])),
   ap_reserve: 0,
 })

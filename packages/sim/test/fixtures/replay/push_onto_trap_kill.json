@@ -138,9 +138,6 @@
           "strength": 0
         },
         "effects": [],
-        "deck": ["trap", "shove"],
-        "hand": [],
-        "discard": [],
         "spell_levels": {
           "trap": 1,
           "shove": 1
@@ -174,9 +171,6 @@
           "strength": 0
         },
         "effects": [],
-        "deck": [],
-        "hand": [],
-        "discard": [],
         "spell_levels": {},
         "ap_reserve": 0
       }
@@ -218,14 +212,6 @@
         "seed": 1
       },
       {
-        "type": "hand_update",
-        "fight_id": "capsule_push_trap_kill",
-        "entity_id": "p0",
-        "hand": ["trap", "shove"],
-        "deck_size": 0,
-        "discard_size": 0
-      },
-      {
         "type": "fight_turn_start",
         "fight_id": "capsule_push_trap_kill",
         "entity_id": "p0",
@@ -249,14 +235,6 @@
         ],
         "is_critical": false,
         "ap_remaining": 6
-      },
-      {
-        "type": "hand_update",
-        "fight_id": "capsule_push_trap_kill",
-        "entity_id": "p0",
-        "hand": ["shove"],
-        "deck_size": 0,
-        "discard_size": 1
       },
       {
         "type": "fight_cast",
@@ -287,20 +265,12 @@
         "ap_remaining": 3
       },
       {
-        "type": "hand_update",
-        "fight_id": "capsule_push_trap_kill",
-        "entity_id": "p0",
-        "hand": [],
-        "deck_size": 0,
-        "discard_size": 2
-      },
-      {
         "type": "fight_ended",
         "fight_id": "capsule_push_trap_kill",
         "winner": 0
       }
     ],
-    "terminal_digest": "026963d6",
+    "terminal_digest": "63ffdc34",
     "terminal_summary": {
       "winner": 0,
       "turn_number": 1,

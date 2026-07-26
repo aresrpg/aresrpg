@@ -60,9 +60,6 @@
           "strength": 0
         },
         "effects": [],
-        "deck": [],
-        "hand": [],
-        "discard": [],
         "spell_levels": {},
         "ap_reserve": 0
       }
@@ -93,9 +90,6 @@
           "strength": 0
         },
         "effects": [],
-        "deck": [],
-        "hand": [],
-        "discard": [],
         "spell_levels": {},
         "ap_reserve": 0
       },
@@ -124,9 +118,6 @@
           "strength": 0
         },
         "effects": [],
-        "deck": [],
-        "hand": [],
-        "discard": [],
         "spell_levels": {},
         "ap_reserve": 0
       }
@@ -194,14 +185,6 @@
         "seed": 1
       },
       {
-        "type": "hand_update",
-        "fight_id": "capsule_occupied_cell_equal_detour",
-        "entity_id": "p0",
-        "hand": [],
-        "deck_size": 0,
-        "discard_size": 0
-      },
-      {
         "type": "fight_turn_start",
         "fight_id": "capsule_occupied_cell_equal_detour",
         "entity_id": "m0",
@@ -238,7 +221,7 @@
         "mp_remaining": 0
       }
     ],
-    "terminal_digest": "7a857b67",
+    "terminal_digest": "ac47d637",
     "terminal_summary": {
       "winner": -1,
       "turn_number": 1,

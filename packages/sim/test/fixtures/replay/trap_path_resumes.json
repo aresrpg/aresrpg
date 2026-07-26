@@ -110,9 +110,6 @@
           "strength": 0
         },
         "effects": [],
-        "deck": ["trap"],
-        "hand": [],
-        "discard": [],
         "spell_levels": {
           "trap": 1
         },
@@ -145,9 +142,6 @@
           "strength": 0
         },
         "effects": [],
-        "deck": [],
-        "hand": ["trap"],
-        "discard": [],
         "spell_levels": {
           "trap": 1
         },
@@ -196,14 +190,6 @@
         "seed": 1
       },
       {
-        "type": "hand_update",
-        "fight_id": "capsule_trap_walk",
-        "entity_id": "p0",
-        "hand": ["trap"],
-        "deck_size": 0,
-        "discard_size": 0
-      },
-      {
         "type": "fight_turn_start",
         "fight_id": "capsule_trap_walk",
         "entity_id": "p0",
@@ -227,14 +213,6 @@
         ],
         "is_critical": false,
         "ap_remaining": 6
-      },
-      {
-        "type": "hand_update",
-        "fight_id": "capsule_trap_walk",
-        "entity_id": "p0",
-        "hand": [],
-        "deck_size": 0,
-        "discard_size": 1
       },
       {
         "type": "fight_moved",
@@ -271,14 +249,6 @@
         ]
       },
       {
-        "type": "hand_update",
-        "fight_id": "capsule_trap_walk",
-        "entity_id": "p0",
-        "hand": ["trap"],
-        "deck_size": 0,
-        "discard_size": 0
-      },
-      {
         "type": "fight_turn_end",
         "fight_id": "capsule_trap_walk",
         "entity_id": "p0"
@@ -291,7 +261,7 @@
         "mp": 5
       }
     ],
-    "terminal_digest": "a1b47c46",
+    "terminal_digest": "f30c67c6",
     "terminal_summary": {
       "winner": -1,
       "turn_number": 1,

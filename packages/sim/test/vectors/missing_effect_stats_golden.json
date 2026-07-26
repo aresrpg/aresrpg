@@ -58,9 +58,7 @@
         "caster_ap": 7,
         "caster_ap_used": 3,
         "history_rows": 2,
-        "target_hp": 100,
-        "hand": 0,
-        "discard": 1
+        "target_hp": 100
       }
     },
     {

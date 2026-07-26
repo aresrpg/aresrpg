@@ -107,9 +107,6 @@
           "strength": 0
         },
         "effects": [],
-        "deck": ["veil"],
-        "hand": [],
-        "discard": [],
         "spell_levels": {
           "veil": 1
         },
@@ -142,9 +139,6 @@
           "strength": 0
         },
         "effects": [],
-        "deck": [],
-        "hand": ["trap"],
-        "discard": [],
         "spell_levels": {
           "trap": 1
         },
@@ -191,14 +185,6 @@
         "seed": 1
       },
       {
-        "type": "hand_update",
-        "fight_id": "capsule_invis_turns",
-        "entity_id": "p0",
-        "hand": ["veil"],
-        "deck_size": 0,
-        "discard_size": 0
-      },
-      {
         "type": "fight_turn_start",
         "fight_id": "capsule_invis_turns",
         "entity_id": "p0",
@@ -224,22 +210,6 @@
         "ap_remaining": 8
       },
       {
-        "type": "hand_update",
-        "fight_id": "capsule_invis_turns",
-        "entity_id": "p0",
-        "hand": [],
-        "deck_size": 0,
-        "discard_size": 1
-      },
-      {
-        "type": "hand_update",
-        "fight_id": "capsule_invis_turns",
-        "entity_id": "p0",
-        "hand": ["veil"],
-        "deck_size": 0,
-        "discard_size": 0
-      },
-      {
         "type": "fight_turn_end",
         "fight_id": "capsule_invis_turns",
         "entity_id": "p0"
@@ -250,14 +220,6 @@
         "entity_id": "m0",
         "ap": 10,
         "mp": 5
-      },
-      {
-        "type": "hand_update",
-        "fight_id": "capsule_invis_turns",
-        "entity_id": "m0",
-        "hand": ["trap"],
-        "deck_size": 0,
-        "discard_size": 0
       },
       {
         "type": "fight_turn_end",
@@ -272,14 +234,6 @@
         "mp": 5
       },
       {
-        "type": "hand_update",
-        "fight_id": "capsule_invis_turns",
-        "entity_id": "p0",
-        "hand": ["veil"],
-        "deck_size": 0,
-        "discard_size": 0
-      },
-      {
         "type": "fight_turn_end",
         "fight_id": "capsule_invis_turns",
         "entity_id": "p0"
@@ -290,14 +244,6 @@
         "entity_id": "m0",
         "ap": 10,
         "mp": 5
-      },
-      {
-        "type": "hand_update",
-        "fight_id": "capsule_invis_turns",
-        "entity_id": "m0",
-        "hand": ["trap"],
-        "deck_size": 0,
-        "discard_size": 0
       },
       {
         "type": "fight_turn_end",
@@ -312,7 +258,7 @@
         "mp": 5
       }
     ],
-    "terminal_digest": "dd47e90c",
+    "terminal_digest": "fb0ef22d",
     "terminal_summary": {
       "winner": -1,
       "turn_number": 3,
