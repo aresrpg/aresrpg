@@ -55,9 +55,6 @@ const player = (id, cell) => ({
   level: 1,
   stats: { agility: 0, intelligence: 0, range: 0 },
   effects: [],
-  deck: [],
-  hand: [],
-  discard: [],
   spell_levels: {},
   ap_reserve: 0,
 })
@@ -79,9 +76,6 @@ const mob = (id, cell) => ({
   level: 1,
   stats: { agility: 0, intelligence: 0, range: 0 },
   effects: [],
-  deck: [],
-  hand: [MOB_ATTACK_ID],
-  discard: [],
   spell_levels: { [MOB_ATTACK_ID]: 1 },
   ap_reserve: 0,
 })

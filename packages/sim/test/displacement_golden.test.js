@@ -88,9 +88,6 @@ const entity_of = (spec, source, target) => {
     level,
     stats: {},
     effects: [],
-    deck: [],
-    hand: [],
-    discard: [],
     spell_levels: {},
     ap_reserve: 0,
   }

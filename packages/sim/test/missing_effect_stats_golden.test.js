@@ -111,7 +111,6 @@ const run_negative_ap_dodge = vector => {
 
 const run_fumble = vector => {
   const caster = fighter('p0', { x: 2, y: 2 }, true, {
-    hand: [vector.id],
     effects: [
       active('CRITICAL_FAILURE', {
         source_id: 'p0',
@@ -151,8 +150,6 @@ const run_fumble = vector => {
       Object.keys(result.state.cast_history).length +
       Object.keys(result.state.target_history).length,
     target_hp: find_entity(result.state, target.id).health,
-    hand: after.hand.length,
-    discard: after.discard.length,
   }
 }
 

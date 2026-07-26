@@ -144,12 +144,11 @@ const cast_through_reducer = (
       ],
     },
   ])
-  // The caster must hold the spell (handle_cast checks current.hand) and be the acting entity — the reducer's
+  // The caster must KNOW the spell (its level feeds the resolver) and be the acting entity — the reducer's
   // `acting_entity` guard reads turn_order[current_turn_idx], and every layout seats the caster at index 0.
   const { state } = built
   state.current_turn_idx = 0
   const caster = find_entity(state, built.caster.id)
-  caster.hand = [spell_id]
   caster.spell_levels = { [spell_id]: 1 }
   const ctx = { spell_templates: templates, arena }
   const command = {
@@ -165,7 +164,6 @@ const cast_through_reducer = (
   const rebuilt = layouts[layout_name]()
   rebuilt.state.current_turn_idx = 0
   const caster2 = find_entity(rebuilt.state, rebuilt.caster.id)
-  caster2.hand = [spell_id]
   caster2.spell_levels = { [spell_id]: 1 }
   const twin = reduce(
     rebuilt.state,
@@ -285,6 +283,10 @@ const matrix = [
     on: ['ranged'],
     eff: { target_filter: ZONE, element: 255 },
     target: 'self',
+    // INERT TODAY — the normalizer carries no arm for kind 18, so it mints UNSUPPORTED and folds nothing.
+    // This row read green only because the retired card system discarded the cast card, which counted as a
+    // "state change" (#1012). Implementing the kind turns this red: move the row back, do not relax it.
+    unsupported: true,
   },
   {
     kind: SE.K_PLACE_TRAP,
@@ -317,7 +319,14 @@ const matrix = [
     effects: true,
   },
   { kind: SE.K_APPLY_STATE, on: ['point_blank'], eff: { value: 1, turns: 2 } },
-  { kind: SE.K_REMOVE_STATE, on: ['point_blank'], eff: { value: 1 } },
+  // INERT TODAY — same story as K_RESET_POSITIONS above: no normalizer arm for kind 23, so it mints
+  // UNSUPPORTED and folds nothing; the retired discard was the only reason this row ever looked alive.
+  {
+    kind: SE.K_REMOVE_STATE,
+    on: ['point_blank'],
+    eff: { value: 1 },
+    unsupported: true,
+  },
   {
     kind: SE.K_REDUCE_DAMAGE,
     on: ['wounded_ally'],
@@ -458,10 +467,14 @@ describe('PILLAR 2a — every spell-effect kind executes deterministically throu
 
         // (2) DID SOMETHING — a legal cast must leave a trace: an effect row OR a fight-state delta. Steal/percent/
         //     swap resolve straight into state and record no effect row; both count as "executes properly."
+        //     A row flagged `unsupported` is pinned the other way: the normalizer has no arm for that kind, so
+        //     the cast MUST fold nothing. Wiring the kind flips this red — that is the point (#1012).
         expect(
           castEvent.effects.length > 0 || changed,
-          `${kind_name} cast produced neither an effect row nor any state change on ${layout_name}`,
-        ).toBe(true)
+          row.unsupported
+            ? `${kind_name} now folds something on ${layout_name} — drop its \`unsupported\` flag`
+            : `${kind_name} cast produced neither an effect row nor any state change on ${layout_name}`,
+        ).toBe(!row.unsupported)
 
         // (3) DETERMINISTIC — same (state,command,ctx) folded twice → byte-identical {state,events}.
         expect(JSON.stringify(twin.events)).toBe(JSON.stringify(result.events))

@@ -37,9 +37,7 @@ export const fighter = (
   level: 1,
   stats,
   effects,
-  deck: [],
   hand,
-  discard: [],
   spell_levels: Object.fromEntries(hand.map(spell_id => [spell_id, 1])),
   ap_reserve: 0,
 })

@@ -168,21 +168,21 @@ const MOB_KIT = [
 /** The whole castable corpus, RAW — what the recorder header stores and the normalizer ingests. */
 export const TEMPLATES_RAW = [...PLAYER_KIT, ...MOB_KIT]
 
-const PLAYER_DECK = PLAYER_KIT.map(spell => spell.id)
-const MOB_DECK = MOB_KIT.map(spell => spell.id)
+const PLAYER_SPELLS = PLAYER_KIT.map(spell => spell.id)
+const MOB_SPELLS = MOB_KIT.map(spell => spell.id)
 
 /** A spell id no fighter owns — the illegal-cast arm of every stream. */
 const UNKNOWN_SPELL = 's_unknown'
 
 /**
- * One fight entity in the sim's own shape. The deck is EXACTLY the hand size the opening deal
- * draws, so the whole kit sits in hand every turn and the stream's spell picks are meaningful.
+ * One fight entity in the sim's own shape. `spells` is the whole spell book, castable every turn its
+ * authored limits allow, so the stream's spell picks are all meaningful.
  * @param {string} id
  * @param {{x:number,y:number}} cell
  * @param {boolean} is_player
- * @param {{ health:number, ap:number, mp:number, deck:string[] }} params
+ * @param {{ health:number, ap:number, mp:number, spells:string[] }} params
  */
-export const fighter = (id, cell, is_player, { health, ap, mp, deck }) => ({
+export const fighter = (id, cell, is_player, { health, ap, mp, spells }) => ({
   id,
   name: id,
   cell,
@@ -199,10 +199,7 @@ export const fighter = (id, cell, is_player, { health, ap, mp, deck }) => ({
   level: is_player ? 20 : 12,
   stats: {},
   effects: [],
-  deck: [...deck],
-  hand: is_player ? [] : [...deck],
-  discard: [],
-  spell_levels: Object.fromEntries(deck.map(spell => [spell, 1])),
+  spell_levels: Object.fromEntries(spells.map(spell => [spell, 1])),
   ap_reserve: 0,
 })
 
@@ -214,7 +211,7 @@ export const build_roster = (arena, size = 2) => ({
       health: 60,
       ap: 6,
       mp: 3,
-      deck: PLAYER_DECK,
+      spells: PLAYER_SPELLS,
     }),
   ),
   team1: arena.spawns_b.slice(0, size).map((cell, i) =>
@@ -222,7 +219,7 @@ export const build_roster = (arena, size = 2) => ({
       health: 40,
       ap: 4,
       mp: 3,
-      deck: MOB_DECK,
+      spells: MOB_SPELLS,
     }),
   ),
 })

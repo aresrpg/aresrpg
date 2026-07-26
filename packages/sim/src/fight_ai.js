@@ -56,8 +56,8 @@ const nearest_enemy = (state, entity) => {
 }
 
 /**
- * The most expensive (highest-AP) castable damage spell in hand whose AoE/range can hit `target` from
- * `from`, or null. "Castable" = AP-affordable and target legal (range/LoS/linear) via can_target.
+ * The most expensive (highest-AP) castable damage spell the fighter KNOWS whose AoE/range can hit `target`
+ * from `from`, or null. "Castable" = AP-affordable and target legal (range/LoS/linear) via can_target.
  * @param {import('./fight_state.js').FightState} state
  * @param {import('./fight_state.js').FightEntity} entity
  * @param {import('./cell.js').Cell} from
@@ -77,7 +77,7 @@ const best_castable_damage_spell = (
   const range_bonus = entity.stats.range ?? 0
   let best = null
   let best_cost = -1
-  for (const spell_id of entity.hand) {
+  for (const spell_id of Object.keys(entity.spell_levels)) {
     const template = spell_templates.get(spell_id)
     if (!template) continue
     const level = entity.spell_levels[spell_id] ?? 1

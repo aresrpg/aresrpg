@@ -95,14 +95,11 @@ const player = (id, cell) => ({
   level: 1,
   stats: { agility: 0, intelligence: 0, range: 0 },
   effects: [],
-  deck: [],
-  hand: [],
-  discard: [],
   spell_levels: {},
   ap_reserve: 0,
 })
 
-const mob = (id, cell, { ap = 6, mp = 4, hand, spell_levels } = {}) => ({
+const mob = (id, cell, { ap = 6, mp = 4, spell_levels } = {}) => ({
   id,
   name: id,
   cell,
@@ -119,9 +116,6 @@ const mob = (id, cell, { ap = 6, mp = 4, hand, spell_levels } = {}) => ({
   level: 1,
   stats: { agility: 0, intelligence: 0, range: 0 },
   effects: [],
-  deck: [],
-  hand: hand ?? [MOB_ATTACK_ID],
-  discard: [],
   spell_levels: spell_levels ?? { [MOB_ATTACK_ID]: 1 },
   ap_reserve: 0,
 })
@@ -172,7 +166,7 @@ describe('#606 mob AI — steps to its range band and attacks', () => {
     const r = resolve_mob_turn({
       p_cell: { x: 10, y: 10 },
       m_cell: { x: 12, y: 10 },
-      mob_opts: { hand: [BOLT_ID], spell_levels: { [BOLT_ID]: 1 } },
+      mob_opts: { spell_levels: { [BOLT_ID]: 1 } },
     })
     expect(r.cast).toBe(true) // it FIRED (RED before: no cast)
     expect(r.hp_delta).toBeGreaterThan(0) // the player actually took damage
@@ -186,7 +180,7 @@ describe('#606 mob AI — steps to its range band and attacks', () => {
     const r = resolve_mob_turn({
       p_cell: { x: 10, y: 10 },
       m_cell: { x: 16, y: 10 },
-      mob_opts: { hand: [BOLT_ID], spell_levels: { [BOLT_ID]: 1 }, mp: 4 },
+      mob_opts: { spell_levels: { [BOLT_ID]: 1 }, mp: 4 },
     })
     expect(r.cast).toBe(true)
     expect(r.hp_delta).toBeGreaterThan(0)

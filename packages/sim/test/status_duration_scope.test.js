@@ -134,9 +134,6 @@ const fighter = (id, cell, is_player) => ({
   level: 1,
   stats: { agility: 0, intelligence: 0, range: 0 },
   effects: [],
-  deck: is_player ? [...DECK] : [],
-  hand: is_player ? [...DECK] : [MOB_ATTACK_ID],
-  discard: [],
   spell_levels: is_player
     ? Object.fromEntries(DECK.map(id => [id, 1]))
     : { [MOB_ATTACK_ID]: 1 },

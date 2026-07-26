@@ -122,10 +122,9 @@
  * @property {number} level
  * @property {Stats} stats           locked snapshot (frozen at fight start by the caller)
  * @property {ActiveEffect[]} effects
- * @property {string[]} deck         the card system — spell ids, shuffled at start
- * @property {string[]} hand
- * @property {string[]} discard
- * @property {Record<string, number>} spell_levels  spell_id -> level (1-based)
+ * @property {Record<string, number>} spell_levels  the SPELL BOOK — spell_id -> level (1-based). Its keys are
+ *   the fighter's whole castable set: on chain there is no hand and no draw, so every known spell is castable
+ *   every turn its authored AP / range / LoS / cast limits allow (#1012).
  * @property {number} ap_reserve     manual AP pool added to the current turn
  */
 

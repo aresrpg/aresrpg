@@ -265,8 +265,7 @@ export const apply_canonical_event = (state, event) => {
         frame_facts: [{ kind: 'turn_skipped', id: event.entity_id }],
       }
 
-    // ── resource / hand bookkeeping (no observable-board delta) ──
-    case 'hand_update':
+    // ── resource bookkeeping (no observable-board delta) ──
     case 'ap_reserve_used':
       return { state, frame_facts: [] }
 

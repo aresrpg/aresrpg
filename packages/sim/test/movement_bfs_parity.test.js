@@ -31,9 +31,6 @@ const entity_of = ({ id, is_player, cell }) => ({
   level: 1,
   stats: {},
   effects: [],
-  deck: [],
-  hand: [],
-  discard: [],
   spell_levels: {},
   ap_reserve: 0,
 })

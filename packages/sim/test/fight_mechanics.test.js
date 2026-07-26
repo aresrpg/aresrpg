@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, test, expect } from 'bun:test'
 
-import { reduce, create_fight_state, HAND_SIZE } from '../src/reduce.js'
+import { reduce, create_fight_state } from '../src/reduce.js'
 import { normalize_spell_templates } from '../src/spell_templates.js'
 import { find_entity, get_current_turn_entity } from '../src/fight_state.js'
 
@@ -206,9 +206,6 @@ const make_entity = (id, cell, is_player, overrides = {}) => ({
   level: 1,
   stats: { agility: 0, intelligence: 0, range: 0 },
   effects: [],
-  deck: is_player ? [...ALL] : [],
-  hand: is_player ? [] : [...ALL],
-  discard: [],
   spell_levels: Object.fromEntries(ALL.map(id => [id, 1])),
   ap_reserve: 0,
   ...overrides,
@@ -295,40 +292,6 @@ describe('placement + ready', () => {
     // already started -> a second ready is a no-op
     const r2 = reduce(r1.state, { type: 'ready', entity_id: 'p0' }, ctx)
     expect(r2.events).toEqual([])
-  })
-})
-
-// ── DECK-TO-7 AUTO-DRAW ────────────────────────────────────────────────────────
-describe('deck auto-draw to HAND_SIZE', () => {
-  test('opening hand is HAND_SIZE when the deck is big enough', () => {
-    const big = Array.from({ length: 10 }, () => 'filler')
-    const { state } = started_fight(7, { p_overrides: { deck: big, hand: [] } })
-    expect(HAND_SIZE).toBe(7)
-    expect(find_entity(state, 'p0').hand.length).toBe(7)
-  })
-
-  test('end_turn redraws back up toward HAND_SIZE (cast a card -> hand refilled from deck+discard)', () => {
-    // 6 DISTINCT spells (discard_spell keys by id; identical ids would all discard together). hand caps at
-    // min(7, 6) = 6 at start; after a cast (hand 5, discard 1) end_turn reshuffles + draws back to 6.
-    const { state, ctx } = started_fight(7, {
-      p_overrides: { deck: [...ALL], hand: [] },
-    })
-    expect(find_entity(state, 'p0').hand.length).toBe(6)
-    const cast = reduce(
-      state,
-      {
-        type: 'cast',
-        entity_id: 'p0',
-        spell_id: 'filler',
-        target: { x: 2, y: 5 },
-      },
-      ctx,
-    )
-    expect(find_entity(cast.state, 'p0').hand.length).toBe(5)
-    const ended = reduce(cast.state, { type: 'end_turn', entity_id: 'p0' }, ctx)
-    // deck was empty, so end_turn reshuffles the 1-card discard and draws it -> hand back to 6.
-    expect(find_entity(ended.state, 'p0').hand.length).toBe(6)
-    expect(ended.events.some(e => e.type === 'hand_update')).toBe(true)
   })
 })
 

@@ -88,9 +88,7 @@ const fighter = (
   level,
   stats: {},
   effects,
-  deck: [],
   hand,
-  discard: [],
   spell_levels: Object.fromEntries(hand.map(id => [id, 1])),
   ap_reserve: 0,
 })

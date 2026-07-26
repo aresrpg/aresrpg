@@ -134,9 +134,6 @@ const make_fighter = (
   level: 50,
   stats: {},
   effects,
-  deck: [],
-  hand: [],
-  discard: [],
   spell_levels: {},
   ap_reserve: 0,
 })

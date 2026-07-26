@@ -160,8 +160,6 @@ const SPELLS_JSON = {
 
 const spell_templates = normalize_spell_templates(SPELLS_JSON)
 
-const ALL_SPELLS = ['bolt', 'rngbolt', 'blast', 'close']
-
 const make_entity = (id, cell, is_player, overrides = {}) => ({
   id,
   name: id,
@@ -179,16 +177,13 @@ const make_entity = (id, cell, is_player, overrides = {}) => ({
   level: 1,
   stats: { agility: 0, intelligence: 0, range: 0 },
   effects: [],
-  // Players draw from a deck; mobs come pre-handed. Give the full spell list either way.
-  deck: is_player ? [...ALL_SPELLS] : [],
-  hand: is_player ? [] : [...ALL_SPELLS],
-  discard: [],
+  // The whole spell book — every fighter's castable set, player or mob.
   spell_levels: { bolt: 1, rngbolt: 1, blast: 1, close: 1 },
   ap_reserve: 0,
   ...overrides,
 })
 
-// A started 1v1 fight (player at p_cell, mob at m_cell). Player hand is the full deck (4 spells <= hand cap).
+// A started 1v1 fight (player at p_cell, mob at m_cell). Both fighters know all four spells.
 const started_fight = (seed, { p_cell, m_cell, arena, mob_overrides } = {}) => {
   const a = arena ?? flat_arena()
   const ctx = { spell_templates, arena: a }
@@ -292,34 +287,6 @@ describe('determinism', () => {
     const distinct = new Set(samples)
     // a 1..40 roll across 8 seeds cannot collapse to a single value if the seed actually drives the rng
     expect(distinct.size).toBeGreaterThan(1)
-  })
-
-  test('different seed -> different draw (opening hand order can diverge)', () => {
-    // a player with a 6-card deck draws a 5-card opening hand; the draw is seed-shuffled.
-    const big_deck = ['bolt', 'rngbolt', 'blast', 'close', 'bolt', 'rngbolt']
-    const hand_for = seed => {
-      const arena = flat_arena()
-      const ctx = { spell_templates, arena }
-      const team0 = [
-        make_entity('p0', { x: 1, y: 4 }, true, {
-          deck: [...big_deck],
-          hand: [],
-        }),
-      ]
-      const team1 = [make_entity('m0', { x: 7, y: 4 }, false)]
-      const base = create_fight_state({
-        fight_id: 'f',
-        arena_seed: seed,
-        arena_radius: arena.radius,
-        arena,
-        team0,
-        team1,
-      })
-      const { state } = reduce(base, { type: 'start' }, ctx)
-      return find_entity(state, 'p0').hand.join(',')
-    }
-    const hands = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(hand_for))
-    expect(hands.size).toBeGreaterThan(1)
   })
 })
 
@@ -498,7 +465,7 @@ describe('line of sight', () => {
 
 // ── SPELL CAST ────────────────────────────────────────────────────────────────
 describe('spell cast', () => {
-  test('spends the spell AP, deals damage in [min,max], discards', () => {
+  test('spends the spell AP and deals damage in [min,max]', () => {
     const { state, ctx } = started_fight(99)
     const before_ap = find_entity(state, 'p0').ap
     const r = reduce(
@@ -517,8 +484,6 @@ describe('spell cast', () => {
     const dealt = 100 - mob.health
     expect(dealt).toBeGreaterThanOrEqual(1) // min
     expect(dealt).toBeLessThanOrEqual(40) // max
-    expect(caster.hand).not.toContain('rngbolt')
-    expect(caster.discard).toContain('rngbolt')
   })
 
   test('AoE hits every enemy standing in the blast diamond', () => {
@@ -526,10 +491,10 @@ describe('spell cast', () => {
     const arena = flat_arena()
     const ctx = { spell_templates, arena }
     // §17.28 interleave: a LONE player vs 2 mobs lets a MOB open (parity with interleave.move). An idle
-    // empty-deck ally makes team0 == team1 size so side A's p0 opens — the cast under test lands turn 1.
+    // spell-less ally makes team0 == team1 size so side A's p0 opens — the cast under test lands turn 1.
     const team0 = [
       make_entity('p0', { x: 1, y: 4 }, true),
-      make_entity('ally', { x: 1, y: 1 }, true, { deck: [] }),
+      make_entity('ally', { x: 1, y: 1 }, true, { spell_levels: {} }),
     ]
     const team1 = [
       make_entity('m0', { x: 7, y: 4 }, false), // target cell
@@ -565,7 +530,7 @@ describe('spell cast', () => {
     const ctx = { spell_templates, arena }
     const team0 = [
       make_entity('p0', { x: 1, y: 4 }, true),
-      make_entity('ally', { x: 1, y: 1 }, true, { deck: [] }), // idle -> even teams, p0 opens (§17.28)
+      make_entity('ally', { x: 1, y: 1 }, true, { spell_levels: {} }), // idle -> even teams, p0 opens (§17.28)
     ]
     const team1 = [
       make_entity('m0', { x: 7, y: 4 }, false),

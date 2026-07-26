@@ -138,9 +138,9 @@ const SIGNED_SHIFT = 32_768
  * @property {SpellLevel[]} levels
  */
 
-// The generic mob basic melee attack (the SEAM that gives every mob a real damaging turn). Mobs ship with
-// an empty deck/hand (the player card system is theirs alone), so the AI could previously only MOVE — never
-// damage. This single-target (area 0), range-1, low-cost EARTH strike is dealt to every mob via
+// The generic mob basic melee attack (the SEAM that gives every mob a real damaging turn). A mob with an
+// empty spell book can only MOVE — never damage. This single-target (area 0), range-1, low-cost EARTH
+// strike is given to every mob via
 // `mob_to_fight_entity`, and registered into the fight `ctx.spell_templates` so the existing handle_cast path
 // drives it with NO new reducer code. Damage stays low + integer and mobs carry 0 offensive stats, so the hit
 // is small and deterministic. FLAGGED placeholder: the content

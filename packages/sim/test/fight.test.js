@@ -114,9 +114,6 @@ const make_entity = (id, team, cell, is_player, overrides = {}) => ({
   level: 1,
   stats: { agility: 0, intelligence: 0, range: 0 },
   effects: [],
-  deck: is_player ? ['bolt', 'mend'] : [],
-  hand: is_player ? [] : ['bolt'],
-  discard: [],
   spell_levels: { bolt: 1, mend: 1 },
   ap_reserve: 0,
   ...overrides,
@@ -171,11 +168,10 @@ describe('spell template normalizer', () => {
 
 // ── Core loop ────────────────────────────────────────────────────────────────
 describe('reduce: core loop', () => {
-  test('start deals hands and fixes turn order', () => {
+  test('start fixes turn order and hands the first turn to the player', () => {
     const { state } = started_fight()
     expect(state.started).toBe(true)
     expect(state.turn_order).toEqual(['p0', 'm0'])
-    expect(find_entity(state, 'p0')?.hand.length).toBe(2) // deck of 2 -> full hand
     expect(get_current_turn_entity(state)?.id).toBe('p0')
   })
 
@@ -215,7 +211,7 @@ describe('reduce: core loop', () => {
     expect(find_entity(bad.state, 'p0')?.cell).toEqual({ x: 1, y: 4 })
   })
 
-  test('cast damage spends AP, deals damage, discards the card', () => {
+  test('cast damage spends AP and deals damage — one event, no bookkeeping', () => {
     const { state, ctx } = started_fight()
     const r = reduce(
       state,
@@ -231,38 +227,7 @@ describe('reduce: core loop', () => {
     const caster = find_entity(r.state, 'p0')
     expect(mob?.health).toBe(20) // 30 - 10 (flat min=max=10, no stats, level 1)
     expect(caster?.ap).toBe(3) // 6 - 3
-    expect(caster?.hand).not.toContain('bolt')
-    expect(caster?.discard).toContain('bolt')
-    expect(r.events.map(e => e.type)).toEqual(['fight_cast', 'hand_update'])
-  })
-
-  test('start deals each player an opening hand AND emits hand_update', () => {
-    const arena = flat_arena()
-    const ctx = { spell_templates, arena }
-    const base = create_fight_state({
-      fight_id: 'fh',
-      arena_seed: 7,
-      arena_radius: arena.radius,
-      arena,
-      team0: [make_entity('p0', 0, { x: 1, y: 4 }, true)],
-      team1: [make_entity('m0', 1, { x: 7, y: 4 }, false)],
-    })
-    const { state, events } = reduce(base, { type: 'start' }, ctx)
-    // The opening hand is drawn into state...
-    const player = find_entity(state, 'p0')
-    expect(player?.hand.length).toBeGreaterThan(0)
-    // ...AND reported via a hand_update event so the server forwards a fightHandUpdate. The bug: the
-    // drawn opening hand was never emitted at start, so the client deck/hand rendered empty (0 cards).
-    const hand_update = events.find(
-      e => e.type === 'hand_update' && e.entity_id === 'p0',
-    )
-    expect(hand_update).toBeDefined()
-    expect(hand_update?.hand).toEqual(player?.hand)
-    expect(hand_update?.deck_size).toBe(player?.deck.length)
-    // Mobs are pre-handed (empty deck, no draw) -> no hand_update emitted for them.
-    expect(
-      events.some(e => e.type === 'hand_update' && e.entity_id === 'm0'),
-    ).toBe(false)
+    expect(r.events.map(e => e.type)).toEqual(['fight_cast'])
   })
 
   test('cast out of line-of-sight is rejected', () => {

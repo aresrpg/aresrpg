@@ -117,9 +117,6 @@ describe('tackle golden — reduce-level behavior (the sim rng thread)', () => {
     level: 1,
     stats: { strength: 0, intelligence: 0, chance: 0, agility },
     effects: [],
-    deck: [],
-    hand: [],
-    discard: [],
     spell_levels: {},
     ap_reserve: 0,
   })

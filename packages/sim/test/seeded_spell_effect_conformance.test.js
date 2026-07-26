@@ -263,7 +263,6 @@ const fixture_of = row => {
       entity.id === CASTER_ID
         ? {
             ...entity,
-            hand: [spell_id],
             spell_levels: { [spell_id]: 1 },
           }
         : entity,

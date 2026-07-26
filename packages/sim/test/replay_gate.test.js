@@ -234,9 +234,6 @@ const make_entity = (id, cell, is_player, overrides = {}) => ({
   level: 1,
   stats: { agility: 0, intelligence: 0, range: 0, strength: 0 },
   effects: [],
-  deck: is_player ? ['trap'] : [],
-  hand: is_player ? [] : ['trap'],
-  discard: [],
   spell_levels: { trap: 1 },
   ap_reserve: 0,
   ...overrides,
@@ -273,20 +270,14 @@ const scenarios = [
       arena_seed: 1,
       team0: [
         make_entity('p0', { x: 5, y: 3 }, true, {
-          deck: [],
-          hand: [],
           spell_levels: {},
         }),
       ],
       team1: [
         make_entity('m0', { x: 1, y: 3 }, false, {
-          deck: [],
-          hand: [],
           spell_levels: {},
         }),
         make_entity('m1', { x: 3, y: 3 }, false, {
-          deck: [],
-          hand: [],
           spell_levels: {},
         }),
       ],
@@ -414,14 +405,12 @@ const scenarios = [
       arena_seed: 1,
       team0: [
         make_entity('p0', { x: 5, y: 5 }, true, {
-          deck: ['trap', 'shove'],
           spell_levels: { trap: 1, shove: 1 },
         }),
       ],
       team1: [
         make_entity('m0', { x: 7, y: 5 }, false, {
           health: 5,
-          hand: [],
           spell_levels: {},
         }),
       ],
@@ -465,14 +454,11 @@ const scenarios = [
       arena_seed: 1,
       team0: [
         make_entity('p0', { x: 10, y: 10 }, true, {
-          deck: [],
-          hand: [],
           spell_levels: {},
         }),
       ],
       team1: [
         make_entity('m0', { x: 12, y: 10 }, false, {
-          hand: ['bolt'],
           spell_levels: { bolt: 1 },
         }),
       ],
@@ -502,7 +488,6 @@ const scenarios = [
       arena_seed: 1,
       team0: [
         make_entity('p0', { x: 5, y: 5 }, true, {
-          deck: ['veil'],
           spell_levels: { veil: 1 },
         }),
       ],
@@ -544,15 +529,12 @@ const scenarios = [
       team0: [
         make_entity('p0', { x: 5, y: 5 }, true, {
           health: 60,
-          deck: ['drain'],
           spell_levels: { drain: 1 },
         }),
       ],
       team1: [
         make_entity('m0', { x: 7, y: 5 }, false, {
           health: 60,
-          deck: [],
-          hand: ['drain'],
           spell_levels: { drain: 1 },
         }),
       ],

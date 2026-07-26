@@ -23,9 +23,6 @@ import {
   advance_turn,
   apply_damage,
   check_victory,
-  init_entity_hand,
-  draw_spells,
-  discard_spell,
   use_ap_reserve,
   process_turn_effects,
   is_stunned,
@@ -35,11 +32,6 @@ import { check_glyphs, check_traps, decay_glyphs } from './fight_traps.js'
 import { ai_choose_turn } from './fight_ai.js'
 import { process_delayed_payloads } from './fight_delayed.js'
 import { find_path_4dir } from './pathfind.js'
-
-// A fighter draws back up to a fixed hand size at end of turn (the card-deck model — REVIEW-jun-25 "## Fights":
-// "at the end of each turn if someone has less than 7 spells he will draw one automatically"). The opening
-// hand is also dealt to this size. Lives here (the single deck-size law shared by start + end-of-turn).
-export const HAND_SIZE = 7
 
 // STALEMATE backstop (#97): #62 removed the round cap on purpose (a PvE fight should end only on a real wipe,
 // never a low-cap forfeit), which opened an UNBOUNDED-FIGHT DoS — a ≥100-resistance idler takes 0 damage and
@@ -325,49 +317,26 @@ const handle_ready = (state, cmd) => {
 }
 
 /**
- * Start combat: shuffle every entity's deck + draw the opening hand (rng-threaded), compute the fixed turn
- * order, flip `started`, and reset the first actor's resources. Donor loop.ts:112 + types.ts:157.
+ * Start combat: compute the fixed turn order, flip `started`, and reset the first actor's resources.
+ * Donor loop.ts:112 + types.ts:157. Nothing is dealt — a fighter's castable set is its whole spell book
+ * (`spell_levels`) from the first turn to the last, exactly as on chain.
  * @param {import('./fight_state.js').FightState} state
  * @returns {ReduceResult}
  */
 const handle_start = state => {
   if (state.started) return { state, events: [] }
-  // Players shuffle their deck + draw an opening hand of HAND_SIZE; mobs come pre-handed (deck empty).
-  // Donor loop.ts:112. init_entity_hand draws `6 + additional`, so additional = HAND_SIZE - 6.
-  const player_ids = [...state.team0, ...state.team1]
-    .filter(e => e.is_player)
-    .map(e => e.id)
-  const dealt = player_ids.reduce(
-    (acc, id) => init_entity_hand(acc, id, HAND_SIZE - 6),
-    state,
-  )
-  const turn_order = generate_turn_order(dealt.team0, dealt.team1)
+  const turn_order = generate_turn_order(state.team0, state.team1)
   const started = {
-    ...dealt,
+    ...state,
     turn_order,
     current_turn_idx: 0,
     turn_number: 1,
     started: true,
     // Seed the stalemate baseline at the true fight start (after any placement-phase joins changed the roster).
     no_progress_rounds: 0,
-    last_total_hp: total_health(dealt),
+    last_total_hp: total_health(state),
   }
   const first = get_current_turn_entity(started)
-  // Report each player's opening hand so the server forwards a fightHandUpdate. The hand is dealt into
-  // state above but is secret per player (the server routes each event to its owner); without emitting it
-  // the drawn hand never reaches the client and the deck/hand render as empty. Mirrors the per-turn cast
-  // hand_update (handle_cast). Mobs draw no hand (pre-handed, empty deck), so only players are reported.
-  const hand_events = player_ids.map(id => {
-    const entity = find_entity(started, id)
-    return {
-      type: 'hand_update',
-      fight_id: state.fight_id,
-      entity_id: id,
-      hand: entity?.hand ?? [],
-      deck_size: entity?.deck.length ?? 0,
-      discard_size: entity?.discard.length ?? 0,
-    }
-  })
   return {
     state: started,
     events: [
@@ -377,7 +346,6 @@ const handle_start = state => {
         turn_order,
         seed: state.arena_seed,
       },
-      ...hand_events,
       ...(first
         ? [
             {
@@ -505,7 +473,10 @@ const walk_path = (state, cmd, ctx) => {
 }
 
 /**
- * Cast a spell from hand (in-hand check, process, discard). Donor loop.ts:281 + spells.ts:40.
+ * Cast a spell. The gates are the chain's and only the chain's — the template must exist, and
+ * `process_spell_cast` applies AP, range, LoS, casts_per_turn, casts_per_target and cooldown
+ * (cast.move:130-192). No hand, no discard: every spell a fighter knows is castable every turn its
+ * authored limits allow (#1012). Donor loop.ts:281 + spells.ts:40.
  * @param {import('./fight_state.js').FightState} state
  * @param {CmdCast} cmd
  * @param {ReduceContext} ctx
@@ -514,7 +485,6 @@ const walk_path = (state, cmd, ctx) => {
 const handle_cast = (state, cmd, ctx) => {
   const current = acting_entity(state, cmd.entity_id)
   if (!current) return { state, events: [] }
-  if (!current.hand.includes(cmd.spell_id)) return { state, events: [] }
   const spell = ctx.spell_templates.get(cmd.spell_id)
   if (!spell) return { state, events: [] }
   const level = current.spell_levels[cmd.spell_id] ?? 1
@@ -533,8 +503,6 @@ const handle_cast = (state, cmd, ctx) => {
   )
   if (!res.success) return { state, events: [] }
 
-  const after = discard_spell(res.state, cmd.entity_id, cmd.spell_id)
-  const caster = find_entity(after, cmd.entity_id)
   const events = [
     {
       type: 'fight_cast',
@@ -546,24 +514,16 @@ const handle_cast = (state, cmd, ctx) => {
       is_critical: res.is_critical,
       ap_remaining: res.caster_ap_remaining,
     },
-    {
-      type: 'hand_update',
-      fight_id: state.fight_id,
-      entity_id: cmd.entity_id,
-      hand: caster?.hand ?? [],
-      deck_size: caster?.deck.length ?? 0,
-      discard_size: caster?.discard.length ?? 0,
-    },
   ]
   // If the caster died to its own AoE (it stood in the blast) but the fight continues, end its turn now.
   return advance_if_dead(
-    with_victory(state.winner, after, events),
+    with_victory(state.winner, res.state, events),
     cmd.entity_id,
   )
 }
 
 /**
- * End the current actor's turn: draw 1 spell, advance the turn (skipping the dead), emit start/end.
+ * End the current actor's turn: advance the turn (skipping the dead), emit start/end.
  * Donor loop.ts:346 + actions.ts:329.
  * @param {import('./fight_state.js').FightState} state
  * @param {CmdEndTurn} cmd
@@ -573,27 +533,11 @@ const handle_end_turn = (state, cmd) => {
   const current = get_current_turn_entity(state)
   if (!current || current.id !== cmd.entity_id) return { state, events: [] }
 
-  // Draw back up to HAND_SIZE (auto-draw): a fighter holding fewer than 7 cards draws until full (or
-  // the deck+discard run dry). With a small deck this is the "always redraw your one card" behaviour. The
-  // server forwards the resulting hand to the player via the hand_update below.
-  const deficit = Math.max(0, HAND_SIZE - current.hand.length)
-  const drawn = deficit > 0 ? draw_spells(state, cmd.entity_id, deficit) : state
-  const drawn_entity = find_entity(drawn, cmd.entity_id)
-
-  const advanced = advance_to_actor(drawn)
+  const advanced = advance_to_actor(state)
   const next = get_current_turn_entity(advanced.state)
 
   /** @type {import('./reduce.js').FightEvent[]} */
   const events = [
-    // Re-sync the ender's hand (it may have grown by 0..deficit cards) so the client never desyncs the deck.
-    {
-      type: 'hand_update',
-      fight_id: state.fight_id,
-      entity_id: cmd.entity_id,
-      hand: drawn_entity?.hand ?? [],
-      deck_size: drawn_entity?.deck.length ?? 0,
-      discard_size: drawn_entity?.discard.length ?? 0,
-    },
     {
       type: 'fight_turn_end',
       fight_id: state.fight_id,
