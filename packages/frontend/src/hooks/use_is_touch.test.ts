@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // USE_IS_TOUCH — the capability hook's pure core, proven against a device matrix and CONTRASTED with
-// `use_is_mobile`'s width query (the §3.1 ruling: touch-capability ≠ viewport-width). bun:test has no
+// the layout's width query (the §3.1 ruling: touch-capability ≠ viewport-width). bun:test has no
 // DOM, so we drive `detect_touch` with fake windows and exercise `subscribe`'s reactive plumbing via a
 // swapped-in global `window`. The iPad-landscape case (coarse pointer, desktop width) is asserted
 // explicitly as `is_touch && !is_mobile`.
@@ -10,8 +10,8 @@ import { afterEach, describe, expect, it } from 'bun:test'
 
 import { detect_touch, subscribe } from './use_is_touch'
 
-// `use_is_mobile.ts:3` — replicated here to assert the CONTRAST (it exports no predicate; we must not
-// modify it). A fake window answers BOTH query families so one object models a whole device.
+// The layout breakpoint is replicated here to assert the CONTRAST. A fake window answers BOTH query
+// families so one object models a whole device.
 const MOBILE_QUERY = '(max-width: 1023px)'
 
 function make_win({ coarse, touch_points, width }: { coarse: boolean; touch_points: number; width: number }) {
@@ -23,7 +23,7 @@ function make_win({ coarse, touch_points, width }: { coarse: boolean; touch_poin
   }
 }
 
-// The is_mobile predicate exactly as use_is_mobile.ts computes it — for the contrast assertions.
+// The layout's is_mobile predicate, kept local for the contrast assertions.
 const is_mobile = (win: ReturnType<typeof make_win>) => win.matchMedia(MOBILE_QUERY).matches
 
 describe('detect_touch — capability matrix vs use_is_mobile width matrix', () => {

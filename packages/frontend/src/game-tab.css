@@ -139,7 +139,7 @@
 }
 
 /* MOBILE: the 24px tab padding ate ~48px of a 390px phone. Trim it so the stacked
-   Characters/Profile/Marketplace/Map content has room. Matches use_is_mobile (≤1023px). */
+   Characters/Profile/Marketplace/Map content has room at the shared ≤1023px breakpoint. */
 @media (max-width: 1023px) {
   .gw-tab {
     padding: var(--s-3);

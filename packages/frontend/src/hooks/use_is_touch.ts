@@ -5,8 +5,8 @@ import { useSyncExternalStore } from 'react'
 /**
  * Touch INPUT-CAPABILITY hook — does this device expose a coarse pointer (finger / stylus)?
  *
- * DELIBERATELY DISTINCT from `use_is_mobile` (./use_is_mobile.ts:3), which is a VIEWPORT-WIDTH query
- * (`max-width: 1023px`). The two answer different questions and must never be conflated
+ * DELIBERATELY DISTINCT from the VIEWPORT-WIDTH layout query (`max-width: 1023px`). The two answer
+ * different questions and must never be conflated
  * (docs/MOBILE_SUPPORT_PLAN.md §3.1 — "one touch-input module, NOT a unified re-abstraction"):
  *   - iPad in landscape      → `is_touch && !is_mobile`  (touch controls + desktop layout)
  *   - narrow desktop window  → `is_mobile && !is_touch`  (mobile layout, no joystick)
