@@ -88,6 +88,15 @@ jobs:
     # No leg in this job may be re-masked: severities only ratchet up (FROZEN.md).
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # #996 HERMETIC: this job is REQUIRED, so its verdict may only depend on bytes in the repo.
+    # Two frontend rows (src/chain/read_templates.test.js, src/chain/live_reads.test.js) default to
+    # reading LIVE Sui testnet, which puts remote availability and off-repo seed-corpus content on
+    # the gate — a blip or a content edit reds every open PR on commits that touch nothing. Both
+    # files already honour ARES_SKIP_LIVE=1 (their own convention); setting it here is what makes
+    # the required leg hermetic. The live reads keep an honest home in the advisory `live-canary`
+    # job below — this removes their GATE power, not their signal.
+    env:
+      ARES_SKIP_LIVE: '1'
     strategy:
       fail-fast: false
       matrix:
@@ -122,6 +131,52 @@ jobs:
               echo "| ${{ matrix.package }} | $pass | $skip | $fail |"
             } >> "$GITHUB_STEP_SUMMARY"
           ) || true
+
+  live-canary:
+    # THE LIVE READS' NEW HOME (#996) — the two frontend rows the `tests` job above now skips
+    # (src/chain/read_templates.test.js, src/chain/live_reads.test.js) run here against live Sui
+    # testnet, on the same trigger, so the drift they were built to catch (a gRPC wrapper
+    # re-migration, an item.move event-type/field-name change) is still measured on every PR.
+    #
+    # ADVISORY BY CONSTRUCTION — and that is a deliberate exception to this file's no-masking law,
+    # not an oversight of it. The promotion engine fails CLOSED on any non-green check-run on the
+    # head sha (.github/scripts/promote-green-eval.sh gate 1, name-independent) and derives its
+    # required set from THIS FILE's job names (gate 2, issue #725) — so a job added here that can
+    # report red does not merely gate the PR, it wedges the land-on-green queue until a human
+    # clears it. A verdict that depends on remote availability and on off-repo seed-corpus content
+    # must never hold that lever: that is the exact coupling #996 exists to remove. The test step
+    # therefore records its outcome in the step summary and always exits 0; `continue-on-error`
+    # covers the same property for the infra steps around it. The signal is the summary line, read
+    # by a human; it is not, and must not become, an exit code.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: setup Bun
+        id: setup_bun
+        continue-on-error: true
+        uses: oven-sh/setup-bun@v2
+      - name: setup Bun (retry)
+        if: steps.setup_bun.outcome == 'failure'
+        uses: oven-sh/setup-bun@v2
+      - name: install deps
+        run: bun install --frozen-lockfile
+      - name: live chain reads vs testnet — advisory verdict, never an exit code
+        working-directory: packages/frontend
+        run: |
+          bun test src/chain/read_templates.test.js src/chain/live_reads.test.js 2>&1 | tee /tmp/live-canary.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" = 0 ]; then verdict='PASS'; else verdict="FAIL (exit $rc)"; fi
+          {
+            echo "### live-canary — advisory, gates nothing (#996)"
+            echo ""
+            echo "\`packages/frontend/src/chain/{read_templates,live_reads}.test.js\` vs live Sui testnet: **$verdict**"
+            echo ""
+            echo "A FAIL here is not evidence of a code defect on its own — testnet being down or a"
+            echo "seed-corpus edit produce the same red. Read the log before blaming the diff."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "LIVE CANARY VERDICT: $verdict"
 
   smoke:
     # BOOT SMOKE — the class killer for the migration-stub throw family (a shape-correct-but-empty content
