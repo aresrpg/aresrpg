@@ -20,7 +20,11 @@ import { INVISIBILITY_STATUS_KIND } from './fight_status_snapshot.js'
 // ActionEffect is the only receipt row carrying the exact timed self-buff descriptor. Keep this deliberately
 // narrow: these three kinds produce byte-identical fighter rows for a guaranteed point effect on the caster.
 // Targeted/AoE/chance effects need outcome/recipient evidence the envelope does not carry and remain snapshot truth.
-const SELF_STATUS_KINDS = new Set([6, 9, INVISIBILITY_STATUS_KIND]) // GIVE_POINTS · ALTER_STAT · INVISIBILITY
+const K_GIVE_POINTS = 6
+const K_REMOVE_POINTS = 7
+const SELF_STATUS_KINDS = new Set([K_GIVE_POINTS, 9, INVISIBILITY_STATUS_KIND]) // GIVE_POINTS · ALTER_STAT · INVISIBILITY
+/** A GIVE/REMOVE_POINTS row's `stat` is the chain POINT id (`spell_effect` POINT_AP/POINT_MP) — the pool it moves. */
+const POINT_POOL = { 0: 'ap', 1: 'mp' }
 const SHAPE_POINT = 0
 const TF_NOT_TEAM = 1
 const TF_NOT_SELF = 2
@@ -234,6 +238,26 @@ const decrement_statuses = (state, key) => {
   })
 }
 
+/** The pool a fighter's ACTIVE timed point rows move the turn-start refill by — the client twin of the chain's ONE
+ * refill law (`participant::net_refill`, `base + credit − debt` floored at 0, called from `begin_turn`) and of
+ * `sim/fight_state.active_pool_modifier`: a `+1 MP · 3 turns` buff refills to base+1 for every turn inside its
+ * window, a REMOVE_POINTS row subtracts (summing both into one signed net is the same floor the chain takes).
+ * Duration needs no predicate of its own here — a row only reaches a TurnStarted if it survived the PRIOR
+ * turn-end `decrement_statuses`, which is exactly the chain's tick scope (cast.move:1585 ages the ENDING actor's
+ * rows), so presence IS activity. Kinds other than the two point ones never touch a pool: an ALTER_STAT row moves
+ * a STAT, and the snapshot owns those.
+ * @param {Array<{kind?:number, stat?:number, value?:number, remaining_turns?:number}>} statuses
+ * @param {'ap'|'mp'} pool
+ */
+const pool_grant = (statuses, pool) =>
+  (statuses ?? []).reduce((sum, row) => {
+    if (POINT_POOL[Number(row?.stat)] !== pool || (Number(row?.remaining_turns) || 0) <= 0) return sum
+    const kind = Number(row?.kind)
+    const value = Number(row?.value) || 0
+    if (kind === K_GIVE_POINTS) return sum + value
+    return kind === K_REMOVE_POINTS ? sum - value : sum
+  }, 0)
+
 /** Apply an MP delta without discarding temporary debt below zero. The visible pool stays clamped, but a later
  * undo/refund composes with the raw balance if an earlier speculative grant disappears during a re-fold. Ordinary
  * chain deltas only start tracking when a Moved prediction already did (or `track` explicitly requests it). */
@@ -328,9 +352,22 @@ export const apply_action = (state, action) => {
       // it the projected budget stays the stale pre-refill snapshot (0) → a live turn with a dead move/cast range
       // (the v1.12.28 dead opening click). The snapshot reconciles for FREE: a post-refill object read prunes this
       // overlay entry, `f.ap/mp` go null, and project.js falls back to the authoritative row.ap/mp (drained-safe).
+      //
+      // THE POOL A TIMED GRANT REFILLS TO (#973, driven round 2). `base_ap`/`base_mp` are the seat's IMMUTABLE
+      // snapshot pools, so a `+1 MP · 3 turns` buff was granted once and then ROLLED BACK by the very next
+      // TurnStarted — the pool the player watched revert while the chip still counted down. The refill target is
+      // base + the fighter's ACTIVE point rows, exactly as `effective_mp_max` computes it sim-side and
+      // `participant::net_refill` on chain; the rows are already in this fold's status home.
+      const grant = (base, pool) =>
+        base == null ? base : Math.max(0, Number(base) + pool_grant(withturn.fighters[key].statuses, pool))
       return action.ap == null && action.mp == null
         ? patch_fighter(withturn, key, { turn_number, mp_unclamped: null })
-        : patch_fighter(withturn, key, { turn_number, ap: action.ap, mp: action.mp, mp_unclamped: null })
+        : patch_fighter(withturn, key, {
+            turn_number,
+            ap: grant(action.ap, 'ap'),
+            mp: grant(action.mp, 'mp'),
+            mp_unclamped: null,
+          })
     }
     case 'TurnEnded': {
       const key = fighter_key({ is_mob: action.is_mob, idx: action.idx, resolve_seat: rs })
