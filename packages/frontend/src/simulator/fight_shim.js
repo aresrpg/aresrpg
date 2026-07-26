@@ -31,6 +31,7 @@ import { fight_store } from '@aresrpg/fight/store'
 import { fight_view } from '@aresrpg/fight/project'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_WON } from '@aresrpg/fight/board_state'
 import { GRID_W } from '@aresrpg/fight/los'
+import { level_to_experience } from '@aresrpg/sdk/experience'
 import {
   LOCAL_ADDRESS,
   abandon_fight,
@@ -189,11 +190,17 @@ export const create_fight_shim = ({
   const seed_stores = ({ fight_id, roster, mobs, width, height }) => {
     if (!engine_context.get_state().sui?.characters?.length)
       engine_context.dispatch('action/sui_data', {
+        // A CHAIN CHARACTER CARRIES `experience`, NOT `level` (#949). The production surfaces this page mounts
+        // read the level they gate with off the xp curve — `xp_progress(character.experience ?? 0).level`
+        // (DungeonBoard.jsx:196) — so a row seeded with `level` alone fell to `?? 0` ⇒ LEVEL 1, and the spell
+        // bar armed only the three unlock-1 starters while the seat next to it carried level-200 pools. The
+        // row speaks BOTH: `experience` is the shape every consumer decodes, `level` the one the picker reads.
         characters: roster.map(({ id, name, class_id, level }) => ({
           id,
           name,
           classe: class_id,
           level,
+          experience: level_to_experience(level),
           in_dungeon: false,
         })),
         loaded: true,
