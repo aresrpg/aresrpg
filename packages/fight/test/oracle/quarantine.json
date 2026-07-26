@@ -1,0 +1,4 @@
+{
+  "ratchet": "L1 quarantine (issue #930), fight half. Rows only SHRINK. A row is legal only while it names a filed GitHub issue for a CONFIRMED defect — a row without an issue number fails the suite (SKIP is never PASS) — and only while the defect still reproduces: once it is fixed the row must be DELETED, which the hygiene test enforces. `seed: null` means the defect is not seed-specific and every driven fight that hits it is covered by the one issue.",
+  "rows": []
+}
