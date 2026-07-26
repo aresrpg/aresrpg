@@ -29,6 +29,7 @@
 
 import { game_log } from '../core/log.js'
 
+import { settled_loot_rows } from './loot_inventory.js'
 import { is_preflight_failure } from './pending_outcomes.js'
 
 /**
@@ -36,6 +37,8 @@ import { is_preflight_failure } from './pending_outcomes.js'
  *   Promise<any>, now?: () => number, schedule?: (fn: () => void, ms: number) => any }} MintDeps
  * @typedef {{ verdict: 'minted', result_id: string, settlement: any } |
  *   { verdict: 'latched', result_id: string }} MintOutcome
+ * @typedef {{ result_id: string, digest: string, object_deltas: Array<{ object_id: string, item_type: string,
+ *   amount: number }>, balance_deltas: Array<{ coin_type: string, amount: string }> }} MintRecovery
  */
 
 // result_id → retry state + ONE settlement promise. The promise exposes the async mint outcome as DATA to the
@@ -61,6 +64,64 @@ const default_schedule = (/** @type {() => void} */ fn, /** @type {number} */ ms
 
 let drain_promise = /** @type {Promise<void> | null} */ (null)
 let retry_timer = /** @type {any} */ (null)
+
+/** Whether a receipt balance delta is a positive collection rather than gas/payment spend. */
+const positive_delta = (/** @type {unknown} */ amount) => {
+  try {
+    return BigInt(String(amount ?? 0)) > 0n
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Pure receipt projection for recovery observability. ItemMinted is the exact object+quantity delta already used
+ * by the inventory reducer; positive balanceChanges ride too if a future normalized receipt exposes them.
+ * @param {MintOutcome} outcome
+ * @returns {MintRecovery}
+ */
+export function mint_recovery_detail(outcome) {
+  const settlement = outcome?.verdict === 'minted' ? outcome.settlement : null
+  const receipt = settlement?.receipt ?? {}
+  const minted_objects = settled_loot_rows(settlement).map((row) => ({
+    object_id: String(row.id),
+    item_type: String(row.item_type),
+    amount: Number(row.amount),
+  }))
+  const created_objects = (receipt?.objectChanges ?? [])
+    .filter((/** @type {any} */ change) => change?.type === 'created' && change?.objectId)
+    .map((/** @type {any} */ change) => ({
+      object_id: String(change.objectId),
+      item_type: String(change.objectType ?? ''),
+      amount: 1,
+    }))
+  return {
+    result_id: String(outcome?.result_id ?? ''),
+    digest: String(receipt?.digest ?? ''),
+    object_deltas: minted_objects.length ? minted_objects : created_objects,
+    balance_deltas: (receipt?.balanceChanges ?? [])
+      .filter((/** @type {any} */ delta) => positive_delta(delta?.amount))
+      .map((/** @type {any} */ delta) => ({
+        coin_type: String(delta?.coinType ?? delta?.coin_type ?? ''),
+        amount: String(delta.amount),
+      })),
+  }
+}
+
+/**
+ * Compact, language-neutral receipt facts for the localized boot-recovery toast: full tx digest followed by
+ * exact object/balance deltas. `∅` honestly identifies a bare husk burn that collected no value.
+ * @param {MintRecovery} recovery
+ */
+export function mint_recovery_line(recovery) {
+  const objects = recovery.object_deltas.map(
+    ({ object_id, item_type, amount }) => `${item_type || object_id} ×${amount}${item_type ? ` (${object_id})` : ''}`
+  )
+  const balances = recovery.balance_deltas.map(
+    ({ coin_type, amount }) => `${positive_delta(amount) ? '+' : ''}${amount}${coin_type ? ` ${coin_type}` : ''}`
+  )
+  return `${recovery.digest || '?'} → ${[...objects, ...balances].join(', ') || '∅'}`
+}
 
 /**
  * Enqueue a result_id for its atomic mint+burn. IDEMPOTENT: an already-terminal id (`done`/`latched`) is a NO-OP
@@ -173,7 +234,8 @@ function schedule_retry(deps) {
  * FightResults that owe a mint/burn (the unopened engine rows are the auto-open path's concern). A quiet success
  * sweep: NO per-result toast — ONE summary once the readable set drains.
  * @param {string} address
- * @param {MintDeps & { fetch_results: (address: string) => Promise<any[]>, notify: (count: number) => void }} deps
+ * @param {MintDeps & { fetch_results: (address: string) => Promise<any[]>,
+ *   notify: (count: number, details: string) => void }} deps
  * @returns {Promise<number>} the count recovered (minted+burned) in this pass
  */
 export async function sweep_stranded_results(address, deps) {
@@ -193,11 +255,20 @@ export async function sweep_stranded_results(address, deps) {
     const entry = queue.get(id)
     return !entry || entry.status === 'pending'
   })
-  for (const id of fresh) void enqueue_mint(id)
+  const outcome_promises = new Map(
+    fresh.map((/** @type {string} */ id) => [id, enqueue_mint(id)]).filter(([, promise]) => promise != null)
+  )
   await drain_pending_mints(deps)
-  const recovered = fresh.filter((/** @type {string} */ id) => queue.get(id)?.status === 'done').length
-  if (recovered > 0) deps.notify(recovered) // ONE quiet summary — never per-result spam
-  return recovered
+  const recovered_promises = fresh.flatMap((/** @type {string} */ id) =>
+    queue.get(id)?.status === 'done' && outcome_promises.get(id) ? [outcome_promises.get(id)] : []
+  )
+  const recoveries = (await Promise.all(recovered_promises)).map(mint_recovery_detail)
+  if (recoveries.length) {
+    const details = recoveries.map(mint_recovery_line)
+    for (const detail of details) game_log('dungeon', 'mint-sweep recovered stranded reward:', detail)
+    deps.notify(recoveries.length, details.join('; ')) // ONE toast, exact receipt facts from every recovery
+  }
+  return recoveries.length
 }
 
 /** Inspect an id's queue status (tests + callers that gate on completion). @param {string} result_id */

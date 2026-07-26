@@ -595,8 +595,12 @@ export async function auto_open_pending_outcomes(store, address, { announce = fa
     await sweep_stranded_results(address, {
       ...mint_deps(),
       fetch_results: get_fight_results,
-      notify: (/** @type {number} */ count) =>
-        push_event_toast({ state: 'success', title: i18n.t('dungeons.results_recovered', { count }) }),
+      notify: (/** @type {number} */ count, details) =>
+        push_event_toast({
+          state: 'success',
+          title: i18n.t('dungeons.results_recovered', { count }),
+          message: details,
+        }),
     }).catch((error) => game_log('dungeon', 'mint-sweep failed (next boot re-checks)', error))
 }
 

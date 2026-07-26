@@ -11,16 +11,23 @@
 //     rows are skipped, and ONE summary toast is requested — never per-result spam.
 import { afterEach, describe, expect, it } from 'bun:test'
 
+import { get_log_buffer, _reset_log_for_test } from '../core/log.js'
+
 import {
   enqueue_mint,
   process_mint,
   drain_pending_mints,
   sweep_stranded_results,
+  mint_recovery_detail,
+  mint_recovery_line,
   pending_mint_status,
   reset_pending_mints_for_test,
 } from './pending_mints.js'
 
-afterEach(() => reset_pending_mints_for_test())
+afterEach(() => {
+  reset_pending_mints_for_test()
+  _reset_log_for_test()
+})
 
 // A landed FightResult read (decode_fight_result shape): `is_opened` true, `rolled` a plain array (empty ⇒ husk).
 const opened = (rolled) => ({ is_opened: true, rolled })
@@ -184,17 +191,42 @@ describe('sweep_stranded_results (leg②) — recover opened-but-un-burned resul
 
   it('mints the loot result, bare-burns the husk, SKIPS the unopened row, requests ONE summary of the recovered count', async () => {
     const summaries = []
-    const { minted, deps } = make_deps({ read_result: async (id) => chain[id] ?? null })
+    const { minted, deps } = make_deps({
+      read_result: async (id) => chain[id] ?? null,
+      mint_impl: async (id, templates) => ({
+        receipt: {
+          digest: `digest-${id}`,
+          events: templates.map((template, index) => ({
+            type: '0xares::item::ItemMinted',
+            parsedJson: {
+              item: `${id}-item-${index}`,
+              template,
+              item_type: `loot_${index}`,
+              amount: '1',
+            },
+          })),
+        },
+      }),
+    })
     const recovered = await sweep_stranded_results('0xowner', {
       ...deps,
       fetch_results: async () => rows,
-      notify: (count) => summaries.push(count),
+      notify: (count, details) => summaries.push({ count, details }),
     })
     expect(recovered).toBe(2)
     expect(new Set(minted.map((m) => m.id))).toEqual(new Set(['0xLOOT', '0xHUSK'])) // never 0xUNOPENED (chain-gated)
     expect(minted.find((m) => m.id === '0xLOOT').templates).toEqual(['0xA', '0xB'])
     expect(minted.find((m) => m.id === '0xHUSK').templates).toEqual([]) // bare burn
-    expect(summaries).toEqual([2]) // ONE quiet summary — no per-result spam
+    expect(summaries).toEqual([
+      {
+        count: 2,
+        details: 'digest-0xLOOT → loot_0 ×1 (0xLOOT-item-0), loot_1 ×1 (0xLOOT-item-1); digest-0xHUSK → ∅',
+      },
+    ]) // ONE quiet summary — no per-result spam, with digest + collected delta in its rendered message payload
+    expect(get_log_buffer().map(({ message }) => message)).toEqual([
+      'mint-sweep recovered stranded reward: digest-0xLOOT → loot_0 ×1 (0xLOOT-item-0), loot_1 ×1 (0xLOOT-item-1)',
+      'mint-sweep recovered stranded reward: digest-0xHUSK → ∅',
+    ]) // one bounded log per tx means a large sweep cannot truncate later digests
   })
 
   it('an executed-failure result LATCHES in the sweep and a RE-RUN composes ZERO (idempotent recovery)', async () => {
@@ -231,5 +263,65 @@ describe('sweep_stranded_results (leg②) — recover opened-but-un-burned resul
       },
     })
     expect(recovered).toBe(0)
+  })
+})
+
+describe('mint recovery instrumentation', () => {
+  it('projects the digest plus collected object/positive-balance deltas without changing the settlement', () => {
+    const settlement = {
+      receipt: {
+        digest: '0xdigest',
+        events: [
+          {
+            type: '0xares::item::ItemMinted',
+            parsedJson: { item: '0xitem', template: '0xtemplate', item_type: 'razkin_hide', amount: '2' },
+          },
+        ],
+        balanceChanges: [
+          { coinType: '0x2::sui::SUI', amount: '25' },
+          { coinType: '0x2::sui::SUI', amount: '-7' }, // gas/payment is not value collected
+        ],
+      },
+    }
+    const detail = mint_recovery_detail({
+      verdict: 'minted',
+      result_id: '0xresult',
+      settlement,
+    })
+
+    expect(detail).toEqual({
+      result_id: '0xresult',
+      digest: '0xdigest',
+      object_deltas: [{ object_id: '0xitem', item_type: 'razkin_hide', amount: 2 }],
+      balance_deltas: [{ coin_type: '0x2::sui::SUI', amount: '25' }],
+    })
+    expect(mint_recovery_line(detail)).toBe('0xdigest → razkin_hide ×2 (0xitem), +25 0x2::sui::SUI')
+    expect(settlement.receipt.events[0].parsedJson.amount).toBe('2') // projection is read-only
+  })
+
+  it('names a bare result burn as an empty delta while retaining its digest', () => {
+    expect(
+      mint_recovery_line({
+        result_id: '0xhusk',
+        digest: '0xhusktx',
+        object_deltas: [],
+        balance_deltas: [],
+      })
+    ).toBe('0xhusktx → ∅')
+  })
+
+  it('falls back to created objectChanges when an ItemMinted event is unavailable', () => {
+    expect(
+      mint_recovery_detail({
+        verdict: 'minted',
+        result_id: '0xresult',
+        settlement: {
+          receipt: {
+            digest: '0xdigest',
+            objectChanges: [{ type: 'created', objectId: '0xitem', objectType: '0xares::item::Item' }],
+          },
+        },
+      }).object_deltas
+    ).toEqual([{ object_id: '0xitem', item_type: '0xares::item::Item', amount: 1 }])
   })
 })
