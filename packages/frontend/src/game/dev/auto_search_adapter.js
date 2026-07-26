@@ -9,7 +9,7 @@
 //   search    → `trigger_prompt('search')` — the SAME [F] lever a human presses (DiscoveryPrompts registers
 //               it, and it owns the kiosk resolve, the progress toast, the tx and the receipt into the door).
 //   approach  → the same steerer, plus the "spotted it, running over" toast (the loop is unattended).
-//   found     → the house event toast + the fold's own auto-disable.
+//   found     → the house event toast + a SOFT ALARM (`play_fight_sfx('warn')`) + the fold's own auto-disable.
 //   halt      → the steerer's cancel, so a stopped loop never leaves the body running.
 //
 // The steerer talks BACK too: `subscribe_auto_run_cancelled` reports every cancellation and its reason, so the
@@ -31,6 +31,7 @@ import { zone_searchable } from '@aresrpg/world/spawns_reconcile'
 import i18n from '../../i18n'
 import { context } from '../store.js'
 import { push_event_toast } from '../core/toast.js'
+import { play_fight_sfx } from '../core/audio/sfx.js'
 import { subscribe_auto_run_cancelled } from '../auto_run.js'
 import { use_prompt_stack } from '../../world-shell/prompt_stack.js'
 import { spawns_store } from '../../world-shell/spawns_adapter.js'
@@ -141,8 +142,8 @@ function world_snapshot(zones_rows, now) {
 const walk_to = (x, z) => context.events.emit('map/auto_run', { type: 'point', position: { x, z } })
 const halt_walk = () => context.events.emit('map/auto_run', { type: 'cancel' })
 
-/** Perform ONE command row. The only place this feature touches the world. */
-function perform(command, name_of) {
+/** Perform ONE command row. The only place this feature touches the world. Exported for its driven unit test. */
+export function perform(command, name_of) {
   switch (command.kind) {
     case 'walk':
       return walk_to(command.x, command.z)
@@ -157,6 +158,11 @@ function perform(command, name_of) {
       return use_prompt_stack.getState().trigger_prompt('search')
     case 'found': {
       halt_walk()
+      // THE SOFT ALARM: the scouter's whole point is running while the player looks elsewhere, so the find has
+      // to be audible. `warn` is the registry's one restrained ATTENTION cue (a quiet low rising tone, never a
+      // shrill beep) — the discovery chime is already spent on every zone reveal this loop fires, so reusing it
+      // would bury the find in its own noise. Once per find: the fold's `found` row lands exactly once (seq).
+      play_fight_sfx('warn')
       const mob = command.name || name_of(command.template_id)
       return push_event_toast({ state: 'info', title: i18n.t('auto_search.found', { mob }) })
     }
