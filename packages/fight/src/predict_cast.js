@@ -147,12 +147,18 @@ const status_from_sim_effect = (effect) => {
     }
   if ((effect.type === 'STAT_BUFF' || effect.type === 'STAT_DEBUFF') && effect.stat === 'range')
     return {
+      // The status home speaks DECODED SIGNED deltas: `fight_status_snapshot.js` strips the chain's 32768
+      // centering at the wire door (#886), and the #904 ruling makes that value the ONLY sign fact — the fold
+      // ignores FLAG_NEGATIVE because both flag dialects occur on live rows. A predicted row lands in the same
+      // home, so it carries the same signed delta; emitting a magnitude here made `sim_effects_of` read every
+      // predicted range DEBUFF as a BUFF (value > 0), the #728 sign inversion on the prediction door.
       kind: K_ALTER_STAT,
       remaining_turns,
       element: null,
-      value: Number(effect.value) || 0,
+      value: (effect.type === 'STAT_DEBUFF' ? -1 : 1) * (Number(effect.value) || 0),
       stat: STAT_RANGE,
       chance: 100,
+      // Derived mirror of a minted row's flag, never the sign source — no reader consults it for sign.
       flags: effect.type === 'STAT_DEBUFF' ? FLAG_NEGATIVE : 0,
     }
   if (effect.type === 'STAT_BUFF' && (effect.stat === 'ap' || effect.stat === 'mp'))

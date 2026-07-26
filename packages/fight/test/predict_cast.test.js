@@ -245,7 +245,10 @@ describe('sim-backed own-cast prediction', () => {
       'range_self',
       {
         kind: SE.K_ALTER_STAT,
-        value: 1,
+        // AUTHORED ON THE WIRE (#904): kind 9 stores its delta CENTERED at 32768, so `+1 range` is 32769 and
+        // FLAG_NEGATIVE is never the sign. The normalize door strips the centering; the status home below keeps
+        // the decoded signed delta (+1), the same shape `fight_status_snapshot.js` hands the real chain rows.
+        value: 32_769,
         stat: SE.STAT_RANGE,
         flags: 0,
         turns: 3,
@@ -299,6 +302,73 @@ describe('sim-backed own-cast prediction', () => {
         resolve_ref,
       }).result.success
     ).toBe(true)
+  })
+
+  // The mirror of the row above, and the sign inversion #904 exposed on this door: a CENTERED debuff (value below
+  // 32768, flags absent) must land in the status home as a NEGATIVE delta. A magnitude + FLAG_NEGATIVE row read
+  // back as a BUFF — `sim_effects_of` derives the sign from the value alone, exactly as the chain fold does.
+  test('a predicted self -range row enters the status home signed and illegalizes a max-distance cast', () => {
+    const store = started_store()
+    const resolve_ref = (id) =>
+      id === CHAR ? { is_mob: false, idx: 0 } : id === 'mob-0' ? { is_mob: true, idx: 0 } : null
+    const debuff = single_effect_spell(
+      'range_drain',
+      {
+        kind: SE.K_ALTER_STAT,
+        value: 32_767, // centered −1 range
+        stat: SE.STAT_RANGE,
+        flags: 0, // the unflagged dialect: the value alone carries the sign
+        turns: 3,
+        chance: 100,
+        target_filter: SE.TF_ONLY_CASTER,
+      },
+      1,
+      false
+    )
+    const predicted_debuff = predict_cast({
+      view: engine_view(store.getState()),
+      caster_id: CHAR,
+      spell: debuff,
+      target_cell: START,
+      critical: false,
+      resolve_ref,
+    })
+    store.getState().input({
+      type: 'predicted',
+      intent_id: 'range-debuff:0',
+      basis_version: 6,
+      actions: predicted_debuff.actions,
+      beats: predicted_debuff.beats,
+    })
+    expect(engine_view(store.getState()).fighters.get(CHAR).effects).toContainEqual(
+      expect.objectContaining({
+        kind: SE.K_ALTER_STAT,
+        stat: SE.STAT_RANGE,
+        value: -1,
+        remaining_turns: 3,
+      })
+    )
+
+    const raw = single_effect_spell(
+      'range_followup',
+      { kind: SE.K_DAMAGE, value: 7, element: 2, target_filter: SE.TF_NOT_TEAM },
+      1,
+      false
+    )
+    const followup = {
+      ...raw,
+      levels: raw.levels.map((level) => ({ ...level, range: [1, 2], modifiable_range: true })),
+    }
+    expect(
+      predict_cast({
+        view: engine_view(store.getState()),
+        caster_id: CHAR,
+        spell: followup,
+        target_cell: encode(4, 4), // distance 2: the authored max, minus the just-predicted -1 row
+        critical: false,
+        resolve_ref,
+      }).result.success
+    ).toBe(false)
   })
 
   test('prediction seeds immutable gear range from the fighter when a caller supplies no stats adapter', () => {
