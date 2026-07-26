@@ -98,3 +98,8 @@ packages/move/*/traces/
 # /ship untracks the dir via `git rm -r --cached vfx/`.
 /vfx/
 api/release.json
+
+# L1 oracle shrink artifacts (issue #930): the minimal failing capsule a failing property stream
+# dumps for local forensics. The landed record of a confirmed defect is its GitHub issue + the
+# quarantine row, never a committed blob.
+packages/*/test/oracle/artifacts-local/
