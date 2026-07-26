@@ -111,7 +111,7 @@ test('paid additional character: live price surfaces and the underfunded flow re
   // price-bearing confirm and the S-54 choke's pre-sign dry-run refusal on the REAL chain.
   await page.evaluate(async () => {
     const { character_create } = await import('/src/game/screens/character-create.js')
-    const { use_expedition } = await import('/src/expedition/store.ts')
+    const { use_expedition } = await import('/src/roster/store.ts')
     const { context } = await import('/src/game/core/game.js')
     const s = context.get_state()
     const color_to_number = (hex: string) => parseInt(String(hex).replace(/^#/, ''), 16)
