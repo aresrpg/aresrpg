@@ -9,7 +9,8 @@
 //      contracts_paused_modal.test.tsx, which splits for the same reason). The container's WIRING is proven
 //      by source shape instead, and the LAW those affordances rest on — an enable can never arm the loop
 //      without the fee confirmation — is driven end to end in auto_search.test.js.
-//   3. The MOUNT: the panel sits directly under the world select in the social cluster, DEV builds only.
+//   3. The MOUNT: the panel sits directly under the world select in the social cluster, on the hack grid (no
+//      build-mode gate — the fee modal is the money safety, not the build).
 
 import { readFileSync } from 'node:fs'
 
@@ -56,8 +57,9 @@ describe('the HUD row — a real switch and a cog', () => {
 describe('the container wiring — the fee disclosure gates every enable', () => {
   test('the switch dispatches a toggle input; it never arms the loop itself', () => {
     expect(panel_source).toContain("auto_search_input({ type: 'toggle', value: next })")
-    // exactly ONE fee_confirm in the file — the dialog's own handler; the switch has no path to it
-    expect(panel_source.match(/fee_confirm/g)).toHaveLength(1)
+    // exactly ONE fee_confirm DISPATCH in the file — the dialog's own handler; the switch has no path to it.
+    // (Counted on the dispatch, not the bare word: it also names a comment and the confirm button's i18n key.)
+    expect(panel_source.match(/type: 'fee_confirm'/g)).toHaveLength(1)
     expect(panel_source).toContain('on_confirm={() => auto_search_input({ type: \'fee_confirm\' })}')
     expect(panel_source).toContain('on_cancel={() => auto_search_input({ type: \'fee_cancel\' })}')
   })
@@ -75,7 +77,7 @@ describe('the container wiring — the fee disclosure gates every enable', () =>
   })
 })
 
-describe('the mount — directly under the world select, DEV builds only', () => {
+describe('the mount — directly under the world select, on the hack grid', () => {
   test('the panel is rendered after the world switcher inside the social cluster', () => {
     const cluster = hud_source.slice(hud_source.indexOf('className="gw-social"'))
     const world_select = cluster.indexOf('<WorldSwitcher />')
@@ -84,8 +86,14 @@ describe('the mount — directly under the world select, DEV builds only', () =>
     expect(panel).toBeGreaterThan(world_select)
   })
 
-  test('the mount is gated on import.meta.env.DEV — every leg it fires is a real transaction', () => {
-    const mount_line = hud_source.split('\n').find((line) => line.includes('<AutoSearchPanel />'))
-    expect(mount_line).toContain('import.meta.env.DEV')
+  test('the mount rides the hack-grid seam, never the build mode', () => {
+    const mount_line = /** @type {string} */ (hud_source.split('\n').find((line) => line.includes('<AutoSearchPanel />')))
+    // Reachable on EVERY build the moment hack mode is armed (it is the dev entry's surface, like the hack
+    // radio) — a build-mode gate here would silently un-ship it from edge. The money safety is the fee modal
+    // on each enable, driven end to end in auto_search.test.js.
+    expect(mount_line).not.toContain('import.meta.env')
+    expect(mount_line).toContain('hack_grid')
+    // ...and it stays exploration-only and embodied-only, exactly like the world select above it.
+    expect(mount_line).toContain('!fight_mode && has_character')
   })
 })

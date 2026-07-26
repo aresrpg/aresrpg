@@ -15,8 +15,9 @@
 // zones map was replaced is a receipt (fold_zone_searched rebuilds it); one that leaves with the zones map
 // untouched is a failure. One subscription, both signals, and no dependence on event ordering.
 //
-// The loop is DEV-only by mount (GameWorldHud gates it on import.meta.env.DEV): every zone search it fires
-// is a real, gas-burning transaction.
+// Every zone search the loop fires is a real, gas-burning transaction, so the arming safety is the FEE
+// CONFIRMATION the pure core demands before it ever sets `armed` (auto_search.js). The panel mounts on the
+// hack grid of every build (GameWorldHud), so the build mode guards nothing here and never did the money work.
 
 import { useEffect, useRef } from 'react'
 import { create } from 'zustand'

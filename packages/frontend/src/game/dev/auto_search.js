@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// AUTO-SEARCH (#1106) — the DEV scouting loop's pure core: walk to a zone inside a configured distance
+// AUTO-SEARCH (#1106) — the scouting loop's pure core: walk to a zone inside a configured distance
 // annulus, search it, and stop at the first group of a wanted mob template. A small fold over plain data —
 // `reduce_auto_search(state, input, now)` — with ZERO effects and no clock of its own. Time is an input.
 //

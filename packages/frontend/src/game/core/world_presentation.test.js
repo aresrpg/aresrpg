@@ -33,6 +33,7 @@ describe('the world-presentation signal', () => {
       '../screens/hud/use_minimap.js',
       '../screens/hud/MinimapModal.jsx',
       '../screens/hud/world/HackRadioPlayer.jsx',
+      '../screens/hud/world/GameWorldHud.jsx', // #1106 — the auto-search dev entry mounts on the grid
     ]) {
       const source = read(path)
       expect(source.includes('select_hack_presentation'), `${path} selects the reducer-door signal`).toBe(true)

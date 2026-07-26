@@ -30,6 +30,7 @@ import './world_toast_overlay.css'
 import '../hud.css'
 import '../mobile-fight-hud.css'
 import { use_game_state } from '../../../store.js'
+import { select_hack_presentation } from '../../../core/world_presentation.js'
 import { event_toast_store } from '../../../core/toast.js'
 import { WorldChat } from './WorldChat.jsx'
 import { PartyFrame } from './PartyFrame.jsx'
@@ -52,9 +53,12 @@ import { PromptStack } from './PromptStack.jsx'
 import { DungeonsModal } from './DungeonsModal.jsx'
 import { FightsModal } from './FightsModal.jsx'
 import { FightOpennessToggle } from './FightOpennessToggle.jsx'
-// AUTO-SEARCH (#1106) — the DEV scouting loop (walk a ranged zone, search it, stop at a wanted mob). Every
-// leg it fires is a real gas-burning transaction, so it is gated on import.meta.env.DEV exactly like the
-// other dev rigs above: the branch is statically false in a production build and the tree drops.
+// AUTO-SEARCH (#1106) — the scouting loop (walk a ranged zone, search it, stop at a wanted mob). It is a
+// HACK-MODE surface, so it rides that grid's EXISTING visibility seam (select_hack_presentation, the same
+// one HackRadioPlayer self-gates on) rather than the build mode: reachable on every build the moment the
+// player arms hack mode, off the normal terrain HUD, and no second home for "is the dev entry showing".
+// Every leg it fires is a real gas-burning transaction; the money safety is the FEE MODAL on each enable
+// (the fold refuses to arm on a bare toggle), and unmounting here is a hard stop (`world_unbound`).
 import { AutoSearchPanel } from '../../../dev/AutoSearchPanel.jsx'
 import { Minimap } from '../Minimap.jsx' // CUBE-WORLD MINIMAP — top-right 3-D relief map (self-gates on pose)
 import { HackRadioPlayer } from './HackRadioPlayer.jsx' // HACK MODE — the album radio (self-gates on hack)
@@ -111,6 +115,9 @@ export function GameWorldHud() {
   // Tactical fight flag (engine store, set by core/modules/fight.js): combat replaces the world VIEW (the
   // board renders INTO the roam scene), so the combat chrome below mounts off this flag, not a panel set.
   const fight_mode = use_game_state((s) => s.fight_mode)
+  // HACK GRID (#812's reducer-door signal, never a second read of the preference): the LIVE session's
+  // presentation, so arming/disarming hack mode adds/removes the dev entry's surfaces without a reload.
+  const hack_grid = use_game_state(select_hack_presentation)
   // VIEW-ONLY spectate: a spectator sends no commands, so the deck hand is hidden (the
   // turn controls become a "Leave spectate" — FightControls handles that itself).
   const spectating = !!use_fight_view()?.spectator // synchronous core view (S2 mirror kill)
@@ -234,8 +241,9 @@ export function GameWorldHud() {
             {!fight_mode && has_character && <FightOpennessToggle />}
             {!fight_mode && has_character && <OnlinePlayers />}
             {!fight_mode && has_character && <WorldSwitcher />}
-            {/* AUTO-SEARCH (#1106) — directly under the world panel, DEV builds only (real transactions). */}
-            {import.meta.env.DEV && !fight_mode && has_character && <AutoSearchPanel />}
+            {/* AUTO-SEARCH (#1106) — directly under the world panel, on the hack grid only (the dev entry),
+                plus this cluster's own exploration/embodied gate. Unmounting halts the loop. */}
+            {hack_grid && !fight_mode && has_character && <AutoSearchPanel />}
           </div>
         )}
         {/* S-67 — the shared player-action menu (chat name click / in-world nameplate click). Renders null
