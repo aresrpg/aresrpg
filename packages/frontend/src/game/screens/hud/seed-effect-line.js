@@ -266,6 +266,27 @@ const core_parts = (t, fx) => {
       return { icon: null, dot: null, tone: TONE_BUFF, ...split_value(t, 'spells.fx_reduce_damage', {}, fx.base) }
     case 'REFLECT_DAMAGE':
       return { icon: null, dot: null, tone: TONE_BUFF, ...split_value(t, 'spells.fx_reflect_damage', {}, fx.base) }
+    // ── the wave-12 retro statuses (#1049): every kind the per-fighter status home can hold owns an arm here,
+    // asserted exhaustively by effect-badge-kind-coverage.test.js — a new status kind with no arm goes RED
+    // instead of painting `? 38` on a player's turn card. Semantics: spell_effect.move:76-84.
+    case 'DAMAGE_TO_HEAL':
+      return sentence_parts(t, 'spells.fx_damage_to_heal')
+    case 'NAMED_DAMAGE_STACK':
+      return { icon: 'raw_damage', dot: null, tone: TONE_BUFF, ...split_value(t, 'spells.fx_named_damage_stack', {}, fx.base) }
+    case 'REACTIVE_PUNISHMENT':
+      return { icon: null, dot: null, tone: TONE_BUFF, ...split_value(t, 'spells.fx_reactive_punishment', {}, fx.base) }
+    case 'EROSION':
+      // value = percent of max HP lost alongside the damage taken — a penalty, so the value reads red.
+      return { icon: 'health', dot: null, tone: TONE_BAD, ...split_value(t, 'spells.fx_erosion', {}, `${fx.base ?? 0}%`) }
+    case 'DAMAGE_REDIRECT':
+      // value 0 = a full redirect to the source; > 0 = that percent reflected at the attacker.
+      return (fx.base ?? 0) > 0
+        ? { icon: null, dot: null, tone: TONE_BUFF, ...split_value(t, 'spells.fx_damage_redirect_pct', {}, `${fx.base}%`) }
+        : sentence_parts(t, 'spells.fx_damage_redirect')
+    case 'TIMED_PAYLOAD':
+      return sentence_parts(t, 'spells.fx_timed_payload')
+    case 'STANCE':
+      return sentence_parts(t, 'spells.fx_stance')
     case 'PUSH':
       return { icon: null, dot: null, tone: TONE_BUFF, ...split_value(t, 'spells.fx_push', {}, fx.base) }
     case 'PULL':
