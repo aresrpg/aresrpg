@@ -44,6 +44,7 @@ import {
 
 import { with_experience } from '../world-shell/seat_character.js'
 import { use_dungeon } from '../world-shell/dungeon_store.js'
+import { mark_active_seat } from '../fight-engine/phase.js'
 import { install_fight_trace_tee } from '../world-shell/fight_trace_tee.js'
 import { context } from '../game/store.js'
 import { game_log } from '../core/log.js'
@@ -258,6 +259,15 @@ export const create_fight_shim = ({
     // it is read once here rather than spelled twice.
     const seat_id = focus_id ?? roster[0]?.id ?? null
     seed_stores({ fight_id, roster, mobs, width: chain.board.width, height: chain.board.height })
+    // THE POLL ANALOGUE (#1056). The phase machine's D81 latch — "this client reached an ACTIVE, seated turn in
+    // THIS fight" — is what makes a WON/FAILED read an EARNED terminal instead of an unearned one, and an
+    // unearned terminal is EXIT: the fight layer unmounts and the adapter tears the board down, so winning a
+    // simulator fight went BLACK where the victory sequence belongs. On chain the latch fires from the 4s poll
+    // (dungeon_run_store.refresh, off an ACTIVE read); this page has no poll, and START *is* that observation —
+    // it opens an ACTIVE fight on a seat this client holds. So it is latched here, once, at the same moment the
+    // stores learn the fight is ACTIVE. Keyed by fight id, exactly like the chain's, so nothing leaks to a
+    // later session. (dev_synth_fight.js does the same for the synthetic-fight rig, by folding a second read.)
+    mark_active_seat(fight_id)
     store.getState().input({
       type: 'init',
       fight_id,
