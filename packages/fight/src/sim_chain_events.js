@@ -17,7 +17,7 @@
 // emitted row's key set AND per-key JSON type against those captured rows.
 
 import { GRID_W, encode } from './los.js'
-import { INVISIBILITY_STATUS_KIND } from './fight_status_snapshot.js'
+import { INVISIBILITY_STATUS_KIND, MOB_FIGHTER_ID_BASE } from './fight_status_snapshot.js'
 
 /** The mock package id every emitted row is namespaced under. `decode_fight_event` keys off the LAST `::`
  *  segment, so the prefix is presentation only — but it must never collide with a real deployed package. */
@@ -93,6 +93,100 @@ export const fold_projection = (folded) => {
   }
   const winner = folded.winner ?? -1
   return { fighters: rows, active: winner === -1 ? (folded.active ?? null) : null, winner }
+}
+
+// ╔════════════════ [ The status read — the sim's live effect rows → the snapshot's status rows ] ═════════ ]
+
+/** The sim's stat keys → the chain's numeric stat id (`spell_effect.move` STAT_*; the inverse of the
+ *  normalizer's STAT_ID_MAP). A key absent here carries no numeric id and rides as null. */
+const STAT_CHAIN_ID = {
+  strength: 0,
+  intelligence: 1,
+  chance: 2,
+  agility: 3,
+  wisdom: 4,
+  vitality: 5,
+  range: 6,
+  critical_hit: 7,
+  percent_damage: 8,
+  raw_damage: 9,
+  max_hp: 10,
+  heal: 11,
+  ap_dodge: 12,
+  mp_dodge: 13,
+  physical_damage: 14,
+}
+
+/** Resist stat key → the chain element ordinal the K_ALTER_RESIST row carries (255 = NONE/neutral). */
+const RESIST_ELEMENT = {
+  fire_resistance: 0,
+  water_resistance: 1,
+  earth_resistance: 2,
+  air_resistance: 3,
+  neutral_resistance: 255,
+}
+
+/** A sim `ActiveEffect.type` → the chain status kind it is recorded as. The pool/resist variants of the two
+ *  stat rows are disambiguated by the row's own `stat` in `status_kind_of`, so this table holds the rest. */
+const STATUS_KIND = {
+  INVISIBILITY: 27, // K_INVISIBILITY
+  POISON: 21, // K_APPLY_DOT
+  SHIELD: 24, // K_REDUCE_DAMAGE
+  REFLECT_DAMAGE: 25, // K_REFLECT_DAMAGE
+  RETURN_SPELL: 29, // K_RETURN_SPELL
+  APPLY_STATE: 22, // K_APPLY_STATE
+  STUN: 22, // a stun is a named state on chain (no dedicated kind)
+  DAMAGE_TO_HEAL: 32, // K_DAMAGE_TO_HEAL
+  TIMED_PAYLOAD: 34, // K_TIMED_PAYLOAD
+  NAMED_DAMAGE_STACK: 35, // K_NAMED_DAMAGE_STACK
+  STANCE: 36, // K_STANCE
+  REACTIVE_PUNISHMENT: 37, // K_REACTIVE_PUNISHMENT
+  EROSION: 38, // K_EROSION
+  DAMAGE_REDIRECT: 39, // K_DAMAGE_REDIRECT
+}
+
+/** The chain kind for one live sim effect row, or null when the row is not a status the chain records
+ *  (a plain DAMAGE/HEAL tick row is bookkeeping, never a badge). */
+const status_kind_of = (effect) => {
+  if (effect.type === 'STAT_BUFF' || effect.type === 'STAT_DEBUFF') {
+    if (POOL_POINT_KIND[effect.stat] !== undefined) return effect.type === 'STAT_BUFF' ? 6 : 7 // GIVE/REMOVE_POINTS
+    return RESIST_ELEMENT[effect.stat] !== undefined ? 11 : 9 // ALTER_RESIST : ALTER_STAT
+  }
+  return STATUS_KIND[effect.type] ?? null
+}
+
+/**
+ * THE SIMULATOR'S STATUS READ. `snapshot_from_sim` is the only durable channel behind the receipt, so it must
+ * state the statuses the sim HOLDS — the store's omission-hold law (fold.js `carry_statuses`) treats any array,
+ * `[]` included, as authoritative "nobody has one". A hardcoded `[]` therefore wiped the invisibility the
+ * receipt had just floored and every buff badge with it, which is #952's wholesale rollback.
+ *
+ * Rows come out in the raw `spell_board` shape `status_snapshot_entities` decodes: `fighter` is the seat index
+ * for a player and `MOB_FIGHTER_ID_BASE + idx` for a mob.
+ * @param {object} state a sim FightState
+ * @returns {object[]}
+ */
+export const status_rows_from_sim = (state) => {
+  const rows = []
+  const collect = (team, fighter_base) =>
+    team.forEach((entity, idx) => {
+      for (const effect of entity.effects ?? []) {
+        const kind = status_kind_of(effect)
+        if (kind == null) continue
+        rows.push({
+          fighter: fighter_base + idx,
+          kind,
+          remaining_turns: Math.max(0, Math.trunc(Number(effect.turns_remaining) || 0)),
+          element: RESIST_ELEMENT[effect.stat] ?? null,
+          value: Number(effect.value) || 0,
+          stat: POOL_POINT_KIND[effect.stat] ?? STAT_CHAIN_ID[effect.stat] ?? null,
+          chance: effect.chance ?? null,
+        })
+      }
+    })
+  collect(state.team0, 0)
+  collect(state.team1, MOB_FIGHTER_ID_BASE)
+  return rows
 }
 
 // ╔════════════════ [ The event encoder — sim events → fight_events rows (spec §4.4) ] ════════════════════ ]
