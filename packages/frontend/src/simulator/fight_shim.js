@@ -47,6 +47,7 @@ import { install_fight_trace_tee } from '../world-shell/fight_trace_tee.js'
 import { context } from '../game/store.js'
 import { game_log } from '../core/log.js'
 
+import { hand_update_of } from './fight_setup.js'
 import { export_sim_trace } from './trace_export.js'
 import { save_trace } from './persistence'
 
@@ -251,6 +252,9 @@ export const create_fight_shim = ({
     arm_trace_tee(store)
     const chain = create_sim_chain({ seed, fight_id, team0, team1, templates_raw, anchor })
     live = { chain, fight_id, seed }
+    // THE SEAT THE PLAYER HOLDS — the ctx's `my_entity_id` and the hand the bar opens on are the same seat, so
+    // it is read once here rather than spelled twice.
+    const seat_id = focus_id ?? roster[0]?.id ?? null
     seed_stores({ fight_id, roster, mobs, width: chain.board.width, height: chain.board.height })
     store.getState().input({
       type: 'init',
@@ -265,7 +269,7 @@ export const create_fight_shim = ({
         // which on this page holds whatever the world session last loaded (often the player's real roster,
         // which never contains `sim_c1`).
         roster: roster.map(({ id, name, class_id, level }) => ({ id, name, classe: class_id, level })),
-        my_entity_id: focus_id ?? roster[0]?.id ?? null,
+        my_entity_id: seat_id,
         creator: LOCAL_ADDRESS,
         spectator: false,
         run: null,
@@ -281,12 +285,22 @@ export const create_fight_shim = ({
       },
     })
     store.getState().input({ type: 'snapshot', fight: snapshot_from_sim(chain, { now_ms: now() }), version: 1 })
+    // THE DEALT HAND (#949). The snapshot carries none, so without this the spell bar opens EMPTY on a full
+    // deck and fills only when a later turn's update lands — read as "this seat only has its first spells".
+    const hand_update = hand_update_of(chain.sim_state, seat_id)
+    if (hand_update) store.getState().input({ ...hand_update, fight_id })
     pump_mobs() // the turn weave can open on a mob seat
     return { ok: true, fight_id }
   }
 
-  /** Seat focus (spec §6) — the production MULTICHAR path; the core re-resolves `my_key` from the new entity. */
-  const focus_seat = (character_id) => store.getState().input({ type: 'ctx', ctx: { my_entity_id: character_id } })
+  /** Seat focus (spec §6) — the production MULTICHAR path; the core re-resolves `my_key` from the new entity.
+   *  The bar's hand is a SINGLE slot, so the new seat's cards go through the same door the open used (#949) —
+   *  otherwise focus switches the board and leaves the previous seat's spells armed on the bar. */
+  const focus_seat = (character_id) => {
+    store.getState().input({ type: 'ctx', ctx: { my_entity_id: character_id } })
+    const hand_update = live && hand_update_of(live.chain.sim_state, character_id)
+    if (hand_update) store.getState().input({ ...hand_update, fight_id: live.fight_id })
+  }
 
   /** Full teardown — the core forgets the fight (a fresh session generation drops any in-flight async input). */
   const dispose = () => {

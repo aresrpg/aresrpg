@@ -100,6 +100,37 @@ export const mob_entity = ({ mob, index, cell, spells = [] }) => {
 }
 
 /**
+ * ONE seat's CURRENT hand as the store's own `hand_update` input (#949) — the door the spell bar's `fight.hand`
+ * is written through, and the only one.
+ *
+ * A fight's opening deal never reached it. `create_sim_chain` deals every player seat a full hand inside its
+ * constructor and reports it as a sim `hand_update` event, but those start events are folded away in there and
+ * never surface as a receipt, and `snapshot_from_sim` carries no hand on a participant row. So the ctx+snapshot
+ * pair a fight opens with put NOTHING on the bar, whatever the deck held: a level-200 seat opened on an empty
+ * bar and showed only the cards some LATER turn's update happened to deliver — read as "this character has
+ * just its first spells". Read off the chain's own dealt state, so the bar holds the cards the sim holds
+ * rather than a second deal, and so seat FOCUS can re-read the same fact for the seat it switches to.
+ *
+ * ONE seat, not the roster: the store keeps a SINGLE hand (the local player's — on chain the server routes
+ * each update to its owner), so handing it every seat's would leave the last one showing.
+ * @param {{ team0?: Array<{ id: string, hand?: string[], deck?: string[], discard?: string[] }> }} sim_state
+ * @param {string | null} entity_id  the seat the page is focused on
+ * @returns {{ type: 'hand_update', entity_id: string, hand: string[], deck_size: number,
+ *   discard_size: number } | null}  null when the chain holds no such seat
+ */
+export const hand_update_of = (sim_state, entity_id) => {
+  const seat = (sim_state?.team0 ?? []).find(({ id }) => id === entity_id)
+  if (!seat) return null
+  return {
+    type: 'hand_update',
+    entity_id: seat.id,
+    hand: seat.hand ?? [],
+    deck_size: seat.deck?.length ?? 0,
+    discard_size: seat.discard?.length ?? 0,
+  }
+}
+
+/**
  * The whole start fold: placed roster seats → team0, picked mobs → team1, and the ONE template map the
  * authority's `ctx` carries (class templates plus every mob's authored kit, merged into one map).
  *

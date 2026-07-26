@@ -34,6 +34,13 @@ const { build_teams } = await import('./fight_setup.js')
 const { build_seat } = await import('./content.js')
 const { create_fight_shim } = await import('./fight_shim.js')
 const { SpellBar } = await import('../game/screens/hud/SpellBar.jsx')
+const { reset_walrus_assets_for_test } = await import('@aresrpg/sdk/jobs')
+
+// The pinned markup now holds FILLED sockets (#949 — a fight's dealt hand reaches the bar), and a filled
+// socket carries its spell-art URL. That URL is resolved off the process-wide asset manifest, which any
+// earlier test file in the run may have configured — so the snapshot would say `/assets/…` alone and
+// `https://cdn…/walrus/…` inside the suite. Reset to the unpublished default: one URL shape, either way.
+reset_walrus_assets_for_test()
 
 const SEED = 0xc81f3a92
 const NOW = 1_700_000_000_000
