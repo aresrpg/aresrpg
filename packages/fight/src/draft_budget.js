@@ -84,6 +84,16 @@ export function cap_of(authored) {
   return authored == null || authored === 255 || authored === 0 ? Infinity : authored
 }
 
+/** THE ONE PER-TARGET VERDICT (#1045) — cast.move's TargetKey/TargetRecord rule: `cell` is SPENT for `spell_key`
+ *  this turn, so the chain would abort ECastsPerTarget on a repeat. The board's castable gate drops such cells and
+ *  the click path names them (a mute disarm was the "the second cast folded nothing" dead-end: a spell whose
+ *  casts_per_turn is unlimited stays legitimately armable — only its already-hit cells are spent).
+ *  @param {Array<{ cell:number, spell_key:string|null }>|null|undefined} cast_path this turn's drafted queue
+ *  @param {string|null} spell_key @param {number} cell @param {number|null|undefined} casts_per_target */
+export function target_cap_reached(cast_path, spell_key, cell, casts_per_target) {
+  return casts_at_cell(cast_path, spell_key, cell) >= cap_of(casts_per_target)
+}
+
 /** The visible turn deadline the timer should count to: while a draft exists it counts to the auto-commit
  *  moment (deadline − buffer) so "time left but locked" never shows; idle (no draft) counts to the raw deadline
  *  (the turn runs full length — liquidation ends it there). @param {number} deadline @param {boolean} has_draft

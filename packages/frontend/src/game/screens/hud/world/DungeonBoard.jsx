@@ -67,7 +67,7 @@ import { character_cast_clock, use_dungeon_turn } from '../../dungeon-turn.js'
 import { GRID_W, GRID_CELLS, encode, decode, lineOfSight, bfsPathCost, bfsPath, bfsReachable } from '@aresrpg/fight/los'
 import { dungeon_grid_of } from '../../dungeon-grid.js'
 import { presentation_blocked_cells } from '../../../../world-shell/fight_board_blockers.js'
-import { on_cooldown, cooldown_left, casts_at_cell, cap_of } from '@aresrpg/fight/draft_budget'
+import { on_cooldown, cooldown_left, target_cap_reached, cap_of } from '@aresrpg/fight/draft_budget'
 import { FightControls } from '../FightControls.jsx'
 import { ConfirmDialog } from './ConfirmDialog.jsx'
 import { use_fight_phase } from './use_fight_phase.js'
@@ -307,7 +307,10 @@ export function DungeonBoard() {
   const armed_on_cd = on_cooldown(last_cast_turn[armed_key], my_turn_no, armed_cooldown)
   const armed_cd_left = cooldown_left(last_cast_turn[armed_key], my_turn_no, armed_cooldown)
   const cpt_cap_eff = armed_cooldown > 0 ? 1 : cpt_cap
-  const cpt_target_cap = armed_id === WEAPON_ATTACK_ID ? Infinity : cap_of(active_spell?.levels?.[0]?.casts_per_target)
+  // The AUTHORED per-target cap rides raw so every read goes through the ONE verdict (`target_cap_reached`);
+  // `cpt_target_cap` stays the resolved number the footprint loop tests for the unlimited short-circuit.
+  const cpt_target_authored = armed_id === WEAPON_ATTACK_ID ? Infinity : active_spell?.levels?.[0]?.casts_per_target
+  const cpt_target_cap = cap_of(cpt_target_authored)
 
   // D108/D109 (Decision-A: the chain-SEEDED cell IS a valid pick) — the encoded escrow cell (`me.cell`)
   // snapped into the contract's legal start set (placement_cells[0]) so READY's place_at never EBadStartCell.
@@ -459,7 +462,7 @@ export function DungeonBoard() {
       // FIX 4 casts_per_target: a cell already at its per-target cap this turn drops out (chain aborts ECastsPerTarget).
       if (cpt_target_cap !== Infinity)
         for (const c of [...footprint])
-          if (casts_at_cell(cast_path, armed_key, c) >= cpt_target_cap) footprint.delete(c)
+          if (target_cap_reached(cast_path, armed_key, c, cpt_target_authored)) footprint.delete(c)
       return footprint
     }
     const out = new Set()
@@ -473,7 +476,7 @@ export function DungeonBoard() {
       const d = manhattan(caster_cell, cell)
       if (d < cast_params.range_min || d > effective_range_max) continue
       if (!lineOfSight(caster_cell, cell, los_blockers)) continue
-      if (casts_at_cell(cast_path, armed_key, cell) >= cpt_target_cap) continue // FIX 4 casts_per_target (per cell/turn)
+      if (target_cap_reached(cast_path, armed_key, cell, cpt_target_authored)) continue // FIX 4 casts_per_target (per cell/turn)
       out.add(cell)
     }
     return out
@@ -485,6 +488,7 @@ export function DungeonBoard() {
     cpt_cap_eff,
     armed_on_cd,
     cpt_target_cap,
+    cpt_target_authored,
     armed_key,
     cast_path,
     occupied,
@@ -987,10 +991,16 @@ export function DungeonBoard() {
     // 2026-07-17: clicking any non-targetable cell with a spell armed deselects it, now the store's one rule).
     // Queued strikes on real enemies SURVIVE the disarm (this block's own charter): the old
     // set_cast_target(null) here wiped the whole cast_path queue — flush ships it, so wiping it silently
-    // cancelled every drafted strike. Only the cooldown case keeps a surface here: surface WHY (no silent no-op).
+    // cancelled every drafted strike. The KNOWN refusals keep a surface here: surface WHY (no silent no-op).
     if (armed) {
       if (armed !== WEAPON_ATTACK_ID && armed_on_cd)
         push_event_toast({ state: 'info', title: t('dungeons.spell_on_cooldown', { n: armed_cd_left }) })
+      // #1045 A SPENT TARGET SAYS SO: an unlimited-per-turn spell with a per-TARGET cap (patient venom ships
+      // casts_per_target 1) stays legitimately armable — every other cell is still legal — so the re-armed click
+      // landed on a cell `castable` had dropped and vanished into the disarm. Name it with the copy the chain's
+      // own ECastsPerTarget abort already ships (abort_copy.js 106), off the ONE per-target home.
+      else if (armed !== WEAPON_ATTACK_ID && target_cap_reached(cast_path, armed_key, cell, cpt_target_authored))
+        push_event_toast({ state: 'info', title: t('errors.cast_per_target_limit') })
       return
     }
     // D254 cumulative move: each reachable click APPENDS a new SEGMENT from the last step (its own segment + BFS
