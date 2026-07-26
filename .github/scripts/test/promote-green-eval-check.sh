@@ -135,15 +135,15 @@ ENVELOPE=$(jq -nc --argjson runs "$(runs_array "$(check_run build completed succ
   '{total_count: 1, check_runs: $runs}')
 expect_prefix "envelope-shape-accepted" green "$ENVELOPE" "$(jq -nc '["build"]')"
 
-# ── 9. the REAL production REQUIRED_CHECKS, all 14 present + green → green ─────────────────
-# Regression guard on the hand-maintained array itself (promote-green-eval.sh) — a typo'd name
-# here would show up as a permanently-missing check in production; this locks the list's names.
+# ── 9. the REAL production REQUIRED_CHECKS, entire derived set present + green → green ─────
+# Regression guard on the dynamically derived production set (promote-green-eval.sh) — every
+# derived name must be accepted when its check-run is present and green.
 ALL_REAL_RUNS_JSON=$(jq -c '.[]' <<<"$REQUIRED_CHECKS_JSON" | while IFS= read -r name_json; do
   check_run "$(jq -r . <<<"$name_json")" completed success
 done | jq -s '.')
 expect_prefix "production-set-all-green" green "$ALL_REAL_RUNS_JSON" # default (real) required set
 
-# ── 10. the REPORTED bug, reproduced exactly: 13/14 real checks green, `smoke` never
+# ── 10. the REPORTED bug, reproduced exactly: every real check except `smoke` green, `smoke` never
 #       registered on the sha (checks.yml's slow leg hasn't reported in yet) → not, names smoke ─
 REAL_MINUS_SMOKE_RUNS_JSON=$(jq -c '.[]' <<<"$REQUIRED_CHECKS_JSON" | while IFS= read -r name_json; do
   name=$(jq -r . <<<"$name_json")
