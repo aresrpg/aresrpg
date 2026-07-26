@@ -220,6 +220,31 @@ present (e.g. `valkey-bundle`, or Valkey + the corresponding modules) — the
 indexer and API speak plain `JSON.*` / `FT.*` and never depend on Redis-only
 internals. Point `REDIS_URL` at the Valkey instance; nothing else changes.
 
+## Standby parity — the flip predicate
+
+Read-layer invalidation is a **blue/green flip**, never a flush (#1109). Before the `/v1` pointer
+moves, `scripts/standby_parity.mjs` decides — mechanically — whether the standby stack is safe to
+serve:
+
+- **package-set parity** — the standby indexer's `ARES_PACKAGES` set equals the serving one (set
+  semantics; canonical `0x` + 64 hex). On 2026-07-27 a green, fully caught-up standby held the
+  _previous_ era's twelve package ids: a blind flip would have served the wrong world.
+- **watermark-vs-tip** — every standby pipeline watermark is within `PARITY_TIP_TOLERANCE`
+  checkpoints of the live chain tip (read from the official fullnode's gRPC v2 `LedgerService`
+  over gRPC-Web; the JSON-RPC route 404s). Completeness is measured, never timed.
+
+```bash
+PARITY_SERVING_PACKAGES=0x…,0x… \
+PARITY_STANDBY_PACKAGES=0x…,0x… \
+PARITY_STANDBY_REDIS_URL=redis://standby:6379 \
+  bun scripts/standby_parity.mjs      # 0 = FLIP-ELIGIBLE · 1 = a tooth failed · 2 = unevaluable
+```
+
+Exit 1 prints one named reason per failed tooth. The script's header documents every env knob;
+its pure core is unit-tested in `scripts/standby_parity.test.js`, including the 2026-07-27
+near-miss fixture (twelve ids on both sides, zero overlap — a count check waves it through, set
+equality does not).
+
 ## Layout
 
 ```
@@ -227,6 +252,7 @@ packages/rpc/
 ├── indexer/            # Rust — checkpoint ingestion → Redis (sui-indexer-alt-framework)
 ├── api/                # Bun  — read-only HTTP JSON API
 ├── gas-pool/           # opt-in Mysten sui-gas-pool sponsor (--profile gas)
+├── scripts/            # ops predicates (standby_parity.mjs — the blue/green flip gate)
 ├── docker-compose.yml  # redis + indexer + api (+ gas-pool under the gas profile)
 └── .env.example
 ```
