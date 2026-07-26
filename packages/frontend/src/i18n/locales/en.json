@@ -1950,6 +1950,7 @@
     "el_earth": "Earth",
     "el_air": "Air",
     "buff": "Buff",
+    "utility": "Utility",
     "heal": "Heal",
     "tag_self": "Self",
     "tag_zone": "Zone",

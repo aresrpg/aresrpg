@@ -5,10 +5,15 @@ import { useTranslation } from 'react-i18next'
 import { Sparkles, Heart, ArrowLeft } from 'lucide-react'
 import { spell_icon_url } from '@aresrpg/sdk/jobs'
 
-import { ELEMENT_COLORS } from '../../components/entity_display'
 import { use_template_t } from '../../i18n/template_t'
 import { class_spells } from '../../game/screens/hud/fight-spells.js'
-import { seed_effect_parts, seed_effect_value, is_area_effect } from '../../game/screens/hud/seed-effect-line.js'
+import {
+  seed_effect_parts,
+  seed_effect_value,
+  seed_el_label,
+  is_area_effect,
+} from '../../game/screens/hud/seed-effect-line.js'
+import { spell_category } from '../../game/screens/hud/spell-category.js'
 import { EffectLine } from '../../game/screens/hud/EffectLine.jsx'
 
 import { AoeMiniGrid, aoe_grid_view } from './effect_aoe_grid'
@@ -125,7 +130,7 @@ function SpellDetail({ spell }: { spell: any }) {
   }, [spell.name_key])
   const idx = active_idx < levels.length ? active_idx : 0
   const lvl = levels[idx] ?? null
-  const spell_element = spell.element ? String(spell.element).toLowerCase() : null
+  const category = lvl ? spell_category(lvl) : null
   const self_cast = Array.isArray(lvl?.range) && finite_number(lvl.range[0]) === 0 && finite_number(lvl.range[1]) === 0
   const zone_labels = lvl ? spell_zone_labels(t as Translate, lvl) : []
 
@@ -153,12 +158,13 @@ function SpellDetail({ spell }: { spell: any }) {
           <span className="text-[8px] tracking-[0.15em] uppercase text-muted">
             {t('encyclopedia.unlocks_at_level', { level: spell.unlock_level })}
           </span>
-          {spell_element && (
+          {category && (
             <span
               className="text-[8px] tracking-[0.15em] uppercase"
-              style={{ color: ELEMENT_COLORS[spell_element] || 'var(--color-muted)' }}
+              style={{ color: category.color }}
+              data-spell-category={category.key}
             >
-              {t(`encyclopedia.element.${spell_element}`, spell.element) as string}
+              {seed_el_label(t as any, category.key)}
             </span>
           )}
         </div>

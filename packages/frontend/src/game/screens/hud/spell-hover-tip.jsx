@@ -4,8 +4,8 @@
 // and effects come from the same chain projection + shared effect grammar as the grimoire, so there is no
 // second spell-info source to drift.
 
-import { element_color } from './element-colors.js'
 import { seed_effect_line, seed_el_label } from './seed-effect-line.js'
+import { spell_category } from './spell-category.js'
 import { spell_effects } from './spellbook-data.js'
 
 /**
@@ -18,10 +18,11 @@ import { spell_effects } from './spellbook-data.js'
 export const spell_hover_facts = (t, spell) => {
   const level = spell?.levels?.[0] ?? null
   const [range_min, range_max] = level?.range ?? [0, 0]
-  const element = level?.effects?.find((effect) => effect.kind === 'DAMAGE')?.element ?? null
-  const subline = element
-    ? `${seed_el_label(t, element)} · ${t('spells.damage')}`
-    : t(spell?.kind === 'heal' ? 'spells.heal' : 'spells.buff')
+  const category = spell_category(level)
+  const subline =
+    category.family === 'damage' || category.family === 'heal'
+      ? `${seed_el_label(t, category.key)} · ${t(`spells.${category.family}`)}`
+      : seed_el_label(t, category.key)
   const none = t('fight.none')
 
   return {
@@ -30,7 +31,7 @@ export const spell_hover_facts = (t, spell) => {
     crit_txt: level?.crit_rate > 0 ? `1 / ${level.crit_rate}` : none,
     cooldown_txt: level?.cooldown > 0 ? `${level.cooldown} ${t('spells.turns')}` : none,
     subline,
-    color: element_color(element),
+    color: category.color,
     effects: spell_effects(level).map((effect) => ({
       text: seed_effect_line(t, effect),
       color: effect.color,

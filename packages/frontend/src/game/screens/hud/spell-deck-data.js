@@ -16,12 +16,9 @@
 import { spell_templates, spell_card } from '../../core/modules/fight.js'
 
 import { element_color } from './element-colors.js'
+import { SPELL_BUFF_COLOR } from './spell-category.js'
 
 /** @typedef {'fire' | 'water' | 'earth' | 'air' | 'buff'} SpellBucket */
-
-// Non-damage spells share one BUFF bucket + tint (the house epic violet; element-colors carries no buff
-// key, so this single category colour is defined here, not a re-declared element colour).
-const BUFF_COLOR = '#b07cff'
 
 // Effect types that make a spell "elemental" for bucketing/tint (a damaging spell of its element).
 const DAMAGE_TYPES = new Set(['DAMAGE', 'POISON'])
@@ -57,7 +54,7 @@ const categorize = spell_id => {
     school: null,
     bucket: 'buff',
     kind: heal ? 'Heal' : 'Buff',
-    color: BUFF_COLOR,
+    color: SPELL_BUFF_COLOR,
   }
 }
 

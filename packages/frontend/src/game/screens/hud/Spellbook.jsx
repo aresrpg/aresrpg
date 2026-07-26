@@ -46,6 +46,7 @@ import {
 
 import { class_spells } from './fight-spells.js'
 import { grimoire, upgrade_state, crit_pct, spell_effects, MAX_SPELL_LEVEL } from './spellbook-data.js'
+import { spell_category } from './spell-category.js'
 import { seed_effect_parts, seed_el_label } from './seed-effect-line.js'
 import { EffectLine } from './EffectLine.jsx'
 // The row (art + name + subline + trailing slot) and the i18n-first spell copy live in ONE home so the
@@ -268,6 +269,7 @@ function SpellDetailPanel({ t, row, char_level, points, character_id, ready, on_
   // upgrade's receipt projection) — the browsed tab snaps to the new truth, exactly like the mount default.
   useEffect(() => set_sel(Math.max(1, cur)), [cur])
   const sl = row.levels[sel - 1]
+  const category = spell_category(sl)
   const crit = crit_pct(sl)
   const state = upgrade_state(row, char_level, points)
   const effects = spell_effects(sl)
@@ -335,15 +337,15 @@ function SpellDetailPanel({ t, row, char_level, points, character_id, ready, on_
   ]
 
   return (
-    <div className="sb__detail" style={/** @type {import('react').CSSProperties} */ ({ '--el': row.color })}>
+    <div className="sb__detail" style={/** @type {import('react').CSSProperties} */ ({ '--el': category.color })}>
       <div className="sb__dhead">
-        <SpellIcon icon={row.icon} color={row.color} name={name} cls="sb__bigic" />
+        <SpellIcon icon={row.icon} color={category.color} name={name} cls="sb__bigic" />
         <div className="sb__dtitle">
           <h2>{name}</h2>
           <div className="sb__tagrow">
             <span className="sb__chip sb__chip--el">
               <span className="sb__chip-d" />
-              {seed_el_label(t, row.subline_kind)}
+              {seed_el_label(t, category.key)}
             </span>
             <span className="sb__chip sb__chip--type">{t(`spells.tag_${row.subline_descriptor}`)}</span>
             <span className="sb__clvl">

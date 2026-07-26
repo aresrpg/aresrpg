@@ -18,6 +18,7 @@ import { spell_upgrade_cost } from '@aresrpg/sdk/progression'
 
 import { element_color } from './element-colors.js'
 import { class_spells } from './fight-spells.js'
+import { spell_category } from './spell-category.js'
 // The house heal-pink grammar — ONE home in seed-effect-line.js (the effect-line tone SSOT).
 import { HEAL_PINK } from './seed-effect-line.js'
 
@@ -57,25 +58,6 @@ export const crit_pct = level =>
 export const spell_effects = level =>
   (level?.effects ?? []).map(e => ({ ...e, color: effect_color(e) }))
 
-/** The element a spell reads as for its list dot / subline — the first DAMAGE effect's element, else null for a
- * pure heal/buff/utility spell. PLACE_TRAP carries no element of its own (S-64 audit — see effect_color above),
- * so it is skipped rather than short-circuiting the scan: a trap spell's real element is its SIBLING DAMAGE
- * effect (e.g. tomoda kelp_snare = PLACE_TRAP + DAMAGE(earth)) — stopping at the trap used to misclassify every
- * trap spell as a colourless 'buff'. @param {{ effects?: Array<object> } | null | undefined} level */
-const spell_element = level => {
-  for (const e of level?.effects ?? []) {
-    if (e.kind === 'DAMAGE') return e.element
-  }
-  return null
-}
-
-/** The list KIND key (element for damage spells, else 'buff') + its dot tint. */
-const kind_of = level => {
-  const el = spell_element(level)
-  if (el) return { key: el, color: element_color(el) }
-  return { key: 'buff', color: GOLD }
-}
-
 /** A short targeting descriptor for the list subline ('self' / 'melee' / 'ranged'). @param {{ range?: number[], effects?: Array<object> }} level */
 const descriptor = level => {
   const rmax = level?.range?.[1] ?? 0
@@ -100,7 +82,7 @@ const descriptor = level => {
  */
 export const grimoire = (class_id, char_level, points, invested = {}) => {
   const rows = class_spells(class_id).map(sp => {
-    const kind = kind_of(sp.levels[0])
+    const kind = spell_category(sp.levels[0])
     const unlocked = char_level >= sp.unlock_level
     // Chain truth: an unlocked class spell is ALWAYS at least level 1 (free baseline — absent DF reads 1);
     // a locked one renders 0 (not yet usable). `invested` overrides with the real raised level.

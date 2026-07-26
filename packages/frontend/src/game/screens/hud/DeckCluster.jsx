@@ -39,6 +39,7 @@ import { arm_spell, hover_spell, spell_card, spell_element, WEAPON_ATTACK_ID } f
 import { fight_spell, seat_spell_row } from './fight-spells.js'
 import { cooldown_display, cap_of } from '@aresrpg/fight/draft_budget'
 import { element_color } from './element-colors.js'
+import { spell_category } from './spell-category.js'
 import { Tooltip } from './Tooltip.jsx'
 import { SpellSeedTip } from './tooltip-content.jsx'
 import { resolve_key_arm, deck_my_turn, is_arm_key } from './deck-key-arm.js'
@@ -56,9 +57,10 @@ const weapon_element_name = (t, element) => t(`encyclopedia.element.${WEAPON_ELE
 // the on-chain Weapon decode, so this signature is the honest "no weapon equipped" tell for the tooltip label.
 const is_bare_hands = (w) => !!w && w.element === 2 && w.damage === 4 && w.ap_cost === 3 && w.reach === 1
 
-// element → gem tint from the house ramp SSOT (element_color is case-insensitive, so it takes the UPPERCASE
-// element ids the sim emits as-is and falls back to the neutral tint for a missing element).
-const card_color = (spell_id) => element_color(spell_element(spell_id))
+// Seeded socket gems follow the selected level's actual-effect category. A legacy simulator-only card has no
+// projected spell row here, so it keeps the existing normalized element tint instead of guessing.
+const card_color = (spell_id, spell) =>
+  spell ? spell_category(spell.levels?.[0]).color : element_color(spell_element(spell_id))
 
 // True while a text field owns focus — the number-key selection must stay inert while the player types in
 // chat / any input (typing law). Same guard the world keys use (embed_voxel / NpcPrompt).
@@ -290,8 +292,8 @@ export function DeckCluster() {
             const spell_id = hand[i]
             if (!spell_id) return <EmptySocket key={`empty-${i}`} keyCap={key_cap} />
             const card = spell_card(spell_id, me)
-            const color = card_color(spell_id)
             const spell = fight_spell(spell_id)
+            const color = card_color(spell_id, spell)
             const gate = cast_gate(spell_id)
             const affordable = my_turn && card.cost <= ap && !gate.on_cd && !gate.exhausted
             return (

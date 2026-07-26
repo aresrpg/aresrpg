@@ -110,7 +110,7 @@ describe('spell_hover_facts', () => {
     expect(facts.range_txt).toBe('3')
     expect(facts.crit_txt).toBe(en.fight.none)
     expect(facts.cooldown_txt).toBe(en.fight.none)
-    expect(facts.subline).toBe(en.spells.heal)
+    expect(facts.subline).toBe(en.spells.utility)
   })
 })
 
