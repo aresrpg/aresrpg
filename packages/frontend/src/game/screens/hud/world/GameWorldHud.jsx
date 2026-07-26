@@ -178,6 +178,12 @@ export function GameWorldHud() {
     import('../../../dev/dev_bot_seam.js').then((m) => {
       if (!cleared) m.register_dev_bot_seam()
     })
+    // #1100 coop — the second seat's door (__ARES_DEV_WORLD_JOIN). WORLD-ONLY BY CONSTRUCTION: it imports the
+    // chain entry, so it may never live in the seam module the simulator also registers (zero-drift's one
+    // world-only row). Same DEV gate + tree-shake.
+    import('../../../dev/dev_world_entry.js').then((m) => {
+      if (!cleared) m.register_dev_world_entry()
+    })
     return () => {
       cleared = true
     }
