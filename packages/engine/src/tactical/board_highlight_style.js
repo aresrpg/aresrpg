@@ -25,8 +25,16 @@ export function resolve_highlight_style(spec) {
 /** Ally/enemy palette shared by seat glows and entity outlines. */
 export const TEAM_COLORS = { ally: 0x5db4ff, enemy: 0xff6b6b }
 
-/** Trap identity color shared by the semantic channel and its compound base/spike materials. */
+/** Trap IDENTITY color — the design-system gold, worn by the marker's SPIKE (the part the eye picks out) and
+ *  by the semantic channel row below. */
 export const TRAP_COLOR = 0xc8963c
+/** Trap BASE color — a warm near-black cell (#1043). The base used to wear the identity gold too, which over
+ *  the pale warm paving (board_surface.js's PAVING_TONE_DOMINANT) composited to a 1.6:1 tan-on-tan tint: "a
+ *  faint wash barely distinguishable from the floor". A trap is a HAZARD — it reads as a hole punched in the
+ *  paving with a gold spike standing in it (12.7:1 against the paving, 5.8:1 spike-against-base; pinned in
+ *  board_highlights.test.js). Warm rather than neutral black so it stays kin to the gold and never reads as
+ *  the cold gray-blue of a real hole (board.js COLOR_HOLE_RIM). */
+export const TRAP_BASE_COLOR = 0x14110b
 
 /** Render tiers only: projection has already selected one base paint; glyph/trap are sanctioned layers above it. */
 export const CELL_LAYER_ORDER = Object.freeze({
@@ -176,9 +184,13 @@ export const CHANNELS = {
     ...GLYPH_TINT,
     order: CELL_LAYER_ORDER.glyph_hover,
   },
-  // The compound marker consumes this exact gold for both of its unlit materials, so trap identity survives
-  // midnight unchanged instead of collapsing to the old near-black silhouette.
-  trap: { color: TRAP_COLOR, opacity: 0.95, order: CELL_LAYER_ORDER.trap, border: true },
+  // TRAP — the one channel whose tile is NOT built from this row's material dials: board_highlights.js's
+  // build_trap_marker paints a compound dark-base + gold-spike marker (board_highlight_materials.js owns both
+  // unlit materials, TRAP_BASE_COLOR + TRAP_COLOR). This row carries the channel's semantic IDENTITY color —
+  // the spike's gold — and its stack order, which is all the channel loop reads for 'trap'. (A `border: true`
+  // dial used to sit here claiming a hollow gold ring "is what actually reads": nothing ever rendered it, and
+  // the filled gold it was meant to rescue is exactly the #1043 tan-on-tan wash.)
+  trap: { color: TRAP_COLOR, opacity: 0.95, order: CELL_LAYER_ORDER.trap },
   selection: { color: 0xdff0ff, opacity: 0.95, order: 6, outline: true },
   ally_seat: { color: TEAM_COLORS.ally, opacity: 0.9, order: 7, border: true },
   enemy_seat: { color: TEAM_COLORS.enemy, opacity: 0.9, order: 7, border: true },

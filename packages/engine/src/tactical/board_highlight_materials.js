@@ -18,7 +18,7 @@ import {
   edges_of_mask,
   rounded_rect_gradient,
 } from './board_highlight_shapes.js'
-import { TRAP_COLOR, resolve_highlight_style } from './board_highlight_style.js'
+import { TRAP_BASE_COLOR, TRAP_COLOR, resolve_highlight_style } from './board_highlight_style.js'
 
 /**
  * The one material path for fight-board overlays. This matches the engine's materialization-floor and
@@ -195,8 +195,9 @@ export function make_diamond_texture() {
   return t
 }
 
-export const TRAP_BLOB_COLOR = TRAP_COLOR
-export const TRAP_BLOB_OPACITY = 0.88
+// [#1043] the BASE is the DARK half of the marker; the identity gold rides the spike above it.
+export const TRAP_BLOB_COLOR = TRAP_BASE_COLOR
+export const TRAP_BLOB_OPACITY = 0.95
 
 // SPIKE accent dims (× cell_size — the shared cone geometry is sized when board_highlights builds it).
 export const TRAP_SPIKE_RADIUS = 0.12
@@ -211,14 +212,16 @@ export function trap_blob_alpha(/** @type {number} */ u, /** @type {number} */ v
   return rounded_rect_gradient(u, v).coverage
 }
 
-/** Build the trap BASE: a cell-bounded semantic-gold highlight in the shared gradient-tile-wash idiom.
- *  The solid-biased center keeps the trap recognizable while the unlit path preserves that identity at night. */
+/** Build the trap BASE: a cell-bounded DARK highlight in the shared gradient-tile-wash idiom (#1043). Flat
+ *  through the middle — center_dim 1 / center_alpha 0.95 — because a dark cell only reads as "punched out of
+ *  the paving" if it is solid; the gradient's soft center is what let the old gold fill dissolve into the
+ *  sand. Unlit, so noon and midnight get the same hazard. */
 export function make_trap_blob_material() {
   return make_gradient_tile_material({
     color: TRAP_BLOB_COLOR,
     opacity: TRAP_BLOB_OPACITY,
-    center_dim: 0.9,
-    center_alpha: 0.92,
+    center_dim: 1,
+    center_alpha: 0.95,
   }).mat
 }
 

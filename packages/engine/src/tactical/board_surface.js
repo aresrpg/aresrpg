@@ -41,6 +41,10 @@ import { CELL_FLOOR, CELL_OBSTACLE, CELL_HOLE, read_cell } from './board.js'
 
 // ---- Surface palette (sampled off the reference frame — pale worn paving) ------------------
 const TONE_LIGHT = [0xdd, 0xd4, 0xb6] // pale warm cream (the dominant tile tone)
+/** The dominant paving tone (>50% of tiles), EXPOSED as the reference an overlay's contrast is measured
+ *  against — a cell paint that vanishes into this is not a paint (#1043). One home: the bake reads the same
+ *  array, so a repave moves the law with it. */
+export const PAVING_TONE_DOMINANT = TONE_LIGHT
 const TONE_MID = [0xcf, 0xc5, 0xa2] // beige
 const TONE_GRAY = [0xc6, 0xc0, 0xae] // pale gray paver
 const SEAM_MUL = 0.72 // seam line darkening — deep enough to survive mip averaging at fight distance

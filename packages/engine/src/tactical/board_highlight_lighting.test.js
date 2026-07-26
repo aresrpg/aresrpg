@@ -25,6 +25,7 @@ import { EXPOSURE_BASELINE } from '../render/lighting/auto_exposure.js'
 import { CELL_FLOOR } from './board.js'
 import { CHANNELS, TRAP_BLOB_COLOR, create_board_highlights } from './board_highlights.js'
 import {
+  TRAP_SPIKE_COLOR,
   make_entity_anchor_material,
   make_gradient_tile_material,
   make_outline_material,
@@ -59,8 +60,12 @@ describe('night-unlit — every highlight material is fog-exempt (lighting-immun
     })
   }
 
-  test('trap base keeps the semantic trap identity instead of becoming a black night silhouette', () => {
-    expect(TRAP_BLOB_COLOR).toBe(CHANNELS.trap.color)
+  // [#1043] the marker's IDENTITY moved to the spike (the base is now a deliberately dark cell — the gold base
+  // was invisible against the paving). Unlit is what keeps that identity alive at midnight, and every material
+  // above is asserted fog/tone-map exempt: a dark base here is a chosen paint, never a night silhouette.
+  test('the trap SPIKE carries the semantic trap identity; the base is deliberately darker', () => {
+    expect(TRAP_SPIKE_COLOR).toBe(CHANNELS.trap.color)
+    expect(TRAP_BLOB_COLOR).not.toBe(CHANNELS.trap.color)
   })
 })
 

@@ -218,9 +218,10 @@ export function create_board_highlights(board, { reversed_depth = false } = {}) 
   // [trap marker — design correction 2026-07-19: the soft shadow blob read as ugly; use a cell highlight
   // and a spike instead]. SUPERSEDES the organic-stain +
   // bear-trap-sprite form (that soft organic blob read as an ugly shadow). NOW a compound TWO-LAYER marker:
-  //   1. BASE — a semantic-gold, cell-bounded gradient-tile HIGHLIGHT (make_trap_blob_material — the shared
-  //      wash idiom), the primary read and the same authored identity at noon and midnight.
-  //   2. ACCENT — a small SPIKE (an upright cone, make_trap_spike_*) rising from the cell center.
+  //   1. BASE — [#1043] a DARK, cell-bounded gradient-tile HIGHLIGHT (make_trap_blob_material — the shared
+  //      wash idiom): the cell reads as punched out of the pale paving, at noon and at midnight alike.
+  //   2. ACCENT — a small SPIKE (an upright cone, make_trap_spike_*) rising from the cell center, in the
+  //      identity gold — the contrasted mark ON that dark base, and what makes the cell a TRAP and not a hole.
   // Routes through the SAME set_channel/add_tile path as every wash (zero adapter/visibility change — the
   // caster-only trap_overlay logic is untouched); add_tile calls the channel's `build` factory, which for
   // 'trap' is build_trap_marker below — a tiny Group [blob mesh, spike mesh] instead of the single flat

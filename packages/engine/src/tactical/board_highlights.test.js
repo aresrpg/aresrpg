@@ -36,7 +36,25 @@ import {
   resolve_highlight_style,
   trap_blob_alpha,
 } from './board_highlights.js'
+import { TRAP_SPIKE_COLOR } from './board_highlight_materials.js'
 import { CELL_FLOOR } from './board.js'
+import { PAVING_TONE_DOMINANT } from './board_surface.js'
+
+/** WCAG relative luminance / contrast ratio over authored sRGB tokens — the arithmetic the trap-contrast law
+ *  below measures with. A paint's readability against the floor it sits on is a NUMBER, never an opinion. */
+const luminance = (/** @type {number[]} */ [r, g, b]) => {
+  const lin = (/** @type {number} */ c) => (c / 255 <= 0.04045 ? c / 255 / 12.92 : ((c / 255 + 0.055) / 1.055) ** 2.4)
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+}
+const rgb_of = (/** @type {number} */ hex) => [(hex >> 16) & 0xff, (hex >> 8) & 0xff, hex & 0xff]
+/** @param {number[]} a @param {number[]} b */
+const contrast_ratio = (a, b) => {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+  return (hi + 0.05) / (lo + 0.05)
+}
+/** The tile as the eye sees it: an unlit overlay of `alpha` composited over the paving underneath. */
+const composited = (/** @type {number} */ hex, /** @type {number[]} */ under, /** @type {number} */ alpha) =>
+  rgb_of(hex).map((c, i) => Math.round(c * alpha + under[i] * (1 - alpha)))
 
 // ── 1. rounded-rect coverage mask ──────────────────────────────────────────────────────────────────
 
@@ -251,9 +269,9 @@ describe('D256 punchy channel palette — deliberate saturation override', () =>
     // reads ON TOP of every action wash (a stale-blue target over your own trap is a lie) — above target/aoe.
     expect(CHANNELS.trap.order).toBeGreaterThan(CHANNELS.target.order)
     expect(CHANNELS.trap.order).toBeGreaterThan(CHANNELS.aoe.order)
-    // a hollow RING, not a fill — a gold fill camouflages into the warm-tan board (clip-probed 2026-07-13);
-    // the border profile's full-saturation rim is what actually reads from the fight camera.
-    expect(CHANNELS.trap.border).toBe(true)
+    // [#1043] no material dial on this row: build_trap_marker owns the marker's two materials, so a dial here
+    // renders NOTHING (the deleted `border: true` claimed a hollow gold ring that never existed).
+    expect(CHANNELS.trap.border).toBeUndefined()
   })
 })
 
@@ -432,10 +450,10 @@ describe('[#164] glyph channel is MERGE-AWARE + MORE VISIBLE (owner 2026-07-21 r
   })
 })
 
-// ── trap marker — cell-bounded semantic-gold highlight + spike. The old near-black material preserved its
-// bytes at night but lost the trap identity; both layers now read the channel's unlit gold at every TOD. ────
+// ── trap marker — a DARK cell-bounded highlight carrying an unlit GOLD spike (#1043). Both layers stay unlit,
+// so the hazard reads identically at every time of day; only the base's color moved off the identity gold. ──
 
-describe('trap BASE — a semantic-gold CELL-BOUNDED gradient-tile highlight', () => {
+describe('trap BASE — a DARK cell-bounded gradient-tile highlight', () => {
   test('the blob coverage is cell-bounded (edge midpoints solidly inside) and SYMMETRIC — not the lopsided organic island', () => {
     // the rejected form was an organic lobed union: edge midpoints fell OUTSIDE it and opposite axes read
     // wildly differently. The trap highlight is the shared rounded-rect tile — solid to the flat edges,
@@ -448,14 +466,28 @@ describe('trap BASE — a semantic-gold CELL-BOUNDED gradient-tile highlight', (
     expect(trap_blob_alpha(0.5, 0.8)).toBeCloseTo(trap_blob_alpha(0.5, 0.2), 5) // symmetric Y
   })
 
-  test('TRAP_BLOB_COLOR is the semantic trap gold + TRAP_BLOB_OPACITY is solid', () => {
-    const r = (TRAP_BLOB_COLOR >> 16) & 0xff
-    const g = (TRAP_BLOB_COLOR >> 8) & 0xff
-    const b = TRAP_BLOB_COLOR & 0xff
-    expect(TRAP_BLOB_COLOR).toBe(CHANNELS.trap.color)
-    expect(r).toBeGreaterThan(g)
+  // RED-FIRST (#1043) — the owner's live report: "a placed trap paints as a faint orange/tan wash barely
+  // distinguishable from the floor". It was the trap GOLD over the pale warm paving: 1.8:1 on the raw tokens,
+  // 1.6:1 once composited — a tint, not a mark. The direction is a DARK cell base carrying a clearly contrasted
+  // spike, so the numbers below are the law: the base separates from the floor, the spike separates from
+  // the base, and both stay unlit so a night board reads identically.
+  test('the trap BASE is DARK against the paving — a measured contrast floor, not a tint (#1043)', () => {
+    const base_vs_floor = contrast_ratio(rgb_of(TRAP_BLOB_COLOR), PAVING_TONE_DOMINANT)
+    expect(base_vs_floor).toBeGreaterThanOrEqual(7) // the faint gold read 1.8:1 here
+    // and as actually composited over that floor at the marker's own opacity — what the eye receives
+    const seen = composited(TRAP_BLOB_COLOR, PAVING_TONE_DOMINANT, TRAP_BLOB_OPACITY)
+    expect(contrast_ratio(seen, PAVING_TONE_DOMINANT)).toBeGreaterThanOrEqual(7)
+    expect(luminance(rgb_of(TRAP_BLOB_COLOR))).toBeLessThan(luminance(PAVING_TONE_DOMINANT)) // DARK, not bright
+    expect(TRAP_BLOB_OPACITY).toBeGreaterThanOrEqual(0.9) // solid — a dark base that lets the sand through is a tint
+  })
+
+  test('the SPIKE carries the trap identity gold and reads clearly against that dark base (#1043)', () => {
+    expect(TRAP_SPIKE_COLOR).toBe(CHANNELS.trap.color) // the channel's semantic color is the mark you SEE
+    const [r, g, b] = rgb_of(TRAP_SPIKE_COLOR)
+    expect(r).toBeGreaterThan(g) // warm gold: red leads green leads blue
     expect(g).toBeGreaterThan(b)
-    expect(TRAP_BLOB_OPACITY).toBeGreaterThanOrEqual(0.8) // solid
+    const seen_base = composited(TRAP_BLOB_COLOR, PAVING_TONE_DOMINANT, TRAP_BLOB_OPACITY)
+    expect(contrast_ratio(rgb_of(TRAP_SPIKE_COLOR), seen_base)).toBeGreaterThanOrEqual(4.5)
   })
 
   test('the painted trap BASE material is unlit + night-immune (MeshBasicNode, fog + tone-map exempt), no sprite texture', () => {
