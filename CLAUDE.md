@@ -10,6 +10,7 @@ Load these before working — they are the operating rules of this codebase:
 
 @.claude/rules/craft.md
 @.claude/rules/code-law.md
+@.claude/rules/doctrine.md
 
 ## The content boundary
 
