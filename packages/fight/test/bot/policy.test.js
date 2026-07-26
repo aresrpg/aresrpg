@@ -284,6 +284,66 @@ describe('policy — reading the board like a player', () => {
   })
 })
 
+// #1157 ① — THE COOLDOWN BOUNDARY, the case no fixture measured (this file authored every spell at cooldown 0).
+// The chain (`cast.move:380`), the sim (`fight_cast_limits.js:41`) and the board's own gate (`draft_budget.on_
+// cooldown`) all recast only when `turn − last > cooldown`; the policy carried a fourth copy that said `>=`. At
+// the boundary turn it planned a cast all three authorities refuse — and one refusal used to retire the spell for
+// the rest of the run, so every cooldown spell in the corpus was under-exercised by the rig built to exercise it.
+describe('#1157 — the bot obeys the chain’s cooldown rule, not a copy of it', () => {
+  const board = (turn_number, casts) => ({
+    ...read({
+      fighters: [fighter(ME, 0, { x: 5, y: 5 }), fighter('mob-0', 1, { x: 5, y: 7 })],
+      spellbook: [spell('slow_bolt', { cooldown: 2 })],
+    }),
+    turn_number,
+  })
+
+  const casts_at = (turn_number, last) =>
+    plan_turn(board(turn_number), { history: { casts: { slow_bolt: last }, blocked: [], traps: [] } }).actions.filter(
+      (action) => action.kind === 1
+    )
+
+  test('RED: at turn − last === cooldown the spell is STILL locked (the chain refuses it)', () => {
+    expect(casts_at(3, 1)).toHaveLength(0)
+  })
+
+  test('one turn later it is castable — the lock releases at `>` and not before', () => {
+    expect(casts_at(4, 1).map((a) => a.spell_id)).toEqual(['slow_bolt'])
+  })
+
+  test('a spell never cast this fight is free, and cooldown 0 never locks', () => {
+    expect(casts_at(1, null).map((a) => a.spell_id)).toEqual(['slow_bolt'])
+    const zero = plan_turn(
+      read({
+        fighters: [fighter(ME, 0, { x: 5, y: 5 }), fighter('mob-0', 1, { x: 5, y: 7 })],
+        spellbook: [spell('bolt', { cooldown: 0 })],
+      }),
+      { history: { casts: { bolt: 1 }, blocked: [], traps: [] } }
+    )
+    expect(zero.actions.filter((a) => a.kind === 1).map((a) => a.spell_id)).toEqual(['bolt'])
+  })
+})
+
+// #1157 ③ — the per-turn cap is READ, not assumed. The seam publishes `casts_per_turn`; the policy used to
+// hardcode one cast per spell per turn, which left half a turn's damage unexercised on any authored row above 1.
+describe('#1157 — the authored cast caps come off the book', () => {
+  const two_mobs = (over) => ({
+    fighters: [fighter(ME, 0, { x: 5, y: 5 }), fighter('mob-0', 1, { x: 5, y: 7 }), fighter('mob-1', 1, { x: 7, y: 5 })],
+    spellbook: [spell('twin', { ap: 3, casts_per_turn: 2, effects: [effect('DAMAGE', { base: 20 })], ...over })],
+  })
+
+  test('a casts_per_turn:2 spell is planned twice — on two different targets', () => {
+    const casts = plan_turn(read(two_mobs())).actions.filter((a) => a.kind === 1)
+    expect(casts).toHaveLength(2)
+    expect(new Set(casts.map((c) => c.expect.target_id)).size).toBe(2)
+  })
+
+  test('casts_per_turn:1 still caps at one, and the per-target cap holds', () => {
+    const casts = plan_turn(read(two_mobs({ casts_per_turn: 1 }))).actions.filter((a) => a.kind === 1)
+    expect(casts).toHaveLength(1)
+  })
+})
+
 describe('assertions — a success without a delta is a FAIL, never a warning', () => {
   const cast_plan = {
     actions: [

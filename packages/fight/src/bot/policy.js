@@ -21,6 +21,7 @@
 
 import { get_direction } from '@aresrpg/sim/fight_displacement'
 
+import { cap_of, on_cooldown, target_cap_reached } from '../draft_budget.js'
 import {
   allies_of,
   cell_index,
@@ -182,13 +183,20 @@ const score_on_cell = (spell, read, cell, history) => {
  * how long ago each card was played, which is knowledge the player has on screen and the bot must carry
  * itself. `history.casts[spell_id]` is the turn it was last cast; `blocked` holds ids the authority has
  * already refused this fight (a bot that re-proposes a refused cast every turn stalls forever).
+ *
+ * THE COOLDOWN VERDICT IS IMPORTED, never arithmetic of its own (#1157). `on_cooldown` is the extracted home the
+ * board's castable gate and the hotbar's grey socket already read, and it is `cast.move:380`'s rule verbatim:
+ * recastable only when `current − last > cooldown`. The copy that used to live here said `>=`, so at
+ * `turn − last === cooldown` the bot believed a spell castable that all three authorities refuse — and one
+ * refusal used to retire the spell for the whole run.
  */
 const available = (spell, read, { casts = {}, blocked = [] } = {}) => {
   if (blocked.includes(spell.id)) return false
-  const last = casts[spell.id]
-  if (last == null || !spell.cooldown) return true
-  return Number(read.turn_number ?? 0) - Number(last) >= Number(spell.cooldown)
+  return !on_cooldown(casts[spell.id], Number(read.turn_number ?? 0), Number(spell.cooldown ?? 0))
 }
+
+/** How many of `spell_key` this turn's draft already holds — the per-turn axis of the authored caps. */
+const casts_of = (cast_path, spell_key) => cast_path.filter((row) => row.spell_key === spell_key).length
 
 /** Every legal, affordable, still-unclaimed candidate cast from `from`, best first. */
 const candidates = (read, me, from, ap, claimed, seed, history) => {
@@ -197,7 +205,11 @@ const candidates = (read, me, from, ap, claimed, seed, history) => {
   for (const spell of read.spellbook) {
     if (spell.ap > ap) continue
     if (!available(spell, read, history)) continue
-    if (claimed.spells.has(spell.id)) continue // one cast per spell per turn (casts_per_turn is 1 for seed content)
+    // THE AUTHORED CAPS, READ (#1157). `casts_per_turn` / `casts_per_target` ride the seam's book already;
+    // `cap_of` is the decoder for the spell_bands UNLIMITED sentinels and `target_cap_reached` is cast.move's
+    // own per-(spell, cell) verdict. The hardcoded "one cast per spell per turn" that stood here was a content
+    // fact frozen into the instrument: a `casts_per_turn: 2` row left half a turn's damage unexercised, silently.
+    if (casts_of(claimed.cast_path, spell.name_key) >= cap_of(spell.casts_per_turn)) continue
     if (spell.free_cell) {
       const [near] = enemies
         .slice()
@@ -206,6 +218,7 @@ const candidates = (read, me, from, ap, claimed, seed, history) => {
       for (const cell of approach_cells(read, from, near)) {
         const scored = score_on_cell(spell, read, cell, history)
         if (!scored || claimed.facts.has(scored.fact)) continue
+        if (target_cap_reached(claimed.cast_path, spell.name_key, cell_index(cell), spell.casts_per_target)) continue
         if (!spell_reaches(read, spell, from, cell, me.id)) continue
         rows.push({ ...scored, spell, cell })
       }
@@ -218,6 +231,8 @@ const candidates = (read, me, from, ap, claimed, seed, history) => {
       const target_cell = target.id === me.id ? from : target.cell_committed
       const scored = score_on_fighter(spell, { ...me, cell_committed: from }, target)
       if (!scored || scored.value < WEIGHTS.floor || claimed.facts.has(scored.fact)) continue
+      if (target_cap_reached(claimed.cast_path, spell.name_key, cell_index(target_cell), spell.casts_per_target))
+        continue
       if (!spell_reaches(read, spell, from, target_cell, me.id)) continue
       rows.push({ ...scored, spell, cell: target_cell })
     }
@@ -237,7 +252,7 @@ const candidates = (read, me, from, ap, claimed, seed, history) => {
  * stood on its start cell buffing itself while the mob it never approached waited across the map.
  */
 const best_from = (read, me, cell, ap, seed, history) => {
-  const rows = candidates(read, me, cell, ap, { facts: new Set(), spells: new Set() }, seed, history)
+  const rows = candidates(read, me, cell, ap, { facts: new Set(), cast_path: [] }, seed, history)
   const enemy_ids = new Set(enemies_of(read).map((e) => e.id))
   return {
     total: rows[0]?.value ?? 0,
@@ -338,7 +353,10 @@ export const plan_turn = (read, { seed = 0, history = {} } = {}) => {
       expect: { type: 'move', cell: stance.cell, mp_cost: stance.cost },
     })
 
-  const claimed = { facts: new Set(), spells: new Set() }
+  // `cast_path` is the turn's draft in `draft_budget`'s own shape ({ cell, spell_key }), so the per-turn and
+  // per-target caps are the board's verdicts and not a second accounting; `facts` stays the harness rule that
+  // one action owns one assertable fact.
+  const claimed = { facts: new Set(), cast_path: [] }
   // The PRESENTED budget, not the committed one: `ap`/`mp` carry the fold's predicted begin-turn refill, so
   // they are what the player's own bar shows for the turn about to be played.
   let ap = Number(me.ap ?? me.ap_committed ?? 0)
@@ -361,7 +379,7 @@ export const plan_turn = (read, { seed = 0, history = {} } = {}) => {
     })
     if (!pick) break
     claimed.facts.add(pick.fact)
-    claimed.spells.add(pick.spell.id)
+    claimed.cast_path.push({ cell: cell_index(pick.cell), spell_key: pick.spell.name_key })
     ap -= pick.spell.ap
     actions.push({
       kind: 1,

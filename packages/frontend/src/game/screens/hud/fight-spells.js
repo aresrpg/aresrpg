@@ -76,8 +76,8 @@ export const fight_spells_data = {
  *   effects: Array<{ kind: string, element?: string, base: number, crit_base?: number,
  *     chance: number, turns: number, area_shape: string, area_size: number }> }>} levels
  *   all 6 on-chain SpellLevels (SpellTemplate.levels — spell_effect.move's SpellLevel/Effect fields
- *   projected 1:1 above). Fight RESOLUTION currently reads levels[0] only (level-1 MVP —
- *   cast.move's "SPELL LEVEL" note); the encyclopedia (classes_tab.tsx) renders every level.
+ *   projected 1:1 above). Fight resolution reads the SEAT'S rank since #1077 — `seat_spell_row` below is the
+ *   one door every live spell number comes through; the encyclopedia (classes_tab.tsx) renders every level.
  *   casts_per_turn/casts_per_target == 255 means unlimited (spell_bands::CASTS_UNLIMITED).
  */
 
