@@ -103,3 +103,6 @@ api/release.json
 # dumps for local forensics. The landed record of a confirmed defect is its GitHub issue + the
 # quarantine row, never a committed blob.
 packages/*/test/oracle/artifacts-local/
+
+# driven-harness run artifacts (boot/encyclopedia smoke, the fight bot sheet) — outputs, never sources
+smoke-out/

@@ -17,13 +17,17 @@ import { cell_index } from './read.js'
 const find = (read, id) => read?.fighters?.find((f) => f.id === id) ?? null
 const same_cell = (a, b) => !!a && !!b && a.x === b.x && a.y === b.y
 
+/** Cells print as `x,y`; everything else prints as itself. A sheet full of `[object Object]` proves nothing. */
+const fmt = (value) =>
+  value && typeof value === 'object' && Number.isFinite(value.x) && Number.isFinite(value.y) ? `${value.x},${value.y}` : String(value)
+
 const row = (index, action, check, expected, actual, pass, note = '') => ({
   index,
   kind: action?.kind === 0 ? 'move' : action?.kind === 1 ? `cast:${action.spell_key ?? action.spell_id}` : 'turn',
   at: action?.cell ?? null,
   check,
-  expected,
-  actual,
+  expected: fmt(expected),
+  actual: fmt(actual),
   pass,
   note,
 })
@@ -37,21 +41,36 @@ const steps_along = (from, moved, dir) => {
   return dx === 0 && Math.sign(dy) === dir.dy ? Math.abs(dy) : null
 }
 
+// THE TWO CLOCKS, and which fact reads which.
+//
+// POSITION, HP and LIFE are chain truth and read the COMMITTED fold (`*_committed`): settled the instant the
+// receipt folds, owing nothing to an animation.
+//
+// AP and MP DO NOT PUBLISH A LEFTOVER on a committed turn — MEASURED, not assumed (fight_bot_sheet's `pools`
+// block: across a 6-turn run every read either side of every commit showed ap 6 → 6, and mp moved ONLY by the
+// +1 a GIVE_POINTS buff granted, never by the 3 MP a walk had just spent). The post-commit read already shows
+// the NEXT turn's refilled budget, so "AP spent" is not an observable on this surface at all. Asserting a
+// delta against it would be asserting a number nobody publishes, which is how a harness starts lying.
+// So the budget is checked where it IS truth — at turn start, against the plan — and the unobservable
+// leftover is a filed gap, never a fabricated pass.
+const budget_ap = (fighter) => Number(fighter?.ap ?? fighter?.ap_committed ?? 0)
+const budget_mp = (fighter) => Number(fighter?.mp ?? fighter?.mp_committed ?? 0)
+
 const assert_move = (index, action, before, after) => {
   const me_before = find(before, before.my_id)
   const me_after = find(after, after.my_id)
   const landed = same_cell(me_after?.cell_committed, action.cell)
-  const spent = Number(me_before?.mp_committed ?? 0) - Number(me_after?.mp_committed ?? 0)
+  const budget = budget_mp(me_before)
   return [
     row(index, action, 'the seat stands on the cell it moved to', action.cell, me_after?.cell_committed ?? null, landed),
     row(
       index,
       action,
-      'MP spent equals the path it walked',
-      action.expect.mp_cost,
-      spent,
-      spent === action.expect.mp_cost,
-      landed ? '' : 'cell assertion already failed — MP is reported for diagnosis'
+      'the walk fitted the MP the seat had',
+      `≤ ${budget} MP`,
+      `${action.expect.mp_cost} MP`,
+      action.expect.mp_cost <= budget,
+      'the leftover pool is not published post-commit — the CELL row above is this action’s delta'
     ),
   ]
 }
@@ -124,11 +143,54 @@ const assert_status = (index, action, before, after) => {
   return rows
 }
 
+/**
+ * A TRAP HAS NO PLACEMENT OBSERVABLE for a seam-committed cast — also measured. `my_traps` is the client's
+ * LOCAL durable ledger (fold.js: "the local-only durable trap ledger") and its ONLY writer is the board's
+ * OPTIMISTIC draft path (DungeonBoard `optimistic_cast` → `input({ type:'predicted', place_traps })`); the
+ * receipt carries no trap row, so a trap committed through the seam is invisible client-side even though the
+ * sim holds it (proven: the sim then REFUSED a second trap on the same cell — the authority knew, the client
+ * did not). So placement asserts what the authority itself answered — it accepted a `free_cell` cast the sim
+ * gates on occupancy, terrain AND a live trap — and the trap's REAL proof is deferred to `assert_traps_sprung`
+ * below, which watches for the detonation.
+ */
 const assert_trap = (index, action, before, after) => {
-  const cell = cell_index(action.expect.cell)
+  const at = action.expect.cell
+  const standing = (after.fighters ?? []).find((f) => f.alive_committed && f.cell_committed?.x === at.x && f.cell_committed?.y === at.y)
   return [
-    row(index, action, 'the trap is on the board', `cell ${action.expect.cell.x},${action.expect.cell.y} armed`, (after.my_traps ?? []).join(',') || 'none', (after.my_traps ?? []).includes(cell)),
+    row(index, action, 'the authority accepted the trap on a free cell', `${at.x},${at.y} free and untrapped`, standing ? `${standing.id} stands there` : 'accepted', !standing,
+      'placement is not published client-side — the spring row (below, on a later turn) is this trap’s delta'),
   ]
+}
+
+/**
+ * THE TRAP'S ACTUAL PROOF — a deferred, cross-turn assertion. A trap only means something when something
+ * walks into it, so the runner carries the cells it armed and this checks, each turn, whether a living enemy
+ * has ENTERED one: if it did, it must have paid for it. A fighter standing on a trapped cell at full health
+ * is exactly the silent no-op this bot exists to catch.
+ * @param {Array<{ cell: { x: number, y: number }, turn: number, spell_key: string }>} armed
+ * @param {object} before @param {object} after the reads either side of the turn just committed
+ * @returns {{ rows: Array<object>, remaining: Array<object> }}
+ */
+export const assert_traps_sprung = (armed, before, after) => {
+  const rows = []
+  const remaining = []
+  for (const trap of armed) {
+    const on_it = (read) =>
+      (read.fighters ?? []).find(
+        (f) => f.id !== read.my_id && f.cell_committed?.x === trap.cell.x && f.cell_committed?.y === trap.cell.y
+      )
+    const entered = on_it(after)
+    if (!entered || on_it(before)?.id === entered.id) {
+      remaining.push(trap)
+      continue
+    }
+    const was = find(before, entered.id)
+    const hurt = Number(was?.hp_committed ?? 0) - Number(find(after, entered.id)?.hp_committed ?? 0)
+    rows.push(
+      row(0, { kind: 1, spell_key: trap.spell_key, cell: trap.cell }, `the trap armed on turn ${trap.turn} sprang when ${entered.id} stepped on it`, 'HP lost on entry', hurt, hurt >= 1)
+    )
+  }
+  return { rows, remaining }
 }
 
 const ACTION_ASSERTIONS = {
@@ -157,11 +219,16 @@ export const assert_turn = (plan, result) => {
       ? check(index, action, before, after)
       : [row(index, action, 'the bot knows how to check this action', 'a known expectation type', action.expect?.type ?? 'none', false)]
   })
-  // THE BUDGET ROW — actions commit as one batch, so AP is the turn's own fact, not any single cast's.
-  const ap_before = Number(find(before, before.my_id)?.ap_committed ?? 0)
-  const ap_after = Number(find(after, after.my_id)?.ap_committed ?? 0)
+  // THE BUDGET ROW — actions commit as one batch, so AP is the turn's own fact, not any single cast's. It
+  // reads the turn-start budget (see the two-clocks note): a batch over budget is refused by the authority,
+  // so "planned within budget AND accepted" is the whole observable AP truth this surface publishes.
+  const budget = budget_ap(find(before, before.my_id))
   const billed = plan.actions.reduce((sum, a) => sum + Number(a.ap_cost ?? 0), 0)
-  return [...rows, row(plan.actions.length, null, 'AP spent equals the sum of the casts committed', billed, ap_before - ap_after, ap_before - ap_after === billed)]
+  return [
+    ...rows,
+    row(plan.actions.length, null, 'the committed casts fitted the AP the seat had', `≤ ${budget} AP`, `${billed} AP`, billed <= budget,
+      'the leftover pool is not published post-commit — an over-budget batch is refused by the authority'),
+  ]
 }
 
 /** A run's rows → the machine-readable verdict the sheet carries. */

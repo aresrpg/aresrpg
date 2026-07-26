@@ -9,7 +9,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { TF_ONLY_CASTER } from '../../../sim/src/spell_effect.js'
-import { assert_turn, plan_turn, summarise } from '../../src/bot/index.js'
+import { assert_traps_sprung, assert_turn, plan_turn, summarise } from '../../src/bot/index.js'
 import { GRID_H, GRID_W, encode } from '../../src/los.js'
 
 const ME = '0xme'
@@ -234,7 +234,7 @@ describe('assertions — a success without a delta is a FAIL, never a warning', 
     actions: [{ kind: 1, cell: { x: 5, y: 7 }, spell_id: 'bolt', spell_key: 'bolt', ap_cost: 3, from: { x: 5, y: 5 }, expect: { type: 'damage', target_id: 'mob-0', min_damage: 1, kill: false } }],
   }
   const snapshot = (mob_hp, my_ap) =>
-    read({ fighters: [fighter(ME, 0, { x: 5, y: 5 }, { ap_committed: my_ap }), fighter('mob-0', 1, { x: 5, y: 7 }, { hp_committed: mob_hp })] })
+    read({ fighters: [fighter(ME, 0, { x: 5, y: 5 }, { ap: my_ap, ap_committed: my_ap }), fighter('mob-0', 1, { x: 5, y: 7 }, { hp_committed: mob_hp })] })
 
   test('a cast that changed nothing fails, even though the commit said ok', () => {
     const rows = assert_turn(cast_plan, { ok: true, before: snapshot(100, 6), after: snapshot(100, 3) })
@@ -242,14 +242,14 @@ describe('assertions — a success without a delta is a FAIL, never a warning', 
     expect(rows.find((r) => r.check.includes('lost HP')).pass).toBe(false)
   })
 
-  test('a cast that landed passes, AP row included', () => {
+  test('a cast that landed passes, budget row included', () => {
     const rows = assert_turn(cast_plan, { ok: true, before: snapshot(100, 6), after: snapshot(80, 3) })
     expect(summarise(rows)).toEqual({ checks: 2, passed: 2, failed: 0, verdict: 'PASS' })
   })
 
-  test('AP that did not move is its own failure', () => {
-    const rows = assert_turn(cast_plan, { ok: true, before: snapshot(100, 6), after: snapshot(80, 6) })
-    expect(rows.find((r) => r.check.startsWith('AP spent')).pass).toBe(false)
+  test('a batch billed over the seat’s AP is its own failure', () => {
+    const rows = assert_turn(cast_plan, { ok: true, before: snapshot(100, 2), after: snapshot(80, 2) })
+    expect(rows.find((r) => r.check.includes('fitted the AP')).pass).toBe(false)
   })
 
   test('a refused turn fails once, loudly, instead of reporting per-action noise', () => {
@@ -263,7 +263,7 @@ describe('assertions — a success without a delta is a FAIL, never a warning', 
     actions: [{ kind: 1, cell: { x: 8, y: 5 }, spell_id: 'shove', spell_key: 'shove', ap_cost: 3, from: { x: 5, y: 5 }, expect: { type: 'push', target_id: 'mob-0', cells, from: { x: 5, y: 5 } } }],
   })
   const push_board = (mob_cell, mob_hp, my_ap = 3) =>
-    read({ fighters: [fighter(ME, 0, { x: 5, y: 5 }, { ap_committed: my_ap }), fighter('mob-0', 1, mob_cell, { hp_committed: mob_hp })] })
+    read({ fighters: [fighter(ME, 0, { x: 5, y: 5 }, { ap: my_ap, ap_committed: my_ap }), fighter('mob-0', 1, mob_cell, { hp_committed: mob_hp })] })
 
   test('a push that landed its full distance in the right direction passes', () => {
     const rows = assert_turn(push_plan(3), { ok: true, before: push_board({ x: 8, y: 5 }, 100, 6), after: push_board({ x: 11, y: 5 }, 100, 3) })
@@ -287,12 +287,42 @@ describe('assertions — a success without a delta is a FAIL, never a warning', 
     expect(summarise(stopped_hurt).verdict).toBe('PASS')
   })
 
-  test('a move that ended somewhere else fails on the cell AND reports the MP', () => {
+  test('a move that ended somewhere else fails on the cell', () => {
     const plan = { actions: [{ kind: 0, cell: { x: 5, y: 8 }, expect: { type: 'move', cell: { x: 5, y: 8 }, mp_cost: 3 } }] }
     const before = read({ fighters: [fighter(ME, 0, { x: 5, y: 5 })] })
-    const after = read({ fighters: [fighter(ME, 0, { x: 5, y: 6 }, { mp_committed: 2 })] })
+    const after = read({ fighters: [fighter(ME, 0, { x: 5, y: 6 }, { mp: 2, mp_committed: 2 })] })
     const rows = assert_turn(plan, { ok: true, before, after })
     expect(rows.find((r) => r.check.includes('stands on the cell')).pass).toBe(false)
-    expect(rows.find((r) => r.check.includes('MP spent')).pass).toBe(false)
+  })
+
+  test('a walk longer than the seat’s MP fails', () => {
+    const plan = { actions: [{ kind: 0, cell: { x: 5, y: 9 }, expect: { type: 'move', cell: { x: 5, y: 9 }, mp_cost: 4 } }] }
+    const before = read({ fighters: [fighter(ME, 0, { x: 5, y: 5 })] })
+    const after = read({ fighters: [fighter(ME, 0, { x: 5, y: 9 })] })
+    expect(assert_turn(plan, { ok: true, before, after }).find((r) => r.check.includes('fitted the MP')).pass).toBe(false)
+  })
+})
+
+describe('the deferred trap assertion — a trap proves itself when something walks into it', () => {
+  const armed = [{ cell: { x: 5, y: 7 }, turn: 2, spell_key: 'snare' }]
+  const board = (mob_cell, mob_hp) =>
+    read({ fighters: [fighter(ME, 0, { x: 5, y: 5 }), fighter('mob-0', 1, mob_cell, { hp_committed: mob_hp })] })
+
+  test('nothing on the cell yet: the trap stays armed and says nothing', () => {
+    const out = assert_traps_sprung(armed, board({ x: 5, y: 9 }, 100), board({ x: 5, y: 8 }, 100))
+    expect(out.rows).toEqual([])
+    expect(out.remaining).toEqual(armed)
+  })
+
+  test('a mob that walked onto the trap and paid for it passes, and the trap retires', () => {
+    const out = assert_traps_sprung(armed, board({ x: 5, y: 8 }, 100), board({ x: 5, y: 7 }, 75))
+    expect(out.rows).toHaveLength(1)
+    expect(out.rows[0].pass).toBe(true)
+    expect(out.remaining).toEqual([])
+  })
+
+  test('a mob standing ON the trap at full health is the silent no-op — FAIL', () => {
+    const out = assert_traps_sprung(armed, board({ x: 5, y: 8 }, 100), board({ x: 5, y: 7 }, 100))
+    expect(out.rows[0].pass).toBe(false)
   })
 })

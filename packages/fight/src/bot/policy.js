@@ -149,10 +149,14 @@ const approach_cells = (read, caster_cell, enemy) => {
 }
 
 /** Score a free-cell spell (trap / glyph) on one board cell. */
-const score_on_cell = (spell, read, cell) => {
+const score_on_cell = (spell, read, cell, history) => {
   const trap = spell.effects.find((e) => e.kind === 'PLACE_TRAP' || e.kind === 'PLACE_GLYPH')
   if (!trap) return null
-  if ((read.my_traps ?? []).includes(cell_index(cell))) return null // one trap per cell — nothing new to assert
+  // ONE TRAP PER CELL. `read.my_traps` is the client's own ledger and it does NOT learn about a trap
+  // committed through the seam (see assert.js) — so the bot carries its own `history.traps`. Without it the
+  // policy re-proposes a cell the SIM already holds a trap on and the authority refuses the whole turn.
+  const held = [...(read.my_traps ?? []), ...(history?.traps ?? [])]
+  if (held.includes(cell_index(cell))) return null
   return {
     value: Math.max(1, Number(trap.base ?? 0)) * WEIGHTS.trap,
     fact: `trap:${cell_index(cell)}`,
@@ -160,12 +164,26 @@ const score_on_cell = (spell, read, cell) => {
   }
 }
 
+/**
+ * Is this spell available THIS turn? The read is a snapshot — it carries the book's authored cooldown but not
+ * how long ago each card was played, which is knowledge the player has on screen and the bot must carry
+ * itself. `history.casts[spell_id]` is the turn it was last cast; `blocked` holds ids the authority has
+ * already refused this fight (a bot that re-proposes a refused cast every turn stalls forever).
+ */
+const available = (spell, read, { casts = {}, blocked = [] } = {}) => {
+  if (blocked.includes(spell.id)) return false
+  const last = casts[spell.id]
+  if (last == null || !spell.cooldown) return true
+  return Number(read.turn_number ?? 0) - Number(last) >= Number(spell.cooldown)
+}
+
 /** Every legal, affordable, still-unclaimed candidate cast from `from`, best first. */
-const candidates = (read, me, from, ap, claimed, seed) => {
+const candidates = (read, me, from, ap, claimed, seed, history) => {
   const enemies = enemies_of(read)
   const rows = []
   for (const spell of read.spellbook) {
     if (spell.ap > ap) continue
+    if (!available(spell, read, history)) continue
     if (claimed.spells.has(spell.id)) continue // one cast per spell per turn (casts_per_turn is 1 for seed content)
     if (spell.free_cell) {
       const near = enemies
@@ -173,7 +191,7 @@ const candidates = (read, me, from, ap, claimed, seed) => {
         .sort((a, b) => manhattan(a.cell_committed, from) - manhattan(b.cell_committed, from))[0]
       if (!near) continue
       for (const cell of approach_cells(read, from, near)) {
-        const scored = score_on_cell(spell, read, cell)
+        const scored = score_on_cell(spell, read, cell, history)
         if (!scored || claimed.facts.has(scored.fact)) continue
         if (!spell_reaches(read, spell, from, cell, me.id)) continue
         rows.push({ ...scored, spell, cell })
@@ -197,72 +215,91 @@ const candidates = (read, me, from, ap, claimed, seed) => {
   )
 }
 
-/** The value the best single cast from `cell` would be worth — the reposition's objective function. */
-const best_from = (read, me, cell, ap, seed) => candidates(read, me, cell, ap, { facts: new Set(), spells: new Set() }, seed)[0]?.value ?? 0
+/**
+ * The reposition's two objective functions. `total` is what standing there is worth; `enemy` is what it is
+ * worth AGAINST SOMETHING — and only the second may decide to close the distance. A self-buff is castable
+ * from any cell on the board, so ranking on the total alone made the bot "already in range" forever: it
+ * stood on its start cell buffing itself while the mob it never approached waited across the map.
+ */
+const best_from = (read, me, cell, ap, seed, history) => {
+  const rows = candidates(read, me, cell, ap, { facts: new Set(), spells: new Set() }, seed, history)
+  const enemy_ids = new Set(enemies_of(read).map((e) => e.id))
+  return {
+    total: rows[0]?.value ?? 0,
+    enemy: rows.find((r) => enemy_ids.has(r.expect.target_id) || r.expect.type === 'trap')?.value ?? 0,
+  }
+}
 
 /**
  * PHASE 1 — where to stand. Returns `{ cell, cost, why }` (cost 0 = stay put).
  * Two rules a player would recognise: never disengage from an adjacent body (that is a free tackle), and
  * when nothing is castable from anywhere, close the distance instead of standing still.
  */
-const choose_stance = (read, me, seed, decisions) => {
+const choose_stance = (read, me, seed, history, decisions) => {
   const here = me.cell_committed
   const enemies = enemies_of(read)
-  const mp = Number(me.mp_committed ?? 0)
+  const mp = Number(me.mp ?? me.mp_committed ?? 0)
+  const ap = Number(me.ap ?? me.ap_committed ?? 0)
   const stay = { cell: here, cost: 0, why: 'stayed put' }
   if (!enemies.length || mp <= 0) return stay
   if (enemies.some((e) => chebyshev(e.cell_committed, here) <= 1)) {
     decisions.push({ phase: 'move', chose: 'stay', why: 'an enemy is adjacent — disengaging invites a tackle' })
     return stay
   }
-  const base = best_from(read, me, here, Number(me.ap_committed ?? 0), seed)
+  const base = best_from(read, me, here, ap, seed, history)
   const nearest = (cell) => Math.min(...enemies.map((e) => manhattan(e.cell_committed, cell)))
   const options = reachable_cells(read, here, mp, me.id)
-    .map((cell) => ({ cell, cost: path_cost(read, here, cell, mp, me.id), value: best_from(read, me, cell, Number(me.ap_committed ?? 0), seed) }))
+    .map((cell) => ({ cell, cost: path_cost(read, here, cell, mp, me.id), ...best_from(read, me, cell, ap, seed, history) }))
     .filter((o) => o.cost != null)
-  // Rank: more castable value first; then closer to the fight; then cheaper; then the seed's tie-break.
+  // Rank: offensive value first, then total value, then closer to the fight, then cheaper, then the seed.
   const ranked = options.sort(
     (a, b) =>
-      b.value - a.value ||
+      b.enemy - a.enemy ||
+      b.total - a.total ||
       nearest(a.cell) - nearest(b.cell) ||
       a.cost - b.cost ||
       tie_break(seed, `${cell_index(a.cell)}`) - tie_break(seed, `${cell_index(b.cell)}`)
   )
   const best = ranked[0]
-  // KEEP RANGE. Two reasons to leave the cell, and only two: a better cast opens up somewhere else, or
-  // nothing at all is castable from anywhere and the fight has to be closed. A caster that can already
-  // shoot does NOT walk toward the thing shooting back.
-  const unlocks = !!best && best.cost > 0 && best.value > base
-  const approach = !!best && best.cost > 0 && base === 0 && best.value === 0 && nearest(best.cell) < nearest(here)
+  // KEEP RANGE. Two reasons to leave: a better shot opens up somewhere else, or NOTHING can be aimed at an
+  // enemy from anywhere reachable and the gap has to be closed. A caster that can already shoot holds still.
+  const unlocks = !!best && best.cost > 0 && best.enemy > base.enemy
+  const approach = !!best && best.cost > 0 && base.enemy === 0 && best.enemy === 0 && nearest(best.cell) < nearest(here)
+  const target = approach
+    ? ranked.filter((o) => o.cost > 0).sort((a, b) => nearest(a.cell) - nearest(b.cell) || a.cost - b.cost)[0]
+    : best
   decisions.push({
     phase: 'move',
-    considered: ranked.slice(0, 4).map((o) => ({ cell: o.cell, cost: o.cost, cast_value: o.value, nearest_enemy: nearest(o.cell) })),
-    chose: unlocks || approach ? best.cell : 'stay',
+    considered: ranked.slice(0, 4).map((o) => ({ cell: o.cell, cost: o.cost, cast_value: o.total, enemy_value: o.enemy, nearest_enemy: nearest(o.cell) })),
+    chose: unlocks || approach ? target.cell : 'stay',
     why: unlocks
-      ? `moving unlocks ${best.value} points of cast value (vs ${base} from here)`
+      ? `moving unlocks ${best.enemy} points of offensive value (vs ${base.enemy} from here)`
       : approach
-        ? 'nothing is castable from anywhere reachable — closing the distance'
-        : base > 0
-          ? `already in range for ${base} points of cast value — holding position`
+        ? `no enemy is reachable by any spell — closing from ${nearest(here)} to ${nearest(target.cell)}`
+        : base.enemy > 0
+          ? `already in range for ${base.enemy} points of offensive value — holding position`
           : 'no reachable cell improves on standing here',
   })
-  return unlocks || approach ? { cell: best.cell, cost: best.cost, why: 'reposition' } : stay
+  return unlocks || approach ? { cell: target.cell, cost: target.cost, why: 'reposition' } : stay
 }
 
 /**
  * PLAN ONE TURN. Pure.
  * @param {object} read a `__ARES_DEV_READ()` snapshot
- * @param {{ seed?: number }} [options] `seed` breaks exact-value ties — the same seed replays the same turn
+ * @param {{ seed?: number, history?: { casts?: Record<string, number>, blocked?: string[] } }} [options]
+ *   `seed` breaks exact-value ties (same seed ⇒ same turn); `history` is what the snapshot cannot carry —
+ *   `casts` (the cooldown ledger), `blocked` (spells the authority already refused this fight) and `traps`
+ *   (encoded cells the bot has armed, which the client's own ledger never learns about).
  * @returns {{ actions: Array<object>, decisions: Array<object>, reason: string }}
  */
-export const plan_turn = (read, { seed = 0 } = {}) => {
+export const plan_turn = (read, { seed = 0, history = {} } = {}) => {
   const decisions = []
   const me = me_of(read)
   if (!me) return { actions: [], decisions, reason: 'no seat in this fight' }
   if (read.active_id !== read.my_id) return { actions: [], decisions, reason: 'not my turn' }
   if (!enemies_of(read).length) return { actions: [], decisions, reason: 'no living enemy — nothing to do' }
 
-  const stance = choose_stance(read, me, seed, decisions)
+  const stance = choose_stance(read, me, seed, history, decisions)
   const actions = []
   if (stance.cost > 0)
     actions.push({
@@ -272,9 +309,11 @@ export const plan_turn = (read, { seed = 0 } = {}) => {
     })
 
   const claimed = { facts: new Set(), spells: new Set() }
-  let ap = Number(me.ap_committed ?? 0)
+  // The PRESENTED budget, not the committed one: `ap`/`mp` carry the fold's predicted begin-turn refill, so
+  // they are what the player's own bar shows for the turn about to be played.
+  let ap = Number(me.ap ?? me.ap_committed ?? 0)
   for (let step = 0; step < 8; step++) {
-    const rows = candidates(read, me, stance.cell, ap, claimed, seed)
+    const rows = candidates(read, me, stance.cell, ap, claimed, seed, history)
     const pick = rows[0]
     decisions.push({
       phase: 'cast',
