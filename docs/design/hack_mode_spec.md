@@ -199,8 +199,8 @@ asserted by the e2e slice):
 
 1. **Arming without UI**: `?hack=1` in the URL (always wins, the engine-flags PRECEDENCE LAW,
    `engine_flags_pref.js:8-12`) or `localStorage['aresrpg.hack_mode_enabled'] = '1'` before boot
-   (the `?v2shadow` dual-spelling precedent, `world-shell/fight_v2_shadow.js:34-48`). No clicks
-   needed; a fresh context + `addInitScript` is enough.
+   (the dual-spelling precedent every engine flag follows). No clicks needed; a fresh context +
+   `addInitScript` is enough.
 2. **Constant ground**: for every in-fence x,z — `engine.sample_block(x, y, z)` is solid iff
    `floor(y) < 138`; `ground_surface_y(sample, x, z) === 137`; every standing entity's feet
    y = 138. No water, no trees, no cliffs, no caves (overworld).
