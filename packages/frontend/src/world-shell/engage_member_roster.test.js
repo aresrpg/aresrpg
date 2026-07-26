@@ -53,9 +53,13 @@ let member
 let member_args = null
 let mono_args = null
 
+/** #123 (cross-file pollution): `bun test src` shares ONE process — this file's auth address must never outlive it. */
+let prior_address = null
+
 beforeEach(() => {
   member_args = null
   mono_args = null
+  prior_address = use_auth.getState().address ?? null
   use_auth.setState({ address: '0xme' })
   set_expedition_sdk_mock(async () => ({ grpc_client: {} }))
   mono = spyOn(sdk_fight, 'create_fight_ptb').mockReturnValue((args) => {
@@ -80,6 +84,7 @@ beforeEach(() => {
 afterEach(() => {
   for (const spy of spies) spy.mockRestore()
   reset_expedition_sdk_mock()
+  use_auth.setState({ address: prior_address })
 })
 
 describe('the engage action composes the door the ROSTER decides', () => {
