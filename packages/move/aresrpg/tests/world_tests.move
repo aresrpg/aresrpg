@@ -15,6 +15,7 @@ const TEMP: address = @0xB0B;
 
 // ── mirrored error values (module-local; `location` disambiguates the aborting module) ──
 const EOutOfBounds: u64 = 101; // world
+const EBadEntryIndex: u64 = 102; // world (a row index past the table end — the boss mask's fail-closed guard)
 const EBadRange: u64 = 103; // world
 const EWorldNotEmpty: u64 = 104; // world (destroy_world refuses populated tables)
 const V_EWrongVersion: u64 = 101; // version
@@ -70,6 +71,76 @@ fun resource_protector_reads_all_shapes() {
   assert!(world::resource_protector(&w, res_a).is_none());
   ts::return_shared(w); ts::return_shared(ver); sc.return_to_sender(cap);
   sc.end();
+}
+
+// ╔════════════════ [ The BOSS MASK (#1110 — the mixed-pack fence's on-chain predicate) ] ═ ]
+
+#[test]
+/// The `BossMaskKey → vector<u16>` DF door end to end: absent reads EMPTY (the uniform degradation path a
+/// dungeon-only-boss world also lands on), a write round-trips, a rewrite REPLACES wholesale (the mask is a
+/// projection of the authored bestiary — a partial edit has no meaning), and an explicitly empty write is a
+/// legal state indistinguishable from never having written one.
+fun boss_mask_round_trips_and_absent_reads_empty() {
+  let mut sc = ts::begin(OWNER);
+  boot(&mut sc);
+  let _wid = make(&mut sc);
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let mut w = sc.take_shared<World>();
+  assert_eq!(world::boss_mask(&w), vector<u16>[]); // never written — absent ≡ empty
+  let mob = object::id_from_address(@0x60B);
+  world::add_mob_entry(&cap, &mut w, mob, 100, 1, 4, &ver, sc.ctx()); // row 0
+  world::add_mob_entry(&cap, &mut w, mob, 100, 1, 4, &ver, sc.ctx()); // row 1
+  world::add_mob_entry(&cap, &mut w, mob, 100, 1, 4, &ver, sc.ctx()); // row 2
+  world::set_boss_mask(&cap, &mut w, vector<u16>[2], &ver, sc.ctx());
+  assert_eq!(world::boss_mask(&w), vector<u16>[2]);
+  world::set_boss_mask(&cap, &mut w, vector<u16>[0, 2], &ver, sc.ctx()); // rewrite REPLACES
+  assert_eq!(world::boss_mask(&w), vector<u16>[0, 2]);
+  world::set_boss_mask(&cap, &mut w, vector<u16>[], &ver, sc.ctx()); // an empty mask is a legal state
+  assert_eq!(world::boss_mask(&w), vector<u16>[]);
+  ts::return_shared(w); ts::return_shared(ver); sc.return_to_sender(cap);
+  sc.end();
+}
+
+#[test]
+/// `clear_tables` retires the mask WITH the table it indexes. The mask is POSITIONAL, so a mask that outlives
+/// its table names whatever species later lands on those rows — the exact silent mis-fence the wave exists to
+/// prevent. (It also leaves nothing stranded on the UID for the two-step burn.)
+fun clearing_the_tables_retires_the_boss_mask() {
+  let mut sc = ts::begin(OWNER);
+  boot(&mut sc);
+  let _wid = make(&mut sc);
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let mut w = sc.take_shared<World>();
+  world::add_mob_entry(&cap, &mut w, object::id_from_address(@0x60B), 100, 1, 4, &ver, sc.ctx());
+  world::set_boss_mask(&cap, &mut w, vector<u16>[0], &ver, sc.ctx());
+  assert_eq!(world::boss_mask(&w), vector<u16>[0]);
+  world::clear_tables(&cap, &mut w, &ver, sc.ctx());
+  assert_eq!(world::boss_mask(&w), vector<u16>[]);
+  world::clear_tables(&cap, &mut w, &ver, sc.ctx()); // idempotent — clearing a mask-less world is a no-op
+  assert_eq!(world::boss_mask(&w), vector<u16>[]);
+  ts::return_shared(w); ts::return_shared(ver); sc.return_to_sender(cap);
+  sc.end();
+}
+
+#[test, expected_failure(abort_code = EBadEntryIndex, location = world)]
+/// FAIL-CLOSED: a mask index past the live table end ABORTS. A stale mask (written against a table that has
+/// since shrunk) would silently fence the wrong rows — and a fence that silently points at the wrong species is
+/// worse than no fence, because it reads as armed.
+fun a_boss_mask_row_past_the_table_end_aborts() {
+  let mut sc = ts::begin(OWNER);
+  boot(&mut sc);
+  let _wid = make(&mut sc);
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let mut w = sc.take_shared<World>();
+  world::add_mob_entry(&cap, &mut w, object::id_from_address(@0x60B), 100, 1, 4, &ver, sc.ctx()); // one row: 0
+  world::set_boss_mask(&cap, &mut w, vector<u16>[1], &ver, sc.ctx()); // row 1 does not exist
+  abort
 }
 
 #[test, expected_failure(abort_code = EBadRange, location = world)]

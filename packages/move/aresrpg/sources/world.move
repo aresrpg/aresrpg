@@ -111,6 +111,21 @@ public struct MobLevelKey has copy, drop, store { template: ID }
 /// below WRITES it; `resource_protector` READS it.
 public struct ProtectorKey has copy, drop, store { template: ID }
 
+/// THE BOSS FENCE (#1110 design amendment 2) DF KEY on the World UID: the world-scoped list of mob-table row
+/// INDEXES that are BOSS rows. Mixed-species packs draw their non-primary members from the eligible roster, and
+/// 9 boss rows sit in the live pick tables — without a boss predicate the draw could mint multi-boss packs or a
+/// boss riding a chicklet group. `MobTemplate` carries no family/boss field and a COMPATIBLE upgrade cannot add
+/// one to a frozen struct, so the predicate lives here as a dynamic field — the same extension-gate pattern
+/// `MobLevelKey` and `ProtectorKey` already set.
+///
+/// SHAPE: `vector<u16>` of row indexes, NOT a positional bitmask. Most worlds carry 0-1 boss rows (9 across all
+/// 20 worlds; 11 worlds are dungeon-only-boss and mask to EMPTY), so the vector is usually empty or tiny,
+/// `contains` is the whole read, and ABSENT ≡ EMPTY gives one uniform degradation path with no bit math.
+/// Written in the SAME PTB family that writes/reorders the mob table (`set_boss_mask` + the table doors), so the
+/// mask and the table can never drift across a reseed — the alternative, a loose off-chain artifact, rots on the
+/// first row reorder.
+public struct BossMaskKey has copy, drop, store {}
+
 /// THE world template. Shared once at `create_world`; every field is admin-tunable within its clamp band. Spawn
 /// tables + roster grow via the append setters. `spawn_nonce` mints unique per-world spawn ids for `zones`.
 public struct World has key {
@@ -292,6 +307,35 @@ public fun set_mob_level(cap: &AdminCap, w: &mut World, template: ID, level: u16
   touched(w);
 }
 
+/// SET the world's BOSS MASK — the mob-table row indexes that are boss rows (#1110). Overwrites wholesale: the
+/// mask is a projection of the seed's authored bestiary, so a partial edit has no meaning, and rewriting it in
+/// the SAME PTB that (re)writes the table is what keeps mask and table in lockstep across a reseed. Passing an
+/// EMPTY vector is a legal, meaningful state (a world whose bosses are all dungeon-only) and is identical to
+/// having no mask at all — one degradation path, never two.
+///
+/// FAIL-CLOSED on a stale mask: every index must name a REAL row of the live table, so a mask written against a
+/// table that has since shrunk aborts here instead of silently fencing the wrong species.
+public fun set_boss_mask(cap: &AdminCap, w: &mut World, rows: vector<u16>, version: &Version, ctx: &TxContext) {
+  gate(cap, version, ctx);
+  let n = w.mobs.length();
+  let mut i = 0;
+  while (i < rows.length()) {
+    assert!((rows[i] as u64) < n, EBadEntryIndex);
+    i = i + 1;
+  };
+  let key = BossMaskKey {};
+  if (df::exists(&w.id, key)) { *df::borrow_mut<BossMaskKey, vector<u16>>(&mut w.id, key) = rows; }
+  else { df::add(&mut w.id, key, rows); };
+  touched(w);
+}
+
+/// The world's BOSS row indexes — EMPTY when no mask was ever written (the uniform absent ≡ empty rule). Read by
+/// `zone_comp` when it builds the member pick table for a format-3 zone.
+public fun boss_mask(w: &World): vector<u16> {
+  let key = BossMaskKey {};
+  if (df::exists(&w.id, key)) *df::borrow<BossMaskKey, vector<u16>>(&w.id, key) else vector[]
+}
+
 /// PIN (or clear) the gather-ambush defender for resource `template_id` — a `ProtectorKey → ID` DF on the World
 /// UID (P1-1 live-ops dial; worlds seeded before the pin re-arm through this). `some` UPSERTS the pin; `none`
 /// DISARMS (removes the DF — idempotent: disarming a never-pinned template is a no-op). Cap + version gated,
@@ -349,6 +393,10 @@ public fun clear_tables(cap: &AdminCap, w: &mut World, version: &Version, ctx: &
   w.resources = vector[];
   w.mobs = vector[];
   w.dungeon_rooms = vector[];
+  // the boss mask indexes the mob table BY POSITION — a mask that outlives its table names the wrong species,
+  // so retiring the content retires the mask with it (and leaves nothing stranded for `destroy_world`).
+  let key = BossMaskKey {};
+  if (df::exists(&w.id, key)) { let _: vector<u16> = df::remove(&mut w.id, key); };
   touched(w);
 }
 
