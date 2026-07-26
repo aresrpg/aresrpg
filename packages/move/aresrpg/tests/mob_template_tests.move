@@ -8,7 +8,7 @@ module aresrpg::mob_template_tests;
 
 use aresrpg::{admin::{Self, AdminCap}, mob_template::{Self, MobTemplate}, version::{Self, Version}};
 use aresrpg_fight::mob;
-use aresrpg_foundation::spell;
+use aresrpg_foundation::{spell, spell_effect};
 use std::unit_test::assert_eq;
 use sui::test_scenario::{Self as ts};
 
@@ -17,6 +17,7 @@ const TEMP: address = @0xD;
 const A_EAdminCapExpired: u64 = 101; // admin (mirrored; `location` disambiguates the aborting module)
 const V_EWrongVersion: u64 = 101; // version (mirrored; `location` disambiguates the aborting module)
 const MT_ETooManyLoot: u64 = 102; // mob_template ETooManyLoot (mirrored; `location` disambiguates)
+const MT_ETooManySpells: u64 = 101; // mob_template ETooManySpells (mirrored; `location` disambiguates)
 
 #[test]
 fun mint_reflects_content_getters() {
@@ -397,5 +398,148 @@ fun set_loot_with_expired_temp_cap_aborts() {
   let ver = sc.take_shared<Version>();
   let mut tmpl = ts::take_shared_by_id<MobTemplate>(&sc, tid);
   mob_template::set_loot(&temp_cap, &ver, &mut tmpl, vector[mob::new_loot_entry(object::id_from_address(@0x1), 100, 1, 1)], sc.ctx()); // EAdminCapExpired
+  abort
+}
+
+// ╔════════════════ [ set_spells — the live spell-kit correction door ] ══════════════════════ ]
+
+/// One `SpellLevel` carrying a single ALTER_STAT effect of `value` — the shape the encoding correction
+/// re-pushes (an authored `+25` is `value: 25` with the negative flag CLEAR, never a 32768-centered `32793`).
+#[test_only]
+fun kit_level(value: u64): spell_effect::SpellLevel {
+  spell_effect::new_spell_level(
+    1, 3, 1, 6, false, false, true, false, 1, 1, 0, 100, false, vector[], vector[],
+    vector[spell_effect::new_effect(
+      spell_effect::k_alter_stat(), spell::el_none(), value, spell_effect::shape_point(), 0,
+      spell_effect::tf_not_team(), 100, 3, spell_effect::stat_strength(), 0, spell_effect::phase_on_enter(),
+    )],
+    vector[],
+  )
+}
+
+#[test]
+/// The additive setter REPLACES the whole spell kit in place (the twin of `set_loot`) while leaving the
+/// mint-only IDENTITY fields (name, min/max level) and the sibling `loot` table untouched. Cap + version gated
+/// at the door; the corrected effect magnitude round-trips through the free `mob_spells` getter — the #904
+/// correction's on-chain half: a mint-time CENTERED `32793` becomes the ratified magnitude `25`.
+fun set_spells_replaces_the_spell_kit() {
+  let mut sc = ts::begin(OWNER);
+  version::test_init(sc.ctx());
+  admin::test_init(sc.ctx());
+
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  // mint with the MIS-ENCODED kit the live census found (centered 32768 + 25) and a loot entry to guard
+  let tid = mob_template::mint(
+    &cap, &ver, b"rat".to_string(), 3, 9, 50, 6, 3, 0,
+    spell::new_stats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), vector[kit_level(32793)],
+    vector[mob::new_loot_entry(object::id_from_address(@0xA11CE), 5000, 1, 3)], 250, sc.ctx(),
+  );
+  ts::return_shared(ver);
+  sc.return_to_sender(cap);
+
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let mut tmpl = ts::take_shared_by_id<MobTemplate>(&sc, tid);
+  assert_eq!(spell_effect::value(mob_template::mob_spells(&tmpl).borrow(0).sl_effects().borrow(0)), 32793);
+  // the correction driver re-pushes the COMPLETE kit, wholesale — here a 2-level kit with true magnitudes
+  mob_template::set_spells(&cap, &ver, &mut tmpl, vector[kit_level(25), kit_level(40)], sc.ctx());
+  let spells = mob_template::mob_spells(&tmpl);
+  assert_eq!(spells.length(), 2); // 1 level → 2 (the wholesale-replace class)
+  assert_eq!(spell_effect::value(spells.borrow(0).sl_effects().borrow(0)), 25); // decentered magnitude
+  assert_eq!(spell_effect::flags(spells.borrow(0).sl_effects().borrow(0)), 0); // positive: negative flag clear
+  assert_eq!(spell_effect::value(spells.borrow(1).sl_effects().borrow(0)), 40);
+  assert_eq!(spells.borrow(0).sl_ap_cost(), 3); // the level's non-effect surface round-trips too
+  // identity fields and the sibling loot table stay untouched — the setter only replaces `spells`
+  assert_eq!(mob_template::mob_min_level(&tmpl), 3);
+  assert_eq!(mob_template::mob_max_level(&tmpl), 9);
+  assert_eq!(mob_template::mob_loot(&tmpl).length(), 1);
+  ts::return_shared(tmpl);
+  ts::return_shared(ver);
+  sc.return_to_sender(cap);
+  sc.end();
+}
+
+#[test, expected_failure(abort_code = MT_ETooManySpells, location = mob_template)]
+/// A kit exceeding MAX_SPELLS (4) aborts `ETooManySpells` — the SAME bound `mint` asserts (mirrored, never
+/// weaker), so the correction door can never bake a kit `mint` would have rejected.
+fun set_spells_over_cap_aborts() {
+  let mut sc = ts::begin(OWNER);
+  version::test_init(sc.ctx());
+  admin::test_init(sc.ctx());
+
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let tid = mob_template::mint(
+    &cap, &ver, b"rat".to_string(), 1, 2, 10, 6, 3, 0,
+    spell::new_stats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), vector[], vector[], 1, sc.ctx(),
+  );
+  ts::return_shared(ver);
+  sc.return_to_sender(cap);
+
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let mut tmpl = ts::take_shared_by_id<MobTemplate>(&sc, tid);
+  let mut spells = vector[];
+  let mut i = 0;
+  while (i < 5) { spells.push_back(kit_level(25)); i = i + 1 };
+  mob_template::set_spells(&cap, &ver, &mut tmpl, spells, sc.ctx()); // ETooManySpells (5 > 4)
+  abort
+}
+
+#[test, expected_failure(abort_code = V_EWrongVersion, location = version)]
+/// Correcting a kit on a stale package version aborts (`EWrongVersion`) — version-gated exactly like `set_loot`.
+fun set_spells_on_stale_version_aborts() {
+  let mut sc = ts::begin(OWNER);
+  version::test_init(sc.ctx());
+  admin::test_init(sc.ctx());
+
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let tid = mob_template::mint(
+    &cap, &ver, b"rat".to_string(), 1, 2, 10, 6, 3, 0,
+    spell::new_stats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), vector[], vector[], 1, sc.ctx(),
+  );
+  ts::return_shared(ver);
+  sc.return_to_sender(cap);
+
+  sc.next_tx(OWNER);
+  let cap = sc.take_from_sender<AdminCap>();
+  let mut ver = sc.take_shared<Version>();
+  let mut tmpl = ts::take_shared_by_id<MobTemplate>(&sc, tid);
+  version::test_set_stale(&mut ver);
+  mob_template::set_spells(&cap, &ver, &mut tmpl, vector[kit_level(25)], sc.ctx()); // EWrongVersion
+  abort
+}
+
+#[test, expected_failure(abort_code = A_EAdminCapExpired, location = admin)]
+/// Correcting a kit with a temporary admin cap after its epoch aborts (`EAdminCapExpired`) before any write —
+/// the door is CAP-GATED: no capless caller can ever reach the kit.
+fun set_spells_with_expired_temp_cap_aborts() {
+  let mut sc = ts::begin(OWNER);
+  version::test_init(sc.ctx());
+  admin::test_init(sc.ctx());
+
+  sc.next_tx(OWNER);
+  let super_cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let tid = mob_template::mint(
+    &super_cap, &ver, b"rat".to_string(), 1, 2, 10, 6, 3, 0,
+    spell::new_stats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), vector[], vector[], 1, sc.ctx(),
+  );
+  admin::mint_temp_admin_cap(&super_cap, TEMP, sc.ctx());
+  ts::return_shared(ver);
+  sc.return_to_sender(super_cap);
+
+  sc.next_epoch(TEMP);
+  let temp_cap = sc.take_from_sender<AdminCap>();
+  let ver = sc.take_shared<Version>();
+  let mut tmpl = ts::take_shared_by_id<MobTemplate>(&sc, tid);
+  mob_template::set_spells(&temp_cap, &ver, &mut tmpl, vector[kit_level(25)], sc.ctx()); // EAdminCapExpired
   abort
 }
