@@ -32,13 +32,20 @@ import {
 // ── item fixtures ────────────────────────────────────────────────────────────────────────────────
 // Max roll is range[1] — DERIVED, never a hardcoded number: the boots' intelligence penalty rolls to -5
 // (the least-bad end of [-15,-5]), which is exactly the case a `Math.max` shortcut would get wrong.
+//
+// THE KEYS ARE THE CORPUS' OWN (#1065). A CorpusItem's stats come out of the /v1 decode home, which renames
+// every Move `item_stats` field to its UI spelling — `action`/`movement`, `criticalHit`, `rawDamage`, the
+// camelCase resistances. These fixtures used to speak the SDK/chain spelling instead (`ap`, `critical`,
+// `raw_damage`), a shape the corpus never emits, so the arithmetic they pin was arithmetic over a wire that
+// does not exist: six real gear fields folded to zero on every simulated seat and this file stayed green.
+// `item_corpus_wire.fixture.json` is the captured proof of the vocabulary; the bottom block folds live rows.
 const HELM = {
   id: 'fixture_helm',
   name: 'Fixture Helm',
   category: 'helmet',
   quality: 'rare',
   level: 60,
-  stats: { vitality: [10, 40], strength: [2, 8], ap: [0, 1] },
+  stats: { vitality: [10, 40], strength: [2, 8], action: [0, 1] },
   damages: [],
 }
 const BOOTS = {
@@ -47,7 +54,7 @@ const BOOTS = {
   category: 'boots',
   quality: 'common',
   level: 40,
-  stats: { agility: [5, 25], mp: [1, 1], intelligence: [-15, -5] },
+  stats: { agility: [5, 25], movement: [1, 1], intelligence: [-15, -5] },
   damages: [],
 }
 const AMULET = {
@@ -56,7 +63,7 @@ const AMULET = {
   category: 'amulet',
   quality: 'epic',
   level: 80,
-  stats: { vitality: [0, 30], critical: [1, 5], raw_damage: [2, 6], fire_resistance: [0, 12] },
+  stats: { vitality: [0, 30], criticalHit: [1, 5], rawDamage: [2, 6], fireResistance: [0, 12] },
   damages: [],
 }
 
@@ -64,7 +71,7 @@ const AMULET = {
 const centered = (deltas) => ITEM_STAT_CATALOG_ORDER.map((key) => ITEM_STAT_SHIFT + (deltas[key] ?? 0))
 
 describe('centered_max_roll — item ranges to the centered wire', () => {
-  test('takes range[1] and centers it at 32768, mapping ap/mp onto action/movement', () => {
+  test('takes range[1] and centers it at 32768, reading each field by the key the corpus carries it under', () => {
     expect(centered_max_roll(HELM)).toEqual(centered({ vitality: 40, strength: 8, action: 1 }))
     expect(centered_max_roll(BOOTS)).toEqual(centered({ agility: 25, movement: 1, intelligence: -5 }))
     expect(centered_max_roll(AMULET)).toEqual(

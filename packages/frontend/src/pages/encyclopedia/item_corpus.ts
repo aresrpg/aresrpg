@@ -17,6 +17,7 @@
 import { useMemo } from 'react'
 
 import { item_damages_from_v1, item_stats_from_v1 } from '../../chain/read_findables.js'
+import { ITEM_STAT_KEY_MAP } from '../../chain/read_templates.js'
 import { get_encyclopedia } from '../../rpc/client'
 import { use_rpc_view } from '../../rpc/use_view'
 import type { RpcEncyclopediaItem } from '../../rpc/views'
@@ -37,6 +38,16 @@ export type CorpusItem = {
   stats: Record<string, [number, number] | number>
   damages: { from: number; to: number; damage_type: string; element: string }[]
 }
+
+/**
+ * The KEY VOCABULARY a row's `stats` uses, published with the row it describes. `item_stats_from_v1` decodes
+ * through the shared home, which renames every Move `item_stats` field to its UI spelling (`raw_damage` →
+ * `rawDamage`, `critical` → `criticalHit`, the four resistances) — so a consumer that reads a row by the
+ * chain's own field name silently reads NOTHING. The map is the decode home's own table (UI key → chain
+ * field); re-exported here because this module is what hands out the rows, and a consumer must not reach
+ * past it to learn how to read one.
+ */
+export { ITEM_STAT_KEY_MAP }
 
 /** A developer/cheat template never reaches a player's build. Mirrors the SDK predicate, read off the raw
  *  /v1 category (a template row carries no `quality`). */

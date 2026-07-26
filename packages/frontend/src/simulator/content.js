@@ -19,6 +19,7 @@ import { scaled_hp } from '@aresrpg/sim/mob_stats'
 
 import { fight_spells_data } from '../game/screens/hud/fight-spells.js'
 import { equip_item } from '../game/screens/hud/simulator-equip.js'
+import { ITEM_STAT_KEY_MAP } from '../pages/encyclopedia/item_corpus'
 
 // The simulator's paper-doll vocabulary IS the inventory's — re-exported through this door so the page never
 // re-derives a second slot list. The item POPULATION lives in pages/encyclopedia/item_corpus.ts (the /v1 door).
@@ -46,9 +47,23 @@ export const BASE_MP = get_total_stat(/** @type {any} */ ({}), STATISTICS.MOVEME
 const MAX_CHARACTER_LEVEL = experience_to_level(Number.MAX_SAFE_INTEGER)
 
 // ── items: max roll → the centered wire the fold reads ────────────────────────────────────────────
-// The catalog's stat vocabulary is the SDK's (`ap`/`mp`), the fold's is the Move item_stats one
-// (`action`/`movement`); `get_equipment_stat` already reads either spelling, so the bridge is a lookup, not
-// a second alias table.
+// THREE vocabularies meet here and none of them is invented in this file. The fold speaks the Move
+// `item_stats` field names (ITEM_STAT_CATALOG_ORDER); a corpus row speaks the /v1 decode home's UI spelling;
+// the SDK's character documents speak the `ap`/`mp` shorthand. So there is one bridge per direction, each
+// DERIVED from the table its owner already publishes — never a second alias list.
+
+/**
+ * Catalog field → the key a corpus row carries it under (`item_corpus`'s own vocabulary map, inverted).
+ * Six fields diverge — `critical`→`criticalHit`, `raw_damage`→`rawDamage` and the four resistances — and
+ * reading those by the catalog's spelling folded them to ZERO on every simulated seat: gear AP/MP and the
+ * identically-spelled primaries landed while flat damage, crit and resistances silently did not (#1065).
+ * @type {Record<string, string>}
+ */
+const CATALOG_TO_CORPUS = Object.fromEntries(
+  Object.entries(ITEM_STAT_KEY_MAP).map(([ui_key, chain_field]) => [chain_field, ui_key])
+)
+
+/** Catalog field → the SDK stat name the gear-only aggregate is PUBLISHED under (the ap/mp shorthand). */
 const CATALOG_TO_STATISTIC = /** @type {Record<string, string>} */ ({
   action: STATISTICS.ACTION,
   movement: STATISTICS.MOVEMENT,
@@ -64,7 +79,7 @@ const CATALOG_TO_STATISTIC = /** @type {Record<string, string>} */ ({
 export const centered_max_roll = (item) => {
   const worn = /** @type {Record<string, unknown>} */ ({ equipment_stats: equip_item(item) })
   return ITEM_STAT_CATALOG_ORDER.map(
-    (key) => ITEM_STAT_SHIFT + get_equipment_stat(/** @type {any} */ (worn), CATALOG_TO_STATISTIC[key] ?? key)
+    (key) => ITEM_STAT_SHIFT + get_equipment_stat(/** @type {any} */ (worn), CATALOG_TO_CORPUS[key] ?? key)
   )
 }
 
@@ -80,7 +95,10 @@ const equipment_aggregate = (items) =>
     const worn = /** @type {any} */ ({ equipment_stats: equip_item(item) })
     return ITEM_STAT_CATALOG_ORDER.reduce((carried, key) => {
       const stat = CATALOG_TO_STATISTIC[key] ?? key
-      return { ...carried, [stat]: (carried[stat] ?? 0) + get_equipment_stat(worn, stat) }
+      return {
+        ...carried,
+        [stat]: (carried[stat] ?? 0) + get_equipment_stat(worn, CATALOG_TO_CORPUS[key] ?? key),
+      }
     }, totals)
   }, /** @type {Record<string, number>} */ ({}))
 

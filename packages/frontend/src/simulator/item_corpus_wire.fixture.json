@@ -1,0 +1,36 @@
+{
+  "_provenance": {
+    "source": "GET https://rpc.aresrpg.world/v1/encyclopedia?kinds=items",
+    "captured": "2026-07-26",
+    "row": "the level-178 amulet named below, VERBATIM off the live projection",
+    "template_id": "DELIBERATELY ABSENT. A chain object id in a tracked file is what the chain-id gate exists to stop, so the consumer joins this row to a LIVING id read out of the seed manifest at test time — the same idiom content.test.js already uses. Nothing here reads the id as a chain fact.",
+    "why": "The STAT BLOCK is the capture that matters: biased on-chain item_stats::ItemStatistics pairs (32768 = neutral) under the chain field names /v1 serves them by. The client decodes them through chain/read_templates.decode_item_stat_ranges — the door pages/encyclopedia/item_corpus.ts runs every row through — and that decode RENAMES six of them to their UI spelling (raw_damage -> rawDamage, critical -> criticalHit, the four resistances). Pinned here so the simulator gear fold is exercised against the real wire AND the real key vocabulary, never a shape invented by the code under test (#1065)."
+  },
+  "row": {
+    "item_type": "throneless_pendant_crown",
+    "name": "Throneless Pendant Crown",
+    "description": "The wearer insists it works; the evidence is inconclusive, no refunds, no further questions entertained.",
+    "level": 178,
+    "category": "amulet",
+    "stats": {
+      "vitality": [32821, 32987],
+      "wisdom": [32777, 32806],
+      "strength": [32778, 32818],
+      "intelligence": [32768, 32768],
+      "chance": [32768, 32768],
+      "agility": [32782, 32817],
+      "range": [32769, 32769],
+      "movement": [32768, 32768],
+      "action": [32769, 32769],
+      "critical": [32769, 32772],
+      "raw_damage": [32770, 32776],
+      "critical_chance": [32768, 32768],
+      "critical_outcomes": [32768, 32768],
+      "earth_resistance": [32768, 32768],
+      "fire_resistance": [32768, 32768],
+      "water_resistance": [32768, 32768],
+      "air_resistance": [32768, 32768]
+    },
+    "damages": []
+  }
+}
