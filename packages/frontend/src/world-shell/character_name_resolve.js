@@ -34,6 +34,42 @@ export async function resolve_character_docs(ids, fetch_characters = get_charact
 }
 
 /**
+ * THE FIGHT'S NAME BOOK (#929) — one `ctx.roster` row per PLAYER FIGHTER, keyed by its CHARACTER id, so
+ * `engine_view`'s `roster.find(c => c.id === character_id)` always matches and its last-ditch OWNER-ADDRESS
+ * fallback can never surface. That fallback is what both halves of #929 rendered: a coop remote showed the
+ * joiner's wallet, and every simulator seat showed the sim chain's ONE mock owner (`0X51M0…0000`) because the
+ * seats share it — an address is not an identity when a wallet owns several characters.
+ *
+ * Four sources, lowest precedence first — later rows win per id, so a real name always beats a placeholder:
+ *   · PROVISIONAL — every player fighter with no row yet, named by its own short CHARACTER id (the honest
+ *     in-flight display #929 explicitly accepts, never an invented name and never someone's address).
+ *   · CARRIED — the rows already published for THIS fight. The book only grows within a fight, which is what
+ *     lets a non-`/v1` seeder (the simulator shim seeds its roster into ctx at start) keep its real names
+ *     instead of being wiped by the next recompose — the dual-writer clobber that made #929 fire on EVERY
+ *     sim player row even after the seats were named.
+ *   · RESOLVED — `/v1/characters` docs (the coop remote's real name, once the read lands).
+ *   · MINE — my own kiosk characters, always the freshest truth about my own seats.
+ *
+ * Pure: no IO, no store read. @param {{ mine?: readonly any[], resolved?: readonly any[],
+ *   carried?: readonly any[], fighters?: Map<string, any> | undefined }} sources
+ * @returns {any[]} the composed roster rows
+ */
+export function compose_fight_roster({ mine = [], resolved = [], carried = [], fighters = undefined } = {}) {
+  const by_id = new Map()
+  for (const fighter of fighters?.values?.() ?? []) {
+    if (!fighter?.is_player || !fighter.character_id) continue
+    const id = String(fighter.character_id)
+    by_id.set(id, { id, name: short_fighter_id(id) })
+  }
+  for (const rows of [carried, resolved, mine])
+    for (const row of rows ?? []) if (row?.id) by_id.set(String(row.id), row)
+  return [...by_id.values()]
+}
+
+/** Stable identity of a composed roster — the change gate for re-publishing it through the ctx door. */
+export const fight_roster_signature = (rows) => (rows ?? []).map((row) => `${row?.id}:${row?.name ?? ''}`).join('|')
+
+/**
  * Player-fighter character ids a live fight's ctx.roster still needs a doc for (07-19: a party member's
  * fighter row showed a raw truncated address — fight.js's roster ctx used to carry ONLY `sui.characters`, my
  * own alts, so project.js's `roster.find(c => c.id === character_id)` never matched a co-fighter). Mobs

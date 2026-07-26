@@ -18,7 +18,12 @@ import i18n from '../../../i18n'
 
 import { CHANNEL } from './chat.js'
 import { fight_spell, fight_spells_data } from '../../screens/hud/fight-spells.js'
-import { resolve_character_docs, missing_roster_character_ids } from '../../../world-shell/character_name_resolve.js'
+import {
+  resolve_character_docs,
+  missing_roster_character_ids,
+  compose_fight_roster,
+  fight_roster_signature,
+} from '../../../world-shell/character_name_resolve.js'
 import { fight_store } from '@aresrpg/fight/store'
 import { fight_view } from '@aresrpg/fight/project'
 
@@ -559,22 +564,32 @@ export default function fight() {
     /** @param {import('../game.js').Context} context */
     observe({ events, get_state, dispatch }) {
       // THE FIGHT EDGE (S2 mirror kill): no state copy — three edge effects only.
-      // 1) ROSTER → CORE CTX: sui.characters PLUS every OTHER seated fighter (a co-fighter outside
-      //    my own alts fell to the raw-address fallback) resolves via character_name_resolve into ctx.roster
-      //    (engine_view's ONE home). `known`: doc once resolved, `undefined` mid-flight (dedupes either way).
+      // 1) ROSTER → CORE CTX: the fight's NAME BOOK — one row per player fighter, keyed by CHARACTER id
+      //    (compose_fight_roster is the ONE composition home; engine_view is its ONE consumer). Sources:
+      //    my own alts, the `/v1` docs resolved for every OTHER seated fighter, the rows already published
+      //    for this fight (a non-/v1 seeder — the simulator shim — keeps its real seat names), and an honest
+      //    short-CHARACTER-id placeholder for anyone still unresolved. #929: this used to REPLACE ctx.roster
+      //    with `sui.characters` alone, so the sim's seeded seat names were clobbered on the very next input
+      //    and every player row fell to engine_view's owner-address fallback (one mock owner ⇒ one address on
+      //    every row). `known`: doc once resolved, `undefined` mid-flight (dedupes either way).
       const known = new Map()
-      let last_mine = null,
-        last_known_size = -1,
-        last_roster = /** @type {any[]} */ ([])
+      let last_signature = null
+      let last_roster = /** @type {any[]} */ ([])
       const push_roster = () => {
-        const mine = get_state().sui?.characters ?? []
-        if (mine !== last_mine || known.size !== last_known_size) {
-          last_mine = mine
-          last_known_size = known.size
-          last_roster = known.size ? [...mine, ...[...known.values()].filter(Boolean)] : mine
-        }
-        if (last_roster.length && fight_store.getState().ctx?.roster !== last_roster)
-          fight_store.getState().input({ type: 'ctx', ctx: { roster: last_roster } })
+        const rows = compose_fight_roster({
+          mine: get_state().sui?.characters ?? [],
+          resolved: [...known.values()].filter(Boolean),
+          carried: fight_store.getState().ctx?.roster ?? [],
+          fighters: fight_view()?.fighters,
+        })
+        if (!rows.length) return
+        const signature = fight_roster_signature(rows)
+        // Re-publish when the book CHANGED, or when the core no longer holds the array we last published (a
+        // fresh `init` empties ctx — a second fight with the identical roster must re-seed, not dedupe away).
+        if (signature === last_signature && fight_store.getState().ctx?.roster === last_roster) return
+        last_signature = signature
+        last_roster = rows
+        fight_store.getState().input({ type: 'ctx', ctx: { roster: rows } })
       }
       const ensure_roster = () => {
         const missing = missing_roster_character_ids(fight_view()?.fighters, get_state().sui?.characters, known)
