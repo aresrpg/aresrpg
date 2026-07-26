@@ -36,7 +36,11 @@
     <script type="module">
       import * as THREE from 'three'
       import { WebGPURenderer } from 'three/webgpu'
-      import { create_character_avatar, get_glb_loader, apply_avatar_material } from '/src/player/character_avatar.js'
+      import {
+        create_character_avatar,
+        get_glb_loader,
+        apply_avatar_material,
+      } from '/src/player/character_controller.js'
       import { create_vfx_preset } from '/src/render/vfx_preset_engine.js'
       import { PRESETS } from '/src/render/vfx_presets_data.js'
       import { attach_status_overlay, STATUS_OVERLAY } from '/src/render/vfx_model_overlay.js'
