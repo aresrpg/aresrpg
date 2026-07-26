@@ -1,0 +1,123 @@
+{
+  "mission": "combined arming capture — #964 + #968 + #969",
+  "captured_at": "2026-07-26T10:24:00+02:00/10:52:00+02:00",
+  "substrate": {
+    "worktree": "/tmp/aresrpg-lanes/capture-integration",
+    "head": "7003504d",
+    "head_parents": ["64f78787", "ec472b9c", "ec53b090", "13bde8a7"],
+    "dev_server": "bun run dev -- --port 5300 --strictPort (vite 8.1.4, foreground boot verified in log)",
+    "url_driven": "http://localhost:5300/simulator?dev",
+    "browser": "HEADED Chromium 149.0.7827.55 (playwright chromium-1228 chrome-mac-arm64), persistent context, viewport 1600x1000",
+    "gpu": "WebGPU adapter GRANTED — console: '[renderer] adapter: apple/metal-3 · backend=webgpu · reversedDepthBuffer=true'; storage-binding GRANTED=134217728 B. NO WebGL2 fallback. All paint bars are GPU-real, none SKIPPED-ENV.",
+    "identity": "throwaway dev-wallet Ed25519 key generated for this pass, 0.00 SUI, address 0xec456a74270a75d969f21e815058a62d0f679152b59a7122329a6c5292c5db77 — NOT the owner's, NOT alice. Sanctioned seam: auth/dev_wallet.ts (__ARES_DEV_KEY + ?dev), DEV-build only. Zero transactions signed (the simulator is structurally unable to sign — fight_shim seeds local no-ops).",
+    "composition": "1x QA_YAJIN (yajin, roster level 200) + 2x Scarhound (level 180, 7700 HP), seeded by REAL mouse clicks on the 3D board's blue/red start bands (cell centres located by pixel analysis of the rendered canvas)."
+  },
+  "bars": {
+    "A_968_visual_truth": {
+      "verdict": "PASS",
+      "setup_panes_stand_down": true,
+      "start_cell_paint_stands_down": true,
+      "duplicate_setup_sprite": false,
+      "stop_restores": true,
+      "observed": [
+        "SETUP (A0): 3-column grid — ROSTER pane left, board centre, MOB TEAM read-out right; blue ally band + orange mob band painted on the board; hint 'CLICK A BLUE CELL TO PLACE A CHARACTER...'; button = START FIGHT.",
+        "FIGHT (A2 money shot): both side panes UNMOUNTED, board spans full width; blue/orange start bands GONE (the only wash is the fight's own green movement range); exactly 3 entities on the board (1 yajin + 2 scarhounds) with NO duplicated setup sprite beside any live entity; turn-order strip + HP bars + hotbar + END TURN present; hint switched to 'THE FIGHT OWNS THE BOARD — STOP RETURNS TO SETUP'; button = STOP.",
+        "POST-STOP (A4): both panes restored, blue/orange bands repainted, setup hint restored, START FIGHT restored, MOB TEAM read-out shows both Scarhound rows. No leftover fight chrome."
+      ],
+      "screenshots": ["A0_setup_before_start.png", "A2_money_shot_midfight.png", "A4_after_stop_restore.png"]
+    },
+    "B_968_auto_pass": {
+      "verdict": "PARTIAL — banner half PASS, chain auto-press NOT DRIVABLE ON THIS SUBSTRATE",
+      "no_banner_text": "PASS (mechanical + driven)",
+      "auto_press_on_expiry": "BLOCKED-BY-DESIGN",
+      "evidence": [
+        "MECHANICAL: the retired copy keys are absent from ALL SIX locales — grep -c 'turn_expired' => en:0 fr:0 de:0 es:0 ja:0 uk:0.",
+        "MECHANICAL: bun test packages/frontend/src/world-shell/fight_expiry_gate.test.js => 9 pass / 0 fail / 32 expect().",
+        "DRIVEN: a live simulator turn was left to run its clock down repeatedly — no banner text appeared anywhere on the surface at any point.",
+        "STRUCTURAL BLOCKER: FightControls.jsx:161 `const chain_backed = use_dungeon((s) => s.chain_backed !== false)` and :218-219 gate BOTH the auto-END-TURN and the stall console.error on chain_backed. simulator/fight_shim.js:223 seeds `chain_backed: false` DELIBERATELY (its own comment: 'The simulator's local sim stamps a turn deadline off its OWN wall clock, so the predicate alone would happily fire there — auto-passing the turn of a theorycrafter who is reading the board'). The expiry auto-press therefore CANNOT fire in the simulator, by construction. Driving it needs a chain-backed dungeon/world fight — i.e. SUI + a seeded on-chain character, explicitly excluded by this pass's own substrate ('Zero SUI, no wallet (simulator only)').",
+        "NOT THE SAME MECHANISM: the simulator DOES show an 'AUTO PASS IN 15S' cue and does auto-commit a drafted turn — that is turn_commit_countdown_s / auto_commit_label (the pre-existing commit cue), not the #921 expired-turn auto-advance. It was observed firing correctly and is not banner prose about deadlines.",
+        "TWO-SEAT SUB-BAR NOT RUN: it rides the same blocked mechanism."
+      ],
+      "screenshots": ["B1_turn_lapsed.png"]
+    },
+    "C_964_receipt_truth": {
+      "verdict": "MIXED — trap drop PASS, status/pool persistence FAIL, snaptrap BLOCKED",
+      "items": {
+        "utility_effects_fold_into_the_receipt_at_cast": {
+          "verdict": "PASS",
+          "timeline": "AP 6 -> 4 (cast cost 2) and MP 3 -> 4 (+1 MP utility buff applied) in the same receipt; entity carried TWO status chips, 'Become invisible · 3 turns' and '+1 MP · 3 turns', rendered on both the turn-order card and the entity hover card; the yajin's sprite vanished from the board (invisibility rendered).",
+          "screenshot": "C2_vanish_cast.png / C4_cast_turn1.png"
+        },
+        "trap_drop_survives_the_turn_cycle": {
+          "verdict": "PASS",
+          "detail": "Fanged Snare (yajin_fanged_snare, tooltip 'EFFECTS — Places a trap — Earth damage', 2 AP, range 1-3) cast on cell ~(1020,420). AP 6 -> 4. After a manual END TURN and a full mob round the trap glyph is STILL painted on its cell (visible as the amber cell inside the green movement wash).",
+          "screenshots": ["C7_snare_placed.png", "C8_trap_after_turn.png", "C9_trap_later.png"]
+        },
+        "invisibility_and_MP_buff_persist_across_END_TURN": {
+          "verdict": "FAIL",
+          "repro": [
+            "1. /simulator?dev, seat 1 yajin + 2 mobs, START FIGHT.",
+            "2. On turn 1 cast Vanish (yajin_shadowfold) on self.",
+            "3. Observe: 'Become invisible · 3 turns' + '+1 MP · 3 turns', AP 6->4, MP 3->4.",
+            "4. Press END TURN. Let the mob round resolve.",
+            "5. On the yajin's NEXT own turn: BOTH status chips are GONE from the turn-order card AND the entity hover card; MP is back to 3 (the +1 is not applied); the yajin's sprite is rendered again.",
+            "The spell cooldown DOES persist (socket 2 shows 11 -> 10 -> 9), so the cast itself is remembered — only the status/pool half is lost."
+          ],
+          "why_this_is_not_legitimate_expiry": "The chip declared 3 turns and was never once rendered at 2 or 1 — it went 3 -> absent in a single own-turn boundary. packages/sim/src/fight_actions.js:447 decrements durations via `update_entity(tick.state, entity_id, ...)`, i.e. only on the bearer's OWN turn, so one own-turn should have left 2 remaining.",
+          "reproduced": "twice, independently (first fight and a fresh second fight after STOP/START)",
+          "screenshots": ["C2_vanish_cast.png", "C3_after_turn_cycle.png", "C4_cast_turn1.png", "C5_my_turn2.png"]
+        },
+        "yajin_snaptrap_MP_on_step": {
+          "verdict": "BLOCKED — not castable in this build",
+          "detail": "The character was built at roster LEVEL 200 with Snaptrap invested to level 5 (spell budget 199 -> 149 across 5 spells). The armed fight deck contains only THREE spells — yajin_gutterknife, yajin_shadowfold, yajin_fanged_snare — and the turn-order card renders the seat as 'LV 1' while the roster panel renders 'LEVEL 200'. yajin_snaptrap never reaches a hotbar socket, so the MP-on-step payload cannot be driven. Additionally the mob AI never stepped onto the placed trap during observation, so no on-step trigger of any kind was observable.",
+          "attribution": "NOT introduced by any of the three PRs — none of 64f78787 / ec472b9c / ec53b090 / 13bde8a7 touch simulator/fight_start.js or class_deck_of. Pre-existing, but it is what blocks this acceptance item."
+        },
+        "hard_refresh_persistence": {
+          "verdict": "NOT APPLICABLE ON THIS SUBSTRATE",
+          "detail": "The simulator's fight is an in-memory local sim chain (simulator/fight_shim.js); a hard refresh tears the session down by construction. Refresh-survival is a chain-backed property and needs the same substrate bar B needs."
+        },
+        "push_then_move_into_the_vacated_cell": {
+          "verdict": "NOT REACHED",
+          "detail": "No push spell in the 3-spell deck (see snaptrap blocker)."
+        }
+      },
+      "mechanical_layer": "bun test packages/sim/test/trap_payload_kinds.test.js packages/sim/test/unsupported_kind_is_loud.test.js packages/fight/test/sim_chain_utility_kinds.test.js packages/fight/test/sim_snapshot_statuses.test.js => 18 pass / 0 fail / 50 expect()"
+    },
+    "D_969_icons": {
+      "verdict": "PASS",
+      "hotbar_sockets_render_real_art": true,
+      "letter_placeholders": false,
+      "spell_404s": 0,
+      "evidence": [
+        "DOM: every hotbar socket <img> resolves to https://assets.aresrpg.world/spells/<id>.webp with naturalWidth=128, naturalHeight=128, complete=true — real decoded art, no letter placeholder. Sockets observed: yajin_gutterknife.webp, yajin_shadowfold.webp, yajin_fanged_snare.webp.",
+        "The spell-picker/grimoire rows in the character editor render the same SpellRow component art (screenshot 05_char_editor.png).",
+        "ZERO /spells/ resource errors captured across the whole session (window error listener, capture phase, catches <img> load failures).",
+        "HTTP probe against the live host: spells/yajin_gutterknife.webp 200 image/webp 26738B · spells/yajin_shadowfold.webp 200 image/webp 27596B · spells/yajin_fanged_snare.webp 200 image/webp 25046B · spells/yajin_snaptrap.webp 200 image/webp 26076B.",
+        "REGRESSION CONTROL — the exact URL the PR removed still 404s: spells/yajin_gutterknife_hd.webp => 404 application/xml. The client never requests it."
+      ],
+      "mechanical_layer": "bun test packages/sdk/test/spell_icon_webp.test.js packages/sdk/test/asset_host_mapping.test.js packages/sdk/test/item_icon_url.test.js => 28 pass / 0 fail / 56 expect()"
+    },
+    "E_console_hygiene": {
+      "verdict": "PASS (one attributed 404, one attributed connection-refused class)",
+      "unattributed_errors": 0,
+      "console_error_calls": 0,
+      "page_errors": 0,
+      "unhandled_rejections": 0,
+      "attributed": [
+        {
+          "signal": "GET https://assets.aresrpg.world/mobs/hy_custom_timber_wolf.png => 404 application/xml (resource load error, repeated per mob-sprite paint)",
+          "attribution": "PRE-EXISTING content-CDN gap: the Scarhound's mob icon has no published render. NOT caused by #969 — 13bde8a7's only change to packages/frontend/src/game/data/mobs.js is a COMMENT edit (the '_hd two-tier' sentence), verified by git diff edge...13bde8a7. Different asset family (mobs/*.png), different resolver (get_mob_icon_url, unchanged)."
+        },
+        {
+          "signal": "net::ERR_CONNECTION_REFUSED x2 at boot, plus '[worn] template identity join failed — remote worn GLBs stay unmounted RpcError: Failed to fetch' (src/rpc/client.ts)",
+          "attribution": "The local /v1 read API and sponsor endpoint are not running in this pass (by design — zero SUI, no backend). Named by the brief as attributable absent-local-API noise. The client degrades honestly and says so."
+        }
+      ]
+    }
+  },
+  "incidental_findings_outside_the_three_PRs": [
+    "The simulator's fight seat renders as 'LV 1' in the turn-order card while the roster panel renders 'LEVEL 200', and the armed deck holds only 3 of the yajin's 21 spells. HP (1040) does look level-scaled, so this reads as a level/deck-join defect on the START fold (simulator/fight_start.js class_deck_of), not a display-only bug. It BLOCKS any simulator-driven verification of a spell above the first unlock tier — including #964's own snaptrap acceptance item.",
+    "The mob AI (2x Scarhound, level 180) stayed passive for the whole observation window: it never approached, never attacked after the opening turn, and never stepped on the placed trap."
+  ],
+  "teardown": "asserted — see report"
+}
