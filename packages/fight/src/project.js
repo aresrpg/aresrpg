@@ -438,7 +438,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       owner: row.addr,
       character_id,
       name: row.name || roster_name || `${String(row.addr).slice(0, 6)}…${String(row.addr).slice(-4)}`,
-      team: 0,
+      team: Number(row.team ?? 0), // the CHAIN's side (fight.move seats team 1 only in PvP) — never assumed PvM
       // DISPLAY cell — my own walk holds at its pre-move cell until the walk beat presents (the rig follows
       // the run, never teleports to the target ahead of it); health/ap/mp stay the effective/presented fold.
       cell: decode_xy(d.fighters?.[seat_key(seat)]?.cell ?? f.cell ?? row.cell),
@@ -597,7 +597,12 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
     placement,
     placement_deadline_ms: view.placement_deadline_ms ?? 0,
     turn_ms: view.turn_ms ?? 0,
-    placement_cells: placement ? { 0: (view.start_cells ?? []).map(decode_xy), 1: [] } : { 0: [], 1: [] },
+    // BOTH declared zones (#1093): the board paints my band and the opposing one, and placement_click gates on
+    // mine — a team whose zone the projection drops is a bare board (PvM's enemy band) or a dead click (a PvP
+    // team-1 seat). The chain stores both sides; this reads them, it never assumes the PvM side.
+    placement_cells: placement
+      ? { 0: (view.start_cells_a ?? []).map(decode_xy), 1: (view.start_cells_b ?? []).map(decode_xy) }
+      : { 0: [], 1: [] },
     turn_deadline_ms: s.turn_deadline_ms ?? view.turn_deadline_ms ?? 0,
     deadline_starved: deadline_starved(s),
     ready,
