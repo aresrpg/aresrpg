@@ -42,6 +42,9 @@ const EAlreadySeated: u64 = 108; // join: this character already holds a seat in
 const EGatedJoins: u64 = 109; // join: a door-created (dungeon/kolizeum) fight — only VOUCHED joins seat
 const EBadTeam: u64 = 110; // join: team 1 is only a PvP concept
 const EWrongBrand: u64 = 112; // join: the witness type does not match the brand the fight was created under
+const ERosterFull: u64 = 113; // add_member: every committed member already landed — this call has no slot
+const EWrongMember: u64 = 114; // add_member: the template is not the NEXT committed member (swap / reorder refused)
+const EPartialRoster: u64 = 115; // create_members: fewer members landed than the commitment names
 
 
 public struct Dials has copy, drop {
@@ -191,10 +194,52 @@ fun create_inner<W: drop>(
   ctx: &TxContext,
 ) {
   version.assert_enabled();
-  assert!(participant::combatant_hp(&creator) > 0, EZeroHp); // §17.23 — a 0-HP fighter cannot enter
-
   let now = clock.timestamp_ms();
   let aged_bp = aging_bp(&dials, now, spawned_at_ms);
+  let mut fight = assemble(
+    registry, type_name::with_defining_ids<W>(), world, spawn_id, round, world_seed, anchor_x, anchor_z,
+    is_public, party_id, gated_joins, aged_bp,
+    GroupContent { template: content_template, xp: mob::spec_xp(spec), loot: mob::spec_loot(spec), kit: mob::kit_of(spec) },
+    creator, dials, now, ctx,
+  );
+
+  let all_starts = union_starts_stored(&fight);
+  let n_mobs = clamp_group(group_size as u64, dials.team_bound);
+  let mut state = aresrpg_foundation::prng::rng_seed(group_seed);
+  let mut i = 0;
+  while (i < n_mobs) {
+    let (m, st) = mob::spawn_seeded(spec, &fight.board.shape_mask, &fight.board.obstacles, &fight.board.holes, &all_starts, dials.archimob_bp, state);
+    state = st;
+    fight.mobs.push_back(m);
+    i = i + 1;
+  };
+
+  seat_creator(fight, registry, creator_lines);
+}
+
+/// The ONE Fight assembler both create paths share: the §17.23 0-HP gate, the board derivation, the first-come
+/// derived-address claim, and the struct literal. The paths differ ONLY in what they seat afterwards (one spec ×
+/// N mobs, or one spec per committed member) — keeping the literal here is what stops the two from drifting.
+fun assemble(
+  registry: &mut FightRegistry,
+  brand: TypeName,
+  world: ID,
+  spawn_id: u64,
+  round: u64,
+  world_seed: u64,
+  anchor_x: u32,
+  anchor_z: u32,
+  is_public: bool,
+  party_id: Option<ID>,
+  gated_joins: bool,
+  aged_bp: u64,
+  group: GroupContent,
+  creator: Combatant,
+  dials: Dials,
+  now: u64,
+  ctx: &TxContext,
+): Fight {
+  assert!(participant::combatant_hp(&creator) > 0, EZeroHp); // §17.23 — a 0-HP fighter cannot enter
 
   let bspec = board::generate_for_anchor(world_seed, anchor_x, anchor_z);
   assert!(bspec.start_cells_a().length() >= dials.team_bound, EBadStartCells);
@@ -207,12 +252,10 @@ fun create_inner<W: drop>(
   } else {
     sui::derived_object::claim(fight_registry::uid_mut(registry), fight_registry::new_round_key(world, spawn_id, round))
   };
-  let fid = id.to_inner();
-  let creator_id = participant::combatant_character(&creator);
 
-  let mut fight = Fight {
+  Fight {
     id,
-    brand: type_name::with_defining_ids<W>(),
+    brand,
     world,
     spawn_id,
     world_seed,
@@ -239,25 +282,145 @@ fun create_inner<W: drop>(
     turn_deadline_ms: 0,
     last_action_ms: 0,
     placement_deadline_ms: now + dials.placement_ms,
-    group: GroupContent { template: content_template, xp: mob::spec_xp(spec), loot: mob::spec_loot(spec), kit: mob::kit_of(spec) },
-  };
+    group,
+  }
+}
+
+/// The shared create TAIL: attach the creator's weapon lines, latch the seat, announce, share.
+fun seat_creator(mut fight: Fight, registry: &mut FightRegistry, creator_lines: vector<WeaponLine>) {
+  let fid = object::id(&fight);
+  let creator_id = participant::character(fight.participants.borrow(0));
+  attach_weapon_lines(&mut fight, 0, creator_lines); // §17.27 wave-2a — the creator seats at index 0
+  fight_registry::latch_character(registry, fight.brand, creator_id, fid); // S-12f — brand-scoped: one live fight per character per consumer
+  fight_events::emit_created(fid, fight.world, fight.spawn_id, fight.anchor_x, fight.anchor_z, fight.public_fight, fight.aged_bp, fight.mobs.length());
+  fight_events::emit_joined(fid, creator_id, 0);
+  transfer::share_object(fight);
+}
+
+// ╔════════════════ [ THE MEMBER DOOR (#1110 amendment 3 — the hot-potato builder) ] ═ ]
+
+/// A group under construction — a HOT POTATO (no abilities: it cannot be stored, dropped or copied, so the PTB
+/// that opened it MUST finish it in the same transaction).
+///
+/// WHY A BUILDER AT ALL: a mixed pack needs N `&MobTemplate` shared objects in one create, and Move has no
+/// `&vector<SharedObject>` — there is no signature that takes a variable roster. The potato is the seam: one
+/// `add_member` command per template, each one checked against the commitment.
+///
+/// WHAT MAKES IT SAFE: `committed` is the roster the ZONE COMMITMENT binds (it rides the claim ticket, whose only
+/// constructor sits behind the full claim gauntlet), and `add_member` accepts templates only in that exact order.
+/// A caller cannot swap in a softer species, repeat the weakest row, or reorder the pack — the fight can only be
+/// the fight the world advertised.
+public struct GroupBuild {
+  brand: TypeName,
+  world: ID,
+  spawn_id: u64,
+  round: u64,
+  world_seed: u64,
+  anchor_x: u32,
+  anchor_z: u32,
+  spawned_at_ms: u64,
+  is_public: bool,
+  party_id: Option<ID>,
+  gated_joins: bool,
+  group_seed: u64,
+  progress: u64, // §4 distance difficulty 0-1000 — the graded level window's input (#1111)
+  content_template: ID, // the PRIMARY's template: the group's identity row, `committed[0]`
+  committed: vector<ID>, // the roster the commitment binds, IN DRAW ORDER
+  landed: vector<MobSpec>, // one spec per `add_member`, positional against `committed`
+  creator: Combatant,
+  creator_lines: vector<WeaponLine>,
+  dials: Dials,
+}
+
+/// OPEN a member-list group. The consumer package unpacks its own claim ticket and passes the committed roster;
+/// everything the fight needs is captured here so `add_member` and `create_members` take no trusted input.
+public fun open_group<W: drop>(
+  _w: W,
+  world: ID,
+  spawn_id: u64,
+  round: u64,
+  world_seed: u64,
+  anchor_x: u32,
+  anchor_z: u32,
+  spawned_at_ms: u64,
+  is_public: bool,
+  party_id: Option<ID>,
+  gated_joins: bool,
+  group_seed: u64,
+  progress: u64,
+  committed: vector<ID>,
+  creator: Combatant,
+  creator_lines: vector<WeaponLine>,
+  dials: Dials,
+  version: &Version,
+): GroupBuild {
+  version.assert_enabled();
+  assert!(!committed.is_empty(), EPartialRoster); // a group with no committed member is not a group
+  let content_template = committed[0];
+  GroupBuild {
+    brand: type_name::with_defining_ids<W>(),
+    world, spawn_id, round, world_seed, anchor_x, anchor_z, spawned_at_ms, is_public, party_id, gated_joins,
+    group_seed, progress, content_template, committed, landed: vector[], creator, creator_lines, dials,
+  }
+}
+
+/// ADD the next committed member. The spec is the consumer's mirror of ITS template; `template_id` is that
+/// template's object id, and it must equal the NEXT committed id — out-of-order, foreign, and duplicate
+/// templates all abort here, which is the whole anti-swap mechanism (there is no second check downstream).
+public fun add_member(build: &mut GroupBuild, template_id: ID, spec: &MobSpec) {
+  let slot = build.landed.length();
+  assert!(slot < build.committed.length(), ERosterFull);
+  assert!(build.committed[slot] == template_id, EWrongMember);
+  build.landed.push_back(*spec);
+}
+
+/// CONSUME the potato and build the fight: every committed member must have landed, then each seats from ITS OWN
+/// spec at the graded level window. `group_size` is `min(committed roster, team bound)` — the roster is derived at
+/// the RAW rolled size (stream law), the live bound only decides how many of it seat.
+///
+/// Per-member CONTENT (xp / loot / kit) lands as one indexed dynamic field per seated mob; the shared
+/// `GroupContent` keeps the PRIMARY's block so every reader that never learns about members still reads something
+/// true (and every pre-door fight keeps reading exactly what it read before).
+public fun create_members(
+  build: GroupBuild,
+  registry: &mut FightRegistry,
+  version: &Version,
+  clock: &Clock,
+  ctx: &TxContext,
+) {
+  version.assert_enabled();
+  let GroupBuild {
+    brand, world, spawn_id, round, world_seed, anchor_x, anchor_z, spawned_at_ms, is_public, party_id,
+    gated_joins, group_seed, progress, content_template, committed, landed, creator, creator_lines, dials,
+  } = build;
+  assert!(landed.length() == committed.length(), EPartialRoster);
+
+  let now = clock.timestamp_ms();
+  let aged_bp = aging_bp(&dials, now, spawned_at_ms);
+  let primary = &landed[0];
+  let mut fight = assemble(
+    registry, brand, world, spawn_id, round, world_seed, anchor_x, anchor_z, is_public, party_id, gated_joins,
+    aged_bp,
+    GroupContent { template: content_template, xp: mob::spec_xp(primary), loot: mob::spec_loot(primary), kit: mob::kit_of(primary) },
+    creator, dials, now, ctx,
+  );
 
   let all_starts = union_starts_stored(&fight);
-  let n_mobs = clamp_group(group_size as u64, dials.team_bound);
+  let n_mobs = clamp_group(landed.length(), dials.team_bound);
   let mut state = aresrpg_foundation::prng::rng_seed(group_seed);
   let mut i = 0;
   while (i < n_mobs) {
-    let (m, st) = mob::spawn_seeded(spec, &fight.board.shape_mask, &fight.board.obstacles, &fight.board.holes, &all_starts, dials.archimob_bp, state);
+    let spec = &landed[i];
+    let (m, st) = mob::spawn_seeded_graded(spec, &fight.board.shape_mask, &fight.board.obstacles, &fight.board.holes, &all_starts, dials.archimob_bp, progress, state);
     state = st;
     fight.mobs.push_back(m);
+    df::add(&mut fight.id, MemberContentKey { index: i }, GroupContent {
+      template: committed[i], xp: mob::spec_xp(spec), loot: mob::spec_loot(spec), kit: mob::kit_of(spec),
+    });
     i = i + 1;
   };
 
-  attach_weapon_lines(&mut fight, 0, creator_lines); // §17.27 wave-2a — the creator seats at index 0
-  fight_registry::latch_character(registry, fight.brand, creator_id, fid); // S-12f — brand-scoped: one live fight per character per consumer
-  fight_events::emit_created(fid, world, spawn_id, anchor_x, anchor_z, is_public, aged_bp, fight.mobs.length());
-  fight_events::emit_joined(fid, creator_id, 0);
-  transfer::share_object(fight);
+  seat_creator(fight, registry, creator_lines);
 }
 
 public fun create_pvp<W: drop>(
@@ -499,8 +662,41 @@ public(package) fun group_xp(fight: &Fight): u64 { fight.group.xp }
 public(package) fun group_loot(fight: &Fight): &vector<MobLootEntry> { &fight.group.loot }
 public(package) fun group_kit(fight: &Fight): &MobKit { &fight.group.kit }
 
+// ── PER-MEMBER content (#1110): one indexed DF per seated mob, written by `create_members` ──
 
-public(package) fun destroy(fight: Fight) {
+/// The dynamic-field key holding mob `index`'s own content block. Only the member door writes these; a fight
+/// created through any other path has none, which is exactly what makes the accessor below total.
+public struct MemberContentKey has copy, drop, store { index: u64 }
+
+/// THE per-index content door — every group read in the package goes through it. ABSENT ⇒ the fight's shared
+/// block, so a single-spec fight (and every fight that predates the member door) reads what it always read, with
+/// no branch at the call site. One home for "what is mob `index` made of".
+public(package) fun member_content(fight: &Fight, index: u64): &GroupContent {
+  let k = MemberContentKey { index };
+  if (df::exists(&fight.id, k)) df::borrow(&fight.id, k) else &fight.group
+}
+
+/// Does this fight seat SEVERAL specs? The one thing settlement needs beyond the per-index read: a mixed pack's
+/// loot checklist is the members' tables concatenated, a mono pack's is one table repeated (§4.3 of the spec).
+public(package) fun is_mixed(fight: &Fight): bool { df::exists(&fight.id, MemberContentKey { index: 0 }) }
+
+public(package) fun content_template(c: &GroupContent): ID { c.template }
+public(package) fun content_xp(c: &GroupContent): u64 { c.xp }
+public(package) fun content_loot(c: &GroupContent): &vector<MobLootEntry> { &c.loot }
+public(package) fun content_kit(c: &GroupContent): &MobKit { &c.kit }
+
+
+public(package) fun destroy(mut fight: Fight) {
+  // Reclaim the per-member content fields (the settler's storage rebate) — one per seated mob, or none at all.
+  let seated = fight.mobs.length();
+  let mut m = 0;
+  while (m < seated) {
+    let k = MemberContentKey { index: m };
+    if (df::exists(&fight.id, k)) {
+      let GroupContent { template: _, xp: _, loot: _, kit: _ } = df::remove<MemberContentKey, GroupContent>(&mut fight.id, k);
+    };
+    m = m + 1;
+  };
   let Fight {
     id, brand: _, world: _, spawn_id: _, world_seed: _, anchor_x: _, anchor_z: _, public_fight: _, party_id: _, aged_bp: _,
     turn_ms: _, placement_ms: _, team_bound: _, xp_mult: _, loot_mult: _, status: _, mode: _, winner_team: _, gated_joins: _, participants: _, mobs: _,
