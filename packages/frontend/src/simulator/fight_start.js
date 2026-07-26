@@ -13,9 +13,9 @@
 // TEMPLATES ARE RAW. `create_sim_chain` runs the sim's own `normalize_spell_templates` over `templates_raw`
 // and RECORDS those rows in the capsule, and that normalizer is not idempotent — handing it the already
 // normalized map (`fight_spells_data.spells[].template`) would replay every spell inert. So the rows here are
-// the corpus' own, keyed by their authored `id`; the deck ids and the invested spell levels are re-keyed onto
-// that same id space, because the page persists spell levels by `name_key` (stable across republishes) while
-// the chain templates key by object id. One translation, one place.
+// the corpus' own; the deck ids and the invested spell levels are re-keyed onto that same id space, because
+// the page persists spell levels by `name_key` (stable across republishes) while a cast names the spell by
+// its on-chain object id. One translation, one place — `cast_id_of` below is that place.
 
 import { decode } from '@aresrpg/fight/los'
 
@@ -32,26 +32,45 @@ export const START_BLOCKED = {
 }
 
 /**
+ * THE ID A COMMITTED CAST NAMES (#931). The production board stages `object_id` — the on-chain SpellTemplate
+ * shared object `act_cast` takes — and the simulator routes those very staged rows through the sim chain's
+ * `commands_from_staged`, which reads `spell_template_id` verbatim as the spell to cast. So the local chain's
+ * templates, decks and spell levels must live in the OBJECT-ID space too. Keyed by the corpus row's authored
+ * slug instead, every player cast named a spell the ctx could not resolve: the turn committed, the AP was
+ * spent and not one effect folded. Mobs never showed it — their ids are minted by `mob_spell_id` on both the
+ * deck and the template side, and the AI casts by deck id rather than through the staged-action door.
+ * @param {Record<string, any>} row  a raw corpus row
+ * @returns {string}  '' when the row carries no object id — a spell no cast can name
+ */
+const cast_id_of = (row) => String(row?.object_id ?? '')
+
+/**
  * The castable rows for one character: its class' spells whose unlock level it has reached, joined to the RAW
- * corpus row each one normalizes from. A row the corpus no longer carries is dropped — the deck must never
- * name a template the chain's ctx cannot resolve.
+ * corpus row each one normalizes from, re-keyed onto the cast id space. A row the corpus no longer carries is
+ * dropped, and so is one still awaiting its deployment receipt — the deck must never name a template the
+ * chain's ctx cannot resolve, and a receipt-less row is exactly that (the board stages no id for it either).
  * @param {{ class_id: string, level: number, spell_levels?: Record<string, number> }} character
  * @param {Array<Record<string, any>>} corpus  the raw spell corpus rows (get_spell_corpus)
- * @returns {{ rows: Array<Record<string, any>>, spell_ids: string[], spell_levels: Record<string, number> }}
+ * @returns {{ rows: Array<Record<string, any>>, spell_ids: string[], spell_levels: Record<string, number>,
+ *   uncastable: string[] }}  `uncastable` names the dropped rows by their authored id
  */
 export const class_deck_of = (character, corpus) => {
   const raw_by_id = new Map((corpus ?? []).map((row) => [String(row?.id ?? ''), row]))
-  const joined = class_spells(character.class_id)
+  const reachable = class_spells(character.class_id)
     .filter((spell) => spell.unlock_level <= character.level && raw_by_id.has(String(spell.template_id)))
-    .map((spell) => ({
-      raw: raw_by_id.get(String(spell.template_id)),
-      id: String(spell.template_id),
+    .map((spell) => ({ spell, raw: raw_by_id.get(String(spell.template_id)) }))
+  const joined = reachable
+    .filter(({ raw }) => cast_id_of(raw) !== '')
+    .map(({ spell, raw }) => ({
+      raw: { ...raw, id: cast_id_of(raw) },
+      id: cast_id_of(raw),
       level: Number(character.spell_levels?.[spell.name_key] ?? 1),
     }))
   return {
     rows: joined.map(({ raw }) => raw),
     spell_ids: joined.map(({ id }) => id),
     spell_levels: Object.fromEntries(joined.map(({ id, level }) => [id, level])),
+    uncastable: reachable.filter(({ raw }) => cast_id_of(raw) === '').map(({ raw }) => String(raw?.id ?? '')),
   }
 }
 
@@ -83,9 +102,18 @@ export const build_start_args = ({ state, board, item_by_id, mob_by_id, mob_spel
   if (picked.length === 0) return { ok: false, reason: START_BLOCKED.NO_MOBS }
 
   const decks = new Map(seated.map(({ character }) => [character.id, class_deck_of(character, corpus)]))
+  // NO SILENT INERT DECK (#931): a reachable class spell the fight cannot cast is dropped, never quietly, and
+  // ONE line names every one of them — an armed card that folds nothing is the exact failure this fixed.
+  const uncastable = [...new Set([...decks.values()].flatMap(({ uncastable: rows }) => rows))]
+  if (uncastable.length > 0)
+    console.error(
+      `[simulator] ${uncastable.length} class spell(s) carry no on-chain SpellTemplate id and were dropped ` +
+        `from the fight deck — they cannot be cast until the seed ceremony publishes their receipt: ` +
+        `${uncastable.join(', ')}`
+    )
   const placements = seated.map(({ cell, character }) => ({
     cell: decode(cell),
-    // The spell levels the seat fights at are keyed by TEMPLATE id here (see the header) — `seat_entity`
+    // The spell levels the seat fights at are keyed by the CAST id here (see `cast_id_of`) — `seat_entity`
     // reads them off the character it is given, so the re-key rides on this projection.
     character: { ...character, spell_levels: decks.get(character.id).spell_levels },
     seat: build_seat(character, resolve_loadout(item_by_id, character.loadout).items),

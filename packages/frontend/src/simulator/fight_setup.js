@@ -9,10 +9,11 @@
 // off the page reducer's character, it does not exist. That keeps one home per fact across the lane boundary,
 // and it means a balance change in L1 needs no edit here.
 //
-// DECKS AND SPELL LEVELS. A seat's deck is its class's published spells keyed by NAME_KEY — the same key the
-// page reducer's `spell_levels` uses and the same key `class_spell_templates()` maps, so a level the player
-// allocated in the inspector is the level the sim casts at. Level 1 is the FREE baseline (an absent row reads
-// 1 on chain), so unallocated spells still enter the deck at 1 rather than being unavailable.
+// DECKS AND SPELL LEVELS. A seat's deck is its class's published spells keyed by the CAST id — the on-chain
+// SpellTemplate object id a committed cast names (`fight_start.js cast_id_of`, #931). The page reducer holds
+// the player's allocation under `name_key`; `class_deck_of` re-keys it onto the cast id space before it gets
+// here, so a level the player allocated in the inspector is the level the sim casts at. Level 1 is the FREE
+// baseline (an absent row reads 1 on chain), so unallocated spells still enter the deck at 1.
 
 import { build_mob_spell_templates, mob_spell_id } from './content.js'
 
