@@ -204,7 +204,14 @@ const advance_if_dead = (result, actor_id) => {
         ]
       : []),
   ]
-  return with_victory(advanced.state.winner, advanced.state, events)
+  // THE WINNER THIS ADVANCE STARTED FROM, never the one it ENDED on (#1169). `apply_damage` latches `winner`
+  // on the state the instant a kill wipes a team, so a turn-start hazard fired inside `advance_to_actor` can
+  // decide the fight silently: reading `advanced.state.winner` back as the "previous" winner made
+  // `with_victory` believe the fight was ALREADY over and skip its announcement, so the state was terminal and
+  // `fight_ended` was never emitted — no `Victory` row, no client terminal, a fight that runs open-ended. The
+  // guard above already proved this winner is -1; naming it (as handle_move/handle_cast/handle_end_turn all do)
+  // is what keeps the announcement bound to the decision.
+  return with_victory(result.state.winner, advanced.state, events)
 }
 
 // ── Command handlers ───────────────────────────────────────────────────────────
