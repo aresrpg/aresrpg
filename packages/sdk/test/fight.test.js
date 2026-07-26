@@ -5,6 +5,7 @@ import { Transaction } from '@mysten/sui/transactions'
 
 import {
   create_fight_ptb,
+  create_member_fight_ptb,
   join_fight_ptb,
   place_ptb,
   force_start_ptb,
@@ -187,6 +188,48 @@ describe('mob-group proof producer — Move BCS/duplicate-last parity', () => {
         }),
       ),
     ).toEqual(['zones::claim_mob_group_in_zone', 'fight::create'])
+  })
+})
+
+describe('create_member_fight_ptb — the mixed-pack door (#1110)', () => {
+  const roster = [id('mt0'), id('mt1'), id('mt0')] // a repeat is normal: two of one species, one of another
+
+  test('composes claim → open → one add per committed member → create', () => {
+    const tx = create_member_fight_ptb(ctx)({ ...A, member_template_ids: roster })
+    expect(targets(tx)).toEqual([
+      'zones::claim_mob_group_members',
+      'fight::open_group',
+      'fight::add_member',
+      'fight::add_member',
+      'fight::add_member',
+      'fight::create_members',
+    ])
+    // the adds are ORDERED — the chain checks each template against the committed slot, so a composer that
+    // deduped or reordered them would abort on chain rather than merely lose a member
+    const adds = move_calls(tx).filter(c => c.target.endsWith('::add_member'))
+    expect(adds).toHaveLength(roster.length)
+  })
+
+  test('the global-search door swaps in when a zone is named', () => {
+    const tx = create_member_fight_ptb(ctx)({
+      ...A,
+      zx: 7,
+      zy: 9,
+      member_template_ids: roster,
+    })
+    expect(targets(tx)[0]).toBe('zones::claim_mob_group_in_zone_members')
+  })
+
+  test('an empty roster refuses to compose — the chain would abort on the close anyway', () => {
+    expect(() =>
+      create_member_fight_ptb(ctx)({ ...A, member_template_ids: [] }),
+    ).toThrow(/member roster/)
+  })
+
+  test('an undeployed network refuses loudly rather than inventing ids', () => {
+    expect(() =>
+      create_member_fight_ptb(undeployed)({ ...A, member_template_ids: roster }),
+    ).toThrow()
   })
 })
 

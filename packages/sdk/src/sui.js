@@ -20,6 +20,7 @@ import { borrow_personal_kiosk_cap } from './sui/write/borrow_personal_kiosk_cap
 // binds each. These REPLACE every dead legacy builder noted above.
 import {
   create_fight_ptb,
+  create_member_fight_ptb,
   join_fight_ptb,
   place_ptb,
   force_start_ptb,
@@ -347,6 +348,7 @@ export async function SDK({ network = 'testnet' } = {}) {
 
     // S-57 — deployed S-46 FIGHT lifecycle (CORE create/join/settle-loot doors + ENGINE turn/action/settle doors).
     create_fight_ptb: create_fight_ptb(context),
+    create_member_fight_ptb: create_member_fight_ptb(context),
     join_fight_ptb: join_fight_ptb(context),
     place_ptb: place_ptb(context),
     force_start_ptb: force_start_ptb(context),

@@ -594,12 +594,13 @@ export const bit_get = (bitmap, i) => {
  *   carries the format byte that selects the derivation, and omitting it silently derives the legacy one
  * @param {number} p.zx @param {number} p.zy  the zone key
  * @param {object} p.world  the World doc: `{ zone_size, bounds_x, bounds_z, min_groups, max_groups, min_nodes,
- *   max_nodes, mobs: Array<{template_id, rate_bp, min_group, max_group, level?}>,
+ *   max_nodes, boss_mask?: number[], mobs: Array<{template_id, rate_bp, min_group, max_group, level?}>,
  *   resources: Array<{template_id, rate_bp, min_qty, max_qty, job, tier}> }` (`level` = the distance-difficulty
  *   eligibility DF value, 0/absent = unauthored — the dormant path)
  * @param {number} [p.team_bound]  GameConfig team_size_bound (default 6 — config.move DEFAULT_TEAM_SIZE)
  * @returns {Array<{ spawn_id:string, kind:'mob'|'resource', index:number, x:number, z:number, template_id:string,
- *   size?:number, spawned_at_ms?:number, group_seed?:string, remaining?:number, job?:number, tier?:number }>}
+ *   size?:number, spawned_at_ms?:number, group_seed?:string, members?:string[], progress?:number,
+ *   remaining?:number, job?:number, tier?:number }>}
  */
 export function derive_zone({ zone, zx, zy, world, team_bound = 6 }) {
   const zsize = Number(world.zone_size)
@@ -628,26 +629,50 @@ export function derive_zone({ zone, zx, zy, world, team_bound = 6 }) {
     spawn_z: Number(world.spawn_zone_z ?? 1000),
   })
   const lvl_cap = level_cap(progress, rmin, rmax)
-  const weights = mobs.map((m, i) =>
-    levels[i] <= lvl_cap ? Number(m.rate_bp) : 0,
-  )
   const size_bound = size_cap(progress, Number(team_bound) || 6)
+  // THE RULED MODEL (#1111), format-gated exactly as `zone_comp` gates it: a member-list zone weights the pick by
+  // the authored rate ALONE — distance stopped deciding WHICH species a zone admits and started deciding how hard
+  // they are. Applying that to a format-1/2 zone would re-derive it into fiction (a different weight total picks
+  // a different row from the same roll), which is why the branch is on the zone's own committed byte.
+  const members_zone = format === FORMAT_MEMBERS
+  const weights = mobs.map((m, i) =>
+    members_zone || levels[i] <= lvl_cap ? Number(m.rate_bp) : 0,
+  )
+  // the member pool is the pick table with every BOSS row zeroed — absent mask ≡ empty (world.move's rule)
+  const boss_rows = new Set((world.boss_mask ?? []).map(Number))
+  const member_weights = weights.map((w, i) => (boss_rows.has(i) ? 0 : w))
 
-  const groups = derive_mob_groups({
-    seed,
-    min_g: Number(world.min_groups),
-    max_g: Number(world.max_groups),
-    weights,
-    min_group: mobs.map(m => Number(m.min_group)),
-    max_group: mobs.map(m => Number(m.max_group)),
-    size_bound,
-    ox,
-    oz,
-    zsize,
-    bx,
-    bz,
-    format,
-  })
+  const groups = members_zone
+    ? derive_mob_groups_members({
+        seed,
+        min_g: Number(world.min_groups),
+        max_g: Number(world.max_groups),
+        weights,
+        member_weights,
+        min_group: mobs.map(m => Number(m.min_group)),
+        max_group: mobs.map(m => Number(m.max_group)),
+        size_bound,
+        ox,
+        oz,
+        zsize,
+        bx,
+        bz,
+      })
+    : derive_mob_groups({
+        seed,
+        min_g: Number(world.min_groups),
+        max_g: Number(world.max_groups),
+        weights,
+        min_group: mobs.map(m => Number(m.min_group)),
+        max_group: mobs.map(m => Number(m.max_group)),
+        size_bound,
+        ox,
+        oz,
+        zsize,
+        bx,
+        bz,
+        format,
+      })
   const cells = derive_resources({
     seed,
     min_n: Number(world.min_nodes),
@@ -677,6 +702,17 @@ export function derive_zone({ zone, zx, zy, world, team_bound = 6 }) {
       size: g.size,
       spawned_at_ms,
       group_seed: String(g.group_seed),
+      // FORMAT 3 only — the pack's ROSTER (the templates `add_member` must be fed, in this order) and the
+      // difficulty the engine draws its levels at. The roster is trimmed to `size` exactly as the claim door
+      // trims it: the stream derives it at the RAW rolled size, the live team bound decides how many seat.
+      ...(members_zone
+        ? {
+            members: g.members
+              .slice(0, g.size)
+              .map(idx => mobs[idx].template_id),
+            progress,
+          }
+        : {}),
     })
   })
   cells.forEach((c, i) => {

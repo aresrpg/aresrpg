@@ -159,8 +159,13 @@ describe('get_world — null-safe read', () => {
         }),
         getObjects: async request => {
           field_request = request
+          // two MobLevelKey values, then the BossMaskKey vector<u16> (#1110) — ONE batch, in that order
           return {
-            objects: [{ json: { value: 3 } }, { json: { value: 12 } }],
+            objects: [
+              { json: { value: 3 } },
+              { json: { value: 12 } },
+              { json: { value: [1] } },
+            ],
           }
         },
       },
@@ -171,8 +176,10 @@ describe('get_world — null-safe read', () => {
       ids: IDS,
     })(id('w0'))
     expect(world.mobs.map(mob => mob.level)).toEqual([3, 12])
-    expect(field_request.objectIds).toHaveLength(2)
-    expect(new Set(field_request.objectIds).size).toBe(2)
+    // the boss mask rides the SAME batch — a client deriving member packs without it mixes bosses in
+    expect(world.boss_mask).toEqual([1])
+    expect(field_request.objectIds).toHaveLength(3)
+    expect(new Set(field_request.objectIds).size).toBe(3)
     expect(field_request.include).toEqual({ json: true })
   })
 

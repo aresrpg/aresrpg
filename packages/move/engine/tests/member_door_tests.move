@@ -39,6 +39,11 @@ fun species(min_level: u16, max_level: u16, xp: u64, loot_src: address, base_ap:
 }
 
 fun chicklet(): MobSpec { species(1, 1, 10, LOOT_A, 4) }
+/// The THREE-SPECIES roster `mob_graded_level_tests.move` and `spawn_compose.test.js` both pin: a real band, a
+/// POINT band, a wide band. Same seed, same order — so a level that changes here changes in three places at once.
+fun graded_roster(): vector<MobSpec> {
+  vector[species(10, 20, 1, LOOT_A, 6), species(30, 30, 1, LOOT_A, 6), species(100, 200, 1, LOOT_A, 6)]
+}
 fun draugr(): MobSpec { species(50, 50, 500, LOOT_B, 9) }
 
 /// Compose the full door: open with `committed`, add every spec in `order`, create. The two vectors are passed
@@ -180,5 +185,44 @@ fun a_single_spec_fight_reads_the_shared_block_at_every_index() {
     i = i + 1;
   };
   ts::return_shared(fight);
+  sc.end();
+}
+
+/// Seat the pinned three-species roster at `progress` and return the levels the door actually seated.
+fun graded_levels(sc: &mut Scenario, spawn_id: u64, progress: u64, creator: address): vector<u64> {
+  let committed = vector[tid(CHICKLET), tid(DRAUGR), tid(@0xE1)];
+  sc.next_tx(OWNER);
+  {
+    let mut registry = tsreg(sc);
+    let ver = sc.take_shared<Version>();
+    let clock = mk_clock(sc, 1000);
+    let mut build = fight::open_group_for_testing(tid(WORLD), spawn_id, 0, progress, committed, combatant(creator, 100), &ver);
+    let specs = graded_roster();
+    let mut i = 0;
+    while (i < specs.length()) { fight::add_member(&mut build, committed[i], &specs[i]); i = i + 1; };
+    fight::create_members(build, &mut registry, &ver, &clock, sc.ctx());
+    clock::destroy_for_testing(clock);
+    ts::return_shared(registry);
+    ts::return_shared(ver);
+  };
+  sc.next_tx(OWNER);
+  let fight = sc.take_shared<Fight>();
+  let mut lv = vector<u64>[];
+  let mut i = 0;
+  while (i < fight::mob_count(&fight)) { lv.push_back(mob::level(fight::mobs(&fight).borrow(i))); i = i + 1; };
+  ts::return_shared(fight);
+  lv
+}
+
+#[test]
+/// THE GRADED DRAW THROUGH THE DOOR — the levels a real `create_members` seats are the ones the pure kernel
+/// fixture and the CLIENT mirror (`spawn_compose.js::derive_group_members_graded`) pin off group seed 0. The
+/// board's spawn-cell draw sits between two members' level draws, so this is where a stream that only looks
+/// aligned in isolation comes apart: the mirror would paint a pack the chain never seated.
+fun the_door_seats_the_levels_the_client_mirror_predicts() {
+  let mut sc = ts::begin(OWNER);
+  stand_up(&mut sc);
+  assert_eq!(graded_levels(&mut sc, 20, 0, CHAR), vector<u64>[10, 30, 100]); // spawn_compose.test.js `graded_at(0)`
+  assert_eq!(graded_levels(&mut sc, 21, 1000, @0xC9), vector<u64>[20, 30, 178]); // ... `graded_at(1000)`
   sc.end();
 }

@@ -251,3 +251,158 @@ fun writing_the_mask_removes_the_boss_from_other_packs() {
   ts::return_shared(w); ts::return_shared(ver); sc.return_to_sender(cap);
   sc.end();
 }
+
+// ╔════════════════ [ THE PIPELINE PARITY FIXTURE (twin of packages/sim/test/zone_members_pipeline.test.js) ] ═ ]
+
+fun tid(a: address): ID { object::id_from_address(a) }
+fun chicklet(): ID { tid(@0xC1) }
+fun mid(): ID { tid(@0xC2) }
+fun boss(): ID { tid(@0xC3) }
+
+/// The `near` ring of `zone_members_pipeline_parity.json` — the SAME rows `derive_zone` produces in the JS twin.
+fun near_ids(): vector<u64> {
+  vector[
+    16492180582181892288, 3956747793522794080, 18052246252437403437, 15457146976168181440,
+    18110359238327092912, 10597610377060817547, 8976852253373484546, 3631178599744171756,
+    17455388501741882677, 15372486481835117553, 14129701224272850252, 7538737853449190364,
+    4534515994362930194, 2714026330597926000, 7293208781394179178, 7699665138257714782,
+    10383472789507226224, 5227907263169655552, 15438368702439668200, 6743919970837403326,
+    11586568831637676708, 3280996214862550492, 9442171755903901, 15591751892401515548
+  ]
+}
+fun near_xs(): vector<u32> {
+  vector[
+    249729, 249727, 249530, 249405, 249475, 249717, 249772, 249794,
+    249691, 249719, 249611, 249369, 249396, 249554, 249573, 249374,
+    249403, 249797, 249691, 249715, 249794, 249406, 249530, 249795
+  ]
+}
+fun near_zs(): vector<u32> {
+  vector[
+    249367, 249411, 249483, 249530, 249452, 249529, 249688, 249675,
+    249557, 249811, 249674, 249761, 249814, 249452, 249514, 249729,
+    249561, 249371, 249716, 249692, 249598, 249481, 249523, 249566
+  ]
+}
+fun near_sizes(): vector<u16> {
+  vector[
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
+  ]
+}
+fun near_members(): vector<vector<ID>> {
+  vector[
+    vector[mid(), mid()], vector[mid(), chicklet()],
+    vector[chicklet(), mid()], vector[mid(), mid()],
+    vector[chicklet(), mid()], vector[mid(), mid()],
+    vector[mid(), chicklet()], vector[mid(), chicklet()],
+    vector[chicklet(), mid()], vector[mid(), chicklet()],
+    vector[mid(), mid()], vector[mid(), chicklet()],
+    vector[boss(), boss()], vector[chicklet(), mid()],
+    vector[boss(), boss()], vector[mid(), chicklet()],
+    vector[mid(), chicklet()], vector[mid(), mid()],
+    vector[chicklet(), mid()], vector[mid(), chicklet()],
+    vector[mid(), chicklet()], vector[chicklet(), mid()],
+    vector[boss(), boss()], vector[boss(), boss()]
+  ]
+}
+
+/// The `far` ring of `zone_members_pipeline_parity.json` — the SAME rows `derive_zone` produces in the JS twin.
+fun far_ids(): vector<u64> {
+  vector[
+    16492180582181892288, 3956747793522794080, 18052246252437403437, 15457146976168181440,
+    18110359238327092912, 10597610377060817547, 8976852253373484546, 3631178599744171756,
+    17455388501741882677, 15372486481835117553, 14129701224272850252, 7538737853449190364,
+    4534515994362930194, 2714026330597926000, 7293208781394179178, 7699665138257714782,
+    10383472789507226224, 5227907263169655552, 15438368702439668200, 6743919970837403326,
+    11586568831637676708, 3280996214862550492, 9442171755903901, 15591751892401515548
+  ]
+}
+fun far_xs(): vector<u32> {
+  vector[
+    256385, 256383, 256186, 256061, 256131, 256373, 256428, 256450,
+    256347, 256375, 256267, 256025, 256052, 256210, 256229, 256030,
+    256059, 256453, 256347, 256371, 256450, 256062, 256186, 256451
+  ]
+}
+fun far_zs(): vector<u32> {
+  vector[
+    249879, 249923, 249995, 250042, 249964, 250041, 250200, 250187,
+    250069, 250323, 250186, 250273, 250326, 249964, 250026, 250241,
+    250073, 249883, 250228, 250204, 250110, 249993, 250035, 250078
+  ]
+}
+fun far_sizes(): vector<u16> {
+  vector[
+    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4
+  ]
+}
+fun far_members(): vector<vector<ID>> {
+  vector[
+    vector[mid(), mid(), chicklet(), chicklet()], vector[mid(), chicklet(), chicklet(), mid()],
+    vector[chicklet(), mid(), chicklet(), mid()], vector[mid(), mid(), chicklet(), mid()],
+    vector[chicklet(), mid(), chicklet(), chicklet()], vector[mid(), mid(), chicklet(), chicklet()],
+    vector[mid(), chicklet(), chicklet(), mid()], vector[mid(), chicklet(), chicklet(), chicklet()],
+    vector[chicklet(), mid(), mid(), mid()], vector[mid(), chicklet(), mid(), mid()],
+    vector[mid(), mid(), mid(), mid()], vector[mid(), chicklet(), mid(), mid()],
+    vector[boss(), boss(), boss(), boss()], vector[chicklet(), mid(), chicklet(), chicklet()],
+    vector[boss(), boss(), boss(), boss()], vector[mid(), chicklet(), chicklet(), mid()],
+    vector[mid(), chicklet(), mid(), chicklet()], vector[mid(), mid(), mid(), chicklet()],
+    vector[chicklet(), mid(), mid(), mid()], vector[mid(), chicklet(), mid(), mid()],
+    vector[mid(), chicklet(), mid(), mid()], vector[chicklet(), mid(), chicklet(), chicklet()],
+    vector[boss(), boss(), boss(), boss()], vector[boss(), boss(), boss(), boss()]
+  ]
+}
+
+/// Trim a derived roster to what actually SEATS — the claim door's own rule (the stream derives the roster at
+/// the RAW rolled size; the live team bound decides how many of it seat), so the fixture pins seated packs.
+fun seated(roster: vector<ID>, size: u16): vector<ID> {
+  let mut out = roster;
+  while (out.length() > (size as u64)) { out.pop_back(); };
+  out
+}
+
+#[test]
+/// THE FULL PIPELINE, ROW FOR ROW, against the fixture the JS mirror asserts. The kernel already has a parity
+/// fixture; this one covers everything BETWEEN the world and the kernel — the pick table without its level cap,
+/// the boss-masked member table, the §4 size cap, and `progress` — because that is where the two derivers can
+/// silently disagree while both "match the kernel". Both rings are pinned: progress 0 and progress 1000.
+fun the_member_pipeline_matches_the_js_derive_zone_fixture() {
+  let mut sc = ts::begin(OWNER);
+  boot(&mut sc);
+  make(&mut sc, vector[ROW_BOSS]);
+  sc.next_tx(OWNER);
+  let w = sc.take_shared<World>();
+
+  let (n_ids, _np, n_members, n_xs, n_zs, n_sizes, _ng, n_progress) =
+    zone_comp::derive_mobs_members(&w, SPAWN_ZX, SPAWN_ZX, SEED, TEAM_BOUND);
+  assert_eq!(n_progress, 0);
+  assert_eq!(n_ids, near_ids());
+  assert_eq!(n_xs, near_xs());
+  assert_eq!(n_zs, near_zs());
+  assert_eq!(n_sizes, near_sizes());
+  let expected_near = near_members();
+  let mut i = 0;
+  while (i < n_ids.length()) {
+    assert_eq!(seated(n_members[i], n_sizes[i]), expected_near[i]);
+    i = i + 1;
+  };
+
+  let (f_ids, _fp, f_members, f_xs, f_zs, f_sizes, _fg, f_progress) =
+    zone_comp::derive_mobs_members(&w, FAR_ZX, SPAWN_ZX + 1, SEED, TEAM_BOUND);
+  assert_eq!(f_progress, 1000);
+  assert_eq!(f_ids, far_ids());
+  assert_eq!(f_xs, far_xs());
+  assert_eq!(f_zs, far_zs());
+  assert_eq!(f_sizes, far_sizes());
+  let expected_far = far_members();
+  let mut j = 0;
+  while (j < f_ids.length()) {
+    assert_eq!(seated(f_members[j], f_sizes[j]), expected_far[j]);
+    j = j + 1;
+  };
+
+  ts::return_shared(w);
+  sc.end();
+}

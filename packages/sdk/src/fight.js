@@ -296,6 +296,132 @@ export function create_fight_ptb(context) {
 }
 
 /**
+ * CREATE a Fight over a LIVE MEMBER-LIST (format-3) world group — the mixed-pack door (#1110/#1111). Formats 1/2
+ * keep using `create_fight_ptb` above; the two are not interchangeable and the chain enforces it (a format-3 zone
+ * refuses the original claim door and vice versa), so pick by the zone's own commitment byte — `@aresrpg/sim`'s
+ * `derive_zone` hands you `members` on exactly the rows that need this door.
+ *
+ * ONE PTB, N+3 calls: the member CLAIM door returns a `MemberGroupTicket` hot potato carrying the COMMITTED
+ * roster; `fight::open_group` consumes it into a `GroupBuild` (also a hot potato); one `fight::add_member` per
+ * species — in the committed order, or the chain aborts; `create_members` closes it. The per-command shape is
+ * not ceremony: a pack of N species needs N `&MobTemplate` shared objects, and Move has no signature that takes
+ * a variable roster of them.
+ *
+ * `member_template_ids` MUST be the roster the zone derived, in order (`derive_zone` row `.members`). Duplicates
+ * are normal — a pack of three of one species passes the same object three times, resolved to ONE tx input.
+ * @param {FightContext} context
+ */
+export function create_member_fight_ptb(context) {
+  const { network } = context
+  return ({
+    world_id,
+    kiosk_id,
+    personal_kiosk_cap_id,
+    character_id,
+    raised_spell_ids = [],
+    spawn_id,
+    zx = null,
+    zy = null,
+    member_template_ids,
+    is_public = true,
+    party_id = null,
+    tx = new Transaction(),
+  }) => {
+    const a = aresrpg_deployment(network, context.ids?.aresrpg)
+    if (!Array.isArray(member_template_ids) || !member_template_ids.length)
+      throw new Error(
+        '[fight] create_member_fight_ptb needs the zone-derived member roster',
+      )
+    const in_zone = zx != null && zy != null
+
+    const config = shared_object_arg(
+      tx,
+      network,
+      'GAME_CONFIG',
+      false,
+      a.GAME_CONFIG,
+    )
+    const version = shared_object_arg(tx, network, 'VERSION', false, a.VERSION)
+    const engine_version = shared_object_arg(
+      tx,
+      network,
+      'ENGINE_VERSION',
+      false,
+      a.ENGINE_VERSION,
+    )
+    // world is &mut in the claim AND & in open_group — a caller-cached ref must carry mutable:true
+    const world = as_object_arg(tx, world_id)
+    const kiosk = as_object_arg(tx, kiosk_id)
+    const pkcap = as_object_arg(tx, personal_kiosk_cap_id)
+
+    // (1) claim the live member group → MemberGroupTicket (hot potato). No proof variant exists: a format-3
+    // commitment covers the whole derived set, so re-derivation IS the proof (identical to format 2).
+    const [ticket] = tx.moveCall({
+      target: `${a.LATEST_PACKAGE_ID}::zones::${in_zone ? 'claim_mob_group_in_zone_members' : 'claim_mob_group_members'}`,
+      arguments: [
+        world, // world: &mut World
+        kiosk, // kiosk: &mut Kiosk
+        pkcap, // pkcap: &PersonalKioskCap
+        tx.pure.id(character_id), // character_id: ID
+        ...(in_zone ? [tx.pure.u32(Number(zx)), tx.pure.u32(Number(zy))] : []),
+        tx.pure.u64(BigInt(spawn_id)), // spawn_id: u64
+        config, // config: &GameConfig
+        version, // version: &Version
+        tx.object.clock(), // clock: &Clock (0x6)
+      ],
+    })
+
+    // (2) open the build, consuming the ticket — the creator's snapshot, the dirty mark and the #609 round all
+    // happen here, exactly as they do in the single-spec `create`.
+    const [build] = tx.moveCall({
+      target: `${a.LATEST_PACKAGE_ID}::fight::open_group`,
+      arguments: [
+        ticket, // ticket: zones::MemberGroupTicket (hot potato — consumed here)
+        world, // world: &World (same object; pinned to the ticket)
+        kiosk, // kiosk: &mut Kiosk
+        pkcap, // pkcap: &PersonalKioskCap
+        tx.pure.bool(is_public), // is_public: bool
+        tx.pure.option('id', party_id), // party_id: Option<ID>
+        tx.pure.vector('id', raised_spell_ids), // raised_spell_ids: vector<ID> (F-07)
+        config, // config: &GameConfig
+        version, // version: &Version (core)
+        engine_version, // engine_version: &EngineVersion
+        tx.object.clock(), // clock: &Clock (0x6)
+      ],
+    })
+
+    // (3) one add per committed member, IN ORDER. `as_object_arg` dedupes a repeated template to one tx input.
+    for (const template_id of member_template_ids)
+      tx.moveCall({
+        target: `${a.LATEST_PACKAGE_ID}::fight::add_member`,
+        arguments: [
+          build, // build: &mut GroupBuild
+          as_object_arg(tx, template_id), // mob_tmpl: &MobTemplate
+        ],
+      })
+
+    // (4) close the potato — the engine asserts count == committed size and seats the pack. ENGINE package.
+    tx.moveCall({
+      target: `${a.ENGINE_LATEST_PACKAGE_ID}::fight::create_members`,
+      arguments: [
+        build, // build: GroupBuild (by value — consumed)
+        shared_object_arg(
+          tx,
+          network,
+          'FIGHT_REGISTRY',
+          true,
+          a.FIGHT_REGISTRY,
+        ), // registry: &mut FightRegistry
+        engine_version, // version: &Version (ENGINE)
+        tx.object.clock(), // clock: &Clock (0x6)
+      ],
+    })
+
+    return tx
+  }
+}
+
+/**
  * JOIN an existing fight during placement (§7). `fight::join` is a `public fun` (NO &Random — the joiner's
  * snapshot is a deterministic geared-combat read; the Clock settles lazy regen before the §17.23 0-HP gate), so
  * this is a plain single-call PTB. `party_id` is the joiner's party

@@ -15,33 +15,48 @@ const mob_level_key_bcs = bcs.struct('MobLevelKey', {
   template: bcs.Address,
 })
 
-async function read_mob_levels(context, world_id, mobs) {
-  if (!mobs.length) return []
+/**
+ * The world's EXTENSION FIELDS in ONE batch: every mob row's `MobLevelKey` (the distance-eligibility level the
+ * chain's legacy pick table gates on) plus the `BossMaskKey` (#1110 — the boss rows `derive_zone` zeroes out of
+ * the MEMBER pick table). Both are dynamic fields the World grew after publish, and both are composition inputs,
+ * so they travel together: a client missing either one derives spawn rows the chain refuses to claim.
+ *
+ * `null` on a transport failure — an unfiltered roster would make the client advertise groups the chain rejects.
+ * A MISSING boss-mask field is not a failure: absent ≡ empty is the chain's own rule.
+ */
+async function read_world_fields(context, world_id, mobs) {
+  // an empty mob table has no levels to gate and no rows to mask — nothing to fetch, and no deployment to resolve
+  if (!mobs.length) return { levels: [], boss_mask: [] }
   const { grpc_client } = context
   const network = context.network ?? grpc_client.network
   const dep = aresrpg_deployment(network, context.ids?.aresrpg)
-  const object_ids = mobs.map(mob =>
+  const level_ids = mobs.map(mob =>
     deriveDynamicFieldID(
       world_id,
       `${dep.PACKAGE_ID}::world::MobLevelKey`,
-      mob_level_key_bcs
-        .serialize({ template: mob.template_id })
-        .toBytes(),
+      mob_level_key_bcs.serialize({ template: mob.template_id }).toBytes(),
     ),
+  )
+  // BossMaskKey is an EMPTY struct, so its BCS serialisation is zero bytes
+  const mask_id = deriveDynamicFieldID(
+    world_id,
+    `${dep.PACKAGE_ID}::world::BossMaskKey`,
+    new Uint8Array(),
   )
   try {
     const { objects } = await grpc_client.core.getObjects({
-      objectIds: object_ids,
+      objectIds: [...level_ids, mask_id],
       include: { json: true },
     })
-    return object_ids.map((_, index) => {
+    const value_at = index => {
       const object = objects?.[index]
-      return Number(
-        object instanceof Error ? 0 : (object?.json?.value ?? 0),
-      )
-    })
+      return !object || object instanceof Error ? null : object?.json?.value
+    }
+    return {
+      levels: level_ids.map((_, index) => Number(value_at(index) ?? 0)),
+      boss_mask: (value_at(level_ids.length) ?? []).map(Number),
+    }
   } catch {
-    // Returning an unfiltered roster would make the client advertise groups the chain refuses to claim.
     return null
   }
 }
@@ -85,9 +100,12 @@ export function get_world(context) {
       min_group: Number(mob.min_group ?? 1),
       max_group: Number(mob.max_group ?? 1),
     }))
-    const mob_levels = await read_mob_levels(context, world_id, mobs)
-    if (mob_levels === null) return null
+    const fields = await read_world_fields(context, world_id, mobs)
+    if (fields === null) return null
     return {
+      // #1110 — the boss fence's predicate. `derive_zone` zeroes these rows out of the MEMBER pick table; a
+      // client reading the table without the mask draws packs with bosses riding along that never seat.
+      boss_mask: fields.boss_mask,
       id: json.id,
       seed: to_bigint(json.seed),
       biome: json.biome,
@@ -111,7 +129,7 @@ export function get_world(context) {
       // the exact same values keeps the client-derived spawn rows claimable; a batch transport failure fails shut.
       mobs: mobs.map((mob, index) => ({
         ...mob,
-        level: mob_levels[index],
+        level: fields.levels[index],
       })),
       resources: (json.resources ?? []).map((/** @type {any} */ r) => ({
         template_id: r.template_id,
