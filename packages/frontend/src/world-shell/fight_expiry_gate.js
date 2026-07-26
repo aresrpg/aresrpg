@@ -45,14 +45,32 @@ export const turn_stalled = (/** @type {any} */ view, /** @type {number} */ now 
 
 // WHY THIS GATE NEVER BLOCKS AN ACTION — chain ground truth, `turns.move:177`: "The caller's OWN overdue turn
 // still acts (grace until someone actually cranks it away)". A late END TURN is the LEGAL move that advances a
-// stalled fight, so refusing it client-side would build the dead end this gate exists to remove. The gate is
-// therefore PRESENTATIONAL: it says what the player cannot otherwise see (the `0s` that never moves), while the
-// same predicate keeps driving the permissionless crank door. What IS blocked lives on chain, and only there:
-// someone ELSE's overdue turn aborts `ESomeoneOverdue` at simulation (zero gas) and the commit path already
-// auto-cranks + retries once for it.
+// stalled fight, so refusing it client-side would build the dead end this gate exists to remove. What IS
+// blocked lives on chain, and only there: someone ELSE's overdue turn aborts `ESomeoneOverdue` at simulation
+// (zero gas) and the commit path already auto-cranks + retries once for it.
+//
+// #921 RETIRED THE COPY. The two i18n keys that used to live here (`fights.turn_expired`,
+// `fights.turn_expired_exit`) named a player-facing state that should never have been one: the client now
+// AUTO-ADVANCES an expired turn and console.errors what it cannot. The predicates above are unchanged — only
+// their audience is — and the two verdicts below are the actions they now drive, kept here beside the
+// predicate that decides them rather than inlined in the action bar that fires them.
 
-/** The i18n key naming the stalled state and its working exit — the forfeit door FightControls already owns. */
-export const TURN_STALLED_COPY_KEY = 'fights.turn_expired_exit'
+/**
+ * PURE — should the client press my own late turn for me? The chain grants the caller's OWN overdue turn
+ * grace (turns.move:177), so a late press is the legal move that advances the fight: automate it. Held while
+ * anything of ours is already in flight (`busy`) or the press is not armed — the button's own verdict, so the
+ * automation can never fire what a player could not.
+ * @param {any} view the adapted fight view (status + turn_deadline_ms)
+ * @param {{ turn_phase: string, end_armed: boolean, busy: boolean }} bar
+ * @param {number} [now]
+ */
+export const should_auto_end_turn = (view, { turn_phase, end_armed, busy }, now = Date.now()) =>
+  !busy && end_armed && turn_phase === 'armed' && turn_overdue_ms(view, now) != null
 
-/** The END TURN title while my own turn is overdue: the press still lands (chain grace) but must say it is late. */
-export const TURN_OVERDUE_COPY_KEY = 'fights.turn_expired'
+/**
+ * PURE — should the client SHOUT? Past the grace every watcher's crank needs, with nothing of ours in flight:
+ * the auto-doors (the late press above, the permissionless crank in fight-liquidation.js) have both had their
+ * window and the fight still has not moved. Developer telemetry, never player prose.
+ * @param {any} view @param {{ busy: boolean }} bar @param {number} [now]
+ */
+export const should_report_stall = (view, { busy }, now = Date.now()) => !busy && turn_stalled(view, now)

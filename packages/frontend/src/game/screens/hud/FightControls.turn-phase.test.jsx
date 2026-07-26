@@ -217,56 +217,34 @@ describe('fight turn controls — one phase source for the button and countdown'
     expect(context.get_state().fight).toBeUndefined()
   })
 
-  // ── #882 · THE EXIT IS VISIBLE ────────────────────────────────────────────────────────────────────────────
-  // A fight whose turn deadline lapsed hours ago showed `0s` forever and said nothing: no path forward and no
-  // hint that FORFEIT — the door proven to resolve it on the first attempt — was sitting right there. The notice
-  // derives from the SAME predicate the permissionless crank door reads (fight_expiry_gate.js), so the surface
-  // and the janitor can never disagree.
-  test('a STALLED turn (deadline lapsed past the grace) names the state, the exit, and that END TURN still lands', () => {
+  // ── #921 · AN EXPIRED TURN IS NEVER NARRATED ──────────────────────────────────────────────────────────────
+  // #882 gave the expired state two banners (stalled red, overdue gold). They were the wrong shape: a player
+  // should never read operational instructions about deadlines. The client acts instead — auto-press, auto-
+  // crank, console.error — and the action bar says nothing at all about the clock. The FORFEIT door is
+  // untouched; it simply no longer has a sign pointing at it.
+  test('no expiry banner renders in ANY expired state — the bar keeps only its doors', () => {
     seed()
+    const bar = (props) => renderToStaticMarkup(<FightControls abandon_label="FORFEIT" end_label="END TURN" {...props} />)
 
-    const html = renderToStaticMarkup(
-      <FightControls
-        abandon_label="FORFEIT"
-        end_label="END TURN"
-        fight_status={1}
-        turn_deadline_ms={Date.now() - 6 * 3_600_000}
-      />
-    )
+    for (const props of [
+      { fight_status: 1, turn_deadline_ms: Date.now() + 45_000 }, // live
+      { fight_status: 1, turn_deadline_ms: Date.now() - 1_000 }, // just lapsed
+      { fight_status: 1, turn_deadline_ms: Date.now() - 6 * 3_600_000 }, // the take-7 zombie
+      { fight_status: 5, turn_deadline_ms: Date.now() - 6 * 3_600_000 }, // placement's own clock
+      { turn_deadline_ms: Date.now() - 6 * 3_600_000 }, // a mount with no chain status at all
+    ]) {
+      const html = bar(props)
+      expect(html).not.toContain('hud-fightctl__notices')
+      expect(html).not.toContain('data-fight-stalled')
+      expect(html).not.toContain('data-turn-overdue')
+    }
 
-    expect(html).toContain('data-fight-stalled="true"') // the fight is not advancing…
-    expect(html).toContain('hud-fightctl__abandon') // …and the working exit is mounted right beside that notice
-    expect(html).toContain('>FORFEIT<')
-    // RENDERED, not a hover-only title: an explanation the player has to discover is not an honest surface.
-    expect(html).toContain('data-turn-overdue="true"')
-    // …and END TURN is still MOUNTED: the expiry gate never disarms it, because on chain a late press is the
-    // legal move that advances the fight (turns.move:177 grants the caller's own overdue turn grace).
-    expect(html).toContain('hud-fightctl__end')
-  })
-
-  test('a live turn says nothing; a JUST-lapsed one is overdue but NOT yet stalled', () => {
-    seed()
-    const bar = (props) => renderToStaticMarkup(<FightControls end_label="END TURN" {...props} />)
-
-    const live = bar({ fight_status: 1, turn_deadline_ms: Date.now() + 45_000 })
-    expect(live).not.toContain('hud-fightctl__stalled')
-    expect(live).not.toContain('hud-fightctl__overdue')
-
-    // a watcher's crank is very likely in flight here — crying "the fight is stuck" at t+1s would be noise, not
-    // honesty; MY OWN late turn is still worth saying, because ending it is exactly what advances the fight.
-    const just_lapsed = bar({ fight_status: 1, turn_deadline_ms: Date.now() - 1_000 })
-    expect(just_lapsed).not.toContain('hud-fightctl__stalled')
-    expect(just_lapsed).toContain('hud-fightctl__overdue')
-
-    // …a PLACEMENT window is a different clock entirely (force_start owns it)
-    const placement_window = bar({ fight_status: 5, turn_deadline_ms: Date.now() - 6 * 3_600_000 })
-    expect(placement_window).not.toContain('hud-fightctl__stalled')
-    expect(placement_window).not.toContain('hud-fightctl__overdue')
-
-    // …and a mount that never learns the chain status claims nothing at all
-    const statusless = bar({ turn_deadline_ms: Date.now() - 6 * 3_600_000 })
-    expect(statusless).not.toContain('hud-fightctl__stalled')
-    expect(statusless).not.toContain('hud-fightctl__overdue')
+    // The exit and the late press both survive: on chain a late END TURN is the legal move that advances the
+    // fight (turns.move:177), which is exactly why the client can press it FOR the player.
+    const zombie = bar({ fight_status: 1, turn_deadline_ms: Date.now() - 6 * 3_600_000 })
+    expect(zombie).toContain('hud-fightctl__abandon')
+    expect(zombie).toContain('>FORFEIT<')
+    expect(zombie).toContain('hud-fightctl__end')
   })
 
   test('mobile placement renders READY and FORFEIT inside the compact fight-layer modifier', async () => {

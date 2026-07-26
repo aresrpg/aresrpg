@@ -16,16 +16,15 @@
 // the RunPass directly — no death, no loot): DungeonBoard renders that as its OWN separate control when a run
 // is live; this component only ever owns the fight-forfeit door.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { use_dungeon } from '../../../world-shell/dungeon_store.js'
 import { turn_input_armed } from '../../../world-shell/voxel_fight_folds.js'
 import {
-  TURN_OVERDUE_COPY_KEY,
-  TURN_STALLED_COPY_KEY,
+  should_auto_end_turn,
+  should_report_stall,
   turn_overdue_ms,
-  turn_stalled,
 } from '../../../world-shell/fight_expiry_gate.js'
 import { use_dungeon_turn } from '../dungeon-turn.js'
 import { fight_store } from '@aresrpg/fight/store'
@@ -155,6 +154,11 @@ export function FightControls({
   const { t } = useTranslation()
   const fight = use_fight_view() // synchronous core view (S2 mirror kill)
   const busy = use_dungeon((s) => s.busy)
+  // #921 ④ — IS THERE A CHAIN BEHIND THIS FIGHT? The auto-advance below embodies the post-deadline janitors,
+  // and those are chain doors. Only a composition that has none says so (simulator/fight_shim.js seeds
+  // `chain_backed: false`), so absence reads as the chain — a world/dungeon fight can never opt out by
+  // omission.
+  const chain_backed = use_dungeon((s) => s.chain_backed !== false)
   // THE CORE FLOOR (@aresrpg/fight store PLAYER_TURN_FLOOR_MS): min_turn_left reads the core's raw
   // `turn_started_at` — a field the projected view (`fight`, above) doesn't carry — so this subscribes to
   // the raw core state via the React binding (game/store.js use_fight; the core store itself is vanilla).
@@ -190,12 +194,54 @@ export function FightControls({
     return () => clearInterval(id)
   }, [clock_live, min_turn_gating])
 
+  // Commit-pending stays mounted but disabled. An actor/presentation phase change is `hidden`, so the same model
+  // unmounts the action and removes its companion cue. Hoisted above the early return: the auto-advance below
+  // is a hook and must read the SAME armed verdict the button does.
+  const end_is_disabled = (end_disabled ?? false) || min_turn_gating
+
+  // ── #921 · AN EXPIRED TURN ADVANCES ITSELF; IT IS NEVER NARRATED ────────────────────────────────────────
+  // Two banners used to print operational instructions about deadlines — "your turn is late, press END TURN",
+  // "this fight is stalled, forfeit". Both told the player to do what the client can simply DO, and deadline
+  // machinery is not game grammar. So:
+  //   · MY overdue turn      → auto-press END TURN. The chain grants the late press grace (turns.move:177),
+  //                            which is exactly why the banner could say "press it" — so press it.
+  //   · SOMEONE ELSE'S       → the permissionless `turns::crank`, which every watching client already fires
+  //                            from its own poll (fight-liquidation.js, jitter + single-flight + the
+  //                            executed-failure latch). One home; nothing is re-fired from here.
+  //   · NEITHER WORKED       → one console.error naming the fight and its state. Developer telemetry, not
+  //                            player prose. FORFEIT stays where it always was, without a sign pointing at it.
+  //
+  // IT ARMS ON CHAIN SEMANTICS ALONE (`chain_backed`, above). The simulator's local sim stamps a turn
+  // deadline off its OWN wall clock, so the predicate alone would happily fire there — auto-passing the turn
+  // of a theorycrafter who is reading the board. It is the composition, not the clock, that decides.
+  const bar_state = { turn_phase, end_armed: !end_is_disabled, busy }
+  const auto_end = chain_backed && should_auto_end_turn(chain_turn, bar_state, now_ms)
+  const report_stall = chain_backed && should_report_stall(chain_turn, bar_state, now_ms)
+  const auto_ended_for = useRef(0)
+  const reported_stall_for = useRef(0)
+  useEffect(() => {
+    if (!auto_end || auto_ended_for.current === turn_deadline_ms) return
+    auto_ended_for.current = turn_deadline_ms // once per deadline — a fresh turn is a fresh key
+    on_end_turn()
+  }, [auto_end, turn_deadline_ms, on_end_turn])
+  useEffect(() => {
+    if (!report_stall || reported_stall_for.current === turn_deadline_ms) return
+    reported_stall_for.current = turn_deadline_ms
+    console.error('[fight] expired turn could not be advanced', {
+      fight_id: fight?.fight_id ?? null,
+      status: fight_status,
+      turn_deadline_ms,
+      active_entity_id: fight?.active_entity_id ?? null,
+      my_entity_id: fight?.my_entity_id ?? null,
+      overdue_ms: turn_overdue_ms(chain_turn, now_ms),
+    })
+    // `now_ms` deliberately absent: it ticks every second and would re-run this on a latch that already holds.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [report_stall, turn_deadline_ms, fight, fight_status])
+
   if (!fight) return null
 
   const i_am_ready = fight.my_entity_id != null && fight.ready.has(fight.my_entity_id)
-  // Commit-pending stays mounted but disabled. An actor/presentation phase change is `hidden`, so the same model
-  // unmounts the action and removes its companion cue.
-  const end_is_disabled = (end_disabled ?? false) || min_turn_gating
   const abandon_button_label = abandon_label ?? t('dungeons.abandon_fight')
 
   // D110: seconds until the chain force-starts the fight (begin_active_if_expired). Clamped ≥0; shown only in
@@ -204,14 +250,6 @@ export function FightControls({
     placement && has_placement_deadline ? Math.max(0, Math.ceil((placement_deadline_ms - now_ms) / 1000)) : null
   const commit_in_s = turn_commit_countdown_s(turn_phase, has_turn_draft, turn_deadline_ms, now_ms, fight?.turn_ms ?? 0)
   const show_commit_cue = !placement && commit_in_s != null && commit_in_s <= 15 && !!auto_commit_label
-  // #882 THE EXIT IS VISIBLE: a fight whose turn deadline lapsed past the janitors' grace is not advancing on
-  // its own, and the board says `0s` forever. Name it, and name the door that works — the FORFEIT sitting right
-  // beside this notice (proven live: it resolved the expired fight terminal on the first attempt). My OWN
-  // overdue turn is a distinct, softer beat: the chain still grants it grace (turns.move:177), so END TURN
-  // stays ARMED and the notice says exactly that — a late press is the move that advances the fight. Both are
-  // RENDERED, never a hover-only `title`: an explanation the player must discover is not an honest surface.
-  const stalled = turn_stalled(chain_turn, now_ms)
-  const my_turn_overdue = turn_phase !== 'hidden' && turn_overdue_ms(chain_turn, now_ms) != null
 
   const on_forfeit_confirmed = () => {
     set_confirm_open(false)
@@ -256,22 +294,6 @@ export function FightControls({
       {show_commit_cue && (
         <div className="dgb-commit-cue" role="status">
           {auto_commit_label?.(Math.max(0, commit_in_s ?? 0))}
-        </div>
-      )}
-      {(stalled || my_turn_overdue) && (
-        // Stacked directly ABOVE the action bar (`.hud-bottom` is the positioned ancestor), so the notice and
-        // the FORFEIT it names read as one thing — never a chip pushed off to the side of the row.
-        <div className="hud-fightctl__notices">
-          {stalled && (
-            <div className="hud-fightctl__stalled" role="status" aria-live="polite" data-fight-stalled="true">
-              {t(TURN_STALLED_COPY_KEY)}
-            </div>
-          )}
-          {my_turn_overdue && (
-            <div className="hud-fightctl__overdue" role="status" aria-live="polite" data-turn-overdue="true">
-              {t(TURN_OVERDUE_COPY_KEY)}
-            </div>
-          )}
         </div>
       )}
       <div className="hud-fightctl" data-controlled-character={fight.my_entity_id ?? undefined}>

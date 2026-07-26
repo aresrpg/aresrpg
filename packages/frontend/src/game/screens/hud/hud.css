@@ -897,41 +897,6 @@
   background: linear-gradient(165deg, #12121a, #0a0a0f);
 }
 
-/* #882 STALLED notice — the turn deadline lapsed and nothing is advancing the fight. Same chip family as the
- * countdown above, in the danger register, sitting directly over the FORFEIT it points at. Its OVERDUE sibling
- * is the softer beat (your own turn is late; END TURN still lands) — gold, not red: it is not a dead end. */
-.hud-fightctl__notices {
-  position: absolute; /* `.hud-bottom` is fixed, so this stacks the notices right above the action bar */
-  right: 0;
-  bottom: calc(100% + 8px);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-  pointer-events: none;
-}
-.hud-fightctl__stalled,
-.hud-fightctl__overdue {
-  /* the action bar is a narrow column, so a notice must size to its own text, not to the bar */
-  width: max-content;
-  max-width: min(520px, 92vw);
-  padding: 4px 14px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  text-align: center;
-  color: #ff9a8a;
-  border: 1px solid rgba(220, 70, 60, 0.5);
-  background: linear-gradient(165deg, #1a1013, #0a0a0f);
-}
-.hud-fightctl__overdue {
-  color: var(--accent);
-  border: 1px solid rgba(200, 150, 60, 0.45);
-  background: linear-gradient(165deg, #12121a, #0a0a0f);
-}
-
 /* identity + vitals card — bust, name/level, RED-gradient HP bar, AP/MP/Reserve as single icon+number,
  * and a thin global XP bar along the bottom. Compact + centered, off the borders. */
 .hud-vitals {

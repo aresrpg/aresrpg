@@ -2707,8 +2707,6 @@
     "a_fight": "le combat",
     "a_dungeon": "le donjon",
     "board_place_failed": "Impossible de placer le plateau de combat — recharge la page.",
-    "turn_expired": "Ce tour a dépassé son délai — terminez-le, n’importe quel spectateur peut le forcer.",
-    "turn_expired_exit": "Délai du tour expiré · ce combat n’avance plus. Déclarez forfait pour libérer votre personnage.",
     "expired_fight_cleared": "Ce combat était déjà résolu — votre personnage est libre."
   },
   "jobs": {

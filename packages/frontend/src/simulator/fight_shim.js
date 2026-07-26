@@ -215,6 +215,12 @@ export const create_fight_shim = ({
       in_session: false,
       session_address: LOCAL_ADDRESS,
       busy: false,
+      // NO CHAIN BEHIND THIS SESSION (#921 ④). The production HUD embodies the post-deadline janitors — it
+      // auto-presses a late turn and auto-cranks a stalled one, because on chain those doors exist and a
+      // fight must never wedge on an away player. Here they do not: `sim_chain` is pure, its turn deadline is
+      // this shim's own wall clock, and STOP is the only exit. So the composition SAYS SO, once, here — and
+      // the shared surface reads that instead of guessing from a deadline that means something else.
+      chain_backed: false,
       dungeon: { status: STATUS_ACTIVE, width, height, escrow: roster.map(({ id }) => id) },
       mob_names: Object.fromEntries(mobs.map(({ template_id, name }) => [template_id, name])),
       mob_levels: Object.fromEntries(mobs.map(({ template_id, level }) => [template_id, level])),
