@@ -12,6 +12,17 @@
 //   PREDICTION: snapshot_from_sim → board_state_from_fight → the store → engine_view → predict_cast
 // and asserts the predicted post-cast hp equals the resolved one. Nothing is hand-computed: a hardcoded
 // expectation would just be a third implementation of the damage formula.
+//
+// WHAT THIS FILE IS NOT (#1144 — it used to be named `predict_build_truth` and read as the fight twin's parity
+// gate). BOTH halves above are OURS: `predict_cast` is checked against `submit_commands`, and Move is not an
+// input anywhere in it. That is INTERNAL CONSISTENCY — real, worth keeping, and exactly the thing
+// `docs/CODE_LAW.md:146-149` (L-D4) says proves nothing about the authority: "a codec test that encodes with the
+// same model it decodes with proves only internal consistency". It is structurally incapable of catching a
+// sim↔chain divergence (#1144's live one: a cast that predicted 2 HP and killed), and it stayed green through it.
+//
+// The parity claim lives one file over, anchored where it must be: `predict_chain_parity.test.js` pins the
+// prediction against a cast outcome CAPTURED FROM THE DEPLOYED PACKAGE, with its `_provenance` block — the same
+// idiom `packages/sim/test/zone_chain_parity.test.js` already holds the line with in the zone domain.
 
 import { describe, test, expect } from 'bun:test'
 import { normalize_spell_templates } from '@aresrpg/sim/spell_templates'
@@ -176,7 +187,7 @@ describe("#1077 — the predict path runs on the seat's composed build, not leve
     expect(view.fighters.get('mob-0').base_stats).toMatchObject({ fire_resistance: 20 })
   })
 
-  test('RED (a): the predicted damage equals what the authority resolves for the SAME cast', () => {
+  test('INTERNAL CONSISTENCY: predict_cast and the SIM REDUCER land the same number for the SAME cast', () => {
     // the seat's level, read off the build the wire now carries — never a hardcoded 1
     const spell_level = Number(view.fighters.get(ME).spell_levels?.[SPELL_ID] ?? 1)
     const prediction = predict_cast({
@@ -197,6 +208,8 @@ describe("#1077 — the predict path runs on the seat's composed build, not leve
 
     // the fixture must actually exercise the build: a level-1 cast with no stats would take 10 - resist off
     expect(400 - resolved_hp).toBeGreaterThan(LEVEL_ROWS[0].value)
+    // TWO OF OUR OWN MODULES AGREEING — never read as chain parity (see the header). The chain-anchored claim
+    // is `predict_chain_parity.test.js`; this row only proves the predict path and the sim reducer share inputs.
     expect(predicted_hp).toBe(resolved_hp)
   })
 
