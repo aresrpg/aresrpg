@@ -109,8 +109,10 @@ export function get_mob_model(mob) {
  * ruled-mapping rows (glb ≠ `hy_` + key — 755/770 of the published catalog, e.g. Broodfather →
  * hy_scarak_broodmother_model_default). The catalog entry still gates: no extracted GLB means no
  * rendered icon exists to ask for.
- * Icons are rendered offline by scripts/render_mob_icons.mjs and published to the `mob_icon` class — the
- * SAME thumb/_hd two-tier system item_icon_url uses (spells are single-size .webp — #884).
+ * scripts/render_mob_icons.mjs renders the icons offline under GLB basenames (`{glb}.png` /
+ * `{glb}_hd.png`); any publish preparation feeding this resolver must re-key or alias those renders to
+ * the catalog filenames requested above. The `mob_icon` class uses the SAME thumb/_hd two-tier system
+ * item_icon_url uses (spells are single-size .webp — #884).
  * Walrus (boot manifest, `mob_icon` class) is the ONLY origin — no local/bundled fallback (#353: the pre-CDN local copy was migration
  * residue, gitignored and never shipped past a dev's own disk). No catalog match / quilt not yet
  * configured → null, NEVER the GLB debug-cube swapped in as a 2D image (caller degrades to its own
