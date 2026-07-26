@@ -12,7 +12,14 @@
 // `active_id === my_id` plays. A mob's turn belongs to nobody and simply passes; a dead seat never becomes
 // active again; a fight where no seat holds a living fighter is a defeat, whoever is still polling.
 
-import { assert_cross_client, assert_traps_sprung, assert_turn, plan_turn, summarise } from '@aresrpg/fight/bot'
+import {
+  assert_cross_client,
+  assert_traps_sprung,
+  assert_turn,
+  plan_turn,
+  prediction_tally,
+  summarise,
+} from '@aresrpg/fight/bot'
 
 import { wait_for } from './seam.mjs'
 
@@ -98,10 +105,18 @@ const record_commit = ({ seat, plan, result, turn, turn_number }) => {
   // ONLY THE AUTHORITY'S VERDICT BLACKLISTS. A turn-level refusal (not my turn yet, the store mid-poll, the
   // min-turn floor) judged the timing, not the spell — treating it as evidence blinds the bot to a spell that
   // was never the problem, and it stays blind for the rest of the fight.
-  const judged = !result.ok && !result.turn_level
+  //
+  // AND A CAST-LIMIT REFUSAL IS A CLOCK TOO (#1157). Cooldown, casts_per_turn and casts_per_target all expire:
+  // the authority is saying "not now", never "not this spell". Blacklisting on those retired every cooldown
+  // spell in the book the first time the policy's own copy of the rule was one turn optimistic — permanently,
+  // and the sheet still reported PASS on the impoverished fight that followed.
+  const recoverable = /cooldown|cast limit|casts_per_turn|casts_per_target|cast_per_turn_limit|cast_per_target_limit|spell_cooldown/i
+  const judged = !result.ok && !result.turn_level && !recoverable.test(String(result.error ?? ''))
   for (const action of plan.actions)
     if (action.kind === 1) {
-      seat.history.casts[action.spell_id] = turn_number ?? turn
+      // THE COOLDOWN LEDGER RECORDS CASTS, NOT ATTEMPTS. A refused turn cast nothing, so stamping it here
+      // locked a spell the authority never saw — the bot's own ledger inventing a cooldown that does not exist.
+      if (result.ok) seat.history.casts[action.spell_id] = turn_number ?? turn
       if (judged && !seat.history.blocked.includes(action.spell_id)) seat.history.blocked.push(action.spell_id)
     }
   if (!result.ok) return { rows: [], remaining: seat.armed_traps }
@@ -131,6 +146,9 @@ export const drive_fight = async ({
 }) => {
   const turns = []
   const cross = { rows: [], status_proofs: 0 }
+  // THE RUN'S PARITY TALLY (#1144) — how many casts were actually compared prediction↔authority, and the reasons
+  // the rest could not be. A run that resolved none proves nothing about parity and says so at run level.
+  const parity = { checked: 0, unresolved: [] }
   let outcome = 'not reached'
   /** One re-read is allowed when the turn pointer moved between the read and the commit (a harness race, not a
    *  game failure); a second is a genuine stall and is recorded as the FAIL it is. */
@@ -173,6 +191,9 @@ export const drive_fight = async ({
       cross.status_proofs += observed.status_proofs
     }
     const rows = [...assert_turn(plan, result), ...sprung.rows, ...(observed?.rows ?? [])]
+    const tally = prediction_tally(plan, result)
+    parity.checked += tally.checked
+    parity.unresolved.push(...tally.unresolved)
     turns.push({
       turn,
       seat: seat.name,
@@ -185,6 +206,9 @@ export const drive_fight = async ({
         .map((f) => ({ id: f.id, at: f.cell_committed, hp: f.hp_committed })),
       decisions: plan.decisions,
       actions: plan.actions,
+      // WHAT THE CLIENT SAID WOULD HAPPEN, verbatim — the sheet carries the bank next to the fold it was
+      // compared against, so a divergence row is reproducible evidence and not a line of log.
+      predicted: result.predicted ?? [],
       committed: { ok: result.ok, error: result.error ?? null },
       // The two pool clocks either side of the commit — the diagnostic that tells a red AP row apart from a
       // surface that simply never reconciles its pools.
@@ -209,7 +233,7 @@ export const drive_fight = async ({
         break
       }
     }
-  return { turns, outcome, cross }
+  return { turns, outcome, cross, parity }
 }
 
 /** A fresh seat: its page, its seam, whatever its surface knows about it, and the memory a snapshot cannot carry. */

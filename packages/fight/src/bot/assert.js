@@ -9,6 +9,11 @@
 // either side of the commit. Every number it reads is the COMMITTED fold (`*_committed`), never the
 // presented one — the eye's HP ticks with the vfx and the eye's cell holds through the walk beat, so
 // asserting on those would be asserting on an animation clock.
+//
+// AND ONE ROW THAT READS SOMETHING ELSE (#1144). Committed-vs-committed proves the turn did something; it can
+// never prove the game did what the PLAYER WAS SHOWN — a cast that predicts 2 HP and kills passes every row
+// above. `assert_prediction` compares the seam's PREDICTION BANK (the client's own `predict_cast`, recorded
+// before the authority was asked) against the committed fold, which makes every bot drive a live parity sweep.
 
 import { get_direction } from '@aresrpg/sim/fight_displacement'
 
@@ -80,6 +85,54 @@ const assert_move = (index, action, before, after) => {
       `${action.expect.mp_cost} MP`,
       action.expect.mp_cost <= budget,
       'the leftover pool is not published post-commit — the CELL row above is this action’s delta'
+    ),
+  ]
+}
+
+/**
+ * THE PARITY ORACLE (#1144) — the one row in this file that compares OUR MATH against THE AUTHORITY instead of
+ * comparing the authority against itself. Every other row here reads `*_committed` on both sides, which is chain
+ * truth measured against chain truth: it proves the turn did something, never that the game did what the player
+ * was shown. The client's predicted post-cast HP is the only fact a post-commit read cannot recover, so the seam
+ * BANKS it before staging (`dev_bot_seam.bank_predictions`) and this compares it to the committed fold.
+ *
+ * ONLY THE PLANNED TARGET IS ASSERTED. Each bank is predicted from the PRE-TURN view while the committed fold
+ * accumulates every action of the turn, so a fighter two casts both touch would be compared against a state the
+ * first prediction never claimed. The policy's harness rule gives every action a distinct assertable fact, which
+ * makes the planned target — and only it — a fair comparison. Collateral predictions ride the sheet unasserted.
+ *
+ * AND NEVER THE SEAT ITSELF — the window's one MEASURED limit. A committed turn closes with `act_pass` and the
+ * authority resolves the OPPONENTS' turn inside the same commit, so the post-commit fold already carries their
+ * reply: the first drive of this oracle "found" the seat losing 5 HP no prediction claimed, which was a mob
+ * hitting back, not a divergence. Anything the enemy reliably moves is therefore outside what a pre-turn
+ * prediction can be graded against, and asserting on it would make this gate lie in the other direction.
+ * A trap of the seat's own springing on the enemy inside that same window is the residual noise source; it is
+ * visible in the sheet beside its own spring row, never silently folded into this one.
+ *
+ * AN UNRESOLVED PREDICTION IS A GAP, NOT A PASS. A <100% chance row or a not-yet-deployed chain kind has no
+ * deterministic number to compare, so no row is fabricated here; `assert_prediction_proofs` reports the count and
+ * the reasons at run level, and a run that resolved NOTHING fails there rather than passing quietly here.
+ * @returns {Array<object>} zero or one row
+ */
+const assert_prediction = (index, action, banked, before, after) => {
+  const target_id = action.expect?.target_id
+  if (!banked || !target_id || target_id === before?.my_id) return []
+  const rank = `${banked.spell_key ?? banked.spell_id} rank ${banked.spell_level}`
+  const predicted = (banked.hp ?? []).find((row) => row.id === target_id)
+  const committed = Number(find(after, target_id)?.hp_committed ?? Number.NaN)
+  const build = `predicted with ${JSON.stringify(banked.caster_build?.stats ?? {})} at level ${banked.caster_build?.level ?? '?'}`
+  // A cast that claimed no HP for its target (a buff, a trap placement, an unresolved row) has no number to
+  // grade — the run-level tally counts it, and the action's own delta row above owns whether it did anything.
+  if (!predicted) return []
+  return [
+    row(
+      index,
+      action,
+      `the authority resolved the HP the client predicted for ${target_id}`,
+      `${predicted.remaining_hp} hp (${rank})`,
+      `${committed} hp (committed fold)`,
+      Number(predicted.remaining_hp) === committed,
+      `PREDICTION↔AUTHORITY · ${build}`
     ),
   ]
 }
@@ -355,10 +408,46 @@ const ACTION_ASSERTIONS = {
 }
 
 /**
+ * THE RUN'S OWN PARITY ROW (#1144) — the same shape the coop status proof takes, for the same reason: a rig that
+ * CAN compare prediction to chain and never did has proven nothing about parity, and a sheet that reports PASS on
+ * that is exactly the disease this oracle was built to cure (a gate structurally incapable of failing). Zero
+ * resolved comparisons is a FAIL that names why, never a silent pass.
+ * @param {{ checked: number, unresolved: Array<string> }} tally
+ * @returns {Array<object>}
+ */
+export const assert_prediction_proofs = ({ checked = 0, unresolved = [] } = {}) => [
+  row(
+    0,
+    null,
+    'the run compared at least one prediction against the authority',
+    '≥ 1 resolved prediction↔chain comparison',
+    checked || `0 — ${unresolved.length ? `every cast was unpredictable (${[...new Set(unresolved)].join(', ')})` : 'the surface banked no predictions (an old build, or no cast landed)'}`,
+    checked >= 1,
+    unresolved.length ? `${[...new Set(unresolved)].length} unresolved reason(s): ${[...new Set(unresolved)].join(', ')}` : ''
+  ),
+]
+
+/** The parity tally a run accumulates from one turn's banks — `checked` counts exactly the comparisons
+ *  `assert_prediction` actually graded (never a self-target: see its header on the commit window). */
+export const prediction_tally = (plan, result) => {
+  const banks = result?.predicted ?? []
+  const me = result?.before?.my_id ?? null
+  const targets = new Map(plan.actions.map((action, index) => [index, action.expect?.target_id ?? null]))
+  return {
+    checked: banks.filter((bank) => {
+      const target = targets.get(bank.index)
+      return !!target && target !== me && (bank.hp ?? []).some((row) => row.id === target)
+    }).length,
+    unresolved: banks.flatMap((bank) => bank.unresolved ?? []),
+  }
+}
+
+/**
  * Check ONE committed turn. Returns one row per checked fact — `pass:false` rows are failures, never
  * warnings.
  * @param {{ actions: Array<object> }} plan what the policy decided
- * @param {{ ok: boolean, error?: string, before: object, after: object }} result what the seam committed
+ * @param {{ ok: boolean, error?: string, before: object, after: object, predicted?: Array<object> }} result
+ *   what the seam committed, plus the prediction bank it took before staging (see `assert_prediction`)
  * @returns {Array<object>}
  */
 export const assert_turn = (plan, result) => {
@@ -375,10 +464,11 @@ export const assert_turn = (plan, result) => {
       ),
     ]
   const { before, after } = result
+  const banked = new Map((result.predicted ?? []).map((bank) => [bank.index, bank]))
   const rows = plan.actions.flatMap((action, index) => {
     const check = ACTION_ASSERTIONS[action.expect?.type]
     return check
-      ? check(index, action, before, after)
+      ? [...check(index, action, before, after), ...assert_prediction(index, action, banked.get(index), before, after)]
       : [
           row(
             index,

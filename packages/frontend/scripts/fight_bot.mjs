@@ -38,7 +38,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { chromium } from '@playwright/test'
-import { assert_status_proof_ran, summarise } from '@aresrpg/fight/bot'
+import { assert_prediction_proofs, assert_status_proof_ran, summarise } from '@aresrpg/fight/bot'
 
 import { wait_for_server } from './fight_bot/seam.mjs'
 import { drive_fight } from './fight_bot/drive.mjs'
@@ -155,6 +155,11 @@ try {
   sheet.turns = played.turns
   sheet.outcome = played.outcome
   sheet.cross = played.cross
+  sheet.parity = played.parity
+  // THE PARITY ROW, on every surface (#1144). Every other row in this sheet reads the committed fold on both
+  // sides; this one compares what the client PREDICTED against what the authority resolved. A run that never
+  // landed one such comparison has not swept parity, whatever else it proved — so it fails and names why.
+  sheet.run_rows.push(...assert_prediction_proofs(played.parity))
   // THE COOP RULING'S OWN ROW. A coop run that never landed a status across clients has not shown what coop was
   // built to show, so it says so — with the reason, and as a FAIL. A skip dressed as a pass is worse than a gap.
   if (MODE === 'coop')

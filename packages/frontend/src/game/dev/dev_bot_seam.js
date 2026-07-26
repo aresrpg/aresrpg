@@ -24,7 +24,10 @@
 //      authority exactly as it refuses the button.
 //
 // It returns the READ from both sides of the commit, which is what makes per-action assertion possible at
-// all: the bot compares its planned delta against the folded truth instead of trusting an `ok: true`.
+// all: the bot compares its planned delta against the folded truth instead of trusting an `ok: true`. Since
+// #1144 it also returns the PREDICTION BANK — what the client's own `predict_cast` said each cast would do,
+// recorded before the authority was asked. Prediction is the only fact a post-commit read cannot recover, and
+// without it every "parity" assertion in this rig compares the chain against itself.
 //
 //   3. __ARES_DEV_PLACE(cell) — commit the PLACEMENT the world surface opens every fight with (`turns::place`,
 //      place + READY in one signature, the last ready auto-starting the fight). The simulator writes its
@@ -44,9 +47,11 @@ import { decode, encode } from '@aresrpg/fight/los'
 import { board_view, fight_view, min_turn_left } from '@aresrpg/fight/project'
 import { participant_entity_id } from '@aresrpg/fight/fight_control'
 import { fight_store } from '@aresrpg/fight/store'
+import { predict_cast } from '@aresrpg/fight/predict_cast'
 
 import { use_dungeon } from '../../world-shell/dungeon_store.js'
-import { resolve_class_spells } from '../screens/hud/fight-spells.js'
+import { fight_spell, resolve_class_spells, seat_spell_level, seat_spell_row } from '../screens/hud/fight-spells.js'
+import { resolve_dungeon_ref } from '../screens/hud/target_prediction_core.js'
 import { use_dungeon_turn } from '../screens/dungeon-turn.js'
 import { context } from '../store.js'
 
@@ -98,6 +103,12 @@ const fighter_row = (f, committed) => ({
   alive_committed: committed?.alive ?? !f.dead,
   ap_committed: committed?.ap ?? f.ap,
   mp_committed: committed?.mp ?? f.mp,
+  // THE COMPOSED BUILD (#1077) — the locked stat snapshot the authority resolves with and the seat's learned
+  // spell levels, both already riding the fight view. Published because a bot that cannot see the build cannot
+  // PREDICT anything: the prediction bank below runs the same `predict_cast` the floaters do, and a prediction
+  // fed a level-1 empty-stat read would diverge from the chain on every cast for a reason that is not the game's.
+  base_stats: f.base_stats ?? {},
+  spell_levels: f.spell_levels ?? {},
   // the LIVE status rows (project.js `effects_of`) — raw chain kinds, so a buff the bot applied is visible
   // to the assertion that says it landed.
   effects: (f.effects ?? []).map((e) => ({
@@ -112,8 +123,13 @@ const fighter_row = (f, committed) => ({
 /**
  * The caster's book, projected to the SpellLevel field set `@aresrpg/sim/spell_targeting` takes verbatim
  * (range / modifiable_range / linear / line_of_sight / free_cell) so the policy can call the SIM's own
- * targeting gate instead of inventing a second one. Fight resolution reads `levels[0]` only (the level-1
- * MVP — cast.move's "SPELL LEVEL" note), so that is the row published here.
+ * targeting gate instead of inventing a second one.
+ *
+ * THE SEAT'S RANK, not rank 1 (#1157 ②). `seat_spell_row(seat, spell)` is the ONE door every fight surface reads
+ * a live spell number through (range, AP cost, cooldown, per-turn caps, effects) since #1077 — this seam is one
+ * of those surfaces. Reading `levels[0]` priced AP, measured range and checked caps at rank 1 while the authority
+ * resolved at the seat's real rank, so an upgraded spell produced a plan the chain refuses and a FAIL row that
+ * blamed the spell instead of the read.
  *
  * LEVEL-GATED, like the bar. `resolve_class_spells(class, level)` is the SAME resolver DungeonBoard's spell bar
  * reads (`my_spells`), at the SAME level — so the book the bot plans over is the book the player can press. An
@@ -121,15 +137,17 @@ const fighter_row = (f, committed) => ({
  * is NOT harmless on the world: a level-1 seat would plan casts the chain refuses, and every one of those is a
  * signed transaction that burns gas to learn what the resolver already knew.
  */
-const spell_rows = (class_id, char_level) =>
+const spell_rows = (seat, class_id, char_level) =>
   resolve_class_spells(class_id, Number(char_level) || 0)
     .filter((spell) => !!spell.object_id)
     .map((spell) => {
-      const level = spell.levels?.[0] ?? {}
+      const level = seat_spell_row(seat, spell) ?? {}
       return {
         id: spell.object_id, // what a committed cast NAMES (fight_start.js `cast_id_of`)
         name_key: spell.name_key,
         name: spell.name,
+        // the RANK this seat casts at — the level index `predict_cast` and the chain both resolve on
+        level: seat_spell_level(seat, spell),
         element: spell.element ?? null,
         ap: level.ap ?? 0,
         mp: level.mp ?? 0,
@@ -194,8 +212,97 @@ function dev_read() {
     my_traps: [...(view.my_traps ?? [])],
     hand: [...(view.hand ?? [])],
     fighters,
-    spellbook: me ? spell_rows(me.class_id ?? me.classe, me.level ?? 1) : [],
+    spellbook: me ? spell_rows(me, me.class_id ?? me.classe, me.level ?? 1) : [],
   }
+}
+
+/**
+ * THE PREDICTION BANK (#1144) — what the client SAYS this turn's casts will do, recorded BEFORE the authority
+ * is asked, so the assertions can compare prediction against chain instead of chain against itself.
+ *
+ * It is the board's own cast prediction, not a second one: same `predict_cast`, same `fight_view()`, same seat
+ * rank (`seat_spell_level`), same deterministic crit clock and same `resolve_ref` DungeonBoard's `optimistic_cast`
+ * runs when a player clicks — this only declines to write the result into the store. A bank computed any other way
+ * would be a third implementation of the damage formula and would prove nothing about what the player was shown.
+ *
+ * EVERY CAST IS PREDICTED OFF THE PRE-TURN VIEW, and that is sound because of the policy's own harness rule: a
+ * planned turn never contains two actions claiming the same assertable fact, so no two casts of one turn touch the
+ * same fighter's HP. Position is not an input to a damage number, so a preceding move does not move the prediction
+ * either. An unresolved prediction (a <100% chance row, a not-yet-deployed chain kind) banks its REASONS and no
+ * number — an honest gap the sheet reports, never a fabricated expectation.
+ * @param {Array<{ kind: number, cell: { x: number, y: number }, spell_id?: string }>} actions
+ * @returns {Array<object>} one row per cast action, in plan order
+ */
+const bank_predictions = (actions) => {
+  const dungeon = use_dungeon.getState().dungeon
+  const view = fight_view()
+  const caster_id = view?.my_entity_id ?? null
+  const me = caster_id ? view.fighters.get(caster_id) : null
+  if (!dungeon || !me)
+    // NEVER A SILENT EMPTY BANK: an un-bankable turn names its reason, so the sheet's parity row reports a gap
+    // with a cause instead of a quiet zero (the whole failure mode this oracle exists to end).
+    return [{ index: -1, hp: [], unresolved: [`no_bank:${!dungeon ? 'no dungeon store' : 'no seat in the view'}`] }]
+  const escrow_row = dungeon.escrow?.find((p) => (p.character ?? p.character_id) === caster_id) ?? null
+  const seat = dungeon.escrow?.findIndex((p) => (p.character ?? p.character_id) === caster_id) ?? -1
+  const resolve_ref = (id) => resolve_dungeon_ref(dungeon, id)
+  const rows = []
+  let slot = Number(escrow_row?.casts_this_turn ?? 0)
+  for (const [index, action] of actions.entries()) {
+    if (action.kind !== CAST_KIND) continue
+    const spell = fight_spell(action.spell_id)
+    const spell_level = seat_spell_level(me, spell)
+    const target_cell = encode(action.cell.x, action.cell.y)
+    const banked = {
+      index,
+      spell_id: String(action.spell_id),
+      spell_key: spell?.name_key ?? null,
+      spell_level,
+      target_cell: action.cell,
+      // the build the prediction ran on — a divergence row names it, so "predicted 2, chain killed" carries the
+      // stats and rank it was predicted with instead of being an anecdote.
+      caster_build: { stats: me.base_stats ?? {}, level: me.level ?? 1 },
+      hp: [],
+      unresolved: spell?.template ? [] : [`no_template:${action.spell_id}`],
+    }
+    slot += 1
+    if (!spell?.template) {
+      rows.push(banked)
+      continue
+    }
+    const prediction = predict_cast({
+      view,
+      caster_id,
+      spell: spell.template,
+      spell_level,
+      target_cell,
+      critical_clock: {
+        world_seed: dungeon.world_seed,
+        spawn_id: dungeon.spawn_id,
+        turn_deadline_ms: dungeon.turn_deadline_ms,
+        seat,
+        slot: slot - 1,
+      },
+      resolve_ref,
+    })
+    // Hit rows are keyed by REF (is_mob/idx) exactly as the fold takes them, so every fighter the cast changes
+    // is banked by entity id here — the assertion looks its planned target up by id and needs no second mapping.
+    const by_ref = new Map(
+      [...view.fighters.keys()]
+        .map((id) => [resolve_ref(id), id])
+        .filter(([ref]) => !!ref)
+        .map(([ref, id]) => [`${ref.is_mob ? 'm' : 'p'}${ref.idx}`, id])
+    )
+    banked.hp = (prediction?.actions ?? [])
+      .filter((row) => row.kind === 'Hit')
+      .map((row) => ({
+        id: by_ref.get(`${row.victim_is_mob ? 'm' : 'p'}${row.victim_idx}`) ?? null,
+        remaining_hp: Number(row.remaining_hp),
+      }))
+      .filter((row) => !!row.id)
+    banked.unresolved = [...banked.unresolved, ...(prediction?.unresolved ?? [])]
+    rows.push(banked)
+  }
+  return rows
 }
 
 /** Capture the store's short-lived refusal reason across an await — it can be cleared by the reconciling
@@ -255,8 +362,9 @@ const turn_refusal = (view, store, actions) => {
  * `{ kind: 1, cell, spell_id }` (cast — `spell_id` is the SpellTemplate object id `__ARES_DEV_READ`'s
  * spellbook publishes). An EMPTY array is a legal pass, exactly like pressing End Turn with nothing drafted.
  * @param {Array<{ kind: number, cell: { x: number, y: number }, spell_id?: string }>} actions
- * @returns {Promise<{ ok: boolean, error?: string, turn_level?: boolean, before?: object, after?: object }>}
- *   `turn_level` marks a refusal about the TURN rather than the plan — transient, and never evidence about a spell.
+ * @returns {Promise<{ ok: boolean, error?: string, turn_level?: boolean, before?: object, after?: object,
+ *   predicted?: Array<object> }>} `turn_level` marks a refusal about the TURN rather than the plan — transient,
+ *   and never evidence about a spell. `predicted` is the prediction bank (see `bank_predictions`).
  */
 async function dev_turn(actions = []) {
   const store = use_dungeon.getState()
@@ -265,6 +373,9 @@ async function dev_turn(actions = []) {
   if (refusal) return { ok: false, error: refusal.reason, turn_level: refusal.turn_level }
 
   const before = dev_read()
+  // THE BANK, taken here: before a single action is staged, while the view still holds the state the prediction
+  // was made on. After the commit it is unrecoverable — which is why the oracle could never exist client-side.
+  const predicted = bank_predictions(actions)
   // ARM the last cast's card exactly as a real grab does (the spell bar reads `name_key`), so the VFX/hand
   // chrome of a bot turn is the chrome of a played turn. Cosmetic only — the staged object id is the cast.
   const armed = [...actions].reverse().find((a) => a.kind === CAST_KIND)
@@ -291,9 +402,9 @@ async function dev_turn(actions = []) {
     }
   })
   const after = dev_read()
-  if (!committed) return { ok: false, error: error ?? 'turn commit refused', before, after }
-  if (error) return { ok: false, error, before, after }
-  return { ok: true, before, after }
+  if (!committed) return { ok: false, error: error ?? 'turn commit refused', before, after, predicted }
+  if (error) return { ok: false, error, before, after, predicted }
+  return { ok: true, before, after, predicted }
 }
 
 /**
