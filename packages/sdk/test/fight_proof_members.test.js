@@ -21,10 +21,10 @@ import {
 // GROUND TRUTH — the 33-byte format-3 commitment, pinned identically by the Move suite:
 //   0x03 ‖ blake2b256("aresrpg.zone-group.commitment" ‖ 0x03 ‖ bcs(MobGroupMemberSet))
 const COMMITMENT_HEX =
-  '03405e4489411fc5fd83864e61c272b3c35da8e518e4e52bd3d43fd9379af022b2'
+  '034c4299490e05afa3514555d275f87ca677fb37821d5d52da30e4dcfb382a9823'
 
 const WORLD_ID =
-  '0xbe3f36264b09c95e86491a9f0c1bcb744071d0bcc4176f0b7e2e60a22f115e1c'
+  '0xbe3f'
 const DISCOVERED_AT_MS = '1784980009967'
 // the five authored rows of the fixture's table, as the Move suite names them
 const ROWS = [1, 2, 3, 4, 5].map(n => `0x${n.toString(16).padStart(64, '0')}`)

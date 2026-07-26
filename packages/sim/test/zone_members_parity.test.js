@@ -10,7 +10,10 @@
 // trusted from the Move suite — a fence that holds on chain but not in the client still ships a lying map.
 import { describe, test, expect } from 'bun:test'
 
-import { derive_mob_groups_members, commitment_format } from '../src/zone_derive.js'
+import {
+  derive_mob_groups_members,
+  commitment_format,
+} from '../src/zone_derive.js'
 
 import fixture from './fixtures/zone_members_format3_parity.json'
 
@@ -20,7 +23,7 @@ const derived = () =>
     seed: BigInt(fixture.inputs.seed),
   })
 
-const BOSS = fixture.inputs.boss_rows[0]
+const [BOSS] = fixture.inputs.boss_rows
 const single_spec = members => members.every(m => m === members[0])
 
 describe('zone_derive ↔ zone_gen member-list parity (format 3)', () => {
@@ -55,7 +58,9 @@ describe('zone_derive ↔ zone_gen member-list parity (format 3)', () => {
   })
 
   test('FIXTURE ④ — a non-boss primary can draw a genuinely mixed pack', () => {
-    expect(derived().filter(g => !single_spec(g.members)).length).toBeGreaterThan(0)
+    expect(
+      derived().filter(g => !single_spec(g.members)).length,
+    ).toBeGreaterThan(0)
   })
 
   test('FIXTURE ③ — a mask-absent world (empty boss mask) derives well-formed rosters', () => {
@@ -70,7 +75,8 @@ describe('zone_derive ↔ zone_gen member-list parity (format 3)', () => {
     for (const g of rows) {
       expect(g.members).toHaveLength(4) // the roster is the RAW roll, never the team-bound clamp
       expect(g.members[0]).toBe(g.template_idx)
-      for (const m of g.members) expect(m).toBeLessThan(fixture.inputs.weights.length)
+      for (const m of g.members)
+        expect(m).toBeLessThan(fixture.inputs.weights.length)
     }
   })
 
@@ -83,7 +89,16 @@ describe('zone_derive ↔ zone_gen member-list parity (format 3)', () => {
         seed: BigInt(fixture.inputs.seed),
         size_bound,
       })
-    const strip = rows => rows.map(({ size, ...rest }) => ({ ...rest, spawn_id: rest.spawn_id.toString() }))
+    // compare everything BUT the clamped size — that is the one value the bound is allowed to move
+    const strip = rows =>
+      rows.map(row => ({
+        spawn_id: row.spawn_id.toString(),
+        template_idx: row.template_idx,
+        members: row.members,
+        x: row.x,
+        z: row.z,
+        group_seed: row.group_seed,
+      }))
     expect(strip(at(1))).toEqual(strip(at(6)))
     expect(at(1)[0].size).toBe(1)
     expect(at(6)[0].size).toBe(4)

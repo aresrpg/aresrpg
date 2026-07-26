@@ -295,7 +295,15 @@ export function derive_mob_groups_members({
   let s = rng_seed(mix(seed, MOB_SALT))
   const g = p_roll_u64(s, min_g, max_g)
   s = g.state
-  const { capacity, place } = placer(FORMAT_LATTICE, true, ox, oz, zsize, bx, bz)
+  const { capacity, place } = placer(
+    FORMAT_LATTICE,
+    true,
+    ox,
+    oz,
+    zsize,
+    bx,
+    bz,
+  )
   for (let i = 0; i < g.value && i < capacity; i++) {
     const pick = p_pick_weighted(s, weights)
     s = pick.state

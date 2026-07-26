@@ -26,7 +26,7 @@ const ROSTER = [
   { min_level: 100, max_level: 200 }, // a wide band
 ]
 
-const graded_at = progress =>
+const graded_at = (progress) =>
   derive_group_members_graded(0, {
     members: ROSTER,
     progress,
@@ -35,9 +35,9 @@ const graded_at = progress =>
   })
 
 test('FROZEN Move vector: the graded roster at progress 0 / 500 / 1000 (mob_graded_level_tests.move)', () => {
-  expect(graded_at(0).members.map(m => m.level)).toEqual([10, 30, 100])
-  expect(graded_at(500).members.map(m => m.level)).toEqual([15, 30, 128])
-  expect(graded_at(1000).members.map(m => m.level)).toEqual([20, 30, 178])
+  expect(graded_at(0).members.map((m) => m.level)).toEqual([10, 30, 100])
+  expect(graded_at(500).members.map((m) => m.level)).toEqual([15, 30, 128])
+  expect(graded_at(1000).members.map((m) => m.level)).toEqual([20, 30, 178])
 })
 
 test('the parity law: every member costs the same draws whatever its band', () => {
@@ -66,7 +66,7 @@ test('a pack seats min(clamped size, roster length) members, one spec each', () 
     size: 2,
     archimob_bp: 0,
   })
-  expect(clamped.members.map(m => m.level)).toEqual([20, 30])
+  expect(clamped.members.map((m) => m.level)).toEqual([20, 30])
   const over = derive_group_members_graded(0, {
     members: ROSTER,
     progress: 1000,

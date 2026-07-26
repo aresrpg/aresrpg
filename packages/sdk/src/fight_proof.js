@@ -139,8 +139,7 @@ const normalized_commitment = value => {
     )
   )
     throw new Error(`[fight-proof] ${COMMITMENT_SHAPE}`)
-  if (out.length === HASH_BYTES)
-    return { format: FORMAT_MERKLE, digest: out }
+  if (out.length === HASH_BYTES) return { format: FORMAT_MERKLE, digest: out }
   if (out.length === HASH_BYTES + 1 && out[0] === FORMAT_SET)
     return { format: FORMAT_SET, digest: out.subarray(1) }
   if (out.length === HASH_BYTES + 1 && out[0] === FORMAT_MEMBERS)
@@ -236,7 +235,11 @@ export function mob_group_set_bytes({
         ),
         x: normalized_number(group.x, 32, `groups[${position}].x`),
         z: normalized_number(group.z, 32, `groups[${position}].z`),
-        group_size: normalized_number(group.size, 16, `groups[${position}].size`),
+        group_size: normalized_number(
+          group.size,
+          16,
+          `groups[${position}].size`,
+        ),
         group_seed: normalized_unsigned(
           group.group_seed,
           64,
@@ -292,7 +295,11 @@ export function mob_group_member_set_bytes({
         ),
         x: normalized_number(group.x, 32, `groups[${position}].x`),
         z: normalized_number(group.z, 32, `groups[${position}].z`),
-        group_size: normalized_number(group.size, 16, `groups[${position}].size`),
+        group_size: normalized_number(
+          group.size,
+          16,
+          `groups[${position}].size`,
+        ),
         group_seed: normalized_unsigned(
           group.group_seed,
           64,
@@ -433,7 +440,9 @@ const commitment_proof = (commitment, context, groups, target_index) => {
  * @param {{ world_id:string, zx:number, zy:number, zone_seed:string|number|bigint,
  *   discovered_at_ms:string|number|bigint, group_root:number[]|Uint8Array, group_count:number,
  *   groups:Array<{ index:number, spawn_id:string|number|bigint, template_id:string, x:number, z:number,
- *     size:number, group_seed:string|number|bigint }>, index:number }} input
+ *     size:number, group_seed:string|number|bigint, member_template_ids?:string[] }>, index:number }} input
+ *   `member_template_ids` is the group's per-member roster — REQUIRED on a format-3 (member-list) zone, whose
+ *   commitment covers it, and ignored by the format-1/2 digests.
  * @returns {MobGroupProof|null}
  */
 export function compose_mob_group_proof(input) {
@@ -493,7 +502,12 @@ export function compose_mob_group_proof(input) {
       }
     })
     const commitment = normalized_commitment(group_root)
-    const proof = commitment_proof(commitment, context, normalized_groups, target_index)
+    const proof = commitment_proof(
+      commitment,
+      context,
+      normalized_groups,
+      target_index,
+    )
     if (proof == null) return null
     const group = normalized_groups[target_index]
     return {

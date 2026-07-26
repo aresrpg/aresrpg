@@ -46,8 +46,7 @@ export const graded_band = (min_level, max_level, progress) => {
   if (max_level <= min_level) return { lo: min_level, hi: min_level }
   const span = max_level - min_level
   const p = Math.min(progress, PROGRESS_SCALE)
-  const top =
-    min_level + Math.floor((span * p + PROGRESS_SCALE / 2) / PROGRESS_SCALE)
+  const top = min_level + Math.floor((span * p + PROGRESS_SCALE / 2) / PROGRESS_SCALE)
   const width = Math.floor((span * BAND_WINDOW_BP) / 10_000)
   return { lo: top > min_level + width ? top - width : min_level, hi: top }
 }
@@ -65,10 +64,7 @@ export const graded_band = (min_level, max_level, progress) => {
  *   archimob_bp?:number|null, team_bound?:number|null }} spec
  * @returns {{ members: Array<{ level:number, archi:boolean, index:number }>, state: number }}
  */
-export function derive_group_members_graded(
-  group_seed,
-  { members: roster, progress, size, archimob_bp, team_bound },
-) {
+export function derive_group_members_graded(group_seed, { members: roster, progress, size, archimob_bp, team_bound }) {
   const bp = Number(archimob_bp ?? DEFAULT_ARCHIMOB_BP)
   const bound = Number(team_bound ?? DEFAULT_TEAM_BOUND) || DEFAULT_TEAM_BOUND
   // the engine spawns `min(clamp(size, bound), roster.length)` — a roster is derived at the RAW rolled size and
@@ -79,11 +75,7 @@ export function derive_group_members_graded(
   let state = rng_seed(Number(BigInt(group_seed ?? 0) & MASK32))
   const out = []
   for (let i = 0; i < n; i += 1) {
-    const { lo, hi } = graded_band(
-      Number(roster[i].min_level) || 0,
-      Number(roster[i].max_level) || 0,
-      prog,
-    )
+    const { lo, hi } = graded_band(Number(roster[i].min_level) || 0, Number(roster[i].max_level) || 0, prog)
     const lvl = rng_range(state, lo, Math.max(lo, hi))
     state = lvl.state
     const roll = rng_int(state, 10_000)

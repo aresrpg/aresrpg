@@ -228,7 +228,7 @@ fun the_member_commitment_binds_the_roster() {
   let (ids, idxs, members, xs, zs, sizes, gseeds) = zone_gen::derive_mob_groups_members(
     SEED, 8, 16, &weights, &member_weights, &min_group, &max_group, SIZE_BOUND, OX, OZ, ZSIZE, BX, BZ,
   );
-  let world = object::id_from_address(@0xbe3f36264b09c95e86491a9f0c1bcb744071d0bcc4176f0b7e2e60a22f115e1c);
+  let world = object::id_from_address(@0xbe3f);
   let rows = vector<ID>[
     object::id_from_address(@0x01), object::id_from_address(@0x02), object::id_from_address(@0x03),
     object::id_from_address(@0x04), object::id_from_address(@0x05),
@@ -251,7 +251,7 @@ fun the_member_commitment_binds_the_roster() {
   let got = zone_gen::mob_group_commitment_members(
     world, 487, 487, SEED, 1784980009967, &ids, &templates, &member_templates, &xs, &zs, &sizes, &gseeds,
   );
-  assert!(got == x"03405e4489411fc5fd83864e61c272b3c35da8e518e4e52bd3d43fd9379af022b2", 0);
+  assert!(got == x"034c4299490e05afa3514555d275f87ca677fb37821d5d52da30e4dcfb382a9823", 0);
   assert!(zone_gen::mob_group_commitment_format(&got) == 3, 0);
   assert!(zone_gen::mob_group_commitment_members_matches(
     &got, world, 487, 487, SEED, 1784980009967, &ids, &templates, &member_templates, &xs, &zs, &sizes, &gseeds,
