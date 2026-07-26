@@ -160,6 +160,11 @@ const fold_claim_intent = (state, input, now) => {
       zx: k.zx,
       zy: k.zy,
       template_id: row.template_id,
+      // FORMAT 3 (#1110) — the pack's SEATED roster, exactly as the zone derivation served it (`derive_zone`
+      // row `.members`, already trimmed to `size` the way the claim door trims it). A format-1/2 row has no
+      // roster and gets an empty list: PRESENCE is the format signal the executor derives its claim door from,
+      // never a flag. This request row is the roster's one home on the way to the chain.
+      member_template_ids: Array.isArray(row.members) ? row.members : [],
       is_public: state.openness === OPENNESS_PUBLIC,
     })
   )

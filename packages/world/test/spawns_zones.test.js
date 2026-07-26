@@ -300,6 +300,24 @@ describe('claim — pending hides, receipt removes + tombstones + hands off to t
     expect(spawn_rows(state()).find((r) => r.key === '5:5:mob:7')?.pending).toBe('claim') // optimistic hide as data
     expect(attack_target(state())).toBe(null) // a pending row stops being a target (the press dropped the pill)
   })
+  // FORMAT 3 (#1110) — a member-roster row's claim is a DIFFERENT chain door, and the only thing that decides
+  // it is the roster the row already carries. The request row is that fact's ONE home: the executor reads the
+  // list off it and picks the member composer, so a roster that stops here is a group nobody can engage.
+  it('a member-roster row rides its roster into the claim request; a mono-spec row carries an empty one', () => {
+    const OTHER = `0x${'c'.repeat(64)}`
+    const ctx = boot()
+    ctx.input({
+      type: 'zones_rows_snapshot',
+      version: 1,
+      zones: [{ zx: 5, zy: 5, discovered_at_ms: 9 }],
+      cells: [{ zx: 5, zy: 5, rows: [mob('7', 520, 540, { members: [TMPL, OTHER] }), mob('8', 521, 541)] }],
+    })
+    ctx.input({ type: 'player_pos', x: 21, z: 41 })
+    ctx.input({ type: 'claim_intent', key: '5:5:mob:7' })
+    expect(ctx.state().tx_request.payload.member_template_ids).toEqual([TMPL, OTHER])
+    ctx.input({ type: 'claim_intent', key: '5:5:mob:8' })
+    expect(ctx.state().tx_request.payload.member_template_ids).toEqual([]) // absence IS the format signal
+  })
   it('claim_intent REFUSES beyond proximity (the far-click teaches "get closer", never a doomed tx)', () => {
     const { input, state } = armed()
     input({ type: 'player_pos', x: 90, z: 90 })
