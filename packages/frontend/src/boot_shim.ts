@@ -9,6 +9,6 @@
 // deprecation warning — "esbuild option… use oxc"); the built entry carried bare `process.emit` refs
 // (stream/events polyfill internals via the protocol wire codec) with no shim ⇒ ReferenceError at boot ⇒
 // BLANK APP in prod/preview while dev kept working. Independent of plugin mechanics by design.
-import process_shim from 'vite-plugin-node-polyfills/shims/process'
+import process_shim from './shims/process.js'
 
 ;(globalThis as { process?: unknown }).process ??= process_shim
