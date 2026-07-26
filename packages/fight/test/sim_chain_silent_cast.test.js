@@ -6,17 +6,16 @@
 // turn, the commit "succeeds" (a version lands), and the receipt carries ONLY TurnEnded/TurnStarted: no Cast,
 // no Hit, no AP spent, no refusal, nothing on the console. The player pressed a card and the game did nothing.
 //
-// THE MECHANISM this file pins. The staged id space is NOT the miss (`in_hand_cast_folds_the_full_envelope`
-// is the positive control: the very same door, a dealt card, folds the whole envelope and spends the AP). The
-// miss is HAND MEMBERSHIP: `packages/sim`'s reducer only honours a cast whose spell sits in the caster's dealt
-// hand (`handle_cast`'s `current.hand.includes` gate, HAND_SIZE = 7), while the mounted spell bar offers every
-// class spell the character unlocked — 20 of them at level 200. Cast the 8th and the reducer returns the state
-// untouched with zero events, which `submit_commands` used to encode as a perfectly ordinary empty turn.
+// THE MECHANISM this file pins. The staged id space was never the miss; the miss was HAND MEMBERSHIP — the
+// reducer honoured only a cast whose spell sat in a dealt 7-card hand while the spell bar offered every spell
+// the character unlocked, 20 of them at level 200. That deal is GONE: the chain has no hand, so the sim has
+// none either, and every unlocked spell folds. What survives is the loudness law.
 //
 // THE LAW THIS GATE CARRIES (docs/CODE_LAW.md, no silent failures): whatever the reason a staged cast cannot
-// fold — an id the ctx cannot resolve, a card the seat does not hold, a rule the sim refuses — the local chain
-// REFUSES LOUDLY and names it, exactly as `commands_from_staged` already throws for the kind-2 weapon strike.
-// A refusal rolls the drafted turn back through the production failure path; a silent no-op steals the turn.
+// fold — an id the ctx cannot resolve, a range it cannot reach, a purse it cannot pay, a published cast limit
+// it has spent — the local chain REFUSES LOUDLY and names it, exactly as `commands_from_staged` already throws
+// for the kind-2 weapon strike. A refusal rolls the drafted turn back through the production failure path; a
+// silent no-op steals the turn.
 
 import { describe, test, expect } from 'bun:test'
 
@@ -35,9 +34,10 @@ import {
 const SEED = 0xc81f3a92
 const FIGHT_ID = 'sim:c81f3a92:1'
 const NOW = 1_784_752_468_344
-const HAND_SIZE = 7 // packages/sim reduce.js — the opening deal every player seat gets
+/** The retired opening-deal size. The kit is deliberately bigger than it — that spread WAS the bug. */
+const RETIRED_HAND_SIZE = 7
 
-const level = (effects, { ap_cost = 1, range_max = 14 } = {}) => ({
+const level = (effects, { ap_cost = 1, range_max = 14, casts_per_turn = 255 } = {}) => ({
   ap_cost,
   range_min: 0,
   range_max,
@@ -45,7 +45,7 @@ const level = (effects, { ap_cost = 1, range_max = 14 } = {}) => ({
   line_launch: false,
   line_of_sight: false,
   free_cell: false,
-  casts_per_turn: 255,
+  casts_per_turn,
   casts_per_target: 255,
   cooldown_turns: 0,
   crit_rate: 0,
@@ -53,18 +53,20 @@ const level = (effects, { ap_cost = 1, range_max = 14 } = {}) => ({
   crit_effects: [],
 })
 
-const damage = (id, value) => ({
+const damage = (id, value, level_overrides = {}) => ({
   id,
-  levels: [level([{ kind: SE.K_DAMAGE, element: 0, value, target_filter: SE.TF_NOT_TEAM }])],
+  levels: [level([{ kind: SE.K_DAMAGE, element: 0, value, target_filter: SE.TF_NOT_TEAM }], level_overrides)],
 })
 
-/** A level-200-shaped class deck: MORE spells than one opening hand can hold. That is the whole fixture. */
-const PLAYER_KIT = Array.from({ length: HAND_SIZE + 2 }, (_unused, i) => damage(`0xspell_${i}`, 12))
+/** A level-200-shaped spell book: MORE spells than the retired opening hand could hold. */
+const PLAYER_KIT = Array.from({ length: RETIRED_HAND_SIZE + 2 }, (_unused, i) => damage(`0xspell_${i}`, 12))
+/** The once-per-turn spell — its OWN published cap is the only thing that can refuse its second cast. */
+const ONCE = damage('0xspell_once', 12, { casts_per_turn: 1 })
 const MOB_KIT = [damage('0xmob_hit', 5)]
-const TEMPLATES_RAW = [...PLAYER_KIT, ...MOB_KIT]
-const PLAYER_DECK = PLAYER_KIT.map((s) => s.id)
+const TEMPLATES_RAW = [...PLAYER_KIT, ONCE, ...MOB_KIT]
+const PLAYER_BOOK = [...PLAYER_KIT.map((s) => s.id), ONCE.id]
 
-const fighter = (id, cell, is_player, { health, ap, deck }) => ({
+const fighter = (id, cell, is_player, { health, ap, spells }) => ({
   id,
   name: id,
   cell,
@@ -81,10 +83,7 @@ const fighter = (id, cell, is_player, { health, ap, deck }) => ({
   level: is_player ? 200 : 80,
   stats: {},
   effects: [],
-  deck: [...deck],
-  hand: is_player ? [] : [...deck], // players are dealt at start; mobs come pre-handed
-  discard: [],
-  spell_levels: Object.fromEntries(deck.map((s) => [s, 1])),
+  spell_levels: Object.fromEntries(spells.map((s) => [s, 1])),
   ap_reserve: 0,
 })
 
@@ -105,8 +104,8 @@ const build_chain = () => {
   return create_sim_chain({
     seed: SEED,
     fight_id: FIGHT_ID,
-    team0: [fighter('sim_c1', me, true, { health: 1440, ap: 6, deck: PLAYER_DECK })],
-    team1: [fighter('mob_0', mob_cell, false, { health: 1050, ap: 4, deck: MOB_KIT.map((s) => s.id) })],
+    team0: [fighter('sim_c1', me, true, { health: 1440, ap: 6, spells: PLAYER_BOOK })],
+    team1: [fighter('mob_0', mob_cell, false, { health: 1050, ap: 4, spells: MOB_KIT.map((s) => s.id) })],
     templates_raw: TEMPLATES_RAW,
   })
 }
@@ -133,18 +132,16 @@ const seat = (chain) => chain.sim_state.team0.find((e) => e.id === 'sim_c1')
 const row_kinds = (result) => result.receipt.events.map((row) => String(row.type).split('::').pop())
 
 describe('the local chain never eats a committed cast (#1012)', () => {
-  test('the fixture reproduces a real seat: more castable spells than one hand holds', () => {
+  test('the fixture reproduces a real seat: more spells than the retired hand could hold', () => {
     const chain = build_chain()
-    const me = seat(chain)
 
-    expect(me.hand.length).toBe(HAND_SIZE)
-    expect(me.deck.length).toBeGreaterThan(0) // the undealt remainder — castable on chain, dead here
-    expect(PLAYER_DECK.length).toBeGreaterThan(HAND_SIZE)
+    expect(PLAYER_BOOK.length).toBeGreaterThan(RETIRED_HAND_SIZE)
+    expect(Object.keys(seat(chain).spell_levels)).toEqual(PLAYER_BOOK)
   })
 
-  test('in-hand cast folds the full envelope and spends the AP (the positive control)', () => {
+  test('a cast folds the full envelope and spends the AP (the positive control)', () => {
     const chain = on_my_turn(build_chain())
-    const [dealt] = seat(chain).hand
+    const [dealt] = PLAYER_BOOK
     const ap_before = seat(chain).ap
     const hp_before = chain.sim_state.team1[0].health
 
@@ -158,31 +155,36 @@ describe('the local chain never eats a committed cast (#1012)', () => {
     expect(seat({ sim_state: result.chain.sim_state }).ap).toBeLessThan(ap_before)
   })
 
-  test('a staged cast the seat cannot fold REFUSES LOUDLY — never an empty committed turn', () => {
+  test('EVERY spell in the book folds — the ninth is as castable as the first (#1012)', () => {
+    const last = PLAYER_BOOK[RETIRED_HAND_SIZE + 1] // past the retired hand size by construction
     const chain = on_my_turn(build_chain())
-    const [undealt] = seat(chain).deck
 
-    // The id space is exonerated: the ctx resolves this very template. What the seat lacks is the CARD.
-    expect(chain.ctx.spell_templates.has(undealt)).toBe(true)
-    expect(seat(chain).hand).not.toContain(undealt)
-
-    expect(() => commit_cast(chain, undealt)).toThrow(/sim_chain: cast .* folded nothing/)
+    expect(chain.ctx.spell_templates.has(last)).toBe(true)
+    expect(row_kinds(commit_cast(chain, last))).toContain('Cast')
   })
 
-  test('the SECOND cast of one card in a turn refuses too — the turn is all or nothing', () => {
+  test('the SECOND cast of a once-per-turn spell refuses LOUDLY — the turn is all or nothing', () => {
     const chain = on_my_turn(build_chain())
-    const [dealt] = seat(chain).hand
     const target = chain.sim_state.team1[0].cell
     const staged = Array.from({ length: 2 }, () => ({
       kind: 1,
       target: encode(target.x, target.y),
-      spell_template_id: dealt,
+      spell_template_id: ONCE.id,
     }))
 
-    // The sim discards a cast card out of the hand, so the second copy folds nothing — on chain the spell's
-    // own `casts_per_turn` would have allowed it. Loud, and the WHOLE turn is refused: the caller keeps the
-    // pre-turn chain, so the first cast never half-commits.
-    expect(() => submit_staged(chain, staged, 'sim_c1', { now_ms: NOW })).toThrow(/already cast that card/)
+    // `casts_per_turn: 1` is the ONLY thing refusing the repeat — no card left a hand. Loud, and the WHOLE
+    // turn is refused: the caller keeps the pre-turn chain, so the first cast never half-commits.
+    expect(() => submit_staged(chain, staged, 'sim_c1', { now_ms: NOW })).toThrow(/already cast that spell/)
+  })
+
+  test('a staged cast the sim refuses on its own rules REFUSES LOUDLY — never an empty committed turn', () => {
+    const chain = on_my_turn(build_chain())
+    // Aim at empty ground far from the seat: nothing to hit and, at that distance, nothing in range either.
+    expect(() =>
+      submit_staged(chain, [{ kind: 1, target: encode(19, 19), spell_template_id: PLAYER_BOOK[0] }], 'sim_c1', {
+        now_ms: NOW,
+      })
+    ).toThrow(/folded nothing — the sim refused it \(range, line of sight, AP, or a cast limit\)/)
   })
 
   test('a staged cast naming a template the ctx cannot resolve REFUSES LOUDLY', () => {

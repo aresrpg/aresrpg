@@ -371,7 +371,8 @@ const staged_casts = (staged) => (staged ?? []).filter((action) => action.kind =
 /**
  * WHY a staged cast folded nothing (#1012). The sim reducer answers every refusal the same way — the state
  * back, untouched, with no events — so the reason is re-derived from the state the turn started in, in the
- * order `handle_cast` gates them. Diagnosis only: the refusal itself is the invariant above.
+ * order `handle_cast` gates them: the seat, its turn, the template, then the chain's own cast rules (AP,
+ * range, LoS, casts_per_turn, casts_per_target, cooldown). Diagnosis only: the refusal is the invariant.
  * @param {object} chain the chain the turn was folded against
  * @param {{ entity_id: string, spell_id: string, recast: boolean }} cast
  * @returns {string}
@@ -383,9 +384,8 @@ const cast_refusal_reason = (chain, { entity_id, spell_id, recast }) => {
   if (current_actor(chain) !== entity_id) return `it is not that seat's turn`
   if (!chain.ctx.spell_templates.has(spell_id))
     return `this fight's ctx holds no template with that id — the fight was started on another id space`
-  if (!caster.hand.includes(spell_id))
-    return `the seat does not hold that card — its dealt hand is [${caster.hand.join(', ')}]`
-  if (recast) return `the seat already cast that card this turn, and the sim discarded it out of the hand`
+  if (recast)
+    return `the seat already cast that spell this turn — its published casts_per_turn / casts_per_target / cooldown refused the repeat`
   return `the sim refused it (range, line of sight, AP, or a cast limit)`
 }
 
