@@ -32,8 +32,12 @@ const OWNER = '0xowner'
 const CHARACTER_ID = '0xcharacter'
 const FIGHT_ID = '0xzombiefight'
 const WORLD_ID = '0xworld'
-const STATUS_ACTIVE = 1
-const STATUS_PLACEMENT = 5
+// CHAIN scalars (fight.move) — `fight_object` below is a raw Fight object read, so these must be the chain
+// namespace, never the projected board-view one. Pinning them to the shared home keeps this fixture honest: it
+// previously hard-coded placement as 5 (a VIEW scalar the chain can never emit), which is what let #932 ship
+// green — every "zombie placement" case below was exercising a status that does not exist on chain.
+const { CHAIN_STATUS_ACTIVE: STATUS_ACTIVE, CHAIN_STATUS_PLACEMENT: STATUS_PLACEMENT } =
+  await import('./fight_chain_status.js')
 
 let read_response = /** @type {(object_id:string) => Promise<any>} */ (
   async () => {
@@ -203,7 +207,7 @@ describe('boot resume vs an EXPIRED-turn zombie (#882)', () => {
     let cranked = false
     read_response = async (object_id) => {
       if (object_id !== FIGHT_ID) throw new Error(`unexpected object read: ${object_id}`)
-      // the crank forfeited the overdue turn and resolved the fight terminal (WON) — nothing left to mount
+      // the crank forfeited the overdue turn and resolved the fight terminal (chain DEFEAT) — nothing to mount
       return cranked ? fight_object(3) : fight_object(STATUS_ACTIVE, { turn_deadline_ms: Date.now() - 6 * 3_600_000 })
     }
     const crank_door = mock(async () => {
@@ -261,8 +265,8 @@ describe('resume_decision (pure)', () => {
     expect(resume_decision({ status: STATUS_PLACEMENT, placement_deadline_ms: 0 }, NOW)).toBe('enter') // windowless — defensive, never wedge on absent data
     expect(resume_decision({ status: STATUS_PLACEMENT, placement_deadline_ms: NOW }, NOW)).toBe('force_start')
     expect(resume_decision({ status: STATUS_PLACEMENT, placement_deadline_ms: 12n }, NOW)).toBe('force_start') // bigint decode shape
-    expect(resume_decision({ status: 3 }, NOW)).toBe('skip') // WON — pending-outcome recovery owns the discharge
-    expect(resume_decision({ status: 4 }, NOW)).toBe('skip') // FAILED
+    expect(resume_decision({ status: 2 }, NOW)).toBe('skip') // VICTORY — pending-outcome recovery owns the discharge
+    expect(resume_decision({ status: 3 }, NOW)).toBe('skip') // DEFEAT
     expect(resume_decision(null, NOW)).toBe('skip') // unreadable — never adopt on hope
   })
 
