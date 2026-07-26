@@ -456,7 +456,9 @@ const empty_fight = () => ({
   busy: false, // a fight tx is in flight (txs orchestration drives via the door)
   commit_due: false, // tick-derived level; project.commit_due is the edge-facing projection
   commit_latch: null, // executed-failure proof mirrored through the busy input (never read from another store)
-  commit_attempt_epoch: null, // reducer-owned once claim; only a new playable turn/receipt produces another key
+  commit_attempt_epoch: null, // reducer-owned once claim; a new playable turn/receipt produces another key, and
+  // discarding a non-empty uncommitted draft ('clear_staged', #1045) gives this claim back exactly once per turn
+  // so a refused commit still leaves the turn endable
   receipt_seq: 0, // receipt feedback re-arms a same-player solo turn without weakening failure idempotency
   last_action_ms: 0, // chain floor for the next legal commit, adopted at the snapshot input door
   error: null,
@@ -1189,7 +1191,21 @@ const make_input =
         set((s) => ({ ...s, staged: [...s.staged, msg.intent] }))
         return
       case 'clear_staged':
-        set((s) => ({ ...s, staged: [], commit_due: false }))
+        // #1045 THE TURN STAYS ENDABLE. Discarding a NON-EMPTY draft that never produced a receipt is the flush's
+        // own proof that this turn's commit attempt did not happen (the refusal path: `rollback` then this input —
+        // dungeon_run_store.commit_turn's catch + DungeonBoard.flush_commit's tail). Give the submit claim back so
+        // the deadline/kill auto-commit can still fire the BARE PASS that ends the turn — never a retry: the
+        // refused actions are exactly what this input throws away. Self-bounding at ONE recovery per turn — that
+        // bare pass clears an ALREADY-EMPTY draft, which releases nothing, so a failing commit can never loop. A
+        // SUCCESSFUL commit is unaffected: its receipt already emptied `staged` and advanced the epoch's
+        // receipt_seq. An EXECUTED failure stays blocked by its own latch (auto_commit_decision → 'latched'),
+        // so the tx-retry burn law is untouched.
+        set((s) => ({
+          ...s,
+          staged: [],
+          commit_due: false,
+          commit_attempt_epoch: s.staged.length ? null : s.commit_attempt_epoch,
+        }))
         return
       default:
         return
