@@ -46,9 +46,9 @@ process.chdir(repo_root)
 // is the complete set of modules a fight is opened, folded, decided and drawn through on its side.
 
 /** The world's fight: the chain entry, the receipt→core door, the run/dungeon stores, the 3D board, the HUD
- *  siblings GameWorldHud mounts inside `fight_layer_class`. `SpellBar` has no root here because it has no
- *  file — it is declared privately inside GameWorldHud.jsx, which is why the simulator cannot mount it (the
- *  extraction is boarded; when it lands it becomes a root on both sides and the manifests do not move). */
+ *  siblings GameWorldHud mounts inside `fight_layer_class` — `SpellBar` among them since #916 gave it a file
+ *  (GameWorldHud.jsx:313,333). It is a root on BOTH sides now, exactly as this gate boarded it: the eight
+ *  modules it reaches are shared, not sim-only, so the manifests below do not move. */
 const WORLD_FIGHT_ROOTS = [
   'packages/frontend/src/world-shell/world_fight.js',
   'packages/frontend/src/world-shell/dungeon_fight_shim.js',
@@ -62,6 +62,7 @@ const WORLD_FIGHT_ROOTS = [
   'packages/frontend/src/game/screens/hud/EntityTooltip.jsx',
   'packages/frontend/src/game/screens/hud/FightResult.jsx',
   'packages/frontend/src/game/screens/hud/FightSummary.jsx',
+  'packages/frontend/src/game/screens/hud/SpellBar.jsx',
 ]
 
 /** The simulator's fight: the local-chain shim (the mock door), the start fold, the HUD binding, and the board
