@@ -1,0 +1,311 @@
+{
+ "tally": {
+  "log": 8,
+  "info": 99,
+  "REQFAIL": 56,
+  "error": 54,
+  "warning": 11
+ },
+ "samples": [
+  {
+   "t": 1785057449194,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057450205,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057454213,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057495769,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057496779,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057500788,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057515107,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057516119,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057520130,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057571700,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057572713,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057576720,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057585070,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057586080,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057590089,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057646391,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057646391,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057651819,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057651819,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057651868,
+   "type": "warning",
+   "text": "[mob_model] \"https://assets.aresrpg.world/models/mobs/hy_scarak_broodmother_model_default.glb\" intrinsic height 4.01 blocks outside [0.35, 3.2] \u2014 clamped to 3.20"
+  },
+  {
+   "t": 1785057655831,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057655832,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057658543,
+   "type": "warning",
+   "text": "[mob_model] \"https://assets.aresrpg.world/models/mobs/hy_scarak_broodmother_model_default.glb\" intrinsic height 4.01 blocks outside [0.35, 3.2] \u2014 clamped to 3.20"
+  },
+  {
+   "t": 1785057658555,
+   "type": "warning",
+   "text": "CopyExternalImageToTexture(): Browser fails extracting valid resourcefrom external image. This API call will return early."
+  },
+  {
+   "t": 1785057659108,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057659151,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057659155,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057659157,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057659168,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057659172,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785057659183,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785058259176,
+   "type": "warning",
+   "text": "[terminal-gate2] UNGATED teardown of a TERMINAL board (status=4) \u2014 the death sequence/card was preempted; a terminal read reached teardown ahead of the gate"
+  },
+  {
+   "t": 1785058270361,
+   "type": "warning",
+   "text": "[mob_model] \"https://assets.aresrpg.world/models/mobs/hy_scarak_broodmother_model_default.glb\" intrinsic height 4.01 blocks outside [0.35, 3.2] \u2014 clamped to 3.20"
+  },
+  {
+   "t": 1785058270400,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785058270401,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785058271414,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785058271415,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785058275423,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785058275423,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785058286074,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785058286074,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785058286075,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785058286075,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785058286075,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785058286075,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785058286075,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785058286086,
+   "type": "warning",
+   "text": "[mob_model] \"https://assets.aresrpg.world/models/mobs/hy_scarak_broodmother_model_default.glb\" intrinsic height 4.01 blocks outside [0.35, 3.2] \u2014 clamped to 3.20"
+  },
+  {
+   "t": 1785058286095,
+   "type": "warning",
+   "text": "CopyExternalImageToTexture(): Browser fails extracting valid resourcefrom external image. This API call will return early."
+  },
+  {
+   "t": 1785058687060,
+   "type": "warning",
+   "text": "[terminal-gate2] UNGATED teardown of a TERMINAL board (status=4) \u2014 the death sequence/card was preempted; a terminal read reached teardown ahead of the gate"
+  },
+  {
+   "t": 1785058687095,
+   "type": "warning",
+   "text": "[mob_model] \"https://assets.aresrpg.world/models/mobs/hy_scarak_broodmother_model_default.glb\" intrinsic height 4.01 blocks outside [0.35, 3.2] \u2014 clamped to 3.20"
+  },
+  {
+   "t": 1785058687130,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785058687130,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785058688139,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785058688139,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785058692149,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785058692149,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785058718026,
+   "type": "warning",
+   "text": "[mob_model] \"https://assets.aresrpg.world/models/mobs/hy_scarak_broodmother_model_default.glb\" intrinsic height 4.01 blocks outside [0.35, 3.2] \u2014 clamped to 3.20"
+  },
+  {
+   "t": 1785058718046,
+   "type": "warning",
+   "text": "CopyExternalImageToTexture(): Browser fails extracting valid resourcefrom external image. This API call will return early."
+  },
+  {
+   "t": 1785058718325,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "t": 1785058718348,
+   "type": "error",
+   "text": "Failed to load resource: the server responded with a status of 404 ()"
+  }
+ ]
+}

@@ -1,0 +1,68 @@
+{
+  "drive": "SLEEP MANDATE — SIM RE-DRIVE (blocked bars of the first closing drive)",
+  "target": "https://edge.aresrpg.world/simulator?dev — SERVED production build V1.13.0",
+  "driven_at": "2026-07-26T17:1x+07:00",
+  "identity": "QA key `alice` (0xb495…d177) via an injected wallet-standard stand-in whose signing features THROW — zero tx, zero signature, read-only seat. Never the owner's session.",
+  "freshness": {
+    "verdict": "FRESH",
+    "proof": "served chunk /assets/seat_character-Cfcs3lpm.js exists in the crawled 139-chunk graph and its body is exactly #1011's pair: `t=t=>{if(!t)return null;if(t.experience!=null)return t;let n=Number(t.level);return Number.isFinite(n)&&n>0?{...t,experience:e(n)}:t}` over experience-Biw1CGkb.js. `seat_character` also appears in index/simulator/DungeonBoard chunks.",
+    "tip": "26d34229 fix(simulator): a sim seat's experience derives at the consumption seam (#1001)"
+  },
+  "door_reproduced": {
+    "requirement": "wallet CONNECTED with chain characters",
+    "proof": "/characters printed `On-chain on Sui · 2 characters` (qa3c15f0be, qa2f178667 — both Lv 1 SENSHI) for 0xb495…d177 BEFORE the sim fight, so state.sui.characters.length === 2 and fight_shim.js:191's seeding guard stayed CLOSED. shots/017_chain_roster.png",
+    "note": "the simulator route alone never boots the roster (boot_roster is GameWorldHost-only); the roster was loaded via the /characters route then SPA-navigated back to /simulator, store intact."
+  },
+  "bars": {
+    "1_level200_full_deck": {
+      "verdict": "PASS",
+      "detail": "LEVEL 200 yajin KAGEMARU seated with a WALLET-OWNED roster present. The bar opens with the FULL unlocked deck: 20 distinct spells + the weapon socket, all with real .webp icons and per-spell AP badges. Every one carries a real tooltip (name/element/AP/RANGE/CRIT/COOLDOWN/EFFECTS) — gutterknife, vanish, fanged snare, prowler's eye, patient venom, dread whisper, killer's calm, snaptrap, fleece, vial snare, nightsurge, springjaw, false trail, mute snare, seeking blade, cold slit, field of fangs, quietus, coffin snare, death mark.",
+      "turn_card": "KAGEMARU LV 200; XP strip prints 200",
+      "regression_fixed": "#1001 closed the first drive's FAIL (3 unlock-1 starters at LV 200).",
+      "money_shot": "shots/019_fight_open.png + shots/crop_bar.png"
+    },
+    "2_casts_land_and_stick": {
+      "verdict": "FAIL",
+      "detail": "Casts LAND (targeting proven) but the damage NEVER folds. Two independent landed casts on ETERNWOOL's own cell, both reverted at the turn boundary.",
+      "repro": [
+        "seat KAGEMARU LV200 + Broodfather(1190)/Eternwool(1120), START FIGHT, let the mobs close to melee",
+        "turn N: arm DEATH MARK (2-4 Earth, 4 AP, range 1-3) and click Eternwool's cell -> AP 6->2, Eternwool card shows staged (1118)",
+        "END TURN -> next own turn Eternwool reads 1120 again (full bar)",
+        "turn N+2: arm QUIETUS (21-40 Earth, 5 AP, range 1) and click the SAME cell -> AP 6->1, staged (1099) i.e. 21 damage",
+        "END TURN -> next own turn Eternwool reads 1120 again, bar visually FULL"
+      ],
+      "counter_evidence": "mob->player damage folds normally the whole session (KAGEMARU 1040 -> 621 -> 384 across turns), so the fold path is alive in one direction only.",
+      "artifacts": "shots/030_pre_cast.png (pre), shots/031_post_cast.png (staged 1099), shots/turn_t5_hud.png (post END TURN: 1120, full bar)"
+    },
+    "3_status_truth": {
+      "verdict": "FAIL",
+      "detail": "Two defects. (a) VALUE CORRUPTION: NIGHTSURGE grants `+5 Critical Hit · 4 turns` (its own tooltip); the committed chip renders `+32763 Critical Hit · 3 turns` — 32768-5, a sign/magnitude decode fault at the receipt->chip seam. The COUNTDOWN itself is correct (3 -> 2 -> 1 turn -> gone at own turns). (b) PREDICTED vs COMMITTED divergence: while staged the NIGHTSURGE chip does not render at all (shots/028_nightsurge.png) and only appears after END TURN.",
+      "mp_pool": "FAIL — VANISH's `+1 MP · 3 turns` chip renders while staged (shots/027_hud.png) then is GONE at the very next own turn, and the pool reads 3 MP (base) on that turn and every turn after: the timed point grant did not survive the turn-start refill (the aa2bc1a7/#973 behaviour). Caveat: the same VANISH also grants invisibility, which the mobs broke (HP fell 1040->1016 that turn), so the drop may be a whole-status expiry rather than the refill specifically — it is not separable with this deck (VANISH is the only MP grant and is on an 11-turn cooldown).",
+      "artifacts": "shots/027_hud.png, shots/028_nightsurge.png, shots/turn_t2_hud.png, shots/turn_t3_hud.png"
+    },
+    "4_traps_and_974": {
+      "verdict": "FAIL (placement paints nothing) / #974 PASS",
+      "trap": "FIELD OF FANGS (5 AP, range 1-3, `Places a trap · CIRCLE 2 | 2 to 10 Earth damage`) placed successfully — AP 6->1 — but NO trap glyph, marker or cell paint appears anywhere on the board (shots/045_trap.png, shots/046_selfstep.png; the second frame has the spell disarmed and the movement wash on, still nothing). With no visible trap and with bar 2's fold failure, neither the mob-step nor the self-step trigger is verifiable.",
+      "974_mob_approach": "PASS — in BOTH fights the mobs crossed the full board unassisted and engaged (shots/026_board.png start -> shots/turn_t3_board.png melee), including after the VANISH invisibility window."
+    },
+    "5_multi_seat": {
+      "verdict": "PASS",
+      "detail": "Two seated characters (KAGEMARU yajin LV200, TETSUO senshi LV150). Initiative shows 4 rows. The HUD FOLLOWS the controlled seat: on TETSUO's turn the bar is the senshi deck (AP 5/6/5/4/4…), HP 815/815, XP strip 150; on KAGEMARU's turn it is the yajin deck (4/2/2/2/3…), HP 1040/1040, XP strip 200. Both playable (casts landed on KAGEMARU; TETSUO's bar armed).",
+      "auto_pass": "PASS and SILENT — KAGEMARU's turn was allowed to lapse with no input; the round advanced through Eternwool/Tetsuo/Broodfather and came back to KAGEMARU with a fresh 39s. NO `AUTO PASS IN Ns` banner text exists anywhere in the DOM during the lapse — the #1003 banner row the brief flagged as open is NOT present in this build.",
+      "artifacts": "shots/042_multi_fight.png, shots/043_seat2_turn.png, shots/043_bar.png"
+    },
+    "6_1004_hover_question": {
+      "answer": "NO — the red cast-footprint does NOT paint over an enemy-occupied cell.",
+      "method": "QUIETUS (range 1) armed with ETERNWOOL standing on the cell where a QUIETUS cast had PROVABLY landed minutes earlier (same pixel, AP-verified). Three frames at identical camera: unhovered / hovering the ENEMY's cell / hovering an empty in-range cell — all three identical, only the plain blue range wash.",
+      "footprint_exists": "the mechanism is alive: a separate frame in the same fight shows an EMPTY in-range cell flipping blue->red on hover (shots/h_5.png), and a 132-point hover sweep quantified it (~640 red px on the empty cell, <=35 px anywhere an enemy stood).",
+      "artifacts": "shots/034_unhovered.png, shots/035_hover_enemy.png, shots/036_hover_empty.png, shots/hover_montage.png, shots/h_5.png"
+    },
+    "7_console": {
+      "verdict": "FAIL (attributable)",
+      "page_errors": "0 uncaught exceptions across the whole session",
+      "http_404": "assets.aresrpg.world/mobs/hy_scarak_broodmother_model_default.png and assets.aresrpg.world/mobs/hy_custom_woolice.png — 3 hits each. These are the Broodfather/Eternwool PORTRAITS; the initiative cards fall back to letter avatars (B/E) instead of mob icons. 54 console `error` lines are these repeated resource 404s.",
+      "aborted": "51 x rpc.aresrpg.world/v1/config :: net::ERR_ABORTED — poll aborts, no failed read surfaced to the UI"
+    }
+  },
+  "artifacts": { "console": "console_tally.json", "responses": "responses.log", "chunk_graph": "chunk_list.json" }
+}
