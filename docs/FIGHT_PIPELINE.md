@@ -19,7 +19,10 @@ SNAPSHOTS instead of reading an ordered log.
    indexer serves it as an ordered, per-fight event log (`/v1/fights/{id}/events`): `seq`
    contiguous from 0, immutable pages, `journal_head` on snapshots. Nothing client-side ever
    writes canon.
-2. **A pure fold.** Fight state is produced by folding the ordered log through one reducer.
+2. **A pure fold, with a gated reverse shadow.** Committed fight truth is produced by the
+   headless core fold by default (`?v2truth=0` or stored `ares_v2truth='0'` selects the legacy
+   fold). The legacy fold also continues to feed paced presentation and, by default, a
+   reverse-shadow comparator (`?v2shadow=0` or stored `ares_v2shadow='0'` disables comparison).
    All canonical inputs — tx receipts (an early copy of journal content) and journal pages —
    normalize into ONE batch vocabulary and enter through ONE accept door with three laws:
    - **Contiguity**: a gap is resolved by fetching the missing range, never by skipping,
@@ -77,7 +80,9 @@ it against the receipt like any prediction.
 - Deriving events by diffing snapshots, at any layer, for any reason.
 - A snapshot overwriting live fold state.
 - Purging predictions on unrelated receipts.
-- A second home for fight state (parallel entity/death/position caches outside the fold).
+- A second simultaneous runtime truth owner for fight state (parallel entity/death/position
+  caches outside the selected committed-truth fold); a diagnostic comparison fold may remain
+  alongside it without owning runtime truth.
 - Effect machinery (promises, fetches, timers) inside the fight core — effects are injected
   at the edges; results re-enter as inputs (law L-P4).
 - An effect kind published in content that the sim cannot resolve: the totality gate holds a
